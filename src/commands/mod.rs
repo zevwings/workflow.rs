@@ -4,3 +4,4 @@ pub mod pr;
 pub mod proxy;
 pub mod qk;
 pub mod setup;
+pub mod uninstall;
