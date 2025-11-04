@@ -1,11 +1,11 @@
 use crate::{log_error, log_info, log_success, Codeup, Git, GitHub, Platform, RepoType};
 use anyhow::Result;
 
-/// PR 显示命令
-pub struct PRShowCommand;
+/// PR 状态命令
+pub struct PRStatusCommand;
 
-impl PRShowCommand {
-    /// 显示 PR 信息
+impl PRStatusCommand {
+    /// 显示 PR 状态信息
     pub fn show(pr_id_or_branch: Option<String>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 

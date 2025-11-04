@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::pr::{create, list, merge, show, update};
+use workflow::commands::pr::{create, list, merge, status, update};
 
 #[derive(Parser)]
 #[command(name = "pr")]
@@ -41,8 +41,8 @@ enum PRCommands {
         #[arg(short, long, action = clap::ArgAction::SetTrue)]
         force: bool,
     },
-    /// Show PR information
-    Show {
+    /// Show PR status information
+    Status {
         /// PR ID or branch name
         #[arg(value_name = "PR_ID_OR_BRANCH")]
         pr_id_or_branch: Option<String>,
@@ -76,8 +76,8 @@ fn main() -> Result<()> {
         PRCommands::Merge { pr_id, force } => {
             merge::PRMergeCommand::merge(pr_id, force)?;
         }
-        PRCommands::Show { pr_id_or_branch } => {
-            show::PRShowCommand::show(pr_id_or_branch)?;
+        PRCommands::Status { pr_id_or_branch } => {
+            status::PRStatusCommand::show(pr_id_or_branch)?;
         }
         PRCommands::List { state, limit } => {
             list::PRListCommand::list(state, limit)?;

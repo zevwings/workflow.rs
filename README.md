@@ -91,7 +91,7 @@ pr create --description "..." # 指定简短描述
 pr create --dry-run      # 干运行（不实际创建）
 pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
 pr merge --force         # 强制合并
-pr show [PR_ID_OR_BRANCH] # 显示 PR 信息（可选参数）
+pr status [PR_ID_OR_BRANCH] # 显示 PR 状态信息（可选参数）
 pr list                   # 列出所有 PR
 pr list --state open     # 按状态过滤（open/closed/merged）
 pr list --limit 10       # 限制结果数量
