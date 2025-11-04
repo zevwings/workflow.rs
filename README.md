@@ -77,11 +77,6 @@ workflow setup                     # 初始化或更新配置
 workflow config                    # 查看当前配置
 ```
 
-### Jira 操作
-```bash
-jira status PROJ-123     # 配置状态映射（交互式）
-jira show PROJ-123        # 显示 ticket 信息
-```
 
 ### PR 操作
 ```bash
@@ -112,10 +107,6 @@ qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会提示）
 qk PROJ-123 search [term] # 搜索关键词（可选，不提供会提示）
 ```
 
-### 辅助功能
-```bash
-update                    # 快速更新（使用 PR 标题作为提交信息）
-```
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
 

@@ -34,18 +34,10 @@ name = "pr"
 path = "src/bin/pr.rs"
 
 [[bin]]
-name = "jira"
-path = "src/bin/jira.rs"
-
-[[bin]]
 name = "logs"
 path = "src/bin/logs.rs"
 
 [[bin]]
 name = "qk"
 path = "src/bin/qk.rs"
-
-[[bin]]
-name = "update"
-path = "src/bin/update.rs"
 
