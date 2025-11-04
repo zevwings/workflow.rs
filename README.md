@@ -37,11 +37,22 @@ workflow/
 ├── Cargo.toml           # 项目配置
 ├── src/
 │   ├── main.rs          # CLI 入口
+│   ├── lib.rs           # 库入口
 │   ├── lib/             # 核心库模块
-│   ├── commands/        # 命令实现
-│   └── types/           # 类型定义
+│   │   ├── git/         # Git 操作
+│   │   ├── jira/        # Jira API 集成
+│   │   ├── pr/          # PR 相关功能
+│   │   ├── llm/         # LLM 集成（AI）
+│   │   ├── log/         # 日志处理
+│   │   ├── settings/    # 配置管理
+│   │   └── utils/       # 工具函数
+│   └── commands/        # 命令实现
+│       ├── pr/          # PR 命令
+│       ├── jira/        # Jira 命令
+│       ├── logs/        # 日志命令
+│       └── ...
 └── docs/                # 文档目录
-    └── ARCHITECTURE.md  # 架构设计（包含 AI 模块）
+    └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
 ```
 
 ## 📋 命令清单

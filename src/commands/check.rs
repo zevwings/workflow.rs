@@ -1,4 +1,4 @@
-use crate::{log_error, log_info, log_success, log_warning, Git};
+use crate::{log_error, log_info, log_success, Git};
 use anyhow::{Context, Result};
 use duct::cmd;
 
@@ -53,6 +53,18 @@ impl CheckCommand {
         cmd("git", &["add", "--all"])
             .run()
             .context("Failed to run git add --all")?;
+
+        // 检查是否有 staged 的文件
+        let has_staged = cmd("git", &["diff", "--cached", "--quiet"])
+            .run()
+            .map(|output| !output.status.success())
+            .unwrap_or(false);
+
+        if !has_staged {
+            log_info!("No staged files to check, pre-commit check skipped");
+            log_success!("Pre-commit checks passed (nothing to commit)");
+            return Ok(());
+        }
 
         // 运行 pre-commit hooks
         // 注意：这里需要 pre-commit 工具已安装

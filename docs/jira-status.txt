@@ -1,4 +1,0 @@
-
-WEW:
-created-pr,WEW,In Progress
-merged-pr,WEW,Done
