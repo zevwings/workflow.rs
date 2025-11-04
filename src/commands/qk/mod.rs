@@ -1,4 +1,4 @@
-pub mod qk;
+pub mod quick;
 
-pub use qk::Qk;
+pub use quick::QuickCommand;
 

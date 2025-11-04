@@ -5,11 +5,11 @@ use anyhow::{Context, Result};
 use dialoguer::Input;
 use std::path::{Path, PathBuf};
 
-/// Qk 统一命令包装器
+/// Quick 统一命令包装器
 /// 对应 Shell 脚本 qk.sh
-pub struct Qk;
+pub struct QuickCommand;
 
-impl Qk {
+impl QuickCommand {
     /// 查找日志文件
     /// 在指定目录中查找 flutter-api*.log 文件
     fn find_log_file(base_dir: &Path) -> Result<PathBuf> {
