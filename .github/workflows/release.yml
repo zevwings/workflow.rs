@@ -1,0 +1,685 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master  # 当合并到 master 分支时触发
+    tags:
+      - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+
+# 配置工作流权限，允许创建 Release 和更新仓库
+permissions:
+  contents: write  # 允许创建 Release 和上传文件
+  pull-requests: read  # 读取 PR（如果需要）
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 当合并到 master 时自动创建 tag
+  create-tag:
+    name: Create Tag
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: write  # 允许创建和推送 tag
+    outputs:
+      tag: ${{ steps.job_outputs.outputs.tag }}
+      tag_created: ${{ steps.job_outputs.outputs.tag_created }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史记录来检查 tag
+          token: ${{ secrets.GITHUB_TOKEN }}  # 确保使用正确的 token
+
+      - name: Get version from Cargo.toml
+        id: version
+        shell: bash
+        run: |
+          # 从 Cargo.toml 读取版本号
+          VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Cannot read version from Cargo.toml"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "✅ Version from Cargo.toml: $VERSION"
+          echo "✅ Tag to create: $TAG"
+
+      - name: Check if tag exists and increment version if needed
+        id: check_tag
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "⚠️  Tag $TAG already exists"
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Tag commit: $(git rev-parse $TAG)"
+
+            if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=false" >> $GITHUB_OUTPUT
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$TAG" >> $GITHUB_OUTPUT
+              echo "✅ Tag points to current commit, skipping tag creation"
+            else
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=true" >> $GITHUB_OUTPUT
+              echo "⚠️  Tag points to different commit, auto-incrementing patch version"
+
+              # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
+              IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+              MAJOR="${VERSION_PARTS[0]:-0}"
+              MINOR="${VERSION_PARTS[1]:-0}"
+              PATCH="${VERSION_PARTS[2]:-0}"
+
+              # 递增 patch 版本
+              PATCH=$((PATCH + 1))
+              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              NEW_TAG="v$NEW_VERSION"
+
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+              echo "old_version=$VERSION" >> $GITHUB_OUTPUT
+              echo "old_tag=$TAG" >> $GITHUB_OUTPUT
+
+              echo "✅ Auto-incremented version: $VERSION -> $NEW_VERSION"
+              echo "✅ New tag: $NEW_TAG"
+            fi
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "needs_increment=false" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "✅ Tag $TAG does not exist, will create it"
+          fi
+
+      - name: Update Cargo.toml version if needed
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          echo "Updating Cargo.toml version to $NEW_VERSION"
+
+          # 更新 Cargo.toml 中的版本号
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          else
+            # Linux
+            sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          fi
+
+          # 验证更新
+          UPDATED_VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
+            echo "❌ Error: Failed to update version in Cargo.toml"
+            exit 1
+          fi
+
+          echo "✅ Cargo.toml updated: version = \"$NEW_VERSION\""
+
+      - name: Commit version update
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 提交更改
+          git add Cargo.toml
+          git commit -m "chore: bump version to ${{ steps.check_tag.outputs.version }}"
+
+          # 推送到 master
+          echo "Pushing version update to master"
+          git push origin master
+
+          echo "✅ Version update committed and pushed"
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          TAG="${{ steps.check_tag.outputs.tag }}"
+          echo "Creating tag: $TAG"
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 创建 tag
+          git tag "$TAG"
+
+          # 推送 tag
+          echo "Pushing tag: $TAG"
+          git push origin "$TAG"
+
+          echo "✅ Successfully created and pushed tag: $TAG"
+          echo "ℹ️  This tag push should trigger a new workflow run for building and releasing"
+
+      - name: Set job outputs
+        id: job_outputs
+        shell: bash
+        run: |
+          TAG="${{ steps.check_tag.outputs.tag }}"
+          TAG_CREATED="false"
+          if [ "${{ steps.check_tag.outputs.exists }}" == "false" ] || [ "${{ steps.check_tag.outputs.needs_increment }}" == "true" ]; then
+            TAG_CREATED="true"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag_created=$TAG_CREATED" >> $GITHUB_OUTPUT
+          echo "✅ Job outputs set: tag=$TAG, tag_created=$TAG_CREATED"
+
+      - name: Skip tag creation
+        if: steps.check_tag.outputs.exists == 'true' && steps.check_tag.outputs.needs_increment == 'false'
+        shell: bash
+        run: |
+          echo "⏭️  Skipping tag creation: tag ${{ steps.check_tag.outputs.tag }} already exists and points to current commit"
+
+  # 构建所有平台的二进制文件
+  build:
+    runs-on: ${{ matrix.os }}
+    needs: create-tag
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macOS-Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macOS-AppleSilicon
+          # 暂时跳过 Linux 构建
+          # - os: ubuntu-latest
+          #   target: x86_64-unknown-linux-gnu
+          #   platform: x86_64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 从标签获取版本号
+            VERSION=${GITHUB_REF#refs/tags/}
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 从 create-tag job 的 outputs 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              VERSION="${{ needs.create-tag.outputs.tag }}"
+              # 移除 v 前缀（如果有）
+              VERSION=${VERSION#v}
+            else
+              # 如果 outputs 不可用，从 Cargo.toml 读取
+              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+              if [ -z "$VERSION" ]; then
+                echo "❌ Error: Cannot read version from Cargo.toml"
+                exit 1
+              fi
+            fi
+          else
+            echo "❌ Error: Cannot determine version from context"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install pkg-config || true
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+      - name: Create package directory
+        run: |
+          mkdir -p package
+          cp target/${{ matrix.target }}/release/workflow package/
+          cp target/${{ matrix.target }}/release/pr package/
+          cp target/${{ matrix.target }}/release/qk package/
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd package
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          tar czf "../$ARCHIVE_NAME" workflow pr qk
+          cd ..
+          ls -lh "$ARCHIVE_NAME"
+
+      - name: Calculate SHA256
+        id: sha256
+        shell: bash
+        run: |
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
+          else
+            SHA256=$(sha256sum "$ARCHIVE_NAME" | cut -d' ' -f1)
+          fi
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_OUTPUT
+          echo "archive=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+          echo "SHA256 for ${{ matrix.platform }}: $SHA256"
+
+      - name: Save SHA256 to file
+        shell: bash
+        run: |
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          echo "${{ steps.sha256.outputs.sha256 }}" > sha256-${{ matrix.platform }}.txt
+          echo "${{ matrix.platform }}" >> sha256-${{ matrix.platform }}.txt
+          echo "$ARCHIVE_NAME" >> sha256-${{ matrix.platform }}.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz
+          retention-days: 30
+
+      - name: Upload SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.platform }}
+          path: |
+            sha256-${{ matrix.platform }}.txt
+          retention-days: 30
+
+  # 创建 GitHub Release 并上传所有二进制文件
+  release:
+    name: Create Release
+    needs: [create-tag, build]
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    permissions:
+      contents: write  # 允许创建 Release 和上传文件
+      pull-requests: read  # 读取 PR（如果需要）
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 从标签获取版本号
+            VERSION=${GITHUB_REF#refs/tags/}
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 从 create-tag job 的 outputs 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              VERSION="${{ needs.create-tag.outputs.tag }}"
+              # 移除 v 前缀（如果有）
+              VERSION=${VERSION#v}
+            else
+              # 如果 outputs 不可用，从 Cargo.toml 读取
+              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+              if [ -z "$VERSION" ]; then
+                echo "❌ Error: Cannot read version from Cargo.toml"
+                exit 1
+              fi
+            fi
+          else
+            echo "❌ Error: Cannot determine version from context"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "workflow-*.tar.gz" -exec cp {} release-assets/ \;
+          if [ -z "$(ls -A release-assets)" ]; then
+            echo "Error: No release assets found!"
+            exit 1
+          fi
+          ls -lh release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          make_latest: true
+          body: |
+            ## Release ${{ steps.version.outputs.tag }}
+
+            ### Downloads
+
+            - **macOS Intel**: [workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz)
+            - **macOS Apple Silicon**: [workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz)
+
+            ### Installation
+
+            ```bash
+            # Download and extract (macOS)
+            # For Intel Mac
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz
+            # For Apple Silicon Mac
+            # curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-*.tar.gz
+            sudo mv workflow pr qk /usr/local/bin/
+            ```
+
+            ### Homebrew
+
+            Install via Homebrew:
+            ```bash
+            brew tap zevwings/workflow
+            brew install workflow
+            ```
+          files: release-assets/*
+          draft: false
+          prerelease: false
+
+  # 自动更新 Homebrew Formula
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: [create-tag, build, release]
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    permissions:
+      contents: write  # 允许推送到 homebrew-workflow 仓库
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version and detect install type
+        id: version
+        shell: bash
+        run: |
+          # 检测是 tag 还是 branch
+          # 优先检查是否是从 create-tag job 创建的 tag（在 master push 时）
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 在 master push 时，如果 create-tag job 创建了 tag，应该使用 tag
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              INSTALL_TYPE="tag"
+              VERSION_REF="${{ needs.create-tag.outputs.tag }}"
+              VERSION="${VERSION_REF#v}"  # 移除 v 前缀
+              echo "✅ Detected as TAG from create-tag job: $VERSION_REF"
+            else
+              # 如果没有创建 tag，则使用 branch
+              INSTALL_TYPE="branch"
+              VERSION_REF="${GITHUB_REF#refs/heads/}"
+              VERSION="0.0.0-dev"
+              echo "✅ Detected as BRANCH: $VERSION_REF"
+              echo "ℹ️  Using default version for branch: $VERSION"
+            fi
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 是 tag push 触发的 workflow
+            INSTALL_TYPE="tag"
+            VERSION_REF="${GITHUB_REF#refs/tags/}"
+            VERSION="${VERSION_REF#v}"  # 移除 v 前缀
+            echo "✅ Detected as TAG: $VERSION_REF"
+          elif [[ "${{ github.ref }}" == refs/heads/* ]]; then
+            # 是 branch push 触发的 workflow（非 master，或 master 但没有创建 tag）
+            INSTALL_TYPE="branch"
+            VERSION_REF="${GITHUB_REF#refs/heads/}"
+            # 对于 branch，版本号可以从 workflow_dispatch input 或使用默认版本
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              VERSION="${{ github.event.inputs.version }}"
+            else
+              # 对于 branch，使用默认版本号（因为 branch 名可能包含特殊字符，不适合作为 version）
+              # 可以将 branch 名转换为有效的版本号格式，或使用固定的开发版本号
+              # 例如：zw/update-completions -> 0.0.0-dev (或者使用日期等)
+              VERSION="0.0.0-dev"
+            fi
+            echo "✅ Detected as BRANCH: $VERSION_REF"
+            echo "ℹ️  Using default version for branch: $VERSION"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # 手动触发，默认使用 tag
+            INSTALL_TYPE="tag"
+            VERSION_REF="${{ github.event.inputs.version }}"
+            VERSION="${VERSION_REF#v}"
+            echo "✅ Manual trigger, using as TAG: $VERSION_REF"
+          else
+            echo "❌ Error: Cannot determine install type from ${{ github.ref }}"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "install_type=$INSTALL_TYPE" >> $GITHUB_OUTPUT
+          echo "version_ref=$VERSION_REF" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Install Type: $INSTALL_TYPE"
+          echo "Version Ref: $VERSION_REF"
+          echo "Version: $VERSION"
+
+      # 注意：使用 git tag 方式时，不需要 SHA256 校验
+      # 因为 Homebrew 会直接从 git 仓库 checkout 指定的 tag
+
+      - name: Check HOMEBREW_TAP_TOKEN
+        id: check_token
+        shell: bash
+        run: |
+          if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
+            echo "❌ Error: HOMEBREW_TAP_TOKEN secret is not configured"
+            echo ""
+            echo "Please configure HOMEBREW_TAP_TOKEN secret:"
+            echo "1. Go to: Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: HOMEBREW_TAP_TOKEN"
+            echo "4. Value: Your Personal Access Token (PAT) with 'repo' scope"
+            echo ""
+            echo "To create a PAT:"
+            echo "1. Go to: https://github.com/settings/tokens"
+            echo "2. Click 'Generate new token (classic)'"
+            echo "3. Select 'repo' scope (full control of private repositories)"
+            echo "4. Copy the token and add it as HOMEBREW_TAP_TOKEN secret"
+            exit 1
+          else
+            echo "✅ HOMEBREW_TAP_TOKEN is configured"
+          fi
+
+      - name: Checkout homebrew-workflow
+        uses: actions/checkout@v4
+        with:
+          repository: zevwings/homebrew-workflow
+          path: homebrew-workflow
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update Formula from template
+        shell: bash
+        run: |
+          # 模板文件和目标文件路径
+          TEMPLATE_FILE="homebrew/Formula.template"
+          FORMULA_FILE="homebrew-workflow/Formula/workflow.rb"
+
+          # 检查模板文件是否存在
+          if [ ! -f "$TEMPLATE_FILE" ]; then
+            echo "❌ Error: Template file not found at $TEMPLATE_FILE"
+            echo "Make sure homebrew/Formula.template exists in the source repository"
+            exit 1
+          fi
+
+          # 确保 homebrew-workflow/Formula 目录存在
+          mkdir -p homebrew-workflow/Formula
+
+          # 备份现有的 Formula 文件（如果存在）
+          if [ -f "$FORMULA_FILE" ]; then
+            cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+            echo "📦 Backed up existing Formula file"
+          fi
+
+          # 从模板生成 URL 行
+          INSTALL_TYPE="${{ steps.version.outputs.install_type }}"
+          VERSION_REF="${{ steps.version.outputs.version_ref }}"
+
+          if [[ "$INSTALL_TYPE" == "tag" ]]; then
+            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", tag: \"$VERSION_REF\""
+          elif [[ "$INSTALL_TYPE" == "branch" ]]; then
+            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", branch: \"$VERSION_REF\""
+          else
+            echo "❌ Error: Invalid install type: $INSTALL_TYPE"
+            exit 1
+          fi
+
+          echo "🔧 Generated URL line: $URL_LINE"
+
+          # 从模板生成 Formula 文件
+          echo "📝 Generating Formula file from template..."
+          sed -e "s|{{VERSION}}|${{ steps.version.outputs.version }}|g" \
+              -e "s|{{INSTALL_TYPE}}|$INSTALL_TYPE|g" \
+              -e "s|{{VERSION_REF}}|$VERSION_REF|g" \
+              -e "s|{{URL_LINE}}|$URL_LINE|g" \
+              "$TEMPLATE_FILE" > "$FORMULA_FILE"
+
+          echo "✅ Formula file generated from template"
+
+          cd homebrew-workflow
+
+          # 更新为相对于 homebrew-workflow 目录的路径
+          FORMULA_FILE="Formula/workflow.rb"
+
+          # 验证文件结构（确保没有语法错误）
+          echo "🔍 Validating Formula file structure..."
+          if ! ruby -c "$FORMULA_FILE" 2>/dev/null; then
+            echo "❌ Error: Formula file has syntax errors"
+            ruby -c "$FORMULA_FILE" || true
+            exit 1
+          fi
+          echo "✅ Formula file syntax is valid"
+
+          # 显示生成的 Formula 文件
+          echo ""
+          echo "📄 Generated Formula file:"
+          echo "--- Formula/workflow.rb ---"
+          cat "$FORMULA_FILE"
+          echo ""
+
+          # 显示更改（如果有备份）
+          if [ -f "$FORMULA_FILE.bak" ]; then
+            echo "--- Diff (Before vs After) ---"
+            diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+          fi
+
+      - name: Commit and push changes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          cd homebrew-workflow
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 检查是否有更改
+          git add Formula/workflow.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Formula file is already up to date."
+            exit 0
+          fi
+
+          # 验证 Formula 文件格式
+          if ! brew audit --strict Formula/workflow.rb 2>/dev/null; then
+            echo "Warning: brew audit failed, but continuing..."
+          fi
+
+          # 提交更改
+          git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
+
+          # 检测当前分支名称
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch: $CURRENT_BRANCH"
+
+          # actions/checkout@v4 已经设置了正确的远程 URL，直接推送即可
+          # 推送更改到当前分支
+          echo "Pushing to branch: $CURRENT_BRANCH"
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
+          else
+            echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
+            echo "Remote URL: $(git remote get-url origin | sed 's|://.*@|://***@|')"
+            echo "Branch: $CURRENT_BRANCH"
+            echo "Git status:"
+            git status
+            echo "Git log:"
+            git log --oneline -5
+            echo ""
+            echo "Possible issues:"
+            echo "1. HOMEBREW_TAP_TOKEN may not have write access to zevwings/homebrew-workflow"
+            echo "2. Token may have expired or been revoked"
+            echo "3. Repository may not exist or be accessible"
+            exit 1
+          fi
+
+          echo "✅ Homebrew Formula updated successfully!"
+
+
+
