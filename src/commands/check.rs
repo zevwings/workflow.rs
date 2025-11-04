@@ -32,18 +32,27 @@ impl CheckCommand {
 
     /// 检查网络连接（GitHub）
     pub fn check_network() -> Result<()> {
-        let output = cmd("curl", &["-IsSf", "https://github.com"])
+        log_info!("Checking network connection to GitHub...");
+        let output = cmd("curl", &["-IsSf", "--max-time", "10", "https://github.com"])
             .stdout_null()
             .stderr_null()
-            .run()
-            .context("Failed to check network connection")?;
+            .run();
 
-        if output.status.success() {
-            log_success!("GitHub network is available");
-            Ok(())
-        } else {
-            log_error!("GitHub network error");
-            anyhow::bail!("Network check failed");
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    log_success!("GitHub network is available");
+                    Ok(())
+                } else {
+                    log_error!("GitHub network check failed (curl returned non-zero exit code)");
+                    anyhow::bail!("Network check failed");
+                }
+            }
+            Err(e) => {
+                log_error!("Failed to check network connection: {}", e);
+                log_error!("This might be due to network issues, proxy settings, or firewall restrictions");
+                anyhow::bail!("Network check failed: {}", e);
+            }
         }
     }
 
