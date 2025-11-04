@@ -1,0 +1,111 @@
+use crate::utils::string;
+use crate::settings::Settings;
+use anyhow::{Context, Result};
+
+use super::constants::TYPES_OF_CHANGES;
+
+/// 从 PR URL 提取 PR ID
+///
+/// # 示例
+/// ```
+/// assert_eq!(extract_pr_id_from_url("https://github.com/owner/repo/pull/123"), Ok("123".to_string()));
+/// assert_eq!(extract_pr_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
+/// ```
+pub fn extract_pr_id_from_url(url: &str) -> Result<String> {
+    use regex::Regex;
+    let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
+    let caps = re
+        .captures(url)
+        .context("Failed to extract PR ID from URL")?;
+
+    Ok(caps.get(1).unwrap().as_str().to_string())
+}
+
+/// 生成 PR body
+///
+/// # Arguments
+/// * `selected_change_types` - 选中的变更类型数组
+/// * `short_description` - 简短描述（可选）
+/// * `jira_ticket` - Jira ticket ID（可选）
+pub fn generate_pr_body(
+    selected_change_types: &[bool],
+    short_description: Option<&str>,
+    jira_ticket: Option<&str>,
+) -> Result<String> {
+    let mut body = String::from("\n# PR Ready\n\n## Types of changes\n\n");
+
+    // 生成变更类型复选框
+    for (i, change_type) in TYPES_OF_CHANGES.iter().enumerate() {
+        let checked = if i < selected_change_types.len() && selected_change_types[i] {
+            "[x]"
+        } else {
+            "[ ]"
+        };
+        body.push_str(&format!("{} {}\n", checked, change_type));
+    }
+
+    // 添加简短描述
+    if let Some(desc) = short_description {
+        if !desc.trim().is_empty() {
+            body.push_str("\n#### Short description:\n\n");
+            body.push_str(desc);
+            body.push('\n');
+        }
+    }
+
+    // 添加 Jira 链接
+    if let Some(ticket) = jira_ticket {
+        let settings = Settings::get();
+        let jira_service = &settings.jira_service_address;
+        if !jira_service.is_empty() {
+            body.push_str(&format!(
+                "\n#### Jira Link:\n\n{}/browse/{}\n",
+                jira_service, ticket
+            ));
+        }
+    }
+
+    Ok(body)
+}
+
+/// 生成分支名
+///
+/// # Arguments
+/// * `jira_ticket` - Jira ticket ID（可选）
+/// * `title` - PR 标题
+pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<String> {
+    let mut branch_name = String::new();
+
+    // 如果有 Jira ticket，添加到分支名前缀
+    if let Some(ticket) = jira_ticket {
+        branch_name.push_str(ticket);
+        branch_name.push_str("--");
+    }
+
+    // 清理标题作为分支名
+    let cleaned_title = string::to_branch_name(title);
+    branch_name.push_str(&cleaned_title);
+
+    // 如果有 GH_BRANCH_PREFIX，添加前缀
+    let settings = Settings::get();
+    if let Some(prefix) = &settings.gh_branch_prefix {
+        if !prefix.trim().is_empty() {
+            branch_name = format!("{}/{}", prefix.trim(), branch_name);
+        }
+    }
+
+    Ok(branch_name)
+}
+
+/// 生成 commit 标题
+///
+/// # Arguments
+/// * `jira_ticket` - Jira ticket ID（可选）
+/// * `title` - PR 标题
+pub fn generate_commit_title(jira_ticket: Option<&str>, title: &str) -> String {
+    match jira_ticket {
+        Some(ticket) => format!("{}: {}", ticket, title),
+        None => format!("# {}", title),
+    }
+}
+
