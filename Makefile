@@ -36,7 +36,8 @@ release:
 	@echo "构建 release 版本..."
 	cargo build --release
 	@echo "打包完成: target/release/$(BINARY_NAME)"
-	@ls -lh target/release/$(BINARY_NAME)
+	@echo "二进制文件:"
+	@ls -lh target/release/{workflow,pr,qk} 2>/dev/null || ls -lh target/release/$(BINARY_NAME)
 
 # 清理构建产物
 clean:
@@ -46,9 +47,20 @@ clean:
 
 # 安装到系统（默认 /usr/local/bin）
 install: release
-	@echo "安装 $(BINARY_NAME) 到 /usr/local/bin..."
-	sudo cp target/release/$(BINARY_NAME) /usr/local/bin/
+	@echo "安装所有二进制文件到 /usr/local/bin..."
+	@sudo cp target/release/workflow /usr/local/bin/ || echo "警告: workflow 安装失败"
+	@sudo cp target/release/pr /usr/local/bin/ || echo "警告: pr 安装失败"
+	@sudo cp target/release/qk /usr/local/bin/ || echo "警告: qk 安装失败"
 	@echo "安装完成"
+	@echo ""
+	@echo "已安装的命令:"
+	@echo "  - workflow (主命令)"
+	@echo "  - pr (PR 操作命令)"
+	@echo "  - qk (快速日志操作命令)"
+	@echo ""
+	@echo "⚠️  重要提示："
+	@echo "  如果命令无法识别，请运行 'hash -r' 清除 shell 缓存，或重启终端"
+	@echo "  验证安装: which pr (应该显示 /usr/local/bin/pr)"
 
 # 运行测试
 test:

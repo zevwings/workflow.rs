@@ -12,10 +12,29 @@
 
 ## 🚀 快速开始
 
+### 安装
+
+使用 Makefile 安装所有二进制文件到系统：
+
+```bash
+make install
+```
+
+这会安装以下命令到 `/usr/local/bin`：
+- `workflow` - 主命令
+- `pr` - PR 操作命令
+- `qk` - 快速日志操作命令
+
+**重要提示**：
+- 安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
+- 如果系统默认的 `pr` 命令（Unix 文本格式化工具）干扰，确保 `/usr/local/bin` 在 PATH 中位于 `/usr/bin` 之前
+
 ### 编译项目
 
 ```bash
 cargo build --release
+# 或使用 Makefile
+make release
 ```
 
 ### 运行测试
