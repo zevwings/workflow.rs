@@ -10,6 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4.5"
 anyhow = "1.0"
 duct = "0.13"
 serde = { version = "1.0", features = ["derive"] }
@@ -36,4 +37,8 @@ path = "src/bin/pr.rs"
 [[bin]]
 name = "qk"
 path = "src/bin/qk.rs"
+
+[[bin]]
+name = "generate-completions"
+path = "src/bin/generate-completions.rs"
 

@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint setup
+.PHONY: help build release clean install test lint setup generate-completions install-completions
 
 # 项目名称
 BINARY_NAME = workflow
@@ -17,13 +17,15 @@ check-clippy:
 # 显示帮助信息
 help:
 	@echo "可用的 Make 目标："
-	@echo "  make build      - 构建 debug 版本"
-	@echo "  make release    - 构建 release 版本（打包）"
-	@echo "  make clean      - 清理构建产物"
-	@echo "  make install    - 安装到系统 (默认: /usr/local/bin)"
-	@echo "  make test       - 运行测试"
-	@echo "  make lint       - 运行完整的代码检查（格式化 + Clippy + Check）"
-	@echo "  make setup      - 安装所需的开发工具（rustfmt, clippy）"
+	@echo "  make build              - 构建 debug 版本"
+	@echo "  make release            - 构建 release 版本（打包）"
+	@echo "  make clean              - 清理构建产物"
+	@echo "  make install            - 安装到系统 (默认: /usr/local/bin)"
+	@echo "  make test               - 运行测试"
+	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
+	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy）"
+	@echo "  make generate-completions - 生成 shell completion 脚本"
+	@echo "  make install-completions  - 安装 shell completion 脚本（自动检测 shell）"
 
 # 构建 debug 版本
 dev:
@@ -91,4 +93,67 @@ lint: check-rustfmt check-clippy
 	@echo "✓ Check 通过"
 	@echo ""
 	@echo "✓ 所有检查通过！"
+
+# 生成 shell completion 脚本
+generate-completions:
+	@echo "生成 shell completion 脚本..."
+	@if [ -z "$(SHELL_TYPE)" ]; then \
+		echo "用法: make generate-completions SHELL_TYPE=<shell> OUTPUT_DIR=<dir>"; \
+		echo "支持的 shell: zsh, bash, fish, powershell, elvish"; \
+		echo ""; \
+		echo "示例:"; \
+		echo "  make generate-completions SHELL_TYPE=zsh OUTPUT_DIR=~/.zsh/completions"; \
+		echo "  make generate-completions SHELL_TYPE=bash OUTPUT_DIR=~/.bash_completion.d"; \
+		exit 1; \
+	fi
+	@if [ -z "$(OUTPUT_DIR)" ]; then \
+		echo "错误: 请指定 OUTPUT_DIR"; \
+		exit 1; \
+	fi
+	@cargo run --bin generate-completions -- $(SHELL_TYPE) $(OUTPUT_DIR)
+
+# 安装 shell completion 脚本（自动检测 shell）
+install-completions:
+	@echo "检测 shell 类型..."
+	@SHELL_TYPE=$$(basename $$SHELL); \
+	if [ "$$SHELL_TYPE" = "zsh" ]; then \
+		COMPLETION_DIR=$$HOME/.zsh/completions; \
+		CONFIG_FILE=$$HOME/.zshrc; \
+		echo "检测到 zsh，completion 目录: $$COMPLETION_DIR"; \
+		mkdir -p $$COMPLETION_DIR; \
+		cargo run --bin generate-completions -- zsh $$COMPLETION_DIR || exit 1; \
+		if ! grep -q "fpath=($$COMPLETION_DIR \$$fpath)" $$CONFIG_FILE 2>/dev/null; then \
+			echo "" >> $$CONFIG_FILE; \
+			echo "# Workflow CLI completions" >> $$CONFIG_FILE; \
+			echo "fpath=($$COMPLETION_DIR \$$fpath)" >> $$CONFIG_FILE; \
+			echo "autoload -Uz compinit && compinit" >> $$CONFIG_FILE; \
+			echo "✅ 已将 completion 配置添加到 $$CONFIG_FILE"; \
+		else \
+			echo "✅ completion 配置已存在于 $$CONFIG_FILE"; \
+		fi; \
+		echo ""; \
+		echo "请运行以下命令重新加载配置:"; \
+		echo "  source $$CONFIG_FILE"; \
+	elif [ "$$SHELL_TYPE" = "bash" ]; then \
+		COMPLETION_DIR=$$HOME/.bash_completion.d; \
+		CONFIG_FILE=$$HOME/.bashrc; \
+		echo "检测到 bash，completion 目录: $$COMPLETION_DIR"; \
+		mkdir -p $$COMPLETION_DIR; \
+		cargo run --bin generate-completions -- bash $$COMPLETION_DIR || exit 1; \
+		if ! grep -q "source $$COMPLETION_DIR" $$CONFIG_FILE 2>/dev/null; then \
+			echo "" >> $$CONFIG_FILE; \
+			echo "# Workflow CLI completions" >> $$CONFIG_FILE; \
+			echo "for f in $$COMPLETION_DIR/*.bash; do source \"\$$f\"; done" >> $$CONFIG_FILE; \
+			echo "✅ 已将 completion 配置添加到 $$CONFIG_FILE"; \
+		else \
+			echo "✅ completion 配置已存在于 $$CONFIG_FILE"; \
+		fi; \
+		echo ""; \
+		echo "请运行以下命令重新加载配置:"; \
+		echo "  source $$CONFIG_FILE"; \
+	else \
+		echo "未支持的 shell: $$SHELL_TYPE"; \
+		echo "请手动运行: make generate-completions SHELL_TYPE=<shell> OUTPUT_DIR=<dir>"; \
+		exit 1; \
+	fi
 
