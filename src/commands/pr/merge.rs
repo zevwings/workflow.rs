@@ -6,10 +6,12 @@ use crate::{
 use anyhow::Result;
 
 /// PR 合并命令
+#[allow(dead_code)]
 pub struct PRMergeCommand;
 
 impl PRMergeCommand {
     /// 合并 PR
+    #[allow(dead_code)]
     pub fn merge(pr_id: Option<String>, _force: bool) -> Result<()> {
         // 1. 运行检查
         CheckCommand::run_all()?;

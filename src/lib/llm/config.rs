@@ -28,4 +28,3 @@ pub fn get_llm_provider() -> Result<String> {
     log_info!("LLM_PROVIDER: openai (default)");
     Ok("openai".to_string())
 }
-

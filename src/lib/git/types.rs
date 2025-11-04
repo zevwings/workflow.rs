@@ -5,4 +5,3 @@ pub enum RepoType {
     Codeup,
     Unknown,
 }
-

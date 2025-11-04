@@ -327,8 +327,7 @@ impl Logs {
 
         // 如果目录已存在，删除它
         if base_dir.exists() {
-            std::fs::remove_dir_all(&base_dir)
-                .context("Failed to remove existing directory")?;
+            std::fs::remove_dir_all(&base_dir).context("Failed to remove existing directory")?;
         }
 
         std::fs::create_dir_all(&base_dir).context("Failed to create output directory")?;
@@ -337,8 +336,8 @@ impl Logs {
         std::fs::create_dir_all(&download_dir).context("Failed to create download directory")?;
 
         // 2. 获取附件列表
-        let attachments = Jira::get_attachments(jira_id)
-            .context("Failed to get attachments from Jira")?;
+        let attachments =
+            Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?;
 
         // 过滤日志附件（log.zip, log.z01, etc.）
         let log_attachments: Vec<_> = attachments
@@ -381,8 +380,7 @@ impl Logs {
         } else {
             // 单个 zip 文件，直接复制为 merged.zip
             let merged_zip = download_dir.join("merged.zip");
-            std::fs::copy(&log_zip, &merged_zip)
-                .context("Failed to copy log.zip to merged.zip")?;
+            std::fs::copy(&log_zip, &merged_zip).context("Failed to copy log.zip to merged.zip")?;
         }
 
         // 5. 解压文件
@@ -435,9 +433,8 @@ impl Logs {
         streamock_url: Option<&str>,
     ) -> Result<String> {
         // 1. 提取响应内容
-        let response_content =
-            Self::extract_response_content(log_file, request_id)
-                .context("Failed to extract response content")?;
+        let response_content = Self::extract_response_content(log_file, request_id)
+            .context("Failed to extract response content")?;
 
         // 2. 获取日志条目的 URL 信息（用于生成 name）
         let entry = Self::find_request_id(log_file, request_id)?;
@@ -551,7 +548,10 @@ impl Logs {
         // 从 Settings 获取日志输出文件夹名称
         let settings = Settings::get();
         let base_dir = if !settings.log_output_folder_name.is_empty() {
-            home_path.join(format!("Downloads/logs_{}/{}/merged", jira_id, settings.log_output_folder_name))
+            home_path.join(format!(
+                "Downloads/logs_{}/{}/merged",
+                jira_id, settings.log_output_folder_name
+            ))
         } else {
             home_path.join(format!("Downloads/logs_{}/merged", jira_id))
         };

@@ -1,9 +1,9 @@
 use anyhow::{Context, Result};
 use serde_json::json;
 
+use super::config;
 use crate::log_info;
 use crate::settings::Settings;
-use super::config;
 
 /// 判断是否需要翻译
 /// 规则：如果包含非英文或描述太长，需要翻译
@@ -65,7 +65,8 @@ pub fn translate_with_llm(desc: &str) -> Result<String> {
 /// 使用 OpenAI API 翻译
 fn translate_with_openai(desc: &str) -> Result<String> {
     let settings = Settings::get();
-    let api_key = settings.openai_key
+    let api_key = settings
+        .openai_key
         .as_ref()
         .context("LLM_OPENAI_KEY environment variable not set")?;
 
@@ -121,7 +122,8 @@ fn translate_with_openai(desc: &str) -> Result<String> {
 /// 使用 DeepSeek API 翻译
 fn translate_with_deepseek(desc: &str) -> Result<String> {
     let settings = Settings::get();
-    let api_key = settings.deepseek_key
+    let api_key = settings
+        .deepseek_key
         .as_ref()
         .context("LLM_DEEPSEEK_KEY environment variable not set")?;
 
@@ -177,10 +179,12 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
 /// 使用代理 API 翻译
 fn translate_with_proxy(desc: &str) -> Result<String> {
     let settings = Settings::get();
-    let api_key = settings.llm_proxy_key
+    let api_key = settings
+        .llm_proxy_key
         .as_ref()
         .context("LLM_PROXY_KEY environment variable not set")?;
-    let base_url = settings.llm_proxy_url
+    let base_url = settings
+        .llm_proxy_url
         .as_ref()
         .context("LLM_PROXY_URL environment variable not set")?;
 

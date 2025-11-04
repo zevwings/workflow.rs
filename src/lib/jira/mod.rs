@@ -6,9 +6,7 @@ pub mod commands;
 pub mod status;
 
 // 重新导出所有公共 API，保持向后兼容
-pub use api::{
-    extract_jira_ticket_id, JiraApi, JiraAttachment,
-};
+pub use api::{extract_jira_ticket_id, JiraApi, JiraAttachment};
 pub use commands::Jira;
 pub use status::*;
 
@@ -34,4 +32,3 @@ impl Jira {
 // 注意：这些别名用于 `config::`、`jira::` 等使用场景
 #[allow(deprecated)]
 pub use status as config;
-

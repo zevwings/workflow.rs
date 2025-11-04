@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::settings::Settings;
 use super::commands::Jira;
+use crate::settings::Settings;
 
 /// Jira REST API 模块
 pub struct JiraApi;
@@ -181,4 +181,3 @@ mod tests {
         assert_eq!(extract_jira_ticket_id("Fix bug"), None);
     }
 }
-

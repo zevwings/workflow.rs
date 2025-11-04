@@ -3,10 +3,12 @@ use anyhow::{Context, Result};
 use dialoguer::Input;
 
 /// 搜索关键词命令
+#[allow(dead_code)]
 pub struct SearchCommand;
 
 impl SearchCommand {
     /// 搜索关键词
+    #[allow(dead_code)]
     pub fn search(jira_id: &str, search_term: Option<String>) -> Result<()> {
         // 1. 获取日志文件路径
         let log_file = Logs::get_log_file_path(jira_id)?;
@@ -32,8 +34,8 @@ impl SearchCommand {
         // 4. 调用库函数执行搜索
         log_success!("Searching for: '{}'...", term);
 
-        let results = Logs::search_keyword(&log_file, &term)
-            .context("Failed to search log file")?;
+        let results =
+            Logs::search_keyword(&log_file, &term).context("Failed to search log file")?;
 
         if results.is_empty() {
             log_warning!("No matches found for '{}'", term);
@@ -55,4 +57,3 @@ impl SearchCommand {
         Ok(())
     }
 }
-

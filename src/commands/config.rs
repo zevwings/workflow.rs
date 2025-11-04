@@ -23,10 +23,21 @@ impl ConfigCommand {
 
         // 优先使用当前环境变量（如果已加载到 shell）
         let env_var_keys = [
-            "EMAIL", "JIRA_API_TOKEN", "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX", "LOG_OUTPUT_FOLDER_NAME", "LOG_DELETE_WHEN_OPERATION_COMPLETED", "DISABLE_CHECK_PROXY",
-            "LLM_PROVIDER", "LLM_OPENAI_KEY", "LLM_DEEPSEEK_KEY", "LLM_PROXY_URL", "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN", "CODEUP_COOKIE", "CODEUP_PROJECT_ID",
+            "EMAIL",
+            "JIRA_API_TOKEN",
+            "JIRA_SERVICE_ADDRESS",
+            "GH_BRANCH_PREFIX",
+            "LOG_OUTPUT_FOLDER_NAME",
+            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
+            "DISABLE_CHECK_PROXY",
+            "LLM_PROVIDER",
+            "LLM_OPENAI_KEY",
+            "LLM_DEEPSEEK_KEY",
+            "LLM_PROXY_URL",
+            "LLM_PROXY_KEY",
+            "CODEUP_CSRF_TOKEN",
+            "CODEUP_COOKIE",
+            "CODEUP_PROJECT_ID",
         ];
 
         for key in &env_var_keys {
@@ -38,9 +49,7 @@ impl ConfigCommand {
         // 如果环境变量中没有找到，再从 shell 配置文件读取
         let shell_config_env = EnvFile::load().unwrap_or_default();
         for (key, value) in shell_config_env {
-            if !env_vars.contains_key(&key) {
-                env_vars.insert(key, value);
-            }
+            env_vars.entry(key).or_insert(value);
         }
 
         // 检查是否有配置
@@ -108,7 +117,11 @@ impl ConfigCommand {
                     // 布尔值转换为可读格式
                     match key {
                         &"LOG_DELETE_WHEN_OPERATION_COMPLETED" | &"DISABLE_CHECK_PROXY" => {
-                            if value == "1" { "Yes".to_string() } else { "No".to_string() }
+                            if value == "1" {
+                                "Yes".to_string()
+                            } else {
+                                "No".to_string()
+                            }
                         }
                         _ => value.clone(),
                     }
@@ -153,4 +166,3 @@ impl ConfigCommand {
         }
     }
 }
-

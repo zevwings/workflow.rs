@@ -2,10 +2,12 @@ use crate::{log_info, log_success, Codeup, Git, GitHub, Platform, RepoType};
 use anyhow::Result;
 
 /// PR 列表命令
+#[allow(dead_code)]
 pub struct PRListCommand;
 
 impl PRListCommand {
     /// 列出 PR
+    #[allow(dead_code)]
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
@@ -21,7 +23,9 @@ impl PRListCommand {
                 log_info!("{}", output);
             }
             _ => {
-                anyhow::bail!("PR list is currently only supported for GitHub and Codeup repositories.");
+                anyhow::bail!(
+                    "PR list is currently only supported for GitHub and Codeup repositories."
+                );
             }
         }
 

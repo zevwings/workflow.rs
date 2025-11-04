@@ -46,10 +46,12 @@ workflow/
 │   │   ├── log/         # 日志处理
 │   │   ├── settings/    # 配置管理
 │   │   └── utils/       # 工具函数
+│   ├── bin/             # 独立可执行文件
+│   │   ├── pr.rs        # PR 命令入口
+│   │   └── qk.rs        # 快速日志操作入口
 │   └── commands/        # 命令实现
 │       ├── pr/          # PR 命令
-│       ├── jira/        # Jira 命令
-│       ├── logs/        # 日志命令
+│       ├── qk/          # 快速日志操作命令
 │       └── ...
 └── docs/                # 文档目录
     └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
@@ -93,19 +95,14 @@ pr list --limit 10       # 限制结果数量
 pr update                 # 更新代码（使用 PR 标题作为提交信息）
 ```
 
-### 日志操作
+### 日志操作 (qk)
 ```bash
-logs download PROJ-123   # 下载日志文件
-logs find <file> <id> [PROJ-123] # 查找请求 ID（可选 Jira ID 用于域名）
-logs search <file> <term> # 搜索关键词
+qk PROJ-123 download      # 下载日志文件
+qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会交互式输入）
+qk PROJ-123 search [term] # 搜索关键词（可选，不提供会交互式输入）
 ```
 
-### 快捷日志操作 (qk)
-```bash
-qk PROJ-123 download      # 下载日志（等价于 logs download）
-qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会提示）
-qk PROJ-123 search [term] # 搜索关键词（可选，不提供会提示）
-```
+> **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
 
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。

@@ -1,12 +1,14 @@
-use crate::{log_info, log_success, Logs};
 use crate::settings::Settings;
+use crate::{log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 下载日志命令
+#[allow(dead_code)]
 pub struct DownloadCommand;
 
 impl DownloadCommand {
     /// 下载日志
+    #[allow(dead_code)]
     pub fn download(jira_id: &str) -> Result<()> {
         log_success!("Downloading logs for {}...", jira_id);
 
@@ -29,4 +31,3 @@ impl DownloadCommand {
         Ok(())
     }
 }
-

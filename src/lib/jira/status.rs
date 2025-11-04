@@ -20,8 +20,7 @@ impl ConfigPaths {
         let workflow_dir = home_dir.join(".workflow");
 
         // 确保目录存在
-        fs::create_dir_all(&workflow_dir)
-            .context("Failed to create .workflow directory")?;
+        fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
 
         Ok(Self {
             jira_status: workflow_dir.join("jira-status.json"),
@@ -80,8 +79,8 @@ impl JiraStatus {
         use dialoguer::Select;
 
         // 从 ticket 或项目名中提取项目名
-        let project = string::extract_jira_project(jira_ticket_or_project)
-            .unwrap_or(jira_ticket_or_project);
+        let project =
+            string::extract_jira_project(jira_ticket_or_project).unwrap_or(jira_ticket_or_project);
 
         // 获取项目状态列表
         log_info!("Fetching status list for project: {}", project);
@@ -93,7 +92,9 @@ impl JiraStatus {
         }
 
         // 选择 PR 创建时的状态
-        log_info!("\nSelect one of the following states to change when PR is ready or In progress:");
+        log_info!(
+            "\nSelect one of the following states to change when PR is ready or In progress:"
+        );
 
         // 使用 Select 进行单选
         let selection = Select::new()
@@ -135,8 +136,8 @@ impl JiraStatus {
     pub fn read_pr_created_status(jira_ticket: &str) -> Result<Option<String>> {
         use crate::utils::string;
 
-        let project = string::extract_jira_project(jira_ticket)
-            .context("Invalid Jira ticket format")?;
+        let project =
+            string::extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
@@ -148,8 +149,8 @@ impl JiraStatus {
     pub fn read_pr_merged_status(jira_ticket: &str) -> Result<Option<String>> {
         use crate::utils::string;
 
-        let project = string::extract_jira_project(jira_ticket)
-            .context("Invalid Jira ticket format")?;
+        let project =
+            string::extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
@@ -191,8 +192,7 @@ impl JiraStatus {
         let mut history_map: WorkHistoryMap = if paths.work_history.exists() {
             let content = fs::read_to_string(&paths.work_history)
                 .context("Failed to read existing work-history.json")?;
-            serde_json::from_str(&content)
-                .unwrap_or_else(|_| HashMap::new())
+            serde_json::from_str(&content).unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
         };
@@ -217,8 +217,7 @@ impl JiraStatus {
         let json = serde_json::to_string_pretty(&history_map)
             .context("Failed to serialize work-history.json")?;
 
-        fs::write(&paths.work_history, json)
-            .context("Failed to write work-history.json")?;
+        fs::write(&paths.work_history, json).context("Failed to write work-history.json")?;
 
         Ok(())
     }
@@ -230,11 +229,11 @@ impl JiraStatus {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&paths.work_history)
-            .context("Failed to read work-history.json")?;
+        let content =
+            fs::read_to_string(&paths.work_history).context("Failed to read work-history.json")?;
 
-        let mut history_map: WorkHistoryMap = serde_json::from_str(&content)
-            .context("Failed to parse work-history.json")?;
+        let mut history_map: WorkHistoryMap =
+            serde_json::from_str(&content).context("Failed to parse work-history.json")?;
 
         // 更新合并时间
         if let Some(entry) = history_map.get_mut(pr_id) {
@@ -245,8 +244,7 @@ impl JiraStatus {
         let json = serde_json::to_string_pretty(&history_map)
             .context("Failed to serialize work-history.json")?;
 
-        fs::write(&paths.work_history, json)
-            .context("Failed to write work-history.json")?;
+        fs::write(&paths.work_history, json).context("Failed to write work-history.json")?;
 
         Ok(())
     }
@@ -264,22 +262,20 @@ impl JiraStatus {
             });
         }
 
-        let content = fs::read_to_string(&paths.jira_status)
-            .context("Failed to read jira-status.json")?;
+        let content =
+            fs::read_to_string(&paths.jira_status).context("Failed to read jira-status.json")?;
 
         // 解析 JSON
-        let status_map: JiraStatusMap = serde_json::from_str(&content)
-            .context("Failed to parse jira-status.json")?;
+        let status_map: JiraStatusMap =
+            serde_json::from_str(&content).context("Failed to parse jira-status.json")?;
 
         // 查找项目配置
         let project_config = status_map.get(project);
 
         Ok(JiraStatusConfig {
             project: project.to_string(),
-            created_pr_status: project_config
-                .and_then(|c| c.created_pr_status.clone()),
-            merged_pr_status: project_config
-                .and_then(|c| c.merged_pr_status.clone()),
+            created_pr_status: project_config.and_then(|c| c.created_pr_status.clone()),
+            merged_pr_status: project_config.and_then(|c| c.merged_pr_status.clone()),
         })
     }
 
@@ -291,8 +287,7 @@ impl JiraStatus {
         let mut status_map: JiraStatusMap = if paths.jira_status.exists() {
             let content = fs::read_to_string(&paths.jira_status)
                 .context("Failed to read existing jira-status.json")?;
-            serde_json::from_str(&content)
-                .unwrap_or_else(|_| HashMap::new())
+            serde_json::from_str(&content).unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
         };
@@ -310,8 +305,7 @@ impl JiraStatus {
         let json = serde_json::to_string_pretty(&status_map)
             .context("Failed to serialize jira-status.json")?;
 
-        fs::write(&paths.jira_status, json)
-            .context("Failed to write jira-status.json")?;
+        fs::write(&paths.jira_status, json).context("Failed to write jira-status.json")?;
 
         Ok(())
     }
@@ -323,12 +317,12 @@ impl JiraStatus {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(&paths.work_history)
-            .context("Failed to read work-history.json")?;
+        let content =
+            fs::read_to_string(&paths.work_history).context("Failed to read work-history.json")?;
 
         // 解析 JSON
-        let history_map: WorkHistoryMap = serde_json::from_str(&content)
-            .context("Failed to parse work-history.json")?;
+        let history_map: WorkHistoryMap =
+            serde_json::from_str(&content).context("Failed to parse work-history.json")?;
 
         // 查找 PR ID
         Ok(history_map.get(pr_id).cloned())

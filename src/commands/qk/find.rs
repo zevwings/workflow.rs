@@ -1,13 +1,15 @@
-use crate::{log_error, log_success, Clipboard, Logs};
 use crate::settings::Settings;
+use crate::{log_error, log_success, Clipboard, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
 /// 查找请求 ID 命令
+#[allow(dead_code)]
 pub struct FindCommand;
 
 impl FindCommand {
     /// 查找请求 ID
+    #[allow(dead_code)]
     pub fn find_request_id(jira_id: &str, request_id: Option<String>) -> Result<()> {
         // 1. 获取日志文件路径
         let log_file = Logs::get_log_file_path(jira_id)?;
@@ -56,4 +58,3 @@ impl FindCommand {
         Ok(())
     }
 }
-

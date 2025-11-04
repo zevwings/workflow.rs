@@ -26,7 +26,7 @@ help:
 	@echo "  make setup      - 安装所需的开发工具（rustfmt, clippy）"
 
 # 构建 debug 版本
-build:
+dev:
 	@echo "构建 debug 版本..."
 	cargo build
 	@echo "构建完成: target/debug/$(BINARY_NAME)"

@@ -7,12 +7,13 @@ pub struct CheckCommand;
 
 impl CheckCommand {
     /// 执行综合检查
+    #[allow(dead_code)]
     pub fn run_all() -> Result<()> {
         // 1. 检查 Git 状态
         Self::check_git_status()?;
 
         // 2. 检查网络连接
-            Self::check_network()?;
+        Self::check_network()?;
 
         log_success!("All checks passed");
         Ok(())
@@ -50,7 +51,9 @@ impl CheckCommand {
             }
             Err(e) => {
                 log_error!("Failed to check network connection: {}", e);
-                log_error!("This might be due to network issues, proxy settings, or firewall restrictions");
+                log_error!(
+                    "This might be due to network issues, proxy settings, or firewall restrictions"
+                );
                 anyhow::bail!("Network check failed: {}", e);
             }
         }
