@@ -21,6 +21,31 @@ pub fn extract_pr_id_from_url(url: &str) -> Result<String> {
     Ok(caps.get(1).unwrap().as_str().to_string())
 }
 
+/// 从 Git remote URL 提取 GitHub 仓库的 owner/repo
+///
+/// # 示例
+/// ```
+/// assert_eq!(extract_github_repo_from_url("git@github.com:owner/repo.git"), Ok("owner/repo".to_string()));
+/// assert_eq!(extract_github_repo_from_url("https://github.com/owner/repo.git"), Ok("owner/repo".to_string()));
+/// ```
+pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
+    use regex::Regex;
+
+    // 匹配 SSH 格式: git@github.com:owner/repo.git
+    let ssh_re = Regex::new(r"git@github\.com:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
+    if let Some(caps) = ssh_re.captures(url) {
+        return Ok(caps.get(1).unwrap().as_str().to_string());
+    }
+
+    // 匹配 HTTPS 格式: https://github.com/owner/repo.git
+    let https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").context("Invalid regex pattern")?;
+    if let Some(caps) = https_re.captures(url) {
+        return Ok(caps.get(1).unwrap().as_str().to_string());
+    }
+
+    anyhow::bail!("Failed to extract GitHub repo from URL: {}", url)
+}
+
 /// 生成 PR body
 ///
 /// # Arguments
