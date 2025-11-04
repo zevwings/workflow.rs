@@ -79,42 +79,42 @@ workflow config                    # 查看当前配置
 
 ### Jira 操作
 ```bash
-workflow jira status PROJ-123     # 配置状态映射（交互式）
-workflow jira show PROJ-123        # 显示 ticket 信息
+jira status PROJ-123     # 配置状态映射（交互式）
+jira show PROJ-123        # 显示 ticket 信息
 ```
 
 ### PR 操作
 ```bash
-workflow pr create [PROJ-123]     # 创建 PR（可选 Jira ticket，AI 生成标题）
-workflow pr create --title "..."  # 手动指定标题
-workflow pr create --description "..." # 指定简短描述
-workflow pr create --dry-run      # 干运行（不实际创建）
-workflow pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
-workflow pr merge --force         # 强制合并
-workflow pr show [PR_ID_OR_BRANCH] # 显示 PR 信息（可选参数）
-workflow pr list                   # 列出所有 PR
-workflow pr list --state open     # 按状态过滤（open/closed/merged）
-workflow pr list --limit 10       # 限制结果数量
-workflow pr update                 # 更新代码（使用 PR 标题作为提交信息）
+pr create [PROJ-123]     # 创建 PR（可选 Jira ticket，AI 生成标题）
+pr create --title "..."  # 手动指定标题
+pr create --description "..." # 指定简短描述
+pr create --dry-run      # 干运行（不实际创建）
+pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
+pr merge --force         # 强制合并
+pr show [PR_ID_OR_BRANCH] # 显示 PR 信息（可选参数）
+pr list                   # 列出所有 PR
+pr list --state open     # 按状态过滤（open/closed/merged）
+pr list --limit 10       # 限制结果数量
+pr update                 # 更新代码（使用 PR 标题作为提交信息）
 ```
 
 ### 日志操作
 ```bash
-workflow logs download PROJ-123   # 下载日志文件
-workflow logs find <file> <id> [PROJ-123] # 查找请求 ID（可选 Jira ID 用于域名）
-workflow logs search <file> <term> # 搜索关键词
+logs download PROJ-123   # 下载日志文件
+logs find <file> <id> [PROJ-123] # 查找请求 ID（可选 Jira ID 用于域名）
+logs search <file> <term> # 搜索关键词
 ```
 
 ### 快捷日志操作 (qk)
 ```bash
-workflow qk PROJ-123 download      # 下载日志（等价于 logs download）
-workflow qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会提示）
-workflow qk PROJ-123 search [term] # 搜索关键词（可选，不提供会提示）
+qk PROJ-123 download      # 下载日志（等价于 logs download）
+qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会提示）
+qk PROJ-123 search [term] # 搜索关键词（可选，不提供会提示）
 ```
 
 ### 辅助功能
 ```bash
-workflow update                    # 快速更新（使用 PR 标题作为提交信息）
+update                    # 快速更新（使用 PR 标题作为提交信息）
 ```
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
