@@ -2,12 +2,14 @@ use crate::{Codeup, Git, GitHub, Platform, RepoType};
 use anyhow::Result;
 
 /// 快速更新命令
+#[allow(dead_code)]
 pub struct PRUpdateCommand;
 
 impl PRUpdateCommand {
     /// 快速更新代码（使用 PR 标题作为 commit 消息）
     ///
     /// 根据仓库类型自动选择对应的平台实现
+    #[allow(dead_code)]
     pub fn update() -> Result<()> {
         // 检测仓库类型
         let repo_type = Git::detect_repo_type()?;
@@ -26,6 +28,7 @@ impl PRUpdateCommand {
     ///
     /// # Returns
     /// PR 标题（如果存在），否则返回 None
+    #[allow(dead_code)]
     fn get_pr_title_for_repo(repo_type: &RepoType) -> Result<Option<String>> {
         use crate::{log_success, log_warning};
 

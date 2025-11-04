@@ -7,6 +7,7 @@ pub mod env;
 pub mod logger;
 pub mod proxy;
 pub mod string;
+pub mod uninstall;
 
 // 重新导出 Logger
 pub use logger::Logger;
@@ -24,3 +25,5 @@ pub use env::EnvFile;
 // 重新导出 proxy
 pub use proxy::{Proxy, ProxyInfo};
 
+// 重新导出 uninstall
+pub use uninstall::Uninstall;

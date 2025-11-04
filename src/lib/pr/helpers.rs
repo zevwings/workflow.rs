@@ -1,5 +1,5 @@
-use crate::utils::string;
 use crate::settings::Settings;
+use crate::utils::string;
 use anyhow::{Context, Result};
 
 use super::constants::TYPES_OF_CHANGES;
@@ -32,13 +32,15 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
     use regex::Regex;
 
     // 匹配 SSH 格式: git@github.com:owner/repo.git
-    let ssh_re = Regex::new(r"git@github\.com:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
+    let ssh_re =
+        Regex::new(r"git@github\.com:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
     if let Some(caps) = ssh_re.captures(url) {
         return Ok(caps.get(1).unwrap().as_str().to_string());
     }
 
     // 匹配 HTTPS 格式: https://github.com/owner/repo.git
-    let https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$").context("Invalid regex pattern")?;
+    let https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
+        .context("Invalid regex pattern")?;
     if let Some(caps) = https_re.captures(url) {
         return Ok(caps.get(1).unwrap().as_str().to_string());
     }
@@ -133,4 +135,3 @@ pub fn generate_commit_title(jira_ticket: Option<&str>, title: &str) -> String {
         None => format!("# {}", title),
     }
 }
-

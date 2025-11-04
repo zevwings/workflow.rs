@@ -1,11 +1,13 @@
 use anyhow::{Context, Result};
 use regex::Regex;
+use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 use walkdir::WalkDir;
 
-use crate::Logger;
+use crate::{Jira, Logger, Settings};
 
 /// 日志条目信息
 #[derive(Debug, Clone)]
@@ -311,5 +313,269 @@ impl Logs {
         }
 
         Ok(())
+    }
+
+    /// 从 Jira ticket 下载日志附件
+    /// 返回下载的基础目录路径
+    pub fn download_from_jira(
+        jira_id: &str,
+        log_output_folder_name: Option<&str>,
+    ) -> Result<PathBuf> {
+        // 1. 确定输出目录
+        let home = env::var("HOME").context("HOME environment variable not set")?;
+        let base_dir = PathBuf::from(home).join(format!("Downloads/logs_{}", jira_id));
+
+        // 如果目录已存在，删除它
+        if base_dir.exists() {
+            std::fs::remove_dir_all(&base_dir).context("Failed to remove existing directory")?;
+        }
+
+        std::fs::create_dir_all(&base_dir).context("Failed to create output directory")?;
+
+        let download_dir = base_dir.join("downloads");
+        std::fs::create_dir_all(&download_dir).context("Failed to create download directory")?;
+
+        // 2. 获取附件列表
+        let attachments =
+            Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?;
+
+        // 过滤日志附件（log.zip, log.z01, etc.）
+        let log_attachments: Vec<_> = attachments
+            .iter()
+            .filter(|a| {
+                a.filename.starts_with("log.")
+                    && (a.filename == "log.zip" || a.filename.starts_with("log.z"))
+            })
+            .collect();
+
+        if log_attachments.is_empty() {
+            anyhow::bail!("No log attachments found for {}", jira_id);
+        }
+
+        // 3. 下载附件
+        for attachment in &log_attachments {
+            let file_path = download_dir.join(&attachment.filename);
+            Self::download_file(&attachment.content_url, &file_path)?;
+        }
+
+        // 4. 处理单个 zip 文件或合并分片文件
+        let log_zip = download_dir.join("log.zip");
+        if !log_zip.exists() {
+            anyhow::bail!("log.zip not found after download");
+        }
+
+        // 检查是否有分片文件
+        let has_split_files = std::fs::read_dir(&download_dir)?
+            .filter_map(|e| e.ok())
+            .any(|e| {
+                if let Some(name) = e.file_name().to_str() {
+                    name.starts_with("log.z") && name.len() == 8 && name[6..].parse::<u8>().is_ok()
+                } else {
+                    false
+                }
+            });
+
+        if has_split_files {
+            Self::merge_split_zips(&download_dir)?;
+        } else {
+            // 单个 zip 文件，直接复制为 merged.zip
+            let merged_zip = download_dir.join("merged.zip");
+            std::fs::copy(&log_zip, &merged_zip).context("Failed to copy log.zip to merged.zip")?;
+        }
+
+        // 5. 解压文件
+        let extract_dir = if let Some(folder_name) = log_output_folder_name {
+            base_dir.join(folder_name)
+        } else {
+            base_dir.join("merged")
+        };
+
+        let merged_zip = download_dir.join("merged.zip");
+        if merged_zip.exists() {
+            Self::extract_zip(&merged_zip, &extract_dir)?;
+        }
+
+        Ok(base_dir)
+    }
+
+    /// 下载单个文件
+    fn download_file(url: &str, output_path: &Path) -> Result<()> {
+        let client = reqwest::blocking::Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .context("Failed to create HTTP client")?;
+
+        let mut response = client
+            .get(url)
+            .send()
+            .with_context(|| format!("Failed to download: {}", url))?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("Download failed with status: {}", response.status());
+        }
+
+        let mut file = File::create(output_path)
+            .with_context(|| format!("Failed to create file: {:?}", output_path))?;
+
+        std::io::copy(&mut response, &mut file)
+            .with_context(|| format!("Failed to write file: {:?}", output_path))?;
+
+        Ok(())
+    }
+
+    /// 查找请求 ID 并发送到 Streamock 服务
+    /// 返回提取的响应内容
+    pub fn find_and_send_to_streamock(
+        log_file: &Path,
+        request_id: &str,
+        jira_id: Option<&str>,
+        jira_service_address: Option<&str>,
+        streamock_url: Option<&str>,
+    ) -> Result<String> {
+        // 1. 提取响应内容
+        let response_content = Self::extract_response_content(log_file, request_id)
+            .context("Failed to extract response content")?;
+
+        // 2. 获取日志条目的 URL 信息（用于生成 name）
+        let entry = Self::find_request_id(log_file, request_id)?;
+        let name = if let Some(entry) = entry {
+            if let Some(url) = entry.url {
+                // 提取 URL 的最后两段路径
+                let url_parts: Vec<&str> = url.split('/').collect();
+                if url_parts.len() >= 2 {
+                    format!(
+                        "#{} {}",
+                        request_id,
+                        url_parts[url_parts.len() - 2..].join("/")
+                    )
+                } else {
+                    format!("#{} {}", request_id, url_parts.last().unwrap_or(&"unknown"))
+                }
+            } else {
+                format!("#{} unknown", request_id)
+            }
+        } else {
+            format!("#{} unknown", request_id)
+        };
+
+        // 3. 生成 domain
+        let domain = if let Some(jira_id) = jira_id {
+            if let Some(jira_service) = jira_service_address {
+                format!("{}/browse/{}", jira_service, jira_id)
+            } else {
+                format!("jira/{}", jira_id)
+            }
+        } else {
+            log_file
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or("unknown")
+                .to_string()
+        };
+
+        // 4. 生成时间戳
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let formatted_timestamp = format!("Unix timestamp: {}", now);
+
+        // 5. 创建 JSON payload
+        let payload = serde_json::json!({
+            "encodedKey": "",
+            "data": response_content,
+            "combineLine": "",
+            "separator": "",
+            "domain": domain,
+            "name": name,
+            "timestamp": formatted_timestamp
+        });
+
+        // 6. 发送到 Streamock 服务
+        let streamock_url = streamock_url.unwrap_or("http://localhost:3001/api/submit");
+        let client = reqwest::blocking::Client::new();
+        let response = client
+            .post(streamock_url)
+            .header("Content-Type", "application/json")
+            .header("Connection", "keep-alive")
+            .json(&payload)
+            .send()
+            .context("Failed to send request to Streamock")?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().unwrap_or_default();
+            anyhow::bail!("Streamock request failed: {} - {}", status, body);
+        }
+
+        Ok(response_content)
+    }
+
+    /// 查找日志文件
+    /// 在指定目录中查找 flutter-api*.log 文件
+    pub fn find_log_file(base_dir: &Path) -> Result<PathBuf> {
+        // 尝试查找 flutter-api*.log 文件
+        let log_files: Vec<_> = std::fs::read_dir(base_dir)
+            .context("Failed to read directory")?
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| {
+                if let Ok(metadata) = entry.metadata() {
+                    if metadata.is_file() {
+                        if let Some(name) = entry.file_name().to_str() {
+                            return name.starts_with("flutter-api") && name.ends_with(".log");
+                        }
+                    }
+                }
+                false
+            })
+            .map(|entry| entry.path())
+            .collect();
+
+        if let Some(log_file) = log_files.first() {
+            Ok(log_file.clone())
+        } else {
+            // 如果没找到，返回默认路径
+            Ok(base_dir.join("flutter-api.log"))
+        }
+    }
+
+    /// 获取日志文件路径
+    /// 根据 JIRA ID 自动解析日志文件路径
+    pub fn get_log_file_path(jira_id: &str) -> Result<PathBuf> {
+        let home = env::var("HOME").context("HOME environment variable not set")?;
+        let home_path = PathBuf::from(&home);
+
+        // 从 Settings 获取日志输出文件夹名称
+        let settings = Settings::get();
+        let base_dir = if !settings.log_output_folder_name.is_empty() {
+            home_path.join(format!(
+                "Downloads/logs_{}/{}/merged",
+                jira_id, settings.log_output_folder_name
+            ))
+        } else {
+            home_path.join(format!("Downloads/logs_{}/merged", jira_id))
+        };
+
+        // 如果 merged 目录不存在，尝试查找其他目录
+        if !base_dir.exists() {
+            // 尝试在 logs_<JIRA_ID> 目录下查找
+            let logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
+            if logs_dir.exists() {
+                // 查找 merged 或任何包含 flutter-api*.log 的目录
+                if let Ok(entries) = std::fs::read_dir(&logs_dir) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_dir() {
+                            let potential_log_file = path.join("flutter-api.log");
+                            if potential_log_file.exists() {
+                                return Ok(potential_log_file);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Self::find_log_file(&base_dir)
     }
 }

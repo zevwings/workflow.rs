@@ -73,4 +73,3 @@ pub trait Platform {
         anyhow::bail!("list_prs is not supported by this platform")
     }
 }
-

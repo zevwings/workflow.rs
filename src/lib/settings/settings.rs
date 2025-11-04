@@ -1,5 +1,5 @@
-use std::sync::{OnceLock, RwLock};
 use std::env;
+use std::sync::{OnceLock, RwLock};
 
 /// 应用程序设置
 /// 单例模式，从环境变量读取配置
@@ -55,11 +55,10 @@ static INSTANCE: OnceLock<RwLock<Settings>> = OnceLock::new();
 
 // 线程局部缓存，避免频繁读取锁
 thread_local! {
-    static CACHED: std::cell::Cell<*const Settings> = std::cell::Cell::new(std::ptr::null());
+    static CACHED: std::cell::Cell<*const Settings> = const { std::cell::Cell::new(std::ptr::null()) };
 }
 
 impl Settings {
-
     /// 获取单例实例
     /// 首次调用时会从环境变量初始化
     ///
@@ -87,24 +86,22 @@ impl Settings {
         INSTANCE.get_or_init(|| {
             // 如果初始化失败，创建一个包含默认值的 Settings
             // 这样在 setup 阶段不会 panic
-            let settings = Self::from_env().unwrap_or_else(|_| {
-                Self {
-                    email: String::new(),
-                    jira_api_token: String::new(),
-                    jira_service_address: String::new(),
-                    gh_branch_prefix: None,
-                    log_delete_when_operation_completed: false,
-                    log_output_folder_name: "logs".to_string(),
-                    disable_check_proxy: false,
-                    openai_key: None,
-                    llm_proxy_url: None,
-                    llm_proxy_key: None,
-                    deepseek_key: None,
-                    llm_provider: "openai".to_string(),
-                    codeup_project_id: None,
-                    codeup_csrf_token: None,
-                    codeup_cookie: None,
-                }
+            let settings = Self::from_env().unwrap_or_else(|_| Self {
+                email: String::new(),
+                jira_api_token: String::new(),
+                jira_service_address: String::new(),
+                gh_branch_prefix: None,
+                log_delete_when_operation_completed: false,
+                log_output_folder_name: "logs".to_string(),
+                disable_check_proxy: false,
+                openai_key: None,
+                llm_proxy_url: None,
+                llm_proxy_key: None,
+                deepseek_key: None,
+                llm_provider: "openai".to_string(),
+                codeup_project_id: None,
+                codeup_csrf_token: None,
+                codeup_cookie: None,
             });
             RwLock::new(settings)
         })
@@ -169,11 +166,13 @@ impl Settings {
 
     // ==================== Jira 配置 ====================
     fn load_jira_api_token() -> Result<String, String> {
-        env::var("JIRA_API_TOKEN").map_err(|_| "JIRA_API_TOKEN environment variable not set".to_string())
+        env::var("JIRA_API_TOKEN")
+            .map_err(|_| "JIRA_API_TOKEN environment variable not set".to_string())
     }
 
     fn load_jira_service_address() -> Result<String, String> {
-        env::var("JIRA_SERVICE_ADDRESS").map_err(|_| "JIRA_SERVICE_ADDRESS environment variable not set".to_string())
+        env::var("JIRA_SERVICE_ADDRESS")
+            .map_err(|_| "JIRA_SERVICE_ADDRESS environment variable not set".to_string())
     }
 
     // ==================== GitHub 配置 ====================
@@ -276,8 +275,10 @@ impl Settings {
     #[cfg(test)]
     pub fn reload_for_test() {
         let new_settings = Self::from_env().expect("Failed to initialize Settings");
-        *INSTANCE.get_or_init(|| RwLock::new(new_settings.clone()))
-            .write().unwrap() = new_settings;
+        *INSTANCE
+            .get_or_init(|| RwLock::new(new_settings.clone()))
+            .write()
+            .unwrap() = new_settings;
         CACHED.with(|c| c.set(std::ptr::null()));
     }
 }
@@ -350,4 +351,3 @@ mod tests {
         env::remove_var("LLM_PROVIDER");
     }
 }
-

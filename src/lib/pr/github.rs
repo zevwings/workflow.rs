@@ -1,6 +1,6 @@
+use crate::Git;
 use anyhow::{Context, Result};
 use duct::cmd;
-use crate::Git;
 
 use super::helpers::{extract_github_repo_from_url, extract_pr_id_from_url};
 use super::provider::Platform;
@@ -17,8 +17,7 @@ impl Platform for GitHub {
         target_branch: Option<&str>,
     ) -> Result<String> {
         // 获取仓库的 owner/repo
-        let remote_url = Git::get_remote_url()
-            .context("Failed to get remote URL")?;
+        let remote_url = Git::get_remote_url().context("Failed to get remote URL")?;
         let repo = extract_github_repo_from_url(&remote_url)
             .context("Failed to extract GitHub repo from remote URL")?;
 
@@ -166,4 +165,3 @@ mod tests {
         );
     }
 }
-

@@ -1,11 +1,13 @@
 use crate::{log_error, log_info, log_success, Codeup, Git, GitHub, Platform, RepoType};
 use anyhow::Result;
 
-/// PR 显示命令
-pub struct PRShowCommand;
+/// PR 状态命令
+#[allow(dead_code)]
+pub struct PRStatusCommand;
 
-impl PRShowCommand {
-    /// 显示 PR 信息
+impl PRStatusCommand {
+    /// 显示 PR 状态信息
+    #[allow(dead_code)]
     pub fn show(pr_id_or_branch: Option<String>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
@@ -59,8 +61,7 @@ impl PRShowCommand {
                 log_info!("{}", info);
             }
             RepoType::Unknown => {
-                let remote_url = Git::get_remote_url()
-                    .unwrap_or_else(|_| "unknown".to_string());
+                let remote_url = Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
                 log_error!("Unsupported repository type detected");
                 log_info!("Remote URL: {}", remote_url);
                 anyhow::bail!(

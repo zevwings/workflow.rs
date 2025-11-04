@@ -1,14 +1,17 @@
-use crate::commands::{check::CheckCommand, jira::status::JiraStatus};
+use crate::commands::check::CheckCommand;
+use crate::jira::status::JiraStatus;
 use crate::{
     extract_jira_ticket_id, log_success, log_warning, Codeup, Git, GitHub, Jira, Platform, RepoType,
 };
 use anyhow::Result;
 
 /// PR 合并命令
+#[allow(dead_code)]
 pub struct PRMergeCommand;
 
 impl PRMergeCommand {
     /// 合并 PR
+    #[allow(dead_code)]
     pub fn merge(pr_id: Option<String>, _force: bool) -> Result<()> {
         // 1. 运行检查
         CheckCommand::run_all()?;
@@ -67,7 +70,7 @@ impl PRMergeCommand {
 
         // 4. 更新 Jira 状态（如果关联了 ticket）
         // 尝试从历史记录读取
-        let mut jira_ticket = crate::jira::status::read_work_history(&pr_id)?;
+        let mut jira_ticket = JiraStatus::read_work_history(&pr_id)?;
 
         // 如果历史记录中没有，尝试从 PR 标题提取
         if jira_ticket.is_none() {
@@ -97,7 +100,7 @@ impl PRMergeCommand {
             }
 
             // 更新工作历史记录的合并时间
-            crate::jira::status::update_work_history_merged(&pr_id)?;
+            JiraStatus::update_work_history_merged(&pr_id)?;
         } else {
             log_warning!("No Jira ticket associated with this PR");
         }

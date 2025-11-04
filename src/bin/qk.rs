@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::qk::Qk;
+use workflow::commands::qk::QuickCommand;
 
 #[derive(Parser)]
 #[command(name = "qk")]
@@ -38,16 +38,15 @@ fn main() -> Result<()> {
 
     match cli.subcommand {
         QkCommands::Download => {
-            Qk::download(&cli.jira_id)?;
+            QuickCommand::download(&cli.jira_id)?;
         }
         QkCommands::Find { request_id } => {
-            Qk::find_request_id(&cli.jira_id, request_id)?;
+            QuickCommand::find_request_id(&cli.jira_id, request_id)?;
         }
         QkCommands::Search { search_term } => {
-            Qk::search(&cli.jira_id, search_term)?;
+            QuickCommand::search(&cli.jira_id, search_term)?;
         }
     }
 
     Ok(())
 }
-

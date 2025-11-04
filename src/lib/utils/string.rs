@@ -46,4 +46,3 @@ mod tests {
         assert_eq!(to_branch_name("Bug fix #123"), "bug-fix-123");
     }
 }
-

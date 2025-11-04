@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::settings::Settings;
 use super::provider::Platform;
+use crate::settings::Settings;
 
 /// Codeup API 模块
 pub struct Codeup;
@@ -54,14 +54,17 @@ impl Platform for Codeup {
         target_branch: Option<&str>,
     ) -> Result<String> {
         let settings = Settings::get();
-        let project_id = settings.codeup_project_id
+        let project_id = settings
+            .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
 
-        let csrf_token = settings.codeup_csrf_token
+        let csrf_token = settings
+            .codeup_csrf_token
             .as_ref()
             .context("CODEUP_CSRF_TOKEN environment variable not set")?;
 
-        let cookie = settings.codeup_cookie
+        let cookie = settings
+            .codeup_cookie
             .as_ref()
             .context("CODEUP_COOKIE environment variable not set")?;
 
@@ -116,7 +119,8 @@ impl Platform for Codeup {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         let settings = Settings::get();
-        let csrf_token = settings.codeup_csrf_token
+        let csrf_token = settings
+            .codeup_csrf_token
             .as_ref()
             .context("CODEUP_CSRF_TOKEN environment variable not set")?;
 
@@ -422,8 +426,7 @@ impl Platform for Codeup {
             let pr_id = if let Some(iid) = pr.pr_number {
                 iid.to_string()
             } else if let Some(ref detail_url) = pr.detail_url {
-                Self::extract_pr_id_from_url(detail_url)
-                    .unwrap_or_else(|| "N/A".to_string())
+                Self::extract_pr_id_from_url(detail_url).unwrap_or_else(|| "N/A".to_string())
             } else {
                 "N/A".to_string()
             };
@@ -451,10 +454,12 @@ impl Codeup {
     /// 获取环境变量（辅助函数）
     fn get_env_vars() -> Result<(u64, String)> {
         let settings = Settings::get();
-        let project_id = settings.codeup_project_id
+        let project_id = settings
+            .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
 
-        let cookie = settings.codeup_cookie
+        let cookie = settings
+            .codeup_cookie
             .as_ref()
             .context("CODEUP_COOKIE environment variable not set")?
             .clone();
@@ -512,4 +517,3 @@ impl Codeup {
             .map(|m| m.as_str().to_string())
     }
 }
-

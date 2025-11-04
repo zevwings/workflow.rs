@@ -43,4 +43,3 @@ pub fn has_uncommitted_changes() -> Result<bool> {
 
     Ok(!output.trim().is_empty())
 }
-

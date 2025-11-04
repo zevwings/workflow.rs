@@ -1,8 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::Jira;
 use super::translator::{should_translate, translate_with_llm};
+use crate::Jira;
 
 /// LLM 工具模块 - 用于生成 PR 标题和分支名
 pub struct LLM;
@@ -46,4 +46,3 @@ impl LLM {
         })
     }
 }
-

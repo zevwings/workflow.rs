@@ -1,18 +1,21 @@
-use crate::commands::{check::CheckCommand, jira::status::JiraStatus};
+use crate::commands::check::CheckCommand;
+use crate::jira::status::JiraStatus;
 use crate::{
     extract_pr_id_from_url, generate_branch_name, generate_commit_title, generate_pr_body,
-    log_error, log_info, log_success, log_warning, Browser, Clipboard, Codeup, Git, GitHub, Jira, Platform, RepoType, LLM,
-    TYPES_OF_CHANGES,
+    log_error, log_info, log_success, log_warning, Browser, Clipboard, Codeup, Git, GitHub, Jira,
+    Platform, RepoType, LLM, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
 use std::io::{self, Write};
 
 /// PR 创建命令
+#[allow(dead_code)]
 pub struct PRCreateCommand;
 
 impl PRCreateCommand {
     /// 创建 PR（完整流程）
+    #[allow(dead_code)]
     pub fn create(
         jira_ticket: Option<String>,
         title: Option<String>,
@@ -190,7 +193,7 @@ impl PRCreateCommand {
                 // 写入历史记录
                 let pr_id = extract_pr_id_from_url(&pr_url)?;
                 let repository = Git::get_remote_url().ok();
-                crate::jira::status::write_work_history(
+                JiraStatus::write_work_history(
                     ticket,
                     &pr_id,
                     Some(&pr_url),

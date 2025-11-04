@@ -12,10 +12,29 @@
 
 ## 🚀 快速开始
 
+### 安装
+
+使用 Makefile 安装所有二进制文件到系统：
+
+```bash
+make install
+```
+
+这会安装以下命令到 `/usr/local/bin`：
+- `workflow` - 主命令
+- `pr` - PR 操作命令
+- `qk` - 快速日志操作命令
+
+**重要提示**：
+- 安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
+- 如果系统默认的 `pr` 命令（Unix 文本格式化工具）干扰，确保 `/usr/local/bin` 在 PATH 中位于 `/usr/bin` 之前
+
 ### 编译项目
 
 ```bash
 cargo build --release
+# 或使用 Makefile
+make release
 ```
 
 ### 运行测试
@@ -46,10 +65,12 @@ workflow/
 │   │   ├── log/         # 日志处理
 │   │   ├── settings/    # 配置管理
 │   │   └── utils/       # 工具函数
+│   ├── bin/             # 独立可执行文件
+│   │   ├── pr.rs        # PR 命令入口
+│   │   └── qk.rs        # 快速日志操作入口
 │   └── commands/        # 命令实现
 │       ├── pr/          # PR 命令
-│       ├── jira/        # Jira 命令
-│       ├── logs/        # 日志命令
+│       ├── qk/          # 快速日志操作命令
 │       └── ...
 └── docs/                # 文档目录
     └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
@@ -59,43 +80,49 @@ workflow/
 
 ### 检查工具
 ```bash
-workflow check                    # 综合检查
-workflow check --git-only         # 只检查 Git
-workflow check --network-only     # 只检查网络
-workflow check --proxy-only       # 只检查代理
-workflow check --pre-commit       # Pre-commit 检查
+workflow check git_status         # 检查 Git 状态
+workflow check network             # 检查网络连接（GitHub）
+workflow check pre_commit          # 运行 Pre-commit 检查
 ```
 
-### Jira 操作
+### 代理管理
 ```bash
-workflow jira status PROJ-123     # 配置状态映射
-workflow jira show PROJ-123        # 显示 ticket
+workflow proxy on                  # 开启代理
+workflow proxy off                 # 关闭代理
+workflow proxy check               # 检查代理状态和配置
 ```
+
+### 配置管理
+```bash
+workflow setup                     # 初始化或更新配置
+workflow config                    # 查看当前配置
+```
+
 
 ### PR 操作
 ```bash
-workflow pr create PROJ-123       # 创建 PR（AI 生成标题）
-workflow pr create --title "..."  # 手动指定标题
-workflow pr merge                 # 合并当前分支的 PR
-workflow pr merge 123             # 合并指定 PR
-workflow pr show                  # 显示当前分支的 PR
-workflow pr show 123              # 显示指定 PR
-workflow pr list                  # 列出所有 PR
-workflow pr list --state open     # 列出打开的 PR
+pr create [PROJ-123]     # 创建 PR（可选 Jira ticket，AI 生成标题）
+pr create --title "..."  # 手动指定标题
+pr create --description "..." # 指定简短描述
+pr create --dry-run      # 干运行（不实际创建）
+pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
+pr merge --force         # 强制合并
+pr status [PR_ID_OR_BRANCH] # 显示 PR 状态信息（可选参数）
+pr list                   # 列出所有 PR
+pr list --state open     # 按状态过滤（open/closed/merged）
+pr list --limit 10       # 限制结果数量
+pr update                 # 更新代码（使用 PR 标题作为提交信息）
 ```
 
-### 日志操作
+### 日志操作 (qk)
 ```bash
-workflow logs download PROJ-123   # 下载日志
-workflow logs find <file> <id>    # 查找请求 ID
-workflow logs search <file> <term> # 搜索关键词
+qk PROJ-123 download      # 下载日志文件
+qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会交互式输入）
+qk PROJ-123 search [term] # 搜索关键词（可选，不提供会交互式输入）
 ```
 
-### 辅助功能
-```bash
-workflow update                    # 快速更新（使用 PR 标题）
-workflow proxy                     # 检查并设置代理
-```
+> **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
+
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
 

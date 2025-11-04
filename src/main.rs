@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, config, proxy, setup};
+use commands::{check, config, proxy, setup, uninstall};
 
 use workflow::*;
 
@@ -32,6 +32,8 @@ enum Commands {
     Setup,
     /// View current configuration
     Config,
+    /// Uninstall Workflow CLI configuration
+    Uninstall,
 }
 
 #[derive(Subcommand)]
@@ -76,14 +78,18 @@ fn main() -> Result<()> {
         Some(Commands::Config) => {
             config::ConfigCommand::show()?;
         }
+        Some(Commands::Uninstall) => {
+            uninstall::UninstallCommand::run()?;
+        }
         None => {
             // 显示帮助信息
             println!("Workflow CLI - Configuration Management");
             println!("\nAvailable commands:");
-            println!("  workflow check  - Run checks (git_status/network/pre_commit)");
-            println!("  workflow proxy  - Manage proxy settings (on/off/check)");
-            println!("  workflow setup  - Initialize or update configuration");
-            println!("  workflow config - View current configuration");
+            println!("  workflow check     - Run checks (git_status/network/pre_commit)");
+            println!("  workflow proxy     - Manage proxy settings (on/off/check)");
+            println!("  workflow setup     - Initialize or update configuration");
+            println!("  workflow config    - View current configuration");
+            println!("  workflow uninstall - Uninstall Workflow CLI configuration");
             println!("\nUse 'workflow <command> --help' for more information.");
         }
     }
