@@ -51,6 +51,24 @@ struct PullRequestBranch {
     ref_name: String,
 }
 
+#[derive(Debug, Deserialize)]
+struct RepositoryInfo {
+    default_branch: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubErrorResponse {
+    message: String,
+    errors: Option<Vec<GitHubError>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GitHubError {
+    resource: Option<String>,
+    field: Option<String>,
+    code: Option<String>,
+}
+
 impl PlatformProvider for GitHub {
     /// 创建 Pull Request
     fn create_pull_request(
@@ -61,7 +79,13 @@ impl PlatformProvider for GitHub {
     ) -> Result<String> {
         let repo = Self::get_repo()?;
         let (owner, repo_name) = Self::parse_repo(&repo)?;
-        let base_branch = target_branch.unwrap_or("main");
+
+        // 如果没有指定目标分支，获取仓库的默认分支
+        let base_branch = if let Some(branch) = target_branch {
+            branch.to_string()
+        } else {
+            Self::get_default_branch(&owner, &repo_name)?
+        };
 
         let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);
 
@@ -69,24 +93,44 @@ impl PlatformProvider for GitHub {
             title: title.to_string(),
             body: body.to_string(),
             head: source_branch.to_string(),
-            base: base_branch.to_string(),
+            base: base_branch.clone(),
         };
 
         let client = HttpClient::new()?;
         let headers = Self::create_headers()?;
-        let response: HttpResponse<CreatePullRequestResponse> = client
+
+        // 先尝试解析为通用 JSON 以检查状态码
+        let response: HttpResponse<serde_json::Value> = client
             .post(&url, &request, None, Some(&headers))
             .context("Failed to create PR via GitHub API")?;
 
+        // 如果请求失败，尝试解析错误响应
         if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
+            let error_msg = if let Ok(error) = serde_json::from_value::<GitHubErrorResponse>(response.data.clone()) {
+                let mut msg = format!("GitHub API error: {} (Status: {})", error.message, response.status);
+                if let Some(errors) = error.errors {
+                    for err in errors {
+                        if let (Some(resource), Some(field), Some(code)) = (err.resource, err.field, err.code) {
+                            msg.push_str(&format!("\n  - {}: {} field is invalid ({})", resource, field, code));
+                        }
+                    }
+                }
+                msg
+            } else {
+                format!(
+                    "GitHub API request failed: {} - {}",
+                    response.status,
+                    serde_json::to_string_pretty(&response.data).unwrap_or_else(|_| "Unknown error".to_string())
+                )
+            };
+            anyhow::bail!("{}", error_msg);
         }
 
-        Ok(response.data.html_url)
+        // 解析成功响应
+        let response_data: CreatePullRequestResponse = serde_json::from_value(response.data)
+            .context("Failed to parse success response")?;
+
+        Ok(response_data.html_url)
     }
 
     /// 合并 Pull Request
@@ -355,6 +399,26 @@ impl GitHub {
             anyhow::bail!("Invalid repo format: {}", repo);
         }
         Ok((parts[0].to_string(), parts[1].to_string()))
+    }
+
+    /// 获取仓库的默认分支
+    fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
+        let url = format!("https://api.github.com/repos/{}/{}", owner, repo_name);
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers()?;
+        let response: HttpResponse<RepositoryInfo> = client
+            .get(&url, None, Some(&headers))
+            .context("Failed to get repository info")?;
+
+        if !response.is_success() {
+            anyhow::bail!(
+                "Failed to get repository default branch: {} - {}",
+                response.status,
+                response.status_text
+            );
+        }
+
+        Ok(response.data.default_branch)
     }
 
     /// 创建 GitHub API 请求的 headers
