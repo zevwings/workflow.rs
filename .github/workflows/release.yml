@@ -320,12 +320,67 @@ jobs:
             echo "Warning: Could not find branch or tag in Formula file"
           fi
 
+          # 确保 install 方法中包含 install 二进制文件的安装
+          # 检查是否存在 bin.install "target/release/install"
+          if ! grep -q 'bin.install "target/release/install"' "$FORMULA_FILE"; then
+            echo "Adding install binary installation to install method..."
+            # 在 qk 安装行后添加 install 二进制安装
+            awk '/bin\.install "target\/release\/qk"/ { print; print ""; print "    # 安装 install 二进制文件，用于 post_install 中的 completion 安装"; print "    bin.install \"target/release/install\""; next }1' "$FORMULA_FILE" > "$FORMULA_FILE.tmp" && mv "$FORMULA_FILE.tmp" "$FORMULA_FILE"
+            echo "✅ Added install binary installation"
+          else
+            echo "✅ Install binary installation already exists"
+          fi
+
+          # 确保 post_install 方法中包含 completions 安装逻辑
+          # 检查是否存在 completions 安装代码
+          if ! grep -q 'install_binary = bin/"install"' "$FORMULA_FILE"; then
+            echo "Adding completions installation logic to post_install method..."
+            # 使用 awk 在 test do 之前插入 completions 安装逻辑
+            awk '/^  test do$/ {
+              print "    # 自动安装 shell completion"
+              print "    # 使用已安装的 install 二进制文件来安装 completions"
+              print "    install_binary = bin/\"install\""
+              print ""
+              print "    if install_binary.exist? && install_binary.executable?"
+              print "      home_dir = ENV.fetch(\"HOME\", Dir.home)"
+              print "      shell_env = ENV.fetch(\"SHELL\", \"/bin/zsh\")"
+              print "      ohai \"Installing shell completions...\""
+              print "      ohai \"Using HOME: #{home_dir}\""
+              print "      ohai \"Using SHELL: #{shell_env}\""
+              print "      result = system(install_binary.to_s)"
+              print "      if result"
+              print "        ohai \"Shell completions installed successfully\""
+              print "        ohai \"To activate completions, run: source ~/.zshrc  # or ~/.bashrc\""
+              print "      else"
+              print "        exit_code = $?.exitstatus || 1"
+              print "        opoo \"Failed to install shell completions (exit code: #{exit_code})\""
+              print "        opoo \"You can manually install completions by running:\""
+              print "        opoo \"  #{bin}/install\""
+              print "        opoo \"Or use the workflow command:\""
+              print "        opoo \"  workflow install\""
+              print "      end"
+              print "    else"
+              print "      opoo \"Install binary not found at #{install_binary}\""
+              print "      opoo \"Skipping automatic completion installation\""
+              print "      opoo \"You can manually install completions later by running:\""
+              print "      opoo \"  workflow install\""
+              print "    end"
+              print ""
+            }1' "$FORMULA_FILE" > "$FORMULA_FILE.tmp" && mv "$FORMULA_FILE.tmp" "$FORMULA_FILE"
+            echo "✅ Added completions installation logic"
+          else
+            echo "✅ Completions installation logic already exists"
+          fi
+
           # 显示更改
+          echo ""
           echo "Formula file updated:"
           echo "--- Before ---"
           cat "$FORMULA_FILE.bak"
+          echo ""
           echo "--- After ---"
           cat "$FORMULA_FILE"
+          echo ""
           echo "--- Diff ---"
           diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
 
