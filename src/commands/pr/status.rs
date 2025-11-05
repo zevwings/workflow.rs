@@ -1,4 +1,4 @@
-use crate::{log_error, log_info, log_success, Codeup, Git, GitHub, Platform, RepoType};
+use crate::{log_error, log_info, log_success, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// PR 状态命令
@@ -25,7 +25,7 @@ impl PullRequestStatusCommand {
                     }
                 } else {
                     // 从当前分支获取 PR
-                    match <GitHub as Platform>::get_current_branch_pull_request()? {
+                    match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
                         Some(id) => {
                             log_success!("Found PR for current branch: #{}", id);
                             id
@@ -37,7 +37,7 @@ impl PullRequestStatusCommand {
                 };
 
                 log_success!("\nPR Information:");
-                let info = <GitHub as Platform>::get_pull_request_info(&pull_request_id)?;
+                let info = <GitHub as PlatformProvider>::get_pull_request_info(&pull_request_id)?;
                 log_info!("{}", info);
             }
             RepoType::Codeup => {
@@ -45,7 +45,7 @@ impl PullRequestStatusCommand {
                     id
                 } else {
                     // 从当前分支获取 PR
-                    match <Codeup as Platform>::get_current_branch_pull_request()? {
+                    match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
                         Some(id) => {
                             log_success!("Found PR for current branch: #{}", id);
                             id
@@ -57,7 +57,7 @@ impl PullRequestStatusCommand {
                 };
 
                 log_success!("\nPR Information:");
-                let info = <Codeup as Platform>::get_pull_request_info(&pull_request_id_or_branch)?;
+                let info = <Codeup as PlatformProvider>::get_pull_request_info(&pull_request_id_or_branch)?;
                 log_info!("{}", info);
             }
             RepoType::Unknown => {

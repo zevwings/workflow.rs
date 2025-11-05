@@ -3,7 +3,7 @@ use crate::jira::status::JiraStatus;
 use crate::{
     extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
     generate_pull_request_body, log_error, log_info, log_success, log_warning, Browser, Clipboard,
-    Codeup, Git, GitHub, Jira, Platform, RepoType, LLM, TYPES_OF_CHANGES,
+    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, LLM, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
@@ -162,11 +162,11 @@ impl PullRequestCreateCommand {
         let pull_request_url = match repo_type {
             RepoType::GitHub => {
                 log_success!("Creating PR via GitHub...");
-                <GitHub as Platform>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
+                <GitHub as PlatformProvider>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
             }
             RepoType::Codeup => {
                 log_success!("Creating PR via Codeup...");
-                <Codeup as Platform>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
+                <Codeup as PlatformProvider>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
             }
             RepoType::Unknown => {
                 anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");

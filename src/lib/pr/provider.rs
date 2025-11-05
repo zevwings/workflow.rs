@@ -2,7 +2,7 @@ use anyhow::Result;
 
 /// PR 平台接口 trait
 /// 定义所有 PR 平台（GitHub、Codeup 等）必须实现的共同方法
-pub trait Platform {
+pub trait PlatformProvider {
     /// 创建 Pull Request
     ///
     /// # Arguments

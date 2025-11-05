@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, Codeup, Git, GitHub, Platform, RepoType};
+use crate::{log_info, log_success, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// PR 列表命令
@@ -14,12 +14,12 @@ impl GetPullRequestsCommand {
         match repo_type {
             RepoType::GitHub => {
                 log_success!("PR List");
-                let output = <GitHub as Platform>::get_pull_requests(state.as_deref(), limit)?;
+                let output = <GitHub as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
                 log_info!("{}", output);
             }
             RepoType::Codeup => {
                 log_success!("PR List");
-                let output = <Codeup as Platform>::get_pull_requests(state.as_deref(), limit)?;
+                let output = <Codeup as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
                 log_info!("{}", output);
             }
             _ => {

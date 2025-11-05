@@ -1,4 +1,4 @@
-use crate::{Codeup, Git, GitHub, Platform, RepoType};
+use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// 快速更新命令
@@ -35,10 +35,10 @@ impl PullRequestUpdateCommand {
         let pull_request_title = match repo_type {
             RepoType::GitHub => {
                 // 获取当前分支的 PR
-                match <GitHub as Platform>::get_current_branch_pull_request()? {
+                match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
                     Some(pull_request_id) => {
                         log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<GitHub as Platform>::get_pull_request_title(&pull_request_id)?)
+                        Some(<GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id)?)
                     }
                     None => {
                         log_warning!("No PR found for current branch");
@@ -48,10 +48,10 @@ impl PullRequestUpdateCommand {
             }
             RepoType::Codeup => {
                 // 获取当前分支的 PR
-                match <Codeup as Platform>::get_current_branch_pull_request()? {
+                match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
                     Some(pull_request_id) => {
                         log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<Codeup as Platform>::get_pull_request_title(&pull_request_id)?)
+                        Some(<Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id)?)
                     }
                     None => {
                         log_warning!("No PR found for current branch");

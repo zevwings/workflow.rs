@@ -3,12 +3,12 @@ use anyhow::{Context, Result};
 use duct::cmd;
 
 use super::helpers::{extract_github_repo_from_url, extract_pull_request_id_from_url};
-use super::provider::Platform;
+use super::provider::PlatformProvider;
 
 /// GitHub API 模块
 pub struct GitHub;
 
-impl Platform for GitHub {
+impl PlatformProvider for GitHub {
     /// 创建 Pull Request
     fn create_pull_request(
         title: &str,

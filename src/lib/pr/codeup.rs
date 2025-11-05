@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use super::provider::Platform;
+use super::provider::PlatformProvider;
 use crate::settings::Settings;
 
 /// Codeup API 模块
@@ -45,7 +45,7 @@ struct MergePRRequest {
     delete_source_branch: bool,
 }
 
-impl Platform for Codeup {
+impl PlatformProvider for Codeup {
     /// 创建 Pull Request（通过 HTTP API）
     fn create_pull_request(
         title: &str,

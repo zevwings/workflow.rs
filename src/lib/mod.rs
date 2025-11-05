@@ -9,5 +9,5 @@ pub use llm::*;
 pub use git::*;
 pub use jira::*;
 pub use log::*;
-pub use pr::{Codeup, GitHub, Platform};
+pub use pr::{Codeup, GitHub, PlatformProvider};
 pub use utils::*;

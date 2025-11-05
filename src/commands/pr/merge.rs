@@ -1,7 +1,7 @@
 use crate::commands::check::CheckCommand;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_jira_ticket_id, log_success, log_warning, Codeup, Git, GitHub, Jira, Platform, RepoType,
+    extract_jira_ticket_id, log_success, log_warning, Codeup, Git, GitHub, Jira, PlatformProvider, RepoType,
 };
 use anyhow::Result;
 
@@ -23,7 +23,7 @@ impl PullRequestMergeCommand {
         } else {
             // 从当前分支获取 PR
             match repo_type {
-                RepoType::GitHub => match <GitHub as Platform>::get_current_branch_pull_request()? {
+                RepoType::GitHub => match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
                     Some(id) => {
                         log_success!("Found PR for current branch: #{}", id);
                         id
@@ -33,7 +33,7 @@ impl PullRequestMergeCommand {
                     }
                 },
                 RepoType::Codeup => {
-                    match <Codeup as Platform>::get_current_branch_pull_request()? {
+                    match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
                         Some(id) => {
                             log_success!("Found PR for current branch: #{}", id);
                             id
@@ -54,11 +54,11 @@ impl PullRequestMergeCommand {
         // 3. 合并 PR
         match repo_type {
             RepoType::GitHub => {
-                <GitHub as Platform>::merge_pull_request(&pull_request_id, true)?; // delete-branch
+                <GitHub as PlatformProvider>::merge_pull_request(&pull_request_id, true)?; // delete-branch
                 log_success!("PR merged successfully");
             }
             RepoType::Codeup => {
-                <Codeup as Platform>::merge_pull_request(&pull_request_id, true)?; // delete-branch
+                <Codeup as PlatformProvider>::merge_pull_request(&pull_request_id, true)?; // delete-branch
                 log_success!("PR merged successfully");
             }
             _ => {
@@ -76,12 +76,12 @@ impl PullRequestMergeCommand {
         if jira_ticket.is_none() {
             match repo_type {
                 RepoType::GitHub => {
-                    if let Ok(title) = <GitHub as Platform>::get_pull_request_title(&pull_request_id) {
+                    if let Ok(title) = <GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id) {
                         jira_ticket = extract_jira_ticket_id(&title);
                     }
                 }
                 RepoType::Codeup => {
-                    if let Ok(title) = <Codeup as Platform>::get_pull_request_title(&pull_request_id) {
+                    if let Ok(title) = <Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id) {
                         jira_ticket = extract_jira_ticket_id(&title);
                     }
                 }

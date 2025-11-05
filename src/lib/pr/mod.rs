@@ -11,4 +11,4 @@ pub use helpers::{
     extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
     generate_pull_request_body, transform_to_branch_name,
 };
-pub use provider::Platform;
+pub use provider::PlatformProvider;
