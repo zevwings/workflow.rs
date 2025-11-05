@@ -69,7 +69,8 @@ class Workflow < Formula
 
     # 自动安装 shell completion
     # 使用已安装的 install 二进制文件来安装 completions
-    install_binary = bin/"install"
+    # 在 post_install 中，需要使用 prefix/"bin" 而不是 bin
+    install_binary = prefix/"bin"/"install"
 
     if install_binary.exist? && install_binary.executable?
       # 确保环境变量正确设置
@@ -91,7 +92,7 @@ class Workflow < Formula
         exit_code = $?.exitstatus || 1
         opoo "Failed to install shell completions (exit code: #{exit_code})"
         opoo "You can manually install completions by running:"
-        opoo "  #{bin}/install"
+        opoo "  #{install_binary}"
         opoo "Or use the workflow command:"
         opoo "  workflow install"
       end
