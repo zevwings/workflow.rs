@@ -137,11 +137,16 @@ impl PullRequestCreateCommand {
         // 检查标题是否包含非 ASCII 字符（如中文）
         let has_non_ascii = !title.is_ascii();
         if has_non_ascii {
-            log_info!("Title contains non-ASCII characters, will use LLM to generate English branch name");
+            log_info!(
+                "Title contains non-ASCII characters, will use LLM to generate English branch name"
+            );
         }
 
         // 尝试使用 LLM 根据 commit_title 生成分支名
-        log_info!("Attempting to generate branch name with LLM for commit_title: {}", commit_title);
+        log_info!(
+            "Attempting to generate branch name with LLM for commit_title: {}",
+            commit_title
+        );
         let branch_name = match LLM::generate_branch_name(&commit_title) {
             Ok(llm_branch_name) => {
                 log_success!("Generated branch name with LLM: {}", llm_branch_name);

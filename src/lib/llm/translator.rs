@@ -285,7 +285,11 @@ pub fn generate_branch_name_with_llm(commit_title: &str) -> Result<String> {
             }
             _ => "LLM_OPENAI_KEY environment variable not set",
         };
-        log_info!("LLM API key not set: {} (provider: {})", error_msg, provider);
+        log_info!(
+            "LLM API key not set: {} (provider: {})",
+            error_msg,
+            provider
+        );
         anyhow::bail!("{} (provider: {})", error_msg, provider);
     }
 
