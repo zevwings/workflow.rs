@@ -231,6 +231,8 @@ jobs:
     needs: [build, release]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write  # 允许推送到 homebrew-workflow 仓库
 
     steps:
       - name: Checkout code
@@ -276,14 +278,26 @@ jobs:
           fi
           echo "Found $found_files SHA256 files"
 
+      - name: Determine token for homebrew repo
+        id: token
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
+            echo "token=${{ secrets.HOMEBREW_TAP_TOKEN }}" >> $GITHUB_OUTPUT
+            echo "Using HOMEBREW_TAP_TOKEN"
+          else
+            echo "token=${{ github.token }}" >> $GITHUB_OUTPUT
+            echo "Using GITHUB_TOKEN (fallback - may not work for cross-repo access)"
+            echo "⚠️  Warning: For cross-repository access, please configure HOMEBREW_TAP_TOKEN secret"
+            echo "   Settings → Secrets and variables → Actions → New repository secret"
+          fi
+
       - name: Checkout homebrew-workflow
         uses: actions/checkout@v4
         with:
           repository: zevwings/homebrew-workflow
           path: homebrew-workflow
-          # HOMEBREW_TAP_TOKEN: GitHub Personal Access Token with write access to homebrew-workflow repo
-          # Configure in: Settings → Secrets and variables → Actions
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ steps.token.outputs.token }}
 
       - name: Update Formula
         shell: bash
