@@ -260,6 +260,7 @@ pub fn generate_branch_name_with_llm(commit_title: &str) -> Result<String> {
     let provider = settings.llm_provider.clone();
 
     log_info!("Using LLM provider: {} to generate branch name", provider);
+    log_info!("Commit title for branch name generation: {}", commit_title);
 
     // 先检查对应的 API key 是否设置
     let api_key_set = match provider.as_str() {
@@ -284,8 +285,11 @@ pub fn generate_branch_name_with_llm(commit_title: &str) -> Result<String> {
             }
             _ => "LLM_OPENAI_KEY environment variable not set",
         };
+        log_info!("LLM API key not set: {} (provider: {})", error_msg, provider);
         anyhow::bail!("{} (provider: {})", error_msg, provider);
     }
+
+    log_info!("LLM API key is set, proceeding with branch name generation");
 
     match provider.as_str() {
         "openai" => generate_branch_name_with_openai(commit_title),
