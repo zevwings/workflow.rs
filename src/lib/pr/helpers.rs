@@ -136,12 +136,14 @@ pub fn generate_commit_title(jira_ticket: Option<&str>, title: &str) -> String {
 }
 
 /// 将字符串转换为分支名（替换特殊字符为连字符，去除重复连字符）
+/// 只保留 ASCII 字母数字字符，过滤掉中文字符等其他非 ASCII 字符
 pub fn transform_to_branch_name(s: &str) -> String {
     let mut result = String::new();
     let mut last_was_dash = false;
 
     for c in s.chars() {
-        if c.is_alphanumeric() {
+        // 只保留 ASCII 字母数字字符
+        if c.is_ascii_alphanumeric() {
             result.push(c.to_ascii_lowercase());
             last_was_dash = false;
         } else if !last_was_dash {
