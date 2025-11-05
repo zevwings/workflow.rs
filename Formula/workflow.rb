@@ -26,6 +26,12 @@ class Workflow < Formula
     bin.install "qk"
   end
 
+  def post_install
+    # 自动安装 shell completion
+    # 运行 workflow install 命令会自动检测 shell 并安装 completion
+    system "#{bin}/workflow", "install" rescue nil
+  end
+
   test do
     system "#{bin}/workflow", "--help"
     system "#{bin}/pr", "--help"
