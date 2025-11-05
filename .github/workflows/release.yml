@@ -304,9 +304,21 @@ jobs:
           # 更新版本号
           sed -i "s/version \"[^\"]*\"/version \"${{ steps.version.outputs.version }}\"/" "$FORMULA_FILE"
 
-          # 更新 git tag（使用 git 仓库方式时，只需要更新 tag）
-          # 匹配格式：url "https://github.com/zevwings/workflow.rs.git", tag: "v0.0.1"
-          sed -i "s|tag: \"v[^\"]*\"|tag: \"${{ steps.version.outputs.tag }}\"|" "$FORMULA_FILE"
+          # 更新 git URL：如果当前是 branch: "master"，将其替换为 tag 格式
+          # 如果已经是 tag: 格式，则更新 tag 值
+          # 匹配格式1：url "https://github.com/zevwings/workflow.rs.git", branch: "master"
+          # 匹配格式2：url "https://github.com/zevwings/workflow.rs.git", tag: "v0.0.1"
+          if grep -q 'branch: "master"' "$FORMULA_FILE"; then
+            # 如果使用 branch: "master"，替换为 tag 格式
+            sed -i 's|branch: "master"|tag: "'"${{ steps.version.outputs.tag }}"'"|' "$FORMULA_FILE"
+            echo "Converted branch: \"master\" to tag: \"${{ steps.version.outputs.tag }}\""
+          elif grep -q 'tag: "v' "$FORMULA_FILE"; then
+            # 如果已经是 tag 格式，更新 tag 值
+            sed -i "s|tag: \"v[^\"]*\"|tag: \"${{ steps.version.outputs.tag }}\"|" "$FORMULA_FILE"
+            echo "Updated tag to: \"${{ steps.version.outputs.tag }}\""
+          else
+            echo "Warning: Could not find branch or tag in Formula file"
+          fi
 
           # 显示更改
           echo "Formula file updated:"
