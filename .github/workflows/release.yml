@@ -63,17 +63,28 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            pkg-config \
-            libxcb1-dev \
-            libxcb-render0-dev \
-            libxcb-shape0-dev \
-            libxcb-xfixes0-dev
-          # 如果是交叉编译 ARM，安装交叉编译工具链
+          # 如果是交叉编译 ARM，启用多架构支持并安装 ARM 架构的库
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # 启用多架构支持
+            sudo dpkg --add-architecture arm64
+            sudo apt-get update
+            # 安装交叉编译工具链和 ARM 架构的库
             sudo apt-get install -y \
               gcc-aarch64-linux-gnu \
-              libc6-dev-arm64-cross
+              libc6-dev-arm64-cross \
+              libxcb1-dev:arm64 \
+              libxcb-render0-dev:arm64 \
+              libxcb-shape0-dev:arm64 \
+              libxcb-xfixes0-dev:arm64 \
+              pkg-config-aarch64-linux-gnu
+          else
+            # 对于同架构编译，安装 x86_64 库
+            sudo apt-get install -y \
+              pkg-config \
+              libxcb1-dev \
+              libxcb-render0-dev \
+              libxcb-shape0-dev \
+              libxcb-xfixes0-dev
           fi
 
       - name: Install system dependencies (macOS)
@@ -101,6 +112,17 @@ jobs:
             # 配置交叉编译环境
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            # 配置 PKG_CONFIG 指向 ARM 架构的库
+            export PKG_CONFIG_ALLOW_CROSS=1
+            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+            export PKG_CONFIG_SYSROOT_DIR=/usr/aarch64-linux-gnu
+            # 使用交叉编译版本的 pkg-config
+            export PKG_CONFIG=aarch64-linux-gnu-pkg-config
+            # 设置库搜索路径
+            export LIBRARY_PATH=/usr/lib/aarch64-linux-gnu
+            export LD_LIBRARY_PATH=/usr/lib/aarch64-linux-gnu
+            # 设置链接器标志
+            export RUSTFLAGS="-C linker=aarch64-linux-gnu-gcc -C link-arg=-L/usr/lib/aarch64-linux-gnu"
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk --bin install
         env:
@@ -291,7 +313,8 @@ jobs:
           # Configure in: Settings → Secrets and variables → Actions
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
-      - name: Update Formula
+      - na
+      me: Update Formula
         shell: bash
         run: |
           cd homebrew-workflow
