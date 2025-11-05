@@ -60,8 +60,7 @@ where
                 .context("Failed to parse empty response as JSON")?
         } else {
             // 非空响应体，直接使用字节解析 JSON（比字符串解析更高效）
-            serde_json::from_slice(&bytes)
-                .context("Failed to parse JSON response")?
+            serde_json::from_slice(&bytes).context("Failed to parse JSON response")?
         };
 
         Ok(Self {

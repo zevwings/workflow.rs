@@ -171,8 +171,8 @@ impl PullRequestMergeCommand {
 
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
-        use duct::cmd;
         use crate::log_info;
+        use duct::cmd;
 
         // 如果当前分支已经是默认分支，不需要清理
         if current_branch == default_branch {
@@ -181,7 +181,10 @@ impl PullRequestMergeCommand {
         }
 
         log_info!("Switching to default branch: {}", default_branch);
-        log_info!("Note: Remote branch '{}' has already been deleted via API", current_branch);
+        log_info!(
+            "Note: Remote branch '{}' has already been deleted via API",
+            current_branch
+        );
 
         // 1. 先更新远程分支信息（这会同步远程删除的分支）
         cmd("git", &["fetch", "origin"])
@@ -208,7 +211,9 @@ impl PullRequestMergeCommand {
                     log_info!("Branch may not be fully merged, trying force delete...");
                     cmd("git", &["branch", "-D", current_branch])
                         .run()
-                        .with_context(|| format!("Failed to delete local branch: {}", current_branch))
+                        .with_context(|| {
+                            format!("Failed to delete local branch: {}", current_branch)
+                        })
                 })
                 .context("Failed to delete local branch")?;
             log_success!("Local branch deleted: {}", current_branch);
@@ -221,8 +226,15 @@ impl PullRequestMergeCommand {
             .run()
             .context("Failed to prune remote references")?;
 
-        log_success!("Cleanup completed: switched to {} and deleted local branch {}", default_branch, current_branch);
-        log_success!("Remote branch '{}' was already deleted via API", current_branch);
+        log_success!(
+            "Cleanup completed: switched to {} and deleted local branch {}",
+            default_branch,
+            current_branch
+        );
+        log_success!(
+            "Remote branch '{}' was already deleted via API",
+            current_branch
+        );
         Ok(())
     }
 
@@ -234,8 +246,9 @@ impl PullRequestMergeCommand {
             .read()
             .context("Failed to list branches")?;
 
-        Ok(output.trim().lines().any(|line| {
-            line.trim().trim_start_matches('*').trim() == branch_name
-        }))
+        Ok(output
+            .trim()
+            .lines()
+            .any(|line| line.trim().trim_start_matches('*').trim() == branch_name))
     }
 }

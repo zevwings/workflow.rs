@@ -4,6 +4,7 @@ use serde_json::json;
 
 use crate::http::{HttpClient, HttpResponse};
 use crate::log_info;
+use crate::pr::helpers::transform_to_branch_name;
 use crate::settings::Settings;
 
 /// 判断是否需要翻译
@@ -258,8 +259,6 @@ pub fn generate_branch_name_with_llm(commit_title: &str) -> Result<String> {
     let settings = Settings::load();
     let provider = settings.llm_provider.clone();
 
-    log_info!("Using LLM provider: {} to generate branch name", provider);
-
     // 先检查对应的 API key 是否设置
     let api_key_set = match provider.as_str() {
         "openai" => settings.openai_key.is_some(),
@@ -310,11 +309,11 @@ fn generate_branch_name_with_openai(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
@@ -353,7 +352,9 @@ fn generate_branch_name_with_openai(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from OpenAI response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }
 
 /// 使用 DeepSeek API 生成分支名
@@ -372,11 +373,11 @@ fn generate_branch_name_with_deepseek(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
@@ -415,7 +416,9 @@ fn generate_branch_name_with_deepseek(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from DeepSeek response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }
 
 /// 使用代理 API 生成分支名
@@ -438,11 +441,11 @@ fn generate_branch_name_with_proxy(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
@@ -481,5 +484,7 @@ fn generate_branch_name_with_proxy(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from proxy API response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }

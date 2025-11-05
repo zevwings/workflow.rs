@@ -55,7 +55,13 @@ impl PullRequestCreateCommand {
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)?;
+                JiraStatus::configure_interactive(ticket)
+                    .with_context(|| {
+                        format!(
+                            "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
+                            ticket
+                        )
+                    })?;
                 created_pull_request_status = JiraStatus::read_pull_request_created_status(ticket)
                     .context("Failed to read status after configuration")?;
             }
@@ -155,9 +161,7 @@ impl PullRequestCreateCommand {
 
                 branch_name
             }
-            Err(e) => {
-                log_warning!("LLM branch name generation failed: {}", e);
-                log_info!("Falling back to default branch name generation");
+            Err(_) => {
                 // 回退到原来的方法
                 generate_branch_name(jira_ticket.as_deref(), &title)?
             }
