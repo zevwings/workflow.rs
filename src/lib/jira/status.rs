@@ -80,8 +80,30 @@ impl JiraStatus {
         use dialoguer::Select;
 
         // 从 ticket 或项目名中提取项目名
-        let project =
-            extract_jira_project(jira_ticket_or_project).unwrap_or(jira_ticket_or_project);
+        let project = extract_jira_project(jira_ticket_or_project);
+
+        // 验证项目名格式（Jira 项目名通常只包含字母、数字、下划线，且不包含斜杠）
+        let project = if let Some(proj) = project {
+            // 如果提取到了项目名，验证格式
+            if proj.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                proj
+            } else {
+                anyhow::bail!(
+                    "Invalid Jira project name format: '{}'. Jira project names should contain only letters, numbers, and underscores (e.g., 'PROJ', 'PROJ-123').",
+                    proj
+                );
+            }
+        } else {
+            // 如果没有提取到项目名（说明不是 ticket 格式），验证输入是否为有效的项目名
+            if jira_ticket_or_project.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                jira_ticket_or_project
+            } else {
+                anyhow::bail!(
+                    "Invalid Jira ticket or project name: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name). The input contains invalid characters (like '/', Chinese characters, etc.).",
+                    jira_ticket_or_project
+                );
+            }
+        };
 
         // 获取项目状态列表
         log_info!("Fetching status list for project: {}", project);

@@ -142,14 +142,18 @@ pub fn transform_to_branch_name(s: &str) -> String {
     let mut last_was_dash = false;
 
     for c in s.chars() {
-        // 只保留 ASCII 字母数字字符
+        // 只保留 ASCII 字母数字字符，完全忽略非 ASCII 字符（如中文）
         if c.is_ascii_alphanumeric() {
             result.push(c.to_ascii_lowercase());
             last_was_dash = false;
-        } else if !last_was_dash {
-            result.push('-');
-            last_was_dash = true;
+        } else if c.is_ascii() {
+            // 对于 ASCII 非字母数字字符（如空格、标点），转换为连字符
+            if !last_was_dash {
+                result.push('-');
+                last_was_dash = true;
+            }
         }
+        // 完全忽略非 ASCII 字符（如中文），不添加连字符
     }
 
     result.trim_matches('-').to_string()

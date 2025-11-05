@@ -29,6 +29,25 @@ impl PullRequestCreateCommand {
 
         // 2. 获取或输入 Jira ticket
         let jira_ticket = if let Some(ticket) = jira_ticket {
+            // 验证 ticket 格式
+            if !ticket.trim().is_empty() {
+                // 简单的格式验证：Jira ticket 应该是 PROJECT-123 格式，或纯项目名
+                use crate::jira::helpers::extract_jira_project;
+                let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
+                    // 如果是 ticket 格式（PROJ-123），检查项目名是否有效
+                    project.chars().all(|c| c.is_alphanumeric() || c == '_')
+                } else {
+                    // 如果是项目名格式，检查是否只包含有效字符
+                    ticket.chars().all(|c| c.is_alphanumeric() || c == '_')
+                };
+
+                if !is_valid_format {
+                    anyhow::bail!(
+                        "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+                        ticket
+                    );
+                }
+            }
             Some(ticket)
         } else {
             print!("Jira ticket (optional): ");
@@ -39,6 +58,20 @@ impl PullRequestCreateCommand {
             if ticket.is_empty() {
                 None
             } else {
+                // 验证输入的 ticket 格式
+                use crate::jira::helpers::extract_jira_project;
+                let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
+                    project.chars().all(|c| c.is_alphanumeric() || c == '_')
+                } else {
+                    ticket.chars().all(|c| c.is_alphanumeric() || c == '_')
+                };
+
+                if !is_valid_format {
+                    anyhow::bail!(
+                        "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+                        ticket
+                    );
+                }
                 Some(ticket)
             }
         };
@@ -143,8 +176,24 @@ impl PullRequestCreateCommand {
         // 尝试使用 LLM 根据 commit_title 生成分支名
         let branch_name = match LLM::generate_branch_name(&commit_title) {
             Ok(llm_branch_name) => {
-                log_success!("Generated branch name with LLM: {}", llm_branch_name);
-                let mut branch_name = llm_branch_name;
+                // 验证分支名是否包含非 ASCII 字符（如中文）
+                let is_valid_ascii = llm_branch_name.chars().all(|c| c.is_ascii() || c == '-');
+                let cleaned_branch_name = if !is_valid_ascii {
+                    // 如果包含非 ASCII 字符，使用 transform_to_branch_name 再次清理
+                    let cleaned = crate::pr::helpers::transform_to_branch_name(&llm_branch_name);
+                    // 如果清理后为空或只包含连字符，回退到原来的方法
+                    if cleaned.is_empty() || cleaned.chars().all(|c| c == '-') {
+                        log_info!("LLM generated branch name contains non-ASCII characters and cleaned result is invalid, falling back to default method");
+                        generate_branch_name(jira_ticket.as_deref(), &title)?
+                    } else {
+                        cleaned
+                    }
+                } else {
+                    llm_branch_name
+                };
+
+                log_success!("Generated branch name with LLM: {}", cleaned_branch_name);
+                let mut branch_name = cleaned_branch_name;
 
                 // 如果有 Jira ticket，添加到分支名前缀
                 if let Some(ticket) = jira_ticket.as_deref() {
