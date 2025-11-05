@@ -199,7 +199,27 @@ impl Settings {
     }
 
     fn load_llm_provider() -> String {
-        env::var("LLM_PROVIDER").unwrap_or_else(|_| "openai".to_string())
+        // 1. 优先从当前进程的环境变量读取
+        if let Ok(provider) = env::var("LLM_PROVIDER") {
+            if !provider.is_empty() {
+                crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                return provider;
+            }
+        }
+
+        // 2. 从 shell 配置文件读取
+        if let Ok(shell_config_env) = crate::EnvFile::load() {
+            if let Some(provider) = shell_config_env.get("LLM_PROVIDER") {
+                if !provider.is_empty() {
+                    crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    return provider.clone();
+                }
+            }
+        }
+
+        // 3. 默认使用 openai
+        crate::log_info!("LLM_PROVIDER: openai (default)");
+        "openai".to_string()
     }
 
     // ==================== Codeup 配置 ====================

@@ -2,7 +2,6 @@ use anyhow::{Context, Result};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::json;
 
-use super::config;
 use crate::http::{HttpClient, HttpResponse};
 use crate::log_info;
 use crate::settings::Settings;
@@ -25,12 +24,12 @@ pub fn should_translate(text: &str) -> bool {
 
 /// 使用 LLM 翻译描述为简洁的英文 PR 标题
 pub fn translate_with_llm(desc: &str) -> Result<String> {
-    let provider = config::get_llm_provider()?;
+    let settings = Settings::load();
+    let provider = settings.llm_provider.clone();
 
     log_info!("Using LLM provider: {}", provider);
 
     // 先检查对应的 API key 是否设置
-    let settings = Settings::load();
     let api_key_set = match provider.as_str() {
         "openai" => settings.openai_key.is_some(),
         "deepseek" => settings.deepseek_key.is_some(),
@@ -104,7 +103,7 @@ fn translate_with_openai(desc: &str) -> Result<String> {
     );
 
     let response: HttpResponse<serde_json::Value> = client
-        .post_with_headers(url, &payload, &headers)
+        .post(url, &payload, None, Some(&headers))
         .context("Failed to send request to OpenAI API")?;
 
     if !response.is_success() {
@@ -165,7 +164,7 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
     );
 
     let response: HttpResponse<serde_json::Value> = client
-        .post_with_headers(url, &payload, &headers)
+        .post(url, &payload, None, Some(&headers))
         .context("Failed to send request to DeepSeek API")?;
 
     if !response.is_success() {
@@ -230,7 +229,7 @@ fn translate_with_proxy(desc: &str) -> Result<String> {
     );
 
     let response: HttpResponse<serde_json::Value> = client
-        .post_with_headers(&url, &payload, &headers)
+        .post(&url, &payload, None, Some(&headers))
         .context("Failed to send request to proxy API")?;
 
     if !response.is_success() {

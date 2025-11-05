@@ -19,7 +19,7 @@ pub mod utils;
 pub mod commands;
 
 pub use git::*;
-pub use http::{HttpClient, HttpResponse};
+pub use http::{Authorization, HttpClient, HttpResponse};
 pub use jira::*;
 pub use llm::*;
 pub use log::*;
