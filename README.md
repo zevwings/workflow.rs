@@ -102,6 +102,94 @@ workflow/
     └── HOMEBREW.md      # Homebrew 安装指南
 ```
 
+## 配置
+
+在首次使用之前，需要配置必要的环境变量。推荐使用交互式设置命令：
+
+```bash
+workflow setup
+```
+
+这将引导你完成所有配置项的设置，并自动保存到 shell 配置文件（`~/.zshrc` 或 `~/.bash_profile`）。
+
+### 必填配置
+
+以下配置项是**必须**设置的：
+
+| 环境变量 | 说明 | 示例 |
+|---------|------|------|
+| `EMAIL` | 用户邮箱地址 | `user@example.com` |
+| `JIRA_API_TOKEN` | Jira API Token | 从 Jira 设置中获取 |
+| `JIRA_SERVICE_ADDRESS` | Jira 服务地址 | `https://your-company.atlassian.net` |
+
+### 可选配置
+
+以下配置项是**可选**的，根据你的使用场景选择配置：
+
+#### GitHub 配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `GITHUB_API_TOKEN` | GitHub API Token（用于 PR 操作） | - |
+| `GITHUB_BRANCH_PREFIX` | GitHub 分支前缀 | - |
+
+#### 日志配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `LOG_OUTPUT_FOLDER_NAME` | 日志输出文件夹名称 | `logs` |
+| `LOG_DELETE_WHEN_OPERATION_COMPLETED` | 操作完成后是否删除日志（`0`/`1`） | `0` |
+
+#### 代理配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `DISABLE_CHECK_PROXY` | 是否禁用代理检查（`0`/`1`） | `0` |
+
+#### LLM/AI 配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `LLM_PROVIDER` | LLM 提供者（`openai`/`deepseek`/`proxy`） | `openai` |
+| `LLM_OPENAI_KEY` | OpenAI API Key | - |
+| `LLM_DEEPSEEK_KEY` | DeepSeek API Key | - |
+| `LLM_PROXY_URL` | LLM 代理 URL（使用代理时） | - |
+| `LLM_PROXY_KEY` | LLM 代理 Key（使用代理时） | - |
+
+#### Codeup 配置
+
+| 环境变量 | 说明 | 默认值 |
+|---------|------|--------|
+| `CODEUP_PROJECT_ID` | Codeup 项目 ID | - |
+| `CODEUP_CSRF_TOKEN` | Codeup CSRF Token | - |
+| `CODEUP_COOKIE` | Codeup Cookie | - |
+
+### 查看配置
+
+查看当前所有配置：
+
+```bash
+workflow config
+```
+
+### 手动配置
+
+如果不想使用交互式设置，也可以手动在 shell 配置文件中添加环境变量：
+
+```bash
+# 编辑 shell 配置文件
+vim ~/.zshrc  # 或 ~/.bash_profile
+
+# 添加环境变量
+export EMAIL="user@example.com"
+export JIRA_API_TOKEN="your-jira-token"
+export JIRA_SERVICE_ADDRESS="https://your-company.atlassian.net"
+# ... 其他配置
+
+# 重新加载配置
+source ~/.zshrc
+```
+
 ## 📋 命令清单
 
 ### 检查工具
