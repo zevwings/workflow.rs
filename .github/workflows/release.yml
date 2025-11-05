@@ -1,0 +1,356 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 构建所有平台的二进制文件
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: aarch64-apple-darwin
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: aarch64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          # 移除 v 前缀（如果有）
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Build release binaries
+        run: |
+          cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk --bin install
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+      - name: Create package directory
+        run: |
+          mkdir -p package
+          cp target/${{ matrix.target }}/release/workflow package/
+          cp target/${{ matrix.target }}/release/pr package/
+          cp target/${{ matrix.target }}/release/qk package/
+
+      - name: Create archive
+        shell: bash
+        run: |
+          cd package
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          tar czf "../$ARCHIVE_NAME" workflow pr qk
+          cd ..
+          ls -lh "$ARCHIVE_NAME"
+
+      - name: Calculate SHA256
+        id: sha256
+        shell: bash
+        run: |
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
+          else
+            SHA256=$(sha256sum "$ARCHIVE_NAME" | cut -d' ' -f1)
+          fi
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_OUTPUT
+          echo "archive=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+          echo "SHA256 for ${{ matrix.platform }}: $SHA256"
+
+      - name: Save SHA256 to file
+        shell: bash
+        run: |
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          echo "${{ steps.sha256.outputs.sha256 }}" > sha256-${{ matrix.platform }}.txt
+          echo "${{ matrix.platform }}" >> sha256-${{ matrix.platform }}.txt
+          echo "$ARCHIVE_NAME" >> sha256-${{ matrix.platform }}.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz
+          retention-days: 30
+
+      - name: Upload SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.platform }}
+          path: |
+            sha256-${{ matrix.platform }}.txt
+          retention-days: 30
+
+  # 创建 GitHub Release 并上传所有二进制文件
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          # 移除 v 前缀（如果有）
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "workflow-*.tar.gz" -exec cp {} release-assets/ \;
+          ls -lh release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          body: |
+            ## Release ${{ steps.version.outputs.tag }}
+
+            ### Downloads
+
+            - **macOS Intel**: [workflow-${{ steps.version.outputs.version }}-x86_64-apple-darwin.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-x86_64-apple-darwin.tar.gz)
+            - **macOS ARM**: [workflow-${{ steps.version.outputs.version }}-aarch64-apple-darwin.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-aarch64-apple-darwin.tar.gz)
+            - **Linux x86_64**: [workflow-${{ steps.version.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz)
+            - **Linux ARM**: [workflow-${{ steps.version.outputs.version }}-aarch64-unknown-linux-gnu.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-aarch64-unknown-linux-gnu.tar.gz)
+
+            ### Installation
+
+            ```bash
+            # Download and extract
+            wget https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-$(uname -m)-$(uname -s | tr '[:upper:]' '[:lower:]').tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-*.tar.gz
+            sudo mv workflow pr qk /usr/local/bin/
+            ```
+
+            ### Homebrew
+
+            Install via Homebrew:
+            ```bash
+            brew tap zevwings/workflow
+            brew install workflow
+            ```
+          files: release-assets/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 自动更新 Homebrew Formula
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: [build, release]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Download SHA256 artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sha256-*
+          path: sha256-files
+
+      - name: Extract SHA256 values
+        shell: bash
+        run: |
+          mkdir -p sha256-data
+          for file in sha256-files/*/sha256-*.txt; do
+            if [ -f "$file" ]; then
+              platform=$(basename "$file" .txt | sed 's/sha256-//')
+              sha256=$(head -n1 "$file")
+              echo "$platform=$sha256" >> sha256-data/sha256s.txt
+              echo "$platform: $sha256"
+            fi
+          done
+
+      - name: Checkout homebrew-workflow
+        uses: actions/checkout@v4
+        with:
+          repository: zevwings/homebrew-workflow
+          path: homebrew-workflow
+          # HOMEBREW_TAP_TOKEN: GitHub Personal Access Token with write access to homebrew-workflow repo
+          # Configure in: Settings → Secrets and variables → Actions
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Update Formula
+        shell: bash
+        run: |
+          cd homebrew-workflow
+
+          # 读取 SHA256 值
+          X86_64_DARWIN_SHA=$(grep "x86_64-apple-darwin" ../sha256-data/sha256s.txt | cut -d'=' -f2)
+          AARCH64_DARWIN_SHA=$(grep "aarch64-apple-darwin" ../sha256-data/sha256s.txt | cut -d'=' -f2)
+
+          if [ -z "$X86_64_DARWIN_SHA" ] || [ -z "$AARCH64_DARWIN_SHA" ]; then
+            echo "Error: Failed to extract SHA256 values"
+            exit 1
+          fi
+
+          echo "x86_64-apple-darwin SHA256: $X86_64_DARWIN_SHA"
+          echo "aarch64-apple-darwin SHA256: $AARCH64_DARWIN_SHA"
+
+          # 更新 Formula 文件
+          FORMULA_FILE="Formula/workflow.rb"
+
+          if [ ! -f "$FORMULA_FILE" ]; then
+            echo "Error: Formula file not found at $FORMULA_FILE"
+            exit 1
+          fi
+
+          # 备份原文件
+          cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+
+          # 更新版本号
+          sed -i "s/version \"[^\"]*\"/version \"${{ steps.version.outputs.version }}\"/" "$FORMULA_FILE"
+
+          # 更新 x86_64-apple-darwin URL 和 SHA256
+          sed -i "s|url \"https://github.com/zevwings/workflow.rs/releases/download/v[^\"]*/workflow-[^\"]*-x86_64-apple-darwin.tar.gz\"|url \"https://github.com/zevwings/workflow.rs/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-x86_64-apple-darwin.tar.gz\"|" "$FORMULA_FILE"
+          sed -i "/x86_64-apple-darwin.tar.gz/,/sha256/ s|sha256 \"[^\"]*\"|sha256 \"$X86_64_DARWIN_SHA\"|" "$FORMULA_FILE"
+
+          # 更新 aarch64-apple-darwin URL 和 SHA256
+          sed -i "s|url \"https://github.com/zevwings/workflow.rs/releases/download/v[^\"]*/workflow-[^\"]*-aarch64-apple-darwin.tar.gz\"|url \"https://github.com/zevwings/workflow.rs/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-aarch64-apple-darwin.tar.gz\"|" "$FORMULA_FILE"
+          sed -i "/aarch64-apple-darwin.tar.gz/,/sha256/ s|sha256 \"[^\"]*\"|sha256 \"$AARCH64_DARWIN_SHA\"|" "$FORMULA_FILE"
+
+          # 验证更新
+          if grep -q "PLACEHOLDER" "$FORMULA_FILE"; then
+            echo "Error: Formula file still contains placeholder values"
+            exit 1
+          fi
+
+          # 显示更改
+          echo "Formula file updated:"
+          echo "--- Before ---"
+          cat "$FORMULA_FILE.bak"
+          echo "--- After ---"
+          cat "$FORMULA_FILE"
+          echo "--- Diff ---"
+          diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+
+      - name: Commit and push changes
+        shell: bash
+        run: |
+          cd homebrew-workflow
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 检查是否有更改
+          git add Formula/workflow.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Formula file is already up to date."
+            exit 0
+          fi
+
+          # 验证 Formula 文件格式
+          if ! brew audit --strict Formula/workflow.rb 2>/dev/null; then
+            echo "Warning: brew audit failed, but continuing..."
+          fi
+
+          # 提交更改
+          git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
+
+          # 推送更改（尝试 main，如果失败则尝试 master）
+          if git push origin main 2>/dev/null; then
+            echo "Successfully pushed to main branch"
+          elif git push origin master 2>/dev/null; then
+            echo "Successfully pushed to master branch"
+          else
+            echo "Error: Failed to push changes"
+            exit 1
+          fi
+
+          echo "✅ Homebrew Formula updated successfully!"
+

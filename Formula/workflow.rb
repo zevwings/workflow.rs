@@ -8,33 +8,22 @@ class Workflow < Formula
   version "0.1.0"
   license "MIT"
 
-  # 方式一：从源码构建（推荐用于开发阶段）
-  # 如果有 GitHub Releases，可以使用方式二
-  depends_on "rust" => :build
-
   on_macos do
-    # 从源码构建
-    url "https://github.com/zevwings/workflow.rs.git", branch: "master"
-
-    # 如果使用 GitHub Releases，可以这样配置：
-    # if Hardware::CPU.intel?
-    #   url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-x86_64-apple-darwin.tar.gz"
-    #   sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    # end
-    # if Hardware::CPU.arm?
-    #   url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-aarch64-apple-darwin.tar.gz"
-    #   sha256 "REPLACE_WITH_ACTUAL_SHA256"
-    # end
+    if Hardware::CPU.intel?
+      url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-x86_64-apple-darwin.tar.gz"
+      sha256 "PLACEHOLDER_X86_64_DARWIN_SHA256"
+    end
+    if Hardware::CPU.arm?
+      url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-aarch64-apple-darwin.tar.gz"
+      sha256 "PLACEHOLDER_AARCH64_DARWIN_SHA256"
+    end
   end
 
   def install
-    # 构建所有二进制文件（包括 install，虽然它不会被安装到系统）
-    system "cargo", "build", "--release", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
-    # 只安装用户可用的命令到系统
-    bin.install "target/release/workflow"
-    bin.install "target/release/pr"
-    bin.install "target/release/qk"
-    # 注意：install 二进制不安装到系统，它仅用于 shell completion 安装（Makefile 使用）
+    # 从预编译的 tar.gz 中提取二进制文件
+    bin.install "workflow"
+    bin.install "pr"
+    bin.install "qk"
   end
 
   test do
