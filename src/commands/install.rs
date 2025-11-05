@@ -29,11 +29,7 @@ impl InstallCommand {
 
         let output = output_dir.map(PathBuf::from).unwrap_or_else(|| {
             let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-            if shell == "zsh" {
-                PathBuf::from(&home).join(".zsh/completions")
-            } else {
-                PathBuf::from(&home).join(".bash_completion.d")
-            }
+            PathBuf::from(&home).join(".workflow/completions")
         });
 
         log_info!("生成 shell completion 脚本...");
