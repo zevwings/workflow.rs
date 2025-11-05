@@ -1,9 +1,9 @@
 use crate::commands::check::CheckCommand;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_pr_id_from_url, generate_branch_name, generate_commit_title, generate_pr_body,
-    log_error, log_info, log_success, log_warning, Browser, Clipboard, Codeup, Git, GitHub, Jira,
-    Platform, RepoType, LLM, TYPES_OF_CHANGES,
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, log_error, log_info, log_success, log_warning, Browser, Clipboard,
+    Codeup, Git, GitHub, Jira, Platform, RepoType, LLM, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
@@ -11,9 +11,9 @@ use std::io::{self, Write};
 
 /// PR 创建命令
 #[allow(dead_code)]
-pub struct PRCreateCommand;
+pub struct PullRequestCreateCommand;
 
-impl PRCreateCommand {
+impl PullRequestCreateCommand {
     /// 创建 PR（完整流程）
     #[allow(dead_code)]
     pub fn create(
@@ -45,11 +45,11 @@ impl PRCreateCommand {
         };
 
         // 3. 如果有 Jira ticket，检查并配置状态
-        let mut created_pr_status = None;
+        let mut created_pull_request_status = None;
         if let Some(ref ticket) = jira_ticket {
             // 读取状态配置
-            if let Ok(Some(status)) = JiraStatus::read_pr_created_status(ticket) {
-                created_pr_status = Some(status);
+            if let Ok(Some(status)) = JiraStatus::read_pull_request_created_status(ticket) {
+                created_pull_request_status = Some(status);
             } else {
                 // 如果没有配置，提示配置
                 log_info!(
@@ -57,7 +57,7 @@ impl PRCreateCommand {
                     ticket
                 );
                 JiraStatus::configure_interactive(ticket)?;
-                created_pr_status = JiraStatus::read_pr_created_status(ticket)
+                created_pull_request_status = JiraStatus::read_pull_request_created_status(ticket)
                     .context("Failed to read status after configuration")?;
             }
         }
@@ -137,13 +137,13 @@ impl PRCreateCommand {
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &title);
 
         // 8. 生成 PR body
-        let pr_body =
-            generate_pr_body(&selected_types, Some(&description), jira_ticket.as_deref())?;
+        let pull_request_body =
+            generate_pull_request_body(&selected_types, Some(&description), jira_ticket.as_deref())?;
 
         if dry_run {
             log_info!("\n[DRY RUN] Would create branch: {}", branch_name);
             log_info!("[DRY RUN] Commit title: {}", commit_title);
-            log_info!("[DRY RUN] PR body:\n{}", pr_body);
+            log_info!("[DRY RUN] PR body:\n{}", pull_request_body);
             return Ok(());
         }
 
@@ -159,44 +159,44 @@ impl PRCreateCommand {
 
         // 10. 创建 PR（根据仓库类型）
         let repo_type = Git::detect_repo_type()?;
-        let pr_url = match repo_type {
+        let pull_request_url = match repo_type {
             RepoType::GitHub => {
                 log_success!("Creating PR via GitHub...");
-                <GitHub as Platform>::create_pr(&commit_title, &pr_body, &branch_name, None)?
+                <GitHub as Platform>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
             }
             RepoType::Codeup => {
                 log_success!("Creating PR via Codeup...");
-                <Codeup as Platform>::create_pr(&commit_title, &pr_body, &branch_name, None)?
+                <Codeup as Platform>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
             }
             RepoType::Unknown => {
                 anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
             }
         };
 
-        log_success!("PR created: {}", pr_url);
+        log_success!("PR created: {}", pull_request_url);
 
         // 11. 更新 Jira（如果有 ticket）
         if let Some(ref ticket) = jira_ticket {
-            if let Some(ref status) = created_pr_status {
+            if let Some(ref status) = created_pull_request_status {
                 log_success!("Updating Jira ticket...");
                 // 分配任务
                 Jira::assign_ticket(ticket, None)?;
                 // 更新状态
                 Jira::move_ticket(ticket, status)?;
                 // 添加评论（PR URL）
-                Jira::add_comment(ticket, &pr_url)?;
+                Jira::add_comment(ticket, &pull_request_url)?;
                 // 添加描述（如果有）
                 if !description.trim().is_empty() {
                     Jira::add_comment(ticket, &description)?;
                 }
 
                 // 写入历史记录
-                let pr_id = extract_pr_id_from_url(&pr_url)?;
+                let pull_request_id = extract_pull_request_id_from_url(&pull_request_url)?;
                 let repository = Git::get_remote_url().ok();
                 JiraStatus::write_work_history(
                     ticket,
-                    &pr_id,
-                    Some(&pr_url),
+                    &pull_request_id,
+                    Some(&pull_request_url),
                     repository.as_deref(),
                     Some(&branch_name),
                 )?;
@@ -204,12 +204,12 @@ impl PRCreateCommand {
         }
 
         // 12. 复制 PR URL 到剪贴板
-        Clipboard::copy(&pr_url)?;
-        log_success!("Copied {} to clipboard", pr_url);
+        Clipboard::copy(&pull_request_url)?;
+        log_success!("Copied {} to clipboard", pull_request_url);
 
         // 13. 打开浏览器
         std::thread::sleep(std::time::Duration::from_secs(1));
-        Browser::open(&pr_url)?;
+        Browser::open(&pull_request_url)?;
 
         log_success!("PR created successfully!");
         Ok(())

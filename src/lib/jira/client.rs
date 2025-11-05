@@ -384,11 +384,11 @@ struct Transition {
 /// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123"));
 /// assert_eq!(extract_jira_ticket_id("Fix bug"), None);
 /// ```
-pub fn extract_jira_ticket_id(pr_title: &str) -> Option<String> {
+pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {
     use regex::Regex;
     // 匹配格式: PROJ-123 或 PROJ-123:
     let re = Regex::new(r"^([A-Z]+-\d+)").ok()?;
-    re.captures(pr_title)
+    re.captures(pull_request_title)
         .and_then(|caps| caps.get(1))
         .map(|m| m.as_str().to_string())
 }

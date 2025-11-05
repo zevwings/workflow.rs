@@ -1,5 +1,4 @@
 use crate::settings::Settings;
-use crate::utils::string;
 use anyhow::{Context, Result};
 
 use super::constants::TYPES_OF_CHANGES;
@@ -8,10 +7,10 @@ use super::constants::TYPES_OF_CHANGES;
 ///
 /// # 示例
 /// ```
-/// assert_eq!(extract_pr_id_from_url("https://github.com/owner/repo/pull/123"), Ok("123".to_string()));
-/// assert_eq!(extract_pr_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
+/// assert_eq!(extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123"), Ok("123".to_string()));
+/// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
 /// ```
-pub fn extract_pr_id_from_url(url: &str) -> Result<String> {
+pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
     use regex::Regex;
     let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
     let caps = re
@@ -54,7 +53,7 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
 /// * `selected_change_types` - 选中的变更类型数组
 /// * `short_description` - 简短描述（可选）
 /// * `jira_ticket` - Jira ticket ID（可选）
-pub fn generate_pr_body(
+pub fn generate_pull_request_body(
     selected_change_types: &[bool],
     short_description: Option<&str>,
     jira_ticket: Option<&str>,
@@ -110,7 +109,7 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
     }
 
     // 清理标题作为分支名
-    let cleaned_title = string::transform_to_branch_name(title);
+    let cleaned_title = transform_to_branch_name(title);
     branch_name.push_str(&cleaned_title);
 
     // 如果有 GH_BRANCH_PREFIX，添加前缀
@@ -134,4 +133,22 @@ pub fn generate_commit_title(jira_ticket: Option<&str>, title: &str) -> String {
         Some(ticket) => format!("{}: {}", ticket, title),
         None => format!("# {}", title),
     }
+}
+
+/// 将字符串转换为分支名（替换特殊字符为连字符，去除重复连字符）
+pub fn transform_to_branch_name(s: &str) -> String {
+    let mut result = String::new();
+    let mut last_was_dash = false;
+
+    for c in s.chars() {
+        if c.is_alphanumeric() {
+            result.push(c.to_ascii_lowercase());
+            last_was_dash = false;
+        } else if !last_was_dash {
+            result.push('-');
+            last_was_dash = true;
+        }
+    }
+
+    result.trim_matches('-').to_string()
 }
