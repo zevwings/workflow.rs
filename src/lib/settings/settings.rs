@@ -1,8 +1,8 @@
-use std::sync::{OnceLock, RwLock};
 use std::env;
+use std::sync::OnceLock;
 
 /// 应用程序设置
-/// 单例模式，从环境变量读取配置
+/// 从环境变量读取配置
 #[derive(Clone)]
 pub struct Settings {
     // ==================== 用户配置 ====================
@@ -17,7 +17,9 @@ pub struct Settings {
 
     // ==================== GitHub 配置 ====================
     /// GitHub 分支前缀
-    pub gh_branch_prefix: Option<String>,
+    pub github_branch_prefix: Option<String>,
+    /// GitHub API Token
+    pub github_api_token: Option<String>,
 
     // ==================== 日志配置 ====================
     /// 操作完成后是否删除日志
@@ -50,82 +52,35 @@ pub struct Settings {
     pub codeup_cookie: Option<String>,
 }
 
-// 使用 RwLock 存储 Settings，支持运行时重新加载
-static INSTANCE: OnceLock<RwLock<Settings>> = OnceLock::new();
-
-// 线程局部缓存，避免频繁读取锁
-thread_local! {
-    static CACHED: std::cell::Cell<*const Settings> = std::cell::Cell::new(std::ptr::null());
-}
-
 impl Settings {
-
-    /// 获取单例实例
-    /// 首次调用时会从环境变量初始化
-    ///
-    /// 注意：为了支持运行时重新加载，使用 RwLock 包装
-    /// 使用线程局部缓存来避免频繁读取锁，但在 reload() 后会自动刷新
-    pub fn get() -> &'static Self {
-        let lock = Self::get_lock();
-
-        // 检查线程局部缓存是否有效
-        let cached_ptr = CACHED.with(|c| c.get());
-        if !cached_ptr.is_null() {
-            unsafe { &*cached_ptr }
-        } else {
-            // 从锁读取并缓存
-            let guard = lock.read().unwrap();
-            let settings = Box::leak(Box::new((*guard).clone()));
-            let ptr = settings as *const Settings;
-            CACHED.with(|c| c.set(ptr));
-            settings
-        }
+    /// 获取缓存的 Settings 实例
+    /// 如果环境变量未设置（例如在 setup 阶段），返回包含默认值的 Settings
+    pub fn get() -> &'static Settings {
+        static SETTINGS: OnceLock<Settings> = OnceLock::new();
+        SETTINGS.get_or_init(Self::load)
     }
 
-    /// 获取内部锁实例
-    fn get_lock() -> &'static RwLock<Settings> {
-        INSTANCE.get_or_init(|| {
-            // 如果初始化失败，创建一个包含默认值的 Settings
-            // 这样在 setup 阶段不会 panic
-            let settings = Self::from_env().unwrap_or_else(|_| {
-                Self {
-                    email: String::new(),
-                    jira_api_token: String::new(),
-                    jira_service_address: String::new(),
-                    gh_branch_prefix: None,
-                    log_delete_when_operation_completed: false,
-                    log_output_folder_name: "logs".to_string(),
-                    disable_check_proxy: false,
-                    openai_key: None,
-                    llm_proxy_url: None,
-                    llm_proxy_key: None,
-                    deepseek_key: None,
-                    llm_provider: "openai".to_string(),
-                    codeup_project_id: None,
-                    codeup_csrf_token: None,
-                    codeup_cookie: None,
-                }
-            });
-            RwLock::new(settings)
+    /// 从环境变量加载设置
+    /// 如果环境变量未设置（例如在 setup 阶段），返回包含默认值的 Settings
+    pub fn load() -> Self {
+        Self::from_env().unwrap_or_else(|_| Self {
+            email: String::new(),
+            jira_api_token: String::new(),
+            jira_service_address: String::new(),
+            github_branch_prefix: None,
+            github_api_token: None,
+            log_delete_when_operation_completed: false,
+            log_output_folder_name: "logs".to_string(),
+            disable_check_proxy: false,
+            openai_key: None,
+            llm_proxy_url: None,
+            llm_proxy_key: None,
+            deepseek_key: None,
+            llm_provider: "openai".to_string(),
+            codeup_project_id: None,
+            codeup_csrf_token: None,
+            codeup_cookie: None,
         })
-    }
-
-    /// 重新加载环境变量
-    /// 强制从环境变量重新读取配置并更新单例实例
-    /// 同时清除线程局部缓存，确保下次 get() 时使用新值
-    ///
-    /// 如果环境变量未设置（例如在 setup 阶段），返回错误但不 panic
-    pub fn reload() -> Result<(), String> {
-        let lock = Self::get_lock();
-        let new_settings = Self::from_env()?;
-
-        // 更新锁中的值
-        *lock.write().unwrap() = new_settings;
-
-        // 清除所有线程的缓存，强制下次 get() 时重新读取
-        CACHED.with(|c| c.set(std::ptr::null()));
-
-        Ok(())
     }
 
     /// 从环境变量初始化设置
@@ -139,7 +94,8 @@ impl Settings {
             jira_service_address: Self::load_jira_service_address()?,
 
             // ==================== GitHub 配置 ====================
-            gh_branch_prefix: Self::load_github_config(),
+            github_branch_prefix: Self::load_github_config(),
+            github_api_token: Self::load_github_api_token(),
 
             // ==================== 日志配置 ====================
             log_delete_when_operation_completed: Self::load_log_delete_when_completed(),
@@ -169,16 +125,38 @@ impl Settings {
 
     // ==================== Jira 配置 ====================
     fn load_jira_api_token() -> Result<String, String> {
-        env::var("JIRA_API_TOKEN").map_err(|_| "JIRA_API_TOKEN environment variable not set".to_string())
+        env::var("JIRA_API_TOKEN")
+            .map_err(|_| "JIRA_API_TOKEN environment variable not set".to_string())
     }
 
     fn load_jira_service_address() -> Result<String, String> {
-        env::var("JIRA_SERVICE_ADDRESS").map_err(|_| "JIRA_SERVICE_ADDRESS environment variable not set".to_string())
+        env::var("JIRA_SERVICE_ADDRESS")
+            .map_err(|_| "JIRA_SERVICE_ADDRESS environment variable not set".to_string())
     }
 
     // ==================== GitHub 配置 ====================
     fn load_github_config() -> Option<String> {
-        env::var("GH_BRANCH_PREFIX").ok()
+        // 1. 优先从当前进程的环境变量读取
+        if let Ok(prefix) = env::var("GITHUB_BRANCH_PREFIX") {
+            if !prefix.is_empty() {
+                return Some(prefix);
+            }
+        }
+
+        // 2. 从 shell 配置文件读取
+        if let Ok(shell_config_env) = crate::EnvFile::load() {
+            if let Some(prefix) = shell_config_env.get("GITHUB_BRANCH_PREFIX") {
+                if !prefix.is_empty() {
+                    return Some(prefix.clone());
+                }
+            }
+        }
+
+        None
+    }
+
+    fn load_github_api_token() -> Option<String> {
+        env::var("GITHUB_API_TOKEN").ok()
     }
 
     // ==================== 日志配置 ====================
@@ -253,7 +231,64 @@ impl Settings {
     }
 
     fn load_llm_provider() -> String {
-        env::var("LLM_PROVIDER").unwrap_or_else(|_| "openai".to_string())
+        // 使用静态变量缓存 provider 值，避免重复读取环境变量
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::OnceLock;
+
+        static CACHED_PROVIDER: OnceLock<String> = OnceLock::new();
+        static LOGGED: AtomicBool = AtomicBool::new(false);
+
+        // 如果已经缓存，直接返回
+        if let Some(cached) = CACHED_PROVIDER.get() {
+            return cached.clone();
+        }
+
+        // 首次调用，从环境变量读取
+        let provider = {
+            // 1. 优先从当前进程的环境变量读取
+            if let Ok(provider) = env::var("LLM_PROVIDER") {
+                if !provider.is_empty() {
+                    if !LOGGED.swap(true, Ordering::Relaxed) {
+                        crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                    }
+                    provider
+                } else {
+                    // 空字符串，继续检查其他来源
+                    Self::load_llm_provider_from_config()
+                }
+            } else {
+                // 环境变量不存在，继续检查其他来源
+                Self::load_llm_provider_from_config()
+            }
+        };
+
+        // 缓存结果
+        let _ = CACHED_PROVIDER.set(provider.clone());
+        provider
+    }
+
+    /// 从 shell 配置文件或默认值加载 LLM provider（辅助函数）
+    fn load_llm_provider_from_config() -> String {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static LOGGED: AtomicBool = AtomicBool::new(false);
+
+        // 2. 从 shell 配置文件读取
+        if let Ok(shell_config_env) = crate::EnvFile::load() {
+            if let Some(provider) = shell_config_env.get("LLM_PROVIDER") {
+                if !provider.is_empty() {
+                    if !LOGGED.swap(true, Ordering::Relaxed) {
+                        crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    }
+                    return provider.clone();
+                }
+            }
+        }
+
+        // 3. 默认使用 openai
+        if !LOGGED.swap(true, Ordering::Relaxed) {
+            crate::log_info!("LLM_PROVIDER: openai (default)");
+        }
+        "openai".to_string()
     }
 
     // ==================== Codeup 配置 ====================
@@ -269,16 +304,6 @@ impl Settings {
 
     fn load_codeup_cookie() -> Option<String> {
         env::var("CODEUP_COOKIE").ok()
-    }
-
-    /// 重新加载环境变量（仅用于测试）
-    /// 在测试中，可以强制替换实例
-    #[cfg(test)]
-    pub fn reload_for_test() {
-        let new_settings = Self::from_env().expect("Failed to initialize Settings");
-        *INSTANCE.get_or_init(|| RwLock::new(new_settings.clone()))
-            .write().unwrap() = new_settings;
-        CACHED.with(|c| c.set(std::ptr::null()));
     }
 }
 
@@ -350,4 +375,3 @@ mod tests {
         env::remove_var("LLM_PROVIDER");
     }
 }
-

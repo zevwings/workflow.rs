@@ -1,8 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
+use super::translator::{generate_branch_name_with_llm, should_translate, translate_with_llm};
 use crate::Jira;
-use super::translator::{should_translate, translate_with_llm};
 
 /// LLM 工具模块 - 用于生成 PR 标题和分支名
 pub struct LLM;
@@ -45,5 +45,15 @@ impl LLM {
             translated_desc,
         })
     }
-}
 
+    /// 根据 commit_title 使用 LLM 生成分支名
+    ///
+    /// 生成的分支名应该：
+    /// - 全小写
+    /// - 使用连字符分隔单词
+    /// - 符合 Git 分支命名规范
+    /// - 简洁明了
+    pub fn generate_branch_name(commit_title: &str) -> Result<String> {
+        generate_branch_name_with_llm(commit_title)
+    }
+}

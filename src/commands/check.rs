@@ -1,4 +1,4 @@
-use crate::{log_error, log_info, log_success, log_warning, Git};
+use crate::{log_error, log_info, log_success, Git};
 use anyhow::{Context, Result};
 use duct::cmd;
 
@@ -7,12 +7,13 @@ pub struct CheckCommand;
 
 impl CheckCommand {
     /// 执行综合检查
+    #[allow(dead_code)]
     pub fn run_all() -> Result<()> {
         // 1. 检查 Git 状态
         Self::check_git_status()?;
 
         // 2. 检查网络连接
-            Self::check_network()?;
+        Self::check_network()?;
 
         log_success!("All checks passed");
         Ok(())
@@ -32,42 +33,29 @@ impl CheckCommand {
 
     /// 检查网络连接（GitHub）
     pub fn check_network() -> Result<()> {
-        let output = cmd("curl", &["-IsSf", "https://github.com"])
+        log_info!("Checking network connection to GitHub...");
+        let output = cmd("curl", &["-IsSf", "--max-time", "10", "https://github.com"])
             .stdout_null()
             .stderr_null()
-            .run()
-            .context("Failed to check network connection")?;
+            .run();
 
-        if output.status.success() {
-            log_success!("GitHub network is available");
-            Ok(())
-        } else {
-            log_error!("GitHub network error");
-            anyhow::bail!("Network check failed");
-        }
-    }
-
-    /// 运行 pre-commit hooks（不提交）
-    pub fn check_pre_commit() -> Result<()> {
-        // 先添加所有文件
-        cmd("git", &["add", "--all"])
-            .run()
-            .context("Failed to run git add --all")?;
-
-        // 运行 pre-commit hooks
-        // 注意：这里需要 pre-commit 工具已安装
-        let output = cmd("git", &["commit", "--no-verify", "--dry-run"])
-            .stdout_capture()
-            .stderr_capture()
-            .run()
-            .context("Failed to run pre-commit check")?;
-
-        if output.status.success() {
-            log_success!("Pre-commit checks passed");
-            Ok(())
-        } else {
-            log_error!("Pre-commit checks failed");
-            anyhow::bail!("Pre-commit check failed");
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    log_success!("GitHub network is available");
+                    Ok(())
+                } else {
+                    log_error!("GitHub network check failed (curl returned non-zero exit code)");
+                    anyhow::bail!("Network check failed");
+                }
+            }
+            Err(e) => {
+                log_error!("Failed to check network connection: {}", e);
+                log_error!(
+                    "This might be due to network issues, proxy settings, or firewall restrictions"
+                );
+                anyhow::bail!("Network check failed: {}", e);
+            }
         }
     }
 }

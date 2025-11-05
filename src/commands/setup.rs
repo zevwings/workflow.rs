@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{log_info, log_success, log_warning, EnvFile};
+use crate::{log_info, log_success, log_warning, EnvFile, Shell};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
 use std::collections::HashMap;
@@ -14,41 +14,19 @@ impl SetupCommand {
     pub fn run() -> Result<()> {
         log_success!("🚀 Starting Workflow CLI initialization...\n");
 
-        // 注意：在 setup 阶段不调用 Settings::reload()
-        // 因为此时环境变量可能还没有设置，会导致初始化失败
-        // 我们直接读取环境变量和 shell 配置文件即可
+        // 注意：在 setup 阶段，我们直接读取环境变量和 shell 配置文件即可
 
         // 加载现有配置（从 shell 配置文件和当前环境变量）
         // 优先从当前环境变量读取（如果已加载到 shell）
-        let mut merged_env = HashMap::new();
-
-        // 首先从当前环境变量读取（这是最优先的数据源）
-        let env_var_keys = [
-            "EMAIL", "JIRA_API_TOKEN", "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX", "LOG_OUTPUT_FOLDER_NAME", "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            "DISABLE_CHECK_PROXY", "LLM_PROVIDER",
-            "LLM_OPENAI_KEY", "LLM_DEEPSEEK_KEY", "LLM_PROXY_URL", "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN", "CODEUP_COOKIE", "CODEUP_PROJECT_ID",
-        ];
-
-        for key in &env_var_keys {
-            if let Ok(value) = std::env::var(key) {
-                merged_env.insert(key.to_string(), value);
-            }
-        }
-
-        // 如果环境变量中没有找到，再从 shell 配置文件读取
-        let shell_config_env = EnvFile::load().unwrap_or_default();
-        for (key, value) in shell_config_env {
-            if !merged_env.contains_key(&key) {
-                merged_env.insert(key, value);
-            }
-        }
+        let env_var_keys = EnvFile::get_workflow_env_keys();
+        let merged_env = EnvFile::load_merged(&env_var_keys);
 
         if !merged_env.is_empty() {
             log_info!("ℹ️  Found existing configuration");
             log_info!("   Source: shell config file and current environment variables");
-            log_info!("   You can press Enter to keep current values, or enter new values to override.\n");
+            log_info!(
+                "   You can press Enter to keep current values, or enter new values to override.\n"
+            );
         }
 
         // 收集配置信息（智能处理现有配置）
@@ -64,27 +42,30 @@ impl SetupCommand {
         log_info!("   Shell config: {:?}", shell_config_path);
 
         // 保存配置后，更新当前进程的环境变量
-        // 这样后续对 Settings::get() 的调用会使用新值
+        // 这样后续对 Settings::load() 的调用会使用新值
         for (key, value) in &env_vars {
             std::env::set_var(key, value);
         }
 
-        // 重新加载 Settings 以使用新保存的值
-        if let Err(e) = crate::Settings::reload() {
-            log_warning!("⚠️  Failed to reload Settings after saving: {}", e);
-        }
-
         log_success!("\n🎉 Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
-        log_info!("   Note: Settings have been reloaded with new values.");
+
+        // 尝试重新加载 shell 配置
+        log_info!("\n🔄 Reloading shell configuration...");
+        if let Ok(shell_info) = Shell::detect() {
+            let _ = Shell::reload_config(&shell_info);
+        } else {
+            log_info!("ℹ  Could not detect shell type.");
+            log_info!("Please manually reload your shell configuration:");
+            log_info!("  source ~/.zshrc  # for zsh");
+            log_info!("  source ~/.bashrc  # for bash");
+        }
 
         Ok(())
     }
 
     /// 收集配置信息（统一保存为环境变量）
-    fn collect_config(
-        existing_env: &HashMap<String, String>,
-    ) -> Result<HashMap<String, String>> {
+    fn collect_config(existing_env: &HashMap<String, String>) -> Result<HashMap<String, String>> {
         let mut env_vars = existing_env.clone();
 
         // ==================== 必填项：用户配置 ====================
@@ -120,6 +101,31 @@ impl SetupCommand {
             env_vars.insert("EMAIL".to_string(), email);
         } else if current_email.is_none() {
             anyhow::bail!("Email is required");
+        }
+
+        // ==================== 必填项：GitHub 配置 ====================
+
+        let current_github_token = existing_env.get("GITHUB_API_TOKEN").cloned();
+        let github_token_prompt = if current_github_token.is_some() {
+            "GitHub API token [current: ***] (press Enter to keep)".to_string()
+        } else {
+            "GitHub API token (optional, press Enter to skip)".to_string()
+        };
+
+        let github_api_token: String = Input::new()
+            .with_prompt(&github_token_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get GitHub API token")?;
+
+        if !github_api_token.is_empty() {
+            env_vars.insert("GITHUB_API_TOKEN".to_string(), github_api_token);
+        } else if current_github_token.is_some() {
+            // 保持原值
+            env_vars.insert(
+                "GITHUB_API_TOKEN".to_string(),
+                current_github_token.unwrap(),
+            );
         }
 
         // ==================== 必填项：Jira 配置 ====================
@@ -185,9 +191,12 @@ impl SetupCommand {
         log_info!("\n🐙 GitHub Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
-        let current_gh_prefix = existing_env.get("GH_BRANCH_PREFIX").cloned();
+        let current_gh_prefix = existing_env.get("GITHUB_BRANCH_PREFIX").cloned();
         let gh_prefix_prompt = if let Some(ref prefix) = current_gh_prefix {
-            format!("GitHub branch prefix [current: {}] (press Enter to keep)", prefix)
+            format!(
+                "GitHub branch prefix [current: {}] (press Enter to keep)",
+                prefix
+            )
         } else {
             "GitHub branch prefix (press Enter to skip)".to_string()
         };
@@ -202,23 +211,21 @@ impl SetupCommand {
             .context("Failed to get GitHub branch prefix")?;
 
         if !gh_prefix.is_empty() {
-            env_vars.insert("GH_BRANCH_PREFIX".to_string(), gh_prefix);
+            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), gh_prefix);
         } else if let Some(prefix) = current_gh_prefix {
             // 保持原值
-            env_vars.insert("GH_BRANCH_PREFIX".to_string(), prefix);
+            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), prefix);
         }
 
         // ==================== 可选：日志配置 ====================
         log_info!("\n📝 Log Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
-        let current_log_folder = existing_env.get("LOG_OUTPUT_FOLDER_NAME")
+        let current_log_folder = existing_env
+            .get("LOG_OUTPUT_FOLDER_NAME")
             .cloned()
             .unwrap_or_else(|| "logs".to_string());
-        let log_folder_prompt = format!(
-            "Log output folder name [current: {}]",
-            current_log_folder
-        );
+        let log_folder_prompt = format!("Log output folder name [current: {}]", current_log_folder);
 
         let log_folder: String = Input::new()
             .with_prompt(&log_folder_prompt)
@@ -233,7 +240,8 @@ impl SetupCommand {
             env_vars.insert("LOG_OUTPUT_FOLDER_NAME".to_string(), current_log_folder);
         }
 
-        let current_delete_logs = existing_env.get("LOG_DELETE_WHEN_OPERATION_COMPLETED")
+        let current_delete_logs = existing_env
+            .get("LOG_DELETE_WHEN_OPERATION_COMPLETED")
             .map(|v| v == "1")
             .unwrap_or(false);
 
@@ -249,14 +257,19 @@ impl SetupCommand {
             .context("Failed to get delete logs confirmation")?;
         env_vars.insert(
             "LOG_DELETE_WHEN_OPERATION_COMPLETED".to_string(),
-            if delete_logs { "1".to_string() } else { "0".to_string() },
+            if delete_logs {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
         );
 
         // ==================== 可选：代理配置 ====================
         log_info!("\n🌐 Proxy Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
-        let current_disable_proxy = existing_env.get("DISABLE_CHECK_PROXY")
+        let current_disable_proxy = existing_env
+            .get("DISABLE_CHECK_PROXY")
             .map(|v| v == "1")
             .unwrap_or(false);
 
@@ -272,7 +285,11 @@ impl SetupCommand {
             .context("Failed to get proxy check confirmation")?;
         env_vars.insert(
             "DISABLE_CHECK_PROXY".to_string(),
-            if disable_proxy_check { "1".to_string() } else { "0".to_string() },
+            if disable_proxy_check {
+                "1".to_string()
+            } else {
+                "0".to_string()
+            },
         );
 
         // ==================== 可选：LLM/AI 配置 ====================
@@ -280,7 +297,8 @@ impl SetupCommand {
         log_info!("─────────────────────────────────────────────────────────");
 
         let llm_providers = vec!["openai", "deepseek", "proxy"];
-        let current_provider = existing_env.get("LLM_PROVIDER")
+        let current_provider = existing_env
+            .get("LLM_PROVIDER")
             .cloned()
             .unwrap_or_else(|| "openai".to_string());
         let current_provider_idx = llm_providers
@@ -288,10 +306,7 @@ impl SetupCommand {
             .position(|&p| p == current_provider.as_str())
             .unwrap_or(0);
 
-        let llm_provider_prompt = format!(
-            "Select LLM provider [current: {}]",
-            current_provider
-        );
+        let llm_provider_prompt = format!("Select LLM provider [current: {}]", current_provider);
 
         let llm_provider_idx = Select::new()
             .with_prompt(&llm_provider_prompt)
@@ -341,7 +356,10 @@ impl SetupCommand {
                 if !deepseek_key.is_empty() {
                     env_vars.insert("LLM_DEEPSEEK_KEY".to_string(), deepseek_key);
                 } else if current_deepseek_key.is_some() {
-                    env_vars.insert("LLM_DEEPSEEK_KEY".to_string(), current_deepseek_key.unwrap());
+                    env_vars.insert(
+                        "LLM_DEEPSEEK_KEY".to_string(),
+                        current_deepseek_key.unwrap(),
+                    );
                 }
             }
             "proxy" => {
@@ -453,7 +471,10 @@ impl SetupCommand {
             if !codeup_csrf_token.is_empty() {
                 env_vars.insert("CODEUP_CSRF_TOKEN".to_string(), codeup_csrf_token);
             } else if current_codeup_csrf.is_some() {
-                env_vars.insert("CODEUP_CSRF_TOKEN".to_string(), current_codeup_csrf.unwrap());
+                env_vars.insert(
+                    "CODEUP_CSRF_TOKEN".to_string(),
+                    current_codeup_csrf.unwrap(),
+                );
             }
 
             let current_codeup_cookie = existing_env.get("CODEUP_COOKIE").cloned();
@@ -490,4 +511,3 @@ impl SetupCommand {
         Ok(env_vars)
     }
 }
-

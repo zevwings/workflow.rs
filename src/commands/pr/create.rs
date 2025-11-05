@@ -1,18 +1,21 @@
-use crate::commands::{check::CheckCommand, jira::status::JiraStatus};
+use crate::commands::check::CheckCommand;
+use crate::jira::status::JiraStatus;
 use crate::{
-    extract_pr_id_from_url, generate_branch_name, generate_commit_title, generate_pr_body,
-    log_error, log_info, log_success, log_warning, Browser, Clipboard, Codeup, Git, GitHub, Jira, Platform, RepoType, LLM,
-    TYPES_OF_CHANGES,
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, log_error, log_info, log_success, log_warning, Browser, Clipboard,
+    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, LLM, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
 use std::io::{self, Write};
 
 /// PR 创建命令
-pub struct PRCreateCommand;
+#[allow(dead_code)]
+pub struct PullRequestCreateCommand;
 
-impl PRCreateCommand {
+impl PullRequestCreateCommand {
     /// 创建 PR（完整流程）
+    #[allow(dead_code)]
     pub fn create(
         jira_ticket: Option<String>,
         title: Option<String>,
@@ -22,11 +25,29 @@ impl PRCreateCommand {
         // 1. 运行检查
         if !dry_run {
             CheckCommand::run_all()?;
-            CheckCommand::check_pre_commit()?;
         }
 
         // 2. 获取或输入 Jira ticket
         let jira_ticket = if let Some(ticket) = jira_ticket {
+            // 验证 ticket 格式
+            if !ticket.trim().is_empty() {
+                // 简单的格式验证：Jira ticket 应该是 PROJECT-123 格式，或纯项目名
+                use crate::jira::helpers::extract_jira_project;
+                let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
+                    // 如果是 ticket 格式（PROJ-123），检查项目名是否有效
+                    project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                } else {
+                    // 如果是项目名格式，检查是否只包含有效字符
+                    ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                };
+
+                if !is_valid_format {
+                    anyhow::bail!(
+                        "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+                        ticket
+                    );
+                }
+            }
             Some(ticket)
         } else {
             print!("Jira ticket (optional): ");
@@ -37,24 +58,44 @@ impl PRCreateCommand {
             if ticket.is_empty() {
                 None
             } else {
+                // 验证输入的 ticket 格式
+                use crate::jira::helpers::extract_jira_project;
+                let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
+                    project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                } else {
+                    ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+                };
+
+                if !is_valid_format {
+                    anyhow::bail!(
+                        "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+                        ticket
+                    );
+                }
                 Some(ticket)
             }
         };
 
         // 3. 如果有 Jira ticket，检查并配置状态
-        let mut created_pr_status = None;
+        let mut created_pull_request_status = None;
         if let Some(ref ticket) = jira_ticket {
             // 读取状态配置
-            if let Ok(Some(status)) = JiraStatus::read_pr_created_status(ticket) {
-                created_pr_status = Some(status);
+            if let Ok(Some(status)) = JiraStatus::read_pull_request_created_status(ticket) {
+                created_pull_request_status = Some(status);
             } else {
                 // 如果没有配置，提示配置
                 log_info!(
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)?;
-                created_pr_status = JiraStatus::read_pr_created_status(ticket)
+                JiraStatus::configure_interactive(ticket)
+                    .with_context(|| {
+                        format!(
+                            "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
+                            ticket
+                        )
+                    })?;
+                created_pull_request_status = JiraStatus::read_pull_request_created_status(ticket)
                     .context("Failed to read status after configuration")?;
             }
         }
@@ -129,18 +170,63 @@ impl PRCreateCommand {
             .map(|i| selections.contains(&i))
             .collect();
 
-        // 7. 生成分支名
-        let branch_name = generate_branch_name(jira_ticket.as_deref(), &title)?;
+        // 7. 生成 commit_title 和分支名
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &title);
 
+        // 尝试使用 LLM 根据 commit_title 生成分支名
+        let branch_name = match LLM::generate_branch_name(&commit_title) {
+            Ok(llm_branch_name) => {
+                // 验证分支名是否包含非 ASCII 字符（如中文）
+                let is_valid_ascii = llm_branch_name.chars().all(|c| c.is_ascii() || c == '-');
+                let cleaned_branch_name = if !is_valid_ascii {
+                    // 如果包含非 ASCII 字符，使用 transform_to_branch_name 再次清理
+                    let cleaned = crate::pr::helpers::transform_to_branch_name(&llm_branch_name);
+                    // 如果清理后为空或只包含连字符，回退到原来的方法
+                    if cleaned.is_empty() || cleaned.chars().all(|c| c == '-') {
+                        log_info!("LLM generated branch name contains non-ASCII characters and cleaned result is invalid, falling back to default method");
+                        generate_branch_name(jira_ticket.as_deref(), &title)?
+                    } else {
+                        cleaned
+                    }
+                } else {
+                    llm_branch_name
+                };
+
+                log_success!("Generated branch name with LLM: {}", cleaned_branch_name);
+                let mut branch_name = cleaned_branch_name;
+
+                // 如果有 Jira ticket，添加到分支名前缀
+                if let Some(ticket) = jira_ticket.as_deref() {
+                    branch_name = format!("{}--{}", ticket, branch_name);
+                }
+
+                // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+                let settings = crate::settings::Settings::get();
+                if let Some(prefix) = &settings.github_branch_prefix {
+                    if !prefix.trim().is_empty() {
+                        branch_name = format!("{}/{}", prefix.trim(), branch_name);
+                    }
+                }
+
+                branch_name
+            }
+            Err(_) => {
+                // 回退到原来的方法
+                generate_branch_name(jira_ticket.as_deref(), &title)?
+            }
+        };
+
         // 8. 生成 PR body
-        let pr_body =
-            generate_pr_body(&selected_types, Some(&description), jira_ticket.as_deref())?;
+        let pull_request_body = generate_pull_request_body(
+            &selected_types,
+            Some(&description),
+            jira_ticket.as_deref(),
+        )?;
 
         if dry_run {
             log_info!("\n[DRY RUN] Would create branch: {}", branch_name);
             log_info!("[DRY RUN] Commit title: {}", commit_title);
-            log_info!("[DRY RUN] PR body:\n{}", pr_body);
+            log_info!("[DRY RUN] PR body:\n{}", pull_request_body);
             return Ok(());
         }
 
@@ -156,44 +242,54 @@ impl PRCreateCommand {
 
         // 10. 创建 PR（根据仓库类型）
         let repo_type = Git::detect_repo_type()?;
-        let pr_url = match repo_type {
+        let pull_request_url = match repo_type {
             RepoType::GitHub => {
                 log_success!("Creating PR via GitHub...");
-                <GitHub as Platform>::create_pr(&commit_title, &pr_body, &branch_name, None)?
+                <GitHub as PlatformProvider>::create_pull_request(
+                    &commit_title,
+                    &pull_request_body,
+                    &branch_name,
+                    None,
+                )?
             }
             RepoType::Codeup => {
                 log_success!("Creating PR via Codeup...");
-                <Codeup as Platform>::create_pr(&commit_title, &pr_body, &branch_name, None)?
+                <Codeup as PlatformProvider>::create_pull_request(
+                    &commit_title,
+                    &pull_request_body,
+                    &branch_name,
+                    None,
+                )?
             }
             RepoType::Unknown => {
                 anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
             }
         };
 
-        log_success!("PR created: {}", pr_url);
+        log_success!("PR created: {}", pull_request_url);
 
         // 11. 更新 Jira（如果有 ticket）
         if let Some(ref ticket) = jira_ticket {
-            if let Some(ref status) = created_pr_status {
+            if let Some(ref status) = created_pull_request_status {
                 log_success!("Updating Jira ticket...");
                 // 分配任务
                 Jira::assign_ticket(ticket, None)?;
                 // 更新状态
                 Jira::move_ticket(ticket, status)?;
                 // 添加评论（PR URL）
-                Jira::add_comment(ticket, &pr_url)?;
+                Jira::add_comment(ticket, &pull_request_url)?;
                 // 添加描述（如果有）
                 if !description.trim().is_empty() {
                     Jira::add_comment(ticket, &description)?;
                 }
 
                 // 写入历史记录
-                let pr_id = extract_pr_id_from_url(&pr_url)?;
+                let pull_request_id = extract_pull_request_id_from_url(&pull_request_url)?;
                 let repository = Git::get_remote_url().ok();
-                crate::jira::status::write_work_history(
+                JiraStatus::write_work_history(
                     ticket,
-                    &pr_id,
-                    Some(&pr_url),
+                    &pull_request_id,
+                    Some(&pull_request_url),
                     repository.as_deref(),
                     Some(&branch_name),
                 )?;
@@ -201,14 +297,15 @@ impl PRCreateCommand {
         }
 
         // 12. 复制 PR URL 到剪贴板
-        Clipboard::copy(&pr_url)?;
-        log_success!("Copied {} to clipboard", pr_url);
+        Clipboard::copy(&pull_request_url)?;
+        log_success!("Copied {} to clipboard", pull_request_url);
 
         // 13. 打开浏览器
         std::thread::sleep(std::time::Duration::from_secs(1));
-        Browser::open(&pr_url)?;
+        Browser::open(&pull_request_url)?;
 
         log_success!("PR created successfully!");
         Ok(())
     }
 }
+
