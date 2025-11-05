@@ -85,8 +85,7 @@ impl PlatformProvider for GitHub {
         source_branch: &str,
         target_branch: Option<&str>,
     ) -> Result<String> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
 
         // 如果没有指定目标分支，获取仓库的默认分支
         let base_branch = if let Some(branch) = target_branch {
@@ -101,7 +100,7 @@ impl PlatformProvider for GitHub {
             title: title.to_string(),
             body: body.to_string(),
             head: source_branch.to_string(),
-            base: base_branch.clone(),
+            base: base_branch,
         };
 
         let client = Self::get_client()?;
@@ -114,35 +113,7 @@ impl PlatformProvider for GitHub {
 
         // 如果请求失败，尝试解析错误响应
         if !response.is_success() {
-            let error_msg = if let Ok(error) =
-                serde_json::from_value::<GitHubErrorResponse>(response.data.clone())
-            {
-                let mut msg = format!(
-                    "GitHub API error: {} (Status: {})",
-                    error.message, response.status
-                );
-                if let Some(errors) = error.errors {
-                    for err in errors {
-                        if let (Some(resource), Some(field), Some(code)) =
-                            (err.resource, err.field, err.code)
-                        {
-                            msg.push_str(&format!(
-                                "\n  - {}: {} field is invalid ({})",
-                                resource, field, code
-                            ));
-                        }
-                    }
-                }
-                msg
-            } else {
-                format!(
-                    "GitHub API request failed: {} - {}",
-                    response.status,
-                    serde_json::to_string_pretty(&response.data)
-                        .unwrap_or_else(|_| "Unknown error".to_string())
-                )
-            };
-            anyhow::bail!("{}", error_msg);
+            return Err(Self::handle_api_error_json(&response));
         }
 
         // 解析成功响应
@@ -154,8 +125,7 @@ impl PlatformProvider for GitHub {
 
     /// 合并 Pull Request
     fn merge_pull_request(pull_request_id: &str, delete_branch: bool) -> Result<()> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;
@@ -182,11 +152,7 @@ impl PlatformProvider for GitHub {
             .context(format!("Failed to merge PR: {}", pull_request_id))?;
 
         if !response.is_success() {
-            anyhow::bail!(
-                "GitHub merge request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
+            return Err(Self::handle_api_error_json(&response));
         }
 
         // 如果需要删除分支，调用删除分支 API
@@ -264,8 +230,7 @@ impl PlatformProvider for GitHub {
 
     /// 列出 PR
     fn get_pull_requests(state: Option<&str>, limit: Option<u32>) -> Result<String> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
 
         // 转换 state 参数：GitHub API 支持 "open", "closed", "all"
         let state = match state {
@@ -289,11 +254,7 @@ impl PlatformProvider for GitHub {
             .context("Failed to list PRs via GitHub API")?;
 
         if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
+            return Err(Self::handle_api_error(&response));
         }
 
         use std::fmt::Write;
@@ -316,8 +277,7 @@ impl PlatformProvider for GitHub {
 
     /// 获取当前分支的 PR
     fn get_current_branch_pull_request() -> Result<Option<String>> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
         let current_branch = Git::current_branch()?;
 
         // 使用 head 参数查找当前分支的 PR
@@ -333,11 +293,7 @@ impl PlatformProvider for GitHub {
             .context("Failed to get current branch PR via GitHub API")?;
 
         if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
+            return Err(Self::handle_api_error(&response));
         }
 
         match response.data.first() {
@@ -348,6 +304,18 @@ impl PlatformProvider for GitHub {
 }
 
 impl GitHub {
+    /// 获取缓存的 owner 和 repo_name
+    pub fn get_owner_and_repo() -> Result<(String, String)> {
+        static OWNER_REPO: OnceLock<Result<(String, String)>> = OnceLock::new();
+        match OWNER_REPO.get_or_init(|| {
+            let repo = Self::get_repo()?;
+            Self::parse_repo(&repo)
+        }) {
+            Ok((owner, repo)) => Ok((owner.clone(), repo.clone())),
+            Err(e) => Err(anyhow::anyhow!("{}", e)),
+        }
+    }
+
     /// 获取 GitHub 仓库信息（owner/repo）
     fn get_repo() -> Result<String> {
         let remote_url = Git::get_remote_url().context("Failed to get remote URL")?;
@@ -365,7 +333,7 @@ impl GitHub {
     }
 
     /// 获取仓库的默认分支
-    fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
+    pub fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
         let repo_info = Self::get_repository_info(owner, repo_name)?;
         Ok(repo_info.default_branch)
     }
@@ -380,11 +348,7 @@ impl GitHub {
             .context("Failed to get repository info")?;
 
         if !response.is_success() {
-            anyhow::bail!(
-                "Failed to get repository info: {} - {}",
-                response.status,
-                response.status_text
-            );
+            return Err(Self::handle_api_error(&response));
         }
 
         Ok(response.data)
@@ -416,8 +380,7 @@ impl GitHub {
 
     /// 内部方法：获取 PR 信息（不缓存，避免数据不一致）
     fn fetch_pr_info_internal(pr_number: u64) -> Result<PullRequestInfo> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
 
         let url = format!(
             "https://api.github.com/repos/{}/{}/pulls/{}",
@@ -431,11 +394,7 @@ impl GitHub {
             .context(format!("Failed to get PR info: {}", pr_number))?;
 
         if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
+            return Err(Self::handle_api_error(&response));
         }
 
         Ok(response.data)
@@ -457,6 +416,41 @@ impl GitHub {
             .get_or_init(Self::create_headers)
             .as_ref()
             .map_err(|e| anyhow::anyhow!("Failed to create headers: {}", e))
+    }
+
+    /// 处理 API 错误响应（泛型版本，适用于所有响应类型）
+    fn handle_api_error<T>(response: &HttpResponse<T>) -> anyhow::Error {
+        anyhow::anyhow!(
+            "GitHub API request failed: {} - {}",
+            response.status,
+            response.status_text
+        )
+    }
+
+    /// 处理 API 错误响应（JSON 版本，可以提取详细错误信息）
+    fn handle_api_error_json(response: &HttpResponse<serde_json::Value>) -> anyhow::Error {
+        // 尝试从已解析的 JSON 中提取错误信息
+        if let Ok(error) = serde_json::from_value::<GitHubErrorResponse>(response.data.clone()) {
+            let mut msg = format!(
+                "GitHub API error: {} (Status: {})",
+                error.message, response.status
+            );
+            if let Some(errors) = error.errors {
+                for err in errors {
+                    if let (Some(resource), Some(field), Some(code)) =
+                        (err.resource, err.field, err.code)
+                    {
+                        msg.push_str(&format!(
+                            "\n  - {}: {} field is invalid ({})",
+                            resource, field, code
+                        ));
+                    }
+                }
+            }
+            anyhow::anyhow!(msg)
+        } else {
+            Self::handle_api_error(response)
+        }
     }
 
     /// 创建 GitHub API 请求的 headers（内部方法）

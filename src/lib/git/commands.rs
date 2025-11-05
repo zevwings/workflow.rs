@@ -194,12 +194,18 @@ impl Git {
     }
 
     /// 提交更改
+    ///
+    /// 自动暂存所有已修改的文件，然后提交
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
-        // 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
+        // 1. 先暂存所有已修改的文件
+        Self::add_all().context("Failed to stage changes")?;
+
+        // 2. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
         if !no_verify && Self::has_pre_commit() {
             Self::run_pre_commit()?;
         }
 
+        // 3. 执行提交
         let mut args = vec!["commit", "-m", message];
         if no_verify {
             args.push("--no-verify");
@@ -230,15 +236,14 @@ impl Git {
     /// * `commit_message` - 提交消息。如果为 None，使用默认消息 "update"
     ///
     /// # 执行的操作
-    /// 1. 执行 `git add --all`
-    /// 2. 执行 `git commit`（使用指定的提交消息）
-    /// 3. 执行 `git push`
+    /// 1. 执行 `git commit`（会自动暂存所有文件，使用指定的提交消息）
+    /// 2. 执行 `git push`
     ///
     /// # Note
     /// 此方法只负责 Git 操作，不关心提交消息的来源（可以是 PR 标题、自定义消息等）
+    /// `commit` 方法会自动暂存所有已修改的文件，无需手动执行 `git add`
     pub fn update(commit_message: Option<String>) -> Result<()> {
         use crate::{log_success, log_warning};
-        use anyhow::Context;
 
         // 1. 确定提交消息
         let message = commit_message.unwrap_or_else(|| {
@@ -248,13 +253,9 @@ impl Git {
 
         log_success!("Using commit message: {}", message);
 
-        // 2. 执行 git add --all
-        log_success!("Staging all changes...");
-        Self::add_all().context("Failed to stage changes")?;
-
-        // 3. 执行 git commit
-        log_success!("Committing changes...");
-        Self::commit(&message, false)?; // 不使用 --no-verify
+        // 2. 执行 git commit（会自动暂存所有文件）
+        log_success!("Staging and committing changes...");
+        Self::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
 
         // 4. 执行 git push
         let current_branch = Self::current_branch()?;

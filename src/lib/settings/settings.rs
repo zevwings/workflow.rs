@@ -136,7 +136,23 @@ impl Settings {
 
     // ==================== GitHub 配置 ====================
     fn load_github_config() -> Option<String> {
-        env::var("GITHUB_BRANCH_PREFIX").ok()
+        // 1. 优先从当前进程的环境变量读取
+        if let Ok(prefix) = env::var("GITHUB_BRANCH_PREFIX") {
+            if !prefix.is_empty() {
+                return Some(prefix);
+            }
+        }
+
+        // 2. 从 shell 配置文件读取
+        if let Ok(shell_config_env) = crate::EnvFile::load() {
+            if let Some(prefix) = shell_config_env.get("GITHUB_BRANCH_PREFIX") {
+                if !prefix.is_empty() {
+                    return Some(prefix.clone());
+                }
+            }
+        }
+
+        None
     }
 
     fn load_github_api_token() -> Option<String> {
