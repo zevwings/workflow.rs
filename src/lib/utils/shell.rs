@@ -31,10 +31,10 @@ impl Shell {
         let home_dir = PathBuf::from(home);
 
         let (completion_dir, config_file) = if shell_type == "zsh" {
-            (home_dir.join(".zsh/completions"), home_dir.join(".zshrc"))
+            (home_dir.join(".workflow/completions"), home_dir.join(".zshrc"))
         } else {
             (
-                home_dir.join(".bash_completion.d"),
+                home_dir.join(".workflow/completions"),
                 home_dir.join(".bashrc"),
             )
         };
@@ -61,15 +61,11 @@ impl Shell {
     }
 
     /// 获取 completion 目录路径
-    pub fn get_completion_dir(shell_type: &str) -> Result<PathBuf> {
+    pub fn get_completion_dir(_shell_type: &str) -> Result<PathBuf> {
         let home = std::env::var("HOME").context("HOME environment variable not set")?;
         let home_dir = PathBuf::from(home);
 
-        let completion_dir = if shell_type == "zsh" {
-            home_dir.join(".zsh/completions")
-        } else {
-            home_dir.join(".bash_completion.d")
-        };
+        let completion_dir = home_dir.join(".workflow/completions");
 
         Ok(completion_dir)
     }

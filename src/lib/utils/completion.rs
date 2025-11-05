@@ -12,31 +12,73 @@ use std::path::PathBuf;
 pub struct Completion;
 
 impl Completion {
+    /// 创建 workflow 配置文件目录
+    fn create_workflow_dir() -> Result<PathBuf> {
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let workflow_dir = PathBuf::from(&home).join(".workflow");
+        fs::create_dir_all(&workflow_dir)
+            .context("Failed to create .workflow directory")?;
+        Ok(workflow_dir)
+    }
+
+    /// 创建并写入 workflow completion 配置文件
+    /// 配置文件同时支持 zsh 和 bash
+    fn create_completion_config_file(shell_info: &ShellInfo) -> Result<PathBuf> {
+        let workflow_dir = Self::create_workflow_dir()?;
+        let config_file = workflow_dir.join(".completions");
+
+        // 生成同时支持 zsh 和 bash 的配置
+        let config_content = format!(
+            "# Workflow CLI completions\n\
+            # Supports both zsh and bash\n\
+            \n\
+            # Zsh completion setup\n\
+            if [[ -n \"$ZSH_VERSION\" ]]; then\n\
+                fpath=({} $fpath)\n\
+                if [[ -f {}/_workflow ]]; then\n\
+                    source {}/_workflow\n\
+                    source {}/_pr\n\
+                    source {}/_qk\n\
+                fi\n\
+            fi\n\
+            \n\
+            # Bash completion setup\n\
+            if [[ -n \"$BASH_VERSION\" ]]; then\n\
+                for f in {}/*.bash; do\n\
+                    [[ -f \"$f\" ]] && source \"$f\"\n\
+                done\n\
+            fi\n",
+            shell_info.completion_dir.display(),
+            shell_info.completion_dir.display(),
+            shell_info.completion_dir.display(),
+            shell_info.completion_dir.display(),
+            shell_info.completion_dir.display(),
+            shell_info.completion_dir.display()
+        );
+
+        fs::write(&config_file, config_content)
+            .context("Failed to write workflow completion config file")?;
+
+        Ok(config_file)
+    }
+
     /// 配置 shell 配置文件以启用 completion
     pub fn configure_shell_config(shell_info: &ShellInfo) -> Result<()> {
+        // 创建 workflow completion 配置文件
+        let workflow_config_file = Self::create_completion_config_file(shell_info)?;
+        let workflow_config_file_str = workflow_config_file.display().to_string();
+
+        // 读取 shell 配置文件
         let config_content =
             fs::read_to_string(&shell_info.config_file).unwrap_or_else(|_| String::new());
 
-        let (marker, config_line) = if shell_info.shell_type == "zsh" {
-            (
-                "# Workflow CLI completions",
-                format!(
-                    "fpath=({} $fpath)\nautoload -Uz compinit && compinit",
-                    shell_info.completion_dir.display()
-                ),
-            )
-        } else {
-            (
-                "# Workflow CLI completions",
-                format!(
-                    r#"for f in {}/*.bash; do source "$f"; done"#,
-                    shell_info.completion_dir.display()
-                ),
-            )
-        };
+        // 检查是否已经引用了 workflow 配置文件
+        let source_pattern = "source $HOME/.workflow/.completions";
 
-        // 检查是否已存在配置
-        if config_content.contains(marker) {
+        // 也检查是否使用了绝对路径
+        let source_pattern_abs = format!("source {}", workflow_config_file_str);
+
+        if config_content.contains(source_pattern) || config_content.contains(&source_pattern_abs) {
             log_success!(
                 "✓ completion 配置已存在于 {}",
                 shell_info.config_file.display()
@@ -44,13 +86,14 @@ impl Completion {
             return Ok(());
         }
 
-        // 添加配置
+        // 添加 source 语句到 shell 配置文件
         let mut new_content = config_content;
         if !new_content.is_empty() && !new_content.ends_with('\n') {
             new_content.push('\n');
         }
         new_content.push_str("\n# Workflow CLI completions\n");
-        new_content.push_str(&config_line);
+        new_content.push_str(source_pattern);
+        new_content.push('\n');
         new_content.push('\n');
 
         fs::write(&shell_info.config_file, new_content)
@@ -69,22 +112,18 @@ impl Completion {
         let config_content =
             fs::read_to_string(&shell_info.config_file).unwrap_or_else(|_| String::new());
 
-        let has_completion_block = config_content.contains("# Workflow CLI completions");
-        let completion_dir_str = shell_info.completion_dir.display().to_string();
-        let fpath_pattern = if shell_info.shell_type == "zsh" {
-            format!("fpath=({} $fpath)", completion_dir_str)
-        } else {
-            String::new()
-        };
+        // 检查是否引用了 workflow 配置文件
+        let source_pattern = "source $HOME/.workflow/.completions";
 
-        // 检查是否有 fpath 配置（仅在 zsh 中）
-        let mut has_fpath = if shell_info.shell_type == "zsh" && !fpath_pattern.is_empty() {
-            config_content.contains(&fpath_pattern)
-        } else {
-            false
-        };
+        let has_source = config_content.contains(source_pattern);
 
-        if !has_completion_block && !has_fpath {
+        // 也检查绝对路径
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let workflow_config_file = PathBuf::from(&home).join(".workflow").join(".completions");
+        let source_pattern_abs = format!("source {}", workflow_config_file.display());
+        let has_source_abs = config_content.contains(&source_pattern_abs);
+
+        if !has_source && !has_source_abs {
             log_info!(
                 "ℹ  completion 配置未在 {} 中找到",
                 shell_info.config_file.display()
@@ -92,7 +131,7 @@ impl Completion {
             return Ok(());
         }
 
-        // 删除配置块
+        // 删除配置块（包括 marker 和 source 行）
         let marker_start = "# Workflow CLI completions";
         let mut new_content = String::new();
         let lines: Vec<&str> = config_content.lines().collect();
@@ -103,35 +142,27 @@ impl Completion {
 
             // 检查是否是配置块开始
             if line.contains(marker_start) {
-                // 跳过整个配置块
-                if shell_info.shell_type == "zsh" {
-                    // 跳过到 autoload 行之后
-                    i += 1; // 跳过 marker 行
-                    while i < lines.len() {
-                        if lines[i].contains("autoload -Uz compinit && compinit") {
-                            i += 1; // 跳过 autoload 行
-                            break;
-                        }
-                        i += 1;
+                i += 1; // 跳过 marker 行
+                // 跳过 source 行
+                while i < lines.len() {
+                    let current_line = lines[i];
+                    if current_line.contains(source_pattern) || current_line.contains(&source_pattern_abs) {
+                        i += 1; // 跳过 source 行
+                        break;
                     }
-                } else {
-                    // 跳过到 for f in 行之后
-                    i += 1; // 跳过 marker 行
-                    while i < lines.len() {
-                        if lines[i].contains("for f in") && lines[i].contains(".bash") {
-                            i += 1; // 跳过 for 行
-                            break;
-                        }
+                    // 如果遇到空行，停止
+                    if current_line.trim().is_empty() {
                         i += 1;
+                        break;
                     }
+                    i += 1;
                 }
                 continue;
             }
 
-            // 检查是否是独立的 fpath 行（仅在 zsh 中，且不在配置块内）
-            if has_fpath && shell_info.shell_type == "zsh" && line.contains(&fpath_pattern) {
-                has_fpath = false;
-                i += 1; // 跳过这一行
+            // 跳过独立的 source 行（不在配置块内）
+            if line.contains(source_pattern) || line.contains(&source_pattern_abs) {
+                i += 1;
                 continue;
             }
 
