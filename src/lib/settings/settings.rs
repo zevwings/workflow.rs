@@ -207,19 +207,46 @@ impl Settings {
     }
 
     fn load_llm_provider() -> String {
-        // 使用静态变量确保日志只打印一次
+        // 使用静态变量缓存 provider 值，避免重复读取环境变量
         use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::OnceLock;
+
+        static CACHED_PROVIDER: OnceLock<String> = OnceLock::new();
         static LOGGED: AtomicBool = AtomicBool::new(false);
 
-        // 1. 优先从当前进程的环境变量读取
-        if let Ok(provider) = env::var("LLM_PROVIDER") {
-            if !provider.is_empty() {
-                if !LOGGED.swap(true, Ordering::Relaxed) {
-                    crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
-                }
-                return provider;
-            }
+        // 如果已经缓存，直接返回
+        if let Some(cached) = CACHED_PROVIDER.get() {
+            return cached.clone();
         }
+
+        // 首次调用，从环境变量读取
+        let provider = {
+            // 1. 优先从当前进程的环境变量读取
+            if let Ok(provider) = env::var("LLM_PROVIDER") {
+                if !provider.is_empty() {
+                    if !LOGGED.swap(true, Ordering::Relaxed) {
+                        crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                    }
+                    provider
+                } else {
+                    // 空字符串，继续检查其他来源
+                    Self::load_llm_provider_from_config()
+                }
+            } else {
+                // 环境变量不存在，继续检查其他来源
+                Self::load_llm_provider_from_config()
+            }
+        };
+
+        // 缓存结果
+        let _ = CACHED_PROVIDER.set(provider.clone());
+        provider
+    }
+
+    /// 从 shell 配置文件或默认值加载 LLM provider（辅助函数）
+    fn load_llm_provider_from_config() -> String {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static LOGGED: AtomicBool = AtomicBool::new(false);
 
         // 2. 从 shell 配置文件读取
         if let Ok(shell_config_env) = crate::EnvFile::load() {
