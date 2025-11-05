@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint setup uninstall
+.PHONY: help build release clean install test lint setup uninstall tag
 
 # 项目名称
 BINARY_NAME = workflow
@@ -25,6 +25,7 @@ help:
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy）"
 	@echo "  make uninstall            - 卸载二进制文件和 shell completion 脚本"
+	@echo "  make tag VERSION=v1.0.0  - 创建 git tag 并推送到远程仓库"
 
 # 构建 debug 版本
 dev:
@@ -110,4 +111,30 @@ install: release
 # 卸载二进制文件和 shell completion 脚本（一次性清理全部）
 uninstall:
 	@cargo run --bin workflow -- uninstall
+
+# 创建 git tag 并推送到远程仓库
+# 用法: make tag VERSION=v1.0.0
+# 如需覆盖已存在的 tag，使用: make tag VERSION=v1.0.0 FORCE=1
+tag:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "错误: 请指定版本号，例如: make tag VERSION=v1.0.0"; \
+		exit 1; \
+	fi
+	@echo "创建 tag: $(VERSION)..."
+	@if git rev-parse "$(VERSION)" >/dev/null 2>&1; then \
+		if [ "$(FORCE)" = "1" ]; then \
+			echo "警告: tag $(VERSION) 已存在，强制覆盖..."; \
+			git tag -d $(VERSION) 2>/dev/null || true; \
+			git push origin :refs/tags/$(VERSION) 2>/dev/null || true; \
+		else \
+			echo "错误: tag $(VERSION) 已存在"; \
+			echo "如需覆盖，请使用: make tag VERSION=$(VERSION) FORCE=1"; \
+			exit 1; \
+		fi; \
+	fi
+	@git tag $(VERSION)
+	@echo "✓ Tag 创建成功: $(VERSION)"
+	@echo "推送 tag 到远程仓库..."
+	@git push origin $(VERSION)
+	@echo "✓ Tag 推送成功: $(VERSION)"
 
