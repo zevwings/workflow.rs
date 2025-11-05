@@ -313,8 +313,7 @@ jobs:
           # Configure in: Settings → Secrets and variables → Actions
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
-      - na
-      me: Update Formula
+      - name: Update Formula
         shell: bash
         run: |
           cd homebrew-workflow
