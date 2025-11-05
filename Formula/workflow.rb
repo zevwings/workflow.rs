@@ -17,8 +17,19 @@ class Workflow < Formula
   end
 
   def install
+    # 设置环境变量以优化编译过程
+    ENV["CARGO_TERM_COLOR"] = "always"
+    ENV["CARGO_BUILD_JOBS"] = ENV.fetch("HOMEBREW_MAKE_JOBS", "4").to_s
+
+    # 显示编译进度
+    ohai "Building workflow CLI (this may take a few minutes)..."
+    ohai "Downloading and compiling dependencies..."
+
     # 构建所有二进制文件（包括 install，虽然它不会被安装到系统）
-    system "cargo", "build", "--release", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
+    # 使用 --verbose 显示更多输出，让用户知道进度
+    system "cargo", "build", "--release", "--verbose", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
+
+    ohai "Build completed! Installing binaries..."
 
     # 只安装用户可用的命令到系统
     bin.install "target/release/workflow"
