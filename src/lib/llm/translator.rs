@@ -4,6 +4,7 @@ use serde_json::json;
 
 use crate::http::{HttpClient, HttpResponse};
 use crate::log_info;
+use crate::pr::helpers::transform_to_branch_name;
 use crate::settings::Settings;
 
 /// 判断是否需要翻译
@@ -353,7 +354,9 @@ fn generate_branch_name_with_openai(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from OpenAI response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }
 
 /// 使用 DeepSeek API 生成分支名
@@ -415,7 +418,9 @@ fn generate_branch_name_with_deepseek(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from DeepSeek response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }
 
 /// 使用代理 API 生成分支名
@@ -481,5 +486,7 @@ fn generate_branch_name_with_proxy(commit_title: &str) -> Result<String> {
         .and_then(|c| c.as_str())
         .context("Failed to extract branch name from proxy API response")?;
 
-    Ok(branch_name.trim().to_string())
+    // 清理分支名，确保只保留 ASCII 字符
+    let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+    Ok(cleaned_branch_name)
 }
