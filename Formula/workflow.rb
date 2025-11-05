@@ -28,10 +28,13 @@ class Workflow < Formula
   end
 
   def install
-    system "cargo", "build", "--release", "--bin", "workflow", "--bin", "pr", "--bin", "qk"
+    # 构建所有二进制文件（包括 install，虽然它不会被安装到系统）
+    system "cargo", "build", "--release", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
+    # 只安装用户可用的命令到系统
     bin.install "target/release/workflow"
     bin.install "target/release/pr"
     bin.install "target/release/qk"
+    # 注意：install 二进制不安装到系统，它仅用于 shell completion 安装（Makefile 使用）
   end
 
   test do
