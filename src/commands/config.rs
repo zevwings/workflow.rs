@@ -60,7 +60,7 @@ impl ConfigCommand {
             "JIRA_SERVICE_ADDRESS",
             "JIRA_API_TOKEN",
             // GitHub 配置
-            "GH_BRANCH_PREFIX",
+            "GITHUB_BRANCH_PREFIX",
             // 日志配置
             "LOG_OUTPUT_FOLDER_NAME",
             "LOG_DELETE_WHEN_OPERATION_COMPLETED",

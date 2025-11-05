@@ -16,7 +16,7 @@ pub struct Settings {
 
     // ==================== GitHub 配置 ====================
     /// GitHub 分支前缀
-    pub gh_branch_prefix: Option<String>,
+    pub github_branch_prefix: Option<String>,
     /// GitHub API Token
     pub github_api_token: Option<String>,
 
@@ -59,7 +59,7 @@ impl Settings {
             email: String::new(),
             jira_api_token: String::new(),
             jira_service_address: String::new(),
-            gh_branch_prefix: None,
+            github_branch_prefix: None,
             github_api_token: None,
             log_delete_when_operation_completed: false,
             log_output_folder_name: "logs".to_string(),
@@ -86,7 +86,7 @@ impl Settings {
             jira_service_address: Self::load_jira_service_address()?,
 
             // ==================== GitHub 配置 ====================
-            gh_branch_prefix: Self::load_github_config(),
+            github_branch_prefix: Self::load_github_config(),
             github_api_token: Self::load_github_api_token(),
 
             // ==================== 日志配置 ====================
@@ -128,7 +128,7 @@ impl Settings {
 
     // ==================== GitHub 配置 ====================
     fn load_github_config() -> Option<String> {
-        env::var("GH_BRANCH_PREFIX").ok()
+        env::var("GITHUB_BRANCH_PREFIX").ok()
     }
 
     fn load_github_api_token() -> Option<String> {

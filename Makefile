@@ -57,6 +57,21 @@ setup:
 	@rustup component add rustfmt 2>/dev/null || echo "rustfmt 已安装或安装失败"
 	@rustup component add clippy 2>/dev/null || echo "clippy 已安装或安装失败"
 	@echo "开发工具安装完成"
+	@echo ""
+	@echo "正在克隆 rust-analyzer 仓库..."
+	@cd /tmp && \
+	if [ -d "rust-analyzer" ]; then \
+		echo "检测到已存在的 rust-analyzer 目录，正在更新..."; \
+		cd rust-analyzer && git pull; \
+	else \
+		git clone --depth 1 https://github.com/rust-lang/rust-analyzer.git && \
+		cd rust-analyzer; \
+	fi
+	@echo "正在构建并安装 rust-analyzer..."
+	@cd /tmp/rust-analyzer && cargo xtask install --server
+	@echo "✅ rust-analyzer 安装完成！"
+	@echo "安装位置: $$(which rust-analyzer)"
+	@rust-analyzer --version
 
 # 运行完整的代码检查（格式化检查 + Clippy + Check）
 lint: check-rustfmt check-clippy

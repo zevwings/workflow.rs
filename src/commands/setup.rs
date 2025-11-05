@@ -103,6 +103,31 @@ impl SetupCommand {
             anyhow::bail!("Email is required");
         }
 
+        // ==================== 必填项：GitHub 配置 ====================
+
+        let current_github_token = existing_env.get("GITHUB_API_TOKEN").cloned();
+        let github_token_prompt = if current_github_token.is_some() {
+            "GitHub API token [current: ***] (press Enter to keep)".to_string()
+        } else {
+            "GitHub API token (optional, press Enter to skip)".to_string()
+        };
+
+        let github_api_token: String = Input::new()
+            .with_prompt(&github_token_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get GitHub API token")?;
+
+        if !github_api_token.is_empty() {
+            env_vars.insert("GITHUB_API_TOKEN".to_string(), github_api_token);
+        } else if current_github_token.is_some() {
+            // 保持原值
+            env_vars.insert(
+                "GITHUB_API_TOKEN".to_string(),
+                current_github_token.unwrap(),
+            );
+        }
+
         // ==================== 必填项：Jira 配置 ====================
         log_info!("\n🎫 Jira Configuration (Required)");
         log_info!("─────────────────────────────────────────────────────────");
@@ -166,7 +191,7 @@ impl SetupCommand {
         log_info!("\n🐙 GitHub Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
-        let current_gh_prefix = existing_env.get("GH_BRANCH_PREFIX").cloned();
+        let current_gh_prefix = existing_env.get("GITHUB_BRANCH_PREFIX").cloned();
         let gh_prefix_prompt = if let Some(ref prefix) = current_gh_prefix {
             format!(
                 "GitHub branch prefix [current: {}] (press Enter to keep)",
@@ -186,10 +211,10 @@ impl SetupCommand {
             .context("Failed to get GitHub branch prefix")?;
 
         if !gh_prefix.is_empty() {
-            env_vars.insert("GH_BRANCH_PREFIX".to_string(), gh_prefix);
+            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), gh_prefix);
         } else if let Some(prefix) = current_gh_prefix {
             // 保持原值
-            env_vars.insert("GH_BRANCH_PREFIX".to_string(), prefix);
+            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), prefix);
         }
 
         // ==================== 可选：日志配置 ====================

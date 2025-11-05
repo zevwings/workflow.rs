@@ -112,9 +112,9 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
     let cleaned_title = transform_to_branch_name(title);
     branch_name.push_str(&cleaned_title);
 
-    // 如果有 GH_BRANCH_PREFIX，添加前缀
+    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
     let settings = Settings::load();
-    if let Some(prefix) = &settings.gh_branch_prefix {
+    if let Some(prefix) = &settings.github_branch_prefix {
         if !prefix.trim().is_empty() {
             branch_name = format!("{}/{}", prefix.trim(), branch_name);
         }
