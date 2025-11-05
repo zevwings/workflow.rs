@@ -231,4 +231,23 @@ impl Completion {
 
         Ok(removed_count)
     }
+
+    /// 删除 workflow completion 配置文件
+    pub fn remove_completion_config_file() -> Result<()> {
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let workflow_config_file = PathBuf::from(&home).join(".workflow").join(".completions");
+
+        if workflow_config_file.exists() {
+            fs::remove_file(&workflow_config_file)
+                .context("Failed to remove workflow completion config file")?;
+            log_info!("  ✓ Removed: {}", workflow_config_file.display());
+        } else {
+            log_info!(
+                "  ℹ  Completion config file not found: {}",
+                workflow_config_file.display()
+            );
+        }
+
+        Ok(())
+    }
 }
