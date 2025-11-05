@@ -1,7 +1,8 @@
 use crate::commands::check::CheckCommand;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_jira_ticket_id, log_success, log_warning, Codeup, Git, GitHub, Jira, PlatformProvider, RepoType,
+    extract_jira_ticket_id, log_success, log_warning, Codeup, Git, GitHub, Jira, PlatformProvider,
+    RepoType,
 };
 use anyhow::Result;
 
@@ -23,15 +24,17 @@ impl PullRequestMergeCommand {
         } else {
             // 从当前分支获取 PR
             match repo_type {
-                RepoType::GitHub => match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
-                    Some(id) => {
-                        log_success!("Found PR for current branch: #{}", id);
-                        id
+                RepoType::GitHub => {
+                    match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
+                        Some(id) => {
+                            log_success!("Found PR for current branch: #{}", id);
+                            id
+                        }
+                        None => {
+                            anyhow::bail!("No PR found for current branch. Please specify PR ID.");
+                        }
                     }
-                    None => {
-                        anyhow::bail!("No PR found for current branch. Please specify PR ID.");
-                    }
-                },
+                }
                 RepoType::Codeup => {
                     match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
                         Some(id) => {
@@ -76,12 +79,16 @@ impl PullRequestMergeCommand {
         if jira_ticket.is_none() {
             match repo_type {
                 RepoType::GitHub => {
-                    if let Ok(title) = <GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id) {
+                    if let Ok(title) =
+                        <GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id)
+                    {
                         jira_ticket = extract_jira_ticket_id(&title);
                     }
                 }
                 RepoType::Codeup => {
-                    if let Ok(title) = <Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id) {
+                    if let Ok(title) =
+                        <Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id)
+                    {
                         jira_ticket = extract_jira_ticket_id(&title);
                     }
                 }

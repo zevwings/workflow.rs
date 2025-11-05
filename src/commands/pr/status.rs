@@ -57,7 +57,9 @@ impl PullRequestStatusCommand {
                 };
 
                 log_success!("\nPR Information:");
-                let info = <Codeup as PlatformProvider>::get_pull_request_info(&pull_request_id_or_branch)?;
+                let info = <Codeup as PlatformProvider>::get_pull_request_info(
+                    &pull_request_id_or_branch,
+                )?;
                 log_info!("{}", info);
             }
             RepoType::Unknown => {

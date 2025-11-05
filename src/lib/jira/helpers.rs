@@ -23,4 +23,3 @@ mod tests {
         assert_eq!(extract_jira_project("ABC-123-456"), Some("ABC"));
     }
 }
-

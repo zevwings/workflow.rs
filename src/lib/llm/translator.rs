@@ -97,10 +97,7 @@ fn translate_with_openai(desc: &str) -> Result<String> {
         HeaderValue::from_str(&format!("Bearer {}", api_key))
             .context("Failed to create Authorization header")?,
     );
-    headers.insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
     let response: HttpResponse<serde_json::Value> = client
         .post(url, &payload, None, Some(&headers))
@@ -108,7 +105,11 @@ fn translate_with_openai(desc: &str) -> Result<String> {
 
     if !response.is_success() {
         let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!("OpenAI API request failed: {} - {}", response.status, error_text);
+        anyhow::bail!(
+            "OpenAI API request failed: {} - {}",
+            response.status,
+            error_text
+        );
     }
 
     let translated = response
@@ -158,10 +159,7 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
         HeaderValue::from_str(&format!("Bearer {}", api_key))
             .context("Failed to create Authorization header")?,
     );
-    headers.insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
     let response: HttpResponse<serde_json::Value> = client
         .post(url, &payload, None, Some(&headers))
@@ -169,7 +167,11 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
 
     if !response.is_success() {
         let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!("DeepSeek API request failed: {} - {}", response.status, error_text);
+        anyhow::bail!(
+            "DeepSeek API request failed: {} - {}",
+            response.status,
+            error_text
+        );
     }
 
     let translated = response
@@ -223,10 +225,7 @@ fn translate_with_proxy(desc: &str) -> Result<String> {
         HeaderValue::from_str(&format!("Bearer {}", api_key))
             .context("Failed to create Authorization header")?,
     );
-    headers.insert(
-        CONTENT_TYPE,
-        HeaderValue::from_static("application/json"),
-    );
+    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
 
     let response: HttpResponse<serde_json::Value> = client
         .post(&url, &payload, None, Some(&headers))
@@ -234,7 +233,11 @@ fn translate_with_proxy(desc: &str) -> Result<String> {
 
     if !response.is_success() {
         let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!("Proxy API request failed: {} - {}", response.status, error_text);
+        anyhow::bail!(
+            "Proxy API request failed: {} - {}",
+            response.status,
+            error_text
+        );
     }
 
     let translated = response

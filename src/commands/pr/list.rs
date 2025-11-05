@@ -14,12 +14,14 @@ impl GetPullRequestsCommand {
         match repo_type {
             RepoType::GitHub => {
                 log_success!("PR List");
-                let output = <GitHub as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
+                let output =
+                    <GitHub as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
                 log_info!("{}", output);
             }
             RepoType::Codeup => {
                 log_success!("PR List");
-                let output = <Codeup as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
+                let output =
+                    <Codeup as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
                 log_info!("{}", output);
             }
             _ => {

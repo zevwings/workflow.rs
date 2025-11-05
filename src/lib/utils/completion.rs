@@ -14,8 +14,8 @@ pub struct Completion;
 impl Completion {
     /// 配置 shell 配置文件以启用 completion
     pub fn configure_shell_config(shell_info: &ShellInfo) -> Result<()> {
-        let config_content = fs::read_to_string(&shell_info.config_file)
-            .unwrap_or_else(|_| String::new());
+        let config_content =
+            fs::read_to_string(&shell_info.config_file).unwrap_or_else(|_| String::new());
 
         let (marker, config_line) = if shell_info.shell_type == "zsh" {
             (
@@ -37,7 +37,10 @@ impl Completion {
 
         // 检查是否已存在配置
         if config_content.contains(marker) {
-            log_success!("✓ completion 配置已存在于 {}", shell_info.config_file.display());
+            log_success!(
+                "✓ completion 配置已存在于 {}",
+                shell_info.config_file.display()
+            );
             return Ok(());
         }
 
@@ -63,8 +66,8 @@ impl Completion {
 
     /// 从 shell 配置文件中移除 completion 配置
     pub fn remove_completion_config(shell_info: &ShellInfo) -> Result<()> {
-        let config_content = fs::read_to_string(&shell_info.config_file)
-            .unwrap_or_else(|_| String::new());
+        let config_content =
+            fs::read_to_string(&shell_info.config_file).unwrap_or_else(|_| String::new());
 
         let has_completion_block = config_content.contains("# Workflow CLI completions");
         let completion_dir_str = shell_info.completion_dir.display().to_string();
@@ -82,7 +85,10 @@ impl Completion {
         };
 
         if !has_completion_block && !has_fpath {
-            log_info!("ℹ  completion 配置未在 {} 中找到", shell_info.config_file.display());
+            log_info!(
+                "ℹ  completion 配置未在 {} 中找到",
+                shell_info.config_file.display()
+            );
             return Ok(());
         }
 
@@ -195,4 +201,3 @@ impl Completion {
         Ok(removed_count)
     }
 }
-

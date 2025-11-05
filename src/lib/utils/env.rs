@@ -338,11 +338,11 @@ impl EnvFile {
                     // 检查是否是 export KEY= 或 export KEY="
                     if let Some(after_key) = rest.strip_prefix(key) {
                         let after_key = after_key.trim_start();
-                            if after_key.starts_with('=') {
-                                // 找到匹配的 export 行
-                                indices_to_remove.push(i);
-                                removed_any = true;
-                                break;
+                        if after_key.starts_with('=') {
+                            // 找到匹配的 export 行
+                            indices_to_remove.push(i);
+                            removed_any = true;
+                            break;
                         }
                     }
                 }

@@ -5,7 +5,7 @@ use crate::{log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
 use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 安装命令
 #[allow(dead_code)]
@@ -53,8 +53,7 @@ impl InstallCommand {
         };
 
         // 创建输出目录
-        fs::create_dir_all(&output)
-            .context("Failed to create output directory")?;
+        fs::create_dir_all(&output).context("Failed to create output directory")?;
 
         // 生成 completion 脚本
         Self::generate_workflow_completion(&shell_type, &output)?;
@@ -110,11 +109,8 @@ impl InstallCommand {
         Ok(())
     }
 
-
-
-
     /// 生成 workflow 命令的 completion
-    fn generate_workflow_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_workflow_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("workflow")
@@ -124,18 +120,20 @@ impl InstallCommand {
                     .about("Manage proxy settings")
                     .subcommand(Command::new("on").about("Turn proxy on"))
                     .subcommand(Command::new("off").about("Turn proxy off"))
-                    .subcommand(Command::new("check").about("Check proxy status"))
+                    .subcommand(Command::new("check").about("Check proxy status")),
             )
             .subcommand(
                 Command::new("check")
                     .about("Run checks")
                     .subcommand(Command::new("git_status").about("Check git status"))
                     .subcommand(Command::new("network").about("Check network connection"))
-                    .subcommand(Command::new("pre_commit").about("Run pre-commit checks"))
+                    .subcommand(Command::new("pre_commit").about("Run pre-commit checks")),
             )
             .subcommand(Command::new("setup").about("Initialize or update configuration"))
             .subcommand(Command::new("config").about("View current configuration"))
-            .subcommand(Command::new("install").about("Install Workflow CLI (binary and completions)"))
+            .subcommand(
+                Command::new("install").about("Install Workflow CLI (binary and completions)"),
+            )
             .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"));
 
         let mut buffer = Vec::new();
@@ -152,15 +150,14 @@ impl InstallCommand {
             }
         };
 
-        fs::write(&output_file, buffer)
-            .context("Failed to write completion file")?;
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
         log_success!("  生成: {}", output_file.display());
 
         Ok(())
     }
 
     /// 生成 pr 命令的 completion
-    fn generate_pr_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_pr_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("pr")
@@ -171,24 +168,24 @@ impl InstallCommand {
                     .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
                     .arg(clap::Arg::new("title").short('t').long("title"))
                     .arg(clap::Arg::new("description").short('d').long("description"))
-                    .arg(clap::Arg::new("dry-run").long("dry-run"))
+                    .arg(clap::Arg::new("dry-run").long("dry-run")),
             )
             .subcommand(
                 Command::new("merge")
                     .about("Merge a Pull Request")
                     .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
-                    .arg(clap::Arg::new("force").short('f').long("force"))
+                    .arg(clap::Arg::new("force").short('f').long("force")),
             )
             .subcommand(
                 Command::new("status")
                     .about("Show PR status information")
-                    .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH"))
+                    .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
             )
             .subcommand(
                 Command::new("list")
                     .about("List PRs")
                     .arg(clap::Arg::new("state").short('s').long("state"))
-                    .arg(clap::Arg::new("limit").short('l').long("limit"))
+                    .arg(clap::Arg::new("limit").short('l').long("limit")),
             )
             .subcommand(Command::new("update").about("Update code"));
 
@@ -206,30 +203,33 @@ impl InstallCommand {
             }
         };
 
-        fs::write(&output_file, buffer)
-            .context("Failed to write completion file")?;
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
         log_success!("  生成: {}", output_file.display());
 
         Ok(())
     }
 
     /// 生成 qk 命令的 completion
-    fn generate_qk_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_qk_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("qk")
             .about("Quick log operations")
-            .arg(clap::Arg::new("JIRA_ID").value_name("JIRA_ID").required(true))
+            .arg(
+                clap::Arg::new("JIRA_ID")
+                    .value_name("JIRA_ID")
+                    .required(true),
+            )
             .subcommand(Command::new("download").about("Download logs"))
             .subcommand(
                 Command::new("find")
                     .about("Find request by ID")
-                    .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID"))
+                    .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
             )
             .subcommand(
                 Command::new("search")
                     .about("Search in logs")
-                    .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM"))
+                    .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
             );
 
         let mut buffer = Vec::new();
@@ -246,12 +246,9 @@ impl InstallCommand {
             }
         };
 
-        fs::write(&output_file, buffer)
-            .context("Failed to write completion file")?;
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
         log_success!("  生成: {}", output_file.display());
 
         Ok(())
     }
 }
-
-

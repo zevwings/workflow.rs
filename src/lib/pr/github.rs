@@ -76,7 +76,15 @@ impl PlatformProvider for GitHub {
     fn get_pull_request_url(pull_request_id: &str) -> Result<String> {
         let output = cmd(
             "gh",
-            &["pr", "view", pull_request_id, "--json", "url", "--jq", ".url"],
+            &[
+                "pr",
+                "view",
+                pull_request_id,
+                "--json",
+                "url",
+                "--jq",
+                ".url",
+            ],
         )
         .read()
         .context(format!("Failed to get PR URL: {}", pull_request_id))?;
@@ -88,7 +96,15 @@ impl PlatformProvider for GitHub {
     fn get_pull_request_title(pull_request_id: &str) -> Result<String> {
         let output = cmd(
             "gh",
-            &["pr", "view", pull_request_id, "--json", "title", "--jq", ".title"],
+            &[
+                "pr",
+                "view",
+                pull_request_id,
+                "--json",
+                "title",
+                "--jq",
+                ".title",
+            ],
         )
         .read()
         .context(format!("Failed to get PR title: {}", pull_request_id))?;

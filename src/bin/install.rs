@@ -5,4 +5,3 @@ fn main() -> Result<()> {
     InstallCommand::install()?;
     Ok(())
 }
-

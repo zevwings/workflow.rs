@@ -64,7 +64,6 @@ impl SetupCommand {
         Ok(())
     }
 
-
     /// 收集配置信息（统一保存为环境变量）
     fn collect_config(existing_env: &HashMap<String, String>) -> Result<HashMap<String, String>> {
         let mut env_vars = existing_env.clone();
@@ -487,4 +486,3 @@ impl SetupCommand {
         Ok(env_vars)
     }
 }
-

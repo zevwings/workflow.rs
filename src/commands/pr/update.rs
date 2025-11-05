@@ -38,7 +38,9 @@ impl PullRequestUpdateCommand {
                 match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
                     Some(pull_request_id) => {
                         log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id)?)
+                        Some(<GitHub as PlatformProvider>::get_pull_request_title(
+                            &pull_request_id,
+                        )?)
                     }
                     None => {
                         log_warning!("No PR found for current branch");
@@ -51,7 +53,9 @@ impl PullRequestUpdateCommand {
                 match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
                     Some(pull_request_id) => {
                         log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id)?)
+                        Some(<Codeup as PlatformProvider>::get_pull_request_title(
+                            &pull_request_id,
+                        )?)
                     }
                     None => {
                         log_warning!("No PR found for current branch");

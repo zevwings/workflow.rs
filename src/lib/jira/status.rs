@@ -75,9 +75,9 @@ impl JiraStatus {
     /// 交互式配置 Jira 状态
     pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
         // 需要导入的依赖
+        use super::helpers::extract_jira_project;
         use crate::{log_info, log_success, Jira};
         use dialoguer::Select;
-        use super::helpers::extract_jira_project;
 
         // 从 ticket 或项目名中提取项目名
         let project =
@@ -137,8 +137,7 @@ impl JiraStatus {
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
         use super::helpers::extract_jira_project;
 
-        let project =
-            extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
@@ -150,8 +149,7 @@ impl JiraStatus {
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
         use super::helpers::extract_jira_project;
 
-        let project =
-            extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
@@ -275,8 +273,10 @@ impl JiraStatus {
 
         Ok(JiraStatusConfig {
             project: project.to_string(),
-            created_pull_request_status: project_config.and_then(|c| c.created_pull_request_status.clone()),
-            merged_pull_request_status: project_config.and_then(|c| c.merged_pull_request_status.clone()),
+            created_pull_request_status: project_config
+                .and_then(|c| c.created_pull_request_status.clone()),
+            merged_pull_request_status: project_config
+                .and_then(|c| c.merged_pull_request_status.clone()),
         })
     }
 

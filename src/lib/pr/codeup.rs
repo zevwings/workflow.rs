@@ -426,7 +426,8 @@ impl PlatformProvider for Codeup {
             let pull_request_id = if let Some(iid) = pr.pull_request_number {
                 iid.to_string()
             } else if let Some(ref detail_url) = pr.detail_url {
-                Self::extract_pull_request_id_from_url(detail_url).unwrap_or_else(|| "N/A".to_string())
+                Self::extract_pull_request_id_from_url(detail_url)
+                    .unwrap_or_else(|| "N/A".to_string())
             } else {
                 "N/A".to_string()
             };

@@ -86,8 +86,15 @@ impl UninstallCommand {
                                     log_info!("  ✓ Removed: {}", binary_path);
                                 }
                                 Err(e) => {
-                                    log_warning!("  ⚠️  Failed to remove {} with sudo: {}", binary_path, e);
-                                    log_info!("     You may need to manually remove it with: sudo rm {}", binary_path);
+                                    log_warning!(
+                                        "  ⚠️  Failed to remove {} with sudo: {}",
+                                        binary_path,
+                                        e
+                                    );
+                                    log_info!(
+                                        "     You may need to manually remove it with: sudo rm {}",
+                                        binary_path
+                                    );
                                 }
                             }
                         }
@@ -105,8 +112,15 @@ impl UninstallCommand {
                                     log_info!("  ✓ Removed: {}", binary_path);
                                 }
                                 Err(e) => {
-                                    log_warning!("  ⚠️  Failed to remove {} with sudo: {}", binary_path, e);
-                                    log_info!("     You may need to manually remove it with: sudo rm {}", binary_path);
+                                    log_warning!(
+                                        "  ⚠️  Failed to remove {} with sudo: {}",
+                                        binary_path,
+                                        e
+                                    );
+                                    log_info!(
+                                        "     You may need to manually remove it with: sudo rm {}",
+                                        binary_path
+                                    );
                                 }
                             }
                         }
@@ -122,7 +136,10 @@ impl UninstallCommand {
                     }
                     Err(e) => {
                         log_warning!("  ⚠️  Failed to remove {} with sudo: {}", install_path, e);
-                        log_info!("     You may need to manually remove it with: sudo rm {}", install_path);
+                        log_info!(
+                            "     You may need to manually remove it with: sudo rm {}",
+                            install_path
+                        );
                     }
                 }
             }
@@ -135,7 +152,10 @@ impl UninstallCommand {
             if shell_info.config_file.exists() {
                 Completion::remove_completion_config(&shell_info)?;
             } else {
-                log_info!("  ℹ  Config file {} does not exist", shell_info.config_file.display());
+                log_info!(
+                    "  ℹ  Config file {} does not exist",
+                    shell_info.config_file.display()
+                );
             }
         }
 
@@ -150,7 +170,9 @@ impl UninstallCommand {
 
         log_success!("\n✅ Uninstall completed successfully!");
         if remove_config {
-            log_info!("All Workflow CLI configuration has been removed from your shell config file.");
+            log_info!(
+                "All Workflow CLI configuration has been removed from your shell config file."
+            );
         } else {
             log_info!("Workflow CLI configuration has been kept (not removed).");
         }
@@ -173,4 +195,3 @@ impl UninstallCommand {
         Ok(())
     }
 }
-

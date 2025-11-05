@@ -410,4 +410,3 @@ mod tests {
         assert_eq!(extract_jira_ticket_id("Fix bug"), None);
     }
 }
-

@@ -236,7 +236,6 @@ impl Settings {
     fn load_codeup_cookie() -> Option<String> {
         env::var("CODEUP_COOKIE").ok()
     }
-
 }
 
 #[cfg(test)]

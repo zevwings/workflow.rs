@@ -137,8 +137,11 @@ impl PullRequestCreateCommand {
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &title);
 
         // 8. 生成 PR body
-        let pull_request_body =
-            generate_pull_request_body(&selected_types, Some(&description), jira_ticket.as_deref())?;
+        let pull_request_body = generate_pull_request_body(
+            &selected_types,
+            Some(&description),
+            jira_ticket.as_deref(),
+        )?;
 
         if dry_run {
             log_info!("\n[DRY RUN] Would create branch: {}", branch_name);
@@ -162,11 +165,21 @@ impl PullRequestCreateCommand {
         let pull_request_url = match repo_type {
             RepoType::GitHub => {
                 log_success!("Creating PR via GitHub...");
-                <GitHub as PlatformProvider>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
+                <GitHub as PlatformProvider>::create_pull_request(
+                    &commit_title,
+                    &pull_request_body,
+                    &branch_name,
+                    None,
+                )?
             }
             RepoType::Codeup => {
                 log_success!("Creating PR via Codeup...");
-                <Codeup as PlatformProvider>::create_pull_request(&commit_title, &pull_request_body, &branch_name, None)?
+                <Codeup as PlatformProvider>::create_pull_request(
+                    &commit_title,
+                    &pull_request_body,
+                    &branch_name,
+                    None,
+                )?
             }
             RepoType::Unknown => {
                 anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");

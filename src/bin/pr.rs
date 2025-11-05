@@ -73,10 +73,15 @@ fn main() -> Result<()> {
         } => {
             create::PullRequestCreateCommand::create(jira_ticket, title, description, dry_run)?;
         }
-        PRCommands::Merge { pull_request_id, force } => {
+        PRCommands::Merge {
+            pull_request_id,
+            force,
+        } => {
             merge::PullRequestMergeCommand::merge(pull_request_id, force)?;
         }
-        PRCommands::Status { pull_request_id_or_branch } => {
+        PRCommands::Status {
+            pull_request_id_or_branch,
+        } => {
             status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
         }
         PRCommands::List { state, limit } => {
