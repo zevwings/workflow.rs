@@ -55,7 +55,13 @@ impl PullRequestCreateCommand {
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)?;
+                JiraStatus::configure_interactive(ticket)
+                    .with_context(|| {
+                        format!(
+                            "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
+                            ticket
+                        )
+                    })?;
                 created_pull_request_status = JiraStatus::read_pull_request_created_status(ticket)
                     .context("Failed to read status after configuration")?;
             }
@@ -134,19 +140,7 @@ impl PullRequestCreateCommand {
         // 7. 生成 commit_title 和分支名
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &title);
 
-        // 检查标题是否包含非 ASCII 字符（如中文）
-        let has_non_ascii = !title.is_ascii();
-        if has_non_ascii {
-            log_info!(
-                "Title contains non-ASCII characters, will use LLM to generate English branch name"
-            );
-        }
-
         // 尝试使用 LLM 根据 commit_title 生成分支名
-        log_info!(
-            "Attempting to generate branch name with LLM for commit_title: {}",
-            commit_title
-        );
         let branch_name = match LLM::generate_branch_name(&commit_title) {
             Ok(llm_branch_name) => {
                 log_success!("Generated branch name with LLM: {}", llm_branch_name);
@@ -167,18 +161,8 @@ impl PullRequestCreateCommand {
 
                 branch_name
             }
-            Err(e) => {
-                // 如果标题包含非 ASCII 字符且 LLM 失败，不能回退到原来的方法
-                // 因为原来的方法会过滤掉中文，导致生成无效的分支名
-                if has_non_ascii {
-                    log_error!("LLM branch name generation failed: {}", e);
-                    anyhow::bail!(
-                        "Cannot generate branch name: The title contains non-ASCII characters (like Chinese), but LLM is not available or failed. Please configure LLM API (LLM_OPENAI_KEY, LLM_DEEPSEEK_KEY, or LLM_PROXY_KEY/LLM_PROXY_URL) or use an English title."
-                    );
-                }
-                log_warning!("LLM branch name generation failed: {}", e);
-                log_info!("Falling back to default branch name generation");
-                // 回退到原来的方法（仅当标题是 ASCII 时）
+            Err(_) => {
+                // 回退到原来的方法
                 generate_branch_name(jira_ticket.as_deref(), &title)?
             }
         };
