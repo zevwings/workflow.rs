@@ -222,9 +222,11 @@ impl PullRequestMergeCommand {
         }
 
         // 5. 清理远程分支引用（prune，移除已删除的远程分支引用）
-        cmd("git", &["remote", "prune", "origin"])
-            .run()
-            .context("Failed to prune remote references")?;
+        // 注意：这是一个可选的清理操作，失败不影响主要功能
+        if let Err(e) = cmd("git", &["remote", "prune", "origin"]).run() {
+            log_info!("Warning: Failed to prune remote references: {}", e);
+            log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
+        }
 
         log_success!(
             "Cleanup completed: switched to {} and deleted local branch {}",
