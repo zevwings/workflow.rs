@@ -38,7 +38,7 @@ impl EnvFile {
             "EMAIL",
             "JIRA_API_TOKEN",
             "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX",
+            "GITHUB_BRANCH_PREFIX",
             "LOG_OUTPUT_FOLDER_NAME",
             "LOG_DELETE_WHEN_OPERATION_COMPLETED",
             "DISABLE_CHECK_PROXY",

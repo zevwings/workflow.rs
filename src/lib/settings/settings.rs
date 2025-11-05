@@ -16,7 +16,9 @@ pub struct Settings {
 
     // ==================== GitHub 配置 ====================
     /// GitHub 分支前缀
-    pub gh_branch_prefix: Option<String>,
+    pub github_branch_prefix: Option<String>,
+    /// GitHub API Token
+    pub github_api_token: Option<String>,
 
     // ==================== 日志配置 ====================
     /// 操作完成后是否删除日志
@@ -57,7 +59,8 @@ impl Settings {
             email: String::new(),
             jira_api_token: String::new(),
             jira_service_address: String::new(),
-            gh_branch_prefix: None,
+            github_branch_prefix: None,
+            github_api_token: None,
             log_delete_when_operation_completed: false,
             log_output_folder_name: "logs".to_string(),
             disable_check_proxy: false,
@@ -83,7 +86,8 @@ impl Settings {
             jira_service_address: Self::load_jira_service_address()?,
 
             // ==================== GitHub 配置 ====================
-            gh_branch_prefix: Self::load_github_config(),
+            github_branch_prefix: Self::load_github_config(),
+            github_api_token: Self::load_github_api_token(),
 
             // ==================== 日志配置 ====================
             log_delete_when_operation_completed: Self::load_log_delete_when_completed(),
@@ -124,7 +128,11 @@ impl Settings {
 
     // ==================== GitHub 配置 ====================
     fn load_github_config() -> Option<String> {
-        env::var("GH_BRANCH_PREFIX").ok()
+        env::var("GITHUB_BRANCH_PREFIX").ok()
+    }
+
+    fn load_github_api_token() -> Option<String> {
+        env::var("GITHUB_API_TOKEN").ok()
     }
 
     // ==================== 日志配置 ====================
@@ -199,10 +207,16 @@ impl Settings {
     }
 
     fn load_llm_provider() -> String {
+        // 使用静态变量确保日志只打印一次
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static LOGGED: AtomicBool = AtomicBool::new(false);
+
         // 1. 优先从当前进程的环境变量读取
         if let Ok(provider) = env::var("LLM_PROVIDER") {
             if !provider.is_empty() {
-                crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                if !LOGGED.swap(true, Ordering::Relaxed) {
+                    crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                }
                 return provider;
             }
         }
@@ -211,14 +225,18 @@ impl Settings {
         if let Ok(shell_config_env) = crate::EnvFile::load() {
             if let Some(provider) = shell_config_env.get("LLM_PROVIDER") {
                 if !provider.is_empty() {
-                    crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    if !LOGGED.swap(true, Ordering::Relaxed) {
+                        crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    }
                     return provider.clone();
                 }
             }
         }
 
         // 3. 默认使用 openai
-        crate::log_info!("LLM_PROVIDER: openai (default)");
+        if !LOGGED.swap(true, Ordering::Relaxed) {
+            crate::log_info!("LLM_PROVIDER: openai (default)");
+        }
         "openai".to_string()
     }
 

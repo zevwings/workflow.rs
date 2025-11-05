@@ -1,14 +1,16 @@
 use anyhow::{Context, Result};
+use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
 
 use super::provider::PlatformProvider;
+use crate::http::{HttpClient, HttpResponse};
 use crate::settings::Settings;
 
 /// Codeup API 模块
 pub struct Codeup;
 
 #[derive(Debug, Serialize)]
-struct CreatePRRequest {
+struct CreatePullRequestRequest {
     source_project_id: u64,
     target_project_id: u64,
     source_branch: String,
@@ -21,12 +23,12 @@ struct CreatePRRequest {
 }
 
 #[derive(Debug, Deserialize)]
-struct CreatePRResponse {
+struct CreatePullRequestResponse {
     detail_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
-pub(crate) struct PRInfo {
+pub(crate) struct PullRequestInfo {
     #[allow(dead_code)]
     id: Option<u64>,
     title: Option<String>,
@@ -40,7 +42,7 @@ pub(crate) struct PRInfo {
 }
 
 #[derive(Debug, Serialize)]
-struct MergePRRequest {
+struct MergePullRequestRequest {
     merge_method: String,
     delete_source_branch: bool,
 }
@@ -70,7 +72,7 @@ impl PlatformProvider for Codeup {
 
         let target_branch = target_branch.unwrap_or("develop");
 
-        let request = CreatePRRequest {
+        let request = CreatePullRequestRequest {
             source_project_id: project_id,
             target_project_id: project_id,
             source_branch: source_branch.to_string(),
@@ -87,27 +89,22 @@ impl PlatformProvider for Codeup {
             project_id, csrf_token
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .post(&url)
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Cookie", cookie)
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers(cookie, Some("application/json"))?;
+        let response: HttpResponse<CreatePullRequestResponse> = client
+            .post(&url, &request, None, Some(&headers))
             .context("Failed to send Codeup API request")?;
 
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().unwrap_or_default();
-            anyhow::bail!("Codeup API request failed: {} - {}", status, error_text);
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup API request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
         }
 
-        let response_data: CreatePRResponse = response
-            .json()
-            .context("Failed to parse Codeup API response")?;
-
-        let pull_request_url = response_data
+        let pull_request_url = response
+            .data
             .detail_url
             .context("Failed to get PR URL from Codeup API response")?;
 
@@ -145,7 +142,7 @@ impl PlatformProvider for Codeup {
             }
         };
 
-        let merge_request = MergePRRequest {
+        let merge_request = MergePullRequestRequest {
             merge_method: "merge".to_string(), // Codeup 可能支持 "merge", "squash", "rebase"
             delete_source_branch: delete_branch,
         };
@@ -155,20 +152,18 @@ impl PlatformProvider for Codeup {
             project_id, actual_pull_request_id, csrf_token
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .put(&url)
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Cookie", cookie)
-            .header("Content-Type", "application/json")
-            .json(&merge_request)
-            .send()
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers(&cookie, Some("application/json"))?;
+        let response: HttpResponse<serde_json::Value> = client
+            .put(&url, &merge_request, None, Some(&headers))
             .context("Failed to send Codeup merge request")?;
 
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().unwrap_or_default();
-            anyhow::bail!("Codeup merge request failed: {} - {}", status, error_text);
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup merge request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
         }
 
         Ok(())
@@ -187,27 +182,22 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = reqwest::blocking::Client::new();
-            let response = client
-                .get(&url)
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Cookie", cookie)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .send()
+            let client = HttpClient::new()?;
+            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let response: HttpResponse<Vec<PullRequestInfo>> = client
+                .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
 
-            let status = response.status();
-            if !status.is_success() {
-                let error_text = response.text().unwrap_or_default();
-                anyhow::bail!("Codeup API request failed: {} - {}", status, error_text);
+            if !response.is_success() {
+                anyhow::bail!(
+                    "Codeup API request failed: {} - {}",
+                    response.status,
+                    response.status_text
+                );
             }
 
-            let pull_request_list: Vec<PRInfo> = response
-                .json()
-                .context("Failed to parse Codeup API response")?;
-
             // 查找匹配的 PR ID
-            pull_request_list.into_iter().find(|pr| {
+            response.data.into_iter().find(|pr| {
                 if let Some(iid) = pr.pull_request_number {
                     iid.to_string() == pull_request_id_or_branch
                 } else if let Some(ref detail_url) = pr.detail_url {
@@ -268,25 +258,17 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = reqwest::blocking::Client::new();
-            let response = client
-                .get(&url)
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Cookie", cookie)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .send()
+            let client = HttpClient::new()?;
+            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let response: HttpResponse<Vec<PullRequestInfo>> = client
+                .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
 
-            let status = response.status();
-            if !status.is_success() {
-                anyhow::bail!("Codeup API request failed: {}", status);
+            if !response.is_success() {
+                anyhow::bail!("Codeup API request failed: {}", response.status);
             }
 
-            let pull_request_list: Vec<PRInfo> = response
-                .json()
-                .context("Failed to parse Codeup API response")?;
-
-            pull_request_list.into_iter().find(|pr| {
+            response.data.into_iter().find(|pr| {
                 if let Some(iid) = pr.pull_request_number {
                     iid.to_string() == pull_request_id
                 } else if let Some(ref detail_url) = pr.detail_url {
@@ -319,25 +301,17 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = reqwest::blocking::Client::new();
-            let response = client
-                .get(&url)
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Cookie", cookie)
-                .header("Content-Type", "application/x-www-form-urlencoded")
-                .send()
+            let client = HttpClient::new()?;
+            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let response: HttpResponse<Vec<PullRequestInfo>> = client
+                .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
 
-            let status = response.status();
-            if !status.is_success() {
-                anyhow::bail!("Codeup API request failed: {}", status);
+            if !response.is_success() {
+                anyhow::bail!("Codeup API request failed: {}", response.status);
             }
 
-            let pull_request_list: Vec<PRInfo> = response
-                .json()
-                .context("Failed to parse Codeup API response")?;
-
-            pull_request_list.into_iter().find(|pr| {
+            response.data.into_iter().find(|pr| {
                 if let Some(iid) = pr.pull_request_number {
                     iid.to_string() == pull_request_id
                 } else if let Some(ref detail_url) = pr.detail_url {
@@ -401,24 +375,22 @@ impl PlatformProvider for Codeup {
             project_id, sub_state_list, per_page
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&url)
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Cookie", cookie)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .send()
-            .context("Failed to send Codeup API request")?;
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let response: HttpResponse<Vec<PullRequestInfo>> =
+            client
+                .get(&url, None, Some(&headers))
+                .context("Failed to send Codeup API request")?;
 
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().unwrap_or_default();
-            anyhow::bail!("Codeup API request failed: {} - {}", status, error_text);
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup API request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
         }
 
-        let pull_request_list: Vec<PRInfo> = response
-            .json()
-            .context("Failed to parse Codeup API response")?;
+        let pull_request_list = response.data;
 
         // 格式化输出
         let mut output = String::new();
@@ -468,8 +440,30 @@ impl Codeup {
         Ok((project_id, cookie))
     }
 
+    /// 创建 Codeup API 请求的 headers（辅助函数）
+    fn create_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "X-Requested-With",
+            "XMLHttpRequest"
+                .parse()
+                .context("Failed to parse X-Requested-With header")?,
+        );
+        headers.insert(
+            "Cookie",
+            cookie.parse().context("Failed to parse Cookie header")?,
+        );
+        if let Some(ct) = content_type {
+            headers.insert(
+                "Content-Type",
+                ct.parse().context("Failed to parse Content-Type header")?,
+            );
+        }
+        Ok(headers)
+    }
+
     /// 通过分支名查找 PR（内部方法）
-    pub(crate) fn get_pull_request_by_branch(branch_name: &str) -> Result<Option<PRInfo>> {
+    pub(crate) fn get_pull_request_by_branch(branch_name: &str) -> Result<Option<PullRequestInfo>> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         let url = format!(
@@ -477,27 +471,23 @@ impl Codeup {
             project_id
         );
 
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .get(&url)
-            .header("X-Requested-With", "XMLHttpRequest")
-            .header("Cookie", cookie)
-            .header("Content-Type", "application/x-www-form-urlencoded")
-            .send()
-            .context("Failed to send Codeup API request")?;
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let response: HttpResponse<Vec<PullRequestInfo>> =
+            client
+                .get(&url, None, Some(&headers))
+                .context("Failed to send Codeup API request")?;
 
-        let status = response.status();
-        if !status.is_success() {
-            let error_text = response.text().unwrap_or_default();
-            anyhow::bail!("Codeup API request failed: {} - {}", status, error_text);
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup API request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
         }
 
-        let pull_request_list: Vec<PRInfo> = response
-            .json()
-            .context("Failed to parse Codeup API response")?;
-
         // 通过分支名查找 PR
-        for pr in pull_request_list {
+        for pr in response.data {
             if let Some(ref source_branch) = pr.source_branch {
                 if source_branch == branch_name {
                     return Ok(Some(pr));
