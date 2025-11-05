@@ -43,6 +43,37 @@ impl JiraClient {
         Ok(email_address.to_string())
     }
 
+    /// 获取当前 Jira 用户的 accountId
+    pub fn get_current_user_account_id() -> Result<String> {
+        let (email, api_token) = Self::get_auth()?;
+        let settings = Settings::load();
+        let service_address = &settings.jira_service_address;
+
+        let url = format!("{}/rest/api/2/myself", service_address);
+
+        let client = HttpClient::new()?;
+        let auth = Authorization::new(&email, &api_token);
+        let response = client
+            .get::<serde_json::Value>(&url, Some(&auth), None)
+            .context("Failed to get current Jira user")?;
+
+        if !response.is_success() {
+            anyhow::bail!("Failed to get current Jira user: {}", response.status);
+        }
+
+        // 优先尝试获取 accountId（现代 Jira API）
+        if let Some(account_id) = response.data.get("accountId").and_then(|a| a.as_str()) {
+            return Ok(account_id.to_string());
+        }
+
+        // 如果没有 accountId，尝试使用 key（旧版 Jira）
+        if let Some(key) = response.data.get("key").and_then(|k| k.as_str()) {
+            return Ok(key.to_string());
+        }
+
+        anyhow::bail!("Failed to extract accountId or key from Jira user response")
+    }
+
     /// 获取 ticket 信息
     pub fn get_ticket_info(ticket: &str) -> Result<serde_json::Value> {
         let (email, api_token) = Self::get_auth()?;
@@ -286,23 +317,25 @@ impl JiraClient {
         let settings = Settings::load();
         let service_address = &settings.jira_service_address;
 
-        let assignee_email = match assignee {
+        let assignee_account_id = match assignee {
             Some(user) => user.to_string(),
             None => {
                 // 如果没有指定，分配给当前用户
-                Self::get_current_user()?
+                Self::get_current_user_account_id()?
             }
         };
 
         let url = format!("{}/rest/api/2/issue/{}/assignee", service_address, ticket);
 
+        // 使用 serde 的 rename 属性将 Rust 的 snake_case 转换为 JSON 的 camelCase
         #[derive(Serialize)]
+        #[serde(rename_all = "camelCase")]
         struct AssigneeRequest {
-            name: String,
+            account_id: String,
         }
 
         let body = AssigneeRequest {
-            name: assignee_email.clone(),
+            account_id: assignee_account_id.clone(),
         };
 
         let client = HttpClient::new()?;
@@ -311,14 +344,14 @@ impl JiraClient {
             .put::<serde_json::Value, _>(&url, &body, Some(&auth), None)
             .context(format!(
                 "Failed to assign ticket {} to {}",
-                ticket, assignee_email
+                ticket, assignee_account_id
             ))?;
 
         if !response.is_success() {
             anyhow::bail!(
                 "Failed to assign ticket {} to {}: {}",
                 ticket,
-                assignee_email,
+                assignee_account_id,
                 response.status
             );
         }
