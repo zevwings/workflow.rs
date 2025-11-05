@@ -1,5 +1,7 @@
 #[path = "lib/git/mod.rs"]
 pub mod git;
+#[path = "lib/http/mod.rs"]
+pub mod http;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
 #[path = "lib/llm/mod.rs"]
@@ -17,12 +19,13 @@ pub mod utils;
 pub mod commands;
 
 pub use git::*;
+pub use http::{Authorization, HttpClient, HttpResponse};
 pub use jira::*;
 pub use llm::*;
 pub use log::*;
 pub use pr::{
-    extract_pr_id_from_url, generate_branch_name, generate_commit_title, generate_pr_body, Codeup,
-    GitHub, Platform, TYPES_OF_CHANGES,
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, Codeup, GitHub, PlatformProvider, TYPES_OF_CHANGES,
 };
 pub use settings::*;
 pub use utils::*;

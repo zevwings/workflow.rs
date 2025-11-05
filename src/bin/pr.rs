@@ -35,7 +35,7 @@ enum PRCommands {
     Merge {
         /// PR ID (if not provided, auto-detect from current branch)
         #[arg(value_name = "PR_ID")]
-        pr_id: Option<String>,
+        pull_request_id: Option<String>,
 
         /// Force merge
         #[arg(short, long, action = clap::ArgAction::SetTrue)]
@@ -45,7 +45,7 @@ enum PRCommands {
     Status {
         /// PR ID or branch name
         #[arg(value_name = "PR_ID_OR_BRANCH")]
-        pr_id_or_branch: Option<String>,
+        pull_request_id_or_branch: Option<String>,
     },
     /// List PRs
     List {
@@ -71,19 +71,24 @@ fn main() -> Result<()> {
             description,
             dry_run,
         } => {
-            create::PRCreateCommand::create(jira_ticket, title, description, dry_run)?;
+            create::PullRequestCreateCommand::create(jira_ticket, title, description, dry_run)?;
         }
-        PRCommands::Merge { pr_id, force } => {
-            merge::PRMergeCommand::merge(pr_id, force)?;
+        PRCommands::Merge {
+            pull_request_id,
+            force,
+        } => {
+            merge::PullRequestMergeCommand::merge(pull_request_id, force)?;
         }
-        PRCommands::Status { pr_id_or_branch } => {
-            status::PRStatusCommand::show(pr_id_or_branch)?;
+        PRCommands::Status {
+            pull_request_id_or_branch,
+        } => {
+            status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
         }
         PRCommands::List { state, limit } => {
-            list::PRListCommand::list(state, limit)?;
+            list::GetPullRequestsCommand::list(state, limit)?;
         }
         PRCommands::Update => {
-            update::PRUpdateCommand::update()?;
+            update::PullRequestUpdateCommand::update()?;
         }
     }
 

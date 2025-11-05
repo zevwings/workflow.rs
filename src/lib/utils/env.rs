@@ -11,6 +11,48 @@ use std::path::PathBuf;
 pub struct EnvFile;
 
 impl EnvFile {
+    /// 从多个来源加载环境变量（环境变量 > 配置文件）
+    /// 返回合并后的环境变量 HashMap
+    pub fn load_merged(keys: &[&str]) -> HashMap<String, String> {
+        let mut merged = HashMap::new();
+
+        // 1. 优先从当前环境变量读取
+        for key in keys {
+            if let Ok(value) = std::env::var(key) {
+                merged.insert(key.to_string(), value);
+            }
+        }
+
+        // 2. 从配置文件读取（如果环境变量中没有）
+        let config_env = Self::load().unwrap_or_default();
+        for (key, value) in config_env {
+            merged.entry(key).or_insert(value);
+        }
+
+        merged
+    }
+
+    /// 获取所有 Workflow CLI 相关的环境变量键
+    pub fn get_workflow_env_keys() -> Vec<&'static str> {
+        vec![
+            "EMAIL",
+            "JIRA_API_TOKEN",
+            "JIRA_SERVICE_ADDRESS",
+            "GH_BRANCH_PREFIX",
+            "LOG_OUTPUT_FOLDER_NAME",
+            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
+            "DISABLE_CHECK_PROXY",
+            "LLM_PROVIDER",
+            "LLM_OPENAI_KEY",
+            "LLM_DEEPSEEK_KEY",
+            "LLM_PROXY_URL",
+            "LLM_PROXY_KEY",
+            "CODEUP_CSRF_TOKEN",
+            "CODEUP_COOKIE",
+            "CODEUP_PROJECT_ID",
+        ]
+    }
+
     /// 从 shell 配置文件加载环境变量（主要数据源）
     pub fn load() -> Result<HashMap<String, String>> {
         let shell_config_path = Self::get_shell_config_path()?;
@@ -296,11 +338,11 @@ impl EnvFile {
                     // 检查是否是 export KEY= 或 export KEY="
                     if let Some(after_key) = rest.strip_prefix(key) {
                         let after_key = after_key.trim_start();
-                            if after_key.starts_with('=') {
-                                // 找到匹配的 export 行
-                                indices_to_remove.push(i);
-                                removed_any = true;
-                                break;
+                        if after_key.starts_with('=') {
+                            // 找到匹配的 export 行
+                            indices_to_remove.push(i);
+                            removed_any = true;
+                            break;
                         }
                     }
                 }

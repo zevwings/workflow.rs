@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{log_info, log_success, log_warning, EnvFile};
+use crate::{log_info, log_success, log_warning, EnvFile, Shell};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
 use std::collections::HashMap;
@@ -14,44 +14,12 @@ impl SetupCommand {
     pub fn run() -> Result<()> {
         log_success!("🚀 Starting Workflow CLI initialization...\n");
 
-        // 注意：在 setup 阶段不调用 Settings::reload()
-        // 因为此时环境变量可能还没有设置，会导致初始化失败
-        // 我们直接读取环境变量和 shell 配置文件即可
+        // 注意：在 setup 阶段，我们直接读取环境变量和 shell 配置文件即可
 
         // 加载现有配置（从 shell 配置文件和当前环境变量）
         // 优先从当前环境变量读取（如果已加载到 shell）
-        let mut merged_env = HashMap::new();
-
-        // 首先从当前环境变量读取（这是最优先的数据源）
-        let env_var_keys = [
-            "EMAIL",
-            "JIRA_API_TOKEN",
-            "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX",
-            "LOG_OUTPUT_FOLDER_NAME",
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            "DISABLE_CHECK_PROXY",
-            "LLM_PROVIDER",
-            "LLM_OPENAI_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "LLM_PROXY_URL",
-            "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-            "CODEUP_PROJECT_ID",
-        ];
-
-        for key in &env_var_keys {
-            if let Ok(value) = std::env::var(key) {
-                merged_env.insert(key.to_string(), value);
-            }
-        }
-
-        // 如果环境变量中没有找到，再从 shell 配置文件读取
-        let shell_config_env = EnvFile::load().unwrap_or_default();
-        for (key, value) in shell_config_env {
-            merged_env.entry(key).or_insert(value);
-        }
+        let env_var_keys = EnvFile::get_workflow_env_keys();
+        let merged_env = EnvFile::load_merged(&env_var_keys);
 
         if !merged_env.is_empty() {
             log_info!("ℹ️  Found existing configuration");
@@ -74,19 +42,24 @@ impl SetupCommand {
         log_info!("   Shell config: {:?}", shell_config_path);
 
         // 保存配置后，更新当前进程的环境变量
-        // 这样后续对 Settings::get() 的调用会使用新值
+        // 这样后续对 Settings::load() 的调用会使用新值
         for (key, value) in &env_vars {
             std::env::set_var(key, value);
         }
 
-        // 重新加载 Settings 以使用新保存的值
-        if let Err(e) = crate::Settings::reload() {
-            log_warning!("⚠️  Failed to reload Settings after saving: {}", e);
-        }
-
         log_success!("\n🎉 Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
-        log_info!("   Note: Settings have been reloaded with new values.");
+
+        // 尝试重新加载 shell 配置
+        log_info!("\n🔄 Reloading shell configuration...");
+        if let Ok(shell_info) = Shell::detect() {
+            let _ = Shell::reload_config(&shell_info);
+        } else {
+            log_info!("ℹ  Could not detect shell type.");
+            log_info!("Please manually reload your shell configuration:");
+            log_info!("  source ~/.zshrc  # for zsh");
+            log_info!("  source ~/.bashrc  # for bash");
+        }
 
         Ok(())
     }

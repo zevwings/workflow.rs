@@ -12,7 +12,7 @@ impl DownloadCommand {
     pub fn download(jira_id: &str) -> Result<()> {
         log_success!("Downloading logs for {}...", jira_id);
 
-        let settings = Settings::get();
+        let settings = Settings::load();
         let log_output_folder_name = if !settings.log_output_folder_name.is_empty() {
             Some(settings.log_output_folder_name.as_str())
         } else {

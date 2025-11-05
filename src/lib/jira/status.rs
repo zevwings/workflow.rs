@@ -33,17 +33,17 @@ impl ConfigPaths {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectStatusConfig {
     #[serde(rename = "created-pr")]
-    pub created_pr_status: Option<String>,
+    pub created_pull_request_status: Option<String>,
     #[serde(rename = "merged-pr")]
-    pub merged_pr_status: Option<String>,
+    pub merged_pull_request_status: Option<String>,
 }
 
 /// Jira 状态配置（兼容现有接口）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JiraStatusConfig {
     pub project: String,
-    pub created_pr_status: Option<String>,
-    pub merged_pr_status: Option<String>,
+    pub created_pull_request_status: Option<String>,
+    pub merged_pull_request_status: Option<String>,
 }
 
 /// Jira 状态配置存储格式（JSON 对象）
@@ -54,7 +54,7 @@ type JiraStatusMap = HashMap<String, ProjectStatusConfig>;
 pub struct WorkHistoryEntry {
     pub jira_ticket: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pr_url: Option<String>,
+    pub pull_request_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>, // ISO 8601 格式
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -75,12 +75,13 @@ impl JiraStatus {
     /// 交互式配置 Jira 状态
     pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
         // 需要导入的依赖
-        use crate::{log_info, log_success, utils::string, Jira};
+        use super::helpers::extract_jira_project;
+        use crate::{log_info, log_success, Jira};
         use dialoguer::Select;
 
         // 从 ticket 或项目名中提取项目名
         let project =
-            string::extract_jira_project(jira_ticket_or_project).unwrap_or(jira_ticket_or_project);
+            extract_jira_project(jira_ticket_or_project).unwrap_or(jira_ticket_or_project);
 
         // 获取项目状态列表
         log_info!("Fetching status list for project: {}", project);
@@ -103,7 +104,7 @@ impl JiraStatus {
             .interact()
             .context("Failed to select status")?;
 
-        let created_pr_status = &statuses[selection];
+        let created_pull_request_status = &statuses[selection];
 
         // 选择 PR 合并时的状态
         log_info!("\nSelect one of the following states to change when PR is merged or Done:");
@@ -113,49 +114,47 @@ impl JiraStatus {
             .interact()
             .context("Failed to select status")?;
 
-        let merged_pr_status = &statuses[selection];
+        let merged_pull_request_status = &statuses[selection];
 
         // 写入配置
         let jira_config = JiraStatusConfig {
             project: project.to_string(),
-            created_pr_status: Some(created_pr_status.clone()),
-            merged_pr_status: Some(merged_pr_status.clone()),
+            created_pull_request_status: Some(created_pull_request_status.clone()),
+            merged_pull_request_status: Some(merged_pull_request_status.clone()),
         };
 
         Self::write_status_config(&jira_config)
             .context("Failed to write Jira status configuration")?;
 
         log_success!("Jira status configuration saved");
-        log_info!("  PR created status: {}", created_pr_status);
-        log_info!("  PR merged status: {}", merged_pr_status);
+        log_info!("  PR created status: {}", created_pull_request_status);
+        log_info!("  PR merged status: {}", merged_pull_request_status);
 
         Ok(())
     }
 
     /// 读取 PR 创建时的状态
-    pub fn read_pr_created_status(jira_ticket: &str) -> Result<Option<String>> {
-        use crate::utils::string;
+    pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
+        use super::helpers::extract_jira_project;
 
-        let project =
-            string::extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
 
-        Ok(config.created_pr_status)
+        Ok(config.created_pull_request_status)
     }
 
     /// 读取 PR 合并时的状态
-    pub fn read_pr_merged_status(jira_ticket: &str) -> Result<Option<String>> {
-        use crate::utils::string;
+    pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
+        use super::helpers::extract_jira_project;
 
-        let project =
-            string::extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
 
-        Ok(config.merged_pr_status)
+        Ok(config.merged_pull_request_status)
     }
 
     /// 读取工作历史记录（通过 PR ID 查找 Jira ticket）
@@ -165,7 +164,7 @@ impl JiraStatus {
     /// {
     ///   "456": {
     ///     "jira_ticket": "PROJ-123",
-    ///     "pr_url": "https://github.com/xxx/pull/456",
+    ///     "pull_request_url": "https://github.com/xxx/pull/456",
     ///     "created_at": "2024-01-15T10:30:00Z",
     ///     "merged_at": null,
     ///     "repository": "github.com/xxx/yyy",
@@ -173,16 +172,16 @@ impl JiraStatus {
     ///   }
     /// }
     /// ```
-    pub fn read_work_history(pr_id: &str) -> Result<Option<String>> {
-        let entry = Self::read_work_history_entry(pr_id)?;
+    pub fn read_work_history(pull_request_id: &str) -> Result<Option<String>> {
+        let entry = Self::read_work_history_entry(pull_request_id)?;
         Ok(entry.map(|e| e.jira_ticket))
     }
 
     /// 写入工作历史记录
     pub fn write_work_history(
         jira_ticket: &str,
-        pr_id: &str,
-        pr_url: Option<&str>,
+        pull_request_id: &str,
+        pull_request_url: Option<&str>,
         repository: Option<&str>,
         branch: Option<&str>,
     ) -> Result<()> {
@@ -202,10 +201,10 @@ impl JiraStatus {
 
         // 更新或插入记录
         history_map.insert(
-            pr_id.to_string(),
+            pull_request_id.to_string(),
             WorkHistoryEntry {
                 jira_ticket: jira_ticket.to_string(),
-                pr_url: pr_url.map(|s| s.to_string()),
+                pull_request_url: pull_request_url.map(|s| s.to_string()),
                 created_at: Some(created_at),
                 merged_at: None,
                 repository: repository.map(|s| s.to_string()),
@@ -223,7 +222,7 @@ impl JiraStatus {
     }
 
     /// 更新工作历史记录的合并时间
-    pub fn update_work_history_merged(pr_id: &str) -> Result<()> {
+    pub fn update_work_history_merged(pull_request_id: &str) -> Result<()> {
         let paths = ConfigPaths::new()?;
         if !paths.work_history.exists() {
             return Ok(());
@@ -236,7 +235,7 @@ impl JiraStatus {
             serde_json::from_str(&content).context("Failed to parse work-history.json")?;
 
         // 更新合并时间
-        if let Some(entry) = history_map.get_mut(pr_id) {
+        if let Some(entry) = history_map.get_mut(pull_request_id) {
             entry.merged_at = Some(Utc::now().to_rfc3339());
         }
 
@@ -257,8 +256,8 @@ impl JiraStatus {
         if !paths.jira_status.exists() {
             return Ok(JiraStatusConfig {
                 project: project.to_string(),
-                created_pr_status: None,
-                merged_pr_status: None,
+                created_pull_request_status: None,
+                merged_pull_request_status: None,
             });
         }
 
@@ -274,8 +273,10 @@ impl JiraStatus {
 
         Ok(JiraStatusConfig {
             project: project.to_string(),
-            created_pr_status: project_config.and_then(|c| c.created_pr_status.clone()),
-            merged_pr_status: project_config.and_then(|c| c.merged_pr_status.clone()),
+            created_pull_request_status: project_config
+                .and_then(|c| c.created_pull_request_status.clone()),
+            merged_pull_request_status: project_config
+                .and_then(|c| c.merged_pull_request_status.clone()),
         })
     }
 
@@ -296,8 +297,8 @@ impl JiraStatus {
         status_map.insert(
             config.project.clone(),
             ProjectStatusConfig {
-                created_pr_status: config.created_pr_status.clone(),
-                merged_pr_status: config.merged_pr_status.clone(),
+                created_pull_request_status: config.created_pull_request_status.clone(),
+                merged_pull_request_status: config.merged_pull_request_status.clone(),
             },
         );
 
@@ -311,7 +312,7 @@ impl JiraStatus {
     }
 
     /// 读取完整的工作历史记录条目（内部方法）
-    fn read_work_history_entry(pr_id: &str) -> Result<Option<WorkHistoryEntry>> {
+    fn read_work_history_entry(pull_request_id: &str) -> Result<Option<WorkHistoryEntry>> {
         let paths = ConfigPaths::new()?;
         if !paths.work_history.exists() {
             return Ok(None);
@@ -325,7 +326,7 @@ impl JiraStatus {
             serde_json::from_str(&content).context("Failed to parse work-history.json")?;
 
         // 查找 PR ID
-        Ok(history_map.get(pr_id).cloned())
+        Ok(history_map.get(pull_request_id).cloned())
     }
 }
 

@@ -35,7 +35,7 @@ impl FindCommand {
         // 4. 调用库函数执行查找并发送到 Streamock
         log_success!("Searching for request ID: {}...", req_id);
 
-        let settings = Settings::get();
+        let settings = Settings::load();
         let jira_service_address = Some(settings.jira_service_address.as_str());
 
         let response_content = Logs::find_and_send_to_streamock(

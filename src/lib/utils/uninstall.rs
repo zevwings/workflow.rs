@@ -33,15 +33,15 @@ impl Uninstall {
     /// 删除所有 Workflow CLI 配置块
     /// 这会从 shell 配置文件中删除整个配置块（包括标记行）
     pub fn remove_config_block() -> Result<()> {
-        let shell_config_path = EnvFile::get_shell_config_path()
-            .context("Failed to get shell config path")?;
+        let shell_config_path =
+            EnvFile::get_shell_config_path().context("Failed to get shell config path")?;
 
         if !shell_config_path.exists() {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&shell_config_path)
-            .context("Failed to read shell config file")?;
+        let content =
+            fs::read_to_string(&shell_config_path).context("Failed to read shell config file")?;
 
         let marker_start = "# Workflow CLI Configuration - Start";
         let marker_end = "# Workflow CLI Configuration - End";
@@ -102,7 +102,11 @@ impl Uninstall {
 
     /// 获取所有 Workflow CLI 二进制文件路径
     pub fn get_binary_paths() -> Vec<&'static str> {
-        vec!["/usr/local/bin/workflow", "/usr/local/bin/pr", "/usr/local/bin/qk"]
+        vec![
+            "/usr/local/bin/workflow",
+            "/usr/local/bin/pr",
+            "/usr/local/bin/qk",
+        ]
     }
 
     /// 删除所有 Workflow CLI 二进制文件

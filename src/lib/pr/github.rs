@@ -2,15 +2,15 @@ use crate::Git;
 use anyhow::{Context, Result};
 use duct::cmd;
 
-use super::helpers::{extract_github_repo_from_url, extract_pr_id_from_url};
-use super::provider::Platform;
+use super::helpers::{extract_github_repo_from_url, extract_pull_request_id_from_url};
+use super::provider::PlatformProvider;
 
 /// GitHub API 模块
 pub struct GitHub;
 
-impl Platform for GitHub {
+impl PlatformProvider for GitHub {
     /// 创建 Pull Request
-    fn create_pr(
+    fn create_pull_request(
         title: &str,
         body: &str,
         source_branch: &str,
@@ -48,8 +48,8 @@ impl Platform for GitHub {
     }
 
     /// 合并 Pull Request
-    fn merge_pr(pr_id: &str, delete_branch: bool) -> Result<()> {
-        let mut args = vec!["pr", "merge", pr_id, "--merge"];
+    fn merge_pull_request(pull_request_id: &str, delete_branch: bool) -> Result<()> {
+        let mut args = vec!["pr", "merge", pull_request_id, "--merge"];
 
         if delete_branch {
             args.push("--delete-branch");
@@ -57,47 +57,63 @@ impl Platform for GitHub {
 
         cmd("gh", &args)
             .run()
-            .context(format!("Failed to merge PR: {}", pr_id))?;
+            .context(format!("Failed to merge PR: {}", pull_request_id))?;
 
         Ok(())
     }
 
     /// 获取 PR 信息
-    fn get_pr_info(pr_id: &str) -> Result<String> {
-        let output = cmd("gh", &["pr", "view", pr_id])
+    fn get_pull_request_info(pull_request_id: &str) -> Result<String> {
+        let output = cmd("gh", &["pr", "view", pull_request_id])
             .read()
-            .context(format!("Failed to get PR info: {}", pr_id))?;
+            .context(format!("Failed to get PR info: {}", pull_request_id))?;
 
         Ok(output)
     }
 
     /// 获取 PR URL
     #[allow(dead_code)]
-    fn get_pr_url(pr_id: &str) -> Result<String> {
+    fn get_pull_request_url(pull_request_id: &str) -> Result<String> {
         let output = cmd(
             "gh",
-            &["pr", "view", pr_id, "--json", "url", "--jq", ".url"],
+            &[
+                "pr",
+                "view",
+                pull_request_id,
+                "--json",
+                "url",
+                "--jq",
+                ".url",
+            ],
         )
         .read()
-        .context(format!("Failed to get PR URL: {}", pr_id))?;
+        .context(format!("Failed to get PR URL: {}", pull_request_id))?;
 
         Ok(output.trim().to_string())
     }
 
     /// 获取 PR 标题
-    fn get_pr_title(pr_id: &str) -> Result<String> {
+    fn get_pull_request_title(pull_request_id: &str) -> Result<String> {
         let output = cmd(
             "gh",
-            &["pr", "view", pr_id, "--json", "title", "--jq", ".title"],
+            &[
+                "pr",
+                "view",
+                pull_request_id,
+                "--json",
+                "title",
+                "--jq",
+                ".title",
+            ],
         )
         .read()
-        .context(format!("Failed to get PR title: {}", pr_id))?;
+        .context(format!("Failed to get PR title: {}", pull_request_id))?;
 
         Ok(output.trim().to_string())
     }
 
     /// 列出 PR
-    fn list_prs(state: Option<&str>, limit: Option<u32>) -> Result<String> {
+    fn get_pull_requests(state: Option<&str>, limit: Option<u32>) -> Result<String> {
         let mut args: Vec<String> = vec!["pr".to_string(), "list".to_string()];
 
         if let Some(s) = state {
@@ -119,7 +135,7 @@ impl Platform for GitHub {
     }
 
     /// 获取当前分支的 PR
-    fn get_current_branch_pr() -> Result<Option<String>> {
+    fn get_current_branch_pull_request() -> Result<Option<String>> {
         let output = cmd(
             "gh",
             &[
@@ -140,8 +156,8 @@ impl Platform for GitHub {
                     Ok(None)
                 } else {
                     // 从 URL 提取 PR ID
-                    let pr_id = extract_pr_id_from_url(url)?;
-                    Ok(Some(pr_id))
+                    let pull_request_id = extract_pull_request_id_from_url(url)?;
+                    Ok(Some(pull_request_id))
                 }
             }
             Err(_) => Ok(None),
@@ -151,16 +167,16 @@ impl Platform for GitHub {
 
 #[cfg(test)]
 mod tests {
-    use super::helpers::extract_pr_id_from_url;
+    use super::helpers::extract_pull_request_id_from_url;
 
     #[test]
-    fn test_extract_pr_id_from_url() {
+    fn test_extract_pull_request_id_from_url() {
         assert_eq!(
-            extract_pr_id_from_url("https://github.com/owner/repo/pull/123").unwrap(),
+            extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123").unwrap(),
             "123"
         );
         assert_eq!(
-            extract_pr_id_from_url("https://github.com/owner/repo/pull/456/").unwrap(),
+            extract_pull_request_id_from_url("https://github.com/owner/repo/pull/456/").unwrap(),
             "456"
         );
     }

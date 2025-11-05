@@ -32,7 +32,7 @@ enum Commands {
     Setup,
     /// View current configuration
     Config,
-    /// Uninstall Workflow CLI configuration
+    /// Uninstall Workflow CLI configuration (removes everything: binaries, completions, config)
     Uninstall,
 }
 
@@ -90,6 +90,8 @@ fn main() -> Result<()> {
             println!("  workflow setup     - Initialize or update configuration");
             println!("  workflow config    - View current configuration");
             println!("  workflow uninstall - Uninstall Workflow CLI configuration");
+            println!("\nInstallation:");
+            println!("  Use 'install' command (built separately): install <subcommand>");
             println!("\nUse 'workflow <command> --help' for more information.");
         }
     }
