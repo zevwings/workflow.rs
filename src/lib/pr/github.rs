@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 
 use crate::git::Git;
 use crate::http::{HttpClient, HttpResponse};
@@ -103,22 +104,32 @@ impl PlatformProvider for GitHub {
             base: base_branch.clone(),
         };
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
 
         // 先尝试解析为通用 JSON 以检查状态码
         let response: HttpResponse<serde_json::Value> = client
-            .post(&url, &request, None, Some(&headers))
+            .post(&url, &request, None, Some(headers))
             .context("Failed to create PR via GitHub API")?;
 
         // 如果请求失败，尝试解析错误响应
         if !response.is_success() {
-            let error_msg = if let Ok(error) = serde_json::from_value::<GitHubErrorResponse>(response.data.clone()) {
-                let mut msg = format!("GitHub API error: {} (Status: {})", error.message, response.status);
+            let error_msg = if let Ok(error) =
+                serde_json::from_value::<GitHubErrorResponse>(response.data.clone())
+            {
+                let mut msg = format!(
+                    "GitHub API error: {} (Status: {})",
+                    error.message, response.status
+                );
                 if let Some(errors) = error.errors {
                     for err in errors {
-                        if let (Some(resource), Some(field), Some(code)) = (err.resource, err.field, err.code) {
-                            msg.push_str(&format!("\n  - {}: {} field is invalid ({})", resource, field, code));
+                        if let (Some(resource), Some(field), Some(code)) =
+                            (err.resource, err.field, err.code)
+                        {
+                            msg.push_str(&format!(
+                                "\n  - {}: {} field is invalid ({})",
+                                resource, field, code
+                            ));
                         }
                     }
                 }
@@ -127,15 +138,16 @@ impl PlatformProvider for GitHub {
                 format!(
                     "GitHub API request failed: {} - {}",
                     response.status,
-                    serde_json::to_string_pretty(&response.data).unwrap_or_else(|_| "Unknown error".to_string())
+                    serde_json::to_string_pretty(&response.data)
+                        .unwrap_or_else(|_| "Unknown error".to_string())
                 )
             };
             anyhow::bail!("{}", error_msg);
         }
 
         // 解析成功响应
-        let response_data: CreatePullRequestResponse = serde_json::from_value(response.data)
-            .context("Failed to parse success response")?;
+        let response_data: CreatePullRequestResponse =
+            serde_json::from_value(response.data).context("Failed to parse success response")?;
 
         Ok(response_data.html_url)
     }
@@ -163,10 +175,10 @@ impl PlatformProvider for GitHub {
             merge_method,
         };
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
         let response: HttpResponse<serde_json::Value> = client
-            .put(&url, &request, None, Some(&headers))
+            .put(&url, &request, None, Some(headers))
             .context(format!("Failed to merge PR: {}", pull_request_id))?;
 
         if !response.is_success() {
@@ -184,10 +196,10 @@ impl PlatformProvider for GitHub {
                 "https://api.github.com/repos/{}/{}/pulls/{}",
                 owner, repo_name, pr_number
             );
-            let client = HttpClient::new()?;
-            let headers = Self::create_headers()?;
+            let client = Self::get_client()?;
+            let headers = Self::get_headers()?;
             let pr_response: HttpResponse<PullRequestInfo> = client
-                .get(&pr_info_url, None, Some(&headers))
+                .get(&pr_info_url, None, Some(headers))
                 .context("Failed to get PR info for branch deletion")?;
 
             if pr_response.is_success() {
@@ -197,7 +209,7 @@ impl PlatformProvider for GitHub {
                     owner, repo_name, branch_name
                 );
                 let delete_response: HttpResponse<serde_json::Value> = client
-                    .delete(&branch_url, None, Some(&headers))
+                    .delete(&branch_url, None, Some(headers))
                     .context("Failed to delete branch")?;
                 // 忽略删除分支的错误（分支可能已经被删除）
                 if !delete_response.is_success() && delete_response.status != 404 {
@@ -211,41 +223,22 @@ impl PlatformProvider for GitHub {
 
     /// 获取 PR 信息
     fn get_pull_request_info(pull_request_id: &str) -> Result<String> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
+        use std::fmt::Write;
+
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;
+        let pr = Self::fetch_pr_info_internal(pr_number)?;
 
-        let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}",
-            owner, repo_name, pr_number
-        );
-
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
-        let response: HttpResponse<PullRequestInfo> = client
-            .get(&url, None, Some(&headers))
-            .context(format!("Failed to get PR info: {}", pull_request_id))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
-
-        let pr = response.data;
         let mut info = String::new();
-        info.push_str(&format!("Title: {}\n", pr.title));
+        writeln!(info, "Title: {}", pr.title)?;
         if let Some(body) = pr.body {
-            info.push_str(&format!("Description: {}\n", body));
+            writeln!(info, "Description: {}", body)?;
         }
-        info.push_str(&format!("State: {}\n", pr.state));
-        info.push_str(&format!("Source Branch: {}\n", pr.head.ref_name));
-        info.push_str(&format!("Target Branch: {}\n", pr.base.ref_name));
-        info.push_str(&format!("URL: {}\n", pr.html_url));
+        writeln!(info, "State: {}", pr.state)?;
+        writeln!(info, "Source Branch: {}", pr.head.ref_name)?;
+        writeln!(info, "Target Branch: {}", pr.base.ref_name)?;
+        writeln!(info, "URL: {}", pr.html_url)?;
 
         Ok(info)
     }
@@ -253,62 +246,20 @@ impl PlatformProvider for GitHub {
     /// 获取 PR URL
     #[allow(dead_code)]
     fn get_pull_request_url(pull_request_id: &str) -> Result<String> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;
-
-        let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}",
-            owner, repo_name, pr_number
-        );
-
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
-        let response: HttpResponse<PullRequestInfo> = client
-            .get(&url, None, Some(&headers))
-            .context(format!("Failed to get PR URL: {}", pull_request_id))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
-
-        Ok(response.data.html_url)
+        let pr = Self::fetch_pr_info_internal(pr_number)?;
+        Ok(pr.html_url)
     }
 
     /// 获取 PR 标题
     fn get_pull_request_title(pull_request_id: &str) -> Result<String> {
-        let repo = Self::get_repo()?;
-        let (owner, repo_name) = Self::parse_repo(&repo)?;
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;
-
-        let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}",
-            owner, repo_name, pr_number
-        );
-
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
-        let response: HttpResponse<PullRequestInfo> = client
-            .get(&url, None, Some(&headers))
-            .context(format!("Failed to get PR title: {}", pull_request_id))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "GitHub API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
-
-        Ok(response.data.title)
+        let pr = Self::fetch_pr_info_internal(pr_number)?;
+        Ok(pr.title)
     }
 
     /// 列出 PR
@@ -331,12 +282,11 @@ impl PlatformProvider for GitHub {
             owner, repo_name, state, per_page
         );
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
-        let response: HttpResponse<Vec<PullRequestInfo>> =
-            client
-                .get(&url, None, Some(&headers))
-                .context("Failed to list PRs via GitHub API")?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
+        let response: HttpResponse<Vec<PullRequestInfo>> = client
+            .get(&url, None, Some(headers))
+            .context("Failed to list PRs via GitHub API")?;
 
         if !response.is_success() {
             anyhow::bail!(
@@ -346,12 +296,15 @@ impl PlatformProvider for GitHub {
             );
         }
 
+        use std::fmt::Write;
+
         let mut output = String::new();
         for pr in response.data {
-            output.push_str(&format!(
-                "#{}  {}  [{}]  {}\n    {}\n",
+            writeln!(
+                output,
+                "#{}  {}  [{}]  {}\n    {}",
                 pr.number, pr.state, pr.head.ref_name, pr.title, pr.html_url
-            ));
+            )?;
         }
 
         if output.is_empty() {
@@ -373,12 +326,11 @@ impl PlatformProvider for GitHub {
             owner, repo_name, owner, current_branch
         );
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
-        let response: HttpResponse<Vec<PullRequestInfo>> =
-            client
-                .get(&url, None, Some(&headers))
-                .context("Failed to get current branch PR via GitHub API")?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
+        let response: HttpResponse<Vec<PullRequestInfo>> = client
+            .get(&url, None, Some(headers))
+            .context("Failed to get current branch PR via GitHub API")?;
 
         if !response.is_success() {
             anyhow::bail!(
@@ -421,10 +373,10 @@ impl GitHub {
     /// 获取仓库信息
     fn get_repository_info(owner: &str, repo_name: &str) -> Result<RepositoryInfo> {
         let url = format!("https://api.github.com/repos/{}/{}", owner, repo_name);
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers()?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
         let response: HttpResponse<RepositoryInfo> = client
-            .get(&url, None, Some(&headers))
+            .get(&url, None, Some(headers))
             .context("Failed to get repository info")?;
 
         if !response.is_success() {
@@ -459,14 +411,57 @@ impl GitHub {
         }
 
         // 如果都不支持，返回错误
-        anyhow::bail!(
-            "Repository does not support squash, rebase, or merge commit methods"
-        );
+        anyhow::bail!("Repository does not support squash, rebase, or merge commit methods");
     }
 
-    /// 创建 GitHub API 请求的 headers
+    /// 内部方法：获取 PR 信息（不缓存，避免数据不一致）
+    fn fetch_pr_info_internal(pr_number: u64) -> Result<PullRequestInfo> {
+        let repo = Self::get_repo()?;
+        let (owner, repo_name) = Self::parse_repo(&repo)?;
+
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/pulls/{}",
+            owner, repo_name, pr_number
+        );
+
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
+        let response: HttpResponse<PullRequestInfo> = client
+            .get(&url, None, Some(headers))
+            .context(format!("Failed to get PR info: {}", pr_number))?;
+
+        if !response.is_success() {
+            anyhow::bail!(
+                "GitHub API request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
+        }
+
+        Ok(response.data)
+    }
+
+    /// 获取缓存的 HTTP 客户端
+    fn get_client() -> Result<&'static HttpClient> {
+        static CLIENT: OnceLock<Result<HttpClient>> = OnceLock::new();
+        CLIENT
+            .get_or_init(HttpClient::new)
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))
+    }
+
+    /// 获取缓存的 headers
+    fn get_headers() -> Result<&'static HeaderMap> {
+        static HEADERS: OnceLock<Result<HeaderMap>> = OnceLock::new();
+        HEADERS
+            .get_or_init(Self::create_headers)
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("Failed to create headers: {}", e))
+    }
+
+    /// 创建 GitHub API 请求的 headers（内部方法）
     fn create_headers() -> Result<HeaderMap> {
-        let settings = Settings::load();
+        let settings = Settings::get();
         let token = settings
             .github_api_token
             .as_ref()

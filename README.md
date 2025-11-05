@@ -68,27 +68,38 @@ cargo run -- --help
 
 ```
 workflow/
-├── Cargo.toml           # 项目配置
+├── Cargo.toml           # 项目配置和依赖管理
+├── Makefile             # 构建和安装脚本
+├── Formula/             # Homebrew Formula 定义
+│   └── workflow.rb      # Homebrew 安装配方
 ├── src/
-│   ├── main.rs          # CLI 入口
-│   ├── lib.rs           # 库入口
-│   ├── lib/             # 核心库模块
-│   │   ├── git/         # Git 操作
-│   │   ├── jira/        # Jira API 集成
-│   │   ├── pr/          # PR 相关功能
-│   │   ├── llm/         # LLM 集成（AI）
-│   │   ├── log/         # 日志处理
-│   │   ├── settings/    # 配置管理
-│   │   └── utils/       # 工具函数
-│   ├── bin/             # 独立可执行文件
-│   │   ├── pr.rs        # PR 命令入口
-│   │   └── qk.rs        # 快速日志操作入口
-│   └── commands/        # 命令实现
-│       ├── pr/          # PR 命令
-│       ├── qk/          # 快速日志操作命令
-│       └── ...
+│   ├── main.rs          # 主 CLI 入口（workflow 命令）
+│   ├── lib.rs           # 库入口，重新导出所有公共 API
+│   ├── lib/             # 核心库模块（业务逻辑层）
+│   │   ├── git/         # Git 操作（命令封装、仓库检测、类型定义）
+│   │   ├── http/        # HTTP 客户端（支持认证和代理）
+│   │   ├── jira/        # Jira API 集成（客户端、状态管理、工作历史）
+│   │   ├── pr/          # PR 相关功能（GitHub/Codeup 支持、提供者抽象）
+│   │   ├── llm/         # LLM 集成（AI 功能，支持 OpenAI/DeepSeek/Proxy）
+│   │   ├── log/         # 日志处理（下载、搜索、提取）
+│   │   ├── settings/    # 配置管理（环境变量单例）
+│   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
+│   ├── bin/             # 独立可执行文件（CLI 入口层）
+│   │   ├── pr.rs        # PR 命令入口（独立的 pr 命令）
+│   │   ├── qk.rs        # 快速日志操作入口（独立的 qk 命令）
+│   │   └── install.rs   # 安装命令入口（独立的 install 命令）
+│   └── commands/        # 命令实现（命令封装层）
+│       ├── pr/          # PR 相关命令（create, merge, status, list, update）
+│       ├── qk/          # 快速日志操作命令（download, find, search）
+│       ├── check.rs     # 检查命令（git_status, network）
+│       ├── proxy.rs     # 代理管理命令（on, off, check）
+│       ├── config.rs    # 配置查看命令
+│       ├── setup.rs     # 初始化设置命令
+│       ├── install.rs   # 安装命令实现
+│       └── uninstall.rs # 卸载命令实现
 └── docs/                # 文档目录
-    └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
+    ├── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
+    └── HOMEBREW.md      # Homebrew 安装指南
 ```
 
 ## 📋 命令清单
@@ -97,8 +108,9 @@ workflow/
 ```bash
 workflow check git_status         # 检查 Git 状态
 workflow check network             # 检查网络连接（GitHub）
-workflow check pre_commit          # 运行 Pre-commit 检查
 ```
+
+> **注意**：pre-commit 检查已集成到 Git 提交流程中。当执行 `git commit` 时，如果工程中存在 pre-commit hooks（`.git/hooks/pre-commit` 或 `.pre-commit-config.yaml`），系统会自动执行 pre-commit 检查。
 
 ### 代理管理
 ```bash
@@ -109,8 +121,14 @@ workflow proxy check               # 检查代理状态和配置
 
 ### 配置管理
 ```bash
-workflow setup                     # 初始化或更新配置
-workflow config                    # 查看当前配置
+workflow setup                     # 初始化或更新配置（交互式设置）
+workflow config                    # 查看当前配置（显示所有配置项）
+workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
+```
+
+### 安装命令
+```bash
+install                            # 安装 Workflow CLI 到系统
 ```
 
 

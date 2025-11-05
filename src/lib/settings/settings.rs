@@ -1,4 +1,5 @@
 use std::env;
+use std::sync::OnceLock;
 
 /// 应用程序设置
 /// 从环境变量读取配置
@@ -52,6 +53,13 @@ pub struct Settings {
 }
 
 impl Settings {
+    /// 获取缓存的 Settings 实例
+    /// 如果环境变量未设置（例如在 setup 阶段），返回包含默认值的 Settings
+    pub fn get() -> &'static Settings {
+        static SETTINGS: OnceLock<Settings> = OnceLock::new();
+        SETTINGS.get_or_init(Self::load)
+    }
+
     /// 从环境变量加载设置
     /// 如果环境变量未设置（例如在 setup 阶段），返回包含默认值的 Settings
     pub fn load() -> Self {
