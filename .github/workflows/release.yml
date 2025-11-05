@@ -252,31 +252,8 @@ jobs:
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
-      - name: Download SHA256 artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: sha256-*
-          path: sha256-files
-
-      - name: Extract SHA256 values
-        shell: bash
-        run: |
-          mkdir -p sha256-data
-          found_files=0
-          for file in sha256-files/*/sha256-*.txt; do
-            if [ -f "$file" ]; then
-              platform=$(basename "$file" .txt | sed 's/sha256-//')
-              sha256=$(head -n1 "$file")
-              echo "$platform=$sha256" >> sha256-data/sha256s.txt
-              echo "$platform: $sha256"
-              found_files=$((found_files + 1))
-            fi
-          done
-          if [ $found_files -eq 0 ]; then
-            echo "Error: No SHA256 files found!"
-            exit 1
-          fi
-          echo "Found $found_files SHA256 files"
+      # 注意：使用 git tag 方式时，不需要 SHA256 校验
+      # 因为 Homebrew 会直接从 git 仓库 checkout 指定的 tag
 
       - name: Check HOMEBREW_TAP_TOKEN
         id: check_token
@@ -313,18 +290,6 @@ jobs:
         run: |
           cd homebrew-workflow
 
-          # 读取 SHA256 值
-          X86_64_DARWIN_SHA=$(grep "x86_64-apple-darwin" ../sha256-data/sha256s.txt | cut -d'=' -f2)
-          AARCH64_DARWIN_SHA=$(grep "aarch64-apple-darwin" ../sha256-data/sha256s.txt | cut -d'=' -f2)
-
-          if [ -z "$X86_64_DARWIN_SHA" ] || [ -z "$AARCH64_DARWIN_SHA" ]; then
-            echo "Error: Failed to extract SHA256 values"
-            exit 1
-          fi
-
-          echo "x86_64-apple-darwin SHA256: $X86_64_DARWIN_SHA"
-          echo "aarch64-apple-darwin SHA256: $AARCH64_DARWIN_SHA"
-
           # 更新 Formula 文件
           FORMULA_FILE="Formula/workflow.rb"
 
@@ -339,19 +304,9 @@ jobs:
           # 更新版本号
           sed -i "s/version \"[^\"]*\"/version \"${{ steps.version.outputs.version }}\"/" "$FORMULA_FILE"
 
-          # 更新 x86_64-apple-darwin URL 和 SHA256
-          sed -i "s|url \"https://github.com/zevwings/workflow.rs/releases/download/v[^\"]*/workflow-[^\"]*-x86_64-apple-darwin.tar.gz\"|url \"https://github.com/zevwings/workflow.rs/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-x86_64-apple-darwin.tar.gz\"|" "$FORMULA_FILE"
-          sed -i "/x86_64-apple-darwin.tar.gz/,/sha256/ s|sha256 \"[^\"]*\"|sha256 \"$X86_64_DARWIN_SHA\"|" "$FORMULA_FILE"
-
-          # 更新 aarch64-apple-darwin URL 和 SHA256
-          sed -i "s|url \"https://github.com/zevwings/workflow.rs/releases/download/v[^\"]*/workflow-[^\"]*-aarch64-apple-darwin.tar.gz\"|url \"https://github.com/zevwings/workflow.rs/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-aarch64-apple-darwin.tar.gz\"|" "$FORMULA_FILE"
-          sed -i "/aarch64-apple-darwin.tar.gz/,/sha256/ s|sha256 \"[^\"]*\"|sha256 \"$AARCH64_DARWIN_SHA\"|" "$FORMULA_FILE"
-
-          # 验证更新
-          if grep -q "PLACEHOLDER" "$FORMULA_FILE"; then
-            echo "Error: Formula file still contains placeholder values"
-            exit 1
-          fi
+          # 更新 git tag（使用 git 仓库方式时，只需要更新 tag）
+          # 匹配格式：url "https://github.com/zevwings/workflow.rs.git", tag: "v0.0.1"
+          sed -i "s|tag: \"v[^\"]*\"|tag: \"${{ steps.version.outputs.tag }}\"|" "$FORMULA_FILE"
 
           # 显示更改
           echo "Formula file updated:"
