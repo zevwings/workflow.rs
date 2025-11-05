@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 
 use super::provider::PlatformProvider;
 use crate::http::{HttpClient, HttpResponse};
@@ -55,7 +56,7 @@ impl PlatformProvider for Codeup {
         source_branch: &str,
         target_branch: Option<&str>,
     ) -> Result<String> {
-        let settings = Settings::load();
+        let settings = Settings::get();
         let project_id = settings
             .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
@@ -89,8 +90,8 @@ impl PlatformProvider for Codeup {
             project_id, csrf_token
         );
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers(cookie, Some("application/json"))?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers(cookie, Some("application/json"))?;
         let response: HttpResponse<CreatePullRequestResponse> = client
             .post(&url, &request, None, Some(&headers))
             .context("Failed to send Codeup API request")?;
@@ -115,7 +116,7 @@ impl PlatformProvider for Codeup {
     fn merge_pull_request(pull_request_id: &str, delete_branch: bool) -> Result<()> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
-        let settings = Settings::load();
+        let settings = Settings::get();
         let csrf_token = settings
             .codeup_csrf_token
             .as_ref()
@@ -152,8 +153,8 @@ impl PlatformProvider for Codeup {
             project_id, actual_pull_request_id, csrf_token
         );
 
-        let client = HttpClient::new()?;
-        let headers = Self::create_headers(&cookie, Some("application/json"))?;
+        let client = Self::get_client()?;
+        let headers = Self::get_headers(&cookie, Some("application/json"))?;
         let response: HttpResponse<serde_json::Value> = client
             .put(&url, &merge_request, None, Some(&headers))
             .context("Failed to send Codeup merge request")?;
@@ -182,8 +183,8 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = HttpClient::new()?;
-            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let client = Self::get_client()?;
+            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
             let response: HttpResponse<Vec<PullRequestInfo>> = client
                 .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
@@ -215,28 +216,26 @@ impl PlatformProvider for Codeup {
 
         match pull_request_info {
             Some(pr) => {
+                use std::fmt::Write;
+
                 let mut info = String::new();
-                info.push_str(&format!(
-                    "Title: {}\n",
-                    pr.title.as_deref().unwrap_or("N/A")
-                ));
+                writeln!(info, "Title: {}", pr.title.as_deref().unwrap_or("N/A"))?;
                 if let Some(desc) = pr.description {
-                    info.push_str(&format!("Description: {}\n", desc));
+                    writeln!(info, "Description: {}", desc)?;
                 }
-                info.push_str(&format!(
-                    "Source Branch: {}\n",
+                writeln!(
+                    info,
+                    "Source Branch: {}",
                     pr.source_branch.as_deref().unwrap_or("N/A")
-                ));
-                info.push_str(&format!(
-                    "Target Branch: {}\n",
+                )?;
+                writeln!(
+                    info,
+                    "Target Branch: {}",
                     pr.target_branch.as_deref().unwrap_or("N/A")
-                ));
-                info.push_str(&format!(
-                    "State: {}\n",
-                    pr.state.as_deref().unwrap_or("N/A")
-                ));
+                )?;
+                writeln!(info, "State: {}", pr.state.as_deref().unwrap_or("N/A"))?;
                 if let Some(url) = pr.detail_url {
-                    info.push_str(&format!("URL: {}\n", url));
+                    writeln!(info, "URL: {}", url)?;
                 }
                 Ok(info)
             }
@@ -258,8 +257,8 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = HttpClient::new()?;
-            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let client = Self::get_client()?;
+            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
             let response: HttpResponse<Vec<PullRequestInfo>> = client
                 .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
@@ -301,8 +300,8 @@ impl PlatformProvider for Codeup {
                 project_id
             );
 
-            let client = HttpClient::new()?;
-            let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+            let client = Self::get_client()?;
+            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
             let response: HttpResponse<Vec<PullRequestInfo>> = client
                 .get(&url, None, Some(&headers))
                 .context("Failed to send Codeup API request")?;
@@ -393,6 +392,8 @@ impl PlatformProvider for Codeup {
         let pull_request_list = response.data;
 
         // 格式化输出
+        use std::fmt::Write;
+
         let mut output = String::new();
         for pr in pull_request_list {
             let pull_request_id = if let Some(iid) = pr.pull_request_number {
@@ -409,10 +410,11 @@ impl PlatformProvider for Codeup {
             let source_branch = pr.source_branch.as_deref().unwrap_or("N/A");
             let url_str = pr.detail_url.as_deref().unwrap_or("N/A");
 
-            output.push_str(&format!(
-                "#{}  {}  [{}]  {}\n    {}\n",
+            writeln!(
+                output,
+                "#{}  {}  [{}]  {}\n    {}",
                 pull_request_id, state_str, source_branch, title, url_str
-            ));
+            )?;
         }
 
         if output.is_empty() {
@@ -424,9 +426,23 @@ impl PlatformProvider for Codeup {
 }
 
 impl Codeup {
+    /// 获取缓存的 HTTP 客户端
+    fn get_client() -> Result<&'static HttpClient> {
+        static CLIENT: OnceLock<Result<HttpClient>> = OnceLock::new();
+        CLIENT
+            .get_or_init(HttpClient::new)
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))
+    }
+
+    /// 获取 headers（每次调用都创建新的，因为 cookie 可能不同）
+    fn get_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
+        Self::create_headers(cookie, content_type)
+    }
+
     /// 获取环境变量（辅助函数）
     fn get_env_vars() -> Result<(u64, String)> {
-        let settings = Settings::load();
+        let settings = Settings::get();
         let project_id = settings
             .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
@@ -440,7 +456,7 @@ impl Codeup {
         Ok((project_id, cookie))
     }
 
-    /// 创建 Codeup API 请求的 headers（辅助函数）
+    /// 创建 Codeup API 请求的 headers（内部方法）
     fn create_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         headers.insert(

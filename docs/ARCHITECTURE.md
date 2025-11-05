@@ -14,7 +14,8 @@ src/
 ├── lib.rs                  # 库入口和模块声明（重新导出所有公共 API）
 ├── bin/                    # 独立可执行文件（独立的 CLI 工具）
 │   ├── pr.rs               # PR 命令入口（使用 commands::pr）
-│   └── qk.rs               # 快速日志操作入口（使用 commands::qk）
+│   ├── qk.rs               # 快速日志操作入口（使用 commands::qk）
+│   └── install.rs          # 安装命令入口（使用 commands::install）
 ├── commands/               # 命令实现模块（CLI 命令封装层）
 │   ├── mod.rs              # 命令模块声明
 │   ├── pr/                 # PR 相关命令
@@ -29,10 +30,12 @@ src/
 │   │   ├── download.rs     # 下载日志命令
 │   │   ├── find.rs         # 查找请求 ID 命令
 │   │   └── search.rs       # 搜索关键词命令
-│   ├── check.rs            # 综合检查命令
-│   ├── proxy.rs            # 代理管理命令
-│   ├── config.rs           # 配置管理命令
-│   └── setup.rs            # 初始化设置命令
+│   ├── check.rs            # 综合检查命令（git_status, network）
+│   ├── proxy.rs            # 代理管理命令（on, off, check）
+│   ├── config.rs           # 配置查看命令（显示当前配置）
+│   ├── setup.rs            # 初始化设置命令（交互式配置）
+│   ├── install.rs          # 安装命令实现（安装二进制和补全脚本）
+│   └── uninstall.rs        # 卸载命令实现（清理所有相关文件）
 └── lib/                    # 核心功能库（业务逻辑层）
     ├── mod.rs              # 库模块声明
     ├── git/                # Git 操作模块
@@ -40,11 +43,15 @@ src/
     │   ├── commands.rs     # Git 命令封装
     │   ├── repo.rs         # 仓库操作和类型检测
     │   └── types.rs        # Git 相关类型定义
+    ├── http/               # HTTP 客户端模块
+    │   ├── mod.rs          # HTTP 模块声明
+    │   ├── client.rs       # HTTP 客户端实现（支持认证和代理）
+    │   └── response.rs     # HTTP 响应类型定义
     ├── jira/               # Jira API 集成
     │   ├── mod.rs          # Jira 模块声明
-    │   ├── api.rs          # Jira REST API 客户端
-    │   ├── commands.rs     # Jira CLI 命令封装
-    │   └── status.rs       # 状态配置和工作历史
+    │   ├── client.rs       # Jira REST API 客户端
+    │   ├── helpers.rs      # Jira 辅助函数（项目提取等）
+    │   └── status.rs       # 状态配置和工作历史管理
     ├── pr/                 # PR 相关功能
     │   ├── mod.rs          # PR 模块声明
     │   ├── github.rs       # GitHub PR 实现
@@ -54,9 +61,8 @@ src/
     │   └── constants.rs    # PR 相关常量
     ├── llm/                # LLM 集成（AI 功能）
     │   ├── mod.rs          # LLM 模块声明
-    │   ├── llm.rs          # LLM 主模块
-    │   ├── translator.rs   # 翻译功能
-    │   └── config.rs       # LLM 配置
+    │   ├── llm.rs          # LLM 客户端实现（支持多提供商）
+    │   └── translator.rs   # 翻译功能（标题生成和翻译判断）
     ├── log/                # 日志处理
     │   ├── mod.rs          # 日志模块声明
     │   └── logs.rs         # 日志处理核心逻辑（包含路径解析）
@@ -65,12 +71,15 @@ src/
     │   └── settings.rs     # 环境变量单例配置
     └── utils/              # 工具函数
         ├── mod.rs          # Utils 模块声明
-        ├── browser.rs      # 浏览器操作
-        ├── clipboard.rs    # 剪贴板操作
-        ├── logger.rs       # 日志输出工具
-        ├── string.rs       # 字符串处理工具
-        ├── proxy.rs        # 代理工具
-        └── env.rs          # 环境变量工具
+        ├── browser.rs      # 浏览器操作（打开 URL）
+        ├── clipboard.rs    # 剪贴板操作（复制/读取）
+        ├── completion.rs   # Shell 补全脚本生成
+        ├── env.rs          # 环境变量工具（读取和写入）
+        ├── logger.rs       # 日志输出工具（格式化日志）
+        ├── proxy.rs        # 代理工具（代理信息管理）
+        ├── shell.rs        # Shell 信息检测（检测当前 shell）
+        ├── string.rs       # 字符串处理工具（敏感信息掩码等）
+        └── uninstall.rs    # 卸载工具（清理配置和文件）
 ```
 
 ---
@@ -84,6 +93,8 @@ src/
 │         CLI 入口层 (bin/)               │
 │  - bin/qk.rs                            │
 │  - bin/pr.rs                            │
+│  - bin/install.rs                       │
+│  - main.rs (workflow 主命令)            │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐

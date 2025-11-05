@@ -25,7 +25,6 @@ impl PullRequestCreateCommand {
         // 1. 运行检查
         if !dry_run {
             CheckCommand::run_all()?;
-            CheckCommand::check_pre_commit()?;
         }
 
         // 2. 获取或输入 Jira ticket

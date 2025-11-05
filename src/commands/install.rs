@@ -126,8 +126,7 @@ impl InstallCommand {
                 Command::new("check")
                     .about("Run checks")
                     .subcommand(Command::new("git_status").about("Check git status"))
-                    .subcommand(Command::new("network").about("Check network connection"))
-                    .subcommand(Command::new("pre_commit").about("Run pre-commit checks")),
+                    .subcommand(Command::new("network").about("Check network connection")),
             )
             .subcommand(Command::new("setup").about("Initialize or update configuration"))
             .subcommand(Command::new("config").about("View current configuration"))

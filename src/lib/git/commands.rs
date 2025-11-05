@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
 use duct::cmd;
+use std::path::Path;
+use std::process::Command;
 
 /// Git 操作模块
 pub struct Git;
@@ -44,14 +46,12 @@ impl Git {
         let remote_branches = cmd("git", &["branch", "-r", "--list"])
             .read()
             .context("Failed to list remote branches")?;
-        let exists_remote = remote_branches
-            .lines()
-            .any(|line| {
-                line.trim()
-                    .strip_prefix("origin/")
-                    .map(|b| b == branch_name)
-                    .unwrap_or(false)
-            });
+        let exists_remote = remote_branches.lines().any(|line| {
+            line.trim()
+                .strip_prefix("origin/")
+                .map(|b| b == branch_name)
+                .unwrap_or(false)
+        });
 
         Ok((exists_local, exists_remote))
     }
@@ -80,9 +80,17 @@ impl Git {
                 .context(format!("Failed to checkout branch: {}", branch_name))?;
         } else if exists_remote {
             // 分支只存在于远程，创建本地分支并跟踪远程分支
-            cmd("git", &["checkout", "-b", branch_name, &format!("origin/{}", branch_name)])
-                .run()
-                .context(format!("Failed to checkout remote branch: {}", branch_name))?;
+            cmd(
+                "git",
+                &[
+                    "checkout",
+                    "-b",
+                    branch_name,
+                    &format!("origin/{}", branch_name),
+                ],
+            )
+            .run()
+            .context(format!("Failed to checkout remote branch: {}", branch_name))?;
         } else {
             // 分支不存在，创建新分支
             cmd("git", &["checkout", "-b", branch_name])
@@ -92,8 +100,106 @@ impl Git {
         Ok(())
     }
 
+    /// 检查工程中是否存在 pre-commit hooks
+    ///
+    /// 检查以下位置：
+    /// 1. `.git/hooks/pre-commit` - Git hooks
+    /// 2. `.pre-commit-config.yaml` - pre-commit 工具配置文件
+    /// 3. `pre-commit` 命令是否可用（pre-commit 工具）
+    fn has_pre_commit() -> bool {
+        // 检查 .git/hooks/pre-commit
+        if let Ok(git_dir) = cmd("git", &["rev-parse", "--git-dir"]).read() {
+            let hooks_path = Path::new(&git_dir.trim()).join("hooks").join("pre-commit");
+            if hooks_path.exists() && hooks_path.is_file() {
+                return true;
+            }
+        }
+
+        // 检查 .pre-commit-config.yaml
+        if Path::new(".pre-commit-config.yaml").exists() {
+            return true;
+        }
+
+        // 检查 pre-commit 命令是否可用
+        if cmd("which", &["pre-commit"])
+            .stdout_null()
+            .stderr_null()
+            .run()
+            .is_ok()
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// 执行 pre-commit hooks（如果存在）
+    ///
+    /// 如果有 pre-commit 工具配置，使用 `pre-commit run`
+    /// 如果有 Git hooks，直接执行 `.git/hooks/pre-commit` 脚本
+    fn run_pre_commit() -> Result<()> {
+        use crate::{log_info, log_success};
+
+        // 检查是否有 staged 的文件
+        let has_staged = cmd("git", &["diff", "--cached", "--quiet"])
+            .run()
+            .map(|output| !output.status.success())
+            .unwrap_or(false);
+
+        if !has_staged {
+            log_info!("No staged files, skipping pre-commit");
+            return Ok(());
+        }
+
+        // 优先使用 pre-commit 工具
+        if Path::new(".pre-commit-config.yaml").exists() {
+            log_info!("Running pre-commit hooks...");
+            let output = cmd("pre-commit", &["run"])
+                .stdout_capture()
+                .stderr_capture()
+                .run()
+                .context("Failed to run pre-commit")?;
+
+            if output.status.success() {
+                log_success!("Pre-commit checks passed");
+                Ok(())
+            } else {
+                anyhow::bail!("Pre-commit checks failed");
+            }
+        } else if let Ok(git_dir) = cmd("git", &["rev-parse", "--git-dir"]).read() {
+            // 检查并执行 Git hooks
+            let hooks_path = Path::new(&git_dir.trim()).join("hooks").join("pre-commit");
+            if hooks_path.exists() && hooks_path.is_file() {
+                log_info!("Running Git pre-commit hooks...");
+                let output = Command::new(&hooks_path)
+                    .output()
+                    .context("Failed to run pre-commit hooks")?;
+
+                if output.status.success() {
+                    log_success!("Pre-commit checks passed");
+                    Ok(())
+                } else {
+                    anyhow::bail!("Pre-commit checks failed");
+                }
+            } else {
+                // 没有 pre-commit hooks，跳过
+                log_info!("No pre-commit hooks found, skipping");
+                Ok(())
+            }
+        } else {
+            // 无法获取 git 目录，跳过
+            log_info!("Not in a git repository, skipping pre-commit");
+            Ok(())
+        }
+    }
+
     /// 提交更改
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
+        // 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
+        if !no_verify && Self::has_pre_commit() {
+            Self::run_pre_commit()?;
+        }
+
         let mut args = vec!["commit", "-m", message];
         if no_verify {
             args.push("--no-verify");
