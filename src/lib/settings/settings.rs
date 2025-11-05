@@ -207,10 +207,16 @@ impl Settings {
     }
 
     fn load_llm_provider() -> String {
+        // 使用静态变量确保日志只打印一次
+        use std::sync::atomic::{AtomicBool, Ordering};
+        static LOGGED: AtomicBool = AtomicBool::new(false);
+
         // 1. 优先从当前进程的环境变量读取
         if let Ok(provider) = env::var("LLM_PROVIDER") {
             if !provider.is_empty() {
-                crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                if !LOGGED.swap(true, Ordering::Relaxed) {
+                    crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                }
                 return provider;
             }
         }
@@ -219,14 +225,18 @@ impl Settings {
         if let Ok(shell_config_env) = crate::EnvFile::load() {
             if let Some(provider) = shell_config_env.get("LLM_PROVIDER") {
                 if !provider.is_empty() {
-                    crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    if !LOGGED.swap(true, Ordering::Relaxed) {
+                        crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                    }
                     return provider.clone();
                 }
             }
         }
 
         // 3. 默认使用 openai
-        crate::log_info!("LLM_PROVIDER: openai (default)");
+        if !LOGGED.swap(true, Ordering::Relaxed) {
+            crate::log_info!("LLM_PROVIDER: openai (default)");
+        }
         "openai".to_string()
     }
 
