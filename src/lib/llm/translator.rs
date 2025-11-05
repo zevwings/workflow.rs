@@ -310,11 +310,11 @@ fn generate_branch_name_with_openai(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
@@ -372,11 +372,11 @@ fn generate_branch_name_with_deepseek(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
@@ -438,11 +438,11 @@ fn generate_branch_name_with_proxy(commit_title: &str) -> Result<String> {
         "messages": [
             {
                 "role": "system",
-                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens). Only return the branch name, nothing else."
+                "content": "You're a git branch naming assistant. Generate a concise, descriptive git branch name based on the commit title. IMPORTANT: The branch name MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first. The branch name should be all lowercase, use hyphens to separate words, be under 50 characters, and follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only). Only return the branch name, nothing else."
             },
             {
                 "role": "user",
-                "content": format!("Generate a git branch name for this commit title: {}", commit_title)
+                "content": format!("Generate an English-only git branch name for this commit title: {}", commit_title)
             }
         ],
         "max_tokens": 50,
