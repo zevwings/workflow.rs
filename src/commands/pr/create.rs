@@ -131,9 +131,37 @@ impl PullRequestCreateCommand {
             .map(|i| selections.contains(&i))
             .collect();
 
-        // 7. 生成分支名
-        let branch_name = generate_branch_name(jira_ticket.as_deref(), &title)?;
+        // 7. 生成 commit_title 和分支名
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &title);
+
+        // 尝试使用 LLM 根据 commit_title 生成分支名
+        let branch_name = match LLM::generate_branch_name(&commit_title) {
+            Ok(llm_branch_name) => {
+                log_success!("Generated branch name with LLM: {}", llm_branch_name);
+                let mut branch_name = llm_branch_name;
+
+                // 如果有 Jira ticket，添加到分支名前缀
+                if let Some(ticket) = jira_ticket.as_deref() {
+                    branch_name = format!("{}--{}", ticket, branch_name);
+                }
+
+                // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+                let settings = crate::settings::Settings::get();
+                if let Some(prefix) = &settings.github_branch_prefix {
+                    if !prefix.trim().is_empty() {
+                        branch_name = format!("{}/{}", prefix.trim(), branch_name);
+                    }
+                }
+
+                branch_name
+            }
+            Err(e) => {
+                log_warning!("LLM branch name generation failed: {}", e);
+                log_info!("Falling back to default branch name generation");
+                // 回退到原来的方法
+                generate_branch_name(jira_ticket.as_deref(), &title)?
+            }
+        };
 
         // 8. 生成 PR body
         let pull_request_body = generate_pull_request_body(

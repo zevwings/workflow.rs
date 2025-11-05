@@ -23,7 +23,7 @@ help:
 	@echo "  make install            - 一次性安装全部（构建 + 安装二进制 + 安装 completion）"
 	@echo "  make test               - 运行测试"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
-	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy）"
+	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer）"
 	@echo "  make uninstall            - 卸载二进制文件和 shell completion 脚本"
 	@echo "  make tag VERSION=v1.0.0  - 创建 git tag 并推送到远程仓库"
 
@@ -59,20 +59,40 @@ setup:
 	@rustup component add clippy 2>/dev/null || echo "clippy 已安装或安装失败"
 	@echo "开发工具安装完成"
 	@echo ""
+	@echo "=========================================="
+	@echo "安装 rust-analyzer (从源码构建)"
+	@echo "=========================================="
+	@echo ""
+	@echo "注意: 如果您的平台没有预编译的 rust-analyzer 二进制文件，"
+	@echo "      需要从源码构建安装。"
+	@echo ""
 	@echo "正在克隆 rust-analyzer 仓库..."
 	@cd /tmp && \
 	if [ -d "rust-analyzer" ]; then \
 		echo "检测到已存在的 rust-analyzer 目录，正在更新..."; \
-		cd rust-analyzer && git pull; \
+		cd rust-analyzer && \
+		git fetch origin main 2>/dev/null || git fetch origin master 2>/dev/null || git pull; \
+		git reset --hard origin/main 2>/dev/null || git reset --hard origin/master 2>/dev/null || true; \
 	else \
+		echo "克隆 rust-analyzer 仓库..."; \
 		git clone --depth 1 https://github.com/rust-lang/rust-analyzer.git && \
 		cd rust-analyzer; \
 	fi
 	@echo "正在构建并安装 rust-analyzer..."
-	@cd /tmp/rust-analyzer && cargo xtask install --server
-	@echo "✅ rust-analyzer 安装完成！"
-	@echo "安装位置: $$(which rust-analyzer)"
-	@rust-analyzer --version
+	@echo "这可能需要几分钟时间，请耐心等待..."
+	@cd /tmp/rust-analyzer && \
+	if cargo xtask install --server; then \
+		echo ""; \
+		echo "✅ rust-analyzer 安装完成！"; \
+		echo "安装位置: $$(which rust-analyzer)"; \
+		rust-analyzer --version; \
+	else \
+		echo ""; \
+		echo "❌ rust-analyzer 安装失败"; \
+		echo "请检查错误信息，或手动运行以下命令:"; \
+		echo "  cd /tmp/rust-analyzer && cargo xtask install --server"; \
+		exit 1; \
+	fi
 
 # 运行完整的代码检查（格式化检查 + Clippy + Check）
 lint: check-rustfmt check-clippy
