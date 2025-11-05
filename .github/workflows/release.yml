@@ -147,6 +147,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write  # 允许创建 Release 和上传文件
+      pull-requests: read  # 读取 PR（如果需要）
 
     steps:
       - name: Checkout code
@@ -221,8 +224,6 @@ jobs:
           files: release-assets/*
           draft: false
           prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # 自动更新 Homebrew Formula
   update-homebrew:

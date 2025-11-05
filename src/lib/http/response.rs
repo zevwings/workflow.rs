@@ -59,8 +59,20 @@ where
                 .or_else(|_| serde_json::from_slice(b"{}"))
                 .context("Failed to parse empty response as JSON")?
         } else {
-            // 非空响应体，直接使用字节解析 JSON（比字符串解析更高效）
-            serde_json::from_slice(&bytes).context("Failed to parse JSON response")?
+            // 非空响应体，尝试解析 JSON
+            serde_json::from_slice(&bytes).with_context(|| {
+                // 如果解析失败，尝试读取响应体内容用于错误信息
+                let response_text = String::from_utf8_lossy(&bytes);
+                let preview = if response_text.len() > 200 {
+                    format!("{}...", &response_text[..200])
+                } else {
+                    response_text.to_string()
+                };
+                format!(
+                    "Failed to parse JSON response (HTTP {}). The response may be HTML or an error page. Response preview: {}",
+                    status, preview
+                )
+            })?
         };
 
         Ok(Self {

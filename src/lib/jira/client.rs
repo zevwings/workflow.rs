@@ -113,7 +113,32 @@ impl JiraClient {
             .context("Failed to fetch project statuses")?;
 
         if !response.is_success() {
-            anyhow::bail!("Failed to fetch project statuses: {}", response.status);
+            // 提供更详细的错误信息
+            if response.status == 404 {
+                anyhow::bail!(
+                    "Project '{}' not found in Jira. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/修改打包脚本问题')",
+                    project
+                );
+            } else if response.status == 403 {
+                anyhow::bail!(
+                    "Access denied for project '{}'. Please check your Jira API token permissions.",
+                    project
+                );
+            } else {
+                anyhow::bail!(
+                    "Failed to fetch project statuses for '{}': HTTP {}. Please check the project name and your Jira API access.",
+                    project,
+                    response.status
+                );
+            }
+        }
+
+        // 检查响应数据是否是有效的 JSON
+        if response.data.is_null() {
+            anyhow::bail!(
+                "Empty response from Jira API for project '{}'. The project may not exist or you may not have access.",
+                project
+            );
         }
 
         // 解析状态列表（取第一个版本的 statuses）
@@ -123,7 +148,13 @@ impl JiraClient {
             .and_then(|arr| arr.first())
             .and_then(|version| version.get("statuses"))
             .and_then(|s| s.as_array())
-            .context("Invalid statuses JSON structure")?;
+            .with_context(|| {
+                format!(
+                    "Invalid statuses JSON structure for project '{}'. The API response format may have changed. Response: {}",
+                    project,
+                    serde_json::to_string_pretty(&response.data).unwrap_or_else(|_| "Unable to serialize response".to_string())
+                )
+            })?;
 
         let status_names: Vec<String> = statuses
             .iter()
