@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::git::Git;
 use crate::http::{HttpClient, HttpResponse};
+use crate::log_info;
 use crate::settings::Settings;
 
 use super::helpers::extract_github_repo_from_url;
@@ -54,6 +55,12 @@ struct PullRequestBranch {
 #[derive(Debug, Deserialize)]
 struct RepositoryInfo {
     default_branch: String,
+    #[serde(rename = "allow_squash_merge")]
+    allow_squash_merge: Option<bool>,
+    #[serde(rename = "allow_merge_commit")]
+    allow_merge_commit: Option<bool>,
+    #[serde(rename = "allow_rebase_merge")]
+    allow_rebase_merge: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -141,6 +148,10 @@ impl PlatformProvider for GitHub {
             .parse::<u64>()
             .context("Invalid PR number")?;
 
+        // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
+        let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
+        log_info!("Using merge method: {}", merge_method);
+
         let url = format!(
             "https://api.github.com/repos/{}/{}/pulls/{}/merge",
             owner, repo_name, pr_number
@@ -149,7 +160,7 @@ impl PlatformProvider for GitHub {
         let request = MergePullRequestRequest {
             commit_title: None,
             commit_message: None,
-            merge_method: "merge".to_string(),
+            merge_method,
         };
 
         let client = HttpClient::new()?;
@@ -403,6 +414,12 @@ impl GitHub {
 
     /// 获取仓库的默认分支
     fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
+        let repo_info = Self::get_repository_info(owner, repo_name)?;
+        Ok(repo_info.default_branch)
+    }
+
+    /// 获取仓库信息
+    fn get_repository_info(owner: &str, repo_name: &str) -> Result<RepositoryInfo> {
         let url = format!("https://api.github.com/repos/{}/{}", owner, repo_name);
         let client = HttpClient::new()?;
         let headers = Self::create_headers()?;
@@ -412,13 +429,39 @@ impl GitHub {
 
         if !response.is_success() {
             anyhow::bail!(
-                "Failed to get repository default branch: {} - {}",
+                "Failed to get repository info: {} - {}",
                 response.status,
                 response.status_text
             );
         }
 
-        Ok(response.data.default_branch)
+        Ok(response.data)
+    }
+
+    /// 获取首选的合并方法：优先使用 squash，其次 rebase，最后 merge
+    fn get_preferred_merge_method(owner: &str, repo_name: &str) -> Result<String> {
+        let repo_info = Self::get_repository_info(owner, repo_name)?;
+
+        // 优先级：squash > rebase > merge
+        // 1. 优先使用 squash，如果支持的话
+        if repo_info.allow_squash_merge.unwrap_or(false) {
+            return Ok("squash".to_string());
+        }
+
+        // 2. 其次使用 rebase，如果支持的话
+        if repo_info.allow_rebase_merge.unwrap_or(false) {
+            return Ok("rebase".to_string());
+        }
+
+        // 3. 最后使用 merge，如果支持的话
+        if repo_info.allow_merge_commit.unwrap_or(false) {
+            return Ok("merge".to_string());
+        }
+
+        // 如果都不支持，返回错误
+        anyhow::bail!(
+            "Repository does not support squash, rebase, or merge commit methods"
+        );
     }
 
     /// 创建 GitHub API 请求的 headers
