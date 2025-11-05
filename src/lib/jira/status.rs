@@ -85,17 +85,17 @@ impl JiraStatus {
         // 验证项目名格式（Jira 项目名通常只包含字母、数字、下划线，且不包含斜杠）
         let project = if let Some(proj) = project {
             // 如果提取到了项目名，验证格式
-            if proj.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            if proj.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
                 proj
             } else {
                 anyhow::bail!(
-                    "Invalid Jira project name format: '{}'. Jira project names should contain only letters, numbers, and underscores (e.g., 'PROJ', 'PROJ-123').",
+                    "Invalid Jira project name format: '{}'. Jira project names should contain only ASCII letters, numbers, and underscores (e.g., 'PROJ', 'PROJ-123').",
                     proj
                 );
             }
         } else {
             // 如果没有提取到项目名（说明不是 ticket 格式），验证输入是否为有效的项目名
-            if jira_ticket_or_project.chars().all(|c| c.is_alphanumeric() || c == '_') {
+            if jira_ticket_or_project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
                 jira_ticket_or_project
             } else {
                 anyhow::bail!(

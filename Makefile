@@ -114,9 +114,14 @@ lint: check-rustfmt check-clippy
 
 # 安装到系统（默认 /usr/local/bin，一次性安装全部）
 # 直接调用 cargo build --release 确保总是重新构建并安装最新代码
+# 清理增量编译缓存以确保使用最新代码
 install:
 	@echo "构建 release 版本（确保使用最新代码）..."
-	@cargo build --release
+	@echo "清理增量编译缓存以确保重新编译..."
+	@rm -rf target/release/incremental/*/workflow-* 2>/dev/null || true
+	@rm -rf target/release/incremental/*/pr-* 2>/dev/null || true
+	@rm -rf target/release/incremental/*/qk-* 2>/dev/null || true
+	@CARGO_INCREMENTAL=0 cargo build --release || cargo build --release
 	@echo ""
 	@echo "安装二进制文件到 /usr/local/bin..."
 	@sudo cp target/release/workflow /usr/local/bin/workflow

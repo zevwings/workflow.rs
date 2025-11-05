@@ -278,18 +278,27 @@ jobs:
           fi
           echo "Found $found_files SHA256 files"
 
-      - name: Determine token for homebrew repo
-        id: token
+      - name: Check HOMEBREW_TAP_TOKEN
+        id: check_token
         shell: bash
         run: |
-          if [ -n "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
-            echo "token=${{ secrets.HOMEBREW_TAP_TOKEN }}" >> $GITHUB_OUTPUT
-            echo "Using HOMEBREW_TAP_TOKEN"
+          if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
+            echo "❌ Error: HOMEBREW_TAP_TOKEN secret is not configured"
+            echo ""
+            echo "Please configure HOMEBREW_TAP_TOKEN secret:"
+            echo "1. Go to: Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: HOMEBREW_TAP_TOKEN"
+            echo "4. Value: Your Personal Access Token (PAT) with 'repo' scope"
+            echo ""
+            echo "To create a PAT:"
+            echo "1. Go to: https://github.com/settings/tokens"
+            echo "2. Click 'Generate new token (classic)'"
+            echo "3. Select 'repo' scope (full control of private repositories)"
+            echo "4. Copy the token and add it as HOMEBREW_TAP_TOKEN secret"
+            exit 1
           else
-            echo "token=${{ github.token }}" >> $GITHUB_OUTPUT
-            echo "Using GITHUB_TOKEN (fallback - may not work for cross-repo access)"
-            echo "⚠️  Warning: For cross-repository access, please configure HOMEBREW_TAP_TOKEN secret"
-            echo "   Settings → Secrets and variables → Actions → New repository secret"
+            echo "✅ HOMEBREW_TAP_TOKEN is configured"
           fi
 
       - name: Checkout homebrew-workflow
@@ -297,7 +306,7 @@ jobs:
         with:
           repository: zevwings/homebrew-workflow
           path: homebrew-workflow
-          token: ${{ steps.token.outputs.token }}
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
       - name: Update Formula
         shell: bash
@@ -356,7 +365,7 @@ jobs:
       - name: Commit and push changes
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           cd homebrew-workflow
 
@@ -384,31 +393,24 @@ jobs:
           CURRENT_BRANCH=$(git branch --show-current)
           echo "Current branch: $CURRENT_BRANCH"
 
-          # 配置远程 URL 使用 token（如果需要）
-          REMOTE_URL=$(git remote get-url origin)
-          echo "Remote URL: $REMOTE_URL"
-
-          # 如果远程 URL 是 HTTPS，更新为使用 token
-          if [[ "$REMOTE_URL" == https://* ]]; then
-            # 提取仓库路径
-            REPO_PATH=$(echo "$REMOTE_URL" | sed 's|https://github.com/||' | sed 's|\.git$||')
-            # 使用 token 更新远程 URL
-            git remote set-url origin "https://${GITHUB_TOKEN}@github.com/$REPO_PATH.git"
-            echo "Updated remote URL to use token authentication"
-          fi
-
+          # actions/checkout@v4 已经设置了正确的远程 URL，直接推送即可
           # 推送更改到当前分支
           echo "Pushing to branch: $CURRENT_BRANCH"
           if git push origin "$CURRENT_BRANCH"; then
             echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
           else
             echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
-            echo "Remote URL: $(git remote get-url origin)"
+            echo "Remote URL: $(git remote get-url origin | sed 's|://.*@|://***@|')"
             echo "Branch: $CURRENT_BRANCH"
             echo "Git status:"
             git status
             echo "Git log:"
             git log --oneline -5
+            echo ""
+            echo "Possible issues:"
+            echo "1. HOMEBREW_TAP_TOKEN may not have write access to zevwings/homebrew-workflow"
+            echo "2. Token may have expired or been revoked"
+            echo "3. Repository may not exist or be accessible"
             exit 1
           fi
 
