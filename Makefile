@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint setup uninstall tag
+.PHONY: help build release clean install test lint setup uninstall tag dev
 
 # 项目名称
 BINARY_NAME = workflow
@@ -113,7 +113,11 @@ lint: check-rustfmt check-clippy
 	@echo "✓ 所有检查通过！"
 
 # 安装到系统（默认 /usr/local/bin，一次性安装全部）
-install: release
+# 直接调用 cargo build --release 确保总是重新构建并安装最新代码
+install:
+	@echo "构建 release 版本（确保使用最新代码）..."
+	@cargo build --release
+	@echo ""
 	@echo "安装二进制文件到 /usr/local/bin..."
 	@sudo cp target/release/workflow /usr/local/bin/workflow
 	@sudo cp target/release/pr /usr/local/bin/pr
