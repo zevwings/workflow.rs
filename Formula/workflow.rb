@@ -5,28 +5,55 @@
 class Workflow < Formula
   desc "Workflow CLI tool for PR management, Jira integration, and log processing"
   homepage "https://github.com/zevwings/workflow.rs"
-  version "0.1.0"
+  version "0.0.1"
   license "MIT"
 
+  # 从源码构建（使用 git tag）
+  depends_on "rust" => :build
+
   on_macos do
-    if Hardware::CPU.intel?
-      url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-x86_64-apple-darwin.tar.gz"
-      sha256 "PLACEHOLDER_X86_64_DARWIN_SHA256"
-    end
-    if Hardware::CPU.arm?
-      url "https://github.com/zevwings/workflow.rs/releases/download/v0.1.0/workflow-0.1.0-aarch64-apple-darwin.tar.gz"
-      sha256 "PLACEHOLDER_AARCH64_DARWIN_SHA256"
-    end
+    # 使用 git 仓库和 tag（会自动更新为最新的 tag）
+    url "https://github.com/zevwings/workflow.rs.git", tag: "v0.0.1"
   end
 
   def install
-    # 从预编译的 tar.gz 中提取二进制文件
-    bin.install "workflow"
-    bin.install "pr"
-    bin.install "qk"
+    # 构建所有二进制文件（包括 install，虽然它不会被安装到系统）
+    system "cargo", "build", "--release", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
+
+    # 只安装用户可用的命令到系统
+    bin.install "target/release/workflow"
+    bin.install "target/release/pr"
+    bin.install "target/release/qk"
+
+    # 注意：install 二进制不安装到系统，它仅用于 shell completion 安装（Makefile 使用）
   end
 
   def post_install
+    # 创建符号链接到 /usr/local/bin（如果目录存在且可写）
+    local_bin = "/usr/local/bin"
+    homebrew_prefix = ENV.fetch("HOMEBREW_PREFIX", "/opt/homebrew")
+
+    if Dir.exist?(local_bin) && File.writable?(local_bin)
+      %w[workflow pr qk].each do |cmd|
+        source = "#{homebrew_prefix}/bin/#{cmd}"
+        target = "#{local_bin}/#{cmd}"
+        if File.exist?(source)
+          begin
+            FileUtils.ln_sf(source, target)
+            ohai "Created symlink: #{target} -> #{source}"
+          rescue => e
+            opoo "Failed to create symlink #{target}: #{e.message}"
+            opoo "You may need to run manually: sudo ln -sf #{source} #{target}"
+          end
+        end
+      end
+    else
+      opoo "/usr/local/bin is not writable. Creating symlinks requires sudo:"
+      opoo "  sudo ln -sf #{homebrew_prefix}/bin/workflow /usr/local/bin/workflow"
+      opoo "  sudo ln -sf #{homebrew_prefix}/bin/pr /usr/local/bin/pr"
+      opoo "  sudo ln -sf #{homebrew_prefix}/bin/qk /usr/local/bin/qk"
+    end
+
     # 自动安装 shell completion
     # 运行 workflow install 命令会自动检测 shell 并安装 completion
     system "#{bin}/workflow", "install" rescue nil
