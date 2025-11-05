@@ -288,21 +288,40 @@ jobs:
       - name: Update Formula
         shell: bash
         run: |
-          cd homebrew-workflow
+          # Formula 文件路径
+          FORMULA_FILE="homebrew-workflow/Formula/workflow.rb"
+          SOURCE_FORMULA="Formula/workflow.rb"
 
-          # 更新 Formula 文件
-          FORMULA_FILE="Formula/workflow.rb"
+          # 从源仓库读取最新的 Formula 文件
+          echo "Reading Formula file from source repository..."
 
-          if [ ! -f "$FORMULA_FILE" ]; then
-            echo "Error: Formula file not found at $FORMULA_FILE"
+          if [ ! -f "$SOURCE_FORMULA" ]; then
+            echo "Error: Source Formula file not found at $SOURCE_FORMULA"
+            echo "Make sure Formula/workflow.rb exists in the source repository"
             exit 1
           fi
 
-          # 备份原文件
-          cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+          # 确保 homebrew-workflow/Formula 目录存在
+          mkdir -p homebrew-workflow/Formula
+
+          # 备份 homebrew-workflow 中的现有文件（如果存在）
+          if [ -f "$FORMULA_FILE" ]; then
+            cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+            echo "Backed up existing Formula file"
+          fi
+
+          # 复制源 Formula 文件到 homebrew-workflow
+          cp "$SOURCE_FORMULA" "$FORMULA_FILE"
+          echo "Copied Formula file from source repository"
+
+          cd homebrew-workflow
+
+          # 更新为相对于 homebrew-workflow 目录的路径
+          FORMULA_FILE="Formula/workflow.rb"
 
           # 更新版本号
           sed -i "s/version \"[^\"]*\"/version \"${{ steps.version.outputs.version }}\"/" "$FORMULA_FILE"
+          echo "Updated version to: ${{ steps.version.outputs.version }}"
 
           # 更新 git URL：如果当前是 branch: "master"，将其替换为 tag 格式
           # 如果已经是 tag: 格式，则更新 tag 值
@@ -320,140 +339,23 @@ jobs:
             echo "Warning: Could not find branch or tag in Formula file"
           fi
 
-          # 确保 install 方法包含所有优化和功能
-          # 检查是否存在优化的编译配置（环境变量、进度提示、verbose）
-          NEEDS_UPDATE=false
-
-          # 检查是否缺少环境变量设置
-          if ! grep -q 'ENV\["CARGO_TERM_COLOR"\]' "$FORMULA_FILE"; then
-            echo "Adding cargo build optimizations..."
-            NEEDS_UPDATE=true
-          fi
-
-          # 检查是否缺少进度提示
-          if ! grep -q 'Building workflow CLI' "$FORMULA_FILE"; then
-            echo "Adding build progress messages..."
-            NEEDS_UPDATE=true
-          fi
-
-          # 检查是否缺少 --verbose 标志
-          if ! grep -q '--verbose' "$FORMULA_FILE" || ! grep -q 'cargo.*build' "$FORMULA_FILE"; then
-            echo "Adding --verbose flag to cargo build..."
-            NEEDS_UPDATE=true
-          fi
-
-          # 检查是否缺少 install 二进制安装
-          if ! grep -q 'bin.install "target/release/install"' "$FORMULA_FILE"; then
-            echo "Adding install binary installation..."
-            NEEDS_UPDATE=true
-          fi
-
-          # 如果需要进行更新，使用 Python 脚本完整替换 install 方法
-          if [ "$NEEDS_UPDATE" = true ]; then
-            echo "Updating install method with optimizations..."
-            # 创建临时 Python 脚本文件
-            cat > /tmp/update_install.py << 'SCRIPT_EOF'
-import re
-
-file_path = "Formula/workflow.rb"
-with open(file_path, 'r') as f:
-    content = f.read()
-
-# 优化的 install 方法内容
-optimized_install = '''  def install
-    # 设置环境变量以优化编译过程
-    ENV["CARGO_TERM_COLOR"] = "always"
-    ENV["CARGO_BUILD_JOBS"] = ENV.fetch("HOMEBREW_MAKE_JOBS", "4").to_s
-
-    # 显示编译进度
-    ohai "Building workflow CLI (this may take a few minutes)..."
-    ohai "Downloading and compiling dependencies..."
-
-    # 构建所有二进制文件（包括 install，虽然它不会被安装到系统）
-    # 使用 --verbose 显示更多输出，让用户知道进度
-    system "cargo", "build", "--release", "--verbose", "--bin", "workflow", "--bin", "pr", "--bin", "qk", "--bin", "install"
-
-    ohai "Build completed! Installing binaries..."
-
-    # 只安装用户可用的命令到系统
-    bin.install "target/release/workflow"
-    bin.install "target/release/pr"
-    bin.install "target/release/qk"
-
-    # 临时安装 install 二进制文件，用于 post_install 中的 completion 安装
-    # 安装后会被保留，用户可以使用它来安装 completions
-    bin.install "target/release/install"
-  end'''
-
-# 替换整个 install 方法
-pattern = r'  def install\b.*?  end'
-match = re.search(pattern, content, re.DOTALL)
-if match:
-    content = content[:match.start()] + optimized_install + content[match.end():]
-    with open(file_path, 'w') as f:
-        f.write(content)
-    print("✅ Updated install method with optimizations")
-else:
-    print("⚠️  Could not find install method to update")
-SCRIPT_EOF
-            python3 /tmp/update_install.py
-            rm -f /tmp/update_install.py
-          else
-            echo "✅ Install method already optimized"
-          fi
-
-          # 确保 post_install 方法中包含 completions 安装逻辑
-          # 检查是否存在 completions 安装代码
-          if ! grep -q 'install_binary = bin/"install"' "$FORMULA_FILE"; then
-            echo "Adding completions installation logic to post_install method..."
-            # 使用 awk 在 test do 之前插入 completions 安装逻辑
-            awk '/^  test do$/ {
-              print "    # 自动安装 shell completion"
-              print "    # 使用已安装的 install 二进制文件来安装 completions"
-              print "    install_binary = bin/\"install\""
-              print ""
-              print "    if install_binary.exist? && install_binary.executable?"
-              print "      home_dir = ENV.fetch(\"HOME\", Dir.home)"
-              print "      shell_env = ENV.fetch(\"SHELL\", \"/bin/zsh\")"
-              print "      ohai \"Installing shell completions...\""
-              print "      ohai \"Using HOME: #{home_dir}\""
-              print "      ohai \"Using SHELL: #{shell_env}\""
-              print "      result = system(install_binary.to_s)"
-              print "      if result"
-              print "        ohai \"Shell completions installed successfully\""
-              print "        ohai \"To activate completions, run: source ~/.zshrc  # or ~/.bashrc\""
-              print "      else"
-              print "        exit_code = $?.exitstatus || 1"
-              print "        opoo \"Failed to install shell completions (exit code: #{exit_code})\""
-              print "        opoo \"You can manually install completions by running:\""
-              print "        opoo \"  #{bin}/install\""
-              print "        opoo \"Or use the workflow command:\""
-              print "        opoo \"  workflow install\""
-              print "      end"
-              print "    else"
-              print "      opoo \"Install binary not found at #{install_binary}\""
-              print "      opoo \"Skipping automatic completion installation\""
-              print "      opoo \"You can manually install completions later by running:\""
-              print "      opoo \"  workflow install\""
-              print "    end"
-              print ""
-            }1' "$FORMULA_FILE" > "$FORMULA_FILE.tmp" && mv "$FORMULA_FILE.tmp" "$FORMULA_FILE"
-            echo "✅ Added completions installation logic"
-          else
-            echo "✅ Completions installation logic already exists"
-          fi
-
           # 显示更改
-          echo ""
-          echo "Formula file updated:"
-          echo "--- Before ---"
-          cat "$FORMULA_FILE.bak"
-          echo ""
-          echo "--- After ---"
-          cat "$FORMULA_FILE"
-          echo ""
-          echo "--- Diff ---"
-          diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+          if [ -f "$FORMULA_FILE.bak" ]; then
+            echo ""
+            echo "Formula file updated:"
+            echo "--- Before ---"
+            cat "$FORMULA_FILE.bak"
+            echo ""
+            echo "--- After ---"
+            cat "$FORMULA_FILE"
+            echo ""
+            echo "--- Diff ---"
+            diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+          else
+            echo ""
+            echo "New Formula file:"
+            cat "$FORMULA_FILE"
+          fi
 
       - name: Commit and push changes
         shell: bash
