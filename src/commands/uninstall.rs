@@ -50,22 +50,24 @@ impl UninstallCommand {
             log_info!("");
         }
 
-        // 确认卸载
-        let confirmed = Confirm::new()
-            .with_prompt("Are you sure you want to uninstall everything?")
+        // 第一步确认：是否删除二进制文件和 completion 脚本
+        let remove_binaries = Confirm::new()
+            .with_prompt("Remove binary files and shell completion scripts?")
             .default(false)
             .interact()
-            .context("Failed to get confirmation")?;
+            .context("Failed to get confirmation for removing binaries")?;
 
-        if !confirmed {
+        if !remove_binaries {
             log_info!("Uninstall cancelled.");
             return Ok(());
         }
 
-        // 删除配置
-        log_info!("\n🗑️  Removing configuration...");
-        Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
-        log_info!("  ✓ Configuration removed successfully");
+        // 第二步确认：是否删除环境变量配置
+        let remove_config = Confirm::new()
+            .with_prompt("Remove environment variables and configuration from shell config file?")
+            .default(true)
+            .interact()
+            .context("Failed to get confirmation for removing configuration")?;
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {
@@ -128,17 +130,64 @@ impl UninstallCommand {
             }
         }
 
-        // 卸载 shell completion
+        // 卸载 shell completion（只要第一步确认就删除）
         log_info!("\n🗑️  Removing shell completion scripts...");
         Self::remove_completion_files_and_config()?;
 
+        // 删除配置（需要第二步确认）
+        if remove_config {
+            log_info!("\n🗑️  Removing configuration...");
+            Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
+            log_info!("  ✓ Configuration removed successfully");
+        } else {
+            log_info!("\nℹ  Configuration will be kept (not removed).");
+        }
+
         log_success!("\n✅ Uninstall completed successfully!");
-        log_info!("All Workflow CLI configuration has been removed from your shell config file.");
+        if remove_config {
+            log_info!("All Workflow CLI configuration has been removed from your shell config file.");
+        } else {
+            log_info!("Workflow CLI configuration has been kept (not removed).");
+        }
         if !existing_binaries.is_empty() {
             log_info!("All Workflow CLI binary files have been removed.");
         }
         log_info!("All Workflow CLI shell completion scripts have been removed.");
-        log_info!("Note: You may need to restart your shell or run 'source ~/.zshrc' (or similar) for changes to take effect.");
+
+        // 尝试重新加载 shell 配置
+        log_info!("\n🔄 Reloading shell configuration...");
+        if let Ok(shell_info) = Self::detect_shell() {
+            let config_file = shell_info.config_file.display().to_string();
+            let shell_cmd = if shell_info.shell_type == "zsh" {
+                format!("source {}", config_file)
+            } else {
+                format!("source {}", config_file)
+            };
+
+            // 尝试在子 shell 中执行 source 命令
+            // 注意：这不会影响当前 shell，但可以验证配置文件是否有效
+            let status = cmd(&shell_info.shell_type, &["-c", &shell_cmd])
+                .run()
+                .map(|_| ())
+                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e));
+
+            match status {
+                Ok(_) => {
+                    log_success!("✓ Shell configuration reloaded (in subprocess)");
+                    log_info!("Note: Changes may not take effect in the current shell.");
+                    log_info!("Please run manually: source {}", config_file);
+                }
+                Err(e) => {
+                    log_warning!("⚠️  Could not reload shell configuration: {}", e);
+                    log_info!("Please run manually: source {}", config_file);
+                }
+            }
+        } else {
+            log_info!("ℹ  Could not detect shell type.");
+            log_info!("Please manually reload your shell configuration:");
+            log_info!("  source ~/.zshrc  # for zsh");
+            log_info!("  source ~/.bashrc  # for bash");
+        }
 
         Ok(())
     }

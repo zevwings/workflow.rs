@@ -4,7 +4,9 @@
 use crate::{log_info, log_success, log_warning, EnvFile};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
+use duct::cmd;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -88,7 +90,68 @@ impl SetupCommand {
         log_info!("   You can now use the Workflow CLI commands.");
         log_info!("   Note: Settings have been reloaded with new values.");
 
+        // 尝试重新加载 shell 配置
+        log_info!("\n🔄 Reloading shell configuration...");
+        if let Ok(shell_info) = Self::detect_shell() {
+            let config_file = shell_info.config_file.display().to_string();
+            let shell_cmd = format!("source {}", config_file);
+
+            // 尝试在子 shell 中执行 source 命令
+            // 注意：这不会影响当前 shell，但可以验证配置文件是否有效
+            let status = cmd(&shell_info.shell_type, &["-c", &shell_cmd])
+                .run()
+                .map(|_| ())
+                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e));
+
+            match status {
+                Ok(_) => {
+                    log_success!("✓ Shell configuration reloaded (in subprocess)");
+                    log_info!("Note: Changes may not take effect in the current shell.");
+                    log_info!("Please run manually: source {}", config_file);
+                }
+                Err(e) => {
+                    log_warning!("⚠️  Could not reload shell configuration: {}", e);
+                    log_info!("Please run manually: source {}", config_file);
+                }
+            }
+        } else {
+            log_info!("ℹ  Could not detect shell type.");
+            log_info!("Please manually reload your shell configuration:");
+            log_info!("  source ~/.zshrc  # for zsh");
+            log_info!("  source ~/.bashrc  # for bash");
+        }
+
         Ok(())
+    }
+
+    /// 检测 shell 类型
+    fn detect_shell() -> Result<ShellInfo> {
+        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+        let shell_type = if shell.contains("zsh") {
+            "zsh"
+        } else if shell.contains("bash") {
+            "bash"
+        } else {
+            anyhow::bail!("不支持的 shell: {}", shell);
+        };
+
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let home_dir = PathBuf::from(home);
+
+        let (completion_dir, config_file) = if shell_type == "zsh" {
+            (home_dir.join(".zsh/completions"), home_dir.join(".zshrc"))
+        } else {
+            (
+                home_dir.join(".bash_completion.d"),
+                home_dir.join(".bashrc"),
+            )
+        };
+
+        Ok(ShellInfo {
+            shell_type: shell_type.to_string(),
+            completion_dir,
+            config_file,
+        })
     }
 
     /// 收集配置信息（统一保存为环境变量）
@@ -512,4 +575,11 @@ impl SetupCommand {
 
         Ok(env_vars)
     }
+}
+
+/// Shell 信息
+struct ShellInfo {
+    shell_type: String,
+    completion_dir: PathBuf,
+    config_file: PathBuf,
 }
