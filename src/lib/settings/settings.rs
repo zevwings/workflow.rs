@@ -17,6 +17,8 @@ pub struct Settings {
     // ==================== GitHub 配置 ====================
     /// GitHub 分支前缀
     pub gh_branch_prefix: Option<String>,
+    /// GitHub API Token
+    pub github_api_token: Option<String>,
 
     // ==================== 日志配置 ====================
     /// 操作完成后是否删除日志
@@ -58,6 +60,7 @@ impl Settings {
             jira_api_token: String::new(),
             jira_service_address: String::new(),
             gh_branch_prefix: None,
+            github_api_token: None,
             log_delete_when_operation_completed: false,
             log_output_folder_name: "logs".to_string(),
             disable_check_proxy: false,
@@ -84,6 +87,7 @@ impl Settings {
 
             // ==================== GitHub 配置 ====================
             gh_branch_prefix: Self::load_github_config(),
+            github_api_token: Self::load_github_api_token(),
 
             // ==================== 日志配置 ====================
             log_delete_when_operation_completed: Self::load_log_delete_when_completed(),
@@ -125,6 +129,10 @@ impl Settings {
     // ==================== GitHub 配置 ====================
     fn load_github_config() -> Option<String> {
         env::var("GH_BRANCH_PREFIX").ok()
+    }
+
+    fn load_github_api_token() -> Option<String> {
+        env::var("GITHUB_API_TOKEN").ok()
     }
 
     // ==================== 日志配置 ====================
