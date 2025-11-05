@@ -39,6 +39,6 @@ name = "qk"
 path = "src/bin/qk.rs"
 
 [[bin]]
-name = "generate-completions"
-path = "src/bin/generate-completions.rs"
+name = "install"
+path = "src/bin/install.rs"
 
