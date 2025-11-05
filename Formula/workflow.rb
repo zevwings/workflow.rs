@@ -25,7 +25,9 @@ class Workflow < Formula
     bin.install "target/release/pr"
     bin.install "target/release/qk"
 
-    # 注意：install 二进制不安装到系统，它仅用于 shell completion 安装（Makefile 使用）
+    # 临时安装 install 二进制文件，用于 post_install 中的 completion 安装
+    # 安装后会被保留，用户可以使用它来安装 completions
+    bin.install "target/release/install"
   end
 
   def post_install
@@ -55,8 +57,39 @@ class Workflow < Formula
     end
 
     # 自动安装 shell completion
-    # 运行 workflow install 命令会自动检测 shell 并安装 completion
-    system "#{bin}/workflow", "install" rescue nil
+    # 使用已安装的 install 二进制文件来安装 completions
+    install_binary = bin/"install"
+
+    if install_binary.exist? && install_binary.executable?
+      # 确保环境变量正确设置
+      home_dir = ENV.fetch("HOME", Dir.home)
+      shell_env = ENV.fetch("SHELL", "/bin/zsh")
+
+      ohai "Installing shell completions..."
+      ohai "Using HOME: #{home_dir}"
+      ohai "Using SHELL: #{shell_env}"
+
+      # 运行 install 命令来安装 completions
+      # 使用 system 命令，但捕获错误并提供更好的反馈
+      result = system(install_binary.to_s)
+
+      if result
+        ohai "Shell completions installed successfully"
+        ohai "To activate completions, run: source ~/.zshrc  # or ~/.bashrc"
+      else
+        exit_code = $?.exitstatus || 1
+        opoo "Failed to install shell completions (exit code: #{exit_code})"
+        opoo "You can manually install completions by running:"
+        opoo "  #{bin}/install"
+        opoo "Or use the workflow command:"
+        opoo "  workflow install"
+      end
+    else
+      opoo "Install binary not found at #{install_binary}"
+      opoo "Skipping automatic completion installation"
+      opoo "You can manually install completions later by running:"
+      opoo "  workflow install"
+    end
   end
 
   test do
