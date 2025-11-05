@@ -49,19 +49,19 @@ where
             .to_string();
         let headers = response.headers().clone();
 
-        // 先读取响应体文本（某些 API 如 Jira transitions 可能返回空响应体）
-        let text = response.text()?;
+        // 先读取响应体字节（比 text() 更高效，避免额外的 UTF-8 验证）
+        let bytes = response.bytes()?;
 
         // 如果响应体为空，尝试解析为 null JSON（适用于 serde_json::Value）
-        let data: T = if text.trim().is_empty() {
+        let data: T = if bytes.is_empty() || bytes.iter().all(|&b| b.is_ascii_whitespace()) {
             // 空响应体，尝试解析为 null
-            serde_json::from_str("null")
-                .or_else(|_| serde_json::from_str("{}"))
+            serde_json::from_slice(b"null")
+                .or_else(|_| serde_json::from_slice(b"{}"))
                 .context("Failed to parse empty response as JSON")?
         } else {
-            // 非空响应体，正常解析 JSON
-            serde_json::from_str(&text)
-                .context(format!("Failed to parse JSON response: {}", text))?
+            // 非空响应体，直接使用字节解析 JSON（比字符串解析更高效）
+            serde_json::from_slice(&bytes)
+                .context("Failed to parse JSON response")?
         };
 
         Ok(Self {
