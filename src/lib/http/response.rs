@@ -1,3 +1,4 @@
+use anyhow::Context;
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
 
@@ -48,7 +49,20 @@ where
             .to_string();
         let headers = response.headers().clone();
 
-        let data: T = response.json()?;
+        // 先读取响应体文本（某些 API 如 Jira transitions 可能返回空响应体）
+        let text = response.text()?;
+
+        // 如果响应体为空，尝试解析为 null JSON（适用于 serde_json::Value）
+        let data: T = if text.trim().is_empty() {
+            // 空响应体，尝试解析为 null
+            serde_json::from_str("null")
+                .or_else(|_| serde_json::from_str("{}"))
+                .context("Failed to parse empty response as JSON")?
+        } else {
+            // 非空响应体，正常解析 JSON
+            serde_json::from_str(&text)
+                .context(format!("Failed to parse JSON response: {}", text))?
+        };
 
         Ok(Self {
             status,
