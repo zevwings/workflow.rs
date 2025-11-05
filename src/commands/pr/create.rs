@@ -35,10 +35,10 @@ impl PullRequestCreateCommand {
                 use crate::jira::helpers::extract_jira_project;
                 let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
                     // 如果是 ticket 格式（PROJ-123），检查项目名是否有效
-                    project.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
                 } else {
                     // 如果是项目名格式，检查是否只包含有效字符
-                    ticket.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
                 };
 
                 if !is_valid_format {
@@ -61,9 +61,9 @@ impl PullRequestCreateCommand {
                 // 验证输入的 ticket 格式
                 use crate::jira::helpers::extract_jira_project;
                 let is_valid_format = if let Some(project) = extract_jira_project(&ticket) {
-                    project.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
                 } else {
-                    ticket.chars().all(|c| c.is_alphanumeric() || c == '_')
+                    ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
                 };
 
                 if !is_valid_format {
