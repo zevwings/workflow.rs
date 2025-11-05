@@ -11,7 +11,7 @@ impl JiraApi {
     /// 获取项目状态列表（通过 REST API）
     pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
         let email = Jira::get_current_user()?;
-        let settings = Settings::get();
+        let settings = Settings::load();
         let api_token = &settings.jira_api_token;
         let service_address = &settings.jira_service_address;
 
@@ -56,7 +56,7 @@ impl JiraApi {
     /// 从 Jira REST API 获取 issue summary
     pub fn get_summary(ticket: &str) -> Result<String> {
         let email = Jira::get_current_user()?;
-        let settings = Settings::get();
+        let settings = Settings::load();
         let api_token = &settings.jira_api_token;
         let service_address = &settings.jira_service_address;
 
@@ -89,7 +89,7 @@ impl JiraApi {
     /// 下载附件（用于日志下载功能）
     pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
         let email = Jira::get_current_user()?;
-        let settings = Settings::get();
+        let settings = Settings::load();
         let api_token = &settings.jira_api_token;
         let service_address = &settings.jira_service_address;
 

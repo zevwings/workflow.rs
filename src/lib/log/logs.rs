@@ -546,7 +546,7 @@ impl Logs {
         let home_path = PathBuf::from(&home);
 
         // 从 Settings 获取日志输出文件夹名称
-        let settings = Settings::get();
+        let settings = Settings::load();
         let base_dir = if !settings.log_output_folder_name.is_empty() {
             home_path.join(format!(
                 "Downloads/logs_{}/{}/merged",

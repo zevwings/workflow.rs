@@ -1,8 +1,7 @@
 use std::env;
-use std::sync::{OnceLock, RwLock};
 
 /// 应用程序设置
-/// 单例模式，从环境变量读取配置
+/// 从环境变量读取配置
 #[derive(Clone)]
 pub struct Settings {
     // ==================== 用户配置 ====================
@@ -50,79 +49,27 @@ pub struct Settings {
     pub codeup_cookie: Option<String>,
 }
 
-// 使用 RwLock 存储 Settings，支持运行时重新加载
-static INSTANCE: OnceLock<RwLock<Settings>> = OnceLock::new();
-
-// 线程局部缓存，避免频繁读取锁
-thread_local! {
-    static CACHED: std::cell::Cell<*const Settings> = const { std::cell::Cell::new(std::ptr::null()) };
-}
-
 impl Settings {
-    /// 获取单例实例
-    /// 首次调用时会从环境变量初始化
-    ///
-    /// 注意：为了支持运行时重新加载，使用 RwLock 包装
-    /// 使用线程局部缓存来避免频繁读取锁，但在 reload() 后会自动刷新
-    pub fn get() -> &'static Self {
-        let lock = Self::get_lock();
-
-        // 检查线程局部缓存是否有效
-        let cached_ptr = CACHED.with(|c| c.get());
-        if !cached_ptr.is_null() {
-            unsafe { &*cached_ptr }
-        } else {
-            // 从锁读取并缓存
-            let guard = lock.read().unwrap();
-            let settings = Box::leak(Box::new((*guard).clone()));
-            let ptr = settings as *const Settings;
-            CACHED.with(|c| c.set(ptr));
-            settings
-        }
-    }
-
-    /// 获取内部锁实例
-    fn get_lock() -> &'static RwLock<Settings> {
-        INSTANCE.get_or_init(|| {
-            // 如果初始化失败，创建一个包含默认值的 Settings
-            // 这样在 setup 阶段不会 panic
-            let settings = Self::from_env().unwrap_or_else(|_| Self {
-                email: String::new(),
-                jira_api_token: String::new(),
-                jira_service_address: String::new(),
-                gh_branch_prefix: None,
-                log_delete_when_operation_completed: false,
-                log_output_folder_name: "logs".to_string(),
-                disable_check_proxy: false,
-                openai_key: None,
-                llm_proxy_url: None,
-                llm_proxy_key: None,
-                deepseek_key: None,
-                llm_provider: "openai".to_string(),
-                codeup_project_id: None,
-                codeup_csrf_token: None,
-                codeup_cookie: None,
-            });
-            RwLock::new(settings)
+    /// 从环境变量加载设置
+    /// 如果环境变量未设置（例如在 setup 阶段），返回包含默认值的 Settings
+    pub fn load() -> Self {
+        Self::from_env().unwrap_or_else(|_| Self {
+            email: String::new(),
+            jira_api_token: String::new(),
+            jira_service_address: String::new(),
+            gh_branch_prefix: None,
+            log_delete_when_operation_completed: false,
+            log_output_folder_name: "logs".to_string(),
+            disable_check_proxy: false,
+            openai_key: None,
+            llm_proxy_url: None,
+            llm_proxy_key: None,
+            deepseek_key: None,
+            llm_provider: "openai".to_string(),
+            codeup_project_id: None,
+            codeup_csrf_token: None,
+            codeup_cookie: None,
         })
-    }
-
-    /// 重新加载环境变量
-    /// 强制从环境变量重新读取配置并更新单例实例
-    /// 同时清除线程局部缓存，确保下次 get() 时使用新值
-    ///
-    /// 如果环境变量未设置（例如在 setup 阶段），返回错误但不 panic
-    pub fn reload() -> Result<(), String> {
-        let lock = Self::get_lock();
-        let new_settings = Self::from_env()?;
-
-        // 更新锁中的值
-        *lock.write().unwrap() = new_settings;
-
-        // 清除所有线程的缓存，强制下次 get() 时重新读取
-        CACHED.with(|c| c.set(std::ptr::null()));
-
-        Ok(())
     }
 
     /// 从环境变量初始化设置
@@ -270,17 +217,6 @@ impl Settings {
         env::var("CODEUP_COOKIE").ok()
     }
 
-    /// 重新加载环境变量（仅用于测试）
-    /// 在测试中，可以强制替换实例
-    #[cfg(test)]
-    pub fn reload_for_test() {
-        let new_settings = Self::from_env().expect("Failed to initialize Settings");
-        *INSTANCE
-            .get_or_init(|| RwLock::new(new_settings.clone()))
-            .write()
-            .unwrap() = new_settings;
-        CACHED.with(|c| c.set(std::ptr::null()));
-    }
 }
 
 #[cfg(test)]

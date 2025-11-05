@@ -1,12 +1,10 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{log_info, log_success, log_warning, EnvFile, Uninstall};
+use crate::{log_info, log_success, log_warning, Completion, EnvFile, Shell, Uninstall};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use duct::cmd;
-use std::fs;
-use std::path::PathBuf;
 
 /// 卸载命令
 pub struct UninstallCommand;
@@ -132,7 +130,14 @@ impl UninstallCommand {
 
         // 卸载 shell completion（只要第一步确认就删除）
         log_info!("\n🗑️  Removing shell completion scripts...");
-        Self::remove_completion_files_and_config()?;
+        if let Ok(shell_info) = Shell::detect() {
+            Completion::remove_completion_files(&shell_info)?;
+            if shell_info.config_file.exists() {
+                Completion::remove_completion_config(&shell_info)?;
+            } else {
+                log_info!("  ℹ  Config file {} does not exist", shell_info.config_file.display());
+            }
+        }
 
         // 删除配置（需要第二步确认）
         if remove_config {
@@ -156,32 +161,8 @@ impl UninstallCommand {
 
         // 尝试重新加载 shell 配置
         log_info!("\n🔄 Reloading shell configuration...");
-        if let Ok(shell_info) = Self::detect_shell() {
-            let config_file = shell_info.config_file.display().to_string();
-            let shell_cmd = if shell_info.shell_type == "zsh" {
-                format!("source {}", config_file)
-            } else {
-                format!("source {}", config_file)
-            };
-
-            // 尝试在子 shell 中执行 source 命令
-            // 注意：这不会影响当前 shell，但可以验证配置文件是否有效
-            let status = cmd(&shell_info.shell_type, &["-c", &shell_cmd])
-                .run()
-                .map(|_| ())
-                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e));
-
-            match status {
-                Ok(_) => {
-                    log_success!("✓ Shell configuration reloaded (in subprocess)");
-                    log_info!("Note: Changes may not take effect in the current shell.");
-                    log_info!("Please run manually: source {}", config_file);
-                }
-                Err(e) => {
-                    log_warning!("⚠️  Could not reload shell configuration: {}", e);
-                    log_info!("Please run manually: source {}", config_file);
-                }
-            }
+        if let Ok(shell_info) = Shell::detect() {
+            let _ = Shell::reload_config(&shell_info);
         } else {
             log_info!("ℹ  Could not detect shell type.");
             log_info!("Please manually reload your shell configuration:");
@@ -191,180 +172,5 @@ impl UninstallCommand {
 
         Ok(())
     }
-
-    /// 删除 shell completion 文件和配置（内部方法）
-    fn remove_completion_files_and_config() -> Result<()> {
-        let shell_info = Self::detect_shell()?;
-
-        // 删除 completion 脚本文件
-        let completion_files = if shell_info.shell_type == "zsh" {
-            vec![
-                shell_info.completion_dir.join("_workflow"),
-                shell_info.completion_dir.join("_pr"),
-                shell_info.completion_dir.join("_qk"),
-            ]
-        } else {
-            vec![
-                shell_info.completion_dir.join("workflow.bash"),
-                shell_info.completion_dir.join("pr.bash"),
-                shell_info.completion_dir.join("qk.bash"),
-            ]
-        };
-
-        let mut removed_count = 0;
-        for file in &completion_files {
-            if file.exists() {
-                if let Err(e) = fs::remove_file(file) {
-                    log_warning!("⚠  删除失败: {} ({})", file.display(), e);
-                } else {
-                    log_info!("  ✓ Removed: {}", file.display());
-                    removed_count += 1;
-                }
-            }
-        }
-
-        if removed_count > 0 {
-            log_info!("  ✓ Completion script files removed");
-        } else {
-            log_info!("  ℹ  Completion script files not found (may not be installed)");
-        }
-
-        // 从配置文件中删除 completion 配置
-        if shell_info.config_file.exists() {
-            Self::remove_completion_config(&shell_info)?;
-        } else {
-            log_info!("  ℹ  Config file {} does not exist", shell_info.config_file.display());
-        }
-
-        Ok(())
-    }
-
-    /// 检测 shell 类型
-    fn detect_shell() -> Result<ShellInfo> {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        let shell_type = if shell.contains("zsh") {
-            "zsh"
-        } else if shell.contains("bash") {
-            "bash"
-        } else {
-            anyhow::bail!("不支持的 shell: {}", shell);
-        };
-
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(home);
-
-        let (completion_dir, config_file) = if shell_type == "zsh" {
-            (home_dir.join(".zsh/completions"), home_dir.join(".zshrc"))
-        } else {
-            (
-                home_dir.join(".bash_completion.d"),
-                home_dir.join(".bashrc"),
-            )
-        };
-
-        Ok(ShellInfo {
-            shell_type: shell_type.to_string(),
-            completion_dir,
-            config_file,
-        })
-    }
-
-    /// 从配置文件中删除 completion 配置
-    fn remove_completion_config(shell_info: &ShellInfo) -> Result<()> {
-        let config_content = fs::read_to_string(&shell_info.config_file)
-            .unwrap_or_else(|_| String::new());
-
-        let has_completion_block = config_content.contains("# Workflow CLI completions");
-        let completion_dir_str = shell_info.completion_dir.display().to_string();
-        let fpath_pattern = if shell_info.shell_type == "zsh" {
-            format!("fpath=({} $fpath)", completion_dir_str)
-        } else {
-            String::new()
-        };
-
-        // 检查是否有 fpath 配置（仅在 zsh 中）
-        let mut has_fpath = if shell_info.shell_type == "zsh" && !fpath_pattern.is_empty() {
-            config_content.contains(&fpath_pattern)
-        } else {
-            false
-        };
-
-        if !has_completion_block && !has_fpath {
-            log_info!("ℹ  completion 配置未在 {} 中找到", shell_info.config_file.display());
-            return Ok(());
-        }
-
-        // 删除配置块
-        let marker_start = "# Workflow CLI completions";
-        let mut new_content = String::new();
-        let lines: Vec<&str> = config_content.lines().collect();
-        let mut i = 0;
-
-        while i < lines.len() {
-            let line = lines[i];
-
-            // 检查是否是配置块开始
-            if line.contains(marker_start) {
-                // 跳过整个配置块
-                if shell_info.shell_type == "zsh" {
-                    // 跳过到 autoload 行之后
-                    i += 1; // 跳过 marker 行
-                    while i < lines.len() {
-                        if lines[i].contains("autoload -Uz compinit && compinit") {
-                            i += 1; // 跳过 autoload 行
-                            break;
-                        }
-                        i += 1;
-                    }
-                } else {
-                    // 跳过到 for f in 行之后
-                    i += 1; // 跳过 marker 行
-                    while i < lines.len() {
-                        if lines[i].contains("for f in") && lines[i].contains(".bash") {
-                            i += 1; // 跳过 for 行
-                            break;
-                        }
-                        i += 1;
-                    }
-                }
-                continue;
-            }
-
-            // 检查是否是独立的 fpath 行（仅在 zsh 中，且不在配置块内）
-            if has_fpath && shell_info.shell_type == "zsh" && line.contains(&fpath_pattern) {
-                has_fpath = false;
-                i += 1; // 跳过这一行
-                continue;
-            }
-
-            new_content.push_str(line);
-            new_content.push('\n');
-            i += 1;
-        }
-
-        // 清理末尾的多个空行
-        while new_content.ends_with("\n\n") {
-            new_content.pop();
-        }
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-
-        fs::write(&shell_info.config_file, new_content)
-            .context("Failed to write to shell config file")?;
-
-        log_success!(
-            "✓ 已从 {} 中删除 completion 配置",
-            shell_info.config_file.display()
-        );
-
-        Ok(())
-    }
 }
 
-/// Shell 信息
-struct ShellInfo {
-    shell_type: String,
-    completion_dir: PathBuf,
-    config_file: PathBuf,
-}

@@ -1,7 +1,9 @@
 use anyhow::{Context, Result};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::json;
 
 use super::config;
+use crate::http::{HttpClient, HttpResponse};
 use crate::log_info;
 use crate::settings::Settings;
 
@@ -28,7 +30,7 @@ pub fn translate_with_llm(desc: &str) -> Result<String> {
     log_info!("Using LLM provider: {}", provider);
 
     // 先检查对应的 API key 是否设置
-    let settings = Settings::get();
+    let settings = Settings::load();
     let api_key_set = match provider.as_str() {
         "openai" => settings.openai_key.is_some(),
         "deepseek" => settings.deepseek_key.is_some(),
@@ -64,13 +66,13 @@ pub fn translate_with_llm(desc: &str) -> Result<String> {
 
 /// 使用 OpenAI API 翻译
 fn translate_with_openai(desc: &str) -> Result<String> {
-    let settings = Settings::get();
+    let settings = Settings::load();
     let api_key = settings
         .openai_key
         .as_ref()
         .context("LLM_OPENAI_KEY environment variable not set")?;
 
-    let client = reqwest::blocking::Client::new();
+    let client = HttpClient::new()?;
     let url = "https://api.openai.com/v1/chat/completions";
 
     let payload = json!({
@@ -89,25 +91,29 @@ fn translate_with_openai(desc: &str) -> Result<String> {
         "temperature": 0.7
     });
 
-    let response = client
-        .post(url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .header("Content-Type", "application/json")
-        .json(&payload)
-        .send()
+    // 构建 headers
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", api_key))
+            .context("Failed to create Authorization header")?,
+    );
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response: HttpResponse<serde_json::Value> = client
+        .post_with_headers(url, &payload, &headers)
         .context("Failed to send request to OpenAI API")?;
 
-    let status = response.status();
-    if !status.is_success() {
-        let error_text = response.text().unwrap_or_default();
-        anyhow::bail!("OpenAI API request failed: {} - {}", status, error_text);
+    if !response.is_success() {
+        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
+        anyhow::bail!("OpenAI API request failed: {} - {}", response.status, error_text);
     }
 
-    let response_data: serde_json::Value = response
-        .json()
-        .context("Failed to parse OpenAI API response")?;
-
-    let translated = response_data
+    let translated = response
+        .data
         .get("choices")
         .and_then(|c| c.as_array())
         .and_then(|arr| arr.first())
@@ -121,13 +127,13 @@ fn translate_with_openai(desc: &str) -> Result<String> {
 
 /// 使用 DeepSeek API 翻译
 fn translate_with_deepseek(desc: &str) -> Result<String> {
-    let settings = Settings::get();
+    let settings = Settings::load();
     let api_key = settings
         .deepseek_key
         .as_ref()
         .context("LLM_DEEPSEEK_KEY environment variable not set")?;
 
-    let client = reqwest::blocking::Client::new();
+    let client = HttpClient::new()?;
     let url = "https://api.deepseek.com/v1/chat/completions";
 
     let payload = json!({
@@ -146,25 +152,29 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
         "temperature": 0.7
     });
 
-    let response = client
-        .post(url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .header("Content-Type", "application/json")
-        .json(&payload)
-        .send()
+    // 构建 headers
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", api_key))
+            .context("Failed to create Authorization header")?,
+    );
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response: HttpResponse<serde_json::Value> = client
+        .post_with_headers(url, &payload, &headers)
         .context("Failed to send request to DeepSeek API")?;
 
-    let status = response.status();
-    if !status.is_success() {
-        let error_text = response.text().unwrap_or_default();
-        anyhow::bail!("DeepSeek API request failed: {} - {}", status, error_text);
+    if !response.is_success() {
+        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
+        anyhow::bail!("DeepSeek API request failed: {} - {}", response.status, error_text);
     }
 
-    let response_data: serde_json::Value = response
-        .json()
-        .context("Failed to parse DeepSeek API response")?;
-
-    let translated = response_data
+    let translated = response
+        .data
         .get("choices")
         .and_then(|c| c.as_array())
         .and_then(|arr| arr.first())
@@ -178,7 +188,7 @@ fn translate_with_deepseek(desc: &str) -> Result<String> {
 
 /// 使用代理 API 翻译
 fn translate_with_proxy(desc: &str) -> Result<String> {
-    let settings = Settings::get();
+    let settings = Settings::load();
     let api_key = settings
         .llm_proxy_key
         .as_ref()
@@ -188,7 +198,7 @@ fn translate_with_proxy(desc: &str) -> Result<String> {
         .as_ref()
         .context("LLM_PROXY_URL environment variable not set")?;
 
-    let client = reqwest::blocking::Client::new();
+    let client = HttpClient::new()?;
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
 
     let payload = json!({
@@ -207,25 +217,29 @@ fn translate_with_proxy(desc: &str) -> Result<String> {
         "temperature": 0.7
     });
 
-    let response = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .header("Content-Type", "application/json")
-        .json(&payload)
-        .send()
+    // 构建 headers
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        AUTHORIZATION,
+        HeaderValue::from_str(&format!("Bearer {}", api_key))
+            .context("Failed to create Authorization header")?,
+    );
+    headers.insert(
+        CONTENT_TYPE,
+        HeaderValue::from_static("application/json"),
+    );
+
+    let response: HttpResponse<serde_json::Value> = client
+        .post_with_headers(&url, &payload, &headers)
         .context("Failed to send request to proxy API")?;
 
-    let status = response.status();
-    if !status.is_success() {
-        let error_text = response.text().unwrap_or_default();
-        anyhow::bail!("Proxy API request failed: {} - {}", status, error_text);
+    if !response.is_success() {
+        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
+        anyhow::bail!("Proxy API request failed: {} - {}", response.status, error_text);
     }
 
-    let response_data: serde_json::Value = response
-        .json()
-        .context("Failed to parse proxy API response")?;
-
-    let translated = response_data
+    let translated = response
+        .data
         .get("choices")
         .and_then(|c| c.as_array())
         .and_then(|arr| arr.first())

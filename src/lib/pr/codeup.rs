@@ -53,7 +53,7 @@ impl Platform for Codeup {
         source_branch: &str,
         target_branch: Option<&str>,
     ) -> Result<String> {
-        let settings = Settings::get();
+        let settings = Settings::load();
         let project_id = settings
             .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
@@ -118,7 +118,7 @@ impl Platform for Codeup {
     fn merge_pr(pr_id: &str, delete_branch: bool) -> Result<()> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
-        let settings = Settings::get();
+        let settings = Settings::load();
         let csrf_token = settings
             .codeup_csrf_token
             .as_ref()
@@ -453,7 +453,7 @@ impl Platform for Codeup {
 impl Codeup {
     /// 获取环境变量（辅助函数）
     fn get_env_vars() -> Result<(u64, String)> {
-        let settings = Settings::get();
+        let settings = Settings::load();
         let project_id = settings
             .codeup_project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;

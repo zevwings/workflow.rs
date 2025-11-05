@@ -1,12 +1,10 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{log_info, log_success, log_warning, EnvFile};
+use crate::{log_info, log_success, log_warning, EnvFile, Shell};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
-use duct::cmd;
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -16,44 +14,12 @@ impl SetupCommand {
     pub fn run() -> Result<()> {
         log_success!("🚀 Starting Workflow CLI initialization...\n");
 
-        // 注意：在 setup 阶段不调用 Settings::reload()
-        // 因为此时环境变量可能还没有设置，会导致初始化失败
-        // 我们直接读取环境变量和 shell 配置文件即可
+        // 注意：在 setup 阶段，我们直接读取环境变量和 shell 配置文件即可
 
         // 加载现有配置（从 shell 配置文件和当前环境变量）
         // 优先从当前环境变量读取（如果已加载到 shell）
-        let mut merged_env = HashMap::new();
-
-        // 首先从当前环境变量读取（这是最优先的数据源）
-        let env_var_keys = [
-            "EMAIL",
-            "JIRA_API_TOKEN",
-            "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX",
-            "LOG_OUTPUT_FOLDER_NAME",
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            "DISABLE_CHECK_PROXY",
-            "LLM_PROVIDER",
-            "LLM_OPENAI_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "LLM_PROXY_URL",
-            "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-            "CODEUP_PROJECT_ID",
-        ];
-
-        for key in &env_var_keys {
-            if let Ok(value) = std::env::var(key) {
-                merged_env.insert(key.to_string(), value);
-            }
-        }
-
-        // 如果环境变量中没有找到，再从 shell 配置文件读取
-        let shell_config_env = EnvFile::load().unwrap_or_default();
-        for (key, value) in shell_config_env {
-            merged_env.entry(key).or_insert(value);
-        }
+        let env_var_keys = EnvFile::get_workflow_env_keys();
+        let merged_env = EnvFile::load_merged(&env_var_keys);
 
         if !merged_env.is_empty() {
             log_info!("ℹ️  Found existing configuration");
@@ -76,44 +42,18 @@ impl SetupCommand {
         log_info!("   Shell config: {:?}", shell_config_path);
 
         // 保存配置后，更新当前进程的环境变量
-        // 这样后续对 Settings::get() 的调用会使用新值
+        // 这样后续对 Settings::load() 的调用会使用新值
         for (key, value) in &env_vars {
             std::env::set_var(key, value);
         }
 
-        // 重新加载 Settings 以使用新保存的值
-        if let Err(e) = crate::Settings::reload() {
-            log_warning!("⚠️  Failed to reload Settings after saving: {}", e);
-        }
-
         log_success!("\n🎉 Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
-        log_info!("   Note: Settings have been reloaded with new values.");
 
         // 尝试重新加载 shell 配置
         log_info!("\n🔄 Reloading shell configuration...");
-        if let Ok(shell_info) = Self::detect_shell() {
-            let config_file = shell_info.config_file.display().to_string();
-            let shell_cmd = format!("source {}", config_file);
-
-            // 尝试在子 shell 中执行 source 命令
-            // 注意：这不会影响当前 shell，但可以验证配置文件是否有效
-            let status = cmd(&shell_info.shell_type, &["-c", &shell_cmd])
-                .run()
-                .map(|_| ())
-                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e));
-
-            match status {
-                Ok(_) => {
-                    log_success!("✓ Shell configuration reloaded (in subprocess)");
-                    log_info!("Note: Changes may not take effect in the current shell.");
-                    log_info!("Please run manually: source {}", config_file);
-                }
-                Err(e) => {
-                    log_warning!("⚠️  Could not reload shell configuration: {}", e);
-                    log_info!("Please run manually: source {}", config_file);
-                }
-            }
+        if let Ok(shell_info) = Shell::detect() {
+            let _ = Shell::reload_config(&shell_info);
         } else {
             log_info!("ℹ  Could not detect shell type.");
             log_info!("Please manually reload your shell configuration:");
@@ -124,35 +64,6 @@ impl SetupCommand {
         Ok(())
     }
 
-    /// 检测 shell 类型
-    fn detect_shell() -> Result<ShellInfo> {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        let shell_type = if shell.contains("zsh") {
-            "zsh"
-        } else if shell.contains("bash") {
-            "bash"
-        } else {
-            anyhow::bail!("不支持的 shell: {}", shell);
-        };
-
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(home);
-
-        let (completion_dir, config_file) = if shell_type == "zsh" {
-            (home_dir.join(".zsh/completions"), home_dir.join(".zshrc"))
-        } else {
-            (
-                home_dir.join(".bash_completion.d"),
-                home_dir.join(".bashrc"),
-            )
-        };
-
-        Ok(ShellInfo {
-            shell_type: shell_type.to_string(),
-            completion_dir,
-            config_file,
-        })
-    }
 
     /// 收集配置信息（统一保存为环境变量）
     fn collect_config(existing_env: &HashMap<String, String>) -> Result<HashMap<String, String>> {
@@ -577,9 +488,3 @@ impl SetupCommand {
     }
 }
 
-/// Shell 信息
-struct ShellInfo {
-    shell_type: String,
-    completion_dir: PathBuf,
-    config_file: PathBuf,
-}

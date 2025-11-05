@@ -82,7 +82,7 @@ pub fn generate_pr_body(
 
     // 添加 Jira 链接
     if let Some(ticket) = jira_ticket {
-        let settings = Settings::get();
+        let settings = Settings::load();
         let jira_service = &settings.jira_service_address;
         if !jira_service.is_empty() {
             body.push_str(&format!(
@@ -110,11 +110,11 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
     }
 
     // 清理标题作为分支名
-    let cleaned_title = string::to_branch_name(title);
+    let cleaned_title = string::transform_to_branch_name(title);
     branch_name.push_str(&cleaned_title);
 
     // 如果有 GH_BRANCH_PREFIX，添加前缀
-    let settings = Settings::get();
+    let settings = Settings::load();
     if let Some(prefix) = &settings.gh_branch_prefix {
         if !prefix.trim().is_empty() {
             branch_name = format!("{}/{}", prefix.trim(), branch_name);

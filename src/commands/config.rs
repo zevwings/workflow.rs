@@ -1,7 +1,7 @@
 //! 配置查看命令
 //! 显示当前的环境变量配置
 
-use crate::{log_info, log_success, log_warning, EnvFile};
+use crate::{log_info, log_success, log_warning, mask_sensitive_value, EnvFile};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
@@ -19,38 +19,8 @@ impl ConfigCommand {
         log_info!("Shell config: {:?}\n", shell_config_path);
 
         // 从多个来源加载环境变量：当前环境变量 > shell 配置文件
-        let mut env_vars = HashMap::new();
-
-        // 优先使用当前环境变量（如果已加载到 shell）
-        let env_var_keys = [
-            "EMAIL",
-            "JIRA_API_TOKEN",
-            "JIRA_SERVICE_ADDRESS",
-            "GH_BRANCH_PREFIX",
-            "LOG_OUTPUT_FOLDER_NAME",
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            "DISABLE_CHECK_PROXY",
-            "LLM_PROVIDER",
-            "LLM_OPENAI_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "LLM_PROXY_URL",
-            "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-            "CODEUP_PROJECT_ID",
-        ];
-
-        for key in &env_var_keys {
-            if let Ok(value) = std::env::var(key) {
-                env_vars.insert(key.to_string(), value);
-            }
-        }
-
-        // 如果环境变量中没有找到，再从 shell 配置文件读取
-        let shell_config_env = EnvFile::load().unwrap_or_default();
-        for (key, value) in shell_config_env {
-            env_vars.entry(key).or_insert(value);
-        }
+        let env_var_keys = EnvFile::get_workflow_env_keys();
+        let env_vars = EnvFile::load_merged(&env_var_keys);
 
         // 检查是否有配置
         if env_vars.is_empty() {
@@ -112,7 +82,7 @@ impl ConfigCommand {
         for key in &display_order {
             if let Some(value) = env_vars.get(*key) {
                 let display_value = if sensitive_keys.contains(key) {
-                    Self::mask_sensitive_value(value)
+                    mask_sensitive_value(value)
                 } else {
                     // 布尔值转换为可读格式
                     match key {
@@ -142,7 +112,7 @@ impl ConfigCommand {
             for key in &other_keys {
                 let value = env_vars.get(*key).unwrap();
                 let display_value = if sensitive_keys.contains(key.as_str()) {
-                    Self::mask_sensitive_value(value)
+                    mask_sensitive_value(value)
                 } else {
                     value.clone()
                 };
@@ -151,18 +121,5 @@ impl ConfigCommand {
         }
 
         Ok(())
-    }
-
-    /// 隐藏敏感值
-    fn mask_sensitive_value(value: &str) -> String {
-        if value.len() <= 8 {
-            // 如果值很短，完全隐藏
-            "***".to_string()
-        } else {
-            // 显示前3个字符和后3个字符，中间用 *** 代替
-            let start = &value[..3.min(value.len())];
-            let end = &value[value.len().saturating_sub(3)..];
-            format!("{}***{}", start, end)
-        }
     }
 }

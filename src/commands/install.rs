@@ -1,15 +1,17 @@
 //! 安装命令
 //! 提供安装、生成和安装 shell completion 的功能
 
-use crate::{log_info, log_success, log_warning};
+use crate::{log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
-use clap_complete::{generate, shells::Shell};
+use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
 use std::path::PathBuf;
 
 /// 安装命令
+#[allow(dead_code)]
 pub struct InstallCommand;
 
+#[allow(dead_code)]
 impl InstallCommand {
     /// 生成 shell completion 脚本（内部方法）
     /// 参数: shell_type (zsh/bash), output_dir
@@ -40,11 +42,11 @@ impl InstallCommand {
 
         // 解析 shell 类型
         let shell_type = match shell {
-            "zsh" => Shell::Zsh,
-            "bash" => Shell::Bash,
-            "fish" => Shell::Fish,
-            "powershell" => Shell::PowerShell,
-            "elvish" => Shell::Elvish,
+            "zsh" => ClapShell::Zsh,
+            "bash" => ClapShell::Bash,
+            "fish" => ClapShell::Fish,
+            "powershell" => ClapShell::PowerShell,
+            "elvish" => ClapShell::Elvish,
             _ => {
                 anyhow::bail!("不支持的 shell: {}", shell);
             }
@@ -65,7 +67,7 @@ impl InstallCommand {
 
     /// 安装 shell completion 脚本（自动检测 shell，内部方法）
     fn install_completions() -> Result<()> {
-        let shell_info = Self::detect_shell()?;
+        let shell_info = Shell::detect()?;
 
         log_info!("检测 shell 类型...");
         log_info!("检测到: {}", shell_info.shell_type);
@@ -84,7 +86,7 @@ impl InstallCommand {
 
         // 配置 shell 配置文件
         log_info!("正在配置 shell 配置文件...");
-        Self::configure_shell_config(&shell_info)?;
+        Completion::configure_shell_config(&shell_info)?;
 
         log_success!("✅ shell completion 安装完成");
         log_info!("请运行以下命令重新加载配置:");
@@ -109,88 +111,10 @@ impl InstallCommand {
     }
 
 
-    /// 配置 shell 配置文件
-    fn configure_shell_config(shell_info: &ShellInfo) -> Result<()> {
-        let config_content = fs::read_to_string(&shell_info.config_file)
-            .unwrap_or_else(|_| String::new());
-
-        let (marker, config_line) = if shell_info.shell_type == "zsh" {
-            (
-                "# Workflow CLI completions",
-                format!(
-                    "fpath=({} $fpath)\nautoload -Uz compinit && compinit",
-                    shell_info.completion_dir.display()
-                ),
-            )
-        } else {
-            (
-                "# Workflow CLI completions",
-                format!(
-                    r#"for f in {}/*.bash; do source "$f"; done"#,
-                    shell_info.completion_dir.display()
-                ),
-            )
-        };
-
-        // 检查是否已存在配置
-        if config_content.contains(marker) {
-            log_success!("✓ completion 配置已存在于 {}", shell_info.config_file.display());
-            return Ok(());
-        }
-
-        // 添加配置
-        let mut new_content = config_content;
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-        new_content.push_str("\n# Workflow CLI completions\n");
-        new_content.push_str(&config_line);
-        new_content.push('\n');
-
-        fs::write(&shell_info.config_file, new_content)
-            .context("Failed to write to shell config file")?;
-
-        log_success!(
-            "✓ 已将 completion 配置添加到 {}",
-            shell_info.config_file.display()
-        );
-
-        Ok(())
-    }
-
-    /// 检测 shell 类型
-    fn detect_shell() -> Result<ShellInfo> {
-        let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        let shell_type = if shell.contains("zsh") {
-            "zsh"
-        } else if shell.contains("bash") {
-            "bash"
-        } else {
-            anyhow::bail!("不支持的 shell: {}", shell);
-        };
-
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(home);
-
-        let (completion_dir, config_file) = if shell_type == "zsh" {
-            (home_dir.join(".zsh/completions"), home_dir.join(".zshrc"))
-        } else {
-            (
-                home_dir.join(".bash_completion.d"),
-                home_dir.join(".bashrc"),
-            )
-        };
-
-        Ok(ShellInfo {
-            shell_type: shell_type.to_string(),
-            completion_dir,
-            config_file,
-        })
-    }
 
 
     /// 生成 workflow 命令的 completion
-    fn generate_workflow_completion(shell: &Shell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_workflow_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("workflow")
@@ -218,11 +142,11 @@ impl InstallCommand {
         generate(*shell, &mut cmd, "workflow", &mut buffer);
 
         let output_file = match shell {
-            Shell::Zsh => output_dir.join("_workflow"),
-            Shell::Bash => output_dir.join("workflow.bash"),
-            Shell::Fish => output_dir.join("workflow.fish"),
-            Shell::PowerShell => output_dir.join("_workflow.ps1"),
-            Shell::Elvish => output_dir.join("workflow.elv"),
+            ClapShell::Zsh => output_dir.join("_workflow"),
+            ClapShell::Bash => output_dir.join("workflow.bash"),
+            ClapShell::Fish => output_dir.join("workflow.fish"),
+            ClapShell::PowerShell => output_dir.join("_workflow.ps1"),
+            ClapShell::Elvish => output_dir.join("workflow.elv"),
             _ => {
                 anyhow::bail!("不支持的 shell 类型");
             }
@@ -236,7 +160,7 @@ impl InstallCommand {
     }
 
     /// 生成 pr 命令的 completion
-    fn generate_pr_completion(shell: &Shell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_pr_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("pr")
@@ -272,11 +196,11 @@ impl InstallCommand {
         generate(*shell, &mut cmd, "pr", &mut buffer);
 
         let output_file = match shell {
-            Shell::Zsh => output_dir.join("_pr"),
-            Shell::Bash => output_dir.join("pr.bash"),
-            Shell::Fish => output_dir.join("pr.fish"),
-            Shell::PowerShell => output_dir.join("_pr.ps1"),
-            Shell::Elvish => output_dir.join("pr.elv"),
+            ClapShell::Zsh => output_dir.join("_pr"),
+            ClapShell::Bash => output_dir.join("pr.bash"),
+            ClapShell::Fish => output_dir.join("pr.fish"),
+            ClapShell::PowerShell => output_dir.join("_pr.ps1"),
+            ClapShell::Elvish => output_dir.join("pr.elv"),
             _ => {
                 anyhow::bail!("不支持的 shell 类型");
             }
@@ -290,7 +214,7 @@ impl InstallCommand {
     }
 
     /// 生成 qk 命令的 completion
-    fn generate_qk_completion(shell: &Shell, output_dir: &PathBuf) -> Result<()> {
+    fn generate_qk_completion(shell: &ClapShell, output_dir: &PathBuf) -> Result<()> {
         use clap::Command;
 
         let mut cmd = Command::new("qk")
@@ -312,11 +236,11 @@ impl InstallCommand {
         generate(*shell, &mut cmd, "qk", &mut buffer);
 
         let output_file = match shell {
-            Shell::Zsh => output_dir.join("_qk"),
-            Shell::Bash => output_dir.join("qk.bash"),
-            Shell::Fish => output_dir.join("qk.fish"),
-            Shell::PowerShell => output_dir.join("_qk.ps1"),
-            Shell::Elvish => output_dir.join("qk.elv"),
+            ClapShell::Zsh => output_dir.join("_qk"),
+            ClapShell::Bash => output_dir.join("qk.bash"),
+            ClapShell::Fish => output_dir.join("qk.fish"),
+            ClapShell::PowerShell => output_dir.join("_qk.ps1"),
+            ClapShell::Elvish => output_dir.join("qk.elv"),
             _ => {
                 anyhow::bail!("不支持的 shell 类型");
             }
@@ -330,10 +254,4 @@ impl InstallCommand {
     }
 }
 
-/// Shell 信息
-struct ShellInfo {
-    shell_type: String,
-    completion_dir: PathBuf,
-    config_file: PathBuf,
-}
 

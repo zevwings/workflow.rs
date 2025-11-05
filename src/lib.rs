@@ -1,5 +1,7 @@
 #[path = "lib/git/mod.rs"]
 pub mod git;
+#[path = "lib/http/mod.rs"]
+pub mod http;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
 #[path = "lib/llm/mod.rs"]
@@ -17,6 +19,7 @@ pub mod utils;
 pub mod commands;
 
 pub use git::*;
+pub use http::{HttpClient, HttpResponse};
 pub use jira::*;
 pub use llm::*;
 pub use log::*;
