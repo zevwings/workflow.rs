@@ -355,6 +355,8 @@ jobs:
 
       - name: Commit and push changes
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ steps.token.outputs.token }}
         run: |
           cd homebrew-workflow
 
@@ -378,13 +380,35 @@ jobs:
           # 提交更改
           git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
 
-          # 推送更改（尝试 main，如果失败则尝试 master）
-          if git push origin main 2>/dev/null; then
-            echo "Successfully pushed to main branch"
-          elif git push origin master 2>/dev/null; then
-            echo "Successfully pushed to master branch"
+          # 检测当前分支名称
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch: $CURRENT_BRANCH"
+
+          # 配置远程 URL 使用 token（如果需要）
+          REMOTE_URL=$(git remote get-url origin)
+          echo "Remote URL: $REMOTE_URL"
+
+          # 如果远程 URL 是 HTTPS，更新为使用 token
+          if [[ "$REMOTE_URL" == https://* ]]; then
+            # 提取仓库路径
+            REPO_PATH=$(echo "$REMOTE_URL" | sed 's|https://github.com/||' | sed 's|\.git$||')
+            # 使用 token 更新远程 URL
+            git remote set-url origin "https://${GITHUB_TOKEN}@github.com/$REPO_PATH.git"
+            echo "Updated remote URL to use token authentication"
+          fi
+
+          # 推送更改到当前分支
+          echo "Pushing to branch: $CURRENT_BRANCH"
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
           else
-            echo "Error: Failed to push changes"
+            echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
+            echo "Remote URL: $(git remote get-url origin)"
+            echo "Branch: $CURRENT_BRANCH"
+            echo "Git status:"
+            git status
+            echo "Git log:"
+            git log --oneline -5
             exit 1
           fi
 
