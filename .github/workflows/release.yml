@@ -2,6 +2,8 @@ name: Release
 
 on:
   push:
+    branches:
+      - master  # 当合并到 master 分支时触发
     tags:
       - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
   workflow_dispatch:  # 允许手动触发
@@ -19,10 +21,87 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # 当合并到 master 时自动创建 tag
+  create-tag:
+    name: Create Tag
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    permissions:
+      contents: write  # 允许创建和推送 tag
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史记录来检查 tag
+
+      - name: Get version from Cargo.toml
+        id: version
+        shell: bash
+        run: |
+          # 从 Cargo.toml 读取版本号
+          VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Cannot read version from Cargo.toml"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "✅ Version from Cargo.toml: $VERSION"
+          echo "✅ Tag to create: $TAG"
+
+      - name: Check if tag exists
+        id: check_tag
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Tag $TAG already exists"
+            echo "Current commit: $(git rev-parse HEAD)"
+            echo "Tag commit: $(git rev-parse $TAG)"
+            if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
+              echo "✅ Tag points to current commit, skipping tag creation"
+            else
+              echo "⚠️  Tag points to different commit, consider updating version in Cargo.toml"
+            fi
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag $TAG does not exist, will create it"
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          echo "Creating tag: $TAG"
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 创建 tag
+          git tag "$TAG"
+
+          # 推送 tag
+          echo "Pushing tag: $TAG"
+          git push origin "$TAG"
+
+          echo "✅ Successfully created and pushed tag: $TAG"
+
+      - name: Skip tag creation
+        if: steps.check_tag.outputs.exists == 'true'
+        shell: bash
+        run: |
+          echo "⏭️  Skipping tag creation: tag ${{ steps.version.outputs.tag }} already exists"
+
   # 构建所有平台的二进制文件
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
