@@ -149,6 +149,7 @@ impl UninstallCommand {
         log_info!("\n🗑️  Removing shell completion scripts...");
         if let Ok(shell_info) = Shell::detect() {
             Completion::remove_completion_files(&shell_info)?;
+            Completion::remove_completion_config_file()?;
             if shell_info.config_file.exists() {
                 Completion::remove_completion_config(&shell_info)?;
             } else {
