@@ -139,9 +139,9 @@ class Workflow < Formula
   end
 
   test do
-    system "#{bin}/workflow", "--help"
-    system "#{bin}/pr", "--help"
-    system "#{bin}/qk", "--help"
+    system bin/"workflow", "--help"
+    system bin/"pr", "--help"
+    system bin/"qk", "--help"
   end
 end
 

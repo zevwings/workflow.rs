@@ -340,6 +340,7 @@ jobs:
           # 从模板生成 URL 行
           INSTALL_TYPE="${{ steps.version.outputs.install_type }}"
           VERSION_REF="${{ steps.version.outputs.version_ref }}"
+          VERSION="${{ steps.version.outputs.version }}"
 
           if [[ "$INSTALL_TYPE" == "tag" ]]; then
             URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", tag: \"$VERSION_REF\""
@@ -353,11 +354,17 @@ jobs:
           echo "🔧 Generated URL line: $URL_LINE"
 
           # 从模板生成 Formula 文件
+          # 使用 awk 进行替换，更可靠地处理特殊字符和引号
           echo "📝 Generating Formula file from template..."
-          sed -e "s|{{VERSION}}|${{ steps.version.outputs.version }}|g" \
-              -e "s|{{INSTALL_TYPE}}|$INSTALL_TYPE|g" \
-              -e "s|{{VERSION_REF}}|$VERSION_REF|g" \
-              -e "s|{{URL_LINE}}|$URL_LINE|g" \
+          awk -v version="$VERSION" \
+              -v install_type="$INSTALL_TYPE" \
+              -v version_ref="$VERSION_REF" \
+              -v url_line="$URL_LINE" \
+              '{gsub(/\{\{VERSION\}\}/, version); \
+                gsub(/\{\{INSTALL_TYPE\}\}/, install_type); \
+                gsub(/\{\{VERSION_REF\}\}/, version_ref); \
+                gsub(/\{\{URL_LINE\}\}/, url_line); \
+                print}' \
               "$TEMPLATE_FILE" > "$FORMULA_FILE"
 
           echo "✅ Formula file generated from template"
