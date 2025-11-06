@@ -3,7 +3,6 @@ use std::fmt;
 
 /// Logger 模块
 /// 提供带颜色的日志输出功能
-
 /// 颜色输出的工具函数
 pub struct Logger;
 

@@ -1,6 +1,6 @@
 [package]
 name = "workflow"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 default-run = "workflow"
 
@@ -10,6 +10,7 @@ path = "src/lib.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4.5"
 anyhow = "1.0"
 duct = "0.13"
 serde = { version = "1.0", features = ["derive"] }
@@ -17,7 +18,7 @@ serde_json = "1.0"
 chrono = "0.4"
 colored = "2.1"
 dialoguer = "0.11"
-reqwest = { version = "0.11", features = ["json", "blocking"] }
+reqwest = { version = "0.11", features = ["json", "blocking", "rustls-tls"], default-features = false }
 regex = "1.10"
 clipboard = "0.5"
 open = "5.0"
@@ -34,18 +35,10 @@ name = "pr"
 path = "src/bin/pr.rs"
 
 [[bin]]
-name = "jira"
-path = "src/bin/jira.rs"
-
-[[bin]]
-name = "logs"
-path = "src/bin/logs.rs"
-
-[[bin]]
 name = "qk"
 path = "src/bin/qk.rs"
 
 [[bin]]
-name = "update"
-path = "src/bin/update.rs"
+name = "install"
+path = "src/bin/install.rs"
 

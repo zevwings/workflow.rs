@@ -34,4 +34,3 @@ impl Git {
         repo::has_uncommitted_changes()
     }
 }
-

@@ -1,4 +1,4 @@
-use crate::{Clipboard, log_info, log_success, log_warning, EnvFile, Proxy};
+use crate::{log_info, log_success, log_warning, Clipboard, EnvFile, Proxy};
 use anyhow::{Context, Result};
 
 /// 代理检查命令
@@ -96,16 +96,15 @@ impl ProxyCommand {
                 EnvFile::set_multiple(&env_vars)
                     .context("Failed to save proxy settings to ~/.zshrc")?;
 
-                let shell_config_path = EnvFile::get_shell_config_path()
-                    .context("Failed to get shell config path")?;
+                let shell_config_path =
+                    EnvFile::get_shell_config_path().context("Failed to get shell config path")?;
                 log_success!("Proxy settings saved to {:?}", shell_config_path);
                 log_info!("  The proxy will be enabled when you start a new shell");
                 log_info!("  Or run: source {:?}", shell_config_path);
             }
 
             // 5. 复制到剪贴板
-            Clipboard::copy(&proxy_cmd)
-                .context("Failed to copy proxy command to clipboard")?;
+            Clipboard::copy(&proxy_cmd).context("Failed to copy proxy command to clipboard")?;
 
             log_success!("Proxy command copied to clipboard");
             log_info!("  You can also run it manually: {}", proxy_cmd);
@@ -131,8 +130,13 @@ impl ProxyCommand {
         let has_env_https_proxy = env_proxy.contains_key("https_proxy");
         let has_env_all_proxy = env_proxy.contains_key("all_proxy");
 
-        if !has_http_proxy && !has_https_proxy && !has_all_proxy
-            && !has_env_http_proxy && !has_env_https_proxy && !has_env_all_proxy {
+        if !has_http_proxy
+            && !has_https_proxy
+            && !has_all_proxy
+            && !has_env_http_proxy
+            && !has_env_https_proxy
+            && !has_env_all_proxy
+        {
             log_success!("Proxy is already off (no proxy environment variables set)");
             return Ok(());
         }
@@ -162,8 +166,8 @@ impl ProxyCommand {
         EnvFile::remove_from_file(&proxy_keys)
             .context("Failed to remove proxy settings from ~/.zshrc")?;
 
-        let shell_config_path = EnvFile::get_shell_config_path()
-            .context("Failed to get shell config path")?;
+        let shell_config_path =
+            EnvFile::get_shell_config_path().context("Failed to get shell config path")?;
         log_success!("Proxy settings removed from {:?}", shell_config_path);
         log_info!("  The proxy will be disabled when you start a new shell");
         log_info!("  Or run: source {:?}", shell_config_path);
@@ -192,11 +196,13 @@ impl ProxyCommand {
             log_info!("  {}", unset_cmd);
 
             // 复制到剪贴板
-            Clipboard::copy(&unset_cmd)
-                .context("Failed to copy unset command to clipboard")?;
+            Clipboard::copy(&unset_cmd).context("Failed to copy unset command to clipboard")?;
 
             log_success!("Proxy unset command copied to clipboard");
-            log_info!("  Run this command to disable proxy in current shell: {}", unset_cmd);
+            log_info!(
+                "  Run this command to disable proxy in current shell: {}",
+                unset_cmd
+            );
         }
 
         Ok(())

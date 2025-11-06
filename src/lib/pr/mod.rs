@@ -7,8 +7,8 @@ pub mod provider;
 pub use codeup::Codeup;
 pub use constants::TYPES_OF_CHANGES;
 pub use github::GitHub;
-pub use provider::Platform;
 pub use helpers::{
-    extract_pr_id_from_url, generate_branch_name, generate_commit_title, generate_pr_body,
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, transform_to_branch_name,
 };
-
+pub use provider::PlatformProvider;
