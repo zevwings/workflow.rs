@@ -95,7 +95,10 @@ impl JiraStatus {
             }
         } else {
             // 如果没有提取到项目名（说明不是 ticket 格式），验证输入是否为有效的项目名
-            if jira_ticket_or_project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            if jira_ticket_or_project
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_')
+            {
                 jira_ticket_or_project
             } else {
                 anyhow::bail!(

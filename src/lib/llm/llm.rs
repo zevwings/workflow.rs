@@ -1,7 +1,8 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use super::translator::{generate_branch_name_with_llm, should_translate, translate_with_llm};
+use super::branch_name::generate_branch_name_with_llm;
+use super::translator::{should_translate, translate_with_llm};
 use crate::Jira;
 
 /// LLM 工具模块 - 用于生成 PR 标题和分支名
