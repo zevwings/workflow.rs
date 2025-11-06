@@ -510,7 +510,6 @@ impl PullRequestCreateCommand {
 
             log_success!("Committing changes...");
             Git::commit(&commit_title, true)?; // no-verify
-
             log_success!("Pushing to remote...");
             Git::push(&branch_name, true)?; // set-upstream
         } else {
