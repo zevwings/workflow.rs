@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, MultiSelect, Select};
+use duct::cmd;
 use std::io::{self, Write};
 
 /// PR 创建命令
@@ -447,23 +448,39 @@ impl PullRequestCreateCommand {
                 Git::stash(Some(&format!("WIP: {}", commit_title)))?;
             }
 
-            // 如果不在默认分支上，需要先切换到默认分支再创建新分支
-            if !is_default_branch && (committed_to_current_branch || use_stash) {
-                log_info!("Switching to default branch '{}' to create new branch...", default_branch);
-                Git::checkout_branch(&default_branch)?;
+            // 如果已经提交到当前分支，从当前分支创建新分支（包含这些更改）
+            // 否则，从默认分支创建新分支
+            if committed_to_current_branch {
+                // 重新获取当前分支名（确保准确性）
+                let source_branch = Git::current_branch()
+                    .context("Failed to get current branch for creating new branch")?;
+                // 从当前分支创建新分支，这样新分支会包含已经提交的更改
+                log_info!("Creating branch '{}' from current branch '{}'...", branch_name, source_branch);
+                // 使用 git checkout -b 从当前分支创建新分支
+                cmd("git", &["checkout", "-b", &branch_name])
+                    .run()
+                    .context(format!("Failed to create branch '{}' from '{}'", branch_name, source_branch))?;
+                // 新分支已经包含了更改，不需要再次提交
+                log_info!("Branch '{}' created from '{}' with existing commits.", branch_name, source_branch);
+            } else {
+                // 如果不在默认分支上，需要先切换到默认分支再创建新分支
+                if !is_default_branch && use_stash {
+                    log_info!("Switching to default branch '{}' to create new branch...", default_branch);
+                    Git::checkout_branch(&default_branch)?;
+                }
+
+                log_success!("\nCreating branch: {}", branch_name);
+                Git::checkout_branch(&branch_name)?;
+
+                // 如果使用 stash，恢复修改
+                if use_stash {
+                    log_success!("Restoring stashed changes...");
+                    Git::stash_pop()?;
+                }
+
+                log_success!("Committing changes...");
+                Git::commit(&commit_title, true)?; // no-verify
             }
-
-            log_success!("\nCreating branch: {}", branch_name);
-            Git::checkout_branch(&branch_name)?;
-
-            // 如果使用 stash，恢复修改
-            if use_stash {
-                log_success!("Restoring stashed changes...");
-                Git::stash_pop()?;
-            }
-
-            log_success!("Committing changes...");
-            Git::commit(&commit_title, true)?; // no-verify
 
             log_success!("Pushing to remote...");
             Git::push(&branch_name, true)?; // set-upstream
