@@ -141,9 +141,22 @@ impl Git {
         use crate::{log_info, log_success};
 
         // 检查是否有 staged 的文件
-        let has_staged = cmd("git", &["diff", "--cached", "--quiet"])
-            .run()
-            .map(|output| !output.status.success())
+        // 使用 git status --porcelain 检查暂存的文件（更可靠）
+        let has_staged = cmd("git", &["status", "--porcelain"])
+            .read()
+            .map(|output| {
+                output
+                    .lines()
+                    .any(|line| {
+                        if line.is_empty() {
+                            return false;
+                        }
+                        // 第一列（X）表示暂存区状态，如果不是空格，说明有暂存的文件
+                        // 注意：不能 trim，因为需要保留前导空格来判断
+                        let first_char = line.chars().next().unwrap_or(' ');
+                        first_char != ' ' && first_char != '?'
+                    })
+            })
             .unwrap_or(false);
 
         if !has_staged {
@@ -197,28 +210,65 @@ impl Git {
     ///
     /// 自动暂存所有已修改的文件，然后提交
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
-        use crate::log_info;
+        use crate::{log_info, log_warning};
 
-        // 1. 先暂存所有已修改的文件
-        Self::add_all().context("Failed to stage changes")?;
+        // 1. 使用 git status --porcelain 检查是否有更改（更可靠）
+        let status_output = cmd("git", &["status", "--porcelain"])
+            .read()
+            .context("Failed to check git status")?;
 
-        // 2. 检查是否有暂存的文件
-        let has_staged = cmd("git", &["diff", "--cached", "--quiet"])
-            .run()
-            .map(|output| !output.status.success())
-            .unwrap_or(false);
+        let has_changes = !status_output.trim().is_empty();
 
-        if !has_staged {
+        // 2. 如果没有更改，直接返回
+        if !has_changes {
             log_info!("Nothing to commit, working tree clean");
             return Ok(());
         }
 
-        // 3. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
+        // 3. 暂存所有已修改的文件
+        // 注意：即使文件已经在暂存区，执行 add_all() 也是安全的，不会造成问题
+        // 这样可以确保所有更改都被暂存，包括未暂存和已暂存的更改
+        Self::add_all().context("Failed to stage changes")?;
+
+        // 5. 再次检查是否有暂存的文件（在 add_all 之后）
+        // 使用 git status --porcelain 检查暂存的文件（更可靠）
+        let staged_output = cmd("git", &["status", "--porcelain"])
+            .read()
+            .context("Failed to check staged changes")?;
+
+        // 检查是否有暂存的文件
+        // git status --porcelain 格式: "XY filename"
+        // X = 暂存区状态, Y = 工作区状态
+        // 如果 X 不是空格，说明有暂存的文件
+        let has_staged_after = staged_output
+            .lines()
+            .any(|line| {
+                if line.is_empty() {
+                    return false;
+                }
+                // 第一列（X）表示暂存区状态，如果不是空格，说明有暂存的文件
+                // 注意：不能 trim，因为需要保留前导空格来判断
+                let first_char = line.chars().next().unwrap_or(' ');
+                first_char != ' ' && first_char != '?'
+            });
+
+        if !has_staged_after {
+            // 如果 add_all 后仍然没有暂存的文件，可能是所有更改都被忽略了
+            log_warning!("No changes to commit after staging.");
+            log_warning!("This might be due to:");
+            log_warning!("  - All changes are ignored by .gitignore");
+            log_warning!("  - Files are already committed");
+            log_warning!("  - No actual changes detected");
+            log_info!("Nothing to commit, working tree clean");
+            return Ok(());
+        }
+
+        // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
         if !no_verify && Self::has_pre_commit() {
             Self::run_pre_commit()?;
         }
 
-        // 4. 执行提交
+        // 7. 执行提交
         let mut args = vec!["commit", "-m", message];
         if no_verify {
             args.push("--no-verify");
@@ -346,11 +396,55 @@ impl Git {
         Ok(())
     }
 
+    /// 检查分支是否有提交（相对于默认分支）
+    ///
+    /// 返回 true 如果分支有提交，false 如果分支为空或与默认分支相同
+    pub fn branch_has_commits(branch_name: &str, default_branch: &str) -> Result<bool> {
+        // 检查分支是否有提交（相对于默认分支）
+        // 使用 git rev-list 来检查是否有提交
+        let output = cmd("git", &["rev-list", "--count", &format!("{}..{}", default_branch, branch_name)])
+            .read()
+            .context("Failed to check branch commits")?;
+
+        let count: u32 = output.trim().parse()
+            .context("Failed to parse commit count")?;
+
+        Ok(count > 0)
+    }
+
     /// 恢复 stash 中的修改
+    ///
+    /// 如果遇到合并冲突，会保留 stash entry 并返回错误，提示用户手动解决冲突
     pub fn stash_pop() -> Result<()> {
-        cmd("git", &["stash", "pop"])
-            .run()
-            .context("Failed to pop stash")?;
-        Ok(())
+        use crate::log_warning;
+
+        // 尝试执行 git stash pop
+        let result = cmd("git", &["stash", "pop"]).run();
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                // 检查是否有未合并的路径（冲突文件）
+                let has_unmerged = cmd("git", &["ls-files", "-u"])
+                    .read()
+                    .map(|output| !output.trim().is_empty())
+                    .unwrap_or(false);
+
+                if has_unmerged {
+                    log_warning!("Merge conflicts detected when restoring stashed changes.");
+                    log_warning!("The stash entry is kept in case you need it again.");
+                    log_warning!("Please resolve the conflicts manually and then:");
+                    log_warning!("  1. Resolve conflicts in the affected files");
+                    log_warning!("  2. Stage the resolved files with: git add <file>");
+                    log_warning!("  3. Continue with your workflow");
+                    anyhow::bail!(
+                        "Failed to pop stash due to merge conflicts. Please resolve conflicts manually."
+                    );
+                } else {
+                    // 没有冲突但失败了，返回原始错误
+                    Err(e).context("Failed to pop stash")
+                }
+            }
+        }
     }
 }

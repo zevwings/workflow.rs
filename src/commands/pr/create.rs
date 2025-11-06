@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, MultiSelect, Select};
+use duct::cmd;
 use std::io::{self, Write};
 
 /// PR 创建命令
@@ -251,63 +252,89 @@ impl PullRequestCreateCommand {
             .context("Failed to check branch existence")?;
         let repo_type = Git::detect_repo_type()?;
 
-        // 处理非默认分支上有未提交修改的情况
+        // 处理未提交修改的情况
         let mut use_stash = false; // 是否使用 stash 带到新分支
         let mut committed_to_current_branch = false; // 是否已经提交到当前分支
-        if has_uncommitted && !is_default_branch {
-            log_warning!(
-                "\n⚠️  You are on branch '{}' (not default branch '{}')",
-                current_branch,
-                default_branch
-            );
-            log_info!("You have uncommitted changes.");
+        if has_uncommitted {
+            if !is_default_branch {
+                // 在非默认分支上有未提交修改
+                log_warning!(
+                    "\n⚠️  You are on branch '{}' (not default branch '{}')",
+                    current_branch,
+                    default_branch
+                );
+                log_info!("You have uncommitted changes.");
 
-            let options = vec![
-                "Commit changes to current branch first (recommended)",
-                "Bring changes to new branch (using stash)",
-                "Cancel operation",
-            ];
+                let options = vec![
+                    "Commit changes to current branch first (recommended)",
+                    "Bring changes to new branch (using stash)",
+                    "Cancel operation",
+                ];
 
-            let selection = Select::new()
-                .with_prompt("How would you like to handle uncommitted changes?")
-                .items(&options)
-                .default(0)
-                .interact()
-                .context("Failed to get user selection")?;
+                let selection = Select::new()
+                    .with_prompt("How would you like to handle uncommitted changes?")
+                    .items(&options)
+                    .default(0)
+                    .interact()
+                    .context("Failed to get user selection")?;
 
-            match selection {
-                0 => {
-                    // 选项 A：提交到当前分支
-                    log_info!("Will commit changes to current branch first...");
-                    // 提示输入提交消息
-                    let commit_msg: String = Input::new()
-                        .with_prompt("Commit message for current branch")
-                        .default(format!("WIP: {}", commit_title.clone()))
-                        .interact_text()
-                        .context("Failed to get commit message")?;
+                match selection {
+                    0 => {
+                        // 选项 A：提交到当前分支
+                        log_info!("Will commit changes to current branch first...");
+                        // 提示输入提交消息
+                        let commit_msg: String = Input::new()
+                            .with_prompt("Commit message for current branch")
+                            .default(format!("WIP: {}", commit_title.clone()))
+                            .interact_text()
+                            .context("Failed to get commit message")?;
 
-                    log_success!("Committing changes to current branch: {}", current_branch);
-                    Git::commit(&commit_msg, true)?; // no-verify
+                        log_success!("Committing changes to current branch: {}", current_branch);
 
-                    log_success!("Pushing changes to current branch...");
-                    Git::push(&current_branch, false)?; // 不使用 -u
+                        // 检查提交前是否有未提交的更改
+                        let has_changes_before = Git::has_uncommitted_changes()
+                            .unwrap_or(false);
 
-                    committed_to_current_branch = true;
-                    // 更新状态：现在没有未提交的修改了
-                    // 注意：这里不直接修改 has_uncommitted，而是通过 committed_to_current_branch 标记
+                        Git::commit(&commit_msg, true)?; // no-verify
+
+                        // 检查提交后是否还有未提交的更改
+                        let has_changes_after = Git::has_uncommitted_changes()
+                            .unwrap_or(false);
+
+                        // 如果提交前有更改，但提交后仍然有更改，说明提交可能失败了
+                        if has_changes_before && has_changes_after {
+                            log_warning!("Commit completed but uncommitted changes still exist.");
+                            log_warning!("This might indicate that changes could not be committed.");
+                            log_warning!("Will use stash to bring changes to new branch instead.");
+                            use_stash = true;
+                            committed_to_current_branch = false;
+                        } else {
+                            log_success!("Pushing changes to current branch...");
+                            Git::push(&current_branch, false)?; // 不使用 -u
+                            committed_to_current_branch = true;
+                        }
+                        // 更新状态：现在没有未提交的修改了
+                        // 注意：这里不直接修改 has_uncommitted，而是通过 committed_to_current_branch 标记
+                    }
+                    1 => {
+                        // 选项 B：使用 stash 带到新分支
+                        log_info!("Will stash changes and bring them to new branch...");
+                        use_stash = true;
+                    }
+                    2 => {
+                        // 选项 C：取消操作
+                        anyhow::bail!("Operation cancelled.");
+                    }
+                    _ => {
+                        anyhow::bail!("Invalid selection.");
+                    }
                 }
-                1 => {
-                    // 选项 B：使用 stash 带到新分支
-                    log_info!("Will stash changes and bring them to new branch...");
-                    use_stash = true;
-                }
-                2 => {
-                    // 选项 C：取消操作
-                    anyhow::bail!("Operation cancelled.");
-                }
-                _ => {
-                    anyhow::bail!("Invalid selection.");
-                }
+            } else {
+                // 在默认分支上有未提交修改，直接带到新分支（不需要 stash，因为 Git 会自动带过去）
+                // 但是为了确保更改被正确带到新分支，我们仍然使用 stash 来保证一致性
+                log_info!("You have uncommitted changes on default branch '{}'.", current_branch);
+                log_info!("Will bring changes to new branch...");
+                use_stash = true;
             }
         }
 
@@ -459,7 +486,26 @@ impl PullRequestCreateCommand {
             // 如果使用 stash，恢复修改
             if use_stash {
                 log_success!("Restoring stashed changes...");
-                Git::stash_pop()?;
+                if let Err(e) = Git::stash_pop() {
+                    // 如果 stash_pop 失败（可能是冲突），检查是否有冲突
+                    let has_unmerged = cmd("git", &["ls-files", "-u"])
+                        .read()
+                        .map(|output| !output.trim().is_empty())
+                        .unwrap_or(false);
+
+                    if has_unmerged {
+                        log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
+                        log_warning!("After resolving conflicts:");
+                        log_warning!("  1. Stage resolved files: git add <file>");
+                        log_warning!("  2. Commit changes: git commit -m \"{}\"", commit_title);
+                        log_warning!("  3. Push to remote: git push -u origin {}", branch_name);
+                        log_warning!("  4. Create PR manually or run this command again");
+                        anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
+                    } else {
+                        // 没有冲突但失败了，返回错误
+                        return Err(e);
+                    }
+                }
             }
 
             log_success!("Committing changes...");
@@ -494,6 +540,22 @@ impl PullRequestCreateCommand {
             }
         } else {
             // 分支无 PR，创建新 PR
+            // 先检查分支是否有提交（相对于默认分支）
+            let default_branch = Git::get_default_branch()
+                .context("Failed to get default branch")?;
+            let has_commits = Git::branch_has_commits(&branch_name, &default_branch)
+                .context("Failed to check branch commits")?;
+
+            if !has_commits {
+                log_warning!("Branch '{}' has no commits compared to '{}'.", branch_name, default_branch);
+                log_warning!("GitHub does not allow creating PRs for empty branches.");
+                log_warning!("Please make some changes and commit them before creating a PR.");
+                anyhow::bail!(
+                    "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
+                    branch_name
+                );
+            }
+
             let repo_type = Git::detect_repo_type()?;
             match repo_type {
                 RepoType::GitHub => {
