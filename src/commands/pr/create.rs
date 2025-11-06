@@ -248,7 +248,34 @@ impl PullRequestCreateCommand {
             .context("Failed to get default branch")?;
         let is_default_branch = current_branch == default_branch;
 
-        let (exists_local, exists_remote) = Git::branch_exists(&branch_name)
+        // 检查当前分支是否有提交（相对于默认分支）
+        // 如果用户在非默认分支上，且工作树干净，且当前分支有提交，询问是否在当前分支上创建 PR
+        let (actual_branch_name, use_current_branch) = if !has_uncommitted && !is_default_branch {
+            let current_branch_has_commits = Git::branch_has_commits(&current_branch, &default_branch)
+                .context("Failed to check if current branch has commits")?;
+
+            if current_branch_has_commits {
+                log_info!("\nYou are on branch '{}' with commits.", current_branch);
+                let should_use_current = Confirm::new()
+                    .with_prompt(format!("Create PR for current branch '{}'? (otherwise will create new branch '{}')", current_branch, branch_name))
+                    .default(true)
+                    .interact()
+                    .context("Failed to get confirmation")?;
+
+                if should_use_current {
+                    // 使用当前分支名作为 PR 分支名
+                    (current_branch.clone(), true)
+                } else {
+                    (branch_name, false)
+                }
+            } else {
+                (branch_name, false)
+            }
+        } else {
+            (branch_name, false)
+        };
+
+        let (exists_local, exists_remote) = Git::branch_exists(&actual_branch_name)
             .context("Failed to check branch existence")?;
         let repo_type = Git::detect_repo_type()?;
 
@@ -343,7 +370,7 @@ impl PullRequestCreateCommand {
         let existing_pr = if exists_local || exists_remote {
             // 尝试切换到分支检查 PR（如果切换失败，假设没有 PR）
             let current_branch_for_check = Git::current_branch().ok();
-            if let Ok(()) = Git::checkout_branch(&branch_name) {
+            if let Ok(()) = Git::checkout_branch(&actual_branch_name) {
                 // 成功切换到分支，检查 PR
                 let pr = match repo_type {
                     RepoType::GitHub => {
@@ -380,7 +407,7 @@ impl PullRequestCreateCommand {
 
         if exists_remote && existing_pr.is_none() {
             // 场景：分支已推送但无 PR（可能是上次创建失败）
-            log_warning!("\n⚠️  Branch '{}' exists on remote but no PR found.", branch_name);
+            log_warning!("\n⚠️  Branch '{}' exists on remote but no PR found.", actual_branch_name);
             log_info!("This might indicate a previous failed PR creation.");
 
             if has_uncommitted {
@@ -414,7 +441,7 @@ impl PullRequestCreateCommand {
         } else if exists_local || exists_remote {
             // 场景：分支已存在（但可能有 PR 也可能没有）
             if let Some(ref pr_id) = existing_pr {
-                log_warning!("\n⚠️  Branch '{}' already exists and has PR #{}", branch_name, pr_id);
+                log_warning!("\n⚠️  Branch '{}' already exists and has PR #{}", actual_branch_name, pr_id);
 
                 if has_uncommitted {
                     log_info!("You have uncommitted changes.");
@@ -434,7 +461,7 @@ impl PullRequestCreateCommand {
                     skip_git_ops = true;
                 }
             } else {
-                log_warning!("\n⚠️  Branch '{}' already exists.", branch_name);
+                log_warning!("\n⚠️  Branch '{}' already exists.", actual_branch_name);
                 if has_uncommitted {
                     log_info!("You have uncommitted changes.");
                     let should_continue = Confirm::new()
@@ -468,63 +495,77 @@ impl PullRequestCreateCommand {
 
         // 10. 执行 Git 操作（如果需要）
         if !skip_git_ops {
-            // 如果使用 stash，先保存修改
-            if use_stash {
-                log_success!("Stashing uncommitted changes...");
-                Git::stash(Some(&format!("WIP: {}", commit_title)))?;
-            }
+            // 如果选择使用当前分支，且工作树干净，只需要推送（如果还没有推送）
+            if use_current_branch && !has_uncommitted {
+                log_info!("Using current branch '{}' for PR.", actual_branch_name);
+                // 检查分支是否已推送
+                let (_, exists_remote_current) = Git::branch_exists(&actual_branch_name)
+                    .context("Failed to check if current branch exists on remote")?;
+                if !exists_remote_current {
+                    log_success!("Pushing current branch to remote...");
+                    Git::push(&actual_branch_name, true)?; // set-upstream
+                } else {
+                    log_info!("Branch '{}' already exists on remote.", actual_branch_name);
+                }
+            } else {
+                // 如果使用 stash，先保存修改
+                if use_stash {
+                    log_success!("Stashing uncommitted changes...");
+                    Git::stash(Some(&format!("WIP: {}", commit_title)))?;
+                }
 
-            // 如果不在默认分支上，需要先切换到默认分支再创建新分支
-            if !is_default_branch && (committed_to_current_branch || use_stash) {
-                log_info!("Switching to default branch '{}' to create new branch...", default_branch);
-                Git::checkout_branch(&default_branch)?;
-            }
+                // 如果不在默认分支上，需要先切换到默认分支再创建新分支
+                if !is_default_branch && (committed_to_current_branch || use_stash) {
+                    log_info!("Switching to default branch '{}' to create new branch...", default_branch);
+                    Git::checkout_branch(&default_branch)?;
+                }
 
-            log_success!("\nCreating branch: {}", branch_name);
-            Git::checkout_branch(&branch_name)?;
+                log_success!("\nCreating branch: {}", actual_branch_name);
+                Git::checkout_branch(&actual_branch_name)?;
 
-            // 如果使用 stash，恢复修改
-            if use_stash {
-                log_success!("Restoring stashed changes...");
-                if let Err(e) = Git::stash_pop() {
-                    // 如果 stash_pop 失败（可能是冲突），检查是否有冲突
-                    let has_unmerged = cmd("git", &["ls-files", "-u"])
-                        .read()
-                        .map(|output| !output.trim().is_empty())
-                        .unwrap_or(false);
+                // 如果使用 stash，恢复修改
+                if use_stash {
+                    log_success!("Restoring stashed changes...");
+                    if let Err(e) = Git::stash_pop() {
+                        // 如果 stash_pop 失败（可能是冲突），检查是否有冲突
+                        let has_unmerged = cmd("git", &["ls-files", "-u"])
+                            .read()
+                            .map(|output| !output.trim().is_empty())
+                            .unwrap_or(false);
 
-                    if has_unmerged {
-                        log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
-                        log_warning!("After resolving conflicts:");
-                        log_warning!("  1. Stage resolved files: git add <file>");
-                        log_warning!("  2. Commit changes: git commit -m \"{}\"", commit_title);
-                        log_warning!("  3. Push to remote: git push -u origin {}", branch_name);
-                        log_warning!("  4. Create PR manually or run this command again");
-                        anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
-                    } else {
-                        // 没有冲突但失败了，返回错误
-                        return Err(e);
+                        if has_unmerged {
+                            log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
+                            log_warning!("After resolving conflicts:");
+                            log_warning!("  1. Stage resolved files: git add <file>");
+                            log_warning!("  2. Commit changes: git commit -m \"{}\"", commit_title);
+                            log_warning!("  3. Push to remote: git push -u origin {}", actual_branch_name);
+                            log_warning!("  4. Create PR manually or run this command again");
+                            anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
+                        } else {
+                            // 没有冲突但失败了，返回错误
+                            return Err(e);
+                        }
                     }
                 }
-            }
 
-            log_success!("Committing changes...");
-            Git::commit(&commit_title, true)?; // no-verify
-            log_success!("Pushing to remote...");
-            Git::push(&branch_name, true)?; // set-upstream
+                log_success!("Committing changes...");
+                Git::commit(&commit_title, true)?; // no-verify
+                log_success!("Pushing to remote...");
+                Git::push(&actual_branch_name, true)?; // set-upstream
+            }
         } else {
             // 跳过 Git 操作，但需要确保在正确的分支上
             let current_branch = Git::current_branch()?;
-            if current_branch != branch_name {
-                log_info!("Switching to branch: {}", branch_name);
-                Git::checkout_branch(&branch_name)?;
+            if current_branch != actual_branch_name {
+                log_info!("Switching to branch: {}", actual_branch_name);
+                Git::checkout_branch(&actual_branch_name)?;
             }
         }
 
         // 10. 创建 PR（根据仓库类型）
         // 如果分支已有 PR，跳过创建步骤，直接使用现有 PR
         let pull_request_url = if let Some(ref pr_id) = existing_pr {
-            log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
+            log_info!("PR #{} already exists for branch '{}'", pr_id, actual_branch_name);
             let repo_type = Git::detect_repo_type()?;
             match repo_type {
                 RepoType::GitHub => {
@@ -542,16 +583,16 @@ impl PullRequestCreateCommand {
             // 先检查分支是否有提交（相对于默认分支）
             let default_branch = Git::get_default_branch()
                 .context("Failed to get default branch")?;
-            let has_commits = Git::branch_has_commits(&branch_name, &default_branch)
+            let has_commits = Git::branch_has_commits(&actual_branch_name, &default_branch)
                 .context("Failed to check branch commits")?;
 
             if !has_commits {
-                log_warning!("Branch '{}' has no commits compared to '{}'.", branch_name, default_branch);
+                log_warning!("Branch '{}' has no commits compared to '{}'.", actual_branch_name, default_branch);
                 log_warning!("GitHub does not allow creating PRs for empty branches.");
                 log_warning!("Please make some changes and commit them before creating a PR.");
                 anyhow::bail!(
                     "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
-                    branch_name
+                    actual_branch_name
                 );
             }
 
@@ -562,7 +603,7 @@ impl PullRequestCreateCommand {
                     <GitHub as PlatformProvider>::create_pull_request(
                         &commit_title,
                         &pull_request_body,
-                        &branch_name,
+                        &actual_branch_name,
                         None,
                     )?
                 }
@@ -571,7 +612,7 @@ impl PullRequestCreateCommand {
                     <Codeup as PlatformProvider>::create_pull_request(
                         &commit_title,
                         &pull_request_body,
-                        &branch_name,
+                        &actual_branch_name,
                         None,
                     )?
                 }
@@ -606,7 +647,7 @@ impl PullRequestCreateCommand {
                     &pull_request_id,
                     Some(&pull_request_url),
                     repository.as_deref(),
-                    Some(&branch_name),
+                    Some(&actual_branch_name),
                 )?;
             }
         }
