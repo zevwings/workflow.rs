@@ -16,8 +16,7 @@ impl Completion {
     fn create_workflow_dir() -> Result<PathBuf> {
         let home = std::env::var("HOME").context("HOME environment variable not set")?;
         let workflow_dir = PathBuf::from(&home).join(".workflow");
-        fs::create_dir_all(&workflow_dir)
-            .context("Failed to create .workflow directory")?;
+        fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
         Ok(workflow_dir)
     }
 
@@ -143,10 +142,12 @@ impl Completion {
             // 检查是否是配置块开始
             if line.contains(marker_start) {
                 i += 1; // 跳过 marker 行
-                // 跳过 source 行
+                        // 跳过 source 行
                 while i < lines.len() {
                     let current_line = lines[i];
-                    if current_line.contains(source_pattern) || current_line.contains(&source_pattern_abs) {
+                    if current_line.contains(source_pattern)
+                        || current_line.contains(&source_pattern_abs)
+                    {
                         i += 1; // 跳过 source 行
                         break;
                     }

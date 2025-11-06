@@ -31,7 +31,10 @@ impl Shell {
         let home_dir = PathBuf::from(home);
 
         let (completion_dir, config_file) = if shell_type == "zsh" {
-            (home_dir.join(".workflow/completions"), home_dir.join(".zshrc"))
+            (
+                home_dir.join(".workflow/completions"),
+                home_dir.join(".zshrc"),
+            )
         } else {
             (
                 home_dir.join(".workflow/completions"),

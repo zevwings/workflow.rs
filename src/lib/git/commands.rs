@@ -197,15 +197,28 @@ impl Git {
     ///
     /// 自动暂存所有已修改的文件，然后提交
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
+        use crate::log_info;
+
         // 1. 先暂存所有已修改的文件
         Self::add_all().context("Failed to stage changes")?;
 
-        // 2. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
+        // 2. 检查是否有暂存的文件
+        let has_staged = cmd("git", &["diff", "--cached", "--quiet"])
+            .run()
+            .map(|output| !output.status.success())
+            .unwrap_or(false);
+
+        if !has_staged {
+            log_info!("Nothing to commit, working tree clean");
+            return Ok(());
+        }
+
+        // 3. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
         if !no_verify && Self::has_pre_commit() {
             Self::run_pre_commit()?;
         }
 
-        // 3. 执行提交
+        // 4. 执行提交
         let mut args = vec!["commit", "-m", message];
         if no_verify {
             args.push("--no-verify");
