@@ -33,7 +33,7 @@ impl Git {
 
     /// 检查分支是否存在（本地或远程）
     /// 返回 (本地存在, 远程存在)
-    fn branch_exists(branch_name: &str) -> Result<(bool, bool)> {
+    pub fn branch_exists(branch_name: &str) -> Result<(bool, bool)> {
         // 检查本地分支
         let local_branches = cmd("git", &["branch", "--list"])
             .read()

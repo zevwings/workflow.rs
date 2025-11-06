@@ -6,7 +6,7 @@ use crate::{
     Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, LLM, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
-use dialoguer::{Input, MultiSelect};
+use dialoguer::{Confirm, Input, MultiSelect};
 use std::io::{self, Write};
 
 /// PR 创建命令
@@ -238,39 +238,201 @@ impl PullRequestCreateCommand {
             return Ok(());
         }
 
-        // 9. 创建分支、提交、推送
-        log_success!("\nCreating branch: {}", branch_name);
-        Git::checkout_branch(&branch_name)?;
+        // 9. 检查状态：未提交修改、分支存在、PR 存在
+        let has_uncommitted = Git::has_uncommitted_changes()
+            .context("Failed to check uncommitted changes")?;
+        let (exists_local, exists_remote) = Git::branch_exists(&branch_name)
+            .context("Failed to check branch existence")?;
+        let repo_type = Git::detect_repo_type()?;
 
-        log_success!("Committing changes...");
-        Git::commit(&commit_title, true)?; // no-verify
+        // 检查分支是否已有 PR（只在分支已存在时检查）
+        let existing_pr = if exists_local || exists_remote {
+            // 尝试切换到分支检查 PR（如果切换失败，假设没有 PR）
+            let current_branch = Git::current_branch().ok();
+            let pr_result = if let Ok(()) = Git::checkout_branch(&branch_name) {
+                // 成功切换到分支，检查 PR
+                let pr = match repo_type {
+                    RepoType::GitHub => {
+                        <GitHub as PlatformProvider>::get_current_branch_pull_request()
+                            .ok()
+                            .flatten()
+                    }
+                    RepoType::Codeup => {
+                        <Codeup as PlatformProvider>::get_current_branch_pull_request()
+                            .ok()
+                            .flatten()
+                    }
+                    RepoType::Unknown => None,
+                };
+                // 恢复原分支
+                if let Some(ref orig) = current_branch {
+                    let _ = Git::checkout_branch(orig);
+                }
+                pr
+            } else {
+                // 切换分支失败（可能有未提交修改），无法检查 PR
+                // 恢复原分支
+                if let Some(ref orig) = current_branch {
+                    let _ = Git::checkout_branch(orig);
+                }
+                None
+            };
+            pr_result
+        } else {
+            None
+        };
 
-        log_success!("Pushing to remote...");
-        Git::push(&branch_name, true)?; // set-upstream
+        // 根据状态组合决定处理方式
+        let mut skip_git_ops = false; // 是否跳过 Git 操作（分支、提交、推送）
+
+        if exists_remote && existing_pr.is_none() {
+            // 场景：分支已推送但无 PR（可能是上次创建失败）
+            log_warning!("\n⚠️  Branch '{}' exists on remote but no PR found.", branch_name);
+            log_info!("This might indicate a previous failed PR creation.");
+
+            if has_uncommitted {
+                log_info!("You have uncommitted changes.");
+                let should_continue = Confirm::new()
+                    .with_prompt("Continue with PR creation? (will commit and push changes)")
+                    .default(true)
+                    .interact()
+                    .context("Failed to get confirmation")?;
+
+                if !should_continue {
+                    anyhow::bail!("PR creation cancelled.");
+                }
+                // 继续正常流程：切换到分支、提交、推送、创建 PR
+            } else {
+                // 无未提交修改，可以直接创建 PR
+                log_info!("No uncommitted changes. Skipping Git operations...");
+                let should_create_pr = Confirm::new()
+                    .with_prompt("Create PR for existing branch?")
+                    .default(true)
+                    .interact()
+                    .context("Failed to get confirmation")?;
+
+                if !should_create_pr {
+                    anyhow::bail!("PR creation cancelled.");
+                }
+
+                // 跳过 Git 操作，直接创建 PR
+                skip_git_ops = true;
+            }
+        } else if exists_local || exists_remote {
+            // 场景：分支已存在（但可能有 PR 也可能没有）
+            if let Some(ref pr_id) = existing_pr {
+                log_warning!("\n⚠️  Branch '{}' already exists and has PR #{}", branch_name, pr_id);
+
+                if has_uncommitted {
+                    log_info!("You have uncommitted changes.");
+                    let should_continue = Confirm::new()
+                        .with_prompt("Continue to commit changes and update existing PR?")
+                        .default(true)
+                        .interact()
+                        .context("Failed to get confirmation")?;
+
+                    if !should_continue {
+                        anyhow::bail!("PR creation cancelled.");
+                    }
+                    // 继续正常流程：切换到分支、提交、推送（PR 已存在，无需创建）
+                } else {
+                    log_info!("No uncommitted changes. PR #{} already exists.", pr_id);
+                    // 无未提交修改，只需要获取 PR URL 即可
+                    skip_git_ops = true;
+                }
+            } else {
+                log_warning!("\n⚠️  Branch '{}' already exists.", branch_name);
+                if has_uncommitted {
+                    log_info!("You have uncommitted changes.");
+                    let should_continue = Confirm::new()
+                        .with_prompt("Continue to commit changes and create PR?")
+                        .default(true)
+                        .interact()
+                        .context("Failed to get confirmation")?;
+
+                    if !should_continue {
+                        anyhow::bail!("PR creation cancelled.");
+                    }
+                    // 继续正常流程
+                } else {
+                    log_info!("No uncommitted changes.");
+                    let should_continue = Confirm::new()
+                        .with_prompt("Continue to create PR?")
+                        .default(true)
+                        .interact()
+                        .context("Failed to get confirmation")?;
+
+                    if !should_continue {
+                        anyhow::bail!("PR creation cancelled.");
+                    }
+                    // 继续正常流程（虽然可能不需要提交，但会检查）
+                }
+            }
+        } else if has_uncommitted {
+            // 场景：分支不存在，但有未提交修改（正常流程）
+            log_info!("\nYou have uncommitted changes. Will create branch and commit.");
+        }
+
+        // 10. 执行 Git 操作（如果需要）
+        if !skip_git_ops {
+            log_success!("\nCreating branch: {}", branch_name);
+            Git::checkout_branch(&branch_name)?;
+
+            log_success!("Committing changes...");
+            Git::commit(&commit_title, true)?; // no-verify
+
+            log_success!("Pushing to remote...");
+            Git::push(&branch_name, true)?; // set-upstream
+        } else {
+            // 跳过 Git 操作，但需要确保在正确的分支上
+            let current_branch = Git::current_branch()?;
+            if current_branch != branch_name {
+                log_info!("Switching to branch: {}", branch_name);
+                Git::checkout_branch(&branch_name)?;
+            }
+        }
 
         // 10. 创建 PR（根据仓库类型）
-        let repo_type = Git::detect_repo_type()?;
-        let pull_request_url = match repo_type {
-            RepoType::GitHub => {
-                log_success!("Creating PR via GitHub...");
-                <GitHub as PlatformProvider>::create_pull_request(
-                    &commit_title,
-                    &pull_request_body,
-                    &branch_name,
-                    None,
-                )?
+        // 如果分支已有 PR，跳过创建步骤，直接使用现有 PR
+        let pull_request_url = if let Some(ref pr_id) = existing_pr {
+            log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
+            let repo_type = Git::detect_repo_type()?;
+            match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_url(pr_id)?
+                }
+                RepoType::Codeup => {
+                    <Codeup as PlatformProvider>::get_pull_request_url(pr_id)?
+                }
+                RepoType::Unknown => {
+                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
+                }
             }
-            RepoType::Codeup => {
-                log_success!("Creating PR via Codeup...");
-                <Codeup as PlatformProvider>::create_pull_request(
-                    &commit_title,
-                    &pull_request_body,
-                    &branch_name,
-                    None,
-                )?
-            }
-            RepoType::Unknown => {
-                anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
+        } else {
+            // 分支无 PR，创建新 PR
+            let repo_type = Git::detect_repo_type()?;
+            match repo_type {
+                RepoType::GitHub => {
+                    log_success!("Creating PR via GitHub...");
+                    <GitHub as PlatformProvider>::create_pull_request(
+                        &commit_title,
+                        &pull_request_body,
+                        &branch_name,
+                        None,
+                    )?
+                }
+                RepoType::Codeup => {
+                    log_success!("Creating PR via Codeup...");
+                    <Codeup as PlatformProvider>::create_pull_request(
+                        &commit_title,
+                        &pull_request_body,
+                        &branch_name,
+                        None,
+                    )?
+                }
+                RepoType::Unknown => {
+                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
+                }
             }
         };
 
