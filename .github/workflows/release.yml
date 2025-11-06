@@ -253,14 +253,17 @@ jobs:
             # 是 branch
             INSTALL_TYPE="branch"
             VERSION_REF="${GITHUB_REF#refs/heads/}"
-            # 对于 branch，版本号可以从 workflow_dispatch input 或使用 branch 名称
+            # 对于 branch，版本号可以从 workflow_dispatch input 或使用默认版本
             if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
               VERSION="${{ github.event.inputs.version }}"
             else
-              # 使用 branch 名称作为版本（移除 v 前缀如果有）
-              VERSION="${VERSION_REF#v}"
+              # 对于 branch，使用默认版本号（因为 branch 名可能包含特殊字符，不适合作为 version）
+              # 可以将 branch 名转换为有效的版本号格式，或使用固定的开发版本号
+              # 例如：zw/update-completions -> 0.0.0-dev (或者使用日期等)
+              VERSION="0.0.0-dev"
             fi
             echo "✅ Detected as BRANCH: $VERSION_REF"
+            echo "ℹ️  Using default version for branch: $VERSION"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             # 手动触发，默认使用 tag
             INSTALL_TYPE="tag"
