@@ -34,6 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
+          token: ${{ secrets.GITHUB_TOKEN }}  # 确保使用正确的 token
 
       - name: Get version from Cargo.toml
         id: version
@@ -90,6 +91,7 @@ jobs:
           git push origin "$TAG"
 
           echo "✅ Successfully created and pushed tag: $TAG"
+          echo "ℹ️  This tag push should trigger a new workflow run for building and releasing"
 
       - name: Skip tag creation
         if: steps.check_tag.outputs.exists == 'true'
