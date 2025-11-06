@@ -278,4 +278,79 @@ impl Git {
         log_success!("Update completed successfully!");
         Ok(())
     }
+
+    /// 获取默认分支
+    ///
+    /// 根据仓库类型获取默认分支：
+    /// - GitHub: 通过 API 获取
+    /// - Codeup: 从远程获取
+    /// - 其他: 从远程获取
+    pub fn get_default_branch() -> Result<String> {
+        use crate::git::{detect_repo_type, RepoType};
+        use crate::pr::github::GitHub;
+
+        let repo_type = detect_repo_type()?;
+        match repo_type {
+            RepoType::GitHub => {
+                let (owner, repo_name) = GitHub::get_owner_and_repo()
+                    .context("Failed to get owner and repo for GitHub")?;
+                GitHub::get_default_branch(&owner, &repo_name)
+                    .context("Failed to get default branch from GitHub")
+            }
+            RepoType::Codeup | RepoType::Unknown => {
+                Self::get_default_branch_from_remote()
+            }
+        }
+    }
+
+    /// 从远程获取默认分支
+    ///
+    /// 尝试通过 Git 命令获取远程默认分支
+    fn get_default_branch_from_remote() -> Result<String> {
+        // 尝试获取远程默认分支
+        let output = cmd("git", &["symbolic-ref", "refs/remotes/origin/HEAD"])
+            .read()
+            .or_else(|_| {
+                // 如果上面失败，尝试从 remote show origin 获取
+                let remote_info = cmd("git", &["remote", "show", "origin"]).read()?;
+                for line in remote_info.lines() {
+                    if line.contains("HEAD branch:") {
+                        if let Some(branch) = line.split("HEAD branch:").nth(1) {
+                            return Ok(branch.trim().to_string());
+                        }
+                    }
+                }
+                anyhow::bail!("Could not determine default branch")
+            })?;
+
+        // 提取分支名：refs/remotes/origin/main -> main
+        let branch = output
+            .trim()
+            .strip_prefix("refs/remotes/origin/")
+            .unwrap_or(output.trim())
+            .to_string();
+
+        Ok(branch)
+    }
+
+    /// 保存未提交的修改到 stash
+    pub fn stash(message: Option<&str>) -> Result<()> {
+        let mut args = vec!["stash", "push"];
+        if let Some(msg) = message {
+            args.push("-m");
+            args.push(msg);
+        }
+        cmd("git", &args)
+            .run()
+            .context("Failed to stash changes")?;
+        Ok(())
+    }
+
+    /// 恢复 stash 中的修改
+    pub fn stash_pop() -> Result<()> {
+        cmd("git", &["stash", "pop"])
+            .run()
+            .context("Failed to pop stash")?;
+        Ok(())
+    }
 }
