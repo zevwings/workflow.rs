@@ -238,18 +238,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Get version from tag
+      - name: Get version and detect install type
         id: version
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
+          # 检测是 tag 还是 branch
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 是 tag
+            INSTALL_TYPE="tag"
+            VERSION_REF="${GITHUB_REF#refs/tags/}"
+            VERSION="${VERSION_REF#v}"  # 移除 v 前缀
+            echo "✅ Detected as TAG: $VERSION_REF"
+          elif [[ "${{ github.ref }}" == refs/heads/* ]]; then
+            # 是 branch
+            INSTALL_TYPE="branch"
+            VERSION_REF="${GITHUB_REF#refs/heads/}"
+            # 对于 branch，版本号可以从 workflow_dispatch input 或使用 branch 名称
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              VERSION="${{ github.event.inputs.version }}"
+            else
+              # 使用 branch 名称作为版本（移除 v 前缀如果有）
+              VERSION="${VERSION_REF#v}"
+            fi
+            echo "✅ Detected as BRANCH: $VERSION_REF"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # 手动触发，默认使用 tag
+            INSTALL_TYPE="tag"
+            VERSION_REF="${{ github.event.inputs.version }}"
+            VERSION="${VERSION_REF#v}"
+            echo "✅ Manual trigger, using as TAG: $VERSION_REF"
           else
-            VERSION=${GITHUB_REF#refs/tags/}
+            echo "❌ Error: Cannot determine install type from ${{ github.ref }}"
+            exit 1
           fi
-          VERSION=${VERSION#v}
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "install_type=$INSTALL_TYPE" >> $GITHUB_OUTPUT
+          echo "version_ref=$VERSION_REF" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Install Type: $INSTALL_TYPE"
+          echo "Version Ref: $VERSION_REF"
           echo "Version: $VERSION"
 
       # 注意：使用 git tag 方式时，不需要 SHA256 校验
@@ -285,34 +314,53 @@ jobs:
           path: homebrew-workflow
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
 
-      - name: Update Formula
+      - name: Update Formula from template
         shell: bash
         run: |
-          # Formula 文件路径
+          # 模板文件和目标文件路径
+          TEMPLATE_FILE="homebrew/Formula.template"
           FORMULA_FILE="homebrew-workflow/Formula/workflow.rb"
-          SOURCE_FORMULA="Formula/workflow.rb"
 
-          # 从源仓库读取最新的 Formula 文件
-          echo "Reading Formula file from source repository..."
-
-          if [ ! -f "$SOURCE_FORMULA" ]; then
-            echo "Error: Source Formula file not found at $SOURCE_FORMULA"
-            echo "Make sure Formula/workflow.rb exists in the source repository"
+          # 检查模板文件是否存在
+          if [ ! -f "$TEMPLATE_FILE" ]; then
+            echo "❌ Error: Template file not found at $TEMPLATE_FILE"
+            echo "Make sure homebrew/Formula.template exists in the source repository"
             exit 1
           fi
 
           # 确保 homebrew-workflow/Formula 目录存在
           mkdir -p homebrew-workflow/Formula
 
-          # 备份 homebrew-workflow 中的现有文件（如果存在）
+          # 备份现有的 Formula 文件（如果存在）
           if [ -f "$FORMULA_FILE" ]; then
             cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
-            echo "Backed up existing Formula file"
+            echo "📦 Backed up existing Formula file"
           fi
 
-          # 复制源 Formula 文件到 homebrew-workflow
-          cp "$SOURCE_FORMULA" "$FORMULA_FILE"
-          echo "Copied Formula file from source repository"
+          # 从模板生成 URL 行
+          INSTALL_TYPE="${{ steps.version.outputs.install_type }}"
+          VERSION_REF="${{ steps.version.outputs.version_ref }}"
+
+          if [[ "$INSTALL_TYPE" == "tag" ]]; then
+            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", tag: \"$VERSION_REF\""
+          elif [[ "$INSTALL_TYPE" == "branch" ]]; then
+            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", branch: \"$VERSION_REF\""
+          else
+            echo "❌ Error: Invalid install type: $INSTALL_TYPE"
+            exit 1
+          fi
+
+          echo "🔧 Generated URL line: $URL_LINE"
+
+          # 从模板生成 Formula 文件
+          echo "📝 Generating Formula file from template..."
+          sed -e "s|{{VERSION}}|${{ steps.version.outputs.version }}|g" \
+              -e "s|{{INSTALL_TYPE}}|$INSTALL_TYPE|g" \
+              -e "s|{{VERSION_REF}}|$VERSION_REF|g" \
+              -e "s|{{URL_LINE}}|$URL_LINE|g" \
+              "$TEMPLATE_FILE" > "$FORMULA_FILE"
+
+          echo "✅ Formula file generated from template"
 
           cd homebrew-workflow
 
@@ -320,50 +368,25 @@ jobs:
           FORMULA_FILE="Formula/workflow.rb"
 
           # 验证文件结构（确保没有语法错误）
-          echo "Validating Formula file structure..."
+          echo "🔍 Validating Formula file structure..."
           if ! ruby -c "$FORMULA_FILE" 2>/dev/null; then
-            echo "Error: Formula file has syntax errors"
+            echo "❌ Error: Formula file has syntax errors"
             ruby -c "$FORMULA_FILE" || true
             exit 1
           fi
           echo "✅ Formula file syntax is valid"
 
-          # 更新版本号
-          sed -i "s/version \"[^\"]*\"/version \"${{ steps.version.outputs.version }}\"/" "$FORMULA_FILE"
-          echo "Updated version to: ${{ steps.version.outputs.version }}"
+          # 显示生成的 Formula 文件
+          echo ""
+          echo "📄 Generated Formula file:"
+          echo "--- Formula/workflow.rb ---"
+          cat "$FORMULA_FILE"
+          echo ""
 
-          # 更新 git URL：如果当前是 branch: "master"，将其替换为 tag 格式
-          # 如果已经是 tag: 格式，则更新 tag 值
-          # 匹配格式1：url "https://github.com/zevwings/workflow.rs.git", branch: "master"
-          # 匹配格式2：url "https://github.com/zevwings/workflow.rs.git", tag: "v0.0.1"
-          if grep -q 'branch: "master"' "$FORMULA_FILE"; then
-            # 如果使用 branch: "master"，替换为 tag 格式
-            sed -i 's|branch: "master"|tag: "'"${{ steps.version.outputs.tag }}"'"|' "$FORMULA_FILE"
-            echo "Converted branch: \"master\" to tag: \"${{ steps.version.outputs.tag }}\""
-          elif grep -q 'tag: "v' "$FORMULA_FILE"; then
-            # 如果已经是 tag 格式，更新 tag 值
-            sed -i "s|tag: \"v[^\"]*\"|tag: \"${{ steps.version.outputs.tag }}\"|" "$FORMULA_FILE"
-            echo "Updated tag to: \"${{ steps.version.outputs.tag }}\""
-          else
-            echo "Warning: Could not find branch or tag in Formula file"
-          fi
-
-          # 显示更改
+          # 显示更改（如果有备份）
           if [ -f "$FORMULA_FILE.bak" ]; then
-            echo ""
-            echo "Formula file updated:"
-            echo "--- Before ---"
-            cat "$FORMULA_FILE.bak"
-            echo ""
-            echo "--- After ---"
-            cat "$FORMULA_FILE"
-            echo ""
-            echo "--- Diff ---"
+            echo "--- Diff (Before vs After) ---"
             diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
-          else
-            echo ""
-            echo "New Formula file:"
-            cat "$FORMULA_FILE"
           fi
 
       - name: Commit and push changes

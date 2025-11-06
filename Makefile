@@ -81,7 +81,11 @@ setup:
 	@echo "正在构建并安装 rust-analyzer..."
 	@echo "这可能需要几分钟时间，请耐心等待..."
 	@cd /tmp/rust-analyzer && \
-	if cargo xtask install --server; then \
+	XTASK_CMD="cargo run --package xtask --bin xtask" && \
+	if command -v cargo-xtask >/dev/null 2>&1 || cargo xtask --version >/dev/null 2>&1; then \
+		XTASK_CMD="cargo xtask"; \
+	fi && \
+	if $$XTASK_CMD install --server; then \
 		echo ""; \
 		echo "✅ rust-analyzer 安装完成！"; \
 		echo "安装位置: $$(which rust-analyzer)"; \
@@ -90,7 +94,7 @@ setup:
 		echo ""; \
 		echo "❌ rust-analyzer 安装失败"; \
 		echo "请检查错误信息，或手动运行以下命令:"; \
-		echo "  cd /tmp/rust-analyzer && cargo xtask install --server"; \
+		echo "  cd /tmp/rust-analyzer && cargo run --package xtask --bin xtask install --server"; \
 		exit 1; \
 	fi
 
