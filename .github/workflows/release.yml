@@ -51,31 +51,104 @@ jobs:
           echo "✅ Version from Cargo.toml: $VERSION"
           echo "✅ Tag to create: $TAG"
 
-      - name: Check if tag exists
+      - name: Check if tag exists and increment version if needed
         id: check_tag
         shell: bash
         run: |
           TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "exists=true" >> $GITHUB_OUTPUT
             echo "⚠️  Tag $TAG already exists"
             echo "Current commit: $(git rev-parse HEAD)"
             echo "Tag commit: $(git rev-parse $TAG)"
+
             if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=false" >> $GITHUB_OUTPUT
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$TAG" >> $GITHUB_OUTPUT
               echo "✅ Tag points to current commit, skipping tag creation"
             else
-              echo "⚠️  Tag points to different commit, consider updating version in Cargo.toml"
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=true" >> $GITHUB_OUTPUT
+              echo "⚠️  Tag points to different commit, auto-incrementing patch version"
+
+              # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
+              IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+              MAJOR="${VERSION_PARTS[0]:-0}"
+              MINOR="${VERSION_PARTS[1]:-0}"
+              PATCH="${VERSION_PARTS[2]:-0}"
+
+              # 递增 patch 版本
+              PATCH=$((PATCH + 1))
+              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              NEW_TAG="v$NEW_VERSION"
+
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+              echo "old_version=$VERSION" >> $GITHUB_OUTPUT
+              echo "old_tag=$TAG" >> $GITHUB_OUTPUT
+
+              echo "✅ Auto-incremented version: $VERSION -> $NEW_VERSION"
+              echo "✅ New tag: $NEW_TAG"
             fi
           else
             echo "exists=false" >> $GITHUB_OUTPUT
+            echo "needs_increment=false" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
             echo "✅ Tag $TAG does not exist, will create it"
           fi
 
-      - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false'
+      - name: Update Cargo.toml version if needed
+        if: steps.check_tag.outputs.needs_increment == 'true'
         shell: bash
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          echo "Updating Cargo.toml version to $NEW_VERSION"
+
+          # 更新 Cargo.toml 中的版本号
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            # macOS
+            sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          else
+            # Linux
+            sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          fi
+
+          # 验证更新
+          UPDATED_VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
+            echo "❌ Error: Failed to update version in Cargo.toml"
+            exit 1
+          fi
+
+          echo "✅ Cargo.toml updated: version = \"$NEW_VERSION\""
+
+      - name: Commit version update
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 提交更改
+          git add Cargo.toml
+          git commit -m "chore: bump version to ${{ steps.check_tag.outputs.version }}"
+
+          # 推送到 master
+          echo "Pushing version update to master"
+          git push origin master
+
+          echo "✅ Version update committed and pushed"
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          TAG="${{ steps.check_tag.outputs.tag }}"
           echo "Creating tag: $TAG"
 
           # 配置 Git
@@ -92,10 +165,10 @@ jobs:
           echo "✅ Successfully created and pushed tag: $TAG"
 
       - name: Skip tag creation
-        if: steps.check_tag.outputs.exists == 'true'
+        if: steps.check_tag.outputs.exists == 'true' && steps.check_tag.outputs.needs_increment == 'false'
         shell: bash
         run: |
-          echo "⏭️  Skipping tag creation: tag ${{ steps.version.outputs.tag }} already exists"
+          echo "⏭️  Skipping tag creation: tag ${{ steps.check_tag.outputs.tag }} already exists and points to current commit"
 
   # 构建所有平台的二进制文件
   build:
