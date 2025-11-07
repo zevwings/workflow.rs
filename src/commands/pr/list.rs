@@ -11,18 +11,25 @@ impl GetPullRequestsCommand {
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
+        log_success!("PR List");
+        let output = Self::get_pull_requests(state.as_deref(), limit, &repo_type)?;
+        log_info!("{}", output);
+
+        Ok(())
+    }
+
+    /// 根据仓库类型获取 PR 列表
+    fn get_pull_requests(
+        state: Option<&str>,
+        limit: Option<u32>,
+        repo_type: &RepoType,
+    ) -> Result<String> {
         match repo_type {
             RepoType::GitHub => {
-                log_success!("PR List");
-                let output =
-                    <GitHub as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
-                log_info!("{}", output);
+                <GitHub as PlatformProvider>::get_pull_requests(state, limit)
             }
             RepoType::Codeup => {
-                log_success!("PR List");
-                let output =
-                    <Codeup as PlatformProvider>::get_pull_requests(state.as_deref(), limit)?;
-                log_info!("{}", output);
+                <Codeup as PlatformProvider>::get_pull_requests(state, limit)
             }
             _ => {
                 anyhow::bail!(
@@ -30,7 +37,5 @@ impl GetPullRequestsCommand {
                 );
             }
         }
-
-        Ok(())
     }
 }

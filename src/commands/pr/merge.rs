@@ -17,40 +17,9 @@ impl PullRequestMergeCommand {
         // 1. 运行检查
         CheckCommand::run_all()?;
 
-        // 2. 获取 PR ID（从参数或当前分支）
+        // 2. 获取仓库类型和 PR ID
         let repo_type = Git::detect_repo_type()?;
-        let pull_request_id = if let Some(id) = pull_request_id {
-            id
-        } else {
-            // 从当前分支获取 PR
-            match repo_type {
-                RepoType::GitHub => {
-                    match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
-                        Some(id) => {
-                            log_success!("Found PR for current branch: #{}", id);
-                            id
-                        }
-                        None => {
-                            anyhow::bail!("No PR found for current branch. Please specify PR ID.");
-                        }
-                    }
-                }
-                RepoType::Codeup => {
-                    match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
-                        Some(id) => {
-                            log_success!("Found PR for current branch: #{}", id);
-                            id
-                        }
-                        None => {
-                            anyhow::bail!("No PR found for current branch. Please specify PR ID or branch name.");
-                        }
-                    }
-                }
-                _ => {
-                    anyhow::bail!("Auto-detection of PR ID is only supported for GitHub and Codeup repositories.");
-                }
-            }
-        };
+        let pull_request_id = Self::get_pull_request_id(pull_request_id, &repo_type)?;
 
         log_success!("\nMerging PR: #{}", pull_request_id);
 
@@ -62,14 +31,70 @@ impl PullRequestMergeCommand {
             .context("Failed to get default branch")?;
 
         // 5. 合并 PR
-        match repo_type {
+        Self::merge_pull_request(&pull_request_id, &repo_type)?;
+
+        // 6. 合并后清理：切换到默认分支并删除当前分支
+        // 注意：远程分支已经通过 API 删除（在 merge_pull_request 中）
+        Self::cleanup_after_merge(&current_branch, &default_branch)?;
+
+        // 7. 更新 Jira 状态（如果关联了 ticket）
+        Self::update_jira_status(&pull_request_id, &repo_type)?;
+
+        Ok(())
+    }
+
+    /// 获取 PR ID（从参数或当前分支）
+    fn get_pull_request_id(
+        pull_request_id: Option<String>,
+        repo_type: &RepoType,
+    ) -> Result<String> {
+        if let Some(id) = pull_request_id {
+            return Ok(id);
+        }
+
+        // 从当前分支获取 PR
+        let pr_id = match repo_type {
             RepoType::GitHub => {
-                <GitHub as PlatformProvider>::merge_pull_request(&pull_request_id, true)?; // delete-branch
-                log_success!("PR merged successfully");
+                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
             }
             RepoType::Codeup => {
-                <Codeup as PlatformProvider>::merge_pull_request(&pull_request_id, true)?; // delete-branch
-                log_success!("PR merged successfully");
+                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
+            }
+            _ => {
+                anyhow::bail!(
+                    "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
+                );
+            }
+        };
+
+        match pr_id {
+            Some(id) => {
+                log_success!("Found PR for current branch: #{}", id);
+                Ok(id)
+            }
+            None => {
+                let error_msg = match repo_type {
+                    RepoType::GitHub => {
+                        "No PR found for current branch. Please specify PR ID."
+                    }
+                    RepoType::Codeup => {
+                        "No PR found for current branch. Please specify PR ID or branch name."
+                    }
+                    _ => "No PR found for current branch.",
+                };
+                anyhow::bail!("{}", error_msg);
+            }
+        }
+    }
+
+    /// 合并 PR（根据仓库类型调用对应的实现）
+    fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
+        match repo_type {
+            RepoType::GitHub => {
+                <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true)?;
+            }
+            RepoType::Codeup => {
+                <Codeup as PlatformProvider>::merge_pull_request(pull_request_id, true)?;
             }
             _ => {
                 anyhow::bail!(
@@ -77,34 +102,18 @@ impl PullRequestMergeCommand {
                 );
             }
         }
+        log_success!("PR merged successfully");
+        Ok(())
+    }
 
-        // 6. 合并后清理：切换到默认分支并删除当前分支
-        // 注意：远程分支已经通过 API 删除（在 merge_pull_request 中）
-        Self::cleanup_after_merge(&current_branch, &default_branch)?;
-
-        // 7. 更新 Jira 状态（如果关联了 ticket）
+    /// 更新 Jira 状态（如果关联了 ticket）
+    fn update_jira_status(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
         // 尝试从历史记录读取
-        let mut jira_ticket = JiraStatus::read_work_history(&pull_request_id)?;
+        let mut jira_ticket = JiraStatus::read_work_history(pull_request_id)?;
 
         // 如果历史记录中没有，尝试从 PR 标题提取
         if jira_ticket.is_none() {
-            match repo_type {
-                RepoType::GitHub => {
-                    if let Ok(title) =
-                        <GitHub as PlatformProvider>::get_pull_request_title(&pull_request_id)
-                    {
-                        jira_ticket = extract_jira_ticket_id(&title);
-                    }
-                }
-                RepoType::Codeup => {
-                    if let Ok(title) =
-                        <Codeup as PlatformProvider>::get_pull_request_title(&pull_request_id)
-                    {
-                        jira_ticket = extract_jira_ticket_id(&title);
-                    }
-                }
-                _ => {}
-            }
+            jira_ticket = Self::extract_jira_ticket_from_pr_title(pull_request_id, repo_type)?;
         }
 
         if let Some(ticket) = jira_ticket {
@@ -118,12 +127,30 @@ impl PullRequestMergeCommand {
             }
 
             // 更新工作历史记录的合并时间
-            JiraStatus::update_work_history_merged(&pull_request_id)?;
+            JiraStatus::update_work_history_merged(pull_request_id)?;
         } else {
             log_warning!("No Jira ticket associated with this PR");
         }
 
         Ok(())
+    }
+
+    /// 从 PR 标题提取 Jira ticket ID
+    fn extract_jira_ticket_from_pr_title(
+        pull_request_id: &str,
+        repo_type: &RepoType,
+    ) -> Result<Option<String>> {
+        let title = match repo_type {
+            RepoType::GitHub => {
+                <GitHub as PlatformProvider>::get_pull_request_title(pull_request_id).ok()
+            }
+            RepoType::Codeup => {
+                <Codeup as PlatformProvider>::get_pull_request_title(pull_request_id).ok()
+            }
+            _ => None,
+        };
+
+        Ok(title.and_then(|t| extract_jira_ticket_id(&t)))
     }
 
     /// 合并后清理：切换到默认分支并删除当前分支

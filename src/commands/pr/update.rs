@@ -16,7 +16,7 @@ impl PullRequestUpdateCommand {
         let repo_type = Git::detect_repo_type()?;
 
         // 获取当前分支的 PR 标题
-        let pull_request_title = Self::get_pull_request_title_for_repo(&repo_type)?;
+        let pull_request_title = Self::get_pull_request_title(&repo_type)?;
 
         // 确定提交消息
         let message = pull_request_title.unwrap_or_else(|| {
@@ -40,53 +40,43 @@ impl PullRequestUpdateCommand {
     }
 
     /// 根据仓库类型获取当前分支的 PR 标题
-    ///
-    /// # Arguments
-    /// * `repo_type` - 仓库类型（GitHub、Codeup 等）
-    ///
-    /// # Returns
-    /// PR 标题（如果存在），否则返回 None
-    #[allow(dead_code)]
-    fn get_pull_request_title_for_repo(repo_type: &RepoType) -> Result<Option<String>> {
-        use crate::{log_success, log_warning};
-
-        let pull_request_title = match repo_type {
+    fn get_pull_request_title(repo_type: &RepoType) -> Result<Option<String>> {
+        // 获取当前分支的 PR ID
+        let pr_id = match repo_type {
             RepoType::GitHub => {
-                // 获取当前分支的 PR
-                match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
-                    Some(pull_request_id) => {
-                        log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<GitHub as PlatformProvider>::get_pull_request_title(
-                            &pull_request_id,
-                        )?)
-                    }
-                    None => {
-                        log_warning!("No PR found for current branch");
-                        None
-                    }
-                }
+                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
             }
             RepoType::Codeup => {
-                // 获取当前分支的 PR
-                match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
-                    Some(pull_request_id) => {
-                        log_success!("Found PR for current branch: #{}", pull_request_id);
-                        Some(<Codeup as PlatformProvider>::get_pull_request_title(
-                            &pull_request_id,
-                        )?)
-                    }
-                    None => {
-                        log_warning!("No PR found for current branch");
-                        None
-                    }
-                }
+                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
             }
             RepoType::Unknown => {
                 log_warning!("Unknown repository type, cannot get PR title");
-                None
+                return Ok(None);
             }
         };
 
-        Ok(pull_request_title)
+        let pr_id = match pr_id {
+            Some(id) => {
+                log_success!("Found PR for current branch: #{}", id);
+                id
+            }
+            None => {
+                log_warning!("No PR found for current branch");
+                return Ok(None);
+            }
+        };
+
+        // 获取 PR 标题
+        let title = match repo_type {
+            RepoType::GitHub => {
+                <GitHub as PlatformProvider>::get_pull_request_title(&pr_id).ok()
+            }
+            RepoType::Codeup => {
+                <Codeup as PlatformProvider>::get_pull_request_title(&pr_id).ok()
+            }
+            _ => None,
+        };
+
+        Ok(title)
     }
 }
