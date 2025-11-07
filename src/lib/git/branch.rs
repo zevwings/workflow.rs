@@ -305,5 +305,25 @@ impl Git {
             .context(format!("Failed to push branch: {}", branch_name))?;
         Ok(())
     }
+
+    /// 删除本地分支
+    ///
+    /// 删除指定的本地分支。如果分支未完全合并，可以使用 `force` 参数强制删除。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要删除的分支名称
+    /// * `force` - 是否强制删除（使用 `-D` 而不是 `-d`）
+    ///
+    /// # 错误
+    ///
+    /// 如果删除失败，返回相应的错误信息。
+    pub fn delete(branch_name: &str, force: bool) -> Result<()> {
+        let flag = if force { "-D" } else { "-d" };
+        cmd("git", &["branch", flag, branch_name])
+            .run()
+            .with_context(|| format!("Failed to delete local branch: {}", branch_name))?;
+        Ok(())
+    }
 }
 

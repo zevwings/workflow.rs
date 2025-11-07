@@ -129,7 +129,6 @@ impl PullRequestMergeCommand {
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
         use crate::log_info;
-        use duct::cmd;
 
         // 如果当前分支已经是默认分支，不需要清理
         if current_branch == default_branch {
@@ -144,32 +143,24 @@ impl PullRequestMergeCommand {
         );
 
         // 1. 先更新远程分支信息（这会同步远程删除的分支）
-        cmd("git", &["fetch", "origin"])
-            .run()
-            .context("Failed to fetch from origin")?;
+        Git::fetch()?;
 
         // 2. 切换到默认分支
         Git::checkout_branch(default_branch)
             .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
         // 3. 更新本地默认分支
-        cmd("git", &["pull", "origin", default_branch])
-            .run()
+        Git::pull(default_branch)
             .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
 
         // 4. 删除本地分支（如果还存在）
         if Self::branch_exists_locally(current_branch)? {
             log_info!("Deleting local branch: {}", current_branch);
-            cmd("git", &["branch", "-d", current_branch])
-                .run()
+            Git::delete(current_branch, false)
                 .or_else(|_| {
                     // 如果分支未完全合并，尝试强制删除
                     log_info!("Branch may not be fully merged, trying force delete...");
-                    cmd("git", &["branch", "-D", current_branch])
-                        .run()
-                        .with_context(|| {
-                            format!("Failed to delete local branch: {}", current_branch)
-                        })
+                    Git::delete(current_branch, true)
                 })
                 .context("Failed to delete local branch")?;
             log_success!("Local branch deleted: {}", current_branch);
@@ -179,7 +170,7 @@ impl PullRequestMergeCommand {
 
         // 5. 清理远程分支引用（prune，移除已删除的远程分支引用）
         // 注意：这是一个可选的清理操作，失败不影响主要功能
-        if let Err(e) = cmd("git", &["remote", "prune", "origin"]).run() {
+        if let Err(e) = Git::prune_remote() {
             log_info!("Warning: Failed to prune remote references: {}", e);
             log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
         }

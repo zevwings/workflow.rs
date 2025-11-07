@@ -105,5 +105,33 @@ impl Git {
 
         Ok(output.trim().to_string())
     }
+
+    /// 从远程仓库获取更新
+    ///
+    /// 使用 `git fetch origin` 从远程仓库获取最新的分支和提交信息。
+    ///
+    /// # 错误
+    ///
+    /// 如果获取失败，返回相应的错误信息。
+    pub fn fetch() -> Result<()> {
+        cmd("git", &["fetch", "origin"])
+            .run()
+            .context("Failed to fetch from origin")?;
+        Ok(())
+    }
+
+    /// 清理远程分支引用
+    ///
+    /// 使用 `git remote prune origin` 移除已删除的远程分支引用。
+    ///
+    /// # 错误
+    ///
+    /// 如果清理失败，返回相应的错误信息。
+    pub fn prune_remote() -> Result<()> {
+        cmd("git", &["remote", "prune", "origin"])
+            .run()
+            .context("Failed to prune remote references")?;
+        Ok(())
+    }
 }
 
