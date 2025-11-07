@@ -39,19 +39,19 @@ impl PullRequestCreateCommand {
         }
 
         // 2. 获取或输入 Jira ticket
-        let jira_ticket = Self::get_or_input_jira_ticket(jira_ticket)?;
+        let jira_ticket = Self::resolve_jira_ticket(jira_ticket)?;
 
         // 3. 如果有 Jira ticket，检查并配置状态
-        let created_pull_request_status = Self::configure_jira_status(&jira_ticket)?;
+        let created_pull_request_status = Self::ensure_jira_status(&jira_ticket)?;
 
         // 4. 获取或生成 PR 标题
-        let title = Self::get_or_generate_title(title, &jira_ticket)?;
+        let title = Self::resolve_title(title, &jira_ticket)?;
 
         // 5. 生成 commit_title 和分支名
         let (commit_title, branch_name) = Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
 
         // 6. 获取描述
-        let description = Self::get_description(description)?;
+        let description = Self::resolve_description(description)?;
 
         // 7. 选择变更类型
         let selected_types = Self::select_change_types()?;
@@ -94,7 +94,7 @@ impl PullRequestCreateCommand {
         )?;
 
         // 13. 复制 PR URL 到剪贴板并打开浏览器
-        Self::copy_and_open_pr(&pull_request_url)?;
+        Self::copy_and_open_pull_request(&pull_request_url)?;
 
         log_success!("PR created successfully!");
         Ok(())
@@ -102,8 +102,8 @@ impl PullRequestCreateCommand {
 
     /// 获取或输入 Jira ticket
     ///
-    /// 如果提供了 ticket，验证其格式；如果没有提供，提示用户输入并验证。
-    fn get_or_input_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
+    /// 步骤 2：如果提供了 ticket，验证其格式；如果没有提供，提示用户输入并验证。
+    fn resolve_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
         if let Some(ticket) = jira_ticket {
             // 验证 ticket 格式
             if !ticket.trim().is_empty() {
@@ -128,10 +128,40 @@ impl PullRequestCreateCommand {
         }
     }
 
+    /// 配置 Jira ticket 状态
+    ///
+    /// 步骤 3：如果有 Jira ticket，检查并配置状态。如果已配置则读取，否则进行交互式配置。
+    fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>> {
+        if let Some(ref ticket) = jira_ticket {
+            // 读取状态配置
+            if let Ok(Some(status)) = JiraStatus::read_pull_request_created_status(ticket) {
+                Ok(Some(status))
+            } else {
+                // 如果没有配置，提示配置
+                log_info!(
+                    "No status configuration found for {}, configuring...",
+                    ticket
+                );
+                JiraStatus::configure_interactive(ticket)
+                    .with_context(|| {
+                        format!(
+                            "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
+                            ticket
+                        )
+                    })?;
+                let status = JiraStatus::read_pull_request_created_status(ticket)
+                    .context("Failed to read status after configuration")?;
+                Ok(status)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
     /// 提示用户输入 PR 标题
     ///
-    /// 使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
-    fn input_pr_title() -> Result<String> {
+    /// 步骤 4（辅助函数）：使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
+    fn input_pull_request_title() -> Result<String> {
         let title: String = Input::new()
             .with_prompt("PR title (required)")
             .validate_with(|input: &String| -> Result<(), &str> {
@@ -148,9 +178,9 @@ impl PullRequestCreateCommand {
 
     /// 获取或生成 PR 标题
     ///
-    /// 如果提供了标题，直接使用；如果有 Jira ticket，尝试从 Jira 获取标题；
+    /// 步骤 4：如果提供了标题，直接使用；如果有 Jira ticket，尝试从 Jira 获取标题；
     /// 否则提示用户输入标题。
-    fn get_or_generate_title(title: Option<String>, jira_ticket: &Option<String>) -> Result<String> {
+    fn resolve_title(title: Option<String>, jira_ticket: &Option<String>) -> Result<String> {
         let title = if let Some(t) = title {
             t
         } else if let Some(ref ticket) = jira_ticket {
@@ -163,7 +193,7 @@ impl PullRequestCreateCommand {
                     if summary.is_empty() {
                         log_warning!("Jira ticket summary is empty, falling back to manual input");
                         // 回退到手动输入
-                        Self::input_pr_title()?
+                        Self::input_pull_request_title()?
                     } else {
                         log_success!("Using Jira ticket summary: {}", summary);
                         summary
@@ -173,20 +203,61 @@ impl PullRequestCreateCommand {
                     log_error!("Failed to get ticket info: {}", e);
                     log_warning!("Falling back to manual input");
                     // 回退到手动输入
-                    Self::input_pr_title()?
+                    Self::input_pull_request_title()?
                 }
             }
         } else {
-            Self::input_pr_title()?
+            Self::input_pull_request_title()?
         };
 
         Ok(title)
     }
 
+    /// 生成 commit title 和分支名
+    ///
+    /// 步骤 5：首先生成 commit title，然后尝试使用 LLM 生成分支名。
+    /// 如果 LLM 生成失败或结果无效，回退到默认方法。
+    /// 返回 (commit_title, branch_name) 元组。
+    fn generate_commit_title_and_branch_name(
+        jira_ticket: &Option<String>,
+        title: &str,
+    ) -> Result<(String, String)> {
+        let commit_title = generate_commit_title(jira_ticket.as_deref(), title);
+
+        // 尝试使用 LLM 根据 commit_title 生成分支名
+        let branch_name = match PullRequestLLM::generate(&commit_title) {
+            Ok(content) => {
+                log_success!("Generated branch name with LLM: {}", content.branch_name);
+                let mut branch_name: String = content.branch_name;
+
+                // 如果有 Jira ticket，添加到分支名前缀
+                if let Some(ticket) = jira_ticket.as_deref() {
+                    branch_name = format!("{}-{}", ticket, branch_name);
+                }
+
+                // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+                let settings = Settings::get();
+                if let Some(prefix) = &settings.github_branch_prefix {
+                    if !prefix.trim().is_empty() {
+                        branch_name = format!("{}/{}", prefix.trim(), branch_name);
+                    }
+                }
+
+                branch_name
+            }
+            Err(_) => {
+                // 回退到原来的方法
+                generate_branch_name(jira_ticket.as_deref(), title)?
+            }
+        };
+
+        Ok((commit_title, branch_name))
+    }
+
     /// 获取 PR 描述
     ///
-    /// 如果提供了描述，直接使用；否则提示用户输入描述（可选）。
-    fn get_description(description: Option<String>) -> Result<String> {
+    /// 步骤 6：如果提供了描述，直接使用；否则提示用户输入描述（可选）。
+    fn resolve_description(description: Option<String>) -> Result<String> {
         if let Some(desc) = description {
             Ok(desc)
         } else {
@@ -199,9 +270,27 @@ impl PullRequestCreateCommand {
         }
     }
 
+    /// 选择变更类型
+    ///
+    /// 步骤 7：提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
+    fn select_change_types() -> Result<Vec<bool>> {
+        log_info!("\nTypes of changes:");
+        let selections = MultiSelect::new()
+            .with_prompt("Select change types (use space to select, enter to confirm)")
+            .items(TYPES_OF_CHANGES)
+            .interact()
+            .context("Failed to select change types")?;
+
+        let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
+            .map(|i| selections.contains(&i))
+            .collect();
+
+        Ok(selected_types)
+    }
+
     /// 准备 Git 操作
     ///
-    /// 检查 Git 状态、分支存在情况、PR 存在情况，并根据状态决定处理方式。
+    /// 步骤 9：检查 Git 状态、分支存在情况、PR 存在情况，并根据状态决定处理方式。
     /// 返回包含所有状态信息的 `GitOpsState` 结构体。
     fn prepare_git_operations(branch_name: &str, commit_title: &str) -> Result<GitOpsState> {
         // 检查状态：未提交修改、分支存在、PR 存在、当前分支是否是默认分支
@@ -471,138 +560,9 @@ impl PullRequestCreateCommand {
         })
     }
 
-    /// 选择变更类型
-    ///
-    /// 提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
-    fn select_change_types() -> Result<Vec<bool>> {
-        log_info!("\nTypes of changes:");
-        let selections = MultiSelect::new()
-            .with_prompt("Select change types (use space to select, enter to confirm)")
-            .items(TYPES_OF_CHANGES)
-            .interact()
-            .context("Failed to select change types")?;
-
-        let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
-            .map(|i| selections.contains(&i))
-            .collect();
-
-        Ok(selected_types)
-    }
-
-    /// 生成 commit title 和分支名
-    ///
-    /// 首先生成 commit title，然后尝试使用 LLM 生成分支名。
-    /// 如果 LLM 生成失败或结果无效，回退到默认方法。
-    /// 返回 (commit_title, branch_name) 元组。
-    fn generate_commit_title_and_branch_name(
-        jira_ticket: &Option<String>,
-        title: &str,
-    ) -> Result<(String, String)> {
-        let commit_title = generate_commit_title(jira_ticket.as_deref(), title);
-
-        // 尝试使用 LLM 根据 commit_title 生成分支名
-        let branch_name = match PullRequestLLM::generate(&commit_title) {
-            Ok(content) => {
-                log_success!("Generated branch name with LLM: {}", content.branch_name);
-                let mut branch_name: String = content.branch_name;
-
-                // 如果有 Jira ticket，添加到分支名前缀
-                if let Some(ticket) = jira_ticket.as_deref() {
-                    branch_name = format!("{}-{}", ticket, branch_name);
-                }
-
-                // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-                let settings = Settings::get();
-                if let Some(prefix) = &settings.github_branch_prefix {
-                    if !prefix.trim().is_empty() {
-                        branch_name = format!("{}/{}", prefix.trim(), branch_name);
-                    }
-                }
-
-                branch_name
-            }
-            Err(_) => {
-                // 回退到原来的方法
-                generate_branch_name(jira_ticket.as_deref(), title)?
-            }
-        };
-
-        Ok((commit_title, branch_name))
-    }
-
-    /// 创建或获取 PR
-    ///
-    /// 如果分支已有 PR，获取 PR URL；否则创建新 PR。
-    /// 在创建 PR 前会检查分支是否有提交。
-    fn create_or_get_pull_request(
-        git_ops_state: &GitOpsState,
-        commit_title: &str,
-        pull_request_body: &str,
-    ) -> Result<String> {
-        // 如果分支已有 PR，跳过创建步骤，直接使用现有 PR
-        if let Some(ref pr_id) = git_ops_state.existing_pr {
-            log_info!("PR #{} already exists for branch '{}'", pr_id, git_ops_state.actual_branch_name);
-            let repo_type = Git::detect_repo_type()?;
-            match repo_type {
-                RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::get_pull_request_url(pr_id)
-                }
-                RepoType::Codeup => {
-                    <Codeup as PlatformProvider>::get_pull_request_url(pr_id)
-                }
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            }
-        } else {
-            // 分支无 PR，创建新 PR
-            // 先检查分支是否有提交（相对于默认分支）
-            let has_commits = Git::is_branch_ahead(&git_ops_state.actual_branch_name, &git_ops_state.default_branch)
-                .context("Failed to check branch commits")?;
-
-            if !has_commits {
-                log_warning!("Branch '{}' has no commits compared to '{}'.", git_ops_state.actual_branch_name, git_ops_state.default_branch);
-                log_warning!("GitHub does not allow creating PRs for empty branches.");
-                log_warning!("Please make some changes and commit them before creating a PR.");
-                anyhow::bail!(
-                    "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
-                    git_ops_state.actual_branch_name
-                );
-            }
-
-            let repo_type = Git::detect_repo_type()?;
-            let pull_request_url = match repo_type {
-                RepoType::GitHub => {
-                    log_success!("Creating PR via GitHub...");
-                    <GitHub as PlatformProvider>::create_pull_request(
-                        commit_title,
-                        pull_request_body,
-                        &git_ops_state.actual_branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Codeup => {
-                    log_success!("Creating PR via Codeup...");
-                    <Codeup as PlatformProvider>::create_pull_request(
-                        commit_title,
-                        pull_request_body,
-                        &git_ops_state.actual_branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            };
-
-            log_success!("PR created: {}", pull_request_url);
-            Ok(pull_request_url)
-        }
-    }
-
     /// 执行 Git 操作
     ///
-    /// 根据 `git_ops_state` 的状态执行相应的 Git 操作：
+    /// 步骤 10：根据 `git_ops_state` 的状态执行相应的 Git 操作：
     /// - 如果跳过 Git 操作，只确保在正确的分支上
     /// - 如果使用当前分支且工作树干净，只需要推送
     /// - 否则：创建分支、stash/恢复修改、提交、推送
@@ -673,9 +633,79 @@ impl PullRequestCreateCommand {
         Ok(())
     }
 
+    /// 创建或获取 PR
+    ///
+    /// 步骤 11：如果分支已有 PR，获取 PR URL；否则创建新 PR。
+    /// 在创建 PR 前会检查分支是否有提交。
+    fn create_or_get_pull_request(
+        git_ops_state: &GitOpsState,
+        commit_title: &str,
+        pull_request_body: &str,
+    ) -> Result<String> {
+        // 如果分支已有 PR，跳过创建步骤，直接使用现有 PR
+        if let Some(ref pr_id) = git_ops_state.existing_pr {
+            log_info!("PR #{} already exists for branch '{}'", pr_id, git_ops_state.actual_branch_name);
+            let repo_type = Git::detect_repo_type()?;
+            match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_url(pr_id)
+                }
+                RepoType::Codeup => {
+                    <Codeup as PlatformProvider>::get_pull_request_url(pr_id)
+                }
+                RepoType::Unknown => {
+                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
+                }
+            }
+        } else {
+            // 分支无 PR，创建新 PR
+            // 先检查分支是否有提交（相对于默认分支）
+            let has_commits = Git::is_branch_ahead(&git_ops_state.actual_branch_name, &git_ops_state.default_branch)
+                .context("Failed to check branch commits")?;
+
+            if !has_commits {
+                log_warning!("Branch '{}' has no commits compared to '{}'.", git_ops_state.actual_branch_name, git_ops_state.default_branch);
+                log_warning!("GitHub does not allow creating PRs for empty branches.");
+                log_warning!("Please make some changes and commit them before creating a PR.");
+                anyhow::bail!(
+                    "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
+                    git_ops_state.actual_branch_name
+                );
+            }
+
+            let repo_type = Git::detect_repo_type()?;
+            let pull_request_url = match repo_type {
+                RepoType::GitHub => {
+                    log_success!("Creating PR via GitHub...");
+                    <GitHub as PlatformProvider>::create_pull_request(
+                        commit_title,
+                        pull_request_body,
+                        &git_ops_state.actual_branch_name,
+                        None,
+                    )?
+                }
+                RepoType::Codeup => {
+                    log_success!("Creating PR via Codeup...");
+                    <Codeup as PlatformProvider>::create_pull_request(
+                        commit_title,
+                        pull_request_body,
+                        &git_ops_state.actual_branch_name,
+                        None,
+                    )?
+                }
+                RepoType::Unknown => {
+                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
+                }
+            };
+
+            log_success!("PR created: {}", pull_request_url);
+            Ok(pull_request_url)
+        }
+    }
+
     /// 更新 Jira ticket
     ///
-    /// 如果有 Jira ticket 和状态配置，更新 ticket：
+    /// 步骤 12：如果有 Jira ticket 和状态配置，更新 ticket：
     /// - 分配任务
     /// - 更新状态
     /// - 添加评论（PR URL 和描述）
@@ -716,38 +746,10 @@ impl PullRequestCreateCommand {
         Ok(())
     }
 
-    /// 配置 Jira ticket 状态
-    ///
-    /// 如果有 Jira ticket，检查并配置状态。如果已配置则读取，否则进行交互式配置。
-    fn configure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>> {
-        if let Some(ref ticket) = jira_ticket {
-            // 读取状态配置
-            if let Ok(Some(status)) = JiraStatus::read_pull_request_created_status(ticket) {
-                Ok(Some(status))
-            } else {
-                // 如果没有配置，提示配置
-                log_info!(
-                    "No status configuration found for {}, configuring...",
-                    ticket
-                );
-                JiraStatus::configure_interactive(ticket)
-                    .with_context(|| {
-                        format!(
-                            "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
-                            ticket
-                        )
-                    })?;
-                let status = JiraStatus::read_pull_request_created_status(ticket)
-                    .context("Failed to read status after configuration")?;
-                Ok(status)
-            }
-        } else {
-            Ok(None)
-        }
-    }
-
     /// 复制 PR URL 到剪贴板并在浏览器中打开
-    fn copy_and_open_pr(pull_request_url: &str) -> Result<()> {
+    ///
+    /// 步骤 13：复制 PR URL 到剪贴板并在浏览器中打开。
+    fn copy_and_open_pull_request(pull_request_url: &str) -> Result<()> {
         // 复制 PR URL 到剪贴板
         Clipboard::copy(pull_request_url)?;
         log_success!("Copied {} to clipboard", pull_request_url);
