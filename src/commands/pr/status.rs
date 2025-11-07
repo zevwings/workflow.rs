@@ -11,59 +11,89 @@ impl PullRequestStatusCommand {
     pub fn show(pull_request_id_or_branch: Option<String>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
-        match repo_type {
-            RepoType::GitHub => {
-                let pull_request_id = if let Some(id) = pull_request_id_or_branch {
-                    // 如果是数字，直接使用；否则可能是分支名，需要通过分支获取 PR
-                    if id.parse::<u32>().is_ok() {
-                        id
-                    } else {
-                        // 假设是分支名，尝试通过 gh CLI 查找该分支的 PR
-                        // GitHub CLI 没有直接通过分支名查找 PR 的命令，但我们可以在输出中查找
-                        // 或者提示用户使用 PR ID
-                        anyhow::bail!("Branch name lookup for GitHub is not yet implemented. Please use PR ID (e.g., #123) or run without arguments to auto-detect from current branch.");
-                    }
-                } else {
-                    // 从当前分支获取 PR
-                    match <GitHub as PlatformProvider>::get_current_branch_pull_request()? {
-                        Some(id) => {
-                            log_success!("Found PR for current branch: #{}", id);
-                            id
-                        }
-                        None => {
-                            anyhow::bail!("No PR found for current branch. Please specify PR ID.");
-                        }
-                    }
-                };
+        // 获取 PR ID 或标识符
+        let pr_identifier = Self::get_pr_identifier(pull_request_id_or_branch, &repo_type)?;
 
-                log_success!("\nPR Information:");
-                let info = <GitHub as PlatformProvider>::get_pull_request_info(&pull_request_id)?;
-                log_info!("{}", info);
+        // 显示 PR 信息
+        Self::show_pr_info(&pr_identifier, &repo_type)?;
+
+        Ok(())
+    }
+
+    /// 获取 PR 标识符（从参数或当前分支）
+    fn get_pr_identifier(
+        pull_request_id_or_branch: Option<String>,
+        repo_type: &RepoType,
+    ) -> Result<String> {
+        if let Some(id) = pull_request_id_or_branch {
+            // GitHub 只支持数字 ID，Codeup 支持 ID 或分支名
+            match repo_type {
+                RepoType::GitHub => {
+                    if id.parse::<u32>().is_ok() {
+                        Ok(id)
+                    } else {
+                        anyhow::bail!(
+                            "Branch name lookup for GitHub is not yet implemented. Please use PR ID (e.g., #123) or run without arguments to auto-detect from current branch."
+                        );
+                    }
+                }
+                RepoType::Codeup => Ok(id),
+                _ => Ok(id),
+            }
+        } else {
+            // 从当前分支获取 PR
+            Self::get_current_branch_pr(repo_type)
+        }
+    }
+
+    /// 从当前分支获取 PR ID
+    fn get_current_branch_pr(repo_type: &RepoType) -> Result<String> {
+        let pr_id = match repo_type {
+            RepoType::GitHub => {
+                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
             }
             RepoType::Codeup => {
-                let pull_request_id_or_branch = if let Some(id) = pull_request_id_or_branch {
-                    id
-                } else {
-                    // 从当前分支获取 PR
-                    match <Codeup as PlatformProvider>::get_current_branch_pull_request()? {
-                        Some(id) => {
-                            log_success!("Found PR for current branch: #{}", id);
-                            id
-                        }
-                        None => {
-                            anyhow::bail!("No PR found for current branch. Please specify PR ID or branch name.");
-                        }
-                    }
-                };
+                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
+            }
+            _ => {
+                anyhow::bail!(
+                    "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
+                );
+            }
+        };
 
-                log_success!("\nPR Information:");
-                let info = <Codeup as PlatformProvider>::get_pull_request_info(
-                    &pull_request_id_or_branch,
-                )?;
-                log_info!("{}", info);
+        match pr_id {
+            Some(id) => {
+                log_success!("Found PR for current branch: #{}", id);
+                Ok(id)
+            }
+            None => {
+                let error_msg = match repo_type {
+                    RepoType::GitHub => {
+                        "No PR found for current branch. Please specify PR ID."
+                    }
+                    RepoType::Codeup => {
+                        "No PR found for current branch. Please specify PR ID or branch name."
+                    }
+                    _ => "No PR found for current branch.",
+                };
+                anyhow::bail!("{}", error_msg);
+            }
+        }
+    }
+
+    /// 显示 PR 信息
+    fn show_pr_info(pr_identifier: &str, repo_type: &RepoType) -> Result<()> {
+        let info = match repo_type {
+            RepoType::GitHub => {
+                <GitHub as PlatformProvider>::get_pull_request_info(pr_identifier)?
+            }
+            RepoType::Codeup => {
+                <Codeup as PlatformProvider>::get_pull_request_info(pr_identifier)?
             }
             RepoType::Unknown => {
-                let remote_url = Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
+                let remote_url =
+                    Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
                 log_error!("Unsupported repository type detected");
                 log_info!("Remote URL: {}", remote_url);
                 anyhow::bail!(
@@ -73,8 +103,10 @@ impl PullRequestStatusCommand {
                     remote_url
                 );
             }
-        }
+        };
 
+        log_success!("\nPR Information:");
+        log_info!("{}", info);
         Ok(())
     }
 }
