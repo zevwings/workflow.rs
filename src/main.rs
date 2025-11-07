@@ -36,13 +36,10 @@ enum Commands {
         #[command(subcommand)]
         subcommand: ProxySubcommand,
     },
-    /// 运行检查工具（git 状态、网络连接）
+    /// 运行环境检查
     ///
-    /// 提供开发环境健康检查功能。
-    Check {
-        #[command(subcommand)]
-        subcommand: CheckSubcommand,
-    },
+    /// 检查 Git 仓库状态和网络连接（GitHub）。
+    Check,
     /// 初始化或更新配置
     ///
     /// 交互式设置 Workflow CLI 所需的各种配置项（如 Jira、GitHub 等）。
@@ -76,22 +73,6 @@ enum ProxySubcommand {
     Check,
 }
 
-/// 检查工具子命令
-///
-/// 提供各种开发环境检查功能。
-#[derive(Subcommand)]
-enum CheckSubcommand {
-    /// 检查 Git 状态
-    ///
-    /// 检查当前工作区是否有未提交的更改、未推送的提交等。
-    #[command(name = "git_status")]
-    GitStatus,
-    /// 检查网络连接（GitHub）
-    ///
-    /// 测试与 GitHub API 的网络连接是否正常。
-    Network,
-}
-
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
@@ -105,10 +86,9 @@ fn main() -> Result<()> {
             ProxySubcommand::Off => proxy::ProxyCommand::off()?,
             ProxySubcommand::Check => proxy::ProxyCommand::check()?,
         },
-        // 检查工具命令
-        Some(Commands::Check { subcommand }) => match subcommand {
-            CheckSubcommand::GitStatus => check::CheckCommand::check_git_status()?,
-            CheckSubcommand::Network => check::CheckCommand::check_network()?,
+        // 环境检查
+        Some(Commands::Check) => {
+            check::CheckCommand::run_all()?;
         },
         // 配置初始化
         Some(Commands::Setup) => {
@@ -126,7 +106,7 @@ fn main() -> Result<()> {
         None => {
             println!("Workflow CLI - Configuration Management");
             println!("\nAvailable commands:");
-            println!("  workflow check     - Run checks (git_status/network)");
+            println!("  workflow check     - Run environment checks (Git status and network)");
             println!("  workflow proxy     - Manage proxy settings (on/off/check)");
             println!("  workflow setup     - Initialize or update configuration");
             println!("  workflow config    - View current configuration");

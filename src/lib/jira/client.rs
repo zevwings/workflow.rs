@@ -194,6 +194,7 @@ impl JiraClient {
         Ok(summary.to_string())
     }
 
+
     /// 下载附件（用于日志下载功能）
     pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
         let (email, api_token) = Self::get_auth()?;

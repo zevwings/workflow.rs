@@ -7,7 +7,7 @@ pub mod status;
 
 // 重新导出所有公共 API，保持向后兼容
 pub use client::{extract_jira_ticket_id, JiraAttachment, JiraClient};
-pub use helpers::extract_jira_project;
+pub use helpers::{extract_jira_project, validate_jira_ticket_format};
 pub use status::*;
 
 /// Jira 客户端（向后兼容别名）
