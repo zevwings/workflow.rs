@@ -55,7 +55,6 @@ struct PullRequestBranch {
 
 #[derive(Debug, Deserialize)]
 struct RepositoryInfo {
-    default_branch: String,
     #[serde(rename = "allow_squash_merge")]
     allow_squash_merge: Option<bool>,
     #[serde(rename = "allow_merge_commit")]
@@ -91,7 +90,8 @@ impl PlatformProvider for GitHub {
         let base_branch = if let Some(branch) = target_branch {
             branch.to_string()
         } else {
-            Self::get_default_branch(&owner, &repo_name)?
+            Git::get_default_branch()
+                .context("Failed to get default branch")?
         };
 
         let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);
@@ -334,12 +334,6 @@ impl GitHub {
             anyhow::bail!("Invalid repo format: {}", repo);
         }
         Ok((parts[0].to_string(), parts[1].to_string()))
-    }
-
-    /// 获取仓库的默认分支
-    pub fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
-        let repo_info = Self::get_repository_info(owner, repo_name)?;
-        Ok(repo_info.default_branch)
     }
 
     /// 获取仓库信息

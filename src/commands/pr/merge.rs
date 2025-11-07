@@ -58,21 +58,8 @@ impl PullRequestMergeCommand {
         let current_branch = Git::current_branch()?;
 
         // 4. 获取默认分支
-        let default_branch = match repo_type {
-            RepoType::GitHub => {
-                let (owner, repo_name) = GitHub::get_owner_and_repo()?;
-                GitHub::get_default_branch(&owner, &repo_name)?
-            }
-            RepoType::Codeup => {
-                // Codeup 默认分支通常是 develop 或 main
-                // 尝试从远程获取默认分支
-                Self::get_default_branch_from_remote()?
-            }
-            _ => {
-                // 尝试从远程获取默认分支
-                Self::get_default_branch_from_remote()?
-            }
-        };
+        let default_branch = Git::get_default_branch()
+            .context("Failed to get default branch")?;
 
         // 5. 合并 PR
         match repo_type {
@@ -139,36 +126,6 @@ impl PullRequestMergeCommand {
         Ok(())
     }
 
-    /// 从远程获取默认分支
-    fn get_default_branch_from_remote() -> Result<String> {
-        use duct::cmd;
-
-        // 尝试获取远程默认分支
-        let output = cmd("git", &["symbolic-ref", "refs/remotes/origin/HEAD"])
-            .read()
-            .or_else(|_| {
-                // 如果上面失败，尝试从 remote show origin 获取
-                let remote_info = cmd("git", &["remote", "show", "origin"]).read()?;
-                for line in remote_info.lines() {
-                    if line.contains("HEAD branch:") {
-                        if let Some(branch) = line.split("HEAD branch:").nth(1) {
-                            return Ok(branch.trim().to_string());
-                        }
-                    }
-                }
-                anyhow::bail!("Could not determine default branch")
-            })?;
-
-        // 提取分支名：refs/remotes/origin/main -> main
-        let branch = output
-            .trim()
-            .strip_prefix("refs/remotes/origin/")
-            .unwrap_or(output.trim())
-            .to_string();
-
-        Ok(branch)
-    }
-
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
         use crate::log_info;
@@ -192,8 +149,7 @@ impl PullRequestMergeCommand {
             .context("Failed to fetch from origin")?;
 
         // 2. 切换到默认分支
-        cmd("git", &["checkout", default_branch])
-            .run()
+        Git::checkout_branch(default_branch)
             .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
         // 3. 更新本地默认分支
@@ -242,15 +198,8 @@ impl PullRequestMergeCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        use duct::cmd;
-
-        let output = cmd("git", &["branch", "--list", branch_name])
-            .read()
-            .context("Failed to list branches")?;
-
-        Ok(output
-            .trim()
-            .lines()
-            .any(|line| line.trim().trim_start_matches('*').trim() == branch_name))
+        let (exists_local, _) = Git::is_branch_exists(branch_name)
+            .context("Failed to check if branch exists")?;
+        Ok(exists_local)
     }
 }
