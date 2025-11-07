@@ -22,9 +22,7 @@ impl Git {
             args.push("-m");
             args.push(msg);
         }
-        cmd("git", &args)
-            .run()
-            .context("Failed to stash changes")?;
+        cmd("git", &args).run().context("Failed to stash changes")?;
         Ok(())
     }
 

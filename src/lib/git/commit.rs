@@ -44,7 +44,7 @@ impl Git {
             .stdout_null()
             .stderr_null()
             .run()
-            .is_err();  // 如果有差异，返回非零退出码（Err）
+            .is_err(); // 如果有差异，返回非零退出码（Err）
 
         // 检查暂存区是否有未提交的更改
         let has_staged_changes = Self::has_staged()?;
@@ -71,8 +71,8 @@ impl Git {
             .run();
 
         match result {
-            Ok(_) => Ok(false),  // 没有暂存的文件
-            Err(_) => Ok(true),  // 有暂存的文件
+            Ok(_) => Ok(false), // 没有暂存的文件
+            Err(_) => Ok(true), // 有暂存的文件
         }
     }
 
@@ -138,4 +138,3 @@ impl Git {
         Ok(())
     }
 }
-
