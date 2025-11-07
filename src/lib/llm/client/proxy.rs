@@ -105,4 +105,3 @@ pub fn call_llm(params: LLMRequestParams) -> Result<String> {
 
     Ok(content.trim().to_string())
 }
-

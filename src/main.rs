@@ -89,7 +89,7 @@ fn main() -> Result<()> {
         // 环境检查
         Some(Commands::Check) => {
             check::CheckCommand::run_all()?;
-        },
+        }
         // 配置初始化
         Some(Commands::Setup) => {
             setup::SetupCommand::run()?;

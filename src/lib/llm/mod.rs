@@ -9,7 +9,7 @@
 //! - `pr_llm` - PR 内容生成（`PullRequestLLM` 结构体）
 //! - `client` - LLM 客户端实现（OpenAI、DeepSeek、代理）
 
-mod pr_llm;
 mod client;
+mod pr_llm;
 
 pub use pr_llm::{PullRequestContent, PullRequestLLM};

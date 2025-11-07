@@ -49,12 +49,8 @@ impl PullRequestStatusCommand {
     /// 从当前分支获取 PR ID
     fn get_current_branch_pr(repo_type: &RepoType) -> Result<String> {
         let pr_id = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
             _ => {
                 anyhow::bail!(
                     "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
@@ -69,9 +65,7 @@ impl PullRequestStatusCommand {
             }
             None => {
                 let error_msg = match repo_type {
-                    RepoType::GitHub => {
-                        "No PR found for current branch. Please specify PR ID."
-                    }
+                    RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
                     RepoType::Codeup => {
                         "No PR found for current branch. Please specify PR ID or branch name."
                     }
@@ -85,15 +79,10 @@ impl PullRequestStatusCommand {
     /// 显示 PR 信息
     fn show_pr_info(pr_identifier: &str, repo_type: &RepoType) -> Result<()> {
         let info = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_request_info(pr_identifier)?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_request_info(pr_identifier)?
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_info(pr_identifier)?,
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_request_info(pr_identifier)?,
             RepoType::Unknown => {
-                let remote_url =
-                    Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
+                let remote_url = Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
                 log_error!("Unsupported repository type detected");
                 log_info!("Remote URL: {}", remote_url);
                 anyhow::bail!(

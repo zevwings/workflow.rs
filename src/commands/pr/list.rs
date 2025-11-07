@@ -25,12 +25,8 @@ impl GetPullRequestsCommand {
         repo_type: &RepoType,
     ) -> Result<String> {
         match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_requests(state, limit)
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_requests(state, limit)
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_requests(state, limit),
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_requests(state, limit),
             _ => {
                 anyhow::bail!(
                     "PR list is currently only supported for GitHub and Codeup repositories."

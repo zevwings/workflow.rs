@@ -5,8 +5,8 @@
 //! - 文件名处理（邮箱地址清理）
 //! - 认证和 URL 构建（获取认证信息、构建基础 URL）
 
-use anyhow::Result;
 use crate::settings::Settings;
+use anyhow::Result;
 
 /// 从 Jira ticket 提取项目名
 ///

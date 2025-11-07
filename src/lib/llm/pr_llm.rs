@@ -9,7 +9,7 @@ use serde_json::Value;
 use crate::pr::helpers::transform_to_branch_name;
 use crate::settings::Settings;
 
-use super::client::{openai, deepseek, proxy};
+use super::client::{deepseek, openai, proxy};
 
 /// PR 内容，包含分支名和 PR 标题
 ///
@@ -85,7 +85,10 @@ impl PullRequestLLM {
             let error_msg = match provider {
                 "openai" => "LLM_OPENAI_KEY environment variable not set",
                 "deepseek" => "LLM_DEEPSEEK_KEY environment variable not set",
-                "proxy" => match (settings.llm_proxy_key.is_none(), settings.llm_proxy_url.is_none()) {
+                "proxy" => match (
+                    settings.llm_proxy_key.is_none(),
+                    settings.llm_proxy_url.is_none(),
+                ) {
                     (true, true) => "LLM_PROXY_KEY and LLM_PROXY_URL environment variables not set",
                     (true, false) => "LLM_PROXY_KEY environment variable not set",
                     (false, true) => "LLM_PROXY_URL environment variable not set",
@@ -134,7 +137,10 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
 
     /// 生成同时生成分支名和 PR 标题的 user prompt
     fn user_prompt(commit_title: &str) -> String {
-        format!("Generate a branch name and PR title for this commit title: {}", commit_title)
+        format!(
+            "Generate a branch name and PR title for this commit title: {}",
+            commit_title
+        )
     }
 
     /// 使用 OpenAI API 同时生成分支名和 PR 标题
@@ -253,8 +259,8 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
         };
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(json_str)
-            .context("Failed to parse LLM response as JSON")?;
+        let json: Value =
+            serde_json::from_str(json_str).context("Failed to parse LLM response as JSON")?;
 
         let branch_name = json
             .get("branch_name")
@@ -277,4 +283,3 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
         })
     }
 }
-

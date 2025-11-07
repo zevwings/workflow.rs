@@ -90,8 +90,7 @@ impl PlatformProvider for GitHub {
         let base_branch = if let Some(branch) = target_branch {
             branch.to_string()
         } else {
-            Git::get_default_branch()
-                .context("Failed to get default branch")?
+            Git::get_default_branch().context("Failed to get default branch")?
         };
 
         let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);

@@ -25,13 +25,13 @@ pub mod users;
 
 // 重新导出所有公共 API，保持向后兼容
 pub use client::JiraClient;
-pub use models::{
-    JiraComments, JiraAttachment, JiraComment, JiraIssue, JiraIssueFields,
-    JiraStatus, JiraTransition, JiraUser,
-};
 pub use helpers::{
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
     validate_jira_ticket_format,
+};
+pub use models::{
+    JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraStatus,
+    JiraTransition, JiraUser,
 };
 pub use status::*;
 

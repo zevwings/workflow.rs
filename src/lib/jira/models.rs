@@ -112,4 +112,3 @@ pub struct JiraTransition {
     pub id: String,
     pub name: String,
 }
-

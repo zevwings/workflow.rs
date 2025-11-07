@@ -1,6 +1,6 @@
+use crate::{log_success, log_warning};
 use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
-use crate::{log_success, log_warning};
 
 /// 快速更新命令
 #[allow(dead_code)]
@@ -43,12 +43,8 @@ impl PullRequestUpdateCommand {
     fn get_pull_request_title(repo_type: &RepoType) -> Result<Option<String>> {
         // 获取当前分支的 PR ID
         let pr_id = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
             RepoType::Unknown => {
                 log_warning!("Unknown repository type, cannot get PR title");
                 return Ok(None);
@@ -68,12 +64,8 @@ impl PullRequestUpdateCommand {
 
         // 获取 PR 标题
         let title = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_request_title(&pr_id).ok()
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_request_title(&pr_id).ok()
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_title(&pr_id).ok(),
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_request_title(&pr_id).ok(),
             _ => None,
         };
 

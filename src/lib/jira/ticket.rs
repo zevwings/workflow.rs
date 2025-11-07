@@ -284,4 +284,3 @@ pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
 
     Ok(())
 }
-
