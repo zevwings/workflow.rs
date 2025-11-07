@@ -58,7 +58,7 @@ impl PullRequestCreateCommand {
             return Ok(());
         }
 
-        // 9-10. 创建或更新分支
+        // 9. 创建或更新分支
         let (actual_branch_name, default_branch) = Self::create_or_update_branch(
             &branch_name,
             &commit_title,
@@ -285,22 +285,216 @@ impl PullRequestCreateCommand {
         Ok(selected_types)
     }
 
+    /// 在默认分支上创建新分支并提交
+    ///
+    /// 步骤 9 的辅助方法：当用户在默认分支上有未提交修改时，直接创建新分支
+    /// （Git 会自动把未提交的修改带到新分支），然后提交并推送。
+    ///
+    /// # 流程
+    /// 1. 创建新分支（未提交的修改会自动带到新分支）
+    /// 2. 提交更改
+    /// 3. 推送到远程
+    fn create_branch_from_default(
+        branch_name: &str,
+        commit_title: &str,
+        default_branch: &str,
+    ) -> Result<(String, String)> {
+        log_info!("You are on default branch '{}' with uncommitted changes.", default_branch);
+        log_info!("Will create new branch and commit changes...");
+
+        // 直接创建新分支（Git 会自动把未提交的修改带到新分支）
+        log_success!("Creating branch: {}", branch_name);
+        Git::checkout_branch(branch_name)?;
+
+        // 提交并推送
+        log_success!("Committing changes...");
+        Git::commit(commit_title, true)?; // no-verify
+        log_success!("Pushing to remote...");
+        Git::push(branch_name, true)?; // set-upstream
+
+        Ok((branch_name.to_string(), default_branch.to_string()))
+    }
+
+    /// 在当前分支上提交并推送
+    ///
+    /// 步骤 9 的辅助方法：当用户不在默认分支上且有未提交修改时，在当前分支上
+    /// 提交更改并推送（如需要）。
+    ///
+    /// # 流程
+    /// 1. 检查分支是否已推送到远程
+    /// 2. 提交更改
+    /// 3. 推送分支（如果未推送则设置上游，如果已推送则只推送更改）
+    fn commit_and_push_current_branch(
+        current_branch: &str,
+        commit_title: &str,
+        default_branch: &str,
+    ) -> Result<(String, String)> {
+        log_info!("Will commit and create PR on current branch '{}'...", current_branch);
+
+        // 检查是否已推送
+        let (_, exists_remote) = Git::is_branch_exists(current_branch)
+            .context("Failed to check if branch exists on remote")?;
+
+        // 提交
+        log_success!("Committing changes...");
+        Git::commit(commit_title, true)?; // no-verify
+
+        // 推送（如需要）
+        if !exists_remote {
+            log_success!("Pushing to remote...");
+            Git::push(current_branch, true)?; // set-upstream
+        } else {
+            log_info!("Branch '{}' already exists on remote.", current_branch);
+            log_success!("Pushing latest changes...");
+            Git::push(current_branch, false)?; // 不使用 -u，因为已经设置过
+        }
+
+        Ok((current_branch.to_string(), default_branch.to_string()))
+    }
+
+    /// 使用 stash 创建新分支并提交
+    ///
+    /// 步骤 9 的辅助方法：当用户不在默认分支上且有未提交修改，但选择创建新分支时，
+    /// 使用 stash 暂存修改，切换到默认分支，拉取最新代码，创建新分支，恢复修改，
+    /// 然后提交并推送。
+    ///
+    /// # 流程
+    /// 1. 使用 stash 暂存未提交的修改
+    /// 2. 切换到默认分支
+    /// 3. 拉取最新代码
+    /// 4. 检查目标分支是否存在（如果存在则报错）
+    /// 5. 创建新分支
+    /// 6. 恢复 stash 中的修改
+    /// 7. 提交更改
+    /// 8. 推送到远程
+    fn create_new_branch_with_stash(
+        _current_branch: &str,
+        branch_name: &str,
+        commit_title: &str,
+        default_branch: &str,
+    ) -> Result<(String, String)> {
+        log_info!("Will create new branch '{}' and commit changes...", branch_name);
+
+        // 使用 stash 暂存修改
+        log_success!("Stashing uncommitted changes...");
+        Git::stash_push(Some(&format!("WIP: {}", commit_title)))?;
+
+        // 切换到默认分支
+        log_info!("Switching to default branch '{}'...", default_branch);
+        Git::checkout_branch(default_branch)?;
+
+        // 拉取最新的代码
+        log_success!("Pulling latest changes from '{}'...", default_branch);
+        Git::pull(default_branch)?;
+
+        // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
+        let (exists_local, exists_remote) = Git::is_branch_exists(branch_name)
+            .context("Failed to check if branch exists")?;
+
+        if exists_local || exists_remote {
+            anyhow::bail!("Branch '{}' already exists. Cannot create new branch with existing name.", branch_name);
+        }
+
+        // 创建新分支
+        log_success!("Creating branch: {}", branch_name);
+        Git::checkout_branch(branch_name)?;
+
+        // 恢复 stash
+        log_success!("Restoring stashed changes...");
+        if let Err(e) = Git::stash_pop() {
+            if Git::has_unmerged().unwrap_or(false) {
+                log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
+                anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
+            } else {
+                return Err(e);
+            }
+        }
+
+        // 提交并推送
+        log_success!("Committing changes...");
+        Git::commit(commit_title, true)?; // no-verify
+        log_success!("Pushing to remote...");
+        Git::push(branch_name, true)?; // set-upstream
+
+        Ok((branch_name.to_string(), default_branch.to_string()))
+    }
+
+    /// 处理已推送到远程的分支
+    ///
+    /// 步骤 9 的辅助方法：当用户不在默认分支上且无未提交修改，但分支已推送到远程时，
+    /// 询问用户是否在当前分支创建 PR。
+    ///
+    /// # 流程
+    /// 1. 询问用户是否在当前分支创建 PR
+    /// 2. 如果用户同意，返回当前分支名和默认分支名
+    fn handle_existing_remote_branch(
+        current_branch: &str,
+        default_branch: &str,
+    ) -> Result<(String, String)> {
+        log_info!("Branch '{}' already exists on remote.", current_branch);
+        let should_use_current = Confirm::new()
+            .with_prompt(format!("Create PR for current branch '{}'?", current_branch))
+            .default(true)
+            .interact()
+            .context("Failed to get confirmation")?;
+
+        if !should_use_current {
+            anyhow::bail!("Operation cancelled.");
+        }
+
+        Ok((current_branch.to_string(), default_branch.to_string()))
+    }
+
+    /// 处理未推送的分支
+    ///
+    /// 步骤 9 的辅助方法：当用户不在默认分支上且无未提交修改，但分支未推送到远程时，
+    /// 询问用户是否推送并创建 PR，然后推送分支。
+    ///
+    /// # 流程
+    /// 1. 询问用户是否推送并创建 PR
+    /// 2. 如果用户同意，推送分支到远程
+    /// 3. 返回当前分支名和默认分支名
+    fn handle_unpushed_branch(
+        current_branch: &str,
+        default_branch: &str,
+    ) -> Result<(String, String)> {
+        log_info!("Branch '{}' has commits but not pushed to remote.", current_branch);
+        let should_use_current = Confirm::new()
+            .with_prompt(format!("Push and create PR for current branch '{}'?", current_branch))
+            .default(true)
+            .interact()
+            .context("Failed to get confirmation")?;
+
+        if !should_use_current {
+            anyhow::bail!("Operation cancelled.");
+        }
+
+        // 推送
+        log_success!("Pushing to remote...");
+        Git::push(current_branch, true)?; // set-upstream
+
+        Ok((current_branch.to_string(), default_branch.to_string()))
+    }
+
     /// 创建或更新分支
     ///
-    /// 步骤 9-10：根据当前 Git 状态决定分支策略，创建或更新分支：
-    /// - 检查未提交修改
-    /// - 决定使用当前分支还是创建新分支
-    /// - 创建分支（如需要）
-    /// - 提交更改
-    /// - 推送到远程
+    /// 步骤 9：根据当前 Git 状态决定分支策略，创建或更新分支：
+    /// 1. 检查是否有未提交的修改
+    /// 2. 获取当前分支和默认分支
+    /// 3. 根据分支状态和修改情况决定处理策略：
+    ///    - 在默认分支上：
+    ///      - 有未提交修改 → 创建新分支并提交
+    ///      - 无未提交修改 → 报错（无法创建 PR）
+    ///    - 不在默认分支上：
+    ///      - 有未提交修改 → 询问用户是否在当前分支创建 PR，或创建新分支
+    ///      - 无未提交修改 → 检查分支是否已推送、是否有提交，然后处理
+    /// 4. 执行相应的分支操作（创建分支、提交更改、推送到远程）
     ///
     /// 返回实际使用的分支名和默认分支名。
     fn create_or_update_branch(
         branch_name: &str,
         commit_title: &str,
     ) -> Result<(String, String)> {
-        use duct::cmd;
-
         // 1. 检查是否有未提交的修改
         let has_uncommitted = Git::has_commit()
             .context("Failed to check uncommitted changes")?;
@@ -317,35 +511,7 @@ impl PullRequestCreateCommand {
             // 在默认分支上
             if has_uncommitted {
                 // 有未提交修改 → 创建新分支并提交
-                log_info!("You are on default branch '{}' with uncommitted changes.", default_branch);
-                log_info!("Will create new branch and commit changes...");
-
-                // 使用 stash 暂存修改
-                log_success!("Stashing uncommitted changes...");
-                Git::stash_push(Some(&format!("WIP: {}", commit_title)))?;
-
-                // 创建新分支
-                log_success!("Creating branch: {}", branch_name);
-                Git::checkout_branch(branch_name)?;
-
-                // 恢复 stash
-                log_success!("Restoring stashed changes...");
-                if let Err(e) = Git::stash_pop() {
-                    if Git::has_unmerged().unwrap_or(false) {
-                        log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
-                        anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
-                    } else {
-                        return Err(e);
-                    }
-                }
-
-                // 提交并推送
-                log_success!("Committing changes...");
-                Git::commit(commit_title, true)?; // no-verify
-                log_success!("Pushing to remote...");
-                Git::push(branch_name, true)?; // set-upstream
-
-                Ok((branch_name.to_string(), default_branch))
+                Self::create_branch_from_default(branch_name, commit_title, &default_branch)
             } else {
                 // 无未提交修改 → 提示：默认分支上没有更改，无法创建 PR
                 anyhow::bail!("No changes on default branch '{}'. Cannot create PR without changes.", default_branch);
@@ -363,87 +529,10 @@ impl PullRequestCreateCommand {
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR
-                    log_info!("Will commit and create PR on current branch '{}'...", current_branch);
-
-                    // 检查是否已推送
-                    let (_, exists_remote) = Git::is_branch_exists(&current_branch)
-                        .context("Failed to check if branch exists on remote")?;
-
-                    // 提交
-                    log_success!("Committing changes...");
-                    Git::commit(commit_title, true)?; // no-verify
-
-                    // 推送（如需要）
-                    if !exists_remote {
-                        log_success!("Pushing to remote...");
-                        Git::push(&current_branch, true)?; // set-upstream
-                    } else {
-                        log_info!("Branch '{}' already exists on remote.", current_branch);
-                        log_success!("Pushing latest changes...");
-                        Git::push(&current_branch, false)?; // 不使用 -u，因为已经设置过
-                    }
-
-                    Ok((current_branch, default_branch))
+                    Self::commit_and_push_current_branch(&current_branch, commit_title, &default_branch)
                 } else {
-                    // 用户不期望在当前分支提交并创建 → 使用 stash 暂存代码，并切换到默认分支，拉取最新的代码，创建新分支并提交并创建 PR
-                    log_info!("Will create new branch '{}' and commit changes...", branch_name);
-
-                    // 使用 stash 暂存修改
-                    log_success!("Stashing uncommitted changes...");
-                    Git::stash_push(Some(&format!("WIP: {}", commit_title)))?;
-
-                    // 切换到默认分支
-                    log_info!("Switching to default branch '{}'...", default_branch);
-                    Git::checkout_branch(&default_branch)?;
-
-                    // 拉取最新的代码
-                    log_success!("Pulling latest changes from '{}'...", default_branch);
-                    cmd("git", &["pull", "origin", &default_branch])
-                        .run()
-                        .context(format!("Failed to pull latest changes from {}", default_branch))?;
-
-                    // 检查目标分支是否存在
-                    let (exists_local, exists_remote) = Git::is_branch_exists(branch_name)
-                        .context("Failed to check if branch exists")?;
-
-                    if exists_local || exists_remote {
-                        log_warning!("Branch '{}' already exists.", branch_name);
-                        let should_use_existing = Confirm::new()
-                            .with_prompt(format!("Use existing branch '{}'? (otherwise will cancel)", branch_name))
-                            .default(true)
-                            .interact()
-                            .context("Failed to get confirmation")?;
-
-                        if !should_use_existing {
-                            anyhow::bail!("Operation cancelled.");
-                        }
-
-                        // 切换到现有分支
-                        Git::checkout_branch(branch_name)?;
-                    } else {
-                        // 创建新分支
-                        log_success!("Creating branch: {}", branch_name);
-                        Git::checkout_branch(branch_name)?;
-                    }
-
-                    // 恢复 stash
-                    log_success!("Restoring stashed changes...");
-                    if let Err(e) = Git::stash_pop() {
-                        if Git::has_unmerged().unwrap_or(false) {
-                            log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
-                            anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
-                        } else {
-                            return Err(e);
-                        }
-                    }
-
-                    // 提交并推送
-                    log_success!("Committing changes...");
-                    Git::commit(commit_title, true)?; // no-verify
-                    log_success!("Pushing to remote...");
-                    Git::push(branch_name, true)?; // set-upstream
-
-                    Ok((branch_name.to_string(), default_branch))
+                    // 用户不期望在当前分支提交并创建 → 使用 stash 创建新分支
+                    Self::create_new_branch_with_stash(&current_branch, branch_name, commit_title, &default_branch)
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
@@ -460,36 +549,10 @@ impl PullRequestCreateCommand {
 
                 if exists_remote {
                     // 当前已经推送到远程 → 询问是否在当前分支创建 PR
-                    log_info!("Branch '{}' already exists on remote.", current_branch);
-                    let should_use_current = Confirm::new()
-                        .with_prompt(format!("Create PR for current branch '{}'?", current_branch))
-                        .default(true)
-                        .interact()
-                        .context("Failed to get confirmation")?;
-
-                    if !should_use_current {
-                        anyhow::bail!("Operation cancelled.");
-                    }
-
-                    Ok((current_branch, default_branch))
+                    Self::handle_existing_remote_branch(&current_branch, &default_branch)
                 } else {
                     // 当前没有推送到远程 → 询问用户是否需要在当前分支创建 PR
-                    log_info!("Branch '{}' has commits but not pushed to remote.", current_branch);
-                    let should_use_current = Confirm::new()
-                        .with_prompt(format!("Push and create PR for current branch '{}'?", current_branch))
-                        .default(true)
-                        .interact()
-                        .context("Failed to get confirmation")?;
-
-                    if !should_use_current {
-                        anyhow::bail!("Operation cancelled.");
-                    }
-
-                    // 推送
-                    log_success!("Pushing to remote...");
-                    Git::push(&current_branch, true)?; // set-upstream
-
-                    Ok((current_branch, default_branch))
+                    Self::handle_unpushed_branch(&current_branch, &default_branch)
                 }
             }
         }
