@@ -1,5 +1,6 @@
 use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
+use crate::{log_success, log_warning};
 
 /// 快速更新命令
 #[allow(dead_code)]
@@ -17,8 +18,25 @@ impl PullRequestUpdateCommand {
         // 获取当前分支的 PR 标题
         let pull_request_title = Self::get_pull_request_title_for_repo(&repo_type)?;
 
-        // 执行 Git 更新操作
-        Git::update(pull_request_title)
+        // 确定提交消息
+        let message = pull_request_title.unwrap_or_else(|| {
+            log_warning!("No commit message provided, using default message");
+            "update".to_string()
+        });
+
+        log_success!("Using commit message: {}", message);
+
+        // 执行 git commit（会自动暂存所有文件）
+        log_success!("Staging and committing changes...");
+        Git::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
+
+        // 执行 git push
+        let current_branch = Git::current_branch()?;
+        log_success!("Pushing to remote...");
+        Git::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
+
+        log_success!("Update completed successfully!");
+        Ok(())
     }
 
     /// 根据仓库类型获取当前分支的 PR 标题

@@ -1,5 +1,17 @@
 //! 环境变量管理
-//! 处理敏感配置，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
+//!
+//! 本模块提供了环境变量的完整管理功能，包括：
+//! - 从 shell 配置文件读取环境变量（~/.zshrc, ~/.bash_profile 等）
+//! - 保存环境变量到 shell 配置文件
+//! - 删除环境变量
+//! - 合并环境变量（环境变量 > 配置文件）
+//!
+//! 所有环境变量都保存在 shell 配置文件的配置块中，格式：
+//! ```
+//! # Workflow CLI Configuration - Start
+//! export KEY="VALUE"
+//! # Workflow CLI Configuration - End
+//! ```
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;
@@ -7,12 +19,23 @@ use std::fs;
 use std::path::PathBuf;
 
 /// 环境变量管理器
-/// 数据源：shell 配置文件（~/.zshrc, ~/.bash_profile 等）
+///
+/// 管理 Workflow CLI 相关的环境变量。
+/// 数据源：shell 配置文件（~/.zshrc, ~/.bash_profile 等）。
 pub struct EnvFile;
 
 impl EnvFile {
     /// 从多个来源加载环境变量（环境变量 > 配置文件）
-    /// 返回合并后的环境变量 HashMap
+    ///
+    /// 优先从当前环境变量读取，如果环境变量中没有，则从配置文件读取。
+    ///
+    /// # 参数
+    ///
+    /// * `keys` - 要加载的环境变量键列表
+    ///
+    /// # 返回
+    ///
+    /// 返回合并后的环境变量 HashMap。
     pub fn load_merged(keys: &[&str]) -> HashMap<String, String> {
         let mut merged = HashMap::new();
 
@@ -54,6 +77,16 @@ impl EnvFile {
     }
 
     /// 从 shell 配置文件加载环境变量（主要数据源）
+    ///
+    /// 从 shell 配置文件中读取 Workflow CLI 配置块内的环境变量。
+    ///
+    /// # 返回
+    ///
+    /// 返回环境变量 HashMap。如果配置文件不存在或没有配置块，返回空 HashMap。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取配置文件失败，返回相应的错误信息。
     pub fn load() -> Result<HashMap<String, String>> {
         let shell_config_path = Self::get_shell_config_path()?;
 
@@ -116,7 +149,17 @@ impl EnvFile {
     }
 
     /// 保存环境变量到 shell 配置文件
-    /// 如果 key 已存在则覆盖，不存在则新增
+    ///
+    /// 将环境变量保存到 shell 配置文件的配置块中。
+    /// 如果 key 已存在则覆盖，不存在则新增。
+    ///
+    /// # 参数
+    ///
+    /// * `env_vars` - 要保存的环境变量 HashMap
+    ///
+    /// # 错误
+    ///
+    /// 如果写入配置文件失败，返回相应的错误信息。
     pub fn save(env_vars: &HashMap<String, String>) -> Result<()> {
         // 保存到 shell 配置文件（用户主目录，使其在 shell 中生效）
         Self::save_to_shell_config(env_vars)?;
@@ -242,6 +285,19 @@ impl EnvFile {
     }
 
     /// 根据用户的 SHELL 环境变量确定 shell 配置文件路径
+    ///
+    /// 根据 `SHELL` 环境变量自动检测 shell 类型，并返回对应的配置文件路径。
+    ///
+    /// # 返回
+    ///
+    /// 返回 shell 配置文件的路径：
+    /// - zsh → `~/.zshrc`
+    /// - bash → `~/.bash_profile`（如果不存在则使用 `~/.bashrc`）
+    /// - 其他 → `~/.profile`
+    ///
+    /// # 错误
+    ///
+    /// 如果 `HOME` 环境变量未设置，返回相应的错误信息。
     pub fn get_shell_config_path() -> Result<PathBuf> {
         let home = std::env::var("HOME").context("HOME environment variable not set")?;
         let home_dir = PathBuf::from(home);
@@ -280,6 +336,17 @@ impl EnvFile {
     }
 
     /// 更新单个环境变量
+    ///
+    /// 设置或更新单个环境变量的值。
+    ///
+    /// # 参数
+    ///
+    /// * `key` - 环境变量键
+    /// * `value` - 环境变量值
+    ///
+    /// # 错误
+    ///
+    /// 如果保存失败，返回相应的错误信息。
     pub fn set(key: &str, value: &str) -> Result<()> {
         let mut env_vars = HashMap::new();
         env_vars.insert(key.to_string(), value.to_string());
@@ -287,6 +354,16 @@ impl EnvFile {
     }
 
     /// 删除环境变量
+    ///
+    /// 从配置文件中删除指定的环境变量。
+    ///
+    /// # 参数
+    ///
+    /// * `key` - 要删除的环境变量键
+    ///
+    /// # 错误
+    ///
+    /// 如果删除失败，返回相应的错误信息。
     pub fn unset(key: &str) -> Result<()> {
         let mut existing = Self::load()?;
         existing.remove(key);

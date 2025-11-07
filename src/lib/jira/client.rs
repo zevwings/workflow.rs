@@ -1,476 +1,104 @@
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+//! Jira REST API 客户端（向后兼容包装器）
+//!
+//! 本模块提供了 `JiraClient` 结构体，作为向后兼容的包装器。
+//! 所有方法都委托到对应的功能模块：
+//! - 用户相关方法 → `users` 模块
+//! - Ticket/Issue 相关方法 → `ticket` 模块
+//! - 项目状态相关方法 → `status` 模块（`get_project_statuses`）
 
-use crate::http::{Authorization, HttpClient};
-use crate::settings::Settings;
+use anyhow::Result;
+
+use super::models::{JiraAttachment, JiraIssue, JiraUser};
+use super::ticket;
+use super::users;
 
 /// Jira REST API 客户端
+///
+/// 这是一个向后兼容的包装器，所有方法都委托到对应的功能模块。
+/// 建议新代码直接使用各功能模块的函数，而不是通过 `JiraClient`。
 pub struct JiraClient;
 
 impl JiraClient {
-    /// 获取认证信息（email 和 api_token）
-    fn get_auth() -> Result<(String, String)> {
-        let settings = Settings::load();
-        let email = settings.email.clone();
-        let api_token = settings.jira_api_token.clone();
-        Ok((email, api_token))
-    }
-
-    /// 获取当前 Jira 用户邮箱
-    pub fn get_current_user() -> Result<String> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/myself", service_address);
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context("Failed to get current Jira user")?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get current Jira user: {}", response.status);
-        }
-
-        let email_address = response
-            .data
-            .get("emailAddress")
-            .and_then(|e| e.as_str())
-            .context("Failed to extract emailAddress from Jira user")?;
-
-        Ok(email_address.to_string())
-    }
-
-    /// 获取当前 Jira 用户的 accountId
-    pub fn get_current_user_account_id() -> Result<String> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/myself", service_address);
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context("Failed to get current Jira user")?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get current Jira user: {}", response.status);
-        }
-
-        // 优先尝试获取 accountId（现代 Jira API）
-        if let Some(account_id) = response.data.get("accountId").and_then(|a| a.as_str()) {
-            return Ok(account_id.to_string());
-        }
-
-        // 如果没有 accountId，尝试使用 key（旧版 Jira）
-        if let Some(key) = response.data.get("key").and_then(|k| k.as_str()) {
-            return Ok(key.to_string());
-        }
-
-        anyhow::bail!("Failed to extract accountId or key from Jira user response")
+    /// 获取当前 Jira 用户信息
+    ///
+    /// 先检查本地缓存（`${HOME}/.workflow/users/${email}.json`），
+    /// 如果缓存不存在或读取失败，则从 Jira API 获取并保存到本地。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `JiraUser` 结构体，包含用户的 `account_id`、`display_name` 和 `email_address`。
+    pub fn get_user_info() -> Result<JiraUser> {
+        users::get_user_info()
     }
 
     /// 获取 ticket 信息
-    pub fn get_ticket_info(ticket: &str) -> Result<serde_json::Value> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/issue/{}", service_address, ticket);
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context(format!("Failed to get ticket info: {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get ticket info: {}", response.status);
-        }
-
-        Ok(response.data)
+    ///
+    /// 从 Jira API 获取指定 ticket 的完整信息，包括：
+    /// - 基本信息（key、id、summary、description）
+    /// - 状态信息
+    /// - 附件列表
+    /// - 评论列表
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    ///
+    /// # 返回
+    ///
+    /// 返回 `JiraIssue` 结构体，包含 ticket 的所有信息。
+    pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
+        ticket::get_ticket_info(ticket)
     }
 
-    /// 获取项目状态列表（通过 REST API）
-    pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!(
-            "{}/rest/api/2/project/{}/statuses",
-            service_address, project
-        );
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context("Failed to fetch project statuses")?;
-
-        if !response.is_success() {
-            // 提供更详细的错误信息
-            if response.status == 404 {
-                anyhow::bail!(
-                    "Project '{}' not found in Jira. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/修改打包脚本问题')",
-                    project
-                );
-            } else if response.status == 403 {
-                anyhow::bail!(
-                    "Access denied for project '{}'. Please check your Jira API token permissions.",
-                    project
-                );
-            } else {
-                anyhow::bail!(
-                    "Failed to fetch project statuses for '{}': HTTP {}. Please check the project name and your Jira API access.",
-                    project,
-                    response.status
-                );
-            }
-        }
-
-        // 检查响应数据是否是有效的 JSON
-        if response.data.is_null() {
-            anyhow::bail!(
-                "Empty response from Jira API for project '{}'. The project may not exist or you may not have access.",
-                project
-            );
-        }
-
-        // 解析状态列表（取第一个版本的 statuses）
-        let statuses = response
-            .data
-            .as_array()
-            .and_then(|arr| arr.first())
-            .and_then(|version| version.get("statuses"))
-            .and_then(|s| s.as_array())
-            .with_context(|| {
-                format!(
-                    "Invalid statuses JSON structure for project '{}'. The API response format may have changed. Response: {}",
-                    project,
-                    serde_json::to_string_pretty(&response.data).unwrap_or_else(|_| "Unable to serialize response".to_string())
-                )
-            })?;
-
-        let status_names: Vec<String> = statuses
-            .iter()
-            .filter_map(|s| s.get("name"))
-            .filter_map(|n| n.as_str())
-            .map(|s| s.to_string())
-            .collect();
-
-        Ok(status_names)
-    }
-
-    /// 从 Jira REST API 获取 issue summary
-    pub fn get_summary(ticket: &str) -> Result<String> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/issue/{}", service_address, ticket);
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context("Failed to fetch Jira ticket")?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to fetch Jira ticket: {}", response.status);
-        }
-
-        let summary = response
-            .data
-            .get("fields")
-            .and_then(|f| f.get("summary"))
-            .and_then(|s| s.as_str())
-            .context("Failed to extract summary from Jira ticket")?;
-
-        Ok(summary.to_string())
-    }
-
-    /// 下载附件（用于日志下载功能）
+    /// 获取 ticket 的附件列表
+    ///
+    /// 用于日志下载等功能。
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    ///
+    /// # 返回
+    ///
+    /// 返回附件列表，如果没有附件则返回空列表。
     pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/issue/{}", service_address, ticket);
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context("Failed to fetch ticket info")?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to fetch ticket info: {}", response.status);
-        }
-
-        // 解析附件列表
-        let attachments = response
-            .data
-            .get("fields")
-            .and_then(|f| f.get("attachment"))
-            .and_then(|a| a.as_array())
-            .context("No attachments found or invalid JSON structure")?;
-
-        let result: Vec<JiraAttachment> = attachments
-            .iter()
-            .filter_map(|a| {
-                let filename = a.get("filename")?.as_str()?.to_string();
-                let content_url = a.get("content")?.as_str()?.to_string();
-                let mime_type = a
-                    .get("mimeType")
-                    .and_then(|m| m.as_str())
-                    .map(|s| s.to_string());
-                let size = a.get("size").and_then(|s| s.as_u64());
-
-                Some(JiraAttachment {
-                    filename,
-                    content_url,
-                    mime_type,
-                    size,
-                })
-            })
-            .collect();
-
-        Ok(result)
-    }
-
-    /// 获取 issue 的可用 transitions（用于状态转换）
-    fn get_transitions(ticket: &str) -> Result<Vec<Transition>> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!(
-            "{}/rest/api/2/issue/{}/transitions",
-            service_address, ticket
-        );
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .get::<serde_json::Value>(&url, Some(&auth), None)
-            .context(format!("Failed to get transitions for ticket: {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get transitions: {}", response.status);
-        }
-
-        let transitions = response
-            .data
-            .get("transitions")
-            .and_then(|t| t.as_array())
-            .context("Invalid transitions JSON structure")?;
-
-        let result: Vec<Transition> = transitions
-            .iter()
-            .filter_map(|t| {
-                let id = t.get("id")?.as_str()?.to_string();
-                let name = t.get("name")?.as_str()?.to_string();
-                Some(Transition { id, name })
-            })
-            .collect();
-
-        Ok(result)
+        ticket::get_attachments(ticket)
     }
 
     /// 更新 ticket 状态
+    ///
+    /// 将 ticket 的状态更新为指定的状态。
+    /// 会先获取 ticket 的可用 transitions，然后查找匹配的状态进行转换。
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `status` - 目标状态名称，如 `"In Progress"`、`"Done"` 等
     pub fn move_ticket(ticket: &str, status: &str) -> Result<()> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        // 先获取可用的 transitions
-        let transitions = Self::get_transitions(ticket)?;
-
-        // 查找匹配的 transition
-        let transition = transitions
-            .iter()
-            .find(|t| t.name.eq_ignore_ascii_case(status))
-            .context(format!(
-                "Status '{}' not found in available transitions for ticket {}",
-                status, ticket
-            ))?;
-
-        let url = format!(
-            "{}/rest/api/2/issue/{}/transitions",
-            service_address, ticket
-        );
-
-        #[derive(Serialize)]
-        struct TransitionRequest {
-            transition: TransitionRef,
-        }
-
-        #[derive(Serialize)]
-        struct TransitionRef {
-            id: String,
-        }
-
-        let body = TransitionRequest {
-            transition: TransitionRef {
-                id: transition.id.clone(),
-            },
-        };
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .post::<serde_json::Value, _>(&url, &body, Some(&auth), None)
-            .context(format!(
-                "Failed to move ticket {} to status {}",
-                ticket, status
-            ))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to move ticket {} to status {}: {}",
-                ticket,
-                status,
-                response.status
-            );
-        }
-
-        Ok(())
+        ticket::move_ticket(ticket, status)
     }
 
     /// 分配 ticket 给用户
+    ///
+    /// 将 ticket 分配给指定的用户。如果 `assignee` 为 `None`，则分配给当前用户。
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `assignee` - 被分配用户的 account_id，如果为 `None` 则分配给当前用户
     pub fn assign_ticket(ticket: &str, assignee: Option<&str>) -> Result<()> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let assignee_account_id = match assignee {
-            Some(user) => user.to_string(),
-            None => {
-                // 如果没有指定，分配给当前用户
-                Self::get_current_user_account_id()?
-            }
-        };
-
-        let url = format!("{}/rest/api/2/issue/{}/assignee", service_address, ticket);
-
-        // 使用 serde 的 rename 属性将 Rust 的 snake_case 转换为 JSON 的 camelCase
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct AssigneeRequest {
-            account_id: String,
-        }
-
-        let body = AssigneeRequest {
-            account_id: assignee_account_id.clone(),
-        };
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .put::<serde_json::Value, _>(&url, &body, Some(&auth), None)
-            .context(format!(
-                "Failed to assign ticket {} to {}",
-                ticket, assignee_account_id
-            ))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to assign ticket {} to {}: {}",
-                ticket,
-                assignee_account_id,
-                response.status
-            );
-        }
-
-        Ok(())
+        ticket::assign_ticket(ticket, assignee)
     }
 
     /// 添加评论到 ticket
+    ///
+    /// 在指定的 ticket 上添加一条评论。
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `comment` - 评论内容
     pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
-        let (email, api_token) = Self::get_auth()?;
-        let settings = Settings::load();
-        let service_address = &settings.jira_service_address;
-
-        let url = format!("{}/rest/api/2/issue/{}/comment", service_address, ticket);
-
-        #[derive(Serialize)]
-        struct CommentRequest {
-            body: String,
-        }
-
-        let body = CommentRequest {
-            body: comment.to_string(),
-        };
-
-        let client = HttpClient::new()?;
-        let auth = Authorization::new(&email, &api_token);
-        let response = client
-            .post::<serde_json::Value, _>(&url, &body, Some(&auth), None)
-            .context(format!("Failed to add comment to ticket {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to add comment to ticket {}: {}",
-                ticket,
-                response.status
-            );
-        }
-
-        Ok(())
-    }
-}
-
-/// Jira 附件信息
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct JiraAttachment {
-    pub filename: String,
-    pub content_url: String,
-    pub mime_type: Option<String>,
-    pub size: Option<u64>,
-}
-
-/// Transition 信息
-#[derive(Debug, Clone)]
-struct Transition {
-    id: String,
-    name: String,
-}
-
-/// 从 PR 标题提取 Jira ticket ID
-///
-/// # 示例
-/// ```
-/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123"));
-/// assert_eq!(extract_jira_ticket_id("Fix bug"), None);
-/// ```
-pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {
-    use regex::Regex;
-    // 匹配格式: PROJ-123 或 PROJ-123:
-    let re = Regex::new(r"^([A-Z]+-\d+)").ok()?;
-    re.captures(pull_request_title)
-        .and_then(|caps| caps.get(1))
-        .map(|m| m.as_str().to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_extract_jira_ticket_id() {
-        assert_eq!(
-            extract_jira_ticket_id("PROJ-123: Fix bug"),
-            Some("PROJ-123".to_string())
-        );
-        assert_eq!(
-            extract_jira_ticket_id("ABC-456 Description"),
-            Some("ABC-456".to_string())
-        );
-        assert_eq!(extract_jira_ticket_id("Fix bug"), None);
+        ticket::add_comment(ticket, comment)
     }
 }

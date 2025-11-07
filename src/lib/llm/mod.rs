@@ -1,8 +1,15 @@
-mod branch_name;
-#[allow(clippy::module_inception)]
-mod llm;
-mod translator;
+//! LLM（大语言模型）模块
+//!
+//! 本模块提供了使用 LLM 生成 Pull Request 内容的功能，包括：
+//! - 根据 commit 标题生成分支名和 PR 标题
+//! - 支持多种 LLM 提供商（OpenAI、DeepSeek、代理 API）
+//!
+//! ## 模块结构
+//!
+//! - `pr_llm` - PR 内容生成（`PullRequestLLM` 结构体）
+//! - `client` - LLM 客户端实现（OpenAI、DeepSeek、代理）
 
-pub use branch_name::generate_branch_name_with_llm;
-pub use llm::{IssueDesc, LLM};
-pub use translator::{should_translate, translate_with_llm};
+mod pr_llm;
+mod client;
+
+pub use pr_llm::{PullRequestContent, PullRequestLLM};

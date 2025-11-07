@@ -58,21 +58,8 @@ impl PullRequestMergeCommand {
         let current_branch = Git::current_branch()?;
 
         // 4. 获取默认分支
-        let default_branch = match repo_type {
-            RepoType::GitHub => {
-                let (owner, repo_name) = GitHub::get_owner_and_repo()?;
-                GitHub::get_default_branch(&owner, &repo_name)?
-            }
-            RepoType::Codeup => {
-                // Codeup 默认分支通常是 develop 或 main
-                // 尝试从远程获取默认分支
-                Self::get_default_branch_from_remote()?
-            }
-            _ => {
-                // 尝试从远程获取默认分支
-                Self::get_default_branch_from_remote()?
-            }
-        };
+        let default_branch = Git::get_default_branch()
+            .context("Failed to get default branch")?;
 
         // 5. 合并 PR
         match repo_type {
@@ -139,40 +126,9 @@ impl PullRequestMergeCommand {
         Ok(())
     }
 
-    /// 从远程获取默认分支
-    fn get_default_branch_from_remote() -> Result<String> {
-        use duct::cmd;
-
-        // 尝试获取远程默认分支
-        let output = cmd("git", &["symbolic-ref", "refs/remotes/origin/HEAD"])
-            .read()
-            .or_else(|_| {
-                // 如果上面失败，尝试从 remote show origin 获取
-                let remote_info = cmd("git", &["remote", "show", "origin"]).read()?;
-                for line in remote_info.lines() {
-                    if line.contains("HEAD branch:") {
-                        if let Some(branch) = line.split("HEAD branch:").nth(1) {
-                            return Ok(branch.trim().to_string());
-                        }
-                    }
-                }
-                anyhow::bail!("Could not determine default branch")
-            })?;
-
-        // 提取分支名：refs/remotes/origin/main -> main
-        let branch = output
-            .trim()
-            .strip_prefix("refs/remotes/origin/")
-            .unwrap_or(output.trim())
-            .to_string();
-
-        Ok(branch)
-    }
-
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
         use crate::log_info;
-        use duct::cmd;
 
         // 如果当前分支已经是默认分支，不需要清理
         if current_branch == default_branch {
@@ -187,33 +143,24 @@ impl PullRequestMergeCommand {
         );
 
         // 1. 先更新远程分支信息（这会同步远程删除的分支）
-        cmd("git", &["fetch", "origin"])
-            .run()
-            .context("Failed to fetch from origin")?;
+        Git::fetch()?;
 
         // 2. 切换到默认分支
-        cmd("git", &["checkout", default_branch])
-            .run()
+        Git::checkout_branch(default_branch)
             .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
         // 3. 更新本地默认分支
-        cmd("git", &["pull", "origin", default_branch])
-            .run()
+        Git::pull(default_branch)
             .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
 
         // 4. 删除本地分支（如果还存在）
         if Self::branch_exists_locally(current_branch)? {
             log_info!("Deleting local branch: {}", current_branch);
-            cmd("git", &["branch", "-d", current_branch])
-                .run()
+            Git::delete(current_branch, false)
                 .or_else(|_| {
                     // 如果分支未完全合并，尝试强制删除
                     log_info!("Branch may not be fully merged, trying force delete...");
-                    cmd("git", &["branch", "-D", current_branch])
-                        .run()
-                        .with_context(|| {
-                            format!("Failed to delete local branch: {}", current_branch)
-                        })
+                    Git::delete(current_branch, true)
                 })
                 .context("Failed to delete local branch")?;
             log_success!("Local branch deleted: {}", current_branch);
@@ -223,7 +170,7 @@ impl PullRequestMergeCommand {
 
         // 5. 清理远程分支引用（prune，移除已删除的远程分支引用）
         // 注意：这是一个可选的清理操作，失败不影响主要功能
-        if let Err(e) = cmd("git", &["remote", "prune", "origin"]).run() {
+        if let Err(e) = Git::prune_remote() {
             log_info!("Warning: Failed to prune remote references: {}", e);
             log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
         }
@@ -242,15 +189,8 @@ impl PullRequestMergeCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        use duct::cmd;
-
-        let output = cmd("git", &["branch", "--list", branch_name])
-            .read()
-            .context("Failed to list branches")?;
-
-        Ok(output
-            .trim()
-            .lines()
-            .any(|line| line.trim().trim_start_matches('*').trim() == branch_name))
+        let (exists_local, _) = Git::is_branch_exists(branch_name)
+            .context("Failed to check if branch exists")?;
+        Ok(exists_local)
     }
 }

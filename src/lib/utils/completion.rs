@@ -1,5 +1,10 @@
 //! Shell Completion 管理工具
-//! 提供 Completion 配置管理、文件管理等功能
+//!
+//! 本模块提供了 Shell Completion 的完整管理功能，包括：
+//! - 配置 shell 配置文件以启用 completion
+//! - 创建 completion 配置文件
+//! - 删除 completion 配置和文件
+//! - 获取 completion 文件列表
 
 use crate::log_info;
 use crate::log_success;
@@ -9,6 +14,9 @@ use std::fs;
 use std::path::PathBuf;
 
 /// Completion 管理工具
+///
+/// 提供 Shell Completion 的配置和管理功能。
+/// 支持 zsh 和 bash 两种 shell。
 pub struct Completion;
 
 impl Completion {
