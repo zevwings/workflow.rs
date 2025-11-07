@@ -1,5 +1,26 @@
 //! Utils 模块
-//! 提供各种工具函数和实用工具
+//!
+//! 本模块提供了各种工具函数和实用工具，包括：
+//! - 环境变量管理（读取、写入、删除）
+//! - Shell 检测和管理（检测 shell 类型、配置路径）
+//! - Completion 管理（配置、删除）
+//! - 代理检测和管理（系统代理、环境变量代理）
+//! - 日志输出（带颜色的日志宏）
+//! - 字符串处理（敏感值隐藏）
+//! - 浏览器和剪贴板操作
+//! - 卸载工具
+//!
+//! ## 模块结构
+//!
+//! - `env` - 环境变量管理（`EnvFile`）
+//! - `shell` - Shell 检测和管理（`Shell`、`ShellInfo`）
+//! - `completion` - Completion 管理（`Completion`）
+//! - `proxy` - 代理检测和管理（`Proxy`、`ProxyInfo`）
+//! - `logger` - 日志输出（`Logger`）
+//! - `string` - 字符串处理工具
+//! - `browser` - 浏览器操作（`Browser`）
+//! - `clipboard` - 剪贴板操作（`Clipboard`）
+//! - `uninstall` - 卸载工具（`Uninstall`）
 
 pub mod browser;
 pub mod clipboard;

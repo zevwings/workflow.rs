@@ -53,19 +53,21 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
 /// * `selected_change_types` - 选中的变更类型数组
 /// * `short_description` - 简短描述（可选）
 /// * `jira_ticket` - Jira ticket ID（可选）
+/// * `dependency` - 依赖信息（可选）
 pub fn generate_pull_request_body(
     selected_change_types: &[bool],
     short_description: Option<&str>,
     jira_ticket: Option<&str>,
+    dependency: Option<&str>,
 ) -> Result<String> {
     let mut body = String::from("\n# PR Ready\n\n## Types of changes\n\n");
 
     // 生成变更类型复选框
     for (i, change_type) in TYPES_OF_CHANGES.iter().enumerate() {
         let checked = if i < selected_change_types.len() && selected_change_types[i] {
-            "[x]"
+            "- [x]"
         } else {
-            "[ ]"
+            "- [ ]"
         };
         body.push_str(&format!("{} {}\n", checked, change_type));
     }
@@ -79,15 +81,26 @@ pub fn generate_pull_request_body(
         }
     }
 
-    // 添加 Jira 链接
+    // 添加 Jira 链接（只有当 ticket 和 jira_service 都不为空时才显示）
     if let Some(ticket) = jira_ticket {
-        let settings = Settings::get();
-        let jira_service = &settings.jira_service_address;
-        if !jira_service.is_empty() {
-            body.push_str(&format!(
-                "\n#### Jira Link:\n\n{}/browse/{}\n",
-                jira_service, ticket
-            ));
+        if !ticket.trim().is_empty() {
+            let settings = Settings::get();
+            let jira_service = &settings.jira_service_address;
+            if !jira_service.trim().is_empty() {
+                body.push_str(&format!(
+                    "\n#### Jira Link:\n\n{}/browse/{}\n",
+                    jira_service, ticket
+                ));
+            }
+        }
+    }
+
+    // 添加依赖信息（只有当 dependency 不为空时才显示）
+    if let Some(dep) = dependency {
+        if !dep.trim().is_empty() {
+            body.push_str("\n#### Dependency\n\n");
+            body.push_str(dep);
+            body.push('\n');
         }
     }
 

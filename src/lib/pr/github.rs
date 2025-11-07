@@ -55,7 +55,6 @@ struct PullRequestBranch {
 
 #[derive(Debug, Deserialize)]
 struct RepositoryInfo {
-    default_branch: String,
     #[serde(rename = "allow_squash_merge")]
     allow_squash_merge: Option<bool>,
     #[serde(rename = "allow_merge_commit")]
@@ -91,15 +90,20 @@ impl PlatformProvider for GitHub {
         let base_branch = if let Some(branch) = target_branch {
             branch.to_string()
         } else {
-            Self::get_default_branch(&owner, &repo_name)?
+            Git::get_default_branch()
+                .context("Failed to get default branch")?
         };
 
         let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);
 
+        // 对于包含 `/` 的分支名，使用 `owner:branch_name` 格式以确保 GitHub API 正确处理
+        // 即使分支在同一个仓库中，使用这种格式也更安全
+        let head_branch = format!("{}:{}", owner, source_branch);
+
         let request = CreatePullRequestRequest {
             title: title.to_string(),
             body: body.to_string(),
-            head: source_branch.to_string(),
+            head: head_branch,
             base: base_branch,
         };
 
@@ -332,12 +336,6 @@ impl GitHub {
         Ok((parts[0].to_string(), parts[1].to_string()))
     }
 
-    /// 获取仓库的默认分支
-    pub fn get_default_branch(owner: &str, repo_name: &str) -> Result<String> {
-        let repo_info = Self::get_repository_info(owner, repo_name)?;
-        Ok(repo_info.default_branch)
-    }
-
     /// 获取仓库信息
     fn get_repository_info(owner: &str, repo_name: &str) -> Result<RepositoryInfo> {
         let url = format!("https://api.github.com/repos/{}/{}", owner, repo_name);
@@ -447,9 +445,21 @@ impl GitHub {
                     }
                 }
             }
+            // 添加完整的错误响应 JSON 以便调试
+            if let Ok(json_str) = serde_json::to_string_pretty(&response.data) {
+                msg.push_str(&format!("\n\nFull error response:\n{}", json_str));
+            }
             anyhow::anyhow!(msg)
         } else {
-            Self::handle_api_error(response)
+            // 如果无法解析为 GitHubErrorResponse，尝试显示原始 JSON
+            let json_str = serde_json::to_string_pretty(&response.data)
+                .unwrap_or_else(|_| format!("{:?}", response.data));
+            anyhow::anyhow!(
+                "GitHub API request failed: {} - {}\n\nResponse:\n{}",
+                response.status,
+                response.status_text,
+                json_str
+            )
         }
     }
 

@@ -1,22 +1,45 @@
 //! Shell 检测与管理工具
-//! 提供 Shell 类型检测、配置路径管理等功能
+//!
+//! 本模块提供了 Shell 相关的检测和管理功能，包括：
+//! - 检测当前 shell 类型（zsh、bash 等）
+//! - 获取 shell 配置文件路径
+//! - 获取 completion 目录路径
+//! - 重新加载 shell 配置
 
 use anyhow::{Context, Result};
 use duct::cmd;
 use std::path::PathBuf;
 
 /// Shell 信息结构体
+///
+/// 包含当前 shell 的类型、completion 目录和配置文件路径。
+#[derive(Debug, Clone)]
 pub struct ShellInfo {
+    /// Shell 类型（"zsh" 或 "bash"）
     pub shell_type: String,
+    /// Completion 目录路径（`~/.workflow/completions`）
     pub completion_dir: PathBuf,
+    /// Shell 配置文件路径（`~/.zshrc` 或 `~/.bashrc`）
     pub config_file: PathBuf,
 }
 
 /// Shell 管理工具
+///
+/// 提供 Shell 检测和配置管理功能。
 pub struct Shell;
 
 impl Shell {
     /// 检测当前 shell 类型并返回 ShellInfo
+    ///
+    /// 根据 `SHELL` 环境变量检测当前 shell 类型，并返回相应的配置信息。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `ShellInfo` 结构体，包含 shell 类型、completion 目录和配置文件路径。
+    ///
+    /// # 错误
+    ///
+    /// 如果 shell 类型不支持或 `HOME` 环境变量未设置，返回相应的错误信息。
     pub fn detect() -> Result<ShellInfo> {
         let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
         let shell_type = if shell.contains("zsh") {
@@ -74,6 +97,17 @@ impl Shell {
     }
 
     /// 重新加载 shell 配置（在子进程中执行 source 命令）
+    ///
+    /// 在子 shell 中执行 `source` 命令来重新加载配置文件。
+    /// 注意：这不会影响当前 shell，但可以验证配置文件是否有效。
+    ///
+    /// # 参数
+    ///
+    /// * `shell_info` - Shell 信息结构体
+    ///
+    /// # 错误
+    ///
+    /// 如果重新加载失败，返回相应的错误信息。
     pub fn reload_config(shell_info: &ShellInfo) -> Result<()> {
         use crate::{log_info, log_success, log_warning};
 
