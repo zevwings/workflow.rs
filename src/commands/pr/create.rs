@@ -64,7 +64,7 @@ impl PullRequestCreateCommand {
             &commit_title,
         )?;
 
-        // 11. 创建或获取 PR
+        // 10. 创建或获取 PR
         let pull_request_url = Self::create_or_get_pull_request(
             &actual_branch_name,
             &default_branch,
@@ -72,7 +72,7 @@ impl PullRequestCreateCommand {
             &pull_request_body,
         )?;
 
-        // 12. 更新 Jira（如果有 ticket）
+        // 11. 更新 Jira（如果有 ticket）
         Self::update_jira_ticket(
             &jira_ticket,
             &created_pull_request_status,
@@ -81,7 +81,7 @@ impl PullRequestCreateCommand {
             &actual_branch_name,
         )?;
 
-        // 13. 复制 PR URL 到剪贴板并打开浏览器
+        // 12. 复制 PR URL 到剪贴板并打开浏览器
         Self::copy_and_open_pull_request(&pull_request_url)?;
 
         log_success!("PR created successfully!");
@@ -560,7 +560,7 @@ impl PullRequestCreateCommand {
 
     /// 创建或获取 PR
     ///
-    /// 步骤 11：检查分支是否已有 PR，如果有则获取 PR URL，否则创建新 PR。
+    /// 步骤 10：检查分支是否已有 PR，如果有则获取 PR URL，否则创建新 PR。
     /// 在创建 PR 前会检查分支是否有提交。
     ///
     /// 返回 PR URL。
@@ -646,7 +646,7 @@ impl PullRequestCreateCommand {
 
     /// 更新 Jira ticket
     ///
-    /// 步骤 12：如果有 Jira ticket 和状态配置，更新 ticket：
+    /// 步骤 11：如果有 Jira ticket 和状态配置，更新 ticket：
     /// - 分配任务
     /// - 更新状态
     /// - 添加评论（PR URL 和描述）
@@ -689,7 +689,7 @@ impl PullRequestCreateCommand {
 
     /// 复制 PR URL 到剪贴板并在浏览器中打开
     ///
-    /// 步骤 13：复制 PR URL 到剪贴板并在浏览器中打开。
+    /// 步骤 12：复制 PR URL 到剪贴板并在浏览器中打开。
     fn copy_and_open_pull_request(pull_request_url: &str) -> Result<()> {
         // 复制 PR URL 到剪贴板
         Clipboard::copy(pull_request_url)?;
