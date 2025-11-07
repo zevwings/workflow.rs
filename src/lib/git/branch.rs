@@ -45,18 +45,32 @@ impl Git {
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn is_branch_exists(branch_name: &str) -> Result<(bool, bool)> {
         // 使用 git rev-parse --verify 检查本地分支（更高效）
-        let exists_local = cmd("git", &["rev-parse", "--verify", &format!("refs/heads/{}", branch_name)])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok();
+        let exists_local = cmd(
+            "git",
+            &[
+                "rev-parse",
+                "--verify",
+                &format!("refs/heads/{}", branch_name),
+            ],
+        )
+        .stdout_null()
+        .stderr_null()
+        .run()
+        .is_ok();
 
         // 使用 git rev-parse --verify 检查远程分支（更高效）
-        let exists_remote = cmd("git", &["rev-parse", "--verify", &format!("refs/remotes/origin/{}", branch_name)])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok();
+        let exists_remote = cmd(
+            "git",
+            &[
+                "rev-parse",
+                "--verify",
+                &format!("refs/remotes/origin/{}", branch_name),
+            ],
+        )
+        .stdout_null()
+        .stderr_null()
+        .run()
+        .is_ok();
 
         Ok((exists_local, exists_remote))
     }
@@ -106,10 +120,13 @@ impl Git {
         } else if exists_remote {
             // 分支只存在于远程，创建本地分支并跟踪远程分支
             // 优先使用 git switch --track（Git 2.23+），如果失败则回退到 git checkout
-            let result = cmd("git", &["switch", "--track", &format!("origin/{}", branch_name)])
-                .stdout_null()
-                .stderr_null()
-                .run();
+            let result = cmd(
+                "git",
+                &["switch", "--track", &format!("origin/{}", branch_name)],
+            )
+            .stdout_null()
+            .stderr_null()
+            .run();
 
             if result.is_err() {
                 // 回退到 git checkout -b
@@ -224,7 +241,10 @@ impl Git {
 
         for default_name in &common_defaults {
             let branch_ref = format!("origin/{}", default_name);
-            if remote_branches.lines().any(|line| line.trim() == branch_ref) {
+            if remote_branches
+                .lines()
+                .any(|line| line.trim() == branch_ref)
+            {
                 return Ok(default_name.to_string());
             }
         }
@@ -252,11 +272,20 @@ impl Git {
     pub fn is_branch_ahead(branch_name: &str, base_branch: &str) -> Result<bool> {
         // 检查分支是否领先于指定分支
         // 使用 git rev-list 来检查是否有新提交
-        let output = cmd("git", &["rev-list", "--count", &format!("{}..{}", base_branch, branch_name)])
-            .read()
-            .context("Failed to check branch commits")?;
+        let output = cmd(
+            "git",
+            &[
+                "rev-list",
+                "--count",
+                &format!("{}..{}", base_branch, branch_name),
+            ],
+        )
+        .read()
+        .context("Failed to check branch commits")?;
 
-        let count: u32 = output.trim().parse()
+        let count: u32 = output
+            .trim()
+            .parse()
             .context("Failed to parse commit count")?;
 
         Ok(count > 0)
@@ -276,7 +305,10 @@ impl Git {
     pub fn pull(branch_name: &str) -> Result<()> {
         cmd("git", &["pull", "origin", branch_name])
             .run()
-            .context(format!("Failed to pull latest changes from {}", branch_name))?;
+            .context(format!(
+                "Failed to pull latest changes from {}",
+                branch_name
+            ))?;
         Ok(())
     }
 
@@ -326,4 +358,3 @@ impl Git {
         Ok(())
     }
 }
-

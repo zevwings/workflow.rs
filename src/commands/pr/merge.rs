@@ -27,8 +27,7 @@ impl PullRequestMergeCommand {
         let current_branch = Git::current_branch()?;
 
         // 4. 获取默认分支
-        let default_branch = Git::get_default_branch()
-            .context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
 
         // 5. 合并 PR
         Self::merge_pull_request(&pull_request_id, &repo_type)?;
@@ -54,12 +53,8 @@ impl PullRequestMergeCommand {
 
         // 从当前分支获取 PR
         let pr_id = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
             _ => {
                 anyhow::bail!(
                     "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
@@ -74,9 +69,7 @@ impl PullRequestMergeCommand {
             }
             None => {
                 let error_msg = match repo_type {
-                    RepoType::GitHub => {
-                        "No PR found for current branch. Please specify PR ID."
-                    }
+                    RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
                     RepoType::Codeup => {
                         "No PR found for current branch. Please specify PR ID or branch name."
                     }
@@ -236,8 +229,8 @@ impl PullRequestMergeCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        let (exists_local, _) = Git::is_branch_exists(branch_name)
-            .context("Failed to check if branch exists")?;
+        let (exists_local, _) =
+            Git::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
         Ok(exists_local)
     }
 }

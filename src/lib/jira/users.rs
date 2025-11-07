@@ -32,8 +32,7 @@ fn get_user_info_file_path(email: &str) -> Result<PathBuf> {
     let users_dir = home_dir.join(".workflow").join("users");
 
     // 确保目录存在
-    fs::create_dir_all(&users_dir)
-        .context("Failed to create .workflow/users directory")?;
+    fs::create_dir_all(&users_dir).context("Failed to create .workflow/users directory")?;
 
     let sanitized_email = sanitize_email_for_filename(email);
     Ok(users_dir.join(format!("{}.json", sanitized_email)))
@@ -60,8 +59,10 @@ fn get_user_info_from_local(email: &str) -> Result<JiraUser> {
     let file_content = fs::read_to_string(&file_path)
         .context(format!("Failed to read user info file: {:?}", file_path))?;
 
-    let user: JiraUser = serde_json::from_str(&file_content)
-        .context(format!("Failed to parse user info from file: {:?}", file_path))?;
+    let user: JiraUser = serde_json::from_str(&file_content).context(format!(
+        "Failed to parse user info from file: {:?}",
+        file_path
+    ))?;
 
     Ok(user)
 }
@@ -108,10 +109,12 @@ fn get_user_info_from_remote(email: &str, api_token: &str) -> Result<JiraUser> {
 
     // 保存到本地文件
     let file_path = get_user_info_file_path(email)?;
-    let json_content = serde_json::to_string_pretty(&user)
-        .context("Failed to serialize user info to JSON")?;
-    fs::write(&file_path, json_content)
-        .context(format!("Failed to write user info to file: {:?}", file_path))?;
+    let json_content =
+        serde_json::to_string_pretty(&user).context("Failed to serialize user info to JSON")?;
+    fs::write(&file_path, json_content).context(format!(
+        "Failed to write user info to file: {:?}",
+        file_path
+    ))?;
 
     Ok(user)
 }
@@ -135,4 +138,3 @@ pub fn get_user_info() -> Result<JiraUser> {
     // 本地文件不存在或读取失败，从 API 获取
     get_user_info_from_remote(&email, &api_token)
 }
-
