@@ -9,7 +9,6 @@
 ## 📚 文档
 
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 架构设计文档（包含 AI 模块设计）
-- [docs/HOMEBREW.md](./docs/HOMEBREW.md) - Homebrew 安装指南
 
 ## 🚀 快速开始
 
@@ -25,7 +24,7 @@ brew tap zevwings/workflow
 brew install workflow
 ```
 
-> **注意**：需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。详细步骤请参考 [docs/HOMEBREW.md](./docs/HOMEBREW.md)。
+> **注意**：需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
 
 #### 方式二：使用 Makefile
 
@@ -98,8 +97,7 @@ workflow/
 │       ├── install.rs   # 安装命令实现
 │       └── uninstall.rs # 卸载命令实现
 └── docs/                # 文档目录
-    ├── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
-    └── HOMEBREW.md      # Homebrew 安装指南
+    └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
 ```
 
 ## 配置
