@@ -145,15 +145,22 @@ impl PullRequestMergeCommand {
         // 1. 先更新远程分支信息（这会同步远程删除的分支）
         Git::fetch()?;
 
-        // 2. 切换到默认分支
+        // 2. 检查是否有未提交的更改，如果有就先 stash
+        let has_stashed = Git::has_commit()?;
+        if has_stashed {
+            log_info!("Stashing local changes before switching branches...");
+            Git::stash_push(Some("Auto-stash before PR merge cleanup"))?;
+        }
+
+        // 3. 切换到默认分支
         Git::checkout_branch(default_branch)
             .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
-        // 3. 更新本地默认分支
+        // 4. 更新本地默认分支
         Git::pull(default_branch)
             .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
 
-        // 4. 删除本地分支（如果还存在）
+        // 5. 删除本地分支（如果还存在）
         if Self::branch_exists_locally(current_branch)? {
             log_info!("Deleting local branch: {}", current_branch);
             Git::delete(current_branch, false)
@@ -168,7 +175,20 @@ impl PullRequestMergeCommand {
             log_info!("Local branch already deleted: {}", current_branch);
         }
 
-        // 5. 清理远程分支引用（prune，移除已删除的远程分支引用）
+        // 6. 恢复 stash（如果有）
+        if has_stashed {
+            log_info!("Restoring stashed changes...");
+            if let Err(e) = Git::stash_pop() {
+                use crate::log_warning;
+                log_warning!("Failed to restore stashed changes: {}", e);
+                log_warning!("You can manually restore them with: git stash pop");
+                log_warning!("Or view the stash list with: git stash list");
+            } else {
+                log_success!("Stashed changes restored successfully");
+            }
+        }
+
+        // 7. 清理远程分支引用（prune，移除已删除的远程分支引用）
         // 注意：这是一个可选的清理操作，失败不影响主要功能
         if let Err(e) = Git::prune_remote() {
             log_info!("Warning: Failed to prune remote references: {}", e);
