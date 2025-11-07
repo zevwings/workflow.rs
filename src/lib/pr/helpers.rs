@@ -65,9 +65,9 @@ pub fn generate_pull_request_body(
     // 生成变更类型复选框
     for (i, change_type) in TYPES_OF_CHANGES.iter().enumerate() {
         let checked = if i < selected_change_types.len() && selected_change_types[i] {
-            "[x]"
+            "- [x]"
         } else {
-            "[ ]"
+            "- [ ]"
         };
         body.push_str(&format!("{} {}\n", checked, change_type));
     }
