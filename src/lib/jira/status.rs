@@ -22,11 +22,24 @@ use super::helpers::{get_auth, get_base_url};
 /// 管理 Jira 状态配置和工作历史记录的存储路径。
 /// 所有文件都存储在 `${HOME}/.workflow` 目录下。
 pub struct ConfigPaths {
+    /// Jira 状态配置文件路径（`${HOME}/.workflow/jira-status.json`）
     pub jira_status: PathBuf,
+    /// 工作历史记录文件路径（`${HOME}/.workflow/work-history.json`）
     pub work_history: PathBuf,
 }
 
 impl ConfigPaths {
+    /// 创建配置文件路径管理器
+    ///
+    /// 初始化配置文件路径，确保 `.workflow` 目录存在。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `ConfigPaths` 结构体，包含所有配置文件的路径。
+    ///
+    /// # 错误
+    ///
+    /// 如果 `HOME` 环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn new() -> Result<Self> {
         let home = std::env::var("HOME").context("HOME environment variable not set")?;
         let home_dir = PathBuf::from(&home);
@@ -49,8 +62,10 @@ impl ConfigPaths {
 /// 存储单个项目的状态配置，包括 PR 创建和合并时的目标状态。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectStatusConfig {
+    /// PR 创建时的目标状态（JSON 字段名：`created-pr`）
     #[serde(rename = "created-pr")]
     pub created_pull_request_status: Option<String>,
+    /// PR 合并时的目标状态（JSON 字段名：`merged-pr`）
     #[serde(rename = "merged-pr")]
     pub merged_pull_request_status: Option<String>,
 }
@@ -60,8 +75,11 @@ pub struct ProjectStatusConfig {
 /// 包含项目名称和对应的状态配置。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JiraStatusConfig {
+    /// 项目名称（如 `"PROJ"`）
     pub project: String,
+    /// PR 创建时的目标状态
     pub created_pull_request_status: Option<String>,
+    /// PR 合并时的目标状态
     pub merged_pull_request_status: Option<String>,
 }
 
@@ -73,15 +91,21 @@ type JiraStatusMap = HashMap<String, ProjectStatusConfig>;
 /// 记录 PR 的创建和合并信息，包括 Jira ticket、PR URL、时间戳等。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkHistoryEntry {
+    /// Jira ticket ID（如 `"PROJ-123"`）
     pub jira_ticket: String,
+    /// Pull Request URL（可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pull_request_url: Option<String>,
+    /// PR 创建时间（ISO 8601 格式，可选）
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>, // ISO 8601 格式
+    pub created_at: Option<String>,
+    /// PR 合并时间（ISO 8601 格式，可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub merged_at: Option<String>,
+    /// 仓库地址（可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
+    /// 分支名称（可选）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
 }
@@ -177,6 +201,26 @@ pub struct JiraStatus;
 
 impl JiraStatus {
     /// 交互式配置 Jira 状态
+    ///
+    /// 通过交互式界面配置指定项目的 PR 创建和合并时的目标状态。
+    /// 会从 Jira API 获取项目状态列表，然后让用户选择。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket_or_project` - Jira ticket ID（如 `"PROJ-123"`）或项目名称（如 `"PROJ"`）
+    ///
+    /// # 行为
+    ///
+    /// 1. 从 ticket 或项目名中提取项目名
+    /// 2. 验证项目名格式
+    /// 3. 从 Jira API 获取项目状态列表
+    /// 4. 交互式选择 PR 创建时的状态
+    /// 5. 交互式选择 PR 合并时的状态
+    /// 6. 保存配置到本地文件
+    ///
+    /// # 错误
+    ///
+    /// 如果项目名格式无效、无法获取状态列表或保存配置失败，返回相应的错误信息。
     pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
         // 需要导入的依赖
         use super::helpers::extract_jira_project;
@@ -262,6 +306,20 @@ impl JiraStatus {
     }
 
     /// 读取 PR 创建时的状态
+    ///
+    /// 从配置文件中读取指定 Jira ticket 所属项目的 PR 创建时的目标状态。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 PR 创建时的目标状态名称（如果已配置），否则返回 `None`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
         use super::helpers::extract_jira_project;
 
@@ -274,6 +332,20 @@ impl JiraStatus {
     }
 
     /// 读取 PR 合并时的状态
+    ///
+    /// 从配置文件中读取指定 Jira ticket 所属项目的 PR 合并时的目标状态。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 PR 合并时的目标状态名称（如果已配置），否则返回 `None`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
         use super::helpers::extract_jira_project;
 
@@ -287,7 +359,19 @@ impl JiraStatus {
 
     /// 读取工作历史记录（通过 PR ID 查找 Jira ticket）
     ///
-    /// 文件格式（JSON）：
+    /// 从工作历史记录文件中查找指定 PR ID 对应的 Jira ticket。
+    ///
+    /// # 参数
+    ///
+    /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 Jira ticket ID（如果找到），否则返回 `None`。
+    ///
+    /// # 文件格式
+    ///
+    /// 工作历史记录文件格式（JSON）：
     /// ```json
     /// {
     ///   "456": {
@@ -300,12 +384,38 @@ impl JiraStatus {
     ///   }
     /// }
     /// ```
+    ///
+    /// # 错误
+    ///
+    /// 如果读取文件失败，返回相应的错误信息。
     pub fn read_work_history(pull_request_id: &str) -> Result<Option<String>> {
         let entry = Self::read_work_history_entry(pull_request_id)?;
         Ok(entry.map(|e| e.jira_ticket))
     }
 
     /// 写入工作历史记录
+    ///
+    /// 将 PR 创建信息写入工作历史记录文件。
+    /// 如果记录已存在，则更新；如果不存在，则创建新记录。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
+    /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    /// * `pull_request_url` - Pull Request URL（可选）
+    /// * `repository` - 仓库地址（可选）
+    /// * `branch` - 分支名称（可选）
+    ///
+    /// # 行为
+    ///
+    /// 1. 读取现有的工作历史记录（如果文件存在）
+    /// 2. 创建或更新指定 PR ID 的记录
+    /// 3. 设置 `created_at` 为当前时间（ISO 8601 格式）
+    /// 4. 将更新后的记录写入文件
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入文件失败，返回相应的错误信息。
     pub fn write_work_history(
         jira_ticket: &str,
         pull_request_id: &str,
@@ -350,6 +460,27 @@ impl JiraStatus {
     }
 
     /// 更新工作历史记录的合并时间
+    ///
+    /// 更新指定 PR ID 的工作历史记录，设置 `merged_at` 为当前时间。
+    ///
+    /// # 参数
+    ///
+    /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    ///
+    /// # 行为
+    ///
+    /// 1. 读取现有的工作历史记录
+    /// 2. 查找指定 PR ID 的记录
+    /// 3. 如果找到，更新 `merged_at` 为当前时间（ISO 8601 格式）
+    /// 4. 将更新后的记录写入文件
+    ///
+    /// # 返回
+    ///
+    /// 如果文件不存在或记录不存在，返回 `Ok(())`（不报错）。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入文件失败，返回相应的错误信息。
     pub fn update_work_history_merged(pull_request_id: &str) -> Result<()> {
         let paths = ConfigPaths::new()?;
         if !paths.work_history.exists() {
@@ -377,6 +508,21 @@ impl JiraStatus {
     }
 
     /// 读取 Jira 状态配置（内部方法）
+    ///
+    /// 从配置文件中读取指定项目的状态配置。
+    ///
+    /// # 参数
+    ///
+    /// * `project` - 项目名称（如 `"PROJ"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `JiraStatusConfig` 结构体。
+    /// 如果文件不存在或项目配置不存在，返回空配置（所有字段为 `None`）。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(project: &str) -> Result<JiraStatusConfig> {
         let paths = ConfigPaths::new()?;
 
@@ -409,6 +555,23 @@ impl JiraStatus {
     }
 
     /// 写入 Jira 状态配置（内部方法）
+    ///
+    /// 将状态配置写入配置文件。
+    /// 如果项目配置已存在，则更新；如果不存在，则创建新配置。
+    ///
+    /// # 参数
+    ///
+    /// * `config` - Jira 状态配置结构体
+    ///
+    /// # 行为
+    ///
+    /// 1. 读取现有的状态配置（如果文件存在）
+    /// 2. 更新或插入项目配置
+    /// 3. 将更新后的配置写入文件（使用 pretty print 格式）
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(config: &JiraStatusConfig) -> Result<()> {
         let paths = ConfigPaths::new()?;
 
@@ -440,6 +603,21 @@ impl JiraStatus {
     }
 
     /// 读取完整的工作历史记录条目（内部方法）
+    ///
+    /// 从工作历史记录文件中读取指定 PR ID 的完整记录。
+    ///
+    /// # 参数
+    ///
+    /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `WorkHistoryEntry` 结构体（如果找到），否则返回 `None`。
+    /// 如果文件不存在，返回 `None`。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_work_history_entry(pull_request_id: &str) -> Result<Option<WorkHistoryEntry>> {
         let paths = ConfigPaths::new()?;
         if !paths.work_history.exists() {

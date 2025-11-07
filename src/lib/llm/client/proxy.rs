@@ -1,3 +1,7 @@
+//! 代理 API 客户端
+//!
+//! 本模块提供了调用代理 LLM API 的功能。
+
 use anyhow::{Context, Result};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::json;
@@ -6,15 +10,37 @@ use crate::http::{HttpClient, HttpResponse};
 use crate::settings::Settings;
 
 /// LLM 请求参数
+///
+/// 包含调用 LLM API 所需的所有参数。
+#[derive(Debug, Clone)]
 pub struct LLMRequestParams {
+    /// 系统提示词
     pub system_prompt: String,
+    /// 用户提示词
     pub user_prompt: String,
+    /// 最大 token 数
     pub max_tokens: u32,
+    /// 温度参数（控制输出的随机性）
     pub temperature: f32,
+    /// 模型名称（如 "gpt-3.5-turbo"）
     pub model: String,
 }
 
 /// 使用代理 API 调用 LLM
+///
+/// 调用代理 LLM API 生成文本。
+///
+/// # 参数
+///
+/// * `params` - LLM 请求参数
+///
+/// # 返回
+///
+/// 返回 LLM 生成的文本内容（去除首尾空白）。
+///
+/// # 错误
+///
+/// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
 pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let settings = Settings::load();
     let api_key = settings

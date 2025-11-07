@@ -1,3 +1,8 @@
+//! Pull Request LLM 服务
+//!
+//! 本模块提供了使用 LLM 生成 Pull Request 内容的功能。
+//! 根据 commit 标题自动生成符合规范的分支名和 PR 标题。
+
 use anyhow::{Context, Result};
 use serde_json::Value;
 
@@ -7,23 +12,41 @@ use crate::settings::Settings;
 use super::client::{openai, deepseek, proxy};
 
 /// PR 内容，包含分支名和 PR 标题
+///
+/// 由 LLM 生成的分支名和 PR 标题，用于创建 Pull Request。
 #[derive(Debug, Clone)]
 pub struct PullRequestContent {
+    /// 分支名称（小写，使用连字符分隔）
     pub branch_name: String,
+    /// PR 标题（简洁，不超过 8 个单词）
     pub pr_title: String,
 }
 
 /// Pull Request LLM 服务
+///
+/// 提供使用 LLM 生成分支名和 PR 标题的功能。
+/// 支持多种 LLM 提供商：OpenAI、DeepSeek、代理 API。
 pub struct PullRequestLLM;
 
 impl PullRequestLLM {
     /// 同时生成分支名和 PR 标题（通过一个 LLM 请求）
     ///
+    /// 根据 commit 标题生成符合规范的分支名和 PR 标题。
+    /// 分支名和 PR 标题都会自动翻译为英文（如果输入包含非英文内容）。
+    ///
     /// # 参数
+    ///
     /// * `commit_title` - commit 标题或描述
     ///
     /// # 返回
-    /// 返回 `PullRequestContent` 结构体，包含 `branch_name` 和 `pr_title`
+    ///
+    /// 返回 `PullRequestContent` 结构体，包含：
+    /// - `branch_name` - 分支名称（小写，使用连字符分隔）
+    /// - `pr_title` - PR 标题（简洁，不超过 8 个单词）
+    ///
+    /// # 错误
+    ///
+    /// 如果 LLM API 调用失败或响应格式不正确，返回相应的错误信息。
     pub fn generate(commit_title: &str) -> Result<PullRequestContent> {
         let settings = Settings::load();
         let provider = settings.llm_provider.clone();
@@ -39,6 +62,17 @@ impl PullRequestLLM {
     }
 
     /// 检查对应的 API key 是否设置
+    ///
+    /// 根据 LLM 提供商检查相应的 API key 是否已配置。
+    ///
+    /// # 参数
+    ///
+    /// * `settings` - 设置对象
+    /// * `provider` - LLM 提供商名称（"openai"、"deepseek"、"proxy"）
+    ///
+    /// # 错误
+    ///
+    /// 如果对应的 API key 未设置，返回相应的错误信息。
     fn check_api_key(settings: &Settings, provider: &str) -> Result<()> {
         let api_key_set = match provider {
             "openai" => settings.openai_key.is_some(),
@@ -104,6 +138,20 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     }
 
     /// 使用 OpenAI API 同时生成分支名和 PR 标题
+    ///
+    /// 调用 OpenAI API 生成分支名和 PR 标题。
+    ///
+    /// # 参数
+    ///
+    /// * `commit_title` - commit 标题或描述
+    ///
+    /// # 返回
+    ///
+    /// 返回 `PullRequestContent` 结构体。
+    ///
+    /// # 错误
+    ///
+    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     fn generate_with_openai(commit_title: &str) -> Result<PullRequestContent> {
         let params = openai::LLMRequestParams {
             system_prompt: Self::system_prompt(),
@@ -117,6 +165,20 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     }
 
     /// 使用 DeepSeek API 同时生成分支名和 PR 标题
+    ///
+    /// 调用 DeepSeek API 生成分支名和 PR 标题。
+    ///
+    /// # 参数
+    ///
+    /// * `commit_title` - commit 标题或描述
+    ///
+    /// # 返回
+    ///
+    /// 返回 `PullRequestContent` 结构体。
+    ///
+    /// # 错误
+    ///
+    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     fn generate_with_deepseek(commit_title: &str) -> Result<PullRequestContent> {
         let params = deepseek::LLMRequestParams {
             system_prompt: Self::system_prompt(),
@@ -130,6 +192,20 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     }
 
     /// 使用代理 API 同时生成分支名和 PR 标题
+    ///
+    /// 调用代理 API 生成分支名和 PR 标题。
+    ///
+    /// # 参数
+    ///
+    /// * `commit_title` - commit 标题或描述
+    ///
+    /// # 返回
+    ///
+    /// 返回 `PullRequestContent` 结构体。
+    ///
+    /// # 错误
+    ///
+    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     fn generate_with_proxy(commit_title: &str) -> Result<PullRequestContent> {
         let params = proxy::LLMRequestParams {
             system_prompt: Self::system_prompt(),
@@ -143,6 +219,21 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     }
 
     /// 解析 LLM 返回的 JSON 响应，提取分支名和 PR 标题
+    ///
+    /// 从 LLM 的 JSON 响应中提取 `branch_name` 和 `pr_title` 字段。
+    /// 支持处理包含 markdown 代码块的响应格式。
+    ///
+    /// # 参数
+    ///
+    /// * `response` - LLM 返回的响应字符串（可能是 JSON 或包含 JSON 的 markdown 代码块）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `PullRequestContent` 结构体，包含清理后的分支名和 PR 标题。
+    ///
+    /// # 错误
+    ///
+    /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_llm_response(response: String) -> Result<PullRequestContent> {
         let trimmed = response.trim();
 

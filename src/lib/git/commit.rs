@@ -1,13 +1,28 @@
+//! Git 提交相关操作
+//!
+//! 本模块提供了 Git 提交相关的核心功能，包括：
+//! - 检查 Git 状态和工作区更改
+//! - 暂存文件（add）
+//! - 提交更改（commit）
+//! - 推送到远程仓库（push）
+
 use anyhow::{Context, Result};
 use duct::cmd;
 
-/// Git 操作模块
+/// Git 操作结构体
+///
+/// 提供 Git 仓库的各种操作功能，包括提交、推送、分支管理等。
 pub struct Git;
 
 impl Git {
     /// 检查 Git 状态
     ///
-    /// 使用 --porcelain 选项获取简洁、稳定的输出格式
+    /// 使用 `--porcelain` 选项获取简洁、稳定的输出格式。
+    /// 该格式适合程序解析，不包含颜色和装饰性输出。
+    ///
+    /// # 返回
+    ///
+    /// 返回 Git 状态的简洁输出字符串。
     pub fn status() -> Result<String> {
         cmd("git", &["status", "--porcelain"])
             .read()
@@ -16,8 +31,13 @@ impl Git {
 
     /// 检查工作区是否有未提交的更改
     ///
-    /// 使用 `git diff --quiet` 和 `git diff --cached --quiet` 检查是否有未提交的更改
-    /// 返回 true 如果有未提交的更改（工作区或暂存区），false 如果没有
+    /// 检查工作区和暂存区是否有未提交的更改。
+    /// 使用 `git diff --quiet` 检查工作区，使用 `git diff --cached --quiet` 检查暂存区。
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果有未提交的更改（工作区或暂存区）
+    /// - `Ok(false)` - 如果没有未提交的更改
     #[allow(dead_code)]
     pub fn has_commit() -> Result<bool> {
         // 检查工作区是否有未提交的更改
@@ -35,8 +55,13 @@ impl Git {
 
     /// 检查是否有暂存的文件
     ///
-    /// 使用 `git diff --cached --quiet` 检查是否有暂存的文件
-    /// 返回 true 如果有暂存的文件，false 如果没有
+    /// 使用 `git diff --cached --quiet` 检查暂存区是否有文件。
+    /// `--quiet` 选项会在有差异时返回非零退出码，无差异时返回 0。
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果有暂存的文件
+    /// - `Ok(false)` - 如果没有暂存的文件
     pub(crate) fn has_staged() -> Result<bool> {
         // 使用 git diff --cached --quiet 检查是否有暂存的文件
         // --quiet 选项：如果有差异，返回非零退出码；如果没有差异，返回 0
@@ -53,6 +78,12 @@ impl Git {
     }
 
     /// 添加所有文件到暂存区
+    ///
+    /// 使用 `git add --all` 将所有已修改、新增和删除的文件添加到暂存区。
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
         cmd("git", &["add", "--all"])
             .run()
@@ -62,7 +93,20 @@ impl Git {
 
     /// 提交更改
     ///
-    /// 自动暂存所有已修改的文件，然后提交
+    /// 自动暂存所有已修改的文件，然后提交。
+    /// 如果存在 pre-commit hooks，会在提交前执行（除非 `no_verify` 为 `true`）。
+    ///
+    /// # 参数
+    ///
+    /// * `message` - 提交消息
+    /// * `no_verify` - 是否跳过 pre-commit hooks 验证
+    ///
+    /// # 行为
+    ///
+    /// 1. 检查是否有未提交的更改，如果没有则直接返回
+    /// 2. 暂存所有已修改的文件
+    /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
+    /// 4. 执行提交操作
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
         use crate::log_info;
 
@@ -96,6 +140,17 @@ impl Git {
     }
 
     /// 推送到远程仓库
+    ///
+    /// 将指定分支推送到远程仓库的 `origin`。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要推送的分支名称
+    /// * `set_upstream` - 是否设置上游分支（使用 `-u` 选项）
+    ///
+    /// # 错误
+    ///
+    /// 如果推送失败，返回相应的错误信息。
     pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
         let mut args = vec!["push"];
         if set_upstream {

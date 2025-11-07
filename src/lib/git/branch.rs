@@ -5,6 +5,16 @@ use super::commit::Git;
 
 impl Git {
     /// 获取当前分支名
+    ///
+    /// 使用 `git branch --show-current` 获取当前分支的名称。
+    ///
+    /// # 返回
+    ///
+    /// 返回当前分支的名称（去除首尾空白）。
+    ///
+    /// # 错误
+    ///
+    /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
         let output = cmd("git", &["branch", "--show-current"])
             .read()
@@ -14,7 +24,25 @@ impl Git {
     }
 
     /// 检查分支是否存在（本地或远程）
-    /// 返回 (本地存在, 远程存在)
+    ///
+    /// 使用 `git rev-parse --verify` 检查指定分支在本地和远程是否存在。
+    /// 该方法比使用 `git branch` 更高效。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回元组 `(本地存在, 远程存在)`：
+    /// - `(true, true)` - 分支在本地和远程都存在
+    /// - `(true, false)` - 分支只在本地存在
+    /// - `(false, true)` - 分支只在远程存在
+    /// - `(false, false)` - 分支不存在
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn is_branch_exists(branch_name: &str) -> Result<(bool, bool)> {
         // 使用 git rev-parse --verify 检查本地分支（更高效）
         let exists_local = cmd("git", &["rev-parse", "--verify", &format!("refs/heads/{}", branch_name)])
@@ -35,10 +63,21 @@ impl Git {
 
     /// 创建或切换到分支
     ///
-    /// 如果分支已存在且是当前分支，则跳过
-    /// 如果分支已存在但不是当前分支，则切换到该分支
-    /// 如果分支只存在于远程，则创建本地分支并跟踪远程分支
-    /// 如果分支不存在，则创建新分支
+    /// 根据分支的存在情况执行相应的操作：
+    /// - 如果分支已存在且是当前分支，则跳过
+    /// - 如果分支已存在但不是当前分支，则切换到该分支
+    /// - 如果分支只存在于远程，则创建本地分支并跟踪远程分支
+    /// - 如果分支不存在，则创建新分支
+    ///
+    /// 优先使用 `git switch`（Git 2.23+），如果失败则回退到 `git checkout`。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要创建或切换的分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果分支操作失败，返回相应的错误信息。
     pub fn checkout_branch(branch_name: &str) -> Result<()> {
         // 检查是否是当前分支
         let current_branch = Self::current_branch()?;
@@ -142,6 +181,17 @@ impl Git {
     }
 
     /// 解析 ls-remote --symref 的输出
+    ///
+    /// 从 `git ls-remote --symref` 的输出中提取默认分支名称。
+    /// 输出格式通常是：`ref: refs/heads/main\tHEAD`
+    ///
+    /// # 参数
+    ///
+    /// * `output` - `git ls-remote --symref` 命令的输出字符串
+    ///
+    /// # 返回
+    ///
+    /// 返回默认分支名称（如果找到），否则返回 `None`。
     fn parse_symref_output(output: &str) -> Option<String> {
         for line in output.lines() {
             if line.starts_with("ref:") {
@@ -157,6 +207,17 @@ impl Git {
     }
 
     /// 从远程分支列表中查找常见的默认分支名
+    ///
+    /// 当无法通过其他方式获取默认分支时，从远程分支列表中查找常见的默认分支名。
+    /// 按顺序查找：`main`、`master`、`develop`、`dev`。
+    ///
+    /// # 返回
+    ///
+    /// 返回找到的默认分支名称。
+    ///
+    /// # 错误
+    ///
+    /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
     fn find_default_branch_from_remote() -> Result<String> {
         let remote_branches = cmd("git", &["branch", "-r"]).read()?;
         let common_defaults = ["main", "master", "develop", "dev"];
@@ -173,7 +234,21 @@ impl Git {
 
     /// 检查分支是否领先于指定分支（是否有新提交）
     ///
-    /// 返回 true 如果分支有新的提交，false 如果分支为空或与指定分支相同
+    /// 使用 `git rev-list --count` 检查指定分支相对于基础分支是否有新的提交。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    /// * `base_branch` - 基础分支名称（用于比较）
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果分支有新的提交
+    /// - `Ok(false)` - 如果分支为空或与指定分支相同
+    ///
+    /// # 错误
+    ///
+    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
     pub fn is_branch_ahead(branch_name: &str, base_branch: &str) -> Result<bool> {
         // 检查分支是否领先于指定分支
         // 使用 git rev-list 来检查是否有新提交

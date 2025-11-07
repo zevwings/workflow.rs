@@ -5,6 +5,17 @@ use super::commit::Git;
 
 impl Git {
     /// 保存未提交的修改到 stash
+    ///
+    /// 使用 `git stash push` 将当前工作区和暂存区的未提交修改保存到 stash。
+    /// 如果提供了消息，则使用 `-m` 选项添加 stash 消息。
+    ///
+    /// # 参数
+    ///
+    /// * `message` - 可选的 stash 消息，用于标识这次 stash 的内容
+    ///
+    /// # 错误
+    ///
+    /// 如果 stash 操作失败，返回相应的错误信息。
     pub fn stash_push(message: Option<&str>) -> Result<()> {
         let mut args = vec!["stash", "push"];
         if let Some(msg) = message {
@@ -19,7 +30,25 @@ impl Git {
 
     /// 恢复 stash 中的修改
     ///
-    /// 如果遇到合并冲突，会保留 stash entry 并返回错误，提示用户手动解决冲突
+    /// 使用 `git stash pop` 恢复最近一次 stash 中的修改。
+    /// 如果遇到合并冲突，会保留 stash entry 并返回错误，提示用户手动解决冲突。
+    ///
+    /// # 行为
+    ///
+    /// 1. 尝试执行 `git stash pop` 恢复修改
+    /// 2. 如果成功，返回 `Ok(())`
+    /// 3. 如果失败，检查是否有未合并的文件（冲突）
+    /// 4. 如果有冲突，输出警告信息并返回错误，保留 stash entry
+    /// 5. 如果没有冲突但失败，返回原始错误
+    ///
+    /// # 返回
+    ///
+    /// 如果成功恢复修改，返回 `Ok(())`。
+    ///
+    /// # 错误
+    ///
+    /// 如果遇到合并冲突或其他错误，返回相应的错误信息。
+    /// 当遇到冲突时，会输出详细的解决步骤提示。
     pub fn stash_pop() -> Result<()> {
         use crate::log_warning;
 
