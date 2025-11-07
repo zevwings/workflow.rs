@@ -4,7 +4,6 @@
 //! - 检查 Git 状态和工作区更改
 //! - 暂存文件（add）
 //! - 提交更改（commit）
-//! - 推送到远程仓库（push）
 
 use anyhow::{Context, Result};
 use duct::cmd;
@@ -136,32 +135,6 @@ impl Git {
         }
 
         cmd("git", &args).run().context("Failed to commit")?;
-        Ok(())
-    }
-
-    /// 推送到远程仓库
-    ///
-    /// 将指定分支推送到远程仓库的 `origin`。
-    ///
-    /// # 参数
-    ///
-    /// * `branch_name` - 要推送的分支名称
-    /// * `set_upstream` - 是否设置上游分支（使用 `-u` 选项）
-    ///
-    /// # 错误
-    ///
-    /// 如果推送失败，返回相应的错误信息。
-    pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
-        let mut args = vec!["push"];
-        if set_upstream {
-            args.push("-u");
-        }
-        args.push("origin");
-        args.push(branch_name);
-
-        cmd("git", &args)
-            .run()
-            .context(format!("Failed to push branch: {}", branch_name))?;
         Ok(())
     }
 }

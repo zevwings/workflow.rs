@@ -261,5 +261,49 @@ impl Git {
 
         Ok(count > 0)
     }
+
+    /// 从远程拉取指定分支的最新更改
+    ///
+    /// 使用 `git pull origin <branch>` 从远程仓库拉取指定分支的最新更改。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要拉取的分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果拉取失败，返回相应的错误信息。
+    pub fn pull(branch_name: &str) -> Result<()> {
+        cmd("git", &["pull", "origin", branch_name])
+            .run()
+            .context(format!("Failed to pull latest changes from {}", branch_name))?;
+        Ok(())
+    }
+
+    /// 推送到远程仓库
+    ///
+    /// 将指定分支推送到远程仓库的 `origin`。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要推送的分支名称
+    /// * `set_upstream` - 是否设置上游分支（使用 `-u` 选项）
+    ///
+    /// # 错误
+    ///
+    /// 如果推送失败，返回相应的错误信息。
+    pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
+        let mut args = vec!["push"];
+        if set_upstream {
+            args.push("-u");
+        }
+        args.push("origin");
+        args.push(branch_name);
+
+        cmd("git", &args)
+            .run()
+            .context(format!("Failed to push branch: {}", branch_name))?;
+        Ok(())
+    }
 }
 
