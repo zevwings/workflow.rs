@@ -1,11 +1,10 @@
 use crate::commands::check::CheckCommand;
 use crate::jira::status::JiraStatus;
 use crate::{
-    Browser, Clipboard, Codeup, Git, GitHub, Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title, generate_pull_request_body, log_error, log_info, log_success, log_warning, validate_jira_ticket_format
+    Browser, Clipboard, Codeup, Git, GitHub, Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title, generate_pull_request_body, log_info, log_success, log_warning, validate_jira_ticket_format
 };
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, MultiSelect, Select};
-use std::io::{self, Write};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -65,7 +64,7 @@ impl PullRequestCreateCommand {
         )?;
 
         if dry_run {
-            log_info!("\n[DRY RUN] Would create branch: {}", branch_name);
+            log_info!("[DRY RUN] Would create branch: {}", branch_name);
             log_info!("[DRY RUN] Commit title: {}", commit_title);
             log_info!("[DRY RUN] PR body:\n{}", pull_request_body);
             return Ok(());
@@ -104,28 +103,34 @@ impl PullRequestCreateCommand {
     ///
     /// 步骤 2：如果提供了 ticket，验证其格式；如果没有提供，提示用户输入并验证。
     fn resolve_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
-        if let Some(ticket) = jira_ticket {
-            // 验证 ticket 格式
-            if !ticket.trim().is_empty() {
-                validate_jira_ticket_format(&ticket)?;
-            }
-            Ok(Some(ticket))
-        } else {
-            // 提示用户输入
-            print!("Jira ticket (optional): ");
-            io::stdout().flush()?;
-            let mut input = String::new();
-            io::stdin().read_line(&mut input)?;
-            let ticket = input.trim().to_string();
-
-            if ticket.is_empty() {
-                Ok(None)
+        let ticket = if let Some(t) = jira_ticket {
+            let trimmed = t.trim().to_string();
+            if trimmed.is_empty() {
+                None
             } else {
-                // 验证输入的 ticket 格式
-                validate_jira_ticket_format(&ticket)?;
-                Ok(Some(ticket))
+                Some(trimmed)
             }
+        } else {
+            // 使用 dialoguer::Input 保持一致性
+            let input: String = Input::new()
+                .with_prompt("Jira ticket (optional)")
+                .allow_empty(true)
+                .interact_text()
+                .context("Failed to get Jira ticket")?;
+            let trimmed = input.trim().to_string();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed)
+            }
+        };
+
+        // 统一验证逻辑
+        if let Some(ref ticket) = ticket {
+            validate_jira_ticket_format(ticket)?;
         }
+
+        Ok(ticket)
     }
 
     /// 配置 Jira ticket 状态
@@ -181,36 +186,52 @@ impl PullRequestCreateCommand {
     /// 步骤 4：如果提供了标题，直接使用；如果有 Jira ticket，尝试从 Jira 获取标题；
     /// 否则提示用户输入标题。
     fn resolve_title(title: Option<String>, jira_ticket: &Option<String>) -> Result<String> {
-        let title = if let Some(t) = title {
-            t
-        } else if let Some(ref ticket) = jira_ticket {
+        if let Some(t) = title {
+            return Ok(t);
+        }
+
             // 如果有 Jira ticket，尝试从 Jira 获取标题
+        if let Some(ref ticket) = jira_ticket {
             log_success!("Getting PR title from Jira ticket...");
 
-            match Jira::get_ticket_info(ticket) {
-                Ok(issue) => {
+            if let Ok(issue) = Jira::get_ticket_info(ticket) {
                     let summary = issue.fields.summary.trim().to_string();
-                    if summary.is_empty() {
+                if !summary.is_empty() {
+                    log_success!("Using Jira ticket summary: {}", summary);
+                    return Ok(summary);
+                }
                         log_warning!("Jira ticket summary is empty, falling back to manual input");
-                        // 回退到手动输入
-                        Self::input_pull_request_title()?
                     } else {
-                        log_success!("Using Jira ticket summary: {}", summary);
-                        summary
-                    }
-                }
-                Err(e) => {
-                    log_error!("Failed to get ticket info: {}", e);
-                    log_warning!("Falling back to manual input");
-                    // 回退到手动输入
-                    Self::input_pull_request_title()?
-                }
+                log_warning!("Failed to get ticket info, falling back to manual input");
             }
-        } else {
-            Self::input_pull_request_title()?
-        };
+        }
 
-        Ok(title)
+        // 回退到手动输入（统一处理）
+        Self::input_pull_request_title()
+    }
+
+    /// 应用分支名前缀（Jira ticket 和 github_branch_prefix）
+    ///
+    /// 步骤 5（辅助函数）：统一处理分支名前缀逻辑，避免代码重复。
+    fn apply_branch_name_prefixes(
+        mut branch_name: String,
+        jira_ticket: Option<&str>,
+    ) -> Result<String> {
+        // 如果有 Jira ticket，添加到分支名前缀
+        if let Some(ticket) = jira_ticket {
+            branch_name = format!("{}-{}", ticket, branch_name);
+        }
+
+        // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+        let settings = Settings::get();
+        if let Some(prefix) = &settings.github_branch_prefix {
+            let trimmed = prefix.trim();
+            if !trimmed.is_empty() {
+                branch_name = format!("{}/{}", trimmed, branch_name);
+            }
+        }
+
+        Ok(branch_name)
     }
 
     /// 生成 commit title 和分支名
@@ -228,25 +249,11 @@ impl PullRequestCreateCommand {
         let branch_name = match PullRequestLLM::generate(&commit_title) {
             Ok(content) => {
                 log_success!("Generated branch name with LLM: {}", content.branch_name);
-                let mut branch_name: String = content.branch_name;
-
-                // 如果有 Jira ticket，添加到分支名前缀
-                if let Some(ticket) = jira_ticket.as_deref() {
-                    branch_name = format!("{}-{}", ticket, branch_name);
-                }
-
-                // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-                let settings = Settings::get();
-                if let Some(prefix) = &settings.github_branch_prefix {
-                    if !prefix.trim().is_empty() {
-                        branch_name = format!("{}/{}", prefix.trim(), branch_name);
-                    }
-                }
-
-                branch_name
+                // 使用辅助函数统一处理前缀逻辑，避免重复代码
+                Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?
             }
             Err(_) => {
-                // 回退到原来的方法
+                // 回退到原来的方法（已包含前缀逻辑）
                 generate_branch_name(jira_ticket.as_deref(), title)?
             }
         };
@@ -274,13 +281,14 @@ impl PullRequestCreateCommand {
     ///
     /// 步骤 7：提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
     fn select_change_types() -> Result<Vec<bool>> {
-        log_info!("\nTypes of changes:");
+        log_info!("Types of changes:");
         let selections = MultiSelect::new()
             .with_prompt("Select change types (use space to select, enter to confirm)")
             .items(TYPES_OF_CHANGES)
             .interact()
             .context("Failed to select change types")?;
 
+        // 简化转换逻辑：直接使用 HashSet 的 contains 方法
         let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
             .map(|i| selections.contains(&i))
             .collect();
