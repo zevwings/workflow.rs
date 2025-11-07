@@ -226,7 +226,8 @@ impl PullRequestCreateCommand {
 
     /// 生成 commit title 和分支名
     ///
-    /// 步骤 5：首先生成 commit title，然后尝试使用 LLM 生成分支名。
+    /// 步骤 5：首先生成 commit title，然后尝试使用 LLM 生成分支名和 PR 标题。
+    /// 如果 LLM 生成成功，使用翻译后的 pr_title 作为最终的 commit_title。
     /// 如果 LLM 生成失败或结果无效，回退到默认方法。
     /// 返回 (commit_title, branch_name) 元组。
     fn generate_commit_title_and_branch_name(
@@ -235,20 +236,24 @@ impl PullRequestCreateCommand {
     ) -> Result<(String, String)> {
         let commit_title = generate_commit_title(jira_ticket.as_deref(), title);
 
-        // 尝试使用 LLM 根据 commit_title 生成分支名
-        let branch_name = match PullRequestLLM::generate(&commit_title) {
+        // 尝试使用 LLM 根据 commit_title 生成分支名和 PR 标题
+        let (final_commit_title, branch_name) = match PullRequestLLM::generate(&commit_title) {
             Ok(content) => {
-                log_success!("Generated branch name with LLM: {}", content.branch_name);
+                log_success!("e {}", content.branch_name);
+                // 使用翻译后的 pr_title 作为最终的 commit_title
+                let final_commit_title = content.pr_title;
                 // 使用辅助函数统一处理前缀逻辑，避免重复代码
-                Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?
+                let branch_name = Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
+                (final_commit_title, branch_name)
             }
             Err(_) => {
                 // 回退到原来的方法（已包含前缀逻辑）
-                generate_branch_name(jira_ticket.as_deref(), title)?
+                let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
+                (commit_title, branch_name)
             }
         };
 
-        Ok((commit_title, branch_name))
+        Ok((final_commit_title, branch_name))
     }
 
     /// 获取 PR 描述
