@@ -1,10 +1,17 @@
-use anyhow::{Context, Result};
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use serde_json::json;
+use anyhow::Result;
 
-use crate::http::{HttpClient, HttpResponse};
 use crate::log_info;
 use crate::settings::Settings;
+
+/// 生成翻译的 system prompt
+fn translate_system_prompt() -> String {
+    "You're a multilingual assistant skilled in translating content into concise English github pull request titles, within 8 words, and without any punctuation.".to_string()
+}
+
+/// 生成翻译的 user prompt
+fn translate_user_prompt(desc: &str) -> String {
+    desc.to_string()
+}
 
 /// 判断是否需要翻译
 /// 规则：如果包含非英文或描述太长，需要翻译
@@ -65,190 +72,39 @@ pub fn translate_with_llm(desc: &str) -> Result<String> {
 
 /// 使用 OpenAI API 翻译
 fn translate_with_openai(desc: &str) -> Result<String> {
-    let settings = Settings::load();
-    let api_key = settings
-        .openai_key
-        .as_ref()
-        .context("LLM_OPENAI_KEY environment variable not set")?;
-
-    let client = HttpClient::new()?;
-    let url = "https://api.openai.com/v1/chat/completions";
-
-    let payload = json!({
-        "model": "gpt-3.5-turbo",
-        "messages": [
-            {
-                "role": "system",
-                "content": "You're a multilingual assistant skilled in translating content into concise English github pull request titles, within 8 words, and without any punctuation."
-            },
-            {
-                "role": "user",
-                "content": desc
-            }
-        ],
-        "max_tokens": 60,
-        "temperature": 0.7
-    });
-
-    // 构建 headers
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", api_key))
-            .context("Failed to create Authorization header")?,
-    );
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    let response: HttpResponse<serde_json::Value> = client
-        .post(url, &payload, None, Some(&headers))
-        .context("Failed to send request to OpenAI API")?;
-
-    if !response.is_success() {
-        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!(
-            "OpenAI API request failed: {} - {}",
-            response.status,
-            error_text
-        );
-    }
-
-    let translated = response
-        .data
-        .get("choices")
-        .and_then(|c| c.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|msg| msg.get("content"))
-        .and_then(|c| c.as_str())
-        .context("Failed to extract translated text from OpenAI response")?;
-
-    Ok(translated.trim().to_string())
+    use super::client::openai;
+    let params = openai::LLMRequestParams {
+        system_prompt: translate_system_prompt(),
+        user_prompt: translate_user_prompt(desc),
+        max_tokens: 60,
+        temperature: 0.7,
+        model: "gpt-3.5-turbo".to_string(),
+    };
+    openai::call_llm(params)
 }
 
 /// 使用 DeepSeek API 翻译
 fn translate_with_deepseek(desc: &str) -> Result<String> {
-    let settings = Settings::load();
-    let api_key = settings
-        .deepseek_key
-        .as_ref()
-        .context("LLM_DEEPSEEK_KEY environment variable not set")?;
-
-    let client = HttpClient::new()?;
-    let url = "https://api.deepseek.com/v1/chat/completions";
-
-    let payload = json!({
-        "model": "deepseek-chat",
-        "messages": [
-            {
-                "role": "system",
-                "content": "You're a multilingual assistant skilled in translating content into concise English github pull request titles, within 8 words, and without any punctuation."
-            },
-            {
-                "role": "user",
-                "content": desc
-            }
-        ],
-        "max_tokens": 60,
-        "temperature": 0.7
-    });
-
-    // 构建 headers
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", api_key))
-            .context("Failed to create Authorization header")?,
-    );
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    let response: HttpResponse<serde_json::Value> = client
-        .post(url, &payload, None, Some(&headers))
-        .context("Failed to send request to DeepSeek API")?;
-
-    if !response.is_success() {
-        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!(
-            "DeepSeek API request failed: {} - {}",
-            response.status,
-            error_text
-        );
-    }
-
-    let translated = response
-        .data
-        .get("choices")
-        .and_then(|c| c.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|msg| msg.get("content"))
-        .and_then(|c| c.as_str())
-        .context("Failed to extract translated text from DeepSeek response")?;
-
-    Ok(translated.trim().to_string())
+    use super::client::deepseek;
+    let params = deepseek::LLMRequestParams {
+        system_prompt: translate_system_prompt(),
+        user_prompt: translate_user_prompt(desc),
+        max_tokens: 60,
+        temperature: 0.7,
+        model: "deepseek-chat".to_string(),
+    };
+    deepseek::call_llm(params)
 }
 
 /// 使用代理 API 翻译
 fn translate_with_proxy(desc: &str) -> Result<String> {
-    let settings = Settings::load();
-    let api_key = settings
-        .llm_proxy_key
-        .as_ref()
-        .context("LLM_PROXY_KEY environment variable not set")?;
-    let base_url = settings
-        .llm_proxy_url
-        .as_ref()
-        .context("LLM_PROXY_URL environment variable not set")?;
-
-    let client = HttpClient::new()?;
-    let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));
-
-    let payload = json!({
-        "model": "gpt-3.5-turbo",
-        "messages": [
-            {
-                "role": "system",
-                "content": "You're a multilingual assistant skilled in translating content into concise English github pull request titles, within 8 words, and without any punctuation."
-            },
-            {
-                "role": "user",
-                "content": desc
-            }
-        ],
-        "max_tokens": 60,
-        "temperature": 0.7
-    });
-
-    // 构建 headers
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", api_key))
-            .context("Failed to create Authorization header")?,
-    );
-    headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-
-    let response: HttpResponse<serde_json::Value> = client
-        .post(&url, &payload, None, Some(&headers))
-        .context("Failed to send request to proxy API")?;
-
-    if !response.is_success() {
-        let error_text = serde_json::to_string(&response.data).unwrap_or_default();
-        anyhow::bail!(
-            "Proxy API request failed: {} - {}",
-            response.status,
-            error_text
-        );
-    }
-
-    let translated = response
-        .data
-        .get("choices")
-        .and_then(|c| c.as_array())
-        .and_then(|arr| arr.first())
-        .and_then(|choice| choice.get("message"))
-        .and_then(|msg| msg.get("content"))
-        .and_then(|c| c.as_str())
-        .context("Failed to extract translated text from proxy API response")?;
-
-    Ok(translated.trim().to_string())
+    use super::client::proxy;
+    let params = proxy::LLMRequestParams {
+        system_prompt: translate_system_prompt(),
+        user_prompt: translate_user_prompt(desc),
+        max_tokens: 60,
+        temperature: 0.7,
+        model: "gpt-3.5-turbo".to_string(),
+    };
+    proxy::call_llm(params)
 }

@@ -28,7 +28,8 @@ impl LLM {
     /// ```
     pub fn get_issue_desc(jira_ticket: &str) -> Result<IssueDesc> {
         // 1. 从 Jira 获取 issue summary（使用 REST API）
-        let summary = Jira::get_summary(jira_ticket)?;
+        let issue = Jira::get_ticket_info(jira_ticket)?;
+        let summary = issue.fields.summary;
 
         // 2. 检查是否需要翻译
         let need_translate = should_translate(&summary);
