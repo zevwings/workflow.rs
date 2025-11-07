@@ -1,7 +1,7 @@
 use crate::commands::check::CheckCommand;
 use crate::jira::status::JiraStatus;
 use crate::{
-    Browser, Clipboard, Codeup, Git, GitHub, Jira, LLM, PlatformProvider, RepoType, TYPES_OF_CHANGES, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title, generate_pull_request_body, log_error, log_info, log_success, log_warning
+    Browser, Clipboard, Codeup, Git, GitHub, Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title, generate_pull_request_body, log_error, log_info, log_success, log_warning, validate_jira_ticket_format
 };
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, MultiSelect, Select};
@@ -48,20 +48,21 @@ impl PullRequestCreateCommand {
         // 4. 获取或生成 PR 标题
         let title = Self::get_or_generate_title(title, &jira_ticket)?;
 
-        // 5. 获取描述
+        // 5. 生成 commit_title 和分支名
+        let (commit_title, branch_name) = Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
+
+        // 6. 获取描述
         let description = Self::get_description(description)?;
 
-        // 6. 选择变更类型
+        // 7. 选择变更类型
         let selected_types = Self::select_change_types()?;
-
-        // 7. 生成 commit_title 和分支名
-        let (commit_title, branch_name) = Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
 
         // 8. 生成 PR body
         let pull_request_body = generate_pull_request_body(
             &selected_types,
             Some(&description),
             jira_ticket.as_deref(),
+            None, // dependency 暂时为空
         )?;
 
         if dry_run {
@@ -104,8 +105,6 @@ impl PullRequestCreateCommand {
     ///
     /// 如果提供了 ticket，验证其格式；如果没有提供，提示用户输入并验证。
     fn get_or_input_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
-        use crate::jira::helpers::validate_jira_ticket_format;
-
         if let Some(ticket) = jira_ticket {
             // 验证 ticket 格式
             if !ticket.trim().is_empty() {
@@ -130,55 +129,57 @@ impl PullRequestCreateCommand {
         }
     }
 
+    /// 提示用户输入 PR 标题
+    ///
+    /// 使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
+    fn input_pr_title() -> Result<String> {
+        let title: String = Input::new()
+            .with_prompt("PR title (required)")
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("PR title is required and cannot be empty")
+                } else {
+                    Ok(())
+                }
+            })
+            .interact_text()
+            .context("Failed to get PR title")?;
+        Ok(title)
+    }
+
     /// 获取或生成 PR 标题
     ///
-    /// 如果提供了标题，直接使用；如果有 Jira ticket，尝试使用 LLM 生成标题；
+    /// 如果提供了标题，直接使用；如果有 Jira ticket，尝试从 Jira 获取标题；
     /// 否则提示用户输入标题。
     fn get_or_generate_title(title: Option<String>, jira_ticket: &Option<String>) -> Result<String> {
         let title = if let Some(t) = title {
             t
         } else if let Some(ref ticket) = jira_ticket {
-            // 如果有 Jira ticket，尝试使用 LLM 生成标题
-            log_success!("Generating PR title from Jira ticket...");
+            // 如果有 Jira ticket，尝试从 Jira 获取标题
+            log_success!("Getting PR title from Jira ticket...");
 
-            match LLM::get_issue_desc(ticket) {
-                Ok(desc) => {
-                    if let Some(ref translated) = desc.translated_desc {
-                        log_success!("Original: {}", desc.issue_desc);
-                        log_success!("Translated: {}", translated);
-                        translated.clone()
+            match Jira::get_ticket_info(ticket) {
+                Ok(issue) => {
+                    let summary = issue.fields.summary.trim().to_string();
+                    if summary.is_empty() {
+                        log_warning!("Jira ticket summary is empty, falling back to manual input");
+                        // 回退到手动输入
+                        Self::input_pr_title()?
                     } else {
-                        log_success!("Using original description: {}", desc.issue_desc);
-                        desc.issue_desc.clone()
+                        log_success!("Using Jira ticket summary: {}", summary);
+                        summary
                     }
                 }
                 Err(e) => {
-                    log_error!("AI generation failed: {}", e);
+                    log_error!("Failed to get ticket info: {}", e);
                     log_warning!("Falling back to manual input");
                     // 回退到手动输入
-                    print!("PR title (required): ");
-                    io::stdout().flush()?;
-                    let mut input = String::new();
-                    io::stdin().read_line(&mut input)?;
-                    let input_title = input.trim().to_string();
-
-                    if input_title.is_empty() {
-                        anyhow::bail!("PR title is required");
-                    }
-                    input_title
+                    Self::input_pr_title()?
                 }
             }
         } else {
-            let title: String = Input::new()
-                .with_prompt("PR title (required)")
-                .interact_text()
-                .context("Failed to get PR title")?;
-            title
+            Self::input_pr_title()?
         };
-
-        if title.trim().is_empty() {
-            anyhow::bail!("PR title is required");
-        }
 
         Ok(title)
     }
@@ -501,34 +502,18 @@ impl PullRequestCreateCommand {
         let commit_title = generate_commit_title(jira_ticket.as_deref(), title);
 
         // 尝试使用 LLM 根据 commit_title 生成分支名
-        let branch_name = match LLM::generate_branch_name(&commit_title) {
-            Ok(llm_branch_name) => {
-                // 验证分支名是否包含非 ASCII 字符（如中文）
-                let is_valid_ascii = llm_branch_name.chars().all(|c| c.is_ascii() || c == '-');
-                let cleaned_branch_name = if !is_valid_ascii {
-                    // 如果包含非 ASCII 字符，使用 transform_to_branch_name 再次清理
-                    let cleaned = crate::pr::helpers::transform_to_branch_name(&llm_branch_name);
-                    // 如果清理后为空或只包含连字符，回退到原来的方法
-                    if cleaned.is_empty() || cleaned.chars().all(|c| c == '-') {
-                        log_info!("LLM generated branch name contains non-ASCII characters and cleaned result is invalid, falling back to default method");
-                        generate_branch_name(jira_ticket.as_deref(), title)?
-                    } else {
-                        cleaned
-                    }
-                } else {
-                    llm_branch_name
-                };
-
-                log_success!("Generated branch name with LLM: {}", cleaned_branch_name);
-                let mut branch_name = cleaned_branch_name;
+        let branch_name = match PullRequestLLM::generate(&commit_title) {
+            Ok(content) => {
+                log_success!("Generated branch name with LLM: {}", content.branch_name);
+                let mut branch_name: String = content.branch_name;
 
                 // 如果有 Jira ticket，添加到分支名前缀
                 if let Some(ticket) = jira_ticket.as_deref() {
-                    branch_name = format!("{}--{}", ticket, branch_name);
+                    branch_name = format!("{}-{}", ticket, branch_name);
                 }
 
                 // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-                let settings = crate::settings::Settings::get();
+                let settings = Settings::get();
                 if let Some(prefix) = &settings.github_branch_prefix {
                     if !prefix.trim().is_empty() {
                         branch_name = format!("{}/{}", prefix.trim(), branch_name);

@@ -74,6 +74,18 @@ For the branch name:
 - Use hyphens to separate words
 - Be under 50 characters
 - Follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only)
+- MUST start with an appropriate prefix based on the commit title content:
+  * If the commit title contains keywords related to bug fixes, issues, or problems (e.g., \"fix\", \"bug\", \"修复\", \"问题\", \"bug fix\", \"hotfix\"), use prefix \"fix-\"
+  * If the commit title contains keywords related to new features or enhancements (e.g., \"feature\", \"new\", \"新功能\", \"功能\", \"add\", \"implement\"), use prefix \"feature-\"
+  * If the commit title contains keywords related to refactoring (e.g., \"refactor\", \"重构\", \"refactoring\", \"restructure\"), use prefix \"refactoring-\"
+  * If none of the above apply, use prefix \"feature-\" as default
+- Examples:
+  * \"Fix login bug\" → \"fix-login-bug\"
+  * \"修复登录问题\" → \"fix-login-issue\"
+  * \"Add user authentication\" → \"feature-add-user-authentication\"
+  * \"新功能：用户认证\" → \"feature-user-authentication\"
+  * \"Refactor code structure\" → \"refactoring-code-structure\"
+  * \"重构代码结构\" → \"refactoring-code-structure\"
 
 For the PR title:
 - Must be concise, within 8 words
