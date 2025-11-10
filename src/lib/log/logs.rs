@@ -1,10 +1,10 @@
 use anyhow::{Context, Result};
+use chrono::Local;
 use regex::Regex;
 use std::env;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 use walkdir::WalkDir;
 
 use crate::{Jira, Logger, Settings};
@@ -23,6 +23,11 @@ pub struct Logs;
 impl Logs {
     /// 从日志文件中搜索请求 ID
     /// 返回包含该 ID 的条目信息
+    ///
+    /// 匹配 shell 脚本 qkfind.sh 的逻辑：
+    /// 1. 查找包含 `#<request_id>` 的行
+    /// 2. 从该行中提取 URL（如果存在）
+    /// 3. 返回包含 ID 和 URL 的条目
     pub fn find_request_id(log_file: &Path, request_id: &str) -> Result<Option<LogEntry>> {
         let file = File::open(log_file)
             .with_context(|| format!("Failed to open log file: {:?}", log_file))?;
@@ -34,17 +39,12 @@ impl Logs {
         for line_result in reader.lines() {
             let line = line_result.context("Failed to read line")?;
 
-            // 检查是否是新条目的开始（以 💡 开头）
-            if line.starts_with("💡") {
-                // 如果之前找到了匹配的条目，返回它
-                if found_id {
-                    break;
-                }
-
-                // 解析新条目
+            // 检查是否包含请求 ID（匹配 shell 脚本：$0 ~ "#" rid）
+            if line.contains(&format!("#{}", request_id)) {
+                // 解析条目（提取 ID 和 URL）
                 current_entry = Self::parse_log_entry(&line)?;
 
-                // 检查 ID 是否匹配
+                // 验证 ID 是否匹配
                 if let Some(ref entry) = current_entry {
                     if entry
                         .id
@@ -53,13 +53,13 @@ impl Logs {
                         .unwrap_or(false)
                     {
                         found_id = true;
-                    }
-                }
-            } else if found_id {
-                // 如果已找到匹配的条目，提取 URL（如果需要）
-                if let Some(ref mut entry) = current_entry {
-                    if entry.url.is_none() {
-                        entry.url = Self::extract_url_from_line(&line);
+                        // 如果 URL 还没有提取，尝试从当前行提取
+                        if entry.url.is_none() {
+                            if let Some(ref mut entry) = current_entry {
+                                entry.url = Self::extract_url_from_line(&line);
+                            }
+                        }
+                        break; // 找到后立即返回
                     }
                 }
             }
@@ -73,6 +73,11 @@ impl Logs {
     }
 
     /// 提取日志条目的响应内容（从 "response:" 开始到空行结束）
+    ///
+    /// 匹配 shell 脚本 qkfind.sh 的逻辑：
+    /// 1. 查找包含 `#<request_id>` 的行（prev）
+    /// 2. 查找下一行包含 `response:` 的行
+    /// 3. 提取 `response: ` 之后的内容，直到空行
     pub fn extract_response_content(log_file: &Path, request_id: &str) -> Result<String> {
         let file = File::open(log_file)
             .with_context(|| format!("Failed to open log file: {:?}", log_file))?;
@@ -80,19 +85,14 @@ impl Logs {
         let reader = BufReader::new(file);
         let mut lines = reader.lines();
         let mut response_lines = Vec::new();
+        let mut prev_line = String::new();
         let mut in_response = false;
-        let mut found_request = false;
 
         while let Some(Ok(line)) = lines.next() {
-            // 检查是否找到请求 ID
-            if line.contains(&format!("#{}", request_id)) {
-                found_request = true;
-                continue;
-            }
-
-            // 如果找到了请求，开始查找 "response:"
-            if found_request {
-                if line.contains("response:") {
+            // 检查是否包含 response:
+            if line.contains("response:") {
+                // 检查上一行是否包含请求 ID
+                if prev_line.contains(&format!("#{}", request_id)) {
                     in_response = true;
                     // 提取 "response: " 之后的内容
                     if let Some(response_start) = line.find("response:") {
@@ -103,15 +103,18 @@ impl Logs {
                     }
                     continue;
                 }
-
-                // 如果在响应块中，收集内容直到空行
-                if in_response {
-                    if line.trim().is_empty() {
-                        break; // 空行表示响应结束
-                    }
-                    response_lines.push(line);
-                }
             }
+
+            // 如果在响应块中，收集内容直到空行
+            if in_response {
+                if line.trim().is_empty() {
+                    break; // 空行表示响应结束
+                }
+                response_lines.push(line.clone());
+            }
+
+            // 保存当前行作为下一行的 prev
+            prev_line = line.clone();
         }
 
         if response_lines.is_empty() {
@@ -123,6 +126,13 @@ impl Logs {
 
     /// 在日志文件中搜索关键词
     /// 返回匹配的请求信息列表（URL 和 ID）
+    ///
+    /// 匹配 shell 脚本 qksearch.sh 的逻辑：
+    /// 1. 查找以 💡 开头的行（新日志条目）
+    /// 2. 提取 ID（#<数字>）和 URL
+    /// 3. 在当前块中搜索关键词（不区分大小写）
+    /// 4. 如果找到匹配，记录该块的 URL 和 ID
+    /// 5. 空行表示块结束
     pub fn search_keyword(log_file: &Path, keyword: &str) -> Result<Vec<LogEntry>> {
         let file = File::open(log_file)
             .with_context(|| format!("Failed to open log file: {:?}", log_file))?;
@@ -130,6 +140,7 @@ impl Logs {
         let reader = BufReader::new(file);
         let keyword_lower = keyword.to_lowercase();
         let mut results = Vec::new();
+        let mut printed_ids = std::collections::HashSet::new();
         let mut current_entry: Option<LogEntry> = None;
         let mut found_in_current_block = false;
 
@@ -137,12 +148,17 @@ impl Logs {
             let line = line_result.context("Failed to read line")?;
             let line_lower = line.to_lowercase();
 
-            // 检查是否是新条目的开始
+            // 检查是否是新条目的开始（以 💡 开头）
             if line.starts_with("💡") {
-                // 如果之前的条目匹配，保存它
+                // 如果之前的条目匹配，保存它（避免重复）
                 if found_in_current_block {
                     if let Some(entry) = current_entry.take() {
-                        results.push(entry);
+                        if let Some(ref id) = entry.id {
+                            if !printed_ids.contains(id) {
+                                results.push(entry.clone());
+                                printed_ids.insert(id.clone());
+                            }
+                        }
                     }
                 }
 
@@ -150,7 +166,7 @@ impl Logs {
                 current_entry = Self::parse_log_entry(&line)?;
                 found_in_current_block = false;
             } else if current_entry.is_some() {
-                // 在当前块中搜索关键词
+                // 在当前块中搜索关键词（不区分大小写）
                 if line_lower.contains(&keyword_lower) {
                     found_in_current_block = true;
                 }
@@ -164,10 +180,20 @@ impl Logs {
             }
 
             // 空行表示块结束
-            if line.trim().is_empty() && found_in_current_block {
-                if let Some(entry) = current_entry.take() {
-                    results.push(entry);
+            if line.trim().is_empty() {
+                // 如果当前块匹配，保存结果
+                if found_in_current_block {
+                    if let Some(entry) = current_entry.take() {
+                        if let Some(ref id) = entry.id {
+                            if !printed_ids.contains(id) {
+                                results.push(entry.clone());
+                                printed_ids.insert(id.clone());
+                            }
+                        }
+                    }
                 }
+                // 重置状态
+                current_entry = None;
                 found_in_current_block = false;
             }
         }
@@ -175,7 +201,11 @@ impl Logs {
         // 检查最后一个条目
         if found_in_current_block {
             if let Some(entry) = current_entry {
-                results.push(entry);
+                if let Some(ref id) = entry.id {
+                    if !printed_ids.contains(id) {
+                        results.push(entry);
+                    }
+                }
             }
         }
 
@@ -198,10 +228,38 @@ impl Logs {
     }
 
     /// 从行中提取 URL
+    ///
+    /// 匹配 shell 脚本的逻辑：
+    /// 1. 首先尝试匹配 HTTP 方法（GET, POST, PUT, DELETE, PATCH, HEAD, OPTIONS）后的 URL
+    /// 2. 如果没有找到，尝试匹配格式：`数字 https://...`
+    /// 3. 清理 URL（移除引号、单引号、空格、逗号、右花括号等）
     fn extract_url_from_line(line: &str) -> Option<String> {
-        // 匹配 HTTP URL
-        let url_re = Regex::new(r#"https?://[^\s"',]+"#).ok()?;
-        url_re.find(line).map(|m| m.as_str().to_string())
+        // 清理 URL 的辅助函数
+        fn clean_url(url: &str) -> String {
+            url.trim_end_matches(|c: char| matches!(c, '"' | '\'' | ' ' | ',' | '}')).to_string()
+        }
+
+        // 方法 1: 查找 HTTP 方法后的 URL
+        // 匹配: GET https://... 或 POST https://... 等
+        // 使用字符类匹配非空白、非引号、非逗号的字符（单引号和右花括号通过 clean_url 处理）
+        let method_pattern = Regex::new("(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\\s+(https?://[^\\s\",]+)").ok()?;
+        if let Some(caps) = method_pattern.captures(line) {
+            if let Some(url_match) = caps.get(2) {
+                return Some(clean_url(url_match.as_str()));
+            }
+        }
+
+        // 方法 2: 查找格式 `数字 https://...`
+        let number_url_pattern = Regex::new("\\d+\\s+(https?://[^\\s\",]+)").ok()?;
+        if let Some(caps) = number_url_pattern.captures(line) {
+            if let Some(url_match) = caps.get(1) {
+                return Some(clean_url(url_match.as_str()));
+            }
+        }
+
+        // 方法 3: 直接匹配 HTTP URL（向后兼容）
+        let url_re = Regex::new(r#"https?://[^\s",]+"#).ok()?;
+        url_re.find(line).map(|m| clean_url(m.as_str()))
     }
 
     /// 合并分片 zip 文件
@@ -332,7 +390,7 @@ impl Logs {
             let home = env::var("HOME").context("HOME environment variable not set")?;
             PathBuf::from(home).join(rest)
         } else if base_dir_str == "~" {
-            let home = env::var("HOME").context("HOME environment variable not set")?;
+        let home = env::var("HOME").context("HOME environment variable not set")?;
             PathBuf::from(home)
         } else {
             PathBuf::from(&base_dir_str)
@@ -341,36 +399,66 @@ impl Logs {
         // 每个 JIRA ticket 使用独立的子目录
         let base_dir = base_dir.join(jira_id);
 
+        // 创建 downloads 子目录（与 shell 脚本一致）
+        let download_dir = base_dir.join("downloads");
+
         // 如果目录已存在，删除它
         if base_dir.exists() {
             std::fs::remove_dir_all(&base_dir).context("Failed to remove existing directory")?;
         }
 
-        std::fs::create_dir_all(&base_dir).context("Failed to create output directory")?;
-
-        let download_dir = base_dir.join("downloads");
-        std::fs::create_dir_all(&download_dir).context("Failed to create download directory")?;
+        std::fs::create_dir_all(&download_dir).context("Failed to create output directory")?;
 
         // 2. 获取附件列表
-        let attachments =
+        let attachments: Vec<crate::JiraAttachment> =
             Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?;
 
         if attachments.is_empty() {
             anyhow::bail!("No attachments found for {}", jira_id);
         }
 
-        // 3. 过滤日志附件（log.zip, log.z01, etc.）
+        // 调试：显示所有附件
+        crate::log_info!("Found {} attachment(s):", attachments.len());
+        for attachment in &attachments {
+            crate::log_info!("  - {}", attachment.filename);
+        }
+
+        // 3. 过滤日志附件
+        // 匹配规则（与 shell 脚本的 awk 模式一致）：
+        // 1. log.zip 或 log.z[0-9]+ 格式的文件（如 log.zip, log.z01, log.z02 等）
+        // 2. 以 .log 结尾的文件（如 any_file.log, error.log 等）
+        // 3. 以 .txt 结尾的文件（如 metric0.txt, log0.txt, network3.txt 等）
+        // Shell 脚本使用: /^[[:space:]]*[0-9]+\. log\.(zip|z[0-9]+)[[:space:]]*$/
+        // 我们简化匹配：log\.(zip|z[0-9]+) 或 log\d*\.(zip|z[0-9]+)
+        let log_zip_pattern = Regex::new(r"^log\.(zip|z\d+)$")?;
         let log_attachments: Vec<_> = attachments
             .iter()
             .filter(|a| {
-                a.filename.starts_with("log.")
-                    && (a.filename == "log.zip" || a.filename.starts_with("log.z"))
+                // 匹配 log.zip 或 log.z[0-9]+ 格式（与 shell 脚本一致）
+                // 例如：log.zip, log.z01, log.z02 等
+                let matches_log_zip = log_zip_pattern.is_match(&a.filename);
+                // 匹配所有以 .log 结尾的文件
+                // 例如：any_file.log, error.log, debug.log 等
+                let matches_log_ext = a.filename.ends_with(".log");
+                // 匹配所有以 .txt 结尾的文件
+                // 例如：metric0.txt, log0.txt, network3.txt, any_file.txt 等
+                let matches_txt_ext = a.filename.ends_with(".txt");
+
+                matches_log_zip || matches_log_ext || matches_txt_ext
             })
             .collect();
 
+        // 调试：显示过滤后的日志附件
+        if !log_attachments.is_empty() {
+            crate::log_info!("Filtered {} log attachment(s):", log_attachments.len());
+            for attachment in &log_attachments {
+                crate::log_info!("  - {}", attachment.filename);
+            }
+        }
+
         // 4. 下载附件
         if download_all_attachments {
-            // 下载所有附件
+            // 下载所有附件到 downloads 目录
             for attachment in &attachments {
                 let file_path = download_dir.join(&attachment.filename);
                 Self::download_file(&attachment.content_url, &file_path)?;
@@ -381,29 +469,145 @@ impl Logs {
                 anyhow::bail!("No log attachments found for {}", jira_id);
             }
 
+            // 预先编译正则表达式，避免在循环中重复编译
+            use regex::Regex;
+            let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
+
+            // 预先获取描述中的原始 URL 映射，避免重复解析
+            let mut original_urls: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            if let Ok(issue) = Jira::get_ticket_info(jira_id) {
+                if let Some(description) = &issue.fields.description {
+                    for cap in link_pattern.captures_iter(description) {
+                        if let (Some(filename_match), Some(url_match)) = (cap.get(1), cap.get(2)) {
+                            let filename = filename_match.as_str().trim().to_string();
+                            let url = url_match.as_str().trim().to_string();
+                            if url.contains("cloudfront.net") {
+                                original_urls.insert(filename, url);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 尝试从 Jira API 的附件列表中查找匹配的文件名
+            let mut api_attachments_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            if let Ok(issue) = Jira::get_ticket_info(jira_id) {
+                if let Some(api_attachments) = &issue.fields.attachment {
+                    for api_att in api_attachments {
+                        api_attachments_map.insert(api_att.filename.clone(), api_att.content_url.clone());
+                    }
+                }
+            }
+
+            let mut failed_attachments = Vec::new();
             for attachment in &log_attachments {
                 let file_path = download_dir.join(&attachment.filename);
-                Self::download_file(&attachment.content_url, &file_path)?;
+
+                // 首先尝试使用当前的 URL
+                let (mut download_success, original_error) = match Self::download_file(&attachment.content_url, &file_path) {
+                    Ok(()) => {
+                        crate::log_success!("Downloaded: {}", attachment.filename);
+                        (true, None)
+                    }
+                    Err(e) => {
+                        crate::log_info!("Warning: Failed to download {}: {}", attachment.filename, e);
+                        let error_msg = format!("{}", e);
+
+                        // 如果当前 URL 是 CloudFront URL，尝试多种方式：
+                        // 1. 从 Jira API 附件列表中查找匹配的文件名
+                        // 2. 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
+                        let success = if attachment.content_url.contains("cloudfront.net") {
+                            let mut success = false;
+
+                            // 方式 1: 从 API 附件列表中查找
+                            if let Some(api_url) = api_attachments_map.get(&attachment.filename) {
+                                crate::log_info!("Debug: Trying Jira API URL for {}: {}", attachment.filename, api_url);
+                                match Self::download_file(api_url, &file_path) {
+                                    Ok(()) => {
+                                        crate::log_success!("Downloaded: {} (using Jira API URL)", attachment.filename);
+                                        success = true;
+                                    }
+                                    Err(e2) => {
+                                        crate::log_info!("Debug: Also failed with Jira API URL: {}", e2);
+                                    }
+                                }
+                            }
+
+                            // 方式 2: 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
+                            if !success {
+                                if let Some(attachment_id) = crate::jira::ticket::extract_attachment_id_from_url(&attachment.content_url) {
+                                    if let Ok(base_url) = crate::jira::helpers::get_base_url() {
+                                        let jira_api_url = format!("{}/attachment/content/{}", base_url, attachment_id);
+                                        crate::log_info!("Debug: Trying Jira API URL from attachment ID {} for {}: {}",
+                                            attachment_id, attachment.filename, jira_api_url);
+                                        match Self::download_file(&jira_api_url, &file_path) {
+                                            Ok(()) => {
+                                                crate::log_success!("Downloaded: {} (using Jira API URL from attachment ID)", attachment.filename);
+                                                success = true;
+                                            }
+                                            Err(e2) => {
+                                                crate::log_info!("Debug: Also failed with Jira API URL from attachment ID: {}", e2);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            success
+                        } else {
+                            false
+                        };
+
+                        (success, Some(error_msg))
+                    }
+                };
+
+                // 如果还是失败，尝试使用原始 CloudFront URL（如果不同）
+                if !download_success {
+                    if let Some(original_url) = original_urls.get(&attachment.filename) {
+                        if original_url != &attachment.content_url {
+                            crate::log_info!("Debug: Retrying with original CloudFront URL for {}", attachment.filename);
+                            download_success = match Self::download_file(original_url, &file_path) {
+                                Ok(()) => {
+                                    crate::log_success!("Downloaded: {} (using original CloudFront URL)", attachment.filename);
+                                    true
+                                }
+                                Err(e2) => {
+                                    crate::log_info!("Warning: Also failed with original CloudFront URL: {}", e2);
+                                    false
+                                }
+                            };
+                        }
+                    }
+                }
+
+                if !download_success {
+                    // 使用保存的原始错误信息
+                    if let Some(error) = original_error {
+                        failed_attachments.push((attachment.filename.clone(), anyhow::anyhow!("{}", error)));
+                    }
+                }
+            }
+
+            // 如果有失败的附件，显示警告但不中断整个流程
+            if !failed_attachments.is_empty() {
+                crate::log_info!("\n⚠️  Warning: {} attachment(s) failed to download:", failed_attachments.len());
+                for (filename, error) in &failed_attachments {
+                    crate::log_info!("  - {}: {}", filename, error);
+                }
             }
         }
 
         // 5. 处理日志附件（合并分片、解压）
+        // 检查是否有 log.zip 或分片文件（与 shell 脚本一致）
         let log_zip = download_dir.join("log.zip");
-        if log_zip.exists() {
-            // 检查是否有分片文件
-            let has_split_files = std::fs::read_dir(&download_dir)?
-                .filter_map(|e| e.ok())
-                .any(|e| {
-                    if let Some(name) = e.file_name().to_str() {
-                        name.starts_with("log.z")
-                            && name.len() == 8
-                            && name[6..].parse::<u8>().is_ok()
-                    } else {
-                        false
-                    }
-                });
+        let log_z01 = download_dir.join("log.z01");
 
-            if has_split_files {
+        if log_zip.exists() {
+            // 检查是否有分片文件（与 shell 脚本一致：检查 log.z01）
+            if log_z01.exists() {
+                // 检测到分片文件，需要合并（与 shell 脚本一致）
+                crate::log_info!("检测到分片文件，需要合并...");
                 Self::merge_split_zips(&download_dir)?;
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
@@ -424,8 +628,21 @@ impl Logs {
                 Self::extract_zip(&merged_zip, &extract_dir)?;
             }
         } else if !download_all_attachments {
-            // 如果没有日志附件且不是下载所有附件，返回错误
-            anyhow::bail!("log.zip not found after download");
+            // 检查是否有成功下载的日志文件（.txt, .log 等）
+            let has_log_files = std::fs::read_dir(&download_dir)?
+                .filter_map(|e| e.ok())
+                .any(|e| {
+                    if let Some(name) = e.file_name().to_str() {
+                        name.ends_with(".txt") || name.ends_with(".log") || name.ends_with(".zip")
+                    } else {
+                        false
+                    }
+                });
+
+            if !has_log_files {
+                // 如果没有日志附件且不是下载所有附件，返回错误
+                anyhow::bail!("No log files found after download. All log attachments failed to download.");
+            }
         }
 
         Ok(base_dir)
@@ -441,15 +658,99 @@ impl Logs {
             .build()
             .context("Failed to create HTTP client")?;
 
-        // 添加 Basic Auth 认证
-        let mut response = client
-            .get(url)
-            .basic_auth(&email, Some(&api_token))
-            .send()
-            .with_context(|| format!("Failed to download: {}", url))?;
+        // 判断是否是 CloudFront 签名 URL（包含 Expires 和 Signature 参数）
+        // CloudFront 签名 URL 通常不需要 Basic Auth，或者 Basic Auth 会干扰签名验证
+        let is_cloudfront_signed_url = url.contains("cloudfront.net") &&
+                                       url.contains("Expires=") &&
+                                       url.contains("Signature=");
+
+        // 获取 Jira base URL 用于 Referer 头
+        let jira_base_url = crate::jira::helpers::get_base_url().ok();
+
+        let mut response = if is_cloudfront_signed_url {
+            // CloudFront 签名 URL，先尝试不使用 Basic Auth，但添加 Referer 头
+            crate::log_info!("Debug: Using CloudFront signed URL without Basic Auth");
+            let mut request = client.get(url);
+
+            // 添加 Referer 头，可能有助于 CloudFront 验证
+            if let Some(ref base_url) = jira_base_url {
+                request = request.header("Referer", base_url);
+            }
+
+            request
+                .send()
+                .with_context(|| format!("Failed to download: {}", url))?
+        } else {
+            // Jira API URL，使用 Basic Auth
+            client
+                .get(url)
+                .basic_auth(&email, Some(&api_token))
+                .send()
+                .with_context(|| format!("Failed to download: {}", url))?
+        };
 
         if !response.status().is_success() {
-            anyhow::bail!("Download failed with status: {}", response.status());
+            // 如果 CloudFront URL 失败，尝试使用 Basic Auth
+            if is_cloudfront_signed_url {
+                let status = response.status();
+                crate::log_info!("Debug: CloudFront URL failed (status: {}), retrying with Basic Auth", status);
+
+                // 尝试读取响应体以获取更多错误信息
+                let error_text = response.text().unwrap_or_default();
+                if !error_text.is_empty() {
+                    let preview = if error_text.len() > 200 {
+                        format!("{}...", &error_text[..200])
+                    } else {
+                        error_text.clone()
+                    };
+                    crate::log_info!("Debug: Error response: {}", preview);
+                }
+
+                let mut request = client.get(url);
+                // 添加 Referer 头
+                if let Some(ref base_url) = jira_base_url {
+                    request = request.header("Referer", base_url);
+                }
+
+                response = request
+                    .basic_auth(&email, Some(&api_token))
+                    .send()
+                    .with_context(|| format!("Failed to download with Basic Auth: {}", url))?;
+
+                if !response.status().is_success() {
+                    let status = response.status();
+                    // 尝试读取响应体以获取更多错误信息
+                    let error_text = response.text().unwrap_or_default();
+                    let error_msg = if !error_text.is_empty() {
+                        let preview = if error_text.len() > 200 {
+                            format!("{}...", &error_text[..200])
+                        } else {
+                            error_text
+                        };
+                        format!("Download failed with status: {} - {}", status, preview)
+                    } else {
+                        format!("Download failed with status: {}", status)
+                    };
+
+                    anyhow::bail!("{}", error_msg);
+                }
+            } else {
+                let status = response.status();
+                // 尝试读取响应体以获取更多错误信息
+                let error_text = response.text().unwrap_or_default();
+                let error_msg = if !error_text.is_empty() {
+                    let preview = if error_text.len() > 200 {
+                        format!("{}...", &error_text[..200])
+                    } else {
+                        error_text
+                    };
+                    format!("Download failed with status: {} - {}", status, preview)
+                } else {
+                    format!("Download failed with status: {}", status)
+                };
+
+                anyhow::bail!("{}", error_msg);
+            }
         }
 
         let mut file = File::create(output_path)
@@ -475,19 +776,33 @@ impl Logs {
             .context("Failed to extract response content")?;
 
         // 2. 获取日志条目的 URL 信息（用于生成 name）
+        // 匹配 shell 脚本 qkfind.sh 的逻辑：
+        // 1. 从包含 `#<request_id>` 的行中提取 URL
+        // 2. 移除域名和前缀路径
+        // 3. 提取最后两段路径（如果存在），否则提取最后一段
         let entry = Self::find_request_id(log_file, request_id)?;
         let name = if let Some(entry) = entry {
             if let Some(url) = entry.url {
-                // 提取 URL 的最后两段路径
-                let url_parts: Vec<&str> = url.split('/').collect();
+                // 移除域名和前缀路径（匹配 shell 脚本逻辑）
+                // shell 脚本: sub(/^https?:\/\/[^\/]+\/[^\/]+\/[^\/]+\//, "", $i)
+                let url_re = Regex::new(r"^https?://[^/]+/[^/]+/[^/]+/").ok();
+                let mut processed_url = url.clone();
+                if let Some(re) = url_re {
+                    processed_url = re.replace(&url, "").to_string();
+                }
+
+                // 提取最后两段路径（如果存在），否则提取最后一段
+                let url_parts: Vec<&str> = processed_url.split('/').filter(|s| !s.is_empty()).collect();
                 if url_parts.len() >= 2 {
                     format!(
                         "#{} {}",
                         request_id,
                         url_parts[url_parts.len() - 2..].join("/")
                     )
+                } else if let Some(last_part) = url_parts.last() {
+                    format!("#{} {}", request_id, last_part)
                 } else {
-                    format!("#{} {}", request_id, url_parts.last().unwrap_or(&"unknown"))
+                    format!("#{} unknown", request_id)
                 }
             } else {
                 format!("#{} unknown", request_id)
@@ -511,12 +826,9 @@ impl Logs {
                 .to_string()
         };
 
-        // 4. 生成时间戳
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs();
-        let formatted_timestamp = format!("Unix timestamp: {}", now);
+        // 4. 生成时间戳（匹配 shell 脚本格式：MM/DD/YYYY, HH:MM:SS AM/PM）
+        let now = Local::now();
+        let formatted_timestamp = now.format("%m/%d/%Y, %I:%M:%S %p").to_string();
 
         // 5. 创建 JSON payload
         let payload = serde_json::json!({
@@ -630,19 +942,19 @@ impl Logs {
         // 如果旧位置也不存在，尝试在旧目录下查找
         let old_logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
         if old_logs_dir.exists() {
-            // 查找 merged 或任何包含 flutter-api*.log 的目录
+                // 查找 merged 或任何包含 flutter-api*.log 的目录
             if let Ok(entries) = std::fs::read_dir(&old_logs_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if path.is_dir() {
-                        let potential_log_file = path.join("flutter-api.log");
-                        if potential_log_file.exists() {
-                            return Ok(potential_log_file);
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if path.is_dir() {
+                            let potential_log_file = path.join("flutter-api.log");
+                            if potential_log_file.exists() {
+                                return Ok(potential_log_file);
+                            }
                         }
                     }
                 }
             }
-        }
 
         // 如果都找不到，返回新位置的默认路径
         Self::find_log_file(&extract_dir)

@@ -31,6 +31,7 @@ impl DownloadCommand {
 
         log_success!("\nDownload completed!");
         log_info!("Files located at: {:?}", base_dir);
+        log_info!("Downloaded files in: {:?}/downloads", base_dir);
 
         Ok(())
     }

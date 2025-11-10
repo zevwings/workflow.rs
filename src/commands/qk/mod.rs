@@ -1,12 +1,14 @@
 pub mod clean;
 pub mod download;
 pub mod find;
+pub mod info;
 pub mod search;
 
 // 为了向后兼容，保留 QuickCommand 作为统一接口
 pub use clean::CleanCommand;
 pub use download::DownloadCommand;
 pub use find::FindCommand;
+pub use info::InfoCommand;
 pub use search::SearchCommand;
 
 use anyhow::Result;
@@ -39,5 +41,11 @@ impl QuickCommand {
     #[allow(dead_code)]
     pub fn clean(jira_id: &str, dry_run: bool, list_only: bool) -> Result<()> {
         CleanCommand::clean(jira_id, dry_run, list_only)
+    }
+
+    /// 显示 ticket 信息
+    #[allow(dead_code)]
+    pub fn show(jira_id: &str) -> Result<()> {
+        InfoCommand::show(jira_id)
     }
 }
