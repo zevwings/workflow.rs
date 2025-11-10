@@ -182,7 +182,12 @@ impl InstallCommand {
                     .arg(clap::Arg::new("state").short('s').long("state"))
                     .arg(clap::Arg::new("limit").short('l').long("limit")),
             )
-            .subcommand(Command::new("update").about("Update code"));
+            .subcommand(Command::new("update").about("Update code"))
+            .subcommand(
+                Command::new("close")
+                    .about("Close a Pull Request")
+                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
+            );
 
         let mut buffer = Vec::new();
         generate(*shell, &mut cmd, "pr", &mut buffer);

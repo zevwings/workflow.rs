@@ -322,6 +322,42 @@ impl PlatformProvider for GitHub {
             None => Ok(None),
         }
     }
+
+    /// 关闭 Pull Request
+    fn close_pull_request(pull_request_id: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        let url = format!(
+            "https://api.github.com/repos/{}/{}/pulls/{}",
+            owner, repo_name, pr_number
+        );
+
+        // GitHub API: PATCH /repos/{owner}/{repo}/pulls/{pull_number}
+        // Body: {"state": "closed"}
+        #[derive(Debug, Serialize)]
+        struct UpdatePullRequestRequest {
+            state: String,
+        }
+
+        let request = UpdatePullRequestRequest {
+            state: "closed".to_string(),
+        };
+
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
+        let response: HttpResponse<serde_json::Value> = client
+            .patch(&url, &request, None, Some(headers))
+            .context(format!("Failed to close PR: {}", pull_request_id))?;
+
+        if !response.is_success() {
+            return Err(Self::handle_api_error_json(&response));
+        }
+
+        Ok(())
+    }
 }
 
 impl GitHub {

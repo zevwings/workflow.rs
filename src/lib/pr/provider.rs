@@ -92,4 +92,10 @@ pub trait PlatformProvider {
     /// # Returns
     /// PR 状态信息，包含是否已合并等信息
     fn get_pull_request_status(pull_request_id: &str) -> Result<PullRequestStatus>;
+
+    /// 关闭 Pull Request
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    fn close_pull_request(pull_request_id: &str) -> Result<()>;
 }

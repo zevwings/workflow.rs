@@ -357,4 +357,22 @@ impl Git {
             .with_context(|| format!("Failed to delete local branch: {}", branch_name))?;
         Ok(())
     }
+
+    /// 删除远程分支
+    ///
+    /// 使用 `git push origin --delete <branch_name>` 删除远程分支。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要删除的远程分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果删除失败，返回相应的错误信息。
+    pub fn delete_remote(branch_name: &str) -> Result<()> {
+        cmd("git", &["push", "origin", "--delete", branch_name])
+            .run()
+            .with_context(|| format!("Failed to delete remote branch: {}", branch_name))?;
+        Ok(())
+    }
 }

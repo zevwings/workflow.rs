@@ -349,6 +349,69 @@ impl PlatformProvider for Codeup {
 
         Ok(output)
     }
+
+    /// 关闭 Pull Request
+    fn close_pull_request(pull_request_id: &str) -> Result<()> {
+        let (project_id, cookie) = Self::get_env_vars()?;
+        let settings = Settings::get();
+        let csrf_token = settings
+            .codeup_csrf_token
+            .as_ref()
+            .context("CODEUP_CSRF_TOKEN environment variable not set")?;
+
+        // 先获取 PR 信息以确定实际的 PR ID
+        let actual_pull_request_id = if pull_request_id.parse::<u64>().is_ok() {
+            pull_request_id.to_string()
+        } else {
+            // 可能是分支名或 URL，先查找 PR
+            let pull_request_info = Self::get_pull_request_by_branch(pull_request_id)?;
+            match pull_request_info {
+                Some(pr) => {
+                    if let Some(ref detail_url) = pr.detail_url {
+                        Self::extract_pull_request_id_from_url(detail_url)
+                            .context("Failed to extract PR ID from URL")?
+                    } else if let Some(iid) = pr.pull_request_number {
+                        iid.to_string()
+                    } else {
+                        anyhow::bail!("Cannot determine PR ID")
+                    }
+                }
+                None => anyhow::bail!("PR not found: {}", pull_request_id),
+            }
+        };
+
+        // Codeup API: 关闭 PR 的端点
+        // 使用 PUT 请求更新 PR 状态为 closed
+        #[derive(Debug, Serialize)]
+        struct ClosePullRequestRequest {
+            state: String,
+        }
+
+        let request = ClosePullRequestRequest {
+            state: "closed".to_string(),
+        };
+
+        let url = format!(
+            "https://codeup.aliyun.com/api/v4/projects/{}/code_reviews/{}/close?_csrf={}&_input_charset=utf-8",
+            project_id, actual_pull_request_id, csrf_token
+        );
+
+        let client = Self::get_client()?;
+        let headers = Self::get_headers(&cookie, Some("application/json"))?;
+        let response: HttpResponse<serde_json::Value> = client
+            .put(&url, &request, None, Some(&headers))
+            .context("Failed to close PR via Codeup API")?;
+
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup close PR request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
+        }
+
+        Ok(())
+    }
 }
 
 impl Codeup {
