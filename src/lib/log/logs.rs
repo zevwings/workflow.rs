@@ -8,6 +8,7 @@ use std::time::SystemTime;
 use walkdir::WalkDir;
 
 use crate::{Jira, Logger, Settings};
+use crate::jira::helpers::get_auth;
 
 /// 日志条目信息
 #[derive(Debug, Clone)]
@@ -320,10 +321,25 @@ impl Logs {
     pub fn download_from_jira(
         jira_id: &str,
         log_output_folder_name: Option<&str>,
+        download_all_attachments: bool,
     ) -> Result<PathBuf> {
         // 1. 确定输出目录
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        let base_dir = PathBuf::from(home).join(format!("Downloads/logs_{}", jira_id));
+        let settings = Settings::load();
+        let base_dir_str = settings.log_download_base_dir;
+
+        // 展开 ~ 路径
+        let base_dir = if let Some(rest) = base_dir_str.strip_prefix("~/") {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home).join(rest)
+        } else if base_dir_str == "~" {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home)
+        } else {
+            PathBuf::from(&base_dir_str)
+        };
+
+        // 每个 JIRA ticket 使用独立的子目录
+        let base_dir = base_dir.join(jira_id);
 
         // 如果目录已存在，删除它
         if base_dir.exists() {
@@ -339,7 +355,11 @@ impl Logs {
         let attachments =
             Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?;
 
-        // 过滤日志附件（log.zip, log.z01, etc.）
+        if attachments.is_empty() {
+            anyhow::bail!("No attachments found for {}", jira_id);
+        }
+
+        // 3. 过滤日志附件（log.zip, log.z01, etc.）
         let log_attachments: Vec<_> = attachments
             .iter()
             .filter(|a| {
@@ -348,51 +368,64 @@ impl Logs {
             })
             .collect();
 
-        if log_attachments.is_empty() {
-            anyhow::bail!("No log attachments found for {}", jira_id);
+        // 4. 下载附件
+        if download_all_attachments {
+            // 下载所有附件
+            for attachment in &attachments {
+                let file_path = download_dir.join(&attachment.filename);
+                Self::download_file(&attachment.content_url, &file_path)?;
+            }
+        } else {
+            // 只下载日志附件
+            if log_attachments.is_empty() {
+                anyhow::bail!("No log attachments found for {}", jira_id);
+            }
+
+            for attachment in &log_attachments {
+                let file_path = download_dir.join(&attachment.filename);
+                Self::download_file(&attachment.content_url, &file_path)?;
+            }
         }
 
-        // 3. 下载附件
-        for attachment in &log_attachments {
-            let file_path = download_dir.join(&attachment.filename);
-            Self::download_file(&attachment.content_url, &file_path)?;
-        }
-
-        // 4. 处理单个 zip 文件或合并分片文件
+        // 5. 处理日志附件（合并分片、解压）
         let log_zip = download_dir.join("log.zip");
-        if !log_zip.exists() {
-            anyhow::bail!("log.zip not found after download");
-        }
+        if log_zip.exists() {
+            // 检查是否有分片文件
+            let has_split_files = std::fs::read_dir(&download_dir)?
+                .filter_map(|e| e.ok())
+                .any(|e| {
+                    if let Some(name) = e.file_name().to_str() {
+                        name.starts_with("log.z")
+                            && name.len() == 8
+                            && name[6..].parse::<u8>().is_ok()
+                    } else {
+                        false
+                    }
+                });
 
-        // 检查是否有分片文件
-        let has_split_files = std::fs::read_dir(&download_dir)?
-            .filter_map(|e| e.ok())
-            .any(|e| {
-                if let Some(name) = e.file_name().to_str() {
-                    name.starts_with("log.z") && name.len() == 8 && name[6..].parse::<u8>().is_ok()
-                } else {
-                    false
-                }
-            });
+            if has_split_files {
+                Self::merge_split_zips(&download_dir)?;
+            } else {
+                // 单个 zip 文件，直接复制为 merged.zip
+                let merged_zip = download_dir.join("merged.zip");
+                std::fs::copy(&log_zip, &merged_zip)
+                    .context("Failed to copy log.zip to merged.zip")?;
+            }
 
-        if has_split_files {
-            Self::merge_split_zips(&download_dir)?;
-        } else {
-            // 单个 zip 文件，直接复制为 merged.zip
+            // 解压文件
+            let extract_dir = if let Some(folder_name) = log_output_folder_name {
+                base_dir.join(folder_name)
+            } else {
+                base_dir.join("merged")
+            };
+
             let merged_zip = download_dir.join("merged.zip");
-            std::fs::copy(&log_zip, &merged_zip).context("Failed to copy log.zip to merged.zip")?;
-        }
-
-        // 5. 解压文件
-        let extract_dir = if let Some(folder_name) = log_output_folder_name {
-            base_dir.join(folder_name)
-        } else {
-            base_dir.join("merged")
-        };
-
-        let merged_zip = download_dir.join("merged.zip");
-        if merged_zip.exists() {
-            Self::extract_zip(&merged_zip, &extract_dir)?;
+            if merged_zip.exists() {
+                Self::extract_zip(&merged_zip, &extract_dir)?;
+            }
+        } else if !download_all_attachments {
+            // 如果没有日志附件且不是下载所有附件，返回错误
+            anyhow::bail!("log.zip not found after download");
         }
 
         Ok(base_dir)
@@ -400,13 +433,18 @@ impl Logs {
 
     /// 下载单个文件
     fn download_file(url: &str, output_path: &Path) -> Result<()> {
+        // 获取 Jira 认证信息
+        let (email, api_token) = get_auth()?;
+
         let client = reqwest::blocking::Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .build()
             .context("Failed to create HTTP client")?;
 
+        // 添加 Basic Auth 认证
         let mut response = client
             .get(url)
+            .basic_auth(&email, Some(&api_token))
             .send()
             .with_context(|| format!("Failed to download: {}", url))?;
 
@@ -542,12 +580,41 @@ impl Logs {
     /// 获取日志文件路径
     /// 根据 JIRA ID 自动解析日志文件路径
     pub fn get_log_file_path(jira_id: &str) -> Result<PathBuf> {
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        let home_path = PathBuf::from(&home);
+        let settings = Settings::load();
+
+        // 获取配置的基础目录
+        let base_dir_str = settings.log_download_base_dir;
+
+        // 展开 ~ 路径
+        let base_dir_path = if let Some(rest) = base_dir_str.strip_prefix("~/") {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home).join(rest)
+        } else if base_dir_str == "~" {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home)
+        } else {
+            PathBuf::from(&base_dir_str)
+        };
+
+        // 每个 JIRA ticket 使用独立的子目录
+        let ticket_dir = base_dir_path.join(jira_id);
 
         // 从 Settings 获取日志输出文件夹名称
-        let settings = Settings::load();
-        let base_dir = if !settings.log_output_folder_name.is_empty() {
+        let extract_dir = if !settings.log_output_folder_name.is_empty() {
+            ticket_dir.join(&settings.log_output_folder_name)
+        } else {
+            ticket_dir.join("merged")
+        };
+
+        // 如果新位置存在，使用新位置
+        if extract_dir.exists() {
+            return Self::find_log_file(&extract_dir);
+        }
+
+        // 向后兼容：尝试查找旧位置
+        let home = env::var("HOME").context("HOME environment variable not set")?;
+        let home_path = PathBuf::from(&home);
+        let old_base_dir = if !settings.log_output_folder_name.is_empty() {
             home_path.join(format!(
                 "Downloads/logs_{}/{}/merged",
                 jira_id, settings.log_output_folder_name
@@ -556,26 +623,261 @@ impl Logs {
             home_path.join(format!("Downloads/logs_{}/merged", jira_id))
         };
 
-        // 如果 merged 目录不存在，尝试查找其他目录
-        if !base_dir.exists() {
-            // 尝试在 logs_<JIRA_ID> 目录下查找
-            let logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
-            if logs_dir.exists() {
-                // 查找 merged 或任何包含 flutter-api*.log 的目录
-                if let Ok(entries) = std::fs::read_dir(&logs_dir) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if path.is_dir() {
-                            let potential_log_file = path.join("flutter-api.log");
-                            if potential_log_file.exists() {
-                                return Ok(potential_log_file);
-                            }
+        if old_base_dir.exists() {
+            return Self::find_log_file(&old_base_dir);
+        }
+
+        // 如果旧位置也不存在，尝试在旧目录下查找
+        let old_logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
+        if old_logs_dir.exists() {
+            // 查找 merged 或任何包含 flutter-api*.log 的目录
+            if let Ok(entries) = std::fs::read_dir(&old_logs_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let potential_log_file = path.join("flutter-api.log");
+                        if potential_log_file.exists() {
+                            return Ok(potential_log_file);
                         }
                     }
                 }
             }
         }
 
-        Self::find_log_file(&base_dir)
+        // 如果都找不到，返回新位置的默认路径
+        Self::find_log_file(&extract_dir)
+    }
+
+    /// 获取基础目录路径
+    /// 展开 ~ 路径并返回完整的基础目录路径
+    fn get_base_dir_path() -> Result<PathBuf> {
+        let settings = Settings::load();
+        let base_dir_str = settings.log_download_base_dir;
+
+        // 展开 ~ 路径
+        if let Some(rest) = base_dir_str.strip_prefix("~/") {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            Ok(PathBuf::from(home).join(rest))
+        } else if base_dir_str == "~" {
+            let home = env::var("HOME").context("HOME environment variable not set")?;
+            Ok(PathBuf::from(home))
+        } else {
+            Ok(PathBuf::from(&base_dir_str))
+        }
+    }
+
+    /// 计算目录大小和文件数量
+    fn calculate_dir_info(dir: &Path) -> Result<(u64, usize)> {
+        let mut total_size = 0u64;
+        let mut file_count = 0usize;
+
+        if !dir.exists() {
+            return Ok((0, 0));
+        }
+
+        for entry in WalkDir::new(dir) {
+            let entry = entry.context("Failed to read directory entry")?;
+            let metadata = entry.metadata().context("Failed to get file metadata")?;
+
+            if metadata.is_file() {
+                total_size += metadata.len();
+                file_count += 1;
+            }
+        }
+
+        Ok((total_size, file_count))
+    }
+
+    /// 格式化文件大小
+    fn format_size(bytes: u64) -> String {
+        const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+        let mut size = bytes as f64;
+        let mut unit_index = 0;
+
+        while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+            size /= 1024.0;
+            unit_index += 1;
+        }
+
+        if unit_index == 0 {
+            format!("{} {}", bytes, UNITS[unit_index])
+        } else {
+            format!("{:.2} {}", size, UNITS[unit_index])
+        }
+    }
+
+    /// 列出目录内容
+    fn list_dir_contents(dir: &Path) -> Result<Vec<PathBuf>> {
+        let mut contents = Vec::new();
+
+        if !dir.exists() {
+            return Ok(contents);
+        }
+
+        for entry in WalkDir::new(dir).max_depth(3) {
+            let entry = entry.context("Failed to read directory entry")?;
+            contents.push(entry.path().to_path_buf());
+        }
+
+        Ok(contents)
+    }
+
+    /// 清除整个基础目录
+    ///
+    /// # 参数
+    ///
+    /// * `dry_run` - 如果为 true，只预览操作，不实际删除
+    /// * `list_only` - 如果为 true，只列出将要删除的内容
+    ///
+    /// # 返回
+    ///
+    /// 返回是否实际执行了删除操作
+    pub fn clean_base_dir(dry_run: bool, list_only: bool) -> Result<bool> {
+        let base_dir = Self::get_base_dir_path()?;
+
+        if !base_dir.exists() {
+            crate::log_info!("Base directory does not exist: {:?}", base_dir);
+            return Ok(false);
+        }
+
+        let (size, file_count) = Self::calculate_dir_info(&base_dir)?;
+
+        if list_only {
+            crate::log_info!("Base directory: {:?}", base_dir);
+            crate::log_info!("Total size: {}", Self::format_size(size));
+            crate::log_info!("Total files: {}", file_count);
+            crate::log_info!("\nContents:");
+            let contents = Self::list_dir_contents(&base_dir)?;
+            for path in contents {
+                if path.is_file() {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        crate::log_info!("  📄 {} ({})", path.display(), Self::format_size(metadata.len()));
+                    } else {
+                        crate::log_info!("  📄 {}", path.display());
+                    }
+                } else if path.is_dir() {
+                    crate::log_info!("  📁 {}", path.display());
+                }
+            }
+            return Ok(false);
+        }
+
+        if dry_run {
+            crate::log_info!("[DRY RUN] Would delete base directory: {:?}", base_dir);
+            crate::log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
+            crate::log_info!("[DRY RUN] Total files: {}", file_count);
+            return Ok(false);
+        }
+
+        // 显示将要删除的信息
+        crate::log_info!("Base directory: {:?}", base_dir);
+        crate::log_info!("Total size: {}", Self::format_size(size));
+        crate::log_info!("Total files: {}", file_count);
+
+        // 需要确认
+        use dialoguer::Confirm;
+        let confirmed = Confirm::new()
+            .with_prompt(format!(
+                "Are you sure you want to delete the entire base directory? This will remove {} files ({}).",
+                file_count,
+                Self::format_size(size)
+            ))
+            .default(false)
+            .interact()
+            .context("Failed to get confirmation")?;
+
+        if !confirmed {
+            crate::log_info!("Clean operation cancelled.");
+            return Ok(false);
+        }
+
+        // 执行删除
+        std::fs::remove_dir_all(&base_dir)
+            .context(format!("Failed to delete base directory: {:?}", base_dir))?;
+
+        crate::log_success!("Base directory deleted successfully: {:?}", base_dir);
+        Ok(true)
+    }
+
+    /// 清除特定 JIRA ID 的目录
+    ///
+    /// # 参数
+    ///
+    /// * `jira_id` - JIRA ticket ID
+    /// * `dry_run` - 如果为 true，只预览操作，不实际删除
+    /// * `list_only` - 如果为 true，只列出将要删除的内容
+    ///
+    /// # 返回
+    ///
+    /// 返回是否实际执行了删除操作
+    pub fn clean_jira_dir(jira_id: &str, dry_run: bool, list_only: bool) -> Result<bool> {
+        let base_dir = Self::get_base_dir_path()?;
+        let jira_dir = base_dir.join(jira_id);
+
+        if !jira_dir.exists() {
+            crate::log_info!("Directory does not exist for {}: {:?}", jira_id, jira_dir);
+            return Ok(false);
+        }
+
+        let (size, file_count) = Self::calculate_dir_info(&jira_dir)?;
+
+        if list_only {
+            crate::log_info!("JIRA ID: {}", jira_id);
+            crate::log_info!("Directory: {:?}", jira_dir);
+            crate::log_info!("Total size: {}", Self::format_size(size));
+            crate::log_info!("Total files: {}", file_count);
+            crate::log_info!("\nContents:");
+            let contents = Self::list_dir_contents(&jira_dir)?;
+            for path in contents {
+                if path.is_file() {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        crate::log_info!("  📄 {} ({})", path.display(), Self::format_size(metadata.len()));
+                    } else {
+                        crate::log_info!("  📄 {}", path.display());
+                    }
+                } else if path.is_dir() {
+                    crate::log_info!("  📁 {}", path.display());
+                }
+            }
+            return Ok(false);
+        }
+
+        if dry_run {
+            crate::log_info!("[DRY RUN] Would delete directory for {}: {:?}", jira_id, jira_dir);
+            crate::log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
+            crate::log_info!("[DRY RUN] Total files: {}", file_count);
+            return Ok(false);
+        }
+
+        // 显示将要删除的信息
+        crate::log_info!("JIRA ID: {}", jira_id);
+        crate::log_info!("Directory: {:?}", jira_dir);
+        crate::log_info!("Total size: {}", Self::format_size(size));
+        crate::log_info!("Total files: {}", file_count);
+
+        // 需要确认
+        use dialoguer::Confirm;
+        let confirmed = Confirm::new()
+            .with_prompt(format!(
+                "Are you sure you want to delete the directory for {}? This will remove {} files ({}).",
+                jira_id,
+                file_count,
+                Self::format_size(size)
+            ))
+            .default(false)
+            .interact()
+            .context("Failed to get confirmation")?;
+
+        if !confirmed {
+            crate::log_info!("Clean operation cancelled.");
+            return Ok(false);
+        }
+
+        // 执行删除
+        std::fs::remove_dir_all(&jira_dir)
+            .context(format!("Failed to delete directory for {}: {:?}", jira_id, jira_dir))?;
+
+        crate::log_success!("Directory deleted successfully for {}: {:?}", jira_id, jira_dir);
+        Ok(true)
     }
 }

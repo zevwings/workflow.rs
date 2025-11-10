@@ -9,8 +9,12 @@ pub struct DownloadCommand;
 impl DownloadCommand {
     /// 下载日志
     #[allow(dead_code)]
-    pub fn download(jira_id: &str) -> Result<()> {
-        log_success!("Downloading logs for {}...", jira_id);
+    pub fn download(jira_id: &str, download_all: bool) -> Result<()> {
+        if download_all {
+            log_success!("Downloading all attachments for {}...", jira_id);
+        } else {
+            log_success!("Downloading logs for {}...", jira_id);
+        }
 
         let settings = Settings::load();
         let log_output_folder_name = if !settings.log_output_folder_name.is_empty() {
@@ -22,8 +26,8 @@ impl DownloadCommand {
         log_success!("Getting attachments for {}...", jira_id);
 
         // 调用库函数执行下载
-        let base_dir = Logs::download_from_jira(jira_id, log_output_folder_name)
-            .context("Failed to download logs from Jira")?;
+        let base_dir = Logs::download_from_jira(jira_id, log_output_folder_name, download_all)
+            .context("Failed to download attachments from Jira")?;
 
         log_success!("\nDownload completed!");
         log_info!("Files located at: {:?}", base_dir);
