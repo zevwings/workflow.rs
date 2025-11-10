@@ -11,7 +11,7 @@
 //! - `check` - 检查工具命令（git_status, network）
 //! - `config` - 配置查看命令
 //! - `install` - 安装命令实现
-//! - `pr` - PR 相关命令（create, merge, status, list, update）
+//! - `pr` - PR 相关命令（create, merge, close, status, list, update）
 //! - `proxy` - 代理管理命令（on, off, check）
 //! - `qk` - 快速日志操作命令（download, find, search）
 //! - `setup` - 初始化设置命令
