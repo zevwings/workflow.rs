@@ -454,6 +454,51 @@ impl JiraStatus {
         Ok(entry.map(|e| e.jira_ticket))
     }
 
+    /// 根据分支名从工作历史记录中查找 PR ID
+    ///
+    /// 从工作历史记录文件中查找指定分支名对应的 PR ID。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 分支名称（如 `"feature/PROJ-123-add-feature"`）
+    /// * `repository` - 仓库地址（必需，用于确定存储文件）
+    ///
+    /// # 返回
+    ///
+    /// 返回 PR ID（如果找到），否则返回 `None`。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取文件失败，返回相应的错误信息。
+    pub fn find_pr_id_by_branch(
+        branch_name: &str,
+        repository: Option<&str>,
+    ) -> Result<Option<String>> {
+        let repo_url = repository.context("Repository URL is required for work history")?;
+        let repo_file = get_repo_work_history_path(repo_url)?;
+
+        if !repo_file.exists() {
+            return Ok(None);
+        }
+
+        let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
+
+        // 解析 JSON
+        let history_map: WorkHistoryMap =
+            serde_json::from_str(&content).context("Failed to parse work-history file")?;
+
+        // 遍历所有记录，查找匹配的分支名
+        for (pr_id, entry) in history_map.iter() {
+            if let Some(ref branch) = entry.branch {
+                if branch == branch_name {
+                    return Ok(Some(pr_id.clone()));
+                }
+            }
+        }
+
+        Ok(None)
+    }
+
     /// 写入工作历史记录
     ///
     /// 将 PR 创建信息写入工作历史记录文件。

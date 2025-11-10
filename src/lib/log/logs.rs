@@ -7,8 +7,8 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
-use crate::{Jira, Logger, Settings};
 use crate::jira::helpers::get_auth;
+use crate::{Jira, Logger, Settings};
 
 /// 日志条目信息
 #[derive(Debug, Clone)]
@@ -236,13 +236,14 @@ impl Logs {
     fn extract_url_from_line(line: &str) -> Option<String> {
         // 清理 URL 的辅助函数
         fn clean_url(url: &str) -> String {
-            url.trim_end_matches(|c: char| matches!(c, '"' | '\'' | ' ' | ',' | '}')).to_string()
+            url.trim_end_matches(['"', '\'', ' ', ',', '}']).to_string()
         }
 
         // 方法 1: 查找 HTTP 方法后的 URL
         // 匹配: GET https://... 或 POST https://... 等
         // 使用字符类匹配非空白、非引号、非逗号的字符（单引号和右花括号通过 clean_url 处理）
-        let method_pattern = Regex::new("(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\\s+(https?://[^\\s\",]+)").ok()?;
+        let method_pattern =
+            Regex::new("(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\\s+(https?://[^\\s\",]+)").ok()?;
         if let Some(caps) = method_pattern.captures(line) {
             if let Some(url_match) = caps.get(2) {
                 return Some(clean_url(url_match.as_str()));
@@ -390,7 +391,7 @@ impl Logs {
             let home = env::var("HOME").context("HOME environment variable not set")?;
             PathBuf::from(home).join(rest)
         } else if base_dir_str == "~" {
-        let home = env::var("HOME").context("HOME environment variable not set")?;
+            let home = env::var("HOME").context("HOME environment variable not set")?;
             PathBuf::from(home)
         } else {
             PathBuf::from(&base_dir_str)
@@ -474,7 +475,8 @@ impl Logs {
             let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
 
             // 预先获取描述中的原始 URL 映射，避免重复解析
-            let mut original_urls: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            let mut original_urls: std::collections::HashMap<String, String> =
+                std::collections::HashMap::new();
             if let Ok(issue) = Jira::get_ticket_info(jira_id) {
                 if let Some(description) = &issue.fields.description {
                     for cap in link_pattern.captures_iter(description) {
@@ -490,11 +492,13 @@ impl Logs {
             }
 
             // 尝试从 Jira API 的附件列表中查找匹配的文件名
-            let mut api_attachments_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+            let mut api_attachments_map: std::collections::HashMap<String, String> =
+                std::collections::HashMap::new();
             if let Ok(issue) = Jira::get_ticket_info(jira_id) {
                 if let Some(api_attachments) = &issue.fields.attachment {
                     for api_att in api_attachments {
-                        api_attachments_map.insert(api_att.filename.clone(), api_att.content_url.clone());
+                        api_attachments_map
+                            .insert(api_att.filename.clone(), api_att.content_url.clone());
                     }
                 }
             }
@@ -504,13 +508,20 @@ impl Logs {
                 let file_path = download_dir.join(&attachment.filename);
 
                 // 首先尝试使用当前的 URL
-                let (mut download_success, original_error) = match Self::download_file(&attachment.content_url, &file_path) {
+                let (mut download_success, original_error) = match Self::download_file(
+                    &attachment.content_url,
+                    &file_path,
+                ) {
                     Ok(()) => {
                         crate::log_success!("Downloaded: {}", attachment.filename);
                         (true, None)
                     }
                     Err(e) => {
-                        crate::log_info!("Warning: Failed to download {}: {}", attachment.filename, e);
+                        crate::log_info!(
+                            "Warning: Failed to download {}: {}",
+                            attachment.filename,
+                            e
+                        );
                         let error_msg = format!("{}", e);
 
                         // 如果当前 URL 是 CloudFront URL，尝试多种方式：
@@ -521,23 +532,40 @@ impl Logs {
 
                             // 方式 1: 从 API 附件列表中查找
                             if let Some(api_url) = api_attachments_map.get(&attachment.filename) {
-                                crate::log_info!("Debug: Trying Jira API URL for {}: {}", attachment.filename, api_url);
+                                crate::log_info!(
+                                    "Debug: Trying Jira API URL for {}: {}",
+                                    attachment.filename,
+                                    api_url
+                                );
                                 match Self::download_file(api_url, &file_path) {
                                     Ok(()) => {
-                                        crate::log_success!("Downloaded: {} (using Jira API URL)", attachment.filename);
+                                        crate::log_success!(
+                                            "Downloaded: {} (using Jira API URL)",
+                                            attachment.filename
+                                        );
                                         success = true;
                                     }
                                     Err(e2) => {
-                                        crate::log_info!("Debug: Also failed with Jira API URL: {}", e2);
+                                        crate::log_info!(
+                                            "Debug: Also failed with Jira API URL: {}",
+                                            e2
+                                        );
                                     }
                                 }
                             }
 
                             // 方式 2: 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
                             if !success {
-                                if let Some(attachment_id) = crate::jira::ticket::extract_attachment_id_from_url(&attachment.content_url) {
+                                if let Some(attachment_id) =
+                                    crate::jira::ticket::extract_attachment_id_from_url(
+                                        &attachment.content_url,
+                                    )
+                                {
                                     if let Ok(base_url) = crate::jira::helpers::get_base_url() {
-                                        let jira_api_url = format!("{}/attachment/content/{}", base_url, attachment_id);
+                                        let jira_api_url = format!(
+                                            "{}/attachment/content/{}",
+                                            base_url, attachment_id
+                                        );
                                         crate::log_info!("Debug: Trying Jira API URL from attachment ID {} for {}: {}",
                                             attachment_id, attachment.filename, jira_api_url);
                                         match Self::download_file(&jira_api_url, &file_path) {
@@ -566,14 +594,23 @@ impl Logs {
                 if !download_success {
                     if let Some(original_url) = original_urls.get(&attachment.filename) {
                         if original_url != &attachment.content_url {
-                            crate::log_info!("Debug: Retrying with original CloudFront URL for {}", attachment.filename);
+                            crate::log_info!(
+                                "Debug: Retrying with original CloudFront URL for {}",
+                                attachment.filename
+                            );
                             download_success = match Self::download_file(original_url, &file_path) {
                                 Ok(()) => {
-                                    crate::log_success!("Downloaded: {} (using original CloudFront URL)", attachment.filename);
+                                    crate::log_success!(
+                                        "Downloaded: {} (using original CloudFront URL)",
+                                        attachment.filename
+                                    );
                                     true
                                 }
                                 Err(e2) => {
-                                    crate::log_info!("Warning: Also failed with original CloudFront URL: {}", e2);
+                                    crate::log_info!(
+                                        "Warning: Also failed with original CloudFront URL: {}",
+                                        e2
+                                    );
                                     false
                                 }
                             };
@@ -584,14 +621,18 @@ impl Logs {
                 if !download_success {
                     // 使用保存的原始错误信息
                     if let Some(error) = original_error {
-                        failed_attachments.push((attachment.filename.clone(), anyhow::anyhow!("{}", error)));
+                        failed_attachments
+                            .push((attachment.filename.clone(), anyhow::anyhow!("{}", error)));
                     }
                 }
             }
 
             // 如果有失败的附件，显示警告但不中断整个流程
             if !failed_attachments.is_empty() {
-                crate::log_info!("\n⚠️  Warning: {} attachment(s) failed to download:", failed_attachments.len());
+                crate::log_info!(
+                    "\n⚠️  Warning: {} attachment(s) failed to download:",
+                    failed_attachments.len()
+                );
                 for (filename, error) in &failed_attachments {
                     crate::log_info!("  - {}: {}", filename, error);
                 }
@@ -641,7 +682,9 @@ impl Logs {
 
             if !has_log_files {
                 // 如果没有日志附件且不是下载所有附件，返回错误
-                anyhow::bail!("No log files found after download. All log attachments failed to download.");
+                anyhow::bail!(
+                    "No log files found after download. All log attachments failed to download."
+                );
             }
         }
 
@@ -660,9 +703,9 @@ impl Logs {
 
         // 判断是否是 CloudFront 签名 URL（包含 Expires 和 Signature 参数）
         // CloudFront 签名 URL 通常不需要 Basic Auth，或者 Basic Auth 会干扰签名验证
-        let is_cloudfront_signed_url = url.contains("cloudfront.net") &&
-                                       url.contains("Expires=") &&
-                                       url.contains("Signature=");
+        let is_cloudfront_signed_url = url.contains("cloudfront.net")
+            && url.contains("Expires=")
+            && url.contains("Signature=");
 
         // 获取 Jira base URL 用于 Referer 头
         let jira_base_url = crate::jira::helpers::get_base_url().ok();
@@ -693,7 +736,10 @@ impl Logs {
             // 如果 CloudFront URL 失败，尝试使用 Basic Auth
             if is_cloudfront_signed_url {
                 let status = response.status();
-                crate::log_info!("Debug: CloudFront URL failed (status: {}), retrying with Basic Auth", status);
+                crate::log_info!(
+                    "Debug: CloudFront URL failed (status: {}), retrying with Basic Auth",
+                    status
+                );
 
                 // 尝试读取响应体以获取更多错误信息
                 let error_text = response.text().unwrap_or_default();
@@ -792,7 +838,8 @@ impl Logs {
                 }
 
                 // 提取最后两段路径（如果存在），否则提取最后一段
-                let url_parts: Vec<&str> = processed_url.split('/').filter(|s| !s.is_empty()).collect();
+                let url_parts: Vec<&str> =
+                    processed_url.split('/').filter(|s| !s.is_empty()).collect();
                 if url_parts.len() >= 2 {
                     format!(
                         "#{} {}",
@@ -942,19 +989,19 @@ impl Logs {
         // 如果旧位置也不存在，尝试在旧目录下查找
         let old_logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
         if old_logs_dir.exists() {
-                // 查找 merged 或任何包含 flutter-api*.log 的目录
+            // 查找 merged 或任何包含 flutter-api*.log 的目录
             if let Ok(entries) = std::fs::read_dir(&old_logs_dir) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if path.is_dir() {
-                            let potential_log_file = path.join("flutter-api.log");
-                            if potential_log_file.exists() {
-                                return Ok(potential_log_file);
-                            }
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_dir() {
+                        let potential_log_file = path.join("flutter-api.log");
+                        if potential_log_file.exists() {
+                            return Ok(potential_log_file);
                         }
                     }
                 }
             }
+        }
 
         // 如果都找不到，返回新位置的默认路径
         Self::find_log_file(&extract_dir)
@@ -1063,7 +1110,11 @@ impl Logs {
             for path in contents {
                 if path.is_file() {
                     if let Ok(metadata) = std::fs::metadata(&path) {
-                        crate::log_info!("  📄 {} ({})", path.display(), Self::format_size(metadata.len()));
+                        crate::log_info!(
+                            "  📄 {} ({})",
+                            path.display(),
+                            Self::format_size(metadata.len())
+                        );
                     } else {
                         crate::log_info!("  📄 {}", path.display());
                     }
@@ -1143,7 +1194,11 @@ impl Logs {
             for path in contents {
                 if path.is_file() {
                     if let Ok(metadata) = std::fs::metadata(&path) {
-                        crate::log_info!("  📄 {} ({})", path.display(), Self::format_size(metadata.len()));
+                        crate::log_info!(
+                            "  📄 {} ({})",
+                            path.display(),
+                            Self::format_size(metadata.len())
+                        );
                     } else {
                         crate::log_info!("  📄 {}", path.display());
                     }
@@ -1155,7 +1210,11 @@ impl Logs {
         }
 
         if dry_run {
-            crate::log_info!("[DRY RUN] Would delete directory for {}: {:?}", jira_id, jira_dir);
+            crate::log_info!(
+                "[DRY RUN] Would delete directory for {}: {:?}",
+                jira_id,
+                jira_dir
+            );
             crate::log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
             crate::log_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(false);
@@ -1186,10 +1245,16 @@ impl Logs {
         }
 
         // 执行删除
-        std::fs::remove_dir_all(&jira_dir)
-            .context(format!("Failed to delete directory for {}: {:?}", jira_id, jira_dir))?;
+        std::fs::remove_dir_all(&jira_dir).context(format!(
+            "Failed to delete directory for {}: {:?}",
+            jira_id, jira_dir
+        ))?;
 
-        crate::log_success!("Directory deleted successfully for {}: {:?}", jira_id, jira_dir);
+        crate::log_success!(
+            "Directory deleted successfully for {}: {:?}",
+            jira_id,
+            jira_dir
+        );
         Ok(true)
     }
 }
