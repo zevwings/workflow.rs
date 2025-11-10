@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, log_warning, Logs};
+use crate::{log_debug, log_info, log_success, log_warning, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -32,7 +32,7 @@ impl SearchCommand {
         };
 
         // 4. 调用库函数执行搜索
-        log_success!("Searching for: '{}'...", term);
+        log_debug!("Searching for: '{}'...", term);
 
         let results =
             Logs::search_keyword(&log_file, &term).context("Failed to search log file")?;

@@ -10,6 +10,8 @@ use anyhow::{Context, Result};
 use duct::cmd;
 use std::path::PathBuf;
 
+use crate::{log_info, log_success, log_warning};
+
 /// Shell 信息结构体
 ///
 /// 包含当前 shell 的类型、completion 目录和配置文件路径。
@@ -109,7 +111,6 @@ impl Shell {
     ///
     /// 如果重新加载失败，返回相应的错误信息。
     pub fn reload_config(shell_info: &ShellInfo) -> Result<()> {
-        use crate::{log_info, log_success, log_warning};
 
         let config_file = shell_info.config_file.display().to_string();
         let shell_cmd = format!("source {}", config_file);
