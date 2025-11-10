@@ -294,12 +294,31 @@ impl PullRequestMergeCommand {
     }
 
     /// 检查错误是否是"PR 已合并"错误
+    ///
+    /// 这是一个备用检查，用于处理以下情况：
+    /// 1. 状态检查失败（网络问题等）
+    /// 2. 竞态条件：在状态检查和实际合并之间，PR 被其他进程合并了
     fn is_already_merged_error(error: &anyhow::Error) -> bool {
         let error_msg = error.to_string().to_lowercase();
-        error_msg.contains("already been merged")
-            || error_msg.contains("not mergeable")
+
+        // 优先检查明确的错误消息
+        if error_msg.contains("already been merged")
             || error_msg.contains("pull request has already been merged")
-            || error_msg.contains("405") // Method Not Allowed
-            || (error_msg.contains("422") && error_msg.contains("merge")) // Unprocessable Entity with merge
+            || error_msg.contains("not mergeable") {
+            return true;
+        }
+
+        // 检查 HTTP 状态码（需要结合错误消息，避免误判）
+        // 405 (Method Not Allowed) - 某些 API 在 PR 已合并时返回此状态码
+        // 422 (Unprocessable Entity) - GitHub API 在 PR 已合并时可能返回此状态码
+        // 但需要确保错误消息中包含 merge 相关的内容，避免误判其他错误
+        if error_msg.contains("405") && error_msg.contains("merge") {
+            return true;
+        }
+        if error_msg.contains("422") && error_msg.contains("merge") {
+            return true;
+        }
+
+        false
     }
 }
