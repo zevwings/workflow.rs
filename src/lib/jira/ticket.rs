@@ -68,13 +68,25 @@ pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
     if let Some(fields) = response.data.get("fields") {
         if let Some(attachments) = fields.get("attachment") {
             if let Some(attachments_array) = attachments.as_array() {
-                crate::log_info!("Debug: Found {} attachments in API response", attachments_array.len());
+                crate::log_info!(
+                    "Debug: Found {} attachments in API response",
+                    attachments_array.len()
+                );
                 for (idx, att) in attachments_array.iter().enumerate() {
                     if let Some(filename) = att.get("filename").and_then(|f| f.as_str()) {
                         if let Some(content_url) = att.get("content").and_then(|c| c.as_str()) {
-                            crate::log_info!("Debug: Attachment {}: {} -> {}", idx + 1, filename, content_url);
+                            crate::log_info!(
+                                "Debug: Attachment {}: {} -> {}",
+                                idx + 1,
+                                filename,
+                                content_url
+                            );
                         } else {
-                            crate::log_info!("Debug: Attachment {}: {} (no content URL)", idx + 1, filename);
+                            crate::log_info!(
+                                "Debug: Attachment {}: {} (no content URL)",
+                                idx + 1,
+                                filename
+                            );
                         }
                     }
                 }
@@ -144,11 +156,16 @@ fn parse_attachments_from_description(description: &str) -> Vec<JiraAttachment> 
             let url = url_match.as_str().trim().to_string();
 
             // 只处理看起来像文件链接的 URL（包含 attachments 或 .txt/.log 等扩展名）
-            if url.contains("attachments") ||
-               filename.ends_with(".txt") ||
-               filename.ends_with(".log") ||
-               filename.ends_with(".zip") {
-                crate::log_info!("Debug: Parsed attachment from description: {} -> {}", filename, url);
+            if url.contains("attachments")
+                || filename.ends_with(".txt")
+                || filename.ends_with(".log")
+                || filename.ends_with(".zip")
+            {
+                crate::log_info!(
+                    "Debug: Parsed attachment from description: {} -> {}",
+                    filename,
+                    url
+                );
 
                 // 尝试从 URL 中提取附件 ID
                 if let Some(attachment_id) = extract_attachment_id_from_url(&url) {
@@ -225,11 +242,18 @@ pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
                 // 注意：从 CloudFront URL 提取的 ID 通常不是真正的 Jira 附件 ID
                 // 因此我们直接使用 CloudFront URL，让下载逻辑处理认证
                 if desc_att.content_url.contains("cloudfront.net") {
-                    crate::log_info!("Debug: Found CloudFront URL for {}: {}", desc_att.filename, desc_att.content_url);
+                    crate::log_info!(
+                        "Debug: Found CloudFront URL for {}: {}",
+                        desc_att.filename,
+                        desc_att.content_url
+                    );
                     // 保持原始 CloudFront URL，下载时会尝试不同的认证方式
                 }
 
-                crate::log_info!("Debug: Found attachment in description: {}", desc_att.filename);
+                crate::log_info!(
+                    "Debug: Found attachment in description: {}",
+                    desc_att.filename
+                );
                 attachments.push(desc_att);
             }
         }
