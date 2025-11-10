@@ -7,6 +7,7 @@
 
 use crate::settings::Settings;
 use anyhow::Result;
+use regex::Regex;
 
 /// 从 Jira ticket 提取项目名
 ///
@@ -65,7 +66,6 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
 /// assert_eq!(extract_jira_ticket_id("Fix bug"), None);
 /// ```
 pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {
-    use regex::Regex;
     // 匹配格式: PROJ-123 或 PROJ-123:
     let re = Regex::new(r"^([A-Z]+-\d+)").ok()?;
     re.captures(pull_request_title)

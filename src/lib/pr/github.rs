@@ -1,16 +1,17 @@
 use anyhow::{Context, Result};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::sync::OnceLock;
 
 use crate::git::Git;
 use crate::http::{HttpClient, HttpResponse};
 use crate::jira::status::JiraStatus;
-use crate::log_info;
+use crate::log_debug;
 use crate::settings::Settings;
 
 use super::helpers::extract_github_repo_from_url;
-use super::provider::PlatformProvider;
+use super::provider::{PlatformProvider, PullRequestStatus};
 
 /// GitHub API 模块
 pub struct GitHub;
@@ -140,7 +141,7 @@ impl PlatformProvider for GitHub {
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
-        log_info!("Using merge method: {}", merge_method);
+        log_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
             "https://api.github.com/repos/{}/{}/pulls/{}/merge",
@@ -197,7 +198,6 @@ impl PlatformProvider for GitHub {
 
     /// 获取 PR 信息
     fn get_pull_request_info(pull_request_id: &str) -> Result<String> {
-        use std::fmt::Write;
 
         let pr_number = pull_request_id
             .parse::<u64>()
@@ -237,10 +237,7 @@ impl PlatformProvider for GitHub {
     }
 
     /// 获取 PR 状态
-    fn get_pull_request_status(
-        pull_request_id: &str,
-    ) -> Result<super::provider::PullRequestStatus> {
-        use super::provider::PullRequestStatus;
+    fn get_pull_request_status(pull_request_id: &str) -> Result<PullRequestStatus> {
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;
@@ -280,8 +277,6 @@ impl PlatformProvider for GitHub {
         if !response.is_success() {
             return Err(Self::handle_api_error(&response));
         }
-
-        use std::fmt::Write;
 
         let mut output = String::new();
         for pr in response.data {
@@ -331,7 +326,7 @@ impl PlatformProvider for GitHub {
         if let Some(pr_id) =
             JiraStatus::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
-            log_info!(
+            log_debug!(
                 "Found PR #{} for branch '{}' from work-history",
                 pr_id,
                 current_branch
@@ -611,7 +606,7 @@ pub struct GitHubUser {
 
 #[cfg(test)]
 mod tests {
-    use super::super::helpers::extract_pull_request_id_from_url;
+    use crate::pr::helpers::extract_pull_request_id_from_url;
 
     #[test]
     fn test_extract_pull_request_id_from_url() {

@@ -1,5 +1,5 @@
 use crate::settings::Settings;
-use crate::{log_error, log_success, Clipboard, Logs};
+use crate::{log_debug, log_error, log_success, Clipboard, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -33,7 +33,7 @@ impl FindCommand {
         };
 
         // 4. 调用库函数执行查找并发送到 Streamock
-        log_success!("Searching for request ID: {}...", req_id);
+        log_debug!("Searching for request ID: {}...", req_id);
 
         let settings = Settings::load();
         let jira_service_address = Some(settings.jira_service_address.as_str());
@@ -52,8 +52,7 @@ impl FindCommand {
 
         // 复制到剪贴板（CLI特定操作）
         Clipboard::copy(&response_content).context("Failed to copy to clipboard")?;
-        log_success!("Response content copied to clipboard");
-        log_success!("Response sent to Streamock successfully");
+        log_success!("Response content copied to clipboard and sent to Streamock successfully");
 
         Ok(())
     }

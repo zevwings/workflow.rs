@@ -1,4 +1,5 @@
 use std::env;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::OnceLock;
 
 /// 应用程序设置
@@ -247,8 +248,6 @@ impl Settings {
 
     fn load_llm_provider() -> String {
         // 使用静态变量缓存 provider 值，避免重复读取环境变量
-        use std::sync::atomic::{AtomicBool, Ordering};
-        use std::sync::OnceLock;
 
         static CACHED_PROVIDER: OnceLock<String> = OnceLock::new();
         static LOGGED: AtomicBool = AtomicBool::new(false);
@@ -264,7 +263,7 @@ impl Settings {
             if let Ok(provider) = env::var("LLM_PROVIDER") {
                 if !provider.is_empty() {
                     if !LOGGED.swap(true, Ordering::Relaxed) {
-                        crate::log_info!("LLM_PROVIDER: {} (from environment variable)", provider);
+                        crate::log_debug!("LLM_PROVIDER: {} (from environment variable)", provider);
                     }
                     provider
                 } else {
@@ -284,7 +283,6 @@ impl Settings {
 
     /// 从 shell 配置文件或默认值加载 LLM provider（辅助函数）
     fn load_llm_provider_from_config() -> String {
-        use std::sync::atomic::{AtomicBool, Ordering};
         static LOGGED: AtomicBool = AtomicBool::new(false);
 
         // 2. 从 shell 配置文件读取
@@ -292,7 +290,7 @@ impl Settings {
             if let Some(provider) = shell_config_env.get("LLM_PROVIDER") {
                 if !provider.is_empty() {
                     if !LOGGED.swap(true, Ordering::Relaxed) {
-                        crate::log_info!("LLM_PROVIDER: {} (from shell config file)", provider);
+                        crate::log_debug!("LLM_PROVIDER: {} (from shell config file)", provider);
                     }
                     return provider.clone();
                 }
@@ -301,7 +299,7 @@ impl Settings {
 
         // 3. 默认使用 openai
         if !LOGGED.swap(true, Ordering::Relaxed) {
-            crate::log_info!("LLM_PROVIDER: openai (default)");
+            crate::log_debug!("LLM_PROVIDER: openai (default)");
         }
         "openai".to_string()
     }

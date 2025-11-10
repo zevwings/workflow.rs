@@ -1,5 +1,6 @@
 use crate::settings::Settings;
 use anyhow::{Context, Result};
+use regex::Regex;
 
 use super::constants::TYPES_OF_CHANGES;
 
@@ -11,7 +12,6 @@ use super::constants::TYPES_OF_CHANGES;
 /// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
 /// ```
 pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
-    use regex::Regex;
     let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
     let caps = re
         .captures(url)
@@ -28,7 +28,6 @@ pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
 /// assert_eq!(extract_github_repo_from_url("https://github.com/owner/repo.git"), Ok("owner/repo".to_string()));
 /// ```
 pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
-    use regex::Regex;
 
     // 匹配 SSH 格式: git@github.com:owner/repo.git
     let ssh_re =

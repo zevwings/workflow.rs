@@ -8,6 +8,8 @@
 use anyhow::{Context, Result};
 use duct::cmd;
 
+use crate::log_info;
+
 /// Git 操作结构体
 ///
 /// 提供 Git 仓库的各种操作功能，包括提交、推送、分支管理等。
@@ -107,7 +109,6 @@ impl Git {
     /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
     /// 4. 执行提交操作
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
-        use crate::log_info;
 
         // 1. 使用 git diff --quiet 检查是否有更改（更高效）
         let has_changes = Self::has_commit()?;

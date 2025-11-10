@@ -1,11 +1,14 @@
 use anyhow::{Context, Result};
 use reqwest::header::HeaderMap;
 use serde::{Deserialize, Serialize};
+use std::fmt::Write;
 use std::sync::OnceLock;
 
-use super::provider::PlatformProvider;
+use super::provider::{PlatformProvider, PullRequestStatus};
+use crate::git::Git;
 use crate::http::{HttpClient, HttpResponse};
 use crate::settings::Settings;
+use regex::Regex;
 
 /// Codeup API 模块
 pub struct Codeup;
@@ -189,8 +192,6 @@ impl PlatformProvider for Codeup {
 
         match pull_request_info {
             Some(pr) => {
-                use std::fmt::Write;
-
                 let mut info = String::new();
                 writeln!(info, "Title: {}", pr.title.as_deref().unwrap_or("N/A"))?;
                 if let Some(desc) = pr.description {
@@ -239,7 +240,6 @@ impl PlatformProvider for Codeup {
 
     /// 获取当前分支的 PR ID
     fn get_current_branch_pull_request() -> Result<Option<String>> {
-        use crate::git::Git;
         let current_branch = Git::current_branch()?;
 
         match Self::get_pull_request_by_branch(&current_branch)? {
@@ -260,10 +260,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 获取 PR 状态
-    fn get_pull_request_status(
-        pull_request_id: &str,
-    ) -> Result<super::provider::PullRequestStatus> {
-        use super::provider::PullRequestStatus;
+    fn get_pull_request_status(pull_request_id: &str) -> Result<PullRequestStatus> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
@@ -316,8 +313,6 @@ impl PlatformProvider for Codeup {
         let pull_request_list = response.data;
 
         // 格式化输出
-        use std::fmt::Write;
-
         let mut output = String::new();
         for pr in pull_request_list {
             let pull_request_id = if let Some(iid) = pr.pull_request_number {
@@ -551,7 +546,6 @@ impl Codeup {
 
     /// 从 PR URL 提取 PR ID（内部方法）
     fn extract_pull_request_id_from_url(url: &str) -> Option<String> {
-        use regex::Regex;
         // Codeup PR URL 格式: https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345
         let re = Regex::new(r"/code_reviews/(\d+)").ok()?;
         re.captures(url)

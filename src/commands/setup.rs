@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{log_info, log_success, log_warning, EnvFile, Shell};
+use crate::{log_debug, log_info, log_success, log_warning, EnvFile, Shell};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
 use std::collections::HashMap;
@@ -22,11 +22,7 @@ impl SetupCommand {
         let merged_env = EnvFile::load_merged(&env_var_keys);
 
         if !merged_env.is_empty() {
-            log_info!("ℹ️  Found existing configuration");
-            log_info!("   Source: shell config file and current environment variables");
-            log_info!(
-                "   You can press Enter to keep current values, or enter new values to override.\n"
-            );
+            log_info!("ℹ️  Found existing configuration. Press Enter to keep current values, or enter new values to override.\n");
         }
 
         // 收集配置信息（智能处理现有配置）
@@ -37,9 +33,9 @@ impl SetupCommand {
         EnvFile::save(&env_vars).context("Failed to save environment variables")?;
         log_success!("✅ Environment variables saved to shell config file");
 
-        let shell_config_path = EnvFile::get_shell_config_path()
+        let _shell_config_path = EnvFile::get_shell_config_path()
             .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
-        log_info!("   Shell config: {:?}", shell_config_path);
+        log_debug!("   Shell config: {:?}", _shell_config_path);
 
         // 保存配置后，更新当前进程的环境变量
         // 这样后续对 Settings::load() 的调用会使用新值
