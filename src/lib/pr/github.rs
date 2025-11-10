@@ -5,6 +5,7 @@ use std::sync::OnceLock;
 
 use crate::git::Git;
 use crate::http::{HttpClient, HttpResponse};
+use crate::jira::status::JiraStatus;
 use crate::log_info;
 use crate::settings::Settings;
 
@@ -319,10 +320,20 @@ impl PlatformProvider for GitHub {
             return Err(Self::handle_api_error(&response));
         }
 
-        match response.data.first() {
-            Some(pr) => Ok(Some(pr.number.to_string())),
-            None => Ok(None),
+        // 如果 API 查询成功，返回结果
+        if let Some(pr) = response.data.first() {
+            return Ok(Some(pr.number.to_string()));
         }
+
+        // 如果 API 查询没有找到 open 状态的 PR，尝试从 work-history 文件中查找
+        // 这可以处理已关闭或已合并的 PR
+        let remote_url = Git::get_remote_url().ok();
+        if let Some(pr_id) = JiraStatus::find_pr_id_by_branch(&current_branch, remote_url.as_deref())? {
+            log_info!("Found PR #{} for branch '{}' from work-history", pr_id, current_branch);
+            return Ok(Some(pr_id));
+        }
+
+        Ok(None)
     }
 
     /// 关闭 Pull Request
