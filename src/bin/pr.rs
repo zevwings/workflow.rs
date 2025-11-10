@@ -1,6 +1,6 @@
 //! PR 命令入口
 //!
-//! 这是独立的 `pr` 命令入口，提供 Pull Request 的创建、合并、查询等操作。
+//! 这是独立的 `pr` 命令入口，提供 Pull Request 的创建、合并、关闭、查询等操作。
 //! 支持 GitHub 和 Codeup 两种代码托管平台。
 
 use anyhow::Result;

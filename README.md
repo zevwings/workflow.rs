@@ -88,7 +88,7 @@ workflow/
 │   │   ├── qk.rs        # 快速日志操作入口（独立的 qk 命令）
 │   │   └── install.rs   # 安装命令入口（独立的 install 命令）
 │   └── commands/        # 命令实现（命令封装层）
-│       ├── pr/          # PR 相关命令（create, merge, status, list, update）
+│       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
 │       ├── qk/          # 快速日志操作命令（download, find, search）
 │       ├── check.rs     # 检查命令（git_status, network）
 │       ├── proxy.rs     # 代理管理命令（on, off, check）
@@ -226,6 +226,7 @@ pr create --description "..." # 指定简短描述
 pr create --dry-run      # 干运行（不实际创建）
 pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
 pr merge --force         # 强制合并
+pr close [PR_ID]         # 关闭 PR（可选指定 PR ID，否则自动检测当前分支）
 pr status [PR_ID_OR_BRANCH] # 显示 PR 状态信息（可选参数）
 pr list                   # 列出所有 PR
 pr list --state open     # 按状态过滤（open/closed/merged）

@@ -22,6 +22,7 @@ src/
 │   │   ├── mod.rs          # PR 命令模块声明
 │   │   ├── create.rs       # 创建 PR
 │   │   ├── merge.rs        # 合并 PR
+│   │   ├── close.rs        # 关闭 PR
 │   │   ├── status.rs       # PR 状态查询
 │   │   ├── list.rs         # 列出 PR
 │   │   └── update.rs       # 更新 PR
