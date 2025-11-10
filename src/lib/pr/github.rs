@@ -42,6 +42,10 @@ struct PullRequestInfo {
     title: String,
     body: Option<String>,
     state: String,
+    #[serde(default)]
+    merged: bool,
+    #[serde(rename = "merged_at", default)]
+    merged_at: Option<String>,
     html_url: String,
     head: PullRequestBranch,
     base: PullRequestBranch,
@@ -229,6 +233,20 @@ impl PlatformProvider for GitHub {
             .context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.title)
+    }
+
+    /// 获取 PR 状态
+    fn get_pull_request_status(pull_request_id: &str) -> Result<super::provider::PullRequestStatus> {
+        use super::provider::PullRequestStatus;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+        let pr = Self::fetch_pr_info_internal(pr_number)?;
+        Ok(PullRequestStatus {
+            state: pr.state,
+            merged: pr.merged,
+            merged_at: pr.merged_at,
+        })
     }
 
     /// 列出 PR

@@ -1,5 +1,16 @@
 use anyhow::Result;
 
+/// PR 状态信息
+#[derive(Debug, Clone)]
+pub struct PullRequestStatus {
+    /// PR 状态（如 "open", "closed", "merged"）
+    pub state: String,
+    /// 是否已合并
+    pub merged: bool,
+    /// 合并时间（如果已合并）
+    pub merged_at: Option<String>,
+}
+
 /// PR 平台接口 trait
 /// 定义所有 PR 平台（GitHub、Codeup 等）必须实现的共同方法
 pub trait PlatformProvider {
@@ -72,4 +83,13 @@ pub trait PlatformProvider {
         // 默认实现：返回不支持的错误
         anyhow::bail!("get_pull_requests is not supported by this platform")
     }
+
+    /// 获取 PR 状态
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    ///
+    /// # Returns
+    /// PR 状态信息，包含是否已合并等信息
+    fn get_pull_request_status(pull_request_id: &str) -> Result<PullRequestStatus>;
 }

@@ -176,39 +176,12 @@ impl PlatformProvider for Codeup {
 
         // 尝试解析为数字，如果是数字则当作 PR ID，否则当作分支名
         let pull_request_info = if pull_request_id_or_branch.parse::<u64>().is_ok() {
-            // 作为 PR ID，需要直接获取 PR 详情（尝试通过搜索 API 找到）
-            // Codeup API 可能不支持直接通过 ID 获取，我们先通过搜索找到
-            let url = format!(
-                "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&state=opened&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=50",
-                project_id
-            );
-
-            let client = Self::get_client()?;
-            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-            let response: HttpResponse<Vec<PullRequestInfo>> = client
-                .get(&url, None, Some(&headers))
-                .context("Failed to send Codeup API request")?;
-
-            if !response.is_success() {
-                anyhow::bail!(
-                    "Codeup API request failed: {} - {}",
-                    response.status,
-                    response.status_text
-                );
-            }
-
-            // 查找匹配的 PR ID
-            response.data.into_iter().find(|pr| {
-                if let Some(iid) = pr.pull_request_number {
-                    iid.to_string() == pull_request_id_or_branch
-                } else if let Some(ref detail_url) = pr.detail_url {
-                    Self::extract_pull_request_id_from_url(detail_url)
-                        .map(|id| id == pull_request_id_or_branch)
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            })
+            // 作为 PR ID，使用 get_pull_request_by_id（支持已合并的 PR）
+            Some(Self::get_pull_request_by_id(
+                pull_request_id_or_branch,
+                project_id,
+                &cookie,
+            )?)
         } else {
             // 作为分支名查找
             Self::get_pull_request_by_branch(pull_request_id_or_branch)?
@@ -250,87 +223,18 @@ impl PlatformProvider for Codeup {
     fn get_pull_request_url(pull_request_id: &str) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
-        // 尝试解析为数字
-        let pull_request_info = if pull_request_id.parse::<u64>().is_ok() {
-            let url = format!(
-                "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&state=opened&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=50",
-                project_id
-            );
-
-            let client = Self::get_client()?;
-            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-            let response: HttpResponse<Vec<PullRequestInfo>> = client
-                .get(&url, None, Some(&headers))
-                .context("Failed to send Codeup API request")?;
-
-            if !response.is_success() {
-                anyhow::bail!("Codeup API request failed: {}", response.status);
-            }
-
-            response.data.into_iter().find(|pr| {
-                if let Some(iid) = pr.pull_request_number {
-                    iid.to_string() == pull_request_id
-                } else if let Some(ref detail_url) = pr.detail_url {
-                    Self::extract_pull_request_id_from_url(detail_url)
-                        .map(|id| id == pull_request_id)
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            })
-        } else {
-            Self::get_pull_request_by_branch(pull_request_id)?
-        };
-
-        match pull_request_info {
-            Some(pr) => pr.detail_url.context("PR URL not found in response"),
-            None => {
-                anyhow::bail!("PR not found: {}", pull_request_id)
-            }
-        }
+        // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
+        let pr = Self::get_pull_request_by_id(pull_request_id, project_id, &cookie)?;
+        pr.detail_url.context("PR URL not found in response")
     }
 
     /// 获取 PR 标题
     fn get_pull_request_title(pull_request_id: &str) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
-        let pull_request_info = if pull_request_id.parse::<u64>().is_ok() {
-            let url = format!(
-                "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&state=opened&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=50",
-                project_id
-            );
-
-            let client = Self::get_client()?;
-            let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-            let response: HttpResponse<Vec<PullRequestInfo>> = client
-                .get(&url, None, Some(&headers))
-                .context("Failed to send Codeup API request")?;
-
-            if !response.is_success() {
-                anyhow::bail!("Codeup API request failed: {}", response.status);
-            }
-
-            response.data.into_iter().find(|pr| {
-                if let Some(iid) = pr.pull_request_number {
-                    iid.to_string() == pull_request_id
-                } else if let Some(ref detail_url) = pr.detail_url {
-                    Self::extract_pull_request_id_from_url(detail_url)
-                        .map(|id| id == pull_request_id)
-                        .unwrap_or(false)
-                } else {
-                    false
-                }
-            })
-        } else {
-            Self::get_pull_request_by_branch(pull_request_id)?
-        };
-
-        match pull_request_info {
-            Some(pr) => pr.title.context("PR title not found in response"),
-            None => {
-                anyhow::bail!("PR not found: {}", pull_request_id)
-            }
-        }
+        // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
+        let pr = Self::get_pull_request_by_id(pull_request_id, project_id, &cookie)?;
+        pr.title.context("PR title not found in response")
     }
 
     /// 获取当前分支的 PR ID
@@ -353,6 +257,28 @@ impl PlatformProvider for Codeup {
             }
             None => Ok(None),
         }
+    }
+
+    /// 获取 PR 状态
+    fn get_pull_request_status(pull_request_id: &str) -> Result<super::provider::PullRequestStatus> {
+        use super::provider::PullRequestStatus;
+        let (project_id, cookie) = Self::get_env_vars()?;
+
+        // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
+        let pr_info = Self::get_pull_request_by_id(pull_request_id, project_id, &cookie)?;
+
+        let state = pr_info
+            .state
+            .as_deref()
+            .unwrap_or("unknown")
+            .to_string();
+        let merged = state == "merged";
+
+        Ok(PullRequestStatus {
+            state,
+            merged,
+            merged_at: None, // Codeup API 不返回 merged_at 字段
+        })
     }
 
     /// 列出 PR
@@ -512,6 +438,54 @@ impl Codeup {
         }
 
         Ok(None)
+    }
+
+    /// 通过 PR ID 获取 PR 信息（内部方法，支持已合并的 PR）
+    fn get_pull_request_by_id(
+        pull_request_id: &str,
+        project_id: u64,
+        cookie: &str,
+    ) -> Result<PullRequestInfo> {
+        // 搜索所有状态的 PR（包括已合并的）
+        let url = format!(
+            "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=100",
+            project_id
+        );
+
+        let client = HttpClient::new()?;
+        let headers = Self::create_headers(cookie, Some("application/x-www-form-urlencoded"))?;
+        let response: HttpResponse<Vec<PullRequestInfo>> =
+            client
+                .get(&url, None, Some(&headers))
+                .context("Failed to send Codeup API request")?;
+
+        if !response.is_success() {
+            anyhow::bail!(
+                "Codeup API request failed: {} - {}",
+                response.status,
+                response.status_text
+            );
+        }
+
+        // 查找匹配的 PR ID
+        for pr in response.data {
+            // 通过 iid 匹配
+            if let Some(iid) = pr.pull_request_number {
+                if iid.to_string() == pull_request_id {
+                    return Ok(pr);
+                }
+            }
+            // 通过 detail_url 中的 ID 匹配
+            if let Some(ref detail_url) = pr.detail_url {
+                if let Some(id) = Self::extract_pull_request_id_from_url(detail_url) {
+                    if id == pull_request_id {
+                        return Ok(pr);
+                    }
+                }
+            }
+        }
+
+        anyhow::bail!("PR not found: {}", pull_request_id)
     }
 
     /// 从 PR URL 提取 PR ID（内部方法）
