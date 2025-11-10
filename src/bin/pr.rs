@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::pr::{create, list, merge, status, update};
+use workflow::commands::pr::{create, list, merge, status, update, close};
 
 /// CLI 主结构体
 ///
@@ -82,6 +82,14 @@ enum PRCommands {
     ///
     /// 将当前更改提交到 PR 分支，使用 PR 标题作为提交信息。
     Update,
+    /// 关闭 Pull Request
+    ///
+    /// 关闭当前分支对应的 PR，删除远程分支，并切换到默认分支。
+    Close {
+        /// PR ID（可选，不提供时自动检测当前分支）
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+    },
 }
 
 /// 主函数
@@ -115,6 +123,9 @@ fn main() -> Result<()> {
         }
         PRCommands::Update => {
             update::PullRequestUpdateCommand::update()?;
+        }
+        PRCommands::Close { pull_request_id } => {
+            close::PullRequestCloseCommand::close(pull_request_id)?;
         }
     }
 

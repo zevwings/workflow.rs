@@ -2,7 +2,7 @@
 //!
 //! 本模块提供了用户信息获取和本地缓存功能：
 //! - 从 Jira API 获取用户信息
-//! - 本地缓存用户信息到 `${HOME}/.workflow/users/${email}.json`
+//! - 本地缓存用户信息到 `${HOME}/.workflow/jira-users/${email}.json`
 //! - 优先使用本地缓存，减少 API 调用
 
 use anyhow::{Context, Result};
@@ -17,7 +17,7 @@ use super::models::JiraUser;
 /// 获取用户信息文件路径
 ///
 /// 根据邮箱地址生成用户信息缓存文件的路径。
-/// 路径格式：`${HOME}/.workflow/users/${sanitized_email}.json`
+/// 路径格式：`${HOME}/.workflow/jira-users/${sanitized_email}.json`
 ///
 /// # 参数
 ///
@@ -29,10 +29,10 @@ use super::models::JiraUser;
 fn get_user_info_file_path(email: &str) -> Result<PathBuf> {
     let home = std::env::var("HOME").context("HOME environment variable not set")?;
     let home_dir = PathBuf::from(&home);
-    let users_dir = home_dir.join(".workflow").join("users");
+    let users_dir = home_dir.join(".workflow").join("jira-users");
 
     // 确保目录存在
-    fs::create_dir_all(&users_dir).context("Failed to create .workflow/users directory")?;
+    fs::create_dir_all(&users_dir).context("Failed to create .workflow/jira-users directory")?;
 
     let sanitized_email = sanitize_email_for_filename(email);
     Ok(users_dir.join(format!("{}.json", sanitized_email)))

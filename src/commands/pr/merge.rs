@@ -29,11 +29,11 @@ impl PullRequestMergeCommand {
         // 4. 获取默认分支
         let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
 
-        // 5. 合并 PR
+        // 5. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id, &repo_type)?;
 
         // 6. 合并后清理：切换到默认分支并删除当前分支
-        // 注意：远程分支已经通过 API 删除（在 merge_pull_request 中）
+        // 注意：如果 PR 已合并，远程分支可能已经被删除
         Self::cleanup_after_merge(&current_branch, &default_branch)?;
 
         // 7. 更新 Jira 状态（如果关联了 ticket）
@@ -81,13 +81,74 @@ impl PullRequestMergeCommand {
     }
 
     /// 合并 PR（根据仓库类型调用对应的实现）
-    fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
-        match repo_type {
+    /// 返回 true 表示新合并，false 表示已经合并
+    fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
+        use crate::log_info;
+
+        // 先检查 PR 状态
+        let status = match repo_type {
             RepoType::GitHub => {
-                <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true)?;
+                <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)?
             }
             RepoType::Codeup => {
-                <Codeup as PlatformProvider>::merge_pull_request(pull_request_id, true)?;
+                <Codeup as PlatformProvider>::get_pull_request_status(pull_request_id)?
+            }
+            _ => {
+                anyhow::bail!(
+                    "PR merge is currently only supported for GitHub and Codeup repositories."
+                );
+            }
+        };
+
+        // 如果已经合并，跳过合并步骤
+        if status.merged {
+            log_warning!("PR #{} has already been merged", pull_request_id);
+            if let Some(merged_at) = status.merged_at {
+                log_info!("Merged at: {}", merged_at);
+            }
+            log_info!("Skipping merge step, continuing with cleanup...");
+            return Ok(false);
+        }
+
+        // 执行合并操作
+        match repo_type {
+            RepoType::GitHub => {
+                match <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true) {
+                    Ok(()) => {
+                        log_success!("PR merged successfully");
+                        Ok(true)
+                    }
+                    Err(e) => {
+                        // 检查是否是"已合并"错误
+                        if Self::is_already_merged_error(&e) {
+                            log_warning!("PR #{} has already been merged (detected from merge error)", pull_request_id);
+                            log_info!("Skipping merge step, continuing with cleanup...");
+                            Ok(false)
+                        } else {
+                            // 其他错误，返回错误
+                            Err(e)
+                        }
+                    }
+                }
+            }
+            RepoType::Codeup => {
+                match <Codeup as PlatformProvider>::merge_pull_request(pull_request_id, true) {
+                    Ok(()) => {
+                        log_success!("PR merged successfully");
+                        Ok(true)
+                    }
+                    Err(e) => {
+                        // 检查是否是"已合并"错误
+                        if Self::is_already_merged_error(&e) {
+                            log_warning!("PR #{} has already been merged (detected from merge error)", pull_request_id);
+                            log_info!("Skipping merge step, continuing with cleanup...");
+                            Ok(false)
+                        } else {
+                            // 其他错误，返回错误
+                            Err(e)
+                        }
+                    }
+                }
             }
             _ => {
                 anyhow::bail!(
@@ -95,14 +156,15 @@ impl PullRequestMergeCommand {
                 );
             }
         }
-        log_success!("PR merged successfully");
-        Ok(())
     }
 
     /// 更新 Jira 状态（如果关联了 ticket）
     fn update_jira_status(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
+        // 获取当前仓库 URL
+        let repository = Git::get_remote_url().ok();
+
         // 尝试从历史记录读取
-        let mut jira_ticket = JiraStatus::read_work_history(pull_request_id)?;
+        let mut jira_ticket = JiraStatus::read_work_history(pull_request_id, repository.as_deref())?;
 
         // 如果历史记录中没有，尝试从 PR 标题提取
         if jira_ticket.is_none() {
@@ -120,7 +182,7 @@ impl PullRequestMergeCommand {
             }
 
             // 更新工作历史记录的合并时间
-            JiraStatus::update_work_history_merged(pull_request_id)?;
+            JiraStatus::update_work_history_merged(pull_request_id, repository.as_deref())?;
         } else {
             log_warning!("No Jira ticket associated with this PR");
         }
@@ -158,7 +220,7 @@ impl PullRequestMergeCommand {
 
         log_info!("Switching to default branch: {}", default_branch);
         log_info!(
-            "Note: Remote branch '{}' has already been deleted via API",
+            "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );
 
@@ -220,8 +282,8 @@ impl PullRequestMergeCommand {
             default_branch,
             current_branch
         );
-        log_success!(
-            "Remote branch '{}' was already deleted via API",
+        log_info!(
+            "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );
         Ok(())
@@ -232,5 +294,34 @@ impl PullRequestMergeCommand {
         let (exists_local, _) =
             Git::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
         Ok(exists_local)
+    }
+
+    /// 检查错误是否是"PR 已合并"错误
+    ///
+    /// 这是一个备用检查，用于处理以下情况：
+    /// 1. 状态检查失败（网络问题等）
+    /// 2. 竞态条件：在状态检查和实际合并之间，PR 被其他进程合并了
+    fn is_already_merged_error(error: &anyhow::Error) -> bool {
+        let error_msg = error.to_string().to_lowercase();
+
+        // 优先检查明确的错误消息
+        if error_msg.contains("already been merged")
+            || error_msg.contains("pull request has already been merged")
+            || error_msg.contains("not mergeable") {
+            return true;
+        }
+
+        // 检查 HTTP 状态码（需要结合错误消息，避免误判）
+        // 405 (Method Not Allowed) - 某些 API 在 PR 已合并时返回此状态码
+        // 422 (Unprocessable Entity) - GitHub API 在 PR 已合并时可能返回此状态码
+        // 但需要确保错误消息中包含 merge 相关的内容，避免误判其他错误
+        if error_msg.contains("405") && error_msg.contains("merge") {
+            return true;
+        }
+        if error_msg.contains("422") && error_msg.contains("merge") {
+            return true;
+        }
+
+        false
     }
 }
