@@ -13,7 +13,8 @@ use workflow::commands::qk::QuickCommand;
 
 /// CLI 主结构体
 ///
-/// 使用 clap 进行命令行参数解析，需要提供 JIRA ID 和子命令。
+/// 使用 clap 进行命令行参数解析，需要提供 JIRA ID 和可选的子命令。
+/// 如果不提供子命令，将显示 ticket 信息。
 #[derive(Parser)]
 #[command(name = "qk")]
 #[command(about = "Quick log operations (unified wrapper)", long_about = None)]
@@ -24,7 +25,7 @@ struct Cli {
     jira_id: String,
 
     #[command(subcommand)]
-    subcommand: QkCommands,
+    subcommand: Option<QkCommands>,
 }
 
 /// QK 命令枚举
@@ -36,7 +37,11 @@ enum QkCommands {
     ///
     /// 从 Jira ticket 的附件中下载日志文件（支持分片文件自动合并）。
     /// 日志文件会保存到本地，路径根据 JIRA ID 自动解析。
-    Download,
+    Download {
+        /// 下载所有附件（不仅仅是日志附件）
+        #[arg(long, short = 'a')]
+        all: bool,
+    },
     /// 查找请求 ID
     ///
     /// 在日志文件中查找指定的请求 ID，并提取对应的响应内容。
@@ -54,23 +59,43 @@ enum QkCommands {
         #[arg(value_name = "SEARCH_TERM")]
         search_term: Option<String>,
     },
+    /// 清理日志目录
+    ///
+    /// 删除指定 JIRA ID 的日志目录及其所有内容。
+    /// 需要确认才能执行删除操作。
+    Clean {
+        /// 预览操作，不实际删除
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+        /// 只列出将要删除的内容
+        #[arg(long, short = 'l')]
+        list: bool,
+    },
 }
 
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
+/// 如果不提供子命令，将显示 ticket 信息。
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
     match cli.subcommand {
-        QkCommands::Download => {
-            QuickCommand::download(&cli.jira_id)?;
+        Some(QkCommands::Download { all }) => {
+            QuickCommand::download(&cli.jira_id, all)?;
         }
-        QkCommands::Find { request_id } => {
+        Some(QkCommands::Find { request_id }) => {
             QuickCommand::find_request_id(&cli.jira_id, request_id)?;
         }
-        QkCommands::Search { search_term } => {
+        Some(QkCommands::Search { search_term }) => {
             QuickCommand::search(&cli.jira_id, search_term)?;
+        }
+        Some(QkCommands::Clean { dry_run, list }) => {
+            QuickCommand::clean(&cli.jira_id, dry_run, list)?;
+        }
+        None => {
+            // 如果没有提供子命令，显示 ticket 信息
+            QuickCommand::show(&cli.jira_id)?;
         }
     }
 

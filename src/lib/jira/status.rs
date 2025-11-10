@@ -165,8 +165,7 @@ fn get_repo_work_history_path(repo_url: &str) -> Result<PathBuf> {
         .join("work-history");
 
     // 确保目录存在
-    fs::create_dir_all(&history_dir)
-        .context("Failed to create work-history directory")?;
+    fs::create_dir_all(&history_dir).context("Failed to create work-history directory")?;
 
     Ok(history_dir.join(format!("{}.json", repo_id)))
 }
@@ -520,8 +519,7 @@ impl JiraStatus {
         let json = serde_json::to_string_pretty(&history_map)
             .context("Failed to serialize work-history")?;
 
-        fs::write(&repo_file, json)
-            .context("Failed to write work-history file")?;
+        fs::write(&repo_file, json).context("Failed to write work-history file")?;
 
         Ok(())
     }
@@ -561,8 +559,7 @@ impl JiraStatus {
             return Ok(());
         }
 
-        let content = fs::read_to_string(&repo_file)
-            .context("Failed to read work-history file")?;
+        let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
 
         let mut history_map: WorkHistoryMap =
             serde_json::from_str(&content).context("Failed to parse work-history file")?;
@@ -704,8 +701,7 @@ impl JiraStatus {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(&repo_file)
-            .context("Failed to read work-history file")?;
+        let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
 
         // 解析 JSON
         let history_map: WorkHistoryMap =

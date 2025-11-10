@@ -9,15 +9,17 @@
 //! ## 模块说明
 //!
 //! - `check` - 检查工具命令（git_status, network）
+//! - `clean` - 清理日志目录命令
 //! - `config` - 配置查看命令
 //! - `install` - 安装命令实现
 //! - `pr` - PR 相关命令（create, merge, close, status, list, update）
 //! - `proxy` - 代理管理命令（on, off, check）
-//! - `qk` - 快速日志操作命令（download, find, search）
+//! - `qk` - 快速日志操作命令（download, find, search, clean）
 //! - `setup` - 初始化设置命令
 //! - `uninstall` - 卸载命令实现
 
 pub mod check;
+pub mod clean;
 pub mod config;
 pub mod install;
 pub mod pr;

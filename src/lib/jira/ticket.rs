@@ -48,7 +48,11 @@ fn get_issue_url(ticket: &str) -> Result<String> {
 /// 返回 `JiraIssue` 结构体，包含 ticket 的所有信息。
 pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
     let (email, api_token) = get_auth()?;
-    let url = get_issue_url(ticket)?;
+    let mut url = get_issue_url(ticket)?;
+
+    // 添加 fields 参数，明确请求所有需要的字段，包括附件
+    // 使用 expand=renderedFields 可以获取更多信息
+    url = format!("{}?fields=*all&expand=renderedFields", url);
 
     let client = HttpClient::new()?;
     let auth = Authorization::new(&email, &api_token);
@@ -60,13 +64,143 @@ pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
         anyhow::bail!("Failed to get ticket info: {}", response.status);
     }
 
+    // 调试：打印附件信息
+    if let Some(fields) = response.data.get("fields") {
+        if let Some(attachments) = fields.get("attachment") {
+            if let Some(attachments_array) = attachments.as_array() {
+                crate::log_info!("Debug: Found {} attachments in API response", attachments_array.len());
+                for (idx, att) in attachments_array.iter().enumerate() {
+                    if let Some(filename) = att.get("filename").and_then(|f| f.as_str()) {
+                        if let Some(content_url) = att.get("content").and_then(|c| c.as_str()) {
+                            crate::log_info!("Debug: Attachment {}: {} -> {}", idx + 1, filename, content_url);
+                        } else {
+                            crate::log_info!("Debug: Attachment {}: {} (no content URL)", idx + 1, filename);
+                        }
+                    }
+                }
+            }
+        } else {
+            crate::log_info!("Debug: No 'attachment' field in API response");
+        }
+    }
+
     serde_json::from_value(response.data)
         .context(format!("Failed to parse ticket info for: {}", ticket))
+}
+
+/// 从 URL 中提取附件 ID
+///
+/// 从 CloudFront URL 中提取附件 ID，格式如：/attachments/bugs/16232306/.../21886523/log0.txt
+/// 附件 ID 通常是路径中的数字部分。
+pub fn extract_attachment_id_from_url(url: &str) -> Option<String> {
+    use regex::Regex;
+    // 匹配 URL 中的附件 ID，通常在路径中，如 /attachments/.../21886523/...
+    let id_pattern = Regex::new(r"/attachments/[^/]+/\d+/([^/]+/)*(\d+)/").unwrap();
+    if let Some(cap) = id_pattern.captures(url) {
+        if let Some(id_match) = cap.get(2) {
+            return Some(id_match.as_str().to_string());
+        }
+    }
+    None
+}
+
+/// 从 CloudFront URL 构建 Jira API 的 content URL
+///
+/// 尝试从 CloudFront URL 中提取信息，构建 Jira API 的 content URL。
+/// 格式：{base_url}/attachment/content/{attachment_id}
+/// 注意：Jira API 的格式是 `/attachment/content/{id}`，不是 `/attachment/{id}/content`
+#[allow(dead_code)]
+fn build_jira_content_url_from_cloudfront(cloudfront_url: &str) -> Option<String> {
+    // 从 CloudFront URL 中提取附件 ID
+    if let Some(attachment_id) = extract_attachment_id_from_url(cloudfront_url) {
+        // 尝试获取 base URL
+        if let Ok(base_url) = get_base_url() {
+            // 构建 Jira API 的 content URL
+            // 格式：{base_url}/attachment/content/{attachment_id}
+            // 注意：从 ticket info 获取的附件 URL 格式是：/rest/api/2/attachment/content/{id}
+            let jira_url = format!("{}/attachment/content/{}", base_url, attachment_id);
+            return Some(jira_url);
+        }
+    }
+    None
+}
+
+/// 从描述中解析附件链接
+///
+/// Jira 描述中可能包含附件链接，格式为：`# [filename|url]`
+/// 解析这些链接并返回附件列表。
+fn parse_attachments_from_description(description: &str) -> Vec<JiraAttachment> {
+    use regex::Regex;
+    let mut attachments = Vec::new();
+
+    // 匹配 Jira 链接格式：# [filename|url]
+    // 例如：# [log0.txt|https://...]
+    // 使用更宽松的匹配，允许 URL 中包含各种字符（包括查询参数）
+    let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
+
+    for cap in link_pattern.captures_iter(description) {
+        if let (Some(filename_match), Some(url_match)) = (cap.get(1), cap.get(2)) {
+            let filename = filename_match.as_str().trim().to_string();
+            let url = url_match.as_str().trim().to_string();
+
+            // 只处理看起来像文件链接的 URL（包含 attachments 或 .txt/.log 等扩展名）
+            if url.contains("attachments") ||
+               filename.ends_with(".txt") ||
+               filename.ends_with(".log") ||
+               filename.ends_with(".zip") {
+                crate::log_info!("Debug: Parsed attachment from description: {} -> {}", filename, url);
+
+                // 尝试从 URL 中提取附件 ID
+                if let Some(attachment_id) = extract_attachment_id_from_url(&url) {
+                    crate::log_info!("Debug: Extracted attachment ID from URL: {}", attachment_id);
+                }
+
+                attachments.push(JiraAttachment {
+                    filename,
+                    content_url: url,
+                    mime_type: None,
+                    size: None,
+                });
+            }
+        }
+    }
+
+    attachments
+}
+
+/// 通过附件 ID 获取附件的正确 URL
+///
+/// 从 Jira API 获取附件的正确下载 URL。
+/// 附件 ID 可以通过 `/rest/api/2/attachment/{id}` 端点获取。
+#[allow(dead_code)]
+fn get_attachment_url_by_id(attachment_id: &str) -> Result<String> {
+    let (email, api_token) = get_auth()?;
+    let base_url = get_base_url()?;
+    let url = format!("{}/attachment/{}", base_url, attachment_id);
+
+    let client = HttpClient::new()?;
+    let auth = Authorization::new(&email, &api_token);
+    let response = client
+        .get::<serde_json::Value>(&url, Some(&auth), None)
+        .context(format!("Failed to get attachment info: {}", attachment_id))?;
+
+    if !response.is_success() {
+        anyhow::bail!("Failed to get attachment info: {}", response.status);
+    }
+
+    // 从响应中提取 content URL
+    if let Some(content_url) = response.data.get("content").and_then(|c| c.as_str()) {
+        Ok(content_url.to_string())
+    } else {
+        anyhow::bail!("No content URL found in attachment response")
+    }
 }
 
 /// 获取 ticket 的附件列表
 ///
 /// 用于日志下载等功能。
+/// 会从 `fields.attachment` 获取附件，同时也会从描述中解析附件链接。
+/// 对于从描述中解析出的 CloudFront URL，会尝试通过附件 ID 获取正确的 Jira API URL。
 ///
 /// # 参数
 ///
@@ -77,7 +211,31 @@ pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
 /// 返回附件列表，如果没有附件则返回空列表。
 pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
     let issue = get_ticket_info(ticket)?;
-    Ok(issue.fields.attachment.unwrap_or_default())
+    let mut attachments = issue.fields.attachment.unwrap_or_default();
+
+    // 从描述中解析附件链接
+    if let Some(description) = &issue.fields.description {
+        let description_attachments = parse_attachments_from_description(description);
+
+        // 合并附件，避免重复（基于文件名）
+        for desc_att in description_attachments {
+            // 检查是否已存在同名附件
+            if !attachments.iter().any(|a| a.filename == desc_att.filename) {
+                // 如果是 CloudFront 签名 URL，直接使用原始 URL
+                // 注意：从 CloudFront URL 提取的 ID 通常不是真正的 Jira 附件 ID
+                // 因此我们直接使用 CloudFront URL，让下载逻辑处理认证
+                if desc_att.content_url.contains("cloudfront.net") {
+                    crate::log_info!("Debug: Found CloudFront URL for {}: {}", desc_att.filename, desc_att.content_url);
+                    // 保持原始 CloudFront URL，下载时会尝试不同的认证方式
+                }
+
+                crate::log_info!("Debug: Found attachment in description: {}", desc_att.filename);
+                attachments.push(desc_att);
+            }
+        }
+    }
+
+    Ok(attachments)
 }
 
 /// 获取 issue 的可用 transitions

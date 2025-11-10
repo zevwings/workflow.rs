@@ -1,6 +1,4 @@
-use crate::{
-    log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
-};
+use crate::{log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::{Context, Result};
 
 /// PR 关闭命令
@@ -21,8 +19,7 @@ impl PullRequestCloseCommand {
         let current_branch = Git::current_branch()?;
 
         // 3. 获取默认分支
-        let default_branch = Git::get_default_branch()
-            .context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
 
         // 4. 提前检查：如果当前分支是默认分支，不应该关闭
         if current_branch == default_branch {
@@ -40,7 +37,10 @@ impl PullRequestCloseCommand {
             // 如果关闭失败，检查是否是"已关闭"错误（竞态条件）
             if let Err(e) = Self::close_pull_request(&pull_request_id, &repo_type) {
                 if Self::is_already_closed_error(&e) {
-                    log_warning!("PR #{} has already been closed (detected from close error)", pull_request_id);
+                    log_warning!(
+                        "PR #{} has already been closed (detected from close error)",
+                        pull_request_id
+                    );
                     log_info!("Skipping close step, continuing with cleanup...");
                 } else {
                     // 其他错误，返回错误
@@ -69,12 +69,8 @@ impl PullRequestCloseCommand {
 
         // 从当前分支获取 PR
         let pr_id = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_current_branch_pull_request()?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_current_branch_pull_request()?
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
             _ => {
                 anyhow::bail!(
                     "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
@@ -101,10 +97,7 @@ impl PullRequestCloseCommand {
     }
 
     /// 检查 PR 是否已经关闭
-    fn check_if_already_closed(
-        pull_request_id: &str,
-        repo_type: &RepoType,
-    ) -> Result<bool> {
+    fn check_if_already_closed(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
         let status = match repo_type {
             RepoType::GitHub => {
                 <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)?
@@ -121,7 +114,11 @@ impl PullRequestCloseCommand {
 
         // 如果状态是 closed 或 merged，说明已经关闭
         if status.state == "closed" || status.state == "merged" {
-            log_warning!("PR #{} is already closed (state: {})", pull_request_id, status.state);
+            log_warning!(
+                "PR #{} is already closed (state: {})",
+                pull_request_id,
+                status.state
+            );
             return Ok(true);
         }
 
@@ -170,7 +167,9 @@ impl PullRequestCloseCommand {
         // 检查 HTTP 状态码（需要结合错误消息，避免误判）
         // 422 (Unprocessable Entity) - GitHub API 在 PR 已关闭时可能返回此状态码
         // 但需要确保错误消息中包含 close 相关的内容，避免误判其他错误
-        if error_msg.contains("422") && (error_msg.contains("close") || error_msg.contains("closed")) {
+        if error_msg.contains("422")
+            && (error_msg.contains("close") || error_msg.contains("closed"))
+        {
             return true;
         }
 
@@ -184,7 +183,10 @@ impl PullRequestCloseCommand {
             .context("Failed to check if remote branch exists")?;
 
         if !exists_remote {
-            log_info!("Remote branch '{}' does not exist, skipping deletion", branch_name);
+            log_info!(
+                "Remote branch '{}' does not exist, skipping deletion",
+                branch_name
+            );
             return Ok(());
         }
 
@@ -203,7 +205,10 @@ impl PullRequestCloseCommand {
                     || error_msg.contains("not found")
                     || error_msg.contains("does not exist")
                 {
-                    log_info!("Remote branch '{}' may have already been deleted", branch_name);
+                    log_info!(
+                        "Remote branch '{}' may have already been deleted",
+                        branch_name
+                    );
                 } else {
                     // 其他错误，记录警告但继续执行
                     log_warning!("Failed to delete remote branch: {}", e);
@@ -292,4 +297,3 @@ impl PullRequestCloseCommand {
         Ok(exists_local)
     }
 }
-

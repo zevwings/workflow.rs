@@ -236,7 +236,9 @@ impl PlatformProvider for GitHub {
     }
 
     /// 获取 PR 状态
-    fn get_pull_request_status(pull_request_id: &str) -> Result<super::provider::PullRequestStatus> {
+    fn get_pull_request_status(
+        pull_request_id: &str,
+    ) -> Result<super::provider::PullRequestStatus> {
         use super::provider::PullRequestStatus;
         let pr_number = pull_request_id
             .parse::<u64>()
@@ -552,6 +554,42 @@ impl GitHub {
 
         Ok(headers)
     }
+
+    /// 获取 GitHub 用户信息
+    ///
+    /// 调用 GitHub API 的 /user 端点获取当前用户信息。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `GitHubUser` 结构体，包含用户的 `login`、`name` 和 `email`。
+    pub fn get_user_info() -> Result<GitHubUser> {
+        let url = "https://api.github.com/user";
+        let client = Self::get_client()?;
+        let headers = Self::get_headers()?;
+        let response: HttpResponse<serde_json::Value> = client
+            .get(url, None, Some(headers))
+            .context("Failed to get GitHub user info")?;
+
+        if !response.is_success() {
+            anyhow::bail!("Failed to get GitHub user info: {}", response.status);
+        }
+
+        // 解析响应
+        let user: GitHubUser = serde_json::from_value(response.data)
+            .context("Failed to parse GitHub user response")?;
+
+        Ok(user)
+    }
+}
+
+/// GitHub 用户信息
+#[derive(Debug, Deserialize)]
+pub struct GitHubUser {
+    pub login: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
 }
 
 #[cfg(test)]

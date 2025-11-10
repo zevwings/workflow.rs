@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::pr::{create, list, merge, status, update, close};
+use workflow::commands::pr::{close, create, list, merge, status, update};
 
 /// CLI 主结构体
 ///
