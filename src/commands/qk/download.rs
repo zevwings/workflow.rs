@@ -1,5 +1,5 @@
 use crate::settings::Settings;
-use crate::{log_info, log_success, Logs};
+use crate::{log_debug, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 下载日志命令
@@ -23,15 +23,14 @@ impl DownloadCommand {
             None
         };
 
-        log_success!("Getting attachments for {}...", jira_id);
+        log_debug!("Getting attachments for {}...", jira_id);
 
         // 调用库函数执行下载
         let base_dir = Logs::download_from_jira(jira_id, log_output_folder_name, download_all)
             .context("Failed to download attachments from Jira")?;
 
         log_success!("\nDownload completed!");
-        log_info!("Files located at: {:?}", base_dir);
-        log_info!("Downloaded files in: {:?}/downloads", base_dir);
+        log_info!("Files located at: {:?}/downloads", base_dir);
 
         Ok(())
     }

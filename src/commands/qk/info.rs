@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, Jira};
+use crate::{log_debug, log_info, log_success, Jira};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令
@@ -9,7 +9,7 @@ impl InfoCommand {
     /// 显示 ticket 信息
     #[allow(dead_code)]
     pub fn show(jira_id: &str) -> Result<()> {
-        log_info!("Getting ticket info for {}...", jira_id);
+        log_debug!("Getting ticket info for {}...", jira_id);
 
         // 获取 ticket 信息
         let issue = Jira::get_ticket_info(jira_id)
