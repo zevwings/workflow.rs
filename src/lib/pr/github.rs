@@ -328,8 +328,14 @@ impl PlatformProvider for GitHub {
         // 如果 API 查询没有找到 open 状态的 PR，尝试从 work-history 文件中查找
         // 这可以处理已关闭或已合并的 PR
         let remote_url = Git::get_remote_url().ok();
-        if let Some(pr_id) = JiraStatus::find_pr_id_by_branch(&current_branch, remote_url.as_deref())? {
-            log_info!("Found PR #{} for branch '{}' from work-history", pr_id, current_branch);
+        if let Some(pr_id) =
+            JiraStatus::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
+        {
+            log_info!(
+                "Found PR #{} for branch '{}' from work-history",
+                pr_id,
+                current_branch
+            );
             return Ok(Some(pr_id));
         }
 
