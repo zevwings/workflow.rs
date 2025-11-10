@@ -113,6 +113,64 @@ pub struct WorkHistoryEntry {
 /// 工作历史记录存储格式（JSON 对象，PR ID -> Entry）
 type WorkHistoryMap = HashMap<String, WorkHistoryEntry>;
 
+/// 规范化仓库 URL 为文件名
+///
+/// 将仓库 URL 转换为可用于文件名的字符串。
+///
+/// # 示例
+/// ```
+/// assert_eq!(
+///     normalize_repo_to_filename("git@github.com:owner/repo.git"),
+///     "github.com-owner-repo"
+/// );
+/// assert_eq!(
+///     normalize_repo_to_filename("https://github.com/owner/repo.git"),
+///     "github.com-owner-repo"
+/// );
+/// ```
+fn normalize_repo_to_filename(repo_url: &str) -> String {
+    repo_url
+        .replace("git@", "")
+        .replace("https://", "")
+        .replace("http://", "")
+        .replace(":", "-")
+        .replace("/", "-")
+        .replace(".git", "")
+        .replace(".", "-")
+}
+
+/// 获取仓库特定的工作历史文件路径
+///
+/// 根据仓库 URL 生成对应的历史文件路径。
+/// 文件存储在 `${HOME}/.workflow/work-history/` 目录下。
+///
+/// # 参数
+///
+/// * `repo_url` - 仓库 URL（如 `"git@github.com:owner/repo.git"`）
+///
+/// # 返回
+///
+/// 返回仓库特定的历史文件路径。
+///
+/// # 错误
+///
+/// 如果无法创建目录或获取路径，返回相应的错误信息。
+fn get_repo_work_history_path(repo_url: &str) -> Result<PathBuf> {
+    let paths = ConfigPaths::new()?;
+    let repo_id = normalize_repo_to_filename(repo_url);
+    let history_dir = paths
+        .work_history
+        .parent()
+        .context("Failed to get workflow directory")?
+        .join("work-history");
+
+    // 确保目录存在
+    fs::create_dir_all(&history_dir)
+        .context("Failed to create work-history directory")?;
+
+    Ok(history_dir.join(format!("{}.json", repo_id)))
+}
+
 /// 获取项目状态列表
 ///
 /// 通过 Jira REST API 获取指定项目的所有可用状态。
@@ -364,6 +422,7 @@ impl JiraStatus {
     /// # 参数
     ///
     /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    /// * `repository` - 仓库地址（可选，如果提供则从仓库特定的文件读取）
     ///
     /// # 返回
     ///
@@ -388,8 +447,11 @@ impl JiraStatus {
     /// # 错误
     ///
     /// 如果读取文件失败，返回相应的错误信息。
-    pub fn read_work_history(pull_request_id: &str) -> Result<Option<String>> {
-        let entry = Self::read_work_history_entry(pull_request_id)?;
+    pub fn read_work_history(
+        pull_request_id: &str,
+        repository: Option<&str>,
+    ) -> Result<Option<String>> {
+        let entry = Self::read_work_history_entry(pull_request_id, repository)?;
         Ok(entry.map(|e| e.jira_ticket))
     }
 
@@ -398,20 +460,23 @@ impl JiraStatus {
     /// 将 PR 创建信息写入工作历史记录文件。
     /// 如果记录已存在，则更新；如果不存在，则创建新记录。
     ///
+    /// 根据仓库 URL 将记录写入到对应的仓库特定文件中。
+    ///
     /// # 参数
     ///
     /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
     /// * `pull_request_id` - Pull Request ID（如 `"456"`）
     /// * `pull_request_url` - Pull Request URL（可选）
-    /// * `repository` - 仓库地址（可选）
+    /// * `repository` - 仓库地址（必需，用于确定存储文件）
     /// * `branch` - 分支名称（可选）
     ///
     /// # 行为
     ///
-    /// 1. 读取现有的工作历史记录（如果文件存在）
-    /// 2. 创建或更新指定 PR ID 的记录
-    /// 3. 设置 `created_at` 为当前时间（ISO 8601 格式）
-    /// 4. 将更新后的记录写入文件
+    /// 1. 根据仓库 URL 确定存储文件路径
+    /// 2. 读取现有的工作历史记录（如果文件存在）
+    /// 3. 创建或更新指定 PR ID 的记录
+    /// 4. 设置 `created_at` 为当前时间（ISO 8601 格式）
+    /// 5. 将更新后的记录写入仓库特定的文件
     ///
     /// # 错误
     ///
@@ -423,12 +488,13 @@ impl JiraStatus {
         repository: Option<&str>,
         branch: Option<&str>,
     ) -> Result<()> {
-        let paths = ConfigPaths::new()?;
+        let repo_url = repository.context("Repository URL is required for work history")?;
+        let repo_file = get_repo_work_history_path(repo_url)?;
 
         // 读取现有配置
-        let mut history_map: WorkHistoryMap = if paths.work_history.exists() {
-            let content = fs::read_to_string(&paths.work_history)
-                .context("Failed to read existing work-history.json")?;
+        let mut history_map: WorkHistoryMap = if repo_file.exists() {
+            let content = fs::read_to_string(&repo_file)
+                .context("Failed to read existing work-history file")?;
             serde_json::from_str(&content).unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
@@ -452,9 +518,10 @@ impl JiraStatus {
 
         // 写入 JSON（使用 pretty print 以便阅读）
         let json = serde_json::to_string_pretty(&history_map)
-            .context("Failed to serialize work-history.json")?;
+            .context("Failed to serialize work-history")?;
 
-        fs::write(&paths.work_history, json).context("Failed to write work-history.json")?;
+        fs::write(&repo_file, json)
+            .context("Failed to write work-history file")?;
 
         Ok(())
     }
@@ -466,13 +533,15 @@ impl JiraStatus {
     /// # 参数
     ///
     /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    /// * `repository` - 仓库地址（必需，用于确定存储文件）
     ///
     /// # 行为
     ///
-    /// 1. 读取现有的工作历史记录
-    /// 2. 查找指定 PR ID 的记录
-    /// 3. 如果找到，更新 `merged_at` 为当前时间（ISO 8601 格式）
-    /// 4. 将更新后的记录写入文件
+    /// 1. 根据仓库 URL 确定存储文件路径
+    /// 2. 读取现有的工作历史记录
+    /// 3. 查找指定 PR ID 的记录
+    /// 4. 如果找到，更新 `merged_at` 为当前时间（ISO 8601 格式）
+    /// 5. 将更新后的记录写入仓库特定的文件
     ///
     /// # 返回
     ///
@@ -481,17 +550,22 @@ impl JiraStatus {
     /// # 错误
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
-    pub fn update_work_history_merged(pull_request_id: &str) -> Result<()> {
-        let paths = ConfigPaths::new()?;
-        if !paths.work_history.exists() {
+    pub fn update_work_history_merged(
+        pull_request_id: &str,
+        repository: Option<&str>,
+    ) -> Result<()> {
+        let repo_url = repository.context("Repository URL is required for work history")?;
+        let repo_file = get_repo_work_history_path(repo_url)?;
+
+        if !repo_file.exists() {
             return Ok(());
         }
 
-        let content =
-            fs::read_to_string(&paths.work_history).context("Failed to read work-history.json")?;
+        let content = fs::read_to_string(&repo_file)
+            .context("Failed to read work-history file")?;
 
         let mut history_map: WorkHistoryMap =
-            serde_json::from_str(&content).context("Failed to parse work-history.json")?;
+            serde_json::from_str(&content).context("Failed to parse work-history file")?;
 
         // 更新合并时间
         if let Some(entry) = history_map.get_mut(pull_request_id) {
@@ -500,9 +574,9 @@ impl JiraStatus {
 
         // 写入 JSON
         let json = serde_json::to_string_pretty(&history_map)
-            .context("Failed to serialize work-history.json")?;
+            .context("Failed to serialize work-history file")?;
 
-        fs::write(&paths.work_history, json).context("Failed to write work-history.json")?;
+        fs::write(&repo_file, json).context("Failed to write work-history file")?;
 
         Ok(())
     }
@@ -609,6 +683,7 @@ impl JiraStatus {
     /// # 参数
     ///
     /// * `pull_request_id` - Pull Request ID（如 `"456"`）
+    /// * `repository` - 仓库地址（可选，如果提供则从仓库特定的文件读取）
     ///
     /// # 返回
     ///
@@ -618,18 +693,23 @@ impl JiraStatus {
     /// # 错误
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
-    fn read_work_history_entry(pull_request_id: &str) -> Result<Option<WorkHistoryEntry>> {
-        let paths = ConfigPaths::new()?;
-        if !paths.work_history.exists() {
+    fn read_work_history_entry(
+        pull_request_id: &str,
+        repository: Option<&str>,
+    ) -> Result<Option<WorkHistoryEntry>> {
+        let repo_url = repository.context("Repository URL is required for work history")?;
+        let repo_file = get_repo_work_history_path(repo_url)?;
+
+        if !repo_file.exists() {
             return Ok(None);
         }
 
-        let content =
-            fs::read_to_string(&paths.work_history).context("Failed to read work-history.json")?;
+        let content = fs::read_to_string(&repo_file)
+            .context("Failed to read work-history file")?;
 
         // 解析 JSON
         let history_map: WorkHistoryMap =
-            serde_json::from_str(&content).context("Failed to parse work-history.json")?;
+            serde_json::from_str(&content).context("Failed to parse work-history file")?;
 
         // 查找 PR ID
         Ok(history_map.get(pull_request_id).cloned())

@@ -160,8 +160,11 @@ impl PullRequestMergeCommand {
 
     /// 更新 Jira 状态（如果关联了 ticket）
     fn update_jira_status(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
+        // 获取当前仓库 URL
+        let repository = Git::get_remote_url().ok();
+
         // 尝试从历史记录读取
-        let mut jira_ticket = JiraStatus::read_work_history(pull_request_id)?;
+        let mut jira_ticket = JiraStatus::read_work_history(pull_request_id, repository.as_deref())?;
 
         // 如果历史记录中没有，尝试从 PR 标题提取
         if jira_ticket.is_none() {
@@ -179,7 +182,7 @@ impl PullRequestMergeCommand {
             }
 
             // 更新工作历史记录的合并时间
-            JiraStatus::update_work_history_merged(pull_request_id)?;
+            JiraStatus::update_work_history_merged(pull_request_id, repository.as_deref())?;
         } else {
             log_warning!("No Jira ticket associated with this PR");
         }
