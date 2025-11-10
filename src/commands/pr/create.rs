@@ -57,7 +57,6 @@ impl PullRequestCreateCommand {
         if dry_run {
             log_info!("[DRY RUN] Would create branch: {}", branch_name);
             log_info!("[DRY RUN] Commit title: {}", commit_title);
-            log_info!("[DRY RUN] PR title: {}", commit_title);
             log_info!("[DRY RUN] PR body:\n{}", pull_request_body);
             return Ok(());
         }
