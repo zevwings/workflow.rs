@@ -260,18 +260,16 @@ impl PlatformProvider for Codeup {
     }
 
     /// 获取 PR 状态
-    fn get_pull_request_status(pull_request_id: &str) -> Result<super::provider::PullRequestStatus> {
+    fn get_pull_request_status(
+        pull_request_id: &str,
+    ) -> Result<super::provider::PullRequestStatus> {
         use super::provider::PullRequestStatus;
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
         let pr_info = Self::get_pull_request_by_id(pull_request_id, project_id, &cookie)?;
 
-        let state = pr_info
-            .state
-            .as_deref()
-            .unwrap_or("unknown")
-            .to_string();
+        let state = pr_info.state.as_deref().unwrap_or("unknown").to_string();
         let merged = state == "merged";
 
         Ok(PullRequestStatus {
@@ -560,4 +558,47 @@ impl Codeup {
             .and_then(|caps| caps.get(1))
             .map(|m| m.as_str().to_string())
     }
+
+    /// 获取 Codeup 用户信息
+    ///
+    /// 调用 Codeup API 获取当前用户信息。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `CodeupUser` 结构体，包含用户的 `name`、`email` 等信息。
+    pub fn get_user_info() -> Result<CodeupUser> {
+        let (_, cookie) = Self::get_env_vars()?;
+
+        // Codeup API 用户信息端点
+        let url = "https://codeup.aliyun.com/api/v4/user?_input_charset=utf-8";
+
+        let client = Self::get_client()?;
+        let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let response: HttpResponse<serde_json::Value> = client
+            .get(url, None, Some(&headers))
+            .context("Failed to get Codeup user info")?;
+
+        if !response.is_success() {
+            anyhow::bail!("Failed to get Codeup user info: {}", response.status);
+        }
+
+        // 解析响应
+        let user: CodeupUser = serde_json::from_value(response.data)
+            .context("Failed to parse Codeup user response")?;
+
+        Ok(user)
+    }
+}
+
+/// Codeup 用户信息
+#[derive(Debug, Deserialize)]
+pub struct CodeupUser {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<u64>,
 }

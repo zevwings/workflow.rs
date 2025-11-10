@@ -26,6 +26,8 @@ pub struct Settings {
     pub log_delete_when_operation_completed: bool,
     /// 日志输出文件夹名称
     pub log_output_folder_name: String,
+    /// 日志下载基础目录
+    pub log_download_base_dir: String,
 
     // ==================== 代理配置 ====================
     /// 是否禁用代理检查
@@ -71,6 +73,7 @@ impl Settings {
             github_api_token: None,
             log_delete_when_operation_completed: false,
             log_output_folder_name: "logs".to_string(),
+            log_download_base_dir: String::new(),
             disable_check_proxy: false,
             openai_key: None,
             llm_proxy_url: None,
@@ -100,6 +103,7 @@ impl Settings {
             // ==================== 日志配置 ====================
             log_delete_when_operation_completed: Self::load_log_delete_when_completed(),
             log_output_folder_name: Self::load_log_output_folder_name(),
+            log_download_base_dir: Self::load_log_download_base_dir(),
 
             // ==================== 代理配置 ====================
             disable_check_proxy: Self::load_proxy_config(),
@@ -170,6 +174,17 @@ impl Settings {
 
     fn load_log_output_folder_name() -> String {
         env::var("LOG_OUTPUT_FOLDER_NAME").unwrap_or_else(|_| "logs".to_string())
+    }
+
+    fn load_log_download_base_dir() -> String {
+        env::var("LOG_DOWNLOAD_BASE_DIR").unwrap_or_else(|_| {
+            // 默认值：~/Downloads/Workflow
+            if let Ok(home) = env::var("HOME") {
+                format!("{}/Downloads/Workflow", home)
+            } else {
+                "~/Downloads/Workflow".to_string()
+            }
+        })
     }
 
     // ==================== 代理配置 ====================

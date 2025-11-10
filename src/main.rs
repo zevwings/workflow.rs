@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, config, proxy, setup, uninstall};
+use commands::{check, clean, config, proxy, setup, uninstall};
 
 use workflow::*;
 
@@ -52,6 +52,18 @@ enum Commands {
     ///
     /// 删除所有相关文件：二进制文件、补全脚本、配置文件等。
     Uninstall,
+    /// 清理日志目录
+    ///
+    /// 删除整个日志下载基础目录及其所有内容。
+    /// 需要确认才能执行删除操作。
+    Clean {
+        /// 预览操作，不实际删除
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+        /// 只列出将要删除的内容
+        #[arg(long, short = 'l')]
+        list: bool,
+    },
 }
 
 /// 代理管理子命令
@@ -102,11 +114,16 @@ fn main() -> Result<()> {
         Some(Commands::Uninstall) => {
             uninstall::UninstallCommand::run()?;
         }
+        // 清理日志目录
+        Some(Commands::Clean { dry_run, list }) => {
+            clean::CleanCommand::clean(dry_run, list)?;
+        }
         // 无命令时显示帮助信息
         None => {
             println!("Workflow CLI - Configuration Management");
             println!("\nAvailable commands:");
             println!("  workflow check     - Run environment checks (Git status and network)");
+            println!("  workflow clean     - Clean log download directory");
             println!("  workflow proxy     - Manage proxy settings (on/off/check)");
             println!("  workflow setup     - Initialize or update configuration");
             println!("  workflow config    - View current configuration");

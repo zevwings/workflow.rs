@@ -73,12 +73,13 @@ pub fn generate_pull_request_body(
     }
 
     // 添加简短描述
+    // 即使描述为空，也显示标题
     if let Some(desc) = short_description {
+        body.push_str("\n#### Short description:\n\n");
         if !desc.trim().is_empty() {
-            body.push_str("\n#### Short description:\n\n");
             body.push_str(desc);
-            body.push('\n');
         }
+        body.push('\n');
     }
 
     // 添加 Jira 链接（只有当 ticket 和 jira_service 都不为空时才显示）

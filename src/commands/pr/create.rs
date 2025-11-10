@@ -241,7 +241,8 @@ impl PullRequestCreateCommand {
                 // 使用翻译后的 pr_title 作为 PR 标题
                 let pr_title = content.pr_title;
                 // 使用辅助函数统一处理前缀逻辑，避免重复代码
-                let branch_name = Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
+                let branch_name =
+                    Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
                 (pr_title, branch_name)
             }
             Err(_) => {

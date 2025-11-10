@@ -47,6 +47,15 @@ impl SetupCommand {
             std::env::set_var(key, value);
         }
 
+        // 验证 Jira 配置（如果已配置）
+        Self::verify_jira_config(&env_vars)?;
+
+        // 验证 GitHub 配置（如果已配置）
+        Self::verify_github_config(&env_vars)?;
+
+        // 验证 Codeup 配置（如果已配置）
+        Self::verify_codeup_config(&env_vars)?;
+
         log_success!("\n🎉 Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
 
@@ -104,17 +113,19 @@ impl SetupCommand {
         }
 
         // ==================== 必填项：GitHub 配置 ====================
+        log_info!("\n🐙 GitHub Configuration (Required)");
+        log_info!("─────────────────────────────────────────────────────────");
 
         let current_github_token = existing_env.get("GITHUB_API_TOKEN").cloned();
         let github_token_prompt = if current_github_token.is_some() {
-            "GitHub API token [current: ***] (press Enter to keep)".to_string()
+            "GitHub API token [current: ***]".to_string()
         } else {
-            "GitHub API token (optional, press Enter to skip)".to_string()
+            "GitHub API token".to_string()
         };
 
         let github_api_token: String = Input::new()
             .with_prompt(&github_token_prompt)
-            .allow_empty(true)
+            .allow_empty(current_github_token.is_some())
             .interact_text()
             .context("Failed to get GitHub API token")?;
 
@@ -126,6 +137,8 @@ impl SetupCommand {
                 "GITHUB_API_TOKEN".to_string(),
                 current_github_token.unwrap(),
             );
+        } else {
+            anyhow::bail!("GitHub API token is required");
         }
 
         // ==================== 必填项：Jira 配置 ====================
@@ -509,5 +522,123 @@ impl SetupCommand {
         }
 
         Ok(env_vars)
+    }
+
+    /// 验证 Jira 配置
+    ///
+    /// 尝试获取 Jira 用户信息来验证配置是否正确。
+    fn verify_jira_config(env_vars: &HashMap<String, String>) -> Result<()> {
+        // 检查是否配置了 Jira 相关信息
+        let has_jira_config = env_vars.contains_key("JIRA_SERVICE_ADDRESS")
+            && env_vars.contains_key("JIRA_API_TOKEN")
+            && env_vars.contains_key("EMAIL");
+
+        if !has_jira_config {
+            return Ok(());
+        }
+
+        log_info!("\n🔍 Verifying Jira configuration...");
+
+        // 尝试获取 Jira 用户信息
+        match crate::jira::users::get_user_info() {
+            Ok(user) => {
+                log_info!("");
+                log_success!("Jira configuration verified successfully!");
+                log_info!("   User: {}", user.display_name);
+                if let Some(email) = &user.email_address {
+                    log_info!("   Email: {}", email);
+                }
+                log_info!("   Account ID: {}", user.account_id);
+            }
+            Err(e) => {
+                log_warning!("⚠️  Failed to verify Jira configuration");
+                log_info!("   Error: {}", e);
+                log_info!("   Please check your Jira service address and API token.");
+                log_info!("   You can run 'workflow setup' again to update the configuration.");
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证 GitHub 配置
+    ///
+    /// 尝试获取 GitHub 用户信息来验证配置是否正确。
+    fn verify_github_config(env_vars: &HashMap<String, String>) -> Result<()> {
+        // 检查是否配置了 GitHub API token
+        let has_github_config = env_vars.contains_key("GITHUB_API_TOKEN");
+
+        if !has_github_config {
+            return Ok(());
+        }
+
+        log_info!("\n🔍 Verifying GitHub configuration...");
+
+        // 尝试获取 GitHub 用户信息
+        match crate::pr::GitHub::get_user_info() {
+            Ok(user) => {
+                log_info!("");
+                log_success!("GitHub configuration verified successfully!");
+                log_info!("   User: {}", user.login);
+                if let Some(name) = &user.name {
+                    log_info!("   Name: {}", name);
+                }
+                if let Some(email) = &user.email {
+                    log_info!("   Email: {}", email);
+                }
+            }
+            Err(e) => {
+                log_warning!("⚠️  Failed to verify GitHub configuration");
+                log_info!("   Error: {}", e);
+                log_info!("   Please check your GitHub API token.");
+                log_info!("   You can run 'workflow setup' again to update the configuration.");
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 验证 Codeup 配置
+    ///
+    /// 尝试获取 Codeup 用户信息来验证配置是否正确。
+    fn verify_codeup_config(env_vars: &HashMap<String, String>) -> Result<()> {
+        // 检查是否配置了 Codeup 相关信息
+        let has_codeup_config = env_vars.contains_key("CODEUP_PROJECT_ID")
+            && env_vars.contains_key("CODEUP_COOKIE")
+            && env_vars.contains_key("CODEUP_CSRF_TOKEN");
+
+        if !has_codeup_config {
+            return Ok(());
+        }
+
+        log_info!("\n🔍 Verifying Codeup configuration...");
+
+        // 尝试获取 Codeup 用户信息
+        match crate::pr::Codeup::get_user_info() {
+            Ok(user) => {
+                log_info!("");
+                log_success!("Codeup configuration verified successfully!");
+                if let Some(name) = &user.name {
+                    log_info!("   Name: {}", name);
+                }
+                if let Some(username) = &user.username {
+                    log_info!("   Username: {}", username);
+                }
+                if let Some(email) = &user.email {
+                    log_info!("   Email: {}", email);
+                }
+                if let Some(id) = user.id {
+                    log_info!("   ID: {}", id);
+                }
+            }
+            Err(e) => {
+                log_warning!("⚠️  Failed to verify Codeup configuration");
+                log_info!("   Error: {}", e);
+                log_info!("   Please check your Codeup project ID, cookie, and CSRF token.");
+                log_info!("   You can run 'workflow setup' again to update the configuration.");
+            }
+        }
+
+        Ok(())
     }
 }

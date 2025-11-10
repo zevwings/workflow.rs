@@ -59,6 +59,7 @@ impl EnvFile {
     pub fn get_workflow_env_keys() -> Vec<&'static str> {
         vec![
             "EMAIL",
+            "GITHUB_API_TOKEN",
             "JIRA_API_TOKEN",
             "JIRA_SERVICE_ADDRESS",
             "GITHUB_BRANCH_PREFIX",
