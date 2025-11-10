@@ -186,12 +186,12 @@ impl PullRequestMergeCommand {
             } else {
                 log_warning!("No Jira status configuration found for ticket: {}", ticket);
             }
-
-            // 更新工作历史记录的合并时间
-            JiraStatus::update_work_history_merged(pull_request_id, repository.as_deref())?;
         } else {
             log_warning!("No Jira ticket associated with this PR");
         }
+
+        // 删除工作历史记录中的 PR ID 条目
+        JiraStatus::delete_work_history_entry(pull_request_id, repository.as_deref())?;
 
         Ok(())
     }
