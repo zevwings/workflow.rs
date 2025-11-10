@@ -3,6 +3,8 @@ use duct::cmd;
 use std::path::Path;
 use std::process::Command;
 
+use crate::{log_info, log_success};
+
 use super::commit::Git;
 
 impl Git {
@@ -52,7 +54,6 @@ impl Git {
     /// 如果有 pre-commit 工具配置，使用 `pre-commit run`
     /// 如果有 Git hooks，直接执行 `.git/hooks/pre-commit` 脚本
     pub(crate) fn run_pre_commit() -> Result<()> {
-        use crate::{log_info, log_success};
 
         // 检查是否有 staged 的文件
         let has_staged = Self::has_staged().unwrap_or(false);

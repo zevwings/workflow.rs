@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use chrono::Local;
+use dialoguer::Confirm;
 use regex::Regex;
 use std::env;
 use std::fs::{File, OpenOptions};
@@ -8,7 +9,7 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use crate::jira::helpers::get_auth;
-use crate::{Jira, Logger, Settings};
+use crate::{log_debug, log_info, log_success, Jira, Logger, Settings};
 
 /// 日志条目信息
 #[derive(Debug, Clone)]
@@ -437,9 +438,9 @@ impl Logs {
         }
 
         // 调试：显示所有附件
-        crate::log_info!("Found {} attachment(s):", attachments.len());
+        log_debug!("Found {} attachment(s):", attachments.len());
         for attachment in &attachments {
-            crate::log_info!("  - {}", attachment.filename);
+            log_debug!("  - {}", attachment.filename);
         }
 
         // 3. 过滤日志附件
@@ -469,9 +470,9 @@ impl Logs {
 
         // 调试：显示过滤后的日志附件
         if !log_attachments.is_empty() {
-            crate::log_info!("Filtered {} log attachment(s):", log_attachments.len());
+            log_debug!("Filtered {} log attachment(s):", log_attachments.len());
             for attachment in &log_attachments {
-                crate::log_info!("  - {}", attachment.filename);
+                log_debug!("  - {}", attachment.filename);
             }
         }
 
@@ -489,7 +490,6 @@ impl Logs {
             }
 
             // 预先编译正则表达式，避免在循环中重复编译
-            use regex::Regex;
             let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
 
             // 预先获取描述中的原始 URL 映射，避免重复解析
@@ -531,11 +531,11 @@ impl Logs {
                     &file_path,
                 ) {
                     Ok(()) => {
-                        crate::log_success!("Downloaded: {}", attachment.filename);
+                        log_success!("Downloaded: {}", attachment.filename);
                         (true, None)
                     }
                     Err(e) => {
-                        crate::log_info!(
+                        log_debug!(
                             "Warning: Failed to download {}: {}",
                             attachment.filename,
                             e
@@ -550,22 +550,22 @@ impl Logs {
 
                             // 方式 1: 从 API 附件列表中查找
                             if let Some(api_url) = api_attachments_map.get(&attachment.filename) {
-                                crate::log_info!(
-                                    "Debug: Trying Jira API URL for {}: {}",
+                                log_debug!(
+                                    "Trying Jira API URL for {}: {}",
                                     attachment.filename,
                                     api_url
                                 );
                                 match Self::download_file(api_url, &file_path) {
                                     Ok(()) => {
-                                        crate::log_success!(
+                                        log_success!(
                                             "Downloaded: {} (using Jira API URL)",
                                             attachment.filename
                                         );
                                         success = true;
                                     }
                                     Err(e2) => {
-                                        crate::log_info!(
-                                            "Debug: Also failed with Jira API URL: {}",
+                                        log_debug!(
+                                            "Also failed with Jira API URL: {}",
                                             e2
                                         );
                                     }
@@ -584,15 +584,15 @@ impl Logs {
                                             "{}/attachment/content/{}",
                                             base_url, attachment_id
                                         );
-                                        crate::log_info!("Debug: Trying Jira API URL from attachment ID {} for {}: {}",
+                                        log_debug!("Trying Jira API URL from attachment ID {} for {}: {}",
                                             attachment_id, attachment.filename, jira_api_url);
                                         match Self::download_file(&jira_api_url, &file_path) {
                                             Ok(()) => {
-                                                crate::log_success!("Downloaded: {} (using Jira API URL from attachment ID)", attachment.filename);
+                                                log_success!("Downloaded: {} (using Jira API URL from attachment ID)", attachment.filename);
                                                 success = true;
                                             }
                                             Err(e2) => {
-                                                crate::log_info!("Debug: Also failed with Jira API URL from attachment ID: {}", e2);
+                                                log_debug!("Also failed with Jira API URL from attachment ID: {}", e2);
                                             }
                                         }
                                     }
@@ -612,20 +612,20 @@ impl Logs {
                 if !download_success {
                     if let Some(original_url) = original_urls.get(&attachment.filename) {
                         if original_url != &attachment.content_url {
-                            crate::log_info!(
-                                "Debug: Retrying with original CloudFront URL for {}",
+                            log_debug!(
+                                "Retrying with original CloudFront URL for {}",
                                 attachment.filename
                             );
                             download_success = match Self::download_file(original_url, &file_path) {
                                 Ok(()) => {
-                                    crate::log_success!(
+                                    log_success!(
                                         "Downloaded: {} (using original CloudFront URL)",
                                         attachment.filename
                                     );
                                     true
                                 }
                                 Err(e2) => {
-                                    crate::log_info!(
+                                    log_debug!(
                                         "Warning: Also failed with original CloudFront URL: {}",
                                         e2
                                     );
@@ -647,12 +647,12 @@ impl Logs {
 
             // 如果有失败的附件，显示警告但不中断整个流程
             if !failed_attachments.is_empty() {
-                crate::log_info!(
+                log_info!(
                     "\n⚠️  Warning: {} attachment(s) failed to download:",
                     failed_attachments.len()
                 );
                 for (filename, error) in &failed_attachments {
-                    crate::log_info!("  - {}: {}", filename, error);
+                    log_info!("  - {}: {}", filename, error);
                 }
             }
         }
@@ -666,7 +666,7 @@ impl Logs {
             // 检查是否有分片文件（与 shell 脚本一致：检查 log.z01）
             if log_z01.exists() {
                 // 检测到分片文件，需要合并（与 shell 脚本一致）
-                crate::log_info!("检测到分片文件，需要合并...");
+                log_debug!("检测到分片文件，需要合并...");
                 Self::merge_split_zips(&download_dir)?;
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
@@ -730,7 +730,7 @@ impl Logs {
 
         let mut response = if is_cloudfront_signed_url {
             // CloudFront 签名 URL，先尝试不使用 Basic Auth，但添加 Referer 头
-            crate::log_info!("Debug: Using CloudFront signed URL without Basic Auth");
+            log_debug!("Using CloudFront signed URL without Basic Auth");
             let mut request = client.get(url);
 
             // 添加 Referer 头，可能有助于 CloudFront 验证
@@ -754,8 +754,8 @@ impl Logs {
             // 如果 CloudFront URL 失败，尝试使用 Basic Auth
             if is_cloudfront_signed_url {
                 let status = response.status();
-                crate::log_info!(
-                    "Debug: CloudFront URL failed (status: {}), retrying with Basic Auth",
+                log_debug!(
+                    "CloudFront URL failed (status: {}), retrying with Basic Auth",
                     status
                 );
 
@@ -767,7 +767,7 @@ impl Logs {
                     } else {
                         error_text.clone()
                     };
-                    crate::log_info!("Debug: Error response: {}", preview);
+                    log_debug!("Error response: {}", preview);
                 }
 
                 let mut request = client.get(url);
@@ -1113,50 +1113,49 @@ impl Logs {
         let base_dir = Self::get_base_dir_path()?;
 
         if !base_dir.exists() {
-            crate::log_info!("Base directory does not exist: {:?}", base_dir);
+            log_info!("Base directory does not exist: {:?}", base_dir);
             return Ok(false);
         }
 
         let (size, file_count) = Self::calculate_dir_info(&base_dir)?;
 
         if list_only {
-            crate::log_info!("Base directory: {:?}", base_dir);
-            crate::log_info!("Total size: {}", Self::format_size(size));
-            crate::log_info!("Total files: {}", file_count);
-            crate::log_info!("\nContents:");
+            log_info!("Base directory: {:?}", base_dir);
+            log_info!("Total size: {}", Self::format_size(size));
+            log_info!("Total files: {}", file_count);
+            log_info!("\nContents:");
             let contents = Self::list_dir_contents(&base_dir)?;
             for path in contents {
                 if path.is_file() {
                     if let Ok(metadata) = std::fs::metadata(&path) {
-                        crate::log_info!(
+                        log_info!(
                             "  📄 {} ({})",
                             path.display(),
                             Self::format_size(metadata.len())
                         );
                     } else {
-                        crate::log_info!("  📄 {}", path.display());
+                        log_info!("  📄 {}", path.display());
                     }
                 } else if path.is_dir() {
-                    crate::log_info!("  📁 {}", path.display());
+                    log_info!("  📁 {}", path.display());
                 }
             }
             return Ok(false);
         }
 
         if dry_run {
-            crate::log_info!("[DRY RUN] Would delete base directory: {:?}", base_dir);
-            crate::log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
-            crate::log_info!("[DRY RUN] Total files: {}", file_count);
+            log_info!("[DRY RUN] Would delete base directory: {:?}", base_dir);
+            log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
+            log_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(false);
         }
 
         // 显示将要删除的信息
-        crate::log_info!("Base directory: {:?}", base_dir);
-        crate::log_info!("Total size: {}", Self::format_size(size));
-        crate::log_info!("Total files: {}", file_count);
+        log_info!("Base directory: {:?}", base_dir);
+        log_info!("Total size: {}", Self::format_size(size));
+        log_info!("Total files: {}", file_count);
 
         // 需要确认
-        use dialoguer::Confirm;
         let confirmed = Confirm::new()
             .with_prompt(format!(
                 "Are you sure you want to delete the entire base directory? This will remove {} files ({}).",
@@ -1168,7 +1167,7 @@ impl Logs {
             .context("Failed to get confirmation")?;
 
         if !confirmed {
-            crate::log_info!("Clean operation cancelled.");
+            log_info!("Clean operation cancelled.");
             return Ok(false);
         }
 
@@ -1176,7 +1175,7 @@ impl Logs {
         std::fs::remove_dir_all(&base_dir)
             .context(format!("Failed to delete base directory: {:?}", base_dir))?;
 
-        crate::log_success!("Base directory deleted successfully: {:?}", base_dir);
+        log_success!("Base directory deleted successfully: {:?}", base_dir);
         Ok(true)
     }
 
@@ -1196,56 +1195,55 @@ impl Logs {
         let jira_dir = base_dir.join(jira_id);
 
         if !jira_dir.exists() {
-            crate::log_info!("Directory does not exist for {}: {:?}", jira_id, jira_dir);
+            log_info!("Directory does not exist for {}: {:?}", jira_id, jira_dir);
             return Ok(false);
         }
 
         let (size, file_count) = Self::calculate_dir_info(&jira_dir)?;
 
         if list_only {
-            crate::log_info!("JIRA ID: {}", jira_id);
-            crate::log_info!("Directory: {:?}", jira_dir);
-            crate::log_info!("Total size: {}", Self::format_size(size));
-            crate::log_info!("Total files: {}", file_count);
-            crate::log_info!("\nContents:");
+            log_info!("JIRA ID: {}", jira_id);
+            log_info!("Directory: {:?}", jira_dir);
+            log_info!("Total size: {}", Self::format_size(size));
+            log_info!("Total files: {}", file_count);
+            log_info!("\nContents:");
             let contents = Self::list_dir_contents(&jira_dir)?;
             for path in contents {
                 if path.is_file() {
                     if let Ok(metadata) = std::fs::metadata(&path) {
-                        crate::log_info!(
+                        log_info!(
                             "  📄 {} ({})",
                             path.display(),
                             Self::format_size(metadata.len())
                         );
                     } else {
-                        crate::log_info!("  📄 {}", path.display());
+                        log_info!("  📄 {}", path.display());
                     }
                 } else if path.is_dir() {
-                    crate::log_info!("  📁 {}", path.display());
+                    log_info!("  📁 {}", path.display());
                 }
             }
             return Ok(false);
         }
 
         if dry_run {
-            crate::log_info!(
+            log_info!(
                 "[DRY RUN] Would delete directory for {}: {:?}",
                 jira_id,
                 jira_dir
             );
-            crate::log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
-            crate::log_info!("[DRY RUN] Total files: {}", file_count);
+            log_info!("[DRY RUN] Total size: {}", Self::format_size(size));
+            log_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(false);
         }
 
         // 显示将要删除的信息
-        crate::log_info!("JIRA ID: {}", jira_id);
-        crate::log_info!("Directory: {:?}", jira_dir);
-        crate::log_info!("Total size: {}", Self::format_size(size));
-        crate::log_info!("Total files: {}", file_count);
+        log_info!("JIRA ID: {}", jira_id);
+        log_info!("Directory: {:?}", jira_dir);
+        log_info!("Total size: {}", Self::format_size(size));
+        log_info!("Total files: {}", file_count);
 
         // 需要确认
-        use dialoguer::Confirm;
         let confirmed = Confirm::new()
             .with_prompt(format!(
                 "Are you sure you want to delete the directory for {}? This will remove {} files ({}).",
@@ -1258,7 +1256,7 @@ impl Logs {
             .context("Failed to get confirmation")?;
 
         if !confirmed {
-            crate::log_info!("Clean operation cancelled.");
+            log_info!("Clean operation cancelled.");
             return Ok(false);
         }
 
@@ -1268,7 +1266,7 @@ impl Logs {
             jira_id, jira_dir
         ))?;
 
-        crate::log_success!(
+        log_success!(
             "Directory deleted successfully for {}: {:?}",
             jira_id,
             jira_dir

@@ -1,5 +1,51 @@
 use colored::*;
 use std::fmt;
+use std::env;
+use std::sync::OnceLock;
+
+/// 日志级别枚举
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum LogLevel {
+    /// 不输出任何日志
+    Off = 0,
+    /// 只输出错误
+    Error = 1,
+    /// 输出警告和错误
+    Warn = 2,
+    /// 输出信息、警告和错误（默认）
+    Info = 3,
+    /// 输出所有日志（包括调试）
+    Debug = 4,
+}
+
+impl LogLevel {
+    /// 从字符串解析日志级别
+    fn from_str(s: &str) -> Self {
+        match s.to_lowercase().as_str() {
+            "off" | "0" => LogLevel::Off,
+            "error" | "1" => LogLevel::Error,
+            "warn" | "warning" | "2" => LogLevel::Warn,
+            "info" | "3" => LogLevel::Info,
+            "debug" | "4" => LogLevel::Debug,
+            _ => LogLevel::Info, // 默认值
+        }
+    }
+
+    /// 获取当前日志级别（从环境变量读取）
+    fn current() -> Self {
+        static LOG_LEVEL: OnceLock<LogLevel> = OnceLock::new();
+        *LOG_LEVEL.get_or_init(|| {
+            env::var("WORKFLOW_LOG_LEVEL")
+                .map(|s| LogLevel::from_str(&s))
+                .unwrap_or(LogLevel::Info) // 默认 INFO，不输出 DEBUG
+        })
+    }
+
+    /// 检查是否应该输出指定级别的日志
+    fn should_log(&self, level: LogLevel) -> bool {
+        *self >= level
+    }
+}
 
 /// Logger 模块
 /// 提供带颜色的日志输出功能
@@ -52,9 +98,12 @@ impl Logger {
         println!("{}", Self::info(message));
     }
 
-    /// 打印调试消息
+    /// 打印调试消息（仅在日志级别 >= DEBUG 时输出）
     pub fn print_debug(message: impl fmt::Display) {
-        println!("{}", Self::debug(message));
+        let current_level = LogLevel::current();
+        if current_level.should_log(LogLevel::Debug) {
+            println!("{}", Self::debug(message));
+        }
     }
 }
 
@@ -128,13 +177,24 @@ macro_rules! log_info {
 
 /// 格式化并打印调试消息
 ///
+/// 仅在日志级别 >= DEBUG 时输出。
+/// 日志级别通过环境变量 `WORKFLOW_LOG_LEVEL` 控制：
+/// - `off` 或 `0`: 不输出任何日志
+/// - `error` 或 `1`: 只输出错误
+/// - `warn` 或 `2`: 输出警告和错误
+/// - `info` 或 `3`: 输出信息、警告和错误（默认）
+/// - `debug` 或 `4`: 输出所有日志（包括调试）
+///
 /// # Examples
 ///
 /// ```
 /// use workflow::log_debug;
 ///
+/// // 默认情况下（WORKFLOW_LOG_LEVEL=info），这些不会输出
 /// log_debug!("Debug information");
 /// log_debug!("Debug: {} = {}", key, value);
+///
+/// // 设置 WORKFLOW_LOG_LEVEL=debug 后才会输出
 /// ```
 #[macro_export]
 macro_rules! log_debug {

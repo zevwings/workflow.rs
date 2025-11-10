@@ -14,8 +14,10 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::http::{Authorization, HttpClient};
+use crate::{log_debug, log_info, log_success};
+use dialoguer::Select;
 
-use super::helpers::{get_auth, get_base_url};
+use super::helpers::{extract_jira_project, get_auth, get_base_url};
 
 /// 配置文件路径管理
 ///
@@ -279,10 +281,6 @@ impl JiraStatus {
     ///
     /// 如果项目名格式无效、无法获取状态列表或保存配置失败，返回相应的错误信息。
     pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
-        // 需要导入的依赖
-        use super::helpers::extract_jira_project;
-        use crate::{log_info, log_success};
-        use dialoguer::Select;
 
         // 从 ticket 或项目名中提取项目名
         let project = extract_jira_project(jira_ticket_or_project);
@@ -314,7 +312,7 @@ impl JiraStatus {
         };
 
         // 获取项目状态列表
-        log_info!("Fetching status list for project: {}", project);
+        log_debug!("Fetching status list for project: {}", project);
         let statuses = get_project_statuses(project).context("Failed to get project statuses")?;
 
         if statuses.is_empty() {
@@ -356,8 +354,8 @@ impl JiraStatus {
             .context("Failed to write Jira status configuration")?;
 
         log_success!("Jira status configuration saved");
-        log_info!("  PR created status: {}", created_pull_request_status);
-        log_info!("  PR merged status: {}", merged_pull_request_status);
+        log_debug!("  PR created status: {}", created_pull_request_status);
+        log_debug!("  PR merged status: {}", merged_pull_request_status);
 
         Ok(())
     }
@@ -378,7 +376,6 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
-        use super::helpers::extract_jira_project;
 
         let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
@@ -404,7 +401,6 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
-        use super::helpers::extract_jira_project;
 
         let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 

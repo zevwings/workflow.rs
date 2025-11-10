@@ -3,6 +3,7 @@
 
 use crate::{log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
+use clap::Command;
 use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -107,7 +108,6 @@ impl InstallCommand {
 
     /// 生成 workflow 命令的 completion
     fn generate_workflow_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-        use clap::Command;
 
         let mut cmd = Command::new("workflow")
             .about("Workflow CLI tool")
@@ -153,7 +153,6 @@ impl InstallCommand {
 
     /// 生成 pr 命令的 completion
     fn generate_pr_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-        use clap::Command;
 
         let mut cmd = Command::new("pr")
             .about("Pull Request operations")
@@ -211,7 +210,6 @@ impl InstallCommand {
 
     /// 生成 qk 命令的 completion
     fn generate_qk_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-        use clap::Command;
 
         let mut cmd = Command::new("qk")
             .about("Quick log operations")

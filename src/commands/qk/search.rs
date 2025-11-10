@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, log_warning, Logs};
+use crate::{log_debug, log_info, log_success, log_warning, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -31,8 +31,8 @@ impl SearchCommand {
                 .context("Failed to read search term")?
         };
 
-        // 4. 调用库函数执行搜索（支持在多个日志文件中搜索）
-        log_success!("Searching for: '{}'...", term);
+        // 4. 调用库函数执行搜索
+        log_debug!("Searching for: '{}'...", term);
 
         // 确定两个日志文件路径
         let api_log = log_file.parent()
