@@ -36,8 +36,8 @@ impl PullRequestCreateCommand {
         // 4. 获取或生成 PR 标题
         let title = Self::resolve_title(title, &jira_ticket)?;
 
-        // 5. 生成 commit_title 和分支名
-        let (commit_title, branch_name) =
+        // 5. 生成 commit_title、PR title 和分支名
+        let (commit_title, pr_title, branch_name) =
             Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
 
         // 6. 获取描述
@@ -57,6 +57,7 @@ impl PullRequestCreateCommand {
         if dry_run {
             log_info!("[DRY RUN] Would create branch: {}", branch_name);
             log_info!("[DRY RUN] Commit title: {}", commit_title);
+            log_info!("[DRY RUN] PR title: {}", pr_title);
             log_info!("[DRY RUN] PR body:\n{}", pull_request_body);
             return Ok(());
         }
@@ -69,7 +70,7 @@ impl PullRequestCreateCommand {
         let pull_request_url = Self::create_or_get_pull_request(
             &actual_branch_name,
             &default_branch,
-            &commit_title,
+            &pr_title,
             &pull_request_body,
         )?;
 
@@ -224,36 +225,37 @@ impl PullRequestCreateCommand {
         Ok(branch_name)
     }
 
-    /// 生成 commit title 和分支名
+    /// 生成 commit title、PR title 和分支名
     ///
-    /// 步骤 5：首先生成 commit title，然后尝试使用 LLM 生成分支名和 PR 标题。
-    /// 如果 LLM 生成成功，使用翻译后的 pr_title 作为最终的 commit_title。
+    /// 步骤 5：尝试使用 LLM 根据纯 title 生成分支名和 PR 标题。
+    /// 如果 LLM 生成成功，使用翻译后的 pr_title，然后对 pr_title 应用 generate_commit_title 生成 commit_title。
     /// 如果 LLM 生成失败或结果无效，回退到默认方法。
-    /// 返回 (commit_title, branch_name) 元组。
+    /// 返回 (commit_title, pr_title, branch_name) 元组。
     fn generate_commit_title_and_branch_name(
         jira_ticket: &Option<String>,
         title: &str,
-    ) -> Result<(String, String)> {
-        let commit_title = generate_commit_title(jira_ticket.as_deref(), title);
-
-        // 尝试使用 LLM 根据 commit_title 生成分支名和 PR 标题
-        let (final_commit_title, branch_name) = match PullRequestLLM::generate(&commit_title) {
+    ) -> Result<(String, String, String)> {
+        // 尝试使用 LLM 根据纯 title 生成分支名和 PR 标题
+        let (pr_title, branch_name) = match PullRequestLLM::generate(title) {
             Ok(content) => {
-                log_success!("e {}", content.branch_name);
-                // 使用翻译后的 pr_title 作为最终的 commit_title
-                let final_commit_title = content.pr_title;
+                log_success!("Generated branch name: {}", content.branch_name);
+                // 使用翻译后的 pr_title 作为 PR 标题
+                let pr_title = content.pr_title;
                 // 使用辅助函数统一处理前缀逻辑，避免重复代码
                 let branch_name = Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
-                (final_commit_title, branch_name)
+                (pr_title, branch_name)
             }
             Err(_) => {
                 // 回退到原来的方法（已包含前缀逻辑）
                 let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
-                (commit_title, branch_name)
+                (title.to_string(), branch_name)
             }
         };
 
-        Ok((final_commit_title, branch_name))
+        // 对 pr_title 应用 generate_commit_title 生成最终的 commit_title（用于 Git commit）
+        let commit_title = generate_commit_title(jira_ticket.as_deref(), &pr_title);
+
+        Ok((commit_title, pr_title, branch_name))
     }
 
     /// 获取 PR 描述
@@ -599,11 +601,14 @@ impl PullRequestCreateCommand {
     /// 步骤 10：检查分支是否已有 PR，如果有则获取 PR URL，否则创建新 PR。
     /// 在创建 PR 前会检查分支是否有提交。
     ///
+    /// # 参数
+    /// * `pr_title` - PR 标题（纯标题，不包含前缀）
+    ///
     /// 返回 PR URL。
     fn create_or_get_pull_request(
         branch_name: &str,
         default_branch: &str,
-        commit_title: &str,
+        pr_title: &str,
         pull_request_body: &str,
     ) -> Result<String> {
         // 检查分支是否已有 PR
@@ -651,7 +656,7 @@ impl PullRequestCreateCommand {
                 RepoType::GitHub => {
                     log_success!("Creating PR via GitHub...");
                     <GitHub as PlatformProvider>::create_pull_request(
-                        commit_title,
+                        pr_title,
                         pull_request_body,
                         branch_name,
                         None,
@@ -660,7 +665,7 @@ impl PullRequestCreateCommand {
                 RepoType::Codeup => {
                     log_success!("Creating PR via Codeup...");
                     <Codeup as PlatformProvider>::create_pull_request(
-                        commit_title,
+                        pr_title,
                         pull_request_body,
                         branch_name,
                         None,
