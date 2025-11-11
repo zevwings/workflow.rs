@@ -5,9 +5,9 @@ use anyhow::Result;
 #[allow(dead_code)]
 pub struct GetPullRequestsCommand;
 
+#[allow(dead_code)]
 impl GetPullRequestsCommand {
     /// 列出 PR
-    #[allow(dead_code)]
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 

@@ -1,4 +1,5 @@
 use crate::commands::check::CheckCommand;
+use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
     extract_jira_ticket_id, log_info, log_success, log_warning, Codeup, Git, GitHub, Jira,
@@ -10,16 +11,16 @@ use anyhow::{Context, Result};
 #[allow(dead_code)]
 pub struct PullRequestMergeCommand;
 
+#[allow(dead_code)]
 impl PullRequestMergeCommand {
     /// 合并 PR
-    #[allow(dead_code)]
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
         // 1. 运行检查
         CheckCommand::run_all()?;
 
         // 2. 获取仓库类型和 PR ID
         let repo_type = Git::detect_repo_type()?;
-        let pull_request_id = Self::get_pull_request_id(pull_request_id, &repo_type)?;
+        let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
         log_success!("\nMerging PR: #{}", pull_request_id);
 
@@ -42,48 +43,9 @@ impl PullRequestMergeCommand {
         Ok(())
     }
 
-    /// 获取 PR ID（从参数或当前分支）
-    fn get_pull_request_id(
-        pull_request_id: Option<String>,
-        repo_type: &RepoType,
-    ) -> Result<String> {
-        if let Some(id) = pull_request_id {
-            return Ok(id);
-        }
-
-        // 从当前分支获取 PR
-        let pr_id = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
-            _ => {
-                anyhow::bail!(
-                    "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
-                );
-            }
-        };
-
-        match pr_id {
-            Some(id) => {
-                log_success!("Found PR for current branch: #{}", id);
-                Ok(id)
-            }
-            None => {
-                let error_msg = match repo_type {
-                    RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
-                    RepoType::Codeup => {
-                        "No PR found for current branch. Please specify PR ID or branch name."
-                    }
-                    _ => "No PR found for current branch.",
-                };
-                anyhow::bail!("{}", error_msg);
-            }
-        }
-    }
-
     /// 合并 PR（根据仓库类型调用对应的实现）
     /// 返回 true 表示新合并，false 表示已经合并
     fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
-
         // 先检查 PR 状态
         let status = match repo_type {
             RepoType::GitHub => {
@@ -216,7 +178,6 @@ impl PullRequestMergeCommand {
 
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
-
         // 如果当前分支已经是默认分支，不需要清理
         if current_branch == default_branch {
             log_info!("Already on default branch: {}", default_branch);

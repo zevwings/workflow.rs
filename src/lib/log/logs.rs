@@ -517,11 +517,7 @@ impl Logs {
                         (true, None)
                     }
                     Err(e) => {
-                        log_debug!(
-                            "Warning: Failed to download {}: {}",
-                            attachment.filename,
-                            e
-                        );
+                        log_debug!("Warning: Failed to download {}: {}", attachment.filename, e);
                         let error_msg = format!("{}", e);
 
                         // 如果当前 URL 是 CloudFront URL，尝试多种方式：
@@ -546,10 +542,7 @@ impl Logs {
                                         success = true;
                                     }
                                     Err(e2) => {
-                                        log_debug!(
-                                            "Also failed with Jira API URL: {}",
-                                            e2
-                                        );
+                                        log_debug!("Also failed with Jira API URL: {}", e2);
                                     }
                                 }
                             }
@@ -566,8 +559,12 @@ impl Logs {
                                             "{}/attachment/content/{}",
                                             base_url, attachment_id
                                         );
-                                        log_debug!("Trying Jira API URL from attachment ID {} for {}: {}",
-                                            attachment_id, attachment.filename, jira_api_url);
+                                        log_debug!(
+                                            "Trying Jira API URL from attachment ID {} for {}: {}",
+                                            attachment_id,
+                                            attachment.filename,
+                                            jira_api_url
+                                        );
                                         match Self::download_file(&jira_api_url, &file_path) {
                                             Ok(()) => {
                                                 log_success!("Downloaded: {} (using Jira API URL from attachment ID)", attachment.filename);

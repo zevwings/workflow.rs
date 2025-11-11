@@ -9,7 +9,9 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::qk::QuickCommand;
+use workflow::commands::qk::{
+    CleanCommand, DownloadCommand, FindCommand, InfoCommand, SearchCommand,
+};
 
 /// CLI 主结构体
 ///
@@ -82,20 +84,20 @@ fn main() -> Result<()> {
 
     match cli.subcommand {
         Some(QkCommands::Download { all }) => {
-            QuickCommand::download(&cli.jira_id, all)?;
+            DownloadCommand::download(&cli.jira_id, all)?;
         }
         Some(QkCommands::Find { request_id }) => {
-            QuickCommand::find_request_id(&cli.jira_id, request_id)?;
+            FindCommand::find_request_id(&cli.jira_id, request_id)?;
         }
         Some(QkCommands::Search { search_term }) => {
-            QuickCommand::search(&cli.jira_id, search_term)?;
+            SearchCommand::search(&cli.jira_id, search_term)?;
         }
         Some(QkCommands::Clean { dry_run, list }) => {
-            QuickCommand::clean(&cli.jira_id, dry_run, list)?;
+            CleanCommand::clean(&cli.jira_id, dry_run, list)?;
         }
         None => {
             // 如果没有提供子命令，显示 ticket 信息
-            QuickCommand::show(&cli.jira_id)?;
+            InfoCommand::show(&cli.jira_id)?;
         }
     }
 

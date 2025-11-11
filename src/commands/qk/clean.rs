@@ -5,9 +5,9 @@ use anyhow::{Context, Result};
 #[allow(dead_code)]
 pub struct CleanCommand;
 
+#[allow(dead_code)]
 impl CleanCommand {
     /// 清理指定 JIRA ID 的日志目录
-    #[allow(dead_code)]
     pub fn clean(jira_id: &str, dry_run: bool, list_only: bool) -> Result<()> {
         if list_only {
             log_info!("Listing contents for {}...", jira_id);

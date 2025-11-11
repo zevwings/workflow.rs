@@ -281,7 +281,6 @@ impl JiraStatus {
     ///
     /// 如果项目名格式无效、无法获取状态列表或保存配置失败，返回相应的错误信息。
     pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
-
         // 从 ticket 或项目名中提取项目名
         let project = extract_jira_project(jira_ticket_or_project);
 
@@ -376,7 +375,6 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
-
         let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
@@ -401,7 +399,6 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
-
         let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
 
         let config = Self::read_status_config(project)
@@ -674,7 +671,10 @@ impl JiraStatus {
                 fs::write(&repo_file, json).context("Failed to write work-history file")?;
             }
         } else {
-            log_info!("PR #{} not found in work-history, skipping deletion", pull_request_id);
+            log_info!(
+                "PR #{} not found in work-history, skipping deletion",
+                pull_request_id
+            );
         }
 
         Ok(())
