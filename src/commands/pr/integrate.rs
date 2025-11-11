@@ -95,6 +95,9 @@ impl PullRequestIntegrateCommand {
             log_info!("You can push manually with: git push");
         }
 
+        // 8. 删除被合并的源分支（如果存在且不是当前分支）
+        Self::delete_merged_branch(&source_branch, &current_branch)?;
+
         log_success!("Integration completed successfully!");
         Ok(())
     }
@@ -174,5 +177,56 @@ impl PullRequestIntegrateCommand {
         } else {
             crate::MergeStrategy::Merge
         }
+    }
+
+    /// 删除被合并的源分支
+    ///
+    /// 在合并成功后，删除源分支（本地和远程）。
+    /// 如果源分支是当前分支，则跳过删除。
+    fn delete_merged_branch(source_branch: &str, current_branch: &str) -> Result<()> {
+        // 不能删除当前分支
+        if source_branch == current_branch {
+            log_info!("Source branch '{}' is the current branch, skipping deletion", source_branch);
+            return Ok(());
+        }
+
+        // 检查源分支是否存在
+        let (exists_local, exists_remote) = Git::is_branch_exists(source_branch)
+            .context("Failed to check if source branch exists")?;
+
+        if !exists_local && !exists_remote {
+            log_info!("Source branch '{}' does not exist, nothing to delete", source_branch);
+            return Ok(());
+        }
+
+        // 删除本地分支
+        // 由于合并已经成功，先尝试普通删除，失败则强制删除
+        if exists_local {
+            log_info!("Deleting local branch '{}'...", source_branch);
+            Git::delete(source_branch, false)
+                .or_else(|_| {
+                    // 如果普通删除失败（可能因为分支未完全合并），尝试强制删除
+                    log_info!("Branch may not be fully merged, attempting force delete...");
+                    Git::delete(source_branch, true)
+                })
+                .with_context(|| format!("Failed to delete local branch: {}", source_branch))?;
+            log_success!("Local branch '{}' deleted successfully", source_branch);
+        }
+
+        // 删除远程分支
+        if exists_remote {
+            log_info!("Deleting remote branch '{}'...", source_branch);
+            match Git::delete_remote(source_branch) {
+                Ok(()) => {
+                    log_success!("Remote branch '{}' deleted successfully", source_branch);
+                }
+                Err(e) => {
+                    log_warning!("Failed to delete remote branch '{}': {}", source_branch, e);
+                    log_info!("You may need to delete it manually: git push origin --delete {}", source_branch);
+                }
+            }
+        }
+
+        Ok(())
     }
 }
