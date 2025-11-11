@@ -1,4 +1,3 @@
-use crate::settings::Settings;
 use crate::{log_debug, log_error, log_success, Clipboard, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
@@ -32,27 +31,18 @@ impl FindCommand {
                 .context("Failed to read request ID")?
         };
 
-        // 4. 调用库函数执行查找并发送到 Streamock
+        // 4. 提取响应内容
         log_debug!("Searching for request ID: {}...", req_id);
 
-        let settings = Settings::load();
-        let jira_service_address = Some(settings.jira_service_address.as_str());
-
-        let response_content = Logs::find_and_send_to_streamock(
-            &log_file,
-            &req_id,
-            Some(jira_id),
-            jira_service_address,
-            None, // 使用默认的 Streamock URL
-        )
-        .map_err(|e| {
-            log_error!("Failed to process request: {}", e);
-            e
-        })?;
+        let response_content = Logs::extract_response_content(&log_file, &req_id)
+            .map_err(|e| {
+                log_error!("Failed to extract response content: {}", e);
+                e
+            })?;
 
         // 复制到剪贴板（CLI特定操作）
         Clipboard::copy(&response_content).context("Failed to copy to clipboard")?;
-        log_success!("Response content copied to clipboard and sent to Streamock successfully");
+        log_success!("Response content copied to clipboard successfully");
 
         Ok(())
     }

@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use chrono::Local;
 use dialoguer::Confirm;
 use regex::Regex;
 use std::env;
@@ -824,106 +823,6 @@ impl Logs {
             .with_context(|| format!("Failed to write file: {:?}", output_path))?;
 
         Ok(())
-    }
-
-    /// 查找请求 ID 并发送到 Streamock 服务
-    /// 返回提取的响应内容
-    pub fn find_and_send_to_streamock(
-        log_file: &Path,
-        request_id: &str,
-        jira_id: Option<&str>,
-        jira_service_address: Option<&str>,
-        streamock_url: Option<&str>,
-    ) -> Result<String> {
-        // 1. 提取响应内容
-        let response_content = Self::extract_response_content(log_file, request_id)
-            .context("Failed to extract response content")?;
-
-        // 2. 获取日志条目的 URL 信息（用于生成 name）
-        // 匹配 shell 脚本 qkfind.sh 的逻辑：
-        // 1. 从包含 `#<request_id>` 的行中提取 URL
-        // 2. 移除域名和前缀路径
-        // 3. 提取最后两段路径（如果存在），否则提取最后一段
-        let entry = Self::find_request_id(log_file, request_id)?;
-        let name = if let Some(entry) = entry {
-            if let Some(url) = entry.url {
-                // 移除域名和前缀路径（匹配 shell 脚本逻辑）
-                // shell 脚本: sub(/^https?:\/\/[^\/]+\/[^\/]+\/[^\/]+\//, "", $i)
-                let url_re = Regex::new(r"^https?://[^/]+/[^/]+/[^/]+/").ok();
-                let mut processed_url = url.clone();
-                if let Some(re) = url_re {
-                    processed_url = re.replace(&url, "").to_string();
-                }
-
-                // 提取最后两段路径（如果存在），否则提取最后一段
-                let url_parts: Vec<&str> =
-                    processed_url.split('/').filter(|s| !s.is_empty()).collect();
-                if url_parts.len() >= 2 {
-                    format!(
-                        "#{} {}",
-                        request_id,
-                        url_parts[url_parts.len() - 2..].join("/")
-                    )
-                } else if let Some(last_part) = url_parts.last() {
-                    format!("#{} {}", request_id, last_part)
-                } else {
-                    format!("#{} unknown", request_id)
-                }
-            } else {
-                format!("#{} unknown", request_id)
-            }
-        } else {
-            format!("#{} unknown", request_id)
-        };
-
-        // 3. 生成 domain
-        let domain = if let Some(jira_id) = jira_id {
-            if let Some(jira_service) = jira_service_address {
-                format!("{}/browse/{}", jira_service, jira_id)
-            } else {
-                format!("jira/{}", jira_id)
-            }
-        } else {
-            log_file
-                .file_name()
-                .and_then(|n| n.to_str())
-                .unwrap_or("unknown")
-                .to_string()
-        };
-
-        // 4. 生成时间戳（匹配 shell 脚本格式：MM/DD/YYYY, HH:MM:SS AM/PM）
-        let now = Local::now();
-        let formatted_timestamp = now.format("%m/%d/%Y, %I:%M:%S %p").to_string();
-
-        // 5. 创建 JSON payload
-        let payload = serde_json::json!({
-            "encodedKey": "",
-            "data": response_content,
-            "combineLine": "",
-            "separator": "",
-            "domain": domain,
-            "name": name,
-            "timestamp": formatted_timestamp
-        });
-
-        // 6. 发送到 Streamock 服务
-        let streamock_url = streamock_url.unwrap_or("http://localhost:3001/api/submit");
-        let client = reqwest::blocking::Client::new();
-        let response = client
-            .post(streamock_url)
-            .header("Content-Type", "application/json")
-            .header("Connection", "keep-alive")
-            .json(&payload)
-            .send()
-            .context("Failed to send request to Streamock")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let body = response.text().unwrap_or_default();
-            anyhow::bail!("Streamock request failed: {} - {}", status, body);
-        }
-
-        Ok(response_content)
     }
 
     /// 查找日志文件

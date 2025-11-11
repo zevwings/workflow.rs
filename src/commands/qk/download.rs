@@ -29,8 +29,8 @@ impl DownloadCommand {
         let base_dir = Logs::download_from_jira(jira_id, log_output_folder_name, download_all)
             .context("Failed to download attachments from Jira")?;
 
-        log_success!("\nDownload completed!");
-        log_info!("Files located at: {:?}/downloads", base_dir);
+        log_success!("Download completed!\n");
+        log_info!("Files located at: {}/downloads", base_dir.display());
 
         Ok(())
     }
