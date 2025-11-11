@@ -169,39 +169,39 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
 #### 创建 PR 流程图
 
 ```mermaid
-flowchart TD
-    Start([开始]) --> Check{运行检查<br/>CheckCommand::run_all}
-    Check --> ResolveTicket[解析 Jira Ticket<br/>resolve_jira_ticket]
-    ResolveTicket --> EnsureStatus[确保 Jira 状态<br/>ensure_jira_status]
-    EnsureStatus --> ResolveTitle{获取 PR 标题<br/>resolve_title}
+flowchart LR
+    Start([开始]) --> Check{运行检查}
+    Check --> ResolveTicket[解析 Jira Ticket]
+    ResolveTicket --> EnsureStatus[确保 Jira 状态]
+    EnsureStatus --> ResolveTitle{获取 PR 标题}
 
     ResolveTitle -->|提供 --title| UseTitle[使用提供的标题]
-    ResolveTitle -->|未提供| AIGenerate[AI 生成标题<br/>lib/llm/]
+    ResolveTitle -->|未提供| AIGenerate[AI 生成标题]
     AIGenerate -->|成功| UseTitle
     AIGenerate -->|失败| ManualInput[手动输入标题]
     ManualInput --> UseTitle
 
-    UseTitle --> GenerateBranch[生成分支名和 commit<br/>generate_commit_title_and_branch_name]
-    GenerateBranch --> GetDesc[获取描述<br/>resolve_description]
-    GetDesc --> SelectTypes[选择变更类型<br/>select_change_types]
-    SelectTypes --> GenerateBody[生成 PR Body<br/>generate_pull_request_body]
+    UseTitle --> GenerateBranch[生成分支名和 commit]
+    GenerateBranch --> GetDesc[获取描述]
+    GetDesc --> SelectTypes[选择变更类型]
+    SelectTypes --> GenerateBody[生成 PR Body]
 
     GenerateBody --> DryRun{是否为<br/>dry-run?}
     DryRun -->|是| DryRunEnd[输出预览信息]
-    DryRun -->|否| CreateBranch[创建/更新分支<br/>create_or_update_branch]
+    DryRun -->|否| CreateBranch[创建/更新分支]
 
-    CreateBranch --> GitOps[Git 操作<br/>create_branch<br/>commit<br/>push]
-    GitOps --> DetectRepo[检测仓库类型<br/>Git::detect_repo_type]
+    CreateBranch --> GitOps[Git 操作]
+    GitOps --> DetectRepo{检测仓库类型}
 
-    DetectRepo -->|GitHub| GitHubAPI[GitHub API<br/>create_pull_request]
-    DetectRepo -->|Codeup| CodeupAPI[Codeup API<br/>create_pull_request]
+    DetectRepo -->|GitHub| GitHubAPI[GitHub API]
+    DetectRepo -->|Codeup| CodeupAPI[Codeup API]
 
-    GitHubAPI --> UpdateJira[更新 Jira<br/>update_jira_ticket]
+    GitHubAPI --> UpdateJira[更新 Jira]
     CodeupAPI --> UpdateJira
 
-    UpdateJira --> JiraStatus[更新 Jira 状态<br/>Jira::update_status]
-    JiraStatus --> SaveHistory[保存工作历史<br/>WorkHistory::save]
-    SaveHistory --> CopyOpen[复制 URL 并打开浏览器<br/>copy_and_open_pull_request]
+    UpdateJira --> JiraStatus[更新 Jira 状态]
+    JiraStatus --> SaveHistory[保存工作历史]
+    SaveHistory --> CopyOpen[复制 URL 并打开浏览器]
     CopyOpen --> End([完成])
     DryRunEnd --> End
 
@@ -275,44 +275,44 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
 #### 合并 PR 流程图
 
 ```mermaid
-flowchart TD
-    Start([开始]) --> Check[运行检查<br/>CheckCommand::run_all]
-    Check --> DetectRepo[检测仓库类型<br/>Git::detect_repo_type]
-    DetectRepo --> GetPRID{获取 PR ID<br/>get_pull_request_id}
+flowchart LR
+    Start([开始]) --> Check[运行检查]
+    Check --> DetectRepo[检测仓库类型]
+    DetectRepo --> GetPRID{获取 PR ID}
 
     GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
-    GetPRID -->|未提供| AutoDetect[从当前分支自动检测]
+    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
 
-    AutoDetect -->|GitHub| GitHubGetPR[GitHub::get_current_branch_pull_request]
-    AutoDetect -->|Codeup| CodeupGetPR[Codeup::get_current_branch_pull_request]
+    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
+    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
 
     GitHubGetPR --> UsePRID
     CodeupGetPR --> UsePRID
 
-    UsePRID --> SaveBranch[保存当前分支名<br/>Git::current_branch]
-    SaveBranch --> GetDefault[获取默认分支<br/>Git::get_default_branch]
+    UsePRID --> SaveBranch[保存当前分支名]
+    SaveBranch --> GetDefault[获取默认分支]
     GetDefault --> CheckStatus{检查 PR 状态<br/>是否已合并?}
 
     CheckStatus -->|已合并| SkipMerge[跳过合并步骤]
-    CheckStatus -->|未合并| MergePR[合并 PR<br/>merge_pull_request]
+    CheckStatus -->|未合并| MergePR{合并 PR}
 
-    MergePR -->|GitHub| GitHubMerge[GitHub::merge_pull_request]
-    MergePR -->|Codeup| CodeupMerge[Codeup::merge_pull_request]
+    MergePR -->|GitHub| GitHubMerge[GitHub API]
+    MergePR -->|Codeup| CodeupMerge[Codeup API]
 
     GitHubMerge --> Cleanup
     CodeupMerge --> Cleanup
     SkipMerge --> Cleanup
 
-    Cleanup[清理本地分支<br/>cleanup_after_merge] --> Checkout[切换到默认分支<br/>Git::checkout]
-    Checkout --> DeleteBranch[删除本地分支<br/>Git::delete_branch]
+    Cleanup[清理本地分支] --> Checkout[切换到默认分支]
+    Checkout --> DeleteBranch[删除本地分支]
 
-    DeleteBranch --> UpdateJira[更新 Jira 状态<br/>update_jira_status]
+    DeleteBranch --> UpdateJira[更新 Jira 状态]
     UpdateJira --> GetHistory{从工作历史<br/>获取 ticket}
 
     GetHistory -->|找到| UseHistory[使用工作历史中的 ticket]
     GetHistory -->|未找到| ExtractTitle[从 PR 标题提取 ticket]
 
-    UseHistory --> UpdateStatus[更新 Jira 状态<br/>Jira::update_status]
+    UseHistory --> UpdateStatus[更新 Jira 状态]
     ExtractTitle --> UpdateStatus
     UpdateStatus --> End([完成])
 
@@ -374,41 +374,40 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 #### 关闭 PR 流程图
 
 ```mermaid
-flowchart TD
-    Start([开始]) --> DetectRepo[检测仓库类型<br/>Git::detect_repo_type]
-    DetectRepo --> GetPRID{获取 PR ID<br/>get_pull_request_id}
+flowchart LR
+    Start([开始]) --> DetectRepo[检测仓库类型]
+    DetectRepo --> GetPRID{获取 PR ID}
 
     GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
-    GetPRID -->|未提供| AutoDetect[从当前分支自动检测]
+    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
 
-    AutoDetect -->|GitHub| GitHubGetPR[GitHub::get_current_branch_pull_request]
-    AutoDetect -->|Codeup| CodeupGetPR[Codeup::get_current_branch_pull_request]
+    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
+    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
 
     GitHubGetPR --> UsePRID
     CodeupGetPR --> UsePRID
 
-    UsePRID --> SaveBranch[保存当前分支名<br/>Git::current_branch]
-    SaveBranch --> GetDefault[获取默认分支<br/>Git::get_default_branch]
+    UsePRID --> SaveBranch[保存当前分支名]
+    SaveBranch --> GetDefault[获取默认分支]
     GetDefault --> CheckDefault{当前分支<br/>是否为默认分支?}
 
     CheckDefault -->|是| Error[错误：不允许关闭默认分支]
     CheckDefault -->|否| CheckClosed{检查 PR 状态<br/>是否已关闭?}
 
     CheckClosed -->|已关闭| SkipClose[跳过关闭步骤]
-    CheckClosed -->|未关闭| ClosePR[关闭 PR<br/>close_pull_request]
+    CheckClosed -->|未关闭| ClosePR{关闭 PR}
 
-    ClosePR -->|GitHub| GitHubClose[GitHub::close_pull_request]
-    ClosePR -->|Codeup| CodeupClose[Codeup::close_pull_request]
+    ClosePR -->|GitHub| GitHubClose[GitHub API]
+    ClosePR -->|Codeup| CodeupClose[Codeup API]
 
     GitHubClose --> DeleteRemote
     CodeupClose --> DeleteRemote
     SkipClose --> DeleteRemote
 
-    DeleteRemote[删除远程分支<br/>delete_remote_branch] --> GitDeleteRemote[Git::delete_remote_branch]
-    GitDeleteRemote --> Cleanup[清理本地分支<br/>cleanup_after_close]
+    DeleteRemote[删除远程分支] --> Cleanup[清理本地分支]
 
-    Cleanup --> Checkout[切换到默认分支<br/>Git::checkout]
-    Checkout --> DeleteBranch[删除本地分支<br/>Git::delete_branch]
+    Cleanup --> Checkout[切换到默认分支]
+    Checkout --> DeleteBranch[删除本地分支]
     DeleteBranch --> End([完成])
     Error --> End
 
