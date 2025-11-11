@@ -111,7 +111,6 @@ impl Shell {
     ///
     /// 如果重新加载失败，返回相应的错误信息。
     pub fn reload_config(shell_info: &ShellInfo) -> Result<()> {
-
         let config_file = shell_info.config_file.display().to_string();
         let shell_cmd = format!("source {}", config_file);
 

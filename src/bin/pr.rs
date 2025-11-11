@@ -5,7 +5,7 @@
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use workflow::commands::pr::{close, create, list, merge, status, update};
+use workflow::commands::pr::{close, create, integrate, list, merge, status, update};
 
 /// CLI 主结构体
 ///
@@ -82,6 +82,27 @@ enum PRCommands {
     ///
     /// 将当前更改提交到 PR 分支，使用 PR 标题作为提交信息。
     Update,
+    /// 集成分支到当前分支
+    ///
+    /// 将指定分支合并到当前分支，并可选地推送到远程。
+    /// 这是一个本地 Git 操作，与 `merge` 命令（通过 API 合并 PR）不同。
+    Integrate {
+        /// 要合并的源分支名称（必需）
+        #[arg(value_name = "SOURCE_BRANCH")]
+        source_branch: String,
+
+        /// 只允许 fast-forward 合并（如果无法 fast-forward 则失败）
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        ff_only: bool,
+
+        /// 使用 squash 合并（将分支的所有提交压缩为一个提交）
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        squash: bool,
+
+        /// 不推送到远程（默认会推送）
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        no_push: bool,
+    },
     /// 关闭 Pull Request
     ///
     /// 关闭当前分支对应的 PR，删除远程分支，并切换到默认分支。
@@ -123,6 +144,21 @@ fn main() -> Result<()> {
         }
         PRCommands::Update => {
             update::PullRequestUpdateCommand::update()?;
+        }
+        PRCommands::Integrate {
+            source_branch,
+            ff_only,
+            squash,
+            no_push,
+        } => {
+            // 默认推送，除非指定了 --no-push
+            let should_push = !no_push;
+            integrate::PullRequestIntegrateCommand::integrate(
+                source_branch,
+                ff_only,
+                squash,
+                should_push,
+            )?;
         }
         PRCommands::Close { pull_request_id } => {
             close::PullRequestCloseCommand::close(pull_request_id)?;

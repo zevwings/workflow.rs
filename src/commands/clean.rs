@@ -28,8 +28,9 @@ impl CleanCommand {
         }
 
         // 调用库函数执行清理
-        let deleted =
-            Logs::clean_base_dir(dry_run, list_only).context("Failed to clean base directory")?;
+        let base_dir = Logs::get_base_dir_path().context("Failed to get base directory path")?;
+        let deleted = Logs::clean_dir(&base_dir, "the entire base directory", dry_run, list_only)
+            .context("Failed to clean base directory")?;
 
         if deleted {
             log_success!("\nClean completed successfully!");

@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-QK 模块是 Workflow CLI 的快速日志操作工具，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词、清理日志目录和显示 ticket 信息等功能。该模块采用三层架构设计，核心业务逻辑集中在 `lib/log/logs.rs`，命令层提供便捷的用户接口。
+QK 模块是 Workflow CLI 的快速日志操作工具，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词、清理日志目录和显示 ticket 信息等功能。该模块采用三层架构设计，核心业务逻辑按功能拆分为多个模块，命令层提供便捷的用户接口。
 
 ---
 
@@ -22,7 +22,7 @@ src/bin/qk.rs (103 行)
 src/commands/qk/
 ├── mod.rs          # QK 命令模块声明和统一接口（51 行）
 ├── download.rs     # 下载日志命令（38 行）
-├── find.rs         # 查找请求 ID 命令（60 行）
+├── find.rs         # 查找请求 ID 命令（50 行）
 ├── search.rs       # 搜索关键词命令（59 行）
 ├── clean.rs        # 清理日志目录命令（33 行）
 └── info.rs         # 显示 ticket 信息命令（92 行）
@@ -38,23 +38,63 @@ src/commands/qk/
 
 ```
 src/lib/log/
-├── mod.rs          # 日志模块声明
-└── logs.rs         # 日志处理核心逻辑（1195 行）
+├── mod.rs          # 日志模块声明和统一导出（107 行）
+├── utils.rs        # 通用工具函数（86 行）
+├── parse.rs        # 日志解析模块（52 行）
+├── extract.rs      # URL 提取模块（51 行）
+├── zip.rs          # Zip 文件处理模块（123 行）
+├── download.rs     # 下载模块（432 行）
+├── find.rs         # 查找模块（198 行）
+├── search.rs       # 搜索模块（109 行）
+└── clean.rs        # 清理模块（102 行）
 ```
 
-**职责**：
-- 从 Jira 下载日志附件
-- 合并分片 zip 文件
-- 解压日志文件
-- 查找请求 ID 并提取响应内容
-- 搜索关键词
-- 清理日志目录
-- 解析日志文件路径
+**模块职责**：
+
+- **`utils.rs`**：通用工具函数
+  - `expand_path()` - 展开路径字符串（支持 ~ 和 ~/ 格式）
+  - `open_log_file()` - 打开日志文件并返回 BufReader
+  - `format_size()` - 格式化文件大小（B, KB, MB, GB, TB）
+  - `calculate_dir_info()` - 计算目录大小和文件数量
+  - `list_dir_contents()` - 列出目录内容（递归，最大深度 3）
+
+- **`parse.rs`**：日志解析模块
+  - `LogEntry` 结构体定义
+  - `parse_log_entry()` - 解析日志条目
+  - `add_entry_if_not_duplicate()` - 添加条目到结果列表（去重）
+
+- **`extract.rs`**：URL 提取模块
+  - `extract_url_from_line()` - 从日志行中提取 URL
+
+- **`zip.rs`**：Zip 文件处理模块
+  - `merge_split_zips()` - 合并分片 zip 文件
+  - `extract_zip()` - 解压 zip 文件
+
+- **`download.rs`**：下载模块
+  - `download_from_jira()` - 从 Jira ticket 下载日志附件
+
+- **`find.rs`**：查找模块
+  - `find_request_id()` - 从日志文件中搜索请求 ID
+  - `extract_response_content()` - 提取日志条目的响应内容
+  - `get_log_file_path()` - 获取日志文件路径
+  - `find_log_file()` - 查找日志文件
+
+- **`search.rs`**：搜索模块
+  - `search_keyword()` - 在日志文件中搜索关键词
+
+- **`clean.rs`**：清理模块
+  - `clean_dir()` - 清理目录的通用实现
+  - `get_base_dir_path()` - 获取基础目录路径
+
+**设计特点**：
+- 模块化设计，职责清晰
+- 使用 `Logs` 结构体统一导出，保持 `Logs::xxx()` 调用方式
+- 正则表达式使用 `OnceLock` 缓存，提升性能
+- 通用工具函数与业务逻辑分离
 
 ### 依赖模块
 
 - **`lib/jira/`**：Jira 集成（获取附件、获取 ticket 信息等）
-- **`lib/http/`**：HTTP 客户端（发送请求到 Streamock 服务）
 - **`lib/utils/clipboard.rs`**：剪贴板操作（复制响应内容）
 - **`lib/settings/`**：配置管理（环境变量读取）
 
@@ -71,9 +111,9 @@ bin/qk.rs (CLI 入口，参数解析)
   ↓
 commands/qk/*.rs (命令封装层，处理交互)
   ↓
-lib/log/logs.rs (核心业务逻辑层)
+lib/log/*.rs (核心业务逻辑层，模块化)
   ↓
-lib/jira/, lib/http/, lib/utils/ 等 (依赖模块)
+lib/jira/, lib/utils/ 等 (依赖模块)
 ```
 
 ---
@@ -93,17 +133,18 @@ commands/qk/download.rs::DownloadCommand::download()
   2. 加载 Settings
   3. 获取 log_output_folder_name 配置
   4. 调用 Logs::download_from_jira()
-     ├─ 确定输出目录 (~/Downloads/logs_<JIRA_ID>)
-     ├─ 创建目录结构
-     ├─ Jira::get_attachments() 获取附件列表
-     ├─ 根据 download_all_attachments 参数决定：
-     │   - true: 下载所有附件到 downloads/ 目录
-     │   - false: 只下载日志附件 (log.zip, log.z01, etc.)
-     └─ 如果存在 log.zip，处理日志附件：
-         - 检查是否有分片文件
-         - 有: merge_split_zips() 合并分片
-         - 无: 直接复制 log.zip 为 merged.zip
-         - extract_zip() 解压 merged.zip
+     ├─ download.rs::download_from_jira()
+     │   ├─ 确定输出目录（使用 utils::expand_path()）
+     │   ├─ 创建目录结构
+     │   ├─ Jira::get_attachments() 获取附件列表
+     │   ├─ 根据 download_all_attachments 参数决定：
+     │   │   - true: 下载所有附件到 downloads/ 目录
+     │   │   - false: 只下载日志附件 (log.zip, log.z01, etc.)
+     │   └─ 如果存在 log.zip，处理日志附件：
+     │       - 检查是否有分片文件
+     │       - 有: zip::merge_split_zips() 合并分片
+     │       - 无: 直接复制 log.zip 为 merged.zip
+     │       - zip::extract_zip() 解压 merged.zip
   5. 输出成功信息和文件路径
 ```
 
@@ -115,13 +156,13 @@ commands/qk/download.rs::DownloadCommand::download()
 
 2. **分片文件处理**：
    - 自动检测分片 zip 文件
-   - 合并分片文件为 merged.zip
-   - 解压合并后的文件
+   - 使用 `zip::merge_split_zips()` 合并分片文件为 merged.zip
+   - 使用 `zip::extract_zip()` 解压合并后的文件
 
 3. **目录结构**：
-   - 创建 `~/Downloads/logs_<JIRA_ID>/` 目录
+   - 创建 `~/Downloads/logs_<JIRA_ID>/` 目录（或配置的基础目录）
    - 所有附件下载到 `downloads/` 子目录
-   - 解压后的日志文件在 `merged/` 子目录
+   - 解压后的日志文件在 `merged/` 子目录（或配置的文件夹名称）
 
 ### 关键步骤说明
 
@@ -130,12 +171,12 @@ commands/qk/download.rs::DownloadCommand::download()
    - 根据 `download_all_attachments` 参数过滤附件
 
 2. **分片合并**：
-   - 使用 `Logs::merge_split_zips()` 合并分片文件
+   - 使用 `Logs::merge_split_zips()` → `zip::merge_split_zips()` 合并分片文件
    - 支持标准 zip 分片格式（.z01, .z02 等）
 
 3. **文件解压**：
-   - 使用 `Logs::extract_zip()` 解压合并后的 zip 文件
-   - 解压到 `merged/` 子目录
+   - 使用 `Logs::extract_zip()` → `zip::extract_zip()` 解压合并后的 zip 文件
+   - 解压到配置的文件夹名称或 `merged/` 子目录
 
 ---
 
@@ -150,17 +191,14 @@ commands/qk/mod.rs::QuickCommand::find_request_id()
   ↓
 commands/qk/find.rs::FindCommand::find_request_id()
   ↓
-  1. Logs::get_log_file_path() 获取日志文件路径
+  1. Logs::get_log_file_path() → find::get_log_file_path() 获取日志文件路径
   2. 检查日志文件是否存在
   3. 获取请求 ID（参数提供或交互式输入）
-  4. 调用 Logs::find_and_send_to_streamock()
-     ├─ extract_response_content() 提取响应内容
-     ├─ find_request_id() 获取日志条目信息 (URL)
-     ├─ 生成 name (格式: #<REQUEST_ID> <URL路径>)
-     ├─ 生成 domain (格式: <JIRA_SERVICE>/browse/<JIRA_ID>)
-     ├─ 生成时间戳
-     ├─ 创建 JSON payload
-     └─ 发送 POST 请求到 Streamock 服务
+  4. 调用 Logs::extract_response_content() → find::extract_response_content()
+     ├─ find::find_request_id() 查找请求 ID 并获取日志条目信息
+     ├─ 读取日志文件，定位到请求 ID 对应的响应块
+     ├─ 提取响应内容（从响应块开始到下一个请求或文件结束）
+     └─ 返回响应内容字符串
   5. Clipboard::copy() 复制响应内容到剪贴板
   6. 输出成功信息
 ```
@@ -169,33 +207,25 @@ commands/qk/find.rs::FindCommand::find_request_id()
 
 1. **日志文件解析**：
    - 根据 JIRA ID 自动解析日志文件路径
-   - 支持多种日志文件格式
+   - 支持多种日志文件格式和向后兼容的路径查找
 
 2. **响应内容提取**：
    - 从日志文件中提取指定请求 ID 的响应内容
-   - 自动识别响应块
+   - 自动识别响应块（从响应行开始到下一个请求或空行）
 
-3. **Streamock 集成**：
-   - 自动发送请求信息到 Streamock 服务
-   - 生成包含请求 ID、URL、时间戳的 JSON payload
-
-4. **剪贴板操作**：
+3. **剪贴板操作**：
    - 自动复制响应内容到剪贴板
    - 方便用户直接粘贴使用
 
 ### 关键步骤说明
 
 1. **路径解析**：
-   - 使用 `Logs::get_log_file_path()` 根据 JIRA ID 解析日志文件路径
-   - 支持默认路径格式：`~/Downloads/logs_<JIRA_ID>/merged/flutter-api.log`
+   - 使用 `Logs::get_log_file_path()` → `find::get_log_file_path()` 根据 JIRA ID 解析日志文件路径
+   - 支持新路径格式和向后兼容的旧路径格式
 
 2. **内容提取**：
-   - 使用 `Logs::extract_response_content()` 提取响应内容
-   - 使用 `Logs::find_request_id()` 查找请求 ID 并获取 URL 信息
-
-3. **Streamock 集成**：
-   - 默认发送到 `http://localhost:3001/api/submit`
-   - 生成包含完整请求信息的 JSON payload
+   - 使用 `Logs::extract_response_content()` → `find::extract_response_content()` 提取响应内容
+   - 使用 `Logs::find_request_id()` → `find::find_request_id()` 查找请求 ID 并获取 URL 信息
 
 ---
 
@@ -210,16 +240,20 @@ commands/qk/mod.rs::QuickCommand::search()
   ↓
 commands/qk/search.rs::SearchCommand::search()
   ↓
-  1. Logs::get_log_file_path() 获取日志文件路径
+  1. Logs::get_log_file_path() → find::get_log_file_path() 获取日志文件路径
   2. 检查日志文件是否存在
   3. 获取搜索词（参数提供或交互式输入）
-  4. 调用 Logs::search_keyword()
-     ├─ 打开日志文件
+  4. 调用 Logs::search_keyword() → search::search_keyword()
+     ├─ utils::open_log_file() 打开日志文件
      ├─ 逐行读取日志文件
-     ├─ 识别日志条目 (以 "💡" 开头的行)
-     ├─ 解析日志条目 (提取 ID 和 URL)
-     ├─ 在当前条目块中搜索关键词 (不区分大小写)
-     └─ 如果匹配，保存到结果列表
+     ├─ 识别日志条目（使用 parse::parse_log_entry()）
+     │   - flutter-api.log 格式：以 "💡" 开头的行
+     │   - api.log 格式：包含 `#<数字> <HTTP方法>` 的行
+     ├─ 解析日志条目（提取 ID 和 URL）
+     │   - parse::parse_log_entry() 提取 ID
+     │   - extract::extract_url_from_line() 提取 URL
+     ├─ 在当前条目块中搜索关键词（不区分大小写）
+     └─ 如果匹配，使用 parse::add_entry_if_not_duplicate() 保存到结果列表
   5. 格式化输出结果
      - 无结果: 输出警告信息
      - 有结果: 输出匹配的 URL 和 ID
@@ -232,18 +266,19 @@ commands/qk/search.rs::SearchCommand::search()
    - 在日志条目块中搜索匹配内容
 
 2. **日志条目识别**：
-   - 自动识别日志条目（以 "💡" 开头的行）
-   - 解析日志条目格式，提取 ID 和 URL
+   - 自动识别日志条目（以 "💡" 开头的行或包含 `#<数字> <HTTP方法>` 的行）
+   - 使用 `parse::parse_log_entry()` 解析日志条目格式，提取 ID 和 URL
 
 3. **结果展示**：
    - 格式化输出匹配的日志条目
    - 显示请求 ID 和 URL 信息
+   - 自动去重（使用 `parse::add_entry_if_not_duplicate()`）
 
 ### 关键步骤说明
 
 1. **日志解析**：
-   - 使用 `Logs::parse_log_entry()` 解析日志条目格式
-   - 使用 `Logs::extract_url_from_line()` 从日志行提取 URL
+   - 使用 `parse::parse_log_entry()` 解析日志条目格式
+   - 使用 `extract::extract_url_from_line()` 从日志行提取 URL
 
 2. **关键词匹配**：
    - 在当前日志条目块中搜索关键词
@@ -266,30 +301,32 @@ commands/qk/clean.rs::CleanCommand::clean()
      - list_only: 列出目录内容
      - dry_run: 预览清理操作
      - 正常: 执行清理操作
-  2. 调用 Logs::clean_jira_dir()
-     ├─ 解析日志目录路径
-     ├─ 检查目录是否存在
-     ├─ list_only: 列出目录内容
+  2. 调用 Logs::get_base_dir_path() → clean::get_base_dir_path() 获取基础目录
+  3. 调用 Logs::clean_dir() → clean::clean_dir()
+     ├─ utils::calculate_dir_info() 计算目录大小和文件数量
+     ├─ utils::list_dir_contents() 列出目录内容
+     ├─ list_only: 只列出目录内容
      ├─ dry_run: 预览将要删除的文件
      └─ 正常: 删除整个日志目录
-  3. 输出操作结果
+  4. 输出操作结果
 ```
 
 ### 功能说明
 
 1. **目录清理**：
-   - 删除指定 JIRA ID 的整个日志目录
+   - 删除指定 JIRA ID 的整个日志目录或整个基础目录
    - 支持预览模式（dry-run）和列表模式（list-only）
 
 2. **安全机制**：
    - 提供预览模式，避免误删
    - 提供列表模式，查看目录内容
+   - 显示目录大小和文件数量
 
 ### 关键步骤说明
 
 1. **路径解析**：
-   - 根据 JIRA ID 解析日志目录路径
-   - 使用 `Logs::clean_jira_dir()` 执行清理操作
+   - 使用 `Logs::get_base_dir_path()` → `clean::get_base_dir_path()` 获取基础目录路径
+   - 根据 JIRA ID 构建目标目录路径
 
 2. **操作模式**：
    - `list_only`: 只列出目录内容，不删除
@@ -325,7 +362,7 @@ commands/qk/info.rs::InfoCommand::show()
    - 显示基本信息、描述、附件、评论等
 
 2. **格式化显示**：
-   - 格式化文件大小显示
+   - 格式化文件大小显示（使用 `Logs::format_size()`）
    - 清晰的分类展示
 
 ### 关键步骤说明
@@ -336,7 +373,7 @@ commands/qk/info.rs::InfoCommand::show()
 
 2. **附件列表**：
    - 显示所有附件的文件名和大小
-   - 格式化文件大小（B, KB, MB, GB, TB）
+   - 使用 `Logs::format_size()` 格式化文件大小（B, KB, MB, GB, TB）
 
 ---
 
@@ -351,9 +388,9 @@ Jira::get_attachments()
   ↓ (过滤日志附件)
 下载到本地 downloads/ 目录
   ↓ (合并分片)
-merged.zip
+zip::merge_split_zips() → merged.zip
   ↓ (解压)
-~/Downloads/logs_<JIRA_ID>/merged/
+zip::extract_zip() → ~/Downloads/logs_<JIRA_ID>/merged/
   ↓ (输出路径)
 用户终端
 ```
@@ -363,17 +400,13 @@ merged.zip
 ```
 命令行参数 (JIRA_ID, REQUEST_ID)
   ↓
-解析日志文件路径
+find::get_log_file_path() 解析日志文件路径
   ↓
-读取日志文件
+utils::open_log_file() 读取日志文件
   ↓
-提取响应内容 + 查找 URL 信息
+find::extract_response_content() 提取响应内容
   ↓
-生成 JSON payload
-  ↓
-发送到 Streamock 服务
-  ↓
-复制响应内容到剪贴板
+Clipboard::copy() 复制响应内容到剪贴板
   ↓
 输出成功信息
 ```
@@ -383,13 +416,17 @@ merged.zip
 ```
 命令行参数 (JIRA_ID, SEARCH_TERM)
   ↓
-解析日志文件路径
+find::get_log_file_path() 解析日志文件路径
   ↓
-逐行读取日志文件
+utils::open_log_file() 逐行读取日志文件
+  ↓
+parse::parse_log_entry() 识别和解析日志条目
+  ↓
+extract::extract_url_from_line() 提取 URL
   ↓
 匹配关键词 (不区分大小写)
   ↓
-收集匹配的 LogEntry (ID + URL)
+parse::add_entry_if_not_duplicate() 收集匹配的 LogEntry (ID + URL)
   ↓
 格式化输出到终端
 ```
@@ -404,12 +441,6 @@ merged.zip
   - `Jira::get_attachments()` - 获取附件列表
   - `Jira::get_ticket_info()` - 获取 ticket 信息
 
-### HTTP 模块集成
-
-- **`lib/http/`**：HTTP 客户端
-  - 发送 POST 请求到 Streamock 服务
-  - 支持代理和认证
-
 ### 工具模块集成
 
 - **`lib/utils/clipboard.rs`**：剪贴板操作
@@ -419,7 +450,7 @@ merged.zip
 
 - **`lib/settings/`**：配置管理
   - `log_output_folder_name` - 日志输出文件夹名称
-  - `jira_service_address` - Jira 服务地址
+  - `log_download_base_dir` - 日志下载基础目录
 
 ---
 
@@ -436,18 +467,23 @@ merged.zip
 
 ### 2. 统一接口模式
 
-`QuickCommand` 结构体作为统一接口，保持向后兼容：
-- 所有方法都标记为 `#[allow(dead_code)]`
-- 内部直接调用拆分的命令模块
-- 允许未来逐步迁移到新的命令结构
+`Logs` 结构体作为统一接口，保持向后兼容：
+- 所有方法都通过 `Logs::xxx()` 调用
+- 内部转发到对应的模块函数
+- 允许未来逐步优化内部实现
 
-### 3. 工具函数模式
+### 3. 模块化设计
 
-将复杂的操作封装到 `lib/log/logs.rs` 中的工具函数，命令层只负责调用和交互：
-- `Logs::download_from_jira()` - 下载日志
-- `Logs::find_and_send_to_streamock()` - 查找并发送到 Streamock
-- `Logs::search_keyword()` - 搜索关键词
-- `Logs::clean_jira_dir()` - 清理日志目录
+核心业务逻辑按功能拆分为多个模块：
+- **工具层**：`utils.rs` - 通用工具函数
+- **解析层**：`parse.rs`, `extract.rs` - 日志解析和 URL 提取
+- **功能层**：`download.rs`, `find.rs`, `search.rs`, `clean.rs` - 具体功能实现
+- **处理层**：`zip.rs` - Zip 文件处理
+
+### 4. 性能优化
+
+- **正则表达式缓存**：使用 `OnceLock` 缓存正则表达式，避免重复编译
+- **代码复用**：提取公共函数，减少重复代码
 
 ---
 
@@ -466,7 +502,6 @@ merged.zip
 
 - **API 调用错误**：
   - Download 命令：Jira API 调用失败会返回错误信息
-  - Find 命令：Streamock 服务调用失败会记录错误并返回
   - Info 命令：Jira API 调用失败会返回错误信息
 
 - **交互式输入错误**：
@@ -486,12 +521,12 @@ merged.zip
 
 ### 添加新的日志格式支持
 
-1. 在 `lib/log/logs.rs` 中添加新的日志格式解析逻辑
-2. 更新 `parse_log_entry()` 和 `extract_url_from_line()` 方法
+1. 在 `lib/log/parse.rs` 中添加新的日志格式解析逻辑
+2. 在 `lib/log/extract.rs` 中更新 URL 提取逻辑
 
 ### 添加新的搜索功能
 
-1. 在 `lib/log/logs.rs` 中添加新的搜索方法
+1. 在 `lib/log/search.rs` 中添加新的搜索方法
 2. 在命令层添加对应的命令实现
 
 ---
@@ -500,7 +535,6 @@ merged.zip
 
 - [主架构文档](./ARCHITECTURE.md)
 - [PR 模块架构文档](./PR_ARCHITECTURE.md)
-- [日志处理模块文档](./ARCHITECTURE.md#日志处理模块-liblog)
 
 ---
 
@@ -561,3 +595,61 @@ qk WEW-763 info
 qk WEW-763
 ```
 
+---
+
+## 模块依赖关系
+
+```
+utils.rs (基础层，无依赖)
+    ↑
+    │
+    ├── download.rs (依赖 utils.rs)
+    ├── find.rs (依赖 utils.rs, parse.rs, extract.rs)
+    ├── search.rs (依赖 utils.rs, parse.rs, extract.rs)
+    └── clean.rs (依赖 utils.rs)
+
+extract.rs (基础层，无依赖)
+    ↑
+    │
+parse.rs (依赖 extract.rs)
+    ↑
+    │
+    ├── find.rs (依赖 parse.rs, extract.rs)
+    └── search.rs (依赖 parse.rs, extract.rs)
+
+zip.rs (独立模块，依赖标准库)
+    ↑
+    │
+download.rs (依赖 zip.rs, utils.rs)
+
+download.rs (独立模块，依赖 utils.rs, zip.rs)
+find.rs (独立模块，依赖 utils.rs, parse.rs, extract.rs)
+search.rs (独立模块，依赖 utils.rs, parse.rs, extract.rs)
+clean.rs (独立模块，依赖 utils.rs)
+```
+
+---
+
+## 性能优化
+
+### 正则表达式缓存
+
+- **优化前**：每次调用都重新编译正则表达式
+- **优化后**：使用 `OnceLock` 缓存正则表达式，只编译一次
+- **影响模块**：`extract.rs`, `search.rs`, `parse.rs`
+
+### 代码复用
+
+- 提取公共函数到 `utils.rs`，减少重复代码
+- 模块化设计，便于维护和测试
+
+---
+
+## 总结
+
+QK 模块采用清晰的三层架构设计：
+- **CLI 层**：参数解析和命令分发
+- **命令层**：用户交互和格式化输出
+- **核心层**：模块化的业务逻辑实现
+
+核心业务逻辑层按功能拆分为多个模块，每个模块职责清晰，便于维护和扩展。通过 `Logs` 结构体统一导出，保持了向后兼容的 API 接口。
