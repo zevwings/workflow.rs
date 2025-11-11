@@ -20,6 +20,7 @@ src/
 │   ├── mod.rs              # 命令模块声明
 │   ├── pr/                 # PR 相关命令
 │   │   ├── mod.rs          # PR 命令模块声明
+│   │   ├── helpers.rs      # PR 辅助函数（PR ID 解析等）
 │   │   ├── create.rs       # 创建 PR
 │   │   ├── merge.rs        # 合并 PR
 │   │   ├── close.rs        # 关闭 PR
@@ -27,10 +28,12 @@ src/
 │   │   ├── list.rs         # 列出 PR
 │   │   └── update.rs       # 更新 PR
 │   ├── qk/                 # 快速日志操作命令
-│   │   ├── mod.rs          # QK 命令模块声明和统一接口（QuickCommand）
+│   │   ├── mod.rs          # QK 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
 │   │   ├── find.rs         # 查找请求 ID 命令
-│   │   └── search.rs       # 搜索关键词命令
+│   │   ├── search.rs       # 搜索关键词命令
+│   │   ├── clean.rs        # 清理日志目录命令
+│   │   └── info.rs         # 显示 ticket 信息命令
 │   ├── check.rs            # 综合检查命令（git_status, network）
 │   ├── proxy.rs            # 代理管理命令（on, off, check）
 │   ├── config.rs           # 配置查看命令（显示当前配置）
@@ -125,7 +128,8 @@ src/
 ### 数据流向
 
 ```
-用户输入 → bin/qk.rs → commands/qk/QuickCommand → lib/log/logs.rs → 执行操作
+用户输入 → bin/qk.rs → commands/qk/*.rs → lib/log/logs.rs → 执行操作
+用户输入 → bin/pr.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
 ```
 
 ---
@@ -198,10 +202,12 @@ workflow pr create PROJ-123 --title "Fix bug"
   - `extract_zip()` - 解压文件
 
 - **命令封装层**：`commands/qk/` - 提供便捷的命令接口
-  - `mod.rs` - 模块导出和统一接口（QuickCommand）
+  - `mod.rs` - 模块导出
   - `download.rs` - 下载命令（调用 `Logs::download_from_jira()`）
   - `find.rs` - 查找命令（调用 `Logs::find_and_send_to_streamock()`，添加剪贴板操作）
   - `search.rs` - 搜索命令（调用 `Logs::search_keyword()`，格式化输出）
+  - `clean.rs` - 清理命令（调用 `Logs::clean_jira_dir()`）
+  - `info.rs` - 信息命令（显示 ticket 信息）
 
 - **CLI 入口层**：`bin/qk.rs` - 独立的可执行文件（命令行参数解析和命令分发）
 

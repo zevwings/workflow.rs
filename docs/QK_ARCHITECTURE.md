@@ -20,7 +20,7 @@ src/bin/qk.rs (103 行)
 
 ```
 src/commands/qk/
-├── mod.rs          # QK 命令模块声明和统一接口（51 行）
+├── mod.rs          # QK 命令模块声明
 ├── download.rs     # 下载日志命令（38 行）
 ├── find.rs         # 查找请求 ID 命令（60 行）
 ├── search.rs       # 搜索关键词命令（59 行）
@@ -85,8 +85,6 @@ lib/jira/, lib/http/, lib/utils/ 等 (依赖模块)
 ```
 bin/qk.rs::QkCommands::Download
   ↓
-commands/qk/mod.rs::QuickCommand::download()
-  ↓
 commands/qk/download.rs::DownloadCommand::download()
   ↓
   1. 根据 download_all 参数显示不同的提示信息
@@ -146,8 +144,6 @@ commands/qk/download.rs::DownloadCommand::download()
 ```
 bin/qk.rs::QkCommands::Find
   ↓
-commands/qk/mod.rs::QuickCommand::find_request_id()
-  ↓
 commands/qk/find.rs::FindCommand::find_request_id()
   ↓
   1. Logs::get_log_file_path() 获取日志文件路径
@@ -206,8 +202,6 @@ commands/qk/find.rs::FindCommand::find_request_id()
 ```
 bin/qk.rs::QkCommands::Search
   ↓
-commands/qk/mod.rs::QuickCommand::search()
-  ↓
 commands/qk/search.rs::SearchCommand::search()
   ↓
   1. Logs::get_log_file_path() 获取日志文件路径
@@ -258,8 +252,6 @@ commands/qk/search.rs::SearchCommand::search()
 ```
 bin/qk.rs::QkCommands::Clean
   ↓
-commands/qk/mod.rs::QuickCommand::clean()
-  ↓
 commands/qk/clean.rs::CleanCommand::clean()
   ↓
   1. 根据参数显示不同的提示信息
@@ -304,8 +296,6 @@ commands/qk/clean.rs::CleanCommand::clean()
 
 ```
 bin/qk.rs::QkCommands::Info (或默认无子命令)
-  ↓
-commands/qk/mod.rs::QuickCommand::show()
   ↓
 commands/qk/info.rs::InfoCommand::show()
   ↓
@@ -434,12 +424,14 @@ merged.zip
 - `CleanCommand::clean()`
 - `InfoCommand::show()`
 
-### 2. 统一接口模式
+### 2. 直接调用模式
 
-`QuickCommand` 结构体作为统一接口，保持向后兼容：
-- 所有方法都标记为 `#[allow(dead_code)]`
-- 内部直接调用拆分的命令模块
-- 允许未来逐步迁移到新的命令结构
+所有命令通过 `bin/qk.rs` 直接调用对应的命令结构体：
+- `DownloadCommand::download()` - 下载日志
+- `FindCommand::find_request_id()` - 查找请求 ID
+- `SearchCommand::search()` - 搜索关键词
+- `CleanCommand::clean()` - 清理日志目录
+- `InfoCommand::show()` - 显示 ticket 信息
 
 ### 3. 工具函数模式
 
@@ -482,7 +474,7 @@ merged.zip
 2. 实现命令结构体和处理方法
 3. 在 `commands/qk/mod.rs` 中导出
 4. 在 `bin/qk.rs` 中添加命令枚举和处理逻辑
-5. 在 `QuickCommand` 中添加统一接口方法（可选）
+5. 在 `bin/qk.rs` 中添加命令分发逻辑
 
 ### 添加新的日志格式支持
 

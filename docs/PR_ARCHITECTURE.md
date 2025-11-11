@@ -21,12 +21,13 @@ src/bin/pr.rs
 ```
 src/commands/pr/
 ├── mod.rs          # PR 命令模块声明
-├── create.rs       # 创建 PR 命令（741 行）
-├── merge.rs        # 合并 PR 命令（328 行）
-├── close.rs        # 关闭 PR 命令（296 行）
-├── status.rs       # PR 状态查询命令（102 行）
-├── list.rs         # 列出 PR 命令（38 行）
-└── update.rs       # 更新 PR 命令（75 行）
+├── helpers.rs      # PR 辅助函数（PR ID 解析等）
+├── create.rs       # 创建 PR 命令
+├── merge.rs        # 合并 PR 命令
+├── close.rs        # 关闭 PR 命令
+├── status.rs       # PR 状态查询命令
+├── list.rs         # 列出 PR 命令
+└── update.rs       # 更新 PR 命令
 ```
 
 **职责**：
