@@ -408,9 +408,7 @@ impl Git {
     /// （通过检查 MERGE_HEAD 或合并 commit 的存在），也会认为操作成功。
     pub fn merge_branch(source_branch: &str, strategy: MergeStrategy) -> Result<()> {
         // 保存合并前的 HEAD，用于验证合并是否完成
-        let head_before = cmd("git", &["rev-parse", "HEAD"])
-            .read()
-            .ok();
+        let head_before = cmd("git", &["rev-parse", "HEAD"]).read().ok();
 
         let mut args = vec!["merge"];
 
@@ -455,14 +453,12 @@ impl Git {
             }
 
             // 否则返回原始错误
-            return merge_result
-                .map(|_| ())
-                .with_context(|| {
-                    format!(
-                        "Failed to merge branch '{}' into current branch",
-                        source_branch
-                    )
-                });
+            return merge_result.map(|_| ()).with_context(|| {
+                format!(
+                    "Failed to merge branch '{}' into current branch",
+                    source_branch
+                )
+            });
         }
 
         Ok(())
