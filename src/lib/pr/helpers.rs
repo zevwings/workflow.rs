@@ -28,7 +28,6 @@ pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
 /// assert_eq!(extract_github_repo_from_url("https://github.com/owner/repo.git"), Ok("owner/repo".to_string()));
 /// ```
 pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
-
     // 匹配 SSH 格式: git@github.com:owner/repo.git
     let ssh_re =
         Regex::new(r"git@github\.com:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;

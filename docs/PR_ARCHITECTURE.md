@@ -79,6 +79,55 @@ lib/pr/*.rs (核心业务逻辑层)
 lib/git/, lib/jira/, lib/http/ 等 (依赖模块)
 ```
 
+#### 架构流程图
+
+```mermaid
+graph TB
+    User[用户输入] --> CLI[bin/pr.rs<br/>CLI 入口<br/>参数解析]
+
+    CLI --> Create[commands/pr/create.rs<br/>创建 PR]
+    CLI --> Merge[commands/pr/merge.rs<br/>合并 PR]
+    CLI --> Close[commands/pr/close.rs<br/>关闭 PR]
+    CLI --> Status[commands/pr/status.rs<br/>查询状态]
+    CLI --> List[commands/pr/list.rs<br/>列出 PR]
+    CLI --> Update[commands/pr/update.rs<br/>更新 PR]
+
+    Create --> LibPR[lib/pr/<br/>核心业务逻辑层]
+    Merge --> LibPR
+    Close --> LibPR
+    Status --> LibPR
+    List --> LibPR
+    Update --> LibPR
+
+    LibPR --> Git[lib/git/<br/>Git 操作]
+    LibPR --> Jira[lib/jira/<br/>Jira 集成]
+    LibPR --> LLM[lib/llm/<br/>AI 功能]
+    LibPR --> Http[lib/http/<br/>HTTP 客户端]
+    LibPR --> Utils[lib/utils/<br/>工具函数]
+    LibPR --> Settings[lib/settings/<br/>配置管理]
+
+    Http --> GitHub[GitHub API]
+    Http --> Codeup[Codeup API]
+    Http --> JiraAPI[Jira API]
+    LLM --> LLMAPI[LLM API]
+
+    style User fill:#e1f5ff
+    style CLI fill:#fff4e1
+    style Create fill:#fff4e1
+    style Merge fill:#fff4e1
+    style Close fill:#fff4e1
+    style Status fill:#fff4e1
+    style List fill:#fff4e1
+    style Update fill:#fff4e1
+    style LibPR fill:#e8f5e9
+    style Git fill:#f3e5f5
+    style Jira fill:#f3e5f5
+    style LLM fill:#f3e5f5
+    style Http fill:#f3e5f5
+    style Utils fill:#f3e5f5
+    style Settings fill:#f3e5f5
+```
+
 ### 1. 创建 PR (`pr create`)
 
 #### 调用流程
@@ -115,6 +164,56 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
   12. copy_and_open_pull_request()              # 复制 URL 并打开浏览器
       └─ lib/utils/clipboard.rs::Clipboard::copy()
       └─ lib/utils/browser.rs::Browser::open()
+```
+
+#### 创建 PR 流程图
+
+```mermaid
+flowchart LR
+    Start([开始]) --> Check{运行检查}
+    Check --> ResolveTicket[解析 Jira Ticket]
+    ResolveTicket --> EnsureStatus[确保 Jira 状态]
+    EnsureStatus --> ResolveTitle{获取 PR 标题}
+
+    ResolveTitle -->|提供 --title| UseTitle[使用提供的标题]
+    ResolveTitle -->|未提供| AIGenerate[AI 生成标题]
+    AIGenerate -->|成功| UseTitle
+    AIGenerate -->|失败| ManualInput[手动输入标题]
+    ManualInput --> UseTitle
+
+    UseTitle --> GenerateBranch[生成分支名和 commit]
+    GenerateBranch --> GetDesc[获取描述]
+    GetDesc --> SelectTypes[选择变更类型]
+    SelectTypes --> GenerateBody[生成 PR Body]
+
+    GenerateBody --> DryRun{是否为<br/>dry-run?}
+    DryRun -->|是| DryRunEnd[输出预览信息]
+    DryRun -->|否| CreateBranch[创建/更新分支]
+
+    CreateBranch --> GitOps[Git 操作]
+    GitOps --> DetectRepo{检测仓库类型}
+
+    DetectRepo -->|GitHub| GitHubAPI[GitHub API]
+    DetectRepo -->|Codeup| CodeupAPI[Codeup API]
+
+    GitHubAPI --> UpdateJira[更新 Jira]
+    CodeupAPI --> UpdateJira
+
+    UpdateJira --> JiraStatus[更新 Jira 状态]
+    JiraStatus --> SaveHistory[保存工作历史]
+    SaveHistory --> CopyOpen[复制 URL 并打开浏览器]
+    CopyOpen --> End([完成])
+    DryRunEnd --> End
+
+    style Start fill:#e1f5ff
+    style End fill:#c8e6c9
+    style Check fill:#fff9c4
+    style ResolveTitle fill:#fff9c4
+    style DryRun fill:#fff9c4
+    style DetectRepo fill:#fff9c4
+    style GitHubAPI fill:#e3f2fd
+    style CodeupAPI fill:#e3f2fd
+    style UpdateJira fill:#f3e5f5
 ```
 
 #### 关键步骤说明
@@ -173,6 +272,62 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
      └─ lib/jira/::Jira::update_status()
 ```
 
+#### 合并 PR 流程图
+
+```mermaid
+flowchart LR
+    Start([开始]) --> Check[运行检查]
+    Check --> DetectRepo[检测仓库类型]
+    DetectRepo --> GetPRID{获取 PR ID}
+
+    GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
+    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
+
+    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
+    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
+
+    GitHubGetPR --> UsePRID
+    CodeupGetPR --> UsePRID
+
+    UsePRID --> SaveBranch[保存当前分支名]
+    SaveBranch --> GetDefault[获取默认分支]
+    GetDefault --> CheckStatus{检查 PR 状态<br/>是否已合并?}
+
+    CheckStatus -->|已合并| SkipMerge[跳过合并步骤]
+    CheckStatus -->|未合并| MergePR{合并 PR}
+
+    MergePR -->|GitHub| GitHubMerge[GitHub API]
+    MergePR -->|Codeup| CodeupMerge[Codeup API]
+
+    GitHubMerge --> Cleanup
+    CodeupMerge --> Cleanup
+    SkipMerge --> Cleanup
+
+    Cleanup[清理本地分支] --> Checkout[切换到默认分支]
+    Checkout --> DeleteBranch[删除本地分支]
+
+    DeleteBranch --> UpdateJira[更新 Jira 状态]
+    UpdateJira --> GetHistory{从工作历史<br/>获取 ticket}
+
+    GetHistory -->|找到| UseHistory[使用工作历史中的 ticket]
+    GetHistory -->|未找到| ExtractTitle[从 PR 标题提取 ticket]
+
+    UseHistory --> UpdateStatus[更新 Jira 状态]
+    ExtractTitle --> UpdateStatus
+    UpdateStatus --> End([完成])
+
+    style Start fill:#e1f5ff
+    style End fill:#c8e6c9
+    style GetPRID fill:#fff9c4
+    style CheckStatus fill:#fff9c4
+    style GetHistory fill:#fff9c4
+    style GitHubGetPR fill:#e3f2fd
+    style CodeupGetPR fill:#e3f2fd
+    style GitHubMerge fill:#e3f2fd
+    style CodeupMerge fill:#e3f2fd
+    style UpdateJira fill:#f3e5f5
+```
+
 #### 关键步骤说明
 
 1. **PR ID 获取**：
@@ -214,6 +369,58 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
   7. cleanup_after_close()                      # 清理本地分支
      └─ lib/git/::Git::checkout()
      └─ lib/git/::Git::delete_branch()
+```
+
+#### 关闭 PR 流程图
+
+```mermaid
+flowchart LR
+    Start([开始]) --> DetectRepo[检测仓库类型]
+    DetectRepo --> GetPRID{获取 PR ID}
+
+    GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
+    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
+
+    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
+    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
+
+    GitHubGetPR --> UsePRID
+    CodeupGetPR --> UsePRID
+
+    UsePRID --> SaveBranch[保存当前分支名]
+    SaveBranch --> GetDefault[获取默认分支]
+    GetDefault --> CheckDefault{当前分支<br/>是否为默认分支?}
+
+    CheckDefault -->|是| Error[错误：不允许关闭默认分支]
+    CheckDefault -->|否| CheckClosed{检查 PR 状态<br/>是否已关闭?}
+
+    CheckClosed -->|已关闭| SkipClose[跳过关闭步骤]
+    CheckClosed -->|未关闭| ClosePR{关闭 PR}
+
+    ClosePR -->|GitHub| GitHubClose[GitHub API]
+    ClosePR -->|Codeup| CodeupClose[Codeup API]
+
+    GitHubClose --> DeleteRemote
+    CodeupClose --> DeleteRemote
+    SkipClose --> DeleteRemote
+
+    DeleteRemote[删除远程分支] --> Cleanup[清理本地分支]
+
+    Cleanup --> Checkout[切换到默认分支]
+    Checkout --> DeleteBranch[删除本地分支]
+    DeleteBranch --> End([完成])
+    Error --> End
+
+    style Start fill:#e1f5ff
+    style End fill:#c8e6c9
+    style GetPRID fill:#fff9c4
+    style CheckDefault fill:#ffcdd2
+    style CheckClosed fill:#fff9c4
+    style GitHubGetPR fill:#e3f2fd
+    style CodeupGetPR fill:#e3f2fd
+    style GitHubClose fill:#e3f2fd
+    style CodeupClose fill:#e3f2fd
+    style Error fill:#ffcdd2
 ```
 
 #### 关键步骤说明
@@ -338,6 +545,68 @@ pub trait PlatformProvider {
 }
 ```
 
+#### 平台抽象设计图
+
+```mermaid
+graph TB
+    subgraph "命令层 (commands/pr/)"
+        CreateCmd[create.rs]
+        MergeCmd[merge.rs]
+        CloseCmd[close.rs]
+        StatusCmd[status.rs]
+        ListCmd[list.rs]
+        UpdateCmd[update.rs]
+    end
+
+    subgraph "平台抽象接口"
+        Trait[PlatformProvider Trait<br/>统一接口]
+        Methods[方法列表<br/>create_pull_request<br/>merge_pull_request<br/>get_pull_request_info<br/>get_pull_request_url<br/>get_pull_request_title<br/>get_current_branch_pull_request<br/>get_pull_requests<br/>get_pull_request_status<br/>close_pull_request]
+    end
+
+    subgraph "平台实现"
+        GitHub[GitHub<br/>lib/pr/github.rs<br/>GitHub REST API v3]
+        Codeup[Codeup<br/>lib/pr/codeup.rs<br/>Codeup REST API]
+    end
+
+    subgraph "仓库检测"
+        Detect[Git::detect_repo_type<br/>lib/git/repo.rs]
+    end
+
+    subgraph "外部服务"
+        GitHubAPI[GitHub API]
+        CodeupAPI[Codeup API]
+    end
+
+    CreateCmd --> Trait
+    MergeCmd --> Trait
+    CloseCmd --> Trait
+    StatusCmd --> Trait
+    ListCmd --> Trait
+    UpdateCmd --> Trait
+
+    Trait --> Methods
+    Methods --> GitHub
+    Methods --> Codeup
+
+    Detect -->|检测到 GitHub| GitHub
+    Detect -->|检测到 Codeup| Codeup
+
+    GitHub --> GitHubAPI
+    Codeup --> CodeupAPI
+
+    style Trait fill:#e8f5e9
+    style Methods fill:#e8f5e9
+    style GitHub fill:#e3f2fd
+    style Codeup fill:#fff3e0
+    style Detect fill:#f3e5f5
+    style CreateCmd fill:#fff4e1
+    style MergeCmd fill:#fff4e1
+    style CloseCmd fill:#fff4e1
+    style StatusCmd fill:#fff4e1
+    style ListCmd fill:#fff4e1
+    style UpdateCmd fill:#fff4e1
+```
+
 ### 平台实现
 
 - **GitHub** (`lib/pr/github.rs`)：
@@ -401,34 +670,38 @@ match repo_type {
 
 ### 创建 PR 数据流
 
-```
-用户输入 (Jira ticket, title, description)
-  ↓
-命令层处理 (交互、验证)
-  ↓
-生成分支名、commit 标题、PR body
-  ↓
-Git 操作 (创建分支、提交、推送)
-  ↓
-平台 API (创建 PR)
-  ↓
-Jira 更新 (状态、工作历史)
-  ↓
-工具操作 (剪贴板、浏览器)
+```mermaid
+flowchart LR
+    Input[用户输入<br/>Jira ticket<br/>title<br/>description] --> Command[命令层处理<br/>交互、验证]
+    Command --> Generate[生成内容<br/>分支名<br/>commit 标题<br/>PR body]
+    Generate --> Git[Git 操作<br/>创建分支<br/>提交<br/>推送]
+    Git --> API[平台 API<br/>创建 PR]
+    API --> Jira[Jira 更新<br/>状态更新<br/>工作历史]
+    Jira --> Tools[工具操作<br/>剪贴板<br/>浏览器]
+
+    style Input fill:#e1f5ff
+    style Command fill:#fff4e1
+    style Generate fill:#e8f5e9
+    style Git fill:#f3e5f5
+    style API fill:#e3f2fd
+    style Jira fill:#f3e5f5
+    style Tools fill:#fff9c4
 ```
 
 ### 合并 PR 数据流
 
-```
-用户输入 (PR ID 或自动检测)
-  ↓
-命令层处理 (获取 PR ID、检查状态)
-  ↓
-平台 API (合并 PR)
-  ↓
-Git 操作 (切换分支、删除分支)
-  ↓
-Jira 更新 (从工作历史查找 ticket、更新状态)
+```mermaid
+flowchart LR
+    Input[用户输入<br/>PR ID 或<br/>自动检测] --> Command[命令层处理<br/>获取 PR ID<br/>检查状态]
+    Command --> API[平台 API<br/>合并 PR]
+    API --> Git[Git 操作<br/>切换分支<br/>删除分支]
+    Git --> Jira[Jira 更新<br/>从工作历史查找 ticket<br/>更新状态]
+
+    style Input fill:#e1f5ff
+    style Command fill:#fff4e1
+    style API fill:#e3f2fd
+    style Git fill:#f3e5f5
+    style Jira fill:#f3e5f5
 ```
 
 ---

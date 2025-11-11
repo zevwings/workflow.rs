@@ -50,7 +50,6 @@ impl Git {
     /// 如果遇到合并冲突或其他错误，返回相应的错误信息。
     /// 当遇到冲突时，会输出详细的解决步骤提示。
     pub fn stash_pop() -> Result<()> {
-
         // 尝试执行 git stash pop
         let result = cmd("git", &["stash", "pop"]).run();
 

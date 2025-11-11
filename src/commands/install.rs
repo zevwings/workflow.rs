@@ -108,7 +108,6 @@ impl InstallCommand {
 
     /// 生成 workflow 命令的 completion
     fn generate_workflow_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-
         let mut cmd = Command::new("workflow")
             .about("Workflow CLI tool")
             .subcommand(
@@ -153,7 +152,6 @@ impl InstallCommand {
 
     /// 生成 pr 命令的 completion
     fn generate_pr_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-
         let mut cmd = Command::new("pr")
             .about("Pull Request operations")
             .subcommand(
@@ -210,7 +208,6 @@ impl InstallCommand {
 
     /// 生成 qk 命令的 completion
     fn generate_qk_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-
         let mut cmd = Command::new("qk")
             .about("Quick log operations")
             .arg(

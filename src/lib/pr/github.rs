@@ -198,7 +198,6 @@ impl PlatformProvider for GitHub {
 
     /// 获取 PR 信息
     fn get_pull_request_info(pull_request_id: &str) -> Result<String> {
-
         let pr_number = pull_request_id
             .parse::<u64>()
             .context("Invalid PR number")?;

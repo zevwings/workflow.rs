@@ -18,7 +18,10 @@ impl CleanCommand {
         }
 
         // 调用库函数执行清理
-        let deleted = Logs::clean_jira_dir(jira_id, dry_run, list_only)
+        let base_dir = Logs::get_base_dir_path().context("Failed to get base directory path")?;
+        let jira_dir = base_dir.join(jira_id);
+        let dir_name = format!("the directory for {}", jira_id);
+        let deleted = Logs::clean_dir(&jira_dir, &dir_name, dry_run, list_only)
             .context("Failed to clean logs directory")?;
 
         if deleted {

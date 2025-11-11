@@ -1,6 +1,6 @@
 use colored::*;
-use std::fmt;
 use std::env;
+use std::fmt;
 use std::sync::OnceLock;
 
 /// 日志级别枚举
