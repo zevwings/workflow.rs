@@ -13,9 +13,9 @@ use dialoguer::{Confirm, Input, MultiSelect};
 #[allow(dead_code)]
 pub struct PullRequestCreateCommand;
 
+#[allow(dead_code)]
 impl PullRequestCreateCommand {
     /// 创建 PR（完整流程）
-    #[allow(dead_code)]
     pub fn create(
         jira_ticket: Option<String>,
         title: Option<String>,

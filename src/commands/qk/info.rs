@@ -5,9 +5,9 @@ use anyhow::{Context, Result};
 #[allow(dead_code)]
 pub struct InfoCommand;
 
+#[allow(dead_code)]
 impl InfoCommand {
     /// 显示 ticket 信息
-    #[allow(dead_code)]
     pub fn show(jira_id: &str) -> Result<()> {
         log_debug!("Getting ticket info for {}...", jira_id);
 
@@ -73,6 +73,7 @@ impl InfoCommand {
 }
 
 /// 格式化文件大小
+#[allow(dead_code)]
 fn format_size(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;

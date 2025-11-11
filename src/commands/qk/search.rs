@@ -6,9 +6,9 @@ use dialoguer::Input;
 #[allow(dead_code)]
 pub struct SearchCommand;
 
+#[allow(dead_code)]
 impl SearchCommand {
     /// 搜索关键词
-    #[allow(dead_code)]
     pub fn search(jira_id: &str, search_term: Option<String>) -> Result<()> {
         // 1. 获取日志文件路径
         let log_file = Logs::get_log_file_path(jira_id)?;

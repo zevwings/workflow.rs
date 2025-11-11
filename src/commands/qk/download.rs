@@ -6,9 +6,9 @@ use anyhow::{Context, Result};
 #[allow(dead_code)]
 pub struct DownloadCommand;
 
+#[allow(dead_code)]
 impl DownloadCommand {
     /// 下载日志
-    #[allow(dead_code)]
     pub fn download(jira_id: &str, download_all: bool) -> Result<()> {
         if download_all {
             log_success!("Downloading all attachments for {}...", jira_id);

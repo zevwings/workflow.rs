@@ -1,3 +1,4 @@
+use crate::commands::pr::helpers;
 use crate::{log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::{Context, Result};
 
@@ -5,13 +6,13 @@ use anyhow::{Context, Result};
 #[allow(dead_code)]
 pub struct PullRequestCloseCommand;
 
+#[allow(dead_code)]
 impl PullRequestCloseCommand {
     /// 关闭 PR
-    #[allow(dead_code)]
     pub fn close(pull_request_id: Option<String>) -> Result<()> {
         // 1. 获取仓库类型和 PR ID
         let repo_type = Git::detect_repo_type()?;
-        let pull_request_id = Self::get_pull_request_id(pull_request_id, &repo_type)?;
+        let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
         log_success!("\nClosing PR: #{}", pull_request_id);
 
@@ -56,44 +57,6 @@ impl PullRequestCloseCommand {
         Self::cleanup_after_close(&current_branch, &default_branch)?;
 
         Ok(())
-    }
-
-    /// 获取 PR ID（从参数或当前分支）
-    fn get_pull_request_id(
-        pull_request_id: Option<String>,
-        repo_type: &RepoType,
-    ) -> Result<String> {
-        if let Some(id) = pull_request_id {
-            return Ok(id);
-        }
-
-        // 从当前分支获取 PR
-        let pr_id = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
-            _ => {
-                anyhow::bail!(
-                    "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
-                );
-            }
-        };
-
-        match pr_id {
-            Some(id) => {
-                log_success!("Found PR for current branch: #{}", id);
-                Ok(id)
-            }
-            None => {
-                let error_msg = match repo_type {
-                    RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
-                    RepoType::Codeup => {
-                        "No PR found for current branch. Please specify PR ID or branch name."
-                    }
-                    _ => "No PR found for current branch.",
-                };
-                anyhow::bail!("{}", error_msg);
-            }
-        }
     }
 
     /// 检查 PR 是否已经关闭

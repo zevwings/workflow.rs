@@ -1,3 +1,4 @@
+use crate::commands::pr::helpers;
 use crate::{log_error, log_info, log_success, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
@@ -5,9 +6,9 @@ use anyhow::Result;
 #[allow(dead_code)]
 pub struct PullRequestStatusCommand;
 
+#[allow(dead_code)]
 impl PullRequestStatusCommand {
     /// 显示 PR 状态信息
-    #[allow(dead_code)]
     pub fn show(pull_request_id_or_branch: Option<String>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
@@ -42,37 +43,7 @@ impl PullRequestStatusCommand {
             }
         } else {
             // 从当前分支获取 PR
-            Self::get_current_branch_pr(repo_type)
-        }
-    }
-
-    /// 从当前分支获取 PR ID
-    fn get_current_branch_pr(repo_type: &RepoType) -> Result<String> {
-        let pr_id = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
-            _ => {
-                anyhow::bail!(
-                    "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
-                );
-            }
-        };
-
-        match pr_id {
-            Some(id) => {
-                log_success!("Found PR for current branch: #{}", id);
-                Ok(id)
-            }
-            None => {
-                let error_msg = match repo_type {
-                    RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
-                    RepoType::Codeup => {
-                        "No PR found for current branch. Please specify PR ID or branch name."
-                    }
-                    _ => "No PR found for current branch.",
-                };
-                anyhow::bail!("{}", error_msg);
-            }
+            helpers::get_current_branch_pull_request(repo_type)
         }
     }
 

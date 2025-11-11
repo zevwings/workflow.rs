@@ -1,16 +1,16 @@
-use crate::{log_success, log_warning};
-use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType};
+use crate::commands::pr::helpers;
+use crate::{log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// 快速更新命令
 #[allow(dead_code)]
 pub struct PullRequestUpdateCommand;
 
+#[allow(dead_code)]
 impl PullRequestUpdateCommand {
     /// 快速更新代码（使用 PR 标题作为 commit 消息）
     ///
     /// 根据仓库类型自动选择对应的平台实现
-    #[allow(dead_code)]
     pub fn update() -> Result<()> {
         // 检测仓库类型
         let repo_type = Git::detect_repo_type()?;
@@ -41,22 +41,13 @@ impl PullRequestUpdateCommand {
 
     /// 根据仓库类型获取当前分支的 PR 标题
     fn get_pull_request_title(repo_type: &RepoType) -> Result<Option<String>> {
-        // 获取当前分支的 PR ID
-        let pr_id = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
-            RepoType::Unknown => {
-                log_warning!("Unknown repository type, cannot get PR title");
-                return Ok(None);
-            }
-        };
-
-        let pr_id = match pr_id {
-            Some(id) => {
+        // 获取当前分支的 PR ID（如果不存在，返回 None 而不是错误）
+        let pr_id = match helpers::get_current_branch_pull_request(repo_type) {
+            Ok(id) => {
                 log_success!("Found PR for current branch: #{}", id);
                 id
             }
-            None => {
+            Err(_) => {
                 log_warning!("No PR found for current branch");
                 return Ok(None);
             }
