@@ -186,7 +186,10 @@ impl PullRequestIntegrateCommand {
     fn delete_merged_branch(source_branch: &str, current_branch: &str) -> Result<()> {
         // 不能删除当前分支
         if source_branch == current_branch {
-            log_info!("Source branch '{}' is the current branch, skipping deletion", source_branch);
+            log_info!(
+                "Source branch '{}' is the current branch, skipping deletion",
+                source_branch
+            );
             return Ok(());
         }
 
@@ -195,7 +198,10 @@ impl PullRequestIntegrateCommand {
             .context("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
-            log_info!("Source branch '{}' does not exist, nothing to delete", source_branch);
+            log_info!(
+                "Source branch '{}' does not exist, nothing to delete",
+                source_branch
+            );
             return Ok(());
         }
 
@@ -222,7 +228,10 @@ impl PullRequestIntegrateCommand {
                 }
                 Err(e) => {
                     log_warning!("Failed to delete remote branch '{}': {}", source_branch, e);
-                    log_info!("You may need to delete it manually: git push origin --delete {}", source_branch);
+                    log_info!(
+                        "You may need to delete it manually: git push origin --delete {}",
+                        source_branch
+                    );
                 }
             }
         }
