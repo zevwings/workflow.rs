@@ -24,5 +24,6 @@ mod stash;
 mod types;
 
 // 重新导出所有公共 API
+pub use branch::MergeStrategy;
 pub use commit::Git;
 pub use types::RepoType;
