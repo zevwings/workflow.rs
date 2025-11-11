@@ -35,10 +35,12 @@ impl SearchCommand {
         log_debug!("Searching for: '{}'...", term);
 
         // 确定两个日志文件路径
-        let api_log = log_file.parent()
+        let api_log = log_file
+            .parent()
             .map(|p| p.join("api.log"))
             .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?;
-        let flutter_api_log = log_file.parent()
+        let flutter_api_log = log_file
+            .parent()
             .map(|p| p.join("flutter-api.log"))
             .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?;
 

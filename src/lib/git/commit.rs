@@ -109,7 +109,6 @@ impl Git {
     /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
     /// 4. 执行提交操作
     pub fn commit(message: &str, no_verify: bool) -> Result<()> {
-
         // 1. 使用 git diff --quiet 检查是否有更改（更高效）
         let has_changes = Self::has_commit()?;
 

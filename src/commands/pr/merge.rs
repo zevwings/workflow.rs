@@ -83,7 +83,6 @@ impl PullRequestMergeCommand {
     /// 合并 PR（根据仓库类型调用对应的实现）
     /// 返回 true 表示新合并，false 表示已经合并
     fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
-
         // 先检查 PR 状态
         let status = match repo_type {
             RepoType::GitHub => {
@@ -216,7 +215,6 @@ impl PullRequestMergeCommand {
 
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
-
         // 如果当前分支已经是默认分支，不需要清理
         if current_branch == default_branch {
             log_info!("Already on default branch: {}", default_branch);
