@@ -671,7 +671,10 @@ impl JiraStatus {
                 fs::write(&repo_file, json).context("Failed to write work-history file")?;
             }
         } else {
-            log_info!("PR #{} not found in work-history, skipping deletion", pull_request_id);
+            log_info!(
+                "PR #{} not found in work-history, skipping deletion",
+                pull_request_id
+            );
         }
 
         Ok(())

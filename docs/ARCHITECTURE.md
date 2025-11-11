@@ -20,6 +20,7 @@ src/
 │   ├── mod.rs              # 命令模块声明
 │   ├── pr/                 # PR 相关命令
 │   │   ├── mod.rs          # PR 命令模块声明
+│   │   ├── helpers.rs      # PR 辅助函数（PR ID 解析等）
 │   │   ├── create.rs       # 创建 PR
 │   │   ├── merge.rs        # 合并 PR
 │   │   ├── close.rs        # 关闭 PR
@@ -27,10 +28,12 @@ src/
 │   │   ├── list.rs         # 列出 PR
 │   │   └── update.rs       # 更新 PR
 │   ├── qk/                 # 快速日志操作命令
-│   │   ├── mod.rs          # QK 命令模块声明和统一接口（QuickCommand）
+│   │   ├── mod.rs          # QK 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
 │   │   ├── find.rs         # 查找请求 ID 命令
-│   │   └── search.rs       # 搜索关键词命令
+│   │   ├── search.rs       # 搜索关键词命令
+│   │   ├── clean.rs        # 清理日志目录命令
+│   │   └── info.rs         # 显示 ticket 信息命令
 │   ├── check.rs            # 综合检查命令（git_status, network）
 │   ├── proxy.rs            # 代理管理命令（on, off, check）
 │   ├── config.rs           # 配置查看命令（显示当前配置）
@@ -65,8 +68,15 @@ src/
     │   ├── llm.rs          # LLM 客户端实现（支持多提供商）
     │   └── translator.rs   # 翻译功能（标题生成和翻译判断）
     ├── log/                # 日志处理
-    │   ├── mod.rs          # 日志模块声明
-    │   └── logs.rs         # 日志处理核心逻辑（包含路径解析）
+    │   ├── mod.rs          # 日志模块声明和统一接口
+    │   ├── download.rs     # 下载日志功能
+    │   ├── find.rs         # 查找请求 ID 功能
+    │   ├── search.rs       # 搜索关键词功能
+    │   ├── parse.rs        # 解析日志条目
+    │   ├── extract.rs      # 提取 URL 等工具
+    │   ├── zip.rs          # 处理 zip 文件
+    │   ├── clean.rs        # 清理目录功能
+    │   └── utils.rs        # 通用工具函数
     ├── settings/           # 配置管理
     │   ├── mod.rs          # Settings 模块声明
     │   └── settings.rs     # 环境变量单例配置
@@ -125,7 +135,8 @@ src/
 ### 数据流向
 
 ```
-用户输入 → bin/qk.rs → commands/qk/QuickCommand → lib/log/logs.rs → 执行操作
+用户输入 → bin/qk.rs → commands/qk/*.rs → lib/log/*.rs → 执行操作
+用户输入 → bin/pr.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
 ```
 
 ---
@@ -175,7 +186,7 @@ workflow pr create PROJ-123 --title "Fix bug"
 ### 日志处理模块 (`lib::log`)
 
 #### 概述
-日志处理模块提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词等功能。所有核心业务逻辑都在 `lib/log/logs.rs` 中，`commands/qk/` 提供便捷的命令包装器。
+日志处理模块提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词等功能。核心业务逻辑分布在 `lib/log/` 的各个子模块中，`commands/qk/` 提供便捷的命令包装器。
 
 #### 功能特性
 - **下载日志**：从 Jira ticket 下载日志附件（支持分片文件合并）
@@ -186,22 +197,24 @@ workflow pr create PROJ-123 --title "Fix bug"
 #### 架构设计
 
 **三层架构**：
-- **核心逻辑层**：`lib/log/logs.rs` - 包含所有业务逻辑
-  - `download_from_jira()` - 从 Jira 下载日志
-  - `find_request_id()` - 查找请求 ID
-  - `extract_response_content()` - 提取响应内容
-  - `search_keyword()` - 搜索关键词
-  - `find_and_send_to_streamock()` - 查找并发送到 Streamock
-  - `get_log_file_path()` - 根据 JIRA ID 解析日志文件路径
-  - `find_log_file()` - 查找日志文件
-  - `merge_split_zips()` - 合并分片文件
-  - `extract_zip()` - 解压文件
+- **核心逻辑层**：`lib/log/` - 模块化的业务逻辑
+  - `download.rs` - 从 Jira 下载日志
+  - `find.rs` - 查找请求 ID 和提取响应内容
+  - `search.rs` - 搜索关键词
+  - `parse.rs` - 解析日志条目
+  - `extract.rs` - 提取 URL 等工具函数
+  - `zip.rs` - 处理 zip 文件（合并分片、解压）
+  - `clean.rs` - 清理目录功能
+  - `utils.rs` - 通用工具函数
+  - `mod.rs` - 模块导出，提供 `Logs::xxx()` 统一接口
 
 - **命令封装层**：`commands/qk/` - 提供便捷的命令接口
-  - `mod.rs` - 模块导出和统一接口（QuickCommand）
+  - `mod.rs` - 模块导出
   - `download.rs` - 下载命令（调用 `Logs::download_from_jira()`）
-  - `find.rs` - 查找命令（调用 `Logs::find_and_send_to_streamock()`，添加剪贴板操作）
+  - `find.rs` - 查找命令（调用 `Logs::extract_response_content()`，添加剪贴板操作）
   - `search.rs` - 搜索命令（调用 `Logs::search_keyword()`，格式化输出）
+  - `clean.rs` - 清理命令（调用 `Logs::clean_dir()`）
+  - `info.rs` - 信息命令（显示 ticket 信息）
 
 - **CLI 入口层**：`bin/qk.rs` - 独立的可执行文件（命令行参数解析和命令分发）
 
@@ -218,7 +231,7 @@ qk PROJ-123 search [SEARCH_TERM]
 ```
 
 #### 相关文件
-- `src/lib/log/logs.rs` - 核心业务逻辑
+- `src/lib/log/` - 核心业务逻辑（模块化设计）
 - `src/commands/qk/` - 命令包装器
 - `src/bin/qk.rs` - CLI 入口
 
