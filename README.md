@@ -63,6 +63,83 @@ cargo test
 cargo run -- --help
 ```
 
+## 🏗️ 架构总览
+
+```mermaid
+graph TB
+    subgraph "CLI 入口层 (bin/)"
+        Main[main.rs<br/>workflow 主命令]
+        PRBin[bin/pr.rs<br/>pr 命令]
+        QKBin[bin/qk.rs<br/>qk 命令]
+        InstallBin[bin/install.rs<br/>install 命令]
+    end
+
+    subgraph "命令封装层 (commands/)"
+        PRCmd[commands/pr/<br/>create, merge, close, etc.]
+        QKCmd[commands/qk/<br/>download, find, search]
+        OtherCmd[commands/<br/>check, proxy, config, setup]
+    end
+
+    subgraph "核心业务逻辑层 (lib/)"
+        PRLib[lib/pr/<br/>GitHub/Codeup PR]
+        JiraLib[lib/jira/<br/>Jira API 集成]
+        LogLib[lib/log/<br/>日志处理]
+        LLMLib[lib/llm/<br/>AI 功能]
+        GitLib[lib/git/<br/>Git 操作]
+        HttpLib[lib/http/<br/>HTTP 客户端]
+        UtilsLib[lib/utils/<br/>工具函数]
+        SettingsLib[lib/settings/<br/>配置管理]
+    end
+
+    subgraph "外部服务"
+        GitHub[GitHub API]
+        Codeup[Codeup API]
+        Jira[Jira API]
+        LLM[LLM API<br/>OpenAI/DeepSeek/Proxy]
+    end
+
+    Main --> PRCmd
+    Main --> QKCmd
+    Main --> OtherCmd
+    PRBin --> PRCmd
+    QKBin --> QKCmd
+    InstallBin --> OtherCmd
+
+    PRCmd --> PRLib
+    PRCmd --> LLMLib
+    PRCmd --> JiraLib
+    QKCmd --> LogLib
+    QKCmd --> JiraLib
+    OtherCmd --> UtilsLib
+    OtherCmd --> SettingsLib
+
+    PRLib --> HttpLib
+    PRLib --> GitLib
+    JiraLib --> HttpLib
+    LogLib --> HttpLib
+    LLMLib --> HttpLib
+    HttpLib --> GitHub
+    HttpLib --> Codeup
+    HttpLib --> Jira
+    LLMLib --> LLM
+
+    style Main fill:#e1f5ff
+    style PRBin fill:#e1f5ff
+    style QKBin fill:#e1f5ff
+    style InstallBin fill:#e1f5ff
+    style PRCmd fill:#fff4e1
+    style QKCmd fill:#fff4e1
+    style OtherCmd fill:#fff4e1
+    style PRLib fill:#e8f5e9
+    style JiraLib fill:#e8f5e9
+    style LogLib fill:#e8f5e9
+    style LLMLib fill:#e8f5e9
+    style GitLib fill:#e8f5e9
+    style HttpLib fill:#e8f5e9
+    style UtilsLib fill:#e8f5e9
+    style SettingsLib fill:#e8f5e9
+```
+
 ## 📦 项目结构
 
 ```
