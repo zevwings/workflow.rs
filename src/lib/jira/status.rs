@@ -616,6 +616,67 @@ impl JiraStatus {
         Ok(())
     }
 
+    /// 删除工作历史记录中的 PR ID 条目
+    ///
+    /// 从工作历史记录文件中删除指定 PR ID 的条目。
+    ///
+    /// # 参数
+    ///
+    /// * `pull_request_id` - Pull Request ID（如 `"157"`）
+    /// * `repository` - 仓库地址（必需，用于确定存储文件）
+    ///
+    /// # 行为
+    ///
+    /// 1. 根据仓库 URL 确定存储文件路径
+    /// 2. 读取现有的工作历史记录
+    /// 3. 删除指定 PR ID 的条目
+    /// 4. 将更新后的记录写入仓库特定的文件
+    ///
+    /// # 返回
+    ///
+    /// 如果文件不存在或记录不存在，返回 `Ok(())`（不报错）。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入文件失败，返回相应的错误信息。
+    pub fn delete_work_history_entry(
+        pull_request_id: &str,
+        repository: Option<&str>,
+    ) -> Result<()> {
+        let repo_url = repository.context("Repository URL is required for work history")?;
+        let repo_file = get_repo_work_history_path(repo_url)?;
+
+        if !repo_file.exists() {
+            return Ok(());
+        }
+
+        let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
+
+        let mut history_map: WorkHistoryMap =
+            serde_json::from_str(&content).context("Failed to parse work-history file")?;
+
+        // 删除 PR ID 条目
+        if history_map.remove(pull_request_id).is_some() {
+            log_info!("Removed PR #{} from work-history", pull_request_id);
+
+            // 如果 map 为空，删除文件；否则写入更新后的内容
+            if history_map.is_empty() {
+                fs::remove_file(&repo_file).context("Failed to remove empty work-history file")?;
+                log_info!("Removed empty work-history file");
+            } else {
+                // 写入 JSON
+                let json = serde_json::to_string_pretty(&history_map)
+                    .context("Failed to serialize work-history file")?;
+
+                fs::write(&repo_file, json).context("Failed to write work-history file")?;
+            }
+        } else {
+            log_info!("PR #{} not found in work-history, skipping deletion", pull_request_id);
+        }
+
+        Ok(())
+    }
+
     /// 读取 Jira 状态配置（内部方法）
     ///
     /// 从配置文件中读取指定项目的状态配置。
