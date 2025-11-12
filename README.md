@@ -269,8 +269,7 @@ source ~/.zshrc
 
 ### 检查工具
 ```bash
-workflow check git_status         # 检查 Git 状态
-workflow check network             # 检查网络连接（GitHub）
+workflow check                     # 运行环境检查（Git 状态和网络连接）
 ```
 
 > **注意**：pre-commit 检查已集成到 Git 提交流程中。当执行 `git commit` 时，如果工程中存在 pre-commit hooks（`.git/hooks/pre-commit` 或 `.pre-commit-config.yaml`），系统会自动执行 pre-commit 检查。
@@ -289,9 +288,16 @@ workflow config                    # 查看当前配置（显示所有配置项�
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 ```
 
+### 清理命令
+```bash
+workflow clean                     # 清理日志下载目录（需要确认）
+workflow clean --dry-run           # 预览清理操作，不实际删除
+workflow clean --list              # 只列出将要删除的内容
+```
+
 ### 安装命令
 ```bash
-install                            # 安装 Workflow CLI 到系统
+install                            # 安装 Workflow CLI 到系统（编译并安装所有二进制文件）
 ```
 
 

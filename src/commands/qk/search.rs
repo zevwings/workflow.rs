@@ -1,4 +1,4 @@
-use crate::{log_debug, log_info, log_success, log_warning, Logs};
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -16,7 +16,7 @@ impl SearchCommand {
         // 2. 检查日志文件是否存在
         if !log_file.exists() {
             anyhow::bail!(
-                "❌ Log file not found at: {:?}\n💡 Try downloading logs first with: workflow qk {} download",
+                "Log file not found at: {:?}\nTry downloading logs first with: workflow qk {} download",
                 log_file, jira_id
             );
         }
@@ -67,12 +67,14 @@ impl SearchCommand {
             return Ok(());
         }
 
-        log_success!("\nFound {} matches:\n", total_count);
+        log_break!();
+        log_success!("Found {} matches:", total_count);
+        log_break!();
 
         // 显示 api.log 的结果
         let has_api_results = !api_results.is_empty();
         if has_api_results {
-            log_info!("===========  api.log ===========");
+            log_break!('=', 40, "api.log");
             for entry in api_results {
                 if let Some(id) = entry.id {
                     if let Some(url) = entry.url {
@@ -87,9 +89,9 @@ impl SearchCommand {
         // 显示 flutter-api.log 的结果
         if !flutter_api_results.is_empty() {
             if has_api_results {
-                log_info!(""); // 添加空行分隔
+                log_break!(); // 添加空行分隔
             }
-            log_info!("===========  flutter-api.log ===========");
+            log_break!('=', 40, "flutter-api.log");
             for entry in flutter_api_results {
                 if let Some(id) = entry.id {
                     if let Some(url) = entry.url {

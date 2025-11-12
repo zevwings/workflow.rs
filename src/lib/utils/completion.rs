@@ -87,7 +87,7 @@ impl Completion {
 
         if config_content.contains(source_pattern) || config_content.contains(&source_pattern_abs) {
             log_success!(
-                "✓ completion 配置已存在于 {}",
+                "completion 配置已存在于 {}",
                 shell_info.config_file.display()
             );
             return Ok(());
@@ -107,7 +107,7 @@ impl Completion {
             .context("Failed to write to shell config file")?;
 
         log_success!(
-            "✓ 已将 completion 配置添加到 {}",
+            "已将 completion 配置添加到 {}",
             shell_info.config_file.display()
         );
 
@@ -132,7 +132,7 @@ impl Completion {
 
         if !has_source && !has_source_abs {
             log_info!(
-                "ℹ  completion 配置未在 {} 中找到",
+                "completion 配置未在 {} 中找到",
                 shell_info.config_file.display()
             );
             return Ok(());
@@ -192,7 +192,7 @@ impl Completion {
             .context("Failed to write to shell config file")?;
 
         log_success!(
-            "✓ 已从 {} 中删除 completion 配置",
+            "已从 {} 中删除 completion 配置",
             shell_info.config_file.display()
         );
 
@@ -224,18 +224,18 @@ impl Completion {
         for file in &completion_files {
             if file.exists() {
                 if let Err(e) = fs::remove_file(file) {
-                    log_info!("⚠  删除失败: {} ({})", file.display(), e);
+                    log_info!("删除失败: {} ({})", file.display(), e);
                 } else {
-                    log_info!("  ✓ Removed: {}", file.display());
+                    log_info!("  Removed: {}", file.display());
                     removed_count += 1;
                 }
             }
         }
 
         if removed_count > 0 {
-            log_info!("  ✓ Completion script files removed");
+            log_info!("  Completion script files removed");
         } else {
-            log_info!("  ℹ  Completion script files not found (may not be installed)");
+            log_info!("  Completion script files not found (may not be installed)");
         }
 
         Ok(removed_count)
@@ -249,10 +249,10 @@ impl Completion {
         if workflow_config_file.exists() {
             fs::remove_file(&workflow_config_file)
                 .context("Failed to remove workflow completion config file")?;
-            log_info!("  ✓ Removed: {}", workflow_config_file.display());
+            log_info!("  Removed: {}", workflow_config_file.display());
         } else {
             log_info!(
-                "  ℹ  Completion config file not found: {}",
+                "  Completion config file not found: {}",
                 workflow_config_file.display()
             );
         }

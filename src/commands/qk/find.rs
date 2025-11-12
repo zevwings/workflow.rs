@@ -16,7 +16,7 @@ impl FindCommand {
         // 2. 检查日志文件是否存在
         if !log_file.exists() {
             anyhow::bail!(
-                "❌ Log file not found at: {:?}\n💡 Try downloading logs first with: workflow qk {} download",
+                "Log file not found at: {:?}\nTry downloading logs first with: workflow qk {} download",
                 log_file, jira_id
             );
         }

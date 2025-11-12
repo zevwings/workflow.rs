@@ -5,7 +5,7 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容
 
-use crate::{log_info, log_success, Logs};
+use crate::{log_break, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 清理命令
@@ -33,7 +33,8 @@ impl CleanCommand {
             .context("Failed to clean base directory")?;
 
         if deleted {
-            log_success!("\nClean completed successfully!");
+            log_break!();
+            log_success!("Clean completed successfully!");
         } else if !dry_run && !list_only {
             log_info!("Clean operation was cancelled or directory does not exist.");
         }

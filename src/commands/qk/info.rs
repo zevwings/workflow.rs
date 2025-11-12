@@ -1,4 +1,4 @@
-use crate::{log_debug, log_info, log_success, Jira};
+use crate::{log_break, log_debug, log_info, Jira};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令
@@ -16,7 +16,7 @@ impl InfoCommand {
             .context(format!("Failed to get ticket info for {}", jira_id))?;
 
         // 显示基本信息
-        log_success!("\n📋 Ticket Information");
+        log_break!('=', 40, "Ticket Information");
         log_info!("Key: {}", issue.key);
         log_info!("ID: {}", issue.id);
         log_info!("Summary: {}", issue.fields.summary);
@@ -25,7 +25,8 @@ impl InfoCommand {
         // 显示描述
         if let Some(description) = &issue.fields.description {
             if !description.trim().is_empty() {
-                log_info!("\n📝 Description:");
+                log_break!();
+                log_info!("  Description:");
                 log_info!("{}", description);
             }
         }
@@ -33,7 +34,8 @@ impl InfoCommand {
         // 显示附件列表
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
-                log_info!("\n📎 Attachments ({}):", attachments.len());
+                log_break!();
+                log_info!("📎 Attachments ({}):", attachments.len());
                 for (idx, attachment) in attachments.iter().enumerate() {
                     let size_str = if let Some(size) = attachment.size {
                         format_size(size)
@@ -43,29 +45,35 @@ impl InfoCommand {
                     log_info!("  {}. {} ({})", idx + 1, attachment.filename, size_str);
                 }
             } else {
-                log_info!("\n📎 Attachments: None");
+                log_break!();
+                log_info!("📎 Attachments: None");
             }
         } else {
-            log_info!("\n📎 Attachments: None");
+            log_break!();
+            log_info!("📎 Attachments: None");
         }
 
         // 显示评论数量
         if let Some(comments) = &issue.fields.comment {
             let comment_count = comments.comments.len();
             if comment_count > 0 {
-                log_info!("\n💬 Comments: {} comment(s)", comment_count);
+                log_break!();
+                log_info!("💬 Comments: {} comment(s)", comment_count);
             } else {
-                log_info!("\n💬 Comments: None");
+                log_break!();
+                log_info!("💬 Comments: None");
             }
         } else {
-            log_info!("\n💬 Comments: None");
+            log_break!();
+            log_info!("💬 Comments: None");
         }
 
         // 显示 Jira URL
         let settings = crate::Settings::load();
         if !settings.jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", settings.jira_service_address, issue.key);
-            log_info!("\n🔗 URL: {}", jira_url);
+            log_break!();
+            log_info!("🔗 URL: {}", jira_url);
         }
 
         Ok(())

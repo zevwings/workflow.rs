@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, Logs};
+use crate::{log_break, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 清理日志命令
@@ -25,7 +25,8 @@ impl CleanCommand {
             .context("Failed to clean logs directory")?;
 
         if deleted {
-            log_success!("\nClean completed successfully!");
+            log_break!();
+            log_success!("Clean completed successfully!");
         } else if !dry_run && !list_only {
             log_info!("Clean operation was cancelled or directory does not exist.");
         }

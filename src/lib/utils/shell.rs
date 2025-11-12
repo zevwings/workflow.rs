@@ -123,13 +123,13 @@ impl Shell {
 
         match status {
             Ok(_) => {
-                log_success!("✓ Shell configuration reloaded (in subprocess)");
+                log_success!("Shell configuration reloaded (in subprocess)");
                 log_info!("Note: Changes may not take effect in the current shell.");
                 log_info!("Please run manually: source {}", config_file);
                 Ok(())
             }
             Err(e) => {
-                log_warning!("⚠️  Could not reload shell configuration: {}", e);
+                log_warning!("  Could not reload shell configuration: {}", e);
                 log_info!("Please run manually: source {}", config_file);
                 Err(e)
             }

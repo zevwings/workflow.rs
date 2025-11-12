@@ -1,9 +1,9 @@
-use crate::commands::check::CheckCommand;
+use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_jira_ticket_id, log_info, log_success, log_warning, Codeup, Git, GitHub, Jira,
-    PlatformProvider, RepoType,
+    extract_jira_ticket_id, log_break, log_info, log_success, log_warning, Codeup, Git, GitHub,
+    Jira, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 
@@ -16,13 +16,14 @@ impl PullRequestMergeCommand {
     /// 合并 PR
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
         // 1. 运行检查
-        CheckCommand::run_all()?;
+        check::run_all()?;
 
         // 2. 获取仓库类型和 PR ID
         let repo_type = Git::detect_repo_type()?;
         let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
-        log_success!("\nMerging PR: #{}", pull_request_id);
+        log_break!();
+        log_success!("Merging PR: #{}", pull_request_id);
 
         // 3. 获取当前分支名（合并前保存）
         let current_branch = Git::current_branch()?;

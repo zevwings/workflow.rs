@@ -42,11 +42,9 @@ impl PullRequestUpdateCommand {
     /// 根据仓库类型获取当前分支的 PR 标题
     fn get_pull_request_title(repo_type: &RepoType) -> Result<Option<String>> {
         // 获取当前分支的 PR ID（如果不存在，返回 None 而不是错误）
+        // 注意：helpers::get_current_branch_pull_request 内部已经输出了 PR 信息
         let pr_id = match helpers::get_current_branch_pull_request(repo_type) {
-            Ok(id) => {
-                log_success!("Found PR for current branch: #{}", id);
-                id
-            }
+            Ok(id) => id,
             Err(_) => {
                 log_warning!("No PR found for current branch");
                 return Ok(None);

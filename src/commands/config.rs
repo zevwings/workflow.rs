@@ -1,7 +1,7 @@
 //! 配置查看命令
 //! 显示当前的环境变量配置
 
-use crate::{log_info, log_success, log_warning, mask_sensitive_value, EnvFile};
+use crate::{log_break, log_info, log_warning, mask_sensitive_value, EnvFile};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
@@ -11,7 +11,8 @@ pub struct ConfigCommand;
 impl ConfigCommand {
     /// 显示当前配置（从环境变量读取）
     pub fn show() -> Result<()> {
-        log_success!("📋 Current Configuration\n");
+        log_break!('=', 40, "Current Configuration");
+        log_break!();
 
         // 显示配置文件路径
         let shell_config_path = EnvFile::get_shell_config_path()
@@ -24,14 +25,14 @@ impl ConfigCommand {
 
         // 检查是否有配置
         if env_vars.is_empty() {
-            log_warning!("⚠️  No configuration found!");
+            log_warning!("  No configuration found!");
             log_info!("   Run 'workflow setup' to initialize configuration.");
             return Ok(());
         }
 
         // 显示所有配置（统一显示为环境变量）
-        log_success!("\n📄 Environment Variables");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!();
+        log_break!('-', 100, "Environment Variables");
         Self::print_all_config(&env_vars)?;
 
         Ok(())
@@ -108,7 +109,8 @@ impl ConfigCommand {
             .collect();
         if !other_keys.is_empty() {
             other_keys.sort();
-            log_info!("\n  Other variables:");
+            log_break!();
+            log_info!("  Other variables:");
             for key in &other_keys {
                 let value = env_vars.get(*key).unwrap();
                 let display_value = if sensitive_keys.contains(key.as_str()) {
