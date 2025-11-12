@@ -1,4 +1,4 @@
-use crate::commands::check::CheckCommand;
+use crate::commands::check;
 use crate::jira::status::JiraStatus;
 use crate::{
     extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
@@ -24,7 +24,7 @@ impl PullRequestCreateCommand {
     ) -> Result<()> {
         // 1. 运行检查
         if !dry_run {
-            CheckCommand::run_all()?;
+            check::run_all()?;
         }
 
         // 2. 获取或输入 Jira ticket

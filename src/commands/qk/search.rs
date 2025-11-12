@@ -1,4 +1,4 @@
-use crate::{log_debug, log_info, log_success, log_warning, Logs};
+use crate::{Logs, log_debug, log_info, log_separator, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -67,7 +67,9 @@ impl SearchCommand {
             return Ok(());
         }
 
-        log_success!("\nFound {} matches:\n", total_count);
+        log_separator!();
+        log_success!("Found {} matches:", total_count);
+        log_separator!();
 
         // 显示 api.log 的结果
         let has_api_results = !api_results.is_empty();

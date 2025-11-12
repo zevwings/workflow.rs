@@ -53,29 +53,29 @@ impl LogLevel {
 pub struct Logger;
 
 impl Logger {
-    /// 成功消息（绿色 ✓）
+    /// 成功消息（绿色 ✅）
     pub fn success(message: impl fmt::Display) -> String {
-        format!("{} {}", "✓".green(), message)
+        format!("{} {}", "✅".green(), message)
     }
 
-    /// 错误消息（红色 ✗）
+    /// 错误消息（红色 ❌）
     pub fn error(message: impl fmt::Display) -> String {
-        format!("{} {}", "✗".red(), message)
+        format!("{} {}", "❌".red(), message)
     }
 
-    /// 警告消息（黄色 ⚠）
+    /// 警告消息（黄色 ⚠️）
     pub fn warning(message: impl fmt::Display) -> String {
-        format!("{} {}", "⚠".yellow(), message)
+        format!("{} {}", "⚠️".yellow(), message)
     }
 
-    /// 信息消息（蓝色 ℹ）
+    /// 信息消息（蓝色 ℹ️）
     pub fn info(message: impl fmt::Display) -> String {
-        format!("{} {}", "ℹ".blue(), message)
+        format!("{} {}", "ℹ️".blue(), message)
     }
 
-    /// 调试消息（灰色）
+    /// 调试消息（灰色 ⚙️）
     pub fn debug(message: impl fmt::Display) -> String {
-        format!("{} {}", "•".bright_black(), message)
+        format!("{} {}", "⚙️".bright_black(), message)
     }
 
     /// 打印成功消息
@@ -104,6 +104,19 @@ impl Logger {
         if current_level.should_log(LogLevel::Debug) {
             println!("{}", Self::debug(message));
         }
+    }
+
+    /// 打印分隔线
+    pub fn print_separator(char: Option<char>, length: Option<usize>) {
+        let char = char.unwrap_or('-');
+        let length = length.unwrap_or(80);
+        let separator = char.to_string().repeat(length);
+        println!("{}", separator.bright_black());
+    }
+
+    /// 打印换行符
+    pub fn print_newline() {
+        println!();
     }
 }
 
@@ -203,16 +216,48 @@ macro_rules! log_debug {
     };
 }
 
+/// 打印分隔线
+///
+/// # Examples
+///
+/// ```
+/// use workflow::log_separator;
+///
+/// // 输出换行符
+/// log_separator!("\n");
+///
+/// // 使用默认分隔符（80个 '-'）
+/// log_separator!();
+///
+/// // 指定分隔符字符
+/// log_separator!('=');
+///
+/// // 指定分隔符字符和长度
+/// log_separator!('=', 100);
+/// ```
+#[macro_export]
+macro_rules! log_separator {
+    () => {
+      $crate::Logger::print_newline();
+    };
+    ($char:expr) => {
+        $crate::Logger::print_separator(Some($char), None);
+    };
+    ($char:expr, $length:expr) => {
+        $crate::Logger::print_separator(Some($char), Some($length));
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_logger_output() {
-        assert!(Logger::success("Test").contains("✓"));
-        assert!(Logger::error("Test").contains("✗"));
-        assert!(Logger::warning("Test").contains("⚠"));
-        assert!(Logger::info("Test").contains("ℹ"));
-        assert!(Logger::debug("Test").contains("•"));
+        assert!(Logger::success("Test").contains("✅"));
+        assert!(Logger::error("Test").contains("❌"));
+        assert!(Logger::warning("Test").contains("⚠️"));
+        assert!(Logger::info("Test").contains("ℹ️"));
+        assert!(Logger::debug("Test").contains("⚙️"));
     }
 }

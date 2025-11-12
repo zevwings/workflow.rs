@@ -1,4 +1,4 @@
-use crate::commands::check::CheckCommand;
+use crate::commands::check;
 use crate::{log_error, log_info, log_success, log_warning, Git};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
@@ -20,7 +20,7 @@ impl PullRequestIntegrateCommand {
     pub fn integrate(source_branch: String, ff_only: bool, squash: bool, push: bool) -> Result<()> {
         // 1. 运行检查（可选，但建议运行）
         log_info!("Running pre-flight checks...");
-        if let Err(e) = CheckCommand::run_all() {
+        if let Err(e) = check::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
             let should_continue = Confirm::new()
                 .with_prompt("Continue anyway?")

@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use std::path::{Path, PathBuf};
 
-use crate::{log_info, log_success, Settings};
+use crate::{Settings, log_info, log_separator, log_success};
 
 use super::utils::{calculate_dir_info, expand_path, format_size, list_dir_contents};
 
@@ -24,7 +24,8 @@ fn display_dir_info(dir_name: &str, dir: &Path, size: u64, file_count: usize) ->
     log_info!("Directory: {:?}", dir);
     log_info!("Total size: {}", format_size(size));
     log_info!("Total files: {}", file_count);
-    log_info!("\nContents:");
+    log_separator!();
+    log_info!("Contents:");
     let contents = list_dir_contents(dir)?;
     for path in contents {
         if path.is_file() {
