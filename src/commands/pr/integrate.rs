@@ -1,5 +1,7 @@
 use crate::commands::check;
-use crate::{log_error, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType};
+use crate::{
+    log_error, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 
@@ -186,8 +188,7 @@ impl PullRequestIntegrateCommand {
     /// 返回源分支信息（类型、是否默认分支、合并引用）。
     fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
         // 检查是否为默认分支
-        let default_branch = Git::get_default_branch()
-            .context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
         let is_default = source_branch == default_branch;
 
         if is_default {
@@ -250,16 +251,12 @@ impl PullRequestIntegrateCommand {
 
         // 检查当前分支是否已创建 PR
         let current_pr_id = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_current_branch_pull_request()
-                    .ok()
-                    .flatten()
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_current_branch_pull_request()
-                    .ok()
-                    .flatten()
-            }
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()
+                .ok()
+                .flatten(),
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()
+                .ok()
+                .flatten(),
             RepoType::Unknown => None,
         };
 

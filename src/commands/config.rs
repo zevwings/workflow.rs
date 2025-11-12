@@ -1,7 +1,7 @@
 //! 配置查看命令
 //! 显示当前的环境变量配置
 
-use crate::{EnvFile, log_info, log_break, log_warning, mask_sensitive_value};
+use crate::{log_break, log_info, log_warning, mask_sensitive_value, EnvFile};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 

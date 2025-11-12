@@ -8,7 +8,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 use crate::jira::helpers::get_auth;
-use crate::{Jira, Settings, log_debug, log_info, log_break, log_success};
+use crate::{log_break, log_debug, log_info, log_success, Jira, Settings};
 
 use super::utils::expand_path;
 use super::zip::{extract_zip, merge_split_zips};

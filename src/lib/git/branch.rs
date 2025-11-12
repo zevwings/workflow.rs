@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use duct::cmd;
+use std::collections::HashSet;
 
 use super::commit::Git;
 
@@ -263,6 +264,140 @@ impl Git {
         }
 
         anyhow::bail!("Could not determine default branch")
+    }
+
+    /// 获取所有分支（本地和远程），并排除重复
+    ///
+    /// 获取所有本地分支和远程分支，去除重复的分支名称，返回去重后的分支列表。
+    /// 远程分支的 `origin/` 前缀会被移除，只保留分支名称。
+    ///
+    /// # 参数
+    ///
+    /// * `remove_prefix` - 是否移除分支名称的前缀（如 `prefix/branch-name` -> `branch-name`）
+    ///   如果为 `true`，会移除 `prefix/` 和 `ticket--` 格式的前缀
+    ///
+    /// # 返回
+    ///
+    /// 返回去重后的分支名称列表（按字母顺序排序）
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    ///
+    /// # 示例
+    ///
+    /// ```no_run
+    /// use workflow::Git;
+    ///
+    /// // 获取完整分支名（包含前缀）
+    /// let branches = Git::get_all_branches(false)?;
+    /// // 返回: ["main", "zw/code-optimization", "develop", ...]
+    ///
+    /// // 获取基础分支名（去掉前缀）
+    /// let base_branches = Git::get_all_branches(true)?;
+    /// // 返回: ["main", "code-optimization", "develop", ...]
+    /// ```
+    pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
+        // 获取本地分支列表
+        let local_output = cmd("git", &["branch"])
+            .read()
+            .context("Failed to get local branches")?;
+
+        // 获取远程分支列表
+        let remote_output = cmd("git", &["branch", "-r"])
+            .read()
+            .context("Failed to get remote branches")?;
+
+        // 使用 HashSet 去重
+        let mut branch_set = HashSet::new();
+
+        // 解析本地分支
+        for line in local_output.lines() {
+            let line = line.trim();
+            // 跳过空行和 HEAD 指向的行（如 "  remotes/origin/HEAD -> origin/main"）
+            if line.is_empty() || line.contains("->") {
+                continue;
+            }
+            // 移除 `*` 标记（当前分支）和首尾空白
+            let branch_name = line.trim_start_matches('*').trim();
+            if !branch_name.is_empty() {
+                branch_set.insert(branch_name.to_string());
+            }
+        }
+
+        // 解析远程分支
+        for line in remote_output.lines() {
+            let line = line.trim();
+            // 跳过空行和 HEAD 指向的行
+            if line.is_empty() || line.contains("->") {
+                continue;
+            }
+            // 移除 `origin/` 前缀
+            let branch_name = if let Some(name) = line.strip_prefix("origin/") {
+                name.trim()
+            } else {
+                // 如果不是 origin/ 开头，尝试移除其他远程名称
+                line.split('/').nth(1).unwrap_or(line).trim()
+            };
+            if !branch_name.is_empty() {
+                branch_set.insert(branch_name.to_string());
+            }
+        }
+
+        // 转换为排序后的 Vec
+        let mut branches: Vec<String> = branch_set.into_iter().collect();
+        branches.sort();
+
+        // 如果需要移除前缀，提取基础名称
+        if remove_prefix {
+            Ok(Self::extract_base_branch_names(branches))
+        } else {
+            Ok(branches)
+        }
+    }
+
+    /// 提取分支的基础名称（去掉前缀）
+    ///
+    /// 从完整的分支名中提取基础名称，支持两种格式：
+    /// - `prefix/branch-name`（使用 `/` 分割）
+    /// - `ticket--branch-name`（使用 `--` 分割）
+    ///
+    /// # 参数
+    ///
+    /// * `branches` - 分支名称列表
+    ///
+    /// # 返回
+    ///
+    /// 返回去重后的基础分支名称列表（按字母顺序排序）
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// use workflow::Git;
+    ///
+    /// let branches = vec!["zw/code-optimization".to_string(), "master".to_string()];
+    /// let base_names = Git::extract_base_branch_names(branches);
+    /// // 返回: ["code-optimization", "master"]
+    /// ```
+    pub fn extract_base_branch_names(branches: Vec<String>) -> Vec<String> {
+        let mut base_names: Vec<String> = branches
+            .iter()
+            .map(|branch| {
+                // 移除前缀（格式：prefix/branch-name 或 ticket--branch-name）
+                branch
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or(branch)
+                    .rsplit("--")
+                    .next()
+                    .unwrap_or(branch)
+                    .to_string()
+            })
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
+        base_names.sort();
+        base_names
     }
 
     /// 检查分支是否领先于指定分支（是否有新提交）

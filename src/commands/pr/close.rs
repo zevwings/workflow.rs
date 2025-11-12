@@ -1,5 +1,7 @@
 use crate::commands::pr::helpers;
-use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_info, log_break, log_success, log_warning};
+use crate::{
+    log_break, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+};
 use anyhow::{Context, Result};
 
 /// PR 关闭命令

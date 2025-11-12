@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{EnvFile, Shell, log_debug, log_info, log_break, log_success, log_warning};
+use crate::{log_break, log_debug, log_info, log_success, log_warning, EnvFile, Shell};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
 use std::collections::HashMap;

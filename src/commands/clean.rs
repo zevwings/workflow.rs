@@ -5,7 +5,7 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容
 
-use crate::{Logs, log_info, log_break, log_success};
+use crate::{log_break, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 清理命令

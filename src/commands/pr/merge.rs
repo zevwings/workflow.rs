@@ -2,7 +2,8 @@ use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
-    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, extract_jira_ticket_id, log_info, log_break, log_success, log_warning
+    extract_jira_ticket_id, log_break, log_info, log_success, log_warning, Codeup, Git, GitHub,
+    Jira, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 

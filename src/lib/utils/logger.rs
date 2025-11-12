@@ -143,7 +143,8 @@ impl Logger {
         let left_sep = char.to_string().repeat(left_padding);
         let right_sep = char.to_string().repeat(right_padding);
 
-        println!("{}{}{}",
+        println!(
+            "{}{}{}",
             left_sep.bright_black(),
             text_str,
             right_sep.bright_black()
@@ -278,7 +279,7 @@ macro_rules! log_debug {
 #[macro_export]
 macro_rules! log_break {
     () => {
-      $crate::Logger::print_newline();
+        $crate::Logger::print_newline();
     };
     ($char:expr) => {
         $crate::Logger::print_separator(Some($char), None);

@@ -1,4 +1,4 @@
-use crate::{Logs, log_debug, log_info, log_break, log_success, log_warning};
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 

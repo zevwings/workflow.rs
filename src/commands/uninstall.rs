@@ -1,7 +1,7 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{Completion, EnvFile, Shell, Uninstall, log_info, log_break, log_success, log_warning};
+use crate::{log_break, log_info, log_success, log_warning, Completion, EnvFile, Shell, Uninstall};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use duct::cmd;

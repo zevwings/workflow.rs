@@ -1,4 +1,4 @@
-use crate::{Git, HttpClient, log_error, log_info, log_break, log_success};
+use crate::{log_break, log_error, log_info, log_success, Git, HttpClient};
 use anyhow::{Context, Result};
 
 /// 执行综合环境检查
@@ -37,13 +37,18 @@ pub fn run_all() -> Result<()> {
             if response.status().is_success() {
                 log_success!("GitHub network is available");
             } else {
-                log_error!("GitHub network check failed (status: {})", response.status());
+                log_error!(
+                    "GitHub network check failed (status: {})",
+                    response.status()
+                );
                 anyhow::bail!("Network check failed");
             }
         }
         Err(e) => {
             log_error!("Failed to check network connection: {}", e);
-            log_error!("  This might be due to network issues, proxy settings, or firewall restrictions");
+            log_error!(
+                "  This might be due to network issues, proxy settings, or firewall restrictions"
+            );
             anyhow::bail!("Network check failed: {}", e);
         }
     }

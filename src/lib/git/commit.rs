@@ -137,4 +137,48 @@ impl Git {
         cmd("git", &args).run().context("Failed to commit")?;
         Ok(())
     }
+
+    /// 获取 Git 修改内容（工作区和暂存区）
+    ///
+    /// 获取工作区和暂存区的所有修改内容，用于传递给 LLM 生成分支名和 PR 标题。
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Option<String>`：
+    /// - `Some(String)` - 如果有修改内容，包含暂存区和工作区的修改
+    /// - `None` - 如果没有修改内容
+    ///
+    /// # 格式
+    ///
+    /// 返回的字符串格式：
+    /// ```
+    /// Staged changes:
+    /// {staged diff content}
+    ///
+    /// Working tree changes:
+    /// {worktree diff content}
+    /// ```
+    pub fn get_diff() -> Option<String> {
+        let mut diff_parts = Vec::new();
+
+        // 获取暂存区的修改
+        if let Ok(staged_diff) = cmd("git", &["diff", "--cached"]).read() {
+            if !staged_diff.trim().is_empty() {
+                diff_parts.push(format!("Staged changes:\n{}", staged_diff));
+            }
+        }
+
+        // 获取工作区的修改
+        if let Ok(worktree_diff) = cmd("git", &["diff"]).read() {
+            if !worktree_diff.trim().is_empty() {
+                diff_parts.push(format!("Working tree changes:\n{}", worktree_diff));
+            }
+        }
+
+        if diff_parts.is_empty() {
+            None
+        } else {
+            Some(diff_parts.join("\n\n"))
+        }
+    }
 }

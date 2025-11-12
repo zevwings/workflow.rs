@@ -5,7 +5,7 @@ use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use std::path::{Path, PathBuf};
 
-use crate::{Settings, log_info, log_break, log_success};
+use crate::{log_break, log_info, log_success, Settings};
 
 use super::utils::{calculate_dir_info, expand_path, format_size, list_dir_contents};
 

@@ -36,12 +36,18 @@ impl PullRequestCreateCommand {
         // 4. 获取或生成 PR 标题
         let title = Self::resolve_title(title, &jira_ticket)?;
 
-        // 5. 生成 commit_title 和分支名
-        let (commit_title, branch_name) =
+        // 5. 生成 commit_title、分支名和描述
+        let (commit_title, branch_name, llm_description) =
             Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
 
-        // 6. 获取描述
-        let description = Self::resolve_description(description)?;
+        // 6. 获取描述（优先使用用户输入的描述，否则使用 LLM 生成的描述）
+        let short_description = if let Some(desc) = &description {
+            desc.clone()
+        } else if let Some(desc) = &llm_description {
+            desc.clone()
+        } else {
+            Self::resolve_description(description.clone())?
+        };
 
         // 7. 选择变更类型
         let selected_types = Self::select_change_types()?;
@@ -49,7 +55,7 @@ impl PullRequestCreateCommand {
         // 8. 生成 PR body
         let pull_request_body = generate_pull_request_body(
             &selected_types,
-            Some(&description),
+            Some(&short_description),
             jira_ticket.as_deref(),
             None, // dependency 暂时为空
         )?;
@@ -78,7 +84,7 @@ impl PullRequestCreateCommand {
             &jira_ticket,
             &created_pull_request_status,
             &pull_request_url,
-            &description,
+            &short_description,
             &actual_branch_name,
         )?;
 
@@ -229,33 +235,41 @@ impl PullRequestCreateCommand {
     /// 步骤 5：尝试使用 LLM 根据纯 title 生成分支名和 PR 标题。
     /// 如果 LLM 生成成功，使用翻译后的 pr_title，然后对 pr_title 应用 generate_commit_title 生成 commit_title。
     /// 如果 LLM 生成失败或结果无效，回退到默认方法。
-    /// 返回 (commit_title, branch_name) 元组。
+    /// 返回 (commit_title, branch_name, description) 元组。
     fn generate_commit_title_and_branch_name(
         jira_ticket: &Option<String>,
         title: &str,
-    ) -> Result<(String, String)> {
-        // 尝试使用 LLM 根据纯 title 生成分支名和 PR 标题
-        let (pr_title, branch_name) = match PullRequestLLM::generate(title) {
-            Ok(content) => {
-                log_success!("Generated branch name: {}", content.branch_name);
-                // 使用翻译后的 pr_title 作为 PR 标题
-                let pr_title = content.pr_title;
-                // 使用辅助函数统一处理前缀逻辑，避免重复代码
-                let branch_name =
-                    Self::apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
-                (pr_title, branch_name)
-            }
-            Err(_) => {
-                // 回退到原来的方法（已包含前缀逻辑）
-                let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
-                (title.to_string(), branch_name)
-            }
-        };
+    ) -> Result<(String, String, Option<String>)> {
+        let exists_branches = Git::get_all_branches(true).ok();
+        let git_diff = Git::get_diff();
+
+        // 尝试使用 LLM 根据纯 title 生成分支名、PR 标题和描述
+        let (pr_title, branch_name, description) =
+            match PullRequestLLM::generate(title, exists_branches, git_diff) {
+                Ok(content) => {
+                    log_success!("Generated branch name: {}", content.branch_name);
+                    // 使用翻译后的 pr_title 作为 PR 标题
+                    let pr_title = content.pr_title;
+                    // 使用辅助函数统一处理前缀逻辑，避免重复代码
+                    let branch_name = Self::apply_branch_name_prefixes(
+                        content.branch_name,
+                        jira_ticket.as_deref(),
+                    )?;
+                    // 使用 LLM 生成的描述
+                    let description = content.description;
+                    (pr_title, branch_name, description)
+                }
+                Err(_) => {
+                    // 回退到原来的方法（已包含前缀逻辑）
+                    let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
+                    (title.to_string(), branch_name, None)
+                }
+            };
 
         // 对 pr_title 应用 generate_commit_title 生成最终的 commit_title（用于 Git commit）
         let commit_title = generate_commit_title(jira_ticket.as_deref(), &pr_title);
 
-        Ok((commit_title, branch_name))
+        Ok((commit_title, branch_name, description))
     }
 
     /// 获取 PR 描述

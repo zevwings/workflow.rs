@@ -1,4 +1,4 @@
-use crate::{log_info, log_break, Codeup, Git, GitHub, PlatformProvider, RepoType};
+use crate::{log_break, log_info, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// PR 列表命令

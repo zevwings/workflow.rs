@@ -1,4 +1,4 @@
-use crate::{Logs, log_info, log_break, log_success};
+use crate::{log_break, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 
 /// 清理日志命令

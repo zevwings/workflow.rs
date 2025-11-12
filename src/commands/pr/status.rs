@@ -1,5 +1,5 @@
 use crate::commands::pr::helpers;
-use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_error, log_info, log_break};
+use crate::{log_break, log_error, log_info, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// PR 状态命令

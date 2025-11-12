@@ -1,7 +1,7 @@
 //! 安装命令
 //! 提供安装、生成和安装 shell completion 的功能
 
-use crate::{log_info, log_break, log_success, log_warning, Completion, Shell};
+use crate::{log_break, log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
 use clap::Command;
 use clap_complete::{generate, shells::Shell as ClapShell};

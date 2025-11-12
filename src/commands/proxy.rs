@@ -1,4 +1,4 @@
-use crate::{Clipboard, EnvFile, Proxy, log_info, log_break, log_success, log_warning};
+use crate::{log_break, log_info, log_success, log_warning, Clipboard, EnvFile, Proxy};
 use anyhow::{Context, Result};
 
 /// 代理检查命令

@@ -1,4 +1,4 @@
-use crate::{Jira, log_debug, log_info, log_break};
+use crate::{log_break, log_debug, log_info, Jira};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令

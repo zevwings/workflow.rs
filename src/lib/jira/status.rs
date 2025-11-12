@@ -14,7 +14,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::http::{Authorization, HttpClient};
-use crate::{log_debug, log_info, log_break, log_success};
+use crate::{log_break, log_debug, log_info, log_success};
 use dialoguer::Select;
 
 use super::helpers::{extract_jira_project, get_auth, get_base_url};
@@ -320,9 +320,7 @@ impl JiraStatus {
 
         // 选择 PR 创建时的状态
         log_break!();
-        log_info!(
-            "Select one of the following states to change when PR is ready or In progress:"
-        );
+        log_info!("Select one of the following states to change when PR is ready or In progress:");
 
         // 使用 Select 进行单选
         let selection = Select::new()
