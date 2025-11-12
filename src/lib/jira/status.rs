@@ -14,7 +14,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::http::{Authorization, HttpClient};
-use crate::{log_debug, log_info, log_separator, log_success};
+use crate::{log_debug, log_info, log_break, log_success};
 use dialoguer::Select;
 
 use super::helpers::{extract_jira_project, get_auth, get_base_url};
@@ -319,7 +319,7 @@ impl JiraStatus {
         }
 
         // 选择 PR 创建时的状态
-        log_separator!();
+        log_break!();
         log_info!(
             "Select one of the following states to change when PR is ready or In progress:"
         );
@@ -334,7 +334,7 @@ impl JiraStatus {
         let created_pull_request_status = &statuses[selection];
 
         // 选择 PR 合并时的状态
-        log_separator!();
+        log_break!();
         log_info!("Select one of the following states to change when PR is merged or Done:");
         let selection = Select::new()
             .with_prompt("Select status for PR merged")

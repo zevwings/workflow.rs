@@ -1,4 +1,4 @@
-use crate::{Clipboard, EnvFile, Proxy, log_info, log_separator, log_success, log_warning};
+use crate::{Clipboard, EnvFile, Proxy, log_info, log_break, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// 代理检查命令
@@ -35,7 +35,7 @@ impl ProxyCommand {
         }
 
         // 4. 显示当前环境变量设置
-        log_separator!();
+        log_break!();
         log_info!("Current environment variables:");
 
         // 合并显示：先显示环境变量，再显示配置文件中的（但不在环境变量中的）
@@ -63,10 +63,10 @@ impl ProxyCommand {
 
         // 5. 检查代理是否已正确配置
         if Proxy::is_proxy_configured(&proxy_info) {
-            log_separator!();
+            log_break!();
             log_success!("  Proxy is configured correctly");
         } else {
-            log_separator!();
+            log_break!();
             log_warning!("  Proxy is not configured correctly");
             log_info!("  Run 'workflow proxy on' to enable proxy");
             log_info!("  Or check macOS System Preferences > Network > Advanced > Proxies");

@@ -1,4 +1,4 @@
-use crate::{Jira, log_debug, log_info, log_separator, log_success};
+use crate::{Jira, log_debug, log_info, log_break, log_success};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令
@@ -25,7 +25,7 @@ impl InfoCommand {
         // 显示描述
         if let Some(description) = &issue.fields.description {
             if !description.trim().is_empty() {
-                log_separator!();
+                log_break!();
                 log_info!("  Description:");
                 log_info!("{}", description);
             }
@@ -34,7 +34,7 @@ impl InfoCommand {
         // 显示附件列表
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
-                log_separator!();
+                log_break!();
                 log_info!("📎 Attachments ({}):", attachments.len());
                 for (idx, attachment) in attachments.iter().enumerate() {
                     let size_str = if let Some(size) = attachment.size {
@@ -45,11 +45,11 @@ impl InfoCommand {
                     log_info!("  {}. {} ({})", idx + 1, attachment.filename, size_str);
                 }
             } else {
-                log_separator!();
+                log_break!();
                 log_info!("📎 Attachments: None");
             }
         } else {
-            log_separator!();
+            log_break!();
             log_info!("📎 Attachments: None");
         }
 
@@ -57,14 +57,14 @@ impl InfoCommand {
         if let Some(comments) = &issue.fields.comment {
             let comment_count = comments.comments.len();
             if comment_count > 0 {
-                log_separator!();
+                log_break!();
                 log_info!("💬 Comments: {} comment(s)", comment_count);
             } else {
-                log_separator!();
+                log_break!();
                 log_info!("💬 Comments: None");
             }
         } else {
-            log_separator!();
+            log_break!();
             log_info!("💬 Comments: None");
         }
 
@@ -72,7 +72,7 @@ impl InfoCommand {
         let settings = crate::Settings::load();
         if !settings.jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", settings.jira_service_address, issue.key);
-            log_separator!();
+            log_break!();
             log_info!("🔗 URL: {}", jira_url);
         }
 

@@ -1,7 +1,7 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{Completion, EnvFile, Shell, Uninstall, log_info, log_separator, log_success, log_warning};
+use crate::{Completion, EnvFile, Shell, Uninstall, log_info, log_break, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use duct::cmd;
@@ -13,19 +13,19 @@ impl UninstallCommand {
     /// 运行卸载流程（一次性清理全部）
     pub fn run() -> Result<()> {
         log_warning!("  Uninstall Workflow CLI");
-        log_separator!();
+        log_break!();
         log_info!("This will remove all Workflow CLI configuration and binaries.");
         log_info!("This includes:");
         log_info!("  - All environment variables (EMAIL, JIRA_API_TOKEN, etc.)");
         log_info!("  - The entire Workflow CLI configuration block");
         log_info!("  - Binary files: workflow, pr, qk, install");
         log_info!("  - Shell completion scripts");
-        log_separator!();
+        log_break!();
 
         let shell_config_path = EnvFile::get_shell_config_path()
             .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
         log_info!("Shell config: {:?}", shell_config_path);
-        log_separator!();
+        log_break!();
 
         // 显示将要删除的二进制文件
         let binary_paths = Uninstall::get_binary_paths();
@@ -48,7 +48,7 @@ impl UninstallCommand {
             for binary_path in &existing_binaries {
                 log_info!("  - {}", binary_path);
             }
-            log_info!("");
+            log_break!();
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
@@ -72,7 +72,7 @@ impl UninstallCommand {
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {
-            log_separator!();
+            log_break!();
             log_info!("  Removing binary files...");
             match Uninstall::remove_binaries() {
                 Ok((removed, need_sudo)) => {
@@ -150,7 +150,7 @@ impl UninstallCommand {
         }
 
         // 卸载 shell completion（只要第一步确认就删除）
-        log_separator!();
+        log_break!();
         log_info!("  Removing shell completion scripts...");
         if let Ok(shell_info) = Shell::detect() {
             Completion::remove_completion_files(&shell_info)?;
@@ -167,19 +167,19 @@ impl UninstallCommand {
 
         // 删除配置（需要第二步确认）
         if remove_config {
-            log_separator!();
+            log_break!();
             log_info!("  Removing configuration...");
             Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
             log_info!("  Configuration removed successfully");
         } else {
-            log_separator!();
+            log_break!();
             log_info!("  Configuration will be kept (not removed).");
         }
 
-        log_separator!();
+        log_break!();
         log_success!("  Uninstall completed successfully!");
         if remove_config {
-            log_separator!();
+            log_break!();
             log_info!(
                 "All Workflow CLI configuration has been removed from your shell config file."
             );
@@ -192,12 +192,12 @@ impl UninstallCommand {
         log_info!("All Workflow CLI shell completion scripts have been removed.");
 
         // 尝试重新加载 shell 配置
-        log_separator!();
+        log_break!();
         log_info!("  Reloading shell configuration...");
         if let Ok(shell_info) = Shell::detect() {
             let _ = Shell::reload_config(&shell_info);
         } else {
-            log_separator!();
+            log_break!();
             log_info!("  Could not detect shell type.");
             log_info!("Please manually reload your shell configuration:");
             log_info!("  source ~/.zshrc  # for zsh");

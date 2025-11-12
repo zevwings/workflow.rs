@@ -1,7 +1,7 @@
 //! 配置查看命令
 //! 显示当前的环境变量配置
 
-use crate::{EnvFile, log_info, log_separator, log_success, log_warning, mask_sensitive_value};
+use crate::{EnvFile, log_info, log_break, log_success, log_warning, mask_sensitive_value};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet};
 
@@ -30,9 +30,9 @@ impl ConfigCommand {
         }
 
         // 显示所有配置（统一显示为环境变量）
-        log_separator!();
+        log_break!();
         log_success!("  Environment Variables");
-        log_separator!('-', 100);
+        log_break!('-', 100);
         Self::print_all_config(&env_vars)?;
 
         Ok(())
@@ -109,7 +109,7 @@ impl ConfigCommand {
             .collect();
         if !other_keys.is_empty() {
             other_keys.sort();
-            log_separator!();
+            log_break!();
             log_info!("  Other variables:");
             for key in &other_keys {
                 let value = env_vars.get(*key).unwrap();

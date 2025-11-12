@@ -2,7 +2,7 @@ use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
-    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, extract_jira_ticket_id, log_info, log_separator, log_success, log_warning
+    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType, extract_jira_ticket_id, log_info, log_break, log_success, log_warning
 };
 use anyhow::{Context, Result};
 
@@ -21,7 +21,7 @@ impl PullRequestMergeCommand {
         let repo_type = Git::detect_repo_type()?;
         let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
-        log_separator!();
+        log_break!();
         log_success!("Merging PR: #{}", pull_request_id);
 
         // 3. 获取当前分支名（合并前保存）

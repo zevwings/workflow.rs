@@ -1,4 +1,4 @@
-use crate::{Git, HttpClient, log_error, log_info, log_separator, log_success};
+use crate::{Git, HttpClient, log_error, log_info, log_break, log_success};
 use anyhow::{Context, Result};
 
 /// 执行综合环境检查
@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 /// 检查 Git 仓库状态和到 GitHub 的网络连接。
 pub fn run_all() -> Result<()> {
     log_info!("Running environment checks...");
-    log_separator!();
+    log_break!();
 
     // 1. 检查 Git 状态
     log_info!("[1/2] Checking Git repository status...");
@@ -22,7 +22,7 @@ pub fn run_all() -> Result<()> {
         log_info!("Git status:\n{}", git_output);
     }
 
-    log_separator!();
+    log_break!();
 
     // 2. 检查网络连接
     log_info!("[2/2] Checking network connection to GitHub...");
@@ -48,7 +48,7 @@ pub fn run_all() -> Result<()> {
         }
     }
 
-    log_separator!();
+    log_break!();
     log_success!("All checks passed ✓");
     Ok(())
 }

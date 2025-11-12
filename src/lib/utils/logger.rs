@@ -216,27 +216,27 @@ macro_rules! log_debug {
     };
 }
 
-/// 打印分隔线
+/// 打印分隔线或换行
 ///
 /// # Examples
 ///
 /// ```
-/// use workflow::log_separator;
+/// use workflow::log_break;
 ///
 /// // 输出换行符
-/// log_separator!("\n");
+/// log_break!();
 ///
 /// // 使用默认分隔符（80个 '-'）
-/// log_separator!();
+/// log_break!('-');
 ///
 /// // 指定分隔符字符
-/// log_separator!('=');
+/// log_break!('=');
 ///
 /// // 指定分隔符字符和长度
-/// log_separator!('=', 100);
+/// log_break!('=', 100);
 /// ```
 #[macro_export]
-macro_rules! log_separator {
+macro_rules! log_break {
     () => {
       $crate::Logger::print_newline();
     };

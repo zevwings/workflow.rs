@@ -1,4 +1,4 @@
-use crate::{Logs, log_debug, log_info, log_separator, log_success, log_warning};
+use crate::{Logs, log_debug, log_info, log_break, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -67,9 +67,9 @@ impl SearchCommand {
             return Ok(());
         }
 
-        log_separator!();
+        log_break!();
         log_success!("Found {} matches:", total_count);
-        log_separator!();
+        log_break!();
 
         // 显示 api.log 的结果
         let has_api_results = !api_results.is_empty();
@@ -89,7 +89,7 @@ impl SearchCommand {
         // 显示 flutter-api.log 的结果
         if !flutter_api_results.is_empty() {
             if has_api_results {
-                log_info!(""); // 添加空行分隔
+                log_break!(); // 添加空行分隔
             }
             log_info!("===========  flutter-api.log ===========");
             for entry in flutter_api_results {

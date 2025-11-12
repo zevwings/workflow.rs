@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
 
-use crate::{EnvFile, Shell, log_debug, log_info, log_separator, log_success, log_warning};
+use crate::{EnvFile, Shell, log_debug, log_info, log_break, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
 use std::collections::HashMap;
@@ -52,17 +52,17 @@ impl SetupCommand {
         // 验证 Codeup 配置（如果已配置）
         Self::verify_codeup_config(&env_vars)?;
 
-        log_separator!();
+        log_break!();
         log_success!("🎉 Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
 
         // 尝试重新加载 shell 配置
-        log_separator!();
+        log_break!();
         log_info!("🔄 Reloading shell configuration...");
         if let Ok(shell_info) = Shell::detect() {
             let _ = Shell::reload_config(&shell_info);
         } else {
-            log_separator!();
+            log_break!();
             log_info!("  Could not detect shell type.");
             log_info!("Please manually reload your shell configuration:");
             log_info!("  source ~/.zshrc  # for zsh");
@@ -77,7 +77,7 @@ impl SetupCommand {
         let mut env_vars = existing_env.clone();
 
         // ==================== 必填项：用户配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("📧 User Configuration (Required)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -113,7 +113,7 @@ impl SetupCommand {
         }
 
         // ==================== 必填项：GitHub 配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("🐙 GitHub Configuration (Required)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -143,7 +143,7 @@ impl SetupCommand {
         }
 
         // ==================== 必填项：Jira 配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("🎫 Jira Configuration (Required)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -203,7 +203,7 @@ impl SetupCommand {
         }
 
         // ==================== 可选：GitHub 配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("🐙 GitHub Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -234,7 +234,7 @@ impl SetupCommand {
         }
 
         // ==================== 可选：日志配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("📝 Log Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -282,7 +282,7 @@ impl SetupCommand {
         );
 
         // ==================== 可选：代理配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("🌐 Proxy Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -311,7 +311,7 @@ impl SetupCommand {
         );
 
         // ==================== 可选：LLM/AI 配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("🤖 LLM/AI Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -424,7 +424,7 @@ impl SetupCommand {
         }
 
         // ==================== 可选：Codeup 配置 ====================
-        log_separator!();
+        log_break!();
         log_info!("📦 Codeup Configuration (Optional)");
         log_info!("─────────────────────────────────────────────────────────");
 
@@ -544,13 +544,13 @@ impl SetupCommand {
             return Ok(());
         }
 
-        log_separator!();
+        log_break!();
         log_info!("🔍 Verifying Jira configuration...");
 
         // 尝试获取 Jira 用户信息
         match crate::jira::users::get_user_info() {
             Ok(user) => {
-                log_separator!();
+                log_break!();
                 log_success!("Jira configuration verified successfully!");
                 log_info!("   User: {}", user.display_name);
                 if let Some(email) = &user.email_address {
@@ -580,13 +580,13 @@ impl SetupCommand {
             return Ok(());
         }
 
-        log_separator!();
+        log_break!();
         log_info!("🔍 Verifying GitHub configuration...");
 
         // 尝试获取 GitHub 用户信息
         match crate::pr::GitHub::get_user_info() {
             Ok(user) => {
-                log_separator!();
+                log_break!();
                 log_success!("GitHub configuration verified successfully!");
                 log_info!("   User: {}", user.login);
                 if let Some(name) = &user.name {
@@ -620,13 +620,13 @@ impl SetupCommand {
             return Ok(());
         }
 
-        log_separator!();
+        log_break!();
         log_info!("🔍 Verifying Codeup configuration...");
 
         // 尝试获取 Codeup 用户信息
         match crate::pr::Codeup::get_user_info() {
             Ok(user) => {
-                log_info!("");
+                log_break!();
                 log_success!("Codeup configuration verified successfully!");
                 if let Some(name) = &user.name {
                     log_info!("   Name: {}", name);

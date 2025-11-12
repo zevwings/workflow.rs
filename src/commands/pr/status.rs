@@ -1,5 +1,5 @@
 use crate::commands::pr::helpers;
-use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_error, log_info, log_separator, log_success};
+use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_error, log_info, log_break, log_success};
 use anyhow::Result;
 
 /// PR 状态命令
@@ -65,7 +65,7 @@ impl PullRequestStatusCommand {
             }
         };
 
-        log_separator!();
+        log_break!();
         log_success!("PR Information:");
         log_info!("{}", info);
         Ok(())

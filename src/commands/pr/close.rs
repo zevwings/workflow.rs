@@ -1,5 +1,5 @@
 use crate::commands::pr::helpers;
-use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_info, log_separator, log_success, log_warning};
+use crate::{Codeup, Git, GitHub, PlatformProvider, RepoType, log_info, log_break, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 关闭命令
@@ -14,7 +14,7 @@ impl PullRequestCloseCommand {
         let repo_type = Git::detect_repo_type()?;
         let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
-        log_separator!();
+        log_break!();
         log_success!("Closing PR: #{}", pull_request_id);
 
         // 2. 获取当前分支名（关闭前保存）
