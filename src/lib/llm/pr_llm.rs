@@ -113,7 +113,8 @@ impl PullRequestLLM {
 
     /// 生成同时生成分支名和 PR 标题的 system prompt
     fn system_prompt() -> String {
-        "You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes. IMPORTANT: All outputs MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first.
+        "You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes.
+IMPORTANT: All outputs MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first.
 
 For the branch name:
 - Must be all lowercase
