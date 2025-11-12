@@ -11,15 +11,17 @@ use crate::settings::Settings;
 
 use super::client::{deepseek, openai, proxy};
 
-/// PR 内容，包含分支名和 PR 标题
+/// PR 内容，包含分支名、PR 标题和描述
 ///
-/// 由 LLM 生成的分支名和 PR 标题，用于创建 Pull Request。
+/// 由 LLM 生成的分支名、PR 标题和描述，用于创建 Pull Request。
 #[derive(Debug, Clone)]
 pub struct PullRequestContent {
     /// 分支名称（小写，使用连字符分隔）
     pub branch_name: String,
     /// PR 标题（简洁，不超过 8 个单词）
     pub pr_title: String,
+    /// PR 描述（基于 Git 修改内容生成）
+    pub description: Option<String>,
 }
 
 /// Pull Request LLM 服务
@@ -37,27 +39,34 @@ impl PullRequestLLM {
     /// # 参数
     ///
     /// * `commit_title` - commit 标题或描述
+    /// * `exists_branches` - 已存在的分支列表（可选）
+    /// * `git_diff` - Git 工作区和暂存区的修改内容（可选）
     ///
     /// # 返回
     ///
     /// 返回 `PullRequestContent` 结构体，包含：
     /// - `branch_name` - 分支名称（小写，使用连字符分隔）
     /// - `pr_title` - PR 标题（简洁，不超过 8 个单词）
+    /// - `description` - PR 描述（基于 Git 修改内容生成，可选）
     ///
     /// # 错误
     ///
     /// 如果 LLM API 调用失败或响应格式不正确，返回相应的错误信息。
-    pub fn generate(commit_title: &str) -> Result<PullRequestContent> {
+    pub fn generate(
+        commit_title: &str,
+        exists_branches: Option<Vec<String>>,
+        git_diff: Option<String>,
+    ) -> Result<PullRequestContent> {
         let settings = Settings::load();
         let provider = settings.llm_provider.clone();
 
         Self::check_api_key(&settings, &provider)?;
 
         match provider.as_str() {
-            "openai" => Self::generate_with_openai(commit_title),
-            "deepseek" => Self::generate_with_deepseek(commit_title),
-            "proxy" => Self::generate_with_proxy(commit_title),
-            _ => Self::generate_with_openai(commit_title), // 默认使用 OpenAI
+            "openai" => Self::generate_with_openai(commit_title, exists_branches, git_diff),
+            "deepseek" => Self::generate_with_deepseek(commit_title, exists_branches, git_diff),
+            "proxy" => Self::generate_with_proxy(commit_title, exists_branches, git_diff),
+            _ => Self::generate_with_openai(commit_title, exists_branches, git_diff), // 默认使用 OpenAI
         }
     }
 
@@ -104,13 +113,18 @@ impl PullRequestLLM {
 
     /// 生成同时生成分支名和 PR 标题的 system prompt
     fn system_prompt() -> String {
-        "You're a git assistant that generates both a branch name and a PR title based on the commit title. IMPORTANT: Both outputs MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first.
+        "You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes.
+
+IMPORTANT: All outputs MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first.
 
 For the branch name:
 - Must be all lowercase
 - Use hyphens to separate words
 - Be under 50 characters
 - Follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only)
+- Generate only the base branch name without prefix (e.g., 'feature-name' not 'prefix/feature-name')
+- If existing base branch names are provided, ensure the generated base branch name does not duplicate any of them
+- Consider the git changes when generating the branch name to make it more accurate
 - Examples:
   * \"Fix login bug\" → \"fix-login-bug\"
   * \"修复登录问题\" → \"fix-login-issue\"
@@ -128,19 +142,50 @@ For the PR title:
 - No punctuation
 - In English only
 
-Return your response in JSON format with two fields: \"branch_name\" and \"pr_title\". Example:
+For the description:
+- Generate a concise description based on the git changes provided
+- Summarize what was changed, added, or fixed
+- If no git changes are provided, you can omit this field or provide a brief description based on the commit title
+- Keep it brief (2-4 sentences)
+- In English only
+
+Return your response in JSON format with three fields: \"branch_name\", \"pr_title\", and \"description\" (optional). Example:
 {
-  \"branch_name\": \"feature-add-user-authentication\",
-  \"pr_title\": \"Add user authentication\"
+  \"branch_name\": \"add-user-authentication\",
+  \"pr_title\": \"Add user authentication\",
+  \"description\": \"This PR adds user authentication functionality including login and registration features.\"
 }".to_string()
     }
 
     /// 生成同时生成分支名和 PR 标题的 user prompt
-    fn user_prompt(commit_title: &str) -> String {
-        format!(
-            "Generate a branch name and PR title for this commit title: {}",
-            commit_title
-        )
+    fn user_prompt(
+        commit_title: &str,
+        exists_branches: Option<Vec<String>>,
+        git_diff: Option<String>,
+    ) -> String {
+        // 提取分支列表，如果没有或为空则使用空数组
+        // 注意：exists_branches 已经通过 get_all_branches(true) 获取，已经去掉了前缀
+        let base_branch_names: Vec<String> = exists_branches
+            .filter(|b| !b.is_empty())
+            .unwrap_or_default();
+
+        // 组装 prompt 内容
+        let mut parts = vec![format!("Commit title: {}", commit_title)];
+
+        if !base_branch_names.is_empty() {
+            parts.push(format!(
+                "Existing base branch names: {}",
+                base_branch_names.join(", ")
+            ));
+        }
+
+        if let Some(diff) = git_diff {
+            if !diff.trim().is_empty() {
+                parts.push(format!("Git changes:\n{}", diff));
+            }
+        }
+
+        parts.join("\n")
     }
 
     /// 使用 OpenAI API 同时生成分支名和 PR 标题
@@ -158,10 +203,14 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     /// # 错误
     ///
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_openai(commit_title: &str) -> Result<PullRequestContent> {
+    fn generate_with_openai(
+        commit_title: &str,
+        exists_branches: Option<Vec<String>>,
+        git_diff: Option<String>,
+    ) -> Result<PullRequestContent> {
         let params = openai::LLMRequestParams {
             system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title),
+            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
             max_tokens: 100,
             temperature: 0.5,
             model: "gpt-3.5-turbo".to_string(),
@@ -185,10 +234,14 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     /// # 错误
     ///
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_deepseek(commit_title: &str) -> Result<PullRequestContent> {
+    fn generate_with_deepseek(
+        commit_title: &str,
+        exists_branches: Option<Vec<String>>,
+        git_diff: Option<String>,
+    ) -> Result<PullRequestContent> {
         let params = deepseek::LLMRequestParams {
             system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title),
+            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
             max_tokens: 100,
             temperature: 0.5,
             model: "deepseek-chat".to_string(),
@@ -212,10 +265,14 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
     /// # 错误
     ///
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_proxy(commit_title: &str) -> Result<PullRequestContent> {
+    fn generate_with_proxy(
+        commit_title: &str,
+        exists_branches: Option<Vec<String>>,
+        git_diff: Option<String>,
+    ) -> Result<PullRequestContent> {
         let params = proxy::LLMRequestParams {
             system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title),
+            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
             max_tokens: 100,
             temperature: 0.5,
             model: "gpt-3.5-turbo".to_string(),
@@ -274,12 +331,20 @@ Return your response in JSON format with two fields: \"branch_name\" and \"pr_ti
             .context("Missing 'pr_title' field in LLM response")?
             .to_string();
 
+        // description 是可选的
+        let description = json
+            .get("description")
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         // 清理分支名，确保只保留 ASCII 字符
         let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
 
         Ok(PullRequestContent {
             branch_name: cleaned_branch_name,
             pr_title: pr_title.trim().to_string(),
+            description,
         })
     }
 }

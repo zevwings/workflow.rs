@@ -1,7 +1,7 @@
 //! 安装命令
 //! 提供安装、生成和安装 shell completion 的功能
 
-use crate::{log_info, log_success, log_warning, Completion, Shell};
+use crate::{log_break, log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
 use clap::Command;
 use clap_complete::{generate, shells::Shell as ClapShell};
@@ -57,7 +57,7 @@ impl InstallCommand {
         Self::generate_pr_completion(&shell_type, &output)?;
         Self::generate_qk_completion(&shell_type, &output)?;
 
-        log_success!("✅ Shell completion 脚本已生成到: {}", output.display());
+        log_success!("  Shell completion 脚本已生成到: {}", output.display());
         Ok(())
     }
 
@@ -84,7 +84,7 @@ impl InstallCommand {
         log_info!("正在配置 shell 配置文件...");
         Completion::configure_shell_config(&shell_info)?;
 
-        log_success!("✅ shell completion 安装完成");
+        log_success!("  shell completion 安装完成");
         log_info!("请运行以下命令重新加载配置:");
         log_info!("  source {}", shell_info.config_file.display());
 
@@ -99,8 +99,8 @@ impl InstallCommand {
             log_info!("  可稍后手动安装 completion 脚本");
             return Err(e);
         }
-        log_success!("✅ shell completion 安装完成");
-        log_info!("");
+        log_success!("  shell completion 安装完成");
+        log_break!();
         log_info!("提示：请运行以下命令重新加载配置:");
         log_info!("  source ~/.zshrc  # 或 source ~/.bashrc");
         Ok(())

@@ -53,29 +53,29 @@ impl LogLevel {
 pub struct Logger;
 
 impl Logger {
-    /// 成功消息（绿色 ✓）
+    /// 成功消息（绿色 ✅）
     pub fn success(message: impl fmt::Display) -> String {
-        format!("{} {}", "✓".green(), message)
+        format!("{} {}", "✅".green(), message)
     }
 
-    /// 错误消息（红色 ✗）
+    /// 错误消息（红色 ❌）
     pub fn error(message: impl fmt::Display) -> String {
-        format!("{} {}", "✗".red(), message)
+        format!("{} {}", "❌".red(), message)
     }
 
-    /// 警告消息（黄色 ⚠）
+    /// 警告消息（黄色 ⚠️）
     pub fn warning(message: impl fmt::Display) -> String {
-        format!("{} {}", "⚠".yellow(), message)
+        format!("{} {}", "⚠️".yellow(), message)
     }
 
-    /// 信息消息（蓝色 ℹ）
+    /// 信息消息（蓝色 ℹ️）
     pub fn info(message: impl fmt::Display) -> String {
-        format!("{} {}", "ℹ".blue(), message)
+        format!("{} {}", "ℹ️".blue(), message)
     }
 
-    /// 调试消息（灰色）
+    /// 调试消息（灰色 ⚙️）
     pub fn debug(message: impl fmt::Display) -> String {
-        format!("{} {}", "•".bright_black(), message)
+        format!("{} {}", "⚙️".bright_black(), message)
     }
 
     /// 打印成功消息
@@ -104,6 +104,56 @@ impl Logger {
         if current_level.should_log(LogLevel::Debug) {
             println!("{}", Self::debug(message));
         }
+    }
+
+    /// 打印分隔线
+    pub fn print_separator(char: Option<char>, length: Option<usize>) {
+        let char = char.unwrap_or('-');
+        let length = length.unwrap_or(80);
+        let separator = char.to_string().repeat(length);
+        println!("{}", separator.bright_black());
+    }
+
+    /// 打印带文本的分隔线
+    ///
+    /// 在分隔线中间插入文本，文本前后用分隔符字符填充
+    /// 文本前后会自动添加空格
+    ///
+    /// # 参数
+    ///
+    /// * `char` - 分隔符字符
+    /// * `length` - 总长度
+    /// * `text` - 要插入的文本
+    pub fn print_separator_with_text(char: char, length: usize, text: impl fmt::Display) {
+        let text_str = format!("  {} ", text); // 文本前后添加空格
+        let text_len = text_str.chars().count();
+
+        // 如果文本长度大于等于总长度，直接输出文本
+        if text_len >= length {
+            println!("{}", text_str.bright_black());
+            return;
+        }
+
+        // 计算左右两侧需要填充的字符数
+        let remaining = length - text_len;
+        let left_padding = remaining / 2;
+        let right_padding = remaining - left_padding;
+
+        // 生成分隔线
+        let left_sep = char.to_string().repeat(left_padding);
+        let right_sep = char.to_string().repeat(right_padding);
+
+        println!(
+            "{}{}{}",
+            left_sep.bright_black(),
+            text_str,
+            right_sep.bright_black()
+        );
+    }
+
+    /// 打印换行符
+    pub fn print_newline() {
+        println!();
     }
 }
 
@@ -203,16 +253,55 @@ macro_rules! log_debug {
     };
 }
 
+/// 打印分隔线或换行
+///
+/// # Examples
+///
+/// ```
+/// use workflow::log_break;
+///
+/// // 输出换行符
+/// log_break!();
+///
+/// // 使用默认分隔符（80个 '-'）
+/// log_break!('-');
+///
+/// // 指定分隔符字符
+/// log_break!('=');
+///
+/// // 指定分隔符字符和长度
+/// log_break!('=', 100);
+///
+/// // 在分隔线中间插入文本
+/// log_break!('=', 20, "flutter-api.log");
+/// // 输出: ===========  flutter-api.log ===========
+/// ```
+#[macro_export]
+macro_rules! log_break {
+    () => {
+        $crate::Logger::print_newline();
+    };
+    ($char:expr) => {
+        $crate::Logger::print_separator(Some($char), None);
+    };
+    ($char:expr, $length:expr) => {
+        $crate::Logger::print_separator(Some($char), Some($length));
+    };
+    ($char:expr, $length:expr, $text:expr) => {
+        $crate::Logger::print_separator_with_text($char, $length, $text);
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_logger_output() {
-        assert!(Logger::success("Test").contains("✓"));
-        assert!(Logger::error("Test").contains("✗"));
-        assert!(Logger::warning("Test").contains("⚠"));
-        assert!(Logger::info("Test").contains("ℹ"));
-        assert!(Logger::debug("Test").contains("•"));
+        assert!(Logger::success("Test").contains("✅"));
+        assert!(Logger::error("Test").contains("❌"));
+        assert!(Logger::warning("Test").contains("⚠️"));
+        assert!(Logger::info("Test").contains("ℹ️"));
+        assert!(Logger::debug("Test").contains("⚙️"));
     }
 }

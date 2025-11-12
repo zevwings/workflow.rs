@@ -1,11 +1,21 @@
-use crate::commands::check::CheckCommand;
-use crate::{log_error, log_info, log_success, log_warning, Git};
+use crate::commands::check;
+use crate::{
+    log_error, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 
 /// PR 分支集成的命令
 #[allow(dead_code)]
 pub struct PullRequestIntegrateCommand;
+
+/// 源分支信息
+struct SourceBranchInfo {
+    /// 分支类型：true 表示远程分支，false 表示本地分支
+    is_remote: bool,
+    /// 用于合并的分支引用（本地分支名或 origin/branch-name）
+    merge_ref: String,
+}
 
 impl PullRequestIntegrateCommand {
     /// 将指定分支合并到当前分支并推送到远程
@@ -20,7 +30,7 @@ impl PullRequestIntegrateCommand {
     pub fn integrate(source_branch: String, ff_only: bool, squash: bool, push: bool) -> Result<()> {
         // 1. 运行检查（可选，但建议运行）
         log_info!("Running pre-flight checks...");
-        if let Err(e) = CheckCommand::run_all() {
+        if let Err(e) = check::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
             let should_continue = Confirm::new()
                 .with_prompt("Continue anyway?")
@@ -39,15 +49,15 @@ impl PullRequestIntegrateCommand {
         // 3. 检查工作区状态并 stash（如果需要）
         let has_stashed = Self::check_working_directory()?;
 
-        // 4. 验证并准备源分支，获取实际的分支引用
-        let merge_branch_ref = Self::prepare_source_branch(&source_branch)?;
+        // 4. 验证并准备源分支，获取分支信息
+        let source_branch_info = Self::prepare_source_branch(&source_branch)?;
 
         // 5. 确定合并策略
         let strategy = Self::determine_merge_strategy(ff_only, squash);
 
         // 6. 执行合并
         log_success!("Merging '{}' into '{}'...", source_branch, current_branch);
-        let merge_result = Git::merge_branch(&merge_branch_ref, strategy);
+        let merge_result = Git::merge_branch(&source_branch_info.merge_ref, strategy);
 
         // 如果合并失败，恢复 stash（如果有）
         if merge_result.is_err() && has_stashed {
@@ -82,20 +92,55 @@ impl PullRequestIntegrateCommand {
             }
         }
 
-        // 7. 推送到远程（如果需要）
-        if push {
-            log_success!("Pushing to remote...");
-            let (_, exists_remote) = Git::is_branch_exists(&current_branch)
-                .context("Failed to check if branch exists on remote")?;
-
-            Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
-            log_success!("Pushed to remote successfully");
+        // 7. 根据分支类型处理合并后的操作
+        if source_branch_info.is_remote {
+            // 远程分支：检查当前分支是否已创建 PR
+            let pr_updated = Self::check_and_update_current_branch_pr(&current_branch)?;
+            if pr_updated {
+                // 已更新 PR，不需要 stash pop（代码已推送）
+                log_info!("PR updated, skipping stash pop");
+            } else {
+                // 未创建 PR，恢复 stash（如果有）
+                if has_stashed {
+                    log_info!("Restoring stashed changes...");
+                    if let Err(stash_err) = Git::stash_pop() {
+                        log_warning!("Failed to restore stashed changes: {}", stash_err);
+                        log_warning!("You can manually restore them with: git stash pop");
+                    } else {
+                        log_success!("Stashed changes restored");
+                    }
+                }
+            }
         } else {
-            log_info!("Skipping push (--no-push flag set)");
-            log_info!("You can push manually with: git push");
+            // 本地分支：合并后立即恢复 stash（如果有）
+            if has_stashed {
+                log_info!("Restoring stashed changes...");
+                if let Err(stash_err) = Git::stash_pop() {
+                    log_warning!("Failed to restore stashed changes: {}", stash_err);
+                    log_warning!("You can manually restore them with: git stash pop");
+                } else {
+                    log_success!("Stashed changes restored");
+                }
+            }
+
+            // 推送到远程（如果需要）
+            if push {
+                log_success!("Pushing to remote...");
+                let (_, exists_remote) = Git::is_branch_exists(&current_branch)
+                    .context("Failed to check if branch exists on remote")?;
+
+                Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
+                log_success!("Pushed to remote successfully");
+            } else {
+                log_info!("Skipping push (--no-push flag set)");
+                log_info!("You can push manually with: git push");
+            }
         }
 
-        // 8. 删除被合并的源分支（如果存在且不是当前分支）
+        // 8. 检查并关闭被合并分支的 PR（如果存在）
+        Self::check_and_close_source_branch_pr(&source_branch)?;
+
+        // 9. 删除被合并的源分支（如果存在且不是当前分支）
         Self::delete_merged_branch(&source_branch, &current_branch)?;
 
         log_success!("Integration completed successfully!");
@@ -139,8 +184,20 @@ impl PullRequestIntegrateCommand {
     /// 验证并准备源分支
     ///
     /// 检查源分支是否存在（本地或远程），如果只在远程则先 fetch。
-    /// 返回实际用于合并的分支引用（本地分支名或 origin/branch-name）。
-    fn prepare_source_branch(source_branch: &str) -> Result<String> {
+    /// 检查是否为默认分支，如果是则报错。
+    /// 返回源分支信息（类型、是否默认分支、合并引用）。
+    fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
+        // 检查是否为默认分支
+        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let is_default = source_branch == default_branch;
+
+        if is_default {
+            anyhow::bail!(
+                "Cannot integrate default branch '{}' into current branch. This operation is not allowed.",
+                default_branch
+            );
+        }
+
         let (exists_local, exists_remote) = Git::is_branch_exists(source_branch)
             .context("Failed to check if source branch exists")?;
 
@@ -158,11 +215,17 @@ impl PullRequestIntegrateCommand {
             Git::fetch().context("Failed to fetch from remote")?;
             log_success!("Fetched latest changes from remote");
             // 返回远程分支引用
-            Ok(format!("origin/{}", source_branch))
+            Ok(SourceBranchInfo {
+                is_remote: true,
+                merge_ref: format!("origin/{}", source_branch),
+            })
         } else {
             // 分支在本地存在，直接使用分支名
             log_success!("Source branch '{}' is ready", source_branch);
-            Ok(source_branch.to_string())
+            Ok(SourceBranchInfo {
+                is_remote: false,
+                merge_ref: source_branch.to_string(),
+            })
         }
     }
 
@@ -176,6 +239,79 @@ impl PullRequestIntegrateCommand {
             crate::MergeStrategy::Squash
         } else {
             crate::MergeStrategy::Merge
+        }
+    }
+
+    /// 检查并更新当前分支的 PR
+    ///
+    /// 如果当前分支已创建 PR，则推送代码以更新 PR。
+    /// 返回是否更新了 PR。
+    fn check_and_update_current_branch_pr(current_branch: &str) -> Result<bool> {
+        let repo_type = Git::detect_repo_type()?;
+
+        // 检查当前分支是否已创建 PR
+        let current_pr_id = match repo_type {
+            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()
+                .ok()
+                .flatten(),
+            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()
+                .ok()
+                .flatten(),
+            RepoType::Unknown => None,
+        };
+
+        if let Some(pr_id) = current_pr_id {
+            log_info!("Current branch '{}' has PR #{}", current_branch, pr_id);
+            log_info!("Pushing changes to update PR...");
+
+            // 检查当前分支是否在远程存在
+            let (_, exists_remote) = Git::is_branch_exists(current_branch)
+                .context("Failed to check if current branch exists on remote")?;
+
+            // 推送代码以更新 PR
+            Git::push(current_branch, !exists_remote)
+                .context("Failed to push to remote to update PR")?;
+            log_success!("PR #{} updated successfully", pr_id);
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    /// 检查并关闭被合并分支的 PR
+    ///
+    /// 如果被合并分支已创建 PR，则关闭它。
+    /// 返回是否关闭了 PR。
+    fn check_and_close_source_branch_pr(source_branch: &str) -> Result<bool> {
+        let repo_type = Git::detect_repo_type()?;
+
+        // 由于通过分支名查找 PR 比较复杂，我们采用更简单的方法：
+        // 尝试通过工作历史查找 PR ID
+        let remote_url = Git::get_remote_url().ok();
+        if let Some(pr_id) = crate::jira::status::JiraStatus::find_pr_id_by_branch(
+            source_branch,
+            remote_url.as_deref(),
+        )? {
+            log_info!("Found PR #{} for source branch '{}'", pr_id, source_branch);
+            log_info!("Closing PR #{}...", pr_id);
+
+            match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::close_pull_request(&pr_id)?;
+                }
+                RepoType::Codeup => {
+                    <Codeup as PlatformProvider>::close_pull_request(&pr_id)?;
+                }
+                RepoType::Unknown => {
+                    log_warning!("Unknown repository type, cannot close PR");
+                    return Ok(false);
+                }
+            }
+
+            log_success!("PR #{} closed successfully", pr_id);
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 
