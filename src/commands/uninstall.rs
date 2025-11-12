@@ -78,7 +78,7 @@ impl UninstallCommand {
                 Ok((removed, need_sudo)) => {
                     if !removed.is_empty() {
                         for binary_path in &removed {
-                            log_info!("  ✓ Removed: {}", binary_path);
+                            log_info!("  Removed: {}", binary_path);
                         }
                     }
                     if !need_sudo.is_empty() {
@@ -87,11 +87,11 @@ impl UninstallCommand {
                         for binary_path in &need_sudo {
                             match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                 Ok(_) => {
-                                    log_info!("  ✓ Removed: {}", binary_path);
+                                    log_info!("  Removed: {}", binary_path);
                                 }
                                 Err(e) => {
                                     log_warning!(
-                                        "  ⚠️  Failed to remove {} with sudo: {}",
+                                        "    Failed to remove {} with sudo: {}",
                                         binary_path,
                                         e
                                     );
@@ -105,7 +105,7 @@ impl UninstallCommand {
                     }
                 }
                 Err(e) => {
-                    log_warning!("⚠️  Failed to remove binary files: {}", e);
+                    log_warning!("  Failed to remove binary files: {}", e);
                     // 尝试使用 sudo 删除所有剩余的文件
                     log_info!("  Attempting to remove remaining files with sudo...");
                     for binary_path in &existing_binaries {
@@ -113,11 +113,11 @@ impl UninstallCommand {
                         if path.exists() {
                             match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                 Ok(_) => {
-                                    log_info!("  ✓ Removed: {}", binary_path);
+                                    log_info!("  Removed: {}", binary_path);
                                 }
                                 Err(e) => {
                                     log_warning!(
-                                        "  ⚠️  Failed to remove {} with sudo: {}",
+                                        "    Failed to remove {} with sudo: {}",
                                         binary_path,
                                         e
                                     );
@@ -159,7 +159,7 @@ impl UninstallCommand {
                 Completion::remove_completion_config(&shell_info)?;
             } else {
                 log_info!(
-                    "  ℹ  Config file {} does not exist",
+                    "  Config file {} does not exist",
                     shell_info.config_file.display()
                 );
             }

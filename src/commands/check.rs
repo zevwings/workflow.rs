@@ -11,13 +11,13 @@ pub fn run_all() -> Result<()> {
     // 1. 检查 Git 状态
     log_info!("[1/2] Checking Git repository status...");
     if !Git::is_git_repo() {
-        log_error!("✗ Not in a Git repository");
+        log_error!("Not in a Git repository");
         anyhow::bail!("Git check failed: Not in a Git repository");
     }
 
     let git_output = Git::status().context("Failed to check git status")?;
     if git_output.trim().is_empty() {
-        log_success!("✓ Git repository is clean (no uncommitted changes)");
+        log_success!("Git repository is clean (no uncommitted changes)");
     } else {
         log_info!("Git status:\n{}", git_output);
     }
@@ -35,20 +35,20 @@ pub fn run_all() -> Result<()> {
     {
         Ok(response) => {
             if response.status().is_success() {
-                log_success!("✓ GitHub network is available");
+                log_success!("GitHub network is available");
             } else {
-                log_error!("✗ GitHub network check failed (status: {})", response.status());
+                log_error!("GitHub network check failed (status: {})", response.status());
                 anyhow::bail!("Network check failed");
             }
         }
         Err(e) => {
-            log_error!("✗ Failed to check network connection: {}", e);
+            log_error!("Failed to check network connection: {}", e);
             log_error!("  This might be due to network issues, proxy settings, or firewall restrictions");
             anyhow::bail!("Network check failed: {}", e);
         }
     }
 
     log_break!();
-    log_success!("All checks passed ✓");
+    log_success!("All checks passed");
     Ok(())
 }

@@ -1,4 +1,4 @@
-use crate::{log_info, log_success, Codeup, Git, GitHub, PlatformProvider, RepoType};
+use crate::{log_info, log_break, Codeup, Git, GitHub, PlatformProvider, RepoType};
 use anyhow::Result;
 
 /// PR 列表命令
@@ -11,7 +11,7 @@ impl GetPullRequestsCommand {
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         let repo_type = Git::detect_repo_type()?;
 
-        log_success!("PR List");
+        log_break!('=', 40, "PR List");
         let output = Self::get_pull_requests(state.as_deref(), limit, &repo_type)?;
         log_info!("{}", output);
 

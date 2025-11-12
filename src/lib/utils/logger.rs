@@ -114,6 +114,42 @@ impl Logger {
         println!("{}", separator.bright_black());
     }
 
+    /// 打印带文本的分隔线
+    ///
+    /// 在分隔线中间插入文本，文本前后用分隔符字符填充
+    /// 文本前后会自动添加空格
+    ///
+    /// # 参数
+    ///
+    /// * `char` - 分隔符字符
+    /// * `length` - 总长度
+    /// * `text` - 要插入的文本
+    pub fn print_separator_with_text(char: char, length: usize, text: impl fmt::Display) {
+        let text_str = format!("  {} ", text); // 文本前后添加空格
+        let text_len = text_str.chars().count();
+
+        // 如果文本长度大于等于总长度，直接输出文本
+        if text_len >= length {
+            println!("{}", text_str.bright_black());
+            return;
+        }
+
+        // 计算左右两侧需要填充的字符数
+        let remaining = length - text_len;
+        let left_padding = remaining / 2;
+        let right_padding = remaining - left_padding;
+
+        // 生成分隔线
+        let left_sep = char.to_string().repeat(left_padding);
+        let right_sep = char.to_string().repeat(right_padding);
+
+        println!("{}{}{}",
+            left_sep.bright_black(),
+            text_str,
+            right_sep.bright_black()
+        );
+    }
+
     /// 打印换行符
     pub fn print_newline() {
         println!();
@@ -234,6 +270,10 @@ macro_rules! log_debug {
 ///
 /// // 指定分隔符字符和长度
 /// log_break!('=', 100);
+///
+/// // 在分隔线中间插入文本
+/// log_break!('=', 20, "flutter-api.log");
+/// // 输出: ===========  flutter-api.log ===========
 /// ```
 #[macro_export]
 macro_rules! log_break {
@@ -245,6 +285,9 @@ macro_rules! log_break {
     };
     ($char:expr, $length:expr) => {
         $crate::Logger::print_separator(Some($char), Some($length));
+    };
+    ($char:expr, $length:expr, $text:expr) => {
+        $crate::Logger::print_separator_with_text($char, $length, $text);
     };
 }
 

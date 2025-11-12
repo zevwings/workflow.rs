@@ -12,7 +12,7 @@ pub struct SetupCommand;
 impl SetupCommand {
     /// 运行初始化设置流程
     pub fn run() -> Result<()> {
-        log_success!("🚀 Starting Workflow CLI initialization...\n");
+        log_success!("Starting Workflow CLI initialization...\n");
 
         // 注意：在 setup 阶段，我们直接读取环境变量和 shell 配置文件即可
 
@@ -22,7 +22,7 @@ impl SetupCommand {
         let merged_env = EnvFile::load_merged(&env_var_keys);
 
         if !merged_env.is_empty() {
-            log_info!("ℹ️  Found existing configuration. Press Enter to keep current values, or enter new values to override.\n");
+            log_info!("  Found existing configuration. Press Enter to keep current values, or enter new values to override.\n");
         }
 
         // 收集配置信息（智能处理现有配置）
@@ -31,7 +31,7 @@ impl SetupCommand {
         // 保存配置（统一保存到环境变量）
         log_info!("💾 Saving configuration...");
         EnvFile::save(&env_vars).context("Failed to save environment variables")?;
-        log_success!("✅ Environment variables saved to shell config file");
+        log_success!("  Environment variables saved to shell config file");
 
         let _shell_config_path = EnvFile::get_shell_config_path()
             .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
@@ -53,12 +53,12 @@ impl SetupCommand {
         Self::verify_codeup_config(&env_vars)?;
 
         log_break!();
-        log_success!("🎉 Initialization completed successfully!");
+        log_success!("Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
 
         // 尝试重新加载 shell 配置
         log_break!();
-        log_info!("🔄 Reloading shell configuration...");
+        log_info!("Reloading shell configuration...");
         if let Ok(shell_info) = Shell::detect() {
             let _ = Shell::reload_config(&shell_info);
         } else {
@@ -78,8 +78,8 @@ impl SetupCommand {
 
         // ==================== 必填项：用户配置 ====================
         log_break!();
-        log_info!("📧 User Configuration (Required)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_info!("  User Configuration (Required)");
+        log_break!('─', 65);
 
         let current_email = existing_env.get("EMAIL").cloned();
         let has_email = current_email.is_some();
@@ -115,7 +115,7 @@ impl SetupCommand {
         // ==================== 必填项：GitHub 配置 ====================
         log_break!();
         log_info!("🐙 GitHub Configuration (Required)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let current_github_token = existing_env.get("GITHUB_API_TOKEN").cloned();
         let github_token_prompt = if current_github_token.is_some() {
@@ -145,7 +145,7 @@ impl SetupCommand {
         // ==================== 必填项：Jira 配置 ====================
         log_break!();
         log_info!("🎫 Jira Configuration (Required)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let current_jira_address = existing_env.get("JIRA_SERVICE_ADDRESS").cloned();
         let has_jira_address = current_jira_address.is_some();
@@ -205,7 +205,7 @@ impl SetupCommand {
         // ==================== 可选：GitHub 配置 ====================
         log_break!();
         log_info!("🐙 GitHub Configuration (Optional)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let current_gh_prefix = existing_env.get("GITHUB_BRANCH_PREFIX").cloned();
         let gh_prefix_prompt = if let Some(ref prefix) = current_gh_prefix {
@@ -236,7 +236,7 @@ impl SetupCommand {
         // ==================== 可选：日志配置 ====================
         log_break!();
         log_info!("📝 Log Configuration (Optional)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let current_log_folder = existing_env
             .get("LOG_OUTPUT_FOLDER_NAME")
@@ -284,7 +284,7 @@ impl SetupCommand {
         // ==================== 可选：代理配置 ====================
         log_break!();
         log_info!("🌐 Proxy Configuration (Optional)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let current_disable_proxy = existing_env
             .get("DISABLE_CHECK_PROXY")
@@ -313,7 +313,7 @@ impl SetupCommand {
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
         log_info!("🤖 LLM/AI Configuration (Optional)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let llm_providers = vec!["openai", "deepseek", "proxy"];
         let current_provider = existing_env
@@ -426,7 +426,7 @@ impl SetupCommand {
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
         log_info!("📦 Codeup Configuration (Optional)");
-        log_info!("─────────────────────────────────────────────────────────");
+        log_break!('─', 65);
 
         let has_codeup = existing_env.contains_key("CODEUP_PROJECT_ID")
             || existing_env.contains_key("CODEUP_CSRF_TOKEN")
@@ -559,7 +559,7 @@ impl SetupCommand {
                 log_info!("   Account ID: {}", user.account_id);
             }
             Err(e) => {
-                log_warning!("⚠️  Failed to verify Jira configuration");
+                log_warning!("  Failed to verify Jira configuration");
                 log_info!("   Error: {}", e);
                 log_info!("   Please check your Jira service address and API token.");
                 log_info!("   You can run 'workflow setup' again to update the configuration.");
@@ -597,7 +597,7 @@ impl SetupCommand {
                 }
             }
             Err(e) => {
-                log_warning!("⚠️  Failed to verify GitHub configuration");
+                log_warning!("  Failed to verify GitHub configuration");
                 log_info!("   Error: {}", e);
                 log_info!("   Please check your GitHub API token.");
                 log_info!("   You can run 'workflow setup' again to update the configuration.");
@@ -642,7 +642,7 @@ impl SetupCommand {
                 }
             }
             Err(e) => {
-                log_warning!("⚠️  Failed to verify Codeup configuration");
+                log_warning!("  Failed to verify Codeup configuration");
                 log_info!("   Error: {}", e);
                 log_info!("   Please check your Codeup project ID, cookie, and CSRF token.");
                 log_info!("   You can run 'workflow setup' again to update the configuration.");

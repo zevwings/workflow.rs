@@ -1,4 +1,4 @@
-use crate::{Jira, log_debug, log_info, log_break, log_success};
+use crate::{Jira, log_debug, log_info, log_break};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令
@@ -16,7 +16,7 @@ impl InfoCommand {
             .context(format!("Failed to get ticket info for {}", jira_id))?;
 
         // 显示基本信息
-        log_success!("📋 Ticket Information");
+        log_break!('=', 40, "Ticket Information");
         log_info!("Key: {}", issue.key);
         log_info!("ID: {}", issue.id);
         log_info!("Summary: {}", issue.fields.summary);
