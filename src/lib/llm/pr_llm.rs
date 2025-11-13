@@ -58,11 +58,8 @@ impl PullRequestLLM {
         git_diff: Option<String>,
     ) -> Result<PullRequestContent> {
         let settings = Settings::get();
-        let llm_settings = settings
-            .llm
-            .as_ref()
-            .context("LLM settings not configured")?;
-        let provider = llm_settings.llm_provider.clone();
+        let llm_settings = &settings.llm;
+        let provider = llm_settings.provider.clone();
 
         Self::check_api_key(llm_settings, &provider)?;
 
@@ -88,20 +85,21 @@ impl PullRequestLLM {
     /// 如果对应的 API key 未设置，返回相应的错误信息。
     fn check_api_key(llm_settings: &crate::settings::LLMSettings, provider: &str) -> Result<()> {
         let api_key_set = match provider {
-            "openai" => llm_settings.openai_key.is_some(),
-            "deepseek" => llm_settings.deepseek_key.is_some(),
-            "proxy" => llm_settings.llm_proxy_key.is_some() && llm_settings.llm_proxy_url.is_some(),
-            _ => llm_settings.openai_key.is_some(), // 默认检查 OpenAI
+            "openai" => llm_settings.key.is_some() && llm_settings.provider == "openai",
+            "deepseek" => llm_settings.key.is_some() && llm_settings.provider == "deepseek",
+            "proxy" => {
+                llm_settings.key.is_some()
+                    && llm_settings.url.is_some()
+                    && llm_settings.provider == "proxy"
+            }
+            _ => llm_settings.key.is_some() && llm_settings.provider == "openai", // 默认检查 OpenAI
         };
 
         if !api_key_set {
             let error_msg = match provider {
                 "openai" => "OpenAI API key is not configured",
                 "deepseek" => "DeepSeek API key is not configured",
-                "proxy" => match (
-                    llm_settings.llm_proxy_key.is_none(),
-                    llm_settings.llm_proxy_url.is_none(),
-                ) {
+                "proxy" => match (llm_settings.key.is_none(), llm_settings.url.is_none()) {
                     (true, true) => "LLM proxy key and URL are not configured",
                     (true, false) => "LLM proxy key is not configured",
                     (false, true) => "LLM proxy URL is not configured",

@@ -17,11 +17,8 @@ impl ConfigCommand {
         // 显示配置文件路径
         let workflow_config_path = ConfigPaths::workflow_config()
             .map_err(|_| anyhow::anyhow!("Failed to get workflow config path"))?;
-        let llm_config_path = ConfigPaths::llm_config()
-            .map_err(|_| anyhow::anyhow!("Failed to get llm config path"))?;
 
-        log_info!("Workflow config: {:?}", workflow_config_path);
-        log_info!("LLM config: {:?}\n", llm_config_path);
+        log_info!("Workflow config: {:?}\n", workflow_config_path);
 
         // 从 TOML 文件加载配置
         let settings = Settings::get();
@@ -47,7 +44,8 @@ impl ConfigCommand {
             && settings.jira.api_token.is_none()
             && settings.github.api_token.is_none()
             && settings.codeup.project_id.is_none()
-            && settings.llm.is_none()
+            && settings.llm.url.is_none()
+            && settings.llm.key.is_none()
     }
 
     /// 打印所有配置
@@ -90,31 +88,13 @@ impl ConfigCommand {
             log_info!("  Download Base Dir: {}", dir);
         }
 
-        // 代理配置
-        log_info!(
-            "  Disable Proxy Check: {}",
-            if settings.proxy.disable_check {
-                "Yes"
-            } else {
-                "No"
-            }
-        );
-
         // LLM 配置
-        if let Some(ref llm) = settings.llm {
-            log_info!("  LLM Provider: {}", llm.llm_provider);
-            if let Some(ref key) = llm.openai_key {
-                log_info!("  LLM OpenAI Key: {}", mask_sensitive_value(key));
-            }
-            if let Some(ref key) = llm.deepseek_key {
-                log_info!("  LLM DeepSeek Key: {}", mask_sensitive_value(key));
-            }
-            if let Some(ref url) = llm.llm_proxy_url {
-                log_info!("  LLM Proxy URL: {}", url);
-            }
-            if let Some(ref key) = llm.llm_proxy_key {
-                log_info!("  LLM Proxy Key: {}", mask_sensitive_value(key));
-            }
+        log_info!("  LLM Provider: {}", settings.llm.provider);
+        if let Some(ref url) = settings.llm.url {
+            log_info!("  LLM URL: {}", url);
+        }
+        if let Some(ref key) = settings.llm.key {
+            log_info!("  LLM Key: {}", mask_sensitive_value(key));
         }
 
         // Codeup 配置

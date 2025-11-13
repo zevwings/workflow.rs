@@ -217,12 +217,6 @@ workflow setup
 | `log.delete_when_completed` | 操作完成后是否删除日志 | `false` |
 | `log.download_base_dir` | 下载基础目录 | `~/Downloads/Workflow` |
 
-#### 代理配置
-
-| 配置项 | 说明 | 默认值 |
-|-------|------|--------|
-| `proxy.disable_check` | 是否禁用代理检查 | `false` |
-
 #### LLM/AI 配置（在 `llm.toml` 中）
 
 | 配置项 | 说明 | 默认值 |

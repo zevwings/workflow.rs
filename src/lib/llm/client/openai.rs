@@ -43,12 +43,14 @@ pub struct LLMRequestParams {
 /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
 pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let settings = Settings::get();
-    let llm_settings = settings
-        .llm
-        .as_ref()
-        .context("LLM settings not configured")?;
+    let llm_settings = &settings.llm;
+
+    if llm_settings.provider != "openai" {
+        anyhow::bail!("LLM provider is not 'openai'. Current provider: {}. Please run 'workflow setup' to configure it", llm_settings.provider);
+    }
+
     let api_key = llm_settings
-        .openai_key
+        .key
         .as_ref()
         .context("OpenAI API key is not configured. Please run 'workflow setup' to configure it")?;
 

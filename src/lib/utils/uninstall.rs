@@ -10,19 +10,12 @@ pub struct Uninstall;
 
 impl Uninstall {
     /// 删除所有 Workflow CLI TOML 配置文件
-    /// 这会删除 workflow.toml 和 llm.toml
+    /// 这会删除 workflow.toml
     pub fn remove_config_files() -> Result<()> {
         // 删除 workflow.toml
         if let Ok(workflow_config_path) = ConfigPaths::workflow_config() {
             if workflow_config_path.exists() {
                 fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
-            }
-        }
-
-        // 删除 llm.toml
-        if let Ok(llm_config_path) = ConfigPaths::llm_config() {
-            if llm_config_path.exists() {
-                fs::remove_file(&llm_config_path).context("Failed to remove llm.toml")?;
             }
         }
 

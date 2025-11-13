@@ -43,16 +43,18 @@ pub struct LLMRequestParams {
 /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
 pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let settings = Settings::get();
-    let llm_settings = settings
-        .llm
-        .as_ref()
-        .context("LLM settings not configured")?;
+    let llm_settings = &settings.llm;
+
+    if llm_settings.provider != "proxy" {
+        anyhow::bail!("LLM provider is not 'proxy'. Current provider: {}. Please run 'workflow setup' to configure it", llm_settings.provider);
+    }
+
     let api_key = llm_settings
-        .llm_proxy_key
+        .key
         .as_ref()
         .context("LLM proxy key is not configured. Please run 'workflow setup' to configure it")?;
     let base_url = llm_settings
-        .llm_proxy_url
+        .url
         .as_ref()
         .context("LLM proxy URL is not configured. Please run 'workflow setup' to configure it")?;
 

@@ -19,10 +19,15 @@ use super::models::JiraUser;
 ///
 /// TOML 格式示例：
 /// ```toml
-/// [[users]]
+/// [[users]]  # 数组表（array of tables），可以包含多个用户条目
 /// email = "user@example.com"
 /// account_id = "628d9616269a9a0068f27e0c"
 /// display_name = "User Name"
+///
+/// [[users]]  # 第二个用户条目
+/// email = "another@example.com"
+/// account_id = "another_account_id"
+/// display_name = "Another User"
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct JiraUsersConfig {
@@ -40,9 +45,6 @@ struct JiraUserEntry {
     account_id: String,
     /// 显示名称
     display_name: String,
-    /// 邮箱地址（可选，通常与 email 相同）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    email_address: Option<String>,
 }
 
 /// 从本地 TOML 文件读取用户信息
@@ -84,7 +86,7 @@ fn get_user_info_from_local(email: &str) -> Result<JiraUser> {
     Ok(JiraUser {
         account_id: user_entry.account_id.clone(),
         display_name: user_entry.display_name.clone(),
-        email_address: user_entry.email_address.clone(),
+        email_address: Some(user_entry.email.clone()),
     })
 }
 
@@ -155,14 +157,21 @@ fn save_user_info_to_local(email: &str, user: &JiraUser) -> Result<()> {
     };
 
     // 查找并更新或添加用户
+    // 使用 JiraUser 的 email_address，如果没有则使用传入的 email
+    let email_to_save = user.email_address.as_deref().unwrap_or(email);
+    let email_to_save_str = email_to_save.to_string();
     let user_entry = JiraUserEntry {
-        email: email.to_string(),
+        email: email_to_save_str.clone(),
         account_id: user.account_id.clone(),
         display_name: user.display_name.clone(),
-        email_address: user.email_address.clone(),
     };
 
-    if let Some(existing) = config.users.iter_mut().find(|u| u.email == email) {
+    // 查找时使用保存的 email（可能是 email_address 或传入的 email）
+    if let Some(existing) = config
+        .users
+        .iter_mut()
+        .find(|u| u.email == email_to_save_str || u.email == email)
+    {
         // 更新现有用户
         *existing = user_entry;
     } else {

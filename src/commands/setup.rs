@@ -1,5 +1,5 @@
 //! 初始化设置命令
-//! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml 和 llm.toml）
+//! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::settings::{paths::ConfigPaths, settings::Settings};
 use crate::{log_break, log_info, log_success, log_warning};
@@ -22,7 +22,6 @@ struct CollectedConfig {
     github_branch_prefix: Option<String>,
     log_output_folder_name: String,
     log_delete_when_completed: bool,
-    disable_check_proxy: bool,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
     codeup_cookie: Option<String>,
@@ -32,14 +31,6 @@ struct CollectedConfig {
     llm_deepseek_key: Option<String>,
     llm_proxy_url: Option<String>,
     llm_proxy_key: Option<String>,
-}
-
-impl CollectedConfig {
-    fn has_llm_config(&self) -> bool {
-        self.llm_openai_key.is_some()
-            || self.llm_deepseek_key.is_some()
-            || self.llm_proxy_url.is_some()
-    }
 }
 
 impl SetupCommand {
@@ -54,12 +45,9 @@ impl SetupCommand {
         let config = Self::collect_config(&existing_config)?;
 
         // 保存配置到 TOML 文件
-        log_info!("💾 Saving configuration...");
+        log_info!("  Saving configuration...");
         Self::save_config(&config)?;
         log_success!("  Configuration saved to ~/.workflow/config/workflow.toml");
-        if config.has_llm_config() {
-            log_success!("  LLM configuration saved to ~/.workflow/config/llm.toml");
-        }
 
         // 验证配置
         Self::verify_config(&config)?;
@@ -74,7 +62,7 @@ impl SetupCommand {
     /// 加载现有配置（从 TOML 文件）
     fn load_existing_config() -> Result<CollectedConfig> {
         let settings = Settings::get();
-        let llm_settings = settings.llm.as_ref();
+        let llm = &settings.llm;
 
         Ok(CollectedConfig {
             email: settings.user.email.clone(),
@@ -84,17 +72,30 @@ impl SetupCommand {
             github_branch_prefix: settings.github.branch_prefix.clone(),
             log_output_folder_name: settings.log.output_folder_name.clone(),
             log_delete_when_completed: settings.log.delete_when_completed,
-            disable_check_proxy: settings.proxy.disable_check,
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
-            llm_provider: llm_settings
-                .map(|s| s.llm_provider.clone())
-                .unwrap_or_else(|| "openai".to_string()),
-            llm_openai_key: llm_settings.and_then(|s| s.openai_key.clone()),
-            llm_deepseek_key: llm_settings.and_then(|s| s.deepseek_key.clone()),
-            llm_proxy_url: llm_settings.and_then(|s| s.llm_proxy_url.clone()),
-            llm_proxy_key: llm_settings.and_then(|s| s.llm_proxy_key.clone()),
+            llm_provider: llm.provider.clone(),
+            llm_openai_key: if llm.provider == "openai" {
+                llm.key.clone()
+            } else {
+                None
+            },
+            llm_deepseek_key: if llm.provider == "deepseek" {
+                llm.key.clone()
+            } else {
+                None
+            },
+            llm_proxy_url: if llm.provider == "proxy" {
+                llm.url.clone()
+            } else {
+                None
+            },
+            llm_proxy_key: if llm.provider == "proxy" {
+                llm.key.clone()
+            } else {
+                None
+            },
         })
     }
 
@@ -162,6 +163,35 @@ impl SetupCommand {
             anyhow::bail!("GitHub API token is required");
         };
 
+        // ==================== 可选：GitHub 配置 ====================
+        log_break!();
+        log_info!("🐙 GitHub Configuration (Optional)");
+        log_break!('─', 65);
+
+        let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
+            format!(
+                "GitHub branch prefix [current: {}] (press Enter to keep)",
+                prefix
+            )
+        } else {
+            "GitHub branch prefix (press Enter to skip)".to_string()
+        };
+
+        let default_gh_prefix = existing.github_branch_prefix.clone().unwrap_or_default();
+
+        let gh_prefix: String = Input::new()
+            .with_prompt(&gh_prefix_prompt)
+            .allow_empty(true)
+            .default(default_gh_prefix)
+            .interact_text()
+            .context("Failed to get GitHub branch prefix")?;
+
+        let github_branch_prefix = if !gh_prefix.is_empty() {
+            Some(gh_prefix)
+        } else {
+            existing.github_branch_prefix.clone()
+        };
+
         // ==================== 必填项：Jira 配置 ====================
         log_break!();
         log_info!("🎫 Jira Configuration (Required)");
@@ -225,35 +255,6 @@ impl SetupCommand {
             anyhow::bail!("Jira API token is required");
         };
 
-        // ==================== 可选：GitHub 配置 ====================
-        log_break!();
-        log_info!("🐙 GitHub Configuration (Optional)");
-        log_break!('─', 65);
-
-        let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
-            format!(
-                "GitHub branch prefix [current: {}] (press Enter to keep)",
-                prefix
-            )
-        } else {
-            "GitHub branch prefix (press Enter to skip)".to_string()
-        };
-
-        let default_gh_prefix = existing.github_branch_prefix.clone().unwrap_or_default();
-
-        let gh_prefix: String = Input::new()
-            .with_prompt(&gh_prefix_prompt)
-            .allow_empty(true)
-            .default(default_gh_prefix)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        let github_branch_prefix = if !gh_prefix.is_empty() {
-            Some(gh_prefix)
-        } else {
-            existing.github_branch_prefix.clone()
-        };
-
         // ==================== 可选：日志配置 ====================
         log_break!();
         log_info!("📝 Log Configuration (Optional)");
@@ -290,26 +291,6 @@ impl SetupCommand {
             .default(existing.log_delete_when_completed)
             .interact()
             .context("Failed to get delete logs confirmation")?;
-
-        // ==================== 可选：代理配置 ====================
-        log_break!();
-        log_info!("🌐 Proxy Configuration (Optional)");
-        log_break!('─', 65);
-
-        let disable_proxy_prompt = format!(
-            "Disable proxy check? [current: {}]",
-            if existing.disable_check_proxy {
-                "Yes"
-            } else {
-                "No"
-            }
-        );
-
-        let disable_check_proxy = Confirm::new()
-            .with_prompt(&disable_proxy_prompt)
-            .default(existing.disable_check_proxy)
-            .interact()
-            .context("Failed to get proxy check confirmation")?;
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
@@ -515,7 +496,6 @@ impl SetupCommand {
             github_branch_prefix,
             log_output_folder_name,
             log_delete_when_completed,
-            disable_check_proxy,
             codeup_project_id,
             codeup_csrf_token,
             codeup_cookie,
@@ -530,8 +510,7 @@ impl SetupCommand {
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
         use crate::settings::settings::{
-            CodeupSettings, GitHubSettings, JiraSettings, LLMSettingsToml, LogSettings,
-            ProxySettings, Settings, UserSettings,
+            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings, UserSettings,
         };
 
         // 构建 Settings 结构体
@@ -552,15 +531,25 @@ impl SetupCommand {
                 output_folder_name: config.log_output_folder_name.clone(),
                 download_base_dir: None, // 使用默认值
             },
-            proxy: ProxySettings {
-                disable_check: config.disable_check_proxy,
-            },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,
                 csrf_token: config.codeup_csrf_token.clone(),
                 cookie: config.codeup_cookie.clone(),
             },
-            llm: None, // LLM 配置单独保存
+            llm: crate::settings::settings::LLMSettings {
+                url: if config.llm_provider == "proxy" {
+                    config.llm_proxy_url.clone()
+                } else {
+                    None
+                },
+                key: match config.llm_provider.as_str() {
+                    "openai" => config.llm_openai_key.clone(),
+                    "deepseek" => config.llm_deepseek_key.clone(),
+                    "proxy" => config.llm_proxy_key.clone(),
+                    _ => None,
+                },
+                provider: config.llm_provider.clone(),
+            },
         };
 
         // 保存 workflow.toml
@@ -568,22 +557,6 @@ impl SetupCommand {
         let toml_content =
             toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
         fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
-
-        // 保存 llm.toml（如果有 LLM 配置）
-        if config.has_llm_config() {
-            let llm_settings = LLMSettingsToml {
-                openai_key: config.llm_openai_key.clone(),
-                llm_proxy_url: config.llm_proxy_url.clone(),
-                llm_proxy_key: config.llm_proxy_key.clone(),
-                deepseek_key: config.llm_deepseek_key.clone(),
-                llm_provider: config.llm_provider.clone(),
-            };
-
-            let llm_config_path = ConfigPaths::llm_config()?;
-            let llm_toml_content = toml::to_string_pretty(&llm_settings)
-                .context("Failed to serialize LLM settings to TOML")?;
-            fs::write(&llm_config_path, llm_toml_content).context("Failed to write llm.toml")?;
-        }
 
         Ok(())
     }
@@ -596,7 +569,7 @@ impl SetupCommand {
             && config.email.is_some()
         {
             log_break!();
-            log_info!("🔍 Verifying Jira configuration...");
+            log_info!("  Verifying Jira configuration...");
 
             match crate::jira::users::get_user_info() {
                 Ok(user) => {
@@ -620,7 +593,7 @@ impl SetupCommand {
         // 验证 GitHub 配置
         if config.github_api_token.is_some() {
             log_break!();
-            log_info!("🔍 Verifying GitHub configuration...");
+            log_info!("  Verifying GitHub configuration...");
 
             match crate::pr::GitHub::get_user_info() {
                 Ok(user) => {

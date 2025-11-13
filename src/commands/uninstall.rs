@@ -18,7 +18,7 @@ impl UninstallCommand {
         log_break!();
         log_info!("This will remove all Workflow CLI configuration and binaries.");
         log_info!("This includes:");
-        log_info!("  - TOML configuration files (workflow.toml, llm.toml)");
+        log_info!("  - TOML configuration files (workflow.toml)");
         log_info!("  - Binary files: workflow, pr, qk, install");
         log_info!("  - Shell completion scripts");
         log_break!();
@@ -61,7 +61,7 @@ impl UninstallCommand {
 
         // 第二步确认：是否删除 TOML 配置文件
         let remove_config = Confirm::new()
-            .with_prompt("Remove TOML config files (workflow.toml, llm.toml)?")
+            .with_prompt("Remove TOML config file (workflow.toml)?")
             .default(true)
             .interact()
             .context("Failed to get confirmation for removing configuration")?;
@@ -168,7 +168,6 @@ impl UninstallCommand {
             Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
             log_info!("  Configuration removed successfully");
             log_info!("  - workflow.toml removed");
-            log_info!("  - llm.toml removed");
         } else {
             log_break!();
             log_info!("  Configuration will be kept (not removed).");
