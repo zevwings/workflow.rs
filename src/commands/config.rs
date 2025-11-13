@@ -74,7 +74,10 @@ impl ConfigCommand {
         }
 
         // 日志配置
-        log_info!("  Log Output Folder Name: {}", settings.log.output_folder_name);
+        log_info!(
+            "  Log Output Folder Name: {}",
+            settings.log.output_folder_name
+        );
         log_info!(
             "  Delete Logs When Completed: {}",
             if settings.log.delete_when_completed {

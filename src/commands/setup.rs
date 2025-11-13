@@ -100,7 +100,6 @@ impl SetupCommand {
 
     /// 收集配置信息
     fn collect_config(existing: &CollectedConfig) -> Result<CollectedConfig> {
-
         // ==================== 必填项：用户配置 ====================
         log_break!();
         log_info!("  User Configuration (Required)");
@@ -531,8 +530,8 @@ impl SetupCommand {
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
         use crate::settings::settings::{
-            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, ProxySettings,
-            Settings, UserSettings, LLMSettingsToml,
+            CodeupSettings, GitHubSettings, JiraSettings, LLMSettingsToml, LogSettings,
+            ProxySettings, Settings, UserSettings,
         };
 
         // 构建 Settings 结构体
@@ -566,10 +565,9 @@ impl SetupCommand {
 
         // 保存 workflow.toml
         let workflow_config_path = ConfigPaths::workflow_config()?;
-        let toml_content = toml::to_string_pretty(&settings)
-            .context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content)
-            .context("Failed to write workflow.toml")?;
+        let toml_content =
+            toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
+        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
 
         // 保存 llm.toml（如果有 LLM 配置）
         if config.has_llm_config() {
@@ -584,8 +582,7 @@ impl SetupCommand {
             let llm_config_path = ConfigPaths::llm_config()?;
             let llm_toml_content = toml::to_string_pretty(&llm_settings)
                 .context("Failed to serialize LLM settings to TOML")?;
-            fs::write(&llm_config_path, llm_toml_content)
-                .context("Failed to write llm.toml")?;
+            fs::write(&llm_config_path, llm_toml_content).context("Failed to write llm.toml")?;
         }
 
         Ok(())

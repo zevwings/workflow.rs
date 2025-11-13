@@ -109,7 +109,11 @@ impl PullRequestLLM {
                 },
                 _ => "OpenAI API key is not configured",
             };
-            anyhow::bail!("{} (provider: {}). Please run 'workflow setup' to configure it", error_msg, provider);
+            anyhow::bail!(
+                "{} (provider: {}). Please run 'workflow setup' to configure it",
+                error_msg,
+                provider
+            );
         }
 
         Ok(())

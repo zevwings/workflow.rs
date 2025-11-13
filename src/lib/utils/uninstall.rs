@@ -15,16 +15,14 @@ impl Uninstall {
         // 删除 workflow.toml
         if let Ok(workflow_config_path) = ConfigPaths::workflow_config() {
             if workflow_config_path.exists() {
-                fs::remove_file(&workflow_config_path)
-                    .context("Failed to remove workflow.toml")?;
+                fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
             }
         }
 
         // 删除 llm.toml
         if let Ok(llm_config_path) = ConfigPaths::llm_config() {
             if llm_config_path.exists() {
-                fs::remove_file(&llm_config_path)
-                    .context("Failed to remove llm.toml")?;
+                fs::remove_file(&llm_config_path).context("Failed to remove llm.toml")?;
             }
         }
 

@@ -532,11 +532,9 @@ impl GitHub {
     /// 创建 GitHub API 请求的 headers（内部方法）
     fn create_headers() -> Result<HeaderMap> {
         let settings = Settings::get();
-        let token = settings
-            .github
-            .api_token
-            .as_ref()
-            .context("GitHub API token is not configured. Please run 'workflow setup' to configure it")?;
+        let token = settings.github.api_token.as_ref().context(
+            "GitHub API token is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         let mut headers = HeaderMap::new();
         headers.insert(

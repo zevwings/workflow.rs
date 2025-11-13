@@ -60,22 +60,17 @@ impl PlatformProvider for Codeup {
         target_branch: Option<&str>,
     ) -> Result<String> {
         let settings = Settings::get();
-        let project_id = settings
-            .codeup
-            .project_id
-            .context("Codeup project ID is not configured. Please run 'workflow setup' to configure it")?;
+        let project_id = settings.codeup.project_id.context(
+            "Codeup project ID is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
-        let csrf_token = settings
-            .codeup
-            .csrf_token
-            .as_ref()
-            .context("Codeup CSRF token is not configured. Please run 'workflow setup' to configure it")?;
+        let csrf_token = settings.codeup.csrf_token.as_ref().context(
+            "Codeup CSRF token is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
-        let cookie = settings
-            .codeup
-            .cookie
-            .as_ref()
-            .context("Codeup cookie is not configured. Please run 'workflow setup' to configure it")?;
+        let cookie = settings.codeup.cookie.as_ref().context(
+            "Codeup cookie is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         let target_branch = target_branch.unwrap_or("develop");
 
@@ -123,11 +118,9 @@ impl PlatformProvider for Codeup {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         let settings = Settings::get();
-        let csrf_token = settings
-            .codeup
-            .csrf_token
-            .as_ref()
-            .context("Codeup CSRF token is not configured. Please run 'workflow setup' to configure it")?;
+        let csrf_token = settings.codeup.csrf_token.as_ref().context(
+            "Codeup CSRF token is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         // 先获取 PR 信息以确定实际的 PR ID（可能是从 URL 提取的数字）
         let actual_pull_request_id = if pull_request_id.parse::<u64>().is_ok() {
@@ -351,11 +344,9 @@ impl PlatformProvider for Codeup {
     fn close_pull_request(pull_request_id: &str) -> Result<()> {
         let (project_id, cookie) = Self::get_env_vars()?;
         let settings = Settings::get();
-        let csrf_token = settings
-            .codeup
-            .csrf_token
-            .as_ref()
-            .context("Codeup CSRF token is not configured. Please run 'workflow setup' to configure it")?;
+        let csrf_token = settings.codeup.csrf_token.as_ref().context(
+            "Codeup CSRF token is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         // 先获取 PR 信息以确定实际的 PR ID
         let actual_pull_request_id = if pull_request_id.parse::<u64>().is_ok() {
@@ -431,16 +422,17 @@ impl Codeup {
     /// 从 TOML 配置文件读取 project_id 和 cookie
     fn get_env_vars() -> Result<(u64, String)> {
         let settings = Settings::get();
-        let project_id = settings
-            .codeup
-            .project_id
-            .context("Codeup project ID is not configured. Please run 'workflow setup' to configure it")?;
+        let project_id = settings.codeup.project_id.context(
+            "Codeup project ID is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         let cookie = settings
             .codeup
             .cookie
             .as_ref()
-            .context("Codeup cookie is not configured. Please run 'workflow setup' to configure it")?
+            .context(
+                "Codeup cookie is not configured. Please run 'workflow setup' to configure it",
+            )?
             .clone();
 
         Ok((project_id, cookie))
