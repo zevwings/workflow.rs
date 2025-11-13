@@ -1,4 +1,4 @@
-use crate::{log_break, log_info, log_success, log_warning, Clipboard, Proxy};
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Clipboard, Proxy};
 use anyhow::{Context, Result};
 
 /// 代理检查命令
@@ -8,7 +8,7 @@ impl ProxyCommand {
     /// 检查代理状态和配置
     pub fn check() -> Result<()> {
         // 1. 获取系统代理设置
-        log_info!("Reading system proxy settings...");
+        log_debug!("Reading system proxy settings...");
         let proxy_info =
             Proxy::get_system_proxy().context("Failed to read system proxy settings")?;
 
@@ -77,7 +77,7 @@ impl ProxyCommand {
 
     /// 开启代理（设置环境变量）
     pub fn on() -> Result<()> {
-        log_info!("Reading system proxy settings...");
+        log_debug!("Reading system proxy settings...");
         let result = Proxy::enable_proxy().context("Failed to enable proxy")?;
 
         if result.already_configured {

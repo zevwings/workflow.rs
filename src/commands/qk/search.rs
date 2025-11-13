@@ -80,7 +80,7 @@ impl SearchCommand {
                     if let Some(url) = entry.url {
                         log_info!("URL: {}, ID: {}", url, id);
                     } else {
-                        log_info!("ID: {} (URL not found)", id);
+                        log_debug!("ID: {} (URL not found)", id);
                     }
                 }
             }
@@ -97,7 +97,7 @@ impl SearchCommand {
                     if let Some(url) = entry.url {
                         log_info!("URL: {}, ID: {}", url, id);
                     } else {
-                        log_info!("ID: {} (URL not found)", id);
+                        log_debug!("ID: {} (URL not found)", id);
                     }
                 }
             }

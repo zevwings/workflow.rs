@@ -2,7 +2,8 @@
 //! 删除 Workflow CLI 的所有配置
 
 use crate::{
-    log_break, log_info, log_success, log_warning, Clipboard, Completion, Proxy, Shell, Uninstall,
+    log_break, log_debug, log_info, log_success, log_warning, Clipboard, Completion, Proxy, Shell,
+    Uninstall,
 };
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
@@ -79,7 +80,7 @@ impl UninstallCommand {
                     }
                     if !need_sudo.is_empty() {
                         // 自动使用 sudo 删除需要权限的文件
-                        log_info!("  Some files require sudo privileges, using sudo to remove...");
+                        log_debug!("  Some files require sudo privileges, using sudo to remove...");
                         for binary_path in &need_sudo {
                             match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                 Ok(_) => {

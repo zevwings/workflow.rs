@@ -8,7 +8,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::json;
 
 use super::types::LLMRequestParams;
-use crate::{log_debug};
+use crate::log_debug;
 use crate::{
     http::HttpResponse,
     settings::defaults::{default_llm_model, default_response_format},

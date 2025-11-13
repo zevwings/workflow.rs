@@ -1,6 +1,7 @@
 use crate::commands::check;
 use crate::{
-    log_error, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+    log_debug, log_error, log_info, log_success, log_warning, Codeup, Git, GitHub,
+    PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
@@ -292,7 +293,7 @@ impl PullRequestIntegrateCommand {
             source_branch,
             remote_url.as_deref(),
         )? {
-            log_info!("Found PR #{} for source branch '{}'", pr_id, source_branch);
+            log_debug!("Found PR #{} for source branch '{}'", pr_id, source_branch);
             log_info!("Closing PR #{}...", pr_id);
 
             match repo_type {

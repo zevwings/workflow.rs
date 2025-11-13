@@ -6,6 +6,7 @@
 //! - 删除 completion 配置和文件
 //! - 获取 completion 文件列表
 
+use crate::log_debug;
 use crate::log_info;
 use crate::log_success;
 use crate::ShellInfo;
@@ -235,7 +236,7 @@ impl Completion {
         if removed_count > 0 {
             log_info!("  Completion script files removed");
         } else {
-            log_info!("  Completion script files not found (may not be installed)");
+            log_debug!("  Completion script files not found (may not be installed)");
         }
 
         Ok(removed_count)
