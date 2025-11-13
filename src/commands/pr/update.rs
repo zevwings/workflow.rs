@@ -55,7 +55,7 @@ impl PullRequestUpdateCommand {
         // 获取 PR 标题
         let title = detect_repo_type(
             |repo_type| match repo_type {
-                RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_title(&pr_id),
+                RepoType::GitHub => GitHub::get_pull_request_title(&pr_id),
                 RepoType::Codeup => Codeup::get_pull_request_title(&pr_id),
                 RepoType::Unknown => Ok("".to_string()),
             },

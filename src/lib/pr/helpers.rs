@@ -203,7 +203,7 @@ pub fn transform_to_branch_name(s: &str) -> String {
 /// // 获取当前分支的 PR ID
 /// let pr_id = detect_repo_type(
 ///     |repo_type| match repo_type {
-///         RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request(),
+///         RepoType::GitHub => GitHub::get_current_branch_pull_request(),
 ///         RepoType::Codeup => Codeup::get_current_branch_pull_request(),
 ///         RepoType::Unknown => Ok(None),
 ///     },
@@ -238,7 +238,7 @@ pub fn get_current_branch_pr_id() -> Result<Option<String>> {
     match repo_type {
         RepoType::GitHub => {
             use super::github::GitHub;
-            <GitHub as PlatformProvider>::get_current_branch_pull_request()
+            GitHub::get_current_branch_pull_request()
         }
         RepoType::Codeup => {
             use super::codeup::Codeup;

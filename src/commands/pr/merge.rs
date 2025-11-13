@@ -51,7 +51,7 @@ impl PullRequestMergeCommand {
         let status = detect_repo_type(
             |repo_type| match repo_type {
                 RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)
+                    GitHub::get_pull_request_status(pull_request_id)
                 }
                 RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
                 RepoType::Unknown => {
@@ -77,7 +77,7 @@ impl PullRequestMergeCommand {
         detect_repo_type(
             |repo_type| match repo_type {
                 RepoType::GitHub => {
-                    match <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true) {
+                    match GitHub::merge_pull_request(pull_request_id, true) {
                         Ok(()) => {
                             log_success!("PR merged successfully");
                             Ok(true)
@@ -171,7 +171,7 @@ impl PullRequestMergeCommand {
         let title = detect_repo_type(
             |repo_type| match repo_type {
                 RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::get_pull_request_title(pull_request_id)
+                    GitHub::get_pull_request_title(pull_request_id)
                 }
                 RepoType::Codeup => Codeup::get_pull_request_title(pull_request_id),
                 RepoType::Unknown => Ok("".to_string()),

@@ -625,7 +625,7 @@ impl PullRequestCreateCommand {
             log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
             detect_repo_type(
                 |repo_type| match repo_type {
-                    RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_url(&pr_id),
+                    RepoType::GitHub => GitHub::get_pull_request_url(&pr_id),
                     RepoType::Codeup => Codeup::get_pull_request_url(&pr_id),
                     RepoType::Unknown => {
                         anyhow::bail!(

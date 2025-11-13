@@ -271,7 +271,7 @@ impl PullRequestIntegrateCommand {
 
             match detect_repo_type(
                 |repo_type| match repo_type {
-                    RepoType::GitHub => <GitHub as PlatformProvider>::close_pull_request(&pr_id),
+                    RepoType::GitHub => GitHub::close_pull_request(&pr_id),
                     RepoType::Codeup => Codeup::close_pull_request(&pr_id),
                     RepoType::Unknown => {
                         log_warning!("Unknown repository type, cannot close PR");

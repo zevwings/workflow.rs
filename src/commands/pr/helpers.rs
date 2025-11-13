@@ -34,7 +34,7 @@ pub fn resolve_pull_request_id(
 
     // 从当前分支获取 PR
     let pr_id = match repo_type {
-        RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
+        RepoType::GitHub => GitHub::get_current_branch_pull_request()?,
         RepoType::Codeup => Codeup::get_current_branch_pull_request()?,
         _ => {
             anyhow::bail!(

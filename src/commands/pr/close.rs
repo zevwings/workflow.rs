@@ -68,7 +68,7 @@ impl PullRequestCloseCommand {
         let status = detect_repo_type(
             |repo_type| match repo_type {
                 RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)
+                    GitHub::get_pull_request_status(pull_request_id)
                 }
                 RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
                 RepoType::Unknown => {
@@ -98,7 +98,7 @@ impl PullRequestCloseCommand {
         detect_repo_type(
             |repo_type| match repo_type {
                 RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::close_pull_request(pull_request_id)
+                    GitHub::close_pull_request(pull_request_id)
                         .context("Failed to close PR via GitHub API")?;
                     log_success!("PR closed successfully");
                     Ok(())
