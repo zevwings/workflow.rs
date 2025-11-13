@@ -125,7 +125,7 @@ pub fn get_base_url() -> Result<String> {
 
     if base_url.is_empty() {
         anyhow::bail!(
-            "JIRA_SERVICE_ADDRESS environment variable is not set. \
+            "Jira service address is not configured. \
             Please run 'workflow setup' to configure it."
         );
     }

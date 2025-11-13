@@ -96,20 +96,20 @@ impl PullRequestLLM {
 
         if !api_key_set {
             let error_msg = match provider {
-                "openai" => "LLM_OPENAI_KEY environment variable not set",
-                "deepseek" => "LLM_DEEPSEEK_KEY environment variable not set",
+                "openai" => "OpenAI API key is not configured",
+                "deepseek" => "DeepSeek API key is not configured",
                 "proxy" => match (
                     llm_settings.llm_proxy_key.is_none(),
                     llm_settings.llm_proxy_url.is_none(),
                 ) {
-                    (true, true) => "LLM_PROXY_KEY and LLM_PROXY_URL environment variables not set",
-                    (true, false) => "LLM_PROXY_KEY environment variable not set",
-                    (false, true) => "LLM_PROXY_URL environment variable not set",
+                    (true, true) => "LLM proxy key and URL are not configured",
+                    (true, false) => "LLM proxy key is not configured",
+                    (false, true) => "LLM proxy URL is not configured",
                     (false, false) => unreachable!(),
                 },
-                _ => "LLM_OPENAI_KEY environment variable not set",
+                _ => "OpenAI API key is not configured",
             };
-            anyhow::bail!("{} (provider: {})", error_msg, provider);
+            anyhow::bail!("{} (provider: {}). Please run 'workflow setup' to configure it", error_msg, provider);
         }
 
         Ok(())

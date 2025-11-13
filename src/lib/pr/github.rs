@@ -536,7 +536,7 @@ impl GitHub {
             .github
             .api_token
             .as_ref()
-            .context("GITHUB_API_TOKEN environment variable not set")?;
+            .context("GitHub API token is not configured. Please run 'workflow setup' to configure it")?;
 
         let mut headers = HeaderMap::new();
         headers.insert(

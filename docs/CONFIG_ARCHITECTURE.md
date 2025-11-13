@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-本文档描述 Workflow CLI 的配置管理模块架构，包括交互式配置设置和配置查看功能。这些命令负责管理 Workflow CLI 的所有环境变量配置。
+本文档描述 Workflow CLI 的配置管理模块架构，包括交互式配置设置和配置查看功能。这些命令负责管理 Workflow CLI 的所有 TOML 配置文件。
 
 ---
 
@@ -18,15 +18,17 @@ src/main.rs
 
 ```
 src/commands/
-├── setup.rs        # 初始化设置命令（513 行）
-└── config.rs       # 配置查看命令（125 行）
+├── setup.rs        # 初始化设置命令（~686 行）
+└── config.rs       # 配置查看命令（~131 行）
 ```
 
 ### 依赖模块
 
-- **`lib/utils/env.rs`**：环境变量读写管理
-- **`lib/utils/shell.rs`**：Shell 检测和配置管理
-- **`lib/settings/`**：配置管理（环境变量读取）
+- **`lib/settings/`**：TOML 配置管理
+  - `settings.rs`：配置结构体和加载逻辑
+  - `paths.rs`：配置文件路径管理
+  - `defaults.rs`：默认值辅助函数
+- **`lib/utils/shell.rs`**：Shell 检测和配置管理（仅用于 completion）
 
 ---
 
@@ -41,7 +43,12 @@ main.rs (CLI 入口，参数解析)
   ↓
 commands/setup.rs 或 commands/config.rs (命令封装层)
   ↓
-lib/utils/env.rs (核心业务逻辑层)
+lib/settings/ (TOML 配置管理)
+  ├── paths.rs (配置文件路径)
+  ├── settings.rs (配置加载和结构体)
+  └── defaults.rs (默认值)
+  ↓
+~/.workflow/config/workflow.toml 和 llm.toml (配置文件)
 ```
 
 ---
@@ -61,8 +68,9 @@ main.rs::Commands::Setup
   ↓
 commands/setup.rs::SetupCommand::run()
   ↓
-  1. EnvFile::load_merged()                  # 加载现有配置
-  2. collect_config()                         # 收集配置信息（交互式）
+  1. Settings::get()                          # 加载现有配置（从 TOML）
+  2. load_existing_config()                   # 转换为 CollectedConfig
+  3. collect_config()                          # 收集配置信息（交互式）
      ├─ 用户配置（EMAIL）
      ├─ Jira 配置（地址、Token）
      ├─ GitHub 配置（Token、分支前缀）
@@ -70,21 +78,22 @@ commands/setup.rs::SetupCommand::run()
      ├─ 代理配置（是否禁用检查）
      ├─ LLM 配置（提供商、API Key）
      └─ Codeup 配置（项目 ID、CSRF Token、Cookie）
-  3. EnvFile::save()                          # 保存配置到 shell 配置文件
-  4. std::env::set_var()                      # 更新当前进程环境变量
-  5. Shell::reload_config()                   # 重新加载 shell 配置
+  4. save_config()                             # 保存配置到 TOML 文件
+     ├─ workflow.toml (主配置)
+     └─ llm.toml (LLM 配置，如果存在)
+  5. verify_config()                            # 验证配置（可选）
 ```
 
 ### 功能说明
 
 1. **智能配置处理**：
-   - 自动检测现有配置（从 shell 配置文件和当前环境变量）
+   - 自动检测现有配置（从 TOML 配置文件）
    - 支持保留现有值（按 Enter 跳过）
    - 支持覆盖现有值（输入新值）
 
 2. **配置分组**：
-   - **必填项**：用户配置（EMAIL）、Jira 配置
-   - **可选项**：GitHub、日志、代理、LLM、Codeup 配置
+   - **必填项**：用户配置（EMAIL）、Jira 配置、GitHub 配置
+   - **可选项**：日志、代理、LLM、Codeup 配置
 
 3. **交互式输入**：
    - 使用 `dialoguer` 库提供友好的交互界面
@@ -92,9 +101,10 @@ commands/setup.rs::SetupCommand::run()
    - 敏感信息掩码显示
 
 4. **配置保存**：
-   - 保存到 shell 配置文件（`~/.zshrc` 或 `~/.bashrc`）
-   - 使用 `EnvFile::save()` 方法统一管理
-   - 自动更新当前进程环境变量
+   - 保存到 TOML 配置文件（`~/.workflow/config/workflow.toml`）
+   - LLM 配置单独保存到 `~/.workflow/config/llm.toml`（如果配置了 LLM）
+   - 使用 `toml` crate 进行序列化
+   - 配置文件不存在时自动创建目录
 
 ### 关键步骤说明
 
@@ -102,16 +112,19 @@ commands/setup.rs::SetupCommand::run()
    - 按逻辑分组收集配置项
    - 每个配置项都有默认值和验证逻辑
    - 支持跳过可选配置
+   - 从 `Settings::get()` 读取现有配置作为默认值
 
 2. **配置验证**：
    - 邮箱格式验证
    - URL 格式验证
    - 必填项检查
+   - 配置保存后可选验证（Jira、GitHub、Codeup）
 
 3. **配置保存**：
-   - 统一保存到 shell 配置文件
-   - 使用 Workflow 配置块管理
-   - 自动重新加载配置
+   - 使用 `ConfigPaths` 获取配置文件路径
+   - 使用 `toml::to_string_pretty()` 序列化为 TOML 格式
+   - 主配置保存到 `workflow.toml`
+   - LLM 配置单独保存到 `llm.toml`（如果存在）
 
 ---
 
@@ -130,24 +143,27 @@ main.rs::Commands::Config
   ↓
 commands/config.rs::ConfigCommand::show()
   ↓
-  1. EnvFile::get_shell_config_path()        # 获取配置文件路径
-  2. EnvFile::load_merged()                  # 加载合并后的配置
-  3. print_all_config()                       # 打印所有配置
+  1. ConfigPaths::workflow_config()          # 获取 workflow.toml 路径
+  2. ConfigPaths::llm_config()               # 获取 llm.toml 路径
+  3. Settings::get()                         # 加载配置（从 TOML）
+  4. print_all_config()                       # 打印所有配置
      ├─ 敏感信息掩码（Token、Key 等）
      ├─ 布尔值转换（Yes/No）
-     └─ 按逻辑顺序显示
+     └─ 按逻辑分组显示
 ```
 
 ### 功能说明
 
 1. **配置加载**：
-   - 从多个来源加载配置（当前环境变量 > shell 配置文件）
-   - 使用 `EnvFile::load_merged()` 方法
+   - 从 TOML 配置文件加载（`workflow.toml` 和 `llm.toml`）
+   - 使用 `Settings::get()` 方法（带缓存，使用 `OnceLock`）
+   - 配置文件不存在时使用默认值
 
 2. **配置显示**：
    - 按逻辑分组和顺序显示
    - 敏感信息自动掩码（Token、Key 等）
    - 布尔值转换为可读格式（Yes/No）
+   - 显示配置文件路径
 
 3. **配置分组**：
    - 用户配置
@@ -179,11 +195,24 @@ commands/config.rs::ConfigCommand::show()
   ↓
 命令层处理（验证、格式化）
   ↓
-EnvFile 管理（读取/写入 shell 配置文件）
+Settings 管理（读取/写入 TOML 配置文件）
+  ├── workflow.toml (主配置)
+  └── llm.toml (LLM 配置)
   ↓
-环境变量更新（当前进程）
+配置缓存（OnceLock，单次加载）
   ↓
-Shell 配置重新加载
+应用使用配置
+```
+
+### 配置文件结构
+
+```
+~/.workflow/
+└── config/
+    ├── workflow.toml      # 主配置文件
+    ├── llm.toml           # LLM 配置（可选）
+    ├── jira-status.toml   # Jira 状态配置
+    └── jira-users.toml    # Jira 用户缓存
 ```
 
 ---
@@ -192,9 +221,18 @@ Shell 配置重新加载
 
 ### 工具模块集成
 
-- **`lib/utils/env.rs`**：环境变量读写管理
-- **`lib/utils/shell.rs`**：Shell 检测和配置管理
-- **`lib/settings/`**：配置管理（环境变量读取）
+- **`lib/settings/`**：TOML 配置管理
+  - `settings.rs`：配置结构体定义和加载逻辑
+  - `paths.rs`：统一管理配置文件路径
+  - `defaults.rs`：默认值辅助函数
+- **`lib/utils/shell.rs`**：Shell 检测和配置管理（仅用于 completion）
+
+### 配置文件位置
+
+- **主配置**：`~/.workflow/config/workflow.toml`
+- **LLM 配置**：`~/.workflow/config/llm.toml`（可选）
+- **Jira 状态配置**：`~/.workflow/config/jira-status.toml`
+- **Jira 用户缓存**：`~/.workflow/config/jira-users.toml`
 
 ---
 
@@ -206,7 +244,11 @@ Shell 配置重新加载
 
 ### 2. 配置管理模式
 
-使用 `EnvFile` 统一管理环境变量的读写，支持从多个来源加载和合并。
+使用 `Settings` 结构体和 `ConfigPaths` 统一管理 TOML 配置文件的读写：
+- **单例模式**：使用 `OnceLock` 实现配置的单次加载和缓存
+- **路径管理**：使用 `ConfigPaths` 统一管理所有配置文件路径
+- **默认值**：使用 `#[serde(default)]` 和 `Default` trait 提供默认值
+- **分离存储**：主配置和 LLM 配置分别存储在不同的文件中
 
 ---
 
@@ -222,6 +264,8 @@ Shell 配置重新加载
 
 - **配置加载失败**：使用默认值或提示用户运行 `setup`
 - **文件操作失败**：提供清晰的错误提示和手动操作建议
+- **配置文件不存在**：自动使用默认值，不影响程序运行
+- **TOML 解析失败**：使用默认值，并记录错误（如果启用日志）
 
 ---
 
@@ -229,9 +273,13 @@ Shell 配置重新加载
 
 ### 添加新配置项
 
-1. 在 `setup.rs` 的 `collect_config()` 方法中添加配置收集逻辑
-2. 在 `config.rs` 的 `print_all_config()` 方法中添加配置显示逻辑
-3. 在 `lib/utils/env.rs` 的 `get_workflow_env_keys()` 方法中添加环境变量键
+1. 在 `lib/settings/settings.rs` 中添加新的 `XXSettings` 结构体
+2. 在 `Settings` 结构体中添加新字段（使用 `#[serde(default)]`）
+3. 在 `setup.rs` 的 `CollectedConfig` 结构体中添加字段
+4. 在 `setup.rs` 的 `collect_config()` 方法中添加配置收集逻辑
+5. 在 `setup.rs` 的 `save_config()` 方法中添加保存逻辑
+6. 在 `config.rs` 的 `print_all_config()` 方法中添加配置显示逻辑
+7. 如果需要默认值，在 `lib/settings/defaults.rs` 中添加辅助函数
 
 ---
 

@@ -1,7 +1,7 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{log_break, log_info, log_success, log_warning, Completion, EnvFile, Shell, Uninstall};
+use crate::{log_break, log_info, log_success, log_warning, Completion, Shell, Uninstall};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use duct::cmd;
@@ -16,15 +16,9 @@ impl UninstallCommand {
         log_break!();
         log_info!("This will remove all Workflow CLI configuration and binaries.");
         log_info!("This includes:");
-        log_info!("  - All environment variables (EMAIL, JIRA_API_TOKEN, etc.)");
-        log_info!("  - The entire Workflow CLI configuration block");
+        log_info!("  - TOML configuration files (workflow.toml, llm.toml)");
         log_info!("  - Binary files: workflow, pr, qk, install");
         log_info!("  - Shell completion scripts");
-        log_break!();
-
-        let shell_config_path = EnvFile::get_shell_config_path()
-            .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
-        log_info!("Shell config: {:?}", shell_config_path);
         log_break!();
 
         // 显示将要删除的二进制文件
@@ -63,9 +57,9 @@ impl UninstallCommand {
             return Ok(());
         }
 
-        // 第二步确认：是否删除环境变量配置
+        // 第二步确认：是否删除 TOML 配置文件
         let remove_config = Confirm::new()
-            .with_prompt("Remove environment variables and configuration from shell config file?")
+            .with_prompt("Remove TOML config files (workflow.toml, llm.toml)?")
             .default(true)
             .interact()
             .context("Failed to get confirmation for removing configuration")?;
@@ -171,6 +165,8 @@ impl UninstallCommand {
             log_info!("  Removing configuration...");
             Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
             log_info!("  Configuration removed successfully");
+            log_info!("  - workflow.toml removed");
+            log_info!("  - llm.toml removed");
         } else {
             log_break!();
             log_info!("  Configuration will be kept (not removed).");
@@ -180,9 +176,7 @@ impl UninstallCommand {
         log_success!("  Uninstall completed successfully!");
         if remove_config {
             log_break!();
-            log_info!(
-                "All Workflow CLI configuration has been removed from your shell config file."
-            );
+            log_info!("All Workflow CLI configuration has been removed from TOML files.");
         } else {
             log_info!("Workflow CLI configuration has been kept (not removed).");
         }

@@ -50,11 +50,11 @@ pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let api_key = llm_settings
         .llm_proxy_key
         .as_ref()
-        .context("LLM_PROXY_KEY environment variable not set")?;
+        .context("LLM proxy key is not configured. Please run 'workflow setup' to configure it")?;
     let base_url = llm_settings
         .llm_proxy_url
         .as_ref()
-        .context("LLM_PROXY_URL environment variable not set")?;
+        .context("LLM proxy URL is not configured. Please run 'workflow setup' to configure it")?;
 
     let client = HttpClient::new()?;
     let url = format!("{}/chat/completions", base_url.trim_end_matches('/'));

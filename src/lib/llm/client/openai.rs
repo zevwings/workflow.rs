@@ -50,7 +50,7 @@ pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let api_key = llm_settings
         .openai_key
         .as_ref()
-        .context("LLM_OPENAI_KEY environment variable not set")?;
+        .context("OpenAI API key is not configured. Please run 'workflow setup' to configure it")?;
 
     let client = HttpClient::new()?;
     let url = "https://api.openai.com/v1/chat/completions";

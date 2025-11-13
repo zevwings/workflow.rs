@@ -50,7 +50,7 @@ pub fn call_llm(params: LLMRequestParams) -> Result<String> {
     let api_key = llm_settings
         .deepseek_key
         .as_ref()
-        .context("LLM_DEEPSEEK_KEY environment variable not set")?;
+        .context("DeepSeek API key is not configured. Please run 'workflow setup' to configure it")?;
 
     let client = HttpClient::new()?;
     let url = "https://api.deepseek.com/v1/chat/completions";

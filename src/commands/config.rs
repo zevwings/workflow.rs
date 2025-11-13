@@ -1,125 +1,128 @@
 //! 配置查看命令
-//! 显示当前的环境变量配置
+//! 显示当前的 TOML 配置文件
 
-use crate::{log_break, log_info, log_warning, mask_sensitive_value, EnvFile};
+use crate::settings::{paths::ConfigPaths, settings::Settings};
+use crate::{log_break, log_info, log_warning, mask_sensitive_value};
 use anyhow::Result;
-use std::collections::{HashMap, HashSet};
 
 /// 配置查看命令
 pub struct ConfigCommand;
 
 impl ConfigCommand {
-    /// 显示当前配置（从环境变量读取）
+    /// 显示当前配置（从 TOML 文件读取）
     pub fn show() -> Result<()> {
         log_break!('=', 40, "Current Configuration");
         log_break!();
 
         // 显示配置文件路径
-        let shell_config_path = EnvFile::get_shell_config_path()
-            .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
-        log_info!("Shell config: {:?}\n", shell_config_path);
+        let workflow_config_path = ConfigPaths::workflow_config()
+            .map_err(|_| anyhow::anyhow!("Failed to get workflow config path"))?;
+        let llm_config_path = ConfigPaths::llm_config()
+            .map_err(|_| anyhow::anyhow!("Failed to get llm config path"))?;
 
-        // 从多个来源加载环境变量：当前环境变量 > shell 配置文件
-        let env_var_keys = EnvFile::get_workflow_env_keys();
-        let env_vars = EnvFile::load_merged(&env_var_keys);
+        log_info!("Workflow config: {:?}", workflow_config_path);
+        log_info!("LLM config: {:?}\n", llm_config_path);
+
+        // 从 TOML 文件加载配置
+        let settings = Settings::get();
 
         // 检查是否有配置
-        if env_vars.is_empty() {
+        if Self::is_empty_config(settings) {
             log_warning!("  No configuration found!");
             log_info!("   Run 'workflow setup' to initialize configuration.");
             return Ok(());
         }
 
-        // 显示所有配置（统一显示为环境变量）
+        // 显示所有配置
         log_break!();
-        log_break!('-', 100, "Environment Variables");
-        Self::print_all_config(&env_vars)?;
+        log_break!('-', 100, "Configuration");
+        Self::print_all_config(settings)?;
 
         Ok(())
     }
 
-    /// 打印所有配置（统一显示为环境变量）
-    fn print_all_config(env_vars: &HashMap<String, String>) -> Result<()> {
-        // 定义敏感键（需要隐藏）
-        let sensitive_keys: HashSet<&str> = [
-            "JIRA_API_TOKEN",
-            "LLM_OPENAI_KEY",
-            "LLM_PROXY_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-        ]
-        .iter()
-        .copied()
-        .collect();
+    /// 检查配置是否为空
+    fn is_empty_config(settings: &Settings) -> bool {
+        settings.user.email.is_none()
+            && settings.jira.api_token.is_none()
+            && settings.github.api_token.is_none()
+            && settings.codeup.project_id.is_none()
+            && settings.llm.is_none()
+    }
 
-        // 定义需要显示的键（按逻辑分组和顺序）
-        let display_order = vec![
-            // 用户配置
-            "EMAIL",
-            // Jira 配置
-            "JIRA_SERVICE_ADDRESS",
-            "JIRA_API_TOKEN",
-            // GitHub 配置
-            "GITHUB_BRANCH_PREFIX",
-            // 日志配置
-            "LOG_OUTPUT_FOLDER_NAME",
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            // 代理配置
-            "DISABLE_CHECK_PROXY",
-            // LLM 配置
-            "LLM_PROVIDER",
-            "LLM_OPENAI_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "LLM_PROXY_URL",
-            "LLM_PROXY_KEY",
-            // Codeup 配置
-            "CODEUP_PROJECT_ID",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-        ];
+    /// 打印所有配置
+    fn print_all_config(settings: &Settings) -> Result<()> {
+        // 用户配置
+        if let Some(ref email) = settings.user.email {
+            log_info!("  Email: {}", email);
+        }
 
-        // 按顺序显示
-        for key in &display_order {
-            if let Some(value) = env_vars.get(*key) {
-                let display_value = if sensitive_keys.contains(key) {
-                    mask_sensitive_value(value)
-                } else {
-                    // 布尔值转换为可读格式
-                    match key {
-                        &"LOG_DELETE_WHEN_OPERATION_COMPLETED" | &"DISABLE_CHECK_PROXY" => {
-                            if value == "1" {
-                                "Yes".to_string()
-                            } else {
-                                "No".to_string()
-                            }
-                        }
-                        _ => value.clone(),
-                    }
-                };
-                log_info!("  {}: {}", key, display_value);
+        // Jira 配置
+        if let Some(ref address) = settings.jira.service_address {
+            log_info!("  Jira Service Address: {}", address);
+        }
+        if let Some(ref token) = settings.jira.api_token {
+            log_info!("  Jira API Token: {}", mask_sensitive_value(token));
+        }
+
+        // GitHub 配置
+        if let Some(ref token) = settings.github.api_token {
+            log_info!("  GitHub API Token: {}", mask_sensitive_value(token));
+        }
+        if let Some(ref prefix) = settings.github.branch_prefix {
+            log_info!("  GitHub Branch Prefix: {}", prefix);
+        }
+
+        // 日志配置
+        log_info!("  Log Output Folder Name: {}", settings.log.output_folder_name);
+        log_info!(
+            "  Delete Logs When Completed: {}",
+            if settings.log.delete_when_completed {
+                "Yes"
+            } else {
+                "No"
+            }
+        );
+        if let Some(ref dir) = settings.log.download_base_dir {
+            log_info!("  Download Base Dir: {}", dir);
+        }
+
+        // 代理配置
+        log_info!(
+            "  Disable Proxy Check: {}",
+            if settings.proxy.disable_check {
+                "Yes"
+            } else {
+                "No"
+            }
+        );
+
+        // LLM 配置
+        if let Some(ref llm) = settings.llm {
+            log_info!("  LLM Provider: {}", llm.llm_provider);
+            if let Some(ref key) = llm.openai_key {
+                log_info!("  LLM OpenAI Key: {}", mask_sensitive_value(key));
+            }
+            if let Some(ref key) = llm.deepseek_key {
+                log_info!("  LLM DeepSeek Key: {}", mask_sensitive_value(key));
+            }
+            if let Some(ref url) = llm.llm_proxy_url {
+                log_info!("  LLM Proxy URL: {}", url);
+            }
+            if let Some(ref key) = llm.llm_proxy_key {
+                log_info!("  LLM Proxy Key: {}", mask_sensitive_value(key));
             }
         }
 
-        // 显示其他未列出的键（如果有）
-        let display_order_set: HashSet<&str> = display_order.iter().copied().collect();
-        let mut other_keys: Vec<&String> = env_vars
-            .keys()
-            .filter(|k| !display_order_set.contains(k.as_str()))
-            .collect();
-        if !other_keys.is_empty() {
-            other_keys.sort();
-            log_break!();
-            log_info!("  Other variables:");
-            for key in &other_keys {
-                let value = env_vars.get(*key).unwrap();
-                let display_value = if sensitive_keys.contains(key.as_str()) {
-                    mask_sensitive_value(value)
-                } else {
-                    value.clone()
-                };
-                log_info!("    {}: {}", key, display_value);
-            }
+        // Codeup 配置
+        if let Some(id) = settings.codeup.project_id {
+            log_info!("  Codeup Project ID: {}", id);
+        }
+        if let Some(ref token) = settings.codeup.csrf_token {
+            log_info!("  Codeup CSRF Token: {}", mask_sensitive_value(token));
+        }
+        if let Some(ref cookie) = settings.codeup.cookie {
+            log_info!("  Codeup Cookie: {}", mask_sensitive_value(cookie));
         }
 
         Ok(())
