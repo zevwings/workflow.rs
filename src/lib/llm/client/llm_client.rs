@@ -8,6 +8,7 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::json;
 
 use super::types::LLMRequestParams;
+use crate::{log_debug};
 use crate::{
     http::HttpResponse,
     settings::defaults::{default_llm_model, default_response_format},
@@ -60,6 +61,11 @@ impl LLMClient {
         // 获取 provider 名称用于错误消息
         let provider = self.get_provider_name()?;
 
+        log_debug!("LLM url: {}", url);
+        log_debug!("LLM payload: {}", payload);
+        log_debug!("LLM headers: {:?}", headers);
+        log_debug!("LLM provider: {}", provider);
+
         // 发送请求
         let mut request = client.post(&url);
 
@@ -76,6 +82,12 @@ impl LLMClient {
         // 转换为 HttpResponse
         let http_response: HttpResponse<serde_json::Value> =
             HttpResponse::from_reqwest_response(response)?;
+
+        log_debug!("LLM response: {:?}", http_response);
+        log_debug!("LLM response data: {:?}", http_response.data);
+        log_debug!("LLM response status: {}", http_response.status);
+        log_debug!("LLM response status text: {}", http_response.status_text);
+        log_debug!("LLM response headers: {:?}", http_response.headers);
 
         // 检查错误
         if !http_response.is_success() {

@@ -32,12 +32,23 @@ impl LogLevel {
     }
 
     /// 获取当前日志级别（从环境变量读取）
+    ///
+    /// 如果未设置环境变量 `WORKFLOW_LOG_LEVEL`：
+    /// - 在 debug 模式下（`cargo build`）默认使用 `Debug` 级别
+    /// - 在 release 模式下（`cargo build --release`）默认使用 `Info` 级别
     fn current() -> Self {
         static LOG_LEVEL: OnceLock<LogLevel> = OnceLock::new();
         *LOG_LEVEL.get_or_init(|| {
             env::var("WORKFLOW_LOG_LEVEL")
                 .map(|s| LogLevel::from_str(&s))
-                .unwrap_or(LogLevel::Info) // 默认 INFO，不输出 DEBUG
+                .unwrap_or_else(|_| {
+                    // 在 debug 模式下自动启用 DEBUG 日志级别
+                    if cfg!(debug_assertions) {
+                        LogLevel::Debug
+                    } else {
+                        LogLevel::Info
+                    }
+                })
         })
     }
 
@@ -232,19 +243,23 @@ macro_rules! log_info {
 /// - `off` 或 `0`: 不输出任何日志
 /// - `error` 或 `1`: 只输出错误
 /// - `warn` 或 `2`: 输出警告和错误
-/// - `info` 或 `3`: 输出信息、警告和错误（默认）
-/// - `debug` 或 `4`: 输出所有日志（包括调试）
+/// - `info` 或 `3`: 输出信息、警告和错误（release 模式默认）
+/// - `debug` 或 `4`: 输出所有日志（包括调试，debug 模式默认）
+///
+/// **注意**: 如果未设置 `WORKFLOW_LOG_LEVEL` 环境变量：
+/// - 在 debug 模式下（`cargo build` 或 `make dev`）会自动启用 DEBUG 级别
+/// - 在 release 模式下（`cargo build --release`）默认使用 INFO 级别
 ///
 /// # Examples
 ///
 /// ```
 /// use workflow::log_debug;
 ///
-/// // 默认情况下（WORKFLOW_LOG_LEVEL=info），这些不会输出
 /// log_debug!("Debug information");
 /// log_debug!("Debug: {} = {}", key, value);
 ///
-/// // 设置 WORKFLOW_LOG_LEVEL=debug 后才会输出
+/// // 在 debug 模式下会自动输出
+/// // 在 release 模式下需要设置 WORKFLOW_LOG_LEVEL=debug 才会输出
 /// ```
 #[macro_export]
 macro_rules! log_debug {
