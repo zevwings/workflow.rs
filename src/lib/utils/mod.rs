@@ -25,6 +25,7 @@
 pub mod browser;
 pub mod clipboard;
 pub mod completion;
+pub mod confirm;
 pub mod env;
 pub mod logger;
 pub mod proxy;
@@ -56,3 +57,6 @@ pub use shell::{Shell, ShellInfo};
 
 // 重新导出 uninstall
 pub use uninstall::Uninstall;
+
+// 重新导出 confirm
+pub use confirm::confirm;

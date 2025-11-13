@@ -1,13 +1,13 @@
 use crate::commands::check;
 use crate::jira::status::JiraStatus;
 use crate::{
-    detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
+    confirm, detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
     log_success, log_warning, validate_jira_ticket_format, Browser, Clipboard, Codeup, Git, GitHub,
     Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input, MultiSelect};
+use dialoguer::{Input, MultiSelect};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -360,7 +360,7 @@ impl PullRequestCreateCommand {
         );
 
         // 检查是否已推送
-        let exists_remote = Git::is_branch_exists_remotely(current_branch)
+        let exists_remote = Git::has_remote_branch(current_branch)
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
@@ -459,18 +459,11 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         log_info!("Branch '{}' already exists on remote.", current_branch);
-        let should_use_current = Confirm::new()
-            .with_prompt(format!(
-                "Create PR for current branch '{}'?",
-                current_branch
-            ))
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation")?;
-
-        if !should_use_current {
-            anyhow::bail!("Operation cancelled.");
-        }
+        confirm(
+            &format!("Create PR for current branch '{}'?", current_branch),
+            true,
+            Some("Operation cancelled."),
+        )?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -492,18 +485,14 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        let should_use_current = Confirm::new()
-            .with_prompt(format!(
+        confirm(
+            &format!(
                 "Push and create PR for current branch '{}'?",
                 current_branch
-            ))
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation")?;
-
-        if !should_use_current {
-            anyhow::bail!("Operation cancelled.");
-        }
+            ),
+            true,
+            Some("Operation cancelled."),
+        )?;
 
         // 推送
         log_success!("Pushing to remote...");
@@ -557,11 +546,14 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = Confirm::new()
-                    .with_prompt(format!("Create PR for current branch '{}'? (otherwise will create new branch '{}')", current_branch, branch_name))
-                    .default(true)
-                    .interact()
-                    .context("Failed to get confirmation")?;
+                let should_use_current = confirm(
+                    &format!(
+                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                        current_branch, branch_name
+                    ),
+                    true,
+                    None,
+                )?;
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR
@@ -581,7 +573,7 @@ impl PullRequestCreateCommand {
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
-                let exists_remote = Git::is_branch_exists_remotely(&current_branch)
+                let exists_remote = Git::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 检查当前分支是否有提交（相对于默认分支）

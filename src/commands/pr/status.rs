@@ -54,9 +54,7 @@ impl PullRequestStatusCommand {
     fn show_pr_info(pr_identifier: &str, _repo_type: &RepoType) -> Result<()> {
         let info = detect_repo_type(
             |repo_type| match repo_type {
-                RepoType::GitHub => {
-                    GitHub::get_pull_request_info(pr_identifier)
-                }
+                RepoType::GitHub => GitHub::get_pull_request_info(pr_identifier),
                 RepoType::Codeup => Codeup::get_pull_request_info(pr_identifier),
                 RepoType::Unknown => {
                     let remote_url =

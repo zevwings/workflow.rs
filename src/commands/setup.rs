@@ -6,9 +6,9 @@ use crate::settings::{
     paths::ConfigPaths,
     settings::Settings,
 };
-use crate::{log_break, log_info, log_success, log_warning};
+use crate::{confirm, log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::{Input, Select};
 use std::fs;
 use toml;
 
@@ -281,11 +281,11 @@ impl SetupCommand {
             }
         );
 
-        let log_delete_when_completed = Confirm::new()
-            .with_prompt(&delete_logs_prompt)
-            .default(existing.log_delete_when_completed)
-            .interact()
-            .context("Failed to get delete logs confirmation")?;
+        let log_delete_when_completed = confirm(
+            &delete_logs_prompt,
+            existing.log_delete_when_completed,
+            None,
+        )?;
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
@@ -481,11 +481,7 @@ impl SetupCommand {
             "Do you use Codeup (Aliyun Code Repository)?".to_string()
         };
 
-        let should_configure_codeup = Confirm::new()
-            .with_prompt(&codeup_confirm_prompt)
-            .default(has_codeup)
-            .interact()
-            .context("Failed to get Codeup confirmation")?;
+        let should_configure_codeup = confirm(&codeup_confirm_prompt, has_codeup, None)?;
 
         let (codeup_project_id, codeup_csrf_token, codeup_cookie) = if should_configure_codeup {
             let codeup_id_prompt = if let Some(ref id) = existing.codeup_project_id {

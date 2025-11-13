@@ -2,8 +2,9 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::{log_success, Codeup, GitHub, PlatformProvider, RepoType};
-use anyhow::{Error, Result};
+use crate::{log_info, log_success, Git};
+use crate::{Codeup, GitHub, PlatformProvider, RepoType};
+use anyhow::{Context, Error, Result};
 
 /// 解析 PR ID（从参数或当前分支）
 ///
@@ -151,4 +152,97 @@ pub fn is_pr_already_closed_error(error: &Error) -> bool {
     }
 
     false
+}
+
+/// 通用的分支清理逻辑
+///
+/// 在 PR 操作（合并、关闭等）后，切换到默认分支并删除当前分支。
+///
+/// # 参数
+///
+/// * `current_branch` - 当前分支名称
+/// * `default_branch` - 默认分支名称（通常是 main 或 master）
+/// * `operation_name` - 操作名称（用于日志消息，如 "PR merge" 或 "PR close"）
+///
+/// # 流程
+///
+/// 1. 检查是否在默认分支（如果是，直接返回）
+/// 2. 更新远程分支信息 (fetch)
+/// 3. 检查并 stash 未提交的更改
+/// 4. 切换到默认分支
+/// 5. 拉取最新代码
+/// 6. 删除本地分支
+/// 7. 恢复 stash
+/// 8. 清理远程分支引用 (prune)
+///
+/// # 错误
+///
+/// 如果任何步骤失败，返回相应的错误信息。
+pub fn cleanup_branch(
+    current_branch: &str,
+    default_branch: &str,
+    operation_name: &str,
+) -> Result<()> {
+    // 如果当前分支已经是默认分支，不需要清理
+    if current_branch == default_branch {
+        log_info!("Already on default branch: {}", default_branch);
+        return Ok(());
+    }
+
+    log_info!("Switching to default branch: {}", default_branch);
+
+    // 1. 更新远程分支信息
+    Git::fetch()?;
+
+    // 2. 检查并 stash 未提交的更改
+    let has_stashed = Git::has_commit()?;
+    if has_stashed {
+        log_info!("Stashing local changes before switching branches...");
+        Git::stash_push(Some(&format!(
+            "Auto-stash before {} cleanup",
+            operation_name
+        )))?;
+    }
+
+    // 3. 切换到默认分支
+    Git::checkout_branch(default_branch)
+        .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
+
+    // 4. 更新本地默认分支
+    Git::pull(default_branch)
+        .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
+
+    // 5. 删除本地分支
+    if Git::has_local_branch(current_branch)? {
+        log_info!("Deleting local branch: {}", current_branch);
+        Git::delete(current_branch, false)
+            .or_else(|_| {
+                log_info!("Branch may not be fully merged, trying force delete...");
+                Git::delete(current_branch, true)
+            })
+            .context("Failed to delete local branch")?;
+        log_success!("Local branch deleted: {}", current_branch);
+    } else {
+        log_info!("Local branch already deleted: {}", current_branch);
+    }
+
+    // 6. 恢复 stash
+    if has_stashed {
+        log_info!("Restoring stashed changes...");
+        let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
+    }
+
+    // 7. 清理远程分支引用
+    if let Err(e) = Git::prune_remote() {
+        log_info!("Warning: Failed to prune remote references: {}", e);
+        log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
+    }
+
+    log_success!(
+        "Cleanup completed: switched to {} and deleted local branch {}",
+        default_branch,
+        current_branch
+    );
+
+    Ok(())
 }

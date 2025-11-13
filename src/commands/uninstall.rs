@@ -2,11 +2,10 @@
 //! 删除 Workflow CLI 的所有配置
 
 use crate::{
-    log_break, log_debug, log_info, log_success, log_warning, Clipboard, Completion, Proxy, Shell,
-    Uninstall,
+    confirm, log_break, log_debug, log_info, log_success, log_warning, Clipboard, Completion,
+    Proxy, Shell, Uninstall,
 };
 use anyhow::{Context, Result};
-use dialoguer::Confirm;
 use duct::cmd;
 
 /// 卸载命令
@@ -49,23 +48,17 @@ impl UninstallCommand {
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
-        let remove_binaries = Confirm::new()
-            .with_prompt("Remove binary files and shell completion scripts?")
-            .default(false)
-            .interact()
-            .context("Failed to get confirmation for removing binaries")?;
-
-        if !remove_binaries {
+        if !confirm(
+            "Remove binary files and shell completion scripts?",
+            false,
+            None,
+        )? {
             log_info!("Uninstall cancelled.");
             return Ok(());
         }
 
         // 第二步确认：是否删除 TOML 配置文件
-        let remove_config = Confirm::new()
-            .with_prompt("Remove TOML config file (workflow.toml)?")
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation for removing configuration")?;
+        let remove_config = confirm("Remove TOML config file (workflow.toml)?", true, None)?;
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {

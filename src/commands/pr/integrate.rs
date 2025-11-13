@@ -1,10 +1,9 @@
 use crate::commands::check;
 use crate::{
-    detect_repo_type, get_current_branch_pr_id, log_debug, log_error, log_info, log_success,
-    log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+    confirm, detect_repo_type, get_current_branch_pr_id, log_debug, log_error, log_info,
+    log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
-use dialoguer::Confirm;
 
 /// PR 分支集成的命令
 #[allow(dead_code)]
@@ -33,14 +32,11 @@ impl PullRequestIntegrateCommand {
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
-            let should_continue = Confirm::new()
-                .with_prompt("Continue anyway?")
-                .default(false)
-                .interact()
-                .context("Failed to get user confirmation")?;
-            if !should_continue {
-                anyhow::bail!("Operation cancelled by user");
-            }
+            confirm(
+                "Continue anyway?",
+                false,
+                Some("Operation cancelled by user"),
+            )?;
         }
 
         // 2. 获取当前分支
@@ -112,7 +108,7 @@ impl PullRequestIntegrateCommand {
             // 推送到远程（如果需要）
             if push {
                 log_success!("Pushing to remote...");
-                let exists_remote = Git::is_branch_exists_remotely(&current_branch)
+                let exists_remote = Git::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
@@ -241,7 +237,7 @@ impl PullRequestIntegrateCommand {
             log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
-            let exists_remote = Git::is_branch_exists_remotely(current_branch)
+            let exists_remote = Git::has_remote_branch(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR

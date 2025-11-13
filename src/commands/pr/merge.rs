@@ -50,9 +50,7 @@ impl PullRequestMergeCommand {
         // 先检查 PR 状态
         let status = detect_repo_type(
             |repo_type| match repo_type {
-                RepoType::GitHub => {
-                    GitHub::get_pull_request_status(pull_request_id)
-                }
+                RepoType::GitHub => GitHub::get_pull_request_status(pull_request_id),
                 RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
                 RepoType::Unknown => {
                     anyhow::bail!(
@@ -170,9 +168,7 @@ impl PullRequestMergeCommand {
     ) -> Result<Option<String>> {
         let title = detect_repo_type(
             |repo_type| match repo_type {
-                RepoType::GitHub => {
-                    GitHub::get_pull_request_title(pull_request_id)
-                }
+                RepoType::GitHub => GitHub::get_pull_request_title(pull_request_id),
                 RepoType::Codeup => Codeup::get_pull_request_title(pull_request_id),
                 RepoType::Unknown => Ok("".to_string()),
             },
@@ -185,78 +181,15 @@ impl PullRequestMergeCommand {
 
     /// 合并后清理：切换到默认分支并删除当前分支
     fn cleanup_after_merge(current_branch: &str, default_branch: &str) -> Result<()> {
-        // 如果当前分支已经是默认分支，不需要清理
-        if current_branch == default_branch {
-            log_info!("Already on default branch: {}", default_branch);
-            return Ok(());
-        }
-
-        log_info!("Switching to default branch: {}", default_branch);
         log_info!(
             "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );
-
-        // 1. 先更新远程分支信息（这会同步远程删除的分支）
-        Git::fetch()?;
-
-        // 2. 检查是否有未提交的更改，如果有就先 stash
-        let has_stashed = Git::has_commit()?;
-        if has_stashed {
-            log_info!("Stashing local changes before switching branches...");
-            Git::stash_push(Some("Auto-stash before PR merge cleanup"))?;
-        }
-
-        // 3. 切换到默认分支
-        Git::checkout_branch(default_branch)
-            .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
-
-        // 4. 更新本地默认分支
-        Git::pull(default_branch)
-            .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
-
-        // 5. 删除本地分支（如果还存在）
-        if Self::branch_exists_locally(current_branch)? {
-            log_info!("Deleting local branch: {}", current_branch);
-            Git::delete(current_branch, false)
-                .or_else(|_| {
-                    // 如果分支未完全合并，尝试强制删除
-                    log_info!("Branch may not be fully merged, trying force delete...");
-                    Git::delete(current_branch, true)
-                })
-                .context("Failed to delete local branch")?;
-            log_success!("Local branch deleted: {}", current_branch);
-        } else {
-            log_info!("Local branch already deleted: {}", current_branch);
-        }
-
-        // 6. 恢复 stash（如果有）
-        if has_stashed {
-            log_info!("Restoring stashed changes...");
-            let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
-        }
-
-        // 7. 清理远程分支引用（prune，移除已删除的远程分支引用）
-        // 注意：这是一个可选的清理操作，失败不影响主要功能
-        if let Err(e) = Git::prune_remote() {
-            log_info!("Warning: Failed to prune remote references: {}", e);
-            log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
-        }
-
-        log_success!(
-            "Cleanup completed: switched to {} and deleted local branch {}",
-            default_branch,
-            current_branch
-        );
+        helpers::cleanup_branch(current_branch, default_branch, "PR merge")?;
         log_info!(
             "Note: Remote branch '{}' may have already been deleted via API",
             current_branch
         );
         Ok(())
-    }
-
-    /// 检查本地分支是否存在
-    fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        Git::is_branch_exists_locally(branch_name).context("Failed to check if branch exists")
     }
 }
