@@ -1,7 +1,11 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::settings::{defaults::default_llm_model, paths::ConfigPaths, settings::Settings};
+use crate::settings::{
+    defaults::{default_llm_model, default_response_format},
+    paths::ConfigPaths,
+    settings::Settings,
+};
 use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
@@ -30,7 +34,7 @@ struct CollectedConfig {
     llm_url: Option<String>,
     llm_key: Option<String>,
     llm_model: Option<String>,
-    llm_response_format: String,
+    llm_response_format: Option<String>, // Option<String> 类型，可能为空（None 表示使用默认值）
 }
 
 impl SetupCommand {
@@ -79,7 +83,14 @@ impl SetupCommand {
             llm_url: llm.url.clone(),
             llm_key: llm.key.clone(),
             llm_model: llm.model.clone(),
-            llm_response_format: llm.response_format.clone(),
+            // 如果 response_format 为空字符串或等于默认值，设置为 None（表示使用默认值，不保存到 TOML）
+            llm_response_format: if llm.response_format.is_empty()
+                || llm.response_format == default_response_format()
+            {
+                None
+            } else {
+                Some(llm.response_format.clone())
+            },
         })
     }
 
@@ -124,7 +135,7 @@ impl SetupCommand {
 
         // ==================== 必填项：GitHub 配置 ====================
         log_break!();
-        log_info!("🐙 GitHub Configuration (Required)");
+        log_info!("  GitHub Configuration (Required)");
         log_break!('─', 65);
 
         let github_token_prompt = if existing.github_api_token.is_some() {
@@ -149,7 +160,7 @@ impl SetupCommand {
 
         // ==================== 可选：GitHub 配置 ====================
         log_break!();
-        log_info!("🐙 GitHub Configuration (Optional)");
+        log_info!("  GitHub Configuration (Optional)");
         log_break!('─', 65);
 
         let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
@@ -178,7 +189,7 @@ impl SetupCommand {
 
         // ==================== 必填项：Jira 配置 ====================
         log_break!();
-        log_info!("🎫 Jira Configuration (Required)");
+        log_info!("  Jira Configuration (Required)");
         log_break!('─', 65);
 
         let has_jira_address = existing.jira_service_address.is_some();
@@ -241,7 +252,7 @@ impl SetupCommand {
 
         // ==================== 可选：日志配置 ====================
         log_break!();
-        log_info!("📝 Log Configuration (Optional)");
+        log_info!("  Log Configuration (Optional)");
         log_break!('─', 65);
 
         let log_folder_prompt = format!(
@@ -278,7 +289,7 @@ impl SetupCommand {
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
-        log_info!("🤖 LLM/AI Configuration (Optional)");
+        log_info!("  LLM/AI Configuration (Optional)");
         log_break!('─', 65);
 
         let llm_providers = vec!["openai", "deepseek", "proxy"];
@@ -299,9 +310,10 @@ impl SetupCommand {
         let llm_provider = llm_providers[llm_provider_idx].to_string();
 
         // 根据 provider 设置 URL（只有 proxy 需要输入和保存）
+        // 对于 openai/deepseek，必须设置为 None，避免使用旧的 proxy URL 导致错误
         let llm_url = match llm_provider.as_str() {
-            "openai" => None,
-            "deepseek" => None,
+            "openai" => None,   // openai 不使用 proxy URL，必须为 None
+            "deepseek" => None, // deepseek 不使用 proxy URL，必须为 None
             "proxy" => {
                 let llm_url_prompt = if let Some(ref url) = existing.llm_url {
                     format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
@@ -371,22 +383,16 @@ impl SetupCommand {
         let model_prompt = match llm_provider.as_str() {
             "openai" => {
                 if let Some(ref model) = existing.llm_model {
-                    format!(
-                        "OpenAI model [current: {}] (press Enter for default: gpt-4.0)",
-                        model
-                    )
+                    format!("OpenAI model [current: {}] (press Enter to keep)", model)
                 } else {
-                    "OpenAI model (press Enter for default: gpt-4.0)".to_string()
+                    "OpenAI model (optional, press Enter to skip)".to_string()
                 }
             }
             "deepseek" => {
                 if let Some(ref model) = existing.llm_model {
-                    format!(
-                        "DeepSeek model [current: {}] (press Enter for default: deepseek-chat)",
-                        model
-                    )
+                    format!("DeepSeek model [current: {}] (press Enter to keep)", model)
                 } else {
-                    "DeepSeek model (press Enter for default: deepseek-chat)".to_string()
+                    "DeepSeek model (optional, press Enter to skip)".to_string()
                 }
             }
             "proxy" => {
@@ -400,50 +406,64 @@ impl SetupCommand {
         };
 
         let is_proxy = llm_provider == "proxy";
-        let llm_model_input: String = Input::new()
-            .with_prompt(&model_prompt)
-            .default(default_model.clone())
-            .allow_empty(!is_proxy)
-            .validate_with(move |input: &String| -> Result<(), &str> {
-                if input.is_empty() && is_proxy {
-                    Err("Model is required for proxy provider")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get LLM model")?;
+        // 只有当之前有保存的值时，才设置默认值；否则不设置，让用户明确输入或留空使用默认值
+        let has_existing_model = existing.llm_model.is_some();
+
+        let llm_model_input: String = {
+            let mut input = Input::new()
+                .with_prompt(&model_prompt)
+                .allow_empty(!is_proxy);
+
+            // 只有之前有保存的值时，才设置默认值
+            if has_existing_model {
+                input = input.default(default_model.clone());
+            }
+
+            input
+                .validate_with(move |input: &String| -> Result<(), &str> {
+                    if input.is_empty() && is_proxy {
+                        Err("Model is required for proxy provider")
+                    } else {
+                        Ok(())
+                    }
+                })
+                .interact_text()
+                .context("Failed to get LLM model")?
+        };
 
         let llm_model = if !llm_model_input.is_empty() {
             Some(llm_model_input)
         } else if is_proxy {
             anyhow::bail!("Model is required for proxy provider");
         } else {
-            // 对于 openai 和 deepseek，如果为空则使用默认值
-            Some(default_model)
+            // 对于 openai 和 deepseek，如果为空则设置为 None
+            // 这样不会保存到 TOML，运行时会在 build_model() 中使用默认值
+            None
         };
 
         // 配置 response_format
-        let response_format_prompt = if existing.llm_response_format.is_empty() {
-            "Response format path (optional, press Enter to skip, empty for default)".to_string()
-        } else {
+        let response_format_prompt = if let Some(ref format) = existing.llm_response_format {
             format!(
                 "Response format path [current: {}] (press Enter to keep, empty for default)",
-                existing.llm_response_format
+                format
             )
+        } else {
+            "Response format path (optional, press Enter to skip, empty for default)".to_string()
         };
 
-        let llm_response_format: String = Input::new()
+        let llm_response_format_input: String = Input::new()
             .with_prompt(&response_format_prompt)
             .allow_empty(true)
             .interact_text()
             .context("Failed to get response format")?;
 
-        // 如果用户输入为空，保持现有值（如果现有值也为空，则使用空字符串作为默认值）
-        let llm_response_format = if llm_response_format.is_empty() {
-            existing.llm_response_format.clone()
+        // 如果用户输入为空，保持现有值（None 表示使用默认值，不保存到 TOML）
+        // 如果用户输入不为空，使用用户输入的值
+        // 这样不会保存默认值到 TOML（skip_serializing_if = "String::is_empty"），运行时会在 extract_content() 中使用默认值
+        let llm_response_format = if llm_response_format_input.is_empty() {
+            existing.llm_response_format.clone() // 保持现有值（可能是 None，表示使用默认值）
         } else {
-            llm_response_format
+            Some(llm_response_format_input) // 使用用户输入的值
         };
 
         // ==================== 可选：Codeup 配置 ====================
@@ -590,7 +610,8 @@ impl SetupCommand {
                 key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
                 model: config.llm_model.clone(),
-                response_format: config.llm_response_format.clone(),
+                // None 转换为空字符串（不保存到 TOML，使用默认值）
+                response_format: config.llm_response_format.clone().unwrap_or_default(),
             },
         };
 

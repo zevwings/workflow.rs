@@ -73,10 +73,16 @@ impl InstallCommand {
             .context("Failed to create completion directory")?;
         log_info!("Completion 目录: {}", shell_info.completion_dir.display());
 
-        // 生成 completion 脚本
+        // 生成 completion 脚本（同时生成 zsh 和 bash 以支持统一配置）
         log_info!("正在生成 completion 脚本...");
+        log_info!("生成 zsh completion 脚本...");
         Self::generate_completions(
-            Some(shell_info.shell_type.clone()),
+            Some("zsh".to_string()),
+            Some(shell_info.completion_dir.to_string_lossy().to_string()),
+        )?;
+        log_info!("生成 bash completion 脚本...");
+        Self::generate_completions(
+            Some("bash".to_string()),
             Some(shell_info.completion_dir.to_string_lossy().to_string()),
         )?;
 

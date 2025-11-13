@@ -43,7 +43,10 @@ impl LLMClient {
     /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
     pub fn call(&self, params: &LLMRequestParams) -> Result<String> {
         // 创建带超时的 HTTP 客户端（60秒）
-        let http_client = self.create_http_client()?;
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(60))
+            .build()
+            .context("Failed to create HTTP client with timeout")?;
 
         // 构建请求体（统一格式）
         let payload = self.build_payload(params)?;
@@ -58,7 +61,7 @@ impl LLMClient {
         let provider = self.get_provider_name()?;
 
         // 发送请求
-        let mut request = http_client.post(&url);
+        let mut request = client.post(&url);
 
         // 添加 headers
         for (key, value) in headers.iter() {
@@ -111,6 +114,22 @@ impl LLMClient {
         }
     }
 
+    /// 构建请求头
+    fn build_headers(&self) -> Result<HeaderMap> {
+        let mut headers = HeaderMap::new();
+        let settings = Settings::get();
+        let llm_key = settings.llm.key.as_deref().unwrap_or_default();
+        if llm_key.is_empty() {
+            return Err(anyhow::anyhow!("LLM key is empty in settings"));
+        }
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", llm_key))?,
+        );
+        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+        Ok(headers)
+    }
+
     /// 构建模型名称
     ///
     /// 从 Settings 获取模型名称：
@@ -133,22 +152,6 @@ impl LLMClient {
                 .context("Model is required for proxy provider"),
             _ => settings.llm.model.clone().context("Model is required"),
         }
-    }
-
-    /// 构建请求头
-    fn build_headers(&self) -> Result<HeaderMap> {
-        let mut headers = HeaderMap::new();
-        let settings = Settings::get();
-        let llm_key = settings.llm.key.as_deref().unwrap_or_default();
-        if llm_key.is_empty() {
-            return Err(anyhow::anyhow!("LLM key is empty in settings"));
-        }
-        headers.insert(
-            AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", llm_key))?,
-        );
-        headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        Ok(headers)
     }
 
     /// 构建请求体
@@ -317,17 +320,6 @@ impl LLMClient {
     fn get_provider_name(&self) -> Result<String> {
         let settings: &Settings = Settings::get();
         Ok(settings.llm.provider.clone())
-    }
-
-    /// 创建带超时的 HTTP 客户端
-    ///
-    /// 超时时间设置为 60 秒。
-    fn create_http_client(&self) -> Result<Client> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .context("Failed to create HTTP client with timeout")?;
-        Ok(client)
     }
 
     /// 处理错误响应

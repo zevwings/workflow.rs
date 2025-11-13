@@ -1,7 +1,11 @@
 //! 配置查看命令
 //! 显示当前的 TOML 配置文件
 
-use crate::settings::{paths::ConfigPaths, settings::Settings};
+use crate::settings::{
+    defaults::{default_llm_model, default_response_format},
+    paths::ConfigPaths,
+    settings::Settings,
+};
 use crate::{log_break, log_info, log_warning, mask_sensitive_value};
 use anyhow::Result;
 
@@ -95,6 +99,20 @@ impl ConfigCommand {
         }
         if let Some(ref key) = settings.llm.key {
             log_info!("  LLM Key: {}", mask_sensitive_value(key));
+        }
+        // 显示 model（如果有保存的值，否则显示默认值）
+        if let Some(ref model) = settings.llm.model {
+            log_info!("  LLM Model: {}", model);
+        } else {
+            let default_model = default_llm_model(&settings.llm.provider);
+            log_info!("  LLM Model: {} (default)", default_model);
+        }
+        // 显示 response_format（如果有保存的值，否则显示默认值）
+        if settings.llm.response_format.is_empty() {
+            let default_format = default_response_format();
+            log_info!("  LLM Response Format: {} (default)", default_format);
+        } else {
+            log_info!("  LLM Response Format: {}", settings.llm.response_format);
         }
 
         // Codeup 配置
