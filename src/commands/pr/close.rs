@@ -1,6 +1,7 @@
 use crate::commands::pr::helpers;
 use crate::{
-    log_break, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+    detect_repo_type, log_break, log_info, log_success, log_warning, Codeup, Git, GitHub,
+    PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 
@@ -63,20 +64,21 @@ impl PullRequestCloseCommand {
     }
 
     /// 检查 PR 是否已经关闭
-    fn check_if_already_closed(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
-        let status = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_request_status(pull_request_id)?
-            }
-            _ => {
-                anyhow::bail!(
-                    "PR close is currently only supported for GitHub and Codeup repositories."
-                );
-            }
-        };
+    fn check_if_already_closed(pull_request_id: &str, _repo_type: &RepoType) -> Result<bool> {
+        let status = detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)
+                }
+                RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
+                RepoType::Unknown => {
+                    anyhow::bail!(
+                        "PR close is currently only supported for GitHub and Codeup repositories."
+                    );
+                }
+            },
+            "get pull request status",
+        )?;
 
         // 如果状态是 closed 或 merged，说明已经关闭
         if status.state == "closed" || status.state == "merged" {
@@ -92,27 +94,30 @@ impl PullRequestCloseCommand {
     }
 
     /// 关闭 PR（根据仓库类型调用对应的实现）
-    fn close_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
-        match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::close_pull_request(pull_request_id)
-                    .context("Failed to close PR via GitHub API")?;
-                log_success!("PR closed successfully");
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::close_pull_request(pull_request_id)
-                    .context("Failed to close PR via Codeup API")?;
-                log_success!("PR closed successfully");
-            }
-            _ => {
-                anyhow::bail!(
-                    "PR close is currently only supported for GitHub and Codeup repositories."
-                );
-            }
-        }
-        Ok(())
+    fn close_pull_request(pull_request_id: &str, _repo_type: &RepoType) -> Result<()> {
+        detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::close_pull_request(pull_request_id)
+                        .context("Failed to close PR via GitHub API")?;
+                    log_success!("PR closed successfully");
+                    Ok(())
+                }
+                RepoType::Codeup => {
+                    Codeup::close_pull_request(pull_request_id)
+                        .context("Failed to close PR via Codeup API")?;
+                    log_success!("PR closed successfully");
+                    Ok(())
+                }
+                RepoType::Unknown => {
+                    anyhow::bail!(
+                        "PR close is currently only supported for GitHub and Codeup repositories."
+                    );
+                }
+            },
+            "close pull request",
+        )
     }
-
 
     /// 删除远程分支
     fn delete_remote_branch(branch_name: &str) -> Result<()> {
@@ -204,13 +209,7 @@ impl PullRequestCloseCommand {
         // 6. 恢复 stash（如果有）
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            if let Err(e) = Git::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_warning!("You can manually restore them with: git stash pop");
-                log_warning!("Or view the stash list with: git stash list");
-            } else {
-                log_success!("Stashed changes restored successfully");
-            }
+            let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
         }
 
         // 7. 清理远程分支引用（prune，移除已删除的远程分支引用）
@@ -230,7 +229,6 @@ impl PullRequestCloseCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        Git::is_branch_exists_locally(branch_name)
-            .context("Failed to check if branch exists")
+        Git::is_branch_exists_locally(branch_name).context("Failed to check if branch exists")
     }
 }

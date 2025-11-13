@@ -2,8 +2,8 @@ use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_jira_ticket_id, log_break, log_info, log_success, log_warning, Codeup, Git, GitHub,
-    Jira, PlatformProvider, RepoType,
+    detect_repo_type, extract_jira_ticket_id, log_break, log_info, log_success, log_warning,
+    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 
@@ -46,21 +46,22 @@ impl PullRequestMergeCommand {
 
     /// 合并 PR（根据仓库类型调用对应的实现）
     /// 返回 true 表示新合并，false 表示已经合并
-    fn merge_pull_request(pull_request_id: &str, repo_type: &RepoType) -> Result<bool> {
+    fn merge_pull_request(pull_request_id: &str, _repo_type: &RepoType) -> Result<bool> {
         // 先检查 PR 状态
-        let status = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)?
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_request_status(pull_request_id)?
-            }
-            _ => {
-                anyhow::bail!(
-                    "PR merge is currently only supported for GitHub and Codeup repositories."
-                );
-            }
-        };
+        let status = detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_status(pull_request_id)
+                }
+                RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
+                RepoType::Unknown => {
+                    anyhow::bail!(
+                        "PR merge is currently only supported for GitHub and Codeup repositories."
+                    );
+                }
+            },
+            "get pull request status",
+        )?;
 
         // 如果已经合并，跳过合并步骤
         if status.merged {
@@ -73,57 +74,60 @@ impl PullRequestMergeCommand {
         }
 
         // 执行合并操作
-        match repo_type {
-            RepoType::GitHub => {
-                match <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true) {
-                    Ok(()) => {
-                        log_success!("PR merged successfully");
-                        Ok(true)
-                    }
-                    Err(e) => {
-                        // 检查是否是"已合并"错误
-                        if helpers::is_pr_already_merged_error(&e) {
-                            log_warning!(
-                                "PR #{} has already been merged (detected from merge error)",
-                                pull_request_id
-                            );
-                            log_info!("Skipping merge step, continuing with cleanup...");
-                            Ok(false)
-                        } else {
-                            // 其他错误，返回错误
-                            Err(e)
+        detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    match <GitHub as PlatformProvider>::merge_pull_request(pull_request_id, true) {
+                        Ok(()) => {
+                            log_success!("PR merged successfully");
+                            Ok(true)
+                        }
+                        Err(e) => {
+                            // 检查是否是"已合并"错误
+                            if helpers::is_pr_already_merged_error(&e) {
+                                log_warning!(
+                                    "PR #{} has already been merged (detected from merge error)",
+                                    pull_request_id
+                                );
+                                log_info!("Skipping merge step, continuing with cleanup...");
+                                Ok(false)
+                            } else {
+                                // 其他错误，返回错误
+                                Err(e)
+                            }
                         }
                     }
                 }
-            }
-            RepoType::Codeup => {
-                match <Codeup as PlatformProvider>::merge_pull_request(pull_request_id, true) {
-                    Ok(()) => {
-                        log_success!("PR merged successfully");
-                        Ok(true)
-                    }
-                    Err(e) => {
-                        // 检查是否是"已合并"错误
-                        if helpers::is_pr_already_merged_error(&e) {
-                            log_warning!(
-                                "PR #{} has already been merged (detected from merge error)",
-                                pull_request_id
-                            );
-                            log_info!("Skipping merge step, continuing with cleanup...");
-                            Ok(false)
-                        } else {
-                            // 其他错误，返回错误
-                            Err(e)
+                RepoType::Codeup => {
+                    match Codeup::merge_pull_request(pull_request_id, true) {
+                        Ok(()) => {
+                            log_success!("PR merged successfully");
+                            Ok(true)
+                        }
+                        Err(e) => {
+                            // 检查是否是"已合并"错误
+                            if helpers::is_pr_already_merged_error(&e) {
+                                log_warning!(
+                                    "PR #{} has already been merged (detected from merge error)",
+                                    pull_request_id
+                                );
+                                log_info!("Skipping merge step, continuing with cleanup...");
+                                Ok(false)
+                            } else {
+                                // 其他错误，返回错误
+                                Err(e)
+                            }
                         }
                     }
                 }
-            }
-            _ => {
-                anyhow::bail!(
-                    "PR merge is currently only supported for GitHub and Codeup repositories."
-                );
-            }
-        }
+                RepoType::Unknown => {
+                    anyhow::bail!(
+                        "PR merge is currently only supported for GitHub and Codeup repositories."
+                    );
+                }
+            },
+            "merge pull request",
+        )
     }
 
     /// 更新 Jira 状态（如果关联了 ticket）
@@ -162,17 +166,19 @@ impl PullRequestMergeCommand {
     /// 从 PR 标题提取 Jira ticket ID
     fn extract_jira_ticket_from_pr_title(
         pull_request_id: &str,
-        repo_type: &RepoType,
+        _repo_type: &RepoType,
     ) -> Result<Option<String>> {
-        let title = match repo_type {
-            RepoType::GitHub => {
-                <GitHub as PlatformProvider>::get_pull_request_title(pull_request_id).ok()
-            }
-            RepoType::Codeup => {
-                <Codeup as PlatformProvider>::get_pull_request_title(pull_request_id).ok()
-            }
-            _ => None,
-        };
+        let title = detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_title(pull_request_id)
+                }
+                RepoType::Codeup => Codeup::get_pull_request_title(pull_request_id),
+                RepoType::Unknown => Ok("".to_string()),
+            },
+            "get pull request title",
+        )
+        .ok();
 
         Ok(title.and_then(|t| extract_jira_ticket_id(&t)))
     }
@@ -227,13 +233,7 @@ impl PullRequestMergeCommand {
         // 6. 恢复 stash（如果有）
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            if let Err(e) = Git::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_warning!("You can manually restore them with: git stash pop");
-                log_warning!("Or view the stash list with: git stash list");
-            } else {
-                log_success!("Stashed changes restored successfully");
-            }
+            let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
         }
 
         // 7. 清理远程分支引用（prune，移除已删除的远程分支引用）
@@ -257,8 +257,6 @@ impl PullRequestMergeCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        Git::is_branch_exists_locally(branch_name)
-            .context("Failed to check if branch exists")
+        Git::is_branch_exists_locally(branch_name).context("Failed to check if branch exists")
     }
-
 }

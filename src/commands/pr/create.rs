@@ -1,10 +1,10 @@
 use crate::commands::check;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
-    generate_pull_request_body, log_info, log_success, log_warning, validate_jira_ticket_format,
-    Browser, Clipboard, Codeup, Git, GitHub, Jira, PlatformProvider, PullRequestLLM, RepoType,
-    Settings, TYPES_OF_CHANGES,
+    detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
+    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
+    log_success, log_warning, validate_jira_ticket_format, Browser, Clipboard, Codeup, Git, GitHub,
+    Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, MultiSelect};
@@ -434,15 +434,8 @@ impl PullRequestCreateCommand {
         Git::checkout_branch(branch_name)?;
 
         // 恢复 stash
-        log_success!("Restoring stashed changes...");
-        if let Err(e) = Git::stash_pop() {
-            if Git::has_unmerged().unwrap_or(false) {
-                log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
-                anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
-            } else {
-                return Err(e);
-            }
-        }
+        log_info!("Restoring stashed changes...");
+        let _ = Git::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
 
         // 提交并推送
         log_success!("Committing changes...");
@@ -626,26 +619,22 @@ impl PullRequestCreateCommand {
         pull_request_body: &str,
     ) -> Result<String> {
         // 检查分支是否已有 PR
-        let repo_type = Git::detect_repo_type()?;
-        let existing_pr = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Unknown => None,
-        };
+        let existing_pr = get_current_branch_pr_id()?;
 
         if let Some(pr_id) = existing_pr {
             log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
-            match repo_type {
-                RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_url(&pr_id),
-                RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_request_url(&pr_id),
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            }
+            detect_repo_type(
+                |repo_type| match repo_type {
+                    RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_url(&pr_id),
+                    RepoType::Codeup => Codeup::get_pull_request_url(&pr_id),
+                    RepoType::Unknown => {
+                        anyhow::bail!(
+                            "Unknown repository type. Only GitHub and Codeup are supported."
+                        );
+                    }
+                },
+                "get pull request URL",
+            )
         } else {
             // 分支无 PR，创建新 PR
             // 先检查分支是否有提交（相对于默认分支）
@@ -666,29 +655,24 @@ impl PullRequestCreateCommand {
                 );
             }
 
-            let pull_request_url = match repo_type {
-                RepoType::GitHub => {
-                    log_success!("Creating PR via GitHub...");
-                    <GitHub as PlatformProvider>::create_pull_request(
-                        pr_title,
-                        pull_request_body,
-                        branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Codeup => {
-                    log_success!("Creating PR via Codeup...");
-                    <Codeup as PlatformProvider>::create_pull_request(
-                        pr_title,
-                        pull_request_body,
-                        branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            };
+            let pull_request_url = detect_repo_type(
+                |repo_type| match repo_type {
+                    RepoType::GitHub => {
+                        log_success!("Creating PR via GitHub...");
+                        GitHub::create_pull_request(pr_title, pull_request_body, branch_name, None)
+                    }
+                    RepoType::Codeup => {
+                        log_success!("Creating PR via Codeup...");
+                        Codeup::create_pull_request(pr_title, pull_request_body, branch_name, None)
+                    }
+                    RepoType::Unknown => {
+                        anyhow::bail!(
+                            "Unknown repository type. Only GitHub and Codeup are supported."
+                        );
+                    }
+                },
+                "create pull request",
+            )?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)

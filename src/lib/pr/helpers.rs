@@ -1,8 +1,11 @@
+use crate::git::Git;
+use crate::git::RepoType;
 use crate::settings::Settings;
 use anyhow::{Context, Result};
 use regex::Regex;
 
 use super::constants::TYPES_OF_CHANGES;
+use super::provider::PlatformProvider;
 
 /// 从 PR URL 提取 PR ID
 ///
@@ -170,4 +173,77 @@ pub fn transform_to_branch_name(s: &str) -> String {
     }
 
     result.trim_matches('-').to_string()
+}
+
+/// 根据仓库类型调用平台提供者方法
+///
+/// 这是一个统一的调度函数，根据仓库类型自动选择对应的平台提供者实现。
+/// 它接受一个闭包，闭包接收 RepoType 并根据类型调用对应的 PlatformProvider 方法。
+///
+/// # 参数
+///
+/// * `f` - 一个闭包，接收 RepoType 并根据类型调用对应的 PlatformProvider 方法
+/// * `operation_name` - 操作名称（用于错误消息）
+///
+/// # 返回
+///
+/// 返回闭包执行的结果
+///
+/// # 错误
+///
+/// 如果仓库类型未知或不支持，返回相应的错误信息。
+///
+/// # 示例
+///
+/// ```rust
+/// use workflow::pr::{PlatformProvider, detect_repo_type};
+/// use workflow::pr::github::GitHub;
+/// use workflow::pr::codeup::Codeup;
+///
+/// // 获取当前分支的 PR ID
+/// let pr_id = detect_repo_type(
+///     |repo_type| match repo_type {
+///         RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request(),
+///         RepoType::Codeup => Codeup::get_current_branch_pull_request(),
+///         RepoType::Unknown => Ok(None),
+///     },
+///     "get current branch PR"
+/// )?;
+/// ```
+pub fn detect_repo_type<F, T>(f: F, operation_name: &str) -> Result<T>
+where
+    F: FnOnce(RepoType) -> Result<T>,
+{
+    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
+    match repo_type {
+        RepoType::GitHub | RepoType::Codeup => f(repo_type),
+        RepoType::Unknown => {
+            anyhow::bail!(
+                "{} is currently only supported for GitHub and Codeup repositories.",
+                operation_name
+            );
+        }
+    }
+}
+
+/// 根据仓库类型调用平台提供者方法（获取当前分支的 PR ID）
+///
+/// 这是一个便捷函数，专门用于获取当前分支的 PR ID。
+///
+/// # 返回
+///
+/// 返回当前分支的 PR ID（如果存在），否则返回 None
+pub fn get_current_branch_pr_id() -> Result<Option<String>> {
+    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
+    match repo_type {
+        RepoType::GitHub => {
+            use super::github::GitHub;
+            <GitHub as PlatformProvider>::get_current_branch_pull_request()
+        }
+        RepoType::Codeup => {
+            use super::codeup::Codeup;
+            Codeup::get_current_branch_pull_request()
+        }
+        RepoType::Unknown => Ok(None),
+    }
 }

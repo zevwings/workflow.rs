@@ -35,7 +35,7 @@ pub fn resolve_pull_request_id(
     // 从当前分支获取 PR
     let pr_id = match repo_type {
         RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()?,
-        RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()?,
+        RepoType::Codeup => Codeup::get_current_branch_pull_request()?,
         _ => {
             anyhow::bail!(
                 "Auto-detection of PR ID is only supported for GitHub and Codeup repositories."
@@ -146,9 +146,7 @@ pub fn is_pr_already_closed_error(error: &Error) -> bool {
     // 检查 HTTP 状态码（需要结合错误消息，避免误判）
     // 422 (Unprocessable Entity) - GitHub API 在 PR 已关闭时可能返回此状态码
     // 但需要确保错误消息中包含 close 相关的内容，避免误判其他错误
-    if error_msg.contains("422")
-        && (error_msg.contains("close") || error_msg.contains("closed"))
-    {
+    if error_msg.contains("422") && (error_msg.contains("close") || error_msg.contains("closed")) {
         return true;
     }
 

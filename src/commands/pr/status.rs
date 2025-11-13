@@ -1,5 +1,8 @@
 use crate::commands::pr::helpers;
-use crate::{log_break, log_error, log_info, Codeup, Git, GitHub, PlatformProvider, RepoType};
+use crate::{
+    detect_repo_type, log_break, log_error, log_info, Codeup, Git, GitHub, PlatformProvider,
+    RepoType,
+};
 use anyhow::Result;
 
 /// PR 状态命令
@@ -48,22 +51,28 @@ impl PullRequestStatusCommand {
     }
 
     /// 显示 PR 信息
-    fn show_pr_info(pr_identifier: &str, repo_type: &RepoType) -> Result<()> {
-        let info = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_info(pr_identifier)?,
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_request_info(pr_identifier)?,
-            RepoType::Unknown => {
-                let remote_url = Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
-                log_error!("Unsupported repository type detected");
-                log_info!("Remote URL: {}", remote_url);
-                anyhow::bail!(
-                    "PR show is currently only supported for GitHub (github.com) and Codeup (codeup.aliyun.com) repositories.\n\
-                    Detected remote: {}\n\
-                    Please ensure your remote URL contains 'github.com' or 'codeup.aliyun.com'.",
-                    remote_url
-                );
-            }
-        };
+    fn show_pr_info(pr_identifier: &str, _repo_type: &RepoType) -> Result<()> {
+        let info = detect_repo_type(
+            |repo_type| match repo_type {
+                RepoType::GitHub => {
+                    <GitHub as PlatformProvider>::get_pull_request_info(pr_identifier)
+                }
+                RepoType::Codeup => Codeup::get_pull_request_info(pr_identifier),
+                RepoType::Unknown => {
+                    let remote_url =
+                        Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
+                    log_error!("Unsupported repository type detected");
+                    log_info!("Remote URL: {}", remote_url);
+                    anyhow::bail!(
+                        "PR show is currently only supported for GitHub (github.com) and Codeup (codeup.aliyun.com) repositories.\n\
+                        Detected remote: {}\n\
+                        Please ensure your remote URL contains 'github.com' or 'codeup.aliyun.com'.",
+                        remote_url
+                    );
+                }
+            },
+            "get pull request info",
+        )?;
 
         log_break!();
         log_break!('=', 40, "PR Information");

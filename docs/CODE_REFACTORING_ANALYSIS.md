@@ -5,12 +5,9 @@
 ## 📋 目录
 
 1. [Stash 操作模式](#1-stash-操作模式)
-2. [平台提供者调用模式](#2-平台提供者调用模式)
+2. ~~[平台提供者调用模式](#2-平台提供者调用模式)~~ ✅ 已完成
 3. [分支清理模式](#3-分支清理模式)
 4. [用户确认模式](#4-用户确认模式)
-5. [日志文件检查模式](#5-日志文件检查模式)
-6. [分支存在检查模式](#6-分支存在检查模式)
-7. [错误处理模式](#7-错误处理模式)
 
 ---
 
@@ -39,32 +36,31 @@ if let Err(e) = Git::stash_pop() {
 
 ### ✅ 重构建议
 
-**创建辅助函数：** `src/lib/git/stash.rs`
+**直接修改 `stash_pop()` 方法：** `src/lib/git/stash.rs`
+
+直接在 `stash_pop()` 方法中统一处理日志输出，这样所有调用者都不需要重复的日志处理代码。
 
 ```rust
 impl Git {
-    /// 安全地恢复 stash，包含错误处理和日志
-    pub fn stash_pop_with_logging() -> Result<()> {
-        match Self::stash_pop() {
-            Ok(()) => {
+    pub fn stash_pop() -> Result<()> {
+        let result = cmd("git", &["stash", "pop"]).run();
+
+        match result {
+            Ok(_) => {
                 log_success!("Stashed changes restored");
                 Ok(())
             }
             Err(e) => {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_warning!("You can manually restore them with: git stash pop");
-                Err(e)
+                if Self::has_unmerged()? {
+                    // 冲突处理（已有详细日志）
+                    // ...
+                } else {
+                    // 非冲突错误，输出警告并返回错误
+                    log_warning!("Failed to restore stashed changes: {}", e);
+                    log_warning!("You can manually restore them with: git stash pop");
+                    Err(e).context("Failed to pop stash")
+                }
             }
-        }
-    }
-
-    /// 尝试恢复 stash，失败时只记录警告（不返回错误）
-    pub fn try_stash_pop_with_logging() {
-        if let Err(e) = Self::stash_pop() {
-            log_warning!("Failed to restore stashed changes: {}", e);
-            log_warning!("You can manually restore them with: git stash pop");
-        } else {
-            log_success!("Stashed changes restored");
         }
     }
 }
@@ -72,82 +68,11 @@ impl Git {
 
 **影响范围：**
 - 可以减少约 30-40 行重复代码
-- 统一错误处理逻辑
+- 统一错误处理和日志输出
 - 便于后续维护和修改
+- 不需要新增方法，直接增强现有方法
 
 ---
-
-## 2. 平台提供者调用模式
-
-### 🔍 问题描述
-
-在多个 PR 命令中，重复出现相同的模式：检测仓库类型，然后根据类型调用对应的平台提供者方法。
-
-**重复位置：**
-- `src/commands/pr/create.rs` (多处)
-- `src/commands/pr/integrate.rs` (2处)
-- `src/commands/pr/merge.rs` (3处)
-- `src/commands/pr/close.rs` (2处)
-- `src/commands/pr/status.rs` (1处)
-- `src/commands/pr/list.rs` (1处)
-- `src/commands/pr/update.rs` (1处)
-
-**重复代码示例：**
-```rust
-let repo_type = Git::detect_repo_type()?;
-match repo_type {
-    RepoType::GitHub => <GitHub as PlatformProvider>::some_method(),
-    RepoType::Codeup => <Codeup as PlatformProvider>::some_method(),
-    RepoType::Unknown => {
-        anyhow::bail!("Only GitHub and Codeup are supported.");
-    }
-}
-```
-
-### ✅ 重构建议
-
-**方案 1：创建通用辅助函数** `src/commands/pr/helpers.rs`
-
-```rust
-/// 根据仓库类型调用平台提供者方法
-pub fn with_platform_provider<F, T>(
-    f: F,
-    operation_name: &str,
-) -> Result<T>
-where
-    F: FnOnce(&RepoType) -> Result<T>,
-{
-    let repo_type = Git::detect_repo_type()?;
-    match repo_type {
-        RepoType::GitHub | RepoType::Codeup => f(&repo_type),
-        RepoType::Unknown => {
-            anyhow::bail!(
-                "{} is currently only supported for GitHub and Codeup repositories.",
-                operation_name
-            );
-        }
-    }
-}
-
-/// 获取当前分支的 PR ID（统一处理）
-pub fn get_current_branch_pr_id() -> Result<Option<String>> {
-    let repo_type = Git::detect_repo_type()?;
-    match repo_type {
-        RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request(),
-        RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request(),
-        RepoType::Unknown => Ok(None),
-    }
-}
-```
-
-**方案 2：扩展 PlatformProvider trait** `src/lib/pr/provider.rs`
-
-考虑添加一个统一的调度方法，但这可能需要更大的重构。
-
-**影响范围：**
-- 可以减少约 100+ 行重复代码
-- 统一错误消息格式
-- 便于添加新的平台支持
 
 ---
 
@@ -321,18 +246,17 @@ pub fn confirm_or_cancel(prompt: &str, default: bool) -> Result<()> {
 | 类别 | 预计减少行数 | 优先级 |
 |------|------------|--------|
 | Stash 操作模式 | 30-40 行 | 高 |
-| 平台提供者调用模式 | 100+ 行 | 高 |
+| ~~平台提供者调用模式~~ | ~~100+ 行~~ | ~~已完成~~ |
 | 分支清理模式 | 100+ 行 | 高 |
 | 用户确认模式 | 20-30 行 | 中 |
 | ~~日志文件检查模式~~ | ~~10-15 行~~ | ~~已完成~~ |
 | ~~分支存在检查模式~~ | ~~15-20 行~~ | ~~已完成~~ |
 | ~~错误处理模式~~ | ~~40-50 行~~ | ~~已完成~~ |
-| **总计** | **250-390 行** | - |
+| **总计** | **150-290 行** | - |
 
 ### 重构优先级建议
 
 1. **高优先级**（立即重构）：
-   - 平台提供者调用模式（影响最大）
    - 分支清理模式（代码重复最多）
    - Stash 操作模式（简单且影响大）
 
@@ -355,15 +279,16 @@ pub fn confirm_or_cancel(prompt: &str, default: bool) -> Result<()> {
 
 ### 第一步：创建辅助函数模块
 
-1. 扩展 `src/lib/git/stash.rs` - 添加 stash 辅助函数
-2. 扩展 `src/commands/pr/helpers.rs` - 添加平台提供者和清理辅助函数
-3. 创建 `src/lib/utils/confirm.rs` - 添加确认辅助函数
+1. 扩展 `src/lib/git/stash.rs` - 修改 stash_pop 方法（已完成）
+2. 扩展 `src/lib/pr/provider.rs` - 添加平台提供者调度函数（已完成）
+3. 扩展 `src/commands/pr/helpers.rs` - 添加清理辅助函数
+4. 创建 `src/lib/utils/confirm.rs` - 添加确认辅助函数
 
 ### 第二步：逐步重构
 
 1. 先重构 stash 操作（最简单）
-2. 然后重构分支清理（影响最大）
-3. 最后重构平台提供者调用（最复杂）
+2. 然后重构平台提供者调用（已完成）
+3. 最后重构分支清理（影响最大）
 
 ### 第三步：测试和验证
 
@@ -378,6 +303,6 @@ pub fn confirm_or_cancel(prompt: &str, default: bool) -> Result<()> {
 - `src/lib/git/stash.rs` - Stash 操作
 - `src/lib/git/branch.rs` - 分支操作
 - `src/commands/pr/helpers.rs` - PR 辅助函数
-- `src/lib/pr/provider.rs` - 平台提供者 trait
+- `src/lib/pr/provider.rs` - 平台提供者 trait 和调度函数
 - `src/lib/log/mod.rs` - 日志相关函数
 
