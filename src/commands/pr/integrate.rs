@@ -40,7 +40,7 @@ impl PullRequestIntegrateCommand {
         }
 
         // 2. 获取当前分支
-        let current_branch = Git::current_branch().context("Failed to get current branch")?;
+        let current_branch = Git::current_branch()?;
         log_success!("Current branch: {}", current_branch);
 
         // 3. 检查工作区状态并 stash（如果需要）
@@ -170,7 +170,7 @@ impl PullRequestIntegrateCommand {
     /// 返回源分支信息（类型、是否默认分支、合并引用）。
     fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
         // 检查是否为默认分支
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch()?;
         let is_default = source_branch == default_branch;
 
         if is_default {

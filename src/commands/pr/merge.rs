@@ -5,7 +5,7 @@ use crate::{
     detect_repo_type, extract_jira_ticket_id, log_break, log_info, log_success, log_warning,
     Codeup, Git, GitHub, Jira, PlatformProvider, RepoType,
 };
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 /// PR 合并命令
 #[allow(dead_code)]
@@ -29,7 +29,7 @@ impl PullRequestMergeCommand {
         let current_branch = Git::current_branch()?;
 
         // 4. 获取默认分支
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch()?;
 
         // 5. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id, &repo_type)?;

@@ -24,7 +24,7 @@ impl PullRequestCloseCommand {
         let current_branch = Git::current_branch()?;
 
         // 3. 获取默认分支
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch()?;
 
         // 4. 提前检查：如果当前分支是默认分支，不应该关闭
         if current_branch == default_branch {

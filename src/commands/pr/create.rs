@@ -521,8 +521,8 @@ impl PullRequestCreateCommand {
         let has_uncommitted = Git::has_commit().context("Failed to check uncommitted changes")?;
 
         // 2. 获取当前分支和默认分支
-        let current_branch = Git::current_branch().context("Failed to get current branch")?;
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let current_branch = Git::current_branch()?;
+        let default_branch = Git::get_default_branch()?;
         let is_default_branch = current_branch == default_branch;
 
         // 3. 判断当前是否是默认分支
