@@ -46,7 +46,7 @@ pub use clipboard::Clipboard;
 pub use env::EnvFile;
 
 // 重新导出 proxy
-pub use proxy::{Proxy, ProxyInfo};
+pub use proxy::{Proxy, ProxyDisableResult, ProxyEnableResult, ProxyInfo};
 
 // 重新导出 completion
 pub use completion::Completion;

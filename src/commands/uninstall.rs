@@ -1,7 +1,7 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{log_break, log_info, log_success, log_warning, Completion, Shell, Uninstall};
+use crate::{log_break, log_info, log_success, log_warning, Clipboard, Completion, Proxy, Shell, Uninstall};
 use anyhow::{Context, Result};
 use dialoguer::Confirm;
 use duct::cmd;
@@ -172,6 +172,11 @@ impl UninstallCommand {
             log_info!("  Configuration will be kept (not removed).");
         }
 
+        // 关闭代理（从 shell 环境变量中移除）
+        log_break!();
+        log_info!("  Removing proxy settings from shell configuration...");
+        Self::remove_proxy_settings()?;
+
         log_break!();
         log_success!("  Uninstall completed successfully!");
         if remove_config {
@@ -196,6 +201,29 @@ impl UninstallCommand {
             log_info!("Please manually reload your shell configuration:");
             log_info!("  source ~/.zshrc  # for zsh");
             log_info!("  source ~/.bashrc  # for bash");
+        }
+
+        Ok(())
+    }
+
+    /// 从 shell 环境变量中移除代理设置
+    /// 使用 Proxy::disable_proxy() 公共方法
+    fn remove_proxy_settings() -> Result<()> {
+        let result = Proxy::disable_proxy().context("Failed to remove proxy settings")?;
+
+        if !result.found_proxy {
+            log_info!("  No proxy settings found in shell configuration.");
+            return Ok(());
+        }
+
+        if let Some(ref shell_config_path) = result.shell_config_path {
+            log_success!("  Proxy settings removed from {:?}", shell_config_path);
+        }
+
+        if let Some(ref unset_cmd) = result.unset_command {
+            log_info!("  Proxy unset command: {}", unset_cmd);
+            // 复制到剪贴板（静默处理，失败不影响卸载流程）
+            let _ = Clipboard::copy(unset_cmd);
         }
 
         Ok(())
