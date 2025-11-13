@@ -1,7 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::settings::{paths::ConfigPaths, settings::Settings};
+use crate::settings::{defaults::default_llm_model, paths::ConfigPaths, settings::Settings};
 use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Confirm, Input, Select};
@@ -27,10 +27,10 @@ struct CollectedConfig {
     codeup_cookie: Option<String>,
     // LLM 配置
     llm_provider: String,
-    llm_openai_key: Option<String>,
-    llm_deepseek_key: Option<String>,
-    llm_proxy_url: Option<String>,
-    llm_proxy_key: Option<String>,
+    llm_url: Option<String>,
+    llm_key: Option<String>,
+    llm_model: Option<String>,
+    llm_response_format: String,
 }
 
 impl SetupCommand {
@@ -76,26 +76,10 @@ impl SetupCommand {
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
             llm_provider: llm.provider.clone(),
-            llm_openai_key: if llm.provider == "openai" {
-                llm.key.clone()
-            } else {
-                None
-            },
-            llm_deepseek_key: if llm.provider == "deepseek" {
-                llm.key.clone()
-            } else {
-                None
-            },
-            llm_proxy_url: if llm.provider == "proxy" {
-                llm.url.clone()
-            } else {
-                None
-            },
-            llm_proxy_key: if llm.provider == "proxy" {
-                llm.key.clone()
-            } else {
-                None
-            },
+            llm_url: llm.url.clone(),
+            llm_key: llm.key.clone(),
+            llm_model: llm.model.clone(),
+            llm_response_format: llm.response_format.clone(),
         })
     }
 
@@ -314,88 +298,153 @@ impl SetupCommand {
             .context("Failed to select LLM provider")?;
         let llm_provider = llm_providers[llm_provider_idx].to_string();
 
-        let (llm_openai_key, llm_deepseek_key, llm_proxy_url, llm_proxy_key) =
-            match llm_provider.as_str() {
-                "openai" => {
-                    let openai_key_prompt = if existing.llm_openai_key.is_some() {
-                        "OpenAI API key [current: ***] (press Enter to keep)".to_string()
-                    } else {
-                        "OpenAI API key (optional, press Enter to skip)".to_string()
-                    };
+        // 根据 provider 设置 URL（只有 proxy 需要输入和保存）
+        let llm_url = match llm_provider.as_str() {
+            "openai" => None,
+            "deepseek" => None,
+            "proxy" => {
+                let llm_url_prompt = if let Some(ref url) = existing.llm_url {
+                    format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
+                } else {
+                    "LLM proxy URL (optional, press Enter to skip)".to_string()
+                };
 
-                    let openai_key: String = Input::new()
-                        .with_prompt(&openai_key_prompt)
-                        .allow_empty(true)
-                        .interact_text()
-                        .context("Failed to get OpenAI key")?;
+                let llm_url_input: String = Input::new()
+                    .with_prompt(&llm_url_prompt)
+                    .allow_empty(true)
+                    .interact_text()
+                    .context("Failed to get LLM proxy URL")?;
 
-                    let llm_openai_key = if !openai_key.is_empty() {
-                        Some(openai_key)
-                    } else {
-                        existing.llm_openai_key.clone()
-                    };
-                    (llm_openai_key, None, None, None)
+                if !llm_url_input.is_empty() {
+                    Some(llm_url_input)
+                } else {
+                    existing.llm_url.clone()
                 }
-                "deepseek" => {
-                    let deepseek_key_prompt = if existing.llm_deepseek_key.is_some() {
-                        "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
-                    } else {
-                        "DeepSeek API key (optional, press Enter to skip)".to_string()
-                    };
+            }
+            _ => None,
+        };
 
-                    let deepseek_key: String = Input::new()
-                        .with_prompt(&deepseek_key_prompt)
-                        .allow_empty(true)
-                        .interact_text()
-                        .context("Failed to get DeepSeek key")?;
-
-                    let llm_deepseek_key = if !deepseek_key.is_empty() {
-                        Some(deepseek_key)
-                    } else {
-                        existing.llm_deepseek_key.clone()
-                    };
-                    (None, llm_deepseek_key, None, None)
+        // 收集 API key
+        let key_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if existing.llm_key.is_some() {
+                    "OpenAI API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "OpenAI API key (optional, press Enter to skip)".to_string()
                 }
-                "proxy" => {
-                    let llm_proxy_url_prompt = if let Some(ref url) = existing.llm_proxy_url {
-                        format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
-                    } else {
-                        "LLM proxy URL (optional, press Enter to skip)".to_string()
-                    };
-
-                    let llm_proxy_url: String = Input::new()
-                        .with_prompt(&llm_proxy_url_prompt)
-                        .allow_empty(true)
-                        .interact_text()
-                        .context("Failed to get LLM proxy URL")?;
-
-                    let llm_proxy_url = if !llm_proxy_url.is_empty() {
-                        Some(llm_proxy_url)
-                    } else {
-                        existing.llm_proxy_url.clone()
-                    };
-
-                    let llm_proxy_key_prompt = if existing.llm_proxy_key.is_some() {
-                        "LLM proxy key [current: ***] (press Enter to keep)".to_string()
-                    } else {
-                        "LLM proxy key (optional, press Enter to skip)".to_string()
-                    };
-
-                    let llm_proxy_key: String = Input::new()
-                        .with_prompt(&llm_proxy_key_prompt)
-                        .allow_empty(true)
-                        .interact_text()
-                        .context("Failed to get LLM proxy key")?;
-
-                    let llm_proxy_key = if !llm_proxy_key.is_empty() {
-                        Some(llm_proxy_key)
-                    } else {
-                        existing.llm_proxy_key.clone()
-                    };
-                    (None, None, llm_proxy_url, llm_proxy_key)
+            }
+            "deepseek" => {
+                if existing.llm_key.is_some() {
+                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "DeepSeek API key (optional, press Enter to skip)".to_string()
                 }
-                _ => (None, None, None, None),
-            };
+            }
+            "proxy" => {
+                if existing.llm_key.is_some() {
+                    "LLM proxy key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "LLM proxy key (optional, press Enter to skip)".to_string()
+                }
+            }
+            _ => "LLM API key (optional, press Enter to skip)".to_string(),
+        };
+
+        let llm_key_input: String = Input::new()
+            .with_prompt(&key_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get LLM API key")?;
+
+        let llm_key = if !llm_key_input.is_empty() {
+            Some(llm_key_input)
+        } else {
+            existing.llm_key.clone()
+        };
+
+        // 配置模型
+        let default_model = existing
+            .llm_model
+            .clone()
+            .unwrap_or_else(|| default_llm_model(&llm_provider));
+
+        let model_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!(
+                        "OpenAI model [current: {}] (press Enter for default: gpt-4.0)",
+                        model
+                    )
+                } else {
+                    "OpenAI model (press Enter for default: gpt-4.0)".to_string()
+                }
+            }
+            "deepseek" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!(
+                        "DeepSeek model [current: {}] (press Enter for default: deepseek-chat)",
+                        model
+                    )
+                } else {
+                    "DeepSeek model (press Enter for default: deepseek-chat)".to_string()
+                }
+            }
+            "proxy" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!("LLM model [current: {}] (required)", model)
+                } else {
+                    "LLM model (required)".to_string()
+                }
+            }
+            _ => "LLM model".to_string(),
+        };
+
+        let is_proxy = llm_provider == "proxy";
+        let llm_model_input: String = Input::new()
+            .with_prompt(&model_prompt)
+            .default(default_model.clone())
+            .allow_empty(!is_proxy)
+            .validate_with(move |input: &String| -> Result<(), &str> {
+                if input.is_empty() && is_proxy {
+                    Err("Model is required for proxy provider")
+                } else {
+                    Ok(())
+                }
+            })
+            .interact_text()
+            .context("Failed to get LLM model")?;
+
+        let llm_model = if !llm_model_input.is_empty() {
+            Some(llm_model_input)
+        } else if is_proxy {
+            anyhow::bail!("Model is required for proxy provider");
+        } else {
+            // 对于 openai 和 deepseek，如果为空则使用默认值
+            Some(default_model)
+        };
+
+        // 配置 response_format
+        let response_format_prompt = if existing.llm_response_format.is_empty() {
+            "Response format path (optional, press Enter to skip, empty for default)".to_string()
+        } else {
+            format!(
+                "Response format path [current: {}] (press Enter to keep, empty for default)",
+                existing.llm_response_format
+            )
+        };
+
+        let llm_response_format: String = Input::new()
+            .with_prompt(&response_format_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get response format")?;
+
+        // 如果用户输入为空，保持现有值（如果现有值也为空，则使用空字符串作为默认值）
+        let llm_response_format = if llm_response_format.is_empty() {
+            existing.llm_response_format.clone()
+        } else {
+            llm_response_format
+        };
 
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
@@ -500,10 +549,10 @@ impl SetupCommand {
             codeup_csrf_token,
             codeup_cookie,
             llm_provider,
-            llm_openai_key,
-            llm_deepseek_key,
-            llm_proxy_url,
-            llm_proxy_key,
+            llm_url,
+            llm_key,
+            llm_model,
+            llm_response_format,
         })
     }
 
@@ -537,18 +586,11 @@ impl SetupCommand {
                 cookie: config.codeup_cookie.clone(),
             },
             llm: crate::settings::settings::LLMSettings {
-                url: if config.llm_provider == "proxy" {
-                    config.llm_proxy_url.clone()
-                } else {
-                    None
-                },
-                key: match config.llm_provider.as_str() {
-                    "openai" => config.llm_openai_key.clone(),
-                    "deepseek" => config.llm_deepseek_key.clone(),
-                    "proxy" => config.llm_proxy_key.clone(),
-                    _ => None,
-                },
+                url: config.llm_url.clone(),
+                key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
+                model: config.llm_model.clone(),
+                response_format: config.llm_response_format.clone(),
             },
         };
 

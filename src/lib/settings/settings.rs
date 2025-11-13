@@ -3,7 +3,10 @@ use std::sync::OnceLock;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-use super::defaults::{default_download_base_dir_option, default_log_folder, default_log_settings};
+use super::defaults::{
+    default_download_base_dir_option, default_llm_provider, default_log_folder,
+    default_log_settings, default_response_format,
+};
 use super::paths::ConfigPaths;
 
 // ==================== TOML 配置结构体 ====================
@@ -79,7 +82,7 @@ impl CodeupSettings {
 /// LLM 配置（TOML）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LLMSettings {
-    /// LLM Provider URL（proxy 时使用）
+    /// LLM Provider URL（proxy 时使用，openai/deepseek 时自动设置）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     /// LLM Provider Key（proxy/openai/deepseek 时使用）
@@ -88,10 +91,15 @@ pub struct LLMSettings {
     /// LLM Provider (openai, deepseek, proxy)
     #[serde(default = "default_llm_provider")]
     pub provider: String,
-}
-
-fn default_llm_provider() -> String {
-    "openai".to_string()
+    /// LLM 模型名称（openai: 默认 gpt-4.0, deepseek: 默认 deepseek-chat, proxy: 必填）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    /// 响应格式路径（用于从响应中提取内容）
+    #[serde(
+        default = "default_response_format",
+        skip_serializing_if = "String::is_empty"
+    )]
+    pub response_format: String,
 }
 
 /// 应用程序设置
@@ -121,7 +129,11 @@ pub struct Settings {
 impl LLMSettings {
     /// 检查 LLM 配置是否为空
     fn is_empty(&self) -> bool {
-        self.url.is_none() && self.key.is_none() && self.provider == default_llm_provider()
+        self.url.is_none()
+            && self.key.is_none()
+            && self.model.is_none()
+            && self.provider == default_llm_provider()
+            && self.response_format == default_response_format()
     }
 }
 

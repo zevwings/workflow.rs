@@ -7,9 +7,8 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::pr::helpers::transform_to_branch_name;
-use crate::settings::Settings;
 
-use super::client::{deepseek, openai, proxy};
+use super::client::{LLMClient, LLMRequestParams};
 
 /// PR 内容，包含分支名、PR 标题和描述
 ///
@@ -57,64 +56,23 @@ impl PullRequestLLM {
         exists_branches: Option<Vec<String>>,
         git_diff: Option<String>,
     ) -> Result<PullRequestContent> {
-        let settings = Settings::get();
-        let llm_settings = &settings.llm;
-        let provider = llm_settings.provider.clone();
+        // 使用统一的 v2 客户端
+        let client = LLMClient::new();
 
-        Self::check_api_key(llm_settings, &provider)?;
-
-        match provider.as_str() {
-            "openai" => Self::generate_with_openai(commit_title, exists_branches, git_diff),
-            "deepseek" => Self::generate_with_deepseek(commit_title, exists_branches, git_diff),
-            "proxy" => Self::generate_with_proxy(commit_title, exists_branches, git_diff),
-            _ => Self::generate_with_openai(commit_title, exists_branches, git_diff), // 默认使用 OpenAI
-        }
-    }
-
-    /// 检查对应的 API key 是否设置
-    ///
-    /// 根据 LLM 提供商检查相应的 API key 是否已配置。
-    ///
-    /// # 参数
-    ///
-    /// * `llm_settings` - LLM 设置对象
-    /// * `provider` - LLM 提供商名称（"openai"、"deepseek"、"proxy"）
-    ///
-    /// # 错误
-    ///
-    /// 如果对应的 API key 未设置，返回相应的错误信息。
-    fn check_api_key(llm_settings: &crate::settings::LLMSettings, provider: &str) -> Result<()> {
-        let api_key_set = match provider {
-            "openai" => llm_settings.key.is_some() && llm_settings.provider == "openai",
-            "deepseek" => llm_settings.key.is_some() && llm_settings.provider == "deepseek",
-            "proxy" => {
-                llm_settings.key.is_some()
-                    && llm_settings.url.is_some()
-                    && llm_settings.provider == "proxy"
-            }
-            _ => llm_settings.key.is_some() && llm_settings.provider == "openai", // 默认检查 OpenAI
+        // 构建请求参数
+        let params = LLMRequestParams {
+            system_prompt: Self::system_prompt(),
+            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
+            max_tokens: 100,
+            temperature: 0.5,
+            model: String::new(), // model 会从 Settings 自动获取，这里可以留空
         };
 
-        if !api_key_set {
-            let error_msg = match provider {
-                "openai" => "OpenAI API key is not configured",
-                "deepseek" => "DeepSeek API key is not configured",
-                "proxy" => match (llm_settings.key.is_none(), llm_settings.url.is_none()) {
-                    (true, true) => "LLM proxy key and URL are not configured",
-                    (true, false) => "LLM proxy key is not configured",
-                    (false, true) => "LLM proxy URL is not configured",
-                    (false, false) => unreachable!(),
-                },
-                _ => "OpenAI API key is not configured",
-            };
-            anyhow::bail!(
-                "{} (provider: {}). Please run 'workflow setup' to configure it",
-                error_msg,
-                provider
-            );
-        }
+        // 调用 LLM API
+        let response = client.call(&params)?;
 
-        Ok(())
+        // 解析响应
+        Self::parse_llm_response(response)
     }
 
     /// 生成同时生成分支名和 PR 标题的 system prompt
@@ -192,99 +150,6 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
         }
 
         parts.join("\n")
-    }
-
-    /// 使用 OpenAI API 同时生成分支名和 PR 标题
-    ///
-    /// 调用 OpenAI API 生成分支名和 PR 标题。
-    ///
-    /// # 参数
-    ///
-    /// * `commit_title` - commit 标题或描述
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestContent` 结构体。
-    ///
-    /// # 错误
-    ///
-    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_openai(
-        commit_title: &str,
-        exists_branches: Option<Vec<String>>,
-        git_diff: Option<String>,
-    ) -> Result<PullRequestContent> {
-        let params = openai::LLMRequestParams {
-            system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
-            max_tokens: 100,
-            temperature: 0.5,
-            model: "gpt-3.5-turbo".to_string(),
-        };
-        let response = openai::call_llm(params)?;
-        Self::parse_llm_response(response)
-    }
-
-    /// 使用 DeepSeek API 同时生成分支名和 PR 标题
-    ///
-    /// 调用 DeepSeek API 生成分支名和 PR 标题。
-    ///
-    /// # 参数
-    ///
-    /// * `commit_title` - commit 标题或描述
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestContent` 结构体。
-    ///
-    /// # 错误
-    ///
-    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_deepseek(
-        commit_title: &str,
-        exists_branches: Option<Vec<String>>,
-        git_diff: Option<String>,
-    ) -> Result<PullRequestContent> {
-        let params = deepseek::LLMRequestParams {
-            system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
-            max_tokens: 100,
-            temperature: 0.5,
-            model: "deepseek-chat".to_string(),
-        };
-        let response = deepseek::call_llm(params)?;
-        Self::parse_llm_response(response)
-    }
-
-    /// 使用代理 API 同时生成分支名和 PR 标题
-    ///
-    /// 调用代理 API 生成分支名和 PR 标题。
-    ///
-    /// # 参数
-    ///
-    /// * `commit_title` - commit 标题或描述
-    ///
-    /// # 返回
-    ///
-    /// 返回 `PullRequestContent` 结构体。
-    ///
-    /// # 错误
-    ///
-    /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
-    fn generate_with_proxy(
-        commit_title: &str,
-        exists_branches: Option<Vec<String>>,
-        git_diff: Option<String>,
-    ) -> Result<PullRequestContent> {
-        let params = proxy::LLMRequestParams {
-            system_prompt: Self::system_prompt(),
-            user_prompt: Self::user_prompt(commit_title, exists_branches, git_diff),
-            max_tokens: 100,
-            temperature: 0.5,
-            model: "gpt-3.5-turbo".to_string(),
-        };
-        let response = proxy::call_llm(params)?;
-        Self::parse_llm_response(response)
     }
 
     /// 解析 LLM 返回的 JSON 响应，提取分支名和 PR 标题

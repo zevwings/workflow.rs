@@ -31,3 +31,22 @@ pub fn default_log_settings() -> LogSettings {
         download_base_dir: default_download_base_dir_option(),
     }
 }
+
+/// 默认 LLM 响应格式路径（空字符串表示使用默认的 OpenAI 格式）
+pub fn default_response_format() -> String {
+    "choices[0].message.content".to_string()
+}
+
+/// 默认 LLM Provider
+pub fn default_llm_provider() -> String {
+    "openai".to_string()
+}
+
+/// 根据 Provider 获取默认模型
+pub fn default_llm_model(provider: &str) -> String {
+    match provider {
+        "openai" => "gpt-4.0".to_string(),
+        "deepseek" => "deepseek-chat".to_string(),
+        _ => String::new(), // proxy 必须输入，没有默认值
+    }
+}
