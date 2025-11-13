@@ -57,10 +57,14 @@ impl PullRequestLLM {
         exists_branches: Option<Vec<String>>,
         git_diff: Option<String>,
     ) -> Result<PullRequestContent> {
-        let settings = Settings::load();
-        let provider = settings.llm_provider.clone();
+        let settings = Settings::get();
+        let llm_settings = settings
+            .llm
+            .as_ref()
+            .context("LLM settings not configured")?;
+        let provider = llm_settings.llm_provider.clone();
 
-        Self::check_api_key(&settings, &provider)?;
+        Self::check_api_key(llm_settings, &provider)?;
 
         match provider.as_str() {
             "openai" => Self::generate_with_openai(commit_title, exists_branches, git_diff),
@@ -76,18 +80,18 @@ impl PullRequestLLM {
     ///
     /// # 参数
     ///
-    /// * `settings` - 设置对象
+    /// * `llm_settings` - LLM 设置对象
     /// * `provider` - LLM 提供商名称（"openai"、"deepseek"、"proxy"）
     ///
     /// # 错误
     ///
     /// 如果对应的 API key 未设置，返回相应的错误信息。
-    fn check_api_key(settings: &Settings, provider: &str) -> Result<()> {
+    fn check_api_key(llm_settings: &crate::settings::LLMSettings, provider: &str) -> Result<()> {
         let api_key_set = match provider {
-            "openai" => settings.openai_key.is_some(),
-            "deepseek" => settings.deepseek_key.is_some(),
-            "proxy" => settings.llm_proxy_key.is_some() && settings.llm_proxy_url.is_some(),
-            _ => settings.openai_key.is_some(), // 默认检查 OpenAI
+            "openai" => llm_settings.openai_key.is_some(),
+            "deepseek" => llm_settings.deepseek_key.is_some(),
+            "proxy" => llm_settings.llm_proxy_key.is_some() && llm_settings.llm_proxy_url.is_some(),
+            _ => llm_settings.openai_key.is_some(), // 默认检查 OpenAI
         };
 
         if !api_key_set {
@@ -95,8 +99,8 @@ impl PullRequestLLM {
                 "openai" => "LLM_OPENAI_KEY environment variable not set",
                 "deepseek" => "LLM_DEEPSEEK_KEY environment variable not set",
                 "proxy" => match (
-                    settings.llm_proxy_key.is_none(),
-                    settings.llm_proxy_url.is_none(),
+                    llm_settings.llm_proxy_key.is_none(),
+                    llm_settings.llm_proxy_url.is_none(),
                 ) {
                     (true, true) => "LLM_PROXY_KEY and LLM_PROXY_URL environment variables not set",
                     (true, false) => "LLM_PROXY_KEY environment variable not set",

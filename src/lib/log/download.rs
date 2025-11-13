@@ -129,8 +129,8 @@ pub fn download_from_jira(
     download_all_attachments: bool,
 ) -> Result<PathBuf> {
     // 1. 确定输出目录
-    let settings = Settings::load();
-    let base_dir_str = settings.log_download_base_dir;
+    let settings = Settings::get();
+    let base_dir_str = settings.log.download_base_dir.clone().unwrap_or_default();
 
     // 展开 ~ 路径
     let base_dir = expand_path(&base_dir_str)?;

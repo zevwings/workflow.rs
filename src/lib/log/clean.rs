@@ -90,6 +90,7 @@ pub fn clean_dir(dir: &Path, dir_name: &str, dry_run: bool, list_only: bool) -> 
 /// 获取基础目录路径
 /// 展开 ~ 路径并返回完整的基础目录路径
 pub fn get_base_dir_path() -> Result<PathBuf> {
-    let settings = Settings::load();
-    expand_path(&settings.log_download_base_dir)
+    let settings = Settings::get();
+    let base_dir = settings.log.download_base_dir.clone().unwrap_or_default();
+    expand_path(&base_dir)
 }

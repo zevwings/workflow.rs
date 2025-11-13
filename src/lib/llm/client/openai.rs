@@ -42,8 +42,12 @@ pub struct LLMRequestParams {
 ///
 /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
 pub fn call_llm(params: LLMRequestParams) -> Result<String> {
-    let settings = Settings::load();
-    let api_key = settings
+    let settings = Settings::get();
+    let llm_settings = settings
+        .llm
+        .as_ref()
+        .context("LLM settings not configured")?;
+    let api_key = llm_settings
         .openai_key
         .as_ref()
         .context("LLM_OPENAI_KEY environment variable not set")?;

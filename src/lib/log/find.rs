@@ -136,10 +136,10 @@ pub fn find_log_file(base_dir: &Path) -> Result<PathBuf> {
 /// 获取日志文件路径
 /// 根据 JIRA ID 自动解析日志文件路径
 pub fn get_log_file_path(jira_id: &str) -> Result<PathBuf> {
-    let settings = Settings::load();
+    let settings = Settings::get();
 
     // 获取配置的基础目录
-    let base_dir_str = settings.log_download_base_dir;
+    let base_dir_str = settings.log.download_base_dir.clone().unwrap_or_default();
 
     // 展开 ~ 路径
     let base_dir_path = expand_path(&base_dir_str)?;
@@ -148,8 +148,9 @@ pub fn get_log_file_path(jira_id: &str) -> Result<PathBuf> {
     let ticket_dir = base_dir_path.join(jira_id);
 
     // 从 Settings 获取日志输出文件夹名称
-    let extract_dir = if !settings.log_output_folder_name.is_empty() {
-        ticket_dir.join(&settings.log_output_folder_name)
+    let log_output_folder_name = &settings.log.output_folder_name;
+    let extract_dir = if !log_output_folder_name.is_empty() {
+        ticket_dir.join(log_output_folder_name)
     } else {
         ticket_dir.join("merged")
     };
@@ -162,10 +163,10 @@ pub fn get_log_file_path(jira_id: &str) -> Result<PathBuf> {
     // 向后兼容：尝试查找旧位置
     let home = env::var("HOME").context("HOME environment variable not set")?;
     let home_path = PathBuf::from(&home);
-    let old_base_dir = if !settings.log_output_folder_name.is_empty() {
+    let old_base_dir = if !log_output_folder_name.is_empty() {
         home_path.join(format!(
             "Downloads/logs_{}/{}/merged",
-            jira_id, settings.log_output_folder_name
+            jira_id, log_output_folder_name
         ))
     } else {
         home_path.join(format!("Downloads/logs_{}/merged", jira_id))

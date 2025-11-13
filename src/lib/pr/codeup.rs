@@ -61,16 +61,19 @@ impl PlatformProvider for Codeup {
     ) -> Result<String> {
         let settings = Settings::get();
         let project_id = settings
-            .codeup_project_id
+            .codeup
+            .project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
 
         let csrf_token = settings
-            .codeup_csrf_token
+            .codeup
+            .csrf_token
             .as_ref()
             .context("CODEUP_CSRF_TOKEN environment variable not set")?;
 
         let cookie = settings
-            .codeup_cookie
+            .codeup
+            .cookie
             .as_ref()
             .context("CODEUP_COOKIE environment variable not set")?;
 
@@ -121,7 +124,8 @@ impl PlatformProvider for Codeup {
 
         let settings = Settings::get();
         let csrf_token = settings
-            .codeup_csrf_token
+            .codeup
+            .csrf_token
             .as_ref()
             .context("CODEUP_CSRF_TOKEN environment variable not set")?;
 
@@ -348,7 +352,8 @@ impl PlatformProvider for Codeup {
         let (project_id, cookie) = Self::get_env_vars()?;
         let settings = Settings::get();
         let csrf_token = settings
-            .codeup_csrf_token
+            .codeup
+            .csrf_token
             .as_ref()
             .context("CODEUP_CSRF_TOKEN environment variable not set")?;
 
@@ -426,11 +431,13 @@ impl Codeup {
     fn get_env_vars() -> Result<(u64, String)> {
         let settings = Settings::get();
         let project_id = settings
-            .codeup_project_id
+            .codeup
+            .project_id
             .context("CODEUP_PROJECT_ID environment variable not set")?;
 
         let cookie = settings
-            .codeup_cookie
+            .codeup
+            .cookie
             .as_ref()
             .context("CODEUP_COOKIE environment variable not set")?
             .clone();

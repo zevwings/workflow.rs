@@ -84,12 +84,13 @@ pub fn generate_pull_request_body(
     if let Some(ticket) = jira_ticket {
         if !ticket.trim().is_empty() {
             let settings = Settings::get();
-            let jira_service = &settings.jira_service_address;
-            if !jira_service.trim().is_empty() {
-                body.push_str(&format!(
-                    "\n#### Jira Link:\n\n{}/browse/{}\n",
-                    jira_service, ticket
-                ));
+            if let Some(jira_service) = &settings.jira.service_address {
+                if !jira_service.trim().is_empty() {
+                    body.push_str(&format!(
+                        "\n#### Jira Link:\n\n{}/browse/{}\n",
+                        jira_service, ticket
+                    ));
+                }
             }
         }
     }
@@ -126,7 +127,7 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
 
     // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
     let settings = Settings::get();
-    if let Some(prefix) = &settings.github_branch_prefix {
+    if let Some(prefix) = &settings.github.branch_prefix {
         if !prefix.trim().is_empty() {
             branch_name = format!("{}/{}", prefix.trim(), branch_name);
         }

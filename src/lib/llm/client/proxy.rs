@@ -42,12 +42,16 @@ pub struct LLMRequestParams {
 ///
 /// 如果 API 调用失败或响应格式不正确，返回相应的错误信息。
 pub fn call_llm(params: LLMRequestParams) -> Result<String> {
-    let settings = Settings::load();
-    let api_key = settings
+    let settings = Settings::get();
+    let llm_settings = settings
+        .llm
+        .as_ref()
+        .context("LLM settings not configured")?;
+    let api_key = llm_settings
         .llm_proxy_key
         .as_ref()
         .context("LLM_PROXY_KEY environment variable not set")?;
-    let base_url = settings
+    let base_url = llm_settings
         .llm_proxy_url
         .as_ref()
         .context("LLM_PROXY_URL environment variable not set")?;

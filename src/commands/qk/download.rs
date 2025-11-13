@@ -16,9 +16,9 @@ impl DownloadCommand {
             log_success!("Downloading logs for {}...", jira_id);
         }
 
-        let settings = Settings::load();
-        let log_output_folder_name = if !settings.log_output_folder_name.is_empty() {
-            Some(settings.log_output_folder_name.as_str())
+        let settings = Settings::get();
+        let log_output_folder_name = if !settings.log.output_folder_name.is_empty() {
+            Some(settings.log.output_folder_name.as_str())
         } else {
             None
         };

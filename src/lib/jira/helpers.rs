@@ -101,9 +101,9 @@ pub fn sanitize_email_for_filename(email: &str) -> String {
 ///
 /// 返回 `(email, api_token)` 元组。
 pub fn get_auth() -> Result<(String, String)> {
-    let settings = Settings::load();
-    let email = settings.email.clone();
-    let api_token = settings.jira_api_token.clone();
+    let settings = Settings::get();
+    let email = settings.user.email.clone().unwrap_or_default();
+    let api_token = settings.jira.api_token.clone().unwrap_or_default();
     Ok((email, api_token))
 }
 
@@ -115,9 +115,21 @@ pub fn get_auth() -> Result<(String, String)> {
 /// # 返回
 ///
 /// 返回完整的 REST API 基础 URL。
+///
+/// # 错误
+///
+/// 如果 `jira_service_address` 未设置或为空，返回错误。
 pub fn get_base_url() -> Result<String> {
-    let settings = Settings::load();
-    let base_url = settings.jira_service_address;
+    let settings = Settings::get();
+    let base_url = settings.jira.service_address.clone().unwrap_or_default();
+
+    if base_url.is_empty() {
+        anyhow::bail!(
+            "JIRA_SERVICE_ADDRESS environment variable is not set. \
+            Please run 'workflow setup' to configure it."
+        );
+    }
+
     Ok(format!("{}/rest/api/2", base_url))
 }
 

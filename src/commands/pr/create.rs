@@ -220,7 +220,7 @@ impl PullRequestCreateCommand {
 
         // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
         let settings = Settings::get();
-        if let Some(prefix) = &settings.github_branch_prefix {
+        if let Some(prefix) = &settings.github.branch_prefix {
             let trimmed = prefix.trim();
             if !trimmed.is_empty() {
                 branch_name = format!("{}/{}", trimmed, branch_name);

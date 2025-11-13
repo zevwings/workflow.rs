@@ -533,7 +533,8 @@ impl GitHub {
     fn create_headers() -> Result<HeaderMap> {
         let settings = Settings::get();
         let token = settings
-            .github_api_token
+            .github
+            .api_token
             .as_ref()
             .context("GITHUB_API_TOKEN environment variable not set")?;
 
