@@ -13,7 +13,7 @@
 
 ### 为什么选择统一配置驱动方案？
 
-基于 API 调用分析（参见 [LLM_PLUGIN_CURL.md](./LLM_PLUGIN_CURL.md)），所有 LLM 提供商都遵循 **OpenAI 兼容格式**：
+基于 API 调用分析，所有 LLM 提供商都遵循 **OpenAI 兼容格式**：
 
 - ✅ **请求格式完全相同**：都使用 POST 到 `/v1/chat/completions`，请求体结构相同
 - ✅ **响应格式完全相同**：都从 `choices[0].message.content` 提取内容
@@ -362,10 +362,8 @@ model = "qwen-3-235b"
 
 ## 📚 相关文档
 
-- [LLM_PLUGIN_CURL.md](./LLM_PLUGIN_CURL.md) - API 调用示例和响应格式分析
-- [LLM_PLUGIN_ARCHITECTURE.md](./LLM_PLUGIN_ARCHITECTURE.md) - 详细架构设计（包含 TOML 配置文件系统设计，仅供参考）
-- [LLM_IMPLEMENTATION.md](./LLM_IMPLEMENTATION.md) - 实现指南（包含 TOML 配置文件系统实现，仅供参考）
 - [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md) - Settings 配置系统架构
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - 总体架构设计文档
 
 ---
 
@@ -394,8 +392,7 @@ model = "qwen-3-235b"
 - 支持 OpenAI、DeepSeek、Proxy 提供商
 - 自定义响应格式支持（JSON path）
 
-⚠️ **文档说明**：
-- `LLM_PLUGIN_ARCHITECTURE.md` 和 `LLM_IMPLEMENTATION.md` 中描述的独立 `llm.toml` 配置文件系统**尚未实现**
+⚠️ **配置说明**：
 - 当前实现使用 `workflow.toml` 的 `[llm]` 部分进行配置
-- 未来可能会实现独立的 `llm.toml` 配置文件系统以支持多提供商配置
+- 所有 LLM 相关配置统一存储在 `workflow.toml` 中，与项目配置统一管理
 

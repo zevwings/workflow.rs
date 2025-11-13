@@ -360,7 +360,7 @@ impl PullRequestCreateCommand {
         );
 
         // 检查是否已推送
-        let (_, exists_remote) = Git::is_branch_exists(current_branch)
+        let exists_remote = Git::is_branch_exists_remotely(current_branch)
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
@@ -588,7 +588,7 @@ impl PullRequestCreateCommand {
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
-                let (_, exists_remote) = Git::is_branch_exists(&current_branch)
+                let exists_remote = Git::is_branch_exists_remotely(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 检查当前分支是否有提交（相对于默认分支）

@@ -127,7 +127,7 @@ impl PullRequestIntegrateCommand {
             // 推送到远程（如果需要）
             if push {
                 log_success!("Pushing to remote...");
-                let (_, exists_remote) = Git::is_branch_exists(&current_branch)
+                let exists_remote = Git::is_branch_exists_remotely(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
@@ -266,7 +266,7 @@ impl PullRequestIntegrateCommand {
             log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
-            let (_, exists_remote) = Git::is_branch_exists(current_branch)
+            let exists_remote = Git::is_branch_exists_remotely(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR

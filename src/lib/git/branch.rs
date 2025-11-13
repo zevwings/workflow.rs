@@ -89,6 +89,46 @@ impl Git {
         Ok((exists_local, exists_remote))
     }
 
+    /// 检查分支是否在本地存在
+    ///
+    /// 这是 `is_branch_exists` 的便捷方法，只检查本地分支是否存在。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 如果分支在本地存在，返回 `true`，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn is_branch_exists_locally(branch_name: &str) -> Result<bool> {
+        let (exists_local, _) = Self::is_branch_exists(branch_name)?;
+        Ok(exists_local)
+    }
+
+    /// 检查分支是否在远程存在
+    ///
+    /// 这是 `is_branch_exists` 的便捷方法，只检查远程分支是否存在。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 如果分支在远程存在，返回 `true`，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn is_branch_exists_remotely(branch_name: &str) -> Result<bool> {
+        let (_, exists_remote) = Self::is_branch_exists(branch_name)?;
+        Ok(exists_remote)
+    }
+
     /// 创建或切换到分支
     ///
     /// 根据分支的存在情况执行相应的操作：

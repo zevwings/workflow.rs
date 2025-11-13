@@ -4,7 +4,17 @@
 
 ## 📚 文档
 
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 架构设计文档（包含 AI 模块设计）
+完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。
+
+主要文档包括：
+- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 总体架构设计文档
+- [docs/PR_ARCHITECTURE.md](./docs/PR_ARCHITECTURE.md) - PR 模块架构文档
+- [docs/QK_ARCHITECTURE.md](./docs/QK_ARCHITECTURE.md) - 快速日志操作模块架构文档
+- [docs/LLM_ARCHITECTURE.md](./docs/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
+- [docs/CONFIG_ARCHITECTURE.md](./docs/CONFIG_ARCHITECTURE.md) - 配置管理模块架构文档
+- [docs/INSTALL_ARCHITECTURE.md](./docs/INSTALL_ARCHITECTURE.md) - 安装/卸载模块架构文档
+- [docs/PROXY_ARCHITECTURE.md](./docs/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
+- [docs/CHECK_ARCHITECTURE.md](./docs/CHECK_ARCHITECTURE.md) - 环境检查模块架构文档
 
 ## 🚀 快速开始
 
@@ -170,7 +180,15 @@ workflow/
 │       ├── install.rs   # 安装命令实现
 │       └── uninstall.rs # 卸载命令实现
 └── docs/                # 文档目录
-    └── ARCHITECTURE.md  # 架构设计（包含 AI 模块和数据存储）
+    ├── README.md        # 文档索引
+    ├── ARCHITECTURE.md  # 总体架构设计文档
+    ├── PR_ARCHITECTURE.md      # PR 模块架构文档
+    ├── QK_ARCHITECTURE.md      # 快速日志操作模块架构文档
+    ├── LLM_ARCHITECTURE.md     # LLM 统一配置驱动架构文档
+    ├── CONFIG_ARCHITECTURE.md  # 配置管理模块架构文档
+    ├── INSTALL_ARCHITECTURE.md # 安装/卸载模块架构文档
+    ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
+    └── CHECK_ARCHITECTURE.md   # 环境检查模块架构文档
 ```
 
 ## 配置
@@ -387,6 +405,7 @@ make lint
 ## 📝 贡献
 
 请参考以下文档了解更多信息：
+- [docs/README.md](./docs/README.md) - 完整文档索引
 - [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 了解架构设计和核心模块详情
 
 

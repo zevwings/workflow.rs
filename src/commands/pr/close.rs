@@ -40,7 +40,7 @@ impl PullRequestCloseCommand {
             // 6. 关闭 PR（远程）
             // 如果关闭失败，检查是否是"已关闭"错误（竞态条件）
             if let Err(e) = Self::close_pull_request(&pull_request_id, &repo_type) {
-                if Self::is_already_closed_error(&e) {
+                if helpers::is_pr_already_closed_error(&e) {
                     log_warning!(
                         "PR #{} has already been closed (detected from close error)",
                         pull_request_id
@@ -113,39 +113,11 @@ impl PullRequestCloseCommand {
         Ok(())
     }
 
-    /// 检查错误是否是"PR 已关闭"错误
-    ///
-    /// 这是一个备用检查，用于处理以下情况：
-    /// 1. 状态检查失败（网络问题等）
-    /// 2. 竞态条件：在状态检查和实际关闭之间，PR 被其他进程关闭了
-    fn is_already_closed_error(error: &anyhow::Error) -> bool {
-        let error_msg = error.to_string().to_lowercase();
-
-        // 优先检查明确的错误消息
-        if error_msg.contains("already been closed")
-            || error_msg.contains("pull request has already been closed")
-            || error_msg.contains("is already closed")
-            || error_msg.contains("state is closed")
-        {
-            return true;
-        }
-
-        // 检查 HTTP 状态码（需要结合错误消息，避免误判）
-        // 422 (Unprocessable Entity) - GitHub API 在 PR 已关闭时可能返回此状态码
-        // 但需要确保错误消息中包含 close 相关的内容，避免误判其他错误
-        if error_msg.contains("422")
-            && (error_msg.contains("close") || error_msg.contains("closed"))
-        {
-            return true;
-        }
-
-        false
-    }
 
     /// 删除远程分支
     fn delete_remote_branch(branch_name: &str) -> Result<()> {
         // 检查远程分支是否存在
-        let (_, exists_remote) = Git::is_branch_exists(branch_name)
+        let exists_remote = Git::is_branch_exists_remotely(branch_name)
             .context("Failed to check if remote branch exists")?;
 
         if !exists_remote {
@@ -258,8 +230,7 @@ impl PullRequestCloseCommand {
 
     /// 检查本地分支是否存在
     fn branch_exists_locally(branch_name: &str) -> Result<bool> {
-        let (exists_local, _) =
-            Git::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
-        Ok(exists_local)
+        Git::is_branch_exists_locally(branch_name)
+            .context("Failed to check if branch exists")
     }
 }
