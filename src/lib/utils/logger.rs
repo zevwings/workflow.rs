@@ -111,13 +111,15 @@ impl FromStr for LogLevel {
             "warn" => Ok(LogLevel::Warn),
             "info" => Ok(LogLevel::Info),
             "debug" => Ok(LogLevel::Debug),
-            _ => Err(format!("Invalid log level: {}. Expected: none, error, warn, info, debug", s)),
+            _ => Err(format!(
+                "Invalid log level: {}. Expected: none, error, warn, info, debug",
+                s
+            )),
         }
     }
 }
 
 impl LogLevel {
-
     /// 将 LogLevel 转换为字符串
     pub fn as_str(&self) -> &'static str {
         match self {

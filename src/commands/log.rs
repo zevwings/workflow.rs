@@ -24,10 +24,7 @@ impl LogCommand {
             .unwrap_or(2); // 默认为 info
 
         // 创建提示信息
-        let prompt = format!(
-            "Select log level [current: {}]",
-            current_level_str
-        );
+        let prompt = format!("Select log level [current: {}]", current_level_str);
 
         // 显示选择菜单
         let selected_idx = Select::new()
@@ -65,10 +62,16 @@ impl LogCommand {
         let config_level = Settings::get().log.level.as_ref();
 
         log_success!("Current log level: {}", current_level.as_str());
-        log_message!("Default log level: {} (based on build mode)", default_level.as_str());
+        log_message!(
+            "Default log level: {} (based on build mode)",
+            default_level.as_str()
+        );
 
         if let Some(level_str) = config_level {
-            log_message!("Config file level: {} (from ~/.workflow/config/workflow.toml)", level_str);
+            log_message!(
+                "Config file level: {} (from ~/.workflow/config/workflow.toml)",
+                level_str
+            );
         } else {
             log_message!("Config file level: not set (using default)");
         }
@@ -116,10 +119,8 @@ impl LogCommand {
         let workflow_config_path = ConfigPaths::workflow_config()?;
         let toml_content = toml::to_string_pretty(&updated_settings)
             .context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content)
-            .context("Failed to write workflow.toml")?;
+        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
 
         Ok(())
     }
 }
-

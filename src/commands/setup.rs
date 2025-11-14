@@ -1,12 +1,12 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::settings::{
+use crate::{log_info, settings::{
     defaults::{default_llm_model, default_response_format},
     paths::ConfigPaths,
-    settings::Settings,
-};
-use crate::{confirm, log_break, log_info, log_message, log_success, log_warning};
+    settings::{GitHubAccount, Settings},
+}};
+use crate::{confirm, log_break, log_message, log_success};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -19,11 +19,11 @@ pub struct SetupCommand;
 #[derive(Debug, Clone)]
 struct CollectedConfig {
     // Workflow 配置
-    email: Option<String>,
+    jira_email: Option<String>,
     jira_api_token: Option<String>,
     jira_service_address: Option<String>,
-    github_api_token: Option<String>,
-    github_branch_prefix: Option<String>,
+    github_accounts: Vec<GitHubAccount>,
+    github_current: Option<String>,
     log_output_folder_name: String,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
@@ -50,10 +50,18 @@ impl SetupCommand {
         // 保存配置到 TOML 文件
         log_message!("Saving configuration...");
         Self::save_config(&config)?;
-        log_success!("  Configuration saved to ~/.workflow/config/workflow.toml");
+        log_success!("Configuration saved to ~/.workflow/config/workflow.toml");
 
-        // 验证配置
-        Self::verify_config(&config)?;
+        log_break!();
+        log_info!("Verifying configuration...");
+        log_break!();
+
+        log_break!('-', 40, "Verifying Configuration");
+        log_break!();
+
+        // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
+        let settings = Settings::load();
+        settings.verify()?;
 
         log_break!();
         log_success!("Initialization completed successfully!");
@@ -68,11 +76,11 @@ impl SetupCommand {
         let llm = &settings.llm;
 
         Ok(CollectedConfig {
-            email: settings.user.email.clone(),
+            jira_email: settings.jira.email.clone(),
             jira_api_token: settings.jira.api_token.clone(),
             jira_service_address: settings.jira.service_address.clone(),
-            github_api_token: settings.github.api_token.clone(),
-            github_branch_prefix: settings.github.branch_prefix.clone(),
+            github_accounts: settings.github.accounts.clone(),
+            github_current: settings.github.current.clone(),
             log_output_folder_name: settings.log.output_folder_name.clone(),
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
@@ -94,26 +102,110 @@ impl SetupCommand {
 
     /// 收集配置信息
     fn collect_config(existing: &CollectedConfig) -> Result<CollectedConfig> {
-        // ==================== 必填项：用户配置 ====================
+        // ==================== 必填项：GitHub 配置 ====================
         log_break!();
-        log_message!("  User Configuration (Required)");
+        log_message!("  GitHub Configuration (Required)");
         log_break!('─', 65);
 
-        let has_email = existing.email.is_some();
-        let email_prompt = if let Some(ref email) = existing.email {
-            format!("Email address [current: {}]", email)
+        let mut github_accounts = existing.github_accounts.clone();
+        let mut github_current = existing.github_current.clone();
+
+        // 如果已有账号，询问是否要管理账号
+        if !github_accounts.is_empty() {
+            let options = vec![
+                "Add new account",
+                "Modify existing account",
+                "Keep current accounts",
+            ];
+            let selection = Select::new()
+                .with_prompt("GitHub account management")
+                .items(&options)
+                .default(2)
+                .interact()
+                .context("Failed to get GitHub account management choice")?;
+
+            match selection {
+                0 => {
+                    // 添加新账号
+                    let account = Self::collect_github_account()?;
+                    github_accounts.push(account);
+                    // 如果是第一个账号，自动设置为当前账号
+                    if github_accounts.len() == 1 {
+                        github_current = github_accounts.first().map(|a| a.name.clone());
+                    }
+                }
+                1 => {
+                    // 修改现有账号
+                    if github_accounts.is_empty() {
+                        log_message!("No accounts to modify.");
+                    } else {
+                        let account_names: Vec<String> =
+                            github_accounts.iter().map(|a| a.name.clone()).collect();
+                        let account_names_display: Vec<&str> =
+                            account_names.iter().map(|s| s.as_str()).collect();
+                        let selection = Select::new()
+                            .with_prompt("Select account to modify")
+                            .items(&account_names_display)
+                            .interact()
+                            .context("Failed to select account")?;
+
+                        let account = Self::collect_github_account()?;
+                        github_accounts[selection] = account;
+                    }
+                }
+                _ => {
+                    // 保持现有账号
+                }
+            }
         } else {
-            "Email address".to_string()
+            // 没有账号，添加第一个账号
+            log_message!("No GitHub accounts configured. Let's add one:");
+            let account = Self::collect_github_account()?;
+            github_accounts.push(account);
+            github_current = github_accounts.first().map(|a| a.name.clone());
+        }
+
+        // 如果有多个账号，询问当前使用的账号
+        if github_accounts.len() > 1 {
+            let account_names: Vec<String> =
+                github_accounts.iter().map(|a| a.name.clone()).collect();
+            let account_names_display: Vec<&str> =
+                account_names.iter().map(|s| s.as_str()).collect();
+            let default_index = github_current
+                .as_ref()
+                .and_then(|current| account_names.iter().position(|n| n == current))
+                .unwrap_or(0);
+
+            let selection = Select::new()
+                .with_prompt("Select current GitHub account")
+                .items(&account_names_display)
+                .default(default_index)
+                .interact()
+                .context("Failed to select current account")?;
+
+            github_current = Some(account_names[selection].clone());
+        }
+
+        // ==================== 必填项：Jira 配置 ====================
+        log_break!();
+        log_message!("  Jira Configuration (Required)");
+        log_break!('─', 65);
+
+        let has_jira_email = existing.jira_email.is_some();
+        let jira_email_prompt = if let Some(ref email) = existing.jira_email {
+            format!("Jira email address [current: {}]", email)
+        } else {
+            "Jira email address".to_string()
         };
 
-        let default_email = existing.email.clone().unwrap_or_default();
+        let default_jira_email = existing.jira_email.clone().unwrap_or_default();
 
-        let email: String = Input::new()
-            .with_prompt(&email_prompt)
-            .default(default_email)
+        let jira_email: String = Input::new()
+            .with_prompt(&jira_email_prompt)
+            .default(default_jira_email)
             .validate_with(move |input: &String| -> Result<(), &str> {
-                if input.is_empty() && !has_email {
-                    Err("Email is required")
+                if input.is_empty() && !has_jira_email {
+                    Err("Jira email address is required")
                 } else if !input.is_empty() && !input.contains('@') {
                     Err("Please enter a valid email address")
                 } else {
@@ -121,82 +213,15 @@ impl SetupCommand {
                 }
             })
             .interact_text()
-            .context("Failed to get email")?;
+            .context("Failed to get Jira email address")?;
 
-        let email = if !email.is_empty() {
-            Some(email)
-        } else if existing.email.is_some() {
-            existing.email.clone()
+        let jira_email = if !jira_email.is_empty() {
+            Some(jira_email)
+        } else if existing.jira_email.is_some() {
+            existing.jira_email.clone()
         } else {
-            anyhow::bail!("Email is required");
+            anyhow::bail!("Jira email address is required");
         };
-
-        // ==================== 必填项：GitHub 配置 ====================
-        log_break!();
-        log_message!("  GitHub Configuration (Required)");
-        log_break!('─', 65);
-
-        let has_github_token = existing.github_api_token.is_some();
-        let github_token_prompt = if has_github_token {
-            "GitHub API token [current: ***]".to_string()
-        } else {
-            "GitHub API token".to_string()
-        };
-
-        let default_github_token = existing.github_api_token.clone().unwrap_or_default();
-
-        let github_api_token: String = Input::new()
-            .with_prompt(&github_token_prompt)
-            .default(default_github_token)
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("GitHub API token is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub API token")?;
-
-        let github_api_token = if !github_api_token.trim().is_empty() {
-            Some(github_api_token.trim().to_string())
-        } else {
-            anyhow::bail!("GitHub API token is required");
-        };
-
-        // ==================== 可选：GitHub 配置 ====================
-        log_break!();
-        log_message!("  GitHub Configuration (Optional)");
-        log_break!('─', 65);
-
-        let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
-            format!(
-                "GitHub branch prefix [current: {}] (press Enter to keep)",
-                prefix
-            )
-        } else {
-            "GitHub branch prefix (press Enter to skip)".to_string()
-        };
-
-        let default_gh_prefix = existing.github_branch_prefix.clone().unwrap_or_default();
-
-        let gh_prefix: String = Input::new()
-            .with_prompt(&gh_prefix_prompt)
-            .allow_empty(true)
-            .default(default_gh_prefix)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        let github_branch_prefix = if !gh_prefix.is_empty() {
-            Some(gh_prefix)
-        } else {
-            existing.github_branch_prefix.clone()
-        };
-
-        // ==================== 必填项：Jira 配置 ====================
-        log_break!();
-        log_message!("  Jira Configuration (Required)");
-        log_break!('─', 65);
 
         let has_jira_address = existing.jira_service_address.is_some();
         let jira_address_prompt = if let Some(ref addr) = existing.jira_service_address {
@@ -545,11 +570,11 @@ impl SetupCommand {
         };
 
         Ok(CollectedConfig {
-            email,
+            jira_email,
             jira_api_token,
             jira_service_address,
-            github_api_token,
-            github_branch_prefix,
+            github_accounts,
+            github_current,
             log_output_folder_name,
             codeup_project_id,
             codeup_csrf_token,
@@ -562,6 +587,64 @@ impl SetupCommand {
         })
     }
 
+    /// 收集单个 GitHub 账号信息
+    fn collect_github_account() -> Result<GitHubAccount> {
+        let name: String = Input::new()
+            .with_prompt("GitHub account name")
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("Account name is required and cannot be empty")
+                } else {
+                    Ok(())
+                }
+            })
+            .interact_text()
+            .context("Failed to get GitHub account name")?;
+
+        let email: String = Input::new()
+            .with_prompt("GitHub account email")
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("Email is required and cannot be empty")
+                } else if !input.contains('@') {
+                    Err("Please enter a valid email address")
+                } else {
+                    Ok(())
+                }
+            })
+            .interact_text()
+            .context("Failed to get GitHub account email")?;
+
+        let api_token: String = Input::new()
+            .with_prompt("GitHub API token")
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("GitHub API token is required and cannot be empty")
+                } else {
+                    Ok(())
+                }
+            })
+            .interact_text()
+            .context("Failed to get GitHub API token")?;
+
+        let branch_prefix: String = Input::new()
+            .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get GitHub branch prefix")?;
+
+        Ok(GitHubAccount {
+            name: name.trim().to_string(),
+            email: email.trim().to_string(),
+            api_token: api_token.trim().to_string(),
+            branch_prefix: if branch_prefix.trim().is_empty() {
+                None
+            } else {
+                Some(branch_prefix.trim().to_string())
+            },
+        })
+    }
+
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
         use crate::settings::settings::{
@@ -570,21 +653,20 @@ impl SetupCommand {
 
         // 构建 Settings 结构体
         let settings = Settings {
-            user: UserSettings {
-                email: config.email.clone(),
-            },
+            user: UserSettings::default(),
             jira: JiraSettings {
+                email: config.jira_email.clone(),
                 api_token: config.jira_api_token.clone(),
                 service_address: config.jira_service_address.clone(),
             },
             github: GitHubSettings {
-                api_token: config.github_api_token.clone(),
-                branch_prefix: config.github_branch_prefix.clone(),
+                accounts: config.github_accounts.clone(),
+                current: config.github_current.clone(),
             },
             log: LogSettings {
                 output_folder_name: config.log_output_folder_name.clone(),
                 download_base_dir: None, // 使用默认值
-                level: None, // 日志级别通过 workflow log set 命令设置
+                level: None,             // 日志级别通过 workflow log set 命令设置
             },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,
@@ -610,95 +692,4 @@ impl SetupCommand {
         Ok(())
     }
 
-    /// 验证配置
-    fn verify_config(config: &CollectedConfig) -> Result<()> {
-        // 验证 Jira 配置
-        if config.jira_api_token.is_some()
-            && config.jira_service_address.is_some()
-            && config.email.is_some()
-        {
-            log_break!();
-            log_message!("Verifying Jira configuration...");
-
-            match crate::jira::users::get_user_info() {
-                Ok(user) => {
-                    log_break!();
-                    log_success!("Jira configuration verified successfully!");
-                    log_info!("   User: {}", user.display_name);
-                    if let Some(email) = &user.email_address {
-                        log_info!("   Email: {}", email);
-                    }
-                    log_info!("   Account ID: {}", user.account_id);
-                }
-                Err(e) => {
-                    log_warning!("  Failed to verify Jira configuration");
-                    log_info!("   Error: {}", e);
-                    log_info!("   Please check your Jira service address and API token.");
-                    log_info!("   You can run 'workflow setup' again to update the configuration.");
-                }
-            }
-        }
-
-        // 验证 GitHub 配置
-        if config.github_api_token.is_some() {
-            log_break!();
-            log_message!("Verifying GitHub configuration...");
-
-            match crate::pr::GitHub::get_user_info() {
-                Ok(user) => {
-                    log_break!();
-                    log_success!("GitHub configuration verified successfully!");
-                    log_info!("   User: {}", user.login);
-                    if let Some(name) = &user.name {
-                        log_info!("   Name: {}", name);
-                    }
-                    if let Some(email) = &user.email {
-                        log_info!("   Email: {}", email);
-                    }
-                }
-                Err(e) => {
-                    log_warning!("  Failed to verify GitHub configuration");
-                    log_info!("   Error: {}", e);
-                    log_info!("   Please check your GitHub API token.");
-                    log_info!("   You can run 'workflow setup' again to update the configuration.");
-                }
-            }
-        }
-
-        // 验证 Codeup 配置
-        if config.codeup_project_id.is_some()
-            && config.codeup_cookie.is_some()
-            && config.codeup_csrf_token.is_some()
-        {
-            log_break!();
-            log_message!("🔍 Verifying Codeup configuration...");
-
-            match crate::pr::Codeup::get_user_info() {
-                Ok(user) => {
-                    log_break!();
-                    log_success!("Codeup configuration verified successfully!");
-                    if let Some(name) = &user.name {
-                        log_info!("   Name: {}", name);
-                    }
-                    if let Some(username) = &user.username {
-                        log_info!("   Username: {}", username);
-                    }
-                    if let Some(email) = &user.email {
-                        log_info!("   Email: {}", email);
-                    }
-                    if let Some(id) = user.id {
-                        log_info!("   ID: {}", id);
-                    }
-                }
-                Err(e) => {
-                    log_warning!("  Failed to verify Codeup configuration");
-                    log_info!("   Error: {}", e);
-                    log_info!("   Please check your Codeup project ID, cookie, and CSRF token.");
-                    log_info!("   You can run 'workflow setup' again to update the configuration.");
-                }
-            }
-        }
-
-        Ok(())
-    }
 }
