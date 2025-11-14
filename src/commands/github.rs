@@ -1,6 +1,7 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
+use crate::git::GitConfig;
 use crate::settings::{
     paths::ConfigPaths,
     settings::{GitHubAccount, Settings},
@@ -110,6 +111,7 @@ impl GitHubCommand {
         // 如果这是第一个账号，自动设置为当前账号
         if settings.github.accounts.len() == 1 {
             settings.github.current = Some(account.name.clone());
+            GitConfig::set_global_user(&account.email, &account.name)?;
             log_success!("Account '{}' added and set as current.", account.name);
         } else {
             log_success!("Account '{}' added.", account.name);
@@ -124,6 +126,7 @@ impl GitHubCommand {
 
             if should_set_current {
                 settings.github.current = Some(account.name.clone());
+                GitConfig::set_global_user(&account.email, &account.name)?;
                 log_success!("Account '{}' is now set as current.", account.name);
             } else {
                 log_message!("Current account remains unchanged.");
@@ -194,10 +197,27 @@ impl GitHubCommand {
 
         settings.github.accounts.remove(selection);
 
-        // 如果删除后还有账号，且删除的是当前账号，或者没有设置当前账号，则设置第一个账号为当前账号
+        // 如果删除后还有账号
         if !settings.github.accounts.is_empty() {
-            if was_current || settings.github.current.is_none() {
-                settings.github.current = Some(settings.github.accounts[0].name.clone());
+            // 检查当前账号是否还在列表中
+            let current_still_exists = settings
+                .github
+                .current
+                .as_ref()
+                .map(|current_name| {
+                    settings
+                        .github
+                        .accounts
+                        .iter()
+                        .any(|a| &a.name == current_name)
+                })
+                .unwrap_or(false);
+
+            // 如果删除的是当前账号，或者当前账号不在列表中，或者没有设置当前账号，则设置第一个账号为当前账号
+            if was_current || !current_still_exists || settings.github.current.is_none() {
+                let new_current = &settings.github.accounts[0];
+                settings.github.current = Some(new_current.name.clone());
+                GitConfig::set_global_user(&new_current.email, &new_current.name)?;
             }
         } else {
             // 如果没有账号了，清空 current
@@ -251,8 +271,10 @@ impl GitHubCommand {
             .context("Failed to get account selection")?;
 
         let account_name = account_names[selection].clone();
+        let account = &settings.github.accounts[selection];
         settings.github.current = Some(account_name.clone());
 
+        GitConfig::set_global_user(&account.email, &account.name)?;
         log_success!("Switched to account '{}'.", account_name);
         Self::save_settings(&settings)?;
 
@@ -325,19 +347,30 @@ impl GitHubCommand {
             ));
         }
 
+        // 检查这个账号是否是当前账号
+        let is_current = settings
+            .github
+            .current
+            .as_ref()
+            .map(|c| c == &old_account.name)
+            .unwrap_or(false);
+
         // 如果账号名称改变了，且这个账号是当前账号，需要更新 current 字段
-        if new_account.name != old_account.name
-            && settings
-                .github
-                .current
-                .as_ref()
-                .map(|c| c == &old_account.name)
-                .unwrap_or(false)
-        {
+        if new_account.name != old_account.name && is_current {
             settings.github.current = Some(new_account.name.clone());
         }
 
+        // 如果更新的是当前账号，且 email 或 name 改变了，需要更新 git config
+        let should_update_git_config = is_current
+            && (new_account.email != old_account.email || new_account.name != old_account.name);
+
         settings.github.accounts[selection] = new_account.clone();
+
+        // 更新 git config（在更新 accounts 之后）
+        if should_update_git_config {
+            let updated_account = &settings.github.accounts[selection];
+            GitConfig::set_global_user(&updated_account.email, &updated_account.name)?;
+        }
 
         log_success!("Account '{}' updated.", new_account.name);
         Self::save_settings(&settings)?;

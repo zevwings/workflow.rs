@@ -6,6 +6,7 @@
 //! - 仓库检测（Git 仓库检测、远程仓库类型识别）
 //! - 暂存管理（stash push/pop、冲突检测）
 //! - Pre-commit hooks 支持（检测和执行）
+//! - 配置管理（设置和读取 Git 全局配置）
 //!
 //! ## 模块结构
 //!
@@ -14,10 +15,12 @@
 //! - `repo` - 仓库检测和类型识别
 //! - `stash` - 暂存管理
 //! - `pre_commit` - Pre-commit hooks 支持
+//! - `config` - Git 配置管理（`GitConfig` 结构体）
 //! - `types` - 类型定义（`RepoType` 枚举）
 
 mod branch;
 mod commit;
+mod config;
 mod pre_commit;
 mod repo;
 mod stash;
@@ -26,4 +29,5 @@ mod types;
 // 重新导出所有公共 API
 pub use branch::MergeStrategy;
 pub use commit::Git;
+pub use config::GitConfig;
 pub use types::RepoType;
