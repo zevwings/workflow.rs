@@ -3,7 +3,7 @@ use duct::cmd;
 use std::path::Path;
 use std::process::Command;
 
-use crate::{log_info, log_success};
+use crate::{log_debug, log_info, log_success};
 
 use super::commit::Git;
 
@@ -92,7 +92,7 @@ impl Git {
             }
         } else {
             // 没有 pre-commit hooks，跳过
-            log_info!("No pre-commit hooks found, skipping");
+            log_debug!("No pre-commit hooks found, skipping");
             Ok(())
         }
     }

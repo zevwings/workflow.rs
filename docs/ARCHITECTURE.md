@@ -241,36 +241,36 @@ qk PROJ-123 search [SEARCH_TERM]
 
 ### 配置文件位置
 
-所有配置文件存储在 `${HOME}/.workflow/` 目录下：
+配置文件存储在以下位置：
 
-- `jira-status.json` - Jira 项目状态映射配置
-- `work-history.json` - PR 和 Jira ticket 的关联历史
+- `~/.workflow/config/jira-status.toml` - Jira 项目状态映射配置
+- `~/.workflow/work-history/` - PR 和 Jira ticket 的关联历史（按仓库存储）
 
-### Jira Status 配置 (`jira-status.json`)
+### Jira Status 配置 (`jira-status.toml`)
 
 存储每个 Jira 项目在创建 PR 和合并 PR 时的状态映射关系。
 
 **格式**：
-```json
-{
-  "WEW": {
-    "created-pr": "In Progress",
-    "merged-pr": "Done"
-  },
-  "PROJ": {
-    "created-pr": "In Review",
-    "merged-pr": "Done"
-  }
-}
+```toml
+[WEW]
+created-pr = "In Progress"
+merged-pr = "Done"
+
+[PROJ]
+created-pr = "In Review"
+merged-pr = "Done"
 ```
 
 **使用场景**：
 - 创建 PR 时自动更新 Jira ticket 状态为 `created-pr` 配置的状态
 - 合并 PR 时自动更新 Jira ticket 状态为 `merged-pr` 配置的状态
 
-### Work History (`work-history.json`)
+### Work History (`~/.workflow/work-history/`)
 
-存储 PR ID 到 Jira ticket 的映射关系，用于在合并 PR 时自动查找对应的 Jira ticket。
+存储 PR ID 到 Jira ticket 的映射关系，用于在合并 PR 时自动查找对应的 Jira ticket。按仓库分别存储在不同的 JSON 文件中。
+
+**文件位置**：
+- `~/.workflow/work-history/{repo_id}.json` - 每个仓库对应一个 JSON 文件
 
 **格式**：
 ```json

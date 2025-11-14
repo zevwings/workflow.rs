@@ -89,6 +89,46 @@ impl Git {
         Ok((exists_local, exists_remote))
     }
 
+    /// 检查分支是否在本地存在
+    ///
+    /// 这是 `is_branch_exists` 的便捷方法，只检查本地分支是否存在。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 如果分支在本地存在，返回 `true`，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn has_local_branch(branch_name: &str) -> Result<bool> {
+        let (exists_local, _) = Self::is_branch_exists(branch_name)?;
+        Ok(exists_local)
+    }
+
+    /// 检查分支是否在远程存在
+    ///
+    /// 这是 `is_branch_exists` 的便捷方法，只检查远程分支是否存在。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要检查的分支名称
+    ///
+    /// # 返回
+    ///
+    /// 如果分支在远程存在，返回 `true`，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn has_remote_branch(branch_name: &str) -> Result<bool> {
+        let (_, exists_remote) = Self::is_branch_exists(branch_name)?;
+        Ok(exists_remote)
+    }
+
     /// 创建或切换到分支
     ///
     /// 根据分支的存在情况执行相应的操作：
@@ -188,9 +228,12 @@ impl Git {
         // 这是最可靠的方法，因为它直接从远程仓库查询，不依赖本地设置
         let output = cmd("git", &["ls-remote", "--symref", "origin", "HEAD"])
             .read()
+            .context("Failed to get default branch")
             .or_else(|_| {
                 // 如果 --symref 失败，尝试从 remote show origin 获取
-                let remote_info = cmd("git", &["remote", "show", "origin"]).read()?;
+                let remote_info = cmd("git", &["remote", "show", "origin"])
+                    .read()
+                    .context("Failed to get default branch")?;
                 for line in remote_info.lines() {
                     if line.contains("HEAD branch:") {
                         if let Some(branch) = line.split("HEAD branch:").nth(1) {
@@ -208,7 +251,7 @@ impl Git {
         }
 
         // 如果没有找到符号引用，尝试从远程分支列表中查找常见的默认分支名
-        Self::find_default_branch_from_remote()
+        Self::find_default_branch_from_remote().context("Failed to get default branch")
     }
 
     /// 解析 ls-remote --symref 的输出
@@ -250,7 +293,9 @@ impl Git {
     ///
     /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
     fn find_default_branch_from_remote() -> Result<String> {
-        let remote_branches = cmd("git", &["branch", "-r"]).read()?;
+        let remote_branches = cmd("git", &["branch", "-r"])
+            .read()
+            .context("Failed to get default branch")?;
         let common_defaults = ["main", "master", "develop", "dev"];
 
         for default_name in &common_defaults {

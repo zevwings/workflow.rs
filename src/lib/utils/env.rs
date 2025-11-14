@@ -1,12 +1,14 @@
-//! 环境变量管理
+//! 环境变量管理（仅用于代理功能）
 //!
-//! 本模块提供了环境变量的完整管理功能，包括：
-//! - 从 shell 配置文件读取环境变量（~/.zshrc, ~/.bash_profile 等）
-//! - 保存环境变量到 shell 配置文件
-//! - 删除环境变量
-//! - 合并环境变量（环境变量 > 配置文件）
+//! 本模块提供了代理环境变量的管理功能，包括：
+//! - 从 shell 配置文件读取代理环境变量（~/.zshrc, ~/.bash_profile 等）
+//! - 保存代理环境变量到 shell 配置文件
+//! - 删除代理环境变量
 //!
-//! 所有环境变量都保存在 shell 配置文件的配置块中，格式：
+//! 注意：Workflow CLI 的主要配置已迁移到 TOML 文件（~/.workflow/config/workflow.toml），
+//! 此模块仅用于管理代理相关的环境变量（http_proxy, https_proxy, all_proxy）。
+//!
+//! 代理环境变量保存在 shell 配置文件的配置块中，格式：
 //! ```
 //! # Workflow CLI Configuration - Start
 //! export KEY="VALUE"
@@ -18,68 +20,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-/// 环境变量管理器
+/// 环境变量管理器（仅用于代理功能）
 ///
-/// 管理 Workflow CLI 相关的环境变量。
+/// 管理代理相关的环境变量（http_proxy, https_proxy, all_proxy）。
 /// 数据源：shell 配置文件（~/.zshrc, ~/.bash_profile 等）。
 pub struct EnvFile;
 
 impl EnvFile {
-    /// 从多个来源加载环境变量（环境变量 > 配置文件）
+    /// 从 shell 配置文件加载环境变量
     ///
-    /// 优先从当前环境变量读取，如果环境变量中没有，则从配置文件读取。
-    ///
-    /// # 参数
-    ///
-    /// * `keys` - 要加载的环境变量键列表
-    ///
-    /// # 返回
-    ///
-    /// 返回合并后的环境变量 HashMap。
-    pub fn load_merged(keys: &[&str]) -> HashMap<String, String> {
-        let mut merged = HashMap::new();
-
-        // 1. 优先从当前环境变量读取
-        for key in keys {
-            if let Ok(value) = std::env::var(key) {
-                merged.insert(key.to_string(), value);
-            }
-        }
-
-        // 2. 从配置文件读取（如果环境变量中没有）
-        let config_env = Self::load().unwrap_or_default();
-        for (key, value) in config_env {
-            merged.entry(key).or_insert(value);
-        }
-
-        merged
-    }
-
-    /// 获取所有 Workflow CLI 相关的环境变量键
-    pub fn get_workflow_env_keys() -> Vec<&'static str> {
-        vec![
-            "EMAIL",
-            "GITHUB_API_TOKEN",
-            "JIRA_API_TOKEN",
-            "JIRA_SERVICE_ADDRESS",
-            "GITHUB_BRANCH_PREFIX",
-            "LOG_OUTPUT_FOLDER_NAME",
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED",
-            "DISABLE_CHECK_PROXY",
-            "LLM_PROVIDER",
-            "LLM_OPENAI_KEY",
-            "LLM_DEEPSEEK_KEY",
-            "LLM_PROXY_URL",
-            "LLM_PROXY_KEY",
-            "CODEUP_CSRF_TOKEN",
-            "CODEUP_COOKIE",
-            "CODEUP_PROJECT_ID",
-        ]
-    }
-
-    /// 从 shell 配置文件加载环境变量（主要数据源）
-    ///
-    /// 从 shell 配置文件中读取 Workflow CLI 配置块内的环境变量。
+    /// 从 shell 配置文件中读取配置块内的环境变量（主要用于代理配置）。
     ///
     /// # 返回
     ///
@@ -184,42 +134,17 @@ impl EnvFile {
         let marker_end = "# Workflow CLI Configuration - End";
 
         // 解析现有配置块中的环境变量（如果存在）
-        let mut existing_env_in_block = HashMap::new();
-        if let Some(start_pos) = existing_content.find(marker_start) {
+        let existing_env_in_block = if let Some(start_pos) = existing_content.find(marker_start) {
             if let Some(end_pos) = existing_content[start_pos..].find(marker_end) {
                 let block_content =
                     &existing_content[start_pos + marker_start.len()..start_pos + end_pos];
-                // 解析配置块中的 export KEY="VALUE" 格式
-                for line in block_content.lines() {
-                    let line = line.trim();
-                    if line.is_empty() || line.starts_with('#') {
-                        continue;
-                    }
-                    // 匹配 export KEY="VALUE" 或 export KEY=VALUE
-                    if let Some(rest) = line.strip_prefix("export ") {
-                        if let Some(equal_pos) = rest.find('=') {
-                            let key = rest[..equal_pos].trim();
-                            let mut value = rest[equal_pos + 1..].trim();
-                            // 移除引号（如果有）
-                            if (value.starts_with('"') && value.ends_with('"'))
-                                || (value.starts_with('\'') && value.ends_with('\''))
-                            {
-                                value = &value[1..value.len() - 1];
-                            }
-                            // 反转义
-                            let unescaped_value = value
-                                .replace("\\\\", "\\")
-                                .replace("\\\"", "\"")
-                                .replace("\\$", "$")
-                                .replace("\\`", "`");
-                            if !key.is_empty() {
-                                existing_env_in_block.insert(key.to_string(), unescaped_value);
-                            }
-                        }
-                    }
-                }
+                Self::parse_shell_config_block(block_content).unwrap_or_default()
+            } else {
+                HashMap::new()
             }
-        }
+        } else {
+            HashMap::new()
+        };
 
         // 合并环境变量：新值覆盖旧值
         let mut merged_env = existing_env_in_block;
@@ -336,43 +261,6 @@ impl EnvFile {
         Ok(config_path)
     }
 
-    /// 更新单个环境变量
-    ///
-    /// 设置或更新单个环境变量的值。
-    ///
-    /// # 参数
-    ///
-    /// * `key` - 环境变量键
-    /// * `value` - 环境变量值
-    ///
-    /// # 错误
-    ///
-    /// 如果保存失败，返回相应的错误信息。
-    pub fn set(key: &str, value: &str) -> Result<()> {
-        let mut env_vars = HashMap::new();
-        env_vars.insert(key.to_string(), value.to_string());
-        Self::save(&env_vars)
-    }
-
-    /// 删除环境变量
-    ///
-    /// 从配置文件中删除指定的环境变量。
-    ///
-    /// # 参数
-    ///
-    /// * `key` - 要删除的环境变量键
-    ///
-    /// # 错误
-    ///
-    /// 如果删除失败，返回相应的错误信息。
-    pub fn unset(key: &str) -> Result<()> {
-        let mut existing = Self::load()?;
-        existing.remove(key);
-
-        // 更新 shell 配置文件
-        Self::save(&existing)
-    }
-
     /// 批量设置环境变量
     pub fn set_multiple(env_vars: &HashMap<String, String>) -> Result<()> {
         Self::save(env_vars)
@@ -395,10 +283,6 @@ impl EnvFile {
         let mut lines: Vec<String> = content.lines().map(|s| s.to_string()).collect();
         let mut removed_any = false;
 
-        // 查找配置块的开始和结束位置（用于将来的扩展）
-        // let mut block_start = None;
-        // let mut block_end = None;
-
         // 收集需要删除的行索引
         let mut indices_to_remove: Vec<usize> = Vec::new();
 
@@ -410,7 +294,7 @@ impl EnvFile {
                 continue;
             }
 
-            // 如果行以 export 开头，检查是否是代理配置
+            // 如果行以 export 开头，检查是否匹配要删除的键
             if let Some(rest) = trimmed.strip_prefix("export ") {
                 for key in keys {
                     // 检查是否是 export KEY= 或 export KEY="

@@ -18,46 +18,7 @@ use crate::{log_break, log_debug, log_info, log_success};
 use dialoguer::Select;
 
 use super::helpers::{extract_jira_project, get_auth, get_base_url};
-
-/// 配置文件路径管理
-///
-/// 管理 Jira 状态配置和工作历史记录的存储路径。
-/// 所有文件都存储在 `${HOME}/.workflow` 目录下。
-pub struct ConfigPaths {
-    /// Jira 状态配置文件路径（`${HOME}/.workflow/jira-status.json`）
-    pub jira_status: PathBuf,
-    /// 工作历史记录文件路径（`${HOME}/.workflow/work-history.json`）
-    pub work_history: PathBuf,
-}
-
-impl ConfigPaths {
-    /// 创建配置文件路径管理器
-    ///
-    /// 初始化配置文件路径，确保 `.workflow` 目录存在。
-    ///
-    /// # 返回
-    ///
-    /// 返回 `ConfigPaths` 结构体，包含所有配置文件的路径。
-    ///
-    /// # 错误
-    ///
-    /// 如果 `HOME` 环境变量未设置或无法创建目录，返回相应的错误信息。
-    pub fn new() -> Result<Self> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(&home);
-
-        // 使用 ${HOME}/.workflow 目录
-        let workflow_dir = home_dir.join(".workflow");
-
-        // 确保目录存在
-        fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
-
-        Ok(Self {
-            jira_status: workflow_dir.join("jira-status.json"),
-            work_history: workflow_dir.join("work-history.json"),
-        })
-    }
-}
+use crate::settings::paths::ConfigPaths as SettingsConfigPaths;
 
 /// 项目状态配置
 ///
@@ -85,7 +46,14 @@ pub struct JiraStatusConfig {
     pub merged_pull_request_status: Option<String>,
 }
 
-/// Jira 状态配置存储格式（JSON 对象）
+/// Jira 状态配置存储格式（TOML 表）
+///
+/// TOML 格式示例：
+/// ```toml
+/// [PROJ]
+/// created-pr = "In Progress"
+/// merged-pr = "Done"
+/// ```
 type JiraStatusMap = HashMap<String, ProjectStatusConfig>;
 
 /// 工作历史记录条目
@@ -158,17 +126,8 @@ fn normalize_repo_to_filename(repo_url: &str) -> String {
 ///
 /// 如果无法创建目录或获取路径，返回相应的错误信息。
 fn get_repo_work_history_path(repo_url: &str) -> Result<PathBuf> {
-    let paths = ConfigPaths::new()?;
+    let history_dir = SettingsConfigPaths::work_history_dir()?;
     let repo_id = normalize_repo_to_filename(repo_url);
-    let history_dir = paths
-        .work_history
-        .parent()
-        .context("Failed to get workflow directory")?
-        .join("work-history");
-
-    // 确保目录存在
-    fs::create_dir_all(&history_dir).context("Failed to create work-history directory")?;
-
     Ok(history_dir.join(format!("{}.json", repo_id)))
 }
 
@@ -697,10 +656,10 @@ impl JiraStatus {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(project: &str) -> Result<JiraStatusConfig> {
-        let paths = ConfigPaths::new()?;
+        let config_path = SettingsConfigPaths::jira_status_config()?;
 
         // 如果文件不存在，返回空配置
-        if !paths.jira_status.exists() {
+        if !config_path.exists() {
             return Ok(JiraStatusConfig {
                 project: project.to_string(),
                 created_pull_request_status: None,
@@ -709,11 +668,11 @@ impl JiraStatus {
         }
 
         let content =
-            fs::read_to_string(&paths.jira_status).context("Failed to read jira-status.json")?;
+            fs::read_to_string(&config_path).context("Failed to read jira-status.toml")?;
 
-        // 解析 JSON
+        // 解析 TOML
         let status_map: JiraStatusMap =
-            serde_json::from_str(&content).context("Failed to parse jira-status.json")?;
+            toml::from_str(&content).context("Failed to parse jira-status.toml")?;
 
         // 查找项目配置
         let project_config = status_map.get(project);
@@ -746,13 +705,13 @@ impl JiraStatus {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(config: &JiraStatusConfig) -> Result<()> {
-        let paths = ConfigPaths::new()?;
+        let config_path = SettingsConfigPaths::jira_status_config()?;
 
         // 读取现有配置
-        let mut status_map: JiraStatusMap = if paths.jira_status.exists() {
-            let content = fs::read_to_string(&paths.jira_status)
-                .context("Failed to read existing jira-status.json")?;
-            serde_json::from_str(&content).unwrap_or_else(|_| HashMap::new())
+        let mut status_map: JiraStatusMap = if config_path.exists() {
+            let content = fs::read_to_string(&config_path)
+                .context("Failed to read existing jira-status.toml")?;
+            toml::from_str(&content).unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
         };
@@ -766,11 +725,11 @@ impl JiraStatus {
             },
         );
 
-        // 写入 JSON（使用 pretty print 以便阅读）
-        let json = serde_json::to_string_pretty(&status_map)
-            .context("Failed to serialize jira-status.json")?;
+        // 写入 TOML
+        let toml_content =
+            toml::to_string_pretty(&status_map).context("Failed to serialize jira-status.toml")?;
 
-        fs::write(&paths.jira_status, json).context("Failed to write jira-status.json")?;
+        fs::write(&config_path, toml_content).context("Failed to write jira-status.toml")?;
 
         Ok(())
     }

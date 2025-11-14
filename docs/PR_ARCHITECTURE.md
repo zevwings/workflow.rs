@@ -222,7 +222,7 @@ flowchart LR
 1. **Jira Ticket 处理**：
    - 如果提供 ticket，验证格式
    - 如果没有提供，提示用户输入
-   - 检查并配置 Jira 状态（从 `jira-status.json` 读取配置）
+   - 检查并配置 Jira 状态（从 `jira-status.toml` 读取配置）
 
 2. **PR 标题生成**：
    - 如果提供 `--title`，直接使用
@@ -640,7 +640,7 @@ match repo_type {
 ### Jira 集成
 
 - **创建 PR 时**：
-  - 检查并配置 Jira 状态（从 `jira-status.json` 读取）
+  - 检查并配置 Jira 状态（从 `jira-status.toml` 读取）
   - 创建 PR 后更新 Jira 状态为 `created-pr` 配置的状态
   - 保存工作历史（PR ID → Jira ticket 映射）
 

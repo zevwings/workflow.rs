@@ -31,27 +31,4 @@ impl Clipboard {
 
         Ok(())
     }
-
-    /// 从剪贴板读取文本
-    ///
-    /// 从系统剪贴板读取文本内容。
-    ///
-    /// # 返回
-    ///
-    /// 返回剪贴板中的文本内容。
-    ///
-    /// # 错误
-    ///
-    /// 如果读取失败，返回相应的错误信息。
-    #[allow(dead_code)]
-    pub fn read() -> Result<String> {
-        let mut ctx: ClipboardContext = ClipboardProvider::new()
-            .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard: {}", e))?;
-
-        let contents = ctx
-            .get_contents()
-            .map_err(|e| anyhow::anyhow!("Failed to read from clipboard: {}", e))?;
-
-        Ok(contents)
-    }
 }

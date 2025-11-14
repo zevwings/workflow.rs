@@ -2,10 +2,9 @@
 //! 清理日志目录
 
 use anyhow::{Context, Result};
-use dialoguer::Confirm;
 use std::path::{Path, PathBuf};
 
-use crate::{log_break, log_info, log_success, Settings};
+use crate::{confirm, log_break, log_info, log_success, Settings};
 
 use super::utils::{calculate_dir_info, expand_path, format_size, list_dir_contents};
 
@@ -64,18 +63,16 @@ pub fn clean_dir(dir: &Path, dir_name: &str, dry_run: bool, list_only: bool) -> 
 
     display_dir_info(dir_name, dir, size, file_count)?;
 
-    let confirmed = Confirm::new()
-        .with_prompt(format!(
+    if !confirm(
+        &format!(
             "Are you sure you want to delete {}? This will remove {} files ({}).",
             dir_name,
             file_count,
             format_size(size)
-        ))
-        .default(false)
-        .interact()
-        .context("Failed to get confirmation")?;
-
-    if !confirmed {
+        ),
+        false,
+        None,
+    )? {
         log_info!("Clean operation cancelled.");
         return Ok(false);
     }
@@ -90,6 +87,7 @@ pub fn clean_dir(dir: &Path, dir_name: &str, dry_run: bool, list_only: bool) -> 
 /// 获取基础目录路径
 /// 展开 ~ 路径并返回完整的基础目录路径
 pub fn get_base_dir_path() -> Result<PathBuf> {
-    let settings = Settings::load();
-    expand_path(&settings.log_download_base_dir)
+    let settings = Settings::get();
+    let base_dir = settings.log.download_base_dir.clone().unwrap_or_default();
+    expand_path(&base_dir)
 }

@@ -1,7 +1,7 @@
 //! Utils 模块
 //!
 //! 本模块提供了各种工具函数和实用工具，包括：
-//! - 环境变量管理（读取、写入、删除）
+//! - 代理环境变量管理（仅用于代理功能，读取、写入、删除）
 //! - Shell 检测和管理（检测 shell 类型、配置路径）
 //! - Completion 管理（配置、删除）
 //! - 代理检测和管理（系统代理、环境变量代理）
@@ -12,7 +12,7 @@
 //!
 //! ## 模块结构
 //!
-//! - `env` - 环境变量管理（`EnvFile`）
+//! - `env` - 代理环境变量管理（`EnvFile`，仅用于代理功能）
 //! - `shell` - Shell 检测和管理（`Shell`、`ShellInfo`）
 //! - `completion` - Completion 管理（`Completion`）
 //! - `proxy` - 代理检测和管理（`Proxy`、`ProxyInfo`）
@@ -25,6 +25,7 @@
 pub mod browser;
 pub mod clipboard;
 pub mod completion;
+pub mod confirm;
 pub mod env;
 pub mod logger;
 pub mod proxy;
@@ -46,7 +47,7 @@ pub use clipboard::Clipboard;
 pub use env::EnvFile;
 
 // 重新导出 proxy
-pub use proxy::{Proxy, ProxyInfo};
+pub use proxy::{Proxy, ProxyDisableResult, ProxyEnableResult, ProxyInfo};
 
 // 重新导出 completion
 pub use completion::Completion;
@@ -56,3 +57,6 @@ pub use shell::{Shell, ShellInfo};
 
 // 重新导出 uninstall
 pub use uninstall::Uninstall;
+
+// 重新导出 confirm
+pub use confirm::confirm;

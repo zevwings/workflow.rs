@@ -2,45 +2,54 @@
 //!
 //! 本模块提供了用户信息获取和本地缓存功能：
 //! - 从 Jira API 获取用户信息
-//! - 本地缓存用户信息到 `${HOME}/.workflow/jira-users/${email}.json`
+//! - 本地缓存用户信息到 `${HOME}/.workflow/config/jira-users.toml`
 //! - 优先使用本地缓存，减少 API 调用
 
 use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
 
 use crate::http::{Authorization, HttpClient};
+use crate::settings::paths::ConfigPaths;
 
-use super::helpers::{get_auth, get_base_url, sanitize_email_for_filename};
+use super::helpers::{get_auth, get_base_url};
 use super::models::JiraUser;
 
-/// 获取用户信息文件路径
+/// Jira 用户配置（TOML）
 ///
-/// 根据邮箱地址生成用户信息缓存文件的路径。
-/// 路径格式：`${HOME}/.workflow/jira-users/${sanitized_email}.json`
+/// TOML 格式示例：
+/// ```toml
+/// [[users]]  # 数组表（array of tables），可以包含多个用户条目
+/// email = "user@example.com"
+/// account_id = "628d9616269a9a0068f27e0c"
+/// display_name = "User Name"
 ///
-/// # 参数
-///
-/// * `email` - 用户邮箱地址
-///
-/// # 返回
-///
-/// 返回用户信息文件的完整路径。
-fn get_user_info_file_path(email: &str) -> Result<PathBuf> {
-    let home = std::env::var("HOME").context("HOME environment variable not set")?;
-    let home_dir = PathBuf::from(&home);
-    let users_dir = home_dir.join(".workflow").join("jira-users");
-
-    // 确保目录存在
-    fs::create_dir_all(&users_dir).context("Failed to create .workflow/jira-users directory")?;
-
-    let sanitized_email = sanitize_email_for_filename(email);
-    Ok(users_dir.join(format!("{}.json", sanitized_email)))
+/// [[users]]  # 第二个用户条目
+/// email = "another@example.com"
+/// account_id = "another_account_id"
+/// display_name = "Another User"
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct JiraUsersConfig {
+    /// 用户列表
+    #[serde(default)]
+    users: Vec<JiraUserEntry>,
 }
 
-/// 从本地文件读取用户信息
+/// Jira 用户条目（TOML）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct JiraUserEntry {
+    /// 用户邮箱（必需，用于查找）
+    email: String,
+    /// 账户 ID
+    account_id: String,
+    /// 显示名称
+    display_name: String,
+}
+
+/// 从本地 TOML 文件读取用户信息
 ///
-/// 从缓存文件中读取用户信息。如果文件不存在，返回错误。
+/// 从 `jira-users.toml` 配置文件中读取指定邮箱的用户信息。
 ///
 /// # 参数
 ///
@@ -48,23 +57,37 @@ fn get_user_info_file_path(email: &str) -> Result<PathBuf> {
 ///
 /// # 返回
 ///
-/// 返回 `JiraUser` 结构体，如果文件不存在则返回错误。
+/// 返回 `JiraUser` 结构体，如果文件不存在或用户不存在则返回错误。
 fn get_user_info_from_local(email: &str) -> Result<JiraUser> {
-    let file_path = get_user_info_file_path(email)?;
+    let config_path = ConfigPaths::jira_users_config()?;
 
-    if !file_path.exists() {
-        anyhow::bail!("User info file does not exist: {:?}", file_path);
+    if !config_path.exists() {
+        anyhow::bail!("Jira users config file does not exist: {:?}", config_path);
     }
 
-    let file_content = fs::read_to_string(&file_path)
-        .context(format!("Failed to read user info file: {:?}", file_path))?;
+    let content = fs::read_to_string(&config_path)
+        .context(format!("Failed to read jira-users.toml: {:?}", config_path))?;
 
-    let user: JiraUser = serde_json::from_str(&file_content).context(format!(
-        "Failed to parse user info from file: {:?}",
-        file_path
+    let config: JiraUsersConfig = toml::from_str(&content).context(format!(
+        "Failed to parse jira-users.toml: {:?}",
+        config_path
     ))?;
 
-    Ok(user)
+    // 查找匹配的用户
+    let user_entry = config
+        .users
+        .iter()
+        .find(|u| u.email == email)
+        .context(format!(
+            "User with email '{}' not found in jira-users.toml",
+            email
+        ))?;
+
+    Ok(JiraUser {
+        account_id: user_entry.account_id.clone(),
+        display_name: user_entry.display_name.clone(),
+        email_address: Some(user_entry.email.clone()),
+    })
 }
 
 /// 从远程 API 获取用户信息并保存到本地
@@ -107,16 +130,65 @@ fn get_user_info_from_remote(email: &str, api_token: &str) -> Result<JiraUser> {
         }
     }
 
-    // 保存到本地文件
-    let file_path = get_user_info_file_path(email)?;
-    let json_content =
-        serde_json::to_string_pretty(&user).context("Failed to serialize user info to JSON")?;
-    fs::write(&file_path, json_content).context(format!(
-        "Failed to write user info to file: {:?}",
-        file_path
-    ))?;
+    // 保存到本地 TOML 文件
+    save_user_info_to_local(email, &user)?;
 
     Ok(user)
+}
+
+/// 保存用户信息到本地 TOML 文件
+///
+/// 将用户信息添加到或更新到 `jira-users.toml` 配置文件中。
+///
+/// # 参数
+///
+/// * `email` - 用户邮箱地址
+/// * `user` - JiraUser 结构体
+fn save_user_info_to_local(email: &str, user: &JiraUser) -> Result<()> {
+    let config_path = ConfigPaths::jira_users_config()?;
+
+    // 读取现有配置
+    let mut config: JiraUsersConfig = if config_path.exists() {
+        let content =
+            fs::read_to_string(&config_path).context("Failed to read existing jira-users.toml")?;
+        toml::from_str(&content).unwrap_or_else(|_| JiraUsersConfig { users: vec![] })
+    } else {
+        JiraUsersConfig { users: vec![] }
+    };
+
+    // 查找并更新或添加用户
+    // 使用 JiraUser 的 email_address，如果没有则使用传入的 email
+    let email_to_save = user.email_address.as_deref().unwrap_or(email);
+    let email_to_save_str = email_to_save.to_string();
+    let user_entry = JiraUserEntry {
+        email: email_to_save_str.clone(),
+        account_id: user.account_id.clone(),
+        display_name: user.display_name.clone(),
+    };
+
+    // 查找时使用保存的 email（可能是 email_address 或传入的 email）
+    if let Some(existing) = config
+        .users
+        .iter_mut()
+        .find(|u| u.email == email_to_save_str || u.email == email)
+    {
+        // 更新现有用户
+        *existing = user_entry;
+    } else {
+        // 添加新用户
+        config.users.push(user_entry);
+    }
+
+    // 写入 TOML
+    let toml_content =
+        toml::to_string_pretty(&config).context("Failed to serialize jira-users.toml")?;
+
+    fs::write(&config_path, toml_content).context(format!(
+        "Failed to write jira-users.toml: {:?}",
+        config_path
+    ))?;
+
+    Ok(())
 }
 
 /// 获取当前 Jira 用户信息

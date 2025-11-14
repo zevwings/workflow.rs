@@ -1,9 +1,9 @@
 use crate::commands::check;
 use crate::{
-    log_error, log_info, log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+    confirm, detect_repo_type, get_current_branch_pr_id, log_debug, log_error, log_info,
+    log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
-use dialoguer::Confirm;
 
 /// PR 分支集成的命令
 #[allow(dead_code)]
@@ -32,18 +32,15 @@ impl PullRequestIntegrateCommand {
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
-            let should_continue = Confirm::new()
-                .with_prompt("Continue anyway?")
-                .default(false)
-                .interact()
-                .context("Failed to get user confirmation")?;
-            if !should_continue {
-                anyhow::bail!("Operation cancelled by user");
-            }
+            confirm(
+                "Continue anyway?",
+                false,
+                Some("Operation cancelled by user"),
+            )?;
         }
 
         // 2. 获取当前分支
-        let current_branch = Git::current_branch().context("Failed to get current branch")?;
+        let current_branch = Git::current_branch()?;
         log_success!("Current branch: {}", current_branch);
 
         // 3. 检查工作区状态并 stash（如果需要）
@@ -62,12 +59,7 @@ impl PullRequestIntegrateCommand {
         // 如果合并失败，恢复 stash（如果有）
         if merge_result.is_err() && has_stashed {
             log_info!("Merge failed, attempting to restore stashed changes...");
-            if let Err(stash_err) = Git::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", stash_err);
-                log_warning!("You can manually restore them with: git stash pop");
-            } else {
-                log_success!("Stashed changes restored");
-            }
+            let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
         }
 
         match merge_result {
@@ -103,30 +95,20 @@ impl PullRequestIntegrateCommand {
                 // 未创建 PR，恢复 stash（如果有）
                 if has_stashed {
                     log_info!("Restoring stashed changes...");
-                    if let Err(stash_err) = Git::stash_pop() {
-                        log_warning!("Failed to restore stashed changes: {}", stash_err);
-                        log_warning!("You can manually restore them with: git stash pop");
-                    } else {
-                        log_success!("Stashed changes restored");
-                    }
+                    let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
                 }
             }
         } else {
             // 本地分支：合并后立即恢复 stash（如果有）
             if has_stashed {
                 log_info!("Restoring stashed changes...");
-                if let Err(stash_err) = Git::stash_pop() {
-                    log_warning!("Failed to restore stashed changes: {}", stash_err);
-                    log_warning!("You can manually restore them with: git stash pop");
-                } else {
-                    log_success!("Stashed changes restored");
-                }
+                let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
             }
 
             // 推送到远程（如果需要）
             if push {
                 log_success!("Pushing to remote...");
-                let (_, exists_remote) = Git::is_branch_exists(&current_branch)
+                let exists_remote = Git::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
@@ -188,7 +170,7 @@ impl PullRequestIntegrateCommand {
     /// 返回源分支信息（类型、是否默认分支、合并引用）。
     fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
         // 检查是否为默认分支
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let default_branch = Git::get_default_branch()?;
         let is_default = source_branch == default_branch;
 
         if is_default {
@@ -247,25 +229,15 @@ impl PullRequestIntegrateCommand {
     /// 如果当前分支已创建 PR，则推送代码以更新 PR。
     /// 返回是否更新了 PR。
     fn check_and_update_current_branch_pr(current_branch: &str) -> Result<bool> {
-        let repo_type = Git::detect_repo_type()?;
-
         // 检查当前分支是否已创建 PR
-        let current_pr_id = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Unknown => None,
-        };
+        let current_pr_id = get_current_branch_pr_id()?;
 
         if let Some(pr_id) = current_pr_id {
             log_info!("Current branch '{}' has PR #{}", current_branch, pr_id);
             log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
-            let (_, exists_remote) = Git::is_branch_exists(current_branch)
+            let exists_remote = Git::has_remote_branch(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
@@ -283,8 +255,6 @@ impl PullRequestIntegrateCommand {
     /// 如果被合并分支已创建 PR，则关闭它。
     /// 返回是否关闭了 PR。
     fn check_and_close_source_branch_pr(source_branch: &str) -> Result<bool> {
-        let repo_type = Git::detect_repo_type()?;
-
         // 由于通过分支名查找 PR 比较复杂，我们采用更简单的方法：
         // 尝试通过工作历史查找 PR ID
         let remote_url = Git::get_remote_url().ok();
@@ -292,24 +262,26 @@ impl PullRequestIntegrateCommand {
             source_branch,
             remote_url.as_deref(),
         )? {
-            log_info!("Found PR #{} for source branch '{}'", pr_id, source_branch);
+            log_debug!("Found PR #{} for source branch '{}'", pr_id, source_branch);
             log_info!("Closing PR #{}...", pr_id);
 
-            match repo_type {
-                RepoType::GitHub => {
-                    <GitHub as PlatformProvider>::close_pull_request(&pr_id)?;
+            match detect_repo_type(
+                |repo_type| match repo_type {
+                    RepoType::GitHub => GitHub::close_pull_request(&pr_id),
+                    RepoType::Codeup => Codeup::close_pull_request(&pr_id),
+                    RepoType::Unknown => {
+                        log_warning!("Unknown repository type, cannot close PR");
+                        Ok(())
+                    }
+                },
+                "close pull request",
+            ) {
+                Ok(()) => {
+                    log_success!("PR #{} closed successfully", pr_id);
+                    Ok(true)
                 }
-                RepoType::Codeup => {
-                    <Codeup as PlatformProvider>::close_pull_request(&pr_id)?;
-                }
-                RepoType::Unknown => {
-                    log_warning!("Unknown repository type, cannot close PR");
-                    return Ok(false);
-                }
+                Err(_) => Ok(false),
             }
-
-            log_success!("PR #{} closed successfully", pr_id);
-            Ok(true)
         } else {
             Ok(false)
         }

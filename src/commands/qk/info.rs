@@ -69,9 +69,10 @@ impl InfoCommand {
         }
 
         // 显示 Jira URL
-        let settings = crate::Settings::load();
-        if !settings.jira_service_address.is_empty() {
-            let jira_url = format!("{}/browse/{}", settings.jira_service_address, issue.key);
+        let settings = crate::Settings::get();
+        let jira_service_address = settings.jira.service_address.clone().unwrap_or_default();
+        if !jira_service_address.is_empty() {
+            let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
             log_break!();
             log_info!("🔗 URL: {}", jira_url);
         }
