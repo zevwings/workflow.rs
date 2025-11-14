@@ -1,4 +1,4 @@
-use crate::{log_break, log_debug, log_info, log_success, log_warning, Logs};
+use crate::{log_break, log_debug, log_message, log_success, log_warning, Logs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -70,7 +70,7 @@ impl SearchCommand {
             for entry in api_results {
                 if let Some(id) = entry.id {
                     if let Some(url) = entry.url {
-                        log_info!("URL: {}, ID: {}", url, id);
+                        log_message!("URL: {}, ID: {}", url, id);
                     } else {
                         log_debug!("ID: {} (URL not found)", id);
                     }
@@ -87,7 +87,7 @@ impl SearchCommand {
             for entry in flutter_api_results {
                 if let Some(id) = entry.id {
                     if let Some(url) = entry.url {
-                        log_info!("URL: {}, ID: {}", url, id);
+                        log_message!("URL: {}, ID: {}", url, id);
                     } else {
                         log_debug!("ID: {} (URL not found)", id);
                     }
