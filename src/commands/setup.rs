@@ -1,6 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
+use crate::git::GitConfig;
 use crate::{confirm, log_break, log_message, log_success};
 use crate::{
     log_info,
@@ -10,7 +11,6 @@ use crate::{
         settings::{GitHubAccount, Settings},
     },
 };
-use crate::git::GitConfig;
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -154,8 +154,13 @@ impl SetupCommand {
                 _ => {
                     // 保持现有账号，但需要确保 Git 配置与当前账号一致
                     if let Some(ref current_name) = github_current {
-                        if let Some(current_account) = github_accounts.iter().find(|a| &a.name == current_name) {
-                            GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+                        if let Some(current_account) =
+                            github_accounts.iter().find(|a| &a.name == current_name)
+                        {
+                            GitConfig::set_global_user(
+                                &current_account.email,
+                                &current_account.name,
+                            )?;
                         }
                     }
                 }
@@ -185,7 +190,11 @@ impl SetupCommand {
             } else if github_accounts.len() == 1 {
                 // 如果只有一个账号，确保设置了 Git 配置
                 let account = &github_accounts[0];
-                if github_current.as_ref().map(|c| c == &account.name).unwrap_or(false) {
+                if github_current
+                    .as_ref()
+                    .map(|c| c == &account.name)
+                    .unwrap_or(false)
+                {
                     GitConfig::set_global_user(&account.email, &account.name)?;
                 }
             }
