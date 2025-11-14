@@ -110,7 +110,24 @@ impl GitHubCommand {
             log_success!("Account '{}' added and set as current.", account.name);
         } else {
             log_success!("Account '{}' added.", account.name);
-            log_message!("Use 'workflow github switch' to switch to this account.");
+            log_break!();
+
+            // 询问是否要将新账号设为当前账号
+            let should_set_current = confirm(
+                &format!(
+                    "Set '{}' as the current GitHub account?",
+                    account.name
+                ),
+                false,
+                None,
+            )?;
+
+            if should_set_current {
+                settings.github.current = Some(account.name.clone());
+                log_success!("Account '{}' is now set as current.", account.name);
+            } else {
+                log_message!("Current account remains unchanged.");
+            }
         }
 
         Self::save_settings(&settings)?;
@@ -168,21 +185,23 @@ impl GitHubCommand {
         }
 
         // 如果删除的是当前账号，需要更新 current
-        if settings
+        let was_current = settings
             .github
             .current
             .as_ref()
             .map(|c| c == account_name)
-            .unwrap_or(false)
-        {
-            settings.github.current = None;
-        }
+            .unwrap_or(false);
 
         settings.github.accounts.remove(selection);
 
-        // 如果删除后只剩一个账号，自动设置为当前账号
-        if settings.github.accounts.len() == 1 {
-            settings.github.current = Some(settings.github.accounts[0].name.clone());
+        // 如果删除后还有账号，且删除的是当前账号，或者没有设置当前账号，则设置第一个账号为当前账号
+        if !settings.github.accounts.is_empty() {
+            if was_current || settings.github.current.is_none() {
+                settings.github.current = Some(settings.github.accounts[0].name.clone());
+            }
+        } else {
+            // 如果没有账号了，清空 current
+            settings.github.current = None;
         }
 
         log_success!("Account '{}' removed.", account_name);
@@ -291,13 +310,14 @@ impl GitHubCommand {
         // 收集新的账号信息（使用现有值作为默认值）
         let new_account = Self::collect_github_account_with_defaults(old_account)?;
 
-        // 如果账号名称改变了，检查新名称是否已存在
+        // 如果账号名称改变了，检查新名称是否已存在（排除当前正在更新的账号）
         if new_account.name != old_account.name
             && settings
                 .github
                 .accounts
                 .iter()
-                .any(|a| a.name == new_account.name)
+                .enumerate()
+                .any(|(idx, a)| idx != selection && a.name == new_account.name)
         {
             return Err(anyhow::anyhow!(
                 "Account with name '{}' already exists",
@@ -305,13 +325,14 @@ impl GitHubCommand {
             ));
         }
 
-        // 如果账号名称改变了，需要更新 current
-        if settings
-            .github
-            .current
-            .as_ref()
-            .map(|c| c == &old_account.name)
-            .unwrap_or(false)
+        // 如果账号名称改变了，且这个账号是当前账号，需要更新 current 字段
+        if new_account.name != old_account.name
+            && settings
+                .github
+                .current
+                .as_ref()
+                .map(|c| c == &old_account.name)
+                .unwrap_or(false)
         {
             settings.github.current = Some(new_account.name.clone());
         }
