@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, config, log, proxy, setup, uninstall};
+use commands::{check, clean, config, github, log, proxy, setup, uninstall};
 
 use workflow::*;
 
@@ -71,6 +71,14 @@ enum Commands {
         #[command(subcommand)]
         subcommand: LogSubcommand,
     },
+    /// 管理 GitHub 账号
+    ///
+    /// 管理多个 GitHub 账号的配置（添加、删除、切换、更新等）。
+    #[command(name = "github")]
+    GitHub {
+        #[command(subcommand)]
+        subcommand: GitHubSubcommand,
+    },
 }
 
 /// 代理管理子命令
@@ -105,6 +113,37 @@ enum LogSubcommand {
     ///
     /// 显示当前设置的日志级别和默认级别信息。
     Check,
+}
+
+/// GitHub 账号管理子命令
+///
+/// 用于管理多个 GitHub 账号的配置。
+#[derive(Subcommand)]
+enum GitHubSubcommand {
+    /// 列出所有 GitHub 账号
+    ///
+    /// 显示所有已配置的 GitHub 账号信息。
+    List,
+    /// 显示当前激活的 GitHub 账号
+    ///
+    /// 显示当前正在使用的 GitHub 账号信息。
+    Current,
+    /// 添加新的 GitHub 账号
+    ///
+    /// 交互式添加新的 GitHub 账号配置。
+    Add,
+    /// 删除 GitHub 账号
+    ///
+    /// 从配置中删除指定的 GitHub 账号。
+    Remove,
+    /// 切换当前 GitHub 账号
+    ///
+    /// 在多个 GitHub 账号之间切换。
+    Switch,
+    /// 更新 GitHub 账号信息
+    ///
+    /// 更新已存在的 GitHub 账号配置。
+    Update,
 }
 
 /// 主函数
@@ -145,16 +184,26 @@ fn main() -> Result<()> {
             LogSubcommand::Set => log::LogCommand::set()?,
             LogSubcommand::Check => log::LogCommand::check()?,
         },
+        // GitHub 账号管理命令
+        Some(Commands::GitHub { subcommand }) => match subcommand {
+            GitHubSubcommand::List => github::GitHubCommand::list()?,
+            GitHubSubcommand::Current => github::GitHubCommand::current()?,
+            GitHubSubcommand::Add => github::GitHubCommand::add()?,
+            GitHubSubcommand::Remove => github::GitHubCommand::remove()?,
+            GitHubSubcommand::Switch => github::GitHubCommand::switch()?,
+            GitHubSubcommand::Update => github::GitHubCommand::update()?,
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
             log_message!("  workflow check     - Run environment checks (Git status and network)");
             log_message!("  workflow clean     - Clean log download directory");
+            log_message!("  workflow config    - View current configuration");
+            log_message!("  workflow github    - Manage GitHub accounts (list/add/remove/switch/update/current)");
             log_message!("  workflow log       - Manage log level (set/check)");
             log_message!("  workflow proxy     - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup     - Initialize or update configuration");
-            log_message!("  workflow config    - View current configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
             log_message!("\nInstallation:");
             log_message!("  Use 'install' command (built separately): install <subcommand>");

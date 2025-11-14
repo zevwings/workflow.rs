@@ -11,6 +11,7 @@
 //! - `check` - 检查工具命令（git_status, network）
 //! - `clean` - 清理日志目录命令
 //! - `config` - 配置查看命令
+//! - `github` - GitHub 账号管理命令（list, add, remove, switch, update, current）
 //! - `install` - 安装命令实现
 //! - `log` - 日志级别管理命令（set, check）
 //! - `pr` - PR 相关命令（create, merge, close, status, list, update）
@@ -22,6 +23,7 @@
 pub mod check;
 pub mod clean;
 pub mod config;
+pub mod github;
 pub mod install;
 pub mod log;
 pub mod pr;
