@@ -176,7 +176,6 @@ mod tests {
         assert_eq!(settings.llm.provider, "openai"); // 默认值
     }
 
-
     #[test]
     fn test_llm_provider() {
         // 测试默认值
