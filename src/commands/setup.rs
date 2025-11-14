@@ -10,6 +10,7 @@ use crate::{
         settings::{GitHubAccount, Settings},
     },
 };
+use crate::git::GitConfig;
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -115,49 +116,77 @@ impl SetupCommand {
 
         // 如果已有账号，询问是否要管理账号
         if !github_accounts.is_empty() {
-            let options = vec![
-                "Add new account",
-                "Modify existing account",
-                "Keep current accounts",
-            ];
+            // 获取当前账号的 email，用于显示
+            let current_email = github_current
+                .as_ref()
+                .and_then(|current_name| {
+                    github_accounts
+                        .iter()
+                        .find(|a| &a.name == current_name)
+                        .map(|a| a.email.clone())
+                })
+                .unwrap_or_else(|| "unknown".to_string());
+
+            let keep_option = format!("Keep current accounts ({})", current_email);
+            let options = ["Add new account".to_string(), keep_option];
+            let options_refs: Vec<&str> = options.iter().map(|s| s.as_str()).collect();
             let selection = Select::new()
                 .with_prompt("GitHub account management")
-                .items(&options)
-                .default(2)
+                .items(&options_refs)
+                .default(1)
                 .interact()
                 .context("Failed to get GitHub account management choice")?;
 
+            let mut account_added = false;
             match selection {
                 0 => {
                     // 添加新账号
                     let account = Self::collect_github_account()?;
                     github_accounts.push(account);
+                    account_added = true;
                     // 如果是第一个账号，自动设置为当前账号
                     if github_accounts.len() == 1 {
-                        github_current = github_accounts.first().map(|a| a.name.clone());
-                    }
-                }
-                1 => {
-                    // 修改现有账号
-                    if github_accounts.is_empty() {
-                        log_message!("No accounts to modify.");
-                    } else {
-                        let account_names: Vec<String> =
-                            github_accounts.iter().map(|a| a.name.clone()).collect();
-                        let account_names_display: Vec<&str> =
-                            account_names.iter().map(|s| s.as_str()).collect();
-                        let selection = Select::new()
-                            .with_prompt("Select account to modify")
-                            .items(&account_names_display)
-                            .interact()
-                            .context("Failed to select account")?;
-
-                        let account = Self::collect_github_account()?;
-                        github_accounts[selection] = account;
+                        let first_account = github_accounts.first().unwrap();
+                        github_current = Some(first_account.name.clone());
+                        GitConfig::set_global_user(&first_account.email, &first_account.name)?;
                     }
                 }
                 _ => {
-                    // 保持现有账号
+                    // 保持现有账号，但需要确保 Git 配置与当前账号一致
+                    if let Some(ref current_name) = github_current {
+                        if let Some(current_account) = github_accounts.iter().find(|a| &a.name == current_name) {
+                            GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+                        }
+                    }
+                }
+            }
+
+            // 只有在添加了新账号后，如果有多个账号，才询问选择当前账号
+            if account_added && github_accounts.len() > 1 {
+                let account_names: Vec<String> =
+                    github_accounts.iter().map(|a| a.name.clone()).collect();
+                let account_names_display: Vec<&str> =
+                    account_names.iter().map(|s| s.as_str()).collect();
+                let default_index = github_current
+                    .as_ref()
+                    .and_then(|current| account_names.iter().position(|n| n == current))
+                    .unwrap_or(0);
+
+                let selection = Select::new()
+                    .with_prompt("Select current GitHub account")
+                    .items(&account_names_display)
+                    .default(default_index)
+                    .interact()
+                    .context("Failed to select current account")?;
+
+                github_current = Some(account_names[selection].clone());
+                let current_account = &github_accounts[selection];
+                GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+            } else if github_accounts.len() == 1 {
+                // 如果只有一个账号，确保设置了 Git 配置
+                let account = &github_accounts[0];
+                if github_current.as_ref().map(|c| c == &account.name).unwrap_or(false) {
+                    GitConfig::set_global_user(&account.email, &account.name)?;
                 }
             }
         } else {
@@ -165,28 +194,9 @@ impl SetupCommand {
             log_message!("No GitHub accounts configured. Let's add one:");
             let account = Self::collect_github_account()?;
             github_accounts.push(account);
-            github_current = github_accounts.first().map(|a| a.name.clone());
-        }
-
-        // 如果有多个账号，询问当前使用的账号
-        if github_accounts.len() > 1 {
-            let account_names: Vec<String> =
-                github_accounts.iter().map(|a| a.name.clone()).collect();
-            let account_names_display: Vec<&str> =
-                account_names.iter().map(|s| s.as_str()).collect();
-            let default_index = github_current
-                .as_ref()
-                .and_then(|current| account_names.iter().position(|n| n == current))
-                .unwrap_or(0);
-
-            let selection = Select::new()
-                .with_prompt("Select current GitHub account")
-                .items(&account_names_display)
-                .default(default_index)
-                .interact()
-                .context("Failed to select current account")?;
-
-            github_current = Some(account_names[selection].clone());
+            let first_account = github_accounts.first().unwrap();
+            github_current = Some(first_account.name.clone());
+            GitConfig::set_global_user(&first_account.email, &first_account.name)?;
         }
 
         // ==================== 必填项：Jira 配置 ====================
