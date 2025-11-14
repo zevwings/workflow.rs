@@ -1,7 +1,11 @@
 use std::sync::OnceLock;
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
+
+use crate::defaults::default_llm_model;
+use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
 
 use super::defaults::{
     default_download_base_dir_option, default_llm_provider, default_log_folder,
@@ -14,26 +18,73 @@ use super::paths::ConfigPaths;
 /// 用户配置（TOML）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UserSettings {
-    /// 用户邮箱
-    pub email: Option<String>,
+    // 用户配置字段已移除，所有配置已迁移到对应的服务配置中
 }
 
 /// Jira 配置（TOML）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct JiraSettings {
+    /// Jira 用户邮箱（用于 API 认证）
+    pub email: Option<String>,
     /// Jira API Token
     pub api_token: Option<String>,
     /// Jira 服务地址
     pub service_address: Option<String>,
 }
 
+/// GitHub 账号配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GitHubAccount {
+    /// 账号名称（用于标识和切换）
+    pub name: String,
+    /// 账号邮箱（必填，用于显示和区分）
+    pub email: String,
+    /// GitHub API Token
+    pub api_token: String,
+    /// 分支前缀（可选）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub branch_prefix: Option<String>,
+}
+
 /// GitHub 配置（TOML）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GitHubSettings {
-    /// GitHub 分支前缀
-    pub branch_prefix: Option<String>,
-    /// GitHub API Token
-    pub api_token: Option<String>,
+    /// 多个 GitHub 账号列表
+    #[serde(default)]
+    pub accounts: Vec<GitHubAccount>,
+    /// 当前激活的账号名称
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current: Option<String>,
+}
+
+impl GitHubSettings {
+    /// 获取当前激活的账号
+    ///
+    /// 如果设置了 `current`，返回对应的账号；否则返回第一个账号。
+    /// 如果没有账号，返回 `None`。
+    pub fn get_current_account(&self) -> Option<&GitHubAccount> {
+        if self.accounts.is_empty() {
+            return None;
+        }
+
+        if let Some(ref current_name) = self.current {
+            self.accounts.iter().find(|acc| acc.name == *current_name)
+        } else {
+            // 如果没有设置 current，返回第一个账号
+            self.accounts.first()
+        }
+    }
+
+    /// 获取当前账号的 API Token
+    pub fn get_current_token(&self) -> Option<&str> {
+        self.get_current_account().map(|acc| acc.api_token.as_str())
+    }
+
+    /// 获取当前账号的分支前缀
+    pub fn get_current_branch_prefix(&self) -> Option<&str> {
+        self.get_current_account()
+            .and_then(|acc| acc.branch_prefix.as_deref())
+    }
 }
 
 /// 日志配置（TOML）
@@ -162,6 +213,172 @@ impl Settings {
             Err(_) => Self::default(),
         }
     }
+
+    /// 显示所有配置并验证（用于 `workflow config` 命令）
+    ///
+    /// 显示所有配置项，并对 Jira 和 GitHub 配置进行验证。
+    ///
+    /// # 返回
+    ///
+    /// 如果成功返回 `Ok(())`，否则返回错误。
+    pub fn verify(&self) -> Result<()> {
+        self.print_log();
+        self.print_llm();
+        self.verify_codeup();
+        self.verify_jira()?;
+        self.verify_github()?;
+        Ok(())
+    }
+
+    /// 显示日志配置
+    fn print_log(&self) {
+        log_message!("Log Output Folder Name: {}", self.log.output_folder_name);
+        if let Some(ref dir) = self.log.download_base_dir {
+            log_message!("Download Base Dir: {}", dir);
+        }
+    }
+
+    /// 显示 LLM 配置
+    fn print_llm(&self) {
+        log_message!("\nLLM Provider: {}", self.llm.provider);
+        if let Some(ref url) = self.llm.url {
+            log_message!("LLM URL: {}", url);
+        }
+        if let Some(ref key) = self.llm.key {
+            log_message!("LLM Key: {}", mask_sensitive_value(key));
+        }
+        // 显示 model（如果有保存的值，否则显示默认值）
+        if let Some(ref model) = self.llm.model {
+            log_message!("LLM Model: {}", model);
+        } else {
+            let default_model = default_llm_model(&self.llm.provider);
+            log_message!("LLM Model: {} (default)", default_model);
+        }
+        // 显示 response_format（如果有保存的值，否则显示默认值）
+        if self.llm.response_format.is_empty() {
+            let default_format = default_response_format();
+            log_message!("LLM Response Format: {} (default)", default_format);
+        } else {
+            log_message!("LLM Response Format: {}", self.llm.response_format);
+        }
+    }
+
+    /// 显示 Codeup 配置
+    fn verify_codeup(&self) {
+        if let Some(id) = self.codeup.project_id {
+            log_message!("\nCodeup Project ID: {}", id);
+        }
+        if let Some(ref token) = self.codeup.csrf_token {
+            log_message!("Codeup CSRF Token: {}", mask_sensitive_value(token));
+        }
+        if let Some(ref cookie) = self.codeup.cookie {
+            log_message!("Codeup Cookie: {}", mask_sensitive_value(cookie));
+        }
+    }
+
+    /// 显示并验证 Jira 配置
+    fn verify_jira(&self) -> Result<()> {
+        if let (Some(email), Some(api_token), Some(service_address)) = (
+            &self.jira.email,
+            &self.jira.api_token,
+            &self.jira.service_address,
+        ) {
+            log_break!();
+            log_info!("Verifying Jira configuration...");
+            log_message!("  Email: {}", email);
+            log_message!("  Service Address: {}", service_address);
+            log_message!("  API Token: {}", mask_sensitive_value(api_token));
+
+            let base_url = format!("{}/rest/api/2", service_address);
+            let url = format!("{}/myself", base_url);
+
+            match crate::http::HttpClient::new() {
+                Ok(client) => {
+                    let auth = crate::http::Authorization::new(email, api_token);
+                    match client.get::<serde_json::Value>(&url, Some(&auth), None) {
+                        Ok(response) => {
+                            if response.is_success() {
+                                match serde_json::from_value::<crate::jira::models::JiraUser>(
+                                    response.data,
+                                ) {
+                                    Ok(user) => {
+                                        log_success!(
+                                            "Jira verified successfully! Email: {} (Account ID: {})",
+                                            email,
+                                            user.account_id
+                                        );
+                                    }
+                                    Err(e) => {
+                                        log_warning!("Failed to parse Jira user response");
+                                        log_message!("  Error: {}", e);
+                                    }
+                                }
+                            } else {
+                                log_warning!("Failed to verify Jira configuration");
+                                log_message!("  Status: {}", response.status);
+                                log_message!(
+                                    "  Please check your Jira service address, email, and API token."
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            log_warning!("Failed to verify Jira configuration");
+                            log_message!("  Error: {}", e);
+                            log_message!(
+                                "  Please check your Jira service address, email, and API token."
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to create HTTP client");
+                    log_message!("  Error: {}", e);
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// 显示并验证 GitHub 配置
+    fn verify_github(&self) -> Result<()> {
+        if !self.github.accounts.is_empty() {
+            log_break!();
+            log_info!("Verifying GitHub configuration...");
+            for account in &self.github.accounts {
+                let is_current = self
+                    .github
+                    .current
+                    .as_ref()
+                    .map(|c| c == &account.name)
+                    .unwrap_or_else(|| {
+                        // 如果没有设置 current，第一个账号是当前账号
+                        self.github.accounts.first().map(|a| &a.name) == Some(&account.name)
+                    });
+                let current_marker = if is_current { " (current)" } else { "" };
+                log_message!("  - {}{}", account.name, current_marker);
+                log_message!("    Email: {}", account.email);
+                log_message!(
+                    "    API Token: {}",
+                    mask_sensitive_value(&account.api_token)
+                );
+                if let Some(ref prefix) = account.branch_prefix {
+                    log_message!("    Branch Prefix: {}", prefix);
+                }
+
+                match crate::pr::GitHub::get_user_info() {
+                    Ok(user) => {
+                        log_success!("GitHub account '{}' verified successfully!", user.login);
+                    }
+                    Err(e) => {
+                        log_warning!("Failed to verify account '{}'", account.name);
+                        log_message!("  Error: {}", e);
+                        log_message!("  Please check your GitHub API token.");
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -172,7 +389,7 @@ mod tests {
     fn test_settings_initialization() {
         // 测试初始化（使用默认值）
         let settings = Settings::load();
-        assert_eq!(settings.user.email, None);
+        assert_eq!(settings.jira.email, None);
         assert_eq!(settings.jira.api_token, None);
         assert_eq!(settings.jira.service_address, None);
         assert_eq!(settings.log.output_folder_name, "logs");

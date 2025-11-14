@@ -102,7 +102,7 @@ pub fn sanitize_email_for_filename(email: &str) -> String {
 /// 返回 `(email, api_token)` 元组。
 pub fn get_auth() -> Result<(String, String)> {
     let settings = Settings::get();
-    let email = settings.user.email.clone().unwrap_or_default();
+    let email = settings.jira.email.clone().unwrap_or_default();
     let api_token = settings.jira.api_token.clone().unwrap_or_default();
     Ok((email, api_token))
 }
