@@ -12,6 +12,7 @@
 //! - `clean` - 清理日志目录命令
 //! - `config` - 配置查看命令
 //! - `install` - 安装命令实现
+//! - `log` - 日志级别管理命令（set, check）
 //! - `pr` - PR 相关命令（create, merge, close, status, list, update）
 //! - `proxy` - 代理管理命令（on, off, check）
 //! - `qk` - 快速日志操作命令（download, find, search, clean）
@@ -22,6 +23,7 @@ pub mod check;
 pub mod clean;
 pub mod config;
 pub mod install;
+pub mod log;
 pub mod pr;
 pub mod proxy;
 pub mod qk;

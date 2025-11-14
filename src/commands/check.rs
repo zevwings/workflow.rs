@@ -1,15 +1,15 @@
-use crate::{log_break, log_error, log_info, log_success, Git, HttpClient};
+use crate::{log_break, log_error, log_info, log_message, log_success, Git, HttpClient};
 use anyhow::{Context, Result};
 
 /// 执行综合环境检查
 ///
 /// 检查 Git 仓库状态和到 GitHub 的网络连接。
 pub fn run_all() -> Result<()> {
-    log_info!("Running environment checks...");
+    log_message!("Running environment checks...");
     log_break!();
 
     // 1. 检查 Git 状态
-    log_info!("[1/2] Checking Git repository status...");
+    log_message!("[1/2] Checking Git repository status...");
     if !Git::is_git_repo() {
         log_error!("Not in a Git repository");
         anyhow::bail!("Git check failed: Not in a Git repository");
@@ -25,7 +25,7 @@ pub fn run_all() -> Result<()> {
     log_break!();
 
     // 2. 检查网络连接
-    log_info!("[2/2] Checking network connection to GitHub...");
+    log_message!("[2/2] Checking network connection to GitHub...");
     let client = HttpClient::new().context("Failed to create HTTP client")?;
     match client
         .client()

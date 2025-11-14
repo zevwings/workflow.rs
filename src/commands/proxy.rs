@@ -1,4 +1,4 @@
-use crate::{log_break, log_debug, log_info, log_success, log_warning, Clipboard, Proxy};
+use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Clipboard, Proxy};
 use anyhow::{Context, Result};
 
 /// 代理检查命令
@@ -36,7 +36,7 @@ impl ProxyCommand {
 
         // 4. 显示当前环境变量设置
         log_break!();
-        log_info!("Current environment variables:");
+        log_message!("Current environment variables:");
 
         // 合并显示：先显示环境变量，再显示配置文件中的（但不在环境变量中的）
         let mut has_any_proxy = false;
@@ -68,8 +68,8 @@ impl ProxyCommand {
         } else {
             log_break!();
             log_warning!("  Proxy is not configured correctly");
-            log_info!("  Run 'workflow proxy on' to enable proxy");
-            log_info!("  Or check macOS System Preferences > Network > Advanced > Proxies");
+            log_message!("Run 'workflow proxy on' to enable proxy");
+            log_message!("Or check macOS System Preferences > Network > Advanced > Proxies");
         }
 
         Ok(())
@@ -87,22 +87,22 @@ impl ProxyCommand {
 
         if let Some(ref proxy_cmd) = result.proxy_command {
             log_success!("Proxy command generated:");
-            log_info!("  {}", proxy_cmd);
+            log_message!("{}", proxy_cmd);
 
             if let Some(ref shell_config_path) = result.shell_config_path {
                 log_success!("Proxy settings saved to {:?}", shell_config_path);
-                log_info!("  The proxy will be enabled when you start a new shell");
-                log_info!("  Or run: source {:?}", shell_config_path);
+                log_message!("The proxy will be enabled when you start a new shell");
+                log_message!("Or run: source {:?}", shell_config_path);
             }
 
             // 复制到剪贴板
             Clipboard::copy(proxy_cmd).context("Failed to copy proxy command to clipboard")?;
 
             log_success!("Proxy command copied to clipboard");
-            log_info!("  You can also run it manually: {}", proxy_cmd);
+            log_message!("You can also run it manually: {}", proxy_cmd);
         } else {
             log_warning!("No proxy configuration found in system settings");
-            log_info!("  Check macOS System Preferences > Network > Advanced > Proxies");
+            log_message!("Check macOS System Preferences > Network > Advanced > Proxies");
         }
 
         Ok(())
@@ -119,25 +119,25 @@ impl ProxyCommand {
 
         if let Some(ref shell_config_path) = result.shell_config_path {
             log_success!("Proxy settings removed from {:?}", shell_config_path);
-            log_info!("  The proxy will be disabled when you start a new shell");
-            log_info!("  Or run: source {:?}", shell_config_path);
+            log_message!("The proxy will be disabled when you start a new shell");
+            log_message!("Or run: source {:?}", shell_config_path);
         }
 
         if let Some(ref unset_cmd) = result.unset_command {
-            log_info!("Current proxy environment variables:");
+            log_message!("Current proxy environment variables:");
             for (key, value) in &result.current_env_proxy {
                 log_info!("  {}={}", key, value);
             }
 
             log_success!("Proxy unset command generated:");
-            log_info!("  {}", unset_cmd);
+            log_message!("{}", unset_cmd);
 
             // 复制到剪贴板
             Clipboard::copy(unset_cmd).context("Failed to copy unset command to clipboard")?;
 
             log_success!("Proxy unset command copied to clipboard");
-            log_info!(
-                "  Run this command to disable proxy in current shell: {}",
+            log_message!(
+                "Run this command to disable proxy in current shell: {}",
                 unset_cmd
             );
         }

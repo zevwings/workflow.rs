@@ -6,7 +6,7 @@ use crate::settings::{
     paths::ConfigPaths,
     settings::Settings,
 };
-use crate::{confirm, log_break, log_info, log_success, log_warning};
+use crate::{confirm, log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -48,7 +48,7 @@ impl SetupCommand {
         let config = Self::collect_config(&existing_config)?;
 
         // 保存配置到 TOML 文件
-        log_info!("  Saving configuration...");
+        log_message!("Saving configuration...");
         Self::save_config(&config)?;
         log_success!("  Configuration saved to ~/.workflow/config/workflow.toml");
 
@@ -57,7 +57,7 @@ impl SetupCommand {
 
         log_break!();
         log_success!("Initialization completed successfully!");
-        log_info!("   You can now use the Workflow CLI commands.");
+        log_message!("You can now use the Workflow CLI commands.");
 
         Ok(())
     }
@@ -96,7 +96,7 @@ impl SetupCommand {
     fn collect_config(existing: &CollectedConfig) -> Result<CollectedConfig> {
         // ==================== 必填项：用户配置 ====================
         log_break!();
-        log_info!("  User Configuration (Required)");
+        log_message!("  User Configuration (Required)");
         log_break!('─', 65);
 
         let has_email = existing.email.is_some();
@@ -133,7 +133,7 @@ impl SetupCommand {
 
         // ==================== 必填项：GitHub 配置 ====================
         log_break!();
-        log_info!("  GitHub Configuration (Required)");
+        log_message!("  GitHub Configuration (Required)");
         log_break!('─', 65);
 
         let has_github_token = existing.github_api_token.is_some();
@@ -166,7 +166,7 @@ impl SetupCommand {
 
         // ==================== 可选：GitHub 配置 ====================
         log_break!();
-        log_info!("  GitHub Configuration (Optional)");
+        log_message!("  GitHub Configuration (Optional)");
         log_break!('─', 65);
 
         let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
@@ -195,7 +195,7 @@ impl SetupCommand {
 
         // ==================== 必填项：Jira 配置 ====================
         log_break!();
-        log_info!("  Jira Configuration (Required)");
+        log_message!("  Jira Configuration (Required)");
         log_break!('─', 65);
 
         let has_jira_address = existing.jira_service_address.is_some();
@@ -258,7 +258,7 @@ impl SetupCommand {
 
         // ==================== 可选：日志配置 ====================
         log_break!();
-        log_info!("  Log Configuration (Optional)");
+        log_message!("  Log Configuration (Optional)");
         log_break!('─', 65);
 
         let log_folder_prompt = format!(
@@ -280,7 +280,7 @@ impl SetupCommand {
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
-        log_info!("  LLM/AI Configuration (Optional)");
+        log_message!("  LLM/AI Configuration (Optional)");
         log_break!('─', 65);
 
         let llm_providers = vec!["openai", "deepseek", "proxy"];
@@ -459,7 +459,7 @@ impl SetupCommand {
 
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
-        log_info!("📦 Codeup Configuration (Optional)");
+        log_message!("📦 Codeup Configuration (Optional)");
         log_break!('─', 65);
 
         let has_codeup = existing.codeup_project_id.is_some()
@@ -584,6 +584,7 @@ impl SetupCommand {
             log: LogSettings {
                 output_folder_name: config.log_output_folder_name.clone(),
                 download_base_dir: None, // 使用默认值
+                level: None, // 日志级别通过 workflow log set 命令设置
             },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,
@@ -617,7 +618,7 @@ impl SetupCommand {
             && config.email.is_some()
         {
             log_break!();
-            log_info!("  Verifying Jira configuration...");
+            log_message!("Verifying Jira configuration...");
 
             match crate::jira::users::get_user_info() {
                 Ok(user) => {
@@ -641,7 +642,7 @@ impl SetupCommand {
         // 验证 GitHub 配置
         if config.github_api_token.is_some() {
             log_break!();
-            log_info!("  Verifying GitHub configuration...");
+            log_message!("Verifying GitHub configuration...");
 
             match crate::pr::GitHub::get_user_info() {
                 Ok(user) => {
@@ -670,7 +671,7 @@ impl SetupCommand {
             && config.codeup_csrf_token.is_some()
         {
             log_break!();
-            log_info!("🔍 Verifying Codeup configuration...");
+            log_message!("🔍 Verifying Codeup configuration...");
 
             match crate::pr::Codeup::get_user_info() {
                 Ok(user) => {

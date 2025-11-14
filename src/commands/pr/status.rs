@@ -1,7 +1,7 @@
 use crate::commands::pr::helpers;
 use crate::{
-    detect_repo_type, log_break, log_error, log_info, Codeup, Git, GitHub, PlatformProvider,
-    RepoType,
+    detect_repo_type, log_break, log_error, log_info, log_message, Codeup, Git, GitHub,
+    PlatformProvider, RepoType,
 };
 use anyhow::Result;
 
@@ -74,7 +74,7 @@ impl PullRequestStatusCommand {
 
         log_break!();
         log_break!('=', 40, "PR Information");
-        log_info!("{}", info);
+        log_message!("{}", info);
         Ok(())
     }
 }
