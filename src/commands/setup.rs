@@ -670,12 +670,11 @@ impl SetupCommand {
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
         use crate::settings::settings::{
-            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings, UserSettings,
+            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings,
         };
 
         // 构建 Settings 结构体
         let settings = Settings {
-            user: UserSettings::default(),
             jira: JiraSettings {
                 email: config.jira_email.clone(),
                 api_token: config.jira_api_token.clone(),

@@ -15,12 +15,6 @@ use super::paths::ConfigPaths;
 
 // ==================== TOML 配置结构体 ====================
 
-/// 用户配置（TOML）
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct UserSettings {
-    // 用户配置字段已移除，所有配置已迁移到对应的服务配置中
-}
-
 /// Jira 配置（TOML）
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct JiraSettings {
@@ -157,9 +151,6 @@ pub struct LLMSettings {
 /// 从 workflow.toml 配置文件读取配置
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Settings {
-    /// 用户配置
-    #[serde(default)]
-    pub user: UserSettings,
     /// Jira 配置
     #[serde(default)]
     pub jira: JiraSettings,
@@ -365,7 +356,8 @@ impl Settings {
                     log_message!("    Branch Prefix: {}", prefix);
                 }
 
-                match crate::pr::GitHub::get_user_info() {
+                // 使用该账号的 token 验证
+                match crate::pr::GitHub::get_user_info(Some(&account.api_token)) {
                     Ok(user) => {
                         log_success!("GitHub account '{}' verified successfully!", user.login);
                     }
@@ -379,6 +371,7 @@ impl Settings {
         }
         Ok(())
     }
+
 }
 
 #[cfg(test)]
