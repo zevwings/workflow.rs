@@ -1,7 +1,7 @@
 //! 安装命令
 //! 提供安装、生成和安装 shell completion 的功能
 
-use crate::{log_break, log_info, log_success, log_warning, Completion, Shell};
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion, Shell};
 use anyhow::{Context, Result};
 use clap::Command;
 use clap_complete::{generate, shells::Shell as ClapShell};
@@ -33,9 +33,9 @@ impl InstallCommand {
             PathBuf::from(&home).join(".workflow/completions")
         });
 
-        log_info!("生成 shell completion 脚本...");
-        log_info!("Shell 类型: {}", shell);
-        log_info!("输出目录: {}", output.display());
+        log_debug!("生成 shell completion 脚本...");
+        log_debug!("Shell 类型: {}", shell);
+        log_debug!("输出目录: {}", output.display());
 
         // 解析 shell 类型
         let shell_type = match shell {
@@ -65,23 +65,29 @@ impl InstallCommand {
     fn install_completions() -> Result<()> {
         let shell_info = Shell::detect()?;
 
-        log_info!("检测 shell 类型...");
-        log_info!("检测到: {}", shell_info.shell_type);
+        log_debug!("检测 shell 类型...");
+        log_debug!("检测到: {}", shell_info.shell_type);
 
         // 创建 completion 目录
         fs::create_dir_all(&shell_info.completion_dir)
             .context("Failed to create completion directory")?;
-        log_info!("Completion 目录: {}", shell_info.completion_dir.display());
+        log_debug!("Completion 目录: {}", shell_info.completion_dir.display());
 
-        // 生成 completion 脚本
-        log_info!("正在生成 completion 脚本...");
+        // 生成 completion 脚本（同时生成 zsh 和 bash 以支持统一配置）
+        log_debug!("正在生成 completion 脚本...");
+        log_debug!("生成 zsh completion 脚本...");
         Self::generate_completions(
-            Some(shell_info.shell_type.clone()),
+            Some("zsh".to_string()),
+            Some(shell_info.completion_dir.to_string_lossy().to_string()),
+        )?;
+        log_debug!("生成 bash completion 脚本...");
+        Self::generate_completions(
+            Some("bash".to_string()),
             Some(shell_info.completion_dir.to_string_lossy().to_string()),
         )?;
 
         // 配置 shell 配置文件
-        log_info!("正在配置 shell 配置文件...");
+        log_debug!("正在配置 shell 配置文件...");
         Completion::configure_shell_config(&shell_info)?;
 
         log_success!("  shell completion 安装完成");

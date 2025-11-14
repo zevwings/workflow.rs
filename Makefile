@@ -24,8 +24,8 @@ help:
 	@echo "  make test               - 运行测试"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer）"
-	@echo "  make uninstall            - 卸载二进制文件和 shell completion 脚本"
-	@echo "  make tag VERSION=v1.0.0  - 创建 git tag 并推送到远程仓库"
+	@echo "  make uninstall          - 卸载二进制文件和 shell completion 脚本"
+	@echo "  make tag VERSION=v1.0.0 - 创建 git tag 并推送到远程仓库"
 
 # 构建 debug 版本
 dev:

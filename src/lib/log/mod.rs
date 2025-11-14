@@ -84,6 +84,32 @@ impl Logs {
         find::get_log_file_path(jira_id)
     }
 
+    /// 确保日志文件存在，否则返回错误
+    ///
+    /// 检查指定 JIRA ID 的日志文件是否存在，如果不存在则返回包含下载提示的错误。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_id` - JIRA ticket ID
+    ///
+    /// # 返回
+    ///
+    /// 如果日志文件存在，返回文件路径；否则返回错误。
+    ///
+    /// # 错误
+    ///
+    /// 如果日志文件不存在，返回包含下载提示的错误信息。
+    pub fn ensure_log_file_exists(jira_id: &str) -> Result<PathBuf> {
+        let log_file = Self::get_log_file_path(jira_id)?;
+        if !log_file.exists() {
+            anyhow::bail!(
+                "Log file not found at: {:?}\nTry downloading logs first with: workflow qk {} download",
+                log_file, jira_id
+            );
+        }
+        Ok(log_file)
+    }
+
     pub fn find_log_file(base_dir: &Path) -> Result<PathBuf> {
         find::find_log_file(base_dir)
     }

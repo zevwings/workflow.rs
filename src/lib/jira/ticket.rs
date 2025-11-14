@@ -84,27 +84,6 @@ pub fn extract_attachment_id_from_url(url: &str) -> Option<String> {
     None
 }
 
-/// 从 CloudFront URL 构建 Jira API 的 content URL
-///
-/// 尝试从 CloudFront URL 中提取信息，构建 Jira API 的 content URL。
-/// 格式：{base_url}/attachment/content/{attachment_id}
-/// 注意：Jira API 的格式是 `/attachment/content/{id}`，不是 `/attachment/{id}/content`
-#[allow(dead_code)]
-fn build_jira_content_url_from_cloudfront(cloudfront_url: &str) -> Option<String> {
-    // 从 CloudFront URL 中提取附件 ID
-    if let Some(attachment_id) = extract_attachment_id_from_url(cloudfront_url) {
-        // 尝试获取 base URL
-        if let Ok(base_url) = get_base_url() {
-            // 构建 Jira API 的 content URL
-            // 格式：{base_url}/attachment/content/{attachment_id}
-            // 注意：从 ticket info 获取的附件 URL 格式是：/rest/api/2/attachment/content/{id}
-            let jira_url = format!("{}/attachment/content/{}", base_url, attachment_id);
-            return Some(jira_url);
-        }
-    }
-    None
-}
-
 /// 从描述中解析附件链接
 ///
 /// Jira 描述中可能包含附件链接，格式为：`# [filename|url]`
@@ -144,34 +123,6 @@ fn parse_attachments_from_description(description: &str) -> Vec<JiraAttachment> 
     }
 
     attachments
-}
-
-/// 通过附件 ID 获取附件的正确 URL
-///
-/// 从 Jira API 获取附件的正确下载 URL。
-/// 附件 ID 可以通过 `/rest/api/2/attachment/{id}` 端点获取。
-#[allow(dead_code)]
-fn get_attachment_url_by_id(attachment_id: &str) -> Result<String> {
-    let (email, api_token) = get_auth()?;
-    let base_url = get_base_url()?;
-    let url = format!("{}/attachment/{}", base_url, attachment_id);
-
-    let client = HttpClient::new()?;
-    let auth = Authorization::new(&email, &api_token);
-    let response = client
-        .get::<serde_json::Value>(&url, Some(&auth), None)
-        .context(format!("Failed to get attachment info: {}", attachment_id))?;
-
-    if !response.is_success() {
-        anyhow::bail!("Failed to get attachment info: {}", response.status);
-    }
-
-    // 从响应中提取 content URL
-    if let Some(content_url) = response.data.get("content").and_then(|c| c.as_str()) {
-        Ok(content_url.to_string())
-    } else {
-        anyhow::bail!("No content URL found in attachment response")
-    }
 }
 
 /// 获取 ticket 的附件列表

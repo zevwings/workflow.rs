@@ -96,7 +96,7 @@ impl PlatformProvider for GitHub {
         let base_branch = if let Some(branch) = target_branch {
             branch.to_string()
         } else {
-            Git::get_default_branch().context("Failed to get default branch")?
+            Git::get_default_branch()?
         };
 
         let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);
@@ -532,10 +532,9 @@ impl GitHub {
     /// 创建 GitHub API 请求的 headers（内部方法）
     fn create_headers() -> Result<HeaderMap> {
         let settings = Settings::get();
-        let token = settings
-            .github_api_token
-            .as_ref()
-            .context("GITHUB_API_TOKEN environment variable not set")?;
+        let token = settings.github.api_token.as_ref().context(
+            "GitHub API token is not configured. Please run 'workflow setup' to configure it",
+        )?;
 
         let mut headers = HeaderMap::new();
         headers.insert(

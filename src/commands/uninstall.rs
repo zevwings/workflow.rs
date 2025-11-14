@@ -1,9 +1,11 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::{log_break, log_info, log_success, log_warning, Completion, EnvFile, Shell, Uninstall};
+use crate::{
+    confirm, log_break, log_debug, log_info, log_success, log_warning, Clipboard, Completion,
+    Proxy, Shell, Uninstall,
+};
 use anyhow::{Context, Result};
-use dialoguer::Confirm;
 use duct::cmd;
 
 /// 卸载命令
@@ -16,15 +18,9 @@ impl UninstallCommand {
         log_break!();
         log_info!("This will remove all Workflow CLI configuration and binaries.");
         log_info!("This includes:");
-        log_info!("  - All environment variables (EMAIL, JIRA_API_TOKEN, etc.)");
-        log_info!("  - The entire Workflow CLI configuration block");
+        log_info!("  - TOML configuration files (workflow.toml)");
         log_info!("  - Binary files: workflow, pr, qk, install");
         log_info!("  - Shell completion scripts");
-        log_break!();
-
-        let shell_config_path = EnvFile::get_shell_config_path()
-            .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
-        log_info!("Shell config: {:?}", shell_config_path);
         log_break!();
 
         // 显示将要删除的二进制文件
@@ -52,23 +48,17 @@ impl UninstallCommand {
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
-        let remove_binaries = Confirm::new()
-            .with_prompt("Remove binary files and shell completion scripts?")
-            .default(false)
-            .interact()
-            .context("Failed to get confirmation for removing binaries")?;
-
-        if !remove_binaries {
+        if !confirm(
+            "Remove binary files and shell completion scripts?",
+            false,
+            None,
+        )? {
             log_info!("Uninstall cancelled.");
             return Ok(());
         }
 
-        // 第二步确认：是否删除环境变量配置
-        let remove_config = Confirm::new()
-            .with_prompt("Remove environment variables and configuration from shell config file?")
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation for removing configuration")?;
+        // 第二步确认：是否删除 TOML 配置文件
+        let remove_config = confirm("Remove TOML config file (workflow.toml)?", true, None)?;
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {
@@ -83,7 +73,7 @@ impl UninstallCommand {
                     }
                     if !need_sudo.is_empty() {
                         // 自动使用 sudo 删除需要权限的文件
-                        log_info!("  Some files require sudo privileges, using sudo to remove...");
+                        log_debug!("  Some files require sudo privileges, using sudo to remove...");
                         for binary_path in &need_sudo {
                             match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                 Ok(_) => {
@@ -171,18 +161,22 @@ impl UninstallCommand {
             log_info!("  Removing configuration...");
             Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
             log_info!("  Configuration removed successfully");
+            log_info!("  - workflow.toml removed");
         } else {
             log_break!();
             log_info!("  Configuration will be kept (not removed).");
         }
 
+        // 关闭代理（从 shell 环境变量中移除）
+        log_break!();
+        log_info!("  Removing proxy settings from shell configuration...");
+        Self::remove_proxy_settings()?;
+
         log_break!();
         log_success!("  Uninstall completed successfully!");
         if remove_config {
             log_break!();
-            log_info!(
-                "All Workflow CLI configuration has been removed from your shell config file."
-            );
+            log_info!("All Workflow CLI configuration has been removed from TOML files.");
         } else {
             log_info!("Workflow CLI configuration has been kept (not removed).");
         }
@@ -202,6 +196,29 @@ impl UninstallCommand {
             log_info!("Please manually reload your shell configuration:");
             log_info!("  source ~/.zshrc  # for zsh");
             log_info!("  source ~/.bashrc  # for bash");
+        }
+
+        Ok(())
+    }
+
+    /// 从 shell 环境变量中移除代理设置
+    /// 使用 Proxy::disable_proxy() 公共方法
+    fn remove_proxy_settings() -> Result<()> {
+        let result = Proxy::disable_proxy().context("Failed to remove proxy settings")?;
+
+        if !result.found_proxy {
+            log_info!("  No proxy settings found in shell configuration.");
+            return Ok(());
+        }
+
+        if let Some(ref shell_config_path) = result.shell_config_path {
+            log_success!("  Proxy settings removed from {:?}", shell_config_path);
+        }
+
+        if let Some(ref unset_cmd) = result.unset_command {
+            log_info!("  Proxy unset command: {}", unset_cmd);
+            // 复制到剪贴板（静默处理，失败不影响卸载流程）
+            let _ = Clipboard::copy(unset_cmd);
         }
 
         Ok(())

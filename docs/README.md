@@ -63,6 +63,14 @@
 - Git 仓库状态检查
 - 网络连接检查
 
+### [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
+**LLM 统一配置驱动架构文档**
+
+- LLM 客户端统一架构设计
+- 支持 OpenAI、DeepSeek、Proxy 提供商
+- 配置驱动实现方式
+- PR 标题生成功能
+
 ---
 
 ## 📝 文档结构说明
@@ -87,6 +95,7 @@
 - **2024-01** - 移除 QuickCommand 包装器，统一为直接调用方式
 - **2024-01** - 创建 PR helpers 模块，提取重复逻辑
 - **2024-01** - 统一文档结构和命名规范
+- **2024-01** - 统一 LLM 架构文档，移除旧的实现文档（`LLM_IMPLEMENTATION.md`、`LLM_PLUGIN_ARCHITECTURE.md`、`LLM_PLUGIN_CURL.md`），保留统一的架构设计文档 `LLM_ARCHITECTURE.md`
 
 ---
 
@@ -95,5 +104,9 @@
 - 想了解整体架构？ → [ARCHITECTURE.md](./ARCHITECTURE.md)
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./PR_ARCHITECTURE.md)
 - 想了解日志操作？ → [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
+- 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
+- 想了解配置管理？ → [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md)
 - 想了解安装配置？ → [INSTALL_ARCHITECTURE.md](./INSTALL_ARCHITECTURE.md)
+- 想了解代理管理？ → [PROXY_ARCHITECTURE.md](./PROXY_ARCHITECTURE.md)
+- 想了解环境检查？ → [CHECK_ARCHITECTURE.md](./CHECK_ARCHITECTURE.md)
 

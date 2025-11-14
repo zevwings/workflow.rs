@@ -10,18 +10,10 @@ pub struct SearchCommand;
 impl SearchCommand {
     /// 搜索关键词
     pub fn search(jira_id: &str, search_term: Option<String>) -> Result<()> {
-        // 1. 获取日志文件路径
-        let log_file = Logs::get_log_file_path(jira_id)?;
+        // 1. 确保日志文件存在
+        let log_file = Logs::ensure_log_file_exists(jira_id)?;
 
-        // 2. 检查日志文件是否存在
-        if !log_file.exists() {
-            anyhow::bail!(
-                "Log file not found at: {:?}\nTry downloading logs first with: workflow qk {} download",
-                log_file, jira_id
-            );
-        }
-
-        // 3. 获取搜索词（从参数或交互式输入）
+        // 2. 获取搜索词（从参数或交互式输入）
         let term = if let Some(t) = search_term {
             t
         } else {
@@ -31,7 +23,7 @@ impl SearchCommand {
                 .context("Failed to read search term")?
         };
 
-        // 4. 调用库函数执行搜索
+        // 3. 调用库函数执行搜索
         log_debug!("Searching for: '{}'...", term);
 
         // 确定两个日志文件路径
@@ -80,7 +72,7 @@ impl SearchCommand {
                     if let Some(url) = entry.url {
                         log_info!("URL: {}, ID: {}", url, id);
                     } else {
-                        log_info!("ID: {} (URL not found)", id);
+                        log_debug!("ID: {} (URL not found)", id);
                     }
                 }
             }
@@ -97,7 +89,7 @@ impl SearchCommand {
                     if let Some(url) = entry.url {
                         log_info!("URL: {}, ID: {}", url, id);
                     } else {
-                        log_info!("ID: {} (URL not found)", id);
+                        log_debug!("ID: {} (URL not found)", id);
                     }
                 }
             }

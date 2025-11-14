@@ -1,95 +1,112 @@
 //! 初始化设置命令
-//! 交互式配置应用，保存到 shell 配置文件（~/.zshrc, ~/.bash_profile 等）
+//! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::{log_break, log_debug, log_info, log_success, log_warning, EnvFile, Shell};
+use crate::settings::{
+    defaults::{default_llm_model, default_response_format},
+    paths::ConfigPaths,
+    settings::Settings,
+};
+use crate::{confirm, log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input, Select};
-use std::collections::HashMap;
+use dialoguer::{Input, Select};
+use std::fs;
+use toml;
 
 /// 初始化设置命令
 pub struct SetupCommand;
+
+/// 收集的配置数据
+#[derive(Debug, Clone)]
+struct CollectedConfig {
+    // Workflow 配置
+    email: Option<String>,
+    jira_api_token: Option<String>,
+    jira_service_address: Option<String>,
+    github_api_token: Option<String>,
+    github_branch_prefix: Option<String>,
+    log_output_folder_name: String,
+    codeup_project_id: Option<u64>,
+    codeup_csrf_token: Option<String>,
+    codeup_cookie: Option<String>,
+    // LLM 配置
+    llm_provider: String,
+    llm_url: Option<String>,
+    llm_key: Option<String>,
+    llm_model: Option<String>,
+    llm_response_format: Option<String>, // Option<String> 类型，可能为空（None 表示使用默认值）
+}
 
 impl SetupCommand {
     /// 运行初始化设置流程
     pub fn run() -> Result<()> {
         log_success!("Starting Workflow CLI initialization...\n");
 
-        // 注意：在 setup 阶段，我们直接读取环境变量和 shell 配置文件即可
-
-        // 加载现有配置（从 shell 配置文件和当前环境变量）
-        // 优先从当前环境变量读取（如果已加载到 shell）
-        let env_var_keys = EnvFile::get_workflow_env_keys();
-        let merged_env = EnvFile::load_merged(&env_var_keys);
-
-        if !merged_env.is_empty() {
-            log_info!("  Found existing configuration. Press Enter to keep current values, or enter new values to override.\n");
-        }
+        // 加载现有配置（从 TOML 文件）
+        let existing_config = Self::load_existing_config()?;
 
         // 收集配置信息（智能处理现有配置）
-        let env_vars = Self::collect_config(&merged_env)?;
+        let config = Self::collect_config(&existing_config)?;
 
-        // 保存配置（统一保存到环境变量）
-        log_info!("💾 Saving configuration...");
-        EnvFile::save(&env_vars).context("Failed to save environment variables")?;
-        log_success!("  Environment variables saved to shell config file");
+        // 保存配置到 TOML 文件
+        log_info!("  Saving configuration...");
+        Self::save_config(&config)?;
+        log_success!("  Configuration saved to ~/.workflow/config/workflow.toml");
 
-        let _shell_config_path = EnvFile::get_shell_config_path()
-            .map_err(|_| anyhow::anyhow!("Failed to get shell config path"))?;
-        log_debug!("   Shell config: {:?}", _shell_config_path);
-
-        // 保存配置后，更新当前进程的环境变量
-        // 这样后续对 Settings::load() 的调用会使用新值
-        for (key, value) in &env_vars {
-            std::env::set_var(key, value);
-        }
-
-        // 验证 Jira 配置（如果已配置）
-        Self::verify_jira_config(&env_vars)?;
-
-        // 验证 GitHub 配置（如果已配置）
-        Self::verify_github_config(&env_vars)?;
-
-        // 验证 Codeup 配置（如果已配置）
-        Self::verify_codeup_config(&env_vars)?;
+        // 验证配置
+        Self::verify_config(&config)?;
 
         log_break!();
         log_success!("Initialization completed successfully!");
         log_info!("   You can now use the Workflow CLI commands.");
 
-        // 尝试重新加载 shell 配置
-        log_break!();
-        log_info!("Reloading shell configuration...");
-        if let Ok(shell_info) = Shell::detect() {
-            let _ = Shell::reload_config(&shell_info);
-        } else {
-            log_break!();
-            log_info!("  Could not detect shell type.");
-            log_info!("Please manually reload your shell configuration:");
-            log_info!("  source ~/.zshrc  # for zsh");
-            log_info!("  source ~/.bashrc  # for bash");
-        }
-
         Ok(())
     }
 
-    /// 收集配置信息（统一保存为环境变量）
-    fn collect_config(existing_env: &HashMap<String, String>) -> Result<HashMap<String, String>> {
-        let mut env_vars = existing_env.clone();
+    /// 加载现有配置（从 TOML 文件）
+    fn load_existing_config() -> Result<CollectedConfig> {
+        let settings = Settings::get();
+        let llm = &settings.llm;
 
+        Ok(CollectedConfig {
+            email: settings.user.email.clone(),
+            jira_api_token: settings.jira.api_token.clone(),
+            jira_service_address: settings.jira.service_address.clone(),
+            github_api_token: settings.github.api_token.clone(),
+            github_branch_prefix: settings.github.branch_prefix.clone(),
+            log_output_folder_name: settings.log.output_folder_name.clone(),
+            codeup_project_id: settings.codeup.project_id,
+            codeup_csrf_token: settings.codeup.csrf_token.clone(),
+            codeup_cookie: settings.codeup.cookie.clone(),
+            llm_provider: llm.provider.clone(),
+            llm_url: llm.url.clone(),
+            llm_key: llm.key.clone(),
+            llm_model: llm.model.clone(),
+            // 如果 response_format 为空字符串或等于默认值，设置为 None（表示使用默认值，不保存到 TOML）
+            llm_response_format: if llm.response_format.is_empty()
+                || llm.response_format == default_response_format()
+            {
+                None
+            } else {
+                Some(llm.response_format.clone())
+            },
+        })
+    }
+
+    /// 收集配置信息
+    fn collect_config(existing: &CollectedConfig) -> Result<CollectedConfig> {
         // ==================== 必填项：用户配置 ====================
         log_break!();
         log_info!("  User Configuration (Required)");
         log_break!('─', 65);
 
-        let current_email = existing_env.get("EMAIL").cloned();
-        let has_email = current_email.is_some();
-        let email_prompt = if let Some(ref email) = current_email {
+        let has_email = existing.email.is_some();
+        let email_prompt = if let Some(ref email) = existing.email {
             format!("Email address [current: {}]", email)
         } else {
             "Email address".to_string()
         };
 
-        let default_email = current_email.clone().unwrap_or_default();
+        let default_email = existing.email.clone().unwrap_or_default();
 
         let email: String = Input::new()
             .with_prompt(&email_prompt)
@@ -106,58 +123,92 @@ impl SetupCommand {
             .interact_text()
             .context("Failed to get email")?;
 
-        if !email.is_empty() {
-            env_vars.insert("EMAIL".to_string(), email);
-        } else if current_email.is_none() {
+        let email = if !email.is_empty() {
+            Some(email)
+        } else if existing.email.is_some() {
+            existing.email.clone()
+        } else {
             anyhow::bail!("Email is required");
-        }
+        };
 
         // ==================== 必填项：GitHub 配置 ====================
         log_break!();
-        log_info!("🐙 GitHub Configuration (Required)");
+        log_info!("  GitHub Configuration (Required)");
         log_break!('─', 65);
 
-        let current_github_token = existing_env.get("GITHUB_API_TOKEN").cloned();
-        let github_token_prompt = if current_github_token.is_some() {
+        let has_github_token = existing.github_api_token.is_some();
+        let github_token_prompt = if has_github_token {
             "GitHub API token [current: ***]".to_string()
         } else {
             "GitHub API token".to_string()
         };
 
+        let default_github_token = existing.github_api_token.clone().unwrap_or_default();
+
         let github_api_token: String = Input::new()
             .with_prompt(&github_token_prompt)
-            .allow_empty(current_github_token.is_some())
+            .default(default_github_token)
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("GitHub API token is required and cannot be empty")
+                } else {
+                    Ok(())
+                }
+            })
             .interact_text()
             .context("Failed to get GitHub API token")?;
 
-        if !github_api_token.is_empty() {
-            env_vars.insert("GITHUB_API_TOKEN".to_string(), github_api_token);
-        } else if current_github_token.is_some() {
-            // 保持原值
-            env_vars.insert(
-                "GITHUB_API_TOKEN".to_string(),
-                current_github_token.unwrap(),
-            );
+        let github_api_token = if !github_api_token.trim().is_empty() {
+            Some(github_api_token.trim().to_string())
         } else {
             anyhow::bail!("GitHub API token is required");
-        }
+        };
+
+        // ==================== 可选：GitHub 配置 ====================
+        log_break!();
+        log_info!("  GitHub Configuration (Optional)");
+        log_break!('─', 65);
+
+        let gh_prefix_prompt = if let Some(ref prefix) = existing.github_branch_prefix {
+            format!(
+                "GitHub branch prefix [current: {}] (press Enter to keep)",
+                prefix
+            )
+        } else {
+            "GitHub branch prefix (press Enter to skip)".to_string()
+        };
+
+        let default_gh_prefix = existing.github_branch_prefix.clone().unwrap_or_default();
+
+        let gh_prefix: String = Input::new()
+            .with_prompt(&gh_prefix_prompt)
+            .allow_empty(true)
+            .default(default_gh_prefix)
+            .interact_text()
+            .context("Failed to get GitHub branch prefix")?;
+
+        let github_branch_prefix = if !gh_prefix.is_empty() {
+            Some(gh_prefix)
+        } else {
+            existing.github_branch_prefix.clone()
+        };
 
         // ==================== 必填项：Jira 配置 ====================
         log_break!();
-        log_info!("🎫 Jira Configuration (Required)");
+        log_info!("  Jira Configuration (Required)");
         log_break!('─', 65);
 
-        let current_jira_address = existing_env.get("JIRA_SERVICE_ADDRESS").cloned();
-        let has_jira_address = current_jira_address.is_some();
-        let jira_address_prompt = if let Some(ref addr) = current_jira_address {
+        let has_jira_address = existing.jira_service_address.is_some();
+        let jira_address_prompt = if let Some(ref addr) = existing.jira_service_address {
             format!("Jira service address [current: {}]", addr)
         } else {
             "Jira service address".to_string()
         };
 
-        let default_jira_address = current_jira_address
+        let default_jira_address = existing
+            .jira_service_address
             .clone()
-            .unwrap_or_else(|| "https://your-company.atlassian.net".to_string());
+            .unwrap_or_else(|| String::from(""));
 
         let jira_service_address: String = Input::new()
             .with_prompt(&jira_address_prompt)
@@ -177,14 +228,15 @@ impl SetupCommand {
             .interact_text()
             .context("Failed to get Jira service address")?;
 
-        if !jira_service_address.is_empty() {
-            env_vars.insert("JIRA_SERVICE_ADDRESS".to_string(), jira_service_address);
-        } else if current_jira_address.is_none() {
+        let jira_service_address = if !jira_service_address.is_empty() {
+            Some(jira_service_address)
+        } else if existing.jira_service_address.is_some() {
+            existing.jira_service_address.clone()
+        } else {
             anyhow::bail!("Jira service address is required");
-        }
+        };
 
-        let current_jira_token = existing_env.get("JIRA_API_TOKEN").cloned();
-        let jira_token_prompt = if current_jira_token.is_some() {
+        let jira_token_prompt = if existing.jira_api_token.is_some() {
             "Jira API token [current: ***]".to_string()
         } else {
             "Jira API token".to_string()
@@ -192,140 +244,53 @@ impl SetupCommand {
 
         let jira_api_token: String = Input::new()
             .with_prompt(&jira_token_prompt)
-            .allow_empty(current_jira_token.is_some())
+            .allow_empty(existing.jira_api_token.is_some())
             .interact_text()
             .context("Failed to get Jira API token")?;
 
-        if !jira_api_token.is_empty() {
-            env_vars.insert("JIRA_API_TOKEN".to_string(), jira_api_token);
-        } else if current_jira_token.is_none() {
-            anyhow::bail!("Jira API token is required");
-        }
-
-        // ==================== 可选：GitHub 配置 ====================
-        log_break!();
-        log_info!("🐙 GitHub Configuration (Optional)");
-        log_break!('─', 65);
-
-        let current_gh_prefix = existing_env.get("GITHUB_BRANCH_PREFIX").cloned();
-        let gh_prefix_prompt = if let Some(ref prefix) = current_gh_prefix {
-            format!(
-                "GitHub branch prefix [current: {}] (press Enter to keep)",
-                prefix
-            )
+        let jira_api_token = if !jira_api_token.is_empty() {
+            Some(jira_api_token)
+        } else if existing.jira_api_token.is_some() {
+            existing.jira_api_token.clone()
         } else {
-            "GitHub branch prefix (press Enter to skip)".to_string()
+            anyhow::bail!("Jira API token is required");
         };
-
-        let default_gh_prefix = current_gh_prefix.clone().unwrap_or_default();
-
-        let gh_prefix: String = Input::new()
-            .with_prompt(&gh_prefix_prompt)
-            .allow_empty(true)
-            .default(default_gh_prefix)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        if !gh_prefix.is_empty() {
-            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), gh_prefix);
-        } else if let Some(prefix) = current_gh_prefix {
-            // 保持原值
-            env_vars.insert("GITHUB_BRANCH_PREFIX".to_string(), prefix);
-        }
 
         // ==================== 可选：日志配置 ====================
         log_break!();
-        log_info!("📝 Log Configuration (Optional)");
+        log_info!("  Log Configuration (Optional)");
         log_break!('─', 65);
 
-        let current_log_folder = existing_env
-            .get("LOG_OUTPUT_FOLDER_NAME")
-            .cloned()
-            .unwrap_or_else(|| "logs".to_string());
-        let log_folder_prompt = format!("Log output folder name [current: {}]", current_log_folder);
+        let log_folder_prompt = format!(
+            "Log output folder name [current: {}]",
+            existing.log_output_folder_name
+        );
 
-        let log_folder: String = Input::new()
+        let log_output_folder_name: String = Input::new()
             .with_prompt(&log_folder_prompt)
-            .default(current_log_folder.clone())
+            .default(existing.log_output_folder_name.clone())
             .interact_text()
             .context("Failed to get log folder name")?;
 
-        if !log_folder.is_empty() {
-            env_vars.insert("LOG_OUTPUT_FOLDER_NAME".to_string(), log_folder);
+        let log_output_folder_name = if !log_output_folder_name.is_empty() {
+            log_output_folder_name
         } else {
-            // 保持原值或使用默认值
-            env_vars.insert("LOG_OUTPUT_FOLDER_NAME".to_string(), current_log_folder);
-        }
-
-        let current_delete_logs = existing_env
-            .get("LOG_DELETE_WHEN_OPERATION_COMPLETED")
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let delete_logs_prompt = format!(
-            "Delete logs when operation completed? [current: {}]",
-            if current_delete_logs { "Yes" } else { "No" }
-        );
-
-        let delete_logs = Confirm::new()
-            .with_prompt(&delete_logs_prompt)
-            .default(current_delete_logs)
-            .interact()
-            .context("Failed to get delete logs confirmation")?;
-        env_vars.insert(
-            "LOG_DELETE_WHEN_OPERATION_COMPLETED".to_string(),
-            if delete_logs {
-                "1".to_string()
-            } else {
-                "0".to_string()
-            },
-        );
-
-        // ==================== 可选：代理配置 ====================
-        log_break!();
-        log_info!("🌐 Proxy Configuration (Optional)");
-        log_break!('─', 65);
-
-        let current_disable_proxy = existing_env
-            .get("DISABLE_CHECK_PROXY")
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
-        let disable_proxy_prompt = format!(
-            "Disable proxy check? [current: {}]",
-            if current_disable_proxy { "Yes" } else { "No" }
-        );
-
-        let disable_proxy_check = Confirm::new()
-            .with_prompt(&disable_proxy_prompt)
-            .default(current_disable_proxy)
-            .interact()
-            .context("Failed to get proxy check confirmation")?;
-        env_vars.insert(
-            "DISABLE_CHECK_PROXY".to_string(),
-            if disable_proxy_check {
-                "1".to_string()
-            } else {
-                "0".to_string()
-            },
-        );
+            existing.log_output_folder_name.clone()
+        };
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
-        log_info!("🤖 LLM/AI Configuration (Optional)");
+        log_info!("  LLM/AI Configuration (Optional)");
         log_break!('─', 65);
 
         let llm_providers = vec!["openai", "deepseek", "proxy"];
-        let current_provider = existing_env
-            .get("LLM_PROVIDER")
-            .cloned()
-            .unwrap_or_else(|| "openai".to_string());
         let current_provider_idx = llm_providers
             .iter()
-            .position(|&p| p == current_provider.as_str())
+            .position(|&p| p == existing.llm_provider.as_str())
             .unwrap_or(0);
 
-        let llm_provider_prompt = format!("Select LLM provider [current: {}]", current_provider);
+        let llm_provider_prompt =
+            format!("Select LLM provider [current: {}]", existing.llm_provider);
 
         let llm_provider_idx = Select::new()
             .with_prompt(&llm_provider_prompt)
@@ -333,104 +298,173 @@ impl SetupCommand {
             .default(current_provider_idx)
             .interact()
             .context("Failed to select LLM provider")?;
-        let selected_provider = llm_providers[llm_provider_idx].to_string();
-        env_vars.insert("LLM_PROVIDER".to_string(), selected_provider.clone());
+        let llm_provider = llm_providers[llm_provider_idx].to_string();
 
-        match selected_provider.as_str() {
-            "openai" => {
-                let current_openai_key = existing_env.get("LLM_OPENAI_KEY").cloned();
-                let openai_key_prompt = if current_openai_key.is_some() {
-                    "OpenAI API key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "OpenAI API key (optional, press Enter to skip)".to_string()
-                };
-
-                let openai_key: String = Input::new()
-                    .with_prompt(&openai_key_prompt)
-                    .allow_empty(true)
-                    .interact_text()
-                    .context("Failed to get OpenAI key")?;
-
-                if !openai_key.is_empty() {
-                    env_vars.insert("LLM_OPENAI_KEY".to_string(), openai_key);
-                } else if current_openai_key.is_some() {
-                    // 保持原值
-                    env_vars.insert("LLM_OPENAI_KEY".to_string(), current_openai_key.unwrap());
-                }
-            }
-            "deepseek" => {
-                let current_deepseek_key = existing_env.get("LLM_DEEPSEEK_KEY").cloned();
-                let deepseek_key_prompt = if current_deepseek_key.is_some() {
-                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "DeepSeek API key (optional, press Enter to skip)".to_string()
-                };
-
-                let deepseek_key: String = Input::new()
-                    .with_prompt(&deepseek_key_prompt)
-                    .allow_empty(true)
-                    .interact_text()
-                    .context("Failed to get DeepSeek key")?;
-
-                if !deepseek_key.is_empty() {
-                    env_vars.insert("LLM_DEEPSEEK_KEY".to_string(), deepseek_key);
-                } else if current_deepseek_key.is_some() {
-                    env_vars.insert(
-                        "LLM_DEEPSEEK_KEY".to_string(),
-                        current_deepseek_key.unwrap(),
-                    );
-                }
-            }
+        // 根据 provider 设置 URL（只有 proxy 需要输入和保存）
+        // 对于 openai/deepseek，必须设置为 None，避免使用旧的 proxy URL 导致错误
+        let llm_url = match llm_provider.as_str() {
+            "openai" => None,   // openai 不使用 proxy URL，必须为 None
+            "deepseek" => None, // deepseek 不使用 proxy URL，必须为 None
             "proxy" => {
-                let current_llm_proxy_url = existing_env.get("LLM_PROXY_URL").cloned();
-                let llm_proxy_url_prompt = if let Some(ref url) = current_llm_proxy_url {
+                let llm_url_prompt = if let Some(ref url) = existing.llm_url {
                     format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
                 } else {
                     "LLM proxy URL (optional, press Enter to skip)".to_string()
                 };
 
-                let llm_proxy_url: String = Input::new()
-                    .with_prompt(&llm_proxy_url_prompt)
+                let llm_url_input: String = Input::new()
+                    .with_prompt(&llm_url_prompt)
                     .allow_empty(true)
                     .interact_text()
                     .context("Failed to get LLM proxy URL")?;
 
-                if !llm_proxy_url.is_empty() {
-                    env_vars.insert("LLM_PROXY_URL".to_string(), llm_proxy_url);
-                } else if current_llm_proxy_url.is_some() {
-                    env_vars.insert("LLM_PROXY_URL".to_string(), current_llm_proxy_url.unwrap());
+                if !llm_url_input.is_empty() {
+                    Some(llm_url_input)
+                } else {
+                    existing.llm_url.clone()
                 }
+            }
+            _ => None,
+        };
 
-                let current_llm_proxy_key = existing_env.get("LLM_PROXY_KEY").cloned();
-                let llm_proxy_key_prompt = if current_llm_proxy_key.is_some() {
+        // 收集 API key
+        let key_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if existing.llm_key.is_some() {
+                    "OpenAI API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "OpenAI API key (optional, press Enter to skip)".to_string()
+                }
+            }
+            "deepseek" => {
+                if existing.llm_key.is_some() {
+                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "DeepSeek API key (optional, press Enter to skip)".to_string()
+                }
+            }
+            "proxy" => {
+                if existing.llm_key.is_some() {
                     "LLM proxy key [current: ***] (press Enter to keep)".to_string()
                 } else {
                     "LLM proxy key (optional, press Enter to skip)".to_string()
-                };
-
-                let llm_proxy_key: String = Input::new()
-                    .with_prompt(&llm_proxy_key_prompt)
-                    .allow_empty(true)
-                    .interact_text()
-                    .context("Failed to get LLM proxy key")?;
-
-                if !llm_proxy_key.is_empty() {
-                    env_vars.insert("LLM_PROXY_KEY".to_string(), llm_proxy_key);
-                } else if current_llm_proxy_key.is_some() {
-                    env_vars.insert("LLM_PROXY_KEY".to_string(), current_llm_proxy_key.unwrap());
                 }
             }
-            _ => {}
-        }
+            _ => "LLM API key (optional, press Enter to skip)".to_string(),
+        };
+
+        let llm_key_input: String = Input::new()
+            .with_prompt(&key_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get LLM API key")?;
+
+        let llm_key = if !llm_key_input.is_empty() {
+            Some(llm_key_input)
+        } else {
+            existing.llm_key.clone()
+        };
+
+        // 配置模型
+        let default_model = existing
+            .llm_model
+            .clone()
+            .unwrap_or_else(|| default_llm_model(&llm_provider));
+
+        let model_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!("OpenAI model [current: {}] (press Enter to keep)", model)
+                } else {
+                    "OpenAI model (optional, press Enter to skip)".to_string()
+                }
+            }
+            "deepseek" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!("DeepSeek model [current: {}] (press Enter to keep)", model)
+                } else {
+                    "DeepSeek model (optional, press Enter to skip)".to_string()
+                }
+            }
+            "proxy" => {
+                if let Some(ref model) = existing.llm_model {
+                    format!("LLM model [current: {}] (required)", model)
+                } else {
+                    "LLM model (required)".to_string()
+                }
+            }
+            _ => "LLM model".to_string(),
+        };
+
+        let is_proxy = llm_provider == "proxy";
+        // 只有当之前有保存的值时，才设置默认值；否则不设置，让用户明确输入或留空使用默认值
+        let has_existing_model = existing.llm_model.is_some();
+
+        let llm_model_input: String = {
+            let mut input = Input::new()
+                .with_prompt(&model_prompt)
+                .allow_empty(!is_proxy);
+
+            // 只有之前有保存的值时，才设置默认值
+            if has_existing_model {
+                input = input.default(default_model.clone());
+            }
+
+            input
+                .validate_with(move |input: &String| -> Result<(), &str> {
+                    if input.is_empty() && is_proxy {
+                        Err("Model is required for proxy provider")
+                    } else {
+                        Ok(())
+                    }
+                })
+                .interact_text()
+                .context("Failed to get LLM model")?
+        };
+
+        let llm_model = if !llm_model_input.is_empty() {
+            Some(llm_model_input)
+        } else if is_proxy {
+            anyhow::bail!("Model is required for proxy provider");
+        } else {
+            // 对于 openai 和 deepseek，如果为空则设置为 None
+            // 这样不会保存到 TOML，运行时会在 build_model() 中使用默认值
+            None
+        };
+
+        // 配置 response_format
+        let response_format_prompt = if let Some(ref format) = existing.llm_response_format {
+            format!(
+                "Response format path [current: {}] (press Enter to keep, empty for default)",
+                format
+            )
+        } else {
+            "Response format path (optional, press Enter to skip, empty for default)".to_string()
+        };
+
+        let llm_response_format_input: String = Input::new()
+            .with_prompt(&response_format_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get response format")?;
+
+        // 如果用户输入为空，保持现有值（None 表示使用默认值，不保存到 TOML）
+        // 如果用户输入不为空，使用用户输入的值
+        // 这样不会保存默认值到 TOML（skip_serializing_if = "String::is_empty"），运行时会在 extract_content() 中使用默认值
+        let llm_response_format = if llm_response_format_input.is_empty() {
+            existing.llm_response_format.clone() // 保持现有值（可能是 None，表示使用默认值）
+        } else {
+            Some(llm_response_format_input) // 使用用户输入的值
+        };
 
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
         log_info!("📦 Codeup Configuration (Optional)");
         log_break!('─', 65);
 
-        let has_codeup = existing_env.contains_key("CODEUP_PROJECT_ID")
-            || existing_env.contains_key("CODEUP_CSRF_TOKEN")
-            || existing_env.contains_key("CODEUP_COOKIE");
+        let has_codeup = existing.codeup_project_id.is_some()
+            || existing.codeup_csrf_token.is_some()
+            || existing.codeup_cookie.is_some();
 
         let codeup_confirm_prompt = if has_codeup {
             "Do you want to configure Codeup? [current: configured]".to_string()
@@ -438,21 +472,19 @@ impl SetupCommand {
             "Do you use Codeup (Aliyun Code Repository)?".to_string()
         };
 
-        let should_configure_codeup = Confirm::new()
-            .with_prompt(&codeup_confirm_prompt)
-            .default(has_codeup)
-            .interact()
-            .context("Failed to get Codeup confirmation")?;
+        let should_configure_codeup = confirm(&codeup_confirm_prompt, has_codeup, None)?;
 
-        if should_configure_codeup {
-            let current_codeup_id = existing_env.get("CODEUP_PROJECT_ID").cloned();
-            let codeup_id_prompt = if let Some(ref id) = current_codeup_id {
+        let (codeup_project_id, codeup_csrf_token, codeup_cookie) = if should_configure_codeup {
+            let codeup_id_prompt = if let Some(ref id) = existing.codeup_project_id {
                 format!("Codeup project ID [current: {}] (press Enter to keep)", id)
             } else {
                 "Codeup project ID (optional, press Enter to skip)".to_string()
             };
 
-            let default_codeup_id = current_codeup_id.clone().unwrap_or_default();
+            let default_codeup_id = existing
+                .codeup_project_id
+                .map(|id| id.to_string())
+                .unwrap_or_default();
 
             let codeup_project_id: String = Input::new()
                 .with_prompt(&codeup_id_prompt)
@@ -461,22 +493,13 @@ impl SetupCommand {
                 .interact_text()
                 .context("Failed to get Codeup project ID")?;
 
-            if !codeup_project_id.is_empty() {
-                if let Ok(id) = codeup_project_id.parse::<u64>() {
-                    env_vars.insert("CODEUP_PROJECT_ID".to_string(), id.to_string());
-                } else {
-                    log_warning!("Invalid project ID, skipping...");
-                    if let Some(id) = current_codeup_id {
-                        env_vars.insert("CODEUP_PROJECT_ID".to_string(), id);
-                    }
-                }
-            } else if let Some(id) = current_codeup_id {
-                // 保持原值
-                env_vars.insert("CODEUP_PROJECT_ID".to_string(), id);
-            }
+            let codeup_project_id = if !codeup_project_id.is_empty() {
+                codeup_project_id.parse::<u64>().ok()
+            } else {
+                existing.codeup_project_id
+            };
 
-            let current_codeup_csrf = existing_env.get("CODEUP_CSRF_TOKEN").cloned();
-            let codeup_csrf_prompt = if current_codeup_csrf.is_some() {
+            let codeup_csrf_prompt = if existing.codeup_csrf_token.is_some() {
                 "Codeup CSRF token [current: ***] (press Enter to keep)".to_string()
             } else {
                 "Codeup CSRF token (optional, press Enter to skip)".to_string()
@@ -488,17 +511,13 @@ impl SetupCommand {
                 .interact_text()
                 .context("Failed to get Codeup CSRF token")?;
 
-            if !codeup_csrf_token.is_empty() {
-                env_vars.insert("CODEUP_CSRF_TOKEN".to_string(), codeup_csrf_token);
-            } else if current_codeup_csrf.is_some() {
-                env_vars.insert(
-                    "CODEUP_CSRF_TOKEN".to_string(),
-                    current_codeup_csrf.unwrap(),
-                );
-            }
+            let codeup_csrf_token = if !codeup_csrf_token.is_empty() {
+                Some(codeup_csrf_token)
+            } else {
+                existing.codeup_csrf_token.clone()
+            };
 
-            let current_codeup_cookie = existing_env.get("CODEUP_COOKIE").cloned();
-            let codeup_cookie_prompt = if current_codeup_cookie.is_some() {
+            let codeup_cookie_prompt = if existing.codeup_cookie.is_some() {
                 "Codeup cookie [current: ***] (press Enter to keep)".to_string()
             } else {
                 "Codeup cookie (optional, press Enter to skip)".to_string()
@@ -510,142 +529,172 @@ impl SetupCommand {
                 .interact_text()
                 .context("Failed to get Codeup cookie")?;
 
-            if !codeup_cookie.is_empty() {
-                env_vars.insert("CODEUP_COOKIE".to_string(), codeup_cookie);
-            } else if current_codeup_cookie.is_some() {
-                env_vars.insert("CODEUP_COOKIE".to_string(), current_codeup_cookie.unwrap());
-            }
-        } else if has_codeup {
-            // 用户选择不配置，但已存在配置，保持原值
-            if let Some(id) = existing_env.get("CODEUP_PROJECT_ID") {
-                env_vars.insert("CODEUP_PROJECT_ID".to_string(), id.clone());
-            }
-            if let Some(token) = existing_env.get("CODEUP_CSRF_TOKEN") {
-                env_vars.insert("CODEUP_CSRF_TOKEN".to_string(), token.clone());
-            }
-            if let Some(cookie) = existing_env.get("CODEUP_COOKIE") {
-                env_vars.insert("CODEUP_COOKIE".to_string(), cookie.clone());
-            }
-        }
+            let codeup_cookie = if !codeup_cookie.is_empty() {
+                Some(codeup_cookie)
+            } else {
+                existing.codeup_cookie.clone()
+            };
 
-        Ok(env_vars)
+            (codeup_project_id, codeup_csrf_token, codeup_cookie)
+        } else {
+            (
+                existing.codeup_project_id,
+                existing.codeup_csrf_token.clone(),
+                existing.codeup_cookie.clone(),
+            )
+        };
+
+        Ok(CollectedConfig {
+            email,
+            jira_api_token,
+            jira_service_address,
+            github_api_token,
+            github_branch_prefix,
+            log_output_folder_name,
+            codeup_project_id,
+            codeup_csrf_token,
+            codeup_cookie,
+            llm_provider,
+            llm_url,
+            llm_key,
+            llm_model,
+            llm_response_format,
+        })
     }
 
-    /// 验证 Jira 配置
-    ///
-    /// 尝试获取 Jira 用户信息来验证配置是否正确。
-    fn verify_jira_config(env_vars: &HashMap<String, String>) -> Result<()> {
-        // 检查是否配置了 Jira 相关信息
-        let has_jira_config = env_vars.contains_key("JIRA_SERVICE_ADDRESS")
-            && env_vars.contains_key("JIRA_API_TOKEN")
-            && env_vars.contains_key("EMAIL");
+    /// 保存配置到 TOML 文件
+    fn save_config(config: &CollectedConfig) -> Result<()> {
+        use crate::settings::settings::{
+            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings, UserSettings,
+        };
 
-        if !has_jira_config {
-            return Ok(());
-        }
+        // 构建 Settings 结构体
+        let settings = Settings {
+            user: UserSettings {
+                email: config.email.clone(),
+            },
+            jira: JiraSettings {
+                api_token: config.jira_api_token.clone(),
+                service_address: config.jira_service_address.clone(),
+            },
+            github: GitHubSettings {
+                api_token: config.github_api_token.clone(),
+                branch_prefix: config.github_branch_prefix.clone(),
+            },
+            log: LogSettings {
+                output_folder_name: config.log_output_folder_name.clone(),
+                download_base_dir: None, // 使用默认值
+            },
+            codeup: CodeupSettings {
+                project_id: config.codeup_project_id,
+                csrf_token: config.codeup_csrf_token.clone(),
+                cookie: config.codeup_cookie.clone(),
+            },
+            llm: crate::settings::settings::LLMSettings {
+                url: config.llm_url.clone(),
+                key: config.llm_key.clone(),
+                provider: config.llm_provider.clone(),
+                model: config.llm_model.clone(),
+                // None 转换为空字符串（不保存到 TOML，使用默认值）
+                response_format: config.llm_response_format.clone().unwrap_or_default(),
+            },
+        };
 
-        log_break!();
-        log_info!("🔍 Verifying Jira configuration...");
-
-        // 尝试获取 Jira 用户信息
-        match crate::jira::users::get_user_info() {
-            Ok(user) => {
-                log_break!();
-                log_success!("Jira configuration verified successfully!");
-                log_info!("   User: {}", user.display_name);
-                if let Some(email) = &user.email_address {
-                    log_info!("   Email: {}", email);
-                }
-                log_info!("   Account ID: {}", user.account_id);
-            }
-            Err(e) => {
-                log_warning!("  Failed to verify Jira configuration");
-                log_info!("   Error: {}", e);
-                log_info!("   Please check your Jira service address and API token.");
-                log_info!("   You can run 'workflow setup' again to update the configuration.");
-            }
-        }
+        // 保存 workflow.toml
+        let workflow_config_path = ConfigPaths::workflow_config()?;
+        let toml_content =
+            toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
+        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
 
         Ok(())
     }
 
-    /// 验证 GitHub 配置
-    ///
-    /// 尝试获取 GitHub 用户信息来验证配置是否正确。
-    fn verify_github_config(env_vars: &HashMap<String, String>) -> Result<()> {
-        // 检查是否配置了 GitHub API token
-        let has_github_config = env_vars.contains_key("GITHUB_API_TOKEN");
+    /// 验证配置
+    fn verify_config(config: &CollectedConfig) -> Result<()> {
+        // 验证 Jira 配置
+        if config.jira_api_token.is_some()
+            && config.jira_service_address.is_some()
+            && config.email.is_some()
+        {
+            log_break!();
+            log_info!("  Verifying Jira configuration...");
 
-        if !has_github_config {
-            return Ok(());
-        }
-
-        log_break!();
-        log_info!("🔍 Verifying GitHub configuration...");
-
-        // 尝试获取 GitHub 用户信息
-        match crate::pr::GitHub::get_user_info() {
-            Ok(user) => {
-                log_break!();
-                log_success!("GitHub configuration verified successfully!");
-                log_info!("   User: {}", user.login);
-                if let Some(name) = &user.name {
-                    log_info!("   Name: {}", name);
+            match crate::jira::users::get_user_info() {
+                Ok(user) => {
+                    log_break!();
+                    log_success!("Jira configuration verified successfully!");
+                    log_info!("   User: {}", user.display_name);
+                    if let Some(email) = &user.email_address {
+                        log_info!("   Email: {}", email);
+                    }
+                    log_info!("   Account ID: {}", user.account_id);
                 }
-                if let Some(email) = &user.email {
-                    log_info!("   Email: {}", email);
+                Err(e) => {
+                    log_warning!("  Failed to verify Jira configuration");
+                    log_info!("   Error: {}", e);
+                    log_info!("   Please check your Jira service address and API token.");
+                    log_info!("   You can run 'workflow setup' again to update the configuration.");
                 }
-            }
-            Err(e) => {
-                log_warning!("  Failed to verify GitHub configuration");
-                log_info!("   Error: {}", e);
-                log_info!("   Please check your GitHub API token.");
-                log_info!("   You can run 'workflow setup' again to update the configuration.");
             }
         }
 
-        Ok(())
-    }
+        // 验证 GitHub 配置
+        if config.github_api_token.is_some() {
+            log_break!();
+            log_info!("  Verifying GitHub configuration...");
 
-    /// 验证 Codeup 配置
-    ///
-    /// 尝试获取 Codeup 用户信息来验证配置是否正确。
-    fn verify_codeup_config(env_vars: &HashMap<String, String>) -> Result<()> {
-        // 检查是否配置了 Codeup 相关信息
-        let has_codeup_config = env_vars.contains_key("CODEUP_PROJECT_ID")
-            && env_vars.contains_key("CODEUP_COOKIE")
-            && env_vars.contains_key("CODEUP_CSRF_TOKEN");
-
-        if !has_codeup_config {
-            return Ok(());
-        }
-
-        log_break!();
-        log_info!("🔍 Verifying Codeup configuration...");
-
-        // 尝试获取 Codeup 用户信息
-        match crate::pr::Codeup::get_user_info() {
-            Ok(user) => {
-                log_break!();
-                log_success!("Codeup configuration verified successfully!");
-                if let Some(name) = &user.name {
-                    log_info!("   Name: {}", name);
+            match crate::pr::GitHub::get_user_info() {
+                Ok(user) => {
+                    log_break!();
+                    log_success!("GitHub configuration verified successfully!");
+                    log_info!("   User: {}", user.login);
+                    if let Some(name) = &user.name {
+                        log_info!("   Name: {}", name);
+                    }
+                    if let Some(email) = &user.email {
+                        log_info!("   Email: {}", email);
+                    }
                 }
-                if let Some(username) = &user.username {
-                    log_info!("   Username: {}", username);
-                }
-                if let Some(email) = &user.email {
-                    log_info!("   Email: {}", email);
-                }
-                if let Some(id) = user.id {
-                    log_info!("   ID: {}", id);
+                Err(e) => {
+                    log_warning!("  Failed to verify GitHub configuration");
+                    log_info!("   Error: {}", e);
+                    log_info!("   Please check your GitHub API token.");
+                    log_info!("   You can run 'workflow setup' again to update the configuration.");
                 }
             }
-            Err(e) => {
-                log_warning!("  Failed to verify Codeup configuration");
-                log_info!("   Error: {}", e);
-                log_info!("   Please check your Codeup project ID, cookie, and CSRF token.");
-                log_info!("   You can run 'workflow setup' again to update the configuration.");
+        }
+
+        // 验证 Codeup 配置
+        if config.codeup_project_id.is_some()
+            && config.codeup_cookie.is_some()
+            && config.codeup_csrf_token.is_some()
+        {
+            log_break!();
+            log_info!("🔍 Verifying Codeup configuration...");
+
+            match crate::pr::Codeup::get_user_info() {
+                Ok(user) => {
+                    log_break!();
+                    log_success!("Codeup configuration verified successfully!");
+                    if let Some(name) = &user.name {
+                        log_info!("   Name: {}", name);
+                    }
+                    if let Some(username) = &user.username {
+                        log_info!("   Username: {}", username);
+                    }
+                    if let Some(email) = &user.email {
+                        log_info!("   Email: {}", email);
+                    }
+                    if let Some(id) = user.id {
+                        log_info!("   ID: {}", id);
+                    }
+                }
+                Err(e) => {
+                    log_warning!("  Failed to verify Codeup configuration");
+                    log_info!("   Error: {}", e);
+                    log_info!("   Please check your Codeup project ID, cookie, and CSRF token.");
+                    log_info!("   You can run 'workflow setup' again to update the configuration.");
+                }
             }
         }
 

@@ -1,13 +1,13 @@
 use crate::commands::check;
 use crate::jira::status::JiraStatus;
 use crate::{
-    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
-    generate_pull_request_body, log_info, log_success, log_warning, validate_jira_ticket_format,
-    Browser, Clipboard, Codeup, Git, GitHub, Jira, PlatformProvider, PullRequestLLM, RepoType,
-    Settings, TYPES_OF_CHANGES,
+    confirm, detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
+    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
+    log_success, log_warning, validate_jira_ticket_format, Browser, Clipboard, Codeup, Git, GitHub,
+    Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
-use dialoguer::{Confirm, Input, MultiSelect};
+use dialoguer::{Input, MultiSelect};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -220,7 +220,7 @@ impl PullRequestCreateCommand {
 
         // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
         let settings = Settings::get();
-        if let Some(prefix) = &settings.github_branch_prefix {
+        if let Some(prefix) = &settings.github.branch_prefix {
             let trimmed = prefix.trim();
             if !trimmed.is_empty() {
                 branch_name = format!("{}/{}", trimmed, branch_name);
@@ -360,7 +360,7 @@ impl PullRequestCreateCommand {
         );
 
         // 检查是否已推送
-        let (_, exists_remote) = Git::is_branch_exists(current_branch)
+        let exists_remote = Git::has_remote_branch(current_branch)
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
@@ -434,15 +434,8 @@ impl PullRequestCreateCommand {
         Git::checkout_branch(branch_name)?;
 
         // 恢复 stash
-        log_success!("Restoring stashed changes...");
-        if let Err(e) = Git::stash_pop() {
-            if Git::has_unmerged().unwrap_or(false) {
-                log_warning!("Merge conflicts detected. Please resolve conflicts manually.");
-                anyhow::bail!("Failed to restore stashed changes due to merge conflicts. Please resolve conflicts manually and continue.");
-            } else {
-                return Err(e);
-            }
-        }
+        log_info!("Restoring stashed changes...");
+        let _ = Git::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
 
         // 提交并推送
         log_success!("Committing changes...");
@@ -466,18 +459,11 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         log_info!("Branch '{}' already exists on remote.", current_branch);
-        let should_use_current = Confirm::new()
-            .with_prompt(format!(
-                "Create PR for current branch '{}'?",
-                current_branch
-            ))
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation")?;
-
-        if !should_use_current {
-            anyhow::bail!("Operation cancelled.");
-        }
+        confirm(
+            &format!("Create PR for current branch '{}'?", current_branch),
+            true,
+            Some("Operation cancelled."),
+        )?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -499,18 +485,14 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        let should_use_current = Confirm::new()
-            .with_prompt(format!(
+        confirm(
+            &format!(
                 "Push and create PR for current branch '{}'?",
                 current_branch
-            ))
-            .default(true)
-            .interact()
-            .context("Failed to get confirmation")?;
-
-        if !should_use_current {
-            anyhow::bail!("Operation cancelled.");
-        }
+            ),
+            true,
+            Some("Operation cancelled."),
+        )?;
 
         // 推送
         log_success!("Pushing to remote...");
@@ -539,8 +521,8 @@ impl PullRequestCreateCommand {
         let has_uncommitted = Git::has_commit().context("Failed to check uncommitted changes")?;
 
         // 2. 获取当前分支和默认分支
-        let current_branch = Git::current_branch().context("Failed to get current branch")?;
-        let default_branch = Git::get_default_branch().context("Failed to get default branch")?;
+        let current_branch = Git::current_branch()?;
+        let default_branch = Git::get_default_branch()?;
         let is_default_branch = current_branch == default_branch;
 
         // 3. 判断当前是否是默认分支
@@ -564,11 +546,14 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = Confirm::new()
-                    .with_prompt(format!("Create PR for current branch '{}'? (otherwise will create new branch '{}')", current_branch, branch_name))
-                    .default(true)
-                    .interact()
-                    .context("Failed to get confirmation")?;
+                let should_use_current = confirm(
+                    &format!(
+                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                        current_branch, branch_name
+                    ),
+                    true,
+                    None,
+                )?;
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR
@@ -588,7 +573,7 @@ impl PullRequestCreateCommand {
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
-                let (_, exists_remote) = Git::is_branch_exists(&current_branch)
+                let exists_remote = Git::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 检查当前分支是否有提交（相对于默认分支）
@@ -626,26 +611,22 @@ impl PullRequestCreateCommand {
         pull_request_body: &str,
     ) -> Result<String> {
         // 检查分支是否已有 PR
-        let repo_type = Git::detect_repo_type()?;
-        let existing_pr = match repo_type {
-            RepoType::GitHub => <GitHub as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Codeup => <Codeup as PlatformProvider>::get_current_branch_pull_request()
-                .ok()
-                .flatten(),
-            RepoType::Unknown => None,
-        };
+        let existing_pr = get_current_branch_pr_id()?;
 
         if let Some(pr_id) = existing_pr {
             log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
-            match repo_type {
-                RepoType::GitHub => <GitHub as PlatformProvider>::get_pull_request_url(&pr_id),
-                RepoType::Codeup => <Codeup as PlatformProvider>::get_pull_request_url(&pr_id),
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            }
+            detect_repo_type(
+                |repo_type| match repo_type {
+                    RepoType::GitHub => GitHub::get_pull_request_url(&pr_id),
+                    RepoType::Codeup => Codeup::get_pull_request_url(&pr_id),
+                    RepoType::Unknown => {
+                        anyhow::bail!(
+                            "Unknown repository type. Only GitHub and Codeup are supported."
+                        );
+                    }
+                },
+                "get pull request URL",
+            )
         } else {
             // 分支无 PR，创建新 PR
             // 先检查分支是否有提交（相对于默认分支）
@@ -666,29 +647,24 @@ impl PullRequestCreateCommand {
                 );
             }
 
-            let pull_request_url = match repo_type {
-                RepoType::GitHub => {
-                    log_success!("Creating PR via GitHub...");
-                    <GitHub as PlatformProvider>::create_pull_request(
-                        pr_title,
-                        pull_request_body,
-                        branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Codeup => {
-                    log_success!("Creating PR via Codeup...");
-                    <Codeup as PlatformProvider>::create_pull_request(
-                        pr_title,
-                        pull_request_body,
-                        branch_name,
-                        None,
-                    )?
-                }
-                RepoType::Unknown => {
-                    anyhow::bail!("Unknown repository type. Only GitHub and Codeup are supported.");
-                }
-            };
+            let pull_request_url = detect_repo_type(
+                |repo_type| match repo_type {
+                    RepoType::GitHub => {
+                        log_success!("Creating PR via GitHub...");
+                        GitHub::create_pull_request(pr_title, pull_request_body, branch_name, None)
+                    }
+                    RepoType::Codeup => {
+                        log_success!("Creating PR via Codeup...");
+                        Codeup::create_pull_request(pr_title, pull_request_body, branch_name, None)
+                    }
+                    RepoType::Unknown => {
+                        anyhow::bail!(
+                            "Unknown repository type. Only GitHub and Codeup are supported."
+                        );
+                    }
+                },
+                "create pull request",
+            )?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
