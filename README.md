@@ -30,7 +30,9 @@ brew tap zevwings/workflow
 brew install workflow
 ```
 
-> **注意**：需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
+> **注意**：
+> - 需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
+> - 如果使用 GitHub Actions 自动发布，需要配置 `HOMEBREW_TAP_TOKEN` secret（见下方说明）。
 
 #### 方式二：使用 Makefile
 
@@ -395,6 +397,57 @@ qk PROJ-123 clean --list             # 只列出将要删除的内容
 
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
+
+## 🚀 发布
+
+### GitHub Actions 自动发布
+
+项目使用 GitHub Actions 自动构建和发布。当推送到 `master` 分支或创建版本 tag 时，会自动触发发布流程。
+
+#### 配置 HOMEBREW_TAP_TOKEN
+
+为了自动更新 Homebrew Formula，需要在 GitHub 仓库中配置 `HOMEBREW_TAP_TOKEN` secret。
+
+**配置步骤：**
+
+1. **创建 Personal Access Token (PAT)**：
+   - 访问：https://github.com/settings/tokens
+   - 点击 "Generate new token" → 选择 "Generate new token (classic)"
+   - 配置 Token：
+     - Note（描述）：例如 "Homebrew Tap Token for workflow.rs"
+     - Expiration（过期时间）：根据需要选择（建议至少 90 天或更长）
+     - Select scopes：勾选 `repo`（Full control of private repositories）
+   - 点击 "Generate token"
+   - 复制生成的 token（只显示一次，请保存）
+
+2. **在仓库中设置 Secret**：
+   - 进入仓库设置页面：`Settings` → `Secrets and variables` → `Actions`
+   - 点击 "New repository secret"
+   - Name：输入 `HOMEBREW_TAP_TOKEN`
+   - Secret：粘贴第一步复制的 token
+   - 点击 "Add secret"
+
+**重要提示：**
+- Token 必须包含 `repo` scope
+- Token 所属账号需要有访问 `homebrew-workflow` 仓库的权限
+- 如果 `homebrew-workflow` 是私有仓库，确保 token 有访问权限
+- Workflow 会自动验证 token 的有效性和权限
+
+**验证配置：**
+
+运行 GitHub Actions 时，workflow 会自动验证：
+- Token 是否存在
+- Token 是否有效（通过 GitHub API `/user` 端点）
+- Token 是否有访问目标仓库的权限（通过 GitHub API `/repos/zevwings/homebrew-workflow` 端点）
+
+如果验证失败，workflow 会提供详细的错误信息和解决建议。
+
+### 发布流程
+
+1. **自动创建 Tag**：当代码合并到 `master` 分支时，自动根据 `Cargo.toml` 中的版本号创建 tag
+2. **构建二进制**：为多个平台构建 release 二进制文件
+3. **创建 Release**：在 GitHub 上创建 Release，并上传构建产物
+4. **更新 Homebrew Formula**：自动更新 `homebrew-workflow` 仓库中的 Formula 文件
 
 ## 🔧 开发
 
