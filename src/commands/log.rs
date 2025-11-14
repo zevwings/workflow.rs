@@ -103,7 +103,6 @@ impl LogCommand {
 
         // 构建新的配置，更新 log.level
         let updated_settings = Settings {
-            user: existing_settings.user,
             jira: existing_settings.jira,
             github: existing_settings.github,
             log: LogSettings {

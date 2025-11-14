@@ -567,17 +567,53 @@ impl GitHub {
 
     /// 获取 GitHub 用户信息
     ///
-    /// 调用 GitHub API 的 /user 端点获取当前用户信息。
+    /// 调用 GitHub API 的 /user 端点获取用户信息。
+    ///
+    /// # 参数
+    ///
+    /// * `token` - 可选的 GitHub API token。如果为 `None`，则使用当前激活账号的 token。
     ///
     /// # 返回
     ///
     /// 返回 `GitHubUser` 结构体，包含用户的 `login`、`name` 和 `email`。
-    pub fn get_user_info() -> Result<GitHubUser> {
+    pub fn get_user_info(token: Option<&str>) -> Result<GitHubUser> {
         let url = "https://api.github.com/user";
         let client = Self::get_client()?;
-        let headers = Self::get_headers()?;
+
+        // 如果提供了 token，使用该 token 创建 headers；否则使用当前账号的 headers
+        let headers = if let Some(token) = token {
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                "Authorization",
+                format!("Bearer {}", token)
+                    .parse()
+                    .context("Failed to parse Authorization header")?,
+            );
+            headers.insert(
+                "Accept",
+                "application/vnd.github+json"
+                    .parse()
+                    .context("Failed to parse Accept header")?,
+            );
+            headers.insert(
+                "X-GitHub-Api-Version",
+                "2022-11-28"
+                    .parse()
+                    .context("Failed to parse X-GitHub-Api-Version header")?,
+            );
+            headers.insert(
+                "User-Agent",
+                "workflow-cli"
+                    .parse()
+                    .context("Failed to parse User-Agent header")?,
+            );
+            headers
+        } else {
+            Self::get_headers()?.clone()
+        };
+
         let response: HttpResponse<serde_json::Value> = client
-            .get(url, None, Some(headers))
+            .get(url, None, Some(&headers))
             .context("Failed to get GitHub user info")?;
 
         if !response.is_success() {

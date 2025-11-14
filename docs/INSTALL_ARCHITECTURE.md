@@ -239,8 +239,57 @@ Shell 配置重新加载
 
 ---
 
+## 3. GitHub Actions 发布流程
+
+### 概述
+
+项目使用 GitHub Actions 自动构建和发布。发布流程包括：
+- 自动创建版本 tag
+- 构建多平台二进制文件
+- 创建 GitHub Release
+- 自动更新 Homebrew Formula
+
+### 相关文件
+
+```
+.github/workflows/release.yml  # GitHub Actions 工作流定义
+homebrew/Formula.template       # Homebrew Formula 模板
+```
+
+### 发布流程说明
+
+1. **触发条件**：
+   - 推送到 `master` 分支时自动创建 tag
+   - 创建版本 tag（如 `v1.0.0`）时触发发布
+   - 手动触发（workflow_dispatch）
+
+2. **Token 配置**：
+   - 需要在仓库 Secrets 中配置 `HOMEBREW_TAP_TOKEN`
+   - Token 需要 `repo` scope
+   - Token 所属账号需要有访问 `homebrew-workflow` 仓库的权限
+   - Workflow 会自动验证 token 的有效性和权限
+
+3. **验证机制**：
+   - 检查 token 是否存在
+   - 验证 token 是否有效（通过 GitHub API）
+   - 验证 token 是否有访问目标仓库的权限
+   - 提供详细的错误信息和解决建议
+
+4. **发布步骤**：
+   - 创建版本 tag（如果从 master 分支触发）
+   - 构建二进制文件（多平台）
+   - 创建 GitHub Release
+   - 更新 Homebrew Formula（使用 `HOMEBREW_TAP_TOKEN` checkout 和更新）
+
+### 配置 HOMEBREW_TAP_TOKEN
+
+详细配置步骤请参考主 README.md 中的"发布"章节。
+
+---
+
 ## 📚 相关文档
 
 - [主架构文档](./ARCHITECTURE.md)
 - [配置管理模块架构文档](./CONFIG_ARCHITECTURE.md)
+- [主 README.md](../README.md) - 包含发布流程和 HOMEBREW_TAP_TOKEN 配置说明
 

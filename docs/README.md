@@ -43,6 +43,8 @@
 - Shell completion 脚本生成和安装
 - 二进制文件安装
 - 卸载功能实现
+- GitHub Actions 发布流程
+- HOMEBREW_TAP_TOKEN 配置说明
 
 ### [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md)
 **配置管理模块架构文档**
@@ -96,6 +98,7 @@
 - **2024-01** - 创建 PR helpers 模块，提取重复逻辑
 - **2024-01** - 统一文档结构和命名规范
 - **2024-01** - 统一 LLM 架构文档，移除旧的实现文档（`LLM_IMPLEMENTATION.md`、`LLM_PLUGIN_ARCHITECTURE.md`、`LLM_PLUGIN_CURL.md`），保留统一的架构设计文档 `LLM_ARCHITECTURE.md`
+- **2024-01** - 添加 GitHub Actions 发布流程文档，包括 HOMEBREW_TAP_TOKEN 配置说明和自动验证机制
 
 ---
 
