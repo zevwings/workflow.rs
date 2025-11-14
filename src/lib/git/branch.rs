@@ -457,12 +457,19 @@ impl Git {
     /// # 返回
     ///
     /// - `Ok(true)` - 如果分支有新的提交
-    /// - `Ok(false)` - 如果分支为空或与指定分支相同
+    /// - `Ok(false)` - 如果分支为空或与指定分支相同，或分支不存在
     ///
     /// # 错误
     ///
-    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
+    /// 如果命令执行失败，返回相应的错误信息。
     pub fn is_branch_ahead(branch_name: &str, base_branch: &str) -> Result<bool> {
+        // 先检查分支是否存在（本地或远程）
+        let (exists_local, exists_remote) = Self::is_branch_exists(branch_name)?;
+        if !exists_local && !exists_remote {
+            // 分支不存在，返回 false
+            return Ok(false);
+        }
+
         // 检查分支是否领先于指定分支
         // 使用 git rev-list 来检查是否有新提交
         let output = cmd(
