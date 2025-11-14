@@ -33,8 +33,8 @@ pub mod shell;
 pub mod string;
 pub mod uninstall;
 
-// 重新导出 Logger
-pub use logger::Logger;
+// 重新导出 Logger 和 LogLevel
+pub use logger::{LogLevel, Logger};
 
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;

@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, config, proxy, setup, uninstall};
+use commands::{check, clean, config, log, proxy, setup, uninstall};
 
 use workflow::*;
 
@@ -64,6 +64,13 @@ enum Commands {
         #[arg(long, short = 'l')]
         list: bool,
     },
+    /// 管理日志级别（设置/检查）
+    ///
+    /// 设置或查看当前日志输出级别（none, error, warn, info, debug）。
+    Log {
+        #[command(subcommand)]
+        subcommand: LogSubcommand,
+    },
 }
 
 /// 代理管理子命令
@@ -82,6 +89,21 @@ enum ProxySubcommand {
     /// 检查代理状态和配置
     ///
     /// 显示当前代理环境变量的状态和配置信息。
+    Check,
+}
+
+/// 日志级别管理子命令
+///
+/// 用于管理日志输出级别。
+#[derive(Subcommand)]
+enum LogSubcommand {
+    /// 设置日志级别（交互式选择）
+    ///
+    /// 通过交互式菜单选择日志级别：none, error, warn, info, debug。
+    Set,
+    /// 检查当前日志级别
+    ///
+    /// 显示当前设置的日志级别和默认级别信息。
     Check,
 }
 
@@ -118,19 +140,25 @@ fn main() -> Result<()> {
         Some(Commands::Clean { dry_run, list }) => {
             clean::CleanCommand::clean(dry_run, list)?;
         }
+        // 日志级别管理命令
+        Some(Commands::Log { subcommand }) => match subcommand {
+            LogSubcommand::Set => log::LogCommand::set()?,
+            LogSubcommand::Check => log::LogCommand::check()?,
+        },
         // 无命令时显示帮助信息
         None => {
-            println!("Workflow CLI - Configuration Management");
-            println!("\nAvailable commands:");
-            println!("  workflow check     - Run environment checks (Git status and network)");
-            println!("  workflow clean     - Clean log download directory");
-            println!("  workflow proxy     - Manage proxy settings (on/off/check)");
-            println!("  workflow setup     - Initialize or update configuration");
-            println!("  workflow config    - View current configuration");
-            println!("  workflow uninstall - Uninstall Workflow CLI configuration");
-            println!("\nInstallation:");
-            println!("  Use 'install' command (built separately): install <subcommand>");
-            println!("\nUse 'workflow <command> --help' for more information.");
+            log_message!("Workflow CLI - Configuration Management");
+            log_message!("\nAvailable commands:");
+            log_message!("  workflow check     - Run environment checks (Git status and network)");
+            log_message!("  workflow clean     - Clean log download directory");
+            log_message!("  workflow log       - Manage log level (set/check)");
+            log_message!("  workflow proxy     - Manage proxy settings (on/off/check)");
+            log_message!("  workflow setup     - Initialize or update configuration");
+            log_message!("  workflow config    - View current configuration");
+            log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
+            log_message!("\nInstallation:");
+            log_message!("  Use 'install' command (built separately): install <subcommand>");
+            log_message!("\nUse 'workflow <command> --help' for more information.");
         }
     }
 

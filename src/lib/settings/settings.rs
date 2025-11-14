@@ -45,6 +45,9 @@ pub struct LogSettings {
     /// 日志下载基础目录
     #[serde(default = "default_download_base_dir_option")]
     pub download_base_dir: Option<String>,
+    /// 日志级别（none, error, warn, info, debug）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level: Option<String>,
 }
 
 impl Default for LogSettings {
