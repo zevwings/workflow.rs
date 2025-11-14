@@ -1,12 +1,12 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::{
-    confirm, log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value,
-};
 use crate::settings::{
     paths::ConfigPaths,
     settings::{GitHubAccount, Settings},
+};
+use crate::{
+    confirm, log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
@@ -44,13 +44,14 @@ impl GitHubCommand {
                 });
 
             let current_marker = if is_current { " (current)" } else { "" };
-            log_break!('-', 40, &format!("Account {}: {}{}", index + 1, account.name, current_marker));
+            log_break!(
+                '-',
+                40,
+                &format!("Account {}: {}{}", index + 1, account.name, current_marker)
+            );
             log_message!("  Name: {}", account.name);
             log_message!("  Email: {}", account.email);
-            log_message!(
-                "  API Token: {}",
-                mask_sensitive_value(&account.api_token)
-            );
+            log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
             if let Some(ref prefix) = account.branch_prefix {
                 log_message!("  Branch Prefix: {}", prefix);
             }
@@ -71,10 +72,7 @@ impl GitHubCommand {
         if let Some(account) = github.get_current_account() {
             log_success!("Current account: {}", account.name);
             log_message!("  Email: {}", account.email);
-            log_message!(
-                "  API Token: {}",
-                mask_sensitive_value(&account.api_token)
-            );
+            log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
             if let Some(ref prefix) = account.branch_prefix {
                 log_message!("  Branch Prefix: {}", prefix);
             }
@@ -95,7 +93,12 @@ impl GitHubCommand {
         let account = Self::collect_github_account()?;
 
         // 检查账号名称是否已存在
-        if settings.github.accounts.iter().any(|a| a.name == account.name) {
+        if settings
+            .github
+            .accounts
+            .iter()
+            .any(|a| a.name == account.name)
+        {
             return Err(anyhow::anyhow!(
                 "Account with name '{}' already exists",
                 account.name
@@ -114,10 +117,7 @@ impl GitHubCommand {
 
             // 询问是否要将新账号设为当前账号
             let should_set_current = confirm(
-                &format!(
-                    "Set '{}' as the current GitHub account?",
-                    account.name
-                ),
+                &format!("Set '{}' as the current GitHub account?", account.name),
                 false,
                 None,
             )?;
@@ -474,12 +474,10 @@ impl GitHubCommand {
     /// 保存设置到 TOML 文件
     fn save_settings(settings: &Settings) -> Result<()> {
         let workflow_config_path = ConfigPaths::workflow_config()?;
-        let toml_content = toml::to_string_pretty(settings)
-            .context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content)
-            .context("Failed to write workflow.toml")?;
+        let toml_content =
+            toml::to_string_pretty(settings).context("Failed to serialize settings to TOML")?;
+        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
 
         Ok(())
     }
 }
-

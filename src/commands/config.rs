@@ -1,11 +1,8 @@
 //! 配置查看命令
 //! 显示当前的 TOML 配置文件
 
+use crate::settings::{paths::ConfigPaths, settings::Settings};
 use crate::{log_break, log_info, log_warning};
-use crate::settings::{
-    paths::ConfigPaths,
-    settings::Settings,
-};
 use anyhow::Result;
 
 /// 配置查看命令

@@ -1,8 +1,8 @@
 use std::sync::OnceLock;
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use anyhow::Result;
 
 use crate::defaults::default_llm_model;
 use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
@@ -352,12 +352,7 @@ impl Settings {
                     .map(|c| c == &account.name)
                     .unwrap_or_else(|| {
                         // 如果没有设置 current，第一个账号是当前账号
-                        self
-                            .github
-                            .accounts
-                            .first()
-                            .map(|a| &a.name)
-                            == Some(&account.name)
+                        self.github.accounts.first().map(|a| &a.name) == Some(&account.name)
                     });
                 let current_marker = if is_current { " (current)" } else { "" };
                 log_message!("  - {}{}", account.name, current_marker);
@@ -384,7 +379,6 @@ impl Settings {
         }
         Ok(())
     }
-
 }
 
 #[cfg(test)]

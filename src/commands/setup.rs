@@ -1,12 +1,15 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::{log_info, settings::{
-    defaults::{default_llm_model, default_response_format},
-    paths::ConfigPaths,
-    settings::{GitHubAccount, Settings},
-}};
 use crate::{confirm, log_break, log_message, log_success};
+use crate::{
+    log_info,
+    settings::{
+        defaults::{default_llm_model, default_response_format},
+        paths::ConfigPaths,
+        settings::{GitHubAccount, Settings},
+    },
+};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -691,5 +694,4 @@ impl SetupCommand {
 
         Ok(())
     }
-
 }
