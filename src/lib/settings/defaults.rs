@@ -26,7 +26,6 @@ pub fn default_download_base_dir_option() -> Option<String> {
 /// 默认 LogSettings 实例
 pub fn default_log_settings() -> LogSettings {
     LogSettings {
-        delete_when_completed: false,
         output_folder_name: default_log_folder(),
         download_base_dir: default_download_base_dir_option(),
     }

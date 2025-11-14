@@ -80,14 +80,6 @@ impl ConfigCommand {
             "  Log Output Folder Name: {}",
             settings.log.output_folder_name
         );
-        log_info!(
-            "  Delete Logs When Completed: {}",
-            if settings.log.delete_when_completed {
-                "Yes"
-            } else {
-                "No"
-            }
-        );
         if let Some(ref dir) = settings.log.download_base_dir {
             log_info!("  Download Base Dir: {}", dir);
         }

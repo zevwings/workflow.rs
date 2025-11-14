@@ -39,9 +39,6 @@ pub struct GitHubSettings {
 /// 日志配置（TOML）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogSettings {
-    /// 操作完成后是否删除日志
-    #[serde(default)]
-    pub delete_when_completed: bool,
     /// 日志输出文件夹名称
     #[serde(default = "default_log_folder")]
     pub output_folder_name: String,
@@ -179,12 +176,6 @@ mod tests {
         assert_eq!(settings.llm.provider, "openai"); // 默认值
     }
 
-    #[test]
-    fn test_boolean_flags() {
-        // 测试默认值
-        let settings = Settings::load();
-        assert!(!settings.log.delete_when_completed);
-    }
 
     #[test]
     fn test_llm_provider() {

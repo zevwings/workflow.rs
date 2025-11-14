@@ -25,7 +25,6 @@ struct CollectedConfig {
     github_api_token: Option<String>,
     github_branch_prefix: Option<String>,
     log_output_folder_name: String,
-    log_delete_when_completed: bool,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
     codeup_cookie: Option<String>,
@@ -75,7 +74,6 @@ impl SetupCommand {
             github_api_token: settings.github.api_token.clone(),
             github_branch_prefix: settings.github.branch_prefix.clone(),
             log_output_folder_name: settings.log.output_folder_name.clone(),
-            log_delete_when_completed: settings.log.delete_when_completed,
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
@@ -138,22 +136,30 @@ impl SetupCommand {
         log_info!("  GitHub Configuration (Required)");
         log_break!('─', 65);
 
-        let github_token_prompt = if existing.github_api_token.is_some() {
+        let has_github_token = existing.github_api_token.is_some();
+        let github_token_prompt = if has_github_token {
             "GitHub API token [current: ***]".to_string()
         } else {
             "GitHub API token".to_string()
         };
 
+        let default_github_token = existing.github_api_token.clone().unwrap_or_default();
+
         let github_api_token: String = Input::new()
             .with_prompt(&github_token_prompt)
-            .allow_empty(existing.github_api_token.is_some())
+            .default(default_github_token)
+            .validate_with(|input: &String| -> Result<(), &str> {
+                if input.trim().is_empty() {
+                    Err("GitHub API token is required and cannot be empty")
+                } else {
+                    Ok(())
+                }
+            })
             .interact_text()
             .context("Failed to get GitHub API token")?;
 
-        let github_api_token = if !github_api_token.is_empty() {
-            Some(github_api_token)
-        } else if existing.github_api_token.is_some() {
-            existing.github_api_token.clone()
+        let github_api_token = if !github_api_token.trim().is_empty() {
+            Some(github_api_token.trim().to_string())
         } else {
             anyhow::bail!("GitHub API token is required");
         };
@@ -271,21 +277,6 @@ impl SetupCommand {
         } else {
             existing.log_output_folder_name.clone()
         };
-
-        let delete_logs_prompt = format!(
-            "Delete logs when operation completed? [current: {}]",
-            if existing.log_delete_when_completed {
-                "Yes"
-            } else {
-                "No"
-            }
-        );
-
-        let log_delete_when_completed = confirm(
-            &delete_logs_prompt,
-            existing.log_delete_when_completed,
-            None,
-        )?;
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
@@ -560,7 +551,6 @@ impl SetupCommand {
             github_api_token,
             github_branch_prefix,
             log_output_folder_name,
-            log_delete_when_completed,
             codeup_project_id,
             codeup_csrf_token,
             codeup_cookie,
@@ -592,7 +582,6 @@ impl SetupCommand {
                 branch_prefix: config.github_branch_prefix.clone(),
             },
             log: LogSettings {
-                delete_when_completed: config.log_delete_when_completed,
                 output_folder_name: config.log_output_folder_name.clone(),
                 download_base_dir: None, // 使用默认值
             },

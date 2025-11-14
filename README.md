@@ -199,12 +199,11 @@ workflow/
 workflow setup
 ```
 
-这将引导你完成所有配置项的设置，并自动保存到 TOML 配置文件（`~/.workflow/config/workflow.toml` 和 `~/.workflow/config/llm.toml`）。
+这将引导你完成所有配置项的设置，并自动保存到 TOML 配置文件（`~/.workflow/config/workflow.toml`）。
 
 ### 配置文件位置
 
-- **主配置文件**：`~/.workflow/config/workflow.toml` - 包含用户、Jira、GitHub、日志、代理、Codeup 等配置
-- **LLM 配置文件**：`~/.workflow/config/llm.toml` - 包含 LLM/AI 相关配置（可选）
+- **主配置文件**：`~/.workflow/config/workflow.toml` - 包含用户、Jira、GitHub、日志、代理、Codeup、LLM/AI 等配置
 
 ### 必填配置
 
@@ -215,6 +214,7 @@ workflow setup
 | `user.email` | 用户邮箱地址 | `user@example.com` |
 | `jira.api_token` | Jira API Token | 从 Jira 设置中获取 |
 | `jira.service_address` | Jira 服务地址 | `https://your-company.atlassian.net` |
+| `github.api_token` | GitHub API Token（用于 PR 操作） | 从 GitHub 设置中获取 |
 
 ### 可选配置
 
@@ -224,7 +224,6 @@ workflow setup
 
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
-| `github.api_token` | GitHub API Token（用于 PR 操作） | - |
 | `github.branch_prefix` | GitHub 分支前缀 | - |
 
 #### 日志配置
@@ -232,18 +231,17 @@ workflow setup
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
 | `log.output_folder_name` | 日志输出文件夹名称 | `logs` |
-| `log.delete_when_completed` | 操作完成后是否删除日志 | `false` |
 | `log.download_base_dir` | 下载基础目录 | `~/Downloads/Workflow` |
 
-#### LLM/AI 配置（在 `llm.toml` 中）
+#### LLM/AI 配置
 
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
-| `llm_provider` | LLM 提供者（`openai`/`deepseek`/`proxy`） | `openai` |
-| `openai_key` | OpenAI API Key | - |
-| `deepseek_key` | DeepSeek API Key | - |
-| `llm_proxy_url` | LLM 代理 URL（使用代理时） | - |
-| `llm_proxy_key` | LLM 代理 Key（使用代理时） | - |
+| `llm.provider` | LLM 提供者（`openai`/`deepseek`/`proxy`） | `openai` |
+| `llm.key` | LLM API Key（所有提供者通用） | - |
+| `llm.url` | LLM 服务 URL（仅 `proxy` 提供者需要） | - |
+| `llm.model` | LLM 模型名称（可选，`openai` 默认 `gpt-4.0`，`deepseek` 默认 `deepseek-chat`，`proxy` 必填） | - |
+| `llm.response_format` | 响应格式路径（用于从响应中提取内容，空字符串表示使用默认的 OpenAI 格式） | 空（不保存到配置文件） |
 
 #### Codeup 配置
 
@@ -268,9 +266,6 @@ workflow config
 ```bash
 # 编辑主配置文件
 vim ~/.workflow/config/workflow.toml
-
-# 编辑 LLM 配置文件（可选）
-vim ~/.workflow/config/llm.toml
 ```
 
 配置文件示例：
@@ -290,15 +285,20 @@ branch_prefix = "feature"
 
 [log]
 output_folder_name = "logs"
-delete_when_completed = false
 download_base_dir = "~/Downloads/Workflow"
-```
 
-```toml
-# ~/.workflow/config/llm.toml
-llm_provider = "openai"
-openai_key = "your-openai-key"
-deepseek_key = "your-deepseek-key"
+[llm]
+provider = "openai"
+key = "your-llm-api-key"
+# model = "gpt-4.0"  # 可选，openai 默认 gpt-4.0
+# response_format = ""  # 可选，空字符串表示使用默认的 OpenAI 格式，不保存到配置文件
+
+# 如果使用 proxy 提供者，需要配置 url：
+# [llm]
+# provider = "proxy"
+# url = "https://your-proxy-url"
+# key = "your-proxy-key"
+# model = "your-model-name"  # proxy 提供者必填
 ```
 
 ## 📋 命令清单
@@ -339,28 +339,59 @@ install                            # 安装 Workflow CLI 到系统（编译并�
 
 ### PR 操作
 ```bash
-pr create [PROJ-123]     # 创建 PR（可选 Jira ticket，AI 生成标题）
-pr create --title "..."  # 手动指定标题
-pr create --description "..." # 指定简短描述
-pr create --dry-run      # 干运行（不实际创建）
-pr merge [PR_ID]         # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
-pr merge --force         # 强制合并
-pr close [PR_ID]         # 关闭 PR（可选指定 PR ID，否则自动检测当前分支）
-pr status [PR_ID_OR_BRANCH] # 显示 PR 状态信息（可选参数）
-pr list                   # 列出所有 PR
-pr list --state open     # 按状态过滤（open/closed/merged）
-pr list --limit 10       # 限制结果数量
-pr update                 # 更新代码（使用 PR 标题作为提交信息）
+# 创建 PR
+pr create [JIRA_TICKET]              # 创建 PR（可选 Jira ticket，AI 生成标题）
+pr create --title "..."               # 手动指定标题
+pr create --description "..."         # 指定简短描述
+pr create --dry-run                   # 干运行（不实际创建）
+
+# 合并 PR
+pr merge [PR_ID]                      # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
+pr merge --force                      # 强制合并
+
+# 关闭 PR
+pr close [PR_ID]                      # 关闭 PR（可选指定 PR ID，否则自动检测当前分支）
+
+# 查看 PR 状态
+pr status [PR_ID_OR_BRANCH]           # 显示 PR 状态信息（可选参数，不提供时自动检测当前分支）
+
+# 列出 PR
+pr list                               # 列出所有 PR
+pr list --state open                  # 按状态过滤（open/closed/merged）
+pr list --limit 10                    # 限制结果数量
+
+# 更新代码
+pr update                             # 更新代码（使用 PR 标题作为提交信息）
+
+# 集成分支
+pr integrate <SOURCE_BRANCH>          # 将指定分支合并到当前分支
+pr integrate <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
+pr integrate <SOURCE_BRANCH> --squash # 使用 squash 合并
+pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会推送）
 ```
 
 ### 日志操作 (qk)
 ```bash
-qk PROJ-123 download      # 下载日志文件
-qk PROJ-123 find [id]     # 查找请求 ID（可选，不提供会交互式输入）
-qk PROJ-123 search [term] # 搜索关键词（可选，不提供会交互式输入）
+# 显示 ticket 信息（不提供子命令时）
+qk PROJ-123                          # 显示 Jira ticket 信息
+
+# 下载日志
+qk PROJ-123 download                  # 下载日志文件
+qk PROJ-123 download --all            # 下载所有附件（不仅仅是日志附件）
+
+# 查找请求 ID
+qk PROJ-123 find [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）
+
+# 搜索关键词
+qk PROJ-123 search [SEARCH_TERM]     # 搜索关键词（可选，不提供会交互式输入）
+
+# 清理日志目录
+qk PROJ-123 clean                    # 清理指定 JIRA ID 的日志目录（需要确认）
+qk PROJ-123 clean --dry-run          # 预览清理操作，不实际删除
+qk PROJ-123 clean --list             # 只列出将要删除的内容
 ```
 
-> **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
+> **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。如果不提供子命令，将显示 ticket 信息。
 
 
 > **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
