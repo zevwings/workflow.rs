@@ -371,7 +371,6 @@ impl Settings {
         }
         Ok(())
     }
-
 }
 
 #[cfg(test)]

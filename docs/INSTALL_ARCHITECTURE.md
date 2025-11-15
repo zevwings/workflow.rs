@@ -263,20 +263,56 @@ homebrew/Formula.template       # Homebrew Formula 模板
    - 创建版本 tag（如 `v1.0.0`）时触发发布
    - 手动触发（workflow_dispatch）
 
-2. **Token 配置**：
+2. **自动版本管理机制**：
+
+   项目使用基于 **Conventional Commits** 规范的自动版本管理机制，根据 commit messages 自动确定版本更新类型：
+
+   - **Major 版本更新** (`1.0.0` → `2.0.0`)：
+     - 检测到 `BREAKING CHANGE` 或 `BREAKING:` 关键词
+     - 检测到 commit message 中包含 `!`（如 `feat!: add new API`）
+
+   - **Minor 版本更新** (`1.0.0` → `1.1.0`)：
+     - 检测到 `feat:` 或 `feature:` 开头的 commit message
+     - 例如：`feat: add new feature` 或 `feature: implement new functionality`
+
+   - **Patch 版本更新** (`1.0.0` → `1.0.1`)：
+     - 其他所有情况（bug fix、docs、refactor 等）
+     - 例如：`fix: bug fix`、`docs: update documentation`、`refactor: code cleanup`
+
+   **工作流程**：
+   1. 当代码推送到 `master` 分支时，workflow 会：
+      - 分析从最新 tag 到当前 commit 的所有 commit messages
+      - 根据 commit messages 确定版本更新类型（major/minor/patch）
+      - 如果 tag 已存在但指向不同 commit，自动递增版本号
+      - 如果 tag 不存在，检查 `Cargo.toml` 中的版本是否需要更新
+
+   2. **版本更新优先级**：
+      - 如果检测到 `BREAKING CHANGE` → 递增 major 版本
+      - 如果检测到 `feat:` → 递增 minor 版本
+      - 其他情况 → 递增 patch 版本
+
+   3. **示例场景**：
+      - 当前版本：`1.0.9`，最新 tag：`v1.0.9`
+      - 提交了 `feat: add new feature` commit
+      - 推送到 master 后，自动创建 tag `v1.1.0`（minor 版本更新）
+      - 如果 `Cargo.toml` 中版本是 `1.0.9`，会自动更新为 `1.1.0`
+
+3. **Token 配置**：
    - 需要在仓库 Secrets 中配置 `HOMEBREW_TAP_TOKEN`
    - Token 需要 `repo` scope
    - Token 所属账号需要有访问 `homebrew-workflow` 仓库的权限
    - Workflow 会自动验证 token 的有效性和权限
 
-3. **验证机制**：
+4. **验证机制**：
    - 检查 token 是否存在
    - 验证 token 是否有效（通过 GitHub API）
    - 验证 token 是否有访问目标仓库的权限
    - 提供详细的错误信息和解决建议
 
-4. **发布步骤**：
-   - 创建版本 tag（如果从 master 分支触发）
+5. **发布步骤**：
+   - 分析 commit messages 确定版本更新类型
+   - 创建或更新版本 tag（如果从 master 分支触发）
+   - 自动更新 `Cargo.toml` 和 `Cargo.lock` 中的版本号（如果需要）
    - 构建二进制文件（多平台）
    - 创建 GitHub Release
    - 更新 Homebrew Formula（使用 `HOMEBREW_TAP_TOKEN` checkout 和更新）
