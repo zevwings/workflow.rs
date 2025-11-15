@@ -55,12 +55,75 @@ jobs:
           echo "✅ Version from Cargo.toml: $VERSION"
           echo "✅ Tag to create: $TAG"
 
+      - name: Detect version bump type from commit messages
+        id: detect_bump_type
+        shell: bash
+        run: |
+          # 获取最新的 tag（如果存在）
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [ -z "$LATEST_TAG" ]; then
+            # 如果没有 tag，检查从初始 commit 到当前的所有 commits
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+            echo "ℹ️  No previous tag found, analyzing all commits"
+          else
+            # 获取从最新 tag 到当前 commit 的所有 commit messages
+            COMMITS=$(git log --pretty=format:"%s" ${LATEST_TAG}..HEAD)
+            echo "ℹ️  Analyzing commits since ${LATEST_TAG}"
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            echo "ℹ️  No new commits found, using patch bump"
+            BUMP_TYPE="patch"
+          else
+            # 检测版本更新类型
+            # BREAKING CHANGE 或 ! 在类型后 → major
+            # feat: 或 feature: → minor
+            # 其他 → patch
+
+            BUMP_TYPE="patch"
+
+            # 检查是否有 BREAKING CHANGE
+            if echo "$COMMITS" | grep -qiE "(BREAKING CHANGE|BREAKING:|!.*:)" || \
+               echo "$COMMITS" | grep -qiE "^[^:]*!:"; then
+              BUMP_TYPE="major"
+              echo "🔴 Detected BREAKING CHANGE, will bump MAJOR version"
+            # 检查是否有 feat: 或 feature:
+            elif echo "$COMMITS" | grep -qiE "^(feat|feature):"; then
+              BUMP_TYPE="minor"
+              echo "🟡 Detected feature commit, will bump MINOR version"
+            else
+              echo "🟢 No breaking changes or features detected, will bump PATCH version"
+            fi
+
+            # 显示检测到的 commits（用于调试）
+            echo ""
+            echo "📝 Commits analyzed:"
+            echo "$COMMITS" | head -10 | while read -r commit; do
+              echo "  - $commit"
+            done
+            if [ $(echo "$COMMITS" | wc -l) -gt 10 ]; then
+              echo "  ... and $(( $(echo "$COMMITS" | wc -l) - 10 )) more commits"
+            fi
+          fi
+
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo ""
+          echo "✅ Version bump type: $BUMP_TYPE"
+
       - name: Check if tag exists and increment version if needed
         id: check_tag
         shell: bash
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           VERSION="${{ steps.version.outputs.version }}"
+          BUMP_TYPE="${{ steps.detect_bump_type.outputs.bump_type }}"
+
+          # 解析版本号
+          IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+          MAJOR="${VERSION_PARTS[0]:-0}"
+          MINOR="${VERSION_PARTS[1]:-0}"
+          PATCH="${VERSION_PARTS[2]:-0}"
 
           if git rev-parse "$TAG" >/dev/null 2>&1; then
             echo "⚠️  Tag $TAG already exists"
@@ -76,16 +139,32 @@ jobs:
             else
               echo "exists=true" >> $GITHUB_OUTPUT
               echo "needs_increment=true" >> $GITHUB_OUTPUT
-              echo "⚠️  Tag points to different commit, auto-incrementing patch version"
+              echo "⚠️  Tag points to different commit, auto-incrementing version based on commit messages"
 
-              # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
-              IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
-              MAJOR="${VERSION_PARTS[0]:-0}"
-              MINOR="${VERSION_PARTS[1]:-0}"
-              PATCH="${VERSION_PARTS[2]:-0}"
+              # 根据检测到的 bump_type 递增版本号
+              case "$BUMP_TYPE" in
+                major)
+                  MAJOR=$((MAJOR + 1))
+                  MINOR=0
+                  PATCH=0
+                  echo "🔴 Bumping MAJOR version"
+                  ;;
+                minor)
+                  MINOR=$((MINOR + 1))
+                  PATCH=0
+                  echo "🟡 Bumping MINOR version"
+                  ;;
+                patch)
+                  PATCH=$((PATCH + 1))
+                  echo "🟢 Bumping PATCH version"
+                  ;;
+                *)
+                  # 默认使用 patch
+                  PATCH=$((PATCH + 1))
+                  echo "⚠️  Unknown bump type '$BUMP_TYPE', defaulting to PATCH"
+                  ;;
+              esac
 
-              # 递增 patch 版本
-              PATCH=$((PATCH + 1))
               NEW_VERSION="$MAJOR.$MINOR.$PATCH"
               NEW_TAG="v$NEW_VERSION"
 
@@ -93,16 +172,75 @@ jobs:
               echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
               echo "old_version=$VERSION" >> $GITHUB_OUTPUT
               echo "old_tag=$TAG" >> $GITHUB_OUTPUT
+              echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
 
-              echo "✅ Auto-incremented version: $VERSION -> $NEW_VERSION"
+              echo "✅ Auto-incremented version: $VERSION -> $NEW_VERSION ($BUMP_TYPE)"
               echo "✅ New tag: $NEW_TAG"
             fi
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "needs_increment=false" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Tag $TAG does not exist, will create it"
+            # Tag 不存在，检查是否需要根据 commit messages 更新版本
+            echo "✅ Tag $TAG does not exist"
+
+            # 获取最新的 tag（用于计算期望的版本号）
+            LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+            if [ -n "$LATEST_TAG" ]; then
+              # 有之前的 tag，计算基于 commit messages 的期望版本号
+              LATEST_VERSION="${LATEST_TAG#v}"  # 移除 v 前缀
+              IFS='.' read -ra LATEST_PARTS <<< "$LATEST_VERSION"
+              LATEST_MAJOR="${LATEST_PARTS[0]:-0}"
+              LATEST_MINOR="${LATEST_PARTS[1]:-0}"
+              LATEST_PATCH="${LATEST_PARTS[2]:-0}"
+
+              # 根据 bump_type 计算期望版本
+              case "$BUMP_TYPE" in
+                major)
+                  EXPECTED_MAJOR=$((LATEST_MAJOR + 1))
+                  EXPECTED_MINOR=0
+                  EXPECTED_PATCH=0
+                  ;;
+                minor)
+                  EXPECTED_MAJOR=$LATEST_MAJOR
+                  EXPECTED_MINOR=$((LATEST_MINOR + 1))
+                  EXPECTED_PATCH=0
+                  ;;
+                patch)
+                  EXPECTED_MAJOR=$LATEST_MAJOR
+                  EXPECTED_MINOR=$LATEST_MINOR
+                  EXPECTED_PATCH=$((LATEST_PATCH + 1))
+                  ;;
+              esac
+
+              EXPECTED_VERSION="$EXPECTED_MAJOR.$EXPECTED_MINOR.$EXPECTED_PATCH"
+
+              # 如果 Cargo.toml 中的版本与期望版本不一致，需要更新
+              if [ "$VERSION" != "$EXPECTED_VERSION" ]; then
+                echo "ℹ️  Cargo.toml version ($VERSION) doesn't match expected version ($EXPECTED_VERSION) based on commits"
+                echo "ℹ️  Will update to expected version based on commit messages ($BUMP_TYPE bump)"
+
+                echo "exists=false" >> $GITHUB_OUTPUT
+                echo "needs_increment=true" >> $GITHUB_OUTPUT
+                echo "version=$EXPECTED_VERSION" >> $GITHUB_OUTPUT
+                echo "tag=v$EXPECTED_VERSION" >> $GITHUB_OUTPUT
+                echo "old_version=$VERSION" >> $GITHUB_OUTPUT
+                echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+                echo "✅ Will create tag: v$EXPECTED_VERSION (based on $BUMP_TYPE bump from $LATEST_TAG)"
+              else
+                echo "exists=false" >> $GITHUB_OUTPUT
+                echo "needs_increment=false" >> $GITHUB_OUTPUT
+                echo "version=$VERSION" >> $GITHUB_OUTPUT
+                echo "tag=$TAG" >> $GITHUB_OUTPUT
+                echo "✅ Tag $TAG does not exist, will create it (version matches expected)"
+              fi
+            else
+              # 没有之前的 tag，直接使用 Cargo.toml 中的版本
+              echo "exists=false" >> $GITHUB_OUTPUT
+              echo "needs_increment=false" >> $GITHUB_OUTPUT
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$TAG" >> $GITHUB_OUTPUT
+              echo "✅ Tag $TAG does not exist, will create it (no previous tag found)"
+            fi
           fi
 
       - name: Setup Rust
@@ -185,7 +323,18 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit. Files are already up to date."
           else
-            git commit -m "chore: bump version to ${{ steps.check_tag.outputs.version }}"
+            # 构建 commit message，包含版本更新类型
+            OLD_VERSION="${{ steps.check_tag.outputs.old_version }}"
+            NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+            BUMP_TYPE="${{ steps.check_tag.outputs.bump_type }}"
+
+            if [ -n "$BUMP_TYPE" ] && [ "$BUMP_TYPE" != "patch" ]; then
+              COMMIT_MSG="chore: bump version to $NEW_VERSION ($BUMP_TYPE bump from $OLD_VERSION)"
+            else
+              COMMIT_MSG="chore: bump version to $NEW_VERSION"
+            fi
+
+            git commit -m "$COMMIT_MSG"
 
             # 推送到 master
             echo "Pushing version update to master"
