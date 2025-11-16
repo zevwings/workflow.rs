@@ -89,7 +89,15 @@ jobs:
               BUMP_TYPE="major"
               echo "🔴 Detected BREAKING CHANGE, will bump MAJOR version"
             # 检查是否有 feat: 或 feature:
-            elif echo "$COMMITS" | grep -qiE "^(feat|feature):"; then
+            # 支持格式：
+            # - feat: message
+            # - feature: message
+            # - # feat: message (#PR)
+            # - # feature: message (#PR)
+            # - # Add feature (#PR) (包含 "feature" 关键词)
+            elif echo "$COMMITS" | grep -qiE "^(feat|feature):" || \
+                 echo "$COMMITS" | grep -qiE "^#.*(feat|feature):" || \
+                 echo "$COMMITS" | grep -qiE "^#.*\b(feat|feature)\b"; then
               BUMP_TYPE="minor"
               echo "🟡 Detected feature commit, will bump MINOR version"
             else
