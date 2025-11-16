@@ -60,7 +60,10 @@ impl Git {
     /// - 其他 → `RepoType::Unknown`
     fn parse_repo_type_from_url(url: &str) -> RepoType {
         // 检查 GitHub：包含 github.com 或 SSH host 以 github 开头（处理 SSH Host 别名，如 git@github-brainim:user/repo.git）
-        if url.contains("github.com") || url.starts_with("git@github") || url.starts_with("ssh://git@github") {
+        if url.contains("github.com")
+            || url.starts_with("git@github")
+            || url.starts_with("ssh://git@github")
+        {
             RepoType::GitHub
         } else if url.contains("codeup.aliyun.com") {
             RepoType::Codeup

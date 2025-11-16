@@ -47,6 +47,7 @@ impl Completion {
                     source {}/_workflow\n\
                     source {}/_pr\n\
                     source {}/_qk\n\
+                    source {}/_github\n\
                 fi\n\
             fi\n\
             \n\
@@ -56,6 +57,7 @@ impl Completion {
                     [[ -f \"$f\" ]] && source \"$f\"\n\
                 done\n\
             fi\n",
+            shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
@@ -207,12 +209,14 @@ impl Completion {
                 shell_info.completion_dir.join("_workflow"),
                 shell_info.completion_dir.join("_pr"),
                 shell_info.completion_dir.join("_qk"),
+                shell_info.completion_dir.join("_github"),
             ]
         } else {
             vec![
                 shell_info.completion_dir.join("workflow.bash"),
                 shell_info.completion_dir.join("pr.bash"),
                 shell_info.completion_dir.join("qk.bash"),
+                shell_info.completion_dir.join("github.bash"),
             ]
         }
     }
