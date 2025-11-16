@@ -31,6 +31,10 @@ impl Completion {
 
     /// 创建并写入 workflow completion 配置文件
     /// 配置文件同时支持 zsh 和 bash
+    ///
+    /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
+    /// 包括 `github`、`proxy`、`log`、`clean` 等子命令。
+    /// `_pr` 和 `_qk` 是独立命令的 completion 文件。
     fn create_completion_config_file(shell_info: &ShellInfo) -> Result<PathBuf> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -47,7 +51,6 @@ impl Completion {
                     source {}/_workflow\n\
                     source {}/_pr\n\
                     source {}/_qk\n\
-                    source {}/_github\n\
                 fi\n\
             fi\n\
             \n\
@@ -57,7 +60,6 @@ impl Completion {
                     [[ -f \"$f\" ]] && source \"$f\"\n\
                 done\n\
             fi\n",
-            shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
             shell_info.completion_dir.display(),
@@ -203,20 +205,23 @@ impl Completion {
     }
 
     /// 获取 completion 文件列表（根据 shell 类型）
+    ///
+    /// 返回独立的 completion 文件列表：
+    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `github`）
+    /// - `_pr` / `pr.bash`: `pr` 独立命令
+    /// - `_qk` / `qk.bash`: `qk` 独立命令
     pub fn get_completion_files(shell_info: &ShellInfo) -> Vec<PathBuf> {
         if shell_info.shell_type == "zsh" {
             vec![
                 shell_info.completion_dir.join("_workflow"),
                 shell_info.completion_dir.join("_pr"),
                 shell_info.completion_dir.join("_qk"),
-                shell_info.completion_dir.join("_github"),
             ]
         } else {
             vec![
                 shell_info.completion_dir.join("workflow.bash"),
                 shell_info.completion_dir.join("pr.bash"),
                 shell_info.completion_dir.join("qk.bash"),
-                shell_info.completion_dir.join("github.bash"),
             ]
         }
     }

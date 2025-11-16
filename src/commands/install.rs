@@ -56,7 +56,6 @@ impl InstallCommand {
         Self::generate_workflow_completion(&shell_type, &output)?;
         Self::generate_pr_completion(&shell_type, &output)?;
         Self::generate_qk_completion(&shell_type, &output)?;
-        Self::generate_github_completion(&shell_type, &output)?;
 
         log_success!("  Shell completion 脚本已生成到: {}", output.display());
         Ok(())
@@ -135,7 +134,29 @@ impl InstallCommand {
             .subcommand(
                 Command::new("install").about("Install Workflow CLI (binary and completions)"),
             )
-            .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"));
+            .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
+            .subcommand(
+                Command::new("clean")
+                    .about("Clean log directory")
+                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n'))
+                    .arg(clap::Arg::new("list").long("list").short('l')),
+            )
+            .subcommand(
+                Command::new("log")
+                    .about("Manage log level")
+                    .subcommand(Command::new("set").about("Set log level"))
+                    .subcommand(Command::new("check").about("Check log level")),
+            )
+            .subcommand(
+                Command::new("github")
+                    .about("Manage GitHub accounts")
+                    .subcommand(Command::new("list").about("List all GitHub accounts"))
+                    .subcommand(Command::new("current").about("Show current GitHub account"))
+                    .subcommand(Command::new("add").about("Add a new GitHub account"))
+                    .subcommand(Command::new("remove").about("Remove a GitHub account"))
+                    .subcommand(Command::new("switch").about("Switch GitHub account"))
+                    .subcommand(Command::new("update").about("Update GitHub account")),
+            );
 
         let mut buffer = Vec::new();
         generate(*shell, &mut cmd, "workflow", &mut buffer);
@@ -243,37 +264,6 @@ impl InstallCommand {
             ClapShell::Fish => output_dir.join("qk.fish"),
             ClapShell::PowerShell => output_dir.join("_qk.ps1"),
             ClapShell::Elvish => output_dir.join("qk.elv"),
-            _ => {
-                anyhow::bail!("不支持的 shell 类型");
-            }
-        };
-
-        fs::write(&output_file, buffer).context("Failed to write completion file")?;
-        log_success!("  生成: {}", output_file.display());
-
-        Ok(())
-    }
-
-    /// 生成 github 命令的 completion
-    fn generate_github_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-        let mut cmd = Command::new("github")
-            .about("Manage GitHub accounts")
-            .subcommand(Command::new("list").about("List all GitHub accounts"))
-            .subcommand(Command::new("current").about("Show current GitHub account"))
-            .subcommand(Command::new("add").about("Add a new GitHub account"))
-            .subcommand(Command::new("remove").about("Remove a GitHub account"))
-            .subcommand(Command::new("switch").about("Switch GitHub account"))
-            .subcommand(Command::new("update").about("Update GitHub account"));
-
-        let mut buffer = Vec::new();
-        generate(*shell, &mut cmd, "github", &mut buffer);
-
-        let output_file = match shell {
-            ClapShell::Zsh => output_dir.join("_github"),
-            ClapShell::Bash => output_dir.join("github.bash"),
-            ClapShell::Fish => output_dir.join("github.fish"),
-            ClapShell::PowerShell => output_dir.join("_github.ps1"),
-            ClapShell::Elvish => output_dir.join("github.elv"),
             _ => {
                 anyhow::bail!("不支持的 shell 类型");
             }
