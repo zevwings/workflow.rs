@@ -1,6 +1,7 @@
 //! Shell Completion 管理工具
 //!
 //! 本模块提供了 Shell Completion 的完整管理功能，包括：
+//! - 生成 completion 脚本文件
 //! - 配置 shell 配置文件以启用 completion
 //! - 创建 completion 配置文件
 //! - 删除 completion 配置和文件
@@ -11,8 +12,10 @@ use crate::log_info;
 use crate::log_success;
 use crate::ShellInfo;
 use anyhow::{Context, Result};
+use clap::Command;
+use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Completion 管理工具
 ///
@@ -31,6 +34,10 @@ impl Completion {
 
     /// 创建并写入 workflow completion 配置文件
     /// 配置文件同时支持 zsh 和 bash
+    ///
+    /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
+    /// 包括 `github`、`proxy`、`log`、`clean` 等子命令。
+    /// `_pr` 和 `_qk` 是独立命令的 completion 文件。
     fn create_completion_config_file(shell_info: &ShellInfo) -> Result<PathBuf> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -201,6 +208,11 @@ impl Completion {
     }
 
     /// 获取 completion 文件列表（根据 shell 类型）
+    ///
+    /// 返回独立的 completion 文件列表：
+    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `github`）
+    /// - `_pr` / `pr.bash`: `pr` 独立命令
+    /// - `_qk` / `qk.bash`: `qk` 独立命令
     pub fn get_completion_files(shell_info: &ShellInfo) -> Vec<PathBuf> {
         if shell_info.shell_type == "zsh" {
             vec![
@@ -218,11 +230,36 @@ impl Completion {
     }
 
     /// 删除 completion 文件
+    ///
+    /// 删除所有 shell 类型的 completion 文件（zsh, bash, fish, powershell, elvish），
+    /// 确保卸载时完全清理所有可能存在的 completion 文件。
     pub fn remove_completion_files(shell_info: &ShellInfo) -> Result<usize> {
-        let completion_files = Self::get_completion_files(shell_info);
+        // 获取所有 shell 类型的 completion 文件
+        let all_files = vec![
+            // zsh 文件
+            shell_info.completion_dir.join("_workflow"),
+            shell_info.completion_dir.join("_pr"),
+            shell_info.completion_dir.join("_qk"),
+            // bash 文件
+            shell_info.completion_dir.join("workflow.bash"),
+            shell_info.completion_dir.join("pr.bash"),
+            shell_info.completion_dir.join("qk.bash"),
+            // fish 文件
+            shell_info.completion_dir.join("workflow.fish"),
+            shell_info.completion_dir.join("pr.fish"),
+            shell_info.completion_dir.join("qk.fish"),
+            // powershell 文件
+            shell_info.completion_dir.join("_workflow.ps1"),
+            shell_info.completion_dir.join("_pr.ps1"),
+            shell_info.completion_dir.join("_qk.ps1"),
+            // elvish 文件
+            shell_info.completion_dir.join("workflow.elv"),
+            shell_info.completion_dir.join("pr.elv"),
+            shell_info.completion_dir.join("qk.elv"),
+        ];
 
         let mut removed_count = 0;
-        for file in &completion_files {
+        for file in &all_files {
             if file.exists() {
                 if let Err(e) = fs::remove_file(file) {
                     log_info!("删除失败: {} ({})", file.display(), e);
@@ -257,6 +294,218 @@ impl Completion {
                 workflow_config_file.display()
             );
         }
+
+        Ok(())
+    }
+
+    /// 生成所有 completion 脚本文件
+    ///
+    /// 为所有命令生成 completion 脚本：
+    /// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
+    /// - `pr` 独立命令
+    /// - `qk` 独立命令
+    pub fn generate_all_completions(
+        shell_type: Option<String>,
+        output_dir: Option<String>,
+    ) -> Result<()> {
+        let shell = shell_type.as_deref().unwrap_or_else(|| {
+            let shell_env = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+            if shell_env.contains("zsh") {
+                "zsh"
+            } else if shell_env.contains("bash") {
+                "bash"
+            } else {
+                "zsh" // 默认
+            }
+        });
+
+        let output = output_dir.map(PathBuf::from).unwrap_or_else(|| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
+            PathBuf::from(&home).join(".workflow/completions")
+        });
+
+        log_debug!("生成 shell completion 脚本...");
+        log_debug!("Shell 类型: {}", shell);
+        log_debug!("输出目录: {}", output.display());
+
+        // 解析 shell 类型
+        let shell_type = match shell {
+            "zsh" => ClapShell::Zsh,
+            "bash" => ClapShell::Bash,
+            "fish" => ClapShell::Fish,
+            "powershell" => ClapShell::PowerShell,
+            "elvish" => ClapShell::Elvish,
+            _ => {
+                anyhow::bail!("不支持的 shell: {}", shell);
+            }
+        };
+
+        // 创建输出目录
+        fs::create_dir_all(&output).context("Failed to create output directory")?;
+
+        // 生成 completion 脚本
+        Self::generate_workflow_completion(&shell_type, &output)?;
+        Self::generate_pr_completion(&shell_type, &output)?;
+        Self::generate_qk_completion(&shell_type, &output)?;
+
+        log_success!("  Shell completion 脚本已生成到: {}", output.display());
+        Ok(())
+    }
+
+    /// 生成 workflow 命令的 completion
+    fn generate_workflow_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
+        let mut cmd = Command::new("workflow")
+            .about("Workflow CLI tool")
+            .subcommand(
+                Command::new("proxy")
+                    .about("Manage proxy settings")
+                    .subcommand(Command::new("on").about("Turn proxy on"))
+                    .subcommand(Command::new("off").about("Turn proxy off"))
+                    .subcommand(Command::new("check").about("Check proxy status")),
+            )
+            .subcommand(Command::new("check").about("Run environment checks"))
+            .subcommand(Command::new("setup").about("Initialize or update configuration"))
+            .subcommand(Command::new("config").about("View current configuration"))
+            .subcommand(
+                Command::new("install").about("Install Workflow CLI (binary and completions)"),
+            )
+            .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
+            .subcommand(
+                Command::new("clean")
+                    .about("Clean log directory")
+                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n'))
+                    .arg(clap::Arg::new("list").long("list").short('l')),
+            )
+            .subcommand(
+                Command::new("log")
+                    .about("Manage log level")
+                    .subcommand(Command::new("set").about("Set log level"))
+                    .subcommand(Command::new("check").about("Check log level")),
+            )
+            .subcommand(
+                Command::new("github")
+                    .about("Manage GitHub accounts")
+                    .subcommand(Command::new("list").about("List all GitHub accounts"))
+                    .subcommand(Command::new("current").about("Show current GitHub account"))
+                    .subcommand(Command::new("add").about("Add a new GitHub account"))
+                    .subcommand(Command::new("remove").about("Remove a GitHub account"))
+                    .subcommand(Command::new("switch").about("Switch GitHub account"))
+                    .subcommand(Command::new("update").about("Update GitHub account")),
+            );
+
+        let mut buffer = Vec::new();
+        generate(*shell, &mut cmd, "workflow", &mut buffer);
+
+        let output_file = match shell {
+            ClapShell::Zsh => output_dir.join("_workflow"),
+            ClapShell::Bash => output_dir.join("workflow.bash"),
+            ClapShell::Fish => output_dir.join("workflow.fish"),
+            ClapShell::PowerShell => output_dir.join("_workflow.ps1"),
+            ClapShell::Elvish => output_dir.join("workflow.elv"),
+            _ => {
+                anyhow::bail!("不支持的 shell 类型");
+            }
+        };
+
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
+        log_success!("  生成: {}", output_file.display());
+
+        Ok(())
+    }
+
+    /// 生成 pr 命令的 completion
+    fn generate_pr_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
+        let mut cmd = Command::new("pr")
+            .about("Pull Request operations")
+            .subcommand(
+                Command::new("create")
+                    .about("Create a new Pull Request")
+                    .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
+                    .arg(clap::Arg::new("title").short('t').long("title"))
+                    .arg(clap::Arg::new("description").short('d').long("description"))
+                    .arg(clap::Arg::new("dry-run").long("dry-run")),
+            )
+            .subcommand(
+                Command::new("merge")
+                    .about("Merge a Pull Request")
+                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
+                    .arg(clap::Arg::new("force").short('f').long("force")),
+            )
+            .subcommand(
+                Command::new("status")
+                    .about("Show PR status information")
+                    .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
+            )
+            .subcommand(
+                Command::new("list")
+                    .about("List PRs")
+                    .arg(clap::Arg::new("state").short('s').long("state"))
+                    .arg(clap::Arg::new("limit").short('l').long("limit")),
+            )
+            .subcommand(Command::new("update").about("Update code"))
+            .subcommand(
+                Command::new("close")
+                    .about("Close a Pull Request")
+                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
+            );
+
+        let mut buffer = Vec::new();
+        generate(*shell, &mut cmd, "pr", &mut buffer);
+
+        let output_file = match shell {
+            ClapShell::Zsh => output_dir.join("_pr"),
+            ClapShell::Bash => output_dir.join("pr.bash"),
+            ClapShell::Fish => output_dir.join("pr.fish"),
+            ClapShell::PowerShell => output_dir.join("_pr.ps1"),
+            ClapShell::Elvish => output_dir.join("pr.elv"),
+            _ => {
+                anyhow::bail!("不支持的 shell 类型");
+            }
+        };
+
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
+        log_success!("  生成: {}", output_file.display());
+
+        Ok(())
+    }
+
+    /// 生成 qk 命令的 completion
+    fn generate_qk_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
+        let mut cmd = Command::new("qk")
+            .about("Quick log operations")
+            .arg(
+                clap::Arg::new("JIRA_ID")
+                    .value_name("JIRA_ID")
+                    .required(true),
+            )
+            .subcommand(Command::new("download").about("Download logs"))
+            .subcommand(
+                Command::new("find")
+                    .about("Find request by ID")
+                    .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
+            )
+            .subcommand(
+                Command::new("search")
+                    .about("Search in logs")
+                    .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
+            );
+
+        let mut buffer = Vec::new();
+        generate(*shell, &mut cmd, "qk", &mut buffer);
+
+        let output_file = match shell {
+            ClapShell::Zsh => output_dir.join("_qk"),
+            ClapShell::Bash => output_dir.join("qk.bash"),
+            ClapShell::Fish => output_dir.join("qk.fish"),
+            ClapShell::PowerShell => output_dir.join("_qk.ps1"),
+            ClapShell::Elvish => output_dir.join("qk.elv"),
+            _ => {
+                anyhow::bail!("不支持的 shell 类型");
+            }
+        };
+
+        fs::write(&output_file, buffer).context("Failed to write completion file")?;
+        log_success!("  生成: {}", output_file.display());
 
         Ok(())
     }
