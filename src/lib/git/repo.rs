@@ -46,6 +46,7 @@ impl Git {
     /// 从 URL 解析仓库类型
     ///
     /// 通过检查 URL 中是否包含特定域名来识别仓库类型。
+    /// 支持识别 SSH Host 别名（如 `github-brainim`）。
     ///
     /// # 参数
     ///
@@ -54,11 +55,12 @@ impl Git {
     /// # 返回
     ///
     /// 返回对应的 `RepoType`：
-    /// - 包含 `github.com` → `RepoType::GitHub`
+    /// - 包含 `github.com` 或 host 以 `github` 开头 → `RepoType::GitHub`
     /// - 包含 `codeup.aliyun.com` → `RepoType::Codeup`
     /// - 其他 → `RepoType::Unknown`
     fn parse_repo_type_from_url(url: &str) -> RepoType {
-        if url.contains("github.com") {
+        // 检查 GitHub：包含 github.com 或 SSH host 以 github 开头（处理 SSH Host 别名，如 git@github-brainim:user/repo.git）
+        if url.contains("github.com") || url.starts_with("git@github") || url.starts_with("ssh://git@github") {
             RepoType::GitHub
         } else if url.contains("codeup.aliyun.com") {
             RepoType::Codeup
