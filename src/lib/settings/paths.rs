@@ -6,6 +6,9 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 /// 配置路径管理器
 pub struct ConfigPaths;
 
@@ -27,6 +30,13 @@ impl ConfigPaths {
 
         // 确保配置目录存在
         fs::create_dir_all(&config_dir).context("Failed to create .workflow/config directory")?;
+
+        // 设置目录权限为 700（仅用户可访问）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set config directory permissions")?;
+        }
 
         Ok(config_dir)
     }
@@ -77,6 +87,13 @@ impl ConfigPaths {
         // 确保工作流目录存在
         fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
 
+        // 设置目录权限为 700（仅用户可访问）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set workflow directory permissions")?;
+        }
+
         Ok(workflow_dir)
     }
 
@@ -97,6 +114,13 @@ impl ConfigPaths {
         // 确保目录存在
         fs::create_dir_all(&history_dir)
             .context("Failed to create .workflow/work-history directory")?;
+
+        // 设置目录权限为 700（仅用户可访问）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&history_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set work-history directory permissions")?;
+        }
 
         Ok(history_dir)
     }

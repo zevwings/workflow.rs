@@ -195,6 +195,23 @@ impl Settings {
                 if !config_path.exists() {
                     Self::default()
                 } else {
+                    // 检查文件权限（仅 Unix 系统）
+                    #[cfg(unix)]
+                    {
+                        if let Ok(metadata) = config_path.metadata() {
+                            use std::os::unix::fs::PermissionsExt;
+                            let permissions = metadata.permissions();
+                            let mode = permissions.mode();
+                            // 检查是否有组或其他用户权限（非 600）
+                            if (mode & 0o077) != 0 {
+                                log_warning!(
+                                    "Warning: Configuration file has overly permissive permissions (current: {:o}). Consider setting to 600 for better security.",
+                                    mode & 0o777
+                                );
+                            }
+                        }
+                    }
+
                     match fs::read_to_string(&config_path) {
                         Ok(content) => toml::from_str::<Self>(&content).unwrap_or_default(),
                         Err(_) => Self::default(),
