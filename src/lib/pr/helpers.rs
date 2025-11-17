@@ -25,15 +25,20 @@ pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
 
 /// 从 Git remote URL 提取 GitHub 仓库的 owner/repo
 ///
+/// 支持标准格式和 SSH host 别名格式（如 github-brainim）
+///
 /// # 示例
 /// ```
-/// assert_eq!(extract_github_repo_from_url("git@github.com:owner/repo.git"), Ok("owner/repo".to_string()));
-/// assert_eq!(extract_github_repo_from_url("https://github.com/owner/repo.git"), Ok("owner/repo".to_string()));
+/// use workflow::pr::helpers::extract_github_repo_from_url;
+/// assert_eq!(extract_github_repo_from_url("git@github.com:owner/repo.git").unwrap(), "owner/repo");
+/// assert_eq!(extract_github_repo_from_url("git@github-brainim:owner/repo.git").unwrap(), "owner/repo");
+/// assert_eq!(extract_github_repo_from_url("https://github.com/owner/repo.git").unwrap(), "owner/repo");
 /// ```
 pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
-    // 匹配 SSH 格式: git@github.com:owner/repo.git
+    // 匹配 SSH 格式: git@github.com:owner/repo.git 或 git@github-xxx:owner/repo.git (支持 SSH host 别名)
+    // 使用 git@github[^:]*: 来匹配 git@github 开头的所有 SSH host（包括别名）
     let ssh_re =
-        Regex::new(r"git@github\.com:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
+        Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
     if let Some(caps) = ssh_re.captures(url) {
         return Ok(caps.get(1).unwrap().as_str().to_string());
     }
