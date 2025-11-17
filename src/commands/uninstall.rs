@@ -159,9 +159,11 @@ impl UninstallCommand {
         if remove_config {
             log_break!();
             log_message!("Removing configuration...");
-            Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
+            let removed_files = Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
             log_message!("Configuration removed successfully");
-            log_message!("  - workflow.toml removed");
+            for file in &removed_files {
+                log_message!("  - {} removed", file);
+            }
         } else {
             log_break!();
             log_message!("Configuration will be kept (not removed).");

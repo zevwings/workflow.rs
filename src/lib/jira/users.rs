@@ -9,6 +9,9 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 use crate::http::{Authorization, HttpClient};
 use crate::settings::paths::ConfigPaths;
 
@@ -187,6 +190,13 @@ fn save_user_info_to_local(email: &str, user: &JiraUser) -> Result<()> {
         "Failed to write jira-users.toml: {:?}",
         config_path
     ))?;
+
+    // 设置文件权限为 600（仅用户可读写）
+    #[cfg(unix)]
+    {
+        fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600))
+            .context("Failed to set jira-users.toml permissions")?;
+    }
 
     Ok(())
 }

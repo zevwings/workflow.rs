@@ -16,6 +16,9 @@ use dialoguer::{Input, Select};
 use std::fs;
 use toml;
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 /// 初始化设置命令
 pub struct SetupCommand;
 
@@ -709,6 +712,13 @@ impl SetupCommand {
         let toml_content =
             toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
         fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
+
+        // 设置文件权限为 600（仅用户可读写）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&workflow_config_path, fs::Permissions::from_mode(0o600))
+                .context("Failed to set workflow.toml permissions")?;
+        }
 
         Ok(())
     }
