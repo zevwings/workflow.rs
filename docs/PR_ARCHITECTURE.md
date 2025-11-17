@@ -27,7 +27,8 @@ src/commands/pr/
 ├── close.rs        # 关闭 PR 命令
 ├── status.rs       # PR 状态查询命令
 ├── list.rs         # 列出 PR 命令
-└── update.rs       # 更新 PR 命令
+├── update.rs       # 更新 PR 命令
+└── integrate.rs    # 集成分支命令
 ```
 
 **职责**：
@@ -92,6 +93,7 @@ graph TB
     CLI --> Status[commands/pr/status.rs<br/>查询状态]
     CLI --> List[commands/pr/list.rs<br/>列出 PR]
     CLI --> Update[commands/pr/update.rs<br/>更新 PR]
+    CLI --> Integrate[commands/pr/integrate.rs<br/>集成分支]
 
     Create --> LibPR[lib/pr/<br/>核心业务逻辑层]
     Merge --> LibPR
@@ -99,6 +101,7 @@ graph TB
     Status --> LibPR
     List --> LibPR
     Update --> LibPR
+    Integrate --> LibPR
 
     LibPR --> Git[lib/git/<br/>Git 操作]
     LibPR --> Jira[lib/jira/<br/>Jira 集成]
@@ -120,6 +123,7 @@ graph TB
     style Status fill:#fff4e1
     style List fill:#fff4e1
     style Update fill:#fff4e1
+    style Integrate fill:#fff4e1
     style LibPR fill:#e8f5e9
     style Git fill:#f3e5f5
     style Jira fill:#f3e5f5
@@ -524,6 +528,144 @@ commands/pr/update.rs::PullRequestUpdateCommand::update()
    - 自动暂存所有文件
    - 推送到远程分支
 
+### 7. 集成分支 (`pr integrate`)
+
+#### 调用流程
+
+```
+bin/pr.rs::PRCommands::Integrate
+  ↓
+commands/pr/integrate.rs::PullRequestIntegrateCommand::integrate()
+  ↓
+  1. CheckCommand::run_all()                    # 运行检查（可选，失败时可继续）
+  2. Git::current_branch()                      # 获取当前分支
+  3. check_working_directory()                  # 检查工作区状态
+     ├─ 如果有未提交更改，提示 stash 或取消
+     └─ 如果选择 stash，执行 Git::stash_push()
+  4. prepare_source_branch()                    # 验证并准备源分支
+     ├─ 检查是否为默认分支（不允许）
+     ├─ 检查分支是否存在（本地或远程）
+     ├─ 如果只在远程，执行 Git::fetch()
+     └─ 返回分支信息（类型、合并引用）
+  5. determine_merge_strategy()                  # 确定合并策略
+     ├─ --ff-only → FastForwardOnly
+     ├─ --squash → Squash
+     └─ 默认 → Merge
+  6. Git::merge_branch()                         # 执行合并
+  7. check_and_update_current_branch_pr()      # 检查并更新当前分支的 PR
+     ├─ 如果当前分支有 PR，推送代码更新 PR
+     └─ 如果是远程分支合并，恢复 stash
+  8. check_and_close_source_branch_pr()        # 检查并关闭源分支的 PR
+     ├─ 从工作历史查找源分支的 PR ID
+     └─ 如果找到，调用平台 API 关闭 PR
+  9. delete_merged_branch()                     # 删除被合并的源分支
+     ├─ 删除本地分支
+     └─ 删除远程分支
+  10. 如果指定了 --push，推送到远程（本地分支合并时）
+```
+
+#### 集成分支流程图
+
+```mermaid
+flowchart LR
+    Start([开始]) --> Check[运行检查<br/>可选]
+    Check --> GetCurrent[获取当前分支]
+    GetCurrent --> CheckWorkDir{检查工作区<br/>是否有未提交更改?}
+
+    CheckWorkDir -->|有更改| StashChoice{选择处理方式}
+    CheckWorkDir -->|无更改| PrepareBranch
+
+    StashChoice -->|Stash| Stash[Stash 更改]
+    StashChoice -->|取消| Abort[取消操作]
+    Stash --> PrepareBranch
+
+    PrepareBranch[验证源分支] --> CheckDefault{是否为<br/>默认分支?}
+    CheckDefault -->|是| Error[错误：不允许]
+    CheckDefault -->|否| CheckExists{分支是否存在?}
+
+    CheckExists -->|不存在| Error2[错误：分支不存在]
+    CheckExists -->|只在远程| Fetch[Fetch 远程]
+    CheckExists -->|本地存在| DetermineStrategy
+
+    Fetch --> DetermineStrategy[确定合并策略<br/>ff-only/squash/merge]
+    DetermineStrategy --> Merge[执行合并]
+
+    Merge --> CheckSuccess{合并成功?}
+    CheckSuccess -->|失败| CheckConflict{有冲突?}
+    CheckSuccess -->|成功| CheckRemote{源分支<br/>是远程分支?}
+
+    CheckConflict -->|有冲突| ManualResolve[提示手动解决]
+    CheckConflict -->|无冲突| Error3[返回错误]
+
+    CheckRemote -->|是| UpdatePR[更新当前分支 PR]
+    CheckRemote -->|否| RestoreStash{有 Stash?}
+
+    UpdatePR --> CloseSourcePR[关闭源分支 PR]
+    RestoreStash -->|有| PopStash[恢复 Stash]
+    RestoreStash -->|无| CheckPush
+
+    PopStash --> CheckPush{需要推送?<br/>--no-push?}
+    CheckPush -->|是| Push[推送到远程]
+    CheckPush -->|否| CloseSourcePR
+
+    Push --> CloseSourcePR
+    CloseSourcePR --> DeleteBranch[删除源分支<br/>本地和远程]
+    DeleteBranch --> End([完成])
+
+    ManualResolve --> End
+    Error --> End
+    Error2 --> End
+    Error3 --> End
+    Abort --> End
+
+    style Start fill:#e1f5ff
+    style End fill:#c8e6c9
+    style CheckWorkDir fill:#fff9c4
+    style CheckDefault fill:#ffcdd2
+    style CheckSuccess fill:#fff9c4
+    style CheckRemote fill:#fff9c4
+    style Merge fill:#e3f2fd
+    style UpdatePR fill:#e3f2fd
+    style CloseSourcePR fill:#e3f2fd
+    style Error fill:#ffcdd2
+    style Error2 fill:#ffcdd2
+    style Error3 fill:#ffcdd2
+```
+
+#### 关键步骤说明
+
+1. **工作区检查**：
+   - 检查是否有未提交的更改
+   - 如果有，提示用户选择 stash 或取消操作
+   - 如果选择 stash，自动保存更改，合并后恢复
+
+2. **源分支验证**：
+   - 不允许将默认分支合并到当前分支
+   - 检查分支是否存在（本地或远程）
+   - 如果分支只在远程，自动 fetch 获取最新引用
+
+3. **合并策略**：
+   - `--ff-only`：只允许 fast-forward 合并，否则失败
+   - `--squash`：将源分支的所有提交压缩为一个提交
+   - 默认：使用标准的 merge commit
+
+4. **合并后处理**：
+   - **远程分支合并**：如果当前分支有 PR，自动推送更新 PR
+   - **本地分支合并**：根据 `--no-push` 标志决定是否推送
+   - 自动恢复 stash（如果有）
+
+5. **PR 管理**：
+   - 如果源分支有 PR，自动关闭它
+   - 通过工作历史查找源分支的 PR ID
+
+6. **分支清理**：
+   - 合并成功后，自动删除源分支（本地和远程）
+   - 如果删除失败，提供手动删除的提示
+
+7. **错误处理**：
+   - 合并冲突时，提供详细的解决步骤
+   - 合并失败时，自动恢复 stash（如果有）
+
 ---
 
 ## 🏗️ 平台抽象设计
@@ -557,6 +699,7 @@ graph TB
         StatusCmd[status.rs]
         ListCmd[list.rs]
         UpdateCmd[update.rs]
+        IntegrateCmd[integrate.rs]
     end
 
     subgraph "平台抽象接口"
@@ -584,6 +727,7 @@ graph TB
     StatusCmd --> Trait
     ListCmd --> Trait
     UpdateCmd --> Trait
+    IntegrateCmd --> Trait
 
     Trait --> Methods
     Methods --> GitHub
@@ -606,6 +750,7 @@ graph TB
     style StatusCmd fill:#fff4e1
     style ListCmd fill:#fff4e1
     style UpdateCmd fill:#fff4e1
+    style IntegrateCmd fill:#fff4e1
 ```
 
 ### 平台实现
