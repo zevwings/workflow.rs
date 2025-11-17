@@ -326,6 +326,22 @@ workflow config                    # 查看当前配置（显示所有配置项�
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 ```
 
+### GitHub 账号管理
+```bash
+workflow github list               # 列出所有 GitHub 账号
+workflow github current            # 显示当前激活的 GitHub 账号
+workflow github add                # 添加新的 GitHub 账号（交互式）
+workflow github remove             # 删除 GitHub 账号（交互式选择）
+workflow github switch             # 切换当前 GitHub 账号（交互式选择）
+workflow github update             # 更新 GitHub 账号信息（交互式选择并更新）
+```
+
+### 日志级别管理
+```bash
+workflow log set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
+workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+```
+
 ### 清理命令
 ```bash
 workflow clean                     # 清理日志下载目录（需要确认）
@@ -396,7 +412,7 @@ qk PROJ-123 clean --list             # 只列出将要删除的内容
 > **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。如果不提供子命令，将显示 ticket 信息。
 
 
-> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。
+> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [PR 模块架构文档](./docs/PR_ARCHITECTURE.md)。
 
 ## 🚀 发布
 

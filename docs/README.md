@@ -28,6 +28,7 @@
 - 支持 GitHub 和 Codeup 平台
 - Jira 状态管理集成
 - 平台抽象设计（PlatformProvider Trait）
+- GitHub API 集成实现详情
 
 ### [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
 **快速日志操作模块架构文档**
