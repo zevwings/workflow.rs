@@ -98,8 +98,8 @@ impl LogCommand {
 
     /// 保存日志级别到配置文件
     fn save_log_level_to_config(level: &str) -> Result<()> {
-        use crate::settings::paths::ConfigPaths;
-        use crate::settings::settings::LogSettings;
+        use crate::base::settings::paths::Paths;
+        use crate::base::settings::settings::LogSettings;
 
         // 读取现有配置
         let existing_settings = Settings::get().clone();
@@ -118,7 +118,7 @@ impl LogCommand {
         };
 
         // 保存到 workflow.toml
-        let workflow_config_path = ConfigPaths::workflow_config()?;
+        let workflow_config_path = Paths::workflow_config()?;
         let toml_content = toml::to_string_pretty(&updated_settings)
             .context("Failed to serialize settings to TOML")?;
         fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;

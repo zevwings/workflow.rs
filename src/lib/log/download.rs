@@ -288,7 +288,7 @@ pub fn download_from_jira(
                         // 方式 2: 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
                         if !success {
                             if let Some(attachment_id) =
-                                crate::jira::ticket::extract_attachment_id_from_url(
+                                crate::jira::ticket::JiraTicket::extract_attachment_id_from_url(
                                     &attachment.content_url,
                                 )
                             {

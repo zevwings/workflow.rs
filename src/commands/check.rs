@@ -1,5 +1,10 @@
-use crate::{log_break, log_error, log_info, log_message, log_success, Git, HttpClient};
+use crate::base::http::{HttpMethod, RequestConfig};
+use crate::{
+    log_break, log_error, log_info, log_message, log_success, GitCommit, GitRepo, HttpClient,
+};
 use anyhow::{Context, Result};
+use serde_json::Value;
+use std::time::Duration;
 
 /// 执行综合环境检查
 ///
@@ -10,12 +15,12 @@ pub fn run_all() -> Result<()> {
 
     // 1. 检查 Git 状态
     log_message!("[1/2] Checking Git repository status...");
-    if !Git::is_git_repo() {
+    if !GitRepo::is_git_repo() {
         log_error!("Not in a Git repository");
         anyhow::bail!("Git check failed: Not in a Git repository");
     }
 
-    let git_output = Git::status().context("Failed to check git status")?;
+    let git_output = GitCommit::status().context("Failed to check git status")?;
     if git_output.trim().is_empty() {
         log_success!("Git repository is clean (no uncommitted changes)");
     } else {
@@ -26,13 +31,9 @@ pub fn run_all() -> Result<()> {
 
     // 2. 检查网络连接
     log_message!("[2/2] Checking network connection to GitHub...");
-    let client = HttpClient::new().context("Failed to create HTTP client")?;
-    match client
-        .client()
-        .get("https://github.com")
-        .timeout(std::time::Duration::from_secs(10))
-        .send()
-    {
+    let client = HttpClient::global().context("Failed to create HTTP client")?;
+    let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
+    match client.stream(HttpMethod::Get, "https://github.com", config) {
         Ok(response) => {
             if response.status().is_success() {
                 log_success!("GitHub network is available");

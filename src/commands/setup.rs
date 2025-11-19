@@ -2,15 +2,15 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::git::GitConfig;
-use crate::{confirm, log_break, log_message, log_success};
 use crate::{
-    log_info,
-    settings::{
+    base::settings::{
         defaults::{default_llm_model, default_response_format},
-        paths::ConfigPaths,
+        paths::Paths,
         settings::{GitHubAccount, Settings},
     },
+    log_info,
 };
+use crate::{confirm, log_break, log_message, log_success};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 use std::fs;
@@ -672,7 +672,7 @@ impl SetupCommand {
 
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
-        use crate::settings::settings::{
+        use crate::base::settings::settings::{
             CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings,
         };
 
@@ -697,7 +697,7 @@ impl SetupCommand {
                 csrf_token: config.codeup_csrf_token.clone(),
                 cookie: config.codeup_cookie.clone(),
             },
-            llm: crate::settings::settings::LLMSettings {
+            llm: crate::base::settings::settings::LLMSettings {
                 url: config.llm_url.clone(),
                 key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
@@ -708,7 +708,7 @@ impl SetupCommand {
         };
 
         // 保存 workflow.toml
-        let workflow_config_path = ConfigPaths::workflow_config()?;
+        let workflow_config_path = Paths::workflow_config()?;
         let toml_content =
             toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
         fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;

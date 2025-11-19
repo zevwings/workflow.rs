@@ -1,4 +1,4 @@
-use crate::settings::Settings;
+use crate::base::settings::Settings;
 use crate::{log_debug, log_info, log_success, Logs};
 use anyhow::{Context, Result};
 

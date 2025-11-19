@@ -2,7 +2,7 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::{log_info, log_success, Git};
+use crate::{log_info, log_success, GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{Codeup, GitHub, PlatformProvider, RepoType};
 use anyhow::{Context, Error, Result};
 
@@ -192,33 +192,33 @@ pub fn cleanup_branch(
     log_info!("Switching to default branch: {}", default_branch);
 
     // 1. 更新远程分支信息
-    Git::fetch()?;
+    GitRepo::fetch()?;
 
     // 2. 检查并 stash 未提交的更改
-    let has_stashed = Git::has_commit()?;
+    let has_stashed = GitCommit::has_commit()?;
     if has_stashed {
         log_info!("Stashing local changes before switching branches...");
-        Git::stash_push(Some(&format!(
+        GitStash::stash_push(Some(&format!(
             "Auto-stash before {} cleanup",
             operation_name
         )))?;
     }
 
     // 3. 切换到默认分支
-    Git::checkout_branch(default_branch)
+    GitBranch::checkout_branch(default_branch)
         .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
     // 4. 更新本地默认分支
-    Git::pull(default_branch)
+    GitBranch::pull(default_branch)
         .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
 
     // 5. 删除本地分支
-    if Git::has_local_branch(current_branch)? {
+    if GitBranch::has_local_branch(current_branch)? {
         log_info!("Deleting local branch: {}", current_branch);
-        Git::delete(current_branch, false)
+        GitBranch::delete(current_branch, false)
             .or_else(|_| {
                 log_info!("Branch may not be fully merged, trying force delete...");
-                Git::delete(current_branch, true)
+                GitBranch::delete(current_branch, true)
             })
             .context("Failed to delete local branch")?;
         log_success!("Local branch deleted: {}", current_branch);
@@ -229,11 +229,11 @@ pub fn cleanup_branch(
     // 6. 恢复 stash
     if has_stashed {
         log_info!("Restoring stashed changes...");
-        let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
+        let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理
     }
 
     // 7. 清理远程分支引用
-    if let Err(e) = Git::prune_remote() {
+    if let Err(e) = GitRepo::prune_remote() {
         log_info!("Warning: Failed to prune remote references: {}", e);
         log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
     }

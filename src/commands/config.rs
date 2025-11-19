@@ -1,7 +1,7 @@
 //! 配置查看命令
 //! 显示当前的 TOML 配置文件
 
-use crate::settings::{paths::ConfigPaths, settings::Settings};
+use crate::base::settings::{paths::Paths, settings::Settings};
 use crate::{log_break, log_info, log_warning};
 use anyhow::Result;
 
@@ -15,7 +15,7 @@ impl ConfigCommand {
         log_break!();
 
         // 显示配置文件路径
-        let workflow_config_path = ConfigPaths::workflow_config()
+        let workflow_config_path = Paths::workflow_config()
             .map_err(|_| anyhow::anyhow!("Failed to get workflow config path"))?;
 
         log_info!("Workflow config: {:?}\n", workflow_config_path);

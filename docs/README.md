@@ -76,6 +76,24 @@
 
 ---
 
+## 📋 设计文档
+
+### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
+**为什么需要同时生成 zsh 和 bash 的补全脚本**
+
+- 配置文件设计说明
+- 多 shell 环境支持场景
+- 设计决策和实现方案
+
+### [FUTURE_IMPROVEMENTS.md](./FUTURE_IMPROVEMENTS.md)
+**未来改进计划**
+
+- 未实现功能列表
+- 改进建议和优先级
+- 贡献指南
+
+---
+
 ## 📝 文档结构说明
 
 所有模块架构文档遵循统一的结构：
@@ -100,6 +118,7 @@
 - **2024-01** - 统一文档结构和命名规范
 - **2024-01** - 统一 LLM 架构文档，移除旧的实现文档（`LLM_IMPLEMENTATION.md`、`LLM_PLUGIN_ARCHITECTURE.md`、`LLM_PLUGIN_CURL.md`），保留统一的架构设计文档 `LLM_ARCHITECTURE.md`
 - **2024-01** - 添加 GitHub Actions 发布流程文档，包括 HOMEBREW_TAP_TOKEN 配置说明和自动验证机制
+- **2024-01** - 合并未实现功能到 `FUTURE_IMPROVEMENTS.md`，删除已实现的改进文档（`UPDATE_IMPROVEMENTS.md`、`COMPLETION_FILE_NAMING_ANALYSIS.md`、`INSTALL_COMPLETION_IMPROVEMENT.md`）
 
 ---
 

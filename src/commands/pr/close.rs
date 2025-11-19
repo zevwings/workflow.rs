@@ -1,7 +1,7 @@
 use crate::commands::pr::helpers;
 use crate::{
-    detect_repo_type, log_break, log_info, log_success, log_warning, Codeup, Git, GitHub,
-    PlatformProvider, RepoType,
+    detect_repo_type, log_break, log_info, log_success, log_warning, Codeup, GitBranch, GitHub,
+    GitRepo, PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 
@@ -14,17 +14,17 @@ impl PullRequestCloseCommand {
     /// 关闭 PR
     pub fn close(pull_request_id: Option<String>) -> Result<()> {
         // 1. 获取仓库类型和 PR ID
-        let repo_type = Git::detect_repo_type()?;
+        let repo_type = GitRepo::detect_repo_type()?;
         let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
         log_break!();
         log_success!("Closing PR: #{}", pull_request_id);
 
         // 2. 获取当前分支名（关闭前保存）
-        let current_branch = Git::current_branch()?;
+        let current_branch = GitBranch::current_branch()?;
 
         // 3. 获取默认分支
-        let default_branch = Git::get_default_branch()?;
+        let default_branch = GitBranch::get_default_branch()?;
 
         // 4. 提前检查：如果当前分支是默认分支，不应该关闭
         if current_branch == default_branch {
@@ -120,7 +120,7 @@ impl PullRequestCloseCommand {
     /// 删除远程分支
     fn delete_remote_branch(branch_name: &str) -> Result<()> {
         // 检查远程分支是否存在
-        let exists_remote = Git::has_remote_branch(branch_name)
+        let exists_remote = GitBranch::has_remote_branch(branch_name)
             .context("Failed to check if remote branch exists")?;
 
         if !exists_remote {
@@ -135,7 +135,7 @@ impl PullRequestCloseCommand {
         log_info!("Note: This will permanently delete the remote branch");
 
         // 尝试删除远程分支
-        match Git::delete_remote(branch_name) {
+        match GitBranch::delete_remote(branch_name) {
             Ok(()) => {
                 log_success!("Remote branch deleted: {}", branch_name);
             }

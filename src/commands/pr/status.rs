@@ -1,6 +1,6 @@
 use crate::commands::pr::helpers;
 use crate::{
-    detect_repo_type, log_break, log_error, log_info, log_message, Codeup, Git, GitHub,
+    detect_repo_type, log_break, log_error, log_info, log_message, Codeup, GitHub, GitRepo,
     PlatformProvider, RepoType,
 };
 use anyhow::Result;
@@ -13,7 +13,7 @@ pub struct PullRequestStatusCommand;
 impl PullRequestStatusCommand {
     /// 显示 PR 状态信息
     pub fn show(pull_request_id_or_branch: Option<String>) -> Result<()> {
-        let repo_type = Git::detect_repo_type()?;
+        let repo_type = GitRepo::detect_repo_type()?;
 
         // 获取 PR ID 或标识符
         let pr_identifier = Self::get_pr_identifier(pull_request_id_or_branch, &repo_type)?;
@@ -58,7 +58,7 @@ impl PullRequestStatusCommand {
                 RepoType::Codeup => Codeup::get_pull_request_info(pr_identifier),
                 RepoType::Unknown => {
                     let remote_url =
-                        Git::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
+                        GitRepo::get_remote_url().unwrap_or_else(|_| "unknown".to_string());
                     log_error!("Unsupported repository type detected");
                     log_info!("Remote URL: {}", remote_url);
                     anyhow::bail!(

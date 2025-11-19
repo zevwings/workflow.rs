@@ -3,7 +3,7 @@ use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
 use crate::{
     detect_repo_type, extract_jira_ticket_id, log_break, log_info, log_success, log_warning,
-    Codeup, Git, GitHub, Jira, PlatformProvider, RepoType,
+    Codeup, GitBranch, GitHub, GitRepo, Jira, PlatformProvider, RepoType,
 };
 use anyhow::Result;
 
@@ -19,17 +19,17 @@ impl PullRequestMergeCommand {
         check::run_all()?;
 
         // 2. 获取仓库类型和 PR ID
-        let repo_type = Git::detect_repo_type()?;
+        let repo_type = GitRepo::detect_repo_type()?;
         let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
 
         log_break!();
         log_success!("Merging PR: #{}", pull_request_id);
 
         // 3. 获取当前分支名（合并前保存）
-        let current_branch = Git::current_branch()?;
+        let current_branch = GitBranch::current_branch()?;
 
         // 4. 获取默认分支
-        let default_branch = Git::get_default_branch()?;
+        let default_branch = GitBranch::get_default_branch()?;
 
         // 5. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id, &repo_type)?;
@@ -131,7 +131,7 @@ impl PullRequestMergeCommand {
     /// 更新 Jira 状态（如果关联了 ticket）
     fn update_jira_status(pull_request_id: &str, repo_type: &RepoType) -> Result<()> {
         // 获取当前仓库 URL
-        let repository = Git::get_remote_url().ok();
+        let repository = GitRepo::get_remote_url().ok();
 
         // 尝试从历史记录读取
         let mut jira_ticket =

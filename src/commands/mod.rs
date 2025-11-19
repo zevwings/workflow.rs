@@ -19,6 +19,7 @@
 //! - `qk` - 快速日志操作命令（download, find, search, clean）
 //! - `setup` - 初始化设置命令
 //! - `uninstall` - 卸载命令实现
+//! - `update` - 更新命令实现（重新构建、更新二进制文件、更新 completion）
 
 pub mod check;
 pub mod clean;
@@ -31,3 +32,4 @@ pub mod proxy;
 pub mod qk;
 pub mod setup;
 pub mod uninstall;
+pub mod update;

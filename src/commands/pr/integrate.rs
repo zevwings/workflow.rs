@@ -1,7 +1,8 @@
 use crate::commands::check;
 use crate::{
     confirm, detect_repo_type, get_current_branch_pr_id, log_debug, log_error, log_info,
-    log_success, log_warning, Codeup, Git, GitHub, PlatformProvider, RepoType,
+    log_success, log_warning, Codeup, GitBranch, GitCommit, GitHub, GitRepo, GitStash,
+    PlatformProvider, RepoType,
 };
 use anyhow::{Context, Result};
 
@@ -40,7 +41,7 @@ impl PullRequestIntegrateCommand {
         }
 
         // 2. 获取当前分支
-        let current_branch = Git::current_branch()?;
+        let current_branch = GitBranch::current_branch()?;
         log_success!("Current branch: {}", current_branch);
 
         // 3. 检查工作区状态并 stash（如果需要）
@@ -54,12 +55,12 @@ impl PullRequestIntegrateCommand {
 
         // 6. 执行合并
         log_success!("Merging '{}' into '{}'...", source_branch, current_branch);
-        let merge_result = Git::merge_branch(&source_branch_info.merge_ref, strategy);
+        let merge_result = GitBranch::merge_branch(&source_branch_info.merge_ref, strategy);
 
         // 如果合并失败，恢复 stash（如果有）
         if merge_result.is_err() && has_stashed {
             log_info!("Merge failed, attempting to restore stashed changes...");
-            let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
+            let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
         }
 
         match merge_result {
@@ -68,7 +69,7 @@ impl PullRequestIntegrateCommand {
             }
             Err(e) => {
                 // 检查是否是合并冲突
-                if let Ok(has_conflicts) = Git::has_merge_conflicts() {
+                if let Ok(has_conflicts) = GitBranch::has_merge_conflicts() {
                     if has_conflicts {
                         log_error!("Merge conflicts detected!");
                         log_info!("Please resolve the conflicts manually:");
@@ -95,23 +96,24 @@ impl PullRequestIntegrateCommand {
                 // 未创建 PR，恢复 stash（如果有）
                 if has_stashed {
                     log_info!("Restoring stashed changes...");
-                    let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
+                    let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理，忽略错误继续执行
                 }
             }
         } else {
             // 本地分支：合并后立即恢复 stash（如果有）
             if has_stashed {
                 log_info!("Restoring stashed changes...");
-                let _ = Git::stash_pop(); // 日志已在 stash_pop 中处理
+                let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理
             }
 
             // 推送到远程（如果需要）
             if push {
                 log_success!("Pushing to remote...");
-                let exists_remote = Git::has_remote_branch(&current_branch)
+                let exists_remote = GitBranch::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
-                Git::push(&current_branch, !exists_remote).context("Failed to push to remote")?;
+                GitBranch::push(&current_branch, !exists_remote)
+                    .context("Failed to push to remote")?;
                 log_success!("Pushed to remote successfully");
             } else {
                 log_info!("Skipping push (--no-push flag set)");
@@ -135,7 +137,7 @@ impl PullRequestIntegrateCommand {
     /// 返回是否执行了 stash 操作。
     fn check_working_directory() -> Result<bool> {
         let has_uncommitted =
-            Git::has_commit().context("Failed to check working directory status")?;
+            GitCommit::has_commit().context("Failed to check working directory status")?;
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
@@ -149,7 +151,7 @@ impl PullRequestIntegrateCommand {
             match choice {
                 0 => {
                     log_info!("Stashing uncommitted changes...");
-                    Git::stash_push(Some("Auto-stash before branch integration"))?;
+                    GitStash::stash_push(Some("Auto-stash before branch integration"))?;
                     log_success!("Changes stashed successfully");
                     Ok(true)
                 }
@@ -170,7 +172,7 @@ impl PullRequestIntegrateCommand {
     /// 返回源分支信息（类型、是否默认分支、合并引用）。
     fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
         // 检查是否为默认分支
-        let default_branch = Git::get_default_branch()?;
+        let default_branch = GitBranch::get_default_branch()?;
         let is_default = source_branch == default_branch;
 
         if is_default {
@@ -180,7 +182,7 @@ impl PullRequestIntegrateCommand {
             );
         }
 
-        let (exists_local, exists_remote) = Git::is_branch_exists(source_branch)
+        let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
             .context("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
@@ -194,7 +196,7 @@ impl PullRequestIntegrateCommand {
             // 分支只在远程，需要先 fetch 以确保有最新的引用
             log_info!("Source branch '{}' only exists on remote", source_branch);
             log_info!("Fetching from remote...");
-            Git::fetch().context("Failed to fetch from remote")?;
+            GitRepo::fetch().context("Failed to fetch from remote")?;
             log_success!("Fetched latest changes from remote");
             // 返回远程分支引用
             Ok(SourceBranchInfo {
@@ -237,11 +239,11 @@ impl PullRequestIntegrateCommand {
             log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
-            let exists_remote = Git::has_remote_branch(current_branch)
+            let exists_remote = GitBranch::has_remote_branch(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
-            Git::push(current_branch, !exists_remote)
+            GitBranch::push(current_branch, !exists_remote)
                 .context("Failed to push to remote to update PR")?;
             log_success!("PR #{} updated successfully", pr_id);
             Ok(true)
@@ -257,7 +259,7 @@ impl PullRequestIntegrateCommand {
     fn check_and_close_source_branch_pr(source_branch: &str) -> Result<bool> {
         // 由于通过分支名查找 PR 比较复杂，我们采用更简单的方法：
         // 尝试通过工作历史查找 PR ID
-        let remote_url = Git::get_remote_url().ok();
+        let remote_url = GitRepo::get_remote_url().ok();
         if let Some(pr_id) = crate::jira::status::JiraStatus::find_pr_id_by_branch(
             source_branch,
             remote_url.as_deref(),
@@ -302,7 +304,7 @@ impl PullRequestIntegrateCommand {
         }
 
         // 检查源分支是否存在
-        let (exists_local, exists_remote) = Git::is_branch_exists(source_branch)
+        let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
             .context("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
@@ -317,11 +319,11 @@ impl PullRequestIntegrateCommand {
         // 由于合并已经成功，先尝试普通删除，失败则强制删除
         if exists_local {
             log_info!("Deleting local branch '{}'...", source_branch);
-            Git::delete(source_branch, false)
+            GitBranch::delete(source_branch, false)
                 .or_else(|_| {
                     // 如果普通删除失败（可能因为分支未完全合并），尝试强制删除
                     log_info!("Branch may not be fully merged, attempting force delete...");
-                    Git::delete(source_branch, true)
+                    GitBranch::delete(source_branch, true)
                 })
                 .with_context(|| format!("Failed to delete local branch: {}", source_branch))?;
             log_success!("Local branch '{}' deleted successfully", source_branch);
@@ -330,7 +332,7 @@ impl PullRequestIntegrateCommand {
         // 删除远程分支
         if exists_remote {
             log_info!("Deleting remote branch '{}'...", source_branch);
-            match Git::delete_remote(source_branch) {
+            match GitBranch::delete_remote(source_branch) {
                 Ok(()) => {
                     log_success!("Remote branch '{}' deleted successfully", source_branch);
                 }

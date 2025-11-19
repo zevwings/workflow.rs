@@ -2,11 +2,12 @@
 //! 删除 Workflow CLI 的所有配置
 
 use crate::{
-    confirm, log_break, log_debug, log_message, log_success, log_warning, Clipboard, Completion,
-    Proxy, Shell, Uninstall,
+    base::settings::paths::Paths, confirm, log_break, log_debug, log_message, log_success,
+    log_warning, Clipboard, Completion, Detect, Proxy, Reload,
 };
 use anyhow::{Context, Result};
 use duct::cmd;
+use std::fs;
 
 /// 卸载命令
 pub struct UninstallCommand;
@@ -24,19 +25,19 @@ impl UninstallCommand {
         log_break!();
 
         // 显示将要删除的二进制文件
-        let binary_paths = Uninstall::get_binary_paths();
+        let binary_paths = Paths::binary_paths();
         let mut existing_binaries = Vec::new();
         for binary_path in &binary_paths {
             let path = std::path::Path::new(binary_path);
             if path.exists() {
-                existing_binaries.push(*binary_path);
+                existing_binaries.push(binary_path.clone());
             }
         }
 
         // 检查 install 二进制
         let install_path = "/usr/local/bin/install";
         if std::path::Path::new(install_path).exists() {
-            existing_binaries.push(install_path);
+            existing_binaries.push(install_path.to_string());
         }
 
         if !existing_binaries.is_empty() {
@@ -64,7 +65,7 @@ impl UninstallCommand {
         if !existing_binaries.is_empty() {
             log_break!();
             log_message!("Removing binary files...");
-            match Uninstall::remove_binaries() {
+            match Self::remove_binaries() {
                 Ok((removed, need_sudo)) => {
                     if !removed.is_empty() {
                         for binary_path in &removed {
@@ -142,16 +143,14 @@ impl UninstallCommand {
         // 卸载 shell completion（只要第一步确认就删除）
         log_break!();
         log_message!("Removing shell completion scripts...");
-        if let Ok(shell_info) = Shell::detect() {
-            Completion::remove_completion_files(&shell_info)?;
+        if let Ok(shell) = Detect::shell() {
+            Completion::remove_completion_files(&shell)?;
             Completion::remove_completion_config_file()?;
-            if shell_info.config_file.exists() {
-                Completion::remove_completion_config(&shell_info)?;
+            let config_file = Paths::config_file(&shell)?;
+            if config_file.exists() {
+                Completion::remove_completion_config(&shell)?;
             } else {
-                log_message!(
-                    "Config file {} does not exist",
-                    shell_info.config_file.display()
-                );
+                log_message!("Config file {} does not exist", config_file.display());
             }
         }
 
@@ -159,7 +158,8 @@ impl UninstallCommand {
         if remove_config {
             log_break!();
             log_message!("Removing configuration...");
-            let removed_files = Uninstall::uninstall_all().context("Failed to uninstall configuration")?;
+            let removed_files =
+                Self::remove_config_files().context("Failed to uninstall configuration")?;
             log_message!("Configuration removed successfully");
             for file in &removed_files {
                 log_message!("  - {} removed", file);
@@ -190,8 +190,8 @@ impl UninstallCommand {
         // 尝试重新加载 shell 配置
         log_break!();
         log_message!("Reloading shell configuration...");
-        if let Ok(shell_info) = Shell::detect() {
-            let _ = Shell::reload_config(&shell_info);
+        if let Ok(shell) = Detect::shell() {
+            let _ = Reload::shell(&shell);
         } else {
             log_break!();
             log_message!("Could not detect shell type.");
@@ -225,4 +225,82 @@ impl UninstallCommand {
 
         Ok(())
     }
+
+    /// 删除所有 Workflow CLI 二进制文件
+    ///
+    /// 这会删除 `/usr/local/bin` 目录下的二进制文件。
+    ///
+    /// # 返回
+    ///
+    /// 返回一个元组，包含：
+    /// - 成功删除的文件列表
+    /// - 需要 sudo 权限的文件列表（权限不足）
+    ///
+    /// # 错误
+    ///
+    /// 如果删除文件时出现非权限错误，返回相应的错误信息。
+    fn remove_binaries() -> Result<(Vec<String>, Vec<String>)> {
+      let binary_paths = Paths::binary_paths();
+      let mut removed = Vec::new();
+      let mut need_sudo = Vec::new();
+
+      for binary_path in binary_paths {
+          let path = std::path::Path::new(&binary_path);
+          if path.exists() {
+              match fs::remove_file(path) {
+                  Ok(_) => {
+                      removed.push(binary_path);
+                  }
+                  Err(e) => {
+                      // 检查是否是权限错误
+                      if e.kind() == std::io::ErrorKind::PermissionDenied {
+                          need_sudo.push(binary_path);
+                      } else {
+                          return Err(anyhow::anyhow!(
+                              "Failed to remove binary file: {}: {}",
+                              binary_path,
+                              e
+                          ));
+                      }
+                  }
+              }
+          }
+      }
+
+      Ok((removed, need_sudo))
+  }
+
+  /// 删除所有 Workflow CLI TOML 配置文件
+  ///
+  /// 这会删除 workflow.toml 和 jira-users.toml。
+  ///
+  /// # 返回
+  ///
+  /// 返回成功删除的文件列表。
+  ///
+  /// # 错误
+  ///
+  /// 如果删除文件时出错，返回相应的错误信息。
+  fn remove_config_files() -> Result<Vec<String>> {
+      let mut removed = Vec::new();
+
+      // 删除 workflow.toml
+      if let Ok(workflow_config_path) = Paths::workflow_config() {
+          if workflow_config_path.exists() {
+              fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
+              removed.push("workflow.toml".to_string());
+          }
+      }
+
+      // 删除 jira-users.toml
+      if let Ok(jira_users_config_path) = Paths::jira_users_config() {
+          if jira_users_config_path.exists() {
+              fs::remove_file(&jira_users_config_path)
+                  .context("Failed to remove jira-users.toml")?;
+              removed.push("jira-users.toml".to_string());
+          }
+      }
+
+      Ok(removed)
+  }
 }

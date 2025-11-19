@@ -112,7 +112,8 @@ class Workflow < Formula
 
       # 运行 install 命令来安装 completions
       # 使用 system 命令，但捕获错误并提供更好的反馈
-      result = system(install_binary.to_s)
+      # 参考 Makefile: ./target/release/install --completions
+      result = system(install_binary.to_s, "--completions")
 
       if result
         ohai "Shell completions installed successfully"
@@ -121,9 +122,9 @@ class Workflow < Formula
         exit_code = $?.exitstatus || 1
         opoo "Failed to install shell completions (exit code: #{exit_code})"
         opoo "You can manually install completions by running:"
-        opoo "  #{install_binary}"
+        opoo "  #{install_binary} --completions"
         opoo "Or use the workflow command:"
-        opoo "  workflow install"
+        opoo "  workflow update"
       end
     else
       opoo "Install binary not found at #{install_binary}"

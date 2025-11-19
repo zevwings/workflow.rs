@@ -9,8 +9,8 @@
 use anyhow::Result;
 
 use super::models::{JiraAttachment, JiraIssue, JiraUser};
-use super::ticket;
-use super::users;
+use super::ticket::JiraTicket;
+use super::users::JiraUsers;
 
 /// Jira REST API 客户端
 ///
@@ -28,7 +28,7 @@ impl JiraClient {
     ///
     /// 返回 `JiraUser` 结构体，包含用户的 `account_id`、`display_name` 和 `email_address`。
     pub fn get_user_info() -> Result<JiraUser> {
-        users::get_user_info()
+        JiraUsers::get()
     }
 
     /// 获取 ticket 信息
@@ -47,7 +47,7 @@ impl JiraClient {
     ///
     /// 返回 `JiraIssue` 结构体，包含 ticket 的所有信息。
     pub fn get_ticket_info(ticket: &str) -> Result<JiraIssue> {
-        ticket::get_ticket_info(ticket)
+        JiraTicket::get_info(ticket)
     }
 
     /// 获取 ticket 的附件列表
@@ -62,7 +62,7 @@ impl JiraClient {
     ///
     /// 返回附件列表，如果没有附件则返回空列表。
     pub fn get_attachments(ticket: &str) -> Result<Vec<JiraAttachment>> {
-        ticket::get_attachments(ticket)
+        JiraTicket::get_attachments(ticket)
     }
 
     /// 更新 ticket 状态
@@ -75,7 +75,7 @@ impl JiraClient {
     /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
     /// * `status` - 目标状态名称，如 `"In Progress"`、`"Done"` 等
     pub fn move_ticket(ticket: &str, status: &str) -> Result<()> {
-        ticket::move_ticket(ticket, status)
+        JiraTicket::transition(ticket, status)
     }
 
     /// 分配 ticket 给用户
@@ -87,7 +87,7 @@ impl JiraClient {
     /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
     /// * `assignee` - 被分配用户的 account_id，如果为 `None` 则分配给当前用户
     pub fn assign_ticket(ticket: &str, assignee: Option<&str>) -> Result<()> {
-        ticket::assign_ticket(ticket, assignee)
+        JiraTicket::assign(ticket, assignee)
     }
 
     /// 添加评论到 ticket
@@ -99,6 +99,6 @@ impl JiraClient {
     /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
     /// * `comment` - 评论内容
     pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
-        ticket::add_comment(ticket, comment)
+        JiraTicket::add_comment(ticket, comment)
     }
 }

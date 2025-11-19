@@ -5,7 +5,7 @@
 //! - 文件名处理（邮箱地址清理）
 //! - 认证和 URL 构建（获取认证信息、构建基础 URL）
 
-use crate::settings::Settings;
+use crate::base::settings::Settings;
 use anyhow::Result;
 use regex::Regex;
 

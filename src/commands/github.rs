@@ -1,11 +1,11 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::git::GitConfig;
-use crate::settings::{
-    paths::ConfigPaths,
+use crate::base::settings::{
+    paths::Paths,
     settings::{GitHubAccount, Settings},
 };
+use crate::git::GitConfig;
 use crate::{
     confirm, log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value,
 };
@@ -509,7 +509,7 @@ impl GitHubCommand {
 
     /// 保存设置到 TOML 文件
     fn save_settings(settings: &Settings) -> Result<()> {
-        let workflow_config_path = ConfigPaths::workflow_config()?;
+        let workflow_config_path = Paths::workflow_config()?;
         let toml_content =
             toml::to_string_pretty(settings).context("Failed to serialize settings to TOML")?;
         fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;

@@ -1,6 +1,6 @@
-use crate::git::Git;
+use crate::base::settings::Settings;
+use crate::git::GitRepo;
 use crate::git::RepoType;
-use crate::settings::Settings;
 use anyhow::{Context, Result};
 use regex::Regex;
 
@@ -219,7 +219,7 @@ pub fn detect_repo_type<F, T>(f: F, operation_name: &str) -> Result<T>
 where
     F: FnOnce(RepoType) -> Result<T>,
 {
-    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
+    let repo_type = GitRepo::detect_repo_type().context("Failed to detect repository type")?;
     match repo_type {
         RepoType::GitHub | RepoType::Codeup => f(repo_type),
         RepoType::Unknown => {
@@ -239,7 +239,7 @@ where
 ///
 /// 返回当前分支的 PR ID（如果存在），否则返回 None
 pub fn get_current_branch_pr_id() -> Result<Option<String>> {
-    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
+    let repo_type = GitRepo::detect_repo_type().context("Failed to detect repository type")?;
     match repo_type {
         RepoType::GitHub => {
             use super::github::GitHub;

@@ -29,11 +29,14 @@ pub use helpers::{
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
     validate_jira_ticket_format,
 };
+// 导出 models 模块的类型
+// 注意：models::JiraStatus 是数据模型（用于序列化），status::JiraStatus 是管理结构体
+// 如果需要访问数据模型，请使用 jira::models::JiraStatus
 pub use models::{
-    JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraStatus,
-    JiraTransition, JiraUser,
+    JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraTransition,
+    JiraUser,
 };
-pub use status::*;
+pub use status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig, WorkHistoryEntry};
 
 /// Jira 客户端（向后兼容别名）
 pub type Jira = JiraClient;

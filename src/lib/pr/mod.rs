@@ -2,6 +2,7 @@ pub mod codeup;
 pub mod constants;
 pub mod github;
 pub mod helpers;
+pub mod llm;
 pub mod provider;
 
 pub use codeup::Codeup;
@@ -12,4 +13,5 @@ pub use helpers::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id,
     transform_to_branch_name,
 };
+pub use llm::{PullRequestContent, PullRequestLLM};
 pub use provider::{PlatformProvider, PullRequestStatus};

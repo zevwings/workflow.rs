@@ -16,7 +16,7 @@ impl ProxyCommand {
 
         // 2. 检查环境变量中的代理设置
         let env_proxy = Proxy::check_env_proxy();
-        let shell_config_env = crate::utils::env::EnvFile::load().unwrap_or_default();
+        let shell_config_env = crate::EnvFile::load().unwrap_or_default();
 
         // 3. 显示系统代理设置
         log_success!("System proxy settings:");

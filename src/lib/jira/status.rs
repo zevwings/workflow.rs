@@ -9,6 +9,7 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -16,12 +17,12 @@ use std::path::PathBuf;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-use crate::http::{Authorization, HttpClient};
+use crate::base::http::{Authorization, HttpClient, RequestConfig};
 use crate::{log_break, log_debug, log_info, log_success};
 use dialoguer::Select;
 
 use super::helpers::{extract_jira_project, get_auth, get_base_url};
-use crate::settings::paths::ConfigPaths as SettingsConfigPaths;
+use crate::base::settings::paths::Paths;
 
 /// 项目状态配置
 ///
@@ -86,112 +87,74 @@ pub struct WorkHistoryEntry {
 /// 工作历史记录存储格式（JSON 对象，PR ID -> Entry）
 type WorkHistoryMap = HashMap<String, WorkHistoryEntry>;
 
-/// 规范化仓库 URL 为文件名
+/// Jira 状态管理（用于 PR 流程）
 ///
-/// 将仓库 URL 转换为可用于文件名的字符串。
-///
-/// # 示例
-/// ```
-/// assert_eq!(
-///     normalize_repo_to_filename("git@github.com:owner/repo.git"),
-///     "github.com-owner-repo"
-/// );
-/// assert_eq!(
-///     normalize_repo_to_filename("https://github.com/owner/repo.git"),
-///     "github.com-owner-repo"
-/// );
-/// ```
-fn normalize_repo_to_filename(repo_url: &str) -> String {
-    repo_url
-        .replace("git@", "")
-        .replace("https://", "")
-        .replace("http://", "")
-        .replace(":", "-")
-        .replace("/", "-")
-        .replace(".git", "")
-        .replace(".", "-")
-}
+/// 提供 PR 创建和合并时的状态自动更新功能，
+/// 以及工作历史记录的读写功能。
+pub struct JiraStatus;
 
-/// 获取仓库特定的工作历史文件路径
-///
-/// 根据仓库 URL 生成对应的历史文件路径。
-/// 文件存储在 `${HOME}/.workflow/work-history/` 目录下。
-///
-/// # 参数
-///
-/// * `repo_url` - 仓库 URL（如 `"git@github.com:owner/repo.git"`）
-///
-/// # 返回
-///
-/// 返回仓库特定的历史文件路径。
-///
-/// # 错误
-///
-/// 如果无法创建目录或获取路径，返回相应的错误信息。
-fn get_repo_work_history_path(repo_url: &str) -> Result<PathBuf> {
-    let history_dir = SettingsConfigPaths::work_history_dir()?;
-    let repo_id = normalize_repo_to_filename(repo_url);
-    Ok(history_dir.join(format!("{}.json", repo_id)))
-}
+impl JiraStatus {
+    /// 获取项目状态列表
+    ///
+    /// 通过 Jira REST API 获取指定项目的所有可用状态。
+    ///
+    /// # 参数
+    ///
+    /// * `project` - Jira 项目名称，如 `"PROJ"`
+    ///
+    /// # 返回
+    ///
+    /// 返回状态名称列表。
+    ///
+    /// # 错误
+    ///
+    /// 如果项目不存在、无访问权限或 API 调用失败，返回相应的错误信息。
+    pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
+        let (email, api_token) = get_auth()?;
+        let base_url = get_base_url()?;
+        let url = format!("{}/project/{}/statuses", base_url, project);
 
-/// 获取项目状态列表
-///
-/// 通过 Jira REST API 获取指定项目的所有可用状态。
-///
-/// # 参数
-///
-/// * `project` - Jira 项目名称，如 `"PROJ"`
-///
-/// # 返回
-///
-/// 返回状态名称列表。
-///
-/// # 错误
-///
-/// 如果项目不存在、无访问权限或 API 调用失败，返回相应的错误信息。
-pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
-    let (email, api_token) = get_auth()?;
-    let base_url = get_base_url()?;
-    let url = format!("{}/project/{}/statuses", base_url, project);
+        let client = HttpClient::global()?;
+        let auth = Authorization::new(&email, &api_token);
+        let config = RequestConfig::<Value, Value>::new().auth(&auth);
+        let response = client
+            .get(&url, config)
+            .context("Failed to fetch project statuses")?;
 
-    let client = HttpClient::new()?;
-    let auth = Authorization::new(&email, &api_token);
-    let response = client
-        .get::<serde_json::Value>(&url, Some(&auth), None)
-        .context("Failed to fetch project statuses")?;
-
-    if !response.is_success() {
-        // 提供更详细的错误信息
-        if response.status == 404 {
-            anyhow::bail!(
+        if !response.is_success() {
+            // 提供更详细的错误信息
+            if response.status == 404 {
+                anyhow::bail!(
                 "Project '{}' not found in Jira. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/修改打包脚本问题')",
                 project
             );
-        } else if response.status == 403 {
-            anyhow::bail!(
-                "Access denied for project '{}'. Please check your Jira API token permissions.",
-                project
-            );
-        } else {
-            anyhow::bail!(
+            } else if response.status == 403 {
+                anyhow::bail!(
+                    "Access denied for project '{}'. Please check your Jira API token permissions.",
+                    project
+                );
+            } else {
+                anyhow::bail!(
                 "Failed to fetch project statuses for '{}': HTTP {}. Please check the project name and your Jira API access.",
                 project,
                 response.status
             );
+            }
         }
-    }
 
-    // 检查响应数据是否是有效的 JSON
-    if response.data.is_null() {
-        anyhow::bail!(
+        // 解析 JSON 响应
+        let data: Value = response.as_json()?;
+
+        // 检查响应数据是否是有效的 JSON
+        if data.is_null() {
+            anyhow::bail!(
             "Empty response from Jira API for project '{}'. The project may not exist or you may not have access.",
             project
         );
-    }
+        }
 
-    // 解析状态列表（取第一个版本的 statuses）
-    let statuses = response
-        .data
+        // 解析状态列表（取第一个版本的 statuses）
+        let statuses = data
         .as_array()
         .and_then(|arr| arr.first())
         .and_then(|version| version.get("statuses"))
@@ -200,27 +163,20 @@ pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
             format!(
                 "Invalid statuses JSON structure for project '{}'. The API response format may have changed. Response: {}",
                 project,
-                serde_json::to_string_pretty(&response.data).unwrap_or_else(|_| "Unable to serialize response".to_string())
+                serde_json::to_string_pretty(&data).unwrap_or_else(|_| "Unable to serialize response".to_string())
             )
         })?;
 
-    let status_names: Vec<String> = statuses
-        .iter()
-        .filter_map(|s| s.get("name"))
-        .filter_map(|n| n.as_str())
-        .map(|s| s.to_string())
-        .collect();
+        let status_names: Vec<String> = statuses
+            .iter()
+            .filter_map(|s| s.get("name"))
+            .filter_map(|n| n.as_str())
+            .map(|s| s.to_string())
+            .collect();
 
-    Ok(status_names)
-}
+        Ok(status_names)
+    }
 
-/// Jira 状态管理（用于 PR 流程）
-///
-/// 提供 PR 创建和合并时的状态自动更新功能，
-/// 以及工作历史记录的读写功能。
-pub struct JiraStatus;
-
-impl JiraStatus {
     /// 交互式配置 Jira 状态
     ///
     /// 通过交互式界面配置指定项目的 PR 创建和合并时的目标状态。
@@ -274,7 +230,8 @@ impl JiraStatus {
 
         // 获取项目状态列表
         log_debug!("Fetching status list for project: {}", project);
-        let statuses = get_project_statuses(project).context("Failed to get project statuses")?;
+        let statuses =
+            Self::get_project_statuses(project).context("Failed to get project statuses")?;
 
         if statuses.is_empty() {
             anyhow::bail!("No statuses found for project: {}", project);
@@ -430,7 +387,7 @@ impl JiraStatus {
         repository: Option<&str>,
     ) -> Result<Option<String>> {
         let repo_url = repository.context("Repository URL is required for work history")?;
-        let repo_file = get_repo_work_history_path(repo_url)?;
+        let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
             return Ok(None);
@@ -488,7 +445,7 @@ impl JiraStatus {
         branch: Option<&str>,
     ) -> Result<()> {
         let repo_url = repository.context("Repository URL is required for work history")?;
-        let repo_file = get_repo_work_history_path(repo_url)?;
+        let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         // 读取现有配置
         let mut history_map: WorkHistoryMap = if repo_file.exists() {
@@ -553,7 +510,7 @@ impl JiraStatus {
         repository: Option<&str>,
     ) -> Result<()> {
         let repo_url = repository.context("Repository URL is required for work history")?;
-        let repo_file = get_repo_work_history_path(repo_url)?;
+        let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
             return Ok(());
@@ -606,7 +563,7 @@ impl JiraStatus {
         repository: Option<&str>,
     ) -> Result<()> {
         let repo_url = repository.context("Repository URL is required for work history")?;
-        let repo_file = get_repo_work_history_path(repo_url)?;
+        let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
             return Ok(());
@@ -659,7 +616,7 @@ impl JiraStatus {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(project: &str) -> Result<JiraStatusConfig> {
-        let config_path = SettingsConfigPaths::jira_status_config()?;
+        let config_path = Paths::jira_status_config()?;
 
         // 如果文件不存在，返回空配置
         if !config_path.exists() {
@@ -708,7 +665,7 @@ impl JiraStatus {
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(config: &JiraStatusConfig) -> Result<()> {
-        let config_path = SettingsConfigPaths::jira_status_config()?;
+        let config_path = Paths::jira_status_config()?;
 
         // 读取现有配置
         let mut status_map: JiraStatusMap = if config_path.exists() {
@@ -766,7 +723,7 @@ impl JiraStatus {
         repository: Option<&str>,
     ) -> Result<Option<WorkHistoryEntry>> {
         let repo_url = repository.context("Repository URL is required for work history")?;
-        let repo_file = get_repo_work_history_path(repo_url)?;
+        let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
             return Ok(None);
@@ -780,6 +737,48 @@ impl JiraStatus {
 
         // 查找 PR ID
         Ok(history_map.get(pull_request_id).cloned())
+    }
+
+    /// 规范化仓库 URL 为文件名
+    ///
+    /// 将仓库 URL 转换为可用于文件名的字符串。
+    ///
+    /// # 转换规则
+    ///
+    /// - `git@github.com:owner/repo.git` → `github.com-owner-repo`
+    /// - `https://github.com/owner/repo.git` → `github.com-owner-repo`
+    /// - `http://github.com/owner/repo.git` → `github.com-owner-repo`
+    fn normalize_repo_to_filename(repo_url: &str) -> String {
+        repo_url
+            .replace("git@", "")
+            .replace("https://", "")
+            .replace("http://", "")
+            .replace(":", "-")
+            .replace("/", "-")
+            .replace(".git", "")
+            .replace(".", "-")
+    }
+
+    /// 获取仓库特定的工作历史文件路径
+    ///
+    /// 根据仓库 URL 生成对应的历史文件路径。
+    /// 文件存储在 `${HOME}/.workflow/work-history/` 目录下。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_url` - 仓库 URL（如 `"git@github.com:owner/repo.git"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回仓库特定的历史文件路径。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录或获取路径，返回相应的错误信息。
+    fn get_repo_work_history_path(repo_url: &str) -> Result<PathBuf> {
+        let history_dir = Paths::work_history_dir()?;
+        let repo_id = Self::normalize_repo_to_filename(repo_url);
+        Ok(history_dir.join(format!("{}.json", repo_id)))
     }
 }
 

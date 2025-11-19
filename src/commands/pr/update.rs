@@ -1,6 +1,6 @@
 use crate::{
-    detect_repo_type, get_current_branch_pr_id, log_success, log_warning, Codeup, Git, GitHub,
-    PlatformProvider, RepoType,
+    detect_repo_type, get_current_branch_pr_id, log_success, log_warning, Codeup, GitBranch,
+    GitCommit, GitHub, GitRepo, PlatformProvider, RepoType,
 };
 use anyhow::Result;
 
@@ -15,7 +15,7 @@ impl PullRequestUpdateCommand {
     /// 根据仓库类型自动选择对应的平台实现
     pub fn update() -> Result<()> {
         // 检测仓库类型
-        let repo_type = Git::detect_repo_type()?;
+        let repo_type = GitRepo::detect_repo_type()?;
 
         // 获取当前分支的 PR 标题
         let pull_request_title = Self::get_pull_request_title(&repo_type)?;
@@ -30,12 +30,12 @@ impl PullRequestUpdateCommand {
 
         // 执行 git commit（会自动暂存所有文件）
         log_success!("Staging and committing changes...");
-        Git::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
+        GitCommit::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
 
         // 执行 git push
-        let current_branch = Git::current_branch()?;
+        let current_branch = GitBranch::current_branch()?;
         log_success!("Pushing to remote...");
-        Git::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
+        GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
         log_success!("Update completed successfully!");
         Ok(())

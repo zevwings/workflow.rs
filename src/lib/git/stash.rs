@@ -3,9 +3,15 @@ use duct::cmd;
 
 use crate::{log_success, log_warning};
 
-use super::commit::Git;
+/// Git Stash 管理
+///
+/// 提供 stash 相关的操作功能，包括：
+/// - 保存未提交的修改到 stash
+/// - 恢复 stash 中的修改
+/// - 检查是否有未合并的文件（冲突）
+pub struct GitStash;
 
-impl Git {
+impl GitStash {
     /// 保存未提交的修改到 stash
     ///
     /// 使用 `git stash push` 将当前工作区和暂存区的未提交修改保存到 stash。

@@ -8,10 +8,18 @@
 use anyhow::{Context, Result};
 use duct::cmd;
 
-use super::commit::Git;
 use super::types::RepoType;
 
-impl Git {
+/// Git 仓库管理
+///
+/// 提供仓库相关的操作功能，包括：
+/// - 检测当前目录是否为 Git 仓库
+/// - 检测远程仓库类型（GitHub、Codeup 等）
+/// - 获取远程仓库 URL
+/// - 从远程获取更新
+pub struct GitRepo;
+
+impl GitRepo {
     /// 检查是否在 Git 仓库中
     ///
     /// 使用 `git rev-parse --git-dir` 检查当前目录是否为 Git 仓库。

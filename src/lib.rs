@@ -7,37 +7,63 @@
 //! - **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
 
 // 核心库模块声明
+#[path = "lib/base/mod.rs"]
+pub mod base;
+#[path = "lib/completion/mod.rs"]
+pub mod completion;
 #[path = "lib/git/mod.rs"]
 pub mod git;
-#[path = "lib/http/mod.rs"]
-pub mod http;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
-#[path = "lib/llm/mod.rs"]
-pub mod llm;
 #[path = "lib/log/mod.rs"]
 pub mod log;
 #[path = "lib/pr/mod.rs"]
 pub mod pr;
-#[path = "lib/settings/mod.rs"]
-pub mod settings;
-#[path = "lib/utils/mod.rs"]
-pub mod utils;
+#[path = "lib/proxy/mod.rs"]
+pub mod proxy;
+#[path = "lib/rollback/mod.rs"]
+pub mod rollback;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]
 pub mod commands;
 
 // 重新导出所有公共 API，方便外部使用
-pub use git::*;
-pub use http::{Authorization, HttpClient, HttpResponse};
-pub use jira::*;
-pub use llm::*;
-pub use log::*;
+// 从 base 模块重新导出基础设施类型，保持向后兼容
+pub use base::settings::{LLMSettings, Paths, Settings};
+pub use base::util::{
+    Browser, Checksum, Clipboard, LogLevel, Logger, Unzip, confirm, mask_sensitive_value,
+};
+pub use base::{
+    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, Reload,
+};
+
+// 业务模块导出
+pub use completion::{
+    Completion, generate_all_completions, generate_pr_completion, generate_qk_completion,
+    generate_workflow_completion, get_all_completion_files, get_completion_files_for_shell,
+    get_completion_filename,
+};
+pub use git::{
+    GitBranch, GitCommit, GitConfig, GitPreCommit, GitRepo, GitStash, MergeStrategy, RepoType,
+};
+pub use jira::{
+    Jira, JiraApi, JiraAttachment, JiraClient, JiraComment, JiraComments, JiraIssue,
+    JiraIssueFields, JiraStatus, JiraStatusConfig, JiraTransition, JiraUser, ProjectStatusConfig,
+    WorkHistoryEntry, extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
+    validate_jira_ticket_format,
+};
+pub use log::{
+    LogEntry, Logs, add_entry_if_not_duplicate, calculate_dir_info, clean_dir,
+    download_from_jira, expand_path, extract_response_content, extract_url_from_line,
+    extract_zip, find_log_file, find_request_id, format_size, get_base_dir_path,
+    get_log_file_path, list_dir_contents, merge_split_zips, open_log_file, parse_log_entry,
+    search_keyword,
+};
 pub use pr::{
     detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup, GitHub,
-    PlatformProvider, TYPES_OF_CHANGES,
+    PlatformProvider, PullRequestContent, PullRequestLLM, TYPES_OF_CHANGES,
 };
-pub use settings::*;
-pub use utils::*;
+pub use proxy::{EnvFile, Proxy, ProxyDisableResult, ProxyEnableResult, ProxyInfo};
+pub use rollback::{BackupInfo, RollbackManager};

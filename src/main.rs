@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, config, github, log, proxy, setup, uninstall};
+use commands::{check, clean, config, github, log, proxy, setup, uninstall, update};
 
 use workflow::*;
 
@@ -52,6 +52,16 @@ enum Commands {
     ///
     /// 删除所有相关文件：二进制文件、补全脚本、配置文件等。
     Uninstall,
+    /// 更新 Workflow CLI
+    ///
+    /// 重新构建 release 版本并更新所有二进制文件和 shell completion 脚本。
+    Update {
+        /// 指定要更新的版本号（例如：1.1.2）
+        ///
+        /// 如果不指定，将更新到最新版本。
+        #[arg(long, short = 'v')]
+        version: Option<String>,
+    },
     /// 清理日志目录
     ///
     /// 删除整个日志下载基础目录及其所有内容。
@@ -150,6 +160,17 @@ enum GitHubSubcommand {
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
+    // 初始化日志级别（从配置文件读取，但不让 logger 模块直接依赖 Settings）
+    {
+        use crate::base::settings::Settings;
+        let config_level = Settings::get()
+            .log
+            .level
+            .as_ref()
+            .and_then(|s| s.parse::<crate::LogLevel>().ok());
+        crate::LogLevel::init(config_level);
+    }
+
     let cli = Cli::parse();
 
     match cli.command {
@@ -174,6 +195,10 @@ fn main() -> Result<()> {
         // 卸载
         Some(Commands::Uninstall) => {
             uninstall::UninstallCommand::run()?;
+        }
+        // 更新
+        Some(Commands::Update { version }) => {
+            update::UpdateCommand::update(version)?;
         }
         // 清理日志目录
         Some(Commands::Clean { dry_run, list }) => {
@@ -205,6 +230,9 @@ fn main() -> Result<()> {
             log_message!("  workflow proxy     - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup     - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
+            log_message!(
+                "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
+            );
             log_message!("\nInstallation:");
             log_message!("  Use 'install' command (built separately): install <subcommand>");
             log_message!("\nUse 'workflow <command> --help' for more information.");

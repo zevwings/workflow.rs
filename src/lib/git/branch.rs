@@ -2,8 +2,6 @@ use anyhow::{Context, Result};
 use duct::cmd;
 use std::collections::HashSet;
 
-use super::commit::Git;
-
 /// 合并策略枚举
 ///
 /// 定义不同的 Git 合并策略。
@@ -17,7 +15,18 @@ pub enum MergeStrategy {
     FastForwardOnly,
 }
 
-impl Git {
+/// Git 分支管理
+///
+/// 提供分支相关的操作功能，包括：
+/// - 获取当前分支名
+/// - 检查分支是否存在
+/// - 创建或切换分支
+/// - 获取默认分支
+/// - 合并分支
+/// - 推送和删除分支
+pub struct GitBranch;
+
+impl GitBranch {
     /// 获取当前分支名
     ///
     /// 使用 `git branch --show-current` 获取当前分支的名称。
@@ -332,14 +341,14 @@ impl Git {
     /// # 示例
     ///
     /// ```no_run
-    /// use workflow::Git;
+    /// use workflow::GitBranch;
     ///
     /// // 获取完整分支名（包含前缀）
-    /// let branches = Git::get_all_branches(false)?;
+    /// let branches = GitBranch::get_all_branches(false)?;
     /// // 返回: ["main", "zw/code-optimization", "develop", ...]
     ///
     /// // 获取基础分支名（去掉前缀）
-    /// let base_branches = Git::get_all_branches(true)?;
+    /// let base_branches = GitBranch::get_all_branches(true)?;
     /// // 返回: ["main", "code-optimization", "develop", ...]
     /// ```
     pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
@@ -418,10 +427,10 @@ impl Git {
     /// # 示例
     ///
     /// ```
-    /// use workflow::Git;
+    /// use workflow::GitBranch;
     ///
     /// let branches = vec!["zw/code-optimization".to_string(), "master".to_string()];
-    /// let base_names = Git::extract_base_branch_names(branches);
+    /// let base_names = GitBranch::extract_base_branch_names(branches);
     /// // 返回: ["code-optimization", "master"]
     /// ```
     pub fn extract_base_branch_names(branches: Vec<String>) -> Vec<String> {

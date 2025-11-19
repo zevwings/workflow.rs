@@ -8,14 +8,18 @@
 use anyhow::{Context, Result};
 use duct::cmd;
 
+use super::pre_commit::GitPreCommit;
 use crate::log_info;
 
-/// Git 操作结构体
+/// Git 提交管理
 ///
-/// 提供 Git 仓库的各种操作功能，包括提交、推送、分支管理等。
-pub struct Git;
+/// 提供提交相关的操作功能，包括：
+/// - 检查 Git 状态和工作区更改
+/// - 暂存文件（add）
+/// - 提交更改（commit）
+pub struct GitCommit;
 
-impl Git {
+impl GitCommit {
     /// 检查 Git 状态
     ///
     /// 使用 `--porcelain` 选项获取简洁、稳定的输出格式。
@@ -124,8 +128,8 @@ impl Git {
         Self::add_all().context("Failed to stage changes")?;
 
         // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
-        if !no_verify && Self::has_pre_commit() {
-            Self::run_pre_commit()?;
+        if !no_verify && GitPreCommit::has_pre_commit() {
+            GitPreCommit::run_pre_commit()?;
         }
 
         // 7. 执行提交
