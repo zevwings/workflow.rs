@@ -9,12 +9,8 @@
 
 use anyhow::{Context, Result};
 use regex::Regex;
-use serde::Serialize;
-use serde_json::Value;
 
-use crate::base::http::{Authorization, HttpClient, RequestConfig};
-
-use super::helpers::{get_auth, get_base_url};
+use super::api::issue::JiraIssueApi;
 use super::models::{JiraAttachment, JiraIssue, JiraTransition};
 
 /// Jira Ticket/Issue 操作
@@ -28,22 +24,6 @@ use super::models::{JiraAttachment, JiraIssue, JiraTransition};
 pub struct JiraTicket;
 
 impl JiraTicket {
-    /// 获取 issue URL
-    ///
-    /// 根据 ticket ID 构建完整的 issue API URL。
-    ///
-    /// # 参数
-    ///
-    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
-    ///
-    /// # 返回
-    ///
-    /// 返回完整的 issue API URL，格式：`{base_url}/issue/{ticket}`
-    fn get_issue_url(ticket: &str) -> Result<String> {
-        let base_url = get_base_url()?;
-        Ok(format!("{}/issue/{}", base_url, ticket))
-    }
-
     /// 获取 ticket 信息
     ///
     /// 从 Jira API 获取指定 ticket 的完整信息，包括：
@@ -60,27 +40,8 @@ impl JiraTicket {
     ///
     /// 返回 `JiraIssue` 结构体，包含 ticket 的所有信息。
     pub fn get_info(ticket: &str) -> Result<JiraIssue> {
-        let (email, api_token) = get_auth()?;
-        let mut url = Self::get_issue_url(ticket)?;
-
-        // 添加 fields 参数，明确请求所有需要的字段，包括附件
-        // 使用 expand=renderedFields 可以获取更多信息
-        url = format!("{}?fields=*all&expand=renderedFields", url);
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(&email, &api_token);
-        let config = RequestConfig::<Value, Value>::new().auth(&auth);
-        let response = client
-            .get(&url, config)
-            .context(format!("Failed to get ticket info: {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get ticket info: {}", response.status);
-        }
-
-        response
-            .as_json()
-            .context(format!("Failed to parse ticket info for: {}", ticket))
+        JiraIssueApi::get_issue(ticket)
+            .context(format!("Failed to get ticket info for: {}", ticket))
     }
 
     /// 从 URL 中提取附件 ID
@@ -104,10 +65,6 @@ impl JiraTicket {
     /// 解析这些链接并返回附件列表。
     fn parse_attachments_from_description(description: &str) -> Vec<JiraAttachment> {
         let mut attachments = Vec::new();
-
-        // 匹配 Jira 链接格式：# [filename|url]
-        // 例如：# [log0.txt|https://...]
-        // 使用更宽松的匹配，允许 URL 中包含各种字符（包括查询参数）
         let link_pattern = Regex::new(r#"#\s*\[([^|]+)\|([^\]]+)\]"#).unwrap();
 
         for cap in link_pattern.captures_iter(description) {
@@ -115,17 +72,11 @@ impl JiraTicket {
                 let filename = filename_match.as_str().trim().to_string();
                 let url = url_match.as_str().trim().to_string();
 
-                // 只处理看起来像文件链接的 URL（包含 attachments 或 .txt/.log 等扩展名）
                 if url.contains("attachments")
                     || filename.ends_with(".txt")
                     || filename.ends_with(".log")
                     || filename.ends_with(".zip")
                 {
-                    // 尝试从 URL 中提取附件 ID
-                    if let Some(_attachment_id) = Self::extract_attachment_id_from_url(&url) {
-                        // 附件 ID 已提取，可用于后续处理
-                    }
-
                     attachments.push(JiraAttachment {
                         filename,
                         content_url: url,
@@ -141,9 +92,7 @@ impl JiraTicket {
 
     /// 获取 ticket 的附件列表
     ///
-    /// 用于日志下载等功能。
     /// 会从 `fields.attachment` 获取附件，同时也会从描述中解析附件链接。
-    /// 对于从描述中解析出的 CloudFront URL，会尝试通过附件 ID 获取正确的 Jira API URL。
     ///
     /// # 参数
     ///
@@ -156,21 +105,9 @@ impl JiraTicket {
         let issue = Self::get_info(ticket)?;
         let mut attachments = issue.fields.attachment.unwrap_or_default();
 
-        // 从描述中解析附件链接
         if let Some(description) = &issue.fields.description {
-            let description_attachments = Self::parse_attachments_from_description(description);
-
-            // 合并附件，避免重复（基于文件名）
-            for desc_att in description_attachments {
-                // 检查是否已存在同名附件
+            for desc_att in Self::parse_attachments_from_description(description) {
                 if !attachments.iter().any(|a| a.filename == desc_att.filename) {
-                    // 如果是 CloudFront 签名 URL，直接使用原始 URL
-                    // 注意：从 CloudFront URL 提取的 ID 通常不是真正的 Jira 附件 ID
-                    // 因此我们直接使用 CloudFront URL，让下载逻辑处理认证
-                    if desc_att.content_url.contains("cloudfront.net") {
-                        // 保持原始 CloudFront URL，下载时会尝试不同的认证方式
-                    }
-
                     attachments.push(desc_att);
                 }
             }
@@ -191,43 +128,13 @@ impl JiraTicket {
     ///
     /// 返回可用的 transitions 列表，每个 transition 包含 ID 和名称。
     fn get_transitions(ticket: &str) -> Result<Vec<JiraTransition>> {
-        let (email, api_token) = get_auth()?;
-        let issue_url = Self::get_issue_url(ticket)?;
-        let url = format!("{}/transitions", issue_url);
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(&email, &api_token);
-        let config = RequestConfig::<Value, Value>::new().auth(&auth);
-        let response = client
-            .get(&url, config)
-            .context(format!("Failed to get transitions for ticket: {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!("Failed to get transitions: {}", response.status);
-        }
-
-        let data: Value = response.as_json()?;
-        let transitions = data
-            .get("transitions")
-            .and_then(|t| t.as_array())
-            .context("Invalid transitions JSON structure")?;
-
-        let result: Vec<JiraTransition> = transitions
-            .iter()
-            .filter_map(|t| {
-                let id = t.get("id")?.as_str()?.to_string();
-                let name = t.get("name")?.as_str()?.to_string();
-                Some(JiraTransition { id, name })
-            })
-            .collect();
-
-        Ok(result)
+        JiraIssueApi::get_issue_transitions(ticket)
+            .context(format!("Failed to get transitions for ticket: {}", ticket))
     }
 
     /// 更新 ticket 状态
     ///
     /// 将 ticket 的状态更新为指定的状态。
-    /// 会先获取 ticket 的可用 transitions，然后查找匹配的状态进行转换。
     ///
     /// # 参数
     ///
@@ -238,12 +145,7 @@ impl JiraTicket {
     ///
     /// 如果指定的状态不在可用 transitions 列表中，返回错误。
     pub fn transition(ticket: &str, status: &str) -> Result<()> {
-        let (email, api_token) = get_auth()?;
-
-        // 先获取可用的 transitions
         let transitions = Self::get_transitions(ticket)?;
-
-        // 查找匹配的 transition
         let transition = transitions
             .iter()
             .find(|t| t.name.eq_ignore_ascii_case(status))
@@ -252,43 +154,11 @@ impl JiraTicket {
                 status, ticket
             ))?;
 
-        let issue_url = Self::get_issue_url(ticket)?;
-        let url = format!("{}/transitions", issue_url);
-
-        #[derive(Serialize)]
-        struct TransitionRequest {
-            transition: TransitionRef,
-        }
-
-        #[derive(Serialize)]
-        struct TransitionRef {
-            id: String,
-        }
-
-        let body = TransitionRequest {
-            transition: TransitionRef {
-                id: transition.id.clone(),
-            },
-        };
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(&email, &api_token);
-        let config = RequestConfig::<_, Value>::new().body(&body).auth(&auth);
-        let response = client.post(&url, config).context(format!(
+        JiraIssueApi::transition_issue(ticket, &transition.id)
+            .context(format!(
             "Failed to move ticket {} to status {}",
             ticket, status
-        ))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to move ticket {} to status {}: {}",
-                ticket,
-                status,
-                response.status
-            );
-        }
-
-        Ok(())
+            ))
     }
 
     /// 分配 ticket 给用户
@@ -300,8 +170,6 @@ impl JiraTicket {
     /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
     /// * `assignee` - 被分配用户的 account_id，如果为 `None` 则分配给当前用户
     pub fn assign(ticket: &str, assignee: Option<&str>) -> Result<()> {
-        let (email, api_token) = get_auth()?;
-
         let assignee_account_id = match assignee {
             Some(user) => user.to_string(),
             None => {
@@ -310,38 +178,11 @@ impl JiraTicket {
             }
         };
 
-        let issue_url = Self::get_issue_url(ticket)?;
-        let url = format!("{}/assignee", issue_url);
-
-        // 使用 serde 的 rename 属性将 Rust 的 snake_case 转换为 JSON 的 camelCase
-        #[derive(Serialize)]
-        #[serde(rename_all = "camelCase")]
-        struct AssigneeRequest {
-            account_id: String,
-        }
-
-        let body = AssigneeRequest {
-            account_id: assignee_account_id.clone(),
-        };
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(&email, &api_token);
-        let config = RequestConfig::<_, Value>::new().body(&body).auth(&auth);
-        let response = client.put(&url, config).context(format!(
+        JiraIssueApi::assign_issue(ticket, &assignee_account_id)
+            .context(format!(
             "Failed to assign ticket {} to {}",
             ticket, assignee_account_id
-        ))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to assign ticket {} to {}: {}",
-                ticket,
-                assignee_account_id,
-                response.status
-            );
-        }
-
-        Ok(())
+            ))
     }
 
     /// 添加评论到 ticket
@@ -353,34 +194,7 @@ impl JiraTicket {
     /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
     /// * `comment` - 评论内容
     pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
-        let (email, api_token) = get_auth()?;
-        let issue_url = Self::get_issue_url(ticket)?;
-        let url = format!("{}/comment", issue_url);
-
-        #[derive(Serialize)]
-        struct CommentRequest {
-            body: String,
-        }
-
-        let body = CommentRequest {
-            body: comment.to_string(),
-        };
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(&email, &api_token);
-        let config = RequestConfig::<_, Value>::new().body(&body).auth(&auth);
-        let response = client
-            .post(&url, config)
-            .context(format!("Failed to add comment to ticket {}", ticket))?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Failed to add comment to ticket {}: {}",
-                ticket,
-                response.status
-            );
-        }
-
-        Ok(())
+        JiraIssueApi::add_issue_comment(ticket, comment)
+            .context(format!("Failed to add comment to ticket {}", ticket))
     }
 }

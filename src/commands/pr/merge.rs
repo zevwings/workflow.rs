@@ -1,6 +1,7 @@
 use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::jira::status::JiraStatus;
+use crate::jira::history::JiraWorkHistory;
 use crate::{
     detect_repo_type, extract_jira_ticket_id, log_break, log_info, log_success, log_warning,
     Codeup, GitBranch, GitHub, GitRepo, Jira, PlatformProvider, RepoType,
@@ -135,7 +136,7 @@ impl PullRequestMergeCommand {
 
         // 尝试从历史记录读取
         let mut jira_ticket =
-            JiraStatus::read_work_history(pull_request_id, repository.as_deref())?;
+            JiraWorkHistory::read_work_history(pull_request_id, repository.as_deref())?;
 
         // 如果历史记录中没有，尝试从 PR 标题提取
         if jira_ticket.is_none() {
@@ -156,7 +157,7 @@ impl PullRequestMergeCommand {
         }
 
         // 删除工作历史记录中的 PR ID 条目
-        JiraStatus::delete_work_history_entry(pull_request_id, repository.as_deref())?;
+        JiraWorkHistory::delete_work_history_entry(pull_request_id, repository.as_deref())?;
 
         Ok(())
     }

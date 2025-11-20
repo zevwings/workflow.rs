@@ -260,7 +260,7 @@ impl PullRequestIntegrateCommand {
         // 由于通过分支名查找 PR 比较复杂，我们采用更简单的方法：
         // 尝试通过工作历史查找 PR ID
         let remote_url = GitRepo::get_remote_url().ok();
-        if let Some(pr_id) = crate::jira::status::JiraStatus::find_pr_id_by_branch(
+        if let Some(pr_id) = crate::jira::history::JiraWorkHistory::find_pr_id_by_branch(
             source_branch,
             remote_url.as_deref(),
         )? {

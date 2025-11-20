@@ -4,6 +4,8 @@
 //! - 字符串处理（提取项目名、提取 ticket ID、验证格式）
 //! - 文件名处理（邮箱地址清理）
 //! - 认证和 URL 构建（获取认证信息、构建基础 URL）
+//!
+//! 注意：日志处理相关的辅助函数已迁移到 `jira::logs::helpers` 模块。
 
 use crate::base::settings::Settings;
 use anyhow::Result;

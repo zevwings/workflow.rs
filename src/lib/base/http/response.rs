@@ -132,6 +132,35 @@ impl HttpResponse {
         &self.body_bytes
     }
 
+    /// 确保响应是成功的，否则返回错误
+    ///
+    /// 检查 HTTP 状态码是否在成功范围内（200-299）。
+    /// 如果响应失败，返回包含状态码和响应体的错误信息。
+    ///
+    /// # 返回
+    ///
+    /// 如果响应成功，返回 `Ok(self)`；否则返回包含错误信息的 `Err`。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use crate::base::http::HttpResponse;
+    ///
+    /// let response = client.get(url, config)?;
+    /// let response = response.ensure_success()?; // 如果失败会返回错误
+    /// let data: MyType = response.as_json()?;
+    /// ```
+    pub fn ensure_success(self) -> Result<Self> {
+        if !self.is_success() {
+            anyhow::bail!(
+                "HTTP request failed with status {}: {}",
+                self.status,
+                self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string())
+            );
+        }
+        Ok(self)
+    }
+
     /// 使用指定的 Parser 解析响应（通用方法）
     ///
     /// 允许使用自定义的 Parser 来解析响应体。

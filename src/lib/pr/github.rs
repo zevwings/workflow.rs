@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 use crate::base::http::{HttpClient, HttpResponse, RequestConfig};
 use crate::base::settings::Settings;
 use crate::git::{GitBranch, GitRepo};
-use crate::jira::status::JiraStatus;
+use crate::jira::history::JiraWorkHistory;
 use crate::log_debug;
 
 use super::helpers::extract_github_repo_from_url;
@@ -338,7 +338,7 @@ impl PlatformProvider for GitHub {
         // 这可以处理已关闭或已合并的 PR
         let remote_url = GitRepo::get_remote_url().ok();
         if let Some(pr_id) =
-            JiraStatus::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
+            JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
             log_debug!(
                 "Found PR #{} for branch '{}' from work-history",

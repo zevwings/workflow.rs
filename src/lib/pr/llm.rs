@@ -7,8 +7,6 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::pr::helpers::transform_to_branch_name;
-use crate::log_debug;
-
 use crate::base::llm::{LLMClient, LLMRequestParams};
 
 /// PR 内容，包含分支名、PR 标题和描述
@@ -64,14 +62,11 @@ impl PullRequestLLM {
         let user_prompt = Self::user_prompt(commit_title, exists_branches, git_diff);
         let params = LLMRequestParams {
             system_prompt: Self::system_prompt(),
-            user_prompt: user_prompt.clone(),
+            user_prompt,
             max_tokens: 500, // 增加到 500，确保有足够空间返回完整的 JSON（包括 description）
             temperature: 0.5,
             model: String::new(), // model 会从 Settings 自动获取，这里可以留空
         };
-
-        log_debug!("LLM generate request - commit_title: {}", commit_title);
-        log_debug!("LLM generate request - user_prompt: {}", user_prompt);
 
         // 调用 LLM API
         let response = client.call(&params).with_context(|| {
@@ -80,8 +75,6 @@ impl PullRequestLLM {
                 commit_title
             )
         })?;
-
-        log_debug!("LLM generate response (raw): {}", response);
 
         // 解析响应
         Self::parse_llm_response(response).with_context(|| {
@@ -171,11 +164,6 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
                     // 尝试在最后一个换行符处截断，避免截断中间的行
                     let last_newline = truncated.rfind('\n').unwrap_or(MAX_DIFF_LENGTH);
                     let truncated_diff = &diff[..last_newline];
-                    log_debug!(
-                        "Git diff truncated from {} to {} characters",
-                        diff.len(),
-                        truncated_diff.len()
-                    );
                     format!("{}\n... (diff truncated, {} characters total)", truncated_diff, diff.len())
                 } else {
                     diff
@@ -205,7 +193,6 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
     /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_llm_response(response: String) -> Result<PullRequestContent> {
         let trimmed = response.trim();
-        log_debug!("LLM response (trimmed): {}", trimmed);
 
         // 尝试提取 JSON（可能包含 markdown 代码块）
         let json_str = if trimmed.starts_with("```json") {
@@ -221,8 +208,6 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
         } else {
             trimmed
         };
-
-        log_debug!("LLM response (extracted JSON): {}", json_str);
 
         // 解析 JSON
         let json: Value = serde_json::from_str(json_str)

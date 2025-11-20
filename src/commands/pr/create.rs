@@ -1,5 +1,6 @@
 use crate::commands::check;
 use crate::jira::status::JiraStatus;
+use crate::jira::history::JiraWorkHistory;
 use crate::{
     confirm, detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
@@ -262,8 +263,7 @@ impl PullRequestCreateCommand {
                 }
                 Err(e) => {
                     // 记录错误信息，但继续使用回退方法
-                    log_warning!("Failed to generate branch name using LLM: {}", e);
-                    log_warning!("Falling back to default branch name generation method");
+                    log_warning!("Failed to generate branch name using LLM: {}, falling back to default method", e);
                     // 回退到原来的方法（已包含前缀逻辑）
                     let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
                     (title.to_string(), branch_name, None)
@@ -707,7 +707,7 @@ impl PullRequestCreateCommand {
                 // 写入历史记录
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;
                 let repository = GitRepo::get_remote_url().ok();
-                JiraStatus::write_work_history(
+                JiraWorkHistory::write_work_history(
                     ticket,
                     &pull_request_id,
                     Some(pull_request_url),

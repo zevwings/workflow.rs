@@ -1,5 +1,4 @@
-use crate::base::settings::Settings;
-use crate::{log_debug, log_info, log_success, Logs};
+use crate::{log_debug, log_info, log_success, JiraLogs};
 use anyhow::{Context, Result};
 
 /// 下载日志命令
@@ -16,17 +15,11 @@ impl DownloadCommand {
             log_success!("Downloading logs for {}...", jira_id);
         }
 
-        let settings = Settings::get();
-        let log_output_folder_name = if !settings.log.output_folder_name.is_empty() {
-            Some(settings.log.output_folder_name.as_str())
-        } else {
-            None
-        };
-
         log_debug!("Getting attachments for {}...", jira_id);
 
-        // 调用库函数执行下载
-        let base_dir = Logs::download_from_jira(jira_id, log_output_folder_name, download_all)
+        // 创建 JiraLogs 实例并执行下载
+        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        let base_dir = logs.download_from_jira(jira_id, None, download_all)
             .context("Failed to download attachments from Jira")?;
 
         log_success!("Download completed!\n");

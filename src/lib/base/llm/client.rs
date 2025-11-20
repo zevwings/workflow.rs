@@ -106,24 +106,13 @@ impl LLMClient {
         // 转换为 HttpResponse
         let http_response = HttpResponse::from_reqwest_response(response)?;
 
-        log_debug!("LLM response: {:?}", http_response);
-        log_debug!("LLM response status: {}", http_response.status);
-        log_debug!("LLM response status text: {}", http_response.status_text);
-        log_debug!("LLM response headers: {:?}", http_response.headers);
-
         // 检查错误
         if !http_response.is_success() {
-            // 记录错误响应的 body，便于调试
-            let error_body = http_response
-                .as_text()
-                .unwrap_or_else(|_| String::from_utf8_lossy(http_response.as_bytes()).to_string());
-            log_debug!("LLM error response body: {}", error_body);
             return self.handle_error(&http_response);
         }
 
         // 解析 JSON 响应
         let data: Value = http_response.as_json()?;
-        log_debug!("LLM response data: {:?}", data);
 
         // 根据配置的响应格式提取内容
         self.extract_content(&data)

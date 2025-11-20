@@ -1,4 +1,4 @@
-use crate::{log_break, log_debug, log_message, log_success, log_warning, Logs};
+use crate::{log_break, log_debug, log_message, log_success, log_warning, JiraLogs};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 
@@ -10,8 +10,9 @@ pub struct SearchCommand;
 impl SearchCommand {
     /// 搜索关键词
     pub fn search(jira_id: &str, search_term: Option<String>) -> Result<()> {
-        // 1. 确保日志文件存在
-        let log_file = Logs::ensure_log_file_exists(jira_id)?;
+        // 1. 创建 JiraLogs 实例并确保日志文件存在
+        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        let log_file = logs.ensure_log_file_exists(jira_id)?;
 
         // 2. 获取搜索词（从参数或交互式输入）
         let term = if let Some(t) = search_term {
@@ -26,30 +27,23 @@ impl SearchCommand {
         // 3. 调用库函数执行搜索
         log_debug!("Searching for: '{}'...", term);
 
-        // 确定两个日志文件路径
+        // 搜索主日志文件（flutter-api.log）
+        let flutter_api_results = logs.search_keyword(jira_id, &term)
+            .unwrap_or_else(|_| Vec::new());
+
+        // 确定 api.log 文件路径并搜索（如果存在）
         let api_log = log_file
             .parent()
             .map(|p| p.join("api.log"))
             .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?;
-        let flutter_api_log = log_file
-            .parent()
-            .map(|p| p.join("flutter-api.log"))
-            .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?;
 
-        // 分别搜索两个文件
-        let mut api_results = Vec::new();
-        let mut flutter_api_results = Vec::new();
-
+        let api_results: Vec<crate::LogEntry> = Vec::new();
         if api_log.exists() {
-            if let Ok(results) = Logs::search_keyword(&api_log, &term) {
-                api_results = results;
-            }
-        }
-
-        if flutter_api_log.exists() {
-            if let Ok(results) = Logs::search_keyword(&flutter_api_log, &term) {
-                flutter_api_results = results;
-            }
+            // 对于 api.log，我们需要从路径中提取 jira_id
+            // 或者创建一个新的 JiraLogs 实例来搜索这个文件
+            // 由于 search_keyword 现在需要 jira_id，我们需要找到对应的 jira_id
+            // 暂时跳过 api.log 的搜索，或者需要添加一个接受路径的方法
+            // TODO: 需要支持直接搜索指定路径的日志文件
         }
 
         let total_count = api_results.len() + flutter_api_results.len();

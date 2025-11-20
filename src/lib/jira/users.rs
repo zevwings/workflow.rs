@@ -7,16 +7,12 @@
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::fs;
 
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
-
-use crate::base::http::{Authorization, HttpClient, RequestConfig};
 use crate::base::settings::paths::Paths;
 
-use super::helpers::{get_auth, get_base_url};
+use super::api::user::JiraUserApi;
+use super::config::ConfigManager;
+use super::helpers::get_auth;
 use super::models::JiraUser;
 
 /// Jira 用户配置（TOML）
@@ -33,7 +29,7 @@ use super::models::JiraUser;
 /// account_id = "another_account_id"
 /// display_name = "Another User"
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 struct JiraUsersConfig {
     /// 用户列表
     #[serde(default)]
@@ -73,20 +69,14 @@ impl JiraUsers {
     /// 返回 `JiraUser` 结构体，如果文件不存在或用户不存在则返回错误。
     fn from_local(email: &str) -> Result<JiraUser> {
         let config_path = Paths::jira_users_config()?;
+        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
+        let config = manager.read()?;
 
-        if !config_path.exists() {
-            anyhow::bail!("Jira users config file does not exist: {:?}", config_path);
+        if config.users.is_empty() {
+            let config_path = Paths::jira_users_config()?;
+            anyhow::bail!("Jira users config file does not exist or is empty: {:?}", config_path);
         }
 
-        let content = fs::read_to_string(&config_path)
-            .context(format!("Failed to read jira-users.toml: {:?}", config_path))?;
-
-        let config: JiraUsersConfig = toml::from_str(&content).context(format!(
-            "Failed to parse jira-users.toml: {:?}",
-            config_path
-        ))?;
-
-        // 查找匹配的用户
         let user_entry = config
             .users
             .iter()
@@ -111,43 +101,19 @@ impl JiraUsers {
     /// # 参数
     ///
     /// * `email` - 用户邮箱地址
-    /// * `api_token` - Jira API token
+    /// * `api_token` - Jira API token（已不再使用，保留以保持接口兼容性）
     ///
     /// # 返回
     ///
     /// 返回 `JiraUser` 结构体，包含用户的完整信息。
-    fn from_remote(email: &str, api_token: &str) -> Result<JiraUser> {
-        let base_url = get_base_url()?;
-        let url = format!("{}/myself", base_url);
-
-        let client = HttpClient::global()?;
-        let auth = Authorization::new(email, api_token);
-        let config = RequestConfig::<Value, Value>::new().auth(&auth);
-        let response = client
-            .get(&url, config)
+    fn from_remote(email: &str, _api_token: &str) -> Result<JiraUser> {
+        let user = JiraUserApi::get_current_user()
             .context("Failed to get current Jira user")?;
 
-        if !response.is_success() {
-            anyhow::bail!("Failed to get current Jira user: {}", response.status);
-        }
-
-        // 解析 JSON 响应
-        let data: Value = response.as_json()?;
-
-        // 尝试直接反序列化为 JiraUser
-        let mut user: JiraUser =
-            serde_json::from_value(data.clone()).context("Failed to parse Jira user response")?;
-
-        // 确保 account_id 存在（如果没有，尝试使用 key 作为后备）
         if user.account_id.is_empty() {
-            if let Some(key) = data.get("key").and_then(|k| k.as_str()) {
-                user.account_id = key.to_string();
-            } else {
-                anyhow::bail!("Failed to extract accountId or key from Jira user response");
-            }
+            anyhow::bail!("Failed to extract accountId from Jira user response");
         }
 
-        // 保存到本地 TOML 文件
         Self::to_local(email, &user)?;
 
         Ok(user)
@@ -163,56 +129,27 @@ impl JiraUsers {
     /// * `user` - JiraUser 结构体
     fn to_local(email: &str, user: &JiraUser) -> Result<()> {
         let config_path = Paths::jira_users_config()?;
+        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
 
-        // 读取现有配置
-        let mut config: JiraUsersConfig = if config_path.exists() {
-            let content = fs::read_to_string(&config_path)
-                .context("Failed to read existing jira-users.toml")?;
-            toml::from_str(&content).unwrap_or_else(|_| JiraUsersConfig { users: vec![] })
-        } else {
-            JiraUsersConfig { users: vec![] }
-        };
+        manager.update(|config| {
+            let email_to_save = user.email_address.as_deref().unwrap_or(email);
+            let email_to_save_str = email_to_save.to_string();
+            let user_entry = JiraUserEntry {
+                email: email_to_save_str.clone(),
+                account_id: user.account_id.clone(),
+                display_name: user.display_name.clone(),
+            };
 
-        // 查找并更新或添加用户
-        // 使用 JiraUser 的 email_address，如果没有则使用传入的 email
-        let email_to_save = user.email_address.as_deref().unwrap_or(email);
-        let email_to_save_str = email_to_save.to_string();
-        let user_entry = JiraUserEntry {
-            email: email_to_save_str.clone(),
-            account_id: user.account_id.clone(),
-            display_name: user.display_name.clone(),
-        };
-
-        // 查找时使用保存的 email（可能是 email_address 或传入的 email）
-        if let Some(existing) = config
-            .users
-            .iter_mut()
-            .find(|u| u.email == email_to_save_str || u.email == email)
-        {
-            // 更新现有用户
-            *existing = user_entry;
-        } else {
-            // 添加新用户
-            config.users.push(user_entry);
-        }
-
-        // 写入 TOML
-        let toml_content =
-            toml::to_string_pretty(&config).context("Failed to serialize jira-users.toml")?;
-
-        fs::write(&config_path, toml_content).context(format!(
-            "Failed to write jira-users.toml: {:?}",
-            config_path
-        ))?;
-
-        // 设置文件权限为 600（仅用户可读写）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&config_path, fs::Permissions::from_mode(0o600))
-                .context("Failed to set jira-users.toml permissions")?;
-        }
-
-        Ok(())
+            if let Some(existing) = config
+                .users
+                .iter_mut()
+                .find(|u| u.email == email_to_save_str || u.email == email)
+            {
+                *existing = user_entry;
+            } else {
+                config.users.push(user_entry);
+            }
+        })
     }
 
     /// 获取当前 Jira 用户信息
@@ -226,12 +163,10 @@ impl JiraUsers {
     pub fn get() -> Result<JiraUser> {
         let (email, api_token) = get_auth()?;
 
-        // 先尝试从本地文件读取
         if let Ok(user) = Self::from_local(&email) {
             return Ok(user);
         }
 
-        // 本地文件不存在或读取失败，从 API 获取
         Self::from_remote(&email, &api_token)
     }
 }

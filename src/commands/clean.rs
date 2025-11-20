@@ -5,7 +5,7 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容
 
-use crate::{log_break, log_info, log_success, Logs};
+use crate::{log_break, log_info, log_success, JiraLogs};
 use anyhow::{Context, Result};
 
 /// 清理命令
@@ -27,9 +27,10 @@ impl CleanCommand {
             log_info!("Cleaning base directory...");
         }
 
-        // 调用库函数执行清理
-        let base_dir = Logs::get_base_dir_path().context("Failed to get base directory path")?;
-        let deleted = Logs::clean_dir(&base_dir, "the entire base directory", dry_run, list_only)
+        // 创建 JiraLogs 实例并执行清理
+        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        // 使用空字符串作为 jira_id 来清理整个基础目录
+        let deleted = logs.clean_dir("", dry_run, list_only)
             .context("Failed to clean base directory")?;
 
         if deleted {

@@ -53,9 +53,20 @@ src/
     │   └── response.rs     # HTTP 响应类型定义
     ├── jira/               # Jira API 集成
     │   ├── mod.rs          # Jira 模块声明
-    │   ├── client.rs       # Jira REST API 客户端
+    │   ├── api/            # API 方法子模块
+    │   │   ├── http_client.rs  # JiraHttpClient (HTTP 层)
+    │   │   ├── issue.rs    # Issue/Ticket 相关 API
+    │   │   ├── user.rs     # 用户相关 API
+    │   │   └── project.rs  # 项目相关 API
+    │   ├── config.rs       # ConfigManager (TOML 配置管理器)
+    │   ├── client.rs       # JiraClient 包装器（向后兼容）
     │   ├── helpers.rs      # Jira 辅助函数（项目提取等）
-    │   └── status.rs       # 状态配置和工作历史管理
+    │   ├── models.rs       # 数据模型定义
+    │   ├── users.rs        # 用户信息管理
+    │   ├── ticket.rs       # Ticket/Issue 操作
+    │   ├── status.rs       # 状态管理
+    │   ├── history.rs      # 工作历史记录管理
+    │   └── logs/           # 日志处理模块
     ├── pr/                 # PR 相关功能
     │   ├── mod.rs          # PR 模块声明
     │   ├── github.rs       # GitHub PR 实现

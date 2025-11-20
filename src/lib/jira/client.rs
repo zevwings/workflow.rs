@@ -21,8 +21,7 @@ pub struct JiraClient;
 impl JiraClient {
     /// 获取当前 Jira 用户信息
     ///
-    /// 先检查本地缓存（`${HOME}/.workflow/users/${email}.json`），
-    /// 如果缓存不存在或读取失败，则从 Jira API 获取并保存到本地。
+    /// 先检查本地缓存，如果缓存不存在或读取失败，则从 Jira API 获取并保存到本地。
     ///
     /// # 返回
     ///

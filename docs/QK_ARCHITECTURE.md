@@ -32,65 +32,68 @@ src/commands/qk/
 - 解析命令参数
 - 处理用户交互（输入、选择等）
 - 格式化输出
-- 调用核心业务逻辑层 (`lib/log/`) 的功能
+- 调用核心业务逻辑层 (`lib/jira/logs/`) 的功能
 
-### 核心业务逻辑层 (`lib/log/`)
+### 核心业务逻辑层 (`lib/jira/logs/`)
 
 ```
-src/lib/log/
-├── mod.rs          # 日志模块声明和统一导出（107 行）
-├── utils.rs        # 通用工具函数（86 行）
-├── parse.rs        # 日志解析模块（52 行）
-├── extract.rs      # URL 提取模块（51 行）
-├── zip.rs          # Zip 文件处理模块（123 行）
-├── download.rs     # 下载模块（432 行）
-├── find.rs         # 查找模块（198 行）
-├── search.rs       # 搜索模块（109 行）
-└── clean.rs        # 清理模块（102 行）
+src/lib/jira/logs/
+├── mod.rs          # JiraLogs 结构体定义和构造方法 (66行)
+├── constants.rs    # 常量定义 (33行)
+├── helpers.rs      # 日志处理辅助函数 (178行)
+├── path.rs         # 路径管理功能 (135行)
+├── download.rs     # 下载功能 (450行)
+├── search.rs       # 搜索和查找功能 (187行)
+├── zip.rs          # ZIP 处理功能 (131行)
+└── clean.rs        # 清理功能 (103行)
 ```
 
 **模块职责**：
 
-- **`utils.rs`**：通用工具函数
-  - `expand_path()` - 展开路径字符串（支持 ~ 和 ~/ 格式）
-  - `open_log_file()` - 打开日志文件并返回 BufReader
-  - `format_size()` - 格式化文件大小（B, KB, MB, GB, TB）
-  - `calculate_dir_info()` - 计算目录大小和文件数量
-  - `list_dir_contents()` - 列出目录内容（递归，最大深度 3）
+- **`mod.rs`**：主结构体
+  - `JiraLogs` 结构体定义
+  - `new()` - 创建 JiraLogs 实例，初始化配置和 HTTP 客户端
 
-- **`parse.rs`**：日志解析模块
+- **`constants.rs`**：常量定义
+  - 定义所有模块共享的常量（文件夹名称、文件扩展名等）
+
+- **`helpers.rs`**：辅助函数
   - `LogEntry` 结构体定义
+  - `extract_url_from_line()` - 从行中提取 URL
   - `parse_log_entry()` - 解析日志条目
-  - `add_entry_if_not_duplicate()` - 添加条目到结果列表（去重）
+  - `expand_path()` - 展开路径字符串
+  - `open_log_file()` - 打开日志文件
+  - `format_size()` - 格式化文件大小
+  - `calculate_dir_info()` - 计算目录信息
+  - `list_dir_contents()` - 列出目录内容
 
-- **`extract.rs`**：URL 提取模块
-  - `extract_url_from_line()` - 从日志行中提取 URL
-
-- **`zip.rs`**：Zip 文件处理模块
-  - `merge_split_zips()` - 合并分片 zip 文件
-  - `extract_zip()` - 解压 zip 文件
-
-- **`download.rs`**：下载模块
-  - `download_from_jira()` - 从 Jira ticket 下载日志附件
-
-- **`find.rs`**：查找模块
-  - `find_request_id()` - 从日志文件中搜索请求 ID
-  - `extract_response_content()` - 提取日志条目的响应内容
-  - `get_log_file_path()` - 获取日志文件路径
-  - `find_log_file()` - 查找日志文件
-
-- **`search.rs`**：搜索模块
-  - `search_keyword()` - 在日志文件中搜索关键词
-
-- **`clean.rs`**：清理模块
-  - `clean_dir()` - 清理目录的通用实现
+- **`path.rs`**：路径管理
   - `get_base_dir_path()` - 获取基础目录路径
+  - `get_log_file_path()` - 获取日志文件路径（自动解析）
+  - `ensure_log_file_exists()` - 确保日志文件存在
+
+- **`download.rs`**：下载功能
+  - `download_from_jira()` - 从 Jira 下载日志附件
+
+- **`search.rs`**：搜索和查找
+  - `find_request_id()` - 查找请求 ID
+  - `extract_response_content()` - 提取响应内容
+  - `search_keyword()` - 搜索关键词
+
+- **`zip.rs`**：ZIP 处理
+  - `merge_split_zips()` - 合并分片 ZIP 文件
+  - `extract_zip()` - 解压 ZIP 文件
+
+- **`clean.rs`**：清理功能
+  - `clean_dir()` - 清理指定目录
 
 **设计特点**：
+- 统一接口：所有功能通过 `JiraLogs` 实例方法访问
 - 模块化设计，职责清晰
-- 使用 `Logs` 结构体统一导出，保持 `Logs::xxx()` 调用方式
-- 正则表达式使用 `OnceLock` 缓存，提升性能
-- 通用工具函数与业务逻辑分离
+- 状态缓存：缓存配置和 HTTP 客户端，提升性能
+- 向后兼容：路径解析支持新旧位置自动查找
+
+**详细架构文档**：参见 [JIRA_ARCHITECTURE.md](./JIRA_ARCHITECTURE.md) 中的日志处理模块部分
 
 ### 依赖模块
 
@@ -111,7 +114,7 @@ bin/qk.rs (CLI 入口，参数解析)
   ↓
 commands/qk/*.rs (命令封装层，处理交互)
   ↓
-lib/log/*.rs (核心业务逻辑层，模块化)
+lib/jira/logs/*.rs (核心业务逻辑层，模块化)
   ↓
 lib/jira/, lib/utils/ 等 (依赖模块)
 ```
@@ -130,8 +133,8 @@ commands/qk/download.rs::DownloadCommand::download()
   1. 根据 download_all 参数显示不同的提示信息
   2. 加载 Settings
   3. 获取 log_output_folder_name 配置
-  4. 调用 Logs::download_from_jira()
-     ├─ download.rs::download_from_jira()
+  4. 调用 JiraLogs::download_from_jira()
+     ├─ download.rs::JiraLogs::download_from_jira()
      │   ├─ 确定输出目录（使用 utils::expand_path()）
      │   ├─ 创建目录结构
      │   ├─ Jira::get_attachments() 获取附件列表
@@ -169,11 +172,11 @@ commands/qk/download.rs::DownloadCommand::download()
    - 根据 `download_all_attachments` 参数过滤附件
 
 2. **分片合并**：
-   - 使用 `Logs::merge_split_zips()` → `zip::merge_split_zips()` 合并分片文件
+   - 使用 `JiraLogs::merge_split_zips()` → `zip::merge_split_zips()` 合并分片文件
    - 支持标准 zip 分片格式（.z01, .z02 等）
 
 3. **文件解压**：
-   - 使用 `Logs::extract_zip()` → `zip::extract_zip()` 解压合并后的 zip 文件
+   - 使用 `JiraLogs::extract_zip()` → `zip::extract_zip()` 解压合并后的 zip 文件
    - 解压到配置的文件夹名称或 `merged/` 子目录
 
 ---
@@ -187,10 +190,10 @@ bin/qk.rs::QkCommands::Find
   ↓
 commands/qk/find.rs::FindCommand::find_request_id()
   ↓
-  1. Logs::get_log_file_path() → find::get_log_file_path() 获取日志文件路径
+  1. JiraLogs::get_log_file_path() → path::get_log_file_path() 获取日志文件路径
   2. 检查日志文件是否存在
   3. 获取请求 ID（参数提供或交互式输入）
-  4. 调用 Logs::extract_response_content() → find::extract_response_content()
+  4. 调用 JiraLogs::extract_response_content() → search::extract_response_content()
      ├─ find::find_request_id() 查找请求 ID 并获取日志条目信息
      ├─ 读取日志文件，定位到请求 ID 对应的响应块
      ├─ 提取响应内容（从响应块开始到下一个请求或文件结束）
@@ -234,10 +237,10 @@ bin/qk.rs::QkCommands::Search
   ↓
 commands/qk/search.rs::SearchCommand::search()
   ↓
-  1. Logs::get_log_file_path() → find::get_log_file_path() 获取日志文件路径
+  1. JiraLogs::get_log_file_path() → path::get_log_file_path() 获取日志文件路径
   2. 检查日志文件是否存在
   3. 获取搜索词（参数提供或交互式输入）
-  4. 调用 Logs::search_keyword() → search::search_keyword()
+  4. 调用 JiraLogs::search_keyword() → search::search_keyword()
      ├─ utils::open_log_file() 打开日志文件
      ├─ 逐行读取日志文件
      ├─ 识别日志条目（使用 parse::parse_log_entry()）
@@ -293,8 +296,8 @@ commands/qk/clean.rs::CleanCommand::clean()
      - list_only: 列出目录内容
      - dry_run: 预览清理操作
      - 正常: 执行清理操作
-  2. 调用 Logs::get_base_dir_path() → clean::get_base_dir_path() 获取基础目录
-  3. 调用 Logs::clean_dir() → clean::clean_dir()
+  2. 调用 JiraLogs::get_base_dir_path() → path::get_base_dir_path() 获取基础目录
+  3. 调用 JiraLogs::clean_dir() → clean::clean_dir()
      ├─ utils::calculate_dir_info() 计算目录大小和文件数量
      ├─ utils::list_dir_contents() 列出目录内容
      ├─ list_only: 只列出目录内容
@@ -317,7 +320,7 @@ commands/qk/clean.rs::CleanCommand::clean()
 ### 关键步骤说明
 
 1. **路径解析**：
-   - 使用 `Logs::get_base_dir_path()` → `clean::get_base_dir_path()` 获取基础目录路径
+   - 使用 `JiraLogs::get_base_dir_path()` → `path::get_base_dir_path()` 获取基础目录路径
    - 根据 JIRA ID 构建目标目录路径
 
 2. **操作模式**：
@@ -352,7 +355,7 @@ commands/qk/info.rs::InfoCommand::show()
    - 显示基本信息、描述、附件、评论等
 
 2. **格式化显示**：
-   - 格式化文件大小显示（使用 `Logs::format_size()`）
+   - 格式化文件大小显示（使用 `helpers::format_size()`）
    - 清晰的分类展示
 
 ### 关键步骤说明
@@ -363,7 +366,7 @@ commands/qk/info.rs::InfoCommand::show()
 
 2. **附件列表**：
    - 显示所有附件的文件名和大小
-   - 使用 `Logs::format_size()` 格式化文件大小（B, KB, MB, GB, TB）
+   - 使用 `helpers::format_size()` 格式化文件大小（B, KB, MB, GB, TB）
 
 ---
 
@@ -465,11 +468,11 @@ parse::add_entry_if_not_duplicate() 收集匹配的 LogEntry (ID + URL)
 - `CleanCommand::clean()` - 清理日志目录
 - `InfoCommand::show()` - 显示 ticket 信息
 
-**核心业务逻辑层（Commands → Logs）**：
-`Logs` 结构体作为统一接口，保持向后兼容：
-- 所有方法都通过 `Logs::xxx()` 调用（如 `Logs::download_from_jira()`）
-- 内部转发到对应的模块函数（如 `download::download_from_jira()`）
-- 允许未来逐步优化内部实现而不影响外部 API
+**核心业务逻辑层（Commands → JiraLogs）**：
+`JiraLogs` 结构体作为统一接口：
+- 所有方法都通过 `JiraLogs::xxx()` 调用（如 `JiraLogs::download_from_jira()`）
+- 所有方法都是 `impl JiraLogs`，直接访问结构体的状态和配置
+- 提供统一的 API，自动处理路径解析和配置管理
 
 **完整调用链示例**：
 ```
@@ -477,18 +480,19 @@ bin/qk.rs::DownloadCommand::download()
   ↓
 commands/qk/download.rs::DownloadCommand::download()
   ↓
-lib/log/mod.rs::Logs::download_from_jira()
+lib/jira/logs/mod.rs::JiraLogs::download_from_jira()
   ↓
-lib/log/download.rs::download_from_jira()
+lib/jira/logs/download.rs::JiraLogs::download_from_jira()
 ```
 
 ### 3. 模块化设计
 
 核心业务逻辑按功能拆分为多个模块：
-- **工具层**：`utils.rs` - 通用工具函数
-- **解析层**：`parse.rs`, `extract.rs` - 日志解析和 URL 提取
-- **功能层**：`download.rs`, `find.rs`, `search.rs`, `clean.rs` - 具体功能实现
-- **处理层**：`zip.rs` - Zip 文件处理
+- **配置层**：`mod.rs` - JiraLogs 结构体定义和构造
+- **工具层**：`helpers.rs` - 日志处理辅助函数
+- **功能层**：`path.rs`, `download.rs`, `search.rs`, `clean.rs` - 具体功能实现
+- **处理层**：`zip.rs` - ZIP 文件处理
+- **常量层**：`constants.rs` - 常量定义
 
 ### 4. 性能优化
 
@@ -531,12 +535,12 @@ lib/log/download.rs::download_from_jira()
 
 ### 添加新的日志格式支持
 
-1. 在 `lib/log/parse.rs` 中添加新的日志格式解析逻辑
-2. 在 `lib/log/extract.rs` 中更新 URL 提取逻辑
+1. 在 `lib/jira/logs/helpers.rs` 中添加新的日志格式解析逻辑
+2. 在 `lib/jira/logs/helpers.rs` 中更新 URL 提取逻辑
 
 ### 添加新的搜索功能
 
-1. 在 `lib/log/search.rs` 中添加新的搜索方法
+1. 在 `lib/jira/logs/search.rs` 中添加新的搜索方法
 2. 在命令层添加对应的命令实现
 
 ---

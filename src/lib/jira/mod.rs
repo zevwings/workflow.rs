@@ -12,23 +12,31 @@
 //! - `client` - JiraClient 包装器，提供向后兼容的 API
 //! - `users` - 用户相关 API（获取用户信息、本地缓存）
 //! - `ticket` - Ticket/Issue 相关 API（查询、更新、分配、评论）
-//! - `status` - 状态管理（项目状态获取、状态配置、工作历史）
+//! - `status` - 状态管理（项目状态获取、状态配置）
+//! - `history` - 工作历史记录管理（PR 创建/合并记录）
 //! - `models` - 数据模型定义
 //! - `helpers` - 辅助函数（字符串处理、认证、URL 构建）
 
+pub mod api;
 pub mod client;
+pub mod config;
 pub mod helpers;
+pub mod logs;
 pub mod models;
 pub mod status;
 pub mod ticket;
 pub mod users;
+pub mod history;
 
 // 重新导出所有公共 API，保持向后兼容
+pub use api::{JiraHttpClient, JiraIssueApi, JiraProjectApi, JiraUserApi};
 pub use client::JiraClient;
+pub use config::ConfigManager;
 pub use helpers::{
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
     validate_jira_ticket_format,
 };
+pub use logs::{JiraLogs, LogEntry};
 // 导出 models 模块的类型
 // 注意：models::JiraStatus 是数据模型（用于序列化），status::JiraStatus 是管理结构体
 // 如果需要访问数据模型，请使用 jira::models::JiraStatus
@@ -36,7 +44,8 @@ pub use models::{
     JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraTransition,
     JiraUser,
 };
-pub use status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig, WorkHistoryEntry};
+pub use status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
+pub use history::{JiraWorkHistory, WorkHistoryEntry};
 
 /// Jira 客户端（向后兼容别名）
 pub type Jira = JiraClient;
@@ -44,7 +53,3 @@ pub type Jira = JiraClient;
 /// Jira API（向后兼容别名）
 pub type JiraApi = JiraClient;
 
-// 为了向后兼容，保留旧的模块路径别名
-// 注意：这些别名用于 `config::`、`jira::` 等使用场景
-#[allow(deprecated)]
-pub use status as config;

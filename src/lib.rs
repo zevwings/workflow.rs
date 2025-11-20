@@ -15,8 +15,6 @@ pub mod completion;
 pub mod git;
 #[path = "lib/jira/mod.rs"]
 pub mod jira;
-#[path = "lib/log/mod.rs"]
-pub mod log;
 #[path = "lib/pr/mod.rs"]
 pub mod pr;
 #[path = "lib/proxy/mod.rs"]
@@ -50,16 +48,10 @@ pub use git::{
 pub use jira::{
     Jira, JiraApi, JiraAttachment, JiraClient, JiraComment, JiraComments, JiraIssue,
     JiraIssueFields, JiraStatus, JiraStatusConfig, JiraTransition, JiraUser, ProjectStatusConfig,
-    WorkHistoryEntry, extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
-    validate_jira_ticket_format,
+    extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
+    validate_jira_ticket_format, WorkHistoryEntry,
 };
-pub use log::{
-    LogEntry, Logs, add_entry_if_not_duplicate, calculate_dir_info, clean_dir,
-    download_from_jira, expand_path, extract_response_content, extract_url_from_line,
-    extract_zip, find_log_file, find_request_id, format_size, get_base_dir_path,
-    get_log_file_path, list_dir_contents, merge_split_zips, open_log_file, parse_log_entry,
-    search_keyword,
-};
+pub use jira::{LogEntry, JiraLogs};
 pub use pr::{
     detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup, GitHub,

@@ -38,6 +38,15 @@
 - 与 Jira 和 Streamock 的集成
 - 命令使用示例
 
+### [JIRA_ARCHITECTURE.md](./JIRA_ARCHITECTURE.md)
+**Jira 模块架构文档**
+
+- 分层架构设计（HTTP 客户端层、API 方法层、业务逻辑层）
+- API 子模块（Issue、User、Project）
+- 配置管理（ConfigManager）
+- 业务功能（用户管理、Ticket 操作、状态管理、工作历史记录）
+- 日志处理模块（JiraLogs）
+
 ### [INSTALL_ARCHITECTURE.md](./INSTALL_ARCHITECTURE.md)
 **安装/卸载模块架构文档**
 
@@ -119,6 +128,7 @@
 - **2024-01** - 统一 LLM 架构文档，移除旧的实现文档（`LLM_IMPLEMENTATION.md`、`LLM_PLUGIN_ARCHITECTURE.md`、`LLM_PLUGIN_CURL.md`），保留统一的架构设计文档 `LLM_ARCHITECTURE.md`
 - **2024-01** - 添加 GitHub Actions 发布流程文档，包括 HOMEBREW_TAP_TOKEN 配置说明和自动验证机制
 - **2024-01** - 合并未实现功能到 `FUTURE_IMPROVEMENTS.md`，删除已实现的改进文档（`UPDATE_IMPROVEMENTS.md`、`COMPLETION_FILE_NAMING_ANALYSIS.md`、`INSTALL_COMPLETION_IMPROVEMENT.md`）
+- **2024-11** - 整合 Jira 模块架构文档，合并 `JIRA_LOGS_ARCHITECTURE.md` 和 `JIRA_MODULE_REFACTOR_ANALYSIS.md` 为统一的 `JIRA_ARCHITECTURE.md`
 
 ---
 
@@ -127,6 +137,7 @@
 - 想了解整体架构？ → [ARCHITECTURE.md](./ARCHITECTURE.md)
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./PR_ARCHITECTURE.md)
 - 想了解日志操作？ → [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
+- 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./JIRA_ARCHITECTURE.md)
 - 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
 - 想了解配置管理？ → [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md)
 - 想了解安装配置？ → [INSTALL_ARCHITECTURE.md](./INSTALL_ARCHITECTURE.md)
