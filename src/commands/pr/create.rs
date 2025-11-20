@@ -1,12 +1,12 @@
 use crate::commands::check;
-use crate::jira::status::JiraStatus;
 use crate::jira::history::JiraWorkHistory;
+use crate::jira::status::JiraStatus;
+use crate::pr::create_provider;
 use crate::{
-    confirm, detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
-    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
-    log_success, log_warning, validate_jira_ticket_format, Browser, Clipboard, Codeup, GitBranch,
-    GitCommit, GitHub, GitRepo, GitStash, Jira, PlatformProvider, PullRequestLLM, RepoType,
-    Settings, TYPES_OF_CHANGES,
+    confirm, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, get_current_branch_pr_id, log_info, log_success, log_warning,
+    validate_jira_ticket_format, Browser, Clipboard, GitBranch, GitCommit, GitRepo, GitStash, Jira,
+    PullRequestLLM, Settings, TYPES_OF_CHANGES,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
@@ -263,7 +263,10 @@ impl PullRequestCreateCommand {
                 }
                 Err(e) => {
                     // 记录错误信息，但继续使用回退方法
-                    log_warning!("Failed to generate branch name using LLM: {}, falling back to default method", e);
+                    log_warning!(
+                    "Failed to generate branch name using LLM: {}, falling back to default method",
+                    e
+                );
                     // 回退到原来的方法（已包含前缀逻辑）
                     let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
                     (title.to_string(), branch_name, None)
@@ -620,18 +623,8 @@ impl PullRequestCreateCommand {
 
         if let Some(pr_id) = existing_pr {
             log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
-            detect_repo_type(
-                |repo_type| match repo_type {
-                    RepoType::GitHub => GitHub::get_pull_request_url(&pr_id),
-                    RepoType::Codeup => Codeup::get_pull_request_url(&pr_id),
-                    RepoType::Unknown => {
-                        anyhow::bail!(
-                            "Unknown repository type. Only GitHub and Codeup are supported."
-                        );
-                    }
-                },
-                "get pull request URL",
-            )
+            let provider = create_provider()?;
+            provider.get_pull_request_url(&pr_id)
         } else {
             // 分支无 PR，创建新 PR
             // 先检查分支是否有提交（相对于默认分支）
@@ -652,24 +645,10 @@ impl PullRequestCreateCommand {
                 );
             }
 
-            let pull_request_url = detect_repo_type(
-                |repo_type| match repo_type {
-                    RepoType::GitHub => {
-                        log_success!("Creating PR via GitHub...");
-                        GitHub::create_pull_request(pr_title, pull_request_body, branch_name, None)
-                    }
-                    RepoType::Codeup => {
-                        log_success!("Creating PR via Codeup...");
-                        Codeup::create_pull_request(pr_title, pull_request_body, branch_name, None)
-                    }
-                    RepoType::Unknown => {
-                        anyhow::bail!(
-                            "Unknown repository type. Only GitHub and Codeup are supported."
-                        );
-                    }
-                },
-                "create pull request",
-            )?;
+            let provider = create_provider()?;
+            log_success!("Creating PR...");
+            let pull_request_url =
+                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)

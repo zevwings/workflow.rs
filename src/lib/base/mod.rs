@@ -18,5 +18,5 @@ pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConf
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload};
 pub use util::{
-    Browser, Checksum, Clipboard, LogLevel, Logger, Unzip, confirm, mask_sensitive_value,
+    confirm, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger, Unzip,
 };

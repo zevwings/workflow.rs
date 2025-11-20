@@ -155,7 +155,8 @@ impl HttpResponse {
             anyhow::bail!(
                 "HTTP request failed with status {}: {}",
                 self.status,
-                self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string())
+                self.as_text()
+                    .unwrap_or_else(|_| "Unable to read response body".to_string())
             );
         }
         Ok(self)

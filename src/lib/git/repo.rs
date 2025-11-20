@@ -7,8 +7,8 @@
 
 use anyhow::{Context, Result};
 
-use super::types::RepoType;
 use super::helpers::{check_success, cmd_read, cmd_run};
+use super::types::RepoType;
 
 /// Git 仓库管理
 ///

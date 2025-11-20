@@ -19,7 +19,8 @@ impl DownloadCommand {
 
         // 创建 JiraLogs 实例并执行下载
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let base_dir = logs.download_from_jira(jira_id, None, download_all)
+        let base_dir = logs
+            .download_from_jira(jira_id, None, download_all)
             .context("Failed to download attachments from Jira")?;
 
         log_success!("Download completed!\n");

@@ -368,19 +368,15 @@ impl LLMClient {
                     .get("error")
                     .and_then(|e| e.get("message"))
                     .and_then(|m| m.as_str())
-                    .or_else(|| {
-                        error_json
-                            .get("error")
-                            .and_then(|e| e.as_str())
-                    })
-                    .or_else(|| {
-                        error_json
-                            .get("message")
-                            .and_then(|m| m.as_str())
-                    });
+                    .or_else(|| error_json.get("error").and_then(|e| e.as_str()))
+                    .or_else(|| error_json.get("message").and_then(|m| m.as_str()));
 
                 if let Some(detail) = error_detail {
-                    format!("{} (details: {})", serde_json::to_string(&error_json).unwrap_or_default(), detail)
+                    format!(
+                        "{} (details: {})",
+                        serde_json::to_string(&error_json).unwrap_or_default(),
+                        detail
+                    )
                 } else {
                     serde_json::to_string(&error_json).unwrap_or_default()
                 }

@@ -28,7 +28,8 @@ impl SearchCommand {
         log_debug!("Searching for: '{}'...", term);
 
         // 搜索主日志文件（flutter-api.log）
-        let flutter_api_results = logs.search_keyword(jira_id, &term)
+        let flutter_api_results = logs
+            .search_keyword(jira_id, &term)
             .unwrap_or_else(|_| Vec::new());
 
         // 确定 api.log 文件路径并搜索（如果存在）

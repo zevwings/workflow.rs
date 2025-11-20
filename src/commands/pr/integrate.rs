@@ -1,8 +1,8 @@
 use crate::commands::check;
+use crate::pr::create_provider;
 use crate::{
-    confirm, detect_repo_type, get_current_branch_pr_id, log_debug, log_error, log_info,
-    log_success, log_warning, Codeup, GitBranch, GitCommit, GitHub, GitRepo, GitStash,
-    PlatformProvider, RepoType,
+    confirm, get_current_branch_pr_id, log_debug, log_error, log_info, log_success, log_warning,
+    GitBranch, GitCommit, GitRepo, GitStash,
 };
 use anyhow::{Context, Result};
 
@@ -267,17 +267,8 @@ impl PullRequestIntegrateCommand {
             log_debug!("Found PR #{} for source branch '{}'", pr_id, source_branch);
             log_info!("Closing PR #{}...", pr_id);
 
-            match detect_repo_type(
-                |repo_type| match repo_type {
-                    RepoType::GitHub => GitHub::close_pull_request(&pr_id),
-                    RepoType::Codeup => Codeup::close_pull_request(&pr_id),
-                    RepoType::Unknown => {
-                        log_warning!("Unknown repository type, cannot close PR");
-                        Ok(())
-                    }
-                },
-                "close pull request",
-            ) {
+            let provider = create_provider()?;
+            match provider.close_pull_request(&pr_id) {
                 Ok(()) => {
                     log_success!("PR #{} closed successfully", pr_id);
                     Ok(true)

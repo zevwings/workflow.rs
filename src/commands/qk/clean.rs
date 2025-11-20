@@ -19,7 +19,8 @@ impl CleanCommand {
 
         // 创建 JiraLogs 实例并执行清理
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let deleted = logs.clean_dir(jira_id, dry_run, list_only)
+        let deleted = logs
+            .clean_dir(jira_id, dry_run, list_only)
             .context("Failed to clean logs directory")?;
 
         if deleted {

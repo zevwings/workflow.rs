@@ -175,4 +175,3 @@ pub(crate) fn list_dir_contents(dir: &Path) -> Result<Vec<PathBuf>> {
 
     Ok(contents)
 }
-

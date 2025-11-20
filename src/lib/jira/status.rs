@@ -59,7 +59,6 @@ type JiraStatusMap = HashMap<String, ProjectStatusConfig>;
 pub struct JiraStatus;
 
 impl JiraStatus {
-
     /// 交互式配置 Jira 状态
     ///
     /// 通过交互式界面配置指定项目的 PR 创建和合并时的目标状态。
@@ -267,7 +266,6 @@ impl JiraStatus {
             );
         })
     }
-
 }
 
 #[cfg(test)]

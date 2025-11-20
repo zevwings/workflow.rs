@@ -58,7 +58,10 @@ impl JiraLogs {
                 jira_id, self.output_folder_name, DEFAULT_OUTPUT_FOLDER
             ))
         } else {
-            home_path.join(format!("Downloads/logs_{}/{}", jira_id, DEFAULT_OUTPUT_FOLDER))
+            home_path.join(format!(
+                "Downloads/logs_{}/{}",
+                jira_id, DEFAULT_OUTPUT_FOLDER
+            ))
         })
     }
 
@@ -74,13 +77,16 @@ impl JiraLogs {
         }
 
         // 查找 merged 或任何包含 flutter-api*.log 的目录
-        let entries = std::fs::read_dir(&old_logs_dir)
-            .context("Failed to read old logs directory")?;
+        let entries =
+            std::fs::read_dir(&old_logs_dir).context("Failed to read old logs directory")?;
 
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                let potential_log_file = path.join(format!("{}{}", FLUTTER_API_LOG_PREFIX, FLUTTER_API_LOG_SUFFIX));
+                let potential_log_file = path.join(format!(
+                    "{}{}",
+                    FLUTTER_API_LOG_PREFIX, FLUTTER_API_LOG_SUFFIX
+                ));
                 if potential_log_file.exists() {
                     return Ok(potential_log_file);
                 }
@@ -114,7 +120,8 @@ impl JiraLogs {
                 if let Ok(metadata) = entry.metadata() {
                     if metadata.is_file() {
                         if let Some(name) = entry.file_name().to_str() {
-                            return name.starts_with(FLUTTER_API_LOG_PREFIX) && name.ends_with(FLUTTER_API_LOG_SUFFIX);
+                            return name.starts_with(FLUTTER_API_LOG_PREFIX)
+                                && name.ends_with(FLUTTER_API_LOG_SUFFIX);
                         }
                     }
                 }
@@ -127,8 +134,10 @@ impl JiraLogs {
             Ok(log_file.clone())
         } else {
             // 如果没找到，返回默认路径
-            Ok(base_dir.join(format!("{}{}", FLUTTER_API_LOG_PREFIX, FLUTTER_API_LOG_SUFFIX)))
+            Ok(base_dir.join(format!(
+                "{}{}",
+                FLUTTER_API_LOG_PREFIX, FLUTTER_API_LOG_SUFFIX
+            )))
         }
     }
 }
-

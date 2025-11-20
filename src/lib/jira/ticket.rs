@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use regex::Regex;
 
 use super::api::issue::JiraIssueApi;
-use super::models::{JiraAttachment, JiraIssue, JiraTransition};
+use super::types::{JiraAttachment, JiraIssue, JiraTransition};
 
 /// Jira Ticket/Issue 操作
 ///
@@ -154,11 +154,10 @@ impl JiraTicket {
                 status, ticket
             ))?;
 
-        JiraIssueApi::transition_issue(ticket, &transition.id)
-            .context(format!(
+        JiraIssueApi::transition_issue(ticket, &transition.id).context(format!(
             "Failed to move ticket {} to status {}",
             ticket, status
-            ))
+        ))
     }
 
     /// 分配 ticket 给用户
@@ -178,11 +177,10 @@ impl JiraTicket {
             }
         };
 
-        JiraIssueApi::assign_issue(ticket, &assignee_account_id)
-            .context(format!(
+        JiraIssueApi::assign_issue(ticket, &assignee_account_id).context(format!(
             "Failed to assign ticket {} to {}",
             ticket, assignee_account_id
-            ))
+        ))
     }
 
     /// 添加评论到 ticket

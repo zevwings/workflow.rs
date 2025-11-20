@@ -42,7 +42,12 @@ impl JiraLogs {
         }
 
         // 4. 处理下载的日志（合并分片、解压）
-        self.process_downloaded_logs(&base_dir, &download_dir, &output_folder, download_all_attachments)?;
+        self.process_downloaded_logs(
+            &base_dir,
+            &download_dir,
+            &output_folder,
+            download_all_attachments,
+        )?;
 
         Ok(base_dir)
     }
@@ -214,7 +219,10 @@ impl JiraLogs {
         api_attachments_map: &HashMap<String, String>,
     ) -> Result<()> {
         // 首先尝试使用当前的 URL
-        if self.download_file(&attachment.content_url, file_path).is_ok() {
+        if self
+            .download_file(&attachment.content_url, file_path)
+            .is_ok()
+        {
             log_success!("Downloaded: {}", attachment.filename);
             return Ok(());
         }
@@ -223,7 +231,11 @@ impl JiraLogs {
             "Failed to download {} from primary URL",
             attachment.filename
         );
-        log_debug!("Warning: Failed to download {}: {}", attachment.filename, original_error);
+        log_debug!(
+            "Warning: Failed to download {}: {}",
+            attachment.filename,
+            original_error
+        );
 
         // 如果当前 URL 是 CloudFront URL，尝试多种方式
         if attachment.content_url.contains("cloudfront.net") {
@@ -306,8 +318,12 @@ impl JiraLogs {
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
                 let merged_zip = download_dir.join(MERGED_ZIP_FILENAME);
-                std::fs::copy(&log_zip, &merged_zip)
-                    .with_context(|| format!("Failed to copy {} to {}", LOG_ZIP_FILENAME, MERGED_ZIP_FILENAME))?;
+                std::fs::copy(&log_zip, &merged_zip).with_context(|| {
+                    format!(
+                        "Failed to copy {} to {}",
+                        LOG_ZIP_FILENAME, MERGED_ZIP_FILENAME
+                    )
+                })?;
             }
 
             // 解压文件
@@ -364,8 +380,9 @@ impl JiraLogs {
 
         // 判断是否是 CloudFront 签名 URL（包含 Expires 和 Signature 参数）
         // CloudFront 签名 URL 通常不需要 Basic Auth，或者 Basic Auth 会干扰签名验证
-        let is_cloudfront_signed_url =
-            url.contains("cloudfront.net") && url.contains("Expires=") && url.contains("Signature=");
+        let is_cloudfront_signed_url = url.contains("cloudfront.net")
+            && url.contains("Expires=")
+            && url.contains("Signature=");
 
         // 获取 Jira base URL 用于 Referer 头
         let jira_base_url = crate::jira::helpers::get_base_url().ok();
@@ -446,4 +463,3 @@ impl JiraLogs {
         Ok(())
     }
 }
-

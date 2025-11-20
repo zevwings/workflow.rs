@@ -35,26 +35,29 @@ impl JiraHttpClient {
     /// 如果认证信息或基础 URL 未配置，返回错误。
     pub fn global() -> Result<&'static Self> {
         static CLIENT: OnceLock<Result<JiraHttpClient>> = OnceLock::new();
-        CLIENT.get_or_init(|| {
-            let (email, api_token) = match get_auth() {
-                Ok(auth) => auth,
-                Err(e) => return Err(anyhow::anyhow!("Failed to get Jira authentication: {}", e)),
-            };
-            let base_url = match get_base_url() {
-                Ok(url) => url,
-                Err(e) => return Err(anyhow::anyhow!("Failed to get Jira base URL: {}", e)),
-            };
-            HttpClient::global()
-                .map_err(|e| anyhow::anyhow!("Failed to get HTTP client: {}", e))?;
+        CLIENT
+            .get_or_init(|| {
+                let (email, api_token) = match get_auth() {
+                    Ok(auth) => auth,
+                    Err(e) => {
+                        return Err(anyhow::anyhow!("Failed to get Jira authentication: {}", e))
+                    }
+                };
+                let base_url = match get_base_url() {
+                    Ok(url) => url,
+                    Err(e) => return Err(anyhow::anyhow!("Failed to get Jira base URL: {}", e)),
+                };
+                HttpClient::global()
+                    .map_err(|e| anyhow::anyhow!("Failed to get HTTP client: {}", e))?;
 
-            Ok(JiraHttpClient {
-                email,
-                api_token,
-                base_url,
+                Ok(JiraHttpClient {
+                    email,
+                    api_token,
+                    base_url,
+                })
             })
-        })
-        .as_ref()
-        .map_err(|e| anyhow::anyhow!("Failed to initialize JiraHttpClient: {}", e))
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("Failed to initialize JiraHttpClient: {}", e))
     }
 
     /// 执行 GET 请求
@@ -99,9 +102,7 @@ impl JiraHttpClient {
     {
         let url = format!("{}/{}", self.base_url, path);
         let auth = Authorization::new(&self.email, &self.api_token);
-        let config = RequestConfig::<Req, Value>::new()
-            .body(body)
-            .auth(&auth);
+        let config = RequestConfig::<Req, Value>::new().body(body).auth(&auth);
         let http_client = HttpClient::global()?;
         let response = http_client
             .post(&url, config)
@@ -128,9 +129,7 @@ impl JiraHttpClient {
     {
         let url = format!("{}/{}", self.base_url, path);
         let auth = Authorization::new(&self.email, &self.api_token);
-        let config = RequestConfig::<Req, Value>::new()
-            .body(body)
-            .auth(&auth);
+        let config = RequestConfig::<Req, Value>::new().body(body).auth(&auth);
         let http_client = HttpClient::global()?;
         let response = http_client
             .put(&url, config)
@@ -140,4 +139,3 @@ impl JiraHttpClient {
         response.as_json()
     }
 }
-

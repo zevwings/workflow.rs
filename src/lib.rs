@@ -30,7 +30,7 @@ pub mod commands;
 // 从 base 模块重新导出基础设施类型，保持向后兼容
 pub use base::settings::{LLMSettings, Paths, Settings};
 pub use base::util::{
-    Browser, Checksum, Clipboard, LogLevel, Logger, Unzip, confirm, mask_sensitive_value,
+    confirm, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger, Unzip,
 };
 pub use base::{
     Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, Reload,
@@ -38,20 +38,20 @@ pub use base::{
 
 // 业务模块导出
 pub use completion::{
-    Completion, generate_all_completions, generate_pr_completion, generate_qk_completion,
-    generate_workflow_completion, get_all_completion_files, get_completion_files_for_shell,
-    get_completion_filename,
+    generate_all_completions, generate_pr_completion, generate_qk_completion,
+    generate_workflow_completion, get_all_completion_files, get_completion_filename,
+    get_completion_files_for_shell, Completion,
 };
 pub use git::{
     GitBranch, GitCommit, GitConfig, GitPreCommit, GitRepo, GitStash, MergeStrategy, RepoType,
 };
 pub use jira::{
-    Jira, JiraApi, JiraAttachment, JiraClient, JiraComment, JiraComments, JiraIssue,
-    JiraIssueFields, JiraStatus, JiraStatusConfig, JiraTransition, JiraUser, ProjectStatusConfig,
     extract_jira_project, extract_jira_ticket_id, sanitize_email_for_filename,
-    validate_jira_ticket_format, WorkHistoryEntry,
+    validate_jira_ticket_format, Jira, JiraApi, JiraAttachment, JiraClient, JiraComment,
+    JiraComments, JiraIssue, JiraIssueFields, JiraStatus, JiraStatusConfig, JiraTransition,
+    JiraUser, ProjectStatusConfig, WorkHistoryEntry,
 };
-pub use jira::{LogEntry, JiraLogs};
+pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
     detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup, GitHub,

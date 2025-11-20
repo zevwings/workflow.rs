@@ -1,10 +1,10 @@
 //! 搜索和查找功能相关实现
 
 use anyhow::{Context, Result};
+use regex::Regex;
 use std::collections::HashSet;
 use std::io::BufRead;
 use std::sync::OnceLock;
-use regex::Regex;
 
 use super::constants::*;
 use super::helpers;
@@ -78,7 +78,8 @@ impl JiraLogs {
                     in_response = true;
                     // 提取 "response: " 之后的内容
                     if let Some(response_start) = line.find(RESPONSE_KEYWORD) {
-                        let response_content = &line[response_start + RESPONSE_KEYWORD_LEN..].trim_start();
+                        let response_content =
+                            &line[response_start + RESPONSE_KEYWORD_LEN..].trim_start();
                         if !response_content.is_empty() {
                             response_lines.push(response_content.to_string());
                         }
@@ -123,7 +124,11 @@ impl JiraLogs {
             if self.is_new_log_entry(&line) {
                 // 如果之前的条目匹配，保存它（避免重复）
                 if found_in_current_block {
-                    helpers::add_entry_if_not_duplicate(current_entry.take(), &mut results, &mut printed_ids);
+                    helpers::add_entry_if_not_duplicate(
+                        current_entry.take(),
+                        &mut results,
+                        &mut printed_ids,
+                    );
                 }
 
                 // 解析新条目
@@ -148,7 +153,11 @@ impl JiraLogs {
             if line.trim().is_empty() {
                 // 如果当前块匹配，保存结果
                 if found_in_current_block {
-                    helpers::add_entry_if_not_duplicate(current_entry.take(), &mut results, &mut printed_ids);
+                    helpers::add_entry_if_not_duplicate(
+                        current_entry.take(),
+                        &mut results,
+                        &mut printed_ids,
+                    );
                 }
                 // 重置状态
                 current_entry = None;
@@ -184,4 +193,3 @@ impl JiraLogs {
         }
     }
 }
-

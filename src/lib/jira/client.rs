@@ -8,8 +8,8 @@
 
 use anyhow::Result;
 
-use super::models::{JiraAttachment, JiraIssue, JiraUser};
 use super::ticket::JiraTicket;
+use super::types::{JiraAttachment, JiraIssue, JiraUser};
 use super::users::JiraUsers;
 
 /// Jira REST API 客户端

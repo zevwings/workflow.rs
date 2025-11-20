@@ -93,8 +93,7 @@ impl GitStash {
     pub fn has_unmerged() -> Result<bool> {
         // 使用 git ls-files -u 检查是否有未合并的路径
         // -u 选项：显示未合并的文件
-        let output = cmd_read(&["ls-files", "-u"])
-            .context("Failed to check unmerged files")?;
+        let output = cmd_read(&["ls-files", "-u"]).context("Failed to check unmerged files")?;
 
         Ok(!output.trim().is_empty())
     }

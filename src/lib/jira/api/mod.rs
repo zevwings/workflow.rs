@@ -11,4 +11,3 @@ pub use http_client::JiraHttpClient;
 pub use issue::JiraIssueApi;
 pub use project::JiraProjectApi;
 pub use user::JiraUserApi;
-

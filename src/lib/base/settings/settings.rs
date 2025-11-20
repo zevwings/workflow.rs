@@ -309,7 +309,7 @@ impl Settings {
                     match client.get(&url, config) {
                         Ok(response) => {
                             if response.is_success() {
-                                match response.as_json::<crate::jira::models::JiraUser>() {
+                                match response.as_json::<crate::jira::types::JiraUser>() {
                                     Ok(user) => {
                                         log_success!(
                                             "Jira verified successfully! Email: {} (Account ID: {})",
@@ -406,10 +406,7 @@ impl Settings {
                     total_count
                 );
                 if !failed_accounts.is_empty() {
-                    log_message!(
-                        "  Failed accounts: {}",
-                        failed_accounts.join(", ")
-                    );
+                    log_message!("  Failed accounts: {}", failed_accounts.join(", "));
                 }
             }
         }

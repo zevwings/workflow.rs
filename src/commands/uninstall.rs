@@ -240,67 +240,67 @@ impl UninstallCommand {
     ///
     /// 如果删除文件时出现非权限错误，返回相应的错误信息。
     fn remove_binaries() -> Result<(Vec<String>, Vec<String>)> {
-      let binary_paths = Paths::binary_paths();
-      let mut removed = Vec::new();
-      let mut need_sudo = Vec::new();
+        let binary_paths = Paths::binary_paths();
+        let mut removed = Vec::new();
+        let mut need_sudo = Vec::new();
 
-      for binary_path in binary_paths {
-          let path = std::path::Path::new(&binary_path);
-          if path.exists() {
-              match fs::remove_file(path) {
-                  Ok(_) => {
-                      removed.push(binary_path);
-                  }
-                  Err(e) => {
-                      // 检查是否是权限错误
-                      if e.kind() == std::io::ErrorKind::PermissionDenied {
-                          need_sudo.push(binary_path);
-                      } else {
-                          return Err(anyhow::anyhow!(
-                              "Failed to remove binary file: {}: {}",
-                              binary_path,
-                              e
-                          ));
-                      }
-                  }
-              }
-          }
-      }
+        for binary_path in binary_paths {
+            let path = std::path::Path::new(&binary_path);
+            if path.exists() {
+                match fs::remove_file(path) {
+                    Ok(_) => {
+                        removed.push(binary_path);
+                    }
+                    Err(e) => {
+                        // 检查是否是权限错误
+                        if e.kind() == std::io::ErrorKind::PermissionDenied {
+                            need_sudo.push(binary_path);
+                        } else {
+                            return Err(anyhow::anyhow!(
+                                "Failed to remove binary file: {}: {}",
+                                binary_path,
+                                e
+                            ));
+                        }
+                    }
+                }
+            }
+        }
 
-      Ok((removed, need_sudo))
-  }
+        Ok((removed, need_sudo))
+    }
 
-  /// 删除所有 Workflow CLI TOML 配置文件
-  ///
-  /// 这会删除 workflow.toml 和 jira-users.toml。
-  ///
-  /// # 返回
-  ///
-  /// 返回成功删除的文件列表。
-  ///
-  /// # 错误
-  ///
-  /// 如果删除文件时出错，返回相应的错误信息。
-  fn remove_config_files() -> Result<Vec<String>> {
-      let mut removed = Vec::new();
+    /// 删除所有 Workflow CLI TOML 配置文件
+    ///
+    /// 这会删除 workflow.toml 和 jira-users.toml。
+    ///
+    /// # 返回
+    ///
+    /// 返回成功删除的文件列表。
+    ///
+    /// # 错误
+    ///
+    /// 如果删除文件时出错，返回相应的错误信息。
+    fn remove_config_files() -> Result<Vec<String>> {
+        let mut removed = Vec::new();
 
-      // 删除 workflow.toml
-      if let Ok(workflow_config_path) = Paths::workflow_config() {
-          if workflow_config_path.exists() {
-              fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
-              removed.push("workflow.toml".to_string());
-          }
-      }
+        // 删除 workflow.toml
+        if let Ok(workflow_config_path) = Paths::workflow_config() {
+            if workflow_config_path.exists() {
+                fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
+                removed.push("workflow.toml".to_string());
+            }
+        }
 
-      // 删除 jira-users.toml
-      if let Ok(jira_users_config_path) = Paths::jira_users_config() {
-          if jira_users_config_path.exists() {
-              fs::remove_file(&jira_users_config_path)
-                  .context("Failed to remove jira-users.toml")?;
-              removed.push("jira-users.toml".to_string());
-          }
-      }
+        // 删除 jira-users.toml
+        if let Ok(jira_users_config_path) = Paths::jira_users_config() {
+            if jira_users_config_path.exists() {
+                fs::remove_file(&jira_users_config_path)
+                    .context("Failed to remove jira-users.toml")?;
+                removed.push("jira-users.toml".to_string());
+            }
+        }
 
-      Ok(removed)
-  }
+        Ok(removed)
+    }
 }

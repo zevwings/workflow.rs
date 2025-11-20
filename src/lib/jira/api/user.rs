@@ -5,7 +5,7 @@
 use anyhow::{Context, Result};
 
 use super::http_client::JiraHttpClient;
-use crate::jira::models::JiraUser;
+use crate::jira::types::JiraUser;
 
 pub struct JiraUserApi;
 
@@ -19,8 +19,8 @@ impl JiraUserApi {
     /// 返回 `JiraUser` 结构体，包含用户的完整信息。
     pub fn get_current_user() -> Result<JiraUser> {
         let client = JiraHttpClient::global()?;
-        client.get("myself")
+        client
+            .get("myself")
             .context("Failed to get current Jira user")
     }
 }
-

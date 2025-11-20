@@ -1,59 +1,25 @@
 use anyhow::{Context, Result};
 use reqwest::header::HeaderMap;
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt::Write;
+use std::sync::OnceLock;
 
-use super::provider::{PlatformProvider, PullRequestStatus};
-use crate::base::http::{HttpClient, RequestConfig};
 use crate::base::settings::Settings;
 use crate::git::GitBranch;
+
+use super::requests::{ClosePullRequestRequest, CreatePullRequestRequest, MergePullRequestRequest};
+use super::responses::{CodeupUser, CreatePullRequestResponse, PullRequestInfo};
+use crate::pr::http_client::PRHttpClient;
+use crate::pr::provider::{PlatformProvider, PullRequestStatus};
 use regex::Regex;
 
 /// Codeup API 模块
 pub struct Codeup;
 
-#[derive(Debug, Serialize)]
-struct CreatePullRequestRequest {
-    source_project_id: u64,
-    target_project_id: u64,
-    source_branch: String,
-    target_branch: String,
-    title: String,
-    description: String,
-    tb_user_ids: Vec<u64>,
-    reviewer_user_ids: Vec<u64>,
-    create_from: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct CreatePullRequestResponse {
-    detail_url: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub(crate) struct PullRequestInfo {
-    #[allow(dead_code)]
-    id: Option<u64>,
-    title: Option<String>,
-    description: Option<String>,
-    source_branch: Option<String>,
-    target_branch: Option<String>,
-    state: Option<String>,
-    detail_url: Option<String>,
-    #[serde(rename = "iid")]
-    pull_request_number: Option<u64>,
-}
-
-#[derive(Debug, Serialize)]
-struct MergePullRequestRequest {
-    merge_method: String,
-    delete_source_branch: bool,
-}
-
 impl PlatformProvider for Codeup {
     /// 创建 Pull Request（通过 HTTP API）
     fn create_pull_request(
+        &self,
         title: &str,
         body: &str,
         source_branch: &str,
@@ -91,24 +57,12 @@ impl PlatformProvider for Codeup {
             project_id, csrf_token
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::get_headers(cookie, Some("application/json"))?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
-        let response = client
-            .post(&url, config)
-            .context("Failed to send Codeup API request")?;
 
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
-
-        let response_data: CreatePullRequestResponse = response.as_json()?;
+        // 使用 PRHttpClient 发送请求，自动处理错误和响应解析
+        let response_data: CreatePullRequestResponse =
+            http_client.post(&url, &request, &headers)?;
         let pull_request_url = response_data
             .detail_url
             .context("Failed to get PR URL from Codeup API response")?;
@@ -117,7 +71,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 合并 PR（Codeup 暂不支持 gh CLI）
-    fn merge_pull_request(pull_request_id: &str, delete_branch: bool) -> Result<()> {
+    fn merge_pull_request(&self, pull_request_id: &str, delete_branch: bool) -> Result<()> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         let settings = Settings::get();
@@ -156,28 +110,18 @@ impl PlatformProvider for Codeup {
             project_id, actual_pull_request_id, csrf_token
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::get_headers(&cookie, Some("application/json"))?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&merge_request)
-            .headers(&headers);
-        let response = client
-            .put(&url, config)
-            .context("Failed to send Codeup merge request")?;
 
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup merge request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
+        // 使用 PRHttpClient 发送 PUT 请求，自动处理错误
+        // Codeup API 返回合并结果，但我们不需要使用响应
+        let _: serde_json::Value = http_client.put(&url, &merge_request, &headers)?;
 
         Ok(())
     }
 
     /// 获取 PR 信息（Codeup 暂不支持 gh CLI，需要通过 API）
-    fn get_pull_request_info(pull_request_id_or_branch: &str) -> Result<String> {
+    fn get_pull_request_info(&self, pull_request_id_or_branch: &str) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 尝试解析为数字，如果是数字则当作 PR ID，否则当作分支名
@@ -224,7 +168,7 @@ impl PlatformProvider for Codeup {
 
     /// 获取 PR URL
     #[allow(dead_code)]
-    fn get_pull_request_url(pull_request_id: &str) -> Result<String> {
+    fn get_pull_request_url(&self, pull_request_id: &str) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
@@ -233,7 +177,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 获取 PR 标题
-    fn get_pull_request_title(pull_request_id: &str) -> Result<String> {
+    fn get_pull_request_title(&self, pull_request_id: &str) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
@@ -242,7 +186,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 获取当前分支的 PR ID
-    fn get_current_branch_pull_request() -> Result<Option<String>> {
+    fn get_current_branch_pull_request(&self) -> Result<Option<String>> {
         let current_branch = GitBranch::current_branch()?;
 
         match Self::get_pull_request_by_branch(&current_branch)? {
@@ -263,7 +207,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 获取 PR 状态
-    fn get_pull_request_status(pull_request_id: &str) -> Result<PullRequestStatus> {
+    fn get_pull_request_status(&self, pull_request_id: &str) -> Result<PullRequestStatus> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
@@ -280,7 +224,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 列出 PR
-    fn get_pull_requests(state: Option<&str>, limit: Option<u32>) -> Result<String> {
+    fn get_pull_requests(&self, state: Option<&str>, limit: Option<u32>) -> Result<String> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         // 根据 state 参数确定 sub_state_list
@@ -298,22 +242,10 @@ impl PlatformProvider for Codeup {
             project_id, sub_state_list, per_page
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-        let response = client
-            .get(&url, config)
-            .context("Failed to send Codeup API request")?;
 
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
-
-        let pull_request_list: Vec<PullRequestInfo> = response.as_json()?;
+        let pull_request_list: Vec<PullRequestInfo> = http_client.get(&url, &headers)?;
 
         // 格式化输出
         let mut output = String::new();
@@ -347,7 +279,7 @@ impl PlatformProvider for Codeup {
     }
 
     /// 关闭 Pull Request
-    fn close_pull_request(pull_request_id: &str) -> Result<()> {
+    fn close_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (project_id, cookie) = Self::get_env_vars()?;
         let settings = Settings::get();
         let csrf_token = settings.codeup.csrf_token.as_ref().context(
@@ -375,13 +307,6 @@ impl PlatformProvider for Codeup {
             }
         };
 
-        // Codeup API: 关闭 PR 的端点
-        // 使用 PUT 请求更新 PR 状态为 closed
-        #[derive(Debug, Serialize)]
-        struct ClosePullRequestRequest {
-            state: String,
-        }
-
         let request = ClosePullRequestRequest {
             state: "closed".to_string(),
         };
@@ -391,28 +316,27 @@ impl PlatformProvider for Codeup {
             project_id, actual_pull_request_id, csrf_token
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::get_headers(&cookie, Some("application/json"))?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
-        let response = client
-            .put(&url, config)
-            .context("Failed to close PR via Codeup API")?;
 
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup close PR request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
+        // 使用 PRHttpClient 发送 PUT 请求，自动处理错误
+        // Codeup API 返回关闭结果，但我们不需要使用响应
+        let _: serde_json::Value = http_client.put(&url, &request, &headers)?;
 
         Ok(())
     }
 }
 
 impl Codeup {
+    /// 获取 PR HTTP 客户端实例
+    fn get_http_client() -> Result<&'static PRHttpClient> {
+        static CLIENT: OnceLock<Result<PRHttpClient>> = OnceLock::new();
+        CLIENT
+            .get_or_init(PRHttpClient::new)
+            .as_ref()
+            .map_err(|e| anyhow::anyhow!("Failed to create PR HTTP client: {}", e))
+    }
+
     /// 获取 headers（每次调用都创建新的，因为 cookie 可能不同）
     fn get_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
         Self::create_headers(cookie, content_type)
@@ -469,23 +393,11 @@ impl Codeup {
             project_id
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-        let response = client
-            .get(&url, config)
-            .context("Failed to send Codeup API request")?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
 
         // 通过分支名查找 PR
-        let prs: Vec<PullRequestInfo> = response.as_json()?;
+        let prs: Vec<PullRequestInfo> = http_client.get(&url, &headers)?;
         for pr in prs {
             if let Some(ref source_branch) = pr.source_branch {
                 if source_branch == branch_name {
@@ -509,22 +421,11 @@ impl Codeup {
             project_id
         );
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::create_headers(cookie, Some("application/x-www-form-urlencoded"))?;
-        let response = client
-            .get(&url, RequestConfig::<Value, Value>::new().headers(&headers))
-            .context("Failed to send Codeup API request")?;
-
-        if !response.is_success() {
-            anyhow::bail!(
-                "Codeup API request failed: {} - {}",
-                response.status,
-                response.status_text
-            );
-        }
 
         // 查找匹配的 PR ID
-        let prs: Vec<PullRequestInfo> = response.as_json()?;
+        let prs: Vec<PullRequestInfo> = http_client.get(&url, &headers)?;
         for pr in prs {
             // 通过 iid 匹配
             if let Some(iid) = pr.pull_request_number {
@@ -567,35 +468,15 @@ impl Codeup {
         // Codeup API 用户信息端点
         let url = "https://codeup.aliyun.com/api/v4/user?_input_charset=utf-8";
 
-        let client = HttpClient::global()?;
+        let http_client = Self::get_http_client()?;
         let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-        let response = client
-            .get(url, config)
-            .context("Failed to get Codeup user info")?;
 
-        if !response.is_success() {
-            anyhow::bail!("Failed to get Codeup user info: {}", response.status);
-        }
-
-        // 解析响应
-        let data: Value = response.as_json()?;
+        // 使用 PRHttpClient 发送请求，自动处理错误和响应解析
+        // 注意：Codeup API 返回的是 Value，需要手动解析
+        let data: Value = http_client.get(url, &headers)?;
         let user: CodeupUser =
             serde_json::from_value(data).context("Failed to parse Codeup user response")?;
 
         Ok(user)
     }
-}
-
-/// Codeup 用户信息
-#[derive(Debug, Deserialize)]
-pub struct CodeupUser {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<u64>,
 }

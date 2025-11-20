@@ -30,7 +30,8 @@ impl CleanCommand {
         // 创建 JiraLogs 实例并执行清理
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
         // 使用空字符串作为 jira_id 来清理整个基础目录
-        let deleted = logs.clean_dir("", dry_run, list_only)
+        let deleted = logs
+            .clean_dir("", dry_run, list_only)
             .context("Failed to clean base directory")?;
 
         if deleted {

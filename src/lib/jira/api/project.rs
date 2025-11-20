@@ -26,7 +26,8 @@ impl JiraProjectApi {
     pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
         let client = JiraHttpClient::global()?;
         let path = format!("project/{}/statuses", project);
-        let data: Value = client.get(&path)
+        let data: Value = client
+            .get(&path)
             .context(format!("Failed to fetch project statuses for: {}", project))?;
 
         let statuses = data
@@ -52,4 +53,3 @@ impl JiraProjectApi {
         Ok(status_names)
     }
 }
-

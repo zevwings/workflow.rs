@@ -14,8 +14,8 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::{log_info, log_warning};
 use crate::base::settings::paths::Paths;
+use crate::{log_info, log_warning};
 
 /// 工作历史记录条目
 ///

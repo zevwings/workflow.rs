@@ -1,8 +1,7 @@
 use crate::commands::pr::helpers;
-use crate::{
-    detect_repo_type, log_break, log_info, log_success, log_warning, Codeup, GitBranch, GitHub,
-    GitRepo, PlatformProvider, RepoType,
-};
+use crate::pr::create_provider;
+use crate::pr::helpers::resolve_pull_request_id;
+use crate::{log_break, log_info, log_success, log_warning, GitBranch};
 use anyhow::{Context, Result};
 
 /// PR 关闭命令
@@ -13,9 +12,8 @@ pub struct PullRequestCloseCommand;
 impl PullRequestCloseCommand {
     /// 关闭 PR
     pub fn close(pull_request_id: Option<String>) -> Result<()> {
-        // 1. 获取仓库类型和 PR ID
-        let repo_type = GitRepo::detect_repo_type()?;
-        let pull_request_id = helpers::resolve_pull_request_id(pull_request_id, &repo_type)?;
+        // 1. 获取 PR ID
+        let pull_request_id = resolve_pull_request_id(pull_request_id)?;
 
         log_break!();
         log_success!("Closing PR: #{}", pull_request_id);
@@ -35,12 +33,12 @@ impl PullRequestCloseCommand {
         }
 
         // 5. 检查 PR 状态（如果已关闭，跳过关闭步骤）
-        let was_already_closed = Self::check_if_already_closed(&pull_request_id, &repo_type)?;
+        let was_already_closed = Self::check_if_already_closed(&pull_request_id)?;
 
         if !was_already_closed {
             // 6. 关闭 PR（远程）
             // 如果关闭失败，检查是否是"已关闭"错误（竞态条件）
-            if let Err(e) = Self::close_pull_request(&pull_request_id, &repo_type) {
+            if let Err(e) = Self::close_pull_request(&pull_request_id) {
                 if helpers::is_pr_already_closed_error(&e) {
                     log_warning!(
                         "PR #{} has already been closed (detected from close error)",
@@ -64,19 +62,9 @@ impl PullRequestCloseCommand {
     }
 
     /// 检查 PR 是否已经关闭
-    fn check_if_already_closed(pull_request_id: &str, _repo_type: &RepoType) -> Result<bool> {
-        let status = detect_repo_type(
-            |repo_type| match repo_type {
-                RepoType::GitHub => GitHub::get_pull_request_status(pull_request_id),
-                RepoType::Codeup => Codeup::get_pull_request_status(pull_request_id),
-                RepoType::Unknown => {
-                    anyhow::bail!(
-                        "PR close is currently only supported for GitHub and Codeup repositories."
-                    );
-                }
-            },
-            "get pull request status",
-        )?;
+    fn check_if_already_closed(pull_request_id: &str) -> Result<bool> {
+        let provider = create_provider()?;
+        let status = provider.get_pull_request_status(pull_request_id)?;
 
         // 如果状态是 closed 或 merged，说明已经关闭
         if status.state == "closed" || status.state == "merged" {
@@ -92,29 +80,13 @@ impl PullRequestCloseCommand {
     }
 
     /// 关闭 PR（根据仓库类型调用对应的实现）
-    fn close_pull_request(pull_request_id: &str, _repo_type: &RepoType) -> Result<()> {
-        detect_repo_type(
-            |repo_type| match repo_type {
-                RepoType::GitHub => {
-                    GitHub::close_pull_request(pull_request_id)
-                        .context("Failed to close PR via GitHub API")?;
-                    log_success!("PR closed successfully");
-                    Ok(())
-                }
-                RepoType::Codeup => {
-                    Codeup::close_pull_request(pull_request_id)
-                        .context("Failed to close PR via Codeup API")?;
-                    log_success!("PR closed successfully");
-                    Ok(())
-                }
-                RepoType::Unknown => {
-                    anyhow::bail!(
-                        "PR close is currently only supported for GitHub and Codeup repositories."
-                    );
-                }
-            },
-            "close pull request",
-        )
+    fn close_pull_request(pull_request_id: &str) -> Result<()> {
+        let provider = create_provider()?;
+        provider
+            .close_pull_request(pull_request_id)
+            .context("Failed to close PR")?;
+        log_success!("PR closed successfully");
+        Ok(())
     }
 
     /// 删除远程分支

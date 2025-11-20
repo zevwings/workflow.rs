@@ -7,7 +7,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use super::http_client::JiraHttpClient;
-use crate::jira::models::{JiraIssue, JiraAttachment, JiraTransition};
+use crate::jira::types::{JiraAttachment, JiraIssue, JiraTransition};
 
 /// 状态转换请求体
 ///
@@ -57,7 +57,8 @@ impl JiraIssueApi {
     pub fn get_issue(ticket: &str) -> Result<JiraIssue> {
         let client = JiraHttpClient::global()?;
         let path = format!("issue/{}?fields=*all&expand=renderedFields", ticket);
-        client.get(&path)
+        client
+            .get(&path)
             .context(format!("Failed to get issue: {}", ticket))
     }
 
@@ -87,7 +88,8 @@ impl JiraIssueApi {
     pub fn get_issue_transitions(ticket: &str) -> Result<Vec<JiraTransition>> {
         let client = JiraHttpClient::global()?;
         let path = format!("issue/{}/transitions", ticket);
-        let data: Value = client.get(&path)
+        let data: Value = client
+            .get(&path)
             .context(format!("Failed to get transitions for ticket: {}", ticket))?;
 
         let transitions = data
@@ -127,8 +129,10 @@ impl JiraIssueApi {
             },
         };
 
-        client.post::<_, Value>(&path, &body)
-            .context(format!("Failed to transition issue {} to transition {}", ticket, transition_id))?;
+        client.post::<_, Value>(&path, &body).context(format!(
+            "Failed to transition issue {} to transition {}",
+            ticket, transition_id
+        ))?;
         Ok(())
     }
 
@@ -150,8 +154,10 @@ impl JiraIssueApi {
             account_id: account_id.to_string(),
         };
 
-        client.put::<_, Value>(&path, &body)
-            .context(format!("Failed to assign issue {} to {}", ticket, account_id))?;
+        client.put::<_, Value>(&path, &body).context(format!(
+            "Failed to assign issue {} to {}",
+            ticket, account_id
+        ))?;
         Ok(())
     }
 
@@ -173,9 +179,9 @@ impl JiraIssueApi {
             body: comment.to_string(),
         };
 
-        client.post::<_, Value>(&path, &body)
+        client
+            .post::<_, Value>(&path, &body)
             .context(format!("Failed to add comment to issue {}", ticket))?;
         Ok(())
     }
 }
-

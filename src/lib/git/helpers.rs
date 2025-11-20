@@ -46,11 +46,7 @@ pub(crate) fn cmd_run(args: &[&str]) -> Result<()> {
 ///
 /// 如果命令成功执行（退出码为 0），返回 `true`，否则返回 `false`
 pub(crate) fn check_success(args: &[&str]) -> bool {
-    cmd("git", args)
-        .stdout_null()
-        .stderr_null()
-        .run()
-        .is_ok()
+    cmd("git", args).stdout_null().stderr_null().run().is_ok()
 }
 
 /// 检查 Git 引用是否存在
@@ -78,10 +74,7 @@ pub(crate) fn switch_or_checkout(
     checkout_args: &[&str],
     error_msg: impl AsRef<str>,
 ) -> Result<()> {
-    let result = cmd("git", switch_args)
-        .stdout_null()
-        .stderr_null()
-        .run();
+    let result = cmd("git", switch_args).stdout_null().stderr_null().run();
 
     if result.is_err() {
         cmd_run(checkout_args).with_context(|| error_msg.as_ref().to_string())?;
@@ -111,4 +104,3 @@ pub(crate) fn remove_branch_prefix(branch: &str) -> &str {
         .next()
         .unwrap_or(branch)
 }
-

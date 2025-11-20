@@ -13,7 +13,7 @@ use crate::base::settings::paths::Paths;
 use super::api::user::JiraUserApi;
 use super::config::ConfigManager;
 use super::helpers::get_auth;
-use super::models::JiraUser;
+use super::types::JiraUser;
 
 /// Jira 用户配置（TOML）
 ///
@@ -74,7 +74,10 @@ impl JiraUsers {
 
         if config.users.is_empty() {
             let config_path = Paths::jira_users_config()?;
-            anyhow::bail!("Jira users config file does not exist or is empty: {:?}", config_path);
+            anyhow::bail!(
+                "Jira users config file does not exist or is empty: {:?}",
+                config_path
+            );
         }
 
         let user_entry = config
@@ -107,8 +110,7 @@ impl JiraUsers {
     ///
     /// 返回 `JiraUser` 结构体，包含用户的完整信息。
     fn from_remote(email: &str, _api_token: &str) -> Result<JiraUser> {
-        let user = JiraUserApi::get_current_user()
-            .context("Failed to get current Jira user")?;
+        let user = JiraUserApi::get_current_user().context("Failed to get current Jira user")?;
 
         if user.account_id.is_empty() {
             anyhow::bail!("Failed to extract accountId from Jira user response");

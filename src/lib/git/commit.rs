@@ -7,8 +7,8 @@
 
 use anyhow::{Context, Result};
 
-use super::pre_commit::GitPreCommit;
 use super::helpers::{check_success, cmd_read, cmd_run};
+use super::pre_commit::GitPreCommit;
 use crate::log_info;
 
 /// Git 提交管理

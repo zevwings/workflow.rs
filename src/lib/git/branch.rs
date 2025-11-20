@@ -2,8 +2,8 @@ use anyhow::{Context, Result};
 use std::collections::HashSet;
 
 use super::helpers::{
-    check_ref_exists, check_success, cmd_read, cmd_run,
-    remove_branch_prefix, switch_or_checkout, COMMON_DEFAULT_BRANCHES,
+    check_ref_exists, check_success, cmd_read, cmd_run, remove_branch_prefix, switch_or_checkout,
+    COMMON_DEFAULT_BRANCHES,
 };
 
 /// 合并策略枚举
@@ -43,8 +43,7 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
-        cmd_read(&["branch", "--show-current"])
-            .context("Failed to get current branch")
+        cmd_read(&["branch", "--show-current"]).context("Failed to get current branch")
     }
 
     /// 检查分支是否存在（本地或远程）
@@ -194,8 +193,7 @@ impl GitBranch {
         }
 
         // 尝试方法3：从远程分支列表中查找常见的默认分支名
-        Self::find_default_branch_from_remote()
-            .context("Failed to get default branch")
+        Self::find_default_branch_from_remote().context("Failed to get default branch")
     }
 
     /// 从 `git remote show origin` 获取默认分支
@@ -250,8 +248,8 @@ impl GitBranch {
     ///
     /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
     fn find_default_branch_from_remote() -> Result<String> {
-        let remote_branches = cmd_read(&["branch", "-r"])
-            .context("Failed to get default branch")?;
+        let remote_branches =
+            cmd_read(&["branch", "-r"]).context("Failed to get default branch")?;
 
         for default_name in COMMON_DEFAULT_BRANCHES {
             let branch_ref = format!("origin/{}", default_name);
@@ -423,9 +421,7 @@ impl GitBranch {
         ])
         .context("Failed to check branch commits")?;
 
-        let count: u32 = output
-            .parse()
-            .context("Failed to parse commit count")?;
+        let count: u32 = output.parse().context("Failed to parse commit count")?;
 
         Ok(count > 0)
     }
@@ -466,8 +462,7 @@ impl GitBranch {
         args.push("origin");
         args.push(branch_name);
 
-        cmd_run(&args)
-            .with_context(|| format!("Failed to push branch: {}", branch_name))
+        cmd_run(&args).with_context(|| format!("Failed to push branch: {}", branch_name))
     }
 
     /// 删除本地分支

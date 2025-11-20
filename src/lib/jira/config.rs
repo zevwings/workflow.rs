@@ -8,9 +8,9 @@
 use anyhow::{Context, Result};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
-use std::fs;
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -88,8 +88,7 @@ where
         }
         let content = fs::read_to_string(&self.path)
             .context(format!("Failed to read config file: {:?}", self.path))?;
-        toml::from_str(&content)
-            .context(format!("Failed to parse TOML config: {:?}", self.path))
+        toml::from_str(&content).context(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
     /// 写入配置文件
@@ -105,8 +104,8 @@ where
     ///
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write(&self, config: &T) -> Result<()> {
-        let toml_content = toml::to_string_pretty(config)
-            .context("Failed to serialize config to TOML")?;
+        let toml_content =
+            toml::to_string_pretty(config).context("Failed to serialize config to TOML")?;
         fs::write(&self.path, toml_content)
             .context(format!("Failed to write config file: {:?}", self.path))?;
         self.set_permissions()?;

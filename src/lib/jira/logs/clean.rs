@@ -3,8 +3,8 @@
 use anyhow::{Context, Result};
 use std::path::Path;
 
-use crate::{confirm, log_break, log_info, log_success};
 use super::helpers;
+use crate::{confirm, log_break, log_info, log_success};
 
 use super::JiraLogs;
 
@@ -68,7 +68,13 @@ impl JiraLogs {
     }
 
     /// 显示目录信息
-    fn display_dir_info(&self, dir_name: &str, dir: &Path, size: u64, file_count: usize) -> Result<()> {
+    fn display_dir_info(
+        &self,
+        dir_name: &str,
+        dir: &Path,
+        size: u64,
+        file_count: usize,
+    ) -> Result<()> {
         // 根据 dir_name 判断显示格式
         if dir_name.starts_with("the directory for") {
             // JIRA 目录格式：提取 JIRA ID
@@ -88,7 +94,11 @@ impl JiraLogs {
         for path in contents {
             if path.is_file() {
                 if let Ok(metadata) = std::fs::metadata(&path) {
-                    log_info!("  📄 {} ({})", path.display(), helpers::format_size(metadata.len()));
+                    log_info!(
+                        "  📄 {} ({})",
+                        path.display(),
+                        helpers::format_size(metadata.len())
+                    );
                 } else {
                     log_info!("  📄 {}", path.display());
                 }
@@ -99,4 +109,3 @@ impl JiraLogs {
         Ok(())
     }
 }
-

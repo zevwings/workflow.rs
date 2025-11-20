@@ -26,10 +26,12 @@ impl FindCommand {
         // 3. 提取响应内容
         log_debug!("Searching for request ID: {}...", req_id);
 
-        let response_content = logs.extract_response_content(jira_id, &req_id).map_err(|e| {
-            log_error!("Failed to extract response content: {}", e);
-            e
-        })?;
+        let response_content = logs
+            .extract_response_content(jira_id, &req_id)
+            .map_err(|e| {
+                log_error!("Failed to extract response content: {}", e);
+                e
+            })?;
 
         // 复制到剪贴板（CLI特定操作）
         Clipboard::copy(&response_content).context("Failed to copy to clipboard")?;

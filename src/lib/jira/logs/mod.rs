@@ -7,13 +7,13 @@ use std::path::PathBuf;
 use crate::base::settings::Settings;
 
 // 子模块
+mod clean;
 mod constants;
+mod download;
 mod helpers;
 mod path;
-mod download;
 mod search;
 mod zip;
-mod clean;
 
 // 重新导出 LogEntry 作为公共 API
 pub use helpers::LogEntry;
@@ -62,4 +62,3 @@ impl JiraLogs {
         })
     }
 }
-

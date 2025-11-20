@@ -29,4 +29,3 @@ pub(crate) const RESPONSE_KEYWORD: &str = "response:";
 
 /// 响应关键字长度
 pub(crate) const RESPONSE_KEYWORD_LEN: usize = 9;
-

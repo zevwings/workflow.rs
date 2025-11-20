@@ -6,8 +6,8 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use crate::pr::helpers::transform_to_branch_name;
 use crate::base::llm::{LLMClient, LLMRequestParams};
+use crate::pr::helpers::transform_to_branch_name;
 
 /// PR 内容，包含分支名、PR 标题和描述
 ///
@@ -164,7 +164,11 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
                     // 尝试在最后一个换行符处截断，避免截断中间的行
                     let last_newline = truncated.rfind('\n').unwrap_or(MAX_DIFF_LENGTH);
                     let truncated_diff = &diff[..last_newline];
-                    format!("{}\n... (diff truncated, {} characters total)", truncated_diff, diff.len())
+                    format!(
+                        "{}\n... (diff truncated, {} characters total)",
+                        truncated_diff,
+                        diff.len()
+                    )
                 } else {
                     diff
                 };
@@ -210,8 +214,12 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
         };
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(json_str)
-            .with_context(|| format!("Failed to parse LLM response as JSON. Raw response: {}", json_str))?;
+        let json: Value = serde_json::from_str(json_str).with_context(|| {
+            format!(
+                "Failed to parse LLM response as JSON. Raw response: {}",
+                json_str
+            )
+        })?;
 
         let branch_name = json
             .get("branch_name")
