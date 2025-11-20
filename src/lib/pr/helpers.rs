@@ -4,8 +4,7 @@ use crate::git::RepoType;
 use anyhow::{Context, Result};
 use regex::Regex;
 
-use super::constants::TYPES_OF_CHANGES;
-use super::factory::create_provider;
+use super::platform::{create_provider, TYPES_OF_CHANGES};
 
 /// 从 PR URL 提取 PR ID
 ///

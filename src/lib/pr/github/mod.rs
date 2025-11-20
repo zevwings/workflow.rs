@@ -1,10 +1,10 @@
-pub mod api;
 pub mod errors;
+pub mod platform;
 pub mod requests;
 pub mod responses;
 
-pub use api::GitHub;
 pub use errors::{format_error, GitHubError, GitHubErrorResponse};
+pub use platform::GitHub;
 pub use responses::GitHubUser;
 
 #[cfg(test)]

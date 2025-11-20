@@ -162,6 +162,40 @@ impl HttpResponse {
         Ok(self)
     }
 
+    /// 确保响应是成功的，使用自定义错误处理器
+    ///
+    /// 检查 HTTP 状态码是否在成功范围内（200-299）。
+    /// 如果响应失败，使用提供的错误处理器生成错误。
+    /// 如果响应成功，返回 `Ok(self)` 以便链式调用。
+    ///
+    /// # 参数
+    ///
+    /// * `error_handler` - 错误处理函数，接收 `&HttpResponse` 并返回错误
+    ///
+    /// # 返回
+    ///
+    /// 如果响应成功，返回 `Ok(self)`；否则返回错误处理器生成的错误。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use crate::base::http::HttpResponse;
+    ///
+    /// let response = client.post(url, config)?;
+    /// let data: MyType = response
+    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?
+    ///     .as_json()?;
+    /// ```
+    pub fn ensure_success_with<E>(self, error_handler: impl FnOnce(&Self) -> E) -> Result<Self>
+    where
+        E: Into<anyhow::Error>,
+    {
+        if !self.is_success() {
+            return Err(error_handler(&self).into());
+        }
+        Ok(self)
+    }
+
     /// 使用指定的 Parser 解析响应（通用方法）
     ///
     /// 允许使用自定义的 Parser 来解析响应体。
