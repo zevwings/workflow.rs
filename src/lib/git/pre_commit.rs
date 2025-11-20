@@ -3,10 +3,9 @@ use duct::cmd;
 use std::path::Path;
 use std::process::Command;
 
-use crate::{log_debug, log_info, log_success};
-
 use super::commit::GitCommit;
 use super::repo::GitRepo;
+use crate::{log_debug, log_info, log_success};
 
 /// Git Pre-commit Hooks 管理
 ///

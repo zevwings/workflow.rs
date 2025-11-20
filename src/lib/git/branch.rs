@@ -1,6 +1,10 @@
 use anyhow::{Context, Result};
-use duct::cmd;
 use std::collections::HashSet;
+
+use super::helpers::{
+    check_ref_exists, check_success, cmd_read, cmd_run,
+    remove_branch_prefix, switch_or_checkout, COMMON_DEFAULT_BRANCHES,
+};
 
 /// 合并策略枚举
 ///
@@ -39,11 +43,8 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
-        let output = cmd("git", &["branch", "--show-current"])
-            .read()
-            .context("Failed to get current branch")?;
-
-        Ok(output.trim().to_string())
+        cmd_read(&["branch", "--show-current"])
+            .context("Failed to get current branch")
     }
 
     /// 检查分支是否存在（本地或远程）
@@ -68,32 +69,10 @@ impl GitBranch {
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn is_branch_exists(branch_name: &str) -> Result<(bool, bool)> {
         // 使用 git rev-parse --verify 检查本地分支（更高效）
-        let exists_local = cmd(
-            "git",
-            &[
-                "rev-parse",
-                "--verify",
-                &format!("refs/heads/{}", branch_name),
-            ],
-        )
-        .stdout_null()
-        .stderr_null()
-        .run()
-        .is_ok();
+        let exists_local = check_ref_exists(&format!("refs/heads/{}", branch_name));
 
         // 使用 git rev-parse --verify 检查远程分支（更高效）
-        let exists_remote = cmd(
-            "git",
-            &[
-                "rev-parse",
-                "--verify",
-                &format!("refs/remotes/origin/{}", branch_name),
-            ],
-        )
-        .stdout_null()
-        .stderr_null()
-        .run()
-        .is_ok();
+        let exists_remote = check_ref_exists(&format!("refs/remotes/origin/{}", branch_name));
 
         Ok((exists_local, exists_remote))
     }
@@ -168,57 +147,26 @@ impl GitBranch {
 
         if exists_local {
             // 分支已存在于本地，切换到它
-            // 优先使用 git switch（Git 2.23+），如果失败则回退到 git checkout
-            let result = cmd("git", &["switch", branch_name])
-                .stdout_null()
-                .stderr_null()
-                .run();
-
-            if result.is_err() {
-                // 回退到 git checkout
-                cmd("git", &["checkout", branch_name])
-                    .run()
-                    .context(format!("Failed to checkout branch: {}", branch_name))?;
-            }
+            switch_or_checkout(
+                &["switch", branch_name],
+                &["checkout", branch_name],
+                format!("Failed to checkout branch: {}", branch_name),
+            )?;
         } else if exists_remote {
             // 分支只存在于远程，创建本地分支并跟踪远程分支
-            // 优先使用 git switch --track（Git 2.23+），如果失败则回退到 git checkout
-            let result = cmd(
-                "git",
-                &["switch", "--track", &format!("origin/{}", branch_name)],
-            )
-            .stdout_null()
-            .stderr_null()
-            .run();
-
-            if result.is_err() {
-                // 回退到 git checkout -b
-                cmd(
-                    "git",
-                    &[
-                        "checkout",
-                        "-b",
-                        branch_name,
-                        &format!("origin/{}", branch_name),
-                    ],
-                )
-                .run()
-                .context(format!("Failed to checkout remote branch: {}", branch_name))?;
-            }
+            let remote_ref = format!("origin/{}", branch_name);
+            switch_or_checkout(
+                &["switch", "--track", &remote_ref],
+                &["checkout", "-b", branch_name, &remote_ref],
+                format!("Failed to checkout remote branch: {}", branch_name),
+            )?;
         } else {
             // 分支不存在，创建新分支
-            // 优先使用 git switch -c（Git 2.23+），如果失败则回退到 git checkout -b
-            let result = cmd("git", &["switch", "-c", branch_name])
-                .stdout_null()
-                .stderr_null()
-                .run();
-
-            if result.is_err() {
-                // 回退到 git checkout -b
-                cmd("git", &["checkout", "-b", branch_name])
-                    .run()
-                    .context(format!("Failed to create branch: {}", branch_name))?;
-            }
+            switch_or_checkout(
+                &["switch", "-c", branch_name],
+                &["checkout", "-b", branch_name],
+                format!("Failed to create branch: {}", branch_name),
+            )?;
         }
         Ok(())
     }
@@ -233,34 +181,34 @@ impl GitBranch {
     /// 2. 如果失败，使用 `git remote show origin` 获取
     /// 3. 如果都失败，从远程分支列表中查找常见的默认分支名（main, master, develop, dev）
     pub fn get_default_branch() -> Result<String> {
-        // 首先尝试使用 ls-remote --symref 直接从远程获取符号引用
-        // 这是最可靠的方法，因为它直接从远程仓库查询，不依赖本地设置
-        let output = cmd("git", &["ls-remote", "--symref", "origin", "HEAD"])
-            .read()
-            .context("Failed to get default branch")
-            .or_else(|_| {
-                // 如果 --symref 失败，尝试从 remote show origin 获取
-                let remote_info = cmd("git", &["remote", "show", "origin"])
-                    .read()
-                    .context("Failed to get default branch")?;
-                for line in remote_info.lines() {
-                    if line.contains("HEAD branch:") {
-                        if let Some(branch) = line.split("HEAD branch:").nth(1) {
-                            return Ok(branch.trim().to_string());
-                        }
-                    }
-                }
-                anyhow::bail!("Could not determine default branch")
-            })?;
+        // 尝试方法1：使用 ls-remote --symref 直接从远程获取符号引用
+        if let Ok(output) = cmd_read(&["ls-remote", "--symref", "origin", "HEAD"]) {
+            if let Some(branch) = Self::parse_symref_output(&output) {
+                return Ok(branch);
+            }
+        }
 
-        // 解析 ls-remote --symref 的输出
-        // 输出格式通常是: "ref: refs/heads/main\tHEAD"
-        if let Some(branch) = Self::parse_symref_output(&output) {
+        // 尝试方法2：从 remote show origin 获取
+        if let Ok(branch) = Self::get_default_branch_from_remote_show() {
             return Ok(branch);
         }
 
-        // 如果没有找到符号引用，尝试从远程分支列表中查找常见的默认分支名
-        Self::find_default_branch_from_remote().context("Failed to get default branch")
+        // 尝试方法3：从远程分支列表中查找常见的默认分支名
+        Self::find_default_branch_from_remote()
+            .context("Failed to get default branch")
+    }
+
+    /// 从 `git remote show origin` 获取默认分支
+    fn get_default_branch_from_remote_show() -> Result<String> {
+        let remote_info = cmd_read(&["remote", "show", "origin"])?;
+        for line in remote_info.lines() {
+            if line.contains("HEAD branch:") {
+                if let Some(branch) = line.split("HEAD branch:").nth(1) {
+                    return Ok(branch.trim().to_string());
+                }
+            }
+        }
+        anyhow::bail!("Could not determine default branch from remote show")
     }
 
     /// 解析 ls-remote --symref 的输出
@@ -302,12 +250,10 @@ impl GitBranch {
     ///
     /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
     fn find_default_branch_from_remote() -> Result<String> {
-        let remote_branches = cmd("git", &["branch", "-r"])
-            .read()
+        let remote_branches = cmd_read(&["branch", "-r"])
             .context("Failed to get default branch")?;
-        let common_defaults = ["main", "master", "develop", "dev"];
 
-        for default_name in &common_defaults {
+        for default_name in COMMON_DEFAULT_BRANCHES {
             let branch_ref = format!("origin/{}", default_name);
             if remote_branches
                 .lines()
@@ -353,20 +299,35 @@ impl GitBranch {
     /// ```
     pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
         // 获取本地分支列表
-        let local_output = cmd("git", &["branch"])
-            .read()
-            .context("Failed to get local branches")?;
+        let local_output = cmd_read(&["branch"]).context("Failed to get local branches")?;
 
         // 获取远程分支列表
-        let remote_output = cmd("git", &["branch", "-r"])
-            .read()
-            .context("Failed to get remote branches")?;
+        let remote_output = cmd_read(&["branch", "-r"]).context("Failed to get remote branches")?;
 
         // 使用 HashSet 去重
         let mut branch_set = HashSet::new();
 
         // 解析本地分支
-        for line in local_output.lines() {
+        Self::parse_local_branches(&local_output, &mut branch_set);
+
+        // 解析远程分支
+        Self::parse_remote_branches(&remote_output, &mut branch_set);
+
+        // 转换为排序后的 Vec
+        let mut branches: Vec<String> = branch_set.into_iter().collect();
+        branches.sort();
+
+        // 如果需要移除前缀，提取基础名称
+        if remove_prefix {
+            Ok(Self::extract_base_branch_names(branches))
+        } else {
+            Ok(branches)
+        }
+    }
+
+    /// 解析本地分支列表
+    fn parse_local_branches(output: &str, branch_set: &mut HashSet<String>) {
+        for line in output.lines() {
             let line = line.trim();
             // 跳过空行和 HEAD 指向的行（如 "  remotes/origin/HEAD -> origin/main"）
             if line.is_empty() || line.contains("->") {
@@ -378,9 +339,11 @@ impl GitBranch {
                 branch_set.insert(branch_name.to_string());
             }
         }
+    }
 
-        // 解析远程分支
-        for line in remote_output.lines() {
+    /// 解析远程分支列表
+    fn parse_remote_branches(output: &str, branch_set: &mut HashSet<String>) {
+        for line in output.lines() {
             let line = line.trim();
             // 跳过空行和 HEAD 指向的行
             if line.is_empty() || line.contains("->") {
@@ -396,17 +359,6 @@ impl GitBranch {
             if !branch_name.is_empty() {
                 branch_set.insert(branch_name.to_string());
             }
-        }
-
-        // 转换为排序后的 Vec
-        let mut branches: Vec<String> = branch_set.into_iter().collect();
-        branches.sort();
-
-        // 如果需要移除前缀，提取基础名称
-        if remove_prefix {
-            Ok(Self::extract_base_branch_names(branches))
-        } else {
-            Ok(branches)
         }
     }
 
@@ -436,17 +388,7 @@ impl GitBranch {
     pub fn extract_base_branch_names(branches: Vec<String>) -> Vec<String> {
         let mut base_names: Vec<String> = branches
             .iter()
-            .map(|branch| {
-                // 移除前缀（格式：prefix/branch-name 或 ticket--branch-name）
-                branch
-                    .rsplit('/')
-                    .next()
-                    .unwrap_or(branch)
-                    .rsplit("--")
-                    .next()
-                    .unwrap_or(branch)
-                    .to_string()
-            })
+            .map(|branch| remove_branch_prefix(branch).to_string())
             .collect::<HashSet<_>>()
             .into_iter()
             .collect();
@@ -474,19 +416,14 @@ impl GitBranch {
     pub fn is_branch_ahead(branch_name: &str, base_branch: &str) -> Result<bool> {
         // 检查分支是否领先于指定分支
         // 使用 git rev-list 来检查是否有新提交
-        let output = cmd(
-            "git",
-            &[
-                "rev-list",
-                "--count",
-                &format!("{}..{}", base_branch, branch_name),
-            ],
-        )
-        .read()
+        let output = cmd_read(&[
+            "rev-list",
+            "--count",
+            &format!("{}..{}", base_branch, branch_name),
+        ])
         .context("Failed to check branch commits")?;
 
         let count: u32 = output
-            .trim()
             .parse()
             .context("Failed to parse commit count")?;
 
@@ -505,13 +442,8 @@ impl GitBranch {
     ///
     /// 如果拉取失败，返回相应的错误信息。
     pub fn pull(branch_name: &str) -> Result<()> {
-        cmd("git", &["pull", "origin", branch_name])
-            .run()
-            .context(format!(
-                "Failed to pull latest changes from {}",
-                branch_name
-            ))?;
-        Ok(())
+        cmd_run(&["pull", "origin", branch_name])
+            .with_context(|| format!("Failed to pull latest changes from {}", branch_name))
     }
 
     /// 推送到远程仓库
@@ -534,10 +466,8 @@ impl GitBranch {
         args.push("origin");
         args.push(branch_name);
 
-        cmd("git", &args)
-            .run()
-            .context(format!("Failed to push branch: {}", branch_name))?;
-        Ok(())
+        cmd_run(&args)
+            .with_context(|| format!("Failed to push branch: {}", branch_name))
     }
 
     /// 删除本地分支
@@ -554,10 +484,8 @@ impl GitBranch {
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete(branch_name: &str, force: bool) -> Result<()> {
         let flag = if force { "-D" } else { "-d" };
-        cmd("git", &["branch", flag, branch_name])
-            .run()
-            .with_context(|| format!("Failed to delete local branch: {}", branch_name))?;
-        Ok(())
+        cmd_run(&["branch", flag, branch_name])
+            .with_context(|| format!("Failed to delete local branch: {}", branch_name))
     }
 
     /// 删除远程分支
@@ -572,10 +500,8 @@ impl GitBranch {
     ///
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(branch_name: &str) -> Result<()> {
-        cmd("git", &["push", "origin", "--delete", branch_name])
-            .run()
-            .with_context(|| format!("Failed to delete remote branch: {}", branch_name))?;
-        Ok(())
+        cmd_run(&["push", "origin", "--delete", branch_name])
+            .with_context(|| format!("Failed to delete remote branch: {}", branch_name))
     }
 
     /// 合并指定分支到当前分支
@@ -597,7 +523,7 @@ impl GitBranch {
     /// （通过检查 MERGE_HEAD 或合并 commit 的存在），也会认为操作成功。
     pub fn merge_branch(source_branch: &str, strategy: MergeStrategy) -> Result<()> {
         // 保存合并前的 HEAD，用于验证合并是否完成
-        let head_before = cmd("git", &["rev-parse", "HEAD"]).read().ok();
+        let head_before = cmd_read(&["rev-parse", "HEAD"]).ok();
 
         let mut args = vec!["merge"];
 
@@ -615,34 +541,18 @@ impl GitBranch {
 
         args.push(source_branch);
 
-        let merge_result = cmd("git", &args).run();
+        let merge_result = cmd_run(&args);
 
         // 检查合并是否实际上已经完成
         // 即使命令返回错误，如果合并已经完成，我们也认为操作成功
         if merge_result.is_err() {
-            // 检查是否有 MERGE_HEAD（表示合并正在进行或刚完成）
-            let has_merge_head = cmd("git", &["rev-parse", "--verify", "MERGE_HEAD"])
-                .stdout_null()
-                .stderr_null()
-                .run()
-                .is_ok();
-
-            // 检查 HEAD 是否已经改变（表示合并可能已经完成）
-            let head_after = cmd("git", &["rev-parse", "HEAD"]).read().ok();
-            let head_changed = if let (Some(before), Some(after)) = (head_before, head_after) {
-                before.trim() != after.trim()
-            } else {
-                false
-            };
-
-            // 如果合并已经完成（HEAD 改变或 MERGE_HEAD 存在），认为操作成功
-            if head_changed || has_merge_head {
+            if Self::verify_merge_completed(head_before) {
                 // 合并实际上已经完成，忽略引用更新错误
                 return Ok(());
             }
 
             // 否则返回原始错误
-            return merge_result.map(|_| ()).with_context(|| {
+            return merge_result.with_context(|| {
                 format!(
                     "Failed to merge branch '{}' into current branch",
                     source_branch
@@ -651,6 +561,24 @@ impl GitBranch {
         }
 
         Ok(())
+    }
+
+    /// 验证合并是否已经完成
+    ///
+    /// 通过检查 MERGE_HEAD 是否存在或 HEAD 是否改变来判断合并是否完成。
+    fn verify_merge_completed(head_before: Option<String>) -> bool {
+        // 检查是否有 MERGE_HEAD（表示合并正在进行或刚完成）
+        let has_merge_head = check_ref_exists("MERGE_HEAD");
+
+        // 检查 HEAD 是否已经改变（表示合并可能已经完成）
+        let head_after = cmd_read(&["rev-parse", "HEAD"]).ok();
+        let head_changed = if let (Some(before), Some(after)) = (head_before, head_after) {
+            before.trim() != after.trim()
+        } else {
+            false
+        };
+
+        head_changed || has_merge_head
     }
 
     /// 检查是否有合并冲突
@@ -667,30 +595,14 @@ impl GitBranch {
     /// 如果命令执行失败，返回相应的错误信息。
     pub fn has_merge_conflicts() -> Result<bool> {
         // 检查是否有未合并的文件
-        let has_unmerged = cmd("git", &["diff", "--check"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_err();
-
-        if has_unmerged {
+        if !check_success(&["diff", "--check"]) {
             return Ok(true);
         }
 
         // 检查 MERGE_HEAD 是否存在（表示正在进行合并）
-        let merge_head_exists = cmd("git", &["rev-parse", "--verify", "MERGE_HEAD"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok();
-
-        if merge_head_exists {
+        if check_ref_exists("MERGE_HEAD") {
             // 检查是否有未解决的冲突文件
-            let unmerged_files = cmd("git", &["diff", "--name-only", "--diff-filter=U"])
-                .read()
-                .ok();
-
-            if let Some(files) = unmerged_files {
+            if let Ok(files) = cmd_read(&["diff", "--name-only", "--diff-filter=U"]) {
                 return Ok(!files.trim().is_empty());
             }
         }

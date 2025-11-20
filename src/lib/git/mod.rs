@@ -21,6 +21,7 @@
 mod branch;
 mod commit;
 mod config;
+mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;

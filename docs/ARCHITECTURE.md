@@ -43,9 +43,14 @@ src/
 └── lib/                    # 核心功能库（业务逻辑层）
     ├── mod.rs              # 库模块声明
     ├── git/                # Git 操作模块
-    │   ├── mod.rs          # Git 模块声明
-    │   ├── commands.rs     # Git 命令封装
-    │   ├── repo.rs         # 仓库操作和类型检测
+    │   ├── mod.rs          # Git 模块声明和导出
+    │   ├── branch.rs       # 分支管理操作
+    │   ├── commit.rs       # 提交相关操作
+    │   ├── repo.rs         # 仓库检测和类型识别
+    │   ├── stash.rs        # 暂存管理
+    │   ├── config.rs       # Git 配置管理
+    │   ├── pre_commit.rs   # Pre-commit hooks 支持
+    │   ├── helpers.rs       # Git 操作辅助函数
     │   └── types.rs        # Git 相关类型定义
     ├── http/               # HTTP 客户端模块
     │   ├── mod.rs          # HTTP 模块声明
