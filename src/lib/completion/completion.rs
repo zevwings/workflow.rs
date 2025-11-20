@@ -79,117 +79,39 @@ impl Completion {
 
     /// 配置 shell 配置文件以启用 completion
     pub fn configure_shell_config(shell: &Shell) -> Result<()> {
-        let config_file = Paths::config_file(shell)?;
-
         // 创建 workflow completion 配置文件
-        let workflow_config_file = Self::create_completion_config_file(shell)?;
-        let workflow_config_file_str = workflow_config_file.display().to_string();
+        let _workflow_config_file = Self::create_completion_config_file(shell)?;
 
-        // 读取 shell 配置文件
-        let config_content = fs::read_to_string(&config_file).unwrap_or_else(|_| String::new());
-
-        // 检查是否已经引用了 workflow 配置文件
+        // 使用 ShellConfigManager 添加 source 语句
         let source_pattern = "source $HOME/.workflow/.completions";
+        let added = crate::base::shell::ShellConfigManager::add_source(
+            source_pattern,
+            Some("Workflow CLI completions"),
+        )
+        .context("Failed to add completion source to shell config")?;
 
-        // 也检查是否使用了绝对路径
-        let source_pattern_abs = format!("source {}", workflow_config_file_str);
-
-        if config_content.contains(source_pattern) || config_content.contains(&source_pattern_abs) {
-            log_success!("completion 配置已存在于 {}", config_file.display());
-            return Ok(());
+        if !added {
+            log_success!("completion 配置已存在于 shell 配置文件");
+        } else {
+            log_success!("已将 completion 配置添加到 shell 配置文件");
         }
-
-        // 添加 source 语句到 shell 配置文件
-        let mut new_content = config_content;
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-        new_content.push_str("\n# Workflow CLI completions\n");
-        new_content.push_str(source_pattern);
-        new_content.push('\n');
-        new_content.push('\n');
-
-        fs::write(&config_file, new_content).context("Failed to write to shell config file")?;
-
-        log_success!("已将 completion 配置添加到 {}", config_file.display());
 
         Ok(())
     }
 
     /// 从 shell 配置文件中移除 completion 配置
-    pub fn remove_completion_config(shell: &Shell) -> Result<()> {
-        let config_file = Paths::config_file(shell)?;
-        let config_content = fs::read_to_string(&config_file).unwrap_or_else(|_| String::new());
-
-        // 检查是否引用了 workflow 配置文件
+    pub fn remove_completion_config(_shell: &Shell) -> Result<()> {
         let source_pattern = "source $HOME/.workflow/.completions";
 
-        let has_source = config_content.contains(source_pattern);
+        // 使用 ShellConfigManager 移除 source 语句
+        let removed = crate::base::shell::ShellConfigManager::remove_source(source_pattern)
+            .context("Failed to remove completion source from shell config")?;
 
-        // 也检查绝对路径
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let workflow_config_file = PathBuf::from(&home).join(".workflow").join(".completions");
-        let source_pattern_abs = format!("source {}", workflow_config_file.display());
-        let has_source_abs = config_content.contains(&source_pattern_abs);
-
-        if !has_source && !has_source_abs {
-            log_info!("completion 配置未在 {} 中找到", config_file.display());
-            return Ok(());
+        if !removed {
+            log_info!("completion 配置未在 shell 配置文件中找到");
+        } else {
+            log_success!("已从 shell 配置文件中删除 completion 配置");
         }
-
-        // 删除配置块（包括 marker 和 source 行）
-        let marker_start = "# Workflow CLI completions";
-        let mut new_content = String::new();
-        let lines: Vec<&str> = config_content.lines().collect();
-        let mut i = 0;
-
-        while i < lines.len() {
-            let line = lines[i];
-
-            // 检查是否是配置块开始
-            if line.contains(marker_start) {
-                i += 1; // 跳过 marker 行
-                        // 跳过 source 行
-                while i < lines.len() {
-                    let current_line = lines[i];
-                    if current_line.contains(source_pattern)
-                        || current_line.contains(&source_pattern_abs)
-                    {
-                        i += 1; // 跳过 source 行
-                        break;
-                    }
-                    // 如果遇到空行，停止
-                    if current_line.trim().is_empty() {
-                        i += 1;
-                        break;
-                    }
-                    i += 1;
-                }
-                continue;
-            }
-
-            // 跳过独立的 source 行（不在配置块内）
-            if line.contains(source_pattern) || line.contains(&source_pattern_abs) {
-                i += 1;
-                continue;
-            }
-
-            new_content.push_str(line);
-            new_content.push('\n');
-            i += 1;
-        }
-
-        // 清理末尾的多个空行
-        while new_content.ends_with("\n\n") {
-            new_content.pop();
-        }
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-
-        fs::write(&config_file, new_content).context("Failed to write to shell config file")?;
-
-        log_success!("已从 {} 中删除 completion 配置", config_file.display());
 
         Ok(())
     }

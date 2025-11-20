@@ -35,6 +35,9 @@ enum Commands {
     Proxy {
         #[command(subcommand)]
         subcommand: ProxySubcommand,
+        /// 临时模式：只在当前 shell 启用，不写入配置文件
+        #[arg(short, long)]
+        temporary: bool,
     },
     /// 运行环境检查
     ///
@@ -175,8 +178,11 @@ fn main() -> Result<()> {
 
     match cli.command {
         // 代理管理命令
-        Some(Commands::Proxy { subcommand }) => match subcommand {
-            ProxySubcommand::On => proxy::ProxyCommand::on()?,
+        Some(Commands::Proxy {
+            subcommand,
+            temporary,
+        }) => match subcommand {
+            ProxySubcommand::On => proxy::ProxyCommand::on(temporary)?,
             ProxySubcommand::Off => proxy::ProxyCommand::off()?,
             ProxySubcommand::Check => proxy::ProxyCommand::check()?,
         },

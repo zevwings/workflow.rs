@@ -2,11 +2,39 @@
 
 ## 📋 概述
 
-PR 模块是 Workflow CLI 的核心功能之一，提供 Pull Request 的创建、合并、关闭、查询等操作。支持 GitHub 和 Codeup 两种代码托管平台，并集成了 Jira 状态管理功能。
+PR 模块是 Workflow CLI 的核心功能之一，提供 Pull Request 的创建、合并、关闭、查询等操作。支持 GitHub 和 Codeup 两种代码托管平台，并集成了 Jira 状态管理功能。该模块采用分层架构设计，通过 `PlatformProvider` trait 实现平台抽象，使用工厂函数实现多态分发。
+
+**模块统计：**
+- 总代码行数：约 2000+ 行
+- 文件数量：15+ 个
+- 支持平台：GitHub、Codeup
+- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`
 
 ---
 
-## 📁 相关文件
+## 📁 模块结构
+
+```
+src/lib/pr/
+├── mod.rs              # PR 模块声明和导出 (18行)
+├── platform.rs         # PlatformProvider trait 和工厂函数 (150行)
+├── helpers.rs          # PR 辅助函数 (282行)
+├── llm.rs              # LLM 功能（PR 标题生成）(253行)
+│
+├── github/             # GitHub 平台实现
+│   ├── mod.rs          # GitHub 模块导出
+│   ├── platform.rs    # GitHub 平台实现
+│   ├── requests.rs     # GitHub API 请求结构体
+│   ├── responses.rs    # GitHub API 响应结构体
+│   └── errors.rs       # GitHub 错误处理
+│
+└── codeup/             # Codeup 平台实现
+    ├── mod.rs          # Codeup 模块导出
+    ├── platform.rs    # Codeup 平台实现
+    ├── requests.rs    # Codeup API 请求结构体
+    ├── responses.rs   # Codeup API 响应结构体
+    └── errors.rs      # Codeup 错误处理
+```
 
 ### CLI 入口层
 
@@ -22,13 +50,13 @@ src/bin/pr.rs
 src/commands/pr/
 ├── mod.rs          # PR 命令模块声明
 ├── helpers.rs      # PR 辅助函数（PR ID 解析等）
-├── create.rs       # 创建 PR 命令
-├── merge.rs        # 合并 PR 命令
-├── close.rs        # 关闭 PR 命令
-├── status.rs       # PR 状态查询命令
-├── list.rs         # 列出 PR 命令
-├── update.rs       # 更新 PR 命令
-└── integrate.rs    # 集成分支命令
+├── create.rs       # 创建 PR 命令 (712行)
+├── merge.rs        # 合并 PR 命令 (143行)
+├── close.rs        # 关闭 PR 命令 (141行)
+├── status.rs       # PR 状态查询命令 (50行)
+├── list.rs         # 列出 PR 命令 (21行)
+├── update.rs       # 更新 PR 命令 (57行)
+└── integrate.rs    # 集成分支命令 (343行)
 ```
 
 **职责**：
@@ -37,31 +65,101 @@ src/commands/pr/
 - 格式化输出
 - 调用核心业务逻辑层 (`lib/pr/`) 的功能
 
-### 核心业务逻辑层 (`lib/pr/`)
-
-```
-src/lib/pr/
-├── mod.rs          # PR 模块声明和导出
-├── provider.rs     # PR 平台抽象接口 (PlatformProvider trait)
-├── github.rs       # GitHub PR 实现
-├── codeup.rs       # Codeup PR 实现
-├── helpers.rs      # PR 辅助函数
-└── constants.rs    # PR 相关常量（变更类型等）
-```
-
-**职责**：
-- 定义统一的 PR 平台接口 (`PlatformProvider` trait)
-- 实现 GitHub 和 Codeup 的 PR 操作
-- 提供 PR 相关的辅助函数（生成分支名、commit 标题、PR body 等）
-
 ### 依赖模块
 
 - **`lib/git/`**：Git 操作（检测仓库类型、分支操作等）
 - **`lib/jira/`**：Jira 集成（状态更新、工作历史管理等）
-- **`lib/llm/`**：AI 功能（生成 PR 标题）
-- **`lib/http/`**：HTTP 客户端（API 请求）
-- **`lib/utils/`**：工具函数（浏览器、剪贴板等）
-- **`lib/settings/`**：配置管理（环境变量读取）
+- **`lib/base/llm/`**：AI 功能（生成 PR 标题）
+- **`lib/base/http/`**：HTTP 客户端（API 请求）
+- **`lib/base/util/`**：工具函数（浏览器、剪贴板等）
+- **`lib/base/settings/`**：配置管理（环境变量读取）
+
+---
+
+## 🏗️ 架构设计
+
+### 设计原则
+
+1. **平台抽象**：通过 `PlatformProvider` trait 实现统一的平台接口
+2. **多态分发**：使用工厂函数 `create_provider()` 实现动态分发
+3. **模块化设计**：按平台拆分模块，职责清晰
+4. **统一错误处理**：平台特定错误处理统一封装
+5. **代码复用**：请求/响应结构体分离，便于维护
+
+### 核心组件
+
+#### 1. 平台抽象层 (`platform.rs`)
+
+**职责**：定义统一的 PR 平台接口和工厂函数
+
+- **`PlatformProvider` trait**：定义所有平台必须实现的 9 个方法
+  - `create_pull_request()` - 创建 PR
+  - `merge_pull_request()` - 合并 PR
+  - `get_pull_request_info()` - 获取 PR 信息
+  - `get_pull_request_url()` - 获取 PR URL
+  - `get_pull_request_title()` - 获取 PR 标题
+  - `get_current_branch_pull_request()` - 获取当前分支的 PR ID
+  - `get_pull_requests()` - 列出 PR（可选）
+  - `get_pull_request_status()` - 获取 PR 状态
+  - `close_pull_request()` - 关闭 PR
+
+- **`create_provider()` 工厂函数**：
+  - 自动检测仓库类型（GitHub/Codeup）
+  - 返回 `Box<dyn PlatformProvider>` trait 对象
+  - 实现真正的多态分发
+
+- **`PullRequestStatus` 结构体**：PR 状态信息（state, merged, merged_at）
+
+- **`TYPES_OF_CHANGES` 常量**：PR 变更类型定义
+
+#### 2. GitHub 平台实现 (`github/`)
+
+**职责**：GitHub REST API v3 的完整实现
+
+- **`platform.rs`**：实现 `PlatformProvider` trait
+- **`requests.rs`**：GitHub API 请求结构体
+- **`responses.rs`**：GitHub API 响应结构体
+- **`errors.rs`**：GitHub 特定错误处理
+
+**关键特性**：
+- 使用 GitHub REST API v3
+- 需要 `GITHUB_TOKEN` 环境变量
+- 支持所有 trait 方法
+
+#### 3. Codeup 平台实现 (`codeup/`)
+
+**职责**：Codeup REST API 的完整实现
+
+- **`platform.rs`**：实现 `PlatformProvider` trait
+- **`requests.rs`**：Codeup API 请求结构体
+- **`responses.rs`**：Codeup API 响应结构体
+- **`errors.rs`**：Codeup 特定错误处理
+
+**关键特性**：
+- 使用 Codeup REST API
+- 需要 `CODEUP_PROJECT_ID`、`CODEUP_CSRF_TOKEN`、`CODEUP_COOKIE` 环境变量
+- 支持所有 trait 方法
+
+#### 4. 辅助函数层 (`helpers.rs`)
+
+**职责**：提供 PR 相关的通用辅助函数
+
+**主要函数**：
+- `extract_pull_request_id_from_url()` - 从 URL 提取 PR ID
+- `extract_github_repo_from_url()` - 从 URL 提取 GitHub 仓库信息
+- `generate_branch_name()` - 生成分支名
+- `generate_commit_title()` - 生成 commit 标题
+- `generate_pull_request_body()` - 生成 PR body
+- `get_current_branch_pr_id()` - 获取当前分支的 PR ID
+- `detect_repo_type()` - 检测仓库类型（向后兼容）
+
+#### 5. LLM 功能层 (`llm.rs`)
+
+**职责**：提供 PR 标题的 AI 生成功能
+
+- **`PullRequestLLM`**：PR LLM 客户端包装器
+- **`PullRequestContent`**：PR 内容结构体
+- **主要方法**：`generate_title()` - 从 Jira ticket 描述生成 PR 标题
 
 ---
 
@@ -76,9 +174,13 @@ bin/pr.rs (CLI 入口，参数解析)
   ↓
 commands/pr/*.rs (命令封装层，处理交互)
   ↓
-lib/pr/*.rs (核心业务逻辑层)
+lib/pr/platform.rs (工厂函数 create_provider())
   ↓
-lib/git/, lib/jira/, lib/http/ 等 (依赖模块)
+lib/pr/github/platform.rs 或 lib/pr/codeup/platform.rs (平台实现)
+  ↓
+lib/base/http/ (HTTP 客户端)
+  ↓
+GitHub API 或 Codeup API
 ```
 
 #### 架构流程图
@@ -95,25 +197,27 @@ graph TB
     CLI --> Update[commands/pr/update.rs<br/>更新 PR]
     CLI --> Integrate[commands/pr/integrate.rs<br/>集成分支]
 
-    Create --> LibPR[lib/pr/<br/>核心业务逻辑层]
-    Merge --> LibPR
-    Close --> LibPR
-    Status --> LibPR
-    List --> LibPR
-    Update --> LibPR
-    Integrate --> LibPR
+    Create --> Factory[lib/pr/platform.rs<br/>create_provider<br/>工厂函数]
+    Merge --> Factory
+    Close --> Factory
+    Status --> Factory
+    List --> Factory
+    Update --> Factory
+    Integrate --> Factory
 
-    LibPR --> Git[lib/git/<br/>Git 操作]
-    LibPR --> Jira[lib/jira/<br/>Jira 集成]
-    LibPR --> LLM[lib/llm/<br/>AI 功能]
-    LibPR --> Http[lib/http/<br/>HTTP 客户端]
-    LibPR --> Utils[lib/utils/<br/>工具函数]
-    LibPR --> Settings[lib/settings/<br/>配置管理]
+    Factory -->|GitHub| GitHub[lib/pr/github/platform.rs<br/>GitHub 实现]
+    Factory -->|Codeup| Codeup[lib/pr/codeup/platform.rs<br/>Codeup 实现]
 
-    Http --> GitHub[GitHub API]
-    Http --> Codeup[Codeup API]
-    Http --> JiraAPI[Jira API]
-    LLM --> LLMAPI[LLM API]
+    GitHub --> Http[lib/base/http/<br/>HTTP 客户端]
+    Codeup --> Http
+
+    Http --> GitHubAPI[GitHub API]
+    Http --> CodeupAPI[Codeup API]
+
+    Create --> Git[lib/git/<br/>Git 操作]
+    Create --> Jira[lib/jira/<br/>Jira 集成]
+    Create --> LLM[lib/base/llm/<br/>AI 功能]
+    Create --> Utils[lib/base/util/<br/>工具函数]
 
     style User fill:#e1f5ff
     style CLI fill:#fff4e1
@@ -124,18 +228,19 @@ graph TB
     style List fill:#fff4e1
     style Update fill:#fff4e1
     style Integrate fill:#fff4e1
-    style LibPR fill:#e8f5e9
+    style Factory fill:#e8f5e9
+    style GitHub fill:#e3f2fd
+    style Codeup fill:#fff3e0
+    style Http fill:#f3e5f5
     style Git fill:#f3e5f5
     style Jira fill:#f3e5f5
     style LLM fill:#f3e5f5
-    style Http fill:#f3e5f5
     style Utils fill:#f3e5f5
-    style Settings fill:#f3e5f5
 ```
 
-### 1. 创建 PR (`pr create`)
+### 典型调用示例
 
-#### 调用流程
+#### 1. 创建 PR (`pr create`)
 
 ```
 bin/pr.rs::PRCommands::Create
@@ -147,7 +252,7 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
   3. ensure_jira_status()                       # 检查并配置 Jira 状态
   4. resolve_title()                            # 获取或生成 PR 标题
      ├─ 如果提供 title，直接使用
-     └─ 否则使用 AI 生成（lib/llm/）
+     └─ 否则使用 AI 生成（lib/pr/llm.rs）
   5. generate_commit_title_and_branch_name()     # 生成 commit 标题和分支名
      └─ lib/pr/helpers.rs::generate_branch_name()
      └─ lib/pr/helpers.rs::generate_commit_title()
@@ -156,100 +261,21 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
   8. generate_pull_request_body()               # 生成 PR body
      └─ lib/pr/helpers.rs::generate_pull_request_body()
   9. create_or_update_branch()                  # 创建或更新分支
-     └─ lib/git/::Git::create_branch()
-     └─ lib/git/::Git::commit()
-     └─ lib/git/::Git::push()
+     └─ lib/git/::GitBranch::checkout_branch()
+     └─ lib/git/::GitCommit::commit()
+     └─ lib/git/::GitBranch::push()
   10. create_or_get_pull_request()              # 创建或获取 PR
-      ├─ lib/git/::Git::detect_repo_type()      # 检测仓库类型
-      ├─ lib/pr/github.rs::GitHub::create_pull_request()  # GitHub
-      └─ lib/pr/codeup.rs::Codeup::create_pull_request()  # Codeup
+      ├─ lib/pr/platform.rs::create_provider()  # 工厂函数
+      └─ provider.create_pull_request()         # 多态调用
   11. update_jira_ticket()                      # 更新 Jira
-      └─ lib/jira/::Jira::update_status()
-      └─ lib/jira/status.rs::WorkHistory::save()  # 保存工作历史
+      └─ lib/jira/::JiraTicket::transition()
+      └─ lib/jira/status.rs::WorkHistory::save()
   12. copy_and_open_pull_request()              # 复制 URL 并打开浏览器
-      └─ lib/utils/clipboard.rs::Clipboard::copy()
-      └─ lib/utils/browser.rs::Browser::open()
+      └─ lib/base/util/clipboard.rs::Clipboard::copy()
+      └─ lib/base/util/browser.rs::Browser::open()
 ```
 
-#### 创建 PR 流程图
-
-```mermaid
-flowchart LR
-    Start([开始]) --> Check{运行检查}
-    Check --> ResolveTicket[解析 Jira Ticket]
-    ResolveTicket --> EnsureStatus[确保 Jira 状态]
-    EnsureStatus --> ResolveTitle{获取 PR 标题}
-
-    ResolveTitle -->|提供 --title| UseTitle[使用提供的标题]
-    ResolveTitle -->|未提供| AIGenerate[AI 生成标题]
-    AIGenerate -->|成功| UseTitle
-    AIGenerate -->|失败| ManualInput[手动输入标题]
-    ManualInput --> UseTitle
-
-    UseTitle --> GenerateBranch[生成分支名和 commit]
-    GenerateBranch --> GetDesc[获取描述]
-    GetDesc --> SelectTypes[选择变更类型]
-    SelectTypes --> GenerateBody[生成 PR Body]
-
-    GenerateBody --> DryRun{是否为<br/>dry-run?}
-    DryRun -->|是| DryRunEnd[输出预览信息]
-    DryRun -->|否| CreateBranch[创建/更新分支]
-
-    CreateBranch --> GitOps[Git 操作]
-    GitOps --> DetectRepo{检测仓库类型}
-
-    DetectRepo -->|GitHub| GitHubAPI[GitHub API]
-    DetectRepo -->|Codeup| CodeupAPI[Codeup API]
-
-    GitHubAPI --> UpdateJira[更新 Jira]
-    CodeupAPI --> UpdateJira
-
-    UpdateJira --> JiraStatus[更新 Jira 状态]
-    JiraStatus --> SaveHistory[保存工作历史]
-    SaveHistory --> CopyOpen[复制 URL 并打开浏览器]
-    CopyOpen --> End([完成])
-    DryRunEnd --> End
-
-    style Start fill:#e1f5ff
-    style End fill:#c8e6c9
-    style Check fill:#fff9c4
-    style ResolveTitle fill:#fff9c4
-    style DryRun fill:#fff9c4
-    style DetectRepo fill:#fff9c4
-    style GitHubAPI fill:#e3f2fd
-    style CodeupAPI fill:#e3f2fd
-    style UpdateJira fill:#f3e5f5
-```
-
-#### 关键步骤说明
-
-1. **Jira Ticket 处理**：
-   - 如果提供 ticket，验证格式
-   - 如果没有提供，提示用户输入
-   - 检查并配置 Jira 状态（从 `jira-status.toml` 读取配置）
-
-2. **PR 标题生成**：
-   - 如果提供 `--title`，直接使用
-   - 否则从 Jira ticket 获取描述，使用 AI 生成标题
-   - 如果 AI 生成失败，回退到手动输入
-
-3. **分支和 Commit**：
-   - 生成分支名：`{JIRA_TICKET}--{title}`（如果配置了前缀，添加前缀）
-   - 生成 commit 标题：`{JIRA_TICKET}: {title}` 或 `# {title}`
-
-4. **PR Body 生成**：
-   - 包含变更类型复选框
-   - 包含简短描述
-   - 包含 Jira 链接（如果有 ticket）
-   - 包含依赖信息（如果有）
-
-5. **平台适配**：
-   - 自动检测仓库类型（GitHub/Codeup）
-   - 调用对应的平台实现
-
-### 2. 合并 PR (`pr merge`)
-
-#### 调用流程
+#### 2. 合并 PR (`pr merge`)
 
 ```
 bin/pr.rs::PRCommands::Merge
@@ -260,523 +286,118 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
   2. get_pull_request_id()                      # 获取 PR ID
      ├─ 如果提供 PR ID，直接使用
      └─ 否则从当前分支获取
-        ├─ lib/pr/github.rs::GitHub::get_current_branch_pull_request()
-        └─ lib/pr/codeup.rs::Codeup::get_current_branch_pull_request()
-  3. Git::current_branch()                      # 保存当前分支名
-  4. Git::get_default_branch()                  # 获取默认分支
+        └─ provider.get_current_branch_pull_request()
+  3. GitBranch::current_branch()                # 保存当前分支名
+  4. GitBranch::get_default_branch()             # 获取默认分支
   5. merge_pull_request()                       # 合并 PR
      ├─ 检查 PR 状态（已合并则跳过）
-     ├─ lib/pr/github.rs::GitHub::merge_pull_request()
-     └─ lib/pr/codeup.rs::Codeup::merge_pull_request()
+     └─ provider.merge_pull_request()
   6. cleanup_after_merge()                      # 清理本地分支
-     └─ lib/git/::Git::checkout()
-     └─ lib/git/::Git::delete_branch()
+     └─ lib/git/::GitBranch::checkout_branch()
+     └─ lib/git/::GitBranch::delete()
   7. update_jira_status()                       # 更新 Jira 状态
-     ├─ lib/jira/status.rs::WorkHistory::get()  # 从工作历史获取 ticket
-     ├─ 如果历史中没有，从 PR 标题提取 ticket
-     └─ lib/jira/::Jira::update_status()
+     ├─ lib/jira/status.rs::WorkHistory::read_work_history()
+     └─ lib/jira/::JiraTicket::transition()
 ```
 
-#### 合并 PR 流程图
-
-```mermaid
-flowchart LR
-    Start([开始]) --> Check[运行检查]
-    Check --> DetectRepo[检测仓库类型]
-    DetectRepo --> GetPRID{获取 PR ID}
-
-    GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
-    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
-
-    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
-    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
-
-    GitHubGetPR --> UsePRID
-    CodeupGetPR --> UsePRID
-
-    UsePRID --> SaveBranch[保存当前分支名]
-    SaveBranch --> GetDefault[获取默认分支]
-    GetDefault --> CheckStatus{检查 PR 状态<br/>是否已合并?}
-
-    CheckStatus -->|已合并| SkipMerge[跳过合并步骤]
-    CheckStatus -->|未合并| MergePR{合并 PR}
-
-    MergePR -->|GitHub| GitHubMerge[GitHub API]
-    MergePR -->|Codeup| CodeupMerge[Codeup API]
-
-    GitHubMerge --> Cleanup
-    CodeupMerge --> Cleanup
-    SkipMerge --> Cleanup
-
-    Cleanup[清理本地分支] --> Checkout[切换到默认分支]
-    Checkout --> DeleteBranch[删除本地分支]
-
-    DeleteBranch --> UpdateJira[更新 Jira 状态]
-    UpdateJira --> GetHistory{从工作历史<br/>获取 ticket}
-
-    GetHistory -->|找到| UseHistory[使用工作历史中的 ticket]
-    GetHistory -->|未找到| ExtractTitle[从 PR 标题提取 ticket]
-
-    UseHistory --> UpdateStatus[更新 Jira 状态]
-    ExtractTitle --> UpdateStatus
-    UpdateStatus --> End([完成])
-
-    style Start fill:#e1f5ff
-    style End fill:#c8e6c9
-    style GetPRID fill:#fff9c4
-    style CheckStatus fill:#fff9c4
-    style GetHistory fill:#fff9c4
-    style GitHubGetPR fill:#e3f2fd
-    style CodeupGetPR fill:#e3f2fd
-    style GitHubMerge fill:#e3f2fd
-    style CodeupMerge fill:#e3f2fd
-    style UpdateJira fill:#f3e5f5
-```
-
-#### 关键步骤说明
-
-1. **PR ID 获取**：
-   - 如果提供 PR ID，直接使用
-   - 否则从当前分支自动检测（调用平台 API 查找对应的 PR）
-
-2. **合并前检查**：
-   - 检查 PR 状态，如果已合并则跳过合并步骤
-   - 但继续执行后续清理和 Jira 更新步骤
-
-3. **合并后清理**：
-   - 切换到默认分支
-   - 删除本地分支（远程分支由平台自动删除）
-
-4. **Jira 状态更新**：
-   - 从工作历史 (`work-history.json`) 查找对应的 Jira ticket
-   - 如果历史中没有，尝试从 PR 标题提取 ticket ID
-   - 更新 Jira 状态为 `merged-pr` 配置的状态
-
-### 3. 关闭 PR (`pr close`)
-
-#### 调用流程
+#### 3. 关闭 PR (`pr close`)
 
 ```
 bin/pr.rs::PRCommands::Close
   ↓
 commands/pr/close.rs::PullRequestCloseCommand::close()
   ↓
-  1. get_pull_request_id()                      # 获取 PR ID（同 merge）
-  2. Git::current_branch()                      # 保存当前分支名
-  3. Git::get_default_branch()                  # 获取默认分支
+  1. get_pull_request_id()                      # 获取 PR ID
+  2. GitBranch::current_branch()                # 保存当前分支名
+  3. GitBranch::get_default_branch()             # 获取默认分支
   4. check_if_already_closed()                  # 检查 PR 是否已关闭
-     └─ lib/pr/*.rs::get_pull_request_status()
+     └─ provider.get_pull_request_status()
   5. close_pull_request()                       # 关闭 PR（如果未关闭）
-     ├─ lib/pr/github.rs::GitHub::close_pull_request()
-     └─ lib/pr/codeup.rs::Codeup::close_pull_request()
-  6. delete_remote_branch()                     # 删除远程分支
-     └─ lib/git/::Git::delete_remote_branch()
+     └─ provider.close_pull_request()
+  6. GitBranch::delete_remote()                  # 删除远程分支
   7. cleanup_after_close()                      # 清理本地分支
-     └─ lib/git/::Git::checkout()
-     └─ lib/git/::Git::delete_branch()
+     └─ lib/git/::GitBranch::checkout_branch()
+     └─ lib/git/::GitBranch::delete()
 ```
-
-#### 关闭 PR 流程图
-
-```mermaid
-flowchart LR
-    Start([开始]) --> DetectRepo[检测仓库类型]
-    DetectRepo --> GetPRID{获取 PR ID}
-
-    GetPRID -->|提供 PR ID| UsePRID[使用提供的 PR ID]
-    GetPRID -->|未提供| AutoDetect{从当前分支自动检测}
-
-    AutoDetect -->|GitHub| GitHubGetPR[GitHub API]
-    AutoDetect -->|Codeup| CodeupGetPR[Codeup API]
-
-    GitHubGetPR --> UsePRID
-    CodeupGetPR --> UsePRID
-
-    UsePRID --> SaveBranch[保存当前分支名]
-    SaveBranch --> GetDefault[获取默认分支]
-    GetDefault --> CheckDefault{当前分支<br/>是否为默认分支?}
-
-    CheckDefault -->|是| Error[错误：不允许关闭默认分支]
-    CheckDefault -->|否| CheckClosed{检查 PR 状态<br/>是否已关闭?}
-
-    CheckClosed -->|已关闭| SkipClose[跳过关闭步骤]
-    CheckClosed -->|未关闭| ClosePR{关闭 PR}
-
-    ClosePR -->|GitHub| GitHubClose[GitHub API]
-    ClosePR -->|Codeup| CodeupClose[Codeup API]
-
-    GitHubClose --> DeleteRemote
-    CodeupClose --> DeleteRemote
-    SkipClose --> DeleteRemote
-
-    DeleteRemote[删除远程分支] --> Cleanup[清理本地分支]
-
-    Cleanup --> Checkout[切换到默认分支]
-    Checkout --> DeleteBranch[删除本地分支]
-    DeleteBranch --> End([完成])
-    Error --> End
-
-    style Start fill:#e1f5ff
-    style End fill:#c8e6c9
-    style GetPRID fill:#fff9c4
-    style CheckDefault fill:#ffcdd2
-    style CheckClosed fill:#fff9c4
-    style GitHubGetPR fill:#e3f2fd
-    style CodeupGetPR fill:#e3f2fd
-    style GitHubClose fill:#e3f2fd
-    style CodeupClose fill:#e3f2fd
-    style Error fill:#ffcdd2
-```
-
-#### 关键步骤说明
-
-1. **安全检查**：
-   - 如果当前分支是默认分支，不允许关闭
-
-2. **关闭前检查**：
-   - 检查 PR 状态，如果已关闭则跳过关闭步骤
-   - 但继续执行后续清理步骤
-
-3. **错误处理**：
-   - 如果关闭失败，检查是否是"已关闭"错误（竞态条件）
-   - 如果是，继续执行清理步骤
-
-4. **清理操作**：
-   - 删除远程分支
-   - 切换到默认分支
-   - 删除本地分支
-
-### 4. 查询 PR 状态 (`pr status`)
-
-#### 调用流程
-
-```
-bin/pr.rs::PRCommands::Status
-  ↓
-commands/pr/status.rs::PullRequestStatusCommand::show()
-  ↓
-  1. get_pr_identifier()                       # 获取 PR 标识符
-     ├─ 如果提供 ID 或分支名，直接使用
-     └─ 否则从当前分支获取
-  2. show_pr_info()                             # 显示 PR 信息
-     ├─ lib/pr/github.rs::GitHub::get_pull_request_info()
-     └─ lib/pr/codeup.rs::Codeup::get_pull_request_info()
-```
-
-#### 关键步骤说明
-
-1. **PR 标识符获取**：
-   - GitHub：只支持数字 ID
-   - Codeup：支持 ID 或分支名
-   - 如果不提供，从当前分支自动检测
-
-2. **信息展示**：
-   - 调用平台 API 获取 PR 详细信息
-   - 格式化输出（状态、作者、评论等）
-
-### 5. 列出 PR (`pr list`)
-
-#### 调用流程
-
-```
-bin/pr.rs::PRCommands::List
-  ↓
-commands/pr/list.rs::GetPullRequestsCommand::list()
-  ↓
-  1. Git::detect_repo_type()                   # 检测仓库类型
-  2. get_pull_requests()                        # 获取 PR 列表
-     ├─ lib/pr/github.rs::GitHub::get_pull_requests()
-     └─ lib/pr/codeup.rs::Codeup::get_pull_requests()
-```
-
-#### 关键步骤说明
-
-1. **过滤和限制**：
-   - 支持按状态过滤（open, closed, merged）
-   - 支持限制返回数量
-
-2. **平台差异**：
-   - GitHub 和 Codeup 都支持列表功能
-   - 其他平台可能不支持（返回错误）
-
-### 6. 更新 PR (`pr update`)
-
-#### 调用流程
-
-```
-bin/pr.rs::PRCommands::Update
-  ↓
-commands/pr/update.rs::PullRequestUpdateCommand::update()
-  ↓
-  1. Git::detect_repo_type()                   # 检测仓库类型
-  2. get_pull_request_title()                   # 获取 PR 标题
-     ├─ 从当前分支获取 PR ID
-     └─ 调用平台 API 获取 PR 标题
-  3. Git::commit()                              # 提交更改（使用 PR 标题作为消息）
-  4. Git::push()                                # 推送到远程
-```
-
-#### 关键步骤说明
-
-1. **PR 标题获取**：
-   - 从当前分支自动检测 PR ID
-   - 调用平台 API 获取 PR 标题
-   - 如果找不到 PR，使用默认消息 "update"
-
-2. **提交和推送**：
-   - 使用 PR 标题作为 commit 消息
-   - 自动暂存所有文件
-   - 推送到远程分支
-
-### 7. 集成分支 (`pr integrate`)
-
-#### 调用流程
-
-```
-bin/pr.rs::PRCommands::Integrate
-  ↓
-commands/pr/integrate.rs::PullRequestIntegrateCommand::integrate()
-  ↓
-  1. CheckCommand::run_all()                    # 运行检查（可选，失败时可继续）
-  2. Git::current_branch()                      # 获取当前分支
-  3. check_working_directory()                  # 检查工作区状态
-     ├─ 如果有未提交更改，提示 stash 或取消
-     └─ 如果选择 stash，执行 Git::stash_push()
-  4. prepare_source_branch()                    # 验证并准备源分支
-     ├─ 检查是否为默认分支（不允许）
-     ├─ 检查分支是否存在（本地或远程）
-     ├─ 如果只在远程，执行 Git::fetch()
-     └─ 返回分支信息（类型、合并引用）
-  5. determine_merge_strategy()                  # 确定合并策略
-     ├─ --ff-only → FastForwardOnly
-     ├─ --squash → Squash
-     └─ 默认 → Merge
-  6. Git::merge_branch()                         # 执行合并
-  7. check_and_update_current_branch_pr()      # 检查并更新当前分支的 PR
-     ├─ 如果当前分支有 PR，推送代码更新 PR
-     └─ 如果是远程分支合并，恢复 stash
-  8. check_and_close_source_branch_pr()        # 检查并关闭源分支的 PR
-     ├─ 从工作历史查找源分支的 PR ID
-     └─ 如果找到，调用平台 API 关闭 PR
-  9. delete_merged_branch()                     # 删除被合并的源分支
-     ├─ 删除本地分支
-     └─ 删除远程分支
-  10. 如果指定了 --push，推送到远程（本地分支合并时）
-```
-
-#### 集成分支流程图
-
-```mermaid
-flowchart LR
-    Start([开始]) --> Check[运行检查<br/>可选]
-    Check --> GetCurrent[获取当前分支]
-    GetCurrent --> CheckWorkDir{检查工作区<br/>是否有未提交更改?}
-
-    CheckWorkDir -->|有更改| StashChoice{选择处理方式}
-    CheckWorkDir -->|无更改| PrepareBranch
-
-    StashChoice -->|Stash| Stash[Stash 更改]
-    StashChoice -->|取消| Abort[取消操作]
-    Stash --> PrepareBranch
-
-    PrepareBranch[验证源分支] --> CheckDefault{是否为<br/>默认分支?}
-    CheckDefault -->|是| Error[错误：不允许]
-    CheckDefault -->|否| CheckExists{分支是否存在?}
-
-    CheckExists -->|不存在| Error2[错误：分支不存在]
-    CheckExists -->|只在远程| Fetch[Fetch 远程]
-    CheckExists -->|本地存在| DetermineStrategy
-
-    Fetch --> DetermineStrategy[确定合并策略<br/>ff-only/squash/merge]
-    DetermineStrategy --> Merge[执行合并]
-
-    Merge --> CheckSuccess{合并成功?}
-    CheckSuccess -->|失败| CheckConflict{有冲突?}
-    CheckSuccess -->|成功| CheckRemote{源分支<br/>是远程分支?}
-
-    CheckConflict -->|有冲突| ManualResolve[提示手动解决]
-    CheckConflict -->|无冲突| Error3[返回错误]
-
-    CheckRemote -->|是| UpdatePR[更新当前分支 PR]
-    CheckRemote -->|否| RestoreStash{有 Stash?}
-
-    UpdatePR --> CloseSourcePR[关闭源分支 PR]
-    RestoreStash -->|有| PopStash[恢复 Stash]
-    RestoreStash -->|无| CheckPush
-
-    PopStash --> CheckPush{需要推送?<br/>--no-push?}
-    CheckPush -->|是| Push[推送到远程]
-    CheckPush -->|否| CloseSourcePR
-
-    Push --> CloseSourcePR
-    CloseSourcePR --> DeleteBranch[删除源分支<br/>本地和远程]
-    DeleteBranch --> End([完成])
-
-    ManualResolve --> End
-    Error --> End
-    Error2 --> End
-    Error3 --> End
-    Abort --> End
-
-    style Start fill:#e1f5ff
-    style End fill:#c8e6c9
-    style CheckWorkDir fill:#fff9c4
-    style CheckDefault fill:#ffcdd2
-    style CheckSuccess fill:#fff9c4
-    style CheckRemote fill:#fff9c4
-    style Merge fill:#e3f2fd
-    style UpdatePR fill:#e3f2fd
-    style CloseSourcePR fill:#e3f2fd
-    style Error fill:#ffcdd2
-    style Error2 fill:#ffcdd2
-    style Error3 fill:#ffcdd2
-```
-
-#### 关键步骤说明
-
-1. **工作区检查**：
-   - 检查是否有未提交的更改
-   - 如果有，提示用户选择 stash 或取消操作
-   - 如果选择 stash，自动保存更改，合并后恢复
-
-2. **源分支验证**：
-   - 不允许将默认分支合并到当前分支
-   - 检查分支是否存在（本地或远程）
-   - 如果分支只在远程，自动 fetch 获取最新引用
-
-3. **合并策略**：
-   - `--ff-only`：只允许 fast-forward 合并，否则失败
-   - `--squash`：将源分支的所有提交压缩为一个提交
-   - 默认：使用标准的 merge commit
-
-4. **合并后处理**：
-   - **远程分支合并**：如果当前分支有 PR，自动推送更新 PR
-   - **本地分支合并**：根据 `--no-push` 标志决定是否推送
-   - 自动恢复 stash（如果有）
-
-5. **PR 管理**：
-   - 如果源分支有 PR，自动关闭它
-   - 通过工作历史查找源分支的 PR ID
-
-6. **分支清理**：
-   - 合并成功后，自动删除源分支（本地和远程）
-   - 如果删除失败，提供手动删除的提示
-
-7. **错误处理**：
-   - 合并冲突时，提供详细的解决步骤
-   - 合并失败时，自动恢复 stash（如果有）
 
 ---
 
-## 🏗️ 平台抽象设计
+## 📦 模块职责
 
 ### PlatformProvider Trait
 
-所有 PR 平台（GitHub、Codeup）都实现 `PlatformProvider` trait，提供统一的接口：
+**职责**：定义统一的 PR 平台接口
 
-```rust
-pub trait PlatformProvider {
-    fn create_pull_request(...) -> Result<String>;
-    fn merge_pull_request(...) -> Result<()>;
-    fn get_pull_request_info(...) -> Result<String>;
-    fn get_pull_request_url(...) -> Result<String>;
-    fn get_pull_request_title(...) -> Result<String>;
-    fn get_current_branch_pull_request() -> Result<Option<String>>;
-    fn get_pull_requests(...) -> Result<String>;
-    fn get_pull_request_status(...) -> Result<PullRequestStatus>;
-    fn close_pull_request(...) -> Result<()>;
-}
-```
+**核心方法**：
+- `create_pull_request()` - 创建 PR，返回 PR URL
+- `merge_pull_request()` - 合并 PR
+- `get_pull_request_info()` - 获取 PR 详细信息
+- `get_pull_request_url()` - 获取 PR URL
+- `get_pull_request_title()` - 获取 PR 标题
+- `get_current_branch_pull_request()` - 获取当前分支的 PR ID
+- `get_pull_requests()` - 列出 PR（可选方法）
+- `get_pull_request_status()` - 获取 PR 状态
+- `close_pull_request()` - 关闭 PR
 
-#### 平台抽象设计图
+**设计优势**：
+- 使用实例方法（`&self`），支持 trait 对象
+- 通过工厂函数实现多态分发
+- 消除命令层的代码重复
 
-```mermaid
-graph TB
-    subgraph "命令层 (commands/pr/)"
-        CreateCmd[create.rs]
-        MergeCmd[merge.rs]
-        CloseCmd[close.rs]
-        StatusCmd[status.rs]
-        ListCmd[list.rs]
-        UpdateCmd[update.rs]
-        IntegrateCmd[integrate.rs]
-    end
+### GitHub 平台实现
 
-    subgraph "平台抽象接口"
-        Trait[PlatformProvider Trait<br/>统一接口]
-        Methods[方法列表<br/>create_pull_request<br/>merge_pull_request<br/>get_pull_request_info<br/>get_pull_request_url<br/>get_pull_request_title<br/>get_current_branch_pull_request<br/>get_pull_requests<br/>get_pull_request_status<br/>close_pull_request]
-    end
+**职责**：GitHub REST API v3 的完整实现
 
-    subgraph "平台实现"
-        GitHub[GitHub<br/>lib/pr/github.rs<br/>GitHub REST API v3]
-        Codeup[Codeup<br/>lib/pr/codeup.rs<br/>Codeup REST API]
-    end
+**核心功能**：
+- 实现所有 `PlatformProvider` trait 方法
+- 统一的 HTTP 请求处理
+- GitHub 特定的错误处理
+- 请求/响应结构体分离
 
-    subgraph "仓库检测"
-        Detect[Git::detect_repo_type<br/>lib/git/repo.rs]
-    end
+**使用场景**：
+- 自动检测到 GitHub 仓库时使用
+- 需要 `GITHUB_TOKEN` 环境变量
 
-    subgraph "外部服务"
-        GitHubAPI[GitHub API]
-        CodeupAPI[Codeup API]
-    end
+### Codeup 平台实现
 
-    CreateCmd --> Trait
-    MergeCmd --> Trait
-    CloseCmd --> Trait
-    StatusCmd --> Trait
-    ListCmd --> Trait
-    UpdateCmd --> Trait
-    IntegrateCmd --> Trait
+**职责**：Codeup REST API 的完整实现
 
-    Trait --> Methods
-    Methods --> GitHub
-    Methods --> Codeup
+**核心功能**：
+- 实现所有 `PlatformProvider` trait 方法
+- 统一的 HTTP 请求处理
+- Codeup 特定的错误处理
+- 请求/响应结构体分离
 
-    Detect -->|检测到 GitHub| GitHub
-    Detect -->|检测到 Codeup| Codeup
+**使用场景**：
+- 自动检测到 Codeup 仓库时使用
+- 需要 `CODEUP_PROJECT_ID`、`CODEUP_CSRF_TOKEN`、`CODEUP_COOKIE` 环境变量
 
-    GitHub --> GitHubAPI
-    Codeup --> CodeupAPI
+### Helpers 模块
 
-    style Trait fill:#e8f5e9
-    style Methods fill:#e8f5e9
-    style GitHub fill:#e3f2fd
-    style Codeup fill:#fff3e0
-    style Detect fill:#f3e5f5
-    style CreateCmd fill:#fff4e1
-    style MergeCmd fill:#fff4e1
-    style CloseCmd fill:#fff4e1
-    style StatusCmd fill:#fff4e1
-    style ListCmd fill:#fff4e1
-    style UpdateCmd fill:#fff4e1
-    style IntegrateCmd fill:#fff4e1
-```
+**职责**：提供 PR 相关的通用辅助函数
 
-### 平台实现
+**核心功能**：
+- URL 解析（提取 PR ID、仓库信息）
+- 分支名和 commit 标题生成
+- PR body 生成
+- 仓库类型检测（向后兼容）
 
-- **GitHub** (`lib/pr/github.rs`)：
-  - 使用 GitHub REST API v3
-  - 需要 `GITHUB_TOKEN` 环境变量
-  - 支持所有 trait 方法
+**使用场景**：
+- 命令层和核心层都可以使用
+- 平台无关的通用逻辑
 
-- **Codeup** (`lib/pr/codeup.rs`)：
-  - 使用 Codeup REST API
-  - 需要 `CODEUP_PROJECT_ID`、`CODEUP_CSRF_TOKEN`、`CODEUP_COOKIE` 环境变量
-  - 支持所有 trait 方法
+### LLM 模块
 
-### 仓库类型检测
+**职责**：提供 PR 标题的 AI 生成功能
 
-通过 `lib/git/` 模块检测仓库类型：
+**核心功能**：
+- 从 Jira ticket 描述生成简洁的英文 PR 标题
+- 使用统一的 LLM 客户端
+- 错误处理和回退机制
 
-```rust
-let repo_type = Git::detect_repo_type()?;
-match repo_type {
-    RepoType::GitHub => { /* 使用 GitHub 实现 */ }
-    RepoType::Codeup => { /* 使用 Codeup 实现 */ }
-    _ => { /* 不支持 */ }
-}
-```
+**使用场景**：
+- PR 创建时自动生成标题
+- 如果 AI 生成失败，回退到手动输入
 
 ---
 
@@ -785,14 +406,14 @@ match repo_type {
 ### Jira 集成
 
 - **创建 PR 时**：
-  - 检查并配置 Jira 状态（从 `jira-status.toml` 读取）
-  - 创建 PR 后更新 Jira 状态为 `created-pr` 配置的状态
-  - 保存工作历史（PR ID → Jira ticket 映射）
+  - `JiraStatus::configure_interactive()` - 检查并配置 Jira 状态
+  - `JiraTicket::transition()` - 更新 Jira 状态为 `created-pr` 配置的状态
+  - `JiraWorkHistory::write_work_history()` - 保存工作历史记录（PR ID → Jira ticket 映射）
 
 - **合并 PR 时**：
-  - 从工作历史查找对应的 Jira ticket
+  - `JiraWorkHistory::read_work_history()` - 从工作历史查找对应的 Jira ticket
   - 如果历史中没有，从 PR 标题提取 ticket ID
-  - 更新 Jira 状态为 `merged-pr` 配置的状态
+  - `JiraTicket::transition()` - 更新 Jira 状态为 `merged-pr` 配置的状态
 
 ### Git 集成
 
@@ -800,15 +421,91 @@ match repo_type {
 - **提交操作**：提交更改、推送远程
 - **仓库检测**：检测仓库类型、获取默认分支、获取远程 URL
 
-### AI 集成
+**关键方法**：
+- `GitRepo::detect_repo_type()` - 检测仓库类型（GitHub/Codeup）
+- `GitBranch::checkout_branch()` - 创建或切换分支
+- `GitCommit::commit()` - 提交更改
+- `GitBranch::push()` - 推送到远程
+
+### LLM 集成
 
 - **标题生成**：从 Jira ticket 获取描述，使用 LLM 生成简洁的英文 PR 标题
 - **错误处理**：如果 AI 生成失败，回退到手动输入
+
+**关键方法**：
+- `PullRequestLLM::generate_title()` - 生成 PR 标题
 
 ### 工具集成
 
 - **剪贴板**：复制 PR URL 到剪贴板
 - **浏览器**：自动打开 PR 页面
+
+**关键方法**：
+- `Clipboard::copy()` - 复制到剪贴板
+- `Browser::open()` - 打开浏览器
+
+---
+
+## 🎯 设计模式
+
+### 1. 策略模式
+
+通过 `PlatformProvider` trait 实现平台抽象，不同平台有不同的实现策略。
+
+**优势**：
+- 添加新平台只需实现 trait，无需修改命令层代码
+- 命令层代码与具体平台解耦
+
+### 2. 工厂模式
+
+通过 `create_provider()` 工厂函数实现多态分发。
+
+**优势**：
+- 自动检测仓库类型
+- 返回 trait 对象，实现真正的多态
+- 消除命令层的重复代码
+
+### 3. 模板方法模式
+
+命令层定义统一的流程（如 `create()`、`merge()`），具体步骤由不同的方法实现。
+
+**优势**：
+- 流程清晰，易于理解和维护
+- 便于添加新的处理步骤
+
+### 4. 依赖注入
+
+通过 trait 和模块化设计，命令层依赖抽象的 `PlatformProvider`，而不是具体的平台实现。
+
+**优势**：
+- 符合依赖倒置原则
+- 提高代码可测试性
+- 降低耦合度
+
+---
+
+## 🔍 错误处理
+
+### 分层错误处理
+
+1. **CLI 层**：参数验证错误
+2. **命令层**：用户交互错误、业务逻辑错误
+3. **核心层**：API 调用错误、Git 操作错误
+4. **平台层**：平台特定的错误处理（GitHub/Codeup）
+5. **依赖层**：HTTP 错误、Jira 错误等
+
+### 容错机制
+
+- **AI 生成失败**：回退到手动输入
+- **PR 已合并**：跳过合并步骤，继续后续操作
+- **PR 已关闭**：跳过关闭步骤，继续清理操作
+- **工作历史缺失**：从 PR 标题提取 Jira ticket ID
+- **仓库类型未知**：返回明确的错误提示
+
+### 平台特定错误处理
+
+- **GitHub**：解析 GitHub API 错误响应，提供详细的错误信息
+- **Codeup**：解析 Codeup API 错误响应，提供详细的错误信息
 
 ---
 
@@ -821,15 +518,21 @@ flowchart LR
     Input[用户输入<br/>Jira ticket<br/>title<br/>description] --> Command[命令层处理<br/>交互、验证]
     Command --> Generate[生成内容<br/>分支名<br/>commit 标题<br/>PR body]
     Generate --> Git[Git 操作<br/>创建分支<br/>提交<br/>推送]
-    Git --> API[平台 API<br/>创建 PR]
-    API --> Jira[Jira 更新<br/>状态更新<br/>工作历史]
+    Git --> Factory[工厂函数<br/>create_provider]
+    Factory --> Platform{平台选择}
+    Platform -->|GitHub| GitHubAPI[GitHub API]
+    Platform -->|Codeup| CodeupAPI[Codeup API]
+    GitHubAPI --> Jira[Jira 更新<br/>状态更新<br/>工作历史]
+    CodeupAPI --> Jira
     Jira --> Tools[工具操作<br/>剪贴板<br/>浏览器]
 
     style Input fill:#e1f5ff
     style Command fill:#fff4e1
     style Generate fill:#e8f5e9
     style Git fill:#f3e5f5
-    style API fill:#e3f2fd
+    style Factory fill:#e8f5e9
+    style GitHubAPI fill:#e3f2fd
+    style CodeupAPI fill:#fff3e0
     style Jira fill:#f3e5f5
     style Tools fill:#fff9c4
 ```
@@ -839,50 +542,22 @@ flowchart LR
 ```mermaid
 flowchart LR
     Input[用户输入<br/>PR ID 或<br/>自动检测] --> Command[命令层处理<br/>获取 PR ID<br/>检查状态]
-    Command --> API[平台 API<br/>合并 PR]
-    API --> Git[Git 操作<br/>切换分支<br/>删除分支]
+    Command --> Factory[工厂函数<br/>create_provider]
+    Factory --> Platform{平台选择}
+    Platform -->|GitHub| GitHubAPI[GitHub API<br/>合并 PR]
+    Platform -->|Codeup| CodeupAPI[Codeup API<br/>合并 PR]
+    GitHubAPI --> Git[Git 操作<br/>切换分支<br/>删除分支]
+    CodeupAPI --> Git
     Git --> Jira[Jira 更新<br/>从工作历史查找 ticket<br/>更新状态]
 
     style Input fill:#e1f5ff
     style Command fill:#fff4e1
-    style API fill:#e3f2fd
+    style Factory fill:#e8f5e9
+    style GitHubAPI fill:#e3f2fd
+    style CodeupAPI fill:#fff3e0
     style Git fill:#f3e5f5
     style Jira fill:#f3e5f5
 ```
-
----
-
-## 🎯 设计模式
-
-### 1. 策略模式
-
-通过 `PlatformProvider` trait 实现平台抽象，不同平台有不同的实现策略。
-
-### 2. 模板方法模式
-
-命令层定义统一的流程（如 `create()`、`merge()`），具体步骤由不同的方法实现。
-
-### 3. 依赖注入
-
-通过 trait 和模块化设计，命令层依赖抽象的 `PlatformProvider`，而不是具体的平台实现。
-
----
-
-## 🔍 错误处理
-
-### 分层错误处理
-
-1. **CLI 层**：参数验证错误
-2. **命令层**：用户交互错误、业务逻辑错误
-3. **核心层**：API 调用错误、Git 操作错误
-4. **依赖层**：HTTP 错误、Jira 错误等
-
-### 容错机制
-
-- **AI 生成失败**：回退到手动输入
-- **PR 已合并**：跳过合并步骤，继续后续操作
-- **PR 已关闭**：跳过关闭步骤，继续清理操作
-- **工作历史缺失**：从 PR 标题提取 Jira ticket ID
 
 ---
 
@@ -890,37 +565,162 @@ flowchart LR
 
 ### 添加新平台
 
-1. 在 `lib/pr/` 下创建新的平台实现文件（如 `gitlab.rs`）
-2. 实现 `PlatformProvider` trait
-3. 在 `lib/pr/mod.rs` 中导出
+1. 在 `lib/pr/` 下创建新的平台目录（如 `gitlab/`）
+2. 创建以下文件：
+   - `mod.rs` - 模块导出
+   - `platform.rs` - 实现 `PlatformProvider` trait
+   - `requests.rs` - API 请求结构体
+   - `responses.rs` - API 响应结构体
+   - `errors.rs` - 错误处理
+3. 在 `lib/pr/platform.rs` 的 `create_provider()` 函数中添加新平台的分支
 4. 在 `lib/git/repo.rs` 中添加仓库类型检测逻辑
+5. 在 `lib/pr/mod.rs` 中导出新平台
+
+**示例**：
+```rust
+// lib/pr/platform.rs
+pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
+    match GitRepo::detect_repo_type()? {
+        RepoType::GitHub => Ok(Box::new(GitHub)),
+        RepoType::Codeup => Ok(Box::new(Codeup)),
+        RepoType::GitLab => Ok(Box::new(GitLab)),  // 新增
+        RepoType::Unknown => anyhow::bail!("Unsupported repository type"),
+    }
+}
+```
 
 ### 添加新命令
 
-1. 在 `commands/pr/` 下创建新的命令文件
+1. 在 `commands/pr/` 下创建新的命令文件（如 `reopen.rs`）
 2. 实现命令结构体和处理方法
 3. 在 `commands/pr/mod.rs` 中导出
 4. 在 `bin/pr.rs` 中添加命令枚举和处理逻辑
 
----
+### 添加新的辅助函数
 
-## 🚀 性能优化
-
-### API 调用优化
-
-- 合并 PR 前先检查状态，避免重复合并
-- 关闭 PR 前先检查状态，避免重复关闭
-
-### Git 操作优化
-
-- 只在必要时创建分支
-- 批量操作（如提交和推送一起执行）
+1. 在 `lib/pr/helpers.rs` 中添加新函数
+2. 在 `lib/pr/mod.rs` 中导出（如需要）
+3. 更新文档
 
 ---
 
 ## 📚 相关文档
 
 - [主架构文档](./ARCHITECTURE.md)
-- [Jira 集成文档](./ARCHITECTURE.md#jira-集成)
-- [Git 模块文档](./ARCHITECTURE.md#git-模块)
+- [Jira 模块架构文档](./JIRA_ARCHITECTURE.md) - Jira 集成详情
+- [Git 模块架构文档](./GIT_ARCHITECTURE.md) - Git 操作详情
+- [LLM 模块架构文档](./LLM_ARCHITECTURE.md) - AI 功能详情
 
+---
+
+## 📋 使用示例
+
+### 基本使用
+
+```rust
+use workflow::pr::create_provider;
+
+// 创建平台提供者（自动检测仓库类型）
+let provider = create_provider()?;
+
+// 创建 PR
+let pr_url = provider.create_pull_request(
+    "Fix bug in login",
+    "This PR fixes a bug in the login functionality",
+    "feature/fix-login",
+    None,
+)?;
+
+// 获取 PR 信息
+let info = provider.get_pull_request_info("123")?;
+
+// 合并 PR
+provider.merge_pull_request("123", true)?;
+
+// 关闭 PR
+provider.close_pull_request("123")?;
+```
+
+### 获取当前分支的 PR
+
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 获取当前分支的 PR ID
+if let Some(pr_id) = provider.get_current_branch_pull_request()? {
+    println!("Current branch has PR: {}", pr_id);
+
+    // 获取 PR 状态
+    let status = provider.get_pull_request_status(&pr_id)?;
+    println!("PR status: {}, merged: {}", status.state, status.merged);
+}
+```
+
+### 列出 PR
+
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 列出所有打开的 PR
+let prs = provider.get_pull_requests(Some("open"), Some(10))?;
+println!("{}", prs);
+```
+
+### 使用辅助函数
+
+```rust
+use workflow::pr::helpers::{
+    generate_branch_name,
+    generate_commit_title,
+    generate_pull_request_body,
+};
+
+// 生成分支名
+let branch_name = generate_branch_name("PROJ-123", "Add new feature", None)?;
+
+// 生成 commit 标题
+let commit_title = generate_commit_title("PROJ-123", "Add new feature", false)?;
+
+// 生成 PR body
+let pr_body = generate_pull_request_body(
+    "This is a new feature",
+    &["New feature (non-breaking change which adds functionality)"],
+    Some("PROJ-123"),
+    None,
+)?;
+```
+
+### 使用 LLM 生成标题
+
+```rust
+use workflow::pr::PullRequestLLM;
+
+let llm = PullRequestLLM::new()?;
+let title = llm.generate_title("PROJ-123", "This is a description of the feature")?;
+println!("Generated title: {}", title);
+```
+
+---
+
+## ✅ 总结
+
+PR 模块采用清晰的分层架构设计：
+
+1. **平台抽象层**：`PlatformProvider` trait 定义统一的平台接口
+2. **工厂函数**：`create_provider()` 实现多态分发，自动检测仓库类型
+3. **平台实现层**：GitHub 和 Codeup 分别实现 trait，模块化组织
+4. **辅助函数层**：提供通用的 PR 相关辅助函数
+5. **LLM 功能层**：提供 PR 标题的 AI 生成功能
+
+**设计优势**：
+- ✅ **多态支持**：通过 trait 对象实现真正的多态
+- ✅ **代码复用**：消除命令层的重复代码
+- ✅ **易于扩展**：添加新平台只需实现 trait
+- ✅ **模块化**：按平台拆分，职责清晰
+- ✅ **类型安全**：使用 trait 和类型系统保证类型安全
+
+通过平台抽象和工厂模式，实现了代码复用、易于维护和扩展的目标。

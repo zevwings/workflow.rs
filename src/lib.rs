@@ -34,6 +34,7 @@ pub use base::util::{
 };
 pub use base::{
     Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, Reload,
+    ShellConfigManager,
 };
 
 // 业务模块导出
@@ -57,5 +58,8 @@ pub use pr::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup, GitHub,
     PlatformProvider, PullRequestContent, PullRequestLLM, TYPES_OF_CHANGES,
 };
-pub use proxy::{EnvFile, Proxy, ProxyDisableResult, ProxyEnableResult, ProxyInfo};
+pub use proxy::{
+    ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,
+    ProxyType, SystemProxyReader,
+};
 pub use rollback::{BackupInfo, RollbackManager};

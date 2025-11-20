@@ -26,9 +26,10 @@
 
 - PR 创建、合并、关闭、查询等操作
 - 支持 GitHub 和 Codeup 平台
-- Jira 状态管理集成
 - 平台抽象设计（PlatformProvider Trait）
-- GitHub API 集成实现详情
+- 工厂函数实现多态分发
+- Jira 状态管理集成
+- LLM 标题生成功能
 
 ### [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
 **快速日志操作模块架构文档**
@@ -76,12 +77,12 @@
 - 网络连接检查
 
 ### [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
-**LLM 统一配置驱动架构文档**
+**LLM 模块架构文档**
 
-- LLM 客户端统一架构设计
+- 统一配置驱动的 LLM 客户端实现
 - 支持 OpenAI、DeepSeek、Proxy 提供商
-- 配置驱动实现方式
-- PR 标题生成功能
+- 单例模式和配置驱动设计
+- PR 标题和分支名生成功能
 
 ---
 
@@ -129,6 +130,8 @@
 - **2024-01** - 添加 GitHub Actions 发布流程文档，包括 HOMEBREW_TAP_TOKEN 配置说明和自动验证机制
 - **2024-01** - 合并未实现功能到 `FUTURE_IMPROVEMENTS.md`，删除已实现的改进文档（`UPDATE_IMPROVEMENTS.md`、`COMPLETION_FILE_NAMING_ANALYSIS.md`、`INSTALL_COMPLETION_IMPROVEMENT.md`）
 - **2024-11** - 整合 Jira 模块架构文档，合并 `JIRA_LOGS_ARCHITECTURE.md` 和 `JIRA_MODULE_REFACTOR_ANALYSIS.md` 为统一的 `JIRA_ARCHITECTURE.md`
+- **2024-11** - 重构 PR 模块架构文档，删除分析文档（`PR_HTTP_CLIENT_ANALYSIS.md`、`PR_REFACTOR_STATUS.md`、`PR_REFACTOR_GUIDE.md`），统一为 `PR_ARCHITECTURE.md`，参考 JIRA 和 GIT 架构文档结构
+- **2024-11** - 重构 LLM 模块架构文档，参考 JIRA、PR、GIT 架构文档结构，统一文档格式
 
 ---
 

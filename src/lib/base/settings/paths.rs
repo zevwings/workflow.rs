@@ -6,7 +6,7 @@
 //! - Shell 相关路径（shell 配置文件和 completion 目录）
 
 use anyhow::{Context, Result};
-use clap_complete::shells::Shell as ClapShell;
+use clap_complete::shells::Shell;
 use std::fs;
 use std::path::PathBuf;
 
@@ -235,10 +235,13 @@ impl Paths {
     ///
     /// 支持的 shell 类型及其配置文件路径：
     /// - zsh → `~/.zshrc`
-    /// - bash → `~/.bashrc`
+    /// - bash → `~/.bash_profile`（如果不存在则使用 `~/.bashrc`）
     /// - fish → `~/.config/fish/config.fish`
     /// - powershell → `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
     /// - elvish → `~/.elvish/rc.elv`
+    ///
+    /// 注意：对于 bash，macOS 通常使用 `.bash_profile`，Linux 使用 `.bashrc`。
+    /// 此方法会优先使用 `.bash_profile`，如果不存在则使用 `.bashrc`。
     ///
     /// # 参数
     ///
@@ -255,24 +258,37 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use clap_complete::shells::Shell as ClapShell;
+    /// use clap_complete::shells::Shell;
     /// use workflow::settings::paths::Paths;
     ///
-    /// let zsh_path = Paths::config_file(&ClapShell::Zsh)?;
+    /// let zsh_path = Paths::config_file(&Shell::Zsh)?;
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
     /// ```
-    pub fn config_file(shell: &ClapShell) -> Result<PathBuf> {
+    pub fn config_file(shell: &Shell) -> Result<PathBuf> {
         let home = std::env::var("HOME").context("HOME environment variable not set")?;
         let home_dir = PathBuf::from(home);
 
         let config_file = match shell {
-            ClapShell::Zsh => home_dir.join(".zshrc"),
-            ClapShell::Bash => home_dir.join(".bashrc"),
-            ClapShell::Fish => home_dir.join(".config/fish/config.fish"),
-            ClapShell::PowerShell => {
+            Shell::Zsh => home_dir.join(".zshrc"),
+            Shell::Bash => {
+                // macOS 通常使用 .bash_profile，Linux 使用 .bashrc
+                // 这里优先使用 .bash_profile，如果不存在则使用 .bashrc
+                let bash_profile = home_dir.join(".bash_profile");
+                let bashrc = home_dir.join(".bashrc");
+
+                // 如果 .bash_profile 不存在但 .bashrc 存在，使用 .bashrc
+                // 否则使用 .bash_profile
+                if !bash_profile.exists() && bashrc.exists() {
+                    bashrc
+                } else {
+                    bash_profile
+                }
+            }
+            Shell::Fish => home_dir.join(".config/fish/config.fish"),
+            Shell::PowerShell => {
                 home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
             }
-            ClapShell::Elvish => home_dir.join(".elvish/rc.elv"),
+            Shell::Elvish => home_dir.join(".elvish/rc.elv"),
             _ => anyhow::bail!("不支持的 shell 类型"),
         };
 
