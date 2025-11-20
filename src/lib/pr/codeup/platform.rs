@@ -55,8 +55,10 @@ impl PlatformProvider for Codeup {
         };
 
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/{}/code_reviews?_csrf={}&_input_charset=utf-8",
-            project_id, csrf_token
+            "{}/projects/{}/code_reviews?_csrf={}&_input_charset=utf-8",
+            Self::base_url(),
+            project_id,
+            csrf_token
         );
 
         let client = HttpClient::global()?;
@@ -112,8 +114,11 @@ impl PlatformProvider for Codeup {
         };
 
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/{}/code_reviews/{}/merge?_csrf={}&_input_charset=utf-8",
-            project_id, actual_pull_request_id, csrf_token
+            "{}/projects/{}/code_reviews/{}/merge?_csrf={}&_input_charset=utf-8",
+            Self::base_url(),
+            project_id,
+            actual_pull_request_id,
+            csrf_token
         );
 
         let client = HttpClient::global()?;
@@ -249,12 +254,12 @@ impl PlatformProvider for Codeup {
 
         let per_page = limit.unwrap_or(50);
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list={}&per_page={}",
-            project_id, sub_state_list, per_page
+            "{}/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list={}&per_page={}",
+            Self::base_url(), project_id, sub_state_list, per_page
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
@@ -327,8 +332,11 @@ impl PlatformProvider for Codeup {
         };
 
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/{}/code_reviews/{}/close?_csrf={}&_input_charset=utf-8",
-            project_id, actual_pull_request_id, csrf_token
+            "{}/projects/{}/code_reviews/{}/close?_csrf={}&_input_charset=utf-8",
+            Self::base_url(),
+            project_id,
+            actual_pull_request_id,
+            csrf_token
         );
 
         let client = HttpClient::global()?;
@@ -348,9 +356,31 @@ impl PlatformProvider for Codeup {
 }
 
 impl Codeup {
-    /// 获取 headers（每次调用都创建新的，因为 cookie 可能不同）
+    /// 获取 Codeup API 基础 URL
+    fn base_url() -> &'static str {
+        "https://codeup.aliyun.com/api/v4"
+    }
+
+    /// 创建 Codeup API 请求的 headers（内部方法）
     fn get_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
-        Self::create_headers(cookie, content_type)
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "X-Requested-With",
+            "XMLHttpRequest"
+                .parse()
+                .context("Failed to parse X-Requested-With header")?,
+        );
+        headers.insert(
+            "Cookie",
+            cookie.parse().context("Failed to parse Cookie header")?,
+        );
+        if let Some(ct) = content_type {
+            headers.insert(
+                "Content-Type",
+                ct.parse().context("Failed to parse Content-Type header")?,
+            );
+        }
+        Ok(headers)
     }
 
     /// 获取 Codeup 配置（辅助函数）
@@ -373,39 +403,17 @@ impl Codeup {
         Ok((project_id, cookie))
     }
 
-    /// 创建 Codeup API 请求的 headers（内部方法）
-    fn create_headers(cookie: &str, content_type: Option<&str>) -> Result<HeaderMap> {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "X-Requested-With",
-            "XMLHttpRequest"
-                .parse()
-                .context("Failed to parse X-Requested-With header")?,
-        );
-        headers.insert(
-            "Cookie",
-            cookie.parse().context("Failed to parse Cookie header")?,
-        );
-        if let Some(ct) = content_type {
-            headers.insert(
-                "Content-Type",
-                ct.parse().context("Failed to parse Content-Type header")?,
-            );
-        }
-        Ok(headers)
-    }
-
     /// 通过分支名查找 PR（内部方法）
     pub(crate) fn get_pull_request_by_branch(branch_name: &str) -> Result<Option<PullRequestInfo>> {
         let (project_id, cookie) = Self::get_env_vars()?;
 
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&state=opened&project_ids={}&sub_state_list=wip%2Cunder_review&per_page=50",
-            project_id
+            "{}/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&state=opened&project_ids={}&sub_state_list=wip%2Cunder_review&per_page=50",
+            Self::base_url(), project_id
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::create_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
@@ -432,12 +440,12 @@ impl Codeup {
     ) -> Result<PullRequestInfo> {
         // 搜索所有状态的 PR（包括已合并的）
         let url = format!(
-            "https://codeup.aliyun.com/api/v4/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=100",
-            project_id
+            "{}/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list=wip%2Cunder_review%2Cmerged%2Cclosed&per_page=100",
+            Self::base_url(), project_id
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::create_headers(cookie, Some("application/x-www-form-urlencoded"))?;
+        let headers = Self::get_headers(cookie, Some("application/x-www-form-urlencoded"))?;
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
@@ -485,13 +493,13 @@ impl Codeup {
         let (_, cookie) = Self::get_env_vars()?;
 
         // Codeup API 用户信息端点
-        let url = "https://codeup.aliyun.com/api/v4/user?_input_charset=utf-8";
+        let url = format!("{}/user?_input_charset=utf-8", Self::base_url());
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
-        let response = client.get(url, config)?;
+        let response = client.get(&url, config)?;
         // 注意：Codeup API 返回的是 Value，需要手动解析
         let data: Value = response
             .ensure_success_with(handle_codeup_error)?

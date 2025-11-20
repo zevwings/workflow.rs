@@ -660,13 +660,13 @@ impl PullRequestCreateCommand {
     /// 步骤 11：如果有 Jira ticket 和状态配置，更新 ticket：
     /// - 分配任务
     /// - 更新状态
-    /// - 添加评论（PR URL 和描述）
+    /// - 添加评论（PR URL）
     /// - 写入历史记录
     fn update_jira_ticket(
         jira_ticket: &Option<String>,
         created_pull_request_status: &Option<String>,
         pull_request_url: &str,
-        description: &str,
+        _description: &str,
         branch_name: &str,
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
@@ -678,10 +678,6 @@ impl PullRequestCreateCommand {
                 Jira::move_ticket(ticket, status)?;
                 // 添加评论（PR URL）
                 Jira::add_comment(ticket, pull_request_url)?;
-                // 添加描述（如果有）
-                if !description.trim().is_empty() {
-                    Jira::add_comment(ticket, description)?;
-                }
 
                 // 写入历史记录
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;

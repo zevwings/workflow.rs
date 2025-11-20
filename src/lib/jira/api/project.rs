@@ -5,7 +5,8 @@
 use anyhow::{Context, Result};
 use serde_json::Value;
 
-use super::http_client::JiraHttpClient;
+use super::helpers::{build_jira_url, jira_auth_config};
+use crate::base::http::{HttpClient, RequestConfig};
 
 pub struct JiraProjectApi;
 
@@ -24,10 +25,14 @@ impl JiraProjectApi {
     ///
     /// 如果项目不存在、无访问权限或 API 调用失败，返回相应的错误信息。
     pub fn get_project_statuses(project: &str) -> Result<Vec<String>> {
-        let client = JiraHttpClient::global()?;
-        let path = format!("project/{}/statuses", project);
-        let data: Value = client
-            .get(&path)
+        let url = build_jira_url(&format!("project/{}/statuses", project))?;
+        let client = HttpClient::global()?;
+        let auth = jira_auth_config()?;
+        let config = RequestConfig::<Value, Value>::new().auth(auth);
+        let response = client.get(&url, config)?;
+        let data: Value = response
+            .ensure_success()?
+            .as_json()
             .context(format!("Failed to fetch project statuses for: {}", project))?;
 
         let statuses = data

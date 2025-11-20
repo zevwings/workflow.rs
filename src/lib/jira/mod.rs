@@ -29,7 +29,7 @@ pub mod types;
 pub mod users;
 
 // 重新导出所有公共 API，保持向后兼容
-pub use api::{JiraHttpClient, JiraIssueApi, JiraProjectApi, JiraUserApi};
+pub use api::{JiraIssueApi, JiraProjectApi, JiraUserApi};
 pub use client::JiraClient;
 pub use config::ConfigManager;
 pub use helpers::{

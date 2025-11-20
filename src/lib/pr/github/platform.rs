@@ -41,7 +41,7 @@ impl PlatformProvider for GitHub {
             GitBranch::get_default_branch()?
         };
 
-        let url = format!("https://api.github.com/repos/{}/{}/pulls", owner, repo_name);
+        let url = format!("{}/repos/{}/{}/pulls", Self::base_url(), owner, repo_name);
 
         // 对于包含 `/` 的分支名，使用 `owner:branch_name` 格式以确保 GitHub API 正确处理
         // 即使分支在同一个仓库中，使用这种格式也更安全
@@ -55,10 +55,10 @@ impl PlatformProvider for GitHub {
         };
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
+        let headers = Self::get_headers(None)?;
         let config = RequestConfig::<_, Value>::new()
             .body(&request)
-            .headers(headers);
+            .headers(&headers);
 
         let response = client.post(&url, config)?;
         let response_data: CreatePullRequestResponse = response
@@ -80,8 +80,11 @@ impl PlatformProvider for GitHub {
         log_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}/merge",
-            owner, repo_name, pr_number
+            "{}/repos/{}/{}/pulls/{}/merge",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
         );
 
         let request = MergePullRequestRequest {
@@ -91,10 +94,10 @@ impl PlatformProvider for GitHub {
         };
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
+        let headers = Self::get_headers(None)?;
         let config = RequestConfig::<_, Value>::new()
             .body(&request)
-            .headers(headers);
+            .headers(&headers);
 
         let response = client.put(&url, config)?;
         // GitHub API 返回合并结果，但我们不需要使用响应
@@ -106,12 +109,15 @@ impl PlatformProvider for GitHub {
         if delete_branch {
             // 先获取 PR 信息以获取源分支名
             let pr_info_url = format!(
-                "https://api.github.com/repos/{}/{}/pulls/{}",
-                owner, repo_name, pr_number
+                "{}/repos/{}/{}/pulls/{}",
+                Self::base_url(),
+                owner,
+                repo_name,
+                pr_number
             );
             let client = HttpClient::global()?;
-            let headers = Self::get_headers()?;
-            let config = RequestConfig::<Value, Value>::new().headers(headers);
+            let headers = Self::get_headers(None)?;
+            let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
             let response = client.get(&pr_info_url, config)?;
             // 获取 PR 信息以获取源分支名
@@ -121,11 +127,14 @@ impl PlatformProvider for GitHub {
             {
                 let branch_name = pr_info.head.ref_name;
                 let branch_url = format!(
-                    "https://api.github.com/repos/{}/{}/git/refs/heads/{}",
-                    owner, repo_name, branch_name
+                    "{}/repos/{}/{}/git/refs/heads/{}",
+                    Self::base_url(),
+                    owner,
+                    repo_name,
+                    branch_name
                 );
                 // 尝试删除分支，忽略 404 错误（分支可能已经被删除）
-                let delete_config = RequestConfig::<Value, Value>::new().headers(headers);
+                let delete_config = RequestConfig::<Value, Value>::new().headers(&headers);
                 let _ = client.delete(&branch_url, delete_config);
             }
         }
@@ -200,13 +209,17 @@ impl PlatformProvider for GitHub {
         let per_page = limit.unwrap_or(30).min(100); // GitHub API 限制最多 100
 
         let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls?state={}&per_page={}",
-            owner, repo_name, state, per_page
+            "{}/repos/{}/{}/pulls?state={}&per_page={}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            state,
+            per_page
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
-        let config = RequestConfig::<Value, Value>::new().headers(headers);
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
         let prs: Vec<PullRequestInfo> = response
@@ -235,13 +248,17 @@ impl PlatformProvider for GitHub {
 
         // 使用 head 参数查找当前分支的 PR
         let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls?head={}:{}&state=open",
-            owner, repo_name, owner, current_branch
+            "{}/repos/{}/{}/pulls?head={}:{}&state=open",
+            Self::base_url(),
+            owner,
+            repo_name,
+            owner,
+            current_branch
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
-        let config = RequestConfig::<Value, Value>::new().headers(headers);
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
         // 如果 API 查询成功，返回结果
@@ -277,8 +294,11 @@ impl PlatformProvider for GitHub {
             .context("Invalid PR number")?;
 
         let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}",
-            owner, repo_name, pr_number
+            "{}/repos/{}/{}/pulls/{}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
         );
 
         let request = UpdatePullRequestRequest {
@@ -286,10 +306,10 @@ impl PlatformProvider for GitHub {
         };
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
+        let headers = Self::get_headers(None)?;
         let config = RequestConfig::<_, Value>::new()
             .body(&request)
-            .headers(headers);
+            .headers(&headers);
 
         let response = client.patch(&url, config)?;
         // GitHub API 返回更新后的 PR 对象，但我们不需要使用响应
@@ -302,6 +322,55 @@ impl PlatformProvider for GitHub {
 }
 
 impl GitHub {
+    /// 获取 GitHub API 基础 URL
+    fn base_url() -> &'static str {
+        "https://api.github.com"
+    }
+
+    /// 创建 GitHub API 请求的 headers（内部方法）
+    ///
+    /// # 参数
+    ///
+    /// * `token` - 可选的 GitHub API token。如果为 `None`，则从 settings 获取当前激活账号的 token。
+    fn get_headers(token: Option<&str>) -> Result<HeaderMap> {
+        let token = if let Some(token) = token {
+            token
+        } else {
+            let settings = Settings::get();
+            settings.github.get_current_token().context(
+                "GitHub API token is not configured. Please run 'workflow setup' to configure it",
+            )?
+        };
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", token)
+                .parse()
+                .context("Failed to parse Authorization header")?,
+        );
+        headers.insert(
+            "Accept",
+            "application/vnd.github+json"
+                .parse()
+                .context("Failed to parse Accept header")?,
+        );
+        headers.insert(
+            "X-GitHub-Api-Version",
+            "2022-11-28"
+                .parse()
+                .context("Failed to parse X-GitHub-Api-Version header")?,
+        );
+        headers.insert(
+            "User-Agent",
+            "workflow-cli"
+                .parse()
+                .context("Failed to parse User-Agent header")?,
+        );
+
+        Ok(headers)
+    }
+
     /// 获取缓存的 owner 和 repo_name
     pub fn get_owner_and_repo() -> Result<(String, String)> {
         static OWNER_REPO: OnceLock<Result<(String, String)>> = OnceLock::new();
@@ -332,10 +401,10 @@ impl GitHub {
 
     /// 获取仓库信息
     fn get_repository_info(owner: &str, repo_name: &str) -> Result<RepositoryInfo> {
-        let url = format!("https://api.github.com/repos/{}/{}", owner, repo_name);
+        let url = format!("{}/repos/{}/{}", Self::base_url(), owner, repo_name);
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
-        let config = RequestConfig::<Value, Value>::new().headers(headers);
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
         let repo_info: RepositoryInfo = response
@@ -373,64 +442,22 @@ impl GitHub {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
 
         let url = format!(
-            "https://api.github.com/repos/{}/{}/pulls/{}",
-            owner, repo_name, pr_number
+            "{}/repos/{}/{}/pulls/{}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
         );
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers()?;
-        let config = RequestConfig::<Value, Value>::new().headers(headers);
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
         let pr_info: PullRequestInfo = response
             .ensure_success_with(handle_github_error)?
             .as_json()?;
         Ok(pr_info)
-    }
-
-    /// 获取缓存的 headers
-    fn get_headers() -> Result<&'static HeaderMap> {
-        static HEADERS: OnceLock<Result<HeaderMap>> = OnceLock::new();
-        HEADERS
-            .get_or_init(Self::create_headers)
-            .as_ref()
-            .map_err(|e| anyhow::anyhow!("Failed to create headers: {}", e))
-    }
-
-    /// 创建 GitHub API 请求的 headers（内部方法）
-    fn create_headers() -> Result<HeaderMap> {
-        let settings = Settings::get();
-        let token = settings.github.get_current_token().context(
-            "GitHub API token is not configured. Please run 'workflow setup' to configure it",
-        )?;
-
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "Authorization",
-            format!("Bearer {}", token)
-                .parse()
-                .context("Failed to parse Authorization header")?,
-        );
-        headers.insert(
-            "Accept",
-            "application/vnd.github+json"
-                .parse()
-                .context("Failed to parse Accept header")?,
-        );
-        headers.insert(
-            "X-GitHub-Api-Version",
-            "2022-11-28"
-                .parse()
-                .context("Failed to parse X-GitHub-Api-Version header")?,
-        );
-        headers.insert(
-            "User-Agent",
-            "workflow-cli"
-                .parse()
-                .context("Failed to parse User-Agent header")?,
-        );
-
-        Ok(headers)
     }
 
     /// 获取 GitHub 用户信息
@@ -445,43 +472,18 @@ impl GitHub {
     ///
     /// 返回 `GitHubUser` 结构体，包含用户的 `login`、`name` 和 `email`。
     pub fn get_user_info(token: Option<&str>) -> Result<GitHubUser> {
-        let url = "https://api.github.com/user";
+        let url = format!("{}/user", Self::base_url());
         let client = HttpClient::global()?;
 
         // 如果提供了 token，使用该 token 创建 headers；否则使用当前账号的 headers
         let headers = if let Some(token) = token {
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Authorization",
-                format!("Bearer {}", token)
-                    .parse()
-                    .context("Failed to parse Authorization header")?,
-            );
-            headers.insert(
-                "Accept",
-                "application/vnd.github+json"
-                    .parse()
-                    .context("Failed to parse Accept header")?,
-            );
-            headers.insert(
-                "X-GitHub-Api-Version",
-                "2022-11-28"
-                    .parse()
-                    .context("Failed to parse X-GitHub-Api-Version header")?,
-            );
-            headers.insert(
-                "User-Agent",
-                "workflow-cli"
-                    .parse()
-                    .context("Failed to parse User-Agent header")?,
-            );
-            headers
+            Self::get_headers(Some(token))?
         } else {
-            Self::get_headers()?.clone()
+            Self::get_headers(None)?
         };
 
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
-        let response = client.get(url, config)?;
+        let response = client.get(&url, config)?;
         let user: GitHubUser = response
             .ensure_success_with(handle_github_error)?
             .as_json()?;
