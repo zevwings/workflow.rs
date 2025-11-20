@@ -23,6 +23,7 @@
 
 pub mod check;
 pub mod clean;
+pub mod completion;
 pub mod config;
 pub mod github;
 pub mod install;

@@ -3,7 +3,7 @@
 
 use crate::base::http::{HttpMethod, RequestConfig};
 use crate::base::util::{confirm, Checksum, Unzip};
-use crate::completion::get_completion_files_for_shell;
+use crate::get_completion_files_for_shell;
 use crate::rollback::RollbackManager;
 use crate::Detect;
 use crate::{

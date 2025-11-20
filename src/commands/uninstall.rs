@@ -143,16 +143,11 @@ impl UninstallCommand {
         // 卸载 shell completion（只要第一步确认就删除）
         log_break!();
         log_message!("Removing shell completion scripts...");
-        if let Ok(shell) = Detect::shell() {
-            Completion::remove_completion_files(&shell)?;
-            Completion::remove_completion_config_file()?;
-            let config_file = Paths::config_file(&shell)?;
-            if config_file.exists() {
-                Completion::remove_completion_config(&shell)?;
-            } else {
-                log_message!("Config file {} does not exist", config_file.display());
-            }
-        }
+        // 删除所有 shell 类型的 completion 文件（不依赖当前 shell）
+        Completion::remove_completion_files(&clap_complete::shells::Shell::Zsh)?;
+        Completion::remove_completion_config_file()?;
+        // 移除所有 shell 的 completion 配置
+        Completion::remove_all_completion_configs()?;
 
         // 删除配置（需要第二步确认）
         if remove_config {

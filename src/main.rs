@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, config, github, log, proxy, setup, uninstall, update};
+use commands::{check, clean, completion, config, github, log, proxy, setup, uninstall, update};
 
 use workflow::*;
 
@@ -92,6 +92,13 @@ enum Commands {
         #[command(subcommand)]
         subcommand: GitHubSubcommand,
     },
+    /// 管理 Shell Completion
+    ///
+    /// 生成和管理 shell completion 脚本。
+    Completion {
+        #[command(subcommand)]
+        subcommand: CompletionSubcommand,
+    },
 }
 
 /// 代理管理子命令
@@ -159,6 +166,25 @@ enum GitHubSubcommand {
     Update,
 }
 
+/// Completion 管理子命令
+///
+/// 用于生成和管理 shell completion 脚本。
+#[derive(Subcommand)]
+enum CompletionSubcommand {
+    /// 生成 completion 脚本
+    ///
+    /// 自动检测当前 shell 类型，生成对应的 completion 脚本并应用到配置文件。
+    Generate,
+    /// 检查 completion 状态
+    ///
+    /// 检查系统中已安装的 shell 类型和已配置 completion 的 shell。
+    Check,
+    /// 移除 completion 配置
+    ///
+    /// 交互式选择并移除已配置的 shell completion 配置。
+    Remove,
+}
+
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
@@ -224,12 +250,19 @@ fn main() -> Result<()> {
             GitHubSubcommand::Switch => github::GitHubCommand::switch()?,
             GitHubSubcommand::Update => github::GitHubCommand::update()?,
         },
+        // Completion 管理命令
+        Some(Commands::Completion { subcommand }) => match subcommand {
+            CompletionSubcommand::Generate => completion::CompletionCommand::generate()?,
+            CompletionSubcommand::Check => completion::CompletionCommand::check()?,
+            CompletionSubcommand::Remove => completion::CompletionCommand::remove()?,
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
             log_message!("  workflow check     - Run environment checks (Git status and network)");
             log_message!("  workflow clean     - Clean log download directory");
+            log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
             log_message!("  workflow config    - View current configuration");
             log_message!("  workflow github    - Manage GitHub accounts (list/add/remove/switch/update/current)");
             log_message!("  workflow log       - Manage log level (set/check)");
