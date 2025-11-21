@@ -6,7 +6,9 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use crate::{log_break, log_debug, log_info, log_success, Jira};
+use crate::jira::helpers::{get_auth, get_base_url};
+use crate::jira::ticket::JiraTicket;
+use crate::{log_break, log_debug, log_info, log_success, Jira, JiraAttachment};
 
 use super::constants::*;
 use super::JiraLogs;
@@ -71,9 +73,9 @@ impl JiraLogs {
     fn fetch_and_filter_attachments(
         &self,
         jira_id: &str,
-    ) -> Result<(Vec<crate::JiraAttachment>, Vec<crate::JiraAttachment>)> {
+    ) -> Result<(Vec<JiraAttachment>, Vec<JiraAttachment>)> {
         // 获取附件列表
-        let attachments: Vec<crate::JiraAttachment> =
+        let attachments: Vec<JiraAttachment> =
             Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?;
 
         if attachments.is_empty() {
@@ -121,7 +123,7 @@ impl JiraLogs {
     /// 下载所有附件
     fn download_all_attachments(
         &self,
-        attachments: &[crate::JiraAttachment],
+        attachments: &[JiraAttachment],
         download_dir: &Path,
     ) -> Result<()> {
         for attachment in attachments {
@@ -135,7 +137,7 @@ impl JiraLogs {
     fn download_log_attachments_with_retry(
         &self,
         jira_id: &str,
-        log_attachments: &[crate::JiraAttachment],
+        log_attachments: &[JiraAttachment],
         download_dir: &Path,
     ) -> Result<()> {
         // 提取 URL 映射
@@ -213,7 +215,7 @@ impl JiraLogs {
     /// 下载单个附件（带重试逻辑）
     fn download_attachment_with_retry(
         &self,
-        attachment: &crate::JiraAttachment,
+        attachment: &JiraAttachment,
         file_path: &Path,
         original_urls: &HashMap<String, String>,
         api_attachments_map: &HashMap<String, String>,
@@ -254,11 +256,11 @@ impl JiraLogs {
 
             // 方式 2: 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
             if let Some(attachment_id) =
-                crate::jira::ticket::JiraTicket::extract_attachment_id_from_url(
+                JiraTicket::extract_attachment_id_from_url(
                     &attachment.content_url,
                 )
             {
-                if let Ok(base_url) = crate::jira::helpers::get_base_url() {
+                if let Ok(base_url) = get_base_url() {
                     let jira_api_url = format!("{}/attachment/content/{}", base_url, attachment_id);
                     log_debug!(
                         "Trying Jira API URL from attachment ID {} for {}: {}",
@@ -313,7 +315,7 @@ impl JiraLogs {
             // 检查是否有分片文件
             if log_z01.exists() {
                 // 检测到分片文件，需要合并
-                log_debug!("检测到分片文件，需要合并...");
+                log_debug!("Detected split files, merging...");
                 self.merge_split_zips(download_dir)?;
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
@@ -376,7 +378,7 @@ impl JiraLogs {
     /// 下载单个文件
     fn download_file(&self, url: &str, output_path: &Path) -> Result<()> {
         // 获取 Jira 认证信息
-        let (email, api_token) = crate::jira::helpers::get_auth()?;
+        let (email, api_token) = get_auth()?;
 
         // 判断是否是 CloudFront 签名 URL（包含 Expires 和 Signature 参数）
         // CloudFront 签名 URL 通常不需要 Basic Auth，或者 Basic Auth 会干扰签名验证
@@ -385,7 +387,7 @@ impl JiraLogs {
             && url.contains("Signature=");
 
         // 获取 Jira base URL 用于 Referer 头
-        let jira_base_url = crate::jira::helpers::get_base_url().ok();
+        let jira_base_url = get_base_url().ok();
 
         let mut response = if is_cloudfront_signed_url {
             // CloudFront 签名 URL，先尝试不使用 Basic Auth，但添加 Referer 头

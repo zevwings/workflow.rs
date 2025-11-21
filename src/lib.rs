@@ -39,8 +39,7 @@ pub use base::{
 
 // 业务模块导出
 pub use completion::{
-    generate_all_completions, generate_pr_completion, generate_qk_completion,
-    generate_workflow_completion, get_all_completion_files, get_completion_filename,
+    CompletionGenerator, get_all_completion_files, get_completion_filename,
     get_completion_files_for_shell, Completion,
 };
 pub use git::{

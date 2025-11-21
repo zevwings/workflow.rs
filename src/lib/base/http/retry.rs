@@ -4,6 +4,7 @@
 //! 针对 HTTP 请求的错误类型进行智能判断，自动重试可恢复的错误。
 //! 支持用户交互：在重试前询问用户是否继续，允许用户取消操作。
 
+use crate::{log_debug, log_success, log_warning};
 use anyhow::Result;
 use dialoguer::Confirm;
 
@@ -112,7 +113,7 @@ impl HttpRetry {
             match operation() {
                 Ok(result) => {
                     if attempt > 0 {
-                        crate::log_success!("{} 在第 {} 次重试后成功", operation_name, attempt);
+                        log_success!("{} succeeded after {} retry attempts", operation_name, attempt);
                     }
                     return Ok(result);
                 }
@@ -127,8 +128,8 @@ impl HttpRetry {
                             // 错误不可重试，立即返回
                             if attempt == 0 {
                                 // 第一次尝试就失败，且不可重试
-                                crate::log_warning!(
-                                    "{} 失败: {} (不可重试)",
+                                log_warning!(
+                                    "{} failed: {} (not retryable)",
                                     operation_name,
                                     error_desc
                                 );
@@ -139,8 +140,8 @@ impl HttpRetry {
 
                     // 如果还有重试机会
                     if attempt < config.max_retries {
-                        crate::log_warning!(
-                            "{} 失败: {} (尝试 {}/{})",
+                        log_warning!(
+                            "{} failed: {} (attempt {}/{})",
                             operation_name,
                             error_desc,
                             attempt + 1,
@@ -162,12 +163,12 @@ impl HttpRetry {
                                 }
                                 Ok(false) => {
                                     // 用户选择取消
-                                    crate::log_warning!("用户取消操作");
-                                    return Err(anyhow::anyhow!("用户取消操作"));
+                                    log_warning!("User cancelled operation");
+                                    return Err(anyhow::anyhow!("User cancelled operation"));
                                 }
                                 Err(e) => {
                                     // 交互失败，可能是非交互式终端，直接继续
-                                    crate::log_debug!("无法获取用户输入，自动继续: {}", e);
+                                    log_debug!("Failed to get user input, auto-continuing: {}", e);
                                     std::thread::sleep(std::time::Duration::from_secs(delay));
                                 }
                             }
@@ -185,8 +186,8 @@ impl HttpRetry {
                             .min(config.max_delay);
                     } else {
                         // 所有重试都失败了
-                        crate::log_warning!(
-                            "{} 失败: {} (已重试 {} 次)",
+                        log_warning!(
+                            "{} failed: {} (retried {} times)",
                             operation_name,
                             error_desc,
                             config.max_retries
@@ -199,7 +200,7 @@ impl HttpRetry {
         // 所有重试都失败，返回最后一次的错误，并添加上下文信息
         let final_error = last_error.unwrap();
         Err(final_error.context(format!(
-            "{} 在 {} 次重试后仍然失败",
+            "{} failed after {} retries",
             operation_name, config.max_retries
         )))
     }
@@ -323,16 +324,16 @@ impl HttpRetry {
                 return format!("HTTP {}", status.as_u16());
             }
             if reqwest_error.is_timeout() {
-                return "网络超时".to_string();
+                return "Network timeout".to_string();
             }
             if reqwest_error.is_connect() {
-                return "连接失败".to_string();
+                return "Connection failed".to_string();
             }
         }
 
         // 尝试从 IO 错误中提取信息
         if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
-            return format!("IO 错误: {}", io_error.kind());
+            return format!("IO error: {}", io_error.kind());
         }
 
         // 默认返回错误消息的前 100 个字符

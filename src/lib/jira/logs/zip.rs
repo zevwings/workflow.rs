@@ -1,5 +1,6 @@
 //! ZIP 处理相关功能
 
+use crate::Logger;
 use anyhow::{Context, Result};
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -88,7 +89,7 @@ impl JiraLogs {
         let actual_size = std::fs::metadata(&merged_zip)?.len();
 
         if actual_size != expected_size {
-            crate::Logger::print_warning(format!(
+            Logger::print_warning(format!(
                 "Merged file size mismatch (expected: {}, actual: {})",
                 expected_size, actual_size
             ));

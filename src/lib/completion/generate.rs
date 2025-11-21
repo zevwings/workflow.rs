@@ -8,195 +8,228 @@ use anyhow::{Context, Result};
 use clap::Command;
 use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use crate::completion::files::get_completion_filename;
+use crate::completion::helpers::get_completion_filename;
 
-/// 生成所有 completion 脚本文件
+/// Completion 脚本生成器
 ///
-/// 为所有命令生成 completion 脚本：
-/// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
-/// - `pr` 独立命令
-/// - `qk` 独立命令
-pub fn generate_all_completions(
-    shell_type: Option<String>,
-    output_dir: Option<String>,
-) -> Result<()> {
-    let shell = shell_type.as_deref().unwrap_or_else(|| {
-        let shell_env = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-        if shell_env.contains("zsh") {
-            "zsh"
-        } else if shell_env.contains("bash") {
-            "bash"
-        } else {
-            "zsh" // 默认
-        }
-    });
-
-    let output = output_dir.map(PathBuf::from).unwrap_or_else(|| {
-        let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-        PathBuf::from(&home).join(".workflow/completions")
-    });
-
-    log_debug!("生成 shell completion 脚本...");
-    log_debug!("Shell 类型: {}", shell);
-    log_debug!("输出目录: {}", output.display());
-
-    // 解析 shell 类型
-    let shell_type = match shell {
-        "zsh" => ClapShell::Zsh,
-        "bash" => ClapShell::Bash,
-        "fish" => ClapShell::Fish,
-        "powershell" => ClapShell::PowerShell,
-        "elvish" => ClapShell::Elvish,
-        _ => {
-            anyhow::bail!("不支持的 shell: {}", shell);
-        }
-    };
-
-    // 创建输出目录
-    fs::create_dir_all(&output).context("Failed to create output directory")?;
-
-    // 生成 completion 脚本
-    generate_workflow_completion(&shell_type, &output)?;
-    generate_pr_completion(&shell_type, &output)?;
-    generate_qk_completion(&shell_type, &output)?;
-
-    log_success!("  Shell completion 脚本已生成到: {}", output.display());
-    Ok(())
+/// 提供生成各种 shell 的 completion 脚本文件的功能。
+/// 支持 workflow、pr、qk 三个命令的 completion 生成。
+pub struct CompletionGenerator {
+    shell: ClapShell,
+    output_dir: PathBuf,
 }
 
-/// 生成 workflow 命令的 completion
-pub fn generate_workflow_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-    let mut cmd = Command::new("workflow")
-        .about("Workflow CLI tool")
-        .subcommand(
-            Command::new("proxy")
-                .about("Manage proxy settings")
-                .subcommand(Command::new("on").about("Turn proxy on"))
-                .subcommand(Command::new("off").about("Turn proxy off"))
-                .subcommand(Command::new("check").about("Check proxy status")),
-        )
-        .subcommand(Command::new("check").about("Run environment checks"))
-        .subcommand(Command::new("setup").about("Initialize or update configuration"))
-        .subcommand(Command::new("config").about("View current configuration"))
-        .subcommand(Command::new("install").about("Install Workflow CLI (binary and completions)"))
-        .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
-        .subcommand(
-            Command::new("clean")
-                .about("Clean log directory")
-                .arg(clap::Arg::new("dry-run").long("dry-run").short('n'))
-                .arg(clap::Arg::new("list").long("list").short('l')),
-        )
-        .subcommand(
-            Command::new("log")
-                .about("Manage log level")
-                .subcommand(Command::new("set").about("Set log level"))
-                .subcommand(Command::new("check").about("Check log level")),
-        )
-        .subcommand(
-            Command::new("github")
-                .about("Manage GitHub accounts")
-                .subcommand(Command::new("list").about("List all GitHub accounts"))
-                .subcommand(Command::new("current").about("Show current GitHub account"))
-                .subcommand(Command::new("add").about("Add a new GitHub account"))
-                .subcommand(Command::new("remove").about("Remove a GitHub account"))
-                .subcommand(Command::new("switch").about("Switch GitHub account"))
-                .subcommand(Command::new("update").about("Update GitHub account")),
-        );
+impl CompletionGenerator {
+    /// 创建新的 CompletionGenerator 实例
+    ///
+    /// # 参数
+    ///
+    /// * `shell_type` - Shell 类型字符串（"zsh", "bash", "fish", "powershell", "elvish"），如果为 None 则自动检测
+    /// * `output_dir` - 输出目录路径，如果为 None 则使用默认目录 `~/.workflow/completions`
+    ///
+    /// # 返回
+    ///
+    /// 返回 `CompletionGenerator` 实例，如果 shell 类型不支持则返回错误。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::completion::generate::CompletionGenerator;
+    ///
+    /// let generator = CompletionGenerator::new(
+    ///     Some("zsh".to_string()),
+    ///     Some("/path/to/completions".to_string()),
+    /// )?;
+    /// generator.generate_all()?;
+    /// ```
+    pub fn new(
+        shell_type: Option<String>,
+        output_dir: Option<String>,
+    ) -> Result<Self> {
+        // 解析 shell 类型
+        let shell = shell_type.as_deref().unwrap_or_else(|| {
+            let shell_env = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+            if shell_env.contains("zsh") {
+                "zsh"
+            } else if shell_env.contains("bash") {
+                "bash"
+            } else {
+                "zsh" // 默认
+            }
+        });
 
-    let mut buffer = Vec::new();
-    generate(*shell, &mut cmd, "workflow", &mut buffer);
+        let clap_shell = match shell {
+            "zsh" => ClapShell::Zsh,
+            "bash" => ClapShell::Bash,
+            "fish" => ClapShell::Fish,
+            "powershell" => ClapShell::PowerShell,
+            "elvish" => ClapShell::Elvish,
+            _ => {
+                anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
+            }
+        };
 
-    let shell_type_str = shell.to_string();
-    let filename = get_completion_filename(&shell_type_str, "workflow")?;
-    let output_file = output_dir.join(&filename);
+        // 解析输出目录
+        let output = output_dir.map(PathBuf::from).unwrap_or_else(|| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
+            PathBuf::from(&home).join(".workflow/completions")
+        });
 
-    fs::write(&output_file, buffer).context("Failed to write completion file")?;
-    log_success!("  生成: {}", output_file.display());
+        Ok(Self {
+            shell: clap_shell,
+            output_dir: output,
+        })
+    }
 
-    Ok(())
-}
+    /// 生成所有 completion 脚本文件
+    ///
+    /// 为所有命令生成 completion 脚本：
+    /// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
+    /// - `pr` 独立命令
+    /// - `qk` 独立命令
+    pub fn generate_all(&self) -> Result<()> {
+        log_debug!("Generating shell completion scripts...");
+        log_debug!("Shell type: {}", self.shell);
+        log_debug!("Output directory: {}", self.output_dir.display());
 
-/// 生成 pr 命令的 completion
-pub fn generate_pr_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-    let mut cmd = Command::new("pr")
-        .about("Pull Request operations")
-        .subcommand(
-            Command::new("create")
-                .about("Create a new Pull Request")
-                .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
-                .arg(clap::Arg::new("title").short('t').long("title"))
-                .arg(clap::Arg::new("description").short('d').long("description"))
-                .arg(clap::Arg::new("dry-run").long("dry-run")),
-        )
-        .subcommand(
-            Command::new("merge")
-                .about("Merge a Pull Request")
-                .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
-                .arg(clap::Arg::new("force").short('f').long("force")),
-        )
-        .subcommand(
-            Command::new("status")
-                .about("Show PR status information")
-                .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
-        )
-        .subcommand(
-            Command::new("list")
-                .about("List PRs")
-                .arg(clap::Arg::new("state").short('s').long("state"))
-                .arg(clap::Arg::new("limit").short('l').long("limit")),
-        )
-        .subcommand(Command::new("update").about("Update code"))
-        .subcommand(
-            Command::new("close")
-                .about("Close a Pull Request")
-                .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
-        );
+        // 创建输出目录
+        fs::create_dir_all(&self.output_dir)
+            .with_context(|| format!("Failed to create output directory: {} (shell: {})", self.output_dir.display(), self.shell))?;
 
-    let mut buffer = Vec::new();
-    generate(*shell, &mut cmd, "pr", &mut buffer);
+        // 生成 completion 脚本
+        self.generate_workflow()?;
+        self.generate_pr()?;
+        self.generate_qk()?;
 
-    let shell_type_str = shell.to_string();
-    let filename = get_completion_filename(&shell_type_str, "pr")?;
-    let output_file = output_dir.join(&filename);
+        log_success!("  Shell completion scripts generated to: {}", self.output_dir.display());
+        Ok(())
+    }
 
-    fs::write(&output_file, buffer).context("Failed to write completion file")?;
-    log_success!("  生成: {}", output_file.display());
+    /// 生成 workflow 命令的 completion
+    fn generate_workflow(&self) -> Result<()> {
+        let mut cmd = Command::new("workflow")
+            .about("Workflow CLI tool")
+            .subcommand(
+                Command::new("proxy")
+                    .about("Manage proxy settings")
+                    .subcommand(Command::new("on").about("Turn proxy on"))
+                    .subcommand(Command::new("off").about("Turn proxy off"))
+                    .subcommand(Command::new("check").about("Check proxy status")),
+            )
+            .subcommand(Command::new("check").about("Run environment checks"))
+            .subcommand(Command::new("setup").about("Initialize or update configuration"))
+            .subcommand(Command::new("config").about("View current configuration"))
+            .subcommand(Command::new("install").about("Install Workflow CLI (binary and completions)"))
+            .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
+            .subcommand(
+                Command::new("clean")
+                    .about("Clean log directory")
+                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n'))
+                    .arg(clap::Arg::new("list").long("list").short('l')),
+            )
+            .subcommand(
+                Command::new("log")
+                    .about("Manage log level")
+                    .subcommand(Command::new("set").about("Set log level"))
+                    .subcommand(Command::new("check").about("Check log level")),
+            )
+            .subcommand(
+                Command::new("github")
+                    .about("Manage GitHub accounts")
+                    .subcommand(Command::new("list").about("List all GitHub accounts"))
+                    .subcommand(Command::new("current").about("Show current GitHub account"))
+                    .subcommand(Command::new("add").about("Add a new GitHub account"))
+                    .subcommand(Command::new("remove").about("Remove a GitHub account"))
+                    .subcommand(Command::new("switch").about("Switch GitHub account"))
+                    .subcommand(Command::new("update").about("Update GitHub account")),
+            );
 
-    Ok(())
-}
+        self.generate_completion(&mut cmd, "workflow")
+    }
 
-/// 生成 qk 命令的 completion
-pub fn generate_qk_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-    let mut cmd = Command::new("qk")
-        .about("Quick log operations")
-        .arg(
-            clap::Arg::new("JIRA_ID")
-                .value_name("JIRA_ID")
-                .required(true),
-        )
-        .subcommand(Command::new("download").about("Download logs"))
-        .subcommand(
-            Command::new("find")
-                .about("Find request by ID")
-                .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
-        )
-        .subcommand(
-            Command::new("search")
-                .about("Search in logs")
-                .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
-        );
+    /// 生成 pr 命令的 completion
+    fn generate_pr(&self) -> Result<()> {
+        let mut cmd = Command::new("pr")
+            .about("Pull Request operations")
+            .subcommand(
+                Command::new("create")
+                    .about("Create a new Pull Request")
+                    .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
+                    .arg(clap::Arg::new("title").short('t').long("title"))
+                    .arg(clap::Arg::new("description").short('d').long("description"))
+                    .arg(clap::Arg::new("dry-run").long("dry-run")),
+            )
+            .subcommand(
+                Command::new("merge")
+                    .about("Merge a Pull Request")
+                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
+                    .arg(clap::Arg::new("force").short('f').long("force")),
+            )
+            .subcommand(
+                Command::new("status")
+                    .about("Show PR status information")
+                    .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
+            )
+            .subcommand(
+                Command::new("list")
+                    .about("List PRs")
+                    .arg(clap::Arg::new("state").short('s').long("state"))
+                    .arg(clap::Arg::new("limit").short('l').long("limit")),
+            )
+            .subcommand(Command::new("update").about("Update code"))
+            .subcommand(
+                Command::new("close")
+                    .about("Close a Pull Request")
+                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
+            );
 
-    let mut buffer = Vec::new();
-    generate(*shell, &mut cmd, "qk", &mut buffer);
+        self.generate_completion(&mut cmd, "pr")
+    }
 
-    let shell_type_str = shell.to_string();
-    let filename = get_completion_filename(&shell_type_str, "qk")?;
-    let output_file = output_dir.join(&filename);
+    /// 生成 qk 命令的 completion
+    fn generate_qk(&self) -> Result<()> {
+        let mut cmd = Command::new("qk")
+            .about("Quick log operations")
+            .arg(
+                clap::Arg::new("JIRA_ID")
+                    .value_name("JIRA_ID")
+                    .required(true),
+            )
+            .subcommand(Command::new("download").about("Download logs"))
+            .subcommand(
+                Command::new("find")
+                    .about("Find request by ID")
+                    .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
+            )
+            .subcommand(
+                Command::new("search")
+                    .about("Search in logs")
+                    .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
+            );
 
-    fs::write(&output_file, buffer).context("Failed to write completion file")?;
-    log_success!("  生成: {}", output_file.display());
+        self.generate_completion(&mut cmd, "qk")
+    }
 
-    Ok(())
+    /// 生成单个命令的 completion（通用方法）
+    ///
+    /// # 参数
+    ///
+    /// * `cmd` - clap Command 实例
+    /// * `command_name` - 命令名称（"workflow", "pr", "qk"）
+    fn generate_completion(&self, cmd: &mut Command, command_name: &str) -> Result<()> {
+        let mut buffer = Vec::new();
+        generate(self.shell, cmd, command_name, &mut buffer);
+
+        let shell_type_str = self.shell.to_string();
+        let filename = get_completion_filename(&shell_type_str, command_name)?;
+        let output_file = self.output_dir.join(&filename);
+
+        fs::write(&output_file, buffer)
+            .with_context(|| format!("Failed to write completion file: {} (command: {}, shell: {})", output_file.display(), command_name, self.shell))?;
+        log_success!("  Generated: {}", output_file.display());
+
+        Ok(())
+    }
 }

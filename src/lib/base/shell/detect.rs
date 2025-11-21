@@ -27,7 +27,7 @@ impl Detect {
             })
             .ok_or_else(|| {
                 let shell = std::env::var("SHELL").unwrap_or_else(|_| "unknown".to_string());
-                anyhow::anyhow!("不支持的 shell: {}", shell)
+                anyhow::anyhow!("Unsupported shell: {}", shell)
             })
     }
 }

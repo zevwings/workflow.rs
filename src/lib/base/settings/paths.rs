@@ -289,7 +289,7 @@ impl Paths {
                 home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
             }
             Shell::Elvish => home_dir.join(".elvish/rc.elv"),
-            _ => anyhow::bail!("不支持的 shell 类型"),
+            _ => anyhow::bail!("Unsupported shell type"),
         };
 
         Ok(config_file)

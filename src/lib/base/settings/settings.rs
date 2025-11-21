@@ -6,6 +6,9 @@ use serde_json::Value;
 use std::fs;
 
 use super::defaults::default_llm_model;
+use crate::base::http::{Authorization, HttpClient, RequestConfig};
+use crate::jira::types::JiraUser;
+use crate::pr::GitHub;
 use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
 
 use super::defaults::{
@@ -13,7 +16,6 @@ use super::defaults::{
     default_log_settings, default_response_format,
 };
 use super::paths::Paths;
-use crate::base::http::RequestConfig;
 
 // ==================== TOML 配置结构体 ====================
 
@@ -302,14 +304,14 @@ impl Settings {
             let base_url = format!("{}/rest/api/2", service_address);
             let url = format!("{}/myself", base_url);
 
-            match crate::base::http::HttpClient::global() {
+            match HttpClient::global() {
                 Ok(client) => {
-                    let auth = crate::base::http::Authorization::new(email, api_token);
+                    let auth = Authorization::new(email, api_token);
                     let config = RequestConfig::<Value, Value>::new().auth(&auth);
                     match client.get(&url, config) {
                         Ok(response) => {
                             if response.is_success() {
-                                match response.as_json::<crate::jira::types::JiraUser>() {
+                                match response.as_json::<JiraUser>() {
                                     Ok(user) => {
                                         log_success!(
                                             "Jira verified successfully! Email: {} (Account ID: {})",
@@ -378,7 +380,7 @@ impl Settings {
                 }
 
                 // 使用该账号的 token 验证
-                match crate::pr::GitHub::get_user_info(Some(&account.api_token)) {
+                match GitHub::get_user_info(Some(&account.api_token)) {
                     Ok(user) => {
                         log_success!("GitHub account '{}' verified successfully!", user.login);
                         success_count += 1;

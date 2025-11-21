@@ -121,16 +121,16 @@ impl Checksum {
     /// Checksum::verify(file_path, expected_hash)?;
     /// ```
     pub fn verify(file_path: &Path, expected_hash: &str) -> Result<()> {
-        log_info!("正在验证文件完整性...");
+        log_info!("Verifying file integrity...");
 
         let actual_hash = Self::calculate_file_sha256(file_path)?;
 
         if actual_hash == expected_hash {
-            log_success!("  文件完整性验证通过");
+            log_success!("  File integrity verification passed");
             Ok(())
         } else {
             anyhow::bail!(
-                "文件完整性验证失败！\n  期望: {}\n  实际: {}",
+                "File integrity verification failed!\n  Expected: {}\n  Actual: {}",
                 expected_hash,
                 actual_hash
             );

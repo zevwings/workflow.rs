@@ -9,6 +9,7 @@
 
 use crate::base::settings::paths::Paths;
 use anyhow::{Context, Result};
+use clap_complete::Shell;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -262,6 +263,122 @@ impl ShellConfigManager {
         Self::has_source_in_content(&content, source_path)
     }
 
+    /// 获取 shell 的 source 语句关键字
+    ///
+    /// 不同 shell 使用不同的关键字来加载脚本：
+    /// - zsh, bash, fish, elvish: `source`
+    /// - powershell: `.`
+    fn get_source_keyword(shell: &Shell) -> &'static str {
+        match shell {
+            Shell::PowerShell => ".",
+            _ => "source",
+        }
+    }
+
+    /// 添加 source 语句（指定 shell 类型）
+    ///
+    /// 在指定 shell 类型的配置文件中添加 source 语句。如果已存在则跳过。
+    /// 根据 shell 类型自动使用正确的关键字（PowerShell 使用 `.`，其他使用 `source`）。
+    ///
+    /// # 参数
+    ///
+    /// * `shell` - Shell 类型
+    /// * `source_path` - source 文件路径（支持相对路径如 `$HOME/.workflow/.completions` 或绝对路径）
+    /// * `comment` - 可选的注释文本
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入配置文件失败，返回相应的错误信息。
+    pub fn add_source_for_shell(
+        shell: &Shell,
+        source_path: &str,
+        comment: Option<&str>,
+    ) -> Result<bool> {
+        let config_path = Paths::config_file(shell)?;
+        let content = Self::read_config_file(&config_path).unwrap_or_default();
+
+        // 检查是否已存在（支持不同格式）
+        if Self::has_source_in_content_for_shell(&content, shell, source_path)? {
+            return Ok(false);
+        }
+
+        // 添加 source 语句
+        let mut new_content = content;
+        if !new_content.is_empty() && !new_content.ends_with('\n') {
+            new_content.push('\n');
+        }
+
+        if let Some(comment_text) = comment {
+            new_content.push_str("# ");
+            new_content.push_str(comment_text);
+            new_content.push('\n');
+        }
+        let source_keyword = Self::get_source_keyword(shell);
+        new_content.push_str(source_keyword);
+        new_content.push(' ');
+        new_content.push_str(source_path);
+        new_content.push('\n');
+        new_content.push('\n');
+
+        Self::write_config_file(&config_path, &new_content)?;
+
+        Ok(true)
+    }
+
+    /// 移除 source 语句（指定 shell 类型）
+    ///
+    /// 从指定 shell 类型的配置文件中移除指定的 source 语句。
+    /// 支持不同 shell 的 source 语句格式（PowerShell 使用 `.`，其他使用 `source`）。
+    ///
+    /// # 参数
+    ///
+    /// * `shell` - Shell 类型
+    /// * `source_path` - source 文件路径
+    ///
+    /// # 返回
+    ///
+    /// 返回 `true` 如果移除了 source 语句，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取或写入配置文件失败，返回相应的错误信息。
+    pub fn remove_source_for_shell(shell: &Shell, source_path: &str) -> Result<bool> {
+        let config_path = Paths::config_file(shell)?;
+        let content = Self::read_config_file(&config_path).unwrap_or_default();
+
+        // 检查是否存在（支持不同格式）
+        if !Self::has_source_in_content_for_shell(&content, shell, source_path)? {
+            return Ok(false);
+        }
+
+        // 移除 source 语句和相关注释
+        let new_content = Self::remove_source_from_content_for_shell(&content, shell, source_path)?;
+
+        Self::write_config_file(&config_path, &new_content)?;
+
+        Ok(true)
+    }
+
+    /// 检查 source 语句是否存在（指定 shell 类型）
+    ///
+    /// # 参数
+    ///
+    /// * `shell` - Shell 类型
+    /// * `source_path` - source 文件路径
+    ///
+    /// # 返回
+    ///
+    /// 返回 `true` 如果 source 语句存在，否则返回 `false`。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取配置文件失败，返回相应的错误信息。
+    pub fn has_source_for_shell(shell: &Shell, source_path: &str) -> Result<bool> {
+        let config_path = Paths::config_file(shell)?;
+        let content = Self::read_config_file(&config_path).unwrap_or_default();
+        Self::has_source_in_content(&content, source_path)
+    }
+
     // === 配置块管理 ===
 
     /// 解析配置块
@@ -487,6 +604,47 @@ impl ShellConfigManager {
         Ok(false)
     }
 
+    /// 检查内容中是否包含 source 语句（指定 shell 类型）
+    ///
+    /// 支持不同 shell 的 source 语句格式（PowerShell 使用 `.`，其他使用 `source`）。
+    fn has_source_in_content_for_shell(
+        content: &str,
+        shell: &Shell,
+        source_path: &str,
+    ) -> Result<bool> {
+        let source_keyword = Self::get_source_keyword(shell);
+
+        // 检查 source 语句（支持不同关键字）
+        let patterns = vec![
+            format!("{} {}", source_keyword, source_path),
+            format!("{}  {}", source_keyword, source_path), // 支持多个空格
+        ];
+
+        for pattern in &patterns {
+            if content.contains(pattern) {
+                return Ok(true);
+            }
+        }
+
+        // 检查绝对路径（如果 source_path 是相对路径）
+        if source_path.contains("$HOME") {
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            let abs_path = source_path.replace("$HOME", &home);
+            let abs_patterns = vec![
+                format!("{} {}", source_keyword, abs_path),
+                format!("{}  {}", source_keyword, abs_path),
+            ];
+
+            for pattern in &abs_patterns {
+                if content.contains(pattern) {
+                    return Ok(true);
+                }
+            }
+        }
+
+        Ok(false)
+    }
+
     /// 从内容中移除 source 语句
     ///
     /// 移除 source 语句及其相关的注释块（如果存在）。
@@ -530,6 +688,88 @@ impl ShellConfigManager {
 
             // 跳过独立的 source 行（不在配置块内）
             if line.contains(source_path) || line.contains(&abs_path) {
+                i += 1;
+                // 跳过后续的空行
+                while i < lines.len() && lines[i].trim().is_empty() {
+                    i += 1;
+                }
+                continue;
+            }
+
+            new_content.push_str(line);
+            new_content.push('\n');
+            i += 1;
+        }
+
+        // 清理末尾的多个空行
+        while new_content.ends_with("\n\n") {
+            new_content.pop();
+        }
+        if !new_content.is_empty() && !new_content.ends_with('\n') {
+            new_content.push('\n');
+        }
+
+        Ok(new_content)
+    }
+
+    /// 从内容中移除 source 语句（指定 shell 类型）
+    ///
+    /// 移除 source 语句及其相关的注释块（如果存在）。
+    /// 支持不同 shell 的 source 语句格式（PowerShell 使用 `.`，其他使用 `source`）。
+    fn remove_source_from_content_for_shell(
+        content: &str,
+        shell: &Shell,
+        source_path: &str,
+    ) -> Result<String> {
+        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let abs_path = source_path.replace("$HOME", &home);
+        let source_keyword = Self::get_source_keyword(shell);
+
+        let mut new_content = String::new();
+        let lines: Vec<&str> = content.lines().collect();
+        let mut i = 0;
+
+        while i < lines.len() {
+            let line = lines[i];
+
+            // 检查是否是配置块开始（包含 Workflow CLI 的注释）
+            if line.contains("# Workflow CLI")
+                && (line.contains("completions") || line.contains("Configuration"))
+            {
+                // 跳过整个配置块
+                i += 1; // 跳过注释行
+                // 跳过 source 行
+                while i < lines.len() {
+                    let current_line = lines[i];
+                    // 检查是否匹配 source 语句（支持不同关键字和路径格式）
+                    let matches_source = (current_line.trim().starts_with(source_keyword)
+                        && (current_line.contains(source_path) || current_line.contains(&abs_path)))
+                        || (current_line.contains(source_path) || current_line.contains(&abs_path));
+
+                    if matches_source {
+                        i += 1; // 跳过 source 行
+                        // 跳过后续的空行
+                        while i < lines.len() && lines[i].trim().is_empty() {
+                            i += 1;
+                        }
+                        break;
+                    }
+                    // 如果遇到空行，停止
+                    if current_line.trim().is_empty() {
+                        i += 1;
+                        break;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+
+            // 跳过独立的 source 行（不在配置块内）
+            let matches_source = (line.trim().starts_with(source_keyword)
+                && (line.contains(source_path) || line.contains(&abs_path)))
+                || (line.contains(source_path) || line.contains(&abs_path));
+
+            if matches_source {
                 i += 1;
                 // 跳过后续的空行
                 while i < lines.len() && lines[i].trim().is_empty() {

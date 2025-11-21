@@ -1,4 +1,4 @@
-//! Completion 文件工具函数
+//! Completion 辅助函数
 //!
 //! 提供 completion 文件命名和列表相关的工具函数。
 
@@ -31,7 +31,7 @@ pub fn get_completion_filename(shell_type: &str, command: &str) -> Result<String
         "fish" => Ok(format!("{}.fish", command)),
         "powershell" => Ok(format!("_{}.ps1", command)),
         "elvish" => Ok(format!("{}.elv", command)),
-        _ => anyhow::bail!("不支持的 shell 类型: {}", shell_type),
+        _ => anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell_type),
     }
 }
 
@@ -96,3 +96,4 @@ pub fn get_all_completion_files(commands: &[&str]) -> Vec<String> {
 
     all_files
 }
+

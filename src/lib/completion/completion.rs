@@ -8,6 +8,7 @@
 //! - 获取 completion 文件列表
 
 use crate::base::settings::paths::Paths;
+use crate::base::shell::ShellConfigManager;
 use crate::log_debug;
 use crate::log_info;
 use crate::log_success;
@@ -25,9 +26,11 @@ pub struct Completion;
 impl Completion {
     /// 创建 workflow 配置文件目录
     fn create_workflow_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let home = std::env::var("HOME")
+            .context("HOME environment variable not set")?;
         let workflow_dir = PathBuf::from(&home).join(".workflow");
-        fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
+        fs::create_dir_all(&workflow_dir)
+            .with_context(|| format!("Failed to create workflow config directory: {}", workflow_dir.display()))?;
         Ok(workflow_dir)
     }
 
@@ -67,80 +70,66 @@ impl Completion {
         };
 
         fs::write(&config_file, config_content)
-            .context("Failed to write workflow completion config file")?;
+            .with_context(|| format!("Failed to write workflow completion config file: {}", config_file.display()))?;
 
         Ok(Some(config_file))
     }
 
-    /// 直接写入 shell 配置文件（用于 fish, powershell, elvish）
+    /// 配置 shell 配置文件以启用 completion（用于 fish, powershell, elvish）
     ///
     /// 这些 shell 不使用统一配置文件，而是直接写入各自的配置文件。
+    /// 使用 ShellConfigManager 为每个 completion 文件添加 source 语句。
     fn write_completion_to_shell_config(shell: &Shell) -> Result<()> {
-        let config_path = crate::base::settings::paths::Paths::config_file(shell)?;
-
-        // 读取现有配置
-        let existing_content = if config_path.exists() {
-            fs::read_to_string(&config_path).context("Failed to read shell config file")?
-        } else {
-            String::new()
-        };
-
-        // 检查是否已包含我们的配置
-        let marker = "# Workflow CLI completions";
-        if existing_content.contains(marker) {
-            log_debug!("Completion 配置已存在于 {}", config_path.display());
-            return Ok(());
-        }
-
-        // 生成配置内容
-        let completion_content = match shell {
-            Shell::Fish => {
-                format!(
-                    "\n{}\n\
-                    source $HOME/.workflow/completions/workflow.fish\n\
-                    source $HOME/.workflow/completions/pr.fish\n\
-                    source $HOME/.workflow/completions/qk.fish\n",
-                    marker
-                )
-            }
-            Shell::PowerShell => {
-                format!(
-                    "\n{}\n\
-                    . $HOME/.workflow/completions/_workflow.ps1\n\
-                    . $HOME/.workflow/completions/_pr.ps1\n\
-                    . $HOME/.workflow/completions/_qk.ps1\n",
-                    marker
-                )
-            }
-            Shell::Elvish => {
-                format!(
-                    "\n{}\n\
-                    source $HOME/.workflow/completions/workflow.elv\n\
-                    source $HOME/.workflow/completions/pr.elv\n\
-                    source $HOME/.workflow/completions/qk.elv\n",
-                    marker
-                )
-            }
+        // 获取每个 shell 的 completion 文件路径
+        let (workflow_source, pr_source, qk_source) = match shell {
+            Shell::Fish => (
+                "$HOME/.workflow/completions/workflow.fish",
+                "$HOME/.workflow/completions/pr.fish",
+                "$HOME/.workflow/completions/qk.fish",
+            ),
+            Shell::PowerShell => (
+                "$HOME/.workflow/completions/_workflow.ps1",
+                "$HOME/.workflow/completions/_pr.ps1",
+                "$HOME/.workflow/completions/_qk.ps1",
+            ),
+            Shell::Elvish => (
+                "$HOME/.workflow/completions/workflow.elv",
+                "$HOME/.workflow/completions/pr.elv",
+                "$HOME/.workflow/completions/qk.elv",
+            ),
             _ => return Ok(()), // zsh 和 bash 不使用此方法
         };
 
-        // 追加到配置文件
-        let mut new_content = existing_content;
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            new_content.push('\n');
-        }
-        new_content.push_str(&completion_content);
-
-        // 确保配置文件目录存在
-        if let Some(parent) = config_path.parent() {
-            fs::create_dir_all(parent).context("Failed to create shell config directory")?;
+        // 检查是否已配置（检查第一个文件即可）
+        if ShellConfigManager::has_source_for_shell(shell, workflow_source)? {
+            log_debug!("Completion config already exists in {} config file", shell);
+            return Ok(());
         }
 
-        // 写入文件
-        fs::write(&config_path, new_content)
-            .context("Failed to write completion to shell config file")?;
+        // 使用 ShellConfigManager 为每个 completion 文件添加 source 语句
+        // 只在第一次添加时包含注释
+        ShellConfigManager::add_source_for_shell(
+            shell,
+            workflow_source,
+            Some("Workflow CLI completions"),
+        )
+        .with_context(|| format!("Failed to add workflow completion source to {} config", shell))?;
 
-        log_debug!("已将 completion 配置写入 {}", config_path.display());
+        ShellConfigManager::add_source_for_shell(
+            shell,
+            pr_source,
+            None,
+        )
+        .with_context(|| format!("Failed to add pr completion source to {} config", shell))?;
+
+        ShellConfigManager::add_source_for_shell(
+            shell,
+            qk_source,
+            None,
+        )
+        .with_context(|| format!("Failed to add qk completion source to {} config", shell))?;
+
+        log_debug!("Completion config written to {} config file", shell);
 
         Ok(())
     }
@@ -156,27 +145,28 @@ impl Completion {
                 // 创建 workflow completion 配置文件
                 let _workflow_config_file = Self::create_completion_config_file(shell)?;
 
-                // 使用 ShellConfigManager 添加 source 语句
-                let source_pattern = "source $HOME/.workflow/.completions";
-                let added = crate::base::shell::ShellConfigManager::add_source(
+                // 使用 ShellConfigManager 添加 source 语句（指定 shell 类型）
+                let source_pattern = "$HOME/.workflow/.completions";
+                let added = ShellConfigManager::add_source_for_shell(
+                    shell,
                     source_pattern,
                     Some("Workflow CLI completions"),
                 )
-                .context("Failed to add completion source to shell config")?;
+                .with_context(|| format!("Failed to add completion source to {} config file", shell))?;
 
                 if !added {
-                    log_success!("completion 配置已存在于 shell 配置文件");
+                    log_success!("Completion config already exists in {} config file", shell);
                 } else {
-                    log_success!("已将 completion 配置添加到 shell 配置文件");
+                    log_success!("Completion config added to {} config file", shell);
                 }
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
                 // 直接写入各自的配置文件
                 Self::write_completion_to_shell_config(shell)?;
-                log_success!("已将 completion 配置写入 shell 配置文件");
+                log_success!("Completion config written to shell config file");
             }
             _ => {
-                anyhow::bail!("不支持的 shell 类型: {}", shell);
+                anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
             }
         }
 
@@ -191,15 +181,18 @@ impl Completion {
     pub fn remove_completion_config(shell: &Shell) -> Result<()> {
         match shell {
             Shell::Zsh | Shell::Bash => {
-                // zsh 和 bash 使用统一配置文件，移除 source 语句
-                let source_pattern = "source $HOME/.workflow/.completions";
-                let removed = crate::base::shell::ShellConfigManager::remove_source(source_pattern)
-                    .context("Failed to remove completion source from shell config")?;
+                // zsh 和 bash 使用统一配置文件，移除 source 语句（指定 shell 类型）
+                let source_pattern = "$HOME/.workflow/.completions";
+                let removed = ShellConfigManager::remove_source_for_shell(
+                    shell,
+                    source_pattern,
+                )
+                .with_context(|| format!("Failed to remove completion source from {} config file", shell))?;
 
                 if !removed {
-                    log_debug!("completion 配置未在 {} 配置文件中找到", shell);
+                    log_debug!("Completion config not found in {} config file", shell);
                 } else {
-                    log_debug!("已从 {} 配置文件中删除 completion 配置", shell);
+                    log_debug!("Completion config removed from {} config file", shell);
                 }
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
@@ -207,7 +200,7 @@ impl Completion {
                 Self::remove_completion_block_from_config(shell)?;
             }
             _ => {
-                log_debug!("不支持的 shell 类型: {}", shell);
+                log_debug!("Unsupported shell type: {}", shell);
             }
         }
 
@@ -231,7 +224,7 @@ impl Completion {
             match Self::is_shell_configured_for_removal(shell) {
                 Ok(true) => {
                     if let Err(e) = Self::remove_completion_config(shell) {
-                        log_debug!("移除 {} 的 completion 配置失败: {}", shell, e);
+                        log_debug!("Failed to remove completion config for {}: {}", shell, e);
                     }
                 }
                 Ok(false) => {
@@ -254,28 +247,30 @@ impl Completion {
     ///
     /// `Result<(bool, PathBuf)>` - (是否已配置, 配置文件路径)
     pub fn is_shell_configured(shell: &Shell) -> Result<(bool, PathBuf)> {
-        let config_path = crate::base::settings::paths::Paths::config_file(shell)?;
+        let config_path = Paths::config_file(shell)?;
 
         if !config_path.exists() {
             return Ok((false, config_path));
         }
 
-        let content =
-            fs::read_to_string(&config_path).context("Failed to read shell config file")?;
-
         // 检查配置标记
-        let marker = "# Workflow CLI completions";
         let configured = match shell {
             Shell::Zsh | Shell::Bash => {
                 // zsh 和 bash 使用统一配置文件，检查 source 语句
-                let home = std::env::var("HOME").unwrap_or_default();
-                let abs_path = format!("source {}/.workflow/.completions", home);
-                content.contains("source $HOME/.workflow/.completions")
-                    || content.contains(&abs_path)
+                let source_pattern = "$HOME/.workflow/.completions";
+                ShellConfigManager::has_source_for_shell(shell, source_pattern)
+                    .unwrap_or(false)
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
-                // fish, powershell, elvish 直接写入配置文件
-                content.contains(marker)
+                // fish, powershell, elvish 直接写入配置文件，检查第一个 completion 文件
+                let workflow_source = match shell {
+                    Shell::Fish => "$HOME/.workflow/completions/workflow.fish",
+                    Shell::PowerShell => "$HOME/.workflow/completions/_workflow.ps1",
+                    Shell::Elvish => "$HOME/.workflow/completions/workflow.elv",
+                    _ => return Ok((false, config_path)),
+                };
+                ShellConfigManager::has_source_for_shell(shell, workflow_source)
+                    .unwrap_or(false)
             }
             _ => false,
         };
@@ -283,75 +278,57 @@ impl Completion {
         Ok((configured, config_path))
     }
 
-    /// 从配置文件中移除 completion 配置块
+    /// 从配置文件中移除 completion 配置（用于 fish, powershell, elvish）
     ///
-    /// 用于 fish, powershell, elvish 这些直接写入配置文件的 shell。
-    /// 移除配置块包括标记行和所有相关的 source 行。
+    /// 使用 ShellConfigManager 移除每个 completion 文件的 source 语句。
     fn remove_completion_block_from_config(shell: &Shell) -> Result<()> {
-        let config_path = crate::base::settings::paths::Paths::config_file(shell)?;
-        if !config_path.exists() {
-            log_debug!("配置文件不存在: {}", config_path.display());
-            return Ok(());
+        // 获取每个 shell 的 completion 文件路径
+        let (workflow_source, pr_source, qk_source) = match shell {
+            Shell::Fish => (
+                "$HOME/.workflow/completions/workflow.fish",
+                "$HOME/.workflow/completions/pr.fish",
+                "$HOME/.workflow/completions/qk.fish",
+            ),
+            Shell::PowerShell => (
+                "$HOME/.workflow/completions/_workflow.ps1",
+                "$HOME/.workflow/completions/_pr.ps1",
+                "$HOME/.workflow/completions/_qk.ps1",
+            ),
+            Shell::Elvish => (
+                "$HOME/.workflow/completions/workflow.elv",
+                "$HOME/.workflow/completions/pr.elv",
+                "$HOME/.workflow/completions/qk.elv",
+            ),
+            _ => return Ok(()), // zsh 和 bash 不使用此方法
+        };
+
+        // 使用 ShellConfigManager 移除每个 completion 文件的 source 语句
+        let mut removed_any = false;
+
+        if ShellConfigManager::remove_source_for_shell(shell, workflow_source)
+            .with_context(|| format!("Failed to remove workflow completion source from {} config", shell))?
+        {
+            removed_any = true;
         }
 
-        let content =
-            fs::read_to_string(&config_path).context("Failed to read shell config file")?;
-
-        // 移除配置块
-        let marker = "# Workflow CLI completions";
-        if !content.contains(marker) {
-            log_debug!("completion 配置未在 {} 配置文件中找到", shell);
-            return Ok(());
+        if ShellConfigManager::remove_source_for_shell(shell, pr_source)
+            .with_context(|| format!("Failed to remove pr completion source from {} config", shell))?
+        {
+            removed_any = true;
         }
 
-        // 移除配置块（包括标记和所有 source 行）
-        let lines: Vec<&str> = content.lines().collect();
-        let mut new_lines = Vec::new();
-        let mut skip_block = false;
-
-        for line in lines {
-            if line.contains(marker) {
-                skip_block = true;
-                continue;
-            }
-
-            if skip_block {
-                // 检查是否是 source 行（fish, powershell, elvish 的格式）
-                if line.trim().starts_with("source")
-                    || line.trim().starts_with(".")
-                    || line.trim().contains(".workflow/completions")
-                {
-                    continue;
-                }
-
-                // 如果遇到空行，停止跳过
-                if line.trim().is_empty() {
-                    skip_block = false;
-                    // 不添加这个空行，避免多余的空行
-                    continue;
-                }
-
-                // 如果遇到非空行且不是 source 行，停止跳过
-                skip_block = false;
-            }
-
-            new_lines.push(line);
+        if ShellConfigManager::remove_source_for_shell(shell, qk_source)
+            .with_context(|| format!("Failed to remove qk completion source from {} config", shell))?
+        {
+            removed_any = true;
         }
 
-        // 清理末尾的多个空行
-        while new_lines.last().map(|s| s.trim().is_empty()) == Some(true) {
-            new_lines.pop();
-        }
-
-        let new_content = new_lines.join("\n");
-        if !new_content.is_empty() && !new_content.ends_with('\n') {
-            fs::write(&config_path, format!("{}\n", new_content))
-                .context("Failed to write shell config file")?;
+        if removed_any {
+            log_debug!("Completion config removed from {} config file", shell);
         } else {
-            fs::write(&config_path, new_content).context("Failed to write shell config file")?;
+            log_debug!("Completion config not found in {} config file", shell);
         }
 
-        log_debug!("已从 {} 配置文件中删除 completion 配置", shell);
         Ok(())
     }
 
@@ -372,7 +349,7 @@ impl Completion {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
         let commands = ["workflow", "pr", "qk"];
         let shell_type_str = shell.to_string();
-        super::files::get_completion_files_for_shell(&shell_type_str, &commands)
+        super::helpers::get_completion_files_for_shell(&shell_type_str, &commands)
             .unwrap_or_default()
             .iter()
             .map(|name| completion_dir.join(name))
@@ -387,7 +364,7 @@ impl Completion {
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
         let commands = ["workflow", "pr", "qk"];
-        let all_file_names = super::files::get_all_completion_files(&commands);
+        let all_file_names = super::helpers::get_all_completion_files(&commands);
         let all_files: Vec<PathBuf> = all_file_names
             .iter()
             .map(|name| completion_dir.join(name))
@@ -397,7 +374,7 @@ impl Completion {
         for file in &all_files {
             if file.exists() {
                 if let Err(e) = fs::remove_file(file) {
-                    log_info!("删除失败: {} ({})", file.display(), e);
+                    log_info!("Failed to delete: {} ({})", file.display(), e);
                 } else {
                     log_info!("  Removed: {}", file.display());
                     removed_count += 1;
@@ -416,12 +393,13 @@ impl Completion {
 
     /// 删除 workflow completion 配置文件
     pub fn remove_completion_config_file() -> Result<()> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
+        let home = std::env::var("HOME")
+            .context("HOME environment variable not set")?;
         let workflow_config_file = PathBuf::from(&home).join(".workflow").join(".completions");
 
         if workflow_config_file.exists() {
             fs::remove_file(&workflow_config_file)
-                .context("Failed to remove workflow completion config file")?;
+                .with_context(|| format!("Failed to remove workflow completion config file: {}", workflow_config_file.display()))?;
             log_info!("  Removed: {}", workflow_config_file.display());
         } else {
             log_info!(
@@ -443,6 +421,6 @@ impl Completion {
         shell_type: Option<String>,
         output_dir: Option<String>,
     ) -> Result<()> {
-        super::generate::generate_all_completions(shell_type, output_dir)
+        super::generate::CompletionGenerator::new(shell_type, output_dir)?.generate_all()
     }
 }

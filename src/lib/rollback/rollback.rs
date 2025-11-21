@@ -6,7 +6,10 @@
 //! - 清理备份文件
 
 use crate::completion::get_all_completion_files;
-use crate::{base::settings::paths::Paths, log_debug, log_info, log_success, log_warning, Detect};
+use crate::{
+    base::settings::paths::Paths, base::shell::Reload, log_break, log_debug, log_info, log_success,
+    log_warning, Detect,
+};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -74,13 +77,10 @@ impl RollbackManager {
         ));
 
         fs::create_dir_all(&backup_dir).with_context(|| {
-            format!(
-                "Failed to create backup directory: {}",
-                backup_dir.display()
-            )
+            format!("Failed to create backup directory: {}", backup_dir.display())
         })?;
 
-        log_debug!("创建备份目录: {}", backup_dir.display());
+        log_debug!("Created backup directory: {}", backup_dir.display());
         Ok(backup_dir)
     }
 
@@ -104,7 +104,7 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                log_debug!("二进制文件不存在，跳过备份: {}", source.display());
+                log_debug!("Binary file does not exist, skipping backup: {}", source.display());
                 continue;
             }
 
@@ -116,10 +116,10 @@ impl RollbackManager {
                 .arg(&source)
                 .arg(&backup_path)
                 .status()
-                .with_context(|| format!("Failed to backup binary: {}", source.display()))?;
+                .with_context(|| format!("Failed to backup binary file: {} -> {}", source.display(), backup_path.display()))?;
 
             if !status.success() {
-                anyhow::bail!("备份二进制文件失败: {}", source.display());
+                anyhow::bail!("Failed to backup binary file: {} -> {} (exit code: {})", source.display(), backup_path.display(), status.code().unwrap_or(-1));
             }
 
             // 设置执行权限
@@ -128,14 +128,11 @@ impl RollbackManager {
                 .arg(&backup_path)
                 .status()
                 .with_context(|| {
-                    format!(
-                        "Failed to set executable permission for backup: {}",
-                        backup_path.display()
-                    )
+                    format!("Failed to set executable permission for backup file: {}", backup_path.display())
                 })?;
 
             log_debug!(
-                "已备份二进制文件: {} -> {}",
+                "Backed up binary file: {} -> {}",
                 source.display(),
                 backup_path.display()
             );
@@ -165,7 +162,7 @@ impl RollbackManager {
 
         // 如果补全脚本目录不存在，返回空列表
         if !completion_dir.exists() {
-            log_debug!("补全脚本目录不存在，跳过备份: {}", completion_dir.display());
+            log_debug!("Completion directory does not exist, skipping backup: {}", completion_dir.display());
             return Ok(backups);
         }
 
@@ -178,7 +175,7 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                log_debug!("补全脚本不存在，跳过备份: {}", source.display());
+                log_debug!("Completion script does not exist, skipping backup: {}", source.display());
                 continue;
             }
 
@@ -186,11 +183,11 @@ impl RollbackManager {
 
             // 复制文件
             fs::copy(&source, &backup_path).with_context(|| {
-                format!("Failed to backup completion script: {}", source.display())
+                format!("Failed to backup completion script: {} -> {}", source.display(), backup_path.display())
             })?;
 
             log_debug!(
-                "已备份补全脚本: {} -> {}",
+                "Backed up completion script: {} -> {}",
                 source.display(),
                 backup_path.display()
             );
@@ -208,29 +205,17 @@ impl RollbackManager {
     ///
     /// 返回 `BackupInfo` 结构体，包含备份信息。
     pub fn create_backup() -> Result<BackupInfo> {
-        log_info!("正在创建备份...");
+        log_info!("Creating backup...");
 
         // 创建备份目录
         let backup_dir = Self::create_backup_dir()?;
 
         // 备份二进制文件
         let binaries = ["workflow", "pr", "qk"];
-        let binary_backups =
-            Self::backup_binaries(&backup_dir, &binaries).context("Failed to backup binaries")?;
+        let binary_backups = Self::backup_binaries(&backup_dir, &binaries)
+            .context("Failed to backup binaries")?;
 
-        // 备份补全脚本
-        let _shell = match Detect::shell() {
-            Ok(shell) => shell,
-            Err(e) => {
-                log_warning!("无法检测 shell 类型，跳过补全脚本备份: {}", e);
-                return Ok(BackupInfo {
-                    backup_dir,
-                    binary_backups,
-                    completion_backups: Vec::new(),
-                });
-            }
-        };
-
+        // 备份补全脚本（不依赖 shell 检测）
         let completion_dir = Paths::completion_dir()?;
         let completion_backups = Self::backup_completions(&backup_dir, &completion_dir)
             .context("Failed to backup completions")?;
@@ -241,9 +226,9 @@ impl RollbackManager {
             completion_backups,
         };
 
-        log_success!("  备份完成");
+        log_success!("  Backup completed");
         log_debug!(
-            "备份了 {} 个二进制文件，{} 个补全脚本",
+            "Backed up {} binary file(s), {} completion script(s)",
             backup_info.binary_backups.len(),
             backup_info.completion_backups.len()
         );
@@ -264,7 +249,7 @@ impl RollbackManager {
 
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
-                log_warning!("备份文件不存在，跳过恢复: {}", backup_path.display());
+                log_warning!("Backup file does not exist, skipping restore: {}", backup_path.display());
                 continue;
             }
 
@@ -274,10 +259,10 @@ impl RollbackManager {
                 .arg(backup_path)
                 .arg(&target)
                 .status()
-                .with_context(|| format!("Failed to restore binary: {}", target.display()))?;
+                .with_context(|| format!("Failed to restore binary file: {} -> {}", backup_path.display(), target.display()))?;
 
             if !status.success() {
-                anyhow::bail!("恢复二进制文件失败: {}", target.display());
+                anyhow::bail!("Failed to restore binary file: {} -> {} (exit code: {})", backup_path.display(), target.display(), status.code().unwrap_or(-1));
             }
 
             // 设置执行权限
@@ -287,13 +272,10 @@ impl RollbackManager {
                 .arg(&target)
                 .status()
                 .with_context(|| {
-                    format!(
-                        "Failed to set executable permission for restored binary: {}",
-                        target.display()
-                    )
+                    format!("Failed to set executable permission for restored binary file: {}", target.display())
                 })?;
 
-            log_success!("  已恢复二进制文件: {}", binary_name);
+            log_success!("  Restored binary file: {}", binary_name);
         }
 
         Ok(())
@@ -310,10 +292,7 @@ impl RollbackManager {
     fn restore_completions(backups: &[(String, PathBuf)], completion_dir: &Path) -> Result<()> {
         // 确保补全脚本目录存在
         fs::create_dir_all(completion_dir).with_context(|| {
-            format!(
-                "Failed to create completion directory: {}",
-                completion_dir.display()
-            )
+            format!("Failed to create completion directory: {}", completion_dir.display())
         })?;
 
         for (file_name, backup_path) in backups {
@@ -321,16 +300,16 @@ impl RollbackManager {
 
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
-                log_warning!("备份文件不存在，跳过恢复: {}", backup_path.display());
+                log_warning!("Backup file does not exist, skipping restore: {}", backup_path.display());
                 continue;
             }
 
             // 复制文件
             fs::copy(backup_path, &target).with_context(|| {
-                format!("Failed to restore completion script: {}", target.display())
+                format!("Failed to restore completion script: {} -> {}", backup_path.display(), target.display())
             })?;
 
-            log_success!("  已恢复补全脚本: {}", file_name);
+            log_success!("  Restored completion script: {}", file_name);
         }
 
         Ok(())
@@ -344,29 +323,46 @@ impl RollbackManager {
     ///
     /// * `backup_info` - 备份信息
     pub fn rollback(backup_info: &BackupInfo) -> Result<()> {
-        log_warning!("更新失败，正在回滚到之前的版本...");
-        crate::log_break!();
+        log_warning!("Update failed, rolling back to previous version...");
+        log_break!();
 
         // 恢复二进制文件
         if !backup_info.binary_backups.is_empty() {
-            log_info!("正在恢复二进制文件...");
+            log_info!("Restoring binary files...");
             Self::restore_binaries(&backup_info.binary_backups)
                 .context("Failed to restore binaries")?;
         }
 
-        // 恢复补全脚本
+        // 恢复补全脚本（不依赖 shell 检测）
         if !backup_info.completion_backups.is_empty() {
-            if let Ok(_shell) = Detect::shell() {
-                let completion_dir = Paths::completion_dir()?;
-                log_info!("正在恢复补全脚本...");
-                Self::restore_completions(&backup_info.completion_backups, &completion_dir)
-                    .context("Failed to restore completions")?;
-            } else {
-                log_warning!("无法检测 shell 类型，跳过补全脚本恢复");
-            }
+            let completion_dir = Paths::completion_dir()?;
+            log_info!("Restoring completion scripts...");
+            Self::restore_completions(&backup_info.completion_backups, &completion_dir)
+                .context("Failed to restore completions")?;
         }
 
-        log_success!("回滚完成");
+        // 尝试重新加载当前 shell 的配置（需要检测 shell，但这是可选操作）
+        if let Ok(shell) = Detect::shell() {
+            log_info!("Reloading shell configuration...");
+            if let Err(e) = Reload::shell(&shell) {
+                log_warning!("Failed to reload shell configuration: {}", e);
+                let config_file = Paths::config_file(&shell)?;
+                log_info!("Please run manually: source {}", config_file.display());
+            } else {
+                log_info!("Note: Configuration has been reloaded in subprocess");
+                if let Ok(config_file) = Paths::config_file(&shell) {
+                    log_info!(
+                        "  If completion is not working, please run manually: source {}",
+                        config_file.display()
+                    );
+                }
+            }
+        } else {
+            log_debug!("Failed to detect shell type, skipping reload");
+            log_info!("Please manually reload shell config file to enable completion");
+        }
+
+        log_success!("Rollback completed");
         Ok(())
     }
 
@@ -379,14 +375,11 @@ impl RollbackManager {
     /// * `backup_info` - 备份信息
     pub fn cleanup_backup(backup_info: &BackupInfo) -> Result<()> {
         if backup_info.backup_dir.exists() {
-            log_debug!("清理备份目录: {}", backup_info.backup_dir.display());
+            log_debug!("Cleaning up backup directory: {}", backup_info.backup_dir.display());
             fs::remove_dir_all(&backup_info.backup_dir).with_context(|| {
-                format!(
-                    "Failed to remove backup directory: {}",
-                    backup_info.backup_dir.display()
-                )
+                format!("Failed to remove backup directory: {}", backup_info.backup_dir.display())
             })?;
-            log_debug!("备份目录已清理");
+            log_debug!("Backup directory cleaned up");
         }
         Ok(())
     }
