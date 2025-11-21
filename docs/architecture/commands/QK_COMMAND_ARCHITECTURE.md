@@ -36,13 +36,24 @@ src/commands/qk/
 - 格式化输出
 - 调用核心业务逻辑层 (`lib/jira/logs/`) 的 API
 
-### 依赖模块（简要说明）
+### 依赖模块
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
-- **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）- 详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
-- **`lib/jira/`**：Jira 集成（`Jira::get_ticket_info()`）
-- **`lib/base/util/`**：工具函数（`Clipboard::copy()`）
-- **`lib/base/settings/`**：配置管理（`Settings::get()`）
+- **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
+  - `JiraLogs::new()` - 创建日志管理器
+  - `JiraLogs::download_from_jira()` - 下载日志
+  - `JiraLogs::extract_response_content()` - 提取响应内容
+  - `JiraLogs::search_keyword()` - 搜索关键词
+  - `JiraLogs::clean_dir()` - 清理目录
+  - `JiraLogs::ensure_log_file_exists()` - 确保日志文件存在
+- **`lib/jira/`**：Jira 集成
+  - `Jira::get_ticket_info()` - 获取 ticket 信息
+- **`lib/base/util/`**：工具函数
+  - `Clipboard::copy()` - 复制到剪贴板
+- **`lib/base/settings/`**：配置管理
+  - `Settings::get()` - 获取配置（`log_output_folder_name`、`log_download_base_dir` 等）
+
+详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
 
 ---
 
@@ -395,11 +406,9 @@ commands/qk/info.rs::InfoCommand::show(jira_id)
   - 参数：`jira_id` - Jira ticket ID
   - 返回：Issue 结构体（包含所有 ticket 信息）
 
----
+### 数据流
 
-## 📊 数据流
-
-### Download 命令数据流
+#### Download 命令数据流
 
 ```
 命令行参数 (JIRA_ID, --all)
@@ -417,7 +426,7 @@ Jira API (获取附件列表)
 输出文件路径
 ```
 
-### Find 命令数据流
+#### Find 命令数据流
 
 ```
 命令行参数 (JIRA_ID, REQUEST_ID)
@@ -433,7 +442,7 @@ Clipboard::copy() 复制到剪贴板
 输出成功信息
 ```
 
-### Search 命令数据流
+#### Search 命令数据流
 
 ```
 命令行参数 (JIRA_ID, SEARCH_TERM)
@@ -449,7 +458,7 @@ JiraLogs::search_keyword()
 格式化输出到终端
 ```
 
-### Clean 命令数据流
+#### Clean 命令数据流
 
 ```
 命令行参数 (JIRA_ID, --dry-run, --list)
@@ -465,7 +474,7 @@ JiraLogs::clean_dir()
 输出操作结果
 ```
 
-### Info 命令数据流
+#### Info 命令数据流
 
 ```
 命令行参数 (JIRA_ID)
@@ -481,20 +490,9 @@ Jira API (获取 ticket 信息)
 
 ---
 
-## 🔗 与其他模块的集成
+## 🏗️ 架构设计
 
-命令层通过调用 `lib/` 模块提供的 API 实现功能，主要使用的接口包括：
-
-- **`lib/jira/logs/`**：`JiraLogs::new()`、`JiraLogs::download_from_jira()`、`JiraLogs::extract_response_content()`、`JiraLogs::search_keyword()`、`JiraLogs::clean_dir()`、`JiraLogs::ensure_log_file_exists()` - 详细架构文档：参见 [JIRA_LOGS_ARCHITECTURE.md](./JIRA_LOGS_ARCHITECTURE.md)
-- **`lib/jira/`**：`Jira::get_ticket_info()`
-- **`lib/base/util/`**：`Clipboard::copy()`
-- **`lib/base/settings/`**：`Settings::get()`（用于获取 `log_output_folder_name`、`log_download_base_dir` 等配置）
-
-详细实现请参考相关模块架构文档。
-
----
-
-## 🎯 设计模式
+### 设计模式
 
 ### 1. 命令模式
 
@@ -545,14 +543,14 @@ JiraLogs::download_from_jira()
    - `clap` 自动处理参数验证和错误提示
 
 2. **命令层**：用户交互错误、业务逻辑错误
-   - 交互式输入错误（用户取消输入）
-   - 参数验证错误
+- 交互式输入错误（用户取消输入）
+  - 参数验证错误
 
 3. **库层**：文件操作错误、API 调用错误
    - 通过 `JiraLogs` API 返回的错误信息
    - 文件不存在、API 调用失败等
 
-### 容错机制
+#### 容错机制
 
 - **文件不存在错误**：
   - Find/Search 命令：如果日志文件不存在，`JiraLogs` API 会返回错误，命令层会提示用户先执行 download 命令
@@ -598,7 +596,7 @@ JiraLogs::download_from_jira()
 
 ---
 
-## 使用示例
+## 📋 使用示例
 
 ### Download 命令
 
@@ -661,12 +659,17 @@ qk WEW-763
 
 ---
 
-## 总结
+## ✅ 总结
 
 QK 命令层采用清晰的命令模式设计：
-- **CLI 层**：参数解析和命令分发
-- **命令层**：用户交互和格式化输出
-- **库层调用**：通过 `JiraLogs` API 调用核心业务逻辑
 
-命令层专注于用户交互和输出格式化，核心业务逻辑由 `lib/jira/logs/` 模块提供，实现了清晰的职责分离。
+1. **CLI 层**：参数解析和命令分发
+2. **命令层**：用户交互和格式化输出
+3. **库层调用**：通过 `JiraLogs` API 调用核心业务逻辑
+
+**设计优势**：
+- ✅ **职责分离**：命令层专注于用户交互和输出格式化
+- ✅ **易于扩展**：添加新命令只需实现命令结构体和处理方法
+- ✅ **交互友好**：支持交互式输入和参数传递两种方式
+- ✅ **错误处理**：完整的错误处理和容错机制
 

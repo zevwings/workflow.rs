@@ -440,11 +440,9 @@ commands/config/check.rs::CheckCommand::run_all()
   - 提供详细的错误信息（网络问题、代理设置、防火墙限制等）
   - 给出可能的解决建议
 
----
+### 数据流
 
-## 📊 数据流
-
-### 配置管理数据流
+#### 配置管理数据流
 
 ```
 用户输入（交互式）
@@ -460,7 +458,7 @@ Settings 管理（读取/写入 TOML 配置文件）
 应用使用配置
 ```
 
-### 配置文件结构
+#### 配置文件结构
 
 ```
 ~/.workflow/
@@ -473,29 +471,9 @@ Settings 管理（读取/写入 TOML 配置文件）
 
 ---
 
-## 🔗 与其他模块的集成
+## 🏗️ 架构设计
 
-命令层通过调用 `lib/` 模块提供的 API 实现功能，主要使用的接口包括：
-
-- **`lib/base/settings/`**：`Settings::get()`、`Settings::load()`、`Paths::workflow_config()`
-- **`lib/jira/config.rs`**：`ConfigManager::<Settings>::update()` - 原子性更新配置
-- **`lib/git/config.rs`**：`GitConfig::set_global_user()` - 同步 Git 全局配置
-- **`lib/base/util/`**：`LogLevel::get_level()`、`LogLevel::set_level()`、`mask_sensitive_value()`
-- **`lib/git/`**：`GitRepo::is_git_repo()`、`GitCommit::status()` - 环境检查
-- **`lib/base/http/`**：`HttpClient::global().stream()` - 网络检查
-
-详细实现请参考相关模块架构文档。
-
-### 配置文件位置
-
-- **主配置**：`~/.workflow/config/workflow.toml`
-- **LLM 配置**：`~/.workflow/config/llm.toml`（可选）
-- **Jira 状态配置**：`~/.workflow/config/jira-status.toml`
-- **Jira 用户缓存**：`~/.workflow/config/jira-users.toml`
-
----
-
-## 🎯 设计模式
+### 设计模式
 
 ### 1. 命令模式
 
@@ -509,17 +487,15 @@ Settings 管理（读取/写入 TOML 配置文件）
 - **默认值**：使用 `#[serde(default)]` 和 `Default` trait 提供默认值
 - **分离存储**：主配置和 LLM 配置分别存储在不同的文件中
 
----
+### 错误处理
 
-## 🔍 错误处理
-
-### 分层错误处理
+#### 分层错误处理
 
 1. **CLI 层**：参数验证错误
 2. **命令层**：用户交互错误、业务逻辑错误
 3. **工具层**：文件操作错误、配置读写错误
 
-### 容错机制
+#### 容错机制
 
 - **配置加载失败**：使用默认值或提示用户运行 `setup`
 - **文件操作失败**：提供清晰的错误提示和手动操作建议
@@ -564,4 +540,72 @@ Settings 管理（读取/写入 TOML 配置文件）
 - [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md) - Git 操作和环境检查相关
 - [HTTP 模块架构文档](../lib/HTTP_ARCHITECTURE.md) - HTTP 客户端和网络检查相关
 - [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md) - ConfigManager 使用说明
+
+---
+
+## 📋 使用示例
+
+### Setup 命令
+
+```bash
+# 初始化配置
+workflow config setup
+```
+
+### Show 命令
+
+```bash
+# 查看配置
+workflow config show
+```
+
+### GitHub 账号管理
+
+```bash
+# 添加 GitHub 账号
+workflow config github add
+
+# 切换账号
+workflow config github switch
+
+# 列出所有账号
+workflow config github list
+
+# 删除账号
+workflow config github remove
+```
+
+### 日志级别管理
+
+```bash
+# 设置日志级别
+workflow config log set
+
+# 查看当前日志级别
+workflow config log show
+```
+
+### 环境检查
+
+```bash
+# 检查环境
+workflow config check
+```
+
+---
+
+## ✅ 总结
+
+Config 命令层采用清晰的配置管理设计：
+
+1. **交互式配置**：通过 `setup` 命令交互式收集配置
+2. **配置查看**：通过 `show` 命令查看和验证配置
+3. **账号管理**：支持多 GitHub 账号管理和切换
+4. **环境检查**：提供完整的环境检查功能
+
+**设计优势**：
+- ✅ **易用性**：交互式配置，用户友好
+- ✅ **完整性**：配置验证和环境检查
+- ✅ **灵活性**：支持多账号管理
+- ✅ **可扩展性**：易于添加新的配置项和检查项
 

@@ -38,6 +38,49 @@ src/lib/base/settings/
 - **`lib/pr/`**：GitHub 客户端（用于配置验证）
 - **`lib/base/util/`**：工具函数（日志宏、敏感值掩码）
 
+### 模块集成
+
+#### 使用场景
+
+- **配置读取**：所有模块通过 `Settings::get()` 获取配置
+- **配置验证**：使用 `Settings::verify()` 验证配置正确性
+- **路径获取**：使用 `Paths::workflow_config()` 等获取配置文件路径
+
+#### LLM 模块
+
+- **`lib/base/llm/`**：LLM 客户端
+  - `Settings::get().llm` - 获取 LLM 配置
+  - `Paths::llm_config()` - 获取 LLM 配置文件路径
+
+#### Jira 模块
+
+- **`lib/jira/`**：Jira 客户端
+  - `Settings::get().jira` - 获取 Jira 配置
+  - `Paths::jira_status_config()` - 获取 Jira 状态配置文件路径
+  - `Paths::jira_users_config()` - 获取 Jira 用户配置文件路径
+
+#### PR 模块
+
+- **`lib/pr/`**：PR 平台抽象
+  - `Settings::get().github` - 获取 GitHub 配置
+  - `Settings::get().codeup` - 获取 Codeup 配置
+
+#### Shell 模块
+
+- **`lib/base/shell/`**：Shell 配置管理
+  - `Paths::config_file(shell)` - 获取 Shell 配置文件路径
+  - `Paths::completion_dir()` - 获取 completion 目录路径
+
+#### Completion 模块
+
+- **`lib/completion/`**：Completion 管理
+  - `Paths::completion_dir()` - 获取 completion 目录路径
+
+#### Rollback 模块
+
+- **`lib/rollback/`**：回滚管理
+  - `Paths::completion_dir()` - 获取 completion 目录路径（用于备份）
+
 ---
 
 ## 🏗️ 架构设计
@@ -132,9 +175,88 @@ src/lib/base/settings/
 - ✅ **集中管理**：所有默认值集中在一个模块
 - ✅ **Provider 特定默认值**：LLM 模型根据 Provider 提供不同默认值
 
+### 设计模式
+
+#### 1. 单例模式
+
+通过 `OnceLock` 实现线程安全的全局单例：
+
+```rust
+pub fn get() -> &'static Settings {
+    static SETTINGS: OnceLock<Settings> = OnceLock::new();
+    SETTINGS.get_or_init(Self::load)
+}
+```
+
+**优势**：
+- 配置只加载一次，提高性能
+- 线程安全，可以在多线程环境中安全使用
+- 统一管理，所有模块使用同一个配置实例
+
+#### 2. 默认值模式
+
+使用 `#[serde(default)]` 和 `Default` trait 提供默认值：
+
+```rust
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Settings {
+    #[serde(default)]
+    pub jira: JiraSettings,
+    // ...
+}
+```
+
+**优势**：
+- 配置文件不存在或字段缺失时使用默认值
+- 不中断程序运行
+- 提供合理的默认值，提升用户体验
+
+#### 3. 路径统一管理模式
+
+通过 `Paths` 结构体统一管理所有路径：
+
+```rust
+pub struct Paths;
+
+impl Paths {
+    pub fn workflow_config() -> Result<PathBuf> { ... }
+    pub fn completion_dir() -> Result<PathBuf> { ... }
+    // ...
+}
+```
+
+**优势**：
+- 避免硬编码路径
+- 集中管理，易于维护
+- 自动创建目录和设置权限
+
+### 错误处理
+
+#### 分层错误处理
+
+1. **路径获取失败**：
+   - `HOME` 环境变量未设置：返回错误
+   - 目录创建失败：返回错误
+
+2. **配置文件读取失败**：
+   - 文件不存在：使用默认值，不报错
+   - 读取失败：使用默认值，不报错
+   - 解析失败：使用默认值，不报错
+
+3. **配置验证失败**：
+   - Jira 验证失败：显示警告，不中断流程
+   - GitHub 验证失败：显示警告，不中断流程
+
+#### 容错机制
+
+- **配置文件不存在**：使用默认值，不报错
+- **字段缺失**：使用默认值，不报错
+- **TOML 解析失败**：使用默认值，不报错
+- **配置验证失败**：显示警告，不中断流程
+
 ---
 
-## 🔄 调用流程
+## 🔄 调用流程与数据流
 
 ### 整体架构流程
 
@@ -201,183 +323,6 @@ Settings::verify()
 
 ---
 
-## 📦 模块职责
-
-### Settings
-
-**职责**：配置结构体定义和配置加载
-
-**核心功能**：
-- 定义所有配置结构体（Jira、GitHub、日志、LLM、Codeup）
-- 从 TOML 文件加载配置
-- 提供全局单例访问
-- 配置验证功能
-
-**使用场景**：
-- 所有需要读取配置的模块都使用 `Settings::get()`
-- 配置验证命令使用 `Settings::verify()`
-
-### Paths
-
-**职责**：统一管理所有路径信息
-
-**核心功能**：
-- 配置文件路径管理
-- 安装路径管理
-- Shell 路径管理
-- 自动创建目录和设置权限
-
-**使用场景**：
-- 所有需要获取路径的模块都使用 `Paths::xxx()`
-- 配置文件读写时获取路径
-- 安装/更新时获取安装路径
-
-### defaults
-
-**职责**：提供默认值实现
-
-**核心功能**：
-- 配置结构体的默认值函数
-- Provider 特定的默认值（如 LLM 模型）
-
-**使用场景**：
-- 配置结构体使用 `#[serde(default = "default_xxx")]` 时调用
-- 配置缺失时使用默认值
-
----
-
-## 🔗 与其他模块的集成
-
-### 使用场景
-
-- **配置读取**：所有模块通过 `Settings::get()` 获取配置
-- **配置验证**：使用 `Settings::verify()` 验证配置正确性
-- **路径获取**：使用 `Paths::workflow_config()` 等获取配置文件路径
-
-### LLM 模块
-
-- **`lib/base/llm/`**：LLM 客户端
-  - `Settings::get().llm` - 获取 LLM 配置
-  - `Paths::llm_config()` - 获取 LLM 配置文件路径
-
-### Jira 模块
-
-- **`lib/jira/`**：Jira 客户端
-  - `Settings::get().jira` - 获取 Jira 配置
-  - `Paths::jira_status_config()` - 获取 Jira 状态配置文件路径
-  - `Paths::jira_users_config()` - 获取 Jira 用户配置文件路径
-
-### PR 模块
-
-- **`lib/pr/`**：PR 平台抽象
-  - `Settings::get().github` - 获取 GitHub 配置
-  - `Settings::get().codeup` - 获取 Codeup 配置
-
-### Shell 模块
-
-- **`lib/base/shell/`**：Shell 配置管理
-  - `Paths::config_file(shell)` - 获取 Shell 配置文件路径
-  - `Paths::completion_dir()` - 获取 completion 目录路径
-
-### Completion 模块
-
-- **`lib/completion/`**：Completion 管理
-  - `Paths::completion_dir()` - 获取 completion 目录路径
-
-### Rollback 模块
-
-- **`lib/rollback/`**：回滚管理
-  - `Paths::completion_dir()` - 获取 completion 目录路径（用于备份）
-
----
-
-## 🎯 设计模式
-
-### 1. 单例模式
-
-通过 `OnceLock` 实现线程安全的全局单例：
-
-```rust
-pub fn get() -> &'static Settings {
-    static SETTINGS: OnceLock<Settings> = OnceLock::new();
-    SETTINGS.get_or_init(Self::load)
-}
-```
-
-**优势**：
-- 配置只加载一次，提高性能
-- 线程安全，可以在多线程环境中安全使用
-- 统一管理，所有模块使用同一个配置实例
-
-### 2. 默认值模式
-
-使用 `#[serde(default)]` 和 `Default` trait 提供默认值：
-
-```rust
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Settings {
-    #[serde(default)]
-    pub jira: JiraSettings,
-    // ...
-}
-```
-
-**优势**：
-- 配置文件不存在或字段缺失时使用默认值
-- 不中断程序运行
-- 提供合理的默认值，提升用户体验
-
-### 3. 路径统一管理模式
-
-通过 `Paths` 结构体统一管理所有路径：
-
-```rust
-pub struct Paths;
-
-impl Paths {
-    pub fn workflow_config() -> Result<PathBuf> { ... }
-    pub fn completion_dir() -> Result<PathBuf> { ... }
-    // ...
-}
-```
-
-**优势**：
-- 避免硬编码路径
-- 集中管理，易于维护
-- 自动创建目录和设置权限
-
----
-
-## 🔍 错误处理
-
-### 分层错误处理
-
-1. **路径获取失败**：
-   - `HOME` 环境变量未设置：返回错误
-   - 目录创建失败：返回错误
-
-2. **配置文件读取失败**：
-   - 文件不存在：使用默认值，不报错
-   - 读取失败：使用默认值，不报错
-   - 解析失败：使用默认值，不报错
-
-3. **配置验证失败**：
-   - Jira 验证失败：显示警告，不中断流程
-   - GitHub 验证失败：显示警告，不中断流程
-
-### 容错机制
-
-- **配置文件不存在**：使用默认值，不报错
-- **字段缺失**：使用默认值，不报错
-- **TOML 解析失败**：使用默认值，不报错
-- **配置验证失败**：显示警告，不中断流程
-
----
-
-## 📊 数据流
-
-### 配置加载数据流
-
 ```
 workflow.toml (TOML 文件)
   ↓
@@ -392,7 +337,7 @@ OnceLock 缓存（单例）
 Settings::get() (返回引用)
 ```
 
-### 配置验证数据流
+#### 配置验证数据流
 
 ```
 Settings::verify()

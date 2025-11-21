@@ -35,13 +35,81 @@ src/lib/base/shell/
 - **`clap_complete::Shell`**：Shell 类型枚举
 - **`duct`**：子进程执行（用于配置重载）
 
+### 模块集成
+
+#### Completion 模块集成
+
+**使用场景**：
+- 添加 completion 脚本的 source 语句到 shell 配置文件
+- 移除 completion 脚本的 source 语句
+- 检查 completion 是否已配置
+
+**关键调用**：
+```rust
+// 添加 source 语句（指定 shell 类型）
+ShellConfigManager::add_source_for_shell(
+    shell,
+    "$HOME/.workflow/.completions",
+    Some("Workflow CLI completions"),
+)?;
+
+// 移除 source 语句
+ShellConfigManager::remove_source_for_shell(shell, source_pattern)?;
+
+// 检查 source 语句是否存在
+ShellConfigManager::has_source_for_shell(shell, source_pattern)?;
+```
+
+**位置**：`src/lib/completion/completion.rs`
+
+#### Proxy 模块集成
+
+**使用场景**：
+- 保存代理环境变量到 shell 配置文件（持久化模式）
+- 从 shell 配置文件加载代理环境变量
+- 移除代理环境变量
+
+**关键调用**：
+```rust
+// 保存环境变量到配置块
+ShellConfigManager::set_env_vars(&env_vars)?;
+
+// 从配置块加载环境变量
+let env_vars = ShellConfigManager::load_env_vars()?;
+
+// 移除环境变量
+ShellConfigManager::remove_env_vars(&["http_proxy", "https_proxy", "all_proxy"])?;
+```
+
+**位置**：`src/lib/proxy/manager.rs`
+
+#### Rollback 模块集成
+
+**使用场景**：
+- 在回滚后重新加载 shell 配置
+
+**关键调用**：
+```rust
+// 重新加载 shell 配置
+Reload::shell(&shell)?;
+```
+
+**位置**：`src/lib/rollback/rollback.rs`
+
+#### 其他模块使用
+
+- **Install/Update 命令**：使用 `Detect::shell()` 检测 shell 类型
+- **Config Completion 命令**：使用 `Detect::shell()` 和 `ShellConfigManager` 管理 completion 配置
+
 ---
 
 ## 🏗️ 架构设计
 
-### 组件职责分离
+### 设计原则
 
-模块采用职责分离的设计模式，每个组件负责单一职责：
+模块采用职责分离的设计模式，每个组件负责单一职责。
+
+### 核心组件
 
 #### 1. Detect（结构体）
 
@@ -96,9 +164,89 @@ src/lib/base/shell/
 - **工具方法**：
   - `get_config_path()` - 获取 shell 配置文件路径（自动检测 shell）
 
+### 设计模式
+
+#### 1. 职责分离
+
+每个组件负责单一职责：
+- **Detect**：只负责 Shell 检测
+- **Reload**：只负责配置重载
+- **ShellConfigManager**：只负责配置文件管理
+
+#### 2. 多 Shell 支持策略
+
+通过 `clap_complete::Shell` 枚举统一处理不同 shell：
+- 使用 `Paths::config_file(shell)` 获取不同 shell 的配置文件路径
+- 使用 `get_source_keyword(shell)` 获取不同 shell 的 source 关键字
+- 配置文件路径和语法差异由 `Paths` 和 `ShellConfigManager` 统一处理
+
+#### 3. 配置块管理策略
+
+使用标记行来标识配置块：
+- **优点**：易于识别和管理，不会与用户自定义配置混淆
+- **格式**：`# Workflow CLI Configuration - Start/End`
+- **位置**：配置块始终放在文件末尾
+
+#### 4. 环境变量合并策略
+
+- **合并规则**：新值覆盖旧值（`HashMap::extend()`）
+- **排序规则**：按字母顺序排序键，便于阅读和维护
+- **转义规则**：自动转义特殊字符，确保值正确解析
+
+#### 5. Source 语句去重策略
+
+- **检查机制**：添加前检查是否已存在（支持相对路径和绝对路径）
+- **格式兼容**：支持不同格式的 source 语句（`source`, `.`, 多个空格等）
+- **注释处理**：自动处理相关注释块
+
+### 错误处理
+
+#### Shell 检测失败
+
+**场景**：
+- `SHELL` 环境变量未设置
+- Shell 类型不支持
+
+**处理**：
+```rust
+Detect::shell() -> Result<Shell>
+// 返回错误：Unsupported shell: {shell}
+```
+
+#### 配置文件读写失败
+
+**场景**：
+- 配置文件不存在（首次使用）
+- 权限不足
+- 磁盘空间不足
+
+**处理**：
+- **读取**：配置文件不存在时返回空内容（`Ok(String::new())`）
+- **写入**：使用 `anyhow::Context` 提供详细的错误信息
+
+#### 配置块解析失败
+
+**场景**：
+- 配置块格式错误
+- 标记行不匹配
+
+**处理**：
+- **解析失败**：返回空 HashMap（`unwrap_or_default()`）
+- **标记不匹配**：忽略配置块，保留原有内容
+
+#### 配置重载失败
+
+**场景**：
+- 配置文件语法错误
+- Shell 命令执行失败
+
+**处理**：
+- 显示错误信息
+- 提示用户手动运行 `source` 命令
+
 ---
 
-## 🔄 调用流程
+## 🔄 调用流程与数据流
 
 ### 整体架构流程
 
@@ -248,11 +396,9 @@ Reload::shell(shell)
   └─ 失败：显示错误并提示手动运行
 ```
 
----
+### 数据流
 
-## 📊 数据流
-
-### 配置块结构
+#### 配置块结构
 
 配置块使用标记行来标识，格式如下：
 
@@ -268,7 +414,7 @@ export KEY2="value2"
 # Workflow CLI Configuration - End
 ```
 
-### 环境变量格式
+#### 环境变量格式
 
 - **格式**：`export KEY="VALUE"`
 - **转义规则**：
@@ -278,14 +424,14 @@ export KEY2="value2"
   - `` ` `` → ``\` ``
 - **排序**：按字母顺序排序键
 
-### Source 语句格式
+#### Source 语句格式
 
 不同 shell 使用不同的关键字：
 
 - **zsh, bash, fish, elvish**：`source $HOME/.workflow/.completions`
 - **PowerShell**：`. $HOME/.workflow/.completions`
 
-### 配置文件路径
+#### 配置文件路径
 
 不同 shell 的配置文件路径：
 
@@ -294,158 +440,6 @@ export KEY2="value2"
 - **fish** → `~/.config/fish/config.fish`
 - **powershell** → `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
 - **elvish** → `~/.elvish/rc.elv`
-
----
-
-## 🔗 与其他模块的集成
-
-### Completion 模块集成
-
-**使用场景**：
-- 添加 completion 脚本的 source 语句到 shell 配置文件
-- 移除 completion 脚本的 source 语句
-- 检查 completion 是否已配置
-
-**关键调用**：
-```rust
-// 添加 source 语句（指定 shell 类型）
-ShellConfigManager::add_source_for_shell(
-    shell,
-    "$HOME/.workflow/.completions",
-    Some("Workflow CLI completions"),
-)?;
-
-// 移除 source 语句
-ShellConfigManager::remove_source_for_shell(shell, source_pattern)?;
-
-// 检查 source 语句是否存在
-ShellConfigManager::has_source_for_shell(shell, source_pattern)?;
-```
-
-**位置**：`src/lib/completion/completion.rs`
-
-### Proxy 模块集成
-
-**使用场景**：
-- 保存代理环境变量到 shell 配置文件（持久化模式）
-- 从 shell 配置文件加载代理环境变量
-- 移除代理环境变量
-
-**关键调用**：
-```rust
-// 保存环境变量到配置块
-ShellConfigManager::set_env_vars(&env_vars)?;
-
-// 从配置块加载环境变量
-let env_vars = ShellConfigManager::load_env_vars()?;
-
-// 移除环境变量
-ShellConfigManager::remove_env_vars(&["http_proxy", "https_proxy", "all_proxy"])?;
-```
-
-**位置**：`src/lib/proxy/manager.rs`
-
-### Rollback 模块集成
-
-**使用场景**：
-- 在回滚后重新加载 shell 配置
-
-**关键调用**：
-```rust
-// 重新加载 shell 配置
-Reload::shell(&shell)?;
-```
-
-**位置**：`src/lib/rollback/rollback.rs`
-
-### 其他模块使用
-
-- **Install/Update 命令**：使用 `Detect::shell()` 检测 shell 类型
-- **Config Completion 命令**：使用 `Detect::shell()` 和 `ShellConfigManager` 管理 completion 配置
-
----
-
-## 🎯 设计模式
-
-### 1. 职责分离
-
-每个组件负责单一职责：
-- **Detect**：只负责 Shell 检测
-- **Reload**：只负责配置重载
-- **ShellConfigManager**：只负责配置文件管理
-
-### 2. 多 Shell 支持策略
-
-通过 `clap_complete::Shell` 枚举统一处理不同 shell：
-- 使用 `Paths::config_file(shell)` 获取不同 shell 的配置文件路径
-- 使用 `get_source_keyword(shell)` 获取不同 shell 的 source 关键字
-- 配置文件路径和语法差异由 `Paths` 和 `ShellConfigManager` 统一处理
-
-### 3. 配置块管理策略
-
-使用标记行来标识配置块：
-- **优点**：易于识别和管理，不会与用户自定义配置混淆
-- **格式**：`# Workflow CLI Configuration - Start/End`
-- **位置**：配置块始终放在文件末尾
-
-### 4. 环境变量合并策略
-
-- **合并规则**：新值覆盖旧值（`HashMap::extend()`）
-- **排序规则**：按字母顺序排序键，便于阅读和维护
-- **转义规则**：自动转义特殊字符，确保值正确解析
-
-### 5. Source 语句去重策略
-
-- **检查机制**：添加前检查是否已存在（支持相对路径和绝对路径）
-- **格式兼容**：支持不同格式的 source 语句（`source`, `.`, 多个空格等）
-- **注释处理**：自动处理相关注释块
-
----
-
-## 🔍 错误处理
-
-### Shell 检测失败
-
-**场景**：
-- `SHELL` 环境变量未设置
-- Shell 类型不支持
-
-**处理**：
-```rust
-Detect::shell() -> Result<Shell>
-// 返回错误：Unsupported shell: {shell}
-```
-
-### 配置文件读写失败
-
-**场景**：
-- 配置文件不存在（首次使用）
-- 权限不足
-- 磁盘空间不足
-
-**处理**：
-- **读取**：配置文件不存在时返回空内容（`Ok(String::new())`）
-- **写入**：使用 `anyhow::Context` 提供详细的错误信息
-
-### 配置块解析失败
-
-**场景**：
-- 配置块格式错误
-- 标记行不匹配
-
-**处理**：
-- **解析失败**：返回空 HashMap（`unwrap_or_default()`）
-- **标记不匹配**：忽略配置块，保留原有内容
-
-### 配置重载失败
-
-**场景**：
-- 配置文件语法错误
-- Shell 命令执行失败
-
-**处理**：
-- 显示错误信息
-- 提示用户手动运行 `source` 命令
 
 ---
 

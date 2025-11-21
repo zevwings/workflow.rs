@@ -32,13 +32,39 @@ src/lib/completion/
 - **`lib/base/shell/detect.rs`**：Shell 检测（`Detect::shell()`）
 - **`clap_complete`**：Completion 脚本生成库
 
+### 模块集成
+
+#### Shell 配置管理
+
+- **`lib/base/shell/config.rs`**：`ShellConfigManager`
+  - 添加 source 语句到 shell 配置文件
+  - 从 shell 配置文件移除 source 语句
+
+#### 路径管理
+
+- **`lib/base/settings/paths.rs`**：`Paths`
+  - `completion_dir()` - 获取 completion 目录路径
+
+#### Shell 检测
+
+- **`lib/base/shell/detect.rs`**：`Detect`
+  - `shell()` - 检测当前 shell 类型
+
+#### 回滚模块
+
+- **`lib/rollback/rollback.rs`**：`RollbackManager`
+  - 备份 completion 脚本文件
+  - 恢复 completion 脚本文件
+
 ---
 
 ## 🏗️ 架构设计
 
-### 组件职责分离
+### 设计原则
 
-模块采用职责分离的设计模式，每个组件负责单一职责：
+模块采用职责分离的设计模式，每个组件负责单一职责。
+
+### 核心组件
 
 #### 1. Completion（结构体）
 
@@ -67,9 +93,40 @@ src/lib/completion/
   - 获取指定 shell 类型的所有补全脚本文件名
   - 获取所有 shell 类型的所有补全脚本文件名
 
+### 设计模式
+
+#### 1. 单一职责原则（SRP）
+
+每个组件只负责一个明确的功能：
+- `Completion`：只负责配置和管理
+- `Generate`：只负责生成脚本
+- `Files`：只负责文件命名和列表
+
+#### 2. 委托模式
+
+`Completion` 将具体的生成逻辑委托给 `Generate` 模块，保持接口简洁。
+
+#### 3. 工具函数模式
+
+`Files` 模块提供纯函数工具，无副作用，易于测试和复用。
+
+### 错误处理
+
+#### 分层错误处理
+
+1. **CLI 层**：参数验证错误
+2. **命令层**：用户交互错误、业务逻辑错误
+3. **功能层**：文件操作错误、配置读写错误、shell 检测错误
+
+#### 容错机制
+
+- **Shell 检测失败**：提示用户手动指定 shell 类型
+- **文件操作失败**：提供清晰的错误提示和手动操作建议
+- **配置写入失败**：保留原有配置，提示用户手动配置
+
 ---
 
-## 🔄 调用流程
+## 🔄 调用流程与数据流
 
 ### 整体架构流程
 
@@ -116,11 +173,9 @@ Completion::remove_completion_config(shell)
   4. ShellConfigManager::remove_source()               # 从 shell 配置文件移除 source 语句
 ```
 
----
+### 数据流
 
-## 📊 数据流
-
-### Completion 安装数据流
+#### Completion 安装数据流
 
 ```
 clap::Command (命令定义)
@@ -138,7 +193,7 @@ Shell 配置文件 (~/.zshrc, ~/.bash_profile) (source ~/.workflow/.completions)
 Shell 环境（启用 completion）
 ```
 
-### Completion 文件命名规则
+#### Completion 文件命名规则
 
 | Shell 类型 | 文件命名规则 | 示例 |
 |-----------|------------|------|
@@ -147,95 +202,6 @@ Shell 环境（启用 completion）
 | fish | `{command}.fish` | `workflow.fish`, `pr.fish`, `qk.fish` |
 | powershell | `_{command}.ps1` | `_workflow.ps1`, `_pr.ps1`, `_qk.ps1` |
 | elvish | `{command}.elv` | `workflow.elv`, `pr.elv`, `qk.elv` |
-
----
-
-## 🎯 设计模式
-
-### 1. 单一职责原则（SRP）
-
-每个组件只负责一个明确的功能：
-- `Completion`：只负责配置和管理
-- `Generate`：只负责生成脚本
-- `Files`：只负责文件命名和列表
-
-### 2. 委托模式
-
-`Completion` 将具体的生成逻辑委托给 `Generate` 模块，保持接口简洁。
-
-### 3. 工具函数模式
-
-`Files` 模块提供纯函数工具，无副作用，易于测试和复用。
-
----
-
-## 🔍 核心数据结构
-
-### Completion（结构体）
-
-```rust
-pub struct Completion;
-```
-
-**方法**：
-- `configure_shell_config(shell)` - 配置 shell 配置文件以启用 completion
-- `remove_completion_config(shell)` - 从 shell 配置文件移除 completion 配置
-- `get_completion_files(shell)` - 获取 completion 文件列表
-- `remove_completion_files(shell)` - 删除 completion 文件
-- `remove_completion_config_file()` - 删除 completion 配置文件
-- `generate_all_completions(shell_type, output_dir)` - 生成所有 completion 脚本
-
-### BackupInfo（在 rollback 模块中使用）
-
-```rust
-pub struct BackupInfo {
-    pub backup_dir: PathBuf,
-    binary_backups: Vec<(String, PathBuf)>,
-    completion_backups: Vec<(String, PathBuf)>,
-}
-```
-
----
-
-## 🔗 与其他模块的集成
-
-### Shell 配置管理
-
-- **`lib/base/shell/config.rs`**：`ShellConfigManager`
-  - 添加 source 语句到 shell 配置文件
-  - 从 shell 配置文件移除 source 语句
-
-### 路径管理
-
-- **`lib/base/settings/paths.rs`**：`Paths`
-  - `completion_dir()` - 获取 completion 目录路径
-
-### Shell 检测
-
-- **`lib/base/shell/detect.rs`**：`Detect`
-  - `shell()` - 检测当前 shell 类型
-
-### 回滚模块
-
-- **`lib/rollback/rollback.rs`**：`RollbackManager`
-  - 备份 completion 脚本文件
-  - 恢复 completion 脚本文件
-
----
-
-## 🔍 错误处理
-
-### 分层错误处理
-
-1. **CLI 层**：参数验证错误
-2. **命令层**：用户交互错误、业务逻辑错误
-3. **功能层**：文件操作错误、配置读写错误、shell 检测错误
-
-### 容错机制
-
-- **Shell 检测失败**：提示用户手动指定 shell 类型
-- **文件操作失败**：提供清晰的错误提示和手动操作建议
-- **配置写入失败**：保留原有配置，提示用户手动配置
 
 ---
 
@@ -274,28 +240,6 @@ pub fn generate_new_command_completion(shell: &ClapShell, output_dir: &Path) -> 
 
 ---
 
-## 🎨 代码质量特性
-
-### 已实现的优化
-
-1. **职责分离**：
-   - 每个组件只负责单一功能
-   - 易于测试和维护
-
-2. **代码复用**：
-   - `Files` 模块提供通用工具函数
-   - 减少重复代码
-
-3. **类型安全**：
-   - 使用 `clap_complete::Shell` 枚举类型
-   - 编译时检查，减少运行时错误
-
-4. **可扩展性**：
-   - 添加新命令只需扩展生成函数
-   - 添加新 shell 只需扩展命名规则
-
----
-
 ## 📚 相关文档
 
 - [主架构文档](../ARCHITECTURE.md)
@@ -304,54 +248,33 @@ pub fn generate_new_command_completion(shell: &ClapShell, output_dir: &Path) -> 
 
 ---
 
-## 🔄 使用场景
+## 📋 使用示例
 
-### 安装场景
+### 基本使用
 
-1. **首次安装**：
-   - 用户运行 `workflow install` 或 `./install`
-   - 自动检测 shell 类型
-   - 生成 completion 脚本
-   - 配置 shell 配置文件
+```rust
+use workflow::completion::Completion;
 
-2. **更新安装**：
-   - 用户运行 `workflow update`
-   - 在更新前备份 completion 脚本（通过 `RollbackManager`）
-   - 更新后重新生成 completion 脚本
+// 配置 shell completion
+Completion::configure_shell_config(&shell)?;
 
-### 卸载场景
-
-1. **完全卸载**：
-   - 用户运行 `workflow uninstall`
-   - 删除所有 completion 脚本文件
-   - 删除 completion 配置文件
-   - 从 shell 配置文件移除 source 语句
-
-### 手动生成场景
-
-1. **开发调试**：
-   - 开发者可以手动调用 `Completion::generate_all_completions()`
-   - 指定 shell 类型和输出目录
+// 移除 completion 配置
+Completion::remove_completion_config(&shell)?;
+```
 
 ---
 
-## 💡 设计决策
+## ✅ 总结
 
-### 为什么同时生成 zsh 和 bash 的补全脚本？
+Shell Completion 模块采用清晰的职责分离设计：
 
-- **原因**：配置文件 `~/.workflow/.completions` 同时支持 zsh 和 bash
-- **好处**：用户切换 shell 时补全功能仍然可用
-- **代价**：安装时需要生成更多文件（但文件很小，影响可忽略）
+1. **单一职责**：每个组件只负责单一功能
+2. **委托模式**：Completion 委托给 Generate 模块生成脚本
+3. **工具函数**：Files 模块提供纯函数工具
 
-### 为什么使用统一的配置文件？
-
-- **原因**：简化配置管理，避免在多个 shell 配置文件中重复配置
-- **好处**：一个配置文件管理所有 shell 的 completion
-- **实现**：配置文件内部检测 shell 类型并加载相应的补全脚本
-
-### 为什么支持多种 shell？
-
-- **原因**：不同用户使用不同的 shell
-- **好处**：提供更好的用户体验
-- **实现**：使用 `clap_complete` 库自动生成不同 shell 的补全脚本
+**设计优势**：
+- ✅ **易于扩展**：添加新命令只需扩展生成函数
+- ✅ **类型安全**：使用 clap_complete::Shell 枚举类型
+- ✅ **代码复用**：Files 模块提供通用工具函数
+- ✅ **多 Shell 支持**：支持 zsh、bash、fish、powershell、elvish
 

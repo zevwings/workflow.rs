@@ -311,11 +311,9 @@ commands/lifecycle/update.rs::UpdateCommand::update(version)
 - **验证失败**：认为更新失败，回滚
 - **回滚失败**：提供详细的错误信息和手动恢复指导
 
----
+### 数据流
 
-## 📊 数据流
-
-### 安装数据流
+#### 安装数据流
 
 ```
 Shell 检测
@@ -327,7 +325,7 @@ Completion 生成
 Shell 配置更新
 ```
 
-### 卸载数据流
+#### 卸载数据流
 
 ```
 用户确认
@@ -343,7 +341,7 @@ Completion 清理
 Shell 配置重新加载
 ```
 
-### 更新数据流
+#### 更新数据流
 
 ```
 版本检查
@@ -368,23 +366,9 @@ Shell 配置重新加载
 
 ---
 
-## 🔗 与其他模块的集成
+## 🏗️ 架构设计
 
-命令层通过调用 `lib/` 模块提供的 API 实现功能，主要使用的接口包括：
-
-- **`lib/base/settings/paths.rs`**：`Paths::binary_paths()`、`Paths::completion_dir()`、`Paths::workflow_config()`
-- **`lib/base/shell/`**：`Detect::shell()`、`Reload::shell()`
-- **`lib/completion/`**：`Completion::generate_all_completions()`、`Completion::configure_shell_config()`、`Completion::remove_completion_files()`、`Completion::remove_all_completion_configs()`
-- **`lib/base/http/`**：`HttpClient::global()`、`HttpRetry::retry()`
-- **`lib/base/util/`**：`Checksum::verify()`、`Unzip::extract()`、`confirm()`
-- **`lib/rollback/`**：`RollbackManager::create_backup()`、`RollbackManager::rollback()`、`RollbackManager::cleanup_backup()`
-- **`lib/proxy/`**：`ProxyManager::disable()`
-
-详细实现请参考相关模块架构文档。
-
----
-
-## 🎯 设计模式
+### 设计模式
 
 ### 1. 命令模式
 
@@ -424,7 +408,7 @@ Shell 配置重新加载
 2. **命令层**：用户交互错误、业务逻辑错误
 3. **工具层**：文件操作错误、配置读写错误
 
-### 容错机制
+#### 容错机制
 
 - **文件操作失败**：提供清晰的错误提示和手动操作建议
 - **权限不足**：自动使用 sudo 尝试删除或安装
@@ -547,4 +531,51 @@ homebrew/Formula.template       # Homebrew Formula 模板
 - [回滚模块架构文档](../lib/ROLLBACK_ARCHITECTURE.md) - 回滚机制相关
 - [HTTP 模块架构文档](../lib/HTTP_ARCHITECTURE.md) - HTTP 客户端相关
 - [主 README.md](./README.md) - 包含发布流程和 HOMEBREW_TAP_TOKEN 配置说明
+
+---
+
+## 📋 使用示例
+
+### Install 命令
+
+```bash
+# 安装 workflow CLI
+./install
+```
+
+### Uninstall 命令
+
+```bash
+# 卸载 workflow CLI
+workflow uninstall
+
+# 完全卸载（包括配置文件）
+workflow uninstall --purge
+```
+
+### Update 命令
+
+```bash
+# 更新到最新版本
+workflow update
+
+# 跳过确认直接更新
+workflow update --yes
+```
+
+---
+
+## ✅ 总结
+
+Lifecycle 命令层采用清晰的生命周期管理设计：
+
+1. **安装**：自动检测 shell，生成 completion，配置环境
+2. **卸载**：完整清理所有文件和配置
+3. **更新**：自动备份、下载、验证、安装，失败自动回滚
+
+**设计优势**：
+- ✅ **安全性**：更新前自动备份，失败自动回滚
+- ✅ **完整性**：完整的安装和卸载流程
+- ✅ **可靠性**：校验和验证，确保文件完整性
+- ✅ **用户友好**：清晰的进度提示和错误信息
 

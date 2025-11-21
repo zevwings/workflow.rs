@@ -13,9 +13,9 @@
 
 ---
 
-## 📁 相关文件
+## 📁 模块结构
 
-### 模块结构
+### 核心模块文件
 
 ```
 src/lib/base/util/
@@ -29,52 +29,41 @@ src/lib/base/util/
 └── confirm.rs     # 用户确认对话框（~45 行）
 ```
 
-### 代码统计
+**总计：约 938 行代码，8 个文件，7 个主要组件**
 
-- **总行数**：约 938 行
-- **文件数**：8 个
-- **主要组件**：7 个工具类/函数
+### 依赖模块
 
----
+- **`colored`**：终端颜色输出
+- **`open`**：打开浏览器
+- **`arboard`**：剪贴板操作
+- **`zip`**：ZIP 文件解压
+- **`sha2`**：SHA256 校验和
+- **`dialoguer`**：用户确认对话框
 
-## 🔄 模块导出
+### 模块集成
 
-### 公共 API
+工具模块被所有其他模块广泛使用：
 
-所有工具通过 `src/lib/base/util/mod.rs` 统一导出：
-
-```rust
-// 日志系统
-pub use logger::{LogLevel, Logger};
-
-// 字符串处理
-pub use string::mask_sensitive_value;
-
-// 浏览器和剪贴板
-pub use browser::Browser;
-pub use clipboard::Clipboard;
-
-// 用户确认
-pub use confirm::confirm;
-
-// 文件操作
-pub use unzip::Unzip;
-pub use checksum::Checksum;
-```
-
-### 全局导出
-
-在 `src/lib.rs` 中，util 模块的公共 API 被重新导出到库的根级别：
-
-```rust
-pub use base::util::{
-    confirm, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger, Unzip,
-};
-```
+- **日志系统**：所有模块使用 `log_*!` 宏输出日志
+- **剪贴板**：PR、QK 命令使用 `Clipboard::copy()`
+- **浏览器**：PR 命令使用 `Browser::open()`
+- **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
+- **用户确认**：多个命令使用 `confirm()` 函数
 
 ---
 
-## 1. 日志输出系统 (`logger.rs`)
+## 🏗️ 架构设计
+
+### 设计原则
+
+1. **单一职责**：每个工具函数只负责一个明确的功能
+2. **易用性**：提供简洁的 API 和宏
+3. **可配置性**：日志级别可通过环境变量或运行时设置
+4. **跨平台**：所有工具函数支持多平台
+
+### 核心组件
+
+#### 1. 日志输出系统 (`logger.rs`)
 
 ### 功能概述
 
@@ -244,9 +233,7 @@ let current_level = LogLevel::get_level();
 - **进度提示**：使用 `log_info!` 显示处理进度
 - **调试开发**：使用 `log_debug!` 输出调试信息（仅在 Debug 模式）
 
----
-
-## 2. 字符串处理工具 (`string.rs`)
+#### 2. 字符串处理工具 (`string.rs`)
 
 ### 功能概述
 
@@ -281,9 +268,7 @@ assert_eq!(mask_sensitive_value("verylongapikey123456"), "very***3456");
 - **配置显示**：在显示配置时隐藏敏感值
 - **错误信息**：在错误信息中隐藏敏感数据
 
----
-
-## 3. 浏览器操作 (`browser.rs`)
+#### 3. 浏览器操作 (`browser.rs`)
 
 ### 功能概述
 
@@ -318,9 +303,7 @@ pub fn open(url: &str) -> Result<()>
 - **打开 GitHub 链接**：在 PR 相关命令中打开 GitHub 链接
 - **打开 Jira 链接**：在 Jira 相关命令中打开 Jira 链接
 
----
-
-## 4. 剪贴板操作 (`clipboard.rs`)
+#### 4. 剪贴板操作 (`clipboard.rs`)
 
 ### 功能概述
 
@@ -355,9 +338,7 @@ pub fn copy(text: &str) -> Result<()>
 - **复制 URL**：复制生成的 URL 到剪贴板
 - **复制配置**：复制配置信息到剪贴板
 
----
-
-## 5. 文件解压工具 (`unzip.rs`)
+#### 5. 文件解压工具 (`unzip.rs`)
 
 ### 功能概述
 
@@ -407,9 +388,7 @@ Unzip::extract_tar_gz(
 - **安装功能**：解压安装包
 - **补全脚本安装**：解压补全脚本包
 
----
-
-## 6. 校验和验证工具 (`checksum.rs`)
+#### 6. 校验和验证工具 (`checksum.rs`)
 
 ### 功能概述
 
@@ -520,9 +499,7 @@ assert_eq!(Checksum::build_url(url), "https://example.com/file.tar.gz.sha256");
 - **安装功能**：验证安装包完整性
 - **安全验证**：确保下载的文件未被篡改
 
----
-
-## 7. 用户确认对话框 (`confirm.rs`)
+#### 7. 用户确认对话框 (`confirm.rs`)
 
 ### 功能概述
 
@@ -586,11 +563,9 @@ confirm(
    - 返回 `Ok(false)`：允许调用者根据返回值决定后续逻辑
    - 返回错误：强制要求用户确认，取消则终止操作
 
----
+### 设计模式
 
-## 🎯 设计模式
-
-### 工具类设计
+#### 工具类设计
 
 所有工具函数采用静态方法设计，无需实例化：
 
@@ -614,7 +589,7 @@ Checksum::verify(file, hash)?;
 - 使用简单，直接调用静态方法
 - 适合工具函数的场景
 
-### 日志宏设计
+#### 日志宏设计
 
 使用 Rust 宏系统提供便捷的日志输出接口：
 
@@ -627,7 +602,7 @@ log_info!("Processing {} items", count);
 - 编译时展开，性能开销小
 - 统一的日志输出接口
 
-### 错误处理
+#### 错误处理策略
 
 所有可能失败的操作都返回 `Result<T>`：
 
@@ -645,75 +620,62 @@ Checksum::verify(file, hash)?;
 
 ---
 
-## 📝 使用场景
+## 🔄 调用流程与数据流
 
-### 日志系统
+### 整体架构流程
 
-- **CLI 命令输出**：所有命令使用日志宏输出执行结果
-- **错误处理**：使用 `log_error!` 显示错误信息
-- **进度提示**：使用 `log_info!` 显示处理进度
-- **调试开发**：使用 `log_debug!` 输出调试信息
+```
+应用层（命令、模块）
+  ↓
+工具函数 API
+  ├─ 日志系统 → 终端输出
+  ├─ 浏览器操作 → 系统浏览器
+  ├─ 剪贴板操作 → 系统剪贴板
+  ├─ 文件操作 → 文件系统
+  └─ 用户确认 → 终端交互
+```
 
-### 字符串处理
+### 数据流
 
-- **日志输出**：在日志中隐藏 API Key、密码等敏感信息
-- **配置显示**：在显示配置时隐藏敏感值
+#### 日志输出流程
 
-### 浏览器和剪贴板
+```
+log_info!("message")
+  ↓
+Logger::print_info()
+  ↓
+检查日志级别
+  ↓
+格式化消息（添加颜色和图标）
+  ↓
+输出到终端
+```
 
-- **打开链接**：在需要时自动打开浏览器
-- **复制内容**：复制生成的命令、URL 等到剪贴板
+#### 文件操作流程
 
-### 文件操作
+```
+Unzip::extract_tar_gz(path, dir)
+  ↓
+读取文件
+  ↓
+解压到目标目录
+  ↓
+返回 Result
 
-- **更新功能**：解压和验证更新包
-- **安装功能**：解压和验证安装包
+Checksum::verify(file, hash)
+  ↓
+读取文件内容
+  ↓
+计算 SHA256
+  ↓
+比较哈希值
+  ↓
+返回 Result
+```
 
-### 用户确认
+### 与其他模块的集成
 
-- **危险操作**：在执行不可逆操作前确认
-- **可选操作**：根据用户选择执行不同逻辑
-
----
-
-## 🔍 错误处理
-
-### 日志系统
-
-- **日志级别解析失败**：返回错误信息，使用默认级别
-- **日志输出失败**：使用标准输出/错误输出，不会失败
-
-### 浏览器操作
-
-- **无法打开浏览器**：返回 `anyhow::Error`，包含详细错误信息
-
-### 剪贴板操作
-
-- **剪贴板初始化失败**：返回 `anyhow::Error`，包含错误信息
-- **复制失败**：返回 `anyhow::Error`，包含错误信息
-
-### 文件解压
-
-- **文件不存在**：返回 `anyhow::Error`，包含文件路径信息
-- **解压失败**：返回 `anyhow::Error`，包含详细错误信息
-
-### 校验和验证
-
-- **文件读取失败**：返回 `anyhow::Error`，包含文件路径信息
-- **哈希值不匹配**：返回 `anyhow::Error`，包含期望值和实际值
-
-### 用户确认
-
-- **交互失败**：返回 `anyhow::Error`，包含错误信息
-- **用户取消**：根据 `cancel_message` 参数决定返回 `Ok(false)` 或错误
-
----
-
-## 🔗 与其他模块的集成
-
-### 被广泛使用
-
-util 模块被整个项目广泛使用，几乎所有模块都依赖它：
+util 模块是基础设施模块，被整个项目广泛使用：
 
 - **CLI 命令层**：所有命令使用日志宏输出结果
 - **配置管理**：使用日志宏和确认对话框
@@ -722,9 +684,7 @@ util 模块被整个项目广泛使用，几乎所有模块都依赖它：
 - **Jira 操作**：使用日志宏和浏览器工具
 - **PR 操作**：使用日志宏、浏览器和剪贴板工具
 
-### 依赖关系
-
-util 模块是基础设施模块，不依赖其他业务模块：
+**依赖关系**：
 
 ```
 util (基础设施)
@@ -734,22 +694,7 @@ util (基础设施)
 
 ---
 
-## 📊 性能考虑
-
-### 日志系统
-
-- **日志级别检查**：在输出前检查日志级别，避免不必要的字符串格式化
-- **宏展开**：日志宏在编译时展开，运行时开销小
-- **线程安全**：使用 `Mutex` 保证日志级别的线程安全访问
-
-### 文件操作
-
-- **流式处理**：校验和计算使用流式处理，避免一次性加载整个文件到内存
-- **缓冲区大小**：使用 8KB 缓冲区，平衡性能和内存使用
-
----
-
-## 🔄 扩展性
+## 📝 扩展性
 
 ### 添加新的日志级别
 
@@ -774,13 +719,105 @@ util (基础设施)
 
 ## 📚 相关文档
 
-- [总体架构文档](./README.md)
+- [总体架构文档](../ARCHITECTURE.md)
 - [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md)
 - [HTTP 架构文档](./HTTP_ARCHITECTURE.md)
 
 ---
 
-## 🔄 更新记录
+## 📋 使用示例
 
-- **2024-12** - 创建工具函数模块架构文档
+### 日志输出
+
+```rust
+use workflow::{log_success, log_error, log_warning, log_info, log_debug};
+
+// 成功消息
+log_success!("Operation completed successfully");
+
+// 错误消息
+log_error!("Failed to process request");
+
+// 警告消息
+log_warning!("This operation is deprecated");
+
+// 信息消息
+log_info!("Processing {} items", count);
+
+// 调试消息
+log_debug!("Debug info: {:?}", data);
+
+// 分隔线
+log_break!();
+```
+
+### 字符串处理
+
+```rust
+use workflow::mask_sensitive_value;
+
+let api_key = "verylongapikey123456";
+println!("API Key: {}", mask_sensitive_value(api_key));
+// 输出：API Key: very***3456
+```
+
+### 浏览器操作
+
+```rust
+use workflow::Browser;
+
+Browser::open("https://github.com")?;
+```
+
+### 剪贴板操作
+
+```rust
+use workflow::Clipboard;
+
+Clipboard::copy("Hello, World!")?;
+log_success!("Copied to clipboard");
+```
+
+### 文件操作
+
+```rust
+use workflow::{Unzip, Checksum};
+
+// 解压文件
+Unzip::extract_tar_gz("archive.tar.gz", "output_dir")?;
+
+// 验证校验和
+Checksum::verify("file.bin", "expected_sha256_hash")?;
+```
+
+### 用户确认
+
+```rust
+use workflow::confirm;
+
+if confirm("Do you want to continue?")? {
+    log_info!("User confirmed");
+} else {
+    log_info!("User cancelled");
+}
+```
+
+---
+
+## ✅ 总结
+
+工具函数模块为整个项目提供通用的基础设施支持：
+
+1. **日志系统**：带颜色的日志输出，支持日志级别控制
+2. **字符串处理**：敏感值隐藏
+3. **浏览器和剪贴板**：系统集成操作
+4. **文件操作**：解压和校验和验证
+5. **用户确认**：交互式对话框
+
+**设计优势**：
+- ✅ **易用性**：简洁的 API 和宏
+- ✅ **一致性**：统一的错误处理方式
+- ✅ **可配置性**：日志级别可通过环境变量或运行时设置
+- ✅ **跨平台**：所有工具函数支持多平台
+- ✅ **高性能**：宏在编译时展开，流式处理文件
 
