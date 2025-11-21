@@ -25,14 +25,6 @@ src/lib/completion/
 └── files.rs                # Completion 文件工具函数（文件名、列表）
 ```
 
-### 命令封装层
-
-```
-src/commands/
-├── install.rs              # 安装命令（使用 Completion）
-└── uninstall.rs            # 卸载命令（使用 Completion）
-```
-
 ### 依赖模块
 
 - **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion_dir()`）
@@ -82,21 +74,17 @@ src/commands/
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-main.rs 或 bin/install.rs (CLI 入口，参数解析)
-  ↓
-commands/install.rs 或 commands/uninstall.rs (命令封装层)
+调用者（命令层或其他模块）
   ↓
 Completion (管理层)
   ↓
 Generate / Files / ShellConfigManager (功能层)
 ```
 
-### 安装 Completion (`install.rs`)
+### 安装 Completion 流程
 
 ```
-bin/install.rs::main() 或 commands/install.rs::InstallCommand::install_completions()
+Completion::configure_shell_config(shell)
   ↓
   1. Detect::shell()                                    # 检测 shell 类型
   2. Paths::completion_dir()                           # 获取 completion 目录
@@ -107,9 +95,8 @@ bin/install.rs::main() 或 commands/install.rs::InstallCommand::install_completi
      │   ├─ generate_pr_completion()                  # 生成 pr completion
      │   └─ generate_qk_completion()                  # 生成 qk completion
      └─ files::get_completion_filename()              # 获取文件名
-  5. Completion::configure_shell_config()             # 配置 shell 配置文件
-     ├─ Completion::create_completion_config_file()   # 创建 .completions 配置文件
-     └─ ShellConfigManager::add_source()               # 添加 source 语句到 shell 配置
+  5. Completion::create_completion_config_file()       # 创建 .completions 配置文件
+  6. ShellConfigManager::add_source()                  # 添加 source 语句到 shell 配置
 ```
 
 **设计说明**：
@@ -117,17 +104,16 @@ bin/install.rs::main() 或 commands/install.rs::InstallCommand::install_completi
 - 配置文件在运行时检测当前 shell 类型（通过 `$ZSH_VERSION` 和 `$BASH_VERSION`）
 - 安装时会同时生成 zsh 和 bash 的补全脚本，确保用户切换 shell 时补全功能仍然可用
 
-### 卸载 Completion (`uninstall.rs`)
+### 卸载 Completion 流程
 
 ```
-commands/uninstall.rs::UninstallCommand::run()
+Completion::remove_completion_config(shell)
   ↓
   1. Detect::shell()                                    # 检测 shell 类型
   2. Completion::remove_completion_files()             # 删除 completion 脚本文件
      └─ files::get_all_completion_files()              # 获取所有 shell 类型的文件列表
   3. Completion::remove_completion_config_file()       # 删除 .completions 配置文件
-  4. Completion::remove_completion_config()            # 从 shell 配置文件移除 source 语句
-     └─ ShellConfigManager::remove_source()             # 移除 source 语句
+  4. ShellConfigManager::remove_source()               # 从 shell 配置文件移除 source 语句
 ```
 
 ---
@@ -312,8 +298,8 @@ pub fn generate_new_command_completion(shell: &ClapShell, output_dir: &Path) -> 
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
-- [安装/卸载模块架构文档](./INSTALL_ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
+- [生命周期管理命令模块架构文档](../commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - [回滚模块架构文档](./ROLLBACK_ARCHITECTURE.md)
 
 ---

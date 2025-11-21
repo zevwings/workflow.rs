@@ -374,20 +374,10 @@ HttpRetry::retry(
 - `GitHub::create_pull_request()` - 使用 `HttpClient::post()`
 - `Codeup::merge_pull_request()` - 使用 `HttpClient::put()`
 
-### 环境检查模块集成
+### 使用场景
 
-- **网络检查**：
-  - `commands/check.rs` 使用 `HttpClient::global()` 检查网络连接
-  - 使用 `HttpMethod` 枚举指定请求方法
-
-**关键方法**：
-- `CheckCommand::check_network()` - 使用 `HttpClient::get()`
-
-### 更新模块集成
-
-- **版本检查**：
-  - `commands/update.rs` 使用 `HttpClient::global()` 检查更新
-  - 使用 `HttpRetry` 进行重试
+- **网络检查**：使用 `HttpClient::global()` 检查网络连接
+- **版本检查**：使用 `HttpClient::global()` 检查更新，使用 `HttpRetry` 进行重试
 
 ---
 
@@ -640,7 +630,7 @@ impl HttpResponse {
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
 - [Jira 模块架构文档](./JIRA_ARCHITECTURE.md) - Jira 模块如何使用 HTTP 客户端
 - [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 HTTP 客户端
 - [LLM 模块架构文档](./LLM_ARCHITECTURE.md) - LLM 模块如何使用 HTTP 客户端

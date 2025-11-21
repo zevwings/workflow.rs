@@ -42,6 +42,40 @@ src/
 │   └── uninstall.rs        # 卸载命令实现（清理所有相关文件）
 └── lib/                    # 核心功能库（业务逻辑层）
     ├── mod.rs              # 库模块声明
+    ├── base/               # 基础设施模块
+    │   ├── mod.rs          # Base 模块声明
+    │   ├── http/           # HTTP 客户端模块
+    │   │   ├── mod.rs      # HTTP 模块声明
+    │   │   ├── client.rs   # HTTP 客户端（单例模式）
+    │   │   ├── config.rs   # 请求配置
+    │   │   ├── response.rs # HTTP 响应（延迟解析）
+    │   │   ├── auth.rs     # Basic Authentication
+    │   │   ├── method.rs   # HTTP 方法枚举
+    │   │   ├── parser.rs   # 响应解析器
+    │   │   └── retry.rs   # HTTP 重试工具
+    │   ├── llm/            # LLM 集成（AI 功能）
+    │   │   ├── mod.rs      # LLM 模块声明
+    │   │   ├── client.rs   # LLM 统一客户端
+    │   │   └── types.rs    # LLM 请求参数类型
+    │   ├── settings/       # 配置管理
+    │   │   ├── mod.rs      # Settings 模块声明
+    │   │   ├── settings.rs # Settings 结构体和配置加载
+    │   │   ├── paths.rs    # 路径管理（配置文件、安装路径、Shell 路径）
+    │   │   └── defaults.rs # 默认值辅助函数
+    │   ├── shell/          # Shell 检测与管理
+    │   │   ├── mod.rs      # Shell 模块声明
+    │   │   ├── detect.rs  # Shell 类型检测
+    │   │   ├── reload.rs  # Shell 配置重新加载
+    │   │   └── config.rs  # Shell 配置文件管理
+    │   └── util/           # 工具函数
+    │       ├── mod.rs      # Util 模块声明
+    │       ├── logger.rs  # 日志输出系统
+    │       ├── string.rs  # 字符串处理工具
+    │       ├── browser.rs # 浏览器操作
+    │       ├── clipboard.rs # 剪贴板操作
+    │       ├── unzip.rs   # 文件解压工具
+    │       ├── checksum.rs # 校验和验证工具
+    │       └── confirm.rs # 用户确认对话框
     ├── git/                # Git 操作模块
     │   ├── mod.rs          # Git 模块声明和导出
     │   ├── branch.rs       # 分支管理操作
@@ -50,15 +84,12 @@ src/
     │   ├── stash.rs        # 暂存管理
     │   ├── config.rs       # Git 配置管理
     │   ├── pre_commit.rs   # Pre-commit hooks 支持
-    │   ├── helpers.rs       # Git 操作辅助函数
+    │   ├── helpers.rs      # Git 操作辅助函数
     │   └── types.rs        # Git 相关类型定义
-    ├── http/               # HTTP 客户端模块
-    │   ├── mod.rs          # HTTP 模块声明
-    │   ├── client.rs       # HTTP 客户端实现（支持认证和代理）
-    │   └── response.rs     # HTTP 响应类型定义
     ├── jira/               # Jira API 集成
     │   ├── mod.rs          # Jira 模块声明
     │   ├── api/            # API 方法子模块
+    │   │   ├── mod.rs      # API 模块声明
     │   │   ├── http_client.rs  # JiraHttpClient (HTTP 层)
     │   │   ├── issue.rs    # Issue/Ticket 相关 API
     │   │   ├── user.rs     # 用户相关 API
@@ -66,47 +97,51 @@ src/
     │   ├── config.rs       # ConfigManager (TOML 配置管理器)
     │   ├── client.rs       # JiraClient 包装器（向后兼容）
     │   ├── helpers.rs      # Jira 辅助函数（项目提取等）
-    │   ├── models.rs       # 数据模型定义
+    │   ├── types.rs        # 数据模型定义
     │   ├── users.rs        # 用户信息管理
     │   ├── ticket.rs       # Ticket/Issue 操作
     │   ├── status.rs       # 状态管理
     │   ├── history.rs      # 工作历史记录管理
     │   └── logs/           # 日志处理模块
+    │       ├── mod.rs      # JiraLogs 结构体定义
+    │       ├── constants.rs # 常量定义
+    │       ├── helpers.rs  # 日志处理辅助函数
+    │       ├── path.rs     # 路径管理功能
+    │       ├── download.rs # 下载功能
+    │       ├── search.rs   # 搜索和查找功能
+    │       ├── zip.rs      # ZIP 处理功能
+    │       └── clean.rs    # 清理功能
     ├── pr/                 # PR 相关功能
     │   ├── mod.rs          # PR 模块声明
-    │   ├── github.rs       # GitHub PR 实现
-    │   ├── codeup.rs       # Codeup PR 实现
-    │   ├── provider.rs     # PR 提供商抽象
+    │   ├── platform.rs     # PlatformProvider trait 和工厂函数
     │   ├── helpers.rs      # PR 辅助函数
-    │   └── constants.rs    # PR 相关常量
-    ├── llm/                # LLM 集成（AI 功能）
-    │   ├── mod.rs          # LLM 模块声明
-    │   ├── llm.rs          # LLM 客户端实现（支持多提供商）
-    │   └── translator.rs   # 翻译功能（标题生成和翻译判断）
-    ├── log/                # 日志处理
-    │   ├── mod.rs          # 日志模块声明和统一接口
-    │   ├── download.rs     # 下载日志功能
-    │   ├── find.rs         # 查找请求 ID 功能
-    │   ├── search.rs       # 搜索关键词功能
-    │   ├── parse.rs        # 解析日志条目
-    │   ├── extract.rs      # 提取 URL 等工具
-    │   ├── zip.rs          # 处理 zip 文件
-    │   ├── clean.rs        # 清理目录功能
-    │   └── utils.rs        # 通用工具函数
-    ├── settings/           # 配置管理
-    │   ├── mod.rs          # Settings 模块声明
-    │   └── settings.rs     # 环境变量单例配置
-    └── utils/              # 工具函数
-        ├── mod.rs          # Utils 模块声明
-        ├── browser.rs      # 浏览器操作（打开 URL）
-        ├── clipboard.rs    # 剪贴板操作（复制/读取）
-        ├── completion.rs   # Shell 补全脚本生成
-        ├── env.rs          # 环境变量工具（读取和写入）
-        ├── logger.rs       # 日志输出工具（格式化日志）
-        ├── proxy.rs        # 代理工具（代理信息管理）
-        ├── shell.rs        # Shell 信息检测（检测当前 shell）
-        ├── string.rs       # 字符串处理工具（敏感信息掩码等）
-        └── uninstall.rs    # 卸载工具（清理配置和文件）
+    │   ├── llm.rs          # LLM 功能（PR 标题生成）
+    │   ├── github/         # GitHub 平台实现
+    │   │   ├── mod.rs      # GitHub 模块导出
+    │   │   ├── platform.rs # GitHub 平台实现
+    │   │   ├── requests.rs # GitHub API 请求结构体
+    │   │   ├── responses.rs # GitHub API 响应结构体
+    │   │   └── errors.rs   # GitHub 错误处理
+    │   └── codeup/         # Codeup 平台实现
+    │       ├── mod.rs      # Codeup 模块导出
+    │       ├── platform.rs # Codeup 平台实现
+    │       ├── requests.rs # Codeup API 请求结构体
+    │       ├── responses.rs # Codeup API 响应结构体
+    │       └── errors.rs   # Codeup 错误处理
+    ├── completion/         # Shell Completion 管理
+    │   ├── mod.rs          # Completion 模块声明
+    │   ├── completion.rs   # Completion 管理工具
+    │   ├── generate.rs     # Completion 脚本生成器
+    │   └── files.rs        # Completion 文件工具函数
+    ├── proxy/              # 代理管理
+    │   ├── mod.rs          # Proxy 模块声明
+    │   ├── proxy.rs        # 类型定义（ProxyType, ProxyInfo, ProxyConfig）
+    │   ├── system_reader.rs # 系统代理读取器
+    │   ├── config_generator.rs # 代理配置生成器
+    │   └── manager.rs      # 代理管理器
+    └── rollback/           # 回滚管理
+        ├── mod.rs          # Rollback 模块声明
+        └── rollback.rs     # 回滚管理器（备份、恢复、清理）
 ```
 
 ---
@@ -133,12 +168,13 @@ src/
                   │
 ┌─────────────────▼───────────────────────┐
 │      核心业务逻辑层 (lib/)               │
-│  - lib/log/      (日志处理)              │
+│  - lib/base/     (基础设施：HTTP、LLM、Settings、Shell、Util) │
 │  - lib/pr/       (PR 功能)               │
-│  - lib/jira/     (Jira 集成)             │
+│  - lib/jira/     (Jira 集成，包含日志处理) │
 │  - lib/git/      (Git 操作)              │
-│  - lib/llm/      (AI 功能)               │
-│  - lib/utils/    (工具函数)             │
+│  - lib/completion/ (Completion 管理)    │
+│  - lib/proxy/    (代理管理)              │
+│  - lib/rollback/ (回滚管理)              │
 └─────────────────────────────────────────┘
 ```
 
@@ -151,105 +187,63 @@ src/
 ### 数据流向
 
 ```
-用户输入 → bin/qk.rs → commands/qk/*.rs → lib/log/*.rs → 执行操作
+用户输入 → bin/qk.rs → commands/qk/*.rs → lib/jira/logs/*.rs → 执行操作
 用户输入 → bin/pr.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
+用户输入 → main.rs → commands/*.rs → lib/*.rs → 执行操作
 ```
 
 ---
 
 ## 🧠 核心模块设计
 
-### AI 模块 (`lib::llm`)
+核心模块位于 `lib/` 目录下，提供所有业务逻辑实现。各模块简要说明如下：
 
-#### 概述
-AI 模块负责从 Jira ticket 获取描述并生成 PR 标题，采用 Rust 原生实现，无需 Python 依赖。
+### 基础设施模块 (`lib::base`)
 
-#### 功能特性
-- 从 Jira ticket 获取描述并生成 PR 标题
-- 自动判断是否需要翻译（非英文或描述太长）
-- 使用 LLM（OpenAI/DeepSeek/Proxy）翻译为简洁的英文 PR 标题
-- 支持多 LLM 提供商（OpenAI、DeepSeek、Proxy）
+- **HTTP 模块** (`lib::base::http`) - 统一 HTTP 客户端，支持认证、重试、延迟解析等特性
+  - 详细架构请参考 [HTTP_ARCHITECTURE.md](./lib/HTTP_ARCHITECTURE.md)
 
-#### 配置
+- **LLM 模块** (`lib::base::llm`) - 统一配置驱动的 LLM 客户端，支持 OpenAI、DeepSeek 和代理 API
+  - 详细架构请参考 [LLM_ARCHITECTURE.md](./lib/LLM_ARCHITECTURE.md)
 
-**环境变量**：
-- `LLM_PROVIDER` - LLM 提供商（可选，默认 `openai`）
-- `LLM_OPENAI_KEY` - OpenAI API Key
-- `LLM_DEEPSEEK_KEY` - DeepSeek API Key
-- `LLM_PROXY_URL` - Proxy API URL
-- `LLM_PROXY_KEY` - Proxy API Key
+- **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理
+  - 详细架构请参考 [SETTINGS_ARCHITECTURE.md](./lib/SETTINGS_ARCHITECTURE.md)
 
-支持的值：`openai`、`deepseek`、`proxy`
+- **Shell 模块** (`lib::base::shell`) - Shell 检测与管理，支持配置自动加载
+  - 详细架构请参考 [SHELL_ARCHITECTURE.md](./lib/SHELL_ARCHITECTURE.md)
 
-#### 错误处理
-PR 创建命令的错误处理：尝试使用 AI 生成标题，如果失败则回退到手动输入。
+- **工具函数模块** (`lib::base::util`) - 通用工具函数（日志、字符串、浏览器、剪贴板等）
+  - 详细架构请参考 [TOOLS_ARCHITECTURE.md](./lib/TOOLS_ARCHITECTURE.md)
 
-**使用示例**：
-```bash
-# 创建 PR（自动生成标题）
-workflow pr create PROJ-123
+### Git 模块 (`lib::git`)
 
-# 手动指定标题（跳过 AI 生成）
-workflow pr create PROJ-123 --title "Fix bug"
-```
+提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
+- 详细架构请参考 [GIT_ARCHITECTURE.md](./lib/GIT_ARCHITECTURE.md)
 
-#### 相关文件
-- `src/lib/llm/` - LLM 集成模块
-- `src/commands/pr/create.rs` - PR 创建命令（已集成 AI 功能）
+### Jira 模块 (`lib::jira`)
 
----
+提供 Jira API 集成功能，包括 Issue 管理、用户管理、状态管理、工作历史记录和日志处理等。
+- 详细架构请参考 [JIRA_ARCHITECTURE.md](./lib/JIRA_ARCHITECTURE.md)
 
-### 日志处理模块 (`lib::log`)
+### PR 模块 (`lib::pr`)
 
-#### 概述
-日志处理模块提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词等功能。核心业务逻辑分布在 `lib/log/` 的各个子模块中，`commands/qk/` 提供便捷的命令包装器。
+提供跨平台 PR 管理功能，支持 GitHub 和 Codeup，包括创建、合并、关闭、更新等操作。
+- 详细架构请参考 [PR_ARCHITECTURE.md](./lib/PR_ARCHITECTURE.md)
 
-#### 功能特性
-- **下载日志**：从 Jira ticket 下载日志附件（支持分片文件合并）
-- **查找请求 ID**：在日志文件中查找请求 ID 并提取响应内容
-- **搜索关键词**：在日志文件中搜索关键词并返回匹配的请求信息
-- **自动路径解析**：根据 JIRA ID 自动解析日志文件路径
+### Completion 模块 (`lib::completion`)
 
-#### 架构设计
+提供 Shell 补全脚本生成和管理功能。
+- 详细架构请参考 [COMPLETION_ARCHITECTURE.md](./lib/COMPLETION_ARCHITECTURE.md)
 
-**三层架构**：
-- **核心逻辑层**：`lib/log/` - 模块化的业务逻辑
-  - `download.rs` - 从 Jira 下载日志
-  - `find.rs` - 查找请求 ID 和提取响应内容
-  - `search.rs` - 搜索关键词
-  - `parse.rs` - 解析日志条目
-  - `extract.rs` - 提取 URL 等工具函数
-  - `zip.rs` - 处理 zip 文件（合并分片、解压）
-  - `clean.rs` - 清理目录功能
-  - `utils.rs` - 通用工具函数
-  - `mod.rs` - 模块导出，提供 `Logs::xxx()` 统一接口
+### Proxy 模块 (`lib::proxy`)
 
-- **命令封装层**：`commands/qk/` - 提供便捷的命令接口
-  - `mod.rs` - 模块导出
-  - `download.rs` - 下载命令（调用 `Logs::download_from_jira()`）
-  - `find.rs` - 查找命令（调用 `Logs::extract_response_content()`，添加剪贴板操作）
-  - `search.rs` - 搜索命令（调用 `Logs::search_keyword()`，格式化输出）
-  - `clean.rs` - 清理命令（调用 `Logs::clean_dir()`）
-  - `info.rs` - 信息命令（显示 ticket 信息）
+提供代理管理功能，包括系统代理读取、配置生成和管理。
+- 详细架构请参考 [PROXY_ARCHITECTURE.md](./lib/PROXY_ARCHITECTURE.md)
 
-- **CLI 入口层**：`bin/qk.rs` - 独立的可执行文件（命令行参数解析和命令分发）
+### Rollback 模块 (`lib::rollback`)
 
-#### 使用示例
-```bash
-# 下载日志
-qk PROJ-123 download
-
-# 查找请求 ID（自动解析日志文件路径）
-qk PROJ-123 find [REQUEST_ID]
-
-# 搜索关键词（自动解析日志文件路径）
-qk PROJ-123 search [SEARCH_TERM]
-```
-
-#### 相关文件
-- `src/lib/log/` - 核心业务逻辑（模块化设计）
-- `src/commands/qk/` - 命令包装器
-- `src/bin/qk.rs` - CLI 入口
+提供回滚管理功能，支持备份、恢复和清理操作。
+- 详细架构请参考 [ROLLBACK_ARCHITECTURE.md](./lib/ROLLBACK_ARCHITECTURE.md)
 
 ---
 
@@ -259,7 +253,10 @@ qk PROJ-123 search [SEARCH_TERM]
 
 配置文件存储在以下位置：
 
+- `~/.workflow/config/workflow.toml` - 主配置文件（Jira、GitHub、日志、LLM、Codeup 配置）
+- `~/.workflow/config/llm.toml` - LLM 配置文件（可选，如果配置了 LLM）
 - `~/.workflow/config/jira-status.toml` - Jira 项目状态映射配置
+- `~/.workflow/config/jira-users.toml` - Jira 用户缓存配置
 - `~/.workflow/work-history/` - PR 和 Jira ticket 的关联历史（按仓库存储）
 
 ### Jira Status 配置 (`jira-status.toml`)
@@ -308,7 +305,7 @@ merged-pr = "Done"
 3. **容错机制**：如果历史记录中没有，会尝试从 PR 标题中提取 Jira ticket ID
 
 **相关文件**：
-- `src/lib/jira/status.rs` - 工作历史的读写逻辑
+- `src/lib/jira/history.rs` - 工作历史的读写逻辑
 
 ---
 

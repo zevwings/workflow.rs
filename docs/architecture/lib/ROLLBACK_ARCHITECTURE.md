@@ -5,7 +5,7 @@
 本文档描述 Workflow CLI 的回滚模块架构，包括更新失败时的备份和恢复机制。该模块负责在更新操作前备份当前版本的二进制文件和补全脚本，并在更新失败时自动恢复备份的文件。
 
 **模块统计：**
-- 总代码行数：约 400 行
+- 总代码行数：约 455 行（rollback.rs: 450 行，mod.rs: 5 行）
 - 文件数量：2 个核心文件
 - 主要组件：2 个（RollbackManager, BackupInfo）
 - 备份内容：二进制文件（workflow, pr, qk）和补全脚本文件
@@ -22,17 +22,12 @@ src/lib/rollback/
 └── rollback.rs             # 回滚管理器（备份、恢复、清理）
 ```
 
-### 命令封装层
-
-```
-src/commands/update.rs      # 更新命令（使用 RollbackManager）
-```
-
 ### 依赖模块
 
 - **`lib/completion/files.rs`**：获取所有补全脚本文件列表（`get_all_completion_files()`）
-- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion_dir()`）
+- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion_dir()`, `Paths::config_file()`）
 - **`lib/base/shell/detect.rs`**：Shell 检测（`Detect::shell()`）
+- **`lib/base/shell/reload.rs`**：Shell 配置重新加载（`Reload::shell()`）
 
 ---
 
@@ -65,41 +60,36 @@ src/commands/update.rs      # 更新命令（使用 RollbackManager）
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-main.rs (CLI 入口，参数解析)
-  ↓
-commands/update.rs (命令封装层)
+调用者（命令层或其他模块）
   ↓
 RollbackManager (回滚管理层)
   ↓
 文件系统操作（备份/恢复/清理）
 ```
 
-### 更新流程（包含回滚机制）
+### 备份流程
 
 ```
-commands/update.rs::UpdateCommand::run()
+RollbackManager::create_backup()
   ↓
-  1. RollbackManager::create_backup()                  # 创建备份
-     ├─ RollbackManager::create_backup_dir()           # 创建备份目录
-     ├─ RollbackManager::backup_binaries()              # 备份二进制文件
-     │   └─ sudo cp /usr/local/bin/{binary} {backup_dir}/
-     └─ RollbackManager::backup_completions()           # 备份补全脚本
-         └─ fs::copy() {completion_dir}/{file} {backup_dir}/
+  1. RollbackManager::create_backup_dir()           # 创建备份目录
+  2. RollbackManager::backup_binaries()              # 备份二进制文件
+     └─ sudo cp /usr/local/bin/{binary} {backup_dir}/
+  3. RollbackManager::backup_completions()           # 备份补全脚本
+     └─ fs::copy() {completion_dir}/{file} {backup_dir}/
+```
+
+### 回滚流程
+
+```
+RollbackManager::rollback(backup_info)
   ↓
-  2. 执行更新操作（下载、验证、安装）
-  ↓
-  3. 根据更新结果：
-     ├─ 更新成功：
-     │   └─ RollbackManager::cleanup_backup()           # 清理备份
-     └─ 更新失败：
-         ├─ RollbackManager::rollback()                 # 执行回滚
-         │   ├─ RollbackManager::restore_binaries()     # 恢复二进制文件
-         │   │   └─ sudo cp {backup_dir}/{binary} /usr/local/bin/
-         │   └─ RollbackManager::restore_completions()  # 恢复补全脚本
-         │       └─ fs::copy() {backup_dir}/{file} {completion_dir}/
-         └─ RollbackManager::cleanup_backup()           # 清理备份
+  1. RollbackManager::restore_binaries()             # 恢复二进制文件
+     └─ sudo cp {backup_dir}/{binary} /usr/local/bin/
+  2. RollbackManager::restore_completions()          # 恢复补全脚本
+     └─ fs::copy() {backup_dir}/{file} {completion_dir}/
+  3. 尝试重新加载 shell 配置（可选）
+     └─ Reload::shell()                              # 重新加载 shell 配置
 ```
 
 ### 备份流程
@@ -142,7 +132,12 @@ rollback(backup_info)
      ├─ 检查备份文件是否存在
      └─ 使用 fs::copy 恢复到补全脚本目录
   ↓
-  3. 返回成功
+  3. 尝试重新加载 shell 配置（可选）
+     ├─ 检测当前 shell 类型
+     ├─ 调用 Reload::shell() 重新加载配置
+     └─ 如果失败，记录警告并提供手动重新加载命令
+  ↓
+  4. 返回成功
 ```
 
 ### 清理流程
@@ -244,6 +239,11 @@ pub struct BackupInfo {
 - 使用 `Vec<(String, PathBuf)>` 存储文件名和备份路径的映射
 - 便于恢复时根据文件名找到对应的备份文件
 
+**预留方法**（目前未使用，但保留以备将来扩展）：
+- `new(backup_dir)` - 创建新的备份信息
+- `add_binary_backup(name, path)` - 添加二进制文件备份
+- `add_completion_backup(name, path)` - 添加补全脚本备份
+
 ### RollbackManager（结构体）
 
 ```rust
@@ -275,17 +275,17 @@ pub struct RollbackManager;
 - **`lib/base/settings/paths.rs`**：`Paths`
   - `completion_dir()` - 获取补全脚本目录路径
 
-### Shell 检测
+### Shell 检测和重新加载
 
 - **`lib/base/shell/detect.rs`**：`Detect`
-  - `shell()` - 检测当前 shell 类型（用于确定补全脚本目录）
+  - `shell()` - 检测当前 shell 类型（用于确定补全脚本目录和配置重新加载）
+- **`lib/base/shell/reload.rs`**：`Reload`
+  - `shell(shell)` - 重新加载 shell 配置（在回滚后尝试重新加载补全脚本）
 
-### 更新命令
+### 使用场景
 
-- **`commands/update.rs`**：`UpdateCommand`
-  - 在更新前调用 `create_backup()`
-  - 在更新成功时调用 `cleanup_backup()`
-  - 在更新失败时调用 `rollback()` 和 `cleanup_backup()`
+- **更新操作**：在更新前创建备份，更新成功时清理备份，更新失败时执行回滚
+- **其他需要备份的场景**：任何需要备份和恢复的场景都可以使用 `RollbackManager`
 
 ---
 
@@ -389,9 +389,10 @@ fn verify_backup(backup_info: &BackupInfo) -> Result<()> {
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
-- [安装/卸载模块架构文档](./INSTALL_ARCHITECTURE.md)
+- [总体架构文档](../ARCHITECTURE.md)
+- [生命周期管理命令模块架构文档](../commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - [Completion 模块架构文档](./COMPLETION_ARCHITECTURE.md)
+- [Shell 检测与管理模块架构文档](./SHELL_ARCHITECTURE.md)
 
 ---
 

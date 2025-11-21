@@ -24,22 +24,10 @@ src/lib/proxy/
 └── manager.rs              # 代理管理器（协调其他组件，提供高级功能）
 ```
 
-### CLI 入口层
-
-```
-src/main.rs                 # CLI 入口，参数解析
-```
-
-### 命令封装层
-
-```
-src/commands/proxy.rs       # 代理管理命令（CLI 接口）
-```
-
 ### 依赖模块
 
 - **`lib/base/shell/config.rs`**：Shell 配置文件管理（`ShellConfigManager`）
-- **`lib/util/clipboard.rs`**：剪贴板操作
+- **`lib/base/util/clipboard.rs`**：剪贴板操作（`Clipboard`）
 
 ---
 
@@ -161,70 +149,52 @@ src/commands/proxy.rs       # 代理管理命令（CLI 接口）
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-main.rs (CLI 入口，参数解析)
-  ↓
-commands/proxy.rs (命令封装层)
+调用者（命令层或其他模块）
   ↓
 ProxyManager (协调层)
   ↓
 SystemProxyReader / ProxyConfigGenerator / ShellConfigManager (功能层)
 ```
 
-### 开启代理 (`on`)
+### 开启代理流程
 
 ```
-main.rs::Commands::Proxy::On { temporary }
+ProxyManager::enable(temporary)
   ↓
-commands/proxy.rs::ProxyCommand::on(temporary)
-  ↓
-  1. ProxyManager::enable(temporary)
-     ├─ SystemProxyReader::read()                    # 获取系统代理设置
-     ├─ ProxyManager::is_proxy_configured()          # 检查代理是否已配置
-     ├─ ProxyConfigGenerator::generate_command()     # 生成代理命令
-     ├─ ProxyConfigGenerator::generate_env_vars()    # 生成环境变量
-     └─ ShellConfigManager::set_env_vars()          # 保存到配置文件（如果非临时模式）
-  ↓
-  2. Clipboard::copy()                                # 复制代理命令到剪贴板
+  1. SystemProxyReader::read()                    # 获取系统代理设置
+  2. ProxyManager::is_proxy_configured()          # 检查代理是否已配置
+  3. ProxyConfigGenerator::generate_command()     # 生成代理命令
+  4. ProxyConfigGenerator::generate_env_vars()    # 生成环境变量
+  5. ShellConfigManager::set_env_vars()          # 保存到配置文件（如果非临时模式）
 ```
 
 **模式说明**：
 - **默认模式**（`temporary = false`）：写入 shell 配置文件，新开 shell 自动启用
 - **临时模式**（`temporary = true`）：不写入配置文件，只在当前 shell 生效
 
-### 关闭代理 (`off`)
+### 关闭代理流程
 
 ```
-main.rs::Commands::Proxy::Off
+ProxyManager::disable()
   ↓
-commands/proxy.rs::ProxyCommand::off()
-  ↓
-  1. ProxyManager::disable()
-     ├─ ProxyManager::collect_current_proxy()        # 收集当前代理设置（环境变量和配置文件）
-     ├─ ProxyManager::remove_from_config_file()      # 从配置文件移除
-     └─ ProxyManager::generate_unset_command()       # 生成 unset 命令
-  ↓
-  2. Clipboard::copy()                                 # 复制 unset 命令到剪贴板
+  1. ProxyManager::collect_current_proxy()        # 收集当前代理设置（环境变量和配置文件）
+  2. ProxyManager::remove_from_config_file()      # 从配置文件移除
+  3. ProxyManager::generate_unset_command()       # 生成 unset 命令
 ```
 
 **行为说明**：
 - 同时从 shell 配置文件和当前 shell 环境变量中移除代理设置
 - 生成 `unset` 命令用于当前 shell 会话
 
-### 检查代理 (`check`)
+### 检查代理流程
 
 ```
-main.rs::Commands::Proxy::Check
-  ↓
-commands/proxy.rs::ProxyCommand::check()
+ProxyManager::check_env_proxy()
   ↓
   1. SystemProxyReader::read()                       # 获取系统代理设置
   2. ProxyManager::check_env_proxy()                 # 检查环境变量
   3. ShellConfigManager::load_env_vars()              # 加载配置文件
-  4. 显示系统代理设置（使用 ProxyType::all() 迭代器）
-  5. 显示环境变量设置（区分当前会话和配置文件）
-  6. ProxyManager::is_proxy_configured()             # 检查代理是否已正确配置
+  4. ProxyManager::is_proxy_configured()             # 检查代理是否已正确配置
 ```
 
 ---
@@ -302,7 +272,7 @@ commands/proxy.rs::ProxyCommand::check()
 
 ### 工具模块
 
-- **`lib/util/clipboard.rs`**：剪贴板操作
+- **`lib/base/util/clipboard.rs`**：剪贴板操作（`Clipboard`）
   - 复制代理命令到剪贴板
   - 复制 unset 命令到剪贴板
 
@@ -465,8 +435,8 @@ impl ProxyType {
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
-- [配置管理模块架构文档](./CONFIG_ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
+- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md)
 
 ---
 

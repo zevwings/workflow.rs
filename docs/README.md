@@ -8,7 +8,7 @@
 
 ## 🏗️ 核心架构文档
 
-### [ARCHITECTURE.md](./ARCHITECTURE.md)
+### [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
 **总体架构设计文档**
 
 - 项目概述和模块划分
@@ -21,25 +21,20 @@
 
 ## 📦 模块架构文档
 
-### [PR_ARCHITECTURE.md](./PR_ARCHITECTURE.md)
+> 所有架构文档位于 [`architecture/`](./architecture/) 目录下
+
+### Lib 层架构文档（核心业务逻辑）
+
+#### [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
 **Pull Request 模块架构文档**
 
 - PR 创建、合并、关闭、查询等操作
 - 支持 GitHub 和 Codeup 平台
 - 平台抽象设计（PlatformProvider Trait）
 - 工厂函数实现多态分发
-- Jira 状态管理集成
 - LLM 标题生成功能
 
-### [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
-**快速日志操作模块架构文档**
-
-- 日志下载、查找、搜索功能
-- 三层架构设计
-- 与 Jira 和 Streamock 的集成
-- 命令使用示例
-
-### [JIRA_ARCHITECTURE.md](./JIRA_ARCHITECTURE.md)
+#### [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
 **Jira 模块架构文档**
 
 - 分层架构设计（HTTP 客户端层、API 方法层、业务逻辑层）
@@ -48,35 +43,35 @@
 - 业务功能（用户管理、Ticket 操作、状态管理、工作历史记录）
 - 日志处理模块（JiraLogs）
 
-### [INSTALL_ARCHITECTURE.md](./INSTALL_ARCHITECTURE.md)
-**安装/卸载模块架构文档**
+#### [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+**Git 模块架构文档**
 
-- Shell completion 脚本生成和安装
-- 二进制文件安装
-- 卸载功能实现
-- GitHub Actions 发布流程
-- HOMEBREW_TAP_TOKEN 配置说明
+- 分支管理操作（创建、切换、合并、删除）
+- 提交管理（状态检查、暂存、提交）
+- 仓库检测和类型识别
+- 暂存管理（stash push/pop）
+- Pre-commit hooks 支持
+- Git 配置管理
 
-### [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md)
-**配置管理模块架构文档**
+#### [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
+**HTTP 模块架构文档**
 
-- 初始化设置命令（setup）
-- 配置查看命令（config）
-- 环境变量管理
+- HTTP 客户端封装（单例模式）
+- 请求配置（body、query、auth、headers、timeout）
+- 响应处理（延迟解析、JSON/Text 解析）
+- 重试机制（指数退避、智能错误判断）
+- 认证支持（Basic Authentication）
 
-### [PROXY_ARCHITECTURE.md](./PROXY_ARCHITECTURE.md)
-**代理管理模块架构文档**
+#### [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
+**Settings 模块架构文档**
 
-- 代理开启/关闭/检查功能
-- 环境变量代理配置
+- TOML 配置文件加载和管理
+- 配置结构体定义（Jira、GitHub、日志、LLM、Codeup）
+- 路径管理（配置文件路径、安装路径、Shell 路径）
+- 默认值管理
+- 配置验证功能
 
-### [CHECK_ARCHITECTURE.md](./CHECK_ARCHITECTURE.md)
-**环境检查模块架构文档**
-
-- Git 仓库状态检查
-- 网络连接检查
-
-### [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
+#### [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
 **LLM 模块架构文档**
 
 - 统一配置驱动的 LLM 客户端实现
@@ -84,9 +79,96 @@
 - 单例模式和配置驱动设计
 - PR 标题和分支名生成功能
 
+#### [SHELL_ARCHITECTURE.md](./architecture/lib/SHELL_ARCHITECTURE.md)
+**Shell 检测与管理模块架构文档**
+
+- Shell 类型检测（zsh、bash、fish、powershell、elvish）
+- Shell 配置重新加载
+- Shell 配置文件管理（环境变量、source 语句、配置块）
+- 多 shell 支持策略
+- 与 Completion 和 Proxy 模块的集成
+
+#### [COMPLETION_ARCHITECTURE.md](./architecture/lib/COMPLETION_ARCHITECTURE.md)
+**Shell Completion 模块架构文档**
+
+- Completion 脚本生成（workflow、pr、qk）
+- Completion 安装和卸载
+- 多 Shell 支持（zsh、bash、fish、powershell、elvish）
+- Shell 配置文件管理集成
+
+#### [PROXY_ARCHITECTURE.md](./architecture/lib/PROXY_ARCHITECTURE.md)
+**代理管理模块架构文档**
+
+- 代理开启/关闭/检查功能
+- 从 macOS 系统设置读取代理配置
+- 环境变量代理配置管理
+- 临时模式和持久化模式
+
+#### [ROLLBACK_ARCHITECTURE.md](./architecture/lib/ROLLBACK_ARCHITECTURE.md)
+**回滚模块架构文档**
+
+- 更新失败时的备份和恢复机制
+- 二进制文件和补全脚本的备份
+- 自动回滚功能
+
+#### [TOOLS_ARCHITECTURE.md](./architecture/lib/TOOLS_ARCHITECTURE.md)
+**工具函数模块架构文档**
+
+- 日志输出系统（带颜色的日志宏和日志级别管理）
+- 字符串处理工具（敏感值隐藏）
+- 浏览器和剪贴板操作
+- 文件解压和校验和验证
+- 用户确认对话框
+
+### 命令层架构文档（CLI 命令封装）
+
+#### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
+**PR 命令层架构文档**
+
+- PR 创建、合并、关闭、查询等命令
+- 命令层设计（CLI 入口层、命令封装层）
+- 与 lib/pr 模块的集成
+- 命令使用示例
+
+#### [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
+**快速日志操作命令层架构文档**
+
+- 日志下载、查找、搜索功能
+- 命令层设计（CLI 入口层、命令封装层）
+- 与 Jira 日志处理模块的集成
+- 命令使用示例
+
+#### [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
+**配置管理命令层架构文档**
+
+- 初始化设置命令（setup）
+- 配置查看命令（config）
+- GitHub 账号管理（多账号支持）
+- 日志级别管理
+- 环境检查功能（Git 仓库状态、网络连接）
+- Completion 管理命令
+
+#### [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
+**生命周期管理命令层架构文档**
+
+- 安装功能（二进制文件和 shell completion 脚本）
+- 卸载功能（清理所有相关文件和配置）
+- 更新功能（从 GitHub Releases 更新到新版本）
+- GitHub Actions 发布流程
+- HOMEBREW_TAP_TOKEN 配置说明
+
 ---
 
-## 📋 设计文档
+## 📋 设计文档和指南
+
+> 设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
+
+### [DOCUMENT_GUIDELINES.md](./guidelines/DOCUMENT_GUIDELINES.md)
+**文档编写指南**
+
+- 文档模板使用说明
+- 章节检查清单
+- 文档编写规范
 
 ### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
 **为什么需要同时生成 zsh 和 bash 的补全脚本**
@@ -132,18 +214,36 @@
 - **2024-11** - 整合 Jira 模块架构文档，合并 `JIRA_LOGS_ARCHITECTURE.md` 和 `JIRA_MODULE_REFACTOR_ANALYSIS.md` 为统一的 `JIRA_ARCHITECTURE.md`
 - **2024-11** - 重构 PR 模块架构文档，删除分析文档（`PR_HTTP_CLIENT_ANALYSIS.md`、`PR_REFACTOR_STATUS.md`、`PR_REFACTOR_GUIDE.md`），统一为 `PR_ARCHITECTURE.md`，参考 JIRA 和 GIT 架构文档结构
 - **2024-11** - 重构 LLM 模块架构文档，参考 JIRA、PR、GIT 架构文档结构，统一文档格式
+- **2024-12** - 合并环境检查模块文档到配置管理模块文档，`CHECK_ARCHITECTURE.md` 已合并到 `CONFIG_ARCHITECTURE.md`
+- **2024-12** - 更新生命周期管理模块文档，将 `INSTALL_ARCHITECTURE.md` 扩展为包含安装、卸载、更新三个功能的完整文档，并重命名为 `LIFECYCLE_COMMAND_ARCHITECTURE.md`
+- **2024-12** - 创建 Shell 检测与管理模块架构文档 `SHELL_ARCHITECTURE.md`
+- **2024-12** - 创建 Settings 模块架构文档 `SETTINGS_ARCHITECTURE.md`，删除重复的 `CONFIG_ARCHITECTURE.md`
+- **2024-12** - 更新所有 lib 层架构文档，移除命令层详细内容，确保只描述 lib/ 模块
+- **2024-12** - 重组文档结构，分为 ARCHITECTURE 和 GUIDELINES 两个目录
 
 ---
 
 ## 📖 快速导航
 
-- 想了解整体架构？ → [ARCHITECTURE.md](./ARCHITECTURE.md)
-- 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./PR_ARCHITECTURE.md)
-- 想了解日志操作？ → [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
-- 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./JIRA_ARCHITECTURE.md)
-- 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./LLM_ARCHITECTURE.md)
-- 想了解配置管理？ → [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md)
-- 想了解安装配置？ → [INSTALL_ARCHITECTURE.md](./INSTALL_ARCHITECTURE.md)
-- 想了解代理管理？ → [PROXY_ARCHITECTURE.md](./PROXY_ARCHITECTURE.md)
-- 想了解环境检查？ → [CHECK_ARCHITECTURE.md](./CHECK_ARCHITECTURE.md)
+### 整体架构
+- 想了解整体架构？ → [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+
+### Lib 层模块（核心业务逻辑）
+- 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
+- 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
+- 想了解 Git 操作？ → [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+- 想了解 HTTP 客户端？ → [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
+- 想了解配置管理？ → [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
+- 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
+- 想了解 Shell 检测与管理？ → [SHELL_ARCHITECTURE.md](./architecture/lib/SHELL_ARCHITECTURE.md)
+- 想了解 Completion 功能？ → [COMPLETION_ARCHITECTURE.md](./architecture/lib/COMPLETION_ARCHITECTURE.md)
+- 想了解代理管理？ → [PROXY_ARCHITECTURE.md](./architecture/lib/PROXY_ARCHITECTURE.md)
+- 想了解回滚机制？ → [ROLLBACK_ARCHITECTURE.md](./architecture/lib/ROLLBACK_ARCHITECTURE.md)
+- 想了解工具函数？ → [TOOLS_ARCHITECTURE.md](./architecture/lib/TOOLS_ARCHITECTURE.md)
+
+### 命令层模块（CLI 命令封装）
+- 想了解 PR 命令？ → [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
+- 想了解日志操作命令？ → [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
+- 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
+- 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 

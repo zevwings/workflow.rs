@@ -136,9 +136,7 @@ src/lib/jira/
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-commands/*.rs (命令封装层)
+调用者（命令层或其他模块）
   ↓
 lib/jira/*.rs (业务逻辑层)
   ├── users.rs → JiraUsers::get()
@@ -163,8 +161,6 @@ lib/base/http/ (基础 HTTP 层)
 #### 1. 获取 Ticket 信息
 
 ```
-commands/pr/create.rs
-  ↓
 JiraTicket::get_info("PROJ-123")
   ↓
 JiraIssueApi::get_issue("PROJ-123")
@@ -177,8 +173,6 @@ HttpClient::global()?.get(url, config)
 #### 2. 更新 Ticket 状态
 
 ```
-commands/pr/merge.rs
-  ↓
 JiraTicket::transition("PROJ-123", "Done")
   ↓
 JiraIssueApi::transition_issue("PROJ-123", transition_id)
@@ -189,8 +183,6 @@ JiraHttpClient::global()?.post("issue/PROJ-123/transitions", body)
 #### 3. 读取工作历史记录
 
 ```
-commands/pr/merge.rs
-  ↓
 JiraWorkHistory::read_work_history(pr_id, repository)
   ↓
 读取 ~/.workflow/work-history/{repo}.json
@@ -328,7 +320,7 @@ manager.update(|config| {
 - `search_keyword()` - 搜索关键词
 - `clean_dir()` - 清理日志目录
 
-**详细架构**：参见 [QK_ARCHITECTURE.md](./QK_ARCHITECTURE.md)
+**详细架构**：参见 [QK 命令模块架构文档](../commands/QK_COMMAND_ARCHITECTURE.md)（命令层）和本文档的日志处理模块部分
 
 ---
 
@@ -485,9 +477,9 @@ merged-pr = "Done"
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
 - [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 Jira 集成
-- [QK 模块架构文档](./QK_ARCHITECTURE.md) - QK 模块如何使用 Jira 日志功能
+- [QK 命令模块架构文档](../commands/QK_COMMAND_ARCHITECTURE.md) - QK 命令层如何使用 Jira 日志处理模块
 
 ---
 

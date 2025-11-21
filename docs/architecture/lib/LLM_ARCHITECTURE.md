@@ -238,8 +238,6 @@ graph TB
 #### 1. 生成 PR 标题和分支名
 
 ```
-commands/pr/create.rs::resolve_title()
-  ↓
 PullRequestLLM::generate(commit_title, exists_branches, git_diff)
   ↓
 LLMClient::global() (获取全局单例)
@@ -314,12 +312,9 @@ parse_llm_response() → PullRequestContent
 
 ### PR 模块集成
 
-- **创建 PR 时**：
+- **`lib/pr/llm.rs`**：PR LLM 功能
   - `PullRequestLLM::generate()` - 从 Jira ticket 描述生成 PR 标题
   - 如果 AI 生成失败，回退到手动输入
-
-**关键方法**：
-- `commands/pr/create.rs::resolve_title()` - 调用 `PullRequestLLM::generate()`
 
 ### Settings 模块集成
 
@@ -539,9 +534,9 @@ response_format = "candidates[0].content.parts[0].text"  # 自定义路径
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
 - [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 LLM 功能
-- [CONFIG_ARCHITECTURE.md](./CONFIG_ARCHITECTURE.md) - Settings 配置系统架构
+- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - Settings 配置系统架构
 
 ---
 

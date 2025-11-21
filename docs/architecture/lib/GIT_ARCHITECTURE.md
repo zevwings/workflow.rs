@@ -32,9 +32,6 @@ src/lib/git/
 ### 依赖模块
 
 - **`lib/pr/`**：PR 功能（使用 Git 操作进行分支管理）
-- **`commands/pr/`**：PR 命令（使用 Git 操作）
-- **`commands/check.rs`**：环境检查命令（使用 Git 状态检查）
-- **`commands/setup.rs`**：初始化设置命令（使用 Git 配置）
 
 ---
 
@@ -176,9 +173,7 @@ src/lib/git/
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-commands/*.rs (命令封装层)
+调用者（命令层或其他模块）
   ↓
 lib/git/*.rs (核心业务逻辑层)
   ├── GitBranch::xxx()    # 分支操作
@@ -199,17 +194,19 @@ duct::cmd (命令执行层)
 
 ### 典型调用示例
 
-#### 1. 创建 PR 时的 Git 操作
+#### 1. 分支操作
 
 ```
-commands/pr/create.rs
-  ↓
 GitBranch::checkout_branch(branch_name)
   ↓
 helpers::switch_or_checkout()  # 尝试 git switch，失败时回退
   ↓
 helpers::cmd_run()  # 执行 git 命令
-  ↓
+```
+
+#### 2. 提交操作
+
+```
 GitCommit::commit(commit_title, true)
   ↓
 GitPreCommit::run_pre_commit()  # 如果存在 pre-commit hooks
@@ -217,23 +214,11 @@ GitPreCommit::run_pre_commit()  # 如果存在 pre-commit hooks
 GitCommit::add_all()  # 暂存所有文件
   ↓
 helpers::cmd_run()  # 执行 git commit
-  ↓
-GitBranch::push(branch_name, true)
-  ↓
-helpers::cmd_run()  # 执行 git push
 ```
 
-#### 2. 合并 PR 时的 Git 操作
+#### 3. 合并操作
 
 ```
-commands/pr/merge.rs
-  ↓
-GitRepo::detect_repo_type()  # 检测仓库类型
-  ↓
-GitBranch::current_branch()  # 获取当前分支
-  ↓
-GitBranch::get_default_branch()  # 获取默认分支
-  ↓
 GitBranch::merge_branch(source_branch, strategy)
   ↓
 GitBranch::has_merge_conflicts()  # 检查冲突
@@ -241,20 +226,6 @@ GitBranch::has_merge_conflicts()  # 检查冲突
 GitBranch::checkout_branch(default_branch)  # 切换到默认分支
   ↓
 GitBranch::delete(branch_name, false)  # 删除本地分支
-```
-
-#### 3. 环境检查时的 Git 操作
-
-```
-commands/check.rs
-  ↓
-GitRepo::is_git_repo()  # 检查是否在 Git 仓库中
-  ↓
-helpers::check_success()  # 静默检查
-  ↓
-GitCommit::status()  # 检查 Git 状态
-  ↓
-helpers::cmd_read()  # 读取 git status 输出
 ```
 
 ---
@@ -350,32 +321,19 @@ helpers::cmd_read()  # 读取 git status 输出
 
 ### PR 模块集成
 
-- **创建 PR 时**：
+- **`lib/pr/`**：PR 功能使用 Git 操作
   - `GitBranch::checkout_branch()` - 创建或切换分支
   - `GitCommit::commit()` - 提交更改
   - `GitBranch::push()` - 推送到远程
   - `GitRepo::detect_repo_type()` - 检测仓库类型
-
-- **合并 PR 时**：
   - `GitBranch::merge_branch()` - 合并分支
-  - `GitBranch::checkout_branch()` - 切换到默认分支
-  - `GitBranch::delete()` - 删除本地分支
-
-- **集成分支时**：
   - `GitStash::stash_push()` - 保存工作区更改
-  - `GitBranch::merge_branch()` - 合并分支
   - `GitStash::stash_pop()` - 恢复工作区更改
 
-### 环境检查模块集成
+### 其他模块集成
 
-- **`commands/check.rs`**：
-  - `GitRepo::is_git_repo()` - 检查是否在 Git 仓库中
-  - `GitCommit::status()` - 检查 Git 状态
-
-### 配置模块集成
-
-- **`commands/setup.rs`**：
-  - `GitConfig::set_global_user()` - 设置 Git 全局配置
+- **配置管理**：使用 `GitConfig::set_global_user()` 设置 Git 全局配置
+- **环境检查**：使用 `GitRepo::is_git_repo()` 和 `GitCommit::status()` 检查 Git 状态
 
 ---
 
@@ -533,9 +491,9 @@ helpers::cmd_run()  # 执行 git commit
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
 - [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 Git 操作
-- [环境检查模块架构文档](./CHECK_ARCHITECTURE.md) - 环境检查如何使用 Git 状态
+- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置管理如何使用 Git 配置
 
 ---
 

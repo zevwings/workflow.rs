@@ -2,7 +2,9 @@
 
 ## 📋 概述
 
-PR 模块是 Workflow CLI 的核心功能之一，提供 Pull Request 的创建、合并、关闭、查询等操作。支持 GitHub 和 Codeup 两种代码托管平台，并集成了 Jira 状态管理功能。该模块采用分层架构设计，通过 `PlatformProvider` trait 实现平台抽象，使用工厂函数实现多态分发。
+PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Request 的平台抽象层。支持 GitHub 和 Codeup 两种代码托管平台，通过 `PlatformProvider` trait 实现统一的平台接口，使用工厂函数实现多态分发。该模块专注于平台 API 的抽象和调用，不涉及命令层的业务逻辑。
+
+**注意**：本文档仅描述 `lib/pr/` 模块的架构。关于 PR 命令层的详细内容，请参考 [PR 命令模块架构文档](../commands/PR_COMMAND_ARCHITECTURE.md)。
 
 **模块统计：**
 - 总代码行数：约 2000+ 行
@@ -36,43 +38,14 @@ src/lib/pr/
     └── errors.rs      # Codeup 错误处理
 ```
 
-### CLI 入口层
-
-```
-src/bin/pr.rs
-```
-- **职责**：独立的 PR 命令入口，负责命令行参数解析和命令分发
-- **功能**：使用 `clap` 解析命令行参数，将请求分发到对应的命令处理函数
-
-### 命令封装层 (`commands/pr/`)
-
-```
-src/commands/pr/
-├── mod.rs          # PR 命令模块声明
-├── helpers.rs      # PR 辅助函数（PR ID 解析等）
-├── create.rs       # 创建 PR 命令 (712行)
-├── merge.rs        # 合并 PR 命令 (143行)
-├── close.rs        # 关闭 PR 命令 (141行)
-├── status.rs       # PR 状态查询命令 (50行)
-├── list.rs         # 列出 PR 命令 (21行)
-├── update.rs       # 更新 PR 命令 (57行)
-└── integrate.rs    # 集成分支命令 (343行)
-```
-
-**职责**：
-- 解析命令参数
-- 处理用户交互（输入、选择等）
-- 格式化输出
-- 调用核心业务逻辑层 (`lib/pr/`) 的功能
-
 ### 依赖模块
 
-- **`lib/git/`**：Git 操作（检测仓库类型、分支操作等）
-- **`lib/jira/`**：Jira 集成（状态更新、工作历史管理等）
-- **`lib/base/llm/`**：AI 功能（生成 PR 标题）
+- **`lib/git/`**：Git 操作（检测仓库类型，用于工厂函数自动选择平台）
+- **`lib/base/llm/`**：AI 功能（PR 标题生成，通过 `llm.rs` 模块封装）
 - **`lib/base/http/`**：HTTP 客户端（API 请求）
-- **`lib/base/util/`**：工具函数（浏览器、剪贴板等）
-- **`lib/base/settings/`**：配置管理（环境变量读取）
+- **`lib/base/settings/`**：配置管理（环境变量读取，如 `GITHUB_TOKEN`、`CODEUP_PROJECT_ID` 等）
+
+**注意**：PR 模块不直接依赖 Jira、Git 分支操作、工具函数等模块，这些集成由命令层（`commands/pr/`）负责协调。
 
 ---
 
@@ -168,11 +141,7 @@ src/commands/pr/
 ### 整体架构流程
 
 ```
-用户输入
-  ↓
-bin/pr.rs (CLI 入口，参数解析)
-  ↓
-commands/pr/*.rs (命令封装层，处理交互)
+调用者（命令层或其他模块）
   ↓
 lib/pr/platform.rs (工厂函数 create_provider())
   ↓
@@ -187,23 +156,7 @@ GitHub API 或 Codeup API
 
 ```mermaid
 graph TB
-    User[用户输入] --> CLI[bin/pr.rs<br/>CLI 入口<br/>参数解析]
-
-    CLI --> Create[commands/pr/create.rs<br/>创建 PR]
-    CLI --> Merge[commands/pr/merge.rs<br/>合并 PR]
-    CLI --> Close[commands/pr/close.rs<br/>关闭 PR]
-    CLI --> Status[commands/pr/status.rs<br/>查询状态]
-    CLI --> List[commands/pr/list.rs<br/>列出 PR]
-    CLI --> Update[commands/pr/update.rs<br/>更新 PR]
-    CLI --> Integrate[commands/pr/integrate.rs<br/>集成分支]
-
-    Create --> Factory[lib/pr/platform.rs<br/>create_provider<br/>工厂函数]
-    Merge --> Factory
-    Close --> Factory
-    Status --> Factory
-    List --> Factory
-    Update --> Factory
-    Integrate --> Factory
+    Caller[调用者<br/>命令层或其他模块] --> Factory[lib/pr/platform.rs<br/>create_provider<br/>工厂函数]
 
     Factory -->|GitHub| GitHub[lib/pr/github/platform.rs<br/>GitHub 实现]
     Factory -->|Codeup| Codeup[lib/pr/codeup/platform.rs<br/>Codeup 实现]
@@ -214,110 +167,64 @@ graph TB
     Http --> GitHubAPI[GitHub API]
     Http --> CodeupAPI[Codeup API]
 
-    Create --> Git[lib/git/<br/>Git 操作]
-    Create --> Jira[lib/jira/<br/>Jira 集成]
-    Create --> LLM[lib/base/llm/<br/>AI 功能]
-    Create --> Utils[lib/base/util/<br/>工具函数]
+    Factory --> Helpers[lib/pr/helpers.rs<br/>辅助函数]
+    Factory --> LLM[lib/pr/llm.rs<br/>LLM 功能]
 
-    style User fill:#e1f5ff
-    style CLI fill:#fff4e1
-    style Create fill:#fff4e1
-    style Merge fill:#fff4e1
-    style Close fill:#fff4e1
-    style Status fill:#fff4e1
-    style List fill:#fff4e1
-    style Update fill:#fff4e1
-    style Integrate fill:#fff4e1
+    style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
     style GitHub fill:#e3f2fd
     style Codeup fill:#fff3e0
     style Http fill:#f3e5f5
-    style Git fill:#f3e5f5
-    style Jira fill:#f3e5f5
+    style Helpers fill:#f3e5f5
     style LLM fill:#f3e5f5
-    style Utils fill:#f3e5f5
 ```
 
 ### 典型调用示例
 
-#### 1. 创建 PR (`pr create`)
+#### 1. 创建 PR
 
-```
-bin/pr.rs::PRCommands::Create
-  ↓
-commands/pr/create.rs::PullRequestCreateCommand::create()
-  ↓
-  1. CheckCommand::run_all()                    # 运行检查（git status, network）
-  2. resolve_jira_ticket()                      # 获取或输入 Jira ticket
-  3. ensure_jira_status()                       # 检查并配置 Jira 状态
-  4. resolve_title()                            # 获取或生成 PR 标题
-     ├─ 如果提供 title，直接使用
-     └─ 否则使用 AI 生成（lib/pr/llm.rs）
-  5. generate_commit_title_and_branch_name()     # 生成 commit 标题和分支名
-     └─ lib/pr/helpers.rs::generate_branch_name()
-     └─ lib/pr/helpers.rs::generate_commit_title()
-  6. resolve_description()                      # 获取描述
-  7. select_change_types()                      # 选择变更类型
-  8. generate_pull_request_body()               # 生成 PR body
-     └─ lib/pr/helpers.rs::generate_pull_request_body()
-  9. create_or_update_branch()                  # 创建或更新分支
-     └─ lib/git/::GitBranch::checkout_branch()
-     └─ lib/git/::GitCommit::commit()
-     └─ lib/git/::GitBranch::push()
-  10. create_or_get_pull_request()              # 创建或获取 PR
-      ├─ lib/pr/platform.rs::create_provider()  # 工厂函数
-      └─ provider.create_pull_request()         # 多态调用
-  11. update_jira_ticket()                      # 更新 Jira
-      └─ lib/jira/::JiraTicket::transition()
-      └─ lib/jira/status.rs::WorkHistory::save()
-  12. copy_and_open_pull_request()              # 复制 URL 并打开浏览器
-      └─ lib/base/util/clipboard.rs::Clipboard::copy()
-      └─ lib/base/util/browser.rs::Browser::open()
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 创建 PR
+let pr_url = provider.create_pull_request(
+    "Fix bug in login",
+    "This PR fixes a bug in the login functionality",
+    "feature/fix-login",
+    None,
+)?;
 ```
 
-#### 2. 合并 PR (`pr merge`)
+#### 2. 合并 PR
 
-```
-bin/pr.rs::PRCommands::Merge
-  ↓
-commands/pr/merge.rs::PullRequestMergeCommand::merge()
-  ↓
-  1. CheckCommand::run_all()                    # 运行检查
-  2. get_pull_request_id()                      # 获取 PR ID
-     ├─ 如果提供 PR ID，直接使用
-     └─ 否则从当前分支获取
-        └─ provider.get_current_branch_pull_request()
-  3. GitBranch::current_branch()                # 保存当前分支名
-  4. GitBranch::get_default_branch()             # 获取默认分支
-  5. merge_pull_request()                       # 合并 PR
-     ├─ 检查 PR 状态（已合并则跳过）
-     └─ provider.merge_pull_request()
-  6. cleanup_after_merge()                      # 清理本地分支
-     └─ lib/git/::GitBranch::checkout_branch()
-     └─ lib/git/::GitBranch::delete()
-  7. update_jira_status()                       # 更新 Jira 状态
-     ├─ lib/jira/status.rs::WorkHistory::read_work_history()
-     └─ lib/jira/::JiraTicket::transition()
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 检查 PR 状态
+let status = provider.get_pull_request_status("123")?;
+if !status.merged {
+    // 合并 PR
+    provider.merge_pull_request("123", true)?;
+}
 ```
 
-#### 3. 关闭 PR (`pr close`)
+#### 3. 获取 PR 信息
 
-```
-bin/pr.rs::PRCommands::Close
-  ↓
-commands/pr/close.rs::PullRequestCloseCommand::close()
-  ↓
-  1. get_pull_request_id()                      # 获取 PR ID
-  2. GitBranch::current_branch()                # 保存当前分支名
-  3. GitBranch::get_default_branch()             # 获取默认分支
-  4. check_if_already_closed()                  # 检查 PR 是否已关闭
-     └─ provider.get_pull_request_status()
-  5. close_pull_request()                       # 关闭 PR（如果未关闭）
-     └─ provider.close_pull_request()
-  6. GitBranch::delete_remote()                  # 删除远程分支
-  7. cleanup_after_close()                      # 清理本地分支
-     └─ lib/git/::GitBranch::checkout_branch()
-     └─ lib/git/::GitBranch::delete()
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 获取当前分支的 PR ID
+if let Some(pr_id) = provider.get_current_branch_pull_request()? {
+    // 获取 PR 详细信息
+    let info = provider.get_pull_request_info(&pr_id)?;
+    println!("PR URL: {}", info.url);
+}
 ```
 
 ---
@@ -342,7 +249,7 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 **设计优势**：
 - 使用实例方法（`&self`），支持 trait 对象
 - 通过工厂函数实现多态分发
-- 消除命令层的代码重复
+- 消除调用层的代码重复
 
 ### GitHub 平台实现
 
@@ -383,7 +290,7 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 - 仓库类型检测（向后兼容）
 
 **使用场景**：
-- 命令层和核心层都可以使用
+- 可以被任何调用者使用（命令层或其他模块）
 - 平台无关的通用逻辑
 
 ### LLM 模块
@@ -403,46 +310,29 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 
 ## 🔗 与其他模块的集成
 
-### Jira 集成
-
-- **创建 PR 时**：
-  - `JiraStatus::configure_interactive()` - 检查并配置 Jira 状态
-  - `JiraTicket::transition()` - 更新 Jira 状态为 `created-pr` 配置的状态
-  - `JiraWorkHistory::write_work_history()` - 保存工作历史记录（PR ID → Jira ticket 映射）
-
-- **合并 PR 时**：
-  - `JiraWorkHistory::read_work_history()` - 从工作历史查找对应的 Jira ticket
-  - 如果历史中没有，从 PR 标题提取 ticket ID
-  - `JiraTicket::transition()` - 更新 Jira 状态为 `merged-pr` 配置的状态
-
 ### Git 集成
 
-- **分支操作**：创建、删除、切换分支
-- **提交操作**：提交更改、推送远程
-- **仓库检测**：检测仓库类型、获取默认分支、获取远程 URL
+PR 模块依赖 Git 模块进行仓库类型检测：
 
 **关键方法**：
-- `GitRepo::detect_repo_type()` - 检测仓库类型（GitHub/Codeup）
-- `GitBranch::checkout_branch()` - 创建或切换分支
-- `GitCommit::commit()` - 提交更改
-- `GitBranch::push()` - 推送到远程
+- `GitRepo::detect_repo_type()` - 检测仓库类型（GitHub/Codeup），用于工厂函数自动选择平台实现
+
+### HTTP 集成
+
+PR 模块依赖 HTTP 客户端进行 API 调用：
+
+**关键方法**：
+- `HttpClient` - 统一的 HTTP 客户端，用于发送 API 请求
 
 ### LLM 集成
 
-- **标题生成**：从 Jira ticket 获取描述，使用 LLM 生成简洁的英文 PR 标题
-- **错误处理**：如果 AI 生成失败，回退到手动输入
+PR 模块提供 LLM 功能用于生成 PR 标题：
 
 **关键方法**：
-- `PullRequestLLM::generate_title()` - 生成 PR 标题
+- `PullRequestLLM::generate_title()` - 从 Jira ticket 描述生成简洁的英文 PR 标题
+- 依赖 `lib/base/llm/` 模块的 LLM 客户端
 
-### 工具集成
-
-- **剪贴板**：复制 PR URL 到剪贴板
-- **浏览器**：自动打开 PR 页面
-
-**关键方法**：
-- `Clipboard::copy()` - 复制到剪贴板
-- `Browser::open()` - 打开浏览器
+**注意**：PR 模块本身不直接集成 Jira、Git 分支操作、工具函数等，这些集成由命令层（`commands/pr/`）负责协调。PR 模块专注于平台 API 的抽象和调用。
 
 ---
 
@@ -465,15 +355,7 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 - 返回 trait 对象，实现真正的多态
 - 消除命令层的重复代码
 
-### 3. 模板方法模式
-
-命令层定义统一的流程（如 `create()`、`merge()`），具体步骤由不同的方法实现。
-
-**优势**：
-- 流程清晰，易于理解和维护
-- 便于添加新的处理步骤
-
-### 4. 依赖注入
+### 3. 依赖注入
 
 通过 trait 和模块化设计，命令层依赖抽象的 `PlatformProvider`，而不是具体的平台实现。
 
@@ -488,24 +370,22 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 
 ### 分层错误处理
 
-1. **CLI 层**：参数验证错误
-2. **命令层**：用户交互错误、业务逻辑错误
-3. **核心层**：API 调用错误、Git 操作错误
-4. **平台层**：平台特定的错误处理（GitHub/Codeup）
-5. **依赖层**：HTTP 错误、Jira 错误等
+1. **平台层**：平台特定的错误处理（GitHub/Codeup）
+2. **HTTP 层**：HTTP 请求错误、网络错误
+3. **业务层**：API 响应错误、数据解析错误
 
 ### 容错机制
 
-- **AI 生成失败**：回退到手动输入
-- **PR 已合并**：跳过合并步骤，继续后续操作
-- **PR 已关闭**：跳过关闭步骤，继续清理操作
-- **工作历史缺失**：从 PR 标题提取 Jira ticket ID
-- **仓库类型未知**：返回明确的错误提示
+- **仓库类型未知**：工厂函数返回明确的错误提示
+- **API 调用失败**：平台实现层提供详细的错误信息
+- **数据解析失败**：返回结构化的错误信息
 
 ### 平台特定错误处理
 
 - **GitHub**：解析 GitHub API 错误响应，提供详细的错误信息
 - **Codeup**：解析 Codeup API 错误响应，提供详细的错误信息
+
+每个平台实现都有自己的错误处理模块（`errors.rs`），统一封装平台特定的错误类型。
 
 ---
 
@@ -515,48 +395,48 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 
 ```mermaid
 flowchart LR
-    Input[用户输入<br/>Jira ticket<br/>title<br/>description] --> Command[命令层处理<br/>交互、验证]
-    Command --> Generate[生成内容<br/>分支名<br/>commit 标题<br/>PR body]
-    Generate --> Git[Git 操作<br/>创建分支<br/>提交<br/>推送]
-    Git --> Factory[工厂函数<br/>create_provider]
+    Caller[调用者<br/>提供参数] --> Factory[工厂函数<br/>create_provider]
     Factory --> Platform{平台选择}
-    Platform -->|GitHub| GitHubAPI[GitHub API]
-    Platform -->|Codeup| CodeupAPI[Codeup API]
-    GitHubAPI --> Jira[Jira 更新<br/>状态更新<br/>工作历史]
-    CodeupAPI --> Jira
-    Jira --> Tools[工具操作<br/>剪贴板<br/>浏览器]
+    Platform -->|GitHub| GitHub[GitHub 实现<br/>构建请求]
+    Platform -->|Codeup| Codeup[Codeup 实现<br/>构建请求]
+    GitHub --> Http[HTTP 客户端<br/>发送请求]
+    Codeup --> Http
+    Http --> GitHubAPI[GitHub API]
+    Http --> CodeupAPI[Codeup API]
+    GitHubAPI --> Response[返回 PR URL]
+    CodeupAPI --> Response
 
-    style Input fill:#e1f5ff
-    style Command fill:#fff4e1
-    style Generate fill:#e8f5e9
-    style Git fill:#f3e5f5
+    style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
-    style GitHubAPI fill:#e3f2fd
-    style CodeupAPI fill:#fff3e0
-    style Jira fill:#f3e5f5
-    style Tools fill:#fff9c4
+    style GitHub fill:#e3f2fd
+    style Codeup fill:#fff3e0
+    style Http fill:#f3e5f5
+    style Response fill:#c8e6c9
 ```
 
-### 合并 PR 数据流
+### 获取 PR 信息数据流
 
 ```mermaid
 flowchart LR
-    Input[用户输入<br/>PR ID 或<br/>自动检测] --> Command[命令层处理<br/>获取 PR ID<br/>检查状态]
-    Command --> Factory[工厂函数<br/>create_provider]
+    Caller[调用者<br/>提供 PR ID] --> Factory[工厂函数<br/>create_provider]
     Factory --> Platform{平台选择}
-    Platform -->|GitHub| GitHubAPI[GitHub API<br/>合并 PR]
-    Platform -->|Codeup| CodeupAPI[Codeup API<br/>合并 PR]
-    GitHubAPI --> Git[Git 操作<br/>切换分支<br/>删除分支]
-    CodeupAPI --> Git
-    Git --> Jira[Jira 更新<br/>从工作历史查找 ticket<br/>更新状态]
+    Platform -->|GitHub| GitHub[GitHub 实现<br/>构建请求]
+    Platform -->|Codeup| Codeup[Codeup 实现<br/>构建请求]
+    GitHub --> Http[HTTP 客户端<br/>发送请求]
+    Codeup --> Http
+    Http --> GitHubAPI[GitHub API]
+    Http --> CodeupAPI[Codeup API]
+    GitHubAPI --> Parse[解析响应]
+    CodeupAPI --> Parse
+    Parse --> Response[返回 PR 信息]
 
-    style Input fill:#e1f5ff
-    style Command fill:#fff4e1
+    style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
-    style GitHubAPI fill:#e3f2fd
-    style CodeupAPI fill:#fff3e0
-    style Git fill:#f3e5f5
-    style Jira fill:#f3e5f5
+    style GitHub fill:#e3f2fd
+    style Codeup fill:#fff3e0
+    style Http fill:#f3e5f5
+    style Parse fill:#fff9c4
+    style Response fill:#c8e6c9
 ```
 
 ---
@@ -589,13 +469,6 @@ pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
 }
 ```
 
-### 添加新命令
-
-1. 在 `commands/pr/` 下创建新的命令文件（如 `reopen.rs`）
-2. 实现命令结构体和处理方法
-3. 在 `commands/pr/mod.rs` 中导出
-4. 在 `bin/pr.rs` 中添加命令枚举和处理逻辑
-
 ### 添加新的辅助函数
 
 1. 在 `lib/pr/helpers.rs` 中添加新函数
@@ -606,7 +479,8 @@ pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
 
 ## 📚 相关文档
 
-- [主架构文档](./ARCHITECTURE.md)
+- [主架构文档](../ARCHITECTURE.md)
+- [PR 命令模块架构文档](../commands/PR_COMMAND_ARCHITECTURE.md) - PR 命令层详情
 - [Jira 模块架构文档](./JIRA_ARCHITECTURE.md) - Jira 集成详情
 - [Git 模块架构文档](./GIT_ARCHITECTURE.md) - Git 操作详情
 - [LLM 模块架构文档](./LLM_ARCHITECTURE.md) - AI 功能详情
@@ -718,9 +592,10 @@ PR 模块采用清晰的分层架构设计：
 
 **设计优势**：
 - ✅ **多态支持**：通过 trait 对象实现真正的多态
-- ✅ **代码复用**：消除命令层的重复代码
+- ✅ **代码复用**：消除调用层的重复代码
 - ✅ **易于扩展**：添加新平台只需实现 trait
 - ✅ **模块化**：按平台拆分，职责清晰
 - ✅ **类型安全**：使用 trait 和类型系统保证类型安全
+- ✅ **平台无关**：调用者无需关心具体平台实现
 
-通过平台抽象和工厂模式，实现了代码复用、易于维护和扩展的目标。
+通过平台抽象和工厂模式，实现了代码复用、易于维护和扩展的目标。命令层（`commands/pr/`）使用本模块提供的接口，实现了完整的 PR 生命周期管理功能。
