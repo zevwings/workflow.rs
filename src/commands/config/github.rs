@@ -2,13 +2,16 @@
 //! 用于管理多个 GitHub 账号的配置
 
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::settings::settings::Settings;
 use crate::base::util::{confirm, mask_sensitive_value};
+use crate::commands::config::helpers::{
+    collect_github_account, collect_github_account_with_defaults,
+};
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::{Input, Select};
+use dialoguer::Select;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
@@ -86,10 +89,10 @@ impl GitHubCommand {
         log_break!('=', 40, "Add GitHub Account");
         log_break!();
 
-        let mut settings = Settings::load();
-        let account = Self::collect_github_account()?;
+        let account = collect_github_account()?;
 
-        // 检查账号名称是否已存在
+        // 先检查账号名称是否已存在
+        let settings = Settings::load();
         if settings
             .github
             .accounts
@@ -102,34 +105,49 @@ impl GitHubCommand {
             ));
         }
 
-        settings.github.accounts.push(account.clone());
+        let is_first_account = settings.github.accounts.is_empty();
+        let account_name = account.name.clone();
+        let account_email = account.email.clone();
+
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+
+        manager.update(|settings| {
+            settings.github.accounts.push(account.clone());
+
+            // 如果这是第一个账号，自动设置为当前账号
+            if is_first_account {
+                settings.github.current = Some(account_name.clone());
+            }
+        })?;
 
         // 如果这是第一个账号，自动设置为当前账号
-        if settings.github.accounts.len() == 1 {
-            settings.github.current = Some(account.name.clone());
-            GitConfig::set_global_user(&account.email, &account.name)?;
-            log_success!("Account '{}' added and set as current.", account.name);
+        if is_first_account {
+            GitConfig::set_global_user(&account_email, &account_name)?;
+            log_success!("Account '{}' added and set as current.", account_name);
         } else {
-            log_success!("Account '{}' added.", account.name);
+            log_success!("Account '{}' added.", account_name);
             log_break!();
 
             // 询问是否要将新账号设为当前账号
             let should_set_current = confirm(
-                &format!("Set '{}' as the current GitHub account?", account.name),
+                &format!("Set '{}' as the current GitHub account?", account_name),
                 false,
                 None,
             )?;
 
             if should_set_current {
-                settings.github.current = Some(account.name.clone());
-                GitConfig::set_global_user(&account.email, &account.name)?;
-                log_success!("Account '{}' is now set as current.", account.name);
+                let config_path = Paths::workflow_config()?;
+                let manager = ConfigManager::<Settings>::new(config_path);
+                manager.update(|settings| {
+                    settings.github.current = Some(account_name.clone());
+                })?;
+                GitConfig::set_global_user(&account_email, &account_name)?;
+                log_success!("Account '{}' is now set as current.", account_name);
             } else {
                 log_message!("Current account remains unchanged.");
             }
         }
-
-        Self::save_settings(&settings)?;
 
         Ok(())
     }
@@ -139,7 +157,7 @@ impl GitHubCommand {
         log_break!('=', 40, "Remove GitHub Account");
         log_break!();
 
-        let mut settings = Settings::load();
+        let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");
@@ -168,7 +186,7 @@ impl GitHubCommand {
             .interact()
             .context("Failed to get account selection")?;
 
-        let account_name = &account_names[selection];
+        let account_name = account_names[selection].clone();
 
         // 确认删除
         if !confirm(
@@ -188,40 +206,74 @@ impl GitHubCommand {
             .github
             .current
             .as_ref()
-            .map(|c| c == account_name)
+            .map(|c| c == &account_name)
             .unwrap_or(false);
 
-        settings.github.accounts.remove(selection);
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
 
-        // 如果删除后还有账号
-        if !settings.github.accounts.is_empty() {
-            // 检查当前账号是否还在列表中
-            let current_still_exists = settings
-                .github
-                .current
-                .as_ref()
-                .map(|current_name| {
-                    settings
+        manager.update(|settings| {
+            settings.github.accounts.remove(selection);
+
+            // 如果删除后还有账号
+            if !settings.github.accounts.is_empty() {
+                // 检查当前账号是否还在列表中
+                let current_still_exists = settings
+                    .github
+                    .current
+                    .as_ref()
+                    .map(|current_name| {
+                        settings
+                            .github
+                            .accounts
+                            .iter()
+                            .any(|a| &a.name == current_name)
+                    })
+                    .unwrap_or(false);
+
+                // 如果删除的是当前账号，或者当前账号不在列表中，或者没有设置当前账号，则设置第一个账号为当前账号
+                if was_current || !current_still_exists || settings.github.current.is_none() {
+                    let new_current = &settings.github.accounts[0];
+                    settings.github.current = Some(new_current.name.clone());
+                }
+            } else {
+                // 如果没有账号了，清空 current
+                settings.github.current = None;
+            }
+        })?;
+
+        // 如果删除后还有账号，且需要更新 git config
+        let settings_after = Settings::load();
+        if !settings_after.github.accounts.is_empty() {
+            let should_update_git = was_current
+                || settings
+                    .github
+                    .current
+                    .as_ref()
+                    .map(|current_name| {
+                        !settings_after
+                            .github
+                            .accounts
+                            .iter()
+                            .any(|a| &a.name == current_name)
+                    })
+                    .unwrap_or(true);
+
+            if should_update_git {
+                if let Some(current_name) = &settings_after.github.current {
+                    if let Some(current_account) = settings_after
                         .github
                         .accounts
                         .iter()
-                        .any(|a| &a.name == current_name)
-                })
-                .unwrap_or(false);
-
-            // 如果删除的是当前账号，或者当前账号不在列表中，或者没有设置当前账号，则设置第一个账号为当前账号
-            if was_current || !current_still_exists || settings.github.current.is_none() {
-                let new_current = &settings.github.accounts[0];
-                settings.github.current = Some(new_current.name.clone());
-                GitConfig::set_global_user(&new_current.email, &new_current.name)?;
+                        .find(|a| &a.name == current_name)
+                    {
+                        GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+                    }
+                }
             }
-        } else {
-            // 如果没有账号了，清空 current
-            settings.github.current = None;
         }
 
         log_success!("Account '{}' removed.", account_name);
-        Self::save_settings(&settings)?;
 
         Ok(())
     }
@@ -231,7 +283,7 @@ impl GitHubCommand {
         log_break!('=', 40, "Switch GitHub Account");
         log_break!();
 
-        let mut settings = Settings::load();
+        let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");
@@ -268,11 +320,16 @@ impl GitHubCommand {
 
         let account_name = account_names[selection].clone();
         let account = &settings.github.accounts[selection];
-        settings.github.current = Some(account_name.clone());
+
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+
+        manager.update(|settings| {
+            settings.github.current = Some(account_name.clone());
+        })?;
 
         GitConfig::set_global_user(&account.email, &account.name)?;
         log_success!("Switched to account '{}'.", account_name);
-        Self::save_settings(&settings)?;
 
         Ok(())
     }
@@ -282,7 +339,7 @@ impl GitHubCommand {
         log_break!('=', 40, "Update GitHub Account");
         log_break!();
 
-        let mut settings = Settings::load();
+        let settings = Settings::load();
 
         if settings.github.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");
@@ -326,7 +383,7 @@ impl GitHubCommand {
         log_break!();
 
         // 收集新的账号信息（使用现有值作为默认值）
-        let new_account = Self::collect_github_account_with_defaults(old_account)?;
+        let new_account = collect_github_account_with_defaults(old_account)?;
 
         // 如果账号名称改变了，检查新名称是否已存在（排除当前正在更新的账号）
         if new_account.name != old_account.name
@@ -352,159 +409,35 @@ impl GitHubCommand {
             .unwrap_or(false);
 
         // 如果账号名称改变了，且这个账号是当前账号，需要更新 current 字段
-        if new_account.name != old_account.name && is_current {
-            settings.github.current = Some(new_account.name.clone());
-        }
+        let name_changed = new_account.name != old_account.name;
+        let should_update_current = name_changed && is_current;
 
         // 如果更新的是当前账号，且 email 或 name 改变了，需要更新 git config
         let should_update_git_config = is_current
             && (new_account.email != old_account.email || new_account.name != old_account.name);
 
-        settings.github.accounts[selection] = new_account.clone();
+        let new_account_name = new_account.name.clone();
+        let new_account_email = new_account.email.clone();
+
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+
+        manager.update(|settings| {
+            settings.github.accounts[selection] = new_account.clone();
+
+            // 如果账号名称改变了，且这个账号是当前账号，需要更新 current 字段
+            if should_update_current {
+                settings.github.current = Some(new_account_name.clone());
+            }
+        })?;
 
         // 更新 git config（在更新 accounts 之后）
         if should_update_git_config {
-            let updated_account = &settings.github.accounts[selection];
-            GitConfig::set_global_user(&updated_account.email, &updated_account.name)?;
+            GitConfig::set_global_user(&new_account_email, &new_account_name)?;
         }
 
-        log_success!("Account '{}' updated.", new_account.name);
-        Self::save_settings(&settings)?;
+        log_success!("Account '{}' updated.", new_account_name);
 
-        Ok(())
-    }
-
-    /// 收集 GitHub 账号信息
-    fn collect_github_account() -> Result<GitHubAccount> {
-        let name: String = Input::new()
-            .with_prompt("GitHub account name")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Account name is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account name")?;
-
-        let email: String = Input::new()
-            .with_prompt("GitHub account email")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Email is required and cannot be empty")
-                } else if !input.contains('@') {
-                    Err("Please enter a valid email address")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account email")?;
-
-        let api_token: String = Input::new()
-            .with_prompt("GitHub API token")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("GitHub API token is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub API token")?;
-
-        let branch_prefix: String = Input::new()
-            .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
-            .allow_empty(true)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        Ok(GitHubAccount {
-            name: name.trim().to_string(),
-            email: email.trim().to_string(),
-            api_token: api_token.trim().to_string(),
-            branch_prefix: if branch_prefix.trim().is_empty() {
-                None
-            } else {
-                Some(branch_prefix.trim().to_string())
-            },
-        })
-    }
-
-    /// 收集 GitHub 账号信息（使用现有值作为默认值）
-    fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Result<GitHubAccount> {
-        let name: String = Input::new()
-            .with_prompt("GitHub account name")
-            .default(old_account.name.clone())
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Account name is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account name")?;
-
-        let email: String = Input::new()
-            .with_prompt("GitHub account email")
-            .default(old_account.email.clone())
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Email is required and cannot be empty")
-                } else if !input.contains('@') {
-                    Err("Please enter a valid email address")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account email")?;
-
-        let api_token: String = Input::new()
-            .with_prompt("GitHub API token")
-            .default(old_account.api_token.clone())
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("GitHub API token is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub API token")?;
-
-        let branch_prefix: String = Input::new()
-            .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
-            .default(
-                old_account
-                    .branch_prefix
-                    .as_deref()
-                    .unwrap_or("")
-                    .to_string(),
-            )
-            .allow_empty(true)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        Ok(GitHubAccount {
-            name: name.trim().to_string(),
-            email: email.trim().to_string(),
-            api_token: api_token.trim().to_string(),
-            branch_prefix: if branch_prefix.trim().is_empty() {
-                None
-            } else {
-                Some(branch_prefix.trim().to_string())
-            },
-        })
-    }
-
-    /// 保存设置到 TOML 文件
-    fn save_settings(settings: &Settings) -> Result<()> {
-        let config_path = Paths::workflow_config()?;
-        let manager = ConfigManager::<Settings>::new(config_path);
-        manager.write(settings)?;
         Ok(())
     }
 }

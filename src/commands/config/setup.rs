@@ -5,6 +5,7 @@ use crate::base::settings::defaults::{default_llm_model, default_response_format
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
+use crate::commands::config::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
@@ -136,7 +137,7 @@ impl SetupCommand {
             match selection {
                 0 => {
                     // 添加新账号
-                    let account = Self::collect_github_account()?;
+                    let account = collect_github_account()?;
                     github_accounts.push(account);
                     account_added = true;
                     // 如果是第一个账号，自动设置为当前账号
@@ -196,7 +197,7 @@ impl SetupCommand {
         } else {
             // 没有账号，添加第一个账号
             log_message!("No GitHub accounts configured. Let's add one:");
-            let account = Self::collect_github_account()?;
+            let account = collect_github_account()?;
             github_accounts.push(account);
             let first_account = github_accounts.first().unwrap();
             github_current = Some(first_account.name.clone());
@@ -601,64 +602,6 @@ impl SetupCommand {
             llm_key,
             llm_model,
             llm_response_format,
-        })
-    }
-
-    /// 收集单个 GitHub 账号信息
-    fn collect_github_account() -> Result<GitHubAccount> {
-        let name: String = Input::new()
-            .with_prompt("GitHub account name")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Account name is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account name")?;
-
-        let email: String = Input::new()
-            .with_prompt("GitHub account email")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("Email is required and cannot be empty")
-                } else if !input.contains('@') {
-                    Err("Please enter a valid email address")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub account email")?;
-
-        let api_token: String = Input::new()
-            .with_prompt("GitHub API token")
-            .validate_with(|input: &String| -> Result<(), &str> {
-                if input.trim().is_empty() {
-                    Err("GitHub API token is required and cannot be empty")
-                } else {
-                    Ok(())
-                }
-            })
-            .interact_text()
-            .context("Failed to get GitHub API token")?;
-
-        let branch_prefix: String = Input::new()
-            .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
-            .allow_empty(true)
-            .interact_text()
-            .context("Failed to get GitHub branch prefix")?;
-
-        Ok(GitHubAccount {
-            name: name.trim().to_string(),
-            email: email.trim().to_string(),
-            api_token: api_token.trim().to_string(),
-            branch_prefix: if branch_prefix.trim().is_empty() {
-                None
-            } else {
-                Some(branch_prefix.trim().to_string())
-            },
         })
     }
 

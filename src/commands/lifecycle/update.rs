@@ -78,6 +78,8 @@ pub struct UpdateCommand;
 
 #[allow(dead_code)]
 impl UpdateCommand {
+    // ==================== 版本管理 ====================
+
     /// 获取当前安装的版本号
     ///
     /// 尝试多种方法获取当前版本：
@@ -182,6 +184,8 @@ impl UpdateCommand {
         VersionComparison::UpToDate
     }
 
+    // ==================== 平台检测 ====================
+
     /// 第一步：检测当前平台
     ///
     /// 返回平台标识符，用于匹配 GitHub Releases 中的资源文件。
@@ -192,9 +196,11 @@ impl UpdateCommand {
         match (os, arch) {
             ("macos", "x86_64") => Ok("macOS-Intel".to_string()),
             ("macos", "aarch64") => Ok("macOS-AppleSilicon".to_string()),
-            _ => anyhow::bail!("不支持的平台: {}-{}", os, arch),
+            _ => anyhow::bail!("Unsupported platform: {}-{}", os, arch),
         }
     }
+
+    // ==================== 下载相关 ====================
 
     /// 第二步：获取版本号
     ///
@@ -202,11 +208,11 @@ impl UpdateCommand {
     fn get_version(version: Option<String>) -> Result<String> {
         match version {
             Some(v) => {
-                log_info!("使用指定版本: v{}", v);
+                log_info!("Using specified version: v{}", v);
                 Ok(v)
             }
             None => {
-                log_info!("正在获取最新版本...");
+                log_info!("Fetching latest version...");
 
                 let url = "https://api.github.com/repos/zevwings/workflow.rs/releases/latest";
                 let retry_config = HttpRetryConfig::new();
@@ -219,17 +225,17 @@ impl UpdateCommand {
                             .context("Failed to fetch latest release from GitHub")
                     },
                     &retry_config,
-                    "获取最新版本信息",
+                    "Fetching latest version information",
                 )?;
 
                 if response.status < 200 || response.status >= 300 {
-                    anyhow::bail!("获取最新版本失败: HTTP {}", response.status);
+                    anyhow::bail!("Failed to fetch latest version: HTTP {}", response.status);
                 }
 
                 let release: GitHubRelease = response.as_json()?;
                 let version = release.tag_name.trim_start_matches('v').to_string();
 
-                log_success!("  最新版本: v{}", version);
+                log_success!("  Latest version: v{}", version);
                 Ok(version)
             }
         }
@@ -269,9 +275,9 @@ impl UpdateCommand {
     /// 从指定 URL 下载文件到临时目录，显示下载进度。
     /// 支持重试机制，如果下载失败会自动重试。
     fn download_file(url: &str, output_path: &Path) -> Result<()> {
-        log_info!("正在下载更新包...");
-        log_debug!("下载 URL: {}", url);
-        log_debug!("保存到: {}", output_path.display());
+        log_info!("Downloading update package...");
+        log_debug!("Download URL: {}", url);
+        log_debug!("Saving to: {}", output_path.display());
 
         let retry_config = HttpRetryConfig::new();
 
@@ -280,7 +286,7 @@ impl UpdateCommand {
                 // 如果文件已存在且不完整，先删除它
                 if output_path.exists() {
                     if let Err(e) = fs::remove_file(output_path) {
-                        log_debug!("删除不完整文件失败: {}", e);
+                        log_debug!("Failed to delete incomplete file: {}", e);
                     }
                 }
 
@@ -291,7 +297,7 @@ impl UpdateCommand {
                     .context("Failed to send HTTP request")?;
 
                 if !response.status().is_success() {
-                    anyhow::bail!("下载失败: HTTP {}", response.status());
+                    anyhow::bail!("Download failed: HTTP {}", response.status());
                 }
 
                 // 获取文件总大小（如果可用）
@@ -303,7 +309,7 @@ impl UpdateCommand {
 
                 // 创建进度条
                 let pb = if let Some(size) = total_size {
-                    log_info!("文件大小: {}", Self::format_size(size));
+                    log_info!("File size: {}", Self::format_size(size));
                     let pb = ProgressBar::new(size);
                     pb.set_style(
                         ProgressStyle::default_bar()
@@ -316,7 +322,7 @@ impl UpdateCommand {
                     let pb = ProgressBar::new_spinner();
                     pb.set_style(
                         ProgressStyle::default_spinner()
-                            .template("{spinner:.green} [{elapsed_precise}] {bytes} 已下载...")
+                            .template("{spinner:.green} [{elapsed_precise}] {bytes} downloaded...")
                             .unwrap(),
                     );
                     pb
@@ -344,11 +350,11 @@ impl UpdateCommand {
                     pb.set_position(downloaded_bytes);
                 }
 
-                pb.finish_with_message("下载完成");
+                pb.finish_with_message("Download complete");
                 Ok(())
             },
             &retry_config,
-            "下载更新包",
+            "Downloading update package",
         )
     }
 
@@ -356,27 +362,32 @@ impl UpdateCommand {
     ///
     /// 解压 tar.gz 文件到指定目录。
     fn extract_archive(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
-        log_info!("正在解压更新包...");
-        log_debug!("正在解压: {}", tar_gz_path.display());
-        log_debug!("解压到: {}", output_dir.display());
+        log_info!("Extracting update package...");
+        log_debug!("Extracting: {}", tar_gz_path.display());
+        log_debug!("Extracting to: {}", output_dir.display());
 
         Unzip::extract_tar_gz(tar_gz_path, output_dir)?;
 
-        log_success!("  解压完成");
+        log_success!("  Extraction complete");
         Ok(())
     }
+
+    // ==================== 解压和安装 ====================
 
     /// 第六步：使用 ./install 安装二进制文件和补全脚本
     ///
     /// 在解压目录中运行 ./install 来安装二进制文件到 /usr/local/bin 和补全脚本。
     /// 默认行为是安装全部（二进制文件 + completions）。
     fn install(extract_dir: &Path) -> Result<()> {
-        log_info!("正在安装二进制文件和补全脚本...");
+        log_info!("Installing binaries and completion scripts...");
 
         let install_binary = extract_dir.join("install");
 
         if !install_binary.exists() {
-            anyhow::bail!("install 二进制文件不存在: {}", install_binary.display());
+            anyhow::bail!(
+                "Install binary does not exist: {}",
+                install_binary.display()
+            );
         }
 
         // 设置执行权限
@@ -393,12 +404,16 @@ impl UpdateCommand {
             .context("Failed to run install")?;
 
         if !status.success() {
-            anyhow::bail!("安装失败");
+            anyhow::bail!("Installation failed");
         }
 
-        log_success!("  二进制文件和补全脚本安装完成");
+        log_success!("  Binaries and completion scripts installation complete");
         Ok(())
     }
+
+    // ==================== 验证相关 ====================
+
+    // --- 基础验证工具方法 ---
 
     /// 检查文件是否可执行
     ///
@@ -452,6 +467,8 @@ impl UpdateCommand {
         }
     }
 
+    // --- 高级验证方法 ---
+
     /// 验证单个二进制文件
     ///
     /// 检查二进制文件是否存在、可执行、版本正确且可用。
@@ -498,7 +515,7 @@ impl UpdateCommand {
     ///
     /// 验证 workflow、pr、qk 三个二进制文件。
     fn verify_binaries(target_version: &str) -> Result<Vec<BinaryStatus>> {
-        log_info!("验证二进制文件...");
+        log_info!("Verifying binaries...");
 
         let binaries = ["workflow", "pr", "qk"];
         let mut results = Vec::new();
@@ -516,12 +533,14 @@ impl UpdateCommand {
     ///
     /// 检查补全脚本文件是否存在、是否可读，并验证文件内容基本格式。
     fn verify_completions() -> Result<bool> {
-        log_info!("验证补全脚本...");
+        log_info!("Verifying completion scripts...");
 
         let shell = match Detect::shell() {
             Ok(shell) => shell,
             Err(_) => {
-                log_warning!("无法检测 shell 类型，跳过补全脚本验证");
+                log_warning!(
+                    "Unable to detect shell type, skipping completion script verification"
+                );
                 return Ok(false);
             }
         };
@@ -530,7 +549,10 @@ impl UpdateCommand {
 
         // 检查补全脚本目录是否存在
         if !completion_dir.exists() {
-            log_warning!("补全脚本目录不存在: {}", completion_dir.display());
+            log_warning!(
+                "Completion script directory does not exist: {}",
+                completion_dir.display()
+            );
             return Ok(false);
         }
 
@@ -546,14 +568,18 @@ impl UpdateCommand {
 
             // 1. 检查文件是否存在
             if !path.exists() {
-                log_warning!("补全脚本不存在: {}", path.display());
+                log_warning!("Completion script does not exist: {}", path.display());
                 all_valid = false;
                 continue;
             }
 
             // 2. 检查文件是否可读
             if let Err(e) = fs::metadata(&path) {
-                log_warning!("无法读取补全脚本元数据: {} ({})", path.display(), e);
+                log_warning!(
+                    "Unable to read completion script metadata: {} ({})",
+                    path.display(),
+                    e
+                );
                 all_valid = false;
                 continue;
             }
@@ -561,7 +587,7 @@ impl UpdateCommand {
             // 3. 检查文件大小（应该大于 0）
             if let Ok(metadata) = fs::metadata(&path) {
                 if metadata.len() == 0 {
-                    log_warning!("补全脚本文件为空: {}", path.display());
+                    log_warning!("Completion script file is empty: {}", path.display());
                     all_valid = false;
                     continue;
                 }
@@ -572,32 +598,38 @@ impl UpdateCommand {
                 // 对于 zsh，检查是否包含基本的补全函数定义
                 if shell == Shell::Zsh {
                     if !content.contains("#compdef") && !content.contains("compdef") {
-                        log_warning!("补全脚本格式可能不正确: {} (缺少 compdef)", path.display());
+                        log_warning!(
+                            "Completion script format may be incorrect: {} (missing compdef)",
+                            path.display()
+                        );
                         // 不标记为失败，因为可能是其他格式的补全脚本
                     }
                 } else {
                     // 对于 bash，检查是否包含基本的补全函数定义
                     if !content.contains("complete") && !content.contains("_") {
                         log_warning!(
-                            "补全脚本格式可能不正确: {} (缺少 complete 命令)",
+                            "Completion script format may be incorrect: {} (missing complete command)",
                             path.display()
                         );
                         // 不标记为失败，因为可能是其他格式的补全脚本
                     }
                 }
             } else {
-                log_warning!("无法读取补全脚本内容: {}", path.display());
+                log_warning!(
+                    "Unable to read completion script content: {}",
+                    path.display()
+                );
                 all_valid = false;
                 continue;
             }
 
-            log_debug!("补全脚本验证通过: {}", path.display());
+            log_debug!("Completion script verification passed: {}", path.display());
         }
 
         if all_valid {
-            log_success!("  补全脚本验证通过");
+            log_success!("  Completion script verification passed");
         } else {
-            log_warning!("部分补全脚本验证失败");
+            log_warning!("Some completion script verifications failed");
         }
 
         Ok(all_valid)
@@ -607,7 +639,7 @@ impl UpdateCommand {
     ///
     /// 验证更新后的安装是否成功，包括二进制文件和补全脚本。
     fn verify_installation(target_version: &str) -> Result<VerificationResult> {
-        log_info!("正在验证安装...");
+        log_info!("Verifying installation...");
         log_break!();
 
         // 验证二进制文件
@@ -616,30 +648,30 @@ impl UpdateCommand {
         let mut all_binaries_ok = true;
         for binary in &binaries {
             if !binary.exists {
-                log_warning!("二进制文件不存在: {}", binary.path);
+                log_warning!("Binary file does not exist: {}", binary.path);
                 all_binaries_ok = false;
             } else if !binary.executable {
-                log_warning!("二进制文件不可执行: {}", binary.path);
+                log_warning!("Binary file is not executable: {}", binary.path);
                 all_binaries_ok = false;
             } else if let Some(ref version) = binary.version {
                 if version != target_version {
                     log_warning!(
-                        "二进制文件版本不匹配: {} (期望: {}, 实际: {})",
+                        "Binary file version mismatch: {} (expected: {}, actual: {})",
                         binary.name,
                         target_version,
                         version
                     );
                     all_binaries_ok = false;
                 } else {
-                    log_success!("  {} v{} 验证通过", binary.name, version);
+                    log_success!("  {} v{} verification passed", binary.name, version);
                 }
             } else {
-                log_warning!("无法获取 {} 的版本号", binary.name);
+                log_warning!("Unable to get version number for {}", binary.name);
                 all_binaries_ok = false;
             }
 
             if !binary.working {
-                log_warning!("二进制文件无法正常工作: {}", binary.name);
+                log_warning!("Binary file cannot work properly: {}", binary.name);
                 all_binaries_ok = false;
             }
         }
@@ -649,9 +681,9 @@ impl UpdateCommand {
         // 验证补全脚本
         let completions_installed = Self::verify_completions()?;
         if completions_installed {
-            log_success!("  补全脚本验证通过");
+            log_success!("  Completion script verification passed");
         } else {
-            log_warning!("补全脚本验证失败");
+            log_warning!("Completion script verification failed");
         }
 
         log_break!();
@@ -660,9 +692,9 @@ impl UpdateCommand {
         let all_checks_passed = all_binaries_ok && completions_installed;
 
         if all_checks_passed {
-            log_success!("所有验证通过！");
+            log_success!("All verifications passed!");
         } else {
-            log_warning!("部分验证失败，请检查上述警告信息");
+            log_warning!("Some verifications failed, please check the above warning messages");
         }
 
         Ok(VerificationResult {
@@ -671,6 +703,8 @@ impl UpdateCommand {
             all_checks_passed,
         })
     }
+
+    // ==================== 主流程 ====================
 
     /// 执行完整的更新操作
     ///
@@ -686,21 +720,21 @@ impl UpdateCommand {
     /// 9. 使用 ./install 安装二进制文件和补全脚本（默认安装全部）
     /// 10. 验证安装结果
     pub fn update(version: Option<String>) -> Result<()> {
-        log_info!("开始更新 Workflow CLI...");
+        log_info!("Starting Workflow CLI update...");
         log_break!();
 
         // 获取当前版本
         let current_version = Self::get_current_version()?;
         if let Some(ref current) = current_version {
-            log_info!("当前版本: v{}", current);
+            log_info!("Current version: v{}", current);
         } else {
-            log_warning!("无法检测当前版本，将继续更新流程");
+            log_warning!("Unable to detect current version, will continue update process");
         }
         log_break!();
 
         // 第一步：检测平台
         let platform = Self::detect_platform()?;
-        log_info!("检测到平台: {}", platform);
+        log_info!("Detected platform: {}", platform);
         log_break!();
 
         // 第二步：获取目标版本号
@@ -710,33 +744,40 @@ impl UpdateCommand {
         if let Some(ref current) = current_version {
             match Self::compare_versions(current, &target_version) {
                 VersionComparison::UpToDate => {
-                    log_success!("当前已是最新版本 (v{})，无需更新", current);
+                    log_success!("Already at latest version (v{}), no update needed", current);
                     return Ok(());
                 }
                 VersionComparison::NeedsUpdate => {
-                    log_info!("发现新版本: v{} -> v{}", current, target_version);
+                    log_info!("New version found: v{} -> v{}", current, target_version);
                 }
                 VersionComparison::Downgrade => {
-                    log_warning!("目标版本 (v{}) 低于当前版本 (v{})", target_version, current);
-                    log_warning!("  这将执行降级操作");
+                    log_warning!(
+                        "Target version (v{}) is lower than current version (v{})",
+                        target_version,
+                        current
+                    );
+                    log_warning!("  This will perform a downgrade operation");
                 }
             }
         } else {
-            log_info!("目标版本: v{}", target_version);
+            log_info!("Target version: v{}", target_version);
         }
         log_break!();
 
         // 第三步：获取用户确认
         let confirm_message = if let Some(ref current) = current_version {
             format!(
-                "确定要更新 Workflow CLI 吗？\n  当前版本: v{}\n  目标版本: v{}",
+                "Are you sure you want to update Workflow CLI?\n  Current version: v{}\n  Target version: v{}",
                 current, target_version
             )
         } else {
-            format!("确定要更新 Workflow CLI 到 v{} 吗？", target_version)
+            format!(
+                "Are you sure you want to update Workflow CLI to v{}?",
+                target_version
+            )
         };
 
-        if !confirm(&confirm_message, true, Some("更新已取消"))? {
+        if !confirm(&confirm_message, true, Some("Update cancelled"))? {
             return Ok(());
         }
         log_break!();
@@ -748,9 +789,9 @@ impl UpdateCommand {
                 Some(backup)
             }
             Err(e) => {
-                log_warning!("创建备份失败: {}", e);
-                log_warning!("  将继续更新，但无法在失败时回滚");
-                log_warning!("  如果更新失败，可能需要手动恢复");
+                log_warning!("Failed to create backup: {}", e);
+                log_warning!("  Will continue update, but cannot rollback on failure");
+                log_warning!("  If update fails, manual recovery may be required");
                 log_break!();
                 None
             }
@@ -758,7 +799,7 @@ impl UpdateCommand {
 
         // 第五步：构建下载 URL
         let download_url = Self::build_download_url(&target_version, &platform);
-        log_info!("下载 URL: {}", download_url);
+        log_info!("Download URL: {}", download_url);
         log_break!();
 
         // 创建临时目录
@@ -792,7 +833,7 @@ impl UpdateCommand {
                     response.as_text()
                 },
                 &retry_config,
-                "下载校验和文件",
+                "Downloading checksum file",
             )
             .context("Failed to download checksum file")?;
 
@@ -818,7 +859,7 @@ impl UpdateCommand {
 
             // 如果验证失败，认为更新失败
             if !verification_result.all_checks_passed {
-                anyhow::bail!("安装验证失败，部分检查未通过");
+                anyhow::bail!("Installation verification failed, some checks did not pass");
             }
 
             Ok(())
@@ -828,24 +869,24 @@ impl UpdateCommand {
         match update_result {
             Ok(()) => {
                 // 更新成功，清理临时文件和备份
-                log_debug!("清理临时文件...");
+                log_debug!("Cleaning up temporary files...");
                 if let Err(e) = fs::remove_dir_all(&temp_dir) {
-                    log_warning!("清理临时文件失败: {}", e);
+                    log_warning!("Failed to clean up temporary files: {}", e);
                 }
 
                 // 清理备份
                 if let Some(ref backup) = backup_info {
                     if let Err(e) = RollbackManager::cleanup_backup(backup) {
-                        log_warning!("清理备份失败: {}", e);
+                        log_warning!("Failed to clean up backup: {}", e);
                     }
                 }
 
-                log_success!("Workflow CLI 更新完成！所有验证通过。");
+                log_success!("Workflow CLI update complete! All verifications passed.");
                 Ok(())
             }
             Err(e) => {
                 // 更新失败，执行回滚
-                log_error!("更新失败: {}", e);
+                log_error!("Update failed: {}", e);
                 log_break!();
 
                 if let Some(ref backup) = backup_info {
@@ -854,28 +895,28 @@ impl UpdateCommand {
                             log_break!();
                             // 回滚成功后清理备份
                             if let Err(cleanup_err) = RollbackManager::cleanup_backup(backup) {
-                                log_warning!("清理备份失败: {}", cleanup_err);
+                                log_warning!("Failed to clean up backup: {}", cleanup_err);
                             }
                         }
                         Err(rollback_err) => {
-                            log_error!("回滚失败: {}", rollback_err);
-                            log_error!("  系统可能处于不一致状态");
-                            log_error!("  请手动检查并恢复文件");
-                            log_error!("  备份位置: {}", backup.backup_dir.display());
+                            log_error!("Rollback failed: {}", rollback_err);
+                            log_error!("  System may be in an inconsistent state");
+                            log_error!("  Please manually check and restore files");
+                            log_error!("  Backup location: {}", backup.backup_dir.display());
                         }
                     }
                 } else {
-                    log_error!("无法回滚：没有可用的备份");
-                    log_error!("  请手动检查并恢复文件");
+                    log_error!("Unable to rollback: no available backup");
+                    log_error!("  Please manually check and restore files");
                 }
 
                 // 清理临时文件
-                log_debug!("清理临时文件...");
+                log_debug!("Cleaning up temporary files...");
                 if let Err(cleanup_err) = fs::remove_dir_all(&temp_dir) {
-                    log_warning!("清理临时文件失败: {}", cleanup_err);
+                    log_warning!("Failed to clean up temporary files: {}", cleanup_err);
                 }
 
-                Err(e.context("更新失败"))
+                Err(e.context("Update failed"))
             }
         }
     }
