@@ -155,17 +155,56 @@ impl ShellConfigManager {
             // 重新构建文件内容
             let new_content = lines.join("\n");
 
+            // 检查配置块是否为空（只有标记和注释，没有 export 语句）
+            // 如果为空，则完全移除配置块
+            let final_content = Self::remove_empty_config_block(&new_content, marker_start, marker_end);
+
             // 确保文件以换行符结尾
-            let final_content = if new_content.ends_with('\n') {
-                new_content
+            let final_content = if final_content.ends_with('\n') {
+                final_content
             } else {
-                format!("{}\n", new_content)
+                format!("{}\n", final_content)
             };
 
             Self::write_config_file(&config_path, &final_content)?;
         }
 
         Ok(removed_any)
+    }
+
+    /// 移除空的配置块
+    ///
+    /// 如果配置块内没有任何 export 语句（只有标记和注释），则完全移除配置块。
+    fn remove_empty_config_block(content: &str, marker_start: &str, marker_end: &str) -> String {
+        // 查找配置块
+        if let Some(start_pos) = content.find(marker_start) {
+            if let Some(end_pos) = content[start_pos..].find(marker_end) {
+                let block_end = start_pos + end_pos + marker_end.len();
+                let block_content = &content[start_pos + marker_start.len()..start_pos + end_pos];
+
+                // 检查块内是否有任何 export 语句
+                let has_exports = block_content.lines().any(|line| {
+                    let trimmed = line.trim();
+                    !trimmed.is_empty() && !trimmed.starts_with('#') && trimmed.starts_with("export ")
+                });
+
+                // 如果没有 export 语句，移除整个配置块
+                if !has_exports {
+                    let before = content[..start_pos].trim_end();
+                    let after = content[block_end..].trim_start();
+
+                    return if before.is_empty() {
+                        after.to_string()
+                    } else if after.is_empty() {
+                        format!("{}\n", before)
+                    } else {
+                        format!("{}\n{}", before, after)
+                    };
+                }
+            }
+        }
+
+        content.to_string()
     }
 
     // === Source 语句管理 ===
@@ -571,6 +610,11 @@ impl ShellConfigManager {
         content_without_block: &str,
         env_vars: &HashMap<String, String>,
     ) -> Result<String> {
+        // 如果没有环境变量，不创建配置块，直接返回原内容
+        if env_vars.is_empty() {
+            return Ok(content_without_block.to_string());
+        }
+
         let config_block = Self::build_config_block(env_vars);
 
         // 合并内容

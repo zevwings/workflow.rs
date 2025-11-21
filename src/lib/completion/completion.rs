@@ -45,7 +45,7 @@ impl Completion {
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
     /// 包括 `github`、`proxy`、`log`、`clean` 等子命令。
-    /// `_pr` 和 `_qk` 是独立命令的 completion 文件。
+    /// `_pr`、`_qk` 和 `_install` 是独立命令的 completion 文件。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -55,11 +55,8 @@ impl Completion {
                 # Zsh completion setup\n\
                 \n\
                 fpath=($HOME/.workflow/completions $fpath)\n\
-                if [[ -f $HOME/.workflow/completions/_workflow ]]; then\n\
-                    source $HOME/.workflow/completions/_workflow\n\
-                    source $HOME/.workflow/completions/_pr\n\
-                    source $HOME/.workflow/completions/_qk\n\
-                fi\n"
+                autoload -Uz compinit\n\
+                compinit\n"
                 .to_string(),
             Shell::Bash => "# Workflow CLI completions\n\
                 # Bash completion setup\n\
@@ -362,9 +359,10 @@ impl Completion {
     /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `github`）
     /// - `_pr` / `pr.bash`: `pr` 独立命令
     /// - `_qk` / `qk.bash`: `qk` 独立命令
+    /// - `_install` / `install.bash`: `install` 独立命令
     pub fn get_completion_files(shell: &Shell) -> Vec<PathBuf> {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow", "pr", "qk", "install"];
         let shell_type_str = shell.to_string();
         super::helpers::get_completion_files_for_shell(&shell_type_str, &commands)
             .unwrap_or_default()
@@ -380,7 +378,7 @@ impl Completion {
     pub fn remove_completion_files(_shell: &Shell) -> Result<usize> {
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow", "pr", "qk", "install"];
         let all_file_names = super::helpers::get_all_completion_files(&commands);
         let all_files: Vec<PathBuf> = all_file_names
             .iter()

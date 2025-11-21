@@ -30,6 +30,10 @@ impl CompletionCommand {
         log_info!("Checking shell completion status...");
         log_break!();
 
+        // 检测当前使用的 shell
+        let current_shell = Detect::shell().ok();
+        log_debug!("Current shell: {:?}", current_shell);
+
         // 检测已安装的 shell
         let installed_shells = Detect::installed_shells();
         log_debug!("Detected installed shells: {:?}", installed_shells);
@@ -57,10 +61,10 @@ impl CompletionCommand {
             });
         }
 
-        // 显示结果
-        log_message!("Installed shells:");
-        for status in &statuses {
-            if status.installed {
+        // 显示当前 shell 状态
+        if let Some(current) = current_shell {
+            if let Some(status) = statuses.iter().find(|s| s.shell == current) {
+                log_message!("Current shell:");
                 let icon = if status.configured { "✓" } else { "✗" };
                 let config_status = if status.configured {
                     format!("Completion configured ({})", status.config_path.display())
@@ -68,10 +72,38 @@ impl CompletionCommand {
                     "Completion not configured".to_string()
                 };
                 log_message!("  {} {} - {}", icon, status.shell, config_status);
+                log_break!();
+
+                // 如果当前 shell 未配置，显示警告
+                if !status.configured {
+                    log_warning!("Your current shell ({}) does not have completion configured", current);
+                    log_info!("Hint: Run `workflow completion generate` to generate completion");
+                    log_break!();
+                }
             }
         }
 
-        log_break!();
+        // 显示其他已安装的 shell（仅供参考，不发出警告）
+        let other_shells: Vec<_> = statuses
+            .iter()
+            .filter(|s| {
+                s.installed && Some(s.shell) != current_shell
+            })
+            .collect();
+
+        if !other_shells.is_empty() {
+            log_message!("Other installed shells:");
+            for status in &other_shells {
+                let icon = if status.configured { "✓" } else { "○" };
+                let config_status = if status.configured {
+                    format!("Completion configured ({})", status.config_path.display())
+                } else {
+                    "Completion not configured".to_string()
+                };
+                log_message!("  {} {} - {}", icon, status.shell, config_status);
+            }
+            log_break!();
+        }
 
         // 显示未安装但已配置的 shell（可能用户手动配置了）
         let uninstalled_configured: Vec<_> = statuses
@@ -91,21 +123,13 @@ impl CompletionCommand {
             log_break!();
         }
 
-        // 显示未配置的 shell
-        let unconfigured: Vec<_> = statuses
-            .iter()
-            .filter(|s| s.installed && !s.configured)
-            .collect();
-
-        if !unconfigured.is_empty() {
-            log_warning!("Shells without completion configured:");
-            for status in &unconfigured {
-                log_message!("  ✗ {} - Completion not configured", status.shell);
+        // 显示当前 shell 的最终状态
+        if let Some(current) = current_shell {
+            if let Some(status) = statuses.iter().find(|s| s.shell == current) {
+                if status.configured {
+                    log_success!("Current shell ({}) has completion configured", current);
+                }
             }
-            log_break!();
-            log_info!("Hint: Run `workflow completion generate` to generate completion for unconfigured shells");
-        } else if statuses.iter().any(|s| s.installed && s.configured) {
-            log_success!("All installed shells have completion configured");
         }
 
         Ok(())

@@ -40,7 +40,7 @@ pub fn get_completion_filename(shell_type: &str, command: &str) -> Result<String
 /// # 参数
 ///
 /// * `shell_type` - Shell 类型
-/// * `commands` - 命令名列表（通常为 ["workflow", "pr", "qk"]）
+/// * `commands` - 命令名列表（通常为 ["workflow", "pr", "qk", "install"]）
 ///
 /// # 返回
 ///
@@ -51,8 +51,8 @@ pub fn get_completion_filename(shell_type: &str, command: &str) -> Result<String
 /// ```
 /// use workflow::completion::get_completion_files_for_shell;
 ///
-/// let files = get_completion_files_for_shell("zsh", &["workflow", "pr", "qk"]).unwrap();
-/// assert_eq!(files, vec!["_workflow", "_pr", "_qk"]);
+/// let files = get_completion_files_for_shell("zsh", &["workflow", "pr", "qk", "install"]).unwrap();
+/// assert_eq!(files, vec!["_workflow", "_pr", "_qk", "_install"]);
 /// ```
 pub fn get_completion_files_for_shell(shell_type: &str, commands: &[&str]) -> Result<Vec<String>> {
     commands
@@ -67,7 +67,7 @@ pub fn get_completion_files_for_shell(shell_type: &str, commands: &[&str]) -> Re
 ///
 /// # 参数
 ///
-/// * `commands` - 命令名列表（通常为 ["workflow", "pr", "qk"]）
+/// * `commands` - 命令名列表（通常为 ["workflow", "pr", "qk", "install"]）
 ///
 /// # 返回
 ///
@@ -78,7 +78,7 @@ pub fn get_completion_files_for_shell(shell_type: &str, commands: &[&str]) -> Re
 /// ```
 /// use workflow::completion::get_all_completion_files;
 ///
-/// let all_files = get_all_completion_files(&["workflow", "pr", "qk"]);
+/// let all_files = get_all_completion_files(&["workflow", "pr", "qk", "install"]);
 /// // 包含 zsh, bash, fish, powershell, elvish 的所有文件
 /// assert!(all_files.contains(&"_workflow".to_string()));
 /// assert!(all_files.contains(&"workflow.bash".to_string()));

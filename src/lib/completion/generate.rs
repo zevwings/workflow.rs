@@ -86,6 +86,7 @@ impl CompletionGenerator {
     /// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
     /// - `pr` 独立命令
     /// - `qk` 独立命令
+    /// - `install` 独立命令
     pub fn generate_all(&self) -> Result<()> {
         log_debug!("Generating shell completion scripts...");
         log_debug!("Shell type: {}", self.shell);
@@ -104,6 +105,7 @@ impl CompletionGenerator {
         self.generate_workflow()?;
         self.generate_pr()?;
         self.generate_qk()?;
+        self.generate_install()?;
 
         log_success!(
             "  Shell completion scripts generated to: {}",
@@ -119,6 +121,7 @@ impl CompletionGenerator {
             .subcommand(
                 Command::new("proxy")
                     .about("Manage proxy settings")
+                    .arg(clap::Arg::new("temporary").long("temporary").short('t').action(clap::ArgAction::SetTrue))
                     .subcommand(Command::new("on").about("Turn proxy on"))
                     .subcommand(Command::new("off").about("Turn proxy off"))
                     .subcommand(Command::new("check").about("Check proxy status")),
@@ -126,15 +129,17 @@ impl CompletionGenerator {
             .subcommand(Command::new("check").about("Run environment checks"))
             .subcommand(Command::new("setup").about("Initialize or update configuration"))
             .subcommand(Command::new("config").about("View current configuration"))
-            .subcommand(
-                Command::new("install").about("Install Workflow CLI (binary and completions)"),
-            )
             .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
+            .subcommand(
+                Command::new("update")
+                    .about("Update Workflow CLI")
+                    .arg(clap::Arg::new("version").long("version").short('v').value_name("VERSION")),
+            )
             .subcommand(
                 Command::new("clean")
                     .about("Clean log directory")
-                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n'))
-                    .arg(clap::Arg::new("list").long("list").short('l')),
+                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n').action(clap::ArgAction::SetTrue))
+                    .arg(clap::Arg::new("list").long("list").short('l').action(clap::ArgAction::SetTrue)),
             )
             .subcommand(
                 Command::new("log")
@@ -151,6 +156,13 @@ impl CompletionGenerator {
                     .subcommand(Command::new("remove").about("Remove a GitHub account"))
                     .subcommand(Command::new("switch").about("Switch GitHub account"))
                     .subcommand(Command::new("update").about("Update GitHub account")),
+            )
+            .subcommand(
+                Command::new("completion")
+                    .about("Manage shell completion")
+                    .subcommand(Command::new("generate").about("Generate completion scripts"))
+                    .subcommand(Command::new("check").about("Check completion status"))
+                    .subcommand(Command::new("remove").about("Remove completion configuration")),
             );
 
         self.generate_completion(&mut cmd, "workflow")
@@ -164,15 +176,15 @@ impl CompletionGenerator {
                 Command::new("create")
                     .about("Create a new Pull Request")
                     .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
-                    .arg(clap::Arg::new("title").short('t').long("title"))
-                    .arg(clap::Arg::new("description").short('d').long("description"))
-                    .arg(clap::Arg::new("dry-run").long("dry-run")),
+                    .arg(clap::Arg::new("title").short('t').long("title").value_name("TITLE"))
+                    .arg(clap::Arg::new("description").short('d').long("description").value_name("DESCRIPTION"))
+                    .arg(clap::Arg::new("dry-run").long("dry-run").action(clap::ArgAction::SetTrue)),
             )
             .subcommand(
                 Command::new("merge")
                     .about("Merge a Pull Request")
                     .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
-                    .arg(clap::Arg::new("force").short('f').long("force")),
+                    .arg(clap::Arg::new("force").short('f').long("force").action(clap::ArgAction::SetTrue)),
             )
             .subcommand(
                 Command::new("status")
@@ -182,10 +194,18 @@ impl CompletionGenerator {
             .subcommand(
                 Command::new("list")
                     .about("List PRs")
-                    .arg(clap::Arg::new("state").short('s').long("state"))
-                    .arg(clap::Arg::new("limit").short('l').long("limit")),
+                    .arg(clap::Arg::new("state").short('s').long("state").value_name("STATE"))
+                    .arg(clap::Arg::new("limit").short('l').long("limit").value_name("LIMIT")),
             )
             .subcommand(Command::new("update").about("Update code"))
+            .subcommand(
+                Command::new("integrate")
+                    .about("Integrate branch to current branch")
+                    .arg(clap::Arg::new("SOURCE_BRANCH").value_name("SOURCE_BRANCH").required(true))
+                    .arg(clap::Arg::new("ff-only").long("ff-only").action(clap::ArgAction::SetTrue))
+                    .arg(clap::Arg::new("squash").long("squash").action(clap::ArgAction::SetTrue))
+                    .arg(clap::Arg::new("no-push").long("no-push").action(clap::ArgAction::SetTrue)),
+            )
             .subcommand(
                 Command::new("close")
                     .about("Close a Pull Request")
@@ -204,7 +224,11 @@ impl CompletionGenerator {
                     .value_name("JIRA_ID")
                     .required(true),
             )
-            .subcommand(Command::new("download").about("Download logs"))
+            .subcommand(
+                Command::new("download")
+                    .about("Download logs")
+                    .arg(clap::Arg::new("all").long("all").short('a').action(clap::ArgAction::SetTrue)),
+            )
             .subcommand(
                 Command::new("find")
                     .about("Find request by ID")
@@ -214,9 +238,35 @@ impl CompletionGenerator {
                 Command::new("search")
                     .about("Search in logs")
                     .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
+            )
+            .subcommand(
+                Command::new("clean")
+                    .about("Clean log directory")
+                    .arg(clap::Arg::new("dry-run").long("dry-run").short('n').action(clap::ArgAction::SetTrue))
+                    .arg(clap::Arg::new("list").long("list").short('l').action(clap::ArgAction::SetTrue)),
             );
 
         self.generate_completion(&mut cmd, "qk")
+    }
+
+    /// 生成 install 命令的 completion
+    fn generate_install(&self) -> Result<()> {
+        let mut cmd = Command::new("install")
+            .about("Install Workflow CLI components")
+            .arg(
+                clap::Arg::new("binaries")
+                    .long("binaries")
+                    .action(clap::ArgAction::SetTrue)
+                    .help("Only install binary files to /usr/local/bin"),
+            )
+            .arg(
+                clap::Arg::new("completions")
+                    .long("completions")
+                    .action(clap::ArgAction::SetTrue)
+                    .help("Only install shell completion scripts"),
+            );
+
+        self.generate_completion(&mut cmd, "install")
     }
 
     /// 生成单个命令的 completion（通用方法）

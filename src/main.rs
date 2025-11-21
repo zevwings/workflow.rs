@@ -262,21 +262,21 @@ fn main() -> Result<()> {
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
-            log_message!("  workflow check     - Run environment checks (Git status and network)");
-            log_message!("  workflow clean     - Clean log download directory");
+            log_message!("  workflow check      - Run environment checks (Git status and network)");
+            log_message!("  workflow clean      - Clean log download directory");
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
-            log_message!("  workflow config    - View current configuration");
-            log_message!("  workflow github    - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log       - Manage log level (set/check)");
-            log_message!("  workflow proxy     - Manage proxy settings (on/off/check)");
-            log_message!("  workflow setup     - Initialize or update configuration");
+            log_message!("  workflow config     - View current configuration");
+            log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
+            log_message!("  workflow log        - Manage log level (set/check)");
+            log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
+            log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
-            log_message!(
-                "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
-            );
-            log_message!("\nInstallation:");
-            log_message!("  Use 'install' command (built separately): install <subcommand>");
-            log_message!("\nUse 'workflow <command> --help' for more information.");
+            log_message!("  workflow update     - Update Workflow CLI (rebuild and update binaries)");
+            log_message!("\nOther CLI tools:");
+            log_message!("  pr                  - Pull Request operations (create/merge/close/status/list/update/integrate)");
+            log_message!("  qk                  - Quick log operations (download/find/search/clean/info)");
+            log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
+            log_message!("\nUse '<command> --help' for more information about each command.");
         }
     }
 
