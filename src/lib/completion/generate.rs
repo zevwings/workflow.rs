@@ -44,10 +44,7 @@ impl CompletionGenerator {
     /// )?;
     /// generator.generate_all()?;
     /// ```
-    pub fn new(
-        shell_type: Option<String>,
-        output_dir: Option<String>,
-    ) -> Result<Self> {
+    pub fn new(shell_type: Option<String>, output_dir: Option<String>) -> Result<Self> {
         // 解析 shell 类型
         let shell = shell_type.as_deref().unwrap_or_else(|| {
             let shell_env = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
@@ -95,15 +92,23 @@ impl CompletionGenerator {
         log_debug!("Output directory: {}", self.output_dir.display());
 
         // 创建输出目录
-        fs::create_dir_all(&self.output_dir)
-            .with_context(|| format!("Failed to create output directory: {} (shell: {})", self.output_dir.display(), self.shell))?;
+        fs::create_dir_all(&self.output_dir).with_context(|| {
+            format!(
+                "Failed to create output directory: {} (shell: {})",
+                self.output_dir.display(),
+                self.shell
+            )
+        })?;
 
         // 生成 completion 脚本
         self.generate_workflow()?;
         self.generate_pr()?;
         self.generate_qk()?;
 
-        log_success!("  Shell completion scripts generated to: {}", self.output_dir.display());
+        log_success!(
+            "  Shell completion scripts generated to: {}",
+            self.output_dir.display()
+        );
         Ok(())
     }
 
@@ -121,7 +126,9 @@ impl CompletionGenerator {
             .subcommand(Command::new("check").about("Run environment checks"))
             .subcommand(Command::new("setup").about("Initialize or update configuration"))
             .subcommand(Command::new("config").about("View current configuration"))
-            .subcommand(Command::new("install").about("Install Workflow CLI (binary and completions)"))
+            .subcommand(
+                Command::new("install").about("Install Workflow CLI (binary and completions)"),
+            )
             .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
             .subcommand(
                 Command::new("clean")
@@ -226,8 +233,14 @@ impl CompletionGenerator {
         let filename = get_completion_filename(&shell_type_str, command_name)?;
         let output_file = self.output_dir.join(&filename);
 
-        fs::write(&output_file, buffer)
-            .with_context(|| format!("Failed to write completion file: {} (command: {}, shell: {})", output_file.display(), command_name, self.shell))?;
+        fs::write(&output_file, buffer).with_context(|| {
+            format!(
+                "Failed to write completion file: {} (command: {}, shell: {})",
+                output_file.display(),
+                command_name,
+                self.shell
+            )
+        })?;
         log_success!("  Generated: {}", output_file.display());
 
         Ok(())

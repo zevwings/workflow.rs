@@ -4,10 +4,10 @@ use anyhow::Result;
 
 /// PR 列表命令
 #[allow(dead_code)]
-pub struct GetPullRequestsCommand;
+pub struct PullRequestListCommand;
 
 #[allow(dead_code)]
-impl GetPullRequestsCommand {
+impl PullRequestListCommand {
     /// 列出 PR
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         log_break!('=', 40, "PR List");

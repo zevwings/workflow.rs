@@ -6,6 +6,12 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 use std::time::Duration;
 
+/// 环境检查命令
+#[allow(dead_code)]
+pub struct CheckCommand;
+
+#[allow(dead_code)]
+impl CheckCommand {
 /// 执行综合环境检查
 ///
 /// 检查 Git 仓库状态和到 GitHub 的网络连接。
@@ -57,4 +63,5 @@ pub fn run_all() -> Result<()> {
     log_break!();
     log_success!("All checks passed");
     Ok(())
+    }
 }

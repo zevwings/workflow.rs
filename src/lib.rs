@@ -39,8 +39,8 @@ pub use base::{
 
 // 业务模块导出
 pub use completion::{
-    CompletionGenerator, get_all_completion_files, get_completion_filename,
-    get_completion_files_for_shell, Completion,
+    get_all_completion_files, get_completion_filename, get_completion_files_for_shell, Completion,
+    CompletionGenerator,
 };
 pub use git::{
     GitBranch, GitCommit, GitConfig, GitPreCommit, GitRepo, GitStash, MergeStrategy, RepoType,

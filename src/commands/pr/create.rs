@@ -1,4 +1,4 @@
-use crate::commands::check;
+use crate::commands::config::check;
 use crate::jira::history::JiraWorkHistory;
 use crate::jira::status::JiraStatus;
 use crate::pr::create_provider;
@@ -26,7 +26,7 @@ impl PullRequestCreateCommand {
     ) -> Result<()> {
         // 1. 运行检查
         if !dry_run {
-            check::run_all()?;
+            check::CheckCommand::run_all()?;
         }
 
         // 2. 获取或输入 Jira ticket

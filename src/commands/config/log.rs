@@ -1,11 +1,8 @@
-use crate::{log_break, log_message, log_success, LogLevel, Settings};
+use crate::{
+    jira::ConfigManager, log_break, log_message, log_success, LogLevel, Paths, Settings,
+};
 use anyhow::{Context, Result};
 use dialoguer::Select;
-use std::fs;
-use toml;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// 日志级别管理命令
 pub struct LogCommand;
@@ -98,38 +95,11 @@ impl LogCommand {
 
     /// 保存日志级别到配置文件
     fn save_log_level_to_config(level: &str) -> Result<()> {
-        use crate::base::settings::paths::Paths;
-        use crate::base::settings::settings::LogSettings;
-
-        // 读取现有配置
-        let existing_settings = Settings::get().clone();
-
-        // 构建新的配置，更新 log.level
-        let updated_settings = Settings {
-            jira: existing_settings.jira,
-            github: existing_settings.github,
-            log: LogSettings {
-                output_folder_name: existing_settings.log.output_folder_name,
-                download_base_dir: existing_settings.log.download_base_dir,
-                level: Some(level.to_string()),
-            },
-            codeup: existing_settings.codeup,
-            llm: existing_settings.llm,
-        };
-
-        // 保存到 workflow.toml
-        let workflow_config_path = Paths::workflow_config()?;
-        let toml_content = toml::to_string_pretty(&updated_settings)
-            .context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
-
-        // 设置文件权限为 600（仅用户可读写）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&workflow_config_path, fs::Permissions::from_mode(0o600))
-                .context("Failed to set workflow.toml permissions")?;
-        }
-
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+        manager.update(|settings| {
+            settings.log.level = Some(level.to_string());
+        })?;
         Ok(())
     }
 }

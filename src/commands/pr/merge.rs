@@ -1,4 +1,4 @@
-use crate::commands::check;
+use crate::commands::config::check;
 use crate::commands::pr::helpers;
 use crate::jira::history::JiraWorkHistory;
 use crate::jira::status::JiraStatus;
@@ -18,7 +18,7 @@ impl PullRequestMergeCommand {
     /// 合并 PR
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
         // 1. 运行检查
-        check::run_all()?;
+        check::CheckCommand::run_all()?;
 
         // 2. 获取 PR ID
         let pull_request_id = resolve_pull_request_id(pull_request_id)?;

@@ -1,23 +1,16 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::git::GitConfig;
-use crate::{
-    base::settings::{
-        defaults::{default_llm_model, default_response_format},
-        paths::Paths,
-        settings::{GitHubAccount, Settings},
-    },
-    log_info,
+use crate::base::settings::{
+    defaults::{default_llm_model, default_response_format},
+    settings::GitHubAccount,
 };
-use crate::{confirm, log_break, log_message, log_success};
+use crate::{
+    confirm, GitConfig, jira::ConfigManager, log_break, log_info, log_message, log_success, Paths,
+    Settings,
+};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
-use std::fs;
-use toml;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -708,17 +701,9 @@ impl SetupCommand {
         };
 
         // 保存 workflow.toml
-        let workflow_config_path = Paths::workflow_config()?;
-        let toml_content =
-            toml::to_string_pretty(&settings).context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
-
-        // 设置文件权限为 600（仅用户可读写）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&workflow_config_path, fs::Permissions::from_mode(0o600))
-                .context("Failed to set workflow.toml permissions")?;
-        }
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+        manager.write(&settings)?;
 
         Ok(())
     }

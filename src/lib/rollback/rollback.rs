@@ -77,7 +77,10 @@ impl RollbackManager {
         ));
 
         fs::create_dir_all(&backup_dir).with_context(|| {
-            format!("Failed to create backup directory: {}", backup_dir.display())
+            format!(
+                "Failed to create backup directory: {}",
+                backup_dir.display()
+            )
         })?;
 
         log_debug!("Created backup directory: {}", backup_dir.display());
@@ -104,7 +107,10 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                log_debug!("Binary file does not exist, skipping backup: {}", source.display());
+                log_debug!(
+                    "Binary file does not exist, skipping backup: {}",
+                    source.display()
+                );
                 continue;
             }
 
@@ -116,10 +122,21 @@ impl RollbackManager {
                 .arg(&source)
                 .arg(&backup_path)
                 .status()
-                .with_context(|| format!("Failed to backup binary file: {} -> {}", source.display(), backup_path.display()))?;
+                .with_context(|| {
+                    format!(
+                        "Failed to backup binary file: {} -> {}",
+                        source.display(),
+                        backup_path.display()
+                    )
+                })?;
 
             if !status.success() {
-                anyhow::bail!("Failed to backup binary file: {} -> {} (exit code: {})", source.display(), backup_path.display(), status.code().unwrap_or(-1));
+                anyhow::bail!(
+                    "Failed to backup binary file: {} -> {} (exit code: {})",
+                    source.display(),
+                    backup_path.display(),
+                    status.code().unwrap_or(-1)
+                );
             }
 
             // 设置执行权限
@@ -128,7 +145,10 @@ impl RollbackManager {
                 .arg(&backup_path)
                 .status()
                 .with_context(|| {
-                    format!("Failed to set executable permission for backup file: {}", backup_path.display())
+                    format!(
+                        "Failed to set executable permission for backup file: {}",
+                        backup_path.display()
+                    )
                 })?;
 
             log_debug!(
@@ -162,7 +182,10 @@ impl RollbackManager {
 
         // 如果补全脚本目录不存在，返回空列表
         if !completion_dir.exists() {
-            log_debug!("Completion directory does not exist, skipping backup: {}", completion_dir.display());
+            log_debug!(
+                "Completion directory does not exist, skipping backup: {}",
+                completion_dir.display()
+            );
             return Ok(backups);
         }
 
@@ -175,7 +198,10 @@ impl RollbackManager {
 
             // 如果文件不存在，跳过
             if !source.exists() {
-                log_debug!("Completion script does not exist, skipping backup: {}", source.display());
+                log_debug!(
+                    "Completion script does not exist, skipping backup: {}",
+                    source.display()
+                );
                 continue;
             }
 
@@ -183,7 +209,11 @@ impl RollbackManager {
 
             // 复制文件
             fs::copy(&source, &backup_path).with_context(|| {
-                format!("Failed to backup completion script: {} -> {}", source.display(), backup_path.display())
+                format!(
+                    "Failed to backup completion script: {} -> {}",
+                    source.display(),
+                    backup_path.display()
+                )
             })?;
 
             log_debug!(
@@ -212,8 +242,8 @@ impl RollbackManager {
 
         // 备份二进制文件
         let binaries = ["workflow", "pr", "qk"];
-        let binary_backups = Self::backup_binaries(&backup_dir, &binaries)
-            .context("Failed to backup binaries")?;
+        let binary_backups =
+            Self::backup_binaries(&backup_dir, &binaries).context("Failed to backup binaries")?;
 
         // 备份补全脚本（不依赖 shell 检测）
         let completion_dir = Paths::completion_dir()?;
@@ -249,7 +279,10 @@ impl RollbackManager {
 
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
-                log_warning!("Backup file does not exist, skipping restore: {}", backup_path.display());
+                log_warning!(
+                    "Backup file does not exist, skipping restore: {}",
+                    backup_path.display()
+                );
                 continue;
             }
 
@@ -259,10 +292,21 @@ impl RollbackManager {
                 .arg(backup_path)
                 .arg(&target)
                 .status()
-                .with_context(|| format!("Failed to restore binary file: {} -> {}", backup_path.display(), target.display()))?;
+                .with_context(|| {
+                    format!(
+                        "Failed to restore binary file: {} -> {}",
+                        backup_path.display(),
+                        target.display()
+                    )
+                })?;
 
             if !status.success() {
-                anyhow::bail!("Failed to restore binary file: {} -> {} (exit code: {})", backup_path.display(), target.display(), status.code().unwrap_or(-1));
+                anyhow::bail!(
+                    "Failed to restore binary file: {} -> {} (exit code: {})",
+                    backup_path.display(),
+                    target.display(),
+                    status.code().unwrap_or(-1)
+                );
             }
 
             // 设置执行权限
@@ -272,7 +316,10 @@ impl RollbackManager {
                 .arg(&target)
                 .status()
                 .with_context(|| {
-                    format!("Failed to set executable permission for restored binary file: {}", target.display())
+                    format!(
+                        "Failed to set executable permission for restored binary file: {}",
+                        target.display()
+                    )
                 })?;
 
             log_success!("  Restored binary file: {}", binary_name);
@@ -292,7 +339,10 @@ impl RollbackManager {
     fn restore_completions(backups: &[(String, PathBuf)], completion_dir: &Path) -> Result<()> {
         // 确保补全脚本目录存在
         fs::create_dir_all(completion_dir).with_context(|| {
-            format!("Failed to create completion directory: {}", completion_dir.display())
+            format!(
+                "Failed to create completion directory: {}",
+                completion_dir.display()
+            )
         })?;
 
         for (file_name, backup_path) in backups {
@@ -300,13 +350,20 @@ impl RollbackManager {
 
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
-                log_warning!("Backup file does not exist, skipping restore: {}", backup_path.display());
+                log_warning!(
+                    "Backup file does not exist, skipping restore: {}",
+                    backup_path.display()
+                );
                 continue;
             }
 
             // 复制文件
             fs::copy(backup_path, &target).with_context(|| {
-                format!("Failed to restore completion script: {} -> {}", backup_path.display(), target.display())
+                format!(
+                    "Failed to restore completion script: {} -> {}",
+                    backup_path.display(),
+                    target.display()
+                )
             })?;
 
             log_success!("  Restored completion script: {}", file_name);
@@ -375,9 +432,15 @@ impl RollbackManager {
     /// * `backup_info` - 备份信息
     pub fn cleanup_backup(backup_info: &BackupInfo) -> Result<()> {
         if backup_info.backup_dir.exists() {
-            log_debug!("Cleaning up backup directory: {}", backup_info.backup_dir.display());
+            log_debug!(
+                "Cleaning up backup directory: {}",
+                backup_info.backup_dir.display()
+            );
             fs::remove_dir_all(&backup_info.backup_dir).with_context(|| {
-                format!("Failed to remove backup directory: {}", backup_info.backup_dir.display())
+                format!(
+                    "Failed to remove backup directory: {}",
+                    backup_info.backup_dir.display()
+                )
             })?;
             log_debug!("Backup directory cleaned up");
         }

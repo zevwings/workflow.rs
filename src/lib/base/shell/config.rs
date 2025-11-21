@@ -738,17 +738,18 @@ impl ShellConfigManager {
             {
                 // 跳过整个配置块
                 i += 1; // 跳过注释行
-                // 跳过 source 行
+                        // 跳过 source 行
                 while i < lines.len() {
                     let current_line = lines[i];
                     // 检查是否匹配 source 语句（支持不同关键字和路径格式）
                     let matches_source = (current_line.trim().starts_with(source_keyword)
-                        && (current_line.contains(source_path) || current_line.contains(&abs_path)))
+                        && (current_line.contains(source_path)
+                            || current_line.contains(&abs_path)))
                         || (current_line.contains(source_path) || current_line.contains(&abs_path));
 
                     if matches_source {
                         i += 1; // 跳过 source 行
-                        // 跳过后续的空行
+                                // 跳过后续的空行
                         while i < lines.len() && lines[i].trim().is_empty() {
                             i += 1;
                         }

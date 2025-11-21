@@ -140,7 +140,7 @@ fn main() -> Result<()> {
             status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
         }
         PRCommands::List { state, limit } => {
-            list::GetPullRequestsCommand::list(state, limit)?;
+            list::PullRequestListCommand::list(state, limit)?;
         }
         PRCommands::Update => {
             update::PullRequestUpdateCommand::update()?;

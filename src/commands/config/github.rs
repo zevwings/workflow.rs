@@ -1,21 +1,13 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::base::settings::{
-    paths::Paths,
-    settings::{GitHubAccount, Settings},
-};
-use crate::git::GitConfig;
+use crate::base::settings::settings::GitHubAccount;
 use crate::{
-    confirm, log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value,
+    confirm, GitConfig, jira::ConfigManager, log_break, log_info, log_message, log_success,
+    log_warning, mask_sensitive_value, Paths, Settings,
 };
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
-use std::fs;
-use toml;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
@@ -509,18 +501,9 @@ impl GitHubCommand {
 
     /// 保存设置到 TOML 文件
     fn save_settings(settings: &Settings) -> Result<()> {
-        let workflow_config_path = Paths::workflow_config()?;
-        let toml_content =
-            toml::to_string_pretty(settings).context("Failed to serialize settings to TOML")?;
-        fs::write(&workflow_config_path, toml_content).context("Failed to write workflow.toml")?;
-
-        // 设置文件权限为 600（仅用户可读写）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&workflow_config_path, fs::Permissions::from_mode(0o600))
-                .context("Failed to set workflow.toml permissions")?;
-        }
-
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+        manager.write(settings)?;
         Ok(())
     }
 }

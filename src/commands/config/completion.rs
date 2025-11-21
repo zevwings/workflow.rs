@@ -8,7 +8,6 @@ use crate::{
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use dialoguer::MultiSelect;
-use std::fs;
 use std::path::PathBuf;
 
 /// Shell 配置状态
@@ -24,44 +23,6 @@ struct ShellStatus {
 pub struct CompletionCommand;
 
 impl CompletionCommand {
-    /// 检测系统中已安装的 shell
-    ///
-    /// 通过读取 /etc/shells 文件来检测已安装的 shell。
-    fn detect_installed_shells() -> Vec<Shell> {
-        let mut installed = Vec::new();
-
-        // 读取 /etc/shells 文件
-        if let Ok(content) = fs::read_to_string("/etc/shells") {
-            for line in content.lines() {
-                let line = line.trim();
-                if line.is_empty() || line.starts_with('#') {
-                    continue;
-                }
-
-                // 尝试从路径解析 shell 类型
-                if let Some(shell) = Shell::from_shell_path(line) {
-                    installed.push(shell);
-                }
-            }
-        }
-
-        // 如果没有从 /etc/shells 检测到，至少添加当前 shell
-        if installed.is_empty() {
-            if let Ok(current_shell) = Detect::shell() {
-                installed.push(current_shell);
-            }
-        }
-
-        installed
-    }
-
-    /// 检查 shell 是否已配置 completion
-    ///
-    /// 调用 `Completion::is_shell_configured()` 统一方法。
-    fn check_shell_configured(shell: &Shell) -> Result<(bool, PathBuf)> {
-        Completion::is_shell_configured(shell)
-    }
-
     /// 检查 completion 状态
     ///
     /// 检测系统中已安装的 shell 和已配置 completion 的 shell。
@@ -70,7 +31,7 @@ impl CompletionCommand {
         log_break!();
 
         // 检测已安装的 shell
-        let installed_shells = Self::detect_installed_shells();
+        let installed_shells = Detect::installed_shells();
         log_debug!("检测到已安装的 shell: {:?}", installed_shells);
 
         // 检查所有支持的 shell（不仅仅是已安装的）
@@ -85,7 +46,7 @@ impl CompletionCommand {
         let mut statuses = Vec::new();
         for shell in &all_shells {
             let installed = installed_shells.contains(shell);
-            let (configured, config_path) = Self::check_shell_configured(shell)
+            let (configured, config_path) = Completion::is_shell_configured(shell)
                 .unwrap_or_else(|_| (false, Paths::config_file(shell).unwrap_or_default()));
 
             statuses.push(ShellStatus {
@@ -170,7 +131,7 @@ impl CompletionCommand {
         let mut shell_statuses = Vec::new();
 
         for shell in &all_shells {
-            match Self::check_shell_configured(shell) {
+            match Completion::is_shell_configured(shell) {
                 Ok((configured, config_path)) => {
                     if configured {
                         configured_shells.push(*shell);

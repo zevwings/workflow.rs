@@ -1,4 +1,4 @@
-use crate::commands::check;
+use crate::commands::config::check;
 use crate::pr::create_provider;
 use crate::{
     confirm, get_current_branch_pr_id, log_debug, log_error, log_info, log_success, log_warning,
@@ -31,7 +31,7 @@ impl PullRequestIntegrateCommand {
     pub fn integrate(source_branch: String, ff_only: bool, squash: bool, push: bool) -> Result<()> {
         // 1. 运行检查（可选，但建议运行）
         log_info!("Running pre-flight checks...");
-        if let Err(e) = check::run_all() {
+        if let Err(e) = check::CheckCommand::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
             confirm(
                 "Continue anyway?",

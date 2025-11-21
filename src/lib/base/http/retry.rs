@@ -113,7 +113,11 @@ impl HttpRetry {
             match operation() {
                 Ok(result) => {
                     if attempt > 0 {
-                        log_success!("{} succeeded after {} retry attempts", operation_name, attempt);
+                        log_success!(
+                            "{} succeeded after {} retry attempts",
+                            operation_name,
+                            attempt
+                        );
                     }
                     return Ok(result);
                 }

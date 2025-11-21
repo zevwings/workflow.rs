@@ -8,7 +8,11 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, completion, config, github, log, proxy, setup, uninstall, update};
+use commands::config::{
+    check, completion, github, log, proxy, setup, show,
+};
+use commands::lifecycle::{uninstall, update};
+use commands::qk::clean::CleanCommand;
 
 use workflow::*;
 
@@ -214,7 +218,7 @@ fn main() -> Result<()> {
         },
         // 环境检查
         Some(Commands::Check) => {
-            check::run_all()?;
+            check::CheckCommand::run_all()?;
         }
         // 配置初始化
         Some(Commands::Setup) => {
@@ -222,7 +226,7 @@ fn main() -> Result<()> {
         }
         // 配置查看
         Some(Commands::Config) => {
-            config::ConfigCommand::show()?;
+            show::ConfigCommand::show()?;
         }
         // 卸载
         Some(Commands::Uninstall) => {
@@ -232,9 +236,9 @@ fn main() -> Result<()> {
         Some(Commands::Update { version }) => {
             update::UpdateCommand::update(version)?;
         }
-        // 清理日志目录
+        // 清理日志目录（清理整个基础目录）
         Some(Commands::Clean { dry_run, list }) => {
-            clean::CleanCommand::clean(dry_run, list)?;
+            CleanCommand::clean("", dry_run, list)?;
         }
         // 日志级别管理命令
         Some(Commands::Log { subcommand }) => match subcommand {

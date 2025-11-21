@@ -256,9 +256,7 @@ impl JiraLogs {
 
             // 方式 2: 从 CloudFront URL 中提取附件 ID 并构建 Jira API URL
             if let Some(attachment_id) =
-                JiraTicket::extract_attachment_id_from_url(
-                    &attachment.content_url,
-                )
+                JiraTicket::extract_attachment_id_from_url(&attachment.content_url)
             {
                 if let Ok(base_url) = get_base_url() {
                     let jira_api_url = format!("{}/attachment/content/{}", base_url, attachment_id);

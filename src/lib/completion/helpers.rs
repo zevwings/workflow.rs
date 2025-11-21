@@ -96,4 +96,3 @@ pub fn get_all_completion_files(commands: &[&str]) -> Vec<String> {
 
     all_files
 }
-

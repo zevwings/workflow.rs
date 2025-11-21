@@ -12,7 +12,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use workflow::commands::install::InstallCommand;
+use workflow::commands::lifecycle::install::InstallCommand;
 
 /// CLI 主结构体
 #[derive(Parser)]

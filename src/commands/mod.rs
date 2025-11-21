@@ -6,31 +6,32 @@
 //! - 格式化输出
 //! - 调用核心业务逻辑层 (`lib/`) 的功能
 //!
-//! ## 模块说明
+//! ## 模块分类
 //!
-//! - `check` - 检查工具命令（git_status, network）
-//! - `clean` - 清理日志目录命令
-//! - `config` - 配置查看命令
-//! - `github` - GitHub 账号管理命令（list, add, remove, switch, update, current）
+//! ### 生命周期管理 (`lifecycle/`)
 //! - `install` - 安装命令实现
-//! - `log` - 日志级别管理命令（set, check）
-//! - `pr` - PR 相关命令（create, merge, close, status, list, update）
-//! - `proxy` - 代理管理命令（on, off, check）
-//! - `qk` - 快速日志操作命令（download, find, search, clean）
-//! - `setup` - 初始化设置命令
 //! - `uninstall` - 卸载命令实现
 //! - `update` - 更新命令实现（重新构建、更新二进制文件、更新 completion）
+//!
+//! ### 配置管理 (`config/`)
+//! - `setup` - 初始化设置命令
+//! - `config` - 配置查看命令
+//! - `github` - GitHub 账号管理命令（list, add, remove, switch, update, current）
+//! - `log` - 日志级别管理命令（set, check）
+//! - `proxy` - 代理管理命令（on, off, check）
+//! - `completion` - Shell Completion 管理命令
+//! - `check` - 检查工具命令（git_status, network）
+//!
+//! ### 业务功能
+//! - `pr` - PR 相关命令（create, merge, close, status, list, update）
+//! - `qk` - 快速日志操作命令（download, find, search, clean）
 
-pub mod check;
-pub mod clean;
-pub mod completion;
+// 生命周期管理
+pub mod lifecycle;
+
+// 配置管理
 pub mod config;
-pub mod github;
-pub mod install;
-pub mod log;
+
+// 业务功能
 pub mod pr;
-pub mod proxy;
 pub mod qk;
-pub mod setup;
-pub mod uninstall;
-pub mod update;
