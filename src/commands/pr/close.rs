@@ -1,7 +1,8 @@
 use crate::commands::pr::helpers;
+use crate::git::GitBranch;
 use crate::pr::create_provider;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{log_break, log_info, log_success, log_warning, GitBranch};
+use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 关闭命令

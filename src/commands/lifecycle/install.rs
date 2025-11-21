@@ -1,10 +1,9 @@
 //! 安装命令
 //! 提供安装二进制文件和 shell completion 的功能
 
-use crate::{
-    base::settings::paths::Paths, log_break, log_debug, log_info, log_success, log_warning,
-    Completion, Detect,
-};
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use std::fs;

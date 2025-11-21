@@ -6,7 +6,8 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容（list-only）
 
-use crate::{log_break, log_info, log_success, JiraLogs};
+use crate::jira::logs::JiraLogs;
+use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
 
 /// 清理日志命令

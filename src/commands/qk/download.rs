@@ -1,4 +1,5 @@
-use crate::{log_debug, log_info, log_success, JiraLogs};
+use crate::jira::logs::JiraLogs;
+use crate::{log_debug, log_info, log_success};
 use anyhow::{Context, Result};
 
 /// 下载日志命令

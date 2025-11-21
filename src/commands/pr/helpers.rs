@@ -2,7 +2,8 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::{log_info, log_success, GitBranch, GitCommit, GitRepo, GitStash};
+use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::{log_info, log_success};
 use anyhow::{Context, Error, Result};
 
 /// 检查错误是否表示 PR 已合并

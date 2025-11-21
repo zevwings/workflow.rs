@@ -1,5 +1,7 @@
+use crate::git::{GitBranch, GitCommit};
 use crate::pr::create_provider;
-use crate::{get_current_branch_pr_id, log_success, log_warning, GitBranch, GitCommit};
+use crate::pr::helpers::get_current_branch_pr_id;
+use crate::{log_success, log_warning};
 use anyhow::Result;
 
 /// 快速更新命令

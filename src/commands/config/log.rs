@@ -1,6 +1,8 @@
-use crate::{
-    jira::ConfigManager, log_break, log_message, log_success, LogLevel, Paths, Settings,
-};
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::Settings;
+use crate::base::util::LogLevel;
+use crate::jira::config::ConfigManager;
+use crate::{log_break, log_message, log_success};
 use anyhow::{Context, Result};
 use dialoguer::Select;
 

@@ -1,9 +1,9 @@
+use crate::base::util::confirm;
 use crate::commands::config::check;
+use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
-use crate::{
-    confirm, get_current_branch_pr_id, log_debug, log_error, log_info, log_success, log_warning,
-    GitBranch, GitCommit, GitRepo, GitStash,
-};
+use crate::pr::helpers::get_current_branch_pr_id;
+use crate::{log_debug, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 分支集成的命令

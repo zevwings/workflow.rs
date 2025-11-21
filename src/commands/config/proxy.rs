@@ -1,5 +1,6 @@
+use crate::base::util::Clipboard;
 use crate::{
-    log_break, log_debug, log_info, log_message, log_success, log_warning, Clipboard, ProxyManager,
+    log_break, log_debug, log_info, log_message, log_success, log_warning, ProxyManager,
     SystemProxyReader,
 };
 use anyhow::{Context, Result};

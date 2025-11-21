@@ -1,12 +1,11 @@
 use crate::commands::config::check;
 use crate::commands::pr::helpers;
-use crate::jira::history::JiraWorkHistory;
+use crate::git::{GitBranch, GitRepo};
 use crate::jira::status::JiraStatus;
+use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
 use crate::pr::create_provider;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{
-    extract_jira_ticket_id, log_break, log_info, log_success, log_warning, GitBranch, GitRepo, Jira,
-};
+use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::Result;
 
 /// PR 合并命令

@@ -1,16 +1,16 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::http::{HttpMethod, RequestConfig};
+use crate::base::http::client::HttpClient;
+use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
 use crate::base::util::{confirm, Checksum, Unzip};
-use crate::get_completion_files_for_shell;
 use crate::rollback::RollbackManager;
-use crate::Detect;
 use crate::{
-    base::settings::paths::Paths, log_break, log_debug, log_error, log_info, log_success,
-    log_warning, HttpClient,
+    get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
+    log_warning,
 };
-use crate::{HttpRetry, HttpRetryConfig};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use indicatif::{ProgressBar, ProgressStyle};

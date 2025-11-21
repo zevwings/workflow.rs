@@ -8,9 +8,7 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::config::{
-    check, completion, github, log, proxy, setup, show,
-};
+use commands::config::{check, completion, github, log, proxy, setup, show};
 use commands::lifecycle::{uninstall, update};
 use commands::qk::clean::CleanCommand;
 

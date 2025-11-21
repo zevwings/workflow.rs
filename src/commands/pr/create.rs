@@ -1,13 +1,18 @@
+use crate::base::settings::settings::Settings;
+use crate::base::util::{confirm, Browser, Clipboard};
 use crate::commands::config::check;
-use crate::jira::history::JiraWorkHistory;
+use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
+use crate::jira::{Jira, JiraWorkHistory};
 use crate::pr::create_provider;
-use crate::{
-    confirm, extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
-    generate_pull_request_body, get_current_branch_pr_id, log_info, log_success, log_warning,
-    validate_jira_ticket_format, Browser, Clipboard, GitBranch, GitCommit, GitRepo, GitStash, Jira,
-    PullRequestLLM, Settings, TYPES_OF_CHANGES,
+use crate::pr::helpers::{
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, get_current_branch_pr_id,
 };
+use crate::pr::llm::PullRequestLLM;
+use crate::pr::TYPES_OF_CHANGES;
+use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
 

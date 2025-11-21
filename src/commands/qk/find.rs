@@ -1,4 +1,6 @@
-use crate::{log_debug, log_error, log_success, Clipboard, JiraLogs};
+use crate::base::util::Clipboard;
+use crate::jira::logs::JiraLogs;
+use crate::{log_debug, log_error, log_success};
 use anyhow::{Context, Result};
 use dialoguer::Input;
 

@@ -1,10 +1,10 @@
 //! Completion 管理命令
 //! 提供生成和管理 shell completion 脚本的功能
 
-use crate::{
-    base::settings::paths::Paths, confirm, log_break, log_debug, log_info, log_message,
-    log_success, log_warning, Completion, Detect,
-};
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
+use crate::base::util::confirm;
+use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use dialoguer::MultiSelect;

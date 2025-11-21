@@ -1,14 +1,13 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::base::settings::{
-    defaults::{default_llm_model, default_response_format},
-    settings::GitHubAccount,
-};
-use crate::{
-    confirm, GitConfig, jira::ConfigManager, log_break, log_info, log_message, log_success, Paths,
-    Settings,
-};
+use crate::base::settings::defaults::{default_llm_model, default_response_format};
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::util::confirm;
+use crate::git::GitConfig;
+use crate::jira::config::ConfigManager;
+use crate::{log_break, log_info, log_message, log_success};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 

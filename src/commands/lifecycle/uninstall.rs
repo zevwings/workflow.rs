@@ -1,9 +1,11 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
+use crate::base::settings::paths::Paths;
+use crate::base::shell::{Detect, Reload};
+use crate::base::util::{confirm, Clipboard};
 use crate::{
-    base::settings::paths::Paths, confirm, log_break, log_debug, log_message, log_success,
-    log_warning, Clipboard, Completion, Detect, Reload,
+    log_break, log_debug, log_message, log_success, log_warning, Completion, ProxyManager,
 };
 use anyhow::{Context, Result};
 use duct::cmd;
@@ -200,7 +202,6 @@ impl UninstallCommand {
 
     /// 从 shell 环境变量中移除代理设置
     fn remove_proxy_settings() -> Result<()> {
-        use crate::ProxyManager;
         let result = ProxyManager::disable().context("Failed to remove proxy settings")?;
 
         if !result.found_proxy {

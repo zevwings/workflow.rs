@@ -1,11 +1,12 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
-use crate::base::settings::settings::GitHubAccount;
-use crate::{
-    confirm, GitConfig, jira::ConfigManager, log_break, log_info, log_message, log_success,
-    log_warning, mask_sensitive_value, Paths, Settings,
-};
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::util::{confirm, mask_sensitive_value};
+use crate::git::GitConfig;
+use crate::jira::config::ConfigManager;
+use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Input, Select};
 
