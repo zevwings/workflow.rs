@@ -14,23 +14,23 @@ use anyhow::Result;
 use clap::Parser;
 use workflow::commands::lifecycle::install::InstallCommand;
 
-/// CLI 主结构体
+/// CLI main structure
 #[derive(Parser)]
 #[command(name = "install")]
 #[command(about = "Install Workflow CLI components", long_about = None)]
 #[command(version)]
 struct Cli {
-    /// 只安装二进制文件到 /usr/local/bin
+    /// Only install binaries to /usr/local/bin
     ///
-    /// 将当前目录下的 workflow、pr、qk 二进制文件安装到 /usr/local/bin。
-    /// 如果不指定此参数，默认安装全部（二进制文件 + completions）。
+    /// Install workflow, pr, qk binaries from current directory to /usr/local/bin.
+    /// If not specified, installs everything by default (binaries + completions).
     #[arg(long)]
     binaries: bool,
 
-    /// 只安装 shell completion 脚本
+    /// Only install shell completion scripts
     ///
-    /// 自动检测 shell 类型（zsh/bash）并安装相应的 completion 脚本。
-    /// 如果不指定此参数，默认安装全部（二进制文件 + completions）。
+    /// Auto-detect shell type (zsh/bash) and install corresponding completion scripts.
+    /// If not specified, installs everything by default (binaries + completions).
     #[arg(long)]
     completions: bool,
 }

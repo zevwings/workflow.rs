@@ -76,7 +76,10 @@ impl CompletionCommand {
 
                 // 如果当前 shell 未配置，显示警告
                 if !status.configured {
-                    log_warning!("Your current shell ({}) does not have completion configured", current);
+                    log_warning!(
+                        "Your current shell ({}) does not have completion configured",
+                        current
+                    );
                     log_info!("Hint: Run `workflow completion generate` to generate completion");
                     log_break!();
                 }
@@ -86,9 +89,7 @@ impl CompletionCommand {
         // 显示其他已安装的 shell（仅供参考，不发出警告）
         let other_shells: Vec<_> = statuses
             .iter()
-            .filter(|s| {
-                s.installed && Some(s.shell) != current_shell
-            })
+            .filter(|s| s.installed && Some(s.shell) != current_shell)
             .collect();
 
         if !other_shells.is_empty() {

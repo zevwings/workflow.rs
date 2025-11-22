@@ -157,7 +157,8 @@ impl ShellConfigManager {
 
             // 检查配置块是否为空（只有标记和注释，没有 export 语句）
             // 如果为空，则完全移除配置块
-            let final_content = Self::remove_empty_config_block(&new_content, marker_start, marker_end);
+            let final_content =
+                Self::remove_empty_config_block(&new_content, marker_start, marker_end);
 
             // 确保文件以换行符结尾
             let final_content = if final_content.ends_with('\n') {
@@ -185,7 +186,9 @@ impl ShellConfigManager {
                 // 检查块内是否有任何 export 语句
                 let has_exports = block_content.lines().any(|line| {
                     let trimmed = line.trim();
-                    !trimmed.is_empty() && !trimmed.starts_with('#') && trimmed.starts_with("export ")
+                    !trimmed.is_empty()
+                        && !trimmed.starts_with('#')
+                        && trimmed.starts_with("export ")
                 });
 
                 // 如果没有 export 语句，移除整个配置块

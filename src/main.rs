@@ -31,159 +31,159 @@ struct Cli {
 /// 定义了 Workflow CLI 支持的所有顶级命令。
 #[derive(Subcommand)]
 enum Commands {
-    /// 管理代理设置（开启/关闭/检查）
+    /// Manage proxy settings (on/off/check)
     ///
-    /// 通过环境变量管理 HTTP/HTTPS 代理配置。
+    /// Manage HTTP/HTTPS proxy configuration via environment variables.
     Proxy {
         #[command(subcommand)]
         subcommand: ProxySubcommand,
-        /// 临时模式：只在当前 shell 启用，不写入配置文件
+        /// Temporary mode: only enable in current shell, don't write to config file
         #[arg(short, long)]
         temporary: bool,
     },
-    /// 运行环境检查
+    /// Run environment checks
     ///
-    /// 检查 Git 仓库状态和网络连接（GitHub）。
+    /// Check Git repository status and network connectivity (GitHub).
     Check,
-    /// 初始化或更新配置
+    /// Initialize or update configuration
     ///
-    /// 交互式设置 Workflow CLI 所需的各种配置项（如 Jira、GitHub 等）。
+    /// Interactively set up various configuration items required by Workflow CLI (e.g., Jira, GitHub, etc.).
     Setup,
-    /// 查看当前配置
+    /// View current configuration
     ///
-    /// 显示所有已配置的环境变量和设置项（敏感信息会被掩码）。
+    /// Display all configured environment variables and settings (sensitive information will be masked).
     Config,
-    /// 卸载 Workflow CLI 配置
+    /// Uninstall Workflow CLI configuration
     ///
-    /// 删除所有相关文件：二进制文件、补全脚本、配置文件等。
+    /// Remove all related files: binaries, completion scripts, configuration files, etc.
     Uninstall,
-    /// 更新 Workflow CLI
+    /// Update Workflow CLI
     ///
-    /// 重新构建 release 版本并更新所有二进制文件和 shell completion 脚本。
+    /// Rebuild release version and update all binaries and shell completion scripts.
     Update {
-        /// 指定要更新的版本号（例如：1.1.2）
+        /// Specify the version number to update to (e.g., 1.1.2)
         ///
-        /// 如果不指定，将更新到最新版本。
+        /// If not specified, will update to the latest version.
         #[arg(long, short = 'v')]
         version: Option<String>,
     },
-    /// 清理日志目录
+    /// Clean log directory
     ///
-    /// 删除整个日志下载基础目录及其所有内容。
-    /// 需要确认才能执行删除操作。
+    /// Delete the entire log download base directory and all its contents.
+    /// Confirmation is required before deletion.
     Clean {
-        /// 预览操作，不实际删除
+        /// Preview operation without actually deleting
         #[arg(long, short = 'n')]
         dry_run: bool,
-        /// 只列出将要删除的内容
+        /// Only list what would be deleted
         #[arg(long, short = 'l')]
         list: bool,
     },
-    /// 管理日志级别（设置/检查）
+    /// Manage log level (set/check)
     ///
-    /// 设置或查看当前日志输出级别（none, error, warn, info, debug）。
+    /// Set or view current log output level (none, error, warn, info, debug).
     Log {
         #[command(subcommand)]
         subcommand: LogSubcommand,
     },
-    /// 管理 GitHub 账号
+    /// Manage GitHub accounts
     ///
-    /// 管理多个 GitHub 账号的配置（添加、删除、切换、更新等）。
+    /// Manage configurations for multiple GitHub accounts (add, remove, switch, update, etc.).
     #[command(name = "github")]
     GitHub {
         #[command(subcommand)]
         subcommand: GitHubSubcommand,
     },
-    /// 管理 Shell Completion
+    /// Manage shell completion
     ///
-    /// 生成和管理 shell completion 脚本。
+    /// Generate and manage shell completion scripts.
     Completion {
         #[command(subcommand)]
         subcommand: CompletionSubcommand,
     },
 }
 
-/// 代理管理子命令
+/// Proxy management subcommands
 ///
-/// 用于管理 HTTP/HTTPS 代理的环境变量配置。
+/// Used to manage HTTP/HTTPS proxy environment variable configuration.
 #[derive(Subcommand)]
 enum ProxySubcommand {
-    /// 开启代理（设置环境变量）
+    /// Enable proxy (set environment variables)
     ///
-    /// 设置 `HTTP_PROXY` 和 `HTTPS_PROXY` 环境变量。
+    /// Set HTTP_PROXY and HTTPS_PROXY environment variables.
     On,
-    /// 关闭代理（清除环境变量）
+    /// Disable proxy (clear environment variables)
     ///
-    /// 取消设置 `HTTP_PROXY` 和 `HTTPS_PROXY` 环境变量。
+    /// Unset HTTP_PROXY and HTTPS_PROXY environment variables.
     Off,
-    /// 检查代理状态和配置
+    /// Check proxy status and configuration
     ///
-    /// 显示当前代理环境变量的状态和配置信息。
+    /// Display current proxy environment variable status and configuration information.
     Check,
 }
 
-/// 日志级别管理子命令
+/// Log level management subcommands
 ///
-/// 用于管理日志输出级别。
+/// Used to manage log output level.
 #[derive(Subcommand)]
 enum LogSubcommand {
-    /// 设置日志级别（交互式选择）
+    /// Set log level (interactive selection)
     ///
-    /// 通过交互式菜单选择日志级别：none, error, warn, info, debug。
+    /// Select log level through interactive menu: none, error, warn, info, debug.
     Set,
-    /// 检查当前日志级别
+    /// Check current log level
     ///
-    /// 显示当前设置的日志级别和默认级别信息。
+    /// Display current configured log level and default level information.
     Check,
 }
 
-/// GitHub 账号管理子命令
+/// GitHub account management subcommands
 ///
-/// 用于管理多个 GitHub 账号的配置。
+/// Used to manage configurations for multiple GitHub accounts.
 #[derive(Subcommand)]
 enum GitHubSubcommand {
-    /// 列出所有 GitHub 账号
+    /// List all GitHub accounts
     ///
-    /// 显示所有已配置的 GitHub 账号信息。
+    /// Display all configured GitHub account information.
     List,
-    /// 显示当前激活的 GitHub 账号
+    /// Show current active GitHub account
     ///
-    /// 显示当前正在使用的 GitHub 账号信息。
+    /// Display currently active GitHub account information.
     Current,
-    /// 添加新的 GitHub 账号
+    /// Add a new GitHub account
     ///
-    /// 交互式添加新的 GitHub 账号配置。
+    /// Interactively add a new GitHub account configuration.
     Add,
-    /// 删除 GitHub 账号
+    /// Remove a GitHub account
     ///
-    /// 从配置中删除指定的 GitHub 账号。
+    /// Remove the specified GitHub account from configuration.
     Remove,
-    /// 切换当前 GitHub 账号
+    /// Switch current GitHub account
     ///
-    /// 在多个 GitHub 账号之间切换。
+    /// Switch between multiple GitHub accounts.
     Switch,
-    /// 更新 GitHub 账号信息
+    /// Update GitHub account information
     ///
-    /// 更新已存在的 GitHub 账号配置。
+    /// Update existing GitHub account configuration.
     Update,
 }
 
-/// Completion 管理子命令
+/// Completion management subcommands
 ///
-/// 用于生成和管理 shell completion 脚本。
+/// Used to generate and manage shell completion scripts.
 #[derive(Subcommand)]
 enum CompletionSubcommand {
-    /// 生成 completion 脚本
+    /// Generate completion scripts
     ///
-    /// 自动检测当前 shell 类型，生成对应的 completion 脚本并应用到配置文件。
+    /// Auto-detect current shell type, generate corresponding completion scripts and apply to configuration files.
     Generate,
-    /// 检查 completion 状态
+    /// Check completion status
     ///
-    /// 检查系统中已安装的 shell 类型和已配置 completion 的 shell。
+    /// Check installed shell types and shells with configured completion.
     Check,
-    /// 移除 completion 配置
+    /// Remove completion configuration
     ///
-    /// 交互式选择并移除已配置的 shell completion 配置。
+    /// Interactively select and remove configured shell completion configuration.
     Remove,
 }
 
@@ -271,10 +271,14 @@ fn main() -> Result<()> {
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
-            log_message!("  workflow update     - Update Workflow CLI (rebuild and update binaries)");
+            log_message!(
+                "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
+            );
             log_message!("\nOther CLI tools:");
             log_message!("  pr                  - Pull Request operations (create/merge/close/status/list/update/integrate)");
-            log_message!("  qk                  - Quick log operations (download/find/search/clean/info)");
+            log_message!(
+                "  qk                  - Quick log operations (download/find/search/clean/info)"
+            );
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");
         }

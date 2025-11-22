@@ -19,95 +19,95 @@ struct Cli {
     subcommand: PRCommands,
 }
 
-/// PR 命令枚举
+/// PR commands enumeration
 ///
-/// 定义了所有 PR 相关的子命令。
+/// Defines all PR-related subcommands.
 #[derive(Subcommand)]
 enum PRCommands {
-    /// 创建新的 Pull Request
+    /// Create a new Pull Request
     ///
-    /// 支持自动检测仓库类型（GitHub/Codeup），并可选择使用 AI 生成 PR 标题。
-    /// 如果提供 Jira ticket，会自动更新 Jira 状态。
+    /// Supports auto-detection of repository type (GitHub/Codeup), and optionally uses AI to generate PR title.
+    /// If a Jira ticket is provided, will automatically update Jira status.
     Create {
-        /// Jira ticket ID（可选，如 PROJ-123）
+        /// Jira ticket ID (optional, e.g., PROJ-123)
         #[arg(value_name = "JIRA_TICKET")]
         jira_ticket: Option<String>,
 
-        /// PR 标题（可选，不提供时使用 AI 生成）
+        /// PR title (optional, will use AI generation if not provided)
         #[arg(short, long)]
         title: Option<String>,
 
-        /// 简短描述（可选）
+        /// Short description (optional)
         #[arg(short, long)]
         description: Option<String>,
 
-        /// 干运行模式（不实际创建 PR，仅显示将要执行的操作）
+        /// Dry run mode (don't actually create PR, only show what would be done)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         dry_run: bool,
     },
-    /// 合并 Pull Request
+    /// Merge a Pull Request
     ///
-    /// 自动检测当前分支对应的 PR，或手动指定 PR ID。
-    /// 合并后会自动更新对应的 Jira ticket 状态。
+    /// Auto-detect PR corresponding to current branch, or manually specify PR ID.
+    /// Will automatically update corresponding Jira ticket status after merging.
     Merge {
-        /// PR ID（可选，不提供时自动检测当前分支）
+        /// PR ID (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
 
-        /// 强制合并（跳过检查）
+        /// Force merge (skip checks)
         #[arg(short, long, action = clap::ArgAction::SetTrue)]
         force: bool,
     },
-    /// 显示 PR 状态信息
+    /// Show PR status information
     ///
-    /// 显示指定 PR 的详细信息，包括状态、作者、评论等。
+    /// Display detailed information about a specific PR, including status, author, comments, etc.
     Status {
-        /// PR ID 或分支名（可选，不提供时自动检测当前分支）
+        /// PR ID or branch name (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID_OR_BRANCH")]
         pull_request_id_or_branch: Option<String>,
     },
-    /// 列出 PR
+    /// List Pull Requests
     ///
-    /// 列出仓库中的所有 PR，支持按状态过滤和限制数量。
+    /// List all PRs in the repository, supports filtering by status and limiting the number of results.
     List {
-        /// 按状态过滤（open, closed, merged）
+        /// Filter by state (open, closed, merged)
         #[arg(short, long)]
         state: Option<String>,
 
-        /// 限制结果数量
+        /// Limit the number of results
         #[arg(short, long)]
         limit: Option<u32>,
     },
-    /// 更新代码（使用 PR 标题作为提交信息）
+    /// Update code (use PR title as commit message)
     ///
-    /// 将当前更改提交到 PR 分支，使用 PR 标题作为提交信息。
+    /// Commit current changes to PR branch using PR title as commit message.
     Update,
-    /// 集成分支到当前分支
+    /// Integrate branch into current branch
     ///
-    /// 将指定分支合并到当前分支，并可选地推送到远程。
-    /// 这是一个本地 Git 操作，与 `merge` 命令（通过 API 合并 PR）不同。
+    /// Merge specified branch into current branch, and optionally push to remote.
+    /// This is a local Git operation, different from the `merge` command (which merges PR via API).
     Integrate {
-        /// 要合并的源分支名称（必需）
+        /// Source branch name to merge (required)
         #[arg(value_name = "SOURCE_BRANCH")]
         source_branch: String,
 
-        /// 只允许 fast-forward 合并（如果无法 fast-forward 则失败）
+        /// Only allow fast-forward merge (fail if not possible)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         ff_only: bool,
 
-        /// 使用 squash 合并（将分支的所有提交压缩为一个提交）
+        /// Use squash merge (compress all commits into one)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         squash: bool,
 
-        /// 不推送到远程（默认会推送）
+        /// Don't push to remote (pushes by default)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         no_push: bool,
     },
-    /// 关闭 Pull Request
+    /// Close a Pull Request
     ///
-    /// 关闭当前分支对应的 PR，删除远程分支，并切换到默认分支。
+    /// Close PR corresponding to current branch, delete remote branch, and switch to default branch.
     Close {
-        /// PR ID（可选，不提供时自动检测当前分支）
+        /// PR ID (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
     },
