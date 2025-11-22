@@ -323,6 +323,8 @@ workflow proxy check               # 检查代理状态和配置
 ```bash
 workflow setup                     # 初始化或更新配置（交互式设置）
 workflow config                    # 查看当前配置（显示所有配置项）
+workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
+workflow update --version 1.1.2    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 ```
 
@@ -342,6 +344,13 @@ workflow log set                   # 设置日志级别（交互式选择：none
 workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
 ```
 
+### Shell Completion 管理
+```bash
+workflow completion generate       # 生成 completion 脚本（自动检测 shell 并应用）
+workflow completion check          # 检查 completion 状态（显示已安装的 shell 和已配置的 completion）
+workflow completion remove         # 移除 completion 配置（交互式选择要移除的 shell）
+```
+
 ### 清理命令
 ```bash
 workflow clean                     # 清理日志下载目录（需要确认）
@@ -351,8 +360,12 @@ workflow clean --list              # 只列出将要删除的内容
 
 ### 安装命令
 ```bash
-install                            # 安装 Workflow CLI 到系统（编译并安装所有二进制文件）
+install                            # 安装 Workflow CLI 到系统（默认安装二进制文件 + shell completions）
+install --binaries                 # 只安装二进制文件到 /usr/local/bin
+install --completions              # 只安装 shell completion 脚本
 ```
+
+> **注意**：`install` 命令是一个独立的可执行文件，用于将编译好的二进制文件安装到系统。如果同时指定 `--binaries` 和 `--completions`，或不指定任何选项，则安装全部内容。
 
 
 ### PR 操作

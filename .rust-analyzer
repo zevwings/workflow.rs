@@ -1,0 +1,45 @@
+{
+  "cargo": {
+    "allFeatures": true,
+    "loadOutDirsFromCheck": false
+  },
+  "checkOnSave": {
+    "enable": false
+  },
+  "procMacro": {
+    "enable": true
+  },
+  "files": {
+    "excludeDirs": [
+      "target",
+      ".git"
+    ],
+    "watcher": "notify"
+  },
+  "diagnostics": {
+    "enable": true,
+    "disabled": [
+      "unresolved-macro-call",
+      "missing-unsafe"
+    ],
+    "remapPrefix": {}
+  },
+  "inlayHints": {
+    "enable": false
+  },
+  "completion": {
+    "autoimport": {
+      "enable": true
+    }
+  },
+  "rustfmt": {
+    "extraArgs": []
+  },
+  "typing": {
+    "continueCommentsOnNewline": false
+  },
+  "assist": {
+    "importGranularity": "module"
+  }
+}
+

@@ -3,11 +3,18 @@ use duct::cmd;
 use std::path::Path;
 use std::process::Command;
 
+use super::commit::GitCommit;
+use super::repo::GitRepo;
 use crate::{log_debug, log_info, log_success};
 
-use super::commit::Git;
+/// Git Pre-commit Hooks 管理
+///
+/// 提供 pre-commit hooks 相关的操作功能，包括：
+/// - 检查是否存在 pre-commit hooks
+/// - 执行 pre-commit hooks
+pub struct GitPreCommit;
 
-impl Git {
+impl GitPreCommit {
     /// 检查工程中是否存在 pre-commit hooks
     ///
     /// 检查以下位置：
@@ -40,7 +47,7 @@ impl Git {
 
     /// 获取 pre-commit hook 路径（如果存在）
     fn get_pre_commit_hook_path() -> Option<std::path::PathBuf> {
-        if let Ok(git_dir) = Git::get_git_dir() {
+        if let Ok(git_dir) = GitRepo::get_git_dir() {
             let hooks_path = Path::new(&git_dir).join("hooks").join("pre-commit");
             if hooks_path.exists() && hooks_path.is_file() {
                 return Some(hooks_path);
@@ -55,7 +62,7 @@ impl Git {
     /// 如果有 Git hooks，直接执行 `.git/hooks/pre-commit` 脚本
     pub(crate) fn run_pre_commit() -> Result<()> {
         // 检查是否有 staged 的文件
-        let has_staged = Self::has_staged().unwrap_or(false);
+        let has_staged = GitCommit::has_staged().unwrap_or(false);
 
         if !has_staged {
             log_info!("No staged files, skipping pre-commit");

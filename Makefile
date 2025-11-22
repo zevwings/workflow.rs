@@ -21,6 +21,7 @@ help:
 	@echo "  make release            - 构建 release 版本（打包）"
 	@echo "  make clean              - 清理构建产物"
 	@echo "  make install            - 一次性安装全部（构建 + 安装二进制 + 安装 completion）"
+	@echo "  make update             - 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）"
 	@echo "  make test               - 运行测试"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer）"
@@ -139,7 +140,14 @@ install:
 	@echo "  - qk (快速日志操作命令)"
 	@echo ""
 	@echo "安装 shell completion 脚本..."
-	@./target/release/install
+	@./target/release/install --completions
+
+# 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）
+# 使用 workflow update 命令
+update:
+	@echo "更新 Workflow CLI..."
+	@cargo build --release --bin workflow
+	@./target/release/workflow update
 
 # 卸载二进制文件和 shell completion 脚本（一次性清理全部）
 uninstall:

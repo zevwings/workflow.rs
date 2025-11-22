@@ -10,7 +10,7 @@
 //!
 //! ## 模块结构
 //!
-//! - `commit` - Git 提交相关操作（`Git` 结构体）
+//! - `commit` - Git 提交相关操作（`GitCommit` 结构体）
 //! - `branch` - 分支管理操作
 //! - `repo` - 仓库检测和类型识别
 //! - `stash` - 暂存管理
@@ -21,13 +21,17 @@
 mod branch;
 mod commit;
 mod config;
+mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;
 mod types;
 
 // 重新导出所有公共 API
-pub use branch::MergeStrategy;
-pub use commit::Git;
+pub use branch::{GitBranch, MergeStrategy};
+pub use commit::GitCommit;
 pub use config::GitConfig;
+pub use pre_commit::GitPreCommit;
+pub use repo::GitRepo;
+pub use stash::GitStash;
 pub use types::RepoType;

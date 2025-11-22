@@ -6,12 +6,20 @@
 //! - 获取远程仓库 URL
 
 use anyhow::{Context, Result};
-use duct::cmd;
 
-use super::commit::Git;
+use super::helpers::{check_success, cmd_read, cmd_run};
 use super::types::RepoType;
 
-impl Git {
+/// Git 仓库管理
+///
+/// 提供仓库相关的操作功能，包括：
+/// - 检测当前目录是否为 Git 仓库
+/// - 检测远程仓库类型（GitHub、Codeup 等）
+/// - 获取远程仓库 URL
+/// - 从远程获取更新
+pub struct GitRepo;
+
+impl GitRepo {
     /// 检查是否在 Git 仓库中
     ///
     /// 使用 `git rev-parse --git-dir` 检查当前目录是否为 Git 仓库。
@@ -20,11 +28,7 @@ impl Git {
     ///
     /// 返回 `true` 如果当前目录是 Git 仓库，否则返回 `false`。
     pub fn is_git_repo() -> bool {
-        cmd("git", &["rev-parse", "--git-dir", "--quiet"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok()
+        check_success(&["rev-parse", "--git-dir", "--quiet"])
     }
 
     /// 检测远程仓库类型（GitHub 或 Codeup）
@@ -85,11 +89,7 @@ impl Git {
     /// 如果无法获取远程 URL，返回相应的错误信息。
     #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
-        let output = cmd("git", &["remote", "get-url", "origin"])
-            .read()
-            .context("Failed to get remote URL")?;
-
-        Ok(output.trim().to_string())
+        cmd_read(&["remote", "get-url", "origin"]).context("Failed to get remote URL")
     }
 
     /// 获取 Git 目录路径
@@ -104,11 +104,7 @@ impl Git {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        let output = cmd("git", &["rev-parse", "--git-dir"])
-            .read()
-            .context("Failed to get git directory")?;
-
-        Ok(output.trim().to_string())
+        cmd_read(&["rev-parse", "--git-dir"]).context("Failed to get git directory")
     }
 
     /// 从远程仓库获取更新
@@ -119,10 +115,7 @@ impl Git {
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        cmd("git", &["fetch", "origin"])
-            .run()
-            .context("Failed to fetch from origin")?;
-        Ok(())
+        cmd_run(&["fetch", "origin"]).context("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用
@@ -133,9 +126,6 @@ impl Git {
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        cmd("git", &["remote", "prune", "origin"])
-            .run()
-            .context("Failed to prune remote references")?;
-        Ok(())
+        cmd_run(&["remote", "prune", "origin"]).context("Failed to prune remote references")
     }
 }

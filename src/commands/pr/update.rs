@@ -1,7 +1,7 @@
-use crate::{
-    detect_repo_type, get_current_branch_pr_id, log_success, log_warning, Codeup, Git, GitHub,
-    PlatformProvider, RepoType,
-};
+use crate::git::{GitBranch, GitCommit};
+use crate::pr::create_provider;
+use crate::pr::helpers::get_current_branch_pr_id;
+use crate::{log_success, log_warning};
 use anyhow::Result;
 
 /// 快速更新命令
@@ -14,11 +14,8 @@ impl PullRequestUpdateCommand {
     ///
     /// 根据仓库类型自动选择对应的平台实现
     pub fn update() -> Result<()> {
-        // 检测仓库类型
-        let repo_type = Git::detect_repo_type()?;
-
         // 获取当前分支的 PR 标题
-        let pull_request_title = Self::get_pull_request_title(&repo_type)?;
+        let pull_request_title = Self::get_pull_request_title()?;
 
         // 确定提交消息
         let message = pull_request_title.unwrap_or_else(|| {
@@ -30,19 +27,19 @@ impl PullRequestUpdateCommand {
 
         // 执行 git commit（会自动暂存所有文件）
         log_success!("Staging and committing changes...");
-        Git::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
+        GitCommit::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
 
         // 执行 git push
-        let current_branch = Git::current_branch()?;
+        let current_branch = GitBranch::current_branch()?;
         log_success!("Pushing to remote...");
-        Git::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
+        GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
         log_success!("Update completed successfully!");
         Ok(())
     }
 
     /// 根据仓库类型获取当前分支的 PR 标题
-    fn get_pull_request_title(_repo_type: &RepoType) -> Result<Option<String>> {
+    fn get_pull_request_title() -> Result<Option<String>> {
         // 获取当前分支的 PR ID（如果不存在，返回 None 而不是错误）
         let pr_id = match get_current_branch_pr_id() {
             Ok(Some(id)) => id,
@@ -53,15 +50,8 @@ impl PullRequestUpdateCommand {
         };
 
         // 获取 PR 标题
-        let title = detect_repo_type(
-            |repo_type| match repo_type {
-                RepoType::GitHub => GitHub::get_pull_request_title(&pr_id),
-                RepoType::Codeup => Codeup::get_pull_request_title(&pr_id),
-                RepoType::Unknown => Ok("".to_string()),
-            },
-            "get pull request title",
-        )
-        .ok();
+        let provider = create_provider()?;
+        let title = provider.get_pull_request_title(&pr_id).ok();
 
         Ok(title)
     }

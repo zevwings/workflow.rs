@@ -1,11 +1,10 @@
-use crate::git::Git;
+use crate::base::settings::Settings;
+use crate::git::GitRepo;
 use crate::git::RepoType;
-use crate::settings::Settings;
 use anyhow::{Context, Result};
 use regex::Regex;
 
-use super::constants::TYPES_OF_CHANGES;
-use super::provider::PlatformProvider;
+use super::platform::{create_provider, TYPES_OF_CHANGES};
 
 /// 从 PR URL 提取 PR ID
 ///
@@ -219,7 +218,7 @@ pub fn detect_repo_type<F, T>(f: F, operation_name: &str) -> Result<T>
 where
     F: FnOnce(RepoType) -> Result<T>,
 {
-    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
+    let repo_type = GitRepo::detect_repo_type().context("Failed to detect repository type")?;
     match repo_type {
         RepoType::GitHub | RepoType::Codeup => f(repo_type),
         RepoType::Unknown => {
@@ -239,16 +238,44 @@ where
 ///
 /// 返回当前分支的 PR ID（如果存在），否则返回 None
 pub fn get_current_branch_pr_id() -> Result<Option<String>> {
-    let repo_type = Git::detect_repo_type().context("Failed to detect repository type")?;
-    match repo_type {
-        RepoType::GitHub => {
-            use super::github::GitHub;
-            GitHub::get_current_branch_pull_request()
+    let provider = create_provider()?;
+    provider.get_current_branch_pull_request()
+}
+
+/// 解析 PR ID（从参数或当前分支）
+///
+/// 如果提供了 `pull_request_id`，直接返回。
+/// 否则，尝试从当前分支自动检测 PR ID。
+///
+/// # 参数
+///
+/// * `pull_request_id` - 可选的 PR ID（从命令行参数传入）
+///
+/// # 返回
+///
+/// 返回解析后的 PR ID 字符串
+///
+/// # 错误
+///
+/// 如果无法自动检测 PR ID 且未提供参数，返回错误。
+pub fn resolve_pull_request_id(pull_request_id: Option<String>) -> Result<String> {
+    if let Some(id) = pull_request_id {
+        return Ok(id);
+    }
+
+    let provider = create_provider()?;
+    match provider.get_current_branch_pull_request()? {
+        Some(id) => Ok(id),
+        None => {
+            let repo_type = GitRepo::detect_repo_type()?;
+            let error_msg = match repo_type {
+                RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
+                RepoType::Codeup => {
+                    "No PR found for current branch. Please specify PR ID or branch name."
+                }
+                _ => "No PR found for current branch.",
+            };
+            anyhow::bail!("{}", error_msg);
         }
-        RepoType::Codeup => {
-            use super::codeup::Codeup;
-            Codeup::get_current_branch_pull_request()
-        }
-        RepoType::Unknown => Ok(None),
     }
 }
