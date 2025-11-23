@@ -77,6 +77,13 @@ impl Paths {
         Ok(Self::config_dir()?.join("jira-users.toml"))
     }
 
+    /// 获取分支配置文件路径
+    ///
+    /// 返回 `~/.workflow/config/branch.toml` 的路径。
+    pub fn branch_config() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("branch.toml"))
+    }
+
     /// 获取工作流目录路径
     ///
     /// 返回 `~/.workflow/` 目录路径，如果目录不存在则创建。

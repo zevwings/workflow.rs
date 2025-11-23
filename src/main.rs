@@ -8,8 +8,12 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::config::{check, completion, github, log, proxy, setup, show};
+use commands::branch::{clean, ignore};
+use commands::check::check;
+use commands::config::{completion, log, setup, show};
+use commands::github::github;
 use commands::lifecycle::{uninstall, update};
+use commands::proxy::proxy;
 use commands::qk::clean::CleanCommand;
 
 use workflow::*;
@@ -101,6 +105,13 @@ enum Commands {
         #[command(subcommand)]
         subcommand: CompletionSubcommand,
     },
+    /// Manage Git branches
+    ///
+    /// Clean local branches and manage branch ignore list.
+    Branch {
+        #[command(subcommand)]
+        subcommand: BranchSubcommand,
+    },
 }
 
 /// Proxy management subcommands
@@ -187,6 +198,45 @@ enum CompletionSubcommand {
     Remove,
 }
 
+/// Branch management subcommands
+///
+/// Used to clean branches and manage branch ignore list.
+#[derive(Subcommand)]
+enum BranchSubcommand {
+    /// Clean local branches
+    ///
+    /// Delete all local branches except main/master, develop, current branch, and branches in ignore list.
+    Clean {
+        /// Dry run mode (show what would be deleted without actually deleting)
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+    /// Manage branch ignore list
+    ///
+    /// Add, remove, or list branches in the ignore list.
+    Ignore {
+        #[command(subcommand)]
+        subcommand: IgnoreSubcommand,
+    },
+}
+
+/// Branch ignore list management subcommands
+#[derive(Subcommand)]
+enum IgnoreSubcommand {
+    /// Add branch to ignore list
+    Add {
+        /// Branch name to add
+        branch_name: String,
+    },
+    /// Remove branch from ignore list
+    Remove {
+        /// Branch name to remove
+        branch_name: String,
+    },
+    /// List ignored branches for current repository
+    List,
+}
+
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
@@ -258,10 +308,28 @@ fn main() -> Result<()> {
             CompletionSubcommand::Check => completion::CompletionCommand::check()?,
             CompletionSubcommand::Remove => completion::CompletionCommand::remove()?,
         },
+        // 分支管理命令
+        Some(Commands::Branch { subcommand }) => match subcommand {
+            BranchSubcommand::Clean { dry_run } => {
+                clean::BranchCleanCommand::clean(dry_run)?;
+            }
+            BranchSubcommand::Ignore { subcommand } => match subcommand {
+                IgnoreSubcommand::Add { branch_name } => {
+                    ignore::BranchIgnoreCommand::add(branch_name)?;
+                }
+                IgnoreSubcommand::Remove { branch_name } => {
+                    ignore::BranchIgnoreCommand::remove(branch_name)?;
+                }
+                IgnoreSubcommand::List => {
+                    ignore::BranchIgnoreCommand::list()?;
+                }
+            },
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
+            log_message!("  workflow branch     - Manage Git branches (clean/ignore)");
             log_message!("  workflow check      - Run environment checks (Git status and network)");
             log_message!("  workflow clean      - Clean log download directory");
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");

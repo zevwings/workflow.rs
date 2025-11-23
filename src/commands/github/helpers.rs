@@ -1,6 +1,6 @@
-//! Config 命令辅助函数
+//! GitHub 命令辅助函数
 //!
-//! 提供配置管理命令的共享逻辑，减少代码重复。
+//! 提供 GitHub 账号管理的共享逻辑，减少代码重复。
 
 use crate::base::settings::settings::GitHubAccount;
 use anyhow::{Context, Result};

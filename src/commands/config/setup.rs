@@ -5,7 +5,7 @@ use crate::base::settings::defaults::{default_llm_model, default_response_format
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
-use crate::commands::config::helpers::collect_github_account;
+use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};

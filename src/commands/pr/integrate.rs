@@ -1,5 +1,5 @@
 use crate::base::util::confirm;
-use crate::commands::config::check;
+use crate::commands::check;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;

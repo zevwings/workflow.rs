@@ -4,7 +4,7 @@
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::util::{confirm, mask_sensitive_value};
-use crate::commands::config::helpers::{
+use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
 use crate::git::GitConfig;

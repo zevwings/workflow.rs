@@ -26,7 +26,8 @@ src/
 │   │   ├── close.rs        # 关闭 PR
 │   │   ├── status.rs       # PR 状态查询
 │   │   ├── list.rs         # 列出 PR
-│   │   └── update.rs       # 更新 PR
+│   │   ├── update.rs       # 更新 PR
+│   │   └── integrate.rs    # 集成分支命令
 │   ├── qk/                 # 快速日志操作命令
 │   │   ├── mod.rs          # QK 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
@@ -34,12 +35,31 @@ src/
 │   │   ├── search.rs       # 搜索关键词命令
 │   │   ├── clean.rs        # 清理日志目录命令
 │   │   └── info.rs         # 显示 ticket 信息命令
-│   ├── check.rs            # 综合检查命令（git_status, network）
-│   ├── proxy.rs            # 代理管理命令（on, off, check）
-│   ├── config.rs           # 配置查看命令（显示当前配置）
-│   ├── setup.rs            # 初始化设置命令（交互式配置）
-│   ├── install.rs          # 安装命令实现（安装二进制和补全脚本）
-│   └── uninstall.rs        # 卸载命令实现（清理所有相关文件）
+│   ├── branch/             # 分支管理命令
+│   │   ├── mod.rs          # Branch 命令模块声明
+│   │   ├── clean.rs        # 清理本地分支命令
+│   │   └── ignore.rs      # 管理分支忽略列表命令
+│   ├── github/             # GitHub 账号管理命令
+│   │   ├── mod.rs          # GitHub 命令模块声明
+│   │   ├── github.rs       # GitHub 账号管理实现
+│   │   └── helpers.rs      # GitHub 辅助函数（账号信息收集等）
+│   ├── check/              # 环境检查命令
+│   │   ├── mod.rs          # Check 命令模块声明
+│   │   └── check.rs        # 综合检查命令（git_status, network）
+│   ├── proxy/              # 代理管理命令
+│   │   ├── mod.rs          # Proxy 命令模块声明
+│   │   └── proxy.rs        # 代理管理命令（on, off, check）
+│   ├── config/             # 配置管理命令
+│   │   ├── mod.rs          # Config 命令模块声明
+│   │   ├── setup.rs        # 初始化设置命令（交互式配置）
+│   │   ├── show.rs         # 配置查看命令（显示当前配置）
+│   │   ├── log.rs           # 日志级别管理命令（set, check）
+│   │   └── completion.rs   # Shell Completion 管理命令
+│   └── lifecycle/          # 生命周期管理命令
+│       ├── mod.rs          # Lifecycle 命令模块声明
+│       ├── install.rs      # 安装命令实现（安装二进制和补全脚本）
+│       ├── uninstall.rs    # 卸载命令实现（清理所有相关文件）
+│       └── update.rs       # 更新命令实现（重新构建、更新二进制文件）
 └── lib/                    # 核心功能库（业务逻辑层）
     ├── mod.rs              # 库模块声明
     ├── base/               # 基础设施模块
@@ -163,7 +183,12 @@ src/
 │      命令封装层 (commands/)              │
 │  - commands/qk/  (日志操作)              │
 │  - commands/pr/  (PR 操作)               │
-│  - commands/check, proxy, config, etc.  │
+│  - commands/branch/ (分支管理)           │
+│  - commands/github/ (GitHub 账号管理)   │
+│  - commands/check/ (环境检查)            │
+│  - commands/proxy/ (代理管理)            │
+│  - commands/config/ (配置管理)           │
+│  - commands/lifecycle/ (生命周期管理)    │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
@@ -257,6 +282,7 @@ src/
 - `~/.workflow/config/llm.toml` - LLM 配置文件（可选，如果配置了 LLM）
 - `~/.workflow/config/jira-status.toml` - Jira 项目状态映射配置
 - `~/.workflow/config/jira-users.toml` - Jira 用户缓存配置
+- `~/.workflow/config/branch.toml` - 分支清理忽略列表配置（按仓库分组）
 - `~/.workflow/work-history/` - PR 和 Jira ticket 的关联历史（按仓库存储）
 
 ### Jira Status 配置 (`jira-status.toml`)
@@ -277,6 +303,34 @@ merged-pr = "Done"
 **使用场景**：
 - 创建 PR 时自动更新 Jira ticket 状态为 `created-pr` 配置的状态
 - 合并 PR 时自动更新 Jira ticket 状态为 `merged-pr` 配置的状态
+
+### Branch 配置 (`branch.toml`)
+
+存储分支清理时的忽略列表，按仓库名分组。
+
+**格式**：
+```toml
+[zevwings/workflow.rs]
+ignore = [
+    "zw/important-feature",
+    "zw/refactor-code-base",
+    "release/v1.0",
+]
+
+[company/project-name]
+ignore = [
+    "important-branch-name",
+    "hotfix/critical",
+]
+```
+
+**使用场景**：
+- `workflow branch clean` 命令会自动排除配置文件中列出的分支
+- 通过 `workflow branch ignore` 命令管理忽略列表（add/remove/list）
+
+**相关文件**：
+- `src/commands/branch/helpers.rs` - 分支配置管理逻辑（BranchConfig）
+- `src/commands/branch/` - 分支管理命令实现
 
 ### Work History (`~/.workflow/work-history/`)
 

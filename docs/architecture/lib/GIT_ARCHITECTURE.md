@@ -18,10 +18,10 @@ Git 模块是 Workflow CLI 的核心功能之一，提供完整的 Git 仓库操
 
 ```
 src/lib/git/
-├── mod.rs          # Git 模块声明和导出 (38行)
-├── branch.rs       # 分支管理操作 (613行)
+├── mod.rs          # Git 模块声明和导出 (40行)
+├── branch.rs       # 分支管理操作 (608行)
 ├── commit.rs       # 提交相关操作 (172行)
-├── repo.rs         # 仓库检测和类型识别 (132行)
+├── repo.rs         # 仓库检测和类型识别 (203行)
 ├── stash.rs        # 暂存管理 (102行)
 ├── config.rs       # Git 配置管理 (67行)
 ├── pre_commit.rs   # Pre-commit hooks 支持 (107行)
@@ -48,9 +48,15 @@ src/lib/git/
   - `GitConfig::set_global_user()` - 设置 Git 全局配置
   - 用于初始化设置和 GitHub 账号切换
 
-- **环境检查集成**：
+- **环境检查集成** (`commands/check/`)：
   - `GitRepo::is_git_repo()` - 检查是否在 Git 仓库中
   - `GitCommit::status()` - 检查 Git 状态
+
+- **分支管理集成** (`commands/branch/`)：
+  - `GitBranch::get_all_branches()` - 获取所有分支
+  - `GitBranch::is_merged()` - 检查分支是否已合并
+  - `GitRepo::extract_repo_name()` - 提取仓库名（用于配置分组）
+  - `GitRepo::prune_remote()` - 清理远程分支引用
 
 ---
 
@@ -98,6 +104,7 @@ src/lib/git/
 - PR 创建时创建和切换分支
 - PR 合并时合并分支和清理
 - 分支列表查询
+- 分支清理操作
 
 #### 2. 提交管理 (`commit.rs`)
 

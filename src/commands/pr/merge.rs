@@ -1,4 +1,4 @@
-use crate::commands::config::check;
+use crate::commands::check;
 use crate::commands::pr::helpers;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::status::JiraStatus;

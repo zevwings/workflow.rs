@@ -4,12 +4,14 @@
 
 本文档描述 Workflow CLI 的配置管理模块架构，包括：
 - 交互式配置设置和配置查看功能
-- GitHub 账号管理（多账号支持）
 - 日志级别管理
-- 配置管理辅助函数
-- 环境检查功能（Git 仓库状态、网络连接）
+- Shell Completion 管理
 
-这些命令负责管理 Workflow CLI 的所有 TOML 配置文件，使用统一的 `ConfigManager` 进行配置更新，并提供环境诊断和验证功能。
+这些命令负责管理 Workflow CLI 的核心 TOML 配置文件，使用统一的 `ConfigManager` 进行配置更新。
+
+**注意**：以下功能已独立到其他模块：
+- **GitHub 账号管理** → `commands/github/`（详见独立的 GitHub 命令文档）
+- **环境检查** → `commands/check/`（详见独立的 Check 命令文档）
 
 ---
 
@@ -25,12 +27,10 @@ src/main.rs
 
 ```
 src/commands/config/
-├── setup.rs        # 初始化设置命令（~654 行）
+├── setup.rs        # 初始化设置命令（~653 行）
 ├── show.rs         # 配置查看命令（~52 行）
-├── github.rs       # GitHub 账号管理命令（~442 行）
 ├── log.rs          # 日志级别管理命令（~108 行）
-├── helpers.rs      # 配置管理辅助函数（~164 行）
-└── check.rs        # 环境检查命令（~68 行）
+└── completion.rs   # Shell Completion 管理命令（~303 行）
 ```
 
 ### 依赖模块（简要说明）
@@ -195,86 +195,7 @@ commands/config/show.rs::ConfigCommand::show()
 
 ---
 
-## 3. GitHub 账号管理命令 (`github.rs`)
-
-### 相关文件
-
-```
-src/commands/config/github.rs
-```
-
-### 调用流程
-
-```
-main.rs::Commands::GitHub { subcommand }
-  ↓
-commands/config/github.rs::GitHubCommand::{list|current|add|remove|switch|update}()
-  ↓
-  1. Settings::load()                        # 加载配置
-  2. 执行相应的账号管理操作
-  3. ConfigManager::<Settings>::update()    # 更新配置
-  4. GitConfig::set_global_user()            # 更新 Git 全局配置（如需要）
-```
-
-### 功能说明
-
-GitHub 账号管理命令提供多账号管理功能，支持以下子命令：
-
-1. **`list`** - 列出所有 GitHub 账号
-   - 显示所有已配置的 GitHub 账号
-   - 标记当前激活的账号
-   - 显示账号的详细信息（名称、邮箱、Token、分支前缀）
-
-2. **`current`** - 显示当前激活的 GitHub 账号
-   - 显示当前正在使用的 GitHub 账号信息
-   - 如果没有激活的账号，提示用户添加
-
-3. **`add`** - 添加新的 GitHub 账号
-   - 交互式收集账号信息（名称、邮箱、API Token、分支前缀）
-   - 检查账号名称是否已存在
-   - 如果这是第一个账号，自动设置为当前账号
-   - 自动更新 Git 全局配置（user.name 和 user.email）
-
-4. **`remove`** - 删除 GitHub 账号
-   - 交互式选择要删除的账号
-   - 如果删除的是当前账号，自动切换到第一个账号
-   - 如果删除后没有账号了，清空 current 字段
-   - 更新 Git 全局配置（如需要）
-
-5. **`switch`** - 切换当前 GitHub 账号
-   - 交互式选择要切换到的账号
-   - 更新 `Settings.github.current` 字段
-   - 自动更新 Git 全局配置（user.name 和 user.email）
-
-6. **`update`** - 更新 GitHub 账号信息
-   - 交互式选择要更新的账号
-   - 使用现有值作为默认值，支持部分更新
-   - 如果更新的是当前账号，且 email 或 name 改变了，更新 Git 全局配置
-   - 如果账号名称改变了，且是当前账号，更新 current 字段
-
-### 关键步骤说明
-
-1. **账号信息收集**：
-   - 使用 `helpers::collect_github_account()` 收集新账号信息
-   - 使用 `helpers::collect_github_account_with_defaults()` 更新现有账号信息
-   - 验证输入（账号名称不能为空、邮箱格式验证等）
-
-2. **配置更新**：
-   - 使用 `ConfigManager::<Settings>::update()` 方法更新配置
-   - 原子性更新，确保配置一致性
-
-3. **Git 配置同步**：
-   - 当添加、切换或更新账号时，自动更新 Git 全局配置
-   - 使用 `GitConfig::set_global_user()` 设置 user.name 和 user.email
-
-4. **当前账号管理**：
-   - `Settings.github.current` 字段存储当前激活的账号名称
-   - 如果没有设置 current，第一个账号被视为当前账号
-   - 删除或切换账号时自动维护 current 字段
-
----
-
-## 4. 日志级别管理命令 (`log.rs`)
+## 3. 日志级别管理命令 (`log.rs`)
 
 ### 相关文件
 
@@ -332,113 +253,17 @@ commands/config/log.rs::LogCommand::{set|check}()
 
 ---
 
-## 5. 配置管理辅助函数 (`helpers.rs`)
+## 4. Shell Completion 管理命令 (`completion.rs`)
 
 ### 相关文件
 
 ```
-src/commands/config/helpers.rs
+src/commands/config/completion.rs
 ```
 
 ### 功能说明
 
-配置管理辅助函数模块提供配置管理命令的共享逻辑，减少代码重复：
-
-1. **`collect_github_account()`** - 收集 GitHub 账号信息
-   - 交互式收集账号名称（必填）
-   - 交互式收集邮箱（必填，需包含 @）
-   - 交互式收集 API Token（必填）
-   - 交互式收集分支前缀（可选）
-   - 输入验证（非空验证、邮箱格式验证等）
-
-2. **`collect_github_account_with_defaults()`** - 收集 GitHub 账号信息（带默认值）
-   - 与 `collect_github_account()` 类似
-   - 使用现有账号信息作为默认值
-   - 用户可以直接按 Enter 保留现有值
-   - 支持部分更新账号信息
-
-### 关键步骤说明
-
-1. **输入验证**：
-   - 账号名称：不能为空
-   - 邮箱：不能为空，必须包含 @ 符号
-   - API Token：不能为空
-   - 分支前缀：可选，可以为空
-
-2. **数据清理**：
-   - 自动去除输入值的前后空格
-   - 空字符串转换为 `None`（对于可选字段）
-
-3. **使用场景**：
-   - `collect_github_account()` 用于添加新账号（`github.rs::add()`）
-   - `collect_github_account_with_defaults()` 用于更新现有账号（`github.rs::update()`）
-   - 也被 `setup.rs` 使用，用于初始化配置
-
----
-
-## 6. 环境检查命令 (`check.rs`)
-
-### 相关文件
-
-```
-src/commands/config/check.rs
-```
-
-### 调用流程
-
-```
-main.rs::Commands::Check
-  ↓
-commands/config/check.rs::CheckCommand::run_all()
-  ↓
-  1. GitRepo::is_git_repo()                  # 检查是否在 Git 仓库中
-  2. GitCommit::status()                     # 检查 Git 状态
-  3. HttpClient::global().stream()          # 检查网络连接（GitHub）
-```
-
-### 功能说明
-
-环境检查命令提供工作环境的诊断和验证功能：
-
-1. **Git 仓库检查**：
-   - 检查当前目录是否是 Git 仓库
-   - 检查 Git 状态（是否有未提交的更改）
-   - 使用 `GitRepo::is_git_repo()` 检测仓库
-   - 使用 `GitCommit::status()` 获取状态信息
-
-2. **网络连接检查**：
-   - 检查到 GitHub 的网络连接
-   - 使用 `HttpClient::global()` 发送 HTTP 请求
-   - 超时时间设置为 10 秒
-   - 验证响应状态码
-
-### 关键步骤说明
-
-1. **Git 检查**：
-   - 如果不在 Git 仓库中，直接失败并提示错误
-   - 如果有未提交的更改，显示 Git 状态信息
-   - 如果仓库干净（无未提交更改），显示成功信息
-
-2. **网络检查**：
-   - 使用 `HttpClient::stream()` 方法发送 GET 请求到 `https://github.com`
-   - 如果请求失败，提供详细的错误信息和建议
-   - 如果响应状态码不是成功状态，报告错误
-   - 如果检查通过，显示成功信息
-
-3. **检查顺序**：
-   - 按顺序执行检查（Git 检查 → 网络检查）
-   - 如果任何检查失败，整个命令失败
-   - 所有检查通过后，显示总体成功信息
-
-### 错误处理
-
-- **Git 检查失败**：
-  - 如果不在 Git 仓库中，提供清晰的错误提示
-  - 如果 Git 状态检查失败，提供上下文错误信息
-
-- **网络检查失败**：
-  - 提供详细的错误信息（网络问题、代理设置、防火墙限制等）
-  - 给出可能的解决建议
+Shell Completion 管理命令提供 Shell 补全脚本的生成和管理功能，支持多种 Shell 类型（zsh, bash, fish, powershell, elvish）。
 
 ### 数据流
 
@@ -468,6 +293,8 @@ Settings 管理（读取/写入 TOML 配置文件）
     ├── jira-status.toml   # Jira 状态配置
     └── jira-users.toml    # Jira 用户缓存
 ```
+
+**注意**：其他配置文件（如 `branch.toml`）由对应的命令模块管理，详见相关模块文档。
 
 ---
 
@@ -559,22 +386,6 @@ workflow config setup
 workflow config show
 ```
 
-### GitHub 账号管理
-
-```bash
-# 添加 GitHub 账号
-workflow config github add
-
-# 切换账号
-workflow config github switch
-
-# 列出所有账号
-workflow config github list
-
-# 删除账号
-workflow config github remove
-```
-
 ### 日志级别管理
 
 ```bash
@@ -582,14 +393,20 @@ workflow config github remove
 workflow config log set
 
 # 查看当前日志级别
-workflow config log show
+workflow config log check
 ```
 
-### 环境检查
+### Shell Completion 管理
 
 ```bash
-# 检查环境
-workflow config check
+# 生成补全脚本
+workflow completion generate
+
+# 检查补全状态
+workflow completion check
+
+# 移除补全配置
+workflow completion remove
 ```
 
 ---
@@ -600,12 +417,12 @@ Config 命令层采用清晰的配置管理设计：
 
 1. **交互式配置**：通过 `setup` 命令交互式收集配置
 2. **配置查看**：通过 `show` 命令查看和验证配置
-3. **账号管理**：支持多 GitHub 账号管理和切换
-4. **环境检查**：提供完整的环境检查功能
+3. **日志管理**：通过 `log` 命令管理日志级别
+4. **Completion 管理**：通过 `completion` 命令管理 Shell 补全
 
 **设计优势**：
 - ✅ **易用性**：交互式配置，用户友好
-- ✅ **完整性**：配置验证和环境检查
-- ✅ **灵活性**：支持多账号管理
-- ✅ **可扩展性**：易于添加新的配置项和检查项
+- ✅ **完整性**：配置验证和查看功能
+- ✅ **模块化**：与其他命令模块（GitHub、Check）职责分离
+- ✅ **可扩展性**：易于添加新的配置项
 

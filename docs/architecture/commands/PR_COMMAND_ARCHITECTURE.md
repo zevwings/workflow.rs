@@ -74,7 +74,7 @@ src/commands/pr/
   - `Browser::open()` - 打开浏览器
   - `confirm()` - 用户确认
 
-- **`lib/commands/config/check/`**：检查命令（`CheckCommand::run_all()`）
+- **`commands/check/`**：检查命令（`CheckCommand::run_all()`）
   - 运行环境检查（Git 状态、网络）
 
 ---

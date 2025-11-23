@@ -1,6 +1,6 @@
 use crate::base::settings::settings::Settings;
 use crate::base::util::{confirm, Browser, Clipboard};
-use crate::commands::config::check;
+use crate::commands::check;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;

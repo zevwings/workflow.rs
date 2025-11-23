@@ -13,25 +13,27 @@
 //! - `uninstall` - 卸载命令实现
 //! - `update` - 更新命令实现（重新构建、更新二进制文件、更新 completion）
 //!
-//! ### 配置管理 (`config/`)
-//! - `setup` - 初始化设置命令
-//! - `config` - 配置查看命令
-//! - `github` - GitHub 账号管理命令（list, add, remove, switch, update, current）
-//! - `log` - 日志级别管理命令（set, check）
-//! - `proxy` - 代理管理命令（on, off, check）
-//! - `completion` - Shell Completion 管理命令
-//! - `check` - 检查工具命令（git_status, network）
+//! ### 配置管理
+//! - `config/` - 配置管理命令（setup, show, log, completion）
+//! - `github/` - GitHub 账号管理命令（list, add, remove, switch, update, current）
+//! - `check/` - 环境检查命令（git_status, network）
+//! - `proxy/` - 代理管理命令（on, off, check）
 //!
 //! ### 业务功能
-//! - `pr` - PR 相关命令（create, merge, close, status, list, update）
-//! - `qk` - 快速日志操作命令（download, find, search, clean）
+//! - `pr/` - PR 相关命令（create, merge, close, status, list, update, integrate）
+//! - `qk/` - 快速日志操作命令（download, find, search, clean, info）
+//! - `branch/` - 分支管理命令（clean, ignore）
 
 // 生命周期管理
 pub mod lifecycle;
 
 // 配置管理
+pub mod check;
 pub mod config;
+pub mod github;
+pub mod proxy;
 
 // 业务功能
+pub mod branch;
 pub mod pr;
 pub mod qk;
