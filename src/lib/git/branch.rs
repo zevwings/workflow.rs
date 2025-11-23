@@ -323,6 +323,34 @@ impl GitBranch {
         }
     }
 
+    /// 获取所有本地分支
+    ///
+    /// 只获取本地分支列表，不包括远程分支。
+    ///
+    /// # 返回
+    ///
+    /// 返回本地分支名称列表（按字母顺序排序）
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn get_local_branches() -> Result<Vec<String>> {
+        // 获取本地分支列表
+        let local_output = cmd_read(&["branch"]).context("Failed to get local branches")?;
+
+        // 使用 HashSet 去重
+        let mut branch_set = HashSet::new();
+
+        // 解析本地分支
+        Self::parse_local_branches(&local_output, &mut branch_set);
+
+        // 转换为排序后的 Vec
+        let mut branches: Vec<String> = branch_set.into_iter().collect();
+        branches.sort();
+
+        Ok(branches)
+    }
+
     /// 解析本地分支列表
     fn parse_local_branches(output: &str, branch_set: &mut HashSet<String>) {
         for line in output.lines() {

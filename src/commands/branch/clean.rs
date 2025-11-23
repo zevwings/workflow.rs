@@ -55,7 +55,7 @@ impl BranchCleanCommand {
 
         // 6. 获取所有本地分支
         let all_branches =
-            GitBranch::get_all_branches(false).context("Failed to get all branches")?;
+            GitBranch::get_local_branches().context("Failed to get local branches")?;
 
         // 7. 过滤出需要删除的分支
         let branches_to_delete: Vec<String> = all_branches
