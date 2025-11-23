@@ -7,14 +7,17 @@
 完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。
 
 主要文档包括：
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 总体架构设计文档
-- [docs/PR_ARCHITECTURE.md](./docs/PR_ARCHITECTURE.md) - PR 模块架构文档
-- [docs/QK_ARCHITECTURE.md](./docs/QK_ARCHITECTURE.md) - 快速日志操作模块架构文档
-- [docs/LLM_ARCHITECTURE.md](./docs/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
-- [docs/CONFIG_ARCHITECTURE.md](./docs/CONFIG_ARCHITECTURE.md) - 配置管理模块架构文档
-- [docs/INSTALL_ARCHITECTURE.md](./docs/INSTALL_ARCHITECTURE.md) - 安装/卸载模块架构文档
-- [docs/PROXY_ARCHITECTURE.md](./docs/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
-- [docs/CHECK_ARCHITECTURE.md](./docs/CHECK_ARCHITECTURE.md) - 环境检查模块架构文档
+- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 总体架构设计文档
+- [docs/architecture/lib/PR_ARCHITECTURE.md](./docs/architecture/lib/PR_ARCHITECTURE.md) - PR 模块架构文档
+- [docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md) - 日志和 Jira 操作命令架构文档
+- [docs/architecture/lib/LLM_ARCHITECTURE.md](./docs/architecture/lib/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
+- [docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理命令架构文档
+- [docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md) - 生命周期管理命令架构文档
+- [docs/architecture/lib/PROXY_ARCHITECTURE.md](./docs/architecture/lib/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
+- [docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支管理命令架构文档
+- [docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md) - 环境检查命令架构文档
+- [docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理命令架构文档
+- [docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md) - 代理管理命令架构文档
 
 ## 🚀 快速开始
 
@@ -43,13 +46,10 @@ make install
 ```
 
 这会安装以下命令到 `/usr/local/bin`：
-- `workflow` - 主命令
-- `pr` - PR 操作命令
-- `qk` - 快速日志操作命令
+- `workflow` - 主命令（包含所有子命令：pr, log, jira 等）
 
 **重要提示**：
 - 安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
-- 如果系统默认的 `pr` 命令（Unix 文本格式化工具）干扰，确保 `/usr/local/bin` 在 PATH 中位于 `/usr/bin` 之前
 
 ### 编译项目
 
@@ -77,21 +77,21 @@ cargo run -- --help
 graph TB
     subgraph "CLI 入口层 (bin/)"
         Main[main.rs<br/>workflow 主命令]
-        PRBin[bin/pr.rs<br/>pr 命令]
-        QKBin[bin/qk.rs<br/>qk 命令]
         InstallBin[bin/install.rs<br/>install 命令]
     end
 
     subgraph "命令封装层 (commands/)"
         PRCmd[commands/pr/<br/>create, merge, close, etc.]
-        QKCmd[commands/qk/<br/>download, find, search]
-        OtherCmd[commands/<br/>check, proxy, config, setup]
+        LogCmd[commands/qk/<br/>download, find, search, clean]
+        JiraCmd[commands/qk/info<br/>显示 ticket 信息]
+        BranchCmd[commands/branch/<br/>clean, ignore]
+        OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
     end
 
     subgraph "核心业务逻辑层 (lib/)"
         PRLib[lib/pr/<br/>GitHub/Codeup PR]
         JiraLib[lib/jira/<br/>Jira API 集成]
-        LogLib[lib/log/<br/>日志处理]
+        LogLib[lib/jira/logs/<br/>日志处理]
         LLMLib[lib/llm/<br/>AI 功能]
         GitLib[lib/git/<br/>Git 操作]
         HttpLib[lib/http/<br/>HTTP 客户端]
@@ -107,17 +107,18 @@ graph TB
     end
 
     Main --> PRCmd
-    Main --> QKCmd
+    Main --> LogCmd
+    Main --> JiraCmd
+    Main --> BranchCmd
     Main --> OtherCmd
-    PRBin --> PRCmd
-    QKBin --> QKCmd
     InstallBin --> OtherCmd
 
     PRCmd --> PRLib
     PRCmd --> LLMLib
     PRCmd --> JiraLib
-    QKCmd --> LogLib
-    QKCmd --> JiraLib
+    LogCmd --> LogLib
+    LogCmd --> JiraLib
+    JiraCmd --> JiraLib
     OtherCmd --> UtilsLib
     OtherCmd --> SettingsLib
 
@@ -132,11 +133,11 @@ graph TB
     LLMLib --> LLM
 
     style Main fill:#e1f5ff
-    style PRBin fill:#e1f5ff
-    style QKBin fill:#e1f5ff
     style InstallBin fill:#e1f5ff
     style PRCmd fill:#fff4e1
-    style QKCmd fill:#fff4e1
+    style LogCmd fill:#fff4e1
+    style JiraCmd fill:#fff4e1
+    style BranchCmd fill:#fff4e1
     style OtherCmd fill:#fff4e1
     style PRLib fill:#e8f5e9
     style JiraLib fill:#e8f5e9
@@ -169,28 +170,41 @@ workflow/
 │   │   ├── settings/    # 配置管理（环境变量单例）
 │   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
 │   ├── bin/             # 独立可执行文件（CLI 入口层）
-│   │   ├── pr.rs        # PR 命令入口（独立的 pr 命令）
-│   │   ├── qk.rs        # 快速日志操作入口（独立的 qk 命令）
 │   │   └── install.rs   # 安装命令入口（独立的 install 命令）
 │   └── commands/        # 命令实现（命令封装层）
 │       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
-│       ├── qk/          # 快速日志操作命令（download, find, search）
-│       ├── check.rs     # 检查命令（git_status, network）
-│       ├── proxy.rs     # 代理管理命令（on, off, check）
-│       ├── config.rs    # 配置查看命令
-│       ├── setup.rs     # 初始化设置命令
-│       ├── install.rs   # 安装命令实现
-│       └── uninstall.rs # 卸载命令实现
+│       ├── qk/          # 日志和 Jira 操作命令（download, find, search, clean, info）
+│       ├── branch/       # 分支管理命令（clean, ignore）
+│       ├── check/       # 环境检查命令（check）
+│       ├── proxy/       # 代理管理命令（on, off, check）
+│       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
+│       ├── config/       # 配置管理命令（setup, show, log, completion）
+│       └── lifecycle/   # 生命周期管理命令（install, uninstall, update）
 └── docs/                # 文档目录
     ├── README.md        # 文档索引
-    ├── ARCHITECTURE.md  # 总体架构设计文档
-    ├── PR_ARCHITECTURE.md      # PR 模块架构文档
-    ├── QK_ARCHITECTURE.md      # 快速日志操作模块架构文档
-    ├── LLM_ARCHITECTURE.md     # LLM 统一配置驱动架构文档
-    ├── CONFIG_ARCHITECTURE.md  # 配置管理模块架构文档
-    ├── INSTALL_ARCHITECTURE.md # 安装/卸载模块架构文档
-    ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
-    └── CHECK_ARCHITECTURE.md   # 环境检查模块架构文档
+    └── architecture/    # 架构文档目录
+        ├── ARCHITECTURE.md  # 总体架构设计文档
+        ├── lib/         # Lib 层架构文档（核心业务逻辑）
+        │   ├── PR_ARCHITECTURE.md      # PR 模块架构文档
+        │   ├── JIRA_ARCHITECTURE.md    # Jira 模块架构文档
+        │   ├── GIT_ARCHITECTURE.md     # Git 模块架构文档
+        │   ├── HTTP_ARCHITECTURE.md    # HTTP 模块架构文档
+        │   ├── LLM_ARCHITECTURE.md     # LLM 模块架构文档
+        │   ├── SETTINGS_ARCHITECTURE.md # Settings 模块架构文档
+        │   ├── SHELL_ARCHITECTURE.md   # Shell 模块架构文档
+        │   ├── COMPLETION_ARCHITECTURE.md # Completion 模块架构文档
+        │   ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
+        │   ├── ROLLBACK_ARCHITECTURE.md # 回滚模块架构文档
+        │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
+        └── commands/    # 命令层架构文档（CLI 命令封装）
+            ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
+            ├── QK_COMMAND_ARCHITECTURE.md      # 日志和 Jira 操作命令架构文档
+            ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
+            ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
+            ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档
+            ├── CHECK_COMMAND_ARCHITECTURE.md   # 环境检查命令架构文档
+            ├── GITHUB_COMMAND_ARCHITECTURE.md  # GitHub 账号管理命令架构文档
+            └── PROXY_COMMAND_ARCHITECTURE.md  # 代理管理命令架构文档
 ```
 
 ## 配置
@@ -340,8 +354,8 @@ workflow github update             # 更新 GitHub 账号信息（交互式选�
 
 ### 日志级别管理
 ```bash
-workflow log set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
-workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+workflow log-level set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
+workflow log-level check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
 ```
 
 ### Shell Completion 管理
@@ -351,11 +365,16 @@ workflow completion check          # 检查 completion 状态（显示已安装�
 workflow completion remove         # 移除 completion 配置（交互式选择要移除的 shell）
 ```
 
-### 清理命令
+### 分支管理
 ```bash
-workflow clean                     # 清理日志下载目录（需要确认）
-workflow clean --dry-run           # 预览清理操作，不实际删除
-workflow clean --list              # 只列出将要删除的内容
+# 清理本地分支
+workflow branch clean              # 清理已合并的分支（保留 main/master、develop、当前分支和忽略列表中的分支）
+workflow branch clean --dry-run    # 预览将要删除的分支，不实际删除
+
+# 管理分支忽略列表
+workflow branch ignore add <BRANCH_NAME>      # 添加分支到忽略列表
+workflow branch ignore remove <BRANCH_NAME>  # 从忽略列表移除分支
+workflow branch ignore list                   # 列出当前仓库的忽略分支
 ```
 
 ### 安装命令
@@ -371,61 +390,65 @@ install --completions              # 只安装 shell completion 脚本
 ### PR 操作
 ```bash
 # 创建 PR
-pr create [JIRA_TICKET]              # 创建 PR（可选 Jira ticket，AI 生成标题）
-pr create --title "..."               # 手动指定标题
-pr create --description "..."         # 指定简短描述
-pr create --dry-run                   # 干运行（不实际创建）
+workflow pr create [JIRA_TICKET]              # 创建 PR（可选 Jira ticket，AI 生成标题）
+workflow pr create --title "..."               # 手动指定标题
+workflow pr create --description "..."         # 指定简短描述
+workflow pr create --dry-run                   # 干运行（不实际创建）
 
 # 合并 PR
-pr merge [PR_ID]                      # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
-pr merge --force                      # 强制合并
+workflow pr merge [PR_ID]                      # 合并 PR（可选指定 PR ID，否则自动检测当前分支）
+workflow pr merge --force                      # 强制合并
 
 # 关闭 PR
-pr close [PR_ID]                      # 关闭 PR（可选指定 PR ID，否则自动检测当前分支）
+workflow pr close [PR_ID]                      # 关闭 PR（可选指定 PR ID，否则自动检测当前分支）
 
 # 查看 PR 状态
-pr status [PR_ID_OR_BRANCH]           # 显示 PR 状态信息（可选参数，不提供时自动检测当前分支）
+workflow pr status [PR_ID_OR_BRANCH]           # 显示 PR 状态信息（可选参数，不提供时自动检测当前分支）
 
 # 列出 PR
-pr list                               # 列出所有 PR
-pr list --state open                  # 按状态过滤（open/closed/merged）
-pr list --limit 10                    # 限制结果数量
+workflow pr list                               # 列出所有 PR
+workflow pr list --state open                  # 按状态过滤（open/closed/merged）
+workflow pr list --limit 10                    # 限制结果数量
 
 # 更新代码
-pr update                             # 更新代码（使用 PR 标题作为提交信息）
+workflow pr update                             # 更新代码（使用 PR 标题作为提交信息）
 
 # 集成分支
-pr integrate <SOURCE_BRANCH>          # 将指定分支合并到当前分支
-pr integrate <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
-pr integrate <SOURCE_BRANCH> --squash # 使用 squash 合并
-pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会推送）
+workflow pr integrate <SOURCE_BRANCH>          # 将指定分支合并到当前分支
+workflow pr integrate <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
+workflow pr integrate <SOURCE_BRANCH> --squash # 使用 squash 合并
+workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会推送）
 ```
 
-### 日志操作 (qk)
+### 日志操作
 ```bash
-# 显示 ticket 信息（不提供子命令时）
-qk PROJ-123                          # 显示 Jira ticket 信息
-
 # 下载日志
-qk PROJ-123 download                  # 下载日志文件
-qk PROJ-123 download --all            # 下载所有附件（不仅仅是日志附件）
+workflow log download PROJ-123                  # 下载日志文件
+workflow log download PROJ-123 --all            # 下载所有附件（不仅仅是日志附件）
 
 # 查找请求 ID
-qk PROJ-123 find [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）
+workflow log find PROJ-123 [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）
 
 # 搜索关键词
-qk PROJ-123 search [SEARCH_TERM]     # 搜索关键词（可选，不提供会交互式输入）
+workflow log search PROJ-123 [SEARCH_TERM]     # 搜索关键词（可选，不提供会交互式输入）
 
 # 清理日志目录
-qk PROJ-123 clean                    # 清理指定 JIRA ID 的日志目录（需要确认）
-qk PROJ-123 clean --dry-run          # 预览清理操作，不实际删除
-qk PROJ-123 clean --list             # 只列出将要删除的内容
+workflow log clean                              # 清理整个日志基础目录（需要确认）
+workflow log clean PROJ-123                    # 清理指定 JIRA ID 的日志目录（需要确认）
+workflow log clean --dry-run                   # 预览清理操作，不实际删除
+workflow log clean --list                      # 只列出将要删除的内容
 ```
 
-> **注意**：`qk` 命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。如果不提供子命令，将显示 ticket 信息。
+### Jira 操作
+```bash
+# 显示 ticket 信息
+workflow jira info PROJ-123                    # 显示 Jira ticket 信息
+```
+
+> **注意**：日志操作命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
 
 
-> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [PR 模块架构文档](./docs/PR_ARCHITECTURE.md)。
+> **注意**：Codeup 仓库的 PR 查看和合并功能正在开发中，GitHub 仓库已完整支持。详细说明请查看 [PR 模块架构文档](./docs/architecture/lib/PR_ARCHITECTURE.md)。
 
 ## 🚀 发布
 
@@ -519,7 +542,7 @@ make lint
 
 请参考以下文档了解更多信息：
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
 
 
 

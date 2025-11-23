@@ -81,8 +81,7 @@ src/lib/completion/
 - **职责**：生成各种 shell 的 completion 脚本文件
 - **功能**：
   - 生成 `workflow` 命令的 completion（包含所有子命令）
-  - 生成 `pr` 独立命令的 completion
-  - 生成 `qk` 独立命令的 completion
+  - 生成 `workflow` 命令及其所有子命令的 completion（包括 `pr`、`log`、`jira` 等）
   - 支持多种 shell 类型（zsh, bash, fish, powershell, elvish）
 
 #### 3. Files（函数模块）
@@ -149,8 +148,7 @@ Completion::configure_shell_config(shell)
   4. Completion::generate_all_completions()             # 生成 completion 脚本
      ├─ generate::generate_all_completions()
      │   ├─ generate_workflow_completion()            # 生成 workflow completion
-     │   ├─ generate_pr_completion()                  # 生成 pr completion
-     │   └─ generate_qk_completion()                  # 生成 qk completion
+     │   └─ generate_workflow_completion()            # 生成 workflow completion（包含所有子命令）
      └─ files::get_completion_filename()              # 获取文件名
   5. Completion::create_completion_config_file()       # 创建 .completions 配置文件
   6. ShellConfigManager::add_source()                  # 添加 source 语句到 shell 配置
@@ -182,7 +180,7 @@ clap::Command (命令定义)
   ↓
 clap_complete::generate() (生成 completion 脚本)
   ↓
-Completion 脚本文件（_workflow, _pr, _qk 或 workflow.bash, pr.bash, qk.bash）
+Completion 脚本文件（_workflow 或 workflow.bash）
   ↓
 ~/.workflow/completions/ 目录
   ↓
@@ -197,11 +195,12 @@ Shell 环境（启用 completion）
 
 | Shell 类型 | 文件命名规则 | 示例 |
 |-----------|------------|------|
-| zsh | `_{command}` | `_workflow`, `_pr`, `_qk` |
-| bash | `{command}.bash` | `workflow.bash`, `pr.bash`, `qk.bash` |
-| fish | `{command}.fish` | `workflow.fish`, `pr.fish`, `qk.fish` |
-| powershell | `_{command}.ps1` | `_workflow.ps1`, `_pr.ps1`, `_qk.ps1` |
-| elvish | `{command}.elv` | `workflow.elv`, `pr.elv`, `qk.elv` |
+
+| zsh | `_{command}` | `_workflow` |
+| bash | `{command}.bash` | `workflow.bash` |
+| fish | `{command}.fish` | `workflow.fish` |
+| powershell | `_{command}.ps1` | `_workflow.ps1` |
+| elvish | `{command}.elv` | `workflow.elv` |
 
 ---
 

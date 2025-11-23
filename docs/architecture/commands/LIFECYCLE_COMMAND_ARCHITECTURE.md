@@ -78,7 +78,7 @@ bin/install.rs::main()
 commands/lifecycle/install.rs::InstallCommand::{install_binaries|install_completions}()
   ↓
   1. install_binaries()                       # 安装二进制文件（可选）
-     └─ 复制 workflow, pr, qk 到 /usr/local/bin
+     └─ 复制 workflow 到 /usr/local/bin
   2. install_completions()                    # 安装 shell completion（可选）
      ├─ Detect::shell()                      # 检测 shell 类型
      ├─ Completion::generate_all_completions() # 生成 completion 脚本
@@ -90,15 +90,15 @@ commands/lifecycle/install.rs::InstallCommand::{install_binaries|install_complet
 安装命令提供两个独立的功能，可以通过 `bin/install.rs` 的参数选择：
 
 1. **安装二进制文件** (`install_binaries()`)：
-   - 在当前可执行文件所在目录查找 `workflow`、`pr`、`qk` 二进制文件
-   - 将它们复制到 `/usr/local/bin`
+   - 在当前可执行文件所在目录查找 `workflow` 二进制文件
+   - 将它复制到 `/usr/local/bin`
    - 使用 `sudo` 复制文件并设置执行权限
    - 显示安装进度和结果
 
 2. **安装 Shell Completion** (`install_completions()`)：
    - 自动检测当前 shell 类型（zsh, bash, fish, powershell, elvish）
    - 只生成当前检测到的 shell 类型的 completion 脚本
-   - 为 `workflow`、`pr`、`qk` 三个命令生成 completion 脚本
+   - 为 `workflow` 命令及其所有子命令生成 completion 脚本
    - 自动在 shell 配置文件中添加 completion 加载代码
    - 提供重新加载 shell 配置的提示
 
@@ -113,7 +113,7 @@ commands/lifecycle/install.rs::InstallCommand::{install_binaries|install_complet
 2. **Completion 脚本生成**：
    - 使用 `Completion::generate_all_completions()` 生成脚本
    - 只生成当前 shell 类型的脚本（简化安装流程）
-   - 根据 shell 类型生成对应的文件（如 zsh 的 `_workflow`、`_pr`、`_qk`）
+   - 根据 shell 类型生成对应的文件（如 zsh 的 `_workflow`）
 
 3. **Shell 配置管理**：
    - 使用 `Completion::configure_shell_config()` 配置 shell 配置文件
@@ -158,7 +158,7 @@ commands/lifecycle/uninstall.rs::UninstallCommand::run()
    - 第二步：确认是否删除 TOML 配置文件（可选）
 
 2. **二进制文件删除**：
-   - 删除 `workflow`、`pr`、`qk`、`install` 二进制文件
+   - 删除 `workflow`、`install` 二进制文件
    - 自动处理需要 sudo 权限的文件
    - 显示将要删除的文件列表
 
@@ -297,7 +297,7 @@ commands/lifecycle/update.rs::UpdateCommand::update(version)
    - 如果回滚失败，提供手动恢复指导
 
 6. **验证流程**：
-   - 验证所有二进制文件（workflow, pr, qk）
+   - 验证 `workflow` 二进制文件
    - 检查文件存在、可执行、版本正确、可用
    - 验证 completion 脚本安装
    - 如果验证失败，认为更新失败并触发回滚
@@ -431,6 +431,8 @@ Shell 配置重新加载
 1. 在 `lib/base/settings/paths.rs` 的 `binary_paths()` 方法中添加新的二进制路径（参考相关模块文档）
 2. 在 `update.rs` 的 `verify_binaries()` 方法中添加新的二进制文件验证
 3. 在 `install.rs` 的 `install_binaries()` 方法中添加新的二进制文件安装逻辑
+
+**注意**：当前架构中，所有功能都通过 `workflow` 主命令及其子命令提供，不再需要独立的二进制文件。
 
 ### 添加新的更新验证项
 

@@ -22,12 +22,14 @@ PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Req
 
 ### CLI 入口层
 
+PR 命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Pr` 枚举定义。
+
 ```
-src/bin/pr.rs (170 行)
+src/main.rs
 ```
-- **职责**：独立的 PR 命令入口，负责命令行参数解析和命令分发
-- **功能**：使用 `clap` 解析命令行参数，将请求分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令
+- **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
+- **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, integrate）
 
 ### 命令封装层
 
@@ -86,7 +88,7 @@ src/commands/pr/
 ```
 用户输入
   ↓
-bin/pr.rs (CLI 入口，参数解析)
+src/main.rs (CLI 入口，参数解析)
   ↓
 commands/pr/*.rs (命令封装层，处理交互)
   ↓
@@ -98,7 +100,7 @@ GitHub API 或 Codeup API
 ### 命令分发流程
 
 ```
-bin/pr.rs::main()
+src/main.rs::main()
   ↓
 Cli::parse() (clap 解析参数)
   ↓
@@ -158,7 +160,7 @@ src/commands/pr/create.rs (717 行)
 ### 调用流程
 
 ```
-bin/pr.rs::PRCommands::Create
+src/main.rs::PRCommands::Create
   ↓
 commands/pr/create.rs::PullRequestCreateCommand::create()
   ↓
@@ -222,7 +224,7 @@ src/commands/pr/integrate.rs (343 行)
 ### 调用流程
 
 ```
-bin/pr.rs::PRCommands::Integrate
+src/main.rs::PRCommands::Integrate
   ↓
 commands/pr/integrate.rs::PullRequestIntegrateCommand::integrate()
   ↓
@@ -258,7 +260,7 @@ src/commands/pr/merge.rs (142 行)
 ### 调用流程
 
 ```
-bin/pr.rs::PRCommands::Merge
+src/main.rs::PRCommands::Merge
   ↓
 commands/pr/merge.rs::PullRequestMergeCommand::merge()
   ↓
@@ -291,7 +293,7 @@ src/commands/pr/close.rs (142 行)
 ### 调用流程
 
 ```
-bin/pr.rs::PRCommands::Close
+src/main.rs::PRCommands::Close
   ↓
 commands/pr/close.rs::PullRequestCloseCommand::close()
   ↓
@@ -385,26 +387,26 @@ src/commands/pr/update.rs (59 行)
 
 ### Create 命令
 ```bash
-pr create                           # 交互式
-pr create PROJ-123                  # 指定 ticket
-pr create --dry-run                 # 干运行
+workflow pr create                           # 交互式
+workflow pr create PROJ-123                  # 指定 ticket
+workflow pr create --dry-run                 # 干运行
 ```
 
 ### Merge 命令
 ```bash
-pr merge                            # 合并当前 PR
-pr merge 123                        # 合并指定 PR
+workflow pr merge                            # 合并当前 PR
+workflow pr merge 123                        # 合并指定 PR
 ```
 
 ### Close 命令
 ```bash
-pr close                            # 关闭当前 PR
+workflow pr close                            # 关闭当前 PR
 ```
 
 ### Integrate 命令
 ```bash
-pr integrate feature-branch         # 集成分支
-pr integrate feature-branch --squash # Squash 合并
+workflow pr integrate feature-branch         # 集成分支
+workflow pr integrate feature-branch --squash # Squash 合并
 ```
 
 ---
@@ -415,7 +417,8 @@ pr integrate feature-branch --squash # Squash 合并
 1. 在 `commands/pr/` 下创建新的命令文件
 2. 实现命令结构体和处理方法
 3. 在 `commands/pr/mod.rs` 中导出
-4. 在 `bin/pr.rs` 中添加命令枚举和处理逻辑
+4. 在 `src/main.rs` 中的 `PRCommands` 枚举中添加新命令
+5. 在 `src/main.rs` 的命令分发逻辑中添加处理代码
 
 ### 添加新的平台支持
 1. 在 `lib/pr/` 下创建新的平台模块

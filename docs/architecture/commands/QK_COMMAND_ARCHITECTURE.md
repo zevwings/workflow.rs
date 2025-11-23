@@ -1,10 +1,14 @@
-# QK 命令模块架构文档
+# 日志和 Jira 命令模块架构文档
 
 ## 📋 概述
 
-QK 命令层是 Workflow CLI 的快速日志操作命令接口，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词、清理日志目录和显示 ticket 信息等功能。该层采用命令模式设计，通过调用 `lib/jira/logs/` 模块提供的 API 实现业务功能。
+日志和 Jira 命令层是 Workflow CLI 的命令接口，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词、清理日志目录和显示 ticket 信息等功能。该层采用命令模式设计，通过调用 `lib/jira/logs/` 模块提供的 API 实现业务功能。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/jira/logs/` 模块提供。
+
+**命令结构**：
+- `workflow log` - 日志操作命令（download, find, search, clean）
+- `workflow jira` - Jira 操作命令（info）
 
 ---
 
@@ -12,11 +16,13 @@ QK 命令层是 Workflow CLI 的快速日志操作命令接口，提供从 Jira 
 
 ### CLI 入口层
 
+日志和 Jira 命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Log` 和 `Commands::Jira` 枚举定义。
+
 ```
-src/bin/qk.rs (106 行)
+src/main.rs
 ```
-- **职责**：独立的 QK 命令入口，负责命令行参数解析和命令分发
-- **功能**：使用 `clap` 解析命令行参数，将请求分发到对应的命令处理函数
+- **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
+- **功能**：使用 `clap` 解析命令行参数，将 `workflow log` 和 `workflow jira` 子命令分发到对应的命令处理函数
 
 ### 命令封装层 (`commands/qk/`)
 
@@ -64,7 +70,7 @@ src/commands/qk/
 ```
 用户输入
   ↓
-bin/qk.rs (CLI 入口，参数解析)
+src/main.rs (workflow 主命令，参数解析)
   ↓
 commands/qk/*.rs (命令封装层，处理交互)
   ↓
@@ -74,7 +80,7 @@ lib/jira/logs/ (通过 JiraLogs API 调用，具体实现见相关模块文档)
 ### 命令分发流程
 
 ```
-bin/qk.rs::main()
+src/main.rs::main()
   ↓
 Cli::parse() (解析命令行参数)
   ↓
@@ -94,13 +100,13 @@ match cli.subcommand
 
 ```
 src/commands/qk/download.rs
-src/bin/qk.rs (命令入口)
+src/main.rs (命令入口)
 ```
 
 ### 调用流程
 
 ```
-bin/qk.rs::QkCommands::Download
+src/main.rs::LogSubcommand::Download
   ↓
 commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
   ↓
@@ -157,13 +163,13 @@ commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
 
 ```
 src/commands/qk/find.rs
-src/bin/qk.rs (命令入口)
+src/main.rs (命令入口)
 ```
 
 ### 调用流程
 
 ```
-bin/qk.rs::QkCommands::Find
+src/main.rs::LogSubcommand::Find
   ↓
 commands/qk/find.rs::FindCommand::find_request_id(jira_id, request_id)
   ↓
@@ -222,13 +228,13 @@ commands/qk/find.rs::FindCommand::find_request_id(jira_id, request_id)
 
 ```
 src/commands/qk/search.rs
-src/bin/qk.rs (命令入口)
+src/main.rs (命令入口)
 ```
 
 ### 调用流程
 
 ```
-bin/qk.rs::QkCommands::Search
+src/main.rs::LogSubcommand::Search
   ↓
 commands/qk/search.rs::SearchCommand::search(jira_id, search_term)
   ↓
@@ -294,13 +300,13 @@ commands/qk/search.rs::SearchCommand::search(jira_id, search_term)
 
 ```
 src/commands/qk/clean.rs
-src/bin/qk.rs (命令入口)
+src/main.rs (命令入口)
 ```
 
 ### 调用流程
 
 ```
-bin/qk.rs::QkCommands::Clean
+src/main.rs::LogSubcommand::Clean
   ↓
 commands/qk/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
   ↓
@@ -357,13 +363,13 @@ commands/qk/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
 
 ```
 src/commands/qk/info.rs
-src/bin/qk.rs (命令入口，默认命令)
+src/main.rs (命令入口，默认命令)
 ```
 
 ### 调用流程
 
 ```
-bin/qk.rs::QkCommands::None (或 Info)
+src/main.rs::JiraSubcommand::Info
   ↓
 commands/qk/info.rs::InfoCommand::show(jira_id)
   ↓
@@ -506,9 +512,9 @@ Jira API (获取 ticket 信息)
 ### 2. 分层调用模式
 
 **命令层（CLI → Commands）**：
-所有命令通过 `bin/qk.rs` 直接调用对应的命令结构体：
+所有命令通过 `src/main.rs` 直接调用对应的命令结构体：
 ```
-bin/qk.rs::main()
+src/main.rs::main()
   ↓
 match cli.subcommand
   ├─ Download → DownloadCommand::download()
@@ -571,8 +577,8 @@ JiraLogs::download_from_jira()
 1. 在 `commands/qk/` 下创建新的命令文件（如 `new_command.rs`）
 2. 实现命令结构体和处理方法（如 `NewCommand::execute()`）
 3. 在 `commands/qk/mod.rs` 中导出命令结构体
-4. 在 `bin/qk.rs` 中添加命令枚举（`QkCommands`）
-5. 在 `bin/qk.rs` 的 `main()` 函数中添加命令分发逻辑
+4. 在 `src/main.rs` 中添加命令枚举（`LogSubcommand` 或 `JiraSubcommand`）
+5. 在 `src/main.rs` 的 `main()` 函数中添加命令分发逻辑
 
 ### 添加新的用户交互
 
@@ -602,59 +608,59 @@ JiraLogs::download_from_jira()
 
 ```bash
 # 只下载日志附件（默认行为）
-qk WEW-763 download
+workflow log download WEW-763
 
 # 下载所有附件
-qk WEW-763 download --all
+workflow log download WEW-763 --all
 # 或使用短选项
-qk WEW-763 download -a
+workflow log download WEW-763 -a
 ```
 
 ### Find 命令
 
 ```bash
 # 提供请求 ID
-qk WEW-763 find abc123
+workflow log find WEW-763 abc123
 
 # 交互式输入请求 ID
-qk WEW-763 find
+workflow log find WEW-763
 ```
 
 ### Search 命令
 
 ```bash
 # 提供搜索词
-qk WEW-763 search "error"
+workflow log search WEW-763 "error"
 
 # 交互式输入搜索词
-qk WEW-763 search
+workflow log search WEW-763
 ```
 
 ### Clean 命令
 
 ```bash
-# 清理日志目录
-qk WEW-763 clean
+# 清理整个日志基础目录
+workflow log clean
+
+# 清理指定 JIRA ID 的日志目录
+workflow log clean WEW-763
 
 # 预览清理操作（dry-run）
-qk WEW-763 clean --dry-run
+workflow log clean --dry-run
 # 或使用短选项
-qk WEW-763 clean -n
+workflow log clean -n
 
 # 列出目录内容
-qk WEW-763 clean --list
+workflow log clean --list
 # 或使用短选项
-qk WEW-763 clean -l
+workflow log clean -l
 ```
 
 ### Info 命令
 
 ```bash
 # 显示 ticket 信息
-qk WEW-763 info
-
-# 或直接使用（无子命令时默认显示 info）
-qk WEW-763
+workflow jira info WEW-763
 ```
 
 ---

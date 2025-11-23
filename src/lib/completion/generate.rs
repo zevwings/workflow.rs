@@ -312,6 +312,39 @@ impl CompletionGenerator {
                     .subcommand(Command::new("generate").about("Generate completion scripts"))
                     .subcommand(Command::new("check").about("Check completion status"))
                     .subcommand(Command::new("remove").about("Remove completion configuration")),
+            )
+            .subcommand(
+                Command::new("branch")
+                    .about("Manage Git branches")
+                    .subcommand(
+                        Command::new("clean").about("Clean local branches").arg(
+                            clap::Arg::new("dry-run")
+                                .long("dry-run")
+                                .short('n')
+                                .action(clap::ArgAction::SetTrue),
+                        ),
+                    )
+                    .subcommand(
+                        Command::new("ignore")
+                            .about("Manage branch ignore list")
+                            .subcommand(
+                                Command::new("add").about("Add branch to ignore list").arg(
+                                    clap::Arg::new("BRANCH_NAME")
+                                        .value_name("BRANCH_NAME")
+                                        .required(true),
+                                ),
+                            )
+                            .subcommand(
+                                Command::new("remove")
+                                    .about("Remove branch from ignore list")
+                                    .arg(
+                                        clap::Arg::new("BRANCH_NAME")
+                                            .value_name("BRANCH_NAME")
+                                            .required(true),
+                                    ),
+                            )
+                            .subcommand(Command::new("list").about("List ignored branches")),
+                    ),
             );
 
         self.generate_completion(&mut cmd, "workflow")
@@ -322,7 +355,7 @@ impl CompletionGenerator {
     /// # 参数
     ///
     /// * `cmd` - clap Command 实例
-    /// * `command_name` - 命令名称（"workflow", "pr", "qk"）
+    /// * `command_name` - 命令名称（"workflow"）
     fn generate_completion(&self, cmd: &mut Command, command_name: &str) -> Result<()> {
         let mut buffer = Vec::new();
         generate(self.shell, cmd, command_name, &mut buffer);

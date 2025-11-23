@@ -131,9 +131,10 @@
 - 命令使用示例
 
 #### [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
-**快速日志操作命令层架构文档**
+**日志和 Jira 操作命令层架构文档**
 
-- 日志下载、查找、搜索功能
+- 日志下载、查找、搜索功能（`workflow log` 子命令）
+- Jira ticket 信息显示（`workflow jira` 子命令）
 - 命令层设计（CLI 入口层、命令封装层）
 - 与 Jira 日志处理模块的集成
 - 命令使用示例
@@ -156,6 +157,34 @@
 - 更新功能（从 GitHub Releases 更新到新版本）
 - GitHub Actions 发布流程
 - HOMEBREW_TAP_TOKEN 配置说明
+
+#### [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+**分支管理命令层架构文档**
+
+- 分支清理功能（清理已合并分支，保留重要分支）
+- 分支忽略列表管理（按仓库配置忽略分支）
+- 支持 dry-run 模式和确认机制
+
+#### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
+**环境检查命令层架构文档**
+
+- Git 仓库状态检查
+- 网络连接检查（到 GitHub）
+- 作为其他命令的前置检查步骤
+
+#### [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
+**GitHub 账号管理命令层架构文档**
+
+- 多账号管理（支持配置多个 GitHub 账号）
+- 账号切换功能（自动更新 Git 配置）
+- 账号配置管理（添加、删除、更新）
+
+#### [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)
+**代理管理命令层架构文档**
+
+- 代理启用/禁用功能（临时模式和持久模式）
+- 代理状态检查（系统设置、环境变量、配置文件）
+- 自动读取系统代理设置
 
 ---
 
@@ -243,7 +272,11 @@
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
-- 想了解日志操作命令？ → [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
+- 想了解日志和 Jira 操作命令？ → [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
+- 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
+- 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
+- 想了解代理管理命令？ → [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)
 

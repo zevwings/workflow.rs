@@ -10,8 +10,8 @@
 这些命令负责管理 Workflow CLI 的核心 TOML 配置文件，使用统一的 `ConfigManager` 进行配置更新。
 
 **注意**：以下功能已独立到其他模块：
-- **GitHub 账号管理** → `commands/github/`（详见独立的 GitHub 命令文档）
-- **环境检查** → `commands/check/`（详见独立的 Check 命令文档）
+- **GitHub 账号管理** → `commands/github/`（详见 [GitHub 命令架构文档](./GITHUB_COMMAND_ARCHITECTURE.md)）
+- **环境检查** → `commands/check/`（详见 [环境检查命令架构文档](./CHECK_COMMAND_ARCHITECTURE.md)）
 
 ---
 
@@ -353,7 +353,10 @@ Settings 管理（读取/写入 TOML 配置文件）
 
 ### 添加新的环境检查项
 
-1. 在 `check.rs` 的 `run_all()` 方法中添加新的检查步骤
+环境检查功能已独立到 `commands/check/` 模块，详见 [环境检查命令架构文档](./CHECK_COMMAND_ARCHITECTURE.md)。
+
+如需添加新的检查项：
+1. 在 `commands/check/check.rs` 的 `run_all()` 方法中添加新的检查步骤
 2. 调用相应的工具函数或库函数
 3. 提供清晰的错误提示和解决建议
 4. 更新检查步骤的编号和日志输出
@@ -364,8 +367,10 @@ Settings 管理（读取/写入 TOML 配置文件）
 
 - [主架构文档](../ARCHITECTURE.md)
 - [生命周期管理命令模块架构文档](./LIFECYCLE_COMMAND_ARCHITECTURE.md)
-- [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md) - Git 操作和环境检查相关
-- [HTTP 模块架构文档](../lib/HTTP_ARCHITECTURE.md) - HTTP 客户端和网络检查相关
+- [GitHub 命令架构文档](./GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理相关
+- [环境检查命令架构文档](./CHECK_COMMAND_ARCHITECTURE.md) - 环境检查相关
+- [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md) - Git 操作相关
+- [HTTP 模块架构文档](../lib/HTTP_ARCHITECTURE.md) - HTTP 客户端相关
 - [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md) - ConfigManager 使用说明
 
 ---
@@ -423,6 +428,6 @@ Config 命令层采用清晰的配置管理设计：
 **设计优势**：
 - ✅ **易用性**：交互式配置，用户友好
 - ✅ **完整性**：配置验证和查看功能
-- ✅ **模块化**：与其他命令模块（GitHub、Check）职责分离
+- ✅ **模块化**：与其他命令模块（GitHub、Check、Branch、Proxy）职责分离
 - ✅ **可扩展性**：易于添加新的配置项
 

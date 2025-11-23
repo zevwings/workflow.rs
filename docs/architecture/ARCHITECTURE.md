@@ -13,9 +13,7 @@ src/
 ├── main.rs                 # CLI 入口和命令分发
 ├── lib.rs                  # 库入口和模块声明（重新导出所有公共 API）
 ├── bin/                    # 独立可执行文件（独立的 CLI 工具）
-│   ├── pr.rs               # PR 命令入口（使用 commands::pr）
-│   ├── qk.rs               # 快速日志操作入口（使用 commands::qk）
-│   └── install.rs          # 安装命令入口（使用 commands::install）
+│   └── install.rs          # 安装命令入口（使用 commands::lifecycle::install）
 ├── commands/               # 命令实现模块（CLI 命令封装层）
 │   ├── mod.rs              # 命令模块声明
 │   ├── pr/                 # PR 相关命令
@@ -28,7 +26,7 @@ src/
 │   │   ├── list.rs         # 列出 PR
 │   │   ├── update.rs       # 更新 PR
 │   │   └── integrate.rs    # 集成分支命令
-│   ├── qk/                 # 快速日志操作命令
+│   ├── qk/                 # 日志和 Jira 操作命令（用于 workflow log 和 workflow jira）
 │   │   ├── mod.rs          # QK 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
 │   │   ├── find.rs         # 查找请求 ID 命令
@@ -172,11 +170,9 @@ src/
 
 ```
 ┌─────────────────────────────────────────┐
-│         CLI 入口层 (bin/)               │
-│  - bin/qk.rs                            │
-│  - bin/pr.rs                            │
-│  - bin/install.rs                       │
+│         CLI 入口层                      │
 │  - main.rs (workflow 主命令)            │
+│  - bin/install.rs (独立安装命令)        │
 └─────────────────┬───────────────────────┘
                   │
 ┌─────────────────▼───────────────────────┐
@@ -205,16 +201,21 @@ src/
 
 ### 模块职责
 
-- **CLI 入口层** (`bin/`): 独立的可执行文件，负责命令行参数解析和命令分发
-- **命令封装层** (`commands/`): 提供 CLI 命令封装，处理用户交互和日志输出
+- **CLI 入口层** (`main.rs` 和 `bin/`): `main.rs` 是 `workflow` 主命令的入口，负责命令行参数解析和命令分发；`bin/install.rs` 是独立的安装命令入口
+- **命令封装层** (`commands/`): 提供 CLI 命令封装，处理用户交互和日志输出，所有命令都通过 `workflow` 主命令调用
 - **核心业务逻辑层** (`lib/`): 包含所有业务逻辑，可被其他模块复用
 
 ### 数据流向
 
 ```
-用户输入 → bin/qk.rs → commands/qk/*.rs → lib/jira/logs/*.rs → 执行操作
-用户输入 → bin/pr.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
-用户输入 → main.rs → commands/*.rs → lib/*.rs → 执行操作
+用户输入 → main.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
+用户输入 → main.rs → commands/qk/*.rs → lib/jira/logs/*.rs → 执行操作
+用户输入 → main.rs → commands/branch/*.rs → lib/git/branch.rs → 执行操作
+用户输入 → main.rs → commands/github/*.rs → lib/git/config.rs → 执行操作
+用户输入 → main.rs → commands/check/*.rs → lib/git/*.rs → 执行操作
+用户输入 → main.rs → commands/proxy/*.rs → lib/proxy/*.rs → 执行操作
+用户输入 → main.rs → commands/config/*.rs → lib/base/settings/*.rs → 执行操作
+用户输入 → main.rs → commands/lifecycle/*.rs → lib/completion/*.rs → 执行操作
 ```
 
 ---
