@@ -2,23 +2,6 @@
 
 工作流自动化工具的 Rust 实现版本。
 
-## 📚 文档
-
-完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。
-
-主要文档包括：
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 总体架构设计文档
-- [docs/architecture/lib/PR_ARCHITECTURE.md](./docs/architecture/lib/PR_ARCHITECTURE.md) - PR 模块架构文档
-- [docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md) - 日志和 Jira 操作命令架构文档
-- [docs/architecture/lib/LLM_ARCHITECTURE.md](./docs/architecture/lib/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
-- [docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理命令架构文档
-- [docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md) - 生命周期管理命令架构文档
-- [docs/architecture/lib/PROXY_ARCHITECTURE.md](./docs/architecture/lib/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
-- [docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支管理命令架构文档
-- [docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md) - 环境检查命令架构文档
-- [docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理命令架构文档
-- [docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md) - 代理管理命令架构文档
-
 ## 🚀 快速开始
 
 ### 安装
@@ -69,142 +52,6 @@ cargo test
 
 ```bash
 cargo run -- --help
-```
-
-## 🏗️ 架构总览
-
-```mermaid
-graph TB
-    subgraph "CLI 入口层 (bin/)"
-        Main[main.rs<br/>workflow 主命令]
-        InstallBin[bin/install.rs<br/>install 命令]
-    end
-
-    subgraph "命令封装层 (commands/)"
-        PRCmd[commands/pr/<br/>create, merge, close, etc.]
-        LogCmd[commands/qk/<br/>download, find, search, clean]
-        JiraCmd[commands/qk/info<br/>显示 ticket 信息]
-        BranchCmd[commands/branch/<br/>clean, ignore]
-        OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
-    end
-
-    subgraph "核心业务逻辑层 (lib/)"
-        PRLib[lib/pr/<br/>GitHub/Codeup PR]
-        JiraLib[lib/jira/<br/>Jira API 集成]
-        LogLib[lib/jira/logs/<br/>日志处理]
-        LLMLib[lib/llm/<br/>AI 功能]
-        GitLib[lib/git/<br/>Git 操作]
-        HttpLib[lib/http/<br/>HTTP 客户端]
-        UtilsLib[lib/utils/<br/>工具函数]
-        SettingsLib[lib/settings/<br/>配置管理]
-    end
-
-    subgraph "外部服务"
-        GitHub[GitHub API]
-        Codeup[Codeup API]
-        Jira[Jira API]
-        LLM[LLM API<br/>OpenAI/DeepSeek/Proxy]
-    end
-
-    Main --> PRCmd
-    Main --> LogCmd
-    Main --> JiraCmd
-    Main --> BranchCmd
-    Main --> OtherCmd
-    InstallBin --> OtherCmd
-
-    PRCmd --> PRLib
-    PRCmd --> LLMLib
-    PRCmd --> JiraLib
-    LogCmd --> LogLib
-    LogCmd --> JiraLib
-    JiraCmd --> JiraLib
-    OtherCmd --> UtilsLib
-    OtherCmd --> SettingsLib
-
-    PRLib --> HttpLib
-    PRLib --> GitLib
-    JiraLib --> HttpLib
-    LogLib --> HttpLib
-    LLMLib --> HttpLib
-    HttpLib --> GitHub
-    HttpLib --> Codeup
-    HttpLib --> Jira
-    LLMLib --> LLM
-
-    style Main fill:#e1f5ff
-    style InstallBin fill:#e1f5ff
-    style PRCmd fill:#fff4e1
-    style LogCmd fill:#fff4e1
-    style JiraCmd fill:#fff4e1
-    style BranchCmd fill:#fff4e1
-    style OtherCmd fill:#fff4e1
-    style PRLib fill:#e8f5e9
-    style JiraLib fill:#e8f5e9
-    style LogLib fill:#e8f5e9
-    style LLMLib fill:#e8f5e9
-    style GitLib fill:#e8f5e9
-    style HttpLib fill:#e8f5e9
-    style UtilsLib fill:#e8f5e9
-    style SettingsLib fill:#e8f5e9
-```
-
-## 📦 项目结构
-
-```
-workflow/
-├── Cargo.toml           # 项目配置和依赖管理
-├── Makefile             # 构建和安装脚本
-├── Formula/             # Homebrew Formula 定义
-│   └── workflow.rb      # Homebrew 安装配方
-├── src/
-│   ├── main.rs          # 主 CLI 入口（workflow 命令）
-│   ├── lib.rs           # 库入口，重新导出所有公共 API
-│   ├── lib/             # 核心库模块（业务逻辑层）
-│   │   ├── git/         # Git 操作（命令封装、仓库检测、类型定义）
-│   │   ├── http/        # HTTP 客户端（支持认证和代理）
-│   │   ├── jira/        # Jira API 集成（客户端、状态管理、工作历史）
-│   │   ├── pr/          # PR 相关功能（GitHub/Codeup 支持、提供者抽象）
-│   │   ├── llm/         # LLM 集成（AI 功能，支持 OpenAI/DeepSeek/Proxy）
-│   │   ├── log/         # 日志处理（下载、搜索、提取）
-│   │   ├── settings/    # 配置管理（环境变量单例）
-│   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
-│   ├── bin/             # 独立可执行文件（CLI 入口层）
-│   │   └── install.rs   # 安装命令入口（独立的 install 命令）
-│   └── commands/        # 命令实现（命令封装层）
-│       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
-│       ├── qk/          # 日志和 Jira 操作命令（download, find, search, clean, info）
-│       ├── branch/       # 分支管理命令（clean, ignore）
-│       ├── check/       # 环境检查命令（check）
-│       ├── proxy/       # 代理管理命令（on, off, check）
-│       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
-│       ├── config/       # 配置管理命令（setup, show, log, completion）
-│       └── lifecycle/   # 生命周期管理命令（install, uninstall, update）
-└── docs/                # 文档目录
-    ├── README.md        # 文档索引
-    └── architecture/    # 架构文档目录
-        ├── ARCHITECTURE.md  # 总体架构设计文档
-        ├── lib/         # Lib 层架构文档（核心业务逻辑）
-        │   ├── PR_ARCHITECTURE.md      # PR 模块架构文档
-        │   ├── JIRA_ARCHITECTURE.md    # Jira 模块架构文档
-        │   ├── GIT_ARCHITECTURE.md     # Git 模块架构文档
-        │   ├── HTTP_ARCHITECTURE.md    # HTTP 模块架构文档
-        │   ├── LLM_ARCHITECTURE.md     # LLM 模块架构文档
-        │   ├── SETTINGS_ARCHITECTURE.md # Settings 模块架构文档
-        │   ├── SHELL_ARCHITECTURE.md   # Shell 模块架构文档
-        │   ├── COMPLETION_ARCHITECTURE.md # Completion 模块架构文档
-        │   ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
-        │   ├── ROLLBACK_ARCHITECTURE.md # 回滚模块架构文档
-        │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
-        └── commands/    # 命令层架构文档（CLI 命令封装）
-            ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
-            ├── QK_COMMAND_ARCHITECTURE.md      # 日志和 Jira 操作命令架构文档
-            ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
-            ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
-            ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档
-            ├── CHECK_COMMAND_ARCHITECTURE.md   # 环境检查命令架构文档
-            ├── GITHUB_COMMAND_ARCHITECTURE.md  # GitHub 账号管理命令架构文档
-            └── PROXY_COMMAND_ARCHITECTURE.md  # 代理管理命令架构文档
 ```
 
 ## 配置
@@ -536,6 +383,160 @@ cargo fmt
 cargo clippy
 # 或使用 Makefile 进行完整检查
 make lint
+```
+
+## 📚 文档
+
+完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。
+
+主要文档包括：
+- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 总体架构设计文档
+- [docs/architecture/lib/PR_ARCHITECTURE.md](./docs/architecture/lib/PR_ARCHITECTURE.md) - PR 模块架构文档
+- [docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md) - 日志和 Jira 操作命令架构文档
+- [docs/architecture/lib/LLM_ARCHITECTURE.md](./docs/architecture/lib/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
+- [docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理命令架构文档
+- [docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md) - 生命周期管理命令架构文档
+- [docs/architecture/lib/PROXY_ARCHITECTURE.md](./docs/architecture/lib/PROXY_ARCHITECTURE.md) - 代理管理模块架构文档
+- [docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支管理命令架构文档
+- [docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md) - 环境检查命令架构文档
+- [docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理命令架构文档
+- [docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md) - 代理管理命令架构文档
+
+
+## 🏗️ 架构总览
+
+```mermaid
+graph TB
+    subgraph "CLI 入口层 (bin/)"
+        Main[main.rs<br/>workflow 主命令]
+        InstallBin[bin/install.rs<br/>install 命令]
+    end
+
+    subgraph "命令封装层 (commands/)"
+        PRCmd[commands/pr/<br/>create, merge, close, etc.]
+        LogCmd[commands/qk/<br/>download, find, search, clean]
+        JiraCmd[commands/qk/info<br/>显示 ticket 信息]
+        BranchCmd[commands/branch/<br/>clean, ignore]
+        OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
+    end
+
+    subgraph "核心业务逻辑层 (lib/)"
+        PRLib[lib/pr/<br/>GitHub/Codeup PR]
+        JiraLib[lib/jira/<br/>Jira API 集成]
+        LogLib[lib/jira/logs/<br/>日志处理]
+        LLMLib[lib/llm/<br/>AI 功能]
+        GitLib[lib/git/<br/>Git 操作]
+        HttpLib[lib/http/<br/>HTTP 客户端]
+        UtilsLib[lib/utils/<br/>工具函数]
+        SettingsLib[lib/settings/<br/>配置管理]
+    end
+
+    subgraph "外部服务"
+        GitHub[GitHub API]
+        Codeup[Codeup API]
+        Jira[Jira API]
+        LLM[LLM API<br/>OpenAI/DeepSeek/Proxy]
+    end
+
+    Main --> PRCmd
+    Main --> LogCmd
+    Main --> JiraCmd
+    Main --> BranchCmd
+    Main --> OtherCmd
+    InstallBin --> OtherCmd
+
+    PRCmd --> PRLib
+    PRCmd --> LLMLib
+    PRCmd --> JiraLib
+    LogCmd --> LogLib
+    LogCmd --> JiraLib
+    JiraCmd --> JiraLib
+    OtherCmd --> UtilsLib
+    OtherCmd --> SettingsLib
+
+    PRLib --> HttpLib
+    PRLib --> GitLib
+    JiraLib --> HttpLib
+    LogLib --> HttpLib
+    LLMLib --> HttpLib
+    HttpLib --> GitHub
+    HttpLib --> Codeup
+    HttpLib --> Jira
+    LLMLib --> LLM
+
+    style Main fill:#e1f5ff
+    style InstallBin fill:#e1f5ff
+    style PRCmd fill:#fff4e1
+    style LogCmd fill:#fff4e1
+    style JiraCmd fill:#fff4e1
+    style BranchCmd fill:#fff4e1
+    style OtherCmd fill:#fff4e1
+    style PRLib fill:#e8f5e9
+    style JiraLib fill:#e8f5e9
+    style LogLib fill:#e8f5e9
+    style LLMLib fill:#e8f5e9
+    style GitLib fill:#e8f5e9
+    style HttpLib fill:#e8f5e9
+    style UtilsLib fill:#e8f5e9
+    style SettingsLib fill:#e8f5e9
+```
+
+## 📦 项目结构
+
+```
+workflow/
+├── Cargo.toml           # 项目配置和依赖管理
+├── Makefile             # 构建和安装脚本
+├── Formula/             # Homebrew Formula 定义
+│   └── workflow.rb      # Homebrew 安装配方
+├── src/
+│   ├── main.rs          # 主 CLI 入口（workflow 命令）
+│   ├── lib.rs           # 库入口，重新导出所有公共 API
+│   ├── lib/             # 核心库模块（业务逻辑层）
+│   │   ├── git/         # Git 操作（命令封装、仓库检测、类型定义）
+│   │   ├── http/        # HTTP 客户端（支持认证和代理）
+│   │   ├── jira/        # Jira API 集成（客户端、状态管理、工作历史）
+│   │   ├── pr/          # PR 相关功能（GitHub/Codeup 支持、提供者抽象）
+│   │   ├── llm/         # LLM 集成（AI 功能，支持 OpenAI/DeepSeek/Proxy）
+│   │   ├── log/         # 日志处理（下载、搜索、提取）
+│   │   ├── settings/    # 配置管理（环境变量单例）
+│   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
+│   ├── bin/             # 独立可执行文件（CLI 入口层）
+│   │   └── install.rs   # 安装命令入口（独立的 install 命令）
+│   └── commands/        # 命令实现（命令封装层）
+│       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
+│       ├── qk/          # 日志和 Jira 操作命令（download, find, search, clean, info）
+│       ├── branch/       # 分支管理命令（clean, ignore）
+│       ├── check/       # 环境检查命令（check）
+│       ├── proxy/       # 代理管理命令（on, off, check）
+│       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
+│       ├── config/       # 配置管理命令（setup, show, log, completion）
+│       └── lifecycle/   # 生命周期管理命令（install, uninstall, update）
+└── docs/                # 文档目录
+    ├── README.md        # 文档索引
+    └── architecture/    # 架构文档目录
+        ├── ARCHITECTURE.md  # 总体架构设计文档
+        ├── lib/         # Lib 层架构文档（核心业务逻辑）
+        │   ├── PR_ARCHITECTURE.md      # PR 模块架构文档
+        │   ├── JIRA_ARCHITECTURE.md    # Jira 模块架构文档
+        │   ├── GIT_ARCHITECTURE.md     # Git 模块架构文档
+        │   ├── HTTP_ARCHITECTURE.md    # HTTP 模块架构文档
+        │   ├── LLM_ARCHITECTURE.md     # LLM 模块架构文档
+        │   ├── SETTINGS_ARCHITECTURE.md # Settings 模块架构文档
+        │   ├── SHELL_ARCHITECTURE.md   # Shell 模块架构文档
+        │   ├── COMPLETION_ARCHITECTURE.md # Completion 模块架构文档
+        │   ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
+        │   ├── ROLLBACK_ARCHITECTURE.md # 回滚模块架构文档
+        │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
+        └── commands/    # 命令层架构文档（CLI 命令封装）
+            ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
+            ├── QK_COMMAND_ARCHITECTURE.md      # 日志和 Jira 操作命令架构文档
+            ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
+            ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
+            ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档
+            ├── CHECK_COMMAND_ARCHITECTURE.md   # 环境检查命令架构文档
+            ├── GITHUB_COMMAND_ARCHITECTURE.md  # GitHub 账号管理命令架构文档
+            └── PROXY_COMMAND_ARCHITECTURE.md  # 代理管理命令架构文档
 ```
 
 ## 📝 贡献
