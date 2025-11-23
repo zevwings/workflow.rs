@@ -8,7 +8,6 @@ use crate::commands::check;
 use crate::git::{GitBranch, GitRepo};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use duct::cmd;
 
 /// 分支清理命令
 pub struct BranchCleanCommand;
@@ -168,7 +167,7 @@ impl BranchCleanCommand {
         let mut unmerged = Vec::new();
 
         for branch in branches {
-            if Self::is_branch_merged(branch, base_branch)? {
+            if GitBranch::is_branch_merged(branch, base_branch)? {
                 merged.push(branch.clone());
             } else {
                 unmerged.push(branch.clone());
@@ -176,19 +175,5 @@ impl BranchCleanCommand {
         }
 
         Ok((merged, unmerged))
-    }
-
-    /// 检查分支是否已合并到指定分支
-    fn is_branch_merged(branch: &str, base_branch: &str) -> Result<bool> {
-        // 使用 git branch --merged 检查
-        let output = cmd("git", &["branch", "--merged", base_branch])
-            .read()
-            .context("Failed to check merged branches")?;
-
-        // 检查分支是否在输出中
-        Ok(output.lines().any(|line| {
-            let line = line.trim().trim_start_matches('*').trim();
-            line == branch
-        }))
     }
 }

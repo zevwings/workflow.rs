@@ -632,4 +632,32 @@ impl GitBranch {
 
         Ok(false)
     }
+
+    /// 检查分支是否已合并到指定分支
+    ///
+    /// 使用 `git branch --merged` 检查指定分支是否已合并到基础分支。
+    ///
+    /// # 参数
+    ///
+    /// * `branch` - 要检查的分支名称
+    /// * `base_branch` - 基础分支名称（用于检查合并状态）
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果分支已合并到基础分支
+    /// - `Ok(false)` - 如果分支未合并
+    ///
+    /// # 错误
+    ///
+    /// 如果命令执行失败，返回相应的错误信息。
+    pub fn is_branch_merged(branch: &str, base_branch: &str) -> Result<bool> {
+        let output = cmd_read(&["branch", "--merged", base_branch])
+            .context("Failed to check merged branches")?;
+
+        // 检查分支是否在输出中
+        Ok(output.lines().any(|line| {
+            let line = line.trim().trim_start_matches('*').trim();
+            line == branch
+        }))
+    }
 }
