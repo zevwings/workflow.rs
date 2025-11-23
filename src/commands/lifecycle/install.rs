@@ -67,8 +67,8 @@ impl InstallCommand {
 
     /// 安装二进制文件到 /usr/local/bin
     ///
-    /// 在当前可执行文件所在目录查找 workflow、pr、qk 二进制文件，
-    /// 并将它们复制到 /usr/local/bin。
+    /// 在当前可执行文件所在目录查找 workflow 二进制文件，
+    /// 并将其复制到 /usr/local/bin。
     pub fn install_binaries() -> Result<()> {
         log_info!("Installing binaries to /usr/local/bin...");
 
@@ -81,7 +81,7 @@ impl InstallCommand {
 
         log_debug!("Current directory: {}", current_dir.display());
 
-        let binaries = ["workflow", "pr", "qk"];
+        let binaries = ["workflow"];
         let mut installed_count = 0;
 
         for binary in &binaries {
@@ -131,9 +131,7 @@ impl InstallCommand {
                 installed_count
             );
             log_info!("Installed commands:");
-            log_info!("  - workflow (main command)");
-            log_info!("  - pr (PR operation command)");
-            log_info!("  - qk (quick log operation command)");
+            log_info!("  - workflow (main command with subcommands: pr, log, jira, etc.)");
         } else {
             anyhow::bail!("No installable binary files found");
         }

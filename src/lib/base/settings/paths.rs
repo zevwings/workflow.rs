@@ -144,7 +144,7 @@ impl Paths {
     /// 获取所有命令名称
     ///
     /// 返回所有 Workflow CLI 命令的名称列表，这些名称同时用于：
-    /// - 二进制文件名（workflow, pr, qk）
+    /// - 二进制文件名（workflow）
     /// - 补全脚本命令名（用于生成补全脚本）
     ///
     /// # 返回
@@ -157,10 +157,10 @@ impl Paths {
     /// use workflow::settings::paths::Paths;
     ///
     /// let names = Paths::command_names();
-    /// assert_eq!(names, ["workflow", "pr", "qk"]);
+    /// assert_eq!(names, ["workflow"]);
     /// ```
     pub fn command_names() -> &'static [&'static str] {
-        &["workflow", "pr", "qk"]
+        &["workflow"]
     }
 
     /// 获取二进制文件安装目录
@@ -199,8 +199,6 @@ impl Paths {
     /// let paths = Paths::binary_paths();
     /// assert_eq!(paths, vec![
     ///     "/usr/local/bin/workflow".to_string(),
-    ///     "/usr/local/bin/pr".to_string(),
-    ///     "/usr/local/bin/qk".to_string(),
     /// ]);
     /// ```
     pub fn binary_paths() -> Vec<String> {

@@ -22,7 +22,7 @@ impl UninstallCommand {
         log_message!("This will remove all Workflow CLI configuration and binaries.");
         log_message!("This includes:");
         log_message!("  - TOML configuration files (workflow.toml)");
-        log_message!("  - Binary files: workflow, pr, qk, install");
+        log_message!("  - Binary files: workflow, install");
         log_message!("  - Shell completion scripts");
         log_break!();
 

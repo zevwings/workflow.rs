@@ -35,14 +35,6 @@ name = "workflow"
 path = "src/main.rs"
 
 [[bin]]
-name = "pr"
-path = "src/bin/pr.rs"
-
-[[bin]]
-name = "qk"
-path = "src/bin/qk.rs"
-
-[[bin]]
 name = "install"
 path = "src/bin/install.rs"
 

@@ -44,8 +44,7 @@ impl Completion {
     /// - fish, powershell, elvish：返回 None（不使用统一配置文件，直接写入各自的配置文件）
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
-    /// 包括 `github`、`proxy`、`log`、`clean` 等子命令。
-    /// `_pr` 和 `_qk` 是独立命令的 completion 文件。
+    /// 包括 `pr`、`log`、`jira`、`github`、`proxy`、`log-level` 等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -82,36 +81,23 @@ impl Completion {
     /// 配置 shell 配置文件以启用 completion（用于 fish, powershell, elvish）
     ///
     /// 这些 shell 不使用统一配置文件，而是直接写入各自的配置文件。
-    /// 使用 ShellConfigManager 为每个 completion 文件添加 source 语句。
+    /// 使用 ShellConfigManager 为 completion 文件添加 source 语句。
     fn write_completion_to_shell_config(shell: &Shell) -> Result<()> {
         // 获取每个 shell 的 completion 文件路径
-        let (workflow_source, pr_source, qk_source) = match shell {
-            Shell::Fish => (
-                "$HOME/.workflow/completions/workflow.fish",
-                "$HOME/.workflow/completions/pr.fish",
-                "$HOME/.workflow/completions/qk.fish",
-            ),
-            Shell::PowerShell => (
-                "$HOME/.workflow/completions/_workflow.ps1",
-                "$HOME/.workflow/completions/_pr.ps1",
-                "$HOME/.workflow/completions/_qk.ps1",
-            ),
-            Shell::Elvish => (
-                "$HOME/.workflow/completions/workflow.elv",
-                "$HOME/.workflow/completions/pr.elv",
-                "$HOME/.workflow/completions/qk.elv",
-            ),
+        let workflow_source = match shell {
+            Shell::Fish => "$HOME/.workflow/completions/workflow.fish",
+            Shell::PowerShell => "$HOME/.workflow/completions/_workflow.ps1",
+            Shell::Elvish => "$HOME/.workflow/completions/workflow.elv",
             _ => return Ok(()), // zsh 和 bash 不使用此方法
         };
 
-        // 检查是否已配置（检查第一个文件即可）
+        // 检查是否已配置
         if ShellConfigManager::has_source_for_shell(shell, workflow_source)? {
             log_debug!("Completion config already exists in {} config file", shell);
             return Ok(());
         }
 
-        // 使用 ShellConfigManager 为每个 completion 文件添加 source 语句
-        // 只在第一次添加时包含注释
+        // 使用 ShellConfigManager 为 completion 文件添加 source 语句
         ShellConfigManager::add_source_for_shell(
             shell,
             workflow_source,
@@ -123,12 +109,6 @@ impl Completion {
                 shell
             )
         })?;
-
-        ShellConfigManager::add_source_for_shell(shell, pr_source, None)
-            .with_context(|| format!("Failed to add pr completion source to {} config", shell))?;
-
-        ShellConfigManager::add_source_for_shell(shell, qk_source, None)
-            .with_context(|| format!("Failed to add qk completion source to {} config", shell))?;
 
         log_debug!("Completion config written to {} config file", shell);
 
@@ -286,58 +266,23 @@ impl Completion {
     /// 使用 ShellConfigManager 移除每个 completion 文件的 source 语句。
     fn remove_completion_block_from_config(shell: &Shell) -> Result<()> {
         // 获取每个 shell 的 completion 文件路径
-        let (workflow_source, pr_source, qk_source) = match shell {
-            Shell::Fish => (
-                "$HOME/.workflow/completions/workflow.fish",
-                "$HOME/.workflow/completions/pr.fish",
-                "$HOME/.workflow/completions/qk.fish",
-            ),
-            Shell::PowerShell => (
-                "$HOME/.workflow/completions/_workflow.ps1",
-                "$HOME/.workflow/completions/_pr.ps1",
-                "$HOME/.workflow/completions/_qk.ps1",
-            ),
-            Shell::Elvish => (
-                "$HOME/.workflow/completions/workflow.elv",
-                "$HOME/.workflow/completions/pr.elv",
-                "$HOME/.workflow/completions/qk.elv",
-            ),
+        let workflow_source = match shell {
+            Shell::Fish => "$HOME/.workflow/completions/workflow.fish",
+            Shell::PowerShell => "$HOME/.workflow/completions/_workflow.ps1",
+            Shell::Elvish => "$HOME/.workflow/completions/workflow.elv",
             _ => return Ok(()), // zsh 和 bash 不使用此方法
         };
 
-        // 使用 ShellConfigManager 移除每个 completion 文件的 source 语句
-        let mut removed_any = false;
-
-        if ShellConfigManager::remove_source_for_shell(shell, workflow_source).with_context(
-            || {
+        // 使用 ShellConfigManager 移除 completion 文件的 source 语句
+        let removed = ShellConfigManager::remove_source_for_shell(shell, workflow_source)
+            .with_context(|| {
                 format!(
                     "Failed to remove workflow completion source from {} config",
                     shell
                 )
-            },
-        )? {
-            removed_any = true;
-        }
+            })?;
 
-        if ShellConfigManager::remove_source_for_shell(shell, pr_source).with_context(|| {
-            format!(
-                "Failed to remove pr completion source from {} config",
-                shell
-            )
-        })? {
-            removed_any = true;
-        }
-
-        if ShellConfigManager::remove_source_for_shell(shell, qk_source).with_context(|| {
-            format!(
-                "Failed to remove qk completion source from {} config",
-                shell
-            )
-        })? {
-            removed_any = true;
-        }
-
-        if removed_any {
+        if removed {
             log_debug!("Completion config removed from {} config file", shell);
         } else {
             log_debug!("Completion config not found in {} config file", shell);
@@ -355,13 +300,11 @@ impl Completion {
 
     /// 获取 completion 文件列表（根据 shell 类型）
     ///
-    /// 返回独立的 completion 文件列表：
-    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `github`）
-    /// - `_pr` / `pr.bash`: `pr` 独立命令
-    /// - `_qk` / `qk.bash`: `qk` 独立命令
+    /// 返回 completion 文件列表：
+    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github` 等）
     pub fn get_completion_files(shell: &Shell) -> Vec<PathBuf> {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow"];
         let shell_type_str = shell.to_string();
         super::helpers::get_completion_files_for_shell(&shell_type_str, &commands)
             .unwrap_or_default()
@@ -377,7 +320,7 @@ impl Completion {
     pub fn remove_completion_files(_shell: &Shell) -> Result<usize> {
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow"];
         let all_file_names = super::helpers::get_all_completion_files(&commands);
         let all_files: Vec<PathBuf> = all_file_names
             .iter()
@@ -431,9 +374,7 @@ impl Completion {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
-    /// - `pr` 独立命令
-    /// - `qk` 独立命令
+    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`proxy`、`log-level` 等）
     pub fn generate_all_completions(
         shell_type: Option<String>,
         output_dir: Option<String>,

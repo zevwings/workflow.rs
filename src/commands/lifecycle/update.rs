@@ -513,11 +513,11 @@ impl UpdateCommand {
 
     /// 验证所有二进制文件
     ///
-    /// 验证 workflow、pr、qk 三个二进制文件。
+    /// 验证 workflow 二进制文件。
     fn verify_binaries(target_version: &str) -> Result<Vec<BinaryStatus>> {
         log_info!("Verifying binaries...");
 
-        let binaries = ["workflow", "pr", "qk"];
+        let binaries = ["workflow"];
         let mut results = Vec::new();
 
         for binary in &binaries {
@@ -557,7 +557,7 @@ impl UpdateCommand {
         }
 
         // 检查补全脚本文件是否存在（根据 shell 类型）
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow"];
         let shell_type_str = shell.to_string();
         let files = get_completion_files_for_shell(&shell_type_str, &commands).unwrap_or_default();
 

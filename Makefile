@@ -40,7 +40,7 @@ release:
 	cargo build --release
 	@echo "打包完成: target/release/$(BINARY_NAME)"
 	@echo "二进制文件:"
-	@ls -lh target/release/{workflow,pr,qk,install} 2>/dev/null || ls -lh target/release/$(BINARY_NAME)
+	@ls -lh target/release/{workflow,install} 2>/dev/null || ls -lh target/release/$(BINARY_NAME)
 
 # 清理构建产物
 clean:
@@ -124,23 +124,10 @@ install:
 	@echo "构建 release 版本（确保使用最新代码）..."
 	@echo "清理增量编译缓存以确保重新编译..."
 	@rm -rf target/release/incremental/*/workflow-* 2>/dev/null || true
-	@rm -rf target/release/incremental/*/pr-* 2>/dev/null || true
-	@rm -rf target/release/incremental/*/qk-* 2>/dev/null || true
 	@CARGO_INCREMENTAL=0 cargo build --release || cargo build --release
 	@echo ""
-	@echo "安装二进制文件到 /usr/local/bin..."
-	@sudo cp target/release/workflow /usr/local/bin/workflow
-	@sudo cp target/release/pr /usr/local/bin/pr
-	@sudo cp target/release/qk /usr/local/bin/qk
-	@echo "✓ 二进制文件安装完成"
-	@echo ""
-	@echo "已安装的命令:"
-	@echo "  - workflow (主命令)"
-	@echo "  - pr (PR 操作命令)"
-	@echo "  - qk (快速日志操作命令)"
-	@echo ""
-	@echo "安装 shell completion 脚本..."
-	@./target/release/install --completions
+	@echo "安装 Workflow CLI (二进制文件 + shell completion)..."
+	@./target/release/install
 
 # 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）
 # 使用 workflow update 命令

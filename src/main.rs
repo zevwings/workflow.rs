@@ -1,7 +1,7 @@
 //! Workflow CLI 主入口
 //!
 //! 这是 Workflow CLI 工具的主命令入口，提供配置管理、检查工具、代理管理等核心功能。
-//! 其他独立命令（如 `pr`、`qk`）通过 `bin/` 目录下的独立可执行文件实现。
+//! 所有功能都通过 `workflow` 命令及其子命令提供，包括 `pr`、`log`、`jira` 等子命令。
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -13,8 +13,12 @@ use commands::check::check;
 use commands::config::{completion, log, setup, show};
 use commands::github::github;
 use commands::lifecycle::{uninstall, update};
+use commands::pr::{close, create, integrate, list, merge, status, update as pr_update};
 use commands::proxy::proxy;
-use commands::qk::clean::CleanCommand;
+use commands::qk::{
+    clean::CleanCommand, download::DownloadCommand, find::FindCommand, info::InfoCommand,
+    search::SearchCommand,
+};
 
 use workflow::*;
 
@@ -71,24 +75,13 @@ enum Commands {
         #[arg(long, short = 'v')]
         version: Option<String>,
     },
-    /// Clean log directory
-    ///
-    /// Delete the entire log download base directory and all its contents.
-    /// Confirmation is required before deletion.
-    Clean {
-        /// Preview operation without actually deleting
-        #[arg(long, short = 'n')]
-        dry_run: bool,
-        /// Only list what would be deleted
-        #[arg(long, short = 'l')]
-        list: bool,
-    },
     /// Manage log level (set/check)
     ///
     /// Set or view current log output level (none, error, warn, info, debug).
-    Log {
+    #[command(name = "log-level")]
+    LogLevel {
         #[command(subcommand)]
-        subcommand: LogSubcommand,
+        subcommand: LogLevelSubcommand,
     },
     /// Manage GitHub accounts
     ///
@@ -111,6 +104,27 @@ enum Commands {
     Branch {
         #[command(subcommand)]
         subcommand: BranchSubcommand,
+    },
+    /// Pull Request operations
+    ///
+    /// Create, merge, close, and manage Pull Requests.
+    Pr {
+        #[command(subcommand)]
+        subcommand: PRCommands,
+    },
+    /// Log operations (download, find, search, clean)
+    ///
+    /// Download log files from Jira tickets, search and find content in logs.
+    Log {
+        #[command(subcommand)]
+        subcommand: LogSubcommand,
+    },
+    /// Jira operations (info, create, update, etc.)
+    ///
+    /// View and manage Jira ticket information.
+    Jira {
+        #[command(subcommand)]
+        subcommand: JiraSubcommand,
     },
 }
 
@@ -137,7 +151,7 @@ enum ProxySubcommand {
 ///
 /// Used to manage log output level.
 #[derive(Subcommand)]
-enum LogSubcommand {
+enum LogLevelSubcommand {
     /// Set log level (interactive selection)
     ///
     /// Select log level through interactive menu: none, error, warn, info, debug.
@@ -237,6 +251,176 @@ enum IgnoreSubcommand {
     List,
 }
 
+/// PR commands enumeration
+///
+/// Defines all PR-related subcommands.
+#[derive(Subcommand)]
+enum PRCommands {
+    /// Create a new Pull Request
+    ///
+    /// Supports auto-detection of repository type (GitHub/Codeup), and optionally uses AI to generate PR title.
+    /// If a Jira ticket is provided, will automatically update Jira status.
+    Create {
+        /// Jira ticket ID (optional, e.g., PROJ-123)
+        #[arg(value_name = "JIRA_TICKET")]
+        jira_ticket: Option<String>,
+
+        /// PR title (optional, will use AI generation if not provided)
+        #[arg(short, long)]
+        title: Option<String>,
+
+        /// Short description (optional)
+        #[arg(short, long)]
+        description: Option<String>,
+
+        /// Dry run mode (don't actually create PR, only show what would be done)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
+    },
+    /// Merge a Pull Request
+    ///
+    /// Auto-detect PR corresponding to current branch, or manually specify PR ID.
+    /// Will automatically update corresponding Jira ticket status after merging.
+    Merge {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+
+        /// Force merge (skip checks)
+        #[arg(short, long, action = clap::ArgAction::SetTrue)]
+        force: bool,
+    },
+    /// Show PR status information
+    ///
+    /// Display detailed information about a specific PR, including status, author, comments, etc.
+    Status {
+        /// PR ID or branch name (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID_OR_BRANCH")]
+        pull_request_id_or_branch: Option<String>,
+    },
+    /// List Pull Requests
+    ///
+    /// List all PRs in the repository, supports filtering by status and limiting the number of results.
+    List {
+        /// Filter by state (open, closed, merged)
+        #[arg(short, long)]
+        state: Option<String>,
+
+        /// Limit the number of results
+        #[arg(short, long)]
+        limit: Option<u32>,
+    },
+    /// Update code (use PR title as commit message)
+    ///
+    /// Commit current changes to PR branch using PR title as commit message.
+    Update,
+    /// Integrate branch into current branch
+    ///
+    /// Merge specified branch into current branch, and optionally push to remote.
+    /// This is a local Git operation, different from the `merge` command (which merges PR via API).
+    Integrate {
+        /// Source branch name to merge (required)
+        #[arg(value_name = "SOURCE_BRANCH")]
+        source_branch: String,
+
+        /// Only allow fast-forward merge (fail if not possible)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        ff_only: bool,
+
+        /// Use squash merge (compress all commits into one)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        squash: bool,
+
+        /// Don't push to remote (pushes by default)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        no_push: bool,
+    },
+    /// Close a Pull Request
+    ///
+    /// Close PR corresponding to current branch, delete remote branch, and switch to default branch.
+    Close {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+    },
+}
+
+/// Log operations subcommands
+///
+/// Used to manage log file operations.
+#[derive(Subcommand)]
+enum LogSubcommand {
+    /// Download log files from Jira ticket
+    ///
+    /// Download log files from Jira ticket attachments (supports automatic merging of split files).
+    /// Log files will be saved locally with paths automatically resolved based on JIRA ID.
+    Download {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+
+        /// Download all attachments (not just log files)
+        #[arg(long, short = 'a')]
+        all: bool,
+    },
+    /// Find request ID in log files
+    ///
+    /// Find specified request ID in log files and extract corresponding response content.
+    /// If found, will copy response content to clipboard and automatically open browser.
+    Find {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+
+        /// Request ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "REQUEST_ID")]
+        request_id: Option<String>,
+    },
+    /// Search for keywords in log files
+    ///
+    /// Search for specified keywords in log files and return all matching request information.
+    Search {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+
+        /// Search keyword (optional, will prompt interactively if not provided)
+        #[arg(value_name = "SEARCH_TERM")]
+        search_term: Option<String>,
+    },
+    /// Clean log directory
+    ///
+    /// Clean log directory for specified JIRA ID, or clean entire base directory if no JIRA ID provided.
+    Clean {
+        /// Jira ticket ID (optional, if not provided, clean entire base directory)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+
+        /// Preview operation without actually deleting
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+
+        /// Only list what would be deleted
+        #[arg(long, short = 'l')]
+        list: bool,
+    },
+}
+
+/// Jira operations subcommands
+///
+/// Used to manage Jira ticket operations.
+#[derive(Subcommand)]
+enum JiraSubcommand {
+    /// Show ticket information
+    ///
+    /// Display detailed information about a Jira ticket.
+    Info {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+    },
+}
+
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
@@ -284,14 +468,10 @@ fn main() -> Result<()> {
         Some(Commands::Update { version }) => {
             update::UpdateCommand::update(version)?;
         }
-        // 清理日志目录（清理整个基础目录）
-        Some(Commands::Clean { dry_run, list }) => {
-            CleanCommand::clean("", dry_run, list)?;
-        }
         // 日志级别管理命令
-        Some(Commands::Log { subcommand }) => match subcommand {
-            LogSubcommand::Set => log::LogCommand::set()?,
-            LogSubcommand::Check => log::LogCommand::check()?,
+        Some(Commands::LogLevel { subcommand }) => match subcommand {
+            LogLevelSubcommand::Set => log::LogCommand::set()?,
+            LogLevelSubcommand::Check => log::LogCommand::check()?,
         },
         // GitHub 账号管理命令
         Some(Commands::GitHub { subcommand }) => match subcommand {
@@ -325,28 +505,103 @@ fn main() -> Result<()> {
                 }
             },
         },
+        // PR 操作命令
+        Some(Commands::Pr { subcommand }) => match subcommand {
+            PRCommands::Create {
+                jira_ticket,
+                title,
+                description,
+                dry_run,
+            } => {
+                create::PullRequestCreateCommand::create(jira_ticket, title, description, dry_run)?;
+            }
+            PRCommands::Merge {
+                pull_request_id,
+                force,
+            } => {
+                merge::PullRequestMergeCommand::merge(pull_request_id, force)?;
+            }
+            PRCommands::Status {
+                pull_request_id_or_branch,
+            } => {
+                status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
+            }
+            PRCommands::List { state, limit } => {
+                list::PullRequestListCommand::list(state, limit)?;
+            }
+            PRCommands::Update => {
+                pr_update::PullRequestUpdateCommand::update()?;
+            }
+            PRCommands::Integrate {
+                source_branch,
+                ff_only,
+                squash,
+                no_push,
+            } => {
+                let should_push = !no_push;
+                integrate::PullRequestIntegrateCommand::integrate(
+                    source_branch,
+                    ff_only,
+                    squash,
+                    should_push,
+                )?;
+            }
+            PRCommands::Close { pull_request_id } => {
+                close::PullRequestCloseCommand::close(pull_request_id)?;
+            }
+        },
+        // 日志操作命令
+        Some(Commands::Log { subcommand }) => match subcommand {
+            LogSubcommand::Download { jira_id, all } => {
+                DownloadCommand::download(&jira_id, all)?;
+            }
+            LogSubcommand::Find {
+                jira_id,
+                request_id,
+            } => {
+                FindCommand::find_request_id(&jira_id, request_id)?;
+            }
+            LogSubcommand::Search {
+                jira_id,
+                search_term,
+            } => {
+                SearchCommand::search(&jira_id, search_term)?;
+            }
+            LogSubcommand::Clean {
+                jira_id,
+                dry_run,
+                list,
+            } => {
+                let jira_id = jira_id.as_deref().unwrap_or("");
+                CleanCommand::clean(jira_id, dry_run, list)?;
+            }
+        },
+        // Jira 操作命令
+        Some(Commands::Jira { subcommand }) => match subcommand {
+            JiraSubcommand::Info { jira_id } => {
+                InfoCommand::show(&jira_id)?;
+            }
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
             log_message!("  workflow branch     - Manage Git branches (clean/ignore)");
             log_message!("  workflow check      - Run environment checks (Git status and network)");
-            log_message!("  workflow clean      - Clean log download directory");
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
             log_message!("  workflow config     - View current configuration");
             log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log        - Manage log level (set/check)");
+            log_message!("  workflow log-level  - Manage log level (set/check)");
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
             log_message!(
                 "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
             );
+            log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/integrate)");
+            log_message!("  workflow log        - Log operations (download/find/search/clean)");
+            log_message!("  workflow jira       - Jira operations (info)");
             log_message!("\nOther CLI tools:");
-            log_message!("  pr                  - Pull Request operations (create/merge/close/status/list/update/integrate)");
-            log_message!(
-                "  qk                  - Quick log operations (download/find/search/clean/info)"
-            );
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");
         }

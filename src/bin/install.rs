@@ -22,7 +22,7 @@ use workflow::commands::lifecycle::install::InstallCommand;
 struct Cli {
     /// Only install binaries to /usr/local/bin
     ///
-    /// Install workflow, pr, qk binaries from current directory to /usr/local/bin.
+    /// Install workflow binary from current directory to /usr/local/bin.
     /// If not specified, installs everything by default (binaries + completions).
     #[arg(long)]
     binaries: bool,

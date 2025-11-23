@@ -15,7 +15,7 @@ use crate::completion::helpers::get_completion_filename;
 /// Completion 脚本生成器
 ///
 /// 提供生成各种 shell 的 completion 脚本文件的功能。
-/// 支持 workflow、pr、qk 三个命令的 completion 生成。
+/// 支持 workflow 命令及其所有子命令的 completion 生成。
 pub struct CompletionGenerator {
     shell: ClapShell,
     output_dir: PathBuf,
@@ -83,9 +83,7 @@ impl CompletionGenerator {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `github`、`proxy`、`log`、`clean` 等）
-    /// - `pr` 独立命令
-    /// - `qk` 独立命令
+    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`proxy`、`log-level` 等）
     pub fn generate_all(&self) -> Result<()> {
         log_debug!("Generating shell completion scripts...");
         log_debug!("Shell type: {}", self.shell);
@@ -102,8 +100,6 @@ impl CompletionGenerator {
 
         // 生成 completion 脚本
         self.generate_workflow()?;
-        self.generate_pr()?;
-        self.generate_qk()?;
 
         log_success!(
             "  Shell completion scripts generated to: {}",
@@ -142,26 +138,163 @@ impl CompletionGenerator {
                 ),
             )
             .subcommand(
-                Command::new("clean")
-                    .about("Clean log directory")
-                    .arg(
-                        clap::Arg::new("dry-run")
-                            .long("dry-run")
-                            .short('n')
-                            .action(clap::ArgAction::SetTrue),
+                Command::new("log-level")
+                    .about("Manage log level")
+                    .subcommand(Command::new("set").about("Set log level"))
+                    .subcommand(Command::new("check").about("Check log level")),
+            )
+            .subcommand(
+                Command::new("pr")
+                    .about("Pull Request operations")
+                    .subcommand(
+                        Command::new("create")
+                            .about("Create a new Pull Request")
+                            .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
+                            .arg(
+                                clap::Arg::new("title")
+                                    .short('t')
+                                    .long("title")
+                                    .value_name("TITLE"),
+                            )
+                            .arg(
+                                clap::Arg::new("description")
+                                    .short('d')
+                                    .long("description")
+                                    .value_name("DESCRIPTION"),
+                            )
+                            .arg(
+                                clap::Arg::new("dry-run")
+                                    .long("dry-run")
+                                    .action(clap::ArgAction::SetTrue),
+                            ),
                     )
-                    .arg(
-                        clap::Arg::new("list")
-                            .long("list")
-                            .short('l')
-                            .action(clap::ArgAction::SetTrue),
+                    .subcommand(
+                        Command::new("merge")
+                            .about("Merge a Pull Request")
+                            .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
+                            .arg(
+                                clap::Arg::new("force")
+                                    .short('f')
+                                    .long("force")
+                                    .action(clap::ArgAction::SetTrue),
+                            ),
+                    )
+                    .subcommand(
+                        Command::new("status")
+                            .about("Show PR status information")
+                            .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
+                    )
+                    .subcommand(
+                        Command::new("list")
+                            .about("List PRs")
+                            .arg(
+                                clap::Arg::new("state")
+                                    .short('s')
+                                    .long("state")
+                                    .value_name("STATE"),
+                            )
+                            .arg(
+                                clap::Arg::new("limit")
+                                    .short('l')
+                                    .long("limit")
+                                    .value_name("LIMIT"),
+                            ),
+                    )
+                    .subcommand(Command::new("update").about("Update code"))
+                    .subcommand(
+                        Command::new("integrate")
+                            .about("Integrate branch to current branch")
+                            .arg(
+                                clap::Arg::new("SOURCE_BRANCH")
+                                    .value_name("SOURCE_BRANCH")
+                                    .required(true),
+                            )
+                            .arg(
+                                clap::Arg::new("ff-only")
+                                    .long("ff-only")
+                                    .action(clap::ArgAction::SetTrue),
+                            )
+                            .arg(
+                                clap::Arg::new("squash")
+                                    .long("squash")
+                                    .action(clap::ArgAction::SetTrue),
+                            )
+                            .arg(
+                                clap::Arg::new("no-push")
+                                    .long("no-push")
+                                    .action(clap::ArgAction::SetTrue),
+                            ),
+                    )
+                    .subcommand(
+                        Command::new("close")
+                            .about("Close a Pull Request")
+                            .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
                     ),
             )
             .subcommand(
                 Command::new("log")
-                    .about("Manage log level")
-                    .subcommand(Command::new("set").about("Set log level"))
-                    .subcommand(Command::new("check").about("Check log level")),
+                    .about("Log operations")
+                    .subcommand(
+                        Command::new("download")
+                            .about("Download log files from Jira ticket")
+                            .arg(
+                                clap::Arg::new("JIRA_ID")
+                                    .value_name("JIRA_ID")
+                                    .required(true),
+                            )
+                            .arg(
+                                clap::Arg::new("all")
+                                    .long("all")
+                                    .short('a')
+                                    .action(clap::ArgAction::SetTrue),
+                            ),
+                    )
+                    .subcommand(
+                        Command::new("find")
+                            .about("Find request ID in log files")
+                            .arg(
+                                clap::Arg::new("JIRA_ID")
+                                    .value_name("JIRA_ID")
+                                    .required(true),
+                            )
+                            .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
+                    )
+                    .subcommand(
+                        Command::new("search")
+                            .about("Search for keywords in log files")
+                            .arg(
+                                clap::Arg::new("JIRA_ID")
+                                    .value_name("JIRA_ID")
+                                    .required(true),
+                            )
+                            .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
+                    )
+                    .subcommand(
+                        Command::new("clean")
+                            .about("Clean log directory")
+                            .arg(clap::Arg::new("JIRA_ID").value_name("JIRA_ID"))
+                            .arg(
+                                clap::Arg::new("dry-run")
+                                    .long("dry-run")
+                                    .short('n')
+                                    .action(clap::ArgAction::SetTrue),
+                            )
+                            .arg(
+                                clap::Arg::new("list")
+                                    .long("list")
+                                    .short('l')
+                                    .action(clap::ArgAction::SetTrue),
+                            ),
+                    ),
+            )
+            .subcommand(
+                Command::new("jira").about("Jira operations").subcommand(
+                    Command::new("info").about("Show ticket information").arg(
+                        clap::Arg::new("JIRA_ID")
+                            .value_name("JIRA_ID")
+                            .required(true),
+                    ),
+                ),
             )
             .subcommand(
                 Command::new("github")
@@ -182,145 +315,6 @@ impl CompletionGenerator {
             );
 
         self.generate_completion(&mut cmd, "workflow")
-    }
-
-    /// 生成 pr 命令的 completion
-    fn generate_pr(&self) -> Result<()> {
-        let mut cmd = Command::new("pr")
-            .about("Pull Request operations")
-            .subcommand(
-                Command::new("create")
-                    .about("Create a new Pull Request")
-                    .arg(clap::Arg::new("JIRA_TICKET").value_name("JIRA_TICKET"))
-                    .arg(
-                        clap::Arg::new("title")
-                            .short('t')
-                            .long("title")
-                            .value_name("TITLE"),
-                    )
-                    .arg(
-                        clap::Arg::new("description")
-                            .short('d')
-                            .long("description")
-                            .value_name("DESCRIPTION"),
-                    )
-                    .arg(
-                        clap::Arg::new("dry-run")
-                            .long("dry-run")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            )
-            .subcommand(
-                Command::new("merge")
-                    .about("Merge a Pull Request")
-                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
-                    .arg(
-                        clap::Arg::new("force")
-                            .short('f')
-                            .long("force")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            )
-            .subcommand(
-                Command::new("status")
-                    .about("Show PR status information")
-                    .arg(clap::Arg::new("PR_ID_OR_BRANCH").value_name("PR_ID_OR_BRANCH")),
-            )
-            .subcommand(
-                Command::new("list")
-                    .about("List PRs")
-                    .arg(
-                        clap::Arg::new("state")
-                            .short('s')
-                            .long("state")
-                            .value_name("STATE"),
-                    )
-                    .arg(
-                        clap::Arg::new("limit")
-                            .short('l')
-                            .long("limit")
-                            .value_name("LIMIT"),
-                    ),
-            )
-            .subcommand(Command::new("update").about("Update code"))
-            .subcommand(
-                Command::new("integrate")
-                    .about("Integrate branch to current branch")
-                    .arg(
-                        clap::Arg::new("SOURCE_BRANCH")
-                            .value_name("SOURCE_BRANCH")
-                            .required(true),
-                    )
-                    .arg(
-                        clap::Arg::new("ff-only")
-                            .long("ff-only")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        clap::Arg::new("squash")
-                            .long("squash")
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        clap::Arg::new("no-push")
-                            .long("no-push")
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            )
-            .subcommand(
-                Command::new("close")
-                    .about("Close a Pull Request")
-                    .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
-            );
-
-        self.generate_completion(&mut cmd, "pr")
-    }
-
-    /// 生成 qk 命令的 completion
-    fn generate_qk(&self) -> Result<()> {
-        let mut cmd = Command::new("qk")
-            .about("Quick log operations")
-            .arg(
-                clap::Arg::new("JIRA_ID")
-                    .value_name("JIRA_ID")
-                    .required(true),
-            )
-            .subcommand(
-                Command::new("download").about("Download logs").arg(
-                    clap::Arg::new("all")
-                        .long("all")
-                        .short('a')
-                        .action(clap::ArgAction::SetTrue),
-                ),
-            )
-            .subcommand(
-                Command::new("find")
-                    .about("Find request by ID")
-                    .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
-            )
-            .subcommand(
-                Command::new("search")
-                    .about("Search in logs")
-                    .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
-            )
-            .subcommand(
-                Command::new("clean")
-                    .about("Clean log directory")
-                    .arg(
-                        clap::Arg::new("dry-run")
-                            .long("dry-run")
-                            .short('n')
-                            .action(clap::ArgAction::SetTrue),
-                    )
-                    .arg(
-                        clap::Arg::new("list")
-                            .long("list")
-                            .short('l')
-                            .action(clap::ArgAction::SetTrue),
-                    ),
-            );
-
-        self.generate_completion(&mut cmd, "qk")
     }
 
     /// 生成单个命令的 completion（通用方法）

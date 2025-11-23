@@ -190,7 +190,7 @@ impl RollbackManager {
         }
 
         // 要备份的补全脚本文件（所有 shell 类型）
-        let commands = ["workflow", "pr", "qk"];
+        let commands = ["workflow"];
         let completion_files = get_all_completion_files(&commands);
 
         for file_name in &completion_files {
@@ -241,7 +241,7 @@ impl RollbackManager {
         let backup_dir = Self::create_backup_dir()?;
 
         // 备份二进制文件
-        let binaries = ["workflow", "pr", "qk"];
+        let binaries = ["workflow"];
         let binary_backups =
             Self::backup_binaries(&backup_dir, &binaries).context("Failed to backup binaries")?;
 
