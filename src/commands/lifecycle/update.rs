@@ -582,10 +582,10 @@ impl UpdateCommand {
 
         let install_dir = Paths::binary_install_dir();
         let install_path = PathBuf::from(&install_dir);
-        let binaries = ["workflow"];
+        let binaries = Paths::command_names();
         let mut results = Vec::new();
 
-        for binary in &binaries {
+        for binary in binaries {
             let binary_name = Paths::binary_name(binary);
             let path = install_path.join(&binary_name);
             let status =
@@ -624,9 +624,9 @@ impl UpdateCommand {
         }
 
         // 检查补全脚本文件是否存在（根据 shell 类型）
-        let commands = ["workflow"];
+        let commands = Paths::command_names();
         let shell_type_str = shell.to_string();
-        let files = get_completion_files_for_shell(&shell_type_str, &commands).unwrap_or_default();
+        let files = get_completion_files_for_shell(&shell_type_str, commands).unwrap_or_default();
 
         let mut all_valid = true;
 
