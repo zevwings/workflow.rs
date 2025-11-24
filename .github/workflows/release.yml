@@ -329,39 +329,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-          # 安装 ARM64 交叉编译的 XCB 开发库（clipboard 依赖）
-          # 需要启用多架构支持并安装 ARM64 版本的库
-          sudo dpkg --add-architecture arm64
-          # 更新包列表，允许某些源失败（某些 Ubuntu 源可能不完全支持 ARM64）
-          # 主源 (azure.archive.ubuntu.com) 应该支持 ARM64，即使 security 源失败也可以继续
-          sudo apt-get update -o Acquire::Check-Valid-Until=false 2>&1 || {
-            echo "Warning: Some apt sources failed to update, but continuing..."
-            # 即使某些源失败，也继续尝试安装
-          }
-          # 安装 ARM64 版本的 XCB 库及其依赖
-          # 这些包应该可以从主 Ubuntu 源获取
-          sudo apt-get install -y --no-install-recommends \
-            libxcb1-dev:arm64 \
-            libxcb-render0-dev:arm64 \
-            libxcb-shape0-dev:arm64 \
-            libxcb-xfixes0-dev:arm64 \
-            libxcb-util0-dev:arm64 \
-            libx11-dev:arm64 \
-            libx11-xcb-dev:arm64 \
-            pkg-config-aarch64-linux-gnu
-          # 验证库是否安装成功
-          echo "Checking installed ARM64 XCB libraries:"
-          if ls -la /usr/lib/aarch64-linux-gnu/libxcb*.so* 2>/dev/null; then
-            echo "✅ XCB libraries found in /usr/lib/aarch64-linux-gnu/"
-          else
-            echo "❌ Error: XCB libraries not found in expected location"
-            echo "Searching for XCB libraries:"
-            find /usr -name "libxcb*.so*" -path "*/aarch64-linux-gnu/*" 2>/dev/null || true
-            exit 1
-          fi
-          # 验证 pkg-config 文件
-          echo "Checking pkg-config files:"
-          ls -la /usr/lib/aarch64-linux-gnu/pkgconfig/xcb*.pc 2>/dev/null || echo "Warning: pkg-config files not found"
+          # 注意：clipboard 功能在 Linux ARM64 交叉编译时已禁用（Cargo.toml 中配置）
+          # 因此不需要安装 XCB 开发库，避免 Ubuntu 源中 ARM64 包不可用的问题
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -411,26 +380,8 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            # 设置 PKG_CONFIG 路径，指向 ARM64 库
-            export PKG_CONFIG_ALLOW_CROSS=1
-            export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
-            export PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
-            export PKG_CONFIG=aarch64-linux-gnu-pkg-config
-            # 设置库搜索路径，让链接器能找到 ARM64 的 XCB 库
-            export LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LIBRARY_PATH
-            # 设置链接器标志，明确指定库搜索路径
-            export RUSTFLAGS="-C link-arg=-L/usr/lib/aarch64-linux-gnu -C link-arg=-Wl,-rpath-link=/usr/lib/aarch64-linux-gnu"
-            # 验证环境变量
             echo "CC: $CC_aarch64_unknown_linux_gnu"
-            echo "PKG_CONFIG: $PKG_CONFIG"
-            echo "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
-            echo "LIBRARY_PATH: $LIBRARY_PATH"
-            echo "RUSTFLAGS: $RUSTFLAGS"
-            # 测试 pkg-config
-            if command -v aarch64-linux-gnu-pkg-config >/dev/null 2>&1; then
-              echo "Testing pkg-config for xcb:"
-              aarch64-linux-gnu-pkg-config --libs xcb xcb-render xcb-shape xcb-xfixes || true
-            fi
+            echo "Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
         env:
