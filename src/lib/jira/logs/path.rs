@@ -48,29 +48,51 @@ impl JiraLogs {
     }
 
     /// 获取旧位置路径（版本1）
+    ///
+    /// 跨平台支持：
+    /// - Unix (macOS/Linux): `~/Downloads/logs_{jira_id}/...`
+    /// - Windows: `%USERPROFILE%\Downloads\logs_{jira_id}\...`
     fn get_old_location_path_v1(&self, jira_id: &str) -> Result<PathBuf> {
         use std::env;
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        let home_path = PathBuf::from(&home);
-        Ok(if !self.output_folder_name.is_empty() {
-            home_path.join(format!(
-                "Downloads/logs_{}/{}/{}",
-                jira_id, self.output_folder_name, DEFAULT_OUTPUT_FOLDER
-            ))
+        let user_dir = if cfg!(target_os = "windows") {
+            // Windows: 使用 %USERPROFILE%
+            env::var("USERPROFILE")
+                .context("USERPROFILE environment variable not set")?
         } else {
-            home_path.join(format!(
-                "Downloads/logs_{}/{}",
-                jira_id, DEFAULT_OUTPUT_FOLDER
-            ))
+            // Unix-like: 使用 HOME
+            env::var("HOME").context("HOME environment variable not set")?
+        };
+        let user_path = PathBuf::from(&user_dir);
+        Ok(if !self.output_folder_name.is_empty() {
+            user_path.join("Downloads").join(format!(
+                "logs_{}",
+                jira_id
+            )).join(&self.output_folder_name).join(DEFAULT_OUTPUT_FOLDER)
+        } else {
+            user_path.join("Downloads").join(format!(
+                "logs_{}",
+                jira_id
+            )).join(DEFAULT_OUTPUT_FOLDER)
         })
     }
 
     /// 在旧目录下查找日志文件
+    ///
+    /// 跨平台支持：
+    /// - Unix (macOS/Linux): `~/Downloads/logs_{jira_id}`
+    /// - Windows: `%USERPROFILE%\Downloads\logs_{jira_id}`
     fn find_log_file_in_old_directory(&self, jira_id: &str) -> Result<PathBuf> {
         use std::env;
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        let home_path = PathBuf::from(&home);
-        let old_logs_dir = home_path.join(format!("Downloads/logs_{}", jira_id));
+        let user_dir = if cfg!(target_os = "windows") {
+            // Windows: 使用 %USERPROFILE%
+            env::var("USERPROFILE")
+                .context("USERPROFILE environment variable not set")?
+        } else {
+            // Unix-like: 使用 HOME
+            env::var("HOME").context("HOME environment variable not set")?
+        };
+        let user_path = PathBuf::from(&user_dir);
+        let old_logs_dir = user_path.join("Downloads").join(format!("logs_{}", jira_id));
 
         if !old_logs_dir.exists() {
             anyhow::bail!("Old logs directory does not exist");
