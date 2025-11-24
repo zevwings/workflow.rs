@@ -19,9 +19,11 @@ use serde::Deserialize;
 use serde_json::Value;
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 /// GitHub Release 信息
 #[derive(Debug, Deserialize)]
@@ -489,6 +491,7 @@ impl UpdateCommand {
     /// 检查文件是否可执行
     ///
     /// 检查文件是否存在且具有执行权限。
+    #[cfg(unix)]
     fn check_executable(path: &Path) -> Result<bool> {
         if !path.exists() {
             return Ok(false);
@@ -502,6 +505,27 @@ impl UpdateCommand {
 
         // 检查是否有执行权限（owner, group, or others）
         Ok((mode & 0o111) != 0)
+    }
+
+    /// 检查文件是否可执行（Windows 版本）
+    ///
+    /// 在 Windows 上，通过文件扩展名判断是否可执行。
+    #[cfg(windows)]
+    fn check_executable(path: &Path) -> Result<bool> {
+        if !path.exists() {
+            return Ok(false);
+        }
+
+        // Windows 上通过扩展名判断可执行文件
+        if let Some(ext) = path.extension() {
+            let ext_str = ext.to_string_lossy().to_lowercase();
+            // .exe, .bat, .cmd, .com, .ps1 等是可执行的
+            Ok(ext_str == "exe" || ext_str == "bat" || ext_str == "cmd" || ext_str == "com" || ext_str == "ps1")
+        } else {
+            // 没有扩展名，可能是脚本文件，检查是否有执行权限（通过文件属性）
+            // 在 Windows 上，我们假设文件存在就是可执行的（简化处理）
+            Ok(true)
+        }
     }
 
     /// 获取二进制文件的版本号
