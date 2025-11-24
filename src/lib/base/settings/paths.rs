@@ -35,8 +35,8 @@ impl Paths {
     pub fn config_dir() -> Result<PathBuf> {
         let config_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %APPDATA%\workflow\config
-            let app_data = std::env::var("APPDATA")
-                .context("APPDATA environment variable not set")?;
+            let app_data =
+                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
             PathBuf::from(app_data).join("workflow").join("config")
         } else {
             // Unix-like: 使用 ~/.workflow/config
@@ -106,8 +106,8 @@ impl Paths {
     pub fn workflow_dir() -> Result<PathBuf> {
         let workflow_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %APPDATA%\workflow
-            let app_data = std::env::var("APPDATA")
-                .context("APPDATA environment variable not set")?;
+            let app_data =
+                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
             PathBuf::from(app_data).join("workflow")
         } else {
             // Unix-like: 使用 ~/.workflow
@@ -199,11 +199,9 @@ impl Paths {
     pub fn binary_install_dir() -> String {
         if cfg!(target_os = "windows") {
             // Windows: 使用 %LOCALAPPDATA%\Programs\workflow\bin
-            let local_app_data = std::env::var("LOCALAPPDATA")
-                .unwrap_or_else(|_| {
-                    std::env::var("USERPROFILE")
-                        .unwrap_or_else(|_| "C:\\Users\\User".to_string())
-                });
+            let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| {
+                std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\User".to_string())
+            });
             format!("{}\\Programs\\workflow\\bin", local_app_data)
         } else {
             // Unix-like: 使用 /usr/local/bin
@@ -236,7 +234,10 @@ impl Paths {
             .iter()
             .map(|name| {
                 let binary_name = Self::binary_name(name);
-                install_path.join(&binary_name).to_string_lossy().to_string()
+                install_path
+                    .join(&binary_name)
+                    .to_string_lossy()
+                    .to_string()
             })
             .collect()
     }
@@ -293,8 +294,8 @@ impl Paths {
     pub fn completion_dir() -> Result<PathBuf> {
         let completion_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %APPDATA%\workflow\completions
-            let app_data = std::env::var("APPDATA")
-                .context("APPDATA environment variable not set")?;
+            let app_data =
+                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
             PathBuf::from(app_data).join("workflow").join("completions")
         } else {
             // Unix-like: 使用 ~/.workflow/completions
@@ -350,8 +351,14 @@ impl Paths {
                     let user_profile = std::env::var("USERPROFILE")
                         .context("USERPROFILE environment variable not set")?;
                     let user_dir = PathBuf::from(user_profile);
-                    let pwsh_profile = user_dir.join("Documents").join("PowerShell").join("Microsoft.PowerShell_profile.ps1");
-                    let ps_profile = user_dir.join("Documents").join("WindowsPowerShell").join("Microsoft.PowerShell_profile.ps1");
+                    let pwsh_profile = user_dir
+                        .join("Documents")
+                        .join("PowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1");
+                    let ps_profile = user_dir
+                        .join("Documents")
+                        .join("WindowsPowerShell")
+                        .join("Microsoft.PowerShell_profile.ps1");
 
                     // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
                     if pwsh_profile.exists() {
@@ -360,7 +367,10 @@ impl Paths {
                         ps_profile
                     }
                 }
-                _ => anyhow::bail!("Unsupported shell on Windows: {:?}. Only PowerShell is supported.", shell),
+                _ => anyhow::bail!(
+                    "Unsupported shell on Windows: {:?}. Only PowerShell is supported.",
+                    shell
+                ),
             }
         } else {
             // Unix-like: 使用 HOME 环境变量

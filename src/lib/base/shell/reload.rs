@@ -29,9 +29,15 @@ impl Reload {
 
         // PowerShell 使用 `.` 而不是 `source`
         let (shell_cmd, reload_hint) = if shell == &Shell::PowerShell {
-            (format!(". {}", config_file_str), format!(". {}", config_file_str))
+            (
+                format!(". {}", config_file_str),
+                format!(". {}", config_file_str),
+            )
         } else {
-            (format!("source {}", config_file_str), format!("source {}", config_file_str))
+            (
+                format!("source {}", config_file_str),
+                format!("source {}", config_file_str),
+            )
         };
 
         // 尝试在子 shell 中执行 source 命令

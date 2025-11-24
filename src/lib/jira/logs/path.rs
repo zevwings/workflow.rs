@@ -56,23 +56,23 @@ impl JiraLogs {
         use std::env;
         let user_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %USERPROFILE%
-            env::var("USERPROFILE")
-                .context("USERPROFILE environment variable not set")?
+            env::var("USERPROFILE").context("USERPROFILE environment variable not set")?
         } else {
             // Unix-like: 使用 HOME
             env::var("HOME").context("HOME environment variable not set")?
         };
         let user_path = PathBuf::from(&user_dir);
         Ok(if !self.output_folder_name.is_empty() {
-            user_path.join("Downloads").join(format!(
-                "logs_{}",
-                jira_id
-            )).join(&self.output_folder_name).join(DEFAULT_OUTPUT_FOLDER)
+            user_path
+                .join("Downloads")
+                .join(format!("logs_{}", jira_id))
+                .join(&self.output_folder_name)
+                .join(DEFAULT_OUTPUT_FOLDER)
         } else {
-            user_path.join("Downloads").join(format!(
-                "logs_{}",
-                jira_id
-            )).join(DEFAULT_OUTPUT_FOLDER)
+            user_path
+                .join("Downloads")
+                .join(format!("logs_{}", jira_id))
+                .join(DEFAULT_OUTPUT_FOLDER)
         })
     }
 
@@ -85,14 +85,15 @@ impl JiraLogs {
         use std::env;
         let user_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %USERPROFILE%
-            env::var("USERPROFILE")
-                .context("USERPROFILE environment variable not set")?
+            env::var("USERPROFILE").context("USERPROFILE environment variable not set")?
         } else {
             // Unix-like: 使用 HOME
             env::var("HOME").context("HOME environment variable not set")?
         };
         let user_path = PathBuf::from(&user_dir);
-        let old_logs_dir = user_path.join("Downloads").join(format!("logs_{}", jira_id));
+        let old_logs_dir = user_path
+            .join("Downloads")
+            .join(format!("logs_{}", jira_id));
 
         if !old_logs_dir.exists() {
             anyhow::bail!("Old logs directory does not exist");

@@ -424,6 +424,16 @@ cargo clippy
 make lint
 ```
 
+### 开发规范
+
+详细的开发规范请参考 [开发规范文档](./docs/guidelines/DEVELOPMENT_GUIDELINES.md)，包括：
+- 代码风格规范（格式化、Lint、命名约定）
+- 错误处理规范
+- 文档规范
+- Git 工作流和提交规范
+- 测试规范
+- 代码审查指南
+
 ## 📚 文档
 
 完整的架构文档和使用说明请查看 [docs/README.md](./docs/README.md)。

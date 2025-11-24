@@ -160,14 +160,13 @@ impl RollbackManager {
             }
             #[cfg(windows)]
             {
-                fs::copy(&source, &backup_path)
-                    .with_context(|| {
-                        format!(
-                            "Failed to backup binary file: {} -> {}",
-                            source.display(),
-                            backup_path.display()
-                        )
-                    })?;
+                fs::copy(&source, &backup_path).with_context(|| {
+                    format!(
+                        "Failed to backup binary file: {} -> {}",
+                        source.display(),
+                        backup_path.display()
+                    )
+                })?;
             }
 
             log_debug!(
@@ -347,14 +346,13 @@ impl RollbackManager {
             }
             #[cfg(windows)]
             {
-                fs::copy(backup_path, &target)
-                    .with_context(|| {
-                        format!(
-                            "Failed to restore binary file: {} -> {}",
-                            backup_path.display(),
-                            target.display()
-                        )
-                    })?;
+                fs::copy(backup_path, &target).with_context(|| {
+                    format!(
+                        "Failed to restore binary file: {} -> {}",
+                        backup_path.display(),
+                        target.display()
+                    )
+                })?;
             }
 
             log_success!("  Restored binary file: {}", binary_name);

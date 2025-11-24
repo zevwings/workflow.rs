@@ -91,8 +91,7 @@ impl Unzip {
         let file = File::open(zip_path)
             .with_context(|| format!("Failed to open zip file: {}", zip_path.display()))?;
 
-        let mut archive = ZipArchive::new(file)
-            .context("Failed to read zip archive")?;
+        let mut archive = ZipArchive::new(file).context("Failed to read zip archive")?;
 
         // 解压所有文件
         for i in 0..archive.len() {
@@ -104,13 +103,15 @@ impl Unzip {
 
             if file.name().ends_with('/') {
                 // 目录
-                fs::create_dir_all(&outpath)
-                    .with_context(|| format!("Failed to create directory: {}", outpath.display()))?;
+                fs::create_dir_all(&outpath).with_context(|| {
+                    format!("Failed to create directory: {}", outpath.display())
+                })?;
             } else {
                 // 文件
                 if let Some(parent) = outpath.parent() {
-                    fs::create_dir_all(parent)
-                        .with_context(|| format!("Failed to create parent directory: {}", parent.display()))?;
+                    fs::create_dir_all(parent).with_context(|| {
+                        format!("Failed to create parent directory: {}", parent.display())
+                    })?;
                 }
 
                 let mut outfile = File::create(&outpath)
