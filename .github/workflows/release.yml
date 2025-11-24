@@ -329,6 +329,18 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
+          # 安装 ARM64 交叉编译的 XCB 开发库（clipboard 依赖）
+          # 需要启用多架构支持并安装 ARM64 版本的库
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update
+          sudo apt-get install -y libxcb1-dev:arm64 libxcb-render0-dev:arm64 libxcb-shape0-dev:arm64 libxcb-xfixes0-dev:arm64
+
+      - name: Install system dependencies (Linux x86_64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          sudo apt-get install -y libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -355,6 +367,9 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            # 设置 PKG_CONFIG 路径，指向 ARM64 库
+            export PKG_CONFIG_ALLOW_CROSS=1
+            export PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
         env:
