@@ -7,6 +7,7 @@ use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
 
 /// 安装命令
@@ -65,12 +66,18 @@ impl InstallCommand {
         Ok(())
     }
 
-    /// 安装二进制文件到 /usr/local/bin
+    /// 安装二进制文件到系统目录
     ///
     /// 在当前可执行文件所在目录查找 workflow 二进制文件，
-    /// 并将其复制到 /usr/local/bin。
+    /// 并将其复制到系统二进制目录（通常是 /usr/local/bin）。
     pub fn install_binaries() -> Result<()> {
-        log_info!("Installing binaries to /usr/local/bin...");
+        let install_dir = Paths::binary_install_dir();
+        log_info!("Installing binaries to {}...", install_dir);
+
+        // 创建安装目录（Windows 需要）
+        let install_path = PathBuf::from(&install_dir);
+        fs::create_dir_all(&install_path)
+            .context("Failed to create install directory")?;
 
         // 获取当前可执行文件所在目录
         let current_exe =
@@ -80,13 +87,21 @@ impl InstallCommand {
             .context("Failed to get parent directory of executable")?;
 
         log_debug!("Current directory: {}", current_dir.display());
+        log_debug!("Install directory: {}", install_dir);
 
         let binaries = ["workflow"];
         let mut installed_count = 0;
 
         for binary in &binaries {
-            let source = current_dir.join(binary);
-            let target = format!("/usr/local/bin/{}", binary);
+            // Windows 需要 .exe 扩展名
+            let binary_name = if cfg!(target_os = "windows") {
+                format!("{}.exe", binary)
+            } else {
+                binary.to_string()
+            };
+
+            let source = current_dir.join(&binary_name);
+            let target = install_path.join(&binary_name);
 
             if !source.exists() {
                 log_warning!(
@@ -96,32 +111,38 @@ impl InstallCommand {
                 continue;
             }
 
-            log_info!("  Installing {} -> {}", binary, target);
+            log_info!("  Installing {} -> {}", binary_name, target.display());
 
-            // 使用 sudo 复制文件
-            let status = Command::new("sudo")
-                .arg("cp")
-                .arg(&source)
-                .arg(&target)
-                .status()
-                .context(format!("Failed to copy {} to {}", source.display(), target))?;
+            // Unix: 使用 sudo 复制文件
+            // Windows: 直接复制文件
+            if cfg!(target_os = "windows") {
+                fs::copy(&source, &target)
+                    .with_context(|| format!("Failed to copy {} to {}", source.display(), target.display()))?;
+            } else {
+                let status = Command::new("sudo")
+                    .arg("cp")
+                    .arg(&source)
+                    .arg(&target)
+                    .status()
+                    .context(format!("Failed to copy {} to {}", source.display(), target.display()))?;
 
-            if !status.success() {
-                anyhow::bail!("Failed to install {}", binary);
+                if !status.success() {
+                    anyhow::bail!("Failed to install {}", binary);
+                }
+
+                // 设置执行权限（仅 Unix）
+                Command::new("sudo")
+                    .arg("chmod")
+                    .arg("+x")
+                    .arg(&target)
+                    .status()
+                    .context(format!(
+                        "Failed to set executable permission for {}",
+                        target.display()
+                    ))?;
             }
 
-            // 设置执行权限
-            Command::new("sudo")
-                .arg("chmod")
-                .arg("+x")
-                .arg(&target)
-                .status()
-                .context(format!(
-                    "Failed to set executable permission for {}",
-                    target
-                ))?;
-
-            log_success!("    ✓  {} installation complete", binary);
+            log_success!("    ✓  {} installation complete", binary_name);
             installed_count += 1;
         }
 

@@ -31,15 +31,23 @@ impl Paths {
     ///
     /// # 错误
     ///
-    /// 如果 `HOME` 环境变量未设置或无法创建目录，返回相应的错误信息。
+    /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn config_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let config_dir = PathBuf::from(home).join(".workflow").join("config");
+        let config_dir = if cfg!(target_os = "windows") {
+            // Windows: 使用 %APPDATA%\workflow\config
+            let app_data = std::env::var("APPDATA")
+                .context("APPDATA environment variable not set")?;
+            PathBuf::from(app_data).join("workflow").join("config")
+        } else {
+            // Unix-like: 使用 ~/.workflow/config
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home).join(".workflow").join("config")
+        };
 
         // 确保配置目录存在
-        fs::create_dir_all(&config_dir).context("Failed to create .workflow/config directory")?;
+        fs::create_dir_all(&config_dir).context("Failed to create config directory")?;
 
-        // 设置目录权限为 700（仅用户可访问）
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o700))
@@ -86,7 +94,7 @@ impl Paths {
 
     /// 获取工作流目录路径
     ///
-    /// 返回 `~/.workflow/` 目录路径，如果目录不存在则创建。
+    /// 返回 `~/.workflow/` 目录路径（Unix）或 `%APPDATA%\workflow` 目录路径（Windows），如果目录不存在则创建。
     ///
     /// # 返回
     ///
@@ -94,15 +102,23 @@ impl Paths {
     ///
     /// # 错误
     ///
-    /// 如果 `HOME` 环境变量未设置或无法创建目录，返回相应的错误信息。
+    /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn workflow_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let workflow_dir = PathBuf::from(home).join(".workflow");
+        let workflow_dir = if cfg!(target_os = "windows") {
+            // Windows: 使用 %APPDATA%\workflow
+            let app_data = std::env::var("APPDATA")
+                .context("APPDATA environment variable not set")?;
+            PathBuf::from(app_data).join("workflow")
+        } else {
+            // Unix-like: 使用 ~/.workflow
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home).join(".workflow")
+        };
 
         // 确保工作流目录存在
         fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
 
-        // 设置目录权限为 700（仅用户可访问）
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700))
@@ -114,7 +130,7 @@ impl Paths {
 
     /// 获取工作历史记录目录路径
     ///
-    /// 返回 `~/.workflow/work-history/` 目录路径，如果目录不存在则创建。
+    /// 返回 `~/.workflow/work-history/` 目录路径（Unix）或 `%APPDATA%\workflow\work-history` 目录路径（Windows），如果目录不存在则创建。
     ///
     /// # 返回
     ///
@@ -122,7 +138,7 @@ impl Paths {
     ///
     /// # 错误
     ///
-    /// 如果 `HOME` 环境变量未设置或无法创建目录，返回相应的错误信息。
+    /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn work_history_dir() -> Result<PathBuf> {
         let history_dir = Self::workflow_dir()?.join("work-history");
 
@@ -130,7 +146,7 @@ impl Paths {
         fs::create_dir_all(&history_dir)
             .context("Failed to create .workflow/work-history directory")?;
 
-        // 设置目录权限为 700（仅用户可访问）
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&history_dir, fs::Permissions::from_mode(0o700))
@@ -169,7 +185,7 @@ impl Paths {
     ///
     /// # 返回
     ///
-    /// 返回安装目录路径的静态字符串。
+    /// 返回安装目录路径的字符串。
     ///
     /// # 示例
     ///
@@ -177,10 +193,22 @@ impl Paths {
     /// use workflow::settings::paths::Paths;
     ///
     /// let dir = Paths::binary_install_dir();
-    /// assert_eq!(dir, "/usr/local/bin");
+    /// // Unix: "/usr/local/bin"
+    /// // Windows: "%LOCALAPPDATA%\\Programs\\workflow\\bin"
     /// ```
-    pub fn binary_install_dir() -> &'static str {
-        "/usr/local/bin"
+    pub fn binary_install_dir() -> String {
+        if cfg!(target_os = "windows") {
+            // Windows: 使用 %LOCALAPPDATA%\Programs\workflow\bin
+            let local_app_data = std::env::var("LOCALAPPDATA")
+                .unwrap_or_else(|_| {
+                    std::env::var("USERPROFILE")
+                        .unwrap_or_else(|_| "C:\\Users\\User".to_string())
+                });
+            format!("{}\\Programs\\workflow\\bin", local_app_data)
+        } else {
+            // Unix-like: 使用 /usr/local/bin
+            "/usr/local/bin".to_string()
+        }
     }
 
     /// 获取所有二进制文件的完整路径
@@ -203,9 +231,18 @@ impl Paths {
     /// ```
     pub fn binary_paths() -> Vec<String> {
         let install_dir = Self::binary_install_dir();
+        let install_path = PathBuf::from(&install_dir);
         Self::command_names()
             .iter()
-            .map(|name| format!("{}/{}", install_dir, name))
+            .map(|name| {
+                // Windows 需要 .exe 扩展名
+                let binary_name = if cfg!(target_os = "windows") {
+                    format!("{}.exe", name)
+                } else {
+                    name.to_string()
+                };
+                install_path.join(&binary_name).to_string_lossy().to_string()
+            })
             .collect()
     }
 
@@ -230,9 +267,17 @@ impl Paths {
     /// assert_eq!(dir, PathBuf::from("~/.workflow/completions"));
     /// ```
     pub fn completion_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(home);
-        Ok(home_dir.join(".workflow/completions"))
+        let completion_dir = if cfg!(target_os = "windows") {
+            // Windows: 使用 %APPDATA%\workflow\completions
+            let app_data = std::env::var("APPDATA")
+                .context("APPDATA environment variable not set")?;
+            PathBuf::from(app_data).join("workflow").join("completions")
+        } else {
+            // Unix-like: 使用 ~/.workflow/completions
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            PathBuf::from(home).join(".workflow").join("completions")
+        };
+        Ok(completion_dir)
     }
 
     // ==================== Shell 路径相关方法 ====================
@@ -270,31 +315,57 @@ impl Paths {
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
     /// ```
     pub fn config_file(shell: &Shell) -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let home_dir = PathBuf::from(home);
+        let config_file = if cfg!(target_os = "windows") {
+            // Windows: 主要支持 PowerShell
+            match shell {
+                Shell::PowerShell => {
+                    // Windows PowerShell 配置文件路径
+                    // PowerShell Core (pwsh): %USERPROFILE%\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
+                    // Windows PowerShell (powershell.exe): %USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
+                    // 优先使用 PowerShell Core 路径
+                    let user_profile = std::env::var("USERPROFILE")
+                        .context("USERPROFILE environment variable not set")?;
+                    let user_dir = PathBuf::from(user_profile);
+                    let pwsh_profile = user_dir.join("Documents").join("PowerShell").join("Microsoft.PowerShell_profile.ps1");
+                    let ps_profile = user_dir.join("Documents").join("WindowsPowerShell").join("Microsoft.PowerShell_profile.ps1");
 
-        let config_file = match shell {
-            Shell::Zsh => home_dir.join(".zshrc"),
-            Shell::Bash => {
-                // macOS 通常使用 .bash_profile，Linux 使用 .bashrc
-                // 这里优先使用 .bash_profile，如果不存在则使用 .bashrc
-                let bash_profile = home_dir.join(".bash_profile");
-                let bashrc = home_dir.join(".bashrc");
-
-                // 如果 .bash_profile 不存在但 .bashrc 存在，使用 .bashrc
-                // 否则使用 .bash_profile
-                if !bash_profile.exists() && bashrc.exists() {
-                    bashrc
-                } else {
-                    bash_profile
+                    // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
+                    if pwsh_profile.exists() {
+                        pwsh_profile
+                    } else {
+                        ps_profile
+                    }
                 }
+                _ => anyhow::bail!("Unsupported shell on Windows: {:?}. Only PowerShell is supported.", shell),
             }
-            Shell::Fish => home_dir.join(".config/fish/config.fish"),
-            Shell::PowerShell => {
-                home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
+        } else {
+            // Unix-like: 使用 HOME 环境变量
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            let home_dir = PathBuf::from(home);
+
+            match shell {
+                Shell::Zsh => home_dir.join(".zshrc"),
+                Shell::Bash => {
+                    // macOS 通常使用 .bash_profile，Linux 使用 .bashrc
+                    // 这里优先使用 .bash_profile，如果不存在则使用 .bashrc
+                    let bash_profile = home_dir.join(".bash_profile");
+                    let bashrc = home_dir.join(".bashrc");
+
+                    // 如果 .bash_profile 不存在但 .bashrc 存在，使用 .bashrc
+                    // 否则使用 .bash_profile
+                    if !bash_profile.exists() && bashrc.exists() {
+                        bashrc
+                    } else {
+                        bash_profile
+                    }
+                }
+                Shell::Fish => home_dir.join(".config/fish/config.fish"),
+                Shell::PowerShell => {
+                    home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
+                }
+                Shell::Elvish => home_dir.join(".elvish/rc.elv"),
+                _ => anyhow::bail!("Unsupported shell type"),
             }
-            Shell::Elvish => home_dir.join(".elvish/rc.elv"),
-            _ => anyhow::bail!("Unsupported shell type"),
         };
 
         Ok(config_file)

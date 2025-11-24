@@ -197,6 +197,42 @@ impl UpdateCommand {
         match (os, arch) {
             ("macos", "x86_64") => Ok("macOS-Intel".to_string()),
             ("macos", "aarch64") => Ok("macOS-AppleSilicon".to_string()),
+            ("linux", "x86_64") => {
+                // 尝试检测是否需要 musl/static 版本
+                // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
+                if let Ok(os_release) = std::fs::read_to_string("/etc/os-release") {
+                    if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
+                        return Ok("Linux-x86_64-static".to_string());
+                    }
+                }
+
+                // 方法2: 尝试检测当前二进制是否静态链接
+                // 如果 ldd 命令失败或没有输出，可能是静态链接
+                if let Ok(output) = std::process::Command::new("ldd")
+                    .arg(std::env::current_exe().unwrap_or_default())
+                    .output()
+                {
+                    let output_str = String::from_utf8_lossy(&output.stdout);
+                    // 如果 ldd 输出 "not a dynamic executable" 或 "statically linked"
+                    // 说明是静态链接，应该使用 static 版本
+                    if output_str.contains("not a dynamic executable")
+                        || output_str.contains("statically linked")
+                        || output_str.is_empty()
+                    {
+                        return Ok("Linux-x86_64-static".to_string());
+                    }
+                } else {
+                    // ldd 命令不存在或失败，可能是 musl 环境（Alpine 等）
+                    // 在这种情况下，尝试使用 static 版本
+                    return Ok("Linux-x86_64-static".to_string());
+                }
+
+                // 默认返回 glibc 版本（大多数 Linux 发行版）
+                Ok("Linux-x86_64".to_string())
+            }
+            ("linux", "aarch64") => Ok("Linux-ARM64".to_string()),
+            ("windows", "x86_64") => Ok("Windows-x86_64".to_string()),
+            ("windows", "aarch64") => Ok("Windows-ARM64".to_string()),
             _ => anyhow::bail!("Unsupported platform: {}-{}", os, arch),
         }
     }
@@ -256,9 +292,14 @@ impl UpdateCommand {
     ///
     /// 根据平台和版本号拼接下载链接。
     fn build_download_url(version: &str, platform: &str) -> String {
+        let extension = if platform.starts_with("Windows") {
+            "zip"
+        } else {
+            "tar.gz"
+        };
         format!(
-            "https://github.com/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.tar.gz",
-            version, version, platform
+            "https://github.com/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.{}",
+            version, version, platform, extension
         )
     }
 
@@ -371,13 +412,24 @@ impl UpdateCommand {
 
     /// 第五步：解压文件
     ///
-    /// 解压 tar.gz 文件到指定目录。
-    fn extract_archive(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
+    /// 解压 tar.gz 或 zip 文件到指定目录。
+    fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
         log_info!("Extracting update package...");
-        log_debug!("Extracting: {}", tar_gz_path.display());
+        log_debug!("Extracting: {}", archive_path.display());
         log_debug!("Extracting to: {}", output_dir.display());
 
-        Unzip::extract_tar_gz(tar_gz_path, output_dir)?;
+        // 根据文件扩展名选择解压方法
+        let extension = archive_path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or("");
+
+        if extension == "zip" {
+            Unzip::extract_zip(archive_path, output_dir)?;
+        } else {
+            // 默认使用 tar.gz 解压
+            Unzip::extract_tar_gz(archive_path, output_dir)?;
+        }
 
         log_success!("  Extraction complete");
         Ok(())
@@ -387,12 +439,17 @@ impl UpdateCommand {
 
     /// 第六步：使用 ./install 安装二进制文件和补全脚本
     ///
-    /// 在解压目录中运行 ./install 来安装二进制文件到 /usr/local/bin 和补全脚本。
+    /// 在解压目录中运行 ./install 来安装二进制文件到系统目录和补全脚本。
     /// 默认行为是安装全部（二进制文件 + completions）。
     fn install(extract_dir: &Path) -> Result<()> {
         log_info!("Installing binaries and completion scripts...");
 
-        let install_binary = extract_dir.join("install");
+        // Windows 需要 .exe 扩展名
+        let install_binary = if cfg!(target_os = "windows") {
+            extract_dir.join("install.exe")
+        } else {
+            extract_dir.join("install")
+        };
 
         if !install_binary.exists() {
             anyhow::bail!(
@@ -401,12 +458,15 @@ impl UpdateCommand {
             );
         }
 
-        // 设置执行权限
-        Command::new("chmod")
-            .arg("+x")
-            .arg(&install_binary)
-            .status()
-            .context("Failed to set executable permission for install")?;
+        // 设置执行权限（仅 Unix）
+        #[cfg(unix)]
+        {
+            Command::new("chmod")
+                .arg("+x")
+                .arg(&install_binary)
+                .status()
+                .context("Failed to set executable permission for install")?;
+        }
 
         // 运行 ./install 安装二进制文件和补全脚本（默认安装全部）
         let status = Command::new(&install_binary)
@@ -530,12 +590,24 @@ impl UpdateCommand {
     fn verify_binaries(target_version: &str) -> Result<Vec<BinaryStatus>> {
         log_info!("Verifying binaries...");
 
+        let install_dir = Paths::binary_install_dir();
+        let install_path = std::path::PathBuf::from(&install_dir);
         let binaries = ["workflow"];
         let mut results = Vec::new();
 
         for binary in &binaries {
-            let path = format!("/usr/local/bin/{}", binary);
-            let status = Self::verify_single_binary(&path, binary, target_version)?;
+            // Windows 需要 .exe 扩展名
+            let binary_name = if cfg!(target_os = "windows") {
+                format!("{}.exe", binary)
+            } else {
+                binary.to_string()
+            };
+            let path = install_path.join(&binary_name);
+            let status = Self::verify_single_binary(
+                &path.to_string_lossy(),
+                &binary_name,
+                target_version,
+            )?;
             results.push(status);
         }
 

@@ -89,7 +89,7 @@ impl RollbackManager {
 
     /// 备份二进制文件
     ///
-    /// 备份 `/usr/local/bin` 中的二进制文件到备份目录。
+    /// 备份系统目录（通常是 /usr/local/bin）中的二进制文件到备份目录。
     ///
     /// # 参数
     ///
@@ -100,10 +100,18 @@ impl RollbackManager {
     ///
     /// 返回备份的文件路径列表。
     fn backup_binaries(backup_dir: &Path, binaries: &[&str]) -> Result<Vec<(String, PathBuf)>> {
+        let install_dir = Paths::binary_install_dir();
+        let install_path = PathBuf::from(&install_dir);
         let mut backups = Vec::new();
 
         for binary in binaries {
-            let source = PathBuf::from(format!("/usr/local/bin/{}", binary));
+            // Windows 需要 .exe 扩展名
+            let binary_name = if cfg!(target_os = "windows") {
+                format!("{}.exe", binary)
+            } else {
+                binary.to_string()
+            };
+            let source = install_path.join(&binary_name);
 
             // 如果文件不存在，跳过
             if !source.exists() {
@@ -116,40 +124,54 @@ impl RollbackManager {
 
             let backup_path = backup_dir.join(binary);
 
-            // 使用 sudo 复制文件
-            let status = Command::new("sudo")
-                .arg("cp")
-                .arg(&source)
-                .arg(&backup_path)
-                .status()
-                .with_context(|| {
-                    format!(
-                        "Failed to backup binary file: {} -> {}",
+            // 复制文件（Unix 使用 sudo，Windows 直接复制）
+            #[cfg(unix)]
+            {
+                let status = Command::new("sudo")
+                    .arg("cp")
+                    .arg(&source)
+                    .arg(&backup_path)
+                    .status()
+                    .with_context(|| {
+                        format!(
+                            "Failed to backup binary file: {} -> {}",
+                            source.display(),
+                            backup_path.display()
+                        )
+                    })?;
+
+                if !status.success() {
+                    anyhow::bail!(
+                        "Failed to backup binary file: {} -> {} (exit code: {})",
                         source.display(),
-                        backup_path.display()
-                    )
-                })?;
+                        backup_path.display(),
+                        status.code().unwrap_or(-1)
+                    );
+                }
 
-            if !status.success() {
-                anyhow::bail!(
-                    "Failed to backup binary file: {} -> {} (exit code: {})",
-                    source.display(),
-                    backup_path.display(),
-                    status.code().unwrap_or(-1)
-                );
+                // 设置执行权限（仅 Unix）
+                Command::new("chmod")
+                    .arg("+x")
+                    .arg(&backup_path)
+                    .status()
+                    .with_context(|| {
+                        format!(
+                            "Failed to set executable permission for backup file: {}",
+                            backup_path.display()
+                        )
+                    })?;
             }
-
-            // 设置执行权限
-            Command::new("chmod")
-                .arg("+x")
-                .arg(&backup_path)
-                .status()
-                .with_context(|| {
-                    format!(
-                        "Failed to set executable permission for backup file: {}",
-                        backup_path.display()
-                    )
-                })?;
+            #[cfg(windows)]
+            {
+                fs::copy(&source, &backup_path)
+                    .with_context(|| {
+                        format!(
+                            "Failed to backup binary file: {} -> {}",
+                            source.display(),
+                            backup_path.display()
+                        )
+                    })?;
+            }
 
             log_debug!(
                 "Backed up binary file: {} -> {}",
@@ -268,14 +290,16 @@ impl RollbackManager {
 
     /// 恢复二进制文件
     ///
-    /// 从备份恢复二进制文件到 `/usr/local/bin`。
+    /// 从备份恢复二进制文件到系统目录（通常是 /usr/local/bin）。
     ///
     /// # 参数
     ///
     /// * `backups` - 备份的文件路径列表
     fn restore_binaries(backups: &[(String, PathBuf)]) -> Result<()> {
+        let install_dir = Paths::binary_install_dir();
+        let install_path = PathBuf::from(&install_dir);
         for (binary_name, backup_path) in backups {
-            let target = PathBuf::from(format!("/usr/local/bin/{}", binary_name));
+            let target = install_path.join(binary_name);
 
             // 如果备份文件不存在，跳过
             if !backup_path.exists() {
@@ -286,41 +310,55 @@ impl RollbackManager {
                 continue;
             }
 
-            // 使用 sudo 复制文件
-            let status = Command::new("sudo")
-                .arg("cp")
-                .arg(backup_path)
-                .arg(&target)
-                .status()
-                .with_context(|| {
-                    format!(
-                        "Failed to restore binary file: {} -> {}",
+            // 复制文件（Unix 使用 sudo，Windows 直接复制）
+            #[cfg(unix)]
+            {
+                let status = Command::new("sudo")
+                    .arg("cp")
+                    .arg(backup_path)
+                    .arg(&target)
+                    .status()
+                    .with_context(|| {
+                        format!(
+                            "Failed to restore binary file: {} -> {}",
+                            backup_path.display(),
+                            target.display()
+                        )
+                    })?;
+
+                if !status.success() {
+                    anyhow::bail!(
+                        "Failed to restore binary file: {} -> {} (exit code: {})",
                         backup_path.display(),
-                        target.display()
-                    )
-                })?;
+                        target.display(),
+                        status.code().unwrap_or(-1)
+                    );
+                }
 
-            if !status.success() {
-                anyhow::bail!(
-                    "Failed to restore binary file: {} -> {} (exit code: {})",
-                    backup_path.display(),
-                    target.display(),
-                    status.code().unwrap_or(-1)
-                );
+                // 设置执行权限（仅 Unix）
+                Command::new("sudo")
+                    .arg("chmod")
+                    .arg("+x")
+                    .arg(&target)
+                    .status()
+                    .with_context(|| {
+                        format!(
+                            "Failed to set executable permission for restored binary file: {}",
+                            target.display()
+                        )
+                    })?;
             }
-
-            // 设置执行权限
-            Command::new("sudo")
-                .arg("chmod")
-                .arg("+x")
-                .arg(&target)
-                .status()
-                .with_context(|| {
-                    format!(
-                        "Failed to set executable permission for restored binary file: {}",
-                        target.display()
-                    )
-                })?;
+            #[cfg(windows)]
+            {
+                fs::copy(backup_path, &target)
+                    .with_context(|| {
+                        format!(
+                            "Failed to restore binary file: {} -> {}",
+                            backup_path.display(),
+                            target.display()
+                        )
+                    })?;
+            }
 
             log_success!("  Restored binary file: {}", binary_name);
         }
