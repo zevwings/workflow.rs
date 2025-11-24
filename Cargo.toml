@@ -30,6 +30,7 @@ tar = "0.4"
 sha2 = "0.10"
 
 # clipboard 依赖：在 musl 目标上禁用（避免 XCB 依赖问题）
+# 注意：Linux ARM64 交叉编译时，如果 XCB 库不可用，clipboard 功能会静默失败
 [target.'cfg(not(target_env = "musl"))'.dependencies]
 clipboard = "0.5"
 

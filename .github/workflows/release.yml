@@ -345,6 +345,11 @@ jobs:
               echo "This may be due to incomplete ARM64 support in some Ubuntu sources"
               echo "Attempting to continue build anyway..."
             }
+          # 验证库是否安装成功
+          echo "Checking installed ARM64 XCB libraries:"
+          ls -la /usr/lib/aarch64-linux-gnu/libxcb*.so* 2>/dev/null || echo "Warning: XCB libraries not found in expected location"
+          # 列出所有可能的库位置
+          find /usr -name "libxcb*.so*" -path "*/aarch64-linux-gnu/*" 2>/dev/null | head -10 || true
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -397,6 +402,9 @@ jobs:
             # 设置 PKG_CONFIG 路径，指向 ARM64 库
             export PKG_CONFIG_ALLOW_CROSS=1
             export PKG_CONFIG_PATH_aarch64_unknown_linux_gnu=/usr/lib/aarch64-linux-gnu/pkgconfig
+            # 设置库搜索路径，让链接器能找到 ARM64 的 XCB 库
+            export LIBRARY_PATH=/usr/lib/aarch64-linux-gnu:$LIBRARY_PATH
+            export RUSTFLAGS="-L native=/usr/lib/aarch64-linux-gnu"
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
         env:
