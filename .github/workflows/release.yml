@@ -332,8 +332,19 @@ jobs:
           # 安装 ARM64 交叉编译的 XCB 开发库（clipboard 依赖）
           # 需要启用多架构支持并安装 ARM64 版本的库
           sudo dpkg --add-architecture arm64
-          sudo apt-get update
-          sudo apt-get install -y libxcb1-dev:arm64 libxcb-render0-dev:arm64 libxcb-shape0-dev:arm64 libxcb-xfixes0-dev:arm64
+          # 更新包列表，忽略某些源不支持 ARM64 的错误（使用 || true 允许失败）
+          sudo apt-get update -o Acquire::Check-Valid-Until=false || true
+          # 安装 ARM64 版本的 XCB 库
+          # 即使某些包不可用也继续（因为某些 Ubuntu 源可能不完全支持 ARM64）
+          sudo apt-get install -y --no-install-recommends \
+            libxcb1-dev:arm64 \
+            libxcb-render0-dev:arm64 \
+            libxcb-shape0-dev:arm64 \
+            libxcb-xfixes0-dev:arm64 || {
+              echo "Warning: Failed to install some ARM64 XCB libraries"
+              echo "This may be due to incomplete ARM64 support in some Ubuntu sources"
+              echo "Attempting to continue build anyway..."
+            }
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -347,6 +358,22 @@ jobs:
         run: |
           brew install pkg-config || true
 
+      - name: Get Cargo.lock hash
+        id: cargo_lock
+        shell: bash
+        run: |
+          if [ -f "Cargo.lock" ]; then
+            # macOS 使用 shasum，Linux 使用 sha256sum
+            if command -v shasum >/dev/null 2>&1; then
+              HASH=$(shasum -a 256 Cargo.lock | cut -d' ' -f1 | head -c 16)
+            else
+              HASH=$(sha256sum Cargo.lock | cut -d' ' -f1 | head -c 16)
+            fi
+            echo "hash=$HASH" >> $GITHUB_OUTPUT
+          else
+            echo "hash=no-lock" >> $GITHUB_OUTPUT
+          fi
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -356,7 +383,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ steps.cargo_lock.outputs.hash }}
           restore-keys: |
             ${{ runner.os }}-cargo-${{ matrix.target }}-
 
@@ -387,29 +414,44 @@ jobs:
             cp target/${{ matrix.target }}/release/install package/
           fi
 
-      - name: Create archive
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $archiveName = "workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          $archivePath = Join-Path $PWD $archiveName
+          # 进入 package 目录
+          Push-Location package
+          try {
+            # 打包 workflow.exe 和 install.exe 两个二进制文件
+            Compress-Archive -Path "workflow.exe", "install.exe" -DestinationPath $archivePath -Force
+            # 显示文件信息
+            $fileInfo = Get-Item $archivePath
+            Write-Host "📦 Archive created: $archiveName"
+            Write-Host "   Size: $([math]::Round($fileInfo.Length / 1MB, 2)) MB"
+            # 验证打包内容
+            Write-Host "📦 Archive contents:"
+            $verifyPath = Join-Path $env:TEMP "workflow-verify"
+            Expand-Archive -Path $archivePath -DestinationPath $verifyPath -Force
+            Get-ChildItem $verifyPath | ForEach-Object { Write-Host "   $($_.Name)" }
+            Remove-Item $verifyPath -Recurse -Force
+          } finally {
+            Pop-Location
+          }
+
+      - name: Create archive (Unix)
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           cd package
-          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
-            # 打包 workflow.exe 和 install.exe 两个二进制文件
-            zip -r "../$ARCHIVE_NAME" workflow.exe install.exe
-            cd ..
-            ls -lh "$ARCHIVE_NAME"
-            # 验证打包内容
-            echo "📦 Archive contents:"
-            unzip -l "$ARCHIVE_NAME"
-          else
-            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
-            # 打包 workflow 和 install 两个二进制文件
-            tar czf "../$ARCHIVE_NAME" workflow install
-            cd ..
-            ls -lh "$ARCHIVE_NAME"
-            # 验证打包内容
-            echo "📦 Archive contents:"
-            tar tzf "$ARCHIVE_NAME"
-          fi
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          # 打包 workflow 和 install 两个二进制文件
+          tar czf "../$ARCHIVE_NAME" workflow install
+          cd ..
+          ls -lh "$ARCHIVE_NAME"
+          # 验证打包内容
+          echo "📦 Archive contents:"
+          tar tzf "$ARCHIVE_NAME"
 
       - name: Calculate SHA256
         id: sha256
