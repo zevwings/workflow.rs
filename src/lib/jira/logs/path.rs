@@ -140,4 +140,15 @@ impl JiraLogs {
             )))
         }
     }
+
+    /// 获取 api.log 文件路径
+    /// 基于 flutter-api.log 的路径，在同一目录下查找 api.log
+    pub fn get_api_log_file_path(&self, jira_id: &str) -> Result<PathBuf> {
+        let flutter_api_log = self.get_log_file_path(jira_id)?;
+        let api_log = flutter_api_log
+            .parent()
+            .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?
+            .join("api.log");
+        Ok(api_log)
+    }
 }

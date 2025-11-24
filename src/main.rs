@@ -12,9 +12,9 @@ use commands::branch::{clean, ignore};
 use commands::check::check;
 use commands::config::{completion, log, setup, show};
 use commands::github::github;
-use commands::jira::{attachments::AttachmentsCommand, clean::CleanCommand, info::InfoCommand};
+use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use commands::lifecycle::{uninstall, update};
-use commands::log::{download::DownloadCommand, find::FindCommand, search::SearchCommand};
+use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{close, create, integrate, list, merge, status, update as pr_update};
 use commands::proxy::proxy;
 
@@ -356,10 +356,6 @@ enum LogSubcommand {
         /// Jira ticket ID (e.g., PROJ-123)
         #[arg(value_name = "JIRA_ID")]
         jira_id: String,
-
-        /// Download all attachments (not just log files)
-        #[arg(long, short = 'a')]
-        all: bool,
     },
     /// Find request ID in log files
     ///
@@ -558,8 +554,7 @@ fn main() -> Result<()> {
         },
         // 日志操作命令
         Some(Commands::Log { subcommand }) => match subcommand {
-            LogSubcommand::Download { jira_id, all: _ } => {
-                // Log download only downloads log files, ignoring the 'all' flag
+            LogSubcommand::Download { jira_id } => {
                 DownloadCommand::download(&jira_id)?;
             }
             LogSubcommand::Find {

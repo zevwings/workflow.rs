@@ -3,10 +3,8 @@ use crate::{log_debug, log_info, log_success};
 use anyhow::{Context, Result};
 
 /// 下载附件命令
-#[allow(dead_code)]
 pub struct AttachmentsCommand;
 
-#[allow(dead_code)]
 impl AttachmentsCommand {
     /// 下载所有附件
     pub fn download(jira_id: &str) -> Result<()> {

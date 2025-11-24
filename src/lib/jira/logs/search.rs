@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use regex::Regex;
 use std::collections::HashSet;
 use std::io::BufRead;
+use std::path::Path;
 use std::sync::OnceLock;
 
 use super::constants::*;
@@ -103,13 +104,14 @@ impl JiraLogs {
         Ok(response_lines.join("\n"))
     }
 
-    /// 在日志文件中搜索关键词
-    ///
-    /// 自动根据 `jira_id` 解析日志文件路径，然后搜索关键词。
-    pub fn search_keyword(&self, jira_id: &str, keyword: &str) -> Result<Vec<LogEntry>> {
-        let log_file = self.ensure_log_file_exists(jira_id)?;
+    /// 在指定日志文件中搜索关键词（内部方法）
+    fn search_keyword_in_file(&self, log_file: &Path, keyword: &str) -> Result<Vec<LogEntry>> {
+        // 如果文件不存在，返回空结果
+        if !log_file.exists() {
+            return Ok(Vec::new());
+        }
 
-        let reader = helpers::open_log_file(&log_file)?;
+        let reader = helpers::open_log_file(log_file)?;
         let keyword_lower = keyword.to_lowercase();
         let mut results = Vec::new();
         let mut printed_ids = HashSet::new();
@@ -171,6 +173,34 @@ impl JiraLogs {
         }
 
         Ok(results)
+    }
+
+    /// 在日志文件中搜索关键词
+    ///
+    /// 自动根据 `jira_id` 解析日志文件路径，然后搜索关键词。
+    /// 同时搜索 flutter-api.log 和 api.log 两个文件。
+    pub fn search_keyword(&self, jira_id: &str, keyword: &str) -> Result<Vec<LogEntry>> {
+        let log_file = self.ensure_log_file_exists(jira_id)?;
+        self.search_keyword_in_file(&log_file, keyword)
+    }
+
+    /// 同时搜索 flutter-api.log 和 api.log 文件
+    ///
+    /// 返回两个文件的结果，分别对应 (api.log 结果, flutter-api.log 结果)
+    pub fn search_keyword_both_files(
+        &self,
+        jira_id: &str,
+        keyword: &str,
+    ) -> Result<(Vec<LogEntry>, Vec<LogEntry>)> {
+        // 搜索 flutter-api.log
+        let flutter_api_log = self.ensure_log_file_exists(jira_id)?;
+        let flutter_api_results = self.search_keyword_in_file(&flutter_api_log, keyword)?;
+
+        // 搜索 api.log（如果存在）
+        let api_log = self.get_api_log_file_path(jira_id)?;
+        let api_results = self.search_keyword_in_file(&api_log, keyword)?;
+
+        Ok((api_results, flutter_api_results))
     }
 
     /// 检测是否是新日志条目的开始

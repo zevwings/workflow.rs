@@ -5,10 +5,8 @@ use anyhow::{Context, Result};
 use dialoguer::Input;
 
 /// 查找请求 ID 命令
-#[allow(dead_code)]
 pub struct FindCommand;
 
-#[allow(dead_code)]
 impl FindCommand {
     /// 查找请求 ID
     pub fn find_request_id(jira_id: &str, request_id: Option<String>) -> Result<()> {

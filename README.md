@@ -271,7 +271,6 @@ workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会
 ```bash
 # 下载日志
 workflow log download PROJ-123                  # 下载日志文件
-workflow log download PROJ-123 --all            # 下载所有附件（此参数会被忽略，只下载日志文件）
 
 # 查找请求 ID
 workflow log find PROJ-123 [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）

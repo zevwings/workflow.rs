@@ -5,3 +5,7 @@
 pub mod download;
 pub mod find;
 pub mod search;
+
+pub use download::DownloadCommand;
+pub use find::FindCommand;
+pub use search::SearchCommand;

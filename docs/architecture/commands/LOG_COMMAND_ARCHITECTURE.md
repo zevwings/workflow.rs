@@ -81,9 +81,10 @@ Cli::parse() (解析命令行参数)
 match cli.subcommand
   ├─ Download → DownloadCommand::download()
   ├─ Find → FindCommand::find_request_id()
-  ├─ Search → SearchCommand::search()
-  └─ Clean → CleanCommand::clean()
+  └─ Search → SearchCommand::search()
 ```
+
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
 
 ---
 
@@ -365,6 +366,8 @@ match cli.subcommand
   ├─ Find → FindCommand::find_request_id()
   └─ Search → SearchCommand::search()
 ```
+
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
 
 **库层调用（Commands → JiraLogs）**：
 命令层通过 `JiraLogs` API 调用核心业务逻辑：

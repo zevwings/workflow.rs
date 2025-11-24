@@ -5,3 +5,7 @@
 pub mod attachments;
 pub mod clean;
 pub mod info;
+
+pub use attachments::AttachmentsCommand;
+pub use clean::CleanCommand;
+pub use info::InfoCommand;

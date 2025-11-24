@@ -51,7 +51,7 @@
 
 **问题 1：`log/download.rs`**
 - ✅ 已移除 `download_all` 参数，方法内部固定为 `false`（只下载日志文件）
-- ✅ CLI 中保留 `--all` 参数但忽略（向后兼容）
+- ✅ 已完全移除 CLI 中的 `--all` 参数
 
 **问题 2：`jira/attachments.rs`**
 - ✅ 已重命名为 `attachments.rs`
@@ -166,8 +166,8 @@
 ## 📌 注意事项
 
 1. **向后兼容性**：
-   - `log download` 命令的 `--all` 参数可以保留，但在实现中忽略
-   - 这样可以保持 CLI 接口的向后兼容性
+   - `log download` 命令的 `--all` 参数已完全移除
+   - 如需下载所有附件，请使用 `workflow jira attachments` 命令
 
 2. **命名一致性**：
    - `jira/download.rs` 必须重命名为 `attachments.rs` 以符合文档和语义

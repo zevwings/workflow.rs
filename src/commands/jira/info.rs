@@ -3,10 +3,8 @@ use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
 
 /// 显示 ticket 信息命令
-#[allow(dead_code)]
 pub struct InfoCommand;
 
-#[allow(dead_code)]
 impl InfoCommand {
     /// 显示 ticket 信息
     pub fn show(jira_id: &str) -> Result<()> {
@@ -14,7 +12,7 @@ impl InfoCommand {
 
         // 获取 ticket 信息
         let issue = Jira::get_ticket_info(jira_id)
-            .context(format!("Failed to get ticket info for {}", jira_id))?;
+            .with_context(|| format!("Failed to get ticket info for {}", jira_id))?;
 
         // 显示基本信息
         log_break!('=', 40, "Ticket Information");
@@ -83,7 +81,6 @@ impl InfoCommand {
 }
 
 /// 格式化文件大小
-#[allow(dead_code)]
 fn format_size(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
