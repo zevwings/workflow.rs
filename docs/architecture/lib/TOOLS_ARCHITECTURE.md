@@ -332,6 +332,22 @@ pub fn copy(text: &str) -> Result<()>
 
 **实现**：使用 `clipboard` crate 提供的跨平台功能
 
+### 平台限制
+
+**重要说明**：剪贴板功能在以下平台不可用（静默失败，不影响其他功能）：
+
+- **Linux ARM64** (`aarch64-unknown-linux-gnu`)：由于 XCB 库在 Ubuntu 源中不可用，交叉编译时无法链接 XCB 库
+- **musl 静态链接版本** (`*-unknown-linux-musl`)：musl 不支持 XCB 库
+
+**支持平台**：
+- ✅ macOS (Intel 和 Apple Silicon)
+- ✅ Linux x86_64 (glibc)
+- ✅ Windows (x86_64 和 ARM64)
+
+**设计说明**：
+- 在不受支持的平台上，`Clipboard::copy()` 会静默成功（返回 `Ok(())`），但不会实际复制内容
+- 这样设计是为了确保其他功能不受影响，用户仍可以正常使用其他命令
+
 ### 使用场景
 
 - **复制命令**：复制生成的命令到剪贴板，方便用户使用

@@ -16,6 +16,9 @@ Workflow CLI 完全支持以下平台：
 - 配置文件存储在 `~/.workflow/config/`
 - 补全脚本存储在 `~/.workflow/completions/`
 - 安装/卸载可能需要 `sudo` 权限
+- **剪贴板功能限制**：
+  - Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（XCB 库依赖问题）
+  - 其他平台（macOS、Linux x86_64、Windows）完全支持剪贴板功能
 
 #### Windows
 - 二进制文件安装到 `%LOCALAPPDATA%\Programs\workflow\bin`

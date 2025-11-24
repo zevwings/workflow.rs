@@ -310,7 +310,8 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+          echo "✅ Version: $VERSION"
+          echo "✅ Tag: v$VERSION"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -329,8 +330,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
-          # 注意：clipboard 功能在 Linux ARM64 交叉编译时已禁用（Cargo.toml 中配置）
-          # 因此不需要安装 XCB 开发库，避免 Ubuntu 源中 ARM64 包不可用的问题
+          # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
+          # 因此不需要安装 XCB 开发库，简化构建流程
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -380,8 +381,8 @@ jobs:
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
-            echo "CC: $CC_aarch64_unknown_linux_gnu"
-            echo "Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
+            echo "🔧 Cross-compiling for Linux ARM64"
+            echo "ℹ️  Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
         env:
@@ -394,9 +395,11 @@ jobs:
           if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
             cp target/${{ matrix.target }}/release/workflow.exe package/
             cp target/${{ matrix.target }}/release/install.exe package/
+            echo "✅ Copied workflow.exe and install.exe to package/"
           else
             cp target/${{ matrix.target }}/release/workflow package/
             cp target/${{ matrix.target }}/release/install package/
+            echo "✅ Copied workflow and install binaries to package/"
           fi
 
       - name: Create archive (Windows)
@@ -540,7 +543,8 @@ jobs:
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
+          echo "✅ Version: $VERSION"
+          echo "✅ Tag: v$VERSION"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

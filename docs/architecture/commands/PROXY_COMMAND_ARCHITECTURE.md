@@ -270,6 +270,7 @@ commands/proxy/proxy.rs::ProxyCommand::check()
 - **系统代理未配置**：显示警告，但不中断执行
 - **配置文件写入失败**：返回错误，提供手动配置建议
 - **剪贴板复制失败**：记录警告，但不影响主要功能
+  - 注意：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（详见 [工具函数模块架构文档](../lib/TOOLS_ARCHITECTURE.md)）
 
 ---
 
