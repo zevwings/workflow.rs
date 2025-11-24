@@ -5,6 +5,8 @@ use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
+#[cfg(target_os = "macos")]
+use crate::base::util::remove_quarantine_attribute;
 use crate::base::util::{confirm, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
@@ -453,7 +455,7 @@ impl UpdateCommand {
                         "Removing quarantine attribute from extracted binary: {}",
                         binary_path.display()
                     );
-                    Self::remove_quarantine_attribute(&binary_path)?;
+                    remove_quarantine_attribute(&binary_path)?;
                 }
             }
         }
@@ -506,62 +508,6 @@ impl UpdateCommand {
     // ==================== 验证相关 ====================
 
     // --- 基础验证工具方法 ---
-
-    /// 移除 macOS 隔离属性（quarantine attribute）
-    ///
-    /// 在 macOS 上，从网络下载的文件会被 Gatekeeper 添加隔离属性。
-    /// 这个函数使用 `xattr -d com.apple.quarantine` 移除隔离属性，
-    /// 允许二进制文件正常执行。
-    #[cfg(target_os = "macos")]
-    fn remove_quarantine_attribute(binary_path: &Path) -> Result<()> {
-        // 检查文件是否存在
-        if !binary_path.exists() {
-            return Ok(());
-        }
-
-        // 使用 xattr 命令移除隔离属性
-        let output = Command::new("xattr")
-            .arg("-d")
-            .arg("com.apple.quarantine")
-            .arg(binary_path)
-            .output();
-
-        match output {
-            Ok(result) => {
-                if result.status.success() {
-                    log_debug!(
-                        "Removed quarantine attribute from: {}",
-                        binary_path.display()
-                    );
-                } else {
-                    // 如果隔离属性不存在，xattr 会返回非零状态码，这是正常的
-                    let stderr = String::from_utf8_lossy(&result.stderr);
-                    if !stderr.contains("No such xattr") {
-                        log_debug!(
-                            "Failed to remove quarantine attribute from {}: {}",
-                            binary_path.display(),
-                            stderr.trim()
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                log_debug!(
-                    "Failed to execute xattr command for {}: {}",
-                    binary_path.display(),
-                    e
-                );
-            }
-        }
-
-        Ok(())
-    }
-
-    /// 移除隔离属性（非 macOS 平台，空实现）
-    #[cfg(not(target_os = "macos"))]
-    fn remove_quarantine_attribute(_binary_path: &Path) -> Result<()> {
-        Ok(())
-    }
 
     /// 检查文件是否可执行
     ///
@@ -649,9 +595,10 @@ impl UpdateCommand {
                             max_retries
                         );
                         // 尝试移除隔离属性作为最后的补救措施
+                        #[cfg(target_os = "macos")]
                         if attempt < max_retries {
                             log_debug!("Attempting to remove quarantine attribute as fallback...");
-                            Self::remove_quarantine_attribute(binary_path)?;
+                            remove_quarantine_attribute(binary_path)?;
                             thread::sleep(Duration::from_millis(200));
                             continue;
                         }
@@ -716,13 +663,14 @@ impl UpdateCommand {
         match output {
             Ok(result) => {
                 // 如果遇到 SIGKILL，记录警告并尝试移除隔离属性作为最后的补救措施
-                if result.status.code().is_none() && cfg!(target_os = "macos") {
+                #[cfg(target_os = "macos")]
+                if result.status.code().is_none() {
                     log_warning!(
                         "Binary help command failed with SIGKILL for {}, this should not happen if quarantine was removed",
                         binary_path.display()
                     );
                     log_debug!("Attempting to remove quarantine attribute as fallback...");
-                    Self::remove_quarantine_attribute(binary_path)?;
+                    remove_quarantine_attribute(binary_path)?;
                     thread::sleep(Duration::from_millis(200));
 
                     // 重试一次

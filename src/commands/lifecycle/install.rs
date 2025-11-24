@@ -3,6 +3,8 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
+#[cfg(target_os = "macos")]
+use crate::base::util::remove_quarantine_attribute;
 use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
@@ -112,19 +114,11 @@ impl InstallCommand {
             #[cfg(target_os = "macos")]
             {
                 if source.exists() {
-                    let output = Command::new("xattr")
-                        .arg("-d")
-                        .arg("com.apple.quarantine")
-                        .arg(&source)
-                        .output();
-                    if let Ok(result) = output {
-                        if result.status.success() {
-                            log_debug!(
-                                "Removed quarantine attribute from source: {}",
-                                source.display()
-                            );
-                        }
-                    }
+                    log_debug!(
+                        "Removing quarantine attribute from source: {}",
+                        source.display()
+                    );
+                    remove_quarantine_attribute(&source)?;
                 }
             }
 
