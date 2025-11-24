@@ -5,9 +5,9 @@ use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
-#[cfg(target_os = "macos")]
-use crate::base::util::remove_quarantine_attribute;
 use crate::base::util::{confirm, Checksum, Unzip};
+#[cfg(target_os = "macos")]
+use crate::base::util::{remove_quarantine_attribute, remove_quarantine_attribute_with_sudo};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -595,10 +595,11 @@ impl UpdateCommand {
                             max_retries
                         );
                         // 尝试移除隔离属性作为最后的补救措施
+                        // 使用 sudo 版本，因为文件在系统目录中需要管理员权限
                         #[cfg(target_os = "macos")]
                         if attempt < max_retries {
-                            log_debug!("Attempting to remove quarantine attribute as fallback...");
-                            remove_quarantine_attribute(binary_path)?;
+                            log_debug!("Attempting to remove quarantine attribute (with sudo) as fallback...");
+                            remove_quarantine_attribute_with_sudo(binary_path)?;
                             thread::sleep(Duration::from_millis(200));
                             continue;
                         }
@@ -663,14 +664,17 @@ impl UpdateCommand {
         match output {
             Ok(result) => {
                 // 如果遇到 SIGKILL，记录警告并尝试移除隔离属性作为最后的补救措施
+                // 使用 sudo 版本，因为文件在系统目录中需要管理员权限
                 #[cfg(target_os = "macos")]
                 if result.status.code().is_none() {
                     log_warning!(
                         "Binary help command failed with SIGKILL for {}, this should not happen if quarantine was removed",
                         binary_path.display()
                     );
-                    log_debug!("Attempting to remove quarantine attribute as fallback...");
-                    remove_quarantine_attribute(binary_path)?;
+                    log_debug!(
+                        "Attempting to remove quarantine attribute (with sudo) as fallback..."
+                    );
+                    remove_quarantine_attribute_with_sudo(binary_path)?;
                     thread::sleep(Duration::from_millis(200));
 
                     // 重试一次
