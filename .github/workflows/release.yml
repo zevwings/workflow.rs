@@ -143,38 +143,29 @@ jobs:
           fi
           echo "✅ Cargo.toml updated: version = \"$NEW_VERSION\""
 
-          # 2. 运行 cargo build 或 cargo check 来自动更新 Cargo.lock
+          # 2. 直接手动更新 Cargo.lock 中的版本号（避免编译依赖问题）
           echo "Updating Cargo.lock to reflect new version in Cargo.toml..."
-          cargo build --quiet || cargo check --quiet || true
 
-          # 3. 验证 Cargo.lock 中的版本是否已更新
+          # 3. 手动更新 Cargo.lock 中的版本号
           if grep -q 'name = "workflow"' Cargo.lock; then
+            # 使用 sed 在 workflow 包的 [[package]] 块中更新版本号
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+              # macOS: 使用 sed 更新 workflow 包的版本号
+              sed -i '' '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            else
+              # Linux: 使用 sed 更新
+              sed -i '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            fi
+            # 验证更新
             LOCK_VERSION=$(grep -A 2 'name = "workflow"' Cargo.lock | grep 'version' | head -1 | sed -E 's/.*version = "([^"]+)".*/\1/')
             if [ "$LOCK_VERSION" = "$NEW_VERSION" ]; then
               echo "✅ Cargo.lock updated: version = \"$LOCK_VERSION\""
             else
-              echo "⚠️  Warning: Cargo.lock version ($LOCK_VERSION) does not match expected version ($NEW_VERSION)"
-              echo "Attempting to manually update Cargo.lock..."
-              # 手动更新 Cargo.lock 中的版本号
-              # 使用 sed 在 workflow 包的 [[package]] 块中更新版本号
-              if [[ "$OSTYPE" == "darwin"* ]]; then
-                # macOS: 使用 sed 更新 workflow 包的版本号
-                sed -i '' '/^name = "workflow"$/,/^version = /{
-                  /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
-                }' Cargo.lock
-              else
-                # Linux: 使用 sed 更新
-                sed -i '/^name = "workflow"$/,/^version = /{
-                  /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
-                }' Cargo.lock
-              fi
-              # 再次验证
-              LOCK_VERSION=$(grep -A 2 'name = "workflow"' Cargo.lock | grep 'version' | head -1 | sed -E 's/.*version = "([^"]+)".*/\1/')
-              if [ "$LOCK_VERSION" = "$NEW_VERSION" ]; then
-                echo "✅ Cargo.lock manually updated: version = \"$LOCK_VERSION\""
-              else
-                echo "⚠️  Warning: Could not update Cargo.lock version. It will be updated on next build."
-              fi
+              echo "⚠️  Warning: Could not update Cargo.lock version. It will be updated on next build."
             fi
           else
             echo "⚠️  Warning: Could not find workflow package in Cargo.lock"
