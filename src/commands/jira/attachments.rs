@@ -8,7 +8,7 @@ pub struct AttachmentsCommand;
 impl AttachmentsCommand {
     /// 下载所有附件
     pub fn download(jira_id: &str) -> Result<()> {
-        log_success!("Downloading all attachments for {}...", jira_id);
+        log_info!("Downloading all attachments for {}...", jira_id);
 
         log_debug!("Getting attachments for {}...", jira_id);
 

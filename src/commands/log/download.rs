@@ -8,7 +8,7 @@ pub struct DownloadCommand;
 impl DownloadCommand {
     /// 下载日志
     pub fn download(jira_id: &str) -> Result<()> {
-        log_success!("Downloading logs for {}...", jira_id);
+        log_info!("Downloading logs for {}...", jira_id);
 
         log_debug!("Getting attachments for {}...", jira_id);
 
