@@ -2,19 +2,21 @@
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
 use crate::base::http::client::HttpClient;
-use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
+use crate::base::http::{
+    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
+};
 use crate::base::settings::paths::Paths;
+use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{confirm, Checksum, Unzip};
 #[cfg(target_os = "macos")]
-use crate::base::util::{remove_quarantine_attribute, remove_quarantine_attribute_with_sudo};
+use crate::base::util::remove_quarantine_attribute;
+use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
     log_warning,
 };
 use anyhow::{Context, Result};
-use clap_complete::shells::Shell;
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
@@ -24,8 +26,7 @@ use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::thread;
-use std::time::Duration;
+use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -66,7 +67,9 @@ struct BinaryStatus {
     path: String,
     exists: bool,
     executable: bool,
+    #[allow(dead_code)]
     version: Option<String>,
+    #[allow(dead_code)]
     working: bool,
 }
 
@@ -80,6 +83,35 @@ struct VerificationResult {
     all_checks_passed: bool,
 }
 
+/// 临时目录管理器
+struct TempDirManager {
+    temp_dir: PathBuf,
+    extract_dir: PathBuf,
+    archive_path: PathBuf,
+}
+
+impl TempDirManager {
+    fn new(version: &str, platform: &str) -> Result<Self> {
+        let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
+
+        if temp_dir.exists() {
+            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
+        }
+
+        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
+
+        let archive_name = format!("workflow-{}-{}.tar.gz", version, platform);
+        let archive_path = temp_dir.join(&archive_name);
+        let extract_dir = temp_dir.join("extracted");
+
+        Ok(Self {
+            temp_dir,
+            extract_dir,
+            archive_path,
+        })
+    }
+}
+
 /// 更新命令
 #[allow(dead_code)]
 pub struct UpdateCommand;
@@ -90,80 +122,11 @@ impl UpdateCommand {
 
     /// 获取当前安装的版本号
     ///
-    /// 尝试多种方法获取当前版本：
-    /// 1. 从环境变量 CARGO_PKG_VERSION（编译时注入）
-    /// 2. 运行 `workflow --version` 命令获取版本
-    /// 3. 从 Cargo.toml 读取（开发环境）
+    /// 从编译时嵌入的版本号获取（使用 env! 宏）。
+    /// 注意：env!("CARGO_PKG_VERSION") 在编译时总是有值，所以总是可用。
     fn get_current_version() -> Result<Option<String>> {
-        // 方法 1: 尝试从环境变量获取（编译时注入）
-        if let Ok(version) = env::var("CARGO_PKG_VERSION") {
-            return Ok(Some(version));
-        }
-
-        // 方法 2: 尝试运行 workflow --version 命令
-        if let Ok(output) = Command::new("workflow").arg("--version").output() {
-            if output.status.success() {
-                let version_str = String::from_utf8_lossy(&output.stdout);
-                // 解析版本号（格式可能是 "workflow 1.1.2" 或 "1.1.2"）
-                if let Some(version) = version_str
-                    .split_whitespace()
-                    .last()
-                    .and_then(|s| s.strip_prefix('v'))
-                    .or_else(|| version_str.split_whitespace().last())
-                {
-                    return Ok(Some(version.to_string()));
-                }
-            }
-        }
-
-        // 方法 3: 尝试从 Cargo.toml 读取（开发环境）
-        let cargo_toml_path = env::current_dir()
-            .ok()
-            .and_then(|dir| {
-                // 尝试多个可能的路径
-                let paths = [
-                    dir.join("Cargo.toml"),
-                    dir.join("../Cargo.toml"),
-                    dir.join("../../Cargo.toml"),
-                ];
-                paths.iter().find(|p| p.exists()).cloned()
-            })
-            .or_else(|| {
-                // 如果当前目录找不到，尝试从可执行文件位置推断
-                env::current_exe()
-                    .ok()
-                    .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
-                    .and_then(|mut path| {
-                        // 向上查找 Cargo.toml
-                        for _ in 0..5 {
-                            let cargo_toml = path.join("Cargo.toml");
-                            if cargo_toml.exists() {
-                                return Some(cargo_toml);
-                            }
-                            path = path.parent()?.to_path_buf();
-                        }
-                        None
-                    })
-            });
-
-        if let Some(cargo_toml) = cargo_toml_path {
-            let content = fs::read_to_string(&cargo_toml)
-                .with_context(|| format!("Failed to read Cargo.toml: {}", cargo_toml.display()))?;
-
-            for line in content.lines() {
-                if line.trim().starts_with("version =") {
-                    if let Some(start) = line.find('"') {
-                        if let Some(end) = line[start + 1..].find('"') {
-                            let version = &line[start + 1..start + 1 + end];
-                            return Ok(Some(version.to_string()));
-                        }
-                    }
-                }
-            }
-        }
-
-        // 如果都找不到，返回 None（允许继续更新流程）
-        Ok(None)
+        const VERSION: &str = env!("CARGO_PKG_VERSION");
+        Ok(Some(VERSION.to_string()))
     }
 
     /// 比较两个版本号
@@ -192,59 +155,77 @@ impl UpdateCommand {
         VersionComparison::UpToDate
     }
 
-    // ==================== 平台检测 ====================
+    // ==================== 下载相关 ====================
 
-    /// 第一步：检测当前平台
-    ///
-    /// 返回平台标识符，用于匹配 GitHub Releases 中的资源文件。
-    fn detect_platform() -> Result<String> {
-        let arch = env::consts::ARCH;
-        let os = env::consts::OS;
-
-        match (os, arch) {
-            ("macos", "x86_64") => Ok("macOS-Intel".to_string()),
-            ("macos", "aarch64") => Ok("macOS-AppleSilicon".to_string()),
-            ("linux", "x86_64") => {
-                // 尝试检测是否需要 musl/static 版本
-                // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
-                if let Ok(os_release) = fs::read_to_string("/etc/os-release") {
-                    if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
-                        return Ok("Linux-x86_64-static".to_string());
-                    }
-                }
-
-                // 方法2: 尝试检测当前二进制是否静态链接
-                // 如果 ldd 命令失败或没有输出，可能是静态链接
-                if let Ok(output) = Command::new("ldd")
-                    .arg(env::current_exe().unwrap_or_default())
-                    .output()
-                {
-                    let output_str = String::from_utf8_lossy(&output.stdout);
-                    // 如果 ldd 输出 "not a dynamic executable" 或 "statically linked"
-                    // 说明是静态链接，应该使用 static 版本
-                    if output_str.contains("not a dynamic executable")
-                        || output_str.contains("statically linked")
-                        || output_str.is_empty()
-                    {
-                        return Ok("Linux-x86_64-static".to_string());
-                    }
-                } else {
-                    // ldd 命令不存在或失败，可能是 musl 环境（Alpine 等）
-                    // 在这种情况下，尝试使用 static 版本
-                    return Ok("Linux-x86_64-static".to_string());
-                }
-
-                // 默认返回 glibc 版本（大多数 Linux 发行版）
-                Ok("Linux-x86_64".to_string())
-            }
-            ("linux", "aarch64") => Ok("Linux-ARM64".to_string()),
-            ("windows", "x86_64") => Ok("Windows-x86_64".to_string()),
-            ("windows", "aarch64") => Ok("Windows-ARM64".to_string()),
-            _ => anyhow::bail!("Unsupported platform: {}-{}", os, arch),
-        }
+    /// 获取速率限制重置时间
+    fn get_rate_limit_reset_time(headers: &reqwest::header::HeaderMap) -> String {
+        headers
+            .get("x-ratelimit-reset")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|s| s.parse::<i64>().ok())
+            .map(|ts| {
+                let reset = UNIX_EPOCH + Duration::from_secs(ts as u64);
+                format!("Rate limit will reset at: {:?}", reset)
+            })
+            .unwrap_or_else(|| "Rate limit exceeded".to_string())
     }
 
-    // ==================== 下载相关 ====================
+    /// 处理 GitHub API 错误响应
+    fn handle_github_api_error(response: &HttpResponse) -> Result<()> {
+        let status = response.status;
+
+        if (200..300).contains(&status) {
+            return Ok(());
+        }
+
+        let error_msg = match status {
+            403 => {
+                let rate_limit_remaining = response
+                    .headers
+                    .get("x-ratelimit-remaining")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|s| s.parse::<u32>().ok());
+
+                if rate_limit_remaining == Some(0) {
+                    let reset_time = Self::get_rate_limit_reset_time(&response.headers);
+                    format!(
+                        "Failed to fetch latest version: HTTP 403 (Rate limit exceeded)\n\
+                        {}\n\
+                        Tip: Configure a GitHub token to increase rate limit from 60/hour to 5000/hour.\n\
+                        Run 'workflow setup' to configure your GitHub token.",
+                        reset_time
+                    )
+                } else {
+                    "Failed to fetch latest version: HTTP 403 (Forbidden)\n\
+                    This may be due to repository access restrictions, network issues, or GitHub API restrictions.\n\
+                    Tip: Configure a GitHub token to improve reliability.\n\
+                    Run 'workflow setup' to configure your GitHub token.".to_string()
+                }
+            }
+            404 => "Failed to fetch latest version: HTTP 404 (Not Found)\n\
+                The repository or release may not exist, or you may not have access to it."
+                .to_string(),
+            429 => {
+                let reset_time = Self::get_rate_limit_reset_time(&response.headers);
+                format!(
+                    "Failed to fetch latest version: HTTP 429 (Too Many Requests)\n\
+                    {}\n\
+                    Tip: Configure a GitHub token to increase rate limit from 60/hour to 5000/hour.\n\
+                    Run 'workflow setup' to configure your GitHub token.",
+                    reset_time
+                )
+            }
+            _ => {
+                format!(
+                    "Failed to fetch latest version: HTTP {}\n\
+                    Please check your network connection and try again.",
+                    status
+                )
+            }
+        };
+
+        anyhow::bail!("{}", error_msg)
+    }
 
     /// 第二步：获取版本号
     ///
@@ -272,6 +253,27 @@ impl UpdateCommand {
                                 .context("Failed to parse User-Agent header")?,
                         );
 
+                        // 添加 Accept 头（GitHub API 推荐）
+                        headers.insert(
+                            "Accept",
+                            "application/vnd.github+json"
+                                .parse()
+                                .context("Failed to parse Accept header")?,
+                        );
+
+                        // 可选地使用 GitHub token（如果用户已配置）
+                        // 使用 token 可以提高速率限制（从 60/小时 提升到 5000/小时）
+                        let settings = Settings::load();
+                        if let Some(token) = settings.github.get_current_token() {
+                            headers.insert(
+                                "Authorization",
+                                format!("Bearer {}", token)
+                                    .parse()
+                                    .context("Failed to parse Authorization header")?,
+                            );
+                            log_debug!("Using GitHub token for API request");
+                        }
+
                         let client = HttpClient::global()?;
                         let config = RequestConfig::<Value, Value>::new().headers(&headers);
                         client
@@ -282,9 +284,8 @@ impl UpdateCommand {
                     "Fetching latest version information",
                 )?;
 
-                if response.status < 200 || response.status >= 300 {
-                    anyhow::bail!("Failed to fetch latest version: HTTP {}", response.status);
-                }
+                // 检查响应状态码并处理错误
+                Self::handle_github_api_error(&response)?;
 
                 let release: GitHubRelease = response.as_json()?;
                 let version = release.tag_name.trim_start_matches('v').to_string();
@@ -308,25 +309,6 @@ impl UpdateCommand {
             "https://github.com/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.{}",
             version, version, platform, extension
         )
-    }
-
-    /// 格式化文件大小
-    ///
-    /// 将字节数格式化为人类可读的格式（B, KB, MB, GB）。
-    fn format_size(bytes: u64) -> String {
-        const KB: u64 = 1024;
-        const MB: u64 = KB * 1024;
-        const GB: u64 = MB * 1024;
-
-        if bytes >= GB {
-            format!("{:.2} GB", bytes as f64 / GB as f64)
-        } else if bytes >= MB {
-            format!("{:.2} MB", bytes as f64 / MB as f64)
-        } else if bytes >= KB {
-            format!("{:.2} KB", bytes as f64 / KB as f64)
-        } else {
-            format!("{} B", bytes)
-        }
     }
 
     /// 第四步：下载文件
@@ -368,7 +350,7 @@ impl UpdateCommand {
 
                 // 创建进度条
                 let pb = if let Some(size) = total_size {
-                    log_info!("File size: {}", Self::format_size(size));
+                    log_info!("File size: {}", format_size(size));
                     let pb = ProgressBar::new(size);
                     pb.set_style(
                         ProgressStyle::default_bar()
@@ -553,175 +535,11 @@ impl UpdateCommand {
         }
     }
 
-    /// 获取二进制文件的版本号
-    ///
-    /// 运行 `binary_path --version` 命令并解析版本号。
-    /// 使用完整路径而不是命令名，避免 PATH 查找问题。
-    /// 如果第一次失败，会重试最多 3 次，每次间隔递增。
-    /// 注意：隔离属性应在解压时已移除，理论上不应该遇到 SIGKILL。
-    fn get_binary_version(binary_path: &Path) -> Result<Option<String>> {
-        // 添加短暂延迟，确保文件已完全写入磁盘
-        thread::sleep(Duration::from_millis(100));
-
-        // 重试机制：最多尝试 3 次
-        let max_retries = 3;
-        for attempt in 1..=max_retries {
-            let output = Command::new(binary_path).arg("--version").output();
-
-            match output {
-                Ok(result) if result.status.success() => {
-                    let version_str = String::from_utf8_lossy(&result.stdout);
-                    log_debug!("Binary version command output: {}", version_str.trim());
-                    // 解析版本号（格式可能是 "workflow 1.1.2" 或 "1.1.2"）
-                    let version = version_str
-                        .split_whitespace()
-                        .last()
-                        .and_then(|s| s.strip_prefix('v'))
-                        .or_else(|| version_str.split_whitespace().last())
-                        .map(|s| s.to_string());
-                    return Ok(version);
-                }
-                Ok(result) => {
-                    // 命令执行了但返回了非成功状态码
-                    let stderr = String::from_utf8_lossy(&result.stderr);
-                    let stdout = String::from_utf8_lossy(&result.stdout);
-
-                    // 如果遇到 SIGKILL，记录警告（理论上不应该发生）
-                    if result.status.code().is_none() && cfg!(target_os = "macos") {
-                        log_warning!(
-                            "Binary version command failed with SIGKILL for {} (attempt {}/{}), this should not happen if quarantine was removed",
-                            binary_path.display(),
-                            attempt,
-                            max_retries
-                        );
-                        // 尝试移除隔离属性作为最后的补救措施
-                        // 使用 sudo 版本，因为文件在系统目录中需要管理员权限
-                        #[cfg(target_os = "macos")]
-                        if attempt < max_retries {
-                            log_debug!("Attempting to remove quarantine attribute (with sudo) as fallback...");
-                            remove_quarantine_attribute_with_sudo(binary_path)?;
-                            thread::sleep(Duration::from_millis(200));
-                            continue;
-                        }
-                    }
-
-                    if attempt < max_retries {
-                        log_debug!(
-                            "Binary version command failed for {} (attempt {}/{}): status={}, retrying...",
-                            binary_path.display(),
-                            attempt,
-                            max_retries,
-                            result.status
-                        );
-                        // 指数退避：100ms, 200ms, 400ms
-                        thread::sleep(Duration::from_millis(100 * (1 << (attempt - 1))));
-                        continue;
-                    }
-                    log_debug!(
-                        "Binary version command failed for {}: status={}, stdout={:?}, stderr={:?}",
-                        binary_path.display(),
-                        result.status,
-                        stdout.trim(),
-                        stderr.trim()
-                    );
-                    return Ok(None);
-                }
-                Err(e) => {
-                    // 命令执行失败（例如文件不存在、权限问题等）
-                    if attempt < max_retries {
-                        log_debug!(
-                            "Failed to execute binary version command for {} (attempt {}/{}): {}, retrying...",
-                            binary_path.display(),
-                            attempt,
-                            max_retries,
-                            e
-                        );
-                        // 指数退避：100ms, 200ms, 400ms
-                        thread::sleep(Duration::from_millis(100 * (1 << (attempt - 1))));
-                        continue;
-                    }
-                    log_debug!(
-                        "Failed to execute binary version command for {}: {}",
-                        binary_path.display(),
-                        e
-                    );
-                    return Ok(None);
-                }
-            }
-        }
-
-        Ok(None)
-    }
-
-    /// 测试二进制文件是否可用
-    ///
-    /// 运行 `binary_path --help` 命令测试二进制文件是否正常工作。
-    /// 使用完整路径而不是命令名，避免 PATH 查找问题。
-    /// 注意：隔离属性应在解压时已移除，理论上不应该遇到 SIGKILL。
-    fn test_binary_works(binary_path: &Path) -> Result<bool> {
-        let output = Command::new(binary_path).arg("--help").output();
-
-        match output {
-            Ok(result) => {
-                // 如果遇到 SIGKILL，记录警告并尝试移除隔离属性作为最后的补救措施
-                // 使用 sudo 版本，因为文件在系统目录中需要管理员权限
-                #[cfg(target_os = "macos")]
-                if result.status.code().is_none() {
-                    log_warning!(
-                        "Binary help command failed with SIGKILL for {}, this should not happen if quarantine was removed",
-                        binary_path.display()
-                    );
-                    log_debug!(
-                        "Attempting to remove quarantine attribute (with sudo) as fallback..."
-                    );
-                    remove_quarantine_attribute_with_sudo(binary_path)?;
-                    thread::sleep(Duration::from_millis(200));
-
-                    // 重试一次
-                    let retry_output = Command::new(binary_path).arg("--help").output();
-                    match retry_output {
-                        Ok(retry_result) => {
-                            if retry_result.status.success() {
-                                log_debug!(
-                                    "Binary help command succeeded after removing quarantine attribute: {}",
-                                    binary_path.display()
-                                );
-                                return Ok(true);
-                            }
-                        }
-                        Err(_) => {
-                            // 重试也失败，继续返回失败
-                        }
-                    }
-                }
-
-                if !result.status.success() {
-                    let stderr = String::from_utf8_lossy(&result.stderr);
-                    log_debug!(
-                        "Binary help command failed for {}: status={}, stderr={:?}",
-                        binary_path.display(),
-                        result.status,
-                        stderr.trim()
-                    );
-                }
-                Ok(result.status.success())
-            }
-            Err(e) => {
-                log_debug!(
-                    "Failed to execute binary help command for {}: {}",
-                    binary_path.display(),
-                    e
-                );
-                Ok(false)
-            }
-        }
-    }
-
     // --- 高级验证方法 ---
 
     /// 验证单个二进制文件
     ///
-    /// 检查二进制文件是否存在、可执行、版本正确且可用。
+    /// 只检查二进制文件是否存在和是否有执行权限，不执行任何命令。
     fn verify_single_binary(
         path: &str,
         name: &str,
@@ -745,19 +563,14 @@ impl UpdateCommand {
         // 2. 检查文件是否可执行
         let executable = Self::check_executable(path_obj)?;
 
-        // 3. 检查版本号 - 使用完整路径而不是命令名
-        let version = Self::get_binary_version(path_obj)?;
-
-        // 4. 测试命令是否可用 - 使用完整路径而不是命令名
-        let working = Self::test_binary_works(path_obj)?;
-
+        // 不再检查版本号和执行能力，避免 Gatekeeper 问题
         Ok(BinaryStatus {
             name: name.to_string(),
             path: path.to_string(),
             exists,
             executable,
-            version,
-            working,
+            version: None,
+            working: false,
         })
     }
 
@@ -785,7 +598,7 @@ impl UpdateCommand {
 
     /// 验证补全脚本
     ///
-    /// 检查补全脚本文件是否存在、是否可读，并验证文件内容基本格式。
+    /// 只检查补全脚本文件是否存在，不验证文件内容。
     fn verify_completions() -> Result<bool> {
         log_info!("Verifying completion scripts...");
 
@@ -820,59 +633,9 @@ impl UpdateCommand {
         for file in &files {
             let path = completion_dir.join(file);
 
-            // 1. 检查文件是否存在
+            // 只检查文件是否存在
             if !path.exists() {
                 log_warning!("Completion script does not exist: {}", path.display());
-                all_valid = false;
-                continue;
-            }
-
-            // 2. 检查文件是否可读
-            if let Err(e) = fs::metadata(&path) {
-                log_warning!(
-                    "Unable to read completion script metadata: {} ({})",
-                    path.display(),
-                    e
-                );
-                all_valid = false;
-                continue;
-            }
-
-            // 3. 检查文件大小（应该大于 0）
-            if let Ok(metadata) = fs::metadata(&path) {
-                if metadata.len() == 0 {
-                    log_warning!("Completion script file is empty: {}", path.display());
-                    all_valid = false;
-                    continue;
-                }
-            }
-
-            // 4. 尝试读取文件内容，验证基本格式
-            if let Ok(content) = fs::read_to_string(&path) {
-                // 对于 zsh，检查是否包含基本的补全函数定义
-                if shell == Shell::Zsh {
-                    if !content.contains("#compdef") && !content.contains("compdef") {
-                        log_warning!(
-                            "Completion script format may be incorrect: {} (missing compdef)",
-                            path.display()
-                        );
-                        // 不标记为失败，因为可能是其他格式的补全脚本
-                    }
-                } else {
-                    // 对于 bash，检查是否包含基本的补全函数定义
-                    if !content.contains("complete") && !content.contains("_") {
-                        log_warning!(
-                            "Completion script format may be incorrect: {} (missing complete command)",
-                            path.display()
-                        );
-                        // 不标记为失败，因为可能是其他格式的补全脚本
-                    }
-                }
-            } else {
-                log_warning!(
-                    "Unable to read completion script content: {}",
-                    path.display()
-                );
                 all_valid = false;
                 continue;
             }
@@ -891,13 +654,13 @@ impl UpdateCommand {
 
     /// 验证安装结果
     ///
-    /// 验证更新后的安装是否成功，包括二进制文件和补全脚本。
-    fn verify_installation(target_version: &str) -> Result<VerificationResult> {
+    /// 只验证文件是否存在和是否有执行权限，不执行任何命令验证。
+    fn verify_installation(_target_version: &str) -> Result<VerificationResult> {
         log_info!("Verifying installation...");
         log_break!();
 
-        // 验证二进制文件
-        let binaries = Self::verify_binaries(target_version)?;
+        // 验证二进制文件（只检查存在性和执行权限）
+        let binaries = Self::verify_binaries(_target_version)?;
 
         let mut all_binaries_ok = true;
         for binary in &binaries {
@@ -907,51 +670,17 @@ impl UpdateCommand {
             } else if !binary.executable {
                 log_warning!("Binary file is not executable: {}", binary.path);
                 all_binaries_ok = false;
-            } else if let Some(ref version) = binary.version {
-                if version != target_version {
-                    log_warning!(
-                        "Binary file version mismatch: {} (expected: {}, actual: {})",
-                        binary.name,
-                        target_version,
-                        version
-                    );
-                    all_binaries_ok = false;
-                } else {
-                    log_success!("  {} v{} verification passed", binary.name, version);
-                }
             } else {
-                // 无法获取版本号，但如果二进制文件可以正常工作（--help 成功），
-                // 仍然认为安装成功（可能是 macOS Gatekeeper 或其他临时问题）
-                if binary.working {
-                    log_warning!(
-                        "Unable to get version number for {}, but binary appears to work correctly",
-                        binary.name
-                    );
-                    log_warning!(
-                        "  This may be due to macOS Gatekeeper or other security restrictions"
-                    );
-                    log_warning!("  The binary file exists and responds to --help, so installation is likely successful");
-                    log_warning!("  You may need to allow the binary in System Settings > Privacy & Security");
-                    // 不标记为失败，因为二进制文件可以工作
-                    log_success!(
-                        "  {} verification passed (version check skipped)",
-                        binary.name
-                    );
-                } else {
-                    log_warning!("Unable to get version number for {}", binary.name);
-                    all_binaries_ok = false;
-                }
-            }
-
-            if !binary.working {
-                log_warning!("Binary file cannot work properly: {}", binary.name);
-                all_binaries_ok = false;
+                log_success!(
+                    "  {} verification passed (file exists and is executable)",
+                    binary.name
+                );
             }
         }
 
         log_break!();
 
-        // 验证补全脚本
+        // 验证补全脚本（只检查文件存在）
         let completions_installed = Self::verify_completions()?;
         if completions_installed {
             log_success!("  Completion script verification passed");
@@ -977,20 +706,40 @@ impl UpdateCommand {
         })
     }
 
+    // ==================== 临时目录管理 ====================
+
+    /// 清理更新过程中的临时资源
+    fn cleanup_update_resources(
+        temp_dir: &Path,
+        backup_info: Option<&crate::rollback::BackupInfo>,
+    ) {
+        // 清理临时文件
+        if let Err(e) = fs::remove_dir_all(temp_dir) {
+            log_warning!("Failed to clean up temporary files: {}", e);
+        }
+
+        // 清理备份
+        if let Some(backup) = backup_info {
+            if let Err(e) = RollbackManager::cleanup_backup(backup) {
+                log_warning!("Failed to clean up backup: {}", e);
+            }
+        }
+    }
+
     // ==================== 主流程 ====================
 
     /// 执行完整的更新操作
     ///
     /// 按照以下步骤更新 Workflow CLI：
     /// 1. 检测平台
-    /// 2. 获取当前版本和目标版本
-    /// 3. 比较版本并提示用户
-    /// 4. 获取用户确认
-    /// 5. 构建下载 URL
-    /// 6. 下载 tar.gz 文件
+    /// 2. 获取目标版本号
+    /// 3. 比较版本并获取用户确认
+    /// 4. 创建备份
+    /// 5. 准备临时目录和构建下载 URL
+    /// 6. 下载文件
     /// 7. 验证文件完整性
     /// 8. 解压文件
-    /// 9. 使用 ./install 安装二进制文件和补全脚本（默认安装全部）
+    /// 9. 使用 ./install 安装二进制文件和补全脚本
     /// 10. 验证安装结果
     pub fn update(version: Option<String>) -> Result<()> {
         log_info!("Starting Workflow CLI update...");
@@ -1006,7 +755,7 @@ impl UpdateCommand {
         log_break!();
 
         // 第一步：检测平台
-        let platform = Self::detect_platform()?;
+        let platform = detect_release_platform()?;
         log_info!("Detected platform: {}", platform);
         log_break!();
 
@@ -1070,26 +819,16 @@ impl UpdateCommand {
             }
         };
 
-        // 第五步：构建下载 URL
+        // 第五步：准备临时目录和构建下载 URL
+        let temp_manager = TempDirManager::new(&target_version, &platform)?;
         let download_url = Self::build_download_url(&target_version, &platform);
         log_info!("Download URL: {}", download_url);
         log_break!();
 
-        // 创建临时目录
-        let temp_dir = env::temp_dir().join(format!("workflow-update-{}", target_version));
-        if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
-        }
-        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
-
-        let archive_name = format!("workflow-{}-{}.tar.gz", target_version, platform);
-        let tar_gz_path = temp_dir.join(&archive_name);
-        let extract_dir = temp_dir.join("extracted");
-
-        // 执行更新操作，如果失败则回滚
+        // 执行更新操作（可回滚）
         let update_result = (|| -> Result<()> {
             // 第六步：下载文件
-            Self::download_file(&download_url, &tar_gz_path)?;
+            Self::download_file(&download_url, &temp_manager.archive_path)?;
             log_break!();
 
             // 第七步：验证文件完整性
@@ -1118,7 +857,7 @@ impl UpdateCommand {
                         .context("Failed to parse checksum file")?;
 
                     // 验证文件（使用 checksum 模块）
-                    Checksum::verify(&tar_gz_path, &expected_hash)?;
+                    Checksum::verify(&temp_manager.archive_path, &expected_hash)?;
                 }
                 Err(e) => {
                     // 如果是 404 错误，跳过验证但给出警告
@@ -1131,7 +870,9 @@ impl UpdateCommand {
                         log_warning!("  Proceeding with update without verification...");
 
                         // 仍然计算并显示文件的 SHA256，供用户参考
-                        if let Ok(actual_hash) = Checksum::calculate_file_sha256(&tar_gz_path) {
+                        if let Ok(actual_hash) =
+                            Checksum::calculate_file_sha256(&temp_manager.archive_path)
+                        {
                             log_info!("Downloaded file SHA256: {}", actual_hash);
                         }
                     } else {
@@ -1143,19 +884,19 @@ impl UpdateCommand {
             log_break!();
 
             // 第八步：解压文件
-            Self::extract_archive(&tar_gz_path, &extract_dir)?;
+            Self::extract_archive(&temp_manager.archive_path, &temp_manager.extract_dir)?;
             log_break!();
 
             // 第九步：使用 ./install 安装二进制文件和补全脚本（默认安装全部）
             // 注意：隔离属性已在解压时移除，安装后的文件不应该有隔离属性
-            Self::install(&extract_dir)?;
+            Self::install(&temp_manager.extract_dir)?;
             log_break!();
 
-            // 第十步：验证安装结果
+            // 第十步：验证安装结果（只检查文件存在和执行权限）
             let verification_result = Self::verify_installation(&target_version)?;
             log_break!();
 
-            // 如果验证失败，认为更新失败
+            // 如果验证失败，说明文件不存在或没有执行权限，这是真正的安装失败
             if !verification_result.all_checks_passed {
                 anyhow::bail!("Installation verification failed, some checks did not pass");
             }
@@ -1167,18 +908,7 @@ impl UpdateCommand {
         match update_result {
             Ok(()) => {
                 // 更新成功，清理临时文件和备份
-                log_debug!("Cleaning up temporary files...");
-                if let Err(e) = fs::remove_dir_all(&temp_dir) {
-                    log_warning!("Failed to clean up temporary files: {}", e);
-                }
-
-                // 清理备份
-                if let Some(ref backup) = backup_info {
-                    if let Err(e) = RollbackManager::cleanup_backup(backup) {
-                        log_warning!("Failed to clean up backup: {}", e);
-                    }
-                }
-
+                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
                 log_success!("Workflow CLI update complete! All verifications passed.");
                 Ok(())
             }
@@ -1208,12 +938,8 @@ impl UpdateCommand {
                     log_error!("  Please manually check and restore files");
                 }
 
-                // 清理临时文件
-                log_debug!("Cleaning up temporary files...");
-                if let Err(cleanup_err) = fs::remove_dir_all(&temp_dir) {
-                    log_warning!("Failed to clean up temporary files: {}", cleanup_err);
-                }
-
+                // 清理临时资源
+                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
                 Err(e.context("Update failed"))
             }
         }

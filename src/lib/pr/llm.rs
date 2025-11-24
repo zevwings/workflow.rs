@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
+use crate::base::prompt::PromptManager;
 use crate::pr::helpers::transform_to_branch_name;
 
 /// PR 内容，包含分支名、PR 标题和描述
@@ -60,8 +61,11 @@ impl PullRequestLLM {
 
         // 构建请求参数
         let user_prompt = Self::user_prompt(commit_title, exists_branches, git_diff);
+        let system_prompt = PromptManager::load("generate_branch.system.md")
+            .with_context(|| "Failed to load system prompt from file: generate_branch.system.md")?;
+
         let params = LLMRequestParams {
-            system_prompt: Self::system_prompt(),
+            system_prompt,
             user_prompt,
             max_tokens: 500, // 增加到 500，确保有足够空间返回完整的 JSON（包括 description）
             temperature: 0.5,
@@ -83,52 +87,6 @@ impl PullRequestLLM {
                 commit_title
             )
         })
-    }
-
-    /// 生成同时生成分支名和 PR 标题的 system prompt
-    fn system_prompt() -> String {
-        "You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes.
-
-IMPORTANT: All outputs MUST be in English only. If the commit title contains non-English text (like Chinese), translate it to English first.
-
-For the branch name:
-- Must be all lowercase
-- Use hyphens to separate words
-- Be under 50 characters
-- Follow git branch naming conventions (no spaces, no special characters except hyphens, ASCII characters only)
-- Generate only the base branch name without prefix (e.g., 'feature-name' not 'prefix/feature-name')
-- If existing base branch names are provided, ensure the generated base branch name does not duplicate any of them
-- Consider the git changes when generating the branch name to make it more accurate
-- Examples:
-  * \"Fix login bug\" → \"fix-login-bug\"
-  * \"修复登录问题\" → \"fix-login-issue\"
-  * \"Add user authentication\" → \"feature-add-user-authentication\"
-  * \"新功能：用户认证\" → \"feature-user-authentication\"
-  * \"Refactor code structure\" → \"refactoring-code-structure\"
-  * \"重构代码结构\" → \"refactoring-code-structure\"
-  * \"Update documentation\" → \"update-documentation\"
-  * \"更新文档\" → \"update-documentation\"
-  * \"Improve performance\" → \"improve-performance\"
-  * \"优化性能\" → \"performance-optimization\"
-
-For the PR title:
-- Must be concise, within 8 words
-- No punctuation
-- In English only
-
-For the description:
-- Generate a concise description based on the git changes provided
-- Summarize what was changed, added, or fixed
-- If no git changes are provided, you can omit this field or provide a brief description based on the commit title
-- Keep it brief (2-4 sentences)
-- In English only
-
-Return your response in JSON format with three fields: \"branch_name\", \"pr_title\", and \"description\" (optional). Example:
-{
-  \"branch_name\": \"add-user-authentication\",
-  \"pr_title\": \"Add user authentication\",
-  \"description\": \"This PR adds user authentication functionality including login and registration features.\"
-}".to_string()
     }
 
     /// 生成同时生成分支名和 PR 标题的 user prompt

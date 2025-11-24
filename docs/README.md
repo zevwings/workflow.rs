@@ -120,6 +120,14 @@
 - 文件解压和校验和验证
 - 用户确认对话框
 
+#### [PROMPT_ARCHITECTURE.md](./architecture/lib/PROMPT_ARCHITECTURE.md)
+**Prompt 管理模块架构文档**
+
+- Prompt 文件的加载和管理
+- 文件缓存机制（避免重复读取）
+- 线程安全的 Prompt 管理
+- 扁平化文件结构设计
+
 ### 命令层架构文档（CLI 命令封装）
 
 #### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
@@ -291,6 +299,7 @@
 - 想了解代理管理？ → [PROXY_ARCHITECTURE.md](./architecture/lib/PROXY_ARCHITECTURE.md)
 - 想了解回滚机制？ → [ROLLBACK_ARCHITECTURE.md](./architecture/lib/ROLLBACK_ARCHITECTURE.md)
 - 想了解工具函数？ → [TOOLS_ARCHITECTURE.md](./architecture/lib/TOOLS_ARCHITECTURE.md)
+- 想了解 Prompt 管理？ → [PROMPT_ARCHITECTURE.md](./architecture/lib/PROMPT_ARCHITECTURE.md)
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
