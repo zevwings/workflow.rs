@@ -1,6 +1,6 @@
 //! macOS 系统工具
 //!
-//! 提供 macOS 特定的系统操作工具函数。
+//! 本模块提供了 macOS 特定的系统操作工具函数。
 
 use anyhow::Result;
 use std::path::Path;

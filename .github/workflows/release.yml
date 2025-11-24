@@ -560,12 +560,39 @@ jobs:
         shell: bash
         run: |
           mkdir -p release-assets
+          # 复制压缩包文件
           find artifacts -name "workflow-*.tar.gz" -exec cp {} release-assets/ \;
           find artifacts -name "workflow-*.zip" -exec cp {} release-assets/ \;
+
+          # 为每个压缩包创建对应的 .sha256 文件
+          cd release-assets
+          for archive in workflow-*.tar.gz workflow-*.zip; do
+            if [ -f "$archive" ]; then
+              # 从文件名提取平台信息（例如：workflow-1.3.4-macOS-AppleSilicon.tar.gz -> macOS-AppleSilicon）
+              PLATFORM=$(echo "$archive" | sed -E 's/workflow-[0-9]+\.[0-9]+\.[0-9]+-(.+)\.(tar\.gz|zip)/\1/')
+
+              # 查找对应的 SHA256 文件（artifacts 目录结构：artifacts/sha256-{platform}/sha256-{platform}.txt）
+              SHA256_FILE=$(find ../artifacts -path "*/sha256-$PLATFORM/sha256-$PLATFORM.txt" | head -1)
+
+              if [ -f "$SHA256_FILE" ]; then
+                # 提取第一行（哈希值）
+                SHA256_HASH=$(head -n 1 "$SHA256_FILE")
+                # 创建 .sha256 文件（只包含哈希值，符合 parse_hash_from_content 的期望格式）
+                echo "$SHA256_HASH" > "${archive}.sha256"
+                echo "✅ Created ${archive}.sha256: $SHA256_HASH"
+              else
+                echo "⚠️  Warning: SHA256 file not found for $archive (platform: $PLATFORM)"
+                echo "   Searched in: $(find ../artifacts -name "*$PLATFORM*" -type f 2>/dev/null | head -5)"
+              fi
+            fi
+          done
+          cd ..
+
           if [ -z "$(ls -A release-assets)" ]; then
             echo "Error: No release assets found!"
             exit 1
           fi
+          echo "📦 Release assets prepared:"
           ls -lh release-assets/
 
       - name: Create Release
