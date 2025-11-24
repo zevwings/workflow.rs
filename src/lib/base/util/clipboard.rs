@@ -24,8 +24,8 @@ impl Clipboard {
     ///
     /// # 注意
     ///
-    /// 在 musl 静态链接构建中，剪贴板功能不可用（静默失败）。
-    #[cfg(not(target_env = "musl"))]
+    /// 在 musl 静态链接构建和 Linux ARM64 交叉编译中，剪贴板功能不可用（静默失败）。
+    #[cfg(all(not(target_env = "musl"), not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))))]
     pub fn copy(text: &str) -> Result<()> {
         use clipboard::{ClipboardContext, ClipboardProvider};
 
@@ -38,12 +38,12 @@ impl Clipboard {
         Ok(())
     }
 
-    /// 复制文本到剪贴板（musl 目标：静默失败）
+    /// 复制文本到剪贴板（musl 或 Linux ARM64 目标：静默失败）
     ///
-    /// 在 musl 静态链接构建中，剪贴板功能不可用，此方法静默失败。
-    #[cfg(target_env = "musl")]
+    /// 在 musl 静态链接构建和 Linux ARM64 交叉编译中，剪贴板功能不可用，此方法静默失败。
+    #[cfg(any(target_env = "musl", all(target_arch = "aarch64", target_os = "linux", target_env = "gnu")))]
     pub fn copy(_text: &str) -> Result<()> {
-        // musl 静态链接构建不支持剪贴板（需要 XCB 库）
+        // musl 静态链接构建和 Linux ARM64 交叉编译不支持剪贴板（需要 XCB 库）
         // 静默失败，不影响其他功能
         Ok(())
     }
