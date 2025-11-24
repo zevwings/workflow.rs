@@ -261,6 +261,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # 如果 create-tag job 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
+          # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
+          ref: ${{ (needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
 
       - name: Get version from tag
         id: version
