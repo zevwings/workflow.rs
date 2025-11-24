@@ -8,13 +8,23 @@ pub struct SearchCommand;
 
 impl SearchCommand {
     /// 搜索关键词
-    pub fn search(jira_id: &str, search_term: Option<String>) -> Result<()> {
-        // 1. 创建 JiraLogs 实例并确保日志文件存在
+    pub fn search(jira_id: Option<String>, search_term: Option<String>) -> Result<()> {
+        // 1. 获取 JIRA ID（从参数或交互式输入）
+        let jira_id = if let Some(id) = jira_id {
+            id
+        } else {
+            Input::<String>::new()
+                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
+                .interact()
+                .context("Failed to read Jira ticket ID")?
+        };
+
+        // 2. 创建 JiraLogs 实例并确保日志文件存在
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        logs.ensure_log_file_exists(jira_id)
+        logs.ensure_log_file_exists(&jira_id)
             .context("Failed to ensure log file exists")?;
 
-        // 2. 获取搜索词（从参数或交互式输入）
+        // 3. 获取搜索词（从参数或交互式输入）
         let term = if let Some(t) = search_term {
             t
         } else {
@@ -24,12 +34,12 @@ impl SearchCommand {
                 .context("Failed to read search term")?
         };
 
-        // 3. 调用库函数执行搜索
+        // 4. 调用库函数执行搜索
         log_debug!("Searching for: '{}'...", term);
 
         // 同时搜索两个文件
         let (api_results, flutter_api_results) = logs
-            .search_keyword_both_files(jira_id, &term)
+            .search_keyword_both_files(&jira_id, &term)
             .unwrap_or_else(|_| (Vec::new(), Vec::new()));
 
         let total_count = api_results.len() + flutter_api_results.len();

@@ -240,13 +240,7 @@ impl CompletionGenerator {
                             .arg(
                                 clap::Arg::new("JIRA_ID")
                                     .value_name("JIRA_ID")
-                                    .required(true),
-                            )
-                            .arg(
-                                clap::Arg::new("all")
-                                    .long("all")
-                                    .short('a')
-                                    .action(clap::ArgAction::SetTrue),
+                                    .required(false),
                             ),
                     )
                     .subcommand(
@@ -255,7 +249,7 @@ impl CompletionGenerator {
                             .arg(
                                 clap::Arg::new("JIRA_ID")
                                     .value_name("JIRA_ID")
-                                    .required(true),
+                                    .required(false),
                             )
                             .arg(clap::Arg::new("REQUEST_ID").value_name("REQUEST_ID")),
                     )
@@ -265,7 +259,7 @@ impl CompletionGenerator {
                             .arg(
                                 clap::Arg::new("JIRA_ID")
                                     .value_name("JIRA_ID")
-                                    .required(true),
+                                    .required(false),
                             )
                             .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
                     ),
@@ -277,7 +271,7 @@ impl CompletionGenerator {
                         Command::new("info").about("Show ticket information").arg(
                             clap::Arg::new("JIRA_ID")
                                 .value_name("JIRA_ID")
-                                .required(true),
+                                .required(false),
                         ),
                     )
                     .subcommand(
@@ -286,7 +280,7 @@ impl CompletionGenerator {
                             .arg(
                                 clap::Arg::new("JIRA_ID")
                                     .value_name("JIRA_ID")
-                                    .required(true),
+                                    .required(false),
                             ),
                     )
                     .subcommand(

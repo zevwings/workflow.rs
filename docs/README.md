@@ -252,6 +252,9 @@
 - **2024-12** - 创建 Settings 模块架构文档 `SETTINGS_ARCHITECTURE.md`，删除重复的 `CONFIG_ARCHITECTURE.md`
 - **2024-12** - 更新所有 lib 层架构文档，移除命令层详细内容，确保只描述 lib/ 模块
 - **2024-12** - 重组文档结构，分为 ARCHITECTURE 和 GUIDELINES 两个目录
+- **2024-12** - 为所有 log 和 jira 命令添加交互式输入支持（JIRA_ID 参数可选，包括 info、attachments、download、find、search）
+- **2024-12** - 实现同时搜索 api.log 和 flutter-api.log 功能，更新搜索命令以支持两个文件
+- **2024-12** - 删除废弃的 QK_COMMAND_ARCHITECTURE.md 文档（已拆分为 LOG_COMMAND_ARCHITECTURE.md 和 JIRA_COMMAND_ARCHITECTURE.md）
 
 ---
 

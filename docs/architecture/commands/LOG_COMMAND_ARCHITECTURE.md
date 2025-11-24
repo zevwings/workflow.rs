@@ -46,8 +46,9 @@ src/commands/log/
   - `JiraLogs::new()` - 创建日志管理器
   - `JiraLogs::download_from_jira()` - 下载日志
   - `JiraLogs::extract_response_content()` - 提取响应内容
-  - `JiraLogs::search_keyword()` - 搜索关键词
+  - `JiraLogs::search_keyword_both_files()` - 同时搜索 api.log 和 flutter-api.log
   - `JiraLogs::ensure_log_file_exists()` - 确保日志文件存在
+  - `JiraLogs::get_api_log_file_path()` - 获取 api.log 文件路径
 - **`lib/base/util/`**：工具函数
   - `Clipboard::copy()` - 复制到剪贴板
 - **`lib/base/settings/`**：配置管理
@@ -104,19 +105,21 @@ src/main.rs::LogSubcommand::Download
   ↓
 commands/log/download.rs::DownloadCommand::download(jira_id)
   ↓
-  1. 显示下载提示信息
-  2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 调用 JiraLogs::download_from_jira(jira_id, None, false)
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 显示下载提示信息
+  3. 创建 JiraLogs 实例：JiraLogs::new()
+  4. 调用 JiraLogs::download_from_jira(jira_id, None, false)
      └─ 内部处理：下载日志附件、合并分片、解压文件
-  4. 输出成功信息和文件路径
+  5. 输出成功信息和文件路径
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
 
 2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
    - 显示下载进度和结果
 
 3. **核心功能**：
@@ -166,18 +169,19 @@ src/main.rs::LogSubcommand::Find
   ↓
 commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
   ↓
-  1. 创建 JiraLogs 实例：JiraLogs::new()
-  2. 获取请求 ID（参数提供或交互式输入）
-  3. 调用 JiraLogs::extract_response_content(jira_id, request_id)
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 创建 JiraLogs 实例：JiraLogs::new()
+  3. 获取请求 ID（从参数或交互式输入）
+  4. 调用 JiraLogs::extract_response_content(jira_id, request_id)
      └─ 内部处理：解析日志文件、查找请求 ID、提取响应内容
-  4. Clipboard::copy() 复制响应内容到剪贴板
-  5. 输出成功信息
+  5. Clipboard::copy() 复制响应内容到剪贴板
+  6. 输出成功信息
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
    - `request_id` - 请求 ID（可选，不提供时交互式输入）
 
 2. **用户交互**：
@@ -193,9 +197,10 @@ commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
 1. **初始化**：
    - 创建 `JiraLogs` 实例
 
-2. **请求 ID 获取**：
+2. **JIRA ID 和请求 ID 获取**：
    - 优先使用命令行参数
-   - 如果未提供，交互式输入
+   - 如果未提供 `jira_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `request_id`，交互式输入（提示："Enter request ID to find"）
 
 3. **内容提取**：
    - 调用 `JiraLogs::extract_response_content()` 提取响应内容
@@ -231,28 +236,31 @@ src/main.rs::LogSubcommand::Search
   ↓
 commands/log/search.rs::SearchCommand::search(jira_id, search_term)
   ↓
-  1. 创建 JiraLogs 实例：JiraLogs::new()
-  2. 确保日志文件存在：JiraLogs::ensure_log_file_exists(jira_id)
-  3. 获取搜索词（参数提供或交互式输入）
-  4. 调用 JiraLogs::search_keyword(jira_id, search_term)
-     └─ 内部处理：解析日志文件、搜索关键词、收集匹配结果
-  5. 格式化输出结果（显示匹配的 URL 和 ID）
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 创建 JiraLogs 实例：JiraLogs::new()
+  3. 确保日志文件存在：JiraLogs::ensure_log_file_exists(jira_id)
+  4. 获取搜索词（从参数或交互式输入）
+  5. 调用 JiraLogs::search_keyword_both_files(jira_id, search_term)
+     └─ 内部处理：同时搜索 api.log 和 flutter-api.log，解析日志文件、搜索关键词、收集匹配结果
+  6. 格式化输出结果（按文件分组显示匹配的 URL 和 ID）
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
    - `search_term` - 搜索关键词（可选，不提供时交互式输入）
 
 2. **用户交互**：
-   - 如果未提供 `search_term`，使用 `dialoguer::Input` 交互式输入
-   - 格式化输出匹配结果
+   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `search_term`，使用 `dialoguer::Input` 交互式输入（提示："Enter search term"）
+   - 格式化输出匹配结果（按 api.log 和 flutter-api.log 分组显示）
 
 3. **核心功能**：
-   - 通过 `JiraLogs::search_keyword()` API 搜索关键词
-   - 支持搜索多个日志文件（flutter-api.log 和 api.log）
+   - 通过 `JiraLogs::search_keyword_both_files()` API 同时搜索两个日志文件
+   - 同时搜索 api.log 和 flutter-api.log 两个文件
    - 自动去重和格式化输出
+   - 按文件分组显示搜索结果
 
 ### 关键步骤说明
 
@@ -260,13 +268,14 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
    - 创建 `JiraLogs` 实例
    - 确保日志文件存在
 
-2. **搜索词获取**：
+2. **JIRA ID 和搜索词获取**：
    - 优先使用命令行参数
-   - 如果未提供，交互式输入
+   - 如果未提供 `jira_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `search_term`，交互式输入（提示："Enter search term"）
 
 3. **搜索执行**：
-   - 调用 `JiraLogs::search_keyword()` 执行搜索
-   - 支持搜索多个日志文件
+   - 调用 `JiraLogs::search_keyword_both_files()` 执行搜索
+   - 同时搜索 api.log 和 flutter-api.log 两个文件
 
 4. **结果展示**：
    - 格式化输出匹配的日志条目
@@ -279,11 +288,15 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
 - **`JiraLogs::ensure_log_file_exists(jira_id)`** - 确保日志文件存在
   - 参数：`jira_id` - Jira ticket ID
   - 返回：日志文件路径
-- **`JiraLogs::search_keyword(jira_id, search_term)`** - 搜索关键词
+- **`JiraLogs::get_api_log_file_path(jira_id)`** - 获取 api.log 文件路径
+  - 参数：`jira_id` - Jira ticket ID
+  - 返回：api.log 文件路径（基于 flutter-api.log 的路径在同一目录下查找）
+- **`JiraLogs::search_keyword_both_files(jira_id, search_term)`** - 同时搜索两个日志文件
   - 参数：
     - `jira_id` - Jira ticket ID
     - `search_term` - 搜索关键词
-  - 返回：匹配的日志条目列表（`Vec<LogEntry>`）
+  - 返回：`(api_results, flutter_api_results)` - 两个文件的结果元组，每个都是 `Vec<LogEntry>`
+  - 说明：同时搜索 api.log 和 flutter-api.log，如果文件不存在则返回空结果（不报错）
 
 ---
 
@@ -310,7 +323,7 @@ Jira API (获取附件列表)
 #### Find 命令数据流
 
 ```
-命令行参数 (JIRA_ID, REQUEST_ID)
+命令行参数或交互式输入 (JIRA_ID, REQUEST_ID)
   ↓
 FindCommand::find_request_id()
   ↓
@@ -326,11 +339,11 @@ Clipboard::copy() 复制到剪贴板
 #### Search 命令数据流
 
 ```
-命令行参数 (JIRA_ID, SEARCH_TERM)
+命令行参数或交互式输入 (JIRA_ID, SEARCH_TERM)
   ↓
 SearchCommand::search()
   ↓
-JiraLogs::search_keyword()
+JiraLogs::search_keyword_both_files()
   ↓
 解析日志文件、搜索关键词
   ↓
@@ -452,28 +465,44 @@ JiraLogs::download_from_jira()
 ### Download 命令
 
 ```bash
-# 下载日志附件（只下载日志附件）
+# 提供 JIRA ID
 workflow log download PROJ-123
+
+# 交互式输入 JIRA ID
+workflow log download
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
 ```
 
 ### Find 命令
 
 ```bash
-# 提供请求 ID
+# 提供所有参数
 workflow log find PROJ-123 abc123
 
-# 交互式输入请求 ID
+# 提供 JIRA ID，交互式输入请求 ID
 workflow log find PROJ-123
+# 提示: Enter request ID to find
+
+# 交互式输入 JIRA ID 和请求 ID
+workflow log find
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+# 提示: Enter request ID to find
 ```
 
 ### Search 命令
 
 ```bash
-# 提供搜索词
+# 提供所有参数
 workflow log search PROJ-123 "error"
 
-# 交互式输入搜索词
+# 提供 JIRA ID，交互式输入搜索词
 workflow log search PROJ-123
+# 提示: Enter search term
+
+# 交互式输入 JIRA ID 和搜索词
+workflow log search
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+# 提示: Enter search term
 ```
 
 ---

@@ -99,20 +99,22 @@ src/main.rs::JiraSubcommand::Info
   ↓
 commands/jira/info.rs::InfoCommand::show(jira_id)
   ↓
-  1. 调用 Jira::get_ticket_info(jira_id) 获取 ticket 信息
-  2. 显示基本信息（Key, ID, Summary, Status）
-  3. 显示描述（如果有）
-  4. 显示附件列表（如果有）
-  5. 显示评论数量（如果有）
-  6. 显示 Jira URL
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 调用 Jira::get_ticket_info(jira_id) 获取 ticket 信息
+  3. 显示基本信息（Key, ID, Summary, Status）
+  4. 显示描述（如果有）
+  5. 显示附件列表（如果有）
+  6. 显示评论数量（如果有）
+  7. 显示 Jira URL
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
 
 2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
    - 格式化显示 ticket 信息
    - 使用分隔线和图标美化输出
 
@@ -156,19 +158,21 @@ src/main.rs::JiraSubcommand::Attachments
   ↓
 commands/jira/attachments.rs::AttachmentsCommand::download(jira_id)
   ↓
-  1. 显示下载提示信息
-  2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 调用 JiraLogs::download_from_jira(jira_id, None, true)
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 显示下载提示信息
+  3. 创建 JiraLogs 实例：JiraLogs::new()
+  4. 调用 JiraLogs::download_from_jira(jira_id, None, true)
      └─ 内部处理：下载所有附件、合并分片、解压文件
-  4. 输出成功信息和文件路径
+  5. 输出成功信息和文件路径
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
 
 2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
    - 显示下载进度和结果
 
 3. **核心功能**：
@@ -429,15 +433,23 @@ JiraLogs::clean_dir()
 ### Info 命令
 
 ```bash
-# 显示 ticket 信息
+# 提供 JIRA ID
 workflow jira info PROJ-123
+
+# 交互式输入 JIRA ID
+workflow jira info
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
 ```
 
 ### Attachments 命令
 
 ```bash
-# 下载所有附件
+# 提供 JIRA ID
 workflow jira attachments PROJ-123
+
+# 交互式输入 JIRA ID
+workflow jira attachments
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
 ```
 
 ### Clean 命令

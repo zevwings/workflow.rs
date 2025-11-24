@@ -270,22 +270,22 @@ workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会
 ### 日志操作
 ```bash
 # 下载日志
-workflow log download PROJ-123                  # 下载日志文件
+workflow log download [PROJ-123]               # 下载日志文件（JIRA ID 可选，不提供会交互式输入）
 
 # 查找请求 ID
-workflow log find PROJ-123 [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）
+workflow log find [PROJ-123] [REQUEST_ID]     # 查找请求 ID（所有参数可选，不提供会交互式输入）
 
 # 搜索关键词
-workflow log search PROJ-123 [SEARCH_TERM]     # 搜索关键词（可选，不提供会交互式输入）
+workflow log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参数可选，不提供会交互式输入）
 ```
 
 ### Jira 操作
 ```bash
 # 显示 ticket 信息
-workflow jira info PROJ-123                    # 显示 Jira ticket 信息
+workflow jira info [PROJ-123]                 # 显示 Jira ticket 信息（JIRA ID 可选，不提供会交互式输入）
 
 # 下载所有附件
-workflow jira attachments PROJ-123             # 下载所有附件（不仅仅是日志附件）
+workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）
 
 # 清理日志目录
 workflow jira clean                            # 清理整个日志基础目录（需要确认）

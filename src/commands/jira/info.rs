@@ -1,17 +1,28 @@
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
+use dialoguer::Input;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
 
 impl InfoCommand {
     /// 显示 ticket 信息
-    pub fn show(jira_id: &str) -> Result<()> {
+    pub fn show(jira_id: Option<String>) -> Result<()> {
+        // 获取 JIRA ID（从参数或交互式输入）
+        let jira_id = if let Some(id) = jira_id {
+            id
+        } else {
+            Input::<String>::new()
+                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
+                .interact()
+                .context("Failed to read Jira ticket ID")?
+        };
+
         log_debug!("Getting ticket info for {}...", jira_id);
 
         // 获取 ticket 信息
-        let issue = Jira::get_ticket_info(jira_id)
+        let issue = Jira::get_ticket_info(&jira_id)
             .with_context(|| format!("Failed to get ticket info for {}", jira_id))?;
 
         // 显示基本信息

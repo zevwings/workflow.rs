@@ -353,18 +353,18 @@ enum LogSubcommand {
     /// Download log files from Jira ticket attachments (supports automatic merging of split files).
     /// Log files will be saved locally with paths automatically resolved based on JIRA ID.
     Download {
-        /// Jira ticket ID (e.g., PROJ-123)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
+        jira_id: Option<String>,
     },
     /// Find request ID in log files
     ///
     /// Find specified request ID in log files and extract corresponding response content.
     /// If found, will copy response content to clipboard and automatically open browser.
     Find {
-        /// Jira ticket ID (e.g., PROJ-123)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
+        jira_id: Option<String>,
 
         /// Request ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "REQUEST_ID")]
@@ -374,9 +374,9 @@ enum LogSubcommand {
     ///
     /// Search for specified keywords in log files and return all matching request information.
     Search {
-        /// Jira ticket ID (e.g., PROJ-123)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
+        jira_id: Option<String>,
 
         /// Search keyword (optional, will prompt interactively if not provided)
         #[arg(value_name = "SEARCH_TERM")]
@@ -393,17 +393,17 @@ enum JiraSubcommand {
     ///
     /// Display detailed information about a Jira ticket.
     Info {
-        /// Jira ticket ID (e.g., PROJ-123)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
+        jira_id: Option<String>,
     },
     /// Download all attachments from Jira ticket
     ///
     /// Download all attachments from Jira ticket (not just log files).
     Attachments {
-        /// Jira ticket ID (e.g., PROJ-123)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
+        jira_id: Option<String>,
     },
     /// Clean log directory
     ///
@@ -555,28 +555,28 @@ fn main() -> Result<()> {
         // 日志操作命令
         Some(Commands::Log { subcommand }) => match subcommand {
             LogSubcommand::Download { jira_id } => {
-                DownloadCommand::download(&jira_id)?;
+                DownloadCommand::download(jira_id)?;
             }
             LogSubcommand::Find {
                 jira_id,
                 request_id,
             } => {
-                FindCommand::find_request_id(&jira_id, request_id)?;
+                FindCommand::find_request_id(jira_id, request_id)?;
             }
             LogSubcommand::Search {
                 jira_id,
                 search_term,
             } => {
-                SearchCommand::search(&jira_id, search_term)?;
+                SearchCommand::search(jira_id, search_term)?;
             }
         },
         // Jira 操作命令
         Some(Commands::Jira { subcommand }) => match subcommand {
             JiraSubcommand::Info { jira_id } => {
-                InfoCommand::show(&jira_id)?;
+                InfoCommand::show(jira_id)?;
             }
             JiraSubcommand::Attachments { jira_id } => {
-                AttachmentsCommand::download(&jira_id)?;
+                AttachmentsCommand::download(jira_id)?;
             }
             JiraSubcommand::Clean {
                 jira_id,
