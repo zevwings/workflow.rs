@@ -691,10 +691,20 @@ impl UpdateCommand {
         log_break!();
 
         // 汇总结果
+        // 注意：即使 Gatekeeper 阻止执行，只要文件存在且可执行，就认为安装成功
+        // 用户需要手动在系统设置中允许执行
         let all_checks_passed = all_binaries_ok && completions_installed;
 
         if all_checks_passed {
             log_success!("All verifications passed!");
+            #[cfg(target_os = "macos")]
+            {
+                log_info!("");
+                log_info!("💡 Note: If you encounter macOS Gatekeeper blocking execution,");
+                log_info!("   please allow the binary in System Settings:");
+                log_info!("   System Settings → Privacy & Security → Allow");
+                log_info!("");
+            }
         } else {
             log_warning!("Some verifications failed, please check the above warning messages");
         }
