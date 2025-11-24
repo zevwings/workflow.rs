@@ -17,6 +17,7 @@ impl JiraLogs {
     /// 从 Jira ticket 下载日志附件
     ///
     /// 返回下载的基础目录路径。
+    /// 如果下载失败或没有附件/日志，会自动清理已创建的目录。
     pub fn download_from_jira(
         &self,
         jira_id: &str,
@@ -29,29 +30,40 @@ impl JiraLogs {
 
         // 1. 准备下载目录
         let (base_dir, download_dir) = self.prepare_download_directory(jira_id)?;
+        let base_dir_path = base_dir.clone();
 
-        // 2. 获取并过滤附件
-        let (attachments, log_attachments) = self.fetch_and_filter_attachments(jira_id)?;
+        // 使用 Result 的错误处理，在失败时清理目录
+        let result = (|| -> Result<PathBuf> {
+            // 2. 获取并过滤附件
+            let (attachments, log_attachments) = self.fetch_and_filter_attachments(jira_id)?;
 
-        // 3. 下载附件
-        if download_all_attachments {
-            self.download_all_attachments(&attachments, &download_dir)?;
-        } else {
-            if log_attachments.is_empty() {
-                anyhow::bail!("No log attachments found for {}", jira_id);
+            // 3. 下载附件
+            if download_all_attachments {
+                self.download_all_attachments(&attachments, &download_dir)?;
+            } else {
+                if log_attachments.is_empty() {
+                    anyhow::bail!("No log attachments found for {}", jira_id);
+                }
+                self.download_log_attachments_with_retry(jira_id, &log_attachments, &download_dir)?;
             }
-            self.download_log_attachments_with_retry(jira_id, &log_attachments, &download_dir)?;
+
+            // 4. 处理下载的日志（合并分片、解压）
+            self.process_downloaded_logs(
+                &base_dir,
+                &download_dir,
+                &output_folder,
+                download_all_attachments,
+            )?;
+
+            Ok(base_dir)
+        })();
+
+        // 如果失败，清理已创建的目录
+        if result.is_err() && base_dir_path.exists() {
+            let _ = std::fs::remove_dir_all(&base_dir_path);
         }
 
-        // 4. 处理下载的日志（合并分片、解压）
-        self.process_downloaded_logs(
-            &base_dir,
-            &download_dir,
-            &output_folder,
-            download_all_attachments,
-        )?;
-
-        Ok(base_dir)
+        result
     }
 
     /// 准备下载目录
