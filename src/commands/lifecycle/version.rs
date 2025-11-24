@@ -14,17 +14,32 @@ impl VersionCommand {
     /// 显示当前版本信息
     ///
     /// 尝试多种方法获取版本号：
-    /// 1. 从环境变量 CARGO_PKG_VERSION（编译时注入）
-    /// 2. 运行 `workflow --version` 命令获取版本
+    /// 1. 从编译时嵌入的版本号（使用 env! 宏）
+    /// 2. 运行当前二进制文件的 --version 命令获取版本
     /// 3. 从 Cargo.toml 读取（开发环境）
     pub fn show() -> Result<()> {
-        // 方法 1: 尝试从环境变量获取（编译时注入）
-        if let Ok(version) = env::var("CARGO_PKG_VERSION") {
-            log_success!("workflow v{}", version);
+        // 方法 1: 尝试从编译时嵌入的版本号获取（使用 env! 宏）
+        // 注意：env! 宏在编译时展开，所以这个值在运行时总是可用的
+        const VERSION: &str = env!("CARGO_PKG_VERSION");
+        if !VERSION.is_empty() {
+            log_success!("workflow v{}", VERSION);
             return Ok(());
         }
 
-        // 方法 2: 尝试运行 workflow --version 命令
+        // 方法 2: 尝试运行当前二进制文件的 --version 命令
+        // 使用 env::current_exe() 获取当前二进制文件的路径，而不是依赖 PATH
+        if let Ok(current_exe) = env::current_exe() {
+            if let Ok(output) = Command::new(&current_exe).arg("--version").output() {
+                if output.status.success() {
+                    let version_str = String::from_utf8_lossy(&output.stdout);
+                    let version = version_str.trim();
+                    log_success!("{}", version);
+                    return Ok(());
+                }
+            }
+        }
+
+        // 方法 2 的备选：如果 current_exe 失败，尝试使用 "workflow" 命令名
         if let Ok(output) = Command::new("workflow").arg("--version").output() {
             if output.status.success() {
                 let version_str = String::from_utf8_lossy(&output.stdout);
@@ -86,3 +101,4 @@ impl VersionCommand {
         Ok(())
     }
 }
+

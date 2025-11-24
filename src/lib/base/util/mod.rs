@@ -11,6 +11,8 @@
 //!
 //! - `logger` - 日志输出（`Logger`）
 //! - `string` - 字符串处理工具
+//! - `format` - 格式化工具（文件大小格式化等）
+//! - `platform` - 平台检测工具（操作系统和架构检测）
 //! - `browser` - 浏览器操作（`Browser`）
 //! - `clipboard` - 剪贴板操作（`Clipboard`）
 //! - `unzip` - 解压工具（tar.gz 文件解压）
@@ -27,9 +29,11 @@ pub mod browser;
 pub mod checksum;
 pub mod clipboard;
 pub mod confirm;
+pub mod format;
 pub mod logger;
 #[cfg(target_os = "macos")]
 pub mod macos;
+pub mod platform;
 pub mod string;
 pub mod unzip;
 
@@ -38,6 +42,12 @@ pub use logger::{LogLevel, Logger};
 
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;
+
+// 重新导出 format 模块的函数
+pub use format::format_size;
+
+// 重新导出 platform 模块的函数
+pub use platform::detect_release_platform;
 
 // 重新导出 browser 和 clipboard
 pub use browser::Browser;
@@ -54,4 +64,6 @@ pub use checksum::Checksum;
 
 // 重新导出 macOS 工具（仅在 macOS 上）
 #[cfg(target_os = "macos")]
-pub use macos::{remove_quarantine_attribute, remove_quarantine_attribute_with_sudo};
+pub use macos::{
+    remove_quarantine_attribute, remove_quarantine_attribute_with_sudo,
+};
