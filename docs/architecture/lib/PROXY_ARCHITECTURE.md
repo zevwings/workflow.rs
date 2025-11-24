@@ -117,6 +117,7 @@ src/lib/proxy/
 - `is_proxy_configured(proxy_info)` - 检查代理设置是否匹配
 - `enable(temporary)` - 开启代理（支持临时模式和持久化模式）
 - `disable()` - 关闭代理（同时从配置文件和当前 shell 移除）
+- `ensure_proxy_enabled()` - 确保代理已启用（如果系统代理已启用，自动设置环境变量）
 
 **关键特性**：
 - 协调 `SystemProxyReader` 和 `ProxyConfigGenerator`
@@ -196,6 +197,24 @@ ProxyManager::check_env_proxy()
   3. ShellConfigManager::load_env_vars()              # 加载配置文件
   4. ProxyManager::is_proxy_configured()             # 检查代理是否已正确配置
 ```
+
+### 自动启用代理流程
+
+```
+ProxyManager::ensure_proxy_enabled()
+  ↓
+  1. SystemProxyReader::read()                       # 获取系统代理设置
+  2. is_system_proxy_enabled()                       # 检查系统代理是否启用
+  3. is_proxy_configured()                           # 检查环境变量是否已配置
+  4. ProxyConfigGenerator::generate_env_vars()       # 生成环境变量
+  5. std::env::set_var()                             # 在当前进程中设置环境变量
+```
+
+**行为说明**：
+- 如果系统代理（VPN）未启用，静默跳过，不影响正常流程
+- 如果系统代理已启用但环境变量未设置，自动在当前进程中设置环境变量
+- 如果环境变量已配置，无需操作
+- 主要用于在需要网络访问的命令执行前自动启用代理
 
 ### 数据流
 
@@ -314,6 +333,9 @@ if let Some(cmd) = result.unset_command {
 // 检查代理
 let env_proxy = ProxyManager::check_env_proxy();
 let is_configured = ProxyManager::is_proxy_configured(&proxy_info);
+
+// 自动启用代理（如果系统代理已启用）
+ProxyManager::ensure_proxy_enabled()?;
 ```
 
 ### 使用 SystemProxyReader

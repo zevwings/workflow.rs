@@ -79,6 +79,9 @@ src/commands/pr/
 - **`commands/check/`**：检查命令（`CheckCommand::run_all()`）
   - 运行环境检查（Git 状态、网络）
 
+- **`lib/proxy/`**：代理管理（`ProxyManager`）
+  - `ProxyManager::ensure_proxy_enabled()` - 自动启用代理（如果系统代理已启用）
+
 ---
 
 ## 🔄 调用流程
@@ -164,6 +167,7 @@ src/main.rs::PRCommands::Create
   ↓
 commands/pr/create.rs::PullRequestCreateCommand::create()
   ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 运行检查（check::CheckCommand::run_all()）
   2. 获取或输入 Jira ticket（resolve_jira_ticket()）
   3. 配置 Jira 状态（ensure_jira_status()）
@@ -193,6 +197,7 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
 
 创建 PR 命令是 PR 模块中最复杂的命令，提供完整的 PR 创建流程：
 
+0. **代理自动启用**：如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量，确保网络请求通过代理。
 1. **前置检查**：运行所有检查（git status、network 等），支持 dry-run 模式。
 2. **Jira 集成**：支持可选的 Jira ticket 输入，自动验证，自动配置状态，创建后自动更新 ticket。
 3. **PR 标题生成**：优先使用输入标题，或从 Jira 获取，或提示输入。
@@ -264,6 +269,7 @@ src/main.rs::PRCommands::Merge
   ↓
 commands/pr/merge.rs::PullRequestMergeCommand::merge()
   ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 运行检查，获取 PR ID
   2. 合并 PR（merge_pull_request()）
      └─ provider.merge_pull_request()
@@ -275,6 +281,7 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
 ### 功能说明
 
 合并 PR 命令通过 API 合并 PR：
+0. **代理自动启用**：如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量。
 1. **PR ID 解析**：支持参数提供或自动检测。
 2. **合并操作**：通过平台 API 执行合并，处理竞态条件。
 3. **合并后清理**：切换到默认分支，删除当前分支（本地和远程）。
@@ -345,6 +352,19 @@ src/commands/pr/list.rs (21 行)
 
 ```
 src/commands/pr/update.rs (59 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Update
+  ↓
+commands/pr/update.rs::PullRequestUpdateCommand::update()
+  ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
+  1. 获取当前分支的 PR 标题
+  2. 提交更改（GitCommit::commit()）
+  3. 推送到远程（GitBranch::push()）
 ```
 
 ### 功能说明

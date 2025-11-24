@@ -265,6 +265,10 @@ let delay = (1 << retry_count).min(60);
 
 - **模块文件**：`snake_case.rs`（如 `jira_client.rs`、`pr_helpers.rs`）
 - **测试文件**：与源文件同名，放在 `tests/` 目录或使用 `#[cfg(test)]` 模块
+- **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `DEVELOPMENT_GUIDELINES.md`、`PR_ARCHITECTURE.md`）
+  - **架构文档**：`{MODULE}_ARCHITECTURE.md`（如 `PR_ARCHITECTURE.md`、`GIT_ARCHITECTURE.md`）
+  - **命令文档**：`{MODULE}_COMMAND_ARCHITECTURE.md`（如 `PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`）
+  - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `DEVELOPMENT_GUIDELINES.md`、`DOCUMENT_GUIDELINES.md`）
 
 ### 函数命名
 
