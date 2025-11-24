@@ -1,14 +1,22 @@
 //! Workflow CLI 主入口
 //!
 //! 这是 Workflow CLI 工具的主命令入口，提供配置管理、检查工具、代理管理等核心功能。
-//! 其他独立命令（如 `pr`、`qk`）通过 `bin/` 目录下的独立可执行文件实现。
+//! 所有功能都通过 `workflow` 命令及其子命令提供，包括 `pr`、`log`、`jira` 等子命令。
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod commands;
 
-use commands::{check, clean, config, github, log, proxy, setup, uninstall};
+use commands::branch::{clean, ignore};
+use commands::check::check;
+use commands::config::{completion, log, setup, show};
+use commands::github::github;
+use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
+use commands::lifecycle::{uninstall, update};
+use commands::log::{DownloadCommand, FindCommand, SearchCommand};
+use commands::pr::{close, create, integrate, list, merge, status, update as pr_update};
+use commands::proxy::proxy;
 
 use workflow::*;
 
@@ -29,139 +37,426 @@ struct Cli {
 /// 定义了 Workflow CLI 支持的所有顶级命令。
 #[derive(Subcommand)]
 enum Commands {
-    /// 管理代理设置（开启/关闭/检查）
+    /// Manage proxy settings (on/off/check)
     ///
-    /// 通过环境变量管理 HTTP/HTTPS 代理配置。
+    /// Manage HTTP/HTTPS proxy configuration via environment variables.
     Proxy {
         #[command(subcommand)]
         subcommand: ProxySubcommand,
+        /// Temporary mode: only enable in current shell, don't write to config file
+        #[arg(short, long)]
+        temporary: bool,
     },
-    /// 运行环境检查
+    /// Run environment checks
     ///
-    /// 检查 Git 仓库状态和网络连接（GitHub）。
+    /// Check Git repository status and network connectivity (GitHub).
     Check,
-    /// 初始化或更新配置
+    /// Initialize or update configuration
     ///
-    /// 交互式设置 Workflow CLI 所需的各种配置项（如 Jira、GitHub 等）。
+    /// Interactively set up various configuration items required by Workflow CLI (e.g., Jira, GitHub, etc.).
     Setup,
-    /// 查看当前配置
+    /// View current configuration
     ///
-    /// 显示所有已配置的环境变量和设置项（敏感信息会被掩码）。
+    /// Display all configured environment variables and settings (sensitive information will be masked).
     Config,
-    /// 卸载 Workflow CLI 配置
+    /// Uninstall Workflow CLI configuration
     ///
-    /// 删除所有相关文件：二进制文件、补全脚本、配置文件等。
+    /// Remove all related files: binaries, completion scripts, configuration files, etc.
     Uninstall,
-    /// 清理日志目录
+    /// Update Workflow CLI
     ///
-    /// 删除整个日志下载基础目录及其所有内容。
-    /// 需要确认才能执行删除操作。
-    Clean {
-        /// 预览操作，不实际删除
-        #[arg(long, short = 'n')]
-        dry_run: bool,
-        /// 只列出将要删除的内容
-        #[arg(long, short = 'l')]
-        list: bool,
+    /// Rebuild release version and update all binaries and shell completion scripts.
+    Update {
+        /// Specify the version number to update to (e.g., 1.1.2)
+        ///
+        /// If not specified, will update to the latest version.
+        #[arg(long, short = 'v')]
+        version: Option<String>,
     },
-    /// 管理日志级别（设置/检查）
+    /// Manage log level (set/check)
     ///
-    /// 设置或查看当前日志输出级别（none, error, warn, info, debug）。
-    Log {
+    /// Set or view current log output level (none, error, warn, info, debug).
+    #[command(name = "log-level")]
+    LogLevel {
         #[command(subcommand)]
-        subcommand: LogSubcommand,
+        subcommand: LogLevelSubcommand,
     },
-    /// 管理 GitHub 账号
+    /// Manage GitHub accounts
     ///
-    /// 管理多个 GitHub 账号的配置（添加、删除、切换、更新等）。
+    /// Manage configurations for multiple GitHub accounts (add, remove, switch, update, etc.).
     #[command(name = "github")]
     GitHub {
         #[command(subcommand)]
         subcommand: GitHubSubcommand,
     },
+    /// Manage shell completion
+    ///
+    /// Generate and manage shell completion scripts.
+    Completion {
+        #[command(subcommand)]
+        subcommand: CompletionSubcommand,
+    },
+    /// Manage Git branches
+    ///
+    /// Clean local branches and manage branch ignore list.
+    Branch {
+        #[command(subcommand)]
+        subcommand: BranchSubcommand,
+    },
+    /// Pull Request operations
+    ///
+    /// Create, merge, close, and manage Pull Requests.
+    Pr {
+        #[command(subcommand)]
+        subcommand: PRCommands,
+    },
+    /// Log operations (download, find, search)
+    ///
+    /// Download log files from Jira tickets, search and find content in logs.
+    Log {
+        #[command(subcommand)]
+        subcommand: LogSubcommand,
+    },
+    /// Jira operations (info, attachments, clean)
+    ///
+    /// View and manage Jira ticket information, download attachments, and clean local data.
+    Jira {
+        #[command(subcommand)]
+        subcommand: JiraSubcommand,
+    },
 }
 
-/// 代理管理子命令
+/// Proxy management subcommands
 ///
-/// 用于管理 HTTP/HTTPS 代理的环境变量配置。
+/// Used to manage HTTP/HTTPS proxy environment variable configuration.
 #[derive(Subcommand)]
 enum ProxySubcommand {
-    /// 开启代理（设置环境变量）
+    /// Enable proxy (set environment variables)
     ///
-    /// 设置 `HTTP_PROXY` 和 `HTTPS_PROXY` 环境变量。
+    /// Set HTTP_PROXY and HTTPS_PROXY environment variables.
     On,
-    /// 关闭代理（清除环境变量）
+    /// Disable proxy (clear environment variables)
     ///
-    /// 取消设置 `HTTP_PROXY` 和 `HTTPS_PROXY` 环境变量。
+    /// Unset HTTP_PROXY and HTTPS_PROXY environment variables.
     Off,
-    /// 检查代理状态和配置
+    /// Check proxy status and configuration
     ///
-    /// 显示当前代理环境变量的状态和配置信息。
+    /// Display current proxy environment variable status and configuration information.
     Check,
 }
 
-/// 日志级别管理子命令
+/// Log level management subcommands
 ///
-/// 用于管理日志输出级别。
+/// Used to manage log output level.
 #[derive(Subcommand)]
-enum LogSubcommand {
-    /// 设置日志级别（交互式选择）
+enum LogLevelSubcommand {
+    /// Set log level (interactive selection)
     ///
-    /// 通过交互式菜单选择日志级别：none, error, warn, info, debug。
+    /// Select log level through interactive menu: none, error, warn, info, debug.
     Set,
-    /// 检查当前日志级别
+    /// Check current log level
     ///
-    /// 显示当前设置的日志级别和默认级别信息。
+    /// Display current configured log level and default level information.
     Check,
 }
 
-/// GitHub 账号管理子命令
+/// GitHub account management subcommands
 ///
-/// 用于管理多个 GitHub 账号的配置。
+/// Used to manage configurations for multiple GitHub accounts.
 #[derive(Subcommand)]
 enum GitHubSubcommand {
-    /// 列出所有 GitHub 账号
+    /// List all GitHub accounts
     ///
-    /// 显示所有已配置的 GitHub 账号信息。
+    /// Display all configured GitHub account information.
     List,
-    /// 显示当前激活的 GitHub 账号
+    /// Show current active GitHub account
     ///
-    /// 显示当前正在使用的 GitHub 账号信息。
+    /// Display currently active GitHub account information.
     Current,
-    /// 添加新的 GitHub 账号
+    /// Add a new GitHub account
     ///
-    /// 交互式添加新的 GitHub 账号配置。
+    /// Interactively add a new GitHub account configuration.
     Add,
-    /// 删除 GitHub 账号
+    /// Remove a GitHub account
     ///
-    /// 从配置中删除指定的 GitHub 账号。
+    /// Remove the specified GitHub account from configuration.
     Remove,
-    /// 切换当前 GitHub 账号
+    /// Switch current GitHub account
     ///
-    /// 在多个 GitHub 账号之间切换。
+    /// Switch between multiple GitHub accounts.
     Switch,
-    /// 更新 GitHub 账号信息
+    /// Update GitHub account information
     ///
-    /// 更新已存在的 GitHub 账号配置。
+    /// Update existing GitHub account configuration.
     Update,
+}
+
+/// Completion management subcommands
+///
+/// Used to generate and manage shell completion scripts.
+#[derive(Subcommand)]
+enum CompletionSubcommand {
+    /// Generate completion scripts
+    ///
+    /// Auto-detect current shell type, generate corresponding completion scripts and apply to configuration files.
+    Generate,
+    /// Check completion status
+    ///
+    /// Check installed shell types and shells with configured completion.
+    Check,
+    /// Remove completion configuration
+    ///
+    /// Interactively select and remove configured shell completion configuration.
+    Remove,
+}
+
+/// Branch management subcommands
+///
+/// Used to clean branches and manage branch ignore list.
+#[derive(Subcommand)]
+enum BranchSubcommand {
+    /// Clean local branches
+    ///
+    /// Delete all local branches except main/master, develop, current branch, and branches in ignore list.
+    Clean {
+        /// Dry run mode (show what would be deleted without actually deleting)
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+    /// Manage branch ignore list
+    ///
+    /// Add, remove, or list branches in the ignore list.
+    Ignore {
+        #[command(subcommand)]
+        subcommand: IgnoreSubcommand,
+    },
+}
+
+/// Branch ignore list management subcommands
+#[derive(Subcommand)]
+enum IgnoreSubcommand {
+    /// Add branch to ignore list
+    Add {
+        /// Branch name to add
+        branch_name: Option<String>,
+    },
+    /// Remove branch from ignore list
+    Remove {
+        /// Branch name to remove
+        branch_name: Option<String>,
+    },
+    /// List ignored branches for current repository
+    List,
+}
+
+/// PR commands enumeration
+///
+/// Defines all PR-related subcommands.
+#[derive(Subcommand)]
+enum PRCommands {
+    /// Create a new Pull Request
+    ///
+    /// Supports auto-detection of repository type (GitHub/Codeup), and optionally uses AI to generate PR title.
+    /// If a Jira ticket is provided, will automatically update Jira status.
+    Create {
+        /// Jira ticket ID (optional, e.g., PROJ-123)
+        #[arg(value_name = "JIRA_TICKET")]
+        jira_ticket: Option<String>,
+
+        /// PR title (optional, will use AI generation if not provided)
+        #[arg(short, long)]
+        title: Option<String>,
+
+        /// Short description (optional)
+        #[arg(short, long)]
+        description: Option<String>,
+
+        /// Dry run mode (don't actually create PR, only show what would be done)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
+    },
+    /// Merge a Pull Request
+    ///
+    /// Auto-detect PR corresponding to current branch, or manually specify PR ID.
+    /// Will automatically update corresponding Jira ticket status after merging.
+    Merge {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+
+        /// Force merge (skip checks)
+        #[arg(short, long, action = clap::ArgAction::SetTrue)]
+        force: bool,
+    },
+    /// Show PR status information
+    ///
+    /// Display detailed information about a specific PR, including status, author, comments, etc.
+    Status {
+        /// PR ID or branch name (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID_OR_BRANCH")]
+        pull_request_id_or_branch: Option<String>,
+    },
+    /// List Pull Requests
+    ///
+    /// List all PRs in the repository, supports filtering by status and limiting the number of results.
+    List {
+        /// Filter by state (open, closed, merged)
+        #[arg(short, long)]
+        state: Option<String>,
+
+        /// Limit the number of results
+        #[arg(short, long)]
+        limit: Option<u32>,
+    },
+    /// Update code (use PR title as commit message)
+    ///
+    /// Commit current changes to PR branch using PR title as commit message.
+    Update,
+    /// Integrate branch into current branch
+    ///
+    /// Merge specified branch into current branch, and optionally push to remote.
+    /// This is a local Git operation, different from the `merge` command (which merges PR via API).
+    Integrate {
+        /// Source branch name to merge (required)
+        #[arg(value_name = "SOURCE_BRANCH")]
+        source_branch: String,
+
+        /// Only allow fast-forward merge (fail if not possible)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        ff_only: bool,
+
+        /// Use squash merge (compress all commits into one)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        squash: bool,
+
+        /// Don't push to remote (pushes by default)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        no_push: bool,
+    },
+    /// Close a Pull Request
+    ///
+    /// Close PR corresponding to current branch, delete remote branch, and switch to default branch.
+    Close {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+    },
+}
+
+/// Log operations subcommands
+///
+/// Used to manage log file operations.
+#[derive(Subcommand)]
+enum LogSubcommand {
+    /// Download log files from Jira ticket
+    ///
+    /// Download log files from Jira ticket attachments (supports automatic merging of split files).
+    /// Log files will be saved locally with paths automatically resolved based on JIRA ID.
+    Download {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+    },
+    /// Find request ID in log files
+    ///
+    /// Find specified request ID in log files and extract corresponding response content.
+    /// If found, will copy response content to clipboard and automatically open browser.
+    Find {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+
+        /// Request ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "REQUEST_ID")]
+        request_id: Option<String>,
+    },
+    /// Search for keywords in log files
+    ///
+    /// Search for specified keywords in log files and return all matching request information.
+    Search {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+
+        /// Search keyword (optional, will prompt interactively if not provided)
+        #[arg(value_name = "SEARCH_TERM")]
+        search_term: Option<String>,
+    },
+}
+
+/// Jira operations subcommands
+///
+/// Used to manage Jira ticket operations.
+#[derive(Subcommand)]
+enum JiraSubcommand {
+    /// Show ticket information
+    ///
+    /// Display detailed information about a Jira ticket.
+    Info {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+    },
+    /// Download all attachments from Jira ticket
+    ///
+    /// Download all attachments from Jira ticket (not just log files).
+    Attachments {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+    },
+    /// Clean log directory
+    ///
+    /// Clean log directory for specified JIRA ID, or clean entire base directory if --all is specified.
+    Clean {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+
+        /// Clean entire base directory (all tickets)
+        #[arg(long, short = 'a')]
+        all: bool,
+
+        /// Preview operation without actually deleting
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+
+        /// Only list what would be deleted
+        #[arg(long, short = 'l')]
+        list: bool,
+    },
 }
 
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
+    // 初始化日志级别（从配置文件读取，但不让 logger 模块直接依赖 Settings）
+    {
+        use crate::base::settings::Settings;
+        let config_level = Settings::get()
+            .log
+            .level
+            .as_ref()
+            .and_then(|s| s.parse::<crate::LogLevel>().ok());
+        crate::LogLevel::init(config_level);
+    }
+
     let cli = Cli::parse();
 
     match cli.command {
         // 代理管理命令
-        Some(Commands::Proxy { subcommand }) => match subcommand {
-            ProxySubcommand::On => proxy::ProxyCommand::on()?,
+        Some(Commands::Proxy {
+            subcommand,
+            temporary,
+        }) => match subcommand {
+            ProxySubcommand::On => proxy::ProxyCommand::on(temporary)?,
             ProxySubcommand::Off => proxy::ProxyCommand::off()?,
             ProxySubcommand::Check => proxy::ProxyCommand::check()?,
         },
         // 环境检查
         Some(Commands::Check) => {
-            check::run_all()?;
+            check::CheckCommand::run_all()?;
         }
         // 配置初始化
         Some(Commands::Setup) => {
@@ -169,20 +464,20 @@ fn main() -> Result<()> {
         }
         // 配置查看
         Some(Commands::Config) => {
-            config::ConfigCommand::show()?;
+            show::ConfigCommand::show()?;
         }
         // 卸载
         Some(Commands::Uninstall) => {
             uninstall::UninstallCommand::run()?;
         }
-        // 清理日志目录
-        Some(Commands::Clean { dry_run, list }) => {
-            clean::CleanCommand::clean(dry_run, list)?;
+        // 更新
+        Some(Commands::Update { version }) => {
+            update::UpdateCommand::update(version)?;
         }
         // 日志级别管理命令
-        Some(Commands::Log { subcommand }) => match subcommand {
-            LogSubcommand::Set => log::LogCommand::set()?,
-            LogSubcommand::Check => log::LogCommand::check()?,
+        Some(Commands::LogLevel { subcommand }) => match subcommand {
+            LogLevelSubcommand::Set => log::LogCommand::set()?,
+            LogLevelSubcommand::Check => log::LogCommand::check()?,
         },
         // GitHub 账号管理命令
         Some(Commands::GitHub { subcommand }) => match subcommand {
@@ -193,21 +488,131 @@ fn main() -> Result<()> {
             GitHubSubcommand::Switch => github::GitHubCommand::switch()?,
             GitHubSubcommand::Update => github::GitHubCommand::update()?,
         },
+        // Completion 管理命令
+        Some(Commands::Completion { subcommand }) => match subcommand {
+            CompletionSubcommand::Generate => completion::CompletionCommand::generate()?,
+            CompletionSubcommand::Check => completion::CompletionCommand::check()?,
+            CompletionSubcommand::Remove => completion::CompletionCommand::remove()?,
+        },
+        // 分支管理命令
+        Some(Commands::Branch { subcommand }) => match subcommand {
+            BranchSubcommand::Clean { dry_run } => {
+                clean::BranchCleanCommand::clean(dry_run)?;
+            }
+            BranchSubcommand::Ignore { subcommand } => match subcommand {
+                IgnoreSubcommand::Add { branch_name } => {
+                    ignore::BranchIgnoreCommand::add(branch_name)?;
+                }
+                IgnoreSubcommand::Remove { branch_name } => {
+                    ignore::BranchIgnoreCommand::remove(branch_name)?;
+                }
+                IgnoreSubcommand::List => {
+                    ignore::BranchIgnoreCommand::list()?;
+                }
+            },
+        },
+        // PR 操作命令
+        Some(Commands::Pr { subcommand }) => match subcommand {
+            PRCommands::Create {
+                jira_ticket,
+                title,
+                description,
+                dry_run,
+            } => {
+                create::PullRequestCreateCommand::create(jira_ticket, title, description, dry_run)?;
+            }
+            PRCommands::Merge {
+                pull_request_id,
+                force,
+            } => {
+                merge::PullRequestMergeCommand::merge(pull_request_id, force)?;
+            }
+            PRCommands::Status {
+                pull_request_id_or_branch,
+            } => {
+                status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
+            }
+            PRCommands::List { state, limit } => {
+                list::PullRequestListCommand::list(state, limit)?;
+            }
+            PRCommands::Update => {
+                pr_update::PullRequestUpdateCommand::update()?;
+            }
+            PRCommands::Integrate {
+                source_branch,
+                ff_only,
+                squash,
+                no_push,
+            } => {
+                let should_push = !no_push;
+                integrate::PullRequestIntegrateCommand::integrate(
+                    source_branch,
+                    ff_only,
+                    squash,
+                    should_push,
+                )?;
+            }
+            PRCommands::Close { pull_request_id } => {
+                close::PullRequestCloseCommand::close(pull_request_id)?;
+            }
+        },
+        // 日志操作命令
+        Some(Commands::Log { subcommand }) => match subcommand {
+            LogSubcommand::Download { jira_id } => {
+                DownloadCommand::download(jira_id)?;
+            }
+            LogSubcommand::Find {
+                jira_id,
+                request_id,
+            } => {
+                FindCommand::find_request_id(jira_id, request_id)?;
+            }
+            LogSubcommand::Search {
+                jira_id,
+                search_term,
+            } => {
+                SearchCommand::search(jira_id, search_term)?;
+            }
+        },
+        // Jira 操作命令
+        Some(Commands::Jira { subcommand }) => match subcommand {
+            JiraSubcommand::Info { jira_id } => {
+                InfoCommand::show(jira_id)?;
+            }
+            JiraSubcommand::Attachments { jira_id } => {
+                AttachmentsCommand::download(jira_id)?;
+            }
+            JiraSubcommand::Clean {
+                jira_id,
+                all,
+                dry_run,
+                list,
+            } => {
+                CleanCommand::clean(jira_id, all, dry_run, list)?;
+            }
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
-            log_message!("  workflow check     - Run environment checks (Git status and network)");
-            log_message!("  workflow clean     - Clean log download directory");
-            log_message!("  workflow config    - View current configuration");
-            log_message!("  workflow github    - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log       - Manage log level (set/check)");
-            log_message!("  workflow proxy     - Manage proxy settings (on/off/check)");
-            log_message!("  workflow setup     - Initialize or update configuration");
+            log_message!("  workflow branch     - Manage Git branches (clean/ignore)");
+            log_message!("  workflow check      - Run environment checks (Git status and network)");
+            log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
+            log_message!("  workflow config     - View current configuration");
+            log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
+            log_message!("  workflow log-level  - Manage log level (set/check)");
+            log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
+            log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
-            log_message!("\nInstallation:");
-            log_message!("  Use 'install' command (built separately): install <subcommand>");
-            log_message!("\nUse 'workflow <command> --help' for more information.");
+            log_message!(
+                "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
+            );
+            log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/integrate)");
+            log_message!("  workflow log        - Log operations (download/find/search)");
+            log_message!("  workflow jira       - Jira operations (info/attachments/clean)");
+            log_message!("\nOther CLI tools:");
+            log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
+            log_message!("\nUse '<command> --help' for more information about each command.");
         }
     }
 

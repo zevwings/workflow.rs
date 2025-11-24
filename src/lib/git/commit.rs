@@ -6,16 +6,20 @@
 //! - 提交更改（commit）
 
 use anyhow::{Context, Result};
-use duct::cmd;
 
+use super::helpers::{check_success, cmd_read, cmd_run};
+use super::pre_commit::GitPreCommit;
 use crate::log_info;
 
-/// Git 操作结构体
+/// Git 提交管理
 ///
-/// 提供 Git 仓库的各种操作功能，包括提交、推送、分支管理等。
-pub struct Git;
+/// 提供提交相关的操作功能，包括：
+/// - 检查 Git 状态和工作区更改
+/// - 暂存文件（add）
+/// - 提交更改（commit）
+pub struct GitCommit;
 
-impl Git {
+impl GitCommit {
     /// 检查 Git 状态
     ///
     /// 使用 `--porcelain` 选项获取简洁、稳定的输出格式。
@@ -25,9 +29,7 @@ impl Git {
     ///
     /// 返回 Git 状态的简洁输出字符串。
     pub fn status() -> Result<String> {
-        cmd("git", &["status", "--porcelain"])
-            .read()
-            .context("Failed to run git status")
+        cmd_read(&["status", "--porcelain"]).context("Failed to run git status")
     }
 
     /// 检查工作区是否有未提交的更改
@@ -42,11 +44,8 @@ impl Git {
     #[allow(dead_code)]
     pub fn has_commit() -> Result<bool> {
         // 检查工作区是否有未提交的更改
-        let has_worktree_changes = cmd("git", &["diff", "--quiet"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_err(); // 如果有差异，返回非零退出码（Err）
+        // 如果有差异，返回非零退出码（is_err() 返回 true）
+        let has_worktree_changes = !check_success(&["diff", "--quiet"]);
 
         // 检查暂存区是否有未提交的更改
         let has_staged_changes = Self::has_staged()?;
@@ -66,16 +65,8 @@ impl Git {
     pub(crate) fn has_staged() -> Result<bool> {
         // 使用 git diff --cached --quiet 检查是否有暂存的文件
         // --quiet 选项：如果有差异，返回非零退出码；如果没有差异，返回 0
-        // 所以如果命令成功（返回 0），说明没有暂存的文件；如果失败（返回非零），说明有暂存的文件
-        let result = cmd("git", &["diff", "--cached", "--quiet"])
-            .stdout_null()
-            .stderr_null()
-            .run();
-
-        match result {
-            Ok(_) => Ok(false), // 没有暂存的文件
-            Err(_) => Ok(true), // 有暂存的文件
-        }
+        // 所以如果命令成功（返回 true），说明没有暂存的文件；如果失败（返回 false），说明有暂存的文件
+        Ok(!check_success(&["diff", "--cached", "--quiet"]))
     }
 
     /// 添加所有文件到暂存区
@@ -86,10 +77,7 @@ impl Git {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
-        cmd("git", &["add", "--all"])
-            .run()
-            .context("Failed to add all files")?;
-        Ok(())
+        cmd_run(&["add", "--all"]).context("Failed to add all files")
     }
 
     /// 提交更改
@@ -124,8 +112,8 @@ impl Git {
         Self::add_all().context("Failed to stage changes")?;
 
         // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
-        if !no_verify && Self::has_pre_commit() {
-            Self::run_pre_commit()?;
+        if !no_verify && GitPreCommit::has_pre_commit() {
+            GitPreCommit::run_pre_commit()?;
         }
 
         // 7. 执行提交
@@ -134,8 +122,7 @@ impl Git {
             args.push("--no-verify");
         }
 
-        cmd("git", &args).run().context("Failed to commit")?;
-        Ok(())
+        cmd_run(&args).context("Failed to commit")
     }
 
     /// 获取 Git 修改内容（工作区和暂存区）
@@ -162,14 +149,14 @@ impl Git {
         let mut diff_parts = Vec::new();
 
         // 获取暂存区的修改
-        if let Ok(staged_diff) = cmd("git", &["diff", "--cached"]).read() {
+        if let Ok(staged_diff) = cmd_read(&["diff", "--cached"]) {
             if !staged_diff.trim().is_empty() {
                 diff_parts.push(format!("Staged changes:\n{}", staged_diff));
             }
         }
 
         // 获取工作区的修改
-        if let Ok(worktree_diff) = cmd("git", &["diff"]).read() {
+        if let Ok(worktree_diff) = cmd_read(&["diff"]) {
             if !worktree_diff.trim().is_empty() {
                 diff_parts.push(format!("Working tree changes:\n{}", worktree_diff));
             }

@@ -5,8 +5,8 @@
 //! - 读取 Git 配置
 
 use anyhow::{Context, Result};
-use duct::cmd;
 
+use super::helpers::{cmd_read, cmd_run};
 use crate::{log_info, log_message};
 
 /// Git 配置管理结构体
@@ -27,13 +27,11 @@ impl GitConfig {
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn set_global_user(email: &str, name: &str) -> Result<()> {
         // 设置全局 user.email
-        cmd("git", &["config", "--global", "user.email", email])
-            .run()
+        cmd_run(&["config", "--global", "user.email", email])
             .context("Failed to set git global user.email")?;
 
         // 设置全局 user.name
-        cmd("git", &["config", "--global", "user.name", name])
-            .run()
+        cmd_run(&["config", "--global", "user.name", name])
             .context("Failed to set git global user.name")?;
 
         log_info!("Git global config updated:");
@@ -55,16 +53,12 @@ impl GitConfig {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn get_global_user() -> Result<(Option<String>, Option<String>)> {
-        let email = cmd("git", &["config", "--global", "user.email"])
-            .read()
+        let email = cmd_read(&["config", "--global", "user.email"])
             .ok()
-            .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
-        let name = cmd("git", &["config", "--global", "user.name"])
-            .read()
+        let name = cmd_read(&["config", "--global", "user.name"])
             .ok()
-            .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
         Ok((email, name))
