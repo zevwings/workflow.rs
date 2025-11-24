@@ -235,15 +235,39 @@ impl Paths {
         Self::command_names()
             .iter()
             .map(|name| {
-                // Windows 需要 .exe 扩展名
-                let binary_name = if cfg!(target_os = "windows") {
-                    format!("{}.exe", name)
-                } else {
-                    name.to_string()
-                };
+                let binary_name = Self::binary_name(name);
                 install_path.join(&binary_name).to_string_lossy().to_string()
             })
             .collect()
+    }
+
+    /// 获取平台特定的二进制文件名
+    ///
+    /// 在 Windows 上添加 .exe 扩展名，其他平台保持不变。
+    ///
+    /// # 参数
+    ///
+    /// * `name` - 二进制文件的基础名称（不含扩展名）
+    ///
+    /// # 返回
+    ///
+    /// 返回平台特定的二进制文件名。
+    ///
+    /// # 示例
+    ///
+    /// ```
+    /// use workflow::settings::paths::Paths;
+    ///
+    /// let name = Paths::binary_name("workflow");
+    /// // Windows: "workflow.exe"
+    /// // Unix: "workflow"
+    /// ```
+    pub fn binary_name(name: &str) -> String {
+        if cfg!(target_os = "windows") {
+            format!("{}.exe", name)
+        } else {
+            name.to_string()
+        }
     }
 
     /// 获取 completion 目录的完整路径

@@ -446,12 +446,7 @@ impl UpdateCommand {
     fn install(extract_dir: &Path) -> Result<()> {
         log_info!("Installing binaries and completion scripts...");
 
-        // Windows 需要 .exe 扩展名
-        let install_binary = if cfg!(target_os = "windows") {
-            extract_dir.join("install.exe")
-        } else {
-            extract_dir.join("install")
-        };
+        let install_binary = extract_dir.join(Paths::binary_name("install"));
 
         if !install_binary.exists() {
             anyhow::bail!(
@@ -620,12 +615,7 @@ impl UpdateCommand {
         let mut results = Vec::new();
 
         for binary in &binaries {
-            // Windows 需要 .exe 扩展名
-            let binary_name = if cfg!(target_os = "windows") {
-                format!("{}.exe", binary)
-            } else {
-                binary.to_string()
-            };
+            let binary_name = Paths::binary_name(binary);
             let path = install_path.join(&binary_name);
             let status = Self::verify_single_binary(
                 &path.to_string_lossy(),

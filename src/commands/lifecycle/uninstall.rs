@@ -41,12 +41,7 @@ impl UninstallCommand {
         // 检查 install 二进制
         let install_dir = Paths::binary_install_dir();
         let install_path = std::path::PathBuf::from(&install_dir);
-        // Windows 需要 .exe 扩展名
-        let install_name = if cfg!(target_os = "windows") {
-            "install.exe"
-        } else {
-            "install"
-        };
+        let install_name = Paths::binary_name("install");
         let install_binary = install_path.join(install_name);
         if install_binary.exists() {
             existing_binaries.push(install_binary.to_string_lossy().to_string());
