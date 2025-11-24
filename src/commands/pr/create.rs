@@ -30,8 +30,7 @@ impl PullRequestCreateCommand {
         dry_run: bool,
     ) -> Result<()> {
         // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled()
-            .context("Failed to enable proxy")?;
+        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
 
         // 1. 运行检查
         if !dry_run {

@@ -17,8 +17,7 @@ impl PullRequestMergeCommand {
     /// 合并 PR
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
         // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled()
-            .context("Failed to enable proxy")?;
+        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
 
         // 1. 运行检查
         check::CheckCommand::run_all()?;

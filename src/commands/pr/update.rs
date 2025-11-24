@@ -15,8 +15,7 @@ impl PullRequestUpdateCommand {
     /// 根据仓库类型自动选择对应的平台实现
     pub fn update() -> Result<()> {
         // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled()
-            .context("Failed to enable proxy")?;
+        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
 
         // 获取当前分支的 PR 标题
         let pull_request_title = Self::get_pull_request_title()?;

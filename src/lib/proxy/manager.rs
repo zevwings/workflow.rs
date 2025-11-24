@@ -90,8 +90,8 @@ impl ProxyManager {
     /// 如果读取系统代理设置失败，返回相应的错误信息。
     pub fn ensure_proxy_enabled() -> Result<()> {
         // 1. 获取系统代理设置
-        let proxy_info = SystemProxyReader::read()
-            .context("Failed to read system proxy settings")?;
+        let proxy_info =
+            SystemProxyReader::read().context("Failed to read system proxy settings")?;
 
         // 2. 检查系统代理是否启用
         if !Self::is_system_proxy_enabled(&proxy_info) {
