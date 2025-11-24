@@ -332,9 +332,14 @@ jobs:
           # 安装 ARM64 交叉编译的 XCB 开发库（clipboard 依赖）
           # 需要启用多架构支持并安装 ARM64 版本的库
           sudo dpkg --add-architecture arm64
-          # 更新包列表
-          sudo apt-get update -o Acquire::Check-Valid-Until=false
+          # 更新包列表，允许某些源失败（某些 Ubuntu 源可能不完全支持 ARM64）
+          # 主源 (azure.archive.ubuntu.com) 应该支持 ARM64，即使 security 源失败也可以继续
+          sudo apt-get update -o Acquire::Check-Valid-Until=false 2>&1 || {
+            echo "Warning: Some apt sources failed to update, but continuing..."
+            # 即使某些源失败，也继续尝试安装
+          }
           # 安装 ARM64 版本的 XCB 库及其依赖
+          # 这些包应该可以从主 Ubuntu 源获取
           sudo apt-get install -y --no-install-recommends \
             libxcb1-dev:arm64 \
             libxcb-render0-dev:arm64 \
