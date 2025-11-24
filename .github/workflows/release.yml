@@ -343,7 +343,12 @@ jobs:
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          brew install pkg-config || true
+          # 检查 pkg-config 是否已安装，避免重复安装警告
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
 
       - name: Get Cargo.lock hash
         id: cargo_lock
