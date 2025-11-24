@@ -81,4 +81,3 @@ pub fn detect_release_platform() -> Result<String> {
         _ => anyhow::bail!("Unsupported platform: {}-{}", os, arch),
     }
 }
-

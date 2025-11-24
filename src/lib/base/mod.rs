@@ -21,5 +21,6 @@ pub use prompt::PromptManager;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
 pub use util::{
-    confirm, format_size, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger, Unzip,
+    confirm, format_size, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger,
+    Unzip,
 };

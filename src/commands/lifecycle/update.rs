@@ -2,13 +2,15 @@
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
 use crate::base::http::client::HttpClient;
-use crate::base::http::{response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
+use crate::base::http::{
+    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
+};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
 #[cfg(target_os = "macos")]
 use crate::base::util::remove_quarantine_attribute;
+use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -93,24 +95,22 @@ impl TempDirManager {
         let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
 
         if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir)
-                .context("Failed to remove existing temp directory")?;
+            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
         }
 
-        fs::create_dir_all(&temp_dir)
-            .context("Failed to create temp directory")?;
+        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
 
         let archive_name = format!("workflow-{}-{}.tar.gz", version, platform);
         let archive_path = temp_dir.join(&archive_name);
         let extract_dir = temp_dir.join("extracted");
 
-            Ok(Self {
-                temp_dir,
-                extract_dir,
-                archive_path,
-            })
-        }
+        Ok(Self {
+            temp_dir,
+            extract_dir,
+            archive_path,
+        })
     }
+}
 
 /// 更新命令
 #[allow(dead_code)]
@@ -120,52 +120,13 @@ pub struct UpdateCommand;
 impl UpdateCommand {
     // ==================== 版本管理 ====================
 
-    /// 解析版本号字符串
-    ///
-    /// 从命令输出中解析版本号，支持格式如 "workflow 1.1.2" 或 "1.1.2"。
-    fn parse_version_string(version_str: &str) -> Option<String> {
-        version_str
-            .split_whitespace()
-            .last()
-            .and_then(|s| s.strip_prefix('v'))
-            .or_else(|| version_str.split_whitespace().last())
-            .map(|s| s.to_string())
-    }
-
     /// 获取当前安装的版本号
     ///
-    /// 尝试多种方法获取当前版本：
-    /// 1. 从编译时嵌入的版本号（使用 env! 宏，应该总是可用）
-    /// 2. 运行当前二进制文件的 --version 命令获取版本（备选）
-    /// 3. 尝试使用 "workflow" 命令名（最后的备选）
+    /// 从编译时嵌入的版本号获取（使用 env! 宏）。
+    /// 注意：env!("CARGO_PKG_VERSION") 在编译时总是有值，所以总是可用。
     fn get_current_version() -> Result<Option<String>> {
-        // 方法 1: 编译时版本号（应该总是可用）
         const VERSION: &str = env!("CARGO_PKG_VERSION");
-        if !VERSION.is_empty() {
-            return Ok(Some(VERSION.to_string()));
-        }
-
-        // 方法 2: 执行 --version 命令（备选）
-        if let Ok(current_exe) = env::current_exe() {
-            if let Ok(output) = Command::new(&current_exe).arg("--version").output() {
-                if output.status.success() {
-                    if let Some(version) = Self::parse_version_string(&String::from_utf8_lossy(&output.stdout)) {
-                        return Ok(Some(version));
-                    }
-                }
-            }
-        }
-
-        // 方法 3: 尝试使用 "workflow" 命令名（最后的备选）
-        if let Ok(output) = Command::new("workflow").arg("--version").output() {
-            if output.status.success() {
-                if let Some(version) = Self::parse_version_string(&String::from_utf8_lossy(&output.stdout)) {
-                    return Ok(Some(version));
-                }
-            }
-        }
-
-        Ok(None)
+        Ok(Some(VERSION.to_string()))
     }
 
     /// 比较两个版本号
@@ -213,7 +174,7 @@ impl UpdateCommand {
     fn handle_github_api_error(response: &HttpResponse) -> Result<()> {
         let status = response.status;
 
-        if status >= 200 && status < 300 {
+        if (200..300).contains(&status) {
             return Ok(());
         }
 
@@ -241,10 +202,9 @@ impl UpdateCommand {
                     Run 'workflow setup' to configure your GitHub token.".to_string()
                 }
             }
-            404 => {
-                "Failed to fetch latest version: HTTP 404 (Not Found)\n\
-                The repository or release may not exist, or you may not have access to it.".to_string()
-            }
+            404 => "Failed to fetch latest version: HTTP 404 (Not Found)\n\
+                The repository or release may not exist, or you may not have access to it."
+                .to_string(),
             429 => {
                 let reset_time = Self::get_rate_limit_reset_time(&response.headers);
                 format!(
@@ -575,7 +535,6 @@ impl UpdateCommand {
         }
     }
 
-
     // --- 高级验证方法 ---
 
     /// 验证单个二进制文件
@@ -712,7 +671,10 @@ impl UpdateCommand {
                 log_warning!("Binary file is not executable: {}", binary.path);
                 all_binaries_ok = false;
             } else {
-                log_success!("  {} verification passed (file exists and is executable)", binary.name);
+                log_success!(
+                    "  {} verification passed (file exists and is executable)",
+                    binary.name
+                );
             }
         }
 
@@ -747,7 +709,10 @@ impl UpdateCommand {
     // ==================== 临时目录管理 ====================
 
     /// 清理更新过程中的临时资源
-    fn cleanup_update_resources(temp_dir: &Path, backup_info: Option<&crate::rollback::BackupInfo>) {
+    fn cleanup_update_resources(
+        temp_dir: &Path,
+        backup_info: Option<&crate::rollback::BackupInfo>,
+    ) {
         // 清理临时文件
         if let Err(e) = fs::remove_dir_all(temp_dir) {
             log_warning!("Failed to clean up temporary files: {}", e);
@@ -905,7 +870,9 @@ impl UpdateCommand {
                         log_warning!("  Proceeding with update without verification...");
 
                         // 仍然计算并显示文件的 SHA256，供用户参考
-                        if let Ok(actual_hash) = Checksum::calculate_file_sha256(&temp_manager.archive_path) {
+                        if let Ok(actual_hash) =
+                            Checksum::calculate_file_sha256(&temp_manager.archive_path)
+                        {
                             log_info!("Downloaded file SHA256: {}", actual_hash);
                         }
                     } else {

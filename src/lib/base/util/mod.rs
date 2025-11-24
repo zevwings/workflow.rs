@@ -64,6 +64,4 @@ pub use checksum::Checksum;
 
 // 重新导出 macOS 工具（仅在 macOS 上）
 #[cfg(target_os = "macos")]
-pub use macos::{
-    remove_quarantine_attribute, remove_quarantine_attribute_with_sudo,
-};
+pub use macos::{remove_quarantine_attribute, remove_quarantine_attribute_with_sudo};

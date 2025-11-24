@@ -140,4 +140,3 @@ pub fn remove_quarantine_attribute_with_sudo(file_path: &Path) -> Result<()> {
 
     Ok(())
 }
-
