@@ -3,6 +3,7 @@
 
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
+use reqwest::header::HeaderMap;
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
 use crate::base::util::{confirm, Checksum, Unzip};
@@ -219,9 +220,19 @@ impl UpdateCommand {
 
                 let response = HttpRetry::retry(
                     || {
+                        // GitHub API 要求必须包含 User-Agent 头
+                        let mut headers = HeaderMap::new();
+                        headers.insert(
+                            "User-Agent",
+                            "workflow-cli"
+                                .parse()
+                                .context("Failed to parse User-Agent header")?,
+                        );
+
                         let client = HttpClient::global()?;
+                        let config = RequestConfig::<Value, Value>::new().headers(&headers);
                         client
-                            .get(url, RequestConfig::<Value, Value>::new())
+                            .get(url, config)
                             .context("Failed to fetch latest release from GitHub")
                     },
                     &retry_config,
@@ -826,23 +837,45 @@ impl UpdateCommand {
             let http_client = HttpClient::global()?;
             let retry_config = HttpRetryConfig::new();
 
-            let checksum_content = HttpRetry::retry(
+            // 尝试下载校验和文件，如果不存在（404）则跳过验证
+            match HttpRetry::retry(
                 || {
                     let config = RequestConfig::<Value, Value>::new();
                     let response = http_client.get(&checksum_url, config)?;
+                    if response.status == 404 {
+                        anyhow::bail!("Checksum file not found (404)");
+                    }
                     response.as_text()
                 },
                 &retry_config,
                 "Downloading checksum file",
-            )
-            .context("Failed to download checksum file")?;
+            ) {
+                Ok(checksum_content) => {
+                    // 解析哈希值（使用 checksum 模块）
+                    let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
+                        .context("Failed to parse checksum file")?;
 
-            // 解析哈希值（使用 checksum 模块）
-            let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
-                .context("Failed to parse checksum file")?;
+                    // 验证文件（使用 checksum 模块）
+                    Checksum::verify(&tar_gz_path, &expected_hash)?;
+                }
+                Err(e) => {
+                    // 如果是 404 错误，跳过验证但给出警告
+                    if e.to_string().contains("404") || e.to_string().contains("not found") {
+                        log_warning!("Checksum file not found, skipping integrity verification");
+                        log_warning!("  Checksum URL: {}", checksum_url);
+                        log_warning!("  This may indicate the release does not include checksum files");
+                        log_warning!("  Proceeding with update without verification...");
 
-            // 验证文件（使用 checksum 模块）
-            Checksum::verify(&tar_gz_path, &expected_hash)?;
+                        // 仍然计算并显示文件的 SHA256，供用户参考
+                        if let Ok(actual_hash) = Checksum::calculate_file_sha256(&tar_gz_path) {
+                            log_info!("Downloaded file SHA256: {}", actual_hash);
+                        }
+                    } else {
+                        // 其他错误，仍然返回错误
+                        return Err(e.context("Failed to download checksum file"));
+                    }
+                }
+            }
             log_break!();
 
             // 第八步：解压文件
