@@ -304,9 +304,9 @@ impl Completion {
     /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github` 等）
     pub fn get_completion_files(shell: &Shell) -> Vec<PathBuf> {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
-        let commands = ["workflow"];
+        let commands = Paths::command_names();
         let shell_type_str = shell.to_string();
-        super::helpers::get_completion_files_for_shell(&shell_type_str, &commands)
+        super::helpers::get_completion_files_for_shell(&shell_type_str, commands)
             .unwrap_or_default()
             .iter()
             .map(|name| completion_dir.join(name))
@@ -320,8 +320,8 @@ impl Completion {
     pub fn remove_completion_files(_shell: &Shell) -> Result<usize> {
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
-        let commands = ["workflow"];
-        let all_file_names = super::helpers::get_all_completion_files(&commands);
+        let commands = Paths::command_names();
+        let all_file_names = super::helpers::get_all_completion_files(commands);
         let all_files: Vec<PathBuf> = all_file_names
             .iter()
             .map(|name| completion_dir.join(name))
