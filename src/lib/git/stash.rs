@@ -1,11 +1,17 @@
 use anyhow::{Context, Result};
-use duct::cmd;
 
+use super::helpers::{cmd_read, cmd_run};
 use crate::{log_success, log_warning};
 
-use super::commit::Git;
+/// Git Stash 管理
+///
+/// 提供 stash 相关的操作功能，包括：
+/// - 保存未提交的修改到 stash
+/// - 恢复 stash 中的修改
+/// - 检查是否有未合并的文件（冲突）
+pub struct GitStash;
 
-impl Git {
+impl GitStash {
     /// 保存未提交的修改到 stash
     ///
     /// 使用 `git stash push` 将当前工作区和暂存区的未提交修改保存到 stash。
@@ -24,8 +30,7 @@ impl Git {
             args.push("-m");
             args.push(msg);
         }
-        cmd("git", &args).run().context("Failed to stash changes")?;
-        Ok(())
+        cmd_run(&args).context("Failed to stash changes")
     }
 
     /// 恢复 stash 中的修改
@@ -52,7 +57,7 @@ impl Git {
     /// 当遇到其他错误时，会输出警告信息提示用户手动恢复。
     pub fn stash_pop() -> Result<()> {
         // 尝试执行 git stash pop
-        let result = cmd("git", &["stash", "pop"]).run();
+        let result = cmd_run(&["stash", "pop"]);
 
         match result {
             Ok(_) => {
@@ -88,9 +93,7 @@ impl Git {
     pub fn has_unmerged() -> Result<bool> {
         // 使用 git ls-files -u 检查是否有未合并的路径
         // -u 选项：显示未合并的文件
-        let output = cmd("git", &["ls-files", "-u"])
-            .read()
-            .context("Failed to check unmerged files")?;
+        let output = cmd_read(&["ls-files", "-u"]).context("Failed to check unmerged files")?;
 
         Ok(!output.trim().is_empty())
     }

@@ -6,12 +6,21 @@
 //! - 获取远程仓库 URL
 
 use anyhow::{Context, Result};
-use duct::cmd;
+use regex::Regex;
 
-use super::commit::Git;
+use super::helpers::{check_success, cmd_read, cmd_run};
 use super::types::RepoType;
 
-impl Git {
+/// Git 仓库管理
+///
+/// 提供仓库相关的操作功能，包括：
+/// - 检测当前目录是否为 Git 仓库
+/// - 检测远程仓库类型（GitHub、Codeup 等）
+/// - 获取远程仓库 URL
+/// - 从远程获取更新
+pub struct GitRepo;
+
+impl GitRepo {
     /// 检查是否在 Git 仓库中
     ///
     /// 使用 `git rev-parse --git-dir` 检查当前目录是否为 Git 仓库。
@@ -20,11 +29,7 @@ impl Git {
     ///
     /// 返回 `true` 如果当前目录是 Git 仓库，否则返回 `false`。
     pub fn is_git_repo() -> bool {
-        cmd("git", &["rev-parse", "--git-dir", "--quiet"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok()
+        check_success(&["rev-parse", "--git-dir", "--quiet"])
     }
 
     /// 检测远程仓库类型（GitHub 或 Codeup）
@@ -85,11 +90,7 @@ impl Git {
     /// 如果无法获取远程 URL，返回相应的错误信息。
     #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
-        let output = cmd("git", &["remote", "get-url", "origin"])
-            .read()
-            .context("Failed to get remote URL")?;
-
-        Ok(output.trim().to_string())
+        cmd_read(&["remote", "get-url", "origin"]).context("Failed to get remote URL")
     }
 
     /// 获取 Git 目录路径
@@ -104,11 +105,7 @@ impl Git {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        let output = cmd("git", &["rev-parse", "--git-dir"])
-            .read()
-            .context("Failed to get git directory")?;
-
-        Ok(output.trim().to_string())
+        cmd_read(&["rev-parse", "--git-dir"]).context("Failed to get git directory")
     }
 
     /// 从远程仓库获取更新
@@ -119,10 +116,7 @@ impl Git {
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        cmd("git", &["fetch", "origin"])
-            .run()
-            .context("Failed to fetch from origin")?;
-        Ok(())
+        cmd_run(&["fetch", "origin"]).context("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用
@@ -133,9 +127,76 @@ impl Git {
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        cmd("git", &["remote", "prune", "origin"])
-            .run()
-            .context("Failed to prune remote references")?;
-        Ok(())
+        cmd_run(&["remote", "prune", "origin"]).context("Failed to prune remote references")
+    }
+
+    /// 从 Git remote URL 提取仓库名（owner/repo 格式）
+    ///
+    /// 支持 GitHub 和 Codeup 两种平台：
+    /// - GitHub: git@github.com:owner/repo.git → owner/repo
+    /// - Codeup: git@codeup.aliyun.com:owner/repo.git → owner/repo
+    ///
+    /// # 返回
+    ///
+    /// 返回 `owner/repo` 格式的仓库名。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
+    pub fn extract_repo_name() -> Result<String> {
+        let url = Self::get_remote_url()?;
+        Self::extract_repo_name_from_url(&url)
+    }
+
+    /// 从 URL 字符串提取仓库名
+    ///
+    /// 支持多种 URL 格式：
+    /// - SSH: git@github.com:owner/repo.git
+    /// - SSH (别名): git@github-brainim:owner/repo.git
+    /// - HTTPS: https://github.com/owner/repo.git
+    /// - Codeup SSH: git@codeup.aliyun.com:owner/repo.git
+    /// - Codeup HTTPS: https://codeup.aliyun.com/owner/repo.git
+    ///
+    /// # 参数
+    ///
+    /// * `url` - 远程仓库 URL
+    ///
+    /// # 返回
+    ///
+    /// 返回 `owner/repo` 格式的仓库名。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
+    pub fn extract_repo_name_from_url(url: &str) -> Result<String> {
+        // GitHub SSH 格式: git@github.com:owner/repo.git 或 git@github-xxx:owner/repo.git
+        let github_ssh_re =
+            Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
+        if let Some(caps) = github_ssh_re.captures(url) {
+            return Ok(caps.get(1).unwrap().as_str().to_string());
+        }
+
+        // GitHub HTTPS 格式: https://github.com/owner/repo.git
+        let github_https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
+            .context("Invalid regex pattern")?;
+        if let Some(caps) = github_https_re.captures(url) {
+            return Ok(caps.get(1).unwrap().as_str().to_string());
+        }
+
+        // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
+        let codeup_ssh_re = Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
+            .context("Invalid regex pattern")?;
+        if let Some(caps) = codeup_ssh_re.captures(url) {
+            return Ok(caps.get(1).unwrap().as_str().to_string());
+        }
+
+        // Codeup HTTPS 格式: https://codeup.aliyun.com/owner/repo.git
+        let codeup_https_re = Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
+            .context("Invalid regex pattern")?;
+        if let Some(caps) = codeup_https_re.captures(url) {
+            return Ok(caps.get(1).unwrap().as_str().to_string());
+        }
+
+        anyhow::bail!("Failed to extract repo name from URL: {}", url)
     }
 }

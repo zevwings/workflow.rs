@@ -1,11 +1,18 @@
+use crate::base::settings::settings::Settings;
+use crate::base::util::{confirm, Browser, Clipboard};
 use crate::commands::check;
+use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
+use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
-use crate::{
-    confirm, detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
-    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, log_info,
-    log_success, log_warning, validate_jira_ticket_format, Browser, Clipboard, Codeup, Git, GitHub,
-    Jira, PlatformProvider, PullRequestLLM, RepoType, Settings, TYPES_OF_CHANGES,
+use crate::jira::{Jira, JiraWorkHistory};
+use crate::pr::create_provider;
+use crate::pr::helpers::{
+    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
+    generate_pull_request_body, get_current_branch_pr_id,
 };
+use crate::pr::llm::PullRequestLLM;
+use crate::pr::TYPES_OF_CHANGES;
+use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 use dialoguer::{Input, MultiSelect};
 
@@ -24,7 +31,7 @@ impl PullRequestCreateCommand {
     ) -> Result<()> {
         // 1. 运行检查
         if !dry_run {
-            check::run_all()?;
+            check::CheckCommand::run_all()?;
         }
 
         // 2. 获取或输入 Jira ticket
@@ -240,8 +247,8 @@ impl PullRequestCreateCommand {
         jira_ticket: &Option<String>,
         title: &str,
     ) -> Result<(String, String, Option<String>)> {
-        let exists_branches = Git::get_all_branches(true).ok();
-        let git_diff = Git::get_diff();
+        let exists_branches = GitBranch::get_all_branches(true).ok();
+        let git_diff = GitCommit::get_diff();
 
         // 尝试使用 LLM 根据纯 title 生成分支名、PR 标题和描述
         let (pr_title, branch_name, description) =
@@ -259,7 +266,12 @@ impl PullRequestCreateCommand {
                     let description = content.description;
                     (pr_title, branch_name, description)
                 }
-                Err(_) => {
+                Err(e) => {
+                    // 记录错误信息，但继续使用回退方法
+                    log_warning!(
+                    "Failed to generate branch name using LLM: {}, falling back to default method",
+                    e
+                );
                     // 回退到原来的方法（已包含前缀逻辑）
                     let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
                     (title.to_string(), branch_name, None)
@@ -329,13 +341,13 @@ impl PullRequestCreateCommand {
 
         // 直接创建新分支（Git 会自动把未提交的修改带到新分支）
         log_success!("Creating branch: {}", branch_name);
-        Git::checkout_branch(branch_name)?;
+        GitBranch::checkout_branch(branch_name)?;
 
         // 提交并推送
         log_success!("Committing changes...");
-        Git::commit(commit_title, true)?; // no-verify
+        GitCommit::commit(commit_title, true)?; // no-verify
         log_success!("Pushing to remote...");
-        Git::push(branch_name, true)?; // set-upstream
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -360,21 +372,21 @@ impl PullRequestCreateCommand {
         );
 
         // 检查是否已推送
-        let exists_remote = Git::has_remote_branch(current_branch)
+        let exists_remote = GitBranch::has_remote_branch(current_branch)
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
         log_success!("Committing changes...");
-        Git::commit(commit_title, true)?; // no-verify
+        GitCommit::commit(commit_title, true)?; // no-verify
 
         // 推送（如需要）
         if !exists_remote {
             log_success!("Pushing to remote...");
-            Git::push(current_branch, true)?; // set-upstream
+            GitBranch::push(current_branch, true)?; // set-upstream
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
             log_success!("Pushing latest changes...");
-            Git::push(current_branch, false)?; // 不使用 -u，因为已经设置过
+            GitBranch::push(current_branch, false)?; // 不使用 -u，因为已经设置过
         }
 
         Ok((current_branch.to_string(), default_branch.to_string()))
@@ -408,19 +420,19 @@ impl PullRequestCreateCommand {
 
         // 使用 stash 暂存修改
         log_success!("Stashing uncommitted changes...");
-        Git::stash_push(Some(&format!("WIP: {}", commit_title)))?;
+        GitStash::stash_push(Some(&format!("WIP: {}", commit_title)))?;
 
         // 切换到默认分支
         log_info!("Switching to default branch '{}'...", default_branch);
-        Git::checkout_branch(default_branch)?;
+        GitBranch::checkout_branch(default_branch)?;
 
         // 拉取最新的代码
         log_success!("Pulling latest changes from '{}'...", default_branch);
-        Git::pull(default_branch)?;
+        GitBranch::pull(default_branch)?;
 
         // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
         let (exists_local, exists_remote) =
-            Git::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
+            GitBranch::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
 
         if exists_local || exists_remote {
             anyhow::bail!(
@@ -431,17 +443,17 @@ impl PullRequestCreateCommand {
 
         // 创建新分支
         log_success!("Creating branch: {}", branch_name);
-        Git::checkout_branch(branch_name)?;
+        GitBranch::checkout_branch(branch_name)?;
 
         // 恢复 stash
         log_info!("Restoring stashed changes...");
-        let _ = Git::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
+        let _ = GitStash::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
 
         // 提交并推送
         log_success!("Committing changes...");
-        Git::commit(commit_title, true)?; // no-verify
+        GitCommit::commit(commit_title, true)?; // no-verify
         log_success!("Pushing to remote...");
-        Git::push(branch_name, true)?; // set-upstream
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -496,7 +508,7 @@ impl PullRequestCreateCommand {
 
         // 推送
         log_success!("Pushing to remote...");
-        Git::push(current_branch, true)?; // set-upstream
+        GitBranch::push(current_branch, true)?; // set-upstream
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -518,11 +530,12 @@ impl PullRequestCreateCommand {
     /// 返回实际使用的分支名和默认分支名。
     fn create_or_update_branch(branch_name: &str, commit_title: &str) -> Result<(String, String)> {
         // 1. 检查是否有未提交的修改
-        let has_uncommitted = Git::has_commit().context("Failed to check uncommitted changes")?;
+        let has_uncommitted =
+            GitCommit::has_commit().context("Failed to check uncommitted changes")?;
 
         // 2. 获取当前分支和默认分支
-        let current_branch = Git::current_branch()?;
-        let default_branch = Git::get_default_branch()?;
+        let current_branch = GitBranch::current_branch()?;
+        let default_branch = GitBranch::get_default_branch()?;
         let is_default_branch = current_branch == default_branch;
 
         // 3. 判断当前是否是默认分支
@@ -573,11 +586,11 @@ impl PullRequestCreateCommand {
                 }
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
-                let exists_remote = Git::has_remote_branch(&current_branch)
+                let exists_remote = GitBranch::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 检查当前分支是否有提交（相对于默认分支）
-                let has_commits = Git::is_branch_ahead(&current_branch, &default_branch)
+                let has_commits = GitBranch::is_branch_ahead(&current_branch, &default_branch)
                     .context("Failed to check if current branch has commits")?;
 
                 if !has_commits {
@@ -615,22 +628,12 @@ impl PullRequestCreateCommand {
 
         if let Some(pr_id) = existing_pr {
             log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
-            detect_repo_type(
-                |repo_type| match repo_type {
-                    RepoType::GitHub => GitHub::get_pull_request_url(&pr_id),
-                    RepoType::Codeup => Codeup::get_pull_request_url(&pr_id),
-                    RepoType::Unknown => {
-                        anyhow::bail!(
-                            "Unknown repository type. Only GitHub and Codeup are supported."
-                        );
-                    }
-                },
-                "get pull request URL",
-            )
+            let provider = create_provider()?;
+            provider.get_pull_request_url(&pr_id)
         } else {
             // 分支无 PR，创建新 PR
             // 先检查分支是否有提交（相对于默认分支）
-            let has_commits = Git::is_branch_ahead(branch_name, default_branch)
+            let has_commits = GitBranch::is_branch_ahead(branch_name, default_branch)
                 .context("Failed to check branch commits")?;
 
             if !has_commits {
@@ -647,24 +650,10 @@ impl PullRequestCreateCommand {
                 );
             }
 
-            let pull_request_url = detect_repo_type(
-                |repo_type| match repo_type {
-                    RepoType::GitHub => {
-                        log_success!("Creating PR via GitHub...");
-                        GitHub::create_pull_request(pr_title, pull_request_body, branch_name, None)
-                    }
-                    RepoType::Codeup => {
-                        log_success!("Creating PR via Codeup...");
-                        Codeup::create_pull_request(pr_title, pull_request_body, branch_name, None)
-                    }
-                    RepoType::Unknown => {
-                        anyhow::bail!(
-                            "Unknown repository type. Only GitHub and Codeup are supported."
-                        );
-                    }
-                },
-                "create pull request",
-            )?;
+            let provider = create_provider()?;
+            log_success!("Creating PR...");
+            let pull_request_url =
+                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
@@ -676,13 +665,13 @@ impl PullRequestCreateCommand {
     /// 步骤 11：如果有 Jira ticket 和状态配置，更新 ticket：
     /// - 分配任务
     /// - 更新状态
-    /// - 添加评论（PR URL 和描述）
+    /// - 添加评论（PR URL）
     /// - 写入历史记录
     fn update_jira_ticket(
         jira_ticket: &Option<String>,
         created_pull_request_status: &Option<String>,
         pull_request_url: &str,
-        description: &str,
+        _description: &str,
         branch_name: &str,
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
@@ -694,15 +683,11 @@ impl PullRequestCreateCommand {
                 Jira::move_ticket(ticket, status)?;
                 // 添加评论（PR URL）
                 Jira::add_comment(ticket, pull_request_url)?;
-                // 添加描述（如果有）
-                if !description.trim().is_empty() {
-                    Jira::add_comment(ticket, description)?;
-                }
 
                 // 写入历史记录
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;
-                let repository = Git::get_remote_url().ok();
-                JiraStatus::write_work_history(
+                let repository = GitRepo::get_remote_url().ok();
+                JiraWorkHistory::write_work_history(
                     ticket,
                     &pull_request_id,
                     Some(pull_request_url),

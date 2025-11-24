@@ -331,7 +331,7 @@ jobs:
 
       - name: Build release binaries
         run: |
-          cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk
+          cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk --bin install
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
 
@@ -341,13 +341,14 @@ jobs:
           cp target/${{ matrix.target }}/release/workflow package/
           cp target/${{ matrix.target }}/release/pr package/
           cp target/${{ matrix.target }}/release/qk package/
+          cp target/${{ matrix.target }}/release/install package/
 
       - name: Create archive
         shell: bash
         run: |
           cd package
           ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
-          tar czf "../$ARCHIVE_NAME" workflow pr qk
+          tar czf "../$ARCHIVE_NAME" workflow pr qk install
           cd ..
           ls -lh "$ARCHIVE_NAME"
 
@@ -483,7 +484,9 @@ jobs:
             # For Apple Silicon Mac
             # curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz
             tar xzf workflow-${{ steps.version.outputs.version }}-*.tar.gz
-            sudo mv workflow pr qk /usr/local/bin/
+
+            # Install binaries and completions
+            ./install
             ```
 
             ### Homebrew
