@@ -13,7 +13,7 @@ use commands::check::check;
 use commands::config::{completion, log, setup, show};
 use commands::github::github;
 use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
-use commands::lifecycle::{uninstall, update};
+use commands::lifecycle::{uninstall, update, version};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{close, create, integrate, list, merge, status, update as pr_update};
 use commands::proxy::proxy;
@@ -63,6 +63,10 @@ enum Commands {
     ///
     /// Remove all related files: binaries, completion scripts, configuration files, etc.
     Uninstall,
+    /// Show Workflow CLI version
+    ///
+    /// Display the current installed version of Workflow CLI.
+    Version,
     /// Update Workflow CLI
     ///
     /// Rebuild release version and update all binaries and shell completion scripts.
@@ -470,6 +474,10 @@ fn main() -> Result<()> {
         Some(Commands::Uninstall) => {
             uninstall::UninstallCommand::run()?;
         }
+        // 版本信息
+        Some(Commands::Version) => {
+            version::VersionCommand::show()?;
+        }
         // 更新
         Some(Commands::Update { version }) => {
             update::UpdateCommand::update(version)?;
@@ -604,6 +612,7 @@ fn main() -> Result<()> {
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");
+            log_message!("  workflow version    - Show Workflow CLI version");
             log_message!(
                 "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
             );

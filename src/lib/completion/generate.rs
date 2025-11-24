@@ -129,6 +129,7 @@ impl CompletionGenerator {
             .subcommand(Command::new("setup").about("Initialize or update configuration"))
             .subcommand(Command::new("config").about("View current configuration"))
             .subcommand(Command::new("uninstall").about("Uninstall Workflow CLI configuration"))
+            .subcommand(Command::new("version").about("Show Workflow CLI version"))
             .subcommand(
                 Command::new("update").about("Update Workflow CLI").arg(
                     clap::Arg::new("version")
