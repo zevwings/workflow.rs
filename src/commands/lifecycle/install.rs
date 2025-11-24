@@ -80,8 +80,7 @@ impl InstallCommand {
         fs::create_dir_all(&install_path).context("Failed to create install directory")?;
 
         // 获取当前可执行文件所在目录
-        let current_exe =
-            env::current_exe().context("Failed to get current executable path")?;
+        let current_exe = env::current_exe().context("Failed to get current executable path")?;
         let current_dir = current_exe
             .parent()
             .context("Failed to get parent directory of executable")?;
