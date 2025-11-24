@@ -288,6 +288,12 @@ impl CompletionGenerator {
                             .about("Clean log directory")
                             .arg(clap::Arg::new("JIRA_ID").value_name("JIRA_ID"))
                             .arg(
+                                clap::Arg::new("all")
+                                    .long("all")
+                                    .short('a')
+                                    .action(clap::ArgAction::SetTrue),
+                            )
+                            .arg(
                                 clap::Arg::new("dry-run")
                                     .long("dry-run")
                                     .short('n')

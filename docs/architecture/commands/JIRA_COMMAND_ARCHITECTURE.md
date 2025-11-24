@@ -222,22 +222,30 @@ src/main.rs::JiraSubcommand::Clean
   ↓
 commands/jira/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
   ↓
-  1. 根据参数显示不同的提示信息
-  2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 调用 JiraLogs::clean_dir(jira_id, dry_run, list_only)
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 根据参数显示不同的提示信息
+  3. 创建 JiraLogs 实例：JiraLogs::new()
+  4. 调用 JiraLogs::clean_dir(jira_id, dry_run, list_only)
      └─ 内部处理：计算目录信息、列出内容、预览或删除
-  4. 输出操作结果
+  5. 输出操作结果
 ```
 
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可为空字符串，表示清理整个基础目录）
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入；如果为空字符串，会报错）
+   - `all` - 如果为 true，清理整个基础目录（忽略 jira_id）
    - `dry_run` - 预览模式，不实际删除
    - `list_only` - 只列出目录内容
 
 2. **用户交互**：
+   - 如果未提供 `jira_id` 且未指定 `--all`，使用 `dialoguer::Input` 交互式输入
+     - 提示："Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)"
+     - 如果用户直接按 Enter（留空），清理整个基础目录
+   - 如果提供了空字符串作为 `jira_id` 参数，会报错（应使用 `--all` 或省略参数）
+   - 如果指定了 `--all`，直接清理整个基础目录（忽略 jira_id）
    - 根据参数显示不同的提示信息
+   - 在删除前会显示目录信息和确认对话框
    - 显示操作结果
 
 3. **核心功能**：
@@ -455,21 +463,31 @@ workflow jira attachments
 ### Clean 命令
 
 ```bash
-# 清理整个本地数据基础目录
+# 交互式输入 JIRA ID（直接按 Enter 则清理全部）
 workflow jira clean
+# 提示: Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)
+# 直接按 Enter 即可清理全部
 
 # 清理指定 JIRA ID 的本地数据目录
 workflow jira clean PROJ-123
 
-# 预览清理操作（dry-run）
-workflow jira clean --dry-run
+# 清理整个本地数据基础目录（使用 --all 标志）
+workflow jira clean --all
 # 或使用短选项
-workflow jira clean -n
+workflow jira clean -a
+
+# 注意：空字符串作为参数会报错
+# workflow jira clean ""  # ❌ 会报错，应使用 --all 或省略参数
+
+# 预览清理操作（dry-run）
+workflow jira clean --dry-run PROJ-123
+# 或使用短选项
+workflow jira clean -n PROJ-123
 
 # 列出目录内容
-workflow jira clean --list
+workflow jira clean --list PROJ-123
 # 或使用短选项
-workflow jira clean -l
+workflow jira clean -l PROJ-123
 ```
 
 ---

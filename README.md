@@ -288,10 +288,11 @@ workflow jira info [PROJ-123]                 # 显示 Jira ticket 信息（JIRA
 workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）
 
 # 清理日志目录
-workflow jira clean                            # 清理整个日志基础目录（需要确认）
+workflow jira clean                            # 交互式输入 JIRA ID（直接按 Enter 则清理全部），清理指定 ticket
 workflow jira clean PROJ-123                  # 清理指定 JIRA ID 的日志目录（需要确认）
-workflow jira clean --dry-run                 # 预览清理操作，不实际删除
-workflow jira clean --list                    # 只列出将要删除的内容
+workflow jira clean --all                     # 清理整个日志基础目录（需要确认）
+workflow jira clean --dry-run PROJ-123        # 预览清理操作，不实际删除
+workflow jira clean --list PROJ-123           # 只列出将要删除的内容
 ```
 
 > **注意**：日志操作命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。

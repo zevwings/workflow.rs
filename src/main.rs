@@ -407,11 +407,15 @@ enum JiraSubcommand {
     },
     /// Clean log directory
     ///
-    /// Clean log directory for specified JIRA ID, or clean entire base directory if no JIRA ID provided.
+    /// Clean log directory for specified JIRA ID, or clean entire base directory if --all is specified.
     Clean {
-        /// Jira ticket ID (optional, if not provided, clean entire base directory)
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
         jira_id: Option<String>,
+
+        /// Clean entire base directory (all tickets)
+        #[arg(long, short = 'a')]
+        all: bool,
 
         /// Preview operation without actually deleting
         #[arg(long, short = 'n')]
@@ -580,11 +584,11 @@ fn main() -> Result<()> {
             }
             JiraSubcommand::Clean {
                 jira_id,
+                all,
                 dry_run,
                 list,
             } => {
-                let jira_id = jira_id.as_deref().unwrap_or("");
-                CleanCommand::clean(jira_id, dry_run, list)?;
+                CleanCommand::clean(jira_id, all, dry_run, list)?;
             }
         },
         // 无命令时显示帮助信息

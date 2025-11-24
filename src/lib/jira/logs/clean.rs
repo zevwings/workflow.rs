@@ -33,7 +33,7 @@ impl JiraLogs {
         let (size, file_count) = helpers::calculate_dir_info(&dir)?;
 
         if list_only {
-            self.display_dir_info(&dir_name, &dir, size, file_count)?;
+            self.display_dir_info(&dir_name, &dir, size, file_count, jira_id.is_empty())?;
             return Ok(false);
         }
 
@@ -44,7 +44,7 @@ impl JiraLogs {
             return Ok(false);
         }
 
-        self.display_dir_info(&dir_name, &dir, size, file_count)?;
+        self.display_dir_info(&dir_name, &dir, size, file_count, jira_id.is_empty())?;
 
         if !confirm(
             &format!(
@@ -74,6 +74,7 @@ impl JiraLogs {
         dir: &Path,
         size: u64,
         file_count: usize,
+        is_base_dir: bool,
     ) -> Result<()> {
         // 根据 dir_name 判断显示格式
         if dir_name.starts_with("the directory for") {
@@ -90,22 +91,88 @@ impl JiraLogs {
         log_info!("Total files: {}", file_count);
         log_break!();
         log_info!("Contents:");
-        let contents = helpers::list_dir_contents(dir)?;
-        for path in contents {
-            if path.is_file() {
-                if let Ok(metadata) = std::fs::metadata(&path) {
-                    log_info!(
-                        "  📄 {} ({})",
-                        path.display(),
-                        helpers::format_size(metadata.len())
-                    );
-                } else {
-                    log_info!("  📄 {}", path.display());
+
+        if is_base_dir {
+            // 按 ticket 分区显示
+            self.display_base_dir_by_tickets(dir)?;
+        } else {
+            // 单个 ticket 目录，直接列出内容
+            let contents = helpers::list_dir_contents(dir)?;
+            for path in contents {
+                if path.is_file() {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        log_info!(
+                            "  📄 {} ({})",
+                            path.display(),
+                            helpers::format_size(metadata.len())
+                        );
+                    } else {
+                        log_info!("  📄 {}", path.display());
+                    }
+                } else if path.is_dir() {
+                    log_info!("  📁 {}", path.display());
                 }
-            } else if path.is_dir() {
-                log_info!("  📁 {}", path.display());
             }
         }
+        Ok(())
+    }
+
+    /// 按 ticket 分区显示基础目录内容
+    fn display_base_dir_by_tickets(&self, base_dir: &Path) -> Result<()> {
+        use std::fs;
+        use std::path::PathBuf;
+
+        // 读取基础目录下的所有条目
+        let entries = fs::read_dir(base_dir)
+            .with_context(|| format!("Failed to read directory: {:?}", base_dir))?;
+
+        let mut ticket_dirs: Vec<(String, PathBuf)> = Vec::new();
+
+        for entry in entries {
+            let entry = entry.context("Failed to read directory entry")?;
+            let path = entry.path();
+            if path.is_dir() {
+                // 提取 ticket ID（目录名）
+                if let Some(ticket_id) = path.file_name().and_then(|n| n.to_str()) {
+                    ticket_dirs.push((ticket_id.to_string(), path));
+                }
+            }
+        }
+
+        // 按 ticket ID 排序
+        ticket_dirs.sort_by(|a, b| a.0.cmp(&b.0));
+
+        // 为每个 ticket 显示内容
+        for (ticket_id, ticket_dir) in ticket_dirs {
+            // 显示分隔线和 ticket ID
+            log_break!('=', 40, &ticket_id);
+            log_break!();
+
+            // 列出该 ticket 目录下的所有文件（不包含 ticket 目录本身）
+            let contents = helpers::list_dir_contents(&ticket_dir)?;
+            for path in contents {
+                // 跳过 ticket 目录本身
+                if path == ticket_dir {
+                    continue;
+                }
+                if path.is_file() {
+                    if let Ok(metadata) = std::fs::metadata(&path) {
+                        log_info!(
+                            "  📄 {} ({})",
+                            path.display(),
+                            helpers::format_size(metadata.len())
+                        );
+                    } else {
+                        log_info!("  📄 {}", path.display());
+                    }
+                } else if path.is_dir() {
+                    log_info!("  📁 {}", path.display());
+                }
+            }
+
+            log_break!();
+        }
+
         Ok(())
     }
 }
