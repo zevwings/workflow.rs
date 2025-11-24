@@ -2,6 +2,28 @@
 
 工作流自动化工具的 Rust 实现版本。
 
+## 🌐 跨平台支持
+
+Workflow CLI 完全支持以下平台：
+- **macOS** (Intel 和 Apple Silicon)
+- **Linux** (x86_64, ARM64, 包括静态链接版本)
+- **Windows** (x86_64, ARM64)
+
+### 平台特定说明
+
+#### macOS / Linux
+- 二进制文件安装到 `/usr/local/bin`
+- 配置文件存储在 `~/.workflow/config/`
+- 补全脚本存储在 `~/.workflow/completions/`
+- 安装/卸载可能需要 `sudo` 权限
+
+#### Windows
+- 二进制文件安装到 `%LOCALAPPDATA%\Programs\workflow\bin`
+- 配置文件存储在 `%APPDATA%\workflow\config\`
+- 补全脚本存储在 `%APPDATA%\workflow\completions\`
+- 支持 PowerShell (PowerShell Core 和 Windows PowerShell)
+- 安装/卸载可能需要管理员权限
+
 ## 🚀 快速开始
 
 ### 安装
@@ -20,7 +42,7 @@ brew install workflow
 > - 需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
 > - 如果使用 GitHub Actions 自动发布，需要配置 `HOMEBREW_TAP_TOKEN` secret（见下方说明）。
 
-#### 方式二：使用 Makefile
+#### 方式二：使用 Makefile（仅 macOS/Linux）
 
 使用 Makefile 安装所有二进制文件到系统：
 
@@ -28,11 +50,12 @@ brew install workflow
 make install
 ```
 
-这会安装以下命令到 `/usr/local/bin`：
+这会安装以下命令到 `/usr/local/bin`（macOS/Linux）或 `%LOCALAPPDATA%\Programs\workflow\bin`（Windows）：
 - `workflow` - 主命令（包含所有子命令：pr, log, jira 等）
 
 **重要提示**：
-- 安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
+- macOS/Linux：安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
+- Windows：确保安装目录已添加到 PATH 环境变量中
 
 ### 编译项目
 
@@ -66,7 +89,10 @@ workflow setup
 
 ### 配置文件位置
 
-- **主配置文件**：`~/.workflow/config/workflow.toml` - 包含用户、Jira、GitHub、日志、代理、Codeup、LLM/AI 等配置
+- **macOS/Linux**：`~/.workflow/config/workflow.toml`
+- **Windows**：`%APPDATA%\workflow\config\workflow.toml`
+
+配置文件包含用户、Jira、GitHub、日志、代理、Codeup、LLM/AI 等配置。
 
 ### 必填配置
 
@@ -126,9 +152,16 @@ workflow config
 
 如果不想使用交互式设置，也可以手动编辑 TOML 配置文件：
 
+**macOS/Linux**：
 ```bash
 # 编辑主配置文件
 vim ~/.workflow/config/workflow.toml
+```
+
+**Windows**：
+```powershell
+# 编辑主配置文件（使用 PowerShell）
+notepad $env:APPDATA\workflow\config\workflow.toml
 ```
 
 配置文件示例：
