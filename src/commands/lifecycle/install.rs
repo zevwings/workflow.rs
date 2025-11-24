@@ -93,12 +93,7 @@ impl InstallCommand {
         let mut installed_count = 0;
 
         for binary in &binaries {
-            // Windows 需要 .exe 扩展名
-            let binary_name = if cfg!(target_os = "windows") {
-                format!("{}.exe", binary)
-            } else {
-                binary.to_string()
-            };
+            let binary_name = Paths::binary_name(binary);
 
             let source = current_dir.join(&binary_name);
             let target = install_path.join(&binary_name);

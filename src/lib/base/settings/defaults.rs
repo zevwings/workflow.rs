@@ -2,6 +2,7 @@
 //!
 //! 提供配置结构体的默认值实现和辅助函数
 
+use std::path::PathBuf;
 use super::settings::LogSettings;
 
 // ==================== 默认值辅助函数 ====================
@@ -12,10 +13,27 @@ pub fn default_log_folder() -> String {
 }
 
 /// 默认下载基础目录路径
+///
+/// 跨平台支持：
+/// - Unix (macOS/Linux): `~/Downloads/Workflow`
+/// - Windows: `%USERPROFILE%\Downloads\Workflow`
 pub fn default_download_base_dir() -> String {
-    std::env::var("HOME")
-        .map(|home| format!("{}/Downloads/Workflow", home))
-        .unwrap_or_else(|_| "~/Downloads/Workflow".to_string())
+    let user_dir = if cfg!(target_os = "windows") {
+        // Windows: 使用 %USERPROFILE%
+        std::env::var("USERPROFILE")
+            .unwrap_or_else(|_| "C:\\Users\\User".to_string())
+    } else {
+        // Unix-like: 使用 HOME
+        std::env::var("HOME")
+            .unwrap_or_else(|_| "~".to_string())
+    };
+
+    // 使用 PathBuf 确保跨平台路径分隔符正确
+    let download_path = PathBuf::from(&user_dir)
+        .join("Downloads")
+        .join("Workflow");
+
+    download_path.to_string_lossy().to_string()
 }
 
 /// 默认下载基础目录路径（Option 类型）

@@ -107,12 +107,7 @@ impl RollbackManager {
         let mut backups = Vec::new();
 
         for binary in binaries {
-            // Windows 需要 .exe 扩展名
-            let binary_name = if cfg!(target_os = "windows") {
-                format!("{}.exe", binary)
-            } else {
-                binary.to_string()
-            };
+            let binary_name = Paths::binary_name(binary);
             let source = install_path.join(&binary_name);
 
             // 如果文件不存在，跳过
