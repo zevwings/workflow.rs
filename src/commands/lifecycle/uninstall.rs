@@ -8,8 +8,10 @@ use crate::{
     log_break, log_debug, log_message, log_success, log_warning, Completion, ProxyManager,
 };
 use anyhow::{Context, Result};
-use duct::cmd;
 use std::fs;
+
+#[cfg(unix)]
+use duct::cmd;
 
 /// 卸载命令
 pub struct UninstallCommand;

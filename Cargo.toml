@@ -22,13 +22,16 @@ dialoguer = "0.11"
 indicatif = "0.17"
 reqwest = { version = "0.11", features = ["json", "blocking", "rustls-tls"], default-features = false }
 regex = "1.10"
-clipboard = "0.5"
 open = "5.0"
 zip = "0.6"
 flate2 = "1.0"
 walkdir = "2.4"
 tar = "0.4"
 sha2 = "0.10"
+
+# clipboard 依赖：在 musl 目标上禁用（避免 XCB 依赖问题）
+[target.'cfg(not(target_env = "musl"))'.dependencies]
+clipboard = "0.5"
 
 [[bin]]
 name = "workflow"

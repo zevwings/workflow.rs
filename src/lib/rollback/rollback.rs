@@ -13,6 +13,8 @@ use crate::{
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
+
+#[cfg(unix)]
 use std::process::Command;
 
 /// 备份信息

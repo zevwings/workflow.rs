@@ -159,18 +159,30 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
                 // 对于生成分支名和 PR 标题，不需要完整的 diff
                 // 限制在 3000 字符左右（约 750-1000 tokens），足够提供上下文信息
                 const MAX_DIFF_LENGTH: usize = 3000;
-                let diff_trimmed = if diff.len() > MAX_DIFF_LENGTH {
-                    let truncated = &diff[..MAX_DIFF_LENGTH];
-                    // 尝试在最后一个换行符处截断，避免截断中间的行
-                    let last_newline = truncated.rfind('\n').unwrap_or(MAX_DIFF_LENGTH);
-                    let truncated_diff = &diff[..last_newline];
-                    format!(
-                        "{}\n... (diff truncated, {} characters total)",
-                        truncated_diff,
-                        diff.len()
-                    )
-                } else {
-                    diff
+                let diff_trimmed = {
+                    let char_count = diff.chars().count();
+                    if char_count > MAX_DIFF_LENGTH {
+                        // 使用字符边界安全截取，避免在多字节字符中间截断
+                        let mut char_boundary = diff.len(); // 默认到字符串末尾
+                        for (idx, _) in diff.char_indices().take(MAX_DIFF_LENGTH + 1) {
+                            char_boundary = idx;
+                        }
+                        let truncated = &diff[..char_boundary];
+                        // 尝试在最后一个换行符处截断，避免截断中间的行
+                        let last_newline = truncated.rfind('\n').unwrap_or(0);
+                        let truncated_diff = if last_newline > 0 {
+                            &diff[..last_newline]
+                        } else {
+                            truncated
+                        };
+                        format!(
+                            "{}\n... (diff truncated, {} characters total)",
+                            truncated_diff,
+                            char_count
+                        )
+                    } else {
+                        diff
+                    }
                 };
                 parts.push(format!("Git changes:\n{}", diff_trimmed));
             }
