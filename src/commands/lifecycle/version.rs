@@ -3,6 +3,8 @@
 
 use crate::{log_info, log_success};
 use anyhow::{Context, Result};
+use std::env;
+use std::fs;
 use std::process::Command;
 
 /// 版本命令
@@ -17,7 +19,7 @@ impl VersionCommand {
     /// 3. 从 Cargo.toml 读取（开发环境）
     pub fn show() -> Result<()> {
         // 方法 1: 尝试从环境变量获取（编译时注入）
-        if let Ok(version) = std::env::var("CARGO_PKG_VERSION") {
+        if let Ok(version) = env::var("CARGO_PKG_VERSION") {
             log_success!("workflow v{}", version);
             return Ok(());
         }
@@ -33,7 +35,7 @@ impl VersionCommand {
         }
 
         // 方法 3: 尝试从 Cargo.toml 读取（开发环境）
-        let cargo_toml_path = std::env::current_dir()
+        let cargo_toml_path = env::current_dir()
             .ok()
             .and_then(|dir| {
                 // 尝试多个可能的路径
@@ -46,7 +48,7 @@ impl VersionCommand {
             })
             .or_else(|| {
                 // 如果当前目录找不到，尝试从可执行文件位置推断
-                std::env::current_exe()
+                env::current_exe()
                     .ok()
                     .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
                     .and_then(|mut path| {
@@ -63,7 +65,7 @@ impl VersionCommand {
             });
 
         if let Some(cargo_toml) = cargo_toml_path {
-            let content = std::fs::read_to_string(&cargo_toml)
+            let content = fs::read_to_string(&cargo_toml)
                 .with_context(|| format!("Failed to read Cargo.toml: {}", cargo_toml.display()))?;
 
             for line in content.lines() {
@@ -84,4 +86,3 @@ impl VersionCommand {
         Ok(())
     }
 }
-

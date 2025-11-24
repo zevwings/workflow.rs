@@ -9,6 +9,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 use duct::cmd;
@@ -32,7 +33,7 @@ impl UninstallCommand {
         let binary_paths = Paths::binary_paths();
         let mut existing_binaries = Vec::new();
         for binary_path in &binary_paths {
-            let path = std::path::Path::new(binary_path);
+            let path = Path::new(binary_path);
             if path.exists() {
                 existing_binaries.push(binary_path.clone());
             }
@@ -40,7 +41,7 @@ impl UninstallCommand {
 
         // 检查 install 二进制
         let install_dir = Paths::binary_install_dir();
-        let install_path = std::path::PathBuf::from(&install_dir);
+        let install_path = PathBuf::from(&install_dir);
         let install_name = Paths::binary_name("install");
         let install_binary = install_path.join(install_name);
         if install_binary.exists() {
@@ -83,7 +84,9 @@ impl UninstallCommand {
                         // 自动使用 sudo 删除需要权限的文件（仅 Unix）
                         #[cfg(unix)]
                         {
-                            log_debug!("  Some files require sudo privileges, using sudo to remove...");
+                            log_debug!(
+                                "  Some files require sudo privileges, using sudo to remove..."
+                            );
                             for binary_path in &need_sudo {
                                 match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                     Ok(_) => {
@@ -106,7 +109,9 @@ impl UninstallCommand {
                         #[cfg(windows)]
                         {
                             log_warning!("  Some files require administrator privileges.");
-                            log_message!("  Please run this command as administrator or manually remove:");
+                            log_message!(
+                                "  Please run this command as administrator or manually remove:"
+                            );
                             for binary_path in &need_sudo {
                                 log_message!("    {}", binary_path);
                             }
@@ -120,7 +125,7 @@ impl UninstallCommand {
                     {
                         log_message!("Attempting to remove remaining files with sudo...");
                         for binary_path in &existing_binaries {
-                            let path = std::path::Path::new(binary_path);
+                            let path = Path::new(binary_path);
                             if path.exists() {
                                 match cmd("sudo", &["rm", "-f", binary_path]).run() {
                                     Ok(_) => {
@@ -144,9 +149,11 @@ impl UninstallCommand {
                     #[cfg(windows)]
                     {
                         log_warning!("  Some files could not be removed.");
-                        log_message!("  Please run this command as administrator or manually remove:");
+                        log_message!(
+                            "  Please run this command as administrator or manually remove:"
+                        );
                         for binary_path in &existing_binaries {
-                            let path = std::path::Path::new(binary_path);
+                            let path = Path::new(binary_path);
                             if path.exists() {
                                 log_message!("    {}", binary_path);
                             }
@@ -165,7 +172,11 @@ impl UninstallCommand {
                             log_message!("  Removed: {}", install_binary_str);
                         }
                         Err(e) => {
-                            log_warning!("  Failed to remove {} with sudo: {}", install_binary_str, e);
+                            log_warning!(
+                                "  Failed to remove {} with sudo: {}",
+                                install_binary_str,
+                                e
+                            );
                             log_message!(
                                 "  You may need to manually remove it with: sudo rm {}",
                                 install_binary_str
@@ -297,7 +308,7 @@ impl UninstallCommand {
         let mut need_sudo = Vec::new();
 
         for binary_path in binary_paths {
-            let path = std::path::Path::new(&binary_path);
+            let path = Path::new(&binary_path);
             if path.exists() {
                 match fs::remove_file(path) {
                     Ok(_) => {

@@ -195,6 +195,21 @@
 
 > 设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
+### [DEVELOPMENT_GUIDELINES.md](./guidelines/DEVELOPMENT_GUIDELINES.md)
+**开发规范文档**
+
+- 代码风格规范（格式化、Lint、命名约定）
+- 错误处理规范（anyhow、上下文信息）
+- 文档规范（公共 API 文档、注释格式）
+- 命名规范（文件、函数、结构体、常量）
+- 模块组织规范（目录结构、模块职责）
+- Git 工作流（分支策略、工作流程）
+- 提交规范（Conventional Commits）
+- 测试规范（单元测试、集成测试）
+- 代码审查（审查清单、审查重点）
+- 依赖管理（添加依赖、版本管理）
+- 开发工具（必需工具、常用命令）
+
 ### [DOCUMENT_GUIDELINES.md](./guidelines/DOCUMENT_GUIDELINES.md)
 **文档编写指南**
 
@@ -255,6 +270,7 @@
 - **2024-12** - 为所有 log 和 jira 命令添加交互式输入支持（JIRA_ID 参数可选，包括 info、attachments、download、find、search）
 - **2024-12** - 实现同时搜索 api.log 和 flutter-api.log 功能，更新搜索命令以支持两个文件
 - **2024-12** - 删除废弃的 QK_COMMAND_ARCHITECTURE.md 文档（已拆分为 LOG_COMMAND_ARCHITECTURE.md 和 JIRA_COMMAND_ARCHITECTURE.md）
+- **2024-12** - 创建开发规范文档 `DEVELOPMENT_GUIDELINES.md`，包含代码风格、错误处理、文档、命名、模块组织、Git 工作流、提交、测试、代码审查、依赖管理等规范
 
 ---
 

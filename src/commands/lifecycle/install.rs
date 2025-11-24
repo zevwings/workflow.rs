@@ -6,6 +6,7 @@ use crate::base::shell::Detect;
 use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
@@ -76,12 +77,10 @@ impl InstallCommand {
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
-        fs::create_dir_all(&install_path)
-            .context("Failed to create install directory")?;
+        fs::create_dir_all(&install_path).context("Failed to create install directory")?;
 
         // 获取当前可执行文件所在目录
-        let current_exe =
-            std::env::current_exe().context("Failed to get current executable path")?;
+        let current_exe = env::current_exe().context("Failed to get current executable path")?;
         let current_dir = current_exe
             .parent()
             .context("Failed to get parent directory of executable")?;
@@ -111,15 +110,24 @@ impl InstallCommand {
             // Unix: 使用 sudo 复制文件
             // Windows: 直接复制文件
             if cfg!(target_os = "windows") {
-                fs::copy(&source, &target)
-                    .with_context(|| format!("Failed to copy {} to {}", source.display(), target.display()))?;
+                fs::copy(&source, &target).with_context(|| {
+                    format!(
+                        "Failed to copy {} to {}",
+                        source.display(),
+                        target.display()
+                    )
+                })?;
             } else {
                 let status = Command::new("sudo")
                     .arg("cp")
                     .arg(&source)
                     .arg(&target)
                     .status()
-                    .context(format!("Failed to copy {} to {}", source.display(), target.display()))?;
+                    .context(format!(
+                        "Failed to copy {} to {}",
+                        source.display(),
+                        target.display()
+                    ))?;
 
                 if !status.success() {
                     anyhow::bail!("Failed to install {}", binary);

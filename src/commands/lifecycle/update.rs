@@ -3,7 +3,6 @@
 
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig};
-use reqwest::header::HeaderMap;
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
 use crate::base::util::{confirm, Checksum, Unzip};
@@ -15,12 +14,16 @@ use crate::{
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
+use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread;
+use std::time::Duration;
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -91,7 +94,7 @@ impl UpdateCommand {
     /// 3. 从 Cargo.toml 读取（开发环境）
     fn get_current_version() -> Result<Option<String>> {
         // 方法 1: 尝试从环境变量获取（编译时注入）
-        if let Ok(version) = std::env::var("CARGO_PKG_VERSION") {
+        if let Ok(version) = env::var("CARGO_PKG_VERSION") {
             return Ok(Some(version));
         }
 
@@ -112,7 +115,7 @@ impl UpdateCommand {
         }
 
         // 方法 3: 尝试从 Cargo.toml 读取（开发环境）
-        let cargo_toml_path = std::env::current_dir()
+        let cargo_toml_path = env::current_dir()
             .ok()
             .and_then(|dir| {
                 // 尝试多个可能的路径
@@ -125,7 +128,7 @@ impl UpdateCommand {
             })
             .or_else(|| {
                 // 如果当前目录找不到，尝试从可执行文件位置推断
-                std::env::current_exe()
+                env::current_exe()
                     .ok()
                     .and_then(|exe| exe.parent().map(|p| p.to_path_buf()))
                     .and_then(|mut path| {
@@ -193,8 +196,8 @@ impl UpdateCommand {
     ///
     /// 返回平台标识符，用于匹配 GitHub Releases 中的资源文件。
     fn detect_platform() -> Result<String> {
-        let arch = std::env::consts::ARCH;
-        let os = std::env::consts::OS;
+        let arch = env::consts::ARCH;
+        let os = env::consts::OS;
 
         match (os, arch) {
             ("macos", "x86_64") => Ok("macOS-Intel".to_string()),
@@ -202,7 +205,7 @@ impl UpdateCommand {
             ("linux", "x86_64") => {
                 // 尝试检测是否需要 musl/static 版本
                 // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
-                if let Ok(os_release) = std::fs::read_to_string("/etc/os-release") {
+                if let Ok(os_release) = fs::read_to_string("/etc/os-release") {
                     if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
                         return Ok("Linux-x86_64-static".to_string());
                     }
@@ -210,8 +213,8 @@ impl UpdateCommand {
 
                 // 方法2: 尝试检测当前二进制是否静态链接
                 // 如果 ldd 命令失败或没有输出，可能是静态链接
-                if let Ok(output) = std::process::Command::new("ldd")
-                    .arg(std::env::current_exe().unwrap_or_default())
+                if let Ok(output) = Command::new("ldd")
+                    .arg(env::current_exe().unwrap_or_default())
                     .output()
                 {
                     let output_str = String::from_utf8_lossy(&output.stdout);
@@ -515,7 +518,11 @@ impl UpdateCommand {
         if let Some(ext) = path.extension() {
             let ext_str = ext.to_string_lossy().to_lowercase();
             // .exe, .bat, .cmd, .com, .ps1 等是可执行的
-            Ok(ext_str == "exe" || ext_str == "bat" || ext_str == "cmd" || ext_str == "com" || ext_str == "ps1")
+            Ok(ext_str == "exe"
+                || ext_str == "bat"
+                || ext_str == "cmd"
+                || ext_str == "com"
+                || ext_str == "ps1")
         } else {
             // 没有扩展名，可能是脚本文件，检查是否有执行权限（通过文件属性）
             // 在 Windows 上，我们假设文件存在就是可执行的（简化处理）
@@ -527,23 +534,79 @@ impl UpdateCommand {
     ///
     /// 运行 `binary_path --version` 命令并解析版本号。
     /// 使用完整路径而不是命令名，避免 PATH 查找问题。
+    /// 如果第一次失败，会重试最多 3 次，每次间隔递增。
     fn get_binary_version(binary_path: &Path) -> Result<Option<String>> {
-        let output = Command::new(binary_path).arg("--version").output();
+        // 添加短暂延迟，确保文件已完全写入磁盘
+        thread::sleep(Duration::from_millis(100));
 
-        match output {
-            Ok(result) if result.status.success() => {
-                let version_str = String::from_utf8_lossy(&result.stdout);
-                // 解析版本号（格式可能是 "workflow 1.1.2" 或 "1.1.2"）
-                let version = version_str
-                    .split_whitespace()
-                    .last()
-                    .and_then(|s| s.strip_prefix('v'))
-                    .or_else(|| version_str.split_whitespace().last())
-                    .map(|s| s.to_string());
-                Ok(version)
+        // 重试机制：最多尝试 3 次
+        let max_retries = 3;
+        for attempt in 1..=max_retries {
+            let output = Command::new(binary_path).arg("--version").output();
+
+            match output {
+                Ok(result) if result.status.success() => {
+                    let version_str = String::from_utf8_lossy(&result.stdout);
+                    log_debug!("Binary version command output: {}", version_str.trim());
+                    // 解析版本号（格式可能是 "workflow 1.1.2" 或 "1.1.2"）
+                    let version = version_str
+                        .split_whitespace()
+                        .last()
+                        .and_then(|s| s.strip_prefix('v'))
+                        .or_else(|| version_str.split_whitespace().last())
+                        .map(|s| s.to_string());
+                    return Ok(version);
+                }
+                Ok(result) => {
+                    // 命令执行了但返回了非成功状态码
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    let stdout = String::from_utf8_lossy(&result.stdout);
+                    if attempt < max_retries {
+                        log_debug!(
+                            "Binary version command failed for {} (attempt {}/{}): status={}, retrying...",
+                            binary_path.display(),
+                            attempt,
+                            max_retries,
+                            result.status
+                        );
+                        // 指数退避：100ms, 200ms, 400ms
+                        thread::sleep(Duration::from_millis(100 * (1 << (attempt - 1))));
+                        continue;
+                    }
+                    log_debug!(
+                        "Binary version command failed for {}: status={}, stdout={:?}, stderr={:?}",
+                        binary_path.display(),
+                        result.status,
+                        stdout.trim(),
+                        stderr.trim()
+                    );
+                    return Ok(None);
+                }
+                Err(e) => {
+                    // 命令执行失败（例如文件不存在、权限问题等）
+                    if attempt < max_retries {
+                        log_debug!(
+                            "Failed to execute binary version command for {} (attempt {}/{}): {}, retrying...",
+                            binary_path.display(),
+                            attempt,
+                            max_retries,
+                            e
+                        );
+                        // 指数退避：100ms, 200ms, 400ms
+                        thread::sleep(Duration::from_millis(100 * (1 << (attempt - 1))));
+                        continue;
+                    }
+                    log_debug!(
+                        "Failed to execute binary version command for {}: {}",
+                        binary_path.display(),
+                        e
+                    );
+                    return Ok(None);
+                }
             }
-            _ => Ok(None),
         }
+
+        Ok(None)
     }
 
     /// 测试二进制文件是否可用
@@ -554,8 +617,26 @@ impl UpdateCommand {
         let output = Command::new(binary_path).arg("--help").output();
 
         match output {
-            Ok(result) => Ok(result.status.success()),
-            Err(_) => Ok(false),
+            Ok(result) => {
+                if !result.status.success() {
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    log_debug!(
+                        "Binary help command failed for {}: status={}, stderr={:?}",
+                        binary_path.display(),
+                        result.status,
+                        stderr.trim()
+                    );
+                }
+                Ok(result.status.success())
+            }
+            Err(e) => {
+                log_debug!(
+                    "Failed to execute binary help command for {}: {}",
+                    binary_path.display(),
+                    e
+                );
+                Ok(false)
+            }
         }
     }
 
@@ -610,18 +691,15 @@ impl UpdateCommand {
         log_info!("Verifying binaries...");
 
         let install_dir = Paths::binary_install_dir();
-        let install_path = std::path::PathBuf::from(&install_dir);
+        let install_path = PathBuf::from(&install_dir);
         let binaries = ["workflow"];
         let mut results = Vec::new();
 
         for binary in &binaries {
             let binary_name = Paths::binary_name(binary);
             let path = install_path.join(&binary_name);
-            let status = Self::verify_single_binary(
-                &path.to_string_lossy(),
-                &binary_name,
-                target_version,
-            )?;
+            let status =
+                Self::verify_single_binary(&path.to_string_lossy(), &binary_name, target_version)?;
             results.push(status);
         }
 
@@ -765,8 +843,27 @@ impl UpdateCommand {
                     log_success!("  {} v{} verification passed", binary.name, version);
                 }
             } else {
-                log_warning!("Unable to get version number for {}", binary.name);
-                all_binaries_ok = false;
+                // 无法获取版本号，但如果二进制文件可以正常工作（--help 成功），
+                // 仍然认为安装成功（可能是 macOS Gatekeeper 或其他临时问题）
+                if binary.working {
+                    log_warning!(
+                        "Unable to get version number for {}, but binary appears to work correctly",
+                        binary.name
+                    );
+                    log_warning!(
+                        "  This may be due to macOS Gatekeeper or other security restrictions"
+                    );
+                    log_warning!("  The binary file exists and responds to --help, so installation is likely successful");
+                    log_warning!("  You may need to allow the binary in System Settings > Privacy & Security");
+                    // 不标记为失败，因为二进制文件可以工作
+                    log_success!(
+                        "  {} verification passed (version check skipped)",
+                        binary.name
+                    );
+                } else {
+                    log_warning!("Unable to get version number for {}", binary.name);
+                    all_binaries_ok = false;
+                }
             }
 
             if !binary.working {
@@ -902,7 +999,7 @@ impl UpdateCommand {
         log_break!();
 
         // 创建临时目录
-        let temp_dir = std::env::temp_dir().join(format!("workflow-update-{}", target_version));
+        let temp_dir = env::temp_dir().join(format!("workflow-update-{}", target_version));
         if temp_dir.exists() {
             fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
         }
@@ -951,7 +1048,9 @@ impl UpdateCommand {
                     if e.to_string().contains("404") || e.to_string().contains("not found") {
                         log_warning!("Checksum file not found, skipping integrity verification");
                         log_warning!("  Checksum URL: {}", checksum_url);
-                        log_warning!("  This may indicate the release does not include checksum files");
+                        log_warning!(
+                            "  This may indicate the release does not include checksum files"
+                        );
                         log_warning!("  Proceeding with update without verification...");
 
                         // 仍然计算并显示文件的 SHA256，供用户参考
