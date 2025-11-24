@@ -177,8 +177,7 @@ Return your response in JSON format with three fields: \"branch_name\", \"pr_tit
                         };
                         format!(
                             "{}\n... (diff truncated, {} characters total)",
-                            truncated_diff,
-                            char_count
+                            truncated_diff, char_count
                         )
                     } else {
                         diff
