@@ -56,6 +56,64 @@ impl ProxyManager {
         })
     }
 
+    /// 检查系统代理是否启用
+    ///
+    /// 检查系统代理设置中是否有任何代理类型（HTTP、HTTPS、SOCKS）已启用。
+    ///
+    /// # 参数
+    ///
+    /// * `proxy_info` - 代理信息结构体
+    ///
+    /// # 返回
+    ///
+    /// 返回 `true` 如果系统代理已启用，否则返回 `false`。
+    fn is_system_proxy_enabled(proxy_info: &ProxyInfo) -> bool {
+        ProxyType::all().any(|pt| {
+            proxy_info
+                .get_config(pt)
+                .map(|config| config.enable)
+                .unwrap_or(false)
+        })
+    }
+
+    /// 确保代理已启用（如果系统代理已启用）
+    ///
+    /// 如果系统代理（VPN）已启用，但环境变量未设置，则自动在当前进程中设置环境变量。
+    /// 这个方法主要用于在需要网络访问的命令执行前自动启用代理。
+    ///
+    /// # 返回
+    ///
+    /// 如果成功启用代理或代理已配置，返回 `Ok(())`；如果系统代理未启用，也返回 `Ok(())`（静默跳过）。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取系统代理设置失败，返回相应的错误信息。
+    pub fn ensure_proxy_enabled() -> Result<()> {
+        // 1. 获取系统代理设置
+        let proxy_info = SystemProxyReader::read()
+            .context("Failed to read system proxy settings")?;
+
+        // 2. 检查系统代理是否启用
+        if !Self::is_system_proxy_enabled(&proxy_info) {
+            // 系统代理未启用，静默跳过
+            return Ok(());
+        }
+
+        // 3. 检查环境变量是否已配置
+        if Self::is_proxy_configured(&proxy_info) {
+            // 环境变量已配置，无需操作
+            return Ok(());
+        }
+
+        // 4. 系统代理已启用但环境变量未设置，在当前进程中设置环境变量
+        let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
+        for (key, value) in env_vars {
+            std::env::set_var(&key, &value);
+        }
+
+        Ok(())
+    }
+
     /// 开启代理
     ///
     /// 从系统设置读取代理配置，并根据 `temporary` 参数决定是否保存到 shell 配置文件。
