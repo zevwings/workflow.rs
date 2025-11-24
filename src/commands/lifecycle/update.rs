@@ -446,9 +446,10 @@ impl UpdateCommand {
 
     /// 获取二进制文件的版本号
     ///
-    /// 运行 `binary_name --version` 命令并解析版本号。
-    fn get_binary_version(binary_name: &str) -> Result<Option<String>> {
-        let output = Command::new(binary_name).arg("--version").output();
+    /// 运行 `binary_path --version` 命令并解析版本号。
+    /// 使用完整路径而不是命令名，避免 PATH 查找问题。
+    fn get_binary_version(binary_path: &Path) -> Result<Option<String>> {
+        let output = Command::new(binary_path).arg("--version").output();
 
         match output {
             Ok(result) if result.status.success() => {
@@ -468,9 +469,10 @@ impl UpdateCommand {
 
     /// 测试二进制文件是否可用
     ///
-    /// 运行 `binary_name --help` 命令测试二进制文件是否正常工作。
-    fn test_binary_works(binary_name: &str) -> Result<bool> {
-        let output = Command::new(binary_name).arg("--help").output();
+    /// 运行 `binary_path --help` 命令测试二进制文件是否正常工作。
+    /// 使用完整路径而不是命令名，避免 PATH 查找问题。
+    fn test_binary_works(binary_path: &Path) -> Result<bool> {
+        let output = Command::new(binary_path).arg("--help").output();
 
         match output {
             Ok(result) => Ok(result.status.success()),
@@ -506,11 +508,11 @@ impl UpdateCommand {
         // 2. 检查文件是否可执行
         let executable = Self::check_executable(path_obj)?;
 
-        // 3. 检查版本号
-        let version = Self::get_binary_version(name)?;
+        // 3. 检查版本号 - 使用完整路径而不是命令名
+        let version = Self::get_binary_version(path_obj)?;
 
-        // 4. 测试命令是否可用
-        let working = Self::test_binary_works(name)?;
+        // 4. 测试命令是否可用 - 使用完整路径而不是命令名
+        let working = Self::test_binary_works(path_obj)?;
 
         Ok(BinaryStatus {
             name: name.to_string(),
