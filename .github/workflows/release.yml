@@ -322,7 +322,7 @@ jobs:
 
       - name: Build release binaries
         run: |
-          cargo build --release --target ${{ matrix.target }} --bin workflow --bin pr --bin qk --bin install
+          cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
 
@@ -330,8 +330,6 @@ jobs:
         run: |
           mkdir -p package
           cp target/${{ matrix.target }}/release/workflow package/
-          cp target/${{ matrix.target }}/release/pr package/
-          cp target/${{ matrix.target }}/release/qk package/
           cp target/${{ matrix.target }}/release/install package/
 
       - name: Create archive
@@ -339,9 +337,13 @@ jobs:
         run: |
           cd package
           ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
-          tar czf "../$ARCHIVE_NAME" workflow pr qk install
+          # 打包 workflow 和 install 两个二进制文件
+          tar czf "../$ARCHIVE_NAME" workflow install
           cd ..
           ls -lh "$ARCHIVE_NAME"
+          # 验证打包内容
+          echo "📦 Archive contents:"
+          tar tzf "$ARCHIVE_NAME"
 
       - name: Calculate SHA256
         id: sha256
