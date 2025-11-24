@@ -253,10 +253,21 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             platform: macOS-AppleSilicon
-          # 暂时跳过 Linux 构建
-          # - os: ubuntu-latest
-          #   target: x86_64-unknown-linux-gnu
-          #   platform: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: Linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: Linux-ARM64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: Linux-x86_64-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: Windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: Windows-ARM64
 
     steps:
       - name: Checkout code
@@ -306,6 +317,13 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install musl target (if needed)
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
@@ -331,31 +349,55 @@ jobs:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
 
       - name: Create package directory
+        shell: bash
         run: |
           mkdir -p package
-          cp target/${{ matrix.target }}/release/workflow package/
-          cp target/${{ matrix.target }}/release/install package/
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.target }}/release/workflow.exe package/
+            cp target/${{ matrix.target }}/release/install.exe package/
+          else
+            cp target/${{ matrix.target }}/release/workflow package/
+            cp target/${{ matrix.target }}/release/install package/
+          fi
 
       - name: Create archive
         shell: bash
         run: |
           cd package
-          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
-          # 打包 workflow 和 install 两个二进制文件
-          tar czf "../$ARCHIVE_NAME" workflow install
-          cd ..
-          ls -lh "$ARCHIVE_NAME"
-          # 验证打包内容
-          echo "📦 Archive contents:"
-          tar tzf "$ARCHIVE_NAME"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+            # 打包 workflow.exe 和 install.exe 两个二进制文件
+            zip -r "../$ARCHIVE_NAME" workflow.exe install.exe
+            cd ..
+            ls -lh "$ARCHIVE_NAME"
+            # 验证打包内容
+            echo "📦 Archive contents:"
+            unzip -l "$ARCHIVE_NAME"
+          else
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+            # 打包 workflow 和 install 两个二进制文件
+            tar czf "../$ARCHIVE_NAME" workflow install
+            cd ..
+            ls -lh "$ARCHIVE_NAME"
+            # 验证打包内容
+            echo "📦 Archive contents:"
+            tar tzf "$ARCHIVE_NAME"
+          fi
 
       - name: Calculate SHA256
         id: sha256
         shell: bash
         run: |
-          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          else
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          fi
           if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Windows: 使用 PowerShell 计算 SHA256
+            SHA256=$(powershell -Command "(Get-FileHash -Path '$ARCHIVE_NAME' -Algorithm SHA256).Hash")
           else
             SHA256=$(sha256sum "$ARCHIVE_NAME" | cut -d' ' -f1)
           fi
@@ -367,7 +409,11 @@ jobs:
       - name: Save SHA256 to file
         shell: bash
         run: |
-          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          else
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          fi
           echo "${{ steps.sha256.outputs.sha256 }}" > sha256-${{ matrix.platform }}.txt
           echo "${{ matrix.platform }}" >> sha256-${{ matrix.platform }}.txt
           echo "$ARCHIVE_NAME" >> sha256-${{ matrix.platform }}.txt
@@ -377,7 +423,7 @@ jobs:
         with:
           name: ${{ matrix.platform }}
           path: |
-            workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz
+            workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
           retention-days: 30
 
       - name: Upload SHA256
@@ -452,6 +498,7 @@ jobs:
         run: |
           mkdir -p release-assets
           find artifacts -name "workflow-*.tar.gz" -exec cp {} release-assets/ \;
+          find artifacts -name "workflow-*.zip" -exec cp {} release-assets/ \;
           if [ -z "$(ls -A release-assets)" ]; then
             echo "Error: No release assets found!"
             exit 1
@@ -469,13 +516,25 @@ jobs:
 
             ### Downloads
 
+            #### macOS
             - **macOS Intel**: [workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz)
             - **macOS Apple Silicon**: [workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz)
 
+            #### Linux
+            - **Linux x86_64 (glibc)**: [workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz) - For most Linux distributions (Ubuntu, Debian, Fedora, CentOS, etc.)
+            - **Linux ARM64**: [workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz) - For ARM64 servers (AWS Graviton, Raspberry Pi 4+, etc.)
+            - **Linux x86_64 (static/musl)**: [workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz) - Static binary for Alpine Linux, Docker containers, or older distributions
+
+            #### Windows
+            - **Windows x86_64**: [workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip) - For Windows 10/11 (64-bit, Intel/AMD)
+            - **Windows ARM64**: [workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip) - For Windows on ARM devices (Surface Pro X, Surface Laptop Studio, etc.)
+
             ### Installation
 
+            #### macOS
+
             ```bash
-            # Download and extract (macOS)
+            # Download and extract
             # For Intel Mac
             curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz
             # For Apple Silicon Mac
@@ -486,7 +545,73 @@ jobs:
             ./install
             ```
 
-            ### Homebrew
+            #### Linux
+
+            **For most Linux distributions (Ubuntu, Debian, Fedora, CentOS, etc.):**
+            ```bash
+            # Download and extract x86_64 version
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz
+            ./install
+            ```
+
+            **For ARM64 servers (AWS Graviton, Raspberry Pi 4+, etc.):**
+            ```bash
+            # Download and extract ARM64 version
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz
+            ./install
+            ```
+
+            **For Alpine Linux, Docker containers, or older distributions:**
+            ```bash
+            # Download and extract static version (musl)
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz
+            ./install
+            ```
+
+            #### Windows
+
+            **For Windows x86_64 (Intel/AMD):**
+
+            **Using PowerShell:**
+            ```powershell
+            # Download and extract
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip" -OutFile "workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip"
+            Expand-Archive -Path "workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip" -DestinationPath "."
+
+            # Install binaries and completions
+            .\install.exe
+            ```
+
+            **For Windows ARM64 (Surface Pro X, Surface Laptop Studio, etc.):**
+
+            **Using PowerShell:**
+            ```powershell
+            # Download and extract
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip" -OutFile "workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip"
+            Expand-Archive -Path "workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip" -DestinationPath "."
+
+            # Install binaries and completions
+            .\install.exe
+            ```
+
+            **Using Command Prompt (x86_64):**
+            ```cmd
+            # Download using curl (if available) or use a browser
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip
+
+            # Extract using PowerShell (or use 7-Zip/WinRAR)
+            powershell -Command "Expand-Archive -Path 'workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip' -DestinationPath '.'"
+
+            # Install binaries and completions
+            install.exe
+            ```
+
+            **Note:** After installation, you may need to add `%LOCALAPPDATA%\Programs\workflow\bin` to your PATH environment variable.
+
+            ### Homebrew (macOS only)
 
             Install via Homebrew:
             ```bash

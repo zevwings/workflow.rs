@@ -37,9 +37,17 @@ impl UninstallCommand {
         }
 
         // 检查 install 二进制
-        let install_path = "/usr/local/bin/install";
-        if std::path::Path::new(install_path).exists() {
-            existing_binaries.push(install_path.to_string());
+        let install_dir = Paths::binary_install_dir();
+        let install_path = std::path::PathBuf::from(&install_dir);
+        // Windows 需要 .exe 扩展名
+        let install_name = if cfg!(target_os = "windows") {
+            "install.exe"
+        } else {
+            "install"
+        };
+        let install_binary = install_path.join(install_name);
+        if install_binary.exists() {
+            existing_binaries.push(install_binary.to_string_lossy().to_string());
         }
 
         if !existing_binaries.is_empty() {
@@ -75,50 +83,75 @@ impl UninstallCommand {
                         }
                     }
                     if !need_sudo.is_empty() {
-                        // 自动使用 sudo 删除需要权限的文件
-                        log_debug!("  Some files require sudo privileges, using sudo to remove...");
-                        for binary_path in &need_sudo {
-                            match cmd("sudo", &["rm", "-f", binary_path]).run() {
-                                Ok(_) => {
-                                    log_message!("  Removed: {}", binary_path);
+                        // 自动使用 sudo 删除需要权限的文件（仅 Unix）
+                        #[cfg(unix)]
+                        {
+                            log_debug!("  Some files require sudo privileges, using sudo to remove...");
+                            for binary_path in &need_sudo {
+                                match cmd("sudo", &["rm", "-f", binary_path]).run() {
+                                    Ok(_) => {
+                                        log_message!("  Removed: {}", binary_path);
+                                    }
+                                    Err(e) => {
+                                        log_warning!(
+                                            "    Failed to remove {} with sudo: {}",
+                                            binary_path,
+                                            e
+                                        );
+                                        log_message!(
+                                            "  You may need to manually remove it with: sudo rm {}",
+                                            binary_path
+                                        );
+                                    }
                                 }
-                                Err(e) => {
-                                    log_warning!(
-                                        "    Failed to remove {} with sudo: {}",
-                                        binary_path,
-                                        e
-                                    );
-                                    log_message!(
-                                        "  You may need to manually remove it with: sudo rm {}",
-                                        binary_path
-                                    );
-                                }
+                            }
+                        }
+                        #[cfg(windows)]
+                        {
+                            log_warning!("  Some files require administrator privileges.");
+                            log_message!("  Please run this command as administrator or manually remove:");
+                            for binary_path in &need_sudo {
+                                log_message!("    {}", binary_path);
                             }
                         }
                     }
                 }
                 Err(e) => {
                     log_warning!("  Failed to remove binary files: {}", e);
-                    // 尝试使用 sudo 删除所有剩余的文件
-                    log_message!("Attempting to remove remaining files with sudo...");
-                    for binary_path in &existing_binaries {
-                        let path = std::path::Path::new(binary_path);
-                        if path.exists() {
-                            match cmd("sudo", &["rm", "-f", binary_path]).run() {
-                                Ok(_) => {
-                                    log_message!("  Removed: {}", binary_path);
+                    // 尝试使用 sudo 删除所有剩余的文件（仅 Unix）
+                    #[cfg(unix)]
+                    {
+                        log_message!("Attempting to remove remaining files with sudo...");
+                        for binary_path in &existing_binaries {
+                            let path = std::path::Path::new(binary_path);
+                            if path.exists() {
+                                match cmd("sudo", &["rm", "-f", binary_path]).run() {
+                                    Ok(_) => {
+                                        log_message!("  Removed: {}", binary_path);
+                                    }
+                                    Err(e) => {
+                                        log_warning!(
+                                            "    Failed to remove {} with sudo: {}",
+                                            binary_path,
+                                            e
+                                        );
+                                        log_message!(
+                                            "  You may need to manually remove it with: sudo rm {}",
+                                            binary_path
+                                        );
+                                    }
                                 }
-                                Err(e) => {
-                                    log_warning!(
-                                        "    Failed to remove {} with sudo: {}",
-                                        binary_path,
-                                        e
-                                    );
-                                    log_message!(
-                                        "  You may need to manually remove it with: sudo rm {}",
-                                        binary_path
-                                    );
-                                }
+                            }
+                        }
+                    }
+                    #[cfg(windows)]
+                    {
+                        log_warning!("  Some files could not be removed.");
+                        log_message!("  Please run this command as administrator or manually remove:");
+                        for binary_path in &existing_binaries {
+                            let path = std::path::Path::new(binary_path);
+                            if path.exists() {
+                                log_message!("    {}", binary_path);
                             }
                         }
                     }
@@ -126,17 +159,36 @@ impl UninstallCommand {
             }
 
             // 删除 install 二进制（如果存在）
-            if std::path::Path::new(install_path).exists() {
-                match cmd("sudo", &["rm", "-f", install_path]).run() {
-                    Ok(_) => {
-                        log_message!("  Removed: {}", install_path);
+            if install_binary.exists() {
+                let install_binary_str = install_binary.to_string_lossy();
+                #[cfg(unix)]
+                {
+                    match cmd("sudo", &["rm", "-f", install_binary_str.as_ref()]).run() {
+                        Ok(_) => {
+                            log_message!("  Removed: {}", install_binary_str);
+                        }
+                        Err(e) => {
+                            log_warning!("  Failed to remove {} with sudo: {}", install_binary_str, e);
+                            log_message!(
+                                "  You may need to manually remove it with: sudo rm {}",
+                                install_binary_str
+                            );
+                        }
                     }
-                    Err(e) => {
-                        log_warning!("  Failed to remove {} with sudo: {}", install_path, e);
-                        log_message!(
-                            "  You may need to manually remove it with: sudo rm {}",
-                            install_path
-                        );
+                }
+                #[cfg(windows)]
+                {
+                    match fs::remove_file(&install_binary) {
+                        Ok(_) => {
+                            log_message!("  Removed: {}", install_binary_str);
+                        }
+                        Err(e) => {
+                            log_warning!("  Failed to remove {}: {}", install_binary_str, e);
+                            log_message!(
+                                "  You may need to manually remove it: {}",
+                                install_binary_str
+                            );
+                        }
                     }
                 }
             }
@@ -193,8 +245,15 @@ impl UninstallCommand {
             log_break!();
             log_message!("Could not detect shell type.");
             log_message!("Please manually reload your shell configuration:");
-            log_message!("  source ~/.zshrc  # for zsh");
-            log_message!("  source ~/.bashrc  # for bash");
+            #[cfg(unix)]
+            {
+                log_message!("  source ~/.zshrc  # for zsh");
+                log_message!("  source ~/.bashrc  # for bash");
+            }
+            #[cfg(windows)]
+            {
+                log_message!("  . $PROFILE  # for PowerShell");
+            }
         }
 
         Ok(())
@@ -224,7 +283,7 @@ impl UninstallCommand {
 
     /// 删除所有 Workflow CLI 二进制文件
     ///
-    /// 这会删除 `/usr/local/bin` 目录下的二进制文件。
+    /// 这会删除系统目录（通常是 /usr/local/bin）下的二进制文件。
     ///
     /// # 返回
     ///
