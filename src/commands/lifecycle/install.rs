@@ -90,10 +90,10 @@ impl InstallCommand {
         log_debug!("Current directory: {}", current_dir.display());
         log_debug!("Install directory: {}", install_dir);
 
-        let binaries = ["workflow"];
+        let binaries = Paths::command_names();
         let mut installed_count = 0;
 
-        for binary in &binaries {
+        for binary in binaries {
             let binary_name = Paths::binary_name(binary);
 
             let source = current_dir.join(&binary_name);
