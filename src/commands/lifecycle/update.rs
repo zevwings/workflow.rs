@@ -418,6 +418,8 @@ impl UpdateCommand {
     /// 第五步：解压文件
     ///
     /// 解压 tar.gz 或 zip 文件到指定目录。
+    /// 在 macOS 上，解压后立即移除所有二进制文件的隔离属性，
+    /// 确保安装时不会遇到 Gatekeeper 阻止。
     fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
         log_info!("Extracting update package...");
         log_debug!("Extracting: {}", archive_path.display());
@@ -437,6 +439,25 @@ impl UpdateCommand {
         }
 
         log_success!("  Extraction complete");
+
+        // 在 macOS 上，解压后立即移除所有二进制文件的隔离属性
+        // 这样在安装时就不会遇到 Gatekeeper 阻止
+        #[cfg(target_os = "macos")]
+        {
+            let binaries = ["workflow", "install"];
+            for binary in &binaries {
+                let binary_name = Paths::binary_name(binary);
+                let binary_path = output_dir.join(&binary_name);
+                if binary_path.exists() {
+                    log_debug!(
+                        "Removing quarantine attribute from extracted binary: {}",
+                        binary_path.display()
+                    );
+                    Self::remove_quarantine_attribute(&binary_path)?;
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -485,6 +506,62 @@ impl UpdateCommand {
     // ==================== 验证相关 ====================
 
     // --- 基础验证工具方法 ---
+
+    /// 移除 macOS 隔离属性（quarantine attribute）
+    ///
+    /// 在 macOS 上，从网络下载的文件会被 Gatekeeper 添加隔离属性。
+    /// 这个函数使用 `xattr -d com.apple.quarantine` 移除隔离属性，
+    /// 允许二进制文件正常执行。
+    #[cfg(target_os = "macos")]
+    fn remove_quarantine_attribute(binary_path: &Path) -> Result<()> {
+        // 检查文件是否存在
+        if !binary_path.exists() {
+            return Ok(());
+        }
+
+        // 使用 xattr 命令移除隔离属性
+        let output = Command::new("xattr")
+            .arg("-d")
+            .arg("com.apple.quarantine")
+            .arg(binary_path)
+            .output();
+
+        match output {
+            Ok(result) => {
+                if result.status.success() {
+                    log_debug!(
+                        "Removed quarantine attribute from: {}",
+                        binary_path.display()
+                    );
+                } else {
+                    // 如果隔离属性不存在，xattr 会返回非零状态码，这是正常的
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    if !stderr.contains("No such xattr") {
+                        log_debug!(
+                            "Failed to remove quarantine attribute from {}: {}",
+                            binary_path.display(),
+                            stderr.trim()
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                log_debug!(
+                    "Failed to execute xattr command for {}: {}",
+                    binary_path.display(),
+                    e
+                );
+            }
+        }
+
+        Ok(())
+    }
+
+    /// 移除隔离属性（非 macOS 平台，空实现）
+    #[cfg(not(target_os = "macos"))]
+    fn remove_quarantine_attribute(_binary_path: &Path) -> Result<()> {
+        Ok(())
+    }
 
     /// 检查文件是否可执行
     ///
@@ -535,6 +612,7 @@ impl UpdateCommand {
     /// 运行 `binary_path --version` 命令并解析版本号。
     /// 使用完整路径而不是命令名，避免 PATH 查找问题。
     /// 如果第一次失败，会重试最多 3 次，每次间隔递增。
+    /// 注意：隔离属性应在解压时已移除，理论上不应该遇到 SIGKILL。
     fn get_binary_version(binary_path: &Path) -> Result<Option<String>> {
         // 添加短暂延迟，确保文件已完全写入磁盘
         thread::sleep(Duration::from_millis(100));
@@ -561,6 +639,24 @@ impl UpdateCommand {
                     // 命令执行了但返回了非成功状态码
                     let stderr = String::from_utf8_lossy(&result.stderr);
                     let stdout = String::from_utf8_lossy(&result.stdout);
+
+                    // 如果遇到 SIGKILL，记录警告（理论上不应该发生）
+                    if result.status.code().is_none() && cfg!(target_os = "macos") {
+                        log_warning!(
+                            "Binary version command failed with SIGKILL for {} (attempt {}/{}), this should not happen if quarantine was removed",
+                            binary_path.display(),
+                            attempt,
+                            max_retries
+                        );
+                        // 尝试移除隔离属性作为最后的补救措施
+                        if attempt < max_retries {
+                            log_debug!("Attempting to remove quarantine attribute as fallback...");
+                            Self::remove_quarantine_attribute(binary_path)?;
+                            thread::sleep(Duration::from_millis(200));
+                            continue;
+                        }
+                    }
+
                     if attempt < max_retries {
                         log_debug!(
                             "Binary version command failed for {} (attempt {}/{}): status={}, retrying...",
@@ -613,11 +709,40 @@ impl UpdateCommand {
     ///
     /// 运行 `binary_path --help` 命令测试二进制文件是否正常工作。
     /// 使用完整路径而不是命令名，避免 PATH 查找问题。
+    /// 注意：隔离属性应在解压时已移除，理论上不应该遇到 SIGKILL。
     fn test_binary_works(binary_path: &Path) -> Result<bool> {
         let output = Command::new(binary_path).arg("--help").output();
 
         match output {
             Ok(result) => {
+                // 如果遇到 SIGKILL，记录警告并尝试移除隔离属性作为最后的补救措施
+                if result.status.code().is_none() && cfg!(target_os = "macos") {
+                    log_warning!(
+                        "Binary help command failed with SIGKILL for {}, this should not happen if quarantine was removed",
+                        binary_path.display()
+                    );
+                    log_debug!("Attempting to remove quarantine attribute as fallback...");
+                    Self::remove_quarantine_attribute(binary_path)?;
+                    thread::sleep(Duration::from_millis(200));
+
+                    // 重试一次
+                    let retry_output = Command::new(binary_path).arg("--help").output();
+                    match retry_output {
+                        Ok(retry_result) => {
+                            if retry_result.status.success() {
+                                log_debug!(
+                                    "Binary help command succeeded after removing quarantine attribute: {}",
+                                    binary_path.display()
+                                );
+                                return Ok(true);
+                            }
+                        }
+                        Err(_) => {
+                            // 重试也失败，继续返回失败
+                        }
+                    }
+                }
+
                 if !result.status.success() {
                     let stderr = String::from_utf8_lossy(&result.stderr);
                     log_debug!(
@@ -1070,6 +1195,7 @@ impl UpdateCommand {
             log_break!();
 
             // 第九步：使用 ./install 安装二进制文件和补全脚本（默认安装全部）
+            // 注意：隔离属性已在解压时移除，安装后的文件不应该有隔离属性
             Self::install(&extract_dir)?;
             log_break!();
 

@@ -107,6 +107,27 @@ impl InstallCommand {
 
             log_info!("  Installing {} -> {}", binary_name, target.display());
 
+            // 在 macOS 上，复制前移除源文件的隔离属性（如果存在）
+            // 确保安装后的文件不会有隔离属性
+            #[cfg(target_os = "macos")]
+            {
+                if source.exists() {
+                    let output = Command::new("xattr")
+                        .arg("-d")
+                        .arg("com.apple.quarantine")
+                        .arg(&source)
+                        .output();
+                    if let Ok(result) = output {
+                        if result.status.success() {
+                            log_debug!(
+                                "Removed quarantine attribute from source: {}",
+                                source.display()
+                            );
+                        }
+                    }
+                }
+            }
+
             // Unix: 使用 sudo 复制文件
             // Windows: 直接复制文件
             if cfg!(target_os = "windows") {
