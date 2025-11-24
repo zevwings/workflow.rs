@@ -238,12 +238,12 @@ enum IgnoreSubcommand {
     /// Add branch to ignore list
     Add {
         /// Branch name to add
-        branch_name: String,
+        branch_name: Option<String>,
     },
     /// Remove branch from ignore list
     Remove {
         /// Branch name to remove
-        branch_name: String,
+        branch_name: Option<String>,
     },
     /// List ignored branches for current repository
     List,

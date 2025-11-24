@@ -342,7 +342,7 @@ impl CompletionGenerator {
                                 Command::new("add").about("Add branch to ignore list").arg(
                                     clap::Arg::new("BRANCH_NAME")
                                         .value_name("BRANCH_NAME")
-                                        .required(true),
+                                        .required(false),
                                 ),
                             )
                             .subcommand(
@@ -351,7 +351,7 @@ impl CompletionGenerator {
                                     .arg(
                                         clap::Arg::new("BRANCH_NAME")
                                             .value_name("BRANCH_NAME")
-                                            .required(true),
+                                            .required(false),
                                     ),
                             )
                             .subcommand(Command::new("list").about("List ignored branches")),
