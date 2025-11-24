@@ -21,7 +21,8 @@
 //!
 //! ### 业务功能
 //! - `pr/` - PR 相关命令（create, merge, close, status, list, update, integrate）
-//! - `qk/` - 快速日志操作命令（download, find, search, clean, info）
+//! - `log/` - 日志操作命令（download, find, search）
+//! - `jira/` - Jira 操作命令（info, attachments, clean）
 //! - `branch/` - 分支管理命令（clean, ignore）
 
 // 生命周期管理
@@ -35,5 +36,6 @@ pub mod proxy;
 
 // 业务功能
 pub mod branch;
+pub mod jira;
+pub mod log;
 pub mod pr;
-pub mod qk;

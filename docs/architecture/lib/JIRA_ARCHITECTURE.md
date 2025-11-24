@@ -58,7 +58,7 @@ src/lib/jira/
   - 创建 PR 时：`JiraStatus::configure_interactive()` 配置状态，`JiraTicket::transition()` 更新状态，`JiraWorkHistory::write_work_history()` 保存历史
   - 合并 PR 时：`JiraWorkHistory::read_work_history()` 查找 ticket，`JiraTicket::transition()` 更新状态
 
-- **QK 命令集成** (`commands/qk/`)：
+- **Log 和 Jira 命令集成** (`commands/log/` 和 `commands/jira/`)：
   - 下载日志：`JiraTicket::get_attachments()` 获取附件，`JiraLogs::download_from_jira()` 下载
   - 显示信息：`JiraTicket::get_info()` 获取 ticket 信息
 
@@ -217,7 +217,7 @@ src/lib/jira/
 
 **关键特性**：
 - 统一接口，状态缓存
-- 详细架构参见 [QK 命令模块架构文档](../commands/QK_COMMAND_ARCHITECTURE.md)
+- 详细架构参见 [日志命令模块架构文档](../commands/LOG_COMMAND_ARCHITECTURE.md) 和 [Jira 命令模块架构文档](../commands/JIRA_COMMAND_ARCHITECTURE.md)
 
 #### 5. 数据模型层 (`types.rs`)
 
@@ -541,7 +541,8 @@ let config = manager.read()?;
 
 - [主架构文档](../ARCHITECTURE.md)
 - [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 Jira 集成
-- [QK 命令模块架构文档](../commands/QK_COMMAND_ARCHITECTURE.md) - QK 命令层如何使用 Jira 日志处理模块
+- [日志命令模块架构文档](../commands/LOG_COMMAND_ARCHITECTURE.md) - 日志命令层如何使用 Jira 日志处理模块
+- [Jira 命令模块架构文档](../commands/JIRA_COMMAND_ARCHITECTURE.md) - Jira 命令层如何使用 Jira 集成
 - [HTTP 模块架构文档](./HTTP_ARCHITECTURE.md) - HTTP 客户端详情
 
 ---

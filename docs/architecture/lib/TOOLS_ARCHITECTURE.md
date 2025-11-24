@@ -45,7 +45,7 @@ src/lib/base/util/
 工具模块被所有其他模块广泛使用：
 
 - **日志系统**：所有模块使用 `log_*!` 宏输出日志
-- **剪贴板**：PR、QK 命令使用 `Clipboard::copy()`
+- **剪贴板**：PR、Log 和 Jira 命令使用 `Clipboard::copy()`
 - **浏览器**：PR 命令使用 `Browser::open()`
 - **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
 - **用户确认**：多个命令使用 `confirm()` 函数

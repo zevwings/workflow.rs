@@ -2,13 +2,13 @@
 
 ## 📋 概述
 
-本文档描述 Workflow CLI 的 Shell Completion 模块架构，包括 completion 脚本的生成、安装、配置和卸载功能。该模块为 `workflow`、`pr`、`qk` 三个命令提供 shell 自动补全支持。
+本文档描述 Workflow CLI 的 Shell Completion 模块架构，包括 completion 脚本的生成、安装、配置和卸载功能。该模块为 `workflow` 命令及其所有子命令提供 shell 自动补全支持。
 
 **模块统计：**
 - 总代码行数：约 500 行
 - 文件数量：4 个核心文件
 - 主要组件：3 个（Completion, Generate, Files）
-- 支持的命令：workflow, pr, qk
+- 支持的命令：workflow（包含所有子命令：pr, log, jira, branch, github 等）
 - 支持的 Shell：zsh, bash, fish, powershell, elvish
 
 ---

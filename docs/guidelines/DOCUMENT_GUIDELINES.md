@@ -34,7 +34,7 @@
 2. **命令层模块模板** (`COMMAND.template`)
    - 适用于：`commands/` 下的命令封装层模块
    - 特点：关注命令说明、调用流程、用户交互
-   - 示例：`PR_COMMAND_ARCHITECTURE.md`、`QK_COMMAND_ARCHITECTURE.md`、`CONFIG_COMMAND_ARCHITECTURE.md`
+   - 示例：`PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`、`JIRA_COMMAND_ARCHITECTURE.md`、`CONFIG_COMMAND_ARCHITECTURE.md`
 
 ### 快速使用
 

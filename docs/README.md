@@ -91,7 +91,7 @@
 #### [COMPLETION_ARCHITECTURE.md](./architecture/lib/COMPLETION_ARCHITECTURE.md)
 **Shell Completion 模块架构文档**
 
-- Completion 脚本生成（workflow、pr、qk）
+- Completion 脚本生成（workflow 及其所有子命令）
 - Completion 安装和卸载
 - 多 Shell 支持（zsh、bash、fish、powershell、elvish）
 - Shell 配置文件管理集成
@@ -130,8 +130,11 @@
 - 与 lib/pr 模块的集成
 - 命令使用示例
 
-#### [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
-**日志和 Jira 操作命令层架构文档**
+#### [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
+**日志操作命令层架构文档**
+
+#### [JIRA_COMMAND_ARCHITECTURE.md](./architecture/commands/JIRA_COMMAND_ARCHITECTURE.md)
+**Jira 操作命令层架构文档**
 
 - 日志下载、查找、搜索功能（`workflow log` 子命令）
 - Jira ticket 信息显示（`workflow jira` 子命令）
@@ -272,7 +275,8 @@
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
-- 想了解日志和 Jira 操作命令？ → [QK_COMMAND_ARCHITECTURE.md](./architecture/commands/QK_COMMAND_ARCHITECTURE.md)
+- 想了解日志操作命令？ → [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
+- 想了解 Jira 操作命令？ → [JIRA_COMMAND_ARCHITECTURE.md](./architecture/commands/JIRA_COMMAND_ARCHITECTURE.md)
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)

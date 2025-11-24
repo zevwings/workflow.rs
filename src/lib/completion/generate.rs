@@ -268,6 +268,26 @@ impl CompletionGenerator {
                                     .required(true),
                             )
                             .arg(clap::Arg::new("SEARCH_TERM").value_name("SEARCH_TERM")),
+                    ),
+            )
+            .subcommand(
+                Command::new("jira")
+                    .about("Jira operations")
+                    .subcommand(
+                        Command::new("info").about("Show ticket information").arg(
+                            clap::Arg::new("JIRA_ID")
+                                .value_name("JIRA_ID")
+                                .required(true),
+                        ),
+                    )
+                    .subcommand(
+                        Command::new("attachments")
+                            .about("Download all attachments from Jira ticket")
+                            .arg(
+                                clap::Arg::new("JIRA_ID")
+                                    .value_name("JIRA_ID")
+                                    .required(true),
+                            ),
                     )
                     .subcommand(
                         Command::new("clean")
@@ -286,15 +306,6 @@ impl CompletionGenerator {
                                     .action(clap::ArgAction::SetTrue),
                             ),
                     ),
-            )
-            .subcommand(
-                Command::new("jira").about("Jira operations").subcommand(
-                    Command::new("info").about("Show ticket information").arg(
-                        clap::Arg::new("JIRA_ID")
-                            .value_name("JIRA_ID")
-                            .required(true),
-                    ),
-                ),
             )
             .subcommand(
                 Command::new("github")

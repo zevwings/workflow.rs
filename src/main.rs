@@ -12,13 +12,11 @@ use commands::branch::{clean, ignore};
 use commands::check::check;
 use commands::config::{completion, log, setup, show};
 use commands::github::github;
+use commands::jira::{attachments::AttachmentsCommand, clean::CleanCommand, info::InfoCommand};
 use commands::lifecycle::{uninstall, update};
+use commands::log::{download::DownloadCommand, find::FindCommand, search::SearchCommand};
 use commands::pr::{close, create, integrate, list, merge, status, update as pr_update};
 use commands::proxy::proxy;
-use commands::qk::{
-    clean::CleanCommand, download::DownloadCommand, find::FindCommand, info::InfoCommand,
-    search::SearchCommand,
-};
 
 use workflow::*;
 
@@ -112,16 +110,16 @@ enum Commands {
         #[command(subcommand)]
         subcommand: PRCommands,
     },
-    /// Log operations (download, find, search, clean)
+    /// Log operations (download, find, search)
     ///
     /// Download log files from Jira tickets, search and find content in logs.
     Log {
         #[command(subcommand)]
         subcommand: LogSubcommand,
     },
-    /// Jira operations (info, create, update, etc.)
+    /// Jira operations (info, attachments, clean)
     ///
-    /// View and manage Jira ticket information.
+    /// View and manage Jira ticket information, download attachments, and clean local data.
     Jira {
         #[command(subcommand)]
         subcommand: JiraSubcommand,
@@ -388,6 +386,29 @@ enum LogSubcommand {
         #[arg(value_name = "SEARCH_TERM")]
         search_term: Option<String>,
     },
+}
+
+/// Jira operations subcommands
+///
+/// Used to manage Jira ticket operations.
+#[derive(Subcommand)]
+enum JiraSubcommand {
+    /// Show ticket information
+    ///
+    /// Display detailed information about a Jira ticket.
+    Info {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+    },
+    /// Download all attachments from Jira ticket
+    ///
+    /// Download all attachments from Jira ticket (not just log files).
+    Attachments {
+        /// Jira ticket ID (e.g., PROJ-123)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: String,
+    },
     /// Clean log directory
     ///
     /// Clean log directory for specified JIRA ID, or clean entire base directory if no JIRA ID provided.
@@ -403,21 +424,6 @@ enum LogSubcommand {
         /// Only list what would be deleted
         #[arg(long, short = 'l')]
         list: bool,
-    },
-}
-
-/// Jira operations subcommands
-///
-/// Used to manage Jira ticket operations.
-#[derive(Subcommand)]
-enum JiraSubcommand {
-    /// Show ticket information
-    ///
-    /// Display detailed information about a Jira ticket.
-    Info {
-        /// Jira ticket ID (e.g., PROJ-123)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: String,
     },
 }
 
@@ -552,8 +558,9 @@ fn main() -> Result<()> {
         },
         // 日志操作命令
         Some(Commands::Log { subcommand }) => match subcommand {
-            LogSubcommand::Download { jira_id, all } => {
-                DownloadCommand::download(&jira_id, all)?;
+            LogSubcommand::Download { jira_id, all: _ } => {
+                // Log download only downloads log files, ignoring the 'all' flag
+                DownloadCommand::download(&jira_id)?;
             }
             LogSubcommand::Find {
                 jira_id,
@@ -567,19 +574,22 @@ fn main() -> Result<()> {
             } => {
                 SearchCommand::search(&jira_id, search_term)?;
             }
-            LogSubcommand::Clean {
+        },
+        // Jira 操作命令
+        Some(Commands::Jira { subcommand }) => match subcommand {
+            JiraSubcommand::Info { jira_id } => {
+                InfoCommand::show(&jira_id)?;
+            }
+            JiraSubcommand::Attachments { jira_id } => {
+                AttachmentsCommand::download(&jira_id)?;
+            }
+            JiraSubcommand::Clean {
                 jira_id,
                 dry_run,
                 list,
             } => {
                 let jira_id = jira_id.as_deref().unwrap_or("");
                 CleanCommand::clean(jira_id, dry_run, list)?;
-            }
-        },
-        // Jira 操作命令
-        Some(Commands::Jira { subcommand }) => match subcommand {
-            JiraSubcommand::Info { jira_id } => {
-                InfoCommand::show(&jira_id)?;
             }
         },
         // 无命令时显示帮助信息
@@ -599,8 +609,8 @@ fn main() -> Result<()> {
                 "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
             );
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/integrate)");
-            log_message!("  workflow log        - Log operations (download/find/search/clean)");
-            log_message!("  workflow jira       - Jira operations (info)");
+            log_message!("  workflow log        - Log operations (download/find/search)");
+            log_message!("  workflow jira       - Jira operations (info/attachments/clean)");
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

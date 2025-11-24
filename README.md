@@ -271,25 +271,28 @@ workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会
 ```bash
 # 下载日志
 workflow log download PROJ-123                  # 下载日志文件
-workflow log download PROJ-123 --all            # 下载所有附件（不仅仅是日志附件）
+workflow log download PROJ-123 --all            # 下载所有附件（此参数会被忽略，只下载日志文件）
 
 # 查找请求 ID
 workflow log find PROJ-123 [REQUEST_ID]        # 查找请求 ID（可选，不提供会交互式输入）
 
 # 搜索关键词
 workflow log search PROJ-123 [SEARCH_TERM]     # 搜索关键词（可选，不提供会交互式输入）
-
-# 清理日志目录
-workflow log clean                              # 清理整个日志基础目录（需要确认）
-workflow log clean PROJ-123                    # 清理指定 JIRA ID 的日志目录（需要确认）
-workflow log clean --dry-run                   # 预览清理操作，不实际删除
-workflow log clean --list                      # 只列出将要删除的内容
 ```
 
 ### Jira 操作
 ```bash
 # 显示 ticket 信息
 workflow jira info PROJ-123                    # 显示 Jira ticket 信息
+
+# 下载所有附件
+workflow jira attachments PROJ-123             # 下载所有附件（不仅仅是日志附件）
+
+# 清理日志目录
+workflow jira clean                            # 清理整个日志基础目录（需要确认）
+workflow jira clean PROJ-123                  # 清理指定 JIRA ID 的日志目录（需要确认）
+workflow jira clean --dry-run                 # 预览清理操作，不实际删除
+workflow jira clean --list                    # 只列出将要删除的内容
 ```
 
 > **注意**：日志操作命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。
@@ -392,7 +395,8 @@ make lint
 主要文档包括：
 - [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 总体架构设计文档
 - [docs/architecture/lib/PR_ARCHITECTURE.md](./docs/architecture/lib/PR_ARCHITECTURE.md) - PR 模块架构文档
-- [docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/QK_COMMAND_ARCHITECTURE.md) - 日志和 Jira 操作命令架构文档
+- [docs/architecture/commands/LOG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LOG_COMMAND_ARCHITECTURE.md) - 日志操作命令架构文档
+- [docs/architecture/commands/JIRA_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/JIRA_COMMAND_ARCHITECTURE.md) - Jira 操作命令架构文档
 - [docs/architecture/lib/LLM_ARCHITECTURE.md](./docs/architecture/lib/LLM_ARCHITECTURE.md) - LLM 统一配置驱动架构文档
 - [docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理命令架构文档
 - [docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md) - 生命周期管理命令架构文档
@@ -414,8 +418,8 @@ graph TB
 
     subgraph "命令封装层 (commands/)"
         PRCmd[commands/pr/<br/>create, merge, close, etc.]
-        LogCmd[commands/qk/<br/>download, find, search, clean]
-        JiraCmd[commands/qk/info<br/>显示 ticket 信息]
+        LogCmd[commands/log/<br/>download, find, search]
+        JiraCmd[commands/jira/<br/>info, attachments, clean]
         BranchCmd[commands/branch/<br/>clean, ignore]
         OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
     end
@@ -505,7 +509,8 @@ workflow/
 │   │   └── install.rs   # 安装命令入口（独立的 install 命令）
 │   └── commands/        # 命令实现（命令封装层）
 │       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
-│       ├── qk/          # 日志和 Jira 操作命令（download, find, search, clean, info）
+│       ├── log/          # 日志操作命令（download, find, search）
+│       ├── jira/         # Jira 操作命令（info, attachments, clean）
 │       ├── branch/       # 分支管理命令（clean, ignore）
 │       ├── check/       # 环境检查命令（check）
 │       ├── proxy/       # 代理管理命令（on, off, check）
@@ -530,7 +535,8 @@ workflow/
         │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
         └── commands/    # 命令层架构文档（CLI 命令封装）
             ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
-            ├── QK_COMMAND_ARCHITECTURE.md      # 日志和 Jira 操作命令架构文档
+            ├── LOG_COMMAND_ARCHITECTURE.md     # 日志操作命令架构文档
+            ├── JIRA_COMMAND_ARCHITECTURE.md    # Jira 操作命令架构文档
             ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
             ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
             ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档

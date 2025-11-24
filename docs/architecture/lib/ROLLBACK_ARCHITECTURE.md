@@ -8,7 +8,7 @@
 - 总代码行数：约 455 行（rollback.rs: 450 行，mod.rs: 5 行）
 - 文件数量：2 个核心文件
 - 主要组件：2 个（RollbackManager, BackupInfo）
-- 备份内容：二进制文件（workflow, pr, qk）和补全脚本文件
+- 备份内容：二进制文件（workflow）和补全脚本文件
 
 ---
 
@@ -100,7 +100,7 @@ create_backup()
   1. create_backup_dir()
      └─ 在临时目录创建唯一备份目录（workflow-backup-{timestamp}）
   ↓
-  2. backup_binaries(backup_dir, ["workflow", "pr", "qk"])
+  2. backup_binaries(backup_dir, ["workflow"])
      ├─ 遍历二进制文件列表
      ├─ 检查文件是否存在
      ├─ 使用 sudo cp 复制到备份目录
@@ -159,11 +159,11 @@ cleanup_backup(backup_info)
 ### 备份数据流
 
 ```
-/usr/local/bin/workflow, pr, qk (二进制文件)
+/usr/local/bin/workflow (二进制文件)
   ↓
 sudo cp (复制)
   ↓
-{temp_dir}/workflow-backup-{timestamp}/workflow, pr, qk
+{temp_dir}/workflow-backup-{timestamp}/workflow
   ↓
 BackupInfo.binary_backups
 
@@ -183,7 +183,7 @@ BackupInfo.binary_backups
   ↓
 sudo cp (恢复)
   ↓
-/usr/local/bin/workflow, pr, qk
+/usr/local/bin/workflow
 
 BackupInfo.completion_backups
   ↓

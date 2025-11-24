@@ -1,22 +1,13 @@
-# 日志和 Jira 命令模块架构文档
-
-> ⚠️ **此文档已废弃**
->
-> 本文档已拆分为两个独立的架构文档：
-> - [LOG_COMMAND_ARCHITECTURE.md](./LOG_COMMAND_ARCHITECTURE.md) - 日志操作命令架构文档
-> - [JIRA_COMMAND_ARCHITECTURE.md](./JIRA_COMMAND_ARCHITECTURE.md) - Jira 操作命令架构文档
->
-> 本文档保留仅作为历史参考，请使用上述新文档。
+# 日志命令模块架构文档
 
 ## 📋 概述
 
-日志和 Jira 命令层是 Workflow CLI 的命令接口，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词、清理日志目录和显示 ticket 信息等功能。该层采用命令模式设计，通过调用 `lib/jira/logs/` 模块提供的 API 实现业务功能。
+日志命令层是 Workflow CLI 的命令接口，提供从 Jira ticket 下载日志、查找请求 ID、搜索关键词等功能。该层采用命令模式设计，通过调用 `lib/jira/logs/` 模块提供的 API 实现业务功能。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/jira/logs/` 模块提供。
 
 **命令结构**：
 - `workflow log` - 日志操作命令（download, find, search）
-- `workflow jira` - Jira 操作命令（info, attachments, clean）
 
 ---
 
@@ -24,24 +15,22 @@
 
 ### CLI 入口层
 
-日志和 Jira 命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Log` 和 `Commands::Jira` 枚举定义。
+日志命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Log` 枚举定义。
 
 ```
 src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
-- **功能**：使用 `clap` 解析命令行参数，将 `workflow log` 和 `workflow jira` 子命令分发到对应的命令处理函数
+- **功能**：使用 `clap` 解析命令行参数，将 `workflow log` 子命令分发到对应的命令处理函数
 
-### 命令封装层 (`commands/qk/`)
+### 命令封装层 (`commands/log/`)
 
 ```
-src/commands/qk/
-├── mod.rs          # QK 命令模块声明（20 行）
-├── download.rs     # 下载日志命令（33 行）
+src/commands/log/
+├── mod.rs          # Log 命令模块声明
+├── download.rs     # 下载日志命令（29 行）
 ├── find.rs         # 查找请求 ID 命令（45 行）
-├── search.rs       # 搜索关键词命令（97 行）
-├── clean.rs        # 清理日志目录命令（58 行）
-└── info.rs         # 显示 ticket 信息命令（103 行）
+└── search.rs       # 搜索关键词命令（97 行）
 ```
 
 **职责**：
@@ -58,10 +47,7 @@ src/commands/qk/
   - `JiraLogs::download_from_jira()` - 下载日志
   - `JiraLogs::extract_response_content()` - 提取响应内容
   - `JiraLogs::search_keyword()` - 搜索关键词
-  - `JiraLogs::clean_dir()` - 清理目录
   - `JiraLogs::ensure_log_file_exists()` - 确保日志文件存在
-- **`lib/jira/`**：Jira 集成
-  - `Jira::get_ticket_info()` - 获取 ticket 信息
 - **`lib/base/util/`**：工具函数
   - `Clipboard::copy()` - 复制到剪贴板
 - **`lib/base/settings/`**：配置管理
@@ -80,7 +66,7 @@ src/commands/qk/
   ↓
 src/main.rs (workflow 主命令，参数解析)
   ↓
-commands/qk/*.rs (命令封装层，处理交互)
+commands/log/*.rs (命令封装层，处理交互)
   ↓
 lib/jira/logs/ (通过 JiraLogs API 调用，具体实现见相关模块文档)
 ```
@@ -96,8 +82,7 @@ match cli.subcommand
   ├─ Download → DownloadCommand::download()
   ├─ Find → FindCommand::find_request_id()
   ├─ Search → SearchCommand::search()
-  ├─ Clean → CleanCommand::clean()
-  └─ None → InfoCommand::show() (默认)
+  └─ Clean → CleanCommand::clean()
 ```
 
 ---
@@ -107,7 +92,7 @@ match cli.subcommand
 ### 相关文件
 
 ```
-src/commands/qk/download.rs
+src/commands/log/download.rs
 src/main.rs (命令入口)
 ```
 
@@ -116,12 +101,12 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Download
   ↓
-commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
+commands/log/download.rs::DownloadCommand::download(jira_id)
   ↓
-  1. 根据 download_all 参数显示不同的提示信息
+  1. 显示下载提示信息
   2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 调用 JiraLogs::download_from_jira(jira_id, None, download_all)
-     └─ 内部处理：下载附件、合并分片、解压文件
+  3. 调用 JiraLogs::download_from_jira(jira_id, None, false)
+     └─ 内部处理：下载日志附件、合并分片、解压文件
   4. 输出成功信息和文件路径
 ```
 
@@ -129,14 +114,13 @@ commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（必需）
-   - `download_all` - 是否下载所有附件（默认：只下载日志附件）
 
 2. **用户交互**：
-   - 根据 `download_all` 参数显示不同的提示信息
    - 显示下载进度和结果
 
 3. **核心功能**：
    - 通过 `JiraLogs::download_from_jira()` API 实现下载功能
+   - 只下载日志附件（文件匹配 log.zip, *.log, *.txt 模式）
    - 自动处理附件下载、分片合并、文件解压等操作
 
 ### 关键步骤说明
@@ -146,7 +130,7 @@ commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
 
 2. **下载执行**：
    - 调用 `JiraLogs::download_from_jira()` 执行下载
-   - 支持下载所有附件或仅下载日志附件
+   - 只下载日志附件（`download_all_attachments = false`）
    - 自动处理分片 ZIP 文件的合并和解压
 
 3. **结果输出**：
@@ -160,7 +144,7 @@ commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
   - 参数：
     - `jira_id` - Jira ticket ID
     - `output_folder` - 输出文件夹名称（可选，None 时使用配置的默认值）
-    - `download_all_attachments` - 是否下载所有附件
+    - `download_all_attachments` - 是否下载所有附件（false，只下载日志附件）
   - 返回：基础目录路径
 
 ---
@@ -170,7 +154,7 @@ commands/qk/download.rs::DownloadCommand::download(jira_id, download_all)
 ### 相关文件
 
 ```
-src/commands/qk/find.rs
+src/commands/log/find.rs
 src/main.rs (命令入口)
 ```
 
@@ -179,7 +163,7 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Find
   ↓
-commands/qk/find.rs::FindCommand::find_request_id(jira_id, request_id)
+commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
   ↓
   1. 创建 JiraLogs 实例：JiraLogs::new()
   2. 获取请求 ID（参数提供或交互式输入）
@@ -235,7 +219,7 @@ commands/qk/find.rs::FindCommand::find_request_id(jira_id, request_id)
 ### 相关文件
 
 ```
-src/commands/qk/search.rs
+src/commands/log/search.rs
 src/main.rs (命令入口)
 ```
 
@@ -244,7 +228,7 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Search
   ↓
-commands/qk/search.rs::SearchCommand::search(jira_id, search_term)
+commands/log/search.rs::SearchCommand::search(jira_id, search_term)
   ↓
   1. 创建 JiraLogs 实例：JiraLogs::new()
   2. 确保日志文件存在：JiraLogs::ensure_log_file_exists(jira_id)
@@ -302,130 +286,12 @@ commands/qk/search.rs::SearchCommand::search(jira_id, search_term)
 
 ---
 
-## 4. 清理日志目录命令 (`clean`)
-
-### 相关文件
-
-```
-src/commands/qk/clean.rs
-src/main.rs (命令入口)
-```
-
-### 调用流程
-
-```
-src/main.rs::LogSubcommand::Clean
-  ↓
-commands/qk/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
-  ↓
-  1. 根据参数显示不同的提示信息
-  2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 调用 JiraLogs::clean_dir(jira_id, dry_run, list_only)
-     └─ 内部处理：计算目录信息、列出内容、预览或删除
-  4. 输出操作结果
-```
-
-### 功能说明
-
-1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可为空字符串，表示清理整个基础目录）
-   - `dry_run` - 预览模式，不实际删除
-   - `list_only` - 只列出目录内容
-
-2. **用户交互**：
-   - 根据参数显示不同的提示信息
-   - 显示操作结果
-
-3. **核心功能**：
-   - 通过 `JiraLogs::clean_dir()` API 清理日志目录
-   - 支持预览模式和列表模式
-
-### 关键步骤说明
-
-1. **初始化**：
-   - 创建 `JiraLogs` 实例
-
-2. **操作执行**：
-   - 调用 `JiraLogs::clean_dir()` 执行清理操作
-   - 根据参数决定操作模式（预览、列表、删除）
-
-3. **结果输出**：
-   - 显示操作结果
-   - 如果删除成功，显示成功信息
-
-### JiraLogs API 调用
-
-- **`JiraLogs::new()`** - 创建 JiraLogs 实例
-- **`JiraLogs::clean_dir(jira_id, dry_run, list_only)`** - 清理日志目录
-  - 参数：
-    - `jira_id` - Jira ticket ID（空字符串表示清理整个基础目录）
-    - `dry_run` - 预览模式
-    - `list_only` - 只列出目录内容
-  - 返回：是否成功删除（bool）
-
----
-
-## 5. 显示 Ticket 信息命令 (`info`)
-
-### 相关文件
-
-```
-src/commands/qk/info.rs
-src/main.rs (命令入口，默认命令)
-```
-
-### 调用流程
-
-```
-src/main.rs::JiraSubcommand::Info
-  ↓
-commands/qk/info.rs::InfoCommand::show(jira_id)
-  ↓
-  1. 调用 Jira::get_ticket_info(jira_id) 获取 ticket 信息
-  2. 显示基本信息（Key, ID, Summary, Status）
-  3. 显示描述（如果有）
-  4. 显示附件列表（如果有）
-  5. 显示评论数量（如果有）
-  6. 显示 Jira URL
-```
-
-### 功能说明
-
-1. **参数处理**：
-   - `jira_id` - Jira ticket ID（必需）
-
-2. **用户交互**：
-   - 格式化显示 ticket 信息
-   - 使用分隔线和图标美化输出
-
-3. **核心功能**：
-   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息
-   - 格式化显示所有相关信息
-
-### 关键步骤说明
-
-1. **信息获取**：
-   - 调用 `Jira::get_ticket_info()` 获取 ticket 信息
-
-2. **信息展示**：
-   - 显示基本信息（Key, ID, Summary, Status）
-   - 显示描述（如果有）
-   - 显示附件列表（格式化文件大小）
-   - 显示评论数量
-   - 显示 Jira URL
-
-### Jira API 调用
-
-- **`Jira::get_ticket_info(jira_id)`** - 获取 ticket 信息
-  - 参数：`jira_id` - Jira ticket ID
-  - 返回：Issue 结构体（包含所有 ticket 信息）
-
 ### 数据流
 
 #### Download 命令数据流
 
 ```
-命令行参数 (JIRA_ID, --all)
+命令行参数 (JIRA_ID)
   ↓
 DownloadCommand::download()
   ↓
@@ -433,7 +299,7 @@ JiraLogs::download_from_jira()
   ↓
 Jira API (获取附件列表)
   ↓
-下载到本地
+下载日志附件到本地
   ↓
 合并分片、解压文件
   ↓
@@ -472,36 +338,6 @@ JiraLogs::search_keyword()
 格式化输出到终端
 ```
 
-#### Clean 命令数据流
-
-```
-命令行参数 (JIRA_ID, --dry-run, --list)
-  ↓
-CleanCommand::clean()
-  ↓
-JiraLogs::clean_dir()
-  ↓
-计算目录信息、列出内容
-  ↓
-预览或删除目录
-  ↓
-输出操作结果
-```
-
-#### Info 命令数据流
-
-```
-命令行参数 (JIRA_ID)
-  ↓
-InfoCommand::show()
-  ↓
-Jira::get_ticket_info()
-  ↓
-Jira API (获取 ticket 信息)
-  ↓
-格式化显示 ticket 信息
-```
-
 ---
 
 ## 🏗️ 架构设计
@@ -514,8 +350,8 @@ Jira API (获取 ticket 信息)
 - `DownloadCommand::download()` - 下载日志
 - `FindCommand::find_request_id()` - 查找请求 ID
 - `SearchCommand::search()` - 搜索关键词
-- `CleanCommand::clean()` - 清理日志目录
-- `InfoCommand::show()` - 显示 ticket 信息
+
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
 
 ### 2. 分层调用模式
 
@@ -527,9 +363,7 @@ src/main.rs::main()
 match cli.subcommand
   ├─ Download → DownloadCommand::download()
   ├─ Find → FindCommand::find_request_id()
-  ├─ Search → SearchCommand::search()
-  ├─ Clean → CleanCommand::clean()
-  └─ None → InfoCommand::show()
+  └─ Search → SearchCommand::search()
 ```
 
 **库层调用（Commands → JiraLogs）**：
@@ -557,8 +391,8 @@ JiraLogs::download_from_jira()
    - `clap` 自动处理参数验证和错误提示
 
 2. **命令层**：用户交互错误、业务逻辑错误
-- 交互式输入错误（用户取消输入）
-  - 参数验证错误
+   - 交互式输入错误（用户取消输入）
+   - 参数验证错误
 
 3. **库层**：文件操作错误、API 调用错误
    - 通过 `JiraLogs` API 返回的错误信息
@@ -571,7 +405,6 @@ JiraLogs::download_from_jira()
 
 - **API 调用错误**：
   - Download 命令：Jira API 调用失败会通过 `JiraLogs` API 返回错误信息
-  - Info 命令：Jira API 调用失败会返回错误信息
 
 - **交互式输入错误**：
   - Find/Search 命令：如果用户取消输入或输入无效，`dialoguer::Input` 会返回错误
@@ -582,10 +415,10 @@ JiraLogs::download_from_jira()
 
 ### 添加新命令
 
-1. 在 `commands/qk/` 下创建新的命令文件（如 `new_command.rs`）
+1. 在 `commands/log/` 下创建新的命令文件（如 `new_command.rs`）
 2. 实现命令结构体和处理方法（如 `NewCommand::execute()`）
-3. 在 `commands/qk/mod.rs` 中导出命令结构体
-4. 在 `src/main.rs` 中添加命令枚举（`LogSubcommand` 或 `JiraSubcommand`）
+3. 在 `commands/log/mod.rs` 中导出命令结构体
+4. 在 `src/main.rs` 中添加命令枚举（`LogSubcommand`）
 5. 在 `src/main.rs` 的 `main()` 函数中添加命令分发逻辑
 
 ### 添加新的用户交互
@@ -606,6 +439,7 @@ JiraLogs::download_from_jira()
 
 - [主架构文档](../ARCHITECTURE.md)
 - [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
+- [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)
 - [PR 命令模块架构文档](./PR_COMMAND_ARCHITECTURE.md)
 
 ---
@@ -615,67 +449,35 @@ JiraLogs::download_from_jira()
 ### Download 命令
 
 ```bash
-# 只下载日志附件（默认行为）
-workflow log download WEW-763
-
-# 下载所有附件
-workflow log download WEW-763 --all
-# 或使用短选项
-workflow log download WEW-763 -a
+# 下载日志附件（只下载日志附件）
+workflow log download PROJ-123
 ```
 
 ### Find 命令
 
 ```bash
 # 提供请求 ID
-workflow log find WEW-763 abc123
+workflow log find PROJ-123 abc123
 
 # 交互式输入请求 ID
-workflow log find WEW-763
+workflow log find PROJ-123
 ```
 
 ### Search 命令
 
 ```bash
 # 提供搜索词
-workflow log search WEW-763 "error"
+workflow log search PROJ-123 "error"
 
 # 交互式输入搜索词
-workflow log search WEW-763
-```
-
-### Clean 命令
-
-```bash
-# 清理整个日志基础目录
-workflow log clean
-
-# 清理指定 JIRA ID 的日志目录
-workflow log clean WEW-763
-
-# 预览清理操作（dry-run）
-workflow log clean --dry-run
-# 或使用短选项
-workflow log clean -n
-
-# 列出目录内容
-workflow log clean --list
-# 或使用短选项
-workflow log clean -l
-```
-
-### Info 命令
-
-```bash
-# 显示 ticket 信息
-workflow jira info WEW-763
+workflow log search PROJ-123
 ```
 
 ---
 
 ## ✅ 总结
 
-QK 命令层采用清晰的命令模式设计：
+日志命令层采用清晰的命令模式设计：
 
 1. **CLI 层**：参数解析和命令分发
 2. **命令层**：用户交互和格式化输出

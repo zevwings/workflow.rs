@@ -26,13 +26,16 @@ src/
 │   │   ├── list.rs         # 列出 PR
 │   │   ├── update.rs       # 更新 PR
 │   │   └── integrate.rs    # 集成分支命令
-│   ├── qk/                 # 日志和 Jira 操作命令（用于 workflow log 和 workflow jira）
-│   │   ├── mod.rs          # QK 命令模块声明
+│   ├── log/                # 日志操作命令
+│   │   ├── mod.rs          # Log 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
 │   │   ├── find.rs         # 查找请求 ID 命令
-│   │   ├── search.rs       # 搜索关键词命令
-│   │   ├── clean.rs        # 清理日志目录命令
-│   │   └── info.rs         # 显示 ticket 信息命令
+│   │   └── search.rs       # 搜索关键词命令
+│   ├── jira/               # Jira 操作命令
+│   │   ├── mod.rs          # Jira 命令模块声明
+│   │   ├── info.rs         # 显示 ticket 信息命令
+│   │   ├── attachments.rs  # 下载附件命令
+│   │   └── clean.rs        # 清理日志目录命令
 │   ├── branch/             # 分支管理命令
 │   │   ├── mod.rs          # Branch 命令模块声明
 │   │   ├── clean.rs        # 清理本地分支命令
@@ -177,7 +180,8 @@ src/
                   │
 ┌─────────────────▼───────────────────────┐
 │      命令封装层 (commands/)              │
-│  - commands/qk/  (日志操作)              │
+│  - commands/log/  (日志操作)              │
+│  - commands/jira/ (Jira 操作)             │
 │  - commands/pr/  (PR 操作)               │
 │  - commands/branch/ (分支管理)           │
 │  - commands/github/ (GitHub 账号管理)   │
@@ -209,7 +213,8 @@ src/
 
 ```
 用户输入 → main.rs → commands/pr/*.rs → lib/pr/*.rs → 执行操作
-用户输入 → main.rs → commands/qk/*.rs → lib/jira/logs/*.rs → 执行操作
+用户输入 → main.rs → commands/log/*.rs → lib/jira/logs/*.rs → 执行操作
+用户输入 → main.rs → commands/jira/*.rs → lib/jira/*.rs → 执行操作
 用户输入 → main.rs → commands/branch/*.rs → lib/git/branch.rs → 执行操作
 用户输入 → main.rs → commands/github/*.rs → lib/git/config.rs → 执行操作
 用户输入 → main.rs → commands/check/*.rs → lib/git/*.rs → 执行操作
