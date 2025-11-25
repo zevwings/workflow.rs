@@ -65,4 +65,3 @@ Return your response in JSON format with three fields: `branch_name`, `pr_title`
   "description": "This PR adds user authentication functionality including login and registration features."
 }
 ```"#;
-
