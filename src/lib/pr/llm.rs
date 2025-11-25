@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::PromptManager;
+use crate::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 use crate::pr::helpers::transform_to_branch_name;
 
 /// PR 内容，包含分支名、PR 标题和描述
@@ -61,8 +61,8 @@ impl PullRequestLLM {
 
         // 构建请求参数
         let user_prompt = Self::user_prompt(commit_title, exists_branches, git_diff);
-        let system_prompt = PromptManager::load("generate_branch.system.md")
-            .with_context(|| "Failed to load system prompt from file: generate_branch.system.md")?;
+        // 使用编译时嵌入的 system prompt
+        let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
 
         let params = LLMRequestParams {
             system_prompt,

@@ -697,14 +697,6 @@ impl UpdateCommand {
 
         if all_checks_passed {
             log_success!("All verifications passed!");
-            #[cfg(target_os = "macos")]
-            {
-                log_info!("");
-                log_info!("💡 Note: If you encounter macOS Gatekeeper blocking execution,");
-                log_info!("   please allow the binary in System Settings:");
-                log_info!("   System Settings → Privacy & Security → Allow");
-                log_info!("");
-            }
         } else {
             log_warning!("Some verifications failed, please check the above warning messages");
         }
