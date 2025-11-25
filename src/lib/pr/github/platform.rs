@@ -286,6 +286,35 @@ impl PlatformProvider for GitHub {
         Ok(None)
     }
 
+    /// 获取 PR 的 diff 内容
+    fn get_pull_request_diff(&self, pull_request_id: &str) -> Result<String> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        // 使用 GitHub API 获取 PR diff
+        // 格式: GET /repos/{owner}/{repo}/pulls/{pr_number}.diff
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}.diff",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
+
+        let response = client.get(&url, config)?;
+        let diff = response
+            .ensure_success_with(handle_github_error)?
+            .as_text()?;
+
+        Ok(diff)
+    }
+
     /// 关闭 Pull Request
     fn close_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;

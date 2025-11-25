@@ -14,6 +14,9 @@
 
 #[path = "generate_branch.system.rs"]
 pub mod generate_branch_system;
+#[path = "summarize_pr.system.rs"]
+pub mod summarize_pr_system;
 
 // 重新导出公共 API
 pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;
+pub use summarize_pr_system::SUMMARIZE_PR_SYSTEM_PROMPT;
