@@ -12,7 +12,7 @@ use crate::pr::GitHub;
 use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
 
 use super::defaults::{
-    default_download_base_dir_option, default_llm_provider, default_log_folder,
+    default_download_base_dir_option, default_language, default_llm_provider, default_log_folder,
     default_log_settings, default_response_format,
 };
 use super::paths::Paths;
@@ -149,6 +149,9 @@ pub struct LLMSettings {
         skip_serializing_if = "String::is_empty"
     )]
     pub response_format: String,
+    /// PR 总结语言（en, zh, zh-CN, zh-TW 等，默认 en）
+    #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
+    pub language: String,
 }
 
 /// 应用程序设置
@@ -180,6 +183,7 @@ impl LLMSettings {
             && self.model.is_none()
             && self.provider == default_llm_provider()
             && self.response_format == default_response_format()
+            && self.language == default_language()
     }
 }
 

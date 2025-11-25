@@ -23,11 +23,12 @@ impl SummarizeCommand {
     /// # 参数
     ///
     /// * `pull_request_id` - PR ID（可选，如果不提供则自动检测当前分支的 PR）
+    /// * `language` - 语言代码（可选，如 "en", "zh", "zh-CN", "zh-TW"），如果不提供则从配置文件读取或使用默认值
     ///
     /// # 返回
     ///
     /// 返回保存的文件路径
-    pub fn summarize(pull_request_id: Option<String>) -> Result<String> {
+    pub fn summarize(pull_request_id: Option<String>, language: Option<&str>) -> Result<String> {
         // 创建平台提供者
         let provider = create_provider()?;
 
@@ -58,7 +59,7 @@ impl SummarizeCommand {
         log_info!("Generating summary with LLM...");
 
         // 使用 LLM 生成总结
-        let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff)
+        let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)
             .context("Failed to generate PR summary")?;
 
         // 解析 diff，提取所有文件的修改
@@ -106,16 +107,29 @@ impl SummarizeCommand {
             log_info!("Warning: Code changes section is empty. Final document will not include code changes.");
         }
 
-        // 合并总结和代码修改部分
-        let final_summary = if code_changes_section.is_empty() {
-            log_info!(
-                "Warning: No code changes found in diff. The generated document may be incomplete."
-            );
+        // 确保 PR Title 在文档开头
+        let summary_with_title = if summary.summary.starts_with("# ") {
+            // 已经包含标题，直接使用
             summary.summary
         } else {
+            // 添加 PR Title 作为一级标题
+            format!("# {}\n\n{}", pr_title, summary.summary)
+        };
+
+        // 合并总结和代码修改部分
+        // Code Changes 部分应该总是存在，即使为空
+        let code_changes_intro = "The following sections show the detailed code changes for each modified file. Each file's changes are displayed with syntax highlighting based on the file type.";
+
+        let final_summary = if code_changes_section.is_empty() {
+            // 即使没有代码变更，也要包含 Code Changes 标题
             format!(
                 "{}\n\n## Code Changes\n\n{}",
-                summary.summary, code_changes_section
+                summary_with_title, code_changes_intro
+            )
+        } else {
+            format!(
+                "{}\n\n## Code Changes\n\n{}\n\n{}",
+                summary_with_title, code_changes_intro, code_changes_section
             )
         };
 
@@ -308,7 +322,9 @@ impl SummarizeCommand {
     ///
     /// 格式：
     /// ```markdown
-    /// ### src/path/to/file.rs:
+    /// ### src/path/to/file.rs
+    ///
+    /// **Purpose**: Brief description of what this file does (inferred from path and changes)
     ///
     /// ```rust
     /// 代码修改内容
@@ -325,13 +341,57 @@ impl SummarizeCommand {
             // 根据文件扩展名确定代码块语言
             let language = Self::detect_language_from_path(file_path);
 
-            sections.push(format!(
-                "### {}:\n\n```{}\n{}\n```",
-                file_path, language, content
-            ));
+            // 尝试从文件路径推断文件用途
+            let purpose = Self::infer_file_purpose(file_path);
+
+            let section = if purpose.is_empty() {
+                format!("### {}\n\n```{}\n{}\n```", file_path, language, content)
+            } else {
+                format!(
+                    "### {}\n\n**Purpose**: {}\n\n```{}\n{}\n```",
+                    file_path, purpose, language, content
+                )
+            };
+
+            sections.push(section);
         }
 
         sections.join("\n\n")
+    }
+
+    /// 从文件路径推断文件用途
+    ///
+    /// 根据文件路径和名称，尝试推断文件的主要用途
+    fn infer_file_purpose(file_path: &str) -> String {
+        let path_lower = file_path.to_lowercase();
+
+        // 根据路径关键词推断用途
+        if path_lower.contains("command") || path_lower.contains("cmd") {
+            if path_lower.contains("summarize") {
+                "Implements the PR summarization command functionality".to_string()
+            } else {
+                "Command implementation".to_string()
+            }
+        } else if path_lower.contains("prompt") {
+            "System prompt definition for LLM interactions".to_string()
+        } else if path_lower.contains("platform") {
+            "Platform-specific API implementation".to_string()
+        } else if path_lower.contains("llm") {
+            "LLM service integration and response parsing".to_string()
+        } else if path_lower.contains("mod.rs") {
+            "Module declaration and exports".to_string()
+        } else if path_lower.contains("main.rs") {
+            "Main entry point and command routing".to_string()
+        } else if path_lower.contains("test") {
+            "Test implementation".to_string()
+        } else if path_lower.contains("config") || path_lower.contains("settings") {
+            "Configuration and settings management".to_string()
+        } else if path_lower.contains("helper") || path_lower.contains("util") {
+            "Utility functions and helpers".to_string()
+        } else {
+            // 如果无法推断，返回空字符串
+            String::new()
+        }
     }
 
     /// 根据文件路径检测代码块语言

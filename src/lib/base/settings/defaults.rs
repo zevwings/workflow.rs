@@ -64,3 +64,8 @@ pub fn default_llm_model(provider: &str) -> String {
         _ => String::new(), // proxy 必须输入，没有默认值
     }
 }
+
+/// 默认 PR 总结语言
+pub fn default_language() -> String {
+    "en".to_string()
+}

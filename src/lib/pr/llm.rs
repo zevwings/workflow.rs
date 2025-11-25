@@ -7,7 +7,8 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::{GENERATE_BRANCH_SYSTEM_PROMPT, SUMMARIZE_PR_SYSTEM_PROMPT};
+use crate::base::prompt::{generate_summarize_pr_system_prompt, GENERATE_BRANCH_SYSTEM_PROMPT};
+use crate::base::settings::Settings;
 use crate::pr::helpers::transform_to_branch_name;
 
 /// PR 内容，包含分支名、PR 标题和描述
@@ -67,7 +68,7 @@ impl PullRequestLLM {
         let params = LLMRequestParams {
             system_prompt,
             user_prompt,
-            max_tokens: 500, // 增加到 500，确保有足够空间返回完整的 JSON（包括 description）
+            max_tokens: Some(500), // 增加到 500，确保有足够空间返回完整的 JSON（包括 description）
             temperature: 0.5,
             model: String::new(), // model 会从 Settings 自动获取，这里可以留空
         };
@@ -240,6 +241,7 @@ impl PullRequestLLM {
     ///
     /// * `pr_title` - PR 标题
     /// * `pr_diff` - PR 的 diff 内容
+    /// * `language` - 可选的语言代码（如 "en", "zh", "zh-CN", "zh-TW"），如果为 None，则从配置文件读取
     ///
     /// # 返回
     ///
@@ -250,21 +252,38 @@ impl PullRequestLLM {
     /// # 错误
     ///
     /// 如果 LLM API 调用失败或响应格式不正确，返回相应的错误信息。
-    pub fn summarize_pr(pr_title: &str, pr_diff: &str) -> Result<PullRequestSummary> {
+    pub fn summarize_pr(
+        pr_title: &str,
+        pr_diff: &str,
+        language: Option<&str>,
+    ) -> Result<PullRequestSummary> {
         // 使用统一的 v2 客户端
         let client = LLMClient::global();
 
+        // 确定使用的语言：命令行参数 > 配置文件 > 默认值（"en"）
+        let language = language
+            .or_else(|| {
+                let settings = Settings::get();
+                let config_lang = settings.llm.language.as_str();
+                if config_lang.is_empty() {
+                    None
+                } else {
+                    Some(config_lang)
+                }
+            })
+            .unwrap_or("en");
+
         // 构建请求参数
         let user_prompt = Self::summarize_user_prompt(pr_title, pr_diff);
-        // 使用编译时嵌入的 system prompt
-        let system_prompt = SUMMARIZE_PR_SYSTEM_PROMPT.to_string();
+        // 根据语言生成 system prompt
+        let system_prompt = generate_summarize_pr_system_prompt(language);
 
         let params = LLMRequestParams {
             system_prompt,
             user_prompt,
-            max_tokens: 2000, // 增加 token 数量，确保有足够空间返回完整的总结文档
-            temperature: 0.3, // 降低温度，使输出更稳定
-            model: String::new(), // model 会从 Settings 自动获取，这里可以留空
+            max_tokens: Some(2000), // 增加 token 数量，确保有足够空间返回完整的总结文档
+            temperature: 0.3,       // 降低温度，使输出更稳定
+            model: String::new(),   // model 会从 Settings 自动获取，这里可以留空
         };
 
         // 调用 LLM API

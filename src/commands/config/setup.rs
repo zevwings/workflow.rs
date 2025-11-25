@@ -1,10 +1,13 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::base::settings::defaults::{default_llm_model, default_response_format};
+use crate::base::settings::defaults::{
+    default_language, default_llm_model, default_response_format,
+};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
+use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
@@ -34,6 +37,7 @@ struct CollectedConfig {
     llm_key: Option<String>,
     llm_model: Option<String>,
     llm_response_format: Option<String>, // Option<String> 类型，可能为空（None 表示使用默认值）
+    llm_language: String,                // PR 总结语言
 }
 
 impl SetupCommand {
@@ -96,6 +100,11 @@ impl SetupCommand {
                 None
             } else {
                 Some(llm.response_format.clone())
+            },
+            llm_language: if llm.language.is_empty() {
+                default_language()
+            } else {
+                llm.language.clone()
             },
         })
     }
@@ -500,6 +509,16 @@ impl SetupCommand {
             Some(llm_response_format_input) // 使用用户输入的值
         };
 
+        // 配置 PR 总结语言
+        let current_language = if !existing.llm_language.is_empty() {
+            Some(existing.llm_language.as_str())
+        } else {
+            None
+        };
+
+        let llm_language =
+            select_language(current_language).context("Failed to select summary language")?;
+
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
         log_message!("📦 Codeup Configuration (Optional)");
@@ -602,6 +621,7 @@ impl SetupCommand {
             llm_key,
             llm_model,
             llm_response_format,
+            llm_language,
         })
     }
 
@@ -639,6 +659,7 @@ impl SetupCommand {
                 model: config.llm_model.clone(),
                 // None 转换为空字符串（不保存到 TOML，使用默认值）
                 response_format: config.llm_response_format.clone().unwrap_or_default(),
+                language: config.llm_language.clone(),
             },
         };
 

@@ -354,6 +354,11 @@ enum PRCommands {
         /// PR ID (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
+
+        /// Language for the summary (en, zh, zh-CN, zh-TW, etc.)
+        /// If not specified, uses the value from config file or defaults to "en"
+        #[arg(short, long)]
+        language: Option<String>,
     },
 }
 
@@ -573,8 +578,11 @@ fn main() -> Result<()> {
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
             }
-            PRCommands::Summarize { pull_request_id } => {
-                summarize::SummarizeCommand::summarize(pull_request_id)?;
+            PRCommands::Summarize {
+                pull_request_id,
+                language,
+            } => {
+                summarize::SummarizeCommand::summarize(pull_request_id, language.as_deref())?;
             }
         },
         // 日志操作命令

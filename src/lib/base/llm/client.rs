@@ -189,7 +189,7 @@ impl LLMClient {
     /// 构建请求体
     fn build_payload(&self, params: &LLMRequestParams) -> Result<Value> {
         let model = self.build_model()?;
-        Ok(json!({
+        let mut payload = json!({
             "model": model,
             "messages": [
                 {
@@ -201,9 +201,16 @@ impl LLMClient {
                     "content": params.user_prompt
                 }
             ],
-            "max_tokens": params.max_tokens,
             "temperature": params.temperature
-        }))
+        });
+
+        // 只有当 max_tokens 有值时才添加到请求体中
+        // 如果为 None，则不包含该字段，让 API 使用模型默认的最大值
+        if let Some(max_tokens) = params.max_tokens {
+            payload["max_tokens"] = json!(max_tokens);
+        }
+
+        Ok(payload)
     }
 
     /// 从响应中提取内容
