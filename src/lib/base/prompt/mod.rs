@@ -1,25 +1,19 @@
 //! Prompt 管理模块
 //!
-//! 本模块提供了统一的 Prompt 管理功能，支持：
-//! - 从文件加载 Prompt（便于维护和版本控制）
-//! - 默认值回退（如果文件不存在，使用代码中的默认值）
-//! - Prompt 缓存（避免重复读取文件）
+//! 本模块提供了 Prompt 常量定义。
+//! Prompt 内容作为编译时常量直接嵌入到二进制文件中。
 //!
 //! ## 使用示例
 //!
 //! ```rust
-//! use workflow::base::prompt::PromptManager;
+//! use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 //!
-//! // 加载 Prompt，如果文件不存在则使用默认值
-//! let prompt = PromptManager::load_or_default("generate_branch.system.md", || {
-//!     "Default system prompt".to_string()
-//! })?;
-//!
-//! // 直接加载 Prompt（如果文件不存在会返回错误）
-//! let prompt = PromptManager::load("generate_branch.system.md")?;
+//! // 直接使用编译时嵌入的 prompt
+//! let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
 //! ```
 
-pub mod manager;
+#[path = "generate_branch.system.rs"]
+pub mod generate_branch_system;
 
 // 重新导出公共 API
-pub use manager::PromptManager;
+pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;

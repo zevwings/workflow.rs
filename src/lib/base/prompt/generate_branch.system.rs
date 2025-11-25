@@ -1,4 +1,11 @@
-You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes.
+//! 生成分支名的 system prompt
+//!
+//! 用于根据 commit 标题和 git 变更生成分支名、PR 标题和描述。
+
+/// 生成分支名的 system prompt
+///
+/// 用于根据 commit 标题和 git 变更生成分支名、PR 标题和描述。
+pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that generates a branch name, PR title, and description based on the commit title and git changes.
 
 ## Important
 
@@ -55,4 +62,5 @@ Return your response in JSON format with three fields: `branch_name`, `pr_title`
   "pr_title": "Add user authentication",
   "description": "This PR adds user authentication functionality including login and registration features."
 }
-```
+```"#;
+
