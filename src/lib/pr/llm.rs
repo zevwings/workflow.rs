@@ -269,10 +269,7 @@ impl PullRequestLLM {
 
         // 调用 LLM API
         let response = client.call(&params).with_context(|| {
-            format!(
-                "Failed to call LLM API for summarizing PR: '{}'",
-                pr_title
-            )
+            format!("Failed to call LLM API for summarizing PR: '{}'", pr_title)
         })?;
 
         // 解析响应
@@ -386,9 +383,7 @@ impl PullRequestLLM {
             .collect::<String>();
 
         // 移除 .md 扩展名（如果存在），因为我们会自动添加
-        let cleaned_filename = cleaned_filename
-            .trim_end_matches(".md")
-            .to_string();
+        let cleaned_filename = cleaned_filename.trim_end_matches(".md").to_string();
 
         if cleaned_filename.is_empty() {
             anyhow::bail!("Generated filename is empty after cleaning");
