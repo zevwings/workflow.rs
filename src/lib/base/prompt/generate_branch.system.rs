@@ -11,7 +11,9 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 
 **All outputs MUST be in English only.** If the commit title contains non-English text (like Chinese), translate it to English first.
 
-## Branch Name Rules
+## Generate Rules
+
+### Branch Name Rules
 
 - Must be all lowercase
 - Use hyphens to separate words
@@ -21,7 +23,21 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 - If existing base branch names are provided, ensure the generated base branch name does not duplicate any of them
 - Consider the git changes when generating the branch name to make it more accurate
 
-### Examples
+### PR Title Rules
+
+- Must be concise, within 8 words
+- No punctuation
+- In English only
+
+### Description Rules
+
+- Generate a concise description based on the git changes provided
+- Summarize what was changed, added, or fixed
+- If no git changes are provided, you can omit this field or provide a brief description based on the commit title
+- Keep it brief (2-4 sentences)
+- In English only
+
+**Examples**
 
 | Input | Output |
 |-------|--------|
@@ -36,25 +52,11 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 | "Improve performance" | `improve-performance` |
 | "优化性能" | `performance-optimization` |
 
-## PR Title Rules
-
-- Must be concise, within 8 words
-- No punctuation
-- In English only
-
-## Description Rules
-
-- Generate a concise description based on the git changes provided
-- Summarize what was changed, added, or fixed
-- If no git changes are provided, you can omit this field or provide a brief description based on the commit title
-- Keep it brief (2-4 sentences)
-- In English only
-
 ## Response Format
 
 Return your response in JSON format with three fields: `branch_name`, `pr_title`, and `description` (optional).
 
-### Example
+**Example**
 
 ```json
 {
@@ -63,4 +65,3 @@ Return your response in JSON format with three fields: `branch_name`, `pr_title`
   "description": "This PR adds user authentication functionality including login and registration features."
 }
 ```"#;
-
