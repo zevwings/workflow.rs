@@ -1,9 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::base::settings::defaults::{
-    default_language, default_llm_model, default_response_format,
-};
+use crate::base::settings::defaults::{default_language, default_llm_model};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
@@ -36,8 +34,7 @@ struct CollectedConfig {
     llm_url: Option<String>,
     llm_key: Option<String>,
     llm_model: Option<String>,
-    llm_response_format: Option<String>, // Option<String> 类型，可能为空（None 表示使用默认值）
-    llm_language: String,                // PR 总结语言
+    llm_language: String, // PR 总结语言
 }
 
 impl SetupCommand {
@@ -93,14 +90,6 @@ impl SetupCommand {
             llm_url: llm.url.clone(),
             llm_key: llm.key.clone(),
             llm_model: llm.model.clone(),
-            // 如果 response_format 为空字符串或等于默认值，设置为 None（表示使用默认值，不保存到 TOML）
-            llm_response_format: if llm.response_format.is_empty()
-                || llm.response_format == default_response_format()
-            {
-                None
-            } else {
-                Some(llm.response_format.clone())
-            },
             llm_language: if llm.language.is_empty() {
                 default_language()
             } else {
@@ -484,31 +473,6 @@ impl SetupCommand {
             None
         };
 
-        // 配置 response_format
-        let response_format_prompt = if let Some(ref format) = existing.llm_response_format {
-            format!(
-                "Response format path [current: {}] (press Enter to keep, empty for default)",
-                format
-            )
-        } else {
-            "Response format path (optional, press Enter to skip, empty for default)".to_string()
-        };
-
-        let llm_response_format_input: String = Input::new()
-            .with_prompt(&response_format_prompt)
-            .allow_empty(true)
-            .interact_text()
-            .context("Failed to get response format")?;
-
-        // 如果用户输入为空，保持现有值（None 表示使用默认值，不保存到 TOML）
-        // 如果用户输入不为空，使用用户输入的值
-        // 这样不会保存默认值到 TOML（skip_serializing_if = "String::is_empty"），运行时会在 extract_content() 中使用默认值
-        let llm_response_format = if llm_response_format_input.is_empty() {
-            existing.llm_response_format.clone() // 保持现有值（可能是 None，表示使用默认值）
-        } else {
-            Some(llm_response_format_input) // 使用用户输入的值
-        };
-
         // 配置 PR 总结语言
         let current_language = if !existing.llm_language.is_empty() {
             Some(existing.llm_language.as_str())
@@ -620,7 +584,6 @@ impl SetupCommand {
             llm_url,
             llm_key,
             llm_model,
-            llm_response_format,
             llm_language,
         })
     }
@@ -657,8 +620,6 @@ impl SetupCommand {
                 key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
                 model: config.llm_model.clone(),
-                // None 转换为空字符串（不保存到 TOML，使用默认值）
-                response_format: config.llm_response_format.clone().unwrap_or_default(),
                 language: config.llm_language.clone(),
             },
         };

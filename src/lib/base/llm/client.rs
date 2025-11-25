@@ -8,13 +8,9 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
 use std::sync::OnceLock;
 
-use super::types::LLMRequestParams;
+use super::types::{ChatCompletionResponse, LLMRequestParams};
 use crate::log_debug;
-use crate::{
-    base::http::HttpResponse,
-    base::settings::defaults::{default_llm_model, default_response_format},
-    Settings,
-};
+use crate::{base::http::HttpResponse, base::settings::defaults::default_llm_model, Settings};
 
 /// LLM 客户端
 ///
@@ -215,144 +211,24 @@ impl LLMClient {
 
     /// 从响应中提取内容
     ///
-    /// 根据 Settings 中的 response_format 配置决定提取方式：
-    /// - 空字符串或 "choices[0].message.content": 使用 OpenAI 标准格式
-    /// - 其他值: 使用自定义 JSON path 提取
+    /// 使用 OpenAI 标准格式解析响应，提取消息内容。
+    /// 支持所有遵循 OpenAI Chat Completions API 标准的响应格式。
     fn extract_content(&self, response: &Value) -> Result<String> {
-        let settings: &Settings = Settings::get();
-        let response_format = &settings.llm.response_format;
+        // 解析为标准结构体
+        // 先将 Value 转换为 JSON 字符串，再反序列化（这样可以处理 DeserializeOwned 的要求）
+        let json_str = serde_json::to_string(response)
+            .context("Failed to serialize response to JSON string")?;
+        let completion: ChatCompletionResponse = serde_json::from_str(&json_str)
+            .context("Failed to parse response as OpenAI ChatCompletion format")?;
 
-        // 如果为空或等于默认值，使用 OpenAI 格式；否则使用自定义格式
-        if response_format.is_empty() || *response_format == default_response_format() {
-            // 标准 OpenAI 格式
-            response
-                .get("choices")
-                .and_then(|c| c.as_array())
-                .and_then(|arr| arr.first())
-                .and_then(|choice| choice.get("message"))
-                .and_then(|msg| msg.get("content"))
-                .and_then(|c| c.as_str())
-                .context("Failed to extract content from OpenAI format response")
-                .map(|s| s.trim().to_string())
-        } else {
-            // 通过 JSON path 提取
-            self.extract_by_path(response, response_format)
-        }
-    }
+        // 提取内容
+        let content = completion
+            .choices
+            .first()
+            .and_then(|choice| choice.message.content.as_ref())
+            .context("No content in response: choices array is empty or content is null")?;
 
-    /// 通过 JSON path 提取内容
-    ///
-    /// 支持点分隔路径和数组索引，例如：
-    /// - `data.result.text` - 简单路径
-    /// - `candidates[0].content.parts[0].text` - 包含数组索引的路径
-    fn extract_by_path(&self, json: &Value, path: &str) -> Result<String> {
-        let mut current = json;
-
-        // 解析路径：支持 "key[0].subkey[1].value" 格式
-        // 使用正则表达式分割路径，同时保留数组索引
-        let parts = Self::parse_path(path);
-
-        for part in parts {
-            match part {
-                PathPart::Key(key) => {
-                    let key_str = key.as_str();
-                    current = current.get(key_str).with_context(|| {
-                        format!(
-                            "Path '{}' not found in response: missing key '{}'",
-                            path, key_str
-                        )
-                    })?;
-                }
-                PathPart::Index(idx) => {
-                    current = current
-                        .as_array()
-                        .with_context(|| {
-                            format!(
-                                "Path '{}' not found in response: expected array at index {}",
-                                path, idx
-                            )
-                        })?
-                        .get(idx)
-                        .with_context(|| {
-                            format!(
-                                "Path '{}' not found in response: array index {} out of bounds",
-                                path, idx
-                            )
-                        })?;
-                }
-            }
-        }
-
-        current
-            .as_str()
-            .with_context(|| format!("Value at path '{}' is not a string", path))
-            .map(|s| s.trim().to_string())
-    }
-
-    /// 解析 JSON path 字符串
-    ///
-    /// 将路径字符串解析为路径部分序列，支持：
-    /// - 点分隔的键名：`data.result`
-    /// - 数组索引：`[0]`, `[1]`
-    /// - 混合：`candidates[0].content.parts[0].text`
-    fn parse_path(path: &str) -> Vec<PathPart> {
-        let mut parts = Vec::new();
-        let mut current = String::new();
-        let mut in_brackets = false;
-
-        for ch in path.chars() {
-            match ch {
-                '[' => {
-                    if !current.is_empty() {
-                        parts.push(PathPart::Key(current.clone()));
-                        current.clear();
-                    }
-                    in_brackets = true;
-                }
-                ']' => {
-                    if in_brackets {
-                        if let Ok(idx) = current.parse::<usize>() {
-                            parts.push(PathPart::Index(idx));
-                        } else {
-                            // 如果不是数字，作为键名处理
-                            parts.push(PathPart::Key(current.clone()));
-                        }
-                        current.clear();
-                        in_brackets = false;
-                    } else {
-                        current.push(ch);
-                    }
-                }
-                '.' => {
-                    if !in_brackets {
-                        if !current.is_empty() {
-                            parts.push(PathPart::Key(current.clone()));
-                            current.clear();
-                        }
-                    } else {
-                        current.push(ch);
-                    }
-                }
-                _ => {
-                    current.push(ch);
-                }
-            }
-        }
-
-        // 处理最后一个部分
-        if !current.is_empty() {
-            if in_brackets {
-                if let Ok(idx) = current.parse::<usize>() {
-                    parts.push(PathPart::Index(idx));
-                } else {
-                    parts.push(PathPart::Key(current));
-                }
-            } else {
-                parts.push(PathPart::Key(current));
-            }
-        }
-
-        parts
+        Ok(content.trim().to_string())
     }
 
     /// 获取 provider 名称
@@ -405,105 +281,115 @@ impl LLMClient {
     }
 }
 
-/// JSON path 部分
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub(crate) enum PathPart {
-    /// 键名
-    Key(String),
-    /// 数组索引
-    Index(usize),
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     #[test]
-    fn test_parse_path_simple() {
-        let parts = LLMClient::parse_path("data.result.text");
-        assert_eq!(parts.len(), 3);
-        match &parts[0] {
-            PathPart::Key(k) => assert_eq!(k, "data"),
-            _ => panic!("Expected Key"),
-        }
-        match &parts[1] {
-            PathPart::Key(k) => assert_eq!(k, "result"),
-            _ => panic!("Expected Key"),
-        }
-        match &parts[2] {
-            PathPart::Key(k) => assert_eq!(k, "text"),
-            _ => panic!("Expected Key"),
-        }
-    }
-
-    #[test]
-    fn test_parse_path_with_array() {
-        let parts = LLMClient::parse_path("candidates[0].content.parts[0].text");
-        assert_eq!(parts.len(), 6);
-        match &parts[0] {
-            PathPart::Key(k) => assert_eq!(k, "candidates"),
-            _ => panic!("Expected Key"),
-        }
-        match &parts[1] {
-            PathPart::Index(i) => assert_eq!(*i, 0),
-            _ => panic!("Expected Index"),
-        }
-        match &parts[2] {
-            PathPart::Key(k) => assert_eq!(k, "content"),
-            _ => panic!("Expected Key"),
-        }
-        match &parts[3] {
-            PathPart::Key(k) => assert_eq!(k, "parts"),
-            _ => panic!("Expected Key"),
-        }
-        match &parts[4] {
-            PathPart::Index(i) => assert_eq!(*i, 0),
-            _ => panic!("Expected Index"),
-        }
-        match &parts[5] {
-            PathPart::Key(k) => assert_eq!(k, "text"),
-            _ => panic!("Expected Key"),
-        }
-    }
-
-    #[test]
-    fn test_extract_by_path_simple() {
+    fn test_extract_from_openai_standard() {
+        // 测试标准 OpenAI 格式（包含所有必需字段）
         let json = json!({
-            "data": {
-                "result": {
-                    "text": "Hello, World!"
-                }
+            "id": "chatcmpl-test",
+            "object": "chat.completion",
+            "created": 1234567890,
+            "model": "gpt-3.5-turbo",
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Test content"
+                },
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15
             }
         });
 
         let client = LLMClient::global();
-
-        let result = client.extract_by_path(&json, "data.result.text").unwrap();
-        assert_eq!(result, "Hello, World!");
+        let result = client.extract_content(&json).unwrap();
+        assert_eq!(result, "Test content");
     }
 
     #[test]
-    fn test_extract_by_path_with_array() {
+    fn test_extract_from_openai_proxy() {
+        // 测试 proxy 格式（包含扩展字段，但符合 OpenAI 标准）
         let json = json!({
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {
-                                "text": "Hello, World!"
-                            }
-                        ]
-                    }
+            "id": "chatcmpl-CfonRS9pFvyJW33Opwz83wHhVIGnz",
+            "object": "chat.completion",
+            "created": 1764082745,
+            "model": "gpt-3.5-turbo-0125",
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": "Test response content",
+                    "refusal": null,
+                    "annotations": []
+                },
+                "logprobs": null,
+                "finish_reason": "stop"
+            }],
+            "usage": {
+                "prompt_tokens": 62,
+                "completion_tokens": 56,
+                "total_tokens": 118,
+                "prompt_tokens_details": {
+                    "cached_tokens": 0,
+                    "audio_tokens": 0
+                },
+                "completion_tokens_details": {
+                    "reasoning_tokens": 0,
+                    "audio_tokens": 0,
+                    "accepted_prediction_tokens": 0,
+                    "rejected_prediction_tokens": 0
                 }
-            ]
+            },
+            "service_tier": "default",
+            "system_fingerprint": null
         });
 
         let client = LLMClient::global();
+        let result = client.extract_content(&json).unwrap();
+        assert_eq!(result, "Test response content");
+    }
 
-        let result = client
-            .extract_by_path(&json, "candidates[0].content.parts[0].text")
-            .unwrap();
-        assert_eq!(result, "Hello, World!");
+    #[test]
+    fn test_extract_from_cerebras_proxy() {
+        // 测试另一种 proxy 格式变体（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
+        let json = json!({
+            "id": "chatcmpl-97c1fe15-05df-490d-a1b9-8540771db334",
+            "choices": [{
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "Test response content",
+                    "role": "assistant"
+                }
+            }],
+            "created": 1764083329,
+            "model": "qwen-3-235b-a22b-instruct-2507",
+            "system_fingerprint": "fp_d2d9b827ee854c39818d",
+            "object": "chat.completion",
+            "usage": {
+                "total_tokens": 186,
+                "completion_tokens": 123,
+                "prompt_tokens": 63
+            },
+            "time_info": {
+                "queue_time": 0.001855552,
+                "prompt_time": 0.003562439,
+                "completion_time": 0.120426404,
+                "total_time": 0.12685751914978027,
+                "created": 1764083329.0582647
+            }
+        });
+
+        let client = LLMClient::global();
+        let result = client.extract_content(&json).unwrap();
+        assert_eq!(result, "Test response content");
     }
 }

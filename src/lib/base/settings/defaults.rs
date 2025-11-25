@@ -46,11 +46,6 @@ pub fn default_log_settings() -> LogSettings {
     }
 }
 
-/// 默认 LLM 响应格式路径（空字符串表示使用默认的 OpenAI 格式）
-pub fn default_response_format() -> String {
-    "choices[0].message.content".to_string()
-}
-
 /// 默认 LLM Provider
 pub fn default_llm_provider() -> String {
     "openai".to_string()

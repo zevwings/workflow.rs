@@ -14,6 +14,7 @@ use commands::config::{completion, log, setup, show};
 use commands::github::github;
 use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use commands::lifecycle::{uninstall, update, version};
+use commands::llm::{LLMLanguageCommand, LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{close, create, integrate, list, merge, status, summarize, update as pr_update};
 use commands::proxy::proxy;
@@ -93,6 +94,14 @@ enum Commands {
         #[command(subcommand)]
         subcommand: GitHubSubcommand,
     },
+    /// Manage LLM configuration
+    ///
+    /// Configure LLM provider, API keys, models, and summary language settings.
+    #[command(name = "llm")]
+    Llm {
+        #[command(subcommand)]
+        subcommand: LLMSubcommand,
+    },
     /// Manage shell completion
     ///
     /// Generate and manage shell completion scripts.
@@ -162,6 +171,25 @@ enum LogLevelSubcommand {
     ///
     /// Display current configured log level and default level information.
     Check,
+}
+
+/// LLM configuration management subcommands
+///
+/// Used to manage LLM provider, API keys, models, and language settings.
+#[derive(Subcommand)]
+enum LLMSubcommand {
+    /// Show current LLM configuration
+    ///
+    /// Display current LLM provider, API key (masked), model, and language settings.
+    Show,
+    /// Setup LLM configuration
+    ///
+    /// Interactively configure LLM provider, proxy URL, API key, and model settings.
+    Setup,
+    /// Set summary language
+    ///
+    /// Interactively select the language for PR summaries.
+    Language,
 }
 
 /// GitHub account management subcommands
@@ -510,6 +538,12 @@ fn main() -> Result<()> {
             GitHubSubcommand::Remove => github::GitHubCommand::remove()?,
             GitHubSubcommand::Switch => github::GitHubCommand::switch()?,
             GitHubSubcommand::Update => github::GitHubCommand::update()?,
+        },
+        // LLM 配置管理命令
+        Some(Commands::Llm { subcommand }) => match subcommand {
+            LLMSubcommand::Show => LLMShowCommand::show()?,
+            LLMSubcommand::Setup => LLMSetupCommand::setup()?,
+            LLMSubcommand::Language => LLMLanguageCommand::set()?,
         },
         // Completion 管理命令
         Some(Commands::Completion { subcommand }) => match subcommand {
