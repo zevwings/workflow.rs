@@ -159,7 +159,7 @@ impl InstallCommand {
                 }
             }
 
-            log_success!("    ✓  {} installation complete", binary_name);
+            log_success!("{} installation complete", binary_name);
             installed_count += 1;
         }
 
