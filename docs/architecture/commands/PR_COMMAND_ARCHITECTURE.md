@@ -11,10 +11,10 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：8 个（create, merge, close, status, list, update, integrate）
-- 总代码行数：约 1500+ 行
+- 命令数量：9 个（create, merge, close, status, list, update, integrate, summarize）
+- 总代码行数：约 1900+ 行
 - 支持平台：GitHub、Codeup
-- 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`
+- 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
 
 ---
 
@@ -29,7 +29,7 @@ src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, integrate）
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, integrate, summarize）
 
 ### 命令封装层
 
@@ -43,7 +43,8 @@ src/commands/pr/
 ├── close.rs        # 关闭 PR 命令（142 行）
 ├── status.rs       # PR 状态查询命令（50 行）
 ├── list.rs         # 列出 PR 命令（21 行）
-└── update.rs       # 更新 PR 命令（59 行）
+├── update.rs       # 更新 PR 命令（59 行）
+└── summarize.rs    # PR 总结命令（425 行）
 ```
 
 **职责**：
@@ -115,6 +116,7 @@ match cli.subcommand {
   PRCommands::List => list::PullRequestListCommand::list()
   PRCommands::Update => update::PullRequestUpdateCommand::update()
   PRCommands::Integrate => integrate::PullRequestIntegrateCommand::integrate()
+  PRCommands::Summarize => summarize::SummarizeCommand::summarize()
 }
 ```
 
@@ -369,6 +371,124 @@ commands/pr/update.rs::PullRequestUpdateCommand::update()
 
 ### 功能说明
 快速更新 PR 代码。自动使用 PR 标题作为提交消息，暂存所有更改，提交并推送。
+
+---
+
+## 8. PR 总结命令 (`summarize.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/summarize.rs (425 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Summarize
+  ↓
+commands/pr/summarize.rs::SummarizeCommand::summarize()
+  ↓
+  1. 创建平台提供者（create_provider()）
+  2. 获取 PR ID（参数或自动检测当前分支）
+  3. 获取 PR 标题（provider.get_pull_request_title()）
+  4. 获取 PR diff（provider.get_pull_request_diff()）
+  5. 使用 LLM 生成总结（PullRequestLLM::summarize_pr()）
+  6. 解析 diff 提取文件修改（parse_diff_to_file_changes()）
+  7. 格式化代码修改为 markdown（format_file_changes_as_markdown()）
+  8. 合并总结和代码修改部分
+  9. 保存到文件（~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md）
+```
+
+### 功能说明
+
+PR 总结命令使用 LLM 生成 PR 的详细总结文档：
+
+1. **PR 信息获取**：
+   - 自动获取 PR 标题和完整的 diff 内容
+   - 支持通过参数指定 PR ID，或自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+2. **LLM 总结生成**：
+   - 使用配置的 LLM 提供商（OpenAI、DeepSeek、Proxy）生成 PR 总结
+   - 支持多语言（en, zh, zh-CN, zh-TW 等）
+   - 语言可通过 `--language` 参数指定，或从配置文件读取，默认使用 "en"
+   - LLM 会自动生成总结内容和文件名
+
+3. **代码变更提取**：
+   - 解析标准的 unified diff 格式
+   - 提取每个文件的修改内容（包括 hunk 信息）
+   - 自动跳过二进制文件
+   - 处理空文件和新增/删除的文件
+
+4. **智能格式化**：
+   - 根据文件扩展名自动识别代码块语言（支持 rust, javascript, typescript, python, go, java, cpp, c, markdown, json, yaml, toml, bash, sql, html, css, xml 等）
+   - 从文件路径推断文件用途（Purpose），如 "Command implementation"、"LLM service integration" 等
+   - 生成格式化的 markdown 文档，包含：
+     - PR 标题作为一级标题
+     - LLM 生成的总结内容
+     - Code Changes 部分，包含所有修改文件的详细内容
+
+5. **文件保存**：
+   - 保存路径格式：`~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md`
+   - 文件夹命名：`SUMMARIZE_FOR_PR_{PR_ID}`（例如：`SUMMARIZE_FOR_PR_123`）
+   - 文件名由 LLM 根据 PR 内容自动生成
+   - 如果目录不存在，会自动创建
+   - 基础目录可通过配置文件 `log.download_base_dir` 自定义，默认为 `~/Downloads/Workflow`
+
+### 关键步骤说明
+
+1. **Diff 解析**（`parse_diff_to_file_changes()`）：
+   - 支持标准的 unified diff 格式（`diff --git a/path/to/file b/path/to/file`）
+   - 自动跳过二进制文件（检测 "Binary files" 或 "GIT binary patch" 标记）
+   - 提取每个文件的修改内容（包括 hunk 信息，即 `@@` 行之后的内容）
+   - 处理空文件和新增/删除的文件（没有 hunk 的情况）
+   - 从 diff 行中提取文件路径（使用 "b/" 后面的路径，即新文件路径）
+
+2. **语言检测**（`detect_language_from_path()`）：
+   - 支持多种编程语言的语法高亮
+   - 根据文件扩展名自动识别语言类型
+   - 支持的语言：rust, javascript, typescript, python, go, java, cpp, c, markdown, json, yaml, toml, bash, sql, html, css, xml 等
+   - 如果无法识别，使用空字符串（markdown 渲染器会尝试自动检测）
+
+3. **文件用途推断**（`infer_file_purpose()`）：
+   - 根据文件路径关键词推断用途
+   - 支持的关键词匹配：
+     - `command`/`cmd` → "Command implementation" 或 "Implements the PR summarization command functionality"
+     - `prompt` → "System prompt definition for LLM interactions"
+     - `platform` → "Platform-specific API implementation"
+     - `llm` → "LLM service integration and response parsing"
+     - `mod.rs` → "Module declaration and exports"
+     - `main.rs` → "Main entry point and command routing"
+     - `test` → "Test implementation"
+     - `config`/`settings` → "Configuration and settings management"
+     - `helper`/`util` → "Utility functions and helpers"
+   - 如果无法推断，返回空字符串（不显示 Purpose 部分）
+
+4. **文档结构**：
+   - 文档开头：PR 标题作为一级标题（`# {PR_TITLE}`）
+   - 总结部分：LLM 生成的总结内容（如果 LLM 已经包含标题，则直接使用）
+   - Code Changes 部分：
+     - 二级标题：`## Code Changes`
+     - 介绍文字：说明每个文件的详细修改内容
+     - 每个文件：
+       - 三级标题：`### {file_path}`
+       - Purpose（可选）：`**Purpose**: {purpose}`
+       - 代码块：```{language}\n{content}\n```
+
+5. **输出路径构建**（`build_output_path()`）：
+   - 从配置文件读取基础目录（`log.download_base_dir`），默认为 `~/Downloads/Workflow`
+   - 文件夹命名：`SUMMARIZE_FOR_PR_{PR_ID}`
+   - 文件命名：`{filename}.md`（文件名由 LLM 生成）
+   - 自动创建目录（如果不存在）
+
+### 使用示例
+
+```bash
+workflow pr summarize                    # 总结当前分支的 PR
+workflow pr summarize 123                # 总结指定 PR ID
+workflow pr summarize --language zh      # 使用中文生成总结
+```
 
 ---
 

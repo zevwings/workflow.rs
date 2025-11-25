@@ -62,12 +62,16 @@ src/lib/pr/llm.rs   # PullRequestLLM 业务层封装 (253行)
 - 生成 PR 分支名
 - 生成 PR 标题
 - 生成 PR 描述
+- 生成 PR 总结文档
 
 **关键调用**：
 ```rust
-// 通过 PullRequestLLM 调用
+// 生成分支名、PR 标题和描述
 let llm = PullRequestLLM::new(commits, config);
 let result = llm.generate()?;
+
+// 生成 PR 总结
+let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 ```
 
 **位置**：`src/lib/pr/llm.rs`
@@ -132,19 +136,23 @@ let result = llm.generate()?;
 
 **关键方法**：
 - `generate()` - 生成分支名、PR 标题和描述
+- `summarize_pr()` - 生成 PR 总结文档和文件名（支持多语言）
 - `system_prompt()` - 生成系统提示词
 - `user_prompt()` - 生成用户提示词
 - `parse_llm_response()` - 解析 LLM 响应
+- `parse_summary_response()` - 解析 PR 总结响应（JSON 格式）
 
 **关键特性**：
 - ✅ **业务封装**：封装 LLM 调用逻辑，提供业务友好的接口
 - ✅ **智能生成**：根据 commit 标题和 Git diff 生成分支名和 PR 标题
-- ✅ **多语言支持**：自动翻译非英文内容为英文
+- ✅ **PR 总结**：使用 LLM 生成 PR 的详细总结文档和文件名，支持多语言（en, zh, zh-CN, zh-TW, ja, ko, de 等）
+- ✅ **多语言支持**：自动翻译非英文内容为英文，支持配置语言偏好
 - ✅ **响应解析**：支持 JSON 和 Markdown 代码块格式
+- ✅ **文件名生成**：LLM 根据 PR 内容自动生成合适的文件名
 
 #### 4. PullRequestContent（业务数据）
 
-**职责**：定义 PR 内容结构
+**职责**：定义 PR 内容结构（用于生成分支名和 PR 标题）
 
 **位置**：`src/lib/pr/llm.rs`
 
@@ -152,6 +160,16 @@ let result = llm.generate()?;
 - `branch_name` - 分支名称（小写，使用连字符分隔）
 - `pr_title` - PR 标题（简洁，不超过 8 个单词）
 - `description` - PR 描述（基于 Git 修改内容生成，可选）
+
+#### 5. PullRequestSummary（业务数据）
+
+**职责**：定义 PR 总结文档结构（用于生成 PR 总结）
+
+**位置**：`src/lib/pr/llm.rs`
+
+**字段**：
+- `summary` - PR 总结文档（Markdown 格式，包含 PR 标题、概述、需求分析、功能说明、用户场景、技术实现等）
+- `filename` - 文件名（不含路径和扩展名，由 LLM 根据 PR 内容自动生成，已清理特殊字符）
 
 #### 5. Settings（配置系统）
 
@@ -299,13 +317,58 @@ LLM API (OpenAI/DeepSeek/Proxy)
 解析响应并返回
 ```
 
+#### PR 总结流程
+
+```
+用户输入（PR 标题、PR diff、语言）
+  ↓
+PullRequestLLM::summarize_pr()
+  ├─ 确定语言（命令行参数 > 配置文件 > 默认值 "en"）
+  ├─ 构建 user prompt（包含 PR 标题和完整 diff）
+  ├─ 根据语言生成 system prompt（generate_summarize_pr_system_prompt()）
+  │   └─ 使用语言系统获取多语言指令
+  └─ 构建请求参数（max_tokens: 2000, temperature: 0.3）
+  ↓
+LLMClient::global() (获取全局单例)
+  ↓
+LLMClient::call() (调用 LLM API)
+  ├─ build_url() (从 Settings 获取 URL)
+  ├─ build_headers() (从 Settings 获取 API Key)
+  ├─ build_model() (从 Settings 获取 Model)
+  ├─ build_payload() (构建请求体)
+  └─ extract_content() (提取响应内容)
+  ↓
+reqwest HTTP Client (发送请求)
+  ↓
+LLM API (OpenAI/DeepSeek/Proxy)
+  ↓
+parse_summary_response() (解析响应)
+  ├─ 提取 JSON（支持 markdown 代码块格式）
+  ├─ 解析 JSON 获取 summary 和 filename
+  ├─ 清理文件名（移除特殊字符，限制长度）
+  └─ 返回 PullRequestSummary
+  ↓
+返回 PullRequestSummary（summary 和 filename）
+```
+
+**关键说明**：
+- **语言优先级**：命令行参数 > 配置文件（`llm.language`）> 默认值（"en"）
+- **System Prompt**：根据语言动态生成，包含详细的要求分析、功能说明、用户场景等指导
+- **请求参数**：
+  - `max_tokens: 2000` - 确保有足够空间返回完整的总结文档
+  - `temperature: 0.3` - 降低温度，使输出更稳定和一致
+- **响应格式**：LLM 返回 JSON 格式，包含 `summary`（Markdown 文档）和 `filename`（文件名）
+- **文件名处理**：自动清理文件名，移除特殊字符，限制长度，确保文件名安全可用
+
 #### 架构流程图
 
 ```mermaid
 graph TB
     User[用户输入<br/>commit 标题<br/>Git diff] --> PRLLM[PullRequestLLM::generate<br/>业务层封装]
+    User2[用户输入<br/>PR 标题<br/>PR diff<br/>语言] --> PRLLM2[PullRequestLLM::summarize_pr<br/>PR 总结]
 
     PRLLM --> Client[LLMClient::global<br/>获取全局单例]
+    PRLLM2 --> Client
 
     Client --> BuildURL[build_url<br/>构建 API URL]
     Client --> BuildHeaders[build_headers<br/>构建请求头]

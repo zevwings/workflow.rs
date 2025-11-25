@@ -24,4 +24,4 @@ pub use languages::{
     find_language, get_language_instruction, get_supported_language_codes,
     get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
 };
-pub use summarize_pr_system::{generate_summarize_pr_system_prompt, SUMMARIZE_PR_SYSTEM_PROMPT};
+pub use summarize_pr_system::generate_summarize_pr_system_prompt;

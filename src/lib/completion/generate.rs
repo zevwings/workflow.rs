@@ -230,6 +230,17 @@ impl CompletionGenerator {
                         Command::new("close")
                             .about("Close a Pull Request")
                             .arg(clap::Arg::new("PR_ID").value_name("PR_ID")),
+                    )
+                    .subcommand(
+                        Command::new("summarize")
+                            .about("Summarize a Pull Request")
+                            .arg(clap::Arg::new("PR_ID").value_name("PR_ID"))
+                            .arg(
+                                clap::Arg::new("language")
+                                    .short('l')
+                                    .long("language")
+                                    .value_name("LANGUAGE"),
+                            ),
                     ),
             )
             .subcommand(
@@ -324,6 +335,13 @@ impl CompletionGenerator {
                     .subcommand(Command::new("generate").about("Generate completion scripts"))
                     .subcommand(Command::new("check").about("Check completion status"))
                     .subcommand(Command::new("remove").about("Remove completion configuration")),
+            )
+            .subcommand(
+                Command::new("llm")
+                    .about("Manage LLM configuration")
+                    .subcommand(Command::new("show").about("Show current LLM configuration"))
+                    .subcommand(Command::new("setup").about("Setup LLM configuration"))
+                    .subcommand(Command::new("language").about("Set summary language")),
             )
             .subcommand(
                 Command::new("branch")

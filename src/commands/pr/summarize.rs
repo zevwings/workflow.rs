@@ -153,7 +153,7 @@ impl SummarizeCommand {
 
     /// 构建输出路径
     ///
-    /// 格式: `~/Downloads/Workflow/{PR_ID}/{filename}.md`
+    /// 格式: `~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md`
     fn build_output_path(pr_id: &str, filename: &str) -> Result<PathBuf> {
         let settings = Settings::get();
         let base_dir = settings
@@ -162,7 +162,7 @@ impl SummarizeCommand {
             .clone()
             .unwrap_or_else(default_download_base_dir);
 
-        let output_dir = PathBuf::from(&base_dir).join(pr_id);
+        let output_dir = PathBuf::from(&base_dir).join(format!("SUMMARIZE_FOR_PR_{}", pr_id));
         let output_path = output_dir.join(format!("{}.md", filename));
 
         Ok(output_path)

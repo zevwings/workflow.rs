@@ -33,6 +33,7 @@
 - 平台抽象设计（PlatformProvider Trait）
 - 工厂函数实现多态分发
 - LLM 标题生成功能
+- LLM PR 总结功能（支持多语言）
 
 #### [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
 **Jira 模块架构文档**
@@ -78,6 +79,7 @@
 - 支持 OpenAI、DeepSeek、Proxy 提供商
 - 单例模式和配置驱动设计
 - PR 标题和分支名生成功能
+- PR 总结文档生成功能（支持多语言，自动生成文件名）
 
 #### [SHELL_ARCHITECTURE.md](./architecture/lib/SHELL_ARCHITECTURE.md)
 **Shell 检测与管理模块架构文档**
@@ -134,6 +136,7 @@
 **PR 命令层架构文档**
 
 - PR 创建、合并、关闭、查询等命令
+- PR 总结命令（使用 LLM 生成详细总结文档）
 - 命令层设计（CLI 入口层、命令封装层）
 - 与 lib/pr 模块的集成
 - 命令使用示例
