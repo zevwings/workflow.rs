@@ -68,7 +68,7 @@ impl JiraLogs {
 
     /// 准备下载目录
     fn prepare_download_directory(&self, jira_id: &str) -> Result<(PathBuf, PathBuf)> {
-        let base_dir = self.base_dir.join(jira_id);
+        let base_dir = self.base_dir.join("jira").join(jira_id);
         let download_dir = base_dir.join(DOWNLOADS_FOLDER);
 
         // 如果目录已存在，删除它

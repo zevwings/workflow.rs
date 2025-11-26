@@ -14,10 +14,10 @@ impl JiraLogs {
     /// 自动构建目录路径，然后清理该目录。
     pub fn clean_dir(&self, jira_id: &str, dry_run: bool, list_only: bool) -> Result<bool> {
         let dir = if jira_id.is_empty() {
-            // 如果 jira_id 为空，清理整个基础目录
-            self.base_dir.clone()
+            // 如果 jira_id 为空，清理整个 jira 目录
+            self.base_dir.join("jira")
         } else {
-            self.base_dir.join(jira_id)
+            self.base_dir.join("jira").join(jira_id)
         };
         let dir_name = if jira_id.is_empty() {
             "the entire base directory".to_string()
