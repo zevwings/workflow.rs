@@ -4,6 +4,7 @@
 use anyhow::{Context, Result};
 use std::path::PathBuf;
 
+use crate::base::settings::defaults::default_download_base_dir;
 use crate::base::settings::Settings;
 
 // 子模块
@@ -43,7 +44,11 @@ impl JiraLogs {
     /// 如果成功返回 `Ok(JiraLogs)`，否则返回错误（通常是路径展开失败）。
     pub fn new() -> Result<Self> {
         let settings = Settings::get().clone();
-        let base_dir_str = settings.log.download_base_dir.clone().unwrap_or_default();
+        let base_dir_str = settings
+            .log
+            .download_base_dir
+            .clone()
+            .unwrap_or_else(default_download_base_dir);
         let base_dir = helpers::expand_path(&base_dir_str)
             .with_context(|| format!("Failed to expand path: {}", base_dir_str))?;
         let output_folder_name = settings.log.output_folder_name.clone();

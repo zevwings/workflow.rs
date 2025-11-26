@@ -1,0 +1,195 @@
+//! LLM 配置设置命令
+//! 交互式设置 LLM 相关配置（provider, url, key, model）
+
+use crate::base::settings::defaults::default_llm_model;
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::Settings;
+use crate::jira::config::ConfigManager;
+use crate::{log_break, log_info, log_message, log_success};
+use anyhow::{Context, Result};
+use dialoguer::{Input, Select};
+
+/// LLM 配置设置命令
+pub struct LLMSetupCommand;
+
+impl LLMSetupCommand {
+    /// 交互式设置 LLM 配置
+    pub fn setup() -> Result<()> {
+        log_break!('=', 40, "LLM Configuration Setup");
+        log_break!();
+
+        // 加载当前配置
+        let settings = Settings::load();
+        let existing = &settings.llm;
+
+        log_message!("  LLM/AI Configuration");
+        log_break!('─', 65);
+
+        // 1. 选择 Provider
+        let llm_providers = vec!["openai", "deepseek", "proxy"];
+        let current_provider_idx = llm_providers
+            .iter()
+            .position(|&p| p == existing.provider.as_str())
+            .unwrap_or(0);
+
+        let llm_provider_prompt = format!("Select LLM provider [current: {}]", existing.provider);
+
+        let llm_provider_idx = Select::new()
+            .with_prompt(&llm_provider_prompt)
+            .items(&llm_providers)
+            .default(current_provider_idx)
+            .interact()
+            .context("Failed to select LLM provider")?;
+        let llm_provider = llm_providers[llm_provider_idx].to_string();
+
+        // 2. 根据 provider 设置 URL（只有 proxy 需要输入和保存）
+        let llm_url = match llm_provider.as_str() {
+            "openai" => None,   // openai 不使用 proxy URL，必须为 None
+            "deepseek" => None, // deepseek 不使用 proxy URL，必须为 None
+            "proxy" => {
+                let llm_url_prompt = if let Some(ref url) = existing.url {
+                    format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
+                } else {
+                    "LLM proxy URL (optional, press Enter to skip)".to_string()
+                };
+
+                let llm_url_input: String = Input::new()
+                    .with_prompt(&llm_url_prompt)
+                    .allow_empty(true)
+                    .interact_text()
+                    .context("Failed to get LLM proxy URL")?;
+
+                if !llm_url_input.is_empty() {
+                    Some(llm_url_input)
+                } else {
+                    existing.url.clone()
+                }
+            }
+            _ => None,
+        };
+
+        // 3. 收集 API key
+        let key_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if existing.key.is_some() {
+                    "OpenAI API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "OpenAI API key (optional, press Enter to skip)".to_string()
+                }
+            }
+            "deepseek" => {
+                if existing.key.is_some() {
+                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "DeepSeek API key (optional, press Enter to skip)".to_string()
+                }
+            }
+            "proxy" => {
+                if existing.key.is_some() {
+                    "LLM proxy key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "LLM proxy key (optional, press Enter to skip)".to_string()
+                }
+            }
+            _ => "LLM API key (optional, press Enter to skip)".to_string(),
+        };
+
+        let llm_key_input: String = Input::new()
+            .with_prompt(&key_prompt)
+            .allow_empty(true)
+            .interact_text()
+            .context("Failed to get LLM API key")?;
+
+        let llm_key = if !llm_key_input.is_empty() {
+            Some(llm_key_input)
+        } else {
+            existing.key.clone()
+        };
+
+        // 4. 配置模型
+        let default_model = existing
+            .model
+            .clone()
+            .unwrap_or_else(|| default_llm_model(&llm_provider));
+
+        let model_prompt = match llm_provider.as_str() {
+            "openai" => {
+                if let Some(ref model) = existing.model {
+                    format!("OpenAI model [current: {}] (press Enter to keep)", model)
+                } else {
+                    "OpenAI model (optional, press Enter to skip)".to_string()
+                }
+            }
+            "deepseek" => {
+                if let Some(ref model) = existing.model {
+                    format!("DeepSeek model [current: {}] (press Enter to keep)", model)
+                } else {
+                    "DeepSeek model (optional, press Enter to skip)".to_string()
+                }
+            }
+            "proxy" => {
+                if let Some(ref model) = existing.model {
+                    format!("LLM model [current: {}] (required)", model)
+                } else {
+                    "LLM model (required)".to_string()
+                }
+            }
+            _ => "LLM model".to_string(),
+        };
+
+        let is_proxy = llm_provider == "proxy";
+        let has_existing_model = existing.model.is_some();
+
+        let llm_model_input: String = {
+            let mut input = Input::new()
+                .with_prompt(&model_prompt)
+                .allow_empty(!is_proxy);
+
+            if has_existing_model {
+                input = input.default(default_model.clone());
+            }
+
+            input
+                .validate_with(move |input: &String| -> Result<(), &str> {
+                    if input.is_empty() && is_proxy {
+                        Err("Model is required for proxy provider")
+                    } else {
+                        Ok(())
+                    }
+                })
+                .interact_text()
+                .context("Failed to get LLM model")?
+        };
+
+        let llm_model = if !llm_model_input.is_empty() {
+            Some(llm_model_input)
+        } else if is_proxy {
+            anyhow::bail!("Model is required for proxy provider");
+        } else {
+            None
+        };
+
+        // 保存配置
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<Settings>::new(config_path);
+
+        manager.update(|settings| {
+            settings.llm.provider = llm_provider.clone();
+            settings.llm.url = llm_url.clone();
+            settings.llm.key = llm_key.clone();
+            settings.llm.model = llm_model.clone();
+        })?;
+
+        log_break!();
+        log_success!("LLM configuration saved successfully!");
+        log_info!("Provider: {}", llm_provider);
+        if let Some(ref url) = llm_url {
+            log_info!("Proxy URL: {}", url);
+        }
+        if let Some(ref model) = llm_model {
+            log_info!("Model: {}", model);
+        }
+
+        Ok(())
+    }
+}

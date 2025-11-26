@@ -1,10 +1,13 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::base::settings::defaults::{default_llm_model, default_response_format};
+use crate::base::settings::defaults::{
+    default_download_base_dir, default_language, default_llm_model, default_log_folder,
+};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
+use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
@@ -24,7 +27,7 @@ struct CollectedConfig {
     jira_service_address: Option<String>,
     github_accounts: Vec<GitHubAccount>,
     github_current: Option<String>,
-    log_output_folder_name: String,
+    log_download_base_dir: Option<String>,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
     codeup_cookie: Option<String>,
@@ -33,7 +36,7 @@ struct CollectedConfig {
     llm_url: Option<String>,
     llm_key: Option<String>,
     llm_model: Option<String>,
-    llm_response_format: Option<String>, // Option<String> 类型，可能为空（None 表示使用默认值）
+    llm_language: String, // PR 总结语言
 }
 
 impl SetupCommand {
@@ -81,7 +84,7 @@ impl SetupCommand {
             jira_service_address: settings.jira.service_address.clone(),
             github_accounts: settings.github.accounts.clone(),
             github_current: settings.github.current.clone(),
-            log_output_folder_name: settings.log.output_folder_name.clone(),
+            log_download_base_dir: settings.log.download_base_dir.clone(),
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
@@ -89,13 +92,10 @@ impl SetupCommand {
             llm_url: llm.url.clone(),
             llm_key: llm.key.clone(),
             llm_model: llm.model.clone(),
-            // 如果 response_format 为空字符串或等于默认值，设置为 None（表示使用默认值，不保存到 TOML）
-            llm_response_format: if llm.response_format.is_empty()
-                || llm.response_format == default_response_format()
-            {
-                None
+            llm_language: if llm.language.is_empty() {
+                default_language()
             } else {
-                Some(llm.response_format.clone())
+                llm.language.clone()
             },
         })
     }
@@ -299,26 +299,42 @@ impl SetupCommand {
             anyhow::bail!("Jira API token is required");
         };
 
-        // ==================== 可选：日志配置 ====================
+        // ==================== 可选：文档基础路径配置 ====================
         log_break!();
-        log_message!("  Log Configuration (Optional)");
+        log_message!("  Document Base Directory (Optional)");
         log_break!('─', 65);
 
-        let log_folder_prompt = format!(
-            "Log output folder name [current: {}]",
-            existing.log_output_folder_name
-        );
-
-        let log_output_folder_name: String = Input::new()
-            .with_prompt(&log_folder_prompt)
-            .default(existing.log_output_folder_name.clone())
-            .interact_text()
-            .context("Failed to get log folder name")?;
-
-        let log_output_folder_name = if !log_output_folder_name.is_empty() {
-            log_output_folder_name
+        // 设置文档基础目录
+        let base_dir_prompt = if let Some(ref dir) = existing.log_download_base_dir {
+            format!("Document base directory [current: {}]", dir)
         } else {
-            existing.log_output_folder_name.clone()
+            format!(
+                "Document base directory [default: {}] (press Enter to use default)",
+                default_download_base_dir()
+            )
+        };
+
+        let log_download_base_dir: String = Input::new()
+            .with_prompt(&base_dir_prompt)
+            .allow_empty(true)
+            .default(
+                existing
+                    .log_download_base_dir
+                    .clone()
+                    .unwrap_or_else(default_download_base_dir),
+            )
+            .interact_text()
+            .context("Failed to get document base directory")?;
+
+        let log_download_base_dir = if log_download_base_dir.is_empty() {
+            // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
+            None
+        } else if log_download_base_dir == default_download_base_dir() {
+            // 如果等于默认值，也不保存（使用 None）
+            None
+        } else {
+            // 自定义路径，保存到配置文件
+            Some(log_download_base_dir)
         };
 
         // ==================== 可选：LLM/AI 配置 ====================
@@ -475,30 +491,15 @@ impl SetupCommand {
             None
         };
 
-        // 配置 response_format
-        let response_format_prompt = if let Some(ref format) = existing.llm_response_format {
-            format!(
-                "Response format path [current: {}] (press Enter to keep, empty for default)",
-                format
-            )
+        // 配置 PR 总结语言
+        let current_language = if !existing.llm_language.is_empty() {
+            Some(existing.llm_language.as_str())
         } else {
-            "Response format path (optional, press Enter to skip, empty for default)".to_string()
+            None
         };
 
-        let llm_response_format_input: String = Input::new()
-            .with_prompt(&response_format_prompt)
-            .allow_empty(true)
-            .interact_text()
-            .context("Failed to get response format")?;
-
-        // 如果用户输入为空，保持现有值（None 表示使用默认值，不保存到 TOML）
-        // 如果用户输入不为空，使用用户输入的值
-        // 这样不会保存默认值到 TOML（skip_serializing_if = "String::is_empty"），运行时会在 extract_content() 中使用默认值
-        let llm_response_format = if llm_response_format_input.is_empty() {
-            existing.llm_response_format.clone() // 保持现有值（可能是 None，表示使用默认值）
-        } else {
-            Some(llm_response_format_input) // 使用用户输入的值
-        };
+        let llm_language =
+            select_language(current_language).context("Failed to select summary language")?;
 
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
@@ -593,7 +594,7 @@ impl SetupCommand {
             jira_service_address,
             github_accounts,
             github_current,
-            log_output_folder_name,
+            log_download_base_dir,
             codeup_project_id,
             codeup_csrf_token,
             codeup_cookie,
@@ -601,7 +602,7 @@ impl SetupCommand {
             llm_url,
             llm_key,
             llm_model,
-            llm_response_format,
+            llm_language,
         })
     }
 
@@ -623,9 +624,9 @@ impl SetupCommand {
                 current: config.github_current.clone(),
             },
             log: LogSettings {
-                output_folder_name: config.log_output_folder_name.clone(),
-                download_base_dir: None, // 使用默认值
-                level: None,             // 日志级别通过 workflow log set 命令设置
+                output_folder_name: default_log_folder(), // 使用默认值，不再允许用户配置
+                download_base_dir: config.log_download_base_dir.clone(),
+                level: None, // 日志级别通过 workflow log set 命令设置
             },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,
@@ -637,8 +638,7 @@ impl SetupCommand {
                 key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
                 model: config.llm_model.clone(),
-                // None 转换为空字符串（不保存到 TOML，使用默认值）
-                response_format: config.llm_response_format.clone().unwrap_or_default(),
+                language: config.llm_language.clone(),
             },
         };
 

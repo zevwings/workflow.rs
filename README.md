@@ -123,7 +123,7 @@ workflow setup
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
 | `log.output_folder_name` | 日志输出文件夹名称 | `logs` |
-| `log.download_base_dir` | 下载基础目录 | `~/Downloads/Workflow` |
+| `log.download_base_dir` | 下载基础目录 | `~/Documents/Workflow` |
 
 #### LLM/AI 配置
 
@@ -184,7 +184,7 @@ branch_prefix = "feature"
 
 [log]
 output_folder_name = "logs"
-download_base_dir = "~/Downloads/Workflow"
+download_base_dir = "~/Documents/Workflow"
 
 [llm]
 provider = "openai"
@@ -239,6 +239,13 @@ workflow github update             # 更新 GitHub 账号信息（交互式选�
 ```bash
 workflow log-level set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
 workflow log-level check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+```
+
+### LLM 配置管理
+```bash
+workflow llm show                        # 显示当前 LLM 配置（显示提供者、API Key（已掩码）、模型、语言设置）
+workflow llm setup                       # 设置 LLM 配置（交互式配置提供者、代理 URL、API Key、模型）
+workflow llm language                    # 设置摘要语言（交互式选择 PR 摘要的语言）
 ```
 
 ### Shell Completion 管理
@@ -301,6 +308,10 @@ workflow pr integrate <SOURCE_BRANCH>          # 将指定分支合并到当前�
 workflow pr integrate <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
 workflow pr integrate <SOURCE_BRANCH> --squash # 使用 squash 合并
 workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会推送）
+
+# 总结 PR
+workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）
+workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）
 ```
 
 ### 日志操作

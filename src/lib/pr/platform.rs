@@ -111,6 +111,18 @@ pub trait PlatformProvider {
     /// # Arguments
     /// * `pull_request_id` - PR ID
     fn close_pull_request(&self, pull_request_id: &str) -> Result<()>;
+
+    /// 获取 PR 的 diff 内容
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    ///
+    /// # Returns
+    /// PR 的 diff 内容（字符串格式）
+    fn get_pull_request_diff(&self, _pull_request_id: &str) -> Result<String> {
+        // 默认实现：返回不支持的错误
+        anyhow::bail!("get_pull_request_diff is not supported by this platform")
+    }
 }
 
 /// 创建平台提供者实例

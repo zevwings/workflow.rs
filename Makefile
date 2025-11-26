@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint setup uninstall tag dev
+.PHONY: help build release clean install test lint fix setup uninstall tag dev
 
 # 项目名称
 BINARY_NAME = workflow
@@ -24,6 +24,7 @@ help:
 	@echo "  make update             - 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）"
 	@echo "  make test               - 运行测试"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
+	@echo "  make fix                - 自动修复代码问题（格式化 + Clippy + Cargo Fix）"
 	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer）"
 	@echo "  make uninstall          - 卸载二进制文件和 shell completion 脚本"
 	@echo "  make tag VERSION=v1.0.0 - 创建 git tag 并推送到远程仓库"
@@ -116,6 +117,24 @@ lint: check-rustfmt check-clippy
 	@echo "✓ Check 通过"
 	@echo ""
 	@echo "✓ 所有检查通过！"
+
+# 自动修复代码问题（格式化 + Clippy + Cargo Fix）
+fix: check-rustfmt check-clippy
+	@echo "自动修复代码问题..."
+	@echo ""
+	@echo "1/3 修复代码格式..."
+	@cargo fmt
+	@echo "✓ 代码格式已修复"
+	@echo ""
+	@echo "2/3 运行 Clippy 自动修复..."
+	@cargo clippy --fix --allow-dirty --allow-staged || echo "⚠ Clippy 无法自动修复所有问题，请手动检查"
+	@echo "✓ Clippy 修复完成"
+	@echo ""
+	@echo "3/3 运行 Cargo Fix 修复编译警告..."
+	@cargo fix --allow-dirty --allow-staged || echo "⚠ Cargo Fix 无法修复所有问题"
+	@echo "✓ Cargo Fix 完成"
+	@echo ""
+	@echo "✓ 所有修复完成！"
 
 # 安装到系统（默认 /usr/local/bin，一次性安装全部）
 # 直接调用 cargo build --release 确保总是重新构建并安装最新代码

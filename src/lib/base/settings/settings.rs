@@ -4,6 +4,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 use super::defaults::default_llm_model;
 use crate::base::http::{Authorization, HttpClient, RequestConfig};
@@ -12,8 +14,8 @@ use crate::pr::GitHub;
 use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
 
 use super::defaults::{
-    default_download_base_dir_option, default_llm_provider, default_log_folder,
-    default_log_settings, default_response_format,
+    default_download_base_dir_option, default_language, default_llm_provider, default_log_folder,
+    default_log_settings,
 };
 use super::paths::Paths;
 
@@ -143,12 +145,9 @@ pub struct LLMSettings {
     /// LLM 模型名称（openai: 默认 gpt-4.0, deepseek: 默认 deepseek-chat, proxy: 必填）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
-    /// 响应格式路径（用于从响应中提取内容）
-    #[serde(
-        default = "default_response_format",
-        skip_serializing_if = "String::is_empty"
-    )]
-    pub response_format: String,
+    /// PR 总结语言（en, zh, zh-CN, zh-TW 等，默认 en）
+    #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
+    pub language: String,
 }
 
 /// 应用程序设置
@@ -179,7 +178,7 @@ impl LLMSettings {
             && self.key.is_none()
             && self.model.is_none()
             && self.provider == default_llm_provider()
-            && self.response_format == default_response_format()
+            && self.language == default_language()
     }
 }
 
@@ -203,7 +202,6 @@ impl Settings {
                     #[cfg(unix)]
                     {
                         if let Ok(metadata) = config_path.metadata() {
-                            use std::os::unix::fs::PermissionsExt;
                             let permissions = metadata.permissions();
                             let mode = permissions.mode();
                             // 检查是否有组或其他用户权限（非 600）
@@ -265,13 +263,6 @@ impl Settings {
         } else {
             let default_model = default_llm_model(&self.llm.provider);
             log_message!("LLM Model: {} (default)", default_model);
-        }
-        // 显示 response_format（如果有保存的值，否则显示默认值）
-        if self.llm.response_format.is_empty() {
-            let default_format = default_response_format();
-            log_message!("LLM Response Format: {} (default)", default_format);
-        } else {
-            log_message!("LLM Response Format: {}", self.llm.response_format);
         }
     }
 
