@@ -1,7 +1,9 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
-use crate::base::settings::defaults::{default_language, default_llm_model};
+use crate::base::settings::defaults::{
+    default_download_base_dir, default_language, default_llm_model, default_log_folder,
+};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::confirm;
@@ -25,7 +27,7 @@ struct CollectedConfig {
     jira_service_address: Option<String>,
     github_accounts: Vec<GitHubAccount>,
     github_current: Option<String>,
-    log_output_folder_name: String,
+    log_download_base_dir: Option<String>,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
     codeup_cookie: Option<String>,
@@ -82,7 +84,7 @@ impl SetupCommand {
             jira_service_address: settings.jira.service_address.clone(),
             github_accounts: settings.github.accounts.clone(),
             github_current: settings.github.current.clone(),
-            log_output_folder_name: settings.log.output_folder_name.clone(),
+            log_download_base_dir: settings.log.download_base_dir.clone(),
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
@@ -297,26 +299,42 @@ impl SetupCommand {
             anyhow::bail!("Jira API token is required");
         };
 
-        // ==================== 可选：日志配置 ====================
+        // ==================== 可选：文档基础路径配置 ====================
         log_break!();
-        log_message!("  Log Configuration (Optional)");
+        log_message!("  Document Base Directory (Optional)");
         log_break!('─', 65);
 
-        let log_folder_prompt = format!(
-            "Log output folder name [current: {}]",
-            existing.log_output_folder_name
-        );
-
-        let log_output_folder_name: String = Input::new()
-            .with_prompt(&log_folder_prompt)
-            .default(existing.log_output_folder_name.clone())
-            .interact_text()
-            .context("Failed to get log folder name")?;
-
-        let log_output_folder_name = if !log_output_folder_name.is_empty() {
-            log_output_folder_name
+        // 设置文档基础目录
+        let base_dir_prompt = if let Some(ref dir) = existing.log_download_base_dir {
+            format!("Document base directory [current: {}]", dir)
         } else {
-            existing.log_output_folder_name.clone()
+            format!(
+                "Document base directory [default: {}] (press Enter to use default)",
+                default_download_base_dir()
+            )
+        };
+
+        let log_download_base_dir: String = Input::new()
+            .with_prompt(&base_dir_prompt)
+            .allow_empty(true)
+            .default(
+                existing
+                    .log_download_base_dir
+                    .clone()
+                    .unwrap_or_else(default_download_base_dir),
+            )
+            .interact_text()
+            .context("Failed to get document base directory")?;
+
+        let log_download_base_dir = if log_download_base_dir.is_empty() {
+            // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
+            None
+        } else if log_download_base_dir == default_download_base_dir() {
+            // 如果等于默认值，也不保存（使用 None）
+            None
+        } else {
+            // 自定义路径，保存到配置文件
+            Some(log_download_base_dir)
         };
 
         // ==================== 可选：LLM/AI 配置 ====================
@@ -576,7 +594,7 @@ impl SetupCommand {
             jira_service_address,
             github_accounts,
             github_current,
-            log_output_folder_name,
+            log_download_base_dir,
             codeup_project_id,
             codeup_csrf_token,
             codeup_cookie,
@@ -606,9 +624,9 @@ impl SetupCommand {
                 current: config.github_current.clone(),
             },
             log: LogSettings {
-                output_folder_name: config.log_output_folder_name.clone(),
-                download_base_dir: None, // 使用默认值
-                level: None,             // 日志级别通过 workflow log set 命令设置
+                output_folder_name: default_log_folder(), // 使用默认值，不再允许用户配置
+                download_base_dir: config.log_download_base_dir.clone(),
+                level: None, // 日志级别通过 workflow log set 命令设置
             },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,

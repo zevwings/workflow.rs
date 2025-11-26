@@ -8,6 +8,7 @@ use std::path::PathBuf;
 
 use crate::base::settings::defaults::default_download_base_dir;
 use crate::base::settings::Settings;
+use crate::git::GitRepo;
 use crate::log_info;
 use crate::log_success;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -29,6 +30,13 @@ impl SummarizeCommand {
     ///
     /// 返回保存的文件路径
     pub fn summarize(pull_request_id: Option<String>, language: Option<&str>) -> Result<String> {
+        // 检查是否在 Git 仓库中
+        if !GitRepo::is_git_repo() {
+            anyhow::bail!(
+                "Not in a Git repository. Please run this command in a Git repository directory."
+            );
+        }
+
         // 创建平台提供者
         let provider = create_provider()?;
 
@@ -134,7 +142,7 @@ impl SummarizeCommand {
         };
 
         // 构建输出路径
-        let output_path = Self::build_output_path(&pr_id, &summary.filename)?;
+        let output_path = Self::build_output_path(&summary.filename)?;
 
         // 确保目录存在
         if let Some(parent) = output_path.parent() {
@@ -153,17 +161,32 @@ impl SummarizeCommand {
 
     /// 构建输出路径
     ///
-    /// 格式: `~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md`
-    fn build_output_path(pr_id: &str, filename: &str) -> Result<PathBuf> {
+    /// 从 Document Base Directory 配置读取基础路径，如果未配置则使用默认值 `~/Documents/Workflow`。
+    ///
+    /// 格式: `{document_base_dir}/summarize/{repo-name}-{filename}.md`
+    /// 默认格式: `~/Documents/Workflow/summarize/{repo-name}-{filename}.md`
+    ///
+    /// 例如: `~/Documents/Workflow/summarize/workflow.rs-pr-summary.md`
+    fn build_output_path(filename: &str) -> Result<PathBuf> {
         let settings = Settings::get();
+        // 从 Document Base Directory 配置读取，如果未配置则使用默认值
         let base_dir = settings
             .log
             .download_base_dir
             .clone()
             .unwrap_or_else(default_download_base_dir);
 
-        let output_dir = PathBuf::from(&base_dir).join(format!("SUMMARIZE_FOR_PR_{}", pr_id));
-        let output_path = output_dir.join(format!("{}.md", filename));
+        // 获取仓库名称（owner/repo 格式，提取 repo 部分）
+        let repo_name_full = GitRepo::extract_repo_name()
+            .context("Failed to extract repository name from git remote URL")?;
+        let repo_name = repo_name_full
+            .split('/')
+            .next_back()
+            .context("Failed to extract repo name from owner/repo format")?;
+
+        // 构建路径: {base_dir}/summarize/{repo-name}-{filename}.md
+        let summarize_dir = PathBuf::from(&base_dir).join("summarize");
+        let output_path = summarize_dir.join(format!("{}-{}.md", repo_name, filename));
 
         Ok(output_path)
     }

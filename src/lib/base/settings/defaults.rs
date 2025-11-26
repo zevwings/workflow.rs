@@ -15,8 +15,8 @@ pub fn default_log_folder() -> String {
 /// 默认下载基础目录路径
 ///
 /// 跨平台支持：
-/// - Unix (macOS/Linux): `~/Downloads/Workflow`
-/// - Windows: `%USERPROFILE%\Downloads\Workflow`
+/// - Unix (macOS/Linux): `~/Documents/Workflow`
+/// - Windows: `%USERPROFILE%\Documents\Workflow`
 pub fn default_download_base_dir() -> String {
     let user_dir = if cfg!(target_os = "windows") {
         // Windows: 使用 %USERPROFILE%
@@ -27,7 +27,7 @@ pub fn default_download_base_dir() -> String {
     };
 
     // 使用 PathBuf 确保跨平台路径分隔符正确
-    let download_path = PathBuf::from(&user_dir).join("Downloads").join("Workflow");
+    let download_path = PathBuf::from(&user_dir).join("Documents").join("Workflow");
 
     download_path.to_string_lossy().to_string()
 }

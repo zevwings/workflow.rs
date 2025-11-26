@@ -397,7 +397,7 @@ commands/pr/summarize.rs::SummarizeCommand::summarize()
   6. 解析 diff 提取文件修改（parse_diff_to_file_changes()）
   7. 格式化代码修改为 markdown（format_file_changes_as_markdown()）
   8. 合并总结和代码修改部分
-  9. 保存到文件（~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md）
+  9. 保存到文件（~/Documents/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md）
 ```
 
 ### 功能说明
@@ -430,11 +430,11 @@ PR 总结命令使用 LLM 生成 PR 的详细总结文档：
      - Code Changes 部分，包含所有修改文件的详细内容
 
 5. **文件保存**：
-   - 保存路径格式：`~/Downloads/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md`
+   - 保存路径格式：`~/Documents/Workflow/SUMMARIZE_FOR_PR_{PR_ID}/{filename}.md`
    - 文件夹命名：`SUMMARIZE_FOR_PR_{PR_ID}`（例如：`SUMMARIZE_FOR_PR_123`）
    - 文件名由 LLM 根据 PR 内容自动生成
    - 如果目录不存在，会自动创建
-   - 基础目录可通过配置文件 `log.download_base_dir` 自定义，默认为 `~/Downloads/Workflow`
+   - 基础目录可通过配置文件 `log.download_base_dir` 自定义，默认为 `~/Documents/Workflow`
 
 ### 关键步骤说明
 
@@ -477,7 +477,7 @@ PR 总结命令使用 LLM 生成 PR 的详细总结文档：
        - 代码块：```{language}\n{content}\n```
 
 5. **输出路径构建**（`build_output_path()`）：
-   - 从配置文件读取基础目录（`log.download_base_dir`），默认为 `~/Downloads/Workflow`
+   - 从配置文件读取基础目录（`log.download_base_dir`），默认为 `~/Documents/Workflow`
    - 文件夹命名：`SUMMARIZE_FOR_PR_{PR_ID}`
    - 文件命名：`{filename}.md`（文件名由 LLM 生成）
    - 自动创建目录（如果不存在）

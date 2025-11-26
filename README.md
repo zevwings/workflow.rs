@@ -123,7 +123,7 @@ workflow setup
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
 | `log.output_folder_name` | 日志输出文件夹名称 | `logs` |
-| `log.download_base_dir` | 下载基础目录 | `~/Downloads/Workflow` |
+| `log.download_base_dir` | 下载基础目录 | `~/Documents/Workflow` |
 
 #### LLM/AI 配置
 
@@ -184,7 +184,7 @@ branch_prefix = "feature"
 
 [log]
 output_folder_name = "logs"
-download_base_dir = "~/Downloads/Workflow"
+download_base_dir = "~/Documents/Workflow"
 
 [llm]
 provider = "openai"
