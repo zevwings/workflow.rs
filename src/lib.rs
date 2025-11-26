@@ -9,6 +9,8 @@
 // 核心库模块声明
 #[path = "lib/base/mod.rs"]
 pub mod base;
+#[path = "lib/cli/mod.rs"]
+pub mod cli;
 #[path = "lib/completion/mod.rs"]
 pub mod completion;
 #[path = "lib/git/mod.rs"]

@@ -142,7 +142,7 @@ impl SummarizeCommand {
         };
 
         // 构建输出路径
-        let output_path = Self::build_output_path(&summary.filename)?;
+        let output_path = Self::build_output_path(&pr_id, &summary.filename)?;
 
         // 确保目录存在
         if let Some(parent) = output_path.parent() {
@@ -163,11 +163,11 @@ impl SummarizeCommand {
     ///
     /// 从 Document Base Directory 配置读取基础路径，如果未配置则使用默认值 `~/Documents/Workflow`。
     ///
-    /// 格式: `{document_base_dir}/summarize/{repo-name}-{filename}.md`
-    /// 默认格式: `~/Documents/Workflow/summarize/{repo-name}-{filename}.md`
+    /// 格式: `{document_base_dir}/summarize/[{repo-name}]{PR_ID}-{filename}.md`
+    /// 默认格式: `~/Documents/Workflow/summarize/[{repo-name}]{PR_ID}-{filename}.md`
     ///
-    /// 例如: `~/Documents/Workflow/summarize/workflow.rs-pr-summary.md`
-    fn build_output_path(filename: &str) -> Result<PathBuf> {
+    /// 例如: `~/Documents/Workflow/summarize/[workflow.rs]123-pr-summary.md`
+    fn build_output_path(pr_id: &str, filename: &str) -> Result<PathBuf> {
         let settings = Settings::get();
         // 从 Document Base Directory 配置读取，如果未配置则使用默认值
         let base_dir = settings
@@ -184,11 +184,39 @@ impl SummarizeCommand {
             .next_back()
             .context("Failed to extract repo name from owner/repo format")?;
 
-        // 构建路径: {base_dir}/summarize/{repo-name}-{filename}.md
+        // 清理仓库名，移除文件名中不允许的字符
+        let sanitized_repo_name = Self::sanitize_for_filename(repo_name);
+
+        // 构建路径: {base_dir}/summarize/[{repo-name}]{PR_ID}-{filename}.md
         let summarize_dir = PathBuf::from(&base_dir).join("summarize");
-        let output_path = summarize_dir.join(format!("{}-{}.md", repo_name, filename));
+        let output_path = summarize_dir.join(format!(
+            "[{}]{}-{}.md",
+            sanitized_repo_name, pr_id, filename
+        ));
 
         Ok(output_path)
+    }
+
+    /// 清理字符串，使其适合作为文件名使用
+    ///
+    /// 移除或替换文件名中不允许的字符：
+    /// - `/`、`\`、`:`、`*`、`?`、`"`、`<`、`>`、`|` → 替换为 `-`
+    /// - 保留字母、数字、连字符、下划线、点号、方括号
+    ///
+    /// # 参数
+    ///
+    /// * `name` - 需要清理的字符串
+    ///
+    /// # 返回
+    ///
+    /// 返回清理后的字符串
+    fn sanitize_for_filename(name: &str) -> String {
+        name.chars()
+            .map(|c| match c {
+                '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '-',
+                _ => c,
+            })
+            .collect()
     }
 
     /// 解析 diff，提取每个文件的修改
