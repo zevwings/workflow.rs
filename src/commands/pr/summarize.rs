@@ -24,12 +24,15 @@ impl SummarizeCommand {
     /// # 参数
     ///
     /// * `pull_request_id` - PR ID（可选，如果不提供则自动检测当前分支的 PR）
-    /// * `language` - 语言代码（可选，如 "en", "zh", "zh-CN", "zh-TW"），如果不提供则从配置文件读取或使用默认值
     ///
     /// # 返回
     ///
     /// 返回保存的文件路径
-    pub fn summarize(pull_request_id: Option<String>, language: Option<&str>) -> Result<String> {
+    ///
+    /// # 说明
+    ///
+    /// 语言设置从配置文件读取，如果未配置则使用默认值 "en"。
+    pub fn summarize(pull_request_id: Option<String>) -> Result<String> {
         // 检查是否在 Git 仓库中
         if !GitRepo::is_git_repo() {
             anyhow::bail!(
@@ -67,7 +70,7 @@ impl SummarizeCommand {
         log_info!("Generating summary with LLM...");
 
         // 使用 LLM 生成总结
-        let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)
+        let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff)
             .context("Failed to generate PR summary")?;
 
         // 解析 diff，提取所有文件的修改
@@ -105,8 +108,7 @@ impl SummarizeCommand {
         }
 
         // 将文件修改格式化为 markdown（为每个文件生成修改总结）
-        let code_changes_section =
-            Self::format_file_changes_as_markdown(&file_changes, language);
+        let code_changes_section = Self::format_file_changes_as_markdown(&file_changes);
         log_info!(
             "Code changes section length: {} characters",
             code_changes_section.len()
@@ -384,7 +386,6 @@ impl SummarizeCommand {
     /// ```
     fn format_file_changes_as_markdown(
         file_changes: &[(String, String)],
-        language: Option<&str>,
     ) -> String {
         if file_changes.is_empty() {
             return String::new();
@@ -400,7 +401,7 @@ impl SummarizeCommand {
             let purpose = Self::infer_file_purpose(file_path);
 
             // 为每个文件生成修改总结
-            let summary = match Self::generate_file_change_summary(file_path, content, language) {
+            let summary = match Self::generate_file_change_summary(file_path, content) {
                 Ok(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
                 Ok(_) => None,
                 Err(e) => {
@@ -446,10 +447,9 @@ impl SummarizeCommand {
     fn generate_file_change_summary(
         file_path: &str,
         file_diff: &str,
-        language: Option<&str>,
     ) -> Result<String> {
         log_info!("Generating summary for file: {}", file_path);
-        PullRequestLLM::summarize_file_change(file_path, file_diff, language)
+        PullRequestLLM::summarize_file_change(file_path, file_diff)
             .with_context(|| format!("Failed to generate summary for file: {}", file_path))
     }
 

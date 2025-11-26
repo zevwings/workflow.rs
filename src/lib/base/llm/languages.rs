@@ -137,20 +137,33 @@ pub fn get_language_instruction(code: &str) -> String {
 /// # 参数
 ///
 /// * `system_prompt` - 原始 system prompt
-/// * `language_code` - 语言代码（如 "en", "zh-CN" 等）
-///
 /// # 返回
 ///
 /// 返回增强后的 system prompt，包含强化的语言要求
+///
+/// # 说明
+///
+/// 语言选择优先级：配置文件 > 默认值（"en"）
+/// 如果配置文件中的语言代码不在支持列表中，将使用英文作为默认语言。
 ///
 /// # 示例
 ///
 /// ```rust
 /// let original = "You are a helpful assistant.";
-/// let enhanced = get_language_requirement(original, "zh-CN");
-/// // 返回包含强化中文要求的 prompt
+/// let enhanced = get_language_requirement(original);
+/// // 返回包含强化语言要求的 prompt（语言从配置文件读取）
 /// ```
-pub fn get_language_requirement(system_prompt: &str, language_code: &str) -> String {
+pub fn get_language_requirement(system_prompt: &str) -> String {
+    use crate::base::settings::Settings;
+
+    // 从配置文件读取语言设置
+    let settings = Settings::get();
+    let language_code = if settings.llm.language.is_empty() {
+        "en"
+    } else {
+        settings.llm.language.as_str()
+    };
+
     let language_instruction = get_language_instruction(language_code);
     let language_info = find_language(language_code)
         .map(|lang| lang.native_name)

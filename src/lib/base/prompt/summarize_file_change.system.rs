@@ -6,18 +6,15 @@ use crate::base::llm::get_language_requirement;
 
 /// 根据语言生成单个文件修改总结的 system prompt
 ///
-/// # 参数
-///
-/// * `language` - 语言代码（如 "en", "zh", "zh-CN", "zh-TW", "ja", "ko", "de" 等）
-///
 /// # 返回
 ///
 /// 返回根据语言定制的 system prompt 字符串
 ///
 /// # 说明
 ///
-/// 如果提供的语言代码不在支持列表中，将使用英文作为默认语言。
-pub fn generate_summarize_file_change_system_prompt(language: &str) -> String {
+/// 语言选择优先级：配置文件 > 默认值（"en"）
+/// 如果配置文件中的语言代码不在支持列表中，将使用英文作为默认语言。
+pub fn generate_summarize_file_change_system_prompt() -> String {
     // 基础 prompt 内容
     let base_prompt = r#"You're a technical documentation assistant that generates concise summaries of code changes for individual files.
 
@@ -76,6 +73,5 @@ Return your response as a bulleted list (one point per line, each line starting 
 - 主要功能是根据用户信息生成会议卡片"#;
 
     // 使用 LLM 模块的语言增强功能
-    get_language_requirement(base_prompt, language)
+    get_language_requirement(base_prompt)
 }
-
