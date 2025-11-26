@@ -39,9 +39,9 @@ pub fn select_language(current_language: Option<&str>) -> Result<String> {
 
     // 构建提示信息
     let prompt = if let Some(code) = current_language {
-        format!("Select summary language [current: {}]", code)
+        format!("Select LLM output language [current: {}]", code)
     } else {
-        "Select summary language".to_string()
+        "Select LLM output language".to_string()
     };
 
     // 显示选择列表

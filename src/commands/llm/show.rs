@@ -57,9 +57,9 @@ impl LLMShowCommand {
 
         // 显示 Language
         if !llm.language.is_empty() {
-            log_info!("Summary Language: {}", llm.language);
+            log_info!("Output Language: {}", llm.language);
         } else {
-            log_info!("Summary Language: en (default)");
+            log_info!("Output Language: en (default)");
         }
 
         log_break!();

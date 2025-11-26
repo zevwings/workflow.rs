@@ -36,7 +36,7 @@ struct CollectedConfig {
     llm_url: Option<String>,
     llm_key: Option<String>,
     llm_model: Option<String>,
-    llm_language: String, // PR 总结语言
+    llm_language: String, // LLM 输出语言
 }
 
 impl SetupCommand {
@@ -491,7 +491,7 @@ impl SetupCommand {
             None
         };
 
-        // 配置 PR 总结语言
+        // 配置 LLM 输出语言
         let current_language = if !existing.llm_language.is_empty() {
             Some(existing.llm_language.as_str())
         } else {
@@ -499,7 +499,7 @@ impl SetupCommand {
         };
 
         let llm_language =
-            select_language(current_language).context("Failed to select summary language")?;
+            select_language(current_language).context("Failed to select LLM output language")?;
 
         // ==================== 可选：Codeup 配置 ====================
         log_break!();
