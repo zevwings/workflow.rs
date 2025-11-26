@@ -145,7 +145,7 @@ pub struct LLMSettings {
     /// LLM 模型名称（openai: 默认 gpt-4.0, deepseek: 默认 deepseek-chat, proxy: 必填）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
-    /// PR 总结语言（en, zh, zh-CN, zh-TW 等，默认 en）
+    /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
     #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
     pub language: String,
 }
