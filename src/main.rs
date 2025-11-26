@@ -25,13 +25,14 @@ use workflow::cli::{
 };
 use workflow::*;
 
+use crate::base::settings::Settings;
+
 /// 主函数
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
     // 初始化日志级别（从配置文件读取，但不让 logger 模块直接依赖 Settings）
     {
-        use crate::base::settings::Settings;
         let config_level = Settings::get()
             .log
             .level

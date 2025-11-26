@@ -2,7 +2,7 @@
 //!
 //! 用于根据 PR 的 diff 内容生成总结文档。
 
-use crate::base::llm::enhance_language_requirement;
+use crate::base::llm::get_language_requirement;
 
 /// 根据语言生成 PR 总结的 system prompt
 ///
@@ -138,5 +138,5 @@ The generated document MUST follow this exact order:
 9. ## Code Changes"#;
 
     // 使用 LLM 模块的语言增强功能
-    enhance_language_requirement(base_prompt, language)
+    get_language_requirement(base_prompt, language)
 }

@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use reqwest::header::HeaderMap;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fmt::Write;
 use std::sync::OnceLock;
 
@@ -310,7 +310,6 @@ impl PlatformProvider for GitHub {
 
         // 覆盖 Accept header，设置为 diff 格式
         // 注意：GitHub API 的 .diff 端点需要设置正确的 Accept header 才能返回纯文本 diff
-        use reqwest::header::{HeaderValue, ACCEPT};
         headers.insert(
             ACCEPT,
             HeaderValue::from_static("application/vnd.github.v3.diff"),

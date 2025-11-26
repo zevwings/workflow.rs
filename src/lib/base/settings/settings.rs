@@ -4,6 +4,8 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 
 use super::defaults::default_llm_model;
 use crate::base::http::{Authorization, HttpClient, RequestConfig};
@@ -200,7 +202,6 @@ impl Settings {
                     #[cfg(unix)]
                     {
                         if let Ok(metadata) = config_path.metadata() {
-                            use std::os::unix::fs::PermissionsExt;
                             let permissions = metadata.permissions();
                             let mode = permissions.mode();
                             // 检查是否有组或其他用户权限（非 600）

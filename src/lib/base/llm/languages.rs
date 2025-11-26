@@ -147,10 +147,10 @@ pub fn get_language_instruction(code: &str) -> String {
 ///
 /// ```rust
 /// let original = "You are a helpful assistant.";
-/// let enhanced = enhance_language_requirement(original, "zh-CN");
+/// let enhanced = get_language_requirement(original, "zh-CN");
 /// // 返回包含强化中文要求的 prompt
 /// ```
-pub fn enhance_language_requirement(system_prompt: &str, language_code: &str) -> String {
+pub fn get_language_requirement(system_prompt: &str, language_code: &str) -> String {
     let language_instruction = get_language_instruction(language_code);
     let language_info = find_language(language_code)
         .map(|lang| lang.native_name)

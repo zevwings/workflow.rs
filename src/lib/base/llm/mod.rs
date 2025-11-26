@@ -10,7 +10,7 @@ pub mod types;
 #[allow(unused_imports)]
 pub use client::LLMClient;
 pub use languages::{
-    enhance_language_requirement, find_language, get_language_instruction,
+    find_language, get_language_instruction, get_language_requirement,
     get_supported_language_codes, get_supported_language_display_names, SupportedLanguage,
     SUPPORTED_LANGUAGES,
 };
