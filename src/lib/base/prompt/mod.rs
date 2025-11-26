@@ -14,13 +14,13 @@
 
 #[path = "generate_branch.system.rs"]
 pub mod generate_branch_system;
-pub mod languages;
 #[path = "summarize_pr.system.rs"]
 pub mod summarize_pr_system;
 
 // 重新导出公共 API
 pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;
-pub use languages::{
+// 从 LLM 模块重新导出语言相关 API（保持向后兼容）
+pub use crate::base::llm::{
     find_language, get_language_instruction, get_supported_language_codes,
     get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
 };

@@ -163,10 +163,10 @@ impl SummarizeCommand {
     ///
     /// 从 Document Base Directory 配置读取基础路径，如果未配置则使用默认值 `~/Documents/Workflow`。
     ///
-    /// 格式: `{document_base_dir}/summarize/[{repo-name}]{PR_ID}-{filename}.md`
-    /// 默认格式: `~/Documents/Workflow/summarize/[{repo-name}]{PR_ID}-{filename}.md`
+    /// 格式: `{document_base_dir}/summarize/{repo-name}-{PR_ID}-{filename}.md`
+    /// 默认格式: `~/Documents/Workflow/summarize/{repo-name}-{PR_ID}-{filename}.md`
     ///
-    /// 例如: `~/Documents/Workflow/summarize/[workflow.rs]123-pr-summary.md`
+    /// 例如: `~/Documents/Workflow/summarize/workflow.rs-123-add-pr-summarize-feature.md`
     fn build_output_path(pr_id: &str, filename: &str) -> Result<PathBuf> {
         let settings = Settings::get();
         // 从 Document Base Directory 配置读取，如果未配置则使用默认值
@@ -187,12 +187,10 @@ impl SummarizeCommand {
         // 清理仓库名，移除文件名中不允许的字符
         let sanitized_repo_name = Self::sanitize_for_filename(repo_name);
 
-        // 构建路径: {base_dir}/summarize/[{repo-name}]{PR_ID}-{filename}.md
+        // 构建路径: {base_dir}/summarize/{repo-name}-{PR_ID}-{filename}.md
         let summarize_dir = PathBuf::from(&base_dir).join("summarize");
-        let output_path = summarize_dir.join(format!(
-            "[{}]{}-{}.md",
-            sanitized_repo_name, pr_id, filename
-        ));
+        let output_path =
+            summarize_dir.join(format!("{}-{}-{}.md", sanitized_repo_name, pr_id, filename));
 
         Ok(output_path)
     }

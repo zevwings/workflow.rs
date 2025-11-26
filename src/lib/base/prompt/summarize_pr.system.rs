@@ -2,6 +2,8 @@
 //!
 //! 用于根据 PR 的 diff 内容生成总结文档。
 
+use crate::base::llm::enhance_language_requirement;
+
 /// 根据语言生成 PR 总结的 system prompt
 ///
 /// # 参数
@@ -16,15 +18,8 @@
 ///
 /// 如果提供的语言代码不在支持列表中，将使用英文作为默认语言。
 pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
-    // 使用语言系统获取 instruction
-    let language_instruction = crate::base::prompt::get_language_instruction(language);
-
-    format!(
-        r#"You're a technical documentation assistant that generates comprehensive PR summaries and appropriate filenames based on PR diff content.
-
-## Important
-
-{}
+    // 基础 prompt 内容
+    let base_prompt = r#"You're a technical documentation assistant that generates comprehensive PR summaries and appropriate filenames based on PR diff content.
 
 ## Summary Document Rules
 
@@ -140,7 +135,8 @@ The generated document MUST follow this exact order:
 6. ## Technical Details
 7. ## Testing
 8. ## Usage Instructions
-9. ## Code Changes"#,
-        language_instruction
-    )
+9. ## Code Changes"#;
+
+    // 使用 LLM 模块的语言增强功能
+    enhance_language_requirement(base_prompt, language)
 }

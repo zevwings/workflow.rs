@@ -2,7 +2,7 @@
 //!
 //! 提供可复用的交互式选择函数，用于配置设置。
 
-use crate::base::prompt::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
+use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use anyhow::{Context, Result};
 use dialoguer::Select;
 

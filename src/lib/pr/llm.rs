@@ -281,9 +281,9 @@ impl PullRequestLLM {
         let params = LLMRequestParams {
             system_prompt,
             user_prompt,
-            max_tokens: Some(2000), // 增加 token 数量，确保有足够空间返回完整的总结文档
-            temperature: 0.3,       // 降低温度，使输出更稳定
-            model: String::new(),   // model 会从 Settings 自动获取，这里可以留空
+            max_tokens: None, // 增加 token 数量，确保有足够空间返回完整的总结文档
+            temperature: 0.3, // 降低温度，使输出更稳定
+            model: String::new(), // model 会从 Settings 自动获取，这里可以留空
         };
 
         // 调用 LLM API

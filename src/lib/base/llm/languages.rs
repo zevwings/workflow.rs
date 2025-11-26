@@ -1,6 +1,6 @@
-//! PR 总结支持的语言定义
+//! LLM 支持的语言定义
 //!
-//! 定义了支持的语言列表及其对应的 instruction。
+//! 定义了支持的语言列表及其对应的 instruction，用于增强 LLM prompt 中的语言要求。
 
 /// 支持的语言信息
 #[derive(Debug, Clone)]
@@ -128,6 +128,52 @@ pub fn get_language_instruction(code: &str) -> String {
             // 如果找不到匹配的语言，使用英文的默认 instruction
             SUPPORTED_LANGUAGES[0].instruction_template.to_string()
         })
+}
+
+/// 增强 system prompt 中的语言要求
+///
+/// 在给定的 system prompt 开头添加强化的语言要求，确保 LLM 严格按照指定语言生成内容。
+///
+/// # 参数
+///
+/// * `system_prompt` - 原始 system prompt
+/// * `language_code` - 语言代码（如 "en", "zh-CN" 等）
+///
+/// # 返回
+///
+/// 返回增强后的 system prompt，包含强化的语言要求
+///
+/// # 示例
+///
+/// ```rust
+/// let original = "You are a helpful assistant.";
+/// let enhanced = enhance_language_requirement(original, "zh-CN");
+/// // 返回包含强化中文要求的 prompt
+/// ```
+pub fn enhance_language_requirement(system_prompt: &str, language_code: &str) -> String {
+    let language_instruction = get_language_instruction(language_code);
+    let language_info = find_language(language_code)
+        .map(|lang| lang.native_name)
+        .unwrap_or("English");
+
+    format!(
+        r#"## CRITICAL LANGUAGE REQUIREMENT
+
+{}
+
+**IMPORTANT REMINDER**: The entire output, including all sections, headings, content, and text MUST be written in {} only. This is a strict requirement. Do NOT use English or any other language. Every single word in the output must be in {}.
+
+---
+
+{}
+
+---
+
+## REMINDER: Language Requirement
+
+Remember: ALL output must be in {} only. No exceptions."#,
+        language_instruction, language_info, language_info, system_prompt, language_info
+    )
 }
 
 /// 获取所有支持的语言代码列表
