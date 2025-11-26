@@ -19,23 +19,23 @@ impl BranchCleanCommand {
         check::CheckCommand::run_all()?;
 
         log_break!();
-        log_message!("🧹 分支清理");
+        log_message!("Branch Cleanup");
 
         // 2. 初始化：获取当前分支、默认分支、仓库名
         let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
-        log_info!("当前分支: {}", current_branch);
+        log_info!("Current branch: {}", current_branch);
 
         let default_branch =
             GitBranch::get_default_branch().context("Failed to get default branch")?;
-        log_info!("默认分支: {}", default_branch);
+        log_info!("Default branch: {}", default_branch);
 
         // 获取仓库名
         let repo_name =
             GitRepo::extract_repo_name().context("Failed to extract repository name")?;
-        log_info!("仓库: {}", repo_name);
+        log_info!("Repository: {}", repo_name);
 
         // 3. 清理远端引用
-        log_info!("清理远端引用...");
+        log_info!("Cleaning remote references...");
         GitRepo::prune_remote().context("Failed to prune remote references")?;
 
         // 4. 读取配置文件
@@ -50,7 +50,7 @@ impl BranchCleanCommand {
         ];
         exclude_branches.extend(ignore_branches);
 
-        log_info!("排除的分支: {}", exclude_branches.join(", "));
+        log_info!("Excluded branches: {}", exclude_branches.join(", "));
 
         // 6. 获取所有本地分支
         let all_branches =
@@ -63,7 +63,7 @@ impl BranchCleanCommand {
             .collect();
 
         if branches_to_delete.is_empty() {
-            log_success!("没有需要删除的分支");
+            log_success!("No branches to delete");
             return Ok(());
         }
 
@@ -73,24 +73,24 @@ impl BranchCleanCommand {
 
         // 9. 显示预览
         log_break!();
-        log_message!("📋 预览将要删除的分支:");
+        log_message!("Preview of branches to be deleted:");
         if !merged_branches.is_empty() {
-            log_info!("已合并分支 ({} 个):", merged_branches.len());
+            log_info!("Merged branches ({}):", merged_branches.len());
             for branch in &merged_branches {
-                log_info!("  ✓ {}", branch);
+                log_info!("  {}", branch);
             }
         }
         if !unmerged_branches.is_empty() {
-            log_warning!("未合并分支 ({} 个):", unmerged_branches.len());
+            log_warning!("Unmerged branches ({}):", unmerged_branches.len());
             for branch in &unmerged_branches {
-                log_warning!("  ✗ {}", branch);
+                log_warning!("  {}", branch);
             }
         }
 
         // 10. Dry-run 模式
         if dry_run {
             log_break!();
-            log_info!("Dry-run 模式：不会实际删除分支");
+            log_info!("Dry-run mode: branches will not be actually deleted");
             return Ok(());
         }
 
@@ -98,12 +98,12 @@ impl BranchCleanCommand {
         log_break!();
         let total = merged_branches.len() + unmerged_branches.len();
         let prompt = format!(
-            "确定要删除这 {} 个分支吗？(已合并: {}, 未合并: {})",
+            "Are you sure you want to delete {} branch(es)? (merged: {}, unmerged: {})",
             total,
             merged_branches.len(),
             unmerged_branches.len()
         );
-        confirm(&prompt, false, Some("操作已取消"))?;
+        confirm(&prompt, false, Some("Operation cancelled"))?;
 
         // 12. 删除已合并分支
         let mut deleted_count = 0;
@@ -112,11 +112,11 @@ impl BranchCleanCommand {
         for branch in &merged_branches {
             match GitBranch::delete(branch, false) {
                 Ok(()) => {
-                    log_success!("已删除: {}", branch);
+                    log_success!("Deleted: {}", branch);
                     deleted_count += 1;
                 }
                 Err(e) => {
-                    log_warning!("删除失败 {}: {}", branch, e);
+                    log_warning!("Failed to delete {}: {}", branch, e);
                     skipped_count += 1;
                 }
             }
@@ -126,18 +126,18 @@ impl BranchCleanCommand {
         if !unmerged_branches.is_empty() {
             log_break!();
             let prompt = format!(
-                "有 {} 个未合并分支，是否强制删除？",
+                "There are {} unmerged branch(es), force delete them?",
                 unmerged_branches.len()
             );
             if confirm(&prompt, false, None)? {
                 for branch in &unmerged_branches {
                     match GitBranch::delete(branch, true) {
                         Ok(()) => {
-                            log_success!("已强制删除: {}", branch);
+                            log_success!("Force deleted: {}", branch);
                             deleted_count += 1;
                         }
                         Err(e) => {
-                            log_warning!("删除失败 {}: {}", branch, e);
+                            log_warning!("Failed to delete {}: {}", branch, e);
                             skipped_count += 1;
                         }
                     }
@@ -149,10 +149,10 @@ impl BranchCleanCommand {
 
         // 14. 显示结果
         log_break!();
-        log_success!("清理完成！");
-        log_info!("已删除: {} 个分支", deleted_count);
+        log_success!("Cleanup completed!");
+        log_info!("Deleted: {} branch(es)", deleted_count);
         if skipped_count > 0 {
-            log_info!("已跳过: {} 个分支", skipped_count);
+            log_info!("Skipped: {} branch(es)", skipped_count);
         }
 
         Ok(())

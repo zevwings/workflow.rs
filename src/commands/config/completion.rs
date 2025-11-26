@@ -65,13 +65,12 @@ impl CompletionCommand {
         if let Some(current) = current_shell {
             if let Some(status) = statuses.iter().find(|s| s.shell == current) {
                 log_message!("Current shell:");
-                let icon = if status.configured { "✓" } else { "✗" };
                 let config_status = if status.configured {
                     format!("Completion configured ({})", status.config_path.display())
                 } else {
                     "Completion not configured".to_string()
                 };
-                log_message!("  {} {} - {}", icon, status.shell, config_status);
+                log_message!("  {} - {}", status.shell, config_status);
                 log_break!();
 
                 // 如果当前 shell 未配置，显示警告
@@ -95,13 +94,12 @@ impl CompletionCommand {
         if !other_shells.is_empty() {
             log_message!("Other installed shells:");
             for status in &other_shells {
-                let icon = if status.configured { "✓" } else { "○" };
                 let config_status = if status.configured {
                     format!("Completion configured ({})", status.config_path.display())
                 } else {
                     "Completion not configured".to_string()
                 };
-                log_message!("  {} {} - {}", icon, status.shell, config_status);
+                log_message!("  {} - {}", status.shell, config_status);
             }
             log_break!();
         }
@@ -116,7 +114,7 @@ impl CompletionCommand {
             log_message!("Uninstalled but configured shells:");
             for status in &uninstalled_configured {
                 log_message!(
-                    "  ✓ {} - Completion configured ({})",
+                    "  {} - Completion configured ({})",
                     status.shell,
                     status.config_path.display()
                 );
@@ -226,12 +224,12 @@ impl CompletionCommand {
 
             match Completion::remove_completion_config(shell) {
                 Ok(_) => {
-                    log_success!("  ✓ {} completion configuration removed", shell);
+                    log_success!("  {} completion configuration removed", shell);
                     success_count += 1;
                 }
                 Err(e) => {
                     log_warning!(
-                        "  ✗ Failed to remove {} completion configuration: {}",
+                        "  Failed to remove {} completion configuration: {}",
                         shell,
                         e
                     );
