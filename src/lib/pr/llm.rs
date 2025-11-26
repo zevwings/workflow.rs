@@ -11,7 +11,6 @@ use crate::base::prompt::{
     generate_summarize_file_change_system_prompt, generate_summarize_pr_system_prompt,
     GENERATE_BRANCH_SYSTEM_PROMPT,
 };
-use crate::base::settings::Settings;
 use crate::pr::helpers::transform_to_branch_name;
 
 /// PR 内容，包含分支名、PR 标题和描述
@@ -258,28 +257,14 @@ impl PullRequestLLM {
     pub fn summarize_pr(
         pr_title: &str,
         pr_diff: &str,
-        language: Option<&str>,
     ) -> Result<PullRequestSummary> {
         // 使用统一的 v2 客户端
         let client = LLMClient::global();
 
-        // 确定使用的语言：命令行参数 > 配置文件 > 默认值（"en"）
-        let language = language
-            .or_else(|| {
-                let settings = Settings::get();
-                let config_lang = settings.llm.language.as_str();
-                if config_lang.is_empty() {
-                    None
-                } else {
-                    Some(config_lang)
-                }
-            })
-            .unwrap_or("en");
-
         // 构建请求参数
         let user_prompt = Self::summarize_user_prompt(pr_title, pr_diff);
-        // 根据语言生成 system prompt
-        let system_prompt = generate_summarize_pr_system_prompt(language);
+        // 根据语言生成 system prompt（语言选择逻辑在 prompt 生成函数内部处理）
+        let system_prompt = generate_summarize_pr_system_prompt();
 
         let params = LLMRequestParams {
             system_prompt,
@@ -437,23 +422,9 @@ impl PullRequestLLM {
     pub fn summarize_file_change(
         file_path: &str,
         file_diff: &str,
-        language: Option<&str>,
     ) -> Result<String> {
         // 使用统一的 v2 客户端
         let client = LLMClient::global();
-
-        // 确定使用的语言：命令行参数 > 配置文件 > 默认值（"en"）
-        let language = language
-            .or_else(|| {
-                let settings = Settings::get();
-                let config_lang = settings.llm.language.as_str();
-                if config_lang.is_empty() {
-                    None
-                } else {
-                    Some(config_lang)
-                }
-            })
-            .unwrap_or("en");
 
         // 限制 diff 长度，避免请求过大
         // 对于单个文件的总结，限制在 5000 字符左右
@@ -470,7 +441,8 @@ impl PullRequestLLM {
             } else {
                 format!(
                     "{}\n... (diff truncated, {} characters total)",
-                    truncated, file_diff.len()
+                    truncated,
+                    file_diff.len()
                 )
             }
         } else {
@@ -479,8 +451,8 @@ impl PullRequestLLM {
 
         // 构建请求参数
         let user_prompt = Self::summarize_file_change_user_prompt(file_path, &file_diff_trimmed);
-        // 根据语言生成 system prompt
-        let system_prompt = generate_summarize_file_change_system_prompt(language);
+        // 根据语言生成 system prompt（语言选择逻辑在 prompt 生成函数内部处理）
+        let system_prompt = generate_summarize_file_change_system_prompt();
 
         let params = LLMRequestParams {
             system_prompt,
@@ -506,10 +478,7 @@ impl PullRequestLLM {
 
     /// 生成单个文件修改总结的 user prompt
     fn summarize_file_change_user_prompt(file_path: &str, file_diff: &str) -> String {
-        format!(
-            "File path: {}\n\nFile diff:\n{}",
-            file_path, file_diff
-        )
+        format!("File path: {}\n\nFile diff:\n{}", file_path, file_diff)
     }
 
     /// 清理文件修改总结响应

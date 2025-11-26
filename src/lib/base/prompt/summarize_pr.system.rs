@@ -6,20 +6,24 @@ use crate::base::llm::get_language_requirement;
 
 /// 根据语言生成 PR 总结的 system prompt
 ///
-/// # 参数
-///
-/// * `language` - 语言代码（如 "en", "zh", "zh-CN", "zh-TW", "ja", "ko", "de" 等）
-///
 /// # 返回
 ///
 /// 返回根据语言定制的 system prompt 字符串
 ///
 /// # 说明
 ///
-/// 如果提供的语言代码不在支持列表中，将使用英文作为默认语言。
-pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
-    // 基础 prompt 内容
-    let base_prompt = r#"You're a technical documentation assistant that generates comprehensive PR summaries and appropriate filenames based on PR diff content.
+/// 语言选择优先级：配置文件 > 默认值（"en"）
+/// 如果配置文件中的语言代码不在支持列表中，将使用英文作为默认语言。
+pub fn generate_summarize_pr_system_prompt() -> String {
+    // 获取 JSON 响应示例
+    let summarize_response_example =     "{
+      \"summary\": \"# Add User Authentication\\n\\n## Overview\\nThis PR adds user authentication functionality to the application.\\n\\n## Requirements Analysis\\n\\n### Business Requirements\\nDevelopers need a secure way to authenticate users...\\n\\n### Functional Requirements\\nThe system accepts user credentials and returns authentication tokens...\\n\\n## Key Changes\\n- Added login endpoint\\n- Implemented JWT token generation\\n\\n## Files Changed\\n- `src/auth/login.ts`: Added login handler\\n- `src/auth/jwt.ts`: Added token generation\\n\\n## Technical Details\\nImplemented JWT-based authentication:\\n\\n```typescript\\nfunction generateToken(user: User): string {\\n  return jwt.sign({ userId: user.id }, secret);\\n}\\n```\\n\\n## Testing\\nAdded unit tests for authentication flow.\\n\\n## Usage Instructions\\nRun `npm run test` to execute tests.\",
+      \"filename\": \"add-user-authentication\"
+    }"
+        .to_string();
+    // 基础 prompt 内容（使用 format! 宏直接插入 JSON 示例）
+    let base_prompt = format!(
+        r#"You're a technical documentation assistant that generates comprehensive PR summaries and appropriate filenames based on PR diff content.
 
 ## Summary Document Rules
 
@@ -114,9 +118,50 @@ The `summary` field should contain a complete Markdown document. Use newline cha
 
 The `filename` field should be a valid filename without extension (e.g., "add-user-authentication").
 
-Example response structure:
-- summary: A Markdown document starting with a level 1 heading for PR Title, followed by all required sections in order
-- filename: A lowercase filename with hyphens, for example add-user-authentication
+**CRITICAL: JSON Escaping Rules**
+
+You MUST return a valid JSON object with exactly two fields: summary and filename.
+
+All special characters in the summary field MUST be properly escaped according to JSON standards:
+- Newlines: Represent each line break as the two characters: backslash followed by lowercase n
+- Double quotes: Represent each quote mark as backslash followed by quote mark
+- Backslashes: Represent each backslash as two backslashes
+- Backticks: Backticks in markdown code blocks do not need escaping in JSON strings
+
+**Response Structure:**
+
+Your response must be a valid JSON object with this exact structure:
+
+Field 1: summary (string type)
+- Contains the complete Markdown document as a single JSON string value
+- All markdown content must be within this one string field
+- Every line break in your markdown must be written as: backslash + n (two characters)
+- Every double quote in your markdown must be written as: backslash + quote (two characters)
+- Every backslash in your markdown must be written as: backslash + backslash (two characters)
+
+Field 2: filename (string type)
+- Contains a valid filename without extension
+- Use lowercase letters with hyphens to separate words
+- No special characters except hyphens and underscores
+- Example format: add-user-authentication
+
+**Example JSON Response:**
+
+The following is a complete example of the expected JSON format. Notice how:
+- Line breaks are represented as \n (backslash followed by n)
+- Code blocks with triple backticks are included in the string
+- All special characters are properly escaped
+
+{}
+
+**Important Notes:**
+- The summary field contains the complete Markdown document as a single JSON string
+- Line breaks in markdown must be written as backslash-n (two characters) in the JSON string
+- Code blocks in markdown with triple backticks should be included in the summary string
+- Ensure all quotes, backslashes, and special characters are properly escaped according to JSON rules
+- The JSON must be valid and parseable - test that your response can be parsed as JSON
+- When the JSON is parsed, escape sequences will become actual characters (backslash-n becomes a newline)
+- Do NOT wrap your JSON response in markdown code fences
 
 ## Document Structure Order
 
@@ -135,8 +180,10 @@ The generated document MUST follow this exact order:
 6. ## Technical Details
 7. ## Testing
 8. ## Usage Instructions
-9. ## Code Changes"#;
+9. ## Code Changes"#,
+        summarize_response_example
+    );
 
     // 使用 LLM 模块的语言增强功能
-    get_language_requirement(base_prompt, language)
+    get_language_requirement(&base_prompt)
 }

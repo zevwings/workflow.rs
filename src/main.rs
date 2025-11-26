@@ -165,9 +165,8 @@ fn main() -> Result<()> {
             }
             PRCommands::Summarize {
                 pull_request_id,
-                language,
             } => {
-                summarize::SummarizeCommand::summarize(pull_request_id, language.as_deref())?;
+                summarize::SummarizeCommand::summarize(pull_request_id)?;
             }
         },
         // 日志操作命令
