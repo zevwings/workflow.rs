@@ -13,5 +13,5 @@ pub use helpers::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id,
     transform_to_branch_name,
 };
-pub use llm::{PullRequestContent, PullRequestLLM};
+pub use llm::{PullRequestContent, PullRequestLLM, PullRequestSummary};
 pub use platform::{create_provider, PlatformProvider, PullRequestStatus, TYPES_OF_CHANGES};

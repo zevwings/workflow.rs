@@ -32,6 +32,7 @@ pub mod lifecycle;
 pub mod check;
 pub mod config;
 pub mod github;
+pub mod llm;
 pub mod proxy;
 
 // 业务功能

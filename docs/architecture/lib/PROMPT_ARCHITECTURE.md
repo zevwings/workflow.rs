@@ -3,18 +3,17 @@
 ## 📋 概述
 
 本文档描述 Workflow CLI 的 Prompt 管理模块架构，包括：
-- Prompt 文件的加载和管理
-- 文件缓存机制（避免重复读取）
-- 线程安全的 Prompt 管理
-- 扁平化文件结构设计
+- Prompt 作为编译时常量嵌入到二进制文件中
+- 多语言支持（语言增强功能）
+- Prompt 生成函数（根据语言动态生成）
 
-该模块为整个应用提供统一的 Prompt 管理基础设施，支持从文件加载 Prompt，便于维护和版本控制。
+该模块为整个应用提供统一的 Prompt 管理基础设施，Prompt 内容作为编译时常量直接嵌入到二进制文件中，便于维护和版本控制。
 
 **模块统计：**
-- 总代码行数：约 263 行
-- 文件数量：2 个核心文件（manager.rs, mod.rs）
-- 主要组件：1 个（PromptManager）
-- Prompt 文件：`prompts/` 目录下的 Markdown 文件
+- 总代码行数：约 143 行（summarize_pr.system.rs）+ 约 200 行（generate_branch.system.rs）
+- 文件数量：2 个 Prompt 文件（generate_branch.system.rs, summarize_pr.system.rs）
+- 主要组件：2 个（GENERATE_BRANCH_SYSTEM_PROMPT 常量，generate_summarize_pr_system_prompt 函数）
+- 语言支持：通过 `lib/base/llm/languages.rs` 提供多语言支持
 
 ---
 
@@ -24,29 +23,28 @@
 
 ```
 src/lib/base/prompt/
-├── mod.rs          # 模块声明和导出 (27行)
-├── manager.rs      # PromptManager 实现 (238行)
-└── prompts/        # Prompt 文件目录
-    └── generate_branch.system.md  # 示例 Prompt 文件
+├── mod.rs                      # 模块声明和导出 (28行)
+├── generate_branch.system.rs   # 生成分支名的 system prompt (约 200 行)
+└── summarize_pr.system.rs      # PR 总结的 system prompt (143行)
 ```
 
 ### 依赖模块
 
-- **`anyhow`**：错误处理
-- **`std::collections::HashMap`**：缓存存储
-- **`std::sync::{Mutex, OnceLock}`**：线程安全
+- **`lib/base/llm/languages.rs`**：多语言支持（`get_language_requirement` 函数）
+- **`lib/base/llm/mod.rs`**：语言相关 API 重新导出
 
 ### 模块集成
 
 #### PR 模块
 
 - **`lib/pr/llm.rs`**：PR LLM 服务
-  - `PromptManager::load("generate_branch.system.md")` - 加载 system prompt
+  - `GENERATE_BRANCH_SYSTEM_PROMPT` - 使用编译时嵌入的 prompt 常量
+  - `generate_summarize_pr_system_prompt(language)` - 根据语言生成 PR 总结 prompt
 
 #### 使用场景
 
-- **Prompt 加载**：所有需要 LLM prompt 的模块通过 `PromptManager::load()` 加载
-- **文件管理**：Prompt 文件统一放在 `prompts/` 目录下，便于维护
+- **Prompt 使用**：所有需要 LLM prompt 的模块直接使用编译时嵌入的常量或函数
+- **多语言支持**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求
 
 ---
 
@@ -54,81 +52,92 @@ src/lib/base/prompt/
 
 ### 设计原则
 
-1. **文件优先**：Prompt 从文件加载，便于维护和版本控制
-2. **扁平化结构**：所有 Prompt 文件直接放在 `prompts/` 目录下，不使用子文件夹
-3. **缓存机制**：使用内存缓存避免重复读取文件，提高性能
-4. **线程安全**：使用 `Mutex` 和 `OnceLock` 保证线程安全
-5. **完整文件名**：必须使用完整文件名（包含扩展名），如 `"generate_branch.system.md"`
+1. **编译时嵌入**：Prompt 作为编译时常量直接嵌入到二进制文件中，无需运行时文件读取
+2. **多语言支持**：通过 `get_language_requirement` 函数根据语言动态增强 prompt
+3. **类型安全**：使用 Rust 常量（`pub const`）和函数，编译时检查
+4. **易于维护**：Prompt 内容在源代码中，便于版本控制和代码审查
+5. **性能优化**：编译时嵌入，无需运行时文件 I/O 操作
 
 ### 核心组件
 
-#### 1. PromptManager (`manager.rs`)
+#### 1. GENERATE_BRANCH_SYSTEM_PROMPT (`generate_branch.system.rs`)
 
-**职责**：提供统一的 Prompt 加载和管理功能
-
-**主要方法**：
-
-- `load(name: &str) -> Result<String>` - 从文件加载 Prompt（文件不存在会返回错误）
-- `load_or_default<F>(name: &str, default_fn: F) -> Result<String>` - 从文件加载 Prompt，如果文件不存在则使用默认值
-- `clear_cache()` - 清除所有缓存的 Prompt（主要用于测试）
-- `load_from_file(name: &str) -> Result<String>` - 从文件加载 Prompt（内部方法）
-- `name_to_path(name: &str) -> Result<PathBuf>` - 将 Prompt 名称转换为文件路径（内部方法）
-- `get_from_cache(name: &str) -> Option<String>` - 从缓存获取 Prompt（内部方法）
-- `put_to_cache(name: &str, content: &str)` - 将 Prompt 存入缓存（内部方法）
+**职责**：提供生成分支名和 PR 标题的 system prompt
 
 **关键特性**：
 
-- ✅ **文件加载**：从 `prompts/` 目录加载 Prompt 文件
-- ✅ **缓存机制**：使用 `HashMap` 缓存已加载的 Prompt，避免重复读取文件
-- ✅ **线程安全**：使用 `Mutex` 和 `OnceLock` 保证线程安全
-- ✅ **路径管理**：使用 `env!("CARGO_MANIFEST_DIR")` 在编译时确定文件路径
-- ✅ **文件格式支持**：支持 `.md` 和 `.txt` 格式（优先 `.md`）
+- ✅ **编译时常量**：使用 `pub const` 定义，编译时嵌入到二进制文件
+- ✅ **直接使用**：无需文件加载，直接使用常量
+- ✅ **类型安全**：编译时检查，确保 prompt 内容正确
 
 **使用场景**：
 
-- LLM 模块加载 system prompt
-- 需要从文件加载 prompt 的所有场景
+- PR 创建时生成分支名和 PR 标题
+- 通过 `PullRequestLLM::generate()` 调用
+
+#### 2. generate_summarize_pr_system_prompt (`summarize_pr.system.rs`)
+
+**职责**：根据语言生成 PR 总结的 system prompt
+
+**主要方法**：
+
+- `generate_summarize_pr_system_prompt(language: &str) -> String` - 根据语言代码生成 system prompt
+
+**关键特性**：
+
+- ✅ **多语言支持**：支持多种语言（en, zh-CN, zh-TW, ja, ko, de, fr, es, pt, ru 等）
+- ✅ **语言增强**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求
+- ✅ **动态生成**：根据语言代码动态生成包含语言要求的 prompt
+- ✅ **详细指导**：包含详细的要求分析、功能说明、用户场景等指导
+
+**使用场景**：
+
+- PR 总结时生成多语言的总结文档
+- 通过 `PullRequestLLM::summarize_pr()` 调用
 
 ### 设计模式
 
-#### 1. 单例模式
+#### 1. 编译时常量模式
 
-使用 `OnceLock` 和 `Mutex` 实现线程安全的单例缓存：
+使用 Rust 的 `pub const` 定义编译时常量：
 
 ```rust
-fn prompt_cache() -> &'static Mutex<HashMap<String, String>> {
-    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
-    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"..."#;
+```
+
+**优势**：
+- 零运行时开销：编译时嵌入，无需运行时文件 I/O
+- 类型安全：编译时检查，确保 prompt 内容正确
+- 易于维护：Prompt 内容在源代码中，便于版本控制
+
+#### 2. 函数式生成模式
+
+使用函数根据参数动态生成 prompt：
+
+```rust
+pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
+    let base_prompt = r#"..."#;
+    get_language_requirement(base_prompt, language)
 }
 ```
 
 **优势**：
-- 线程安全：使用 `Mutex` 保护共享状态
-- 懒加载：使用 `OnceLock` 实现懒初始化
-- 性能优化：避免重复读取文件
-
-#### 2. 策略模式
-
-支持两种加载策略：
-- `load()` - 强制从文件加载（文件不存在返回错误）
-- `load_or_default()` - 从文件加载，失败则使用默认值
-
-**优势**：
-- 灵活性：根据场景选择不同的加载策略
-- 容错性：`load_or_default` 提供默认值回退
+- 灵活性：根据语言动态生成不同的 prompt
+- 可扩展性：易于添加新的语言支持
+- 统一管理：所有语言增强逻辑集中在一个函数中
 
 ### 错误处理
 
-#### 分层错误处理
+#### 语言代码处理
 
-1. **文件加载错误**：文件不存在或读取失败
-2. **路径解析错误**：文件路径构建失败
+1. **语言代码验证**：如果提供的语言代码不在支持列表中，使用英文作为默认语言
+2. **语言查找**：通过 `find_language()` 函数查找支持的语言
+3. **默认回退**：如果找不到匹配的语言，使用英文的默认 instruction
 
 #### 容错机制
 
-- **文件不存在**：`load()` 返回错误，`load_or_default()` 使用默认值
-- **缓存失效**：缓存不存在时自动从文件加载
-- **路径错误**：使用 `env!("CARGO_MANIFEST_DIR")` 确保路径正确
+- **语言代码不匹配**：自动回退到英文
+- **语言增强失败**：使用基础 prompt，不包含语言要求增强
 
 ---
 
@@ -136,72 +145,86 @@ fn prompt_cache() -> &'static Mutex<HashMap<String, String>> {
 
 ### 整体架构流程
 
+#### 1. 使用编译时常量（GENERATE_BRANCH_SYSTEM_PROMPT）
+
 ```
-调用 PromptManager::load()
+使用 GENERATE_BRANCH_SYSTEM_PROMPT 常量
   ↓
-检查缓存（get_from_cache）
+直接使用编译时嵌入的 prompt 内容
   ↓
-缓存命中？ → 是 → 返回缓存内容
-  ↓ 否
-从文件加载（load_from_file）
+返回 Prompt 字符串
+```
+
+#### 2. 使用函数生成（generate_summarize_pr_system_prompt）
+
+```
+调用 generate_summarize_pr_system_prompt(language)
   ↓
-路径转换（name_to_path）
+查找语言（find_language(language)）
   ↓
-读取文件（fs::read_to_string）
+获取语言 instruction（get_language_instruction(language)）
   ↓
-存入缓存（put_to_cache）
+增强 prompt（get_language_requirement(base_prompt, language)）
   ↓
-返回 Prompt 内容
+返回增强后的 Prompt 字符串
 ```
 
 ### 典型调用示例
 
-#### 1. 从文件加载 Prompt
+#### 1. 使用编译时常量
 
 ```rust
-use workflow::base::prompt::PromptManager;
+use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
-// 加载 Prompt（文件不存在会返回错误）
-let prompt = PromptManager::load("generate_branch.system.md")?;
+// 直接使用编译时嵌入的 prompt
+let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
 ```
 
 **流程**：
-1. 检查缓存中是否有 `"generate_branch.system.md"`
-2. 如果缓存未命中，调用 `name_to_path()` 构建文件路径
-3. 使用 `fs::read_to_string()` 读取文件
-4. 将内容存入缓存
-5. 返回 Prompt 内容
+1. 直接使用常量，无需任何运行时操作
+2. 编译时已嵌入到二进制文件
+3. 零运行时开销
 
-#### 2. 从文件加载 Prompt（带默认值回退）
+#### 2. 使用函数生成（多语言支持）
 
 ```rust
-// 加载 Prompt，如果文件不存在则使用默认值
-let prompt = PromptManager::load_or_default("generate_branch.system.md", || {
-    "Default system prompt".to_string()
-})?;
+use workflow::base::prompt::generate_summarize_pr_system_prompt;
+
+// 根据语言生成 prompt
+let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
 ```
 
 **流程**：
-1. 检查缓存
-2. 如果缓存未命中，尝试从文件加载
-3. 如果文件不存在，调用 `default_fn()` 生成默认值
-4. 将默认值存入缓存
-5. 返回 Prompt 内容
+1. 调用函数，传入语言代码
+2. 查找支持的语言（`find_language()`）
+3. 获取语言 instruction（`get_language_instruction()`）
+4. 增强基础 prompt（`get_language_requirement()`）
+5. 返回包含语言要求的完整 prompt
 
 ### 数据流
 
+#### 编译时常量流程
+
 ```
-Prompt 文件 (prompts/generate_branch.system.md)
+源代码中的 const 定义
   ↓
-PromptManager::load()
+编译时嵌入到二进制文件
   ↓
-缓存检查 (HashMap<String, String>)
+运行时直接使用
+```
+
+#### 函数生成流程
+
+```
+语言代码（如 "zh-CN"）
   ↓
-文件读取 (fs::read_to_string)
+find_language() 查找语言
   ↓
-缓存存储
+get_language_instruction() 获取 instruction
   ↓
-返回 Prompt 字符串
+get_language_requirement() 增强 prompt
+  ↓
+返回增强后的 Prompt 字符串
 ```
 
 ---
@@ -210,69 +233,103 @@ PromptManager::load()
 
 ### Prompt 文件组织
 
-Prompt 文件应放在以下位置，使用扁平化结构（无子文件夹）：
+Prompt 文件作为 Rust 源文件，直接放在 `src/lib/base/prompt/` 目录下：
 
 ```
-src/lib/base/prompt/prompts/
-├── generate_branch.system.md    # 生成分支名的 system prompt
-├── generate_branch.user.md       # 生成分支名的 user prompt（可选）
-└── ...
+src/lib/base/prompt/
+├── mod.rs                      # 模块声明和导出
+├── generate_branch.system.rs   # 生成分支名的 system prompt（编译时常量）
+└── summarize_pr.system.rs     # PR 总结的 system prompt（函数生成）
 ```
 
 ### 文件命名规则
 
-- **扁平化结构**：所有 Prompt 文件直接放在 `prompts/` 目录下，不使用子文件夹
-- **命名格式**：使用点号分隔，格式为 `{功能}.{类型}.{扩展名}`（如 `generate_branch.system.md`）
-- 支持两种文件格式：
-  - **`.md`** (推荐)：Markdown 格式，更易读和维护
-  - **`.txt`** (向后兼容)：纯文本格式
-- **重要**：调用时必须使用完整文件名（包含扩展名），如 `"generate_branch.system.md"`
-- 文件路径：`prompts/generate_branch.system.md` 或 `prompts/generate_branch.system.txt`
+- **Rust 源文件**：所有 Prompt 文件使用 `.rs` 扩展名
+- **命名格式**：使用点号分隔，格式为 `{功能}.{类型}.rs`（如 `generate_branch.system.rs`）
+- **编译时嵌入**：使用 `pub const` 定义编译时常量，或使用函数动态生成
+- **模块路径**：使用 `#[path]` 属性指定文件路径
 
-### 路径解析
+### 文件内容结构
 
-Prompt 文件路径在编译时确定，使用 `env!("CARGO_MANIFEST_DIR")` 获取项目根目录：
+#### 编译时常量（generate_branch.system.rs）
 
 ```rust
-let manifest_dir = env!("CARGO_MANIFEST_DIR");
-let base_path = Path::new(manifest_dir);
-let file_path = base_path.join(format!("src/lib/base/prompt/prompts/{}", name));
+pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"..."#;
+```
+
+#### 函数生成（summarize_pr.system.rs）
+
+```rust
+pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
+    let base_prompt = r#"..."#;
+    get_language_requirement(base_prompt, language)
+}
 ```
 
 ---
 
 ## 📝 扩展性
 
-### 添加新的 Prompt 文件
+### 添加新的 Prompt 常量
 
-1. 在 `src/lib/base/prompt/prompts/` 目录下创建新的 Prompt 文件
-2. 使用命名格式：`{功能}.{类型}.md`（如 `generate_pr_title.system.md`）
-3. 在代码中使用 `PromptManager::load()` 加载：
+1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new_feature.system.rs`）
+2. 使用 `pub const` 定义编译时常量：
 
 ```rust
-let prompt = PromptManager::load("generate_pr_title.system.md")?;
+pub const NEW_FEATURE_SYSTEM_PROMPT: &str = r#"..."#;
+```
+
+3. 在 `mod.rs` 中声明模块并重新导出：
+
+```rust
+#[path = "new_feature.system.rs"]
+pub mod new_feature_system;
+
+pub use new_feature_system::NEW_FEATURE_SYSTEM_PROMPT;
+```
+
+### 添加新的 Prompt 生成函数
+
+1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new_feature.system.rs`）
+2. 实现生成函数：
+
+```rust
+use crate::base::llm::get_language_requirement;
+
+pub fn generate_new_feature_system_prompt(language: &str) -> String {
+    let base_prompt = r#"..."#;
+    get_language_requirement(base_prompt, language)
+}
+```
+
+3. 在 `mod.rs` 中声明模块并重新导出：
+
+```rust
+#[path = "new_feature.system.rs"]
+pub mod new_feature_system;
+
+pub use new_feature_system::generate_new_feature_system_prompt;
 ```
 
 ### 修改现有 Prompt
 
-1. 直接编辑 `prompts/` 目录下的 Markdown 文件
-2. 重新编译项目（缓存会在编译时更新）
+1. 直接编辑 `src/lib/base/prompt/` 目录下的 Rust 源文件
+2. 重新编译项目（编译时常量会在编译时更新）
 
-### 添加新的加载策略
+### 添加新的语言支持
 
-如果需要添加新的加载策略，可以在 `PromptManager` 中添加新的方法：
+1. 在 `src/lib/base/llm/languages.rs` 中的 `SUPPORTED_LANGUAGES` 数组添加新语言：
 
 ```rust
-impl PromptManager {
-    pub fn load_with_fallback<F, G>(name: &str, fallback_fn: F, default_fn: G) -> Result<String>
-    where
-        F: FnOnce() -> Result<String>,
-        G: FnOnce() -> String,
-    {
-        // 实现新的加载策略
-    }
-}
+SupportedLanguage {
+    code: "new-lang",
+    name: "New Language",
+    native_name: "新语言",
+    instruction_template: "**所有输出必须使用新语言。**",
+},
 ```
+
+2. 语言系统会自动支持新语言，无需修改 Prompt 文件
 
 ---
 
@@ -286,48 +343,52 @@ impl PromptManager {
 
 ## 📋 使用示例
 
-### 基本使用
+### 使用编译时常量
 
 ```rust
-use workflow::base::prompt::PromptManager;
+use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
-// 加载 Prompt（文件不存在会返回错误）
-let prompt = PromptManager::load("generate_branch.system.md")?;
+// 直接使用编译时嵌入的 prompt
+let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
 ```
 
-### 带默认值回退
+### 使用函数生成（多语言支持）
 
 ```rust
-// 加载 Prompt，如果文件不存在则使用默认值
-let prompt = PromptManager::load_or_default("generate_branch.system.md", || {
-    "Default system prompt".to_string()
-})?;
-```
+use workflow::base::prompt::generate_summarize_pr_system_prompt;
 
-### 清除缓存（主要用于测试）
-
-```rust
-// 清除所有缓存的 Prompt
-PromptManager::clear_cache();
+// 根据语言生成 prompt
+let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
 ```
 
 ### 在 PR 模块中使用
 
+#### 生成分支名和 PR 标题
+
 ```rust
 // src/lib/pr/llm.rs
-use workflow::base::prompt::PromptManager;
+use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
-let system_prompt = PromptManager::load("generate_branch.system.md")
-    .with_context(|| "Failed to load system prompt from file: generate_branch.system.md")?;
+let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
+```
+
+#### 生成 PR 总结
+
+```rust
+// src/lib/pr/llm.rs
+use workflow::base::prompt::generate_summarize_pr_system_prompt;
+
+let language = "zh-CN"; // 或从配置/参数获取
+let system_prompt = generate_summarize_pr_system_prompt(language);
 ```
 
 ---
 
 ## ⚠️ 注意事项
 
-1. **编译时路径**：Prompt 文件路径在编译时确定，使用 `env!("CARGO_MANIFEST_DIR")`
-2. **文件不存在**：使用 `load()` 时，如果文件不存在会返回错误；使用 `load_or_default()` 时，如果文件不存在会使用默认值
-3. **缓存机制**：Prompt 会被缓存，修改文件后需要重新编译才能生效
-4. **线程安全**：所有操作都是线程安全的，可以在多线程环境中使用
-5. **完整文件名**：调用时必须使用完整文件名（包含扩展名），如 `"generate_branch.system.md"`
+1. **编译时嵌入**：Prompt 内容在编译时嵌入到二进制文件，修改后需要重新编译才能生效
+2. **语言代码**：如果提供的语言代码不在支持列表中，会自动回退到英文
+3. **性能优化**：编译时常量零运行时开销，函数生成也无需文件 I/O 操作
+4. **类型安全**：使用 Rust 常量，编译时检查，确保 prompt 内容正确
+5. **多语言支持**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求，确保 LLM 按照指定语言生成内容
 

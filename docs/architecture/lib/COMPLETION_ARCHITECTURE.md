@@ -8,7 +8,7 @@
 - 总代码行数：约 500 行
 - 文件数量：4 个核心文件
 - 主要组件：3 个（Completion, Generate, Files）
-- 支持的命令：workflow（包含所有子命令：pr, log, jira, branch, github 等）
+- 支持的命令：workflow（包含所有子命令：pr, log, jira, branch, github, llm 等）
 - 支持的 Shell：zsh, bash, fish, powershell, elvish
 
 ---
@@ -81,7 +81,7 @@ src/lib/completion/
 - **职责**：生成各种 shell 的 completion 脚本文件
 - **功能**：
   - 生成 `workflow` 命令的 completion（包含所有子命令）
-  - 生成 `workflow` 命令及其所有子命令的 completion（包括 `pr`、`log`、`jira` 等）
+  - 生成 `workflow` 命令及其所有子命令的 completion（包括 `pr`、`log`、`jira`、`llm` 等）
   - 支持多种 shell 类型（zsh, bash, fish, powershell, elvish）
 
 #### 3. Files（函数模块）
@@ -147,8 +147,7 @@ Completion::configure_shell_config(shell)
   3. fs::create_dir_all()                              # 创建 completion 目录
   4. Completion::generate_all_completions()             # 生成 completion 脚本
      ├─ generate::generate_all_completions()
-     │   ├─ generate_workflow_completion()            # 生成 workflow completion
-     │   └─ generate_workflow_completion()            # 生成 workflow completion（包含所有子命令）
+     │   └─ generate_workflow_completion()            # 生成 workflow completion（包含所有子命令：pr, log, jira, llm, github 等）
      └─ files::get_completion_filename()              # 获取文件名
   5. Completion::create_completion_config_file()       # 创建 .completions 配置文件
   6. ShellConfigManager::add_source()                  # 添加 source 语句到 shell 配置

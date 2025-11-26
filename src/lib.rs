@@ -9,6 +9,8 @@
 // 核心库模块声明
 #[path = "lib/base/mod.rs"]
 pub mod base;
+#[path = "lib/cli/mod.rs"]
+pub mod cli;
 #[path = "lib/completion/mod.rs"]
 pub mod completion;
 #[path = "lib/git/mod.rs"]
@@ -37,6 +39,14 @@ pub use base::{
     Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, Reload,
     ShellConfigManager,
 };
+// 从 base::prompt 重新导出 Prompt 相关 API
+pub use base::prompt::{
+    find_language, generate_summarize_pr_system_prompt, get_language_instruction,
+    get_supported_language_codes, get_supported_language_display_names, SupportedLanguage,
+    GENERATE_BRANCH_SYSTEM_PROMPT, SUPPORTED_LANGUAGES,
+};
+// 从 base::llm 重新导出语言增强 API
+pub use base::llm::get_language_requirement;
 
 // 业务模块导出
 pub use completion::{
@@ -55,8 +65,9 @@ pub use jira::{
 pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
     detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
-    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup, GitHub,
-    PlatformProvider, PullRequestContent, PullRequestLLM, TYPES_OF_CHANGES,
+    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup,
+    CodeupUser, GitHub, GitHubUser, PlatformProvider, PullRequestContent, PullRequestLLM,
+    PullRequestSummary, TYPES_OF_CHANGES,
 };
 pub use proxy::{
     ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,

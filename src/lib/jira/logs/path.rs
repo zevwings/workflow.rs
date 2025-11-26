@@ -1,6 +1,7 @@
 //! 路径管理相关功能
 
 use anyhow::{Context, Result};
+use std::env;
 use std::path::{Path, PathBuf};
 
 use super::constants::*;
@@ -53,7 +54,6 @@ impl JiraLogs {
     /// - Unix (macOS/Linux): `~/Downloads/logs_{jira_id}/...`
     /// - Windows: `%USERPROFILE%\Downloads\logs_{jira_id}\...`
     fn get_old_location_path_v1(&self, jira_id: &str) -> Result<PathBuf> {
-        use std::env;
         let user_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %USERPROFILE%
             env::var("USERPROFILE").context("USERPROFILE environment variable not set")?
@@ -82,7 +82,6 @@ impl JiraLogs {
     /// - Unix (macOS/Linux): `~/Downloads/logs_{jira_id}`
     /// - Windows: `%USERPROFILE%\Downloads\logs_{jira_id}`
     fn find_log_file_in_old_directory(&self, jira_id: &str) -> Result<PathBuf> {
-        use std::env;
         let user_dir = if cfg!(target_os = "windows") {
             // Windows: 使用 %USERPROFILE%
             env::var("USERPROFILE").context("USERPROFILE environment variable not set")?

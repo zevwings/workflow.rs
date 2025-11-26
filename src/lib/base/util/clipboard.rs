@@ -3,6 +3,11 @@
 //! 本模块提供了剪贴板的读写功能。
 
 use anyhow::Result;
+#[cfg(all(
+    not(target_env = "musl"),
+    not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
+))]
+use clipboard::{ClipboardContext, ClipboardProvider};
 
 /// 剪贴板操作模块
 ///
@@ -30,8 +35,6 @@ impl Clipboard {
         not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
     ))]
     pub fn copy(text: &str) -> Result<()> {
-        use clipboard::{ClipboardContext, ClipboardProvider};
-
         let mut ctx: ClipboardContext = ClipboardProvider::new()
             .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard: {}", e))?;
 
