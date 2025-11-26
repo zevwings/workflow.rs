@@ -7,7 +7,10 @@ use anyhow::{Context, Result};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
-use crate::base::prompt::{generate_summarize_pr_system_prompt, GENERATE_BRANCH_SYSTEM_PROMPT};
+use crate::base::prompt::{
+    generate_summarize_file_change_system_prompt, generate_summarize_pr_system_prompt,
+    GENERATE_BRANCH_SYSTEM_PROMPT,
+};
 use crate::base::settings::Settings;
 use crate::pr::helpers::transform_to_branch_name;
 
@@ -412,5 +415,117 @@ impl PullRequestLLM {
             summary: summary.trim().to_string(),
             filename: cleaned_filename,
         })
+    }
+
+    /// 生成单个文件的修改总结
+    ///
+    /// 根据文件的 diff 内容生成该文件的修改总结。
+    ///
+    /// # 参数
+    ///
+    /// * `file_path` - 文件路径
+    /// * `file_diff` - 文件的 diff 内容
+    /// * `language` - 可选的语言代码（如 "en", "zh", "zh-CN", "zh-TW"），如果为 None，则从配置文件读取
+    ///
+    /// # 返回
+    ///
+    /// 返回文件的修改总结（纯文本）
+    ///
+    /// # 错误
+    ///
+    /// 如果 LLM API 调用失败，返回相应的错误信息。
+    pub fn summarize_file_change(
+        file_path: &str,
+        file_diff: &str,
+        language: Option<&str>,
+    ) -> Result<String> {
+        // 使用统一的 v2 客户端
+        let client = LLMClient::global();
+
+        // 确定使用的语言：命令行参数 > 配置文件 > 默认值（"en"）
+        let language = language
+            .or_else(|| {
+                let settings = Settings::get();
+                let config_lang = settings.llm.language.as_str();
+                if config_lang.is_empty() {
+                    None
+                } else {
+                    Some(config_lang)
+                }
+            })
+            .unwrap_or("en");
+
+        // 限制 diff 长度，避免请求过大
+        // 对于单个文件的总结，限制在 5000 字符左右
+        const MAX_DIFF_LENGTH: usize = 5000;
+        let file_diff_trimmed = if file_diff.len() > MAX_DIFF_LENGTH {
+            let truncated = &file_diff[..MAX_DIFF_LENGTH];
+            let last_newline = truncated.rfind('\n').unwrap_or(0);
+            if last_newline > 0 {
+                format!(
+                    "{}\n... (diff truncated, {} characters total)",
+                    &file_diff[..last_newline],
+                    file_diff.len()
+                )
+            } else {
+                format!(
+                    "{}\n... (diff truncated, {} characters total)",
+                    truncated, file_diff.len()
+                )
+            }
+        } else {
+            file_diff.to_string()
+        };
+
+        // 构建请求参数
+        let user_prompt = Self::summarize_file_change_user_prompt(file_path, &file_diff_trimmed);
+        // 根据语言生成 system prompt
+        let system_prompt = generate_summarize_file_change_system_prompt(language);
+
+        let params = LLMRequestParams {
+            system_prompt,
+            user_prompt,
+            max_tokens: Some(300), // 单个文件的总结应该比较简短
+            temperature: 0.3,
+            model: String::new(), // model 会从 Settings 自动获取，这里可以留空
+        };
+
+        // 调用 LLM API
+        let response = client.call(&params).with_context(|| {
+            format!(
+                "Failed to call LLM API for summarizing file change: '{}'",
+                file_path
+            )
+        })?;
+
+        // 清理响应（移除可能的 markdown 代码块包装）
+        let summary = Self::clean_file_change_summary_response(response);
+
+        Ok(summary)
+    }
+
+    /// 生成单个文件修改总结的 user prompt
+    fn summarize_file_change_user_prompt(file_path: &str, file_diff: &str) -> String {
+        format!(
+            "File path: {}\n\nFile diff:\n{}",
+            file_path, file_diff
+        )
+    }
+
+    /// 清理文件修改总结响应
+    ///
+    /// 移除可能的 markdown 代码块包装，返回纯文本。
+    fn clean_file_change_summary_response(response: String) -> String {
+        let trimmed = response.trim();
+
+        // 如果响应被包装在 markdown 代码块中，移除包装
+        if trimmed.starts_with("```") {
+            // 移除 ``` 开头和 ``` 结尾
+            let start = trimmed.find('\n').unwrap_or(0);
+            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
+            trimmed[start..end].trim().to_string()
+        } else {
+            trimmed.to_string()
+        }
     }
 }
