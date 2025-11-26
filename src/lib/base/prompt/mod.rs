@@ -14,6 +14,8 @@
 
 #[path = "generate_branch.system.rs"]
 pub mod generate_branch_system;
+#[path = "summarize_file_change.system.rs"]
+pub mod summarize_file_change_system;
 #[path = "summarize_pr.system.rs"]
 pub mod summarize_pr_system;
 
@@ -24,4 +26,5 @@ pub use crate::base::llm::{
     find_language, get_language_instruction, get_supported_language_codes,
     get_supported_language_display_names, SupportedLanguage, SUPPORTED_LANGUAGES,
 };
+pub use summarize_file_change_system::generate_summarize_file_change_system_prompt;
 pub use summarize_pr_system::generate_summarize_pr_system_prompt;
