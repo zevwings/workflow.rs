@@ -16,10 +16,10 @@ impl JiraLogs {
     /// 获取日志文件路径
     /// 根据 JIRA ID 自动解析日志文件路径
     pub fn get_log_file_path(&self, jira_id: &str) -> Result<PathBuf> {
-        // 尝试新位置
-        let new_location = self.get_new_location_path(jira_id);
-        if new_location.exists() {
-            return self.find_log_file(&new_location);
+        // 尝试当前标准位置
+        let current_location = self.get_ticket_output_dir_path(jira_id);
+        if current_location.exists() {
+            return self.find_log_file(&current_location);
         }
 
         // 向后兼容：尝试旧位置
@@ -34,13 +34,15 @@ impl JiraLogs {
             return Ok(log_file);
         }
 
-        // 如果都找不到，返回新位置的默认路径
-        self.find_log_file(&new_location)
+        // 如果都找不到，返回当前标准位置的默认路径
+        self.find_log_file(&current_location)
     }
 
-    /// 获取新位置路径
-    fn get_new_location_path(&self, jira_id: &str) -> PathBuf {
-        let ticket_dir = self.base_dir.join(jira_id);
+    /// 获取 ticket 输出目录路径
+    ///
+    /// 返回当前标准的 ticket 日志输出目录路径：`{base_dir}/jira/{jira_id}/{output_folder}`
+    fn get_ticket_output_dir_path(&self, jira_id: &str) -> PathBuf {
+        let ticket_dir = self.base_dir.join("jira").join(jira_id);
         if !self.output_folder_name.is_empty() {
             ticket_dir.join(&self.output_folder_name)
         } else {
