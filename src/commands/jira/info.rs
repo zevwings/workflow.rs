@@ -45,7 +45,7 @@ impl InfoCommand {
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
                 log_break!();
-                log_message!("📎 Attachments ({}):", attachments.len());
+                log_message!("Attachments ({}):", attachments.len());
                 for (idx, attachment) in attachments.iter().enumerate() {
                     let size_str = if let Some(size) = attachment.size {
                         format_size(size)
@@ -56,11 +56,11 @@ impl InfoCommand {
                 }
             } else {
                 log_break!();
-                log_message!("📎 Attachments: None");
+                log_message!("Attachments: None");
             }
         } else {
             log_break!();
-            log_message!("📎 Attachments: None");
+            log_message!("Attachments: None");
         }
 
         // 显示评论数量
@@ -68,14 +68,14 @@ impl InfoCommand {
             let comment_count = comments.comments.len();
             if comment_count > 0 {
                 log_break!();
-                log_message!("💬 Comments: {} comment(s)", comment_count);
+                log_message!("Comments: {} comment(s)", comment_count);
             } else {
                 log_break!();
-                log_message!("💬 Comments: None");
+                log_message!("Comments: None");
             }
         } else {
             log_break!();
-            log_message!("💬 Comments: None");
+            log_message!("Comments: None");
         }
 
         // 显示 Jira URL
@@ -84,7 +84,7 @@ impl InfoCommand {
         if !jira_service_address.is_empty() {
             let jira_url = format!("{}/browse/{}", jira_service_address, issue.key);
             log_break!();
-            log_message!("🔗 URL: {}", jira_url);
+            log_message!("URL: {}", jira_url);
         }
 
         Ok(())

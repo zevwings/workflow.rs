@@ -83,7 +83,7 @@ impl CompletionGenerator {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level` 等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch` 等）
     pub fn generate_all(&self) -> Result<()> {
         log_debug!("Generating shell completion scripts...");
         log_debug!("Shell type: {}", self.shell);
