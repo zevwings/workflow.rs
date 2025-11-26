@@ -80,7 +80,7 @@ pub enum Commands {
     },
     /// Manage LLM configuration
     ///
-    /// Configure LLM provider, API keys, models, and summary language settings.
+    /// Configure LLM provider, API keys, models, and output language settings.
     #[command(name = "llm")]
     Llm {
         #[command(subcommand)]
@@ -168,12 +168,8 @@ pub enum LLMSubcommand {
     Show,
     /// Setup LLM configuration
     ///
-    /// Interactively configure LLM provider, proxy URL, API key, and model settings.
+    /// Interactively configure LLM provider, proxy URL, API key, model, and language settings.
     Setup,
-    /// Set summary language
-    ///
-    /// Interactively select the language for PR summaries.
-    Language,
 }
 
 /// GitHub account management subcommands

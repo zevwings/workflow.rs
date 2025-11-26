@@ -1,9 +1,10 @@
 //! LLM 配置设置命令
-//! 交互式设置 LLM 相关配置（provider, url, key, model）
+//! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
 use crate::base::settings::defaults::default_llm_model;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::commands::config::helpers::select_language;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
 use anyhow::{Context, Result};
@@ -169,6 +170,17 @@ impl LLMSetupCommand {
             None
         };
 
+        // 5. 配置 LLM 输出语言
+        log_break!();
+        let current_language = if !existing.language.is_empty() {
+            Some(existing.language.as_str())
+        } else {
+            None
+        };
+
+        let llm_language =
+            select_language(current_language).context("Failed to select LLM output language")?;
+
         // 保存配置
         let config_path = Paths::workflow_config()?;
         let manager = ConfigManager::<Settings>::new(config_path);
@@ -178,6 +190,7 @@ impl LLMSetupCommand {
             settings.llm.url = llm_url.clone();
             settings.llm.key = llm_key.clone();
             settings.llm.model = llm_model.clone();
+            settings.llm.language = llm_language.clone();
         })?;
 
         log_break!();
@@ -189,6 +202,7 @@ impl LLMSetupCommand {
         if let Some(ref model) = llm_model {
             log_info!("Model: {}", model);
         }
+        log_info!("Output Language: {}", llm_language);
 
         Ok(())
     }

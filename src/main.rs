@@ -14,7 +14,7 @@ use commands::config::{completion, log, setup, show};
 use commands::github::github;
 use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use commands::lifecycle::{uninstall, update, version};
-use commands::llm::{LLMLanguageCommand, LLMSetupCommand, LLMShowCommand};
+use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{close, create, integrate, list, merge, status, summarize, update as pr_update};
 use commands::proxy::proxy;
@@ -95,7 +95,6 @@ fn main() -> Result<()> {
         Some(Commands::Llm { subcommand }) => match subcommand {
             LLMSubcommand::Show => LLMShowCommand::show()?,
             LLMSubcommand::Setup => LLMSetupCommand::setup()?,
-            LLMSubcommand::Language => LLMLanguageCommand::set()?,
         },
         // Completion 管理命令
         Some(Commands::Completion { subcommand }) => match subcommand {

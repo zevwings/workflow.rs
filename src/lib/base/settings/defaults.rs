@@ -60,7 +60,7 @@ pub fn default_llm_model(provider: &str) -> String {
     }
 }
 
-/// 默认 PR 总结语言
+/// 默认 LLM 输出语言
 pub fn default_language() -> String {
     "en".to_string()
 }
