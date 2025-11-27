@@ -44,7 +44,7 @@ impl Completion {
     /// - fish, powershell, elvish：返回 None（不使用统一配置文件，直接写入各自的配置文件）
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
-    /// 包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`mcp`、`branch` 等子命令。
+    /// 包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level` 等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -374,7 +374,7 @@ impl Completion {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`mcp`、`branch` 等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`、`log`、`jira`、`github`、`llm`、`proxy`、`log-level` 等）
     pub fn generate_all_completions(
         shell_type: Option<String>,
         output_dir: Option<String>,

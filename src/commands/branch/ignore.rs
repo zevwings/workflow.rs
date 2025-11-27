@@ -37,13 +37,13 @@ impl BranchIgnoreCommand {
         if is_new {
             save(&config).context("Failed to save branch config")?;
             log_success!(
-                "Branch '{}' added to ignore list (repository: {})",
+                "已添加分支 '{}' 到忽略列表 (仓库: {})",
                 branch_name,
                 repo_name
             );
         } else {
             log_info!(
-                "Branch '{}' is already in ignore list (repository: {})",
+                "分支 '{}' 已在忽略列表中 (仓库: {})",
                 branch_name,
                 repo_name
             );
@@ -67,7 +67,7 @@ impl BranchIgnoreCommand {
             let ignore_branches = get_ignore_branches(&config, &repo_name);
 
             if ignore_branches.is_empty() {
-                log_info!("No ignored branches found (repository: {})", repo_name);
+                log_info!("当前没有忽略的分支 (仓库: {})", repo_name);
                 return Ok(());
             }
 
@@ -75,10 +75,7 @@ impl BranchIgnoreCommand {
             let options: Vec<String> = ignore_branches.clone();
 
             log_break!();
-            log_message!(
-                "Found the following ignored branches (repository: {}):",
-                repo_name
-            );
+            log_message!("检测到以下忽略的分支 (仓库: {}):", repo_name);
             for (i, option) in options.iter().enumerate() {
                 log_message!("  [{}] {}", i, option);
             }
@@ -86,31 +83,26 @@ impl BranchIgnoreCommand {
 
             // 使用 MultiSelect 让用户选择
             let selections = MultiSelect::new()
-                .with_prompt(
-                    "Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)",
-                )
+                .with_prompt("选择要移除的分支 (使用空格选择，Enter 确认，Esc 取消)")
                 .items(&options)
                 .interact()
                 .context("Failed to get user selection")?;
 
             if selections.is_empty() {
-                log_info!("No branches selected, operation cancelled");
+                log_info!("未选择任何分支，操作已取消");
                 return Ok(());
             }
 
             log_break!();
-            log_message!("Selected branches:");
+            log_message!("已选择以下分支:");
             for &idx in &selections {
                 log_message!("  - {}", options[idx]);
             }
             log_break!();
 
             // 确认删除
-            let confirm_msg = format!(
-                "Confirm removing {} selected branch(es) from ignore list?",
-                selections.len()
-            );
-            if !confirm(&confirm_msg, false, Some("Operation cancelled"))? {
+            let confirm_msg = format!("确认从忽略列表移除 {} 个选中的分支?", selections.len());
+            if !confirm(&confirm_msg, false, Some("操作已取消"))? {
                 return Ok(());
             }
 
@@ -131,7 +123,7 @@ impl BranchIgnoreCommand {
                 success_count += 1;
             } else {
                 log_warning!(
-                    "Branch '{}' is not in ignore list (repository: {})",
+                    "分支 '{}' 不在忽略列表中 (仓库: {})",
                     branch_name,
                     repo_name
                 );
@@ -143,14 +135,14 @@ impl BranchIgnoreCommand {
         if success_count > 0 {
             save(&config).context("Failed to save branch config")?;
             log_success!(
-                "Removed {} branch(es) from ignore list (repository: {})",
+                "已从忽略列表移除 {} 个分支 (仓库: {})",
                 success_count,
                 repo_name
             );
         }
 
         if fail_count > 0 {
-            log_warning!("Failed to remove {} branch(es)", fail_count);
+            log_warning!("{} 个分支移除失败", fail_count);
         }
 
         Ok(())
@@ -166,15 +158,15 @@ impl BranchIgnoreCommand {
         let ignore_branches = get_ignore_branches(&config, &repo_name);
 
         log_break!();
-        log_message!("Ignored branch list (repository: {})", repo_name);
+        log_message!("📋 忽略分支列表 (仓库: {})", repo_name);
 
         if ignore_branches.is_empty() {
-            log_info!("No ignored branches");
+            log_info!("当前没有忽略的分支");
         } else {
             for (index, branch) in ignore_branches.iter().enumerate() {
                 log_info!("  {}. {}", index + 1, branch);
             }
-            log_info!("Total: {} branch(es)", ignore_branches.len());
+            log_info!("总计: {} 个分支", ignore_branches.len());
         }
 
         Ok(())
