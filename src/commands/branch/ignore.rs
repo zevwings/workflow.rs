@@ -37,7 +37,7 @@ impl BranchIgnoreCommand {
         if is_new {
             save(&config).context("Failed to save branch config")?;
             log_success!(
-                "Added branch '{}' to ignore list (repository: {})",
+                "Branch '{}' added to ignore list (repository: {})",
                 branch_name,
                 repo_name
             );
@@ -67,7 +67,7 @@ impl BranchIgnoreCommand {
             let ignore_branches = get_ignore_branches(&config, &repo_name);
 
             if ignore_branches.is_empty() {
-                log_info!("No ignored branches (repository: {})", repo_name);
+                log_info!("No ignored branches found (repository: {})", repo_name);
                 return Ok(());
             }
 
@@ -150,7 +150,7 @@ impl BranchIgnoreCommand {
         }
 
         if fail_count > 0 {
-            log_warning!("{} branch(es) removal failed", fail_count);
+            log_warning!("Failed to remove {} branch(es)", fail_count);
         }
 
         Ok(())
@@ -166,7 +166,7 @@ impl BranchIgnoreCommand {
         let ignore_branches = get_ignore_branches(&config, &repo_name);
 
         log_break!();
-        log_message!("Ignored branches list (repository: {})", repo_name);
+        log_message!("Ignored branch list (repository: {})", repo_name);
 
         if ignore_branches.is_empty() {
             log_info!("No ignored branches");

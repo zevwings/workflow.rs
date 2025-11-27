@@ -35,7 +35,7 @@ impl BranchCleanCommand {
         log_info!("Repository: {}", repo_name);
 
         // 3. 清理远端引用
-        log_info!("Pruning remote references...");
+        log_info!("Cleaning remote references...");
         GitRepo::prune_remote().context("Failed to prune remote references")?;
 
         // 4. 读取配置文件
@@ -73,7 +73,7 @@ impl BranchCleanCommand {
 
         // 9. 显示预览
         log_break!();
-        log_message!("Preview of branches to delete:");
+        log_message!("Preview of branches to be deleted:");
         if !merged_branches.is_empty() {
             log_info!("Merged branches ({}):", merged_branches.len());
             for branch in &merged_branches {
@@ -90,7 +90,7 @@ impl BranchCleanCommand {
         // 10. Dry-run 模式
         if dry_run {
             log_break!();
-            log_info!("Dry-run mode: branches will not be deleted");
+            log_info!("Dry-run mode: branches will not be actually deleted");
             return Ok(());
         }
 
@@ -98,7 +98,7 @@ impl BranchCleanCommand {
         log_break!();
         let total = merged_branches.len() + unmerged_branches.len();
         let prompt = format!(
-            "Are you sure you want to delete {} branches? (merged: {}, unmerged: {})",
+            "Are you sure you want to delete {} branch(es)? (merged: {}, unmerged: {})",
             total,
             merged_branches.len(),
             unmerged_branches.len()
@@ -126,7 +126,7 @@ impl BranchCleanCommand {
         if !unmerged_branches.is_empty() {
             log_break!();
             let prompt = format!(
-                "There are {} unmerged branches. Force delete them?",
+                "There are {} unmerged branch(es), force delete them?",
                 unmerged_branches.len()
             );
             if confirm(&prompt, false, None)? {
@@ -150,9 +150,9 @@ impl BranchCleanCommand {
         // 14. 显示结果
         log_break!();
         log_success!("Cleanup completed!");
-        log_info!("Deleted {} branches", deleted_count);
+        log_info!("Deleted: {} branch(es)", deleted_count);
         if skipped_count > 0 {
-            log_info!("Skipped {} branches", skipped_count);
+            log_info!("Skipped: {} branch(es)", skipped_count);
         }
 
         Ok(())
