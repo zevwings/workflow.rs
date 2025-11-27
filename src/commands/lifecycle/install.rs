@@ -100,10 +100,7 @@ impl InstallCommand {
             let target = install_path.join(&binary_name);
 
             if !source.exists() {
-                log_warning!(
-                    "⚠  Binary file {} does not exist, skipping",
-                    source.display()
-                );
+                log_warning!("Binary file {} does not exist, skipping", source.display());
                 continue;
             }
 
