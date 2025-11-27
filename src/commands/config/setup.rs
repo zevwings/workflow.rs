@@ -609,7 +609,7 @@ impl SetupCommand {
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
         use crate::base::settings::settings::{
-            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings,
+            ApifoxSettings, CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings,
         };
 
         // 构建 Settings 结构体
@@ -640,6 +640,7 @@ impl SetupCommand {
                 model: config.llm_model.clone(),
                 language: config.llm_language.clone(),
             },
+            apifox: ApifoxSettings::default(), // Apifox 配置通过 mcp setup 命令管理
         };
 
         // 保存 workflow.toml
