@@ -3,13 +3,18 @@
 //! 从 PR diff 中提取修改的方法名，搜索调用点，找到对应的 HTTP 接口定义。
 
 use anyhow::{Context, Result};
+use base64::Engine;
 use regex::Regex;
+use serde_json::Value;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 
+use crate::base::http::{HttpClient, RequestConfig};
+use crate::base::settings::Settings;
 use crate::git::{GitRepo, RepoType};
 use crate::pr::helpers::extract_github_repo_from_url;
+use reqwest::header::HeaderMap;
 
 /// 编程语言类型
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -149,11 +154,44 @@ impl CodebaseSearcher {
 
     /// 检查 GitHub MCP 是否可用
     fn is_github_mcp_available() -> bool {
-        // 检查 MCP 工具是否可用
-        // 这里我们假设如果能够导入 MCP 函数，则可用
-        // 实际实现中，可能需要检查 MCP 服务是否运行
-        // 暂时返回 true，让调用者尝试使用，如果失败再 fallback
-        true
+        // 检查是否配置了 GitHub API token（可以直接使用 GitHub API）
+        Settings::get().github.get_current_token().is_some()
+    }
+
+    /// 获取 GitHub API headers
+    fn get_github_headers() -> Result<HeaderMap> {
+        let settings = Settings::get();
+        let token = settings.github.get_current_token().context(
+            "GitHub API token is not configured. Please run 'workflow setup' to configure it",
+        )?;
+
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Authorization",
+            format!("Bearer {}", token)
+                .parse()
+                .context("Failed to parse Authorization header")?,
+        );
+        headers.insert(
+            "Accept",
+            "application/vnd.github+json"
+                .parse()
+                .context("Failed to parse Accept header")?,
+        );
+        headers.insert(
+            "X-GitHub-Api-Version",
+            "2022-11-28"
+                .parse()
+                .context("Failed to parse X-GitHub-Api-Version header")?,
+        );
+        headers.insert(
+            "User-Agent",
+            "workflow-cli"
+                .parse()
+                .context("Failed to parse User-Agent header")?,
+        );
+
+        Ok(headers)
     }
 
     /// 检查是否是 Git 仓库
@@ -446,17 +484,79 @@ impl CodebaseSearcher {
         Ok(call_sites)
     }
 
-    /// 尝试使用 GitHub MCP 搜索（如果可用）
-    fn try_github_mcp_search(&self, _query: &str, _language: Language) -> Result<Vec<CallSite>> {
-        // 注意：实际的 MCP 调用需要通过工具函数
-        // 这里我们暂时返回错误，让调用者 fallback 到其他方法
-        // 在实际使用中，应该调用 mcp_github_search_code 工具
+    /// 尝试使用 GitHub API 搜索（如果可用）
+    fn try_github_mcp_search(&self, query: &str, language: Language) -> Result<Vec<CallSite>> {
+        // 直接使用 GitHub API 搜索代码
+        // GitHub API 文档: https://docs.github.com/en/rest/search/search?apiVersion=2022-11-28#search-code
+        let api_url = "https://api.github.com/search/code";
 
-        // 由于 MCP 函数是通过工具调用的，我们无法直接在这里调用
-        // 需要在实际使用时通过工具调用机制
-        // TODO: 实现实际的 GitHub MCP 搜索
-        // 可以使用 mcp_github_search_code 工具函数
-        anyhow::bail!("GitHub MCP search not implemented yet - use fallback method")
+        let headers = Self::get_github_headers()?;
+
+        // 构建查询参数
+        let query_params = [("q", query), ("per_page", "100")];
+
+        // 发送 GET 请求
+        let client = HttpClient::global()?;
+        let config = RequestConfig::<Value, _>::new()
+            .query(&query_params)
+            .headers(&headers)
+            .timeout(std::time::Duration::from_secs(30));
+
+        let response = client
+            .get(api_url, config)
+            .context("Failed to call GitHub API")?;
+
+        // 检查响应状态
+        let http_response = response
+            .ensure_success()
+            .context("GitHub API returned error response")?;
+
+        // 解析 JSON 响应
+        let data: Value = http_response
+            .as_json()
+            .context("Failed to parse GitHub API response as JSON")?;
+
+        // 解析 GitHub API 响应格式
+        // GitHub API 响应格式: { "total_count": ..., "items": [...] }
+        let call_sites = Self::parse_github_search_response(&data, language)
+            .context("Failed to parse GitHub search response")?;
+
+        Ok(call_sites)
+    }
+
+    /// 解析 GitHub API 搜索响应
+    fn parse_github_search_response(data: &Value, language: Language) -> Result<Vec<CallSite>> {
+        let mut call_sites = Vec::new();
+
+        // GitHub API 响应格式: { "total_count": ..., "items": [...] }
+        // 每个 item 包含: { "name", "path", "sha", "url", "git_url", "html_url", "repository", "score" }
+        // 注意：GitHub API 的 code search 不直接返回代码内容，只返回匹配的文件信息
+        // 我们需要根据返回的 path 和 repository 信息，后续再获取文件内容
+        if let Some(items) = data.get("items").and_then(|v| v.as_array()) {
+            for item in items {
+                if let Some(path) = item.get("path").and_then(|v| v.as_str()) {
+                    // GitHub API 返回的是文件路径，不是代码片段
+                    // 我们暂时使用路径作为 content，后续可以通过 read_file_via_github_mcp 获取实际内容
+                    let repository = item.get("repository");
+                    let full_path = if let Some(repo) = repository {
+                        let repo_name =
+                            repo.get("full_name").and_then(|v| v.as_str()).unwrap_or("");
+                        format!("{}:{}", repo_name, path)
+                    } else {
+                        path.to_string()
+                    };
+
+                    call_sites.push(CallSite {
+                        file_path: full_path,
+                        line_number: None, // GitHub API 不返回行号
+                        content: format!("Found in {}", path), // 占位内容
+                        language,
+                    });
+                }
+            }
+        }
+
+        Ok(call_sites)
     }
 
     /// 使用 Git grep 搜索方法调用
@@ -726,22 +826,57 @@ impl CodebaseSearcher {
         anyhow::bail!("File not found: {}", file_path)
     }
 
-    /// 使用 GitHub MCP 读取文件内容
-    fn read_file_via_github_mcp(
-        &self,
-        _owner: &str,
-        _repo: &str,
-        _file_path: &str,
-    ) -> Result<String> {
-        // 注意：实际的 MCP 调用需要通过工具函数
-        // 这里我们暂时返回错误，让调用者 fallback 到其他方法
-        // 在实际使用中，应该调用 mcp_github_get_file_contents 工具
+    /// 使用 GitHub API 读取文件内容
+    fn read_file_via_github_mcp(&self, owner: &str, repo: &str, file_path: &str) -> Result<String> {
+        // 直接使用 GitHub API 获取文件内容
+        // GitHub API 文档: https://docs.github.com/en/rest/repos/contents?apiVersion=2022-11-28#get-repository-content
+        let api_url = format!(
+            "https://api.github.com/repos/{}/{}/contents/{}",
+            owner, repo, file_path
+        );
 
-        // 由于 MCP 函数是通过工具调用的，我们无法直接在这里调用
-        // 需要在实际使用时通过工具调用机制
-        // TODO: 实现实际的 GitHub MCP 文件读取
-        // 可以使用 mcp_github_get_file_contents 工具函数
-        anyhow::bail!("GitHub MCP file read not implemented yet - use fallback method")
+        let headers = Self::get_github_headers()?;
+
+        // 发送 GET 请求
+        let client = HttpClient::global()?;
+        let config = RequestConfig::<Value, Value>::new()
+            .headers(&headers)
+            .timeout(std::time::Duration::from_secs(30));
+
+        let response = client
+            .get(&api_url, config)
+            .context("Failed to call GitHub API for file read")?;
+
+        // 检查响应状态
+        let http_response = response
+            .ensure_success()
+            .context("GitHub API returned error response for file read")?;
+
+        // 解析 JSON 响应
+        let data: Value = http_response
+            .as_json()
+            .context("Failed to parse GitHub API response as JSON")?;
+
+        // GitHub API 响应格式: { "name", "path", "sha", "size", "url", "html_url", "git_url", "download_url", "type", "content", "encoding" }
+        // content 是 base64 编码的
+        if let Some(content_base64) = data.get("content").and_then(|v| v.as_str()) {
+            // 移除 base64 字符串中的换行符（GitHub API 会在每 76 个字符后插入换行）
+            let content_clean = content_base64.replace('\n', "");
+
+            // 解码 base64
+            let content_bytes = base64::engine::general_purpose::STANDARD
+                .decode(&content_clean)
+                .context("Failed to decode base64 content from GitHub API")?;
+
+            let content = String::from_utf8(content_bytes)
+                .context("Failed to convert file content to UTF-8 string")?;
+
+            return Ok(content);
+        }
+
+        anyhow::bail!(
+            "Unexpected GitHub API response format for file read: missing 'content' field"
+        )
     }
 
     /// 提取 TypeScript/JavaScript 接口定义
@@ -806,12 +941,13 @@ impl CodebaseSearcher {
         // FastAPI 模式: @router.post("/generate") 或 @app.post("/api/focuses")
         // 支持变量名：router, app, api_router, bp 等
         // 注意：这里使用 \w+ 匹配任意变量名，因为 FastAPI 中 router 变量名可能不同
-        let fastapi_pattern = Regex::new(
-            r#"@(\w+)\.(get|post|put|delete|patch|options|head)\(['"]([^'"]+)['"]"#,
-        )?;
+        let fastapi_pattern =
+            Regex::new(r#"@(\w+)\.(get|post|put|delete|patch|options|head)\(['"]([^'"]+)['"]"#)?;
 
         for cap in fastapi_pattern.captures_iter(content) {
-            if let (Some(_router_var), Some(method), Some(path)) = (cap.get(1), cap.get(2), cap.get(3)) {
+            if let (Some(_router_var), Some(method), Some(path)) =
+                (cap.get(1), cap.get(2), cap.get(3))
+            {
                 let line_number = Self::find_line_number(content, cap.get(0).unwrap().start());
 
                 // 如果找到了 prefix，需要拼接路径
@@ -872,9 +1008,8 @@ impl CodebaseSearcher {
         }
 
         // Flask 模式（无 methods 参数，默认 GET）: @app.route('/api/focuses')
-        let flask_pattern_default = Regex::new(
-            r#"@(?:app|bp|router)\.route\(['"]([^'"]+)['"](?:[^)]*)?\)"#,
-        )?;
+        let flask_pattern_default =
+            Regex::new(r#"@(?:app|bp|router)\.route\(['"]([^'"]+)['"](?:[^)]*)?\)"#)?;
 
         for cap in flask_pattern_default.captures_iter(content) {
             if let Some(path) = cap.get(1) {
@@ -883,7 +1018,10 @@ impl CodebaseSearcher {
                 let path_str = path.as_str();
 
                 // 检查是否已经添加过这个路径（避免重复）
-                if !endpoints.iter().any(|e| e.path == path_str && e.line_number == line_number) {
+                if !endpoints
+                    .iter()
+                    .any(|e| e.path == path_str && e.line_number == line_number)
+                {
                     endpoints.push(EndpointInfo {
                         method: "GET".to_string(), // 默认 GET
                         path: path_str.to_string(),

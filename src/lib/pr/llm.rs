@@ -538,7 +538,12 @@ impl PullRequestLLM {
         if !endpoints.is_empty() {
             log_info!("Found {} endpoint(s) from code analysis:", endpoints.len());
             for endpoint in &endpoints {
-                log_debug!("  - {} {} (in {})", endpoint.method, endpoint.path, endpoint.file_path);
+                log_debug!(
+                    "  - {} {} (in {})",
+                    endpoint.method,
+                    endpoint.path,
+                    endpoint.file_path
+                );
             }
         } else {
             log_debug!("No endpoints found from code analysis");
@@ -554,12 +559,23 @@ impl PullRequestLLM {
         file_changes: &[(String, String)],
         related_endpoints: &[crate::pr::search::EndpointInfo],
     ) -> String {
-        let mut parts = vec![format!("PR Title: {}", pr_title)];
+        let mut parts = vec![
+            format!("PR Title: {}", pr_title),
+            "".to_string(),
+            "## Instructions".to_string(),
+            "".to_string(),
+            "Please analyze the code changes below and generate a comprehensive test plan. Focus on:".to_string(),
+            "1. **Code Logic Analysis**: Identify all functions, conditions, branches, and error paths in the changes".to_string(),
+            "2. **Parameter Analysis**: Extract all parameters, their types, constraints, and validation rules".to_string(),
+            "3. **Test Coverage**: Generate test cases for ALL code paths, branches, and error conditions".to_string(),
+            "4. **Actionable Tests**: Provide executable CURL commands with complete test data".to_string(),
+            "".to_string(),
+        ];
 
         if !pr_diff.trim().is_empty() {
             // 限制 diff 长度，避免请求过大
             // 对于测试计划，我们需要足够的 diff 内容来识别接口
-            const MAX_DIFF_LENGTH: usize = 15000;
+            const MAX_DIFF_LENGTH: usize = 20000; // 增加长度以提供更多上下文
             let diff_trimmed = {
                 let char_count = pr_diff.chars().count();
                 if char_count > MAX_DIFF_LENGTH {
