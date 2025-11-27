@@ -27,6 +27,7 @@ impl HttpClient {
     /// 创建新的 HttpClient（私有方法）
     ///
     /// 初始化 HTTP 客户端，使用默认配置。
+    /// 支持从环境变量读取代理配置（http_proxy, https_proxy, all_proxy）。
     /// 此方法仅在 `global()` 方法内部使用，用于初始化全局单例。
     ///
     /// # 返回
@@ -37,9 +38,28 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let client = Client::builder()
-            .build()
-            .context("Failed to create HTTP client")?;
+        let mut builder = Client::builder();
+
+        // 从环境变量读取代理配置
+        // 优先级：https_proxy > http_proxy > all_proxy
+        if let Ok(proxy_url) = std::env::var("https_proxy")
+            .or_else(|_| std::env::var("HTTPS_PROXY"))
+            .or_else(|_| std::env::var("http_proxy"))
+            .or_else(|_| std::env::var("HTTP_PROXY"))
+            .or_else(|_| std::env::var("all_proxy"))
+            .or_else(|_| std::env::var("ALL_PROXY"))
+        {
+            // 尝试创建 HTTP 代理
+            if let Ok(proxy) = reqwest::Proxy::http(&proxy_url) {
+                builder = builder.proxy(proxy);
+            }
+            // 尝试创建 HTTPS 代理
+            if let Ok(proxy) = reqwest::Proxy::https(&proxy_url) {
+                builder = builder.proxy(proxy);
+            }
+        }
+
+        let client = builder.build().context("Failed to create HTTP client")?;
         Ok(Self { client })
     }
 

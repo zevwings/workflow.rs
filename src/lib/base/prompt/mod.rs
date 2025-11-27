@@ -18,6 +18,8 @@ pub mod generate_branch_system;
 pub mod summarize_file_change_system;
 #[path = "summarize_pr.system.rs"]
 pub mod summarize_pr_system;
+#[path = "summarize_test_plan.system.rs"]
+pub mod summarize_test_plan_system;
 
 // 重新导出公共 API
 pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;
@@ -28,3 +30,4 @@ pub use crate::base::llm::{
 };
 pub use summarize_file_change_system::generate_summarize_file_change_system_prompt;
 pub use summarize_pr_system::generate_summarize_pr_system_prompt;
+pub use summarize_test_plan_system::generate_summarize_test_plan_system_prompt;

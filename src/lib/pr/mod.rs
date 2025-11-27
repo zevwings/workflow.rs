@@ -3,6 +3,7 @@ pub mod github;
 pub mod helpers;
 pub mod llm;
 pub mod platform;
+pub mod search;
 
 pub use codeup::errors::CodeupErrorResponse;
 pub use codeup::{Codeup, CodeupUser};
@@ -15,3 +16,4 @@ pub use helpers::{
 };
 pub use llm::{PullRequestContent, PullRequestLLM, PullRequestSummary};
 pub use platform::{create_provider, PlatformProvider, PullRequestStatus, TYPES_OF_CHANGES};
+pub use search::{CodebaseSearcher, EndpointInfo, MethodInfo};
