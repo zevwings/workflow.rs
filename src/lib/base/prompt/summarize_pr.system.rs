@@ -80,13 +80,21 @@ Generate a comprehensive Markdown document that includes:
    - If no significant technical details are found, still provide a brief analysis of the implementation approach
    - DO NOT simply write "No significant technical details provided" - always analyze the code changes
 7. **Testing**: Testing approach or test coverage
-   - Analyze the code changes to determine testing needs
-   - Unit tests added/modified (if any, clearly state if none)
-   - Integration tests (if any, clearly state if none)
-   - Manual testing steps or scenarios
-   - Test coverage information (if available)
-   - If no tests are found in the changes, suggest what should be tested or state "No tests included in this PR"
-   - DO NOT simply write "No specific testing details provided" - always provide testing guidance based on the changes
+   The Testing section MUST contain two subsections:
+
+   a. **### Test Description**:
+      - Analyze the code changes to determine testing needs
+      - Unit tests added/modified (if any, clearly state if none)
+      - Integration tests (if any, clearly state if none)
+      - Manual testing steps or scenarios
+      - Test coverage information (if available)
+      - If no tests are found in the changes, suggest what should be tested or state "No tests included in this PR"
+      - DO NOT simply write "No specific testing details provided" - always provide testing guidance based on the changes
+
+   b. **Test Plan** (level 3 heading):
+      - DO NOT generate this section in the initial summary
+      - This section will be generated separately in a later step
+      - Just include a placeholder: level 3 heading "Test Plan" followed by "(To be generated)"
 8. **Usage Instructions**: Provide clear, actionable instructions on how to use the new feature or changes
    - Command syntax and examples (if it's a new command)
    - Required configuration or setup (if any)
@@ -179,6 +187,8 @@ The generated document MUST follow this exact order:
 5. ## Files Changed
 6. ## Technical Details
 7. ## Testing
+   - ### Test Description
+   - ### Test Plan (placeholder: level 3 heading "Test Plan" followed by "(To be generated)")
 8. ## Usage Instructions
 9. ## Code Changes"#,
         summarize_response_example

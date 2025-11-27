@@ -163,9 +163,7 @@ fn main() -> Result<()> {
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
             }
-            PRCommands::Summarize {
-                pull_request_id,
-            } => {
+            PRCommands::Summarize { pull_request_id } => {
                 summarize::SummarizeCommand::summarize(pull_request_id)?;
             }
         },

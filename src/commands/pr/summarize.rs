@@ -40,6 +40,10 @@ impl SummarizeCommand {
             );
         }
 
+        // 确保代理已启用（如果系统代理已启用）
+        use crate::ProxyManager;
+        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
+
         // 创建平台提供者
         let provider = create_provider()?;
 
@@ -118,6 +122,23 @@ impl SummarizeCommand {
             log_info!("Warning: Code changes section is empty. Final document will not include code changes.");
         }
 
+        // 生成测试计划
+        log_info!("Generating test plan...");
+        let test_plan = match Self::generate_test_plan(&pr_title, &pr_diff, &file_changes) {
+            Ok(plan) => {
+                log_info!(
+                    "Test plan generated successfully ({} characters)",
+                    plan.len()
+                );
+                Some(plan)
+            }
+            Err(e) => {
+                log_info!("Warning: Failed to generate test plan: {}", e);
+                log_info!("Continuing without test plan...");
+                None
+            }
+        };
+
         // 确保 PR Title 在文档开头
         let summary_with_title = if summary.summary.starts_with("# ") {
             // 已经包含标题，直接使用
@@ -127,7 +148,14 @@ impl SummarizeCommand {
             format!("# {}\n\n{}", pr_title, summary.summary)
         };
 
-        // 合并总结和代码修改部分
+        // 合并总结、测试计划和代码修改部分
+        // 首先插入测试计划到 Testing 部分
+        let summary_with_test_plan = if let Some(plan) = &test_plan {
+            Self::insert_test_plan_into_summary(&summary_with_title, plan)
+        } else {
+            summary_with_title
+        };
+
         // Code Changes 部分应该总是存在，即使为空
         let code_changes_intro = "The following sections show the detailed code changes for each modified file. Each file's changes are displayed with syntax highlighting based on the file type.";
 
@@ -135,12 +163,12 @@ impl SummarizeCommand {
             // 即使没有代码变更，也要包含 Code Changes 标题
             format!(
                 "{}\n\n## Code Changes\n\n{}",
-                summary_with_title, code_changes_intro
+                summary_with_test_plan, code_changes_intro
             )
         } else {
             format!(
                 "{}\n\n## Code Changes\n\n{}\n\n{}",
-                summary_with_title, code_changes_intro, code_changes_section
+                summary_with_test_plan, code_changes_intro, code_changes_section
             )
         };
 
@@ -384,9 +412,7 @@ impl SummarizeCommand {
     /// 代码修改内容
     /// ```
     /// ```
-    fn format_file_changes_as_markdown(
-        file_changes: &[(String, String)],
-    ) -> String {
+    fn format_file_changes_as_markdown(file_changes: &[(String, String)]) -> String {
         if file_changes.is_empty() {
             return String::new();
         }
@@ -444,10 +470,7 @@ impl SummarizeCommand {
     /// 为单个文件生成修改总结
     ///
     /// 使用 LLM 生成文件的修改总结。
-    fn generate_file_change_summary(
-        file_path: &str,
-        file_diff: &str,
-    ) -> Result<String> {
+    fn generate_file_change_summary(file_path: &str, file_diff: &str) -> Result<String> {
         log_info!("Generating summary for file: {}", file_path);
         PullRequestLLM::summarize_file_change(file_path, file_diff)
             .with_context(|| format!("Failed to generate summary for file: {}", file_path))
@@ -513,6 +536,112 @@ impl SummarizeCommand {
             }
         } else {
             ""
+        }
+    }
+
+    /// 生成测试计划
+    ///
+    /// 使用 LLM 生成详细的测试计划。
+    fn generate_test_plan(
+        pr_title: &str,
+        pr_diff: &str,
+        file_changes: &[(String, String)],
+    ) -> Result<String> {
+        PullRequestLLM::generate_test_plan(pr_title, pr_diff, file_changes)
+            .with_context(|| "Failed to generate test plan")
+    }
+
+    /// 将测试计划插入到总结文档的 Testing 部分
+    ///
+    /// 查找 "### Test Plan" 占位符，用实际的测试计划内容替换。
+    fn insert_test_plan_into_summary(summary: &str, test_plan: &str) -> String {
+        // 查找 "### Test Plan" 的位置，可能有多种占位符格式
+        let placeholders = vec![
+            "### Test Plan\n\n(To be generated)",
+            "### Test Plan\n\n(To be generated)\n",
+            "### Test Plan\n\n(To be generated)\n\n",
+        ];
+
+        // 尝试匹配占位符
+        for placeholder in &placeholders {
+            if summary.contains(placeholder) {
+                return summary.replace(placeholder, test_plan.trim());
+            }
+        }
+
+        // 如果没有找到精确匹配，查找 "### Test Plan" 标题
+        if summary.contains("### Test Plan") {
+            // 如果占位符格式不同，尝试查找 "### Test Plan" 之后的内容
+            if let Some(pos) = summary.find("### Test Plan") {
+                // 查找下一个三级标题或二级标题的位置
+                let after_test_plan = &summary[pos..];
+                let next_section = after_test_plan
+                    .lines()
+                    .skip(1)
+                    .position(|line| line.starts_with("### ") || line.starts_with("## "));
+
+                if let Some(next_pos) = next_section {
+                    // 找到下一个部分，替换中间的内容
+                    let next_line_start = after_test_plan
+                        .char_indices()
+                        .enumerate()
+                        .filter(|(_, (_, c))| *c == '\n')
+                        .nth(next_pos)
+                        .map(|(_, (i, _))| i + 1)
+                        .unwrap_or(after_test_plan.len());
+
+                    // 找到 "### Test Plan" 行的结束位置
+                    let test_plan_line_end = after_test_plan
+                        .char_indices()
+                        .skip_while(|(_, c)| *c != '\n')
+                        .nth(0)
+                        .map(|(i, _)| i + 1)
+                        .unwrap_or(0);
+
+                    let before = &summary[..pos + test_plan_line_end];
+                    let after = &summary[pos + next_line_start..];
+                    format!("{}{}\n\n{}", before, test_plan.trim(), after)
+                } else {
+                    // 没找到下一个部分，直接追加
+                    format!("{}\n\n{}", summary, test_plan.trim())
+                }
+            } else {
+                summary.to_string()
+            }
+        } else {
+            // 如果没有找到 Test Plan 部分，在 Testing 部分末尾添加
+            if let Some(pos) = summary.find("## Testing") {
+                // 查找 Testing 部分的结束位置（下一个二级标题）
+                let after_testing = &summary[pos..];
+                let next_section = after_testing
+                    .lines()
+                    .skip(1)
+                    .position(|line| line.starts_with("## ") && !line.starts_with("### "));
+
+                if let Some(next_pos) = next_section {
+                    let next_line_start = after_testing
+                        .char_indices()
+                        .enumerate()
+                        .filter(|(_, (_, c))| *c == '\n')
+                        .nth(next_pos)
+                        .map(|(_, (i, _))| i + 1)
+                        .unwrap_or(after_testing.len());
+
+                    let before = &summary[..pos + next_line_start];
+                    let after = &summary[pos + next_line_start..];
+                    format!("{}\n\n{}\n\n{}", before, test_plan.trim(), after)
+                } else {
+                    // 没找到下一个部分，直接追加
+                    format!("{}\n\n{}\n\n{}", summary, "### Test Plan", test_plan.trim())
+                }
+            } else {
+                // 如果没有 Testing 部分，添加整个部分
+                format!(
+                    "{}\n\n## Testing\n\n### Test Description\n\n(To be filled)\n\n{}\n\n",
+                    summary,
+                    test_plan.trim()
+                )
+            }
         }
     }
 }
