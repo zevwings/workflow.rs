@@ -16,6 +16,7 @@ use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use commands::lifecycle::{uninstall, update, version};
 use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
+use commands::mcp;
 use commands::pr::{close, create, integrate, list, merge, status, summarize, update as pr_update};
 use commands::proxy::proxy;
 
@@ -163,9 +164,7 @@ fn main() -> Result<()> {
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
             }
-            PRCommands::Summarize {
-                pull_request_id,
-            } => {
+            PRCommands::Summarize { pull_request_id } => {
                 summarize::SummarizeCommand::summarize(pull_request_id)?;
             }
         },
@@ -204,6 +203,10 @@ fn main() -> Result<()> {
                 CleanCommand::clean(jira_id, all, dry_run, list)?;
             }
         },
+        // MCP 配置管理命令
+        Some(Commands::Mcp { subcommand }) => {
+            mcp::handle_mcp_command(subcommand)?;
+        }
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
@@ -224,6 +227,9 @@ fn main() -> Result<()> {
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/integrate)");
             log_message!("  workflow log        - Log operations (download/find/search)");
             log_message!("  workflow jira       - Jira operations (info/attachments/clean)");
+            log_message!(
+                "  workflow mcp        - MCP configuration management (setup/show/update/verify)"
+            );
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

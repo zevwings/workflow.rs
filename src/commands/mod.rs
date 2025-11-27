@@ -39,4 +39,5 @@ pub mod proxy;
 pub mod branch;
 pub mod jira;
 pub mod log;
+pub mod mcp;
 pub mod pr;

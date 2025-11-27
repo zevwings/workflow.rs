@@ -254,10 +254,7 @@ impl PullRequestLLM {
     /// # 错误
     ///
     /// 如果 LLM API 调用失败或响应格式不正确，返回相应的错误信息。
-    pub fn summarize_pr(
-        pr_title: &str,
-        pr_diff: &str,
-    ) -> Result<PullRequestSummary> {
+    pub fn summarize_pr(pr_title: &str, pr_diff: &str) -> Result<PullRequestSummary> {
         // 使用统一的 v2 客户端
         let client = LLMClient::global();
 
@@ -419,10 +416,7 @@ impl PullRequestLLM {
     /// # 错误
     ///
     /// 如果 LLM API 调用失败，返回相应的错误信息。
-    pub fn summarize_file_change(
-        file_path: &str,
-        file_diff: &str,
-    ) -> Result<String> {
+    pub fn summarize_file_change(file_path: &str, file_diff: &str) -> Result<String> {
         // 使用统一的 v2 客户端
         let client = LLMClient::global();
 

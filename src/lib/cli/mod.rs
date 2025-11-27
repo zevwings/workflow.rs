@@ -121,6 +121,13 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: JiraSubcommand,
     },
+    /// MCP (Model Context Protocol) configuration management
+    ///
+    /// Manage Cursor IDE MCP server configurations (setup, show, update, verify).
+    Mcp {
+        #[command(subcommand)]
+        subcommand: MCPSubcommand,
+    },
 }
 
 /// Proxy management subcommands
@@ -448,6 +455,34 @@ pub enum JiraSubcommand {
         #[arg(long, short = 'l')]
         list: bool,
     },
+}
+
+/// MCP configuration management subcommands
+///
+/// Used to manage Cursor IDE MCP server configurations.
+#[derive(Subcommand)]
+pub enum MCPSubcommand {
+    /// Setup MCP servers interactively
+    ///
+    /// Interactively configure MCP servers (JIRA, GitHub, Apifox).
+    /// Detects existing configurations from `.cursor/mcp.json` and TOML config.
+    Setup,
+    /// Show current MCP configuration
+    ///
+    /// Display all configured MCP servers and their settings.
+    Show {
+        /// Show full configuration including sensitive values
+        #[arg(long, short = 'f')]
+        full: bool,
+    },
+    /// Update MCP server configuration
+    ///
+    /// Interactively update an existing MCP server configuration.
+    Update,
+    /// Verify MCP configuration
+    ///
+    /// Verify that MCP configuration is valid and all required dependencies are available.
+    Verify,
 }
 
 /// 获取 CLI 命令结构（用于生成补全脚本）

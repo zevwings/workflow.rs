@@ -121,10 +121,28 @@ pub struct CodeupSettings {
     pub cookie: Option<String>,
 }
 
+/// Apifox 配置（TOML）
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ApifoxSettings {
+    /// Apifox 项目 ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project_id: Option<String>,
+    /// Apifox 访问令牌
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token: Option<String>,
+}
+
 impl CodeupSettings {
     /// 检查 Codeup 配置是否为空（所有字段都是 None）
     fn is_empty(&self) -> bool {
         self.project_id.is_none() && self.csrf_token.is_none() && self.cookie.is_none()
+    }
+}
+
+impl ApifoxSettings {
+    /// 检查 Apifox 配置是否为空（所有字段都是 None）
+    fn is_empty(&self) -> bool {
+        self.project_id.is_none() && self.access_token.is_none()
     }
 }
 
@@ -169,6 +187,9 @@ pub struct Settings {
     /// LLM 配置
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
+    /// Apifox 配置
+    #[serde(default, skip_serializing_if = "ApifoxSettings::is_empty")]
+    pub apifox: ApifoxSettings,
 }
 
 impl LLMSettings {

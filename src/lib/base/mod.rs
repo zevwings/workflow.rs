@@ -10,6 +10,7 @@
 
 pub mod http;
 pub mod llm;
+pub mod mcp;
 pub mod prompt;
 pub mod settings;
 pub mod shell;
