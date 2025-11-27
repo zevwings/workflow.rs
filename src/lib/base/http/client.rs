@@ -38,27 +38,7 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let mut builder = Client::builder();
-
-        // 从环境变量读取代理配置
-        // 优先级：https_proxy > http_proxy > all_proxy
-        if let Ok(proxy_url) = std::env::var("https_proxy")
-            .or_else(|_| std::env::var("HTTPS_PROXY"))
-            .or_else(|_| std::env::var("http_proxy"))
-            .or_else(|_| std::env::var("HTTP_PROXY"))
-            .or_else(|_| std::env::var("all_proxy"))
-            .or_else(|_| std::env::var("ALL_PROXY"))
-        {
-            // 尝试创建 HTTP 代理
-            if let Ok(proxy) = reqwest::Proxy::http(&proxy_url) {
-                builder = builder.proxy(proxy);
-            }
-            // 尝试创建 HTTPS 代理
-            if let Ok(proxy) = reqwest::Proxy::https(&proxy_url) {
-                builder = builder.proxy(proxy);
-            }
-        }
-
+        let builder = Client::builder();
         let client = builder.build().context("Failed to create HTTP client")?;
         Ok(Self { client })
     }

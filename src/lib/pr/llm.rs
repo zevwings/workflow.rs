@@ -572,7 +572,123 @@ impl PullRequestLLM {
             "".to_string(),
         ];
 
+        // 添加文件变更信息（简要）
+        if !file_changes.is_empty() {
+            let file_list: Vec<String> = file_changes
+                .iter()
+                .map(|(file_path, _)| format!("- {}", file_path))
+                .collect();
+            parts.push(format!("Modified Files:\n{}", file_list.join("\n")));
+
+            // 分析文件路径，提供 API 相关的提示
+            let mut api_related_files = Vec::new();
+            let mut service_files = Vec::new();
+            let mut model_files = Vec::new();
+            let mut test_files = Vec::new();
+
+            for (file_path, _) in file_changes {
+                let path_lower = file_path.to_lowercase();
+                if path_lower.contains("/api/")
+                    || path_lower.contains("/routes/")
+                    || path_lower.contains("controller")
+                    || path_lower.contains("handler")
+                {
+                    api_related_files.push(file_path.clone());
+                } else if path_lower.contains("service") {
+                    service_files.push(file_path.clone());
+                } else if path_lower.contains("model")
+                    || path_lower.contains("schema")
+                    || path_lower.contains("dto")
+                    || path_lower.contains("entity")
+                {
+                    model_files.push(file_path.clone());
+                } else if path_lower.contains("test") || path_lower.contains("spec") {
+                    test_files.push(file_path.clone());
+                }
+            }
+
+            if !api_related_files.is_empty() {
+                parts.push("### API Endpoint Files".to_string());
+                parts.push("These files likely contain HTTP endpoint definitions:".to_string());
+                for file in &api_related_files {
+                    parts.push(format!("- `{}`", file));
+                }
+                parts.push("".to_string());
+                parts.push("**Action Required**: Analyze these files to extract:".to_string());
+                parts.push("- HTTP method and path for each endpoint".to_string());
+                parts.push("- Request parameters (path, query, body) and their types".to_string());
+                parts.push("- Response structure and status codes".to_string());
+                parts.push("- Validation rules and constraints".to_string());
+                parts.push("- Error handling and error responses".to_string());
+                parts.push("".to_string());
+            }
+
+            if !service_files.is_empty() {
+                parts.push(format!(
+                    "## Service Layer Files Detected\n\nThese service files may be called by controllers that expose HTTP endpoints:\n{}\n\n**Important**: Even though these are service layer files, they may affect API behavior. Please analyze:\n1. What APIs might call these services?\n2. How do the changes affect API responses?\n3. What should be tested in the API layer?",
+                    service_files.iter().map(|f| format!("- {}", f)).collect::<Vec<_>>().join("\n")
+                ));
+            }
+        }
+
+        // 添加找到的相关接口信息
+        if !related_endpoints.is_empty() {
+            parts.push("## Identified Endpoints".to_string());
+            parts.push("".to_string());
+            parts.push(
+                "The following endpoints were automatically detected from code analysis:"
+                    .to_string(),
+            );
+            parts.push("".to_string());
+
+            for endpoint in related_endpoints {
+                let location = if let Some(line) = endpoint.line_number {
+                    format!("{}:{}", endpoint.file_path, line)
+                } else {
+                    endpoint.file_path.clone()
+                };
+                parts.push(format!(
+                    "- **{} {}** (defined in `{}`)",
+                    endpoint.method, endpoint.path, location
+                ));
+            }
+
+            parts.push("".to_string());
+            parts.push("**Critical**: You MUST generate comprehensive test plans for ALL of these endpoints.".to_string());
+            parts.push("".to_string());
+        }
+
+        // 添加 PR Diff（代码变更内容）
         if !pr_diff.trim().is_empty() {
+            parts.push("## Code Changes (PR Diff)".to_string());
+            parts.push("".to_string());
+            parts.push("Analyze the following code changes carefully:".to_string());
+            parts.push("".to_string());
+            parts.push("**Code Analysis Checklist**:".to_string());
+            parts.push(
+                "- [ ] Identify all functions/methods that were added, modified, or removed"
+                    .to_string(),
+            );
+            parts.push("- [ ] Extract function signatures (parameters, return types)".to_string());
+            parts.push(
+                "- [ ] Identify all conditional branches (if/else, switch/case, try/catch)"
+                    .to_string(),
+            );
+            parts.push("- [ ] Identify all validation checks and constraints".to_string());
+            parts.push("- [ ] Identify all error handling paths and exception cases".to_string());
+            parts.push("- [ ] Identify all loops and iterations".to_string());
+            parts.push(
+                "- [ ] Identify all external dependencies (API calls, database operations)"
+                    .to_string(),
+            );
+            parts.push("- [ ] Identify all state changes and side effects".to_string());
+            parts.push("".to_string());
+            parts.push(
+                "**For each identified code path, generate a corresponding test case.**"
+                    .to_string(),
+            );
+            parts.push("".to_string());
+
             // 限制 diff 长度，避免请求过大
             // 对于测试计划，我们需要足够的 diff 内容来识别接口
             const MAX_DIFF_LENGTH: usize = 20000; // 增加长度以提供更多上下文
@@ -591,87 +707,57 @@ impl PullRequestLLM {
                         truncated
                     };
                     format!(
-                        "{}\n... (diff truncated, {} characters total)",
+                        "{}\n\n... (diff truncated, {} characters total. Focus on the visible changes for test plan generation.)",
                         truncated_diff, char_count
                     )
                 } else {
                     pr_diff.to_string()
                 }
             };
-            parts.push(format!("PR Diff:\n{}", diff_trimmed));
+            parts.push("```diff".to_string());
+            parts.push(diff_trimmed);
+            parts.push("```".to_string());
+            parts.push("".to_string());
         }
 
-        // 添加文件变更信息（简要）
-        if !file_changes.is_empty() {
-            let file_list: Vec<String> = file_changes
-                .iter()
-                .map(|(file_path, _)| format!("- {}", file_path))
-                .collect();
-            parts.push(format!("Modified Files:\n{}", file_list.join("\n")));
-
-            // 分析文件路径，提供 API 相关的提示
-            let mut api_related_files = Vec::new();
-            let mut service_files = Vec::new();
-
-            for (file_path, _) in file_changes {
-                let path_lower = file_path.to_lowercase();
-                if path_lower.contains("/api/")
-                    || path_lower.contains("/routes/")
-                    || path_lower.contains("controller")
-                {
-                    api_related_files.push(file_path.clone());
-                } else if path_lower.contains("service") {
-                    service_files.push(file_path.clone());
-                }
-            }
-
-            if !api_related_files.is_empty() {
-                parts.push(format!(
-                    "## API-Related Files Detected\n\nThese files are likely related to API endpoints:\n{}\n\nPlease analyze these files for endpoint definitions.",
-                    api_related_files.iter().map(|f| format!("- {}", f)).collect::<Vec<_>>().join("\n")
-                ));
-            }
-
-            if !service_files.is_empty() {
-                parts.push(format!(
-                    "## Service Layer Files Detected\n\nThese service files may be called by controllers that expose HTTP endpoints:\n{}\n\n**Important**: Even though these are service layer files, they may affect API behavior. Please analyze:\n1. What APIs might call these services?\n2. How do the changes affect API responses?\n3. What should be tested in the API layer?",
-                    service_files.iter().map(|f| format!("- {}", f)).collect::<Vec<_>>().join("\n")
-                ));
-            }
-        }
-
-        // 添加找到的相关接口信息
-        if !related_endpoints.is_empty() {
-            parts.push("## Related Endpoints Found".to_string());
-            parts.push(
-                "The following endpoints were found that may be affected by the service changes:"
-                    .to_string(),
-            );
-            parts.push("".to_string());
-
-            for endpoint in related_endpoints {
-                let location = if let Some(line) = endpoint.line_number {
-                    format!("{}:{}", endpoint.file_path, line)
-                } else {
-                    endpoint.file_path.clone()
-                };
-                parts.push(format!(
-                    "- **{} {}** (in `{}`)",
-                    endpoint.method, endpoint.path, location
-                ));
-            }
-
-            parts.push("".to_string());
-            parts.push(
-                "**Please include test plans for these endpoints in your response.**".to_string(),
-            );
-            parts.push("".to_string());
-            parts.push("For each endpoint, provide:".to_string());
-            parts.push("1. Test scenarios (normal case, validation cases, edge cases)".to_string());
-            parts.push("2. CURL command with example parameters".to_string());
-            parts.push("3. Expected response structure".to_string());
-            parts.push("4. Test priority based on the service changes".to_string());
-        }
+        // 添加测试生成指导
+        parts.push("## Test Generation Requirements".to_string());
+        parts.push("".to_string());
+        parts.push("For each endpoint or component identified, generate:".to_string());
+        parts.push("".to_string());
+        parts.push("1. **Complete Endpoint Information**:".to_string());
+        parts.push("   - HTTP method and full path".to_string());
+        parts.push("   - Purpose and description".to_string());
+        parts.push("   - Test priority (High/Medium/Low)".to_string());
+        parts.push("".to_string());
+        parts.push("2. **Detailed Parameter Analysis**:".to_string());
+        parts.push("   - Path parameters with types and constraints".to_string());
+        parts.push("   - Query parameters with types, required/optional, defaults".to_string());
+        parts.push(
+            "   - Request body structure with all fields, types, and validation rules".to_string(),
+        );
+        parts.push("   - Required headers".to_string());
+        parts.push("".to_string());
+        parts.push("3. **Comprehensive Test Scenarios**:".to_string());
+        parts.push("   - Happy path tests (normal, minimal, complete cases)".to_string());
+        parts.push("   - Validation tests (missing fields, invalid types, invalid formats, invalid values)".to_string());
+        parts.push(
+            "   - Boundary tests (min/max values, empty/null values, very long strings)"
+                .to_string(),
+        );
+        parts.push("   - Error handling tests (authentication, authorization, not found, conflicts, server errors)".to_string());
+        parts.push(
+            "   - Integration tests (database operations, external services, concurrent requests)"
+                .to_string(),
+        );
+        parts.push("".to_string());
+        parts.push("4. **Executable Test Commands**:".to_string());
+        parts.push("   - Complete CURL commands for each test scenario".to_string());
+        parts.push("   - Realistic test data that matches the code's expectations".to_string());
+        parts.push("   - Expected response status codes and structures".to_string());
+        parts.push("   - Clear verification steps".to_string());
+        parts.push("".to_string());
+        parts.push("**Remember**: Generate test cases for EVERY code path, branch, and error condition you identify in the code changes.".to_string());
 
         parts.join("\n\n")
     }

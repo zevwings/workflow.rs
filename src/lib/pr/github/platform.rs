@@ -493,6 +493,38 @@ impl GitHub {
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
+
+        // 检查是否是 404 错误，提供更详细的错误信息
+        if response.status == 404 {
+            let mut error_msg = format!(
+                "Pull Request #{} not found in repository {}/{}",
+                pr_number, owner, repo_name
+            );
+
+            // 尝试检查仓库是否存在
+            let repo_url = format!("{}/repos/{}/{}", Self::base_url(), owner, repo_name);
+            let repo_config = RequestConfig::<Value, Value>::new().headers(&headers);
+            let repo_response = client.get(&repo_url, repo_config)?;
+            if repo_response.status == 404 {
+                error_msg.push_str(&format!(
+                    "\n\nRepository {}/{} not found. Please check:\n  - The repository name is correct\n  - You have access to this repository\n  - The remote URL is configured correctly",
+                    owner, repo_name
+                ));
+            } else {
+                error_msg.push_str(&format!(
+                    "\n\nPossible reasons:\n  - PR #{} does not exist\n  - PR may have been deleted\n  - You may not have access to this PR\n  - The PR number might be incorrect",
+                    pr_number
+                ));
+            }
+
+            // 显示当前使用的仓库信息
+            if let Ok(remote_url) = GitRepo::get_remote_url() {
+                error_msg.push_str(&format!("\n\nCurrent repository: {}", remote_url));
+            }
+
+            return Err(anyhow::anyhow!(error_msg));
+        }
+
         let pr_info: PullRequestInfo = response
             .ensure_success_with(handle_github_error)?
             .as_json()?;
