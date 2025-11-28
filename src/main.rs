@@ -16,7 +16,9 @@ use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use commands::lifecycle::{uninstall, update, version};
 use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
-use commands::pr::{approve, close, comment, create, integrate, list, merge, status, summarize, update as pr_update};
+use commands::pr::{
+    approve, close, comment, create, integrate, list, merge, status, summarize, update as pr_update,
+};
 use commands::proxy::proxy;
 
 use workflow::cli::{
@@ -163,17 +165,15 @@ fn main() -> Result<()> {
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
             }
-            PRCommands::Summarize {
-                pull_request_id,
-            } => {
+            PRCommands::Summarize { pull_request_id } => {
                 summarize::SummarizeCommand::summarize(pull_request_id)?;
             }
             PRCommands::Approve { pull_request_id } => {
                 approve::PullRequestApproveCommand::approve(pull_request_id)?;
             }
             PRCommands::Comment {
-                pull_request_id,
                 message,
+                pull_request_id,
             } => {
                 comment::PullRequestCommentCommand::comment(pull_request_id, message)?;
             }

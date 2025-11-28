@@ -21,13 +21,23 @@ impl PullRequestApproveCommand {
 
         // 创建平台提供者并批准 PR
         let provider = create_provider()?;
-        provider
-            .approve_pull_request(&pr_id)
-            .context(format!("Failed to approve PR #{}", pr_id))?;
-
-        log_success!("PR #{} approved successfully!", pr_id);
+        match provider.approve_pull_request(&pr_id) {
+            Ok(_) => {
+                log_success!("PR #{} approved successfully!", pr_id);
+            }
+            Err(e) => {
+                // 检查是否是"不能批准自己的 PR"这种明确的业务错误
+                let error_msg = e.to_string();
+                if error_msg.contains("Cannot approve your own pull request") {
+                    // 对于这种明确的业务错误，直接返回错误，不添加额外的上下文
+                    return Err(e);
+                } else {
+                    // 对于其他错误，添加上下文信息
+                    return Err(e).context(format!("Failed to approve PR #{}", pr_id));
+                }
+            }
+        }
 
         Ok(())
     }
 }
-
