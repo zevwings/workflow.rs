@@ -493,6 +493,43 @@ impl GitBranch {
         cmd_run(&args).with_context(|| format!("Failed to push branch: {}", branch_name))
     }
 
+    /// 使用 force-with-lease 强制推送到远程仓库
+    ///
+    /// 使用 `--force-with-lease` 选项安全地强制推送分支到远程仓库。
+    /// 这比 `--force` 更安全，因为它会检查远程分支是否有新的提交。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要推送的分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果推送失败，返回相应的错误信息。
+    pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
+        cmd_run(&["push", "--force-with-lease", "origin", branch_name])
+            .with_context(|| format!("Failed to force push branch: {}", branch_name))
+    }
+
+    /// 将当前分支 rebase 到目标分支
+    ///
+    /// 使用 `git rebase` 将当前分支的提交重新应用到目标分支之上。
+    ///
+    /// # 参数
+    ///
+    /// * `target_branch` - 目标分支引用（本地分支名或 origin/branch-name）
+    ///
+    /// # 错误
+    ///
+    /// 如果 rebase 失败（包括冲突），返回相应的错误信息。
+    ///
+    /// # 注意
+    ///
+    /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
+    pub fn rebase_onto(target_branch: &str) -> Result<()> {
+        cmd_run(&["rebase", target_branch])
+            .with_context(|| format!("Failed to rebase onto branch: {}", target_branch))
+    }
+
     /// 删除本地分支
     ///
     /// 删除指定的本地分支。如果分支未完全合并，可以使用 `force` 参数强制删除。

@@ -324,14 +324,19 @@ pub enum PRCommands {
     ///
     /// Commit current changes to PR branch using PR title as commit message.
     Update,
-    /// Integrate branch into current branch
+    /// Sync branch into current branch
     ///
-    /// Merge specified branch into current branch, and optionally push to remote.
+    /// Sync specified branch into current branch, supporting merge, rebase, or squash.
     /// This is a local Git operation, different from the `merge` command (which merges PR via API).
-    Integrate {
-        /// Source branch name to merge (required)
+    /// Merged functionality from `integrate` and `sync` commands.
+    Sync {
+        /// Source branch name to sync (required)
         #[arg(value_name = "SOURCE_BRANCH")]
         source_branch: String,
+
+        /// Use rebase instead of merge (default: merge)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        rebase: bool,
 
         /// Only allow fast-forward merge (fail if not possible)
         #[arg(long, action = clap::ArgAction::SetTrue)]

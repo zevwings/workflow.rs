@@ -11,8 +11,8 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：9 个（create, merge, close, status, list, update, integrate, summarize）
-- 总代码行数：约 1900+ 行
+- 命令数量：9 个（create, merge, close, status, list, update, sync, summarize, approve, comment）
+- 总代码行数：约 2400+ 行
 - 支持平台：GitHub、Codeup
 - 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
 
@@ -29,22 +29,24 @@ src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, integrate, summarize）
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, summarize, approve, comment）
 
 ### 命令封装层
 
 ```
 src/commands/pr/
-├── mod.rs          # PR 命令模块声明（9 行）
+├── mod.rs          # PR 命令模块声明（12 行）
 ├── helpers.rs      # PR 命令辅助函数（176 行）
 ├── create.rs       # 创建 PR 命令（717 行）
-├── integrate.rs    # 集成分支命令（343 行）
+├── sync.rs         # 同步分支命令（488 行，合并了原 integrate 功能）
 ├── merge.rs        # 合并 PR 命令（142 行）
 ├── close.rs        # 关闭 PR 命令（142 行）
 ├── status.rs       # PR 状态查询命令（50 行）
 ├── list.rs         # 列出 PR 命令（21 行）
 ├── update.rs       # 更新 PR 命令（59 行）
-└── summarize.rs    # PR 总结命令（425 行）
+├── summarize.rs    # PR 总结命令（425 行）
+├── approve.rs      # 批准 PR 命令
+└── comment.rs      # 添加 PR 评论命令
 ```
 
 **职责**：
@@ -115,8 +117,10 @@ match cli.subcommand {
   PRCommands::Status => status::PullRequestStatusCommand::show()
   PRCommands::List => list::PullRequestListCommand::list()
   PRCommands::Update => update::PullRequestUpdateCommand::update()
-  PRCommands::Integrate => integrate::PullRequestIntegrateCommand::integrate()
+  PRCommands::Sync => sync::PullRequestSyncCommand::sync()
   PRCommands::Summarize => summarize::SummarizeCommand::summarize()
+  PRCommands::Approve => approve::PullRequestApproveCommand::approve()
+  PRCommands::Comment => comment::PullRequestCommentCommand::comment()
 }
 ```
 
@@ -220,39 +224,355 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
 
 ---
 
-## 2. 集成分支命令 (`integrate.rs`)
+## 2. 同步分支命令 (`sync.rs`)
 
 ### 相关文件
 
 ```
-src/commands/pr/integrate.rs (343 行)
+src/commands/pr/sync.rs (488 行)
 ```
+
+**注意**：`pr sync` 命令已合并了原 `pr integrate` 命令的所有功能，现在是一个统一的命令，通过参数控制所有行为。
 
 ### 调用流程
 
 ```
-src/main.rs::PRCommands::Integrate
+src/main.rs::PRCommands::Sync
   ↓
-commands/pr/integrate.rs::PullRequestIntegrateCommand::integrate()
+commands/pr/sync.rs::PullRequestSyncCommand::sync()
   ↓
   1. 运行检查（check::CheckCommand::run_all()）
   2. 获取当前分支，检查工作区状态并 stash
   3. 验证并准备源分支（prepare_source_branch()）
-  4. 确定合并策略（--ff-only, --squash, default）
-  5. 执行合并（GitBranch::merge_branch()）
-  6. 根据分支类型处理合并后的操作（更新 PR 或恢复 stash）
-  7. 检查并关闭被合并分支的 PR
-  8. 删除被合并的源分支
+  4. 确定同步策略（--rebase, --ff-only, --squash, default merge）
+  5. 执行同步（GitBranch::merge_branch() 或 GitBranch::rebase_onto()）
+  6. 根据分支类型处理同步后的操作（更新当前分支 PR 或恢复 stash）
+  7. 推送到远程（如果未指定 --no-push）
+  8. 处理源分支的 PR 和分支清理（交互式）
+     - 查找源分支的 PR ID
+     - 如果有 PR：询问是否关闭 PR 并删除分支
+     - 如果没有 PR：询问是否删除分支
 ```
 
 ### 功能说明
 
-集成分支命令用于将指定分支合并到当前分支（本地 Git 操作）：
+同步分支命令用于将指定分支同步到当前分支（本地 Git 操作），支持 merge、rebase 或 squash 三种方式：
 1. **工作区管理**：自动检查并提示 stash。
-2. **源分支验证**：不允许合并默认分支，自动检测分支存在性。
-3. **合并策略**：支持 fast-forward, squash 和普通合并。
-4. **PR 更新**：合并后自动推送更新当前 PR，关闭源分支 PR。
-5. **分支清理**：合并成功后自动删除源分支。
+2. **源分支验证**：自动检测分支存在性（本地或远程）。
+3. **同步策略**：支持 merge（默认）、rebase、squash 和 fast-forward only。
+4. **PR 管理**：自动更新当前分支的 PR（如果存在），并根据源分支是否有 PR 进行交互式处理。
+5. **分支清理**：交互式确认是否删除源分支（如果有 PR，会询问是否关闭 PR 并删除分支）。
+
+### 参数设计
+
+**必需参数**:
+- `SOURCE_BRANCH` - 要同步的源分支名称
+
+**可选参数**:
+- `--rebase` - 使用 rebase 而不是 merge（默认使用 merge）
+- `--squash` - 使用 squash 合并（将所有提交压缩为一个）
+- `--ff-only` - 只允许 fast-forward 合并（如果无法 fast-forward 则失败）
+- `--no-push` - 不同步后推送（默认会推送）
+
+**注意**：
+- `--rebase`、`--squash` 和 `--ff-only` 是互斥的，只能使用其中一个
+- **分支删除**：同步完成后会询问用户是否删除源分支（交互式确认），默认选择是
+- **PR 管理**：自动更新当前分支的 PR，并根据源分支是否有 PR 进行交互式处理
+
+### 详细工作流程
+
+#### Merge 模式（默认）
+
+```
+1. 获取当前分支
+2. 检查工作区状态
+   - 如果有未提交更改，自动 stash
+3. 验证并准备源分支
+   - 检查分支是否存在（本地或远程）
+   - 如果只在远程，先 fetch
+4. 合并 SOURCE_BRANCH 到当前分支
+   - 如果有冲突，暂停并提示用户
+   - 合并成功会自动创建 merge commit
+5. 恢复 stash（如果有）
+6. 管理 PR（自动）
+   - 更新当前分支的 PR（如果存在）
+7. 推送到远程（如果未指定 --no-push）
+   - 如果指定 --no-push，只同步到本地，不推送
+8. 处理源分支的 PR 和分支清理（交互式）
+   - 查找源分支的 PR ID
+   - 如果有 PR：询问是否关闭 PR 并删除分支
+   - 如果没有 PR：询问是否删除分支
+   - 自动跳过删除当前分支和默认分支
+```
+
+#### Rebase 模式（--rebase）
+
+```
+1. 获取当前分支
+2. 检查工作区状态
+   - 如果有未提交更改，自动 stash
+3. 验证并准备源分支
+   - 检查分支是否存在（本地或远程）
+   - 如果只在远程，先 fetch
+4. Rebase 当前分支到 SOURCE_BRANCH
+   - 如果有冲突，暂停并提示用户
+   - Rebase 会重写当前分支的提交历史
+5. 恢复 stash（如果有）
+6. 管理 PR（自动）
+   - 更新当前分支的 PR（如果存在）
+7. 强制推送到远程（如果未指定 --no-push，使用 --force-with-lease）
+   - 如果指定 --no-push，只同步到本地，不推送
+8. 处理源分支的 PR 和分支清理（交互式）
+   - 查找源分支的 PR ID
+   - 如果有 PR：询问是否关闭 PR 并删除分支
+   - 如果没有 PR：询问是否删除分支
+   - 自动跳过删除当前分支和默认分支
+```
+
+#### Squash 模式（--squash）
+
+```
+1. 获取当前分支
+2. 检查工作区状态
+   - 如果有未提交更改，自动 stash
+3. 验证并准备源分支
+   - 检查分支是否存在（本地或远程）
+   - 如果只在远程，先 fetch
+4. Squash 合并 SOURCE_BRANCH 到当前分支
+   - 将所有提交压缩为一个提交
+   - 如果有冲突，暂停并提示用户
+5. 恢复 stash（如果有）
+6. 管理 PR（自动）
+   - 更新当前分支的 PR（如果存在）
+7. 推送到远程（如果未指定 --no-push）
+   - 如果指定 --no-push，只同步到本地，不推送
+8. 处理源分支的 PR 和分支清理（交互式）
+   - 查找源分支的 PR ID
+   - 如果有 PR：询问是否关闭 PR 并删除分支
+   - 如果没有 PR：询问是否删除分支
+   - 自动跳过删除当前分支和默认分支
+```
+
+### 使用场景
+
+#### 场景 1：同步 master 到当前分支（merge）
+
+```bash
+# 在 feature-branch 上
+git checkout feature-branch
+workflow pr sync master
+
+# 结果：
+# - 将 master 的最新更改合并到 feature-branch
+# - 自动推送
+```
+
+#### 场景 2：同步 master 到当前分支（rebase）
+
+```bash
+# 在 feature-branch 上
+git checkout feature-branch
+workflow pr sync master --rebase
+
+# 结果：
+# - 将 feature-branch rebase 到 master 的最新提交
+# - 强制推送（使用 --force-with-lease）
+```
+
+#### 场景 3：只同步到本地并提交，不推送
+
+```bash
+workflow pr sync master --no-push
+
+# 结果：
+# - 同步 source_branch 到当前分支
+# - 自动提交（merge 会创建 merge commit，rebase 会重写提交历史）
+# - 不推送到远程（用户可以手动推送）
+#
+# 使用场景：
+# - 需要先本地测试同步后的代码
+# - 需要批量同步多个分支后再统一推送
+# - 需要审查同步后的更改再推送
+```
+
+#### 场景 4：使用 squash 合并功能分支
+
+```bash
+workflow pr sync feature-sub --squash
+
+# 结果：
+# - 将 feature-sub 的所有提交压缩为一个提交
+# - 合并到当前分支
+# - 自动删除分支和管理 PR
+```
+
+#### 场景 5：Fast-forward only
+
+```bash
+workflow pr sync master --ff-only
+
+# 结果：
+# - 只允许 fast-forward 合并
+# - 如果无法 fast-forward，失败并提示
+```
+
+### 边界情况处理
+
+#### 情况 1：当前分支不存在
+
+**处理方式**:
+- 检查是否在 Git 仓库中
+- 检查当前分支是否存在
+- 如果不存在，提示错误并退出
+
+#### 情况 2：源分支不存在
+
+**处理方式**:
+- 检查 SOURCE_BRANCH 是否存在（本地和远程）
+- 如果不存在，提示错误并退出
+- 提供建议：检查分支名拼写
+
+#### 情况 3：合并/变基冲突
+
+**处理方式**:
+- 暂停操作
+- 显示冲突文件列表
+- 提示用户解决冲突：
+  ```
+  Merge/Rebase conflict detected!
+  Please resolve conflicts in:
+    - file1.rs
+    - file2.rs
+
+  After resolving:
+    1. git add <resolved-files>
+    2. git commit  # for merge
+    2. git rebase --continue  # for rebase
+    3. workflow pr sync --continue  # 继续执行
+  ```
+- 提供 `--continue` 选项继续执行
+- 提供 `--abort` 选项中止操作
+
+#### 情况 4：工作区有未提交更改
+
+**处理方式**:
+- 自动检测未提交更改
+- 自动 stash（保存更改）
+- 操作完成后恢复 stash
+- 如果 stash 恢复有冲突，提示用户手动解决
+
+#### 情况 5：Fast-forward 失败（使用 --ff-only）
+
+**处理方式**:
+- 检测到无法 fast-forward
+- 提示错误：
+  ```
+  Cannot fast-forward merge. Use 'workflow pr sync SOURCE_BRANCH'
+  (without --ff-only) to perform a regular merge.
+  ```
+- 退出，不执行合并
+
+#### 情况 6：Rebase 后推送失败
+
+**处理方式**:
+- 使用 `--force-with-lease` 安全地强制推送
+- 如果推送失败（例如远程有新的提交），提示用户：
+  ```
+  Push failed. Remote branch has new commits.
+  Please pull and rebase again, or use 'git push --force' manually.
+  ```
+
+#### 情况 7：源分支有 PR，用户拒绝关闭 PR 和删除分支
+
+**处理方式**:
+- 询问用户是否关闭 PR 并删除分支
+- 如果用户选择否，跳过关闭 PR 和删除分支操作
+- 提示：`Skipping PR closure and branch deletion as requested by user`
+- PR 和分支保留
+
+#### 情况 8：源分支没有 PR，用户拒绝删除分支
+
+**处理方式**:
+- 询问用户是否删除源分支
+- 如果用户选择否，跳过删除操作
+- 提示：`Skipping branch deletion as requested by user`
+- 分支保留在本地和远程
+
+#### 情况 9：源分支是默认分支
+
+**处理方式**:
+- 自动检测源分支是否为默认分支
+- 如果是默认分支，自动跳过删除（安全保护）
+- 提示：`Source branch 'master' is the default branch, skipping deletion for safety`
+
+### 与其他命令的关系
+
+#### 与原 `pr integrate` 的关系
+
+**`pr sync` 已合并 `pr integrate` 的所有功能**：
+
+| 特性 | 原 `pr integrate` | `pr sync`（合并后） |
+|------|-------------------|-------------------|
+| **操作类型** | 合并（merge） | 同步（merge、rebase 或 squash） |
+| **默认行为** | Merge + 删除分支 + 管理 PR | Merge + 交互式确认删除分支 + 自动管理 PR |
+| **合并策略** | Merge/Squash | Merge/Rebase/Squash |
+| **分支清理** | ✅ 自动删除 | ✅ 交互式确认删除（默认选择是） |
+| **PR 管理** | ✅ 自动管理 | ✅ 自动管理（总是执行） |
+| **参数** | `--squash`, `--ff-only`, `--no-push` | `--rebase`, `--squash`, `--ff-only`, `--no-push` |
+
+**迁移指南**：
+
+原 `pr integrate` 用法：
+```bash
+workflow pr integrate feature-sub
+workflow pr integrate feature-sub --squash
+workflow pr integrate feature-sub --no-push
+```
+
+新的 `pr sync` 用法（保持相同行为）：
+```bash
+workflow pr sync feature-sub  # 默认行为相同（会询问是否删除分支）
+workflow pr sync feature-sub --squash
+workflow pr sync feature-sub --no-push
+```
+
+### 错误处理和用户体验
+
+#### 错误消息
+
+- **当前分支不存在**: `Not on a valid branch. Please checkout a branch first.`
+- **源分支不存在**: `Source branch '{SOURCE_BRANCH}' does not exist. Please check the branch name.`
+- **合并冲突**: `Merge conflict detected. Please resolve conflicts and use '--continue' to proceed.`
+- **Rebase 冲突**: `Rebase conflict detected. Please resolve conflicts and use '--continue' to proceed.`
+- **Fast-forward 失败**: `Cannot fast-forward merge. Remove '--ff-only' to perform a regular merge.`
+
+#### 成功消息
+
+```
+✓ Synced master to feature-branch
+✓ Merged 5 commits
+✓ Pushed to remote
+```
+
+#### 交互式提示
+
+**冲突解决提示**：
+
+```
+⚠️  Conflict detected during merge/rebase
+
+Conflicted files:
+  - src/file1.rs
+  - src/file2.rs
+
+To resolve:
+  1. Edit conflicted files
+  2. git add <resolved-files>
+  3. workflow pr sync --continue
+
+To abort:
+  workflow pr sync --abort
+```
 
 ---
 
@@ -507,7 +827,7 @@ workflow pr summarize --language zh      # 使用中文生成总结
 使用工厂函数 `create_provider()` 创建平台提供者，命令层无需关心平台差异。
 
 #### 3. 策略模式
-不同的合并策略（FastForwardOnly, Squash, Merge）在 integrate 命令中实现。
+不同的合并策略（FastForwardOnly, Squash, Merge, Rebase）在 sync 命令中实现。
 
 #### 4. 辅助函数模式
 将通用逻辑（如 `cleanup_branch`）提取到 `helpers.rs` 中共享。
@@ -547,10 +867,12 @@ workflow pr merge 123                        # 合并指定 PR
 workflow pr close                            # 关闭当前 PR
 ```
 
-### Integrate 命令
+### Sync 命令
 ```bash
-workflow pr integrate feature-branch         # 集成分支
-workflow pr integrate feature-branch --squash # Squash 合并
+workflow pr sync feature-branch              # 同步分支（merge，交互式确认删除）
+workflow pr sync feature-branch --squash      # Squash 合并
+workflow pr sync master --rebase              # 使用 rebase 同步基础分支
+workflow pr sync master --no-push             # 只同步到本地，不推送
 ```
 
 ---

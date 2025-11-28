@@ -25,7 +25,7 @@ src/
 │   │   ├── status.rs       # PR 状态查询
 │   │   ├── list.rs         # 列出 PR
 │   │   ├── update.rs       # 更新 PR
-│   │   └── integrate.rs    # 集成分支命令
+│   │   └── sync.rs         # 同步分支命令（合并了原 integrate 功能）
 │   ├── log/                # 日志操作命令
 │   │   ├── mod.rs          # Log 命令模块声明
 │   │   ├── download.rs     # 下载日志命令

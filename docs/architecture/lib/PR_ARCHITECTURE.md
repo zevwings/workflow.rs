@@ -65,7 +65,7 @@ src/lib/pr/
 
 **职责**：定义统一的 PR 平台接口和工厂函数
 
-- **`PlatformProvider` trait**：定义所有平台必须实现的 9 个方法
+- **`PlatformProvider` trait**：定义所有平台必须实现的 11 个方法
   - `create_pull_request()` - 创建 PR
   - `merge_pull_request()` - 合并 PR
   - `get_pull_request_info()` - 获取 PR 信息
@@ -75,6 +75,8 @@ src/lib/pr/
   - `get_pull_requests()` - 列出 PR（可选）
   - `get_pull_request_status()` - 获取 PR 状态
   - `close_pull_request()` - 关闭 PR
+  - `add_comment()` - 添加 PR 评论
+  - `approve_pull_request()` - 批准 PR
 
 - **`create_provider()` 工厂函数**：
   - 自动检测仓库类型（GitHub/Codeup）
@@ -351,6 +353,12 @@ provider.merge_pull_request("123", true)?;
 
 // 关闭 PR
 provider.close_pull_request("123")?;
+
+// 添加评论
+provider.add_comment("123", "Looks good!")?;
+
+// 批准 PR
+provider.approve_pull_request("123")?;
 ```
 
 ### 获取当前分支的 PR
