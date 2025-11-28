@@ -310,6 +310,11 @@ workflow pr sync <SOURCE_BRANCH> --squash      # 使用 squash 合并
 workflow pr sync <SOURCE_BRANCH> --ff-only     # 只允许 fast-forward 合并
 workflow pr sync <SOURCE_BRANCH> --no-push     # 不推送到远程（默认会推送）
 
+# Rebase 分支
+workflow pr rebase <TARGET_BRANCH>             # Rebase 当前分支到目标分支（默认推送）
+workflow pr rebase <TARGET_BRANCH> --no-push   # 只 rebase 到本地，不推送
+workflow pr rebase <TARGET_BRANCH> --dry-run   # 预览模式
+
 # 总结 PR
 workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）
 workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）

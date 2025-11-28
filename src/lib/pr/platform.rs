@@ -136,6 +136,16 @@ pub trait PlatformProvider {
     /// # Arguments
     /// * `pull_request_id` - PR ID
     fn approve_pull_request(&self, pull_request_id: &str) -> Result<()>;
+
+    /// 更新 PR 的 base 分支
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `new_base` - 新的 base 分支名称
+    ///
+    /// # Errors
+    /// 如果更新失败，返回相应的错误信息。
+    fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()>;
 }
 
 /// 创建平台提供者实例

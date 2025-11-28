@@ -17,7 +17,8 @@ use commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{
-    approve, close, comment, create, list, merge, status, summarize, sync, update as pr_update,
+    approve, close, comment, create, list, merge, rebase, status, summarize, sync,
+    update as pr_update,
 };
 use commands::proxy::proxy;
 
@@ -163,6 +164,13 @@ fn main() -> Result<()> {
                     squash,
                     should_push,
                 )?;
+            }
+            PRCommands::Rebase {
+                target_branch,
+                no_push,
+                dry_run,
+            } => {
+                rebase::PullRequestRebaseCommand::rebase(target_branch, !no_push, dry_run)?;
             }
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;

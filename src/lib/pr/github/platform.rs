@@ -464,6 +464,39 @@ impl PlatformProvider for GitHub {
             }
         }
     }
+
+    /// 更新 PR 的 base 分支
+    fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        let request = serde_json::json!({
+            "base": new_base
+        });
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.patch(&url, config)?;
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(())
+    }
 }
 
 impl GitHub {

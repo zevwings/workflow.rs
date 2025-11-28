@@ -350,6 +350,24 @@ pub enum PRCommands {
         #[arg(long, action = clap::ArgAction::SetTrue)]
         no_push: bool,
     },
+    /// Rebase current branch onto target branch and update PR base
+    ///
+    /// Rebase the current branch onto the specified target branch,
+    /// and update the PR's base branch if a PR exists (with user confirmation).
+    /// PR ID is automatically detected from the current branch.
+    Rebase {
+        /// Target branch to rebase onto (required)
+        #[arg(value_name = "TARGET_BRANCH")]
+        target_branch: String,
+
+        /// Don't push to remote (only rebase locally)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        no_push: bool,
+
+        /// Dry run mode (show what would be done without actually doing it)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
+    },
     /// Close a Pull Request
     ///
     /// Close PR corresponding to current branch, delete remote branch, and switch to default branch.

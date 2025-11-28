@@ -421,6 +421,62 @@ impl PlatformProvider for Codeup {
         // 因为 Codeup API 可能没有专门的批准接口，我们使用 add_comment 来实现
         self.add_comment(pull_request_id, "👍")
     }
+
+    /// 更新 PR 的 base 分支
+    fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()> {
+        let (project_id, cookie) = Self::get_env_vars()?;
+
+        let settings = Settings::get();
+        let csrf_token = settings.codeup.csrf_token.as_ref().context(
+            "Codeup CSRF token is not configured. Please run 'workflow setup' to configure it",
+        )?;
+
+        // 先获取 PR 信息以确定实际的 PR ID（可能是从 URL 提取的数字）
+        let actual_pull_request_id = if pull_request_id.parse::<u64>().is_ok() {
+            pull_request_id.to_string()
+        } else {
+            // 可能是分支名或 URL，先查找 PR
+            let pull_request_info = Self::get_pull_request_by_branch(pull_request_id)?;
+            match pull_request_info {
+                Some(pr) => {
+                    if let Some(ref detail_url) = pr.detail_url {
+                        Self::extract_pull_request_id_from_url(detail_url)
+                            .context("Failed to extract PR ID from URL")?
+                    } else if let Some(iid) = pr.pull_request_number {
+                        iid.to_string()
+                    } else {
+                        anyhow::bail!("Cannot determine PR ID")
+                    }
+                }
+                None => anyhow::bail!("PR not found: {}", pull_request_id),
+            }
+        };
+
+        let url = format!(
+            "{}/projects/{}/code_reviews/{}?_csrf={}&_input_charset=utf-8",
+            Self::base_url(),
+            project_id,
+            actual_pull_request_id,
+            csrf_token
+        );
+
+        let request = serde_json::json!({
+            "target_branch": new_base
+        });
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(&cookie, Some("application/json"))?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.put(&url, config)?;
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_codeup_error)?
+            .as_json()?;
+
+        Ok(())
+    }
 }
 
 impl Codeup {

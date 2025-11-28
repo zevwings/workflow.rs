@@ -5,6 +5,7 @@ pub mod create;
 pub mod helpers;
 pub mod list;
 pub mod merge;
+pub mod rebase;
 pub mod status;
 pub mod summarize;
 pub mod sync;

@@ -65,7 +65,7 @@ src/lib/pr/
 
 **职责**：定义统一的 PR 平台接口和工厂函数
 
-- **`PlatformProvider` trait**：定义所有平台必须实现的 11 个方法
+- **`PlatformProvider` trait**：定义所有平台必须实现的 12 个方法
   - `create_pull_request()` - 创建 PR
   - `merge_pull_request()` - 合并 PR
   - `get_pull_request_info()` - 获取 PR 信息
@@ -77,6 +77,7 @@ src/lib/pr/
   - `close_pull_request()` - 关闭 PR
   - `add_comment()` - 添加 PR 评论
   - `approve_pull_request()` - 批准 PR
+  - `update_pr_base()` - 更新 PR 的 base 分支
 
 - **`create_provider()` 工厂函数**：
   - 自动检测仓库类型（GitHub/Codeup）
@@ -227,6 +228,17 @@ if let Some(pr_id) = provider.get_current_branch_pull_request()? {
     let info = provider.get_pull_request_info(&pr_id)?;
     println!("PR URL: {}", info.url);
 }
+```
+
+#### 4. 更新 PR base 分支
+
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 更新 PR 的 base 分支
+provider.update_pr_base("123", "master")?;
 ```
 
 ### 数据流
