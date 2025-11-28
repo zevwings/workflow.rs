@@ -358,6 +358,87 @@ impl PlatformProvider for GitHub {
 
         Ok(())
     }
+
+    /// 添加评论到 Pull Request
+    fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        // GitHub API: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+        // 注意：PR 在 GitHub API 中也是 issue，所以使用 issues 端点
+        let url = format!(
+            "{}/repos/{}/{}/issues/{}/comments",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        #[derive(serde::Serialize)]
+        struct CommentRequest {
+            body: String,
+        }
+
+        let request = CommentRequest {
+            body: comment.to_string(),
+        };
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.post(&url, config)?;
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(())
+    }
+
+    /// 批准 Pull Request
+    fn approve_pull_request(&self, pull_request_id: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        // GitHub API: POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}/reviews",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        #[derive(serde::Serialize)]
+        struct ReviewRequest {
+            event: String,
+            body: String,
+        }
+
+        let request = ReviewRequest {
+            event: "APPROVE".to_string(),
+            body: "👍".to_string(),
+        };
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.post(&url, config)?;
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(())
+    }
 }
 
 impl GitHub {

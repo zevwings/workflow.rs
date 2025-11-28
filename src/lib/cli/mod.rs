@@ -364,6 +364,26 @@ pub enum PRCommands {
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
     },
+    /// Approve a Pull Request
+    ///
+    /// Approve a PR by adding a 👍 comment.
+    Approve {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+    },
+    /// Add a comment to a Pull Request
+    ///
+    /// Add a comment to a PR.
+    Comment {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+
+        /// Comment message
+        #[arg(value_name = "MESSAGE")]
+        message: String,
+    },
 }
 
 /// Log operations subcommands

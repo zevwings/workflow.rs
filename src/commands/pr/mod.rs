@@ -1,4 +1,6 @@
+pub mod approve;
 pub mod close;
+pub mod comment;
 pub mod create;
 pub mod helpers;
 pub mod integrate;

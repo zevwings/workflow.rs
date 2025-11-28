@@ -123,6 +123,19 @@ pub trait PlatformProvider {
         // 默认实现：返回不支持的错误
         anyhow::bail!("get_pull_request_diff is not supported by this platform")
     }
+
+    /// 添加评论到 Pull Request
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `comment` - 评论内容
+    fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()>;
+
+    /// 批准 Pull Request
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    fn approve_pull_request(&self, pull_request_id: &str) -> Result<()>;
 }
 
 /// 创建平台提供者实例
