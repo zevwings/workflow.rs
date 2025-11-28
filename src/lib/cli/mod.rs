@@ -376,13 +376,13 @@ pub enum PRCommands {
     ///
     /// Add a comment to a PR.
     Comment {
-        /// Comment message (required)
-        #[arg(value_name = "MESSAGE")]
-        message: String,
-
         /// PR ID (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
+
+        /// Comment message (required, can be multiple words)
+        #[arg(value_name = "MESSAGE", trailing_var_arg = true)]
+        message: Vec<String>,
     },
 }
 

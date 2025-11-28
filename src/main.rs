@@ -172,8 +172,8 @@ fn main() -> Result<()> {
                 approve::PullRequestApproveCommand::approve(pull_request_id)?;
             }
             PRCommands::Comment {
-                message,
                 pull_request_id,
+                message,
             } => {
                 comment::PullRequestCommentCommand::comment(pull_request_id, message)?;
             }
