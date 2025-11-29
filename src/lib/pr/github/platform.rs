@@ -181,6 +181,15 @@ impl PlatformProvider for GitHub {
         Ok(pr.title)
     }
 
+    /// 获取 PR body 内容
+    fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>> {
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+        let pr = Self::fetch_pr_info_internal(pr_number)?;
+        Ok(pr.body)
+    }
+
     /// 获取 PR 状态
     fn get_pull_request_status(&self, pull_request_id: &str) -> Result<PullRequestStatus> {
         let pr_number = pull_request_id
@@ -352,6 +361,145 @@ impl PlatformProvider for GitHub {
 
         let response = client.patch(&url, config)?;
         // GitHub API 返回更新后的 PR 对象，但我们不需要使用响应
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(())
+    }
+
+    /// 添加评论到 Pull Request
+    fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        // GitHub API: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
+        // 注意：PR 在 GitHub API 中也是 issue，所以使用 issues 端点
+        let url = format!(
+            "{}/repos/{}/{}/issues/{}/comments",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        #[derive(serde::Serialize)]
+        struct CommentRequest {
+            body: String,
+        }
+
+        let request = CommentRequest {
+            body: comment.to_string(),
+        };
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.post(&url, config)?;
+        let _: serde_json::Value = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(())
+    }
+
+    /// 批准 Pull Request
+    fn approve_pull_request(&self, pull_request_id: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        // 先获取 PR 信息以检查是否是自己的 PR
+        let pr_info = Self::fetch_pr_info_internal(pr_number)?;
+        let current_user = Self::get_user_info(None)?;
+
+        // 检查是否是自己的 PR
+        if let Some(ref pr_user) = pr_info.user {
+            if pr_user.login == current_user.login {
+                anyhow::bail!(
+                    "Cannot approve your own pull request. GitHub does not allow users to approve their own PRs."
+                );
+            }
+        }
+
+        // GitHub API: POST /repos/{owner}/{repo}/pulls/{pull_number}/reviews
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}/reviews",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        #[derive(serde::Serialize)]
+        struct ReviewRequest {
+            event: String,
+            body: String,
+        }
+
+        let request = ReviewRequest {
+            event: "APPROVE".to_string(),
+            body: "👍".to_string(),
+        };
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.post(&url, config)?;
+
+        // 处理可能的错误（例如，如果 API 仍然返回错误，提供更友好的消息）
+        match response.ensure_success_with(handle_github_error) {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                // 检查是否是"不能批准自己的 PR"的错误
+                let error_msg = e.to_string().to_lowercase();
+                if error_msg.contains("can not approve your own pull request")
+                    || error_msg.contains("cannot approve your own")
+                {
+                    anyhow::bail!(
+                        "Cannot approve your own pull request. GitHub does not allow users to approve their own PRs."
+                    );
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// 更新 PR 的 base 分支
+    fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id
+            .parse::<u64>()
+            .context("Invalid PR number")?;
+
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        let request = serde_json::json!({
+            "base": new_base
+        });
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new()
+            .body(&request)
+            .headers(&headers);
+
+        let response = client.patch(&url, config)?;
         let _: serde_json::Value = response
             .ensure_success_with(handle_github_error)?
             .as_json()?;

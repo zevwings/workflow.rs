@@ -168,4 +168,27 @@ impl GitCommit {
             Some(diff_parts.join("\n\n"))
         }
     }
+
+    /// 重置工作区到指定提交
+    ///
+    /// 使用 `git reset --hard <target>` 将工作区和暂存区重置到指定提交。
+    /// 这会丢弃所有未提交的更改。
+    ///
+    /// # 参数
+    ///
+    /// * `target` - 目标提交引用（如 "HEAD", "HEAD~1", 分支名等）
+    ///   如果为 `None`，则重置到当前 HEAD
+    ///
+    /// # 警告
+    ///
+    /// 此操作会**永久丢弃**工作区和暂存区的所有未提交更改，请谨慎使用。
+    ///
+    /// # 错误
+    ///
+    /// 如果重置失败，返回相应的错误信息。
+    pub fn reset_hard(target: Option<&str>) -> Result<()> {
+        let target = target.unwrap_or("HEAD");
+        cmd_run(&["reset", "--hard", target])
+            .with_context(|| format!("Failed to reset working directory to {}", target))
+    }
 }

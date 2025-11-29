@@ -1,9 +1,13 @@
+pub mod approve;
 pub mod close;
+pub mod comment;
 pub mod create;
 pub mod helpers;
-pub mod integrate;
 pub mod list;
 pub mod merge;
+pub mod pick;
+pub mod rebase;
 pub mod status;
 pub mod summarize;
+pub mod sync;
 pub mod update;

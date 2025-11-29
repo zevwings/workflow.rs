@@ -493,6 +493,79 @@ impl GitBranch {
         cmd_run(&args).with_context(|| format!("Failed to push branch: {}", branch_name))
     }
 
+    /// 使用 force-with-lease 强制推送到远程仓库
+    ///
+    /// 使用 `--force-with-lease` 选项安全地强制推送分支到远程仓库。
+    /// 这比 `--force` 更安全，因为它会检查远程分支是否有新的提交。
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 要推送的分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果推送失败，返回相应的错误信息。
+    pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
+        cmd_run(&["push", "--force-with-lease", "origin", branch_name])
+            .with_context(|| format!("Failed to force push branch: {}", branch_name))
+    }
+
+    /// 将当前分支 rebase 到目标分支
+    ///
+    /// 使用 `git rebase` 将当前分支的提交重新应用到目标分支之上。
+    ///
+    /// # 参数
+    ///
+    /// * `target_branch` - 目标分支引用（本地分支名或 origin/branch-name）
+    ///
+    /// # 错误
+    ///
+    /// 如果 rebase 失败（包括冲突），返回相应的错误信息。
+    ///
+    /// # 注意
+    ///
+    /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
+    pub fn rebase_onto(target_branch: &str) -> Result<()> {
+        cmd_run(&["rebase", target_branch])
+            .with_context(|| format!("Failed to rebase onto branch: {}", target_branch))
+    }
+
+    /// 将指定范围的提交 rebase 到目标分支
+    ///
+    /// 使用 `git rebase --onto` 将 `<upstream>..<branch>` 范围内的提交
+    /// rebase 到 `<newbase>` 之上。这样可以只 rebase 分支独有的提交，
+    /// 排除上游分支的提交。
+    ///
+    /// # 参数
+    ///
+    /// * `newbase` - 新的基础分支（要 rebase 到的分支）
+    /// * `upstream` - 上游分支（rebase 范围的起点，排除此分支的提交）
+    /// * `branch` - 要 rebase 的分支（rebase 范围的终点）
+    ///
+    /// # 错误
+    ///
+    /// 如果 rebase 失败（包括冲突），返回相应的错误信息。
+    ///
+    /// # 注意
+    ///
+    /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
+    ///
+    /// # 示例
+    ///
+    /// 如果 `test-rebase` 基于 `develop-` 创建，但想 rebase 到 `master`：
+    /// ```no_run
+    /// // 只 rebase test-rebase 独有的提交（排除 develop- 的提交）到 master
+    /// GitBranch::rebase_onto_with_upstream("master", "develop-", "test-rebase")?;
+    /// ```
+    pub fn rebase_onto_with_upstream(newbase: &str, upstream: &str, branch: &str) -> Result<()> {
+        cmd_run(&["rebase", "--onto", newbase, upstream, branch]).with_context(|| {
+            format!(
+                "Failed to rebase '{}' onto '{}' (excluding '{}' commits)",
+                branch, newbase, upstream
+            )
+        })
+    }
+
     /// 删除本地分支
     ///
     /// 删除指定的本地分支。如果分支未完全合并，可以使用 `force` 参数强制删除。
@@ -659,5 +732,109 @@ impl GitBranch {
             let line = line.trim().trim_start_matches('*').trim();
             line == branch
         }))
+    }
+
+    /// 获取两个分支之间的提交列表
+    ///
+    /// 使用 `git rev-list` 获取 from_branch 相对于 to_branch 的所有新提交。
+    ///
+    /// # 参数
+    ///
+    /// * `base_branch` - 基础分支名称（to_branch）
+    /// * `head_branch` - 头部分支名称（from_branch）
+    ///
+    /// # 返回
+    ///
+    /// 返回提交哈希列表，按时间顺序排列（从旧到新）。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
+    pub fn get_commits_between(base_branch: &str, head_branch: &str) -> Result<Vec<String>> {
+        let output = cmd_read(&["rev-list", &format!("{}..{}", base_branch, head_branch)])
+            .context("Failed to get commits between branches")?;
+
+        let commits: Vec<String> = output
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        Ok(commits)
+    }
+
+    /// 获取两个分支的共同祖先（merge base）
+    ///
+    /// 使用 `git merge-base` 获取两个分支的共同祖先提交。
+    ///
+    /// # 参数
+    ///
+    /// * `branch1` - 第一个分支名称
+    /// * `branch2` - 第二个分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回共同祖先的提交哈希。如果两个分支没有共同祖先，返回错误。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
+    pub fn merge_base(branch1: &str, branch2: &str) -> Result<String> {
+        let output = cmd_read(&["merge-base", branch1, branch2]).with_context(|| {
+            format!(
+                "Failed to get merge base between '{}' and '{}'",
+                branch1, branch2
+            )
+        })?;
+
+        let merge_base = output.trim().to_string();
+        if merge_base.is_empty() {
+            anyhow::bail!(
+                "No common ancestor found between '{}' and '{}'",
+                branch1,
+                branch2
+            );
+        }
+
+        Ok(merge_base)
+    }
+
+    /// 检查一个分支是否直接基于另一个分支创建
+    ///
+    /// 通过比较 merge-base 和候选分支的 HEAD 来判断 from_branch 是否直接基于 candidate_branch 创建。
+    ///
+    /// # 参数
+    ///
+    /// * `from_branch` - 要检查的分支
+    /// * `candidate_branch` - 候选的基础分支
+    ///
+    /// # 返回
+    ///
+    /// 如果 from_branch 直接基于 candidate_branch 创建，返回 `true`，否则返回 `false`。
+    ///
+    /// # 说明
+    ///
+    /// 判断逻辑：
+    /// - 如果 `merge-base(from_branch, candidate_branch) == candidate_branch` 的 HEAD，
+    ///   说明 from_branch 可能是直接基于 candidate_branch 创建的
+    pub fn is_branch_based_on(from_branch: &str, candidate_branch: &str) -> Result<bool> {
+        // 如果两个分支相同，返回 false
+        if from_branch == candidate_branch {
+            return Ok(false);
+        }
+
+        // 获取 merge-base
+        let merge_base_commit = match Self::merge_base(from_branch, candidate_branch) {
+            Ok(commit) => commit,
+            Err(_) => return Ok(false),
+        };
+
+        // 获取 candidate_branch 的 HEAD
+        let candidate_head = cmd_read(&["rev-parse", candidate_branch])
+            .with_context(|| format!("Failed to get HEAD of branch '{}'", candidate_branch))?;
+        let candidate_head = candidate_head.trim();
+
+        // 如果 merge-base 等于 candidate_branch 的 HEAD，说明 from_branch 直接基于 candidate_branch
+        Ok(merge_base_commit == candidate_head)
     }
 }

@@ -324,14 +324,19 @@ pub enum PRCommands {
     ///
     /// Commit current changes to PR branch using PR title as commit message.
     Update,
-    /// Integrate branch into current branch
+    /// Sync branch into current branch
     ///
-    /// Merge specified branch into current branch, and optionally push to remote.
+    /// Sync specified branch into current branch, supporting merge, rebase, or squash.
     /// This is a local Git operation, different from the `merge` command (which merges PR via API).
-    Integrate {
-        /// Source branch name to merge (required)
+    /// Merged functionality from `integrate` and `sync` commands.
+    Sync {
+        /// Source branch name to sync (required)
         #[arg(value_name = "SOURCE_BRANCH")]
         source_branch: String,
+
+        /// Use rebase instead of merge (default: merge)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        rebase: bool,
 
         /// Only allow fast-forward merge (fail if not possible)
         #[arg(long, action = clap::ArgAction::SetTrue)]
@@ -344,6 +349,24 @@ pub enum PRCommands {
         /// Don't push to remote (pushes by default)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         no_push: bool,
+    },
+    /// Rebase current branch onto target branch and update PR base
+    ///
+    /// Rebase the current branch onto the specified target branch,
+    /// and update the PR's base branch if a PR exists (with user confirmation).
+    /// PR ID is automatically detected from the current branch.
+    Rebase {
+        /// Target branch to rebase onto (required)
+        #[arg(value_name = "TARGET_BRANCH")]
+        target_branch: String,
+
+        /// Don't push to remote (only rebase locally)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        no_push: bool,
+
+        /// Dry run mode (show what would be done without actually doing it)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
     },
     /// Close a Pull Request
     ///
@@ -363,6 +386,49 @@ pub enum PRCommands {
         /// PR ID (optional, auto-detect from current branch if not provided)
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
+    },
+    /// Approve a Pull Request
+    ///
+    /// Approve a PR by adding a 👍 comment.
+    Approve {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+    },
+    /// Add a comment to a Pull Request
+    ///
+    /// Add a comment to a PR.
+    Comment {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+
+        /// Comment message (required, can be multiple words)
+        #[arg(value_name = "MESSAGE", trailing_var_arg = true)]
+        message: Vec<String>,
+    },
+    /// Pick commits from one branch to another and create a new PR
+    ///
+    /// Cherry-pick all commits from the source branch to the target branch,
+    /// then interactively create a new branch and PR (similar to `pr create`).
+    /// This is similar to backport/forwardport but supports any direction.
+    ///
+    /// The command will:
+    /// 1. Switch to the target branch
+    /// 2. Cherry-pick commits (without committing)
+    /// 3. Interactively create PR (with LLM-generated branch name, Jira integration, etc.)
+    Pick {
+        /// Source branch name (branch to cherry-pick from)
+        #[arg(value_name = "FROM_BRANCH")]
+        from_branch: String,
+
+        /// Target branch name (base branch for the new PR)
+        #[arg(value_name = "TO_BRANCH")]
+        to_branch: String,
+
+        /// Dry run mode (show what would be done without actually doing it)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
     },
 }
 

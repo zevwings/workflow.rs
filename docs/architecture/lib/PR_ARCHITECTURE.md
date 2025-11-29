@@ -7,10 +7,10 @@ PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Reques
 **注意**：本文档仅描述 `lib/pr/` 模块的架构。关于 PR 命令层的详细内容，请参考 [PR 命令模块架构文档](../commands/PR_COMMAND_ARCHITECTURE.md)。
 
 **模块统计：**
-- 总代码行数：约 2000+ 行
-- 文件数量：15+ 个
+- 总代码行数：约 2500+ 行
+- 文件数量：16+ 个
 - 支持平台：GitHub、Codeup
-- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`
+- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`、`SourcePrInfo`、`ExtractedPrInfo`
 
 ---
 
@@ -22,6 +22,7 @@ src/lib/pr/
 ├── platform.rs         # PlatformProvider trait 和工厂函数 (150行)
 ├── helpers.rs          # PR 辅助函数 (282行)
 ├── llm.rs              # LLM 功能（PR 标题生成）(253行)
+├── body_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
 │
 ├── github/             # GitHub 平台实现
 │   ├── mod.rs          # GitHub 模块导出
@@ -65,7 +66,7 @@ src/lib/pr/
 
 **职责**：定义统一的 PR 平台接口和工厂函数
 
-- **`PlatformProvider` trait**：定义所有平台必须实现的 9 个方法
+- **`PlatformProvider` trait**：定义所有平台必须实现的 12 个方法
   - `create_pull_request()` - 创建 PR
   - `merge_pull_request()` - 合并 PR
   - `get_pull_request_info()` - 获取 PR 信息
@@ -75,6 +76,9 @@ src/lib/pr/
   - `get_pull_requests()` - 列出 PR（可选）
   - `get_pull_request_status()` - 获取 PR 状态
   - `close_pull_request()` - 关闭 PR
+  - `add_comment()` - 添加 PR 评论
+  - `approve_pull_request()` - 批准 PR
+  - `update_pr_base()` - 更新 PR 的 base 分支
 
 - **`create_provider()` 工厂函数**：
   - 自动检测仓库类型（GitHub/Codeup）
@@ -133,6 +137,24 @@ src/lib/pr/
 - **`PullRequestLLM`**：PR LLM 客户端包装器
 - **`PullRequestContent`**：PR 内容结构体
 - **主要方法**：`generate_title()` - 从 Jira ticket 描述生成 PR 标题
+
+#### 6. PR Body 解析器 (`body_parser.rs`)
+
+**职责**：从 PR body 中提取信息的纯函数，无用户交互
+
+**主要函数**：
+- `extract_info_from_source_pr()` - 从源 PR 提取所有信息（Jira ticket、描述、变更类型）
+- `extract_jira_ticket_from_body()` - 从 PR body 提取 Jira ticket ID
+- `extract_description_from_body()` - 从 PR body 提取描述
+- `parse_change_types_from_body()` - 从 PR body 解析变更类型
+
+**数据结构**：
+- `SourcePrInfo` - 源 PR 信息（标题、URL、body）
+- `ExtractedPrInfo` - 提取的信息（Jira ticket、描述、变更类型）
+
+**使用场景**：
+- `pr pick` 命令：从源 PR 提取信息用于创建新 PR
+- 可被其他命令复用（如 sync、rebase 等）
 
 ---
 
@@ -225,6 +247,17 @@ if let Some(pr_id) = provider.get_current_branch_pull_request()? {
     let info = provider.get_pull_request_info(&pr_id)?;
     println!("PR URL: {}", info.url);
 }
+```
+
+#### 4. 更新 PR base 分支
+
+```rust
+use workflow::pr::create_provider;
+
+let provider = create_provider()?;
+
+// 更新 PR 的 base 分支
+provider.update_pr_base("123", "master")?;
 ```
 
 ### 数据流
@@ -351,6 +384,12 @@ provider.merge_pull_request("123", true)?;
 
 // 关闭 PR
 provider.close_pull_request("123")?;
+
+// 添加评论
+provider.add_comment("123", "Looks good!")?;
+
+// 批准 PR
+provider.approve_pull_request("123")?;
 ```
 
 ### 获取当前分支的 PR

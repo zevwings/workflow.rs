@@ -78,6 +78,15 @@ pub trait PlatformProvider {
     /// PR 标题字符串
     fn get_pull_request_title(&self, pull_request_id: &str) -> Result<String>;
 
+    /// 获取 PR body 内容
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    ///
+    /// # Returns
+    /// PR body 字符串（如果存在），否则返回 None
+    fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>>;
+
     /// 获取当前分支的 PR ID
     ///
     /// # Returns
@@ -123,6 +132,29 @@ pub trait PlatformProvider {
         // 默认实现：返回不支持的错误
         anyhow::bail!("get_pull_request_diff is not supported by this platform")
     }
+
+    /// 添加评论到 Pull Request
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `comment` - 评论内容
+    fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()>;
+
+    /// 批准 Pull Request
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    fn approve_pull_request(&self, pull_request_id: &str) -> Result<()>;
+
+    /// 更新 PR 的 base 分支
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `new_base` - 新的 base 分支名称
+    ///
+    /// # Errors
+    /// 如果更新失败，返回相应的错误信息。
+    fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()>;
 }
 
 /// 创建平台提供者实例
