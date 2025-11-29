@@ -222,12 +222,117 @@ impl PullRequestPickCommand {
         Ok(())
     }
 
-    /// 获取新提交列表
+    /// 检测 from_branch 可能基于哪个分支创建
+    ///
+    /// 通过检查所有分支，找出 from_branch 可能直接基于创建的分支。
+    /// 如果检测到基础分支，返回该分支名称。
+    ///
+    /// # 参数
+    ///
+    /// * `from_branch` - 源分支名称
+    /// * `to_branch` - 目标分支名称（排除在检测范围外）
+    ///
+    /// # 返回
+    ///
+    /// 如果检测到基础分支，返回 `Some(基础分支名)`，否则返回 `None`。
+    fn detect_base_branch(from_branch: &str, to_branch: &str) -> Result<Option<String>> {
+        log_info!("Detecting base branch for '{}'...", from_branch);
+
+        // 获取所有分支（不包括 from_branch 和 to_branch）
+        let all_branches = GitBranch::get_all_branches(false)
+            .context("Failed to get all branches for base branch detection")?;
+
+        // 按优先级排序：先检查常见的基础分支
+        let mut candidate_branches: Vec<String> = all_branches
+            .into_iter()
+            .filter(|b| b != from_branch && b != to_branch)
+            .collect();
+
+        // 优先检查常见的基础分支名（develop, dev, staging, etc.）
+        let common_base_branches = ["develop", "dev", "staging", "test"];
+        candidate_branches.sort_by(|a, b| {
+            let a_priority = common_base_branches
+                .iter()
+                .position(|&name| a == name || a.ends_with(&format!("/{}", name)))
+                .unwrap_or(usize::MAX);
+            let b_priority = common_base_branches
+                .iter()
+                .position(|&name| b == name || b.ends_with(&format!("/{}", name)))
+                .unwrap_or(usize::MAX);
+            a_priority.cmp(&b_priority)
+        });
+
+        // 检查每个候选分支
+        for candidate in &candidate_branches {
+            match GitBranch::is_branch_based_on(from_branch, candidate) {
+                Ok(true) => {
+                    log_success!(
+                        "Detected that '{}' is likely based on '{}'",
+                        from_branch,
+                        candidate
+                    );
+                    return Ok(Some(candidate.clone()));
+                }
+                Ok(false) => {
+                    // 继续检查下一个分支
+                }
+                Err(e) => {
+                    // 检查失败，记录警告但继续
+                    log_warning!(
+                        "Failed to check if '{}' is based on '{}': {}",
+                        from_branch,
+                        candidate,
+                        e
+                    );
+                }
+            }
+        }
+
+        log_info!("No base branch detected for '{}'", from_branch);
+        Ok(None)
+    }
+
+    /// 获取新提交列表（支持智能检测基础分支）
+    ///
+    /// 首先尝试检测 from_branch 可能基于哪个分支创建。
+    /// 如果检测到基础分支，自动使用该基础分支作为比较基准。
+    /// 这样只会获取 from_branch 相对于基础分支的提交（不包含基础分支的修改）。
+    ///
+    /// # 参数
+    ///
+    /// * `from_branch` - 源分支名称
+    /// * `to_branch` - 目标分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回要 cherry-pick 的提交列表。
     fn get_new_commits(from_branch: &str, to_branch: &str) -> Result<Vec<String>> {
-        GitBranch::get_commits_between(to_branch, from_branch).with_context(|| {
+        // 1. 检测 from_branch 可能基于哪个分支创建
+        let detected_base = Self::detect_base_branch(from_branch, to_branch)?;
+
+        // 2. 如果检测到基础分支，自动使用该基础分支
+        let actual_base = if let Some(base_branch) = detected_base {
+            log_success!(
+                "Detected that '{}' is based on '{}', using it as base branch",
+                from_branch,
+                base_branch
+            );
+            log_info!(
+                "This will only pick commits unique to '{}' (excluding '{}' changes)",
+                from_branch,
+                base_branch
+            );
+            base_branch
+        } else {
+            // 没有检测到基础分支，使用原始逻辑
+            to_branch.to_string()
+        };
+
+        // 3. 获取提交列表
+        GitBranch::get_commits_between(&actual_base, from_branch).with_context(|| {
             format!(
                 "Failed to get commits between '{}' and '{}'",
-                to_branch, from_branch
+                actual_base, from_branch
             )
         })
     }
@@ -365,29 +470,65 @@ impl PullRequestPickCommand {
     /// 获取源 PR 信息
     ///
     /// 临时切换到源分支获取 PR 信息，然后恢复原分支。
+    /// 如果当前有未提交的更改（cherry-pick 的内容），会先 stash，切换回来后再恢复。
     /// 如果任何步骤失败，会尝试恢复原分支状态。
     fn get_source_pr_info(from_branch: &str) -> Result<Option<SourcePrInfo>> {
         // 临时切换到源分支获取 PR 信息
         let current_branch = GitBranch::current_branch()?;
 
+        // 检查是否有未提交的更改（cherry-pick 的内容）
+        let has_uncommitted = GitCommit::has_commit()
+            .context("Failed to check uncommitted changes before switching branch")?;
+        let needs_stash = has_uncommitted;
+
+        // 如果有未提交的更改，先 stash
+        if needs_stash {
+            log_info!("Stashing cherry-picked changes before switching to source branch...");
+            GitStash::stash_push(Some("Auto-stash before getting source PR info"))?;
+        }
+
         // 切换到源分支，确保成功
-        GitBranch::checkout_branch(from_branch)
-            .with_context(|| format!("Failed to checkout source branch: {}", from_branch))?;
+        if let Err(e) = GitBranch::checkout_branch(from_branch)
+            .with_context(|| format!("Failed to checkout source branch: {}", from_branch))
+        {
+            // 如果切换失败，尝试恢复 stash
+            if needs_stash {
+                if let Err(stash_err) = GitStash::stash_pop() {
+                    log_warning!(
+                        "Failed to restore stash after checkout error: {}",
+                        stash_err
+                    );
+                }
+            }
+            return Err(e);
+        }
 
         // 获取 PR 信息
         let pr_id = match get_current_branch_pr_id() {
             Ok(id) => id,
             Err(e) => {
-                // 获取 PR 信息失败，尝试恢复分支
+                // 获取 PR 信息失败，尝试恢复分支和 stash
                 if let Err(restore_err) = GitBranch::checkout_branch(&current_branch) {
                     log_error!("Failed to restore branch after error: {}", restore_err);
                     log_error!(
                         "You may need to manually checkout: git checkout {}",
                         current_branch
                     );
+                    // 如果之前有 stash，尝试恢复
+                    if needs_stash {
+                        if let Err(stash_err) = GitStash::stash_pop() {
+                            log_warning!("Failed to restore stash: {}", stash_err);
+                        }
+                    }
                     return Err(e)
                         .context("Failed to get PR ID from source branch")
                         .context(format!("Also failed to restore branch: {}", restore_err));
+                }
+                // 恢复 stash
+                if needs_stash {
+                    if let Err(stash_err) = GitStash::stash_pop() {
+                        log_warning!("Failed to restore stash: {}", stash_err);
+                    }
                 }
                 return Err(e).context("Failed to get PR ID from source branch");
             }
@@ -396,6 +537,21 @@ impl PullRequestPickCommand {
         // 恢复原分支（应该是 to_branch），确保成功
         GitBranch::checkout_branch(&current_branch)
             .with_context(|| format!("Failed to restore branch: {}", current_branch))?;
+
+        // 恢复 stash（如果有）
+        if needs_stash {
+            log_info!("Restoring stashed cherry-picked changes...");
+            if let Err(stash_err) = GitStash::stash_pop() {
+                log_warning!("Failed to restore stash: {}", stash_err);
+                log_error!(
+                    "Cherry-picked changes may have been lost. Please check: git stash list"
+                );
+                anyhow::bail!(
+                    "Failed to restore stashed changes after getting PR info: {}",
+                    stash_err
+                );
+            }
+        }
 
         if let Some(pr_id) = pr_id {
             let provider = create_provider()?;

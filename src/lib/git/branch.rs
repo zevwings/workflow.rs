@@ -726,4 +726,79 @@ impl GitBranch {
 
         Ok(commits)
     }
+
+    /// 获取两个分支的共同祖先（merge base）
+    ///
+    /// 使用 `git merge-base` 获取两个分支的共同祖先提交。
+    ///
+    /// # 参数
+    ///
+    /// * `branch1` - 第一个分支名称
+    /// * `branch2` - 第二个分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回共同祖先的提交哈希。如果两个分支没有共同祖先，返回错误。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
+    pub fn merge_base(branch1: &str, branch2: &str) -> Result<String> {
+        let output = cmd_read(&["merge-base", branch1, branch2]).with_context(|| {
+            format!(
+                "Failed to get merge base between '{}' and '{}'",
+                branch1, branch2
+            )
+        })?;
+
+        let merge_base = output.trim().to_string();
+        if merge_base.is_empty() {
+            anyhow::bail!(
+                "No common ancestor found between '{}' and '{}'",
+                branch1,
+                branch2
+            );
+        }
+
+        Ok(merge_base)
+    }
+
+    /// 检查一个分支是否直接基于另一个分支创建
+    ///
+    /// 通过比较 merge-base 和候选分支的 HEAD 来判断 from_branch 是否直接基于 candidate_branch 创建。
+    ///
+    /// # 参数
+    ///
+    /// * `from_branch` - 要检查的分支
+    /// * `candidate_branch` - 候选的基础分支
+    ///
+    /// # 返回
+    ///
+    /// 如果 from_branch 直接基于 candidate_branch 创建，返回 `true`，否则返回 `false`。
+    ///
+    /// # 说明
+    ///
+    /// 判断逻辑：
+    /// - 如果 `merge-base(from_branch, candidate_branch) == candidate_branch` 的 HEAD，
+    ///   说明 from_branch 可能是直接基于 candidate_branch 创建的
+    pub fn is_branch_based_on(from_branch: &str, candidate_branch: &str) -> Result<bool> {
+        // 如果两个分支相同，返回 false
+        if from_branch == candidate_branch {
+            return Ok(false);
+        }
+
+        // 获取 merge-base
+        let merge_base_commit = match Self::merge_base(from_branch, candidate_branch) {
+            Ok(commit) => commit,
+            Err(_) => return Ok(false),
+        };
+
+        // 获取 candidate_branch 的 HEAD
+        let candidate_head = cmd_read(&["rev-parse", candidate_branch])
+            .with_context(|| format!("Failed to get HEAD of branch '{}'", candidate_branch))?;
+        let candidate_head = candidate_head.trim();
+
+        // 如果 merge-base 等于 candidate_branch 的 HEAD，说明 from_branch 直接基于 candidate_branch
+        Ok(merge_base_commit == candidate_head)
+    }
 }
