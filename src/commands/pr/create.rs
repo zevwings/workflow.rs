@@ -1,6 +1,6 @@
-use crate::base::settings::settings::Settings;
 use crate::base::util::{confirm, Browser, Clipboard};
 use crate::commands::check;
+use crate::commands::pr::helpers::apply_branch_name_prefixes;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -216,30 +216,6 @@ impl PullRequestCreateCommand {
         Self::input_pull_request_title()
     }
 
-    /// 应用分支名前缀（Jira ticket 和 github_branch_prefix）
-    ///
-    /// 步骤 5（辅助函数）：统一处理分支名前缀逻辑，避免代码重复。
-    fn apply_branch_name_prefixes(
-        mut branch_name: String,
-        jira_ticket: Option<&str>,
-    ) -> Result<String> {
-        // 如果有 Jira ticket，添加到分支名前缀
-        if let Some(ticket) = jira_ticket {
-            branch_name = format!("{}-{}", ticket, branch_name);
-        }
-
-        // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-        let settings = Settings::get();
-        if let Some(prefix) = settings.github.get_current_branch_prefix() {
-            let trimmed = prefix.trim();
-            if !trimmed.is_empty() {
-                branch_name = format!("{}/{}", trimmed, branch_name);
-            }
-        }
-
-        Ok(branch_name)
-    }
-
     /// 生成 commit title 和分支名
     ///
     /// 步骤 5：尝试使用 LLM 根据纯 title 生成分支名和 PR 标题。
@@ -261,10 +237,8 @@ impl PullRequestCreateCommand {
                     // 使用翻译后的 pr_title 作为 PR 标题
                     let pr_title = content.pr_title;
                     // 使用辅助函数统一处理前缀逻辑，避免重复代码
-                    let branch_name = Self::apply_branch_name_prefixes(
-                        content.branch_name,
-                        jira_ticket.as_deref(),
-                    )?;
+                    let branch_name =
+                        apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
                     // 使用 LLM 生成的描述
                     let description = content.description;
                     (pr_title, branch_name, description)

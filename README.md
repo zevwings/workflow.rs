@@ -315,6 +315,10 @@ workflow pr rebase <TARGET_BRANCH>             # Rebase 当前分支到目标分
 workflow pr rebase <TARGET_BRANCH> --no-push   # 只 rebase 到本地，不推送
 workflow pr rebase <TARGET_BRANCH> --dry-run   # 预览模式
 
+# Pick 提交（跨分支移植代码）
+workflow pr pick <FROM_BRANCH> <TO_BRANCH>     # 从源分支 cherry-pick 提交到目标分支并创建新 PR
+workflow pr pick <FROM_BRANCH> <TO_BRANCH> --dry-run  # 预览模式
+
 # 总结 PR
 workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）
 workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）

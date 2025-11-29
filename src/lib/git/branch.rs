@@ -697,4 +697,33 @@ impl GitBranch {
             line == branch
         }))
     }
+
+    /// 获取两个分支之间的提交列表
+    ///
+    /// 使用 `git rev-list` 获取 from_branch 相对于 to_branch 的所有新提交。
+    ///
+    /// # 参数
+    ///
+    /// * `base_branch` - 基础分支名称（to_branch）
+    /// * `head_branch` - 头部分支名称（from_branch）
+    ///
+    /// # 返回
+    ///
+    /// 返回提交哈希列表，按时间顺序排列（从旧到新）。
+    ///
+    /// # 错误
+    ///
+    /// 如果分支不存在或命令执行失败，返回相应的错误信息。
+    pub fn get_commits_between(base_branch: &str, head_branch: &str) -> Result<Vec<String>> {
+        let output = cmd_read(&["rev-list", &format!("{}..{}", base_branch, head_branch)])
+            .context("Failed to get commits between branches")?;
+
+        let commits: Vec<String> = output
+            .lines()
+            .map(|line| line.trim().to_string())
+            .filter(|line| !line.is_empty())
+            .collect();
+
+        Ok(commits)
+    }
 }

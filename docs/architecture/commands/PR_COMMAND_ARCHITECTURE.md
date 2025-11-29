@@ -11,8 +11,8 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：10 个（create, merge, close, status, list, update, sync, rebase, summarize, approve, comment）
-- 总代码行数：约 2900+ 行
+- 命令数量：11 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
+- 总代码行数：约 3900+ 行
 - 支持平台：GitHub、Codeup
 - 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
 
@@ -29,15 +29,15 @@ src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, summarize, approve, comment）
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
 
 ### 命令封装层
 
 ```
 src/commands/pr/
 ├── mod.rs          # PR 命令模块声明（12 行）
-├── helpers.rs      # PR 命令辅助函数（176 行）
-├── create.rs       # 创建 PR 命令（717 行）
+├── helpers.rs      # PR 命令辅助函数（230 行）
+├── create.rs       # 创建 PR 命令（697 行）
 ├── sync.rs         # 同步分支命令（488 行，合并了原 integrate 功能）
 ├── merge.rs        # 合并 PR 命令（142 行）
 ├── close.rs        # 关闭 PR 命令（142 行）
@@ -46,6 +46,7 @@ src/commands/pr/
 ├── update.rs       # 更新 PR 命令（59 行）
 ├── summarize.rs    # PR 总结命令（425 行）
 ├── rebase.rs       # Rebase 分支并更新 PR base 命令（507 行）
+├── pick.rs         # Pick 提交并创建新 PR 命令（978 行）
 ├── approve.rs      # 批准 PR 命令
 └── comment.rs      # 添加 PR 评论命令
 ```
@@ -120,6 +121,7 @@ match cli.subcommand {
   PRCommands::Update => update::PullRequestUpdateCommand::update()
   PRCommands::Sync => sync::PullRequestSyncCommand::sync()
   PRCommands::Rebase => rebase::PullRequestRebaseCommand::rebase()
+  PRCommands::Pick => pick::PullRequestPickCommand::pick()
   PRCommands::Summarize => summarize::SummarizeCommand::summarize()
   PRCommands::Approve => approve::PullRequestApproveCommand::approve()
   PRCommands::Comment => comment::PullRequestCommentCommand::comment()
@@ -774,7 +776,250 @@ workflow pr rebase master --dry-run
 
 ---
 
-## 4. 合并 PR 命令 (`merge.rs`)
+## 4. Pick 提交命令 (`pick.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/pick.rs (978 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Pick
+  ↓
+commands/pr/pick.rs::PullRequestPickCommand::pick()
+  ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
+  1. 运行预检查（check::CheckCommand::run_all()）
+  2. 验证分支存在（validate_branches()）
+  3. 拉取最新代码（GitRepo::fetch()）
+  4. 检测新提交（get_new_commits()）
+     └─ GitBranch::get_commits_between()
+  5. 保存当前分支和工作区状态
+  6. 检查工作区状态（check_working_directory()）
+     └─ 如果有未提交修改，自动 stash
+  7. 切换到 TO_BRANCH（GitBranch::checkout_branch()）
+  8. Cherry-pick 所有提交（cherry_pick_commits_no_commit()）
+     └─ GitCherryPick::cherry_pick_no_commit() (--no-commit)
+  9. 处理 cherry-pick 结果
+     ├─ 成功：继续执行
+     └─ 冲突：handle_cherry_pick_conflict()（暂停并提示用户）
+  10. 获取源 PR 信息（get_source_pr_info()）
+      └─ 临时切换到源分支获取 PR 信息
+  11. 询问是否创建 PR（confirm()）
+  12. 交互式 PR 创建流程（create_pr_interactively()）
+      ├─ 从源 PR 提取信息（extract_info_from_source_pr()）
+      ├─ 确定 LLM 输入（determine_llm_input()）
+      ├─ 生成分支名和 PR 标题（generate_commit_title_and_branch_name_for_pick()）
+      ├─ 确定 Jira ticket（resolve_jira_ticket()）
+      ├─ 配置 Jira 状态（ensure_jira_status()）
+      ├─ 确定 PR 标题（resolve_title()）
+      ├─ 获取描述（resolve_description()）
+      ├─ 选择变更类型（select_change_types()）
+      ├─ 生成 PR body（generate_pull_request_body()）
+      ├─ 创建或更新分支（create_or_update_branch()）
+      ├─ 创建或获取 PR（create_or_get_pull_request()）
+      ├─ 更新 Jira ticket（update_jira_ticket()）
+      └─ 复制 PR URL 并打开浏览器（copy_and_open_pull_request()）
+  13. 恢复原分支和 stash（无论 PR 创建是否成功）
+```
+
+### 功能说明
+
+Pick 提交命令用于跨分支移植代码，从源分支 cherry-pick 提交到目标分支并创建新 PR：
+
+1. **跨分支操作**：支持从任意分支 cherry-pick 到任意分支，类似于 backport/forwardport，但支持任意方向。
+2. **智能提交检测**：自动检测源分支相对于目标分支的新提交。
+3. **源 PR 信息提取**：如果源分支有 PR，自动提取标题、描述、Jira ticket、变更类型等信息。
+4. **Cherry-pick 处理**：使用 `--no-commit` 模式，允许在创建分支前统一提交。
+5. **冲突处理**：检测冲突并提供详细的解决指引，支持放弃或继续。
+6. **交互式 PR 创建**：复用 `create` 命令的交互式流程，支持 LLM 生成分支名和标题。
+7. **状态恢复**：无论成功或失败，都会恢复原分支和 stash，确保工作区状态一致。
+
+### 参数设计
+
+**必需参数**:
+- `FROM_BRANCH` - 源分支名称（要 cherry-pick 的分支）
+- `TO_BRANCH` - 目标分支名称（新 PR 的 base 分支）
+
+**可选参数**:
+- `--dry-run` - 预览模式，显示将要执行的操作但不实际执行
+
+**注意**：
+- 当前实现中，分支名和 PR 标题通过交互式流程生成（使用 LLM 或用户输入）
+- 未来可能支持 `--branch-name`、`--pr-title`、`--pr-description`、`--no-create-pr`、`--force` 等参数
+
+### 详细工作流程
+
+```
+1. 预检查
+   - 自动启用代理（如果系统代理已启用）
+   - 运行环境检查（Git 状态、网络连接）
+
+2. 验证分支存在
+   - 检查 FROM_BRANCH 是否存在（本地或远程）
+   - 检查 TO_BRANCH 是否存在（本地或远程）
+
+3. 拉取最新代码
+   - GitRepo::fetch() 更新远程分支信息
+
+4. 检测新提交
+   - 使用 GitBranch::get_commits_between(TO_BRANCH, FROM_BRANCH)
+   - 如果没有新提交，提示并退出
+
+5. 保存当前状态
+   - 保存当前分支名
+   - 检查工作区状态，如果有未提交修改，自动 stash
+
+6. 切换到 TO_BRANCH
+   - GitBranch::checkout_branch(TO_BRANCH)
+
+7. Cherry-pick 所有提交
+   - 按顺序 cherry-pick 每个提交（使用 --no-commit）
+   - 如果遇到冲突，暂停并提示用户
+
+8. 获取源 PR 信息
+   - 临时切换到源分支
+   - 获取 PR ID、标题、URL、body
+   - 恢复原分支（TO_BRANCH）
+
+9. 询问是否创建 PR
+   - 如果用户选择不创建，询问是否保留修改
+
+10. 交互式 PR 创建流程
+    - 从源 PR body 提取信息（Jira ticket、描述、变更类型）
+    - 使用 LLM 生成分支名和 PR 标题
+    - 交互式确认或输入各项信息
+    - 创建新分支并提交
+    - 创建 PR
+    - 更新 Jira（如果有 ticket）
+    - 复制 URL 并打开浏览器
+
+11. 恢复原分支和 stash
+    - 无论 PR 创建是否成功，都会恢复
+```
+
+### 使用场景
+
+#### 场景 1：将 develop 的修改应用到 master
+
+```bash
+workflow pr pick develop master
+
+# 结果：
+# - 创建新分支（LLM 生成名称）
+# - Cherry-pick develop 的所有新提交
+# - 创建基于 master 的新 PR
+# - 从 develop 的 PR 复制信息（如果存在）
+```
+
+#### 场景 2：将 feature 分支应用到 release 分支
+
+```bash
+workflow pr pick feature-branch release/v1.0
+
+# 结果：
+# - 创建新分支
+# - Cherry-pick feature-branch 的所有提交
+# - 创建基于 release/v1.0 的新 PR
+```
+
+#### 场景 3：预览模式
+
+```bash
+workflow pr pick develop master --dry-run
+
+# 结果：
+# - 显示将要执行的操作
+# - 不实际执行
+```
+
+### 边界情况处理
+
+#### 情况 1：源分支没有新提交
+
+**处理方式**:
+- 检测到 FROM_BRANCH 相对于 TO_BRANCH 没有新提交
+- 提示用户：`No new commits to cherry-pick from {FROM_BRANCH} to {TO_BRANCH}`
+- 退出，不创建分支和 PR
+
+#### 情况 2：Cherry-pick 冲突
+
+**处理方式**:
+- 检测冲突（检查 `.git/CHERRY_PICK_HEAD` 文件或错误消息）
+- 暂停 cherry-pick 操作
+- 显示详细的解决指引
+- 询问用户是否放弃并恢复原分支
+- 如果用户选择保留冲突状态，保持在 TO_BRANCH 上让用户解决
+
+#### 情况 3：源分支不存在
+
+**处理方式**:
+- 检查 FROM_BRANCH 是否存在（本地和远程）
+- 如果不存在，提示错误并退出
+
+#### 情况 4：目标分支不存在
+
+**处理方式**:
+- 检查 TO_BRANCH 是否存在（本地和远程）
+- 如果不存在，提示错误并退出
+
+#### 情况 5：工作区有未提交修改
+
+**处理方式**:
+- 自动检测未提交修改
+- 询问用户是否 stash
+- 如果用户同意，自动 stash 并在完成后恢复
+
+#### 情况 6：PR 创建失败
+
+**处理方式**:
+- 无论 PR 创建是否成功，都会恢复原分支和 stash
+- 如果失败，返回错误信息
+- 确保工作区状态一致
+
+### 与其他命令的关系
+
+#### 与 `pr create` 的关系
+
+| 特性 | `pr pick` | `pr create` |
+|------|-----------|-------------|
+| **操作方式** | Cherry-pick + 创建 PR | 直接创建 PR |
+| **提交来源** | 从源分支 cherry-pick | 当前工作区的修改 |
+| **分支创建** | 基于 TO_BRANCH 创建新分支 | 基于当前分支或默认分支 |
+| **源 PR 信息** | 自动从源 PR 提取 | 手动输入或 LLM 生成 |
+| **使用场景** | 跨分支移植代码 | 创建新功能 PR |
+
+#### 与 `pr sync` 的关系
+
+| 特性 | `pr pick` | `pr sync` |
+|------|-----------|-----------|
+| **操作对象** | 从分支 A 到分支 B | 从分支 A 到当前分支 |
+| **操作方式** | Cherry-pick | Merge、Rebase 或 Squash |
+| **创建新分支** | ✅ 是 | ❌ 否（在当前分支操作） |
+| **创建新 PR** | ✅ 是（可选） | ❌ 否 |
+| **使用场景** | 跨分支移植代码 | 同步基础分支更新 |
+
+#### 与 `pr rebase` 的关系
+
+| 特性 | `pr pick` | `pr rebase` |
+|------|-----------|-------------|
+| **操作方式** | Cherry-pick | Rebase |
+| **创建新分支** | ✅ 是 | ❌ 否（在当前分支操作） |
+| **创建新 PR** | ✅ 是 | ❌ 否（更新现有 PR） |
+| **使用场景** | 跨分支移植代码 | 修正当前分支的基础分支 |
+| **结果** | 新分支 + 新 PR | 修改现有分支 + 更新 PR base |
+
+**使用建议**：
+- 使用 `pr pick` 跨分支移植代码并创建新 PR
+- 使用 `pr sync` 同步基础分支到当前分支
+- 使用 `pr rebase` 修正当前分支的基础分支
+
+---
+
+## 5. 合并 PR 命令 (`merge.rs`)
 
 ### 相关文件
 
@@ -809,7 +1054,7 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
 
 ---
 
-## 5. 关闭 PR 命令 (`close.rs`)
+## 6. 关闭 PR 命令 (`close.rs`)
 
 ### 相关文件
 
@@ -840,7 +1085,7 @@ commands/pr/close.rs::PullRequestCloseCommand::close()
 
 ---
 
-## 6. PR 状态查询命令 (`status.rs`)
+## 7. PR 状态查询命令 (`status.rs`)
 
 ### 相关文件
 
@@ -853,7 +1098,7 @@ PR 状态查询命令用于显示 PR 的详细信息（状态、作者、评论�
 
 ---
 
-## 7. 列出 PR 命令 (`list.rs`)
+## 8. 列出 PR 命令 (`list.rs`)
 
 ### 相关文件
 
@@ -866,7 +1111,7 @@ src/commands/pr/list.rs (21 行)
 
 ---
 
-## 8. 更新 PR 命令 (`update.rs`)
+## 9. 更新 PR 命令 (`update.rs`)
 
 ### 相关文件
 
@@ -892,7 +1137,7 @@ commands/pr/update.rs::PullRequestUpdateCommand::update()
 
 ---
 
-## 9. PR 总结命令 (`summarize.rs`)
+## 10. PR 总结命令 (`summarize.rs`)
 
 ### 相关文件
 
@@ -1073,6 +1318,16 @@ workflow pr sync master --rebase              # 使用 rebase 同步基础分支
 workflow pr sync master --no-push             # 只同步到本地，不推送
 ```
 
+### Pick 命令
+
+```bash
+# 将 develop 的修改应用到 master
+workflow pr pick develop master
+
+# 预览模式
+workflow pr pick develop master --dry-run
+```
+
 ### Rebase 命令
 ```bash
 workflow pr rebase master                     # Rebase 当前分支到 master（默认推送）
@@ -1099,6 +1354,12 @@ workflow pr rebase master --dry-run           # 预览模式
 ---
 
 ## 📚 相关文档
+
+### PR Pick 命令相关文档
+
+**注意**：PR Pick 命令的设计文档和流程图已归档，功能已完成。详细使用说明请参考本文档的 [Pick 提交命令章节](#4-pick-提交命令-pickrs)。
+
+### 其他相关文档
 
 - [主架构文档](../ARCHITECTURE.md)
 - [PR 模块架构文档](../lib/PR_ARCHITECTURE.md) - PR 平台抽象层

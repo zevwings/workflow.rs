@@ -407,6 +407,29 @@ pub enum PRCommands {
         #[arg(value_name = "MESSAGE", trailing_var_arg = true)]
         message: Vec<String>,
     },
+    /// Pick commits from one branch to another and create a new PR
+    ///
+    /// Cherry-pick all commits from the source branch to the target branch,
+    /// then interactively create a new branch and PR (similar to `pr create`).
+    /// This is similar to backport/forwardport but supports any direction.
+    ///
+    /// The command will:
+    /// 1. Switch to the target branch
+    /// 2. Cherry-pick commits (without committing)
+    /// 3. Interactively create PR (with LLM-generated branch name, Jira integration, etc.)
+    Pick {
+        /// Source branch name (branch to cherry-pick from)
+        #[arg(value_name = "FROM_BRANCH")]
+        from_branch: String,
+
+        /// Target branch name (base branch for the new PR)
+        #[arg(value_name = "TO_BRANCH")]
+        to_branch: String,
+
+        /// Dry run mode (show what would be done without actually doing it)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        dry_run: bool,
+    },
 }
 
 /// Log operations subcommands

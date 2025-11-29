@@ -2,6 +2,7 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
+use crate::base::settings::settings::Settings;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_info, log_success};
 use anyhow::{Context, Error, Result};
@@ -172,4 +173,57 @@ pub fn cleanup_branch(
     );
 
     Ok(())
+}
+
+/// 应用分支名前缀（Jira ticket 和 github_branch_prefix）
+///
+/// 统一处理分支名前缀逻辑，避免代码重复。
+/// 先添加 Jira ticket 前缀（如果提供），然后添加 GitHub 分支前缀（如果配置）。
+///
+/// # 参数
+///
+/// * `branch_name` - 基础分支名
+/// * `jira_ticket` - Jira ticket ID（可选）
+///
+/// # 返回
+///
+/// 应用前缀后的完整分支名
+///
+/// # 示例
+///
+/// ```
+/// use crate::commands::pr::helpers::apply_branch_name_prefixes;
+///
+/// // 只有基础分支名
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), None)?;
+/// // 返回: "feature-branch"
+///
+/// // 带 Jira ticket
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
+/// // 返回: "PROJ-123-feature-branch"
+///
+/// // 带 Jira ticket 和 GitHub 前缀
+/// // 假设配置了 github_branch_prefix = "user"
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
+/// // 返回: "user/PROJ-123-feature-branch"
+/// ```
+pub fn apply_branch_name_prefixes(
+    mut branch_name: String,
+    jira_ticket: Option<&str>,
+) -> Result<String> {
+    // 如果有 Jira ticket，添加到分支名前缀
+    if let Some(ticket) = jira_ticket {
+        branch_name = format!("{}-{}", ticket, branch_name);
+    }
+
+    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+    let settings = Settings::get();
+    if let Some(prefix) = settings.github.get_current_branch_prefix() {
+        let trimmed = prefix.trim();
+        if !trimmed.is_empty() {
+            branch_name = format!("{}/{}", trimmed, branch_name);
+        }
+    }
+
+    Ok(branch_name)
 }

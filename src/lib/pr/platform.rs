@@ -78,6 +78,15 @@ pub trait PlatformProvider {
     /// PR 标题字符串
     fn get_pull_request_title(&self, pull_request_id: &str) -> Result<String>;
 
+    /// 获取 PR body 内容
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    ///
+    /// # Returns
+    /// PR body 字符串（如果存在），否则返回 None
+    fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>>;
+
     /// 获取当前分支的 PR ID
     ///
     /// # Returns

@@ -17,7 +17,7 @@ use commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use commands::pr::{
-    approve, close, comment, create, list, merge, rebase, status, summarize, sync,
+    approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
     update as pr_update,
 };
 use commands::proxy::proxy;
@@ -186,6 +186,13 @@ fn main() -> Result<()> {
                 message,
             } => {
                 comment::PullRequestCommentCommand::comment(pull_request_id, message)?;
+            }
+            PRCommands::Pick {
+                from_branch,
+                to_branch,
+                dry_run,
+            } => {
+                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run)?;
             }
         },
         // 日志操作命令

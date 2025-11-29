@@ -7,10 +7,10 @@ PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Reques
 **注意**：本文档仅描述 `lib/pr/` 模块的架构。关于 PR 命令层的详细内容，请参考 [PR 命令模块架构文档](../commands/PR_COMMAND_ARCHITECTURE.md)。
 
 **模块统计：**
-- 总代码行数：约 2000+ 行
-- 文件数量：15+ 个
+- 总代码行数：约 2500+ 行
+- 文件数量：16+ 个
 - 支持平台：GitHub、Codeup
-- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`
+- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`、`SourcePrInfo`、`ExtractedPrInfo`
 
 ---
 
@@ -22,6 +22,7 @@ src/lib/pr/
 ├── platform.rs         # PlatformProvider trait 和工厂函数 (150行)
 ├── helpers.rs          # PR 辅助函数 (282行)
 ├── llm.rs              # LLM 功能（PR 标题生成）(253行)
+├── body_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
 │
 ├── github/             # GitHub 平台实现
 │   ├── mod.rs          # GitHub 模块导出
@@ -136,6 +137,24 @@ src/lib/pr/
 - **`PullRequestLLM`**：PR LLM 客户端包装器
 - **`PullRequestContent`**：PR 内容结构体
 - **主要方法**：`generate_title()` - 从 Jira ticket 描述生成 PR 标题
+
+#### 6. PR Body 解析器 (`body_parser.rs`)
+
+**职责**：从 PR body 中提取信息的纯函数，无用户交互
+
+**主要函数**：
+- `extract_info_from_source_pr()` - 从源 PR 提取所有信息（Jira ticket、描述、变更类型）
+- `extract_jira_ticket_from_body()` - 从 PR body 提取 Jira ticket ID
+- `extract_description_from_body()` - 从 PR body 提取描述
+- `parse_change_types_from_body()` - 从 PR body 解析变更类型
+
+**数据结构**：
+- `SourcePrInfo` - 源 PR 信息（标题、URL、body）
+- `ExtractedPrInfo` - 提取的信息（Jira ticket、描述、变更类型）
+
+**使用场景**：
+- `pr pick` 命令：从源 PR 提取信息用于创建新 PR
+- 可被其他命令复用（如 sync、rebase 等）
 
 ---
 

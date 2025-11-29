@@ -18,14 +18,19 @@ src/
 │   ├── mod.rs              # 命令模块声明
 │   ├── pr/                 # PR 相关命令
 │   │   ├── mod.rs          # PR 命令模块声明
-│   │   ├── helpers.rs      # PR 辅助函数（PR ID 解析等）
+│   │   ├── helpers.rs      # PR 辅助函数（PR ID 解析、分支名前缀应用等）
 │   │   ├── create.rs       # 创建 PR
 │   │   ├── merge.rs        # 合并 PR
 │   │   ├── close.rs        # 关闭 PR
 │   │   ├── status.rs       # PR 状态查询
 │   │   ├── list.rs         # 列出 PR
 │   │   ├── update.rs       # 更新 PR
-│   │   └── sync.rs         # 同步分支命令（合并了原 integrate 功能）
+│   │   ├── sync.rs         # 同步分支命令（合并了原 integrate 功能）
+│   │   ├── rebase.rs       # Rebase 分支并更新 PR base
+│   │   ├── pick.rs         # Pick 提交并创建新 PR
+│   │   ├── summarize.rs    # PR 总结命令
+│   │   ├── approve.rs      # 批准 PR 命令
+│   │   └── comment.rs      # 添加 PR 评论命令
 │   ├── log/                # 日志操作命令
 │   │   ├── mod.rs          # Log 命令模块声明
 │   │   ├── download.rs     # 下载日志命令
@@ -137,6 +142,7 @@ src/
     │   ├── platform.rs     # PlatformProvider trait 和工厂函数
     │   ├── helpers.rs      # PR 辅助函数
     │   ├── llm.rs          # LLM 功能（PR 标题生成）
+    │   ├── body_parser.rs  # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
     │   ├── github/         # GitHub 平台实现
     │   │   ├── mod.rs      # GitHub 模块导出
     │   │   ├── platform.rs # GitHub 平台实现

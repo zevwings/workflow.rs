@@ -201,6 +201,15 @@ impl PlatformProvider for Codeup {
         pr.title.context("PR title not found in response")
     }
 
+    /// 获取 PR body 内容
+    fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>> {
+        let (project_id, cookie) = Self::get_env_vars()?;
+
+        // 通过 PR ID 获取 PR 信息（支持已合并的 PR）
+        let pr = Self::get_pull_request_by_id(pull_request_id, project_id, &cookie)?;
+        Ok(pr.description)
+    }
+
     /// 获取当前分支的 PR ID
     fn get_current_branch_pull_request(&self) -> Result<Option<String>> {
         let current_branch = GitBranch::current_branch()?;

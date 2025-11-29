@@ -1,9 +1,14 @@
+pub mod body_parser;
 pub mod codeup;
 pub mod github;
 pub mod helpers;
 pub mod llm;
 pub mod platform;
 
+pub use body_parser::{
+    extract_description_from_body, extract_info_from_source_pr, extract_jira_ticket_from_body,
+    parse_change_types_from_body, ExtractedPrInfo, SourcePrInfo,
+};
 pub use codeup::errors::CodeupErrorResponse;
 pub use codeup::{Codeup, CodeupUser};
 pub use github::errors::{GitHubError, GitHubErrorResponse};
