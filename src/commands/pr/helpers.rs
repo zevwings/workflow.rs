@@ -228,43 +228,43 @@ pub fn apply_branch_name_prefixes(
     Ok(branch_name)
 }
 
-/// 检测分支可能基于哪个分支创建
+/// Detect which branch a given branch might be based on
 ///
-/// 通过检查所有分支，找出指定分支可能直接基于创建的分支。
-/// 如果检测到基础分支，返回该分支名称。
+/// By checking all branches, find the branch that the given branch might be directly based on.
+/// If a base branch is detected, return its name.
 ///
-/// # 参数
+/// # Arguments
 ///
-/// * `branch` - 要检测的分支名称
-/// * `exclude_branch` - 要排除在检测范围外的分支（通常是目标分支）
+/// * `branch` - The branch name to detect
+/// * `exclude_branch` - The branch to exclude from detection (usually the target branch)
 ///
-/// # 返回
+/// # Returns
 ///
-/// 如果检测到基础分支，返回 `Some(基础分支名)`，否则返回 `None`。
+/// Returns `Some(base_branch_name)` if a base branch is detected, otherwise returns `None`.
 ///
-/// # 示例
+/// # Examples
 ///
 /// ```no_run
 /// use crate::commands::pr::helpers::detect_base_branch;
 ///
-/// // 检测 test-rebase 分支基于哪个分支创建（排除 master）
+/// // Detect which branch test-rebase is based on (excluding master)
 /// let base = detect_base_branch("test-rebase", "master")?;
-/// // 可能返回: Some("develop-")
+/// // May return: Some("develop-")
 /// ```
 pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
     log_info!("Detecting base branch for '{}'...", branch);
 
-    // 获取所有分支（不包括 branch 和 exclude_branch）
+    // Get all branches (excluding branch and exclude_branch)
     let all_branches = GitBranch::get_all_branches(false)
         .context("Failed to get all branches for base branch detection")?;
 
-    // 按优先级排序：先检查常见的基础分支
+    // Sort by priority: check common base branches first
     let mut candidate_branches: Vec<String> = all_branches
         .into_iter()
         .filter(|b| b != branch && b != exclude_branch)
         .collect();
 
-    // 优先检查常见的基础分支名（develop, dev, staging, etc.）
+    // Prioritize checking common base branch names (develop, dev, staging, etc.)
     let common_base_branches = ["develop", "dev", "staging", "test"];
     candidate_branches.sort_by(|a, b| {
         let a_priority = common_base_branches
@@ -278,7 +278,7 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
         a_priority.cmp(&b_priority)
     });
 
-    // 检查每个候选分支
+    // Check each candidate branch
     for candidate in &candidate_branches {
         match GitBranch::is_branch_based_on(branch, candidate) {
             Ok(true) => {
@@ -290,10 +290,10 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
                 return Ok(Some(candidate.clone()));
             }
             Ok(false) => {
-                // 继续检查下一个分支
+                // Continue checking next branch
             }
             Err(e) => {
-                // 检查失败，记录警告但继续
+                // Check failed, log warning but continue
                 log_warning!(
                     "Failed to check if '{}' is based on '{}': {}",
                     branch,
