@@ -1,6 +1,6 @@
 use crate::base::util::{confirm, Browser, Clipboard};
 use crate::commands::check;
-use crate::commands::pr::helpers::apply_branch_name_prefixes;
+use crate::commands::pr::helpers::{apply_branch_name_prefixes, detect_base_branch};
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -222,76 +222,6 @@ impl PullRequestPickCommand {
         Ok(())
     }
 
-    /// 检测 from_branch 可能基于哪个分支创建
-    ///
-    /// 通过检查所有分支，找出 from_branch 可能直接基于创建的分支。
-    /// 如果检测到基础分支，返回该分支名称。
-    ///
-    /// # 参数
-    ///
-    /// * `from_branch` - 源分支名称
-    /// * `to_branch` - 目标分支名称（排除在检测范围外）
-    ///
-    /// # 返回
-    ///
-    /// 如果检测到基础分支，返回 `Some(基础分支名)`，否则返回 `None`。
-    fn detect_base_branch(from_branch: &str, to_branch: &str) -> Result<Option<String>> {
-        log_info!("Detecting base branch for '{}'...", from_branch);
-
-        // 获取所有分支（不包括 from_branch 和 to_branch）
-        let all_branches = GitBranch::get_all_branches(false)
-            .context("Failed to get all branches for base branch detection")?;
-
-        // 按优先级排序：先检查常见的基础分支
-        let mut candidate_branches: Vec<String> = all_branches
-            .into_iter()
-            .filter(|b| b != from_branch && b != to_branch)
-            .collect();
-
-        // 优先检查常见的基础分支名（develop, dev, staging, etc.）
-        let common_base_branches = ["develop", "dev", "staging", "test"];
-        candidate_branches.sort_by(|a, b| {
-            let a_priority = common_base_branches
-                .iter()
-                .position(|&name| a == name || a.ends_with(&format!("/{}", name)))
-                .unwrap_or(usize::MAX);
-            let b_priority = common_base_branches
-                .iter()
-                .position(|&name| b == name || b.ends_with(&format!("/{}", name)))
-                .unwrap_or(usize::MAX);
-            a_priority.cmp(&b_priority)
-        });
-
-        // 检查每个候选分支
-        for candidate in &candidate_branches {
-            match GitBranch::is_branch_based_on(from_branch, candidate) {
-                Ok(true) => {
-                    log_success!(
-                        "Detected that '{}' is likely based on '{}'",
-                        from_branch,
-                        candidate
-                    );
-                    return Ok(Some(candidate.clone()));
-                }
-                Ok(false) => {
-                    // 继续检查下一个分支
-                }
-                Err(e) => {
-                    // 检查失败，记录警告但继续
-                    log_warning!(
-                        "Failed to check if '{}' is based on '{}': {}",
-                        from_branch,
-                        candidate,
-                        e
-                    );
-                }
-            }
-        }
-
-        log_info!("No base branch detected for '{}'", from_branch);
-        Ok(None)
-    }
-
     /// 获取新提交列表（支持智能检测基础分支）
     ///
     /// 首先尝试检测 from_branch 可能基于哪个分支创建。
@@ -308,7 +238,7 @@ impl PullRequestPickCommand {
     /// 返回要 cherry-pick 的提交列表。
     fn get_new_commits(from_branch: &str, to_branch: &str) -> Result<Vec<String>> {
         // 1. 检测 from_branch 可能基于哪个分支创建
-        let detected_base = Self::detect_base_branch(from_branch, to_branch)?;
+        let detected_base = detect_base_branch(from_branch, to_branch)?;
 
         // 2. 如果检测到基础分支，自动使用该基础分支
         let actual_base = if let Some(base_branch) = detected_base {

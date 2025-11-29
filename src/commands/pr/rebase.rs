@@ -1,5 +1,6 @@
 use crate::base::util::confirm;
 use crate::commands::check;
+use crate::commands::pr::helpers::detect_base_branch;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -300,17 +301,40 @@ impl PullRequestRebaseCommand {
         log_info!("Fetching latest changes...");
         GitRepo::fetch()?;
 
-        // 6. 预览模式
+        // 6. 检测当前分支的基础分支（用于智能 rebase）
+        let detected_base = detect_base_branch(&current_branch, &target_branch)?;
+
+        // 7. 预览模式
         if dry_run {
-            Self::dry_run(&current_branch, &target_branch, push)?;
+            Self::dry_run(
+                &current_branch,
+                &target_branch,
+                push,
+                detected_base.as_deref(),
+            )?;
             return Ok(());
         }
 
-        // 7. 执行 rebase
-        log_success!("Rebasing '{}' onto '{}'...", current_branch, target_branch);
-        let rebase_result = GitBranch::rebase_onto(&target_branch);
+        // 8. 执行 rebase（智能选择 rebase 方式）
+        let rebase_result = if let Some(base_branch) = &detected_base {
+            log_success!(
+                "Detected that '{}' is based on '{}', will only rebase unique commits",
+                current_branch,
+                base_branch
+            );
+            log_info!(
+                "Rebasing commits from '{}' (excluding '{}' changes) onto '{}'",
+                current_branch,
+                base_branch,
+                target_branch
+            );
+            GitBranch::rebase_onto_with_upstream(&target_branch, base_branch, &current_branch)
+        } else {
+            log_success!("Rebasing '{}' onto '{}'...", current_branch, target_branch);
+            GitBranch::rebase_onto(&target_branch)
+        };
 
-        // 8. 处理 rebase 结果
+        // 9. 处理 rebase 结果
         if let Err(e) = rebase_result {
             // 如果 rebase 失败，恢复 stash
             if has_stashed {
@@ -329,10 +353,10 @@ impl PullRequestRebaseCommand {
 
         log_success!("Rebase completed successfully");
 
-        // 9. 更新 PR base（如果找到 PR，会提示用户确认）
+        // 10. 更新 PR base（如果找到 PR，会提示用户确认）
         Self::update_pr_base(&current_branch, &target_branch)?;
 
-        // 10. 恢复 stash
+        // 11. 恢复 stash
         if has_stashed {
             log_info!("Restoring stashed changes...");
             if let Err(e) = GitStash::stash_pop() {
@@ -341,7 +365,7 @@ impl PullRequestRebaseCommand {
             }
         }
 
-        // 11. 推送到远程（默认推送）
+        // 12. 推送到远程（默认推送）
         if push {
             Self::push_with_force_lease(&current_branch)?;
         } else {
@@ -483,11 +507,32 @@ impl PullRequestRebaseCommand {
     }
 
     /// 预览模式
-    fn dry_run(current_branch: &str, target_branch: &str, push: bool) -> Result<()> {
+    fn dry_run(
+        current_branch: &str,
+        target_branch: &str,
+        push: bool,
+        detected_base: Option<&str>,
+    ) -> Result<()> {
         log_info!("=== Dry Run Mode ===");
         log_info!("Current branch: {}", current_branch);
         log_info!("Target branch: {}", target_branch);
-        log_info!("Will rebase '{}' onto '{}'", current_branch, target_branch);
+
+        if let Some(base_branch) = detected_base {
+            log_info!(
+                "Detected base branch: '{}' (will only rebase unique commits)",
+                base_branch
+            );
+            log_info!(
+                "Will rebase commits from '{}' (excluding '{}' changes) onto '{}'",
+                current_branch,
+                base_branch,
+                target_branch
+            );
+        } else {
+            log_info!("No base branch detected, will rebase all commits");
+            log_info!("Will rebase '{}' onto '{}'", current_branch, target_branch);
+        }
+
         log_info!(
             "Will check for PR and prompt to update PR base if found (with user confirmation)"
         );

@@ -4,7 +4,7 @@
 
 use crate::base::settings::settings::Settings;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::{log_info, log_success};
+use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
 
 /// 检查错误是否表示 PR 已合并
@@ -226,4 +226,84 @@ pub fn apply_branch_name_prefixes(
     }
 
     Ok(branch_name)
+}
+
+/// 检测分支可能基于哪个分支创建
+///
+/// 通过检查所有分支，找出指定分支可能直接基于创建的分支。
+/// 如果检测到基础分支，返回该分支名称。
+///
+/// # 参数
+///
+/// * `branch` - 要检测的分支名称
+/// * `exclude_branch` - 要排除在检测范围外的分支（通常是目标分支）
+///
+/// # 返回
+///
+/// 如果检测到基础分支，返回 `Some(基础分支名)`，否则返回 `None`。
+///
+/// # 示例
+///
+/// ```no_run
+/// use crate::commands::pr::helpers::detect_base_branch;
+///
+/// // 检测 test-rebase 分支基于哪个分支创建（排除 master）
+/// let base = detect_base_branch("test-rebase", "master")?;
+/// // 可能返回: Some("develop-")
+/// ```
+pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
+    log_info!("Detecting base branch for '{}'...", branch);
+
+    // 获取所有分支（不包括 branch 和 exclude_branch）
+    let all_branches = GitBranch::get_all_branches(false)
+        .context("Failed to get all branches for base branch detection")?;
+
+    // 按优先级排序：先检查常见的基础分支
+    let mut candidate_branches: Vec<String> = all_branches
+        .into_iter()
+        .filter(|b| b != branch && b != exclude_branch)
+        .collect();
+
+    // 优先检查常见的基础分支名（develop, dev, staging, etc.）
+    let common_base_branches = ["develop", "dev", "staging", "test"];
+    candidate_branches.sort_by(|a, b| {
+        let a_priority = common_base_branches
+            .iter()
+            .position(|&name| a == name || a.ends_with(&format!("/{}", name)))
+            .unwrap_or(usize::MAX);
+        let b_priority = common_base_branches
+            .iter()
+            .position(|&name| b == name || b.ends_with(&format!("/{}", name)))
+            .unwrap_or(usize::MAX);
+        a_priority.cmp(&b_priority)
+    });
+
+    // 检查每个候选分支
+    for candidate in &candidate_branches {
+        match GitBranch::is_branch_based_on(branch, candidate) {
+            Ok(true) => {
+                log_success!(
+                    "Detected that '{}' is likely based on '{}'",
+                    branch,
+                    candidate
+                );
+                return Ok(Some(candidate.clone()));
+            }
+            Ok(false) => {
+                // 继续检查下一个分支
+            }
+            Err(e) => {
+                // 检查失败，记录警告但继续
+                log_warning!(
+                    "Failed to check if '{}' is based on '{}': {}",
+                    branch,
+                    candidate,
+                    e
+                );
+            }
+        }
+    }
+
+    log_info!("No base branch detected for '{}'", branch);
+    Ok(None)
 }

@@ -530,6 +530,42 @@ impl GitBranch {
             .with_context(|| format!("Failed to rebase onto branch: {}", target_branch))
     }
 
+    /// 将指定范围的提交 rebase 到目标分支
+    ///
+    /// 使用 `git rebase --onto` 将 `<upstream>..<branch>` 范围内的提交
+    /// rebase 到 `<newbase>` 之上。这样可以只 rebase 分支独有的提交，
+    /// 排除上游分支的提交。
+    ///
+    /// # 参数
+    ///
+    /// * `newbase` - 新的基础分支（要 rebase 到的分支）
+    /// * `upstream` - 上游分支（rebase 范围的起点，排除此分支的提交）
+    /// * `branch` - 要 rebase 的分支（rebase 范围的终点）
+    ///
+    /// # 错误
+    ///
+    /// 如果 rebase 失败（包括冲突），返回相应的错误信息。
+    ///
+    /// # 注意
+    ///
+    /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
+    ///
+    /// # 示例
+    ///
+    /// 如果 `test-rebase` 基于 `develop-` 创建，但想 rebase 到 `master`：
+    /// ```no_run
+    /// // 只 rebase test-rebase 独有的提交（排除 develop- 的提交）到 master
+    /// GitBranch::rebase_onto_with_upstream("master", "develop-", "test-rebase")?;
+    /// ```
+    pub fn rebase_onto_with_upstream(newbase: &str, upstream: &str, branch: &str) -> Result<()> {
+        cmd_run(&["rebase", "--onto", newbase, upstream, branch]).with_context(|| {
+            format!(
+                "Failed to rebase '{}' onto '{}' (excluding '{}' commits)",
+                branch, newbase, upstream
+            )
+        })
+    }
+
     /// 删除本地分支
     ///
     /// 删除指定的本地分支。如果分支未完全合并，可以使用 `force` 参数强制删除。
