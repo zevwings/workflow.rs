@@ -20,7 +20,7 @@
 //! - `proxy/` - 代理管理命令（on, off, check）
 //!
 //! ### 业务功能
-//! - `pr/` - PR 相关命令（create, merge, close, status, list, update, integrate）
+//! - `pr/` - PR 相关命令（create, merge, close, status, list, update, sync）
 //! - `log/` - 日志操作命令（download, find, search）
 //! - `jira/` - Jira 操作命令（info, attachments, clean）
 //! - `branch/` - 分支管理命令（clean, ignore）

@@ -303,11 +303,21 @@ workflow pr list --limit 10                    # 限制结果数量
 # 更新代码
 workflow pr update                             # 更新代码（使用 PR 标题作为提交信息）
 
-# 集成分支
-workflow pr integrate <SOURCE_BRANCH>          # 将指定分支合并到当前分支
-workflow pr integrate <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
-workflow pr integrate <SOURCE_BRANCH> --squash # 使用 squash 合并
-workflow pr integrate <SOURCE_BRANCH> --no-push # 不推送到远程（默认会推送）
+# 同步分支
+workflow pr sync <SOURCE_BRANCH>              # 将指定分支同步到当前分支（merge）
+workflow pr sync <SOURCE_BRANCH> --rebase     # 使用 rebase 同步
+workflow pr sync <SOURCE_BRANCH> --squash      # 使用 squash 合并
+workflow pr sync <SOURCE_BRANCH> --ff-only     # 只允许 fast-forward 合并
+workflow pr sync <SOURCE_BRANCH> --no-push     # 不推送到远程（默认会推送）
+
+# Rebase 分支
+workflow pr rebase <TARGET_BRANCH>             # Rebase 当前分支到目标分支（默认推送）
+workflow pr rebase <TARGET_BRANCH> --no-push   # 只 rebase 到本地，不推送
+workflow pr rebase <TARGET_BRANCH> --dry-run   # 预览模式
+
+# Pick 提交（跨分支移植代码）
+workflow pr pick <FROM_BRANCH> <TO_BRANCH>     # 从源分支 cherry-pick 提交到目标分支并创建新 PR
+workflow pr pick <FROM_BRANCH> <TO_BRANCH> --dry-run  # 预览模式
 
 # 总结 PR
 workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）

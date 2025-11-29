@@ -13,10 +13,13 @@ use commands::check::check;
 use commands::config::{completion, log, setup, show};
 use commands::github::github;
 use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
-use commands::lifecycle::{uninstall, update, version};
+use commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use commands::llm::{LLMSetupCommand, LLMShowCommand};
 use commands::log::{DownloadCommand, FindCommand, SearchCommand};
-use commands::pr::{close, create, integrate, list, merge, status, summarize, update as pr_update};
+use commands::pr::{
+    approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
+    update as pr_update,
+};
 use commands::proxy::proxy;
 
 use workflow::cli::{
@@ -75,7 +78,7 @@ fn main() -> Result<()> {
         }
         // 更新
         Some(Commands::Update { version }) => {
-            update::UpdateCommand::update(version)?;
+            lifecycle_update::UpdateCommand::update(version)?;
         }
         // 日志级别管理命令
         Some(Commands::LogLevel { subcommand }) => match subcommand {
@@ -146,27 +149,50 @@ fn main() -> Result<()> {
             PRCommands::Update => {
                 pr_update::PullRequestUpdateCommand::update()?;
             }
-            PRCommands::Integrate {
+            PRCommands::Sync {
                 source_branch,
+                rebase,
                 ff_only,
                 squash,
                 no_push,
             } => {
                 let should_push = !no_push;
-                integrate::PullRequestIntegrateCommand::integrate(
+                sync::PullRequestSyncCommand::sync(
                     source_branch,
+                    rebase,
                     ff_only,
                     squash,
                     should_push,
                 )?;
             }
+            PRCommands::Rebase {
+                target_branch,
+                no_push,
+                dry_run,
+            } => {
+                rebase::PullRequestRebaseCommand::rebase(target_branch, !no_push, dry_run)?;
+            }
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
             }
-            PRCommands::Summarize {
-                pull_request_id,
-            } => {
+            PRCommands::Summarize { pull_request_id } => {
                 summarize::SummarizeCommand::summarize(pull_request_id)?;
+            }
+            PRCommands::Approve { pull_request_id } => {
+                approve::PullRequestApproveCommand::approve(pull_request_id)?;
+            }
+            PRCommands::Comment {
+                pull_request_id,
+                message,
+            } => {
+                comment::PullRequestCommentCommand::comment(pull_request_id, message)?;
+            }
+            PRCommands::Pick {
+                from_branch,
+                to_branch,
+                dry_run,
+            } => {
+                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run)?;
             }
         },
         // 日志操作命令
@@ -221,7 +247,7 @@ fn main() -> Result<()> {
             log_message!(
                 "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
             );
-            log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/integrate)");
+            log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
             log_message!("  workflow log        - Log operations (download/find/search)");
             log_message!("  workflow jira       - Jira operations (info/attachments/clean)");
             log_message!("\nOther CLI tools:");

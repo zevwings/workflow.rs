@@ -384,9 +384,7 @@ impl SummarizeCommand {
     /// 代码修改内容
     /// ```
     /// ```
-    fn format_file_changes_as_markdown(
-        file_changes: &[(String, String)],
-    ) -> String {
+    fn format_file_changes_as_markdown(file_changes: &[(String, String)]) -> String {
         if file_changes.is_empty() {
             return String::new();
         }
@@ -444,10 +442,7 @@ impl SummarizeCommand {
     /// 为单个文件生成修改总结
     ///
     /// 使用 LLM 生成文件的修改总结。
-    fn generate_file_change_summary(
-        file_path: &str,
-        file_diff: &str,
-    ) -> Result<String> {
+    fn generate_file_change_summary(file_path: &str, file_diff: &str) -> Result<String> {
         log_info!("Generating summary for file: {}", file_path);
         PullRequestLLM::summarize_file_change(file_path, file_diff)
             .with_context(|| format!("Failed to generate summary for file: {}", file_path))

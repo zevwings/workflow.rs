@@ -2,8 +2,9 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
+use crate::base::settings::settings::Settings;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::{log_info, log_success};
+use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
 
 /// 检查错误是否表示 PR 已合并
@@ -172,4 +173,137 @@ pub fn cleanup_branch(
     );
 
     Ok(())
+}
+
+/// 应用分支名前缀（Jira ticket 和 github_branch_prefix）
+///
+/// 统一处理分支名前缀逻辑，避免代码重复。
+/// 先添加 Jira ticket 前缀（如果提供），然后添加 GitHub 分支前缀（如果配置）。
+///
+/// # 参数
+///
+/// * `branch_name` - 基础分支名
+/// * `jira_ticket` - Jira ticket ID（可选）
+///
+/// # 返回
+///
+/// 应用前缀后的完整分支名
+///
+/// # 示例
+///
+/// ```
+/// use crate::commands::pr::helpers::apply_branch_name_prefixes;
+///
+/// // 只有基础分支名
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), None)?;
+/// // 返回: "feature-branch"
+///
+/// // 带 Jira ticket
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
+/// // 返回: "PROJ-123-feature-branch"
+///
+/// // 带 Jira ticket 和 GitHub 前缀
+/// // 假设配置了 github_branch_prefix = "user"
+/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
+/// // 返回: "user/PROJ-123-feature-branch"
+/// ```
+pub fn apply_branch_name_prefixes(
+    mut branch_name: String,
+    jira_ticket: Option<&str>,
+) -> Result<String> {
+    // 如果有 Jira ticket，添加到分支名前缀
+    if let Some(ticket) = jira_ticket {
+        branch_name = format!("{}-{}", ticket, branch_name);
+    }
+
+    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
+    let settings = Settings::get();
+    if let Some(prefix) = settings.github.get_current_branch_prefix() {
+        let trimmed = prefix.trim();
+        if !trimmed.is_empty() {
+            branch_name = format!("{}/{}", trimmed, branch_name);
+        }
+    }
+
+    Ok(branch_name)
+}
+
+/// Detect which branch a given branch might be based on
+///
+/// By checking all branches, find the branch that the given branch might be directly based on.
+/// If a base branch is detected, return its name.
+///
+/// # Arguments
+///
+/// * `branch` - The branch name to detect
+/// * `exclude_branch` - The branch to exclude from detection (usually the target branch)
+///
+/// # Returns
+///
+/// Returns `Some(base_branch_name)` if a base branch is detected, otherwise returns `None`.
+///
+/// # Examples
+///
+/// ```no_run
+/// use crate::commands::pr::helpers::detect_base_branch;
+///
+/// // Detect which branch test-rebase is based on (excluding master)
+/// let base = detect_base_branch("test-rebase", "master")?;
+/// // May return: Some("develop-")
+/// ```
+pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
+    log_info!("Detecting base branch for '{}'...", branch);
+
+    // Get all branches (excluding branch and exclude_branch)
+    let all_branches = GitBranch::get_all_branches(false)
+        .context("Failed to get all branches for base branch detection")?;
+
+    // Sort by priority: check common base branches first
+    let mut candidate_branches: Vec<String> = all_branches
+        .into_iter()
+        .filter(|b| b != branch && b != exclude_branch)
+        .collect();
+
+    // Prioritize checking common base branch names (develop, dev, staging, etc.)
+    let common_base_branches = ["develop", "dev", "staging", "test"];
+    candidate_branches.sort_by(|a, b| {
+        let a_priority = common_base_branches
+            .iter()
+            .position(|&name| a == name || a.ends_with(&format!("/{}", name)))
+            .unwrap_or(usize::MAX);
+        let b_priority = common_base_branches
+            .iter()
+            .position(|&name| b == name || b.ends_with(&format!("/{}", name)))
+            .unwrap_or(usize::MAX);
+        a_priority.cmp(&b_priority)
+    });
+
+    // Check each candidate branch
+    for candidate in &candidate_branches {
+        match GitBranch::is_branch_based_on(branch, candidate) {
+            Ok(true) => {
+                log_success!(
+                    "Detected that '{}' is likely based on '{}'",
+                    branch,
+                    candidate
+                );
+                return Ok(Some(candidate.clone()));
+            }
+            Ok(false) => {
+                // Continue checking next branch
+            }
+            Err(e) => {
+                // Check failed, log warning but continue
+                log_warning!(
+                    "Failed to check if '{}' is based on '{}': {}",
+                    branch,
+                    candidate,
+                    e
+                );
+            }
+        }
+    }
+
+    log_info!("No base branch detected for '{}'", branch);
+    Ok(None)
 }

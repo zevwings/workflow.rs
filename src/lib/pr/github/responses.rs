@@ -20,6 +20,7 @@ pub struct PullRequestInfo {
     pub html_url: String,
     pub head: PullRequestBranch,
     pub base: PullRequestBranch,
+    pub user: Option<GitHubUser>,
 }
 
 /// Pull Request 分支信息

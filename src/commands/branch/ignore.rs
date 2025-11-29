@@ -75,7 +75,10 @@ impl BranchIgnoreCommand {
             let options: Vec<String> = ignore_branches.clone();
 
             log_break!();
-            log_message!("Found the following ignored branches (repository: {}):", repo_name);
+            log_message!(
+                "Found the following ignored branches (repository: {}):",
+                repo_name
+            );
             for (i, option) in options.iter().enumerate() {
                 log_message!("  [{}] {}", i, option);
             }
@@ -83,7 +86,9 @@ impl BranchIgnoreCommand {
 
             // 使用 MultiSelect 让用户选择
             let selections = MultiSelect::new()
-                .with_prompt("Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)")
+                .with_prompt(
+                    "Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)",
+                )
                 .items(&options)
                 .interact()
                 .context("Failed to get user selection")?;
@@ -101,7 +106,10 @@ impl BranchIgnoreCommand {
             log_break!();
 
             // 确认删除
-            let confirm_msg = format!("Confirm removing {} selected branch(es) from ignore list?", selections.len());
+            let confirm_msg = format!(
+                "Confirm removing {} selected branch(es) from ignore list?",
+                selections.len()
+            );
             if !confirm(&confirm_msg, false, Some("Operation cancelled"))? {
                 return Ok(());
             }
