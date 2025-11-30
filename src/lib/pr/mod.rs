@@ -4,6 +4,7 @@ pub mod github;
 pub mod helpers;
 pub mod llm;
 pub mod platform;
+pub mod search;
 
 pub use body_parser::{
     extract_description_from_body, extract_info_from_source_pr, extract_jira_ticket_from_body,
@@ -20,3 +21,4 @@ pub use helpers::{
 };
 pub use llm::{PullRequestContent, PullRequestLLM, PullRequestSummary};
 pub use platform::{create_provider, PlatformProvider, PullRequestStatus, TYPES_OF_CHANGES};
+pub use search::{CodebaseSearcher, EndpointInfo, MethodInfo};

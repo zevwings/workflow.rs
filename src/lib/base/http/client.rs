@@ -27,6 +27,7 @@ impl HttpClient {
     /// 创建新的 HttpClient（私有方法）
     ///
     /// 初始化 HTTP 客户端，使用默认配置。
+    /// 支持从环境变量读取代理配置（http_proxy, https_proxy, all_proxy）。
     /// 此方法仅在 `global()` 方法内部使用，用于初始化全局单例。
     ///
     /// # 返回
@@ -37,9 +38,8 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let client = Client::builder()
-            .build()
-            .context("Failed to create HTTP client")?;
+        let builder = Client::builder();
+        let client = builder.build().context("Failed to create HTTP client")?;
         Ok(Self { client })
     }
 
