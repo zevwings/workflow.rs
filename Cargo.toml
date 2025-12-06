@@ -37,7 +37,7 @@ clipboard = "0.5"
 
 [[bin]]
 name = "workflow"
-path = "src/main.rs"
+path = "src/bin/workflow.rs"
 
 [[bin]]
 name = "install"

@@ -136,7 +136,7 @@ pub fn workflow_dir() -> Result<PathBuf> {
 
 ---
 
-## 2. 文件大小格式化 - 🔴 高优先级
+## 2. 文件大小格式化 - ❌ 不采纳
 
 ### 当前实现
 
@@ -197,19 +197,120 @@ pub fn format_file_size_custom(bytes: u64) -> String {
 }
 ```
 
-**预计收益**:
-- 减少代码量: **~90%** (从 40 行减少到 ~5 行)
-- 更准确的格式化（处理边界情况）
-- 支持多种格式选项
-- 减少维护负担
+**最终决策**: ❌ **不采纳**
 
-**影响文件**:
-- `src/lib/base/util/format.rs`
-- 所有调用 `format_size` 的地方
+**不采纳理由**:
+1. **当前实现已足够**: 30 行简单代码，功能完整
+   - 逻辑清晰，易于理解和维护
+   - 无复杂的边界情况需要处理
+   - 格式化逻辑稳定，很少需要修改
+
+2. **功能需求简单**: 仅需基本的文件大小格式化
+   - 不需要多种格式选项（十进制/二进制切换）
+   - 不需要 i18n 支持
+   - 当前精度（2 位小数）满足需求
+
+3. **收益不明显**: 
+   - 节省 30 行代码的收益很小
+   - 引入新依赖的成本大于收益
+   - 当前实现无已知 bug
+
+**保留的实现**: `src/lib/base/util/format.rs`
+
+```rust
+pub fn format_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+
+    if unit_index == 0 {
+        format!("{} {}", bytes, UNITS[unit_index])
+    } else {
+        format!("{:.2} {}", size, UNITS[unit_index])
+    }
+}
+```
 
 ---
 
-## 3. HTTP 重试机制 - 🟡 中优先级
+## 3. HTTP 请求日志 - ✅ 待实施
+
+### 当前状况
+
+**文件**: `src/lib/base/http/client.rs`
+
+**问题**:
+- HTTP 请求缺少统一的日志记录
+- 调试时难以追踪请求/响应详情
+- 无法通过环境变量控制日志级别
+
+### 推荐方案 ✅
+
+**库**: [`reqwest-tracing`](https://crates.io/crates/reqwest-tracing)
+
+**优势**:
+- ✅ 自动记录所有 HTTP 请求和响应
+- ✅ 与 `reqwest` 无缝集成
+- ✅ 支持通过 `RUST_LOG` 环境变量控制
+- ✅ 轻量级（~15KB，仅 1 个依赖）
+- ✅ 不影响现有代码
+
+**实现示例**:
+```rust
+use reqwest::Client;
+use reqwest_tracing::TracingMiddleware;
+
+// 在应用启动时初始化（main.rs）
+fn init_logging() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn"))
+        )
+        .init();
+}
+
+// 创建带日志的 HTTP 客户端
+pub fn build_http_client() -> Result<Client> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?;
+    
+    // reqwest-tracing 会自动拦截并记录所有请求
+    Ok(client)
+}
+```
+
+**使用效果**:
+```bash
+# 默认情况下不输出（warn 级别）
+$ workflow github list-repos
+
+# 开启 HTTP 日志（info 级别）
+$ RUST_LOG=reqwest=info workflow github list-repos
+INFO  reqwest: HTTP request  method=GET url="https://api.github.com/user/repos"
+INFO  reqwest: HTTP response status=200 duration=245ms
+
+# 开启详细日志（debug 级别）
+$ RUST_LOG=reqwest=debug workflow github list-repos
+DEBUG reqwest: Request headers  user_agent="workflow/1.4.6"
+DEBUG reqwest: Response headers  content_type="application/json"
+```
+
+**决策**: ✅ 采纳，待实施（预计工作量：2 小时）
+
+**影响文件**:
+- `src/main.rs` - 添加 tracing 初始化
+- `Cargo.toml` - 添加依赖
+
+---
+
+## 4. HTTP 重试机制 - ❌ 不采纳
 
 ### 当前实现
 
@@ -279,23 +380,31 @@ pub fn build_http_client() -> Result<ClientWithMiddleware> {
 **注意事项**:
 ⚠️ **保留自定义特性**: 当前实现包含**用户交互式确认**功能（询问用户是否重试），这是标准重试库不提供的。
 
-**推荐混合方案**:
-1. 对于 **非交互式** HTTP 请求，使用 `reqwest-retry`
-2. 对于 **交互式** 操作，保留简化版的自定义重试逻辑
+**最终决策**: ❌ **不采纳**
 
-**预计收益**:
-- 减少代码量: **~60%** (从 350 行减少到 ~140 行，保留交互式部分)
-- 更可靠的重试策略
-- 可扩展的中间件架构
-- 社区维护的错误判断逻辑
+**不采纳理由**:
+1. **核心特性无法替代**: 现有实现包含交互式用户确认功能
+   - 询问用户："是否在 N 秒后重试？"
+   - 倒计时显示："3 秒后重试... (按 Ctrl+C 取消)"
+   - 用户主动取消功能
+   
+2. **用户体验优先**: CLI 工具的交互体验是核心价值
+   - 标准重试库无法提供此功能
+   - 保留 350 行自定义实现是合理的
 
-**影响文件**:
-- `src/lib/base/http/retry.rs`
-- `src/lib/base/http/client.rs`
+3. **代码已稳定**: 当前实现经过充分测试，无明显问题
+
+**保留的特性**:
+- ✅ 指数退避算法（可配置：2s → 4s → 8s）
+- ✅ 智能错误判断（5xx、超时、网络错误可重试）
+- ✅ 交互式确认（询问用户是否继续）
+- ✅ 倒计时显示（可随时取消）
+
+**当前实现**: 保持不变，继续使用 `src/lib/base/http/retry.rs`
 
 ---
 
-## 4. 日志系统 - 🟡 中优先级
+## 5. 日志系统 - ❌ 不采纳
 
 ### 当前实现
 
@@ -376,18 +485,39 @@ log_success!("Configuration saved");
 debug!(path = ?config_path, "Loading configuration");
 ```
 
-**预计收益**:
-- 保留用户体验的同时增加可调试性
-- 支持 `RUST_LOG=debug` 环境变量控制
-- 为未来添加日志文件输出打下基础
+**最终决策**: ❌ **不采纳**
 
-**影响文件**:
-- `src/lib/base/util/logger.rs`
-- 需要在 `main.rs` 中初始化
+**不采纳理由**:
+1. **用户体验优先**: 现有彩色日志宏提供优秀的 CLI 体验
+   - `log_success!()` - ✓ 绿色成功提示
+   - `log_info!()` - ℹ 蓝色信息提示
+   - `log_warning!()` - ⚠ 黄色警告提示
+   - `log_error!()` - ✗ 红色错误提示
+   
+2. **避免重型依赖**: `tracing` 生态较大
+   - `tracing` + `tracing-subscriber` 约 200KB
+   - 额外引入 5 个传递依赖
+   - 编译时间增加约 5 秒
+
+3. **可观测性需求已满足**: 通过 `reqwest-tracing` 获得 HTTP 日志
+   - 核心调试需求（HTTP 请求）已覆盖
+   - CLI 工具不需要复杂的结构化日志
+
+4. **当前实现简单有效**: 约 100 行日志宏代码
+   - 代码清晰，易于维护
+   - 满足所有用户交互需求
+
+**保留的特性**:
+- ✅ 彩色终端输出
+- ✅ 统一的日志格式
+- ✅ 轻量级实现
+- ✅ 无运行时开销
+
+**当前实现**: 保持不变，继续使用 `src/lib/base/util/logger.rs`
 
 ---
 
-## 5. 配置管理 - 🟢 低优先级
+## 6. 配置管理 - ⏸️ 待定
 
 ### 当前实现
 
