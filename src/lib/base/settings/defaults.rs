@@ -19,13 +19,11 @@ pub fn default_log_folder() -> String {
 pub fn default_download_base_dir() -> String {
     // 使用 dirs::home_dir() 获取主目录
     dirs::home_dir()
-        .and_then(|h| {
-            Some(
-                h.join("Documents")
-                    .join("Workflow")
-                    .to_string_lossy()
-                    .to_string(),
-            )
+        .map(|h| {
+            h.join("Documents")
+                .join("Workflow")
+                .to_string_lossy()
+                .to_string()
         })
         .unwrap_or_else(|| {
             if cfg!(target_os = "windows") {

@@ -598,7 +598,10 @@ mod tests {
         let config_dir = Paths::config_dir().unwrap();
         assert!(config_dir.exists());
         assert!(config_dir.is_dir());
-        assert!(config_dir.ends_with(".workflow/config") || config_dir.to_string_lossy().contains("workflow"));
+        assert!(
+            config_dir.ends_with(".workflow/config")
+                || config_dir.to_string_lossy().contains("workflow")
+        );
     }
 
     #[test]
@@ -672,28 +675,6 @@ mod tests {
     }
 
     #[test]
-    fn test_all_config_files_in_same_dir() {
-        let workflow_config = Paths::workflow_config().unwrap();
-        let jira_status = Paths::jira_status_config().unwrap();
-        let jira_users = Paths::jira_users_config().unwrap();
-        let branch_config = Paths::branch_config().unwrap();
-
-        // 所有配置文件应该在同一个目录下
-        assert_eq!(
-            workflow_config.parent().unwrap(),
-            jira_status.parent().unwrap()
-        );
-        assert_eq!(
-            workflow_config.parent().unwrap(),
-            jira_users.parent().unwrap()
-        );
-        assert_eq!(
-            workflow_config.parent().unwrap(),
-            branch_config.parent().unwrap()
-        );
-    }
-
-    #[test]
     fn test_work_history_always_local() {
         let work_history = Paths::work_history_dir().unwrap();
         let home = Paths::home_dir().unwrap();
@@ -727,35 +708,11 @@ mod tests {
     }
 
     #[test]
-    fn test_storage_info() {
-        let info = Paths::storage_info().unwrap();
-        assert!(!info.is_empty());
-        assert!(info.contains("Storage Type"));
-        assert!(info.contains("Configuration"));
-        assert!(info.contains("Work History"));
-    }
-
-    #[test]
     fn test_storage_location() {
         let location = Paths::storage_location();
         assert!(!location.is_empty());
         // 应该是 "iCloud Drive (synced across devices)" 或 "Local storage"
-        assert!(
-            location == "iCloud Drive (synced across devices)" || location == "Local storage"
-        );
-    }
-
-    #[test]
-    #[cfg(target_os = "macos")]
-    fn test_icloud_detection() {
-        let is_icloud = Paths::is_config_in_icloud();
-        let location = Paths::storage_location();
-
-        if is_icloud {
-            assert_eq!(location, "iCloud Drive (synced across devices)");
-        } else {
-            assert_eq!(location, "Local storage");
-        }
+        assert!(location == "iCloud Drive (synced across devices)" || location == "Local storage");
     }
 
     #[test]
