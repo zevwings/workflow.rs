@@ -3,8 +3,6 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
-#[cfg(target_os = "macos")]
-use crate::base::util::remove_quarantine_attribute_with_sudo;
 use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
@@ -145,18 +143,6 @@ impl InstallCommand {
                         "Failed to set executable permission for {}",
                         target.display()
                     ))?;
-
-                // 在 macOS 上，复制后立即移除目标文件的隔离属性（如果存在）
-                // 使用 sudo 因为目标文件在系统目录中，需要管理员权限
-                // 这确保安装后的文件不会有隔离属性，避免 Gatekeeper 阻止执行
-                #[cfg(target_os = "macos")]
-                {
-                    log_debug!(
-                        "Removing quarantine attribute from installed binary: {}",
-                        target.display()
-                    );
-                    remove_quarantine_attribute_with_sudo(&target)?;
-                }
             }
 
             log_success!("{} installation complete", binary_name);

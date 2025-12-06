@@ -17,7 +17,6 @@
 //! - `clipboard` - 剪贴板操作（`Clipboard`）
 //! - `unzip` - 解压工具（tar.gz 文件解压）
 //! - `checksum` - 校验和工具（SHA256 计算和验证）
-//! - `macos` - macOS 系统工具（隔离属性移除等）
 //!
 //! 注意：以下模块已迁移到独立的目录：
 //! - `lib/completion` - Completion 管理
@@ -31,8 +30,6 @@ pub mod clipboard;
 pub mod confirm;
 pub mod format;
 pub mod logger;
-#[cfg(target_os = "macos")]
-pub mod macos;
 pub mod platform;
 pub mod string;
 pub mod unzip;
@@ -62,6 +59,3 @@ pub use unzip::Unzip;
 // 重新导出 checksum
 pub use checksum::Checksum;
 
-// 重新导出 macOS 工具（仅在 macOS 上）
-#[cfg(target_os = "macos")]
-pub use macos::{remove_quarantine_attribute, remove_quarantine_attribute_with_sudo};
