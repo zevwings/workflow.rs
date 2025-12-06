@@ -52,7 +52,7 @@ impl Paths {
     #[cfg(target_os = "macos")]
     fn try_icloud_base_dir() -> Option<PathBuf> {
         // 获取主目录
-        let home = dirs::home_dir()?;
+        let home = Self::home_dir().ok()?;
 
         // 构建 iCloud Drive 基础路径
         // ~/Library/Mobile Documents/com~apple~CloudDocs
@@ -75,8 +75,7 @@ impl Paths {
         // 设置目录权限为 700（仅用户可访问）
         #[cfg(unix)]
         {
-            let _ =
-                fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700));
+            let _ = fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700));
         }
 
         Some(workflow_dir)
@@ -105,8 +104,7 @@ impl Paths {
         let workflow_dir = home.join(".workflow");
 
         // 确保目录存在
-        fs::create_dir_all(&workflow_dir)
-            .context("Failed to create local .workflow directory")?;
+        fs::create_dir_all(&workflow_dir).context("Failed to create local .workflow directory")?;
 
         // 设置目录权限为 700（仅用户可访问）
         #[cfg(unix)]
@@ -121,9 +119,16 @@ impl Paths {
     /// 获取配置基础目录（支持 iCloud）
     ///
     /// 决策逻辑：
-    /// 1. 在 macOS 上，优先尝试使用 iCloud Drive
-    /// 2. 如果 iCloud 不可用，回退到本地目录
-    /// 3. 在其他平台上，直接使用本地目录
+    /// 1. 检查环境变量 `WORKFLOW_DISABLE_ICLOUD`，如果设置则强制使用本地
+    /// 2. 在 macOS 上，如果 iCloud Drive 可用，优先使用 iCloud
+    /// 3. 如果 iCloud 不可用，回退到本地目录
+    /// 4. 在其他平台上，直接使用本地目录
+    ///
+    /// **注意**：如果用户已有本地配置，需要手动迁移到 iCloud：
+    /// ```bash
+    /// cp -r ~/.workflow/config/* \
+    ///    ~/Library/Mobile\ Documents/com~apple~CloudDocs/.workflow/config/
+    /// ```
     ///
     /// # 返回
     ///
@@ -133,9 +138,17 @@ impl Paths {
     ///
     /// 如果无法创建目录，返回相应的错误信息。
     fn config_base_dir() -> Result<PathBuf> {
+        // 检查用户是否明确禁用 iCloud
+        if std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok() {
+            return Self::local_base_dir();
+        }
+
         // macOS 上尝试 iCloud
-        if let Some(icloud_dir) = Self::try_icloud_base_dir() {
-            return Ok(icloud_dir);
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(icloud_dir) = Self::try_icloud_base_dir() {
+                return Ok(icloud_dir);
+            }
         }
 
         // 回退到本地
@@ -565,5 +578,190 @@ impl Paths {
         };
 
         Ok(config_file)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap_complete::shells::Shell;
+
+    #[test]
+    fn test_home_dir() {
+        let home = Paths::home_dir().unwrap();
+        assert!(home.exists());
+        assert!(home.is_dir());
+    }
+
+    #[test]
+    fn test_config_dir() {
+        let config_dir = Paths::config_dir().unwrap();
+        assert!(config_dir.exists());
+        assert!(config_dir.is_dir());
+        assert!(config_dir.ends_with(".workflow/config") || config_dir.to_string_lossy().contains("workflow"));
+    }
+
+    #[test]
+    fn test_work_history_dir() {
+        let history_dir = Paths::work_history_dir().unwrap();
+        assert!(history_dir.exists());
+        assert!(history_dir.is_dir());
+        // work_history 应该总是在本地路径下
+        let path_str = history_dir.to_string_lossy();
+        assert!(path_str.contains("work-history"));
+    }
+
+    #[test]
+    fn test_completion_dir() {
+        let completion_dir = Paths::completion_dir().unwrap();
+        let path_str = completion_dir.to_string_lossy();
+        assert!(path_str.contains("completions"));
+    }
+
+    #[test]
+    fn test_workflow_dir() {
+        let workflow_dir = Paths::workflow_dir().unwrap();
+        assert!(workflow_dir.exists());
+        assert!(workflow_dir.is_dir());
+    }
+
+    #[test]
+    fn test_config_file_paths() {
+        // 测试所有支持的 shell 配置文件路径
+        let shells = vec![
+            Shell::Zsh,
+            Shell::Bash,
+            Shell::Fish,
+            Shell::PowerShell,
+            Shell::Elvish,
+        ];
+
+        for shell in shells {
+            let config_file = Paths::config_file(&shell);
+            match config_file {
+                Ok(path) => {
+                    // 验证路径格式正确
+                    assert!(!path.to_string_lossy().is_empty());
+                }
+                Err(_) => {
+                    // Windows 上某些 shell 可能不支持，这是正常的
+                    #[cfg(target_os = "windows")]
+                    {
+                        // Windows 上只有 PowerShell 应该成功
+                        if matches!(shell, Shell::PowerShell) {
+                            panic!("PowerShell config file should be available on Windows");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    #[cfg(not(target_os = "windows"))]
+    fn test_shell_config_paths_unix() {
+        let zsh_config = Paths::config_file(&Shell::Zsh).unwrap();
+        assert!(zsh_config.to_string_lossy().ends_with(".zshrc"));
+
+        let bash_config = Paths::config_file(&Shell::Bash).unwrap();
+        let bash_path = bash_config.to_string_lossy();
+        assert!(
+            bash_path.ends_with(".bash_profile") || bash_path.ends_with(".bashrc"),
+            "Bash config should be .bash_profile or .bashrc"
+        );
+    }
+
+    #[test]
+    fn test_all_config_files_in_same_dir() {
+        let workflow_config = Paths::workflow_config().unwrap();
+        let jira_status = Paths::jira_status_config().unwrap();
+        let jira_users = Paths::jira_users_config().unwrap();
+        let branch_config = Paths::branch_config().unwrap();
+
+        // 所有配置文件应该在同一个目录下
+        assert_eq!(
+            workflow_config.parent().unwrap(),
+            jira_status.parent().unwrap()
+        );
+        assert_eq!(
+            workflow_config.parent().unwrap(),
+            jira_users.parent().unwrap()
+        );
+        assert_eq!(
+            workflow_config.parent().unwrap(),
+            branch_config.parent().unwrap()
+        );
+    }
+
+    #[test]
+    fn test_work_history_always_local() {
+        let work_history = Paths::work_history_dir().unwrap();
+        let home = Paths::home_dir().unwrap();
+        let local_base = home.join(".workflow");
+
+        // work_history 应该总是在本地路径下
+        assert!(work_history.starts_with(&local_base));
+
+        // 确保不在 iCloud 路径下（如果 iCloud 可用）
+        #[cfg(target_os = "macos")]
+        {
+            let icloud_base = home
+                .join("Library")
+                .join("Mobile Documents")
+                .join("com~apple~CloudDocs")
+                .join(".workflow");
+            if icloud_base.exists() {
+                assert!(!work_history.starts_with(&icloud_base));
+            }
+        }
+    }
+
+    #[test]
+    fn test_completion_dir_is_local() {
+        let completion_dir = Paths::completion_dir().unwrap();
+        let home = Paths::home_dir().unwrap();
+        let local_base = home.join(".workflow");
+
+        // completion 应该总是在本地路径下
+        assert!(completion_dir.starts_with(&local_base));
+    }
+
+    #[test]
+    fn test_storage_info() {
+        let info = Paths::storage_info().unwrap();
+        assert!(!info.is_empty());
+        assert!(info.contains("Storage Type"));
+        assert!(info.contains("Configuration"));
+        assert!(info.contains("Work History"));
+    }
+
+    #[test]
+    fn test_storage_location() {
+        let location = Paths::storage_location();
+        assert!(!location.is_empty());
+        // 应该是 "iCloud Drive (synced across devices)" 或 "Local storage"
+        assert!(
+            location == "iCloud Drive (synced across devices)" || location == "Local storage"
+        );
+    }
+
+    #[test]
+    #[cfg(target_os = "macos")]
+    fn test_icloud_detection() {
+        let is_icloud = Paths::is_config_in_icloud();
+        let location = Paths::storage_location();
+
+        if is_icloud {
+            assert_eq!(location, "iCloud Drive (synced across devices)");
+        } else {
+            assert_eq!(location, "Local storage");
+        }
+    }
+
+    #[test]
+    #[cfg(not(target_os = "macos"))]
+    fn test_non_macos_always_local() {
+        assert!(!Paths::is_config_in_icloud());
+        assert_eq!(Paths::storage_location(), "Local storage");
     }
 }
