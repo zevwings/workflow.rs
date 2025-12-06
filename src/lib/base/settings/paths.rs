@@ -584,141 +584,15 @@ impl Paths {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use clap_complete::shells::Shell;
 
+    /// 测试 home_dir() 方法（这是唯一需要测试私有 API 的测试）
+    ///
+    /// 其他所有测试都已移动到 tests/paths_integration.rs，
+    /// 因为它们只使用公开 API。
     #[test]
     fn test_home_dir() {
         let home = Paths::home_dir().unwrap();
         assert!(home.exists());
         assert!(home.is_dir());
-    }
-
-    #[test]
-    fn test_config_dir() {
-        let config_dir = Paths::config_dir().unwrap();
-        assert!(config_dir.exists());
-        assert!(config_dir.is_dir());
-        assert!(
-            config_dir.ends_with(".workflow/config")
-                || config_dir.to_string_lossy().contains("workflow")
-        );
-    }
-
-    #[test]
-    fn test_work_history_dir() {
-        let history_dir = Paths::work_history_dir().unwrap();
-        assert!(history_dir.exists());
-        assert!(history_dir.is_dir());
-        // work_history 应该总是在本地路径下
-        let path_str = history_dir.to_string_lossy();
-        assert!(path_str.contains("work-history"));
-    }
-
-    #[test]
-    fn test_completion_dir() {
-        let completion_dir = Paths::completion_dir().unwrap();
-        let path_str = completion_dir.to_string_lossy();
-        assert!(path_str.contains("completions"));
-    }
-
-    #[test]
-    fn test_workflow_dir() {
-        let workflow_dir = Paths::workflow_dir().unwrap();
-        assert!(workflow_dir.exists());
-        assert!(workflow_dir.is_dir());
-    }
-
-    #[test]
-    fn test_config_file_paths() {
-        // 测试所有支持的 shell 配置文件路径
-        let shells = vec![
-            Shell::Zsh,
-            Shell::Bash,
-            Shell::Fish,
-            Shell::PowerShell,
-            Shell::Elvish,
-        ];
-
-        for shell in shells {
-            let config_file = Paths::config_file(&shell);
-            match config_file {
-                Ok(path) => {
-                    // 验证路径格式正确
-                    assert!(!path.to_string_lossy().is_empty());
-                }
-                Err(_) => {
-                    // Windows 上某些 shell 可能不支持，这是正常的
-                    #[cfg(target_os = "windows")]
-                    {
-                        // Windows 上只有 PowerShell 应该成功
-                        if matches!(shell, Shell::PowerShell) {
-                            panic!("PowerShell config file should be available on Windows");
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    #[test]
-    #[cfg(not(target_os = "windows"))]
-    fn test_shell_config_paths_unix() {
-        let zsh_config = Paths::config_file(&Shell::Zsh).unwrap();
-        assert!(zsh_config.to_string_lossy().ends_with(".zshrc"));
-
-        let bash_config = Paths::config_file(&Shell::Bash).unwrap();
-        let bash_path = bash_config.to_string_lossy();
-        assert!(
-            bash_path.ends_with(".bash_profile") || bash_path.ends_with(".bashrc"),
-            "Bash config should be .bash_profile or .bashrc"
-        );
-    }
-
-    #[test]
-    fn test_work_history_always_local() {
-        let work_history = Paths::work_history_dir().unwrap();
-        let home = Paths::home_dir().unwrap();
-        let local_base = home.join(".workflow");
-
-        // work_history 应该总是在本地路径下
-        assert!(work_history.starts_with(&local_base));
-
-        // 确保不在 iCloud 路径下（如果 iCloud 可用）
-        #[cfg(target_os = "macos")]
-        {
-            let icloud_base = home
-                .join("Library")
-                .join("Mobile Documents")
-                .join("com~apple~CloudDocs")
-                .join(".workflow");
-            if icloud_base.exists() {
-                assert!(!work_history.starts_with(&icloud_base));
-            }
-        }
-    }
-
-    #[test]
-    fn test_completion_dir_is_local() {
-        let completion_dir = Paths::completion_dir().unwrap();
-        let home = Paths::home_dir().unwrap();
-        let local_base = home.join(".workflow");
-
-        // completion 应该总是在本地路径下
-        assert!(completion_dir.starts_with(&local_base));
-    }
-
-    #[test]
-    fn test_storage_location() {
-        let location = Paths::storage_location();
-        assert!(!location.is_empty());
-        // 应该是 "iCloud Drive (synced across devices)" 或 "Local storage"
-        assert!(location == "iCloud Drive (synced across devices)" || location == "Local storage");
-    }
-
-    #[test]
-    #[cfg(not(target_os = "macos"))]
-    fn test_non_macos_always_local() {
-        assert!(!Paths::is_config_in_icloud());
-        assert_eq!(Paths::storage_location(), "Local storage");
     }
 }

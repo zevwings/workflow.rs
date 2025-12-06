@@ -158,3 +158,130 @@ fn test_path_consistency() {
     let completion_dir2 = Paths::completion_dir().unwrap();
     assert_eq!(completion_dir1, completion_dir2);
 }
+
+// ==================== 基础路径测试 ====================
+
+#[test]
+fn test_config_dir() {
+    let config_dir = Paths::config_dir().unwrap();
+    assert!(config_dir.exists());
+    assert!(config_dir.is_dir());
+    assert!(
+        config_dir.ends_with(".workflow/config")
+            || config_dir.to_string_lossy().contains("workflow")
+    );
+}
+
+#[test]
+fn test_work_history_dir() {
+    let history_dir = Paths::work_history_dir().unwrap();
+    assert!(history_dir.exists());
+    assert!(history_dir.is_dir());
+    let path_str = history_dir.to_string_lossy();
+    assert!(path_str.contains("work-history"));
+}
+
+#[test]
+fn test_completion_dir() {
+    let completion_dir = Paths::completion_dir().unwrap();
+    let path_str = completion_dir.to_string_lossy();
+    assert!(path_str.contains("completions"));
+}
+
+#[test]
+fn test_workflow_dir() {
+    let workflow_dir = Paths::workflow_dir().unwrap();
+    assert!(workflow_dir.exists());
+    assert!(workflow_dir.is_dir());
+}
+
+#[test]
+fn test_config_file_paths() {
+    // 测试所有支持的 shell 配置文件路径
+    let shells = vec![
+        Shell::Zsh,
+        Shell::Bash,
+        Shell::Fish,
+        Shell::PowerShell,
+        Shell::Elvish,
+    ];
+
+    for shell in shells {
+        let config_file = Paths::config_file(&shell);
+        match config_file {
+            Ok(path) => {
+                // 验证路径格式正确
+                assert!(!path.to_string_lossy().is_empty());
+            }
+            Err(_) => {
+                // Windows 上某些 shell 可能不支持，这是正常的
+                #[cfg(target_os = "windows")]
+                {
+                    // Windows 上只有 PowerShell 应该成功
+                    if matches!(shell, Shell::PowerShell) {
+                        panic!("PowerShell config file should be available on Windows");
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+#[cfg(not(target_os = "windows"))]
+fn test_shell_config_paths_unix() {
+    let zsh_config = Paths::config_file(&Shell::Zsh).unwrap();
+    assert!(zsh_config.to_string_lossy().ends_with(".zshrc"));
+
+    let bash_config = Paths::config_file(&Shell::Bash).unwrap();
+    let bash_path = bash_config.to_string_lossy();
+    assert!(
+        bash_path.ends_with(".bash_profile") || bash_path.ends_with(".bashrc"),
+        "Bash config should be .bash_profile or .bashrc"
+    );
+}
+
+#[test]
+fn test_work_history_always_local() {
+    let work_history = Paths::work_history_dir().unwrap();
+    // 通过路径字符串验证，不直接调用 home_dir()
+    let path_str = work_history.to_string_lossy();
+    
+    // work_history 应该总是在本地路径下（包含 .workflow/work-history）
+    assert!(path_str.contains(".workflow"));
+    assert!(path_str.contains("work-history"));
+    
+    // 确保不在 iCloud 路径下
+    assert!(!path_str.contains("com~apple~CloudDocs"));
+}
+
+#[test]
+fn test_completion_dir_is_local() {
+    let completion_dir = Paths::completion_dir().unwrap();
+    // 通过路径字符串验证，不直接调用 home_dir()
+    let path_str = completion_dir.to_string_lossy();
+    
+    // completion 应该总是在本地路径下
+    assert!(path_str.contains(".workflow"));
+    assert!(path_str.contains("completions"));
+    
+    // 确保不在 iCloud 路径下
+    assert!(!path_str.contains("com~apple~CloudDocs"));
+}
+
+#[test]
+fn test_storage_location() {
+    let location = Paths::storage_location();
+    assert!(!location.is_empty());
+    // 应该是 "iCloud Drive (synced across devices)" 或 "Local storage"
+    assert!(
+        location == "iCloud Drive (synced across devices)" || location == "Local storage"
+    );
+}
+
+#[test]
+#[cfg(not(target_os = "macos"))]
+fn test_non_macos_always_local() {
+    assert!(!Paths::is_config_in_icloud());
+    assert_eq!(Paths::storage_location(), "Local storage");
+}
