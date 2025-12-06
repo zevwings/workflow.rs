@@ -6,21 +6,19 @@
 use anyhow::Result;
 use clap::Parser;
 
-mod commands;
-
-use commands::branch::{clean, ignore};
-use commands::check::check;
-use commands::config::{completion, log, setup, show};
-use commands::github::github;
-use commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
-use commands::lifecycle::{uninstall, update as lifecycle_update, version};
-use commands::llm::{LLMSetupCommand, LLMShowCommand};
-use commands::log::{DownloadCommand, FindCommand, SearchCommand};
-use commands::pr::{
+use workflow::commands::branch::{clean, ignore};
+use workflow::commands::check::check;
+use workflow::commands::config::{completion, log, setup, show};
+use workflow::commands::github::github;
+use workflow::commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
+use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
+use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
+use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
+use workflow::commands::pr::{
     approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
     update as pr_update,
 };
-use commands::proxy::proxy;
+use workflow::commands::proxy::proxy;
 
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CompletionSubcommand, GitHubSubcommand, IgnoreSubcommand,
@@ -28,7 +26,7 @@ use workflow::cli::{
 };
 use workflow::*;
 
-use crate::base::settings::Settings;
+use workflow::base::settings::Settings;
 
 /// 主函数
 ///
@@ -40,8 +38,8 @@ fn main() -> Result<()> {
             .log
             .level
             .as_ref()
-            .and_then(|s| s.parse::<crate::LogLevel>().ok());
-        crate::LogLevel::init(config_level);
+            .and_then(|s| s.parse::<workflow::LogLevel>().ok());
+        workflow::LogLevel::init(config_level);
     }
 
     let cli = Cli::parse();

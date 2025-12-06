@@ -2,6 +2,7 @@
 //!
 //! 提供生成各种 shell 的 completion 脚本文件的功能。
 
+use crate::base::settings::paths::Paths;
 use crate::log_debug;
 use crate::log_success;
 use anyhow::{Context, Result};
@@ -70,8 +71,7 @@ impl CompletionGenerator {
 
         // 解析输出目录
         let output = output_dir.map(PathBuf::from).unwrap_or_else(|| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| "~".to_string());
-            PathBuf::from(&home).join(".workflow/completions")
+            Paths::completion_dir().unwrap_or_else(|_| PathBuf::from("~/.workflow/completions"))
         });
 
         Ok(Self {

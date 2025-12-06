@@ -210,8 +210,8 @@ impl SetupCommand {
         log_break!('─', 65);
 
         let has_jira_email = existing.jira_email.is_some();
-        let jira_email_prompt = if let Some(ref email) = existing.jira_email {
-            format!("Jira email address [current: {}]", email)
+        let jira_email_prompt = if existing.jira_email.is_some() {
+            "Jira email address (press Enter to keep)".to_string()
         } else {
             "Jira email address".to_string()
         };
@@ -242,8 +242,8 @@ impl SetupCommand {
         };
 
         let has_jira_address = existing.jira_service_address.is_some();
-        let jira_address_prompt = if let Some(ref addr) = existing.jira_service_address {
-            format!("Jira service address [current: {}]", addr)
+        let jira_address_prompt = if existing.jira_service_address.is_some() {
+            "Jira service address (press Enter to keep)".to_string()
         } else {
             "Jira service address".to_string()
         };
@@ -305,13 +305,10 @@ impl SetupCommand {
         log_break!('─', 65);
 
         // 设置文档基础目录
-        let base_dir_prompt = if let Some(ref dir) = existing.log_download_base_dir {
-            format!("Document base directory [current: {}]", dir)
+        let base_dir_prompt = if existing.log_download_base_dir.is_some() {
+            "Document base directory (press Enter to keep)".to_string()
         } else {
-            format!(
-                "Document base directory [default: {}] (press Enter to use default)",
-                default_download_base_dir()
-            )
+            "Document base directory (press Enter to use default)".to_string()
         };
 
         let log_download_base_dir: String = Input::new()
@@ -432,22 +429,22 @@ impl SetupCommand {
 
         let model_prompt = match llm_provider.as_str() {
             "openai" => {
-                if let Some(ref model) = existing.llm_model {
-                    format!("OpenAI model [current: {}] (press Enter to keep)", model)
+                if existing.llm_model.is_some() {
+                    "OpenAI model (press Enter to keep)".to_string()
                 } else {
                     "OpenAI model (optional, press Enter to skip)".to_string()
                 }
             }
             "deepseek" => {
-                if let Some(ref model) = existing.llm_model {
-                    format!("DeepSeek model [current: {}] (press Enter to keep)", model)
+                if existing.llm_model.is_some() {
+                    "DeepSeek model (press Enter to keep)".to_string()
                 } else {
                     "DeepSeek model (optional, press Enter to skip)".to_string()
                 }
             }
             "proxy" => {
-                if let Some(ref model) = existing.llm_model {
-                    format!("LLM model [current: {}] (required)", model)
+                if existing.llm_model.is_some() {
+                    "LLM model (press Enter to keep)".to_string()
                 } else {
                     "LLM model (required)".to_string()
                 }
@@ -519,8 +516,8 @@ impl SetupCommand {
         let should_configure_codeup = confirm(&codeup_confirm_prompt, has_codeup, None)?;
 
         let (codeup_project_id, codeup_csrf_token, codeup_cookie) = if should_configure_codeup {
-            let codeup_id_prompt = if let Some(ref id) = existing.codeup_project_id {
-                format!("Codeup project ID [current: {}] (press Enter to keep)", id)
+            let codeup_id_prompt = if existing.codeup_project_id.is_some() {
+                "Codeup project ID (press Enter to keep)".to_string()
             } else {
                 "Codeup project ID (optional, press Enter to skip)".to_string()
             };

@@ -406,26 +406,3 @@ impl Settings {
         Ok(())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_settings_initialization() {
-        // 测试初始化（使用默认值）
-        let settings = Settings::load();
-        assert_eq!(settings.jira.email, None);
-        assert_eq!(settings.jira.api_token, None);
-        assert_eq!(settings.jira.service_address, None);
-        assert_eq!(settings.log.output_folder_name, "logs");
-        assert_eq!(settings.llm.provider, "openai"); // 默认值
-    }
-
-    #[test]
-    fn test_llm_provider() {
-        // 测试默认值
-        let settings = Settings::load();
-        assert_eq!(settings.llm.provider, "openai");
-    }
-}

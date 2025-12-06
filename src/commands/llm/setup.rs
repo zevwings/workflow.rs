@@ -115,22 +115,22 @@ impl LLMSetupCommand {
 
         let model_prompt = match llm_provider.as_str() {
             "openai" => {
-                if let Some(ref model) = existing.model {
-                    format!("OpenAI model [current: {}] (press Enter to keep)", model)
+                if existing.model.is_some() {
+                    "OpenAI model (press Enter to keep)".to_string()
                 } else {
                     "OpenAI model (optional, press Enter to skip)".to_string()
                 }
             }
             "deepseek" => {
-                if let Some(ref model) = existing.model {
-                    format!("DeepSeek model [current: {}] (press Enter to keep)", model)
+                if existing.model.is_some() {
+                    "DeepSeek model (press Enter to keep)".to_string()
                 } else {
                     "DeepSeek model (optional, press Enter to skip)".to_string()
                 }
             }
             "proxy" => {
-                if let Some(ref model) = existing.model {
-                    format!("LLM model [current: {}] (required)", model)
+                if existing.model.is_some() {
+                    "LLM model (press Enter to keep)".to_string()
                 } else {
                     "LLM model (required)".to_string()
                 }

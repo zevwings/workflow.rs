@@ -267,6 +267,3 @@ impl JiraStatus {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {}

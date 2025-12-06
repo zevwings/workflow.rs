@@ -243,6 +243,15 @@
 - 改进建议和优先级
 - 贡献指南
 
+### [FEATURE_EXTENSIONS.md](./FEATURE_EXTENSIONS.md)
+**功能拓展分析文档**
+
+- 基于代码库分析的功能拓展方向
+- 10 个主要功能模块的详细拓展建议
+- 每个功能的命令示例和实现建议
+- 优先级建议和开发顺序
+- 技术考虑和贡献指南
+
 ---
 
 ## 📝 文档结构说明
@@ -283,6 +292,7 @@
 - **2024-12** - 实现同时搜索 api.log 和 flutter-api.log 功能，更新搜索命令以支持两个文件
 - **2024-12** - 删除废弃的 QK_COMMAND_ARCHITECTURE.md 文档（已拆分为 LOG_COMMAND_ARCHITECTURE.md 和 JIRA_COMMAND_ARCHITECTURE.md）
 - **2024-12** - 创建开发规范文档 `DEVELOPMENT_GUIDELINES.md`，包含代码风格、错误处理、文档、命名、模块组织、Git 工作流、提交、测试、代码审查、依赖管理等规范
+- **2024-12** - 创建功能拓展分析文档 `FEATURE_EXTENSIONS.md`，基于代码库分析提出 10 个主要功能模块的拓展建议，包含详细的功能说明、命令示例、实现建议和优先级建议
 
 ---
 
