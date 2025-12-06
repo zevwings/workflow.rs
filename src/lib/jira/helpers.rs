@@ -134,4 +134,3 @@ pub fn get_base_url() -> Result<String> {
 
     Ok(format!("{}/rest/api/2", base_url))
 }
-

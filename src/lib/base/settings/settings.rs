@@ -406,4 +406,3 @@ impl Settings {
         Ok(())
     }
 }
-

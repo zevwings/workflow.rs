@@ -197,4 +197,3 @@ pub fn extract_info_from_source_pr(source_pr_info: &Option<SourcePrInfo>) -> Ext
         change_types,
     }
 }
-

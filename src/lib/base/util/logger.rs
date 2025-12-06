@@ -419,4 +419,3 @@ macro_rules! log_break {
         $crate::Logger::print_separator_with_text($char, $length, $text);
     };
 }
-
