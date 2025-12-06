@@ -5,9 +5,7 @@
 //! 注意：这些测试主要测试数据结构和逻辑，实际的备份/恢复操作需要文件系统权限。
 
 use std::fs;
-use std::path::PathBuf;
-use tempfile::TempDir;
-use workflow::rollback::{BackupInfo, RollbackManager};
+use workflow::rollback::BackupInfo;
 
 // ==================== BackupInfo 测试 ====================
 

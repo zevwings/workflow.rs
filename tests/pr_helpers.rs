@@ -210,21 +210,36 @@ fn test_generate_pull_request_body_with_dependency() {
 #[test]
 fn test_detect_repo_type_github() {
     // 测试 GitHub 仓库类型检测
-    let result = detect_repo_type(|| Ok(workflow::git::RepoType::GitHub), "Get repo type");
+    let result = detect_repo_type(
+        |repo_type| {
+            assert_eq!(repo_type, workflow::git::RepoType::GitHub);
+            Ok(())
+        },
+        "Get repo type",
+    );
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_detect_repo_type_codeup() {
     // 测试 Codeup 仓库类型检测
-    let result = detect_repo_type(|| Ok(workflow::git::RepoType::Codeup), "Get repo type");
+    let result = detect_repo_type(
+        |repo_type| {
+            assert_eq!(repo_type, workflow::git::RepoType::Codeup);
+            Ok(())
+        },
+        "Get repo type",
+    );
     assert!(result.is_ok());
 }
 
 #[test]
 fn test_detect_repo_type_error() {
     // 测试错误情况
-    let result = detect_repo_type(|| Err(anyhow::anyhow!("Failed to detect")), "Get repo type");
+    let result: Result<(), _> = detect_repo_type(
+        |_repo_type| Err(anyhow::anyhow!("Failed to detect")),
+        "Get repo type",
+    );
     assert!(result.is_err());
 }
 

@@ -2,7 +2,7 @@
 //!
 //! 测试 `base::http::retry` 模块中的重试机制。
 
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
 
 // ==================== HttpRetryConfig 测试 ====================
@@ -55,10 +55,10 @@ fn test_retry_success_on_first_attempt() {
         interactive: false, // 非交互式，避免用户输入
     };
 
-    let mut attempt_count = 0;
+    let attempt_count = std::cell::Cell::new(0);
     let result = HttpRetry::retry(
         || {
-            attempt_count += 1;
+            attempt_count.set(attempt_count.get() + 1);
             Ok(42)
         },
         &config,
@@ -67,7 +67,7 @@ fn test_retry_success_on_first_attempt() {
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), 42);
-    assert_eq!(attempt_count, 1); // 应该只尝试一次
+    assert_eq!(attempt_count.get(), 1); // 应该只尝试一次
 }
 
 #[test]
@@ -80,11 +80,11 @@ fn test_retry_success_after_retries() {
         interactive: false,
     };
 
-    let mut attempt_count = 0;
+    let attempt_count = std::cell::Cell::new(0);
     let result = HttpRetry::retry(
         || {
-            attempt_count += 1;
-            if attempt_count < 3 {
+            attempt_count.set(attempt_count.get() + 1);
+            if attempt_count.get() < 3 {
                 Err(anyhow!("Network error"))
             } else {
                 Ok(42)
@@ -96,7 +96,7 @@ fn test_retry_success_after_retries() {
 
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), 42);
-    assert_eq!(attempt_count, 3); // 应该尝试 3 次
+    assert_eq!(attempt_count.get(), 3); // 应该尝试 3 次
 }
 
 #[test]
@@ -109,10 +109,10 @@ fn test_retry_exhausted() {
         interactive: false,
     };
 
-    let mut attempt_count = 0;
-    let result = HttpRetry::retry(
+    let attempt_count = std::cell::Cell::new(0);
+    let result: Result<i32, _> = HttpRetry::retry(
         || {
-            attempt_count += 1;
+            attempt_count.set(attempt_count.get() + 1);
             Err(anyhow!("Persistent error"))
         },
         &config,
@@ -121,7 +121,7 @@ fn test_retry_exhausted() {
 
     assert!(result.is_err());
     // 应该尝试 max_retries + 1 次（初始尝试 + 重试次数）
-    assert_eq!(attempt_count, 3); // 1 次初始 + 2 次重试
+    assert_eq!(attempt_count.get(), 3); // 1 次初始 + 2 次重试
 }
 
 #[test]
@@ -134,10 +134,10 @@ fn test_retry_non_retryable_error() {
         interactive: false,
     };
 
-    let mut attempt_count = 0;
-    let result = HttpRetry::retry(
+    let attempt_count = std::cell::Cell::new(0);
+    let result: Result<i32, _> = HttpRetry::retry(
         || {
-            attempt_count += 1;
+            attempt_count.set(attempt_count.get() + 1);
             // 4xx 错误通常不可重试
             Err(anyhow!("400 Bad Request"))
         },
@@ -147,7 +147,7 @@ fn test_retry_non_retryable_error() {
 
     assert!(result.is_err());
     // 不可重试的错误应该立即返回，不进行重试
-    assert_eq!(attempt_count, 1);
+    assert_eq!(attempt_count.get(), 1);
 }
 
 // ==================== 指数退避测试 ====================
@@ -241,7 +241,6 @@ fn test_retryable_network_errors() {
     ];
 
     for error_msg in network_errors {
-        let error = anyhow!(error_msg);
         // 注意：这里我们无法直接测试 is_retryable_error，因为它是私有的
         // 但我们可以通过 retry 行为来间接测试
         let config = HttpRetryConfig {
@@ -252,10 +251,10 @@ fn test_retryable_network_errors() {
             interactive: false,
         };
 
-        let mut attempt_count = 0;
-        let _ = HttpRetry::retry(
+        let attempt_count = std::cell::Cell::new(0);
+        let _: Result<i32, _> = HttpRetry::retry(
             || {
-                attempt_count += 1;
+                attempt_count.set(attempt_count.get() + 1);
                 Err(anyhow!(error_msg))
             },
             &config,
@@ -264,7 +263,7 @@ fn test_retryable_network_errors() {
 
         // 如果是可重试错误，应该尝试多次
         assert!(
-            attempt_count > 1,
+            attempt_count.get() > 1,
             "Error '{}' should be retryable",
             error_msg
         );
@@ -290,10 +289,10 @@ fn test_non_retryable_client_errors() {
             interactive: false,
         };
 
-        let mut attempt_count = 0;
-        let _ = HttpRetry::retry(
+        let attempt_count = std::cell::Cell::new(0);
+        let _: Result<i32, _> = HttpRetry::retry(
             || {
-                attempt_count += 1;
+                attempt_count.set(attempt_count.get() + 1);
                 Err(anyhow!(error_msg))
             },
             &config,
@@ -302,7 +301,8 @@ fn test_non_retryable_client_errors() {
 
         // 如果是不可重试错误，应该只尝试一次
         assert_eq!(
-            attempt_count, 1,
+            attempt_count.get(),
+            1,
             "Error '{}' should not be retryable",
             error_msg
         );
@@ -322,11 +322,11 @@ fn test_non_interactive_mode() {
         interactive: false,
     };
 
-    let mut attempt_count = 0;
+    let attempt_count = std::cell::Cell::new(0);
     let result = HttpRetry::retry(
         || {
-            attempt_count += 1;
-            if attempt_count < 3 {
+            attempt_count.set(attempt_count.get() + 1);
+            if attempt_count.get() < 3 {
                 Err(anyhow!("Network error"))
             } else {
                 Ok(42)
@@ -337,7 +337,7 @@ fn test_non_interactive_mode() {
     );
 
     assert!(result.is_ok());
-    assert_eq!(attempt_count, 3);
+    assert_eq!(attempt_count.get(), 3);
 }
 
 // 注意：交互式模式的测试需要模拟用户输入，这比较复杂

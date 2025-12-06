@@ -25,9 +25,9 @@ pub struct BackupInfo {
     /// 备份目录
     pub backup_dir: PathBuf,
     /// 备份的二进制文件路径
-    binary_backups: Vec<(String, PathBuf)>, // (binary_name, backup_path)
+    pub binary_backups: Vec<(String, PathBuf)>, // (binary_name, backup_path)
     /// 备份的补全脚本路径
-    completion_backups: Vec<(String, PathBuf)>, // (completion_name, backup_path)
+    pub completion_backups: Vec<(String, PathBuf)>, // (completion_name, backup_path)
 }
 
 impl BackupInfo {
@@ -52,6 +52,16 @@ impl BackupInfo {
     /// 添加补全脚本备份
     fn add_completion_backup(&mut self, name: String, path: PathBuf) {
         self.completion_backups.push((name, path));
+    }
+
+    /// 获取二进制文件备份列表
+    pub fn binary_backups(&self) -> &[(String, PathBuf)] {
+        &self.binary_backups
+    }
+
+    /// 获取补全脚本备份列表
+    pub fn completion_backups(&self) -> &[(String, PathBuf)] {
+        &self.completion_backups
     }
 }
 

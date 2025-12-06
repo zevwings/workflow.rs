@@ -40,7 +40,7 @@
   - 包含 UI 框架对比分析和推荐
 - **下一步**: 等待 UI 改进需求时使用
 
-#### 3. [`REFACTORING_PLAN.md`](./REFACTORING_PLAN.md)
+#### 3. [`LOGGING_REFACTORING.md`](./LOGGING_REFACTORING.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **建议**: **保留**作为重构规划参考
@@ -123,9 +123,10 @@
 ```
 docs/todo/
 ├── README.md                      # 本文件（索引文档）
+├── DOCUMENT_CLEANUP_ANALYSIS.md   # 文档清理分析报告
 ├── FEATURE_EXTENSIONS.md          # 功能拓展分析文档（完整版）
 ├── ui-framework-recommendations.md # UI 框架推荐文档
-├── REFACTORING_PLAN.md            # 日志输出重构计划
+├── LOGGING_REFACTORING.md         # 日志输出重构计划
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项
 ├── GIT_TODO.md                    # Git 工作流待办事项
@@ -143,14 +144,15 @@ docs/todo/
 |-----|---------|------|
 | ⏳ 待实施参考 | 3 个 | 保留在 `todo/` |
 | 📋 分类待办事项 | 6 个 | 按模块分类的待办事项 |
-| **总计** | **9 个** | - |
+| 📊 分析报告 | 1 个 | 文档清理分析报告 |
+| **总计** | **10 个** | - |
 
 ### 文档列表
 
 #### 完整规划文档
 1. **FEATURE_EXTENSIONS.md** - 功能拓展分析文档（完整版）
 2. **ui-framework-recommendations.md** - UI 框架推荐文档
-3. **REFACTORING_PLAN.md** - 日志输出重构计划
+3. **LOGGING_REFACTORING.md** - 日志输出重构计划
 
 #### 分类待办事项文档
 4. **JIRA_TODO.md** - JIRA 模块待办事项
@@ -166,7 +168,7 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 8 个文档：
+本目录包含 10 个文档：
 
 #### 完整规划文档（3 个）
 1. **功能拓展分析** (`FEATURE_EXTENSIONS.md`)
@@ -177,7 +179,7 @@ docs/todo/
    - UI 框架技术选型参考
    - 框架对比分析和推荐
 
-3. **重构计划** (`REFACTORING_PLAN.md`)
+3. **日志重构计划** (`LOGGING_REFACTORING.md`)
    - 日志输出重构计划
    - 分阶段实施步骤和时间估算
 
@@ -224,8 +226,9 @@ docs/todo/
 ### 完整参考
 - **功能拓展完整文档** → [`FEATURE_EXTENSIONS.md`](./FEATURE_EXTENSIONS.md)
 - **UI 框架推荐** → [`ui-framework-recommendations.md`](./ui-framework-recommendations.md)
-- **重构计划** → [`REFACTORING_PLAN.md`](./REFACTORING_PLAN.md)
+- **日志重构计划** → [`LOGGING_REFACTORING.md`](./LOGGING_REFACTORING.md)
 - **测试增强计划** → [`TESTING_ENHANCEMENT.md`](./TESTING_ENHANCEMENT.md)
+- **文档清理分析** → [`DOCUMENT_CLEANUP_ANALYSIS.md`](./DOCUMENT_CLEANUP_ANALYSIS.md)
 
 ---
 

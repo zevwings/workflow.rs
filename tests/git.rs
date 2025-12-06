@@ -314,7 +314,7 @@ fn test_git_branch_create() {
     std::env::set_current_dir(temp_repo.path()).unwrap();
 
     // 创建新分支
-    GitBranch::create("test-branch").unwrap();
+    GitBranch::checkout_branch("test-branch").unwrap();
 
     // 验证分支存在
     let (local, _) = GitBranch::is_branch_exists("test-branch").unwrap();
@@ -331,8 +331,8 @@ fn test_git_branch_switch() {
     std::env::set_current_dir(temp_repo.path()).unwrap();
 
     // 创建并切换到新分支
-    GitBranch::create("test-branch").unwrap();
-    GitBranch::switch("test-branch").unwrap();
+    GitBranch::checkout_branch("test-branch").unwrap();
+    GitBranch::checkout_branch("test-branch").unwrap();
 
     // 验证当前分支
     let current = GitBranch::current_branch().unwrap();
@@ -366,18 +366,18 @@ fn test_git_branch_merge() {
     create_and_commit_file(temp_repo.path(), "file1.txt", "content1");
 
     // 创建并切换到新分支
-    GitBranch::create("feature-branch").unwrap();
-    GitBranch::switch("feature-branch").unwrap();
+    GitBranch::checkout_branch("feature-branch").unwrap();
+    GitBranch::checkout_branch("feature-branch").unwrap();
 
     // 在新分支上创建提交
     create_and_commit_file(temp_repo.path(), "file2.txt", "content2");
 
     // 切换回主分支
     let default = GitBranch::get_default_branch().unwrap();
-    GitBranch::switch(&default).unwrap();
+    GitBranch::checkout_branch(&default).unwrap();
 
     // 合并分支
-    GitBranch::merge("feature-branch", MergeStrategy::Merge).unwrap();
+    GitBranch::merge_branch("feature-branch", MergeStrategy::Merge).unwrap();
 
     // 验证合并成功（检查文件是否存在）
     assert!(temp_repo.path().join("file1.txt").exists());
@@ -488,7 +488,7 @@ fn test_git_branch_nonexistent_branch() {
     std::env::set_current_dir(temp_repo.path()).unwrap();
 
     // 切换到不存在的分支应该失败
-    let result = GitBranch::switch("nonexistent-branch");
+    let result = GitBranch::checkout_branch("nonexistent-branch");
     assert!(result.is_err());
 
     std::env::set_current_dir(original_dir).unwrap();
@@ -502,7 +502,7 @@ fn test_git_stash_empty() {
     std::env::set_current_dir(temp_repo.path()).unwrap();
 
     // 在没有更改的情况下 stash 应该失败或返回空
-    let result = GitStash::stash_push(Some("Empty stash"));
+    let _result = GitStash::stash_push(Some("Empty stash"));
     // 可能成功（空 stash）或失败，取决于实现
     // 这里只验证不会 panic
 
