@@ -323,11 +323,12 @@ impl Paths {
     /// ```
     pub fn binary_install_dir() -> String {
         if cfg!(target_os = "windows") {
-            // Windows: 使用 %LOCALAPPDATA%\Programs\workflow\bin
-            let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| {
-                std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\User".to_string())
-            });
-            format!("{}\\Programs\\workflow\\bin", local_app_data)
+            // Windows: 使用 dirs::data_local_dir() 获取 %LOCALAPPDATA%
+            dirs::data_local_dir()
+                .map(|d| d.join("Programs").join("workflow").join("bin"))
+                .or_else(|| dirs::home_dir().map(|h| h.join(".local").join("bin")))
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| "C:\\Users\\User\\Programs\\workflow\\bin".to_string())
         } else {
             // Unix-like: 使用 /usr/local/bin
             "/usr/local/bin".to_string()

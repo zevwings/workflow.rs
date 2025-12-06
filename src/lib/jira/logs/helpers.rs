@@ -16,6 +16,8 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use walkdir::WalkDir;
 
+use crate::base::settings::paths::Paths;
+
 /// 日志条目信息
 #[derive(Debug, Clone)]
 pub struct LogEntry {
@@ -125,12 +127,13 @@ pub(crate) fn add_entry_if_not_duplicate(
 pub(crate) fn expand_path(path_str: &str) -> Result<PathBuf> {
     // 处理 Unix 风格的 ~ 展开
     if let Some(rest) = path_str.strip_prefix("~/") {
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        return Ok(PathBuf::from(home).join(rest));
+        // 使用统一的 home_dir 方法
+        let home = Paths::home_dir()?;
+        return Ok(home.join(rest));
     }
     if path_str == "~" {
-        let home = env::var("HOME").context("HOME environment variable not set")?;
-        return Ok(PathBuf::from(home));
+        // 使用统一的 home_dir 方法
+        return Paths::home_dir();
     }
 
     // 处理 Windows 风格的环境变量展开 %VAR%

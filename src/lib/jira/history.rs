@@ -387,5 +387,3 @@ impl JiraWorkHistory {
     }
 }
 
-#[cfg(test)]
-mod tests {}

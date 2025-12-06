@@ -210,7 +210,7 @@ pub fn format_file_size_custom(bytes: u64) -> String {
    - 不需要 i18n 支持
    - 当前精度（2 位小数）满足需求
 
-3. **收益不明显**: 
+3. **收益不明显**:
    - 节省 30 行代码的收益很小
    - 引入新依赖的成本大于收益
    - 当前实现无已知 bug
@@ -280,7 +280,7 @@ pub fn build_http_client() -> Result<Client> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
         .build()?;
-    
+
     // reqwest-tracing 会自动拦截并记录所有请求
     Ok(client)
 }
@@ -387,7 +387,7 @@ pub fn build_http_client() -> Result<ClientWithMiddleware> {
    - 询问用户："是否在 N 秒后重试？"
    - 倒计时显示："3 秒后重试... (按 Ctrl+C 取消)"
    - 用户主动取消功能
-   
+
 2. **用户体验优先**: CLI 工具的交互体验是核心价值
    - 标准重试库无法提供此功能
    - 保留 350 行自定义实现是合理的
@@ -493,7 +493,7 @@ debug!(path = ?config_path, "Loading configuration");
    - `log_info!()` - ℹ 蓝色信息提示
    - `log_warning!()` - ⚠ 黄色警告提示
    - `log_error!()` - ✗ 红色错误提示
-   
+
 2. **避免重型依赖**: `tracing` 生态较大
    - `tracing` + `tracing-subscriber` 约 200KB
    - 额外引入 5 个传递依赖
@@ -801,7 +801,7 @@ reqwest-tracing = "0.4"         # ⏳ HTTP 请求追踪（~15KB，1 个依赖）
 | `reqwest-tracing` | ~15KB | 1 | ~1s | ⏳ 待实施 |
 | **总计** | ~25KB | 1 | ~1.5s | - |
 
-**评估**: 
+**评估**:
 - ✅ 依赖增加最小化，仅增加 ~25KB 和 1 个传递依赖
 - ✅ 编译时间影响可忽略（~1.5 秒）
 - ✅ 保持了代码简洁性和用户体验
