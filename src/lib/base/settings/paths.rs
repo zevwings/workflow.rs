@@ -19,11 +19,153 @@ use std::os::unix::fs::PermissionsExt;
 pub struct Paths;
 
 impl Paths {
+    // ==================== 私有辅助方法 ====================
+
+    /// 获取用户主目录
+    ///
+    /// 使用 dirs crate 提供的跨平台主目录获取功能。
+    /// 这是一个统一的入口点，所有需要主目录的地方都应该调用此方法。
+    ///
+    /// # 返回
+    ///
+    /// 返回用户主目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法确定主目录，返回错误信息。
+    pub(crate) fn home_dir() -> Result<PathBuf> {
+        dirs::home_dir().context("Cannot determine home directory")
+    }
+
+    /// 尝试获取 iCloud 基础目录（仅 macOS）
+    ///
+    /// 检查 iCloud Drive 是否可用，如果可用则返回 .workflow 目录路径。
+    ///
+    /// # 返回
+    ///
+    /// - `Some(PathBuf)` - iCloud Drive 可用且成功创建目录
+    /// - `None` - iCloud Drive 不可用或创建目录失败
+    ///
+    /// # iCloud 路径
+    ///
+    /// macOS: `~/Library/Mobile Documents/com~apple~CloudDocs/.workflow/`
+    #[cfg(target_os = "macos")]
+    fn try_icloud_base_dir() -> Option<PathBuf> {
+        // 获取主目录
+        let home = Self::home_dir().ok()?;
+
+        // 构建 iCloud Drive 基础路径
+        // ~/Library/Mobile Documents/com~apple~CloudDocs
+        let icloud_base = home
+            .join("Library")
+            .join("Mobile Documents")
+            .join("com~apple~CloudDocs");
+
+        // 检查 iCloud Drive 是否可用
+        if !icloud_base.exists() || !icloud_base.is_dir() {
+            return None;
+        }
+
+        // 尝试创建 .workflow 目录
+        let workflow_dir = icloud_base.join(".workflow");
+        if fs::create_dir_all(&workflow_dir).is_err() {
+            return None;
+        }
+
+        // 设置目录权限为 700（仅用户可访问）
+        #[cfg(unix)]
+        {
+            let _ = fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700));
+        }
+
+        Some(workflow_dir)
+    }
+
+    /// 非 macOS 平台：总是返回 None
+    #[cfg(not(target_os = "macos"))]
+    fn try_icloud_base_dir() -> Option<PathBuf> {
+        None
+    }
+
+    /// 获取本地基础目录（总是可用）
+    ///
+    /// 返回 `~/.workflow/` 目录（Unix）。
+    /// 此方法作为回退方案，确保在任何情况下都能获取到有效路径。
+    ///
+    /// # 返回
+    ///
+    /// 返回本地工作流目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    fn local_base_dir() -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        let workflow_dir = home.join(".workflow");
+
+        // 确保目录存在
+        fs::create_dir_all(&workflow_dir).context("Failed to create local .workflow directory")?;
+
+        // 设置目录权限为 700（仅用户可访问）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set workflow directory permissions")?;
+        }
+
+        Ok(workflow_dir)
+    }
+
+    /// 获取配置基础目录（支持 iCloud）
+    ///
+    /// 决策逻辑：
+    /// 1. 检查环境变量 `WORKFLOW_DISABLE_ICLOUD`，如果设置则强制使用本地
+    /// 2. 在 macOS 上，如果 iCloud Drive 可用，优先使用 iCloud
+    /// 3. 如果 iCloud 不可用，回退到本地目录
+    /// 4. 在其他平台上，直接使用本地目录
+    ///
+    /// **注意**：如果用户已有本地配置，需要手动迁移到 iCloud：
+    /// ```bash
+    /// cp -r ~/.workflow/config/* \
+    ///    ~/Library/Mobile\ Documents/com~apple~CloudDocs/.workflow/config/
+    /// ```
+    ///
+    /// # 返回
+    ///
+    /// 返回配置基础目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    fn config_base_dir() -> Result<PathBuf> {
+        // 检查用户是否明确禁用 iCloud
+        if std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok() {
+            return Self::local_base_dir();
+        }
+
+        // macOS 上尝试 iCloud
+        #[cfg(target_os = "macos")]
+        {
+            if let Some(icloud_dir) = Self::try_icloud_base_dir() {
+                return Ok(icloud_dir);
+            }
+        }
+
+        // 回退到本地
+        Self::local_base_dir()
+    }
+
     // ==================== 配置路径相关方法 ====================
 
-    /// 获取配置目录路径
+    /// 获取配置目录路径（支持 iCloud 同步）
     ///
-    /// 返回 `~/.workflow/config/` 目录路径，如果目录不存在则创建。
+    /// 返回配置文件存储目录。在 macOS 上，如果 iCloud Drive 可用，
+    /// 配置将保存到 iCloud 并自动同步到其他设备。
+    ///
+    /// # 路径示例
+    ///
+    /// - macOS + iCloud：`~/Library/Mobile Documents/com~apple~CloudDocs/.workflow/config/`
+    /// - macOS 无 iCloud / 其他系统：`~/.workflow/config/`
     ///
     /// # 返回
     ///
@@ -33,16 +175,8 @@ impl Paths {
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn config_dir() -> Result<PathBuf> {
-        let config_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow\config
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow").join("config")
-        } else {
-            // Unix-like: 使用 ~/.workflow/config
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow").join("config")
-        };
+        // 使用支持 iCloud 的配置基础目录
+        let config_dir = Self::config_base_dir()?.join("config");
 
         // 确保配置目录存在
         fs::create_dir_all(&config_dir).context("Failed to create config directory")?;
@@ -92,9 +226,9 @@ impl Paths {
         Ok(Self::config_dir()?.join("branch.toml"))
     }
 
-    /// 获取工作流目录路径
+    /// 获取工作流目录路径（支持 iCloud）
     ///
-    /// 返回 `~/.workflow/` 目录路径（Unix）或 `%APPDATA%\workflow` 目录路径（Windows），如果目录不存在则创建。
+    /// 返回工作流基础目录。如果配置在 iCloud，此方法返回 iCloud 路径。
     ///
     /// # 返回
     ///
@@ -102,45 +236,36 @@ impl Paths {
     ///
     /// # 错误
     ///
-    /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
+    /// 如果无法创建目录，返回相应的错误信息。
     pub fn workflow_dir() -> Result<PathBuf> {
-        let workflow_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow")
-        } else {
-            // Unix-like: 使用 ~/.workflow
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow")
-        };
-
-        // 确保工作流目录存在
-        fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
-
-        // 设置目录权限为 700（仅用户可访问，仅 Unix）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700))
-                .context("Failed to set workflow directory permissions")?;
-        }
-
-        Ok(workflow_dir)
+        // 直接返回配置基础目录
+        Self::config_base_dir()
     }
 
-    /// 获取工作历史记录目录路径
+    /// 获取工作历史目录路径（强制本地，不同步）
     ///
-    /// 返回 `~/.workflow/work-history/` 目录路径（Unix）或 `%APPDATA%\workflow\work-history` 目录路径（Windows），如果目录不存在则创建。
+    /// 返回 `~/.workflow/work-history/`（总是本地路径）。
+    ///
+    /// **重要**：工作历史是设备本地的，不应该跨设备同步，因为：
+    /// - 每个设备的工作历史是独立的
+    /// - 避免多设备冲突（不同设备可能处理不同的 PR）
+    /// - 防止历史记录混乱（PR ID 可能在不同仓库中重复）
+    /// - 性能考虑（本地读写更快，不需要等待 iCloud 同步）
+    ///
+    /// # 路径示例
+    ///
+    /// - 所有平台：`~/.workflow/work-history/`
     ///
     /// # 返回
     ///
-    /// 返回工作历史记录目录的 `PathBuf`。
+    /// 返回工作历史目录的 `PathBuf`。
     ///
     /// # 错误
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn work_history_dir() -> Result<PathBuf> {
-        let history_dir = Self::workflow_dir()?.join("work-history");
+        // 强制使用本地路径，不使用 iCloud
+        let history_dir = Self::local_base_dir()?.join("work-history");
 
         // 确保目录存在
         fs::create_dir_all(&history_dir)
@@ -198,11 +323,12 @@ impl Paths {
     /// ```
     pub fn binary_install_dir() -> String {
         if cfg!(target_os = "windows") {
-            // Windows: 使用 %LOCALAPPDATA%\Programs\workflow\bin
-            let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_else(|_| {
-                std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\User".to_string())
-            });
-            format!("{}\\Programs\\workflow\\bin", local_app_data)
+            // Windows: 使用 dirs::data_local_dir() 获取 %LOCALAPPDATA%
+            dirs::data_local_dir()
+                .map(|d| d.join("Programs").join("workflow").join("bin"))
+                .or_else(|| dirs::home_dir().map(|h| h.join(".local").join("bin")))
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|| "C:\\Users\\User\\Programs\\workflow\\bin".to_string())
         } else {
             // Unix-like: 使用 /usr/local/bin
             "/usr/local/bin".to_string()
@@ -271,38 +397,99 @@ impl Paths {
         }
     }
 
-    /// 获取 completion 目录的完整路径
+    /// 获取补全脚本目录路径（强制本地）
     ///
-    /// 返回 `~/.workflow/completions` 目录的完整路径。
+    /// 返回 `~/.workflow/completions/`（总是本地路径）。
+    /// Shell 补全脚本是本地安装的，不需要同步。
     ///
     /// # 返回
     ///
-    /// 返回 completion 目录的 `PathBuf`。
+    /// 返回补全脚本目录的 `PathBuf`。
     ///
     /// # 错误
     ///
-    /// 如果 `HOME` 环境变量未设置，返回相应的错误信息。
-    ///
-    /// # 示例
-    ///
-    /// ```
-    /// use workflow::settings::paths::Paths;
-    ///
-    /// let dir = Paths::completion_dir()?;
-    /// assert_eq!(dir, PathBuf::from("~/.workflow/completions"));
-    /// ```
+    /// 如果无法获取本地目录，返回相应的错误信息。
     pub fn completion_dir() -> Result<PathBuf> {
-        let completion_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow\completions
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow").join("completions")
+        // 确保使用本地路径
+        Ok(Self::local_base_dir()?.join("completions"))
+    }
+
+    // ==================== 信息查询 API ====================
+
+    /// 检查配置是否存储在 iCloud
+    ///
+    /// # 返回
+    ///
+    /// - `true` - 配置当前存储在 iCloud Drive
+    /// - `false` - 配置存储在本地
+    pub fn is_config_in_icloud() -> bool {
+        #[cfg(target_os = "macos")]
+        {
+            Self::try_icloud_base_dir().is_some()
+        }
+
+        #[cfg(not(target_os = "macos"))]
+        {
+            false
+        }
+    }
+
+    /// 获取存储位置的用户友好描述
+    ///
+    /// # 返回
+    ///
+    /// - "iCloud Drive (synced across devices)" - 使用 iCloud
+    /// - "Local storage" - 使用本地存储
+    pub fn storage_location() -> &'static str {
+        if Self::is_config_in_icloud() {
+            "iCloud Drive (synced across devices)"
         } else {
-            // Unix-like: 使用 ~/.workflow/completions
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow").join("completions")
+            "Local storage"
+        }
+    }
+
+    /// 获取详细的存储信息
+    ///
+    /// 返回包含存储类型、配置路径和工作历史路径的详细信息。
+    ///
+    /// # 返回
+    ///
+    /// 返回格式化的存储信息字符串。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法获取路径，返回相应的错误信息。
+    pub fn storage_info() -> Result<String> {
+        let config_dir = Self::config_dir()?;
+        let work_history_dir = Self::work_history_dir()?;
+
+        let info = if Self::is_config_in_icloud() {
+            format!(
+                "Storage Type: iCloud Drive (synced across devices)\n\
+                 \n\
+                 Configuration (synced):\n\
+                 {}\n\
+                 \n\
+                 Work History (local only, not synced):\n\
+                 {}",
+                config_dir.display(),
+                work_history_dir.display()
+            )
+        } else {
+            format!(
+                "Storage Type: Local storage\n\
+                 \n\
+                 Configuration:\n\
+                 {}\n\
+                 \n\
+                 Work History:\n\
+                 {}",
+                config_dir.display(),
+                work_history_dir.display()
+            )
         };
-        Ok(completion_dir)
+
+        Ok(info)
     }
 
     // ==================== Shell 路径相关方法 ====================
@@ -340,68 +527,73 @@ impl Paths {
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
     /// ```
     pub fn config_file(shell: &Shell) -> Result<PathBuf> {
-        let config_file = if cfg!(target_os = "windows") {
-            // Windows: 主要支持 PowerShell
-            match shell {
-                Shell::PowerShell => {
-                    // Windows PowerShell 配置文件路径
-                    // PowerShell Core (pwsh): %USERPROFILE%\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
-                    // Windows PowerShell (powershell.exe): %USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
-                    // 优先使用 PowerShell Core 路径
-                    let user_profile = std::env::var("USERPROFILE")
-                        .context("USERPROFILE environment variable not set")?;
-                    let user_dir = PathBuf::from(user_profile);
-                    let pwsh_profile = user_dir
-                        .join("Documents")
-                        .join("PowerShell")
-                        .join("Microsoft.PowerShell_profile.ps1");
-                    let ps_profile = user_dir
-                        .join("Documents")
-                        .join("WindowsPowerShell")
-                        .join("Microsoft.PowerShell_profile.ps1");
+        // 使用新的 home_dir() 方法
+        let home = Self::home_dir()?;
 
-                    // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
-                    if pwsh_profile.exists() {
-                        pwsh_profile
-                    } else {
-                        ps_profile
-                    }
+        let config_file = match shell {
+            #[cfg(target_os = "windows")]
+            Shell::PowerShell => {
+                // Windows PowerShell 配置文件路径
+                // 优先使用 PowerShell Core 路径
+                let pwsh_profile = home
+                    .join("Documents")
+                    .join("PowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1");
+                let ps_profile = home
+                    .join("Documents")
+                    .join("WindowsPowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1");
+
+                // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
+                if pwsh_profile.exists() {
+                    pwsh_profile
+                } else {
+                    ps_profile
                 }
-                _ => anyhow::bail!(
-                    "Unsupported shell on Windows: {:?}. Only PowerShell is supported.",
-                    shell
-                ),
             }
-        } else {
-            // Unix-like: 使用 HOME 环境变量
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            let home_dir = PathBuf::from(home);
 
-            match shell {
-                Shell::Zsh => home_dir.join(".zshrc"),
-                Shell::Bash => {
-                    // macOS 通常使用 .bash_profile，Linux 使用 .bashrc
-                    // 这里优先使用 .bash_profile，如果不存在则使用 .bashrc
-                    let bash_profile = home_dir.join(".bash_profile");
-                    let bashrc = home_dir.join(".bashrc");
+            #[cfg(not(target_os = "windows"))]
+            Shell::Zsh => home.join(".zshrc"),
 
-                    // 如果 .bash_profile 不存在但 .bashrc 存在，使用 .bashrc
-                    // 否则使用 .bash_profile
-                    if !bash_profile.exists() && bashrc.exists() {
-                        bashrc
-                    } else {
-                        bash_profile
-                    }
+            #[cfg(not(target_os = "windows"))]
+            Shell::Bash => {
+                let bash_profile = home.join(".bash_profile");
+                let bashrc = home.join(".bashrc");
+                if !bash_profile.exists() && bashrc.exists() {
+                    bashrc
+                } else {
+                    bash_profile
                 }
-                Shell::Fish => home_dir.join(".config/fish/config.fish"),
-                Shell::PowerShell => {
-                    home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
-                }
-                Shell::Elvish => home_dir.join(".elvish/rc.elv"),
-                _ => anyhow::bail!("Unsupported shell type"),
             }
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::Fish => home.join(".config/fish/config.fish"),
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::PowerShell => home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::Elvish => home.join(".elvish/rc.elv"),
+
+            _ => anyhow::bail!("Unsupported shell type"),
         };
 
         Ok(config_file)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 测试 home_dir() 方法（这是唯一需要测试私有 API 的测试）
+    ///
+    /// 其他所有测试都已移动到 tests/paths_integration.rs，
+    /// 因为它们只使用公开 API。
+    #[test]
+    fn test_home_dir() {
+        let home = Paths::home_dir().unwrap();
+        assert!(home.exists());
+        assert!(home.is_dir());
     }
 }

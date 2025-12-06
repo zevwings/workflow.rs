@@ -28,6 +28,7 @@ flate2 = "1.0"
 walkdir = "2.4"
 tar = "0.4"
 sha2 = "0.10"
+dirs = "5.0"
 
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
 # Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能
@@ -36,7 +37,7 @@ clipboard = "0.5"
 
 [[bin]]
 name = "workflow"
-path = "src/main.rs"
+path = "src/bin/workflow.rs"
 
 [[bin]]
 name = "install"

@@ -386,6 +386,3 @@ impl JiraWorkHistory {
         Ok(history_dir.join(format!("{}.json", repo_id)))
     }
 }
-
-#[cfg(test)]
-mod tests {}
