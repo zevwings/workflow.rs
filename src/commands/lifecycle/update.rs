@@ -8,8 +8,6 @@ use crate::base::http::{
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-#[cfg(target_os = "macos")]
-use crate::base::util::remove_quarantine_attribute;
 use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
@@ -423,24 +421,6 @@ impl UpdateCommand {
         }
 
         log_success!("  Extraction complete");
-
-        // 在 macOS 上，解压后立即移除所有二进制文件的隔离属性
-        // 这样在安装时就不会遇到 Gatekeeper 阻止
-        #[cfg(target_os = "macos")]
-        {
-            let binaries = ["workflow", "install"];
-            for binary in &binaries {
-                let binary_name = Paths::binary_name(binary);
-                let binary_path = output_dir.join(&binary_name);
-                if binary_path.exists() {
-                    log_debug!(
-                        "Removing quarantine attribute from extracted binary: {}",
-                        binary_path.display()
-                    );
-                    remove_quarantine_attribute(&binary_path)?;
-                }
-            }
-        }
 
         Ok(())
     }
