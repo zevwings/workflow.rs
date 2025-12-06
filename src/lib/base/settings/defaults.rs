@@ -3,7 +3,6 @@
 //! 提供配置结构体的默认值实现和辅助函数
 
 use super::settings::LogSettings;
-use std::path::PathBuf;
 
 // ==================== 默认值辅助函数 ====================
 

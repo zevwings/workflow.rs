@@ -33,7 +33,7 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法确定主目录，返回错误信息。
-    fn home_dir() -> Result<PathBuf> {
+    pub(crate) fn home_dir() -> Result<PathBuf> {
         dirs::home_dir().context("Cannot determine home directory")
     }
 
