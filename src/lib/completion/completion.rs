@@ -26,15 +26,8 @@ pub struct Completion;
 impl Completion {
     /// 创建 workflow 配置文件目录
     fn create_workflow_dir() -> Result<PathBuf> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let workflow_dir = PathBuf::from(&home).join(".workflow");
-        fs::create_dir_all(&workflow_dir).with_context(|| {
-            format!(
-                "Failed to create workflow config directory: {}",
-                workflow_dir.display()
-            )
-        })?;
-        Ok(workflow_dir)
+        // 直接复用 Paths::workflow_dir()
+        Paths::workflow_dir()
     }
 
     /// 创建并写入 workflow completion 配置文件
@@ -351,8 +344,8 @@ impl Completion {
 
     /// 删除 workflow completion 配置文件
     pub fn remove_completion_config_file() -> Result<()> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let workflow_config_file = PathBuf::from(&home).join(".workflow").join(".completions");
+        // 使用 Paths::workflow_dir()
+        let workflow_config_file = Paths::workflow_dir()?.join(".completions");
 
         if workflow_config_file.exists() {
             fs::remove_file(&workflow_config_file).with_context(|| {

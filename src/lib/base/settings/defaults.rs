@@ -18,18 +18,23 @@ pub fn default_log_folder() -> String {
 /// - Unix (macOS/Linux): `~/Documents/Workflow`
 /// - Windows: `%USERPROFILE%\Documents\Workflow`
 pub fn default_download_base_dir() -> String {
-    let user_dir = if cfg!(target_os = "windows") {
-        // Windows: 使用 %USERPROFILE%
-        std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\Users\\User".to_string())
-    } else {
-        // Unix-like: 使用 HOME
-        std::env::var("HOME").unwrap_or_else(|_| "~".to_string())
-    };
-
-    // 使用 PathBuf 确保跨平台路径分隔符正确
-    let download_path = PathBuf::from(&user_dir).join("Documents").join("Workflow");
-
-    download_path.to_string_lossy().to_string()
+    // 使用 dirs::home_dir() 获取主目录
+    dirs::home_dir()
+        .and_then(|h| {
+            Some(
+                h.join("Documents")
+                    .join("Workflow")
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        })
+        .unwrap_or_else(|| {
+            if cfg!(target_os = "windows") {
+                "C:\\Users\\User\\Documents\\Workflow".to_string()
+            } else {
+                "~/Documents/Workflow".to_string()
+            }
+        })
 }
 
 /// 默认下载基础目录路径（Option 类型）

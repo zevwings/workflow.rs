@@ -19,6 +19,24 @@ use std::os::unix::fs::PermissionsExt;
 pub struct Paths;
 
 impl Paths {
+    // ==================== 私有辅助方法 ====================
+
+    /// 获取用户主目录
+    ///
+    /// 使用 dirs crate 提供的跨平台主目录获取功能。
+    /// 这是一个统一的入口点，所有需要主目录的地方都应该调用此方法。
+    ///
+    /// # 返回
+    ///
+    /// 返回用户主目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法确定主目录，返回错误信息。
+    fn home_dir() -> Result<PathBuf> {
+        dirs::home_dir().context("Cannot determine home directory")
+    }
+
     // ==================== 配置路径相关方法 ====================
 
     /// 获取配置目录路径
@@ -33,16 +51,9 @@ impl Paths {
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn config_dir() -> Result<PathBuf> {
-        let config_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow\config
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow").join("config")
-        } else {
-            // Unix-like: 使用 ~/.workflow/config
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow").join("config")
-        };
+        // 使用新的 home_dir() 方法
+        let home = Self::home_dir()?;
+        let config_dir = home.join(".workflow").join("config");
 
         // 确保配置目录存在
         fs::create_dir_all(&config_dir).context("Failed to create config directory")?;
@@ -104,16 +115,9 @@ impl Paths {
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn workflow_dir() -> Result<PathBuf> {
-        let workflow_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow")
-        } else {
-            // Unix-like: 使用 ~/.workflow
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow")
-        };
+        // 使用新的 home_dir() 方法
+        let home = Self::home_dir()?;
+        let workflow_dir = home.join(".workflow");
 
         // 确保工作流目录存在
         fs::create_dir_all(&workflow_dir).context("Failed to create .workflow directory")?;
@@ -292,17 +296,8 @@ impl Paths {
     /// assert_eq!(dir, PathBuf::from("~/.workflow/completions"));
     /// ```
     pub fn completion_dir() -> Result<PathBuf> {
-        let completion_dir = if cfg!(target_os = "windows") {
-            // Windows: 使用 %APPDATA%\workflow\completions
-            let app_data =
-                std::env::var("APPDATA").context("APPDATA environment variable not set")?;
-            PathBuf::from(app_data).join("workflow").join("completions")
-        } else {
-            // Unix-like: 使用 ~/.workflow/completions
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            PathBuf::from(home).join(".workflow").join("completions")
-        };
-        Ok(completion_dir)
+        // 复用 workflow_dir() 方法
+        Ok(Self::workflow_dir()?.join("completions"))
     }
 
     // ==================== Shell 路径相关方法 ====================
@@ -340,66 +335,55 @@ impl Paths {
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
     /// ```
     pub fn config_file(shell: &Shell) -> Result<PathBuf> {
-        let config_file = if cfg!(target_os = "windows") {
-            // Windows: 主要支持 PowerShell
-            match shell {
-                Shell::PowerShell => {
-                    // Windows PowerShell 配置文件路径
-                    // PowerShell Core (pwsh): %USERPROFILE%\Documents\PowerShell\Microsoft.PowerShell_profile.ps1
-                    // Windows PowerShell (powershell.exe): %USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
-                    // 优先使用 PowerShell Core 路径
-                    let user_profile = std::env::var("USERPROFILE")
-                        .context("USERPROFILE environment variable not set")?;
-                    let user_dir = PathBuf::from(user_profile);
-                    let pwsh_profile = user_dir
-                        .join("Documents")
-                        .join("PowerShell")
-                        .join("Microsoft.PowerShell_profile.ps1");
-                    let ps_profile = user_dir
-                        .join("Documents")
-                        .join("WindowsPowerShell")
-                        .join("Microsoft.PowerShell_profile.ps1");
+        // 使用新的 home_dir() 方法
+        let home = Self::home_dir()?;
 
-                    // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
-                    if pwsh_profile.exists() {
-                        pwsh_profile
-                    } else {
-                        ps_profile
-                    }
+        let config_file = match shell {
+            #[cfg(target_os = "windows")]
+            Shell::PowerShell => {
+                // Windows PowerShell 配置文件路径
+                // 优先使用 PowerShell Core 路径
+                let pwsh_profile = home
+                    .join("Documents")
+                    .join("PowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1");
+                let ps_profile = home
+                    .join("Documents")
+                    .join("WindowsPowerShell")
+                    .join("Microsoft.PowerShell_profile.ps1");
+
+                // 如果 PowerShell Core 配置文件存在，使用它；否则使用 Windows PowerShell 路径
+                if pwsh_profile.exists() {
+                    pwsh_profile
+                } else {
+                    ps_profile
                 }
-                _ => anyhow::bail!(
-                    "Unsupported shell on Windows: {:?}. Only PowerShell is supported.",
-                    shell
-                ),
             }
-        } else {
-            // Unix-like: 使用 HOME 环境变量
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            let home_dir = PathBuf::from(home);
 
-            match shell {
-                Shell::Zsh => home_dir.join(".zshrc"),
-                Shell::Bash => {
-                    // macOS 通常使用 .bash_profile，Linux 使用 .bashrc
-                    // 这里优先使用 .bash_profile，如果不存在则使用 .bashrc
-                    let bash_profile = home_dir.join(".bash_profile");
-                    let bashrc = home_dir.join(".bashrc");
+            #[cfg(not(target_os = "windows"))]
+            Shell::Zsh => home.join(".zshrc"),
 
-                    // 如果 .bash_profile 不存在但 .bashrc 存在，使用 .bashrc
-                    // 否则使用 .bash_profile
-                    if !bash_profile.exists() && bashrc.exists() {
-                        bashrc
-                    } else {
-                        bash_profile
-                    }
+            #[cfg(not(target_os = "windows"))]
+            Shell::Bash => {
+                let bash_profile = home.join(".bash_profile");
+                let bashrc = home.join(".bashrc");
+                if !bash_profile.exists() && bashrc.exists() {
+                    bashrc
+                } else {
+                    bash_profile
                 }
-                Shell::Fish => home_dir.join(".config/fish/config.fish"),
-                Shell::PowerShell => {
-                    home_dir.join(".config/powershell/Microsoft.PowerShell_profile.ps1")
-                }
-                Shell::Elvish => home_dir.join(".elvish/rc.elv"),
-                _ => anyhow::bail!("Unsupported shell type"),
             }
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::Fish => home.join(".config/fish/config.fish"),
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::PowerShell => home.join(".config/powershell/Microsoft.PowerShell_profile.ps1"),
+
+            #[cfg(not(target_os = "windows"))]
+            Shell::Elvish => home.join(".elvish/rc.elv"),
+
+            _ => anyhow::bail!("Unsupported shell type"),
         };
 
         Ok(config_file)

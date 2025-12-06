@@ -641,8 +641,8 @@ impl ShellConfigManager {
 
         // 检查绝对路径（如果 source_path 是相对路径）
         if source_path.contains("$HOME") {
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            let abs_path = source_path.replace("$HOME", &home);
+            let home = Paths::home_dir()?;
+            let abs_path = source_path.replace("$HOME", &home.to_string_lossy());
             if content.contains(&abs_path) {
                 return Ok(true);
             }
@@ -675,8 +675,8 @@ impl ShellConfigManager {
 
         // 检查绝对路径（如果 source_path 是相对路径）
         if source_path.contains("$HOME") {
-            let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            let abs_path = source_path.replace("$HOME", &home);
+            let home = Paths::home_dir()?;
+            let abs_path = source_path.replace("$HOME", &home.to_string_lossy());
             let abs_patterns = vec![
                 format!("{} {}", source_keyword, abs_path),
                 format!("{}  {}", source_keyword, abs_path),
@@ -696,8 +696,8 @@ impl ShellConfigManager {
     ///
     /// 移除 source 语句及其相关的注释块（如果存在）。
     fn remove_source_from_content(content: &str, source_path: &str) -> Result<String> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let abs_path = source_path.replace("$HOME", &home);
+        let home = Paths::home_dir()?;
+        let abs_path = source_path.replace("$HOME", &home.to_string_lossy());
 
         let mut new_content = String::new();
         let lines: Vec<&str> = content.lines().collect();
@@ -768,8 +768,8 @@ impl ShellConfigManager {
         shell: &Shell,
         source_path: &str,
     ) -> Result<String> {
-        let home = std::env::var("HOME").context("HOME environment variable not set")?;
-        let abs_path = source_path.replace("$HOME", &home);
+        let home = Paths::home_dir()?;
+        let abs_path = source_path.replace("$HOME", &home.to_string_lossy());
         let source_keyword = Self::get_source_keyword(shell);
 
         let mut new_content = String::new();
