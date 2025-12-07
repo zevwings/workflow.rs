@@ -6,11 +6,30 @@ use workflow::base::util::logger::{LogLevel, Logger};
 
 #[test]
 fn test_logger_output() {
-    assert!(Logger::success("Test").contains("✓"));
-    assert!(Logger::error("Test").contains("✗"));
-    assert!(Logger::warning("Test").contains("⚠"));
-    assert!(Logger::info("Test").contains("ℹ"));
-    assert!(Logger::debug("Test").contains("⚙"));
+    // 测试成功消息（支持 emoji ✅ 或 fallback ✓）
+    let success_msg = Logger::success("Test");
+    assert!(success_msg.contains("Test"));
+    assert!(success_msg.contains("✅") || success_msg.contains("✓"));
+
+    // 测试错误消息（支持 emoji ❌ 或 fallback ✗）
+    let error_msg = Logger::error("Test");
+    assert!(error_msg.contains("Test"));
+    assert!(error_msg.contains("❌") || error_msg.contains("✗"));
+
+    // 测试警告消息（支持 emoji ⚠️ 或 fallback ⚠）
+    let warning_msg = Logger::warning("Test");
+    assert!(warning_msg.contains("Test"));
+    assert!(warning_msg.contains("⚠️") || warning_msg.contains("⚠"));
+
+    // 测试信息消息（支持 emoji ℹ️ 或 fallback ℹ）
+    let info_msg = Logger::info("Test");
+    assert!(info_msg.contains("Test"));
+    assert!(info_msg.contains("ℹ️") || info_msg.contains("ℹ"));
+
+    // 测试调试消息（支持 emoji 🔧 或 fallback ⚙）
+    let debug_msg = Logger::debug("Test");
+    assert!(debug_msg.contains("Test"));
+    assert!(debug_msg.contains("🔧") || debug_msg.contains("⚙"));
 }
 
 #[test]

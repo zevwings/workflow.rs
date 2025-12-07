@@ -10,6 +10,7 @@
 //! ## 模块结构
 //!
 //! - `logger` - 日志输出（`Logger`）
+//! - `colors` - 颜色输出兼容层（使用 console）
 //! - `string` - 字符串处理工具
 //! - `format` - 格式化工具（文件大小格式化等）
 //! - `platform` - 平台检测工具（操作系统和架构检测）
@@ -27,11 +28,13 @@
 pub mod browser;
 pub mod checksum;
 pub mod clipboard;
+pub mod colors;
 pub mod dialog;
 pub mod format;
 pub mod logger;
 pub mod platform;
 pub mod string;
+pub mod table;
 pub mod unzip;
 
 // 重新导出 Logger 和 LogLevel
@@ -58,3 +61,9 @@ pub use unzip::Unzip;
 
 // 重新导出 checksum
 pub use checksum::Checksum;
+
+// 重新导出 table
+pub use table::{TableBuilder, TableStyle};
+
+// 重新导出 colors 模块的函数
+pub use colors::{debug, error, info, separator, separator_with_text, success, warning};

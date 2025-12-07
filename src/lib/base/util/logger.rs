@@ -1,4 +1,6 @@
-use colored::*;
+use crate::base::util::colors::{
+    debug, error, info, separator, separator_with_text, success, warning,
+};
 use std::fmt;
 use std::str::FromStr;
 use std::sync::Mutex;
@@ -145,27 +147,27 @@ pub struct Logger;
 impl Logger {
     /// 成功消息（绿色 ✓）
     pub fn success(message: impl fmt::Display) -> String {
-        format!("{} {}", "✓".green(), message)
+        success(message)
     }
 
     /// 错误消息（红色 ✗）
     pub fn error(message: impl fmt::Display) -> String {
-        format!("{} {}", "✗".red(), message)
+        error(message)
     }
 
     /// 警告消息（黄色 ⚠）
     pub fn warning(message: impl fmt::Display) -> String {
-        format!("{} {}", "⚠".yellow(), message)
+        warning(message)
     }
 
     /// 信息消息（蓝色 ℹ）
     pub fn info(message: impl fmt::Display) -> String {
-        format!("{} {}", "ℹ".blue(), message)
+        info(message)
     }
 
     /// 调试消息（灰色 ⚙）
     pub fn debug(message: impl fmt::Display) -> String {
-        format!("{} {}", "⚙".bright_black(), message)
+        debug(message)
     }
 
     /// 打印成功消息（总是输出，不受日志级别限制）
@@ -219,8 +221,7 @@ impl Logger {
     pub fn print_separator(char: Option<char>, length: Option<usize>) {
         let char = char.unwrap_or('-');
         let length = length.unwrap_or(80);
-        let separator = char.to_string().repeat(length);
-        println!("{}", separator.bright_black());
+        println!("{}", separator(char, length));
     }
 
     /// 打印带文本的分隔线
@@ -234,30 +235,7 @@ impl Logger {
     /// * `length` - 总长度
     /// * `text` - 要插入的文本
     pub fn print_separator_with_text(char: char, length: usize, text: impl fmt::Display) {
-        let text_str = format!("  {} ", text); // 文本前后添加空格
-        let text_len = text_str.chars().count();
-
-        // 如果文本长度大于等于总长度，直接输出文本
-        if text_len >= length {
-            println!("{}", text_str.bright_black());
-            return;
-        }
-
-        // 计算左右两侧需要填充的字符数
-        let remaining = length - text_len;
-        let left_padding = remaining / 2;
-        let right_padding = remaining - left_padding;
-
-        // 生成分隔线
-        let left_sep = char.to_string().repeat(left_padding);
-        let right_sep = char.to_string().repeat(right_padding);
-
-        println!(
-            "{}{}{}",
-            left_sep.bright_black(),
-            text_str,
-            right_sep.bright_black()
-        );
+        println!("{}", separator_with_text(char, length, text));
     }
 
     /// 打印换行符

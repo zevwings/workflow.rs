@@ -7,6 +7,8 @@
 use crate::base::util::dialog::ConfirmDialog;
 use crate::{log_debug, log_success, log_warning};
 use anyhow::Result;
+use std::io::{self, Write};
+use std::time::{Duration, Instant};
 
 /// HTTP 重试配置
 ///
@@ -268,9 +270,6 @@ impl HttpRetry {
     ///
     /// 在等待期间每秒更新一次倒计时，用户可以通过 Ctrl+C 取消。
     fn countdown_with_cancel(seconds: u64, operation_name: &str) -> Result<()> {
-        use std::io::{self, Write};
-        use std::time::{Duration, Instant};
-
         let start = Instant::now();
         let duration = Duration::from_secs(seconds);
 

@@ -3,12 +3,14 @@
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
 
 use crate::base::util::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::commands::branch::{
     add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,
 };
 use crate::git::GitRepo;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
+use tabled::Tabled;
 
 /// 分支忽略列表管理命令
 pub struct BranchIgnoreCommand;
@@ -172,6 +174,14 @@ impl BranchIgnoreCommand {
 
     /// 列出当前仓库的忽略分支
     pub fn list() -> Result<()> {
+        #[derive(Tabled)]
+        struct BranchRow {
+            #[tabled(rename = "#")]
+            index: String,
+            #[tabled(rename = "Branch Name")]
+            name: String,
+        }
+
         let repo_name =
             GitRepo::extract_repo_name().context("Failed to extract repository name")?;
 
@@ -179,17 +189,28 @@ impl BranchIgnoreCommand {
 
         let ignore_branches = get_ignore_branches(&config, &repo_name);
 
-        log_break!();
-        log_message!("Ignored branch list (repository: {})", repo_name);
-
         if ignore_branches.is_empty() {
-            log_info!("No ignored branches");
-        } else {
-            for (index, branch) in ignore_branches.iter().enumerate() {
-                log_info!("  {}. {}", index + 1, branch);
-            }
-            log_info!("Total: {} branch(es)", ignore_branches.len());
+            log_info!("No ignored branches for repository: {}", repo_name);
+            return Ok(());
         }
+
+        // 构建表格数据
+        let rows: Vec<BranchRow> = ignore_branches
+            .iter()
+            .enumerate()
+            .map(|(index, branch)| BranchRow {
+                index: (index + 1).to_string(),
+                name: branch.clone(),
+            })
+            .collect();
+
+        // 使用表格显示
+        TableBuilder::new(rows)
+            .with_title(format!("Ignored Branches (repository: {})", repo_name))
+            .with_style(TableStyle::Modern)
+            .print();
+
+        log_info!("\nTotal: {} branch(es)", ignore_branches.len());
 
         Ok(())
     }

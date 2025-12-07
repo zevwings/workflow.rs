@@ -6,6 +6,7 @@ use crate::base::settings::settings::Settings;
 use crate::base::util::{
     dialog::{ConfirmDialog, SelectDialog},
     mask_sensitive_value,
+    table::{TableBuilder, TableStyle},
 };
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
@@ -14,16 +15,31 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
+use tabled::Tabled;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
 
+/// GitHub 账号表格行
+#[derive(Tabled)]
+struct AccountRow {
+    #[tabled(rename = "#")]
+    index: String,
+    #[tabled(rename = "Name")]
+    name: String,
+    #[tabled(rename = "Email")]
+    email: String,
+    #[tabled(rename = "API Token")]
+    token: String,
+    #[tabled(rename = "Branch Prefix")]
+    prefix: String,
+    #[tabled(rename = "Status")]
+    status: String,
+}
+
 impl GitHubCommand {
     /// 列出所有 GitHub 账号
     pub fn list() -> Result<()> {
-        log_break!('=', 40, "GitHub Accounts");
-        log_break!();
-
         let settings = Settings::load();
         let github = &settings.github;
 
@@ -33,32 +49,46 @@ impl GitHubCommand {
             return Ok(());
         }
 
-        log_info!("Total accounts: {}\n", github.accounts.len());
+        // 构建表格数据
+        let rows: Vec<AccountRow> = github
+            .accounts
+            .iter()
+            .enumerate()
+            .map(|(index, account)| {
+                let is_current = github
+                    .current
+                    .as_ref()
+                    .map(|c| c == &account.name)
+                    .unwrap_or_else(|| {
+                        // 如果没有设置 current，第一个账号是当前账号
+                        index == 0 && github.current.is_none()
+                    });
 
-        for (index, account) in github.accounts.iter().enumerate() {
-            let is_current = github
-                .current
-                .as_ref()
-                .map(|c| c == &account.name)
-                .unwrap_or_else(|| {
-                    // 如果没有设置 current，第一个账号是当前账号
-                    index == 0 && github.current.is_none()
-                });
+                AccountRow {
+                    index: (index + 1).to_string(),
+                    name: account.name.clone(),
+                    email: account.email.clone(),
+                    token: mask_sensitive_value(&account.api_token),
+                    prefix: account
+                        .branch_prefix
+                        .clone()
+                        .unwrap_or_else(|| "-".to_string()),
+                    status: if is_current {
+                        "✓ Current".to_string()
+                    } else {
+                        "".to_string()
+                    },
+                }
+            })
+            .collect();
 
-            let current_marker = if is_current { " (current)" } else { "" };
-            log_break!(
-                '-',
-                40,
-                &format!("Account {}: {}{}", index + 1, account.name, current_marker)
-            );
-            log_message!("  Name: {}", account.name);
-            log_message!("  Email: {}", account.email);
-            log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
-            if let Some(ref prefix) = account.branch_prefix {
-                log_message!("  Branch Prefix: {}", prefix);
-            }
-            log_break!();
-        }
+        // 使用表格显示
+        TableBuilder::new(rows)
+            .with_title("GitHub Accounts")
+            .with_style(TableStyle::Modern)
+            .print();
+
+        log_info!("\nTotal accounts: {}", github.accounts.len());
 
         Ok(())
     }

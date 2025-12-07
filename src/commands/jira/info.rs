@@ -1,10 +1,27 @@
-use crate::base::util::dialog::InputDialog;
+use crate::base::util::{
+    dialog::InputDialog,
+    table::{TableBuilder, TableStyle},
+};
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
+use tabled::Tabled;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
+
+/// JIRA 附件表格行
+#[derive(Tabled)]
+struct AttachmentRow {
+    #[tabled(rename = "#")]
+    index: String,
+    #[tabled(rename = "Filename")]
+    filename: String,
+    #[tabled(rename = "Size")]
+    size: String,
+    #[tabled(rename = "MIME Type")]
+    mime_type: String,
+}
 
 impl InfoCommand {
     /// 显示 ticket 信息
@@ -44,15 +61,34 @@ impl InfoCommand {
         if let Some(attachments) = &issue.fields.attachment {
             if !attachments.is_empty() {
                 log_break!();
-                log_message!("Attachments ({}):", attachments.len());
-                for (idx, attachment) in attachments.iter().enumerate() {
-                    let size_str = if let Some(size) = attachment.size {
-                        format_size(size)
-                    } else {
-                        "Unknown".to_string()
-                    };
-                    log_message!("  {}. {} ({})", idx + 1, attachment.filename, size_str);
-                }
+                // 构建表格数据
+                let rows: Vec<AttachmentRow> = attachments
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, attachment)| {
+                        let size_str = if let Some(size) = attachment.size {
+                            format_size(size)
+                        } else {
+                            "Unknown".to_string()
+                        };
+
+                        AttachmentRow {
+                            index: (idx + 1).to_string(),
+                            filename: attachment.filename.clone(),
+                            size: size_str,
+                            mime_type: attachment
+                                .mime_type
+                                .clone()
+                                .unwrap_or_else(|| "-".to_string()),
+                        }
+                    })
+                    .collect();
+
+                // 使用表格显示
+                TableBuilder::new(rows)
+                    .with_title(format!("Attachments ({})", attachments.len()))
+                    .with_style(TableStyle::Modern)
+                    .print();
             } else {
                 log_break!();
                 log_message!("Attachments: None");

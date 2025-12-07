@@ -1,10 +1,25 @@
-use crate::base::util::dialog::InputDialog;
+use crate::base::util::{
+    dialog::InputDialog,
+    table::{TableBuilder, TableStyle},
+};
 use crate::jira::logs::JiraLogs;
-use crate::{log_break, log_debug, log_message, log_success, log_warning};
+use crate::{log_break, log_debug, log_success, log_warning};
 use anyhow::{Context, Result};
+use tabled::Tabled;
 
 /// 搜索关键词命令
 pub struct SearchCommand;
+
+/// 日志搜索结果表格行
+#[derive(Tabled)]
+struct SearchResultRow {
+    #[tabled(rename = "Source")]
+    source: String,
+    #[tabled(rename = "ID")]
+    id: String,
+    #[tabled(rename = "URL")]
+    url: String,
+}
 
 impl SearchCommand {
     /// 搜索关键词
@@ -51,36 +66,37 @@ impl SearchCommand {
         log_success!("Found {} matches:", total_count);
         log_break!();
 
-        // 显示 api.log 的搜索结果
-        if !api_results.is_empty() {
-            log_break!('=', 40, "api.log");
-            log_break!();
-            for entry in api_results {
-                if let Some(id) = entry.id {
-                    if let Some(url) = entry.url {
-                        log_message!("URL: {}, ID: {}", url, id);
-                    } else {
-                        log_debug!("ID: {} (URL not found)", id);
-                    }
-                }
+        // 构建表格数据
+        let mut rows: Vec<SearchResultRow> = Vec::new();
+
+        // 添加 api.log 的搜索结果
+        for entry in api_results {
+            if let Some(id) = entry.id {
+                rows.push(SearchResultRow {
+                    source: "api.log".to_string(),
+                    id: id.clone(),
+                    url: entry.url.unwrap_or_else(|| "-".to_string()),
+                });
             }
-            log_break!();
-            log_break!();
         }
 
-        // 显示 flutter-api.log 的搜索结果
-        if !flutter_api_results.is_empty() {
-            log_break!('=', 40, "flutter-api.log");
-            log_break!();
-            for entry in flutter_api_results {
-                if let Some(id) = entry.id {
-                    if let Some(url) = entry.url {
-                        log_message!("URL: {}, ID: {}", url, id);
-                    } else {
-                        log_debug!("ID: {} (URL not found)", id);
-                    }
-                }
+        // 添加 flutter-api.log 的搜索结果
+        for entry in flutter_api_results {
+            if let Some(id) = entry.id {
+                rows.push(SearchResultRow {
+                    source: "flutter-api.log".to_string(),
+                    id: id.clone(),
+                    url: entry.url.unwrap_or_else(|| "-".to_string()),
+                });
             }
+        }
+
+        // 使用表格显示所有结果
+        if !rows.is_empty() {
+            TableBuilder::new(rows)
+                .with_title("Search Results")
+                .with_style(TableStyle::Modern)
+                .print();
         }
 
         Ok(())

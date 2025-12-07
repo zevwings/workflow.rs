@@ -2,6 +2,8 @@
 //!
 //! 定义了支持的语言列表及其对应的 instruction，用于增强 LLM prompt 中的语言要求。
 
+use crate::base::settings::Settings;
+
 /// 支持的语言信息
 #[derive(Debug, Clone)]
 pub struct SupportedLanguage {
@@ -154,8 +156,6 @@ pub fn get_language_instruction(code: &str) -> String {
 /// // 返回包含强化语言要求的 prompt（语言从配置文件读取）
 /// ```
 pub fn get_language_requirement(system_prompt: &str) -> String {
-    use crate::base::settings::Settings;
-
     // 从配置文件读取语言设置
     let settings = Settings::get();
     let language_code = if settings.llm.language.is_empty() {

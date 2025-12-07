@@ -250,20 +250,62 @@ impl Settings {
 
     /// 显示 LLM 配置
     fn print_llm(&self) {
-        log_message!("\nLLM Provider: {}", self.llm.provider);
-        if let Some(ref url) = self.llm.url {
-            log_message!("LLM URL: {}", url);
+        use crate::base::util::table::{TableBuilder, TableStyle};
+        use tabled::Tabled;
+
+        #[derive(Tabled)]
+        struct LLMConfigRow {
+            #[tabled(rename = "Provider")]
+            provider: String,
+            #[tabled(rename = "Model")]
+            model: String,
+            #[tabled(rename = "Key")]
+            key: String,
         }
-        if let Some(ref key) = self.llm.key {
-            log_message!("LLM Key: {}", mask_sensitive_value(key));
-        }
-        // 显示 model（如果有保存的值，否则显示默认值）
-        if let Some(ref model) = self.llm.model {
-            log_message!("LLM Model: {}", model);
+
+        log_break!();
+        log_info!("LLM Configuration");
+
+        // 获取 model（如果有保存的值，否则显示默认值）
+        let model = if let Some(ref model) = self.llm.model {
+            model.clone()
         } else {
-            let default_model = default_llm_model(&self.llm.provider);
-            log_message!("LLM Model: {} (default)", default_model);
-        }
+            default_llm_model(&self.llm.provider)
+        };
+
+        // 组合 model 和 URL（仅在 provider 为 "proxy" 时显示 URL）
+        let model_display = if self.llm.provider == "proxy" {
+            if let Some(ref url) = self.llm.url {
+                if !url.is_empty() {
+                    format!("{}({})", model, url)
+                } else {
+                    model
+                }
+            } else {
+                model
+            }
+        } else {
+            model
+        };
+
+        // 获取 Key（掩码显示）
+        let key = self
+            .llm
+            .key
+            .as_ref()
+            .map(|k| mask_sensitive_value(k))
+            .unwrap_or_else(|| "-".to_string());
+
+        // 构建配置表格（横向：一行数据）
+        let config_rows = vec![LLMConfigRow {
+            provider: self.llm.provider.clone(),
+            model: model_display,
+            key,
+        }];
+
+        TableBuilder::new(config_rows)
+            .with_style(TableStyle::Modern)
+            .print();
     }
 
     /// 显示 Codeup 配置
@@ -281,6 +323,19 @@ impl Settings {
 
     /// 显示并验证 Jira 配置
     fn verify_jira(&self) -> Result<()> {
+        use crate::base::util::table::{TableBuilder, TableStyle};
+        use tabled::Tabled;
+
+        #[derive(Tabled)]
+        struct JiraConfigRow {
+            #[tabled(rename = "Email")]
+            email: String,
+            #[tabled(rename = "Service Address")]
+            service_address: String,
+            #[tabled(rename = "API Token")]
+            api_token: String,
+        }
+
         if let (Some(email), Some(api_token), Some(service_address)) = (
             &self.jira.email,
             &self.jira.api_token,
@@ -288,9 +343,17 @@ impl Settings {
         ) {
             log_break!();
             log_info!("Verifying Jira configuration...");
-            log_message!("  Email: {}", email);
-            log_message!("  Service Address: {}", service_address);
-            log_message!("  API Token: {}", mask_sensitive_value(api_token));
+
+            // 构建配置表格（横向：一行数据）
+            let config_rows = vec![JiraConfigRow {
+                email: email.clone(),
+                service_address: service_address.clone(),
+                api_token: mask_sensitive_value(api_token),
+            }];
+
+            TableBuilder::new(config_rows)
+                .with_style(TableStyle::Modern)
+                .print();
 
             let base_url = format!("{}/rest/api/2", service_address);
             let url = format!("{}/myself", base_url);
@@ -343,11 +406,31 @@ impl Settings {
 
     /// 显示并验证 GitHub 配置
     fn verify_github(&self) -> Result<()> {
+        use crate::base::util::table::{TableBuilder, TableStyle};
+        use tabled::Tabled;
+
+        #[derive(Tabled)]
+        struct GitHubAccountRow {
+            #[tabled(rename = "Name")]
+            name: String,
+            #[tabled(rename = "Email")]
+            email: String,
+            #[tabled(rename = "API Token")]
+            token: String,
+            #[tabled(rename = "Branch Prefix")]
+            prefix: String,
+            #[tabled(rename = "Status")]
+            status: String,
+            #[tabled(rename = "Verification")]
+            verification: String,
+        }
+
         if !self.github.accounts.is_empty() {
             log_break!();
             log_info!("Verifying GitHub configuration...");
             let mut success_count = 0;
             let mut failed_accounts = Vec::new();
+            let mut account_rows = Vec::new();
 
             for account in &self.github.accounts {
                 let is_current = self
@@ -359,42 +442,56 @@ impl Settings {
                         // 如果没有设置 current，第一个账号是当前账号
                         self.github.accounts.first().map(|a| &a.name) == Some(&account.name)
                     });
-                let current_marker = if is_current { " (current)" } else { "" };
-                log_message!("  - {}{}", account.name, current_marker);
-                log_message!("    Email: {}", account.email);
-                log_message!(
-                    "    API Token: {}",
-                    mask_sensitive_value(&account.api_token)
-                );
-                if let Some(ref prefix) = account.branch_prefix {
-                    log_message!("    Branch Prefix: {}", prefix);
-                }
 
                 // 使用该账号的 token 验证
-                match GitHub::get_user_info(Some(&account.api_token)) {
-                    Ok(user) => {
-                        log_success!("GitHub account '{}' verified successfully!", user.login);
+                let verification_status = match GitHub::get_user_info(Some(&account.api_token)) {
+                    Ok(_user) => {
                         success_count += 1;
+                        "✓ Success".to_string()
                     }
-                    Err(e) => {
-                        log_warning!("Failed to verify account '{}'", account.name);
-                        log_message!("  Error: {}", e);
-                        log_message!("  Please check your GitHub API token.");
+                    Err(_e) => {
                         failed_accounts.push(account.name.clone());
+                        "✗ Failed".to_string()
                     }
-                }
+                };
+
+                account_rows.push(GitHubAccountRow {
+                    name: if is_current {
+                        format!("{} (current)", account.name)
+                    } else {
+                        account.name.clone()
+                    },
+                    email: account.email.clone(),
+                    token: mask_sensitive_value(&account.api_token),
+                    prefix: account
+                        .branch_prefix
+                        .clone()
+                        .unwrap_or_else(|| "-".to_string()),
+                    status: if is_current {
+                        "Current".to_string()
+                    } else {
+                        "".to_string()
+                    },
+                    verification: verification_status,
+                });
             }
+
+            // 使用表格显示所有账号
+            TableBuilder::new(account_rows)
+                .with_style(TableStyle::Modern)
+                .print();
 
             // 显示验证总结
             let total_count = self.github.accounts.len();
             if failed_accounts.is_empty() {
+                log_break!();
                 log_success!(
                     "All {} GitHub account(s) verified successfully!",
                     total_count
                 );
             } else {
                 log_warning!(
-                    "GitHub verification completed: {}/{} account(s) verified successfully",
+                    "\nGitHub verification completed: {}/{} account(s) verified successfully",
                     success_count,
                     total_count
                 );

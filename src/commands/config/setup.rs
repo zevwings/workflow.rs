@@ -5,7 +5,9 @@ use crate::base::settings::defaults::{
     default_download_base_dir, default_language, default_llm_model, default_log_folder,
 };
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::{GitHubAccount, Settings};
+use crate::base::settings::settings::{
+    CodeupSettings, GitHubAccount, GitHubSettings, JiraSettings, LogSettings, Settings,
+};
 use crate::base::util::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
@@ -67,6 +69,7 @@ impl SetupCommand {
 
         log_break!();
         log_success!("Initialization completed successfully!");
+        log_break!();
         log_message!("You can now use the Workflow CLI commands.");
 
         Ok(())
@@ -599,10 +602,6 @@ impl SetupCommand {
 
     /// 保存配置到 TOML 文件
     fn save_config(config: &CollectedConfig) -> Result<()> {
-        use crate::base::settings::settings::{
-            CodeupSettings, GitHubSettings, JiraSettings, LogSettings, Settings,
-        };
-
         // 构建 Settings 结构体
         let settings = Settings {
             jira: JiraSettings {

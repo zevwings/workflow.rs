@@ -1,11 +1,14 @@
 //! 清理功能相关实现
 
 use anyhow::{Context, Result};
-use std::path::Path;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use super::helpers;
 use crate::base::util::dialog::ConfirmDialog;
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_success};
+use tabled::Tabled;
 
 use super::JiraLogs;
 
@@ -120,9 +123,6 @@ impl JiraLogs {
 
     /// 按 ticket 分区显示基础目录内容
     fn display_base_dir_by_tickets(&self, base_dir: &Path) -> Result<()> {
-        use std::fs;
-        use std::path::PathBuf;
-
         // 读取基础目录下的所有条目
         let entries = fs::read_dir(base_dir)
             .with_context(|| format!("Failed to read directory: {:?}", base_dir))?;
@@ -145,33 +145,61 @@ impl JiraLogs {
 
         // 为每个 ticket 显示内容
         for (ticket_id, ticket_dir) in ticket_dirs {
-            // 显示分隔线和 ticket ID
-            log_break!('=', 40, &ticket_id);
-            log_break!();
+            #[derive(Tabled)]
+            struct FileRow {
+                #[tabled(rename = "Type")]
+                file_type: String,
+                #[tabled(rename = "Name")]
+                name: String,
+                #[tabled(rename = "Size")]
+                size: String,
+            }
 
             // 列出该 ticket 目录下的所有文件（不包含 ticket 目录本身）
             let contents = helpers::list_dir_contents(&ticket_dir)?;
+            let mut rows: Vec<FileRow> = Vec::new();
+
             for path in contents {
                 // 跳过 ticket 目录本身
                 if path == ticket_dir {
                     continue;
                 }
                 if path.is_file() {
-                    if let Ok(metadata) = std::fs::metadata(&path) {
-                        log_info!(
-                            "  📄 {} ({})",
-                            path.display(),
-                            helpers::format_size(metadata.len())
-                        );
+                    let size_str = if let Ok(metadata) = std::fs::metadata(&path) {
+                        helpers::format_size(metadata.len())
                     } else {
-                        log_info!("  📄 {}", path.display());
-                    }
+                        "Unknown".to_string()
+                    };
+                    rows.push(FileRow {
+                        file_type: "📄 File".to_string(),
+                        name: path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("-")
+                            .to_string(),
+                        size: size_str,
+                    });
                 } else if path.is_dir() {
-                    log_info!("  📁 {}", path.display());
+                    rows.push(FileRow {
+                        file_type: "📁 Directory".to_string(),
+                        name: path
+                            .file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("-")
+                            .to_string(),
+                        size: "-".to_string(),
+                    });
                 }
             }
 
-            log_break!();
+            // 使用表格显示
+            if !rows.is_empty() {
+                TableBuilder::new(rows)
+                    .with_title(format!("Files: {}", ticket_id))
+                    .with_style(TableStyle::Modern)
+                    .print();
+                log_break!();
+            }
         }
 
         Ok(())
