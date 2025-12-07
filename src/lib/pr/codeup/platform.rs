@@ -10,7 +10,9 @@ use super::requests::{ClosePullRequestRequest, CreatePullRequestRequest, MergePu
 use super::responses::{CodeupUser, CreatePullRequestResponse, PullRequestInfo};
 use crate::base::http::{HttpClient, RequestConfig};
 use crate::pr::codeup::errors::handle_codeup_error;
+use crate::pr::helpers::extract_pull_request_id_from_url;
 use crate::pr::platform::{PlatformProvider, PullRequestStatus};
+use crate::pr::PullRequestRow;
 use regex::Regex;
 
 /// Codeup 平台实现
@@ -249,62 +251,35 @@ impl PlatformProvider for Codeup {
     }
 
     /// 列出 PR
-    fn get_pull_requests(&self, state: Option<&str>, limit: Option<u32>) -> Result<String> {
-        let (project_id, cookie) = Self::get_env_vars()?;
+    fn get_pull_requests(
+        &self,
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestRow>> {
+        let prs = Self::get_pull_requests_raw(state, limit)?;
+        let rows: Vec<PullRequestRow> = prs
+            .into_iter()
+            .map(|pr| {
+                let pull_request_id = if let Some(iid) = pr.pull_request_number {
+                    iid.to_string()
+                } else if let Some(ref detail_url) = pr.detail_url {
+                    extract_pull_request_id_from_url(detail_url)
+                        .unwrap_or_else(|_| "N/A".to_string())
+                } else {
+                    "N/A".to_string()
+                };
 
-        // 根据 state 参数确定 sub_state_list
-        let sub_state_list = match state {
-            Some("open") => "wip%2Cunder_review",
-            Some("closed") => "merged%2Cclosed",
-            Some("merged") => "merged",
-            Some("all") | None => "wip%2Cunder_review%2Cmerged%2Cclosed",
-            _ => "wip%2Cunder_review%2Cmerged%2Cclosed", // 默认显示所有状态
-        };
-
-        let per_page = limit.unwrap_or(50);
-        let url = format!(
-            "{}/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list={}&per_page={}",
-            Self::base_url(), project_id, sub_state_list, per_page
-        );
-
-        let client = HttpClient::global()?;
-        let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-
-        let response = client.get(&url, config)?;
-        let pull_request_list: Vec<PullRequestInfo> = response
-            .ensure_success_with(handle_codeup_error)?
-            .as_json()?;
-
-        // 格式化输出
-        let mut output = String::new();
-        for pr in pull_request_list {
-            let pull_request_id = if let Some(iid) = pr.pull_request_number {
-                iid.to_string()
-            } else if let Some(ref detail_url) = pr.detail_url {
-                Self::extract_pull_request_id_from_url(detail_url)
-                    .unwrap_or_else(|| "N/A".to_string())
-            } else {
-                "N/A".to_string()
-            };
-
-            let title = pr.title.as_deref().unwrap_or("N/A");
-            let state_str = pr.state.as_deref().unwrap_or("N/A");
-            let source_branch = pr.source_branch.as_deref().unwrap_or("N/A");
-            let url_str = pr.detail_url.as_deref().unwrap_or("N/A");
-
-            writeln!(
-                output,
-                "#{}  {}  [{}]  {}\n    {}",
-                pull_request_id, state_str, source_branch, title, url_str
-            )?;
-        }
-
-        if output.is_empty() {
-            output.push_str("No PRs found.");
-        }
-
-        Ok(output)
+                PullRequestRow {
+                    number: pull_request_id,
+                    state: pr.state.as_deref().unwrap_or("N/A").to_string(),
+                    branch: pr.source_branch.as_deref().unwrap_or("N/A").to_string(),
+                    title: pr.title.as_deref().unwrap_or("N/A").to_string(),
+                    author: "N/A".to_string(), // Codeup API 不返回作者信息
+                    url: pr.detail_url.as_deref().unwrap_or("N/A").to_string(),
+                }
+            })
+            .collect();
+        Ok(rows)
     }
 
     /// 关闭 Pull Request
@@ -534,6 +509,49 @@ impl Codeup {
             .clone();
 
         Ok((project_id, cookie))
+    }
+
+    /// 获取 PR 列表原始数据（不格式化）
+    ///
+    /// # 参数
+    ///
+    /// * `state` - PR 状态筛选（如 "open", "closed"）
+    /// * `limit` - 返回数量限制
+    ///
+    /// # 返回
+    ///
+    /// PR 信息列表
+    pub fn get_pull_requests_raw(
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestInfo>> {
+        let (project_id, cookie) = Self::get_env_vars()?;
+
+        // 根据 state 参数确定 sub_state_list
+        let sub_state_list = match state {
+            Some("open") => "wip%2Cunder_review",
+            Some("closed") => "merged%2Cclosed",
+            Some("merged") => "merged",
+            Some("all") | None => "wip%2Cunder_review%2Cmerged%2Cclosed",
+            _ => "wip%2Cunder_review%2Cmerged%2Cclosed", // 默认显示所有状态
+        };
+
+        let per_page = limit.unwrap_or(50);
+        let url = format!(
+            "{}/projects/code_reviews/advanced_search_cr?_input_charset=utf-8&page=1&search=&order_by=updated_at&project_ids={}&sub_state_list={}&per_page={}",
+            Self::base_url(), project_id, sub_state_list, per_page
+        );
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(&cookie, Some("application/x-www-form-urlencoded"))?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
+
+        let response = client.get(&url, config)?;
+        let pull_request_list: Vec<PullRequestInfo> = response
+            .ensure_success_with(handle_codeup_error)?
+            .as_json()?;
+
+        Ok(pull_request_list)
     }
 
     /// 通过分支名查找 PR（内部方法）

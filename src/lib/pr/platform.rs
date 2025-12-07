@@ -1,6 +1,7 @@
 use crate::git::{GitRepo, RepoType};
 use crate::pr::codeup::Codeup;
 use crate::pr::github::GitHub;
+use crate::pr::PullRequestRow;
 use anyhow::Result;
 
 /// PR 变更类型定义
@@ -100,8 +101,12 @@ pub trait PlatformProvider {
     /// * `limit` - 返回数量限制
     ///
     /// # Returns
-    /// PR 列表的格式化字符串
-    fn get_pull_requests(&self, _state: Option<&str>, _limit: Option<u32>) -> Result<String> {
+    /// PR 列表的表格行数据
+    fn get_pull_requests(
+        &self,
+        _state: Option<&str>,
+        _limit: Option<u32>,
+    ) -> Result<Vec<PullRequestRow>> {
         // 默认实现：返回不支持的错误
         anyhow::bail!("get_pull_requests is not supported by this platform")
     }

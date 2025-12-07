@@ -6,7 +6,7 @@ use crate::base::settings::paths::Paths;
 use crate::log_debug;
 use crate::log_success;
 use anyhow::{Context, Result};
-use clap::Command;
+use clap::{Command, CommandFactory};
 use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
 use std::path::PathBuf;
@@ -115,7 +115,7 @@ impl CompletionGenerator {
     fn generate_workflow(&self) -> Result<()> {
         // 使用实际的 CLI 结构体生成补全脚本，而不是手动构建
         // 这样可以确保补全脚本与实际命令结构保持同步
-        let mut cmd = crate::cli::get_cli_command();
+        let mut cmd = crate::cli::Cli::command();
 
         self.generate_completion(&mut cmd, "workflow")
     }

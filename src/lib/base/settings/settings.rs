@@ -9,9 +9,11 @@ use std::os::unix::fs::PermissionsExt;
 
 use super::defaults::default_llm_model;
 use crate::base::http::{Authorization, HttpClient, RequestConfig};
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::types::JiraUser;
 use crate::pr::GitHub;
 use crate::{log_break, log_info, log_message, log_success, log_warning, mask_sensitive_value};
+use tabled::Tabled;
 
 use super::defaults::{
     default_download_base_dir_option, default_language, default_llm_provider, default_log_folder,
@@ -250,9 +252,6 @@ impl Settings {
 
     /// 显示 LLM 配置
     fn print_llm(&self) {
-        use crate::base::util::table::{TableBuilder, TableStyle};
-        use tabled::Tabled;
-
         #[derive(Tabled)]
         struct LLMConfigRow {
             #[tabled(rename = "Provider")]
@@ -323,9 +322,6 @@ impl Settings {
 
     /// 显示并验证 Jira 配置
     fn verify_jira(&self) -> Result<()> {
-        use crate::base::util::table::{TableBuilder, TableStyle};
-        use tabled::Tabled;
-
         #[derive(Tabled)]
         struct JiraConfigRow {
             #[tabled(rename = "Email")]
@@ -406,9 +402,6 @@ impl Settings {
 
     /// 显示并验证 GitHub 配置
     fn verify_github(&self) -> Result<()> {
-        use crate::base::util::table::{TableBuilder, TableStyle};
-        use tabled::Tabled;
-
         #[derive(Tabled)]
         struct GitHubAccountRow {
             #[tabled(rename = "Name")]

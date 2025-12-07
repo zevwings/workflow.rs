@@ -40,7 +40,7 @@
 use std::fmt;
 
 use tabled::{
-    settings::{object::Columns, Alignment, Modify, Style, Width},
+    settings::{object::Columns, object::Rows, panel::Panel, Alignment, Modify, Style, Width},
     Table, Tabled,
 };
 
@@ -80,6 +80,52 @@ impl TableStyle {
             }
         }
     }
+}
+
+/// 修复表格边框格式
+/// 1. 顶部边框：除了 ┌ 和 ┐ 之外，中间都应该是 ─
+/// 2. 标题行下方的分隔线：从 ├─┼─┼─┤ 格式改为 ├─┬─┬─┤ 格式
+fn fix_title_separator(table_output: String) -> String {
+    let lines: Vec<&str> = table_output.lines().collect();
+    if lines.len() < 4 {
+        return table_output;
+    }
+
+    // 表格结构：
+    // 第0行：顶部边框 ┌─────────────────────────────┐ (需要修复，确保中间都是 ─)
+    // 第1行：标题行   │              title          │
+    // 第2行：分隔线   ├─┼─┼─┤ (需要改为 ├─┬─┬─┤)
+    // 第3行：列标题行
+    // 第4行：列标题分隔线（保持原样）
+
+    let mut result = Vec::new();
+
+    for (i, line) in lines.iter().enumerate() {
+        let mut fixed_line = line.to_string();
+
+        // 修复顶部边框（第0行）：确保除了 ┌ 和 ┐ 之外，中间都是 ─
+        if i == 0 && line.starts_with('┌') && line.ends_with('┐') {
+            // 将除了第一个字符 ┌ 和最后一个字符 ┐ 之外的所有字符替换为 ─
+            let chars: Vec<char> = line.chars().collect();
+            if chars.len() >= 2 {
+                // 保留第一个字符 ┌
+                let first = chars[0];
+                // 保留最后一个字符 ┐
+                let last = chars[chars.len() - 1];
+                // 中间全部替换为 ─
+                fixed_line = format!("{}{}{}", first, "─".repeat(chars.len() - 2), last);
+            }
+        }
+        // 修复标题行下方的分隔线（第2行）：将 ┼ 替换为 ┬
+        else if i == 2 && line.starts_with('├') && line.ends_with('┤') && line.contains('┼')
+        {
+            fixed_line = fixed_line.replace('┼', "┬");
+        }
+
+        result.push(fixed_line);
+    }
+
+    result.join("\n")
 }
 
 /// 表格构建器
@@ -232,17 +278,19 @@ impl<T: Tabled> TableBuilder<T> {
             return;
         }
 
-        // 打印标题
-        if let Some(ref title) = self.title {
-            println!("{}\n", title);
-        }
-
         // 构建表格
         let mut table = Table::new(&self.data);
 
-        // 应用样式
+        // 应用样式（边框）
         if let Some(style) = self.style {
             style.apply_to_table(&mut table);
+        }
+
+        // 添加标题行（在边框内）
+        if let Some(ref title) = self.title {
+            table.with(Panel::header(title));
+            // 设置标题行居中对齐
+            table.with(Modify::new(Rows::first()).with(Alignment::center()));
         }
 
         // 应用最大宽度
@@ -250,12 +298,20 @@ impl<T: Tabled> TableBuilder<T> {
             table.with(Width::wrap(width));
         }
 
-        // 应用对齐
+        // 应用列对齐
         for (col_idx, alignment) in self.alignments.iter().enumerate() {
             table.with(Modify::new(Columns::single(col_idx)).with(*alignment));
         }
 
-        println!("{}", table);
+        // 渲染表格并修复标题行下方的分隔线
+        let table_output = format!("{}", table);
+        let fixed_output = if self.title.is_some() {
+            fix_title_separator(table_output)
+        } else {
+            table_output
+        };
+
+        println!("{}", fixed_output);
     }
 }
 
@@ -267,9 +323,16 @@ impl<T: Tabled> fmt::Display for TableBuilder<T> {
 
         let mut table = Table::new(&self.data);
 
-        // 应用样式
+        // 应用样式（边框）
         if let Some(style) = self.style {
             style.apply_to_table(&mut table);
+        }
+
+        // 添加标题行（在边框内）
+        if let Some(ref title) = self.title {
+            table.with(Panel::header(title));
+            // 设置标题行居中对齐
+            table.with(Modify::new(Rows::first()).with(Alignment::center()));
         }
 
         // 应用最大宽度
@@ -277,11 +340,19 @@ impl<T: Tabled> fmt::Display for TableBuilder<T> {
             table.with(Width::wrap(width));
         }
 
-        // 应用对齐
+        // 应用列对齐
         for (col_idx, alignment) in self.alignments.iter().enumerate() {
             table.with(Modify::new(Columns::single(col_idx)).with(*alignment));
         }
 
-        write!(f, "{}", table)
+        // 渲染表格并修复标题行下方的分隔线
+        let table_output = format!("{}", table);
+        let fixed_output = if self.title.is_some() {
+            fix_title_separator(table_output)
+        } else {
+            table_output
+        };
+
+        write!(f, "{}", fixed_output)
     }
 }
