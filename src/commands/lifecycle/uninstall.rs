@@ -3,7 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::{Detect, Reload};
-use crate::base::util::{confirm, Clipboard};
+use crate::base::util::{dialog::ConfirmDialog, Clipboard};
 use crate::{
     log_break, log_debug, log_message, log_success, log_warning, Completion, ProxyManager,
 };
@@ -57,17 +57,18 @@ impl UninstallCommand {
         }
 
         // 第一步确认：是否删除二进制文件和 completion 脚本
-        if !confirm(
-            "Remove binary files and shell completion scripts?",
-            false,
-            None,
-        )? {
+        if !ConfirmDialog::new("Remove binary files and shell completion scripts?")
+            .with_default(false)
+            .prompt()?
+        {
             log_message!("Uninstall cancelled.");
             return Ok(());
         }
 
         // 第二步确认：是否删除 TOML 配置文件
-        let remove_config = confirm("Remove TOML config file (workflow.toml)?", true, None)?;
+        let remove_config = ConfirmDialog::new("Remove TOML config file (workflow.toml)?")
+            .with_default(true)
+            .prompt()?;
 
         // 删除二进制文件
         if !existing_binaries.is_empty() {

@@ -3,7 +3,10 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
-use crate::base::util::{confirm, mask_sensitive_value};
+use crate::base::util::{
+    dialog::{ConfirmDialog, SelectDialog},
+    mask_sensitive_value,
+};
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
@@ -11,7 +14,6 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::Select;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
@@ -130,11 +132,12 @@ impl GitHubCommand {
             log_break!();
 
             // 询问是否要将新账号设为当前账号
-            let should_set_current = confirm(
-                &format!("Set '{}' as the current GitHub account?", account_name),
-                false,
-                None,
-            )?;
+            let should_set_current = ConfirmDialog::new(format!(
+                "Set '{}' as the current GitHub account?",
+                account_name
+            ))
+            .with_default(false)
+            .prompt()?;
 
             if should_set_current {
                 let config_path = Paths::workflow_config()?;
@@ -179,24 +182,27 @@ impl GitHubCommand {
             .and_then(|current| account_names.iter().position(|n| n == current))
             .unwrap_or(0);
 
-        let selection = Select::new()
-            .with_prompt("Select account to remove")
-            .items(&account_names)
-            .default(default_index)
-            .interact()
-            .context("Failed to get account selection")?;
+        let account_names_vec: Vec<String> = account_names.to_vec();
+        let selected_account =
+            SelectDialog::new("Select account to remove", account_names_vec.clone())
+                .with_default(default_index)
+                .prompt()
+                .context("Failed to get account selection")?;
+        let selection = account_names_vec
+            .iter()
+            .position(|name| name == &selected_account)
+            .unwrap_or(default_index);
 
         let account_name = account_names[selection].clone();
 
         // 确认删除
-        if !confirm(
-            &format!(
-                "Are you sure you want to remove account '{}'?",
-                account_name
-            ),
-            false,
-            None,
-        )? {
+        if !ConfirmDialog::new(format!(
+            "Are you sure you want to remove account '{}'?",
+            account_name
+        ))
+        .with_default(false)
+        .prompt()?
+        {
             log_message!("Operation cancelled.");
             return Ok(());
         }
@@ -311,12 +317,16 @@ impl GitHubCommand {
             .and_then(|current| account_names.iter().position(|n| n == current))
             .unwrap_or(0);
 
-        let selection = Select::new()
-            .with_prompt("Select account to switch to")
-            .items(&account_names)
-            .default(default_index)
-            .interact()
-            .context("Failed to get account selection")?;
+        let account_names_vec: Vec<String> = account_names.to_vec();
+        let selected_account =
+            SelectDialog::new("Select account to switch to", account_names_vec.clone())
+                .with_default(default_index)
+                .prompt()
+                .context("Failed to get account selection")?;
+        let selection = account_names_vec
+            .iter()
+            .position(|name| name == &selected_account)
+            .unwrap_or(default_index);
 
         let account_name = account_names[selection].clone();
         let account = &settings.github.accounts[selection];
@@ -362,12 +372,16 @@ impl GitHubCommand {
             .and_then(|current| account_names.iter().position(|n| n == current))
             .unwrap_or(0);
 
-        let selection = Select::new()
-            .with_prompt("Select account to update")
-            .items(&account_names)
-            .default(default_index)
-            .interact()
-            .context("Failed to get account selection")?;
+        let account_names_vec: Vec<String> = account_names.to_vec();
+        let selected_account =
+            SelectDialog::new("Select account to update", account_names_vec.clone())
+                .with_default(default_index)
+                .prompt()
+                .context("Failed to get account selection")?;
+        let selection = account_names_vec
+            .iter()
+            .position(|name| name == &selected_account)
+            .unwrap_or(default_index);
 
         let old_account = &settings.github.accounts[selection];
         log_info!("Current account information:");

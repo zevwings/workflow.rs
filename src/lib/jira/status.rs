@@ -5,12 +5,12 @@
 //! - 交互式配置状态映射（PR 创建/合并时的状态）
 //! - 读取状态配置
 
+use crate::base::util::dialog::SelectDialog;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use crate::{log_break, log_debug, log_info, log_success};
-use dialoguer::Select;
 
 use super::api::project::JiraProjectApi;
 use super::config::ConfigManager;
@@ -120,23 +120,18 @@ impl JiraStatus {
         log_break!();
         log_info!("Select one of the following states to change when PR is ready or In progress:");
 
-        let selection = Select::new()
-            .with_prompt("Select status for PR created")
-            .items(&statuses)
-            .interact()
-            .context("Failed to select status")?;
-
-        let created_pull_request_status = &statuses[selection];
+        let statuses_vec: Vec<String> = statuses.to_vec();
+        let created_pull_request_status =
+            SelectDialog::new("Select status for PR created", statuses_vec.clone())
+                .prompt()
+                .context("Failed to select status")?;
 
         log_break!();
         log_info!("Select one of the following states to change when PR is merged or Done:");
-        let selection = Select::new()
-            .with_prompt("Select status for PR merged")
-            .items(&statuses)
-            .interact()
-            .context("Failed to select status")?;
-
-        let merged_pull_request_status = &statuses[selection];
+        let merged_pull_request_status =
+            SelectDialog::new("Select status for PR merged", statuses_vec)
+                .prompt()
+                .context("Failed to select status")?;
 
         let jira_config = JiraStatusConfig {
             project: project.to_string(),

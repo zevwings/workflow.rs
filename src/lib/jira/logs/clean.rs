@@ -4,7 +4,8 @@ use anyhow::{Context, Result};
 use std::path::Path;
 
 use super::helpers;
-use crate::{confirm, log_break, log_info, log_success};
+use crate::base::util::dialog::ConfirmDialog;
+use crate::{log_break, log_info, log_success};
 
 use super::JiraLogs;
 
@@ -46,16 +47,16 @@ impl JiraLogs {
 
         self.display_dir_info(&dir_name, &dir, size, file_count, jira_id.is_empty())?;
 
-        if !confirm(
-            &format!(
-                "Are you sure you want to delete {}? This will remove {} files ({}).",
-                dir_name,
-                file_count,
-                helpers::format_size(size)
-            ),
-            false,
-            None,
-        )? {
+        if !ConfirmDialog::new(format!(
+            "Are you sure you want to delete {}? This will remove {} files ({}).",
+            dir_name,
+            file_count,
+            helpers::format_size(size)
+        ))
+        .with_default(false)
+        .with_cancel_message("Operation cancelled")
+        .prompt()?
+        {
             log_info!("Clean operation cancelled.");
             return Ok(false);
         }

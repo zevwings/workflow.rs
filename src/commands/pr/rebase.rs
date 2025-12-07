@@ -1,4 +1,4 @@
-use crate::base::util::confirm;
+use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
 use crate::commands::check;
 use crate::commands::pr::helpers::detect_base_branch;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -280,11 +280,10 @@ impl PullRequestRebaseCommand {
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
-            confirm(
-                "Continue anyway?",
-                false,
-                Some("Operation cancelled by user"),
-            )?;
+            ConfirmDialog::new("Continue anyway?")
+                .with_default(false)
+                .with_cancel_message("Operation cancelled by user")
+                .prompt()?;
         }
 
         // 2. 获取当前分支
@@ -401,12 +400,19 @@ impl PullRequestRebaseCommand {
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
-            let choice = dialoguer::Select::new()
-                .with_prompt("How would you like to proceed?")
-                .items(&["Stash changes and continue", "Abort operation"])
-                .default(0)
-                .interact()
+            let options = vec![
+                "Stash changes and continue".to_string(),
+                "Abort operation".to_string(),
+            ];
+            let selected = SelectDialog::new("How would you like to proceed?", options)
+                .with_default(0)
+                .prompt()
                 .context("Failed to get user choice")?;
+            let choice = if selected == "Stash changes and continue" {
+                0
+            } else {
+                1
+            };
 
             match choice {
                 0 => {
@@ -470,11 +476,13 @@ impl PullRequestRebaseCommand {
         );
 
         // 提示用户确认
-        confirm(
-            &format!("Update PR #{} base branch to '{}'?", pr_id, target_branch),
-            true,
-            Some("PR base update cancelled by user"),
-        )?;
+        ConfirmDialog::new(format!(
+            "Update PR #{} base branch to '{}'?",
+            pr_id, target_branch
+        ))
+        .with_default(true)
+        .with_cancel_message("PR base update cancelled by user")
+        .prompt()?;
 
         log_info!(
             "Updating PR #{} base branch to '{}'...",

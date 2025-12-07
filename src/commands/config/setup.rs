@@ -6,14 +6,13 @@ use crate::base::settings::defaults::{
 };
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
-use crate::base::util::confirm;
+use crate::base::util::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
 use anyhow::{Context, Result};
-use dialoguer::{Input, Select};
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -124,14 +123,15 @@ impl SetupCommand {
                 .unwrap_or_else(|| "unknown".to_string());
 
             let keep_option = format!("Keep current accounts ({})", current_email);
-            let options = ["Add new account".to_string(), keep_option];
-            let options_refs: Vec<&str> = options.iter().map(|s| s.as_str()).collect();
-            let selection = Select::new()
-                .with_prompt("GitHub account management")
-                .items(&options_refs)
-                .default(1)
-                .interact()
+            let options = vec!["Add new account".to_string(), keep_option];
+            let selected_option = SelectDialog::new("GitHub account management", options.clone())
+                .with_default(1)
+                .prompt()
                 .context("Failed to get GitHub account management choice")?;
+            let selection = options
+                .iter()
+                .position(|opt| opt == &selected_option)
+                .unwrap_or(1);
 
             let mut account_added = false;
             match selection {
@@ -166,19 +166,21 @@ impl SetupCommand {
             if account_added && github_accounts.len() > 1 {
                 let account_names: Vec<String> =
                     github_accounts.iter().map(|a| a.name.clone()).collect();
-                let account_names_display: Vec<&str> =
-                    account_names.iter().map(|s| s.as_str()).collect();
                 let default_index = github_current
                     .as_ref()
                     .and_then(|current| account_names.iter().position(|n| n == current))
                     .unwrap_or(0);
 
-                let selection = Select::new()
-                    .with_prompt("Select current GitHub account")
-                    .items(&account_names_display)
-                    .default(default_index)
-                    .interact()
-                    .context("Failed to select current account")?;
+                let account_names_vec: Vec<String> = account_names.to_vec();
+                let selected_account =
+                    SelectDialog::new("Select current GitHub account", account_names_vec.clone())
+                        .with_default(default_index)
+                        .prompt()
+                        .context("Failed to select current account")?;
+                let selection = account_names_vec
+                    .iter()
+                    .position(|name| name == &selected_account)
+                    .unwrap_or(default_index);
 
                 github_current = Some(account_names[selection].clone());
                 let current_account = &github_accounts[selection];
@@ -218,19 +220,18 @@ impl SetupCommand {
 
         let default_jira_email = existing.jira_email.clone().unwrap_or_default();
 
-        let jira_email: String = Input::new()
-            .with_prompt(&jira_email_prompt)
-            .default(default_jira_email)
-            .validate_with(move |input: &String| -> Result<(), &str> {
+        let jira_email = InputDialog::new(&jira_email_prompt)
+            .with_default(default_jira_email)
+            .with_validator(move |input: &str| {
                 if input.is_empty() && !has_jira_email {
-                    Err("Jira email address is required")
+                    Err("Jira email address is required".to_string())
                 } else if !input.is_empty() && !input.contains('@') {
-                    Err("Please enter a valid email address")
+                    Err("Please enter a valid email address".to_string())
                 } else {
                     Ok(())
                 }
             })
-            .interact_text()
+            .prompt()
             .context("Failed to get Jira email address")?;
 
         let jira_email = if !jira_email.is_empty() {
@@ -253,22 +254,24 @@ impl SetupCommand {
             .clone()
             .unwrap_or_else(|| String::from(""));
 
-        let jira_service_address: String = Input::new()
-            .with_prompt(&jira_address_prompt)
-            .default(default_jira_address)
-            .validate_with(move |input: &String| -> Result<(), &str> {
+        let jira_service_address = InputDialog::new(&jira_address_prompt)
+            .with_default(default_jira_address)
+            .with_validator(move |input: &str| {
                 if input.is_empty() && !has_jira_address {
-                    Err("Jira service address is required")
+                    Err("Jira service address is required".to_string())
                 } else if !input.is_empty()
                     && !input.starts_with("http://")
                     && !input.starts_with("https://")
                 {
-                    Err("Please enter a valid URL (must start with http:// or https://)")
+                    Err(
+                        "Please enter a valid URL (must start with http:// or https://)"
+                            .to_string(),
+                    )
                 } else {
                     Ok(())
                 }
             })
-            .interact_text()
+            .prompt()
             .context("Failed to get Jira service address")?;
 
         let jira_service_address = if !jira_service_address.is_empty() {
@@ -285,10 +288,9 @@ impl SetupCommand {
             "Jira API token".to_string()
         };
 
-        let jira_api_token: String = Input::new()
-            .with_prompt(&jira_token_prompt)
+        let jira_api_token = InputDialog::new(&jira_token_prompt)
             .allow_empty(existing.jira_api_token.is_some())
-            .interact_text()
+            .prompt()
             .context("Failed to get Jira API token")?;
 
         let jira_api_token = if !jira_api_token.is_empty() {
@@ -311,16 +313,15 @@ impl SetupCommand {
             "Document base directory (press Enter to use default)".to_string()
         };
 
-        let log_download_base_dir: String = Input::new()
-            .with_prompt(&base_dir_prompt)
+        let log_download_base_dir = InputDialog::new(&base_dir_prompt)
             .allow_empty(true)
-            .default(
+            .with_default(
                 existing
                     .log_download_base_dir
                     .clone()
                     .unwrap_or_else(default_download_base_dir),
             )
-            .interact_text()
+            .prompt()
             .context("Failed to get document base directory")?;
 
         let log_download_base_dir = if log_download_base_dir.is_empty() {
@@ -339,7 +340,7 @@ impl SetupCommand {
         log_message!("  LLM/AI Configuration (Optional)");
         log_break!('─', 65);
 
-        let llm_providers = vec!["openai", "deepseek", "proxy"];
+        let llm_providers = ["openai", "deepseek", "proxy"];
         let current_provider_idx = llm_providers
             .iter()
             .position(|&p| p == existing.llm_provider.as_str())
@@ -348,13 +349,11 @@ impl SetupCommand {
         let llm_provider_prompt =
             format!("Select LLM provider [current: {}]", existing.llm_provider);
 
-        let llm_provider_idx = Select::new()
-            .with_prompt(&llm_provider_prompt)
-            .items(&llm_providers)
-            .default(current_provider_idx)
-            .interact()
+        let llm_providers_vec: Vec<String> = llm_providers.iter().map(|s| s.to_string()).collect();
+        let llm_provider = SelectDialog::new(&llm_provider_prompt, llm_providers_vec)
+            .with_default(current_provider_idx)
+            .prompt()
             .context("Failed to select LLM provider")?;
-        let llm_provider = llm_providers[llm_provider_idx].to_string();
 
         // 根据 provider 设置 URL（只有 proxy 需要输入和保存）
         // 对于 openai/deepseek，必须设置为 None，避免使用旧的 proxy URL 导致错误
@@ -368,10 +367,9 @@ impl SetupCommand {
                     "LLM proxy URL (optional, press Enter to skip)".to_string()
                 };
 
-                let llm_url_input: String = Input::new()
-                    .with_prompt(&llm_url_prompt)
+                let llm_url_input = InputDialog::new(&llm_url_prompt)
                     .allow_empty(true)
-                    .interact_text()
+                    .prompt()
                     .context("Failed to get LLM proxy URL")?;
 
                 if !llm_url_input.is_empty() {
@@ -409,10 +407,9 @@ impl SetupCommand {
             _ => "LLM API key (optional, press Enter to skip)".to_string(),
         };
 
-        let llm_key_input: String = Input::new()
-            .with_prompt(&key_prompt)
+        let llm_key_input = InputDialog::new(&key_prompt)
             .allow_empty(true)
-            .interact_text()
+            .prompt()
             .context("Failed to get LLM API key")?;
 
         let llm_key = if !llm_key_input.is_empty() {
@@ -456,25 +453,23 @@ impl SetupCommand {
         // 只有当之前有保存的值时，才设置默认值；否则不设置，让用户明确输入或留空使用默认值
         let has_existing_model = existing.llm_model.is_some();
 
-        let llm_model_input: String = {
-            let mut input = Input::new()
-                .with_prompt(&model_prompt)
-                .allow_empty(!is_proxy);
+        let llm_model_input = {
+            let mut dialog = InputDialog::new(&model_prompt).allow_empty(!is_proxy);
 
             // 只有之前有保存的值时，才设置默认值
             if has_existing_model {
-                input = input.default(default_model.clone());
+                dialog = dialog.with_default(default_model.clone());
             }
 
-            input
-                .validate_with(move |input: &String| -> Result<(), &str> {
+            dialog
+                .with_validator(move |input: &str| {
                     if input.is_empty() && is_proxy {
-                        Err("Model is required for proxy provider")
+                        Err("Model is required for proxy provider".to_string())
                     } else {
                         Ok(())
                     }
                 })
-                .interact_text()
+                .prompt()
                 .context("Failed to get LLM model")?
         };
 
@@ -513,7 +508,9 @@ impl SetupCommand {
             "Do you use Codeup (Aliyun Code Repository)?".to_string()
         };
 
-        let should_configure_codeup = confirm(&codeup_confirm_prompt, has_codeup, None)?;
+        let should_configure_codeup = ConfirmDialog::new(&codeup_confirm_prompt)
+            .with_default(has_codeup)
+            .prompt()?;
 
         let (codeup_project_id, codeup_csrf_token, codeup_cookie) = if should_configure_codeup {
             let codeup_id_prompt = if existing.codeup_project_id.is_some() {
@@ -527,11 +524,10 @@ impl SetupCommand {
                 .map(|id| id.to_string())
                 .unwrap_or_default();
 
-            let codeup_project_id: String = Input::new()
-                .with_prompt(&codeup_id_prompt)
+            let codeup_project_id = InputDialog::new(&codeup_id_prompt)
                 .allow_empty(true)
-                .default(default_codeup_id)
-                .interact_text()
+                .with_default(default_codeup_id)
+                .prompt()
                 .context("Failed to get Codeup project ID")?;
 
             let codeup_project_id = if !codeup_project_id.is_empty() {
@@ -546,10 +542,9 @@ impl SetupCommand {
                 "Codeup CSRF token (optional, press Enter to skip)".to_string()
             };
 
-            let codeup_csrf_token: String = Input::new()
-                .with_prompt(&codeup_csrf_prompt)
+            let codeup_csrf_token = InputDialog::new(&codeup_csrf_prompt)
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get Codeup CSRF token")?;
 
             let codeup_csrf_token = if !codeup_csrf_token.is_empty() {
@@ -564,10 +559,9 @@ impl SetupCommand {
                 "Codeup cookie (optional, press Enter to skip)".to_string()
             };
 
-            let codeup_cookie: String = Input::new()
-                .with_prompt(&codeup_cookie_prompt)
+            let codeup_cookie = InputDialog::new(&codeup_cookie_prompt)
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get Codeup cookie")?;
 
             let codeup_cookie = if !codeup_cookie.is_empty() {

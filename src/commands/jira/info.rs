@@ -1,7 +1,7 @@
+use crate::base::util::dialog::InputDialog;
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
@@ -13,9 +13,8 @@ impl InfoCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 

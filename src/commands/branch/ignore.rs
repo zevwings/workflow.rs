@@ -2,14 +2,13 @@
 //!
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
 
-use crate::base::util::confirm;
+use crate::base::util::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::commands::branch::{
     add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,
 };
 use crate::git::GitRepo;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::{Input, MultiSelect};
 
 /// 分支忽略列表管理命令
 pub struct BranchIgnoreCommand;
@@ -21,9 +20,8 @@ impl BranchIgnoreCommand {
         let branch_name = if let Some(name) = branch_name {
             name
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter branch name to add to ignore list")
-                .interact()
+            InputDialog::new("Enter branch name to add to ignore list")
+                .prompt()
                 .context("Failed to read branch name")?
         };
 
@@ -85,24 +83,36 @@ impl BranchIgnoreCommand {
             log_break!();
 
             // 使用 MultiSelect 让用户选择
-            let selections = MultiSelect::new()
-                .with_prompt(
-                    "Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)",
-                )
-                .items(&options)
-                .interact()
-                .context("Failed to get user selection")?;
+            let options_vec: Vec<String> = options.to_vec();
+            let selected_branches = MultiSelectDialog::new(
+                "Select branches to remove (space to toggle, Enter to confirm, Esc to cancel)",
+                options_vec,
+            )
+            .prompt()
+            .context("Failed to get user selection")?;
 
-            if selections.is_empty() {
+            if selected_branches.is_empty() {
                 log_info!("No branches selected, operation cancelled");
                 return Ok(());
             }
 
             log_break!();
             log_message!("Selected branches:");
-            for &idx in &selections {
-                log_message!("  - {}", options[idx]);
+            for branch in &selected_branches {
+                log_message!("  - {}", branch);
             }
+
+            let selections: Vec<usize> = options
+                .iter()
+                .enumerate()
+                .filter_map(|(i, opt)| {
+                    if selected_branches.contains(opt) {
+                        Some(i)
+                    } else {
+                        None
+                    }
+                })
+                .collect();
             log_break!();
 
             // 确认删除
@@ -110,7 +120,11 @@ impl BranchIgnoreCommand {
                 "Confirm removing {} selected branch(es) from ignore list?",
                 selections.len()
             );
-            if !confirm(&confirm_msg, false, Some("Operation cancelled"))? {
+            if !ConfirmDialog::new(&confirm_msg)
+                .with_default(false)
+                .with_cancel_message("Operation cancelled")
+                .prompt()?
+            {
                 return Ok(());
             }
 

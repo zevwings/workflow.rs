@@ -1,10 +1,10 @@
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::dialog::SelectDialog;
 use crate::base::util::LogLevel;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_message, log_success};
 use anyhow::{Context, Result};
-use dialoguer::Select;
 
 /// 日志级别管理命令
 pub struct LogCommand;
@@ -16,7 +16,7 @@ impl LogCommand {
         let current_level = LogLevel::get_level();
 
         // 定义日志级别选项
-        let log_levels = vec!["none", "error", "warn", "info", "debug"];
+        let log_levels = ["none", "error", "warn", "info", "debug"];
 
         // 找到当前级别的索引
         let current_level_str = current_level.as_str();
@@ -29,15 +29,11 @@ impl LogCommand {
         let prompt = format!("Select log level [current: {}]", current_level_str);
 
         // 显示选择菜单
-        let selected_idx = Select::new()
-            .with_prompt(&prompt)
-            .items(&log_levels)
-            .default(current_idx)
-            .interact()
+        let log_levels_vec: Vec<&str> = log_levels.to_vec();
+        let selected_level_str = SelectDialog::new(&prompt, log_levels_vec)
+            .with_default(current_idx)
+            .prompt()
             .context("Failed to select log level")?;
-
-        // 获取选中的级别
-        let selected_level_str = log_levels[selected_idx];
         let selected_level = selected_level_str
             .parse::<LogLevel>()
             .map_err(|e| anyhow::anyhow!("{}", e))?;

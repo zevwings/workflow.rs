@@ -1,7 +1,7 @@
+use crate::base::util::dialog::InputDialog;
 use crate::jira::logs::JiraLogs;
 use crate::{log_debug, log_info, log_success};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 下载附件命令
 pub struct AttachmentsCommand;
@@ -13,9 +13,8 @@ impl AttachmentsCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 

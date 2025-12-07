@@ -1,4 +1,4 @@
-use crate::base::util::confirm;
+use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
 use crate::commands::check;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
@@ -49,11 +49,10 @@ impl PullRequestSyncCommand {
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
-            confirm(
-                "Continue anyway?",
-                false,
-                Some("Operation cancelled by user"),
-            )?;
+            ConfirmDialog::new("Continue anyway?")
+                .with_default(false)
+                .with_cancel_message("Operation cancelled by user")
+                .prompt()?;
         }
 
         // 2. 获取当前分支
@@ -198,12 +197,19 @@ impl PullRequestSyncCommand {
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
-            let choice = dialoguer::Select::new()
-                .with_prompt("How would you like to proceed?")
-                .items(&["Stash changes and continue", "Abort operation"])
-                .default(0)
-                .interact()
+            let options = vec![
+                "Stash changes and continue".to_string(),
+                "Abort operation".to_string(),
+            ];
+            let selected = SelectDialog::new("How would you like to proceed?", options)
+                .with_default(0)
+                .prompt()
                 .context("Failed to get user choice")?;
+            let choice = if selected == "Stash changes and continue" {
+                0
+            } else {
+                1
+            };
 
             match choice {
                 0 => {
@@ -384,14 +390,13 @@ impl PullRequestSyncCommand {
             Some(pr_id) => {
                 // 有 PR：询问是否关闭 PR
                 log_info!("Source branch '{}' has PR #{}", source_branch, pr_id);
-                let should_close = confirm(
-                    &format!(
-                        "Close PR #{} and delete source branch '{}' (local and remote)?",
-                        pr_id, source_branch
-                    ),
-                    true, // 默认选择是
-                    Some("PR and branch cleanup cancelled by user"),
-                )?;
+                let should_close = ConfirmDialog::new(format!(
+                    "Close PR #{} and delete source branch '{}' (local and remote)?",
+                    pr_id, source_branch
+                ))
+                .with_default(true)
+                .with_cancel_message("PR and branch cleanup cancelled by user")
+                .prompt()?;
 
                 if should_close {
                     // 关闭 PR
@@ -414,14 +419,13 @@ impl PullRequestSyncCommand {
             }
             None => {
                 // 没有 PR：询问是否删除分支
-                let should_delete = confirm(
-                    &format!(
-                        "Delete source branch '{}' (local and remote)?",
-                        source_branch
-                    ),
-                    true, // 默认选择是
-                    Some("Branch deletion cancelled by user"),
-                )?;
+                let should_delete = ConfirmDialog::new(format!(
+                    "Delete source branch '{}' (local and remote)?",
+                    source_branch
+                ))
+                .with_default(true)
+                .with_cancel_message("Branch deletion cancelled by user")
+                .prompt()?;
 
                 if should_delete {
                     Self::delete_merged_branch(source_branch)?;

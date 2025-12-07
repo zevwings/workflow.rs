@@ -1,7 +1,7 @@
+use crate::base::util::dialog::InputDialog;
 use crate::jira::logs::JiraLogs;
 use crate::{log_break, log_debug, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 搜索关键词命令
 pub struct SearchCommand;
@@ -13,9 +13,8 @@ impl SearchCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 
@@ -28,9 +27,8 @@ impl SearchCommand {
         let term = if let Some(t) = search_term {
             t
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter search term")
-                .interact()
+            InputDialog::new("Enter search term")
+                .prompt()
                 .context("Failed to read search term")?
         };
 

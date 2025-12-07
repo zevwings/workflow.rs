@@ -6,10 +6,10 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容（list-only）
 
+use crate::base::util::dialog::InputDialog;
 use crate::jira::logs::JiraLogs;
 use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 清理日志命令
 pub struct CleanCommand;
@@ -39,10 +39,9 @@ impl CleanCommand {
             trimmed.to_string()
         } else {
             // 交互式输入：允许用户输入 JIRA ID，留空表示清理全部
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
                 .trim()
                 .to_string()

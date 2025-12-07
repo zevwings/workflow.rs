@@ -27,7 +27,7 @@
 pub mod browser;
 pub mod checksum;
 pub mod clipboard;
-pub mod confirm;
+pub mod dialog;
 pub mod format;
 pub mod logger;
 pub mod platform;
@@ -50,8 +50,8 @@ pub use platform::detect_release_platform;
 pub use browser::Browser;
 pub use clipboard::Clipboard;
 
-// 重新导出 confirm
-pub use confirm::confirm;
+// 重新导出 dialog
+pub use dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 
 // 重新导出 unzip
 pub use unzip::Unzip;

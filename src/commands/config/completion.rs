@@ -3,11 +3,10 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
-use crate::base::util::confirm;
+use crate::base::util::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
-use dialoguer::MultiSelect;
 use std::path::PathBuf;
 
 /// Shell 配置状态
@@ -185,11 +184,25 @@ impl CompletionCommand {
         log_break!();
 
         // 使用 MultiSelect 让用户选择
-        let selections = MultiSelect::new()
-            .with_prompt("Select completion to remove (use space to select, Enter to confirm, Esc to cancel)")
-            .items(&options)
-            .interact()
-            .context("Failed to get user selection")?;
+        let options_vec: Vec<String> = options.to_vec();
+        let selected_items = MultiSelectDialog::new(
+            "Select completion to remove (use space to select, Enter to confirm, Esc to cancel)",
+            options_vec,
+        )
+        .prompt()
+        .context("Failed to get user selection")?;
+
+        let selections: Vec<usize> = options
+            .iter()
+            .enumerate()
+            .filter_map(|(i, opt)| {
+                if selected_items.contains(opt) {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         if selections.is_empty() {
             log_info!("No items selected, operation cancelled");
@@ -208,7 +221,11 @@ impl CompletionCommand {
             "Confirm deletion of {} selected completion configurations?",
             selections.len()
         );
-        if !confirm(&confirm_msg, false, Some("Operation cancelled"))? {
+        if !ConfirmDialog::new(&confirm_msg)
+            .with_default(false)
+            .with_cancel_message("Operation cancelled")
+            .prompt()?
+        {
             return Ok(());
         }
 

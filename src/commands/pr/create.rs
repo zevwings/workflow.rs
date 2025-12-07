@@ -1,4 +1,7 @@
-use crate::base::util::{confirm, Browser, Clipboard};
+use crate::base::util::{
+    dialog::{ConfirmDialog, InputDialog, MultiSelectDialog},
+    Browser, Clipboard,
+};
 use crate::commands::check;
 use crate::commands::pr::helpers::apply_branch_name_prefixes;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -14,7 +17,6 @@ use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
 use crate::{log_info, log_success, log_warning, ProxyManager};
 use anyhow::{Context, Result};
-use dialoguer::{Input, MultiSelect};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -117,11 +119,9 @@ impl PullRequestCreateCommand {
                 Some(trimmed)
             }
         } else {
-            // 使用 dialoguer::Input 保持一致性
-            let input: String = Input::new()
-                .with_prompt("Jira ticket (optional)")
+            let input = InputDialog::new("Jira ticket (optional)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get Jira ticket")?;
             let trimmed = input.trim().to_string();
             if trimmed.is_empty() {
@@ -173,16 +173,15 @@ impl PullRequestCreateCommand {
     ///
     /// 步骤 4（辅助函数）：使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
     fn input_pull_request_title() -> Result<String> {
-        let title: String = Input::new()
-            .with_prompt("PR title (required)")
-            .validate_with(|input: &String| -> Result<(), &str> {
+        let title = InputDialog::new("PR title (required)")
+            .with_validator(|input: &str| {
                 if input.trim().is_empty() {
-                    Err("PR title is required and cannot be empty")
+                    Err("PR title is required and cannot be empty".to_string())
                 } else {
                     Ok(())
                 }
             })
-            .interact_text()
+            .prompt()
             .context("Failed to get PR title")?;
         Ok(title)
     }
@@ -268,10 +267,9 @@ impl PullRequestCreateCommand {
         if let Some(desc) = description {
             Ok(desc)
         } else {
-            let desc: String = Input::new()
-                .with_prompt("Short description (optional)")
+            let desc = InputDialog::new("Short description (optional)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get description")?;
             Ok(desc)
         }
@@ -282,15 +280,18 @@ impl PullRequestCreateCommand {
     /// 步骤 7：提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
     fn select_change_types() -> Result<Vec<bool>> {
         log_info!("Types of changes:");
-        let selections = MultiSelect::new()
-            .with_prompt("Select change types (use space to select, enter to confirm)")
-            .items(TYPES_OF_CHANGES)
-            .interact()
-            .context("Failed to select change types")?;
+        let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
+        let selected_items = MultiSelectDialog::new(
+            "Select change types (use space to select, enter to confirm)",
+            options,
+        )
+        .prompt()
+        .context("Failed to select change types")?;
 
-        // 简化转换逻辑：直接使用 HashSet 的 contains 方法
-        let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
-            .map(|i| selections.contains(&i))
+        // 转换选中的项为布尔向量
+        let selected_types: Vec<bool> = TYPES_OF_CHANGES
+            .iter()
+            .map(|&item| selected_items.contains(&item))
             .collect();
 
         Ok(selected_types)
@@ -448,11 +449,13 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         log_info!("Branch '{}' already exists on remote.", current_branch);
-        confirm(
-            &format!("Create PR for current branch '{}'?", current_branch),
-            true,
-            Some("Operation cancelled."),
-        )?;
+        ConfirmDialog::new(format!(
+            "Create PR for current branch '{}'?",
+            current_branch
+        ))
+        .with_default(true)
+        .with_cancel_message("Operation cancelled.")
+        .prompt()?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -474,14 +477,13 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        confirm(
-            &format!(
-                "Push and create PR for current branch '{}'?",
-                current_branch
-            ),
-            true,
-            Some("Operation cancelled."),
-        )?;
+        ConfirmDialog::new(format!(
+            "Push and create PR for current branch '{}'?",
+            current_branch
+        ))
+        .with_default(true)
+        .with_cancel_message("Operation cancelled.")
+        .prompt()?;
 
         // 推送
         log_success!("Pushing to remote...");
@@ -536,14 +538,12 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = confirm(
-                    &format!(
-                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                        current_branch, branch_name
-                    ),
-                    true,
-                    None,
-                )?;
+                let should_use_current = ConfirmDialog::new(format!(
+                    "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                    current_branch, branch_name
+                ))
+                .with_default(true)
+                .prompt()?;
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR

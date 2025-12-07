@@ -8,7 +8,9 @@ use crate::base::http::{
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
+use crate::base::util::{
+    detect_release_platform, dialog::ConfirmDialog, format_size, Checksum, Unzip,
+};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -781,7 +783,11 @@ impl UpdateCommand {
             )
         };
 
-        if !confirm(&confirm_message, true, Some("Update cancelled"))? {
+        if !ConfirmDialog::new(&confirm_message)
+            .with_default(true)
+            .with_cancel_message("Update cancelled")
+            .prompt()?
+        {
             return Ok(());
         }
         log_break!();

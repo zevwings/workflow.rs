@@ -4,9 +4,9 @@
 //! 针对 HTTP 请求的错误类型进行智能判断，自动重试可恢复的错误。
 //! 支持用户交互：在重试前询问用户是否继续，允许用户取消操作。
 
+use crate::base::util::dialog::ConfirmDialog;
 use crate::{log_debug, log_success, log_warning};
 use anyhow::Result;
-use dialoguer::Confirm;
 
 /// HTTP 重试配置
 ///
@@ -160,7 +160,7 @@ impl HttpRetry {
                                 attempt + 1,
                                 config.max_retries + 1
                             );
-                            match Confirm::new().with_prompt(&prompt).default(true).interact() {
+                            match ConfirmDialog::new(&prompt).with_default(true).prompt() {
                                 Ok(true) => {
                                     // 用户选择继续，显示倒计时
                                     Self::countdown_with_cancel(delay, operation_name)?;
