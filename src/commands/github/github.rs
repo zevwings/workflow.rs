@@ -15,6 +15,8 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 use tabled::Tabled;
 
 /// GitHub 账号管理命令
@@ -42,8 +44,21 @@ impl GitHubCommand {
     pub fn list() -> Result<()> {
         let settings = Settings::load();
 
+        // 创建 spinner 显示验证进度
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.white} {msg}")
+                .unwrap(),
+        );
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        spinner.set_message("Verifying GitHub accounts...");
+
         // 使用 verify_github() 获取验证结果
         let verification_result = settings.verify_github()?;
+
+        // 完成 spinner
+        spinner.finish_and_clear();
 
         if !verification_result.configured || verification_result.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");
@@ -172,7 +187,10 @@ impl GitHubCommand {
 
         // 如果这是第一个账号，自动设置为当前账号
         if is_first_account {
-            GitConfig::set_global_user(&account_email, &account_name)?;
+            let result = GitConfig::set_global_user(&account_email, &account_name)?;
+            log_info!("Git global config updated:");
+            log_message!("  user.email: {}", result.email);
+            log_message!("  user.name: {}", result.name);
             log_success!("Account '{}' added and set as current.", account_name);
         } else {
             log_success!("Account '{}' added.", account_name);
@@ -192,7 +210,10 @@ impl GitHubCommand {
                 manager.update(|settings| {
                     settings.github.current = Some(account_name.clone());
                 })?;
-                GitConfig::set_global_user(&account_email, &account_name)?;
+                let result = GitConfig::set_global_user(&account_email, &account_name)?;
+                log_info!("Git global config updated:");
+                log_message!("  user.email: {}", result.email);
+                log_message!("  user.name: {}", result.name);
                 log_success!("Account '{}' is now set as current.", account_name);
             } else {
                 log_message!("Current account remains unchanged.");
@@ -320,7 +341,13 @@ impl GitHubCommand {
                         .iter()
                         .find(|a| &a.name == current_name)
                     {
-                        GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+                        let result = GitConfig::set_global_user(
+                            &current_account.email,
+                            &current_account.name,
+                        )?;
+                        log_info!("Git global config updated:");
+                        log_message!("  user.email: {}", result.email);
+                        log_message!("  user.name: {}", result.name);
                     }
                 }
             }
@@ -385,7 +412,10 @@ impl GitHubCommand {
             settings.github.current = Some(account_name.clone());
         })?;
 
-        GitConfig::set_global_user(&account.email, &account.name)?;
+        let result = GitConfig::set_global_user(&account.email, &account.name)?;
+        log_info!("Git global config updated:");
+        log_message!("  user.email: {}", result.email);
+        log_message!("  user.name: {}", result.name);
         log_success!("Switched to account '{}'.", account_name);
 
         Ok(())
@@ -494,7 +524,10 @@ impl GitHubCommand {
 
         // 更新 git config（在更新 accounts 之后）
         if should_update_git_config {
-            GitConfig::set_global_user(&new_account_email, &new_account_name)?;
+            let result = GitConfig::set_global_user(&new_account_email, &new_account_name)?;
+            log_info!("Git global config updated:");
+            log_message!("  user.email: {}", result.email);
+            log_message!("  user.name: {}", result.name);
         }
 
         log_success!("Account '{}' updated.", new_account_name);

@@ -15,6 +15,8 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -69,9 +71,23 @@ impl SetupCommand {
             log_warning!("{}", warning);
         }
 
+        // 创建 spinner 显示验证进度
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.white} {msg}")
+                .unwrap(),
+        );
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        spinner.set_message("Verifying configurations...");
+
         // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
         let settings = Settings::load();
         let result = settings.verify()?;
+
+        // 完成 spinner
+        spinner.finish_and_clear();
+
         crate::commands::config::show::ConfigCommand::print_verification_result(&result);
 
         log_break!();
@@ -155,7 +171,8 @@ impl SetupCommand {
                     if github_accounts.len() == 1 {
                         let first_account = github_accounts.first().unwrap();
                         github_current = Some(first_account.name.clone());
-                        GitConfig::set_global_user(&first_account.email, &first_account.name)?;
+                        let _ =
+                            GitConfig::set_global_user(&first_account.email, &first_account.name)?;
                     }
                 }
                 _ => {
@@ -164,7 +181,7 @@ impl SetupCommand {
                         if let Some(current_account) =
                             github_accounts.iter().find(|a| &a.name == current_name)
                         {
-                            GitConfig::set_global_user(
+                            let _ = GitConfig::set_global_user(
                                 &current_account.email,
                                 &current_account.name,
                             )?;
@@ -195,7 +212,7 @@ impl SetupCommand {
 
                 github_current = Some(account_names[selection].clone());
                 let current_account = &github_accounts[selection];
-                GitConfig::set_global_user(&current_account.email, &current_account.name)?;
+                let _ = GitConfig::set_global_user(&current_account.email, &current_account.name)?;
             } else if github_accounts.len() == 1 {
                 // 如果只有一个账号，确保设置了 Git 配置
                 let account = &github_accounts[0];
@@ -204,7 +221,7 @@ impl SetupCommand {
                     .map(|c| c == &account.name)
                     .unwrap_or(false)
                 {
-                    GitConfig::set_global_user(&account.email, &account.name)?;
+                    let _ = GitConfig::set_global_user(&account.email, &account.name)?;
                 }
             }
         } else {
@@ -214,7 +231,7 @@ impl SetupCommand {
             github_accounts.push(account);
             let first_account = github_accounts.first().unwrap();
             github_current = Some(first_account.name.clone());
-            GitConfig::set_global_user(&first_account.email, &first_account.name)?;
+            let _ = GitConfig::set_global_user(&first_account.email, &first_account.name)?;
         }
 
         // ==================== 必填项：Jira 配置 ====================

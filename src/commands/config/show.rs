@@ -6,6 +6,8 @@ use crate::base::settings::settings::Settings;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::Result;
+use indicatif::{ProgressBar, ProgressStyle};
+use std::time::Duration;
 use tabled::Tabled;
 
 /// 配置查看命令
@@ -41,7 +43,22 @@ impl ConfigCommand {
         // 显示所有配置
         log_break!();
         log_break!('-', 100, "Configuration");
+
+        // 创建 spinner 显示验证进度
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .template("{spinner:.white} {msg}")
+                .unwrap(),
+        );
+        spinner.enable_steady_tick(Duration::from_millis(100));
+        spinner.set_message("Verifying configurations...");
+
         let result = settings.verify()?;
+
+        // 完成 spinner
+        spinner.finish_and_clear();
+
         Self::print_verification_result(&result);
 
         Ok(())
