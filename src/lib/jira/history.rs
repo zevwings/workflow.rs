@@ -7,15 +7,16 @@
 //! - 更新工作历史记录的合并时间
 //! - 删除工作历史记录条目
 
-use anyhow::{Context, Result};
-use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+
 use crate::base::settings::paths::Paths;
-use crate::{log_info, log_warning};
+use crate::log_warning;
 
 /// 工作历史记录条目
 ///
@@ -43,6 +44,13 @@ pub struct WorkHistoryEntry {
 
 /// 工作历史记录存储格式（JSON 对象，PR ID -> Entry）
 type WorkHistoryMap = HashMap<String, WorkHistoryEntry>;
+
+/// 删除工作历史记录结果
+#[derive(Debug, Clone)]
+pub struct DeleteHistoryResult {
+    /// 删除的消息列表
+    pub messages: Vec<String>,
+}
 
 /// Jira 工作历史记录管理
 ///
@@ -266,7 +274,7 @@ impl JiraWorkHistory {
     ///
     /// # 返回
     ///
-    /// 如果文件不存在或记录不存在，返回 `Ok(())`（不报错）。
+    /// 返回 `DeleteHistoryResult`，包含删除操作的消息。
     ///
     /// # 错误
     ///
@@ -274,12 +282,12 @@ impl JiraWorkHistory {
     pub fn delete_work_history_entry(
         pull_request_id: &str,
         repository: Option<&str>,
-    ) -> Result<()> {
+    ) -> Result<DeleteHistoryResult> {
         let repo_url = repository.context("Repository URL is required for work history")?;
         let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
-            return Ok(());
+            return Ok(DeleteHistoryResult { messages: vec![] });
         }
 
         let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
@@ -287,12 +295,14 @@ impl JiraWorkHistory {
         let mut history_map: WorkHistoryMap =
             serde_json::from_str(&content).context("Failed to parse work-history file")?;
 
+        let mut messages = Vec::new();
+
         if history_map.remove(pull_request_id).is_some() {
-            log_info!("Removed PR #{} from work-history", pull_request_id);
+            messages.push(format!("Removed PR #{} from work-history", pull_request_id));
 
             if history_map.is_empty() {
                 fs::remove_file(&repo_file).context("Failed to remove empty work-history file")?;
-                log_info!("Removed empty work-history file");
+                messages.push("Removed empty work-history file".to_string());
             } else {
                 let json = serde_json::to_string_pretty(&history_map)
                     .context("Failed to serialize work-history file")?;
@@ -306,7 +316,7 @@ impl JiraWorkHistory {
             );
         }
 
-        Ok(())
+        Ok(DeleteHistoryResult { messages })
     }
 
     /// 读取完整的工作历史记录条目（内部方法）

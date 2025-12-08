@@ -1,11 +1,21 @@
-use anyhow::{Context, Result};
-use duct::cmd;
 use std::path::Path;
 use std::process::Command;
 
+use anyhow::{Context, Result};
+use duct::cmd;
+
 use super::commit::GitCommit;
 use super::repo::GitRepo;
-use crate::{log_debug, log_info, log_success};
+
+/// Pre-commit 执行结果
+#[derive(Debug, Clone)]
+#[allow(dead_code)] // 字段将在调用者更新后使用
+pub struct PreCommitResult {
+    /// 是否执行了 pre-commit
+    pub executed: bool,
+    /// 消息
+    pub messages: Vec<String>,
+}
 
 /// Git Pre-commit Hooks 管理
 ///
@@ -60,18 +70,19 @@ impl GitPreCommit {
     ///
     /// 如果有 pre-commit 工具配置，使用 `pre-commit run`
     /// 如果有 Git hooks，直接执行 `.git/hooks/pre-commit` 脚本
-    pub(crate) fn run_pre_commit() -> Result<()> {
+    pub(crate) fn run_pre_commit() -> Result<PreCommitResult> {
         // 检查是否有 staged 的文件
         let has_staged = GitCommit::has_staged().unwrap_or(false);
 
         if !has_staged {
-            log_info!("No staged files, skipping pre-commit");
-            return Ok(());
+            return Ok(PreCommitResult {
+                executed: false,
+                messages: vec!["No staged files, skipping pre-commit".to_string()],
+            });
         }
 
         // 优先使用 pre-commit 工具
         if Path::new(".pre-commit-config.yaml").exists() {
-            log_info!("Running pre-commit hooks...");
             let output = cmd("pre-commit", &["run"])
                 .stdout_capture()
                 .stderr_capture()
@@ -79,28 +90,40 @@ impl GitPreCommit {
                 .context("Failed to run pre-commit")?;
 
             if output.status.success() {
-                log_success!("Pre-commit checks passed");
-                Ok(())
+                Ok(PreCommitResult {
+                    executed: true,
+                    messages: vec![
+                        "Running pre-commit hooks...".to_string(),
+                        "Pre-commit checks passed".to_string(),
+                    ],
+                })
             } else {
                 anyhow::bail!("Pre-commit checks failed");
             }
         } else if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
             // 执行 Git hooks
-            log_info!("Running Git pre-commit hooks...");
             let output = Command::new(&hooks_path)
                 .output()
                 .context("Failed to run pre-commit hooks")?;
 
             if output.status.success() {
-                log_success!("Pre-commit checks passed");
-                Ok(())
+                Ok(PreCommitResult {
+                    executed: true,
+                    messages: vec![
+                        "Running Git pre-commit hooks...".to_string(),
+                        "Pre-commit checks passed".to_string(),
+                    ],
+                })
             } else {
                 anyhow::bail!("Pre-commit checks failed");
             }
         } else {
             // 没有 pre-commit hooks，跳过
-            log_debug!("No pre-commit hooks found, skipping");
-            Ok(())
+            crate::trace_debug!("No pre-commit hooks found, skipping");
+            Ok(PreCommitResult {
+                executed: false,
+                messages: vec![],
+            })
         }
     }
 }

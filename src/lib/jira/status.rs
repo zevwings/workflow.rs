@@ -5,17 +5,30 @@
 //! - 交互式配置状态映射（PR 创建/合并时的状态）
 //! - 读取状态配置
 
-use crate::base::util::dialog::SelectDialog;
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{log_break, log_debug, log_info, log_success};
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
 
 use super::api::project::JiraProjectApi;
 use super::config::ConfigManager;
 use super::helpers::extract_jira_project;
 use crate::base::settings::paths::Paths;
+use crate::base::util::dialog::SelectDialog;
+use crate::{trace_debug, trace_info};
+
+// ==================== 返回结构体 ====================
+
+/// 状态配置结果
+#[derive(Debug, Clone)]
+pub struct StatusConfigResult {
+    /// 项目名称
+    pub project: String,
+    /// PR 创建时的目标状态
+    pub created_pull_request_status: String,
+    /// PR 合并时的目标状态
+    pub merged_pull_request_status: String,
+}
 
 /// 项目状态配置
 ///
@@ -80,7 +93,7 @@ impl JiraStatus {
     /// # 错误
     ///
     /// 如果项目名格式无效、无法获取状态列表或保存配置失败，返回相应的错误信息。
-    pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<()> {
+    pub fn configure_interactive(jira_ticket_or_project: &str) -> Result<StatusConfigResult> {
         let project = extract_jira_project(jira_ticket_or_project);
         let project = if let Some(proj) = project {
             if proj.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
@@ -103,7 +116,7 @@ impl JiraStatus {
             );
         };
 
-        log_debug!("Fetching status list for project: {}", project);
+        trace_debug!("Fetching status list for project: {}", project);
         let statuses = JiraProjectApi::get_project_statuses(project)
             .with_context(|| {
                 format!(
@@ -117,17 +130,12 @@ impl JiraStatus {
             anyhow::bail!("No statuses found for project: {}", project);
         }
 
-        log_break!();
-        log_info!("Select one of the following states to change when PR is ready or In progress:");
-
         let statuses_vec: Vec<String> = statuses.to_vec();
         let created_pull_request_status =
             SelectDialog::new("Select status for PR created", statuses_vec.clone())
                 .prompt()
                 .context("Failed to select status")?;
 
-        log_break!();
-        log_info!("Select one of the following states to change when PR is merged or Done:");
         let merged_pull_request_status =
             SelectDialog::new("Select status for PR merged", statuses_vec)
                 .prompt()
@@ -142,11 +150,15 @@ impl JiraStatus {
         Self::write_status_config(&jira_config)
             .context("Failed to write Jira status configuration")?;
 
-        log_success!("Jira status configuration saved");
-        log_debug!("  PR created status: {}", created_pull_request_status);
-        log_debug!("  PR merged status: {}", merged_pull_request_status);
+        trace_info!("Jira status configuration saved");
+        trace_debug!("  PR created status: {}", created_pull_request_status);
+        trace_debug!("  PR merged status: {}", merged_pull_request_status);
 
-        Ok(())
+        Ok(StatusConfigResult {
+            project: project.to_string(),
+            created_pull_request_status,
+            merged_pull_request_status,
+        })
     }
 
     /// 读取 PR 创建时的状态

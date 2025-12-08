@@ -1,13 +1,15 @@
 //! Completion 管理命令
 //! 提供生成和管理 shell completion 脚本的功能
 
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+use clap_complete::shells::Shell;
+
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
 use crate::base::util::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
-use anyhow::{Context, Result};
-use clap_complete::shells::Shell;
-use std::path::PathBuf;
 
 /// Shell 配置状态
 #[derive(Debug, Clone)]
@@ -294,7 +296,21 @@ impl CompletionCommand {
 
         // 3. 应用到对应的 shell 配置文件（使用 ShellConfigManager）
         log_debug!("Configuring shell configuration file...");
-        Completion::configure_shell_config(&shell)?;
+        let config_result = Completion::configure_shell_config(&shell)?;
+
+        if config_result.already_exists {
+            log_success!(
+                "Completion config already exists in {} config file",
+                config_result.shell
+            );
+        } else if config_result.added {
+            log_success!(
+                "Completion config added to {} config file",
+                config_result.shell
+            );
+        } else {
+            log_success!("Completion config written to shell config file");
+        }
 
         log_success!("  shell completion generation complete");
         log_break!();

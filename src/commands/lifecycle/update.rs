@@ -1,6 +1,19 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
+use std::env;
+use std::fs::{self, File};
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{Duration, UNIX_EPOCH};
+
+use anyhow::{Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::header::HeaderMap;
+use serde::Deserialize;
+use serde_json::Value;
+
 use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
@@ -16,17 +29,6 @@ use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
     log_warning,
 };
-use anyhow::{Context, Result};
-use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::header::HeaderMap;
-use serde::Deserialize;
-use serde_json::Value;
-use std::env;
-use std::fs::{self, File};
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::time::{Duration, UNIX_EPOCH};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -242,7 +244,7 @@ impl UpdateCommand {
                 let url = "https://api.github.com/repos/zevwings/workflow.rs/releases/latest";
                 let retry_config = HttpRetryConfig::new();
 
-                let response = HttpRetry::retry(
+                let retry_result = HttpRetry::retry(
                     || {
                         // GitHub API 要求必须包含 User-Agent 头
                         let mut headers = HeaderMap::new();
@@ -284,6 +286,14 @@ impl UpdateCommand {
                     "Fetching latest version information",
                 )?;
 
+                let response = retry_result.result;
+                if !retry_result.succeeded_on_first_attempt {
+                    log_success!(
+                        "Fetching latest version information succeeded after {} retry attempts",
+                        retry_result.retry_count
+                    );
+                }
+
                 // 检查响应状态码并处理错误
                 Self::handle_github_api_error(&response)?;
 
@@ -322,7 +332,7 @@ impl UpdateCommand {
 
         let retry_config = HttpRetryConfig::new();
 
-        HttpRetry::retry(
+        let retry_result = HttpRetry::retry(
             || {
                 // 如果文件已存在且不完整，先删除它
                 if output_path.exists() {
@@ -396,7 +406,16 @@ impl UpdateCommand {
             },
             &retry_config,
             "Downloading update package",
-        )
+        )?;
+
+        if !retry_result.succeeded_on_first_attempt {
+            log_success!(
+                "Downloading update package succeeded after {} retry attempts",
+                retry_result.retry_count
+            );
+        }
+
+        Ok(())
     }
 
     /// 第五步：解压文件
@@ -839,7 +858,14 @@ impl UpdateCommand {
                 &retry_config,
                 "Downloading checksum file",
             ) {
-                Ok(checksum_content) => {
+                Ok(retry_result) => {
+                    let checksum_content = retry_result.result;
+                    if !retry_result.succeeded_on_first_attempt {
+                        log_success!(
+                            "Downloading checksum file succeeded after {} retry attempts",
+                            retry_result.retry_count
+                        );
+                    }
                     // 解析哈希值（使用 checksum 模块）
                     let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
                         .context("Failed to parse checksum file")?;
@@ -896,7 +922,10 @@ impl UpdateCommand {
         match update_result {
             Ok(()) => {
                 // 更新成功，清理临时文件和备份
-                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
+                Self::cleanup_update_resources(
+                    &temp_manager.temp_dir,
+                    backup_info.as_ref().map(|b| &b.backup_info),
+                );
                 log_success!("Workflow CLI update complete! All verifications passed.");
                 Ok(())
             }
@@ -906,11 +935,79 @@ impl UpdateCommand {
                 log_break!();
 
                 if let Some(ref backup) = backup_info {
-                    match RollbackManager::rollback(backup) {
-                        Ok(()) => {
+                    log_warning!("Update failed, rolling back to previous version...");
+                    log_break!();
+
+                    match RollbackManager::rollback(&backup.backup_info) {
+                        Ok(rollback_result) => {
+                            // 显示恢复的二进制文件
+                            if !rollback_result.restored_binaries.is_empty() {
+                                log_info!("Restoring binary files...");
+                                for binary in &rollback_result.restored_binaries {
+                                    log_info!("  Restored: {}", binary);
+                                }
+                            }
+
+                            // 显示失败的二进制文件
+                            if !rollback_result.failed_binaries.is_empty() {
+                                log_warning!("Failed to restore some binary files:");
+                                for (binary, error) in &rollback_result.failed_binaries {
+                                    log_warning!("  {}: {}", binary, error);
+                                }
+                            }
+
+                            // 显示恢复的补全脚本
+                            if !rollback_result.restored_completions.is_empty() {
+                                log_info!("Restoring completion scripts...");
+                                for completion in &rollback_result.restored_completions {
+                                    log_info!("  Restored: {}", completion);
+                                }
+                            }
+
+                            // 显示失败的补全脚本
+                            if !rollback_result.failed_completions.is_empty() {
+                                log_warning!("Failed to restore some completion scripts:");
+                                for (completion, error) in &rollback_result.failed_completions {
+                                    log_warning!("  {}: {}", completion, error);
+                                }
+                            }
+
+                            // 处理 shell 重新加载
+                            if let Some(reload_success) = rollback_result.shell_reload_success {
+                                if reload_success {
+                                    log_info!(
+                                        "Note: Configuration has been reloaded in subprocess"
+                                    );
+                                    if let Some(ref config_file) = rollback_result.shell_config_file
+                                    {
+                                        log_info!(
+                                            "  If completion is not working, please run manually: source {}",
+                                            config_file.display()
+                                        );
+                                    }
+                                } else {
+                                    log_warning!("Failed to reload shell configuration");
+                                    if let Some(ref config_file) = rollback_result.shell_config_file
+                                    {
+                                        log_info!(
+                                            "Please run manually: source {}",
+                                            config_file.display()
+                                        );
+                                    }
+                                }
+                            } else {
+                                log_info!(
+                                    "Please manually reload shell config file to enable completion"
+                                );
+                            }
+
+                            log_success!("Rollback completed");
                             log_break!();
+
                             // 回滚成功后清理备份
-                            if let Err(cleanup_err) = RollbackManager::cleanup_backup(backup) {
+                            if let Err(cleanup_err) =
+                                RollbackManager::cleanup_backup(&backup.backup_info)
+                            {
                                 log_warning!("Failed to clean up backup: {}", cleanup_err);
                             }
                         }
@@ -918,7 +1015,10 @@ impl UpdateCommand {
                             log_error!("Rollback failed: {}", rollback_err);
                             log_error!("  System may be in an inconsistent state");
                             log_error!("  Please manually check and restore files");
-                            log_error!("  Backup location: {}", backup.backup_dir.display());
+                            log_error!(
+                                "  Backup location: {}",
+                                backup.backup_info.backup_dir.display()
+                            );
                         }
                     }
                 } else {
@@ -927,7 +1027,10 @@ impl UpdateCommand {
                 }
 
                 // 清理临时资源
-                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
+                Self::cleanup_update_resources(
+                    &temp_manager.temp_dir,
+                    backup_info.as_ref().map(|b| &b.backup_info),
+                );
                 Err(e.context("Update failed"))
             }
         }

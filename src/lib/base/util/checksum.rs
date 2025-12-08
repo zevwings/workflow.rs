@@ -6,12 +6,21 @@
 //! - 验证文件完整性
 //! - 构建校验和 URL（纯字符串操作）
 
-use crate::{log_info, log_success};
-use anyhow::{Context, Result};
-use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+
+use anyhow::{Context, Result};
+use sha2::{Digest, Sha256};
+
+/// 校验和验证结果
+#[derive(Debug, Clone)]
+pub struct VerifyResult {
+    /// 是否验证通过
+    pub verified: bool,
+    /// 消息列表
+    pub messages: Vec<String>,
+}
 
 /// 校验和工具
 ///
@@ -107,7 +116,7 @@ impl Checksum {
     ///
     /// # 返回
     ///
-    /// 如果哈希值匹配，返回 `Ok(())`。
+    /// 返回 `VerifyResult`，包含验证状态和消息。
     /// 如果哈希值不匹配，返回错误。
     ///
     /// # 示例
@@ -118,16 +127,19 @@ impl Checksum {
     ///
     /// let file_path = Path::new("file.tar.gz");
     /// let expected_hash = "abc123def456...";
-    /// Checksum::verify(file_path, expected_hash)?;
+    /// let result = Checksum::verify(file_path, expected_hash)?;
     /// ```
-    pub fn verify(file_path: &Path, expected_hash: &str) -> Result<()> {
-        log_info!("Verifying file integrity...");
-
+    pub fn verify(file_path: &Path, expected_hash: &str) -> Result<VerifyResult> {
         let actual_hash = Self::calculate_file_sha256(file_path)?;
 
         if actual_hash == expected_hash {
-            log_success!("  File integrity verification passed");
-            Ok(())
+            Ok(VerifyResult {
+                verified: true,
+                messages: vec![
+                    "Verifying file integrity...".to_string(),
+                    "  File integrity verification passed".to_string(),
+                ],
+            })
         } else {
             anyhow::bail!(
                 "File integrity verification failed!\n  Expected: {}\n  Actual: {}",

@@ -6,10 +6,14 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容（list-only）
 
+use anyhow::{Context, Result};
+use tabled::Tabled;
+
 use crate::base::util::dialog::InputDialog;
+use crate::base::util::format_size;
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::{log_break, log_info, log_success};
-use anyhow::{Context, Result};
 
 /// 清理日志命令
 pub struct CleanCommand;
@@ -66,14 +70,109 @@ impl CleanCommand {
 
         // 创建 JiraLogs 实例并执行清理
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let deleted = logs
+        let result = logs
             .clean_dir(&jira_id, dry_run, list_only)
             .context("Failed to clean logs directory")?;
 
-        if deleted {
+        // 显示目录信息
+        if let Some(ref dir_info) = result.dir_info {
+            // 根据 dir_name 判断显示格式
+            if let Some(ref jira_id) = dir_info.jira_id {
+                log_info!("JIRA ID: {}", jira_id);
+            } else {
+                log_info!("{}: {:?}", dir_info.dir_name, dir_info.dir);
+            }
+            log_info!("Directory: {:?}", dir_info.dir);
+            log_info!("Total size: {}", format_size(dir_info.size));
+            log_info!("Total files: {}", dir_info.file_count);
+            log_break!();
+            log_info!("Contents:");
+
+            if dir_info.is_base_dir {
+                // 按 ticket 分区显示
+                #[derive(Tabled, Clone)]
+                struct FileRow {
+                    #[tabled(rename = "Type")]
+                    file_type: String,
+                    #[tabled(rename = "Name")]
+                    name: String,
+                    #[tabled(rename = "Size")]
+                    size: String,
+                }
+
+                // 按 ticket 分组显示
+                let mut current_ticket: Option<String> = None;
+                let mut rows: Vec<FileRow> = Vec::new();
+
+                for entry in &dir_info.contents {
+                    // 从 entry_type 中提取 ticket ID
+                    let ticket_id = if entry.entry_type.contains("(") {
+                        entry
+                            .entry_type
+                            .split('(')
+                            .nth(1)
+                            .and_then(|s| s.strip_suffix(')'))
+                            .map(|s| s.to_string())
+                    } else {
+                        None
+                    };
+
+                    if ticket_id != current_ticket {
+                        // 显示之前的表格
+                        if !rows.is_empty() {
+                            if let Some(ref ticket) = current_ticket {
+                                TableBuilder::new(rows.clone())
+                                    .with_title(format!("Files: {}", ticket))
+                                    .with_style(TableStyle::Modern)
+                                    .print();
+                                log_break!();
+                            }
+                            rows.clear();
+                        }
+                        current_ticket = ticket_id;
+                    }
+
+                    rows.push(FileRow {
+                        file_type: entry.entry_type.clone(),
+                        name: entry.name.clone(),
+                        size: entry.size.clone().unwrap_or_else(|| "-".to_string()),
+                    });
+                }
+
+                // 显示最后一个表格
+                if !rows.is_empty() {
+                    if let Some(ref ticket) = current_ticket {
+                        TableBuilder::new(rows)
+                            .with_title(format!("Files: {}", ticket))
+                            .with_style(TableStyle::Modern)
+                            .print();
+                        log_break!();
+                    }
+                }
+            } else {
+                // 单个 ticket 目录，直接列出内容
+                for entry in &dir_info.contents {
+                    if let Some(ref size) = entry.size {
+                        log_info!("  {} {} ({})", entry.entry_type, entry.name, size);
+                    } else {
+                        log_info!("  {} {}", entry.entry_type, entry.name);
+                    }
+                }
+            }
+        }
+
+        if result.deleted {
             log_break!();
             log_success!("Clean completed successfully!");
-        } else if !dry_run && !list_only {
+        } else if result.cancelled {
+            log_info!("Clean operation was cancelled.");
+        } else if !result.dir_exists {
+            log_info!("Directory does not exist.");
+        } else if result.dry_run {
+            log_info!("[DRY RUN] Preview completed.");
+        } else if result.list_only {
+            // list_only 模式，信息已在上面的 dir_info 显示中输出
+        } else {
             log_info!("Clean operation was cancelled or directory does not exist.");
         }
 

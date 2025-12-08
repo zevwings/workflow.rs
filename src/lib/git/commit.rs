@@ -9,7 +9,15 @@ use anyhow::{Context, Result};
 
 use super::helpers::{check_success, cmd_read, cmd_run};
 use super::pre_commit::GitPreCommit;
-use crate::log_info;
+
+/// Git 提交结果
+#[derive(Debug, Clone)]
+pub struct CommitResult {
+    /// 是否已提交
+    pub committed: bool,
+    /// 消息（如果工作区干净）
+    pub message: Option<String>,
+}
 
 /// Git 提交管理
 ///
@@ -96,14 +104,20 @@ impl GitCommit {
     /// 2. 暂存所有已修改的文件
     /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
     /// 4. 执行提交操作
-    pub fn commit(message: &str, no_verify: bool) -> Result<()> {
+    ///
+    /// # 返回
+    ///
+    /// 返回 `CommitResult`，包含提交状态和消息。
+    pub fn commit(message: &str, no_verify: bool) -> Result<CommitResult> {
         // 1. 使用 git diff --quiet 检查是否有更改（更高效）
         let has_changes = Self::has_commit()?;
 
         // 2. 如果没有更改，直接返回
         if !has_changes {
-            log_info!("Nothing to commit, working tree clean");
-            return Ok(());
+            return Ok(CommitResult {
+                committed: false,
+                message: Some("Nothing to commit, working tree clean".to_string()),
+            });
         }
 
         // 3. 暂存所有已修改的文件
@@ -122,7 +136,12 @@ impl GitCommit {
             args.push("--no-verify");
         }
 
-        cmd_run(&args).context("Failed to commit")
+        cmd_run(&args).context("Failed to commit")?;
+
+        Ok(CommitResult {
+            committed: true,
+            message: None,
+        })
     }
 
     /// 获取 Git 修改内容（工作区和暂存区）

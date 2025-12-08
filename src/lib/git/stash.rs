@@ -1,7 +1,16 @@
 use anyhow::{Context, Result};
 
 use super::helpers::{cmd_read, cmd_run};
-use crate::{log_success, log_warning};
+use crate::log_warning;
+
+/// Stash 恢复结果
+#[derive(Debug, Clone)]
+pub struct StashPopResult {
+    /// 是否成功恢复
+    pub restored: bool,
+    /// 消息
+    pub message: Option<String>,
+}
 
 /// Git Stash 管理
 ///
@@ -41,29 +50,29 @@ impl GitStash {
     /// # 行为
     ///
     /// 1. 尝试执行 `git stash pop` 恢复修改
-    /// 2. 如果成功，输出成功日志并返回 `Ok(())`
+    /// 2. 如果成功，返回成功结果
     /// 3. 如果失败，检查是否有未合并的文件（冲突）
     /// 4. 如果有冲突，输出警告信息并返回错误，保留 stash entry
     /// 5. 如果没有冲突但失败，输出警告信息并返回错误
     ///
     /// # 返回
     ///
-    /// 如果成功恢复修改，返回 `Ok(())`。
+    /// 返回 `StashPopResult`，包含恢复状态和消息。
     ///
     /// # 错误
     ///
     /// 如果遇到合并冲突或其他错误，返回相应的错误信息。
     /// 当遇到冲突时，会输出详细的解决步骤提示。
     /// 当遇到其他错误时，会输出警告信息提示用户手动恢复。
-    pub fn stash_pop() -> Result<()> {
+    pub fn stash_pop() -> Result<StashPopResult> {
         // 尝试执行 git stash pop
         let result = cmd_run(&["stash", "pop"]);
 
         match result {
-            Ok(_) => {
-                log_success!("Stashed changes restored");
-                Ok(())
-            }
+            Ok(_) => Ok(StashPopResult {
+                restored: true,
+                message: Some("Stashed changes restored".to_string()),
+            }),
             Err(e) => {
                 // 检查是否有未合并的路径（冲突文件）
                 if Self::has_unmerged()? {

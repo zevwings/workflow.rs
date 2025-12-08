@@ -1,15 +1,17 @@
 //! 安装命令
 //! 提供安装二进制文件和 shell completion 的功能
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::Detect;
-use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
-use anyhow::{Context, Result};
-use clap_complete::shells::Shell;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+
+use anyhow::{Context, Result};
+use clap_complete::shells::Shell;
+
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 
 /// 安装命令
 #[allow(dead_code)]
@@ -47,7 +49,21 @@ impl InstallCommand {
 
         // 配置 shell 配置文件
         log_debug!("Configuring shell configuration file...");
-        Completion::configure_shell_config(&shell)?;
+        let config_result = Completion::configure_shell_config(&shell)?;
+
+        if config_result.already_exists {
+            log_success!(
+                "Completion config already exists in {} config file",
+                config_result.shell
+            );
+        } else if config_result.added {
+            log_success!(
+                "Completion config added to {} config file",
+                config_result.shell
+            );
+        } else {
+            log_success!("Completion config written to shell config file");
+        }
 
         log_success!("  shell completion installation complete");
         log_break!();

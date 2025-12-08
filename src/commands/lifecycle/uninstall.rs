@@ -1,18 +1,20 @@
 //! 卸载命令
 //! 删除 Workflow CLI 的所有配置
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::{Detect, Reload};
-use crate::base::util::{dialog::ConfirmDialog, Clipboard};
-use crate::{
-    log_break, log_debug, log_message, log_success, log_warning, Completion, ProxyManager,
-};
-use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 #[cfg(unix)]
 use duct::cmd;
+
+use anyhow::{Context, Result};
+
+use crate::base::settings::paths::Paths;
+use crate::base::shell::{Detect, Reload};
+use crate::base::util::{dialog::ConfirmDialog, Clipboard};
+use crate::{
+    log_break, log_debug, log_info, log_message, log_success, log_warning, Completion, ProxyManager,
+};
 
 /// 卸载命令
 pub struct UninstallCommand;
@@ -207,8 +209,35 @@ impl UninstallCommand {
         log_break!();
         log_message!("Removing shell completion scripts...");
         // 删除所有 shell 类型的 completion 文件（不依赖当前 shell）
-        Completion::remove_completion_files(&clap_complete::shells::Shell::Zsh)?;
-        Completion::remove_completion_config_file()?;
+        let removal_result =
+            Completion::remove_completion_files(&clap_complete::shells::Shell::Zsh)?;
+
+        // 显示删除的文件
+        for file in &removal_result.removed_files {
+            log_info!("  Removed: {}", file.display());
+        }
+
+        // 显示失败的文件
+        for (file, error) in &removal_result.failed_files {
+            log_info!("Failed to delete: {} ({})", file.display(), error);
+        }
+
+        if removal_result.removed_count > 0 {
+            log_info!("  Completion script files removed");
+        }
+
+        let config_file_removed = Completion::remove_completion_config_file()?;
+        if config_file_removed {
+            log_info!(
+                "  Removed: {}",
+                Paths::workflow_dir()?.join(".completions").display()
+            );
+        } else {
+            log_info!(
+                "  Completion config file not found: {}",
+                Paths::workflow_dir()?.join(".completions").display()
+            );
+        }
         // 移除所有 shell 的 completion 配置
         Completion::remove_all_completion_configs()?;
 

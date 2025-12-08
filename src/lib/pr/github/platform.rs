@@ -1,23 +1,23 @@
-use anyhow::{Context, Result};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fmt::Write;
 use std::sync::OnceLock;
 
+use anyhow::{Context, Result};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
+use serde_json::Value;
+
+use crate::base::http::{HttpClient, RequestConfig};
 use crate::base::settings::Settings;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::history::JiraWorkHistory;
-use crate::log_debug;
+use crate::pr::github::errors::handle_github_error;
+use crate::pr::helpers::extract_github_repo_from_url;
+use crate::pr::platform::{PlatformProvider, PullRequestStatus};
+use crate::pr::PullRequestRow;
 
 use super::requests::{
     CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest,
 };
 use super::responses::{CreatePullRequestResponse, GitHubUser, PullRequestInfo, RepositoryInfo};
-use crate::base::http::{HttpClient, RequestConfig};
-use crate::pr::github::errors::handle_github_error;
-use crate::pr::helpers::extract_github_repo_from_url;
-use crate::pr::platform::{PlatformProvider, PullRequestStatus};
-use crate::pr::PullRequestRow;
-use serde_json::Value;
 
 /// GitHub 平台实现
 ///
@@ -78,7 +78,7 @@ impl PlatformProvider for GitHub {
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
-        log_debug!("Using merge method: {}", merge_method);
+        crate::trace_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}/merge",
@@ -263,7 +263,7 @@ impl PlatformProvider for GitHub {
         if let Some(pr_id) =
             JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
-            log_debug!(
+            crate::trace_debug!(
                 "Found PR #{} for branch '{}' from work-history",
                 pr_id,
                 current_branch

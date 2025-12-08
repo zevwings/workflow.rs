@@ -2,13 +2,15 @@
 //!
 //! 负责协调系统代理读取器和配置生成器，提供高级代理管理功能。
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+
 use crate::base::shell::ShellConfigManager;
 use crate::proxy::config_generator::ProxyConfigGenerator;
 use crate::proxy::system_reader::SystemProxyReader;
 use crate::proxy::{ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyType};
-use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::path::PathBuf;
 
 /// 代理管理器
 ///

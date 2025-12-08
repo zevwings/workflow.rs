@@ -1,3 +1,5 @@
+use anyhow::{Context, Result};
+
 use crate::base::util::{
     dialog::{ConfirmDialog, InputDialog, MultiSelectDialog},
     Browser, Clipboard,
@@ -17,7 +19,6 @@ use crate::pr::helpers::{
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
 use crate::{log_error, log_info, log_success, log_warning, ProxyManager};
-use anyhow::{Context, Result};
 
 /// PR Pick 命令
 ///
@@ -738,16 +739,23 @@ impl PullRequestPickCommand {
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)
+                let config_result = JiraStatus::configure_interactive(ticket)
                     .with_context(|| {
                         format!(
                             "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
                             ticket
                         )
                     })?;
-                let status = JiraStatus::read_pull_request_created_status(ticket)
-                    .context("Failed to read status after configuration")?;
-                Ok(status)
+                log_success!("Jira status configuration saved");
+                log_info!(
+                    "  PR created status: {}",
+                    config_result.created_pull_request_status
+                );
+                log_info!(
+                    "  PR merged status: {}",
+                    config_result.merged_pull_request_status
+                );
+                Ok(Some(config_result.created_pull_request_status))
             }
         } else {
             Ok(None)

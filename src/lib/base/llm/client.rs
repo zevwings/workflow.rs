@@ -2,14 +2,14 @@
 //!
 //! 本模块提供了 LLM 客户端实现，支持所有遵循 OpenAI 兼容格式的提供商。
 
+use std::sync::OnceLock;
+
 use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
-use std::sync::OnceLock;
 
 use super::types::{ChatCompletionResponse, LLMRequestParams};
-use crate::log_debug;
 use crate::{base::http::HttpResponse, base::settings::defaults::default_llm_model, Settings};
 
 /// LLM 客户端
@@ -81,10 +81,10 @@ impl LLMClient {
         // 获取 provider 名称用于错误消息
         let provider = self.get_provider_name()?;
 
-        log_debug!("LLM url: {}", url);
-        log_debug!("LLM payload: {}", payload);
-        log_debug!("LLM headers: {:?}", headers);
-        log_debug!("LLM provider: {}", provider);
+        crate::trace_debug!("LLM url: {}", url);
+        crate::trace_debug!("LLM payload: {}", payload);
+        crate::trace_debug!("LLM headers: {:?}", headers);
+        crate::trace_debug!("LLM provider: {}", provider);
 
         // 发送请求
         let mut request = client.post(&url);
