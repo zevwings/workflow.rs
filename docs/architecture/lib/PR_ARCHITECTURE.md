@@ -23,6 +23,7 @@ src/lib/pr/
 ├── helpers.rs          # PR 辅助函数 (282行)
 ├── llm.rs              # LLM 功能（PR 标题生成）(253行)
 ├── body_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
+├── table.rs            # PR 表格显示结构体 (25行)
 │
 ├── github/             # GitHub 平台实现
 │   ├── mod.rs          # GitHub 模块导出
@@ -155,6 +156,41 @@ src/lib/pr/
 **使用场景**：
 - `pr pick` 命令：从源 PR 提取信息用于创建新 PR
 - 可被其他命令复用（如 sync、rebase 等）
+
+#### 7. PR 表格显示 (`table.rs`)
+
+**职责**：提供统一的 PR 列表表格行结构，用于表格格式显示
+
+**核心组件**：
+
+#### PullRequestRow 结构体
+
+```rust
+#[derive(Tabled)]
+pub struct PullRequestRow {
+    #[tabled(rename = "#")]
+    pub number: String,
+    #[tabled(rename = "State")]
+    pub state: String,
+    #[tabled(rename = "Branch")]
+    pub branch: String,
+    #[tabled(rename = "Title")]
+    pub title: String,
+    #[tabled(rename = "Author")]
+    pub author: String,
+    #[tabled(rename = "URL")]
+    pub url: String,
+}
+```
+
+**特性**：
+- 使用 `tabled` crate 的 `Tabled` trait
+- 自动格式化表格列
+- 支持自定义列名（通过 `#[tabled(rename = "...")]`）
+
+**使用场景**：
+- `pr list` 命令：使用 `TableBuilder` 和 `PullRequestRow` 显示 PR 列表
+- 统一的表格格式，提供一致的用户体验
 
 ---
 
@@ -443,6 +479,33 @@ let pr_body = generate_pull_request_body(
     Some("PROJ-123"),
     None,
 )?;
+```
+
+### 使用表格显示 PR 列表
+
+```rust
+use workflow::pr::table::PullRequestRow;
+use workflow::base::util::table::{TableBuilder, TableStyle};
+
+// 构建 PR 行数据
+let pr_rows = vec![
+    PullRequestRow {
+        number: "123".to_string(),
+        state: "open".to_string(),
+        branch: "feature/new".to_string(),
+        title: "Add new feature".to_string(),
+        author: "alice".to_string(),
+        url: "https://github.com/...".to_string(),
+    },
+    // ...
+];
+
+// 使用 TableBuilder 显示
+let output = TableBuilder::new(pr_rows)
+    .with_title("Pull Requests")
+    .with_style(TableStyle::Modern)
+    .render();
+println!("{}", output);
 ```
 
 ### 使用 LLM 生成标题

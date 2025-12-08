@@ -8,6 +8,10 @@
 - 浏览器和剪贴板操作
 - 文件解压和校验和验证
 - 用户确认对话框
+- 交互式对话框（输入、选择、多选、确认）
+- 格式化工具（文件大小格式化）
+- 平台检测工具（GitHub Releases 平台识别）
+- 表格输出工具（统一的表格显示接口）
 
 这些工具函数为整个项目提供通用的基础设施支持，被所有模块广泛使用。
 
@@ -26,10 +30,14 @@ src/lib/base/util/
 ├── clipboard.rs   # 剪贴板操作（~35 行）
 ├── unzip.rs       # 文件解压工具（~61 行）
 ├── checksum.rs    # 校验和验证工具（~164 行）
-└── confirm.rs     # 用户确认对话框（~45 行）
+├── confirm.rs     # 用户确认对话框（~45 行）
+├── dialog.rs      # 交互式对话框（~601 行）
+├── format.rs      # 格式化工具（~42 行）
+├── platform.rs    # 平台检测工具（~84 行）
+└── table.rs       # 表格输出工具（~382 行）
 ```
 
-**总计：约 938 行代码，8 个文件，7 个主要组件**
+**总计：约 2046 行代码，12 个文件，11 个主要组件**
 
 ### 依赖模块
 
@@ -39,6 +47,8 @@ src/lib/base/util/
 - **`zip`**：ZIP 文件解压
 - **`sha2`**：SHA256 校验和
 - **`dialoguer`**：用户确认对话框
+- **`inquire`**：交互式对话框（输入、选择、多选、确认）
+- **`tabled`**：表格输出格式化
 
 ### 模块集成
 
@@ -49,6 +59,10 @@ src/lib/base/util/
 - **浏览器**：PR 命令使用 `Browser::open()`
 - **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
 - **用户确认**：多个命令使用 `confirm()` 函数
+- **交互式对话框**：多个命令使用 `InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`
+- **格式化工具**：Lifecycle 命令使用 `format_size()` 格式化文件大小
+- **平台检测**：Lifecycle 命令使用 `detect_release_platform()` 检测平台
+- **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
 
 ---
 
@@ -578,6 +592,247 @@ confirm(
    - 返回 `Ok(false)`：允许调用者根据返回值决定后续逻辑
    - 返回错误：强制要求用户确认，取消则终止操作
 
+#### 8. 交互式对话框 (`dialog.rs`)
+
+### 功能概述
+
+提供统一的交互式对话框接口，使用 `inquire` 作为后端实现。支持链式调用，提供更好的用户体验和代码可读性。
+
+### 核心组件
+
+#### InputDialog - 文本输入对话框
+
+```rust
+pub struct InputDialog {
+    prompt: String,
+    default: Option<String>,
+    validator: Option<ValidatorFn>,
+    allow_empty: bool,
+}
+```
+
+**主要方法**：
+- `new(prompt)` - 创建新的输入对话框
+- `with_default(default)` - 设置默认值
+- `with_validator(validator)` - 设置验证器
+- `allow_empty(allow)` - 允许空值
+- `prompt()` - 显示对话框并获取用户输入
+
+**特性**：
+- 支持默认值
+- 支持自定义验证器
+- 支持空值处理
+- 链式调用
+
+#### SelectDialog - 单选对话框
+
+```rust
+pub struct SelectDialog<T> {
+    prompt: String,
+    options: Vec<T>,
+    default: Option<usize>,
+}
+```
+
+**主要方法**：
+- `new(prompt, options)` - 创建新的单选对话框
+- `with_default(index)` - 设置默认选项索引
+- `prompt()` - 显示对话框并获取用户选择
+
+**特性**：
+- 支持默认选项
+- 支持任意类型（实现 `Display` trait）
+
+#### MultiSelectDialog - 多选对话框
+
+```rust
+pub struct MultiSelectDialog<T> {
+    prompt: String,
+    options: Vec<T>,
+    default: Option<Vec<usize>>,
+}
+```
+
+**主要方法**：
+- `new(prompt, options)` - 创建新的多选对话框
+- `with_default(indices)` - 设置默认选中的选项索引
+- `prompt()` - 显示对话框并获取用户选择（返回 `Vec<T>`）
+
+**特性**：
+- 支持多选
+- 支持默认选中多个选项
+
+#### ConfirmDialog - 确认对话框
+
+```rust
+pub struct ConfirmDialog {
+    prompt: String,
+    default: Option<bool>,
+    cancel_message: Option<String>,
+}
+```
+
+**主要方法**：
+- `new(prompt)` - 创建新的确认对话框
+- `with_default(default)` - 设置默认选择
+- `with_cancel_message(message)` - 设置取消消息（取消时返回错误）
+- `prompt()` - 显示对话框并获取用户确认
+
+**特性**：
+- 支持默认选择
+- 支持取消消息（强制确认）
+
+### 使用场景
+
+- **交互式输入**：需要用户输入文本（如 Jira ID、分支名等）
+- **选项选择**：需要用户从选项列表中选择（如选择 shell 类型、选择平台等）
+- **多选操作**：需要用户选择多个选项（如选择要清理的分支等）
+- **确认操作**：需要用户确认操作（如删除、更新等）
+
+### 设计决策
+
+1. **链式调用**：所有对话框支持链式调用，提供更好的代码可读性
+2. **统一接口**：所有对话框使用 `prompt()` 方法获取用户输入
+3. **错误处理**：用户取消时返回错误，便于调用者处理
+
+#### 9. 格式化工具 (`format.rs`)
+
+### 功能概述
+
+提供各种格式化函数，包括文件大小格式化等。
+
+### 核心函数
+
+#### format_size
+
+```rust
+pub fn format_size(bytes: u64) -> String
+```
+
+**功能**：格式化文件大小
+
+**参数**：
+- `bytes` - 字节数
+
+**返回**：格式化后的字符串，例如 "1.23 MB" 或 "1024 B"
+
+**规则**：
+- 自动选择合适的单位（B, KB, MB, GB, TB）
+- 小于 1024 字节时显示为 "X B"
+- 大于等于 1024 字节时显示为 "X.XX UNIT"（保留两位小数）
+
+**示例**：
+```rust
+use workflow::base::util::format_size;
+
+assert_eq!(format_size(0), "0 B");
+assert_eq!(format_size(1024), "1.00 KB");
+assert_eq!(format_size(1048576), "1.00 MB");
+```
+
+### 使用场景
+
+- **文件大小显示**：在下载、更新等命令中显示文件大小
+- **进度提示**：显示下载进度和文件大小
+
+#### 10. 平台检测工具 (`platform.rs`)
+
+### 功能概述
+
+提供平台检测相关的工具函数，用于识别当前运行的操作系统和架构。
+
+### 核心函数
+
+#### detect_release_platform
+
+```rust
+pub fn detect_release_platform() -> Result<String>
+```
+
+**功能**：检测当前平台并返回 GitHub Releases 格式的平台标识符
+
+**返回**：平台标识符字符串，例如 `"macOS-AppleSilicon"` 或 `"Linux-x86_64-static"`
+
+**支持的平台格式**：
+- macOS: `macOS-Intel`, `macOS-AppleSilicon`
+- Linux: `Linux-x86_64`, `Linux-x86_64-static`, `Linux-ARM64`
+- Windows: `Windows-x86_64`, `Windows-ARM64`
+
+**检测逻辑**：
+- 对于 Linux x86_64，会自动检测是否需要静态链接版本（musl/static）：
+  1. 检查是否是 Alpine Linux（通常使用 musl）
+  2. 检测当前二进制是否静态链接（使用 `ldd` 命令）
+
+**示例**：
+```rust
+use workflow::base::util::detect_release_platform;
+
+let platform = detect_release_platform()?;
+println!("Detected platform: {}", platform);
+```
+
+### 使用场景
+
+- **更新功能**：检测平台以匹配对应的 GitHub Release 资源文件
+- **安装功能**：检测平台以选择正确的安装包
+
+#### 11. 表格输出工具 (`table.rs`)
+
+### 功能概述
+
+提供统一的表格输出接口，使用 `tabled` 库。支持自定义样式、边框、对齐等。
+
+### 核心组件
+
+#### TableBuilder
+
+```rust
+pub struct TableBuilder<T> {
+    data: Vec<T>,
+    title: Option<String>,
+    style: Option<TableStyle>,
+    max_width: Option<usize>,
+    alignments: Vec<Alignment>,
+}
+```
+
+**主要方法**：
+- `new(data)` - 创建新的表格构建器
+- `with_title(title)` - 设置表格标题
+- `with_style(style)` - 设置表格样式
+- `with_max_width(width)` - 设置最大宽度（自动换行）
+- `with_alignment(alignments)` - 设置列对齐方式
+- `render()` - 构建并渲染表格为字符串
+
+**特性**：
+- 支持链式调用
+- 支持自定义样式和边框
+- 支持列对齐和宽度控制
+- 支持紧凑模式和完整模式
+
+#### TableStyle 枚举
+
+```rust
+pub enum TableStyle {
+    Default,  // 默认样式（ASCII）
+    Modern,   // 现代样式（带边框）
+    Compact,  // 紧凑样式（无边框）
+    Minimal,  // 最小样式（仅分隔符）
+    Grid,     // 网格样式（完整网格）
+}
+```
+
+### 使用场景
+
+- **PR 列表显示**：使用 `PullRequestRow` 结构体显示 PR 列表
+- **数据表格**：显示任何需要表格格式的数据
+
+### 设计决策
+
+1. **链式调用**：支持链式配置，提供更好的代码可读性
+2. **类型安全**：使用泛型和 `Tabled` trait 保证类型安全
+3. **灵活配置**：支持多种样式和对齐方式
+
 ### 设计模式
 
 #### 工具类设计
@@ -817,6 +1072,74 @@ if confirm("Do you want to continue?")? {
 }
 ```
 
+### 交互式对话框
+
+```rust
+use workflow::base::util::dialog::{InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog};
+
+// 文本输入
+let name = InputDialog::new("Enter your name")
+    .with_default("John Doe")
+    .prompt()?;
+
+// 单选
+let options = vec!["Option 1", "Option 2", "Option 3"];
+let selected = SelectDialog::new("Choose an option", options)
+    .with_default(0)
+    .prompt()?;
+
+// 多选
+let selected = MultiSelectDialog::new("Choose options", options)
+    .prompt()?;
+
+// 确认
+let confirmed = ConfirmDialog::new("Continue?")
+    .with_default(true)
+    .prompt()?;
+```
+
+### 格式化工具
+
+```rust
+use workflow::base::util::format_size;
+
+let size = format_size(1048576);
+println!("File size: {}", size);  // 输出：File size: 1.00 MB
+```
+
+### 平台检测
+
+```rust
+use workflow::base::util::detect_release_platform;
+
+let platform = detect_release_platform()?;
+println!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
+```
+
+### 表格输出
+
+```rust
+use tabled::Tabled;
+use workflow::base::util::table::{TableBuilder, TableStyle};
+
+#[derive(Tabled)]
+struct User {
+    name: String,
+    age: u32,
+}
+
+let users = vec![
+    User { name: "Alice".to_string(), age: 30 },
+    User { name: "Bob".to_string(), age: 25 },
+];
+
+let output = TableBuilder::new(users)
+    .with_title("Users")
+    .with_style(TableStyle::Modern)
+    .render();
+println!("{}", output);
+```
+
 ---
 
 ## ✅ 总结
@@ -827,12 +1150,17 @@ if confirm("Do you want to continue?")? {
 2. **字符串处理**：敏感值隐藏
 3. **浏览器和剪贴板**：系统集成操作
 4. **文件操作**：解压和校验和验证
-5. **用户确认**：交互式对话框
+5. **用户确认**：交互式确认对话框
+6. **交互式对话框**：输入、选择、多选、确认对话框（链式调用）
+7. **格式化工具**：文件大小格式化
+8. **平台检测**：GitHub Releases 平台识别
+9. **表格输出**：统一的表格显示接口
 
 **设计优势**：
-- ✅ **易用性**：简洁的 API 和宏
+- ✅ **易用性**：简洁的 API 和宏，支持链式调用
 - ✅ **一致性**：统一的错误处理方式
 - ✅ **可配置性**：日志级别可通过环境变量或运行时设置
 - ✅ **跨平台**：所有工具函数支持多平台
 - ✅ **高性能**：宏在编译时展开，流式处理文件
+- ✅ **类型安全**：使用泛型和 trait 保证类型安全
 
