@@ -281,6 +281,43 @@ impl Paths {
         Ok(history_dir)
     }
 
+    /// 获取日志目录路径（强制本地，不同步）
+    ///
+    /// 返回 `~/.workflow/logs/`（总是本地路径）。
+    ///
+    /// **重要**：日志文件是设备本地的，不应该跨设备同步，因为：
+    /// - 每个设备的日志是独立的
+    /// - 避免 iCloud 同步延迟影响性能
+    /// - 日志文件可能较大，不适合同步
+    ///
+    /// # 路径示例
+    ///
+    /// - 所有平台：`~/.workflow/logs/`
+    ///
+    /// # 返回
+    ///
+    /// 返回日志目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn logs_dir() -> Result<PathBuf> {
+        // 强制使用本地路径，不使用 iCloud
+        let logs_dir = Self::local_base_dir()?.join("logs");
+
+        // 确保目录存在
+        fs::create_dir_all(&logs_dir).context("Failed to create .workflow/logs directory")?;
+
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&logs_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set logs directory permissions")?;
+        }
+
+        Ok(logs_dir)
+    }
+
     // ==================== 安装路径相关方法 ====================
     /// 获取所有命令名称
     ///

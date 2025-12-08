@@ -46,9 +46,9 @@ pub struct Tracer;
 impl Tracer {
     /// 初始化 tracing subscriber（从配置读取日志级别）
     ///
-    /// 根据配置的日志级别决定是否输出到 stderr 或完全丢弃。
+    /// 根据配置的日志级别决定是否输出到文件或完全丢弃。
     /// 如果日志级别为 "off" 或 "none"，则输出到 sink（/dev/null）。
-    /// 否则，输出到 stderr。
+    /// 否则，输出到日志文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）。
     ///
     /// 日志级别从 `~/.workflow/config/workflow.toml` 配置文件中的 `log.level` 字段读取。
     /// 如果配置文件中未设置，则默认使用 "off"（不输出）。
@@ -63,6 +63,7 @@ impl Tracer {
     /// ```
     pub fn init() {
         use crate::base::settings::Settings;
+        use std::fs::OpenOptions;
         use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
         // 从配置文件读取日志级别
@@ -80,7 +81,21 @@ impl Tracer {
 
         // 根据配置决定输出目标
         if tracing_level != "off" && tracing_level != "none" {
-            // 如果配置了日志级别，输出到 stderr
+            // 如果配置了日志级别，输出到文件
+            if let Ok(file_path) = Self::get_log_file_path() {
+                if let Ok(file) = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(&file_path)
+                {
+                    let _ = tracing_subscriber::registry()
+                        .with(EnvFilter::new(tracing_filter))
+                        .with(tracing_subscriber::fmt::layer().with_writer(file))
+                        .try_init();
+                    return;
+                }
+            }
+            // 如果文件创建失败，回退到 stderr
             let _ = tracing_subscriber::registry()
                 .with(EnvFilter::new(tracing_filter))
                 .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
@@ -92,6 +107,33 @@ impl Tracer {
                 .with(tracing_subscriber::fmt::layer().with_writer(std::io::sink))
                 .try_init();
         }
+    }
+
+    /// 获取日志文件路径
+    ///
+    /// 返回格式：`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`
+    ///
+    /// 日志文件存储在应用配置目录下，强制本地存储（不使用 iCloud 同步）。
+    fn get_log_file_path() -> anyhow::Result<std::path::PathBuf> {
+        use crate::base::settings::paths::Paths;
+        use anyhow::Context;
+        use chrono::Local;
+        use std::fs;
+
+        // 获取日志目录（~/.workflow/logs/），强制本地存储
+        let logs_dir = Paths::logs_dir().context("Failed to get logs directory")?;
+
+        // 创建 tracing 子目录
+        let tracing_dir = logs_dir.join("tracing");
+        fs::create_dir_all(&tracing_dir).with_context(|| {
+            format!("Failed to create tracing log directory: {:?}", tracing_dir)
+        })?;
+
+        // 生成带日期的日志文件名
+        let date = Local::now().format("%Y-%m-%d");
+        let log_file = tracing_dir.join(format!("workflow-{}.log", date));
+
+        Ok(log_file)
     }
     /// 记录调试级别的日志
     ///
