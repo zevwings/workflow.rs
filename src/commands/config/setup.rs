@@ -29,6 +29,7 @@ struct CollectedConfig {
     github_accounts: Vec<GitHubAccount>,
     github_current: Option<String>,
     log_download_base_dir: Option<String>,
+    enable_trace_console: Option<bool>,
     codeup_project_id: Option<u64>,
     codeup_csrf_token: Option<String>,
     codeup_cookie: Option<String>,
@@ -87,6 +88,7 @@ impl SetupCommand {
             github_accounts: settings.github.accounts.clone(),
             github_current: settings.github.current.clone(),
             log_download_base_dir: settings.log.download_base_dir.clone(),
+            enable_trace_console: settings.log.enable_trace_console,
             codeup_project_id: settings.codeup.project_id,
             codeup_csrf_token: settings.codeup.csrf_token.clone(),
             codeup_cookie: settings.codeup.cookie.clone(),
@@ -337,6 +339,45 @@ impl SetupCommand {
             // 自定义路径，保存到配置文件
             Some(log_download_base_dir)
         };
+
+        // ==================== 可选：Tracing 控制台输出配置 ====================
+        log_break!();
+        log_message!("  Tracing Console Output (Optional)");
+        log_break!('─', 65);
+
+        let current_trace_console = existing.enable_trace_console.unwrap_or(false);
+        let current_status = if current_trace_console {
+            "enabled (output to both file and console)"
+        } else {
+            "disabled (output to file only)"
+        };
+
+        log_message!("Current: {}", current_status);
+        log_message!(
+            "Enable tracing console output? (tracing logs will be output to both file and console)"
+        );
+
+        let trace_console_options = vec![
+            "Enable (output to both file and console)",
+            "Disable (output to file only)",
+        ];
+
+        let current_trace_console_idx = if current_trace_console { 0 } else { 1 };
+
+        let selected_trace_console = SelectDialog::new(
+            "Select trace console output mode",
+            trace_console_options.clone(),
+        )
+        .with_default(current_trace_console_idx)
+        .prompt()
+        .context("Failed to select trace console option")?;
+
+        // true 时写入配置文件，false 时从配置文件中删除（设置为 None）
+        let enable_trace_console = trace_console_options
+            .iter()
+            .position(|&opt| opt == selected_trace_console)
+            .map(|idx| if idx == 0 { Some(true) } else { None })
+            .unwrap_or(None);
 
         // ==================== 可选：LLM/AI 配置 ====================
         log_break!();
@@ -589,6 +630,7 @@ impl SetupCommand {
             github_accounts,
             github_current,
             log_download_base_dir,
+            enable_trace_console,
             codeup_project_id,
             codeup_csrf_token,
             codeup_cookie,
@@ -617,6 +659,7 @@ impl SetupCommand {
                 output_folder_name: default_log_folder(), // 使用默认值，不再允许用户配置
                 download_base_dir: config.log_download_base_dir.clone(),
                 level: None, // 日志级别通过 workflow log set 命令设置
+                enable_trace_console: config.enable_trace_console,
             },
             codeup: CodeupSettings {
                 project_id: config.codeup_project_id,

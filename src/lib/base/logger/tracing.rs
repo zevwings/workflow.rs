@@ -50,6 +50,9 @@ impl Tracer {
     /// 如果日志级别为 "off" 或 "none"，则输出到 sink（/dev/null）。
     /// 否则，输出到日志文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）。
     ///
+    /// 如果启用了 `enable_trace_console` 配置（为 `true`），tracing 日志会同时输出到文件和控制台（stderr）。
+    /// 如果配置文件中不存在此字段（为 `None`），默认为 `false`（只输出到文件）。
+    ///
     /// 日志级别从 `~/.workflow/config/workflow.toml` 配置文件中的 `log.level` 字段读取。
     /// 如果配置文件中未设置，则默认使用 "off"（不输出）。
     ///
@@ -66,8 +69,10 @@ impl Tracer {
         use std::fs::OpenOptions;
         use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+        let settings = Settings::get();
+
         // 从配置文件读取日志级别
-        let tracing_level = Settings::get().log.level.as_deref().unwrap_or("off");
+        let tracing_level = settings.log.level.as_deref().unwrap_or("off");
 
         // 将 LogLevel 转换为 tracing 的级别格式
         let tracing_filter = match tracing_level {
@@ -81,20 +86,37 @@ impl Tracer {
 
         // 根据配置决定输出目标
         if tracing_level != "off" && tracing_level != "none" {
-            // 如果配置了日志级别，输出到文件
+            // 决定是否同时输出到控制台
+            // 如果配置文件中设置了 enable_trace_console 为 true，则启用；否则默认为 false
+            let enable_console = settings.log.enable_trace_console.unwrap_or(false);
+
+            // 总是尝试输出到文件
             if let Ok(file_path) = Self::get_log_file_path() {
                 if let Ok(file) = OpenOptions::new()
                     .create(true)
                     .append(true)
                     .open(&file_path)
                 {
-                    let _ = tracing_subscriber::registry()
-                        .with(EnvFilter::new(tracing_filter))
-                        .with(tracing_subscriber::fmt::layer().with_writer(file))
-                        .try_init();
+                    // 构建 registry，先添加 EnvFilter
+                    let registry =
+                        tracing_subscriber::registry().with(EnvFilter::new(tracing_filter));
+
+                    // 添加文件 layer
+                    let registry =
+                        registry.with(tracing_subscriber::fmt::layer().with_writer(file));
+
+                    // 如果启用了控制台输出，同时添加 console layer
+                    if enable_console {
+                        let _ = registry
+                            .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
+                            .try_init();
+                    } else {
+                        let _ = registry.try_init();
+                    }
                     return;
                 }
             }
+
             // 如果文件创建失败，回退到 stderr
             let _ = tracing_subscriber::registry()
                 .with(EnvFilter::new(tracing_filter))

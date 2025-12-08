@@ -15,6 +15,12 @@ pub enum LogLevelSubcommand {
     ///
     /// Display current configured log level and default level information.
     Check,
+    /// Enable/disable tracing console output
+    ///
+    /// Control whether tracing logs are also output to console (stderr) in addition to file.
+    /// If enabled, tracing logs will be output to both file and console.
+    /// If not set, defaults to true in debug mode, false in release mode.
+    TraceConsole,
 }
 
 /// Completion management subcommands

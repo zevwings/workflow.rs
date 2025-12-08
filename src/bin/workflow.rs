@@ -85,6 +85,7 @@ fn main() -> Result<()> {
         Some(Commands::LogLevel { subcommand }) => match subcommand {
             LogLevelSubcommand::Set => log::LogCommand::set()?,
             LogLevelSubcommand::Check => log::LogCommand::check()?,
+            LogLevelSubcommand::TraceConsole => log::LogCommand::trace_console()?,
         },
         // GitHub 账号管理命令
         Some(Commands::GitHub { subcommand }) => match subcommand {
