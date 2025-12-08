@@ -36,6 +36,9 @@ fn test_logger_output() {
 #[test]
 fn test_log_level_from_str() {
     // 测试有效的日志级别字符串（不区分大小写）
+    // 支持 "off"（新格式）和 "none"（向后兼容）
+    assert_eq!("off".parse::<LogLevel>().unwrap(), LogLevel::None);
+    assert_eq!("OFF".parse::<LogLevel>().unwrap(), LogLevel::None);
     assert_eq!("none".parse::<LogLevel>().unwrap(), LogLevel::None);
     assert_eq!("NONE".parse::<LogLevel>().unwrap(), LogLevel::None);
     assert_eq!("error".parse::<LogLevel>().unwrap(), LogLevel::Error);
@@ -55,7 +58,7 @@ fn test_log_level_from_str() {
 
 #[test]
 fn test_log_level_as_str() {
-    assert_eq!(LogLevel::None.as_str(), "none");
+    assert_eq!(LogLevel::None.as_str(), "off");
     assert_eq!(LogLevel::Error.as_str(), "error");
     assert_eq!(LogLevel::Warn.as_str(), "warn");
     assert_eq!(LogLevel::Info.as_str(), "info");

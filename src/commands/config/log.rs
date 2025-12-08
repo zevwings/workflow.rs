@@ -16,7 +16,7 @@ impl LogCommand {
         let current_level = LogLevel::get_level();
 
         // 定义日志级别选项
-        let log_levels = ["none", "error", "warn", "info", "debug"];
+        let log_levels = ["off", "error", "warn", "info", "debug"];
 
         // 找到当前级别的索引
         let current_level_str = current_level.as_str();

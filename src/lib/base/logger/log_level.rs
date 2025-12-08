@@ -80,7 +80,7 @@ impl LogLevel {
     /// 将 LogLevel 转换为字符串
     pub fn as_str(&self) -> &'static str {
         match self {
-            LogLevel::None => "none",
+            LogLevel::None => "off",
             LogLevel::Error => "error",
             LogLevel::Warn => "warn",
             LogLevel::Info => "info",
@@ -101,20 +101,20 @@ impl FromStr for LogLevel {
     ///
     /// # Arguments
     ///
-    /// * `s` - 日志级别字符串（不区分大小写）："none", "error", "warn", "info", "debug"
+    /// * `s` - 日志级别字符串（不区分大小写）："off" 或 "none"（向后兼容）, "error", "warn", "info", "debug"
     ///
     /// # Returns
     ///
     /// 如果字符串有效，返回对应的 LogLevel；否则返回错误信息
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "none" => Ok(LogLevel::None),
+            "off" | "none" => Ok(LogLevel::None), // 支持 "off" 和 "none"（向后兼容）
             "error" => Ok(LogLevel::Error),
             "warn" => Ok(LogLevel::Warn),
             "info" => Ok(LogLevel::Info),
             "debug" => Ok(LogLevel::Debug),
             _ => Err(format!(
-                "Invalid log level: {}. Expected: none, error, warn, info, debug",
+                "Invalid log level: {}. Expected: off, error, warn, info, debug",
                 s
             )),
         }

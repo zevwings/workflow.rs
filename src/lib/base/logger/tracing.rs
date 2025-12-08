@@ -37,6 +37,15 @@
 //! Tracer::init();
 //! ```
 
+use crate::base::settings::paths::Paths;
+use crate::base::settings::Settings;
+use crate::base::LogLevel;
+use anyhow::Context;
+use chrono::Local;
+use std::fs;
+use std::fs::OpenOptions;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
 /// Tracing 封装结构体
 ///
 /// 提供统一的 tracing 接口，内部使用 tracing crate。
@@ -47,7 +56,7 @@ impl Tracer {
     /// 初始化 tracing subscriber（从配置读取日志级别）
     ///
     /// 根据配置的日志级别决定是否输出到文件或完全丢弃。
-    /// 如果日志级别为 "off" 或 "none"，则输出到 sink（/dev/null）。
+    /// 如果日志级别为 "off"，则输出到 sink（/dev/null）。
     /// 否则，输出到日志文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）。
     ///
     /// 如果启用了 `enable_trace_console` 配置（为 `true`），tracing 日志会同时输出到文件和控制台（stderr）。
@@ -65,27 +74,21 @@ impl Tracer {
     /// Tracer::init();
     /// ```
     pub fn init() {
-        use crate::base::settings::Settings;
-        use std::fs::OpenOptions;
-        use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
-
         let settings = Settings::get();
 
-        // 从配置文件读取日志级别
-        let tracing_level = settings.log.level.as_deref().unwrap_or("off");
+        // 从配置文件读取日志级别并解析为 LogLevel
+        let log_level = settings
+            .log
+            .level
+            .as_deref()
+            .and_then(|s| s.parse::<LogLevel>().ok())
+            .unwrap_or(LogLevel::None);
 
-        // 将 LogLevel 转换为 tracing 的级别格式
-        let tracing_filter = match tracing_level {
-            "none" | "off" => "off",
-            "error" => "error",
-            "warn" => "warn",
-            "info" => "info",
-            "debug" => "debug",
-            _ => "off",
-        };
+        // 将 LogLevel 转换为 tracing 格式字符串
+        let tracing_filter = log_level.as_str();
 
         // 根据配置决定输出目标
-        if tracing_level != "off" && tracing_level != "none" {
+        if log_level != LogLevel::None {
             // 决定是否同时输出到控制台
             // 如果配置文件中设置了 enable_trace_console 为 true，则启用；否则默认为 false
             let enable_console = settings.log.enable_trace_console.unwrap_or(false);
@@ -137,11 +140,6 @@ impl Tracer {
     ///
     /// 日志文件存储在应用配置目录下，强制本地存储（不使用 iCloud 同步）。
     fn get_log_file_path() -> anyhow::Result<std::path::PathBuf> {
-        use crate::base::settings::paths::Paths;
-        use anyhow::Context;
-        use chrono::Local;
-        use std::fs;
-
         // 获取日志目录（~/.workflow/logs/），强制本地存储
         let logs_dir = Paths::logs_dir().context("Failed to get logs directory")?;
 
