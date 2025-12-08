@@ -13,7 +13,7 @@ use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_info, log_message, log_success};
+use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// 初始化设置命令
@@ -64,9 +64,15 @@ impl SetupCommand {
         log_break!('-', 40, "Verifying Configuration");
         log_break!();
 
+        // 检查配置文件权限
+        if let Some(warning) = Settings::check_permissions() {
+            log_warning!("{}", warning);
+        }
+
         // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
         let settings = Settings::load();
-        settings.verify()?;
+        let result = settings.verify()?;
+        crate::commands::config::show::ConfigCommand::print_verification_result(&result);
 
         log_break!();
         log_success!("Initialization completed successfully!");

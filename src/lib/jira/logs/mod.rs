@@ -19,6 +19,9 @@ mod zip;
 // 重新导出 LogEntry 作为公共 API
 pub use helpers::LogEntry;
 
+// 重新导出下载相关的类型
+pub use download::{DownloadResult, ProgressCallback};
+
 /// Jira 日志处理结构体
 ///
 /// 提供从 Jira 下载的日志文件的下载、搜索、查找和处理功能

@@ -1,6 +1,6 @@
 use crate::base::util::dialog::InputDialog;
-use crate::jira::logs::JiraLogs;
-use crate::{log_debug, log_info, log_success};
+use crate::jira::logs::{JiraLogs, ProgressCallback};
+use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
 
 /// 下载附件命令
@@ -20,16 +20,37 @@ impl AttachmentsCommand {
 
         log_success!("Downloading all attachments for {}...", jira_id);
 
-        log_debug!("Getting attachments for {}...", jira_id);
-
-        // 创建 JiraLogs 实例并执行下载
+        // 创建 JiraLogs 实例
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let base_dir = logs
-            .download_from_jira(&jira_id, None, true)
+
+        // 创建回调函数，将进度消息输出到控制台
+        let callback: ProgressCallback = Box::new(|msg| {
+            if !msg.is_empty() {
+                log_info!("{}", msg);
+            } else {
+                log_break!();
+            }
+        });
+
+        // 执行下载
+        let result = logs
+            .download_from_jira(&jira_id, None, true, Some(callback))
             .context("Failed to download attachments from Jira")?;
 
-        log_success!("Download completed!\n");
-        log_info!("Files located at: {}/downloads", base_dir.display());
+        // 显示下载结果
+        if !result.failed_files.is_empty() {
+            log_break!();
+            log_info!(
+                "  Warning: {} attachment(s) failed to download:",
+                result.failed_files.len()
+            );
+            for (filename, error) in &result.failed_files {
+                log_info!("  - {}: {}", filename, error);
+            }
+        }
+
+        log_success!("Download completed!");
+        log_info!("Files located at: {}/downloads", result.base_dir.display());
 
         Ok(())
     }

@@ -8,43 +8,93 @@ use std::path::{Path, PathBuf};
 
 use crate::jira::helpers::{get_auth, get_base_url};
 use crate::jira::ticket::JiraTicket;
-use crate::{log_break, log_debug, log_info, log_success, Jira, JiraAttachment};
+use crate::{trace_debug, Jira, JiraAttachment};
 
 use super::constants::*;
 use super::JiraLogs;
 
+/// 进度回调函数类型
+pub type ProgressCallback = Box<dyn Fn(&str) + Send + Sync>;
+
+/// 下载操作结果类型（成功文件列表，失败文件列表）
+type DownloadOperationResult = (Vec<PathBuf>, Vec<(String, String)>);
+
+/// 下载结果
+#[derive(Debug, Clone)]
+pub struct DownloadResult {
+    pub base_dir: PathBuf,
+    pub downloaded_files: Vec<PathBuf>,
+    pub failed_files: Vec<(String, String)>, // (filename, error)
+}
+
 impl JiraLogs {
     /// 从 Jira ticket 下载日志附件
     ///
-    /// 返回下载的基础目录路径。
+    /// 返回下载结果，包含基础目录路径、成功下载的文件列表和失败的文件列表。
     /// 如果下载失败或没有附件/日志，会自动清理已创建的目录。
     pub fn download_from_jira(
         &self,
         jira_id: &str,
         log_output_folder_name: Option<&str>,
         download_all_attachments: bool,
-    ) -> Result<PathBuf> {
+        callback: Option<ProgressCallback>,
+    ) -> Result<DownloadResult> {
         let output_folder = log_output_folder_name
             .map(|s| s.to_string())
             .unwrap_or_else(|| self.output_folder_name.clone());
+
+        if let Some(ref cb) = callback {
+            cb("Preparing download directory...");
+        }
 
         // 1. 准备下载目录
         let (base_dir, download_dir) = self.prepare_download_directory(jira_id)?;
         let base_dir_path = base_dir.clone();
 
+        // 初始化结果结构
+        let mut result = DownloadResult {
+            base_dir: base_dir.clone(),
+            downloaded_files: Vec::new(),
+            failed_files: Vec::new(),
+        };
+
         // 使用 Result 的错误处理，在失败时清理目录
-        let result = (|| -> Result<PathBuf> {
+        let download_result = (|| -> Result<()> {
+            if let Some(ref cb) = callback {
+                cb("Fetching attachments...");
+            }
+
             // 2. 获取并过滤附件
             let (attachments, log_attachments) = self.fetch_and_filter_attachments(jira_id)?;
 
             // 3. 下载附件
             if download_all_attachments {
-                self.download_all_attachments(&attachments, &download_dir)?;
+                if let Some(ref cb) = callback {
+                    cb("Downloading all attachments...");
+                }
+                let (downloaded, failed) =
+                    self.download_all_attachments(&attachments, &download_dir, callback.as_ref())?;
+                result.downloaded_files.extend(downloaded);
+                result.failed_files.extend(failed);
             } else {
                 if log_attachments.is_empty() {
                     anyhow::bail!("No log attachments found for {}", jira_id);
                 }
-                self.download_log_attachments_with_retry(jira_id, &log_attachments, &download_dir)?;
+                if let Some(ref cb) = callback {
+                    cb("Downloading log attachments...");
+                }
+                let (downloaded, failed) = self.download_log_attachments_with_retry(
+                    jira_id,
+                    &log_attachments,
+                    &download_dir,
+                    callback.as_ref(),
+                )?;
+                result.downloaded_files.extend(downloaded);
+                result.failed_files.extend(failed);
+            }
+
+            if let Some(ref cb) = callback {
+                cb("Processing downloaded logs...");
             }
 
             // 4. 处理下载的日志（合并分片、解压）
@@ -55,15 +105,16 @@ impl JiraLogs {
                 download_all_attachments,
             )?;
 
-            Ok(base_dir)
+            Ok(())
         })();
 
         // 如果失败，清理已创建的目录
-        if result.is_err() && base_dir_path.exists() {
+        if download_result.is_err() && base_dir_path.exists() {
             let _ = std::fs::remove_dir_all(&base_dir_path);
+            return download_result.map(|_| result);
         }
 
-        result
+        download_result.map(|_| result)
     }
 
     /// 准备下载目录
@@ -95,9 +146,9 @@ impl JiraLogs {
         }
 
         // 调试：显示所有附件
-        log_debug!("Found {} attachment(s):", attachments.len());
+        trace_debug!("Found {} attachment(s):", attachments.len());
         for attachment in &attachments {
-            log_debug!("  - {}", attachment.filename);
+            trace_debug!("  - {}", attachment.filename);
         }
 
         // 过滤日志附件
@@ -123,9 +174,9 @@ impl JiraLogs {
 
         // 调试：显示过滤后的日志附件
         if !log_attachments.is_empty() {
-            log_debug!("Filtered {} log attachment(s):", log_attachments.len());
+            trace_debug!("Filtered {} log attachment(s):", log_attachments.len());
             for attachment in &log_attachments {
-                log_debug!("  - {}", attachment.filename);
+                trace_debug!("  - {}", attachment.filename);
             }
         }
 
@@ -137,12 +188,28 @@ impl JiraLogs {
         &self,
         attachments: &[JiraAttachment],
         download_dir: &Path,
-    ) -> Result<()> {
+        callback: Option<&ProgressCallback>,
+    ) -> Result<DownloadOperationResult> {
+        let mut downloaded = Vec::new();
+        let mut failed = Vec::new();
+
         for attachment in attachments {
             let file_path = download_dir.join(&attachment.filename);
-            self.download_file(&attachment.content_url, &file_path)?;
+            if let Err(error) = self.download_file(&attachment.content_url, &file_path) {
+                let error_msg = error.to_string();
+                failed.push((attachment.filename.clone(), error_msg));
+                if let Some(ref cb) = callback {
+                    cb(&format!("Failed to download: {}", attachment.filename));
+                }
+            } else {
+                downloaded.push(file_path.clone());
+                if let Some(ref cb) = callback {
+                    cb(&format!("Downloaded: {}", attachment.filename));
+                }
+            }
         }
-        Ok(())
+
+        Ok((downloaded, failed))
     }
 
     /// 下载日志附件（带重试逻辑）
@@ -151,10 +218,12 @@ impl JiraLogs {
         jira_id: &str,
         log_attachments: &[JiraAttachment],
         download_dir: &Path,
-    ) -> Result<()> {
+        callback: Option<&ProgressCallback>,
+    ) -> Result<DownloadOperationResult> {
         // 提取 URL 映射
         let (original_urls, api_attachments_map) = self.extract_url_mappings(jira_id)?;
 
+        let mut downloaded = Vec::new();
         let mut failed_attachments = Vec::new();
         for attachment in log_attachments {
             let file_path = download_dir.join(&attachment.filename);
@@ -163,24 +232,36 @@ impl JiraLogs {
                 &file_path,
                 &original_urls,
                 &api_attachments_map,
+                callback,
             ) {
-                failed_attachments.push((attachment.filename.clone(), error));
+                let error_msg = error.to_string();
+                failed_attachments.push((attachment.filename.clone(), error_msg.clone()));
+                if let Some(ref cb) = callback {
+                    cb(&format!(
+                        "Failed to download: {} - {}",
+                        attachment.filename, error_msg
+                    ));
+                }
+            } else {
+                downloaded.push(file_path.clone());
             }
         }
 
-        // 如果有失败的附件，显示警告但不中断整个流程
+        // 如果有失败的附件，通过回调报告警告
         if !failed_attachments.is_empty() {
-            log_break!();
-            log_info!(
-                "  Warning: {} attachment(s) failed to download:",
-                failed_attachments.len()
-            );
-            for (filename, error) in &failed_attachments {
-                log_info!("  - {}: {}", filename, error);
+            if let Some(ref cb) = callback {
+                cb("");
+                cb(&format!(
+                    "  Warning: {} attachment(s) failed to download:",
+                    failed_attachments.len()
+                ));
+                for (filename, error) in &failed_attachments {
+                    cb(&format!("  - {}: {}", filename, error));
+                }
             }
         }
 
-        Ok(())
+        Ok((downloaded, failed_attachments))
     }
 
     /// 提取 URL 映射（从 ticket 描述和附件列表）
@@ -231,13 +312,16 @@ impl JiraLogs {
         file_path: &Path,
         original_urls: &HashMap<String, String>,
         api_attachments_map: &HashMap<String, String>,
+        callback: Option<&ProgressCallback>,
     ) -> Result<()> {
         // 首先尝试使用当前的 URL
         if self
             .download_file(&attachment.content_url, file_path)
             .is_ok()
         {
-            log_success!("Downloaded: {}", attachment.filename);
+            if let Some(ref cb) = callback {
+                cb(&format!("Downloaded: {}", attachment.filename));
+            }
             return Ok(());
         }
 
@@ -245,7 +329,7 @@ impl JiraLogs {
             "Failed to download {} from primary URL",
             attachment.filename
         );
-        log_debug!(
+        trace_debug!(
             "Warning: Failed to download {}: {}",
             attachment.filename,
             original_error
@@ -255,13 +339,18 @@ impl JiraLogs {
         if attachment.content_url.contains("cloudfront.net") {
             // 方式 1: 从 API 附件列表中查找
             if let Some(api_url) = api_attachments_map.get(&attachment.filename) {
-                log_debug!(
+                trace_debug!(
                     "Trying Jira API URL for {}: {}",
                     attachment.filename,
                     api_url
                 );
                 if self.download_file(api_url, file_path).is_ok() {
-                    log_success!("Downloaded: {} (using Jira API URL)", attachment.filename);
+                    if let Some(ref cb) = callback {
+                        cb(&format!(
+                            "Downloaded: {} (using Jira API URL)",
+                            attachment.filename
+                        ));
+                    }
                     return Ok(());
                 }
             }
@@ -272,17 +361,19 @@ impl JiraLogs {
             {
                 if let Ok(base_url) = get_base_url() {
                     let jira_api_url = format!("{}/attachment/content/{}", base_url, attachment_id);
-                    log_debug!(
+                    trace_debug!(
                         "Trying Jira API URL from attachment ID {} for {}: {}",
                         attachment_id,
                         attachment.filename,
                         jira_api_url
                     );
                     if self.download_file(&jira_api_url, file_path).is_ok() {
-                        log_success!(
-                            "Downloaded: {} (using Jira API URL from attachment ID)",
-                            attachment.filename
-                        );
+                        if let Some(ref cb) = callback {
+                            cb(&format!(
+                                "Downloaded: {} (using Jira API URL from attachment ID)",
+                                attachment.filename
+                            ));
+                        }
                         return Ok(());
                     }
                 }
@@ -292,15 +383,17 @@ impl JiraLogs {
         // 如果还是失败，尝试使用原始 CloudFront URL（如果不同）
         if let Some(original_url) = original_urls.get(&attachment.filename) {
             if original_url != &attachment.content_url {
-                log_debug!(
+                trace_debug!(
                     "Retrying with original CloudFront URL for {}",
                     attachment.filename
                 );
                 if self.download_file(original_url, file_path).is_ok() {
-                    log_success!(
-                        "Downloaded: {} (using original CloudFront URL)",
-                        attachment.filename
-                    );
+                    if let Some(ref cb) = callback {
+                        cb(&format!(
+                            "Downloaded: {} (using original CloudFront URL)",
+                            attachment.filename
+                        ));
+                    }
                     return Ok(());
                 }
             }
@@ -325,7 +418,7 @@ impl JiraLogs {
             // 检查是否有分片文件
             if log_z01.exists() {
                 // 检测到分片文件，需要合并
-                log_debug!("Detected split files, merging...");
+                trace_debug!("Detected split files, merging...");
                 self.merge_split_zips(download_dir)?;
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
@@ -401,7 +494,7 @@ impl JiraLogs {
 
         let mut response = if is_cloudfront_signed_url {
             // CloudFront 签名 URL，先尝试不使用 Basic Auth，但添加 Referer 头
-            log_debug!("Using CloudFront signed URL without Basic Auth");
+            trace_debug!("Using CloudFront signed URL without Basic Auth");
             let mut request = self.http_client.get(url);
 
             // 添加 Referer 头，可能有助于 CloudFront 验证
@@ -425,7 +518,7 @@ impl JiraLogs {
             // 如果 CloudFront URL 失败，尝试使用 Basic Auth
             if is_cloudfront_signed_url {
                 let status = response.status();
-                log_debug!(
+                trace_debug!(
                     "CloudFront URL failed (status: {}), retrying with Basic Auth",
                     status
                 );
@@ -438,7 +531,7 @@ impl JiraLogs {
                     } else {
                         error_text.clone()
                     };
-                    log_debug!("Error response: {}", preview);
+                    trace_debug!("Error response: {}", preview);
                 }
 
                 let mut request = self.http_client.get(url);

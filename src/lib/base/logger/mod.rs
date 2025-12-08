@@ -4,6 +4,7 @@
 //! - `LogLevel` - 日志级别管理
 //! - `Logger` - 用户友好的控制台日志输出（用于 Commands 层）
 //! - `Tracer` - 结构化日志记录（用于 Lib 层）
+//! - `console` - 颜色输出工具函数和 Logger 实现
 
 pub mod console;
 pub mod log_level;

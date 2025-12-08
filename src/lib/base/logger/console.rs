@@ -1,12 +1,190 @@
+//! Logger 模块
+//!
+//! 提供带颜色的日志输出功能，包括：
+//! - 颜色格式化函数（success, error, warning, info, debug, separator）
+//! - Logger 结构体和日志输出方法
+//! - 日志宏（log_success!, log_error!, log_warning!, log_info!, log_debug!, log_message!, log_break!）
+//!
+//! ## 颜色输出
+//!
+//! 使用 console crate 实现，提供更丰富的功能和更好的终端支持：
+//! - 支持多种日志级别样式（success, error, warning, info, debug）
+//! - 支持分隔线样式（separator, separator_with_text）
+//! - 使用 ASCII 字符作为图标（✓✗⚠ℹ⚙）
+
 use crate::base::logger::log_level::LogLevel;
-use crate::base::util::colors::{
-    debug, error, info, separator, separator_with_text, success, warning,
-};
+use console::style;
 use std::fmt;
 
-/// Logger 模块
-/// 提供带颜色的日志输出功能
-/// 颜色输出的工具函数
+// ============================================================================
+// 颜色格式化函数
+// ============================================================================
+
+/// 成功消息样式（绿色 ✓）
+///
+/// # 参数
+/// * `text` - 要格式化的文本
+///
+/// # 返回
+/// 格式化后的字符串，包含绿色样式和成功图标
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::success;
+/// let msg = success("Operation completed");
+/// println!("{}", msg);
+/// ```
+pub fn success(text: impl fmt::Display) -> String {
+    style(format!("✓ {}", text)).green().to_string()
+}
+
+/// 错误消息样式（红色 ✗）
+///
+/// # 参数
+/// * `text` - 要格式化的文本
+///
+/// # 返回
+/// 格式化后的字符串，包含红色样式和错误图标
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::error;
+/// let msg = error("Operation failed");
+/// println!("{}", msg);
+/// ```
+pub fn error(text: impl fmt::Display) -> String {
+    style(format!("✗ {}", text)).red().to_string()
+}
+
+/// 警告消息样式（黄色 ⚠）
+///
+/// # 参数
+/// * `text` - 要格式化的文本
+///
+/// # 返回
+/// 格式化后的字符串，包含黄色样式和警告图标
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::warning;
+/// let msg = warning("This is a warning");
+/// println!("{}", msg);
+/// ```
+pub fn warning(text: impl fmt::Display) -> String {
+    style(format!("⚠ {}", text)).yellow().to_string()
+}
+
+/// 信息消息样式（蓝色 ℹ）
+///
+/// # 参数
+/// * `text` - 要格式化的文本
+///
+/// # 返回
+/// 格式化后的字符串，包含蓝色样式和信息图标
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::info;
+/// let msg = info("Processing data");
+/// println!("{}", msg);
+/// ```
+pub fn info(text: impl fmt::Display) -> String {
+    style(format!("ℹ {}", text)).blue().to_string()
+}
+
+/// 调试消息样式（灰色 ⚙）
+///
+/// # 参数
+/// * `text` - 要格式化的文本
+///
+/// # 返回
+/// 格式化后的字符串，包含灰色样式和调试图标
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::debug;
+/// let msg = debug("Debug information");
+/// println!("{}", msg);
+/// ```
+pub fn debug(text: impl fmt::Display) -> String {
+    style(format!("⚙ {}", text)).bright().black().to_string()
+}
+
+/// 分隔线样式（灰色）
+///
+/// # 参数
+/// * `char` - 分隔符字符
+/// * `length` - 分隔线长度
+///
+/// # 返回
+/// 格式化后的分隔线字符串
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::separator;
+/// let sep = separator('-', 80);
+/// println!("{}", sep);
+/// ```
+pub fn separator(char: char, length: usize) -> String {
+    style(char.to_string().repeat(length))
+        .bright()
+        .black()
+        .to_string()
+}
+
+/// 带文本的分隔线样式
+///
+/// 在分隔线中间插入文本，文本前后用分隔符字符填充。
+/// 文本前后会自动添加空格。
+///
+/// # 参数
+/// * `char` - 分隔符字符
+/// * `length` - 总长度
+/// * `text` - 要插入的文本
+///
+/// # 返回
+/// 格式化后的带文本分隔线字符串
+///
+/// # 示例
+/// ```
+/// use workflow::base::logger::console::separator_with_text;
+/// let sep = separator_with_text('=', 80, "Section Title");
+/// println!("{}", sep);
+/// ```
+pub fn separator_with_text(char: char, length: usize, text: impl fmt::Display) -> String {
+    let text_str = format!("  {} ", text);
+    let text_len = text_str.chars().count();
+
+    // 如果文本长度大于等于总长度，直接输出文本
+    if text_len >= length {
+        return style(text_str).bright().black().to_string();
+    }
+
+    // 计算左右两侧需要填充的字符数
+    let remaining = length - text_len;
+    let left_padding = remaining / 2;
+    let right_padding = remaining - left_padding;
+
+    // 生成分隔线
+    let left_sep = char.to_string().repeat(left_padding);
+    let right_sep = char.to_string().repeat(right_padding);
+
+    format!(
+        "{}{}{}",
+        style(left_sep).bright().black(),
+        text_str,
+        style(right_sep).bright().black()
+    )
+}
+
+// ============================================================================
+// Logger 结构体和实现
+// ============================================================================
+
+/// Logger 结构体
+///
+/// 提供带颜色的日志输出功能，用于 Commands 层。
+/// 所有方法都会根据当前日志级别决定是否输出。
 pub struct Logger;
 
 impl Logger {
@@ -83,6 +261,10 @@ impl Logger {
         println!();
     }
 }
+
+// ============================================================================
+// 日志宏
+// ============================================================================
 
 /// 格式化并打印成功消息
 ///

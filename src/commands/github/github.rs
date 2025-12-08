@@ -38,47 +38,38 @@ struct AccountRow {
 }
 
 impl GitHubCommand {
-    /// 列出所有 GitHub 账号
+    /// 列出所有 GitHub 账号（带验证）
     pub fn list() -> Result<()> {
         let settings = Settings::load();
-        let github = &settings.github;
 
-        if github.accounts.is_empty() {
+        // 使用 verify_github() 获取验证结果
+        let verification_result = settings.verify_github()?;
+
+        if !verification_result.configured || verification_result.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");
             log_message!("Run 'workflow github add' to add an account.");
             return Ok(());
         }
 
-        // 构建表格数据
-        let rows: Vec<AccountRow> = github
+        // 构建表格数据（使用验证结果中的账号信息）
+        let rows: Vec<AccountRow> = verification_result
             .accounts
             .iter()
             .enumerate()
-            .map(|(index, account)| {
-                let is_current = github
-                    .current
-                    .as_ref()
-                    .map(|c| c == &account.name)
-                    .unwrap_or_else(|| {
-                        // 如果没有设置 current，第一个账号是当前账号
-                        index == 0 && github.current.is_none()
-                    });
-
-                AccountRow {
-                    index: (index + 1).to_string(),
-                    name: account.name.clone(),
-                    email: account.email.clone(),
-                    token: mask_sensitive_value(&account.api_token),
-                    prefix: account
-                        .branch_prefix
-                        .clone()
-                        .unwrap_or_else(|| "-".to_string()),
-                    status: if is_current {
-                        "✓ Current".to_string()
-                    } else {
-                        "".to_string()
-                    },
-                }
+            .map(|(index, account)| AccountRow {
+                index: (index + 1).to_string(),
+                name: account.name.clone(),
+                email: account.email.clone(),
+                token: account.token.clone(),
+                prefix: account
+                    .branch_prefix
+                    .clone()
+                    .unwrap_or_else(|| "-".to_string()),
+                status: if account.is_current {
+                    "Current".to_string()
+                } else {
+                    "".to_string()
+                },
             })
             .collect();
 
@@ -88,7 +79,33 @@ impl GitHubCommand {
             .with_style(TableStyle::Modern)
             .print();
 
-        log_info!("\nTotal accounts: {}", github.accounts.len());
+        // 显示验证状态
+        log_break!();
+        log_info!("Verification Status:");
+        for account in &verification_result.accounts {
+            if account.verification_status == "Success" {
+                log_success!("  {}: {}", account.name, account.verification_status);
+            } else {
+                log_warning!("  {}: {}", account.name, account.verification_status);
+                if let Some(ref error) = account.verification_error {
+                    log_message!("    Error: {}", error);
+                }
+            }
+        }
+
+        // 显示总结
+        let summary = &verification_result.summary;
+        log_break!();
+        log_info!("Total accounts: {}", summary.total_count);
+        if summary.success_count == summary.total_count {
+            log_success!("All accounts verified successfully!");
+        } else {
+            log_warning!(
+                "Verification: {}/{} account(s) verified successfully",
+                summary.success_count,
+                summary.total_count
+            );
+        }
 
         Ok(())
     }

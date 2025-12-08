@@ -2,35 +2,101 @@
 //!
 //! 测试日志相关的功能，包括日志级别、日志输出格式等。
 
+use workflow::base::logger::console::{debug, error, info, success, warning};
 use workflow::base::logger::LogLevel;
-use workflow::base::util::colors::{debug, error, info, success, warning};
 
 #[test]
 fn test_logger_output() {
-    // 测试成功消息（支持 emoji ✅ 或 fallback ✓）
+    // 测试成功消息（使用 ASCII 字符 ✓）
     let success_msg = success("Test");
     assert!(success_msg.contains("Test"));
-    assert!(success_msg.contains("✅") || success_msg.contains("✓"));
+    assert!(success_msg.contains("✓"));
 
-    // 测试错误消息（支持 emoji ❌ 或 fallback ✗）
+    // 测试错误消息（使用 ASCII 字符 ✗）
     let error_msg = error("Test");
     assert!(error_msg.contains("Test"));
-    assert!(error_msg.contains("❌") || error_msg.contains("✗"));
+    assert!(error_msg.contains("✗"));
 
-    // 测试警告消息（支持 emoji ⚠️ 或 fallback ⚠）
+    // 测试警告消息（使用 ASCII 字符 ⚠）
     let warning_msg = warning("Test");
     assert!(warning_msg.contains("Test"));
-    assert!(warning_msg.contains("⚠️") || warning_msg.contains("⚠"));
+    assert!(warning_msg.contains("⚠"));
 
-    // 测试信息消息（支持 emoji ℹ️ 或 fallback ℹ）
+    // 测试信息消息（使用 ASCII 字符 ℹ）
     let info_msg = info("Test");
     assert!(info_msg.contains("Test"));
-    assert!(info_msg.contains("ℹ️") || info_msg.contains("ℹ"));
+    assert!(info_msg.contains("ℹ"));
 
-    // 测试调试消息（支持 emoji 🔧 或 fallback ⚙）
+    // 测试调试消息（使用 ASCII 字符 ⚙）
     let debug_msg = debug("Test");
     assert!(debug_msg.contains("Test"));
-    assert!(debug_msg.contains("🔧") || debug_msg.contains("⚙"));
+    assert!(debug_msg.contains("⚙"));
+}
+
+#[test]
+fn test_colors_have_space() {
+    // 测试所有颜色函数都在 Emoji 和文本之间有空格
+    let success_msg = success("Test");
+    let error_msg = error("Test");
+    let warning_msg = warning("Test");
+    let info_msg = info("Test");
+    let debug_msg = debug("Test");
+
+    // 检查是否包含空格
+    assert!(
+        success_msg.contains(' '),
+        "Success message should contain a space"
+    );
+    assert!(
+        error_msg.contains(' '),
+        "Error message should contain a space"
+    );
+    assert!(
+        warning_msg.contains(' '),
+        "Warning message should contain a space"
+    );
+    assert!(
+        info_msg.contains(' '),
+        "Info message should contain a space"
+    );
+    assert!(
+        debug_msg.contains(' '),
+        "Debug message should contain a space"
+    );
+
+    // 检查空格的位置（应该在 Emoji 之后）
+    let info_space_pos = info_msg
+        .find(' ')
+        .expect("Info message should have a space");
+    let success_space_pos = success_msg
+        .find(' ')
+        .expect("Success message should have a space");
+
+    // 打印调试信息
+    println!("Info message: '{}'", info_msg);
+    println!("Info message length: {}", info_msg.len());
+    println!("Info space position: {}", info_space_pos);
+    println!("Success message: '{}'", success_msg);
+    println!("Success message length: {}", success_msg.len());
+    println!("Success space position: {}", success_space_pos);
+
+    // 验证格式：图标 + 空格 + 文本
+    let info_parts: Vec<&str> = info_msg.splitn(2, ' ').collect();
+    assert_eq!(
+        info_parts.len(),
+        2,
+        "Info message should split into 2 parts at space"
+    );
+    assert!(
+        info_parts[0].contains("ℹ"),
+        "First part should contain icon: '{}'",
+        info_parts[0]
+    );
+    assert_eq!(
+        info_parts[1], "Test",
+        "Second part should be the text: '{}'",
+        info_parts[1]
+    );
 }
 
 #[test]
