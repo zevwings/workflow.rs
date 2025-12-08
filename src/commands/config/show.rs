@@ -92,9 +92,12 @@ impl ConfigCommand {
             key: result.llm.key.clone(),
             language: result.llm.language.clone(),
         }];
-        TableBuilder::new(config_rows)
-            .with_style(TableStyle::Modern)
-            .print();
+        println!(
+            "{}",
+            TableBuilder::new(config_rows)
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         // 打印 Codeup 配置
         if result.codeup.project_id.is_some()
@@ -131,9 +134,12 @@ impl ConfigCommand {
                     service_address: config.service_address.clone(),
                     api_token: config.api_token.clone(),
                 }];
-                TableBuilder::new(config_rows)
-                    .with_style(TableStyle::Modern)
-                    .print();
+                println!(
+                    "{}",
+                    TableBuilder::new(config_rows)
+                        .with_style(TableStyle::Modern)
+                        .render()
+                );
             }
             if let Some(ref verification) = result.jira.verification {
                 match verification {
@@ -200,9 +206,12 @@ impl ConfigCommand {
                     verification: acc.verification_status.clone(),
                 })
                 .collect();
-            TableBuilder::new(account_rows)
-                .with_style(TableStyle::Modern)
-                .print();
+            println!(
+                "{}",
+                TableBuilder::new(account_rows)
+                    .with_style(TableStyle::Modern)
+                    .render()
+            );
 
             // 打印每个账号的详细错误信息（如果有）
             for account in &result.github.accounts {

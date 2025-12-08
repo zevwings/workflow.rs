@@ -85,10 +85,13 @@ impl InfoCommand {
                     .collect();
 
                 // 使用表格显示
-                TableBuilder::new(rows)
-                    .with_title(format!("Attachments ({})", attachments.len()))
-                    .with_style(TableStyle::Modern)
-                    .print();
+                println!(
+                    "{}",
+                    TableBuilder::new(rows)
+                        .with_title(format!("Attachments ({})", attachments.len()))
+                        .with_style(TableStyle::Modern)
+                        .render()
+                );
             } else {
                 log_break!();
                 log_message!("Attachments: None");

@@ -48,9 +48,12 @@ impl LLMShowCommand {
             key: llm_config.key.clone(),
             language: llm_config.language.clone(),
         }];
-        TableBuilder::new(config_rows)
-            .with_style(TableStyle::Modern)
-            .print();
+        println!(
+            "{}",
+            TableBuilder::new(config_rows)
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         log_break!();
         log_success!("LLM configuration displayed.");

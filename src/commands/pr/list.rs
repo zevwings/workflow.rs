@@ -26,10 +26,13 @@ impl PullRequestListCommand {
         }
 
         // 使用表格显示
-        TableBuilder::new(rows)
-            .with_title("Pull Requests")
-            .with_style(TableStyle::Modern)
-            .print();
+        println!(
+            "{}",
+            TableBuilder::new(rows)
+                .with_title("Pull Requests")
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         Ok(())
     }

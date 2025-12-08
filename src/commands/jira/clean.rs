@@ -121,10 +121,13 @@ impl CleanCommand {
                         // 显示之前的表格
                         if !rows.is_empty() {
                             if let Some(ref ticket) = current_ticket {
-                                TableBuilder::new(rows.clone())
-                                    .with_title(format!("Files: {}", ticket))
-                                    .with_style(TableStyle::Modern)
-                                    .print();
+                                println!(
+                                    "{}",
+                                    TableBuilder::new(rows.clone())
+                                        .with_title(format!("Files: {}", ticket))
+                                        .with_style(TableStyle::Modern)
+                                        .render()
+                                );
                                 log_break!();
                             }
                             rows.clear();
@@ -142,10 +145,13 @@ impl CleanCommand {
                 // 显示最后一个表格
                 if !rows.is_empty() {
                     if let Some(ref ticket) = current_ticket {
-                        TableBuilder::new(rows)
-                            .with_title(format!("Files: {}", ticket))
-                            .with_style(TableStyle::Modern)
-                            .print();
+                        println!(
+                            "{}",
+                            TableBuilder::new(rows)
+                                .with_title(format!("Files: {}", ticket))
+                                .with_style(TableStyle::Modern)
+                                .render()
+                        );
                         log_break!();
                     }
                 }

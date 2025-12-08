@@ -16,7 +16,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use crate::base::settings::paths::Paths;
-use crate::log_warning;
+use crate::trace_warn;
 
 /// 工作历史记录条目
 ///
@@ -50,6 +50,8 @@ type WorkHistoryMap = HashMap<String, WorkHistoryEntry>;
 pub struct DeleteHistoryResult {
     /// 删除的消息列表
     pub messages: Vec<String>,
+    /// 警告消息列表
+    pub warnings: Vec<String>,
 }
 
 /// Jira 工作历史记录管理
@@ -287,7 +289,10 @@ impl JiraWorkHistory {
         let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         if !repo_file.exists() {
-            return Ok(DeleteHistoryResult { messages: vec![] });
+            return Ok(DeleteHistoryResult {
+                messages: vec![],
+                warnings: vec![],
+            });
         }
 
         let content = fs::read_to_string(&repo_file).context("Failed to read work-history file")?;
@@ -296,6 +301,7 @@ impl JiraWorkHistory {
             serde_json::from_str(&content).context("Failed to parse work-history file")?;
 
         let mut messages = Vec::new();
+        let mut warnings = Vec::new();
 
         if history_map.remove(pull_request_id).is_some() {
             messages.push(format!("Removed PR #{} from work-history", pull_request_id));
@@ -310,13 +316,17 @@ impl JiraWorkHistory {
                 fs::write(&repo_file, json).context("Failed to write work-history file")?;
             }
         } else {
-            log_warning!(
+            let warning_msg = format!(
                 "PR #{} not found in work-history, skipping deletion",
                 pull_request_id
             );
+            // 记录到 tracing（用于调试）
+            trace_warn!("{}", warning_msg);
+            // 将警告信息分离到 warnings 字段
+            warnings.push(warning_msg);
         }
 
-        Ok(DeleteHistoryResult { messages })
+        Ok(DeleteHistoryResult { messages, warnings })
     }
 
     /// 读取完整的工作历史记录条目（内部方法）

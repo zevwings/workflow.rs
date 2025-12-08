@@ -205,10 +205,13 @@ impl BranchIgnoreCommand {
             .collect();
 
         // 使用表格显示
-        TableBuilder::new(rows)
-            .with_title(format!("Ignored Branches (repository: {})", repo_name))
-            .with_style(TableStyle::Modern)
-            .print();
+        println!(
+            "{}",
+            TableBuilder::new(rows)
+                .with_title(format!("Ignored Branches (repository: {})", repo_name))
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         log_info!("\nTotal: {} branch(es)", ignore_branches.len());
 

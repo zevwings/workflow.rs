@@ -89,10 +89,13 @@ impl GitHubCommand {
             .collect();
 
         // 使用表格显示
-        TableBuilder::new(rows)
-            .with_title("GitHub Accounts")
-            .with_style(TableStyle::Modern)
-            .print();
+        println!(
+            "{}",
+            TableBuilder::new(rows)
+                .with_title("GitHub Accounts")
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         // 显示验证状态
         log_break!();

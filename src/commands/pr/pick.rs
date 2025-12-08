@@ -5,7 +5,9 @@ use crate::base::util::{
     Browser, Clipboard,
 };
 use crate::commands::check;
-use crate::commands::pr::helpers::{apply_branch_name_prefixes, detect_base_branch};
+use crate::commands::pr::helpers::{
+    apply_branch_name_prefixes, detect_base_branch, handle_stash_pop_result,
+};
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -126,7 +128,7 @@ impl PullRequestPickCommand {
                 // 其他错误，恢复原分支
                 GitBranch::checkout_branch(&current_branch)?;
                 if has_stashed {
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
                 return Err(e);
             }
@@ -138,7 +140,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             return Ok(());
         }
@@ -166,7 +168,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             log_info!("Pick operation completed (PR not created)");
             return Ok(());
@@ -188,9 +190,22 @@ impl PullRequestPickCommand {
 
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            if let Err(e) = GitStash::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_info!("You may need to manually restore: git stash pop");
+            match GitStash::stash_pop() {
+                Ok(result) => {
+                    if result.restored {
+                        if let Some(ref msg) = result.message {
+                            log_success!("{}", msg);
+                        }
+                    }
+                    // 显示警告信息
+                    for warning in &result.warnings {
+                        log_warning!("{}", warning);
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to restore stashed changes: {}", e);
+                    log_info!("You may need to manually restore: git stash pop");
+                }
             }
         }
 
@@ -374,7 +389,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
         } else {
             // 用户选择保留冲突状态，保持在 to_branch 上
@@ -389,12 +404,7 @@ impl PullRequestPickCommand {
                 .with_default(false)
                 .prompt()?;
                 if restore_stash {
-                    if let Err(e) = GitStash::stash_pop() {
-                        log_warning!("Failed to restore stashed changes: {}", e);
-                        log_info!("You can manually restore later: git stash pop");
-                    } else {
-                        log_success!("Stashed changes restored");
-                    }
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
             }
         }
@@ -427,12 +437,7 @@ impl PullRequestPickCommand {
         {
             // 如果切换失败，尝试恢复 stash
             if needs_stash {
-                if let Err(stash_err) = GitStash::stash_pop() {
-                    log_warning!(
-                        "Failed to restore stash after checkout error: {}",
-                        stash_err
-                    );
-                }
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             return Err(e);
         }
@@ -450,9 +455,7 @@ impl PullRequestPickCommand {
                     );
                     // 如果之前有 stash，尝试恢复
                     if needs_stash {
-                        if let Err(stash_err) = GitStash::stash_pop() {
-                            log_warning!("Failed to restore stash: {}", stash_err);
-                        }
+                        handle_stash_pop_result(GitStash::stash_pop());
                     }
                     return Err(e)
                         .context("Failed to get PR ID from source branch")
@@ -460,9 +463,7 @@ impl PullRequestPickCommand {
                 }
                 // 恢复 stash
                 if needs_stash {
-                    if let Err(stash_err) = GitStash::stash_pop() {
-                        log_warning!("Failed to restore stash: {}", stash_err);
-                    }
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
                 return Err(e).context("Failed to get PR ID from source branch");
             }
@@ -475,15 +476,34 @@ impl PullRequestPickCommand {
         // 恢复 stash（如果有）
         if needs_stash {
             log_info!("Restoring stashed cherry-picked changes...");
-            if let Err(stash_err) = GitStash::stash_pop() {
-                log_warning!("Failed to restore stash: {}", stash_err);
-                log_error!(
-                    "Cherry-picked changes may have been lost. Please check: git stash list"
-                );
-                anyhow::bail!(
-                    "Failed to restore stashed changes after getting PR info: {}",
-                    stash_err
-                );
+            match GitStash::stash_pop() {
+                Ok(result) => {
+                    if result.restored {
+                        if let Some(ref msg) = result.message {
+                            log_success!("{}", msg);
+                        }
+                    }
+                    // 显示警告信息
+                    for warning in &result.warnings {
+                        log_warning!("{}", warning);
+                    }
+                    // 如果有警告，说明恢复可能有问题
+                    if !result.restored && !result.warnings.is_empty() {
+                        log_error!(
+                            "Cherry-picked changes may have been lost. Please check: git stash list"
+                        );
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to restore stash: {}", e);
+                    log_error!(
+                        "Cherry-picked changes may have been lost. Please check: git stash list"
+                    );
+                    anyhow::bail!(
+                        "Failed to restore stashed changes after getting PR info: {}",
+                        e
+                    );
+                }
             }
         }
 

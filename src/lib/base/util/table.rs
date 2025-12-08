@@ -263,19 +263,24 @@ impl<T: Tabled> TableBuilder<T> {
         self
     }
 
-    /// 构建并打印表格
+    /// 构建并渲染表格为字符串
+    ///
+    /// # 返回
+    ///
+    /// 返回格式化后的表格字符串。
     ///
     /// # 示例
     ///
     /// ```rust
-    /// TableBuilder::new(data).print();
+    /// let output = TableBuilder::new(data).render();
+    /// println!("{}", output);
     /// ```
-    pub fn print(self) {
+    pub fn render(self) -> String {
         if self.data.is_empty() {
             if let Some(ref title) = self.title {
-                println!("{}\n(No data)", title);
+                return format!("{}\n(No data)", title);
             }
-            return;
+            return String::new();
         }
 
         // 构建表格
@@ -305,13 +310,31 @@ impl<T: Tabled> TableBuilder<T> {
 
         // 渲染表格并修复标题行下方的分隔线
         let table_output = format!("{}", table);
-        let fixed_output = if self.title.is_some() {
+        if self.title.is_some() {
             fix_title_separator(table_output)
         } else {
             table_output
-        };
+        }
+    }
 
-        println!("{}", fixed_output);
+    /// 构建并打印表格（已废弃，请使用 `render()` 并在 commands 层打印）
+    ///
+    /// # 弃用
+    ///
+    /// 此方法已废弃。请使用 `render()` 方法获取字符串，然后在 commands 层使用 `println!` 打印。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// // 旧方式（已废弃）
+    /// TableBuilder::new(data).print();
+    ///
+    /// // 新方式
+    /// println!("{}", TableBuilder::new(data).render());
+    /// ```
+    #[deprecated(note = "Use render() instead and print in commands layer")]
+    pub fn print(self) {
+        println!("{}", self.render());
     }
 }
 

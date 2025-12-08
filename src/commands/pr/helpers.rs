@@ -7,6 +7,33 @@ use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
 
+/// 处理 stash_pop 的结果
+///
+/// 统一处理 `GitStash::stash_pop()` 的返回结果，显示消息和警告。
+///
+/// # 参数
+///
+/// * `result` - `stash_pop()` 的返回结果
+pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
+    match result {
+        Ok(result) => {
+            if result.restored {
+                if let Some(ref msg) = result.message {
+                    log_success!("{}", msg);
+                }
+            }
+            // 显示警告信息
+            for warning in &result.warnings {
+                log_warning!("{}", warning);
+            }
+        }
+        Err(e) => {
+            log_warning!("Failed to restore stashed changes: {}", e);
+            log_info!("You may need to manually restore: git stash pop");
+        }
+    }
+}
+
 /// 检查错误是否表示 PR 已合并
 ///
 /// 这是一个备用检查，用于处理以下情况：
@@ -157,7 +184,7 @@ pub fn cleanup_branch(
     // 6. 恢复 stash
     if has_stashed {
         log_info!("Restoring stashed changes...");
-        let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理
+        handle_stash_pop_result(GitStash::stash_pop());
     }
 
     // 7. 清理远程分支引用

@@ -1,5 +1,6 @@
 use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
 use crate::commands::check;
+use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -78,7 +79,7 @@ impl PullRequestSyncCommand {
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
                     log_info!("Merge failed, attempting to restore stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
 
                 match merge_result {
@@ -111,7 +112,7 @@ impl PullRequestSyncCommand {
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
                     log_info!("Rebase failed, attempting to restore stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
 
                 match rebase_result {
@@ -148,14 +149,14 @@ impl PullRequestSyncCommand {
                 // 未创建 PR，恢复 stash（如果有）
                 if has_stashed {
                     log_info!("Restoring stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
             }
         } else {
             // 本地分支：同步后立即恢复 stash（如果有）
             if has_stashed {
                 log_info!("Restoring stashed changes...");
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
 
             // 推送到远程（如果需要）

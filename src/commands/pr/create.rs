@@ -5,7 +5,7 @@ use crate::base::util::{
     Browser, Clipboard,
 };
 use crate::commands::check;
-use crate::commands::pr::helpers::apply_branch_name_prefixes;
+use crate::commands::pr::helpers::{apply_branch_name_prefixes, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -433,7 +433,7 @@ impl PullRequestCreateCommand {
 
         // 恢复 stash
         log_info!("Restoring stashed changes...");
-        let _ = GitStash::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
+        handle_stash_pop_result(GitStash::stash_pop());
 
         // 提交并推送
         log_success!("Committing changes...");

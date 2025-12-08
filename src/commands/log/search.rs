@@ -93,10 +93,13 @@ impl SearchCommand {
 
         // 使用表格显示所有结果
         if !rows.is_empty() {
-            TableBuilder::new(rows)
-                .with_title("Search Results")
-                .with_style(TableStyle::Modern)
-                .print();
+            println!(
+                "{}",
+                TableBuilder::new(rows)
+                    .with_title("Search Results")
+                    .with_style(TableStyle::Modern)
+                    .render()
+            );
         }
 
         Ok(())

@@ -1,6 +1,6 @@
 use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
 use crate::commands::check;
-use crate::commands::pr::helpers::detect_base_branch;
+use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -338,7 +338,7 @@ impl PullRequestRebaseCommand {
             // 如果 rebase 失败，恢复 stash
             if has_stashed {
                 log_info!("Rebase failed, attempting to restore stashed changes...");
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
 
             // 检查是否是冲突
@@ -358,10 +358,7 @@ impl PullRequestRebaseCommand {
         // 11. 恢复 stash
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            if let Err(e) = GitStash::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_info!("You may need to manually restore: git stash pop");
-            }
+            handle_stash_pop_result(GitStash::stash_pop());
         }
 
         // 12. 推送到远程（默认推送）

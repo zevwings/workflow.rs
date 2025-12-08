@@ -3,7 +3,7 @@ use clap_complete::Shell;
 use duct::cmd;
 
 use crate::base::settings::paths::Paths;
-use crate::log_warning;
+use crate::trace_warn;
 
 /// Shell 重载结果
 #[derive(Debug, Clone)]
@@ -82,8 +82,12 @@ impl Reload {
                 reload_hint: reload_hint.clone(),
             }),
             Err(e) => {
-                log_warning!("  Could not reload shell configuration: {}", e);
-                Err(e)
+                trace_warn!("Could not reload shell configuration: {}", e);
+                Ok(ReloadResult {
+                    reloaded: false,
+                    messages: vec![format!("Could not reload shell configuration: {}", e)],
+                    reload_hint: reload_hint.clone(),
+                })
             }
         }
     }
