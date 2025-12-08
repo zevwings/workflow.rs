@@ -93,7 +93,7 @@ pub enum LogLevel {
 - 默认级别根据编译模式自动决定：
   - Debug 模式：`Debug` 级别
   - Release 模式：`Info` 级别
-- 支持通过环境变量 `WORKFLOW_LOG_LEVEL` 设置
+- 支持通过配置文件设置（`workflow config log set`）
 - 支持运行时动态设置
 
 #### Logger 结构体
@@ -208,9 +208,8 @@ LogLevel::init(Some(LogLevel::Debug));
 ```
 
 **优先级**：
-1. 如果提供了 `level` 参数，使用参数值
-2. 如果设置了 `WORKFLOW_LOG_LEVEL` 环境变量，使用环境变量值
-3. 否则使用默认级别（根据编译模式决定）
+1. 如果提供了 `level` 参数，使用参数值（通常从配置文件读取）
+2. 否则使用默认级别（根据编译模式决定）
 
 #### 运行时设置日志级别
 

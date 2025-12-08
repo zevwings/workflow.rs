@@ -32,7 +32,7 @@ use workflow::base::settings::Settings;
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
-    // 初始化日志级别（从配置文件读取，但不让 logger 模块直接依赖 Settings）
+    // 初始化日志级别（从配置文件读取，用于 log_*! 宏）
     {
         let config_level = Settings::get()
             .log
@@ -41,6 +41,9 @@ fn main() -> Result<()> {
             .and_then(|s| s.parse::<workflow::LogLevel>().ok());
         workflow::LogLevel::init(config_level);
     }
+
+    // 初始化 tracing（从配置文件读取，统一管理）
+    workflow::Tracer::init();
 
     let cli = Cli::parse();
 

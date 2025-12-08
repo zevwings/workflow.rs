@@ -9,7 +9,6 @@
 //!
 //! ## 模块结构
 //!
-//! - `logger` - 日志输出（`Logger`）
 //! - `colors` - 颜色输出兼容层（使用 console）
 //! - `string` - 字符串处理工具
 //! - `format` - 格式化工具（文件大小格式化等）
@@ -20,6 +19,7 @@
 //! - `checksum` - 校验和工具（SHA256 计算和验证）
 //!
 //! 注意：以下模块已迁移到独立的目录：
+//! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`）
 //! - `lib/completion` - Completion 管理
 //! - `lib/rollback` - 回滚工具
 //! - `lib/uninstall` - 卸载工具
@@ -31,14 +31,10 @@ pub mod clipboard;
 pub mod colors;
 pub mod dialog;
 pub mod format;
-pub mod logger;
 pub mod platform;
 pub mod string;
 pub mod table;
 pub mod unzip;
-
-// 重新导出 Logger 和 LogLevel
-pub use logger::{LogLevel, Logger};
 
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;

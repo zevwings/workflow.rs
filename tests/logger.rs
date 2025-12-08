@@ -2,32 +2,33 @@
 //!
 //! 测试日志相关的功能，包括日志级别、日志输出格式等。
 
-use workflow::base::util::logger::{LogLevel, Logger};
+use workflow::base::logger::LogLevel;
+use workflow::base::util::colors::{debug, error, info, success, warning};
 
 #[test]
 fn test_logger_output() {
     // 测试成功消息（支持 emoji ✅ 或 fallback ✓）
-    let success_msg = Logger::success("Test");
+    let success_msg = success("Test");
     assert!(success_msg.contains("Test"));
     assert!(success_msg.contains("✅") || success_msg.contains("✓"));
 
     // 测试错误消息（支持 emoji ❌ 或 fallback ✗）
-    let error_msg = Logger::error("Test");
+    let error_msg = error("Test");
     assert!(error_msg.contains("Test"));
     assert!(error_msg.contains("❌") || error_msg.contains("✗"));
 
     // 测试警告消息（支持 emoji ⚠️ 或 fallback ⚠）
-    let warning_msg = Logger::warning("Test");
+    let warning_msg = warning("Test");
     assert!(warning_msg.contains("Test"));
     assert!(warning_msg.contains("⚠️") || warning_msg.contains("⚠"));
 
     // 测试信息消息（支持 emoji ℹ️ 或 fallback ℹ）
-    let info_msg = Logger::info("Test");
+    let info_msg = info("Test");
     assert!(info_msg.contains("Test"));
     assert!(info_msg.contains("ℹ️") || info_msg.contains("ℹ"));
 
     // 测试调试消息（支持 emoji 🔧 或 fallback ⚙）
-    let debug_msg = Logger::debug("Test");
+    let debug_msg = debug("Test");
     assert!(debug_msg.contains("Test"));
     assert!(debug_msg.contains("🔧") || debug_msg.contains("⚙"));
 }
