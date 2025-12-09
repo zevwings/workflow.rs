@@ -1,0 +1,41 @@
+# Clippy 配置文件
+# 用于配置 Clippy linter 的规则
+
+# 允许的警告（这些警告不会被当作错误）
+# 注意：项目使用 `-D warnings`，所以这些配置主要用于调整警告级别
+
+# 允许 module_inception（模块名与父模块同名）
+# 这是 Rust 中常见的模式，用于创建模块的入口点
+# 例如：src/lib/mod.rs 中定义 mod mod; 是合理的
+# 项目中有多处使用了 #[allow(clippy::module_inception)]，所以这里不禁止
+
+# 复杂度相关
+# 允许较高的复杂度（某些函数确实需要处理复杂逻辑）
+# 注意：使用 cognitive-complexity-threshold（认知复杂度），而不是 cyclomatic_complexity_threshold
+cognitive-complexity-threshold = 30
+
+# 类型复杂度
+# 允许较复杂的类型（某些 API 响应类型确实很复杂）
+type-complexity-threshold = 300
+
+# 函数参数数量
+# 允许较多的函数参数（某些配置函数需要多个参数）
+too-many-arguments-threshold = 8
+
+# 函数长度
+# 允许较长的函数（某些函数确实需要处理大量逻辑）
+too-many-lines-threshold = 500
+
+# 文档相关
+# 不强制要求所有公共项都有文档注释（某些简单的 getter/setter 可能不需要）
+# 但建议在开发规范中要求关键函数必须有文档
+
+# 性能相关
+# 允许在某些情况下使用 clone（某些场景下 clone 是必要的）
+# 不禁止使用 unwrap（但建议使用 expect 或更好的错误处理）
+
+# 注意：
+# - 项目使用 `cargo clippy -- -D warnings`，所有警告都会被当作错误
+# - 如果某个警告需要允许，应该在代码中使用 #[allow(clippy::xxx)] 并添加注释说明
+# - 这个配置文件主要用于调整警告的阈值，而不是完全禁用某些规则
+# - Clippy 配置使用 kebab-case（连字符），不是 snake_case（下划线）

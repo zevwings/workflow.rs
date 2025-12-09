@@ -69,13 +69,9 @@ impl GitConfig {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn get_global_user() -> Result<(Option<String>, Option<String>)> {
-        let email = cmd_read(&["config", "--global", "user.email"])
-            .ok()
-            .filter(|s| !s.is_empty());
+        let email = cmd_read(&["config", "--global", "user.email"]).ok().filter(|s| !s.is_empty());
 
-        let name = cmd_read(&["config", "--global", "user.name"])
-            .ok()
-            .filter(|s| !s.is_empty());
+        let name = cmd_read(&["config", "--global", "user.name"]).ok().filter(|s| !s.is_empty());
 
         Ok((email, name))
     }

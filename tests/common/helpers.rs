@@ -49,10 +49,7 @@ pub fn create_temp_test_dir(prefix: &str) -> PathBuf {
     use std::time::{SystemTime, UNIX_EPOCH};
 
     let temp_dir = std::env::temp_dir();
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let random_suffix = random_string(8);
     let test_dir = temp_dir.join(format!(
         "workflow_test_{}_{}_{}",

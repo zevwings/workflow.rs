@@ -35,6 +35,7 @@ use inquire::{error::InquireError, Confirm};
 /// ```rust,no_run
 /// use workflow::base::dialog::ConfirmDialog;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // 简单确认
 /// let confirmed = ConfirmDialog::new("Continue?")
 ///     .with_default(true)
@@ -45,6 +46,8 @@ use inquire::{error::InquireError, Confirm};
 ///     .with_default(false)
 ///     .with_cancel_message("Operation cancelled.")
 ///     .prompt()?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct ConfirmDialog {
     prompt: String,

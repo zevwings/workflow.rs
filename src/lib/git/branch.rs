@@ -253,10 +253,7 @@ impl GitBranch {
 
         for default_name in COMMON_DEFAULT_BRANCHES {
             let branch_ref = format!("origin/{}", default_name);
-            if remote_branches
-                .lines()
-                .any(|line| line.trim() == branch_ref)
-            {
+            if remote_branches.lines().any(|line| line.trim() == branch_ref) {
                 return Ok(default_name.to_string());
             }
         }

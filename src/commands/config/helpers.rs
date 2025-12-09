@@ -30,11 +30,7 @@ pub fn select_language(current_language: Option<&str>) -> Result<String> {
 
     // 查找当前语言的索引
     let current_idx = current_language
-        .and_then(|code| {
-            SUPPORTED_LANGUAGES
-                .iter()
-                .position(|lang| lang.code == code)
-        })
+        .and_then(|code| SUPPORTED_LANGUAGES.iter().position(|lang| lang.code == code))
         .unwrap_or(0); // 如果没有找到或没有当前值，默认选择第一个（英文）
 
     // 构建提示信息

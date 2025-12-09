@@ -52,9 +52,7 @@ impl Unzip {
         let mut archive = Archive::new(decoder);
 
         // 解压到目标目录
-        archive
-            .unpack(output_dir)
-            .context("Failed to extract tar.gz archive")?;
+        archive.unpack(output_dir).context("Failed to extract tar.gz archive")?;
 
         Ok(())
     }

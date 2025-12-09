@@ -10,12 +10,15 @@ use super::auth::Authorization;
 /// # 示例
 ///
 /// ```rust,no_run
-/// use crate::base::http::{HttpClient, RequestConfig};
+/// use workflow::base::http::{HttpClient, RequestConfig};
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = HttpClient::global()?;
 /// let config = RequestConfig::<serde_json::Value, serde_json::Value>::new()
 ///     .query(&[("page", "1")]);
 /// let response = client.get("https://api.example.com", config)?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct RequestConfig<'a, B, Q: ?Sized> {
     /// 可选的请求体（实现 `Serialize` trait）
@@ -52,7 +55,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::RequestConfig;
+    /// use workflow::base::http::RequestConfig;
     ///
     /// let config = RequestConfig::<serde_json::Value, serde_json::Value>::new();
     /// ```
@@ -73,7 +76,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::RequestConfig;
+    /// use workflow::base::http::RequestConfig;
     ///
     /// let body = serde_json::json!({"key": "value"});
     /// let config = RequestConfig::new().body(&body);
@@ -96,7 +99,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::RequestConfig;
+    /// use workflow::base::http::RequestConfig;
     ///
     /// // 使用元组数组
     /// let query = [("page", "1"), ("per_page", "10")];
@@ -126,7 +129,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{RequestConfig, Authorization};
+    /// use workflow::base::http::{RequestConfig, Authorization};
     ///
     /// let auth = Authorization::new("user@example.com", "api_token");
     /// let config = RequestConfig::new().auth(&auth);
@@ -149,7 +152,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::RequestConfig;
+    /// use workflow::base::http::RequestConfig;
     /// use reqwest::header::HeaderMap;
     ///
     /// let mut headers = HeaderMap::new();
@@ -178,7 +181,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::RequestConfig;
+    /// use workflow::base::http::RequestConfig;
     /// use std::time::Duration;
     ///
     /// let config = RequestConfig::new()

@@ -381,6 +381,8 @@ jobs:
 
       - name: Build release binaries
         shell: bash
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
@@ -392,127 +394,57 @@ jobs:
             # 由于条件编译配置，clipboard 依赖应该被排除，但 Cargo.lock 可能仍然包含它
             # 解决方案：临时从 Cargo.lock 中移除这些依赖，构建后再恢复
             if [ -f "Cargo.lock" ]; then
+              # 检查 Python3 是否可用
+              if ! command -v python3 >/dev/null 2>&1; then
+                echo "❌ python3 is required but not found"
+                exit 1
+              fi
               cp Cargo.lock Cargo.lock.backup
               echo "📝 Backed up Cargo.lock"
               # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
               # 以及从其他包的 dependencies 中移除对这些包的引用
               # Python 脚本更可靠，能更好地处理 TOML 格式
-              python3 << 'PYTHON_SCRIPT'
-import re
-import sys
+              python3 .github/scripts/remove_xcb_deps.py
 
-# 要移除的包名
-PACKAGES_TO_REMOVE = {'clipboard', 'x11-clipboard', 'xcb', 'clipboard-win'}
-
-def remove_packages_from_cargo_lock(content):
-    """从 Cargo.lock 内容中移除指定的包及其依赖引用"""
-    lines = content.split('\n')
-    result = []
-    skip_package = False
-    in_dependencies = False
-    brace_depth = 0
-    
-    i = 0
-    while i < len(lines):
-        line = lines[i]
-        
-        # 检测新的 package 块开始
-        if line.strip() == '[[package]]':
-            skip_package = False
-            in_dependencies = False
-            brace_depth = 0
-            result.append(line)
-            i += 1
-            continue
-        
-        # 检测 package 名称
-        if not skip_package and line.strip().startswith('name = '):
-            match = re.search(r'name = "([^"]+)"', line)
-            if match:
-                pkg_name = match.group(1)
-                if pkg_name in PACKAGES_TO_REMOVE:
-                    skip_package = True
-                    # 跳过整个 package 块，直到下一个 [[package]] 或文件结束
-                    i += 1
-                    while i < len(lines):
-                        if lines[i].strip() == '[[package]]':
-                            i -= 1  # 回退一行，让外层循环处理
-                            break
-                        i += 1
-                    continue
-        
-        # 如果正在跳过这个包，直接跳过所有行
-        if skip_package:
-            i += 1
-            continue
-        
-        # 检测 dependencies 数组开始
-        if line.strip().startswith('dependencies = ['):
-            in_dependencies = True
-            brace_depth = 1
-            result.append(line)
-            i += 1
-            continue
-        
-        # 处理 dependencies 数组内容
-        if in_dependencies:
-            # 计算括号深度
-            brace_depth += line.count('[') - line.count(']')
-            
-            # 检查是否是我们要移除的依赖
-            should_skip = False
-            for pkg in PACKAGES_TO_REMOVE:
-                # 匹配依赖项，格式可能是 "package-name" 或 "package-name version"
-                pattern = rf'^\s*"{re.escape(pkg)}"'
-                if re.match(pattern, line.strip()):
-                    should_skip = True
-                    break
-            
-            if not should_skip:
-                result.append(line)
-            
-            # 如果括号深度回到 0，dependencies 数组结束
-            if brace_depth <= 0:
-                in_dependencies = False
-                brace_depth = 0
-        else:
-            result.append(line)
-        
-        i += 1
-    
-    return '\n'.join(result)
-
-try:
-    with open('Cargo.lock', 'r', encoding='utf-8') as f:
-        content = f.read()
-    
-    modified_content = remove_packages_from_cargo_lock(content)
-    
-    with open('Cargo.lock', 'w', encoding='utf-8') as f:
-        f.write(modified_content)
-    
-    print("✅ Successfully removed clipboard and xcb dependencies from Cargo.lock")
-    sys.exit(0)
-except Exception as e:
-    print(f"❌ Error processing Cargo.lock: {e}", file=sys.stderr)
-    sys.exit(1)
-PYTHON_SCRIPT
-              
               if [ $? -ne 0 ]; then
                 echo "⚠️  Failed to process Cargo.lock, restoring backup"
-                mv Cargo.lock.backup Cargo.lock
+                if [ -f "Cargo.lock.backup" ]; then
+                  mv Cargo.lock.backup Cargo.lock
+                  echo "✅ Restored Cargo.lock from backup"
+                fi
+                echo "❌ Cannot proceed without removing xcb dependencies"
+                exit 1
+              fi
+
+              # 验证 Cargo.lock 仍然有效（至少应该能解析基本结构）
+              if ! grep -q '^\[\[package\]\]' Cargo.lock; then
+                echo "❌ Cargo.lock appears corrupted after processing"
+                if [ -f "Cargo.lock.backup" ]; then
+                  mv Cargo.lock.backup Cargo.lock
+                  echo "✅ Restored Cargo.lock from backup"
+                fi
                 exit 1
               fi
             fi
           fi
-          cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
-          # 恢复 Cargo.lock（如果备份存在）
+          # 构建项目
+          if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+            BUILD_SUCCESS=true
+          else
+            BUILD_SUCCESS=false
+          fi
+
+          # 恢复 Cargo.lock（如果备份存在，无论构建成功与否都要恢复）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]] && [ -f "Cargo.lock.backup" ]; then
             mv Cargo.lock.backup Cargo.lock
-            echo "✅ Restored Cargo.lock"
+            echo "✅ Restored Cargo.lock from backup"
           fi
-        env:
-          CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
 
       - name: Create package directory
         shell: bash

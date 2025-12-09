@@ -37,9 +37,7 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let client = Client::builder()
-            .build()
-            .context("Failed to create HTTP client")?;
+        let client = Client::builder().build().context("Failed to create HTTP client")?;
         Ok(Self { client })
     }
 
@@ -65,10 +63,13 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpClient;
+    /// use workflow::base::http::HttpClient;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let response = client.get("https://api.example.com", None, None)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn global() -> Result<&'static Self> {
         static CLIENT: OnceLock<Result<HttpClient>> = OnceLock::new();
@@ -148,12 +149,16 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, RequestConfig};
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let config = RequestConfig::<Value, _>::new()
     ///     .query(&[("page", "1")]);
     /// let response = client.get("https://api.example.com", config)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn get<Q>(&self, url: &str, config: RequestConfig<Value, Q>) -> Result<HttpResponse>
     where
@@ -172,12 +177,15 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, RequestConfig};
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
     /// let config = RequestConfig::new().body(&body);
     /// let response = client.post("https://api.example.com", config)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn post<B, Q>(&self, url: &str, config: RequestConfig<B, Q>) -> Result<HttpResponse>
     where
@@ -197,12 +205,15 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, RequestConfig};
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
     /// let config = RequestConfig::new().body(&body);
     /// let response = client.put("https://api.example.com", config)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn put<B, Q>(&self, url: &str, config: RequestConfig<B, Q>) -> Result<HttpResponse>
     where
@@ -222,11 +233,15 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, RequestConfig};
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let config = RequestConfig::<Value, _>::new();
     /// let response = client.delete("https://api.example.com", config)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn delete<Q>(&self, url: &str, config: RequestConfig<Value, Q>) -> Result<HttpResponse>
     where
@@ -245,12 +260,15 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, RequestConfig};
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
     /// let config = RequestConfig::new().body(&body);
     /// let response = client.patch("https://api.example.com", config)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn patch<B, Q>(&self, url: &str, config: RequestConfig<B, Q>) -> Result<HttpResponse>
     where
@@ -270,15 +288,19 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::{HttpClient, HttpMethod, RequestConfig};
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, HttpMethod, RequestConfig};
     /// use std::io::Read;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let config = RequestConfig::<Value, _>::new()
     ///     .query(&[("page", "1")]);
     /// let mut response = client.stream(HttpMethod::Get, "https://example.com/api", config)?;
     /// let mut buffer = vec![0u8; 8192];
     /// response.read(&mut buffer)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn stream<B, Q>(
         &self,

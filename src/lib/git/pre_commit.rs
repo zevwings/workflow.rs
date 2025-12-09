@@ -44,12 +44,7 @@ impl GitPreCommit {
         }
 
         // 检查 pre-commit 命令是否可用
-        if cmd("which", &["pre-commit"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok()
-        {
+        if cmd("which", &["pre-commit"]).stdout_null().stderr_null().run().is_ok() {
             return true;
         }
 
@@ -112,9 +107,8 @@ impl GitPreCommit {
                 })
             } else {
                 // 执行其他 Git hooks
-                let output = Command::new(&hooks_path)
-                    .output()
-                    .context("Failed to run pre-commit hooks")?;
+                let output =
+                    Command::new(&hooks_path).output().context("Failed to run pre-commit hooks")?;
 
                 if output.status.success() {
                     Ok(PreCommitResult {
@@ -204,10 +198,7 @@ impl GitPreCommit {
 
         // 3.1 Check code format
         log_info!("1/3 Checking code format...");
-        let fmt_check = cmd("cargo", &["fmt", "--check"])
-            .stdout_capture()
-            .stderr_capture()
-            .run();
+        let fmt_check = cmd("cargo", &["fmt", "--check"]).stdout_capture().stderr_capture().run();
 
         match fmt_check {
             Ok(output) if output.status.success() => {

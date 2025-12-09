@@ -344,10 +344,8 @@ impl Completion {
         // 获取所有 shell 类型的 completion 文件
         let commands = Paths::command_names();
         let all_file_names = super::helpers::get_all_completion_files(commands);
-        let all_files: Vec<PathBuf> = all_file_names
-            .iter()
-            .map(|name| completion_dir.join(name))
-            .collect();
+        let all_files: Vec<PathBuf> =
+            all_file_names.iter().map(|name| completion_dir.join(name)).collect();
 
         let mut removed_count = 0;
         let mut removed_files = Vec::new();

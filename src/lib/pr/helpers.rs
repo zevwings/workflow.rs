@@ -16,9 +16,7 @@ use super::platform::{create_provider, TYPES_OF_CHANGES};
 /// ```
 pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
     let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
-    let caps = re
-        .captures(url)
-        .context("Failed to extract PR ID from URL")?;
+    let caps = re.captures(url).context("Failed to extract PR ID from URL")?;
 
     Ok(caps.get(1).unwrap().as_str().to_string())
 }

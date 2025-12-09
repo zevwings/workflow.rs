@@ -28,10 +28,8 @@ impl LLMSetupCommand {
 
         // 1. 选择 Provider
         let llm_providers = ["openai", "deepseek", "proxy"];
-        let current_provider_idx = llm_providers
-            .iter()
-            .position(|&p| p == existing.provider.as_str())
-            .unwrap_or(0);
+        let current_provider_idx =
+            llm_providers.iter().position(|&p| p == existing.provider.as_str()).unwrap_or(0);
 
         let llm_provider_prompt = format!("Select LLM provider [current: {}]", existing.provider);
 
@@ -109,10 +107,8 @@ impl LLMSetupCommand {
         };
 
         // 4. 配置模型
-        let default_model = existing
-            .model
-            .clone()
-            .unwrap_or_else(|| default_llm_model(&llm_provider));
+        let default_model =
+            existing.model.clone().unwrap_or_else(|| default_llm_model(&llm_provider));
 
         let model_prompt = match llm_provider.as_str() {
             "openai" => {

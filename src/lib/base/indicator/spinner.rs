@@ -51,9 +51,7 @@ impl Spinner {
     pub fn new(message: impl AsRef<str>) -> Self {
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.white} {msg}")
-                .unwrap(),
+            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
         );
         spinner.enable_steady_tick(Duration::from_millis(100));
         spinner.set_message(message.as_ref().to_string());

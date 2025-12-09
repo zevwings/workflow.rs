@@ -20,10 +20,8 @@ impl LogCommand {
 
         // 找到当前级别的索引
         let current_level_str = current_level.as_str();
-        let current_idx = log_levels
-            .iter()
-            .position(|&level| level == current_level_str)
-            .unwrap_or(2); // 默认为 info
+        let current_idx =
+            log_levels.iter().position(|&level| level == current_level_str).unwrap_or(2); // 默认为 info
 
         // 创建提示信息
         let prompt = format!("Select log level [current: {}]", current_level_str);
@@ -34,9 +32,8 @@ impl LogCommand {
             .with_default(current_idx)
             .prompt()
             .context("Failed to select log level")?;
-        let selected_level = selected_level_str
-            .parse::<LogLevel>()
-            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        let selected_level =
+            selected_level_str.parse::<LogLevel>().map_err(|e| anyhow::anyhow!("{}", e))?;
 
         // 设置日志级别（内存中）
         LogLevel::set_level(selected_level);
@@ -130,10 +127,7 @@ impl LogCommand {
                 .prompt()
                 .context("Failed to select trace console option")?;
 
-        let selected_idx = options
-            .iter()
-            .position(|&opt| opt == selected_option)
-            .unwrap_or(1);
+        let selected_idx = options.iter().position(|&opt| opt == selected_option).unwrap_or(1);
 
         // 保存到配置文件
         let config_path = Paths::workflow_config()?;

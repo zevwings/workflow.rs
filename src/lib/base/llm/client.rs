@@ -104,9 +104,7 @@ impl LLMClient {
 
         // 检查错误（使用 ensure_success_with 统一处理）
         let http_response = http_response.ensure_success_with(|r| {
-            let provider = self
-                .get_provider_name()
-                .unwrap_or_else(|_| "unknown".to_string());
+            let provider = self.get_provider_name().unwrap_or_else(|_| "unknown".to_string());
             let error_message = r.extract_error_message();
             anyhow::anyhow!(
                 "LLM API request failed ({}): {} - {}",
@@ -137,11 +135,8 @@ impl LLMClient {
             "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
             "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
             "proxy" => {
-                let base_url = settings
-                    .llm
-                    .url
-                    .as_ref()
-                    .context("LLM proxy URL is not configured")?;
+                let base_url =
+                    settings.llm.url.as_ref().context("LLM proxy URL is not configured")?;
                 Ok(format!(
                     "{}/chat/completions",
                     base_url.trim_end_matches('/')
@@ -177,16 +172,10 @@ impl LLMClient {
         let provider = &settings.llm.provider;
 
         match provider.as_str() {
-            "openai" | "deepseek" => Ok(settings
-                .llm
-                .model
-                .clone()
-                .unwrap_or_else(|| default_llm_model(provider))),
-            "proxy" => settings
-                .llm
-                .model
-                .clone()
-                .context("Model is required for proxy provider"),
+            "openai" | "deepseek" => {
+                Ok(settings.llm.model.clone().unwrap_or_else(|| default_llm_model(provider)))
+            }
+            "proxy" => settings.llm.model.clone().context("Model is required for proxy provider"),
             _ => settings.llm.model.clone().context("Model is required"),
         }
     }

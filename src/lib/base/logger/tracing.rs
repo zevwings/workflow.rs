@@ -20,11 +20,13 @@
 //! ## 使用示例
 //!
 //! ```rust
-//! use workflow::trace_debug;
+//! use workflow::{trace_debug, trace_info, trace_warn, trace_error};
 //!
+//! let data = "test data";
 //! trace_debug!("Processing data: {}", data);
 //! trace_info!("Operation completed");
 //! trace_warn!("Retrying operation");
+//! let error = "connection failed";
 //! trace_error!("Operation failed: {}", error);
 //! ```
 //!
@@ -95,11 +97,7 @@ impl Tracer {
 
             // 总是尝试输出到文件
             if let Ok(file_path) = Self::get_log_file_path() {
-                if let Ok(file) = OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(&file_path)
-                {
+                if let Ok(file) = OpenOptions::new().create(true).append(true).open(&file_path) {
                     // 构建 registry，先添加 EnvFilter
                     let registry =
                         tracing_subscriber::registry().with(EnvFilter::new(tracing_filter));
@@ -219,6 +217,7 @@ impl Tracer {
 /// use workflow::trace_debug;
 ///
 /// trace_debug!("Processing data");
+/// let count = 5;
 /// trace_debug!("Found {} attachment(s)", count);
 /// ```
 #[macro_export]
@@ -239,6 +238,7 @@ macro_rules! trace_debug {
 /// use workflow::trace_info;
 ///
 /// trace_info!("Starting download");
+/// let count = 10;
 /// trace_info!("Downloaded {} files", count);
 /// ```
 #[macro_export]
@@ -259,6 +259,8 @@ macro_rules! trace_info {
 /// use workflow::trace_warn;
 ///
 /// trace_warn!("Retrying operation");
+/// let filename = "file.txt";
+/// let error = "network error";
 /// trace_warn!("Failed to download {}: {}", filename, error);
 /// ```
 #[macro_export]
@@ -279,6 +281,8 @@ macro_rules! trace_warn {
 /// use workflow::trace_error;
 ///
 /// trace_error!("Operation failed");
+/// let code = 500;
+/// let message = "Internal Server Error";
 /// trace_error!("Error: {} - {}", code, message);
 /// ```
 #[macro_export]

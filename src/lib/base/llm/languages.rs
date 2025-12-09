@@ -109,9 +109,7 @@ pub fn find_language(code: &str) -> Option<&SupportedLanguage> {
     }
 
     // 精确匹配
-    SUPPORTED_LANGUAGES
-        .iter()
-        .find(|lang| lang.code.to_lowercase() == code_lower)
+    SUPPORTED_LANGUAGES.iter().find(|lang| lang.code.to_lowercase() == code_lower)
 }
 
 /// 获取语言的 instruction
@@ -165,9 +163,8 @@ pub fn get_language_requirement(system_prompt: &str) -> String {
     };
 
     let language_instruction = get_language_instruction(language_code);
-    let language_info = find_language(language_code)
-        .map(|lang| lang.native_name)
-        .unwrap_or("English");
+    let language_info =
+        find_language(language_code).map(|lang| lang.native_name).unwrap_or("English");
 
     format!(
         r#"## CRITICAL LANGUAGE REQUIREMENT

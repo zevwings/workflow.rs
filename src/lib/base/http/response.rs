@@ -44,11 +44,7 @@ impl HttpResponse {
     /// 如果读取响应体失败，返回相应的错误信息。
     pub fn from_reqwest_response(response: reqwest::blocking::Response) -> Result<Self> {
         let status = response.status().as_u16();
-        let status_text = response
-            .status()
-            .canonical_reason()
-            .unwrap_or("Unknown")
-            .to_string();
+        let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
         let headers = response.headers().clone();
 
         // 缓存响应体字节（可以多次解析）
@@ -144,19 +140,23 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpResponse;
+    /// use workflow::base::http::HttpResponse;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = workflow::base::http::HttpClient::global()?;
+    /// # let url = "https://api.example.com";
+    /// # let config = workflow::base::http::RequestConfig::<serde_json::Value, _>::new();
     /// let response = client.get(url, config)?;
     /// let response = response.ensure_success()?; // 如果失败会返回错误
-    /// let data: MyType = response.as_json()?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn ensure_success(self) -> Result<Self> {
         if !self.is_success() {
             anyhow::bail!(
                 "HTTP request failed with status {}: {}",
                 self.status,
-                self.as_text()
-                    .unwrap_or_else(|_| "Unable to read response body".to_string())
+                self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string())
             );
         }
         Ok(self)
@@ -179,12 +179,17 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpResponse;
+    /// use workflow::base::http::HttpResponse;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = workflow::base::http::HttpClient::global()?;
+    /// # let url = "https://api.example.com";
+    /// # let config = workflow::base::http::RequestConfig::<serde_json::Value, _>::new();
     /// let response = client.post(url, config)?;
-    /// let data: MyType = response
-    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?
-    ///     .as_json()?;
+    /// let response = response
+    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn ensure_success_with<E>(self, error_handler: impl FnOnce(&Self) -> E) -> Result<Self>
     where
@@ -209,7 +214,7 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpResponse;
+    /// use workflow::base::http::HttpResponse;
     ///
     /// let error_msg = response.extract_error_message();
     /// println!("Error: {}", error_msg);
