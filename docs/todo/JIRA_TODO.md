@@ -236,6 +236,12 @@ workflow jira search --interactive                       # 交互式构建查询
 - 支持保存常用查询
 - 支持交互式查询构建器
 
+**关联功能**：
+- **动态补全支持**：`jira_ticket_keys()` 方法需要此 API 支持
+  - 位置：`src/lib/completion/dynamic.rs`
+  - 用途：为 `jira info` 等命令提供 ticket key 的自动补全
+  - 依赖：`JiraIssueApi::search_issues()` 方法（需要在 `src/lib/jira/api/issue.rs` 中实现）
+
 #### 2.9 `jira link` - 关联 tickets
 - ❌ 关联或取消关联 tickets
 
@@ -340,7 +346,7 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ### 中优先级
 1. **JIRA 搜索和列表**
-   - `jira search` - JQL 搜索
+   - `jira search` - JQL 搜索（**支持动态补全功能**）
    - `jira list` - 列出 tickets
    - `jira watch` - 关注/取消关注
 
@@ -372,7 +378,7 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 2. **第二阶段**：增强现有功能
    - `jira info` 显示更多字段
    - `jira info` 评论详情展示
-   - `jira search` - JQL 搜索
+   - `jira search` - JQL 搜索（**实现后支持动态补全的 `jira_ticket_keys()`**）
    - `jira update` - 更新 ticket
 
 3. **第三阶段**：集成增强和高级功能

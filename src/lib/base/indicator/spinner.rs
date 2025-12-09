@@ -152,11 +152,13 @@ impl Spinner {
 
     /// 使用 spinner 执行一个会产生输出的操作
     ///
-    /// 先显示 spinner 消息，然后完成 spinner，再执行操作。
+    /// 先显示 spinner 消息（250ms），然后完成 spinner，再执行操作。
     /// 这样可以确保用户能看到消息，同时让子进程的输出正常显示。
     ///
     /// 这个方法适用于执行会产生 stdout/stderr 输出的操作（如 `git push`），
     /// 可以避免子进程的输出与 spinner 动画混合。
+    ///
+    /// **注意**：操作完成后，建议使用 `log_info!` 或 `log_success!` 显示完成状态。
     ///
     /// # 参数
     ///
@@ -171,18 +173,20 @@ impl Spinner {
     ///
     /// ```rust
     /// use crate::base::indicator::Spinner;
+    /// use crate::log_success;
     ///
     /// Spinner::with_output("Pushing to remote...", || {
     ///     GitBranch::push(&current_branch, false)
     /// })?;
+    /// log_success!("Pushed to remote successfully");
     /// ```
     pub fn with_output<F, T, E>(message: impl AsRef<str>, operation: F) -> Result<T, E>
     where
         F: FnOnce() -> Result<T, E>,
     {
         let spinner = Self::new(message);
-        // 让 spinner 显示一段时间，确保用户能看到消息（至少显示一次动画）
-        std::thread::sleep(Duration::from_millis(200));
+        // 让 spinner 显示足够长的时间（250ms），确保用户能看到消息
+        std::thread::sleep(Duration::from_millis(250));
         // 完成 spinner（清除它），然后执行操作
         spinner.finish();
         // 执行操作，让子进程的输出正常显示
