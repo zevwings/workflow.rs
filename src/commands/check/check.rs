@@ -125,4 +125,58 @@ impl CheckCommand {
         log_success!("All lint checks passed");
         Ok(())
     }
+
+    /// 执行测试检查
+    ///
+    /// 通过调用 `cargo test` 来运行所有测试，确保代码功能正常。
+    pub fn run_test() -> Result<()> {
+        log_message!("Running tests...");
+        log_break!();
+
+        // 运行 cargo test
+        log_message!("Running 'cargo test'...");
+        let test_output = cmd("cargo", &["test", "--verbose"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run cargo test")?;
+
+        if !test_output.status.success() {
+            let stderr = String::from_utf8_lossy(&test_output.stderr);
+            let stdout = String::from_utf8_lossy(&test_output.stdout);
+            log_error!("Tests failed");
+            if !stderr.is_empty() {
+                log_error!("{}", stderr);
+            }
+            if !stdout.is_empty() {
+                log_error!("{}", stdout);
+            }
+            log_error!("Please fix the failing tests before merging");
+            anyhow::bail!("Tests failed");
+        }
+
+        // 输出测试结果（成功时）
+        let stdout = String::from_utf8_lossy(&test_output.stdout);
+        if !stdout.is_empty() {
+            // 只显示测试摘要，避免输出过多
+            let lines: Vec<&str> = stdout.lines().collect();
+            let summary_start = lines
+                .iter()
+                .rposition(|line| line.contains("test result:") || line.contains("running"));
+
+            if let Some(start) = summary_start {
+                let summary: String = lines[start..].join("\n");
+                log_info!("{}", summary);
+            } else {
+                // 如果没有找到摘要，显示最后几行
+                let last_lines: Vec<&str> = lines.iter().rev().take(10).rev().copied().collect();
+                if !last_lines.is_empty() {
+                    log_info!("{}", last_lines.join("\n"));
+                }
+            }
+        }
+
+        log_success!("All tests passed");
+        Ok(())
+    }
 }
