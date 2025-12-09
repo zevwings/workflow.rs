@@ -110,8 +110,6 @@ pub struct GitHubAccountInfo {
     pub email: String,
     /// API Token（掩码显示）
     pub token: String,
-    /// 分支前缀
-    pub branch_prefix: Option<String>,
     /// 验证状态
     pub verification_status: String,
     /// 验证错误信息（如果验证失败）
@@ -166,9 +164,6 @@ pub struct GitHubAccount {
     pub email: String,
     /// GitHub API Token
     pub api_token: String,
-    /// 分支前缀（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub branch_prefix: Option<String>,
 }
 
 /// GitHub 配置（TOML）
@@ -203,12 +198,6 @@ impl GitHubSettings {
     /// 获取当前账号的 API Token
     pub fn get_current_token(&self) -> Option<&str> {
         self.get_current_account().map(|acc| acc.api_token.as_str())
-    }
-
-    /// 获取当前账号的分支前缀
-    pub fn get_current_branch_prefix(&self) -> Option<&str> {
-        self.get_current_account()
-            .and_then(|acc| acc.branch_prefix.as_deref())
     }
 }
 
@@ -464,25 +453,27 @@ impl Settings {
                     let config = RequestConfig::<Value, Value>::new().auth(&auth);
                     match client.get(&url, config) {
                         Ok(response) => {
-                            if response.is_success() {
-                                match response.as_json::<JiraUser>() {
-                                    Ok(user) => Some(JiraVerificationStatus::Success {
-                                        email: email.clone(),
-                                        account_id: user.account_id,
-                                    }),
-                                    Err(e) => Some(JiraVerificationStatus::Failed {
-                                        reason: "Failed to parse Jira user response".to_string(),
-                                        details: vec![format!("Error: {}", e)],
-                                    }),
+                            // 使用 ensure_success 统一处理成功/失败检查
+                            match response.ensure_success() {
+                                Ok(success_response) => {
+                                    match success_response.as_json::<JiraUser>() {
+                                        Ok(user) => Some(JiraVerificationStatus::Success {
+                                            email: email.clone(),
+                                            account_id: user.account_id,
+                                        }),
+                                        Err(e) => Some(JiraVerificationStatus::Failed {
+                                            reason: "Failed to parse Jira user response".to_string(),
+                                            details: vec![format!("Error: {}", e)],
+                                        }),
+                                    }
                                 }
-                            } else {
-                                Some(JiraVerificationStatus::Failed {
+                                Err(e) => Some(JiraVerificationStatus::Failed {
                                     reason: "Failed to verify Jira configuration".to_string(),
                                     details: vec![
-                                        format!("Status: {}", response.status),
+                                        format!("Error: {}", e),
                                         "Please check your Jira service address, email, and API token.".to_string(),
                                     ],
-                                })
+                                }),
                             }
                         }
                         Err(e) => Some(JiraVerificationStatus::Failed {
@@ -562,7 +553,6 @@ impl Settings {
                 is_current,
                 email: account.email.clone(),
                 token: mask_sensitive_value(&account.api_token),
-                branch_prefix: account.branch_prefix.clone(),
                 verification_status,
                 verification_error,
             });

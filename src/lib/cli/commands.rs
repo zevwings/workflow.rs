@@ -92,6 +92,19 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: BranchSubcommand,
     },
+    /// Migrate configuration to new format
+    ///
+    /// Execute versioned migrations to update configuration files.
+    /// Automatically detects and migrates all pending versions.
+    /// Old configuration files will be removed after successful migration.
+    Migrate {
+        /// Dry run mode (preview changes without actually migrating)
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+        /// Keep old configuration files after migration (do not remove)
+        #[arg(long)]
+        keep_old: bool,
+    },
     /// Pull Request operations
     ///
     /// Create, merge, close, and manage Pull Requests.

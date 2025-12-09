@@ -1,4 +1,5 @@
 use crate::base::settings::Settings;
+use crate::commands::branch::BranchConfig;
 use crate::git::GitRepo;
 use crate::git::RepoType;
 use anyhow::{Context, Result};
@@ -132,11 +133,12 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
     let cleaned_title = transform_to_branch_name(title);
     branch_name.push_str(&cleaned_title);
 
-    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-    let settings = Settings::get();
-    if let Some(prefix) = settings.github.get_current_branch_prefix() {
-        if !prefix.trim().is_empty() {
-            branch_name = format!("{}/{}", prefix.trim(), branch_name);
+    // 如果有仓库级别的 branch_prefix，添加前缀
+    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
+    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
+        let trimmed = prefix.trim();
+        if !trimmed.is_empty() {
+            branch_name = format!("{}/{}", trimmed, branch_name);
         }
     }
 

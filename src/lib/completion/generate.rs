@@ -89,7 +89,7 @@ impl CompletionGenerator {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch` 等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）、`migrate`（cleanup）等）
     ///
     /// # 返回
     ///

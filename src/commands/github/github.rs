@@ -59,10 +59,6 @@ impl GitHubCommand {
                 name: account.name.clone(),
                 email: account.email.clone(),
                 token: account.token.clone(),
-                prefix: account
-                    .branch_prefix
-                    .clone()
-                    .unwrap_or_else(|| "-".to_string()),
                 status: if account.is_current {
                     "Current".to_string()
                 } else {
@@ -123,9 +119,6 @@ impl GitHubCommand {
             log_success!("Current account: {}", account.name);
             log_message!("  Email: {}", account.email);
             log_message!("  API Token: {}", mask_sensitive_value(&account.api_token));
-            if let Some(ref prefix) = account.branch_prefix {
-                log_message!("  Branch Prefix: {}", prefix);
-            }
         } else {
             log_warning!("No GitHub account is currently active.");
             log_message!("Run 'workflow github add' to add an account.");
@@ -454,9 +447,6 @@ impl GitHubCommand {
             "  API Token: {}",
             mask_sensitive_value(&old_account.api_token)
         );
-        if let Some(ref prefix) = old_account.branch_prefix {
-            log_message!("  Branch Prefix: {}", prefix);
-        }
         log_break!();
 
         // 收集新的账号信息（使用现有值作为默认值）

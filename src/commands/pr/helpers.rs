@@ -2,7 +2,7 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::base::settings::settings::Settings;
+use crate::commands::branch::BranchConfig;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
@@ -238,14 +238,18 @@ pub fn apply_branch_name_prefixes(
     mut branch_name: String,
     jira_ticket: Option<&str>,
 ) -> Result<String> {
+    // 检测并提示设置 branch_prefix（如果需要）
+    // 注意：此函数不会中断流程，即使出错也会继续
+    let _ = crate::commands::branch::check_and_prompt_branch_prefix();
+
     // 如果有 Jira ticket，添加到分支名前缀
     if let Some(ticket) = jira_ticket {
         branch_name = format!("{}-{}", ticket, branch_name);
     }
 
-    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-    let settings = Settings::get();
-    if let Some(prefix) = settings.github.get_current_branch_prefix() {
+    // 如果有仓库级别的 branch_prefix，添加前缀
+    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
+    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
         let trimmed = prefix.trim();
         if !trimmed.is_empty() {
             branch_name = format!("{}/{}", trimmed, branch_name);

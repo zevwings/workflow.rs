@@ -148,7 +148,6 @@ impl ConfigCommand {
                     },
                     email: acc.email.clone(),
                     token: acc.token.clone(),
-                    prefix: acc.branch_prefix.clone().unwrap_or_else(|| "-".to_string()),
                     status: if acc.is_current {
                         "Current".to_string()
                     } else {

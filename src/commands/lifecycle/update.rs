@@ -850,9 +850,18 @@ impl UpdateCommand {
                 || {
                     let config = RequestConfig::<Value, Value>::new();
                     let response = http_client.get(&checksum_url, config)?;
-                    if response.status == 404 {
-                        anyhow::bail!("Checksum file not found (404)");
-                    }
+                    // 使用 ensure_success_with 统一处理 404 错误
+                    let response = response.ensure_success_with(|r| {
+                        if r.status == 404 {
+                            anyhow::anyhow!("Checksum file not found (404)")
+                        } else {
+                            anyhow::anyhow!(
+                                "HTTP request failed with status {}: {}",
+                                r.status,
+                                r.status_text
+                            )
+                        }
+                    })?;
                     response.as_text()
                 },
                 &retry_config,

@@ -181,7 +181,8 @@ workflow setup
 
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
-| `github.branch_prefix` | GitHub 分支前缀 | - |
+| `github.accounts` | GitHub 账号列表 | - |
+| `github.current` | 当前激活的账号名称 | - |
 
 #### 日志配置
 
@@ -245,7 +246,6 @@ service_address = "https://your-company.atlassian.net"
 
 [github]
 api_token = "your-github-token"
-branch_prefix = "feature"
 
 [log]
 output_folder_name = "logs"
@@ -330,6 +330,11 @@ workflow branch clean --dry-run    # 预览将要删除的分支，不实际删�
 workflow branch ignore add <BRANCH_NAME>      # 添加分支到忽略列表
 workflow branch ignore remove <BRANCH_NAME>  # 从忽略列表移除分支
 workflow branch ignore list                   # 列出当前仓库的忽略分支
+
+# 管理分支前缀（仓库级别）
+workflow branch prefix set [PREFIX]            # 设置当前仓库的分支前缀（如 "feature"、"fix"）
+workflow branch prefix get                     # 获取当前仓库的分支前缀
+workflow branch prefix remove                  # 移除当前仓库的分支前缀
 ```
 
 ### 安装命令
@@ -552,7 +557,7 @@ graph TB
         PRCmd[commands/pr/<br/>create, merge, close, etc.]
         LogCmd[commands/log/<br/>download, find, search]
         JiraCmd[commands/jira/<br/>info, attachments, clean]
-        BranchCmd[commands/branch/<br/>clean, ignore]
+        BranchCmd[commands/branch/<br/>clean, ignore, prefix]
         OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
     end
 
@@ -643,7 +648,7 @@ workflow/
 │       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
 │       ├── log/          # 日志操作命令（download, find, search）
 │       ├── jira/         # Jira 操作命令（info, attachments, clean）
-│       ├── branch/       # 分支管理命令（clean, ignore）
+│       ├── branch/       # 分支管理命令（clean, ignore, prefix）
 │       ├── check/       # 环境检查命令（check）
 │       ├── proxy/       # 代理管理命令（on, off, check）
 │       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）

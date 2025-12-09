@@ -22,6 +22,13 @@ pub enum BranchSubcommand {
         #[command(subcommand)]
         subcommand: IgnoreSubcommand,
     },
+    /// Manage branch prefix for current repository
+    ///
+    /// Set, get, or remove branch prefix for the current repository.
+    Prefix {
+        #[command(subcommand)]
+        subcommand: PrefixSubcommand,
+    },
 }
 
 /// Branch ignore list management subcommands
@@ -39,4 +46,20 @@ pub enum IgnoreSubcommand {
     },
     /// List ignored branches for current repository
     List,
+}
+
+/// Branch prefix management subcommands
+#[derive(Subcommand)]
+pub enum PrefixSubcommand {
+    /// Set branch prefix for current repository
+    ///
+    /// If prefix is not provided, will prompt interactively.
+    Set {
+        /// Branch prefix value, if not provided, will prompt interactively
+        prefix: Option<String>,
+    },
+    /// Get branch prefix for current repository
+    Get,
+    /// Remove branch prefix for current repository
+    Remove,
 }

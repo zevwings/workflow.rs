@@ -43,8 +43,6 @@ pub struct GitHubAccountRow {
     pub email: String,
     #[tabled(rename = "API Token")]
     pub token: String,
-    #[tabled(rename = "Branch Prefix")]
-    pub prefix: String,
     #[tabled(rename = "Status")]
     pub status: String,
     #[tabled(rename = "Verification")]
@@ -64,8 +62,6 @@ pub struct GitHubAccountListRow {
     pub email: String,
     #[tabled(rename = "API Token")]
     pub token: String,
-    #[tabled(rename = "Branch Prefix")]
-    pub prefix: String,
     #[tabled(rename = "Status")]
     pub status: String,
 }

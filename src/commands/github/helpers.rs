@@ -57,20 +57,10 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
         .prompt()
         .context("Failed to get GitHub API token")?;
 
-    let branch_prefix = InputDialog::new("GitHub branch prefix (optional, press Enter to skip)")
-        .allow_empty(true)
-        .prompt()
-        .context("Failed to get GitHub branch prefix")?;
-
     Ok(GitHubAccount {
         name: name.trim().to_string(),
         email: email.trim().to_string(),
         api_token: api_token.trim().to_string(),
-        branch_prefix: if branch_prefix.trim().is_empty() {
-            None
-        } else {
-            Some(branch_prefix.trim().to_string())
-        },
     })
 }
 
@@ -129,26 +119,9 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
         .prompt()
         .context("Failed to get GitHub API token")?;
 
-    let branch_prefix = InputDialog::new("GitHub branch prefix (optional, press Enter to skip)")
-        .with_default(
-            old_account
-                .branch_prefix
-                .as_deref()
-                .unwrap_or("")
-                .to_string(),
-        )
-        .allow_empty(true)
-        .prompt()
-        .context("Failed to get GitHub branch prefix")?;
-
     Ok(GitHubAccount {
         name: name.trim().to_string(),
         email: email.trim().to_string(),
         api_token: api_token.trim().to_string(),
-        branch_prefix: if branch_prefix.trim().is_empty() {
-            None
-        } else {
-            Some(branch_prefix.trim().to_string())
-        },
     })
 }
