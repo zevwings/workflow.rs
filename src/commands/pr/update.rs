@@ -1,5 +1,5 @@
 use crate::base::indicator::Spinner;
-use crate::git::{GitBranch, GitCommit};
+use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_info, log_success, log_warning, ProxyManager};
@@ -29,9 +29,15 @@ impl PullRequestUpdateCommand {
 
         log_success!("Using commit message: {}", message);
 
+        // 先执行 pre-commit 检查（如果有），避免与 Spinner 输出冲突
+        if GitPreCommit::has_pre_commit() {
+            GitPreCommit::run_checks()?;
+        }
+
         // 执行 git commit（会自动暂存所有文件）
+        // 使用 --no-verify 跳过 hook，因为我们已经通过 Rust 代码执行了检查
         Spinner::with("Staging and committing changes...", || {
-            GitCommit::commit(&message, false) // 不使用 --no-verify（commit 方法内部会自动暂存）
+            GitCommit::commit(&message, true) // 使用 --no-verify，因为已经执行了检查
         })?;
 
         // 执行 git push

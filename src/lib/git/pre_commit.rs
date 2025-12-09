@@ -26,13 +26,13 @@ pub struct PreCommitResult {
 pub struct GitPreCommit;
 
 impl GitPreCommit {
-    /// 检查工程中是否存在 pre-commit hooks
+    /// Check if pre-commit hooks exist in the project
     ///
-    /// 检查以下位置：
+    /// Checks the following locations:
     /// 1. `.git/hooks/pre-commit` - Git hooks
-    /// 2. `.pre-commit-config.yaml` - pre-commit 工具配置文件
-    /// 3. `pre-commit` 命令是否可用（pre-commit 工具）
-    pub(crate) fn has_pre_commit() -> bool {
+    /// 2. `.pre-commit-config.yaml` - pre-commit tool config file
+    /// 3. Whether `pre-commit` command is available (pre-commit tool)
+    pub fn has_pre_commit() -> bool {
         // 检查 .git/hooks/pre-commit
         if Self::get_pre_commit_hook_path().is_some() {
             return true;
@@ -148,6 +148,22 @@ impl GitPreCommit {
         } else {
             false
         }
+    }
+
+    /// Public method to run pre-commit checks (for use outside of commit flow)
+    ///
+    /// This method should be called before committing to run pre-commit checks
+    /// without interference from Spinner output. It will:
+    /// 1. Check if pre-commit hooks exist
+    /// 2. Run the checks if they exist
+    /// 3. Return an error if checks fail
+    pub fn run_checks() -> Result<()> {
+        if Self::has_pre_commit() {
+            // First, stage all files (needed for pre-commit checks)
+            GitCommit::add_all().context("Failed to stage files for pre-commit checks")?;
+            Self::run_pre_commit()?;
+        }
+        Ok(())
     }
 
     /// Run code quality checks (using log macros for unified output)
