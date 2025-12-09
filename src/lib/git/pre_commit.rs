@@ -76,26 +76,44 @@ impl GitPreCommit {
             });
         }
 
-        // 优先使用 pre-commit 工具
+        // 优先使用 pre-commit 工具（需要配置文件存在且命令可用）
         if Path::new(".pre-commit-config.yaml").exists() {
-            let output = cmd("pre-commit", &["run"])
-                .stdout_capture()
-                .stderr_capture()
-                .run()
-                .context("Failed to run pre-commit")?;
-
-            if output.status.success() {
-                Ok(PreCommitResult {
-                    executed: true,
-                    messages: vec![
-                        "Running pre-commit hooks...".to_string(),
-                        "Pre-commit checks passed".to_string(),
-                    ],
-                })
+            // 检查 pre-commit 命令是否可用
+            let pre_commit_available = if cfg!(target_os = "windows") {
+                cmd("where", &["pre-commit"]).run().is_ok()
             } else {
-                anyhow::bail!("Pre-commit checks failed");
+                cmd("which", &["pre-commit"]).run().is_ok()
+            };
+
+            if pre_commit_available {
+                let output = cmd("pre-commit", &["run"])
+                    .stdout_capture()
+                    .stderr_capture()
+                    .run()
+                    .context("Failed to run pre-commit")?;
+
+                if output.status.success() {
+                    Ok(PreCommitResult {
+                        executed: true,
+                        messages: vec![
+                            "Running pre-commit hooks...".to_string(),
+                            "Pre-commit checks passed".to_string(),
+                        ],
+                    })
+                } else {
+                    anyhow::bail!("Pre-commit checks failed");
+                }
+            } else {
+                // 配置文件存在但 pre-commit 命令不可用，回退到 Git hooks
+                crate::trace_debug!(
+                    ".pre-commit-config.yaml exists but pre-commit command not found, falling back to Git hooks"
+                );
+                // 继续执行下面的 Git hooks 检查
             }
-        } else if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
+        }
+
+        // 执行 Git pre-commit hook 脚本（如果存在）
+        if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
             // 执行 Git pre-commit hook 脚本
             let output =
                 Command::new(&hooks_path).output().context("Failed to run pre-commit hooks")?;
