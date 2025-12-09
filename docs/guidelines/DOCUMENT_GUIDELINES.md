@@ -558,4 +558,3 @@ let iso = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
    - 在"核心组件"中添加"使用场景"字段
 
 简化后的模板减少了约 15% 的内容，同时保持了所有必要信息，结构更加清晰。
-

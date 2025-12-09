@@ -86,23 +86,60 @@ impl GitPreCommit {
             };
 
             if pre_commit_available {
-                let output = cmd("pre-commit", &["run"])
-                    .stdout_capture()
-                    .stderr_capture()
-                    .run()
-                    .context("Failed to run pre-commit")?;
+                // 运行 pre-commit，如果文件被格式化修改，会自动重新运行
+                // 最多重试 2 次（第一次格式化，第二次检查）
+                let mut max_retries = 2;
+                let mut last_output = None;
 
-                if output.status.success() {
-                    Ok(PreCommitResult {
-                        executed: true,
-                        messages: vec![
-                            "Running pre-commit hooks...".to_string(),
-                            "Pre-commit checks passed".to_string(),
-                        ],
-                    })
-                } else {
-                    anyhow::bail!("Pre-commit checks failed");
+                while max_retries > 0 {
+                    let output = cmd("pre-commit", &["run"])
+                        .stdout_capture()
+                        .stderr_capture()
+                        .run()
+                        .context("Failed to run pre-commit")?;
+
+                    last_output = Some(output.clone());
+
+                    if output.status.success() {
+                        return Ok(PreCommitResult {
+                            executed: true,
+                            messages: vec![
+                                "Running pre-commit hooks...".to_string(),
+                                "Pre-commit checks passed".to_string(),
+                            ],
+                        });
+                    }
+
+                    // 检查是否是因为文件被修改而失败（需要重新运行）
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    let output_text = format!("{}{}", stderr, stdout);
+
+                    // 如果是因为文件被修改，重试一次
+                    if output_text.contains("files were modified by this hook") {
+                        max_retries -= 1;
+                        if max_retries > 0 {
+                            // 文件已被格式化并暂存，重新运行检查
+                            continue;
+                        }
+                    }
+
+                    // 其他错误，直接失败
+                    break;
                 }
+
+                // 如果重试后仍然失败，返回错误
+                if let Some(output) = last_output {
+                    let stderr = String::from_utf8_lossy(&output.stderr);
+                    let stdout = String::from_utf8_lossy(&output.stdout);
+                    if !stderr.is_empty() {
+                        eprintln!("{}", stderr);
+                    }
+                    if !stdout.is_empty() {
+                        eprintln!("{}", stdout);
+                    }
+                }
+                anyhow::bail!("Pre-commit checks failed");
             } else {
                 // 配置文件存在但 pre-commit 命令不可用，回退到 Git hooks
                 crate::trace_debug!(

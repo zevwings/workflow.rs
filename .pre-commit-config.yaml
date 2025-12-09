@@ -15,13 +15,16 @@ repos:
   - repo: local
     hooks:
       # 1. 自动格式化代码并更新暂存区
+      # 注意：pre-commit 会在文件被修改后要求重新运行
+      # 但在提交时（git commit），pre-commit 会自动重新运行，无需手动操作
       - id: cargo-fmt
         name: Format Rust code
         entry: bash -c 'cargo fmt && git add -u'
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
+        # 格式化工具会修改文件，这是预期行为
 
       # 2. 运行代码检查（格式、Clippy、Check）
       - id: cargo-lint
@@ -30,7 +33,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
 
       # 3. 运行测试
       - id: cargo-test
@@ -39,7 +42,7 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [commit]
+        stages: [pre-commit]
 
   # 通用 Git hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
