@@ -6,6 +6,7 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
+use crate::base::indicator::Spinner;
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -225,12 +226,10 @@ impl GitPreCommit {
             // First, stage all files (needed for pre-commit checks)
             GitCommit::add_all().context("Failed to stage files for pre-commit checks")?;
 
-            // 显示提示信息
-            crate::log_break!();
-            crate::log_info!("🔍 Running pre-commit checks...");
-            crate::log_break!();
-
-            Self::run_pre_commit()?;
+            // 使用 Spinner 显示执行过程
+            Spinner::with("🔍 Running pre-commit checks...", || {
+                Self::run_pre_commit()
+            })?;
 
             crate::log_success!("Pre-commit checks passed");
             crate::log_break!();
