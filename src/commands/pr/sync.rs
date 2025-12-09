@@ -180,6 +180,7 @@ impl PullRequestSyncCommand {
                     GitBranch::push(&current_branch, !exists_remote)
                         .context("Failed to push to remote")?;
                 }
+                log_break!();
                 log_success!("Pushed to remote successfully");
             } else {
                 log_info!("Skipping push (--no-push flag set)");

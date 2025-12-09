@@ -45,6 +45,7 @@ impl PullRequestUpdateCommand {
         log_break!();
         GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
+        log_break!();
         log_success!("Update completed successfully!");
         Ok(())
     }
