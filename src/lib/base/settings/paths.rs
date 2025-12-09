@@ -82,7 +82,11 @@ impl Paths {
     }
 
     /// 非 macOS 平台：总是返回 None
+    ///
+    /// 注意：此函数在非 macOS 平台上不会被调用（调用处被 `#[cfg(target_os = "macos")]` 包裹），
+    /// 但为了保持 trait 实现的一致性，需要提供此实现。
     #[cfg(not(target_os = "macos"))]
+    #[allow(dead_code)] // 在非 macOS 平台上不会被调用，但需要提供实现以保持一致性
     fn try_icloud_base_dir() -> Option<PathBuf> {
         None
     }
