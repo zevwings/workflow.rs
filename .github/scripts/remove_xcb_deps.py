@@ -39,11 +39,15 @@ def is_dependency_line(line: str, packages: Set[str]) -> bool:
 def remove_packages_from_cargo_lock(content: str) -> str:
     """从 Cargo.lock 内容中移除指定的包及其依赖引用"""
     lines = content.split('\n')
+    total_lines = len(lines)
+    print(f"📄 Processing Cargo.lock ({total_lines} lines)...", flush=True)
+
     result: List[str] = []
     in_dependencies = False
     bracket_depth = 0
     removed_packages = set()
     removed_deps_count = 0
+    processed_packages = 0
 
     # 当前 package 块的内容（用于缓冲）
     current_package_lines: List[str] = []
@@ -60,6 +64,11 @@ def remove_packages_from_cargo_lock(content: str) -> str:
             if current_package_lines and not skip_current_package:
                 # 将之前的 package 块添加到结果中
                 result.extend(current_package_lines)
+                processed_packages += 1
+                # 每处理 100 个包输出一次进度
+                if processed_packages % 100 == 0:
+                    progress = (i / total_lines) * 100
+                    print(f"  ⏳ Processed {processed_packages} packages ({progress:.1f}% of file)...", flush=True)
 
             # 开始新的 package 块
             current_package_lines = [line]
@@ -125,12 +134,17 @@ def remove_packages_from_cargo_lock(content: str) -> str:
     # 处理最后一个 package 块
     if current_package_lines and not skip_current_package:
         result.extend(current_package_lines)
+        processed_packages += 1
+
+    print(f"📊 Processing complete: {processed_packages} packages processed", flush=True)
 
     # 验证结果
     if removed_packages:
-        print(f"✅ Removed {len(removed_packages)} package(s): {', '.join(sorted(removed_packages))}")
+        print(f"✅ Removed {len(removed_packages)} package(s): {', '.join(sorted(removed_packages))}", flush=True)
     if removed_deps_count > 0:
-        print(f"✅ Removed {removed_deps_count} dependency reference(s)")
+        print(f"✅ Removed {removed_deps_count} dependency reference(s)", flush=True)
+    if not removed_packages and removed_deps_count == 0:
+        print("ℹ️  No packages to remove found", flush=True)
 
     return '\n'.join(result)
 
@@ -176,7 +190,10 @@ def validate_cargo_lock(content: str) -> bool:
 def main() -> int:
     """主函数"""
     try:
+        print("🚀 Starting Cargo.lock processing...", flush=True)
+
         # 读取文件
+        print("📖 Reading Cargo.lock...", flush=True)
         with open('Cargo.lock', 'r', encoding='utf-8') as f:
             original_content = f.read()
 
@@ -184,23 +201,31 @@ def main() -> int:
             print("⚠️  Cargo.lock is empty", file=sys.stderr)
             return 1
 
+        file_size = len(original_content)
+        print(f"📏 Cargo.lock size: {file_size:,} bytes", flush=True)
+
         # 处理内容
         modified_content = remove_packages_from_cargo_lock(original_content)
 
         # 验证结果
+        print("🔍 Validating modified Cargo.lock...", flush=True)
         if not validate_cargo_lock(modified_content):
             print("❌ Modified Cargo.lock appears to be invalid", file=sys.stderr)
             return 1
 
         # 检查是否有实际修改
         if original_content == modified_content:
-            print("ℹ️  No changes needed (packages may not be in Cargo.lock)")
+            print("ℹ️  No changes needed (packages may not be in Cargo.lock)", flush=True)
         else:
             # 写入文件
+            print("💾 Writing modified Cargo.lock...", flush=True)
             with open('Cargo.lock', 'w', encoding='utf-8') as f:
                 f.write(modified_content)
-            print("✅ Successfully updated Cargo.lock")
+            new_size = len(modified_content)
+            size_diff = file_size - new_size
+            print(f"✅ Successfully updated Cargo.lock (reduced by {size_diff:,} bytes)", flush=True)
 
+        print("✨ Processing completed successfully!", flush=True)
         return 0
     except FileNotFoundError:
         print("❌ Cargo.lock not found", file=sys.stderr)

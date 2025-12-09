@@ -631,9 +631,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
           # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
           # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -732,7 +733,17 @@ jobs:
               # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
               # 以及从其他包的 dependencies 中移除对这些包的引用
               # Python 脚本更可靠，能更好地处理 TOML 格式
-              python3 .github/scripts/remove_xcb_deps.py
+              # 添加超时机制（60秒），防止脚本卡住
+              echo "🔄 Processing Cargo.lock to remove xcb dependencies..."
+              timeout 60 python3 .github/scripts/remove_xcb_deps.py || {
+                EXIT_CODE=$?
+                if [ $EXIT_CODE -eq 124 ]; then
+                  echo "❌ Script timed out after 60 seconds"
+                else
+                  echo "❌ Script failed with exit code $EXIT_CODE"
+                fi
+                exit $EXIT_CODE
+              }
 
               if [ $? -ne 0 ]; then
                 echo "⚠️  Failed to process Cargo.lock, restoring backup"
