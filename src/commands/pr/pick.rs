@@ -19,7 +19,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_error, log_info, log_success, log_warning, ProxyManager};
+use crate::{log_break, log_error, log_info, log_success, log_warning, ProxyManager};
 
 /// PR Pick 命令
 ///
@@ -956,7 +956,9 @@ impl PullRequestPickCommand {
                 Spinner::with("Committing changes...", || {
                     GitCommit::commit(commit_title, true) // no-verify
                 })?;
+                log_break!();
                 log_info!("Pushing to remote...");
+                log_break!();
                 GitBranch::push(branch_name, true)?; // set-upstream
 
                 Ok((branch_name.to_string(), default_branch))
@@ -984,7 +986,9 @@ impl PullRequestPickCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
+        log_break!();
         log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))

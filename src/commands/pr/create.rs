@@ -16,7 +16,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_info, log_success, log_warning, ProxyManager};
+use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -332,7 +332,9 @@ impl PullRequestCreateCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
+        log_break!();
         log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
@@ -368,7 +370,9 @@ impl PullRequestCreateCommand {
 
         // 推送（如需要）
         if !exists_remote {
+            log_break!();
             log_info!("Pushing to remote...");
+            log_break!();
             GitBranch::push(current_branch, true)?; // set-upstream
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
@@ -442,7 +446,9 @@ impl PullRequestCreateCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
+        log_break!();
         log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
@@ -498,7 +504,9 @@ impl PullRequestCreateCommand {
         .prompt()?;
 
         // 推送
+        log_break!();
         log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(current_branch, true)?; // set-upstream
 
         Ok((current_branch.to_string(), default_branch.to_string()))

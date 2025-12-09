@@ -2,7 +2,7 @@ use crate::base::indicator::Spinner;
 use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_info, log_success, log_warning, ProxyManager};
+use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
 use anyhow::{Context, Result};
 
 /// 快速更新命令
@@ -40,7 +40,9 @@ impl PullRequestUpdateCommand {
 
         // 执行 git push
         let current_branch = GitBranch::current_branch()?;
+        log_break!();
         log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
         log_success!("Update completed successfully!");

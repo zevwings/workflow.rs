@@ -5,7 +5,7 @@ use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_debug, log_error, log_info, log_success, log_warning};
+use crate::{log_break, log_debug, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
@@ -170,7 +170,9 @@ impl PullRequestSyncCommand {
 
                 // 如果是 rebase，使用 force-with-lease
                 let use_force = matches!(strategy, SyncStrategy::Rebase);
+                log_break!();
                 log_info!("Pushing to remote...");
+                log_break!();
                 if use_force {
                     GitBranch::push_force_with_lease(&current_branch)
                         .context("Failed to push to remote (force-with-lease)")?;
