@@ -78,11 +78,11 @@ impl GitPreCommit {
 
         // 优先使用 pre-commit 工具（需要配置文件存在且命令可用）
         if Path::new(".pre-commit-config.yaml").exists() {
-            // 检查 pre-commit 命令是否可用
+            // 检查 pre-commit 命令是否可用（静默检查，不输出路径）
             let pre_commit_available = if cfg!(target_os = "windows") {
-                cmd("where", &["pre-commit"]).run().is_ok()
+                cmd("where", &["pre-commit"]).stdout_null().stderr_null().run().is_ok()
             } else {
-                cmd("which", &["pre-commit"]).run().is_ok()
+                cmd("which", &["pre-commit"]).stdout_null().stderr_null().run().is_ok()
             };
 
             if pre_commit_available {
@@ -93,9 +93,11 @@ impl GitPreCommit {
 
                 while max_retries > 0 {
                     // 运行 pre-commit，捕获输出但不显示（只显示最终结果）
+                    // 设置环境变量抑制颜色输出
                     let output = cmd("pre-commit", &["run"])
                         .stdout_capture()
                         .stderr_capture()
+                        .env("PRE_COMMIT_COLOR", "never")
                         .run()
                         .context("Failed to run pre-commit")?;
 
@@ -125,6 +127,28 @@ impl GitPreCommit {
                         }
                     }
 
+                    // 检查输出内容，判断是否真的失败
+                    // 如果所有检查都显示 Passed/Skipped，即使退出码非 0 也认为成功
+                    let has_failed_hook = output_text.contains("Failed")
+                        || output_text.contains("error")
+                        || output_text.contains("✗");
+
+                    // 检查是否有通过的检查
+                    let has_passed_hooks =
+                        output_text.contains("Passed") || output_text.contains("Skipped");
+
+                    // 如果只是警告（如未暂存文件），但所有检查都通过了，认为成功
+                    if !has_failed_hook && has_passed_hooks {
+                        // 所有检查都通过，只是有警告，可以继续
+                        return Ok(PreCommitResult {
+                            executed: true,
+                            messages: vec![
+                                "Running pre-commit hooks...".to_string(),
+                                "Pre-commit checks passed".to_string(),
+                            ],
+                        });
+                    }
+
                     // 其他错误，直接失败
                     break;
                 }
@@ -133,10 +157,22 @@ impl GitPreCommit {
                 if let Some(output) = last_output {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     let stdout = String::from_utf8_lossy(&output.stdout);
-                    if !stderr.is_empty() {
-                        eprintln!("{}", stderr);
+
+                    // 过滤掉路径输出行（如 /opt/homebrew/bin/pre-commit）
+                    let filtered_stderr: String = stderr
+                        .lines()
+                        .filter(|line| {
+                            !line.trim().starts_with('/')
+                                && !line.trim().ends_with("pre-commit")
+                                && !line.trim().is_empty()
+                        })
+                        .collect::<Vec<_>>()
+                        .join("\n");
+
+                    if !filtered_stderr.trim().is_empty() {
+                        eprintln!("{}", filtered_stderr);
                     }
-                    if !stdout.is_empty() {
+                    if !stdout.trim().is_empty() {
                         eprintln!("{}", stdout);
                     }
                 }
