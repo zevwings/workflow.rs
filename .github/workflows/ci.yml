@@ -90,21 +90,14 @@ jobs:
             libxcb-xinput-dev \
             libxcb-dri3-dev \
             libxcb-present-dev \
-            libxcb-xv-dev \
-            libxcb-glx-dev \
-            libxcb-shm-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
             libxcb-composite0-dev \
             libxcb-damage0-dev \
             libxcb-record0-dev \
-            libxcb-xevie-dev \
-            libxcb-xf86dri-dev \
-            libxcb-xprint-dev \
             libxcb-screensaver0-dev \
             libxcb-res0-dev \
-            libxcb-xselinux-dev \
-            libxcb-xtest-dev \
-            libxcb-xvmc-dev \
-            libxcb-dri2-dev \
             libxkbcommon-dev \
             libxkbcommon-x11-dev
 
