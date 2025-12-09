@@ -243,10 +243,8 @@ src/
 - **LLM 模块** (`lib::base::llm`) - 统一配置驱动的 LLM 客户端，支持 OpenAI、DeepSeek 和代理 API
   - 详细架构请参考 [LLM_ARCHITECTURE.md](./lib/LLM_ARCHITECTURE.md)
 
-- **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理
+- **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理，支持 iCloud 存储（macOS）
   - 详细架构请参考 [SETTINGS_ARCHITECTURE.md](./lib/SETTINGS_ARCHITECTURE.md)
-  - **iCloud 存储模块** (`lib::base::settings::paths`) - iCloud Drive 存储支持（macOS）
-    - 详细架构请参考 [ICLOUD_STORAGE_ARCHITECTURE.md](./lib/ICLOUD_STORAGE_ARCHITECTURE.md)
 
 - **Shell 模块** (`lib::base::shell`) - Shell 检测与管理，支持配置自动加载
   - 详细架构请参考 [SHELL_ARCHITECTURE.md](./lib/SHELL_ARCHITECTURE.md)
