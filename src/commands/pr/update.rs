@@ -36,9 +36,7 @@ impl PullRequestUpdateCommand {
 
         // 执行 git commit（会自动暂存所有文件）
         // 使用 --no-verify 跳过 hook，因为我们已经通过 Rust 代码执行了检查
-        Spinner::with("Staging and committing changes...", || {
-            GitCommit::commit(&message, true) // 使用 --no-verify，因为已经执行了检查
-        })?;
+        GitCommit::commit(&message, true)?; // 使用 --no-verify，因为已经执行了检查
 
         // 执行 git push
         let current_branch = GitBranch::current_branch()?;
