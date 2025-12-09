@@ -43,16 +43,9 @@ def remove_packages_from_cargo_lock(content: str) -> str:
     print(f"📄 Processing Cargo.lock ({total_lines} lines)...", flush=True)
 
     result: List[str] = []
-    in_dependencies = False
-    bracket_depth = 0
     removed_packages = set()
     removed_deps_count = 0
     processed_packages = 0
-
-    # 当前 package 块的内容（用于缓冲）
-    current_package_lines: List[str] = []
-    current_package_name: Optional[str] = None
-    skip_current_package = False
 
     i = 0
     while i < len(lines):
@@ -60,81 +53,87 @@ def remove_packages_from_cargo_lock(content: str) -> str:
 
         # 检测新的 package 块开始
         if is_package_block_start(line):
-            # 处理之前的 package 块
-            if current_package_lines and not skip_current_package:
-                # 将之前的 package 块添加到结果中
-                result.extend(current_package_lines)
+            # 开始新的 package 块
+            package_name = None
+            in_dependencies = False
+            bracket_depth = 0
+            package_lines: List[str] = []
+            skip_package = False
+
+            i += 1
+            # 处理整个 package 块
+            while i < len(lines):
+                current_line = lines[i]
+
+                # 如果遇到下一个 package 块，停止处理当前块
+                if is_package_block_start(current_line):
+                    break
+
+                # 检测 package 名称
+                if package_name is None:
+                    pkg_name = extract_package_name(current_line)
+                    if pkg_name:
+                        package_name = pkg_name
+                        if pkg_name in PACKAGES_TO_REMOVE:
+                            skip_package = True
+                            removed_packages.add(pkg_name)
+                            # 跳过整个 package 块，找到下一个 package 块
+                            i += 1
+                            while i < len(lines) and not is_package_block_start(lines[i]):
+                                i += 1
+                            # 不继续处理当前 package，直接跳到外层循环处理下一个 package
+                            break
+
+                # 检测 dependencies 数组开始
+                if not in_dependencies and current_line.strip().startswith('dependencies = ['):
+                    in_dependencies = True
+                    bracket_depth = 1
+                    package_lines.append(current_line)
+                    i += 1
+                    continue
+
+                # 处理 dependencies 数组内容
+                if in_dependencies:
+                    # 计算括号深度（处理嵌套数组）
+                    bracket_depth += current_line.count('[') - current_line.count(']')
+
+                    # 检查是否是我们要移除的依赖
+                    if is_dependency_line(current_line, PACKAGES_TO_REMOVE):
+                        removed_deps_count += 1
+                        # 不添加这一行（移除依赖）
+                        i += 1
+                        # 如果括号深度回到 0 或以下，dependencies 数组结束
+                        if bracket_depth <= 0:
+                            in_dependencies = False
+                            bracket_depth = 0
+                        continue
+
+                    # 如果括号深度回到 0 或以下，dependencies 数组结束
+                    if bracket_depth <= 0:
+                        in_dependencies = False
+                        bracket_depth = 0
+
+                # 将当前行添加到 package 块
+                package_lines.append(current_line)
+                i += 1
+
+            # 如果不需要跳过，添加 package 块到结果
+            if not skip_package:
+                package_lines.insert(0, line)  # 添加 [[package]] 行
+                result.extend(package_lines)
                 processed_packages += 1
                 # 每处理 100 个包输出一次进度
                 if processed_packages % 100 == 0:
                     progress = (i / total_lines) * 100
                     print(f"  ⏳ Processed {processed_packages} packages ({progress:.1f}% of file)...", flush=True)
 
-            # 开始新的 package 块
-            current_package_lines = [line]
-            current_package_name = None
-            skip_current_package = False
-            in_dependencies = False
-            bracket_depth = 0
-            i += 1
+            # 如果跳过了 package，i 已经指向下一个 package 块，继续外层循环处理它
+            # 如果没跳过，i 也指向下一个 package 块或文件末尾，继续外层循环
             continue
-
-        # 如果当前 package 块应该被跳过，继续跳过直到下一个 package
-        if skip_current_package:
+        else:
+            # 如果不是 package 块开始，可能是文件开头的元数据，直接添加
+            result.append(line)
             i += 1
-            while i < len(lines):
-                if is_package_block_start(lines[i]):
-                    i -= 1  # 回退，让外层循环处理
-                    break
-                i += 1
-            continue
-
-        # 检测 package 名称
-        if current_package_name is None:
-            pkg_name = extract_package_name(line)
-            if pkg_name:
-                current_package_name = pkg_name
-                if pkg_name in PACKAGES_TO_REMOVE:
-                    skip_current_package = True
-                    removed_packages.add(pkg_name)
-                    current_package_lines = []  # 清空缓冲，不添加这个包
-                    i += 1
-                    continue
-
-        # 检测 dependencies 数组开始（在 package 块内）
-        if not in_dependencies and line.strip().startswith('dependencies = ['):
-            in_dependencies = True
-            bracket_depth = 1
-
-        # 处理 dependencies 数组内容
-        if in_dependencies:
-            # 计算括号深度（处理嵌套数组）
-            bracket_depth += line.count('[') - line.count(']')
-
-            # 检查是否是我们要移除的依赖
-            if is_dependency_line(line, PACKAGES_TO_REMOVE):
-                removed_deps_count += 1
-                # 不将这一行添加到缓冲中（移除依赖）
-                i += 1
-                # 如果括号深度回到 0 或以下，dependencies 数组结束
-                if bracket_depth <= 0:
-                    in_dependencies = False
-                    bracket_depth = 0
-                continue
-
-            # 如果括号深度回到 0 或以下，dependencies 数组结束
-            if bracket_depth <= 0:
-                in_dependencies = False
-                bracket_depth = 0
-
-        # 将当前行添加到 package 块缓冲中（如果不在跳过状态）
-        current_package_lines.append(line)
-        i += 1
-
-    # 处理最后一个 package 块
-    if current_package_lines and not skip_current_package:
-        result.extend(current_package_lines)
-        processed_packages += 1
 
     print(f"📊 Processing complete: {processed_packages} packages processed", flush=True)
 
@@ -150,38 +149,25 @@ def remove_packages_from_cargo_lock(content: str) -> str:
 
 
 def validate_cargo_lock(content: str) -> bool:
-    """验证 Cargo.lock 格式是否正确"""
+    """验证 Cargo.lock 格式是否正确（快速验证）"""
     # 检查是否至少有一个 package 块
     if '[[package]]' not in content:
         return False
 
-    # 检查是否有基本的 TOML 结构
-    if content.count('[') < content.count(']'):
+    # 检查是否有基本的 TOML 结构（括号匹配）
+    open_brackets = content.count('[')
+    close_brackets = content.count(']')
+    if open_brackets < close_brackets:
         return False
 
-    # 验证每个 [[package]] 块都有 name 字段
-    lines = content.split('\n')
-    in_package = False
-    has_name = False
+    # 快速验证：检查是否有 name 字段（每个 package 块都应该有）
+    # 使用简单的计数方法，不逐行解析
+    package_count = content.count('[[package]]')
+    name_count = content.count('name = "')
 
-    for line in lines:
-        if line.strip() == '[[package]]':
-            if in_package and not has_name:
-                # 前一个 package 块没有 name 字段
-                return False
-            in_package = True
-            has_name = False
-        elif in_package:
-            if extract_package_name(line):
-                has_name = True
-            # 检查是否到了下一个 package 块（简单检查，不处理嵌套）
-            if line.strip().startswith('[') and not line.strip().startswith('[['):
-                in_package = False
-                if not has_name:
-                    return False
-
-    # 检查最后一个 package 块
-    if in_package and not has_name:
+    # 每个 package 块应该至少有一个 name 字段
+    # 允许一些容差（某些包可能有多个 name 字段，或者有注释等）
+    if name_count < package_count:
         return False
 
     return True

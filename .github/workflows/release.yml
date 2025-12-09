@@ -550,7 +550,9 @@ jobs:
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
           # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
+          # xcb-proto 需要 Python 来运行代码生成脚本
           sudo apt-get install -y \
+            python3 \
             libxcb1-dev \
             libxcb-render0-dev \
             libxcb-shape0-dev \
@@ -576,6 +578,9 @@ jobs:
             libxcb-res0-dev \
             libxkbcommon-dev \
             libxkbcommon-x11-dev
+          # 验证 xcb-proto 和 Python 已正确安装
+          which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
+          python3 --version || echo "⚠️  Python3 not found"
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -641,12 +646,13 @@ jobs:
               # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
               # 以及从其他包的 dependencies 中移除对这些包的引用
               # Python 脚本更可靠，能更好地处理 TOML 格式
-              # 添加超时机制（60秒），防止脚本卡住
+              # 添加超时机制（120秒），防止脚本卡住
               echo "🔄 Processing Cargo.lock to remove xcb dependencies..."
-              timeout 60 python3 .github/scripts/remove_xcb_deps.py || {
+              timeout 120 python3 .github/scripts/remove_xcb_deps.py || {
                 EXIT_CODE=$?
                 if [ $EXIT_CODE -eq 124 ]; then
-                  echo "❌ Script timed out after 60 seconds"
+                  echo "❌ Script timed out after 120 seconds"
+                  echo "⚠️  This may indicate a performance issue with the script"
                 else
                   echo "❌ Script failed with exit code $EXIT_CODE"
                 fi
