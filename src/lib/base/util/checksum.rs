@@ -127,7 +127,6 @@ impl Checksum {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// ```rust,no_run
     /// use workflow::base::util::checksum::Checksum;
     /// use std::path::Path;
     ///

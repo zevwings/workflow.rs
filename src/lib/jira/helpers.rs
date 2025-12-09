@@ -73,7 +73,7 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
 /// # 示例
 /// ```
 /// use workflow::jira::helpers::extract_jira_ticket_id;
-/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123"));
+/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123".to_string()));
 /// assert_eq!(extract_jira_ticket_id("Fix bug"), None);
 /// ```
 pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {

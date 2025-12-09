@@ -96,11 +96,14 @@ pub fn build_jira_url(path: &str) -> Result<String> {
 ///
 /// ```rust,no_run
 /// use workflow::jira::api::helpers::jira_auth_config;
-/// use crate::base::http::RequestConfig;
+/// use workflow::base::http::RequestConfig;
 /// use serde_json::Value;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let auth = jira_auth_config()?;
 /// let config = RequestConfig::<Value, Value>::new().auth(auth);
+/// # Ok(())
+/// # }
 /// ```
 pub fn jira_auth_config() -> Result<&'static Authorization> {
     static AUTH: OnceLock<Result<Authorization>> = OnceLock::new();

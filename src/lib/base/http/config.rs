@@ -10,12 +10,14 @@ use super::auth::Authorization;
 /// # 示例
 ///
 /// ```rust,no_run
+/// use serde_json::Value;
 /// use workflow::base::http::{HttpClient, RequestConfig};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = HttpClient::global()?;
-/// let config = RequestConfig::<serde_json::Value, serde_json::Value>::new()
-///     .query(&[("page", "1")]);
+/// let query = [("page", "1")];
+/// let config = RequestConfig::<Value, _>::new()
+///     .query(&query);
 /// let response = client.get("https://api.example.com", config)?;
 /// # Ok(())
 /// # }
@@ -76,10 +78,11 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::RequestConfig;
     ///
     /// let body = serde_json::json!({"key": "value"});
-    /// let config = RequestConfig::new().body(&body);
+    /// let config = RequestConfig::<Value, Value>::new().body(&body);
     /// ```
     pub fn body(mut self, body: &'a B) -> Self {
         self.body = Some(body);
@@ -99,17 +102,18 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::RequestConfig;
     ///
     /// // 使用元组数组
     /// let query = [("page", "1"), ("per_page", "10")];
-    /// let config = RequestConfig::new().query(&query);
+    /// let config = RequestConfig::<Value, _>::new().query(&query);
     ///
     /// // 使用 HashMap
     /// use std::collections::HashMap;
     /// let mut params = HashMap::new();
     /// params.insert("state", "open");
-    /// let config = RequestConfig::new().query(&params);
+    /// let config = RequestConfig::<Value, _>::new().query(&params);
     /// ```
     pub fn query(mut self, query: &'a Q) -> Self {
         self.query = Some(query);
@@ -129,10 +133,11 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::{RequestConfig, Authorization};
     ///
     /// let auth = Authorization::new("user@example.com", "api_token");
-    /// let config = RequestConfig::new().auth(&auth);
+    /// let config = RequestConfig::<Value, Value>::new().auth(&auth);
     /// ```
     pub fn auth(mut self, auth: &'a Authorization) -> Self {
         self.auth = Some(auth);
@@ -152,12 +157,13 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::RequestConfig;
     /// use reqwest::header::HeaderMap;
     ///
     /// let mut headers = HeaderMap::new();
     /// headers.insert("X-Custom-Header", "value".parse().unwrap());
-    /// let config = RequestConfig::new().headers(&headers);
+    /// let config = RequestConfig::<Value, Value>::new().headers(&headers);
     /// ```
     pub fn headers(mut self, headers: &'a HeaderMap) -> Self {
         self.headers = Some(headers);
@@ -181,10 +187,11 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::RequestConfig;
     /// use std::time::Duration;
     ///
-    /// let config = RequestConfig::new()
+    /// let config = RequestConfig::<Value, Value>::new()
     ///     .timeout(Duration::from_secs(60));
     /// ```
     pub fn timeout(mut self, timeout: Duration) -> Self {

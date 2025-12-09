@@ -169,7 +169,7 @@ impl GitCommit {
     /// # 格式
     ///
     /// 返回的字符串格式：
-    /// ```
+    /// ```text
     /// Staged changes:
     /// {staged diff content}
     ///

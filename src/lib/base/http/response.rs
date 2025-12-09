@@ -140,13 +140,14 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::HttpResponse;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = workflow::base::http::HttpClient::global()?;
     /// # let url = "https://api.example.com";
-    /// # let config = workflow::base::http::RequestConfig::<serde_json::Value, _>::new();
-    /// let response = client.get(url, config)?;
+    /// # let config = workflow::base::http::RequestConfig::<Value, Value>::new();
+    /// # let response = client.get(url, config)?;
     /// let response = response.ensure_success()?; // 如果失败会返回错误
     /// # Ok(())
     /// # }
@@ -179,13 +180,14 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::HttpResponse;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = workflow::base::http::HttpClient::global()?;
     /// # let url = "https://api.example.com";
-    /// # let config = workflow::base::http::RequestConfig::<serde_json::Value, _>::new();
-    /// let response = client.post(url, config)?;
+    /// # let config = workflow::base::http::RequestConfig::<Value, Value>::new();
+    /// # let response = client.post(url, config)?;
     /// let response = response
     ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?;
     /// # Ok(())
@@ -214,10 +216,17 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::http::HttpResponse;
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, HttpResponse, RequestConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = HttpClient::global()?;
+    /// # let config = RequestConfig::<Value, Value>::new();
+    /// # let response = client.get("https://api.example.com", config)?;
     /// let error_msg = response.extract_error_message();
     /// println!("Error: {}", error_msg);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn extract_error_message(&self) -> String {
         // 尝试解析错误响应为 JSON，提取详细的错误信息

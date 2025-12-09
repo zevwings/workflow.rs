@@ -38,11 +38,17 @@ impl LLMClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::llm::LLMClient;
+    /// use workflow::base::llm::{LLMClient, LLMRequestParams};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = LLMClient::global();
-    /// let params = LLMRequestParams::new("What is Rust?");
+    /// let params = LLMRequestParams {
+    ///     user_prompt: "What is Rust?".to_string(),
+    ///     ..Default::default()
+    /// };
     /// let response = client.call(&params)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn global() -> &'static Self {
         static CLIENT: OnceLock<LLMClient> = OnceLock::new();

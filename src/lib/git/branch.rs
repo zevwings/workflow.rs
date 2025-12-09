@@ -284,6 +284,7 @@ impl GitBranch {
     /// ```no_run
     /// use workflow::GitBranch;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // 获取完整分支名（包含前缀）
     /// let branches = GitBranch::get_all_branches(false)?;
     /// // 返回: ["main", "zw/code-optimization", "develop", ...]
@@ -291,6 +292,8 @@ impl GitBranch {
     /// // 获取基础分支名（去掉前缀）
     /// let base_branches = GitBranch::get_all_branches(true)?;
     /// // 返回: ["main", "code-optimization", "develop", ...]
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
         // 获取本地分支列表
@@ -551,8 +554,13 @@ impl GitBranch {
     ///
     /// 如果 `test-rebase` 基于 `develop-` 创建，但想 rebase 到 `master`：
     /// ```no_run
+    /// use workflow::GitBranch;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // 只 rebase test-rebase 独有的提交（排除 develop- 的提交）到 master
     /// GitBranch::rebase_onto_with_upstream("master", "develop-", "test-rebase")?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn rebase_onto_with_upstream(newbase: &str, upstream: &str, branch: &str) -> Result<()> {
         cmd_run(&["rebase", "--onto", newbase, upstream, branch]).with_context(|| {

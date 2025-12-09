@@ -149,6 +149,8 @@ pub fn get_language_instruction(code: &str) -> String {
 /// # 示例
 ///
 /// ```rust
+/// use workflow::get_language_requirement;
+///
 /// let original = "You are a helpful assistant.";
 /// let enhanced = get_language_requirement(original);
 /// // 返回包含强化语言要求的 prompt（语言从配置文件读取）

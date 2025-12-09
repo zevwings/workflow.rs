@@ -219,7 +219,7 @@ pub fn cleanup_branch(
 /// # 示例
 ///
 /// ```
-/// use crate::commands::pr::helpers::apply_branch_name_prefixes;
+/// use workflow::commands::pr::helpers::apply_branch_name_prefixes;
 ///
 /// // 只有基础分支名
 /// let name = apply_branch_name_prefixes("feature-branch".to_string(), None)?;
@@ -233,6 +233,7 @@ pub fn cleanup_branch(
 /// // 假设配置了 github_branch_prefix = "user"
 /// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
 /// // 返回: "user/PROJ-123-feature-branch"
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn apply_branch_name_prefixes(
     mut branch_name: String,

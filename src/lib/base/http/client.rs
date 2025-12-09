@@ -63,11 +63,13 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::http::HttpClient;
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
-    /// let response = client.get("https://api.example.com", None, None)?;
+    /// let config = RequestConfig::<Value, Value>::new();
+    /// let response = client.get("https://api.example.com", config)?;
     /// # Ok(())
     /// # }
     /// ```
@@ -177,12 +179,13 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
-    /// let config = RequestConfig::new().body(&body);
+    /// let config = RequestConfig::<Value, Value>::new().body(&body);
     /// let response = client.post("https://api.example.com", config)?;
     /// # Ok(())
     /// # }
@@ -205,12 +208,13 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
-    /// let config = RequestConfig::new().body(&body);
+    /// let config = RequestConfig::<Value, Value>::new().body(&body);
     /// let response = client.put("https://api.example.com", config)?;
     /// # Ok(())
     /// # }
@@ -238,7 +242,7 @@ impl HttpClient {
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
-    /// let config = RequestConfig::<Value, _>::new();
+    /// let config = RequestConfig::<Value, Value>::new();
     /// let response = client.delete("https://api.example.com", config)?;
     /// # Ok(())
     /// # }
@@ -260,12 +264,13 @@ impl HttpClient {
     /// # 示例
     ///
     /// ```rust,no_run
+    /// use serde_json::Value;
     /// use workflow::base::http::{HttpClient, RequestConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = HttpClient::global()?;
     /// let body = serde_json::json!({"key": "value"});
-    /// let config = RequestConfig::new().body(&body);
+    /// let config = RequestConfig::<Value, Value>::new().body(&body);
     /// let response = client.patch("https://api.example.com", config)?;
     /// # Ok(())
     /// # }

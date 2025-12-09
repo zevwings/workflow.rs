@@ -34,10 +34,13 @@ impl Unzip {
     /// use workflow::base::util::unzip::Unzip;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// Unzip::extract_tar_gz(
     ///     Path::new("archive.tar.gz"),
     ///     Path::new("./output")
     /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
@@ -76,10 +79,13 @@ impl Unzip {
     /// use workflow::base::util::unzip::Unzip;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// Unzip::extract_zip(
     ///     Path::new("archive.zip"),
     ///     Path::new("./output")
     /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn extract_zip(zip_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录

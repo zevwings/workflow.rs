@@ -12,7 +12,7 @@ use std::time::Duration;
 /// # 示例
 ///
 /// ```rust
-/// use crate::base::indicator::Spinner;
+/// use workflow::base::indicator::Spinner;
 ///
 /// // 方式 1：手动管理
 /// let spinner = Spinner::new("Creating PR...");
@@ -20,9 +20,14 @@ use std::time::Duration;
 /// spinner.finish();
 ///
 /// // 方式 2：自动管理（推荐）
-/// let result = Spinner::with("Creating PR...", || {
-///     provider.create_pull_request(...)
-/// })?;
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let result: Result<i32, Box<dyn std::error::Error>> = Spinner::with("Creating PR...", || {
+///     // 执行操作
+///     Ok(42)
+/// });
+/// let _ = result?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct Spinner {
     inner: ProgressBar,
@@ -42,7 +47,7 @@ impl Spinner {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Spinner;
+    /// use workflow::base::indicator::Spinner;
     ///
     /// let spinner = Spinner::new("Creating PR...");
     /// // 执行耗时操作
@@ -68,7 +73,7 @@ impl Spinner {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Spinner;
+    /// use workflow::base::indicator::Spinner;
     ///
     /// let spinner = Spinner::new("Starting...");
     /// spinner.update_message("Processing...");
@@ -85,7 +90,7 @@ impl Spinner {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Spinner;
+    /// use workflow::base::indicator::Spinner;
     ///
     /// let spinner = Spinner::new("Creating PR...");
     /// // 执行操作
@@ -106,7 +111,7 @@ impl Spinner {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Spinner;
+    /// use workflow::base::indicator::Spinner;
     ///
     /// let spinner = Spinner::new("Creating PR...");
     /// // 执行操作
@@ -132,11 +137,16 @@ impl Spinner {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Spinner;
+    /// use workflow::base::indicator::Spinner;
     ///
-    /// let result = Spinner::with("Creating PR...", || {
-    ///     provider.create_pull_request(...)
-    /// })?;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let result: Result<i32, Box<dyn std::error::Error>> = Spinner::with("Creating PR...", || {
+    ///     // 执行操作
+    ///     Ok(42)
+    /// });
+    /// let _ = result?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with<F, T, E>(message: impl AsRef<str>, operation: F) -> Result<T, E>
     where
@@ -169,14 +179,19 @@ impl Spinner {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use crate::base::indicator::Spinner;
-    /// use crate::log_success;
+    /// ```rust,no_run
+    /// use workflow::base::indicator::Spinner;
+    /// use workflow::log_success;
     ///
-    /// Spinner::with_output("Pushing to remote...", || {
-    ///     GitBranch::push(&current_branch, false)
-    /// })?;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let result: Result<(), Box<dyn std::error::Error>> = Spinner::with_output("Pushing to remote...", || {
+    ///     // 执行操作
+    ///     Ok(())
+    /// });
+    /// result?;
     /// log_success!("Pushed to remote successfully");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn with_output<F, T, E>(message: impl AsRef<str>, operation: F) -> Result<T, E>
     where
