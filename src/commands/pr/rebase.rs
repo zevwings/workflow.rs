@@ -5,7 +5,7 @@ use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_error, log_info, log_success, log_warning};
+use crate::{log_break, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR Rebase 命令
@@ -379,6 +379,7 @@ impl PullRequestRebaseCommand {
             log_info!("Skipping push (use without --no-push to push by default)");
         }
 
+        log_break!();
         log_success!("Rebase operation completed successfully");
         Ok(())
     }

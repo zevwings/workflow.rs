@@ -213,6 +213,7 @@ impl PullRequestPickCommand {
         // 如果 PR 创建失败，返回错误
         pr_result?;
 
+        log_break!();
         log_success!("Pick operation completed successfully!");
         Ok(())
     }

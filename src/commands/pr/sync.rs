@@ -191,6 +191,7 @@ impl PullRequestSyncCommand {
         // 8. 管理 PR 和分支清理（交互式）
         Self::handle_source_branch_cleanup(&source_branch, &current_branch)?;
 
+        log_break!();
         log_success!("Sync completed successfully!");
         Ok(())
     }
