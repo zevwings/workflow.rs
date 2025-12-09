@@ -6,6 +6,7 @@ use duct::cmd;
 
 use super::commit::GitCommit;
 use super::repo::GitRepo;
+use crate::{log_break, log_info, log_success};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -101,21 +102,31 @@ impl GitPreCommit {
                 anyhow::bail!("Pre-commit checks failed");
             }
         } else if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
-            // 执行 Git hooks
-            let output = Command::new(&hooks_path)
-                .output()
-                .context("Failed to run pre-commit hooks")?;
-
-            if output.status.success() {
+            // 检查是否是我们的标准 pre-commit hook（包含代码质量检查）
+            if Self::is_standard_pre_commit_hook(&hooks_path) {
+                // 使用 Rust 实现代码质量检查，统一使用日志宏
+                Self::run_code_quality_checks()?;
                 Ok(PreCommitResult {
                     executed: true,
-                    messages: vec![
-                        "Running Git pre-commit hooks...".to_string(),
-                        "Pre-commit checks passed".to_string(),
-                    ],
+                    messages: vec!["Code quality checks passed".to_string()],
                 })
             } else {
-                anyhow::bail!("Pre-commit checks failed");
+                // 执行其他 Git hooks
+                let output = Command::new(&hooks_path)
+                    .output()
+                    .context("Failed to run pre-commit hooks")?;
+
+                if output.status.success() {
+                    Ok(PreCommitResult {
+                        executed: true,
+                        messages: vec![
+                            "Running Git pre-commit hooks...".to_string(),
+                            "Pre-commit checks passed".to_string(),
+                        ],
+                    })
+                } else {
+                    anyhow::bail!("Pre-commit checks failed");
+                }
             }
         } else {
             // 没有 pre-commit hooks，跳过
@@ -125,5 +136,106 @@ impl GitPreCommit {
                 messages: vec![],
             })
         }
+    }
+
+    /// Check if this is a standard pre-commit hook (contains code quality checks)
+    fn is_standard_pre_commit_hook(hooks_path: &std::path::Path) -> bool {
+        // Check if file content contains our standard check logic
+        if let Ok(content) = std::fs::read_to_string(hooks_path) {
+            content.contains("运行代码质量检查")
+                || content.contains("Code quality check")
+                || content.contains("Running code quality checks")
+        } else {
+            false
+        }
+    }
+
+    /// Run code quality checks (using log macros for unified output)
+    ///
+    /// Includes:
+    /// 1. Auto-format code
+    /// 2. Update staged files
+    /// 3. Run full code checks (format, Clippy, Check)
+    fn run_code_quality_checks() -> Result<()> {
+        log_break!('=', 38);
+        log_info!("🔍 Running code quality checks (Pre-commit Hook)");
+        log_break!('=', 38);
+        log_break!();
+
+        // 1. Auto-format code
+        log_info!("📝 Auto-formatting code...");
+        let fmt_output = cmd("cargo", &["fmt"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run cargo fmt")?;
+
+        if !fmt_output.status.success() {
+            anyhow::bail!("Code formatting failed");
+        }
+        log_success!("Code formatting completed");
+        log_break!();
+
+        // 2. Add formatted files to staging area
+        log_info!("📦 Updating staged files...");
+        GitCommit::add_all().context("Failed to update staged files")?;
+        log_success!("Staged files updated");
+        log_break!();
+
+        // 3. Run full code checks
+        log_info!("Running full code checks...");
+        log_break!();
+
+        // 3.1 Check code format
+        log_info!("1/3 Checking code format...");
+        let fmt_check = cmd("cargo", &["fmt", "--check"])
+            .stdout_capture()
+            .stderr_capture()
+            .run();
+
+        match fmt_check {
+            Ok(output) if output.status.success() => {
+                log_success!("Code format is correct");
+            }
+            _ => {
+                anyhow::bail!("Code format is incorrect, run 'cargo fmt' to auto-fix");
+            }
+        }
+        log_break!();
+
+        // 3.2 Run Clippy check
+        log_info!("2/3 Running Clippy check...");
+        let clippy_output = cmd("cargo", &["clippy", "--", "-D", "warnings"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run cargo clippy")?;
+
+        if !clippy_output.status.success() {
+            anyhow::bail!("Clippy check failed");
+        }
+        log_success!("Clippy check passed");
+        log_break!();
+
+        // 3.3 Run cargo check
+        log_info!("3/3 Running cargo check...");
+        let check_output = cmd("cargo", &["check"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run cargo check")?;
+
+        if !check_output.status.success() {
+            anyhow::bail!("Cargo check failed");
+        }
+        log_success!("Check passed");
+        log_break!();
+
+        log_success!("All checks passed!");
+        log_break!();
+        log_success!("✅ All checks passed, continuing with commit...");
+        log_break!();
+
+        Ok(())
     }
 }

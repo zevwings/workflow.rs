@@ -6,6 +6,7 @@
 //! - 提交更改（commit）
 
 use anyhow::{Context, Result};
+use duct::cmd;
 
 use super::helpers::{check_success, cmd_read, cmd_run};
 use super::pre_commit::GitPreCommit;
@@ -126,9 +127,12 @@ impl GitCommit {
         Self::add_all().context("Failed to stage changes")?;
 
         // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
-        if !no_verify && GitPreCommit::has_pre_commit() {
+        let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
             GitPreCommit::run_pre_commit()?;
-        }
+            true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
+        } else {
+            false
+        };
 
         // 7. 执行提交
         let mut args = vec!["commit", "-m", message];
@@ -136,7 +140,15 @@ impl GitCommit {
             args.push("--no-verify");
         }
 
-        cmd_run(&args).context("Failed to commit")?;
+        // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
+        if should_skip_hook {
+            cmd("git", &args)
+                .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
+                .run()
+                .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+        } else {
+            cmd_run(&args).context("Failed to commit")?;
+        }
 
         Ok(CommitResult {
             committed: true,
