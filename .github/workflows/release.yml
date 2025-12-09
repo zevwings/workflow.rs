@@ -611,6 +611,7 @@ jobs:
           sudo apt-get install -y \
             python3 \
             python3-pip \
+            python3-xcbgen \
             libxcb1-dev \
             libxcb-render0-dev \
             libxcb-shape0-dev \
@@ -666,21 +667,33 @@ jobs:
             exit 1
           fi
           python3 --version || echo "⚠️  Python3 not found"
-          # 验证 xcb-proto 的 Python 模块是否可用（xcb crate 构建脚本需要）
-          echo "🔍 Checking for xcb-proto Python modules..."
+          # 验证 xcbgen Python 模块是否可用（xcb crate 构建脚本需要）
+          echo "🔍 Checking for xcbgen Python module..."
           if python3 -c "import xcbgen" 2>/dev/null; then
-            echo "✅ xcbgen Python module found"
+            echo "✅ xcbgen Python module is importable"
+            # 显示模块位置
+            python3 -c "import xcbgen; print(f'xcbgen location: {xcbgen.__file__}')" 2>/dev/null || true
           else
-            echo "⚠️  Warning: xcbgen Python module not found, trying to locate..."
+            echo "❌ Error: xcbgen Python module is not importable"
+            echo "   This is required for xcb crate to build"
+            echo "   Please ensure python3-xcbgen package is installed"
             # 尝试查找 xcbgen 模块的位置
             XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
             if [ -n "$XCBGEN_PATH" ]; then
-              echo "✅ Found xcbgen at: $XCBGEN_PATH"
-              # 将 xcbgen 的父目录添加到 PYTHONPATH
+              echo "   Found xcbgen directory at: $XCBGEN_PATH"
+              echo "   Trying to add to PYTHONPATH..."
               export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
-              echo "✅ Added to PYTHONPATH: $PYTHONPATH"
+              echo "   PYTHONPATH: $PYTHONPATH"
+              # 再次尝试导入
+              if python3 -c "import xcbgen" 2>/dev/null; then
+                echo "✅ xcbgen module is now importable after setting PYTHONPATH"
+              else
+                echo "❌ xcbgen still not importable"
+                exit 1
+              fi
             else
-              echo "⚠️  xcbgen module not found, xcb crate build may fail"
+              echo "   xcbgen directory not found"
+              exit 1
             fi
           fi
           # 验证 pkg-config 能找到 xcb 库
@@ -765,31 +778,30 @@ jobs:
             echo "🔍 Checking for xcbgen Python module..."
             if python3 -c "import xcbgen" 2>/dev/null; then
               echo "✅ xcbgen module is importable"
+              # 显示模块位置以便调试
+              python3 -c "import xcbgen; print(f'xcbgen location: {xcbgen.__file__}')" 2>/dev/null || true
             else
-              echo "⚠️  xcbgen not importable, searching for module location..."
+              echo "❌ Error: xcbgen not importable"
+              echo "   This will cause xcb crate build to fail"
               # 尝试查找并添加 xcbgen 路径
               XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
               if [ -n "$XCBGEN_PATH" ]; then
                 export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
-                echo "✅ Found xcbgen at: $XCBGEN_PATH"
-                echo "✅ PYTHONPATH set to: $PYTHONPATH"
+                echo "   Found xcbgen at: $XCBGEN_PATH"
+                echo "   PYTHONPATH set to: $PYTHONPATH"
                 # 再次验证
                 if python3 -c "import xcbgen" 2>/dev/null; then
                   echo "✅ xcbgen module is now importable"
                 else
-                  echo "⚠️  Warning: xcbgen still not importable after setting PYTHONPATH"
+                  echo "❌ xcbgen still not importable after setting PYTHONPATH"
+                  exit 1
                 fi
               else
-                echo "⚠️  Warning: xcbgen module directory not found"
-                echo "   This may cause xcb crate build to fail"
-                echo "   Trying to find via dpkg..."
-                # 尝试通过 dpkg 查找
-                XCBGEN_PATH=$(dpkg -L xcb-proto 2>/dev/null | grep "xcbgen" | head -1 | xargs dirname 2>/dev/null || echo "")
-                if [ -n "$XCBGEN_PATH" ] && [ -d "$XCBGEN_PATH" ]; then
-                  export PYTHONPATH="$XCBGEN_PATH:${PYTHONPATH:-}"
-                  echo "✅ Found xcbgen via dpkg at: $XCBGEN_PATH"
-                  echo "✅ PYTHONPATH set to: $PYTHONPATH"
-                fi
+                echo "   xcbgen module directory not found"
+                echo "   Checking installed packages..."
+                dpkg -l | grep -i xcb || echo "   No xcb packages found"
+                echo "   Please ensure python3-xcbgen package is installed"
+                exit 1
               fi
             fi
           fi
@@ -870,11 +882,14 @@ jobs:
               echo "❌ python3 not found"
               exit 1
             fi
-            # 验证 xcbgen Python 模块
+            # 验证 xcbgen Python 模块（必需）
             if python3 -c "import xcbgen" 2>/dev/null; then
               echo "✅ xcbgen Python module is importable"
             else
-              echo "⚠️  Warning: xcbgen module not importable, but continuing (may be in PYTHONPATH)"
+              echo "❌ Error: xcbgen module not importable"
+              echo "   This is required for xcb crate to build"
+              echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+              exit 1
             fi
             # 验证 pkg-config
             if pkg-config --exists xcb; then
@@ -896,10 +911,10 @@ jobs:
               grep -i "xcb\|xproto\|big_requests" build.log || echo "No xcb-related errors found in log"
             fi
           else
-            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
-              BUILD_SUCCESS=true
-            else
-              BUILD_SUCCESS=false
+          if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+            BUILD_SUCCESS=true
+          else
+            BUILD_SUCCESS=false
             fi
           fi
 
