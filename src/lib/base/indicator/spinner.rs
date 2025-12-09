@@ -181,6 +181,9 @@ impl Spinner {
         F: FnOnce() -> Result<T, E>,
     {
         let spinner = Self::new(message);
+        // 先让 spinner 显示一小段时间，确保用户能看到消息
+        std::thread::sleep(Duration::from_millis(150));
+        // 然后 suspend spinner，执行操作（让子进程输出正常显示）
         let result = spinner.inner.suspend(operation);
         spinner.finish();
         result
