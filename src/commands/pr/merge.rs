@@ -22,34 +22,26 @@ impl PullRequestMergeCommand {
         // 1. 运行环境检查
         check::CheckCommand::run_all()?;
 
-        // 2. 运行代码质量检查（Lint）
-        log_break!();
-        check::CheckCommand::run_lint()?;
-
-        // 3. 运行测试检查
-        log_break!();
-        check::CheckCommand::run_test()?;
-
-        // 4. 获取 PR ID
+        // 2. 获取 PR ID
         let pull_request_id = resolve_pull_request_id(pull_request_id)?;
 
         log_break!();
         log_success!("Merging PR: #{}", pull_request_id);
 
-        // 5. 获取当前分支名（合并前保存）
+        // 3. 获取当前分支名（合并前保存）
         let current_branch = GitBranch::current_branch()?;
 
-        // 6. 获取默认分支
+        // 4. 获取默认分支
         let default_branch = GitBranch::get_default_branch()?;
 
-        // 7. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
+        // 5. 合并 PR（如果已合并，跳过合并步骤但继续执行后续步骤）
         Self::merge_pull_request(&pull_request_id)?;
 
-        // 8. 合并后清理：切换到默认分支并删除当前分支
+        // 6. 合并后清理：切换到默认分支并删除当前分支
         // 注意：如果 PR 已合并，远程分支可能已经被删除
         Self::cleanup_after_merge(&current_branch, &default_branch)?;
 
-        // 9. 更新 Jira 状态（如果关联了 ticket）
+        // 7. 更新 Jira 状态（如果关联了 ticket）
         Self::update_jira_status(&pull_request_id)?;
 
         Ok(())

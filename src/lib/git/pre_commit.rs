@@ -204,6 +204,24 @@ impl GitPreCommit {
 
         // 执行 Git pre-commit hook 脚本（如果存在）
         if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
+            // 检查 Git hook 是否是由 pre-commit 工具生成的（需要配置文件）
+            let hook_content = std::fs::read_to_string(&hooks_path).ok();
+            let is_pre_commit_hook = hook_content
+                .as_ref()
+                .map(|content| {
+                    content.contains("pre-commit") && content.contains(".pre-commit-config.yaml")
+                })
+                .unwrap_or(false);
+
+            // 如果是由 pre-commit 工具生成的 hook，检查配置文件是否存在
+            if is_pre_commit_hook && !Path::new(".pre-commit-config.yaml").exists() {
+                anyhow::bail!(
+                    "Pre-commit hook requires .pre-commit-config.yaml but it doesn't exist.\n\
+                    Please create the config file or remove the pre-commit hook.\n\
+                    To uninstall: run `pre-commit uninstall`"
+                );
+            }
+
             // 执行 Git pre-commit hook 脚本
             let output =
                 Command::new(&hooks_path).output().context("Failed to run pre-commit hooks")?;
@@ -217,7 +235,26 @@ impl GitPreCommit {
                     ],
                 })
             } else {
-                anyhow::bail!("Pre-commit checks failed");
+                // 显示具体的错误信息
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let stdout = String::from_utf8_lossy(&output.stdout);
+
+                // 构建错误消息
+                let mut error_msg = String::from("Pre-commit checks failed");
+
+                // 显示错误输出
+                if !stderr.trim().is_empty() {
+                    eprintln!("\n{}", stderr);
+                    error_msg.push_str(&format!("\n\n{}", stderr));
+                }
+                if !stdout.trim().is_empty() {
+                    eprintln!("{}", stdout);
+                    if !error_msg.contains(&stdout.to_string()) {
+                        error_msg.push_str(&format!("\n{}", stdout));
+                    }
+                }
+
+                anyhow::bail!("{}", error_msg);
             }
         } else {
             // 没有 pre-commit hooks，跳过

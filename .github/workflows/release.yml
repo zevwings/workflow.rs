@@ -291,7 +291,7 @@ jobs:
             echo "⚠️  Warning: Could not find workflow package in Cargo.lock"
           fi
 
-      - name: Create version update PR
+      - name: Create and merge version update pull request
         if: steps.check_tag.outputs.needs_increment == 'true'
         shell: bash
         env:
@@ -301,201 +301,107 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 提交更改（同时提交 Cargo.toml 和 Cargo.lock）
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+
+          # 第一步：创建新分支
+          echo "Step 1: Creating branch $BRANCH_NAME"
+          git checkout -b "$BRANCH_NAME"
+
+          # 第二步：添加文件
+          echo "Step 2: Staging Cargo.toml and Cargo.lock"
           git add Cargo.toml Cargo.lock
 
-          # 检查是否有更改需要提交
-          if git diff --staged --quiet; then
-            echo "No changes to commit. Files are already up to date."
-          else
-            NEW_VERSION="${{ steps.check_tag.outputs.version }}"
-            BRANCH_NAME="bump-version-${NEW_VERSION}"
+          # 第三步：提交更改
+          echo "Step 3: Committing changes"
+          git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
 
-            # 创建新分支
-            echo "Creating branch: $BRANCH_NAME"
-            git checkout -b "$BRANCH_NAME"
+          # 第四步：推送到新分支
+          echo "Step 4: Pushing branch to origin"
+          git push origin "$BRANCH_NAME"
 
-            # 提交更改（使用 [skip ci] 跳过 CI 检查，因为版本更新不需要重新运行所有检查）
-            git commit -m "chore: bump version to ${NEW_VERSION} [skip ci]"
+          # 第五步：创建 Pull Request
+          echo "Step 5: Creating Pull Request"
+          PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls" \
+            -d '{
+              "title": "chore: bump version to '"$NEW_VERSION"'",
+              "head": "'"$BRANCH_NAME"'",
+              "base": "master",
+              "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }')
 
-            # 推送到新分支
-            echo "Pushing branch: $BRANCH_NAME"
-            if ! git push origin "$BRANCH_NAME"; then
-              echo "❌ Failed to push branch $BRANCH_NAME"
-              exit 1
-            fi
-            echo "✅ Branch pushed successfully"
+          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
+          PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
 
-            # 创建 Pull Request
-            echo "Creating Pull Request..."
-            PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
+            echo "Response: $PR_BODY"
+            exit 1
+          fi
+
+          # 提取 PR 信息
+          PR_NUMBER=$(echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
+          PR_URL=$(echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
+          echo "✅ PR #$PR_NUMBER created: $PR_URL"
+
+          # 第六步：合并 Pull Request
+          echo "Step 6: Merging Pull Request"
+
+          # 等待 PR 可合并（最多等待 2 分钟，每 5 秒检查一次）
+          MAX_WAIT=120
+          CHECK_INTERVAL=5
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            PR_STATUS=$(curl -s \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "https://api.github.com/repos/${{ github.repository }}/pulls" \
-              -d '{
-                "title": "chore: bump version to '"$NEW_VERSION"'",
-                "head": "'"$BRANCH_NAME"'",
-                "base": "master",
-                "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-              }')
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
 
-            HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
-            PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
+            MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+            MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
 
-            if [ "$HTTP_CODE" = "201" ]; then
-              # 提取 PR 信息
-              PR_URL=$(echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
-              PR_NUMBER=$(echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
-              echo "✅ Pull Request created successfully"
-              echo "PR #$PR_NUMBER: $PR_URL"
-              echo ""
+            if [ "$MERGED" = "true" ]; then
+              echo "✅ PR already merged"
+              exit 0
+            fi
 
-              # 为版本更新 PR 创建通过的状态检查（因为使用了 [skip ci]，需要手动创建检查）
-              echo "📝 Creating status check for version bump PR..."
-              COMMIT_SHA=$(git rev-parse HEAD)
-
-              # 创建状态检查，标记为通过（因为版本更新不需要重新运行 CI）
-              STATUS_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            if [ "$MERGEABLE" = "true" ]; then
+              # 尝试合并
+              MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
                 -H "Accept: application/vnd.github+json" \
                 -H "Authorization: Bearer $GITHUB_TOKEN" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/${{ github.repository }}/statuses/$COMMIT_SHA" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
                 -d '{
-                  "state": "success",
-                  "target_url": "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-                  "description": "Version bump - CI checks skipped (version-only change)",
-                  "context": "Run check-status"
+                  "commit_title": "chore: bump version to '"$NEW_VERSION"' [skip ci]",
+                  "commit_message": "Automated version bump to '"$NEW_VERSION"'\n\nMerged via GitHub Actions workflow [skip ci]",
+                  "merge_method": "squash"
                 }')
 
-              STATUS_HTTP_CODE=$(echo "$STATUS_RESPONSE" | tail -n1)
-              if [ "$STATUS_HTTP_CODE" = "201" ]; then
-                echo "✅ Status check created successfully"
+              MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
+              if [ "$MERGE_CODE" = "200" ]; then
+                echo "✅ PR merged successfully"
+                exit 0
               else
-                echo "⚠️  Warning: Failed to create status check (HTTP $STATUS_HTTP_CODE)"
-              fi
-
-              # 等待状态检查生效
-              sleep 2
-
-              # 自动合并 PR（由于使用了 [skip ci]，PR 应该很快变为可合并）
-              echo "🔄 Checking if PR is ready to merge..."
-
-              # 等待 CI 检查通过（最多等待 10 分钟，每 30 秒检查一次）
-              MAX_WAIT_TIME=600  # 10 分钟
-              CHECK_INTERVAL=30  # 30 秒
-              ELAPSED=0
-              MERGEABLE=false
-
-              while [ $ELAPSED -lt $MAX_WAIT_TIME ]; do
-                # 检查 PR 状态
-                PR_STATUS=$(curl -s \
-                  -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: Bearer $GITHUB_TOKEN" \
-                  -H "X-GitHub-Api-Version: 2022-11-28" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
-
-                # 检查是否可合并
-                MERGEABLE_STATE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
-                MERGED_STATE=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
-
-                if [ "$MERGED_STATE" = "true" ]; then
-                  echo "✅ PR has already been merged"
-                  MERGEABLE=true
-                  break
-                fi
-
-                if [ "$MERGEABLE_STATE" = "true" ]; then
-                  echo "✅ PR is mergeable, attempting to merge..."
-                  MERGEABLE=true
-                  break
-                elif [ "$MERGEABLE_STATE" = "false" ]; then
-                  echo "⏳ PR is not mergeable yet (waiting for checks...)"
-                else
-                  echo "⏳ PR mergeable state: $MERGEABLE_STATE (waiting...)"
-                fi
-
-                sleep $CHECK_INTERVAL
-                ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-                echo "   Elapsed: ${ELAPSED}s / ${MAX_WAIT_TIME}s"
-              done
-
-              if [ "$MERGEABLE" = "true" ]; then
-                # 检查是否已合并
-                PR_STATUS=$(curl -s \
-                  -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: Bearer $GITHUB_TOKEN" \
-                  -H "X-GitHub-Api-Version: 2022-11-28" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
-
-                MERGED_STATE=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
-
-                if [ "$MERGED_STATE" != "true" ]; then
-                  # 合并 PR（使用 squash merge）
-                  echo "🔀 Merging PR #$PR_NUMBER..."
-                  MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
-                    -H "Accept: application/vnd.github+json" \
-                    -H "Authorization: Bearer $GITHUB_TOKEN" \
-                    -H "X-GitHub-Api-Version: 2022-11-28" \
-                    "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
-                    -d '{
-                      "commit_title": "chore: bump version to '"$NEW_VERSION"'",
-                      "commit_message": "Automated version bump to '"$NEW_VERSION"'\n\nMerged via GitHub Actions workflow",
-                      "merge_method": "squash"
-                    }')
-
-                  MERGE_HTTP_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
-                  MERGE_BODY=$(echo "$MERGE_RESPONSE" | head -n-1)
-
-                  if [ "$MERGE_HTTP_CODE" = "200" ]; then
-                    echo "✅ PR merged successfully"
-                    echo "🔗 Merged PR: $PR_URL"
-                    echo ""
-                    echo "📝 The version update has been merged to master."
-                    echo "   The next workflow run will create the tag and release."
-                  else
-                    echo "⚠️  Warning: Failed to merge PR (HTTP $MERGE_HTTP_CODE)"
-                    echo "Response: $MERGE_BODY"
-                    echo ""
-                    echo "Please manually merge the PR: $PR_URL"
-                  fi
-                else
-                  echo "✅ PR has already been merged"
-                fi
-              else
-                echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT_TIME}s"
-                echo "   This may be due to:"
-                echo "   - CI checks still running"
-                echo "   - Branch protection rules requiring manual review"
-                echo "   - Merge conflicts"
-                echo ""
-                echo "Please check and manually merge the PR: $PR_URL"
-              fi
-            else
-              echo "⚠️  Warning: Failed to create Pull Request (HTTP $HTTP_CODE)"
-              echo "Response: $PR_BODY"
-              echo ""
-              echo "Branch $BRANCH_NAME has been pushed successfully."
-              echo "You can manually create a PR at:"
-              echo "https://github.com/${{ github.repository }}/compare/master...$BRANCH_NAME"
-
-              # 如果 PR 创建失败，检查是否是因为 PR 已存在
-              if echo "$PR_BODY" | grep -q "already exists"; then
-                echo ""
-                echo "ℹ️  A PR for this version may already exist. Checking existing PRs..."
-                EXISTING_PRS=$(curl -s \
-                  -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: Bearer $GITHUB_TOKEN" \
-                  -H "X-GitHub-Api-Version: 2022-11-28" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&state=open")
-
-                if echo "$EXISTING_PRS" | grep -q '"number"'; then
-                  EXISTING_PR_URL=$(echo "$EXISTING_PRS" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
-                  echo "✅ Found existing PR: $EXISTING_PR_URL"
-                fi
+                echo "⚠️  Failed to merge PR (HTTP $MERGE_CODE)"
+                echo "Please manually merge: $PR_URL"
+                exit 1
               fi
             fi
-          fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT}s"
+          echo "Please manually merge: $PR_URL"
+          exit 1
 
       - name: Create and push tag
         if: steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true'
@@ -631,9 +537,10 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
           # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
           # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
@@ -732,7 +639,17 @@ jobs:
               # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
               # 以及从其他包的 dependencies 中移除对这些包的引用
               # Python 脚本更可靠，能更好地处理 TOML 格式
-              python3 .github/scripts/remove_xcb_deps.py
+              # 添加超时机制（60秒），防止脚本卡住
+              echo "🔄 Processing Cargo.lock to remove xcb dependencies..."
+              timeout 60 python3 .github/scripts/remove_xcb_deps.py || {
+                EXIT_CODE=$?
+                if [ $EXIT_CODE -eq 124 ]; then
+                  echo "❌ Script timed out after 60 seconds"
+                else
+                  echo "❌ Script failed with exit code $EXIT_CODE"
+                fi
+                exit $EXIT_CODE
+              }
 
               if [ $? -ne 0 ]; then
                 echo "⚠️  Failed to process Cargo.lock, restoring backup"
