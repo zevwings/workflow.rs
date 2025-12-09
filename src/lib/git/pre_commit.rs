@@ -154,7 +154,7 @@ impl GitPreCommit {
                     break;
                 }
 
-                // 如果重试后仍然失败，返回错误
+                // 如果重试后仍然失败，返回错误并显示详细信息
                 if let Some(output) = last_output {
                     let stderr = String::from_utf8_lossy(&output.stderr);
                     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -170,12 +170,27 @@ impl GitPreCommit {
                         .collect::<Vec<_>>()
                         .join("\n");
 
+                    // 构建错误消息
+                    let mut error_msg = String::from("Pre-commit checks failed");
+
+                    // 提取失败的具体信息
+                    let output_text = format!("{}{}", filtered_stderr, stdout);
+                    if let Some(failed_hook) = output_text
+                        .lines()
+                        .find(|line| line.contains("Failed") && line.contains("hook id"))
+                    {
+                        error_msg.push_str(&format!("\n\n{}", failed_hook));
+                    }
+
+                    // 显示错误输出
                     if !filtered_stderr.trim().is_empty() {
-                        eprintln!("{}", filtered_stderr);
+                        eprintln!("\n{}", filtered_stderr);
                     }
                     if !stdout.trim().is_empty() {
                         eprintln!("{}", stdout);
                     }
+
+                    anyhow::bail!("{}", error_msg);
                 }
                 anyhow::bail!("Pre-commit checks failed");
             } else {
@@ -227,9 +242,7 @@ impl GitPreCommit {
             GitCommit::add_all().context("Failed to stage files for pre-commit checks")?;
 
             // 使用 Spinner 显示执行过程
-            Spinner::with("🔍 Running pre-commit checks...", || {
-                Self::run_pre_commit()
-            })?;
+            Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
 
             crate::log_success!("Pre-commit checks passed");
             crate::log_break!();
