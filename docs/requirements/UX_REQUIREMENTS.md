@@ -46,6 +46,269 @@ workflow pr merge --interactive                     # 交互式选择 PR
 workflow jira info --interactive                    # 交互式选择 ticket
 ```
 
+**实现示例**：
+
+### 方案 1：使用 `inquire` 的模糊搜索（推荐，已集成）✅
+
+**重要说明**：`inquire` 库已经内置了模糊搜索功能，默认启用 `fuzzy` 和 `fuzzy-matcher` 特性。**无需添加额外的依赖**，可以直接使用现有的 `SelectDialog` 和 `MultiSelectDialog`。
+
+#### 1. 使用现有的对话框（已支持模糊搜索）
+
+```rust
+// src/commands/pr/merge.rs
+use crate::base::dialog::{SelectDialog, MultiSelectDialog};
+use crate::github::PullRequest;
+use anyhow::Result;
+
+pub fn merge_interactive() -> Result<()> {
+    // 获取 PR 列表
+    let prs = fetch_pull_requests()?;
+
+    // 格式化选项（显示 PR 标题和编号）
+    let options: Vec<String> = prs
+        .iter()
+        .map(|pr| format!("#{} - {}", pr.number, pr.title))
+        .collect();
+
+    // 使用 SelectDialog（已支持模糊搜索）
+    // 用户可以直接输入关键词进行模糊匹配
+    let selected = SelectDialog::new("Select PR to merge (type to search)", options)
+        .prompt()?;
+
+    // 解析选中的 PR 编号
+    let pr_number = extract_pr_number(&selected)?;
+
+    // 执行合并
+    merge_pr(pr_number)?;
+
+    Ok(())
+}
+```
+
+```rust
+// src/commands/jira/info.rs
+use crate::base::dialog::MultiSelectDialog;
+use crate::jira::JiraTicket;
+use anyhow::Result;
+
+pub fn info_interactive() -> Result<()> {
+    // 获取 JIRA tickets 列表
+    let tickets = search_jira_tickets()?;
+
+    // 格式化选项
+    let options: Vec<String> = tickets
+        .iter()
+        .map(|t| format!("{} - {} ({})", t.key, t.summary, t.status))
+        .collect();
+
+    // 使用 MultiSelectDialog（已支持模糊搜索和多选）
+    // 用户可以直接输入关键词进行模糊匹配，支持多选
+    let selected = MultiSelectDialog::new("Select tickets to view (type to search)", options)
+        .prompt()?;
+
+    // 显示选中的 tickets 信息
+    for item in selected {
+        let ticket_key = extract_ticket_key(&item)?;
+        show_ticket_info(&ticket_key)?;
+    }
+
+    Ok(())
+}
+```
+
+#### 2. 直接使用 `inquire`（如果需要更多自定义）
+
+```rust
+use inquire::{Select, MultiSelect};
+
+// 单选 + 模糊搜索（默认启用）
+let options = vec!["Option 1", "Option 2", "Option 3"];
+let selected = Select::new("Choose (type to search):", options)
+    .with_page_size(10)  // 设置每页显示数量
+    .prompt()?;
+
+// 多选 + 模糊搜索（默认启用）
+let selected = MultiSelect::new("Choose (type to search):", options)
+    .with_page_size(10)
+    .prompt()?;
+```
+
+**优势**：
+- ✅ 无需添加新依赖（`inquire` 已集成）
+- ✅ 模糊搜索默认启用
+- ✅ 与现有代码风格一致
+- ✅ 支持键盘导航和搜索
+- ✅ 支持多选功能
+
+**使用方式**：
+- 在 `SelectDialog` 或 `MultiSelectDialog` 中，用户可以直接输入文字进行模糊搜索
+- 支持部分匹配、模糊匹配
+- 使用方向键导航，Enter 确认
+
+### 方案 2：使用 `skim` 库（可选，高级功能）
+
+如果 `inquire` 的模糊搜索功能无法满足需求（例如需要更复杂的搜索算法、自定义界面等），可以考虑使用 `skim`。
+
+**何时考虑使用 `skim`**：
+- 需要更强大的模糊匹配算法
+- 需要自定义界面布局
+- 需要更复杂的搜索选项（如正则表达式搜索）
+- 需要与 `fzf` 完全兼容的体验
+
+**添加依赖**：
+```toml
+[dependencies]
+skim = "0.11"
+```
+
+**实现示例**：见下方完整示例部分。
+
+### 方案 3：集成外部 `fzf` 命令（可选）
+
+如果系统已安装 `fzf`，可以通过命令调用：
+
+```rust
+use std::process::{Command, Stdio};
+
+pub fn fuzzy_select_fzf(options: Vec<String>) -> Result<String> {
+    let mut child = Command::new("fzf")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .spawn()?;
+
+    let input = options.join("\n");
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        stdin.write_all(input.as_bytes())?;
+    }
+
+    let output = child.wait_with_output()?;
+    let selected = String::from_utf8(output.stdout)?;
+    Ok(selected.trim().to_string())
+}
+```
+
+**推荐方案**：**优先使用 `inquire`**（方案 1），因为：
+1. 无需添加新依赖
+2. 已集成到项目中
+3. 模糊搜索功能已足够强大
+4. 与现有代码风格一致
+
+### 完整使用示例：PR 交互式合并
+
+```rust
+// src/commands/pr/merge.rs
+use crate::base::dialog::MultiSelectDialog;
+use crate::github::{GitHubProvider, PullRequest};
+use anyhow::Result;
+
+pub fn merge_interactive() -> Result<()> {
+    // 1. 获取当前仓库的 PR 列表
+    let provider = GitHubProvider::new()?;
+    let prs = provider.list_pull_requests("open")?;
+
+    if prs.is_empty() {
+        println!("No open pull requests found");
+        return Ok(());
+    }
+
+    // 2. 格式化选项，显示关键信息
+    let options: Vec<String> = prs
+        .iter()
+        .map(|pr| {
+            format!(
+                "#{} | {} | {} | {}",
+                pr.number,
+                pr.title.chars().take(50).collect::<String>(),
+                pr.author,
+                pr.state
+            )
+        })
+        .collect();
+
+    // 3. 使用 MultiSelectDialog（已支持模糊搜索）
+    // 用户可以直接输入关键词进行模糊匹配，支持多选
+    println!("Select PR(s) to merge (type to search, Space to select, Enter to confirm):");
+    let selected = MultiSelectDialog::new("PRs:", options)
+        .prompt()?;
+
+    // 4. 解析选中的 PR 编号
+    let pr_numbers: Vec<u64> = selected
+        .iter()
+        .filter_map(|s| {
+            s.split('|')
+                .next()?
+                .trim()
+                .strip_prefix('#')?
+                .parse()
+                .ok()
+        })
+        .collect();
+
+    // 5. 确认并执行合并
+    for pr_number in pr_numbers {
+        println!("Merging PR #{}...", pr_number);
+        provider.merge_pull_request(pr_number, "squash")?;
+        println!("✓ PR #{} merged successfully", pr_number);
+    }
+
+    Ok(())
+}
+```
+
+### 完整使用示例：JIRA Ticket 交互式查看
+
+```rust
+// src/commands/jira/info.rs
+use crate::base::dialog::SelectDialog;
+use crate::jira::{JiraClient, JiraTicket};
+use anyhow::Result;
+
+pub fn info_interactive() -> Result<()> {
+    // 1. 搜索 JIRA tickets
+    let client = JiraClient::new()?;
+    let tickets = client.search("assignee = currentUser() AND status != Done")?;
+
+    if tickets.is_empty() {
+        println!("No tickets found");
+        return Ok(());
+    }
+
+    // 2. 格式化选项
+    let options: Vec<String> = tickets
+        .iter()
+        .map(|t| {
+            format!(
+                "{} | {} | {} | {}",
+                t.key,
+                t.summary.chars().take(40).collect::<String>(),
+                t.status,
+                t.assignee.as_deref().unwrap_or("Unassigned")
+            )
+        })
+        .collect();
+
+    // 3. 使用 SelectDialog（已支持模糊搜索）
+    // 用户可以直接输入关键词进行模糊匹配
+    let selected = SelectDialog::new("Select ticket (type to search):", options)
+        .prompt()?;
+
+    // 4. 提取 ticket key
+    let ticket_key = selected
+        .split('|')
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Invalid selection"))?
+        .trim()
+        .to_string();
+
+    // 5. 显示 ticket 详细信息
+    let ticket = client.get_ticket(&ticket_key)?;
+    display_ticket_info(&ticket)?;
+
+    Ok(())
+}
+```
+
 **验收标准**：
 - [ ] 能够通过 fuzzy finder 搜索和选择 PRs
 - [ ] 能够通过 fuzzy finder 搜索和选择 JIRA tickets
@@ -133,16 +396,233 @@ workflow cm                                        # 等同于 workflow pr merge
 workflow js "project = PROJ"                       # 等同于 workflow jira search
 ```
 
-**实现建议**：
+**实现方案**：
+
+### 1. 配置文件结构扩展
+
+在 `workflow.toml` 中添加别名配置：
+
+```toml
+[aliases]
+ci = "pr create"
+cm = "pr merge"
+js = "jira search"
+ji = "jira info"
+```
+
+### 2. 实现 AliasManager
+
 ```rust
+// src/lib/base/alias/mod.rs
+use anyhow::{Context, Result};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::path::PathBuf;
+use crate::base::settings::paths::Paths;
+use crate::jira::config::ConfigManager;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct AliasConfig {
+    #[serde(default)]
+    pub aliases: HashMap<String, String>,
+}
+
 pub struct AliasManager {
-    aliases: HashMap<String, String>,
+    config: AliasConfig,
+    config_path: PathBuf,
 }
 
 impl AliasManager {
-    pub fn expand_alias(&self, command: &str) -> Result<String> {
-        // 展开别名
+    /// 加载别名配置
+    pub fn load() -> Result<Self> {
+        let config_path = Paths::workflow_config()?;
+        let manager = ConfigManager::<AliasConfig>::new(config_path.clone());
+        let config = manager.read().unwrap_or_default();
+        
+        Ok(Self {
+            config,
+            config_path,
+        })
     }
+
+    /// 展开别名（支持嵌套）
+    pub fn expand_alias(&self, command: &str) -> Result<String> {
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if parts.is_empty() {
+            return Ok(command.to_string());
+        }
+
+        let alias_name = parts[0];
+        
+        // 检查是否是别名
+        if let Some(alias_value) = self.config.aliases.get(alias_name) {
+            // 递归展开（防止无限循环）
+            let mut expanded = alias_value.clone();
+            let mut visited = std::collections::HashSet::new();
+            visited.insert(alias_name.to_string());
+            
+            // 处理嵌套别名
+            while let Some(next_alias) = self.find_alias_in_command(&expanded, &mut visited) {
+                if let Some(next_value) = self.config.aliases.get(&next_alias) {
+                    expanded = expanded.replace(&next_alias, next_value);
+                } else {
+                    break;
+                }
+            }
+            
+            // 添加剩余参数
+            if parts.len() > 1 {
+                let args = parts[1..].join(" ");
+                expanded = format!("{} {}", expanded, args);
+            }
+            
+            Ok(expanded)
+        } else {
+            Ok(command.to_string())
+        }
+    }
+
+    /// 查找命令中的别名
+    fn find_alias_in_command(
+        &self,
+        command: &str,
+        visited: &mut std::collections::HashSet<String>,
+    ) -> Option<String> {
+        let parts: Vec<&str> = command.split_whitespace().collect();
+        if let Some(first) = parts.first() {
+            if self.config.aliases.contains_key(*first) && !visited.contains(*first) {
+                return Some(first.to_string());
+            }
+        }
+        None
+    }
+
+    /// 添加别名
+    pub fn add_alias(&mut self, name: &str, value: &str) -> Result<()> {
+        self.config.aliases.insert(name.to_string(), value.to_string());
+        self.save()
+    }
+
+    /// 删除别名
+    pub fn remove_alias(&mut self, name: &str) -> Result<()> {
+        self.config.aliases.remove(name);
+        self.save()
+    }
+
+    /// 列出所有别名
+    pub fn list_aliases(&self) -> &HashMap<String, String> {
+        &self.config.aliases
+    }
+
+    /// 保存配置
+    fn save(&self) -> Result<()> {
+        let manager = ConfigManager::<AliasConfig>::new(self.config_path.clone());
+        manager.write(&self.config)
+    }
+}
+```
+
+### 3. 在主入口集成别名展开
+
+```rust
+// src/bin/workflow.rs
+use workflow::base::alias::AliasManager;
+
+fn main() -> Result<()> {
+    // ... 现有初始化代码 ...
+
+    let mut cli = Cli::parse();
+    
+    // 展开别名（如果是第一个参数）
+    if let Some(first_arg) = std::env::args().nth(1) {
+        let alias_manager = AliasManager::load().unwrap_or_default();
+        if let Ok(expanded) = alias_manager.expand_alias(&first_arg) {
+            if expanded != first_arg {
+                // 别名已展开，重新解析命令
+                let expanded_args: Vec<String> = expanded
+                    .split_whitespace()
+                    .map(|s| s.to_string())
+                    .collect();
+                
+                // 重新构建命令行参数
+                let mut new_args = vec!["workflow".to_string()];
+                new_args.extend(expanded_args);
+                new_args.extend(std::env::args().skip(2));
+                
+                // 重新解析
+                cli = Cli::parse_from(new_args);
+            }
+        }
+    }
+    
+    // ... 继续处理命令 ...
+}
+```
+
+### 4. 添加别名管理命令
+
+```rust
+// src/lib/cli/commands.rs
+#[derive(Subcommand)]
+pub enum Commands {
+    // ... 现有命令 ...
+    
+    /// Manage command aliases
+    Alias {
+        #[command(subcommand)]
+        subcommand: AliasSubcommand,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum AliasSubcommand {
+    /// List all aliases
+    List,
+    /// Add a new alias
+    Add {
+        name: String,
+        value: String,
+    },
+    /// Remove an alias
+    Remove {
+        name: String,
+    },
+}
+```
+
+```rust
+// src/commands/alias/mod.rs
+use crate::base::alias::AliasManager;
+use anyhow::Result;
+
+pub fn list() -> Result<()> {
+    let manager = AliasManager::load()?;
+    let aliases = manager.list_aliases();
+    
+    if aliases.is_empty() {
+        println!("No aliases defined");
+        return Ok(());
+    }
+    
+    println!("Defined aliases:");
+    for (name, value) in aliases {
+        println!("  {} = {}", name, value);
+    }
+    Ok(())
+}
+
+pub fn add(name: String, value: String) -> Result<()> {
+    let mut manager = AliasManager::load()?;
+    manager.add_alias(&name, &value)?;
+    println!("Alias '{}' added: {}", name, value);
+    Ok(())
+}
+
+pub fn remove(name: String) -> Result<()> {
+    let mut manager = AliasManager::load()?;
+    manager.remove_alias(&name)?;
+    println!("Alias '{}' removed", name);
+    Ok(())
 }
 ```
 
@@ -406,8 +886,8 @@ pub fn create_pr_with_error_context(params: CreatePrParams) -> Result<PullReques
 
 ## 🛠️ 技术栈
 
-1. **Fuzzy Finder**：使用 `skim` 或集成 `fzf`
-2. **进度条**：使用 `indicatif` 显示进度
+1. **Fuzzy Finder**：使用 `inquire`（已集成，默认支持模糊搜索）✅
+2. **进度条**：使用 `indicatif` 显示进度 ✅
 3. **Shell Completion**：使用 `clap_complete` 生成补全脚本
 4. **错误处理**：使用 `anyhow` 提供详细错误信息
 5. **操作日志**：记录操作历史以支持撤销

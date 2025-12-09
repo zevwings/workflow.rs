@@ -956,9 +956,8 @@ impl PullRequestPickCommand {
                 Spinner::with("Committing changes...", || {
                     GitCommit::commit(commit_title, true) // no-verify
                 })?;
-                Spinner::with("Pushing to remote...", || {
-                    GitBranch::push(branch_name, true) // set-upstream
-                })?;
+                log_info!("Pushing to remote...");
+                GitBranch::push(branch_name, true)?; // set-upstream
 
                 Ok((branch_name.to_string(), default_branch))
             } else {
@@ -985,9 +984,8 @@ impl PullRequestPickCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
-        Spinner::with("Pushing to remote...", || {
-            GitBranch::push(branch_name, true) // set-upstream
-        })?;
+        log_info!("Pushing to remote...");
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }

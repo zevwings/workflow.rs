@@ -149,4 +149,40 @@ impl Spinner {
         spinner.finish();
         result
     }
+
+    /// 使用 spinner 执行一个会产生输出的操作
+    ///
+    /// 在执行操作前会暂停 spinner，让子进程的输出正常显示，
+    /// 操作完成后恢复并完成 spinner。
+    ///
+    /// 这个方法适用于执行会产生 stdout/stderr 输出的操作（如 `git push`），
+    /// 可以避免子进程的输出与 spinner 动画混合。
+    ///
+    /// # 参数
+    ///
+    /// * `message` - 要显示的消息文本
+    /// * `operation` - 要执行的操作（闭包）
+    ///
+    /// # 返回
+    ///
+    /// 返回操作的结果
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use crate::base::indicator::Spinner;
+    ///
+    /// Spinner::with_output("Pushing to remote...", || {
+    ///     GitBranch::push(&current_branch, false)
+    /// })?;
+    /// ```
+    pub fn with_output<F, T, E>(message: impl AsRef<str>, operation: F) -> Result<T, E>
+    where
+        F: FnOnce() -> Result<T, E>,
+    {
+        let spinner = Self::new(message);
+        let result = spinner.inner.suspend(operation);
+        spinner.finish();
+        result
+    }
 }

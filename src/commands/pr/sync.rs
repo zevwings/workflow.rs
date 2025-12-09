@@ -170,16 +170,14 @@ impl PullRequestSyncCommand {
 
                 // 如果是 rebase，使用 force-with-lease
                 let use_force = matches!(strategy, SyncStrategy::Rebase);
-                Spinner::with("Pushing to remote...", || -> Result<()> {
-                    if use_force {
-                        GitBranch::push_force_with_lease(&current_branch)
-                            .context("Failed to push to remote (force-with-lease)")?;
-                    } else {
-                        GitBranch::push(&current_branch, !exists_remote)
-                            .context("Failed to push to remote")?;
-                    }
-                    Ok(())
-                })?;
+                log_info!("Pushing to remote...");
+                if use_force {
+                    GitBranch::push_force_with_lease(&current_branch)
+                        .context("Failed to push to remote (force-with-lease)")?;
+                } else {
+                    GitBranch::push(&current_branch, !exists_remote)
+                        .context("Failed to push to remote")?;
+                }
                 log_success!("Pushed to remote successfully");
             } else {
                 log_info!("Skipping push (--no-push flag set)");
@@ -303,10 +301,9 @@ impl PullRequestSyncCommand {
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
-            Spinner::with("Pushing changes to update PR...", || {
-                GitBranch::push(current_branch, !exists_remote)
-                    .context("Failed to push to remote to update PR")
-            })?;
+            log_info!("Pushing changes to update PR...");
+            GitBranch::push(current_branch, !exists_remote)
+                .context("Failed to push to remote to update PR")?;
             log_success!("PR #{} updated successfully", pr_id);
             Ok(true)
         } else {

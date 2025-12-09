@@ -332,9 +332,8 @@ impl PullRequestCreateCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
-        Spinner::with("Pushing to remote...", || {
-            GitBranch::push(branch_name, true) // set-upstream
-        })?;
+        log_info!("Pushing to remote...");
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -369,14 +368,12 @@ impl PullRequestCreateCommand {
 
         // 推送（如需要）
         if !exists_remote {
-            Spinner::with("Pushing to remote...", || {
-                GitBranch::push(current_branch, true) // set-upstream
-            })?;
+            log_info!("Pushing to remote...");
+            GitBranch::push(current_branch, true)?; // set-upstream
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
-            Spinner::with("Pushing latest changes...", || {
-                GitBranch::push(current_branch, false) // 不使用 -u，因为已经设置过
-            })?;
+            log_info!("Pushing latest changes...");
+            GitBranch::push(current_branch, false)?; // 不使用 -u，因为已经设置过
         }
 
         Ok((current_branch.to_string(), default_branch.to_string()))
@@ -445,9 +442,8 @@ impl PullRequestCreateCommand {
         Spinner::with("Committing changes...", || {
             GitCommit::commit(commit_title, true) // no-verify
         })?;
-        Spinner::with("Pushing to remote...", || {
-            GitBranch::push(branch_name, true) // set-upstream
-        })?;
+        log_info!("Pushing to remote...");
+        GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -502,9 +498,8 @@ impl PullRequestCreateCommand {
         .prompt()?;
 
         // 推送
-        Spinner::with("Pushing to remote...", || {
-            GitBranch::push(current_branch, true) // set-upstream
-        })?;
+        log_info!("Pushing to remote...");
+        GitBranch::push(current_branch, true)?; // set-upstream
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }

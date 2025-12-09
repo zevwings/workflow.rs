@@ -512,10 +512,9 @@ impl PullRequestRebaseCommand {
     /// 使用 force-with-lease 推送
     fn push_with_force_lease(current_branch: &str) -> Result<()> {
         // 使用 force-with-lease 推送
-        Spinner::with("Pushing to remote (force-with-lease)...", || {
-            GitBranch::push_force_with_lease(current_branch)
-                .context("Failed to push to remote (force-with-lease)")
-        })?;
+        log_info!("Pushing to remote (force-with-lease)...");
+        GitBranch::push_force_with_lease(current_branch)
+            .context("Failed to push to remote (force-with-lease)")?;
 
         log_success!("Pushed to remote successfully");
         Ok(())
