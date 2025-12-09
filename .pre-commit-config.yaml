@@ -1,0 +1,65 @@
+# Pre-commit hooks 配置
+# 用于在提交前自动运行代码质量检查
+#
+# 安装方式：
+#   1. 安装 pre-commit: pip install pre-commit 或 brew install pre-commit
+#   2. 安装 hooks: pre-commit install
+#
+# 使用方式：
+#   - 自动运行（提交时）
+#   - 手动运行: pre-commit run --all-files
+#   - 跳过检查: git commit --no-verify
+
+repos:
+  # 本地自定义 hooks（匹配 .git/hooks/pre-commit 的行为）
+  - repo: local
+    hooks:
+      # 1. 自动格式化代码并更新暂存区
+      # 注意：pre-commit 会在文件被修改后要求重新运行
+      # 但在提交时（git commit），pre-commit 会自动重新运行，无需手动操作
+      - id: cargo-fmt
+        name: Format Rust code
+        entry: bash -c 'cargo fmt && git add -u'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+        # 格式化工具会修改文件，这是预期行为
+
+      # 2. 运行代码检查（格式、Clippy、Check）
+      - id: cargo-lint
+        name: Run cargo lint (fmt, clippy, check)
+        entry: bash -c 'make lint'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      # 3. 运行测试
+      - id: cargo-test
+        name: Run tests
+        entry: bash -c 'if command -v make >/dev/null 2>&1; then make test; else cargo test --lib --tests; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # 通用 Git hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      # 检查文件末尾是否有换行符
+      - id: end-of-file-fixer
+      # 移除行尾空白
+      - id: trailing-whitespace
+      # 检查 YAML 文件格式
+      - id: check-yaml
+      # 检查 JSON 文件格式
+      - id: check-json
+      # 检查 TOML 文件格式
+      - id: check-toml
+      # 检查是否有合并冲突标记
+      - id: check-merge-conflict
+      # 检查是否有大文件被添加
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
