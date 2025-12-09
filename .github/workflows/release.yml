@@ -325,6 +325,9 @@ jobs:
 
           # 第五步：创建 Pull Request
           echo "Step 5: Creating Pull Request"
+          echo "Branch: $BRANCH_NAME"
+          echo "Version: $NEW_VERSION"
+
           PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -340,16 +343,49 @@ jobs:
           HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
           PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
 
+          echo "HTTP Status Code: $HTTP_CODE"
+
           if [ "$HTTP_CODE" != "201" ]; then
             echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
-            echo "Response: $PR_BODY"
-            exit 1
+            echo "Response body:"
+            echo "$PR_BODY" | jq '.' 2>/dev/null || echo "$PR_BODY"
+
+            # 如果是 422 错误（已存在 PR），尝试查找现有的 PR
+            if [ "$HTTP_CODE" = "422" ]; then
+              echo "Checking for existing PR..."
+              EXISTING_PR=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
+
+              PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.[0].number // empty' 2>/dev/null)
+              if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+                PR_URL=$(echo "$EXISTING_PR" | jq -r '.[0].html_url // empty' 2>/dev/null)
+                echo "✅ Found existing PR #$PR_NUMBER: $PR_URL"
+                echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+                echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+                # 继续执行合并步骤
+              else
+                exit 1
+              fi
+            else
+              exit 1
+            fi
+          else
+            # 提取 PR 信息
+            PR_NUMBER=$(echo "$PR_BODY" | jq -r '.number // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
+            PR_URL=$(echo "$PR_BODY" | jq -r '.html_url // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "✅ PR #$PR_NUMBER created: $PR_URL"
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
           fi
 
-          # 提取 PR 信息
-          PR_NUMBER=$(echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
-          PR_URL=$(echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
-          echo "✅ PR #$PR_NUMBER created: $PR_URL"
+          # 确保 PR_NUMBER 已设置
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❌ Error: PR_NUMBER is not set"
+            exit 1
+          fi
 
           # 第六步：合并 Pull Request
           echo "Step 6: Merging Pull Request"
@@ -554,6 +590,7 @@ jobs:
           # xcb-proto 需要 Python 来运行代码生成脚本
           sudo apt-get install -y \
             python3 \
+            python3-pip \
             libxcb1-dev \
             libxcb-render0-dev \
             libxcb-shape0-dev \
@@ -578,10 +615,44 @@ jobs:
             libxcb-screensaver0-dev \
             libxcb-res0-dev \
             libxkbcommon-dev \
-            libxkbcommon-x11-dev
+            libxkbcommon-x11-dev \
+            pkg-config
           # 验证 xcb-proto 和 Python 已正确安装
-          which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
+          echo "🔍 Verifying xcb-proto installation..."
+          if command -v xcb-proto >/dev/null 2>&1; then
+            echo "✅ xcb-proto found in PATH: $(which xcb-proto)"
+            xcb-proto --version || echo "⚠️  xcb-proto version check failed"
+          else
+            # 尝试查找 xcb-proto 的实际位置
+            XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f 2>/dev/null | head -1)
+            if [ -n "$XCB_PROTO_PATH" ]; then
+              echo "✅ xcb-proto found at: $XCB_PROTO_PATH"
+              echo "📝 Adding to PATH for this session"
+              export PATH="$(dirname $XCB_PROTO_PATH):$PATH"
+            else
+              echo "⚠️  xcb-proto not found in PATH or /usr"
+            fi
+          fi
           python3 --version || echo "⚠️  Python3 not found"
+          # 验证 xcb-proto 的 Python 模块是否可用（xcb crate 构建脚本需要）
+          echo "🔍 Checking for xcb-proto Python modules..."
+          if python3 -c "import xcbgen" 2>/dev/null; then
+            echo "✅ xcbgen Python module found"
+          else
+            echo "⚠️  Warning: xcbgen Python module not found, trying to locate..."
+            # 尝试查找 xcbgen 模块的位置
+            XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+            if [ -n "$XCBGEN_PATH" ]; then
+              echo "✅ Found xcbgen at: $XCBGEN_PATH"
+              # 将 xcbgen 的父目录添加到 PYTHONPATH
+              export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+              echo "✅ Added to PYTHONPATH: $PYTHONPATH"
+            else
+              echo "⚠️  xcbgen module not found, xcb crate build may fail"
+            fi
+          fi
+          # 验证 pkg-config 能找到 xcb 库
+          pkg-config --exists xcb && echo "✅ xcb pkg-config found" || echo "⚠️  xcb pkg-config not found"
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -627,6 +698,42 @@ jobs:
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
+          # 为 Linux x86_64 设置 xcb-proto 环境变量
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            # 确保 xcb-proto 在 PATH 中
+            XCB_PROTO_CMD=""
+            if command -v xcb-proto >/dev/null 2>&1; then
+              XCB_PROTO_CMD=$(which xcb-proto)
+              echo "✅ xcb-proto found in PATH: $XCB_PROTO_CMD"
+            else
+              # 尝试查找 xcb-proto 的实际位置
+              XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f 2>/dev/null | head -1)
+              if [ -n "$XCB_PROTO_PATH" ]; then
+                export PATH="$(dirname $XCB_PROTO_PATH):$PATH"
+                XCB_PROTO_CMD="$XCB_PROTO_PATH"
+                echo "✅ Added xcb-proto to PATH: $XCB_PROTO_CMD"
+              fi
+            fi
+            # 设置 XCB_PROTO 环境变量（如果找到）
+            if [ -n "$XCB_PROTO_CMD" ]; then
+              export XCB_PROTO="$XCB_PROTO_CMD"
+              echo "✅ XCB_PROTO environment variable set to: $XCB_PROTO"
+            else
+              echo "⚠️  Warning: xcb-proto not found, xcb crate build may fail"
+            fi
+            # 设置 PKG_CONFIG_PATH 确保能找到 xcb 库
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            echo "✅ PKG_CONFIG_PATH set to: $PKG_CONFIG_PATH"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+              # 尝试查找并添加 xcbgen 路径
+              XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_PATH" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+                echo "✅ PYTHONPATH set to: $PYTHONPATH"
+              fi
+            fi
+          fi
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
@@ -681,11 +788,54 @@ jobs:
               fi
             fi
           fi
+          # 构建前验证（仅 Linux x86_64）
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔍 Pre-build verification for xcb dependencies..."
+            # 验证 xcb-proto
+            if command -v xcb-proto >/dev/null 2>&1; then
+              echo "✅ xcb-proto: $(which xcb-proto)"
+            else
+              echo "❌ xcb-proto not found in PATH"
+              exit 1
+            fi
+            # 验证 Python
+            if command -v python3 >/dev/null 2>&1; then
+              echo "✅ python3: $(which python3)"
+            else
+              echo "❌ python3 not found"
+              exit 1
+            fi
+            # 验证 xcbgen Python 模块
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen Python module is importable"
+            else
+              echo "⚠️  Warning: xcbgen module not importable, but continuing (may be in PYTHONPATH)"
+            fi
+            # 验证 pkg-config
+            if pkg-config --exists xcb; then
+              echo "✅ xcb libraries found via pkg-config"
+              pkg-config --modversion xcb
+            else
+              echo "⚠️  Warning: xcb not found via pkg-config"
+            fi
+          fi
           # 构建项目
-          if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
-            BUILD_SUCCESS=true
+          # 对于 Linux x86_64，启用详细输出以便调试 xcb 构建问题
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔨 Building with verbose output for xcb debugging..."
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed. Checking build log for xcb-related errors..."
+              grep -i "xcb\|xproto\|big_requests" build.log || echo "No xcb-related errors found in log"
+            fi
           else
-            BUILD_SUCCESS=false
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+            fi
           fi
 
           # 恢复 Cargo.lock（如果备份存在，无论构建成功与否都要恢复）
