@@ -637,57 +637,33 @@ jobs:
             libxkbcommon-dev \
             libxkbcommon-x11-dev \
             pkg-config
-          # 验证 xcb-proto 和 Python 已正确安装
-          echo "🔍 Verifying xcb-proto installation..."
-          XCB_PROTO_FOUND=false
-          if command -v xcb-proto >/dev/null 2>&1; then
-            echo "✅ xcb-proto found in PATH: $(which xcb-proto)"
-            xcb-proto --version || echo "⚠️  xcb-proto version check failed"
-            XCB_PROTO_FOUND=true
+          # 验证 xcb-proto 包和 Python 已正确安装
+          echo "🔍 Verifying xcb-proto package installation..."
+          # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+          if dpkg -l | grep -q "^ii.*xcb-proto"; then
+            echo "✅ xcb-proto package is installed"
+            # 验证协议文件目录存在
+            if [ -d "/usr/share/xcb" ]; then
+              echo "✅ xcb protocol files directory found: /usr/share/xcb"
+              # 列出一些协议文件以确认
+              PROTO_COUNT=$(find /usr/share/xcb -name "*.xml" 2>/dev/null | wc -l)
+              if [ "$PROTO_COUNT" -gt 0 ]; then
+                echo "✅ Found $PROTO_COUNT protocol XML files"
+              else
+                echo "⚠️  Warning: No protocol XML files found in /usr/share/xcb"
+              fi
+            else
+              echo "⚠️  Warning: /usr/share/xcb directory not found"
+              # 尝试查找实际位置
+              XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ Found xcb protocol directory at: $XCB_PROTO_DIR"
+              fi
+            fi
           else
-            # 尝试多个可能的位置
-            POSSIBLE_PATHS=(
-              "/usr/bin/xcb-proto"
-              "/usr/local/bin/xcb-proto"
-            )
-
-            for path in "${POSSIBLE_PATHS[@]}"; do
-              if [ -f "$path" ] || [ -x "$path" ]; then
-                echo "✅ xcb-proto found at: $path"
-                export PATH="$(dirname $path):$PATH"
-                XCB_PROTO_FOUND=true
-                break
-              fi
-            done
-
-            # 如果还没找到，使用 find 搜索
-            if [ "$XCB_PROTO_FOUND" = "false" ]; then
-              XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f -executable 2>/dev/null | head -1)
-              if [ -z "$XCB_PROTO_PATH" ]; then
-                XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f 2>/dev/null | head -1)
-              fi
-              if [ -n "$XCB_PROTO_PATH" ]; then
-                echo "✅ xcb-proto found via find: $XCB_PROTO_PATH"
-                export PATH="$(dirname $XCB_PROTO_PATH):$PATH"
-                XCB_PROTO_FOUND=true
-              fi
-            fi
-
-            # 如果还是没找到，尝试使用 dpkg 查找
-            if [ "$XCB_PROTO_FOUND" = "false" ]; then
-              XCB_PROTO_PATH=$(dpkg -L xcb-proto 2>/dev/null | grep -E "bin/xcb-proto|/xcb-proto$" | head -1)
-              if [ -n "$XCB_PROTO_PATH" ] && [ -f "$XCB_PROTO_PATH" ]; then
-                echo "✅ xcb-proto found via dpkg: $XCB_PROTO_PATH"
-                export PATH="$(dirname $XCB_PROTO_PATH):$PATH"
-                XCB_PROTO_FOUND=true
-              fi
-            fi
-
-            if [ "$XCB_PROTO_FOUND" = "false" ]; then
-              echo "⚠️  Warning: xcb-proto not found after search"
-              echo "   This may cause xcb crate build to fail"
-              echo "   Package status: $(dpkg -l | grep xcb-proto || echo 'xcb-proto package not found')"
-            fi
+            echo "❌ Error: xcb-proto package is not installed"
+            echo "   Please ensure xcb-proto package is installed via apt-get"
+            exit 1
           fi
           python3 --version || echo "⚠️  Python3 not found"
           # 验证 xcb-proto 的 Python 模块是否可用（xcb crate 构建脚本需要）
@@ -754,95 +730,66 @@ jobs:
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
-          # 为 Linux x86_64 设置 xcb-proto 环境变量
+          # 为 Linux x86_64 设置 xcb 构建环境
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
-            echo "🔍 Searching for xcb-proto..."
-            # 确保 xcb-proto 在 PATH 中
-            XCB_PROTO_CMD=""
-            if command -v xcb-proto >/dev/null 2>&1; then
-              XCB_PROTO_CMD=$(which xcb-proto)
-              echo "✅ xcb-proto found in PATH: $XCB_PROTO_CMD"
-            else
-              echo "⚠️  xcb-proto not in PATH, searching system..."
-              # 尝试多个可能的位置
-              POSSIBLE_PATHS=(
-                "/usr/bin/xcb-proto"
-                "/usr/local/bin/xcb-proto"
-                "/usr/lib/x86_64-linux-gnu/xcb-proto"
-              )
-
-              for path in "${POSSIBLE_PATHS[@]}"; do
-                if [ -f "$path" ] || [ -x "$path" ]; then
-                  XCB_PROTO_CMD="$path"
-                  echo "✅ Found xcb-proto at: $XCB_PROTO_CMD"
-                  export PATH="$(dirname $XCB_PROTO_CMD):$PATH"
-                  break
-                fi
-              done
-
-              # 如果还没找到，使用 find 搜索
-              if [ -z "$XCB_PROTO_CMD" ]; then
-                echo "🔍 Using find to search for xcb-proto..."
-                XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f -executable 2>/dev/null | head -1)
-                if [ -z "$XCB_PROTO_PATH" ]; then
-                  # 也搜索 Python 脚本
-                  XCB_PROTO_PATH=$(find /usr -name "xcb-proto" -type f 2>/dev/null | head -1)
-                fi
-                if [ -n "$XCB_PROTO_PATH" ]; then
-                  XCB_PROTO_CMD="$XCB_PROTO_PATH"
-                  export PATH="$(dirname $XCB_PROTO_CMD):$PATH"
-                  echo "✅ Found xcb-proto via find: $XCB_PROTO_CMD"
-                fi
-              fi
-
-              # 如果还是没找到，尝试使用 dpkg 查找
-              if [ -z "$XCB_PROTO_CMD" ]; then
-                echo "🔍 Checking xcb-proto package installation..."
-                if dpkg -L xcb-proto 2>/dev/null | grep -E "bin/xcb-proto|/xcb-proto$" | head -1 | read XCB_PROTO_PATH; then
-                  if [ -n "$XCB_PROTO_PATH" ] && [ -f "$XCB_PROTO_PATH" ]; then
-                    XCB_PROTO_CMD="$XCB_PROTO_PATH"
-                    export PATH="$(dirname $XCB_PROTO_CMD):$PATH"
-                    echo "✅ Found xcb-proto via dpkg: $XCB_PROTO_CMD"
-                  fi
-                fi
-              fi
-            fi
-
-            # 验证找到的 xcb-proto 是否可用
-            if [ -n "$XCB_PROTO_CMD" ]; then
-              if [ -f "$XCB_PROTO_CMD" ] || command -v xcb-proto >/dev/null 2>&1; then
-                export XCB_PROTO="$XCB_PROTO_CMD"
-                echo "✅ XCB_PROTO environment variable set to: $XCB_PROTO"
-                # 验证它是否可执行
-                if xcb-proto --version >/dev/null 2>&1 || python3 "$XCB_PROTO_CMD" --version >/dev/null 2>&1; then
-                  echo "✅ xcb-proto is executable"
-                else
-                  echo "⚠️  Warning: xcb-proto found but may not be executable"
-                fi
+            echo "🔍 Setting up xcb build environment..."
+            # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+            # xcb crate 的构建脚本使用 Python 的 xcbgen 模块来读取这些文件
+            # 验证 xcb-proto 包已安装（协议文件）
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 查找协议文件目录（通常在 /usr/share/xcb/）
+              XCB_PROTO_DIR="/usr/share/xcb"
+              if [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                # 设置环境变量指向协议文件目录（如果 xcb crate 需要）
+                export XCB_PROTO_DIR="$XCB_PROTO_DIR"
               else
-                echo "⚠️  Warning: xcb-proto path found but file does not exist: $XCB_PROTO_CMD"
-                XCB_PROTO_CMD=""
+                # 尝试查找实际位置
+                XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+                if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                  echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                  export XCB_PROTO_DIR="$XCB_PROTO_DIR"
+                else
+                  echo "⚠️  Warning: xcb protocol directory not found, but package is installed"
+                fi
               fi
-            fi
-
-            if [ -z "$XCB_PROTO_CMD" ]; then
-              echo "❌ Error: xcb-proto not found after extensive search"
-              echo "📋 System information:"
-              echo "  PATH: $PATH"
-              echo "  Python3: $(which python3 2>/dev/null || echo 'not found')"
-              echo "  xcb-proto package: $(dpkg -l | grep xcb-proto || echo 'not installed')"
+            else
+              echo "❌ Error: xcb-proto package is not installed"
               exit 1
             fi
             # 设置 PKG_CONFIG_PATH 确保能找到 xcb 库
             export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
             echo "✅ PKG_CONFIG_PATH set to: $PKG_CONFIG_PATH"
             # 确保 PYTHONPATH 包含 xcbgen 模块路径
-            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+            echo "🔍 Checking for xcbgen Python module..."
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen module is importable"
+            else
+              echo "⚠️  xcbgen not importable, searching for module location..."
               # 尝试查找并添加 xcbgen 路径
               XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
               if [ -n "$XCBGEN_PATH" ]; then
                 export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+                echo "✅ Found xcbgen at: $XCBGEN_PATH"
                 echo "✅ PYTHONPATH set to: $PYTHONPATH"
+                # 再次验证
+                if python3 -c "import xcbgen" 2>/dev/null; then
+                  echo "✅ xcbgen module is now importable"
+                else
+                  echo "⚠️  Warning: xcbgen still not importable after setting PYTHONPATH"
+                fi
+              else
+                echo "⚠️  Warning: xcbgen module directory not found"
+                echo "   This may cause xcb crate build to fail"
+                echo "   Trying to find via dpkg..."
+                # 尝试通过 dpkg 查找
+                XCBGEN_PATH=$(dpkg -L xcb-proto 2>/dev/null | grep "xcbgen" | head -1 | xargs dirname 2>/dev/null || echo "")
+                if [ -n "$XCBGEN_PATH" ] && [ -d "$XCBGEN_PATH" ]; then
+                  export PYTHONPATH="$XCBGEN_PATH:${PYTHONPATH:-}"
+                  echo "✅ Found xcbgen via dpkg at: $XCBGEN_PATH"
+                  echo "✅ PYTHONPATH set to: $PYTHONPATH"
+                fi
               fi
             fi
           fi
@@ -903,15 +850,17 @@ jobs:
           # 构建前验证（仅 Linux x86_64）
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
             echo "🔍 Pre-build verification for xcb dependencies..."
-            # 验证 xcb-proto（使用环境变量或 PATH）
-            if [ -n "$XCB_PROTO" ] && ([ -f "$XCB_PROTO" ] || command -v "$XCB_PROTO" >/dev/null 2>&1); then
-              echo "✅ xcb-proto: $XCB_PROTO (from XCB_PROTO env)"
-            elif command -v xcb-proto >/dev/null 2>&1; then
-              echo "✅ xcb-proto: $(which xcb-proto)"
+            # 验证 xcb-proto 包已安装
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 验证协议文件目录存在
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol directory: $XCB_PROTO_DIR"
+              else
+                echo "⚠️  Warning: XCB_PROTO_DIR not set or directory not found"
+              fi
             else
-              echo "❌ xcb-proto not found in PATH or XCB_PROTO environment variable"
-              echo "   XCB_PROTO: ${XCB_PROTO:-not set}"
-              echo "   PATH: $PATH"
+              echo "❌ xcb-proto package is not installed"
               exit 1
             fi
             # 验证 Python
