@@ -438,7 +438,7 @@ impl AliasManager {
         let config_path = Paths::workflow_config()?;
         let manager = ConfigManager::<AliasConfig>::new(config_path.clone());
         let config = manager.read().unwrap_or_default();
-        
+
         Ok(Self {
             config,
             config_path,
@@ -453,14 +453,14 @@ impl AliasManager {
         }
 
         let alias_name = parts[0];
-        
+
         // 检查是否是别名
         if let Some(alias_value) = self.config.aliases.get(alias_name) {
             // 递归展开（防止无限循环）
             let mut expanded = alias_value.clone();
             let mut visited = std::collections::HashSet::new();
             visited.insert(alias_name.to_string());
-            
+
             // 处理嵌套别名
             while let Some(next_alias) = self.find_alias_in_command(&expanded, &mut visited) {
                 if let Some(next_value) = self.config.aliases.get(&next_alias) {
@@ -469,13 +469,13 @@ impl AliasManager {
                     break;
                 }
             }
-            
+
             // 添加剩余参数
             if parts.len() > 1 {
                 let args = parts[1..].join(" ");
                 expanded = format!("{} {}", expanded, args);
             }
-            
+
             Ok(expanded)
         } else {
             Ok(command.to_string())
@@ -532,7 +532,7 @@ fn main() -> Result<()> {
     // ... 现有初始化代码 ...
 
     let mut cli = Cli::parse();
-    
+
     // 展开别名（如果是第一个参数）
     if let Some(first_arg) = std::env::args().nth(1) {
         let alias_manager = AliasManager::load().unwrap_or_default();
@@ -543,18 +543,18 @@ fn main() -> Result<()> {
                     .split_whitespace()
                     .map(|s| s.to_string())
                     .collect();
-                
+
                 // 重新构建命令行参数
                 let mut new_args = vec!["workflow".to_string()];
                 new_args.extend(expanded_args);
                 new_args.extend(std::env::args().skip(2));
-                
+
                 // 重新解析
                 cli = Cli::parse_from(new_args);
             }
         }
     }
-    
+
     // ... 继续处理命令 ...
 }
 ```
@@ -566,7 +566,7 @@ fn main() -> Result<()> {
 #[derive(Subcommand)]
 pub enum Commands {
     // ... 现有命令 ...
-    
+
     /// Manage command aliases
     Alias {
         #[command(subcommand)]
@@ -598,12 +598,12 @@ use anyhow::Result;
 pub fn list() -> Result<()> {
     let manager = AliasManager::load()?;
     let aliases = manager.list_aliases();
-    
+
     if aliases.is_empty() {
         println!("No aliases defined");
         return Ok(());
     }
-    
+
     println!("Defined aliases:");
     for (name, value) in aliases {
         println!("  {} = {}", name, value);
@@ -660,11 +660,255 @@ workflow history --replay 5                        # 重放第 5 条命令
 workflow history --search "pr create"              # 搜索历史命令
 ```
 
+**实现方案**：
+
+### 1. 历史记录数据结构
+
+```rust
+// src/lib/base/history/mod.rs
+use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::PathBuf;
+use crate::base::settings::paths::Paths;
+use crate::jira::config::ConfigManager;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandHistory {
+    pub entries: Vec<HistoryEntry>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistoryEntry {
+    pub command: String,
+    pub args: Vec<String>,
+    pub timestamp: String,
+    pub exit_code: Option<i32>,
+}
+
+impl Default for CommandHistory {
+    fn default() -> Self {
+        Self {
+            entries: Vec::new(),
+        }
+    }
+}
+
+pub struct HistoryManager {
+    history_path: PathBuf,
+    max_entries: usize,
+}
+
+impl HistoryManager {
+    /// 创建历史管理器
+    pub fn new() -> Result<Self> {
+        let history_path = Paths::workflow_dir()?.join("history.toml");
+        Ok(Self {
+            history_path,
+            max_entries: 1000, // 最多保存 1000 条记录
+        })
+    }
+
+    /// 记录命令
+    pub fn record_command(&self, command: &str, args: &[String], exit_code: Option<i32>) -> Result<()> {
+        let mut history = self.load()?;
+
+        let entry = HistoryEntry {
+            command: command.to_string(),
+            args: args.to_vec(),
+            timestamp: Utc::now().to_rfc3339(),
+            exit_code,
+        };
+
+        history.entries.push(entry);
+
+        // 限制历史记录数量
+        if history.entries.len() > self.max_entries {
+            history.entries.drain(0..history.entries.len() - self.max_entries);
+        }
+
+        self.save(&history)
+    }
+
+    /// 加载历史记录
+    pub fn load(&self) -> Result<CommandHistory> {
+        if !self.history_path.exists() {
+            return Ok(CommandHistory::default());
+        }
+
+        let manager = ConfigManager::<CommandHistory>::new(self.history_path.clone());
+        manager.read().context("Failed to load command history")
+    }
+
+    /// 保存历史记录
+    fn save(&self, history: &CommandHistory) -> Result<()> {
+        let manager = ConfigManager::<CommandHistory>::new(self.history_path.clone());
+        manager.write(history)
+    }
+
+    /// 列出历史记录
+    pub fn list(&self, limit: Option<usize>) -> Result<Vec<HistoryEntry>> {
+        let history = self.load()?;
+        let entries = history.entries;
+
+        let limit = limit.unwrap_or(entries.len());
+        Ok(entries.into_iter().rev().take(limit).collect())
+    }
+
+    /// 搜索历史记录
+    pub fn search(&self, query: &str) -> Result<Vec<HistoryEntry>> {
+        let history = self.load()?;
+        let query_lower = query.to_lowercase();
+
+        let results: Vec<HistoryEntry> = history
+            .entries
+            .into_iter()
+            .rev()
+            .filter(|entry| {
+                entry.command.to_lowercase().contains(&query_lower)
+                    || entry.args.iter().any(|arg| arg.to_lowercase().contains(&query_lower))
+            })
+            .collect();
+
+        Ok(results)
+    }
+
+    /// 获取指定索引的历史记录
+    pub fn get(&self, index: usize) -> Result<HistoryEntry> {
+        let history = self.load()?;
+        let entries: Vec<_> = history.entries.into_iter().rev().collect();
+
+        entries
+            .get(index)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("History entry at index {} not found", index))
+    }
+
+    /// 清空历史记录
+    pub fn clear(&self) -> Result<()> {
+        let history = CommandHistory::default();
+        self.save(&history)
+    }
+}
+```
+
+### 2. 在主入口记录命令
+
+```rust
+// src/bin/workflow.rs
+use workflow::base::history::HistoryManager;
+
+fn main() -> Result<()> {
+    // ... 现有初始化代码 ...
+
+    let cli = Cli::parse();
+    let args: Vec<String> = std::env::args().skip(1).collect();
+
+    // 执行命令
+    let result = match &cli.command {
+        // ... 现有命令处理 ...
+    };
+
+    // 记录命令历史
+    let history_manager = HistoryManager::new()?;
+    let exit_code = if result.is_ok() { Some(0) } else { Some(1) };
+    let _ = history_manager.record_command("workflow", &args, exit_code);
+
+    result
+}
+```
+
+### 3. 添加历史命令
+
+```rust
+// src/lib/cli/commands.rs
+#[derive(Subcommand)]
+pub enum Commands {
+    // ... 现有命令 ...
+
+    /// View and manage command history
+    History {
+        /// Replay a command from history
+        #[arg(long, short)]
+        replay: Option<usize>,
+
+        /// Search history
+        #[arg(long, short)]
+        search: Option<String>,
+
+        /// Limit number of entries to show
+        #[arg(long, short, default_value = "20")]
+        limit: usize,
+
+        /// Clear all history
+        #[arg(long)]
+        clear: bool,
+    },
+}
+```
+
+```rust
+// src/commands/history/mod.rs
+use crate::base::history::HistoryManager;
+use anyhow::Result;
+use std::process::Command;
+
+pub fn handle_history(replay: Option<usize>, search: Option<String>, limit: usize, clear: bool) -> Result<()> {
+    let manager = HistoryManager::new()?;
+
+    if clear {
+        manager.clear()?;
+        println!("Command history cleared");
+        return Ok(());
+    }
+
+    if let Some(index) = replay {
+        // 重放命令
+        let entry = manager.get(index)?;
+        println!("Replaying: workflow {}", entry.args.join(" "));
+
+        // 重新执行命令
+        let mut cmd = Command::new("workflow");
+        cmd.args(&entry.args);
+        cmd.status()?;
+
+        return Ok(());
+    }
+
+    if let Some(query) = search {
+        // 搜索历史
+        let results = manager.search(&query)?;
+        if results.is_empty() {
+            println!("No matching history entries found");
+            return Ok(());
+        }
+
+        println!("Found {} matching entries:", results.len());
+        for (i, entry) in results.iter().enumerate() {
+            println!("  [{}] {} {}", i, entry.command, entry.args.join(" "));
+            println!("      Time: {}", entry.timestamp);
+        }
+    } else {
+        // 列出历史
+        let entries = manager.list(Some(limit))?;
+        if entries.is_empty() {
+            println!("No command history");
+            return Ok(());
+        }
+
+        println!("Command history (last {} entries):", limit);
+        for (i, entry) in entries.iter().enumerate() {
+            println!("  [{}] {} {}", i, entry.command, entry.args.join(" "));
+            println!("      Time: {}", entry.timestamp);
+        }
+    }
+
+    Ok(())
+}
+```
+
 **验收标准**：
-- [ ] 能够记录命令历史
-- [ ] 能够查看命令历史列表
-- [ ] 能够重放历史命令
-- [ ] 支持搜索历史命令
 
 ---
 
@@ -704,9 +948,182 @@ workflow jira info PROJ-<TAB>
 workflow pr merge <TAB>
 ```
 
-**技术实现**：
-- 使用 `clap_complete` 生成补全脚本
-- 实现动态补全逻辑
+**实现方案**：
+
+### 1. 基础补全（已实现）
+
+项目已使用 `clap_complete` 实现基础补全，支持：
+- 命令补全
+- 参数补全
+- 子命令补全
+
+### 2. 动态补全实现
+
+需要实现自定义补全函数，从 API 获取数据：
+
+```rust
+// src/lib/completion/dynamic.rs
+use anyhow::Result;
+use std::process::Command;
+
+/// 动态补全提供者
+pub struct DynamicCompletion;
+
+impl DynamicCompletion {
+    /// 获取 JIRA ticket keys
+    pub fn jira_ticket_keys(project: Option<&str>) -> Result<Vec<String>> {
+        // 调用 JIRA API 获取 tickets
+        // 这里需要根据实际的 JIRA 客户端实现
+        let client = crate::jira::JiraClient::new()?;
+        let jql = if let Some(proj) = project {
+            format!("project = {}", proj)
+        } else {
+            "assignee = currentUser()".to_string()
+        };
+
+        let tickets = client.search(&jql)?;
+        Ok(tickets.iter().map(|t| t.key.clone()).collect())
+    }
+
+    /// 获取 PR numbers
+    pub fn pr_numbers() -> Result<Vec<String>> {
+        let provider = crate::github::GitHubProvider::new()?;
+        let prs = provider.list_pull_requests("open")?;
+        Ok(prs.iter().map(|pr| pr.number.to_string()).collect())
+    }
+
+    /// 获取分支名
+    pub fn branch_names() -> Result<Vec<String>> {
+        let output = Command::new("git")
+            .args(&["branch", "--format=%(refname:short)"])
+            .output()?;
+
+        let branches: Vec<String> = String::from_utf8(output.stdout)?
+            .lines()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        Ok(branches)
+    }
+}
+```
+
+### 3. 创建补全脚本包装器
+
+```bash
+# ~/.workflow/completions/_workflow_dynamic
+# 动态补全脚本（zsh 示例）
+
+_workflow_dynamic_jira_tickets() {
+    local -a tickets
+    tickets=($(workflow _completion jira-tickets))
+    _describe 'tickets' tickets
+}
+
+_workflow_dynamic_pr_numbers() {
+    local -a prs
+    prs=($(workflow _completion pr-numbers))
+    _describe 'PRs' prs
+}
+
+_workflow_dynamic_branches() {
+    local -a branches
+    branches=($(workflow _completion branches))
+    _describe 'branches' branches
+}
+
+# 在现有的补全函数中集成
+_workflow_jira_info() {
+    _arguments \
+        '1:ticket:_workflow_dynamic_jira_tickets' \
+        # ... 其他参数
+}
+```
+
+### 4. 添加内部补全命令
+
+```rust
+// src/lib/cli/commands.rs
+#[derive(Subcommand)]
+pub enum Commands {
+    // ... 现有命令 ...
+
+    /// Internal completion command (for dynamic completion)
+    #[command(hide = true)]
+    Completion {
+        #[arg(name = "type")]
+        completion_type: String,
+        #[arg(name = "context")]
+        context: Option<String>,
+    },
+}
+```
+
+```rust
+// src/commands/completion/dynamic.rs
+use crate::completion::dynamic::DynamicCompletion;
+use anyhow::Result;
+
+pub fn handle_completion(completion_type: &str, context: Option<&str>) -> Result<()> {
+    match completion_type {
+        "jira-tickets" => {
+            let tickets = DynamicCompletion::jira_ticket_keys(context)?;
+            for ticket in tickets {
+                println!("{}", ticket);
+            }
+        }
+        "pr-numbers" => {
+            let prs = DynamicCompletion::pr_numbers()?;
+            for pr in prs {
+                println!("{}", pr);
+            }
+        }
+        "branches" => {
+            let branches = DynamicCompletion::branch_names()?;
+            for branch in branches {
+                println!("{}", branch);
+            }
+        }
+        _ => {
+            return Err(anyhow::anyhow!("Unknown completion type: {}", completion_type));
+        }
+    }
+    Ok(())
+}
+```
+
+### 5. 更新补全脚本生成
+
+修改 `src/lib/completion/generate.rs`，在生成的补全脚本中添加动态补全调用：
+
+```rust
+// 在生成补全脚本时，添加动态补全函数
+fn generate_dynamic_completion_functions(shell: &ClapShell) -> String {
+    match shell {
+        ClapShell::Zsh => r#"
+_workflow_dynamic_jira_tickets() {
+    local -a tickets
+    tickets=($(workflow _completion jira-tickets 2>/dev/null))
+    _describe 'tickets' tickets
+}
+"#.to_string(),
+        ClapShell::Bash => r#"
+_workflow_dynamic_jira_tickets() {
+    local tickets
+    tickets=($(workflow _completion jira-tickets 2>/dev/null))
+    COMPREPLY=($(compgen -W "${tickets[*]}" -- "$cur"))
+}
+"#.to_string(),
+        _ => String::new(),
+    }
+}
+```
+
+**注意事项**：
+- 动态补全可能较慢（需要调用 API），考虑添加缓存
+- 需要处理网络错误，避免补全失败影响用户体验
+- 可以添加超时机制，避免长时间等待
 
 **验收标准**：
 - [ ] 支持 bash/zsh/fish 补全
