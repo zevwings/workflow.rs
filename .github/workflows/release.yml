@@ -394,72 +394,114 @@ jobs:
             if [ -f "Cargo.lock" ]; then
               cp Cargo.lock Cargo.lock.backup
               echo "📝 Backed up Cargo.lock"
-              # 使用 awk 删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
+              # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
               # 以及从其他包的 dependencies 中移除对这些包的引用
-              awk '
-              BEGIN {
-                skip_package = 0
-                in_dependencies = 0
-                packages_to_remove["clipboard"] = 1
-                packages_to_remove["x11-clipboard"] = 1
-                packages_to_remove["xcb"] = 1
-                packages_to_remove["clipboard-win"] = 1
-              }
-              /^\[\[package\]\]/ {
-                if (skip_package) skip_package = 0
-                in_dependencies = 0
-                print
-                next
-              }
-              /^name = "/ {
-                pkg_name = ""
-                if (match($0, /name = "([^"]+)"/, arr)) {
-                  pkg_name = arr[1]
-                  if (packages_to_remove[pkg_name]) {
-                    skip_package = 1
-                    next
-                  }
-                }
-                print
-                next
-              }
-              /^dependencies = \[/ {
-                in_dependencies = 1
-                if (!skip_package) print
-                next
-              }
-              /^\]$/ {
-                if (in_dependencies) {
-                  in_dependencies = 0
-                  if (!skip_package) print
-                  next
-                }
-                print
-                next
-              }
-              {
-                if (skip_package) next
-                if (in_dependencies) {
-                  # 检查是否是我们要移除的依赖
-                  remove_dep = 0
-                  for (pkg in packages_to_remove) {
-                    if (match($0, /"([^"]+)"/, arr) && arr[1] == pkg) {
-                      remove_dep = 1
-                      break
-                    }
-                  }
-                  if (!remove_dep) print
-                } else {
-                  print
-                }
-              }
-              ' Cargo.lock > Cargo.lock.tmp
-              if [ $? -eq 0 ]; then
-                mv Cargo.lock.tmp Cargo.lock
-                echo "✅ Removed clipboard and xcb dependencies from Cargo.lock"
-              else
+              # Python 脚本更可靠，能更好地处理 TOML 格式
+              python3 << 'PYTHON_SCRIPT'
+import re
+import sys
+
+# 要移除的包名
+PACKAGES_TO_REMOVE = {'clipboard', 'x11-clipboard', 'xcb', 'clipboard-win'}
+
+def remove_packages_from_cargo_lock(content):
+    """从 Cargo.lock 内容中移除指定的包及其依赖引用"""
+    lines = content.split('\n')
+    result = []
+    skip_package = False
+    in_dependencies = False
+    brace_depth = 0
+    
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        
+        # 检测新的 package 块开始
+        if line.strip() == '[[package]]':
+            skip_package = False
+            in_dependencies = False
+            brace_depth = 0
+            result.append(line)
+            i += 1
+            continue
+        
+        # 检测 package 名称
+        if not skip_package and line.strip().startswith('name = '):
+            match = re.search(r'name = "([^"]+)"', line)
+            if match:
+                pkg_name = match.group(1)
+                if pkg_name in PACKAGES_TO_REMOVE:
+                    skip_package = True
+                    # 跳过整个 package 块，直到下一个 [[package]] 或文件结束
+                    i += 1
+                    while i < len(lines):
+                        if lines[i].strip() == '[[package]]':
+                            i -= 1  # 回退一行，让外层循环处理
+                            break
+                        i += 1
+                    continue
+        
+        # 如果正在跳过这个包，直接跳过所有行
+        if skip_package:
+            i += 1
+            continue
+        
+        # 检测 dependencies 数组开始
+        if line.strip().startswith('dependencies = ['):
+            in_dependencies = True
+            brace_depth = 1
+            result.append(line)
+            i += 1
+            continue
+        
+        # 处理 dependencies 数组内容
+        if in_dependencies:
+            # 计算括号深度
+            brace_depth += line.count('[') - line.count(']')
+            
+            # 检查是否是我们要移除的依赖
+            should_skip = False
+            for pkg in PACKAGES_TO_REMOVE:
+                # 匹配依赖项，格式可能是 "package-name" 或 "package-name version"
+                pattern = rf'^\s*"{re.escape(pkg)}"'
+                if re.match(pattern, line.strip()):
+                    should_skip = True
+                    break
+            
+            if not should_skip:
+                result.append(line)
+            
+            # 如果括号深度回到 0，dependencies 数组结束
+            if brace_depth <= 0:
+                in_dependencies = False
+                brace_depth = 0
+        else:
+            result.append(line)
+        
+        i += 1
+    
+    return '\n'.join(result)
+
+try:
+    with open('Cargo.lock', 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    modified_content = remove_packages_from_cargo_lock(content)
+    
+    with open('Cargo.lock', 'w', encoding='utf-8') as f:
+        f.write(modified_content)
+    
+    print("✅ Successfully removed clipboard and xcb dependencies from Cargo.lock")
+    sys.exit(0)
+except Exception as e:
+    print(f"❌ Error processing Cargo.lock: {e}", file=sys.stderr)
+    sys.exit(1)
+PYTHON_SCRIPT
+              
+              if [ $? -ne 0 ]; then
                 echo "⚠️  Failed to process Cargo.lock, restoring backup"
                 mv Cargo.lock.backup Cargo.lock
+                exit 1
               fi
             fi
           fi
