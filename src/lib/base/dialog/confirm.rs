@@ -8,7 +8,7 @@ use inquire::{error::InquireError, Confirm};
 /// ## 样式示例
 ///
 /// 默认值为 true 时：
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ Continue? (Y/n)                     │
 /// │ > Yes                               │ ← 默认选中
@@ -19,7 +19,7 @@ use inquire::{error::InquireError, Confirm};
 /// ```
 ///
 /// 默认值为 false 时：
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ This operation cannot be undone.    │
 /// │ Continue? (y/N)                     │
