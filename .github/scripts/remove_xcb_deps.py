@@ -40,11 +40,15 @@ def remove_packages_from_cargo_lock(content: str) -> str:
     """从 Cargo.lock 内容中移除指定的包及其依赖引用"""
     lines = content.split('\n')
     result: List[str] = []
-    skip_package = False
     in_dependencies = False
     bracket_depth = 0
     removed_packages = set()
     removed_deps_count = 0
+
+    # 当前 package 块的内容（用于缓冲）
+    current_package_lines: List[str] = []
+    current_package_name: Optional[str] = None
+    skip_current_package = False
 
     i = 0
     while i < len(lines):
@@ -52,40 +56,46 @@ def remove_packages_from_cargo_lock(content: str) -> str:
 
         # 检测新的 package 块开始
         if is_package_block_start(line):
-            skip_package = False
+            # 处理之前的 package 块
+            if current_package_lines and not skip_current_package:
+                # 将之前的 package 块添加到结果中
+                result.extend(current_package_lines)
+
+            # 开始新的 package 块
+            current_package_lines = [line]
+            current_package_name = None
+            skip_current_package = False
             in_dependencies = False
             bracket_depth = 0
-            result.append(line)
             i += 1
             continue
 
-        # 检测 package 名称（只在非跳过状态下检查）
-        if not skip_package:
-            pkg_name = extract_package_name(line)
-            if pkg_name and pkg_name in PACKAGES_TO_REMOVE:
-                skip_package = True
-                removed_packages.add(pkg_name)
-                # 跳过整个 package 块，直到下一个 [[package]] 或文件结束
+        # 如果当前 package 块应该被跳过，继续跳过直到下一个 package
+        if skip_current_package:
+            i += 1
+            while i < len(lines):
+                if is_package_block_start(lines[i]):
+                    i -= 1  # 回退，让外层循环处理
+                    break
                 i += 1
-                while i < len(lines):
-                    if is_package_block_start(lines[i]):
-                        i -= 1  # 回退一行，让外层循环处理下一个 package
-                        break
-                    i += 1
-                continue
-
-        # 如果正在跳过这个包，直接跳过所有行（避免重复检查）
-        if skip_package:
-            i += 1
             continue
 
-        # 检测 dependencies 数组开始
+        # 检测 package 名称
+        if current_package_name is None:
+            pkg_name = extract_package_name(line)
+            if pkg_name:
+                current_package_name = pkg_name
+                if pkg_name in PACKAGES_TO_REMOVE:
+                    skip_current_package = True
+                    removed_packages.add(pkg_name)
+                    current_package_lines = []  # 清空缓冲，不添加这个包
+                    i += 1
+                    continue
+
+        # 检测 dependencies 数组开始（在 package 块内）
         if not in_dependencies and line.strip().startswith('dependencies = ['):
             in_dependencies = True
             bracket_depth = 1
-            result.append(line)
-            i += 1
-            continue
 
         # 处理 dependencies 数组内容
         if in_dependencies:
@@ -95,6 +105,7 @@ def remove_packages_from_cargo_lock(content: str) -> str:
             # 检查是否是我们要移除的依赖
             if is_dependency_line(line, PACKAGES_TO_REMOVE):
                 removed_deps_count += 1
+                # 不将这一行添加到缓冲中（移除依赖）
                 i += 1
                 # 如果括号深度回到 0 或以下，dependencies 数组结束
                 if bracket_depth <= 0:
@@ -102,16 +113,18 @@ def remove_packages_from_cargo_lock(content: str) -> str:
                     bracket_depth = 0
                 continue
 
-            result.append(line)
-
             # 如果括号深度回到 0 或以下，dependencies 数组结束
             if bracket_depth <= 0:
                 in_dependencies = False
                 bracket_depth = 0
-        else:
-            result.append(line)
 
+        # 将当前行添加到 package 块缓冲中（如果不在跳过状态）
+        current_package_lines.append(line)
         i += 1
+
+    # 处理最后一个 package 块
+    if current_package_lines and not skip_current_package:
+        result.extend(current_package_lines)
 
     # 验证结果
     if removed_packages:
@@ -123,13 +136,40 @@ def remove_packages_from_cargo_lock(content: str) -> str:
 
 
 def validate_cargo_lock(content: str) -> bool:
-    """简单验证 Cargo.lock 格式是否正确"""
+    """验证 Cargo.lock 格式是否正确"""
     # 检查是否至少有一个 package 块
     if '[[package]]' not in content:
         return False
+
     # 检查是否有基本的 TOML 结构
     if content.count('[') < content.count(']'):
         return False
+
+    # 验证每个 [[package]] 块都有 name 字段
+    lines = content.split('\n')
+    in_package = False
+    has_name = False
+
+    for line in lines:
+        if line.strip() == '[[package]]':
+            if in_package and not has_name:
+                # 前一个 package 块没有 name 字段
+                return False
+            in_package = True
+            has_name = False
+        elif in_package:
+            if extract_package_name(line):
+                has_name = True
+            # 检查是否到了下一个 package 块（简单检查，不处理嵌套）
+            if line.strip().startswith('[') and not line.strip().startswith('[['):
+                in_package = False
+                if not has_name:
+                    return False
+
+    # 检查最后一个 package 块
+    if in_package and not has_name:
+        return False
+
     return True
 
 

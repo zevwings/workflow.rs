@@ -5,18 +5,14 @@ on:
     branches:
       - master
       - main
-  push:
-    branches:
-      - master
-      - main
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   # 代码质量检查（Lint）
-  lint:
-    name: Lint Check
+  check-lint:
+    name: Run check-lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -50,8 +46,8 @@ jobs:
         run: cargo check
 
   # 运行测试
-  test:
-    name: Test
+  tests:
+    name: Run tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -77,25 +73,58 @@ jobs:
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
-          sudo apt-get install -y libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          sudo apt-get install -y \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv-dev \
+            libxcb-glx-dev \
+            libxcb-shm-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-xevie-dev \
+            libxcb-xf86dri-dev \
+            libxcb-xprint-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxcb-xselinux-dev \
+            libxcb-xtest-dev \
+            libxcb-xvmc-dev \
+            libxcb-dri2-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
 
       - name: Run tests
         run: cargo test --verbose
 
   # 确保所有检查都通过（汇总 job）
-  # 这个 job 依赖于 lint 和 test，只有当两者都成功时才会运行
-  all-checks:
-    name: All Checks Passed
+  # 这个 job 依赖于 check-lint 和 tests，只有当两者都成功时才会运行
+  check-status:
+    name: Run check-status
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [check-lint, tests]
     if: always()
     steps:
       - name: Check lint and test status
         run: |
-          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+          if [ "${{ needs.check-lint.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
             echo "❌ Some checks failed:"
-            echo "  Lint: ${{ needs.lint.result }}"
-            echo "  Test: ${{ needs.test.result }}"
+            echo "  Lint: ${{ needs.check-lint.result }}"
+            echo "  Test: ${{ needs.tests.result }}"
             exit 1
           fi
           echo "✅ All checks passed!"
