@@ -92,7 +92,7 @@ impl GitPreCommit {
                 let mut last_output = None;
 
                 while max_retries > 0 {
-                    // 显示 pre-commit 输出，让用户看到执行过程
+                    // 运行 pre-commit，捕获输出但不显示（只显示最终结果）
                     let output = cmd("pre-commit", &["run"])
                         .stdout_capture()
                         .stderr_capture()
@@ -100,20 +100,6 @@ impl GitPreCommit {
                         .context("Failed to run pre-commit")?;
 
                     last_output = Some(output.clone());
-
-                    // 显示输出（成功时也显示，让用户知道执行了什么）
-                    let stdout = String::from_utf8_lossy(&output.stdout);
-                    let stderr = String::from_utf8_lossy(&output.stderr);
-
-                    // 只显示非空输出，避免显示太多信息
-                    if !stdout.trim().is_empty() {
-                        print!("{}", stdout);
-                    }
-                    if !stderr.trim().is_empty()
-                        && !stderr.contains("files were modified by this hook")
-                    {
-                        eprint!("{}", stderr);
-                    }
 
                     if output.status.success() {
                         return Ok(PreCommitResult {
