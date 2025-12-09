@@ -1,7 +1,5 @@
-use crate::base::util::{
-    dialog::InputDialog,
-    table::{TableBuilder, TableStyle},
-};
+use crate::base::dialog::InputDialog;
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};

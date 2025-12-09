@@ -1,10 +1,10 @@
 //! LLM 配置设置命令
 //! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
+use crate::base::dialog::{InputDialog, SelectDialog};
 use crate::base::settings::defaults::default_llm_model;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
-use crate::base::util::dialog::{InputDialog, SelectDialog};
 use crate::commands::config::helpers::select_language;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};

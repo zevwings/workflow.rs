@@ -13,8 +13,8 @@ use serde::{Deserialize, Serialize};
 use super::api::project::JiraProjectApi;
 use super::config::ConfigManager;
 use super::helpers::extract_jira_project;
+use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
-use crate::base::util::dialog::SelectDialog;
 use crate::{trace_debug, trace_info};
 
 // ==================== 返回结构体 ====================

@@ -2,7 +2,7 @@
 //!
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
 
-use crate::base::util::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::commands::branch::{
     add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,

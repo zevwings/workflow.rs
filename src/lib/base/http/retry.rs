@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::Result;
 
-use crate::base::util::dialog::ConfirmDialog;
+use crate::base::dialog::ConfirmDialog;
 use crate::{trace_debug, trace_info, trace_warn};
 
 // ==================== 返回结构体 ====================

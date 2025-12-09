@@ -1,7 +1,10 @@
-use crate::base::util::dialog::InputDialog;
+use crate::base::dialog::InputDialog;
+use crate::base::indicator::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
+use crate::jira::Jira;
 use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
+use std::sync::{Arc, Mutex};
 
 /// 下载附件命令
 pub struct AttachmentsCommand;
@@ -18,24 +21,50 @@ impl AttachmentsCommand {
                 .context("Failed to read Jira ticket ID")?
         };
 
-        log_success!("Downloading all attachments for {}...", jira_id);
+        // 先获取附件列表以确定总数
+        let attachments =
+            Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira")?;
+        let total_files = attachments.len() as u64;
+
+        if total_files == 0 {
+            anyhow::bail!("No attachments found for {}", jira_id);
+        }
+
+        // 创建 Progress Bar
+        let progress = Arc::new(Mutex::new(Progress::new(
+            total_files,
+            "Downloading attachments...",
+        )));
+        let progress_clone = progress.clone();
+
+        // 创建回调函数，更新进度条
+        let callback: ProgressCallback = Box::new(move |msg| {
+            if !msg.is_empty() {
+                if msg.starts_with("Downloaded:") || msg.contains("Downloaded:") {
+                    if let Ok(pb) = progress_clone.lock() {
+                        pb.inc(1);
+                    }
+                } else if msg.starts_with("Failed to download:") {
+                    // 失败的文件也计入进度
+                    if let Ok(pb) = progress_clone.lock() {
+                        pb.inc(1);
+                    }
+                }
+            }
+        });
 
         // 创建 JiraLogs 实例
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-
-        // 创建回调函数，将进度消息输出到控制台
-        let callback: ProgressCallback = Box::new(|msg| {
-            if !msg.is_empty() {
-                log_info!("{}", msg);
-            } else {
-                log_break!();
-            }
-        });
 
         // 执行下载
         let result = logs
             .download_from_jira(&jira_id, None, true, Some(callback))
             .context("Failed to download attachments from Jira")?;
+
+        // 完成进度条
+        if let Ok(pb) = progress.lock() {
+            pb.finish_ref();
+        }
 
         // 显示下载结果
         if !result.failed_files.is_empty() {

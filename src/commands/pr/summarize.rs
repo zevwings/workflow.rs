@@ -6,6 +6,7 @@ use anyhow::{Context, Result};
 use std::fs;
 use std::path::PathBuf;
 
+use crate::base::indicator::Spinner;
 use crate::base::settings::defaults::default_download_base_dir;
 use crate::base::settings::Settings;
 use crate::git::GitRepo;
@@ -52,26 +53,25 @@ impl SummarizeCommand {
                 .context("No PR found for current branch. Please specify PR ID manually.")?
         };
 
-        log_info!("Fetching PR #{} information...", pr_id);
-
         // 获取 PR 标题
-        let pr_title = provider
-            .get_pull_request_title(&pr_id)
-            .context("Failed to get PR title")?;
+        let pr_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {
+            provider.get_pull_request_title(&pr_id)
+        })
+        .context("Failed to get PR title")?;
 
         log_info!("PR Title: {}", pr_title);
 
         // 获取 PR diff
-        log_info!("Fetching PR diff...");
-        let pr_diff = provider
-            .get_pull_request_diff(&pr_id)
-            .context("Failed to get PR diff")?;
-
-        log_info!("Generating summary with LLM...");
+        let pr_diff = Spinner::with("Fetching PR diff...", || {
+            provider.get_pull_request_diff(&pr_id)
+        })
+        .context("Failed to get PR diff")?;
 
         // 使用 LLM 生成总结
-        let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff)
-            .context("Failed to generate PR summary")?;
+        let summary = Spinner::with("Generating summary with LLM...", || {
+            PullRequestLLM::summarize_pr(&pr_title, &pr_diff)
+        })
+        .context("Failed to generate PR summary")?;
 
         // 解析 diff，提取所有文件的修改
         log_info!("Parsing PR diff to extract file changes...");

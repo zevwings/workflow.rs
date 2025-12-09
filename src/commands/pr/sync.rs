@@ -1,4 +1,5 @@
-use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::indicator::Spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -72,9 +73,10 @@ impl PullRequestSyncCommand {
         // 6. 执行同步（merge 或 rebase）
         match strategy {
             SyncStrategy::Merge(merge_strategy) => {
-                log_success!("Merging '{}' into '{}'...", source_branch, current_branch);
-                let merge_result =
-                    GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy);
+                let merge_result = Spinner::with(
+                    format!("Merging '{}' into '{}'...", source_branch, current_branch),
+                    || GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy),
+                );
 
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
@@ -105,9 +107,11 @@ impl PullRequestSyncCommand {
                 }
             }
             SyncStrategy::Rebase => {
-                log_success!("Rebasing '{}' onto '{}'...", current_branch, source_branch);
                 // 执行 rebase
-                let rebase_result = GitBranch::rebase_onto(&source_branch_info.merge_ref);
+                let rebase_result = Spinner::with(
+                    format!("Rebasing '{}' onto '{}'...", current_branch, source_branch),
+                    || GitBranch::rebase_onto(&source_branch_info.merge_ref),
+                );
 
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
@@ -161,19 +165,21 @@ impl PullRequestSyncCommand {
 
             // 推送到远程（如果需要）
             if push {
-                log_success!("Pushing to remote...");
                 let exists_remote = GitBranch::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 如果是 rebase，使用 force-with-lease
                 let use_force = matches!(strategy, SyncStrategy::Rebase);
-                if use_force {
-                    GitBranch::push_force_with_lease(&current_branch)
-                        .context("Failed to push to remote (force-with-lease)")?;
-                } else {
-                    GitBranch::push(&current_branch, !exists_remote)
-                        .context("Failed to push to remote")?;
-                }
+                Spinner::with("Pushing to remote...", || -> Result<()> {
+                    if use_force {
+                        GitBranch::push_force_with_lease(&current_branch)
+                            .context("Failed to push to remote (force-with-lease)")?;
+                    } else {
+                        GitBranch::push(&current_branch, !exists_remote)
+                            .context("Failed to push to remote")?;
+                    }
+                    Ok(())
+                })?;
                 log_success!("Pushed to remote successfully");
             } else {
                 log_info!("Skipping push (--no-push flag set)");
@@ -247,8 +253,9 @@ impl PullRequestSyncCommand {
         if !exists_local && exists_remote {
             // 分支只在远程，需要先 fetch 以确保有最新的引用
             log_info!("Source branch '{}' only exists on remote", source_branch);
-            log_info!("Fetching from remote...");
-            GitRepo::fetch().context("Failed to fetch from remote")?;
+            Spinner::with("Fetching from remote...", || {
+                GitRepo::fetch().context("Failed to fetch from remote")
+            })?;
             log_success!("Fetched latest changes from remote");
             // 返回远程分支引用
             Ok(SourceBranchInfo {
@@ -290,15 +297,16 @@ impl PullRequestSyncCommand {
 
         if let Some(pr_id) = current_pr_id {
             log_info!("Current branch '{}' has PR #{}", current_branch, pr_id);
-            log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
             let exists_remote = GitBranch::has_remote_branch(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
-            GitBranch::push(current_branch, !exists_remote)
-                .context("Failed to push to remote to update PR")?;
+            Spinner::with("Pushing changes to update PR...", || {
+                GitBranch::push(current_branch, !exists_remote)
+                    .context("Failed to push to remote to update PR")
+            })?;
             log_success!("PR #{} updated successfully", pr_id);
             Ok(true)
         } else {

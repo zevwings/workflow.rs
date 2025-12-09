@@ -10,32 +10,7 @@
 
 ### 1. 交互式界面
 
-#### 1.1 TUI（终端 UI）
-- ❌ 交互式 PR/JIRA ticket 浏览器
-- ❌ 交互式命令选择器
-- ❌ 实时日志查看器
-
-**功能**：使用 TUI 库（如 `ratatui`）提供更好的交互体验。
-
-**实现建议**：
-- 实现交互式 PR/JIRA ticket 浏览器
-- 实现交互式命令选择器
-- 实现实时日志查看器
-
-**TUI 功能**：
-- PR 列表浏览（分页、过滤、排序）
-- JIRA ticket 列表浏览
-- 实时日志查看（类似 `tail -f`）
-- 交互式命令选择（fuzzy finder）
-
-**命令示例**：
-```bash
-workflow tui prs                                    # 打开 PR 浏览器
-workflow tui jira                                   # 打开 JIRA ticket 浏览器
-workflow tui logs PROJ-123                          # 打开日志查看器
-```
-
-#### 1.2 交互式选择
+#### 1.1 交互式选择
 - ❌ Fuzzy finder 选择 tickets/PRs
 - ❌ 多选支持
 
@@ -252,11 +227,7 @@ Error code: PR_CREATE_BRANCH_NOT_FOUND
    - 记录常用命令
 
 ### 低优先级
-1. **TUI 界面**
-   - 交互式 PR/JIRA ticket 浏览器
-   - 实时日志查看器
-
-2. **智能补全**
+1. **智能补全**
    - 增强 shell completion
    - 动态补全
 
@@ -279,13 +250,11 @@ Error code: PR_CREATE_BRANCH_NOT_FOUND
    - 命令历史
 
 3. **第三阶段**：高级功能
-   - TUI 界面
    - 智能补全
    - 操作撤销
 
 ### 技术考虑
-1. **TUI 库**：使用 `ratatui`（原 `tui-rs`）实现终端 UI
-2. **Fuzzy Finder**：使用 `skim` 或集成 `fzf`
+1. **Fuzzy Finder**：使用 `skim` 或集成 `fzf`
 3. **进度条**：使用 `indicatif` 显示进度
 4. **Shell Completion**：使用 `clap_complete` 生成补全脚本
 5. **错误处理**：使用 `anyhow` 提供详细错误信息

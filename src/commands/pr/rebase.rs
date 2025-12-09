@@ -1,4 +1,5 @@
-use crate::base::util::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::indicator::Spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -297,8 +298,7 @@ impl PullRequestRebaseCommand {
         let has_stashed = Self::check_working_directory()?;
 
         // 5. 拉取目标分支最新代码
-        log_info!("Fetching latest changes...");
-        GitRepo::fetch()?;
+        Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
 
         // 6. 检测当前分支的基础分支（用于智能 rebase）
         let detected_base = detect_base_branch(&current_branch, &target_branch)?;
@@ -327,10 +327,21 @@ impl PullRequestRebaseCommand {
                 base_branch,
                 target_branch
             );
-            GitBranch::rebase_onto_with_upstream(&target_branch, base_branch, &current_branch)
+            Spinner::with(
+                format!("Rebasing '{}' onto '{}'...", current_branch, target_branch),
+                || {
+                    GitBranch::rebase_onto_with_upstream(
+                        &target_branch,
+                        base_branch,
+                        &current_branch,
+                    )
+                },
+            )
         } else {
-            log_success!("Rebasing '{}' onto '{}'...", current_branch, target_branch);
-            GitBranch::rebase_onto(&target_branch)
+            Spinner::with(
+                format!("Rebasing '{}' onto '{}'...", current_branch, target_branch),
+                || GitBranch::rebase_onto(&target_branch),
+            )
         };
 
         // 9. 处理 rebase 结果
@@ -481,19 +492,18 @@ impl PullRequestRebaseCommand {
         .with_cancel_message("PR base update cancelled by user")
         .prompt()?;
 
-        log_info!(
-            "Updating PR #{} base branch to '{}'...",
-            pr_id,
-            target_branch
-        );
-
         // 创建 PR provider
         let provider = create_provider()?;
 
         // 更新 PR base
-        provider
-            .update_pr_base(&pr_id, target_branch)
-            .context("Failed to update PR base branch")?;
+        Spinner::with(
+            format!(
+                "Updating PR #{} base branch to '{}'...",
+                pr_id, target_branch
+            ),
+            || provider.update_pr_base(&pr_id, target_branch),
+        )
+        .context("Failed to update PR base branch")?;
 
         log_success!("PR #{} base branch updated to '{}'", pr_id, target_branch);
         Ok(())
@@ -501,11 +511,11 @@ impl PullRequestRebaseCommand {
 
     /// 使用 force-with-lease 推送
     fn push_with_force_lease(current_branch: &str) -> Result<()> {
-        log_info!("Pushing to remote (force-with-lease)...");
-
         // 使用 force-with-lease 推送
-        GitBranch::push_force_with_lease(current_branch)
-            .context("Failed to push to remote (force-with-lease)")?;
+        Spinner::with("Pushing to remote (force-with-lease)...", || {
+            GitBranch::push_force_with_lease(current_branch)
+                .context("Failed to push to remote (force-with-lease)")
+        })?;
 
         log_success!("Pushed to remote successfully");
         Ok(())

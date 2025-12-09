@@ -1,6 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
+use crate::base::dialog::{InputDialog, SelectDialog};
 use crate::base::settings::defaults::{
     default_download_base_dir, default_language, default_llm_model, default_log_folder,
 };
@@ -13,8 +14,7 @@ use crate::base::settings::settings::{
     LogSettings,
     Settings,
 };
-use crate::base::util::dialog::{InputDialog, SelectDialog};
-// use crate::base::util::dialog::ConfirmDialog;  // Unused after Codeup removal
+// use crate::base::dialog::ConfirmDialog;  // Unused after Codeup removal
 use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;

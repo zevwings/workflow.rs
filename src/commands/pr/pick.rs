@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
 
-use crate::base::util::{
-    dialog::{ConfirmDialog, InputDialog, MultiSelectDialog},
-    Browser, Clipboard,
-};
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::indicator::Spinner;
+use crate::base::util::{Browser, Clipboard};
 use crate::commands::check;
 use crate::commands::pr::helpers::{
     apply_branch_name_prefixes, detect_base_branch, handle_stash_pop_result,
@@ -72,8 +71,7 @@ impl PullRequestPickCommand {
         Self::validate_branches(&from_branch, &to_branch)?;
 
         // 3. 拉取最新代码
-        log_info!("Fetching latest changes...");
-        GitRepo::fetch()?;
+        Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
 
         // 4. 检测新提交
         let commits = Self::get_new_commits(&from_branch, &to_branch)?;
@@ -955,10 +953,12 @@ impl PullRequestPickCommand {
                     })?;
 
                 // 提交并推送
-                log_success!("Committing changes...");
-                GitCommit::commit(commit_title, true)?; // no-verify
-                log_success!("Pushing to remote...");
-                GitBranch::push(branch_name, true)?; // set-upstream
+                Spinner::with("Committing changes...", || {
+                    GitCommit::commit(commit_title, true) // no-verify
+                })?;
+                Spinner::with("Pushing to remote...", || {
+                    GitBranch::push(branch_name, true) // set-upstream
+                })?;
 
                 Ok((branch_name.to_string(), default_branch))
             } else {
@@ -982,10 +982,12 @@ impl PullRequestPickCommand {
         log_success!("Creating branch: {}", branch_name);
         GitBranch::checkout_branch(branch_name)?;
 
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
-        GitBranch::push(branch_name, true)?; // set-upstream
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        Spinner::with("Pushing to remote...", || {
+            GitBranch::push(branch_name, true) // set-upstream
+        })?;
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -1023,9 +1025,9 @@ impl PullRequestPickCommand {
             }
 
             let provider = create_provider()?;
-            log_success!("Creating PR...");
-            let pull_request_url =
-                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
+            let pull_request_url = Spinner::with("Creating PR...", || {
+                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
+            })?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
@@ -1041,10 +1043,12 @@ impl PullRequestPickCommand {
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
             if let Some(ref status) = created_pull_request_status {
-                log_success!("Updating Jira ticket...");
-                Jira::assign_ticket(ticket, None)?;
-                Jira::move_ticket(ticket, status)?;
-                Jira::add_comment(ticket, pull_request_url)?;
+                Spinner::with("Updating Jira ticket...", || -> Result<()> {
+                    Jira::assign_ticket(ticket, None)?;
+                    Jira::move_ticket(ticket, status)?;
+                    Jira::add_comment(ticket, pull_request_url)?;
+                    Ok(())
+                })?;
 
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;
                 let repository = GitRepo::get_remote_url().ok();

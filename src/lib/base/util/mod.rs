@@ -19,6 +19,8 @@
 //!
 //! 注意：以下模块已迁移到独立的目录：
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
+//! - `lib/base/indicator` - 进度指示器（`Spinner`、`Progress`）
+//! - `lib/base/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`）
 //! - `lib/completion` - Completion 管理
 //! - `lib/rollback` - 回滚工具
 //! - `lib/uninstall` - 卸载工具
@@ -28,7 +30,6 @@ pub mod browser;
 pub mod checksum;
 pub mod clipboard;
 pub mod date;
-pub mod dialog;
 pub mod format;
 pub mod platform;
 pub mod string;
@@ -47,9 +48,6 @@ pub use platform::detect_release_platform;
 // 重新导出 browser 和 clipboard
 pub use browser::Browser;
 pub use clipboard::Clipboard;
-
-// 重新导出 dialog
-pub use dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 
 // 重新导出 unzip
 pub use unzip::Unzip;

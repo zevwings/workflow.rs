@@ -2,8 +2,8 @@
 //!
 //! 提供可复用的交互式选择函数，用于配置设置。
 
+use crate::base::dialog::SelectDialog;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
-use crate::base::util::dialog::SelectDialog;
 use anyhow::{Context, Result};
 
 /// 交互式选择语言

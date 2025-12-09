@@ -1,3 +1,4 @@
+use crate::base::indicator::Spinner;
 use crate::git::{GitBranch, GitCommit};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
@@ -29,13 +30,15 @@ impl PullRequestUpdateCommand {
         log_success!("Using commit message: {}", message);
 
         // 执行 git commit（会自动暂存所有文件）
-        log_success!("Staging and committing changes...");
-        GitCommit::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
+        Spinner::with("Staging and committing changes...", || {
+            GitCommit::commit(&message, false) // 不使用 --no-verify（commit 方法内部会自动暂存）
+        })?;
 
         // 执行 git push
         let current_branch = GitBranch::current_branch()?;
-        log_success!("Pushing to remote...");
-        GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
+        Spinner::with("Pushing to remote...", || {
+            GitBranch::push(&current_branch, false) // 不使用 -u（分支应该已经存在）
+        })?;
 
         log_success!("Update completed successfully!");
         Ok(())
@@ -54,7 +57,10 @@ impl PullRequestUpdateCommand {
 
         // 获取 PR 标题
         let provider = create_provider()?;
-        let title = provider.get_pull_request_title(&pr_id).ok();
+        let title = Spinner::with(format!("Fetching PR #{} title...", pr_id), || {
+            provider.get_pull_request_title(&pr_id)
+        })
+        .ok();
 
         Ok(title)
     }

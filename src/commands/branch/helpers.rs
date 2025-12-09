@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::io::{self, IsTerminal};
 use std::path::PathBuf;
 
+use crate::base::dialog::InputDialog;
 use crate::base::settings::paths::Paths;
-use crate::base::util::dialog::InputDialog;
 use crate::git::GitRepo;
 use crate::jira::config::ConfigManager;
 use crate::{log_info, log_success, log_warning};

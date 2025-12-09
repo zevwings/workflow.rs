@@ -2,8 +2,8 @@
 //!
 //! 提供 GitHub 账号管理的共享逻辑，减少代码重复。
 
+use crate::base::dialog::InputDialog;
 use crate::base::settings::settings::GitHubAccount;
-use crate::base::util::dialog::InputDialog;
 use anyhow::{Context, Result};
 
 /// 收集 GitHub 账号信息

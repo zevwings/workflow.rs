@@ -1,4 +1,4 @@
-use crate::base::util::dialog::InputDialog;
+use crate::base::dialog::InputDialog;
 use crate::base::util::Clipboard;
 use crate::jira::logs::JiraLogs;
 use crate::{log_debug, log_error, log_success};

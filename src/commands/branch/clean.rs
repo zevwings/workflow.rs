@@ -2,7 +2,7 @@
 //!
 //! 清理本地分支，保留 main/master、develop 和当前分支，以及配置文件中的忽略分支。
 
-use crate::base::util::dialog::ConfirmDialog;
+use crate::base::dialog::ConfirmDialog;
 use crate::commands::branch::{get_ignore_branches, BranchConfig};
 use crate::commands::check;
 use crate::git::{GitBranch, GitRepo};

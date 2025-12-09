@@ -1,9 +1,8 @@
 use anyhow::{Context, Result};
 
-use crate::base::util::{
-    dialog::{ConfirmDialog, InputDialog, MultiSelectDialog},
-    Browser, Clipboard,
-};
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::indicator::Spinner;
+use crate::base::util::{Browser, Clipboard};
 use crate::commands::check;
 use crate::commands::pr::helpers::{apply_branch_name_prefixes, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
@@ -330,10 +329,12 @@ impl PullRequestCreateCommand {
         GitBranch::checkout_branch(branch_name)?;
 
         // 提交并推送
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
-        GitBranch::push(branch_name, true)?; // set-upstream
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        Spinner::with("Pushing to remote...", || {
+            GitBranch::push(branch_name, true) // set-upstream
+        })?;
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -362,17 +363,20 @@ impl PullRequestCreateCommand {
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
 
         // 推送（如需要）
         if !exists_remote {
-            log_success!("Pushing to remote...");
-            GitBranch::push(current_branch, true)?; // set-upstream
+            Spinner::with("Pushing to remote...", || {
+                GitBranch::push(current_branch, true) // set-upstream
+            })?;
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
-            log_success!("Pushing latest changes...");
-            GitBranch::push(current_branch, false)?; // 不使用 -u，因为已经设置过
+            Spinner::with("Pushing latest changes...", || {
+                GitBranch::push(current_branch, false) // 不使用 -u，因为已经设置过
+            })?;
         }
 
         Ok((current_branch.to_string(), default_branch.to_string()))
@@ -413,8 +417,10 @@ impl PullRequestCreateCommand {
         GitBranch::checkout_branch(default_branch)?;
 
         // 拉取最新的代码
-        log_success!("Pulling latest changes from '{}'...", default_branch);
-        GitBranch::pull(default_branch)?;
+        Spinner::with(
+            format!("Pulling latest changes from '{}'...", default_branch),
+            || GitBranch::pull(default_branch),
+        )?;
 
         // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
         let (exists_local, exists_remote) =
@@ -436,10 +442,12 @@ impl PullRequestCreateCommand {
         handle_stash_pop_result(GitStash::stash_pop());
 
         // 提交并推送
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
-        GitBranch::push(branch_name, true)?; // set-upstream
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        Spinner::with("Pushing to remote...", || {
+            GitBranch::push(branch_name, true) // set-upstream
+        })?;
 
         Ok((branch_name.to_string(), default_branch.to_string()))
     }
@@ -494,8 +502,9 @@ impl PullRequestCreateCommand {
         .prompt()?;
 
         // 推送
-        log_success!("Pushing to remote...");
-        GitBranch::push(current_branch, true)?; // set-upstream
+        Spinner::with("Pushing to remote...", || {
+            GitBranch::push(current_branch, true) // set-upstream
+        })?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -636,9 +645,15 @@ impl PullRequestCreateCommand {
             }
 
             let provider = create_provider()?;
-            log_success!("Creating PR...");
+
+            // 创建 spinner 显示创建 PR 的进度
+            let spinner = Spinner::new("Creating PR...");
+
             let pull_request_url =
                 provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
+
+            // 完成 spinner
+            spinner.finish();
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
@@ -661,13 +676,15 @@ impl PullRequestCreateCommand {
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
             if let Some(ref status) = created_pull_request_status {
-                log_success!("Updating Jira ticket...");
-                // 分配任务
-                Jira::assign_ticket(ticket, None)?;
-                // 更新状态
-                Jira::move_ticket(ticket, status)?;
-                // 添加评论（PR URL）
-                Jira::add_comment(ticket, pull_request_url)?;
+                Spinner::with("Updating Jira ticket...", || -> Result<()> {
+                    // 分配任务
+                    Jira::assign_ticket(ticket, None)?;
+                    // 更新状态
+                    Jira::move_ticket(ticket, status)?;
+                    // 添加评论（PR URL）
+                    Jira::add_comment(ticket, pull_request_url)?;
+                    Ok(())
+                })?;
 
                 // 写入历史记录
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;

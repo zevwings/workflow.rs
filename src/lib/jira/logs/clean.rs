@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 
 use super::helpers;
 use super::JiraLogs;
-use crate::base::util::dialog::ConfirmDialog;
+use crate::base::dialog::ConfirmDialog;
 use crate::trace_info;
 
 // ==================== 返回结构体 ====================

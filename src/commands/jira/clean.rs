@@ -8,7 +8,7 @@
 
 use anyhow::{Context, Result};
 
-use crate::base::util::dialog::InputDialog;
+use crate::base::dialog::InputDialog;
 use crate::base::util::format_size;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;

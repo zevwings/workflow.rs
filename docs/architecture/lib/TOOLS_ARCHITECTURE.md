@@ -1075,7 +1075,7 @@ if confirm("Do you want to continue?")? {
 ### 交互式对话框
 
 ```rust
-use workflow::base::util::dialog::{InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog};
+use workflow::base::dialog::{InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog};
 
 // 文本输入
 let name = InputDialog::new("Enter your name")

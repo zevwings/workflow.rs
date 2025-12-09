@@ -5,7 +5,7 @@
 //! 注意：由于对话框需要用户交互，部分测试可能需要模拟或跳过实际交互。
 //! 本测试主要关注对话框的构建、配置和验证逻辑。
 
-use workflow::base::util::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
+use workflow::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 
 // ==================== InputDialog 测试 ====================
 

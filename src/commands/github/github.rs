@@ -1,11 +1,11 @@
 //! GitHub 账号管理命令
 //! 用于管理多个 GitHub 账号的配置
 
+use crate::base::dialog::{ConfirmDialog, SelectDialog};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::GitHubAccountListRow;
 use crate::base::util::{
-    dialog::{ConfirmDialog, SelectDialog},
     mask_sensitive_value,
     table::{TableBuilder, TableStyle},
 };

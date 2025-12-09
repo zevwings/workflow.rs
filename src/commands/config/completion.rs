@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
 
+use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
-use crate::base::util::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
 
 /// Shell 配置状态

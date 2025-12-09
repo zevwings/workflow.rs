@@ -1,6 +1,6 @@
+use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
-use crate::base::util::dialog::SelectDialog;
 use crate::base::LogLevel;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_message, log_success};

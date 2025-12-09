@@ -14,16 +14,16 @@ use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::base::dialog::ConfirmDialog;
 use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
 };
+use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{
-    detect_release_platform, dialog::ConfirmDialog, format_size, Checksum, Unzip,
-};
+use crate::base::util::{detect_release_platform, format_size, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -239,52 +239,52 @@ impl UpdateCommand {
                 Ok(v)
             }
             None => {
-                log_info!("Fetching latest version...");
-
                 let url = "https://api.github.com/repos/zevwings/workflow.rs/releases/latest";
                 let retry_config = HttpRetryConfig::new();
 
-                let retry_result = HttpRetry::retry(
-                    || {
-                        // GitHub API 要求必须包含 User-Agent 头
-                        let mut headers = HeaderMap::new();
-                        headers.insert(
-                            "User-Agent",
-                            "workflow-cli"
-                                .parse()
-                                .context("Failed to parse User-Agent header")?,
-                        );
-
-                        // 添加 Accept 头（GitHub API 推荐）
-                        headers.insert(
-                            "Accept",
-                            "application/vnd.github+json"
-                                .parse()
-                                .context("Failed to parse Accept header")?,
-                        );
-
-                        // 可选地使用 GitHub token（如果用户已配置）
-                        // 使用 token 可以提高速率限制（从 60/小时 提升到 5000/小时）
-                        let settings = Settings::load();
-                        if let Some(token) = settings.github.get_current_token() {
+                let retry_result = Spinner::with("Fetching latest version...", || {
+                    HttpRetry::retry(
+                        || {
+                            // GitHub API 要求必须包含 User-Agent 头
+                            let mut headers = HeaderMap::new();
                             headers.insert(
-                                "Authorization",
-                                format!("Bearer {}", token)
+                                "User-Agent",
+                                "workflow-cli"
                                     .parse()
-                                    .context("Failed to parse Authorization header")?,
+                                    .context("Failed to parse User-Agent header")?,
                             );
-                            log_debug!("Using GitHub token for API request");
-                        }
 
-                        let client = HttpClient::global()?;
-                        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-                        client
-                            .get(url, config)
-                            .context("Failed to fetch latest release from GitHub")
-                    },
-                    &retry_config,
-                    "Fetching latest version information",
-                )?;
+                            // 添加 Accept 头（GitHub API 推荐）
+                            headers.insert(
+                                "Accept",
+                                "application/vnd.github+json"
+                                    .parse()
+                                    .context("Failed to parse Accept header")?,
+                            );
+
+                            // 可选地使用 GitHub token（如果用户已配置）
+                            // 使用 token 可以提高速率限制（从 60/小时 提升到 5000/小时）
+                            let settings = Settings::load();
+                            if let Some(token) = settings.github.get_current_token() {
+                                headers.insert(
+                                    "Authorization",
+                                    format!("Bearer {}", token)
+                                        .parse()
+                                        .context("Failed to parse Authorization header")?,
+                                );
+                                log_debug!("Using GitHub token for API request");
+                            }
+
+                            let client = HttpClient::global()?;
+                            let config = RequestConfig::<Value, Value>::new().headers(&headers);
+                            client
+                                .get(url, config)
+                                .context("Failed to fetch latest release from GitHub")
+                        },
+                        &retry_config,
+                        "Fetching latest version information",
+                    )
+                })?;
 
                 let response = retry_result.result;
                 if !retry_result.succeeded_on_first_attempt {
@@ -424,7 +424,6 @@ impl UpdateCommand {
     /// 在 macOS 上，解压后立即移除所有二进制文件的隔离属性，
     /// 确保安装时不会遇到 Gatekeeper 阻止。
     fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
-        log_info!("Extracting update package...");
         log_debug!("Extracting: {}", archive_path.display());
         log_debug!("Extracting to: {}", output_dir.display());
 
@@ -434,12 +433,15 @@ impl UpdateCommand {
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
-        if extension == "zip" {
-            Unzip::extract_zip(archive_path, output_dir)?;
-        } else {
-            // 默认使用 tar.gz 解压
-            Unzip::extract_tar_gz(archive_path, output_dir)?;
-        }
+        Spinner::with("Extracting update package...", || -> Result<()> {
+            if extension == "zip" {
+                Unzip::extract_zip(archive_path, output_dir)?;
+            } else {
+                // 默认使用 tar.gz 解压
+                Unzip::extract_tar_gz(archive_path, output_dir)?;
+            }
+            Ok(())
+        })?;
 
         log_success!("  Extraction complete");
 
@@ -453,8 +455,6 @@ impl UpdateCommand {
     /// 在解压目录中运行 ./install 来安装二进制文件到系统目录和补全脚本。
     /// 默认行为是安装全部（二进制文件 + completions）。
     fn install(extract_dir: &Path) -> Result<()> {
-        log_info!("Installing binaries and completion scripts...");
-
         let install_binary = extract_dir.join(Paths::binary_name("install"));
 
         if !install_binary.exists() {
@@ -475,14 +475,20 @@ impl UpdateCommand {
         }
 
         // 运行 ./install 安装二进制文件和补全脚本（默认安装全部）
-        let status = Command::new(&install_binary)
-            .current_dir(extract_dir)
-            .status()
-            .context("Failed to run install")?;
+        Spinner::with(
+            "Installing binaries and completion scripts...",
+            || -> Result<()> {
+                let status = Command::new(&install_binary)
+                    .current_dir(extract_dir)
+                    .status()
+                    .context("Failed to run install")?;
 
-        if !status.success() {
-            anyhow::bail!("Installation failed");
-        }
+                if !status.success() {
+                    anyhow::bail!("Installation failed");
+                }
+                Ok(())
+            },
+        )?;
 
         log_success!("  Binaries and completion scripts installation complete");
         Ok(())
@@ -579,20 +585,24 @@ impl UpdateCommand {
     ///
     /// 验证 workflow 二进制文件。
     fn verify_binaries(target_version: &str) -> Result<Vec<BinaryStatus>> {
-        log_info!("Verifying binaries...");
-
         let install_dir = Paths::binary_install_dir();
         let install_path = PathBuf::from(&install_dir);
         let binaries = Paths::command_names();
         let mut results = Vec::new();
 
-        for binary in binaries {
-            let binary_name = Paths::binary_name(binary);
-            let path = install_path.join(&binary_name);
-            let status =
-                Self::verify_single_binary(&path.to_string_lossy(), &binary_name, target_version)?;
-            results.push(status);
-        }
+        Spinner::with("Verifying binaries...", || -> Result<()> {
+            for binary in binaries {
+                let binary_name = Paths::binary_name(binary);
+                let path = install_path.join(&binary_name);
+                let status = Self::verify_single_binary(
+                    &path.to_string_lossy(),
+                    &binary_name,
+                    target_version,
+                )?;
+                results.push(status);
+            }
+            Ok(())
+        })?;
 
         Ok(results)
     }
@@ -601,8 +611,6 @@ impl UpdateCommand {
     ///
     /// 只检查补全脚本文件是否存在，不验证文件内容。
     fn verify_completions() -> Result<bool> {
-        log_info!("Verifying completion scripts...");
-
         let shell = match Detect::shell() {
             Ok(shell) => shell,
             Err(_) => {
@@ -631,18 +639,21 @@ impl UpdateCommand {
 
         let mut all_valid = true;
 
-        for file in &files {
-            let path = completion_dir.join(file);
+        Spinner::with("Verifying completion scripts...", || -> Result<()> {
+            for file in &files {
+                let path = completion_dir.join(file);
 
-            // 只检查文件是否存在
-            if !path.exists() {
-                log_warning!("Completion script does not exist: {}", path.display());
-                all_valid = false;
-                continue;
+                // 只检查文件是否存在
+                if !path.exists() {
+                    log_warning!("Completion script does not exist: {}", path.display());
+                    all_valid = false;
+                    continue;
+                }
+
+                log_debug!("Completion script verification passed: {}", path.display());
             }
-
-            log_debug!("Completion script verification passed: {}", path.display());
-        }
+            Ok(())
+        })?;
 
         if all_valid {
             log_success!("  Completion script verification passed");
@@ -657,11 +668,12 @@ impl UpdateCommand {
     ///
     /// 只验证文件是否存在和是否有执行权限，不执行任何命令验证。
     fn verify_installation(_target_version: &str) -> Result<VerificationResult> {
-        log_info!("Verifying installation...");
         log_break!();
 
         // 验证二进制文件（只检查存在性和执行权限）
-        let binaries = Self::verify_binaries(_target_version)?;
+        let binaries = Spinner::with("Verifying installation...", || {
+            Self::verify_binaries(_target_version)
+        })?;
 
         let mut all_binaries_ok = true;
         for binary in &binaries {
