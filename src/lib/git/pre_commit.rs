@@ -247,8 +247,6 @@ impl GitPreCommit {
         log_success!("Check passed");
         log_break!();
 
-        log_success!("All checks passed!");
-        log_break!();
         log_success!("✅ All checks passed, continuing with commit...");
         log_break!();
 
