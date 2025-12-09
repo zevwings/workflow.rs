@@ -150,6 +150,7 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     permissions:
       contents: write  # 允许创建和推送 tag
+      pull-requests: write  # 允许创建和合并 PR（用于版本更新）
     outputs:
       tag: ${{ steps.job_outputs.outputs.tag }}
       tag_created: ${{ steps.job_outputs.outputs.tag_created }}
