@@ -8,10 +8,11 @@
 - 浏览器和剪贴板操作
 - 文件解压和校验和验证
 - 用户确认对话框
-- 交互式对话框（输入、选择、多选、确认）
 - 格式化工具（文件大小格式化）
 - 平台检测工具（GitHub Releases 平台识别）
 - 表格输出工具（统一的表格显示接口）
+
+**注意**：交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./DIALOG_ARCHITECTURE.md)。进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./INDICATOR_ARCHITECTURE.md)。
 
 这些工具函数为整个项目提供通用的基础设施支持，被所有模块广泛使用。
 
@@ -31,13 +32,12 @@ src/lib/base/util/
 ├── unzip.rs       # 文件解压工具（~61 行）
 ├── checksum.rs    # 校验和验证工具（~164 行）
 ├── confirm.rs     # 用户确认对话框（~45 行）
-├── dialog.rs      # 交互式对话框（~601 行）
 ├── format.rs      # 格式化工具（~42 行）
 ├── platform.rs    # 平台检测工具（~84 行）
 └── table.rs       # 表格输出工具（~382 行）
 ```
 
-**总计：约 2046 行代码，12 个文件，11 个主要组件**
+**总计：约 1446 行代码，11 个文件，9 个主要组件**
 
 ### 依赖模块
 
@@ -47,7 +47,6 @@ src/lib/base/util/
 - **`zip`**：ZIP 文件解压
 - **`sha2`**：SHA256 校验和
 - **`dialoguer`**：用户确认对话框
-- **`inquire`**：交互式对话框（输入、选择、多选、确认）
 - **`tabled`**：表格输出格式化
 
 ### 模块集成
@@ -59,7 +58,6 @@ src/lib/base/util/
 - **浏览器**：PR 命令使用 `Browser::open()`
 - **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
 - **用户确认**：多个命令使用 `confirm()` 函数
-- **交互式对话框**：多个命令使用 `InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`
 - **格式化工具**：Lifecycle 命令使用 `format_size()` 格式化文件大小
 - **平台检测**：Lifecycle 命令使用 `detect_release_platform()` 检测平台
 - **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
@@ -592,110 +590,7 @@ confirm(
    - 返回 `Ok(false)`：允许调用者根据返回值决定后续逻辑
    - 返回错误：强制要求用户确认，取消则终止操作
 
-#### 8. 交互式对话框 (`dialog.rs`)
-
-### 功能概述
-
-提供统一的交互式对话框接口，使用 `inquire` 作为后端实现。支持链式调用，提供更好的用户体验和代码可读性。
-
-### 核心组件
-
-#### InputDialog - 文本输入对话框
-
-```rust
-pub struct InputDialog {
-    prompt: String,
-    default: Option<String>,
-    validator: Option<ValidatorFn>,
-    allow_empty: bool,
-}
-```
-
-**主要方法**：
-- `new(prompt)` - 创建新的输入对话框
-- `with_default(default)` - 设置默认值
-- `with_validator(validator)` - 设置验证器
-- `allow_empty(allow)` - 允许空值
-- `prompt()` - 显示对话框并获取用户输入
-
-**特性**：
-- 支持默认值
-- 支持自定义验证器
-- 支持空值处理
-- 链式调用
-
-#### SelectDialog - 单选对话框
-
-```rust
-pub struct SelectDialog<T> {
-    prompt: String,
-    options: Vec<T>,
-    default: Option<usize>,
-}
-```
-
-**主要方法**：
-- `new(prompt, options)` - 创建新的单选对话框
-- `with_default(index)` - 设置默认选项索引
-- `prompt()` - 显示对话框并获取用户选择
-
-**特性**：
-- 支持默认选项
-- 支持任意类型（实现 `Display` trait）
-
-#### MultiSelectDialog - 多选对话框
-
-```rust
-pub struct MultiSelectDialog<T> {
-    prompt: String,
-    options: Vec<T>,
-    default: Option<Vec<usize>>,
-}
-```
-
-**主要方法**：
-- `new(prompt, options)` - 创建新的多选对话框
-- `with_default(indices)` - 设置默认选中的选项索引
-- `prompt()` - 显示对话框并获取用户选择（返回 `Vec<T>`）
-
-**特性**：
-- 支持多选
-- 支持默认选中多个选项
-
-#### ConfirmDialog - 确认对话框
-
-```rust
-pub struct ConfirmDialog {
-    prompt: String,
-    default: Option<bool>,
-    cancel_message: Option<String>,
-}
-```
-
-**主要方法**：
-- `new(prompt)` - 创建新的确认对话框
-- `with_default(default)` - 设置默认选择
-- `with_cancel_message(message)` - 设置取消消息（取消时返回错误）
-- `prompt()` - 显示对话框并获取用户确认
-
-**特性**：
-- 支持默认选择
-- 支持取消消息（强制确认）
-
-### 使用场景
-
-- **交互式输入**：需要用户输入文本（如 Jira ID、分支名等）
-- **选项选择**：需要用户从选项列表中选择（如选择 shell 类型、选择平台等）
-- **多选操作**：需要用户选择多个选项（如选择要清理的分支等）
-- **确认操作**：需要用户确认操作（如删除、更新等）
-
-### 设计决策
-
-1. **链式调用**：所有对话框支持链式调用，提供更好的代码可读性
-2. **统一接口**：所有对话框使用 `prompt()` 方法获取用户输入
-3. **错误处理**：用户取消时返回错误，便于调用者处理
-
-#### 9. 格式化工具 (`format.rs`)
+#### 8. 格式化工具 (`format.rs`)
 
 ### 功能概述
 
@@ -735,7 +630,7 @@ assert_eq!(format_size(1048576), "1.00 MB");
 - **文件大小显示**：在下载、更新等命令中显示文件大小
 - **进度提示**：显示下载进度和文件大小
 
-#### 10. 平台检测工具 (`platform.rs`)
+#### 9. 平台检测工具 (`platform.rs`)
 
 ### 功能概述
 
@@ -776,7 +671,7 @@ println!("Detected platform: {}", platform);
 - **更新功能**：检测平台以匹配对应的 GitHub Release 资源文件
 - **安装功能**：检测平台以选择正确的安装包
 
-#### 11. 表格输出工具 (`table.rs`)
+#### 10. 表格输出工具 (`table.rs`)
 
 ### 功能概述
 
@@ -992,6 +887,8 @@ util (基础设施)
 - [总体架构文档](../ARCHITECTURE.md)
 - [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md)
 - [HTTP 架构文档](./HTTP_ARCHITECTURE.md)
+- [Dialog 模块架构文档](./DIALOG_ARCHITECTURE.md)
+- [Indicator 模块架构文档](./INDICATOR_ARCHITECTURE.md)
 
 ---
 
@@ -1072,32 +969,6 @@ if confirm("Do you want to continue?")? {
 }
 ```
 
-### 交互式对话框
-
-```rust
-use workflow::base::dialog::{InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog};
-
-// 文本输入
-let name = InputDialog::new("Enter your name")
-    .with_default("John Doe")
-    .prompt()?;
-
-// 单选
-let options = vec!["Option 1", "Option 2", "Option 3"];
-let selected = SelectDialog::new("Choose an option", options)
-    .with_default(0)
-    .prompt()?;
-
-// 多选
-let selected = MultiSelectDialog::new("Choose options", options)
-    .prompt()?;
-
-// 确认
-let confirmed = ConfirmDialog::new("Continue?")
-    .with_default(true)
-    .prompt()?;
-```
-
 ### 格式化工具
 
 ```rust
@@ -1151,10 +1022,11 @@ println!("{}", output);
 3. **浏览器和剪贴板**：系统集成操作
 4. **文件操作**：解压和校验和验证
 5. **用户确认**：交互式确认对话框
-6. **交互式对话框**：输入、选择、多选、确认对话框（链式调用）
-7. **格式化工具**：文件大小格式化
-8. **平台检测**：GitHub Releases 平台识别
-9. **表格输出**：统一的表格显示接口
+6. **格式化工具**：文件大小格式化
+7. **平台检测**：GitHub Releases 平台识别
+8. **表格输出**：统一的表格显示接口
+
+**注意**：交互式对话框和进度指示器已移至独立模块，请参考相关架构文档。
 
 **设计优势**：
 - ✅ **易用性**：简洁的 API 和宏，支持链式调用
