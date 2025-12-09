@@ -63,9 +63,7 @@ pub fn record_migration(version: &str) -> Result<()> {
 
     // 保存
     let manager = ConfigManager::<MigrationHistory>::new(path);
-    manager
-        .write(&history)
-        .context("Failed to save migration history")?;
+    manager.write(&history).context("Failed to save migration history")?;
 
     Ok(())
 }

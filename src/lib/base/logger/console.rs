@@ -126,10 +126,7 @@ pub fn debug(text: impl fmt::Display) -> String {
 /// println!("{}", sep);
 /// ```
 pub fn separator(char: char, length: usize) -> String {
-    style(char.to_string().repeat(length))
-        .bright()
-        .black()
-        .to_string()
+    style(char.to_string().repeat(length)).bright().black().to_string()
 }
 
 /// 带文本的分隔线样式
@@ -274,6 +271,7 @@ impl Logger {
 /// use workflow::log_success;
 ///
 /// log_success!("Operation completed");
+/// let count = 5;
 /// log_success!("Found {} items", count);
 /// ```
 #[macro_export]
@@ -291,6 +289,8 @@ macro_rules! log_success {
 /// use workflow::log_error;
 ///
 /// log_error!("Operation failed");
+/// let code = 404;
+/// let message = "Not Found";
 /// log_error!("Error: {} - {}", code, message);
 /// ```
 #[macro_export]
@@ -308,6 +308,7 @@ macro_rules! log_error {
 /// use workflow::log_warning;
 ///
 /// log_warning!("This is a warning");
+/// let count = 3;
 /// log_warning!("Warning: {} items missing", count);
 /// ```
 #[macro_export]
@@ -325,6 +326,7 @@ macro_rules! log_warning {
 /// use workflow::log_info;
 ///
 /// log_info!("Processing data");
+/// let count = 10;
 /// log_info!("Processing {} items", count);
 /// ```
 #[macro_export]
@@ -347,6 +349,8 @@ macro_rules! log_info {
 /// use workflow::log_debug;
 ///
 /// log_debug!("Debug information");
+/// let key = "version";
+/// let value = "1.0.0";
 /// log_debug!("Debug: {} = {}", key, value);
 ///
 /// // 在 debug 模式下会自动输出

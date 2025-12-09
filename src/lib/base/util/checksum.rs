@@ -43,11 +43,14 @@ impl Checksum {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::util::checksum::Checksum;
+    /// use workflow::base::util::checksum::Checksum;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let hash = Checksum::calculate_file_sha256(Path::new("file.tar.gz"))?;
     /// println!("SHA256: {}", hash);
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn calculate_file_sha256(file_path: &Path) -> Result<String> {
         let mut file = File::open(file_path)
@@ -57,9 +60,8 @@ impl Checksum {
         let mut buffer = vec![0u8; 8192];
 
         loop {
-            let bytes_read = file
-                .read(&mut buffer)
-                .context("Failed to read file for checksum calculation")?;
+            let bytes_read =
+                file.read(&mut buffer).context("Failed to read file for checksum calculation")?;
 
             if bytes_read == 0 {
                 break;
@@ -88,11 +90,14 @@ impl Checksum {
     /// # 示例
     ///
     /// ```
-    /// use workflow::util::checksum::Checksum;
+    /// use workflow::base::util::checksum::Checksum;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let content = "abc123def456  file.tar.gz";
     /// let hash = Checksum::parse_hash_from_content(content)?;
     /// assert_eq!(hash, "abc123def456");
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn parse_hash_from_content(content: &str) -> Result<String> {
         content
@@ -122,12 +127,15 @@ impl Checksum {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::util::checksum::Checksum;
+    /// use workflow::base::util::checksum::Checksum;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let file_path = Path::new("file.tar.gz");
     /// let expected_hash = "abc123def456...";
     /// let result = Checksum::verify(file_path, expected_hash)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn verify(file_path: &Path, expected_hash: &str) -> Result<VerifyResult> {
         let actual_hash = Self::calculate_file_sha256(file_path)?;
@@ -164,7 +172,7 @@ impl Checksum {
     /// # 示例
     ///
     /// ```
-    /// use workflow::util::checksum::Checksum;
+    /// use workflow::base::util::checksum::Checksum;
     ///
     /// let url = "https://example.com/file.tar.gz";
     /// assert_eq!(Checksum::build_url(url), "https://example.com/file.tar.gz.sha256");

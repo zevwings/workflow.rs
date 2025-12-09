@@ -44,12 +44,7 @@ impl GitPreCommit {
         }
 
         // 检查 pre-commit 命令是否可用
-        if cmd("which", &["pre-commit"])
-            .stdout_null()
-            .stderr_null()
-            .run()
-            .is_ok()
-        {
+        if cmd("which", &["pre-commit"]).stdout_null().stderr_null().run().is_ok() {
             return true;
         }
 
@@ -112,9 +107,8 @@ impl GitPreCommit {
                 })
             } else {
                 // 执行其他 Git hooks
-                let output = Command::new(&hooks_path)
-                    .output()
-                    .context("Failed to run pre-commit hooks")?;
+                let output =
+                    Command::new(&hooks_path).output().context("Failed to run pre-commit hooks")?;
 
                 if output.status.success() {
                     Ok(PreCommitResult {
@@ -203,11 +197,8 @@ impl GitPreCommit {
         log_break!();
 
         // 3.1 Check code format
-        log_info!("1/3 Checking code format...");
-        let fmt_check = cmd("cargo", &["fmt", "--check"])
-            .stdout_capture()
-            .stderr_capture()
-            .run();
+        log_info!("1/4 Checking code format...");
+        let fmt_check = cmd("cargo", &["fmt", "--check"]).stdout_capture().stderr_capture().run();
 
         match fmt_check {
             Ok(output) if output.status.success() => {
@@ -220,7 +211,7 @@ impl GitPreCommit {
         log_break!();
 
         // 3.2 Run Clippy check
-        log_info!("2/3 Running Clippy check...");
+        log_info!("2/4 Running Clippy check...");
         let clippy_output = cmd("cargo", &["clippy", "--", "-D", "warnings"])
             .stdout_capture()
             .stderr_capture()
@@ -234,7 +225,7 @@ impl GitPreCommit {
         log_break!();
 
         // 3.3 Run cargo check
-        log_info!("3/3 Running cargo check...");
+        log_info!("3/4 Running cargo check...");
         let check_output = cmd("cargo", &["check"])
             .stdout_capture()
             .stderr_capture()
@@ -245,6 +236,59 @@ impl GitPreCommit {
             anyhow::bail!("Cargo check failed");
         }
         log_success!("Check passed");
+        log_break!();
+
+        // 4. Run tests
+        log_info!("4/4 Running tests...");
+        // 检查 make 命令是否可用（跨平台检查）
+        let make_available = if cfg!(target_os = "windows") {
+            cmd("where", &["make"]).run().is_ok()
+        } else {
+            cmd("which", &["make"]).run().is_ok()
+        };
+
+        if make_available {
+            // 使用 make test 运行测试
+            let test_output = cmd("make", &["test"])
+                .stdout_capture()
+                .stderr_capture()
+                .run()
+                .context("Failed to run make test")?;
+
+            if !test_output.status.success() {
+                let stderr = String::from_utf8_lossy(&test_output.stderr);
+                let stdout = String::from_utf8_lossy(&test_output.stdout);
+                if !stderr.is_empty() {
+                    eprintln!("{}", stderr);
+                }
+                if !stdout.is_empty() {
+                    eprintln!("{}", stdout);
+                }
+                anyhow::bail!("Tests failed");
+            }
+            log_success!("Tests passed");
+        } else {
+            // 如果 make 不可用，直接运行 cargo test
+            log_info!("make command not available, running cargo test directly...");
+            let test_output = cmd("cargo", &["test", "--lib", "--tests"])
+                .stdout_capture()
+                .stderr_capture()
+                .run()
+                .context("Failed to run cargo test")?;
+
+            if !test_output.status.success() {
+                let stderr = String::from_utf8_lossy(&test_output.stderr);
+                let stdout = String::from_utf8_lossy(&test_output.stdout);
+                if !stderr.is_empty() {
+                    eprintln!("{}", stderr);
+                }
+                if !stdout.is_empty() {
+                    eprintln!("{}", stdout);
+                }
+                anyhow::bail!("Tests failed");
+            }
+            log_success!("Tests passed");
+        }
         log_break!();
 
         log_success!("✅ All checks passed, continuing with commit...");

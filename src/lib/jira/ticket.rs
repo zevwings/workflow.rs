@@ -146,13 +146,14 @@ impl JiraTicket {
     /// 如果指定的状态不在可用 transitions 列表中，返回错误。
     pub fn transition(ticket: &str, status: &str) -> Result<()> {
         let transitions = Self::get_transitions(ticket)?;
-        let transition = transitions
-            .iter()
-            .find(|t| t.name.eq_ignore_ascii_case(status))
-            .context(format!(
-                "Status '{}' not found in available transitions for ticket {}",
-                status, ticket
-            ))?;
+        let transition =
+            transitions
+                .iter()
+                .find(|t| t.name.eq_ignore_ascii_case(status))
+                .context(format!(
+                    "Status '{}' not found in available transitions for ticket {}",
+                    status, ticket
+                ))?;
 
         JiraIssueApi::transition_issue(ticket, &transition.id).context(format!(
             "Failed to move ticket {} to status {}",

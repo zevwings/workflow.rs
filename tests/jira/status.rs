@@ -195,10 +195,11 @@ fn test_configure_interactive_invalid_project() {
 }
 
 #[test]
+#[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_configure_interactive_with_ticket() {
     // 测试使用 ticket ID 进行交互式配置
-    // 注意：这个测试需要实际的 Jira API 调用，可能会失败
-    // 我们主要验证函数不会 panic，并且能正确处理错误
+    // 注意：这个测试需要实际的 Jira API 调用和用户交互，在 CI 环境中会卡住
+    // 使用 `cargo test -- --ignored` 来运行这些测试
     let result = JiraStatus::configure_interactive("PROJ-123");
 
     // 如果 API 调用失败（例如没有配置 Jira），应该返回错误
@@ -217,9 +218,11 @@ fn test_configure_interactive_with_ticket() {
 }
 
 #[test]
+#[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_configure_interactive_with_project_name() {
     // 测试使用项目名进行交互式配置
-    // 注意：这个测试需要实际的 Jira API 调用，可能会失败
+    // 注意：这个测试需要实际的 Jira API 调用和用户交互，在 CI 环境中会卡住
+    // 使用 `cargo test -- --ignored` 来运行这些测试
     let result = JiraStatus::configure_interactive("PROJ");
 
     // 如果 API 调用失败（例如没有配置 Jira），应该返回错误

@@ -17,6 +17,7 @@
 //! ```rust,no_run
 //! use workflow::base::dialog::InputDialog;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 简单输入
 //! let name = InputDialog::new("Enter your name")
 //!     .prompt()?;
@@ -41,6 +42,8 @@
 //! let optional = InputDialog::new("Enter value (optional)")
 //!     .allow_empty(true)
 //!     .prompt()?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### SelectDialog
@@ -48,11 +51,14 @@
 //! ```rust,no_run
 //! use workflow::base::dialog::SelectDialog;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let options = vec!["Option 1", "Option 2", "Option 3"];
 //! let selected = SelectDialog::new("Choose an option", options)
 //!     .with_default(0)
 //!     .prompt()?;
 //! // selected 是 "Option 1" 或 "Option 2" 或 "Option 3"
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### MultiSelectDialog
@@ -60,10 +66,13 @@
 //! ```rust,no_run
 //! use workflow::base::dialog::MultiSelectDialog;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let options = vec!["Option 1", "Option 2", "Option 3"];
 //! let selected = MultiSelectDialog::new("Choose options", options)
 //!     .prompt()?;
 //! // selected 是 Vec<&str>，包含选中的选项
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! ### ConfirmDialog
@@ -71,6 +80,7 @@
 //! ```rust,no_run
 //! use workflow::base::dialog::ConfirmDialog;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! // 简单确认
 //! let confirmed = ConfirmDialog::new("Continue?")
 //!     .with_default(true)
@@ -81,6 +91,8 @@
 //!     .with_default(false)
 //!     .with_cancel_message("Operation cancelled.")
 //!     .prompt()?;
+//! # Ok(())
+//! # }
 //! ```
 
 mod confirm;

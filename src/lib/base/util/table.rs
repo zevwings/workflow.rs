@@ -14,9 +14,9 @@
 //!
 //! ```rust
 //! use tabled::Tabled;
-//! use crate::base::util::table::TableBuilder;
+//! use workflow::base::util::{TableBuilder, TableStyle};
 //!
-//! #[derive(Tabled)]
+//! #[derive(Tabled, Clone)]
 //! struct User {
 //!     name: String,
 //!     age: u32,
@@ -28,7 +28,7 @@
 //! ];
 //!
 //! // 链式调用方式
-//! TableBuilder::new(users)
+//! TableBuilder::new(users.clone())
 //!     .with_title("Users")
 //!     .with_style(TableStyle::Modern)
 //!     .print();
@@ -136,7 +136,7 @@ fn fix_title_separator(table_output: String) -> String {
 ///
 /// ```rust
 /// use tabled::Tabled;
-/// use crate::base::util::table::{TableBuilder, TableStyle};
+/// use workflow::base::util::{TableBuilder, TableStyle};
 ///
 /// #[derive(Tabled)]
 /// struct User {
@@ -174,7 +174,7 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// ```rust
     /// use tabled::Tabled;
-    /// use crate::base::util::table::TableBuilder;
+    /// use workflow::base::util::TableBuilder;
     ///
     /// #[derive(Tabled)]
     /// struct Item {
@@ -202,7 +202,9 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use workflow::base::util::TableBuilder;
+    /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_title("My Table");
     /// ```
     pub fn with_title(mut self, title: impl Into<String>) -> Self {
@@ -218,9 +220,9 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
-    /// use crate::base::util::table::{TableBuilder, TableStyle};
-    ///
+    /// ```rust,no_run
+    /// use workflow::base::util::{TableBuilder, TableStyle};
+    /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_style(TableStyle::Modern);
     /// ```
     pub fn with_style(mut self, style: TableStyle) -> Self {
@@ -236,7 +238,9 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use workflow::base::util::TableBuilder;
+    /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_max_width(80);
     /// ```
     pub fn with_max_width(mut self, width: usize) -> Self {
@@ -252,9 +256,10 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use tabled::settings::Alignment;
-    ///
+    /// use workflow::base::util::TableBuilder;
+    /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data)
     ///     .with_alignment(vec![Alignment::left(), Alignment::right()]);
     /// ```
@@ -271,7 +276,9 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use workflow::base::util::TableBuilder;
+    /// # let data = vec![("name", "value")];
     /// let output = TableBuilder::new(data).render();
     /// println!("{}", output);
     /// ```
@@ -325,9 +332,11 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 示例
     ///
-    /// ```rust
+    /// ```rust,no_run
+    /// use workflow::base::util::TableBuilder;
+    /// # let data = vec![("name", "value")];
     /// // 旧方式（已废弃）
-    /// TableBuilder::new(data).print();
+    /// TableBuilder::new(data.clone()).print();
     ///
     /// // 新方式
     /// println!("{}", TableBuilder::new(data).render());

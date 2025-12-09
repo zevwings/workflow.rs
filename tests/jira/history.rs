@@ -10,7 +10,12 @@ use workflow::jira::history::{JiraWorkHistory, WorkHistoryEntry};
 #[test]
 fn test_read_work_history_nonexistent_file() {
     // 测试读取不存在的工作历史记录文件
-    let result = JiraWorkHistory::read_work_history("123", Some("github.com/test/repo"));
+    // 使用唯一的仓库 URL 确保文件不存在
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let unique_repo = format!("github.com/test/repo-{}", timestamp);
+
+    let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo));
 
     // 文件不存在时应该返回 Ok(None)
     assert!(result.is_ok(), "Should return Ok when file doesn't exist");
@@ -104,8 +109,12 @@ fn test_read_work_history_nonexistent_entry() {
 #[test]
 fn test_find_pr_id_by_branch_nonexistent_file() {
     // 测试在不存在文件中根据分支名查找 PR ID
-    let result =
-        JiraWorkHistory::find_pr_id_by_branch("feature/test", Some("github.com/test/repo"));
+    // 使用唯一的仓库 URL 确保文件不存在
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let unique_repo = format!("github.com/test/repo-{}", timestamp);
+
+    let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo));
 
     // 文件不存在时应该返回 Ok(None)
     assert!(result.is_ok(), "Should return Ok when file doesn't exist");
@@ -311,7 +320,12 @@ fn test_update_work_history_merged_without_repository() {
 #[test]
 fn test_update_work_history_merged_nonexistent_file() {
     // 测试更新不存在文件的合并时间
-    let result = JiraWorkHistory::update_work_history_merged("123", Some("github.com/test/repo"));
+    // 使用唯一的仓库 URL 确保文件不存在
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let unique_repo = format!("github.com/test/repo-{}", timestamp);
+
+    let result = JiraWorkHistory::update_work_history_merged("123", Some(&unique_repo));
 
     // 文件不存在时应该返回 Ok(())（不报错）
     assert!(result.is_ok(), "Should return Ok when file doesn't exist");
@@ -360,7 +374,12 @@ fn test_delete_work_history_entry_without_repository() {
 #[test]
 fn test_delete_work_history_entry_nonexistent_file() {
     // 测试删除不存在文件中的条目
-    let result = JiraWorkHistory::delete_work_history_entry("123", Some("github.com/test/repo"));
+    // 使用唯一的仓库 URL 确保文件不存在
+    use std::time::{SystemTime, UNIX_EPOCH};
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let unique_repo = format!("github.com/test/repo-{}", timestamp);
+
+    let result = JiraWorkHistory::delete_work_history_entry("999", Some(&unique_repo));
 
     // 文件不存在时应该返回 Ok，但 messages 和 warnings 应该为空
     assert!(result.is_ok(), "Should return Ok when file doesn't exist");

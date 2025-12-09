@@ -196,10 +196,7 @@ fn test_get_all_completion_files_empty_commands() {
 #[test]
 fn test_get_all_completion_files_uniqueness() {
     let result = get_all_completion_files(&["workflow"]);
-    let unique_count = result
-        .iter()
-        .collect::<std::collections::HashSet<_>>()
-        .len();
+    let unique_count = result.iter().collect::<std::collections::HashSet<_>>().len();
     assert_eq!(unique_count, result.len(), "All filenames should be unique");
 }
 

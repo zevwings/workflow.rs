@@ -173,11 +173,8 @@ impl SummarizeCommand {
     fn build_output_path(pr_id: &str, filename: &str) -> Result<PathBuf> {
         let settings = Settings::get();
         // 从 Document Base Directory 配置读取，如果未配置则使用默认值
-        let base_dir = settings
-            .log
-            .download_base_dir
-            .clone()
-            .unwrap_or_else(default_download_base_dir);
+        let base_dir =
+            settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
 
         // 获取仓库名称（owner/repo 格式，提取 repo 部分）
         let repo_name_full = GitRepo::extract_repo_name()
@@ -223,7 +220,7 @@ impl SummarizeCommand {
     /// 解析 diff，提取每个文件的修改
     ///
     /// Git diff 格式：
-    /// ```
+    /// ```text
     /// diff --git a/path/to/file b/path/to/file
     /// index ...
     /// --- a/path/to/file

@@ -62,16 +62,12 @@ fn perform_migration(
         if let Some(new_repo_config) = new_config.repositories.get(repo_name) {
             // 合并配置：保留新配置中的 branch_prefix，合并 branch_ignore
             let merged_config = merge_repo_config(old_repo_config, new_repo_config);
-            new_config
-                .repositories
-                .insert(repo_name.clone(), merged_config);
+            new_config.repositories.insert(repo_name.clone(), merged_config);
             result.merged_repos.push(repo_name.clone());
         } else {
             // 直接迁移：转换为新格式
             let migrated_config = convert_repo_config(old_repo_config);
-            new_config
-                .repositories
-                .insert(repo_name.clone(), migrated_config);
+            new_config.repositories.insert(repo_name.clone(), migrated_config);
             result.migrated_repos.push(repo_name.clone());
         }
     }

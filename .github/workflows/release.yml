@@ -381,6 +381,8 @@ jobs:
 
       - name: Build release binaries
         shell: bash
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
@@ -388,10 +390,61 @@ jobs:
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
             echo "🔧 Cross-compiling for Linux ARM64"
             echo "ℹ️  Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
+            # 对于 Linux ARM64，我们需要确保 Cargo 不会尝试编译 xcb
+            # 由于条件编译配置，clipboard 依赖应该被排除，但 Cargo.lock 可能仍然包含它
+            # 解决方案：临时从 Cargo.lock 中移除这些依赖，构建后再恢复
+            if [ -f "Cargo.lock" ]; then
+              # 检查 Python3 是否可用
+              if ! command -v python3 >/dev/null 2>&1; then
+                echo "❌ python3 is required but not found"
+                exit 1
+              fi
+              cp Cargo.lock Cargo.lock.backup
+              echo "📝 Backed up Cargo.lock"
+              # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
+              # 以及从其他包的 dependencies 中移除对这些包的引用
+              # Python 脚本更可靠，能更好地处理 TOML 格式
+              python3 .github/scripts/remove_xcb_deps.py
+
+              if [ $? -ne 0 ]; then
+                echo "⚠️  Failed to process Cargo.lock, restoring backup"
+                if [ -f "Cargo.lock.backup" ]; then
+                  mv Cargo.lock.backup Cargo.lock
+                  echo "✅ Restored Cargo.lock from backup"
+                fi
+                echo "❌ Cannot proceed without removing xcb dependencies"
+                exit 1
+              fi
+
+              # 验证 Cargo.lock 仍然有效（至少应该能解析基本结构）
+              if ! grep -q '^\[\[package\]\]' Cargo.lock; then
+                echo "❌ Cargo.lock appears corrupted after processing"
+                if [ -f "Cargo.lock.backup" ]; then
+                  mv Cargo.lock.backup Cargo.lock
+                  echo "✅ Restored Cargo.lock from backup"
+                fi
+                exit 1
+              fi
+            fi
           fi
-          cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
-        env:
-          CARGO_BUILD_TARGET: ${{ matrix.target }}
+          # 构建项目
+          if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+            BUILD_SUCCESS=true
+          else
+            BUILD_SUCCESS=false
+          fi
+
+          # 恢复 Cargo.lock（如果备份存在，无论构建成功与否都要恢复）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]] && [ -f "Cargo.lock.backup" ]; then
+            mv Cargo.lock.backup Cargo.lock
+            echo "✅ Restored Cargo.lock from backup"
+          fi
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
 
       - name: Create package directory
         shell: bash

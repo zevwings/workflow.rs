@@ -251,7 +251,7 @@ impl Default for LogSettings {
 // ==================== TOML LLM 配置结构体 ====================
 
 /// LLM 配置（TOML）
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMSettings {
     /// LLM Provider URL（proxy 时使用，openai/deepseek 时自动设置）
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -268,6 +268,18 @@ pub struct LLMSettings {
     /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
     #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
     pub language: String,
+}
+
+impl Default for LLMSettings {
+    fn default() -> Self {
+        Self {
+            url: None,
+            key: None,
+            provider: default_llm_provider(),
+            model: None,
+            language: default_language(),
+        }
+    }
 }
 
 /// 应用程序设置
@@ -525,12 +537,8 @@ impl Settings {
         let mut account_infos = Vec::new();
 
         for account in &self.github.accounts {
-            let is_current = self
-                .github
-                .current
-                .as_ref()
-                .map(|c| c == &account.name)
-                .unwrap_or_else(|| {
+            let is_current =
+                self.github.current.as_ref().map(|c| c == &account.name).unwrap_or_else(|| {
                     // 如果没有设置 current，第一个账号是当前账号
                     self.github.accounts.first().map(|a| &a.name) == Some(&account.name)
                 });

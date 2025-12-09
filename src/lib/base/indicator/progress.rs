@@ -12,7 +12,7 @@ use std::time::Duration;
 /// # 示例
 ///
 /// ```rust
-/// use crate::base::indicator::Progress;
+/// use workflow::base::indicator::Progress;
 ///
 /// // 方式 1：已知总数
 /// let progress = Progress::new(100, "Downloading files...");
@@ -46,7 +46,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Downloading files...");
     /// progress.inc(1);
@@ -80,7 +80,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new_download(1024 * 1024, "Downloading...");
     /// progress.inc_bytes(1024);
@@ -115,7 +115,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new_unknown("Downloading...");
     /// // 执行操作
@@ -143,7 +143,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Processing...");
     /// progress.inc(1); // 增加 1
@@ -161,7 +161,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new_download(1024 * 1024, "Downloading...");
     /// progress.inc_bytes(1024); // 增加 1024 字节
@@ -179,7 +179,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Processing...");
     /// progress.set_position(50); // 设置为 50%
@@ -197,7 +197,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Starting...");
     /// progress.update_message("Processing...");
@@ -211,7 +211,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Processing...");
     /// progress.finish();
@@ -225,11 +225,12 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     /// use std::sync::{Arc, Mutex};
     ///
     /// let progress = Arc::new(Mutex::new(Progress::new(100, "Processing...")));
-    /// if let Ok(pb) = progress.lock() {
+    /// {
+    ///     let pb = progress.lock().unwrap();
     ///     pb.finish_ref();
     /// }
     /// ```
@@ -246,7 +247,7 @@ impl Progress {
     /// # 示例
     ///
     /// ```rust
-    /// use crate::base::indicator::Progress;
+    /// use workflow::base::indicator::Progress;
     ///
     /// let progress = Progress::new(100, "Processing...");
     /// progress.finish_with_message("Completed!");

@@ -80,9 +80,7 @@ impl SetupCommand {
         // 创建 spinner 显示验证进度
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.white} {msg}")
-                .unwrap(),
+            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
         );
         spinner.enable_steady_tick(Duration::from_millis(100));
         spinner.set_message("Verifying configurations...");
@@ -161,10 +159,7 @@ impl SetupCommand {
                 .with_default(1)
                 .prompt()
                 .context("Failed to get GitHub account management choice")?;
-            let selection = options
-                .iter()
-                .position(|opt| opt == &selected_option)
-                .unwrap_or(1);
+            let selection = options.iter().position(|opt| opt == &selected_option).unwrap_or(1);
 
             let mut account_added = false;
             match selection {
@@ -222,11 +217,7 @@ impl SetupCommand {
             } else if github_accounts.len() == 1 {
                 // 如果只有一个账号，确保设置了 Git 配置
                 let account = &github_accounts[0];
-                if github_current
-                    .as_ref()
-                    .map(|c| c == &account.name)
-                    .unwrap_or(false)
-                {
+                if github_current.as_ref().map(|c| c == &account.name).unwrap_or(false) {
                     let _ = GitConfig::set_global_user(&account.email, &account.name)?;
                 }
             }
@@ -283,10 +274,8 @@ impl SetupCommand {
             "Jira service address".to_string()
         };
 
-        let default_jira_address = existing
-            .jira_service_address
-            .clone()
-            .unwrap_or_else(|| String::from(""));
+        let default_jira_address =
+            existing.jira_service_address.clone().unwrap_or_else(|| String::from(""));
 
         let jira_service_address = InputDialog::new(&jira_address_prompt)
             .with_default(default_jira_address)
@@ -350,10 +339,7 @@ impl SetupCommand {
         let log_download_base_dir = InputDialog::new(&base_dir_prompt)
             .allow_empty(true)
             .with_default(
-                existing
-                    .log_download_base_dir
-                    .clone()
-                    .unwrap_or_else(default_download_base_dir),
+                existing.log_download_base_dir.clone().unwrap_or_else(default_download_base_dir),
             )
             .prompt()
             .context("Failed to get document base directory")?;
@@ -492,10 +478,8 @@ impl SetupCommand {
         };
 
         // 配置模型
-        let default_model = existing
-            .llm_model
-            .clone()
-            .unwrap_or_else(|| default_llm_model(&llm_provider));
+        let default_model =
+            existing.llm_model.clone().unwrap_or_else(|| default_llm_model(&llm_provider));
 
         let model_prompt = match llm_provider.as_str() {
             "openai" => {

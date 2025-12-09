@@ -39,9 +39,7 @@ impl LLMShowCommand {
         }];
         println!(
             "{}",
-            TableBuilder::new(config_rows)
-                .with_style(TableStyle::Modern)
-                .render()
+            TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );
 
         log_break!();
