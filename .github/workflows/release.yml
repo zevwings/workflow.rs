@@ -388,8 +388,87 @@ jobs:
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
             echo "🔧 Cross-compiling for Linux ARM64"
             echo "ℹ️  Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
+            # 对于 Linux ARM64，我们需要确保 Cargo 不会尝试编译 xcb
+            # 由于条件编译配置，clipboard 依赖应该被排除，但 Cargo.lock 可能仍然包含它
+            # 解决方案：临时从 Cargo.lock 中移除这些依赖，构建后再恢复
+            if [ -f "Cargo.lock" ]; then
+              cp Cargo.lock Cargo.lock.backup
+              echo "📝 Backed up Cargo.lock"
+              # 使用 awk 删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
+              # 以及从其他包的 dependencies 中移除对这些包的引用
+              awk '
+              BEGIN {
+                skip_package = 0
+                in_dependencies = 0
+                packages_to_remove["clipboard"] = 1
+                packages_to_remove["x11-clipboard"] = 1
+                packages_to_remove["xcb"] = 1
+                packages_to_remove["clipboard-win"] = 1
+              }
+              /^\[\[package\]\]/ {
+                if (skip_package) skip_package = 0
+                in_dependencies = 0
+                print
+                next
+              }
+              /^name = "/ {
+                pkg_name = ""
+                if (match($0, /name = "([^"]+)"/, arr)) {
+                  pkg_name = arr[1]
+                  if (packages_to_remove[pkg_name]) {
+                    skip_package = 1
+                    next
+                  }
+                }
+                print
+                next
+              }
+              /^dependencies = \[/ {
+                in_dependencies = 1
+                if (!skip_package) print
+                next
+              }
+              /^\]$/ {
+                if (in_dependencies) {
+                  in_dependencies = 0
+                  if (!skip_package) print
+                  next
+                }
+                print
+                next
+              }
+              {
+                if (skip_package) next
+                if (in_dependencies) {
+                  # 检查是否是我们要移除的依赖
+                  remove_dep = 0
+                  for (pkg in packages_to_remove) {
+                    if (match($0, /"([^"]+)"/, arr) && arr[1] == pkg) {
+                      remove_dep = 1
+                      break
+                    }
+                  }
+                  if (!remove_dep) print
+                } else {
+                  print
+                }
+              }
+              ' Cargo.lock > Cargo.lock.tmp
+              if [ $? -eq 0 ]; then
+                mv Cargo.lock.tmp Cargo.lock
+                echo "✅ Removed clipboard and xcb dependencies from Cargo.lock"
+              else
+                echo "⚠️  Failed to process Cargo.lock, restoring backup"
+                mv Cargo.lock.backup Cargo.lock
+              fi
+            fi
           fi
           cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
+          # 恢复 Cargo.lock（如果备份存在）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]] && [ -f "Cargo.lock.backup" ]; then
+            mv Cargo.lock.backup Cargo.lock
+            echo "✅ Restored Cargo.lock"
+          fi
         env:
           CARGO_BUILD_TARGET: ${{ matrix.target }}
 
