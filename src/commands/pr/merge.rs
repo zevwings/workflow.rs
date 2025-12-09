@@ -116,7 +116,18 @@ impl PullRequestMergeCommand {
         }
 
         // 删除工作历史记录中的 PR ID 条目
-        JiraWorkHistory::delete_work_history_entry(pull_request_id, repository.as_deref())?;
+        let delete_result =
+            JiraWorkHistory::delete_work_history_entry(pull_request_id, repository.as_deref())?;
+
+        // 显示删除消息
+        for message in &delete_result.messages {
+            log_info!("{}", message);
+        }
+
+        // 显示警告信息
+        for warning in &delete_result.warnings {
+            log_warning!("{}", warning);
+        }
 
         Ok(())
     }

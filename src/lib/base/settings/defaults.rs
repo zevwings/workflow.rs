@@ -45,6 +45,7 @@ pub fn default_log_settings() -> LogSettings {
         output_folder_name: default_log_folder(),
         download_base_dir: default_download_base_dir_option(),
         level: None,
+        enable_trace_console: None,
     }
 }
 

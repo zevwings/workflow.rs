@@ -1,30 +1,34 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::http::client::HttpClient;
-use crate::base::http::{
-    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
-};
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
-use crate::base::shell::Detect;
-use crate::base::util::{confirm, detect_release_platform, format_size, Checksum, Unzip};
-use crate::rollback::RollbackManager;
-use crate::{
-    get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
-    log_warning,
-};
-use anyhow::{Context, Result};
-use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::header::HeaderMap;
-use serde::Deserialize;
-use serde_json::Value;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, UNIX_EPOCH};
+
+use anyhow::{Context, Result};
+use indicatif::{ProgressBar, ProgressStyle};
+use reqwest::header::HeaderMap;
+use serde::Deserialize;
+use serde_json::Value;
+
+use crate::base::dialog::ConfirmDialog;
+use crate::base::http::client::HttpClient;
+use crate::base::http::{
+    response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
+};
+use crate::base::indicator::Spinner;
+use crate::base::settings::paths::Paths;
+use crate::base::settings::Settings;
+use crate::base::shell::Detect;
+use crate::base::util::{detect_release_platform, format_size, Checksum, Unzip};
+use crate::rollback::RollbackManager;
+use crate::{
+    get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
+    log_warning,
+};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -235,52 +239,60 @@ impl UpdateCommand {
                 Ok(v)
             }
             None => {
-                log_info!("Fetching latest version...");
-
                 let url = "https://api.github.com/repos/zevwings/workflow.rs/releases/latest";
                 let retry_config = HttpRetryConfig::new();
 
-                let response = HttpRetry::retry(
-                    || {
-                        // GitHub API 要求必须包含 User-Agent 头
-                        let mut headers = HeaderMap::new();
-                        headers.insert(
-                            "User-Agent",
-                            "workflow-cli"
-                                .parse()
-                                .context("Failed to parse User-Agent header")?,
-                        );
-
-                        // 添加 Accept 头（GitHub API 推荐）
-                        headers.insert(
-                            "Accept",
-                            "application/vnd.github+json"
-                                .parse()
-                                .context("Failed to parse Accept header")?,
-                        );
-
-                        // 可选地使用 GitHub token（如果用户已配置）
-                        // 使用 token 可以提高速率限制（从 60/小时 提升到 5000/小时）
-                        let settings = Settings::load();
-                        if let Some(token) = settings.github.get_current_token() {
+                let retry_result = Spinner::with("Fetching latest version...", || {
+                    HttpRetry::retry(
+                        || {
+                            // GitHub API 要求必须包含 User-Agent 头
+                            let mut headers = HeaderMap::new();
                             headers.insert(
-                                "Authorization",
-                                format!("Bearer {}", token)
+                                "User-Agent",
+                                "workflow-cli"
                                     .parse()
-                                    .context("Failed to parse Authorization header")?,
+                                    .context("Failed to parse User-Agent header")?,
                             );
-                            log_debug!("Using GitHub token for API request");
-                        }
 
-                        let client = HttpClient::global()?;
-                        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-                        client
-                            .get(url, config)
-                            .context("Failed to fetch latest release from GitHub")
-                    },
-                    &retry_config,
-                    "Fetching latest version information",
-                )?;
+                            // 添加 Accept 头（GitHub API 推荐）
+                            headers.insert(
+                                "Accept",
+                                "application/vnd.github+json"
+                                    .parse()
+                                    .context("Failed to parse Accept header")?,
+                            );
+
+                            // 可选地使用 GitHub token（如果用户已配置）
+                            // 使用 token 可以提高速率限制（从 60/小时 提升到 5000/小时）
+                            let settings = Settings::load();
+                            if let Some(token) = settings.github.get_current_token() {
+                                headers.insert(
+                                    "Authorization",
+                                    format!("Bearer {}", token)
+                                        .parse()
+                                        .context("Failed to parse Authorization header")?,
+                                );
+                                log_debug!("Using GitHub token for API request");
+                            }
+
+                            let client = HttpClient::global()?;
+                            let config = RequestConfig::<Value, Value>::new().headers(&headers);
+                            client
+                                .get(url, config)
+                                .context("Failed to fetch latest release from GitHub")
+                        },
+                        &retry_config,
+                        "Fetching latest version information",
+                    )
+                })?;
+
+                let response = retry_result.result;
+                if !retry_result.succeeded_on_first_attempt {
+                    log_success!(
+                        "Fetching latest version information succeeded after {} retry attempts",
+                        retry_result.retry_count
+                    );
+                }
 
                 // 检查响应状态码并处理错误
                 Self::handle_github_api_error(&response)?;
@@ -320,7 +332,7 @@ impl UpdateCommand {
 
         let retry_config = HttpRetryConfig::new();
 
-        HttpRetry::retry(
+        let retry_result = HttpRetry::retry(
             || {
                 // 如果文件已存在且不完整，先删除它
                 if output_path.exists() {
@@ -394,7 +406,16 @@ impl UpdateCommand {
             },
             &retry_config,
             "Downloading update package",
-        )
+        )?;
+
+        if !retry_result.succeeded_on_first_attempt {
+            log_success!(
+                "Downloading update package succeeded after {} retry attempts",
+                retry_result.retry_count
+            );
+        }
+
+        Ok(())
     }
 
     /// 第五步：解压文件
@@ -403,7 +424,6 @@ impl UpdateCommand {
     /// 在 macOS 上，解压后立即移除所有二进制文件的隔离属性，
     /// 确保安装时不会遇到 Gatekeeper 阻止。
     fn extract_archive(archive_path: &Path, output_dir: &Path) -> Result<()> {
-        log_info!("Extracting update package...");
         log_debug!("Extracting: {}", archive_path.display());
         log_debug!("Extracting to: {}", output_dir.display());
 
@@ -413,12 +433,15 @@ impl UpdateCommand {
             .and_then(|ext| ext.to_str())
             .unwrap_or("");
 
-        if extension == "zip" {
-            Unzip::extract_zip(archive_path, output_dir)?;
-        } else {
-            // 默认使用 tar.gz 解压
-            Unzip::extract_tar_gz(archive_path, output_dir)?;
-        }
+        Spinner::with("Extracting update package...", || -> Result<()> {
+            if extension == "zip" {
+                Unzip::extract_zip(archive_path, output_dir)?;
+            } else {
+                // 默认使用 tar.gz 解压
+                Unzip::extract_tar_gz(archive_path, output_dir)?;
+            }
+            Ok(())
+        })?;
 
         log_success!("  Extraction complete");
 
@@ -432,8 +455,6 @@ impl UpdateCommand {
     /// 在解压目录中运行 ./install 来安装二进制文件到系统目录和补全脚本。
     /// 默认行为是安装全部（二进制文件 + completions）。
     fn install(extract_dir: &Path) -> Result<()> {
-        log_info!("Installing binaries and completion scripts...");
-
         let install_binary = extract_dir.join(Paths::binary_name("install"));
 
         if !install_binary.exists() {
@@ -454,14 +475,20 @@ impl UpdateCommand {
         }
 
         // 运行 ./install 安装二进制文件和补全脚本（默认安装全部）
-        let status = Command::new(&install_binary)
-            .current_dir(extract_dir)
-            .status()
-            .context("Failed to run install")?;
+        Spinner::with(
+            "Installing binaries and completion scripts...",
+            || -> Result<()> {
+                let status = Command::new(&install_binary)
+                    .current_dir(extract_dir)
+                    .status()
+                    .context("Failed to run install")?;
 
-        if !status.success() {
-            anyhow::bail!("Installation failed");
-        }
+                if !status.success() {
+                    anyhow::bail!("Installation failed");
+                }
+                Ok(())
+            },
+        )?;
 
         log_success!("  Binaries and completion scripts installation complete");
         Ok(())
@@ -558,20 +585,24 @@ impl UpdateCommand {
     ///
     /// 验证 workflow 二进制文件。
     fn verify_binaries(target_version: &str) -> Result<Vec<BinaryStatus>> {
-        log_info!("Verifying binaries...");
-
         let install_dir = Paths::binary_install_dir();
         let install_path = PathBuf::from(&install_dir);
         let binaries = Paths::command_names();
         let mut results = Vec::new();
 
-        for binary in binaries {
-            let binary_name = Paths::binary_name(binary);
-            let path = install_path.join(&binary_name);
-            let status =
-                Self::verify_single_binary(&path.to_string_lossy(), &binary_name, target_version)?;
-            results.push(status);
-        }
+        Spinner::with("Verifying binaries...", || -> Result<()> {
+            for binary in binaries {
+                let binary_name = Paths::binary_name(binary);
+                let path = install_path.join(&binary_name);
+                let status = Self::verify_single_binary(
+                    &path.to_string_lossy(),
+                    &binary_name,
+                    target_version,
+                )?;
+                results.push(status);
+            }
+            Ok(())
+        })?;
 
         Ok(results)
     }
@@ -580,8 +611,6 @@ impl UpdateCommand {
     ///
     /// 只检查补全脚本文件是否存在，不验证文件内容。
     fn verify_completions() -> Result<bool> {
-        log_info!("Verifying completion scripts...");
-
         let shell = match Detect::shell() {
             Ok(shell) => shell,
             Err(_) => {
@@ -610,18 +639,21 @@ impl UpdateCommand {
 
         let mut all_valid = true;
 
-        for file in &files {
-            let path = completion_dir.join(file);
+        Spinner::with("Verifying completion scripts...", || -> Result<()> {
+            for file in &files {
+                let path = completion_dir.join(file);
 
-            // 只检查文件是否存在
-            if !path.exists() {
-                log_warning!("Completion script does not exist: {}", path.display());
-                all_valid = false;
-                continue;
+                // 只检查文件是否存在
+                if !path.exists() {
+                    log_warning!("Completion script does not exist: {}", path.display());
+                    all_valid = false;
+                    continue;
+                }
+
+                log_debug!("Completion script verification passed: {}", path.display());
             }
-
-            log_debug!("Completion script verification passed: {}", path.display());
-        }
+            Ok(())
+        })?;
 
         if all_valid {
             log_success!("  Completion script verification passed");
@@ -636,11 +668,12 @@ impl UpdateCommand {
     ///
     /// 只验证文件是否存在和是否有执行权限，不执行任何命令验证。
     fn verify_installation(_target_version: &str) -> Result<VerificationResult> {
-        log_info!("Verifying installation...");
         log_break!();
 
         // 验证二进制文件（只检查存在性和执行权限）
-        let binaries = Self::verify_binaries(_target_version)?;
+        let binaries = Spinner::with("Verifying installation...", || {
+            Self::verify_binaries(_target_version)
+        })?;
 
         let mut all_binaries_ok = true;
         for binary in &binaries {
@@ -781,7 +814,11 @@ impl UpdateCommand {
             )
         };
 
-        if !confirm(&confirm_message, true, Some("Update cancelled"))? {
+        if !ConfirmDialog::new(&confirm_message)
+            .with_default(true)
+            .with_cancel_message("Update cancelled")
+            .prompt()?
+        {
             return Ok(());
         }
         log_break!();
@@ -825,15 +862,31 @@ impl UpdateCommand {
                 || {
                     let config = RequestConfig::<Value, Value>::new();
                     let response = http_client.get(&checksum_url, config)?;
-                    if response.status == 404 {
-                        anyhow::bail!("Checksum file not found (404)");
-                    }
+                    // 使用 ensure_success_with 统一处理 404 错误
+                    let response = response.ensure_success_with(|r| {
+                        if r.status == 404 {
+                            anyhow::anyhow!("Checksum file not found (404)")
+                        } else {
+                            anyhow::anyhow!(
+                                "HTTP request failed with status {}: {}",
+                                r.status,
+                                r.status_text
+                            )
+                        }
+                    })?;
                     response.as_text()
                 },
                 &retry_config,
                 "Downloading checksum file",
             ) {
-                Ok(checksum_content) => {
+                Ok(retry_result) => {
+                    let checksum_content = retry_result.result;
+                    if !retry_result.succeeded_on_first_attempt {
+                        log_success!(
+                            "Downloading checksum file succeeded after {} retry attempts",
+                            retry_result.retry_count
+                        );
+                    }
                     // 解析哈希值（使用 checksum 模块）
                     let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
                         .context("Failed to parse checksum file")?;
@@ -890,7 +943,10 @@ impl UpdateCommand {
         match update_result {
             Ok(()) => {
                 // 更新成功，清理临时文件和备份
-                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
+                Self::cleanup_update_resources(
+                    &temp_manager.temp_dir,
+                    backup_info.as_ref().map(|b| &b.backup_info),
+                );
                 log_success!("Workflow CLI update complete! All verifications passed.");
                 Ok(())
             }
@@ -900,11 +956,79 @@ impl UpdateCommand {
                 log_break!();
 
                 if let Some(ref backup) = backup_info {
-                    match RollbackManager::rollback(backup) {
-                        Ok(()) => {
+                    log_warning!("Update failed, rolling back to previous version...");
+                    log_break!();
+
+                    match RollbackManager::rollback(&backup.backup_info) {
+                        Ok(rollback_result) => {
+                            // 显示恢复的二进制文件
+                            if !rollback_result.restored_binaries.is_empty() {
+                                log_info!("Restoring binary files...");
+                                for binary in &rollback_result.restored_binaries {
+                                    log_info!("  Restored: {}", binary);
+                                }
+                            }
+
+                            // 显示失败的二进制文件
+                            if !rollback_result.failed_binaries.is_empty() {
+                                log_warning!("Failed to restore some binary files:");
+                                for (binary, error) in &rollback_result.failed_binaries {
+                                    log_warning!("  {}: {}", binary, error);
+                                }
+                            }
+
+                            // 显示恢复的补全脚本
+                            if !rollback_result.restored_completions.is_empty() {
+                                log_info!("Restoring completion scripts...");
+                                for completion in &rollback_result.restored_completions {
+                                    log_info!("  Restored: {}", completion);
+                                }
+                            }
+
+                            // 显示失败的补全脚本
+                            if !rollback_result.failed_completions.is_empty() {
+                                log_warning!("Failed to restore some completion scripts:");
+                                for (completion, error) in &rollback_result.failed_completions {
+                                    log_warning!("  {}: {}", completion, error);
+                                }
+                            }
+
+                            // 处理 shell 重新加载
+                            if let Some(reload_success) = rollback_result.shell_reload_success {
+                                if reload_success {
+                                    log_info!(
+                                        "Note: Configuration has been reloaded in subprocess"
+                                    );
+                                    if let Some(ref config_file) = rollback_result.shell_config_file
+                                    {
+                                        log_info!(
+                                            "  If completion is not working, please run manually: source {}",
+                                            config_file.display()
+                                        );
+                                    }
+                                } else {
+                                    log_warning!("Failed to reload shell configuration");
+                                    if let Some(ref config_file) = rollback_result.shell_config_file
+                                    {
+                                        log_info!(
+                                            "Please run manually: source {}",
+                                            config_file.display()
+                                        );
+                                    }
+                                }
+                            } else {
+                                log_info!(
+                                    "Please manually reload shell config file to enable completion"
+                                );
+                            }
+
+                            log_success!("Rollback completed");
                             log_break!();
+
                             // 回滚成功后清理备份
-                            if let Err(cleanup_err) = RollbackManager::cleanup_backup(backup) {
+                            if let Err(cleanup_err) =
+                                RollbackManager::cleanup_backup(&backup.backup_info)
+                            {
                                 log_warning!("Failed to clean up backup: {}", cleanup_err);
                             }
                         }
@@ -912,7 +1036,10 @@ impl UpdateCommand {
                             log_error!("Rollback failed: {}", rollback_err);
                             log_error!("  System may be in an inconsistent state");
                             log_error!("  Please manually check and restore files");
-                            log_error!("  Backup location: {}", backup.backup_dir.display());
+                            log_error!(
+                                "  Backup location: {}",
+                                backup.backup_info.backup_dir.display()
+                            );
                         }
                     }
                 } else {
@@ -921,7 +1048,10 @@ impl UpdateCommand {
                 }
 
                 // 清理临时资源
-                Self::cleanup_update_resources(&temp_manager.temp_dir, backup_info.as_ref());
+                Self::cleanup_update_resources(
+                    &temp_manager.temp_dir,
+                    backup_info.as_ref().map(|b| &b.backup_info),
+                );
                 Err(e.context("Update failed"))
             }
         }

@@ -2,6 +2,8 @@
 //! 显示当前的 LLM 配置信息
 
 use crate::base::settings::settings::Settings;
+use crate::base::settings::table::LLMConfigRow;
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::Result;
 
@@ -24,43 +26,23 @@ impl LLMShowCommand {
             return Ok(());
         }
 
-        // 显示 Provider
-        log_info!("Provider: {}", llm.provider);
+        // 使用 get_llm_config() 获取配置信息
+        let llm_config = settings.get_llm_config();
 
-        // 显示 URL（仅 proxy 模式）
-        if llm.provider == "proxy" {
-            if let Some(ref url) = llm.url {
-                log_info!("Proxy URL: {}", url);
-            } else {
-                log_warning!("Proxy URL: Not configured");
-            }
-        }
-
-        // 显示 API Key（掩码显示）
-        if let Some(ref key) = llm.key {
-            let masked = if key.len() > 8 {
-                format!("{}...{}", &key[..4], &key[key.len() - 4..])
-            } else {
-                "***".to_string()
-            };
-            log_info!("API Key: {}", masked);
-        } else {
-            log_warning!("API Key: Not configured");
-        }
-
-        // 显示 Model
-        if let Some(ref model) = llm.model {
-            log_info!("Model: {}", model);
-        } else {
-            log_info!("Model: (using default)");
-        }
-
-        // 显示 Language
-        if !llm.language.is_empty() {
-            log_info!("Output Language: {}", llm.language);
-        } else {
-            log_info!("Output Language: en (default)");
-        }
+        // 使用表格格式显示（与 config show 保持一致）
+        log_info!("LLM Configuration");
+        let config_rows = vec![LLMConfigRow {
+            provider: llm_config.provider.clone(),
+            model: llm_config.model.clone(),
+            key: llm_config.key.clone(),
+            language: llm_config.language.clone(),
+        }];
+        println!(
+            "{}",
+            TableBuilder::new(config_rows)
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         log_break!();
         log_success!("LLM configuration displayed.");

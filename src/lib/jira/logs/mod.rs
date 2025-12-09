@@ -14,10 +14,17 @@ mod download;
 mod helpers;
 mod path;
 mod search;
+mod table;
 mod zip;
 
 // 重新导出 LogEntry 作为公共 API
 pub use helpers::LogEntry;
+
+// 重新导出下载相关的类型
+pub use download::{DownloadResult, ProgressCallback};
+
+// 重新导出表格相关类型
+pub use table::SearchResultRow;
 
 /// Jira 日志处理结构体
 ///

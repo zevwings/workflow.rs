@@ -6,6 +6,7 @@
 - 安装功能（二进制文件和 shell completion 脚本）
 - 卸载功能（清理所有相关文件和配置）
 - 更新功能（从 GitHub Releases 更新到新版本）
+- 版本显示功能（显示当前版本信息）
 
 这些命令负责管理 Workflow CLI 的完整生命周期，从初始安装到后续更新和卸载。
 
@@ -26,7 +27,8 @@ src/main.rs (卸载和更新命令入口)
 src/commands/lifecycle/
 ├── install.rs      # 安装命令（144 行）
 ├── uninstall.rs    # 卸载命令（303 行）
-└── update.rs       # 更新命令（924 行）
+├── update.rs       # 更新命令（924 行）
+└── version.rs      # 版本显示命令（21 行）
 ```
 
 ### 依赖模块（简要说明）
@@ -54,7 +56,8 @@ bin/install.rs 或 main.rs (CLI 入口，参数解析)
 commands/lifecycle/* (命令封装层)
   ├── install.rs (安装命令)
   ├── uninstall.rs (卸载命令)
-  └── update.rs (更新命令)
+  ├── update.rs (更新命令)
+  └── version.rs (版本显示命令)
   ↓
 lib/* (通过 API 调用，具体实现见相关模块文档)
 ```
@@ -366,6 +369,55 @@ Shell 配置重新加载
 
 ---
 
+## 4. 版本显示命令 (`version.rs`)
+
+### 相关文件
+
+```
+src/commands/lifecycle/version.rs
+```
+
+### 调用流程
+
+```
+main.rs::Commands::Version
+  ↓
+commands/lifecycle/version.rs::VersionCommand::show()
+  ↓
+  1. 从编译时嵌入的版本号获取（使用 env! 宏）
+  2. 显示版本信息
+```
+
+### 功能说明
+
+版本显示命令提供显示当前 Workflow CLI 版本信息的功能：
+
+1. **版本号获取**：
+   - 从编译时嵌入的版本号获取（使用 `env!("CARGO_PKG_VERSION")` 宏）
+   - 注意：`env!` 宏在编译时展开，所以这个值在运行时总是可用的
+
+2. **版本显示**：
+   - 使用 `log_success!` 宏显示版本信息
+   - 格式：`workflow v{version}`
+
+### 关键步骤说明
+
+1. **版本号获取**：
+   - 使用 `env!("CARGO_PKG_VERSION")` 宏在编译时获取版本号
+   - 这个值来自 `Cargo.toml` 中的 `version` 字段
+   - 在运行时总是可用，无需额外处理
+
+2. **版本显示**：
+   - 使用 `log_success!` 宏显示版本信息
+   - 提供清晰的版本输出格式
+
+### 使用场景
+
+- **版本查询**：用户可以通过 `workflow --version` 或 `workflow version` 查看当前版本
+- **更新检查**：在更新命令中用于比较当前版本和目标版本
+
+---
+
 ## 🏗️ 架构设计
 
 ### 设计模式
@@ -565,6 +617,16 @@ workflow update
 workflow update --yes
 ```
 
+### Version 命令
+
+```bash
+# 显示当前版本
+workflow --version
+
+# 或使用 version 子命令
+workflow version
+```
+
 ---
 
 ## ✅ 总结
@@ -574,10 +636,12 @@ Lifecycle 命令层采用清晰的生命周期管理设计：
 1. **安装**：自动检测 shell，生成 completion，配置环境
 2. **卸载**：完整清理所有文件和配置
 3. **更新**：自动备份、下载、验证、安装，失败自动回滚
+4. **版本显示**：显示当前版本信息
 
 **设计优势**：
 - ✅ **安全性**：更新前自动备份，失败自动回滚
 - ✅ **完整性**：完整的安装和卸载流程
 - ✅ **可靠性**：校验和验证，确保文件完整性
 - ✅ **用户友好**：清晰的进度提示和错误信息
+- ✅ **版本管理**：简单的版本查询功能
 

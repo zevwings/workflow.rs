@@ -1,6 +1,7 @@
 //! LLM 配置设置命令
 //! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
+use crate::base::dialog::{InputDialog, SelectDialog};
 use crate::base::settings::defaults::default_llm_model;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
@@ -8,7 +9,6 @@ use crate::commands::config::helpers::select_language;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
 use anyhow::{Context, Result};
-use dialoguer::{Input, Select};
 
 /// LLM 配置设置命令
 pub struct LLMSetupCommand;
@@ -27,7 +27,7 @@ impl LLMSetupCommand {
         log_break!('─', 65);
 
         // 1. 选择 Provider
-        let llm_providers = vec!["openai", "deepseek", "proxy"];
+        let llm_providers = ["openai", "deepseek", "proxy"];
         let current_provider_idx = llm_providers
             .iter()
             .position(|&p| p == existing.provider.as_str())
@@ -35,12 +35,15 @@ impl LLMSetupCommand {
 
         let llm_provider_prompt = format!("Select LLM provider [current: {}]", existing.provider);
 
-        let llm_provider_idx = Select::new()
-            .with_prompt(&llm_provider_prompt)
-            .items(&llm_providers)
-            .default(current_provider_idx)
-            .interact()
+        let llm_providers_vec: Vec<String> = llm_providers.iter().map(|s| s.to_string()).collect();
+        let llm_provider = SelectDialog::new(&llm_provider_prompt, llm_providers_vec)
+            .with_default(current_provider_idx)
+            .prompt()
             .context("Failed to select LLM provider")?;
+        let llm_provider_idx = llm_providers
+            .iter()
+            .position(|&p| p == llm_provider.as_str())
+            .unwrap_or(current_provider_idx);
         let llm_provider = llm_providers[llm_provider_idx].to_string();
 
         // 2. 根据 provider 设置 URL（只有 proxy 需要输入和保存）
@@ -54,10 +57,9 @@ impl LLMSetupCommand {
                     "LLM proxy URL (optional, press Enter to skip)".to_string()
                 };
 
-                let llm_url_input: String = Input::new()
-                    .with_prompt(&llm_url_prompt)
+                let llm_url_input = InputDialog::new(&llm_url_prompt)
                     .allow_empty(true)
-                    .interact_text()
+                    .prompt()
                     .context("Failed to get LLM proxy URL")?;
 
                 if !llm_url_input.is_empty() {
@@ -95,10 +97,9 @@ impl LLMSetupCommand {
             _ => "LLM API key (optional, press Enter to skip)".to_string(),
         };
 
-        let llm_key_input: String = Input::new()
-            .with_prompt(&key_prompt)
+        let llm_key_input = InputDialog::new(&key_prompt)
             .allow_empty(true)
-            .interact_text()
+            .prompt()
             .context("Failed to get LLM API key")?;
 
         let llm_key = if !llm_key_input.is_empty() {
@@ -141,24 +142,22 @@ impl LLMSetupCommand {
         let is_proxy = llm_provider == "proxy";
         let has_existing_model = existing.model.is_some();
 
-        let llm_model_input: String = {
-            let mut input = Input::new()
-                .with_prompt(&model_prompt)
-                .allow_empty(!is_proxy);
+        let llm_model_input = {
+            let mut dialog = InputDialog::new(&model_prompt).allow_empty(!is_proxy);
 
             if has_existing_model {
-                input = input.default(default_model.clone());
+                dialog = dialog.with_default(default_model.clone());
             }
 
-            input
-                .validate_with(move |input: &String| -> Result<(), &str> {
+            dialog
+                .with_validator(move |input: &str| {
                     if input.is_empty() && is_proxy {
-                        Err("Model is required for proxy provider")
+                        Err("Model is required for proxy provider".to_string())
                     } else {
                         Ok(())
                     }
                 })
-                .interact_text()
+                .prompt()
                 .context("Failed to get LLM model")?
         };
 

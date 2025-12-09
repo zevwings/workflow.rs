@@ -2,9 +2,9 @@
 //!
 //! 提供可复用的交互式选择函数，用于配置设置。
 
+use crate::base::dialog::SelectDialog;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use anyhow::{Context, Result};
-use dialoguer::Select;
 
 /// 交互式选择语言
 ///
@@ -45,12 +45,17 @@ pub fn select_language(current_language: Option<&str>) -> Result<String> {
     };
 
     // 显示选择列表
-    let selected_idx = Select::new()
-        .with_prompt(&prompt)
-        .items(&language_display_names)
-        .default(current_idx)
-        .interact()
+    let language_display_names_vec: Vec<String> = language_display_names.to_vec();
+    let selected_display_name = SelectDialog::new(&prompt, language_display_names_vec)
+        .with_default(current_idx)
+        .prompt()
         .context("Failed to select language")?;
+
+    // 查找选中的语言代码
+    let selected_idx = language_display_names
+        .iter()
+        .position(|name| name == &selected_display_name)
+        .context("Selected language not found")?;
 
     // 返回选中的语言代码
     Ok(SUPPORTED_LANGUAGES[selected_idx].code.to_string())

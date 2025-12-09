@@ -7,15 +7,42 @@
 //! - 删除 completion 配置和文件
 //! - 获取 completion 文件列表
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::ShellConfigManager;
-use crate::log_debug;
-use crate::log_info;
-use crate::log_success;
-use anyhow::{Context, Result};
-use clap_complete::Shell;
 use std::fs;
 use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+use clap_complete::Shell;
+
+use crate::base::settings::paths::Paths;
+use crate::base::shell::ShellConfigManager;
+use crate::trace_debug;
+use crate::trace_info;
+
+// ==================== 返回结构体 ====================
+
+/// Completion 配置结果
+#[derive(Debug, Clone)]
+pub struct CompletionConfigResult {
+    /// Shell 类型
+    pub shell: Shell,
+    /// 是否已存在（如果为 true，表示配置已存在，未进行修改）
+    pub already_exists: bool,
+    /// 是否成功添加（如果为 true，表示新添加了配置）
+    pub added: bool,
+    /// 配置文件路径（如果适用）
+    pub config_file: Option<PathBuf>,
+}
+
+/// Completion 文件删除结果
+#[derive(Debug, Clone)]
+pub struct CompletionRemovalResult {
+    /// 删除的文件数量
+    pub removed_count: usize,
+    /// 删除的文件列表
+    pub removed_files: Vec<PathBuf>,
+    /// 失败的文件列表（文件路径和错误信息）
+    pub failed_files: Vec<(PathBuf, String)>,
+}
 
 /// Completion 管理工具
 ///
@@ -38,7 +65,7 @@ impl Completion {
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
     /// 包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、
-    /// `log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch` 等子命令。
+    /// `log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -72,53 +99,18 @@ impl Completion {
         Ok(Some(config_file))
     }
 
-    /// 配置 shell 配置文件以启用 completion（用于 fish, powershell, elvish）
-    ///
-    /// 这些 shell 不使用统一配置文件，而是直接写入各自的配置文件。
-    /// 使用 ShellConfigManager 为 completion 文件添加 source 语句。
-    fn write_completion_to_shell_config(shell: &Shell) -> Result<()> {
-        // 获取每个 shell 的 completion 文件路径
-        let workflow_source = match shell {
-            Shell::Fish => "$HOME/.workflow/completions/workflow.fish",
-            Shell::PowerShell => "$HOME/.workflow/completions/_workflow.ps1",
-            Shell::Elvish => "$HOME/.workflow/completions/workflow.elv",
-            _ => return Ok(()), // zsh 和 bash 不使用此方法
-        };
-
-        // 检查是否已配置
-        if ShellConfigManager::has_source_for_shell(shell, workflow_source)? {
-            log_debug!("Completion config already exists in {} config file", shell);
-            return Ok(());
-        }
-
-        // 使用 ShellConfigManager 为 completion 文件添加 source 语句
-        ShellConfigManager::add_source_for_shell(
-            shell,
-            workflow_source,
-            Some("Workflow CLI completions"),
-        )
-        .with_context(|| {
-            format!(
-                "Failed to add workflow completion source to {} config",
-                shell
-            )
-        })?;
-
-        log_debug!("Completion config written to {} config file", shell);
-
-        Ok(())
-    }
-
     /// 配置 shell 配置文件以启用 completion
     ///
     /// 根据 shell 类型采用不同的配置策略：
     /// - zsh 和 bash：创建统一配置文件并添加到 shell 配置文件
     /// - fish, powershell, elvish：直接写入各自的配置文件
-    pub fn configure_shell_config(shell: &Shell) -> Result<()> {
-        match shell {
+    pub fn configure_shell_config(shell: &Shell) -> Result<CompletionConfigResult> {
+        trace_debug!("Configuring shell config for {}", shell);
+
+        let result = match shell {
             Shell::Zsh | Shell::Bash => {
                 // 创建 workflow completion 配置文件
-                let _workflow_config_file = Self::create_completion_config_file(shell)?;
+                let workflow_config_file = Self::create_completion_config_file(shell)?;
 
                 // 使用 ShellConfigManager 添加 source 语句（指定 shell 类型）
                 let source_pattern = "$HOME/.workflow/.completions";
@@ -131,23 +123,57 @@ impl Completion {
                     format!("Failed to add completion source to {} config file", shell)
                 })?;
 
-                if !added {
-                    log_success!("Completion config already exists in {} config file", shell);
-                } else {
-                    log_success!("Completion config added to {} config file", shell);
+                CompletionConfigResult {
+                    shell: *shell,
+                    already_exists: !added,
+                    added,
+                    config_file: workflow_config_file,
                 }
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
-                // 直接写入各自的配置文件
-                Self::write_completion_to_shell_config(shell)?;
-                log_success!("Completion config written to shell config file");
+                // 获取每个 shell 的 completion 文件路径
+                let workflow_source = match shell {
+                    Shell::Fish => "$HOME/.workflow/completions/workflow.fish",
+                    Shell::PowerShell => "$HOME/.workflow/completions/_workflow.ps1",
+                    Shell::Elvish => "$HOME/.workflow/completions/workflow.elv",
+                    _ => unreachable!(),
+                };
+
+                // 检查是否已配置
+                let already_exists =
+                    ShellConfigManager::has_source_for_shell(shell, workflow_source)?;
+
+                if !already_exists {
+                    // 使用 ShellConfigManager 为 completion 文件添加 source 语句
+                    ShellConfigManager::add_source_for_shell(
+                        shell,
+                        workflow_source,
+                        Some("Workflow CLI completions"),
+                    )
+                    .with_context(|| {
+                        format!(
+                            "Failed to add workflow completion source to {} config",
+                            shell
+                        )
+                    })?;
+                    trace_debug!("Completion config written to {} config file", shell);
+                } else {
+                    trace_debug!("Completion config already exists in {} config file", shell);
+                }
+
+                CompletionConfigResult {
+                    shell: *shell,
+                    already_exists,
+                    added: !already_exists,
+                    config_file: None,
+                }
             }
             _ => {
                 anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
             }
-        }
+        };
 
-        Ok(())
+        Ok(result)
     }
 
     /// 从 shell 配置文件中移除 completion 配置
@@ -169,9 +195,9 @@ impl Completion {
                     })?;
 
                 if !removed {
-                    log_debug!("Completion config not found in {} config file", shell);
+                    trace_debug!("Completion config not found in {} config file", shell);
                 } else {
-                    log_debug!("Completion config removed from {} config file", shell);
+                    trace_debug!("Completion config removed from {} config file", shell);
                 }
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
@@ -179,7 +205,7 @@ impl Completion {
                 Self::remove_completion_block_from_config(shell)?;
             }
             _ => {
-                log_debug!("Unsupported shell type: {}", shell);
+                trace_debug!("Unsupported shell type: {}", shell);
             }
         }
 
@@ -203,7 +229,7 @@ impl Completion {
             match Self::is_shell_configured_for_removal(shell) {
                 Ok(true) => {
                     if let Err(e) = Self::remove_completion_config(shell) {
-                        log_debug!("Failed to remove completion config for {}: {}", shell, e);
+                        trace_debug!("Failed to remove completion config for {}: {}", shell, e);
                     }
                 }
                 Ok(false) => {
@@ -277,9 +303,9 @@ impl Completion {
             })?;
 
         if removed {
-            log_debug!("Completion config removed from {} config file", shell);
+            trace_debug!("Completion config removed from {} config file", shell);
         } else {
-            log_debug!("Completion config not found in {} config file", shell);
+            trace_debug!("Completion config not found in {} config file", shell);
         }
 
         Ok(())
@@ -295,7 +321,7 @@ impl Completion {
     /// 获取 completion 文件列表（根据 shell 类型）
     ///
     /// 返回 completion 文件列表：
-    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`branch` 等）
+    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`branch`（clean、ignore、prefix）等）
     pub fn get_completion_files(shell: &Shell) -> Vec<PathBuf> {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
         let commands = Paths::command_names();
@@ -311,7 +337,9 @@ impl Completion {
     ///
     /// 删除所有 shell 类型的 completion 文件（zsh, bash, fish, powershell, elvish），
     /// 确保卸载时完全清理所有可能存在的 completion 文件。
-    pub fn remove_completion_files(_shell: &Shell) -> Result<usize> {
+    pub fn remove_completion_files(_shell: &Shell) -> Result<CompletionRemovalResult> {
+        trace_debug!("Removing completion files");
+
         let completion_dir = Paths::completion_dir()?;
         // 获取所有 shell 类型的 completion 文件
         let commands = Paths::command_names();
@@ -322,28 +350,41 @@ impl Completion {
             .collect();
 
         let mut removed_count = 0;
+        let mut removed_files = Vec::new();
+        let mut failed_files = Vec::new();
+
         for file in &all_files {
             if file.exists() {
-                if let Err(e) = fs::remove_file(file) {
-                    log_info!("Failed to delete: {} ({})", file.display(), e);
-                } else {
-                    log_info!("  Removed: {}", file.display());
-                    removed_count += 1;
+                match fs::remove_file(file) {
+                    Ok(_) => {
+                        trace_debug!("Removed completion file: {}", file.display());
+                        removed_files.push(file.clone());
+                        removed_count += 1;
+                    }
+                    Err(e) => {
+                        let error_msg = format!("{}", e);
+                        trace_debug!("Failed to delete {}: {}", file.display(), error_msg);
+                        failed_files.push((file.clone(), error_msg));
+                    }
                 }
             }
         }
 
-        if removed_count > 0 {
-            log_info!("  Completion script files removed");
-        } else {
-            log_debug!("  Completion script files not found (may not be installed)");
+        if removed_count == 0 {
+            trace_debug!("Completion script files not found (may not be installed)");
         }
 
-        Ok(removed_count)
+        Ok(CompletionRemovalResult {
+            removed_count,
+            removed_files,
+            failed_files,
+        })
     }
 
     /// 删除 workflow completion 配置文件
-    pub fn remove_completion_config_file() -> Result<()> {
+    pub fn remove_completion_config_file() -> Result<bool> {
+        trace_debug!("Removing completion config file");
+
         // 使用 Paths::workflow_dir()
         let workflow_config_file = Paths::workflow_dir()?.join(".completions");
 
@@ -354,25 +395,30 @@ impl Completion {
                     workflow_config_file.display()
                 )
             })?;
-            log_info!("  Removed: {}", workflow_config_file.display());
-        } else {
-            log_info!(
-                "  Completion config file not found: {}",
+            trace_info!(
+                "Removed completion config file: {}",
                 workflow_config_file.display()
             );
+            Ok(true)
+        } else {
+            trace_info!(
+                "Completion config file not found: {}",
+                workflow_config_file.display()
+            );
+            Ok(false)
         }
-
-        Ok(())
     }
 
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch` 等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）等）
     pub fn generate_all_completions(
         shell_type: Option<String>,
         output_dir: Option<String>,
     ) -> Result<()> {
-        super::generate::CompletionGenerator::new(shell_type, output_dir)?.generate_all()
+        let _ =
+            super::generate::CompletionGenerator::new(shell_type, output_dir)?.generate_all()?;
+        Ok(())
     }
 }

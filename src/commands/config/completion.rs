@@ -1,14 +1,15 @@
 //! Completion 管理命令
 //! 提供生成和管理 shell completion 脚本的功能
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::Detect;
-use crate::base::util::confirm;
-use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
+use std::path::PathBuf;
+
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
-use dialoguer::MultiSelect;
-use std::path::PathBuf;
+
+use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
+use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning, Completion};
 
 /// Shell 配置状态
 #[derive(Debug, Clone)]
@@ -185,11 +186,25 @@ impl CompletionCommand {
         log_break!();
 
         // 使用 MultiSelect 让用户选择
-        let selections = MultiSelect::new()
-            .with_prompt("Select completion to remove (use space to select, Enter to confirm, Esc to cancel)")
-            .items(&options)
-            .interact()
-            .context("Failed to get user selection")?;
+        let options_vec: Vec<String> = options.to_vec();
+        let selected_items = MultiSelectDialog::new(
+            "Select completion to remove (use space to select, Enter to confirm, Esc to cancel)",
+            options_vec,
+        )
+        .prompt()
+        .context("Failed to get user selection")?;
+
+        let selections: Vec<usize> = options
+            .iter()
+            .enumerate()
+            .filter_map(|(i, opt)| {
+                if selected_items.contains(opt) {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         if selections.is_empty() {
             log_info!("No items selected, operation cancelled");
@@ -208,7 +223,11 @@ impl CompletionCommand {
             "Confirm deletion of {} selected completion configurations?",
             selections.len()
         );
-        if !confirm(&confirm_msg, false, Some("Operation cancelled"))? {
+        if !ConfirmDialog::new(&confirm_msg)
+            .with_default(false)
+            .with_cancel_message("Operation cancelled")
+            .prompt()?
+        {
             return Ok(());
         }
 
@@ -277,7 +296,21 @@ impl CompletionCommand {
 
         // 3. 应用到对应的 shell 配置文件（使用 ShellConfigManager）
         log_debug!("Configuring shell configuration file...");
-        Completion::configure_shell_config(&shell)?;
+        let config_result = Completion::configure_shell_config(&shell)?;
+
+        if config_result.already_exists {
+            log_success!(
+                "Completion config already exists in {} config file",
+                config_result.shell
+            );
+        } else if config_result.added {
+            log_success!(
+                "Completion config added to {} config file",
+                config_result.shell
+            );
+        } else {
+            log_success!("Completion config written to shell config file");
+        }
 
         log_success!("  shell completion generation complete");
         log_break!();

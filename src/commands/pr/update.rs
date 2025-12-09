@@ -1,7 +1,8 @@
-use crate::git::{GitBranch, GitCommit};
+use crate::base::indicator::Spinner;
+use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_success, log_warning, ProxyManager};
+use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
 use anyhow::{Context, Result};
 
 /// 快速更新命令
@@ -28,15 +29,23 @@ impl PullRequestUpdateCommand {
 
         log_success!("Using commit message: {}", message);
 
+        // 先执行 pre-commit 检查（如果有），避免与 Spinner 输出冲突
+        if GitPreCommit::has_pre_commit() {
+            GitPreCommit::run_checks()?;
+        }
+
         // 执行 git commit（会自动暂存所有文件）
-        log_success!("Staging and committing changes...");
-        GitCommit::commit(&message, false)?; // 不使用 --no-verify（commit 方法内部会自动暂存）
+        // 使用 --no-verify 跳过 hook，因为我们已经通过 Rust 代码执行了检查
+        GitCommit::commit(&message, true)?; // 使用 --no-verify，因为已经执行了检查
 
         // 执行 git push
         let current_branch = GitBranch::current_branch()?;
-        log_success!("Pushing to remote...");
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(&current_branch, false)?; // 不使用 -u（分支应该已经存在）
 
+        log_break!();
         log_success!("Update completed successfully!");
         Ok(())
     }
@@ -54,7 +63,10 @@ impl PullRequestUpdateCommand {
 
         // 获取 PR 标题
         let provider = create_provider()?;
-        let title = provider.get_pull_request_title(&pr_id).ok();
+        let title = Spinner::with(format!("Fetching PR #{} title...", pr_id), || {
+            provider.get_pull_request_title(&pr_id)
+        })
+        .ok();
 
         Ok(title)
     }

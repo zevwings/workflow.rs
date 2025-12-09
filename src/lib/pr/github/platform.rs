@@ -1,22 +1,23 @@
-use anyhow::{Context, Result};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fmt::Write;
 use std::sync::OnceLock;
 
+use anyhow::{Context, Result};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
+use serde_json::Value;
+
+use crate::base::http::{HttpClient, RequestConfig};
 use crate::base::settings::Settings;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::history::JiraWorkHistory;
-use crate::log_debug;
+use crate::pr::github::errors::handle_github_error;
+use crate::pr::helpers::extract_github_repo_from_url;
+use crate::pr::platform::{PlatformProvider, PullRequestStatus};
+use crate::pr::PullRequestRow;
 
 use super::requests::{
     CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest,
 };
 use super::responses::{CreatePullRequestResponse, GitHubUser, PullRequestInfo, RepositoryInfo};
-use crate::base::http::{HttpClient, RequestConfig};
-use crate::pr::github::errors::handle_github_error;
-use crate::pr::helpers::extract_github_repo_from_url;
-use crate::pr::platform::{PlatformProvider, PullRequestStatus};
-use serde_json::Value;
 
 /// GitHub 平台实现
 ///
@@ -77,7 +78,7 @@ impl PlatformProvider for GitHub {
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
-        log_debug!("Using merge method: {}", merge_method);
+        crate::trace_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}/merge",
@@ -204,50 +205,28 @@ impl PlatformProvider for GitHub {
     }
 
     /// 列出 PR
-    fn get_pull_requests(&self, state: Option<&str>, limit: Option<u32>) -> Result<String> {
-        let (owner, repo_name) = Self::get_owner_and_repo()?;
-
-        // 转换 state 参数：GitHub API 支持 "open", "closed", "all"
-        let state = match state {
-            Some("open") => "open",
-            Some("closed") => "closed",
-            Some("merged") => "closed", // GitHub API 中 merged 是 closed 状态的一种
-            Some("all") | None => "all",
-            _ => "all", // 默认显示所有状态
-        };
-        let per_page = limit.unwrap_or(30).min(100); // GitHub API 限制最多 100
-
-        let url = format!(
-            "{}/repos/{}/{}/pulls?state={}&per_page={}",
-            Self::base_url(),
-            owner,
-            repo_name,
-            state,
-            per_page
-        );
-
-        let client = HttpClient::global()?;
-        let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-
-        let response = client.get(&url, config)?;
-        let prs: Vec<PullRequestInfo> = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
-        let mut output = String::new();
-        for pr in prs {
-            writeln!(
-                output,
-                "#{}  {}  [{}]  {}\n    {}",
-                pr.number, pr.state, pr.head.ref_name, pr.title, pr.html_url
-            )?;
-        }
-
-        if output.is_empty() {
-            output.push_str("No PRs found.");
-        }
-
-        Ok(output)
+    fn get_pull_requests(
+        &self,
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestRow>> {
+        let prs = Self::get_pull_requests_raw(state, limit)?;
+        let rows: Vec<PullRequestRow> = prs
+            .into_iter()
+            .map(|pr| PullRequestRow {
+                number: pr.number.to_string(),
+                state: pr.state,
+                branch: pr.head.ref_name,
+                title: pr.title,
+                author: pr
+                    .user
+                    .as_ref()
+                    .map(|u| u.login.clone())
+                    .unwrap_or_else(|| "N/A".to_string()),
+                url: pr.html_url,
+            })
+            .collect();
+        Ok(rows)
     }
 
     /// 获取当前分支的 PR
@@ -284,7 +263,7 @@ impl PlatformProvider for GitHub {
         if let Some(pr_id) =
             JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
-            log_debug!(
+            crate::trace_debug!(
                 "Found PR #{} for branch '{}' from work-history",
                 pr_id,
                 current_branch
@@ -598,6 +577,53 @@ impl GitHub {
             .ensure_success_with(handle_github_error)?
             .as_json()?;
         Ok(repo_info)
+    }
+
+    /// 获取 PR 列表原始数据（不格式化）
+    ///
+    /// # 参数
+    ///
+    /// * `state` - PR 状态筛选（如 "open", "closed"）
+    /// * `limit` - 返回数量限制
+    ///
+    /// # 返回
+    ///
+    /// PR 信息列表
+    pub fn get_pull_requests_raw(
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestInfo>> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+
+        // 转换 state 参数：GitHub API 支持 "open", "closed", "all"
+        let state = match state {
+            Some("open") => "open",
+            Some("closed") => "closed",
+            Some("merged") => "closed", // GitHub API 中 merged 是 closed 状态的一种
+            Some("all") | None => "all",
+            _ => "all", // 默认显示所有状态
+        };
+        let per_page = limit.unwrap_or(30).min(100); // GitHub API 限制最多 100
+
+        let url = format!(
+            "{}/repos/{}/{}/pulls?state={}&per_page={}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            state,
+            per_page
+        );
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
+
+        let response = client.get(&url, config)?;
+        let prs: Vec<PullRequestInfo> = response
+            .ensure_success_with(handle_github_error)?
+            .as_json()?;
+
+        Ok(prs)
     }
 
     /// 获取首选的合并方法：优先使用 squash，其次 rebase，最后 merge

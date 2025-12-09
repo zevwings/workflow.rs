@@ -178,7 +178,9 @@
 
 - 分支清理功能（清理已合并分支，保留重要分支）
 - 分支忽略列表管理（按仓库配置忽略分支）
+- 分支前缀管理（按仓库配置分支前缀，用于自动生成分支名）
 - 支持 dry-run 模式和确认机制
+- 首次使用自动提示配置分支前缀
 
 #### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 **环境检查命令层架构文档**
@@ -200,6 +202,27 @@
 - 代理启用/禁用功能（临时模式和持久模式）
 - 代理状态检查（系统设置、环境变量、配置文件）
 - 自动读取系统代理设置
+
+---
+
+## 🔄 迁移文档
+
+> 迁移文档位于 [`migration/`](./migration/) 目录下
+
+### [迁移文档索引](./migration/README.md)
+**版本迁移指南**
+
+- 各版本之间的配置迁移说明
+- 迁移步骤和注意事项
+- 迁移前后配置对比
+- 回滚说明
+
+### [1.4.8 → 1.4.9 迁移指南](./migration/1.4.8-to-1.4.9.md)
+**从 1.4.8 升级到 1.4.9 的迁移说明**
+
+- 配置迁移系统（v1.0.0）迁移说明
+- 从 `branch.toml` 迁移到 `repositories.toml`
+- 详细的迁移步骤和验证方法
 
 ---
 
@@ -293,6 +316,7 @@
 - **2024-12** - 删除废弃的 QK_COMMAND_ARCHITECTURE.md 文档（已拆分为 LOG_COMMAND_ARCHITECTURE.md 和 JIRA_COMMAND_ARCHITECTURE.md）
 - **2024-12** - 创建开发规范文档 `DEVELOPMENT_GUIDELINES.md`，包含代码风格、错误处理、文档、命名、模块组织、Git 工作流、提交、测试、代码审查、依赖管理等规范
 - **2024-12** - 创建功能拓展分析文档 `FEATURE_EXTENSIONS.md`，基于代码库分析提出 10 个主要功能模块的拓展建议，包含详细的功能说明、命令示例、实现建议和优先级建议
+- **2024-12** - 创建迁移文档目录 `migration/`，包含迁移文档索引和 1.4.8 → 1.4.9 迁移指南
 
 ---
 
@@ -300,6 +324,10 @@
 
 ### 整体架构
 - 想了解整体架构？ → [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+
+### 版本迁移
+- 需要升级版本？ → [迁移文档索引](./migration/README.md)
+- 从 1.4.8 升级到 1.4.9？ → [1.4.8 → 1.4.9 迁移指南](./migration/1.4.8-to-1.4.9.md)
 
 ### Lib 层模块（核心业务逻辑）
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)

@@ -7,7 +7,16 @@
 use anyhow::{Context, Result};
 
 use super::helpers::{cmd_read, cmd_run};
-use crate::{log_info, log_message};
+use crate::trace_info;
+
+/// Git 配置结果
+#[derive(Debug, Clone)]
+pub struct GitConfigResult {
+    /// 用户邮箱
+    pub email: String,
+    /// 用户名称
+    pub name: String,
+}
 
 /// Git 配置管理结构体
 pub struct GitConfig;
@@ -22,10 +31,16 @@ impl GitConfig {
     /// * `email` - 用户邮箱地址
     /// * `name` - 用户名称
     ///
+    /// # 返回
+    ///
+    /// 返回 `GitConfigResult`，包含设置后的 email 和 name。
+    ///
     /// # 错误
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
-    pub fn set_global_user(email: &str, name: &str) -> Result<()> {
+    pub fn set_global_user(email: &str, name: &str) -> Result<GitConfigResult> {
+        trace_info!("Updating Git global config: email={}, name={}", email, name);
+
         // 设置全局 user.email
         cmd_run(&["config", "--global", "user.email", email])
             .context("Failed to set git global user.email")?;
@@ -34,11 +49,12 @@ impl GitConfig {
         cmd_run(&["config", "--global", "user.name", name])
             .context("Failed to set git global user.name")?;
 
-        log_info!("Git global config updated:");
-        log_message!("  user.email: {}", email);
-        log_message!("  user.name: {}", name);
+        trace_info!("Git global config updated successfully");
 
-        Ok(())
+        Ok(GitConfigResult {
+            email: email.to_string(),
+            name: name.to_string(),
+        })
     }
 
     /// 读取 Git 全局配置

@@ -2,8 +2,9 @@
 //!
 //! 负责生成代理命令和环境变量。
 
-use crate::proxy::{ProxyInfo, ProxyType};
 use std::collections::HashMap;
+
+use crate::proxy::{ProxyInfo, ProxyType};
 
 /// 代理配置生成器
 ///

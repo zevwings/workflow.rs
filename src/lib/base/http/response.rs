@@ -196,6 +196,54 @@ impl HttpResponse {
         Ok(self)
     }
 
+    /// 提取错误消息（通用方法）
+    ///
+    /// 尝试从响应体中提取错误信息，支持多种常见的错误格式：
+    /// - JSON 格式：尝试从 `error.message`、`error` 或 `message` 字段提取
+    /// - 文本格式：如果无法解析为 JSON，则作为文本返回
+    ///
+    /// # 返回
+    ///
+    /// 返回提取的错误消息字符串。如果无法提取，返回格式化的 JSON 或文本内容。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use crate::base::http::HttpResponse;
+    ///
+    /// let error_msg = response.extract_error_message();
+    /// println!("Error: {}", error_msg);
+    /// ```
+    pub fn extract_error_message(&self) -> String {
+        // 尝试解析错误响应为 JSON，提取详细的错误信息
+        match self.as_json::<serde_json::Value>() {
+            Ok(error_json) => {
+                // 尝试提取常见的错误字段
+                let error_detail = error_json
+                    .get("error")
+                    .and_then(|e| e.get("message"))
+                    .and_then(|m| m.as_str())
+                    .or_else(|| error_json.get("error").and_then(|e| e.as_str()))
+                    .or_else(|| error_json.get("message").and_then(|m| m.as_str()));
+
+                if let Some(detail) = error_detail {
+                    format!(
+                        "{} (details: {})",
+                        serde_json::to_string(&error_json).unwrap_or_default(),
+                        detail
+                    )
+                } else {
+                    serde_json::to_string(&error_json).unwrap_or_default()
+                }
+            }
+            Err(_) => {
+                // 如果不是 JSON，尝试作为文本解析
+                self.as_text()
+                    .unwrap_or_else(|_| String::from_utf8_lossy(self.as_bytes()).to_string())
+            }
+        }
+    }
+
     /// 使用指定的 Parser 解析响应（通用方法）
     ///
     /// 允许使用自定义的 Parser 来解析响应体。

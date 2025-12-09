@@ -4,9 +4,26 @@
 //! 针对 HTTP 请求的错误类型进行智能判断，自动重试可恢复的错误。
 //! 支持用户交互：在重试前询问用户是否继续，允许用户取消操作。
 
-use crate::{log_debug, log_success, log_warning};
+use std::io::{self, Write};
+use std::time::{Duration, Instant};
+
 use anyhow::Result;
-use dialoguer::Confirm;
+
+use crate::base::dialog::ConfirmDialog;
+use crate::{trace_debug, trace_info, trace_warn};
+
+// ==================== 返回结构体 ====================
+
+/// 重试结果
+#[derive(Debug, Clone)]
+pub struct RetryResult<T> {
+    /// 操作结果
+    pub result: T,
+    /// 重试次数
+    pub retry_count: u32,
+    /// 是否成功（第一次尝试就成功）
+    pub succeeded_on_first_attempt: bool,
+}
 
 /// HTTP 重试配置
 ///
@@ -80,7 +97,7 @@ impl HttpRetry {
     ///
     /// # 返回
     ///
-    /// 返回操作的结果。如果所有重试都失败，返回最后一次的错误。
+    /// 返回操作的结果和重试信息。如果所有重试都失败，返回最后一次的错误。
     ///
     /// # 错误处理
     ///
@@ -102,7 +119,11 @@ impl HttpRetry {
     ///     "获取数据",
     /// )?;
     /// ```
-    pub fn retry<F, T>(operation: F, config: &HttpRetryConfig, operation_name: &str) -> Result<T>
+    pub fn retry<F, T>(
+        operation: F,
+        config: &HttpRetryConfig,
+        operation_name: &str,
+    ) -> Result<RetryResult<T>>
     where
         F: Fn() -> Result<T>,
     {
@@ -113,13 +134,17 @@ impl HttpRetry {
             match operation() {
                 Ok(result) => {
                     if attempt > 0 {
-                        log_success!(
+                        trace_info!(
                             "{} succeeded after {} retry attempts",
                             operation_name,
                             attempt
                         );
                     }
-                    return Ok(result);
+                    return Ok(RetryResult {
+                        result,
+                        retry_count: attempt,
+                        succeeded_on_first_attempt: attempt == 0,
+                    });
                 }
                 Err(e) => {
                     let error = e;
@@ -132,7 +157,7 @@ impl HttpRetry {
                             // 错误不可重试，立即返回
                             if attempt == 0 {
                                 // 第一次尝试就失败，且不可重试
-                                log_warning!(
+                                trace_warn!(
                                     "{} failed: {} (not retryable)",
                                     operation_name,
                                     error_desc
@@ -144,7 +169,7 @@ impl HttpRetry {
 
                     // 如果还有重试机会
                     if attempt < config.max_retries {
-                        log_warning!(
+                        trace_warn!(
                             "{} failed: {} (attempt {}/{})",
                             operation_name,
                             error_desc,
@@ -160,19 +185,22 @@ impl HttpRetry {
                                 attempt + 1,
                                 config.max_retries + 1
                             );
-                            match Confirm::new().with_prompt(&prompt).default(true).interact() {
+                            match ConfirmDialog::new(&prompt).with_default(true).prompt() {
                                 Ok(true) => {
                                     // 用户选择继续，显示倒计时
                                     Self::countdown_with_cancel(delay, operation_name)?;
                                 }
                                 Ok(false) => {
                                     // 用户选择取消
-                                    log_warning!("User cancelled operation");
+                                    trace_warn!("User cancelled operation");
                                     return Err(anyhow::anyhow!("User cancelled operation"));
                                 }
                                 Err(e) => {
                                     // 交互失败，可能是非交互式终端，直接继续
-                                    log_debug!("Failed to get user input, auto-continuing: {}", e);
+                                    trace_debug!(
+                                        "Failed to get user input, auto-continuing: {}",
+                                        e
+                                    );
                                     std::thread::sleep(std::time::Duration::from_secs(delay));
                                 }
                             }
@@ -190,7 +218,7 @@ impl HttpRetry {
                             .min(config.max_delay);
                     } else {
                         // 所有重试都失败了
-                        log_warning!(
+                        trace_warn!(
                             "{} failed: {} (retried {} times)",
                             operation_name,
                             error_desc,
@@ -268,9 +296,6 @@ impl HttpRetry {
     ///
     /// 在等待期间每秒更新一次倒计时，用户可以通过 Ctrl+C 取消。
     fn countdown_with_cancel(seconds: u64, operation_name: &str) -> Result<()> {
-        use std::io::{self, Write};
-        use std::time::{Duration, Instant};
-
         let start = Instant::now();
         let duration = Duration::from_secs(seconds);
 

@@ -6,10 +6,19 @@
 //! - 提交更改（commit）
 
 use anyhow::{Context, Result};
+use duct::cmd;
 
 use super::helpers::{check_success, cmd_read, cmd_run};
 use super::pre_commit::GitPreCommit;
-use crate::log_info;
+
+/// Git 提交结果
+#[derive(Debug, Clone)]
+pub struct CommitResult {
+    /// 是否已提交
+    pub committed: bool,
+    /// 消息（如果工作区干净）
+    pub message: Option<String>,
+}
 
 /// Git 提交管理
 ///
@@ -96,14 +105,20 @@ impl GitCommit {
     /// 2. 暂存所有已修改的文件
     /// 3. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
     /// 4. 执行提交操作
-    pub fn commit(message: &str, no_verify: bool) -> Result<()> {
+    ///
+    /// # 返回
+    ///
+    /// 返回 `CommitResult`，包含提交状态和消息。
+    pub fn commit(message: &str, no_verify: bool) -> Result<CommitResult> {
         // 1. 使用 git diff --quiet 检查是否有更改（更高效）
         let has_changes = Self::has_commit()?;
 
         // 2. 如果没有更改，直接返回
         if !has_changes {
-            log_info!("Nothing to commit, working tree clean");
-            return Ok(());
+            return Ok(CommitResult {
+                committed: false,
+                message: Some("Nothing to commit, working tree clean".to_string()),
+            });
         }
 
         // 3. 暂存所有已修改的文件
@@ -112,9 +127,12 @@ impl GitCommit {
         Self::add_all().context("Failed to stage changes")?;
 
         // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
-        if !no_verify && GitPreCommit::has_pre_commit() {
+        let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
             GitPreCommit::run_pre_commit()?;
-        }
+            true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
+        } else {
+            false
+        };
 
         // 7. 执行提交
         let mut args = vec!["commit", "-m", message];
@@ -122,7 +140,20 @@ impl GitCommit {
             args.push("--no-verify");
         }
 
-        cmd_run(&args).context("Failed to commit")
+        // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
+        if should_skip_hook {
+            cmd("git", &args)
+                .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
+                .run()
+                .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+        } else {
+            cmd_run(&args).context("Failed to commit")?;
+        }
+
+        Ok(CommitResult {
+            committed: true,
+            message: None,
+        })
     }
 
     /// 获取 Git 修改内容（工作区和暂存区）
