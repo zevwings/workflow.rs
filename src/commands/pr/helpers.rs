@@ -276,11 +276,12 @@ pub fn apply_branch_name_prefixes(
 /// # Examples
 ///
 /// ```no_run
-/// use crate::commands::pr::helpers::detect_base_branch;
+/// use workflow::commands::pr::helpers::detect_base_branch;
 ///
 /// // Detect which branch test-rebase is based on (excluding master)
 /// let base = detect_base_branch("test-rebase", "master")?;
 /// // May return: Some("develop-")
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
     log_info!("Detecting base branch for '{}'...", branch);

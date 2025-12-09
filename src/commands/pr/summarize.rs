@@ -220,7 +220,7 @@ impl SummarizeCommand {
     /// 解析 diff，提取每个文件的修改
     ///
     /// Git diff 格式：
-    /// ```
+    /// ```text
     /// diff --git a/path/to/file b/path/to/file
     /// index ...
     /// --- a/path/to/file

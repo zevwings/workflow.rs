@@ -20,9 +20,12 @@ use anyhow::{Context, Result};
 ///
 /// # 示例
 ///
-/// ```rust
+/// ```rust,no_run
+/// use workflow::commands::config::helpers::select_language;
+///
 /// let language = select_language(Some("zh-CN"))?;
 /// // 用户从列表中选择后，返回 "zh-CN"
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn select_language(current_language: Option<&str>) -> Result<String> {
     // 获取所有支持的语言显示名称
