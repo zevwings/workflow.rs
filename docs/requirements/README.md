@@ -25,6 +25,12 @@
 
 ## 📁 当前文档
 
+### GitHub Branch Prefix 改造需求
+- **文件**：`GITHUB_BRANCH_PREFIX_REPO_BASED_REQUIREMENT.md`
+- **用途**：将 GitHub branch prefix 配置从账号级别改为仓库级别
+- **状态**：待实施
+- **创建日期**：2024-12-19
+
 ### 文档更新分析
 - **文件**：`DOCUMENT_UPDATE_ANALYSIS.md`
 - **用途**：分析项目代码库与文档的对应关系，识别需要更新或补充的文档
@@ -63,4 +69,4 @@
 ---
 
 **维护者**：开发团队
-**最后更新**：2024-12
+**最后更新**: 2025-12-09

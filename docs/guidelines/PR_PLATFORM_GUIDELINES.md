@@ -804,4 +804,4 @@ impl PlatformProvider for GitLab {
 
 ---
 
-*最后更新：2024-12*
+**最后更新**: 2025-12-09

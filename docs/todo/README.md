@@ -44,7 +44,7 @@
 
 ### 📋 分类待办事项文档
 
-#### 4. [`JIRA.md`](./JIRA.md)
+#### 4. [`JIRA_TODO.md`](./JIRA_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: JIRA 模块
@@ -54,7 +54,7 @@
   - JIRA 集成增强（批量操作、自定义工作流规则）
 - **优先级**: 高优先级（命令封装、info 增强）
 
-#### 5. [`GIT.md`](./GIT.md)
+#### 5. [`GIT_TODO.md`](./GIT_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: Git 工作流
@@ -64,7 +64,7 @@
   - Stash 管理（list、apply、drop、pop）
 - **优先级**: 高优先级（分支创建、切换、commit 管理）
 
-#### 6. [`WORKFLOW.md`](./WORKFLOW.md)
+#### 6. [`WORKFLOW_TODO.md`](./WORKFLOW_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 工作流自动化
@@ -73,7 +73,7 @@
   - 钩子系统（Pre-commit、Post-merge、Pre-push）
 - **优先级**: 高优先级（模板系统）
 
-#### 7. [`CONFIG.md`](./CONFIG.md)
+#### 7. [`CONFIG_TODO.md`](./CONFIG_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 配置管理
@@ -83,7 +83,7 @@
   - 多环境支持（开发/测试/生产）
 - **优先级**: 高优先级（配置验证）
 
-#### 8. [`PERFORMANCE.md`](./PERFORMANCE.md)
+#### 8. [`PERFORMANCE_TODO.md`](./PERFORMANCE_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 性能优化
@@ -115,11 +115,11 @@ docs/todo/
 ├── ui-framework-recommendations.md # UI 框架推荐文档
 ├── LOGGING_REFACTORING.md         # 日志输出重构计划
 │
-├── JIRA.md                        # JIRA 模块待办事项
-├── GIT.md                         # Git 工作流待办事项
-├── WORKFLOW.md                    # 工作流自动化待办事项
-├── CONFIG.md                      # 配置管理待办事项
-├── PERFORMANCE.md                 # 性能优化待办事项
+├── JIRA_TODO.md                   # JIRA 模块待办事项
+├── GIT_TODO.md                    # Git 工作流待办事项
+├── WORKFLOW_TODO.md               # 工作流自动化待办事项
+├── CONFIG_TODO.md                 # 配置管理待办事项
+├── PERFORMANCE_TODO.md            # 性能优化待办事项
 └── TESTING_ENHANCEMENT.md         # 测试增强计划
 ```
 
@@ -141,14 +141,14 @@ docs/todo/
 2. **LOGGING_REFACTORING.md** - 日志输出重构计划
 
 #### 分类待办事项文档
-3. **JIRA.md** - JIRA 模块待办事项
-4. **GIT.md** - Git 工作流待办事项
-5. **WORKFLOW.md** - 工作流自动化待办事项
-6. **CONFIG.md** - 配置管理待办事项
-7. **PERFORMANCE.md** - 性能优化待办事项
-8. **STATS.md** - 数据可视化与报告待办事项
-9. **INTEGRATION.md** - 集成与扩展待办事项
-10. **UX.md** - 用户体验优化待办事项
+3. **JIRA_TODO.md** - JIRA 模块待办事项
+4. **GIT_TODO.md** - Git 工作流待办事项
+5. **WORKFLOW_TODO.md** - 工作流自动化待办事项
+6. **CONFIG_TODO.md** - 配置管理待办事项
+7. **PERFORMANCE_TODO.md** - 性能优化待办事项
+8. **STATS_TODO.md** - 数据可视化与报告待办事项
+9. **INTEGRATION_TODO.md** - 集成与扩展待办事项
+10. **UX_TODO.md** - 用户体验优化待办事项
 11. **TESTING_ENHANCEMENT.md** - 测试增强计划
 
 ---
@@ -169,29 +169,29 @@ docs/todo/
    - 分阶段实施步骤和时间估算
 
 #### 分类待办事项文档（8 个）
-3. **JIRA 模块** (`JIRA.md`)
+3. **JIRA 模块** (`JIRA_TODO.md`)
    - JIRA 命令增强和新增命令
    - JIRA 集成功能
 
-4. **Git 工作流** (`GIT.md`)
+4. **Git 工作流** (`GIT_TODO.md`)
    - 分支管理、Commit 管理、Stash 管理
 
-5. **工作流自动化** (`WORKFLOW.md`)
+5. **工作流自动化** (`WORKFLOW_TODO.md`)
    - 模板系统、钩子系统、批量操作
 
-6. **配置管理** (`CONFIG.md`)
+6. **配置管理** (`CONFIG_TODO.md`)
    - 配置验证、导入/导出、多环境支持
 
-7. **性能优化** (`PERFORMANCE.md`)
+7. **性能优化** (`PERFORMANCE_TODO.md`)
    - 缓存机制、并发处理
 
-8. **数据可视化与报告** (`STATS.md`)
+8. **数据可视化与报告** (`STATS_TODO.md`)
    - 统计报告、图表输出、时间线视图
 
-9. **集成与扩展** (`INTEGRATION.md`)
+9. **集成与扩展** (`INTEGRATION_TODO.md`)
    - 更多平台支持、通知系统
 
-10. **用户体验优化** (`UX.md`)
+10. **用户体验优化** (`UX_TODO.md`)
     - 交互式界面、快捷命令、错误处理
 
 11. **测试增强** (`TESTING_ENHANCEMENT.md`)
@@ -211,14 +211,14 @@ docs/todo/
 ## 🔗 快速导航
 
 ### 按模块查找
-- **JIRA 相关** → [`JIRA.md`](./JIRA.md)
-- **Git 相关** → [`GIT.md`](./GIT.md)
-- **工作流自动化** → [`WORKFLOW.md`](./WORKFLOW.md)
-- **配置管理** → [`CONFIG.md`](./CONFIG.md)
-- **性能优化** → [`PERFORMANCE.md`](./PERFORMANCE.md)
-- **数据可视化** → [`STATS.md`](./STATS.md)
-- **集成与扩展** → [`INTEGRATION.md`](./INTEGRATION.md)
-- **用户体验优化** → [`UX.md`](./UX.md)
+- **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md)
+- **Git 相关** → [`GIT_TODO.md`](./GIT_TODO.md)
+- **工作流自动化** → [`WORKFLOW_TODO.md`](./WORKFLOW_TODO.md)
+- **配置管理** → [`CONFIG_TODO.md`](./CONFIG_TODO.md)
+- **性能优化** → [`PERFORMANCE_TODO.md`](./PERFORMANCE_TODO.md)
+- **数据可视化** → [`STATS_TODO.md`](./STATS_TODO.md)
+- **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+- **用户体验优化** → [`UX_TODO.md`](./UX_TODO.md)
 
 ### 完整参考
 - **UI 框架推荐** → [`ui-framework-recommendations.md`](./ui-framework-recommendations.md)
@@ -228,5 +228,5 @@ docs/todo/
 
 ---
 
-**最后更新**: 2024-12-19
+**最后更新**: 2025-12-09
 **文档维护**: 定期审查，保持目录整洁

@@ -288,9 +288,9 @@ impl NotificationManager {
 
 ## 📚 相关文档
 
-- [JIRA 模块待办事项](./JIRA.md)
-- [Git 工作流待办事项](./GIT.md)
+- [JIRA 模块待办事项](./JIRA_TODO.md)
+- [Git 工作流待办事项](./GIT_TODO.md)
 
 ---
 
-**最后更新**: 2024-12-19
+**最后更新**: 2025-12-09

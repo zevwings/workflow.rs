@@ -237,9 +237,9 @@ workflow stash pop stash@{1}                       # 应用并删除指定的 st
 
 ## 📚 相关文档
 
-- [JIRA 模块待办事项](./JIRA.md)
-- [工作流自动化待办事项](./WORKFLOW.md)
+- [JIRA 模块待办事项](./JIRA_TODO.md)
+- [工作流自动化待办事项](./WORKFLOW_TODO.md)
 
 ---
 
-**最后更新**: 2024-12-19
+**最后更新**: 2025-12-09

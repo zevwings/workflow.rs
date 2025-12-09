@@ -393,10 +393,10 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ## 📚 相关文档
 
-- [Git 工作流待办事项](./GIT.md)
-- [工作流自动化待办事项](./WORKFLOW.md)
+- [Git 工作流待办事项](./GIT_TODO.md)
+- [工作流自动化待办事项](./WORKFLOW_TODO.md)
 - [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)
 
 ---
 
-**最后更新**: 2024-12-19
+**最后更新**: 2025-12-09
