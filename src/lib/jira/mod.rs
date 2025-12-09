@@ -24,6 +24,7 @@ pub mod helpers;
 pub mod history;
 pub mod logs;
 pub mod status;
+pub mod table;
 pub mod ticket;
 pub mod types;
 pub mod users;
@@ -42,6 +43,7 @@ pub use logs::{JiraLogs, LogEntry};
 // 如果需要访问数据模型，请使用 jira::types::JiraStatus
 pub use history::{JiraWorkHistory, WorkHistoryEntry};
 pub use status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
+pub use table::{AttachmentRow, FileRow};
 pub use types::{
     JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraTransition, JiraUser,
 };

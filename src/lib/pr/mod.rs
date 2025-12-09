@@ -1,5 +1,5 @@
 pub mod body_parser;
-pub mod codeup;
+// pub mod codeup;  // Codeup support has been removed
 pub mod github;
 pub mod helpers;
 pub mod llm;
@@ -10,8 +10,8 @@ pub use body_parser::{
     extract_description_from_body, extract_info_from_source_pr, extract_jira_ticket_from_body,
     parse_change_types_from_body, ExtractedPrInfo, SourcePrInfo,
 };
-pub use codeup::errors::CodeupErrorResponse;
-pub use codeup::{Codeup, CodeupUser};
+// pub use codeup::errors::CodeupErrorResponse;  // Codeup support has been removed
+// pub use codeup::{Codeup, CodeupUser};  // Codeup support has been removed
 pub use github::errors::{GitHubError, GitHubErrorResponse};
 pub use github::{GitHub, GitHubUser};
 pub use helpers::{

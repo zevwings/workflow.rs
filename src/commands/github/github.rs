@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::settings::table::GitHubAccountListRow;
 use crate::base::util::{
     dialog::{ConfirmDialog, SelectDialog},
     mask_sensitive_value,
@@ -17,27 +18,9 @@ use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
-use tabled::Tabled;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
-
-/// GitHub 账号表格行
-#[derive(Tabled)]
-struct AccountRow {
-    #[tabled(rename = "#")]
-    index: String,
-    #[tabled(rename = "Name")]
-    name: String,
-    #[tabled(rename = "Email")]
-    email: String,
-    #[tabled(rename = "API Token")]
-    token: String,
-    #[tabled(rename = "Branch Prefix")]
-    prefix: String,
-    #[tabled(rename = "Status")]
-    status: String,
-}
 
 impl GitHubCommand {
     /// 列出所有 GitHub 账号（带验证）
@@ -67,11 +50,11 @@ impl GitHubCommand {
         }
 
         // 构建表格数据（使用验证结果中的账号信息）
-        let rows: Vec<AccountRow> = verification_result
+        let rows: Vec<GitHubAccountListRow> = verification_result
             .accounts
             .iter()
             .enumerate()
-            .map(|(index, account)| AccountRow {
+            .map(|(index, account)| GitHubAccountListRow {
                 index: (index + 1).to_string(),
                 name: account.name.clone(),
                 email: account.email.clone(),

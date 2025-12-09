@@ -310,7 +310,6 @@ impl PullRequestSyncCommand {
     ///
     /// 尝试通过多种方式查找源分支的 PR ID：
     /// 1. 通过工作历史查找（主要方式）
-    /// 2. 对于 Codeup，尝试通过 get_pull_request_info API 查找
     ///
     /// 返回 PR ID（如果找到），否则返回 None。
     fn find_source_branch_pr_id(source_branch: &str) -> Result<Option<String>> {
@@ -328,19 +327,9 @@ impl PullRequestSyncCommand {
             return Ok(Some(pr_id));
         }
 
+        // Codeup 特定逻辑已移除（Codeup support has been removed）
         // 方法 2: 对于 Codeup，尝试通过 API 查找（如果工作历史中没有）
-        let repo_type = crate::git::GitRepo::detect_repo_type()?;
-        if matches!(repo_type, crate::git::RepoType::Codeup) {
-            // Codeup 的 get_pull_request_info 支持通过分支名查找
-            let provider = create_provider()?;
-            // 尝试通过分支名获取 PR 信息（Codeup 支持）
-            // 如果成功，说明分支有 PR，但我们需要从返回的信息中提取 PR ID
-            // 由于无法直接提取，这里只做验证，实际 PR ID 仍依赖工作历史
-            if provider.get_pull_request_info(source_branch).is_ok() {
-                log_debug!("Source branch '{}' appears to have a PR (Codeup), but PR ID not found in work-history", source_branch);
-                // 返回 None，让用户手动处理
-            }
-        }
+        // ... (removed)
 
         Ok(None)
     }

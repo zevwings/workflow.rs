@@ -7,10 +7,10 @@ use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::commands::branch::{
     add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,
 };
+use crate::git::BranchRow;
 use crate::git::GitRepo;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
-use tabled::Tabled;
 
 /// 分支忽略列表管理命令
 pub struct BranchIgnoreCommand;
@@ -174,14 +174,6 @@ impl BranchIgnoreCommand {
 
     /// 列出当前仓库的忽略分支
     pub fn list() -> Result<()> {
-        #[derive(Tabled)]
-        struct BranchRow {
-            #[tabled(rename = "#")]
-            index: String,
-            #[tabled(rename = "Branch Name")]
-            name: String,
-        }
-
         let repo_name =
             GitRepo::extract_repo_name().context("Failed to extract repository name")?;
 

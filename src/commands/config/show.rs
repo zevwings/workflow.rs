@@ -3,12 +3,12 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
-use tabled::Tabled;
 
 /// 配置查看命令
 pub struct ConfigCommand;
@@ -75,17 +75,6 @@ impl ConfigCommand {
         // 打印 LLM 配置
         log_break!();
         log_info!("LLM Configuration");
-        #[derive(Tabled)]
-        struct LLMConfigRow {
-            #[tabled(rename = "Provider")]
-            provider: String,
-            #[tabled(rename = "Model")]
-            model: String,
-            #[tabled(rename = "Key")]
-            key: String,
-            #[tabled(rename = "Output Language")]
-            language: String,
-        }
         let config_rows = vec![LLMConfigRow {
             provider: result.llm.provider.clone(),
             model: result.llm.model.clone(),
@@ -99,36 +88,13 @@ impl ConfigCommand {
                 .render()
         );
 
-        // 打印 Codeup 配置
-        if result.codeup.project_id.is_some()
-            || result.codeup.csrf_token.is_some()
-            || result.codeup.cookie.is_some()
-        {
-            if let Some(id) = result.codeup.project_id {
-                log_message!("\nCodeup Project ID: {}", id);
-            }
-            if let Some(ref token) = result.codeup.csrf_token {
-                log_message!("Codeup CSRF Token: {}", token);
-            }
-            if let Some(ref cookie) = result.codeup.cookie {
-                log_message!("Codeup Cookie: {}", cookie);
-            }
-        }
+        // Codeup 配置显示已移除（Codeup support has been removed）
 
         // 打印 Jira 配置
         if result.jira.configured {
             log_break!();
             log_info!("Verifying Jira configuration...");
             if let Some(ref config) = result.jira.config {
-                #[derive(Tabled)]
-                struct JiraConfigRow {
-                    #[tabled(rename = "Email")]
-                    email: String,
-                    #[tabled(rename = "Service Address")]
-                    service_address: String,
-                    #[tabled(rename = "API Token")]
-                    api_token: String,
-                }
                 let config_rows = vec![JiraConfigRow {
                     email: config.email.clone(),
                     service_address: config.service_address.clone(),
@@ -170,21 +136,6 @@ impl ConfigCommand {
         if result.github.configured {
             log_break!();
             log_info!("Verifying GitHub configuration...");
-            #[derive(Tabled)]
-            struct GitHubAccountRow {
-                #[tabled(rename = "Name")]
-                name: String,
-                #[tabled(rename = "Email")]
-                email: String,
-                #[tabled(rename = "API Token")]
-                token: String,
-                #[tabled(rename = "Branch Prefix")]
-                prefix: String,
-                #[tabled(rename = "Status")]
-                status: String,
-                #[tabled(rename = "Verification")]
-                verification: String,
-            }
             let account_rows: Vec<GitHubAccountRow> = result
                 .github
                 .accounts
@@ -246,7 +197,7 @@ impl ConfigCommand {
         settings.jira.email.is_none()
             && settings.jira.api_token.is_none()
             && settings.github.accounts.is_empty()
-            && settings.codeup.project_id.is_none()
+            // && settings.codeup.project_id.is_none()  // Codeup support has been removed
             && settings.llm.url.is_none()
             && settings.llm.key.is_none()
     }

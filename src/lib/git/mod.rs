@@ -28,6 +28,7 @@ mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;
+mod table;
 mod types;
 
 // 重新导出所有公共 API
@@ -38,4 +39,5 @@ pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
 pub use repo::GitRepo;
 pub use stash::{GitStash, StashPopResult};
+pub use table::BranchRow;
 pub use types::RepoType;

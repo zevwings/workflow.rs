@@ -2,26 +2,13 @@ use crate::base::util::{
     dialog::InputDialog,
     table::{TableBuilder, TableStyle},
 };
+use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
-use tabled::Tabled;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
-
-/// JIRA 附件表格行
-#[derive(Tabled)]
-struct AttachmentRow {
-    #[tabled(rename = "#")]
-    index: String,
-    #[tabled(rename = "Filename")]
-    filename: String,
-    #[tabled(rename = "Size")]
-    size: String,
-    #[tabled(rename = "MIME Type")]
-    mime_type: String,
-}
 
 impl InfoCommand {
     /// 显示 ticket 信息

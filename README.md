@@ -45,7 +45,72 @@ brew install workflow
 > - 需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
 > - 如果使用 GitHub Actions 自动发布，需要配置 `HOMEBREW_TAP_TOKEN` secret（见下方说明）。
 
-#### 方式二：使用 Makefile（仅 macOS/Linux）
+#### 方式二：使用安装脚本（推荐，macOS/Linux）
+
+使用一键安装脚本自动下载并安装最新版本：
+
+```bash
+# 安装最新版本
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+
+# 安装指定版本
+VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+```
+
+脚本会自动：
+- 检测您的操作系统和架构（macOS Intel/Apple Silicon, Linux x86_64/ARM64）
+- 从 GitHub Releases 下载对应平台的二进制包
+- 验证 SHA256 校验和确保文件完整性
+- 解压并运行安装程序
+- 安装二进制文件和 shell completion 脚本
+
+**卸载**：
+
+```bash
+# 使用卸载脚本
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+
+# 或使用已安装的命令
+workflow uninstall
+```
+
+#### 方式三：使用安装脚本（Windows）
+
+使用 PowerShell 安装脚本自动下载并安装最新版本：
+
+**PowerShell (推荐)**:
+```powershell
+# 安装最新版本
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1" -OutFile install.ps1; .\install.ps1
+
+# 或一行命令
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+```
+
+**安装指定版本**:
+```powershell
+$env:VERSION="v1.4.8"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+```
+
+脚本会自动：
+- 检测您的 Windows 架构（x86_64/ARM64）
+- 从 GitHub Releases 下载对应平台的二进制包（`.zip`）
+- 验证 SHA256 校验和确保文件完整性
+- 解压并运行安装程序
+- 安装二进制文件到 `%LOCALAPPDATA%\Programs\workflow\bin`
+- 检查并提示 PATH 环境变量配置
+
+**卸载**：
+
+```powershell
+# 使用卸载脚本
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
+
+# 或使用已安装的命令
+workflow uninstall
+```
+
+#### 方式四：使用 Makefile（仅 macOS/Linux）
 
 使用 Makefile 安装所有二进制文件到系统：
 

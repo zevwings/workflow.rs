@@ -6,9 +6,15 @@ use crate::base::settings::defaults::{
 };
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
-    CodeupSettings, GitHubAccount, GitHubSettings, JiraSettings, LogSettings, Settings,
+    // CodeupSettings,  // Codeup support has been removed
+    GitHubAccount,
+    GitHubSettings,
+    JiraSettings,
+    LogSettings,
+    Settings,
 };
-use crate::base::util::dialog::{ConfirmDialog, InputDialog, SelectDialog};
+use crate::base::util::dialog::{InputDialog, SelectDialog};
+// use crate::base::util::dialog::ConfirmDialog;  // Unused after Codeup removal
 use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
@@ -32,9 +38,9 @@ struct CollectedConfig {
     github_current: Option<String>,
     log_download_base_dir: Option<String>,
     enable_trace_console: Option<bool>,
-    codeup_project_id: Option<u64>,
-    codeup_csrf_token: Option<String>,
-    codeup_cookie: Option<String>,
+    // codeup_project_id: Option<u64>,  // Codeup support has been removed
+    // codeup_csrf_token: Option<String>,  // Codeup support has been removed
+    // codeup_cookie: Option<String>,  // Codeup support has been removed
     // LLM 配置
     llm_provider: String,
     llm_url: Option<String>,
@@ -111,9 +117,9 @@ impl SetupCommand {
             github_current: settings.github.current.clone(),
             log_download_base_dir: settings.log.download_base_dir.clone(),
             enable_trace_console: settings.log.enable_trace_console,
-            codeup_project_id: settings.codeup.project_id,
-            codeup_csrf_token: settings.codeup.csrf_token.clone(),
-            codeup_cookie: settings.codeup.cookie.clone(),
+            // codeup_project_id: settings.codeup.project_id,  // Codeup support has been removed
+            // codeup_csrf_token: settings.codeup.csrf_token.clone(),  // Codeup support has been removed
+            // codeup_cookie: settings.codeup.cookie.clone(),  // Codeup support has been removed
             llm_provider: llm.provider.clone(),
             llm_url: llm.url.clone(),
             llm_key: llm.key.clone(),
@@ -560,91 +566,9 @@ impl SetupCommand {
         let llm_language =
             select_language(current_language).context("Failed to select LLM output language")?;
 
+        // Codeup 配置已移除（Codeup support has been removed）
         // ==================== 可选：Codeup 配置 ====================
-        log_break!();
-        log_message!("📦 Codeup Configuration (Optional)");
-        log_break!('─', 65);
-
-        let has_codeup = existing.codeup_project_id.is_some()
-            || existing.codeup_csrf_token.is_some()
-            || existing.codeup_cookie.is_some();
-
-        let codeup_confirm_prompt = if has_codeup {
-            "Do you want to configure Codeup? [current: configured]".to_string()
-        } else {
-            "Do you use Codeup (Aliyun Code Repository)?".to_string()
-        };
-
-        let should_configure_codeup = ConfirmDialog::new(&codeup_confirm_prompt)
-            .with_default(has_codeup)
-            .prompt()?;
-
-        let (codeup_project_id, codeup_csrf_token, codeup_cookie) = if should_configure_codeup {
-            let codeup_id_prompt = if existing.codeup_project_id.is_some() {
-                "Codeup project ID (press Enter to keep)".to_string()
-            } else {
-                "Codeup project ID (optional, press Enter to skip)".to_string()
-            };
-
-            let default_codeup_id = existing
-                .codeup_project_id
-                .map(|id| id.to_string())
-                .unwrap_or_default();
-
-            let codeup_project_id = InputDialog::new(&codeup_id_prompt)
-                .allow_empty(true)
-                .with_default(default_codeup_id)
-                .prompt()
-                .context("Failed to get Codeup project ID")?;
-
-            let codeup_project_id = if !codeup_project_id.is_empty() {
-                codeup_project_id.parse::<u64>().ok()
-            } else {
-                existing.codeup_project_id
-            };
-
-            let codeup_csrf_prompt = if existing.codeup_csrf_token.is_some() {
-                "Codeup CSRF token [current: ***] (press Enter to keep)".to_string()
-            } else {
-                "Codeup CSRF token (optional, press Enter to skip)".to_string()
-            };
-
-            let codeup_csrf_token = InputDialog::new(&codeup_csrf_prompt)
-                .allow_empty(true)
-                .prompt()
-                .context("Failed to get Codeup CSRF token")?;
-
-            let codeup_csrf_token = if !codeup_csrf_token.is_empty() {
-                Some(codeup_csrf_token)
-            } else {
-                existing.codeup_csrf_token.clone()
-            };
-
-            let codeup_cookie_prompt = if existing.codeup_cookie.is_some() {
-                "Codeup cookie [current: ***] (press Enter to keep)".to_string()
-            } else {
-                "Codeup cookie (optional, press Enter to skip)".to_string()
-            };
-
-            let codeup_cookie = InputDialog::new(&codeup_cookie_prompt)
-                .allow_empty(true)
-                .prompt()
-                .context("Failed to get Codeup cookie")?;
-
-            let codeup_cookie = if !codeup_cookie.is_empty() {
-                Some(codeup_cookie)
-            } else {
-                existing.codeup_cookie.clone()
-            };
-
-            (codeup_project_id, codeup_csrf_token, codeup_cookie)
-        } else {
-            (
-                existing.codeup_project_id,
-                existing.codeup_csrf_token.clone(),
-                existing.codeup_cookie.clone(),
-            )
-        };
+        // ... (removed)
 
         Ok(CollectedConfig {
             jira_email,
@@ -654,9 +578,9 @@ impl SetupCommand {
             github_current,
             log_download_base_dir,
             enable_trace_console,
-            codeup_project_id,
-            codeup_csrf_token,
-            codeup_cookie,
+            // codeup_project_id,  // Codeup support has been removed
+            // codeup_csrf_token,  // Codeup support has been removed
+            // codeup_cookie,  // Codeup support has been removed
             llm_provider,
             llm_url,
             llm_key,
@@ -684,11 +608,11 @@ impl SetupCommand {
                 level: None, // 日志级别通过 workflow log set 命令设置
                 enable_trace_console: config.enable_trace_console,
             },
-            codeup: CodeupSettings {
-                project_id: config.codeup_project_id,
-                csrf_token: config.codeup_csrf_token.clone(),
-                cookie: config.codeup_cookie.clone(),
-            },
+            // codeup: CodeupSettings {  // Codeup support has been removed
+            //     project_id: config.codeup_project_id,
+            //     csrf_token: config.codeup_csrf_token.clone(),
+            //     cookie: config.codeup_cookie.clone(),
+            // },
             llm: crate::base::settings::settings::LLMSettings {
                 url: config.llm_url.clone(),
                 key: config.llm_key.clone(),

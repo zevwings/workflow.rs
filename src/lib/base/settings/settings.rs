@@ -43,16 +43,16 @@ pub struct LLMConfigInfo {
     pub language: String,
 }
 
-/// Codeup 配置信息
-#[derive(Debug, Clone)]
-pub struct CodeupConfigInfo {
-    /// 项目 ID
-    pub project_id: Option<u64>,
-    /// CSRF Token（掩码显示）
-    pub csrf_token: Option<String>,
-    /// Cookie（掩码显示）
-    pub cookie: Option<String>,
-}
+// Codeup 配置信息已移除（Codeup support has been removed）
+// #[derive(Debug, Clone)]
+// pub struct CodeupConfigInfo {
+//     /// 项目 ID
+//     pub project_id: Option<u64>,
+//     /// CSRF Token（掩码显示）
+//     pub csrf_token: Option<String>,
+//     /// Cookie（掩码显示）
+//     pub cookie: Option<String>,
+// }
 
 /// Jira 验证结果
 #[derive(Debug, Clone)]
@@ -136,8 +136,8 @@ pub struct VerificationResult {
     pub log: LogConfigInfo,
     /// LLM 配置
     pub llm: LLMConfigInfo,
-    /// Codeup 配置
-    pub codeup: CodeupConfigInfo,
+    // /// Codeup 配置  // Codeup support has been removed
+    // pub codeup: CodeupConfigInfo,
     /// Jira 验证结果
     pub jira: JiraVerificationResult,
     /// GitHub 验证结果
@@ -238,26 +238,26 @@ impl Default for LogSettings {
     }
 }
 
-/// Codeup 配置（TOML）
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct CodeupSettings {
-    /// Codeup 项目 ID
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub project_id: Option<u64>,
-    /// Codeup CSRF Token
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub csrf_token: Option<String>,
-    /// Codeup Cookie
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cookie: Option<String>,
-}
-
-impl CodeupSettings {
-    /// 检查 Codeup 配置是否为空（所有字段都是 None）
-    fn is_empty(&self) -> bool {
-        self.project_id.is_none() && self.csrf_token.is_none() && self.cookie.is_none()
-    }
-}
+// Codeup 配置已移除（Codeup support has been removed）
+// #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+// pub struct CodeupSettings {
+//     /// Codeup 项目 ID
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub project_id: Option<u64>,
+//     /// Codeup CSRF Token
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub csrf_token: Option<String>,
+//     /// Codeup Cookie
+//     #[serde(skip_serializing_if = "Option::is_none")]
+//     pub cookie: Option<String>,
+// }
+//
+// impl CodeupSettings {
+//     /// 检查 Codeup 配置是否为空（所有字段都是 None）
+//     fn is_empty(&self) -> bool {
+//         self.project_id.is_none() && self.csrf_token.is_none() && self.cookie.is_none()
+//     }
+// }
 
 // ==================== TOML LLM 配置结构体 ====================
 
@@ -294,9 +294,9 @@ pub struct Settings {
     /// 日志配置
     #[serde(default)]
     pub log: LogSettings,
-    /// Codeup 配置
-    #[serde(default, skip_serializing_if = "CodeupSettings::is_empty")]
-    pub codeup: CodeupSettings,
+    // /// Codeup 配置  // Codeup support has been removed
+    // #[serde(default, skip_serializing_if = "CodeupSettings::is_empty")]
+    // pub codeup: CodeupSettings,
     /// LLM 配置
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
@@ -381,15 +381,15 @@ impl Settings {
                 download_base_dir: self.log.download_base_dir.clone(),
             },
             llm: self.get_llm_config(),
-            codeup: CodeupConfigInfo {
-                project_id: self.codeup.project_id,
-                csrf_token: self
-                    .codeup
-                    .csrf_token
-                    .as_ref()
-                    .map(|t| mask_sensitive_value(t)),
-                cookie: self.codeup.cookie.as_ref().map(|c| mask_sensitive_value(c)),
-            },
+            // codeup: CodeupConfigInfo {  // Codeup support has been removed
+            //     project_id: self.codeup.project_id,
+            //     csrf_token: self
+            //         .codeup
+            //         .csrf_token
+            //         .as_ref()
+            //         .map(|t| mask_sensitive_value(t)),
+            //     cookie: self.codeup.cookie.as_ref().map(|c| mask_sensitive_value(c)),
+            // },
             jira: self.verify_jira()?,
             github: self.verify_github()?,
         })

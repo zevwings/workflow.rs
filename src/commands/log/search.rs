@@ -3,23 +3,12 @@ use crate::base::util::{
     table::{TableBuilder, TableStyle},
 };
 use crate::jira::logs::JiraLogs;
+use crate::jira::logs::SearchResultRow;
 use crate::{log_break, log_debug, log_success, log_warning};
 use anyhow::{Context, Result};
-use tabled::Tabled;
 
 /// 搜索关键词命令
 pub struct SearchCommand;
-
-/// 日志搜索结果表格行
-#[derive(Tabled)]
-struct SearchResultRow {
-    #[tabled(rename = "Source")]
-    source: String,
-    #[tabled(rename = "ID")]
-    id: String,
-    #[tabled(rename = "URL")]
-    url: String,
-}
 
 impl SearchCommand {
     /// 搜索关键词

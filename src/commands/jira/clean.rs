@@ -7,12 +7,12 @@
 //! - 列出将要删除的内容（list-only）
 
 use anyhow::{Context, Result};
-use tabled::Tabled;
 
 use crate::base::util::dialog::InputDialog;
 use crate::base::util::format_size;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
+use crate::jira::table::FileRow;
 use crate::{log_break, log_info, log_success};
 
 /// 清理日志命令
@@ -89,17 +89,6 @@ impl CleanCommand {
             log_info!("Contents:");
 
             if dir_info.is_base_dir {
-                // 按 ticket 分区显示
-                #[derive(Tabled, Clone)]
-                struct FileRow {
-                    #[tabled(rename = "Type")]
-                    file_type: String,
-                    #[tabled(rename = "Name")]
-                    name: String,
-                    #[tabled(rename = "Size")]
-                    size: String,
-                }
-
                 // 按 ticket 分组显示
                 let mut current_ticket: Option<String> = None;
                 let mut rows: Vec<FileRow> = Vec::new();

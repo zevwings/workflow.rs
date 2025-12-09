@@ -1,5 +1,5 @@
 use crate::git::{GitRepo, RepoType};
-use crate::pr::codeup::Codeup;
+// use crate::pr::codeup::Codeup;  // Codeup support has been removed
 use crate::pr::github::GitHub;
 use crate::pr::PullRequestRow;
 use anyhow::Result;
@@ -190,9 +190,11 @@ pub trait PlatformProvider {
 pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
     match GitRepo::detect_repo_type()? {
         RepoType::GitHub => Ok(Box::new(GitHub)),
-        RepoType::Codeup => Ok(Box::new(Codeup)),
+        RepoType::Codeup => {
+            anyhow::bail!("Codeup support has been removed. Only GitHub is currently supported.")
+        }
         RepoType::Unknown => {
-            anyhow::bail!("Unsupported repository type. Only GitHub and Codeup are supported.")
+            anyhow::bail!("Unsupported repository type. Only GitHub is currently supported.")
         }
     }
 }

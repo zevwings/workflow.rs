@@ -2,10 +2,10 @@
 //! 显示当前的 LLM 配置信息
 
 use crate::base::settings::settings::Settings;
+use crate::base::settings::table::LLMConfigRow;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::Result;
-use tabled::Tabled;
 
 /// LLM 配置查看命令
 pub struct LLMShowCommand;
@@ -31,17 +31,6 @@ impl LLMShowCommand {
 
         // 使用表格格式显示（与 config show 保持一致）
         log_info!("LLM Configuration");
-        #[derive(Tabled)]
-        struct LLMConfigRow {
-            #[tabled(rename = "Provider")]
-            provider: String,
-            #[tabled(rename = "Model")]
-            model: String,
-            #[tabled(rename = "Key")]
-            key: String,
-            #[tabled(rename = "Output Language")]
-            language: String,
-        }
         let config_rows = vec![LLMConfigRow {
             provider: llm_config.provider.clone(),
             model: llm_config.model.clone(),

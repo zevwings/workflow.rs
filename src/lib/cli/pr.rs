@@ -9,7 +9,7 @@ use clap::Subcommand;
 pub enum PRCommands {
     /// Create a new Pull Request
     ///
-    /// Supports auto-detection of repository type (GitHub/Codeup), and optionally uses AI to generate PR title.
+    /// Supports auto-detection of repository type (GitHub), and optionally uses AI to generate PR title.
     /// If a Jira ticket is provided, will automatically update Jira status.
     Create {
         /// Jira ticket ID (optional, e.g., PROJ-123)

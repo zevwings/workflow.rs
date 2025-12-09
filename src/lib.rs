@@ -61,10 +61,20 @@ pub use jira::{
 };
 pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
-    detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
-    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup,
-    CodeupUser, GitHub, GitHubUser, PlatformProvider, PullRequestContent, PullRequestLLM,
-    PullRequestSummary, TYPES_OF_CHANGES,
+    detect_repo_type,
+    extract_pull_request_id_from_url,
+    generate_branch_name,
+    generate_commit_title,
+    generate_pull_request_body,
+    get_current_branch_pr_id,
+    // Codeup, CodeupUser,  // Codeup support has been removed
+    GitHub,
+    GitHubUser,
+    PlatformProvider,
+    PullRequestContent,
+    PullRequestLLM,
+    PullRequestSummary,
+    TYPES_OF_CHANGES,
 };
 pub use proxy::{
     ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,

@@ -425,6 +425,8 @@ Extract retry logic into a separate module for better maintainability.
 
 ## 🧪 测试规范
 
+> **详细测试规范**：请参考 [测试规范指南](./TESTING_GUIDELINES.md)
+
 ### 单元测试
 
 为所有公共函数编写单元测试：
@@ -447,6 +449,7 @@ mod tests {
 - 测试模块放在源文件底部，使用 `#[cfg(test)]`
 - 测试函数使用 `test_` 前缀或 `#[test]` 属性
 - 使用描述性的测试名称
+- 集成测试使用目录结构组织（详见 [测试规范指南](./TESTING_GUIDELINES.md)）
 
 ### 测试覆盖率
 
