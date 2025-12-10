@@ -17,12 +17,61 @@ jobs:
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史来检查提交者
+
       - name: Check if version bump branch
         id: check
         run: |
           # 只检查是否是版本更新分支（bump-version-*）
           if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
-            echo "✅ Version bump branch detected, skipping CI checks"
+            echo "✅ Version bump branch detected: ${{ github.head_ref }}"
+
+            # 验证分支是否由 CI 创建
+            # 方法1: 检查 PR 的创建者
+            PR_CREATOR="${{ github.event.pull_request.user.login }}"
+            PR_CREATOR_TYPE="${{ github.event.pull_request.user.type }}"
+
+            # 方法2: 检查分支最新提交的提交者
+            COMMIT_AUTHOR_NAME=$(git log -1 --format='%an' HEAD)
+            COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%ae' HEAD)
+
+            echo "PR Creator: ${PR_CREATOR:-'N/A'}"
+            echo "PR Creator Type: ${PR_CREATOR_TYPE:-'N/A'}"
+            echo "Commit Author: $COMMIT_AUTHOR_NAME"
+            echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
+
+            # 检查是否是 GitHub Actions bot 创建的
+            # 通过 PR 创建者或提交者信息判断
+            IS_CI_CREATED=false
+
+            # 检查 PR 创建者
+            if [[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR_TYPE" == "Bot" ]]; then
+              IS_CI_CREATED=true
+              echo "✅ Verified via PR creator: Created by GitHub Actions"
+            fi
+
+            # 检查提交者（更可靠，因为分支本身是由 CI 推送的）
+            if [[ "$COMMIT_AUTHOR_NAME" == "github-actions[bot]" ]] || [[ "$COMMIT_AUTHOR_EMAIL" == "github-actions[bot]@users.noreply.github.com" ]]; then
+              IS_CI_CREATED=true
+              echo "✅ Verified via commit author: Created by GitHub Actions"
+            fi
+
+            if [[ "$IS_CI_CREATED" == "false" ]]; then
+              echo "❌ Error: bump-version-* branches can only be created by CI (GitHub Actions)"
+              echo "   This PR was created by: ${PR_CREATOR:-'unknown'} (${PR_CREATOR_TYPE:-'unknown'})"
+              echo "   Commit author: $COMMIT_AUTHOR_NAME <$COMMIT_AUTHOR_EMAIL>"
+              echo "   Only automated version bump PRs from the release workflow are allowed."
+              echo ""
+              echo "   If you need to bump the version, please:"
+              echo "   1. Merge your changes to master"
+              echo "   2. The release workflow will automatically create a bump-version-* branch and PR"
+              exit 1
+            fi
+
+            echo "✅ Verified: This bump-version-* branch was created by CI"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
             echo "should_skip=false" >> $GITHUB_OUTPUT
