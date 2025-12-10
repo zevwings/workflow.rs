@@ -27,7 +27,6 @@ jobs:
           else
             echo "should_skip=false" >> $GITHUB_OUTPUT
           fi
-
   # 代码质量检查（Lint）
   check-lint:
     name: Run check-lint
@@ -206,7 +205,6 @@ jobs:
           if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
             echo "✅ Both lint and test jobs were skipped"
             echo "   This PR does not require CI checks (version bump branch)"
-            echo "status=success" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -214,7 +212,6 @@ jobs:
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
             echo "✅ CI checks skipped (version bump branch detected)"
             echo "   This PR does not require CI checks"
-            echo "status=success" >> $GITHUB_OUTPUT
             exit 0
           fi
 
@@ -226,17 +223,14 @@ jobs:
           # 检查是否有失败的检查（failure, cancelled, 等）
           if [ -n "$LINT_RESULT" ] && [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
             echo "❌ Lint check failed: $LINT_RESULT"
-            echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           if [ -n "$TEST_RESULT" ] && [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
             echo "❌ Test check failed: $TEST_RESULT"
-            echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
 
           # 如果所有检查都成功或跳过，则通过
           echo "✅ All checks passed!"
-          echo "status=success" >> $GITHUB_OUTPUT
           exit 0
