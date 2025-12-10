@@ -7,7 +7,7 @@ use inquire::{error::InquireError, MultiSelect};
 ///
 /// ## 样式示例
 ///
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ Choose options:                      │
 /// │                                     │
@@ -24,10 +24,13 @@ use inquire::{error::InquireError, MultiSelect};
 /// ```rust,no_run
 /// use workflow::base::dialog::MultiSelectDialog;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let options = vec!["Option 1", "Option 2", "Option 3"];
 /// let selected = MultiSelectDialog::new("Choose options", options)
 ///     .prompt()?;
 /// // selected 是 Vec<&str>，包含选中的选项
+/// # Ok(())
+/// # }
 /// ```
 pub struct MultiSelectDialog<T> {
     prompt: String,

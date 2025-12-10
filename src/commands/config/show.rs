@@ -47,9 +47,7 @@ impl ConfigCommand {
         // 创建 spinner 显示验证进度
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.white} {msg}")
-                .unwrap(),
+            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
         );
         spinner.enable_steady_tick(Duration::from_millis(100));
         spinner.set_message("Verifying configurations...");
@@ -83,9 +81,7 @@ impl ConfigCommand {
         }];
         println!(
             "{}",
-            TableBuilder::new(config_rows)
-                .with_style(TableStyle::Modern)
-                .render()
+            TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );
 
         // Codeup 配置显示已移除（Codeup support has been removed）
@@ -102,9 +98,7 @@ impl ConfigCommand {
                 }];
                 println!(
                     "{}",
-                    TableBuilder::new(config_rows)
-                        .with_style(TableStyle::Modern)
-                        .render()
+                    TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
                 );
             }
             if let Some(ref verification) = result.jira.verification {
@@ -158,9 +152,7 @@ impl ConfigCommand {
                 .collect();
             println!(
                 "{}",
-                TableBuilder::new(account_rows)
-                    .with_style(TableStyle::Modern)
-                    .render()
+                TableBuilder::new(account_rows).with_style(TableStyle::Modern).render()
             );
 
             // 打印每个账号的详细错误信息（如果有）

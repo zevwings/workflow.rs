@@ -275,4 +275,3 @@ Shell Completion 模块采用清晰的职责分离设计：
 - ✅ **类型安全**：使用 clap_complete::Shell 枚举类型
 - ✅ **代码复用**：Files 模块提供通用工具函数
 - ✅ **多 Shell 支持**：支持 zsh、bash、fish、powershell、elvish
-

@@ -102,9 +102,7 @@ mod tests {
     fn test_format_date_only() {
         let result = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
         // 验证格式：YYYY-MM-DD
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-            .unwrap()
-            .is_match(&result));
+        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap().is_match(&result));
     }
 
     #[test]
@@ -128,9 +126,7 @@ mod tests {
     fn test_format_last_updated() {
         let result = format_last_updated();
         // 验证格式：YYYY-MM-DD
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-            .unwrap()
-            .is_match(&result));
+        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap().is_match(&result));
     }
 
     #[test]

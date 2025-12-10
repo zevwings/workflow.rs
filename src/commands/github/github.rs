@@ -30,9 +30,7 @@ impl GitHubCommand {
         // 创建 spinner 显示验证进度
         let spinner = ProgressBar::new_spinner();
         spinner.set_style(
-            ProgressStyle::default_spinner()
-                .template("{spinner:.white} {msg}")
-                .unwrap(),
+            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
         );
         spinner.enable_steady_tick(Duration::from_millis(100));
         spinner.set_message("Verifying GitHub accounts...");
@@ -136,12 +134,7 @@ impl GitHubCommand {
 
         // 先检查账号名称是否已存在
         let settings = Settings::load();
-        if settings
-            .github
-            .accounts
-            .iter()
-            .any(|a| a.name == account.name)
-        {
+        if settings.github.accounts.iter().any(|a| a.name == account.name) {
             return Err(anyhow::anyhow!(
                 "Account with name '{}' already exists",
                 account.name
@@ -214,12 +207,8 @@ impl GitHubCommand {
             return Ok(());
         }
 
-        let account_names: Vec<String> = settings
-            .github
-            .accounts
-            .iter()
-            .map(|a| a.name.clone())
-            .collect();
+        let account_names: Vec<String> =
+            settings.github.accounts.iter().map(|a| a.name.clone()).collect();
 
         // 找到当前账号的索引，作为默认选中项
         let default_index = settings
@@ -255,12 +244,8 @@ impl GitHubCommand {
         }
 
         // 如果删除的是当前账号，需要更新 current
-        let was_current = settings
-            .github
-            .current
-            .as_ref()
-            .map(|c| c == &account_name)
-            .unwrap_or(false);
+        let was_current =
+            settings.github.current.as_ref().map(|c| c == &account_name).unwrap_or(false);
 
         let config_path = Paths::workflow_config()?;
         let manager = ConfigManager::<Settings>::new(config_path);
@@ -276,11 +261,7 @@ impl GitHubCommand {
                     .current
                     .as_ref()
                     .map(|current_name| {
-                        settings
-                            .github
-                            .accounts
-                            .iter()
-                            .any(|a| &a.name == current_name)
+                        settings.github.accounts.iter().any(|a| &a.name == current_name)
                     })
                     .unwrap_or(false);
 
@@ -304,21 +285,14 @@ impl GitHubCommand {
                     .current
                     .as_ref()
                     .map(|current_name| {
-                        !settings_after
-                            .github
-                            .accounts
-                            .iter()
-                            .any(|a| &a.name == current_name)
+                        !settings_after.github.accounts.iter().any(|a| &a.name == current_name)
                     })
                     .unwrap_or(true);
 
             if should_update_git {
                 if let Some(current_name) = &settings_after.github.current {
-                    if let Some(current_account) = settings_after
-                        .github
-                        .accounts
-                        .iter()
-                        .find(|a| &a.name == current_name)
+                    if let Some(current_account) =
+                        settings_after.github.accounts.iter().find(|a| &a.name == current_name)
                     {
                         let result = GitConfig::set_global_user(
                             &current_account.email,
@@ -355,12 +329,8 @@ impl GitHubCommand {
             return Ok(());
         }
 
-        let account_names: Vec<String> = settings
-            .github
-            .accounts
-            .iter()
-            .map(|a| a.name.clone())
-            .collect();
+        let account_names: Vec<String> =
+            settings.github.accounts.iter().map(|a| a.name.clone()).collect();
 
         // 找到当前账号的索引，作为默认选中项
         let default_index = settings
@@ -413,12 +383,8 @@ impl GitHubCommand {
             return Ok(());
         }
 
-        let account_names: Vec<String> = settings
-            .github
-            .accounts
-            .iter()
-            .map(|a| a.name.clone())
-            .collect();
+        let account_names: Vec<String> =
+            settings.github.accounts.iter().map(|a| a.name.clone()).collect();
 
         // 找到当前账号的索引，作为默认选中项
         let default_index = settings

@@ -253,9 +253,7 @@ pub fn get_branch_prefix() -> Option<String> {
         Err(_) => return None,
     };
 
-    config
-        .get_branch_prefix_for_repo(&repo_name)
-        .map(|s| s.to_string())
+    config.get_branch_prefix_for_repo(&repo_name).map(|s| s.to_string())
 }
 
 /// 移除当前仓库的分支前缀

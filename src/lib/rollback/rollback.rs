@@ -183,16 +183,12 @@ impl RollbackManager {
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("chmod")
-                    .arg("+x")
-                    .arg(&backup_path)
-                    .status()
-                    .with_context(|| {
-                        format!(
-                            "Failed to set executable permission for backup file: {}",
-                            backup_path.display()
-                        )
-                    })?;
+                Command::new("chmod").arg("+x").arg(&backup_path).status().with_context(|| {
+                    format!(
+                        "Failed to set executable permission for backup file: {}",
+                        backup_path.display()
+                    )
+                })?;
             }
             #[cfg(windows)]
             {

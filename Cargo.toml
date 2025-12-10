@@ -45,4 +45,3 @@ path = "src/bin/workflow.rs"
 [[bin]]
 name = "install"
 path = "src/bin/install.rs"
-

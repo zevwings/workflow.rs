@@ -386,16 +386,14 @@ impl UpdateCommand {
                 let mut downloaded_bytes = 0u64;
 
                 loop {
-                    let bytes_read = response
-                        .read(&mut buffer)
-                        .context("Failed to read response data")?;
+                    let bytes_read =
+                        response.read(&mut buffer).context("Failed to read response data")?;
 
                     if bytes_read == 0 {
                         break;
                     }
 
-                    file.write_all(&buffer[..bytes_read])
-                        .context("Failed to write to file")?;
+                    file.write_all(&buffer[..bytes_read]).context("Failed to write to file")?;
 
                     downloaded_bytes += bytes_read as u64;
                     pb.set_position(downloaded_bytes);
@@ -428,10 +426,7 @@ impl UpdateCommand {
         log_debug!("Extracting to: {}", output_dir.display());
 
         // 根据文件扩展名选择解压方法
-        let extension = archive_path
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .unwrap_or("");
+        let extension = archive_path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
 
         Spinner::with("Extracting update package...", || -> Result<()> {
             if extension == "zip" {

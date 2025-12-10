@@ -104,10 +104,7 @@ impl JiraStatus {
                     proj
                 );
             }
-        } else if jira_ticket_or_project
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
-        {
+        } else if jira_ticket_or_project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
             jira_ticket_or_project
         } else {
             anyhow::bail!(
@@ -177,7 +174,12 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
-        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        // 先验证 ticket 格式
+        super::helpers::validate_jira_ticket_format(jira_ticket)
+            .context("Invalid Jira ticket format")?;
+
+        let project = extract_jira_project(jira_ticket)
+            .ok_or_else(|| anyhow::anyhow!("Invalid Jira ticket format: cannot extract project"))?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;
@@ -201,7 +203,12 @@ impl JiraStatus {
     ///
     /// 如果 ticket 格式无效或读取配置失败，返回相应的错误信息。
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
-        let project = extract_jira_project(jira_ticket).context("Invalid Jira ticket format")?;
+        // 先验证 ticket 格式
+        super::helpers::validate_jira_ticket_format(jira_ticket)
+            .context("Invalid Jira ticket format")?;
+
+        let project = extract_jira_project(jira_ticket)
+            .ok_or_else(|| anyhow::anyhow!("Invalid Jira ticket format: cannot extract project"))?;
 
         let config = Self::read_status_config(project)
             .context("Failed to read Jira status configuration")?;

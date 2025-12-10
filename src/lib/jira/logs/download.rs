@@ -315,10 +315,7 @@ impl JiraLogs {
         callback: Option<&ProgressCallback>,
     ) -> Result<()> {
         // 首先尝试使用当前的 URL
-        if self
-            .download_file(&attachment.content_url, file_path)
-            .is_ok()
-        {
+        if self.download_file(&attachment.content_url, file_path).is_ok() {
             if let Some(ref cb) = callback {
                 cb(&format!("Downloaded: {}", attachment.filename));
             }
@@ -444,15 +441,13 @@ impl JiraLogs {
             }
         } else if !download_all_attachments {
             // 检查是否有成功下载的日志文件（.txt, .log 等）
-            let has_log_files = std::fs::read_dir(download_dir)?
-                .filter_map(|e| e.ok())
-                .any(|e| {
-                    if let Some(name) = e.file_name().to_str() {
-                        LOG_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
-                    } else {
-                        false
-                    }
-                });
+            let has_log_files = std::fs::read_dir(download_dir)?.filter_map(|e| e.ok()).any(|e| {
+                if let Some(name) = e.file_name().to_str() {
+                    LOG_EXTENSIONS.iter().any(|ext| name.ends_with(ext))
+                } else {
+                    false
+                }
+            });
 
             if !has_log_files {
                 anyhow::bail!(
@@ -502,9 +497,7 @@ impl JiraLogs {
                 request = request.header("Referer", base_url);
             }
 
-            request
-                .send()
-                .with_context(|| format!("Failed to download: {}", url))?
+            request.send().with_context(|| format!("Failed to download: {}", url))?
         } else {
             // Jira API URL，使用 Basic Auth
             self.http_client

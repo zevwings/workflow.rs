@@ -19,7 +19,7 @@ impl PullRequestMergeCommand {
         // 0. 如果 VPN 开启，自动启用代理
         ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
 
-        // 1. 运行检查
+        // 1. 运行环境检查
         check::CheckCommand::run_all()?;
 
         // 2. 获取 PR ID
@@ -146,10 +146,6 @@ impl PullRequestMergeCommand {
             current_branch
         );
         helpers::cleanup_branch(current_branch, default_branch, "PR merge")?;
-        log_info!(
-            "Note: Remote branch '{}' may have already been deleted via API",
-            current_branch
-        );
         Ok(())
     }
 }

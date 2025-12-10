@@ -58,7 +58,7 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore"];
+const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
@@ -88,10 +88,8 @@ const COMPLETION_SUBCOMMANDS: &[&str] = &["generate", "check", "remove"];
 #[test]
 fn test_cli_contains_all_top_level_commands() {
     let cmd = Cli::command();
-    let subcommands: Vec<String> = cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let subcommands: Vec<String> =
+        cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
 
     let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
 
@@ -121,10 +119,8 @@ fn test_pr_subcommands_completeness() {
         .find(|sc| sc.get_name() == "pr")
         .expect("pr command should exist");
 
-    let subcommands: Vec<String> = pr_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let subcommands: Vec<String> =
+        pr_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
 
     let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
 
@@ -221,9 +217,7 @@ fn test_zsh_completion_contains_all_commands() {
     )
     .expect("Failed to create zsh generator");
 
-    generator
-        .generate_all()
-        .expect("Failed to generate zsh completion");
+    generator.generate_all().expect("Failed to generate zsh completion");
 
     let filename = get_completion_filename("zsh", "workflow").expect("Failed to get filename");
     let file_path = output_dir.join(&filename);
@@ -260,9 +254,7 @@ fn test_bash_completion_contains_all_commands() {
     )
     .expect("Failed to create bash generator");
 
-    generator
-        .generate_all()
-        .expect("Failed to generate bash completion");
+    generator.generate_all().expect("Failed to generate bash completion");
 
     let filename = get_completion_filename("bash", "workflow").expect("Failed to get filename");
     let file_path = output_dir.join(&filename);
@@ -294,10 +286,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "pr")
         .expect("pr command should exist");
-    let pr_subcommands: Vec<String> = pr_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let pr_subcommands: Vec<String> =
+        pr_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(pr_subcommands.len(), PR_SUBCOMMANDS.len());
 
     // 验证 Log 子命令
@@ -305,10 +295,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "log")
         .expect("log command should exist");
-    let log_subcommands: Vec<String> = log_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let log_subcommands: Vec<String> =
+        log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(log_subcommands.len(), LOG_SUBCOMMANDS.len());
 
     // 验证 Jira 子命令
@@ -316,10 +304,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "jira")
         .expect("jira command should exist");
-    let jira_subcommands: Vec<String> = jira_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let jira_subcommands: Vec<String> =
+        jira_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(jira_subcommands.len(), JIRA_SUBCOMMANDS.len());
 
     // 验证 GitHub 子命令
@@ -327,10 +313,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "github")
         .expect("github command should exist");
-    let github_subcommands: Vec<String> = github_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let github_subcommands: Vec<String> =
+        github_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(github_subcommands.len(), GITHUB_SUBCOMMANDS.len());
 
     // 验证 LLM 子命令
@@ -338,10 +322,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "llm")
         .expect("llm command should exist");
-    let llm_subcommands: Vec<String> = llm_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let llm_subcommands: Vec<String> =
+        llm_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(llm_subcommands.len(), LLM_SUBCOMMANDS.len());
 
     // 验证 Branch 子命令
@@ -349,10 +331,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "branch")
         .expect("branch command should exist");
-    let branch_subcommands: Vec<String> = branch_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let branch_subcommands: Vec<String> =
+        branch_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(branch_subcommands.len(), BRANCH_SUBCOMMANDS.len());
 
     // 验证 Proxy 子命令
@@ -360,10 +340,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "proxy")
         .expect("proxy command should exist");
-    let proxy_subcommands: Vec<String> = proxy_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let proxy_subcommands: Vec<String> =
+        proxy_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(proxy_subcommands.len(), PROXY_SUBCOMMANDS.len());
 
     // 验证 LogLevel 子命令
@@ -371,10 +349,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "log-level")
         .expect("log-level command should exist");
-    let log_level_subcommands: Vec<String> = log_level_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let log_level_subcommands: Vec<String> =
+        log_level_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(log_level_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
 
     // 验证 Completion 子命令
@@ -382,10 +358,8 @@ fn test_all_subcommands_completeness() {
         .get_subcommands()
         .find(|sc| sc.get_name() == "completion")
         .expect("completion command should exist");
-    let completion_subcommands: Vec<String> = completion_cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let completion_subcommands: Vec<String> =
+        completion_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(completion_subcommands.len(), COMPLETION_SUBCOMMANDS.len());
 
     println!("All subcommands verified successfully!");
@@ -418,10 +392,8 @@ fn test_completion_filename_generation() {
 #[test]
 fn test_cli_structure_summary() {
     let cmd = Cli::command();
-    let subcommands: Vec<String> = cmd
-        .get_subcommands()
-        .map(|sc| sc.get_name().to_string())
-        .collect();
+    let subcommands: Vec<String> =
+        cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
 
     println!("\n=== CLI Structure Summary ===");
     println!("Total top-level commands: {}", subcommands.len());
@@ -430,10 +402,8 @@ fn test_cli_structure_summary() {
     // 统计所有子命令
     let mut total_subcommands = 0;
     for subcmd in cmd.get_subcommands() {
-        let sub_subcommands: Vec<String> = subcmd
-            .get_subcommands()
-            .map(|sc| sc.get_name().to_string())
-            .collect();
+        let sub_subcommands: Vec<String> =
+            subcmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
         if !sub_subcommands.is_empty() {
             println!(
                 "  {}: {} subcommands ({:?})",

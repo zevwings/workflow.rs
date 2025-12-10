@@ -296,10 +296,8 @@ impl PullRequestCreateCommand {
         .context("Failed to select change types")?;
 
         // 转换选中的项为布尔向量
-        let selected_types: Vec<bool> = TYPES_OF_CHANGES
-            .iter()
-            .map(|&item| selected_items.contains(&item))
-            .collect();
+        let selected_types: Vec<bool> =
+            TYPES_OF_CHANGES.iter().map(|&item| selected_items.contains(&item)).collect();
 
         Ok(selected_types)
     }

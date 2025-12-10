@@ -71,12 +71,8 @@ fn test_colors_have_space() {
     );
 
     // 检查空格的位置（应该在 Emoji 之后）
-    let info_space_pos = info_msg
-        .find(' ')
-        .expect("Info message should have a space");
-    let success_space_pos = success_msg
-        .find(' ')
-        .expect("Success message should have a space");
+    let info_space_pos = info_msg.find(' ').expect("Info message should have a space");
+    let success_space_pos = success_msg.find(' ').expect("Success message should have a space");
 
     // 打印调试信息
     println!("Info message: '{}'", info_msg);
@@ -87,7 +83,21 @@ fn test_colors_have_space() {
     println!("Success space position: {}", success_space_pos);
 
     // 验证格式：图标 + 空格 + 文本
-    let info_parts: Vec<&str> = info_msg.splitn(2, ' ').collect();
+    // 去除 ANSI 转义码后再比较（在 CI 环境中可能有颜色代码）
+    let strip_ansi = |s: &str| -> String {
+        // 简单的 ANSI 转义码去除（匹配 \u{1b}[...m 格式）
+        s.replace("\u{1b}[0m", "")
+            .replace("\u{1b}[31m", "")
+            .replace("\u{1b}[32m", "")
+            .replace("\u{1b}[33m", "")
+            .replace("\u{1b}[34m", "")
+            .replace("\u{1b}[90m", "")
+            .replace("\u{1b}[1m", "")
+            .replace("\u{1b}[22m", "")
+    };
+
+    let info_clean = strip_ansi(&info_msg);
+    let info_parts: Vec<&str> = info_clean.splitn(2, ' ').collect();
     assert_eq!(
         info_parts.len(),
         2,
