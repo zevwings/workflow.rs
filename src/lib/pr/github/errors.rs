@@ -45,6 +45,12 @@ pub fn format_error(error: &GitHubErrorResponse, response: &HttpResponse) -> Err
         if let Ok(json_str) = serde_json::to_string_pretty(&data) {
             msg.push_str(&format!("\n\nFull error response:\n{}", json_str));
         }
+    } else {
+        // 如果无法解析为 JSON，添加提取的错误消息
+        let error_msg = response.extract_error_message();
+        if !error_msg.is_empty() {
+            msg.push_str(&format!("\n\nError details:\n{}", error_msg));
+        }
     }
 
     anyhow::anyhow!(msg)

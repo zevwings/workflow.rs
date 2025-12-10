@@ -85,13 +85,11 @@ impl ProxyInfo {
 
     /// 获取指定代理类型的配置（可变引用）
     pub fn get_config_mut(&mut self, proxy_type: ProxyType) -> &mut ProxyConfig {
-        self.proxies
-            .entry(proxy_type)
-            .or_insert_with(|| ProxyConfig {
-                enable: false,
-                address: None,
-                port: None,
-            })
+        self.proxies.entry(proxy_type).or_insert_with(|| ProxyConfig {
+            enable: false,
+            address: None,
+            port: None,
+        })
     }
 
     /// 设置指定代理类型的配置
@@ -109,15 +107,13 @@ impl ProxyInfo {
     ///
     /// 如果该类型的代理已启用且配置完整，返回代理 URL（如 `http://proxy:8080`），否则返回 `None`。
     pub fn get_proxy_url(&self, proxy_type: ProxyType) -> Option<String> {
-        self.get_config(proxy_type)
-            .filter(|config| config.enable)
-            .and_then(|config| {
-                config
-                    .address
-                    .as_ref()
-                    .zip(config.port.as_ref())
-                    .map(|(addr, port)| format!("{}://{}:{}", proxy_type.url_scheme(), addr, port))
-            })
+        self.get_config(proxy_type).filter(|config| config.enable).and_then(|config| {
+            config
+                .address
+                .as_ref()
+                .zip(config.port.as_ref())
+                .map(|(addr, port)| format!("{}://{}:{}", proxy_type.url_scheme(), addr, port))
+        })
     }
 }
 

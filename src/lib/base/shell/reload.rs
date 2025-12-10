@@ -3,7 +3,18 @@ use clap_complete::Shell;
 use duct::cmd;
 
 use crate::base::settings::paths::Paths;
-use crate::{log_info, log_success, log_warning};
+use crate::trace_warn;
+
+/// Shell 重载结果
+#[derive(Debug, Clone)]
+pub struct ReloadResult {
+    /// 是否成功重载
+    pub reloaded: bool,
+    /// 消息列表
+    pub messages: Vec<String>,
+    /// 手动重载提示
+    pub reload_hint: String,
+}
 
 /// Shell 配置重载工具
 ///
@@ -20,10 +31,14 @@ impl Reload {
     ///
     /// * `shell` - Shell 类型
     ///
+    /// # 返回
+    ///
+    /// 返回 `ReloadResult`，包含重载状态和消息。
+    ///
     /// # 错误
     ///
     /// 如果重新加载失败，返回相应的错误信息。
-    pub fn shell(shell: &Shell) -> Result<()> {
+    pub fn shell(shell: &Shell) -> Result<ReloadResult> {
         let config_file = Paths::config_file(shell)?;
         let config_file_str = config_file.display().to_string();
 
@@ -58,16 +73,21 @@ impl Reload {
         };
 
         match status {
-            Ok(_) => {
-                log_success!("Shell configuration reloaded (in subprocess)");
-                log_info!("Note: Changes may not take effect in the current shell.");
-                log_info!("Please run manually: {}", reload_hint);
-                Ok(())
-            }
+            Ok(_) => Ok(ReloadResult {
+                reloaded: true,
+                messages: vec![
+                    "Shell configuration reloaded (in subprocess)".to_string(),
+                    "Note: Changes may not take effect in the current shell.".to_string(),
+                ],
+                reload_hint: reload_hint.clone(),
+            }),
             Err(e) => {
-                log_warning!("  Could not reload shell configuration: {}", e);
-                log_info!("Please run manually: {}", reload_hint);
-                Err(e)
+                trace_warn!("Could not reload shell configuration: {}", e);
+                Ok(ReloadResult {
+                    reloaded: false,
+                    messages: vec![format!("Could not reload shell configuration: {}", e)],
+                    reload_hint: reload_hint.clone(),
+                })
             }
         }
     }

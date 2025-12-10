@@ -1,7 +1,11 @@
-use crate::jira::logs::JiraLogs;
-use crate::{log_debug, log_info, log_success};
+use crate::base::dialog::InputDialog;
+use crate::base::indicator::Progress;
+use crate::jira::logs::{JiraLogs, ProgressCallback};
+use crate::jira::Jira;
+use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
-use dialoguer::Input;
+use regex::Regex;
+use std::sync::{Arc, Mutex};
 
 /// 下载日志命令
 pub struct DownloadCommand;
@@ -13,24 +17,84 @@ impl DownloadCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 
-        log_success!("Downloading logs for {}...", jira_id);
+        // 先获取附件列表并过滤日志附件以确定总数
+        let attachments =
+            Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira")?;
 
-        log_debug!("Getting attachments for {}...", jira_id);
+        // 过滤日志附件（与 JiraLogs 中的逻辑一致）
+        let log_zip_pattern =
+            Regex::new(r"^log\.(zip|z\d+)$").context("Failed to create regex pattern")?;
+        let log_attachments: Vec<_> = attachments
+            .iter()
+            .filter(|a| {
+                let matches_log_zip = log_zip_pattern.is_match(&a.filename);
+                let matches_log_ext = a.filename.ends_with(".log");
+                let matches_txt_ext = a.filename.ends_with(".txt");
+                matches_log_zip || matches_log_ext || matches_txt_ext
+            })
+            .collect();
 
-        // 创建 JiraLogs 实例并执行下载
+        let total_files = log_attachments.len() as u64;
+
+        if total_files == 0 {
+            anyhow::bail!("No log attachments found for {}", jira_id);
+        }
+
+        // 创建 Progress Bar
+        let progress = Arc::new(Mutex::new(Progress::new(
+            total_files,
+            "Downloading logs...",
+        )));
+        let progress_clone = progress.clone();
+
+        // 创建回调函数，更新进度条
+        let callback: ProgressCallback = Box::new(move |msg| {
+            if !msg.is_empty() {
+                if msg.starts_with("Downloaded:") || msg.contains("Downloaded:") {
+                    if let Ok(pb) = progress_clone.lock() {
+                        pb.inc(1);
+                    }
+                } else if msg.starts_with("Failed to download:") {
+                    // 失败的文件也计入进度
+                    if let Ok(pb) = progress_clone.lock() {
+                        pb.inc(1);
+                    }
+                }
+            }
+        });
+
+        // 创建 JiraLogs 实例
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let base_dir = logs
-            .download_from_jira(&jira_id, None, false)
+
+        // 执行下载
+        let result = logs
+            .download_from_jira(&jira_id, None, false, Some(callback))
             .context("Failed to download attachments from Jira")?;
 
-        log_success!("Download completed!\n");
-        log_info!("Files located at: {}/downloads", base_dir.display());
+        // 完成进度条
+        if let Ok(pb) = progress.lock() {
+            pb.finish_ref();
+        }
+
+        // 显示下载结果
+        if !result.failed_files.is_empty() {
+            log_break!();
+            log_info!(
+                "  Warning: {} attachment(s) failed to download:",
+                result.failed_files.len()
+            );
+            for (filename, error) in &result.failed_files {
+                log_info!("  - {}: {}", filename, error);
+            }
+        }
+
+        log_success!("Download completed!");
+        log_info!("Files located at: {}/downloads", result.base_dir.display());
 
         Ok(())
     }

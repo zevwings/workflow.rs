@@ -45,7 +45,145 @@ brew install workflow
 > - 需要先在 GitHub 上创建 `homebrew-workflow` tap 仓库，并将 `Formula/workflow.rb` 文件推送到该仓库。
 > - 如果使用 GitHub Actions 自动发布，需要配置 `HOMEBREW_TAP_TOKEN` secret（见下方说明）。
 
-#### 方式二：使用 Makefile（仅 macOS/Linux）
+#### 方式二：使用安装脚本（推荐，macOS/Linux）
+
+使用一键安装脚本自动下载并安装最新版本：
+
+```bash
+# 安装最新版本
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+
+# 安装指定版本
+VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+```
+
+**功能特性**：
+- ✅ 自动检测操作系统和架构（macOS Intel/Apple Silicon, Linux x86_64/ARM64）
+- ✅ 自动下载最新版本或指定版本
+- ✅ SHA256 校验和验证确保文件完整性
+- ✅ 自动安装二进制文件和 shell completion 脚本
+- ✅ 错误处理和重试机制
+- ✅ 临时文件自动清理
+
+**安装流程**：
+1. **平台检测**：自动检测操作系统（macOS/Linux）和架构（x86_64/ARM64）
+2. **版本获取**：从 GitHub Releases API 获取最新版本，或使用指定的版本
+3. **下载**：下载对应平台的二进制包（`.tar.gz`）
+4. **验证**：下载并验证 SHA256 校验和
+5. **解压**：解压二进制包到临时目录
+6. **安装**：运行 `./install` 二进制文件进行安装
+7. **清理**：自动清理临时文件
+
+**系统要求**：
+- `curl` - 用于下载文件
+- `tar` - 用于解压归档文件
+- `sudo` - macOS/Linux 安装到系统目录时需要（脚本会自动提示）
+
+**卸载**：
+
+```bash
+# 使用卸载脚本
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+
+# 或使用已安装的命令
+workflow uninstall
+```
+
+卸载脚本功能：
+- ✅ 自动检测已安装的 Workflow CLI
+- ✅ 优先使用 `workflow uninstall` 命令（如果可用）
+- ✅ 手动卸载作为备选方案
+- ✅ 清理二进制文件、配置文件和 completion 脚本
+- ✅ 交互式确认，避免误删
+
+卸载流程：
+1. **检测安装**：检查 `workflow` 命令是否在 PATH 中
+2. **确认卸载**：提示用户确认是否卸载
+3. **执行卸载**：
+   - 优先使用 `workflow uninstall` 命令（如果可用）
+   - 如果命令不可用，执行手动卸载
+4. **清理文件**：
+   - 删除二进制文件（`/usr/local/bin/workflow`, `/usr/local/bin/install`）
+   - 可选删除配置文件（`~/.workflow/`）
+   - 删除 completion 脚本
+   - 从 shell 配置文件中移除 completion 配置
+
+#### 方式三：使用安装脚本（Windows）
+
+使用 PowerShell 安装脚本自动下载并安装最新版本：
+
+**PowerShell (推荐)**:
+```powershell
+# 安装最新版本
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1" -OutFile install.ps1; .\install.ps1
+
+# 或一行命令
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+```
+
+**安装指定版本**:
+```powershell
+$env:VERSION="v1.4.8"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+```
+
+**功能特性**：
+- ✅ 自动检测 Windows 架构（x86_64/ARM64）
+- ✅ 自动下载最新版本或指定版本
+- ✅ SHA256 校验和验证确保文件完整性
+- ✅ 自动安装二进制文件和 PowerShell completion 脚本
+- ✅ 错误处理和重试机制
+- ✅ 临时文件自动清理
+- ✅ PATH 环境变量检查
+
+**安装流程**：
+1. **平台检测**：自动检测 Windows 架构（x86_64/ARM64）
+2. **版本获取**：从 GitHub Releases API 获取最新版本，或使用指定的版本
+3. **下载**：下载对应平台的二进制包（`.zip`）
+4. **验证**：下载并验证 SHA256 校验和
+5. **解压**：解压二进制包到临时目录
+6. **安装**：运行 `install.exe` 二进制文件进行安装
+7. **清理**：自动清理临时文件
+
+**系统要求**：
+- PowerShell 5.0 或更高版本
+- 网络连接（用于下载）
+- 管理员权限（可能需要，取决于安装目录权限）
+
+**卸载**：
+
+```powershell
+# 使用卸载脚本（PowerShell 推荐）
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
+
+# 或一行命令
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
+
+# 或使用已安装的命令
+workflow uninstall
+```
+
+卸载脚本功能：
+- ✅ 自动检测已安装的 Workflow CLI
+- ✅ 优先使用 `workflow uninstall` 命令（如果可用）
+- ✅ 手动卸载作为备选方案
+- ✅ 清理二进制文件、配置文件和 completion 脚本
+- ✅ 从 PATH 环境变量中移除安装目录
+- ✅ 交互式确认，避免误删
+
+卸载流程：
+1. **检测安装**：检查 `workflow` 命令是否在 PATH 中
+2. **确认卸载**：提示用户确认是否卸载
+3. **执行卸载**：
+   - 优先使用 `workflow uninstall` 命令（如果可用）
+   - 如果命令不可用，执行手动卸载
+4. **清理文件**：
+   - 删除二进制文件（`%LOCALAPPDATA%\Programs\workflow\bin\workflow.exe`, `install.exe`）
+   - 可选删除配置文件（`%APPDATA%\workflow\`）
+   - 删除 completion 脚本
+   - 从 PowerShell profile 中移除 completion 配置
+   - 从 PATH 环境变量中移除安装目录
+
+#### 方式四：使用 Makefile（仅 macOS/Linux）
 
 使用 Makefile 安装所有二进制文件到系统：
 
@@ -59,6 +197,32 @@ make install
 **重要提示**：
 - macOS/Linux：安装后如果命令无法识别，请重新加载 shell：`hash -r` 或重启终端
 - Windows：确保安装目录已添加到 PATH 环境变量中
+
+### 安装/卸载故障排除
+
+#### 安装失败
+
+1. **网络问题**：检查网络连接，脚本会自动重试 3 次
+2. **权限问题**：
+   - macOS/Linux：确保有 `sudo` 权限以安装到系统目录
+   - Windows：确保有管理员权限（取决于安装目录权限）
+3. **工具缺失**：
+   - macOS/Linux：确保已安装 `curl` 和 `tar`
+   - Windows：确保 PowerShell 版本为 5.0 或更高
+
+#### 卸载失败
+
+1. **权限问题**：某些文件可能需要管理员权限才能删除
+2. **手动清理**：如果自动卸载失败，可以手动删除：
+   - **macOS/Linux**：
+     - 二进制文件：`/usr/local/bin/workflow`, `/usr/local/bin/install`
+     - 配置文件：`~/.workflow/`
+     - Shell 配置：从 `~/.zshrc` 或 `~/.bashrc` 中移除相关行
+   - **Windows**：
+     - 二进制文件：`%LOCALAPPDATA%\Programs\workflow\bin\workflow.exe`, `install.exe`
+     - 配置文件：`%APPDATA%\workflow\`
+     - PowerShell 配置：从 PowerShell profile 中移除相关行
+     - PATH 环境变量：从 PATH 中移除 `%LOCALAPPDATA%\Programs\workflow\bin`
 
 ### 编译项目
 
@@ -116,7 +280,8 @@ workflow setup
 
 | 配置项 | 说明 | 默认值 |
 |-------|------|--------|
-| `github.branch_prefix` | GitHub 分支前缀 | - |
+| `github.accounts` | GitHub 账号列表 | - |
+| `github.current` | 当前激活的账号名称 | - |
 
 #### 日志配置
 
@@ -180,7 +345,6 @@ service_address = "https://your-company.atlassian.net"
 
 [github]
 api_token = "your-github-token"
-branch_prefix = "feature"
 
 [log]
 output_folder_name = "logs"
@@ -265,6 +429,11 @@ workflow branch clean --dry-run    # 预览将要删除的分支，不实际删�
 workflow branch ignore add <BRANCH_NAME>      # 添加分支到忽略列表
 workflow branch ignore remove <BRANCH_NAME>  # 从忽略列表移除分支
 workflow branch ignore list                   # 列出当前仓库的忽略分支
+
+# 管理分支前缀（仓库级别）
+workflow branch prefix set [PREFIX]            # 设置当前仓库的分支前缀（如 "feature"、"fix"）
+workflow branch prefix get                     # 获取当前仓库的分支前缀
+workflow branch prefix remove                  # 移除当前仓库的分支前缀
 ```
 
 ### 安装命令
@@ -472,6 +641,7 @@ make lint
 - [docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/CHECK_COMMAND_ARCHITECTURE.md) - 环境检查命令架构文档
 - [docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md) - GitHub 账号管理命令架构文档
 - [docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/PROXY_COMMAND_ARCHITECTURE.md) - 代理管理命令架构文档
+- [docs/architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md](./docs/architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md) - 迁移命令架构文档
 
 
 ## 🏗️ 架构总览
@@ -487,7 +657,7 @@ graph TB
         PRCmd[commands/pr/<br/>create, merge, close, etc.]
         LogCmd[commands/log/<br/>download, find, search]
         JiraCmd[commands/jira/<br/>info, attachments, clean]
-        BranchCmd[commands/branch/<br/>clean, ignore]
+        BranchCmd[commands/branch/<br/>clean, ignore, prefix]
         OtherCmd[commands/<br/>check, proxy, github, config, lifecycle]
     end
 
@@ -578,7 +748,7 @@ workflow/
 │       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
 │       ├── log/          # 日志操作命令（download, find, search）
 │       ├── jira/         # Jira 操作命令（info, attachments, clean）
-│       ├── branch/       # 分支管理命令（clean, ignore）
+│       ├── branch/       # 分支管理命令（clean, ignore, prefix）
 │       ├── check/       # 环境检查命令（check）
 │       ├── proxy/       # 代理管理命令（on, off, check）
 │       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
@@ -617,6 +787,3 @@ workflow/
 请参考以下文档了解更多信息：
 - [docs/README.md](./docs/README.md) - 完整文档索引
 - [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
-
-
-

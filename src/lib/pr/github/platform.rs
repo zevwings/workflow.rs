@@ -1,22 +1,23 @@
-use anyhow::{Context, Result};
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use std::fmt::Write;
 use std::sync::OnceLock;
 
+use anyhow::{Context, Result};
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
+use serde_json::Value;
+
+use crate::base::http::{HttpClient, RequestConfig};
 use crate::base::settings::Settings;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::history::JiraWorkHistory;
-use crate::log_debug;
+use crate::pr::github::errors::handle_github_error;
+use crate::pr::helpers::extract_github_repo_from_url;
+use crate::pr::platform::{PlatformProvider, PullRequestStatus};
+use crate::pr::PullRequestRow;
 
 use super::requests::{
     CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest,
 };
 use super::responses::{CreatePullRequestResponse, GitHubUser, PullRequestInfo, RepositoryInfo};
-use crate::base::http::{HttpClient, RequestConfig};
-use crate::pr::github::errors::handle_github_error;
-use crate::pr::helpers::extract_github_repo_from_url;
-use crate::pr::platform::{PlatformProvider, PullRequestStatus};
-use serde_json::Value;
 
 /// GitHub 平台实现
 ///
@@ -56,14 +57,11 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.post(&url, config)?;
-        let response_data: CreatePullRequestResponse = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let response_data: CreatePullRequestResponse =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(response_data.html_url)
     }
@@ -71,13 +69,11 @@ impl PlatformProvider for GitHub {
     /// 合并 Pull Request
     fn merge_pull_request(&self, pull_request_id: &str, delete_branch: bool) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
-        log_debug!("Using merge method: {}", merge_method);
+        crate::trace_debug!("Using merge method: {}", merge_method);
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}/merge",
@@ -95,15 +91,11 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.put(&url, config)?;
         // GitHub API 返回合并结果，但我们不需要使用响应
-        let _: serde_json::Value = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let _: serde_json::Value = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         // 如果需要删除分支，调用删除分支 API
         if delete_branch {
@@ -144,9 +136,7 @@ impl PlatformProvider for GitHub {
 
     /// 获取 PR 信息
     fn get_pull_request_info(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
 
         let mut info = String::new();
@@ -165,36 +155,28 @@ impl PlatformProvider for GitHub {
     /// 获取 PR URL
     #[allow(dead_code)]
     fn get_pull_request_url(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.html_url)
     }
 
     /// 获取 PR 标题
     fn get_pull_request_title(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.title)
     }
 
     /// 获取 PR body 内容
     fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>> {
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.body)
     }
 
     /// 获取 PR 状态
     fn get_pull_request_status(&self, pull_request_id: &str) -> Result<PullRequestStatus> {
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(PullRequestStatus {
             state: pr.state,
@@ -204,50 +186,28 @@ impl PlatformProvider for GitHub {
     }
 
     /// 列出 PR
-    fn get_pull_requests(&self, state: Option<&str>, limit: Option<u32>) -> Result<String> {
-        let (owner, repo_name) = Self::get_owner_and_repo()?;
-
-        // 转换 state 参数：GitHub API 支持 "open", "closed", "all"
-        let state = match state {
-            Some("open") => "open",
-            Some("closed") => "closed",
-            Some("merged") => "closed", // GitHub API 中 merged 是 closed 状态的一种
-            Some("all") | None => "all",
-            _ => "all", // 默认显示所有状态
-        };
-        let per_page = limit.unwrap_or(30).min(100); // GitHub API 限制最多 100
-
-        let url = format!(
-            "{}/repos/{}/{}/pulls?state={}&per_page={}",
-            Self::base_url(),
-            owner,
-            repo_name,
-            state,
-            per_page
-        );
-
-        let client = HttpClient::global()?;
-        let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<Value, Value>::new().headers(&headers);
-
-        let response = client.get(&url, config)?;
-        let prs: Vec<PullRequestInfo> = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
-        let mut output = String::new();
-        for pr in prs {
-            writeln!(
-                output,
-                "#{}  {}  [{}]  {}\n    {}",
-                pr.number, pr.state, pr.head.ref_name, pr.title, pr.html_url
-            )?;
-        }
-
-        if output.is_empty() {
-            output.push_str("No PRs found.");
-        }
-
-        Ok(output)
+    fn get_pull_requests(
+        &self,
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestRow>> {
+        let prs = Self::get_pull_requests_raw(state, limit)?;
+        let rows: Vec<PullRequestRow> = prs
+            .into_iter()
+            .map(|pr| PullRequestRow {
+                number: pr.number.to_string(),
+                state: pr.state,
+                branch: pr.head.ref_name,
+                title: pr.title,
+                author: pr
+                    .user
+                    .as_ref()
+                    .map(|u| u.login.clone())
+                    .unwrap_or_else(|| "N/A".to_string()),
+                url: pr.html_url,
+            })
+            .collect();
+        Ok(rows)
     }
 
     /// 获取当前分支的 PR
@@ -271,9 +231,8 @@ impl PlatformProvider for GitHub {
 
         let response = client.get(&url, config)?;
         // 如果 API 查询成功，返回结果
-        let prs: Vec<PullRequestInfo> = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let prs: Vec<PullRequestInfo> =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
         if let Some(pr) = prs.first() {
             return Ok(Some(pr.number.to_string()));
         }
@@ -284,7 +243,7 @@ impl PlatformProvider for GitHub {
         if let Some(pr_id) =
             JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
         {
-            log_debug!(
+            crate::trace_debug!(
                 "Found PR #{} for branch '{}' from work-history",
                 pr_id,
                 current_branch
@@ -298,9 +257,7 @@ impl PlatformProvider for GitHub {
     /// 获取 PR 的 diff 内容
     fn get_pull_request_diff(&self, pull_request_id: &str) -> Result<String> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         // 使用 GitHub API 获取 PR diff
         // 格式: GET /repos/{owner}/{repo}/pulls/{pr_number}.diff
@@ -327,9 +284,7 @@ impl PlatformProvider for GitHub {
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
-        let diff = response
-            .ensure_success_with(handle_github_error)?
-            .as_text()?;
+        let diff = response.ensure_success_with(handle_github_error)?.as_text()?;
 
         Ok(diff)
     }
@@ -337,9 +292,7 @@ impl PlatformProvider for GitHub {
     /// 关闭 Pull Request
     fn close_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}",
@@ -355,15 +308,11 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.patch(&url, config)?;
         // GitHub API 返回更新后的 PR 对象，但我们不需要使用响应
-        let _: serde_json::Value = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let _: serde_json::Value = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(())
     }
@@ -371,9 +320,7 @@ impl PlatformProvider for GitHub {
     /// 添加评论到 Pull Request
     fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         // GitHub API: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
         // 注意：PR 在 GitHub API 中也是 issue，所以使用 issues 端点
@@ -396,14 +343,10 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.post(&url, config)?;
-        let _: serde_json::Value = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let _: serde_json::Value = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(())
     }
@@ -411,9 +354,7 @@ impl PlatformProvider for GitHub {
     /// 批准 Pull Request
     fn approve_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         // 先获取 PR 信息以检查是否是自己的 PR
         let pr_info = Self::fetch_pr_info_internal(pr_number)?;
@@ -450,9 +391,7 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.post(&url, config)?;
 
@@ -477,9 +416,7 @@ impl PlatformProvider for GitHub {
     /// 更新 PR 的 base 分支
     fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id
-            .parse::<u64>()
-            .context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}",
@@ -495,14 +432,10 @@ impl PlatformProvider for GitHub {
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
-        let config = RequestConfig::<_, Value>::new()
-            .body(&request)
-            .headers(&headers);
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
 
         let response = client.patch(&url, config)?;
-        let _: serde_json::Value = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let _: serde_json::Value = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(())
     }
@@ -538,21 +471,15 @@ impl GitHub {
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json"
-                .parse()
-                .context("Failed to parse Accept header")?,
+            "application/vnd.github+json".parse().context("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
-            "2022-11-28"
-                .parse()
-                .context("Failed to parse X-GitHub-Api-Version header")?,
+            "2022-11-28".parse().context("Failed to parse X-GitHub-Api-Version header")?,
         );
         headers.insert(
             "User-Agent",
-            "workflow-cli"
-                .parse()
-                .context("Failed to parse User-Agent header")?,
+            "workflow-cli".parse().context("Failed to parse User-Agent header")?,
         );
 
         Ok(headers)
@@ -594,10 +521,55 @@ impl GitHub {
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
-        let repo_info: RepositoryInfo = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let repo_info: RepositoryInfo =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
         Ok(repo_info)
+    }
+
+    /// 获取 PR 列表原始数据（不格式化）
+    ///
+    /// # 参数
+    ///
+    /// * `state` - PR 状态筛选（如 "open", "closed"）
+    /// * `limit` - 返回数量限制
+    ///
+    /// # 返回
+    ///
+    /// PR 信息列表
+    pub fn get_pull_requests_raw(
+        state: Option<&str>,
+        limit: Option<u32>,
+    ) -> Result<Vec<PullRequestInfo>> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+
+        // 转换 state 参数：GitHub API 支持 "open", "closed", "all"
+        let state = match state {
+            Some("open") => "open",
+            Some("closed") => "closed",
+            Some("merged") => "closed", // GitHub API 中 merged 是 closed 状态的一种
+            Some("all") | None => "all",
+            _ => "all", // 默认显示所有状态
+        };
+        let per_page = limit.unwrap_or(30).min(100); // GitHub API 限制最多 100
+
+        let url = format!(
+            "{}/repos/{}/{}/pulls?state={}&per_page={}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            state,
+            per_page
+        );
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
+
+        let response = client.get(&url, config)?;
+        let prs: Vec<PullRequestInfo> =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
+
+        Ok(prs)
     }
 
     /// 获取首选的合并方法：优先使用 squash，其次 rebase，最后 merge
@@ -641,9 +613,8 @@ impl GitHub {
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
-        let pr_info: PullRequestInfo = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let pr_info: PullRequestInfo =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
         Ok(pr_info)
     }
 
@@ -671,9 +642,7 @@ impl GitHub {
 
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
         let response = client.get(&url, config)?;
-        let user: GitHubUser = response
-            .ensure_success_with(handle_github_error)?
-            .as_json()?;
+        let user: GitHubUser = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(user)
     }
