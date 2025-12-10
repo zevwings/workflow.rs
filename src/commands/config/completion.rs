@@ -106,10 +106,8 @@ impl CompletionCommand {
         }
 
         // 显示未安装但已配置的 shell（可能用户手动配置了）
-        let uninstalled_configured: Vec<_> = statuses
-            .iter()
-            .filter(|s| !s.installed && s.configured)
-            .collect();
+        let uninstalled_configured: Vec<_> =
+            statuses.iter().filter(|s| !s.installed && s.configured).collect();
 
         if !uninstalled_configured.is_empty() {
             log_message!("Uninstalled but configured shells:");

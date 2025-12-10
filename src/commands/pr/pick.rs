@@ -289,10 +289,7 @@ impl PullRequestPickCommand {
         let has_changes = !GitCommit::status()?.trim().is_empty();
         if has_changes {
             log_warning!("Working directory has uncommitted changes");
-            if ConfirmDialog::new("Stash changes?")
-                .with_default(true)
-                .prompt()?
-            {
+            if ConfirmDialog::new("Stash changes?").with_default(true).prompt()? {
                 GitStash::stash_push(Some("Stashed by workflow pr pick"))?;
                 log_success!("Stashed changes");
                 Ok(true)
@@ -889,10 +886,8 @@ impl PullRequestPickCommand {
         .prompt()
         .context("Failed to select change types")?;
 
-        let selected_types: Vec<bool> = TYPES_OF_CHANGES
-            .iter()
-            .map(|&item| selected_items.contains(&item))
-            .collect();
+        let selected_types: Vec<bool> =
+            TYPES_OF_CHANGES.iter().map(|&item| selected_items.contains(&item)).collect();
 
         Ok(selected_types)
     }

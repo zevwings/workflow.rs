@@ -97,9 +97,8 @@ impl InstallCommand {
 
         // 获取当前可执行文件所在目录
         let current_exe = env::current_exe().context("Failed to get current executable path")?;
-        let current_dir = current_exe
-            .parent()
-            .context("Failed to get parent directory of executable")?;
+        let current_dir =
+            current_exe.parent().context("Failed to get parent directory of executable")?;
 
         log_debug!("Current directory: {}", current_dir.display());
         log_debug!("Install directory: {}", install_dir);
@@ -134,31 +133,26 @@ impl InstallCommand {
                     )
                 })?;
             } else {
-                let status = Command::new("sudo")
-                    .arg("cp")
-                    .arg(&source)
-                    .arg(&target)
-                    .status()
-                    .context(format!(
-                        "Failed to copy {} to {}",
-                        source.display(),
-                        target.display()
-                    ))?;
+                let status =
+                    Command::new("sudo").arg("cp").arg(&source).arg(&target).status().context(
+                        format!(
+                            "Failed to copy {} to {}",
+                            source.display(),
+                            target.display()
+                        ),
+                    )?;
 
                 if !status.success() {
                     anyhow::bail!("Failed to install {}", binary);
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("sudo")
-                    .arg("chmod")
-                    .arg("+x")
-                    .arg(&target)
-                    .status()
-                    .context(format!(
+                Command::new("sudo").arg("chmod").arg("+x").arg(&target).status().context(
+                    format!(
                         "Failed to set executable permission for {}",
                         target.display()
-                    ))?;
+                    ),
+                )?;
             }
 
             log_success!("{} installation complete", binary_name);

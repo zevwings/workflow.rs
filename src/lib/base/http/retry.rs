@@ -109,6 +109,7 @@ impl HttpRetry {
     /// ```rust,no_run
     /// use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let config = HttpRetryConfig::new();
     /// let result = HttpRetry::retry(
     ///     || {
@@ -118,6 +119,8 @@ impl HttpRetry {
     ///     &config,
     ///     "获取数据",
     /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn retry<F, T>(
         operation: F,

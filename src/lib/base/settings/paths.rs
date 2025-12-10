@@ -56,10 +56,7 @@ impl Paths {
 
         // 构建 iCloud Drive 基础路径
         // ~/Library/Mobile Documents/com~apple~CloudDocs
-        let icloud_base = home
-            .join("Library")
-            .join("Mobile Documents")
-            .join("com~apple~CloudDocs");
+        let icloud_base = home.join("Library").join("Mobile Documents").join("com~apple~CloudDocs");
 
         // 检查 iCloud Drive 是否可用
         if !icloud_base.exists() || !icloud_base.is_dir() {
@@ -82,7 +79,11 @@ impl Paths {
     }
 
     /// 非 macOS 平台：总是返回 None
+    ///
+    /// 注意：此函数在非 macOS 平台上不会被调用（调用处被 `#[cfg(target_os = "macos")]` 包裹），
+    /// 但为了保持 trait 实现的一致性，需要提供此实现。
     #[cfg(not(target_os = "macos"))]
+    #[allow(dead_code)] // 在非 macOS 平台上不会被调用，但需要提供实现以保持一致性
     fn try_icloud_base_dir() -> Option<PathBuf> {
         None
     }
@@ -334,7 +335,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let names = Paths::command_names();
     /// assert_eq!(names, ["workflow"]);
@@ -354,7 +355,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let dir = Paths::binary_install_dir();
     /// // Unix: "/usr/local/bin"
@@ -385,7 +386,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let paths = Paths::binary_paths();
     /// assert_eq!(paths, vec![
@@ -399,10 +400,7 @@ impl Paths {
             .iter()
             .map(|name| {
                 let binary_name = Self::binary_name(name);
-                install_path
-                    .join(&binary_name)
-                    .to_string_lossy()
-                    .to_string()
+                install_path.join(&binary_name).to_string_lossy().to_string()
             })
             .collect()
     }
@@ -422,7 +420,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let name = Paths::binary_name("workflow");
     /// // Windows: "workflow.exe"
@@ -450,7 +448,13 @@ impl Paths {
     /// 如果无法获取本地目录，返回相应的错误信息。
     pub fn completion_dir() -> Result<PathBuf> {
         // 确保使用本地路径
-        Ok(Self::local_base_dir()?.join("completions"))
+        let completion_dir = Self::local_base_dir()?.join("completions");
+
+        // 确保目录存在
+        fs::create_dir_all(&completion_dir)
+            .context("Failed to create .workflow/completions directory")?;
+
+        Ok(completion_dir)
     }
 
     // ==================== 信息查询 API ====================
@@ -560,10 +564,16 @@ impl Paths {
     ///
     /// ```
     /// use clap_complete::shells::Shell;
-    /// use workflow::settings::paths::Paths;
+    /// ```
+    /// use std::path::PathBuf;
+    /// use clap_complete::shells::Shell;
+    /// use workflow::base::settings::paths::Paths;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let zsh_path = Paths::config_file(&Shell::Zsh)?;
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn config_file(shell: &Shell) -> Result<PathBuf> {
         // 使用新的 home_dir() 方法

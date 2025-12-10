@@ -100,9 +100,8 @@ impl PullRequestLLM {
     ) -> String {
         // 提取分支列表，如果没有或为空则使用空数组
         // 注意：exists_branches 已经通过 get_all_branches(true) 获取，已经去掉了前缀
-        let base_branch_names: Vec<String> = exists_branches
-            .filter(|b| !b.is_empty())
-            .unwrap_or_default();
+        let base_branch_names: Vec<String> =
+            exists_branches.filter(|b| !b.is_empty()).unwrap_or_default();
 
         // 组装 prompt 内容
         let mut parts = vec![format!("Commit title: {}", commit_title)];

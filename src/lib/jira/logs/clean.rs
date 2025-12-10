@@ -163,9 +163,7 @@ impl JiraLogs {
         is_base_dir: bool,
     ) -> Result<DirInfo> {
         let jira_id = if dir_name.starts_with("the directory for") {
-            dir_name
-                .strip_prefix("the directory for ")
-                .map(|s| s.to_string())
+            dir_name.strip_prefix("the directory for ").map(|s| s.to_string())
         } else {
             None
         };
@@ -188,21 +186,13 @@ impl JiraLogs {
                     };
                     contents.push(DirEntry {
                         entry_type: "📄 File".to_string(),
-                        name: path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("-")
-                            .to_string(),
+                        name: path.file_name().and_then(|n| n.to_str()).unwrap_or("-").to_string(),
                         size: size_str,
                     });
                 } else if path.is_dir() {
                     contents.push(DirEntry {
                         entry_type: "📁 Directory".to_string(),
-                        name: path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("-")
-                            .to_string(),
+                        name: path.file_name().and_then(|n| n.to_str()).unwrap_or("-").to_string(),
                         size: None,
                     });
                 }
@@ -262,21 +252,13 @@ impl JiraLogs {
                     };
                     all_contents.push(DirEntry {
                         entry_type: format!("📄 File ({})", ticket_id),
-                        name: path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("-")
-                            .to_string(),
+                        name: path.file_name().and_then(|n| n.to_str()).unwrap_or("-").to_string(),
                         size: size_str,
                     });
                 } else if path.is_dir() {
                     all_contents.push(DirEntry {
                         entry_type: format!("📁 Directory ({})", ticket_id),
-                        name: path
-                            .file_name()
-                            .and_then(|n| n.to_str())
-                            .unwrap_or("-")
-                            .to_string(),
+                        name: path.file_name().and_then(|n| n.to_str()).unwrap_or("-").to_string(),
                         size: None,
                     });
                 }

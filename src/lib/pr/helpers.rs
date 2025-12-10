@@ -11,14 +11,13 @@ use super::platform::{create_provider, TYPES_OF_CHANGES};
 ///
 /// # 示例
 /// ```
-/// assert_eq!(extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123"), Ok("123".to_string()));
-/// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
+/// use workflow::pr::helpers::extract_pull_request_id_from_url;
+/// assert_eq!(extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123").unwrap(), "123".to_string());
+/// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345").unwrap(), "12345".to_string());
 /// ```
 pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
     let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
-    let caps = re
-        .captures(url)
-        .context("Failed to extract PR ID from URL")?;
+    let caps = re.captures(url).context("Failed to extract PR ID from URL")?;
 
     Ok(caps.get(1).unwrap().as_str().to_string())
 }
@@ -201,19 +200,26 @@ pub fn transform_to_branch_name(s: &str) -> String {
 ///
 /// # 示例
 ///
-/// ```rust
+/// ```rust,no_run
 /// use workflow::pr::{PlatformProvider, detect_repo_type};
 /// use workflow::pr::github::GitHub;
+/// use workflow::RepoType;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // 获取当前分支的 PR ID
 /// let pr_id = detect_repo_type(
 ///     |repo_type| match repo_type {
-///         RepoType::GitHub => GitHub::get_current_branch_pull_request(),
+///         RepoType::GitHub => {
+///             let github = GitHub;
+///             github.get_current_branch_pull_request()
+///         },
 ///         RepoType::Codeup => Ok(None),  // Codeup support has been removed
 ///         RepoType::Unknown => Ok(None),
 ///     },
 ///     "get current branch PR"
 /// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn detect_repo_type<F, T>(f: F, operation_name: &str) -> Result<T>
 where

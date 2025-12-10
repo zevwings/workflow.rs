@@ -45,11 +45,14 @@ impl CompletionGenerator {
     /// ```rust,no_run
     /// use workflow::completion::generate::CompletionGenerator;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let generator = CompletionGenerator::new(
     ///     Some("zsh".to_string()),
     ///     Some("/path/to/completions".to_string()),
     /// )?;
     /// generator.generate_all()?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(shell_type: Option<String>, output_dir: Option<String>) -> Result<Self> {
         // 解析 shell 类型

@@ -177,8 +177,9 @@ pub trait PlatformProvider {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use crate::pr::create_provider;
+/// use workflow::pr::platform::create_provider;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let provider = create_provider()?;
 /// let pr_url = provider.create_pull_request(
 ///     "Title",
@@ -186,6 +187,8 @@ pub trait PlatformProvider {
 ///     "feature-branch",
 ///     None,
 /// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
     match GitRepo::detect_repo_type()? {

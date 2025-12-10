@@ -11,7 +11,7 @@ use crate::base::dialog::types::ValidatorFn;
 ///
 /// ## 样式示例
 ///
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ Enter your name:                    │
 /// │ > John Doe                          │
@@ -21,7 +21,7 @@ use crate::base::dialog::types::ValidatorFn;
 /// ```
 ///
 /// 带验证器时的错误提示：
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ Enter age:                          │
 /// │ > abc                               │
@@ -35,9 +35,12 @@ use crate::base::dialog::types::ValidatorFn;
 /// ```rust,no_run
 /// use workflow::base::dialog::InputDialog;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let name = InputDialog::new("Enter your name")
 ///     .with_default("John Doe")
 ///     .prompt()?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct InputDialog {
     prompt: String,

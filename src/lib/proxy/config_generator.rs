@@ -26,9 +26,7 @@ impl ProxyConfigGenerator {
     fn generate_proxy_pairs(proxy_info: &ProxyInfo) -> Vec<(String, String)> {
         ProxyType::all()
             .filter_map(|pt| {
-                proxy_info
-                    .get_proxy_url(pt)
-                    .map(|url| (pt.env_key().to_string(), url))
+                proxy_info.get_proxy_url(pt).map(|url| (pt.env_key().to_string(), url))
             })
             .collect()
     }

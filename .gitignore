@@ -71,3 +71,9 @@ $RECYCLE.BIN/
 *.swo
 *~
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python

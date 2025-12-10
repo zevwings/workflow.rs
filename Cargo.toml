@@ -1,6 +1,6 @@
 [package]
 name = "workflow"
-version = "1.4.9"
+version = "1.5.6"
 edition = "2021"
 default-run = "workflow"
 
@@ -45,4 +45,3 @@ path = "src/bin/workflow.rs"
 [[bin]]
 name = "install"
 path = "src/bin/install.rs"
-

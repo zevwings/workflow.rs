@@ -7,7 +7,7 @@ use inquire::{error::InquireError, Select};
 ///
 /// ## 样式示例
 ///
-/// ```
+/// ```text
 /// ┌─────────────────────────────────────┐
 /// │ Choose an option:                    │
 /// │                                     │
@@ -24,10 +24,13 @@ use inquire::{error::InquireError, Select};
 /// ```rust,no_run
 /// use workflow::base::dialog::SelectDialog;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let options = vec!["Option 1", "Option 2", "Option 3"];
 /// let selected = SelectDialog::new("Choose an option", options)
 ///     .with_default(0)
 ///     .prompt()?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct SelectDialog<T> {
     prompt: String,
