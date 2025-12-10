@@ -30,6 +30,11 @@ jobs:
       - name: Check for [skip ci] in PR
         id: check
         run: |
+          # 默认设置为 false，如果找到 [skip ci] 则改为 true
+          # 使用 set +e 确保即使命令失败也能继续执行
+          set +e
+          SHOULD_SKIP="false"
+
           # 检查 PR 标题和正文中是否包含 [skip ci]
           PR_TITLE="${{ github.event.pull_request.title }}"
           PR_BODY="${{ github.event.pull_request.body || '' }}"
@@ -37,43 +42,43 @@ jobs:
           # 检查 PR 标题和正文
           if echo "$PR_TITLE $PR_BODY" | grep -qiE '\[skip\s*ci\]|\[ci\s*skip\]'; then
             echo "✅ Found [skip ci] in PR title or body, skipping CI checks"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+            SHOULD_SKIP="true"
+          else
+            # 检查所有提交消息中是否包含 [skip ci]
+            # 获取 PR 的 base 和 head 分支
+            BASE_REF="${{ github.event.pull_request.base.ref }}"
+            HEAD_REF="${{ github.event.pull_request.head.ref }}"
 
-          # 检查所有提交消息中是否包含 [skip ci]
-          # 获取 PR 的 base 和 head 分支
-          BASE_REF="${{ github.event.pull_request.base.ref }}"
-          HEAD_REF="${{ github.event.pull_request.head.ref }}"
+            # 尝试多种方式获取提交消息
+            # 方法1: 使用 git log 比较分支（如果 base 分支存在）
+            if [ -n "$BASE_REF" ] && [ -n "$HEAD_REF" ]; then
+              # 获取所有提交消息（从 base 到 head）
+              COMMIT_MESSAGES=$(git log origin/$BASE_REF..HEAD --format=%B 2>/dev/null || git log origin/$BASE_REF..origin/$HEAD_REF --format=%B 2>/dev/null || echo "")
+              if echo "$COMMIT_MESSAGES" | grep -qiE '\[skip\s*ci\]|\[ci\s*skip\]'; then
+                echo "✅ Found [skip ci] in commit message, skipping CI checks"
+                SHOULD_SKIP="true"
+              fi
+            fi
 
-          # 尝试多种方式获取提交消息
-          # 方法1: 使用 git log 比较分支（如果 base 分支存在）
-          if [ -n "$BASE_REF" ] && [ -n "$HEAD_REF" ]; then
-            # 获取所有提交消息（从 base 到 head）
-            COMMIT_MESSAGES=$(git log origin/$BASE_REF..HEAD --format=%B 2>/dev/null || git log origin/$BASE_REF..origin/$HEAD_REF --format=%B 2>/dev/null || echo "")
-            if echo "$COMMIT_MESSAGES" | grep -qiE '\[skip\s*ci\]|\[ci\s*skip\]'; then
-              echo "✅ Found [skip ci] in commit message, skipping CI checks"
-              echo "should_skip=true" >> $GITHUB_OUTPUT
-              exit 0
+            # 方法2: 检查当前 HEAD 的提交消息（作为备选）
+            if [ "$SHOULD_SKIP" != "true" ]; then
+              HEAD_COMMIT_MSG=$(git log -1 --format=%B HEAD 2>/dev/null || echo "")
+              if echo "$HEAD_COMMIT_MSG" | grep -qiE '\[skip\s*ci\]|\[ci\s*skip\]'; then
+                echo "✅ Found [skip ci] in HEAD commit message, skipping CI checks"
+                SHOULD_SKIP="true"
+              fi
+            fi
+
+            # 检查是否是版本更新分支
+            if [ "$SHOULD_SKIP" != "true" ] && [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
+              echo "✅ Version bump branch detected, skipping CI checks"
+              SHOULD_SKIP="true"
             fi
           fi
 
-          # 方法2: 检查当前 HEAD 的提交消息（作为备选）
-          HEAD_COMMIT_MSG=$(git log -1 --format=%B HEAD 2>/dev/null || echo "")
-          if echo "$HEAD_COMMIT_MSG" | grep -qiE '\[skip\s*ci\]|\[ci\s*skip\]'; then
-            echo "✅ Found [skip ci] in HEAD commit message, skipping CI checks"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # 检查是否是版本更新分支
-          if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
-            echo "✅ Version bump branch detected, skipping CI checks"
-            echo "should_skip=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "should_skip=false" >> $GITHUB_OUTPUT
+          # 设置输出（无论成功还是失败都要设置）
+          echo "should_skip=$SHOULD_SKIP" >> $GITHUB_OUTPUT
+          echo "Final decision: should_skip=$SHOULD_SKIP"
 
   # 代码质量检查（Lint）
   check-lint:
@@ -231,27 +236,37 @@ jobs:
     steps:
       - name: Check lint and test status
         run: |
-          # 如果 check-skip-ci 失败，记录警告但继续检查
-          if [ "${{ needs.check-skip-ci.result }}" != "success" ]; then
-            echo "⚠️  check-skip-ci job failed, proceeding with normal checks"
+          # 获取所有相关 job 的结果
+          SKIP_CI_RESULT="${{ needs.check-skip-ci.result }}"
+          SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
+          LINT_RESULT="${{ needs.check-lint.result }}"
+          TEST_RESULT="${{ needs.tests.result }}"
+
+          echo "=== Job Status Check ==="
+          echo "check-skip-ci result: $SKIP_CI_RESULT"
+          echo "check-skip-ci should_skip: $SKIP_CI_SHOULD_SKIP"
+          echo "check-lint result: $LINT_RESULT"
+          echo "tests result: $TEST_RESULT"
+          echo "========================"
+
+          # 优先级1: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
+          # 这是最可靠的判断方式，因为即使 check-skip-ci 失败，这两个 job 的状态也能反映实际情况
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
+            echo "✅ Both lint and test jobs were skipped"
+            echo "   This PR does not require CI checks (likely contains [skip ci] or is a version bump branch)"
+            exit 0
           fi
 
-          # 如果应该跳过 CI（包含 [skip ci] 或版本更新分支），直接通过
-          if [ "${{ needs.check-skip-ci.outputs.should_skip }}" == "true" ]; then
+          # 优先级2: 如果 check-skip-ci 成功且 should_skip 为 true，直接通过
+          if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
             echo "✅ CI checks skipped (found [skip ci] or version bump branch)"
             echo "   This PR does not require CI checks"
             exit 0
           fi
 
-          # 获取检查结果
-          LINT_RESULT="${{ needs.check-lint.result }}"
-          TEST_RESULT="${{ needs.tests.result }}"
-
-          # 如果两个检查都被跳过（但 should_skip 不是 true），可能是配置问题，允许通过
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
-            echo "⚠️  Both lint and test jobs were skipped"
-            echo "   This might indicate a configuration issue, but allowing merge"
-            exit 0
+          # 如果 check-skip-ci 失败，记录警告但继续检查其他结果
+          if [ "$SKIP_CI_RESULT" != "success" ] && [ "$SKIP_CI_RESULT" != "skipped" ] && [ -n "$SKIP_CI_RESULT" ]; then
+            echo "⚠️  check-skip-ci job failed ($SKIP_CI_RESULT), but continuing with normal checks"
           fi
 
           # 检查是否有失败的检查（failure, cancelled, 等）
