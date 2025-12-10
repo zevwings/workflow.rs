@@ -31,17 +31,37 @@ pub enum JiraSubcommand {
         #[arg(long)]
         markdown: bool,
     },
-    /// Show changelog (change history) for a Jira ticket
+    /// Show related PRs and branches for a Jira ticket
     ///
-    /// Display change history for a Jira ticket with filtering options.
-    Changelog {
+    /// Display all Pull Requests and Git branches associated with a Jira ticket.
+    Related {
         /// Jira ticket ID (optional, will prompt interactively if not provided)
         #[arg(value_name = "JIRA_ID")]
         jira_id: Option<String>,
 
-        /// Filter changelog by specific field
-        #[arg(long, value_name = "FIELD")]
-        field: Option<String>,
+        /// Output in table format (default)
+        #[arg(long)]
+        table: bool,
+
+        /// Output in JSON format
+        #[arg(long)]
+        json: bool,
+
+        /// Output in YAML format
+        #[arg(long)]
+        yaml: bool,
+
+        /// Output in Markdown format
+        #[arg(long)]
+        markdown: bool,
+    },
+    /// Show changelog (change history) for a Jira ticket
+    ///
+    /// Display change history for a Jira ticket.
+    Changelog {
+        /// Jira ticket ID (optional, will prompt interactively if not provided)
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
 
         /// Output in table format (default)
         #[arg(long)]

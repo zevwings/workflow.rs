@@ -1,4 +1,3 @@
-use crate::base::dialog::InputDialog;
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
 use anyhow::{Context, Result};
@@ -6,13 +5,7 @@ use chrono::{DateTime, FixedOffset};
 use serde_json;
 use std::collections::HashMap;
 
-/// 输出格式选项
-struct OutputFormat {
-    table: bool,
-    json: bool,
-    yaml: bool,
-    markdown: bool,
-}
+use super::helpers::{format_date, get_jira_id, OutputFormat};
 
 /// 显示评论命令
 pub struct CommentsCommand;
@@ -31,32 +24,8 @@ impl CommentsCommand {
         yaml: bool,
         markdown: bool,
     ) -> Result<()> {
-        let format_opts = OutputFormat {
-            table,
-            json,
-            yaml,
-            markdown,
-        };
-        Self::show_with_format(jira_id, limit, offset, author, since, format_opts)
-    }
-
-    /// 显示 ticket 的评论（内部实现）
-    fn show_with_format(
-        jira_id: Option<String>,
-        limit: Option<usize>,
-        offset: Option<usize>,
-        author: Option<String>,
-        since: Option<String>,
-        format: OutputFormat,
-    ) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
-        let jira_id = if let Some(id) = jira_id {
-            id
-        } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
-                .prompt()
-                .context("Failed to read Jira ticket ID")?
-        };
+        let jira_id = get_jira_id(jira_id, None)?;
 
         log_debug!("Getting comments for {}...", jira_id);
 
@@ -64,27 +33,17 @@ impl CommentsCommand {
         let issue = Jira::get_ticket_info(&jira_id)
             .with_context(|| format!("Failed to get ticket info for {}", jira_id))?;
 
-        // 确定输出格式（优先级：json > yaml > markdown > table（默认））
-        let _ = format.table; // table 是默认行为，显式标记以避免未使用警告
-        let format_str = if format.json {
-            "json"
-        } else if format.yaml {
-            "yaml"
-        } else if format.markdown {
-            "markdown"
-        } else {
-            // table 是默认格式
-            "table"
-        };
+        // 确定输出格式
+        let format = OutputFormat::from_args(table, json, yaml, markdown);
 
         // 排序方式：默认使用降序（desc）
         let sort = "desc";
 
         // 根据输出格式选择不同的显示方式
-        match format_str {
-            "json" => Self::output_json(&issue.fields.comment, &jira_id)?,
-            "yaml" => Self::output_yaml(&issue.fields.comment, &jira_id)?,
-            "markdown" => Self::output_markdown(
+        match format {
+            OutputFormat::Json => Self::output_json(&issue.fields.comment, &jira_id)?,
+            OutputFormat::Yaml => Self::output_yaml(&issue.fields.comment, &jira_id)?,
+            OutputFormat::Markdown => Self::output_markdown(
                 &issue.fields.comment,
                 limit,
                 offset,
@@ -92,7 +51,7 @@ impl CommentsCommand {
                 author.as_deref(),
                 since.as_deref(),
             )?,
-            _ => Self::output_table(
+            OutputFormat::Table => Self::output_table(
                 &issue.fields.comment,
                 limit,
                 offset,
@@ -298,15 +257,4 @@ impl CommentsCommand {
 
         Ok(())
     }
-}
-
-/// 格式化日期时间
-fn format_date(date_str: &str) -> Result<String> {
-    DateTime::<FixedOffset>::parse_from_rfc3339(date_str)
-        .or_else(|_| {
-            // 尝试其他格式
-            DateTime::parse_from_str(date_str, "%Y-%m-%dT%H:%M:%S%.3f%z")
-        })
-        .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
-        .or_else(|_| Ok(date_str.to_string()))
 }

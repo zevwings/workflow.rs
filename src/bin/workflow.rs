@@ -12,6 +12,7 @@ use workflow::commands::config::{completion, export, import, log, setup, show, v
 use workflow::commands::github::github;
 use workflow::commands::jira::{
     AttachmentsCommand, ChangelogCommand, CleanCommand, CommentsCommand, InfoCommand,
+    RelatedCommand,
 };
 use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
@@ -283,15 +284,23 @@ fn main() -> Result<()> {
             } => {
                 InfoCommand::show(jira_id, table, json, yaml, markdown)?;
             }
-            JiraSubcommand::Changelog {
+            JiraSubcommand::Related {
                 jira_id,
-                field,
                 table,
                 json,
                 yaml,
                 markdown,
             } => {
-                ChangelogCommand::show(jira_id, field, table, json, yaml, markdown)?;
+                RelatedCommand::show(jira_id, table, json, yaml, markdown)?;
+            }
+            JiraSubcommand::Changelog {
+                jira_id,
+                table,
+                json,
+                yaml,
+                markdown,
+            } => {
+                ChangelogCommand::show(jira_id, table, json, yaml, markdown)?;
             }
             JiraSubcommand::Comments {
                 jira_id,

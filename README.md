@@ -509,6 +509,21 @@ workflow log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参数�
 ```bash
 # 显示 ticket 信息
 workflow jira info [PROJ-123]                 # 显示 Jira ticket 信息（JIRA ID 可选，不提供会交互式输入）
+workflow jira info [PROJ-123] --json          # JSON 格式输出
+workflow jira info [PROJ-123] --markdown      # Markdown 格式输出
+
+# 显示关联信息
+workflow jira related [PROJ-123]              # 显示关联的 PR 和分支信息（JIRA ID 可选，不提供会交互式输入）
+workflow jira related [PROJ-123] --json       # JSON 格式输出
+workflow jira related [PROJ-123] --markdown   # Markdown 格式输出
+
+# 显示变更历史
+workflow jira changelog [PROJ-123]            # 显示变更历史（JIRA ID 可选，不提供会交互式输入）
+workflow jira changelog [PROJ-123] --json     # JSON 格式输出
+workflow jira changelog [PROJ-123] --markdown  # Markdown 格式输出
+
+# 显示评论
+workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
 
 # 下载所有附件
 workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）

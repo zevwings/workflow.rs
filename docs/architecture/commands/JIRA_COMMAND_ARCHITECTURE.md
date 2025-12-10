@@ -7,7 +7,7 @@ Jira 命令层是 Workflow CLI 的命令接口，提供 Jira ticket 信息查看
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/jira/` 模块提供。
 
 **命令结构**：
-- `workflow jira` - Jira 操作命令（info, changelog, comments, attachments, clean）
+- `workflow jira` - Jira 操作命令（info, related, changelog, comments, attachments, clean）
 
 ---
 
@@ -29,6 +29,7 @@ src/main.rs
 src/commands/jira/
 ├── mod.rs          # Jira 命令模块声明
 ├── info.rs         # 显示 ticket 信息命令（~354 行）
+├── related.rs      # 显示关联信息命令（PR 和分支）
 ├── changelog.rs    # 显示变更历史命令（~200 行）
 ├── comments.rs     # 显示评论命令（~313 行）
 ├── attachments.rs  # 下载附件命令（~30 行）
@@ -48,6 +49,10 @@ src/commands/jira/
   - `Jira::get_ticket_info()` - 获取 ticket 信息
 - **`lib/jira/api/`**：Jira API 接口
   - `JiraIssueApi::get_issue_changelog()` - 获取变更历史
+- **`lib/jira/history/`**：Jira 工作历史模块（`JiraWorkHistory`）
+  - `JiraWorkHistory::find_prs_by_jira_ticket()` - 查找关联的 PR
+- **`lib/git/`**：Git 操作模块
+  - `GitBranch::find_branches_by_jira_ticket()` - 查找关联的分支
 - **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
   - `JiraLogs::new()` - 创建日志管理器
   - `JiraLogs::download_from_jira()` - 下载附件
@@ -119,6 +124,10 @@ commands/jira/info.rs::InfoCommand::show(jira_id)
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `--table` - 表格格式输出（默认）
+   - `--json` - JSON 格式输出
+   - `--yaml` - YAML 格式输出
+   - `--markdown` - Markdown 格式输出
 
 2. **用户交互**：
    - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
@@ -149,7 +158,94 @@ commands/jira/info.rs::InfoCommand::show(jira_id)
 
 ---
 
-## 2. 显示变更历史命令 (`changelog`)
+## 2. 显示关联信息命令 (`related`)
+
+### 相关文件
+
+```
+src/commands/jira/related.rs
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::JiraSubcommand::Related
+  ↓
+commands/jira/related.rs::RelatedCommand::show()
+  ↓
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 确定输出格式（table、json、yaml、markdown）
+  3. 调用 JiraWorkHistory::find_prs_by_jira_ticket() 查找关联的 PR
+  4. 调用 GitBranch::find_branches_by_jira_ticket() 查找关联的分支
+  5. 根据输出格式格式化显示关联信息
+```
+
+### 功能说明
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `--table` - 表格格式输出（默认）
+   - `--json` - JSON 格式输出
+   - `--yaml` - YAML 格式输出
+   - `--markdown` - Markdown 格式输出
+
+2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
+   - 支持多种输出格式，便于脚本处理和文档生成
+
+3. **核心功能**：
+   - 通过 `JiraWorkHistory::find_prs_by_jira_ticket()` 查找关联的 PR
+   - 通过 `GitBranch::find_branches_by_jira_ticket()` 查找关联的分支
+   - 显示 PR 信息（URL、分支、创建时间、合并时间等）
+   - 显示分支信息（分支名、最后提交时间等）
+
+### 关键步骤说明
+
+1. **PR 查找**：
+   - 调用 `JiraWorkHistory::find_prs_by_jira_ticket()` 从工作历史中查找关联的 PR
+   - 返回包含 PR URL、分支、创建时间、合并时间等信息的列表
+
+2. **分支查找**：
+   - 调用 `GitBranch::find_branches_by_jira_ticket()` 从 Git 仓库中查找关联的分支
+   - 返回包含分支名、最后提交时间等信息的列表
+
+3. **格式化输出**：
+   - **表格格式**：人类可读的表格格式，显示 PR 和分支详情
+   - **JSON 格式**：结构化 JSON 输出，便于脚本处理
+   - **YAML 格式**：结构化 YAML 输出（当前使用 JSON）
+   - **Markdown 格式**：Markdown 格式输出，便于文档生成
+
+### API 调用
+
+- **`JiraWorkHistory::find_prs_by_jira_ticket(jira_id)`** - 查找关联的 PR
+  - 参数：`jira_id` - Jira ticket ID
+  - 返回：PR 条目列表（包含 PR URL、分支、时间等信息）
+
+- **`GitBranch::find_branches_by_jira_ticket(jira_id)`** - 查找关联的分支
+  - 参数：`jira_id` - Jira ticket ID
+  - 返回：分支列表（包含分支名、最后提交时间等信息）
+
+### 使用示例
+
+```bash
+# 显示关联的 PR 和分支
+workflow jira related PROJ-123
+
+# JSON 格式输出
+workflow jira related PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira related PROJ-123 --markdown
+
+# 交互式输入 JIRA ID
+workflow jira related
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+```
+
+---
+
+## 3. 显示变更历史命令 (`changelog`)
 
 ### 相关文件
 
@@ -168,15 +264,13 @@ commands/jira/changelog.rs::ChangelogCommand::show()
   1. 获取 JIRA ID（从参数或交互式输入）
   2. 确定输出格式（table、json、yaml、markdown）
   3. 调用 JiraIssueApi::get_issue_changelog(jira_id) 获取变更历史
-  4. 如果指定 --field，过滤特定字段的变更
-  5. 根据输出格式格式化显示变更历史
+  4. 根据输出格式格式化显示变更历史
 ```
 
 ### 功能说明
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `--field <FIELD>` - 只显示特定字段的变更（如 `status`、`assignee`）
    - `--table` - 表格格式输出（默认）
    - `--json` - JSON 格式输出
    - `--yaml` - YAML 格式输出
@@ -188,7 +282,7 @@ commands/jira/changelog.rs::ChangelogCommand::show()
 
 3. **核心功能**：
    - 通过 `JiraIssueApi::get_issue_changelog()` API 获取变更历史
-   - 支持按字段过滤变更记录
+   - 显示所有字段的变更记录
    - 显示变更时间、作者、字段变更详情
 
 ### 关键步骤说明
@@ -197,11 +291,7 @@ commands/jira/changelog.rs::ChangelogCommand::show()
    - 调用 `JiraIssueApi::get_issue_changelog()` 获取完整的变更历史
    - 返回包含所有历史记录的 changelog 数据
 
-2. **字段过滤**：
-   - 如果指定 `--field`，只显示该字段的变更记录
-   - 支持过滤常见字段（status、assignee、priority 等）
-
-3. **格式化输出**：
+2. **格式化输出**：
    - **表格格式**：人类可读的表格格式，显示变更详情
    - **JSON 格式**：结构化 JSON 输出，便于脚本处理
    - **YAML 格式**：结构化 YAML 输出（当前使用 JSON）
@@ -219,9 +309,6 @@ commands/jira/changelog.rs::ChangelogCommand::show()
 # 显示所有变更历史
 workflow jira changelog PROJ-123
 
-# 只显示状态变更
-workflow jira changelog PROJ-123 --field status
-
 # JSON 格式输出
 workflow jira changelog PROJ-123 --json
 
@@ -231,7 +318,7 @@ workflow jira changelog PROJ-123 --markdown
 
 ---
 
-## 3. 显示评论命令 (`comments`)
+## 4. 显示评论命令 (`comments`)
 
 ### 相关文件
 
@@ -330,7 +417,7 @@ workflow jira comments PROJ-123 --markdown
 
 ---
 
-## 4. 下载附件命令 (`attachments`)
+## 5. 下载附件命令 (`attachments`)
 
 ### 相关文件
 
@@ -394,7 +481,7 @@ commands/jira/attachments.rs::AttachmentsCommand::download(jira_id)
 
 ---
 
-## 5. 清理本地数据命令 (`clean`)
+## 6. 清理本地数据命令 (`clean`)
 
 ### 相关文件
 
@@ -468,7 +555,7 @@ commands/jira/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
 #### Info 命令数据流
 
 ```
-命令行参数 (JIRA_ID)
+命令行参数 (JIRA_ID, --json, --yaml, --markdown)
   ↓
 InfoCommand::show()
   ↓
@@ -477,6 +564,20 @@ Jira::get_ticket_info()
 Jira API (获取 ticket 信息)
   ↓
 格式化显示 ticket 信息
+```
+
+#### Related 命令数据流
+
+```
+命令行参数 (JIRA_ID, --json, --yaml, --markdown)
+  ↓
+RelatedCommand::show()
+  ↓
+JiraWorkHistory::find_prs_by_jira_ticket()
+  ↓
+GitBranch::find_branches_by_jira_ticket()
+  ↓
+格式化显示关联的 PR 和分支信息
 ```
 
 #### Attachments 命令数据流
@@ -495,6 +596,38 @@ Jira API (获取附件列表)
 合并分片、解压文件
   ↓
 输出文件路径
+```
+
+#### Changelog 命令数据流
+
+```
+命令行参数 (JIRA_ID, --json, --yaml, --markdown)
+  ↓
+ChangelogCommand::show()
+  ↓
+JiraIssueApi::get_issue_changelog()
+  ↓
+Jira API (获取变更历史)
+  ↓
+格式化显示变更历史
+```
+
+#### Comments 命令数据流
+
+```
+命令行参数 (JIRA_ID, --limit, --offset, --author, --since, --json, --yaml, --markdown)
+  ↓
+CommentsCommand::show()
+  ↓
+Jira::get_ticket_info()
+  ↓
+Jira API (获取 ticket 信息，包含评论)
+  ↓
+过滤评论（按作者、时间）
+  ↓
+排序和分页
+  ↓
+格式化显示评论
 ```
 
 #### Clean 命令数据流
@@ -523,6 +656,9 @@ JiraLogs::clean_dir()
 
 每个命令都是一个独立的结构体，实现统一的方法接口：
 - `InfoCommand::show()` - 显示 ticket 信息
+- `RelatedCommand::show()` - 显示关联的 PR 和分支信息
+- `ChangelogCommand::show()` - 显示变更历史
+- `CommentsCommand::show()` - 显示评论
 - `AttachmentsCommand::download()` - 下载所有附件
 - `CleanCommand::clean()` - 清理本地数据
 
@@ -535,6 +671,8 @@ src/main.rs::main()
   ↓
 match cli.subcommand
   ├─ Info → InfoCommand::show()
+  ├─ Changelog → ChangelogCommand::show()
+  ├─ Comments → CommentsCommand::show()
   ├─ Attachments → AttachmentsCommand::download()
   └─ Clean → CleanCommand::clean()
 ```
@@ -543,6 +681,20 @@ match cli.subcommand
 命令层通过 `Jira` 和 `JiraLogs` API 调用核心业务逻辑：
 ```
 InfoCommand::show()
+  ↓
+Jira::get_ticket_info()
+
+RelatedCommand::show()
+  ↓
+JiraWorkHistory::find_prs_by_jira_ticket()
+  ↓
+GitBranch::find_branches_by_jira_ticket()
+
+ChangelogCommand::show()
+  ↓
+JiraIssueApi::get_issue_changelog()
+
+CommentsCommand::show()
   ↓
 Jira::get_ticket_info()
 
@@ -632,8 +784,74 @@ JiraLogs::clean_dir()
 # 提供 JIRA ID
 workflow jira info PROJ-123
 
+# JSON 格式输出
+workflow jira info PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira info PROJ-123 --markdown
+
 # 交互式输入 JIRA ID
 workflow jira info
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+```
+
+### Related 命令
+
+```bash
+# 提供 JIRA ID
+workflow jira related PROJ-123
+
+# JSON 格式输出
+workflow jira related PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira related PROJ-123 --markdown
+
+# 交互式输入 JIRA ID
+workflow jira related
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+```
+
+### Changelog 命令
+
+```bash
+# 提供 JIRA ID
+workflow jira changelog PROJ-123
+
+# JSON 格式输出
+workflow jira changelog PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira changelog PROJ-123 --markdown
+
+# 交互式输入 JIRA ID
+workflow jira changelog
+# 提示: Enter Jira ticket ID (e.g., PROJ-123)
+```
+
+### Comments 命令
+
+```bash
+# 提供 JIRA ID
+workflow jira comments PROJ-123
+
+# 只显示最近 10 条评论
+workflow jira comments PROJ-123 --limit 10
+
+# 只显示指定作者的评论
+workflow jira comments PROJ-123 --author user@example.com
+
+# 只显示指定日期之后的评论
+workflow jira comments PROJ-123 --since 2025-01-01T00:00:00Z
+
+# JSON 格式输出
+workflow jira comments PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira comments PROJ-123 --markdown
+
+# 交互式输入 JIRA ID
+workflow jira comments
 # 提示: Enter Jira ticket ID (e.g., PROJ-123)
 ```
 

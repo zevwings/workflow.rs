@@ -19,10 +19,12 @@
 
 #### 1. [`JIRA_TODO.md`](./JIRA_TODO.md)
 - **状态**: 🚧 部分完成
-- **实现度**: ~30%
+- **实现度**: ~40%
 - **分类**: JIRA 模块
 - **已完成**:
-  - ✅ `jira info` - 显示 ticket 基本信息（支持 comments、changelog、多种输出格式）
+  - ✅ `jira info` - 显示 ticket 基本信息（支持多种输出格式）
+  - ✅ `jira changelog` - 显示变更历史（支持字段过滤、多种输出格式）
+  - ✅ `jira comments` - 显示评论（支持分页、过滤、多种输出格式）
   - ✅ `jira attachments` - 下载附件
   - ✅ `jira clean` - 清理本地数据
   - ✅ JIRA API：`transition`、`assign`、`add_comment`（已实现，待封装为命令）
@@ -141,8 +143,8 @@ docs/todo/
 本目录包含 7 个文档：
 
 #### 部分完成文档（2 个）
-1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~30%）
-   - ✅ 已完成：`jira info`、`jira attachments`、`jira clean`、JIRA API 基础功能
+1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
+   - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
 2. **Git 工作流** (`GIT_TODO.md`) - 🚧 部分完成（~20%）

@@ -42,41 +42,66 @@ impl ConfigExportCommand {
         // 加载配置
         let settings = Settings::load();
 
-        // 提取要导出的配置
-        let export_config = if let Some(ref section_name) = section {
-            Self::extract_section(&settings, section_name)?
-        } else {
-            settings
-        };
+        // 如果指定了 section，验证该 section 的配置
+        if let Some(ref section_name) = section {
+            let export_config = Self::extract_section(&settings, section_name)?;
+            log_info!("Validating configuration before export...");
+            let validation_result =
+                ConfigValidateCommand::validate_config(&export_config, &config_path)?;
 
-        // 导出前验证配置有效性
-        log_info!("Validating configuration before export...");
-        let validation_result =
-            ConfigValidateCommand::validate_config(&export_config, &config_path)?;
-
-        if !validation_result.errors.is_empty() {
-            log_error!("Configuration validation failed");
-            for error in &validation_result.errors {
-                log_message!("  - {}: {}", error.field, error.message);
+            if !validation_result.errors.is_empty() {
+                log_error!("Configuration validation failed");
+                for error in &validation_result.errors {
+                    log_message!("  - {}: {}", error.field, error.message);
+                }
+                return Err(anyhow::anyhow!(
+                    "Export cancelled. Please fix configuration errors before exporting."
+                ));
             }
-            return Err(anyhow::anyhow!(
-                "Export cancelled. Please fix configuration errors before exporting."
-            ));
+
+            if !validation_result.warnings.is_empty() {
+                log_warning!("Configuration validation warnings:");
+                for warning in &validation_result.warnings {
+                    log_message!("  - {}: {}", warning.field, warning.message);
+                }
+                log_info!("Continuing with export despite warnings...");
+            }
+        } else {
+            // 导出完整配置时验证
+            log_info!("Validating configuration before export...");
+            let validation_result =
+                ConfigValidateCommand::validate_config(&settings, &config_path)?;
+
+            if !validation_result.errors.is_empty() {
+                log_error!("Configuration validation failed");
+                for error in &validation_result.errors {
+                    log_message!("  - {}: {}", error.field, error.message);
+                }
+                return Err(anyhow::anyhow!(
+                    "Export cancelled. Please fix configuration errors before exporting."
+                ));
+            }
+
+            if !validation_result.warnings.is_empty() {
+                log_warning!("Configuration validation warnings:");
+                for warning in &validation_result.warnings {
+                    log_message!("  - {}: {}", warning.field, warning.message);
+                }
+                log_info!("Continuing with export despite warnings...");
+            }
         }
 
-        if !validation_result.warnings.is_empty() {
-            log_warning!("Configuration validation warnings:");
-            for warning in &validation_result.warnings {
-                log_message!("  - {}: {}", warning.field, warning.message);
+        // 过滤敏感信息（只在需要时处理，save_config 会处理 section 提取）
+        let filtered_count = if no_secrets {
+            if let Some(ref _section_name) = section {
+                // 对于 section 导出，在 save_config 中处理过滤
+                0 // 将在 save_config 中计算
+            } else {
+                let (_, count) = Self::filter_secrets(settings.clone());
+                count
             }
-            log_info!("Continuing with export despite warnings...");
-        }
-
-        // 过滤敏感信息
-        let (filtered_config, filtered_count) = if no_secrets {
-            Self::filter_secrets(export_config)
         } else {
-            (export_config, 0)
+            0
         };
 
         // 确定输出路径
@@ -96,8 +121,14 @@ impl ConfigExportCommand {
             output_path = output_path.join(filename);
         }
 
-        // 导出到文件
-        Self::save_config(&filtered_config, &output_path, format)?;
+        // 导出到文件（直接使用原始 settings，save_config 会处理 section 提取和过滤）
+        Self::save_config(
+            &settings,
+            section.as_deref(),
+            &output_path,
+            format,
+            no_secrets,
+        )?;
 
         // 显示结果
         if let Some(ref section_name) = section {
@@ -110,10 +141,24 @@ impl ConfigExportCommand {
             log_success!("Configuration exported to {:?}", output_path);
         }
 
-        if filtered_count > 0 {
+        // 如果指定了 section，需要重新计算 filtered_count
+        let actual_filtered_count = if no_secrets {
+            if let Some(ref section_name) = section {
+                // 对于 section 导出，计算该 section 中被过滤的字段数
+                let export_config = Self::extract_section(&settings, section_name)?;
+                let (_, count) = Self::filter_secrets(export_config);
+                count
+            } else {
+                filtered_count
+            }
+        } else {
+            0
+        };
+
+        if actual_filtered_count > 0 {
             log_warning!(
                 "Sensitive information has been filtered ({} field(s))",
-                filtered_count
+                actual_filtered_count
             );
         }
 
@@ -192,7 +237,13 @@ impl ConfigExportCommand {
     }
 
     /// 保存配置到文件
-    fn save_config(config: &Settings, path: &PathBuf, format: &str) -> Result<()> {
+    fn save_config(
+        config: &Settings,
+        section: Option<&str>,
+        path: &PathBuf,
+        format: &str,
+        no_secrets: bool,
+    ) -> Result<()> {
         // 确保父目录存在
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
@@ -201,12 +252,166 @@ impl ConfigExportCommand {
 
         let content = match format.to_lowercase().as_str() {
             "toml" => {
-                toml::to_string_pretty(config).context("Failed to serialize config to TOML")?
+                // 如果指定了 section，只序列化该 section
+                if let Some(section_name) = section {
+                    // 直接从原始 config 中提取 section，然后过滤（如果需要），并序列化
+                    let section_str = match section_name.to_lowercase().as_str() {
+                        "jira" => {
+                            let mut jira = config.jira.clone();
+                            if no_secrets && jira.api_token.is_some() {
+                                jira.api_token = Some("***FILTERED***".to_string());
+                            }
+                            toml::to_string_pretty(&jira)
+                                .context("Failed to serialize jira config to TOML")?
+                        }
+                        "github" => {
+                            let mut github = config.github.clone();
+                            if no_secrets {
+                                for account in &mut github.accounts {
+                                    if !account.api_token.is_empty() {
+                                        account.api_token = "***FILTERED***".to_string();
+                                    }
+                                }
+                            }
+                            toml::to_string_pretty(&github)
+                                .context("Failed to serialize github config to TOML")?
+                        }
+                        "log" => toml::to_string_pretty(&config.log)
+                            .context("Failed to serialize log config to TOML")?,
+                        "llm" => {
+                            let mut llm = config.llm.clone();
+                            if no_secrets && llm.key.is_some() {
+                                llm.key = Some("***FILTERED***".to_string());
+                            }
+                            toml::to_string_pretty(&llm)
+                                .context("Failed to serialize llm config to TOML")?
+                        }
+                        _ => {
+                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                        }
+                    };
+
+                    // 解析为 toml::Value，然后构建包含 section 标题的 TOML
+                    let section_value: toml::Value = toml::from_str(&section_str)
+                        .context("Failed to parse section config as TOML value")?;
+
+                    // 构建包含 section 标题的 TOML 表
+                    let mut table = toml::map::Map::new();
+                    table.insert(section_name.to_string(), section_value);
+                    let root_table = toml::Value::Table(table);
+
+                    toml::to_string_pretty(&root_table)
+                        .context("Failed to serialize section config to TOML")?
+                } else {
+                    // 导出完整配置
+                    let config_to_serialize = if no_secrets {
+                        let (filtered, _) = Self::filter_secrets(config.clone());
+                        filtered
+                    } else {
+                        config.clone()
+                    };
+                    toml::to_string_pretty(&config_to_serialize)
+                        .context("Failed to serialize config to TOML")?
+                }
             }
-            "json" => serde_json::to_string_pretty(config)
-                .context("Failed to serialize config to JSON")?,
+            "json" => {
+                // 如果指定了 section，只序列化该 section
+                if let Some(section_name) = section {
+                    let json_value = match section_name.to_lowercase().as_str() {
+                        "jira" => {
+                            let mut jira = config.jira.clone();
+                            if no_secrets && jira.api_token.is_some() {
+                                jira.api_token = Some("***FILTERED***".to_string());
+                            }
+                            serde_json::to_value(&jira)
+                                .context("Failed to serialize jira config to JSON")?
+                        }
+                        "github" => {
+                            let mut github = config.github.clone();
+                            if no_secrets {
+                                for account in &mut github.accounts {
+                                    if !account.api_token.is_empty() {
+                                        account.api_token = "***FILTERED***".to_string();
+                                    }
+                                }
+                            }
+                            serde_json::to_value(&github)
+                                .context("Failed to serialize github config to JSON")?
+                        }
+                        "log" => serde_json::to_value(&config.log)
+                            .context("Failed to serialize log config to JSON")?,
+                        "llm" => {
+                            let mut llm = config.llm.clone();
+                            if no_secrets && llm.key.is_some() {
+                                llm.key = Some("***FILTERED***".to_string());
+                            }
+                            serde_json::to_value(&llm)
+                                .context("Failed to serialize llm config to JSON")?
+                        }
+                        _ => {
+                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                        }
+                    };
+                    serde_json::to_string_pretty(&json_value).context("Failed to format JSON")?
+                } else {
+                    let config_to_serialize = if no_secrets {
+                        let (filtered, _) = Self::filter_secrets(config.clone());
+                        filtered
+                    } else {
+                        config.clone()
+                    };
+                    serde_json::to_string_pretty(&config_to_serialize)
+                        .context("Failed to serialize config to JSON")?
+                }
+            }
             "yaml" | "yml" => {
-                serde_yaml::to_string(config).context("Failed to serialize config to YAML")?
+                // 如果指定了 section，只序列化该 section
+                if let Some(section_name) = section {
+                    match section_name.to_lowercase().as_str() {
+                        "jira" => {
+                            let mut jira = config.jira.clone();
+                            if no_secrets && jira.api_token.is_some() {
+                                jira.api_token = Some("***FILTERED***".to_string());
+                            }
+                            serde_yaml::to_string(&jira)
+                                .context("Failed to serialize jira config to YAML")?
+                        }
+                        "github" => {
+                            let mut github = config.github.clone();
+                            if no_secrets {
+                                for account in &mut github.accounts {
+                                    if !account.api_token.is_empty() {
+                                        account.api_token = "***FILTERED***".to_string();
+                                    }
+                                }
+                            }
+                            serde_yaml::to_string(&github)
+                                .context("Failed to serialize github config to YAML")?
+                        }
+                        "log" => serde_yaml::to_string(&config.log)
+                            .context("Failed to serialize log config to YAML")?,
+                        "llm" => {
+                            let mut llm = config.llm.clone();
+                            if no_secrets && llm.key.is_some() {
+                                llm.key = Some("***FILTERED***".to_string());
+                            }
+                            serde_yaml::to_string(&llm)
+                                .context("Failed to serialize llm config to YAML")?
+                        }
+                        _ => {
+                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                        }
+                    }
+                } else {
+                    let config_to_serialize = if no_secrets {
+                        let (filtered, _) = Self::filter_secrets(config.clone());
+                        filtered
+                    } else {
+                        config.clone()
+                    };
+                    serde_yaml::to_string(&config_to_serialize)
+                        .context("Failed to serialize config to YAML")?
+                }
             }
             _ => {
                 return Err(anyhow::anyhow!(
