@@ -87,73 +87,72 @@ jobs:
         run: cargo check
 
   # 运行测试
-  # TODO: 后续会打开
-  # tests:
-  #   name: Run tests
-  #   runs-on: ubuntu-latest
-  #   # 跳过版本更新分支的检查（版本更新不需要重新运行 CI）
-  #   if: |
-  #     github.event_name != 'pull_request' ||
-  #     !startsWith(github.head_ref, 'bump-version-')
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #
-  #     - name: Setup Rust
-  #       uses: dtolnay/rust-toolchain@stable
-  #
-  #     - name: Cache cargo registry
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: |
-  #           ~/.cargo/bin/
-  #           ~/.cargo/registry/index/
-  #           ~/.cargo/registry/cache/
-  #           ~/.cargo/git/db/
-  #           target/
-  #         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-  #         restore-keys: |
-  #           ${{ runner.os }}-cargo-
-  #
-  #     - name: Install system dependencies (Linux)
-  #       run: |
-  #         sudo apt-get update
-  #         # 安装 XCB 开发库（clipboard 依赖）
-  #         # xcb crate 需要 xcb-proto 来生成代码模块
-  #         # xcb-proto 需要 Python 来运行代码生成脚本
-  #         sudo apt-get install -y \
-  #           python3 \
-  #           libxcb1-dev \
-  #           libxcb-render0-dev \
-  #           libxcb-shape0-dev \
-  #           libxcb-xfixes0-dev \
-  #           xcb-proto \
-  #           libxcb-keysyms1-dev \
-  #           libxcb-image0-dev \
-  #           libxcb-util-dev \
-  #           libxcb-icccm4-dev \
-  #           libxcb-sync-dev \
-  #           libxcb-xinerama0-dev \
-  #           libxcb-randr0-dev \
-  #           libxcb-xinput-dev \
-  #           libxcb-dri3-dev \
-  #           libxcb-present-dev \
-  #           libxcb-xv0-dev \
-  #           libxcb-glx0-dev \
-  #           libxcb-shm0-dev \
-  #           libxcb-composite0-dev \
-  #           libxcb-damage0-dev \
-  #           libxcb-record0-dev \
-  #           libxcb-screensaver0-dev \
-  #           libxcb-res0-dev \
-  #           libxkbcommon-dev \
-  #           libxkbcommon-x11-dev
-  #         # 验证 xcb-proto 和 Python 已正确安装
-  #         which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
-  #         python3 --version || echo "⚠️  Python3 not found"
-  #
-  #     - name: Run tests
-  #       run: cargo test --verbose
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    # 跳过版本更新分支的检查（版本更新不需要重新运行 CI）
+    if: |
+      github.event_name != 'pull_request' ||
+      !startsWith(github.head_ref, 'bump-version-')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 验证 xcb-proto 和 Python 已正确安装
+          which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
+          python3 --version || echo "⚠️  Python3 not found"
+
+      - name: Run tests
+        run: cargo test --verbose
 
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
@@ -162,7 +161,7 @@ jobs:
   check-status:
     name: Run check-status
     runs-on: ubuntu-latest
-    needs: [check-lint]  # tests 已暂时屏蔽
+    needs: [check-lint, tests]
     # 跳过版本更新分支的检查（版本更新不需要重新运行 CI）
     if: |
       always() &&
@@ -171,9 +170,10 @@ jobs:
     steps:
       - name: Check lint and test status
         run: |
-          if [ "${{ needs.check-lint.result }}" != "success" ]; then
+          if [ "${{ needs.check-lint.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
             echo "❌ Some checks failed:"
             echo "  Lint: ${{ needs.check-lint.result }}"
+            echo "  Test: ${{ needs.tests.result }}"
             echo ""
             echo "This PR cannot be merged until all checks pass."
             exit 1
