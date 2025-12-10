@@ -166,7 +166,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
-          token: ${{ secrets.GITHUB_TOKEN }}  # 确保使用正确的 token
+          token: ${{ secrets.WORKFLOW_PAT }}  # 确保使用正确的 token
 
       - name: Get version from Cargo.toml
         id: version
@@ -181,8 +181,6 @@ jobs:
           TAG="v$VERSION"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "✅ Version from Cargo.toml: $VERSION"
-          echo "✅ Tag to create: $TAG"
 
       - name: Detect branch type and trigger mode
         id: detect_mode
@@ -191,7 +189,6 @@ jobs:
           # 检测是否是 feature 分支
           if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
             IS_FEATURE_BRANCH="true"
-            echo "✅ Detected feature branch: ${{ github.ref }}"
           else
             IS_FEATURE_BRANCH="false"
           fi
@@ -199,44 +196,29 @@ jobs:
           # 检测触发类型
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             IS_MANUAL_TRIGGER="true"
-            echo "✅ Manual trigger detected"
-
-            # 手动触发时，不创建 tag，只提供 outputs 供 build 使用
             INPUT_VERSION="${{ github.event.inputs.version }}"
-            # 移除 v 前缀
             INPUT_VERSION=${INPUT_VERSION#v}
 
             # 验证版本格式
             if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
-              # feature 分支的版本格式必须包含 alpha 或 beta 后缀
               if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.(alpha|beta)-[0-9]+$ ]]; then
                 echo "❌ Error: Feature branch version must be in format: vx.x.x.alpha-xxx or vx.x.x.beta-xxx"
-                echo "   Provided: ${{ github.event.inputs.version }}"
-                echo "   Example: v0.0.1.alpha-001 or v0.0.1.beta-001"
                 exit 1
               fi
             else
-              # master 分支的版本格式为标准格式（不含 alpha/beta）
               if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 echo "❌ Error: Master branch version must be in standard format: vx.x.x"
-                echo "   Provided: ${{ github.event.inputs.version }}"
-                echo "   Example: v0.1.0"
                 exit 1
               fi
             fi
 
             SHOULD_CREATE_TAG="false"
-            echo "ℹ️  Manual trigger: will skip tag creation (direct build only)"
-            echo "   Version format validated: ${{ github.event.inputs.version }}"
           else
-            # push 事件，只在 master 分支创建 tag
             IS_MANUAL_TRIGGER="false"
             if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
               SHOULD_CREATE_TAG="true"
-              echo "ℹ️  Master branch push: will create tag if needed"
             else
               SHOULD_CREATE_TAG="false"
-              echo "ℹ️  Non-master branch push: will skip tag creation"
             fi
           fi
 
@@ -253,20 +235,14 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
 
           if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "⚠️  Tag $TAG already exists"
-            echo "Current commit: $(git rev-parse HEAD)"
-            echo "Tag commit: $(git rev-parse $TAG)"
-
             if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
               echo "exists=true" >> $GITHUB_OUTPUT
               echo "needs_increment=false" >> $GITHUB_OUTPUT
               echo "version=$VERSION" >> $GITHUB_OUTPUT
               echo "tag=$TAG" >> $GITHUB_OUTPUT
-              echo "✅ Tag points to current commit, skipping tag creation"
             else
               echo "exists=true" >> $GITHUB_OUTPUT
               echo "needs_increment=true" >> $GITHUB_OUTPUT
-              echo "⚠️  Tag points to different commit, auto-incrementing patch version"
 
               # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
               IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
@@ -274,7 +250,6 @@ jobs:
               MINOR="${VERSION_PARTS[1]:-0}"
               PATCH="${VERSION_PARTS[2]:-0}"
 
-              # 递增 patch 版本
               PATCH=$((PATCH + 1))
               if [ $PATCH -gt 9 ]; then
                 PATCH=0
@@ -293,16 +268,12 @@ jobs:
               echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
               echo "old_version=$VERSION" >> $GITHUB_OUTPUT
               echo "old_tag=$TAG" >> $GITHUB_OUTPUT
-
-              echo "✅ Auto-incremented version: $VERSION -> $NEW_VERSION"
-              echo "✅ New tag: $NEW_TAG"
             fi
           else
             echo "exists=false" >> $GITHUB_OUTPUT
             echo "needs_increment=false" >> $GITHUB_OUTPUT
             echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "✅ Tag $TAG does not exist, will create it"
           fi
 
       - name: Setup Rust
@@ -314,14 +285,11 @@ jobs:
         shell: bash
         run: |
           NEW_VERSION="${{ steps.check_tag.outputs.version }}"
-          echo "Updating Cargo.toml and Cargo.lock version to $NEW_VERSION"
 
-          # 1. 更新 Cargo.toml 中的版本号
+          # 更新 Cargo.toml 中的版本号
           if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
             sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
           else
-            # Linux
             sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
           fi
 
@@ -331,43 +299,26 @@ jobs:
             echo "❌ Error: Failed to update version in Cargo.toml"
             exit 1
           fi
-          echo "✅ Cargo.toml updated: version = \"$NEW_VERSION\""
 
-          # 2. 直接手动更新 Cargo.lock 中的版本号（避免编译依赖问题）
-          echo "Updating Cargo.lock to reflect new version in Cargo.toml..."
-
-          # 3. 手动更新 Cargo.lock 中的版本号
+          # 更新 Cargo.lock 中的版本号
           if grep -q 'name = "workflow"' Cargo.lock; then
-            # 使用 sed 在 workflow 包的 [[package]] 块中更新版本号
             if [[ "$OSTYPE" == "darwin"* ]]; then
-              # macOS: 使用 sed 更新 workflow 包的版本号
               sed -i '' '/^name = "workflow"$/,/^version = /{
                 /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
               }' Cargo.lock
             else
-              # Linux: 使用 sed 更新
               sed -i '/^name = "workflow"$/,/^version = /{
                 /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
               }' Cargo.lock
             fi
-            # 验证更新
-            LOCK_VERSION=$(grep -A 2 'name = "workflow"' Cargo.lock | grep 'version' | head -1 | sed -E 's/.*version = "([^"]+)".*/\1/')
-            if [ "$LOCK_VERSION" = "$NEW_VERSION" ]; then
-              echo "✅ Cargo.lock updated: version = \"$LOCK_VERSION\""
-            else
-              echo "⚠️  Warning: Could not update Cargo.lock version. It will be updated on next build."
-            fi
-          else
-            echo "⚠️  Warning: Could not find workflow package in Cargo.lock"
           fi
 
       - name: Create and merge version update pull request
         if: steps.check_tag.outputs.needs_increment == 'true'
         shell: bash
         env:
-          # 使用 PAT 而不是 GITHUB_TOKEN，这样创建的 PR 可以触发后续的 workflow
-          # 如果 PAT 不存在，回退到 GITHUB_TOKEN（但创建的 PR 不会触发 workflow）
-          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           # 配置 Git
           git config user.name "github-actions[bot]"
@@ -456,27 +407,14 @@ jobs:
             exit 1
           fi
 
-          # 第六步（可选）：手动触发 CI workflow
-          # 注意：只有当使用 PAT 创建 PR 时，PR 才会自动触发 CI
-          # 如果使用 GITHUB_TOKEN，需要手动触发 CI
-          if [[ -n "${{ secrets.PAT_TOKEN }}" ]]; then
-            echo "✅ Using PAT to create PR, CI should trigger automatically"
-          else
-            echo "⚠️  Using GITHUB_TOKEN to create PR, CI will not trigger automatically"
-            echo "   To fix this, add a PAT_TOKEN secret with a Personal Access Token"
-            echo "   Then PRs created by CI will automatically trigger CI checks"
-            echo ""
-            echo "   Attempting to manually trigger CI workflow..."
-            # 尝试手动触发 CI workflow（需要 PAT）
-            # 注意：使用 GITHUB_TOKEN 无法触发 workflow，所以这里只是记录信息
-            echo "   Note: Manual trigger requires PAT_TOKEN secret"
-          fi
+          # 使用 WORKFLOW_PAT 创建 PR，CI 会自动触发
+          echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
           # 第七步：合并 Pull Request
           echo "Step 6: Merging Pull Request"
 
-          # 等待 PR 可合并（最多等待 2 分钟，每 5 秒检查一次）
-          MAX_WAIT=120
+          # 等待 PR 可合并（最多等待 5 分钟，每 5 秒检查一次）
+          MAX_WAIT=300
           CHECK_INTERVAL=5
           ELAPSED=0
 
@@ -1454,7 +1392,7 @@ jobs:
 
             Install via Homebrew:
             ```bash
-            brew tap zevwings/workflow
+            brew tap ${{ github.repository_owner }}/workflow
             brew install workflow
             ```
           files: release-assets/*
@@ -1541,35 +1479,37 @@ jobs:
       # 注意：使用 git tag 方式时，不需要 SHA256 校验
       # 因为 Homebrew 会直接从 git 仓库 checkout 指定的 tag
 
-      - name: Check HOMEBREW_TAP_TOKEN
+      - name: Check WORKFLOW_PAT
         id: check_token
         shell: bash
+        env:
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          if [ -z "${{ secrets.HOMEBREW_TAP_TOKEN }}" ]; then
-            echo "❌ Error: HOMEBREW_TAP_TOKEN secret is not configured"
+          if [ -z "$WORKFLOW_PAT" ]; then
+            echo "❌ Error: WORKFLOW_PAT secret is not configured"
             echo ""
-            echo "Please configure HOMEBREW_TAP_TOKEN secret:"
+            echo "Please configure WORKFLOW_PAT secret:"
             echo "1. Go to: Settings → Secrets and variables → Actions"
             echo "2. Click 'New repository secret'"
-            echo "3. Name: HOMEBREW_TAP_TOKEN"
+            echo "3. Name: WORKFLOW_PAT"
             echo "4. Value: Your Personal Access Token (PAT) with 'repo' scope"
             echo ""
             echo "To create a PAT:"
             echo "1. Go to: https://github.com/settings/tokens"
             echo "2. Click 'Generate new token (classic)'"
             echo "3. Select 'repo' scope (full control of private repositories)"
-            echo "4. Copy the token and add it as HOMEBREW_TAP_TOKEN secret"
+            echo "4. Copy the token and add it as WORKFLOW_PAT secret"
             exit 1
           else
-            echo "✅ HOMEBREW_TAP_TOKEN is configured"
+            echo "✅ WORKFLOW_PAT is configured"
           fi
 
       - name: Checkout homebrew-workflow
         uses: actions/checkout@v4
         with:
-          repository: zevwings/homebrew-workflow
+          repository: ${{ github.repository_owner }}/homebrew-workflow
           path: homebrew-workflow
-          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          token: ${{ secrets.WORKFLOW_PAT }}
 
       - name: Update Formula from template
         shell: bash
@@ -1599,9 +1539,9 @@ jobs:
           VERSION_REF="${{ steps.version.outputs.version_ref }}"
 
           if [[ "$INSTALL_TYPE" == "tag" ]]; then
-            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", tag: \"$VERSION_REF\""
+            URL_LINE="url \"https://github.com/${{ github.repository }}.git\", tag: \"$VERSION_REF\""
           elif [[ "$INSTALL_TYPE" == "branch" ]]; then
-            URL_LINE="url \"https://github.com/zevwings/workflow.rs.git\", branch: \"$VERSION_REF\""
+            URL_LINE="url \"https://github.com/${{ github.repository }}.git\", branch: \"$VERSION_REF\""
           else
             echo "❌ Error: Invalid install type: $INSTALL_TYPE"
             exit 1
@@ -1649,7 +1589,7 @@ jobs:
       - name: Commit and push changes
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           cd homebrew-workflow
 
@@ -1692,7 +1632,7 @@ jobs:
             git log --oneline -5
             echo ""
             echo "Possible issues:"
-            echo "1. HOMEBREW_TAP_TOKEN may not have write access to zevwings/homebrew-workflow"
+            echo "1. WORKFLOW_PAT may not have write access to ${{ github.repository_owner }}/homebrew-workflow"
             echo "2. Token may have expired or been revoked"
             echo "3. Repository may not exist or be accessible"
             exit 1
