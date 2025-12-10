@@ -13,7 +13,7 @@ use crate::base::util::format_size;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::table::FileRow;
-use crate::{log_break, log_info, log_success};
+use crate::{log_break, log_info, log_message, log_success};
 
 /// 清理日志命令
 pub struct CleanCommand;
@@ -110,7 +110,7 @@ impl CleanCommand {
                         // 显示之前的表格
                         if !rows.is_empty() {
                             if let Some(ref ticket) = current_ticket {
-                                println!(
+                                log_message!(
                                     "{}",
                                     TableBuilder::new(rows.clone())
                                         .with_title(format!("Files: {}", ticket))
@@ -134,7 +134,7 @@ impl CleanCommand {
                 // 显示最后一个表格
                 if !rows.is_empty() {
                     if let Some(ref ticket) = current_ticket {
-                        println!(
+                        log_message!(
                             "{}",
                             TableBuilder::new(rows)
                                 .with_title(format!("Files: {}", ticket))

@@ -2,7 +2,7 @@ use crate::base::dialog::InputDialog;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
-use crate::{log_break, log_debug, log_success, log_warning};
+use crate::{log_break, log_debug, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// 搜索关键词命令
@@ -80,7 +80,7 @@ impl SearchCommand {
 
         // 使用表格显示所有结果
         if !rows.is_empty() {
-            println!(
+            log_message!(
                 "{}",
                 TableBuilder::new(rows)
                     .with_title("Search Results")

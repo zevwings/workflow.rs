@@ -49,7 +49,14 @@ const PR_SUBCOMMANDS: &[&str] = &[
 const LOG_SUBCOMMANDS: &[&str] = &["download", "find", "search"];
 
 /// Jira 子命令列表
-const JIRA_SUBCOMMANDS: &[&str] = &["info", "attachments", "clean"];
+const JIRA_SUBCOMMANDS: &[&str] = &[
+    "info",
+    "related",
+    "changelog",
+    "comments",
+    "attachments",
+    "clean",
+];
 
 /// GitHub 子命令列表
 const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switch", "update"];

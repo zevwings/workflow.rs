@@ -31,10 +31,11 @@ use std::process::Command;
 ///
 /// ```rust,no_run
 /// use workflow::base::util::detect_release_platform;
+/// use workflow::log_message;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let platform = detect_release_platform()?;
-/// println!("Detected platform: {}", platform);
+/// log_message!("Detected platform: {}", platform);
 /// # Ok(())
 /// # }
 /// ```

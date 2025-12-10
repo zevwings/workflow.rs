@@ -3,6 +3,7 @@
 //! 包含 CLI 命令层的所有测试文件。
 
 pub mod branch;
+pub mod config;
 pub mod github;
 pub mod jira;
 pub mod llm;

@@ -405,4 +405,69 @@ impl JiraWorkHistory {
         let repo_id = Self::normalize_repo_to_filename(repo_url);
         Ok(history_dir.join(format!("{}.json", repo_id)))
     }
+
+    /// 根据 JIRA ticket 查找关联的 PR 列表
+    ///
+    /// 从所有仓库的工作历史记录中查找与指定 JIRA ticket 关联的 PR。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Vec<WorkHistoryEntry>`，包含所有关联的 PR 信息。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取文件失败，返回相应的错误信息。
+    pub fn find_prs_by_jira_ticket(jira_ticket: &str) -> Result<Vec<WorkHistoryEntry>> {
+        let history_dir = Paths::work_history_dir()?;
+        let mut results = Vec::new();
+
+        // 遍历所有工作历史文件
+        if history_dir.exists() {
+            for entry in fs::read_dir(&history_dir)? {
+                let entry = entry?;
+                let path = entry.path();
+
+                if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    let content =
+                        fs::read_to_string(&path).context("Failed to read work-history file")?;
+                    let history_map: WorkHistoryMap = serde_json::from_str(&content)
+                        .context("Failed to parse work-history file")?;
+
+                    // 查找匹配的条目
+                    for (_, entry) in history_map.iter() {
+                        if entry.jira_ticket == jira_ticket {
+                            results.push(entry.clone());
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(results)
+    }
+
+    /// 根据 JIRA ticket 查找关联的分支列表
+    ///
+    /// 从所有仓库的工作历史记录中查找与指定 JIRA ticket 关联的分支。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_ticket` - Jira ticket ID（如 `"PROJ-123"`）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `Vec<String>`，包含所有关联的分支名称。
+    ///
+    /// # 错误
+    ///
+    /// 如果读取文件失败，返回相应的错误信息。
+    pub fn find_branches_by_jira_ticket(jira_ticket: &str) -> Result<Vec<String>> {
+        let entries = Self::find_prs_by_jira_ticket(jira_ticket)?;
+        let branches: Vec<String> = entries.iter().filter_map(|e| e.branch.clone()).collect();
+        Ok(branches)
+    }
 }

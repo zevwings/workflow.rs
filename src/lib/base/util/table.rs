@@ -278,9 +278,10 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// ```rust,no_run
     /// use workflow::base::util::TableBuilder;
+    /// use workflow::log_message;
     /// # let data = vec![("name", "value")];
     /// let output = TableBuilder::new(data).render();
-    /// println!("{}", output);
+    /// log_message!("{}", output);
     /// ```
     pub fn render(self) -> String {
         if self.data.is_empty() {
@@ -328,18 +329,19 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// # 弃用
     ///
-    /// 此方法已废弃。请使用 `render()` 方法获取字符串，然后在 commands 层使用 `println!` 打印。
+    /// 此方法已废弃。请使用 `render()` 方法获取字符串，然后在 commands 层使用 `log_message!` 打印。
     ///
     /// # 示例
     ///
     /// ```rust,no_run
     /// use workflow::base::util::TableBuilder;
+    /// use workflow::log_message;
     /// # let data = vec![("name", "value")];
     /// // 旧方式（已废弃）
     /// TableBuilder::new(data.clone()).print();
     ///
     /// // 新方式
-    /// println!("{}", TableBuilder::new(data).render());
+    /// log_message!("{}", TableBuilder::new(data).render());
     /// ```
     #[deprecated(note = "Use render() instead and print in commands layer")]
     pub fn print(self) {

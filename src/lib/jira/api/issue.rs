@@ -8,7 +8,10 @@ use serde_json::Value;
 
 use super::helpers::{build_jira_url, jira_auth_config};
 use crate::base::http::{HttpClient, RequestConfig};
-use crate::jira::types::{JiraAttachment, JiraIssue, JiraTransition};
+use crate::jira::types::{
+    JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraIssue,
+    JiraTransition,
+};
 
 /// 状态转换请求体
 ///
@@ -204,5 +207,71 @@ impl JiraIssueApi {
             .ensure_success()
             .context(format!("Failed to add comment to issue {}", ticket))?;
         Ok(())
+    }
+
+    /// 获取 issue 的变更历史（changelog）
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    ///
+    /// # 返回
+    ///
+    /// 返回 `JiraChangelog` 结构体，包含所有变更记录。
+    ///
+    /// # 错误
+    ///
+    /// 如果 ticket 不存在或无法访问，返回错误。
+    pub fn get_issue_changelog(ticket: &str) -> Result<JiraChangelog> {
+        // 先验证 ticket 是否存在
+        let _issue = Self::get_issue(ticket)
+            .with_context(|| format!("Ticket {} does not exist or is not accessible", ticket))?;
+
+        // 使用专门的 changelog 端点
+        // API v2: /rest/api/2/issue/{issueIdOrKey}/changelog
+        let url = build_jira_url(&format!("issue/{}/changelog", ticket))?;
+        let client = HttpClient::global()?;
+        let auth = jira_auth_config()?;
+        let config = RequestConfig::<Value, Value>::new().auth(auth);
+        let response = client.get(&url, config)?;
+        let data: Value = response
+            .ensure_success()
+            .with_context(|| format!("Failed to get changelog for ticket: {}. The ticket may not exist or you may not have permission to view it.", ticket))?
+            .as_json()
+            .context(format!("Failed to parse changelog response for ticket: {}", ticket))?;
+
+        // 提取 changelog 数据
+        // API v2 返回格式: { "id": "...", "histories": [...] }
+        let histories = data
+            .get("values")
+            .or_else(|| data.get("histories"))
+            .and_then(|h| h.as_array())
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|h| {
+                let id = h.get("id")?.as_str()?.to_string();
+                let created = h.get("created")?.as_str()?.to_string();
+                let author = h.get("author").and_then(|a| serde_json::from_value(a.clone()).ok());
+                let items: Vec<JiraChangelogItem> = h
+                    .get("items")
+                    .and_then(|i| i.as_array())
+                    .unwrap_or(&vec![])
+                    .iter()
+                    .filter_map(|item| serde_json::from_value(item.clone()).ok())
+                    .collect();
+
+                Some(JiraChangelogHistory {
+                    id,
+                    created,
+                    author,
+                    items,
+                })
+            })
+            .collect();
+
+        Ok(JiraChangelog {
+            id: ticket.to_string(),
+            histories,
+        })
     }
 }

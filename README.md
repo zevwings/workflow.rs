@@ -384,6 +384,17 @@ workflow proxy check               # 检查代理状态和配置
 ```bash
 workflow setup                     # 初始化或更新配置（交互式设置）
 workflow config                    # 查看当前配置（显示所有配置项）
+workflow config show               # 查看当前配置（显示所有配置项）
+workflow config validate           # 验证配置文件（检查完整性和有效性）
+workflow config validate --fix     # 验证并自动修复配置错误
+workflow config validate --strict  # 严格模式（将所有警告视为错误）
+workflow config export <OUTPUT>    # 导出配置文件（支持 TOML/JSON/YAML）
+workflow config export <OUTPUT> --section jira  # 只导出指定配置段
+workflow config export <OUTPUT> --no-secrets    # 导出时排除敏感信息
+workflow config import <INPUT>     # 导入配置文件（合并模式）
+workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模式）
+workflow config import <INPUT> --section jira   # 只导入指定配置段
+workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
 workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
 workflow update --version 1.1.2    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
@@ -509,6 +520,21 @@ workflow log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参数�
 ```bash
 # 显示 ticket 信息
 workflow jira info [PROJ-123]                 # 显示 Jira ticket 信息（JIRA ID 可选，不提供会交互式输入）
+workflow jira info [PROJ-123] --json          # JSON 格式输出
+workflow jira info [PROJ-123] --markdown      # Markdown 格式输出
+
+# 显示关联信息
+workflow jira related [PROJ-123]              # 显示关联的 PR 和分支信息（JIRA ID 可选，不提供会交互式输入）
+workflow jira related [PROJ-123] --json       # JSON 格式输出
+workflow jira related [PROJ-123] --markdown   # Markdown 格式输出
+
+# 显示变更历史
+workflow jira changelog [PROJ-123]            # 显示变更历史（JIRA ID 可选，不提供会交互式输入）
+workflow jira changelog [PROJ-123] --json     # JSON 格式输出
+workflow jira changelog [PROJ-123] --markdown  # Markdown 格式输出
+
+# 显示评论
+workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
 
 # 下载所有附件
 workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）

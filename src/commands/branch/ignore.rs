@@ -197,7 +197,7 @@ impl BranchIgnoreCommand {
             .collect();
 
         // 使用表格显示
-        println!(
+        log_message!(
             "{}",
             TableBuilder::new(rows)
                 .with_title(format!("Ignored Branches (repository: {})", repo_name))

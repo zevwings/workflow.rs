@@ -5,8 +5,8 @@
 use clap::Subcommand;
 
 use super::{
-    BranchSubcommand, CompletionSubcommand, GitHubSubcommand, JiraSubcommand, LLMSubcommand,
-    LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand,
+    BranchSubcommand, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand, JiraSubcommand,
+    LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand,
 };
 
 /// 主命令枚举
@@ -32,10 +32,13 @@ pub enum Commands {
     ///
     /// Interactively set up various configuration items required by Workflow CLI (e.g., Jira, GitHub, etc.).
     Setup,
-    /// View current configuration
+    /// Manage configuration
     ///
-    /// Display all configured environment variables and settings (sensitive information will be masked).
-    Config,
+    /// View, validate, export, and import configuration files.
+    Config {
+        #[command(subcommand)]
+        subcommand: Option<ConfigSubcommand>,
+    },
     /// Uninstall Workflow CLI configuration
     ///
     /// Remove all related files: binaries, completion scripts, configuration files, etc.

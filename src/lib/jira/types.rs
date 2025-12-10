@@ -33,6 +33,28 @@ pub struct JiraIssueFields {
     pub attachment: Option<Vec<JiraAttachment>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub comment: Option<JiraComments>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub priority: Option<JiraPriority>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reporter: Option<JiraUser>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub assignee: Option<JiraUser>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub labels: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub components: Option<Vec<JiraComponent>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fix_versions: Option<Vec<JiraVersion>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issuelinks: Option<Vec<JiraIssueLink>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subtasks: Option<Vec<JiraSubtask>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_tracking: Option<JiraTimeTracking>,
 }
 
 /// Jira 附件信息
@@ -111,4 +133,173 @@ pub struct JiraUser {
 pub struct JiraTransition {
     pub id: String,
     pub name: String,
+}
+
+/// Jira 优先级信息
+///
+/// 包含优先级的 ID、名称和图标 URL。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraPriority {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon_url: Option<String>,
+}
+
+/// Jira 组件信息
+///
+/// 包含组件的 ID、名称和描述。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraComponent {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+/// Jira 版本信息
+///
+/// 包含版本的 ID、名称、发布状态和发布日期。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraVersion {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub released: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub release_date: Option<String>,
+}
+
+/// Jira Issue 链接信息
+///
+/// 包含关联的 Issue 信息和链接类型。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraIssueLink {
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_type: Option<JiraIssueLinkType>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inward_issue: Option<JiraIssueRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outward_issue: Option<JiraIssueRef>,
+}
+
+/// Jira Issue 链接类型
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraIssueLinkType {
+    pub id: String,
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub inward: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub outward: Option<String>,
+}
+
+/// Jira Issue 引用
+///
+/// 包含关联 Issue 的基本信息（key、id、summary）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraIssueRef {
+    pub key: String,
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<JiraIssueRefFields>,
+}
+
+/// Jira Issue 引用字段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraIssueRefFields {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<JiraStatus>,
+}
+
+/// Jira 子任务信息
+///
+/// 包含子任务的 key、id 和基本信息。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraSubtask {
+    pub key: String,
+    pub id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<JiraSubtaskFields>,
+}
+
+/// Jira 子任务字段
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraSubtaskFields {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<JiraStatus>,
+}
+
+/// Jira 时间跟踪信息
+///
+/// 包含原始估计时间、剩余时间和已用时间。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraTimeTracking {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original_estimate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remaining_estimate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_spent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub original_estimate_seconds: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remaining_estimate_seconds: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_spent_seconds: Option<i64>,
+}
+
+/// Jira 变更历史
+///
+/// 包含 Issue 的所有变更记录。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraChangelog {
+    pub id: String,
+    pub histories: Vec<JiraChangelogHistory>,
+}
+
+/// Jira 变更历史记录
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraChangelogHistory {
+    pub id: String,
+    pub created: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<JiraUser>,
+    pub items: Vec<JiraChangelogItem>,
+}
+
+/// Jira 变更历史项
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JiraChangelogItem {
+    pub field: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from_string: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to_string: Option<String>,
 }

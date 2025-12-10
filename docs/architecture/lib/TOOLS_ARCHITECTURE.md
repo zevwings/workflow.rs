@@ -661,9 +661,10 @@ pub fn detect_release_platform() -> Result<String>
 **示例**：
 ```rust
 use workflow::base::util::detect_release_platform;
+use workflow::log_message;
 
 let platform = detect_release_platform()?;
-println!("Detected platform: {}", platform);
+log_message!("Detected platform: {}", platform);
 ```
 
 ### 使用场景
@@ -922,9 +923,10 @@ log_break!();
 
 ```rust
 use workflow::mask_sensitive_value;
+use workflow::log_message;
 
 let api_key = "verylongapikey123456";
-println!("API Key: {}", mask_sensitive_value(api_key));
+log_message!("API Key: {}", mask_sensitive_value(api_key));
 // 输出：API Key: very***3456
 ```
 
@@ -973,18 +975,20 @@ if confirm("Do you want to continue?")? {
 
 ```rust
 use workflow::base::util::format_size;
+use workflow::log_message;
 
 let size = format_size(1048576);
-println!("File size: {}", size);  // 输出：File size: 1.00 MB
+log_message!("File size: {}", size);  // 输出：File size: 1.00 MB
 ```
 
 ### 平台检测
 
 ```rust
 use workflow::base::util::detect_release_platform;
+use workflow::log_message;
 
 let platform = detect_release_platform()?;
-println!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
+log_message!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
 ```
 
 ### 表格输出
@@ -1008,7 +1012,7 @@ let output = TableBuilder::new(users)
     .with_title("Users")
     .with_style(TableStyle::Modern)
     .render();
-println!("{}", output);
+log_message!("{}", output);
 ```
 
 ---

@@ -222,7 +222,7 @@ let config_dir = Paths::config_dir()?;
 
 // 检查是否使用 iCloud
 if Paths::is_config_in_icloud() {
-    println!("配置存储在 iCloud，会自动同步");
+    log_message!("配置存储在 iCloud，会自动同步");
 }
 
 // 强制使用本地存储
@@ -495,16 +495,16 @@ let settings = Settings::get();
 
 // 获取 Jira 配置
 if let Some(email) = &settings.jira.email {
-    println!("Jira email: {}", email);
+    log_message!("Jira email: {}", email);
 }
 
 // 获取 GitHub 当前账号
 if let Some(account) = settings.github.get_current_account() {
-    println!("GitHub account: {}", account.name);
+    log_message!("GitHub account: {}", account.name);
 }
 
 // 获取 LLM 配置
-println!("LLM provider: {}", settings.llm.provider);
+log_message!("LLM provider: {}", settings.llm.provider);
 ```
 
 ### 使用 Paths

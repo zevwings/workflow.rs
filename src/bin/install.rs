@@ -13,6 +13,7 @@
 use anyhow::Result;
 use clap::Parser;
 use workflow::commands::lifecycle::install::InstallCommand;
+use workflow::log_break;
 
 /// CLI main structure
 #[derive(Parser)]
@@ -55,7 +56,7 @@ fn main() -> Result<()> {
 
     if install_completions {
         if install_binaries {
-            println!(); // 添加空行分隔
+            log_break!(); // 添加空行分隔
         }
         InstallCommand::install_completions()?;
     }

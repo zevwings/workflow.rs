@@ -218,13 +218,14 @@ impl HttpResponse {
     /// ```rust,no_run
     /// use serde_json::Value;
     /// use workflow::base::http::{HttpClient, HttpResponse, RequestConfig};
+    /// use workflow::log_error;
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = HttpClient::global()?;
     /// # let config = RequestConfig::<Value, Value>::new();
     /// # let response = client.get("https://api.example.com", config)?;
     /// let error_msg = response.extract_error_message();
-    /// println!("Error: {}", error_msg);
+    /// log_error!("Error: {}", error_msg);
     /// # Ok(())
     /// # }
     /// ```

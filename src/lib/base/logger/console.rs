@@ -31,8 +31,9 @@ use std::fmt;
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::success;
+/// use workflow::log_message;
 /// let msg = success("Operation completed");
-/// println!("{}", msg);
+/// log_message!("{}", msg);
 /// ```
 pub fn success(text: impl fmt::Display) -> String {
     style(format!("✓ {}", text)).green().to_string()
@@ -49,8 +50,9 @@ pub fn success(text: impl fmt::Display) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::error;
+/// use workflow::log_error;
 /// let msg = error("Operation failed");
-/// println!("{}", msg);
+/// log_error!("{}", msg);
 /// ```
 pub fn error(text: impl fmt::Display) -> String {
     style(format!("✗ {}", text)).red().to_string()
@@ -67,8 +69,9 @@ pub fn error(text: impl fmt::Display) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::warning;
+/// use workflow::log_warning;
 /// let msg = warning("This is a warning");
-/// println!("{}", msg);
+/// log_warning!("{}", msg);
 /// ```
 pub fn warning(text: impl fmt::Display) -> String {
     style(format!("⚠ {}", text)).yellow().to_string()
@@ -85,8 +88,9 @@ pub fn warning(text: impl fmt::Display) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::info;
+/// use workflow::log_info;
 /// let msg = info("Processing data");
-/// println!("{}", msg);
+/// log_info!("{}", msg);
 /// ```
 pub fn info(text: impl fmt::Display) -> String {
     style(format!("ℹ {}", text)).blue().to_string()
@@ -103,8 +107,9 @@ pub fn info(text: impl fmt::Display) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::debug;
+/// use workflow::log_debug;
 /// let msg = debug("Debug information");
-/// println!("{}", msg);
+/// log_debug!("{}", msg);
 /// ```
 pub fn debug(text: impl fmt::Display) -> String {
     style(format!("⚙ {}", text)).bright().black().to_string()
@@ -122,8 +127,9 @@ pub fn debug(text: impl fmt::Display) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::separator;
+/// use workflow::log_message;
 /// let sep = separator('-', 80);
-/// println!("{}", sep);
+/// log_message!("{}", sep);
 /// ```
 pub fn separator(char: char, length: usize) -> String {
     style(char.to_string().repeat(length)).bright().black().to_string()
@@ -145,8 +151,9 @@ pub fn separator(char: char, length: usize) -> String {
 /// # 示例
 /// ```
 /// use workflow::base::logger::console::separator_with_text;
+/// use workflow::log_message;
 /// let sep = separator_with_text('=', 80, "Section Title");
-/// println!("{}", sep);
+/// log_message!("{}", sep);
 /// ```
 pub fn separator_with_text(char: char, length: usize, text: impl fmt::Display) -> String {
     let text_str = format!("  {} ", text);

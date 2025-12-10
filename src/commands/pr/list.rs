@@ -1,6 +1,6 @@
 use crate::base::util::table::{TableBuilder, TableStyle};
-use crate::log_break;
 use crate::pr::platform::create_provider;
+use crate::{log_break, log_message};
 use anyhow::Result;
 
 /// PR 列表命令
@@ -21,12 +21,12 @@ impl PullRequestListCommand {
         let rows = provider.get_pull_requests(Some(state), limit)?;
 
         if rows.is_empty() {
-            println!("No PRs found.");
+            log_message!("No PRs found.");
             return Ok(());
         }
 
         // 使用表格显示
-        println!(
+        log_message!(
             "{}",
             TableBuilder::new(rows)
                 .with_title("Pull Requests")

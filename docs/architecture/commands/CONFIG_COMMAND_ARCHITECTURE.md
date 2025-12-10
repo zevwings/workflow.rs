@@ -28,8 +28,11 @@ src/main.rs
 ```
 src/commands/config/
 ├── setup.rs        # 初始化设置命令（~653 行）
-├── show.rs         # 配置查看命令（~52 行）
+├── show.rs         # 配置查看命令（~196 行）
 ├── log.rs          # 日志级别管理命令（~108 行）
+├── validate.rs     # 配置验证命令（~480 行）
+├── export.rs       # 配置导出命令（~224 行）
+├── import.rs       # 配置导入命令（~513 行）
 └── completion.rs   # Shell Completion 管理命令（~303 行）
 ```
 
@@ -253,7 +256,255 @@ commands/config/log.rs::LogCommand::{set|check}()
 
 ---
 
-## 4. Shell Completion 管理命令 (`completion.rs`)
+## 4. 配置验证命令 (`validate.rs`)
+
+### 相关文件
+
+```
+src/commands/config/validate.rs
+```
+
+### 调用流程
+
+```
+src/main.rs::Commands::Config { subcommand: Validate }
+  ↓
+commands/config/validate.rs::ConfigValidateCommand::validate()
+  ↓
+  1. 确定配置文件路径（默认或指定路径）
+  2. 读取并解析配置文件（支持 TOML、JSON、YAML）
+  3. 执行配置验证（validate_config）
+     ├─ 验证 JIRA 配置（邮箱格式、URL 格式、API token）
+     ├─ 验证 GitHub 配置（账号名称、API token）
+     ├─ 验证日志配置（路径格式）
+     └─ 验证 LLM 配置（URL 格式、provider 枚举值）
+  4. 如果指定 --fix，尝试自动修复错误
+  5. 显示验证结果（错误、警告）
+  6. 如果指定 --strict，将警告视为错误
+```
+
+### 功能说明
+
+1. **配置验证**：
+   - 验证配置文件格式（TOML、JSON、YAML）
+   - 检查必需字段是否存在
+   - 验证字段类型和值的有效性
+   - 验证 URL 格式、邮箱格式等
+
+2. **自动修复**：
+   - 使用 `--fix` 选项可以自动修复常见错误
+   - 修复 URL 格式错误（自动添加 https://）
+   - 修复其他可修复的配置问题
+
+3. **严格模式**：
+   - 使用 `--strict` 选项将所有警告视为错误
+   - 确保配置完全符合规范
+
+### 关键步骤说明
+
+1. **配置解析**：
+   - 支持 TOML、JSON、YAML 三种格式
+   - 自动检测文件格式或根据扩展名判断
+
+2. **验证项**：
+   - **JIRA 配置**：邮箱格式、URL 格式、API token 非空
+   - **GitHub 配置**：账号名称非空、API token 非空
+   - **日志配置**：路径格式验证
+   - **LLM 配置**：URL 格式、provider 枚举值验证
+
+3. **错误报告**：
+   - 显示详细的错误信息（字段名、错误原因）
+   - 提供修复建议（如果可修复）
+   - 区分错误和警告
+
+### 使用示例
+
+```bash
+# 验证配置
+workflow config validate
+
+# 自动修复配置错误
+workflow config validate --fix
+
+# 严格模式（所有警告视为错误）
+workflow config validate --strict
+
+# 验证指定配置文件
+workflow config validate /path/to/config.toml
+```
+
+---
+
+## 5. 配置导出命令 (`export.rs`)
+
+### 相关文件
+
+```
+src/commands/config/export.rs
+```
+
+### 调用流程
+
+```
+src/main.rs::Commands::Config { subcommand: Export }
+  ↓
+commands/config/export.rs::ConfigExportCommand::export()
+  ↓
+  1. 确定导出格式（toml、json、yaml，默认 toml）
+  2. 加载当前配置（Settings::load()）
+  3. 如果指定 --section，提取特定配置段
+  4. 验证配置有效性（validate_config）
+  5. 如果指定 --no-secrets，过滤敏感信息
+  6. 保存配置到指定文件
+```
+
+### 功能说明
+
+1. **导出格式**：
+   - 支持 TOML（默认）、JSON、YAML 三种格式
+   - 通过 `--json`、`--yaml` 选项指定格式
+
+2. **选择性导出**：
+   - 使用 `--section` 选项可以只导出特定配置段（jira、github、log、llm）
+
+3. **敏感信息过滤**：
+   - 使用 `--no-secrets` 选项可以排除敏感信息
+   - 自动过滤 API tokens、密钥等敏感字段
+
+4. **配置验证**：
+   - 导出前自动验证配置有效性
+   - 如果验证失败，取消导出操作
+
+### 关键步骤说明
+
+1. **配置提取**：
+   - 如果指定 `--section`，只提取对应配置段
+   - 否则导出完整配置
+
+2. **敏感信息过滤**：
+   - 过滤 JIRA API token
+   - 过滤 GitHub API tokens
+   - 过滤 LLM key
+   - 被过滤的字段显示为 `***FILTERED***`
+
+3. **文件保存**：
+   - 如果输出路径是目录，自动生成文件名
+   - 文件名格式：`config.{section}.{format}` 或 `config.{format}`
+
+### 使用示例
+
+```bash
+# 导出完整配置（TOML 格式）
+workflow config export config.backup.toml
+
+# 只导出 JIRA 配置
+workflow config export config.backup.toml --section jira
+
+# 导出配置并排除敏感信息
+workflow config export config.backup.toml --no-secrets
+
+# 导出为 JSON 格式
+workflow config export config.backup.json --json
+
+# 导出为 YAML 格式
+workflow config export config.backup.yaml --yaml
+```
+
+---
+
+## 6. 配置导入命令 (`import.rs`)
+
+### 相关文件
+
+```
+src/commands/config/import.rs
+```
+
+### 调用流程
+
+```
+src/main.rs::Commands::Config { subcommand: Import }
+  ↓
+commands/config/import.rs::ConfigImportCommand::import()
+  ↓
+  1. 读取并解析输入文件（支持 TOML、JSON、YAML）
+  2. 如果指定 --section，提取特定配置段
+  3. 验证导入的配置有效性
+  4. 如果指定 --dry-run，只预览变更
+  5. 创建当前配置的备份（ImportTransaction）
+  6. 根据模式执行导入（合并或覆盖）
+  7. 验证最终配置
+  8. 如果验证失败，自动回滚到备份
+  9. 保存配置并提交事务
+```
+
+### 功能说明
+
+1. **导入模式**：
+   - **合并模式**（默认）：保留现有配置，只更新导入的部分
+   - **覆盖模式**（`--overwrite`）：完全替换现有配置
+
+2. **选择性导入**：
+   - 使用 `--section` 选项可以只导入特定配置段
+
+3. **试运行模式**：
+   - 使用 `--dry-run` 选项可以预览变更而不实际导入
+
+4. **自动备份和回滚**：
+   - 导入前自动创建备份文件
+   - 如果导入后验证失败，自动回滚到备份
+   - 备份文件命名：`config.backup.{timestamp}.toml`
+
+5. **配置验证**：
+   - 导入前验证输入配置
+   - 导入后验证最终配置
+   - 验证失败时自动回滚
+
+### 关键步骤说明
+
+1. **配置解析**：
+   - 支持 TOML、JSON、YAML 三种格式
+   - 自动检测文件格式
+
+2. **事务管理**：
+   - 使用 `ImportTransaction` 管理导入过程
+   - 创建备份、回滚、提交事务
+
+3. **配置合并**：
+   - **合并模式**：深度合并配置，保留现有值
+   - **覆盖模式**：完全替换配置
+   - **段导入**：只更新指定配置段
+
+4. **错误处理**：
+   - 验证失败时自动回滚
+   - 保存失败时自动回滚
+   - 提供详细的错误信息
+
+### 使用示例
+
+```bash
+# 导入配置（合并模式）
+workflow config import config.backup.toml
+
+# 导入配置（覆盖模式）
+workflow config import config.backup.toml --overwrite
+
+# 只导入 JIRA 配置
+workflow config import config.backup.toml --section jira
+
+# 试运行（预览变更）
+workflow config import config.backup.toml --dry-run
+
+# 从 JSON 文件导入
+workflow config import config.backup.json
+
+# 从 YAML 文件导入
+workflow config import config.backup.yaml
+```
+
+---
+
+## 7. Shell Completion 管理命令 (`completion.rs`)
 
 ### 相关文件
 
@@ -401,6 +652,51 @@ workflow config log set
 workflow config log check
 ```
 
+### 配置验证
+
+```bash
+# 验证配置
+workflow config validate
+
+# 自动修复配置错误
+workflow config validate --fix
+
+# 严格模式
+workflow config validate --strict
+```
+
+### 配置导出
+
+```bash
+# 导出完整配置
+workflow config export config.backup.toml
+
+# 只导出 JIRA 配置
+workflow config export config.backup.toml --section jira
+
+# 导出并排除敏感信息
+workflow config export config.backup.toml --no-secrets
+
+# 导出为 JSON 格式
+workflow config export config.backup.json --json
+```
+
+### 配置导入
+
+```bash
+# 导入配置（合并模式）
+workflow config import config.backup.toml
+
+# 导入配置（覆盖模式）
+workflow config import config.backup.toml --overwrite
+
+# 只导入 JIRA 配置
+workflow config import config.backup.toml --section jira
+
+# 试运行（预览变更）
+workflow config import config.backup.toml --dry-run
+```
+
 ### Shell Completion 管理
 
 ```bash
@@ -422,11 +718,16 @@ Config 命令层采用清晰的配置管理设计：
 
 1. **交互式配置**：通过 `setup` 命令交互式收集配置
 2. **配置查看**：通过 `show` 命令查看和验证配置
-3. **日志管理**：通过 `log` 命令管理日志级别
-4. **Completion 管理**：通过 `completion` 命令管理 Shell 补全
+3. **配置验证**：通过 `validate` 命令验证配置完整性和有效性
+4. **配置导出**：通过 `export` 命令导出配置用于备份和迁移
+5. **配置导入**：通过 `import` 命令导入配置（支持合并和覆盖模式）
+6. **日志管理**：通过 `log` 命令管理日志级别
+7. **Completion 管理**：通过 `completion` 命令管理 Shell 补全
 
 **设计优势**：
 - ✅ **易用性**：交互式配置，用户友好
-- ✅ **完整性**：配置验证和查看功能
+- ✅ **完整性**：配置验证、导入/导出功能完善
+- ✅ **安全性**：支持敏感信息过滤、自动备份和回滚
+- ✅ **灵活性**：支持多种格式（TOML、JSON、YAML）、选择性导入/导出
 - ✅ **模块化**：与其他命令模块（GitHub、Check、Branch、Proxy）职责分离
 - ✅ **可扩展性**：易于添加新的配置项
