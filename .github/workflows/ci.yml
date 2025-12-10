@@ -15,6 +15,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # 允许创建 bump-version-* PR 的用户（必须与 WORKFLOW_PAT 的所有者匹配）
+  # 可以通过 Repository Variables 设置 WORKFLOW_USER_NAME 来覆盖默认值
+  # 默认值：使用仓库所有者（github.repository_owner）
+  WORKFLOW_USER_NAME: ${{ vars.WORKFLOW_USER_NAME || github.repository_owner }}
 
 jobs:
   # 检查是否应该跳过 CI（只检查版本更新分支）
@@ -34,92 +38,16 @@ jobs:
         run: |
           # 只检查是否是版本更新分支（bump-version-*）
           if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
-            echo "✅ Version bump branch detected: ${{ github.head_ref }}"
-
             # 验证分支是否由 CI 创建
-            # 方法1: 检查 PR 的创建者
             PR_CREATOR="${{ github.event.pull_request.user.login }}"
-            PR_CREATOR_TYPE="${{ github.event.pull_request.user.type }}"
-            PR_CREATOR_ID="${{ github.event.pull_request.user.id }}"
+            WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
 
-            # 方法2: 检查分支最新提交的提交者
-            COMMIT_AUTHOR_NAME=$(git log -1 --format='%an' HEAD)
-            COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%ae' HEAD)
-
-            echo "=== Verification Details ==="
-            echo "PR Creator: ${PR_CREATOR:-'N/A'}"
-            echo "PR Creator Type: ${PR_CREATOR_TYPE:-'N/A'}"
-            echo "PR Creator ID: ${PR_CREATOR_ID:-'N/A'}"
-            echo "Commit Author: $COMMIT_AUTHOR_NAME"
-            echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
-            echo ""
-            echo "Full PR event data (for debugging):"
-            echo "github.event.pull_request.user.login: ${{ github.event.pull_request.user.login }}"
-            echo "github.event.pull_request.user.type: ${{ github.event.pull_request.user.type }}"
-            echo "github.event.pull_request.user.id: ${{ github.event.pull_request.user.id }}"
-            echo "============================"
-
-            # 检查是否是 GitHub Actions bot 创建的
-            # GitHub Actions bot 的用户 ID 是 41898282
-            # 用户名可能是 "github-actions[bot]" 或 "github-actions"
-            # 类型应该是 "Bot"
-            IS_CI_CREATED=false
-
-            # 检查 PR 创建者（多种方式）
-            # 优先级1: 检查用户类型为 Bot，且必须有明确的 GitHub Actions bot 标识
-            if [[ -n "$PR_CREATOR_TYPE" ]] && [[ "$PR_CREATOR_TYPE" == "Bot" ]]; then
-              # 如果是 Bot 类型，必须进一步验证是否是 GitHub Actions bot
-              if [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
-                IS_CI_CREATED=true
-                echo "✅ Verified via PR creator: Bot type with GitHub Actions bot ID (41898282)"
-              elif [[ -n "$PR_CREATOR" ]] && ([[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR" == "github-actions" ]]); then
-                IS_CI_CREATED=true
-                echo "✅ Verified via PR creator: Bot type with GitHub Actions bot name"
-              else
-                # Bot 类型但无法确认是 GitHub Actions bot，不通过验证
-                echo "⚠️  PR creator is Bot type but cannot verify as GitHub Actions bot"
-                echo "   PR Creator: ${PR_CREATOR:-'N/A'}, ID: ${PR_CREATOR_ID:-'N/A'}"
-              fi
-            # 优先级2: 检查用户 ID（即使类型不是 Bot，但 ID 匹配也通过）
-            elif [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
-              IS_CI_CREATED=true
-              echo "✅ Verified via PR creator ID: GitHub Actions bot ID (41898282)"
-            # 优先级3: 检查用户名（即使类型不是 Bot，但用户名匹配也通过）
-            elif [[ -n "$PR_CREATOR" ]] && ([[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR" == "github-actions" ]]); then
-              IS_CI_CREATED=true
-              echo "✅ Verified via PR creator name: GitHub Actions bot"
-            fi
-
-            # 检查提交者（更可靠，因为分支本身是由 CI 推送的）
-            # 支持多种邮箱格式
-            if [[ "$COMMIT_AUTHOR_NAME" == "github-actions[bot]" ]] || [[ "$COMMIT_AUTHOR_NAME" == "github-actions" ]]; then
-              IS_CI_CREATED=true
-              echo "✅ Verified via commit author name: GitHub Actions bot"
-            fi
-
-            # 检查提交者邮箱（支持多种格式）
-            if [[ "$COMMIT_AUTHOR_EMAIL" == "github-actions[bot]@users.noreply.github.com" ]] || \
-               [[ "$COMMIT_AUTHOR_EMAIL" == "41898282+github-actions[bot]@users.noreply.github.com" ]] || \
-               [[ "$COMMIT_AUTHOR_EMAIL" =~ ^.*github-actions.*@users.noreply.github.com$ ]]; then
-              IS_CI_CREATED=true
-              echo "✅ Verified via commit author email: GitHub Actions bot email"
-            fi
-
-            if [[ "$IS_CI_CREATED" == "false" ]]; then
-              echo ""
-              echo "❌ Error: bump-version-* branches can only be created by CI (GitHub Actions)"
-              echo "   This PR was created by: ${PR_CREATOR:-'unknown'} (${PR_CREATOR_TYPE:-'unknown'}, ID: ${PR_CREATOR_ID:-'unknown'})"
-              echo "   Commit author: $COMMIT_AUTHOR_NAME <$COMMIT_AUTHOR_EMAIL>"
-              echo "   Only automated version bump PRs from the release workflow are allowed."
-              echo ""
-              echo "   If you need to bump the version, please:"
-              echo "   1. Merge your changes to master"
-              echo "   2. The release workflow will automatically create a bump-version-* branch and PR"
+            if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
+              echo "❌ Error: bump-version-* branches can only be created by authorized user"
+              echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
               exit 1
             fi
 
-            echo ""
-            echo "✅ Verified: This bump-version-* branch was created by CI"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
             echo "should_skip=false" >> $GITHUB_OUTPUT
@@ -290,34 +218,17 @@ jobs:
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
 
-          echo "=== Job Status Check ==="
-          echo "check-skip-ci result: ${SKIP_CI_RESULT:-'not_run'}"
-          echo "check-skip-ci should_skip: ${SKIP_CI_SHOULD_SKIP:-'not_set'}"
-          echo "check-lint result: ${LINT_RESULT:-'not_run'}"
-          echo "tests result: ${TEST_RESULT:-'not_run'}"
-          echo "========================"
-
           # 优先级1: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
-          # 这是最可靠的判断方式，因为即使 check-skip-ci 失败，这两个 job 的状态也能反映实际情况
           if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
-            echo "✅ Both lint and test jobs were skipped"
-            echo "   This PR does not require CI checks (version bump branch)"
             exit 0
           fi
 
           # 优先级2: 如果 check-skip-ci 成功且 should_skip 为 true，直接通过
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
-            echo "✅ CI checks skipped (version bump branch detected)"
-            echo "   This PR does not require CI checks"
             exit 0
           fi
 
-          # 如果 check-skip-ci 失败或未运行，记录警告但继续检查其他结果
-          if [ -n "$SKIP_CI_RESULT" ] && [ "$SKIP_CI_RESULT" != "success" ] && [ "$SKIP_CI_RESULT" != "skipped" ]; then
-            echo "⚠️  check-skip-ci job failed ($SKIP_CI_RESULT), but continuing with normal checks"
-          fi
-
-          # 检查是否有失败的检查（failure, cancelled, 等）
+          # 检查是否有失败的检查
           if [ -n "$LINT_RESULT" ] && [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
             echo "❌ Lint check failed: $LINT_RESULT"
             exit 1
@@ -328,6 +239,4 @@ jobs:
             exit 1
           fi
 
-          # 如果所有检查都成功或跳过，则通过
-          echo "✅ All checks passed!"
           exit 0
