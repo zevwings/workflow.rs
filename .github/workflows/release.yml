@@ -413,10 +413,14 @@ jobs:
           # 第七步：合并 Pull Request
           echo "Step 6: Merging Pull Request"
 
+          # 初始等待时间，让 GitHub 有时间更新 PR 状态和触发 CI
+          echo "⏳ Waiting 30s for PR status to be updated..."
+          sleep 30
+
           # 等待 PR 可合并（最多等待 5 分钟，每 5 秒检查一次）
           MAX_WAIT=300
           CHECK_INTERVAL=5
-          ELAPSED=0
+          ELAPSED=30  # 从 30 秒开始计数，因为已经等待了 30 秒
 
           while [ $ELAPSED -lt $MAX_WAIT ]; do
             PR_STATUS=$(curl -s \
@@ -443,7 +447,24 @@ jobs:
               exit 0
             fi
 
+            # 如果 mergeable 为 null，说明 GitHub 还在计算状态，继续等待
+            if [ "$MERGEABLE" = "null" ]; then
+              echo "⏳ PR mergeable status is still being calculated (elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # 如果 mergeable 为 false，说明 PR 有冲突或未通过检查，记录并继续等待
+            if [ "$MERGEABLE" = "false" ]; then
+              echo "⏳ PR is not mergeable yet (may have conflicts or pending checks, elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
             if [ "$MERGEABLE" = "true" ]; then
+              echo "🔀 Attempting to merge PR #$PR_NUMBER..."
               # 尝试合并
               MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
                 -H "Accept: application/vnd.github+json" \
@@ -457,6 +478,8 @@ jobs:
                 }')
 
               MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
+              MERGE_BODY=$(echo "$MERGE_RESPONSE" | head -n-1)
+
               if [ "$MERGE_CODE" = "200" ]; then
                 echo "✅ PR merged successfully"
                 # 第八步：删除远程分支
@@ -470,8 +493,15 @@ jobs:
                   echo "⚠️  Failed to delete remote branch (may already be deleted or protected)"
                 fi
                 exit 0
+              elif [ "$MERGE_CODE" = "405" ]; then
+                # HTTP 405 通常表示 PR 还没有准备好合并，继续等待
+                echo "⏳ PR not ready to merge yet (HTTP 405), waiting..."
+                sleep $CHECK_INTERVAL
+                ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+                continue
               else
                 echo "⚠️  Failed to merge PR (HTTP $MERGE_CODE)"
+                echo "Response: $MERGE_BODY" | jq '.' 2>/dev/null || echo "$MERGE_BODY"
                 echo "Please manually merge: $PR_URL"
                 exit 1
               fi
