@@ -365,7 +365,9 @@ jobs:
         if: steps.check_tag.outputs.needs_increment == 'true'
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 使用 PAT 而不是 GITHUB_TOKEN，这样创建的 PR 可以触发后续的 workflow
+          # 如果 PAT 不存在，回退到 GITHUB_TOKEN（但创建的 PR 不会触发 workflow）
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # 配置 Git
           git config user.name "github-actions[bot]"
@@ -454,7 +456,23 @@ jobs:
             exit 1
           fi
 
-          # 第六步：合并 Pull Request
+          # 第六步（可选）：手动触发 CI workflow
+          # 注意：只有当使用 PAT 创建 PR 时，PR 才会自动触发 CI
+          # 如果使用 GITHUB_TOKEN，需要手动触发 CI
+          if [[ -n "${{ secrets.PAT_TOKEN }}" ]]; then
+            echo "✅ Using PAT to create PR, CI should trigger automatically"
+          else
+            echo "⚠️  Using GITHUB_TOKEN to create PR, CI will not trigger automatically"
+            echo "   To fix this, add a PAT_TOKEN secret with a Personal Access Token"
+            echo "   Then PRs created by CI will automatically trigger CI checks"
+            echo ""
+            echo "   Attempting to manually trigger CI workflow..."
+            # 尝试手动触发 CI workflow（需要 PAT）
+            # 注意：使用 GITHUB_TOKEN 无法触发 workflow，所以这里只是记录信息
+            echo "   Note: Manual trigger requires PAT_TOKEN secret"
+          fi
+
+          # 第七步：合并 Pull Request
           echo "Step 6: Merging Pull Request"
 
           # 等待 PR 可合并（最多等待 2 分钟，每 5 秒检查一次）
@@ -474,7 +492,7 @@ jobs:
 
             if [ "$MERGED" = "true" ]; then
               echo "✅ PR already merged"
-              # 第七步：删除远程分支
+              # 第八步：删除远程分支
               echo "Step 7: Deleting remote branch $BRANCH_NAME"
               # 先切换回 master 分支
               git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
@@ -503,7 +521,7 @@ jobs:
               MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
               if [ "$MERGE_CODE" = "200" ]; then
                 echo "✅ PR merged successfully"
-                # 第七步：删除远程分支
+                # 第八步：删除远程分支
                 echo "Step 7: Deleting remote branch $BRANCH_NAME"
                 # 先切换回 master 分支
                 git checkout master 2>/dev/null || git checkout main 2>/dev/null || true

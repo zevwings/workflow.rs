@@ -5,6 +5,8 @@ on:
     branches:
       - master
       - main
+  # 允许手动触发 CI（用于测试或特殊情况）
+  workflow_dispatch:
 
 # 配置工作流权限，允许读取 PR 信息
 permissions:
