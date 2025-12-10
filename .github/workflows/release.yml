@@ -1,0 +1,1702 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master  # 当合并到 master 分支时触发
+    tags:
+      - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      version:
+        description: 'Version tag (e.g., v0.1.0)'
+        required: true
+
+# 配置工作流权限，允许创建 Release 和更新仓库
+permissions:
+  contents: write  # 允许创建 Release 和上传文件
+  pull-requests: write  # 允许创建 PR（用于版本更新）
+  statuses: write  # 允许创建状态检查（用于满足分支保护规则）
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # 代码质量检查（Lint）
+  check-lint:
+    name: Run check-lint
+    runs-on: ubuntu-latest
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check code format
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargo check
+        run: cargo check
+  #
+  # 运行测试
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          sudo apt-get install -y \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: Run tests
+        run: cargo test --verbose
+  #
+  # 确保所有检查都通过（汇总 job）
+  # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
+  # 如果任何检查失败，此 job 会失败，从而阻止后续操作
+  # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
+  check-status:
+    name: Run check-status
+    runs-on: ubuntu-latest
+    needs: [check-lint, tests]
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Check lint and test status
+        run: |
+          if [ "${{ needs.check-lint.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "❌ Some checks failed:"
+            echo "  Lint: ${{ needs.check-lint.result }}"
+            echo "  Test: ${{ needs.tests.result }}"
+            echo ""
+            echo "Cannot proceed until all checks pass."
+            exit 1
+          fi
+          echo "✅ All checks passed!"
+
+  # 当合并到 master 时自动创建 tag，手动触发时也运行（但不创建 tag）
+  create-tag:
+    name: Run create-tag
+    runs-on: ubuntu-latest
+    needs: [check-status]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.ref == 'refs/heads/master' && github.event_name == 'push')
+    permissions:
+      contents: write  # 允许创建和推送 tag
+      pull-requests: write  # 允许创建和合并 PR（用于版本更新）
+    outputs:
+      tag: ${{ steps.job_outputs.outputs.tag }}
+      tag_created: ${{ steps.job_outputs.outputs.tag_created }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史记录来检查 tag
+          # 使用默认的 GITHUB_TOKEN，有 contents: write 权限，可以推送 tag
+
+      - name: Get version from Cargo.toml
+        id: version
+        shell: bash
+        run: |
+          # 从 Cargo.toml 读取版本号
+          VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Cannot read version from Cargo.toml"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Detect branch type and trigger mode
+        id: detect_mode
+        shell: bash
+        run: |
+          # 检测是否是 feature 分支
+          if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
+            IS_FEATURE_BRANCH="true"
+          else
+            IS_FEATURE_BRANCH="false"
+          fi
+
+          # 检测触发类型
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            IS_MANUAL_TRIGGER="true"
+            INPUT_VERSION="${{ github.event.inputs.version }}"
+            INPUT_VERSION=${INPUT_VERSION#v}
+
+            # 验证版本格式
+            if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
+              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.(alpha|beta)-[0-9]+$ ]]; then
+                echo "❌ Error: Feature branch version must be in format: vx.x.x.alpha-xxx or vx.x.x.beta-xxx"
+                exit 1
+              fi
+            else
+              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "❌ Error: Master branch version must be in standard format: vx.x.x"
+                exit 1
+              fi
+            fi
+
+            SHOULD_CREATE_TAG="false"
+          else
+            IS_MANUAL_TRIGGER="false"
+            if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+              SHOULD_CREATE_TAG="true"
+            else
+              SHOULD_CREATE_TAG="false"
+            fi
+          fi
+
+          echo "is_feature_branch=$IS_FEATURE_BRANCH" >> $GITHUB_OUTPUT
+          echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
+          echo "should_create_tag=$SHOULD_CREATE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Check if tag exists and increment version if needed
+        if: steps.detect_mode.outputs.should_create_tag == 'true'
+        id: check_tag
+        shell: bash
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=false" >> $GITHUB_OUTPUT
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$TAG" >> $GITHUB_OUTPUT
+            else
+              echo "exists=true" >> $GITHUB_OUTPUT
+              echo "needs_increment=true" >> $GITHUB_OUTPUT
+
+              # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
+              IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+              MAJOR="${VERSION_PARTS[0]:-0}"
+              MINOR="${VERSION_PARTS[1]:-0}"
+              PATCH="${VERSION_PARTS[2]:-0}"
+
+              PATCH=$((PATCH + 1))
+              if [ $PATCH -gt 9 ]; then
+                PATCH=0
+                MINOR=$((MINOR + 1))
+              fi
+
+              if [ $MINOR -gt 9 ]; then
+                MINOR=0
+                MAJOR=$((MAJOR + 1))
+              fi
+
+              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+              NEW_TAG="v$NEW_VERSION"
+
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+              echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
+              echo "old_version=$VERSION" >> $GITHUB_OUTPUT
+              echo "old_tag=$TAG" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "needs_increment=false" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Rust
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Update Cargo.toml and Cargo.lock version
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+
+          # 更新 Cargo.toml 中的版本号
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          else
+            sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          fi
+
+          # 验证 Cargo.toml 更新
+          UPDATED_VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
+            echo "❌ Error: Failed to update version in Cargo.toml"
+            exit 1
+          fi
+
+          # 更新 Cargo.lock 中的版本号
+          if grep -q 'name = "workflow"' Cargo.lock; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+              sed -i '' '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            else
+              sed -i '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            fi
+          fi
+
+      - name: Create and merge version update pull request
+        if: steps.check_tag.outputs.needs_increment == 'true'
+        shell: bash
+        env:
+          # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+
+          # 第一步：创建新分支
+          echo "Step 1: Creating branch $BRANCH_NAME"
+          git checkout -b "$BRANCH_NAME"
+
+          # 第二步：添加文件
+          echo "Step 2: Staging Cargo.toml and Cargo.lock"
+          git add Cargo.toml Cargo.lock
+
+          # 第三步：提交更改
+          echo "Step 3: Committing changes"
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+
+          # 第四步：推送到新分支
+          echo "Step 4: Pushing branch to origin"
+          git push origin "$BRANCH_NAME"
+
+          # 第五步：创建 Pull Request（使用 WORKFLOW_PAT 以触发 CI）
+          echo "Step 5: Creating Pull Request"
+          echo "Branch: $BRANCH_NAME"
+          echo "Version: $NEW_VERSION"
+
+          PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $WORKFLOW_PAT" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls" \
+            -d '{
+              "title": "chore: bump version to '"$NEW_VERSION"'",
+              "head": "'"$BRANCH_NAME"'",
+              "base": "master",
+              "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }')
+
+          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
+          PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
+
+          echo "HTTP Status Code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
+            echo "Response body:"
+            echo "$PR_BODY" | jq '.' 2>/dev/null || echo "$PR_BODY"
+
+            # 如果是 422 错误（已存在 PR），尝试查找现有的 PR
+            if [ "$HTTP_CODE" = "422" ]; then
+              echo "Checking for existing PR..."
+              EXISTING_PR=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $WORKFLOW_PAT" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
+
+              PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.[0].number // empty' 2>/dev/null)
+              if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+                PR_URL=$(echo "$EXISTING_PR" | jq -r '.[0].html_url // empty' 2>/dev/null)
+                echo "✅ Found existing PR #$PR_NUMBER: $PR_URL"
+                echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+                echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+                # 继续执行合并步骤
+              else
+                exit 1
+              fi
+            else
+              exit 1
+            fi
+          else
+            # 提取 PR 信息
+            PR_NUMBER=$(echo "$PR_BODY" | jq -r '.number // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
+            PR_URL=$(echo "$PR_BODY" | jq -r '.html_url // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "✅ PR #$PR_NUMBER created: $PR_URL"
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+          fi
+
+          # 确保 PR_NUMBER 已设置
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❌ Error: PR_NUMBER is not set"
+            exit 1
+          fi
+
+          # 使用 WORKFLOW_PAT 创建 PR，CI 会自动触发
+          echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
+
+          # 第七步：合并 Pull Request（使用 GITHUB_TOKEN）
+          echo "Step 6: Merging Pull Request"
+          echo "ℹ️  Using GITHUB_TOKEN to merge PR (workflow has pull-requests: write permission)"
+
+          # 初始等待时间，让 GitHub 有时间更新 PR 状态和触发 CI
+          echo "⏳ Waiting 30s for PR status to be updated..."
+          sleep 30
+
+          # 等待 PR 可合并（最多等待 5 分钟，每 5 秒检查一次）
+          MAX_WAIT=300
+          CHECK_INTERVAL=5
+          ELAPSED=30  # 从 30 秒开始计数，因为已经等待了 30 秒
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # 使用 GITHUB_TOKEN 检查 PR 状态（默认 token，有 read 权限）
+            PR_STATUS=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+            MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+            MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+
+            if [ "$MERGED" = "true" ]; then
+              echo "✅ PR already merged"
+              # 第八步：删除远程分支
+              echo "Step 7: Deleting remote branch $BRANCH_NAME"
+              # 先切换回 master 分支
+              git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+              # 删除远程分支
+              if git push origin --delete "$BRANCH_NAME" 2>/dev/null; then
+                echo "✅ Remote branch $BRANCH_NAME deleted successfully"
+              else
+                echo "⚠️  Failed to delete remote branch (may already be deleted or protected)"
+              fi
+              exit 0
+            fi
+
+            # 如果 mergeable 为 null，说明 GitHub 还在计算状态，继续等待
+            if [ "$MERGEABLE" = "null" ]; then
+              echo "⏳ PR mergeable status is still being calculated (elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            # 如果 mergeable 为 false，说明 PR 有冲突或未通过检查，记录并继续等待
+            if [ "$MERGEABLE" = "false" ]; then
+              echo "⏳ PR is not mergeable yet (may have conflicts or pending checks, elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            if [ "$MERGEABLE" = "true" ]; then
+              echo "🔀 Attempting to merge PR #$PR_NUMBER..."
+              # 尝试合并（使用 GITHUB_TOKEN，workflow 有 pull-requests: write 权限）
+              MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
+                -d '{
+                  "commit_title": "chore: bump version to '"$NEW_VERSION"'",
+                  "commit_message": "Automated version bump to '"$NEW_VERSION"'\n\nMerged via GitHub Actions workflow",
+                  "merge_method": "squash"
+                }')
+
+              MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
+              MERGE_BODY=$(echo "$MERGE_RESPONSE" | head -n-1)
+
+              if [ "$MERGE_CODE" = "200" ]; then
+                echo "✅ PR merged successfully"
+                # 第八步：删除远程分支
+                echo "Step 7: Deleting remote branch $BRANCH_NAME"
+                # 先切换回 master 分支
+                git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+                # 删除远程分支
+                if git push origin --delete "$BRANCH_NAME" 2>/dev/null; then
+                  echo "✅ Remote branch $BRANCH_NAME deleted successfully"
+                else
+                  echo "⚠️  Failed to delete remote branch (may already be deleted or protected)"
+                fi
+                exit 0
+              elif [ "$MERGE_CODE" = "405" ]; then
+                # HTTP 405 通常表示 PR 还没有准备好合并，继续等待
+                echo "⏳ PR not ready to merge yet (HTTP 405), waiting..."
+                sleep $CHECK_INTERVAL
+                ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+                continue
+              else
+                echo "⚠️  Failed to merge PR (HTTP $MERGE_CODE)"
+                echo "Response: $MERGE_BODY" | jq '.' 2>/dev/null || echo "$MERGE_BODY"
+                echo "Please manually merge: $PR_URL"
+                exit 1
+              fi
+            fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT}s"
+          echo "Please manually merge: $PR_URL"
+          exit 1
+
+      - name: Create and push tag
+        if: |
+          steps.detect_mode.outputs.should_create_tag == 'true' &&
+          (steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true')
+        shell: bash
+        run: |
+          TAG="${{ steps.check_tag.outputs.tag }}"
+          echo "Creating tag: $TAG"
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 确保在最新的 master 分支上创建 tag（PR 合并后）
+          echo "📥 Fetching latest changes from origin..."
+          git fetch origin master:master 2>/dev/null || git fetch origin main:main 2>/dev/null || true
+
+          # checkout 到 master 分支
+          echo "🔄 Checking out master branch..."
+          git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+
+          # 拉取最新的代码（包含合并后的提交）
+          echo "⬇️  Pulling latest changes..."
+          git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || true
+
+          # 验证当前提交包含版本更新
+          echo "🔍 Verifying current commit..."
+          LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
+          LATEST_COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Latest commit SHA: $LATEST_COMMIT_SHA"
+          echo "Latest commit message: $LATEST_COMMIT_MSG"
+
+          if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
+            echo "✅ Found version bump commit on master"
+          else
+            echo "⚠️  Warning: Latest commit may not be the version bump commit"
+            echo "   This might happen if PR was merged with a different commit message"
+            echo "   Continuing to create tag on current commit..."
+          fi
+
+          # 创建 tag（基于当前 HEAD，即最新的 master 提交）
+          echo "🏷️  Creating tag $TAG on commit $LATEST_COMMIT_SHA..."
+          git tag "$TAG"
+
+          # 推送 tag（使用 GITHUB_TOKEN，workflow 有 contents: write 权限）
+          echo "📤 Pushing tag: $TAG"
+          echo "ℹ️  Using GITHUB_TOKEN to push tag (workflow has contents: write permission)"
+          git push origin "$TAG"
+
+          echo "✅ Successfully created and pushed tag: $TAG"
+          echo "ℹ️  This tag push will trigger a new workflow run for building and releasing"
+
+      - name: Set job outputs
+        id: job_outputs
+        shell: bash
+        run: |
+          # 如果是 feature 分支手动触发，使用 version 步骤的 outputs，不创建 tag
+          if [[ "${{ steps.detect_mode.outputs.is_feature_branch }}" == "true" && "${{ steps.detect_mode.outputs.is_manual_trigger }}" == "true" ]]; then
+            TAG="${{ steps.version.outputs.tag }}"
+            TAG_CREATED="false"
+            echo "ℹ️  Feature branch manual trigger: using version from Cargo.toml, tag_created=false"
+          elif [[ "${{ steps.detect_mode.outputs.should_create_tag }}" == "true" ]]; then
+            # 正常流程：使用 check_tag 的 outputs
+            TAG="${{ steps.check_tag.outputs.tag }}"
+            TAG_CREATED="false"
+            if [ "${{ steps.check_tag.outputs.exists }}" == "false" ] || [ "${{ steps.check_tag.outputs.needs_increment }}" == "true" ]; then
+              TAG_CREATED="true"
+            fi
+          else
+            # 其他情况（不应该到达这里，但为了安全）
+            TAG="${{ steps.version.outputs.tag }}"
+            TAG_CREATED="false"
+            echo "⚠️  Unexpected condition, using version from Cargo.toml"
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag_created=$TAG_CREATED" >> $GITHUB_OUTPUT
+          echo "✅ Job outputs set: tag=$TAG, tag_created=$TAG_CREATED"
+
+      - name: Skip tag creation
+        if: |
+          steps.detect_mode.outputs.should_create_tag == 'true' &&
+          steps.check_tag.outputs.exists == 'true' &&
+          steps.check_tag.outputs.needs_increment == 'false'
+        shell: bash
+        run: |
+          echo "⏭️  Skipping tag creation: tag ${{ steps.check_tag.outputs.tag }} already exists and points to current commit"
+
+      - name: Skip tag creation (feature branch)
+        if: |
+          steps.detect_mode.outputs.is_feature_branch == 'true' &&
+          steps.detect_mode.outputs.is_manual_trigger == 'true'
+        shell: bash
+        run: |
+          echo "ℹ️  Feature branch manual trigger: skipping tag creation"
+          echo "   Branch: ${{ github.ref }}"
+          echo "   Version: ${{ steps.version.outputs.version }}"
+          echo "   Tag: ${{ steps.version.outputs.tag }}"
+
+  # 构建所有平台的二进制文件
+  build:
+    runs-on: ${{ matrix.os }}
+    needs: [check-status, create-tag]
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macOS-Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macOS-AppleSilicon
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: Linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: Linux-ARM64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: Linux-x86_64-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: Windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: Windows-ARM64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # 如果是 master push 且 create-tag 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
+          # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
+          ref: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 从标签获取版本号
+            VERSION=${GITHUB_REF#refs/tags/}
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 从 create-tag job 的 outputs 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              VERSION="${{ needs.create-tag.outputs.tag }}"
+              # 移除 v 前缀（如果有）
+              VERSION=${VERSION#v}
+            else
+              # 如果 outputs 不可用，从 Cargo.toml 读取
+              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+              if [ -z "$VERSION" ]; then
+                echo "❌ Error: Cannot read version from Cargo.toml"
+                exit 1
+              fi
+            fi
+          else
+            echo "❌ Error: Cannot determine version from context"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version: $VERSION"
+          echo "✅ Tag: v$VERSION"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install musl target (if needed)
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Install cross-compilation toolchain (Linux ARM64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
+          # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
+          # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
+
+      - name: Install system dependencies (Linux x86_64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            python3-pip \
+            python3-xcbgen \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            pkg-config
+          # 验证 xcb-proto 包和 Python 已正确安装
+          echo "🔍 Verifying xcb-proto package installation..."
+          # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+          if dpkg -l | grep -q "^ii.*xcb-proto"; then
+            echo "✅ xcb-proto package is installed"
+            # 验证协议文件目录存在
+            if [ -d "/usr/share/xcb" ]; then
+              echo "✅ xcb protocol files directory found: /usr/share/xcb"
+              # 列出一些协议文件以确认
+              PROTO_COUNT=$(find /usr/share/xcb -name "*.xml" 2>/dev/null | wc -l)
+              if [ "$PROTO_COUNT" -gt 0 ]; then
+                echo "✅ Found $PROTO_COUNT protocol XML files"
+              else
+                echo "⚠️  Warning: No protocol XML files found in /usr/share/xcb"
+              fi
+            else
+              echo "⚠️  Warning: /usr/share/xcb directory not found"
+              # 尝试查找实际位置
+              XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ Found xcb protocol directory at: $XCB_PROTO_DIR"
+              fi
+            fi
+          else
+            echo "❌ Error: xcb-proto package is not installed"
+            echo "   Please ensure xcb-proto package is installed via apt-get"
+            exit 1
+          fi
+          python3 --version || echo "⚠️  Python3 not found"
+          # 验证 xcbgen Python 模块是否可用（xcb crate 构建脚本需要）
+          echo "🔍 Checking for xcbgen Python module..."
+          if python3 -c "import xcbgen" 2>/dev/null; then
+            echo "✅ xcbgen Python module is importable"
+            # 显示模块位置
+            python3 -c "import xcbgen; print(f'xcbgen location: {xcbgen.__file__}')" 2>/dev/null || true
+          else
+            echo "❌ Error: xcbgen Python module is not importable"
+            echo "   This is required for xcb crate to build"
+            echo "   Please ensure python3-xcbgen package is installed"
+            # 尝试查找 xcbgen 模块的位置
+            XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+            if [ -n "$XCBGEN_PATH" ]; then
+              echo "   Found xcbgen directory at: $XCBGEN_PATH"
+              echo "   Trying to add to PYTHONPATH..."
+              export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+              echo "   PYTHONPATH: $PYTHONPATH"
+              # 再次尝试导入
+              if python3 -c "import xcbgen" 2>/dev/null; then
+                echo "✅ xcbgen module is now importable after setting PYTHONPATH"
+              else
+                echo "❌ xcbgen still not importable"
+                exit 1
+              fi
+            else
+              echo "   xcbgen directory not found"
+              exit 1
+            fi
+          fi
+          # 验证 pkg-config 能找到 xcb 库
+          pkg-config --exists xcb && echo "✅ xcb pkg-config found" || echo "⚠️  xcb pkg-config not found"
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # 检查 pkg-config 是否已安装，避免重复安装警告
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
+
+      - name: Get Cargo.lock hash
+        id: cargo_lock
+        shell: bash
+        run: |
+          if [ -f "Cargo.lock" ]; then
+            # macOS 使用 shasum，Linux 使用 sha256sum
+            if command -v shasum >/dev/null 2>&1; then
+              HASH=$(shasum -a 256 Cargo.lock | cut -d' ' -f1 | head -c 16)
+            else
+              HASH=$(sha256sum Cargo.lock | cut -d' ' -f1 | head -c 16)
+            fi
+            echo "hash=$HASH" >> $GITHUB_OUTPUT
+          else
+            echo "hash=no-lock" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ steps.cargo_lock.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ matrix.target }}-
+
+      - name: Build release binaries
+        shell: bash
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+        run: |
+          # 为 Linux x86_64 设置 xcb 构建环境
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔍 Setting up xcb build environment..."
+            # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+            # xcb crate 的构建脚本使用 Python 的 xcbgen 模块来读取这些文件
+            # 验证 xcb-proto 包已安装（协议文件）
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 查找协议文件目录（通常在 /usr/share/xcb/）
+              XCB_PROTO_DIR="/usr/share/xcb"
+              if [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                # 设置环境变量指向协议文件目录（如果 xcb crate 需要）
+                export XCB_PROTO_DIR="$XCB_PROTO_DIR"
+              else
+                # 尝试查找实际位置
+                XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+                if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                  echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                  export XCB_PROTO_DIR="$XCB_PROTO_DIR"
+                else
+                  echo "⚠️  Warning: xcb protocol directory not found, but package is installed"
+                fi
+              fi
+            else
+              echo "❌ Error: xcb-proto package is not installed"
+              exit 1
+            fi
+            # 设置 PKG_CONFIG_PATH 确保能找到 xcb 库
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            echo "✅ PKG_CONFIG_PATH set to: $PKG_CONFIG_PATH"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            echo "🔍 Checking for xcbgen Python module..."
+            # 首先尝试直接导入
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen module is importable"
+              # 显示模块位置以便调试
+              python3 -c "import xcbgen; import os; print(f'xcbgen location: {os.path.dirname(xcbgen.__file__)}')" 2>/dev/null || true
+              # 确保 PYTHONPATH 包含模块路径
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+                echo "✅ PYTHONPATH set to include xcbgen: $PYTHONPATH"
+              fi
+            else
+              echo "⚠️  xcbgen not directly importable, trying to locate..."
+              # 尝试查找并添加 xcbgen 路径
+              XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_PATH" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+                echo "   Found xcbgen at: $XCBGEN_PATH"
+                echo "   PYTHONPATH set to: $PYTHONPATH"
+                # 再次验证
+                if python3 -c "import xcbgen" 2>/dev/null; then
+                  echo "✅ xcbgen module is now importable"
+                else
+                  echo "❌ xcbgen still not importable after setting PYTHONPATH"
+                  echo "   Trying alternative method..."
+                  # 尝试通过 pip 安装（如果可用）
+                  python3 -m pip install --user xcbgen 2>/dev/null || true
+                  if python3 -c "import xcbgen" 2>/dev/null; then
+                    echo "✅ xcbgen installed via pip"
+                  else
+                    echo "❌ xcbgen installation failed"
+                    exit 1
+                  fi
+                fi
+              else
+                echo "   xcbgen module directory not found"
+                echo "   Checking installed packages..."
+                dpkg -l | grep -i xcb || echo "   No xcb packages found"
+                echo "   Attempting to install python3-xcbgen..."
+                sudo apt-get install -y python3-xcbgen || {
+                  echo "❌ Failed to install python3-xcbgen"
+                  exit 1
+                }
+                # 再次尝试
+                if python3 -c "import xcbgen" 2>/dev/null; then
+                  echo "✅ xcbgen module is now importable after installation"
+                else
+                  echo "❌ xcbgen still not importable"
+                  exit 1
+                fi
+              fi
+            fi
+          fi
+          # 设置交叉编译环境变量（仅 Linux ARM64）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            echo "🔧 Cross-compiling for Linux ARM64"
+            echo "ℹ️  Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
+            # 测试：注释掉 remove_xcb_deps.py 脚本调用
+            # 理论上，Cargo.toml 中的条件编译应该已经禁用了 clipboard 依赖
+            # 如果构建失败，说明仍然需要这个脚本，需要取消注释下面的代码
+            echo "🧪 Testing: Skipping Cargo.lock modification (relying on conditional compilation in Cargo.toml)"
+            echo "ℹ️  If build fails, the remove_xcb_deps.py script may still be needed"
+            # 对于 Linux ARM64，我们需要确保 Cargo 不会尝试编译 xcb
+            # 由于条件编译配置，clipboard 依赖应该被排除，但 Cargo.lock 可能仍然包含它
+            # 解决方案：临时从 Cargo.lock 中移除这些依赖，构建后再恢复
+            # if [ -f "Cargo.lock" ]; then
+            #   # 检查 Python3 是否可用
+            #   if ! command -v python3 >/dev/null 2>&1; then
+            #     echo "❌ python3 is required but not found"
+            #     exit 1
+            #   fi
+            #   cp Cargo.lock Cargo.lock.backup
+            #   echo "📝 Backed up Cargo.lock"
+            #   # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
+            #   # 以及从其他包的 dependencies 中移除对这些包的引用
+            #   # Python 脚本更可靠，能更好地处理 TOML 格式
+            #   # 添加超时机制（120秒），防止脚本卡住
+            #   echo "🔄 Processing Cargo.lock to remove xcb dependencies..."
+            #   timeout 120 python3 .github/scripts/remove_xcb_deps.py || {
+            #     EXIT_CODE=$?
+            #     if [ $EXIT_CODE -eq 124 ]; then
+            #       echo "❌ Script timed out after 120 seconds"
+            #       echo "⚠️  This may indicate a performance issue with the script"
+            #     else
+            #       echo "❌ Script failed with exit code $EXIT_CODE"
+            #     fi
+            #     exit $EXIT_CODE
+            #   }
+            #
+            #   if [ $? -ne 0 ]; then
+            #     echo "⚠️  Failed to process Cargo.lock, restoring backup"
+            #     if [ -f "Cargo.lock.backup" ]; then
+            #       mv Cargo.lock.backup Cargo.lock
+            #       echo "✅ Restored Cargo.lock from backup"
+            #     fi
+            #     echo "❌ Cannot proceed without removing xcb dependencies"
+            #     exit 1
+            #   fi
+            #
+            #   # 验证 Cargo.lock 仍然有效（至少应该能解析基本结构）
+            #   if ! grep -q '^\[\[package\]\]' Cargo.lock; then
+            #     echo "❌ Cargo.lock appears corrupted after processing"
+            #     if [ -f "Cargo.lock.backup" ]; then
+            #       mv Cargo.lock.backup Cargo.lock
+            #       echo "✅ Restored Cargo.lock from backup"
+            #     fi
+            #     exit 1
+            #   fi
+            # fi
+          fi
+          # 构建前验证（仅 Linux x86_64）
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔍 Pre-build verification for xcb dependencies..."
+            # 重新设置环境变量（因为每个 step 是独立的 shell）
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+              fi
+            fi
+            # 验证 xcb-proto 包已安装
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 验证协议文件目录存在
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol directory: $XCB_PROTO_DIR"
+                # 列出一些协议文件
+                echo "   Protocol files found:"
+                ls -1 "$XCB_PROTO_DIR"/*.xml 2>/dev/null | head -5 | xargs -n1 basename || echo "   (none found)"
+              else
+                echo "⚠️  Warning: XCB_PROTO_DIR not set or directory not found"
+              fi
+            else
+              echo "❌ xcb-proto package is not installed"
+              exit 1
+            fi
+            # 验证 Python
+            if command -v python3 >/dev/null 2>&1; then
+              echo "✅ python3: $(which python3)"
+            else
+              echo "❌ python3 not found"
+              exit 1
+            fi
+            # 验证 xcbgen Python 模块（必需）
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen Python module is importable"
+              python3 -c "import xcbgen; import os; print(f'   xcbgen location: {os.path.dirname(xcbgen.__file__)}')" 2>/dev/null || true
+            else
+              echo "❌ Error: xcbgen module not importable"
+              echo "   This is required for xcb crate to build"
+              echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+              echo "   Python path: $(python3 -c 'import sys; print(":".join(sys.path))' 2>/dev/null || echo 'unknown')"
+              exit 1
+            fi
+            # 验证 pkg-config
+            if pkg-config --exists xcb; then
+              echo "✅ xcb libraries found via pkg-config"
+              pkg-config --modversion xcb
+            else
+              echo "⚠️  Warning: xcb not found via pkg-config"
+            fi
+            # 显示最终环境变量
+            echo "📋 Environment variables for build:"
+            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
+            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
+            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+          fi
+          # 构建项目
+          # 对于 Linux x86_64，启用详细输出以便调试 xcb 构建问题
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔨 Building with verbose output for xcb debugging..."
+            # 确保环境变量在构建时可用
+            # xcb crate 的构建脚本需要这些环境变量
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_PATH=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_PATH" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+              fi
+            fi
+            # 清理之前的构建缓存，避免缓存问题
+            echo "🧹 Cleaning xcb build artifacts..."
+            # 清理 xcb 包的构建缓存
+            cargo clean -p xcb 2>/dev/null || true
+            # 也清理构建输出目录中的 xcb 相关文件
+            rm -rf target/${{ matrix.target }}/release/build/xcb-* 2>/dev/null || true
+            rm -rf target/${{ matrix.target }}/release/deps/libxcb-* 2>/dev/null || true
+            # 显示最终的环境变量设置
+            echo "📋 Final environment variables:"
+            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
+            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
+            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+            echo "   Python version: $(python3 --version 2>&1 || echo "unknown")"
+            echo "   Python xcbgen: $(python3 -c 'import xcbgen; print("OK")' 2>&1 || echo "FAILED")"
+            # 验证 Python 版本兼容性（xcbgen 需要 Python 3.6+）
+            PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "unknown")
+            echo "   Python version check: $PYTHON_VERSION"
+            if [ "$PYTHON_VERSION" != "unknown" ]; then
+              MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+              if [ "$MAJOR" -lt 3 ] || ([ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 6 ]); then
+                echo "⚠️  Warning: Python version $PYTHON_VERSION may be too old for xcbgen"
+              else
+                echo "✅ Python version $PYTHON_VERSION is compatible"
+              fi
+            fi
+            # 测试 xcbgen 是否能正常工作
+            echo "🧪 Testing xcbgen functionality..."
+            if python3 -c "import xcbgen; import os; import sys; proto_dir = '${XCB_PROTO_DIR}'; print('✅ Protocol directory exists:', proto_dir) if os.path.isdir(proto_dir) else (print('❌ Protocol directory not found:', proto_dir), sys.exit(1)); import xcbgen.state, xcbgen.xtypes; print('✅ xcbgen modules imported successfully')" 2>/dev/null; then
+              echo "✅ xcbgen test passed"
+            else
+              echo "⚠️  xcbgen test failed, but continuing with build..."
+            fi
+            # 构建
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed. Checking build log for xcb-related errors..."
+              grep -i "xcb\|xproto\|big_requests\|xcbgen\|xc_misc\|render\|shape\|xfixes" build.log || echo "No xcb-related errors found in log"
+              # 显示构建脚本输出（如果有）
+              echo "📋 Checking for build script errors..."
+              grep -i "error\|warning\|failed" build.log | head -20 || true
+            fi
+          else
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+            fi
+          fi
+
+          # 恢复 Cargo.lock（如果备份存在，无论构建成功与否都要恢复）
+          # 测试：注释掉恢复逻辑，因为不再创建备份
+          # if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]] && [ -f "Cargo.lock.backup" ]; then
+          #   mv Cargo.lock.backup Cargo.lock
+          #   echo "✅ Restored Cargo.lock from backup"
+          # fi
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
+
+      - name: Create package directory
+        shell: bash
+        run: |
+          mkdir -p package
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            cp target/${{ matrix.target }}/release/workflow.exe package/
+            cp target/${{ matrix.target }}/release/install.exe package/
+            echo "✅ Copied workflow.exe and install.exe to package/"
+          else
+            cp target/${{ matrix.target }}/release/workflow package/
+            cp target/${{ matrix.target }}/release/install package/
+            echo "✅ Copied workflow and install binaries to package/"
+          fi
+
+      - name: Create archive (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $archiveName = "workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          $archivePath = Join-Path $PWD $archiveName
+          # 进入 package 目录
+          Push-Location package
+          try {
+            # 打包 workflow.exe 和 install.exe 两个二进制文件
+            Compress-Archive -Path "workflow.exe", "install.exe" -DestinationPath $archivePath -Force
+            # 显示文件信息
+            $fileInfo = Get-Item $archivePath
+            Write-Host "📦 Archive created: $archiveName"
+            Write-Host "   Size: $([math]::Round($fileInfo.Length / 1MB, 2)) MB"
+            # 验证打包内容
+            Write-Host "📦 Archive contents:"
+            $verifyPath = Join-Path $env:TEMP "workflow-verify"
+            Expand-Archive -Path $archivePath -DestinationPath $verifyPath -Force
+            Get-ChildItem $verifyPath | ForEach-Object { Write-Host "   $($_.Name)" }
+            Remove-Item $verifyPath -Recurse -Force
+          } finally {
+            Pop-Location
+          }
+
+      - name: Create archive (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          cd package
+          ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          # 打包 workflow 和 install 两个二进制文件
+          tar czf "../$ARCHIVE_NAME" workflow install
+          cd ..
+          ls -lh "$ARCHIVE_NAME"
+          # 验证打包内容
+          echo "📦 Archive contents:"
+          tar tzf "$ARCHIVE_NAME"
+
+      - name: Calculate SHA256
+        id: sha256
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          else
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          fi
+          if [[ "${{ matrix.os }}" == "macos-latest" ]]; then
+            SHA256=$(shasum -a 256 "$ARCHIVE_NAME" | cut -d' ' -f1)
+          elif [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            # Windows: 使用 PowerShell 计算 SHA256
+            SHA256=$(powershell -Command "(Get-FileHash -Path '$ARCHIVE_NAME' -Algorithm SHA256).Hash")
+          else
+            SHA256=$(sha256sum "$ARCHIVE_NAME" | cut -d' ' -f1)
+          fi
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "platform=${{ matrix.platform }}" >> $GITHUB_OUTPUT
+          echo "archive=$ARCHIVE_NAME" >> $GITHUB_OUTPUT
+          echo "SHA256 for ${{ matrix.platform }}: $SHA256"
+
+      - name: Save SHA256 to file
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.zip"
+          else
+            ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
+          fi
+          echo "${{ steps.sha256.outputs.sha256 }}" > sha256-${{ matrix.platform }}.txt
+          echo "${{ matrix.platform }}" >> sha256-${{ matrix.platform }}.txt
+          echo "$ARCHIVE_NAME" >> sha256-${{ matrix.platform }}.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
+          retention-days: 30
+
+      - name: Upload SHA256
+        uses: actions/upload-artifact@v4
+        with:
+          name: sha256-${{ matrix.platform }}
+          path: |
+            sha256-${{ matrix.platform }}.txt
+          retention-days: 30
+
+  # 创建 GitHub Release 并上传所有二进制文件
+  release:
+    name: Run create-release
+    needs: [create-tag, build]
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    permissions:
+      contents: write  # 允许创建 Release 和上传文件
+      pull-requests: read  # 读取 PR（如果需要）
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 从标签获取版本号
+            VERSION=${GITHUB_REF#refs/tags/}
+            # 移除 v 前缀（如果有）
+            VERSION=${VERSION#v}
+          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 从 create-tag job 的 outputs 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              VERSION="${{ needs.create-tag.outputs.tag }}"
+              # 移除 v 前缀（如果有）
+              VERSION=${VERSION#v}
+            else
+              # 如果 outputs 不可用，从 Cargo.toml 读取
+              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+              if [ -z "$VERSION" ]; then
+                echo "❌ Error: Cannot read version from Cargo.toml"
+                exit 1
+              fi
+            fi
+          else
+            echo "❌ Error: Cannot determine version from context"
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version: $VERSION"
+          echo "✅ Tag: v$VERSION"
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        shell: bash
+        run: |
+          mkdir -p release-assets
+          # 复制压缩包文件
+          find artifacts -name "workflow-*.tar.gz" -exec cp {} release-assets/ \;
+          find artifacts -name "workflow-*.zip" -exec cp {} release-assets/ \;
+
+          # 为每个压缩包创建对应的 .sha256 文件
+          cd release-assets
+          for archive in workflow-*.tar.gz workflow-*.zip; do
+            if [ -f "$archive" ]; then
+              # 从文件名提取平台信息（例如：workflow-1.3.4-macOS-AppleSilicon.tar.gz -> macOS-AppleSilicon）
+              PLATFORM=$(echo "$archive" | sed -E 's/workflow-[0-9]+\.[0-9]+\.[0-9]+-(.+)\.(tar\.gz|zip)/\1/')
+
+              # 查找对应的 SHA256 文件（artifacts 目录结构：artifacts/sha256-{platform}/sha256-{platform}.txt）
+              SHA256_FILE=$(find ../artifacts -path "*/sha256-$PLATFORM/sha256-$PLATFORM.txt" | head -1)
+
+              if [ -f "$SHA256_FILE" ]; then
+                # 提取第一行（哈希值）
+                SHA256_HASH=$(head -n 1 "$SHA256_FILE")
+                # 创建 .sha256 文件（只包含哈希值，符合 parse_hash_from_content 的期望格式）
+                echo "$SHA256_HASH" > "${archive}.sha256"
+                echo "✅ Created ${archive}.sha256: $SHA256_HASH"
+              else
+                echo "⚠️  Warning: SHA256 file not found for $archive (platform: $PLATFORM)"
+                echo "   Searched in: $(find ../artifacts -name "*$PLATFORM*" -type f 2>/dev/null | head -5)"
+              fi
+            fi
+          done
+          cd ..
+
+          if [ -z "$(ls -A release-assets)" ]; then
+            echo "Error: No release assets found!"
+            exit 1
+          fi
+          echo "📦 Release assets prepared:"
+          ls -lh release-assets/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          make_latest: true
+          body: |
+            ## Release ${{ steps.version.outputs.tag }}
+
+            ### Downloads
+
+            #### macOS
+            - **macOS Intel**: [workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz)
+            - **macOS Apple Silicon**: [workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz)
+
+            #### Linux
+            - **Linux x86_64 (glibc)**: [workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz) - For most Linux distributions (Ubuntu, Debian, Fedora, CentOS, etc.)
+            - **Linux ARM64**: [workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz) - For ARM64 servers (AWS Graviton, Raspberry Pi 4+, etc.)
+            - **Linux x86_64 (static/musl)**: [workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz) - Static binary for Alpine Linux, Docker containers, or older distributions
+
+            #### Windows
+            - **Windows x86_64**: [workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip) - For Windows 10/11 (64-bit, Intel/AMD)
+            - **Windows ARM64**: [workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip) - For Windows on ARM devices (Surface Pro X, Surface Laptop Studio, etc.)
+
+            ### Installation
+
+            #### macOS
+
+            ```bash
+            # Download and extract
+            # For Intel Mac
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-Intel.tar.gz
+            # For Apple Silicon Mac
+            # curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-macOS-AppleSilicon.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-*.tar.gz
+
+            # Install binaries and completions
+            ./install
+            ```
+
+            #### Linux
+
+            **For most Linux distributions (Ubuntu, Debian, Fedora, CentOS, etc.):**
+            ```bash
+            # Download and extract x86_64 version
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-x86_64.tar.gz
+            ./install
+            ```
+
+            **For ARM64 servers (AWS Graviton, Raspberry Pi 4+, etc.):**
+            ```bash
+            # Download and extract ARM64 version
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-ARM64.tar.gz
+            ./install
+            ```
+
+            **For Alpine Linux, Docker containers, or older distributions:**
+            ```bash
+            # Download and extract static version (musl)
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz
+            tar xzf workflow-${{ steps.version.outputs.version }}-Linux-x86_64-static.tar.gz
+            ./install
+            ```
+
+            #### Windows
+
+            **For Windows x86_64 (Intel/AMD):**
+
+            **Using PowerShell:**
+            ```powershell
+            # Download and extract
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip" -OutFile "workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip"
+            Expand-Archive -Path "workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip" -DestinationPath "."
+
+            # Install binaries and completions
+            .\install.exe
+            ```
+
+            **For Windows ARM64 (Surface Pro X, Surface Laptop Studio, etc.):**
+
+            **Using PowerShell:**
+            ```powershell
+            # Download and extract
+            Invoke-WebRequest -Uri "https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip" -OutFile "workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip"
+            Expand-Archive -Path "workflow-${{ steps.version.outputs.version }}-Windows-ARM64.zip" -DestinationPath "."
+
+            # Install binaries and completions
+            .\install.exe
+            ```
+
+            **Using Command Prompt (x86_64):**
+            ```cmd
+            # Download using curl (if available) or use a browser
+            curl -LO https://github.com/${{ github.repository }}/releases/download/${{ steps.version.outputs.tag }}/workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip
+
+            # Extract using PowerShell (or use 7-Zip/WinRAR)
+            powershell -Command "Expand-Archive -Path 'workflow-${{ steps.version.outputs.version }}-Windows-x86_64.zip' -DestinationPath '.'"
+
+            # Install binaries and completions
+            install.exe
+            ```
+
+            **Note:** After installation, you may need to add `%LOCALAPPDATA%\Programs\workflow\bin` to your PATH environment variable.
+
+            ### Homebrew (macOS only)
+
+            Install via Homebrew:
+            ```bash
+            brew tap ${{ github.repository_owner }}/workflow
+            brew install workflow
+            ```
+          files: release-assets/*
+          draft: false
+          prerelease: false
+
+  # 自动更新 Homebrew Formula
+  update-homebrew:
+    name: Run update-homebrew
+    needs: [create-tag, build, release]
+    runs-on: ubuntu-latest
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    permissions:
+      contents: write  # 允许推送到 homebrew-workflow 仓库
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version and detect install type
+        id: version
+        shell: bash
+        run: |
+          # 检测是 tag 还是 branch
+          # 优先检查是否是从 create-tag job 创建的 tag（在 master push 时）
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
+            # 在 master push 时，如果 create-tag job 创建了 tag，应该使用 tag
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              INSTALL_TYPE="tag"
+              VERSION_REF="${{ needs.create-tag.outputs.tag }}"
+              VERSION="${VERSION_REF#v}"  # 移除 v 前缀
+              echo "✅ Detected as TAG from create-tag job: $VERSION_REF"
+            else
+              # 如果没有创建 tag，则使用 branch
+              INSTALL_TYPE="branch"
+              VERSION_REF="${GITHUB_REF#refs/heads/}"
+              VERSION="0.0.0-dev"
+              echo "✅ Detected as BRANCH: $VERSION_REF"
+              echo "ℹ️  Using default version for branch: $VERSION"
+            fi
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # 是 tag push 触发的 workflow
+            INSTALL_TYPE="tag"
+            VERSION_REF="${GITHUB_REF#refs/tags/}"
+            VERSION="${VERSION_REF#v}"  # 移除 v 前缀
+            echo "✅ Detected as TAG: $VERSION_REF"
+          elif [[ "${{ github.ref }}" == refs/heads/* ]]; then
+            # 是 branch push 触发的 workflow（非 master，或 master 但没有创建 tag）
+            INSTALL_TYPE="branch"
+            VERSION_REF="${GITHUB_REF#refs/heads/}"
+            # 对于 branch，版本号可以从 workflow_dispatch input 或使用默认版本
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              VERSION="${{ github.event.inputs.version }}"
+            else
+              # 对于 branch，使用默认版本号（因为 branch 名可能包含特殊字符，不适合作为 version）
+              # 可以将 branch 名转换为有效的版本号格式，或使用固定的开发版本号
+              # 例如：zw/update-completions -> 0.0.0-dev (或者使用日期等)
+              VERSION="0.0.0-dev"
+            fi
+            echo "✅ Detected as BRANCH: $VERSION_REF"
+            echo "ℹ️  Using default version for branch: $VERSION"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # 手动触发，默认使用 tag
+            INSTALL_TYPE="tag"
+            VERSION_REF="${{ github.event.inputs.version }}"
+            VERSION="${VERSION_REF#v}"
+            echo "✅ Manual trigger, using as TAG: $VERSION_REF"
+          else
+            echo "❌ Error: Cannot determine install type from ${{ github.ref }}"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "install_type=$INSTALL_TYPE" >> $GITHUB_OUTPUT
+          echo "version_ref=$VERSION_REF" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo ""
+          echo "Install Type: $INSTALL_TYPE"
+          echo "Version Ref: $VERSION_REF"
+          echo "Version: $VERSION"
+
+      # 注意：使用 git tag 方式时，不需要 SHA256 校验
+      # 因为 Homebrew 会直接从 git 仓库 checkout 指定的 tag
+
+      - name: Check WORKFLOW_PAT
+        id: check_token
+        shell: bash
+        env:
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$WORKFLOW_PAT" ]; then
+            echo "❌ Error: WORKFLOW_PAT secret is not configured"
+            echo ""
+            echo "Please configure WORKFLOW_PAT secret:"
+            echo "1. Go to: Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: WORKFLOW_PAT"
+            echo "4. Value: Your Personal Access Token (PAT) with 'repo' scope"
+            echo ""
+            echo "To create a PAT:"
+            echo "1. Go to: https://github.com/settings/tokens"
+            echo "2. Click 'Generate new token (classic)'"
+            echo "3. Select 'repo' scope (full control of private repositories)"
+            echo "4. Copy the token and add it as WORKFLOW_PAT secret"
+            exit 1
+          else
+            echo "✅ WORKFLOW_PAT is configured"
+          fi
+
+      - name: Checkout homebrew-workflow
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-workflow
+          path: homebrew-workflow
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: Update Formula from template
+        shell: bash
+        run: |
+          # 模板文件和目标文件路径
+          TEMPLATE_FILE="homebrew/Formula.template"
+          FORMULA_FILE="homebrew-workflow/Formula/workflow.rb"
+
+          # 检查模板文件是否存在
+          if [ ! -f "$TEMPLATE_FILE" ]; then
+            echo "❌ Error: Template file not found at $TEMPLATE_FILE"
+            echo "Make sure homebrew/Formula.template exists in the source repository"
+            exit 1
+          fi
+
+          # 确保 homebrew-workflow/Formula 目录存在
+          mkdir -p homebrew-workflow/Formula
+
+          # 备份现有的 Formula 文件（如果存在）
+          if [ -f "$FORMULA_FILE" ]; then
+            cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+            echo "📦 Backed up existing Formula file"
+          fi
+
+          # 从模板生成 URL 行
+          INSTALL_TYPE="${{ steps.version.outputs.install_type }}"
+          VERSION_REF="${{ steps.version.outputs.version_ref }}"
+
+          if [[ "$INSTALL_TYPE" == "tag" ]]; then
+            URL_LINE="url \"https://github.com/${{ github.repository }}.git\", tag: \"$VERSION_REF\""
+          elif [[ "$INSTALL_TYPE" == "branch" ]]; then
+            URL_LINE="url \"https://github.com/${{ github.repository }}.git\", branch: \"$VERSION_REF\""
+          else
+            echo "❌ Error: Invalid install type: $INSTALL_TYPE"
+            exit 1
+          fi
+
+          echo "🔧 Generated URL line: $URL_LINE"
+
+          # 从模板生成 Formula 文件
+          echo "📝 Generating Formula file from template..."
+          sed -e "s|{{VERSION}}|${{ steps.version.outputs.version }}|g" \
+              -e "s|{{INSTALL_TYPE}}|$INSTALL_TYPE|g" \
+              -e "s|{{VERSION_REF}}|$VERSION_REF|g" \
+              -e "s|{{URL_LINE}}|$URL_LINE|g" \
+              "$TEMPLATE_FILE" > "$FORMULA_FILE"
+
+          echo "✅ Formula file generated from template"
+
+          cd homebrew-workflow
+
+          # 更新为相对于 homebrew-workflow 目录的路径
+          FORMULA_FILE="Formula/workflow.rb"
+
+          # 验证文件结构（确保没有语法错误）
+          echo "🔍 Validating Formula file structure..."
+          if ! ruby -c "$FORMULA_FILE" 2>/dev/null; then
+            echo "❌ Error: Formula file has syntax errors"
+            ruby -c "$FORMULA_FILE" || true
+            exit 1
+          fi
+          echo "✅ Formula file syntax is valid"
+
+          # 显示生成的 Formula 文件
+          echo ""
+          echo "📄 Generated Formula file:"
+          echo "--- Formula/workflow.rb ---"
+          cat "$FORMULA_FILE"
+          echo ""
+
+          # 显示更改（如果有备份）
+          if [ -f "$FORMULA_FILE.bak" ]; then
+            echo "--- Diff (Before vs After) ---"
+            diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+          fi
+
+      - name: Commit and push changes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          cd homebrew-workflow
+
+          # 配置 Git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # 检查是否有更改
+          git add Formula/workflow.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Formula file is already up to date."
+            exit 0
+          fi
+
+          # 验证 Formula 文件格式
+          if ! brew audit --strict Formula/workflow.rb 2>/dev/null; then
+            echo "Warning: brew audit failed, but continuing..."
+          fi
+
+          # 提交更改
+          git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
+
+          # 检测当前分支名称
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch: $CURRENT_BRANCH"
+
+          # actions/checkout@v4 已经设置了正确的远程 URL，直接推送即可
+          # 推送更改到当前分支
+          echo "Pushing to branch: $CURRENT_BRANCH"
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
+          else
+            echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
+            echo "Remote URL: $(git remote get-url origin | sed 's|://.*@|://***@|')"
+            echo "Branch: $CURRENT_BRANCH"
+            echo "Git status:"
+            git status
+            echo "Git log:"
+            git log --oneline -5
+            echo ""
+            echo "Possible issues:"
+            echo "1. WORKFLOW_PAT may not have write access to ${{ github.repository_owner }}/homebrew-workflow"
+            echo "2. Token may have expired or been revoked"
+            echo "3. Repository may not exist or be accessible"
+            exit 1
+          fi
+
+          echo "✅ Homebrew Formula updated successfully!"
