@@ -270,7 +270,7 @@ let delay = (1 << retry_count).min(60);
   - **命令文档**：`{MODULE}_COMMAND_ARCHITECTURE.md`（如 `PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`）
   - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `DEVELOPMENT_GUIDELINES.md`、`DOCUMENT_GUIDELINES.md`）
   - **需求文档**：`{FEATURE}_REQUIREMENT.md` 或 `{FEATURE}_REQUIREMENTS.md`（如 `GITHUB_BRANCH_PREFIX_REPO_BASED_REQUIREMENT.md`）
-  - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `CONFIG_TODO.md`、`GIT_TODO.md`、`JIRA_TODO.md`）
+  - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `JIRA_TODO.md`、`INTEGRATION_TODO.md`）
 
 ### 函数命名
 

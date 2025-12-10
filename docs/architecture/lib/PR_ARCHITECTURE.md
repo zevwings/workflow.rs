@@ -281,7 +281,7 @@ let provider = create_provider()?;
 if let Some(pr_id) = provider.get_current_branch_pull_request()? {
     // 获取 PR 详细信息
     let info = provider.get_pull_request_info(&pr_id)?;
-    println!("PR URL: {}", info.url);
+    log_message!("PR URL: {}", info.url);
 }
 ```
 
@@ -437,11 +437,11 @@ let provider = create_provider()?;
 
 // 获取当前分支的 PR ID
 if let Some(pr_id) = provider.get_current_branch_pull_request()? {
-    println!("Current branch has PR: {}", pr_id);
+    log_message!("Current branch has PR: {}", pr_id);
 
     // 获取 PR 状态
     let status = provider.get_pull_request_status(&pr_id)?;
-    println!("PR status: {}, merged: {}", status.state, status.merged);
+    log_message!("PR status: {}, merged: {}", status.state, status.merged);
 }
 ```
 
@@ -454,7 +454,7 @@ let provider = create_provider()?;
 
 // 列出所有打开的 PR
 let prs = provider.get_pull_requests(Some("open"), Some(10))?;
-println!("{}", prs);
+log_message!("{}", prs);
 ```
 
 ### 使用辅助函数
@@ -505,7 +505,7 @@ let output = TableBuilder::new(pr_rows)
     .with_title("Pull Requests")
     .with_style(TableStyle::Modern)
     .render();
-println!("{}", output);
+log_message!("{}", output);
 ```
 
 ### 使用 LLM 生成标题
@@ -515,7 +515,7 @@ use workflow::pr::PullRequestLLM;
 
 let llm = PullRequestLLM::new()?;
 let title = llm.generate_title("PROJ-123", "This is a description of the feature")?;
-println!("Generated title: {}", title);
+log_message!("Generated title: {}", title);
 ```
 
 ---

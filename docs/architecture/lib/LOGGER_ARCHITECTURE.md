@@ -234,7 +234,7 @@ src/lib/base/logger/
    - 日志级别控制：`LogLevel` 枚举
 
 2. ✅ **实现简单**：代码量适中（约 848 行），逻辑清晰，易于维护
-   - 直接使用 `println!`/`eprintln!` 和 tracing 封装
+   - 使用日志宏（`log_*!`）和 tracing 封装
    - 职责分离，易于理解
    - 无需自定义 formatter
 
@@ -350,7 +350,7 @@ Logger::print_success("Operation completed")
   ↓
 success("Operation completed") - 格式化（添加绿色和 ✓ 图标）
   ↓
-println!("✓ Operation completed") - 输出到控制台
+log_success!("Operation completed") - 输出到控制台（通过日志系统）
 ```
 
 #### 2. Lib 层记录调试日志
@@ -554,7 +554,7 @@ impl Logger {
     pub fn print_trace(message: impl fmt::Display) {
         let current_level = LogLevel::current();
         if current_level.should_log(LogLevel::Trace) {
-            println!("{}", trace(message));
+            log_message!("{}", trace(message));
         }
     }
 }

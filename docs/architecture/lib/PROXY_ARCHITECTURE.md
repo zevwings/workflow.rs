@@ -315,19 +315,19 @@ use workflow::ProxyManager;
 // 开启代理（持久化模式）
 let result = ProxyManager::enable(false)?;
 if let Some(cmd) = result.proxy_command {
-    println!("Run: eval $({})", cmd);
+    log_message!("Run: eval $({})", cmd);
 }
 
 // 开启代理（临时模式）
 let result = ProxyManager::enable(true)?;
 if let Some(cmd) = result.proxy_command {
-    println!("Run: {}", cmd);
+    log_message!("Run: {}", cmd);
 }
 
 // 关闭代理
 let result = ProxyManager::disable()?;
 if let Some(cmd) = result.unset_command {
-    println!("Run: {}", cmd);
+    log_message!("Run: {}", cmd);
 }
 
 // 检查代理
@@ -350,7 +350,7 @@ let proxy_info = SystemProxyReader::read()?;
 for proxy_type in workflow::ProxyType::all() {
     if let Some(config) = proxy_info.get_config(proxy_type) {
         if config.enable {
-            println!("{}: {}:{}",
+            log_message!("{}: {}:{}",
                 proxy_type.env_key(),
                 config.address.as_deref().unwrap_or("N/A"),
                 config.port.map(|p| p.to_string()).unwrap_or_else(|| "N/A".to_string())
@@ -370,13 +370,13 @@ let proxy_info = SystemProxyReader::read()?;
 
 // 生成代理命令
 if let Some(cmd) = ProxyConfigGenerator::generate_command(&proxy_info) {
-    println!("Command: {}", cmd);
+    log_message!("Command: {}", cmd);
 }
 
 // 生成环境变量
 let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
 for (key, value) in &env_vars {
-    println!("{}={}", key, value);
+    log_message!("{}={}", key, value);
 }
 ```
 

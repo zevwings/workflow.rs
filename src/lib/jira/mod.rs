@@ -45,7 +45,10 @@ pub use history::{JiraWorkHistory, WorkHistoryEntry};
 pub use status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
 pub use table::{AttachmentRow, FileRow};
 pub use types::{
-    JiraAttachment, JiraComment, JiraComments, JiraIssue, JiraIssueFields, JiraTransition, JiraUser,
+    JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraComment,
+    JiraComments, JiraComponent, JiraIssue, JiraIssueFields, JiraIssueLink, JiraIssueLinkType,
+    JiraIssueRef, JiraPriority, JiraSubtask, JiraSubtaskFields, JiraTimeTracking, JiraTransition,
+    JiraUser, JiraVersion,
 };
 
 /// Jira 客户端（向后兼容别名）

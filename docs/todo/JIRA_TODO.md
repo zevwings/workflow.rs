@@ -6,106 +6,8 @@
 
 ---
 
-## ✅ 已完成功能
-
-- ✅ `jira info` - 显示 ticket 基本信息
-- ✅ `jira attachments` - 下载附件
-- ✅ `jira clean` - 清理本地数据
-- ✅ JIRA API：`transition`、`assign`、`add_comment`（已实现，待封装为命令）
-
----
 
 ## ❌ 待实现功能
-
-### 1. `jira info` 增强功能
-
-#### 1.1 显示更多字段
-- ❌ 优先级（Priority）
-- ❌ 创建/更新时间（Created/Updated）
-- ❌ 报告人/指派人（Reporter/Assignee）
-- ❌ 标签（Labels）
-- ❌ 组件（Components）
-- ❌ 修复版本（Fix Versions）
-- ❌ 关联的 Issues（Linked Issues）
-- ❌ 子任务列表（Subtasks）
-- ❌ 时间跟踪（Time Tracking）
-
-**实现建议**：
-```rust
-// 在 src/lib/jira/types.rs 中扩展 JiraIssueFields
-pub struct JiraIssueFields {
-    // ... 现有字段
-    pub priority: Option<JiraPriority>,
-    pub created: Option<String>,
-    pub updated: Option<String>,
-    pub reporter: Option<JiraUser>,
-    pub assignee: Option<JiraUser>,
-    pub labels: Option<Vec<String>>,
-    pub components: Option<Vec<JiraComponent>>,
-    pub fix_versions: Option<Vec<JiraVersion>>,
-    pub issuelinks: Option<Vec<JiraIssueLink>>,
-    pub subtasks: Option<Vec<JiraSubtask>>,
-    pub time_tracking: Option<JiraTimeTracking>,
-}
-```
-
-#### 1.2 评论详情展示
-- ❌ 显示评论列表（作者、时间、内容）
-- ❌ 支持分页显示（`--limit`、`--offset`）
-- ❌ 支持按时间排序（`--sort`）
-- ❌ 支持过滤（`--author`、`--since`）
-
-**命令示例**：
-```bash
-workflow jira info PROJ-123 --comments          # 显示所有评论
-workflow jira info PROJ-123 --comments --limit 10  # 只显示最近 10 条
-workflow jira info PROJ-123 --comments --author user@example.com  # 过滤作者
-```
-
-#### 1.3 变更历史（Changelog）
-- ❌ 显示 ticket 的状态变更历史
-- ❌ 显示字段变更记录
-
-**命令示例**：
-```bash
-workflow jira info PROJ-123 --changelog        # 显示变更历史
-workflow jira info PROJ-123 --changelog --field status  # 只显示状态变更
-```
-
-**实现建议**：
-- 使用 JIRA API `/issue/{issueIdOrKey}/changelog` 端点
-- 解析 changelog 数据，格式化显示
-
-#### 1.4 自定义字段支持
-- ❌ 支持显示和查询自定义字段
-
-**命令示例**：
-```bash
-workflow jira info PROJ-123 --custom-fields    # 显示所有自定义字段
-workflow jira info PROJ-123 --field customfield_10001  # 显示特定自定义字段
-```
-
-#### 1.5 输出格式支持
-- ❌ JSON 格式输出
-- ❌ YAML 格式输出
-- ❌ Markdown 格式输出
-
-**命令示例**：
-```bash
-workflow jira info PROJ-123                    # 默认表格格式
-workflow jira info PROJ-123 --json             # JSON 格式
-workflow jira info PROJ-123 --yaml             # YAML 格式
-workflow jira info PROJ-123 --markdown         # Markdown 格式
-```
-
-#### 1.6 关联信息展示
-- ❌ 显示关联的 PR
-- ❌ 显示关联的分支
-
-**命令示例**：
-```bash
-workflow jira info PROJ-123 --related         # 显示关联的 PR、分支
-```
 
 ---
 
@@ -128,23 +30,6 @@ workflow jira assign PROJ-123 --unassign             # 取消分配
 - 支持用户名、邮箱、account_id 等多种输入方式
 - 支持交互式选择用户（从项目成员列表）
 
-#### 2.2 `jira comment` - 添加评论
-- ❌ 封装为 CLI 命令（API 已实现）
-
-**当前状态**：`JiraTicket::add_comment()` 已实现，但未封装为 CLI 命令。
-
-**命令示例**：
-```bash
-workflow jira comment PROJ-123 "Fixed the bug"      # 添加评论
-workflow jira comment PROJ-123 --editor              # 使用编辑器输入评论
-workflow jira comment PROJ-123 --file comment.txt    # 从文件读取评论
-```
-
-**实现建议**：
-- 在 `src/commands/jira/` 下创建 `comment.rs`
-- 支持多行输入、编辑器输入、文件输入
-- 支持 Markdown 格式（如果 JIRA 支持）
-
 #### 2.3 `jira create` - 创建 ticket
 - ❌ 创建新的 JIRA ticket
 
@@ -160,21 +45,6 @@ workflow jira create --interactive                    # 交互式创建
 - 支持必填字段验证
 - 支持模板（从现有 ticket 复制字段）
 
-#### 2.4 `jira list` - 列出 tickets
-- ❌ 列出项目中的 tickets（按状态、指派人等过滤）
-
-**命令示例**：
-```bash
-workflow jira list --project PROJ                      # 列出项目所有 tickets
-workflow jira list --project PROJ --status "In Progress"  # 按状态过滤
-workflow jira list --project PROJ --assignee me        # 按指派人过滤
-workflow jira list --project PROJ --limit 20           # 限制数量
-```
-
-**实现建议**：
-- 基于 `jira search` 实现，提供更友好的过滤选项
-- 支持表格、列表、卡片等多种显示格式
-
 #### 2.5 `jira watch` - 关注/取消关注
 - ❌ 关注或取消关注 ticket
 
@@ -187,23 +57,6 @@ workflow jira watch --list                             # 列出关注的 tickets
 
 **实现建议**：
 - 使用 JIRA API `/issue/{issueIdOrKey}/watchers` 端点
-
-#### 2.6 `jira transition` - 状态转换
-- ❌ 封装为 CLI 命令（API 已实现）
-
-**当前状态**：`JiraTicket::transition()` 已实现，但未封装为 CLI 命令。
-
-**命令示例**：
-```bash
-workflow jira transition PROJ-123 "In Progress"     # 转换到指定状态
-workflow jira transition PROJ-123 --list             # 列出可用状态
-workflow jira transition PROJ-123 --auto             # 自动转换到下一个状态
-```
-
-**实现建议**：
-- 在 `src/commands/jira/` 下创建 `transition.rs`
-- 在 `src/lib/cli/mod.rs` 的 `JiraSubcommand` 中添加 `Transition` 子命令
-- 调用 `JiraTicket::transition()` 或 `JiraTicket::get_transitions()`
 
 #### 2.7 `jira update` - 更新 ticket
 - ❌ 更新 ticket 的字段（summary、description、priority 等）
@@ -219,28 +72,6 @@ workflow jira update PROJ-123 --labels "bug,urgent"    # 更新标签
 **实现建议**：
 - 使用 JIRA API `/issue/{issueIdOrKey}` PUT 端点
 - 支持批量更新多个字段
-
-#### 2.8 `jira search` - JQL 搜索
-- ❌ 使用 JQL（Jira Query Language）搜索 tickets
-
-**命令示例**：
-```bash
-workflow jira search "project = PROJ AND status = Open"  # JQL 搜索
-workflow jira search "assignee = currentUser()"         # 搜索分配给自己的
-workflow jira search --saved "my-open-tickets"          # 使用保存的查询
-workflow jira search --interactive                       # 交互式构建查询
-```
-
-**实现建议**：
-- 使用 JIRA API `/search` GET 端点
-- 支持保存常用查询
-- 支持交互式查询构建器
-
-**关联功能**：
-- **动态补全支持**：`jira_ticket_keys()` 方法需要此 API 支持
-  - 位置：`src/lib/completion/dynamic.rs`
-  - 用途：为 `jira info` 等命令提供 ticket key 的自动补全
-  - 依赖：`JiraIssueApi::search_issues()` 方法（需要在 `src/lib/jira/api/issue.rs` 中实现）
 
 #### 2.9 `jira link` - 关联 tickets
 - ❌ 关联或取消关联 tickets
@@ -312,11 +143,9 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 - 支持自定义状态转换规则
 
 #### 3.3 多种触发条件
-- ❌ PR 创建时触发
-- ❌ PR 合并时触发
 - ❌ PR 关闭时触发
 
-**当前状态**：PR 创建和合并时已支持自动更新 JIRA 状态。✅ 已实现
+**当前状态**：PR 创建和合并时已支持自动更新 JIRA 状态。
 
 **拓展**：
 - 支持更多触发条件
@@ -335,19 +164,11 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ### 高优先级
 1. **JIRA 命令封装**（已有 API，封装即可）
-   - `jira transition` - 状态转换（API 已实现，待封装为命令）
    - `jira assign` - 分配 ticket
-   - `jira comment` - 添加评论
    - `jira create` - 创建 ticket
-
-2. **JIRA info 增强**
-   - 显示更多字段（优先级、创建时间、指派人等）
-   - 评论详情展示
 
 ### 中优先级
 1. **JIRA 搜索和列表**
-   - `jira search` - JQL 搜索（**支持动态补全功能**）
-   - `jira list` - 列出 tickets
    - `jira watch` - 关注/取消关注
 
 2. **JIRA 更新和关联**
@@ -370,15 +191,10 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ### 开发顺序
 1. **第一阶段**：封装已有 API 为命令
-   - `jira transition` - 状态转换
    - `jira assign` - 分配 ticket
-   - `jira comment` - 添加评论
    - `jira create` - 创建 ticket
 
 2. **第二阶段**：增强现有功能
-   - `jira info` 显示更多字段
-   - `jira info` 评论详情展示
-   - `jira search` - JQL 搜索（**实现后支持动态补全的 `jira_ticket_keys()`**）
    - `jira update` - 更新 ticket
 
 3. **第三阶段**：集成增强和高级功能
@@ -399,8 +215,9 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ## 📚 相关文档
 
-- [Git 工作流待办事项](./GIT_TODO.md)
-- [工作流自动化待办事项](./WORKFLOW_TODO.md)
+- [JIRA 命令需求文档](../requirements/JIRA_COMMANDS.md) - 已转换为需求文档
+- [Git 工作流需求文档](../requirements/GIT_WORKFLOW.md)
+- [模板系统需求文档](../requirements/TEMPLATE_SYSTEM.md)
 - [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)
 
 ---

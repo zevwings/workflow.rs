@@ -37,7 +37,7 @@ impl LLMShowCommand {
             key: llm_config.key.clone(),
             language: llm_config.language.clone(),
         }];
-        println!(
+        log_message!(
             "{}",
             TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );

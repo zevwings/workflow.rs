@@ -1,10 +1,11 @@
-use crate::base::dialog::InputDialog;
 use crate::base::indicator::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{log_break, log_info, log_success};
 use anyhow::{Context, Result};
 use std::sync::{Arc, Mutex};
+
+use super::helpers::get_jira_id;
 
 /// 下载附件命令
 pub struct AttachmentsCommand;
@@ -13,13 +14,7 @@ impl AttachmentsCommand {
     /// 下载所有附件
     pub fn download(jira_id: Option<String>) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
-        let jira_id = if let Some(id) = jira_id {
-            id
-        } else {
-            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
-                .prompt()
-                .context("Failed to read Jira ticket ID")?
-        };
+        let jira_id = get_jira_id(jira_id, None)?;
 
         // 先获取附件列表以确定总数
         let attachments =

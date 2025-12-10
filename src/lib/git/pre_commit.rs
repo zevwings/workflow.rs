@@ -7,6 +7,7 @@ use duct::cmd;
 use super::commit::GitCommit;
 use super::repo::GitRepo;
 use crate::base::indicator::Spinner;
+use crate::{log_break, log_error, log_success, trace_debug};
 
 /// Pre-commit 执行结果
 #[derive(Debug, Clone)]
@@ -184,10 +185,10 @@ impl GitPreCommit {
 
                     // 显示错误输出
                     if !filtered_stderr.trim().is_empty() {
-                        eprintln!("\n{}", filtered_stderr);
+                        log_error!("\n{}", filtered_stderr);
                     }
                     if !stdout.trim().is_empty() {
-                        eprintln!("{}", stdout);
+                        log_error!("{}", stdout);
                     }
 
                     anyhow::bail!("{}", error_msg);
@@ -195,7 +196,7 @@ impl GitPreCommit {
                 anyhow::bail!("Pre-commit checks failed");
             } else {
                 // 配置文件存在但 pre-commit 命令不可用，回退到 Git hooks
-                crate::trace_debug!(
+                trace_debug!(
                     ".pre-commit-config.yaml exists but pre-commit command not found, falling back to Git hooks"
                 );
                 // 继续执行下面的 Git hooks 检查
@@ -244,11 +245,11 @@ impl GitPreCommit {
 
                 // 显示错误输出
                 if !stderr.trim().is_empty() {
-                    eprintln!("\n{}", stderr);
+                    log_error!("\n{}", stderr);
                     error_msg.push_str(&format!("\n\n{}", stderr));
                 }
                 if !stdout.trim().is_empty() {
-                    eprintln!("{}", stdout);
+                    log_error!("{}", stdout);
                     if !error_msg.contains(&stdout.to_string()) {
                         error_msg.push_str(&format!("\n{}", stdout));
                     }
@@ -258,7 +259,7 @@ impl GitPreCommit {
             }
         } else {
             // 没有 pre-commit hooks，跳过
-            crate::trace_debug!("No pre-commit hooks found, skipping");
+            trace_debug!("No pre-commit hooks found, skipping");
             Ok(PreCommitResult {
                 executed: false,
                 messages: vec![],
@@ -281,8 +282,8 @@ impl GitPreCommit {
             // 使用 Spinner 显示执行过程
             Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;
 
-            crate::log_success!("Pre-commit checks passed");
-            crate::log_break!();
+            log_success!("Pre-commit checks passed");
+            log_break!();
         }
         Ok(())
     }
