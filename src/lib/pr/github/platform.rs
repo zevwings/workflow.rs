@@ -215,7 +215,10 @@ impl PlatformProvider for GitHub {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
         let current_branch = GitBranch::current_branch()?;
 
-        // 使用 head 参数查找当前分支的 PR
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+
+        // 首先尝试查找 open 状态的 PR
         let url = format!(
             "{}/repos/{}/{}/pulls?head={}:{}&state=open",
             Self::base_url(),
@@ -225,20 +228,41 @@ impl PlatformProvider for GitHub {
             current_branch
         );
 
-        let client = HttpClient::global()?;
-        let headers = Self::get_headers(None)?;
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
-
         let response = client.get(&url, config)?;
-        // 如果 API 查询成功，返回结果
         let prs: Vec<PullRequestInfo> =
             response.ensure_success_with(handle_github_error)?.as_json()?;
         if let Some(pr) = prs.first() {
             return Ok(Some(pr.number.to_string()));
         }
 
-        // 如果 API 查询没有找到 open 状态的 PR，尝试从 work-history 文件中查找
-        // 这可以处理已关闭或已合并的 PR
+        // 如果找不到 open 状态的 PR，尝试查找所有状态的 PR（包括 closed/merged）
+        // 这可以处理 PR 已合并但远程分支已删除的情况
+        let url_all = format!(
+            "{}/repos/{}/{}/pulls?head={}:{}&state=all",
+            Self::base_url(),
+            owner,
+            repo_name,
+            owner,
+            current_branch
+        );
+
+        let config_all = RequestConfig::<Value, Value>::new().headers(&headers);
+        let response_all = client.get(&url_all, config_all)?;
+        let prs_all: Vec<PullRequestInfo> =
+            response_all.ensure_success_with(handle_github_error)?.as_json()?;
+        if let Some(pr) = prs_all.first() {
+            crate::trace_debug!(
+                "Found PR #{} for branch '{}' (state: {})",
+                pr.number,
+                current_branch,
+                pr.state
+            );
+            return Ok(Some(pr.number.to_string()));
+        }
+
+        // 如果 API 查询没有找到任何状态的 PR，尝试从 work-history 文件中查找
+        // 这可以处理已关闭或已合并的 PR（作为最后的备选方案）
         let remote_url = GitRepo::get_remote_url().ok();
         if let Some(pr_id) =
             JiraWorkHistory::find_pr_id_by_branch(&current_branch, remote_url.as_deref())?
