@@ -528,7 +528,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 创建 tag
+          # 确保在最新的 master 分支上创建 tag（PR 合并后）
+          echo "📥 Fetching latest changes from origin..."
+          git fetch origin master:master 2>/dev/null || git fetch origin main:main 2>/dev/null || true
+
+          # checkout 到 master 分支
+          echo "🔄 Checking out master branch..."
+          git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+
+          # 拉取最新的代码（包含合并后的提交）
+          echo "⬇️  Pulling latest changes..."
+          git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || true
+
+          # 验证当前提交包含版本更新
+          echo "🔍 Verifying current commit..."
+          LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
+          LATEST_COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Latest commit SHA: $LATEST_COMMIT_SHA"
+          echo "Latest commit message: $LATEST_COMMIT_MSG"
+
+          if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
+            echo "✅ Found version bump commit on master"
+          else
+            echo "⚠️  Warning: Latest commit may not be the version bump commit"
+            echo "   This might happen if PR was merged with a different commit message"
+            echo "   Continuing to create tag on current commit..."
+          fi
+
+          # 创建 tag（基于当前 HEAD，即最新的 master 提交）
+          echo "🏷️  Creating tag $TAG on commit $LATEST_COMMIT_SHA..."
           git tag "$TAG"
 
           # 推送 tag
