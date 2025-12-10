@@ -1,0 +1,242 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - master
+      - main
+  # 允许手动触发 CI（用于测试或特殊情况）
+  workflow_dispatch:
+
+# 配置工作流权限，允许读取 PR 信息
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # 允许创建 bump-version-* PR 的用户（必须与 WORKFLOW_PAT 的所有者匹配）
+  # 可以通过 Repository Variables 设置 WORKFLOW_USER_NAME 来覆盖默认值
+  # 默认值：使用仓库所有者（github.repository_owner）
+  WORKFLOW_USER_NAME: ${{ vars.WORKFLOW_USER_NAME || github.repository_owner }}
+
+jobs:
+  # 检查是否应该跳过 CI（只检查版本更新分支）
+  check-skip-ci:
+    name: Check skip CI
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.should_skip }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史来检查提交者
+
+      - name: Check if version bump branch
+        id: check
+        run: |
+          # 只检查是否是版本更新分支（bump-version-*）
+          if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
+            # 验证分支是否由 CI 创建
+            PR_CREATOR="${{ github.event.pull_request.user.login }}"
+            WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
+
+            if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
+              echo "❌ Error: bump-version-* branches can only be created by authorized user"
+              echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
+              exit 1
+            fi
+
+            echo "should_skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_skip=false" >> $GITHUB_OUTPUT
+          fi
+  # 代码质量检查（Lint）
+  check-lint:
+    name: Run check-lint
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 验证 xcb-proto 和 Python 已正确安装
+          which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
+          python3 --version || echo "⚠️  Python3 not found"
+
+      - name: Check code format
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargo check
+        run: cargo check
+
+  # 运行测试
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 验证 xcb-proto 和 Python 已正确安装
+          which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
+          python3 --version || echo "⚠️  Python3 not found"
+
+      - name: Run tests
+        run: cargo test --verbose
+
+  # 确保所有检查都通过（汇总 job）
+  # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
+  # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
+  # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
+  check-status:
+    name: Run check-status
+    runs-on: ubuntu-latest
+    # 对于所有 PR 都运行此 job，包括版本更新分支的情况
+    # 这样 GitHub 会报告状态，满足分支保护规则的要求
+    # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
+    needs: [check-skip-ci, check-lint, tests]
+    if: always()
+    steps:
+      - name: Check lint and test status
+        id: status_check
+        run: |
+          set +e  # 允许命令失败，继续执行
+
+          # 获取所有相关 job 的结果（如果 job 未运行，result 可能为空）
+          SKIP_CI_RESULT="${{ needs.check-skip-ci.result }}"
+          SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
+          LINT_RESULT="${{ needs.check-lint.result }}"
+          TEST_RESULT="${{ needs.tests.result }}"
+
+          # 优先级1: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
+            exit 0
+          fi
+
+          # 优先级2: 如果 check-skip-ci 成功且 should_skip 为 true，直接通过
+          if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
+            exit 0
+          fi
+
+          # 检查是否有失败的检查
+          if [ -n "$LINT_RESULT" ] && [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
+            echo "❌ Lint check failed: $LINT_RESULT"
+            exit 1
+          fi
+
+          if [ -n "$TEST_RESULT" ] && [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
+            echo "❌ Test check failed: $TEST_RESULT"
+            exit 1
+          fi
+
+          exit 0
