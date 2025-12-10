@@ -146,7 +146,7 @@ jobs:
           fi
           echo "✅ All checks passed!"
 
-  # 当合并到 master 时自动创建 tag，或手动触发时也运行（提供 outputs）
+  # 当合并到 master 时自动创建 tag，手动触发时也运行（但不创建 tag）
   create-tag:
     name: Run create-tag
     runs-on: ubuntu-latest
@@ -201,38 +201,33 @@ jobs:
             IS_MANUAL_TRIGGER="true"
             echo "✅ Manual trigger detected"
 
-            # 如果是 feature 分支手动触发，验证版本格式并跳过 tag 创建
-            if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
-              INPUT_VERSION="${{ github.event.inputs.version }}"
-              # 移除 v 前缀
-              INPUT_VERSION=${INPUT_VERSION#v}
+            # 手动触发时，不创建 tag，只提供 outputs 供 build 使用
+            INPUT_VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀
+            INPUT_VERSION=${INPUT_VERSION#v}
 
-              # 验证 feature 分支的版本格式必须包含 alpha 或 beta 后缀
+            # 验证版本格式
+            if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
+              # feature 分支的版本格式必须包含 alpha 或 beta 后缀
               if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.(alpha|beta)-[0-9]+$ ]]; then
                 echo "❌ Error: Feature branch version must be in format: vx.x.x.alpha-xxx or vx.x.x.beta-xxx"
                 echo "   Provided: ${{ github.event.inputs.version }}"
                 echo "   Example: v0.0.1.alpha-001 or v0.0.1.beta-001"
                 exit 1
               fi
-
-              SHOULD_CREATE_TAG="false"
-              echo "ℹ️  Feature branch manual trigger: will skip tag creation"
-              echo "   Version format validated: ${{ github.event.inputs.version }}"
             else
-              # master 分支手动触发，验证版本格式为标准格式（不含 alpha/beta）
-              INPUT_VERSION="${{ github.event.inputs.version }}"
-              INPUT_VERSION=${INPUT_VERSION#v}
-
+              # master 分支的版本格式为标准格式（不含 alpha/beta）
               if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
                 echo "❌ Error: Master branch version must be in standard format: vx.x.x"
                 echo "   Provided: ${{ github.event.inputs.version }}"
                 echo "   Example: v0.1.0"
                 exit 1
               fi
-
-              SHOULD_CREATE_TAG="true"
-              echo "ℹ️  Master branch manual trigger: will create tag if needed"
             fi
+
+            SHOULD_CREATE_TAG="false"
+            echo "ℹ️  Manual trigger: will skip tag creation (direct build only)"
+            echo "   Version format validated: ${{ github.event.inputs.version }}"
           else
             # push 事件，只在 master 分支创建 tag
             IS_MANUAL_TRIGGER="false"
@@ -607,7 +602,7 @@ jobs:
   # 构建所有平台的二进制文件
   build:
     runs-on: ${{ matrix.os }}
-    needs: create-tag
+    needs: [check-status, create-tag]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
       github.event_name == 'workflow_dispatch' ||
@@ -642,9 +637,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # 如果 create-tag job 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
+          # 如果是 master push 且 create-tag 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
           # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
-          ref: ${{ (needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
+          ref: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
 
       - name: Get version from tag
         id: version
@@ -1240,7 +1235,6 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
-      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write  # 允许创建 Release 和上传文件
