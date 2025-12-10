@@ -2,14 +2,14 @@
 //!
 //! 本模块提供了 LLM 客户端实现，支持所有遵循 OpenAI 兼容格式的提供商。
 
+use std::sync::OnceLock;
+
 use anyhow::{Context, Result};
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
-use std::sync::OnceLock;
 
 use super::types::{ChatCompletionResponse, LLMRequestParams};
-use crate::log_debug;
 use crate::{base::http::HttpResponse, base::settings::defaults::default_llm_model, Settings};
 
 /// LLM 客户端
@@ -38,11 +38,17 @@ impl LLMClient {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::llm::LLMClient;
+    /// use workflow::base::llm::{LLMClient, LLMRequestParams};
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = LLMClient::global();
-    /// let params = LLMRequestParams::new("What is Rust?");
+    /// let params = LLMRequestParams {
+    ///     user_prompt: "What is Rust?".to_string(),
+    ///     ..Default::default()
+    /// };
     /// let response = client.call(&params)?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn global() -> &'static Self {
         static CLIENT: OnceLock<LLMClient> = OnceLock::new();
@@ -81,10 +87,10 @@ impl LLMClient {
         // 获取 provider 名称用于错误消息
         let provider = self.get_provider_name()?;
 
-        log_debug!("LLM url: {}", url);
-        log_debug!("LLM payload: {}", payload);
-        log_debug!("LLM headers: {:?}", headers);
-        log_debug!("LLM provider: {}", provider);
+        crate::trace_debug!("LLM url: {}", url);
+        crate::trace_debug!("LLM payload: {}", payload);
+        crate::trace_debug!("LLM headers: {:?}", headers);
+        crate::trace_debug!("LLM provider: {}", provider);
 
         // 发送请求
         let mut request = client.post(&url);
@@ -102,10 +108,17 @@ impl LLMClient {
         // 转换为 HttpResponse
         let http_response = HttpResponse::from_reqwest_response(response)?;
 
-        // 检查错误
-        if !http_response.is_success() {
-            return self.handle_error(&http_response);
-        }
+        // 检查错误（使用 ensure_success_with 统一处理）
+        let http_response = http_response.ensure_success_with(|r| {
+            let provider = self.get_provider_name().unwrap_or_else(|_| "unknown".to_string());
+            let error_message = r.extract_error_message();
+            anyhow::anyhow!(
+                "LLM API request failed ({}): {} - {}",
+                provider,
+                r.status,
+                error_message
+            )
+        })?;
 
         // 解析 JSON 响应
         let data: Value = http_response.as_json()?;
@@ -128,11 +141,8 @@ impl LLMClient {
             "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
             "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
             "proxy" => {
-                let base_url = settings
-                    .llm
-                    .url
-                    .as_ref()
-                    .context("LLM proxy URL is not configured")?;
+                let base_url =
+                    settings.llm.url.as_ref().context("LLM proxy URL is not configured")?;
                 Ok(format!(
                     "{}/chat/completions",
                     base_url.trim_end_matches('/')
@@ -168,16 +178,10 @@ impl LLMClient {
         let provider = &settings.llm.provider;
 
         match provider.as_str() {
-            "openai" | "deepseek" => Ok(settings
-                .llm
-                .model
-                .clone()
-                .unwrap_or_else(|| default_llm_model(provider))),
-            "proxy" => settings
-                .llm
-                .model
-                .clone()
-                .context("Model is required for proxy provider"),
+            "openai" | "deepseek" => {
+                Ok(settings.llm.model.clone().unwrap_or_else(|| default_llm_model(provider)))
+            }
+            "proxy" => settings.llm.model.clone().context("Model is required for proxy provider"),
             _ => settings.llm.model.clone().context("Model is required"),
         }
     }
@@ -235,48 +239,5 @@ impl LLMClient {
     fn get_provider_name(&self) -> Result<String> {
         let settings: &Settings = Settings::get();
         Ok(settings.llm.provider.clone())
-    }
-
-    /// 处理错误响应
-    fn handle_error(&self, response: &HttpResponse) -> Result<String> {
-        let provider = self
-            .get_provider_name()
-            .unwrap_or_else(|_| "unknown".to_string());
-
-        // 尝试解析错误响应为 JSON，提取详细的错误信息
-        let error_message = match response.as_json::<Value>() {
-            Ok(error_json) => {
-                // 尝试提取常见的错误字段
-                let error_detail = error_json
-                    .get("error")
-                    .and_then(|e| e.get("message"))
-                    .and_then(|m| m.as_str())
-                    .or_else(|| error_json.get("error").and_then(|e| e.as_str()))
-                    .or_else(|| error_json.get("message").and_then(|m| m.as_str()));
-
-                if let Some(detail) = error_detail {
-                    format!(
-                        "{} (details: {})",
-                        serde_json::to_string(&error_json).unwrap_or_default(),
-                        detail
-                    )
-                } else {
-                    serde_json::to_string(&error_json).unwrap_or_default()
-                }
-            }
-            Err(_) => {
-                // 如果不是 JSON，尝试作为文本解析
-                response
-                    .as_text()
-                    .unwrap_or_else(|_| String::from_utf8_lossy(response.as_bytes()).to_string())
-            }
-        };
-
-        anyhow::bail!(
-            "LLM API request failed ({}): {} - {}",
-            provider,
-            response.status,
-            error_message
-        );
     }
 }

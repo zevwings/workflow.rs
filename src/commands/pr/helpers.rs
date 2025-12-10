@@ -2,10 +2,37 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::base::settings::settings::Settings;
+use crate::commands::branch::BranchConfig;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
+
+/// 处理 stash_pop 的结果
+///
+/// 统一处理 `GitStash::stash_pop()` 的返回结果，显示消息和警告。
+///
+/// # 参数
+///
+/// * `result` - `stash_pop()` 的返回结果
+pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
+    match result {
+        Ok(result) => {
+            if result.restored {
+                if let Some(ref msg) = result.message {
+                    log_success!("{}", msg);
+                }
+            }
+            // 显示警告信息
+            for warning in &result.warnings {
+                log_warning!("{}", warning);
+            }
+        }
+        Err(e) => {
+            log_warning!("Failed to restore stashed changes: {}", e);
+            log_info!("You may need to manually restore: git stash pop");
+        }
+    }
+}
 
 /// 检查错误是否表示 PR 已合并
 ///
@@ -157,7 +184,7 @@ pub fn cleanup_branch(
     // 6. 恢复 stash
     if has_stashed {
         log_info!("Restoring stashed changes...");
-        let _ = GitStash::stash_pop(); // 日志已在 stash_pop 中处理
+        handle_stash_pop_result(GitStash::stash_pop());
     }
 
     // 7. 清理远程分支引用
@@ -192,7 +219,7 @@ pub fn cleanup_branch(
 /// # 示例
 ///
 /// ```
-/// use crate::commands::pr::helpers::apply_branch_name_prefixes;
+/// use workflow::commands::pr::helpers::apply_branch_name_prefixes;
 ///
 /// // 只有基础分支名
 /// let name = apply_branch_name_prefixes("feature-branch".to_string(), None)?;
@@ -206,19 +233,24 @@ pub fn cleanup_branch(
 /// // 假设配置了 github_branch_prefix = "user"
 /// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
 /// // 返回: "user/PROJ-123-feature-branch"
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn apply_branch_name_prefixes(
     mut branch_name: String,
     jira_ticket: Option<&str>,
 ) -> Result<String> {
+    // 检测并提示设置 branch_prefix（如果需要）
+    // 注意：此函数不会中断流程，即使出错也会继续
+    let _ = crate::commands::branch::check_and_prompt_branch_prefix();
+
     // 如果有 Jira ticket，添加到分支名前缀
     if let Some(ticket) = jira_ticket {
         branch_name = format!("{}-{}", ticket, branch_name);
     }
 
-    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-    let settings = Settings::get();
-    if let Some(prefix) = settings.github.get_current_branch_prefix() {
+    // 如果有仓库级别的 branch_prefix，添加前缀
+    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
+    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
         let trimmed = prefix.trim();
         if !trimmed.is_empty() {
             branch_name = format!("{}/{}", trimmed, branch_name);
@@ -245,11 +277,12 @@ pub fn apply_branch_name_prefixes(
 /// # Examples
 ///
 /// ```no_run
-/// use crate::commands::pr::helpers::detect_base_branch;
+/// use workflow::commands::pr::helpers::detect_base_branch;
 ///
 /// // Detect which branch test-rebase is based on (excluding master)
 /// let base = detect_base_branch("test-rebase", "master")?;
 /// // May return: Some("develop-")
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<String>> {
     log_info!("Detecting base branch for '{}'...", branch);

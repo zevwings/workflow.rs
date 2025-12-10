@@ -2,9 +2,9 @@
 //!
 //! 提供 GitHub 账号管理的共享逻辑，减少代码重复。
 
+use crate::base::dialog::InputDialog;
 use crate::base::settings::settings::GitHubAccount;
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 收集 GitHub 账号信息
 ///
@@ -22,59 +22,45 @@ use dialoguer::Input;
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account() -> Result<GitHubAccount> {
-    let name: String = Input::new()
-        .with_prompt("GitHub account name")
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let name = InputDialog::new("GitHub account name")
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("Account name is required and cannot be empty")
+                Err("Account name is required and cannot be empty".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub account name")?;
 
-    let email: String = Input::new()
-        .with_prompt("GitHub account email")
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let email = InputDialog::new("GitHub account email")
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("Email is required and cannot be empty")
+                Err("Email is required and cannot be empty".to_string())
             } else if !input.contains('@') {
-                Err("Please enter a valid email address")
+                Err("Please enter a valid email address".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub account email")?;
 
-    let api_token: String = Input::new()
-        .with_prompt("GitHub API token")
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let api_token = InputDialog::new("GitHub API token")
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("GitHub API token is required and cannot be empty")
+                Err("GitHub API token is required and cannot be empty".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub API token")?;
-
-    let branch_prefix: String = Input::new()
-        .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
-        .allow_empty(true)
-        .interact_text()
-        .context("Failed to get GitHub branch prefix")?;
 
     Ok(GitHubAccount {
         name: name.trim().to_string(),
         email: email.trim().to_string(),
         api_token: api_token.trim().to_string(),
-        branch_prefix: if branch_prefix.trim().is_empty() {
-            None
-        } else {
-            Some(branch_prefix.trim().to_string())
-        },
     })
 }
 
@@ -95,68 +81,47 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Result<GitHubAccount> {
-    let name: String = Input::new()
-        .with_prompt("GitHub account name")
-        .default(old_account.name.clone())
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let name = InputDialog::new("GitHub account name")
+        .with_default(old_account.name.clone())
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("Account name is required and cannot be empty")
+                Err("Account name is required and cannot be empty".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub account name")?;
 
-    let email: String = Input::new()
-        .with_prompt("GitHub account email")
-        .default(old_account.email.clone())
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let email = InputDialog::new("GitHub account email")
+        .with_default(old_account.email.clone())
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("Email is required and cannot be empty")
+                Err("Email is required and cannot be empty".to_string())
             } else if !input.contains('@') {
-                Err("Please enter a valid email address")
+                Err("Please enter a valid email address".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub account email")?;
 
-    let api_token: String = Input::new()
-        .with_prompt("GitHub API token")
-        .default(old_account.api_token.clone())
-        .validate_with(|input: &String| -> Result<(), &str> {
+    let api_token = InputDialog::new("GitHub API token")
+        .with_default(old_account.api_token.clone())
+        .with_validator(|input: &str| {
             if input.trim().is_empty() {
-                Err("GitHub API token is required and cannot be empty")
+                Err("GitHub API token is required and cannot be empty".to_string())
             } else {
                 Ok(())
             }
         })
-        .interact_text()
+        .prompt()
         .context("Failed to get GitHub API token")?;
-
-    let branch_prefix: String = Input::new()
-        .with_prompt("GitHub branch prefix (optional, press Enter to skip)")
-        .default(
-            old_account
-                .branch_prefix
-                .as_deref()
-                .unwrap_or("")
-                .to_string(),
-        )
-        .allow_empty(true)
-        .interact_text()
-        .context("Failed to get GitHub branch prefix")?;
 
     Ok(GitHubAccount {
         name: name.trim().to_string(),
         email: email.trim().to_string(),
         api_token: api_token.trim().to_string(),
-        branch_prefix: if branch_prefix.trim().is_empty() {
-            None
-        } else {
-            Some(branch_prefix.trim().to_string())
-        },
     })
 }

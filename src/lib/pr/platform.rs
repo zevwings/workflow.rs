@@ -1,6 +1,7 @@
 use crate::git::{GitRepo, RepoType};
-use crate::pr::codeup::Codeup;
+// use crate::pr::codeup::Codeup;  // Codeup support has been removed
 use crate::pr::github::GitHub;
+use crate::pr::PullRequestRow;
 use anyhow::Result;
 
 /// PR 变更类型定义
@@ -100,8 +101,12 @@ pub trait PlatformProvider {
     /// * `limit` - 返回数量限制
     ///
     /// # Returns
-    /// PR 列表的格式化字符串
-    fn get_pull_requests(&self, _state: Option<&str>, _limit: Option<u32>) -> Result<String> {
+    /// PR 列表的表格行数据
+    fn get_pull_requests(
+        &self,
+        _state: Option<&str>,
+        _limit: Option<u32>,
+    ) -> Result<Vec<PullRequestRow>> {
         // 默认实现：返回不支持的错误
         anyhow::bail!("get_pull_requests is not supported by this platform")
     }
@@ -172,8 +177,9 @@ pub trait PlatformProvider {
 /// # 示例
 ///
 /// ```rust,no_run
-/// use crate::pr::create_provider;
+/// use workflow::pr::platform::create_provider;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let provider = create_provider()?;
 /// let pr_url = provider.create_pull_request(
 ///     "Title",
@@ -181,13 +187,17 @@ pub trait PlatformProvider {
 ///     "feature-branch",
 ///     None,
 /// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
     match GitRepo::detect_repo_type()? {
         RepoType::GitHub => Ok(Box::new(GitHub)),
-        RepoType::Codeup => Ok(Box::new(Codeup)),
+        RepoType::Codeup => {
+            anyhow::bail!("Codeup support has been removed. Only GitHub is currently supported.")
+        }
         RepoType::Unknown => {
-            anyhow::bail!("Unsupported repository type. Only GitHub and Codeup are supported.")
+            anyhow::bail!("Unsupported repository type. Only GitHub is currently supported.")
         }
     }
 }

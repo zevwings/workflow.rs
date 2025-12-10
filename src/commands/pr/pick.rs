@@ -1,6 +1,12 @@
-use crate::base::util::{confirm, Browser, Clipboard};
+use anyhow::{Context, Result};
+
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::indicator::Spinner;
+use crate::base::util::{Browser, Clipboard};
 use crate::commands::check;
-use crate::commands::pr::helpers::{apply_branch_name_prefixes, detect_base_branch};
+use crate::commands::pr::helpers::{
+    apply_branch_name_prefixes, detect_base_branch, handle_stash_pop_result,
+};
 use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -13,9 +19,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_error, log_info, log_success, log_warning, ProxyManager};
-use anyhow::{Context, Result};
-use dialoguer::{Input, MultiSelect};
+use crate::{log_break, log_error, log_info, log_success, log_warning, ProxyManager};
 
 /// PR Pick 命令
 ///
@@ -56,11 +60,10 @@ impl PullRequestPickCommand {
             log_info!("Running pre-flight checks...");
             if let Err(e) = check::CheckCommand::run_all() {
                 log_warning!("Pre-flight checks failed: {}", e);
-                confirm(
-                    "Continue anyway?",
-                    false,
-                    Some("Operation cancelled by user"),
-                )?;
+                ConfirmDialog::new("Continue anyway?")
+                    .with_default(false)
+                    .with_cancel_message("Operation cancelled by user")
+                    .prompt()?;
             }
         }
 
@@ -68,8 +71,7 @@ impl PullRequestPickCommand {
         Self::validate_branches(&from_branch, &to_branch)?;
 
         // 3. 拉取最新代码
-        log_info!("Fetching latest changes...");
-        GitRepo::fetch()?;
+        Spinner::with("Fetching latest changes...", GitRepo::fetch)?;
 
         // 4. 检测新提交
         let commits = Self::get_new_commits(&from_branch, &to_branch)?;
@@ -124,7 +126,7 @@ impl PullRequestPickCommand {
                 // 其他错误，恢复原分支
                 GitBranch::checkout_branch(&current_branch)?;
                 if has_stashed {
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
                 return Err(e);
             }
@@ -136,7 +138,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             return Ok(());
         }
@@ -145,15 +147,16 @@ impl PullRequestPickCommand {
         let source_pr_info = Self::get_source_pr_info(&from_branch)?;
 
         // 12. 询问是否创建 PR
-        let should_create_pr = confirm("Create PR for cherry-picked commits?", true, None)?;
+        let should_create_pr = ConfirmDialog::new("Create PR for cherry-picked commits?")
+            .with_default(true)
+            .prompt()?;
 
         if !should_create_pr {
             // 用户选择不创建 PR
-            let keep_changes = confirm(
-                "Keep cherry-picked changes in working directory?",
-                false,
-                None,
-            )?;
+            let keep_changes =
+                ConfirmDialog::new("Keep cherry-picked changes in working directory?")
+                    .with_default(false)
+                    .prompt()?;
 
             if !keep_changes {
                 // 清理工作区并恢复原分支
@@ -163,7 +166,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             log_info!("Pick operation completed (PR not created)");
             return Ok(());
@@ -185,9 +188,22 @@ impl PullRequestPickCommand {
 
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            if let Err(e) = GitStash::stash_pop() {
-                log_warning!("Failed to restore stashed changes: {}", e);
-                log_info!("You may need to manually restore: git stash pop");
+            match GitStash::stash_pop() {
+                Ok(result) => {
+                    if result.restored {
+                        if let Some(ref msg) = result.message {
+                            log_success!("{}", msg);
+                        }
+                    }
+                    // 显示警告信息
+                    for warning in &result.warnings {
+                        log_warning!("{}", warning);
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to restore stashed changes: {}", e);
+                    log_info!("You may need to manually restore: git stash pop");
+                }
             }
         }
 
@@ -197,6 +213,7 @@ impl PullRequestPickCommand {
         // 如果 PR 创建失败，返回错误
         pr_result?;
 
+        log_break!();
         log_success!("Pick operation completed successfully!");
         Ok(())
     }
@@ -272,7 +289,7 @@ impl PullRequestPickCommand {
         let has_changes = !GitCommit::status()?.trim().is_empty();
         if has_changes {
             log_warning!("Working directory has uncommitted changes");
-            if confirm("Stash changes?", true, None)? {
+            if ConfirmDialog::new("Stash changes?").with_default(true).prompt()? {
                 GitStash::stash_push(Some("Stashed by workflow pr pick"))?;
                 log_success!("Stashed changes");
                 Ok(true)
@@ -354,11 +371,9 @@ impl PullRequestPickCommand {
         log_info!("  - Or manually create PR");
 
         // 询问用户是否要放弃并恢复
-        let should_abort = confirm(
-            "Abort cherry-pick and return to original branch?",
-            false,
-            None,
-        )?;
+        let should_abort = ConfirmDialog::new("Abort cherry-pick and return to original branch?")
+            .with_default(false)
+            .prompt()?;
 
         if should_abort {
             // 用户选择放弃，先清理 cherry-pick 状态
@@ -370,7 +385,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(current_branch)?;
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
         } else {
             // 用户选择保留冲突状态，保持在 to_branch 上
@@ -379,18 +394,13 @@ impl PullRequestPickCommand {
 
             // 询问用户是否要恢复 stash（在解决冲突时可能需要）
             if has_stashed {
-                let restore_stash = confirm(
+                let restore_stash = ConfirmDialog::new(
                     "Restore stashed changes now? (You can restore later with 'git stash pop')",
-                    false,
-                    None,
-                )?;
+                )
+                .with_default(false)
+                .prompt()?;
                 if restore_stash {
-                    if let Err(e) = GitStash::stash_pop() {
-                        log_warning!("Failed to restore stashed changes: {}", e);
-                        log_info!("You can manually restore later: git stash pop");
-                    } else {
-                        log_success!("Stashed changes restored");
-                    }
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
             }
         }
@@ -423,12 +433,7 @@ impl PullRequestPickCommand {
         {
             // 如果切换失败，尝试恢复 stash
             if needs_stash {
-                if let Err(stash_err) = GitStash::stash_pop() {
-                    log_warning!(
-                        "Failed to restore stash after checkout error: {}",
-                        stash_err
-                    );
-                }
+                handle_stash_pop_result(GitStash::stash_pop());
             }
             return Err(e);
         }
@@ -446,9 +451,7 @@ impl PullRequestPickCommand {
                     );
                     // 如果之前有 stash，尝试恢复
                     if needs_stash {
-                        if let Err(stash_err) = GitStash::stash_pop() {
-                            log_warning!("Failed to restore stash: {}", stash_err);
-                        }
+                        handle_stash_pop_result(GitStash::stash_pop());
                     }
                     return Err(e)
                         .context("Failed to get PR ID from source branch")
@@ -456,9 +459,7 @@ impl PullRequestPickCommand {
                 }
                 // 恢复 stash
                 if needs_stash {
-                    if let Err(stash_err) = GitStash::stash_pop() {
-                        log_warning!("Failed to restore stash: {}", stash_err);
-                    }
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
                 return Err(e).context("Failed to get PR ID from source branch");
             }
@@ -471,15 +472,34 @@ impl PullRequestPickCommand {
         // 恢复 stash（如果有）
         if needs_stash {
             log_info!("Restoring stashed cherry-picked changes...");
-            if let Err(stash_err) = GitStash::stash_pop() {
-                log_warning!("Failed to restore stash: {}", stash_err);
-                log_error!(
-                    "Cherry-picked changes may have been lost. Please check: git stash list"
-                );
-                anyhow::bail!(
-                    "Failed to restore stashed changes after getting PR info: {}",
-                    stash_err
-                );
+            match GitStash::stash_pop() {
+                Ok(result) => {
+                    if result.restored {
+                        if let Some(ref msg) = result.message {
+                            log_success!("{}", msg);
+                        }
+                    }
+                    // 显示警告信息
+                    for warning in &result.warnings {
+                        log_warning!("{}", warning);
+                    }
+                    // 如果有警告，说明恢复可能有问题
+                    if !result.restored && !result.warnings.is_empty() {
+                        log_error!(
+                            "Cherry-picked changes may have been lost. Please check: git stash list"
+                        );
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to restore stash: {}", e);
+                    log_error!(
+                        "Cherry-picked changes may have been lost. Please check: git stash list"
+                    );
+                    anyhow::bail!(
+                        "Failed to restore stashed changes after getting PR info: {}",
+                        e
+                    );
+                }
             }
         }
 
@@ -564,11 +584,10 @@ impl PullRequestPickCommand {
         // 4. 确定最终的 ticket（如果能提取到，不需要输入；否则询问是否需要输入）
         let jira_ticket = if let Some(ref ticket) = extracted_info.jira_ticket {
             log_success!("Extracted Jira ticket from source PR: {}", ticket);
-            let use_extracted = confirm(
-                &format!("Use extracted Jira ticket: '{}'?", ticket),
-                true,
-                None,
-            )?;
+            let use_extracted =
+                ConfirmDialog::new(format!("Use extracted Jira ticket: '{}'?", ticket))
+                    .with_default(true)
+                    .prompt()?;
             if use_extracted {
                 Some(ticket.clone())
             } else {
@@ -585,11 +604,12 @@ impl PullRequestPickCommand {
 
         // 6. 确定最终的 title（使用 LLM 生成的，询问用户是否使用）
         let title = {
-            let use_llm_title = confirm(
-                &format!("Use LLM generated title: '{}'?", llm_generated_title),
-                true,
-                None,
-            )?;
+            let use_llm_title = ConfirmDialog::new(format!(
+                "Use LLM generated title: '{}'?",
+                llm_generated_title
+            ))
+            .with_default(true)
+            .prompt()?;
             if use_llm_title {
                 llm_generated_title
             } else {
@@ -605,11 +625,10 @@ impl PullRequestPickCommand {
         let short_description = if let Some(desc) = &extracted_info.description {
             log_success!("Extracted description from source PR body");
             // 询问用户是否使用提取的描述
-            let use_extracted = confirm(
-                &format!("Use description from source PR?\n{}", desc),
-                true,
-                None,
-            )?;
+            let use_extracted =
+                ConfirmDialog::new(format!("Use description from source PR?\n{}", desc))
+                    .with_default(true)
+                    .prompt()?;
             if use_extracted {
                 desc.clone()
             } else {
@@ -633,11 +652,10 @@ impl PullRequestPickCommand {
                     types_str.push_str(&format!("  - [ ] {}\n", change_type));
                 }
             }
-            let use_extracted = confirm(
-                &format!("Use change types from source PR?\n{}", types_str),
-                true,
-                None,
-            )?;
+            let use_extracted =
+                ConfirmDialog::new(format!("Use change types from source PR?\n{}", types_str))
+                    .with_default(true)
+                    .prompt()?;
             if use_extracted {
                 types.clone()
             } else {
@@ -707,11 +725,10 @@ impl PullRequestPickCommand {
     fn resolve_jira_ticket(jira_ticket: Option<String>) -> Result<Option<String>> {
         // 在 pick 场景下，此函数只会在确认不使用提取的 ticket 后调用，传入 None
         // 因此这里只需要处理输入逻辑
-        let input: String = Input::new()
-            .with_prompt("Jira ticket (optional)")
-            .with_initial_text(jira_ticket.as_deref().unwrap_or(""))
+        let input = InputDialog::new("Jira ticket (optional)")
+            .with_default(jira_ticket.as_deref().unwrap_or("").to_string())
             .allow_empty(true)
-            .interact_text()
+            .prompt()
             .context("Failed to get Jira ticket")?;
 
         let trimmed = input.trim().to_string();
@@ -738,16 +755,23 @@ impl PullRequestPickCommand {
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)
+                let config_result = JiraStatus::configure_interactive(ticket)
                     .with_context(|| {
                         format!(
                             "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
                             ticket
                         )
                     })?;
-                let status = JiraStatus::read_pull_request_created_status(ticket)
-                    .context("Failed to read status after configuration")?;
-                Ok(status)
+                log_success!("Jira status configuration saved");
+                log_info!(
+                    "  PR created status: {}",
+                    config_result.created_pull_request_status
+                );
+                log_info!(
+                    "  PR merged status: {}",
+                    config_result.merged_pull_request_status
+                );
+                Ok(Some(config_result.created_pull_request_status))
             }
         } else {
             Ok(None)
@@ -759,7 +783,9 @@ impl PullRequestPickCommand {
         // 如果有提供的标题，先询问用户是否使用
         if let Some(t) = title {
             log_success!("Using source PR title: {}", t);
-            let use_source = confirm(&format!("Use source PR title: '{}'?", t), true, None)?;
+            let use_source = ConfirmDialog::new(format!("Use source PR title: '{}'?", t))
+                .with_default(true)
+                .prompt()?;
             if use_source {
                 return Ok(t);
             }
@@ -788,16 +814,15 @@ impl PullRequestPickCommand {
 
     /// 提示用户输入 PR 标题
     fn input_pull_request_title() -> Result<String> {
-        let title: String = Input::new()
-            .with_prompt("PR title (required)")
-            .validate_with(|input: &String| -> Result<(), &str> {
+        let title = InputDialog::new("PR title (required)")
+            .with_validator(|input: &str| {
                 if input.trim().is_empty() {
-                    Err("PR title is required and cannot be empty")
+                    Err("PR title is required and cannot be empty".to_string())
                 } else {
                     Ok(())
                 }
             })
-            .interact_text()
+            .prompt()
             .context("Failed to get PR title")?;
         Ok(title)
     }
@@ -842,10 +867,9 @@ impl PullRequestPickCommand {
         if let Some(desc) = description {
             Ok(desc)
         } else {
-            let desc: String = Input::new()
-                .with_prompt("Short description (optional)")
+            let desc = InputDialog::new("Short description (optional)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get description")?;
             Ok(desc)
         }
@@ -854,15 +878,16 @@ impl PullRequestPickCommand {
     /// 选择变更类型（复用 create 的逻辑）
     fn select_change_types() -> Result<Vec<bool>> {
         log_info!("Types of changes:");
-        let selections = MultiSelect::new()
-            .with_prompt("Select change types (use space to select, enter to confirm)")
-            .items(TYPES_OF_CHANGES)
-            .interact()
-            .context("Failed to select change types")?;
+        let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
+        let selected_items = MultiSelectDialog::new(
+            "Select change types (use space to select, enter to confirm)",
+            options,
+        )
+        .prompt()
+        .context("Failed to select change types")?;
 
-        let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
-            .map(|i| selections.contains(&i))
-            .collect();
+        let selected_types: Vec<bool> =
+            TYPES_OF_CHANGES.iter().map(|&item| selected_items.contains(&item)).collect();
 
         Ok(selected_types)
     }
@@ -924,9 +949,12 @@ impl PullRequestPickCommand {
                     })?;
 
                 // 提交并推送
-                log_success!("Committing changes...");
-                GitCommit::commit(commit_title, true)?; // no-verify
-                log_success!("Pushing to remote...");
+                Spinner::with("Committing changes...", || {
+                    GitCommit::commit(commit_title, true) // no-verify
+                })?;
+                log_break!();
+                log_info!("Pushing to remote...");
+                log_break!();
                 GitBranch::push(branch_name, true)?; // set-upstream
 
                 Ok((branch_name.to_string(), default_branch))
@@ -951,9 +979,12 @@ impl PullRequestPickCommand {
         log_success!("Creating branch: {}", branch_name);
         GitBranch::checkout_branch(branch_name)?;
 
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
@@ -992,9 +1023,9 @@ impl PullRequestPickCommand {
             }
 
             let provider = create_provider()?;
-            log_success!("Creating PR...");
-            let pull_request_url =
-                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
+            let pull_request_url = Spinner::with("Creating PR...", || {
+                provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
+            })?;
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
@@ -1010,10 +1041,12 @@ impl PullRequestPickCommand {
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
             if let Some(ref status) = created_pull_request_status {
-                log_success!("Updating Jira ticket...");
-                Jira::assign_ticket(ticket, None)?;
-                Jira::move_ticket(ticket, status)?;
-                Jira::add_comment(ticket, pull_request_url)?;
+                Spinner::with("Updating Jira ticket...", || -> Result<()> {
+                    Jira::assign_ticket(ticket, None)?;
+                    Jira::move_ticket(ticket, status)?;
+                    Jira::add_comment(ticket, pull_request_url)?;
+                    Ok(())
+                })?;
 
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;
                 let repository = GitRepo::get_remote_url().ok();
