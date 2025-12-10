@@ -2,7 +2,8 @@
 
 use crate::Logger;
 use anyhow::{Context, Result};
-use std::fs::File;
+use std::fs::{File, OpenOptions};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -12,9 +13,6 @@ use super::JiraLogs;
 impl JiraLogs {
     /// 合并分片 zip 文件
     pub(crate) fn merge_split_zips(&self, download_dir: &Path) -> Result<PathBuf> {
-        use std::fs::OpenOptions;
-        use std::io::Write;
-
         let log_zip = download_dir.join(LOG_ZIP_FILENAME);
         if !log_zip.exists() {
             anyhow::bail!("{} not found in {:?}", LOG_ZIP_FILENAME, download_dir);

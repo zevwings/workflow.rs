@@ -55,10 +55,7 @@ pub fn get_completion_filename(shell_type: &str, command: &str) -> Result<String
 /// assert_eq!(files, vec!["_workflow"]);
 /// ```
 pub fn get_completion_files_for_shell(shell_type: &str, commands: &[&str]) -> Result<Vec<String>> {
-    commands
-        .iter()
-        .map(|cmd| get_completion_filename(shell_type, cmd))
-        .collect()
+    commands.iter().map(|cmd| get_completion_filename(shell_type, cmd)).collect()
 }
 
 /// 获取所有 shell 类型的所有补全脚本文件名

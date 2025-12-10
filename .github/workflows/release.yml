@@ -15,19 +15,148 @@ on:
 # 配置工作流权限，允许创建 Release 和更新仓库
 permissions:
   contents: write  # 允许创建 Release 和上传文件
-  pull-requests: read  # 读取 PR（如果需要）
+  pull-requests: write  # 允许创建 PR（用于版本更新）
+  statuses: write  # 允许创建状态检查（用于满足分支保护规则）
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # 当合并到 master 时自动创建 tag
-  create-tag:
-    name: Create Tag
+  # 代码质量检查（Lint）
+  check-lint:
+    name: Run check-lint
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Check code format
+        run: cargo fmt --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run cargo check
+        run: cargo check
+  #
+  # 运行测试
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          sudo apt-get install -y \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: Run tests
+        run: cargo test --verbose
+  #
+  # 确保所有检查都通过（汇总 job）
+  # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
+  # 如果任何检查失败，此 job 会失败，从而阻止后续操作
+  # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
+  check-status:
+    name: Run check-status
+    runs-on: ubuntu-latest
+    needs: [check-lint, tests]
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Check lint and test status
+        run: |
+          if [ "${{ needs.check-lint.result }}" != "success" ] || [ "${{ needs.tests.result }}" != "success" ]; then
+            echo "❌ Some checks failed:"
+            echo "  Lint: ${{ needs.check-lint.result }}"
+            echo "  Test: ${{ needs.tests.result }}"
+            echo ""
+            echo "Cannot proceed until all checks pass."
+            exit 1
+          fi
+          echo "✅ All checks passed!"
+
+  # 当合并到 master 时自动创建 tag，手动触发时也运行（但不创建 tag）
+  create-tag:
+    name: Run create-tag
+    runs-on: ubuntu-latest
+    needs: [check-status]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.ref == 'refs/heads/master' && github.event_name == 'push')
     permissions:
       contents: write  # 允许创建和推送 tag
+      pull-requests: write  # 允许创建和合并 PR（用于版本更新）
     outputs:
       tag: ${{ steps.job_outputs.outputs.tag }}
       tag_created: ${{ steps.job_outputs.outputs.tag_created }}
@@ -55,7 +184,68 @@ jobs:
           echo "✅ Version from Cargo.toml: $VERSION"
           echo "✅ Tag to create: $TAG"
 
+      - name: Detect branch type and trigger mode
+        id: detect_mode
+        shell: bash
+        run: |
+          # 检测是否是 feature 分支
+          if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
+            IS_FEATURE_BRANCH="true"
+            echo "✅ Detected feature branch: ${{ github.ref }}"
+          else
+            IS_FEATURE_BRANCH="false"
+          fi
+
+          # 检测触发类型
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            IS_MANUAL_TRIGGER="true"
+            echo "✅ Manual trigger detected"
+
+            # 手动触发时，不创建 tag，只提供 outputs 供 build 使用
+            INPUT_VERSION="${{ github.event.inputs.version }}"
+            # 移除 v 前缀
+            INPUT_VERSION=${INPUT_VERSION#v}
+
+            # 验证版本格式
+            if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
+              # feature 分支的版本格式必须包含 alpha 或 beta 后缀
+              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.(alpha|beta)-[0-9]+$ ]]; then
+                echo "❌ Error: Feature branch version must be in format: vx.x.x.alpha-xxx or vx.x.x.beta-xxx"
+                echo "   Provided: ${{ github.event.inputs.version }}"
+                echo "   Example: v0.0.1.alpha-001 or v0.0.1.beta-001"
+                exit 1
+              fi
+            else
+              # master 分支的版本格式为标准格式（不含 alpha/beta）
+              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "❌ Error: Master branch version must be in standard format: vx.x.x"
+                echo "   Provided: ${{ github.event.inputs.version }}"
+                echo "   Example: v0.1.0"
+                exit 1
+              fi
+            fi
+
+            SHOULD_CREATE_TAG="false"
+            echo "ℹ️  Manual trigger: will skip tag creation (direct build only)"
+            echo "   Version format validated: ${{ github.event.inputs.version }}"
+          else
+            # push 事件，只在 master 分支创建 tag
+            IS_MANUAL_TRIGGER="false"
+            if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+              SHOULD_CREATE_TAG="true"
+              echo "ℹ️  Master branch push: will create tag if needed"
+            else
+              SHOULD_CREATE_TAG="false"
+              echo "ℹ️  Non-master branch push: will skip tag creation"
+            fi
+          fi
+
+          echo "is_feature_branch=$IS_FEATURE_BRANCH" >> $GITHUB_OUTPUT
+          echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
+          echo "should_create_tag=$SHOULD_CREATE_TAG" >> $GITHUB_OUTPUT
+
       - name: Check if tag exists and increment version if needed
+        if: steps.detect_mode.outputs.should_create_tag == 'true'
         id: check_tag
         shell: bash
         run: |
@@ -171,32 +361,178 @@ jobs:
             echo "⚠️  Warning: Could not find workflow package in Cargo.lock"
           fi
 
-      - name: Commit version update
+      - name: Create and merge version update pull request
         if: steps.check_tag.outputs.needs_increment == 'true'
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 配置 Git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 提交更改（同时提交 Cargo.toml 和 Cargo.lock）
+          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+
+          # 第一步：创建新分支
+          echo "Step 1: Creating branch $BRANCH_NAME"
+          git checkout -b "$BRANCH_NAME"
+
+          # 第二步：添加文件
+          echo "Step 2: Staging Cargo.toml and Cargo.lock"
           git add Cargo.toml Cargo.lock
 
-          # 检查是否有更改需要提交
-          if git diff --staged --quiet; then
-            echo "No changes to commit. Files are already up to date."
+          # 第三步：提交更改
+          echo "Step 3: Committing changes"
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+
+          # 第四步：推送到新分支
+          echo "Step 4: Pushing branch to origin"
+          git push origin "$BRANCH_NAME"
+
+          # 第五步：创建 Pull Request
+          echo "Step 5: Creating Pull Request"
+          echo "Branch: $BRANCH_NAME"
+          echo "Version: $NEW_VERSION"
+
+          PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls" \
+            -d '{
+              "title": "chore: bump version to '"$NEW_VERSION"'",
+              "head": "'"$BRANCH_NAME"'",
+              "base": "master",
+              "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }')
+
+          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
+          PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
+
+          echo "HTTP Status Code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
+            echo "Response body:"
+            echo "$PR_BODY" | jq '.' 2>/dev/null || echo "$PR_BODY"
+
+            # 如果是 422 错误（已存在 PR），尝试查找现有的 PR
+            if [ "$HTTP_CODE" = "422" ]; then
+              echo "Checking for existing PR..."
+              EXISTING_PR=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
+
+              PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.[0].number // empty' 2>/dev/null)
+              if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+                PR_URL=$(echo "$EXISTING_PR" | jq -r '.[0].html_url // empty' 2>/dev/null)
+                echo "✅ Found existing PR #$PR_NUMBER: $PR_URL"
+                echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+                echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+                # 继续执行合并步骤
+              else
+                exit 1
+              fi
+            else
+              exit 1
+            fi
           else
-            git commit -m "chore: bump version to ${{ steps.check_tag.outputs.version }}"
-
-            # 推送到 master
-            echo "Pushing version update to master"
-            git push origin master
-
-            echo "✅ Version update committed and pushed"
+            # 提取 PR 信息
+            PR_NUMBER=$(echo "$PR_BODY" | jq -r '.number // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
+            PR_URL=$(echo "$PR_BODY" | jq -r '.html_url // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "✅ PR #$PR_NUMBER created: $PR_URL"
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
           fi
 
+          # 确保 PR_NUMBER 已设置
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❌ Error: PR_NUMBER is not set"
+            exit 1
+          fi
+
+          # 第六步：合并 Pull Request
+          echo "Step 6: Merging Pull Request"
+
+          # 等待 PR 可合并（最多等待 2 分钟，每 5 秒检查一次）
+          MAX_WAIT=120
+          CHECK_INTERVAL=5
+          ELAPSED=0
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            PR_STATUS=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+            MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+            MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+
+            if [ "$MERGED" = "true" ]; then
+              echo "✅ PR already merged"
+              # 第七步：删除远程分支
+              echo "Step 7: Deleting remote branch $BRANCH_NAME"
+              # 先切换回 master 分支
+              git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+              # 删除远程分支
+              if git push origin --delete "$BRANCH_NAME" 2>/dev/null; then
+                echo "✅ Remote branch $BRANCH_NAME deleted successfully"
+              else
+                echo "⚠️  Failed to delete remote branch (may already be deleted or protected)"
+              fi
+              exit 0
+            fi
+
+            if [ "$MERGEABLE" = "true" ]; then
+              # 尝试合并
+              MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
+                -d '{
+                  "commit_title": "chore: bump version to '"$NEW_VERSION"'",
+                  "commit_message": "Automated version bump to '"$NEW_VERSION"'\n\nMerged via GitHub Actions workflow",
+                  "merge_method": "squash"
+                }')
+
+              MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
+              if [ "$MERGE_CODE" = "200" ]; then
+                echo "✅ PR merged successfully"
+                # 第七步：删除远程分支
+                echo "Step 7: Deleting remote branch $BRANCH_NAME"
+                # 先切换回 master 分支
+                git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+                # 删除远程分支
+                if git push origin --delete "$BRANCH_NAME" 2>/dev/null; then
+                  echo "✅ Remote branch $BRANCH_NAME deleted successfully"
+                else
+                  echo "⚠️  Failed to delete remote branch (may already be deleted or protected)"
+                fi
+                exit 0
+              else
+                echo "⚠️  Failed to merge PR (HTTP $MERGE_CODE)"
+                echo "Please manually merge: $PR_URL"
+                exit 1
+              fi
+            fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT}s"
+          echo "Please manually merge: $PR_URL"
+          exit 1
+
       - name: Create and push tag
-        if: steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true'
+        if: |
+          steps.detect_mode.outputs.should_create_tag == 'true' &&
+          (steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true')
         shell: bash
         run: |
           TAG="${{ steps.check_tag.outputs.tag }}"
@@ -220,25 +556,53 @@ jobs:
         id: job_outputs
         shell: bash
         run: |
-          TAG="${{ steps.check_tag.outputs.tag }}"
-          TAG_CREATED="false"
-          if [ "${{ steps.check_tag.outputs.exists }}" == "false" ] || [ "${{ steps.check_tag.outputs.needs_increment }}" == "true" ]; then
-            TAG_CREATED="true"
+          # 如果是 feature 分支手动触发，使用 version 步骤的 outputs，不创建 tag
+          if [[ "${{ steps.detect_mode.outputs.is_feature_branch }}" == "true" && "${{ steps.detect_mode.outputs.is_manual_trigger }}" == "true" ]]; then
+            TAG="${{ steps.version.outputs.tag }}"
+            TAG_CREATED="false"
+            echo "ℹ️  Feature branch manual trigger: using version from Cargo.toml, tag_created=false"
+          elif [[ "${{ steps.detect_mode.outputs.should_create_tag }}" == "true" ]]; then
+            # 正常流程：使用 check_tag 的 outputs
+            TAG="${{ steps.check_tag.outputs.tag }}"
+            TAG_CREATED="false"
+            if [ "${{ steps.check_tag.outputs.exists }}" == "false" ] || [ "${{ steps.check_tag.outputs.needs_increment }}" == "true" ]; then
+              TAG_CREATED="true"
+            fi
+          else
+            # 其他情况（不应该到达这里，但为了安全）
+            TAG="${{ steps.version.outputs.tag }}"
+            TAG_CREATED="false"
+            echo "⚠️  Unexpected condition, using version from Cargo.toml"
           fi
+
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "tag_created=$TAG_CREATED" >> $GITHUB_OUTPUT
           echo "✅ Job outputs set: tag=$TAG, tag_created=$TAG_CREATED"
 
       - name: Skip tag creation
-        if: steps.check_tag.outputs.exists == 'true' && steps.check_tag.outputs.needs_increment == 'false'
+        if: |
+          steps.detect_mode.outputs.should_create_tag == 'true' &&
+          steps.check_tag.outputs.exists == 'true' &&
+          steps.check_tag.outputs.needs_increment == 'false'
         shell: bash
         run: |
           echo "⏭️  Skipping tag creation: tag ${{ steps.check_tag.outputs.tag }} already exists and points to current commit"
 
+      - name: Skip tag creation (feature branch)
+        if: |
+          steps.detect_mode.outputs.is_feature_branch == 'true' &&
+          steps.detect_mode.outputs.is_manual_trigger == 'true'
+        shell: bash
+        run: |
+          echo "ℹ️  Feature branch manual trigger: skipping tag creation"
+          echo "   Branch: ${{ github.ref }}"
+          echo "   Version: ${{ steps.version.outputs.version }}"
+          echo "   Tag: ${{ steps.version.outputs.tag }}"
+
   # 构建所有平台的二进制文件
   build:
     runs-on: ${{ matrix.os }}
-    needs: create-tag
+    needs: [check-status, create-tag]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
       github.event_name == 'workflow_dispatch' ||
@@ -273,9 +637,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          # 如果 create-tag job 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
+          # 如果是 master push 且 create-tag 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
           # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
-          ref: ${{ (needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
+          ref: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
 
       - name: Get version from tag
         id: version
@@ -329,16 +693,108 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
           # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
           # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
 
       - name: Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
-          sudo apt-get install -y libxcb1-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev
+          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            python3-pip \
+            python3-xcbgen \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            pkg-config
+          # 验证 xcb-proto 包和 Python 已正确安装
+          echo "🔍 Verifying xcb-proto package installation..."
+          # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+          if dpkg -l | grep -q "^ii.*xcb-proto"; then
+            echo "✅ xcb-proto package is installed"
+            # 验证协议文件目录存在
+            if [ -d "/usr/share/xcb" ]; then
+              echo "✅ xcb protocol files directory found: /usr/share/xcb"
+              # 列出一些协议文件以确认
+              PROTO_COUNT=$(find /usr/share/xcb -name "*.xml" 2>/dev/null | wc -l)
+              if [ "$PROTO_COUNT" -gt 0 ]; then
+                echo "✅ Found $PROTO_COUNT protocol XML files"
+              else
+                echo "⚠️  Warning: No protocol XML files found in /usr/share/xcb"
+              fi
+            else
+              echo "⚠️  Warning: /usr/share/xcb directory not found"
+              # 尝试查找实际位置
+              XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ Found xcb protocol directory at: $XCB_PROTO_DIR"
+              fi
+            fi
+          else
+            echo "❌ Error: xcb-proto package is not installed"
+            echo "   Please ensure xcb-proto package is installed via apt-get"
+            exit 1
+          fi
+          python3 --version || echo "⚠️  Python3 not found"
+          # 验证 xcbgen Python 模块是否可用（xcb crate 构建脚本需要）
+          echo "🔍 Checking for xcbgen Python module..."
+          if python3 -c "import xcbgen" 2>/dev/null; then
+            echo "✅ xcbgen Python module is importable"
+            # 显示模块位置
+            python3 -c "import xcbgen; print(f'xcbgen location: {xcbgen.__file__}')" 2>/dev/null || true
+          else
+            echo "❌ Error: xcbgen Python module is not importable"
+            echo "   This is required for xcb crate to build"
+            echo "   Please ensure python3-xcbgen package is installed"
+            # 尝试查找 xcbgen 模块的位置
+            XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+            if [ -n "$XCBGEN_PATH" ]; then
+              echo "   Found xcbgen directory at: $XCBGEN_PATH"
+              echo "   Trying to add to PYTHONPATH..."
+              export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+              echo "   PYTHONPATH: $PYTHONPATH"
+              # 再次尝试导入
+              if python3 -c "import xcbgen" 2>/dev/null; then
+                echo "✅ xcbgen module is now importable after setting PYTHONPATH"
+              else
+                echo "❌ xcbgen still not importable"
+                exit 1
+              fi
+            else
+              echo "   xcbgen directory not found"
+              exit 1
+            fi
+          fi
+          # 验证 pkg-config 能找到 xcb 库
+          pkg-config --exists xcb && echo "✅ xcb pkg-config found" || echo "⚠️  xcb pkg-config not found"
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -381,17 +837,293 @@ jobs:
 
       - name: Build release binaries
         shell: bash
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
         run: |
+          # 为 Linux x86_64 设置 xcb 构建环境
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔍 Setting up xcb build environment..."
+            # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
+            # xcb crate 的构建脚本使用 Python 的 xcbgen 模块来读取这些文件
+            # 验证 xcb-proto 包已安装（协议文件）
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 查找协议文件目录（通常在 /usr/share/xcb/）
+              XCB_PROTO_DIR="/usr/share/xcb"
+              if [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                # 设置环境变量指向协议文件目录（如果 xcb crate 需要）
+                export XCB_PROTO_DIR="$XCB_PROTO_DIR"
+              else
+                # 尝试查找实际位置
+                XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
+                if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                  echo "✅ xcb protocol files found at: $XCB_PROTO_DIR"
+                  export XCB_PROTO_DIR="$XCB_PROTO_DIR"
+                else
+                  echo "⚠️  Warning: xcb protocol directory not found, but package is installed"
+                fi
+              fi
+            else
+              echo "❌ Error: xcb-proto package is not installed"
+              exit 1
+            fi
+            # 设置 PKG_CONFIG_PATH 确保能找到 xcb 库
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            echo "✅ PKG_CONFIG_PATH set to: $PKG_CONFIG_PATH"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            echo "🔍 Checking for xcbgen Python module..."
+            # 首先尝试直接导入
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen module is importable"
+              # 显示模块位置以便调试
+              python3 -c "import xcbgen; import os; print(f'xcbgen location: {os.path.dirname(xcbgen.__file__)}')" 2>/dev/null || true
+              # 确保 PYTHONPATH 包含模块路径
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+                echo "✅ PYTHONPATH set to include xcbgen: $PYTHONPATH"
+              fi
+            else
+              echo "⚠️  xcbgen not directly importable, trying to locate..."
+              # 尝试查找并添加 xcbgen 路径
+              XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_PATH" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+                echo "   Found xcbgen at: $XCBGEN_PATH"
+                echo "   PYTHONPATH set to: $PYTHONPATH"
+                # 再次验证
+                if python3 -c "import xcbgen" 2>/dev/null; then
+                  echo "✅ xcbgen module is now importable"
+                else
+                  echo "❌ xcbgen still not importable after setting PYTHONPATH"
+                  echo "   Trying alternative method..."
+                  # 尝试通过 pip 安装（如果可用）
+                  python3 -m pip install --user xcbgen 2>/dev/null || true
+                  if python3 -c "import xcbgen" 2>/dev/null; then
+                    echo "✅ xcbgen installed via pip"
+                  else
+                    echo "❌ xcbgen installation failed"
+                    exit 1
+                  fi
+                fi
+              else
+                echo "   xcbgen module directory not found"
+                echo "   Checking installed packages..."
+                dpkg -l | grep -i xcb || echo "   No xcb packages found"
+                echo "   Attempting to install python3-xcbgen..."
+                sudo apt-get install -y python3-xcbgen || {
+                  echo "❌ Failed to install python3-xcbgen"
+                  exit 1
+                }
+                # 再次尝试
+                if python3 -c "import xcbgen" 2>/dev/null; then
+                  echo "✅ xcbgen module is now importable after installation"
+                else
+                  echo "❌ xcbgen still not importable"
+                  exit 1
+                fi
+              fi
+            fi
+          fi
           # 设置交叉编译环境变量（仅 Linux ARM64）
           if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
             export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
             echo "🔧 Cross-compiling for Linux ARM64"
             echo "ℹ️  Note: clipboard feature is disabled for Linux ARM64 (XCB libraries not available in Ubuntu sources)"
+            # 测试：注释掉 remove_xcb_deps.py 脚本调用
+            # 理论上，Cargo.toml 中的条件编译应该已经禁用了 clipboard 依赖
+            # 如果构建失败，说明仍然需要这个脚本，需要取消注释下面的代码
+            echo "🧪 Testing: Skipping Cargo.lock modification (relying on conditional compilation in Cargo.toml)"
+            echo "ℹ️  If build fails, the remove_xcb_deps.py script may still be needed"
+            # 对于 Linux ARM64，我们需要确保 Cargo 不会尝试编译 xcb
+            # 由于条件编译配置，clipboard 依赖应该被排除，但 Cargo.lock 可能仍然包含它
+            # 解决方案：临时从 Cargo.lock 中移除这些依赖，构建后再恢复
+            # if [ -f "Cargo.lock" ]; then
+            #   # 检查 Python3 是否可用
+            #   if ! command -v python3 >/dev/null 2>&1; then
+            #     echo "❌ python3 is required but not found"
+            #     exit 1
+            #   fi
+            #   cp Cargo.lock Cargo.lock.backup
+            #   echo "📝 Backed up Cargo.lock"
+            #   # 使用 Python 脚本删除 clipboard、x11-clipboard、xcb 和 clipboard-win 的包条目
+            #   # 以及从其他包的 dependencies 中移除对这些包的引用
+            #   # Python 脚本更可靠，能更好地处理 TOML 格式
+            #   # 添加超时机制（120秒），防止脚本卡住
+            #   echo "🔄 Processing Cargo.lock to remove xcb dependencies..."
+            #   timeout 120 python3 .github/scripts/remove_xcb_deps.py || {
+            #     EXIT_CODE=$?
+            #     if [ $EXIT_CODE -eq 124 ]; then
+            #       echo "❌ Script timed out after 120 seconds"
+            #       echo "⚠️  This may indicate a performance issue with the script"
+            #     else
+            #       echo "❌ Script failed with exit code $EXIT_CODE"
+            #     fi
+            #     exit $EXIT_CODE
+            #   }
+            #
+            #   if [ $? -ne 0 ]; then
+            #     echo "⚠️  Failed to process Cargo.lock, restoring backup"
+            #     if [ -f "Cargo.lock.backup" ]; then
+            #       mv Cargo.lock.backup Cargo.lock
+            #       echo "✅ Restored Cargo.lock from backup"
+            #     fi
+            #     echo "❌ Cannot proceed without removing xcb dependencies"
+            #     exit 1
+            #   fi
+            #
+            #   # 验证 Cargo.lock 仍然有效（至少应该能解析基本结构）
+            #   if ! grep -q '^\[\[package\]\]' Cargo.lock; then
+            #     echo "❌ Cargo.lock appears corrupted after processing"
+            #     if [ -f "Cargo.lock.backup" ]; then
+            #       mv Cargo.lock.backup Cargo.lock
+            #       echo "✅ Restored Cargo.lock from backup"
+            #     fi
+            #     exit 1
+            #   fi
+            # fi
           fi
-          cargo build --release --target ${{ matrix.target }} --bin workflow --bin install
-        env:
-          CARGO_BUILD_TARGET: ${{ matrix.target }}
+          # 构建前验证（仅 Linux x86_64）
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔍 Pre-build verification for xcb dependencies..."
+            # 重新设置环境变量（因为每个 step 是独立的 shell）
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+              fi
+            fi
+            # 验证 xcb-proto 包已安装
+            if dpkg -l | grep -q "^ii.*xcb-proto"; then
+              echo "✅ xcb-proto package is installed"
+              # 验证协议文件目录存在
+              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
+                echo "✅ xcb protocol directory: $XCB_PROTO_DIR"
+                # 列出一些协议文件
+                echo "   Protocol files found:"
+                ls -1 "$XCB_PROTO_DIR"/*.xml 2>/dev/null | head -5 | xargs -n1 basename || echo "   (none found)"
+              else
+                echo "⚠️  Warning: XCB_PROTO_DIR not set or directory not found"
+              fi
+            else
+              echo "❌ xcb-proto package is not installed"
+              exit 1
+            fi
+            # 验证 Python
+            if command -v python3 >/dev/null 2>&1; then
+              echo "✅ python3: $(which python3)"
+            else
+              echo "❌ python3 not found"
+              exit 1
+            fi
+            # 验证 xcbgen Python 模块（必需）
+            if python3 -c "import xcbgen" 2>/dev/null; then
+              echo "✅ xcbgen Python module is importable"
+              python3 -c "import xcbgen; import os; print(f'   xcbgen location: {os.path.dirname(xcbgen.__file__)}')" 2>/dev/null || true
+            else
+              echo "❌ Error: xcbgen module not importable"
+              echo "   This is required for xcb crate to build"
+              echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+              echo "   Python path: $(python3 -c 'import sys; print(":".join(sys.path))' 2>/dev/null || echo 'unknown')"
+              exit 1
+            fi
+            # 验证 pkg-config
+            if pkg-config --exists xcb; then
+              echo "✅ xcb libraries found via pkg-config"
+              pkg-config --modversion xcb
+            else
+              echo "⚠️  Warning: xcb not found via pkg-config"
+            fi
+            # 显示最终环境变量
+            echo "📋 Environment variables for build:"
+            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
+            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
+            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+          fi
+          # 构建项目
+          # 对于 Linux x86_64，启用详细输出以便调试 xcb 构建问题
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "🔨 Building with verbose output for xcb debugging..."
+            # 确保环境变量在构建时可用
+            # xcb crate 的构建脚本需要这些环境变量
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_PATH=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_PATH" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
+              fi
+            fi
+            # 清理之前的构建缓存，避免缓存问题
+            echo "🧹 Cleaning xcb build artifacts..."
+            # 清理 xcb 包的构建缓存
+            cargo clean -p xcb 2>/dev/null || true
+            # 也清理构建输出目录中的 xcb 相关文件
+            rm -rf target/${{ matrix.target }}/release/build/xcb-* 2>/dev/null || true
+            rm -rf target/${{ matrix.target }}/release/deps/libxcb-* 2>/dev/null || true
+            # 显示最终的环境变量设置
+            echo "📋 Final environment variables:"
+            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
+            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
+            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+            echo "   Python version: $(python3 --version 2>&1 || echo "unknown")"
+            echo "   Python xcbgen: $(python3 -c 'import xcbgen; print("OK")' 2>&1 || echo "FAILED")"
+            # 验证 Python 版本兼容性（xcbgen 需要 Python 3.6+）
+            PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "unknown")
+            echo "   Python version check: $PYTHON_VERSION"
+            if [ "$PYTHON_VERSION" != "unknown" ]; then
+              MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
+              MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
+              if [ "$MAJOR" -lt 3 ] || ([ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 6 ]); then
+                echo "⚠️  Warning: Python version $PYTHON_VERSION may be too old for xcbgen"
+              else
+                echo "✅ Python version $PYTHON_VERSION is compatible"
+              fi
+            fi
+            # 测试 xcbgen 是否能正常工作
+            echo "🧪 Testing xcbgen functionality..."
+            if python3 -c "import xcbgen; import os; import sys; proto_dir = '${XCB_PROTO_DIR}'; print('✅ Protocol directory exists:', proto_dir) if os.path.isdir(proto_dir) else (print('❌ Protocol directory not found:', proto_dir), sys.exit(1)); import xcbgen.state, xcbgen.xtypes; print('✅ xcbgen modules imported successfully')" 2>/dev/null; then
+              echo "✅ xcbgen test passed"
+            else
+              echo "⚠️  xcbgen test failed, but continuing with build..."
+            fi
+            # 构建
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed. Checking build log for xcb-related errors..."
+              grep -i "xcb\|xproto\|big_requests\|xcbgen\|xc_misc\|render\|shape\|xfixes" build.log || echo "No xcb-related errors found in log"
+              # 显示构建脚本输出（如果有）
+              echo "📋 Checking for build script errors..."
+              grep -i "error\|warning\|failed" build.log | head -20 || true
+            fi
+          else
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+            fi
+          fi
+
+          # 恢复 Cargo.lock（如果备份存在，无论构建成功与否都要恢复）
+          # 测试：注释掉恢复逻辑，因为不再创建备份
+          # if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]] && [ -f "Cargo.lock.backup" ]; then
+          #   mv Cargo.lock.backup Cargo.lock
+          #   echo "✅ Restored Cargo.lock from backup"
+          # fi
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build failed"
+            exit 1
+          fi
 
       - name: Create package directory
         shell: bash
@@ -498,12 +1230,11 @@ jobs:
 
   # 创建 GitHub Release 并上传所有二进制文件
   release:
-    name: Create Release
+    name: Run create-release
     needs: [create-tag, build]
     runs-on: ubuntu-latest
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
-      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write  # 允许创建 Release 和上传文件
@@ -714,12 +1445,11 @@ jobs:
 
   # 自动更新 Homebrew Formula
   update-homebrew:
-    name: Update Homebrew Formula
+    name: Run update-homebrew
     needs: [create-tag, build, release]
     runs-on: ubuntu-latest
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
-      github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write  # 允许推送到 homebrew-workflow 仓库
@@ -951,6 +1681,3 @@ jobs:
           fi
 
           echo "✅ Homebrew Formula updated successfully!"
-
-
-

@@ -391,4 +391,3 @@ let system_prompt = generate_summarize_pr_system_prompt(language);
 3. **性能优化**：编译时常量零运行时开销，函数生成也无需文件 I/O 操作
 4. **类型安全**：使用 Rust 常量，编译时检查，确保 prompt 内容正确
 5. **多语言支持**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求，确保 LLM 按照指定语言生成内容
-

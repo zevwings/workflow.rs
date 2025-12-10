@@ -1,6 +1,10 @@
-use crate::base::util::{confirm, Browser, Clipboard};
+use anyhow::{Context, Result};
+
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::indicator::Spinner;
+use crate::base::util::{Browser, Clipboard};
 use crate::commands::check;
-use crate::commands::pr::helpers::apply_branch_name_prefixes;
+use crate::commands::pr::helpers::{apply_branch_name_prefixes, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
@@ -12,9 +16,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_info, log_success, log_warning, ProxyManager};
-use anyhow::{Context, Result};
-use dialoguer::{Input, MultiSelect};
+use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -117,11 +119,9 @@ impl PullRequestCreateCommand {
                 Some(trimmed)
             }
         } else {
-            // 使用 dialoguer::Input 保持一致性
-            let input: String = Input::new()
-                .with_prompt("Jira ticket (optional)")
+            let input = InputDialog::new("Jira ticket (optional)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get Jira ticket")?;
             let trimmed = input.trim().to_string();
             if trimmed.is_empty() {
@@ -153,16 +153,23 @@ impl PullRequestCreateCommand {
                     "No status configuration found for {}, configuring...",
                     ticket
                 );
-                JiraStatus::configure_interactive(ticket)
+                let config_result = JiraStatus::configure_interactive(ticket)
                     .with_context(|| {
                         format!(
                             "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
                             ticket
                         )
                     })?;
-                let status = JiraStatus::read_pull_request_created_status(ticket)
-                    .context("Failed to read status after configuration")?;
-                Ok(status)
+                log_success!("Jira status configuration saved");
+                log_info!(
+                    "  PR created status: {}",
+                    config_result.created_pull_request_status
+                );
+                log_info!(
+                    "  PR merged status: {}",
+                    config_result.merged_pull_request_status
+                );
+                Ok(Some(config_result.created_pull_request_status))
             }
         } else {
             Ok(None)
@@ -173,16 +180,15 @@ impl PullRequestCreateCommand {
     ///
     /// 步骤 4（辅助函数）：使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
     fn input_pull_request_title() -> Result<String> {
-        let title: String = Input::new()
-            .with_prompt("PR title (required)")
-            .validate_with(|input: &String| -> Result<(), &str> {
+        let title = InputDialog::new("PR title (required)")
+            .with_validator(|input: &str| {
                 if input.trim().is_empty() {
-                    Err("PR title is required and cannot be empty")
+                    Err("PR title is required and cannot be empty".to_string())
                 } else {
                     Ok(())
                 }
             })
-            .interact_text()
+            .prompt()
             .context("Failed to get PR title")?;
         Ok(title)
     }
@@ -268,10 +274,9 @@ impl PullRequestCreateCommand {
         if let Some(desc) = description {
             Ok(desc)
         } else {
-            let desc: String = Input::new()
-                .with_prompt("Short description (optional)")
+            let desc = InputDialog::new("Short description (optional)")
                 .allow_empty(true)
-                .interact_text()
+                .prompt()
                 .context("Failed to get description")?;
             Ok(desc)
         }
@@ -282,16 +287,17 @@ impl PullRequestCreateCommand {
     /// 步骤 7：提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
     fn select_change_types() -> Result<Vec<bool>> {
         log_info!("Types of changes:");
-        let selections = MultiSelect::new()
-            .with_prompt("Select change types (use space to select, enter to confirm)")
-            .items(TYPES_OF_CHANGES)
-            .interact()
-            .context("Failed to select change types")?;
+        let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
+        let selected_items = MultiSelectDialog::new(
+            "Select change types (use space to select, enter to confirm)",
+            options,
+        )
+        .prompt()
+        .context("Failed to select change types")?;
 
-        // 简化转换逻辑：直接使用 HashSet 的 contains 方法
-        let selected_types: Vec<bool> = (0..TYPES_OF_CHANGES.len())
-            .map(|i| selections.contains(&i))
-            .collect();
+        // 转换选中的项为布尔向量
+        let selected_types: Vec<bool> =
+            TYPES_OF_CHANGES.iter().map(|&item| selected_items.contains(&item)).collect();
 
         Ok(selected_types)
     }
@@ -321,9 +327,12 @@ impl PullRequestCreateCommand {
         GitBranch::checkout_branch(branch_name)?;
 
         // 提交并推送
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
@@ -353,16 +362,19 @@ impl PullRequestCreateCommand {
             .context("Failed to check if branch exists on remote")?;
 
         // 提交
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
 
         // 推送（如需要）
         if !exists_remote {
-            log_success!("Pushing to remote...");
+            log_break!();
+            log_info!("Pushing to remote...");
+            log_break!();
             GitBranch::push(current_branch, true)?; // set-upstream
         } else {
             log_info!("Branch '{}' already exists on remote.", current_branch);
-            log_success!("Pushing latest changes...");
+            log_info!("Pushing latest changes...");
             GitBranch::push(current_branch, false)?; // 不使用 -u，因为已经设置过
         }
 
@@ -404,8 +416,10 @@ impl PullRequestCreateCommand {
         GitBranch::checkout_branch(default_branch)?;
 
         // 拉取最新的代码
-        log_success!("Pulling latest changes from '{}'...", default_branch);
-        GitBranch::pull(default_branch)?;
+        Spinner::with(
+            format!("Pulling latest changes from '{}'...", default_branch),
+            || GitBranch::pull(default_branch),
+        )?;
 
         // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
         let (exists_local, exists_remote) =
@@ -424,12 +438,15 @@ impl PullRequestCreateCommand {
 
         // 恢复 stash
         log_info!("Restoring stashed changes...");
-        let _ = GitStash::stash_pop(); // 日志和错误处理已在 stash_pop 中处理
+        handle_stash_pop_result(GitStash::stash_pop());
 
         // 提交并推送
-        log_success!("Committing changes...");
-        GitCommit::commit(commit_title, true)?; // no-verify
-        log_success!("Pushing to remote...");
+        Spinner::with("Committing changes...", || {
+            GitCommit::commit(commit_title, true) // no-verify
+        })?;
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(branch_name, true)?; // set-upstream
 
         Ok((branch_name.to_string(), default_branch.to_string()))
@@ -448,11 +465,13 @@ impl PullRequestCreateCommand {
         default_branch: &str,
     ) -> Result<(String, String)> {
         log_info!("Branch '{}' already exists on remote.", current_branch);
-        confirm(
-            &format!("Create PR for current branch '{}'?", current_branch),
-            true,
-            Some("Operation cancelled."),
-        )?;
+        ConfirmDialog::new(format!(
+            "Create PR for current branch '{}'?",
+            current_branch
+        ))
+        .with_default(true)
+        .with_cancel_message("Operation cancelled.")
+        .prompt()?;
 
         Ok((current_branch.to_string(), default_branch.to_string()))
     }
@@ -474,17 +493,18 @@ impl PullRequestCreateCommand {
             "Branch '{}' has commits but not pushed to remote.",
             current_branch
         );
-        confirm(
-            &format!(
-                "Push and create PR for current branch '{}'?",
-                current_branch
-            ),
-            true,
-            Some("Operation cancelled."),
-        )?;
+        ConfirmDialog::new(format!(
+            "Push and create PR for current branch '{}'?",
+            current_branch
+        ))
+        .with_default(true)
+        .with_cancel_message("Operation cancelled.")
+        .prompt()?;
 
         // 推送
-        log_success!("Pushing to remote...");
+        log_break!();
+        log_info!("Pushing to remote...");
+        log_break!();
         GitBranch::push(current_branch, true)?; // set-upstream
 
         Ok((current_branch.to_string(), default_branch.to_string()))
@@ -536,14 +556,12 @@ impl PullRequestCreateCommand {
                     "You are on branch '{}' with uncommitted changes.",
                     current_branch
                 );
-                let should_use_current = confirm(
-                    &format!(
-                        "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
-                        current_branch, branch_name
-                    ),
-                    true,
-                    None,
-                )?;
+                let should_use_current = ConfirmDialog::new(format!(
+                    "Create PR for current branch '{}'? (otherwise will create new branch '{}')",
+                    current_branch, branch_name
+                ))
+                .with_default(true)
+                .prompt()?;
 
                 if should_use_current {
                     // 用户期望在当前分支提交并创建 PR
@@ -628,9 +646,15 @@ impl PullRequestCreateCommand {
             }
 
             let provider = create_provider()?;
-            log_success!("Creating PR...");
+
+            // 创建 spinner 显示创建 PR 的进度
+            let spinner = Spinner::new("Creating PR...");
+
             let pull_request_url =
                 provider.create_pull_request(pr_title, pull_request_body, branch_name, None)?;
+
+            // 完成 spinner
+            spinner.finish();
 
             log_success!("PR created: {}", pull_request_url);
             Ok(pull_request_url)
@@ -653,13 +677,15 @@ impl PullRequestCreateCommand {
     ) -> Result<()> {
         if let Some(ref ticket) = jira_ticket {
             if let Some(ref status) = created_pull_request_status {
-                log_success!("Updating Jira ticket...");
-                // 分配任务
-                Jira::assign_ticket(ticket, None)?;
-                // 更新状态
-                Jira::move_ticket(ticket, status)?;
-                // 添加评论（PR URL）
-                Jira::add_comment(ticket, pull_request_url)?;
+                Spinner::with("Updating Jira ticket...", || -> Result<()> {
+                    // 分配任务
+                    Jira::assign_ticket(ticket, None)?;
+                    // 更新状态
+                    Jira::move_ticket(ticket, status)?;
+                    // 添加评论（PR URL）
+                    Jira::add_comment(ticket, pull_request_url)?;
+                    Ok(())
+                })?;
 
                 // 写入历史记录
                 let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;

@@ -4,6 +4,7 @@
 
 use anyhow::{Context, Result};
 use serde_json::Value;
+use std::time::Duration;
 
 use super::helpers::{build_jira_url, jira_auth_config};
 use crate::base::http::{HttpClient, RequestConfig};
@@ -28,7 +29,9 @@ impl JiraProjectApi {
         let url = build_jira_url(&format!("project/{}/statuses", project))?;
         let client = HttpClient::global()?;
         let auth = jira_auth_config()?;
-        let config = RequestConfig::<Value, Value>::new().auth(auth);
+        // 设置较短的超时时间（10秒），避免在测试或 CI 环境中长时间等待
+        let config =
+            RequestConfig::<Value, Value>::new().auth(auth).timeout(Duration::from_secs(10));
         let response = client.get(&url, config)?;
         let data: Value = response
             .ensure_success()?

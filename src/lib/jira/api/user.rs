@@ -25,9 +25,6 @@ impl JiraUserApi {
         let auth = jira_auth_config()?;
         let config = RequestConfig::<Value, Value>::new().auth(auth);
         let response = client.get(&url, config)?;
-        response
-            .ensure_success()?
-            .as_json()
-            .context("Failed to get current Jira user")
+        response.ensure_success()?.as_json().context("Failed to get current Jira user")
     }
 }

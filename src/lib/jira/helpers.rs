@@ -37,16 +37,25 @@ pub fn extract_jira_project(ticket: &str) -> Option<&str> {
 /// assert!(validate_jira_ticket_format("invalid/ticket").is_err());
 /// ```
 pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
+    // 先检查是否为空或只包含空白字符
+    if ticket.trim().is_empty() {
+        anyhow::bail!("Invalid Jira ticket format: ticket cannot be empty");
+    }
+
     let is_valid_format: bool = if let Some(project) = extract_jira_project(ticket) {
-        // 如果是 ticket 格式（PROJ-123），检查项目名是否有效
-        project
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        // 如果是 ticket 格式（PROJ-123），需要：
+        // 1. 项目名有效（只包含字母、数字、下划线）
+        // 2. ticket 必须包含数字部分（PROJ-123 格式，不能只是 PROJ-）
+        let project_valid = project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_');
+
+        // 检查是否有数字部分（ticket 格式应该是 PROJECT-NUMBER）
+        let has_number_part =
+            ticket.split('-').skip(1).any(|part| part.chars().any(|c| c.is_ascii_digit()));
+
+        project_valid && has_number_part
     } else {
         // 如果是项目名格式，检查是否只包含有效字符
-        ticket
-            .chars()
-            .all(|c| c.is_ascii_alphanumeric() || c == '_')
+        ticket.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
     };
 
     if !is_valid_format {
@@ -64,7 +73,7 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
 /// # 示例
 /// ```
 /// use workflow::jira::helpers::extract_jira_ticket_id;
-/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123"));
+/// assert_eq!(extract_jira_ticket_id("PROJ-123: Fix bug"), Some("PROJ-123".to_string()));
 /// assert_eq!(extract_jira_ticket_id("Fix bug"), None);
 /// ```
 pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {
@@ -89,10 +98,7 @@ pub fn extract_jira_ticket_id(pull_request_title: &str) -> Option<String> {
 /// assert_eq!(sanitize_email_for_filename("user+tag@example.com"), "user_plus_tag_at_example_dot_com");
 /// ```
 pub fn sanitize_email_for_filename(email: &str) -> String {
-    email
-        .replace('@', "_at_")
-        .replace('.', "_dot_")
-        .replace('+', "_plus_")
+    email.replace('@', "_at_").replace('.', "_dot_").replace('+', "_plus_")
 }
 
 /// 获取认证信息

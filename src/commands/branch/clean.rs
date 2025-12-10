@@ -2,7 +2,7 @@
 //!
 //! 清理本地分支，保留 main/master、develop 和当前分支，以及配置文件中的忽略分支。
 
-use crate::base::util::confirm;
+use crate::base::dialog::ConfirmDialog;
 use crate::commands::branch::{get_ignore_branches, BranchConfig};
 use crate::commands::check;
 use crate::git::{GitBranch, GitRepo};
@@ -103,7 +103,10 @@ impl BranchCleanCommand {
             merged_branches.len(),
             unmerged_branches.len()
         );
-        confirm(&prompt, false, Some("Operation cancelled"))?;
+        ConfirmDialog::new(&prompt)
+            .with_default(false)
+            .with_cancel_message("Operation cancelled")
+            .prompt()?;
 
         // 12. 删除已合并分支
         let mut deleted_count = 0;
@@ -129,7 +132,7 @@ impl BranchCleanCommand {
                 "There are {} unmerged branch(es), force delete them?",
                 unmerged_branches.len()
             );
-            if confirm(&prompt, false, None)? {
+            if ConfirmDialog::new(&prompt).with_default(false).prompt()? {
                 for branch in &unmerged_branches {
                     match GitBranch::delete(branch, true) {
                         Ok(()) => {

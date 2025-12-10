@@ -44,11 +44,7 @@ impl HttpResponse {
     /// 如果读取响应体失败，返回相应的错误信息。
     pub fn from_reqwest_response(response: reqwest::blocking::Response) -> Result<Self> {
         let status = response.status().as_u16();
-        let status_text = response
-            .status()
-            .canonical_reason()
-            .unwrap_or("Unknown")
-            .to_string();
+        let status_text = response.status().canonical_reason().unwrap_or("Unknown").to_string();
         let headers = response.headers().clone();
 
         // 缓存响应体字节（可以多次解析）
@@ -144,19 +140,24 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpResponse;
+    /// use serde_json::Value;
+    /// use workflow::base::http::HttpResponse;
     ///
-    /// let response = client.get(url, config)?;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = workflow::base::http::HttpClient::global()?;
+    /// # let url = "https://api.example.com";
+    /// # let config = workflow::base::http::RequestConfig::<Value, Value>::new();
+    /// # let response = client.get(url, config)?;
     /// let response = response.ensure_success()?; // 如果失败会返回错误
-    /// let data: MyType = response.as_json()?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn ensure_success(self) -> Result<Self> {
         if !self.is_success() {
             anyhow::bail!(
                 "HTTP request failed with status {}: {}",
                 self.status,
-                self.as_text()
-                    .unwrap_or_else(|_| "Unable to read response body".to_string())
+                self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string())
             );
         }
         Ok(self)
@@ -179,12 +180,18 @@ impl HttpResponse {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use crate::base::http::HttpResponse;
+    /// use serde_json::Value;
+    /// use workflow::base::http::HttpResponse;
     ///
-    /// let response = client.post(url, config)?;
-    /// let data: MyType = response
-    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?
-    ///     .as_json()?;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = workflow::base::http::HttpClient::global()?;
+    /// # let url = "https://api.example.com";
+    /// # let config = workflow::base::http::RequestConfig::<Value, Value>::new();
+    /// # let response = client.post(url, config)?;
+    /// let response = response
+    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn ensure_success_with<E>(self, error_handler: impl FnOnce(&Self) -> E) -> Result<Self>
     where
@@ -194,6 +201,61 @@ impl HttpResponse {
             return Err(error_handler(&self).into());
         }
         Ok(self)
+    }
+
+    /// 提取错误消息（通用方法）
+    ///
+    /// 尝试从响应体中提取错误信息，支持多种常见的错误格式：
+    /// - JSON 格式：尝试从 `error.message`、`error` 或 `message` 字段提取
+    /// - 文本格式：如果无法解析为 JSON，则作为文本返回
+    ///
+    /// # 返回
+    ///
+    /// 返回提取的错误消息字符串。如果无法提取，返回格式化的 JSON 或文本内容。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use serde_json::Value;
+    /// use workflow::base::http::{HttpClient, HttpResponse, RequestConfig};
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = HttpClient::global()?;
+    /// # let config = RequestConfig::<Value, Value>::new();
+    /// # let response = client.get("https://api.example.com", config)?;
+    /// let error_msg = response.extract_error_message();
+    /// println!("Error: {}", error_msg);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn extract_error_message(&self) -> String {
+        // 尝试解析错误响应为 JSON，提取详细的错误信息
+        match self.as_json::<serde_json::Value>() {
+            Ok(error_json) => {
+                // 尝试提取常见的错误字段
+                let error_detail = error_json
+                    .get("error")
+                    .and_then(|e| e.get("message"))
+                    .and_then(|m| m.as_str())
+                    .or_else(|| error_json.get("error").and_then(|e| e.as_str()))
+                    .or_else(|| error_json.get("message").and_then(|m| m.as_str()));
+
+                if let Some(detail) = error_detail {
+                    format!(
+                        "{} (details: {})",
+                        serde_json::to_string(&error_json).unwrap_or_default(),
+                        detail
+                    )
+                } else {
+                    serde_json::to_string(&error_json).unwrap_or_default()
+                }
+            }
+            Err(_) => {
+                // 如果不是 JSON，尝试作为文本解析
+                self.as_text()
+                    .unwrap_or_else(|_| String::from_utf8_lossy(self.as_bytes()).to_string())
+            }
+        }
     }
 
     /// 使用指定的 Parser 解析响应（通用方法）
