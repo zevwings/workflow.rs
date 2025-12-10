@@ -33,12 +33,7 @@ impl JiraLogs {
 
                 // 验证 ID 是否匹配
                 if let Some(ref entry) = current_entry {
-                    if entry
-                        .id
-                        .as_ref()
-                        .map(|id| id == request_id)
-                        .unwrap_or(false)
-                    {
+                    if entry.id.as_ref().map(|id| id == request_id).unwrap_or(false) {
                         found_id = true;
                         // 如果 URL 还没有提取，尝试从当前行提取
                         if entry.url.is_none() {

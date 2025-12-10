@@ -384,6 +384,128 @@ let result = Module::method()?;
 - [ ] 使用统一的代码块格式
 - [ ] 使用统一的列表格式
 - [ ] 使用统一的分隔线（`---`）
+- [ ] 添加"最后更新"时间戳（格式：`**最后更新**: YYYY-MM-DD`）
+
+---
+
+## 📅 文档时间戳
+
+### 问题说明
+
+在生成文档时，AI 助手（如 Cursor）可能会在文档末尾添加"最后更新"时间戳，但时间可能不正确（时区、格式等问题）。
+
+### 解决方案
+
+项目提供了专门的日期时间工具函数，用于生成正确格式的文档时间戳。
+
+### 使用方法
+
+#### 在 Rust 代码中使用
+
+```rust
+use workflow::base::util::date::format_last_updated;
+
+// 生成"最后更新"时间戳（格式：YYYY-MM-DD）
+let timestamp = format_last_updated();
+// 输出示例：2025-12-09
+```
+
+#### 在文档中使用（推荐格式）
+
+在 Markdown 文档末尾添加时间戳时，使用以下格式：
+
+```markdown
+---
+
+**最后更新**: 2025-12-09
+```
+
+或者：
+
+```markdown
+---
+
+*最后更新：2025-12-09*
+```
+
+### 对于 AI 助手（Cursor/Claude 等）
+
+**重要提示**：当生成或更新文档时，请在文档末尾添加"最后更新"时间戳。
+
+#### 推荐做法
+
+1. **使用当前日期**：使用当前本地日期（格式：`YYYY-MM-DD`）
+2. **格式统一**：使用以下格式之一：
+   - `**最后更新**: YYYY-MM-DD`
+   - `*最后更新：YYYY-MM-DD*`
+3. **位置**：放在文档末尾，分隔线之后
+
+#### 获取当前日期的方法
+
+**命令行方式**：
+
+- **Unix/macOS/Linux**：
+  ```bash
+  date +%Y-%m-%d
+  # 输出：2025-12-09
+  ```
+
+- **Windows PowerShell**：
+  ```powershell
+  Get-Date -Format "yyyy-MM-dd"
+  # 输出：2025-12-09
+  ```
+
+- **Windows CMD**：
+  ```cmd
+  powershell -Command "Get-Date -Format 'yyyy-MM-dd'"
+  ```
+
+**代码方式**：
+
+在 Rust 代码中使用：
+```rust
+use workflow::base::util::date::format_last_updated;
+
+let timestamp = format_last_updated();
+// 输出：2025-12-09
+```
+
+### 高级用法
+
+如果需要更多控制，可以使用其他函数：
+
+```rust
+use workflow::base::util::date::{
+    format_document_timestamp, format_last_updated_with_time, DateFormat, Timezone,
+};
+
+// 只生成日期（本地时区）
+let date = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
+
+// 生成日期和时间（本地时区）
+let datetime = format_last_updated_with_time();
+
+// 使用 UTC 时区
+let utc_date = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
+
+// ISO 8601 格式
+let iso = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
+```
+
+### 支持的格式
+
+| 格式 | 函数 | 输出示例 |
+|------|------|----------|
+| 日期（YYYY-MM-DD） | `format_last_updated()` | `2025-12-09` |
+| 日期时间（YYYY-MM-DD HH:MM:SS） | `format_last_updated_with_time()` | `2025-12-09 14:30:00` |
+| ISO 8601 | `format_document_timestamp(DateFormat::Iso8601, ...)` | `2025-12-09T14:30:00+08:00` |
+
+### 注意事项
+
+1. **时区**：默认使用本地时区（`Timezone::Local`）
+2. **格式一致性**：建议在项目中统一使用 `YYYY-MM-DD` 格式
+3. **自动更新**：时间戳不会自动更新，需要在编辑文档时手动更新
 
 ---
 
@@ -412,7 +534,7 @@ let result = Module::method()?;
 ---
 
 *模板版本：2.0*
-*最后更新：2024-12*
+*最后更新：2025-12-09*
 
 ---
 
@@ -436,4 +558,3 @@ let result = Module::method()?;
    - 在"核心组件"中添加"使用场景"字段
 
 简化后的模板减少了约 15% 的内容，同时保持了所有必要信息，结构更加清晰。
-

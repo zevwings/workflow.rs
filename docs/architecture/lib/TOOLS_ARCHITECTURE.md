@@ -8,6 +8,11 @@
 - 浏览器和剪贴板操作
 - 文件解压和校验和验证
 - 用户确认对话框
+- 格式化工具（文件大小格式化）
+- 平台检测工具（GitHub Releases 平台识别）
+- 表格输出工具（统一的表格显示接口）
+
+**注意**：交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./DIALOG_ARCHITECTURE.md)。进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./INDICATOR_ARCHITECTURE.md)。
 
 这些工具函数为整个项目提供通用的基础设施支持，被所有模块广泛使用。
 
@@ -26,10 +31,13 @@ src/lib/base/util/
 ├── clipboard.rs   # 剪贴板操作（~35 行）
 ├── unzip.rs       # 文件解压工具（~61 行）
 ├── checksum.rs    # 校验和验证工具（~164 行）
-└── confirm.rs     # 用户确认对话框（~45 行）
+├── confirm.rs     # 用户确认对话框（~45 行）
+├── format.rs      # 格式化工具（~42 行）
+├── platform.rs    # 平台检测工具（~84 行）
+└── table.rs       # 表格输出工具（~382 行）
 ```
 
-**总计：约 938 行代码，8 个文件，7 个主要组件**
+**总计：约 1446 行代码，11 个文件，9 个主要组件**
 
 ### 依赖模块
 
@@ -39,6 +47,7 @@ src/lib/base/util/
 - **`zip`**：ZIP 文件解压
 - **`sha2`**：SHA256 校验和
 - **`dialoguer`**：用户确认对话框
+- **`tabled`**：表格输出格式化
 
 ### 模块集成
 
@@ -49,6 +58,9 @@ src/lib/base/util/
 - **浏览器**：PR 命令使用 `Browser::open()`
 - **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
 - **用户确认**：多个命令使用 `confirm()` 函数
+- **格式化工具**：Lifecycle 命令使用 `format_size()` 格式化文件大小
+- **平台检测**：Lifecycle 命令使用 `detect_release_platform()` 检测平台
+- **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
 
 ---
 
@@ -93,7 +105,7 @@ pub enum LogLevel {
 - 默认级别根据编译模式自动决定：
   - Debug 模式：`Debug` 级别
   - Release 模式：`Info` 级别
-- 支持通过环境变量 `WORKFLOW_LOG_LEVEL` 设置
+- 支持通过配置文件设置（`workflow config log set`）
 - 支持运行时动态设置
 
 #### Logger 结构体
@@ -208,9 +220,8 @@ LogLevel::init(Some(LogLevel::Debug));
 ```
 
 **优先级**：
-1. 如果提供了 `level` 参数，使用参数值
-2. 如果设置了 `WORKFLOW_LOG_LEVEL` 环境变量，使用环境变量值
-3. 否则使用默认级别（根据编译模式决定）
+1. 如果提供了 `level` 参数，使用参数值（通常从配置文件读取）
+2. 否则使用默认级别（根据编译模式决定）
 
 #### 运行时设置日志级别
 
@@ -579,6 +590,144 @@ confirm(
    - 返回 `Ok(false)`：允许调用者根据返回值决定后续逻辑
    - 返回错误：强制要求用户确认，取消则终止操作
 
+#### 8. 格式化工具 (`format.rs`)
+
+### 功能概述
+
+提供各种格式化函数，包括文件大小格式化等。
+
+### 核心函数
+
+#### format_size
+
+```rust
+pub fn format_size(bytes: u64) -> String
+```
+
+**功能**：格式化文件大小
+
+**参数**：
+- `bytes` - 字节数
+
+**返回**：格式化后的字符串，例如 "1.23 MB" 或 "1024 B"
+
+**规则**：
+- 自动选择合适的单位（B, KB, MB, GB, TB）
+- 小于 1024 字节时显示为 "X B"
+- 大于等于 1024 字节时显示为 "X.XX UNIT"（保留两位小数）
+
+**示例**：
+```rust
+use workflow::base::util::format_size;
+
+assert_eq!(format_size(0), "0 B");
+assert_eq!(format_size(1024), "1.00 KB");
+assert_eq!(format_size(1048576), "1.00 MB");
+```
+
+### 使用场景
+
+- **文件大小显示**：在下载、更新等命令中显示文件大小
+- **进度提示**：显示下载进度和文件大小
+
+#### 9. 平台检测工具 (`platform.rs`)
+
+### 功能概述
+
+提供平台检测相关的工具函数，用于识别当前运行的操作系统和架构。
+
+### 核心函数
+
+#### detect_release_platform
+
+```rust
+pub fn detect_release_platform() -> Result<String>
+```
+
+**功能**：检测当前平台并返回 GitHub Releases 格式的平台标识符
+
+**返回**：平台标识符字符串，例如 `"macOS-AppleSilicon"` 或 `"Linux-x86_64-static"`
+
+**支持的平台格式**：
+- macOS: `macOS-Intel`, `macOS-AppleSilicon`
+- Linux: `Linux-x86_64`, `Linux-x86_64-static`, `Linux-ARM64`
+- Windows: `Windows-x86_64`, `Windows-ARM64`
+
+**检测逻辑**：
+- 对于 Linux x86_64，会自动检测是否需要静态链接版本（musl/static）：
+  1. 检查是否是 Alpine Linux（通常使用 musl）
+  2. 检测当前二进制是否静态链接（使用 `ldd` 命令）
+
+**示例**：
+```rust
+use workflow::base::util::detect_release_platform;
+
+let platform = detect_release_platform()?;
+println!("Detected platform: {}", platform);
+```
+
+### 使用场景
+
+- **更新功能**：检测平台以匹配对应的 GitHub Release 资源文件
+- **安装功能**：检测平台以选择正确的安装包
+
+#### 10. 表格输出工具 (`table.rs`)
+
+### 功能概述
+
+提供统一的表格输出接口，使用 `tabled` 库。支持自定义样式、边框、对齐等。
+
+### 核心组件
+
+#### TableBuilder
+
+```rust
+pub struct TableBuilder<T> {
+    data: Vec<T>,
+    title: Option<String>,
+    style: Option<TableStyle>,
+    max_width: Option<usize>,
+    alignments: Vec<Alignment>,
+}
+```
+
+**主要方法**：
+- `new(data)` - 创建新的表格构建器
+- `with_title(title)` - 设置表格标题
+- `with_style(style)` - 设置表格样式
+- `with_max_width(width)` - 设置最大宽度（自动换行）
+- `with_alignment(alignments)` - 设置列对齐方式
+- `render()` - 构建并渲染表格为字符串
+
+**特性**：
+- 支持链式调用
+- 支持自定义样式和边框
+- 支持列对齐和宽度控制
+- 支持紧凑模式和完整模式
+
+#### TableStyle 枚举
+
+```rust
+pub enum TableStyle {
+    Default,  // 默认样式（ASCII）
+    Modern,   // 现代样式（带边框）
+    Compact,  // 紧凑样式（无边框）
+    Minimal,  // 最小样式（仅分隔符）
+    Grid,     // 网格样式（完整网格）
+}
+```
+
+### 使用场景
+
+- **PR 列表显示**：使用 `PullRequestRow` 结构体显示 PR 列表
+- **数据表格**：显示任何需要表格格式的数据
+
+### 设计决策
+
+1. **链式调用**：支持链式配置，提供更好的代码可读性
+2. **类型安全**：使用泛型和 `Tabled` trait 保证类型安全
+3. **灵活配置**：支持多种样式和对齐方式
+
 ### 设计模式
 
 #### 工具类设计
@@ -738,6 +887,8 @@ util (基础设施)
 - [总体架构文档](../ARCHITECTURE.md)
 - [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md)
 - [HTTP 架构文档](./HTTP_ARCHITECTURE.md)
+- [Dialog 模块架构文档](./DIALOG_ARCHITECTURE.md)
+- [Indicator 模块架构文档](./INDICATOR_ARCHITECTURE.md)
 
 ---
 
@@ -818,6 +969,48 @@ if confirm("Do you want to continue?")? {
 }
 ```
 
+### 格式化工具
+
+```rust
+use workflow::base::util::format_size;
+
+let size = format_size(1048576);
+println!("File size: {}", size);  // 输出：File size: 1.00 MB
+```
+
+### 平台检测
+
+```rust
+use workflow::base::util::detect_release_platform;
+
+let platform = detect_release_platform()?;
+println!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
+```
+
+### 表格输出
+
+```rust
+use tabled::Tabled;
+use workflow::base::util::table::{TableBuilder, TableStyle};
+
+#[derive(Tabled)]
+struct User {
+    name: String,
+    age: u32,
+}
+
+let users = vec![
+    User { name: "Alice".to_string(), age: 30 },
+    User { name: "Bob".to_string(), age: 25 },
+];
+
+let output = TableBuilder::new(users)
+    .with_title("Users")
+    .with_style(TableStyle::Modern)
+    .render();
+println!("{}", output);
+```
+
 ---
 
 ## ✅ 总结
@@ -828,12 +1021,17 @@ if confirm("Do you want to continue?")? {
 2. **字符串处理**：敏感值隐藏
 3. **浏览器和剪贴板**：系统集成操作
 4. **文件操作**：解压和校验和验证
-5. **用户确认**：交互式对话框
+5. **用户确认**：交互式确认对话框
+6. **格式化工具**：文件大小格式化
+7. **平台检测**：GitHub Releases 平台识别
+8. **表格输出**：统一的表格显示接口
+
+**注意**：交互式对话框和进度指示器已移至独立模块，请参考相关架构文档。
 
 **设计优势**：
-- ✅ **易用性**：简洁的 API 和宏
+- ✅ **易用性**：简洁的 API 和宏，支持链式调用
 - ✅ **一致性**：统一的错误处理方式
 - ✅ **可配置性**：日志级别可通过环境变量或运行时设置
 - ✅ **跨平台**：所有工具函数支持多平台
 - ✅ **高性能**：宏在编译时展开，流式处理文件
-
+- ✅ **类型安全**：使用泛型和 trait 保证类型安全

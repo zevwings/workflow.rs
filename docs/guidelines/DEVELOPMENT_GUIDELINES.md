@@ -269,6 +269,8 @@ let delay = (1 << retry_count).min(60);
   - **架构文档**：`{MODULE}_ARCHITECTURE.md`（如 `PR_ARCHITECTURE.md`、`GIT_ARCHITECTURE.md`）
   - **命令文档**：`{MODULE}_COMMAND_ARCHITECTURE.md`（如 `PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`）
   - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `DEVELOPMENT_GUIDELINES.md`、`DOCUMENT_GUIDELINES.md`）
+  - **需求文档**：`{FEATURE}_REQUIREMENT.md` 或 `{FEATURE}_REQUIREMENTS.md`（如 `GITHUB_BRANCH_PREFIX_REPO_BASED_REQUIREMENT.md`）
+  - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `CONFIG_TODO.md`、`GIT_TODO.md`、`JIRA_TODO.md`）
 
 ### 函数命名
 
@@ -425,6 +427,8 @@ Extract retry logic into a separate module for better maintainability.
 
 ## 🧪 测试规范
 
+> **详细测试规范**：请参考 [测试规范指南](./TESTING_GUIDELINES.md)
+
 ### 单元测试
 
 为所有公共函数编写单元测试：
@@ -447,6 +451,7 @@ mod tests {
 - 测试模块放在源文件底部，使用 `#[cfg(test)]`
 - 测试函数使用 `test_` 前缀或 `#[test]` 属性
 - 使用描述性的测试名称
+- 集成测试使用目录结构组织（详见 [测试规范指南](./TESTING_GUIDELINES.md)）
 
 ### 测试覆盖率
 
@@ -597,5 +602,4 @@ cargo fmt --check && cargo clippy -- -D warnings
 
 ---
 
-*最后更新：2024-12*
-
+**最后更新**: 2025-12-09

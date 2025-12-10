@@ -1,0 +1,8 @@
+# Fixtures 目录
+#
+# 此目录用于存放测试数据文件（fixtures）。
+#
+# 示例：
+# - sample_response.json - API 响应示例
+# - test_config.toml - 测试配置文件
+# - sample_pr_body.md - PR body 示例

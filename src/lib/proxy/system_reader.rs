@@ -2,9 +2,10 @@
 //!
 //! 负责从 macOS 系统设置读取代理配置。
 
-use crate::proxy::{ProxyInfo, ProxyType};
 use anyhow::{Context, Result};
 use duct::cmd;
+
+use crate::proxy::{ProxyInfo, ProxyType};
 
 /// 系统代理读取器
 ///
