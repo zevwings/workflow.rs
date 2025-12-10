@@ -56,10 +56,7 @@ impl Paths {
 
         // 构建 iCloud Drive 基础路径
         // ~/Library/Mobile Documents/com~apple~CloudDocs
-        let icloud_base = home
-            .join("Library")
-            .join("Mobile Documents")
-            .join("com~apple~CloudDocs");
+        let icloud_base = home.join("Library").join("Mobile Documents").join("com~apple~CloudDocs");
 
         // 检查 iCloud Drive 是否可用
         if !icloud_base.exists() || !icloud_base.is_dir() {
@@ -82,7 +79,11 @@ impl Paths {
     }
 
     /// 非 macOS 平台：总是返回 None
+    ///
+    /// 注意：此函数在非 macOS 平台上不会被调用（调用处被 `#[cfg(target_os = "macos")]` 包裹），
+    /// 但为了保持 trait 实现的一致性，需要提供此实现。
     #[cfg(not(target_os = "macos"))]
+    #[allow(dead_code)] // 在非 macOS 平台上不会被调用，但需要提供实现以保持一致性
     fn try_icloud_base_dir() -> Option<PathBuf> {
         None
     }
@@ -219,11 +220,13 @@ impl Paths {
         Ok(Self::config_dir()?.join("jira-users.toml"))
     }
 
-    /// 获取分支配置文件路径
+    /// 获取仓库配置文件路径
     ///
-    /// 返回 `~/.workflow/config/branch.toml` 的路径。
+    /// 返回 `~/.workflow/config/repositories.toml` 的路径。
+    ///
+    /// **注意**：配置文件名称使用复数 `repositories.toml`，因为文件中存储多个仓库的配置。
     pub fn branch_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("branch.toml"))
+        Ok(Self::config_dir()?.join("repositories.toml"))
     }
 
     /// 获取工作流目录路径（支持 iCloud）
@@ -281,6 +284,43 @@ impl Paths {
         Ok(history_dir)
     }
 
+    /// 获取日志目录路径（强制本地，不同步）
+    ///
+    /// 返回 `~/.workflow/logs/`（总是本地路径）。
+    ///
+    /// **重要**：日志文件是设备本地的，不应该跨设备同步，因为：
+    /// - 每个设备的日志是独立的
+    /// - 避免 iCloud 同步延迟影响性能
+    /// - 日志文件可能较大，不适合同步
+    ///
+    /// # 路径示例
+    ///
+    /// - 所有平台：`~/.workflow/logs/`
+    ///
+    /// # 返回
+    ///
+    /// 返回日志目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn logs_dir() -> Result<PathBuf> {
+        // 强制使用本地路径，不使用 iCloud
+        let logs_dir = Self::local_base_dir()?.join("logs");
+
+        // 确保目录存在
+        fs::create_dir_all(&logs_dir).context("Failed to create .workflow/logs directory")?;
+
+        // 设置目录权限为 700（仅用户可访问，仅 Unix）
+        #[cfg(unix)]
+        {
+            fs::set_permissions(&logs_dir, fs::Permissions::from_mode(0o700))
+                .context("Failed to set logs directory permissions")?;
+        }
+
+        Ok(logs_dir)
+    }
+
     // ==================== 安装路径相关方法 ====================
     /// 获取所有命令名称
     ///
@@ -295,7 +335,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let names = Paths::command_names();
     /// assert_eq!(names, ["workflow"]);
@@ -315,7 +355,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let dir = Paths::binary_install_dir();
     /// // Unix: "/usr/local/bin"
@@ -346,7 +386,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let paths = Paths::binary_paths();
     /// assert_eq!(paths, vec![
@@ -360,10 +400,7 @@ impl Paths {
             .iter()
             .map(|name| {
                 let binary_name = Self::binary_name(name);
-                install_path
-                    .join(&binary_name)
-                    .to_string_lossy()
-                    .to_string()
+                install_path.join(&binary_name).to_string_lossy().to_string()
             })
             .collect()
     }
@@ -383,7 +420,7 @@ impl Paths {
     /// # 示例
     ///
     /// ```
-    /// use workflow::settings::paths::Paths;
+    /// use workflow::base::settings::paths::Paths;
     ///
     /// let name = Paths::binary_name("workflow");
     /// // Windows: "workflow.exe"
@@ -411,7 +448,13 @@ impl Paths {
     /// 如果无法获取本地目录，返回相应的错误信息。
     pub fn completion_dir() -> Result<PathBuf> {
         // 确保使用本地路径
-        Ok(Self::local_base_dir()?.join("completions"))
+        let completion_dir = Self::local_base_dir()?.join("completions");
+
+        // 确保目录存在
+        fs::create_dir_all(&completion_dir)
+            .context("Failed to create .workflow/completions directory")?;
+
+        Ok(completion_dir)
     }
 
     // ==================== 信息查询 API ====================
@@ -521,10 +564,16 @@ impl Paths {
     ///
     /// ```
     /// use clap_complete::shells::Shell;
-    /// use workflow::settings::paths::Paths;
+    /// ```
+    /// use std::path::PathBuf;
+    /// use clap_complete::shells::Shell;
+    /// use workflow::base::settings::paths::Paths;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let zsh_path = Paths::config_file(&Shell::Zsh)?;
     /// assert_eq!(zsh_path, PathBuf::from("~/.zshrc"));
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn config_file(shell: &Shell) -> Result<PathBuf> {
         // 使用新的 home_dir() 方法

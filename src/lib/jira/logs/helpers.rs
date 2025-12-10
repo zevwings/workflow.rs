@@ -111,7 +111,7 @@ pub(crate) fn add_entry_if_not_duplicate(
 ///
 /// # 示例
 ///
-/// ```
+/// ```text
 /// // Unix
 /// expand_path("~/Documents/Workflow") -> "/home/user/Documents/Workflow"
 /// expand_path("~") -> "/home/user"

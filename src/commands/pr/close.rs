@@ -83,9 +83,7 @@ impl PullRequestCloseCommand {
     /// 关闭 PR（根据仓库类型调用对应的实现）
     fn close_pull_request(pull_request_id: &str) -> Result<()> {
         let provider = create_provider()?;
-        provider
-            .close_pull_request(pull_request_id)
-            .context("Failed to close PR")?;
+        provider.close_pull_request(pull_request_id).context("Failed to close PR")?;
         log_success!("PR closed successfully");
         Ok(())
     }

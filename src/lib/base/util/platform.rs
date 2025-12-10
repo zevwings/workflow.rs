@@ -32,8 +32,11 @@ use std::process::Command;
 /// ```rust,no_run
 /// use workflow::base::util::detect_release_platform;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let platform = detect_release_platform()?;
 /// println!("Detected platform: {}", platform);
+/// # Ok(())
+/// # }
 /// ```
 pub fn detect_release_platform() -> Result<String> {
     let arch = env::consts::ARCH;
@@ -53,9 +56,8 @@ pub fn detect_release_platform() -> Result<String> {
 
             // 方法2: 尝试检测当前二进制是否静态链接
             // 如果 ldd 命令失败或没有输出，可能是静态链接
-            if let Ok(output) = Command::new("ldd")
-                .arg(env::current_exe().unwrap_or_default())
-                .output()
+            if let Ok(output) =
+                Command::new("ldd").arg(env::current_exe().unwrap_or_default()).output()
             {
                 let output_str = String::from_utf8_lossy(&output.stdout);
                 // 如果 ldd 输出 "not a dynamic executable" 或 "statically linked"

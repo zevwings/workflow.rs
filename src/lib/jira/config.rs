@@ -30,8 +30,15 @@ use std::os::unix::fs::PermissionsExt;
 ///
 /// ```rust,no_run
 /// use workflow::jira::config::ConfigManager;
-/// use crate::base::settings::paths::Paths;
+/// use workflow::base::settings::paths::Paths;
+/// use serde::{Deserialize, Serialize};
 ///
+/// #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+/// struct MyConfig {
+///     some_field: String,
+/// }
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let config_path = Paths::jira_users_config()?;
 /// let manager = ConfigManager::<MyConfig>::new(config_path);
 ///
@@ -39,12 +46,16 @@ use std::os::unix::fs::PermissionsExt;
 /// let config = manager.read()?;
 ///
 /// // 更新配置
+/// let new_value = "new_value".to_string();
 /// manager.update(|config| {
 ///     config.some_field = new_value;
 /// })?;
 ///
 /// // 写入配置
-/// manager.write(&config)?;
+/// let updated_config = manager.read()?;
+/// manager.write(&updated_config)?;
+/// # Ok(())
+/// # }
 /// ```
 pub struct ConfigManager<T> {
     path: PathBuf,

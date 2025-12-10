@@ -1,0 +1,21 @@
+# Rustfmt 配置文件
+# 用于统一代码格式化规则
+# 只使用稳定版本支持的功能
+
+# Rust 版本（用于兼容性）
+edition = "2021"
+
+# 缩进设置（4 个空格，与 .editorconfig 保持一致）
+tab_spaces = 4
+
+# 行宽设置（100 字符，与 .editorconfig 保持一致）
+max_width = 100
+
+# 换行设置（Unix 风格，与 .editorconfig 保持一致）
+newline_style = "Unix"
+
+# 数组格式化
+array_width = 60
+
+# 链式调用格式化
+chain_width = 80

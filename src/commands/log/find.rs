@@ -1,8 +1,8 @@
+use crate::base::dialog::InputDialog;
 use crate::base::util::Clipboard;
 use crate::jira::logs::JiraLogs;
 use crate::{log_debug, log_error, log_success};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 查找请求 ID 命令
 pub struct FindCommand;
@@ -14,9 +14,8 @@ impl FindCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 
@@ -27,21 +26,18 @@ impl FindCommand {
         let req_id = if let Some(id) = request_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter request ID to find")
-                .interact()
+            InputDialog::new("Enter request ID to find")
+                .prompt()
                 .context("Failed to read request ID")?
         };
 
         // 4. 提取响应内容
         log_debug!("Searching for request ID: {}...", req_id);
 
-        let response_content = logs
-            .extract_response_content(&jira_id, &req_id)
-            .map_err(|e| {
-                log_error!("Failed to extract response content: {}", e);
-                e
-            })?;
+        let response_content = logs.extract_response_content(&jira_id, &req_id).map_err(|e| {
+            log_error!("Failed to extract response content: {}", e);
+            e
+        })?;
 
         // 复制到剪贴板（CLI特定操作）
         Clipboard::copy(&response_content).context("Failed to copy to clipboard")?;

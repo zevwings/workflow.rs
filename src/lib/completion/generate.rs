@@ -2,16 +2,22 @@
 //!
 //! 提供生成各种 shell 的 completion 脚本文件的功能。
 
-use crate::base::settings::paths::Paths;
-use crate::log_debug;
-use crate::log_success;
-use anyhow::{Context, Result};
-use clap::Command;
-use clap_complete::{generate, shells::Shell as ClapShell};
 use std::fs;
 use std::path::PathBuf;
 
+use anyhow::{Context, Result};
+use clap::{Command, CommandFactory};
+use clap_complete::{generate, shells::Shell as ClapShell};
+
+use crate::base::settings::paths::Paths;
 use crate::completion::helpers::get_completion_filename;
+
+/// 生成结果
+#[derive(Debug, Clone)]
+pub struct GenerateResult {
+    /// 生成的消息列表
+    pub messages: Vec<String>,
+}
 
 /// Completion 脚本生成器
 ///
@@ -39,11 +45,14 @@ impl CompletionGenerator {
     /// ```rust,no_run
     /// use workflow::completion::generate::CompletionGenerator;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// let generator = CompletionGenerator::new(
     ///     Some("zsh".to_string()),
     ///     Some("/path/to/completions".to_string()),
     /// )?;
     /// generator.generate_all()?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn new(shell_type: Option<String>, output_dir: Option<String>) -> Result<Self> {
         // 解析 shell 类型
@@ -83,11 +92,15 @@ impl CompletionGenerator {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch` 等）
-    pub fn generate_all(&self) -> Result<()> {
-        log_debug!("Generating shell completion scripts...");
-        log_debug!("Shell type: {}", self.shell);
-        log_debug!("Output directory: {}", self.output_dir.display());
+    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）、`migrate`（cleanup）等）
+    ///
+    /// # 返回
+    ///
+    /// 返回 `GenerateResult`，包含生成的消息。
+    pub fn generate_all(&self) -> Result<GenerateResult> {
+        crate::trace_debug!("Generating shell completion scripts...");
+        crate::trace_debug!("Shell type: {}", self.shell);
+        crate::trace_debug!("Output directory: {}", self.output_dir.display());
 
         // 创建输出目录
         fs::create_dir_all(&self.output_dir).with_context(|| {
@@ -101,11 +114,12 @@ impl CompletionGenerator {
         // 生成 completion 脚本
         self.generate_workflow()?;
 
-        log_success!(
-            "  Shell completion scripts generated to: {}",
-            self.output_dir.display()
-        );
-        Ok(())
+        Ok(GenerateResult {
+            messages: vec![format!(
+                "  Shell completion scripts generated to: {}",
+                self.output_dir.display()
+            )],
+        })
     }
 
     /// 生成 workflow 命令的 completion
@@ -115,7 +129,7 @@ impl CompletionGenerator {
     fn generate_workflow(&self) -> Result<()> {
         // 使用实际的 CLI 结构体生成补全脚本，而不是手动构建
         // 这样可以确保补全脚本与实际命令结构保持同步
-        let mut cmd = crate::cli::get_cli_command();
+        let mut cmd = crate::cli::Cli::command();
 
         self.generate_completion(&mut cmd, "workflow")
     }
@@ -142,7 +156,6 @@ impl CompletionGenerator {
                 self.shell
             )
         })?;
-        log_success!("  Generated: {}", output_file.display());
 
         Ok(())
     }

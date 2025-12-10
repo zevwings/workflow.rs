@@ -6,7 +6,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-use workflow::commands::branch::{clean, ignore};
+use workflow::commands::branch::{clean, ignore, prefix};
 use workflow::commands::check::check;
 use workflow::commands::config::{completion, log, setup, show};
 use workflow::commands::github::github;
@@ -14,6 +14,7 @@ use workflow::commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
 use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
 use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
+use workflow::commands::migrate::MigrateCommand;
 use workflow::commands::pr::{
     approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
     update as pr_update,
@@ -22,7 +23,8 @@ use workflow::commands::proxy::proxy;
 
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CompletionSubcommand, GitHubSubcommand, IgnoreSubcommand,
-    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand,
+    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands, PrefixSubcommand,
+    ProxySubcommand,
 };
 use workflow::*;
 
@@ -32,7 +34,7 @@ use workflow::base::settings::Settings;
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
-    // 初始化日志级别（从配置文件读取，但不让 logger 模块直接依赖 Settings）
+    // 初始化日志级别（从配置文件读取，用于 log_*! 宏）
     {
         let config_level = Settings::get()
             .log
@@ -41,6 +43,9 @@ fn main() -> Result<()> {
             .and_then(|s| s.parse::<workflow::LogLevel>().ok());
         workflow::LogLevel::init(config_level);
     }
+
+    // 初始化 tracing（从配置文件读取，统一管理）
+    workflow::Tracer::init();
 
     let cli = Cli::parse();
 
@@ -82,6 +87,7 @@ fn main() -> Result<()> {
         Some(Commands::LogLevel { subcommand }) => match subcommand {
             LogLevelSubcommand::Set => log::LogCommand::set()?,
             LogLevelSubcommand::Check => log::LogCommand::check()?,
+            LogLevelSubcommand::TraceConsole => log::LogCommand::trace_console()?,
         },
         // GitHub 账号管理命令
         Some(Commands::GitHub { subcommand }) => match subcommand {
@@ -117,6 +123,17 @@ fn main() -> Result<()> {
                 }
                 IgnoreSubcommand::List => {
                     ignore::BranchIgnoreCommand::list()?;
+                }
+            },
+            BranchSubcommand::Prefix { subcommand } => match subcommand {
+                PrefixSubcommand::Set { prefix } => {
+                    prefix::BranchPrefixCommand::set(prefix)?;
+                }
+                PrefixSubcommand::Get => {
+                    prefix::BranchPrefixCommand::get()?;
+                }
+                PrefixSubcommand::Remove => {
+                    prefix::BranchPrefixCommand::remove()?;
                 }
             },
         },
@@ -228,16 +245,24 @@ fn main() -> Result<()> {
                 CleanCommand::clean(jira_id, all, dry_run, list)?;
             }
         },
+        // 配置迁移命令
+        Some(Commands::Migrate { dry_run, keep_old }) => {
+            // cleanup = true 表示删除旧文件，keep_old = true 表示保留旧文件
+            // 所以 cleanup = !keep_old
+            let cleanup = !keep_old;
+            MigrateCommand::migrate(dry_run, cleanup)?;
+        }
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
             log_message!("\nAvailable commands:");
-            log_message!("  workflow branch     - Manage Git branches (clean/ignore)");
+            log_message!("  workflow branch     - Manage Git branches (clean/ignore/prefix)");
             log_message!("  workflow check      - Run environment checks (Git status and network)");
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
             log_message!("  workflow config     - View current configuration");
             log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
             log_message!("  workflow log-level  - Manage log level (set/check)");
+            log_message!("  workflow migrate    - Migrate configuration to new format");
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");
             log_message!("  workflow uninstall  - Uninstall Workflow CLI configuration");

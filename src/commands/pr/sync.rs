@@ -1,9 +1,11 @@
-use crate::base::util::confirm;
+use crate::base::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::indicator::Spinner;
 use crate::commands::check;
+use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_debug, log_error, log_info, log_success, log_warning};
+use crate::{log_break, log_debug, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
@@ -49,11 +51,10 @@ impl PullRequestSyncCommand {
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
             log_warning!("Pre-flight checks failed: {}", e);
-            confirm(
-                "Continue anyway?",
-                false,
-                Some("Operation cancelled by user"),
-            )?;
+            ConfirmDialog::new("Continue anyway?")
+                .with_default(false)
+                .with_cancel_message("Operation cancelled by user")
+                .prompt()?;
         }
 
         // 2. 获取当前分支
@@ -72,14 +73,15 @@ impl PullRequestSyncCommand {
         // 6. 执行同步（merge 或 rebase）
         match strategy {
             SyncStrategy::Merge(merge_strategy) => {
-                log_success!("Merging '{}' into '{}'...", source_branch, current_branch);
-                let merge_result =
-                    GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy);
+                let merge_result = Spinner::with(
+                    format!("Merging '{}' into '{}'...", source_branch, current_branch),
+                    || GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy),
+                );
 
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
                     log_info!("Merge failed, attempting to restore stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
 
                 match merge_result {
@@ -105,14 +107,16 @@ impl PullRequestSyncCommand {
                 }
             }
             SyncStrategy::Rebase => {
-                log_success!("Rebasing '{}' onto '{}'...", current_branch, source_branch);
                 // 执行 rebase
-                let rebase_result = GitBranch::rebase_onto(&source_branch_info.merge_ref);
+                let rebase_result = Spinner::with(
+                    format!("Rebasing '{}' onto '{}'...", current_branch, source_branch),
+                    || GitBranch::rebase_onto(&source_branch_info.merge_ref),
+                );
 
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
                     log_info!("Rebase failed, attempting to restore stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
 
                 match rebase_result {
@@ -149,24 +153,26 @@ impl PullRequestSyncCommand {
                 // 未创建 PR，恢复 stash（如果有）
                 if has_stashed {
                     log_info!("Restoring stashed changes...");
-                    let _ = GitStash::stash_pop();
+                    handle_stash_pop_result(GitStash::stash_pop());
                 }
             }
         } else {
             // 本地分支：同步后立即恢复 stash（如果有）
             if has_stashed {
                 log_info!("Restoring stashed changes...");
-                let _ = GitStash::stash_pop();
+                handle_stash_pop_result(GitStash::stash_pop());
             }
 
             // 推送到远程（如果需要）
             if push {
-                log_success!("Pushing to remote...");
                 let exists_remote = GitBranch::has_remote_branch(&current_branch)
                     .context("Failed to check if branch exists on remote")?;
 
                 // 如果是 rebase，使用 force-with-lease
                 let use_force = matches!(strategy, SyncStrategy::Rebase);
+                log_break!();
+                log_info!("Pushing to remote...");
+                log_break!();
                 if use_force {
                     GitBranch::push_force_with_lease(&current_branch)
                         .context("Failed to push to remote (force-with-lease)")?;
@@ -174,6 +180,7 @@ impl PullRequestSyncCommand {
                     GitBranch::push(&current_branch, !exists_remote)
                         .context("Failed to push to remote")?;
                 }
+                log_break!();
                 log_success!("Pushed to remote successfully");
             } else {
                 log_info!("Skipping push (--no-push flag set)");
@@ -184,6 +191,7 @@ impl PullRequestSyncCommand {
         // 8. 管理 PR 和分支清理（交互式）
         Self::handle_source_branch_cleanup(&source_branch, &current_branch)?;
 
+        log_break!();
         log_success!("Sync completed successfully!");
         Ok(())
     }
@@ -198,12 +206,19 @@ impl PullRequestSyncCommand {
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
-            let choice = dialoguer::Select::new()
-                .with_prompt("How would you like to proceed?")
-                .items(&["Stash changes and continue", "Abort operation"])
-                .default(0)
-                .interact()
+            let options = vec![
+                "Stash changes and continue".to_string(),
+                "Abort operation".to_string(),
+            ];
+            let selected = SelectDialog::new("How would you like to proceed?", options)
+                .with_default(0)
+                .prompt()
                 .context("Failed to get user choice")?;
+            let choice = if selected == "Stash changes and continue" {
+                0
+            } else {
+                1
+            };
 
             match choice {
                 0 => {
@@ -240,8 +255,9 @@ impl PullRequestSyncCommand {
         if !exists_local && exists_remote {
             // 分支只在远程，需要先 fetch 以确保有最新的引用
             log_info!("Source branch '{}' only exists on remote", source_branch);
-            log_info!("Fetching from remote...");
-            GitRepo::fetch().context("Failed to fetch from remote")?;
+            Spinner::with("Fetching from remote...", || {
+                GitRepo::fetch().context("Failed to fetch from remote")
+            })?;
             log_success!("Fetched latest changes from remote");
             // 返回远程分支引用
             Ok(SourceBranchInfo {
@@ -283,13 +299,13 @@ impl PullRequestSyncCommand {
 
         if let Some(pr_id) = current_pr_id {
             log_info!("Current branch '{}' has PR #{}", current_branch, pr_id);
-            log_info!("Pushing changes to update PR...");
 
             // 检查当前分支是否在远程存在
             let exists_remote = GitBranch::has_remote_branch(current_branch)
                 .context("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
+            log_info!("Pushing changes to update PR...");
             GitBranch::push(current_branch, !exists_remote)
                 .context("Failed to push to remote to update PR")?;
             log_success!("PR #{} updated successfully", pr_id);
@@ -303,7 +319,6 @@ impl PullRequestSyncCommand {
     ///
     /// 尝试通过多种方式查找源分支的 PR ID：
     /// 1. 通过工作历史查找（主要方式）
-    /// 2. 对于 Codeup，尝试通过 get_pull_request_info API 查找
     ///
     /// 返回 PR ID（如果找到），否则返回 None。
     fn find_source_branch_pr_id(source_branch: &str) -> Result<Option<String>> {
@@ -321,19 +336,9 @@ impl PullRequestSyncCommand {
             return Ok(Some(pr_id));
         }
 
+        // Codeup 特定逻辑已移除（Codeup support has been removed）
         // 方法 2: 对于 Codeup，尝试通过 API 查找（如果工作历史中没有）
-        let repo_type = crate::git::GitRepo::detect_repo_type()?;
-        if matches!(repo_type, crate::git::RepoType::Codeup) {
-            // Codeup 的 get_pull_request_info 支持通过分支名查找
-            let provider = create_provider()?;
-            // 尝试通过分支名获取 PR 信息（Codeup 支持）
-            // 如果成功，说明分支有 PR，但我们需要从返回的信息中提取 PR ID
-            // 由于无法直接提取，这里只做验证，实际 PR ID 仍依赖工作历史
-            if provider.get_pull_request_info(source_branch).is_ok() {
-                log_debug!("Source branch '{}' appears to have a PR (Codeup), but PR ID not found in work-history", source_branch);
-                // 返回 None，让用户手动处理
-            }
-        }
+        // ... (removed)
 
         Ok(None)
     }
@@ -384,14 +389,13 @@ impl PullRequestSyncCommand {
             Some(pr_id) => {
                 // 有 PR：询问是否关闭 PR
                 log_info!("Source branch '{}' has PR #{}", source_branch, pr_id);
-                let should_close = confirm(
-                    &format!(
-                        "Close PR #{} and delete source branch '{}' (local and remote)?",
-                        pr_id, source_branch
-                    ),
-                    true, // 默认选择是
-                    Some("PR and branch cleanup cancelled by user"),
-                )?;
+                let should_close = ConfirmDialog::new(format!(
+                    "Close PR #{} and delete source branch '{}' (local and remote)?",
+                    pr_id, source_branch
+                ))
+                .with_default(true)
+                .with_cancel_message("PR and branch cleanup cancelled by user")
+                .prompt()?;
 
                 if should_close {
                     // 关闭 PR
@@ -414,14 +418,13 @@ impl PullRequestSyncCommand {
             }
             None => {
                 // 没有 PR：询问是否删除分支
-                let should_delete = confirm(
-                    &format!(
-                        "Delete source branch '{}' (local and remote)?",
-                        source_branch
-                    ),
-                    true, // 默认选择是
-                    Some("Branch deletion cancelled by user"),
-                )?;
+                let should_delete = ConfirmDialog::new(format!(
+                    "Delete source branch '{}' (local and remote)?",
+                    source_branch
+                ))
+                .with_default(true)
+                .with_cancel_message("Branch deletion cancelled by user")
+                .prompt()?;
 
                 if should_delete {
                     Self::delete_merged_branch(source_branch)?;

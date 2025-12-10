@@ -30,6 +30,7 @@ use std::sync::OnceLock;
 ///
 /// let base_url = jira_base_url()?;
 /// let url = format!("{}/issue/PROJ-123", base_url);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn jira_base_url() -> Result<&'static str> {
     static BASE_URL: OnceLock<Result<&'static str>> = OnceLock::new();
@@ -69,6 +70,7 @@ pub fn jira_base_url() -> Result<&'static str> {
 ///
 /// let url = build_jira_url("issue/PROJ-123")?;
 /// // 返回: "https://jira.example.com/rest/api/2/issue/PROJ-123"
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn build_jira_url(path: &str) -> Result<String> {
     let base_url = jira_base_url()?;
@@ -94,11 +96,14 @@ pub fn build_jira_url(path: &str) -> Result<String> {
 ///
 /// ```rust,no_run
 /// use workflow::jira::api::helpers::jira_auth_config;
-/// use crate::base::http::RequestConfig;
+/// use workflow::base::http::RequestConfig;
 /// use serde_json::Value;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let auth = jira_auth_config()?;
 /// let config = RequestConfig::<Value, Value>::new().auth(auth);
+/// # Ok(())
+/// # }
 /// ```
 pub fn jira_auth_config() -> Result<&'static Authorization> {
     static AUTH: OnceLock<Result<Authorization>> = OnceLock::new();

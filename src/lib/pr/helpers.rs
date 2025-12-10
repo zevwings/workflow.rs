@@ -1,4 +1,5 @@
 use crate::base::settings::Settings;
+use crate::commands::branch::BranchConfig;
 use crate::git::GitRepo;
 use crate::git::RepoType;
 use anyhow::{Context, Result};
@@ -10,14 +11,13 @@ use super::platform::{create_provider, TYPES_OF_CHANGES};
 ///
 /// # 示例
 /// ```
-/// assert_eq!(extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123"), Ok("123".to_string()));
-/// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345"), Ok("12345".to_string()));
+/// use workflow::pr::helpers::extract_pull_request_id_from_url;
+/// assert_eq!(extract_pull_request_id_from_url("https://github.com/owner/repo/pull/123").unwrap(), "123".to_string());
+/// assert_eq!(extract_pull_request_id_from_url("https://codeup.aliyun.com/xxx/project/xxx/code_reviews/12345").unwrap(), "12345".to_string());
 /// ```
 pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
     let re = Regex::new(r"/(\d+)(?:/|$)").context("Invalid regex pattern")?;
-    let caps = re
-        .captures(url)
-        .context("Failed to extract PR ID from URL")?;
+    let caps = re.captures(url).context("Failed to extract PR ID from URL")?;
 
     Ok(caps.get(1).unwrap().as_str().to_string())
 }
@@ -132,11 +132,12 @@ pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<St
     let cleaned_title = transform_to_branch_name(title);
     branch_name.push_str(&cleaned_title);
 
-    // 如果有 GITHUB_BRANCH_PREFIX，添加前缀
-    let settings = Settings::get();
-    if let Some(prefix) = settings.github.get_current_branch_prefix() {
-        if !prefix.trim().is_empty() {
-            branch_name = format!("{}/{}", prefix.trim(), branch_name);
+    // 如果有仓库级别的 branch_prefix，添加前缀
+    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
+    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
+        let trimmed = prefix.trim();
+        if !trimmed.is_empty() {
+            branch_name = format!("{}/{}", trimmed, branch_name);
         }
     }
 
@@ -199,20 +200,26 @@ pub fn transform_to_branch_name(s: &str) -> String {
 ///
 /// # 示例
 ///
-/// ```rust
+/// ```rust,no_run
 /// use workflow::pr::{PlatformProvider, detect_repo_type};
 /// use workflow::pr::github::GitHub;
-/// use workflow::pr::codeup::Codeup;
+/// use workflow::RepoType;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // 获取当前分支的 PR ID
 /// let pr_id = detect_repo_type(
 ///     |repo_type| match repo_type {
-///         RepoType::GitHub => GitHub::get_current_branch_pull_request(),
-///         RepoType::Codeup => Codeup::get_current_branch_pull_request(),
+///         RepoType::GitHub => {
+///             let github = GitHub;
+///             github.get_current_branch_pull_request()
+///         },
+///         RepoType::Codeup => Ok(None),  // Codeup support has been removed
 ///         RepoType::Unknown => Ok(None),
 ///     },
 ///     "get current branch PR"
 /// )?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn detect_repo_type<F, T>(f: F, operation_name: &str) -> Result<T>
 where
@@ -220,10 +227,16 @@ where
 {
     let repo_type = GitRepo::detect_repo_type().context("Failed to detect repository type")?;
     match repo_type {
-        RepoType::GitHub | RepoType::Codeup => f(repo_type),
+        RepoType::GitHub => f(repo_type),
+        RepoType::Codeup => {
+            anyhow::bail!(
+                "{} is not supported for Codeup repositories. Codeup support has been removed. Only GitHub is currently supported.",
+                operation_name
+            );
+        }
         RepoType::Unknown => {
             anyhow::bail!(
-                "{} is currently only supported for GitHub and Codeup repositories.",
+                "{} is currently only supported for GitHub repositories.",
                 operation_name
             );
         }
@@ -271,7 +284,7 @@ pub fn resolve_pull_request_id(pull_request_id: Option<String>) -> Result<String
             let error_msg = match repo_type {
                 RepoType::GitHub => "No PR found for current branch. Please specify PR ID.",
                 RepoType::Codeup => {
-                    "No PR found for current branch. Please specify PR ID or branch name."
+                    "Codeup support has been removed. Only GitHub is currently supported."
                 }
                 _ => "No PR found for current branch.",
             };

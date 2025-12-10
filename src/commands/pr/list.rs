@@ -1,5 +1,6 @@
-use crate::pr::create_provider;
-use crate::{log_break, log_info};
+use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::log_break;
+use crate::pr::platform::create_provider;
 use anyhow::Result;
 
 /// PR 列表命令
@@ -12,8 +13,26 @@ impl PullRequestListCommand {
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         log_break!('=', 40, "PR List");
         let provider = create_provider()?;
-        let output = provider.get_pull_requests(state.as_deref(), limit)?;
-        log_info!("{}", output);
+
+        // 默认只获取 open 状态的 PR
+        let state = state.as_deref().unwrap_or("open");
+
+        // 通过 trait 方法获取表格行数据
+        let rows = provider.get_pull_requests(Some(state), limit)?;
+
+        if rows.is_empty() {
+            println!("No PRs found.");
+            return Ok(());
+        }
+
+        // 使用表格显示
+        println!(
+            "{}",
+            TableBuilder::new(rows)
+                .with_title("Pull Requests")
+                .with_style(TableStyle::Modern)
+                .render()
+        );
 
         Ok(())
     }

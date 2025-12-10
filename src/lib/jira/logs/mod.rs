@@ -14,10 +14,17 @@ mod download;
 mod helpers;
 mod path;
 mod search;
+mod table;
 mod zip;
 
 // 重新导出 LogEntry 作为公共 API
 pub use helpers::LogEntry;
+
+// 重新导出下载相关的类型
+pub use download::{DownloadResult, ProgressCallback};
+
+// 重新导出表格相关类型
+pub use table::SearchResultRow;
 
 /// Jira 日志处理结构体
 ///
@@ -44,11 +51,8 @@ impl JiraLogs {
     /// 如果成功返回 `Ok(JiraLogs)`，否则返回错误（通常是路径展开失败）。
     pub fn new() -> Result<Self> {
         let settings = Settings::get().clone();
-        let base_dir_str = settings
-            .log
-            .download_base_dir
-            .clone()
-            .unwrap_or_else(default_download_base_dir);
+        let base_dir_str =
+            settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
         let base_dir = helpers::expand_path(&base_dir_str)
             .with_context(|| format!("Failed to expand path: {}", base_dir_str))?;
         let output_folder_name = settings.log.output_folder_name.clone();

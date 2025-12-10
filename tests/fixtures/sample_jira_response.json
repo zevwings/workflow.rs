@@ -1,0 +1,22 @@
+{
+  "id": "12345",
+  "key": "PROJ-123",
+  "fields": {
+    "summary": "Test Issue Summary",
+    "description": "This is a test issue description",
+    "status": {
+      "name": "In Progress",
+      "id": "3"
+    },
+    "assignee": {
+      "displayName": "Test User",
+      "emailAddress": "test@example.com"
+    },
+    "reporter": {
+      "displayName": "Reporter User",
+      "emailAddress": "reporter@example.com"
+    },
+    "created": "2024-01-01T10:00:00.000+0000",
+    "updated": "2024-01-02T15:30:00.000+0000"
+  }
+}

@@ -52,9 +52,7 @@ pub struct ExtractedPrInfo {
 pub fn extract_jira_ticket_from_body(body: &str) -> Option<String> {
     // 匹配格式：#### Jira Link:\n\n{url}/browse/{TICKET-ID}
     let re = Regex::new(r"(?i)####\s+Jira\s+Link:.*?\n\n([^\n]+)/browse/([A-Z]+-\d+)").ok()?;
-    re.captures(body)
-        .and_then(|caps| caps.get(2))
-        .map(|m| m.as_str().to_string())
+    re.captures(body).and_then(|caps| caps.get(2)).map(|m| m.as_str().to_string())
 }
 
 /// 从 PR body 中提取简短描述
@@ -74,16 +72,14 @@ pub fn extract_jira_ticket_from_body(body: &str) -> Option<String> {
 pub fn extract_description_from_body(body: &str) -> Option<String> {
     // 匹配格式：#### Short description:\n\n{description}\n
     let re = Regex::new(r"(?i)####\s+Short\s+description:.*?\n\n(.*?)(?:\n####|\n#|$)").ok()?;
-    re.captures(body)
-        .and_then(|caps| caps.get(1))
-        .and_then(|m| {
-            let desc = m.as_str().trim();
-            if desc.is_empty() {
-                None
-            } else {
-                Some(desc.to_string())
-            }
-        })
+    re.captures(body).and_then(|caps| caps.get(1)).and_then(|m| {
+        let desc = m.as_str().trim();
+        if desc.is_empty() {
+            None
+        } else {
+            Some(desc.to_string())
+        }
+    })
 }
 
 /// 从 PR body 中解析变更类型
@@ -107,11 +103,7 @@ pub fn parse_change_types_from_body(body: &str) -> Option<Vec<bool>> {
     let mut selected_types = Vec::new();
 
     // 查找 "## Types of changes" 部分
-    let types_section = body
-        .split("## Types of changes")
-        .nth(1)?
-        .split("\n####")
-        .next()?;
+    let types_section = body.split("## Types of changes").nth(1)?.split("\n####").next()?;
 
     // 解析每个变更类型的复选框状态
     for change_type in TYPES_OF_CHANGES {

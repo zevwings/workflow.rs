@@ -80,14 +80,10 @@ impl JiraUsers {
             );
         }
 
-        let user_entry = config
-            .users
-            .iter()
-            .find(|u| u.email == email)
-            .context(format!(
-                "User with email '{}' not found in jira-users.toml",
-                email
-            ))?;
+        let user_entry = config.users.iter().find(|u| u.email == email).context(format!(
+            "User with email '{}' not found in jira-users.toml",
+            email
+        ))?;
 
         Ok(JiraUser {
             account_id: user_entry.account_id.clone(),

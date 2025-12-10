@@ -100,9 +100,8 @@ impl PullRequestLLM {
     ) -> String {
         // 提取分支列表，如果没有或为空则使用空数组
         // 注意：exists_branches 已经通过 get_all_branches(true) 获取，已经去掉了前缀
-        let base_branch_names: Vec<String> = exists_branches
-            .filter(|b| !b.is_empty())
-            .unwrap_or_default();
+        let base_branch_names: Vec<String> =
+            exists_branches.filter(|b| !b.is_empty()).unwrap_or_default();
 
         // 组装 prompt 内容
         let mut parts = vec![format!("Commit title: {}", commit_title)];
@@ -168,25 +167,11 @@ impl PullRequestLLM {
     ///
     /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_llm_response(response: String) -> Result<PullRequestContent> {
-        let trimmed = response.trim();
-
-        // 尝试提取 JSON（可能包含 markdown 代码块）
-        let json_str = if trimmed.starts_with("```json") {
-            // 移除 ```json 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim()
-        } else if trimmed.starts_with("```") {
-            // 移除 ``` 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim()
-        } else {
-            trimmed
-        };
+        // 使用公共方法提取 JSON
+        let json_str = Self::extract_json_from_markdown(response);
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(json_str).with_context(|| {
+        let json: Value = serde_json::from_str(&json_str).with_context(|| {
             format!(
                 "Failed to parse LLM response as JSON. Raw response: {}",
                 json_str
@@ -340,25 +325,11 @@ impl PullRequestLLM {
     ///
     /// 如果响应格式不正确或缺少必要字段，返回相应的错误信息。
     fn parse_summary_response(response: String) -> Result<PullRequestSummary> {
-        let trimmed = response.trim();
-
-        // 尝试提取 JSON（可能包含 markdown 代码块）
-        let json_str = if trimmed.starts_with("```json") {
-            // 移除 ```json 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim()
-        } else if trimmed.starts_with("```") {
-            // 移除 ``` 开头和 ``` 结尾
-            let start = trimmed.find('\n').unwrap_or(0);
-            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
-            trimmed[start..end].trim()
-        } else {
-            trimmed
-        };
+        // 使用公共方法提取 JSON
+        let json_str = Self::extract_json_from_markdown(response);
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(json_str).with_context(|| {
+        let json: Value = serde_json::from_str(&json_str).with_context(|| {
             format!(
                 "Failed to parse LLM response as JSON. Raw response: {}",
                 json_str
@@ -479,10 +450,33 @@ impl PullRequestLLM {
     ///
     /// 移除可能的 markdown 代码块包装，返回纯文本。
     fn clean_file_change_summary_response(response: String) -> String {
+        Self::extract_json_from_markdown(response)
+    }
+
+    /// 从 markdown 代码块中提取 JSON 字符串（公共方法）
+    ///
+    /// 支持以下格式：
+    /// - ````json\n{...}\n````
+    /// - ````\n{...}\n````
+    /// - 纯 JSON 字符串
+    ///
+    /// # 参数
+    ///
+    /// * `response` - 可能包含 markdown 代码块的响应字符串
+    ///
+    /// # 返回
+    ///
+    /// 返回提取的 JSON 字符串（已去除 markdown 代码块包装）
+    fn extract_json_from_markdown(response: String) -> String {
         let trimmed = response.trim();
 
-        // 如果响应被包装在 markdown 代码块中，移除包装
-        if trimmed.starts_with("```") {
+        // 尝试提取 JSON（可能包含 markdown 代码块）
+        if trimmed.starts_with("```json") {
+            // 移除 ```json 开头和 ``` 结尾
+            let start = trimmed.find('\n').unwrap_or(0);
+            let end = trimmed.rfind("```").unwrap_or(trimmed.len());
+            trimmed[start..end].trim().to_string()
+        } else if trimmed.starts_with("```") {
             // 移除 ``` 开头和 ``` 结尾
             let start = trimmed.find('\n').unwrap_or(0);
             let end = trimmed.rfind("```").unwrap_or(trimmed.len());

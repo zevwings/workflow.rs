@@ -12,10 +12,11 @@
 该模块为整个应用提供统一的配置管理基础设施，所有模块都通过 `Settings::get()` 获取配置。
 
 **模块统计：**
-- 总代码行数：约 800 行
+- 总代码行数：约 950 行
 - 文件数量：4 个核心文件
 - 主要组件：3 个（Settings, Paths, defaults）
 - 配置文件：workflow.toml, llm.toml
+- 特殊功能：iCloud 存储支持（macOS）
 
 ---
 
@@ -27,7 +28,7 @@
 src/lib/base/settings/
 ├── mod.rs          # 模块声明和导出 (11行)
 ├── settings.rs     # Settings 结构体和配置加载 (440行)
-├── paths.rs        # 路径管理 (297行)
+├── paths.rs        # 路径管理（包含 iCloud 支持，约 637行）
 └── defaults.rs     # 默认值辅助函数 (52行)
 ```
 
@@ -155,6 +156,79 @@ src/lib/base/settings/
 - ✅ **权限管理**：Unix 系统下自动设置目录权限（700）
 - ✅ **多 Shell 支持**：支持 zsh、bash、fish、powershell、elvish
 - ✅ **路径统一管理**：所有路径集中管理，避免硬编码
+- ✅ **iCloud 存储支持**：macOS 上自动使用 iCloud Drive 存储配置（可选）
+
+#### iCloud 存储支持（macOS）
+
+**功能概述**：
+在 macOS 上，`Paths` 模块支持自动将配置文件存储到 iCloud Drive，实现跨设备同步。该功能通过 `config_base_dir()` 方法实现，自动在 iCloud 和本地存储之间选择最佳位置。
+
+**设计原则**：
+1. **自动选择**：系统自动选择最佳存储位置，用户无需手动配置
+2. **透明回退**：iCloud 不可用时自动回退到本地存储，确保功能可用
+3. **选择性同步**：配置同步到 iCloud，工作历史等保持本地（避免冲突）
+4. **平台兼容**：非 macOS 平台自动使用本地存储，无需特殊处理
+5. **用户控制**：支持通过环境变量 `WORKFLOW_DISABLE_ICLOUD` 强制使用本地存储
+
+**核心方法**：
+
+- **`try_icloud_base_dir()`** (私有方法，仅 macOS)：
+  - 检查 iCloud Drive 是否可用（`~/Library/Mobile Documents/com~apple~CloudDocs`）
+  - 如果可用，创建并返回 `~/.workflow/` 目录在 iCloud 中的路径
+  - 设置目录权限为 700（仅用户可访问）
+  - 如果不可用或创建失败，返回 `None`
+
+- **`config_base_dir()`** (私有方法)：
+  - 决策逻辑：
+    1. 检查环境变量 `WORKFLOW_DISABLE_ICLOUD`，如果已设置则使用本地存储
+    2. 在 macOS 上尝试 iCloud 存储
+    3. 如果 iCloud 不可用，回退到本地存储
+  - 返回配置基础目录路径
+
+**存储位置决策流程**：
+
+```
+config_base_dir()
+  ↓
+检查环境变量 WORKFLOW_DISABLE_ICLOUD
+  ├─ 已设置 → 使用本地存储 (~/.workflow/)
+  └─ 未设置 → 继续
+  ↓
+[仅 macOS] 尝试 iCloud 存储
+  ├─ iCloud 可用 → 使用 iCloud (~/Library/Mobile Documents/.../.workflow/)
+  └─ iCloud 不可用 → 回退到本地存储
+  ↓
+返回路径
+```
+
+**使用场景**：
+- **配置同步**：配置文件存储在 iCloud，自动同步到其他 macOS 设备
+- **工作历史保持本地**：`work_history_dir()` 和 `completion_dir()` 强制使用本地存储，避免冲突
+
+**环境变量控制**：
+- `WORKFLOW_DISABLE_ICLOUD=1`：强制使用本地存储，即使 iCloud 可用
+
+**查询 API**：
+- `Paths::is_config_in_icloud()` - 检查是否使用 iCloud 存储
+- `Paths::storage_location()` - 获取存储位置描述
+- `Paths::storage_info()` - 获取详细存储信息
+
+**示例**：
+```rust
+use workflow::base::settings::Paths;
+
+// 自动选择存储位置（iCloud 或本地）
+let config_dir = Paths::config_dir()?;
+
+// 检查是否使用 iCloud
+if Paths::is_config_in_icloud() {
+    println!("配置存储在 iCloud，会自动同步");
+}
+
+// 强制使用本地存储
+std::env::set_var("WORKFLOW_DISABLE_ICLOUD", "1");
+let local_config_dir = Paths::config_dir()?;  // 总是返回本地路径
+```
 
 #### 3. defaults（默认值模块）
 
@@ -405,6 +479,8 @@ impl Paths {
 - [Jira 模块架构文档](./JIRA_ARCHITECTURE.md) - Jira 模块如何使用 Settings
 - [Shell 模块架构文档](./SHELL_ARCHITECTURE.md) - Shell 模块如何使用 Paths
 
+**注意**：iCloud 存储功能是 Settings 模块的一部分，通过 `Paths` 结构体实现。详细说明见本文档的"Paths（路径管理器）"章节。
+
 ---
 
 ## 📋 使用示例
@@ -477,6 +553,6 @@ Settings 模块采用清晰的模块化设计：
 - ✅ **类型安全**：使用 Rust 类型系统保证类型安全
 - ✅ **统一管理**：所有路径集中管理，避免硬编码
 - ✅ **易于扩展**：添加新配置项只需扩展结构体
+- ✅ **跨设备同步**：macOS 上支持 iCloud 存储，自动同步配置
 
-通过单例模式、默认值支持和路径统一管理，实现了高性能、容错性和易于维护的目标。
-
+通过单例模式、默认值支持、路径统一管理和 iCloud 存储支持，实现了高性能、容错性、易于维护和跨设备同步的目标。

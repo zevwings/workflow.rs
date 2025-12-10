@@ -34,10 +34,13 @@ impl Unzip {
     /// use workflow::base::util::unzip::Unzip;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// Unzip::extract_tar_gz(
     ///     Path::new("archive.tar.gz"),
     ///     Path::new("./output")
     /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
@@ -52,9 +55,7 @@ impl Unzip {
         let mut archive = Archive::new(decoder);
 
         // 解压到目标目录
-        archive
-            .unpack(output_dir)
-            .context("Failed to extract tar.gz archive")?;
+        archive.unpack(output_dir).context("Failed to extract tar.gz archive")?;
 
         Ok(())
     }
@@ -78,10 +79,13 @@ impl Unzip {
     /// use workflow::base::util::unzip::Unzip;
     /// use std::path::Path;
     ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// Unzip::extract_zip(
     ///     Path::new("archive.zip"),
     ///     Path::new("./output")
     /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn extract_zip(zip_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录

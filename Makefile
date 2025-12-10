@@ -52,7 +52,7 @@ clean:
 # 运行测试
 test:
 	@echo "运行测试..."
-	cargo test
+	cargo test --lib --tests
 
 # 安装所需的开发工具
 setup:
@@ -184,4 +184,3 @@ tag:
 	@echo "推送 tag 到远程仓库..."
 	@git push origin $(VERSION)
 	@echo "✓ Tag 推送成功: $(VERSION)"
-

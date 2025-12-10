@@ -2,13 +2,15 @@
 //!
 //! 负责协调系统代理读取器和配置生成器，提供高级代理管理功能。
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use anyhow::{Context, Result};
+
 use crate::base::shell::ShellConfigManager;
 use crate::proxy::config_generator::ProxyConfigGenerator;
 use crate::proxy::system_reader::SystemProxyReader;
 use crate::proxy::{ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyType};
-use anyhow::{Context, Result};
-use std::collections::HashMap;
-use std::path::PathBuf;
 
 /// 代理管理器
 ///
@@ -26,9 +28,7 @@ impl ProxyManager {
     pub fn check_env_proxy() -> HashMap<String, String> {
         ProxyType::all()
             .filter_map(|pt| {
-                std::env::var(pt.env_key())
-                    .ok()
-                    .map(|value| (pt.env_key().to_string(), value))
+                std::env::var(pt.env_key()).ok().map(|value| (pt.env_key().to_string(), value))
             })
             .collect()
     }
@@ -68,12 +68,8 @@ impl ProxyManager {
     ///
     /// 返回 `true` 如果系统代理已启用，否则返回 `false`。
     fn is_system_proxy_enabled(proxy_info: &ProxyInfo) -> bool {
-        ProxyType::all().any(|pt| {
-            proxy_info
-                .get_config(pt)
-                .map(|config| config.enable)
-                .unwrap_or(false)
-        })
+        ProxyType::all()
+            .any(|pt| proxy_info.get_config(pt).map(|config| config.enable).unwrap_or(false))
     }
 
     /// 确保代理已启用（如果系统代理已启用）
@@ -306,12 +302,8 @@ impl CurrentProxyState {
     /// 检查是否有任何代理设置
     fn is_empty(&self) -> bool {
         let proxy_keys = ProxyType::all_env_keys();
-        let has_in_config = proxy_keys
-            .iter()
-            .any(|key| self.shell_config_env.contains_key(*key));
-        let has_in_env = proxy_keys
-            .iter()
-            .any(|key| self.env_proxy.contains_key(*key));
+        let has_in_config = proxy_keys.iter().any(|key| self.shell_config_env.contains_key(*key));
+        let has_in_env = proxy_keys.iter().any(|key| self.env_proxy.contains_key(*key));
 
         !has_in_config && !has_in_env
     }

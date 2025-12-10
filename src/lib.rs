@@ -31,13 +31,10 @@ pub mod commands;
 // 重新导出所有公共 API，方便外部使用
 // 从 base 模块重新导出基础设施类型，保持向后兼容
 pub use base::settings::{LLMSettings, Paths, Settings};
-pub use base::util::{
-    confirm, format_size, mask_sensitive_value, Browser, Checksum, Clipboard, LogLevel, Logger,
-    Unzip,
-};
+pub use base::util::{format_size, mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
 pub use base::{
-    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, Reload,
-    ShellConfigManager,
+    Authorization, Detect, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig, LogLevel, Logger,
+    Reload, ShellConfigManager, Tracer,
 };
 // 从 base::prompt 重新导出 Prompt 相关 API
 pub use base::prompt::{
@@ -64,10 +61,20 @@ pub use jira::{
 };
 pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
-    detect_repo_type, extract_pull_request_id_from_url, generate_branch_name,
-    generate_commit_title, generate_pull_request_body, get_current_branch_pr_id, Codeup,
-    CodeupUser, GitHub, GitHubUser, PlatformProvider, PullRequestContent, PullRequestLLM,
-    PullRequestSummary, TYPES_OF_CHANGES,
+    detect_repo_type,
+    extract_pull_request_id_from_url,
+    generate_branch_name,
+    generate_commit_title,
+    generate_pull_request_body,
+    get_current_branch_pr_id,
+    // Codeup, CodeupUser,  // Codeup support has been removed
+    GitHub,
+    GitHubUser,
+    PlatformProvider,
+    PullRequestContent,
+    PullRequestLLM,
+    PullRequestSummary,
+    TYPES_OF_CHANGES,
 };
 pub use proxy::{
     ProxyConfigGenerator, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager,

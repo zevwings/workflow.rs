@@ -2,8 +2,9 @@
 //!
 //! 负责生成代理命令和环境变量。
 
-use crate::proxy::{ProxyInfo, ProxyType};
 use std::collections::HashMap;
+
+use crate::proxy::{ProxyInfo, ProxyType};
 
 /// 代理配置生成器
 ///
@@ -25,9 +26,7 @@ impl ProxyConfigGenerator {
     fn generate_proxy_pairs(proxy_info: &ProxyInfo) -> Vec<(String, String)> {
         ProxyType::all()
             .filter_map(|pt| {
-                proxy_info
-                    .get_proxy_url(pt)
-                    .map(|url| (pt.env_key().to_string(), url))
+                proxy_info.get_proxy_url(pt).map(|url| (pt.env_key().to_string(), url))
             })
             .collect()
     }

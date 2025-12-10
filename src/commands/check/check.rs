@@ -3,6 +3,7 @@ use crate::base::http::{HttpMethod, RequestConfig};
 use crate::git::{GitCommit, GitRepo};
 use crate::{log_break, log_error, log_info, log_message, log_success};
 use anyhow::{Context, Result};
+use duct::cmd;
 use serde_json::Value;
 use std::time::Duration;
 
@@ -62,6 +63,120 @@ impl CheckCommand {
 
         log_break!();
         log_success!("All checks passed");
+        Ok(())
+    }
+
+    /// 执行代码质量检查（Lint）
+    ///
+    /// 通过调用 `make lint` 来执行完整的代码质量检查，包括：
+    /// - 代码格式检查（cargo fmt --check）
+    /// - Clippy 检查（cargo clippy -- -D warnings）
+    /// - 编译检查（cargo check）
+    ///
+    /// 这样可以复用 Makefile 中定义的 lint 规则，保持一致性。
+    pub fn run_lint() -> Result<()> {
+        log_message!("Running code quality checks (Lint)...");
+        log_break!();
+
+        // 检查 make 命令是否可用（跨平台检查）
+        let make_available = if cfg!(target_os = "windows") {
+            cmd("where", &["make"]).run().is_ok()
+        } else {
+            cmd("which", &["make"]).run().is_ok()
+        };
+
+        if !make_available {
+            log_error!("make command is not available");
+            log_error!("Please install make or run lint checks manually:");
+            log_error!("  cargo fmt --check");
+            log_error!("  cargo clippy -- -D warnings");
+            log_error!("  cargo check");
+            anyhow::bail!("make command not found");
+        }
+
+        // 使用 make lint 执行检查
+        log_message!("Running 'make lint'...");
+        let lint_output = cmd("make", &["lint"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run make lint")?;
+
+        if !lint_output.status.success() {
+            let stderr = String::from_utf8_lossy(&lint_output.stderr);
+            let stdout = String::from_utf8_lossy(&lint_output.stdout);
+            log_error!("Lint check failed");
+            if !stderr.is_empty() {
+                log_error!("{}", stderr);
+            }
+            if !stdout.is_empty() {
+                log_error!("{}", stdout);
+            }
+            log_error!("Run 'make fix' to auto-fix some issues, or fix them manually");
+            anyhow::bail!("Lint check failed");
+        }
+
+        // 输出 make lint 的结果（成功时）
+        let stdout = String::from_utf8_lossy(&lint_output.stdout);
+        if !stdout.is_empty() {
+            log_info!("{}", stdout);
+        }
+
+        log_success!("All lint checks passed");
+        Ok(())
+    }
+
+    /// 执行测试检查
+    ///
+    /// 通过调用 `cargo test` 来运行所有测试，确保代码功能正常。
+    pub fn run_test() -> Result<()> {
+        log_message!("Running tests...");
+        log_break!();
+
+        // 运行 cargo test
+        log_message!("Running 'cargo test'...");
+        let test_output = cmd("cargo", &["test", "--verbose"])
+            .stdout_capture()
+            .stderr_capture()
+            .run()
+            .context("Failed to run cargo test")?;
+
+        if !test_output.status.success() {
+            let stderr = String::from_utf8_lossy(&test_output.stderr);
+            let stdout = String::from_utf8_lossy(&test_output.stdout);
+            log_error!("Tests failed");
+            if !stderr.is_empty() {
+                log_error!("{}", stderr);
+            }
+            if !stdout.is_empty() {
+                log_error!("{}", stdout);
+            }
+            log_error!("Please fix the failing tests before merging");
+            anyhow::bail!("Tests failed");
+        }
+
+        // 输出测试结果（成功时）
+        let stdout = String::from_utf8_lossy(&test_output.stdout);
+        if !stdout.is_empty() {
+            // 只显示测试摘要，避免输出过多
+            let lines: Vec<&str> = stdout.lines().collect();
+            let summary_start = lines
+                .iter()
+                .rposition(|line| line.contains("test result:") || line.contains("running"));
+
+            if let Some(start) = summary_start {
+                let summary: String = lines[start..].join("\n");
+                log_info!("{}", summary);
+            } else {
+                // 如果没有找到摘要，显示最后几行
+                let last_lines: Vec<&str> = lines.iter().rev().take(10).rev().copied().collect();
+                if !last_lines.is_empty() {
+                    log_info!("{}", last_lines.join("\n"));
+                }
+            }
+        }
+
+        log_success!("All tests passed");
         Ok(())
     }
 }

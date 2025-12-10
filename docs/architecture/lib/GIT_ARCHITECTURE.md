@@ -5,9 +5,9 @@
 Git 模块是 Workflow CLI 的核心功能之一，提供完整的 Git 仓库操作功能，包括提交管理、分支管理、仓库检测、暂存管理、Pre-commit hooks 支持和配置管理。该模块采用模块化设计，每个功能领域有独立的结构体，通过统一的辅助函数减少代码重复。
 
 **模块统计：**
-- 总代码行数：约 1350 行
-- 文件数量：8 个
-- 主要结构体：6 个（GitBranch, GitCommit, GitRepo, GitStash, GitConfig, GitPreCommit）
+- 总代码行数：约 1448 行
+- 文件数量：9 个
+- 主要结构体：7 个（GitBranch, GitCommit, GitRepo, GitStash, GitConfig, GitPreCommit, GitCherryPick）
 - 辅助模块：1 个（helpers.rs）
 
 ---
@@ -25,6 +25,7 @@ src/lib/git/
 ├── stash.rs        # 暂存管理 (102行)
 ├── config.rs       # Git 配置管理 (67行)
 ├── pre_commit.rs   # Pre-commit hooks 支持 (107行)
+├── cherry_pick.rs  # Cherry-pick 操作 (98行)
 ├── helpers.rs      # Git 操作辅助函数 (115行)
 └── types.rs        # 类型定义 (15行)
 ```
@@ -204,7 +205,34 @@ src/lib/git/
 - 提交前自动执行 hooks
 - 支持代码质量检查
 
-#### 7. 辅助函数 (`helpers.rs`)
+#### 7. Cherry-pick 操作 (`cherry_pick.rs`)
+
+**职责**：提供 Git cherry-pick 相关的完整功能
+
+- **`GitCherryPick`**：Cherry-pick 管理结构体（零大小结构体）
+
+**主要方法**：
+- `cherry_pick(commit)` - Cherry-pick 提交到当前分支
+- `cherry_pick_no_commit(commit)` - Cherry-pick 但不提交（保留在工作区）
+- `cherry_pick_continue()` - 继续 cherry-pick 操作
+- `cherry_pick_abort()` - 中止 cherry-pick 操作
+- `is_cherry_pick_in_progress()` - 检查是否正在进行 cherry-pick 操作
+
+**关键特性**：
+- 支持普通 cherry-pick 和 no-commit 模式
+- 支持继续和中止操作
+- 自动检测 cherry-pick 状态
+
+**使用场景**：
+- PR pick 命令：从源 PR 提取提交并应用到新分支
+- 提交迁移：将提交从一个分支应用到另一个分支
+- 冲突处理：检测和处理 cherry-pick 冲突
+
+**注意**：
+- 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续
+- `cherry_pick_no_commit()` 会将修改保留在工作区，需要手动提交
+
+#### 8. 辅助函数 (`helpers.rs`)
 
 **职责**：提供通用的 Git 命令执行辅助函数
 
@@ -224,7 +252,7 @@ src/lib/git/
 - 减少代码重复（约 120-150 行）
 - 提高代码可维护性
 
-#### 8. 类型定义 (`types.rs`)
+#### 9. 类型定义 (`types.rs`)
 
 **职责**：定义 Git 相关类型
 
@@ -335,12 +363,13 @@ switch_or_checkout(
 调用者（命令层或其他模块）
   ↓
 lib/git/*.rs (核心业务逻辑层)
-  ├── GitBranch::xxx()    # 分支操作
-  ├── GitCommit::xxx()     # 提交操作
-  ├── GitRepo::xxx()       # 仓库检测
-  ├── GitStash::xxx()      # 暂存操作
+  ├── GitBranch::xxx()      # 分支操作
+  ├── GitCommit::xxx()      # 提交操作
+  ├── GitRepo::xxx()        # 仓库检测
+  ├── GitStash::xxx()       # 暂存操作
   ├── GitConfig::xxx()     # 配置管理
-  └── GitPreCommit::xxx()  # Pre-commit hooks
+  ├── GitPreCommit::xxx()   # Pre-commit hooks
+  └── GitCherryPick::xxx()  # Cherry-pick 操作
   ↓
 helpers.rs (辅助函数层)
   ├── cmd_read()
@@ -452,6 +481,20 @@ let repo_type = GitRepo::detect_repo_type()?;
 
 // 保存工作区更改
 GitStash::stash_push(Some("WIP: working on feature"))?;
+
+// Cherry-pick 提交
+GitCherryPick::cherry_pick("abc123")?;
+
+// Cherry-pick 但不提交
+GitCherryPick::cherry_pick_no_commit("abc123")?;
+
+// 检查是否正在进行 cherry-pick
+if GitCherryPick::is_cherry_pick_in_progress() {
+    // 解决冲突后继续
+    GitCherryPick::cherry_pick_continue()?;
+    // 或中止操作
+    // GitCherryPick::cherry_pick_abort()?;
+}
 ```
 
 ### 合并分支
@@ -542,6 +585,7 @@ Git 模块采用清晰的模块化设计：
 3. **类型安全**：使用枚举类型提高类型安全性
 4. **错误处理统一**：使用 `anyhow::Result` 和 `context` 提供清晰的错误信息
 5. **易于扩展**：模块化设计便于添加新功能
+6. **完整功能**：支持分支、提交、仓库检测、暂存、配置、pre-commit hooks 和 cherry-pick 操作
 
 **设计优势**：
 - ✅ **职责清晰**：每个结构体负责单一功能领域

@@ -32,9 +32,11 @@ impl GitRepo {
         check_success(&["rev-parse", "--git-dir", "--quiet"])
     }
 
-    /// 检测远程仓库类型（GitHub 或 Codeup）
+    /// 检测远程仓库类型（GitHub）
     ///
     /// 通过解析远程仓库 URL 来识别仓库类型。
+    /// 注意：Codeup 支持已移除，检测到 Codeup URL 将返回 `RepoType::Codeup`，
+    /// 但 PR 功能将不支持。
     ///
     /// # 返回
     ///
@@ -61,7 +63,7 @@ impl GitRepo {
     ///
     /// 返回对应的 `RepoType`：
     /// - 包含 `github.com` 或 host 以 `github` 开头 → `RepoType::GitHub`
-    /// - 包含 `codeup.aliyun.com` → `RepoType::Codeup`
+    /// - 包含 `codeup.aliyun.com` → `RepoType::Codeup`（保留枚举值，但不支持 PR 功能）
     /// - 其他 → `RepoType::Unknown`
     fn parse_repo_type_from_url(url: &str) -> RepoType {
         // 检查 GitHub：包含 github.com 或 SSH host 以 github 开头（处理 SSH Host 别名，如 git@github-brainim:user/repo.git）
