@@ -20,7 +20,7 @@ mod proxy;
 // 这些导出是必需的，因为 bin/workflow.rs 需要使用它们进行命令分发
 pub use branch::{BranchSubcommand, IgnoreSubcommand, PrefixSubcommand};
 pub use commands::Commands;
-pub use config::{CompletionSubcommand, LogLevelSubcommand};
+pub use config::{CompletionSubcommand, ConfigSubcommand, LogLevelSubcommand};
 pub use github::GitHubSubcommand;
 pub use jira::JiraSubcommand;
 pub use llm::LLMSubcommand;

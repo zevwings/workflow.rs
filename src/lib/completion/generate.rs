@@ -9,8 +9,8 @@ use anyhow::{Context, Result};
 use clap::{Command, CommandFactory};
 use clap_complete::{generate, shells::Shell as ClapShell};
 
+use super::helpers::get_completion_filename;
 use crate::base::settings::paths::Paths;
-use crate::completion::helpers::get_completion_filename;
 
 /// 生成结果
 #[derive(Debug, Clone)]

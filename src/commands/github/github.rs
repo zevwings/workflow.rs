@@ -66,7 +66,7 @@ impl GitHubCommand {
             .collect();
 
         // 使用表格显示
-        println!(
+        log_message!(
             "{}",
             TableBuilder::new(rows)
                 .with_title("GitHub Accounts")

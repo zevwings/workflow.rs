@@ -648,10 +648,9 @@ let data: MyType = response
 if response.is_success() {
     let data: MyType = response.as_json()?;
 } else {
-    eprintln!("请求失败: {} {}", response.status, response.status_text);
+    log_error!("请求失败: {} {}", response.status, response.status_text);
     let error_body = response.as_text().unwrap_or_default();
-    eprintln!("错误详情: {}", error_body);
-}
+    log_error!("错误详情: {}", error_body);
 ```
 
 ---

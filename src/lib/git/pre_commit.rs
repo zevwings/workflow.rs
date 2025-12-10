@@ -184,10 +184,10 @@ impl GitPreCommit {
 
                     // 显示错误输出
                     if !filtered_stderr.trim().is_empty() {
-                        eprintln!("\n{}", filtered_stderr);
+                        crate::log_error!("\n{}", filtered_stderr);
                     }
                     if !stdout.trim().is_empty() {
-                        eprintln!("{}", stdout);
+                        crate::log_error!("{}", stdout);
                     }
 
                     anyhow::bail!("{}", error_msg);
@@ -244,11 +244,11 @@ impl GitPreCommit {
 
                 // 显示错误输出
                 if !stderr.trim().is_empty() {
-                    eprintln!("\n{}", stderr);
+                    crate::log_error!("\n{}", stderr);
                     error_msg.push_str(&format!("\n\n{}", stderr));
                 }
                 if !stdout.trim().is_empty() {
-                    eprintln!("{}", stdout);
+                    crate::log_error!("{}", stdout);
                     if !error_msg.contains(&stdout.to_string()) {
                         error_msg.push_str(&format!("\n{}", stdout));
                     }

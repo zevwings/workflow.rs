@@ -49,7 +49,14 @@
 
 ### 进行中的需求
 
-目前没有进行中的需求文档。
+#### 1. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+- **状态**: 📋 需求分析中
+- **分类**: 配置管理
+- **内容**:
+  - 配置文件验证（`config validate`）
+  - 配置导入/导出（`config export/import`）
+- **优先级**: 高优先级（配置验证）、中优先级（导入/导出）
+- **来源**: 从 `docs/todo/CONFIG_TODO.md` 迁移
 
 **已完成的需求**（已删除文档）：
 - GitHub Branch Prefix 基于仓库的改造（2024-12-19 完成）
@@ -59,4 +66,4 @@
 ---
 
 **维护者**：开发团队
-**最后更新**: 2025-12-09
+**最后更新**: 2025-01-27

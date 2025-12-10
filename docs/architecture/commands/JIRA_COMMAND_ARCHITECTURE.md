@@ -7,7 +7,7 @@ Jira 命令层是 Workflow CLI 的命令接口，提供 Jira ticket 信息查看
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/jira/` 模块提供。
 
 **命令结构**：
-- `workflow jira` - Jira 操作命令（info, attachments, clean）
+- `workflow jira` - Jira 操作命令（info, changelog, comments, attachments, clean）
 
 ---
 
@@ -28,9 +28,11 @@ src/main.rs
 ```
 src/commands/jira/
 ├── mod.rs          # Jira 命令模块声明
-├── info.rs         # 显示 ticket 信息命令（103 行）
-├── attachments.rs  # 下载附件命令（30 行）
-└── clean.rs        # 清理本地数据命令（58 行）
+├── info.rs         # 显示 ticket 信息命令（~354 行）
+├── changelog.rs    # 显示变更历史命令（~200 行）
+├── comments.rs     # 显示评论命令（~313 行）
+├── attachments.rs  # 下载附件命令（~30 行）
+└── clean.rs        # 清理本地数据命令（~58 行）
 ```
 
 **职责**：
@@ -44,6 +46,8 @@ src/commands/jira/
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/jira/`**：Jira 集成
   - `Jira::get_ticket_info()` - 获取 ticket 信息
+- **`lib/jira/api/`**：Jira API 接口
+  - `JiraIssueApi::get_issue_changelog()` - 获取变更历史
 - **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
   - `JiraLogs::new()` - 创建日志管理器
   - `JiraLogs::download_from_jira()` - 下载附件
@@ -78,7 +82,10 @@ Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand
   ├─ Info → InfoCommand::show()
-  └─ Attachments → AttachmentsCommand::download()
+  ├─ Changelog → ChangelogCommand::show()
+  ├─ Comments → CommentsCommand::show()
+  ├─ Attachments → AttachmentsCommand::download()
+  └─ Clean → CleanCommand::clean()
 ```
 
 ---
@@ -142,7 +149,188 @@ commands/jira/info.rs::InfoCommand::show(jira_id)
 
 ---
 
-## 2. 下载附件命令 (`attachments`)
+## 2. 显示变更历史命令 (`changelog`)
+
+### 相关文件
+
+```
+src/commands/jira/changelog.rs
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::JiraSubcommand::Changelog
+  ↓
+commands/jira/changelog.rs::ChangelogCommand::show()
+  ↓
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 确定输出格式（table、json、yaml、markdown）
+  3. 调用 JiraIssueApi::get_issue_changelog(jira_id) 获取变更历史
+  4. 如果指定 --field，过滤特定字段的变更
+  5. 根据输出格式格式化显示变更历史
+```
+
+### 功能说明
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `--field <FIELD>` - 只显示特定字段的变更（如 `status`、`assignee`）
+   - `--table` - 表格格式输出（默认）
+   - `--json` - JSON 格式输出
+   - `--yaml` - YAML 格式输出
+   - `--markdown` - Markdown 格式输出
+
+2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
+   - 支持多种输出格式，便于脚本处理和文档生成
+
+3. **核心功能**：
+   - 通过 `JiraIssueApi::get_issue_changelog()` API 获取变更历史
+   - 支持按字段过滤变更记录
+   - 显示变更时间、作者、字段变更详情
+
+### 关键步骤说明
+
+1. **变更历史获取**：
+   - 调用 `JiraIssueApi::get_issue_changelog()` 获取完整的变更历史
+   - 返回包含所有历史记录的 changelog 数据
+
+2. **字段过滤**：
+   - 如果指定 `--field`，只显示该字段的变更记录
+   - 支持过滤常见字段（status、assignee、priority 等）
+
+3. **格式化输出**：
+   - **表格格式**：人类可读的表格格式，显示变更详情
+   - **JSON 格式**：结构化 JSON 输出，便于脚本处理
+   - **YAML 格式**：结构化 YAML 输出（当前使用 JSON）
+   - **Markdown 格式**：Markdown 格式输出，便于文档生成
+
+### Jira API 调用
+
+- **`JiraIssueApi::get_issue_changelog(jira_id)`** - 获取变更历史
+  - 参数：`jira_id` - Jira ticket ID
+  - 返回：Changelog 结构体（包含所有变更历史记录）
+
+### 使用示例
+
+```bash
+# 显示所有变更历史
+workflow jira changelog PROJ-123
+
+# 只显示状态变更
+workflow jira changelog PROJ-123 --field status
+
+# JSON 格式输出
+workflow jira changelog PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira changelog PROJ-123 --markdown
+```
+
+---
+
+## 3. 显示评论命令 (`comments`)
+
+### 相关文件
+
+```
+src/commands/jira/comments.rs
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::JiraSubcommand::Comments
+  ↓
+commands/jira/comments.rs::CommentsCommand::show()
+  ↓
+  1. 获取 JIRA ID（从参数或交互式输入）
+  2. 调用 Jira::get_ticket_info(jira_id) 获取 ticket 信息
+  3. 提取评论数据（issue.fields.comment）
+  4. 应用过滤条件（--author、--since）
+  5. 应用分页（--limit、--offset）
+  6. 排序（默认降序）
+  7. 根据输出格式格式化显示评论
+```
+
+### 功能说明
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `--limit <LIMIT>` - 限制显示的评论数量
+   - `--offset <OFFSET>` - 分页偏移量
+   - `--author <EMAIL>` - 只显示指定作者的评论
+   - `--since <DATE>` - 只显示指定日期之后的评论（RFC3339 格式）
+   - `--table` - 表格格式输出（默认）
+   - `--json` - JSON 格式输出
+   - `--yaml` - YAML 格式输出
+   - `--markdown` - Markdown 格式输出
+
+2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
+   - 支持多种输出格式，便于脚本处理和文档生成
+
+3. **核心功能**：
+   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息（包含评论）
+   - 支持按作者、时间过滤评论
+   - 支持分页显示评论
+   - 默认按时间降序排序（最新的在前）
+
+### 关键步骤说明
+
+1. **评论获取**：
+   - 调用 `Jira::get_ticket_info()` 获取 ticket 信息
+   - 从 `issue.fields.comment` 提取评论数据
+
+2. **过滤和排序**：
+   - **按作者过滤**：使用 `--author` 选项，匹配邮箱地址
+   - **按时间过滤**：使用 `--since` 选项，只显示指定日期之后的评论
+   - **排序**：默认按创建时间降序排序（最新的在前）
+
+3. **分页**：
+   - 使用 `--limit` 限制显示的评论数量
+   - 使用 `--offset` 指定分页偏移量
+
+4. **格式化输出**：
+   - **表格格式**：人类可读的表格格式，显示评论详情
+   - **JSON 格式**：结构化 JSON 输出，便于脚本处理
+   - **YAML 格式**：结构化 YAML 输出（当前使用 JSON）
+   - **Markdown 格式**：Markdown 格式输出，便于文档生成
+
+### Jira API 调用
+
+- **`Jira::get_ticket_info(jira_id)`** - 获取 ticket 信息（包含评论）
+  - 参数：`jira_id` - Jira ticket ID
+  - 返回：Issue 结构体（包含评论数据）
+
+### 使用示例
+
+```bash
+# 显示所有评论
+workflow jira comments PROJ-123
+
+# 只显示最近 10 条评论
+workflow jira comments PROJ-123 --limit 10
+
+# 只显示指定作者的评论
+workflow jira comments PROJ-123 --author user@example.com
+
+# 只显示指定日期之后的评论
+workflow jira comments PROJ-123 --since 2025-01-01T00:00:00Z
+
+# JSON 格式输出
+workflow jira comments PROJ-123 --json
+
+# Markdown 格式输出
+workflow jira comments PROJ-123 --markdown
+```
+
+---
+
+## 4. 下载附件命令 (`attachments`)
 
 ### 相关文件
 
@@ -206,7 +394,7 @@ commands/jira/attachments.rs::AttachmentsCommand::download(jira_id)
 
 ---
 
-## 3. 清理本地数据命令 (`clean`)
+## 5. 清理本地数据命令 (`clean`)
 
 ### 相关文件
 

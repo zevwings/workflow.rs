@@ -79,7 +79,7 @@ impl ConfigCommand {
             key: result.llm.key.clone(),
             language: result.llm.language.clone(),
         }];
-        println!(
+        log_message!(
             "{}",
             TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );
@@ -96,7 +96,7 @@ impl ConfigCommand {
                     service_address: config.service_address.clone(),
                     api_token: config.api_token.clone(),
                 }];
-                println!(
+                log_message!(
                     "{}",
                     TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
                 );
@@ -150,7 +150,7 @@ impl ConfigCommand {
                     verification: acc.verification_status.clone(),
                 })
                 .collect();
-            println!(
+            log_message!(
                 "{}",
                 TableBuilder::new(account_rows).with_style(TableStyle::Modern).render()
             );

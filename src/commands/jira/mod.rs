@@ -3,9 +3,13 @@
 //! 提供 Jira ticket 信息查看、附件下载、清理本地数据等功能。
 
 pub mod attachments;
+pub mod changelog;
 pub mod clean;
+pub mod comments;
 pub mod info;
 
 pub use attachments::AttachmentsCommand;
+pub use changelog::ChangelogCommand;
 pub use clean::CleanCommand;
+pub use comments::CommentsCommand;
 pub use info::InfoCommand;

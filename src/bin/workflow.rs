@@ -8,9 +8,11 @@ use clap::Parser;
 
 use workflow::commands::branch::{clean, ignore, prefix};
 use workflow::commands::check::check;
-use workflow::commands::config::{completion, log, setup, show};
+use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
-use workflow::commands::jira::{AttachmentsCommand, CleanCommand, InfoCommand};
+use workflow::commands::jira::{
+    AttachmentsCommand, ChangelogCommand, CleanCommand, CommentsCommand, InfoCommand,
+};
 use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
 use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
@@ -22,9 +24,9 @@ use workflow::commands::pr::{
 use workflow::commands::proxy::proxy;
 
 use workflow::cli::{
-    BranchSubcommand, Cli, Commands, CompletionSubcommand, GitHubSubcommand, IgnoreSubcommand,
-    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands, PrefixSubcommand,
-    ProxySubcommand,
+    BranchSubcommand, Cli, Commands, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand,
+    IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands,
+    PrefixSubcommand, ProxySubcommand,
 };
 use workflow::*;
 
@@ -67,10 +69,52 @@ fn main() -> Result<()> {
         Some(Commands::Setup) => {
             setup::SetupCommand::run()?;
         }
-        // 配置查看
-        Some(Commands::Config) => {
-            show::ConfigCommand::show()?;
-        }
+        // 配置管理命令
+        Some(Commands::Config { subcommand }) => match subcommand {
+            Some(ConfigSubcommand::Show) => show::ConfigCommand::show()?,
+            Some(ConfigSubcommand::Validate {
+                config_path,
+                fix,
+                strict,
+            }) => {
+                validate::ConfigValidateCommand::validate(config_path, fix, strict)?;
+            }
+            Some(ConfigSubcommand::Export {
+                output_path,
+                section,
+                no_secrets,
+                toml,
+                json,
+                yaml,
+            }) => {
+                export::ConfigExportCommand::export(
+                    output_path,
+                    section,
+                    no_secrets,
+                    toml,
+                    json,
+                    yaml,
+                )?;
+            }
+            Some(ConfigSubcommand::Import {
+                input_path,
+                overwrite,
+                section,
+                dry_run,
+            }) => {
+                import::ConfigImportCommand::import(input_path, overwrite, section, dry_run)?;
+            }
+            None => {
+                // 当没有子命令时，显示帮助信息
+                log_message!("Configuration Management");
+                log_message!("\nAvailable subcommands:");
+                log_message!("  workflow config show     - View current configuration");
+                log_message!("  workflow config validate - Validate configuration file");
+                log_message!("  workflow config export   - Export configuration to a file");
+                log_message!("  workflow config import   - Import configuration from a file");
+                log_message!("\nUse 'workflow config <subcommand> --help' for more information.");
+            }
+        },
         // 卸载
         Some(Commands::Uninstall) => {
             uninstall::UninstallCommand::run()?;
@@ -230,8 +274,39 @@ fn main() -> Result<()> {
         },
         // Jira 操作命令
         Some(Commands::Jira { subcommand }) => match subcommand {
-            JiraSubcommand::Info { jira_id } => {
-                InfoCommand::show(jira_id)?;
+            JiraSubcommand::Info {
+                jira_id,
+                table,
+                json,
+                yaml,
+                markdown,
+            } => {
+                InfoCommand::show(jira_id, table, json, yaml, markdown)?;
+            }
+            JiraSubcommand::Changelog {
+                jira_id,
+                field,
+                table,
+                json,
+                yaml,
+                markdown,
+            } => {
+                ChangelogCommand::show(jira_id, field, table, json, yaml, markdown)?;
+            }
+            JiraSubcommand::Comments {
+                jira_id,
+                limit,
+                offset,
+                author,
+                since,
+                table,
+                json,
+                yaml,
+                markdown,
+            } => {
+                CommentsCommand::show(
+                    jira_id, limit, offset, author, since, table, json, yaml, markdown,
+                )?;
             }
             JiraSubcommand::Attachments { jira_id } => {
                 AttachmentsCommand::download(jira_id)?;

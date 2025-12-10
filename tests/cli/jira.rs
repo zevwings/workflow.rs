@@ -29,7 +29,7 @@ fn test_jira_info_command_structure() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123"]).unwrap();
 
     match cli.command {
-        JiraSubcommand::Info { jira_id } => {
+        JiraSubcommand::Info { jira_id, .. } => {
             assert_eq!(jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Info command"),
@@ -42,7 +42,7 @@ fn test_jira_info_command_without_id() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
 
     match cli.command {
-        JiraSubcommand::Info { jira_id } => {
+        JiraSubcommand::Info { jira_id, .. } => {
             assert_eq!(jira_id, None);
         }
         _ => panic!("Expected Info command"),
@@ -261,7 +261,7 @@ fn test_jira_jira_id_parameter_optional() {
     // Info
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info { jira_id } => assert_eq!(jira_id, None),
+        JiraSubcommand::Info { jira_id, .. } => assert_eq!(jira_id, None),
         _ => panic!(),
     }
 

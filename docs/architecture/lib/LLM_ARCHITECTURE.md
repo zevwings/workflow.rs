@@ -550,10 +550,10 @@ let content = PullRequestLLM::generate(
     Some(git_diff),
 )?;
 
-println!("Branch: {}", content.branch_name);
-println!("PR Title: {}", content.pr_title);
+log_message!("Branch: {}", content.branch_name);
+log_message!("PR Title: {}", content.pr_title);
 if let Some(desc) = content.description {
-    println!("Description: {}", desc);
+    log_message!("Description: {}", desc);
 }
 ```
 
@@ -573,7 +573,7 @@ let params = LLMRequestParams {
 };
 
 let response = client.call(&params)?;
-println!("{}", response);
+log_message!("{}", response);
 ```
 
 ### 配置 OpenAI
