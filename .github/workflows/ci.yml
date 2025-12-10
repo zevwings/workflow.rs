@@ -64,9 +64,9 @@ jobs:
             IS_CI_CREATED=false
 
             # 检查 PR 创建者（多种方式）
-            # 优先级1: 检查用户类型（最可靠）
+            # 优先级1: 检查用户类型为 Bot，且必须有明确的 GitHub Actions bot 标识
             if [[ -n "$PR_CREATOR_TYPE" ]] && [[ "$PR_CREATOR_TYPE" == "Bot" ]]; then
-              # 如果是 Bot 类型，进一步验证是否是 GitHub Actions bot
+              # 如果是 Bot 类型，必须进一步验证是否是 GitHub Actions bot
               if [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
                 IS_CI_CREATED=true
                 echo "✅ Verified via PR creator: Bot type with GitHub Actions bot ID (41898282)"
@@ -74,15 +74,15 @@ jobs:
                 IS_CI_CREATED=true
                 echo "✅ Verified via PR creator: Bot type with GitHub Actions bot name"
               else
-                # 如果只是 Bot 类型，也认为是 CI 创建的（保守策略）
-                IS_CI_CREATED=true
-                echo "✅ Verified via PR creator type: Bot user (assuming GitHub Actions)"
+                # Bot 类型但无法确认是 GitHub Actions bot，不通过验证
+                echo "⚠️  PR creator is Bot type but cannot verify as GitHub Actions bot"
+                echo "   PR Creator: ${PR_CREATOR:-'N/A'}, ID: ${PR_CREATOR_ID:-'N/A'}"
               fi
-            # 优先级2: 检查用户 ID
+            # 优先级2: 检查用户 ID（即使类型不是 Bot，但 ID 匹配也通过）
             elif [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
               IS_CI_CREATED=true
               echo "✅ Verified via PR creator ID: GitHub Actions bot ID (41898282)"
-            # 优先级3: 检查用户名
+            # 优先级3: 检查用户名（即使类型不是 Bot，但用户名匹配也通过）
             elif [[ -n "$PR_CREATOR" ]] && ([[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR" == "github-actions" ]]); then
               IS_CI_CREATED=true
               echo "✅ Verified via PR creator name: GitHub Actions bot"
