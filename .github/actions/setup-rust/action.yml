@@ -1,0 +1,38 @@
+name: 'Setup Rust Environment'
+description: 'Setup Rust toolchain with caching'
+inputs:
+  components:
+    description: 'Additional Rust components (e.g., rustfmt, clippy)'
+    required: false
+    default: ''
+  targets:
+    description: 'Cross-compilation targets'
+    required: false
+    default: ''
+outputs:
+  cache-hit:
+    description: 'Whether the cache was hit'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
+
+    - name: Cache cargo registry
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-

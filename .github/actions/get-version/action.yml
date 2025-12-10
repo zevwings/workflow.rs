@@ -1,0 +1,39 @@
+name: 'Get Version'
+description: 'Extract version from various sources (tag, Cargo.toml, or workflow input)'
+inputs:
+  version_input:
+    description: 'Version from workflow_dispatch input'
+    required: false
+    default: ''
+outputs:
+  version:
+    description: 'Version number without v prefix'
+    value: ${{ steps.version.outputs.version }}
+  tag:
+    description: 'Tag with v prefix'
+    value: ${{ steps.version.outputs.tag }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Get version
+      id: version
+      shell: bash
+      run: |
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ inputs.version_input }}" ]]; then
+          VERSION="${{ inputs.version_input }}"
+          VERSION=${VERSION#v}
+        elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+        else
+          VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ -z "$VERSION" ]; then
+            echo "❌ Error: Cannot read version from Cargo.toml"
+            exit 1
+          fi
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+        echo "✅ Version: $VERSION"
+        echo "✅ Tag: v$VERSION"
