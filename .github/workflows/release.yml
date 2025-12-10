@@ -166,7 +166,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
-          token: ${{ secrets.WORKFLOW_PAT }}  # 确保使用正确的 token
+          # 使用默认的 GITHUB_TOKEN，有 contents: write 权限，可以推送 tag
 
       - name: Get version from Cargo.toml
         id: version
@@ -318,7 +318,7 @@ jobs:
         shell: bash
         env:
           # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
-          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
         run: |
           # 配置 Git
           git config user.name "github-actions[bot]"
@@ -343,14 +343,14 @@ jobs:
           echo "Step 4: Pushing branch to origin"
           git push origin "$BRANCH_NAME"
 
-          # 第五步：创建 Pull Request
+          # 第五步：创建 Pull Request（使用 WORKFLOW_PAT 以触发 CI）
           echo "Step 5: Creating Pull Request"
           echo "Branch: $BRANCH_NAME"
           echo "Version: $NEW_VERSION"
 
           PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
             -H "Accept: application/vnd.github+json" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Authorization: Bearer $WORKFLOW_PAT" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             "https://api.github.com/repos/${{ github.repository }}/pulls" \
             -d '{
@@ -375,7 +375,7 @@ jobs:
               echo "Checking for existing PR..."
               EXISTING_PR=$(curl -s \
                 -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Authorization: Bearer $WORKFLOW_PAT" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
                 "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
 
@@ -410,8 +410,9 @@ jobs:
           # 使用 WORKFLOW_PAT 创建 PR，CI 会自动触发
           echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
-          # 第七步：合并 Pull Request
+          # 第七步：合并 Pull Request（使用 GITHUB_TOKEN）
           echo "Step 6: Merging Pull Request"
+          echo "ℹ️  Using GITHUB_TOKEN to merge PR (workflow has pull-requests: write permission)"
 
           # 初始等待时间，让 GitHub 有时间更新 PR 状态和触发 CI
           echo "⏳ Waiting 30s for PR status to be updated..."
@@ -423,9 +424,10 @@ jobs:
           ELAPSED=30  # 从 30 秒开始计数，因为已经等待了 30 秒
 
           while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # 使用 GITHUB_TOKEN 检查 PR 状态（默认 token，有 read 权限）
             PR_STATUS=$(curl -s \
               -H "Accept: application/vnd.github+json" \
-              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
 
@@ -465,10 +467,10 @@ jobs:
 
             if [ "$MERGEABLE" = "true" ]; then
               echo "🔀 Attempting to merge PR #$PR_NUMBER..."
-              # 尝试合并
+              # 尝试合并（使用 GITHUB_TOKEN，workflow 有 pull-requests: write 权限）
               MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
                 -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer $GITHUB_TOKEN" \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
                 "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
                 -d '{
@@ -559,12 +561,13 @@ jobs:
           echo "🏷️  Creating tag $TAG on commit $LATEST_COMMIT_SHA..."
           git tag "$TAG"
 
-          # 推送 tag
-          echo "Pushing tag: $TAG"
+          # 推送 tag（使用 GITHUB_TOKEN，workflow 有 contents: write 权限）
+          echo "📤 Pushing tag: $TAG"
+          echo "ℹ️  Using GITHUB_TOKEN to push tag (workflow has contents: write permission)"
           git push origin "$TAG"
 
           echo "✅ Successfully created and pushed tag: $TAG"
-          echo "ℹ️  This tag push should trigger a new workflow run for building and releasing"
+          echo "ℹ️  This tag push will trigger a new workflow run for building and releasing"
 
       - name: Set job outputs
         id: job_outputs
