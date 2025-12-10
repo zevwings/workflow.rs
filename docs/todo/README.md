@@ -86,16 +86,6 @@
   - 通知系统（桌面通知、邮件通知）
 - **优先级**: 中优先级
 
-#### 7. [`ALIAS_TODO.md`](./ALIAS_TODO.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 别名系统
-- **内容**:
-  - 别名配置（在配置文件中定义别名）
-  - 别名展开（支持命令参数传递、别名嵌套）
-  - 别名管理命令（list、add、remove）
-- **优先级**: 中优先级
-
 ---
 
 ## 📁 目录结构
@@ -109,8 +99,7 @@ docs/todo/
 ├── WORKFLOW_TODO.md               # 工作流自动化待办事项
 ├── PERFORMANCE_TODO.md            # 性能优化待办事项
 ├── STATS_TODO.md                  # 数据可视化与报告待办事项
-├── INTEGRATION_TODO.md            # 集成与扩展待办事项
-└── ALIAS_TODO.md                  # 别名系统待办事项
+└── INTEGRATION_TODO.md            # 集成与扩展待办事项
 ```
 
 ---
@@ -120,8 +109,8 @@ docs/todo/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 2 个 | JIRA、Git 模块已有基础实现 |
-| ⏳ 待实施 | 5 个 | 按模块分类的待办事项 |
-| **总计** | **7 个** | - |
+| ⏳ 待实施 | 4 个 | 按模块分类的待办事项 |
+| **总计** | **6 个** | - |
 
 ### 文档列表
 
@@ -132,7 +121,6 @@ docs/todo/
 4. **PERFORMANCE_TODO.md** - 性能优化待办事项
 5. **STATS_TODO.md** - 数据可视化与报告待办事项
 6. **INTEGRATION_TODO.md** - 集成与扩展待办事项
-7. **ALIAS_TODO.md** - 别名系统待办事项
 
 ---
 
@@ -140,7 +128,7 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 7 个文档：
+本目录包含 6 个文档：
 
 #### 部分完成文档（2 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
@@ -151,7 +139,7 @@ docs/todo/
    - ✅ 已完成：`branch clean`、`branch ignore`、`branch prefix`
    - ⏳ 待实现：分支管理增强、Commit 管理、Stash 管理
 
-#### 待实施文档（5 个）
+#### 待实施文档（4 个）
 3. **工作流自动化** (`WORKFLOW_TODO.md`)
    - 模板系统、钩子系统、批量操作
 
@@ -163,9 +151,6 @@ docs/todo/
 
 6. **集成与扩展** (`INTEGRATION_TODO.md`)
    - 更多平台支持、通知系统
-
-7. **别名系统** (`ALIAS_TODO.md`)
-   - 别名配置、别名展开、别名管理命令
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
 > 详见：[配置验证与导入/导出需求文档](../requirements/CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
@@ -189,7 +174,7 @@ docs/todo/
 - **性能优化** → [`PERFORMANCE_TODO.md`](./PERFORMANCE_TODO.md)
 - **数据可视化** → [`STATS_TODO.md`](./STATS_TODO.md)
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
-- **别名系统** → [`ALIAS_TODO.md`](./ALIAS_TODO.md)
+- **别名系统** → [别名系统需求文档](../requirements/ALIAS_SYSTEM.md)
 - **配置管理** → [配置验证与导入/导出需求文档](../requirements/CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 
 ---
@@ -203,7 +188,7 @@ docs/todo/
 
 ### 2025-01-27 更新
 - ✅ 更新了 JIRA 和 Git 模块的完成状态
-- ✅ 添加了 ALIAS_TODO.md 文档
 - ✅ 移除了不存在的文档引用
 - ✅ 更新了统计信息和目录结构
 - ✅ 删除了 CONFIG_TODO.md（配置管理功能已迁移至需求文档）
+- ✅ 删除了 ALIAS_TODO.md（别名系统需求已迁移至需求文档）

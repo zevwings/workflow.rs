@@ -30,23 +30,6 @@ workflow jira assign PROJ-123 --unassign             # 取消分配
 - 支持用户名、邮箱、account_id 等多种输入方式
 - 支持交互式选择用户（从项目成员列表）
 
-#### 2.2 `jira comment` - 添加评论
-- ❌ 封装为 CLI 命令（API 已实现）
-
-**当前状态**：`JiraTicket::add_comment()` 已实现，但未封装为 CLI 命令。
-
-**命令示例**：
-```bash
-workflow jira comment PROJ-123 "Fixed the bug"      # 添加评论
-workflow jira comment PROJ-123 --editor              # 使用编辑器输入评论
-workflow jira comment PROJ-123 --file comment.txt    # 从文件读取评论
-```
-
-**实现建议**：
-- 在 `src/commands/jira/` 下创建 `comment.rs`
-- 支持多行输入、编辑器输入、文件输入
-- 支持 Markdown 格式（如果 JIRA 支持）
-
 #### 2.3 `jira create` - 创建 ticket
 - ❌ 创建新的 JIRA ticket
 
@@ -62,21 +45,6 @@ workflow jira create --interactive                    # 交互式创建
 - 支持必填字段验证
 - 支持模板（从现有 ticket 复制字段）
 
-#### 2.4 `jira list` - 列出 tickets
-- ❌ 列出项目中的 tickets（按状态、指派人等过滤）
-
-**命令示例**：
-```bash
-workflow jira list --project PROJ                      # 列出项目所有 tickets
-workflow jira list --project PROJ --status "In Progress"  # 按状态过滤
-workflow jira list --project PROJ --assignee me        # 按指派人过滤
-workflow jira list --project PROJ --limit 20           # 限制数量
-```
-
-**实现建议**：
-- 基于 `jira search` 实现，提供更友好的过滤选项
-- 支持表格、列表、卡片等多种显示格式
-
 #### 2.5 `jira watch` - 关注/取消关注
 - ❌ 关注或取消关注 ticket
 
@@ -89,23 +57,6 @@ workflow jira watch --list                             # 列出关注的 tickets
 
 **实现建议**：
 - 使用 JIRA API `/issue/{issueIdOrKey}/watchers` 端点
-
-#### 2.6 `jira transition` - 状态转换
-- ❌ 封装为 CLI 命令（API 已实现）
-
-**当前状态**：`JiraTicket::transition()` 已实现，但未封装为 CLI 命令。
-
-**命令示例**：
-```bash
-workflow jira transition PROJ-123 "In Progress"     # 转换到指定状态
-workflow jira transition PROJ-123 --list             # 列出可用状态
-workflow jira transition PROJ-123 --auto             # 自动转换到下一个状态
-```
-
-**实现建议**：
-- 在 `src/commands/jira/` 下创建 `transition.rs`
-- 在 `src/lib/cli/mod.rs` 的 `JiraSubcommand` 中添加 `Transition` 子命令
-- 调用 `JiraTicket::transition()` 或 `JiraTicket::get_transitions()`
 
 #### 2.7 `jira update` - 更新 ticket
 - ❌ 更新 ticket 的字段（summary、description、priority 等）
@@ -121,28 +72,6 @@ workflow jira update PROJ-123 --labels "bug,urgent"    # 更新标签
 **实现建议**：
 - 使用 JIRA API `/issue/{issueIdOrKey}` PUT 端点
 - 支持批量更新多个字段
-
-#### 2.8 `jira search` - JQL 搜索
-- ❌ 使用 JQL（Jira Query Language）搜索 tickets
-
-**命令示例**：
-```bash
-workflow jira search "project = PROJ AND status = Open"  # JQL 搜索
-workflow jira search "assignee = currentUser()"         # 搜索分配给自己的
-workflow jira search --saved "my-open-tickets"          # 使用保存的查询
-workflow jira search --interactive                       # 交互式构建查询
-```
-
-**实现建议**：
-- 使用 JIRA API `/search` GET 端点
-- 支持保存常用查询
-- 支持交互式查询构建器
-
-**关联功能**：
-- **动态补全支持**：`jira_ticket_keys()` 方法需要此 API 支持
-  - 位置：`src/lib/completion/dynamic.rs`
-  - 用途：为 `jira info` 等命令提供 ticket key 的自动补全
-  - 依赖：`JiraIssueApi::search_issues()` 方法（需要在 `src/lib/jira/api/issue.rs` 中实现）
 
 #### 2.9 `jira link` - 关联 tickets
 - ❌ 关联或取消关联 tickets
@@ -235,15 +164,11 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ### 高优先级
 1. **JIRA 命令封装**（已有 API，封装即可）
-   - `jira transition` - 状态转换（API 已实现，待封装为命令）
    - `jira assign` - 分配 ticket
-   - `jira comment` - 添加评论
    - `jira create` - 创建 ticket
 
 ### 中优先级
 1. **JIRA 搜索和列表**
-   - `jira search` - JQL 搜索（**支持动态补全功能**）
-   - `jira list` - 列出 tickets
    - `jira watch` - 关注/取消关注
 
 2. **JIRA 更新和关联**
@@ -266,13 +191,10 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ### 开发顺序
 1. **第一阶段**：封装已有 API 为命令
-   - `jira transition` - 状态转换
    - `jira assign` - 分配 ticket
-   - `jira comment` - 添加评论
    - `jira create` - 创建 ticket
 
 2. **第二阶段**：增强现有功能
-   - `jira search` - JQL 搜索（**实现后支持动态补全的 `jira_ticket_keys()`**）
    - `jira update` - 更新 ticket
 
 3. **第三阶段**：集成增强和高级功能
@@ -293,6 +215,7 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ## 📚 相关文档
 
+- [JIRA 命令需求文档](../requirements/JIRA_COMMANDS.md) - 已转换为需求文档
 - [Git 工作流待办事项](./GIT_TODO.md)
 - [工作流自动化待办事项](./WORKFLOW_TODO.md)
 - [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)

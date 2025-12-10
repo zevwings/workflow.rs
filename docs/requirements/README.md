@@ -49,7 +49,66 @@
 
 ### 进行中的需求
 
-#### 1. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+#### 1. [`TEMPLATE_SYSTEM.md`](./TEMPLATE_SYSTEM.md)
+- **状态**: 📋 需求分析中
+- **分类**: 工作流自动化
+- **内容**:
+  - PR 模板（根据 JIRA ticket 自动生成）
+  - Commit 模板（标准化格式）
+  - 分支命名模板（根据 JIRA ticket 自动生成）
+- **优先级**: 高优先级
+- **来源**: 从 `docs/todo/WORKFLOW_TODO.md` 迁移
+
+#### 2. [`CACHE.md`](./CACHE.md)
+- **状态**: 📋 需求分析中
+- **分类**: 性能优化
+- **内容**:
+  - API 响应缓存
+  - 本地数据缓存
+  - 智能刷新
+- **优先级**: 高优先级（API 响应缓存）、中优先级（本地数据缓存、智能刷新）
+- **来源**: 从 `docs/todo/PERFORMANCE_TODO.md` 迁移
+
+#### 3. [`CONCURRENCY.md`](./CONCURRENCY.md)
+- **状态**: 📋 需求分析中
+- **分类**: 性能优化
+- **内容**:
+  - 并行下载
+- **优先级**: 高优先级（并行下载）
+- **来源**: 从 `docs/todo/PERFORMANCE_TODO.md` 迁移
+
+#### 4. [`JIRA_COMMANDS.md`](./JIRA_COMMANDS.md)
+- **状态**: 📋 需求分析中
+- **分类**: JIRA 模块
+- **内容**:
+  - `jira comment` - 添加评论
+  - `jira list` - 列出 tickets
+  - `jira transition` - 状态转换
+  - `jira search` - JQL 搜索
+- **优先级**: 高优先级（`jira comment`、`jira transition`）、中优先级（`jira list`、`jira search`）
+- **来源**: 从 `docs/todo/JIRA_TODO.md` 迁移
+
+#### 5. [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md)
+- **状态**: 📋 需求分析中
+- **分类**: Git 工作流
+- **内容**:
+  - 分支管理（创建、切换、重命名、同步）
+  - Commit 管理（修改、压缩、重写）
+  - Stash 管理（列出、应用、删除）
+- **优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写、Stash 管理）
+- **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
+
+#### 6. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
+- **状态**: 📋 需求分析中
+- **分类**: 用户体验优化
+- **内容**:
+  - 别名配置（配置文件定义别名）
+  - 别名展开（自动展开别名）
+  - 别名管理命令（添加、删除、列出）
+- **优先级**: 中优先级
+- **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
+
+#### 7. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 - **状态**: 📋 需求分析中
 - **分类**: 配置管理
 - **内容**:
