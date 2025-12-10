@@ -22,12 +22,12 @@ impl PullRequestStatusCommand {
     /// 获取 PR 标识符（从参数或当前分支）
     fn get_pr_identifier(pull_request_id_or_branch: Option<String>) -> Result<String> {
         if let Some(id) = pull_request_id_or_branch {
-            // GitHub 只支持数字 ID，Codeup 支持 ID 或分支名
-            // 尝试解析为数字，如果是数字则认为是 PR ID，否则可能是分支名（Codeup）
+            // GitHub 只支持数字 ID
+            // 尝试解析为数字 ID
             if id.parse::<u32>().is_ok() {
                 Ok(id)
             } else {
-                // 可能是分支名，直接返回（Codeup 支持）
+                // 如果不是数字，返回原值（可能用于错误提示）
                 Ok(id)
             }
         } else {

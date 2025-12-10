@@ -142,9 +142,7 @@ impl JiraIssueApi {
             },
         };
 
-        let config = RequestConfig::<TransitionRequest, Value>::new()
-            .body(&body)
-            .auth(auth);
+        let config = RequestConfig::<TransitionRequest, Value>::new().body(&body).auth(auth);
         let response = client.post(&url, config)?;
         response.ensure_success().context(format!(
             "Failed to transition issue {} to transition {}",
@@ -172,9 +170,7 @@ impl JiraIssueApi {
             account_id: account_id.to_string(),
         };
 
-        let config = RequestConfig::<AssigneeRequest, Value>::new()
-            .body(&body)
-            .auth(auth);
+        let config = RequestConfig::<AssigneeRequest, Value>::new().body(&body).auth(auth);
         let response = client.put(&url, config)?;
         response.ensure_success().context(format!(
             "Failed to assign issue {} to {}",
@@ -202,9 +198,7 @@ impl JiraIssueApi {
             body: comment.to_string(),
         };
 
-        let config = RequestConfig::<CommentRequest, Value>::new()
-            .body(&body)
-            .auth(auth);
+        let config = RequestConfig::<CommentRequest, Value>::new().body(&body).auth(auth);
         let response = client.post(&url, config)?;
         response
             .ensure_success()

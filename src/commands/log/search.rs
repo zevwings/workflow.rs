@@ -1,7 +1,9 @@
+use crate::base::dialog::InputDialog;
+use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
-use crate::{log_break, log_debug, log_message, log_success, log_warning};
+use crate::jira::logs::SearchResultRow;
+use crate::{log_break, log_debug, log_success, log_warning};
 use anyhow::{Context, Result};
-use dialoguer::Input;
 
 /// 搜索关键词命令
 pub struct SearchCommand;
@@ -13,9 +15,8 @@ impl SearchCommand {
         let jira_id = if let Some(id) = jira_id {
             id
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter Jira ticket ID (e.g., PROJ-123)")
-                .interact()
+            InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
+                .prompt()
                 .context("Failed to read Jira ticket ID")?
         };
 
@@ -28,9 +29,8 @@ impl SearchCommand {
         let term = if let Some(t) = search_term {
             t
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter search term")
-                .interact()
+            InputDialog::new("Enter search term")
+                .prompt()
                 .context("Failed to read search term")?
         };
 
@@ -53,36 +53,40 @@ impl SearchCommand {
         log_success!("Found {} matches:", total_count);
         log_break!();
 
-        // 显示 api.log 的搜索结果
-        if !api_results.is_empty() {
-            log_break!('=', 40, "api.log");
-            log_break!();
-            for entry in api_results {
-                if let Some(id) = entry.id {
-                    if let Some(url) = entry.url {
-                        log_message!("URL: {}, ID: {}", url, id);
-                    } else {
-                        log_debug!("ID: {} (URL not found)", id);
-                    }
-                }
+        // 构建表格数据
+        let mut rows: Vec<SearchResultRow> = Vec::new();
+
+        // 添加 api.log 的搜索结果
+        for entry in api_results {
+            if let Some(id) = entry.id {
+                rows.push(SearchResultRow {
+                    source: "api.log".to_string(),
+                    id: id.clone(),
+                    url: entry.url.unwrap_or_else(|| "-".to_string()),
+                });
             }
-            log_break!();
-            log_break!();
         }
 
-        // 显示 flutter-api.log 的搜索结果
-        if !flutter_api_results.is_empty() {
-            log_break!('=', 40, "flutter-api.log");
-            log_break!();
-            for entry in flutter_api_results {
-                if let Some(id) = entry.id {
-                    if let Some(url) = entry.url {
-                        log_message!("URL: {}, ID: {}", url, id);
-                    } else {
-                        log_debug!("ID: {} (URL not found)", id);
-                    }
-                }
+        // 添加 flutter-api.log 的搜索结果
+        for entry in flutter_api_results {
+            if let Some(id) = entry.id {
+                rows.push(SearchResultRow {
+                    source: "flutter-api.log".to_string(),
+                    id: id.clone(),
+                    url: entry.url.unwrap_or_else(|| "-".to_string()),
+                });
             }
+        }
+
+        // 使用表格显示所有结果
+        if !rows.is_empty() {
+            println!(
+                "{}",
+                TableBuilder::new(rows)
+                    .with_title("Search Results")
+                    .with_style(TableStyle::Modern)
+                    .render()
+            );
         }
 
         Ok(())

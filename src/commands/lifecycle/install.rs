@@ -1,15 +1,17 @@
 //! 安装命令
 //! 提供安装二进制文件和 shell completion 的功能
 
-use crate::base::settings::paths::Paths;
-use crate::base::shell::Detect;
-use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
-use anyhow::{Context, Result};
-use clap_complete::shells::Shell;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+
+use anyhow::{Context, Result};
+use clap_complete::shells::Shell;
+
+use crate::base::settings::paths::Paths;
+use crate::base::shell::Detect;
+use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 
 /// 安装命令
 #[allow(dead_code)]
@@ -47,7 +49,21 @@ impl InstallCommand {
 
         // 配置 shell 配置文件
         log_debug!("Configuring shell configuration file...");
-        Completion::configure_shell_config(&shell)?;
+        let config_result = Completion::configure_shell_config(&shell)?;
+
+        if config_result.already_exists {
+            log_success!(
+                "Completion config already exists in {} config file",
+                config_result.shell
+            );
+        } else if config_result.added {
+            log_success!(
+                "Completion config added to {} config file",
+                config_result.shell
+            );
+        } else {
+            log_success!("Completion config written to shell config file");
+        }
 
         log_success!("  shell completion installation complete");
         log_break!();
@@ -81,9 +97,8 @@ impl InstallCommand {
 
         // 获取当前可执行文件所在目录
         let current_exe = env::current_exe().context("Failed to get current executable path")?;
-        let current_dir = current_exe
-            .parent()
-            .context("Failed to get parent directory of executable")?;
+        let current_dir =
+            current_exe.parent().context("Failed to get parent directory of executable")?;
 
         log_debug!("Current directory: {}", current_dir.display());
         log_debug!("Install directory: {}", install_dir);
@@ -118,31 +133,26 @@ impl InstallCommand {
                     )
                 })?;
             } else {
-                let status = Command::new("sudo")
-                    .arg("cp")
-                    .arg(&source)
-                    .arg(&target)
-                    .status()
-                    .context(format!(
-                        "Failed to copy {} to {}",
-                        source.display(),
-                        target.display()
-                    ))?;
+                let status =
+                    Command::new("sudo").arg("cp").arg(&source).arg(&target).status().context(
+                        format!(
+                            "Failed to copy {} to {}",
+                            source.display(),
+                            target.display()
+                        ),
+                    )?;
 
                 if !status.success() {
                     anyhow::bail!("Failed to install {}", binary);
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("sudo")
-                    .arg("chmod")
-                    .arg("+x")
-                    .arg(&target)
-                    .status()
-                    .context(format!(
+                Command::new("sudo").arg("chmod").arg("+x").arg(&target).status().context(
+                    format!(
                         "Failed to set executable permission for {}",
                         target.display()
-                    ))?;
+                    ),
+                )?;
             }
 
             log_success!("{} installation complete", binary_name);
