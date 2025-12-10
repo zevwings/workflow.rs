@@ -372,9 +372,8 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 
 ## 📚 相关文档
 
-- [Git 工作流待办事项](../todo/GIT_TODO.md)
 - [JIRA 模块待办事项](../todo/JIRA_TODO.md)
-- [工作流自动化待办事项](../todo/WORKFLOW_TODO.md)
+- [模板系统需求文档](./TEMPLATE_SYSTEM.md)
 
 ---
 

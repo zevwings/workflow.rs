@@ -67,7 +67,6 @@
   - 本地数据缓存
   - 智能刷新
 - **优先级**: 高优先级（API 响应缓存）、中优先级（本地数据缓存、智能刷新）
-- **来源**: 从 `docs/todo/PERFORMANCE_TODO.md` 迁移
 
 #### 3. [`CONCURRENCY.md`](./CONCURRENCY.md)
 - **状态**: 📋 需求分析中
@@ -75,7 +74,6 @@
 - **内容**:
   - 并行下载
 - **优先级**: 高优先级（并行下载）
-- **来源**: 从 `docs/todo/PERFORMANCE_TODO.md` 迁移
 
 #### 4. [`JIRA_COMMANDS.md`](./JIRA_COMMANDS.md)
 - **状态**: 📋 需求分析中

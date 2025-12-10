@@ -216,8 +216,8 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 ## 📚 相关文档
 
 - [JIRA 命令需求文档](../requirements/JIRA_COMMANDS.md) - 已转换为需求文档
-- [Git 工作流待办事项](./GIT_TODO.md)
-- [工作流自动化待办事项](./WORKFLOW_TODO.md)
+- [Git 工作流需求文档](../requirements/GIT_WORKFLOW.md)
+- [模板系统需求文档](../requirements/TEMPLATE_SYSTEM.md)
 - [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)
 
 ---

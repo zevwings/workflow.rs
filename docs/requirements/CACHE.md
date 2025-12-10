@@ -7,7 +7,6 @@
 **状态**: 📋 需求分析中
 **分类**: 性能优化
 **优先级**: 高优先级（API 响应缓存）、中优先级（本地数据缓存、智能刷新）
-**来源**: 从 `docs/todo/PERFORMANCE_TODO.md` 迁移
 
 ---
 
@@ -160,7 +159,6 @@ workflow cache size                                 # 显示缓存大小
 
 ## 📚 相关文档
 
-- [性能优化待办事项](../todo/PERFORMANCE_TODO.md)
 - [JIRA 模块待办事项](../todo/JIRA_TODO.md)
 - [并发处理需求文档](./CONCURRENCY.md)
 

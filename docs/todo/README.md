@@ -35,49 +35,8 @@
   - JIRA 集成增强（批量操作、自定义工作流规则）
 - **优先级**: 高优先级（命令封装、info 增强）
 
-#### 2. [`GIT_TODO.md`](./GIT_TODO.md)
-- **状态**: 🚧 部分完成
-- **实现度**: ~20%
-- **分类**: Git 工作流
-- **已完成**:
-  - ✅ `branch clean` - 清理本地分支
-  - ✅ `branch ignore` - 管理分支忽略列表（add、remove、list）
-  - ✅ `branch prefix` - 管理分支前缀（set、get、remove）
-- **待实现**:
-  - 分支管理增强（create、switch、rename、compare、sync）
-  - Commit 管理（amend、squash、reword、history）
-  - Stash 管理（list、apply、drop、pop）
-- **优先级**: 高优先级（分支创建、切换、commit 管理）
 
-#### 3. [`WORKFLOW_TODO.md`](./WORKFLOW_TODO.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 工作流自动化
-- **内容**:
-  - 模板系统（PR 模板、Commit 模板、分支命名模板）
-  - 钩子系统（Pre-commit、Post-merge、Pre-push）
-- **优先级**: 高优先级（模板系统）
-
-#### 4. [`PERFORMANCE_TODO.md`](./PERFORMANCE_TODO.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 性能优化
-- **内容**:
-  - 缓存机制（API 响应缓存、本地数据缓存、智能刷新）
-  - 并发处理（并行下载、批量 API 调用）
-- **优先级**: 高优先级（API 响应缓存、并行下载）
-
-#### 5. [`STATS_TODO.md`](./STATS_TODO.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 数据可视化与报告
-- **内容**:
-  - 统计报告（PR 统计、JIRA 统计、Git 统计）
-  - 图表输出（ASCII 图表、导出为图片）
-  - 时间线视图
-- **优先级**: 中优先级
-
-#### 6. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+#### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 集成与扩展
@@ -95,10 +54,6 @@ docs/todo/
 ├── README.md                      # 本文件（索引文档）
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
-├── GIT_TODO.md                    # Git 工作流待办事项（🚧 部分完成）
-├── WORKFLOW_TODO.md               # 工作流自动化待办事项
-├── PERFORMANCE_TODO.md            # 性能优化待办事项
-├── STATS_TODO.md                  # 数据可视化与报告待办事项
 └── INTEGRATION_TODO.md            # 集成与扩展待办事项
 ```
 
@@ -108,19 +63,15 @@ docs/todo/
 
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
-| 🚧 部分完成 | 2 个 | JIRA、Git 模块已有基础实现 |
-| ⏳ 待实施 | 4 个 | 按模块分类的待办事项 |
-| **总计** | **6 个** | - |
+| 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
+| ⏳ 待实施 | 1 个 | 按模块分类的待办事项 |
+| **总计** | **2 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
-1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~30%）
-2. **GIT_TODO.md** - Git 工作流待办事项（🚧 部分完成，~20%）
-3. **WORKFLOW_TODO.md** - 工作流自动化待办事项
-4. **PERFORMANCE_TODO.md** - 性能优化待办事项
-5. **STATS_TODO.md** - 数据可视化与报告待办事项
-6. **INTEGRATION_TODO.md** - 集成与扩展待办事项
+1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
+2. **INTEGRATION_TODO.md** - 集成与扩展待办事项
 
 ---
 
@@ -128,28 +79,15 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 6 个文档：
+本目录包含 2 个文档：
 
-#### 部分完成文档（2 个）
+#### 部分完成文档（1 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-2. **Git 工作流** (`GIT_TODO.md`) - 🚧 部分完成（~20%）
-   - ✅ 已完成：`branch clean`、`branch ignore`、`branch prefix`
-   - ⏳ 待实现：分支管理增强、Commit 管理、Stash 管理
-
-#### 待实施文档（4 个）
-3. **工作流自动化** (`WORKFLOW_TODO.md`)
-   - 模板系统、钩子系统、批量操作
-
-4. **性能优化** (`PERFORMANCE_TODO.md`)
-   - 缓存机制、并发处理
-
-5. **数据可视化与报告** (`STATS_TODO.md`)
-   - 统计报告、图表输出、时间线视图
-
-6. **集成与扩展** (`INTEGRATION_TODO.md`)
+#### 待实施文档（1 个）
+2. **集成与扩展** (`INTEGRATION_TODO.md`)
    - 更多平台支持、通知系统
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
@@ -169,11 +107,9 @@ docs/todo/
 
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
-- **Git 相关** → [`GIT_TODO.md`](./GIT_TODO.md) 🚧 部分完成
-- **工作流自动化** → [`WORKFLOW_TODO.md`](./WORKFLOW_TODO.md)
-- **性能优化** → [`PERFORMANCE_TODO.md`](./PERFORMANCE_TODO.md)
-- **数据可视化** → [`STATS_TODO.md`](./STATS_TODO.md)
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+- **Git 工作流** → [Git 工作流需求文档](../requirements/GIT_WORKFLOW.md)
+- **工作流自动化** → [模板系统需求文档](../requirements/TEMPLATE_SYSTEM.md)
 - **别名系统** → [别名系统需求文档](../requirements/ALIAS_SYSTEM.md)
 - **配置管理** → [配置验证与导入/导出需求文档](../requirements/CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 
@@ -192,3 +128,7 @@ docs/todo/
 - ✅ 更新了统计信息和目录结构
 - ✅ 删除了 CONFIG_TODO.md（配置管理功能已迁移至需求文档）
 - ✅ 删除了 ALIAS_TODO.md（别名系统需求已迁移至需求文档）
+- ✅ 删除了 GIT_TODO.md（Git 工作流需求已迁移至需求文档）
+- ✅ 删除了 WORKFLOW_TODO.md（工作流自动化需求已迁移至需求文档）
+- ✅ 删除了 STATS_TODO.md（数据可视化与报告待办事项已删除）
+- ✅ 删除了 PERFORMANCE_TODO.md 和 PERFORMANCE_ANALYSIS.md（性能优化相关内容已迁移至需求文档）

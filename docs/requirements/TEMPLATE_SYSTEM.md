@@ -154,9 +154,8 @@ bugfix = "bugfix/{{jira_key}}-{{summary_slug}}"
 
 ## 📚 相关文档
 
-- [工作流自动化待办事项](../todo/WORKFLOW_TODO.md)
 - [JIRA 模块待办事项](../todo/JIRA_TODO.md)
-- [Git 工作流待办事项](../todo/GIT_TODO.md)
+- [Git 工作流需求文档](./GIT_WORKFLOW.md)
 
 ---
 

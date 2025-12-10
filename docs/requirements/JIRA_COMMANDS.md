@@ -220,7 +220,7 @@ workflow jira search --interactive                       # 交互式构建查询
 
 - [JIRA 模块待办事项](../todo/JIRA_TODO.md)
 - [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)
-- [Git 工作流待办事项](../todo/GIT_TODO.md)
+- [Git 工作流需求文档](./GIT_WORKFLOW.md)
 
 ---
 
