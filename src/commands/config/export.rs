@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -44,7 +45,7 @@ impl ConfigExportCommand {
 
         // 如果指定了 section，验证该 section 的配置
         if let Some(ref section_name) = section {
-            let export_config = Self::extract_section(&settings, section_name)?;
+            let export_config = extract_section(&settings, section_name)?;
             log_info!("Validating configuration before export...");
             let validation_result =
                 ConfigValidateCommand::validate_config(&export_config, &config_path)?;
@@ -145,7 +146,7 @@ impl ConfigExportCommand {
         let actual_filtered_count = if no_secrets {
             if let Some(ref section_name) = section {
                 // 对于 section 导出，计算该 section 中被过滤的字段数
-                let export_config = Self::extract_section(&settings, section_name)?;
+                let export_config = extract_section(&settings, section_name)?;
                 let (_, count) = Self::filter_secrets(export_config);
                 count
             } else {
@@ -163,34 +164,6 @@ impl ConfigExportCommand {
         }
 
         Ok(())
-    }
-
-    /// 提取特定配置段
-    fn extract_section(settings: &Settings, section: &str) -> Result<Settings> {
-        let mut extracted = Settings::default();
-
-        match section.to_lowercase().as_str() {
-            "jira" => {
-                extracted.jira = settings.jira.clone();
-            }
-            "github" => {
-                extracted.github = settings.github.clone();
-            }
-            "log" => {
-                extracted.log = settings.log.clone();
-            }
-            "llm" => {
-                extracted.llm = settings.llm.clone();
-            }
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "Unknown section: '{}'. Valid sections: jira, github, log, llm",
-                    section
-                ));
-            }
-        }
-
-        Ok(extracted)
     }
 
     /// 过滤敏感信息

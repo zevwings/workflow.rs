@@ -1,10 +1,13 @@
 //! 配置命令的辅助函数
 //!
 //! 提供可复用的交互式选择函数，用于配置设置。
+//! 同时提供配置解析和提取的共享函数，减少代码冗余。
 
 use crate::base::dialog::SelectDialog;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
+use crate::base::settings::settings::Settings;
 use anyhow::{Context, Result};
+use std::path::Path;
 
 /// 交互式选择语言
 ///
@@ -58,4 +61,106 @@ pub fn select_language(current_language: Option<&str>) -> Result<String> {
 
     // 返回选中的语言代码
     Ok(SUPPORTED_LANGUAGES[selected_idx].code.to_string())
+}
+
+/// 解析配置文件（支持 TOML、JSON、YAML）
+///
+/// 根据文件扩展名或内容自动检测配置格式并解析。
+///
+/// # 参数
+///
+/// * `content` - 配置文件内容
+/// * `path` - 配置文件路径（用于确定格式）
+///
+/// # 返回
+///
+/// 解析后的 `Settings` 实例
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::commands::config::helpers::parse_config;
+/// use std::path::Path;
+///
+/// let content = r#"[jira]
+/// api_token = "test"
+/// "#;
+/// let path = Path::new("config.toml");
+/// let settings = parse_config(content, path)?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn parse_config(content: &str, path: &Path) -> Result<Settings> {
+    let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("toml").to_lowercase();
+
+    match extension.as_str() {
+        "toml" => toml::from_str::<Settings>(content).context("Failed to parse TOML config file"),
+        "json" => {
+            serde_json::from_str::<Settings>(content).context("Failed to parse JSON config file")
+        }
+        "yaml" | "yml" => {
+            serde_yaml::from_str::<Settings>(content).context("Failed to parse YAML config file")
+        }
+        _ => {
+            // 尝试自动检测格式
+            if content.trim_start().starts_with('{') {
+                serde_json::from_str::<Settings>(content)
+                    .context("Failed to parse JSON config file")
+            } else if content.trim_start().starts_with("---") || content.contains(':') {
+                serde_yaml::from_str::<Settings>(content)
+                    .context("Failed to parse YAML config file")
+            } else {
+                toml::from_str::<Settings>(content).context("Failed to parse TOML config file")
+            }
+        }
+    }
+}
+
+/// 提取特定配置段
+///
+/// 从完整的配置中提取指定配置段（如 jira、github、log、llm）。
+///
+/// # 参数
+///
+/// * `settings` - 完整的配置对象
+/// * `section` - 要提取的配置段名称
+///
+/// # 返回
+///
+/// 只包含指定配置段的 `Settings` 实例
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::commands::config::helpers::extract_section;
+/// use workflow::base::settings::settings::Settings;
+///
+/// let settings = Settings::default();
+/// let jira_config = extract_section(&settings, "jira")?;
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+pub fn extract_section(settings: &Settings, section: &str) -> Result<Settings> {
+    let mut extracted = Settings::default();
+
+    match section.to_lowercase().as_str() {
+        "jira" => {
+            extracted.jira = settings.jira.clone();
+        }
+        "github" => {
+            extracted.github = settings.github.clone();
+        }
+        "log" => {
+            extracted.log = settings.log.clone();
+        }
+        "llm" => {
+            extracted.llm = settings.llm.clone();
+        }
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Unknown section: '{}'. Valid sections: jira, github, log, llm",
+                section
+            ));
+        }
+    }
+
+    Ok(extracted)
 }

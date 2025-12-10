@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::commands::config::helpers::parse_config;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use std::fs;
@@ -60,7 +61,7 @@ impl ConfigValidateCommand {
             .context(format!("Failed to read config file: {:?}", config_path))?;
 
         // 解析配置文件（支持 TOML、JSON、YAML）
-        let mut settings = Self::parse_config(&content, &config_path)?;
+        let mut settings = parse_config(&content, &config_path)?;
 
         // 执行验证
         let mut result = Self::validate_config(&settings, &config_path)?;
@@ -448,32 +449,5 @@ impl ConfigValidateCommand {
         }
 
         Ok(())
-    }
-
-    /// 解析配置文件（支持 TOML、JSON、YAML）
-    fn parse_config(content: &str, path: &Path) -> Result<Settings> {
-        let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("toml").to_lowercase();
-
-        match extension.as_str() {
-            "toml" => {
-                toml::from_str::<Settings>(content).context("Failed to parse TOML config file")
-            }
-            "json" => serde_json::from_str::<Settings>(content)
-                .context("Failed to parse JSON config file"),
-            "yaml" | "yml" => serde_yaml::from_str::<Settings>(content)
-                .context("Failed to parse YAML config file"),
-            _ => {
-                // 尝试自动检测格式
-                if content.trim_start().starts_with('{') {
-                    serde_json::from_str::<Settings>(content)
-                        .context("Failed to parse JSON config file")
-                } else if content.trim_start().starts_with("---") || content.contains(':') {
-                    serde_yaml::from_str::<Settings>(content)
-                        .context("Failed to parse YAML config file")
-                } else {
-                    toml::from_str::<Settings>(content).context("Failed to parse TOML config file")
-                }
-            }
-        }
     }
 }

@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -118,11 +119,11 @@ impl ConfigImportCommand {
         let content = fs::read_to_string(&input_path)
             .context(format!("Failed to read input file: {:?}", input_path))?;
 
-        let imported_settings = Self::parse_config(&content, &input_path)?;
+        let imported_settings = parse_config(&content, &input_path)?;
 
         // 提取要导入的配置段
         let imported = if let Some(ref section_name) = section {
-            Self::extract_section(&imported_settings, section_name)?
+            extract_section(&imported_settings, section_name)?
         } else {
             imported_settings
         };
@@ -243,59 +244,6 @@ impl ConfigImportCommand {
         Ok(())
     }
 
-    /// 解析配置文件（支持 TOML、JSON、YAML）
-    fn parse_config(content: &str, path: &Path) -> Result<Settings> {
-        let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("toml").to_lowercase();
-
-        match extension.as_str() {
-            "toml" => toml::from_str::<Settings>(content).context("Failed to parse TOML config"),
-            "json" => {
-                serde_json::from_str::<Settings>(content).context("Failed to parse JSON config")
-            }
-            "yaml" | "yml" => {
-                serde_yaml::from_str::<Settings>(content).context("Failed to parse YAML config")
-            }
-            _ => {
-                // 尝试自动检测格式
-                if content.trim_start().starts_with('{') {
-                    serde_json::from_str::<Settings>(content).context("Failed to parse JSON config")
-                } else if content.trim_start().starts_with("---") || content.contains(':') {
-                    serde_yaml::from_str::<Settings>(content).context("Failed to parse YAML config")
-                } else {
-                    toml::from_str::<Settings>(content).context("Failed to parse TOML config")
-                }
-            }
-        }
-    }
-
-    /// 提取特定配置段
-    fn extract_section(settings: &Settings, section: &str) -> Result<Settings> {
-        let mut extracted = Settings::default();
-
-        match section.to_lowercase().as_str() {
-            "jira" => {
-                extracted.jira = settings.jira.clone();
-            }
-            "github" => {
-                extracted.github = settings.github.clone();
-            }
-            "log" => {
-                extracted.log = settings.log.clone();
-            }
-            "llm" => {
-                extracted.llm = settings.llm.clone();
-            }
-            _ => {
-                return Err(anyhow::anyhow!(
-                    "Unknown section: '{}'. Valid sections: jira, github, log, llm",
-                    section
-                ));
-            }
-        }
-
-        Ok(extracted)
-    }
-
     /// 合并配置段
     fn merge_section(current: &Settings, imported: &Settings, section: &str) -> Settings {
         let mut merged = current.clone();
@@ -380,7 +328,7 @@ impl ConfigImportCommand {
             config_path
         ))?;
 
-        let saved_settings = Self::parse_config(&content, config_path)?;
+        let saved_settings = parse_config(&content, config_path)?;
 
         // 验证配置
         let validation = ConfigValidateCommand::validate_config(&saved_settings, config_path)?;
