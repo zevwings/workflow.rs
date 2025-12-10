@@ -6,6 +6,11 @@ on:
       - master
       - main
 
+# 配置工作流权限，允许读取 PR 信息
+permissions:
+  contents: read
+  pull-requests: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -33,35 +38,75 @@ jobs:
             # 方法1: 检查 PR 的创建者
             PR_CREATOR="${{ github.event.pull_request.user.login }}"
             PR_CREATOR_TYPE="${{ github.event.pull_request.user.type }}"
+            PR_CREATOR_ID="${{ github.event.pull_request.user.id }}"
 
             # 方法2: 检查分支最新提交的提交者
             COMMIT_AUTHOR_NAME=$(git log -1 --format='%an' HEAD)
             COMMIT_AUTHOR_EMAIL=$(git log -1 --format='%ae' HEAD)
 
+            echo "=== Verification Details ==="
             echo "PR Creator: ${PR_CREATOR:-'N/A'}"
             echo "PR Creator Type: ${PR_CREATOR_TYPE:-'N/A'}"
+            echo "PR Creator ID: ${PR_CREATOR_ID:-'N/A'}"
             echo "Commit Author: $COMMIT_AUTHOR_NAME"
             echo "Commit Author Email: $COMMIT_AUTHOR_EMAIL"
+            echo ""
+            echo "Full PR event data (for debugging):"
+            echo "github.event.pull_request.user.login: ${{ github.event.pull_request.user.login }}"
+            echo "github.event.pull_request.user.type: ${{ github.event.pull_request.user.type }}"
+            echo "github.event.pull_request.user.id: ${{ github.event.pull_request.user.id }}"
+            echo "============================"
 
             # 检查是否是 GitHub Actions bot 创建的
-            # 通过 PR 创建者或提交者信息判断
+            # GitHub Actions bot 的用户 ID 是 41898282
+            # 用户名可能是 "github-actions[bot]" 或 "github-actions"
+            # 类型应该是 "Bot"
             IS_CI_CREATED=false
 
-            # 检查 PR 创建者
-            if [[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR_TYPE" == "Bot" ]]; then
+            # 检查 PR 创建者（多种方式）
+            # 优先级1: 检查用户类型（最可靠）
+            if [[ -n "$PR_CREATOR_TYPE" ]] && [[ "$PR_CREATOR_TYPE" == "Bot" ]]; then
+              # 如果是 Bot 类型，进一步验证是否是 GitHub Actions bot
+              if [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
+                IS_CI_CREATED=true
+                echo "✅ Verified via PR creator: Bot type with GitHub Actions bot ID (41898282)"
+              elif [[ -n "$PR_CREATOR" ]] && ([[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR" == "github-actions" ]]); then
+                IS_CI_CREATED=true
+                echo "✅ Verified via PR creator: Bot type with GitHub Actions bot name"
+              else
+                # 如果只是 Bot 类型，也认为是 CI 创建的（保守策略）
+                IS_CI_CREATED=true
+                echo "✅ Verified via PR creator type: Bot user (assuming GitHub Actions)"
+              fi
+            # 优先级2: 检查用户 ID
+            elif [[ -n "$PR_CREATOR_ID" ]] && [[ "$PR_CREATOR_ID" == "41898282" ]]; then
               IS_CI_CREATED=true
-              echo "✅ Verified via PR creator: Created by GitHub Actions"
+              echo "✅ Verified via PR creator ID: GitHub Actions bot ID (41898282)"
+            # 优先级3: 检查用户名
+            elif [[ -n "$PR_CREATOR" ]] && ([[ "$PR_CREATOR" == "github-actions[bot]" ]] || [[ "$PR_CREATOR" == "github-actions" ]]); then
+              IS_CI_CREATED=true
+              echo "✅ Verified via PR creator name: GitHub Actions bot"
             fi
 
             # 检查提交者（更可靠，因为分支本身是由 CI 推送的）
-            if [[ "$COMMIT_AUTHOR_NAME" == "github-actions[bot]" ]] || [[ "$COMMIT_AUTHOR_EMAIL" == "github-actions[bot]@users.noreply.github.com" ]]; then
+            # 支持多种邮箱格式
+            if [[ "$COMMIT_AUTHOR_NAME" == "github-actions[bot]" ]] || [[ "$COMMIT_AUTHOR_NAME" == "github-actions" ]]; then
               IS_CI_CREATED=true
-              echo "✅ Verified via commit author: Created by GitHub Actions"
+              echo "✅ Verified via commit author name: GitHub Actions bot"
+            fi
+
+            # 检查提交者邮箱（支持多种格式）
+            if [[ "$COMMIT_AUTHOR_EMAIL" == "github-actions[bot]@users.noreply.github.com" ]] || \
+               [[ "$COMMIT_AUTHOR_EMAIL" == "41898282+github-actions[bot]@users.noreply.github.com" ]] || \
+               [[ "$COMMIT_AUTHOR_EMAIL" =~ ^.*github-actions.*@users.noreply.github.com$ ]]; then
+              IS_CI_CREATED=true
+              echo "✅ Verified via commit author email: GitHub Actions bot email"
             fi
 
             if [[ "$IS_CI_CREATED" == "false" ]]; then
+              echo ""
               echo "❌ Error: bump-version-* branches can only be created by CI (GitHub Actions)"
-              echo "   This PR was created by: ${PR_CREATOR:-'unknown'} (${PR_CREATOR_TYPE:-'unknown'})"
+              echo "   This PR was created by: ${PR_CREATOR:-'unknown'} (${PR_CREATOR_TYPE:-'unknown'}, ID: ${PR_CREATOR_ID:-'unknown'})"
               echo "   Commit author: $COMMIT_AUTHOR_NAME <$COMMIT_AUTHOR_EMAIL>"
               echo "   Only automated version bump PRs from the release workflow are allowed."
               echo ""
@@ -71,6 +116,7 @@ jobs:
               exit 1
             fi
 
+            echo ""
             echo "✅ Verified: This bump-version-* branch was created by CI"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
