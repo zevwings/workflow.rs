@@ -7,6 +7,8 @@ use std::io::BufRead;
 use std::path::Path;
 use std::sync::OnceLock;
 
+use crate::base::util::FileReader;
+
 use super::constants::*;
 use super::helpers;
 use super::helpers::LogEntry;
@@ -19,7 +21,7 @@ impl JiraLogs {
     pub fn find_request_id(&self, jira_id: &str, request_id: &str) -> Result<Option<LogEntry>> {
         let log_file = self.ensure_log_file_exists(jira_id)?;
 
-        let reader = helpers::open_log_file(&log_file)?;
+        let reader = FileReader::open(&log_file)?;
         let mut current_entry: Option<LogEntry> = None;
         let mut found_id = false;
 
@@ -60,7 +62,7 @@ impl JiraLogs {
     pub fn extract_response_content(&self, jira_id: &str, request_id: &str) -> Result<String> {
         let log_file = self.ensure_log_file_exists(jira_id)?;
 
-        let reader = helpers::open_log_file(&log_file)?;
+        let reader = FileReader::open(&log_file)?;
         let mut lines = reader.lines();
         let mut response_lines = Vec::new();
         let mut prev_line = String::new();
@@ -106,7 +108,7 @@ impl JiraLogs {
             return Ok(Vec::new());
         }
 
-        let reader = helpers::open_log_file(log_file)?;
+        let reader = FileReader::open(log_file)?;
         let keyword_lower = keyword.to_lowercase();
         let mut results = Vec::new();
         let mut printed_ids = HashSet::new();

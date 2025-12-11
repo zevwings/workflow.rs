@@ -1,14 +1,22 @@
 //! 清理功能相关实现
+//!
+//! 提供清理附件下载目录的功能，包括：
+//! - 清理指定 JIRA ID 的附件目录
+//! - 清理整个基础目录
+//! - 预览操作（dry-run）
+//! - 列出将要删除的内容（list-only）
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
+use walkdir::WalkDir;
 
-use super::helpers;
-use super::JiraLogs;
 use crate::base::dialog::ConfirmDialog;
+use crate::base::util::format_size;
 use crate::trace_info;
+
+use super::paths::AttachmentPaths;
 
 // ==================== 返回结构体 ====================
 
@@ -59,16 +67,38 @@ pub struct CleanResult {
     pub list_only: bool,
 }
 
-impl JiraLogs {
-    /// 清理指定 JIRA ID 的日志目录
+/// 附件清理器
+///
+/// 提供清理附件下载目录的功能。
+pub struct AttachmentCleaner;
+
+impl Default for AttachmentCleaner {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl AttachmentCleaner {
+    /// 创建新的清理器实例
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// 清理指定 JIRA ID 的附件目录
     ///
     /// 自动构建目录路径，然后清理该目录。
+    ///
+    /// # 参数
+    ///
+    /// * `jira_id` - JIRA ID（如 "PROJ-123"）。如果为空字符串，清理整个 jira 目录
+    /// * `dry_run` - 如果为 true，只预览操作，不实际删除
+    /// * `list_only` - 如果为 true，只列出将要删除的内容
     pub fn clean_dir(&self, jira_id: &str, dry_run: bool, list_only: bool) -> Result<CleanResult> {
         let dir = if jira_id.is_empty() {
             // 如果 jira_id 为空，清理整个 jira 目录
-            self.base_dir.join("jira")
+            AttachmentPaths::jira_base_dir()?
         } else {
-            self.base_dir.join("jira").join(jira_id)
+            AttachmentPaths::ticket_base_dir(jira_id)?
         };
         let dir_name = if jira_id.is_empty() {
             "the entire base directory".to_string()
@@ -88,9 +118,9 @@ impl JiraLogs {
             });
         }
 
-        let (size, file_count) = helpers::calculate_dir_info(&dir)?;
+        let (size, file_count) = Self::calculate_dir_info(&dir)?;
         let is_base_dir = jira_id.is_empty();
-        let dir_info = self.display_dir_info(&dir_name, &dir, size, file_count, is_base_dir)?;
+        let dir_info = Self::display_dir_info(&dir_name, &dir, size, file_count, is_base_dir)?;
 
         if list_only {
             return Ok(CleanResult {
@@ -105,7 +135,7 @@ impl JiraLogs {
 
         if dry_run {
             trace_info!("[DRY RUN] Would delete {}: {:?}", dir_name, dir);
-            trace_info!("[DRY RUN] Total size: {}", helpers::format_size(size));
+            trace_info!("[DRY RUN] Total size: {}", format_size(size));
             trace_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(CleanResult {
                 deleted: false,
@@ -121,7 +151,7 @@ impl JiraLogs {
             "Are you sure you want to delete {}? This will remove {} files ({}).",
             dir_name,
             file_count,
-            helpers::format_size(size)
+            format_size(size)
         ))
         .with_default(false)
         .with_cancel_message("Operation cancelled")
@@ -155,7 +185,6 @@ impl JiraLogs {
 
     /// 显示目录信息
     fn display_dir_info(
-        &self,
         dir_name: &str,
         dir: &Path,
         size: u64,
@@ -172,15 +201,15 @@ impl JiraLogs {
 
         if is_base_dir {
             // 按 ticket 分区显示
-            let ticket_contents = self.get_base_dir_contents(dir)?;
+            let ticket_contents = Self::get_base_dir_contents(dir)?;
             contents = ticket_contents;
         } else {
             // 单个 ticket 目录，直接列出内容
-            let dir_contents = helpers::list_dir_contents(dir)?;
+            let dir_contents = Self::list_dir_contents(dir)?;
             for path in dir_contents {
                 if path.is_file() {
                     let size_str = if let Ok(metadata) = std::fs::metadata(&path) {
-                        Some(helpers::format_size(metadata.len()))
+                        Some(format_size(metadata.len()))
                     } else {
                         None
                     };
@@ -211,7 +240,7 @@ impl JiraLogs {
     }
 
     /// 获取基础目录内容（按 ticket 分区）
-    fn get_base_dir_contents(&self, base_dir: &Path) -> Result<Vec<DirEntry>> {
+    fn get_base_dir_contents(base_dir: &Path) -> Result<Vec<DirEntry>> {
         // 读取基础目录下的所有条目
         let entries = fs::read_dir(base_dir)
             .with_context(|| format!("Failed to read directory: {:?}", base_dir))?;
@@ -237,7 +266,7 @@ impl JiraLogs {
         // 为每个 ticket 收集内容
         for (ticket_id, ticket_dir) in ticket_dirs {
             // 列出该 ticket 目录下的所有文件（不包含 ticket 目录本身）
-            let contents = helpers::list_dir_contents(&ticket_dir)?;
+            let contents = Self::list_dir_contents(&ticket_dir)?;
 
             for path in contents {
                 // 跳过 ticket 目录本身
@@ -246,7 +275,7 @@ impl JiraLogs {
                 }
                 if path.is_file() {
                     let size_str = if let Ok(metadata) = std::fs::metadata(&path) {
-                        Some(helpers::format_size(metadata.len()))
+                        Some(format_size(metadata.len()))
                     } else {
                         None
                     };
@@ -266,5 +295,45 @@ impl JiraLogs {
         }
 
         Ok(all_contents)
+    }
+
+    // ==================== 辅助函数 ====================
+
+    /// 计算目录大小和文件数量
+    fn calculate_dir_info(dir: &Path) -> Result<(u64, usize)> {
+        let mut total_size = 0u64;
+        let mut file_count = 0usize;
+
+        if !dir.exists() {
+            return Ok((0, 0));
+        }
+
+        for entry in WalkDir::new(dir) {
+            let entry = entry.context("Failed to read directory entry")?;
+            let metadata = entry.metadata().context("Failed to get file metadata")?;
+
+            if metadata.is_file() {
+                total_size += metadata.len();
+                file_count += 1;
+            }
+        }
+
+        Ok((total_size, file_count))
+    }
+
+    /// 列出目录内容
+    fn list_dir_contents(dir: &Path) -> Result<Vec<PathBuf>> {
+        let mut contents = Vec::new();
+
+        if !dir.exists() {
+            return Ok(contents);
+        }
+
+        for entry in WalkDir::new(dir).max_depth(3) {
+            let entry = entry.context("Failed to read directory entry")?;
+            contents.push(entry.path().to_path_buf());
+        }
+
+        Ok(contents)
     }
 }

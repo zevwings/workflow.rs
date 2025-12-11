@@ -49,10 +49,10 @@ clean:
 	cargo clean
 	@echo "清理完成"
 
-# 运行测试
+# 运行测试（包括单元测试、集成测试和文档测试）
 test:
 	@echo "运行测试..."
-	cargo test --lib --tests
+	cargo test
 
 # 安装所需的开发工具
 setup:

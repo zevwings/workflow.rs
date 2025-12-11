@@ -4,6 +4,7 @@
 
 use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use std::fs;
+use workflow::jira::attachments::AttachmentCleaner;
 use workflow::jira::logs::{JiraLogs, LogEntry};
 
 // ==================== JiraLogs 初始化测试 ====================
@@ -229,11 +230,11 @@ fn test_log_entry_empty() {
 #[test]
 fn test_jira_logs_clean_dir_nonexistent() {
     // 测试清理不存在的目录
-    let jira_logs = JiraLogs::new().expect("Should create JiraLogs");
+    let cleaner = AttachmentCleaner::new();
     let jira_id = "NONEXISTENT-999";
 
     // 使用 dry_run=true 避免交互式对话框
-    let result = jira_logs.clean_dir(jira_id, true, false);
+    let result = cleaner.clean_dir(jira_id, true, false);
 
     // 应该成功返回，但 deleted 应该为 false
     assert!(
@@ -252,10 +253,10 @@ fn test_jira_logs_clean_dir_nonexistent() {
 #[test]
 fn test_jira_logs_clean_dir_dry_run() {
     // 测试清理目录（dry run 模式）
-    let jira_logs = JiraLogs::new().expect("Should create JiraLogs");
+    let cleaner = AttachmentCleaner::new();
     let jira_id = "TEST-DRYRUN";
 
-    let result = jira_logs.clean_dir(jira_id, true, false);
+    let result = cleaner.clean_dir(jira_id, true, false);
 
     // dry run 应该成功，但不实际删除
     assert!(result.is_ok(), "Dry run should succeed");
@@ -267,10 +268,10 @@ fn test_jira_logs_clean_dir_dry_run() {
 #[test]
 fn test_jira_logs_clean_dir_list_only() {
     // 测试清理目录（list only 模式）
-    let jira_logs = JiraLogs::new().expect("Should create JiraLogs");
+    let cleaner = AttachmentCleaner::new();
     let jira_id = "TEST-LIST";
 
-    let result = jira_logs.clean_dir(jira_id, false, true);
+    let result = cleaner.clean_dir(jira_id, false, true);
 
     // list only 应该成功
     assert!(result.is_ok(), "List only should succeed");
@@ -285,10 +286,10 @@ fn test_jira_logs_clean_dir_empty_jira_id() {
     // 测试清理整个基础目录（空 JIRA ID）
     // 注意：这个测试会触发交互式确认对话框，在 CI 环境中会卡住
     // 使用 `cargo test -- --ignored` 来运行这些测试
-    let jira_logs = JiraLogs::new().expect("Should create JiraLogs");
+    let cleaner = AttachmentCleaner::new();
 
     // 使用 dry_run=true 避免交互式对话框
-    let result = jira_logs.clean_dir("", true, false);
+    let result = cleaner.clean_dir("", true, false);
 
     // 应该能够处理空 JIRA ID（即使目录不存在也可能返回错误）
     // 主要验证函数不会 panic

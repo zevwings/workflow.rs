@@ -30,7 +30,7 @@ fn test_jira_info_command_structure() {
 
     match cli.command {
         JiraSubcommand::Info { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Info command"),
     }
@@ -43,7 +43,7 @@ fn test_jira_info_command_without_id() {
 
     match cli.command {
         JiraSubcommand::Info { jira_id, .. } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Info command"),
     }
@@ -58,7 +58,7 @@ fn test_jira_related_command_structure() {
 
     match cli.command {
         JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Related command"),
     }
@@ -71,7 +71,7 @@ fn test_jira_related_command_with_jira_id() {
 
     match cli.command {
         JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
         }
         _ => panic!("Expected Related command"),
     }
@@ -84,7 +84,7 @@ fn test_jira_related_command_without_id() {
 
     match cli.command {
         JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Related command"),
     }
@@ -98,17 +98,11 @@ fn test_jira_related_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--table"]).unwrap();
     match cli.command {
-        JiraSubcommand::Related {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Related { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Related command"),
     }
@@ -116,17 +110,11 @@ fn test_jira_related_command_output_formats() {
     // JSON format
     let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--json"]).unwrap();
     match cli.command {
-        JiraSubcommand::Related {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Related { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Related command"),
     }
@@ -134,17 +122,11 @@ fn test_jira_related_command_output_formats() {
     // YAML format
     let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--yaml"]).unwrap();
     match cli.command {
-        JiraSubcommand::Related {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(yaml);
-            assert!(!markdown);
+        JiraSubcommand::Related { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Related command"),
     }
@@ -153,17 +135,11 @@ fn test_jira_related_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--markdown"]).unwrap();
     match cli.command {
-        JiraSubcommand::Related {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(markdown);
+        JiraSubcommand::Related { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Related command"),
     }
@@ -186,16 +162,13 @@ fn test_jira_related_command_all_flags() {
     match cli.command {
         JiraSubcommand::Related {
             jira_id,
-            table,
-            json,
-            yaml,
-            markdown,
+            output_format,
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
-            assert!(table);
-            assert!(json);
-            assert!(yaml);
-            assert!(markdown);
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+            assert!(output_format.table);
+            assert!(output_format.json);
+            assert!(output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Related command"),
     }
@@ -208,7 +181,7 @@ fn test_jira_attachments_command_structure() {
 
     match cli.command {
         JiraSubcommand::Attachments { jira_id } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
         }
         _ => panic!("Expected Attachments command"),
     }
@@ -221,7 +194,7 @@ fn test_jira_attachments_command_without_id() {
 
     match cli.command {
         JiraSubcommand::Attachments { jira_id } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Attachments command"),
     }
@@ -247,9 +220,9 @@ fn test_jira_clean_command_structure() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, Some("PROJ-789".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-789".to_string()));
             assert!(all);
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
             assert!(list);
         }
         _ => panic!("Expected Clean command"),
@@ -268,9 +241,9 @@ fn test_jira_clean_command_with_jira_id_only() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert!(!all);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
             assert!(!list);
         }
         _ => panic!("Expected Clean command"),
@@ -289,9 +262,9 @@ fn test_jira_clean_command_with_all_flag() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
             assert!(all);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
             assert!(!list);
         }
         _ => panic!("Expected Clean command"),
@@ -311,9 +284,9 @@ fn test_jira_clean_command_with_dry_run() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert!(!all);
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
             assert!(!list);
         }
         _ => panic!("Expected Clean command"),
@@ -332,9 +305,9 @@ fn test_jira_clean_command_with_list_flag() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert!(!all);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
             assert!(list);
         }
         _ => panic!("Expected Clean command"),
@@ -353,9 +326,9 @@ fn test_jira_clean_command_short_flags() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
             assert!(all);
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
             assert!(list);
         }
         _ => panic!("Expected Clean command"),
@@ -374,9 +347,9 @@ fn test_jira_clean_command_without_jira_id() {
             dry_run,
             list,
         } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
             assert!(!all);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
             assert!(!list);
         }
         _ => panic!("Expected Clean command"),
@@ -425,28 +398,28 @@ fn test_jira_jira_id_parameter_optional() {
     // Info
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info { jira_id, .. } => assert_eq!(jira_id, None),
+        JiraSubcommand::Info { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Related
     let cli = TestJiraCli::try_parse_from(&["test-jira", "related"]).unwrap();
     match cli.command {
-        JiraSubcommand::Related { jira_id, .. } => assert_eq!(jira_id, None),
+        JiraSubcommand::Related { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Attachments
     let cli = TestJiraCli::try_parse_from(&["test-jira", "attachments"]).unwrap();
     match cli.command {
-        JiraSubcommand::Attachments { jira_id } => assert_eq!(jira_id, None),
+        JiraSubcommand::Attachments { jira_id } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Clean
     let cli = TestJiraCli::try_parse_from(&["test-jira", "clean"]).unwrap();
     match cli.command {
-        JiraSubcommand::Clean { jira_id, .. } => assert_eq!(jira_id, None),
+        JiraSubcommand::Clean { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 }
@@ -460,7 +433,7 @@ fn test_jira_changelog_command_structure() {
 
     match cli.command {
         JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -473,7 +446,7 @@ fn test_jira_changelog_command_with_jira_id() {
 
     match cli.command {
         JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -486,7 +459,7 @@ fn test_jira_changelog_command_without_id() {
 
     match cli.command {
         JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -501,7 +474,7 @@ fn test_jira_changelog_command_with_field_filter() {
 
     match cli.command {
         JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             // field 字段当前不存在于枚举定义中
         }
         _ => panic!("Expected Changelog command"),
@@ -516,17 +489,11 @@ fn test_jira_changelog_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--table"]).unwrap();
     match cli.command {
-        JiraSubcommand::Changelog {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -535,17 +502,11 @@ fn test_jira_changelog_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--json"]).unwrap();
     match cli.command {
-        JiraSubcommand::Changelog {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -554,17 +515,11 @@ fn test_jira_changelog_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--yaml"]).unwrap();
     match cli.command {
-        JiraSubcommand::Changelog {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(yaml);
-            assert!(!markdown);
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -573,17 +528,11 @@ fn test_jira_changelog_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--markdown"]).unwrap();
     match cli.command {
-        JiraSubcommand::Changelog {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(markdown);
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -606,16 +555,13 @@ fn test_jira_changelog_command_all_flags() {
     match cli.command {
         JiraSubcommand::Changelog {
             jira_id,
-            table,
-            json,
-            yaml,
-            markdown,
+            output_format,
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
-            assert!(table);
-            assert!(json);
-            assert!(yaml);
-            assert!(markdown);
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+            assert!(output_format.table);
+            assert!(output_format.json);
+            assert!(output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
     }
@@ -630,7 +576,7 @@ fn test_jira_comments_command_structure() {
 
     match cli.command {
         JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Comments command"),
     }
@@ -643,7 +589,7 @@ fn test_jira_comments_command_with_jira_id() {
 
     match cli.command {
         JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
         }
         _ => panic!("Expected Comments command"),
     }
@@ -656,7 +602,7 @@ fn test_jira_comments_command_without_id() {
 
     match cli.command {
         JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -670,7 +616,7 @@ fn test_jira_comments_command_with_limit() {
 
     match cli.command {
         JiraSubcommand::Comments { jira_id, limit, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(limit, Some(10));
         }
         _ => panic!("Expected Comments command"),
@@ -687,7 +633,7 @@ fn test_jira_comments_command_with_offset() {
         JiraSubcommand::Comments {
             jira_id, offset, ..
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(offset, Some(5));
         }
         _ => panic!("Expected Comments command"),
@@ -710,7 +656,7 @@ fn test_jira_comments_command_with_author() {
         JiraSubcommand::Comments {
             jira_id, author, ..
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(author, Some("user@example.com".to_string()));
         }
         _ => panic!("Expected Comments command"),
@@ -731,7 +677,7 @@ fn test_jira_comments_command_with_since() {
 
     match cli.command {
         JiraSubcommand::Comments { jira_id, since, .. } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
         _ => panic!("Expected Comments command"),
@@ -746,17 +692,11 @@ fn test_jira_comments_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--table"]).unwrap();
     match cli.command {
-        JiraSubcommand::Comments {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -765,17 +705,11 @@ fn test_jira_comments_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--json"]).unwrap();
     match cli.command {
-        JiraSubcommand::Comments {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -784,17 +718,11 @@ fn test_jira_comments_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--yaml"]).unwrap();
     match cli.command {
-        JiraSubcommand::Comments {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(yaml);
-            assert!(!markdown);
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -803,17 +731,11 @@ fn test_jira_comments_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--markdown"]).unwrap();
     match cli.command {
-        JiraSubcommand::Comments {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(markdown);
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -846,7 +768,7 @@ fn test_jira_comments_command_all_filters() {
             since,
             ..
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(limit, Some(20));
             assert_eq!(offset, Some(10));
             assert_eq!(author, Some("user@example.com".to_string()));
@@ -877,7 +799,7 @@ fn test_jira_comments_command_pagination() {
             offset,
             ..
         } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
             assert_eq!(limit, Some(15));
             assert_eq!(offset, Some(30));
         }
@@ -894,17 +816,11 @@ fn test_jira_info_command_output_formats() {
     // Table format
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--table"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Info command"),
     }
@@ -912,17 +828,11 @@ fn test_jira_info_command_output_formats() {
     // JSON format
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--json"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(json);
-            assert!(!yaml);
-            assert!(!markdown);
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Info command"),
     }
@@ -930,17 +840,11 @@ fn test_jira_info_command_output_formats() {
     // YAML format
     let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--yaml"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(yaml);
-            assert!(!markdown);
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
         }
         _ => panic!("Expected Info command"),
     }
@@ -949,17 +853,11 @@ fn test_jira_info_command_output_formats() {
     let cli =
         TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--markdown"]).unwrap();
     match cli.command {
-        JiraSubcommand::Info {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(!table);
-            assert!(!json);
-            assert!(!yaml);
-            assert!(markdown);
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Info command"),
     }
@@ -980,17 +878,11 @@ fn test_jira_info_command_format_flags_combination() {
     .unwrap();
 
     match cli.command {
-        JiraSubcommand::Info {
-            table,
-            json,
-            yaml,
-            markdown,
-            ..
-        } => {
-            assert!(table);
-            assert!(json);
-            assert!(yaml);
-            assert!(markdown);
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(output_format.json);
+            assert!(output_format.yaml);
+            assert!(output_format.markdown);
         }
         _ => panic!("Expected Info command"),
     }

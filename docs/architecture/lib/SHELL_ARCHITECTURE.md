@@ -552,7 +552,3 @@ export KEY2="value2"
 - [主架构文档](../ARCHITECTURE.md)
 
 ---
-
-## 🔄 更新记录
-
-- **2024-12** - 创建 Shell 检测与管理模块架构文档

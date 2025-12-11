@@ -6,24 +6,19 @@ use serde_json;
 use std::collections::HashMap;
 
 use super::helpers::{get_jira_id, OutputFormat};
+use crate::cli::OutputFormatArgs;
 
 /// 显示关联信息命令
 pub struct RelatedCommand;
 
 impl RelatedCommand {
     /// 显示 ticket 的关联信息（PR 和分支）
-    pub fn show(
-        jira_id: Option<String>,
-        table: bool,
-        json: bool,
-        yaml: bool,
-        markdown: bool,
-    ) -> Result<()> {
+    pub fn show(jira_id: Option<String>, output_format: OutputFormatArgs) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
         let jira_id = get_jira_id(jira_id, None)?;
 
         // 确定输出格式
-        let format = OutputFormat::from_args(table, json, yaml, markdown);
+        let format = OutputFormat::from(&output_format);
 
         // 根据输出格式选择不同的显示方式
         match format {

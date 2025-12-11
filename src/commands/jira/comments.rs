@@ -6,23 +6,20 @@ use serde_json;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
+use crate::cli::OutputFormatArgs;
 
 /// 显示评论命令
 pub struct CommentsCommand;
 
 impl CommentsCommand {
     /// 显示 ticket 的评论
-    #[allow(clippy::too_many_arguments)]
     pub fn show(
         jira_id: Option<String>,
         limit: Option<usize>,
         offset: Option<usize>,
         author: Option<String>,
         since: Option<String>,
-        table: bool,
-        json: bool,
-        yaml: bool,
-        markdown: bool,
+        output_format: OutputFormatArgs,
     ) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
         let jira_id = get_jira_id(jira_id, None)?;
@@ -34,7 +31,7 @@ impl CommentsCommand {
             .with_context(|| format!("Failed to get ticket info for {}", jira_id))?;
 
         // 确定输出格式
-        let format = OutputFormat::from_args(table, json, yaml, markdown);
+        let format = OutputFormat::from(&output_format);
 
         // 排序方式：默认使用降序（desc）
         let sort = "desc";

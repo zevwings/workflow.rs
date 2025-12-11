@@ -8,11 +8,15 @@ use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
 use super::constants::*;
-use super::JiraLogs;
 
-impl JiraLogs {
+/// ZIP 处理器
+///
+/// 提供 ZIP 文件的合并和解压功能。
+pub struct ZipProcessor;
+
+impl ZipProcessor {
     /// 合并分片 zip 文件
-    pub(crate) fn merge_split_zips(&self, download_dir: &Path) -> Result<PathBuf> {
+    pub fn merge_split_zips(&self, download_dir: &Path) -> Result<PathBuf> {
         let log_zip = download_dir.join(LOG_ZIP_FILENAME);
         if !log_zip.exists() {
             anyhow::bail!("{} not found in {:?}", LOG_ZIP_FILENAME, download_dir);
@@ -97,7 +101,7 @@ impl JiraLogs {
     }
 
     /// 解压 zip 文件
-    pub(crate) fn extract_zip(&self, zip_path: &Path, output_dir: &Path) -> Result<()> {
+    pub fn extract_zip(&self, zip_path: &Path, output_dir: &Path) -> Result<()> {
         let file = File::open(zip_path)
             .with_context(|| format!("Failed to open zip file: {:?}", zip_path))?;
 

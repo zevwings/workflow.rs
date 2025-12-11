@@ -252,6 +252,17 @@
 - 章节检查清单
 - 文档编写规范
 
+### [PRE_COMMIT_GUIDELINES.md](./guidelines/PRE_COMMIT_GUIDELINES.md)
+**提交前检查指南**
+
+- 文档检查清单
+- CLI 和 Completion 检查
+- 代码优化检查（包含如何提取共用代码的具体示例）
+- 测试用例检查
+- 代码质量检查（make lint/fix）
+- 其他检查项（版本管理、Git、依赖、平台兼容性等）
+- 快速检查清单和常见问题
+
 ### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
 **为什么需要同时生成 zsh 和 bash 的补全脚本**
 
@@ -291,32 +302,6 @@
 8. **🔍 错误处理** - 错误处理机制
 9. **📝 扩展性** - 如何扩展功能
 10. **📚 相关文档** - 相关文档链接
-
----
-
-## 🔄 文档更新记录
-
-- **2024-01** - 移除 QuickCommand 包装器，统一为直接调用方式
-- **2024-01** - 创建 PR helpers 模块，提取重复逻辑
-- **2024-01** - 统一文档结构和命名规范
-- **2024-01** - 统一 LLM 架构文档，移除旧的实现文档（`LLM_IMPLEMENTATION.md`、`LLM_PLUGIN_ARCHITECTURE.md`、`LLM_PLUGIN_CURL.md`），保留统一的架构设计文档 `LLM_ARCHITECTURE.md`
-- **2024-01** - 添加 GitHub Actions 发布流程文档，包括 HOMEBREW_TAP_TOKEN 配置说明和自动验证机制
-- **2024-01** - 合并未实现功能到 `FUTURE_IMPROVEMENTS.md`，删除已实现的改进文档（`UPDATE_IMPROVEMENTS.md`、`COMPLETION_FILE_NAMING_ANALYSIS.md`、`INSTALL_COMPLETION_IMPROVEMENT.md`）
-- **2024-11** - 整合 Jira 模块架构文档，合并 `JIRA_LOGS_ARCHITECTURE.md` 和 `JIRA_MODULE_REFACTOR_ANALYSIS.md` 为统一的 `JIRA_ARCHITECTURE.md`
-- **2024-11** - 重构 PR 模块架构文档，删除分析文档（`PR_HTTP_CLIENT_ANALYSIS.md`、`PR_REFACTOR_STATUS.md`、`PR_REFACTOR_GUIDE.md`），统一为 `PR_ARCHITECTURE.md`，参考 JIRA 和 GIT 架构文档结构
-- **2024-11** - 重构 LLM 模块架构文档，参考 JIRA、PR、GIT 架构文档结构，统一文档格式
-- **2024-12** - 合并环境检查模块文档到配置管理模块文档，`CHECK_ARCHITECTURE.md` 已合并到 `CONFIG_ARCHITECTURE.md`
-- **2024-12** - 更新生命周期管理模块文档，将 `INSTALL_ARCHITECTURE.md` 扩展为包含安装、卸载、更新三个功能的完整文档，并重命名为 `LIFECYCLE_COMMAND_ARCHITECTURE.md`
-- **2024-12** - 创建 Shell 检测与管理模块架构文档 `SHELL_ARCHITECTURE.md`
-- **2024-12** - 创建 Settings 模块架构文档 `SETTINGS_ARCHITECTURE.md`，删除重复的 `CONFIG_ARCHITECTURE.md`
-- **2024-12** - 更新所有 lib 层架构文档，移除命令层详细内容，确保只描述 lib/ 模块
-- **2024-12** - 重组文档结构，分为 ARCHITECTURE 和 GUIDELINES 两个目录
-- **2024-12** - 为所有 log 和 jira 命令添加交互式输入支持（JIRA_ID 参数可选，包括 info、attachments、download、find、search）
-- **2024-12** - 实现同时搜索 api.log 和 flutter-api.log 功能，更新搜索命令以支持两个文件
-- **2024-12** - 删除废弃的 QK_COMMAND_ARCHITECTURE.md 文档（已拆分为 LOG_COMMAND_ARCHITECTURE.md 和 JIRA_COMMAND_ARCHITECTURE.md）
-- **2024-12** - 创建开发规范文档 `DEVELOPMENT_GUIDELINES.md`，包含代码风格、错误处理、文档、命名、模块组织、Git 工作流、提交、测试、代码审查、依赖管理等规范
-- **2024-12** - 创建功能拓展分析文档 `FEATURE_EXTENSIONS.md`，基于代码库分析提出 10 个主要功能模块的拓展建议，包含详细的功能说明、命令示例、实现建议和优先级建议
-- **2024-12** - 创建迁移文档目录 `migration/`，包含迁移文档索引和 1.4.8 → 1.4.9 迁移指南
 
 ---
 

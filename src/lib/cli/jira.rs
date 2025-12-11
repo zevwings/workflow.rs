@@ -2,6 +2,9 @@
 
 use clap::Subcommand;
 
+use super::common::{DryRunArgs, JiraIdArg, OutputFormatArgs};
+use super::log::LogSubcommand;
+
 /// Jira operations subcommands
 ///
 /// Used to manage Jira ticket operations.
@@ -11,81 +14,38 @@ pub enum JiraSubcommand {
     ///
     /// Display detailed information about a Jira ticket.
     Info {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show related PRs and branches for a Jira ticket
     ///
     /// Display all Pull Requests and Git branches associated with a Jira ticket.
     Related {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show changelog (change history) for a Jira ticket
     ///
     /// Display change history for a Jira ticket.
     Changelog {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show comments for a Jira ticket
     ///
     /// Display all comments for a Jira ticket with filtering and pagination options.
     Comments {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
         /// Limit number of comments to display
         #[arg(long, value_name = "LIMIT")]
@@ -103,48 +63,39 @@ pub enum JiraSubcommand {
         #[arg(long, value_name = "DATE")]
         since: Option<String>,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Download all attachments from Jira ticket
     ///
     /// Download all attachments from Jira ticket (not just log files).
     Attachments {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
     },
     /// Clean log directory
     ///
     /// Clean log directory for specified JIRA ID, or clean entire base directory if --all is specified.
     Clean {
-        /// Jira ticket ID (optional, will prompt interactively if not provided)
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
         /// Clean entire base directory (all tickets)
         #[arg(long, short = 'a')]
         all: bool,
 
-        /// Preview operation without actually deleting
-        #[arg(long, short = 'n')]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
 
         /// Only list what would be deleted
         #[arg(long, short = 'l')]
         list: bool,
+    },
+    /// Log operations (download, find, search)
+    ///
+    /// Download log files from Jira tickets, search and find content in logs.
+    Log {
+        #[command(subcommand)]
+        subcommand: LogSubcommand,
     },
 }

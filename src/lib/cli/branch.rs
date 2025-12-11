@@ -2,6 +2,8 @@
 
 use clap::Subcommand;
 
+use super::common::DryRunArgs;
+
 /// Branch management subcommands
 ///
 /// Used to clean branches and manage branch ignore list.
@@ -11,9 +13,8 @@ pub enum BranchSubcommand {
     ///
     /// Delete all local branches except main/master, develop, current branch, and branches in ignore list.
     Clean {
-        /// Dry run mode (show what would be deleted without actually deleting)
-        #[arg(long, short = 'n')]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
     /// Manage branch ignore list
     ///

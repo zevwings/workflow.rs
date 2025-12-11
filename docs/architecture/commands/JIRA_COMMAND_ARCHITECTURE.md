@@ -124,10 +124,13 @@ commands/jira/info.rs::InfoCommand::show(jira_id)
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `--table` - 表格格式输出（默认）
-   - `--json` - JSON 格式输出
-   - `--yaml` - YAML 格式输出
-   - `--markdown` - Markdown 格式输出
+   - `output_format` - 输出格式选项（使用共用参数组 `OutputFormatArgs`）
+     - `--table` - 表格格式输出（默认）
+     - `--json` - JSON 格式输出
+     - `--yaml` - YAML 格式输出
+     - `--markdown` - Markdown 格式输出
+
+   **注意**：输出格式参数使用 `OutputFormatArgs` 共用参数组，通过 `#[command(flatten)]` 特性展开。这样可以减少代码重复，提高可维护性。详见 [CLI 架构文档](../lib/CLI_ARCHITECTURE.md)。
 
 2. **用户交互**：
    - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
@@ -185,10 +188,11 @@ commands/jira/related.rs::RelatedCommand::show()
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `--table` - 表格格式输出（默认）
-   - `--json` - JSON 格式输出
-   - `--yaml` - YAML 格式输出
-   - `--markdown` - Markdown 格式输出
+   - `output_format` - 输出格式选项（使用共用参数组 `OutputFormatArgs`）
+     - `--table` - 表格格式输出（默认）
+     - `--json` - JSON 格式输出
+     - `--yaml` - YAML 格式输出
+     - `--markdown` - Markdown 格式输出
 
 2. **用户交互**：
    - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
@@ -271,10 +275,11 @@ commands/jira/changelog.rs::ChangelogCommand::show()
 
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `--table` - 表格格式输出（默认）
-   - `--json` - JSON 格式输出
-   - `--yaml` - YAML 格式输出
-   - `--markdown` - Markdown 格式输出
+   - `output_format` - 输出格式选项（使用共用参数组 `OutputFormatArgs`）
+     - `--table` - 表格格式输出（默认）
+     - `--json` - JSON 格式输出
+     - `--yaml` - YAML 格式输出
+     - `--markdown` - Markdown 格式输出
 
 2. **用户交互**：
    - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
@@ -351,10 +356,11 @@ commands/jira/comments.rs::CommentsCommand::show()
    - `--offset <OFFSET>` - 分页偏移量
    - `--author <EMAIL>` - 只显示指定作者的评论
    - `--since <DATE>` - 只显示指定日期之后的评论（RFC3339 格式）
-   - `--table` - 表格格式输出（默认）
-   - `--json` - JSON 格式输出
-   - `--yaml` - YAML 格式输出
-   - `--markdown` - Markdown 格式输出
+   - `output_format` - 输出格式选项（使用共用参数组 `OutputFormatArgs`）
+     - `--table` - 表格格式输出（默认）
+     - `--json` - JSON 格式输出
+     - `--yaml` - YAML 格式输出
+     - `--markdown` - Markdown 格式输出
 
 2. **用户交互**：
    - 如果未提供 `jira_id`，使用 `InputDialog` 交互式输入
@@ -510,8 +516,11 @@ commands/jira/clean.rs::CleanCommand::clean(jira_id, dry_run, list_only)
 1. **参数处理**：
    - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入；如果为空字符串，会报错）
    - `all` - 如果为 true，清理整个基础目录（忽略 jira_id）
-   - `dry_run` - 预览模式，不实际删除
+   - `dry_run` - Dry run 模式选项（使用共用参数组 `DryRunArgs`）
+     - `--dry-run` / `-n` - 预览模式，不实际删除
    - `list_only` - 只列出目录内容
+
+   **注意**：`dry_run` 参数使用 `DryRunArgs` 共用参数组，通过 `#[command(flatten)]` 特性展开。这样可以减少代码重复，提高可维护性。详见 [CLI 架构文档](../lib/CLI_ARCHITECTURE.md)。
 
 2. **用户交互**：
    - 如果未提供 `jira_id` 且未指定 `--all`，使用 `dialoguer::Input` 交互式输入

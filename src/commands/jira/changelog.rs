@@ -5,26 +5,21 @@ use serde_json;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
+use crate::cli::OutputFormatArgs;
 
 /// 显示变更历史命令
 pub struct ChangelogCommand;
 
 impl ChangelogCommand {
     /// 显示 ticket 的变更历史
-    pub fn show(
-        jira_id: Option<String>,
-        table: bool,
-        json: bool,
-        yaml: bool,
-        markdown: bool,
-    ) -> Result<()> {
+    pub fn show(jira_id: Option<String>, output_format: OutputFormatArgs) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
         let jira_id = get_jira_id(jira_id, None)?;
 
         log_debug!("Getting changelog for {}...", jira_id);
 
         // 确定输出格式
-        let format = OutputFormat::from_args(table, json, yaml, markdown);
+        let format = OutputFormat::from(&output_format);
 
         // 根据输出格式选择不同的显示方式
         match format {

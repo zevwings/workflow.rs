@@ -350,7 +350,7 @@ fn test_config_import_command_structure() {
             assert_eq!(input_path, "input.toml");
             assert!(!overwrite);
             assert_eq!(section, None);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
         }
         _ => panic!("Expected Import command"),
     }
@@ -423,7 +423,7 @@ fn test_config_import_command_with_dry_run() {
             ..
         } => {
             assert_eq!(input_path, "input.toml");
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
         }
         _ => panic!("Expected Import command"),
     }
@@ -453,7 +453,7 @@ fn test_config_import_command_all_flags() {
             assert_eq!(input_path, "input.toml");
             assert!(overwrite);
             assert_eq!(section, Some("jira".to_string()));
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
         }
         _ => panic!("Expected Import command"),
     }

@@ -18,6 +18,7 @@
 //! - `helpers` - 辅助函数（字符串处理、认证、URL 构建）
 
 pub mod api;
+pub mod attachments;
 pub mod client;
 pub mod config;
 pub mod helpers;
@@ -31,6 +32,7 @@ pub mod users;
 
 // 重新导出所有公共 API，保持向后兼容
 pub use api::{JiraIssueApi, JiraProjectApi, JiraUserApi};
+pub use attachments::{DownloadResult, JiraAttachmentDownloader, ProgressCallback};
 pub use client::JiraClient;
 pub use config::ConfigManager;
 pub use helpers::{

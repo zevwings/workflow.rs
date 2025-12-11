@@ -1,4 +1,4 @@
-use crate::base::indicator::Progress;
+use crate::base::indicator::{Progress, Spinner};
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{log_break, log_info, log_success};
@@ -16,14 +16,20 @@ impl AttachmentsCommand {
         // 获取 JIRA ID（从参数或交互式输入）
         let jira_id = get_jira_id(jira_id, None)?;
 
-        // 先获取附件列表以确定总数
-        let attachments =
-            Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira")?;
+        // 先获取附件列表以确定总数（使用 Spinner 显示加载状态）
+        let attachments = Spinner::with(
+            format!("Getting attachments info for {}...", jira_id),
+            || Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira"),
+        )?;
         let total_files = attachments.len() as u64;
 
         if total_files == 0 {
             anyhow::bail!("No attachments found for {}", jira_id);
         }
+
+        // 显示下载前的提示信息
+        log_info!("{} file(s) will be downloaded", total_files);
+        log_break!();
 
         // 创建 Progress Bar
         let progress = Arc::new(Mutex::new(Progress::new(
@@ -51,9 +57,16 @@ impl AttachmentsCommand {
         // 创建 JiraLogs 实例
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
 
-        // 执行下载
+        // 执行下载（传递已获取的附件列表，避免重复 API 调用）
         let result = logs
-            .download_from_jira(&jira_id, None, true, Some(callback))
+            .download_from_jira(
+                &jira_id,
+                None,
+                true,
+                Some(callback),
+                None,
+                Some(attachments),
+            )
             .context("Failed to download attachments from Jira")?;
 
         // 完成进度条
@@ -74,6 +87,21 @@ impl AttachmentsCommand {
         }
 
         log_success!("Download completed!");
+
+        // 显示下载的文件列表
+        if !result.downloaded_files.is_empty() {
+            log_break!();
+            log_info!("Downloaded {} file(s):", result.downloaded_files.len());
+            for file_path in &result.downloaded_files {
+                // 只显示文件名，让输出更简洁
+                if let Some(file_name) = file_path.file_name() {
+                    log_info!("  ✓ {}", file_name.to_string_lossy());
+                } else {
+                    log_info!("  ✓ {}", file_path.display());
+                }
+            }
+        }
+
         log_info!("Files located at: {}/downloads", result.base_dir.display());
 
         Ok(())

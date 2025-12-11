@@ -18,7 +18,7 @@
 **实现建议**：
 - 实现 `PlatformProvider` trait for GitLab
 - 使用 GitLab API
-- 参考 GitHub/Codeup 的实现
+- 参考 GitHub 的实现
 
 **需要实现的功能**：
 - PR 创建、合并、关闭
@@ -77,6 +77,34 @@
 - `/{organization}/{project}/_apis/git/repositories/{repositoryId}/pullrequests` - 创建/列出 PR
 - `/{organization}/{project}/_apis/git/repositories/{repositoryId}/pullrequests/{pullRequestId}` - 获取/更新 PR
 - `/{organization}/{project}/_apis/git/repositories/{repositoryId}/pullrequests/{pullRequestId}` - 合并 PR
+
+#### 1.4 Codeup 支持
+- ❌ Codeup PR 支持
+
+**功能**：支持阿里云 Codeup PR。
+
+**实现建议**：
+- 实现 `PlatformProvider` trait for Codeup
+- 使用 Codeup REST API
+- 参考 GitHub 的实现
+
+**需要实现的功能**：
+- PR 创建、合并、关闭
+- PR 状态查询
+- PR 列表查询
+- PR 更新
+- PR 评论、批准
+- PR 同步（merge/rebase）
+
+**Codeup API 端点**：
+- `/api/v3/projects/{project_id}/code_reviews` - 创建/列出 PR
+- `/api/v3/projects/{project_id}/code_reviews/{review_id}` - 获取/更新 PR
+- `/api/v3/projects/{project_id}/code_reviews/{review_id}/merge` - 合并 PR
+
+**配置要求**：
+- `CODEUP_PROJECT_ID` - Codeup 项目 ID
+- `CODEUP_CSRF_TOKEN` - Codeup CSRF Token
+- `CODEUP_COOKIE` - Codeup Cookie
 
 ---
 

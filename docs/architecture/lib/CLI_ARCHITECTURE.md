@@ -24,7 +24,17 @@ CLI 模块是 Workflow CLI 的基础设施模块，定义了整个 CLI 的命令
 
 ```
 src/lib/cli/
-└── mod.rs        # CLI 命令结构定义（~526 行）
+├── mod.rs        # CLI 命令结构定义（~526 行）
+├── common.rs     # 共用参数定义（OutputFormatArgs, DryRunArgs）
+├── branch.rs     # 分支管理子命令
+├── commands.rs   # 主命令枚举
+├── config.rs     # 配置管理子命令
+├── github.rs     # GitHub 账号管理子命令
+├── jira.rs       # Jira 操作子命令
+├── llm.rs        # LLM 配置管理子命令
+├── log.rs        # 日志操作子命令
+├── pr.rs         # PR 操作子命令
+└── proxy.rs      # 代理管理子命令
 ```
 
 ### 依赖模块
@@ -149,7 +159,67 @@ pub enum Commands {
 - `Log` - 日志操作（包含子命令）
 - `Jira` - Jira 操作（包含子命令）
 
-#### 3. 子命令枚举（Subcommands）
+#### 3. 共用参数组（Common Arguments）
+
+**职责**：定义多个命令共享的参数组，减少代码重复
+
+**位置**：`src/lib/cli/common.rs`
+
+**定义**：
+
+```rust
+use clap::Args;
+
+/// 输出格式选项
+#[derive(Args, Debug, Clone)]
+pub struct OutputFormatArgs {
+    #[arg(long)]
+    pub table: bool,
+    #[arg(long)]
+    pub json: bool,
+    #[arg(long)]
+    pub yaml: bool,
+    #[arg(long)]
+    pub markdown: bool,
+}
+
+/// Dry run 模式选项
+#[derive(Args, Debug, Clone)]
+pub struct DryRunArgs {
+    #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
+    pub dry_run: bool,
+}
+```
+
+**使用方式**：
+
+使用 `#[command(flatten)]` 特性将共用参数组展开到命令中：
+
+```rust
+#[derive(Subcommand)]
+pub enum JiraSubcommand {
+    Info {
+        #[arg(value_name = "JIRA_ID")]
+        jira_id: Option<String>,
+
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
+    },
+    // ...
+}
+```
+
+**优势**：
+- ✅ 减少代码重复：参数定义在一个地方
+- ✅ 类型安全：使用结构体而非重复的 bool 参数
+- ✅ 自动生成 completion：clap 自动为共用参数组生成 completion
+- ✅ 易于维护：修改时只需更新一处
+
+**当前使用的命令**：
+- `OutputFormatArgs`：Jira 命令（Info, Related, Changelog, Comments）
+- `DryRunArgs`：PR 命令（Create, Rebase, Pick）、Branch 命令（Clean）、Jira 命令（Clean）、Config 命令（Import）、Migrate 命令
+
+#### 4. 子命令枚举（Subcommands）
 
 **职责**：定义各个顶级命令的子命令
 

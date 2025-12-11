@@ -11,7 +11,7 @@ use anyhow::{Context, Result};
 use crate::base::dialog::InputDialog;
 use crate::base::util::format_size;
 use crate::base::util::table::{TableBuilder, TableStyle};
-use crate::jira::logs::JiraLogs;
+use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
 use crate::{log_break, log_info, log_message, log_success};
 
@@ -68,9 +68,9 @@ impl CleanCommand {
             log_info!("Cleaning logs for {}...", jira_id);
         }
 
-        // 创建 JiraLogs 实例并执行清理
-        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
-        let result = logs
+        // 创建清理器并执行清理
+        let cleaner = AttachmentCleaner::new();
+        let result = cleaner
             .clean_dir(&jira_id, dry_run, list_only)
             .context("Failed to clean logs directory")?;
 

@@ -30,6 +30,7 @@ pub mod browser;
 pub mod checksum;
 pub mod clipboard;
 pub mod date;
+pub mod file;
 pub mod format;
 pub mod platform;
 pub mod string;
@@ -63,6 +64,9 @@ pub use date::{
     format_document_timestamp, format_last_updated, format_last_updated_with_time, DateFormat,
     Timezone,
 };
+
+// 重新导出 file
+pub use file::FileReader;
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

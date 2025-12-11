@@ -143,6 +143,39 @@ workflow alias remove ci
 
 ---
 
+### 4. 别名自动补全
+
+#### 4.1 功能描述
+在 Shell 自动补全中支持别名，用户输入 `workflow ` 后按 Tab 键时，应显示所有子命令和已定义的别名。
+
+#### 4.2 功能要求
+- 别名应作为候选项出现在自动补全列表中
+- 别名与子命令一起显示，按字母顺序排序
+- 支持动态加载别名（从配置文件读取）
+- 别名添加/删除后，自动补全应自动更新（需要重新生成补全脚本）
+
+#### 4.3 使用示例
+```bash
+# 用户输入 workflow 后按 Tab
+$ workflow <TAB>
+alias    branch   ci       cm       config   github   ji       js       jira     log      pr       ...
+
+# 别名 ci, cm, ji, js 出现在补全列表中
+```
+
+#### 4.4 技术实现要求
+- 在生成 completion 脚本时，从配置文件读取所有别名
+- 将别名作为额外的候选项添加到补全脚本中
+- 支持所有 shell 类型（zsh, bash, fish, powershell, elvish）
+- 别名与子命令在补全列表中应能区分（可选：添加标记或描述）
+
+#### 4.5 补全脚本更新
+- 当用户执行 `workflow alias add` 或 `workflow alias remove` 时，提示用户重新生成补全脚本
+- 提供 `workflow completion generate` 命令来更新补全脚本
+- 可选：自动检测别名变化并提示更新补全脚本
+
+---
+
 ## 🔧 技术实现
 
 ### 核心模块结构
@@ -165,6 +198,12 @@ src/lib/base/alias/
 - 别名配置存储在 `workflow.toml` 中
 - 使用现有的配置管理系统
 
+### 自动补全集成
+- 在 `src/lib/completion/generate.rs` 中集成别名补全
+- 生成补全脚本时，从配置文件读取别名列表
+- 将别名添加到 clap Command 的补全候选项中
+- 支持动态别名补全（运行时从配置文件读取）
+
 ---
 
 ## ✅ 验收标准
@@ -177,6 +216,9 @@ src/lib/base/alias/
 - [ ] 能够添加新别名（`workflow alias add <name> <command>`）
 - [ ] 能够删除别名（`workflow alias remove <name>`）
 - [ ] 能够列出所有别名（`workflow alias list`）
+- [ ] 别名出现在自动补全候选项中
+- [ ] 支持所有 shell 类型的别名补全（zsh, bash, fish, powershell, elvish）
+- [ ] 别名添加/删除后，补全脚本能够更新
 
 ### 边界情况
 - [ ] 处理循环别名（防止无限递归）
@@ -189,6 +231,8 @@ src/lib/base/alias/
 - [ ] 错误信息清晰友好
 - [ ] 命令帮助信息完整
 - [ ] 配置文件不存在时使用默认空配置
+- [ ] 别名在补全列表中清晰可见
+- [ ] 添加/删除别名后，提示用户更新补全脚本（可选）
 
 ---
 
@@ -204,6 +248,7 @@ src/lib/base/alias/
 ### 依赖
 - 配置文件管理系统（已实现）
 - CLI 命令解析系统（已实现）
+- Shell Completion 模块（已实现）
 
 ---
 
@@ -225,7 +270,13 @@ src/lib/base/alias/
    - 实现 `alias add` 命令
    - 实现 `alias remove` 命令
 
-4. **第四阶段**：测试和文档
+4. **第四阶段**：自动补全集成
+   - 在 completion 生成器中集成别名读取
+   - 将别名添加到补全候选项
+   - 测试各 shell 类型的别名补全
+   - 实现补全脚本更新机制
+
+5. **第五阶段**：测试和文档
    - 编写集成测试
    - 测试边界情况
    - 更新文档
@@ -236,8 +287,10 @@ src/lib/base/alias/
 
 - [配置架构文档](../architecture/lib/SETTINGS_ARCHITECTURE.md) - 配置文件管理
 - [CLI 架构文档](../architecture/lib/CLI_ARCHITECTURE.md) - 命令解析
+- [Completion 架构文档](../architecture/lib/COMPLETION_ARCHITECTURE.md) - Shell 自动补全实现
 
 ---
 
 **创建日期**: 2025-01-27
 **最后更新**: 2025-01-27
+**更新内容**: 添加别名自动补全需求说明
