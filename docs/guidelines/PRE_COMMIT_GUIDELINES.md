@@ -429,20 +429,24 @@ mod tests {
 
 **运行测试**：
 ```bash
-# 运行所有测试
+# 运行所有测试（包括单元测试、集成测试和文档测试）
+make test
+# 或
 cargo test --verbose
 
 # 运行特定测试
-cargo test --test completeness
-cargo test --lib --tests
+cargo test --test completeness  # 补全完整性测试
+cargo test --lib --tests      # 仅单元测试和集成测试（不包括文档测试）
+cargo test --doc              # 仅文档测试
 ```
 
 ### 4.3 测试覆盖率
 
 **检查项**：
-- [ ] 运行 `cargo test --verbose` 确保所有测试通过
+- [ ] 运行 `make test` 或 `cargo test --verbose` 确保所有测试通过（包括 doctest）
 - [ ] 新增代码路径是否被测试覆盖
 - [ ] 测试用例命名是否清晰（`test_*`）
+- [ ] 文档中的代码示例（doctest）是否能够正常编译和运行
 
 ### 4.4 测试数据
 
@@ -611,10 +615,10 @@ fn get_system_proxy() -> Result<String> {
 # 1. 代码质量检查
 make lint
 
-# 2. 运行所有测试
+# 2. 运行所有测试（包括单元测试、集成测试和文档测试）
 make test
 # 或
-cargo test --verbose
+cargo test --verbose  # 与 make test 行为一致，但会显示详细输出
 
 # 3. 补全脚本完整性测试
 cargo test --test completeness
