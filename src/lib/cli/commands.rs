@@ -5,8 +5,8 @@
 use clap::Subcommand;
 
 use super::{
-    BranchSubcommand, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand, JiraSubcommand,
-    LLMSubcommand, LogLevelSubcommand, PRCommands, ProxySubcommand,
+    BranchSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs, GitHubSubcommand,
+    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands, ProxySubcommand,
 };
 
 /// 主命令枚举
@@ -101,9 +101,8 @@ pub enum Commands {
     /// Automatically detects and migrates all pending versions.
     /// Old configuration files will be removed after successful migration.
     Migrate {
-        /// Dry run mode (preview changes without actually migrating)
-        #[arg(long, short = 'n')]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
         /// Keep old configuration files after migration (do not remove)
         #[arg(long)]
         keep_old: bool,

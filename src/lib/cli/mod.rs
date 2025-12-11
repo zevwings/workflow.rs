@@ -8,6 +8,7 @@ use clap::Parser;
 // 导入所有子命令枚举
 mod branch;
 mod commands;
+mod common;
 mod config;
 mod github;
 mod jira;
@@ -20,6 +21,7 @@ mod proxy;
 // 这些导出是必需的，因为 bin/workflow.rs 需要使用它们进行命令分发
 pub use branch::{BranchSubcommand, IgnoreSubcommand, PrefixSubcommand};
 pub use commands::Commands;
+pub use common::{DryRunArgs, OutputFormatArgs};
 pub use config::{CompletionSubcommand, ConfigSubcommand, LogLevelSubcommand};
 pub use github::GitHubSubcommand;
 pub use jira::JiraSubcommand;

@@ -2,6 +2,7 @@
 
 use clap::Subcommand;
 
+use super::common::{DryRunArgs, OutputFormatArgs};
 use super::log::LogSubcommand;
 
 /// Jira operations subcommands
@@ -17,21 +18,8 @@ pub enum JiraSubcommand {
         #[arg(value_name = "JIRA_ID")]
         jira_id: Option<String>,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show related PRs and branches for a Jira ticket
     ///
@@ -41,21 +29,8 @@ pub enum JiraSubcommand {
         #[arg(value_name = "JIRA_ID")]
         jira_id: Option<String>,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show changelog (change history) for a Jira ticket
     ///
@@ -65,21 +40,8 @@ pub enum JiraSubcommand {
         #[arg(value_name = "JIRA_ID")]
         jira_id: Option<String>,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Show comments for a Jira ticket
     ///
@@ -105,21 +67,8 @@ pub enum JiraSubcommand {
         #[arg(long, value_name = "DATE")]
         since: Option<String>,
 
-        /// Output in table format (default)
-        #[arg(long)]
-        table: bool,
-
-        /// Output in JSON format
-        #[arg(long)]
-        json: bool,
-
-        /// Output in YAML format
-        #[arg(long)]
-        yaml: bool,
-
-        /// Output in Markdown format
-        #[arg(long)]
-        markdown: bool,
+        #[command(flatten)]
+        output_format: OutputFormatArgs,
     },
     /// Download all attachments from Jira ticket
     ///
@@ -141,9 +90,8 @@ pub enum JiraSubcommand {
         #[arg(long, short = 'a')]
         all: bool,
 
-        /// Preview operation without actually deleting
-        #[arg(long, short = 'n')]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
 
         /// Only list what would be deleted
         #[arg(long, short = 'l')]

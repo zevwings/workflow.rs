@@ -2,6 +2,8 @@
 
 use clap::Subcommand;
 
+use super::common::DryRunArgs;
+
 /// Log level management subcommands
 ///
 /// Used to manage log output level.
@@ -102,8 +104,7 @@ pub enum ConfigSubcommand {
         /// Only import specific section (e.g., jira, pr)
         #[arg(long)]
         section: Option<String>,
-        /// Dry run mode (preview changes without actually importing)
-        #[arg(long)]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
 }
