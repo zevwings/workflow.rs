@@ -26,6 +26,7 @@ pub enum TaskResult<T, E> {
 /// use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
 /// use anyhow::Result;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let executor = ConcurrentExecutor::new(5); // 最大并发数 5
 ///
 /// let tasks: Vec<(String, Box<dyn Fn() -> Result<String> + Send + Sync>)> = vec![
@@ -40,6 +41,8 @@ pub enum TaskResult<T, E> {
 ///         TaskResult::Failure(err) => println!("{}: failed - {}", name, err),
 ///     }
 /// }
+/// # Ok(())
+/// # }
 /// ```
 pub struct ConcurrentExecutor {
     /// 最大并发数

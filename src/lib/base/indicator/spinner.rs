@@ -14,13 +14,13 @@ use std::time::Duration;
 /// ```rust
 /// use workflow::base::indicator::Spinner;
 ///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // 方式 1：手动管理
 /// let spinner = Spinner::new("Creating PR...");
 /// // 执行耗时操作
 /// spinner.finish();
 ///
 /// // 方式 2：自动管理（推荐）
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let result: Result<i32, Box<dyn std::error::Error>> = Spinner::with("Creating PR...", || {
 ///     // 执行操作
 ///     Ok(42)

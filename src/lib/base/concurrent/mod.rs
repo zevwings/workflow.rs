@@ -8,6 +8,7 @@
 //! use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
 //! use anyhow::Result;
 //!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let executor = ConcurrentExecutor::new(5); // 最大并发数 5
 //!
 //! let tasks: Vec<(String, Box<dyn Fn() -> Result<String, String> + Send + Sync>)> = vec![
@@ -26,6 +27,8 @@
 //!         TaskResult::Failure(err) => println!("{}: error - {}", name, err),
 //!     }
 //! }
+//! # Ok(())
+//! # }
 //! ```
 
 mod executor;
