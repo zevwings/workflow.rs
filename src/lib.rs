@@ -13,6 +13,8 @@ pub mod base;
 pub mod branch;
 #[path = "lib/cli/mod.rs"]
 pub mod cli;
+#[path = "lib/commit/mod.rs"]
+pub mod commit;
 #[path = "lib/completion/mod.rs"]
 pub mod completion;
 #[path = "lib/git/mod.rs"]

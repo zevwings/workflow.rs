@@ -71,6 +71,7 @@ pub enum PRCommands {
     /// Sync specified branch into current branch, supporting merge, rebase, or squash.
     /// This is a local Git operation, different from the `merge` command (which merges PR via API).
     /// Merged functionality from `integrate` and `sync` commands.
+    /// Will prompt for confirmation before pushing to remote.
     Sync {
         /// Source branch name to sync (required)
         #[arg(value_name = "SOURCE_BRANCH")]
@@ -87,10 +88,6 @@ pub enum PRCommands {
         /// Use squash merge (compress all commits into one)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         squash: bool,
-
-        /// Don't push to remote (pushes by default)
-        #[arg(long, action = clap::ArgAction::SetTrue)]
-        no_push: bool,
     },
     /// Rebase current branch onto target branch and update PR base
     ///

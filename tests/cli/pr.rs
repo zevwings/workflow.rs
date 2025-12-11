@@ -261,7 +261,6 @@ fn test_pr_sync_command_structure() {
         "--rebase",
         "--ff-only",
         "--squash",
-        "--no-push",
     ])
     .unwrap();
 
@@ -271,13 +270,11 @@ fn test_pr_sync_command_structure() {
             rebase,
             ff_only,
             squash,
-            no_push,
         } => {
             assert_eq!(source_branch, "feature/source");
             assert!(rebase);
             assert!(ff_only);
             assert!(squash);
-            assert!(no_push);
         }
         _ => panic!("Expected Sync command"),
     }
@@ -294,13 +291,11 @@ fn test_pr_sync_command_minimal() {
             rebase,
             ff_only,
             squash,
-            no_push,
         } => {
             assert_eq!(source_branch, "feature/source");
             assert!(!rebase);
             assert!(!ff_only);
             assert!(!squash);
-            assert!(!no_push);
         }
         _ => panic!("Expected Sync command"),
     }

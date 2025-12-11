@@ -26,4 +26,19 @@ pub enum CommitSubcommand {
         #[arg(long)]
         no_verify: bool,
     },
+    /// Reword a commit message
+    ///
+    /// Modify the message of a specific commit without changing its content.
+    ///
+    /// Examples:
+    ///   workflow commit reword                              # Reword HEAD (default)
+    ///   workflow commit reword HEAD                         # Reword HEAD explicitly
+    ///   workflow commit reword HEAD~2                       # Reword the second-to-last commit
+    ///   workflow commit reword abc1234                      # Reword a specific commit by SHA
+    Reword {
+        /// Commit reference (HEAD, HEAD~n, SHA, etc.)
+        /// If not provided, defaults to HEAD
+        #[arg(value_name = "COMMIT_ID")]
+        commit_id: Option<String>,
+    },
 }

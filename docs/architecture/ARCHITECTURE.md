@@ -46,6 +46,10 @@ src/
 │   │   ├── clean.rs        # 清理本地分支命令
 │   │   ├── ignore.rs      # 管理分支忽略列表命令
 │   │   └── prefix.rs       # 管理分支前缀命令（仓库级别）
+│   ├── commit/             # Commit 管理命令
+│   │   ├── mod.rs          # Commit 命令模块声明
+│   │   ├── amend.rs        # Commit amend 命令（修改最后一次提交）
+│   │   └── reword.rs       # Commit reword 命令（修改提交消息）
 │   ├── github/             # GitHub 账号管理命令
 │   │   ├── mod.rs          # GitHub 命令模块声明
 │   │   ├── github.rs       # GitHub 账号管理实现
@@ -156,6 +160,10 @@ src/
     │       ├── requests.rs # Codeup API 请求结构体
     │       ├── responses.rs # Codeup API 响应结构体
     │       └── errors.rs   # Codeup 错误处理
+    ├── commit/             # Commit 业务逻辑
+    │   ├── mod.rs          # Commit 模块声明和导出
+    │   ├── amend.rs        # Commit Amend 业务逻辑（预览、格式化等）
+    │   └── reword.rs       # Commit Reword 业务逻辑（预览、格式化、历史 reword）
     ├── completion/         # Shell Completion 管理
     │   ├── mod.rs          # Completion 模块声明
     │   ├── completion.rs   # Completion 管理工具
@@ -223,6 +231,7 @@ src/
 用户输入 → main.rs → commands/log/*.rs → lib/jira/logs/*.rs → 执行操作
 用户输入 → main.rs → commands/jira/*.rs → lib/jira/*.rs → 执行操作
 用户输入 → main.rs → commands/branch/*.rs → lib/git/branch.rs → 执行操作
+用户输入 → main.rs → commands/commit/*.rs → lib/commit/*.rs → lib/git/*.rs → 执行操作
 用户输入 → main.rs → commands/github/*.rs → lib/git/config.rs → 执行操作
 用户输入 → main.rs → commands/check/*.rs → lib/git/*.rs → 执行操作
 用户输入 → main.rs → commands/proxy/*.rs → lib/proxy/*.rs → 执行操作
@@ -257,6 +266,11 @@ src/
 
 提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
 - 详细架构请参考 [GIT_ARCHITECTURE.md](./lib/GIT_ARCHITECTURE.md)
+
+### Commit 模块 (`lib::commit`)
+
+提供 Commit 相关的业务逻辑，包括 amend 和 reword 操作的预览信息生成、格式化显示、完成提示生成以及历史 commit reword 的执行逻辑。
+- 详细架构请参考 [COMMIT_ARCHITECTURE.md](./lib/COMMIT_ARCHITECTURE.md)
 
 ### Jira 模块 (`lib::jira`)
 

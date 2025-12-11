@@ -63,6 +63,33 @@ pub enum BranchSubcommand {
         /// Branch name (optional, will enter interactive mode if not provided)
         branch_name: Option<String>,
     },
+    /// Sync branch into current branch
+    ///
+    /// Sync specified branch into current branch, supporting merge, rebase, or squash.
+    /// This is a local Git operation without PR-specific logic.
+    /// Will prompt for confirmation before pushing to remote.
+    ///
+    /// Examples:
+    ///   workflow branch sync master                    # Merge master into current branch
+    ///   workflow branch sync master --rebase          # Rebase current branch onto master
+    ///   workflow branch sync feature-branch --squash  # Squash merge feature-branch
+    Sync {
+        /// Source branch name to sync (required)
+        #[arg(value_name = "SOURCE_BRANCH")]
+        source_branch: String,
+
+        /// Use rebase instead of merge (default: merge)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        rebase: bool,
+
+        /// Only allow fast-forward merge (fail if not possible)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        ff_only: bool,
+
+        /// Use squash merge (compress all commits into one)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        squash: bool,
+    },
 }
 
 /// Branch ignore list management subcommands

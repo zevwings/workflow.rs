@@ -8,7 +8,7 @@
 
 **状态**: 📋 需求分析中（部分功能已完成）
 **分类**: Git 工作流
-**优先级**: 高优先级（分支创建/切换 ✅、Commit 修改）、中优先级（分支重命名 ✅、分支同步、Commit 压缩/重写）
+**优先级**: 高优先级（分支创建/切换 ✅、Commit 修改 ✅）、中优先级（分支重命名 ✅、分支同步、Commit 压缩/重写 ✅）
 **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
 
 ---
@@ -155,6 +155,8 @@ workflow commit amend --no-edit                    # 不编辑消息
 - 使用 `git commit --amend`
 - 支持交互式编辑
 
+**状态**: ✅ 已完成
+
 ---
 
 #### 2.2 `commit squash` - 压缩多个 commits
@@ -198,6 +200,12 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ##### 实现建议
 - 使用 `git rebase -i` 的 reword 功能
 - 提供友好的交互式界面
+
+**状态**: ✅ 已完成
+- ✅ 支持修改 HEAD（使用 amend）
+- ✅ 支持修改历史 commit（使用 rebase -i）
+- ✅ 交互式选择 commit（支持 fuzzy-matcher）
+- ✅ 无参数时默认使用 HEAD
 
 ---
 
@@ -248,10 +256,21 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 - [ ] `branch sync` 能够同步分支（fetch + merge/rebase）
 
 ### Commit 管理
-- [ ] `commit amend` 能够修改最后一次 commit
+- [x] `commit amend` 能够修改最后一次 commit
+  - [x] 支持修改提交消息
+  - [x] 支持添加文件到最后一次 commit
+  - [x] 支持不编辑消息直接提交（--no-edit）
+  - [x] 完整的交互式界面
+  - [x] 预览和确认机制
 - [ ] `commit squash` 能够压缩多个 commits
-- [ ] `commit reword` 能够修改 commit 消息
-- [ ] 所有操作都支持交互式界面
+- [x] `commit reword` 能够修改 commit 消息
+  - [x] 支持修改 HEAD（使用 amend）
+  - [x] 支持修改历史 commit（使用 rebase -i）
+  - [x] 交互式选择 commit（支持 fuzzy-matcher）
+  - [x] 无参数时默认使用 HEAD
+  - [x] 完整的交互式界面
+  - [x] 预览和确认机制
+- [x] 所有操作都支持交互式界面
 
 ### Stash 管理
 > **已迁移**：Stash 管理的验收标准请参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md) 中的验收标准部分。
@@ -263,13 +282,13 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ### 高优先级
 1. **`branch create`** - 创建分支（从 JIRA ticket 自动命名） ✅ 已完成
 2. **`branch switch`** - 快速切换分支（模糊匹配） ✅ 已完成
-3. **`commit amend`** - 修改最后一次 commit
+3. **`commit amend`** - 修改最后一次 commit ✅ 已完成
 
 ### 中优先级
 1. **`branch rename`** - 重命名分支 ✅ 已完成
 2. **`branch sync`** - 同步分支
 3. **`commit squash`** - 压缩多个 commits
-4. **`commit reword`** - 修改 commit 消息
+4. **`commit reword`** - 修改 commit 消息 ✅ 已完成
 
 > **注意**：Stash 管理的优先级说明请参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)。
 
@@ -283,13 +302,13 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
    - `branch switch` - 快速切换分支 ✅ 已完成
    - `branch rename` - 重命名分支 ✅ 已完成
 
-2. **第二阶段**：Commit 管理
-   - `commit amend` - 修改最后一次 commit
+2. **第二阶段**：Commit 管理 ✅ 部分完成
+   - `commit amend` - 修改最后一次 commit ✅ 已完成
+   - `commit reword` - 修改 commit 消息 ✅ 已完成
 
-3. **第三阶段**：分支管理增强和 Stash 管理
-   - `branch sync` - 同步分支
+3. **第三阶段**：分支管理增强和 Commit 管理完善
+   - `branch sync` - 同步分支 ✅ 已完成
    - `commit squash` - 压缩多个 commits
-   - `commit reword` - 修改 commit 消息
    - Stash 管理（参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)）
 
 ### 技术依赖
@@ -315,3 +334,16 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 - **2025-01-27**: `branch create` 功能已完成 ✅
 - **2025-01-27**: `branch switch` 功能已完成 ✅
 - **2025-01-27**: `branch rename` 功能已完成 ✅
+- **2025-01-27**: `branch sync` 功能已完成 ✅
+  - 支持 merge、rebase、squash 三种同步策略
+  - 支持 fast-forward only 模式
+  - 纯分支操作，无 PR 相关逻辑
+  - 自动处理工作区状态（stash）
+- **2025-01-27**: `commit amend` 功能已完成 ✅
+  - 支持修改提交消息、添加文件、不编辑消息直接提交
+  - 完整的交互式界面和预览确认机制
+- **2025-01-27**: `commit reword` 功能已完成 ✅
+  - 支持修改 HEAD（使用 amend）和历史 commit（使用 rebase -i）
+  - 交互式选择 commit（支持 fuzzy-matcher）
+  - 无参数时默认使用 HEAD
+  - 完整的交互式界面和预览确认机制

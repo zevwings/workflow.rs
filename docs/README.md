@@ -140,6 +140,15 @@
 - 分支名生成（模板系统、LLM、简单回退）
 - 非英文翻译功能
 
+#### [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
+**Commit 模块架构文档**
+
+- Commit amend 业务逻辑（预览、格式化、完成提示）
+- Commit reword 业务逻辑（预览、格式化、完成提示）
+- 历史 commit reword（rebase 交互式编辑）
+- 预览信息生成和格式化显示
+- 无状态设计，职责单一
+
 ### 命令层架构文档（CLI 命令封装）
 
 #### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
@@ -192,6 +201,16 @@
 - 分支前缀管理（按仓库配置分支前缀，用于自动生成分支名）
 - 支持 dry-run 模式和确认机制
 - 首次使用自动提示配置分支前缀
+
+#### [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
+**Commit 管理命令层架构文档**
+
+- Commit amend 命令（修改最后一次提交的消息和文件）
+- Commit reword 命令（修改指定提交的消息，不改变内容）
+- 交互式工作流（选择、输入、确认等）
+- 预览机制（在执行操作前生成预览信息）
+- 分支保护（检查默认分支，防止误操作）
+- 支持 HEAD 和历史 commit 的 reword
 
 #### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 **配置迁移命令层架构文档**
@@ -338,6 +357,7 @@
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
 - 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
 - 想了解 Git 操作？ → [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+- 想了解 Commit 管理？ → [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
 - 想了解 HTTP 客户端？ → [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
 - 想了解配置管理？ → [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
 - 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
@@ -355,6 +375,7 @@
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
 - 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 - 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 - 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)

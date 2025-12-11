@@ -5,6 +5,7 @@
 //! - 暂存文件（add）
 //! - 提交更改（commit）
 //! - 修改最后一次提交（amend）
+//! - 修改历史提交消息（reword）
 
 use anyhow::{Context, Result};
 use duct::cmd;
@@ -32,6 +33,17 @@ pub struct CommitInfo {
     pub author: String,
     /// 日期
     pub date: String,
+}
+
+/// 工作区状态
+#[derive(Debug, Clone)]
+pub struct WorktreeStatus {
+    /// 已修改文件数量
+    pub modified_count: usize,
+    /// 已暂存文件数量
+    pub staged_count: usize,
+    /// 未跟踪文件数量
+    pub untracked_count: usize,
 }
 
 /// Git 提交管理
@@ -387,5 +399,223 @@ impl GitCommit {
 
         // 返回新的 commit SHA
         Self::get_last_commit_sha()
+    }
+
+    /// 解析 commit 引用为完整的 SHA
+    ///
+    /// 支持格式：HEAD, HEAD~n, SHA, 分支名等
+    ///
+    /// # 参数
+    ///
+    /// * `reference` - Commit 引用（如 "HEAD", "HEAD~2", "abc1234" 等）
+    ///
+    /// # 返回
+    ///
+    /// 返回完整的 commit SHA（40 个字符）。
+    pub fn parse_commit_ref(reference: &str) -> Result<String> {
+        let sha = cmd_read(&["rev-parse", reference])
+            .context(format!("Failed to parse commit reference: {}", reference))?;
+        Ok(sha.trim().to_string())
+    }
+
+    /// 获取指定 commit 的信息
+    ///
+    /// # 参数
+    ///
+    /// * `commit_ref` - Commit 引用（如 "HEAD", "HEAD~2", SHA 等）
+    ///
+    /// # 返回
+    ///
+    /// 返回指定 commit 的详细信息。
+    pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
+        let sha = cmd_read(&["log", "-1", "--format=%H", commit_ref])
+            .context(format!("Failed to get commit info for: {}", commit_ref))?;
+        let message = cmd_read(&["log", "-1", "--format=%s", commit_ref])
+            .context(format!("Failed to get commit message for: {}", commit_ref))?;
+        let author = cmd_read(&["log", "-1", "--format=%an <%ae>", commit_ref])
+            .context(format!("Failed to get commit author for: {}", commit_ref))?;
+        let date = cmd_read(&["log", "-1", "--format=%ai", commit_ref])
+            .context(format!("Failed to get commit date for: {}", commit_ref))?;
+
+        Ok(CommitInfo {
+            sha: sha.trim().to_string(),
+            message: message.trim().to_string(),
+            author: author.trim().to_string(),
+            date: date.trim().to_string(),
+        })
+    }
+
+    /// 检查 commit 是否是 HEAD
+    ///
+    /// # 参数
+    ///
+    /// * `commit_sha` - 要检查的 commit SHA
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 是 HEAD
+    /// - `Ok(false)` - 不是 HEAD
+    pub fn is_head_commit(commit_sha: &str) -> Result<bool> {
+        let head_sha = Self::get_last_commit_sha()?;
+        Ok(commit_sha.trim() == head_sha.trim())
+    }
+
+    /// 检查 commit 是否在当前分支的历史中
+    ///
+    /// 使用 `git merge-base --is-ancestor` 检查指定的 commit
+    /// 是否是当前分支（HEAD）的祖先。
+    ///
+    /// # 参数
+    ///
+    /// * `commit_sha` - 要检查的 commit SHA
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - commit 在当前分支历史中
+    /// - `Ok(false)` - commit 不在当前分支历史中
+    pub fn is_commit_in_current_branch(commit_sha: &str) -> Result<bool> {
+        // 使用 git merge-base --is-ancestor <commit_sha> HEAD
+        // 如果 commit_sha 是 HEAD 的祖先，返回 true
+        // 注意：如果 commit_sha == HEAD，也返回 true
+        let result = cmd("git", &["merge-base", "--is-ancestor", commit_sha, "HEAD"]).run();
+        Ok(result.is_ok())
+    }
+
+    /// 获取当前分支的 commits 列表
+    ///
+    /// 获取当前分支最近的 commits。
+    ///
+    /// # 参数
+    ///
+    /// * `count` - 最大返回数量
+    ///
+    /// # 返回
+    ///
+    /// 返回 CommitInfo 列表，按时间顺序排列（从新到旧，HEAD 在第一个）。
+    pub fn get_branch_commits(count: usize) -> Result<Vec<CommitInfo>> {
+        // 使用 git log 获取当前分支的 commits
+        // git log -n <count> --format="%H|%s|%an <%ae>|%ai"
+        let output = cmd_read(&[
+            "log",
+            &format!("-{}", count),
+            "--format=%H|%s|%an <%ae>|%ai",
+        ])?;
+
+        if output.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut commits = Vec::new();
+        for line in output.lines() {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() == 4 {
+                commits.push(CommitInfo {
+                    sha: parts[0].trim().to_string(),
+                    message: parts[1].trim().to_string(),
+                    author: parts[2].trim().to_string(),
+                    date: parts[3].trim().to_string(),
+                });
+            }
+        }
+
+        Ok(commits)
+    }
+
+    /// 获取指定 commit 的父 commit SHA
+    ///
+    /// # 参数
+    ///
+    /// * `commit_sha` - 要获取父 commit 的 commit SHA
+    ///
+    /// # 返回
+    ///
+    /// 返回父 commit 的完整 SHA。如果 commit 没有父 commit（根 commit），返回错误。
+    pub fn get_parent_commit(commit_sha: &str) -> Result<String> {
+        let parent_sha = cmd_read(&["rev-parse", &format!("{}^", commit_sha)])
+            .with_context(|| format!("Failed to get parent commit of: {}", commit_sha))?;
+        Ok(parent_sha.trim().to_string())
+    }
+
+    /// 获取从指定 commit（不包括）到 HEAD 的所有 commits
+    ///
+    /// 用于构建 rebase todo 文件，获取需要 rebase 的 commits 列表。
+    ///
+    /// # 参数
+    ///
+    /// * `from_commit` - 起始 commit SHA（不包括此 commit）
+    ///
+    /// # 返回
+    ///
+    /// 返回 CommitInfo 列表，按时间顺序排列（从旧到新，第一个是最接近 from_commit 的 commit）。
+    pub fn get_commits_from_to_head(from_commit: &str) -> Result<Vec<CommitInfo>> {
+        // 使用 git log 获取从 from_commit 到 HEAD 的所有 commits
+        // git log from_commit..HEAD --format="%H|%s|%an <%ae>|%ai" --reverse
+        // --reverse 表示从旧到新排列
+        let output = cmd_read(&[
+            "log",
+            &format!("{}..HEAD", from_commit),
+            "--format=%H|%s|%an <%ae>|%ai",
+            "--reverse",
+        ])?;
+
+        if output.trim().is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut commits = Vec::new();
+        for line in output.lines() {
+            let parts: Vec<&str> = line.split('|').collect();
+            if parts.len() == 4 {
+                commits.push(CommitInfo {
+                    sha: parts[0].trim().to_string(),
+                    message: parts[1].trim().to_string(),
+                    author: parts[2].trim().to_string(),
+                    date: parts[3].trim().to_string(),
+                });
+            }
+        }
+
+        Ok(commits)
+    }
+
+    /// 获取工作区状态统计
+    ///
+    /// 解析 Git status 输出，统计已修改、已暂存和未跟踪的文件数量。
+    ///
+    /// # 返回
+    ///
+    /// 返回工作区状态统计信息。
+    pub fn get_worktree_status() -> Result<WorktreeStatus> {
+        let status = Self::status()?;
+
+        let modified_count =
+            status.lines().filter(|l| l.starts_with(" M") || l.starts_with("M ")).count();
+        let staged_count = status
+            .lines()
+            .filter(|l| l.starts_with("M ") || l.starts_with("A ") || l.starts_with("D "))
+            .count();
+        let untracked_count = status.lines().filter(|l| l.starts_with("??")).count();
+
+        Ok(WorktreeStatus {
+            modified_count,
+            staged_count,
+            untracked_count,
+        })
+    }
+
+    /// 格式化工作区状态为字符串
+    ///
+    /// # 参数
+    ///
+    /// * `status` - 工作区状态
+    ///
+    /// # 返回
+    ///
+    /// 返回格式化的字符串。
+    pub fn format_worktree_status(status: &WorktreeStatus) -> String {
+        format!(
+            "  工作区状态:\n    - 已修改文件:  {} 个\n    - 已暂存文件:  {} 个\n    - 未跟踪文件:  {} 个",
+            status.modified_count, status.staged_count, status.untracked_count
+        )
     }
 }

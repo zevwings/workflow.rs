@@ -24,6 +24,7 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "llm",
     "completion",
     "branch",
+    "commit",
     "migrate",
     "pr",
     "jira",
@@ -66,7 +67,12 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix", "create", "rename", "switch"];
+const BRANCH_SUBCOMMANDS: &[&str] = &[
+    "clean", "ignore", "prefix", "create", "rename", "switch", "sync",
+];
+
+/// Commit 子命令列表
+const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
@@ -149,6 +155,40 @@ fn test_pr_subcommands_completeness() {
         subcommands.len(),
         PR_SUBCOMMANDS.len(),
         "PR subcommands count mismatch"
+    );
+}
+
+/// 验证 Commit 子命令完整性
+#[test]
+fn test_commit_subcommands_completeness() {
+    let cmd = Cli::command();
+    let commit_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "commit")
+        .expect("commit command should exist");
+
+    let subcommands: Vec<String> =
+        commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+    let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
+
+    for expected_subcmd in COMMIT_SUBCOMMANDS {
+        assert!(
+            subcommand_set.contains(*expected_subcmd),
+            "Missing Commit subcommand: {}",
+            expected_subcmd
+        );
+    }
+
+    println!(
+        "Found {} Commit subcommands: {:?}",
+        subcommands.len(),
+        subcommands
+    );
+    assert_eq!(
+        subcommands.len(),
+        COMMIT_SUBCOMMANDS.len(),
+        "Commit subcommands count mismatch"
     );
 }
 
@@ -346,6 +386,15 @@ fn test_all_subcommands_completeness() {
     let branch_subcommands: Vec<String> =
         branch_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(branch_subcommands.len(), BRANCH_SUBCOMMANDS.len());
+
+    // 验证 Commit 子命令
+    let commit_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "commit")
+        .expect("commit command should exist");
+    let commit_subcommands: Vec<String> =
+        commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(commit_subcommands.len(), COMMIT_SUBCOMMANDS.len());
 
     // 验证 Proxy 子命令
     let proxy_cmd = cmd

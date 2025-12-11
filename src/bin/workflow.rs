@@ -6,9 +6,11 @@
 use anyhow::Result;
 use clap::Parser;
 
-use workflow::commands::branch::{clean, create as branch_create, ignore, prefix, rename, switch};
+use workflow::commands::branch::{
+    clean, create as branch_create, ignore, prefix, rename, switch, sync as branch_sync,
+};
 use workflow::commands::check::check;
-use workflow::commands::commit::CommitAmendCommand;
+use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand};
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
@@ -204,6 +206,14 @@ fn main() -> Result<()> {
             BranchSubcommand::Switch { branch_name } => {
                 switch::SwitchCommand::execute(branch_name)?;
             }
+            BranchSubcommand::Sync {
+                source_branch,
+                rebase,
+                ff_only,
+                squash,
+            } => {
+                branch_sync::BranchSyncCommand::sync(source_branch, rebase, ff_only, squash)?;
+            }
         },
         // Commit 操作命令
         Some(Commands::Commit { subcommand }) => match subcommand {
@@ -213,6 +223,9 @@ fn main() -> Result<()> {
                 no_verify,
             } => {
                 CommitAmendCommand::execute(message, no_edit, no_verify)?;
+            }
+            CommitSubcommand::Reword { commit_id } => {
+                CommitRewordCommand::execute(commit_id)?;
             }
         },
         // PR 操作命令
@@ -252,16 +265,8 @@ fn main() -> Result<()> {
                 rebase,
                 ff_only,
                 squash,
-                no_push,
             } => {
-                let should_push = !no_push;
-                sync::PullRequestSyncCommand::sync(
-                    source_branch,
-                    rebase,
-                    ff_only,
-                    squash,
-                    should_push,
-                )?;
+                sync::PullRequestSyncCommand::sync(source_branch, rebase, ff_only, squash)?;
             }
             PRCommands::Rebase {
                 target_branch,

@@ -461,6 +461,27 @@ workflow branch ignore list                   # 列出当前仓库的忽略分�
 workflow branch prefix set [PREFIX]            # 设置当前仓库的分支前缀（如 "feature"、"fix"）
 workflow branch prefix get                     # 获取当前仓库的分支前缀
 workflow branch prefix remove                  # 移除当前仓库的分支前缀
+
+# 同步分支
+workflow branch sync <SOURCE_BRANCH>          # 将指定分支同步到当前分支（merge）
+workflow branch sync <SOURCE_BRANCH> --rebase # 使用 rebase 同步
+workflow branch sync <SOURCE_BRANCH> --squash  # 使用 squash 合并
+workflow branch sync <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
+```
+
+### Commit 管理
+```bash
+# 修改最后一次 commit
+workflow commit amend                              # 交互式修改最后一次 commit
+workflow commit amend --message "New message"      # 修改 commit 消息
+workflow commit amend --no-edit                    # 不编辑消息直接提交
+workflow commit amend --no-verify                  # 跳过 pre-commit hooks
+
+# 修改 commit 消息（不改变内容）
+workflow commit reword                              # 修改 HEAD 的 commit 消息（默认）
+workflow commit reword HEAD                         # 明确指定 HEAD
+workflow commit reword HEAD~2                       # 修改倒数第二个 commit
+workflow commit reword abc1234                      # 通过 SHA 修改指定 commit
 ```
 
 ### 安装命令

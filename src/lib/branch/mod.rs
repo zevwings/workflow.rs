@@ -30,6 +30,7 @@ pub mod config;
 pub mod llm;
 pub mod naming;
 pub mod prefix;
+pub mod sync;
 pub mod types;
 
 // Re-export structs and functions
@@ -37,4 +38,8 @@ pub use config::{BranchConfig, RepositoryConfig};
 pub use llm::BranchLLM;
 pub use naming::BranchNaming;
 pub use prefix::BranchPrefix;
+pub use sync::{
+    BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, SourceBranchInfo,
+    SyncStrategy,
+};
 pub use types::BranchType;
