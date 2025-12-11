@@ -126,7 +126,8 @@ impl CommitRewordCommand {
         }
 
         // 步骤12: 如果 commit 已推送，询问是否要 force push
-        let is_pushed = CommitReword::should_show_force_push_warning(&current_branch, &commit_info.sha)?;
+        let is_pushed =
+            CommitReword::should_show_force_push_warning(&current_branch, &commit_info.sha)?;
         if is_pushed {
             log_break!();
             let should_push = ConfirmDialog::new("Push to remote (force-with-lease)?")
