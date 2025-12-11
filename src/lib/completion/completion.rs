@@ -65,7 +65,7 @@ impl Completion {
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
     /// 包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、
-    /// `log`、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）等子命令。
+    /// `log`（set、check）、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`proxy`、`branch`（clean、ignore、prefix）等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -410,7 +410,7 @@ impl Completion {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`、`github`、`llm`、`proxy`、`log-level`、`branch`（clean、ignore、prefix）等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`（set、check）、`jira`、`github`、`llm`、`proxy`、`branch`（clean、ignore、prefix）等）
     pub fn generate_all_completions(
         shell_type: Option<String>,
         output_dir: Option<String>,

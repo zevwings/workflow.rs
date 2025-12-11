@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::DryRunArgs;
+use super::common::{DryRunArgs, JiraIdArg};
 
 /// Branch management subcommands
 ///
@@ -29,6 +29,18 @@ pub enum BranchSubcommand {
     Prefix {
         #[command(subcommand)]
         subcommand: PrefixSubcommand,
+    },
+    /// Create a new branch
+    ///
+    /// Create a new branch, optionally from a JIRA ticket.
+    Create {
+        #[command(flatten)]
+        jira_id: JiraIdArg,
+        /// Create from default branch (main/master)
+        #[arg(long)]
+        from_default: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
 }
 

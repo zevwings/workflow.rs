@@ -19,11 +19,12 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "uninstall",
     "version",
     "update",
-    "log-level",
+    "log",
     "github",
     "llm",
     "completion",
     "branch",
+    "migrate",
     "pr",
     "jira",
 ];
@@ -65,7 +66,7 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix"];
+const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix", "create"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
@@ -73,7 +74,7 @@ const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix"];
 /// Proxy 子命令列表
 const PROXY_SUBCOMMANDS: &[&str] = &["on", "off", "check"];
 
-/// LogLevel 子命令列表
+/// Log 子命令列表
 const LOG_LEVEL_SUBCOMMANDS: &[&str] = &["set", "check", "trace-console"];
 
 /// Completion 子命令列表
@@ -355,14 +356,14 @@ fn test_all_subcommands_completeness() {
         proxy_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(proxy_subcommands.len(), PROXY_SUBCOMMANDS.len());
 
-    // 验证 LogLevel 子命令
-    let log_level_cmd = cmd
+    // 验证 Log 子命令
+    let log_cmd = cmd
         .get_subcommands()
-        .find(|sc| sc.get_name() == "log-level")
-        .expect("log-level command should exist");
-    let log_level_subcommands: Vec<String> =
-        log_level_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-    assert_eq!(log_level_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
+        .find(|sc| sc.get_name() == "log")
+        .expect("log command should exist");
+    let log_subcommands: Vec<String> =
+        log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(log_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
 
     // 验证 Completion 子命令
     let completion_cmd = cmd

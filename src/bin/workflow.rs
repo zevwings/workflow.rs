@@ -6,7 +6,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-use workflow::commands::branch::{clean, ignore, prefix};
+use workflow::commands::branch::{clean, create as branch_create, ignore, prefix};
 use workflow::commands::check::check;
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
@@ -19,8 +19,8 @@ use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
 use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use workflow::commands::migrate::MigrateCommand;
 use workflow::commands::pr::{
-    approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
-    update as pr_update,
+    approve, close, comment, create as pr_create, list, merge, pick, rebase, status, summarize,
+    sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
 
@@ -134,7 +134,7 @@ fn main() -> Result<()> {
             lifecycle_update::UpdateCommand::update(version)?;
         }
         // 日志级别管理命令
-        Some(Commands::LogLevel { subcommand }) => match subcommand {
+        Some(Commands::Log { subcommand }) => match subcommand {
             LogLevelSubcommand::Set => log::LogCommand::set()?,
             LogLevelSubcommand::Check => log::LogCommand::check()?,
             LogLevelSubcommand::TraceConsole => log::LogCommand::trace_console()?,
@@ -186,6 +186,17 @@ fn main() -> Result<()> {
                     prefix::BranchPrefixCommand::remove()?;
                 }
             },
+            BranchSubcommand::Create {
+                jira_id,
+                from_default,
+                dry_run,
+            } => {
+                branch_create::CreateCommand::execute(
+                    jira_id.jira_id,
+                    from_default,
+                    dry_run.dry_run,
+                )?;
+            }
         },
         // PR 操作命令
         Some(Commands::Pr { subcommand }) => match subcommand {
@@ -195,7 +206,7 @@ fn main() -> Result<()> {
                 description,
                 dry_run,
             } => {
-                create::PullRequestCreateCommand::create(
+                pr_create::PullRequestCreateCommand::create(
                     jira_ticket,
                     title,
                     description,
@@ -347,7 +358,7 @@ fn main() -> Result<()> {
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
             log_message!("  workflow config     - View current configuration");
             log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log-level  - Manage log level (set/check)");
+            log_message!("  workflow log        - Manage log level (set/check)");
             log_message!("  workflow migrate    - Migrate configuration to new format");
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");

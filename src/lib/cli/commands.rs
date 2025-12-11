@@ -60,8 +60,8 @@ pub enum Commands {
     /// Manage log level (set/check)
     ///
     /// Set or view current log output level (none, error, warn, info, debug).
-    #[command(name = "log-level")]
-    LogLevel {
+    #[command(name = "log")]
+    Log {
         #[command(subcommand)]
         subcommand: LogLevelSubcommand,
     },

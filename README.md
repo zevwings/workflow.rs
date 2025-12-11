@@ -54,7 +54,7 @@ brew install workflow
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 
 # 安装指定版本
-VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.5.1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 ```
 
 **功能特性**：
@@ -123,7 +123,7 @@ powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.4.8"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.5.1"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -396,8 +396,12 @@ workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模
 workflow config import <INPUT> --section jira   # 只导入指定配置段
 workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
 workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
-workflow update --version 1.1.2    # 更新到指定版本
+workflow update --version 1.5.1    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
+workflow version                   # 显示 Workflow CLI 版本
+workflow migrate                   # 执行配置迁移（自动检测并迁移所有待迁移版本）
+workflow migrate --dry-run         # 预览迁移操作
+workflow migrate --keep-old        # 迁移后保留旧配置文件
 ```
 
 ### GitHub 账号管理
@@ -412,8 +416,8 @@ workflow github update             # 更新 GitHub 账号信息（交互式选�
 
 ### 日志级别管理
 ```bash
-workflow log-level set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
-workflow log-level check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+workflow log set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
+workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
 ```
 
 ### LLM 配置管理
@@ -432,6 +436,11 @@ workflow completion remove         # 移除 completion 配置（交互式选择�
 
 ### 分支管理
 ```bash
+# 创建新分支
+workflow branch create [JIRA_ID]              # 创建新分支（可选 JIRA ticket，使用 LLM 生成分支名）
+workflow branch create --from-default         # 从默认分支（main/master）创建
+workflow branch create [JIRA_ID] --dry-run   # 预览模式
+
 # 清理本地分支
 workflow branch clean              # 清理已合并的分支（保留 main/master、develop、当前分支和忽略列表中的分支）
 workflow branch clean --dry-run    # 预览将要删除的分支，不实际删除
@@ -739,66 +748,6 @@ graph TB
     style HttpLib fill:#e8f5e9
     style UtilsLib fill:#e8f5e9
     style SettingsLib fill:#e8f5e9
-```
-
-## 📦 项目结构
-
-```
-workflow/
-├── Cargo.toml           # 项目配置和依赖管理
-├── Makefile             # 构建和安装脚本
-├── Formula/             # Homebrew Formula 定义
-│   └── workflow.rb      # Homebrew 安装配方
-├── src/
-│   ├── main.rs          # 主 CLI 入口（workflow 命令）
-│   ├── lib.rs           # 库入口，重新导出所有公共 API
-│   ├── lib/             # 核心库模块（业务逻辑层）
-│   │   ├── git/         # Git 操作（命令封装、仓库检测、类型定义）
-│   │   ├── http/        # HTTP 客户端（支持认证和代理）
-│   │   ├── jira/        # Jira API 集成（客户端、状态管理、工作历史）
-│   │   ├── pr/          # PR 相关功能（GitHub/Codeup 支持、提供者抽象）
-│   │   ├── llm/         # LLM 集成（AI 功能，支持 OpenAI/DeepSeek/Proxy）
-│   │   ├── log/         # 日志处理（下载、搜索、提取）
-│   │   ├── settings/    # 配置管理（环境变量单例）
-│   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
-│   ├── bin/             # 独立可执行文件（CLI 入口层）
-│   │   └── install.rs   # 安装命令入口（独立的 install 命令）
-│   └── commands/        # 命令实现（命令封装层）
-│       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
-│       ├── log/          # 日志操作命令（download, find, search）
-│       ├── jira/         # Jira 操作命令（info, attachments, clean）
-│       ├── branch/       # 分支管理命令（clean, ignore, prefix）
-│       ├── check/       # 环境检查命令（check）
-│       ├── proxy/       # 代理管理命令（on, off, check）
-│       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
-│       ├── config/       # 配置管理命令（setup, show, log, completion）
-│       └── lifecycle/   # 生命周期管理命令（install, uninstall, update）
-└── docs/                # 文档目录
-    ├── README.md        # 文档索引
-    └── architecture/    # 架构文档目录
-        ├── ARCHITECTURE.md  # 总体架构设计文档
-        ├── lib/         # Lib 层架构文档（核心业务逻辑）
-        │   ├── PR_ARCHITECTURE.md      # PR 模块架构文档
-        │   ├── JIRA_ARCHITECTURE.md    # Jira 模块架构文档
-        │   ├── GIT_ARCHITECTURE.md     # Git 模块架构文档
-        │   ├── HTTP_ARCHITECTURE.md    # HTTP 模块架构文档
-        │   ├── LLM_ARCHITECTURE.md     # LLM 模块架构文档
-        │   ├── SETTINGS_ARCHITECTURE.md # Settings 模块架构文档
-        │   ├── SHELL_ARCHITECTURE.md   # Shell 模块架构文档
-        │   ├── COMPLETION_ARCHITECTURE.md # Completion 模块架构文档
-        │   ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
-        │   ├── ROLLBACK_ARCHITECTURE.md # 回滚模块架构文档
-        │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
-        └── commands/    # 命令层架构文档（CLI 命令封装）
-            ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
-            ├── LOG_COMMAND_ARCHITECTURE.md     # 日志操作命令架构文档
-            ├── JIRA_COMMAND_ARCHITECTURE.md    # Jira 操作命令架构文档
-            ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
-            ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
-            ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档
-            ├── CHECK_COMMAND_ARCHITECTURE.md   # 环境检查命令架构文档
-            ├── GITHUB_COMMAND_ARCHITECTURE.md  # GitHub 账号管理命令架构文档
-            └── PROXY_COMMAND_ARCHITECTURE.md  # 代理管理命令架构文档
 ```
 
 ## 📝 贡献

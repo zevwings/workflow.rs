@@ -11,7 +11,7 @@ use crate::base::prompt::{
     generate_summarize_file_change_system_prompt, generate_summarize_pr_system_prompt,
     GENERATE_BRANCH_SYSTEM_PROMPT,
 };
-use crate::pr::helpers::transform_to_branch_name;
+use crate::branch::BranchNaming;
 
 /// PR 内容，包含分支名、PR 标题和描述
 ///
@@ -198,7 +198,7 @@ impl PullRequestLLM {
             .filter(|s| !s.is_empty());
 
         // 清理分支名，确保只保留 ASCII 字符
-        let cleaned_branch_name = transform_to_branch_name(branch_name.trim());
+        let cleaned_branch_name = BranchNaming::sanitize(branch_name.trim());
 
         Ok(PullRequestContent {
             branch_name: cleaned_branch_name,

@@ -49,17 +49,7 @@
 
 ### 进行中的需求
 
-#### 1. [`TEMPLATE_SYSTEM.md`](./TEMPLATE_SYSTEM.md)
-- **状态**: 📋 需求分析中
-- **分类**: 工作流自动化
-- **内容**:
-  - PR 模板（根据 JIRA ticket 自动生成）
-  - Commit 模板（标准化格式）
-  - 分支命名模板（根据 JIRA ticket 自动生成）
-- **优先级**: 高优先级
-- **来源**: 从 `docs/todo/WORKFLOW_TODO.md` 迁移
-
-#### 2. [`CONCURRENCY.md`](./CONCURRENCY.md)
+#### 1. [`CONCURRENCY.md`](./CONCURRENCY.md)
 - **状态**: 📋 需求分析中
 - **分类**: 性能优化
 - **内容**:
@@ -87,7 +77,18 @@
 - **优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写、Stash 管理）
 - **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
 
-#### 5. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
+#### 5. [`STASH_MANAGEMENT.md`](./STASH_MANAGEMENT.md)
+- **状态**: 📋 需求分析中
+- **分类**: Git 工作流
+- **内容**:
+  - `stash list` - 列出所有 stash
+  - `stash apply` - 应用 stash（保留条目）
+  - `stash drop` - 删除 stash
+  - `stash pop` - 应用并删除 stash
+- **优先级**: 中优先级
+- **来源**: 从 `docs/requirements/GIT_WORKFLOW.md` 提取
+
+#### 6. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
 - **状态**: 📋 需求分析中
 - **分类**: 用户体验优化
 - **内容**:
@@ -97,7 +98,7 @@
 - **优先级**: 中优先级
 - **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
 
-#### 6. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+#### 7. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 - **状态**: 📋 需求分析中
 - **分类**: 配置管理
 - **内容**:
@@ -109,6 +110,7 @@
 **已完成的需求**（已删除文档）：
 - GitHub Branch Prefix 基于仓库的改造（2024-12-19 完成）
 - 配置迁移系统（2024-12-19 完成）
+- 模板系统（2025-01-27 完成）- PR 模板、Commit 模板、分支命名模板
 - UX 用户体验优化需求（已转换为 TODO 文档）
 
 ---

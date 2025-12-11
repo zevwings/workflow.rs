@@ -176,11 +176,21 @@
 #### [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
 **分支管理命令层架构文档**
 
+- 分支创建功能（支持从 JIRA ticket 创建，使用 LLM 生成分支名）
 - 分支清理功能（清理已合并分支，保留重要分支）
 - 分支忽略列表管理（按仓库配置忽略分支）
 - 分支前缀管理（按仓库配置分支前缀，用于自动生成分支名）
 - 支持 dry-run 模式和确认机制
 - 首次使用自动提示配置分支前缀
+
+#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
+**配置迁移命令层架构文档**
+
+- 版本化迁移系统（迁移版本独立于软件版本）
+- 自动检测待迁移版本
+- 支持 dry-run 模式和保留旧配置文件选项
+- 迁移历史记录管理
+- 每个迁移版本独立实现，互不干扰
 
 #### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 **环境检查命令层架构文档**
@@ -335,6 +345,7 @@
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 - 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 - 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
 - 想了解代理管理命令？ → [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)

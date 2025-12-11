@@ -2,21 +2,24 @@
 
 ## 📋 需求概述
 
-本文档描述 Git 工作流相关的需求，包括分支管理、Commit 管理和 Stash 管理功能。
+本文档描述 Git 工作流相关的需求，包括分支管理和 Commit 管理功能。
+
+> **注意**：Stash 管理功能已迁移到独立的 [Stash 管理需求文档](./STASH_MANAGEMENT.md)。
 
 **状态**: 📋 需求分析中
 **分类**: Git 工作流
-**优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写、Stash 管理）
+**优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写）
 **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
 
 ---
 
 ## 🎯 需求目标
 
-扩展 Git 工作流功能，提供更便捷的分支管理、Commit 管理和 Stash 管理能力：
+扩展 Git 工作流功能，提供更便捷的分支管理和 Commit 管理能力：
 1. 简化分支创建和切换流程
 2. 提供便捷的 Commit 历史修改功能
-3. 完善 Stash 管理功能
+
+> **注意**：Stash 管理功能请参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)。
 
 ---
 
@@ -192,94 +195,7 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 
 ### 3. Stash 管理
 
-#### 3.1 `stash list` - 列出所有 stash
-
-##### 功能描述
-列出所有 stash 条目，显示详细信息。
-
-##### 功能要求
-- 列出所有 stash 条目
-- 显示每个 stash 的创建时间、消息等信息
-- 支持显示统计信息
-
-##### 命令示例
-```bash
-workflow stash list                                # 列出所有 stash
-workflow stash list --stat                         # 显示统计信息
-```
-
-##### 实现建议
-- 使用 `git stash list` 命令
-- 解析并格式化输出
-- 支持表格或列表显示
-
----
-
-#### 3.2 `stash apply` - 应用 stash
-
-##### 功能描述
-应用指定的 stash，保留 stash 条目。
-
-##### 功能要求
-- 支持应用最新的 stash
-- 支持应用指定的 stash
-- 支持交互式选择 stash
-
-##### 命令示例
-```bash
-workflow stash apply                               # 应用最新的 stash
-workflow stash apply stash@{1}                     # 应用指定的 stash
-```
-
-##### 实现建议
-- 使用 `GitBranch::stash_apply()` 或 `git stash apply`
-- 支持交互式选择 stash
-
----
-
-#### 3.3 `stash drop` - 删除 stash
-
-##### 功能描述
-删除指定的 stash 条目。
-
-##### 功能要求
-- 支持删除最新的 stash
-- 支持删除指定的 stash
-- 支持交互式选择要删除的 stash
-- 提供确认提示（避免误删）
-
-##### 命令示例
-```bash
-workflow stash drop                                # 删除最新的 stash
-workflow stash drop stash@{1}                     # 删除指定的 stash
-```
-
-##### 实现建议
-- 使用 `git stash drop` 命令
-- 支持交互式选择
-- 提供安全确认机制
-
----
-
-#### 3.4 `stash pop` - 应用并删除 stash
-
-##### 功能描述
-应用 stash 并删除该条目，相当于 apply + drop。
-
-##### 功能要求
-- 支持应用并删除最新的 stash
-- 支持应用并删除指定的 stash
-- 支持交互式选择 stash
-
-##### 命令示例
-```bash
-workflow stash pop                                 # 应用并删除最新的 stash
-workflow stash pop stash@{1}                      # 应用并删除指定的 stash
-```
-
-##### 实现建议
-- 使用 `GitBranch::stash_pop()` 或 `git stash pop`
-- 支持交互式选择 stash
+> **已迁移**：Stash 管理功能的详细需求已迁移到独立的 [Stash 管理需求文档](./STASH_MANAGEMENT.md)，请参考该文档获取完整的需求说明。
 
 ---
 
@@ -310,8 +226,8 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 ## ✅ 验收标准
 
 ### 分支管理
-- [ ] `branch create` 能够创建分支
-- [ ] 支持从 JIRA ticket 自动生成分支名
+- [x] `branch create` 能够创建分支
+- [x] 支持从 JIRA ticket 自动生成分支名
 - [ ] `branch switch` 能够快速切换分支
 - [ ] 支持模糊匹配和交互式选择
 - [ ] `branch rename` 能够重命名分支
@@ -324,11 +240,7 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 - [ ] 所有操作都支持交互式界面
 
 ### Stash 管理
-- [ ] `stash list` 能够列出所有 stash
-- [ ] `stash apply` 能够应用 stash
-- [ ] `stash drop` 能够删除 stash
-- [ ] `stash pop` 能够应用并删除 stash
-- [ ] 支持交互式选择 stash
+> **已迁移**：Stash 管理的验收标准请参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md) 中的验收标准部分。
 
 ---
 
@@ -344,7 +256,8 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 2. **`branch sync`** - 同步分支
 3. **`commit squash`** - 压缩多个 commits
 4. **`commit reword`** - 修改 commit 消息
-5. **Stash 管理** - 所有 stash 相关命令
+
+> **注意**：Stash 管理的优先级说明请参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)。
 
 ---
 
@@ -352,7 +265,7 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 
 ### 实现顺序建议
 1. **第一阶段**：分支管理基础功能
-   - `branch create` - 创建分支
+   - `branch create` - 创建分支 ✅ 已完成
    - `branch switch` - 快速切换分支
 
 2. **第二阶段**：Commit 管理
@@ -361,7 +274,7 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 3. **第三阶段**：分支管理增强和 Stash 管理
    - `branch rename`、`branch sync`
    - `commit squash`、`commit reword`
-   - `stash list`、`stash apply`、`stash drop`、`stash pop`
+   - Stash 管理（参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)）
 
 ### 技术依赖
 - 所有命令都需要 Git 仓库环境
@@ -373,9 +286,14 @@ workflow stash pop stash@{1}                      # 应用并删除指定的 sta
 ## 📚 相关文档
 
 - [JIRA 模块待办事项](../todo/JIRA_TODO.md)
-- [模板系统需求文档](./TEMPLATE_SYSTEM.md)
+- 模板系统需求文档 - ✅ 已完成（2025-01-27）
+- [Stash 管理需求文档](./STASH_MANAGEMENT.md) - Stash 管理功能的详细需求
 
 ---
 
 **创建日期**: 2025-01-27
 **最后更新**: 2025-01-27
+
+## 📝 更新日志
+
+- **2025-01-27**: `branch create` 功能已完成 ✅

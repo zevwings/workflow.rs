@@ -1,5 +1,4 @@
 use crate::base::settings::Settings;
-use crate::commands::branch::BranchConfig;
 use crate::git::GitRepo;
 use crate::git::RepoType;
 use anyhow::{Context, Result};
@@ -52,133 +51,110 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
     anyhow::bail!("Failed to extract GitHub repo from URL: {}", url)
 }
 
-/// 生成 PR body
+/// 生成 PR body（使用模板系统）
 ///
 /// # Arguments
 /// * `selected_change_types` - 选中的变更类型数组
 /// * `short_description` - 简短描述（可选）
 /// * `jira_ticket` - Jira ticket ID（可选）
 /// * `dependency` - 依赖信息（可选）
+/// * `jira_info` - Optional JIRA issue information (for template variables)
 pub fn generate_pull_request_body(
     selected_change_types: &[bool],
     short_description: Option<&str>,
     jira_ticket: Option<&str>,
     dependency: Option<&str>,
+    jira_info: Option<&crate::jira::JiraIssue>,
 ) -> Result<String> {
-    let mut body = String::from("\n# PR Ready\n\n## Types of changes\n\n");
+    use crate::template::{
+        default_pull_request_template, load_pull_request_template, ChangeTypeItem,
+        PullRequestTemplateVars, TemplateEngine,
+    };
 
-    // 生成变更类型复选框
-    for (i, change_type) in TYPES_OF_CHANGES.iter().enumerate() {
-        let checked = if i < selected_change_types.len() && selected_change_types[i] {
-            "- [x]"
-        } else {
-            "- [ ]"
-        };
-        body.push_str(&format!("{} {}\n", checked, change_type));
-    }
+    // Load PR template
+    let template_str = load_pull_request_template().unwrap_or_else(|_| {
+        // Fallback to default template if loading fails
+        default_pull_request_template()
+    });
 
-    // 添加简短描述
-    // 即使描述为空，也显示标题
-    if let Some(desc) = short_description {
-        body.push_str("\n#### Short description:\n\n");
-        if !desc.trim().is_empty() {
-            body.push_str(desc);
-        }
-        body.push('\n');
-    }
+    // Prepare change types
+    let change_types: Vec<ChangeTypeItem> = TYPES_OF_CHANGES
+        .iter()
+        .enumerate()
+        .map(|(i, name)| ChangeTypeItem {
+            name: name.to_string(),
+            selected: i < selected_change_types.len() && selected_change_types[i],
+        })
+        .collect();
 
-    // 添加 Jira 链接（只有当 ticket 和 jira_service 都不为空时才显示）
-    if let Some(ticket) = jira_ticket {
-        if !ticket.trim().is_empty() {
-            let settings = Settings::get();
-            if let Some(jira_service) = &settings.jira.service_address {
-                if !jira_service.trim().is_empty() {
-                    body.push_str(&format!(
-                        "\n#### Jira Link:\n\n{}/browse/{}\n",
-                        jira_service, ticket
-                    ));
-                }
-            }
-        }
-    }
+    // Get JIRA service address
+    let jira_service_address = Settings::get().jira.service_address.clone();
 
-    // 添加依赖信息（只有当 dependency 不为空时才显示）
-    if let Some(dep) = dependency {
-        if !dep.trim().is_empty() {
-            body.push_str("\n#### Dependency\n\n");
-            body.push_str(dep);
-            body.push('\n');
-        }
-    }
+    // Prepare template variables
+    let vars = PullRequestTemplateVars {
+        jira_key: jira_ticket.map(|s| s.to_string()),
+        jira_summary: jira_info.as_ref().map(|i| i.fields.summary.clone()),
+        jira_description: jira_info.as_ref().and_then(|i| i.fields.description.clone()),
+        jira_type: None, // TODO: Extract from jira_info if available
+        jira_service_address,
+        change_types,
+        short_description: short_description.map(|s| s.to_string()),
+        dependency: dependency.map(|s| s.to_string()),
+    };
 
-    Ok(body)
+    // Render template
+    let engine = TemplateEngine::new();
+    engine
+        .render_string(&template_str, &vars)
+        .context("Failed to render PR body template")
 }
 
-/// 生成分支名
+// Branch naming functions have been moved to lib/branch module
+// Use branch::BranchNaming::from_jira_ticket() and branch::BranchNaming::from_title() instead
+
+/// 生成 commit 标题（使用模板系统）
 ///
 /// # Arguments
 /// * `jira_ticket` - Jira ticket ID（可选）
 /// * `title` - PR 标题
-pub fn generate_branch_name(jira_ticket: Option<&str>, title: &str) -> Result<String> {
-    let mut branch_name = String::new();
+/// * `commit_type` - Optional commit type (e.g., "feat", "fix")
+/// * `scope` - Optional commit scope
+/// * `body` - Optional commit body
+pub fn generate_commit_title(
+    jira_ticket: Option<&str>,
+    title: &str,
+    commit_type: Option<&str>,
+    scope: Option<&str>,
+    body: Option<&str>,
+) -> Result<String> {
+    use crate::template::{load_commit_template, CommitTemplateVars, TemplateEngine};
 
-    // 如果有 Jira ticket，添加到分支名前缀
-    if let Some(ticket) = jira_ticket {
-        branch_name.push_str(ticket);
-        branch_name.push_str("--");
-    }
+    use crate::template::loader::default_commit_template;
 
-    // 清理标题作为分支名
-    let cleaned_title = transform_to_branch_name(title);
-    branch_name.push_str(&cleaned_title);
+    // Load commit template
+    let template_str = load_commit_template().unwrap_or_else(|_| {
+        // Fallback to default template
+        default_commit_template()
+    });
 
-    // 如果有仓库级别的 branch_prefix，添加前缀
-    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
-    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
-        let trimmed = prefix.trim();
-        if !trimmed.is_empty() {
-            branch_name = format!("{}/{}", trimmed, branch_name);
-        }
-    }
+    // Prepare template variables
+    let vars = CommitTemplateVars {
+        commit_type: commit_type.unwrap_or("feat").to_string(),
+        scope: scope.map(|s| s.to_string()),
+        subject: title.to_string(),
+        body: body.map(|s| s.to_string()),
+        jira_key: jira_ticket.map(|s| s.to_string()),
+    };
 
-    Ok(branch_name)
+    // Render template
+    let engine = TemplateEngine::new();
+    engine
+        .render_string(&template_str, &vars)
+        .context("Failed to render commit title template")
 }
 
-/// 生成 commit 标题
-///
-/// # Arguments
-/// * `jira_ticket` - Jira ticket ID（可选）
-/// * `title` - PR 标题
-pub fn generate_commit_title(jira_ticket: Option<&str>, title: &str) -> String {
-    match jira_ticket {
-        Some(ticket) => format!("{}: {}", ticket, title),
-        None => format!("# {}", title),
-    }
-}
-
-/// 将字符串转换为分支名（替换特殊字符为连字符，去除重复连字符）
-/// 只保留 ASCII 字母数字字符，过滤掉中文字符等其他非 ASCII 字符
-pub fn transform_to_branch_name(s: &str) -> String {
-    let mut result = String::new();
-    let mut last_was_dash = false;
-
-    for c in s.chars() {
-        // 只保留 ASCII 字母数字字符，完全忽略非 ASCII 字符（如中文）
-        if c.is_ascii_alphanumeric() {
-            result.push(c.to_ascii_lowercase());
-            last_was_dash = false;
-        } else if c.is_ascii() {
-            // 对于 ASCII 非字母数字字符（如空格、标点），转换为连字符
-            if !last_was_dash {
-                result.push('-');
-                last_was_dash = true;
-            }
-        }
-        // 完全忽略非 ASCII 字符（如中文），不添加连字符
-    }
-
-    result.trim_matches('-').to_string()
-}
+// transform_to_branch_name has been moved to lib/branch module
+// Use branch::BranchNaming::sanitize() instead
 
 /// 根据仓库类型调用平台提供者方法
 ///

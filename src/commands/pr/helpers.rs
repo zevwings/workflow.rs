@@ -2,7 +2,6 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
-use crate::commands::branch::BranchConfig;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
@@ -202,63 +201,8 @@ pub fn cleanup_branch(
     Ok(())
 }
 
-/// 应用分支名前缀（Jira ticket 和 github_branch_prefix）
-///
-/// 统一处理分支名前缀逻辑，避免代码重复。
-/// 先添加 Jira ticket 前缀（如果提供），然后添加 GitHub 分支前缀（如果配置）。
-///
-/// # 参数
-///
-/// * `branch_name` - 基础分支名
-/// * `jira_ticket` - Jira ticket ID（可选）
-///
-/// # 返回
-///
-/// 应用前缀后的完整分支名
-///
-/// # 示例
-///
-/// ```
-/// use workflow::commands::pr::helpers::apply_branch_name_prefixes;
-///
-/// // 只有基础分支名
-/// let name = apply_branch_name_prefixes("feature-branch".to_string(), None)?;
-/// // 返回: "feature-branch"
-///
-/// // 带 Jira ticket
-/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
-/// // 返回: "PROJ-123-feature-branch"
-///
-/// // 带 Jira ticket 和 GitHub 前缀
-/// // 假设配置了 github_branch_prefix = "user"
-/// let name = apply_branch_name_prefixes("feature-branch".to_string(), Some("PROJ-123"))?;
-/// // 返回: "user/PROJ-123-feature-branch"
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
-pub fn apply_branch_name_prefixes(
-    mut branch_name: String,
-    jira_ticket: Option<&str>,
-) -> Result<String> {
-    // 检测并提示设置 branch_prefix（如果需要）
-    // 注意：此函数不会中断流程，即使出错也会继续
-    let _ = crate::commands::branch::check_and_prompt_branch_prefix();
-
-    // 如果有 Jira ticket，添加到分支名前缀
-    if let Some(ticket) = jira_ticket {
-        branch_name = format!("{}-{}", ticket, branch_name);
-    }
-
-    // 如果有仓库级别的 branch_prefix，添加前缀
-    let branch_config = BranchConfig::load().context("Failed to load branch config")?;
-    if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
-        let trimmed = prefix.trim();
-        if !trimmed.is_empty() {
-            branch_name = format!("{}/{}", trimmed, branch_name);
-        }
-    }
-
-    Ok(branch_name)
-}
+// apply_branch_name_prefixes has been moved to lib/branch module
+// Use branch::BranchPrefix::apply() instead
 
 /// Detect which branch a given branch might be based on
 ///

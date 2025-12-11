@@ -3,11 +3,12 @@
 ## 📋 概述
 
 本文档描述 Workflow CLI 的分支管理命令模块架构，包括：
+- 分支创建功能（支持从 JIRA ticket 创建，使用 LLM 生成分支名）
 - 本地分支清理功能
 - 分支忽略列表管理功能
 - 分支前缀管理功能（仓库级别）
 
-分支管理命令提供智能的分支清理功能，可以安全地删除已合并的分支，同时保留重要的分支（如 main/master、develop、当前分支和用户配置的忽略分支）。同时支持为不同仓库配置不同的分支前缀，用于生成分支名时自动添加前缀。
+分支管理命令提供智能的分支清理功能，可以安全地删除已合并的分支，同时保留重要的分支（如 main/master、develop、当前分支和用户配置的忽略分支）。同时支持为不同仓库配置不同的分支前缀，用于生成分支名时自动添加前缀。新增的分支创建功能支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名，并支持从默认分支创建。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/git/` 模块提供。
 
@@ -30,6 +31,7 @@ src/main.rs
 ```
 src/commands/branch/
 ├── mod.rs          # 分支命令模块声明（8 行）
+├── create.rs       # 分支创建命令（~347 行）
 ├── clean.rs        # 分支清理命令（~195 行）
 ├── ignore.rs       # 分支忽略列表管理命令（~94 行）
 └── helpers.rs      # 辅助函数（BranchConfig 管理，~98 行）
@@ -84,6 +86,7 @@ src/main.rs::main()
 Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand {
+  BranchSubcommand::Create { jira_id, from_default, dry_run } => CreateCommand::execute()
   BranchSubcommand::Clean { dry_run } => BranchCleanCommand::clean()
   BranchSubcommand::Ignore { subcommand } => match subcommand {
     IgnoreSubcommand::Add { branch_name } => BranchIgnoreCommand::add()
@@ -100,7 +103,118 @@ match cli.subcommand {
 
 ---
 
-## 1. 分支清理命令 (`clean.rs`)
+## 1. 分支创建命令 (`create.rs`)
+
+### 相关文件
+
+```
+src/commands/branch/create.rs (~347 行)
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::BranchSubcommand::Create { jira_id, from_default, dry_run }
+  ↓
+commands/branch/create.rs::CreateCommand::execute(jira_id, from_default, dry_run)
+  ↓
+  1. 解析 JIRA ticket ID（可选，如果未提供则交互式输入）
+  2. 确定分支类型（如果仓库前缀存在则使用，否则交互式选择）
+  3. 确定分支名：
+     - 如果有 JIRA ticket：使用 LLM 从 ticket 信息生成分支名
+     - 否则：交互式输入分支名
+  4. 格式化分支名（使用模板：{type}/{jira-ticket}-{branch-name}）
+  5. 确定基础分支（--from-default 则从默认分支创建，否则从当前分支创建）
+  6. Dry-run 模式（如果启用，只预览不执行）
+  7. 切换到基础分支（如果需要）
+  8. 创建新分支
+```
+
+### 功能说明
+
+分支创建命令提供智能的分支创建功能：
+
+1. **JIRA 集成**：
+   - 支持从 JIRA ticket ID 创建分支
+   - 使用 LLM 从 ticket 信息自动生成分支名
+   - 自动验证 JIRA ticket 格式
+
+2. **分支类型确定**：
+   - 优先使用仓库配置的分支前缀作为分支类型
+   - 如果未配置，则交互式选择（feature/bugfix/refactoring/hotfix/chore）
+
+3. **分支名生成**：
+   - 从 JIRA ticket：使用 LLM 生成分支名 slug
+   - 手动输入：支持非英文输入，自动转换为 slug
+   - 格式化：`{type}/{jira-ticket}-{branch-name}`
+
+4. **基础分支选择**：
+   - `--from-default`：从默认分支（main/master）创建
+   - 默认：从当前分支创建（可选拉取最新更改）
+
+5. **安全机制**：
+   - Dry-run 模式：预览将要创建的分支名
+   - 自动处理未提交的更改（stash）
+   - 自动拉取最新更改（可选）
+
+### 关键步骤说明
+
+1. **JIRA ticket 解析**：
+   - 如果提供了 ticket ID，验证格式
+   - 如果未提供，交互式输入（可选）
+   - 获取 ticket 信息用于生成分支名
+
+2. **分支类型确定**：
+   - 检查仓库配置的分支前缀（`get_branch_prefix()`）
+   - 如果前缀匹配已知分支类型，直接使用
+   - 否则，交互式选择分支类型
+
+3. **分支名生成**：
+   - 从 JIRA：调用 `PullRequestLLM::generate()` 生成分支名
+   - 手动输入：使用 `BranchNaming::sanitize_and_translate_branch_name()` 转换为 slug
+   - 格式化：使用 `BranchNaming::from_type_and_slug()` 生成最终分支名
+
+4. **分支创建流程**：
+   - 如果 `--from-default`：切换到默认分支并拉取最新更改
+   - 否则：询问是否拉取当前分支最新更改
+   - 自动处理未提交更改（stash push/pop）
+   - 创建并切换到新分支
+
+### 数据流
+
+```
+用户输入 (workflow branch create [JIRA_ID] [--from-default] [--dry-run])
+  ↓
+解析 JIRA ticket ID（可选）
+  ↓
+确定分支类型（仓库前缀或交互式选择）
+  ↓
+确定分支名（LLM 生成或交互式输入）
+  ↓
+格式化分支名
+  ↓
+确定基础分支
+  ↓
+Dry-run 预览（如果启用）
+  ↓
+切换到基础分支（如果需要）
+  ↓
+创建新分支
+```
+
+### 依赖模块
+
+- **`lib/branch/`**：分支命名和类型管理（`BranchNaming`、`BranchType`）
+- **`lib/jira/`**：JIRA ticket 信息获取（`Jira::get_ticket_info()`）
+- **`lib/pr/llm.rs`**：LLM 分支名生成（`PullRequestLLM::generate()`）
+- **`lib/git/`**：Git 操作（`GitBranch`、`GitCommit`、`GitStash`）
+- **`commands/branch/helpers.rs`**：分支前缀获取（`get_branch_prefix()`）
+- **`commands/pr/helpers.rs`**：Stash 处理辅助函数（`handle_stash_pop_result()`）
+
+---
+
+## 2. 分支清理命令 (`clean.rs`)
 
 ### 相关文件
 
@@ -194,7 +308,7 @@ commands/branch/clean.rs::BranchCleanCommand::clean(dry_run)
 
 ---
 
-## 2. 分支忽略列表管理命令 (`ignore.rs`)
+## 3. 分支忽略列表管理命令 (`ignore.rs`)
 
 ### 相关文件
 
@@ -283,7 +397,7 @@ commands/branch/ignore.rs::BranchIgnoreCommand::list()
 
 ---
 
-## 3. 分支前缀管理命令 (`prefix.rs`)
+## 4. 分支前缀管理命令 (`prefix.rs`)
 
 ### 相关文件
 
@@ -387,7 +501,7 @@ commands/branch/prefix.rs::BranchPrefixCommand::remove()
 
 ---
 
-## 4. 辅助函数 (`helpers.rs`)
+## 5. 辅助函数 (`helpers.rs`)
 
 ### 相关文件
 
@@ -442,6 +556,7 @@ branch_ignore = ["staging", "production"]
 #### 1. 命令模式
 
 每个命令都是一个独立的结构体，实现统一的方法接口：
+- `CreateCommand::execute()` - 创建分支
 - `BranchCleanCommand::clean()` - 清理分支
 - `BranchIgnoreCommand::add()` - 添加忽略分支
 - `BranchIgnoreCommand::remove()` - 移除忽略分支
@@ -515,6 +630,22 @@ branch_ignore = ["staging", "production"]
 
 ## 📋 使用示例
 
+### Create 命令
+
+```bash
+# 从 JIRA ticket 创建分支（交互式选择分支类型）
+workflow branch create PROJ-123
+
+# 从 JIRA ticket 创建分支，从默认分支创建
+workflow branch create PROJ-123 --from-default
+
+# 手动输入创建分支（交互式输入分支名和类型）
+workflow branch create
+
+# 预览模式（不实际创建）
+workflow branch create PROJ-123 --dry-run
+```
+
 ### Clean 命令
 
 ```bash
@@ -560,12 +691,14 @@ workflow branch prefix remove
 
 分支管理命令层采用清晰的分层架构设计：
 
-1. **智能清理**：自动识别已合并分支，安全删除
-2. **灵活配置**：支持按仓库配置忽略列表和分支前缀
-3. **安全机制**：预览、确认、分类处理，确保操作安全
-4. **分支前缀管理**：支持为不同仓库配置不同的分支前缀，自动应用到分支名生成
+1. **智能创建**：支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名
+2. **智能清理**：自动识别已合并分支，安全删除
+3. **灵活配置**：支持按仓库配置忽略列表和分支前缀
+4. **安全机制**：预览、确认、分类处理，确保操作安全
+5. **分支前缀管理**：支持为不同仓库配置不同的分支前缀，自动应用到分支名生成
 
 **设计优势**：
+- ✅ **智能创建**：LLM 自动生成分支名，支持 JIRA 集成
 - ✅ **安全性**：多重确认机制，防止误删重要分支
 - ✅ **智能性**：自动识别已合并分支，分类处理
 - ✅ **灵活性**：支持按仓库配置忽略列表和分支前缀

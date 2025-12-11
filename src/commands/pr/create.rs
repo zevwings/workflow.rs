@@ -3,19 +3,22 @@ use anyhow::{Context, Result};
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::indicator::Spinner;
 use crate::base::util::{Browser, Clipboard};
+use crate::branch::{BranchNaming, BranchType};
 use crate::commands::check;
-use crate::commands::pr::helpers::{apply_branch_name_prefixes, handle_stash_pop_result};
+use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::status::JiraStatus;
 use crate::jira::{Jira, JiraWorkHistory};
 use crate::pr::create_provider;
 use crate::pr::helpers::{
-    extract_pull_request_id_from_url, generate_branch_name, generate_commit_title,
-    generate_pull_request_body, get_current_branch_pr_id,
+    extract_pull_request_id_from_url, generate_commit_title, generate_pull_request_body,
+    get_current_branch_pr_id,
 };
 use crate::pr::llm::PullRequestLLM;
-use crate::pr::TYPES_OF_CHANGES;
+use crate::pr::{
+    map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
+};
 use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
 
 /// PR 创建命令
@@ -48,9 +51,13 @@ impl PullRequestCreateCommand {
         // 4. 获取或生成 PR 标题
         let title = Self::resolve_title(title, &jira_ticket)?;
 
+        // 4.5. 确定分支类型（优先使用 repository prefix）
+        // 需要在生成分支名之前确定类型，以便使用模板系统
+        let branch_type = Self::resolve_branch_type()?;
+
         // 5. 生成 commit_title、分支名和描述
         let (commit_title, branch_name, llm_description) =
-            Self::generate_commit_title_and_branch_name(&jira_ticket, &title)?;
+            Self::generate_commit_title_and_branch_name(&jira_ticket, &title, branch_type)?;
 
         // 6. 获取描述（优先使用用户输入的描述，否则使用 LLM 生成的描述）
         let short_description = if let Some(desc) = &description {
@@ -61,15 +68,23 @@ impl PullRequestCreateCommand {
             Self::resolve_description(description.clone())?
         };
 
-        // 7. 选择变更类型
-        let selected_types = Self::select_change_types()?;
+        // 7. 选择变更类型（智能选择：根据分支类型自动选择）
+        let selected_types = Self::select_change_types_with_auto_select(Some(branch_type))?;
 
-        // 8. 生成 PR body
+        // 8. 获取 JIRA issue 信息（如果存在）用于模板
+        let jira_info = if let Some(ref ticket) = jira_ticket {
+            Jira::get_ticket_info(ticket).ok()
+        } else {
+            None
+        };
+
+        // 9. 生成 PR body（使用模板系统）
         let pull_request_body = generate_pull_request_body(
             &selected_types,
             Some(&short_description),
             jira_ticket.as_deref(),
             None, // dependency 暂时为空
+            jira_info.as_ref(),
         )?;
 
         if dry_run {
@@ -224,45 +239,93 @@ impl PullRequestCreateCommand {
 
     /// 生成 commit title 和分支名
     ///
-    /// 步骤 5：尝试使用 LLM 根据纯 title 生成分支名和 PR 标题。
-    /// 如果 LLM 生成成功，使用翻译后的 pr_title，然后对 pr_title 应用 generate_commit_title 生成 commit_title。
-    /// 如果 LLM 生成失败或结果无效，回退到默认方法。
+    /// 步骤 5：使用与 branch create 相同的流程生成分支名。
+    /// 1. 如果有 JIRA ticket，从 JIRA 生成分支名 slug（使用 LLM）
+    /// 2. 如果没有 JIRA ticket，从 title 生成分支名 slug（使用 LLM 或翻译）
+    /// 3. 使用模板系统根据分支类型和 slug 生成分支名
+    /// 4. 应用 repository prefix
+    /// 5. 生成 commit title 和 PR 标题
+    ///
     /// 返回 (commit_title, branch_name, description) 元组。
     fn generate_commit_title_and_branch_name(
         jira_ticket: &Option<String>,
         title: &str,
+        branch_type: BranchType,
     ) -> Result<(String, String, Option<String>)> {
-        let exists_branches = GitBranch::get_all_branches(true).ok();
-        let git_diff = GitCommit::get_diff();
+        // Step 1: 生成分支名 slug
+        let (pr_title, branch_name_slug, description) = if let Some(ticket) = jira_ticket {
+            // 有 JIRA ticket：从 JIRA 生成分支名 slug（使用 LLM）
+            let exists_branches = GitBranch::get_all_branches(true).ok();
+            let git_diff = GitCommit::get_diff();
 
-        // 尝试使用 LLM 根据纯 title 生成分支名、PR 标题和描述
-        let (pr_title, branch_name, description) =
+            // 尝试使用 LLM 生成分支名、PR 标题和描述
             match PullRequestLLM::generate(title, exists_branches, git_diff) {
                 Ok(content) => {
-                    log_success!("Generated branch name: {}", content.branch_name);
-                    // 使用翻译后的 pr_title 作为 PR 标题
-                    let pr_title = content.pr_title;
-                    // 使用辅助函数统一处理前缀逻辑，避免重复代码
-                    let branch_name =
-                        apply_branch_name_prefixes(content.branch_name, jira_ticket.as_deref())?;
-                    // 使用 LLM 生成的描述
-                    let description = content.description;
-                    (pr_title, branch_name, description)
+                    log_success!("Generated branch name using LLM: {}", content.branch_name);
+                    // 提取 slug（移除可能的前缀）
+                    let slug = BranchNaming::sanitize(&content.branch_name);
+                    (content.pr_title, slug, content.description)
                 }
                 Err(e) => {
-                    // 记录错误信息，但继续使用回退方法
                     log_warning!(
-                    "Failed to generate branch name using LLM: {}, falling back to default method",
-                    e
-                );
-                    // 回退到原来的方法（已包含前缀逻辑）
-                    let branch_name = generate_branch_name(jira_ticket.as_deref(), title)?;
-                    (title.to_string(), branch_name, None)
+                        "Failed to generate branch name using LLM: {}, using JIRA summary slug",
+                        e
+                    );
+                    // 回退：从 JIRA ticket 获取 summary 并生成 slug
+                    let issue =
+                        Spinner::with(format!("Getting ticket info for {}...", ticket), || {
+                            Jira::get_ticket_info(ticket)
+                        })
+                        .with_context(|| format!("Failed to get ticket info for {}", ticket))?;
+                    let slug = BranchNaming::slugify(&issue.fields.summary);
+                    (title.to_string(), slug, None)
                 }
-            };
+            }
+        } else {
+            // 无 JIRA ticket：从 title 生成分支名 slug（使用 LLM 或翻译）
+            let exists_branches = GitBranch::get_all_branches(true).ok();
+            let git_diff = GitCommit::get_diff();
 
-        // 对 pr_title 应用 generate_commit_title 生成最终的 commit_title（用于 Git commit）
-        let commit_title = generate_commit_title(jira_ticket.as_deref(), &pr_title);
+            match PullRequestLLM::generate(title, exists_branches, git_diff) {
+                Ok(content) => {
+                    log_success!("Generated branch name using LLM: {}", content.branch_name);
+                    let slug = BranchNaming::sanitize(&content.branch_name);
+                    (content.pr_title, slug, content.description)
+                }
+                Err(e) => {
+                    log_warning!(
+                        "Failed to generate branch name using LLM: {}, using sanitized title",
+                        e
+                    );
+                    // 回退：翻译并清理 title
+                    let slug = BranchNaming::sanitize_and_translate_branch_name(title)?;
+                    (title.to_string(), slug, None)
+                }
+            }
+        };
+
+        // Step 2: 使用模板系统根据分支类型和 slug 生成分支名
+        let branch_name = BranchNaming::from_type_and_slug(
+            branch_type.as_str(),
+            &branch_name_slug,
+            jira_ticket.as_deref(),
+        )?;
+
+        // Step 3: 生成 commit title（使用模板系统）
+        let commit_title = generate_commit_title(
+            jira_ticket.as_deref(),
+            &pr_title,
+            None, // commit_type - can be extracted from context if needed
+            None, // scope - can be extracted from context if needed
+            None, // body - optional
+        )
+        .unwrap_or_else(|_| {
+            // Fallback to simple format if template fails
+            match jira_ticket.as_deref() {
+                Some(ticket) => format!("{}: {}", ticket, pr_title),
+                None => format!("# {}", pr_title),
+            }
+        });
 
         Ok((commit_title, branch_name, description))
     }
@@ -282,9 +345,88 @@ impl PullRequestCreateCommand {
         }
     }
 
-    /// 选择变更类型
+    /// 确定分支类型（优先使用 repository prefix）
     ///
-    /// 步骤 7：提示用户选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
+    /// 复用 branch create 的逻辑，优先使用 repository prefix 作为分支类型。
+    fn resolve_branch_type() -> Result<BranchType> {
+        // Check if repository prefix exists and use it as branch type
+        use crate::commands::branch::get_branch_prefix;
+        if let Some(repo_prefix) = get_branch_prefix() {
+            if let Some(ty) = BranchType::from_str(&repo_prefix) {
+                log_info!("Using repository prefix '{}' as branch type", repo_prefix);
+                return Ok(ty);
+            }
+        }
+
+        // Otherwise, prompt user to select
+        BranchType::prompt_selection()
+    }
+
+    /// 选择变更类型（智能选择：根据分支类型自动选择）
+    ///
+    /// 步骤 7：根据分支类型自动选择对应的 PR 变更类型，显示确认对话框。
+    /// 用户可以确认使用自动选择，或修改选择。
+    ///
+    /// # Arguments
+    /// * `branch_type` - 可选的分支类型，如果提供则用于自动选择
+    ///
+    /// # Returns
+    /// 返回布尔向量，表示每个 PR 变更类型是否被选中
+    fn select_change_types_with_auto_select(branch_type: Option<BranchType>) -> Result<Vec<bool>> {
+        // Step 1: 尝试自动选择
+        let auto_selected = if let Some(ty) = branch_type {
+            let change_types = map_branch_type_to_change_types(ty);
+            // 检查是否有自动选择的结果
+            if change_types.iter().any(|&selected| selected) {
+                Some((ty, change_types))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        // Step 2: 如果有自动选择，显示确认对话框
+        if let Some((ty, selected_types)) = auto_selected {
+            // 获取对应的变更类型名称
+            if let Some(index) = map_branch_type_to_change_type_index(ty) {
+                let change_type_name = TYPES_OF_CHANGES[index];
+
+                // 特殊提示（Hotfix 和 Chore）
+                let prompt_message = match ty {
+                    BranchType::Hotfix => format!(
+                        "Auto-selected change type: {}\n\nNote: Hotfix is a type of bug fix. You may want to add other types if this PR also includes other changes.\n\nUse this?",
+                        change_type_name
+                    ),
+                    BranchType::Chore => {
+                        // Chore 没有自动选择，直接进入手动选择
+                        return Self::select_change_types();
+                    }
+                    _ => format!(
+                        "Auto-selected change type: {}\n\nUse this?",
+                        change_type_name
+                    ),
+                };
+
+                let confirmed = ConfirmDialog::new(&prompt_message)
+                    .with_default(true)
+                    .prompt()
+                    .context("Failed to confirm change type")?;
+
+                if confirmed {
+                    log_success!("Using auto-selected change type: {}", change_type_name);
+                    return Ok(selected_types);
+                }
+            }
+        }
+
+        // Step 3: 用户手动选择（原有逻辑）
+        Self::select_change_types()
+    }
+
+    /// 选择变更类型（手动选择）
+    ///
+    /// 提示用户手动选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
     fn select_change_types() -> Result<Vec<bool>> {
         log_info!("Types of changes:");
         let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
