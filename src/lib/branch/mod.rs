@@ -4,6 +4,7 @@
 //! - Branch name generation from JIRA tickets, titles, and templates
 //! - Branch name sanitization and validation
 //! - Branch prefix management
+//! - Branch configuration management
 //!
 //! # Usage
 //!
@@ -25,12 +26,14 @@
 //! # }
 //! ```
 
+pub mod config;
 pub mod llm;
 pub mod naming;
 pub mod prefix;
 pub mod types;
 
-// Re-export structs
+// Re-export structs and functions
+pub use config::{BranchConfig, RepositoryConfig};
 pub use llm::BranchLLM;
 pub use naming::BranchNaming;
 pub use prefix::BranchPrefix;

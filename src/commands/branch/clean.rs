@@ -3,7 +3,7 @@
 //! 清理本地分支，保留 main/master、develop 和当前分支，以及配置文件中的忽略分支。
 
 use crate::base::dialog::ConfirmDialog;
-use crate::commands::branch::{get_ignore_branches, BranchConfig};
+use crate::branch::config::BranchConfig;
 use crate::commands::check;
 use crate::git::{GitBranch, GitRepo};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
@@ -40,7 +40,7 @@ impl BranchCleanCommand {
 
         // 4. 读取配置文件
         let config = BranchConfig::load().context("Failed to load branch config")?;
-        let ignore_branches = get_ignore_branches(&config, &repo_name);
+        let ignore_branches = config.get_ignore_branches(&repo_name);
 
         // 5. 构建排除分支列表
         let mut exclude_branches = vec![

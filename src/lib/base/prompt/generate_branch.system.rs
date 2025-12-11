@@ -32,9 +32,12 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 ### Description Rules
 
 - Generate a concise description based on the git changes provided
-- Summarize what was changed, added, or fixed
+- Format as a bulleted list, with each item describing a specific feature, change, or fix
+- Each bullet point should start with "- " and be on a separate line
+- Focus on what was added, modified, or fixed (not implementation details)
+- Group related changes together when appropriate
 - If no git changes are provided, you can omit this field or provide a brief description based on the commit title
-- Keep it brief (2-4 sentences)
+- Keep it concise but comprehensive (typically 3-8 bullet points)
 - In English only
 
 **Examples**
@@ -56,12 +59,22 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 
 Return your response in JSON format with three fields: `branch_name`, `pr_title`, and `description` (optional).
 
-**Example**
+**Example 1**
 
 ```json
 {
   "branch_name": "add-user-authentication",
   "pr_title": "Add user authentication",
-  "description": "This PR adds user authentication functionality including login and registration features."
+  "description": "- Add user authentication functionality with login and registration\n- Implement JWT token generation and validation\n- Add password hashing using bcrypt\n- Update API endpoints for authentication\n- Add unit tests for authentication flow"
+}
+```
+
+**Example 2**
+
+```json
+{
+  "branch_name": "feat-branch-create-command",
+  "pr_title": "Add branch create command",
+  "description": "- Add workflow branch create command with JIRA ticket support\n- Support LLM-based branch name generation\n- Add dry-run mode and --from-default option\n- Update README.md with new commands\n- Fix doctest in branch module\n- Add CLI parameter parsing tests for branch create\n- Add unit tests for branch naming and types"
 }
 ```"#;

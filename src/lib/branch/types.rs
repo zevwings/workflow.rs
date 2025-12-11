@@ -87,6 +87,35 @@ impl BranchType {
             .find(|ty| ty.display_name() == selected)
             .ok_or_else(|| anyhow::anyhow!("Invalid branch type selection"))
     }
+
+    /// Resolve branch type with repository prefix fallback
+    ///
+    /// Priority:
+    /// 1. If repository prefix exists and can be converted to BranchType, use it
+    /// 2. Otherwise, prompt user to select interactively
+    ///
+    /// # Returns
+    ///
+    /// Returns the resolved branch type.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the user selection fails or if the repository prefix cannot be converted to a branch type.
+    pub fn resolve_with_repo_prefix() -> Result<Self> {
+        use crate::branch::config::BranchConfig;
+        use crate::log_info;
+
+        // Check if repository prefix exists and use it as branch type
+        if let Some(repo_prefix) = BranchConfig::get_prefix_for_current_repo() {
+            if let Some(ty) = Self::from_str(&repo_prefix) {
+                log_info!("Using repository prefix '{}' as branch type", repo_prefix);
+                return Ok(ty);
+            }
+        }
+
+        // Otherwise, prompt user to select
+        Self::prompt_selection()
+    }
 }
 
 impl fmt::Display for BranchType {

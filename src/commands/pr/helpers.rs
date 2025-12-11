@@ -2,8 +2,16 @@
 //!
 //! 提供 PR 命令之间共享的辅助函数，减少代码重复。
 
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::indicator::Spinner;
+use crate::base::util::{Browser, Clipboard};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::{log_info, log_success, log_warning};
+use crate::jira::status::JiraStatus;
+use crate::jira::Jira;
+use crate::jira::JiraWorkHistory;
+use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
+use crate::pr::{create_provider, TYPES_OF_CHANGES};
+use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
 
 /// 处理 stash_pop 的结果
@@ -283,4 +291,344 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
 
     log_info!("No base branch detected for '{}'", branch);
     Ok(None)
+}
+
+/// 配置 Jira ticket 状态
+///
+/// 如果有 Jira ticket，检查并配置状态。如果已配置则读取，否则进行交互式配置。
+///
+/// # 参数
+///
+/// * `jira_ticket` - Jira ticket ID（可选）
+///
+/// # 返回
+///
+/// 返回配置的 PR 创建状态（如果有），否则返回 `None`。
+pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>> {
+    if let Some(ref ticket) = jira_ticket {
+        // 读取状态配置
+        if let Ok(Some(status)) = JiraStatus::read_pull_request_created_status(ticket) {
+            Ok(Some(status))
+        } else {
+            // 如果没有配置，提示配置
+            log_info!(
+                "No status configuration found for {}, configuring...",
+                ticket
+            );
+            let config_result = JiraStatus::configure_interactive(ticket)
+                .with_context(|| {
+                    format!(
+                        "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
+                        ticket
+                    )
+                })?;
+            log_success!("Jira status configuration saved");
+            log_info!(
+                "  PR created status: {}",
+                config_result.created_pull_request_status
+            );
+            log_info!(
+                "  PR merged status: {}",
+                config_result.merged_pull_request_status
+            );
+            Ok(Some(config_result.created_pull_request_status))
+        }
+    } else {
+        Ok(None)
+    }
+}
+
+/// 提示用户输入 PR 标题
+///
+/// 使用 Input 组件提示用户输入 PR 标题，并验证输入不能为空。
+///
+/// # 返回
+///
+/// 返回用户输入的 PR 标题。
+pub fn input_pull_request_title() -> Result<String> {
+    let title = InputDialog::new("PR title (required)")
+        .with_validator(|input: &str| {
+            if input.trim().is_empty() {
+                Err("PR title is required and cannot be empty".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .prompt()
+        .context("Failed to get PR title")?;
+    Ok(title)
+}
+
+/// 获取 PR 描述
+///
+/// 如果提供了描述，直接使用；否则提示用户输入描述（可选）。
+///
+/// # 参数
+///
+/// * `description` - 可选的描述字符串
+///
+/// # 返回
+///
+/// 返回描述字符串（可能为空）。
+pub fn resolve_description(description: Option<String>) -> Result<String> {
+    if let Some(desc) = description {
+        Ok(desc)
+    } else {
+        let desc = InputDialog::new("Short description (optional)")
+            .allow_empty(true)
+            .prompt()
+            .context("Failed to get description")?;
+        Ok(desc)
+    }
+}
+
+/// 选择变更类型（手动选择）
+///
+/// 提示用户手动选择变更类型，返回一个布尔向量，表示每个类型是否被选中。
+///
+/// # 返回
+///
+/// 返回布尔向量，表示每个 PR 变更类型是否被选中。
+pub fn select_change_types() -> Result<Vec<bool>> {
+    log_info!("Types of changes:");
+    let options: Vec<&str> = TYPES_OF_CHANGES.to_vec();
+    let selected_items = MultiSelectDialog::new(
+        "Select change types (use space to select, enter to confirm)",
+        options,
+    )
+    .prompt()
+    .context("Failed to select change types")?;
+
+    // 转换选中的项为布尔向量
+    let selected_types: Vec<bool> =
+        TYPES_OF_CHANGES.iter().map(|&item| selected_items.contains(&item)).collect();
+
+    Ok(selected_types)
+}
+
+/// 在默认分支上创建新分支并提交
+///
+/// 当用户在默认分支上有未提交修改时，直接创建新分支
+/// （Git 会自动把未提交的修改带到新分支），然后提交并推送。
+///
+/// # 参数
+///
+/// * `branch_name` - 要创建的新分支名称
+/// * `commit_title` - 提交标题
+/// * `default_branch` - 默认分支名称
+///
+/// # 返回
+///
+/// 返回实际使用的分支名和默认分支名的元组。
+///
+/// # 流程
+///
+/// 1. 创建新分支（未提交的修改会自动带到新分支）
+/// 2. 提交更改
+/// 3. 推送到远程
+pub fn create_branch_from_default(
+    branch_name: &str,
+    commit_title: &str,
+    default_branch: &str,
+) -> Result<(String, String)> {
+    log_info!(
+        "You are on default branch '{}' with uncommitted changes.",
+        default_branch
+    );
+    log_info!("Will create new branch and commit changes...");
+
+    // 直接创建新分支（Git 会自动把未提交的修改带到新分支）
+    log_success!("Creating branch: {}", branch_name);
+    GitBranch::checkout_branch(branch_name)?;
+
+    // 提交并推送
+    Spinner::with("Committing changes...", || {
+        GitCommit::commit(commit_title, true) // no-verify
+    })?;
+    log_break!();
+    log_info!("Pushing to remote...");
+    log_break!();
+    GitBranch::push(branch_name, true)?; // set-upstream
+
+    Ok((branch_name.to_string(), default_branch.to_string()))
+}
+
+/// 复制 PR URL 到剪贴板并在浏览器中打开
+///
+/// 复制 PR URL 到剪贴板并在浏览器中打开。
+///
+/// # 参数
+///
+/// * `pull_request_url` - PR URL
+pub fn copy_and_open_pull_request(pull_request_url: &str) -> Result<()> {
+    // 复制 PR URL 到剪贴板
+    Clipboard::copy(pull_request_url)?;
+    log_success!("Copied {} to clipboard", pull_request_url);
+
+    // 打开浏览器
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    Browser::open(pull_request_url)?;
+
+    Ok(())
+}
+
+/// 获取或生成 PR 标题
+///
+/// 如果提供了标题，根据 `confirm_if_provided` 参数决定是否询问用户确认使用；
+/// 如果有 Jira ticket，尝试从 Jira 获取标题；否则提示用户手动输入。
+///
+/// # 参数
+///
+/// * `title` - 可选的标题字符串
+/// * `jira_ticket` - 可选的 Jira ticket ID
+/// * `confirm_if_provided` - 如果提供了标题，是否询问用户确认使用
+///
+/// # 返回
+///
+/// 返回 PR 标题字符串。
+pub fn resolve_title(
+    title: Option<String>,
+    jira_ticket: &Option<String>,
+    confirm_if_provided: bool,
+) -> Result<String> {
+    // 如果有提供的标题，根据参数决定是否询问确认
+    if let Some(t) = title {
+        if confirm_if_provided {
+            log_success!("Using source PR title: {}", t);
+            let use_source = ConfirmDialog::new(format!("Use source PR title: '{}'?", t))
+                .with_default(true)
+                .prompt()?;
+            if use_source {
+                return Ok(t);
+            }
+            // 用户选择不使用，继续后续逻辑
+        } else {
+            // 不需要确认，直接使用
+            return Ok(t);
+        }
+    }
+
+    // 如果有 Jira ticket，尝试从 Jira 获取标题
+    if let Some(ref ticket) = jira_ticket {
+        log_success!("Getting PR title from Jira ticket...");
+
+        if let Ok(issue) = Jira::get_ticket_info(ticket) {
+            let summary = issue.fields.summary.trim().to_string();
+            if !summary.is_empty() {
+                log_success!("Using Jira ticket summary: {}", summary);
+                return Ok(summary);
+            }
+            log_warning!("Jira ticket summary is empty, falling back to manual input");
+        } else {
+            log_warning!("Failed to get ticket info, falling back to manual input");
+        }
+    }
+
+    // 回退到手动输入
+    input_pull_request_title()
+}
+
+/// 创建或获取 PR
+///
+/// 检查分支是否已有 PR，如果有则获取 PR URL，否则创建新 PR。
+/// 在创建 PR 前会检查分支是否有提交。
+///
+/// # 参数
+///
+/// * `branch_name` - 分支名称
+/// * `default_branch` - 默认分支名称
+/// * `pr_title` - PR 标题
+/// * `pull_request_body` - PR body
+///
+/// # 返回
+///
+/// 返回 PR URL。
+pub fn create_or_get_pull_request(
+    branch_name: &str,
+    default_branch: &str,
+    pr_title: &str,
+    pull_request_body: &str,
+) -> Result<String> {
+    // 检查分支是否已有 PR
+    let existing_pr = get_current_branch_pr_id()?;
+
+    if let Some(pr_id) = existing_pr {
+        log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
+        let provider = create_provider()?;
+        provider.get_pull_request_url(&pr_id)
+    } else {
+        // 分支无 PR，创建新 PR
+        // 先检查分支是否有提交（相对于默认分支）
+        let has_commits = GitBranch::is_branch_ahead(branch_name, default_branch)
+            .context("Failed to check branch commits")?;
+
+        if !has_commits {
+            log_warning!(
+                "Branch '{}' has no commits compared to '{}'.",
+                branch_name,
+                default_branch
+            );
+            log_warning!("GitHub does not allow creating PRs for empty branches.");
+            log_warning!("Please make some changes and commit them before creating a PR.");
+            anyhow::bail!(
+                "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
+                branch_name
+            );
+        }
+
+        let provider = create_provider()?;
+        let pull_request_url = Spinner::with("Creating PR...", || {
+            provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
+        })?;
+
+        log_success!("PR created: {}", pull_request_url);
+        Ok(pull_request_url)
+    }
+}
+
+/// 更新 Jira ticket
+///
+/// 如果有 Jira ticket 和状态配置，更新 ticket：
+/// - 分配任务
+/// - 更新状态
+/// - 添加评论（PR URL）
+/// - 写入历史记录
+///
+/// # 参数
+///
+/// * `jira_ticket` - 可选的 Jira ticket ID
+/// * `created_pull_request_status` - 可选的 PR 创建状态
+/// * `pull_request_url` - PR URL
+/// * `branch_name` - 分支名称
+pub fn update_jira_ticket(
+    jira_ticket: &Option<String>,
+    created_pull_request_status: &Option<String>,
+    pull_request_url: &str,
+    branch_name: &str,
+) -> Result<()> {
+    if let Some(ref ticket) = jira_ticket {
+        if let Some(ref status) = created_pull_request_status {
+            Spinner::with("Updating Jira ticket...", || -> Result<()> {
+                // 分配任务
+                Jira::assign_ticket(ticket, None)?;
+                // 更新状态
+                Jira::move_ticket(ticket, status)?;
+                // 添加评论（PR URL）
+                Jira::add_comment(ticket, pull_request_url)?;
+                Ok(())
+            })?;
+
+            // 写入历史记录
+            let pull_request_id = extract_pull_request_id_from_url(pull_request_url)?;
+            let repository = GitRepo::get_remote_url().ok();
+            JiraWorkHistory::write_work_history(
+                ticket,
+                &pull_request_id,
+                Some(pull_request_url),
+                repository.as_deref(),
+                Some(branch_name),
+            )?;
+        }
+    }
+    Ok(())
 }

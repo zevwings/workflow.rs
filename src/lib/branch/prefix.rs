@@ -2,7 +2,7 @@
 //!
 //! Provides functionality for applying branch name prefixes (JIRA ticket and repository prefix).
 
-use crate::commands::branch::{check_and_prompt_branch_prefix, BranchConfig};
+use crate::branch::config::BranchConfig;
 use anyhow::{Context, Result};
 
 /// Branch prefix service
@@ -57,7 +57,7 @@ impl BranchPrefix {
     ) -> Result<String> {
         // Check and prompt for branch_prefix if needed
         // Note: This function won't interrupt the flow even if it errors
-        let _ = check_and_prompt_branch_prefix();
+        let _ = BranchConfig::check_and_prompt_prefix();
 
         // If JIRA ticket exists, add as prefix
         // But skip if branch_name already contains the ticket (to avoid duplication)

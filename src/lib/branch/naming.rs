@@ -141,7 +141,7 @@ impl BranchNaming {
     ///
     /// Returns generated branch name (without repository prefix, need to call `BranchPrefix::apply()` later)
     pub fn from_title(jira_ticket: Option<&str>, title: &str) -> Result<String> {
-        use crate::commands::branch::BranchConfig;
+        use crate::branch::config::BranchConfig;
         use anyhow::Context;
 
         let mut branch_name = String::new();

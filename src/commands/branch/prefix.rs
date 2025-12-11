@@ -2,7 +2,7 @@
 //!
 //! 管理仓库级别的分支前缀配置，支持设置、获取、移除操作。
 
-use crate::commands::branch::{get_branch_prefix, remove_branch_prefix, set_branch_prefix};
+use crate::branch::config::BranchConfig;
 use crate::git::GitRepo;
 use crate::{log_info, log_success};
 use anyhow::{Context, Result};
@@ -19,7 +19,7 @@ impl BranchPrefixCommand {
     /// # 返回
     /// 成功返回 `Ok(())`，失败返回错误
     pub fn set(prefix: Option<String>) -> Result<()> {
-        set_branch_prefix(prefix)
+        BranchConfig::set_prefix_for_current_repo(prefix)
     }
 
     /// 获取当前仓库的分支前缀
@@ -30,7 +30,7 @@ impl BranchPrefixCommand {
         let repo_name =
             GitRepo::extract_repo_name().context("Failed to extract repository name")?;
 
-        if let Some(prefix) = get_branch_prefix() {
+        if let Some(prefix) = BranchConfig::get_prefix_for_current_repo() {
             log_success!("Branch prefix for repository '{}': {}", repo_name, prefix);
         } else {
             log_info!("No branch prefix configured for repository: {}", repo_name);
@@ -44,6 +44,6 @@ impl BranchPrefixCommand {
     /// # 返回
     /// 成功返回 `Ok(())`，失败返回错误
     pub fn remove() -> Result<()> {
-        remove_branch_prefix()
+        BranchConfig::remove_prefix_for_current_repo()
     }
 }

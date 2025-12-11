@@ -130,6 +130,16 @@
 - 线程安全的 Prompt 管理
 - 扁平化文件结构设计
 
+#### [BRANCH_ARCHITECTURE.md](./architecture/lib/BRANCH_ARCHITECTURE.md)
+**Branch 模块架构文档**
+
+- 分支命名服务（从 JIRA ticket、标题、类型生成）
+- 分支前缀管理（JIRA ticket 前缀、仓库前缀）
+- 分支配置管理（仓库级别前缀、忽略列表）
+- 分支类型定义（feature/bugfix/refactoring/hotfix/chore）
+- 分支名生成（模板系统、LLM、简单回退）
+- 非英文翻译功能
+
 ### 命令层架构文档（CLI 命令封装）
 
 #### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)

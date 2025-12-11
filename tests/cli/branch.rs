@@ -5,7 +5,7 @@
 use clap::Parser;
 use std::collections::HashMap;
 use workflow::cli::BranchSubcommand;
-use workflow::commands::branch::{validate_repo_name_format, BranchConfig, RepositoryConfig};
+use workflow::commands::branch::{BranchConfig, RepositoryConfig};
 
 // 创建一个测试用的 CLI 结构来测试参数解析
 #[derive(Parser)]
@@ -117,27 +117,6 @@ fn test_branch_create_command_with_dry_run() {
         }
         _ => panic!("Expected Create command"),
     }
-}
-
-// ==================== 仓库格式验证测试 ====================
-
-#[test]
-fn test_validate_repo_name_format_valid() {
-    assert!(validate_repo_name_format("owner/repo").is_ok());
-    assert!(validate_repo_name_format("github/workflow.rs").is_ok());
-    assert!(validate_repo_name_format("user-name/repo_name").is_ok());
-}
-
-#[test]
-fn test_validate_repo_name_format_invalid() {
-    // 缺少斜杠
-    assert!(validate_repo_name_format("invalid").is_err());
-    // 多个斜杠
-    assert!(validate_repo_name_format("owner/repo/sub").is_err());
-    // 空的 owner
-    assert!(validate_repo_name_format("/repo").is_err());
-    // 空的 repo
-    assert!(validate_repo_name_format("owner/").is_err());
 }
 
 // ==================== RepositoryConfig 序列化/反序列化测试 ====================

@@ -106,17 +106,7 @@ impl CreateCommand {
     /// 1. If repository prefix exists, use it as branch type (skip selection)
     /// 2. Otherwise, prompt user to select interactively
     fn resolve_branch_type() -> Result<BranchType> {
-        // Check if repository prefix exists and use it as branch type
-        use crate::commands::branch::get_branch_prefix;
-        if let Some(repo_prefix) = get_branch_prefix() {
-            if let Some(ty) = BranchType::from_str(&repo_prefix) {
-                log_info!("Using repository prefix '{}' as branch type", repo_prefix);
-                return Ok(ty);
-            }
-        }
-
-        // Otherwise, prompt user to select
-        BranchType::prompt_selection()
+        BranchType::resolve_with_repo_prefix()
     }
 
     /// Resolve ticket ID (optional, interactive if not provided)

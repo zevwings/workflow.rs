@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::base::settings::paths::Paths;
-use crate::commands::branch::{save, BranchConfig, RepositoryConfig};
+use crate::branch::config::{BranchConfig, RepositoryConfig};
 use crate::jira::config::ConfigManager;
 use crate::{log_info, log_success};
 
@@ -142,7 +142,7 @@ fn execute_migration(
     old_config_path: &Path,
 ) -> Result<()> {
     // 保存新配置
-    save(new_config).context("Failed to save new configuration")?;
+    new_config.save().context("Failed to save new configuration")?;
 
     log_success!("Migration completed successfully!");
     log_info!("");

@@ -4,9 +4,7 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::util::table::{TableBuilder, TableStyle};
-use crate::commands::branch::{
-    add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,
-};
+use crate::branch::config::BranchConfig;
 use crate::git::BranchRow;
 use crate::git::GitRepo;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
@@ -32,10 +30,10 @@ impl BranchIgnoreCommand {
 
         let mut config = BranchConfig::load().context("Failed to load branch config")?;
 
-        let is_new = add_ignore_branch(&mut config, repo_name.clone(), branch_name.clone())?;
+        let is_new = config.add_ignore_branch(repo_name.clone(), branch_name.clone())?;
 
         if is_new {
-            save(&config).context("Failed to save branch config")?;
+            config.save().context("Failed to save branch config")?;
             log_success!(
                 "Branch '{}' added to ignore list (repository: {})",
                 branch_name,
@@ -64,7 +62,7 @@ impl BranchIgnoreCommand {
             vec![name]
         } else {
             // 获取当前仓库的忽略分支列表
-            let ignore_branches = get_ignore_branches(&config, &repo_name);
+            let ignore_branches = config.get_ignore_branches(&repo_name);
 
             if ignore_branches.is_empty() {
                 log_info!("No ignored branches found (repository: {})", repo_name);
@@ -141,7 +139,7 @@ impl BranchIgnoreCommand {
         let mut fail_count = 0;
 
         for branch_name in &branch_names {
-            let removed = remove_ignore_branch(&mut config, &repo_name, branch_name)?;
+            let removed = config.remove_ignore_branch(&repo_name, branch_name)?;
 
             if removed {
                 success_count += 1;
@@ -157,7 +155,7 @@ impl BranchIgnoreCommand {
 
         // 如果有成功移除的分支，保存配置
         if success_count > 0 {
-            save(&config).context("Failed to save branch config")?;
+            config.save().context("Failed to save branch config")?;
             log_success!(
                 "Removed {} branch(es) from ignore list (repository: {})",
                 success_count,
@@ -179,7 +177,7 @@ impl BranchIgnoreCommand {
 
         let config = BranchConfig::load().context("Failed to load branch config")?;
 
-        let ignore_branches = get_ignore_branches(&config, &repo_name);
+        let ignore_branches = config.get_ignore_branches(&repo_name);
 
         if ignore_branches.is_empty() {
             log_info!("No ignored branches for repository: {}", repo_name);
