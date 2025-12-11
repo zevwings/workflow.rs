@@ -195,6 +195,8 @@ GitCommit::add_files() (暂存文件，如果需要)
 GitCommit::amend() (执行 amend 操作)
   ↓
 CommitAmend::format_completion_message() (生成完成提示)
+  ↓
+如果 commit 已推送：询问是否 force push（使用 --force-with-lease）
 ```
 
 ### 功能说明
@@ -223,6 +225,11 @@ Commit amend 命令用于修改最后一次提交，支持以下功能：
    - 如果 commit 已推送到远程，显示 force push 警告
    - 最终确认机制
 
+6. **自动推送确认**：
+   - 如果 commit 已推送到远程，amend 完成后会询问是否要 force push
+   - 使用 `--force-with-lease` 安全地强制推送
+   - 用户可以选择跳过推送，稍后手动执行
+
 ### 关键步骤说明
 
 1. **分支保护检查**：
@@ -250,8 +257,11 @@ Commit amend 命令用于修改最后一次提交，支持以下功能：
    - 调用 `GitCommit::amend()` 执行 amend 操作
    - 处理 pre-commit hooks（通过 `no_verify` 参数控制）
 
-6. **完成提示**：
+6. **完成提示和推送**：
    - 如果 commit 已推送，显示 force push 提示
+   - 询问用户是否要推送（使用 `--force-with-lease`）
+   - 如果用户确认，自动执行 force push
+   - 如果用户取消，提示可以稍后手动推送
 
 ---
 
@@ -305,6 +315,8 @@ ConfirmDialog::prompt() (最终确认)
   - 历史 commit: CommitReword::reword_history_commit() (使用 rebase -i)
   ↓
 CommitReword::format_completion_message() (生成完成提示)
+  ↓
+如果 commit 已推送：询问是否 force push（使用 --force-with-lease）
 ```
 
 ### 功能说明
@@ -334,6 +346,11 @@ Commit reword 命令用于修改指定提交的消息，不改变提交内容，
    - 显示详细的预览信息（原始 SHA、新消息、操作类型等）
    - 如果 commit 已推送到远程，显示 force push 警告
    - 最终确认机制
+
+6. **自动推送确认**：
+   - 如果 commit 已推送到远程，reword 完成后会询问是否要 force push
+   - 使用 `--force-with-lease` 安全地强制推送
+   - 用户可以选择跳过推送，稍后手动执行
 
 ### 关键步骤说明
 
@@ -377,8 +394,11 @@ Commit reword 命令用于修改指定提交的消息，不改变提交内容，
    - 生成包含原始 SHA、新消息、操作类型等的预览信息
    - 如果已推送，添加 force push 警告
 
-8. **完成提示**：
+8. **完成提示和推送**：
    - 如果 commit 已推送，显示 force push 提示
+   - 询问用户是否要推送（使用 `--force-with-lease`）
+   - 如果用户确认，自动执行 force push
+   - 如果用户取消，提示可以稍后手动推送
 
 ---
 

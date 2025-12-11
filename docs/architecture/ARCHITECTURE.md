@@ -199,6 +199,7 @@ src/
 │  - commands/jira/ (Jira 操作)             │
 │  - commands/pr/  (PR 操作)               │
 │  - commands/branch/ (分支管理)           │
+│  - commands/commit/ (Commit 管理)        │
 │  - commands/github/ (GitHub 账号管理)   │
 │  - commands/check/ (环境检查)            │
 │  - commands/proxy/ (代理管理)            │
@@ -212,6 +213,7 @@ src/
 │  - lib/pr/       (PR 功能)               │
 │  - lib/jira/     (Jira 集成，包含日志处理) │
 │  - lib/git/      (Git 操作)              │
+│  - lib/commit/   (Commit 业务逻辑)       │
 │  - lib/completion/ (Completion 管理)    │
 │  - lib/proxy/    (代理管理)              │
 │  - lib/rollback/ (回滚管理)              │

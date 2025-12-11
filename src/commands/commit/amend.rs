@@ -164,6 +164,30 @@ impl CommitAmendCommand {
             log_message!("{}", msg);
         }
 
+        // 6.5: 如果 commit 已推送，询问是否要 force push
+        let is_pushed = CommitAmend::should_show_force_push_warning(&current_branch, &commit_info.sha)?;
+        if is_pushed {
+            log_break!();
+            let should_push = ConfirmDialog::new("Push to remote (force-with-lease)?")
+                .with_default(true)
+                .with_cancel_message("Push cancelled by user")
+                .prompt()
+                .context("Failed to get push confirmation")?;
+
+            if should_push {
+                log_break!();
+                log_info!("Pushing to remote (force-with-lease)...");
+                log_break!();
+                GitBranch::push_force_with_lease(&current_branch)
+                    .context("Failed to push to remote (force-with-lease)")?;
+                log_break!();
+                log_success!("Pushed to remote successfully");
+            } else {
+                log_info!("Skipping push as requested by user");
+                log_info!("You can push manually with: git push --force-with-lease");
+            }
+        }
+
         Ok(())
     }
 
