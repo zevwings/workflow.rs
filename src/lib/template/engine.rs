@@ -5,6 +5,7 @@
 use anyhow::{Context, Result};
 use handlebars::Handlebars;
 use serde::Serialize;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Template engine type
 #[derive(Debug, Clone, Copy)]
@@ -71,7 +72,6 @@ impl TemplateEngine {
     /// Rendered template string
     pub fn render_string<T: Serialize>(&self, template: &str, vars: &T) -> Result<String> {
         // Register template with a temporary name
-        use std::time::{SystemTime, UNIX_EPOCH};
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
         let temp_name = format!("__temp_{}", timestamp);
         let mut engine = TemplateEngine::new();

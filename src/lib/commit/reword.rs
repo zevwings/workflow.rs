@@ -9,6 +9,7 @@
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use anyhow::{Context, Result};
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -264,7 +265,6 @@ cp "{}" "$1"
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&sequence_editor_script)?.permissions();
             perms.set_mode(0o755);
             fs::set_permissions(&sequence_editor_script, perms)?;
@@ -288,7 +288,6 @@ cp "{}" "$1"
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&message_editor_script)?.permissions();
             perms.set_mode(0o755);
             fs::set_permissions(&message_editor_script, perms)?;

@@ -713,7 +713,7 @@ fn get_system_proxy() -> Result<String> {
 
 ### 报告位置
 
-**文件路径**：`docs/CHECK_REPORT.md`
+**文件路径**：`docs/report/CHECK_REPORT.md`
 
 ### 报告内容
 

@@ -5,8 +5,9 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::commands::check;
+use crate::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch, handle_force_push_warning};
 use crate::commit::{CommitReword, RewordHistoryOptions};
-use crate::git::{CommitInfo, GitBranch, GitCommit};
+use crate::git::{CommitInfo, GitCommit};
 use crate::{log_break, log_info, log_message, log_success};
 use anyhow::{Context, Result};
 
@@ -27,20 +28,10 @@ impl CommitRewordCommand {
         log_message!("Commit Reword");
 
         // 步骤0: 检查是否是默认分支（保护分支不允许直接修改提交历史）
-        let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
-        let default_branch =
-            GitBranch::get_default_branch().context("Failed to get default branch")?;
-        if current_branch == default_branch {
-            anyhow::bail!(
-                "❌ Error: Cannot reword commits on protected branch '{}'\n\nProtected branches (default branches) do not allow direct modification of commit history.\nPlease switch to a feature branch first.",
-                default_branch
-            );
-        }
+        let (current_branch, _default_branch) = check_not_on_default_branch("reword")?;
 
         // 步骤1: 检查是否有最后一次 commit
-        if !GitCommit::has_last_commit()? {
-            anyhow::bail!("❌ Error: No commits found in current branch\n\nCannot perform reword operation because the current branch has no commit history.\nPlease create a commit first.");
-        }
+        check_has_last_commit()?;
 
         // 步骤2: 解析 commit 引用（无参数时默认 HEAD）
         let commit_ref = commit_id.as_deref().unwrap_or("HEAD");
@@ -126,29 +117,11 @@ impl CommitRewordCommand {
         }
 
         // 步骤12: 如果 commit 已推送，询问是否要 force push
-        let is_pushed =
-            CommitReword::should_show_force_push_warning(&current_branch, &commit_info.sha)?;
-        if is_pushed {
-            log_break!();
-            let should_push = ConfirmDialog::new("Push to remote (force-with-lease)?")
-                .with_default(true)
-                .with_cancel_message("Push cancelled by user")
-                .prompt()
-                .context("Failed to get push confirmation")?;
-
-            if should_push {
-                log_break!();
-                log_info!("Pushing to remote (force-with-lease)...");
-                log_break!();
-                GitBranch::push_force_with_lease(&current_branch)
-                    .context("Failed to push to remote (force-with-lease)")?;
-                log_break!();
-                log_success!("Pushed to remote successfully");
-            } else {
-                log_info!("Skipping push as requested by user");
-                log_info!("You can push manually with: git push --force-with-lease");
-            }
-        }
+        handle_force_push_warning(
+            &current_branch,
+            &commit_info.sha,
+            |branch, sha| CommitReword::should_show_force_push_warning(branch, sha),
+        )?;
 
         Ok(())
     }

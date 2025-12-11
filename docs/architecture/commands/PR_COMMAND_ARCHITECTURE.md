@@ -11,8 +11,8 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：11 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
-- 总代码行数：约 3900+ 行
+- 命令数量：12 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
+- 总代码行数：约 4000+ 行
 - 支持平台：GitHub、Codeup
 - 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
 
@@ -1259,6 +1259,101 @@ workflow pr summarize --language zh      # 使用中文生成总结
 
 ---
 
+## 11. 批准 PR 命令 (`approve.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/approve.rs (44 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Approve
+  ↓
+commands/pr/approve.rs::PullRequestApproveCommand::approve()
+  ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
+  1. 获取 PR ID（参数或自动检测当前分支）
+  2. 创建平台提供者（create_provider()）
+  3. 批准 PR（provider.approve_pull_request()）
+```
+
+### 功能说明
+
+批准 PR 命令用于批准指定的 Pull Request：
+
+1. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+2. **代理管理**：
+   - 如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量
+
+3. **错误处理**：
+   - 如果尝试批准自己的 PR，会返回明确的错误信息
+   - 其他错误会添加上下文信息以便调试
+
+### 使用示例
+
+```bash
+workflow pr approve                    # 批准当前分支的 PR
+workflow pr approve 123                 # 批准指定 PR ID
+```
+
+---
+
+## 12. 添加 PR 评论命令 (`comment.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/comment.rs (39 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Comment
+  ↓
+commands/pr/comment.rs::PullRequestCommentCommand::comment()
+  ↓
+  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
+  1. 获取评论内容（将多个单词组合成一个字符串）
+  2. 获取 PR ID（参数或自动检测当前分支）
+  3. 创建平台提供者（create_provider()）
+  4. 添加评论（provider.add_comment()）
+```
+
+### 功能说明
+
+添加 PR 评论命令用于向指定的 Pull Request 添加评论：
+
+1. **评论内容**：
+   - 支持多个单词作为评论内容（使用 `trailing_var_arg` 参数）
+   - 多个单词会自动组合成一个字符串（用空格分隔）
+   - 评论内容为必需参数，如果为空会提示错误
+
+2. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+3. **代理管理**：
+   - 如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量
+
+### 使用示例
+
+```bash
+workflow pr comment "Great work!"                    # 向当前分支的 PR 添加评论
+workflow pr comment 123 "Looks good to me"          # 向指定 PR ID 添加评论
+workflow pr comment "This needs more tests"        # 多个单词自动组合
+```
+
+---
+
 ## 🏗️ 架构设计
 
 ### 设计模式
@@ -1333,6 +1428,18 @@ workflow pr pick develop master --dry-run
 workflow pr rebase master                     # Rebase 当前分支到 master（默认推送）
 workflow pr rebase master --no-push           # 只 rebase 到本地，不推送
 workflow pr rebase master --dry-run           # 预览模式
+```
+
+### Approve 命令
+```bash
+workflow pr approve                            # 批准当前分支的 PR
+workflow pr approve 123                       # 批准指定 PR ID
+```
+
+### Comment 命令
+```bash
+workflow pr comment "Great work!"             # 向当前分支的 PR 添加评论
+workflow pr comment 123 "Looks good to me"   # 向指定 PR ID 添加评论
 ```
 
 ---

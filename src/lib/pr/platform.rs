@@ -1,3 +1,4 @@
+use crate::branch::BranchType;
 use crate::git::{GitRepo, RepoType};
 // use crate::pr::codeup::Codeup;  // Codeup support has been removed
 use crate::pr::github::GitHub;
@@ -71,7 +72,6 @@ pub const TYPES_OF_CHANGES: &[&str] = &[
 pub fn map_branch_type_to_change_type_index(
     branch_type: crate::branch::BranchType,
 ) -> Option<usize> {
-    use crate::branch::BranchType;
     match branch_type {
         BranchType::Feature => Some(1),     // "New feature"
         BranchType::Bugfix => Some(0),      // "Bug fix"

@@ -1,6 +1,11 @@
 use crate::base::settings::Settings;
 use crate::git::GitRepo;
 use crate::git::RepoType;
+use crate::template::{
+    default_pull_request_template, load_commit_template, load_pull_request_template,
+    ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars, TemplateEngine,
+};
+use crate::template::loader::default_commit_template;
 use anyhow::{Context, Result};
 use regex::Regex;
 
@@ -66,11 +71,6 @@ pub fn generate_pull_request_body(
     dependency: Option<&str>,
     jira_info: Option<&crate::jira::JiraIssue>,
 ) -> Result<String> {
-    use crate::template::{
-        default_pull_request_template, load_pull_request_template, ChangeTypeItem,
-        PullRequestTemplateVars, TemplateEngine,
-    };
-
     // Load PR template
     let template_str = load_pull_request_template().unwrap_or_else(|_| {
         // Fallback to default template if loading fails
@@ -127,10 +127,6 @@ pub fn generate_commit_title(
     scope: Option<&str>,
     body: Option<&str>,
 ) -> Result<String> {
-    use crate::template::{load_commit_template, CommitTemplateVars, TemplateEngine};
-
-    use crate::template::loader::default_commit_template;
-
     // Load commit template
     let template_str = load_commit_template().unwrap_or_else(|_| {
         // Fallback to default template

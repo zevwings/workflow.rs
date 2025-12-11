@@ -8,6 +8,7 @@ use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -46,7 +47,6 @@ impl ImportTransaction {
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(&self.config_path)?.permissions();
             perms.set_mode(0o600);
             fs::set_permissions(&self.config_path, perms)?;
@@ -354,7 +354,6 @@ impl ConfigImportCommand {
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
             let mut perms = fs::metadata(path)?.permissions();
             perms.set_mode(0o600);
             fs::set_permissions(path, perms)?;

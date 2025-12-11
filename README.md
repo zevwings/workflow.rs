@@ -423,8 +423,7 @@ workflow log check                 # 检查当前日志级别（显示当前、�
 ### LLM 配置管理
 ```bash
 workflow llm show                        # 显示当前 LLM 配置（显示提供者、API Key（已掩码）、模型、语言设置）
-workflow llm setup                       # 设置 LLM 配置（交互式配置提供者、代理 URL、API Key、模型）
-workflow llm language                    # 设置摘要语言（交互式选择 PR 摘要的语言）
+workflow llm setup                       # 设置 LLM 配置（交互式配置提供者、代理 URL、API Key、模型、语言设置）
 ```
 
 ### Shell Completion 管理
@@ -539,6 +538,12 @@ workflow pr pick <FROM_BRANCH> <TO_BRANCH> --dry-run  # 预览模式
 # 总结 PR
 workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）
 workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）
+
+# 批准 PR
+workflow pr approve [PR_ID]                    # 批准 PR（可选指定 PR ID，否则自动检测当前分支）
+
+# 添加评论
+workflow pr comment [PR_ID] <MESSAGE>          # 添加评论到 PR（可选指定 PR ID，否则自动检测当前分支）
 ```
 
 ### Jira 操作

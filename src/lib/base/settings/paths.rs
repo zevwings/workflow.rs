@@ -7,6 +7,7 @@
 
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -181,8 +182,6 @@ impl Paths {
     /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
     /// ```
     pub fn expand(path_str: &str) -> Result<PathBuf> {
-        use std::env;
-
         // 处理 Unix 风格的 ~ 展开
         if let Some(rest) = path_str.strip_prefix("~/") {
             let home = Self::home_dir()?;

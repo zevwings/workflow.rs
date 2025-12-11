@@ -5,11 +5,15 @@
 //! - Titles/text
 //! - Templates (when template system is available)
 
+use crate::branch::config::BranchConfig;
 use crate::branch::llm::BranchLLM;
 use crate::git::GitBranch;
 use crate::pr::llm::PullRequestLLM;
+use crate::template::{
+    load_branch_template, load_branch_template_by_type, BranchTemplateVars, TemplateEngine,
+};
 use crate::{log_info, log_success, log_warning};
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 /// Branch naming service
 ///
@@ -38,8 +42,6 @@ impl BranchNaming {
         jira_type: Option<&str>,
         use_prefix_format: bool,
     ) -> Result<String> {
-        use crate::template::{load_branch_template, BranchTemplateVars, TemplateEngine};
-
         // Try template system first
         match load_branch_template(jira_type) {
             Ok(template_str) => {
@@ -108,8 +110,6 @@ impl BranchNaming {
         }
 
         // If JIRA ticket exists, use template system
-        use crate::template::{load_branch_template_by_type, BranchTemplateVars, TemplateEngine};
-
         // Load template for the branch type
         let template_str = load_branch_template_by_type(Some(branch_type))?;
 
@@ -141,9 +141,6 @@ impl BranchNaming {
     ///
     /// Returns generated branch name (without repository prefix, need to call `BranchPrefix::apply()` later)
     pub fn from_title(jira_ticket: Option<&str>, title: &str) -> Result<String> {
-        use crate::branch::config::BranchConfig;
-        use anyhow::Context;
-
         let mut branch_name = String::new();
 
         // If JIRA ticket exists, add as prefix
