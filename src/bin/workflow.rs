@@ -240,11 +240,7 @@ fn main() -> Result<()> {
                 no_push,
                 dry_run,
             } => {
-                rebase::PullRequestRebaseCommand::rebase(
-                    target_branch,
-                    !no_push,
-                    dry_run.dry_run,
-                )?;
+                rebase::PullRequestRebaseCommand::rebase(target_branch, !no_push, dry_run.dry_run)?;
             }
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
@@ -275,19 +271,19 @@ fn main() -> Result<()> {
                 jira_id,
                 output_format,
             } => {
-                InfoCommand::show(jira_id, output_format)?;
+                InfoCommand::show(jira_id.jira_id, output_format)?;
             }
             JiraSubcommand::Related {
                 jira_id,
                 output_format,
             } => {
-                RelatedCommand::show(jira_id, output_format)?;
+                RelatedCommand::show(jira_id.jira_id, output_format)?;
             }
             JiraSubcommand::Changelog {
                 jira_id,
                 output_format,
             } => {
-                ChangelogCommand::show(jira_id, output_format)?;
+                ChangelogCommand::show(jira_id.jira_id, output_format)?;
             }
             JiraSubcommand::Comments {
                 jira_id,
@@ -297,10 +293,17 @@ fn main() -> Result<()> {
                 since,
                 output_format,
             } => {
-                CommentsCommand::show(jira_id, limit, offset, author, since, output_format)?;
+                CommentsCommand::show(
+                    jira_id.jira_id,
+                    limit,
+                    offset,
+                    author,
+                    since,
+                    output_format,
+                )?;
             }
             JiraSubcommand::Attachments { jira_id } => {
-                AttachmentsCommand::download(jira_id)?;
+                AttachmentsCommand::download(jira_id.jira_id)?;
             }
             JiraSubcommand::Clean {
                 jira_id,
@@ -308,23 +311,23 @@ fn main() -> Result<()> {
                 dry_run,
                 list,
             } => {
-                CleanCommand::clean(jira_id, all, dry_run.dry_run, list)?;
+                CleanCommand::clean(jira_id.jira_id, all, dry_run.dry_run, list)?;
             }
             JiraSubcommand::Log { subcommand } => match subcommand {
                 LogSubcommand::Download { jira_id } => {
-                    DownloadCommand::download(jira_id)?;
+                    DownloadCommand::download(jira_id.jira_id)?;
                 }
                 LogSubcommand::Find {
                     jira_id,
                     request_id,
                 } => {
-                    FindCommand::find_request_id(jira_id, request_id)?;
+                    FindCommand::find_request_id(jira_id.jira_id, request_id)?;
                 }
                 LogSubcommand::Search {
                     jira_id,
                     search_term,
                 } => {
-                    SearchCommand::search(jira_id, search_term)?;
+                    SearchCommand::search(jira_id.jira_id, search_term)?;
                 }
             },
         },

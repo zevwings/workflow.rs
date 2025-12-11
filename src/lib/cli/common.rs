@@ -38,3 +38,13 @@ pub struct DryRunArgs {
     #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
     pub dry_run: bool,
 }
+
+/// 可选 JIRA ID 参数
+///
+/// JIRA ticket ID，如果未提供则交互式输入。
+#[derive(Args, Debug, Clone)]
+pub struct JiraIdArg {
+    /// Jira ticket ID (optional, will prompt interactively if not provided)
+    #[arg(value_name = "JIRA_ID")]
+    pub jira_id: Option<String>,
+}
