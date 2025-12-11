@@ -4,19 +4,11 @@
 //! - 日志条目解析和 URL 提取
 //! - 路径处理
 //! - 文件操作
-//! - 目录信息计算
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use regex::Regex;
 use std::collections::HashSet;
-use std::env;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
-use walkdir::WalkDir;
-
-use crate::base::settings::paths::Paths;
 
 /// 日志条目信息
 #[derive(Debug, Clone)]
@@ -100,136 +92,4 @@ pub(crate) fn add_entry_if_not_duplicate(
             }
         }
     }
-}
-
-/// 展开路径字符串
-///
-/// 支持的路径格式：
-/// - Unix: `~` 和 `~/path` - 展开为用户主目录
-/// - Windows: `%VAR%` 和 `%VAR%\path` - 展开环境变量
-/// - 绝对路径: 直接使用
-///
-/// # 示例
-///
-/// ```text
-/// // Unix
-/// expand_path("~/Documents/Workflow") -> "/home/user/Documents/Workflow"
-/// expand_path("~") -> "/home/user"
-///
-/// // Windows
-/// expand_path("%USERPROFILE%\\Documents\\Workflow") -> "C:\\Users\\User\\Documents\\Workflow"
-/// expand_path("%APPDATA%\\workflow") -> "C:\\Users\\User\\AppData\\Roaming\\workflow"
-///
-/// // 绝对路径
-/// expand_path("/absolute/path") -> "/absolute/path"
-/// expand_path("C:\\absolute\\path") -> "C:\\absolute\\path"
-/// ```
-pub(crate) fn expand_path(path_str: &str) -> Result<PathBuf> {
-    // 处理 Unix 风格的 ~ 展开
-    if let Some(rest) = path_str.strip_prefix("~/") {
-        // 使用统一的 home_dir 方法
-        let home = Paths::home_dir()?;
-        return Ok(home.join(rest));
-    }
-    if path_str == "~" {
-        // 使用统一的 home_dir 方法
-        return Paths::home_dir();
-    }
-
-    // 处理 Windows 风格的环境变量展开 %VAR%
-    if path_str.contains('%') {
-        let mut result = String::new();
-        let mut chars = path_str.chars().peekable();
-
-        while let Some(ch) = chars.next() {
-            if ch == '%' {
-                // 提取环境变量名
-                let mut var_name = String::new();
-                while let Some(&next_ch) = chars.peek() {
-                    if next_ch == '%' {
-                        chars.next(); // 跳过结束的 %
-                        break;
-                    }
-                    var_name.push(chars.next().unwrap());
-                }
-
-                // 展开环境变量
-                if !var_name.is_empty() {
-                    let var_value = env::var(&var_name)
-                        .with_context(|| format!("Environment variable not set: {}", var_name))?;
-                    result.push_str(&var_value);
-                }
-            } else {
-                result.push(ch);
-            }
-        }
-
-        return Ok(PathBuf::from(result));
-    }
-
-    // 其他情况：直接使用路径（可能是绝对路径或相对路径）
-    Ok(PathBuf::from(path_str))
-}
-
-/// 打开日志文件并返回 BufReader
-pub(crate) fn open_log_file(log_file: &Path) -> Result<BufReader<File>> {
-    let file =
-        File::open(log_file).with_context(|| format!("Failed to open log file: {:?}", log_file))?;
-    Ok(BufReader::new(file))
-}
-
-/// 格式化文件大小
-pub(crate) fn format_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.2} {}", size, UNITS[unit_index])
-    }
-}
-
-/// 计算目录大小和文件数量
-pub(crate) fn calculate_dir_info(dir: &Path) -> Result<(u64, usize)> {
-    let mut total_size = 0u64;
-    let mut file_count = 0usize;
-
-    if !dir.exists() {
-        return Ok((0, 0));
-    }
-
-    for entry in WalkDir::new(dir) {
-        let entry = entry.context("Failed to read directory entry")?;
-        let metadata = entry.metadata().context("Failed to get file metadata")?;
-
-        if metadata.is_file() {
-            total_size += metadata.len();
-            file_count += 1;
-        }
-    }
-
-    Ok((total_size, file_count))
-}
-
-/// 列出目录内容
-pub(crate) fn list_dir_contents(dir: &Path) -> Result<Vec<PathBuf>> {
-    let mut contents = Vec::new();
-
-    if !dir.exists() {
-        return Ok(contents);
-    }
-
-    for entry in WalkDir::new(dir).max_depth(3) {
-        let entry = entry.context("Failed to read directory entry")?;
-        contents.push(entry.path().to_path_buf());
-    }
-
-    Ok(contents)
 }

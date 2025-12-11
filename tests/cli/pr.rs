@@ -40,7 +40,7 @@ fn test_pr_create_command_structure() {
             assert_eq!(jira_ticket, Some("PROJ-123".to_string()));
             assert_eq!(title, Some("Test PR".to_string()));
             assert_eq!(description, Some("Test description".to_string()));
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
         }
         _ => panic!("Expected Create command"),
     }
@@ -61,7 +61,7 @@ fn test_pr_create_command_minimal() {
             assert_eq!(jira_ticket, None);
             assert_eq!(title, None);
             assert_eq!(description, None);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
         }
         _ => panic!("Expected Create command"),
     }
@@ -82,7 +82,7 @@ fn test_pr_create_command_with_jira_ticket_only() {
             assert_eq!(jira_ticket, Some("PROJ-456".to_string()));
             assert_eq!(title, None);
             assert_eq!(description, None);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
         }
         _ => panic!("Expected Create command"),
     }
@@ -322,7 +322,7 @@ fn test_pr_rebase_command_structure() {
         } => {
             assert_eq!(target_branch, "main");
             assert!(no_push);
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
         }
         _ => panic!("Expected Rebase command"),
     }
@@ -341,7 +341,7 @@ fn test_pr_rebase_command_minimal() {
         } => {
             assert_eq!(target_branch, "main");
             assert!(!no_push);
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
         }
         _ => panic!("Expected Rebase command"),
     }
@@ -542,7 +542,7 @@ fn test_pr_pick_command_structure() {
         } => {
             assert_eq!(from_branch, "feature/source");
             assert_eq!(to_branch, "main");
-            assert!(dry_run);
+            assert!(dry_run.dry_run);
         }
         _ => panic!("Expected Pick command"),
     }
@@ -561,7 +561,7 @@ fn test_pr_pick_command_minimal() {
         } => {
             assert_eq!(from_branch, "feature/source");
             assert_eq!(to_branch, "main");
-            assert!(!dry_run);
+            assert!(!dry_run.dry_run);
         }
         _ => panic!("Expected Pick command"),
     }

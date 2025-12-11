@@ -2,6 +2,8 @@
 
 use clap::Subcommand;
 
+use super::common::DryRunArgs;
+
 /// PR commands enumeration
 ///
 /// Defines all PR-related subcommands.
@@ -24,9 +26,8 @@ pub enum PRCommands {
         #[arg(short, long)]
         description: Option<String>,
 
-        /// Dry run mode (don't actually create PR, only show what would be done)
-        #[arg(long, action = clap::ArgAction::SetTrue)]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
     /// Merge a Pull Request
     ///
@@ -105,9 +106,8 @@ pub enum PRCommands {
         #[arg(long, action = clap::ArgAction::SetTrue)]
         no_push: bool,
 
-        /// Dry run mode (show what would be done without actually doing it)
-        #[arg(long, action = clap::ArgAction::SetTrue)]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
     /// Close a Pull Request
     ///
@@ -167,8 +167,7 @@ pub enum PRCommands {
         #[arg(value_name = "TO_BRANCH")]
         to_branch: String,
 
-        /// Dry run mode (show what would be done without actually doing it)
-        #[arg(long, action = clap::ArgAction::SetTrue)]
-        dry_run: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
 }

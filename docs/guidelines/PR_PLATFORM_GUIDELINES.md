@@ -39,7 +39,6 @@ PR 模块采用 **策略模式（Strategy Pattern）** 设计，通过 `Platform
 ### 当前支持
 
 - ✅ **GitHub** - 完全支持
-- ❌ **Codeup** - 已移除支持（保留枚举值用于检测，但不支持 PR 功能）
 
 ---
 

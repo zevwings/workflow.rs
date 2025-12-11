@@ -32,6 +32,13 @@ impl OutputFormat {
     }
 }
 
+// 为 OutputFormatArgs 添加转换方法
+impl From<&crate::cli::OutputFormatArgs> for OutputFormat {
+    fn from(args: &crate::cli::OutputFormatArgs) -> Self {
+        OutputFormat::from_args(args.table, args.json, args.yaml, args.markdown)
+    }
+}
+
 /// 获取 JIRA ID（从参数或交互式输入）
 ///
 /// # 参数

@@ -25,7 +25,6 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "completion",
     "branch",
     "pr",
-    "log",
     "jira",
 ];
 
@@ -56,6 +55,7 @@ const JIRA_SUBCOMMANDS: &[&str] = &[
     "comments",
     "attachments",
     "clean",
+    "log",
 ];
 
 /// GitHub 子命令列表
@@ -297,13 +297,17 @@ fn test_all_subcommands_completeness() {
         pr_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(pr_subcommands.len(), PR_SUBCOMMANDS.len());
 
-    // 验证 Log 子命令
-    let log_cmd = cmd
+    // 验证 Jira Log 子命令（log 现在是 jira 的子命令）
+    let jira_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "jira")
+        .expect("jira command should exist");
+    let jira_log_cmd = jira_cmd
         .get_subcommands()
         .find(|sc| sc.get_name() == "log")
-        .expect("log command should exist");
+        .expect("jira log command should exist");
     let log_subcommands: Vec<String> =
-        log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+        jira_log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(log_subcommands.len(), LOG_SUBCOMMANDS.len());
 
     // 验证 Jira 子命令

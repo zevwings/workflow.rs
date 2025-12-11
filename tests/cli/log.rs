@@ -1,11 +1,21 @@
 //! Log CLI 命令测试
 //!
 //! 测试 Log CLI 命令的参数解析、命令执行流程和错误处理。
+//!
+//! 注意：Log 命令现在是 Jira 命令的子命令，路径为 `workflow jira log`.
 
 use clap::Parser;
-use workflow::cli::LogSubcommand;
+use workflow::cli::{JiraSubcommand, LogSubcommand};
 
-// 创建一个测试用的 CLI 结构来测试参数解析
+// 创建一个测试用的 CLI 结构来测试参数解析（通过 Jira 命令）
+#[derive(Parser)]
+#[command(name = "test-jira")]
+struct TestJiraCli {
+    #[command(subcommand)]
+    command: JiraSubcommand,
+}
+
+// 创建一个测试用的 CLI 结构来测试 LogSubcommand 的参数解析
 #[derive(Parser)]
 #[command(name = "test-log")]
 struct TestLogCli {
@@ -30,7 +40,7 @@ fn test_log_download_command_structure() {
 
     match cli.command {
         LogSubcommand::Download { jira_id } => {
-            assert_eq!(jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
         }
         _ => panic!("Expected Download command"),
     }
@@ -43,7 +53,7 @@ fn test_log_download_command_without_id() {
 
     match cli.command {
         LogSubcommand::Download { jira_id } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
         }
         _ => panic!("Expected Download command"),
     }
@@ -59,7 +69,7 @@ fn test_log_find_command_structure() {
             jira_id,
             request_id,
         } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
             assert_eq!(request_id, Some("req-12345".to_string()));
         }
         _ => panic!("Expected Find command"),
@@ -76,7 +86,7 @@ fn test_log_find_command_with_jira_id_only() {
             jira_id,
             request_id,
         } => {
-            assert_eq!(jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
             assert_eq!(request_id, None);
         }
         _ => panic!("Expected Find command"),
@@ -93,7 +103,7 @@ fn test_log_find_command_without_parameters() {
             jira_id,
             request_id,
         } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
             assert_eq!(request_id, None);
         }
         _ => panic!("Expected Find command"),
@@ -110,7 +120,7 @@ fn test_log_search_command_structure() {
             jira_id,
             search_term,
         } => {
-            assert_eq!(jira_id, Some("PROJ-789".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-789".to_string()));
             assert_eq!(search_term, Some("error".to_string()));
         }
         _ => panic!("Expected Search command"),
@@ -127,7 +137,7 @@ fn test_log_search_command_with_jira_id_only() {
             jira_id,
             search_term,
         } => {
-            assert_eq!(jira_id, Some("PROJ-789".to_string()));
+            assert_eq!(jira_id.jira_id, Some("PROJ-789".to_string()));
             assert_eq!(search_term, None);
         }
         _ => panic!("Expected Search command"),
@@ -144,7 +154,7 @@ fn test_log_search_command_without_parameters() {
             jira_id,
             search_term,
         } => {
-            assert_eq!(jira_id, None);
+            assert_eq!(jira_id.jira_id, None);
             assert_eq!(search_term, None);
         }
         _ => panic!("Expected Search command"),
@@ -181,21 +191,21 @@ fn test_log_jira_id_parameter_optional() {
     // Download
     let cli = TestLogCli::try_parse_from(&["test-log", "download"]).unwrap();
     match cli.command {
-        LogSubcommand::Download { jira_id } => assert_eq!(jira_id, None),
+        LogSubcommand::Download { jira_id } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Find
     let cli = TestLogCli::try_parse_from(&["test-log", "find"]).unwrap();
     match cli.command {
-        LogSubcommand::Find { jira_id, .. } => assert_eq!(jira_id, None),
+        LogSubcommand::Find { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
     // Search
     let cli = TestLogCli::try_parse_from(&["test-log", "search"]).unwrap();
     match cli.command {
-        LogSubcommand::Search { jira_id, .. } => assert_eq!(jira_id, None),
+        LogSubcommand::Search { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 }
@@ -212,7 +222,7 @@ fn test_log_find_with_request_id_only() {
             request_id,
         } => {
             // 第一个参数会被解析为 jira_id
-            assert_eq!(jira_id, Some("req-12345".to_string()));
+            assert_eq!(jira_id.jira_id, Some("req-12345".to_string()));
             assert_eq!(request_id, None);
         }
         _ => panic!("Expected Find command"),
@@ -231,7 +241,7 @@ fn test_log_search_with_search_term_only() {
             search_term,
         } => {
             // 第一个参数会被解析为 jira_id
-            assert_eq!(jira_id, Some("error".to_string()));
+            assert_eq!(jira_id.jira_id, Some("error".to_string()));
             assert_eq!(search_term, None);
         }
         _ => panic!("Expected Search command"),
