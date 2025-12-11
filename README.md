@@ -504,18 +504,6 @@ workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指
 workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）
 ```
 
-### 日志操作
-```bash
-# 下载日志
-workflow log download [PROJ-123]               # 下载日志文件（JIRA ID 可选，不提供会交互式输入）
-
-# 查找请求 ID
-workflow log find [PROJ-123] [REQUEST_ID]     # 查找请求 ID（所有参数可选，不提供会交互式输入）
-
-# 搜索关键词
-workflow log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参数可选，不提供会交互式输入）
-```
-
 ### Jira 操作
 ```bash
 # 显示 ticket 信息
@@ -545,6 +533,11 @@ workflow jira clean PROJ-123                  # 清理指定 JIRA ID 的日志�
 workflow jira clean --all                     # 清理整个日志基础目录（需要确认）
 workflow jira clean --dry-run PROJ-123        # 预览清理操作，不实际删除
 workflow jira clean --list PROJ-123           # 只列出将要删除的内容
+
+# 日志操作
+workflow jira log download [PROJ-123]               # 下载日志文件（JIRA ID 可选，不提供会交互式输入）
+workflow jira log find [PROJ-123] [REQUEST_ID]     # 查找请求 ID（所有参数可选，不提供会交互式输入）
+workflow jira log search [PROJ-123] [SEARCH_TERM]  # 搜索关键词（所有参数可选，不提供会交互式输入）
 ```
 
 > **注意**：日志操作命令会根据 JIRA ID 自动解析日志文件路径，无需手动指定文件路径。

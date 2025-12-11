@@ -6,7 +6,7 @@ use clap::Subcommand;
 
 use super::{
     BranchSubcommand, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand, JiraSubcommand,
-    LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand,
+    LLMSubcommand, LogLevelSubcommand, PRCommands, ProxySubcommand,
 };
 
 /// 主命令枚举
@@ -115,16 +115,9 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: PRCommands,
     },
-    /// Log operations (download, find, search)
+    /// Jira operations (info, attachments, clean, log)
     ///
-    /// Download log files from Jira tickets, search and find content in logs.
-    Log {
-        #[command(subcommand)]
-        subcommand: LogSubcommand,
-    },
-    /// Jira operations (info, attachments, clean)
-    ///
-    /// View and manage Jira ticket information, download attachments, and clean local data.
+    /// View and manage Jira ticket information, download attachments, clean local data, and manage log files.
     Jira {
         #[command(subcommand)]
         subcommand: JiraSubcommand,

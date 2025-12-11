@@ -2,6 +2,8 @@
 
 use clap::Subcommand;
 
+use super::log::LogSubcommand;
+
 /// Jira operations subcommands
 ///
 /// Used to manage Jira ticket operations.
@@ -146,5 +148,12 @@ pub enum JiraSubcommand {
         /// Only list what would be deleted
         #[arg(long, short = 'l')]
         list: bool,
+    },
+    /// Log operations (download, find, search)
+    ///
+    /// Download log files from Jira tickets, search and find content in logs.
+    Log {
+        #[command(subcommand)]
+        subcommand: LogSubcommand,
     },
 }

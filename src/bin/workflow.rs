@@ -255,24 +255,6 @@ fn main() -> Result<()> {
                 pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run)?;
             }
         },
-        // 日志操作命令
-        Some(Commands::Log { subcommand }) => match subcommand {
-            LogSubcommand::Download { jira_id } => {
-                DownloadCommand::download(jira_id)?;
-            }
-            LogSubcommand::Find {
-                jira_id,
-                request_id,
-            } => {
-                FindCommand::find_request_id(jira_id, request_id)?;
-            }
-            LogSubcommand::Search {
-                jira_id,
-                search_term,
-            } => {
-                SearchCommand::search(jira_id, search_term)?;
-            }
-        },
         // Jira 操作命令
         Some(Commands::Jira { subcommand }) => match subcommand {
             JiraSubcommand::Info {
@@ -328,6 +310,23 @@ fn main() -> Result<()> {
             } => {
                 CleanCommand::clean(jira_id, all, dry_run, list)?;
             }
+            JiraSubcommand::Log { subcommand } => match subcommand {
+                LogSubcommand::Download { jira_id } => {
+                    DownloadCommand::download(jira_id)?;
+                }
+                LogSubcommand::Find {
+                    jira_id,
+                    request_id,
+                } => {
+                    FindCommand::find_request_id(jira_id, request_id)?;
+                }
+                LogSubcommand::Search {
+                    jira_id,
+                    search_term,
+                } => {
+                    SearchCommand::search(jira_id, search_term)?;
+                }
+            },
         },
         // 配置迁移命令
         Some(Commands::Migrate { dry_run, keep_old }) => {
@@ -355,8 +354,7 @@ fn main() -> Result<()> {
                 "  workflow update     - Update Workflow CLI (rebuild and update binaries)"
             );
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
-            log_message!("  workflow log        - Log operations (download/find/search)");
-            log_message!("  workflow jira       - Jira operations (info/attachments/clean)");
+            log_message!("  workflow jira       - Jira operations (info/attachments/clean/log)");
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

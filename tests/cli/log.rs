@@ -1,11 +1,21 @@
 //! Log CLI 命令测试
 //!
 //! 测试 Log CLI 命令的参数解析、命令执行流程和错误处理。
+//!
+//! 注意：Log 命令现在是 Jira 命令的子命令，路径为 `workflow jira log`.
 
 use clap::Parser;
-use workflow::cli::LogSubcommand;
+use workflow::cli::{JiraSubcommand, LogSubcommand};
 
-// 创建一个测试用的 CLI 结构来测试参数解析
+// 创建一个测试用的 CLI 结构来测试参数解析（通过 Jira 命令）
+#[derive(Parser)]
+#[command(name = "test-jira")]
+struct TestJiraCli {
+    #[command(subcommand)]
+    command: JiraSubcommand,
+}
+
+// 创建一个测试用的 CLI 结构来测试 LogSubcommand 的参数解析
 #[derive(Parser)]
 #[command(name = "test-log")]
 struct TestLogCli {
