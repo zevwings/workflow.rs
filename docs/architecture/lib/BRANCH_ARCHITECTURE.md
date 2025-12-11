@@ -53,11 +53,14 @@ src/lib/branch/
 
 - **`commands/branch/`**：分支命令层
   - `create.rs` - 使用 `BranchNaming`、`BranchType`、`BranchConfig` 创建分支
+  - `switch.rs` - 分支切换命令（使用 `GitBranch` 进行分支操作）
+  - `rename.rs` - 分支重命名命令（使用 `GitBranch` 进行分支操作）
   - `prefix.rs` - 使用 `BranchConfig` 管理分支前缀
   - `ignore.rs` - 使用 `BranchConfig` 管理忽略列表
 - **`commands/pr/`**：PR 命令层
   - `create.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
   - `pick.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
+  - `helpers.rs` - 提供 stash 处理辅助函数（`handle_stash_pop_result()`），被 `branch switch` 命令使用
 
 ---
 

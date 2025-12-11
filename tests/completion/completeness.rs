@@ -66,7 +66,7 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix", "create"];
+const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix", "create", "rename", "switch"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];

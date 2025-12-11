@@ -441,6 +441,13 @@ workflow branch create [JIRA_ID]              # 创建新分支（可选 JIRA ti
 workflow branch create --from-default         # 从默认分支（main/master）创建
 workflow branch create [JIRA_ID] --dry-run   # 预览模式
 
+# 切换分支
+workflow branch switch [BRANCH_NAME]          # 切换到指定分支（不存在时询问是否创建）
+workflow branch switch                        # 交互式选择分支（分支数量 > 25 时自动启用搜索）
+
+# 重命名分支
+workflow branch rename                        # 交互式重命名分支（支持本地和远程分支）
+
 # 清理本地分支
 workflow branch clean              # 清理已合并的分支（保留 main/master、develop、当前分支和忽略列表中的分支）
 workflow branch clean --dry-run    # 预览将要删除的分支，不实际删除

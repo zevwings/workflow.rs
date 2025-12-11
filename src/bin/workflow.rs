@@ -6,8 +6,9 @@
 use anyhow::Result;
 use clap::Parser;
 
-use workflow::commands::branch::{clean, create as branch_create, ignore, prefix};
+use workflow::commands::branch::{clean, create as branch_create, ignore, prefix, rename, switch};
 use workflow::commands::check::check;
+use workflow::commands::commit::CommitAmendCommand;
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
@@ -25,9 +26,9 @@ use workflow::commands::pr::{
 use workflow::commands::proxy::proxy;
 
 use workflow::cli::{
-    BranchSubcommand, Cli, Commands, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand,
-    IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands,
-    PrefixSubcommand, ProxySubcommand,
+    BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
+    GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
+    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand,
 };
 use workflow::*;
 
@@ -196,6 +197,22 @@ fn main() -> Result<()> {
                     from_default,
                     dry_run.dry_run,
                 )?;
+            }
+            BranchSubcommand::Rename => {
+                rename::BranchRenameCommand::execute()?;
+            }
+            BranchSubcommand::Switch { branch_name } => {
+                switch::SwitchCommand::execute(branch_name)?;
+            }
+        },
+        // Commit 操作命令
+        Some(Commands::Commit { subcommand }) => match subcommand {
+            CommitSubcommand::Amend {
+                message,
+                no_edit,
+                no_verify,
+            } => {
+                CommitAmendCommand::execute(message, no_edit, no_verify)?;
             }
         },
         // PR 操作命令

@@ -4,6 +4,7 @@
 //! - 检查 Git 状态和工作区更改
 //! - 暂存文件（add）
 //! - 提交更改（commit）
+//! - 修改最后一次提交（amend）
 
 use anyhow::{Context, Result};
 use duct::cmd;
@@ -18,6 +19,19 @@ pub struct CommitResult {
     pub committed: bool,
     /// 消息（如果工作区干净）
     pub message: Option<String>,
+}
+
+/// Commit 信息
+#[derive(Debug, Clone)]
+pub struct CommitInfo {
+    /// Commit SHA
+    pub sha: String,
+    /// 提交消息
+    pub message: String,
+    /// 作者
+    pub author: String,
+    /// 日期
+    pub date: String,
 }
 
 /// Git 提交管理
@@ -221,5 +235,157 @@ impl GitCommit {
         let target = target.unwrap_or("HEAD");
         cmd_run(&["reset", "--hard", target])
             .with_context(|| format!("Failed to reset working directory to {}", target))
+    }
+
+    /// 检查是否有最后一次 commit
+    ///
+    /// 使用 `git log -1` 检查是否有 commit 历史。
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果有 commit
+    /// - `Ok(false)` - 如果没有 commit
+    pub fn has_last_commit() -> Result<bool> {
+        Ok(check_success(&["log", "-1", "--oneline"]))
+    }
+
+    /// 获取最后一次 commit 信息
+    ///
+    /// # 返回
+    ///
+    /// 返回最后一次 commit 的详细信息。
+    pub fn get_last_commit_info() -> Result<CommitInfo> {
+        let sha = cmd_read(&["log", "-1", "--format=%H"])?;
+        let message = cmd_read(&["log", "-1", "--format=%s"])?;
+        let author = cmd_read(&["log", "-1", "--format=%an <%ae>"])?;
+        let date = cmd_read(&["log", "-1", "--format=%ai"])?;
+
+        Ok(CommitInfo {
+            sha,
+            message,
+            author,
+            date,
+        })
+    }
+
+    /// 获取最后一次 commit 的 SHA
+    ///
+    /// # 返回
+    ///
+    /// 返回最后一次 commit 的完整 SHA。
+    pub fn get_last_commit_sha() -> Result<String> {
+        cmd_read(&["log", "-1", "--format=%H"]).context("Failed to get last commit SHA")
+    }
+
+    /// 获取最后一次 commit 的消息
+    ///
+    /// # 返回
+    ///
+    /// 返回最后一次 commit 的提交消息。
+    pub fn get_last_commit_message() -> Result<String> {
+        cmd_read(&["log", "-1", "--format=%s"]).context("Failed to get last commit message")
+    }
+
+    /// 获取已修改但未暂存的文件列表
+    ///
+    /// # 返回
+    ///
+    /// 返回已修改但未暂存的文件路径列表。
+    pub fn get_modified_files() -> Result<Vec<String>> {
+        let output = cmd_read(&["diff", "--name-only"])?;
+        if output.trim().is_empty() {
+            Ok(Vec::new())
+        } else {
+            Ok(output.lines().map(|s| s.to_string()).collect())
+        }
+    }
+
+    /// 获取未跟踪的文件列表
+    ///
+    /// # 返回
+    ///
+    /// 返回未跟踪的文件路径列表。
+    pub fn get_untracked_files() -> Result<Vec<String>> {
+        let output = cmd_read(&["ls-files", "--others", "--exclude-standard"])?;
+        if output.trim().is_empty() {
+            Ok(Vec::new())
+        } else {
+            Ok(output.lines().map(|s| s.to_string()).collect())
+        }
+    }
+
+    /// 添加指定文件到暂存区
+    ///
+    /// # 参数
+    ///
+    /// * `files` - 要添加的文件路径列表
+    ///
+    /// # 错误
+    ///
+    /// 如果 Git 命令执行失败，返回相应的错误信息。
+    pub fn add_files(files: &[String]) -> Result<()> {
+        if files.is_empty() {
+            return Ok(());
+        }
+
+        let mut args = vec!["add"];
+        for file in files {
+            args.push(file);
+        }
+
+        cmd_run(&args).context("Failed to add files")
+    }
+
+    /// 执行 commit amend
+    ///
+    /// # 参数
+    ///
+    /// * `message` - 新的提交消息（如果为 `None`，使用 `--no-edit`）
+    /// * `no_edit` - 是否不编辑消息（使用 `--no-edit`）
+    /// * `no_verify` - 是否跳过 pre-commit hooks 验证
+    ///
+    /// # 行为
+    ///
+    /// 1. 如果 `no_verify` 为 `false` 且存在 pre-commit hooks，则执行 hooks
+    /// 2. 执行 `git commit --amend`
+    ///
+    /// # 返回
+    ///
+    /// 返回新的 commit SHA。
+    pub fn amend(message: Option<&str>, no_edit: bool, no_verify: bool) -> Result<String> {
+        // 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
+        let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
+            GitPreCommit::run_pre_commit()?;
+            true // 已经通过 Rust 代码执行了检查，hook 脚本应该跳过
+        } else {
+            false
+        };
+
+        // 构建命令参数
+        let mut args = vec!["commit", "--amend"];
+
+        if no_edit {
+            args.push("--no-edit");
+        } else if let Some(msg) = message {
+            args.push("-m");
+            args.push(msg);
+        }
+
+        if no_verify {
+            args.push("--no-verify");
+        }
+
+        // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
+        if should_skip_hook {
+            cmd("git", &args)
+                .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
+                .run()
+                .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+        } else {
+            cmd_run(&args).context("Failed to amend commit")?;
+        }
+
+        // 返回新的 commit SHA
+        Self::get_last_commit_sha()
     }
 }

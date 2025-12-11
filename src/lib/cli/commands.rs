@@ -5,8 +5,9 @@
 use clap::Subcommand;
 
 use super::{
-    BranchSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs, GitHubSubcommand,
-    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands, ProxySubcommand,
+    BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs,
+    GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
+    ProxySubcommand,
 };
 
 /// 主命令枚举
@@ -94,6 +95,13 @@ pub enum Commands {
     Branch {
         #[command(subcommand)]
         subcommand: BranchSubcommand,
+    },
+    /// Manage Git commits
+    ///
+    /// Amend the last commit, including message and files.
+    Commit {
+        #[command(subcommand)]
+        subcommand: CommitSubcommand,
     },
     /// Migrate configuration to new format
     ///

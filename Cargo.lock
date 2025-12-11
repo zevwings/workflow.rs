@@ -2729,6 +2729,7 @@ dependencies = [
  "dirs",
  "duct",
  "flate2",
+ "fuzzy-matcher",
  "handlebars",
  "indicatif",
  "inquire",

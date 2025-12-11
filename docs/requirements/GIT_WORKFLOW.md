@@ -6,9 +6,9 @@
 
 > **注意**：Stash 管理功能已迁移到独立的 [Stash 管理需求文档](./STASH_MANAGEMENT.md)。
 
-**状态**: 📋 需求分析中
+**状态**: 📋 需求分析中（部分功能已完成）
 **分类**: Git 工作流
-**优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写）
+**优先级**: 高优先级（分支创建/切换 ✅、Commit 修改）、中优先级（分支重命名 ✅、分支同步、Commit 压缩/重写）
 **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
 
 ---
@@ -66,37 +66,45 @@ workflow branch create --checkout                  # 创建并切换
 
 ##### 命令示例
 ```bash
-workflow branch switch feature/new-feature         # 切换分支
-workflow branch switch --fuzzy                     # 模糊匹配选择
-workflow branch switch --create                    # 如果不存在则创建
+workflow branch switch feature/new-feature         # 直接指定分支名切换
+workflow branch switch                              # 不带参数时，自动进入交互式选择
+workflow branch switch --fuzzy                     # 明确指定使用模糊匹配/交互式选择
+workflow branch switch feature/new-feature --create # 如果不存在则创建
 ```
 
 ##### 实现建议
 - 使用 `GitBranch::checkout_branch()`
-- 支持交互式选择（fuzzy finder）
+- 支持交互式选择（使用 `SelectDialog`，支持搜索功能）
 - 自动 stash 未提交的更改
+
+**状态**: ✅ 已完成
 
 ---
 
 #### 1.3 `branch rename` - 重命名分支
 
 ##### 功能描述
-重命名分支，支持本地和远程分支。
+重命名分支，支持本地和远程分支。提供交互式流程，引导用户完成分支重命名操作。
 
 ##### 功能要求
 - 支持重命名指定分支
 - 支持重命名当前分支
 - 支持远程分支重命名
+- 提供交互式流程，无需记忆复杂参数
+- 多重验证和确认机制，防止误操作
 
 ##### 命令示例
 ```bash
-workflow branch rename old-name new-name           # 重命名分支
-workflow branch rename --current new-name          # 重命名当前分支
+workflow branch rename                              # 交互式重命名（推荐）
+workflow branch rename old-name new-name           # 重命名指定分支（非交互式）
+workflow branch rename --current new-name          # 重命名当前分支（非交互式）
 ```
 
 ##### 实现建议
 - 使用 `git branch -m` 命令
 - 支持远程分支重命名
+
+**状态**: ✅ 已完成
 
 ---
 
@@ -228,9 +236,15 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ### 分支管理
 - [x] `branch create` 能够创建分支
 - [x] 支持从 JIRA ticket 自动生成分支名
-- [ ] `branch switch` 能够快速切换分支
-- [ ] 支持模糊匹配和交互式选择
-- [ ] `branch rename` 能够重命名分支
+- [x] `branch switch` 能够快速切换分支
+- [x] 支持模糊匹配和交互式选择（分支数量 > 25 时自动启用 fuzzy filter）
+- [x] 支持分支不存在时询问是否创建
+- [x] 自动处理未提交的更改（stash）
+- [x] `branch rename` 能够重命名分支
+  - [x] 交互式流程实现
+  - [x] 支持本地分支重命名
+  - [x] 支持远程分支重命名（交互式确认）
+  - [x] 完整的分支名格式验证
 - [ ] `branch sync` 能够同步分支（fetch + merge/rebase）
 
 ### Commit 管理
@@ -247,12 +261,12 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ## 📊 优先级说明
 
 ### 高优先级
-1. **`branch create`** - 创建分支（从 JIRA ticket 自动命名）
-2. **`branch switch`** - 快速切换分支（模糊匹配）
+1. **`branch create`** - 创建分支（从 JIRA ticket 自动命名） ✅ 已完成
+2. **`branch switch`** - 快速切换分支（模糊匹配） ✅ 已完成
 3. **`commit amend`** - 修改最后一次 commit
 
 ### 中优先级
-1. **`branch rename`** - 重命名分支
+1. **`branch rename`** - 重命名分支 ✅ 已完成
 2. **`branch sync`** - 同步分支
 3. **`commit squash`** - 压缩多个 commits
 4. **`commit reword`** - 修改 commit 消息
@@ -264,16 +278,18 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ## 🔗 依赖关系
 
 ### 实现顺序建议
-1. **第一阶段**：分支管理基础功能
+1. **第一阶段**：分支管理基础功能 ✅ 已完成
    - `branch create` - 创建分支 ✅ 已完成
-   - `branch switch` - 快速切换分支
+   - `branch switch` - 快速切换分支 ✅ 已完成
+   - `branch rename` - 重命名分支 ✅ 已完成
 
 2. **第二阶段**：Commit 管理
    - `commit amend` - 修改最后一次 commit
 
 3. **第三阶段**：分支管理增强和 Stash 管理
-   - `branch rename`、`branch sync`
-   - `commit squash`、`commit reword`
+   - `branch sync` - 同步分支
+   - `commit squash` - 压缩多个 commits
+   - `commit reword` - 修改 commit 消息
    - Stash 管理（参考 [Stash 管理需求文档](./STASH_MANAGEMENT.md)）
 
 ### 技术依赖
@@ -297,3 +313,5 @@ workflow commit reword HEAD~2                     # 修改倒数第二个
 ## 📝 更新日志
 
 - **2025-01-27**: `branch create` 功能已完成 ✅
+- **2025-01-27**: `branch switch` 功能已完成 ✅
+- **2025-01-27**: `branch rename` 功能已完成 ✅

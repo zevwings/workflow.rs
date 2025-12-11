@@ -4,11 +4,13 @@
 
 本文档描述 Workflow CLI 的分支管理命令模块架构，包括：
 - 分支创建功能（支持从 JIRA ticket 创建，使用 LLM 生成分支名）
+- 分支切换功能（支持直接切换和交互式选择，自动处理未提交更改）
+- 分支重命名功能（支持本地和远程分支重命名，提供完整的交互式流程）
 - 本地分支清理功能
 - 分支忽略列表管理功能
 - 分支前缀管理功能（仓库级别）
 
-分支管理命令提供智能的分支清理功能，可以安全地删除已合并的分支，同时保留重要的分支（如 main/master、develop、当前分支和用户配置的忽略分支）。同时支持为不同仓库配置不同的分支前缀，用于生成分支名时自动添加前缀。新增的分支创建功能支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名，并支持从默认分支创建。
+分支管理命令提供智能的分支清理功能，可以安全地删除已合并的分支，同时保留重要的分支（如 main/master、develop、当前分支和用户配置的忽略分支）。同时支持为不同仓库配置不同的分支前缀，用于生成分支名时自动添加前缀。新增的分支创建功能支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名，并支持从默认分支创建。分支切换功能支持快速切换分支，当分支不存在时自动询问是否创建，并自动处理未提交的更改。分支重命名功能提供完整的交互式流程，支持重命名本地和远程分支，包含多重验证和确认机制。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/git/` 模块提供。
 
@@ -30,11 +32,13 @@ src/main.rs
 
 ```
 src/commands/branch/
-├── mod.rs          # 分支命令模块声明（8 行）
+├── mod.rs          # 分支命令模块声明
 ├── create.rs       # 分支创建命令（~347 行）
+├── switch.rs       # 分支切换命令（~104 行）
+├── rename.rs       # 分支重命名命令（~357 行）
 ├── clean.rs        # 分支清理命令（~195 行）
 ├── ignore.rs       # 分支忽略列表管理命令（~94 行）
-└── helpers.rs      # 辅助函数（BranchConfig 管理，~98 行）
+└── helpers.rs      # 辅助函数（BranchConfig 管理，分支选择等，~330 行）
 ```
 
 **职责**：
@@ -87,6 +91,8 @@ Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand {
   BranchSubcommand::Create { jira_id, from_default, dry_run } => CreateCommand::execute()
+  BranchSubcommand::Switch { branch_name } => SwitchCommand::execute()
+  BranchSubcommand::Rename => BranchRenameCommand::execute()
   BranchSubcommand::Clean { dry_run } => BranchCleanCommand::clean()
   BranchSubcommand::Ignore { subcommand } => match subcommand {
     IgnoreSubcommand::Add { branch_name } => BranchIgnoreCommand::add()
@@ -214,7 +220,252 @@ Dry-run 预览（如果启用）
 
 ---
 
-## 2. 分支清理命令 (`clean.rs`)
+## 2. 分支切换命令 (`switch.rs`)
+
+### 相关文件
+
+```
+src/commands/branch/switch.rs (~104 行)
+src/commands/branch/helpers.rs (分支选择辅助函数)
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::BranchSubcommand::Switch { branch_name }
+  ↓
+commands/branch/switch.rs::SwitchCommand::execute(branch_name)
+  ↓
+  1. 如果提供了分支名：直接使用
+  2. 如果未提供分支名：交互式选择分支（使用 helpers::select_branch()）
+     - 分支数量 > 25：自动启用 fuzzy filter（支持搜索）
+     - 分支数量 <= 25：使用普通 selector
+  3. 检查是否已在目标分支（如果是则退出）
+  4. 检查分支是否存在（本地或远程）
+  5. 如果分支不存在：使用 ConfirmDialog 询问是否创建
+  6. 检查未提交更改：如果有则自动 stash
+  7. 切换或创建分支（GitBranch::checkout_branch()）
+  8. 如果切换失败且之前有 stash：恢复 stash
+  9. 如果之前有 stash：恢复 stash（使用 handle_stash_pop_result()）
+```
+
+### 功能说明
+
+分支切换命令提供快速、智能的分支切换功能：
+
+1. **直接切换**：
+   - 支持直接指定分支名切换
+   - 如果分支不存在，使用 `ConfirmDialog` 询问是否创建
+
+2. **交互式选择**：
+   - 不带参数时自动进入交互式选择
+   - 显示所有可用分支（本地 + 远程，已去重）
+   - 标记当前分支（显示 "[current]"）
+   - 排除当前分支或标记为当前（默认选择）
+
+3. **智能搜索**：
+   - 分支数量 > 25：自动启用 fuzzy filter，支持输入关键词实时过滤
+   - 分支数量 <= 25：使用普通 selector，通过方向键浏览
+   - 使用 `fuzzy-matcher` crate 进行模糊匹配
+
+4. **自动处理未提交更改**：
+   - 自动检测未提交的更改
+   - 切换前自动 stash
+   - 切换后自动恢复 stash
+   - 如果切换失败，自动恢复之前的 stash
+
+### 关键步骤说明
+
+1. **分支选择**：
+   - 使用 `helpers::select_branch()` 统一的分支选择辅助函数
+   - 支持标记当前分支、排除当前分支、设置默认索引等选项
+   - 根据分支数量自动决定是否启用 fuzzy filter
+
+2. **分支存在性检查**：
+   - 使用 `GitBranch::is_branch_exists()` 检查本地和远程
+   - 如果都不存在，使用 `ConfirmDialog` 询问是否创建
+
+3. **Stash 处理**：
+   - 使用 `GitCommit::has_commit()` 检查未提交更改
+   - 使用 `GitStash::stash_push()` 保存更改
+   - 使用 `GitStash::stash_pop()` 恢复更改
+   - 使用 `handle_stash_pop_result()` 处理 stash pop 结果（处理冲突等）
+
+### 数据流
+
+```
+用户输入 (workflow branch switch [BRANCH_NAME])
+  ↓
+分支选择（直接指定或交互式选择）
+  ↓
+检查是否已在目标分支
+  ↓
+检查分支是否存在
+  ↓
+如果不存在：询问是否创建
+  ↓
+检查未提交更改并 stash（如果需要）
+  ↓
+切换或创建分支
+  ↓
+恢复 stash（如果之前有 stash）
+```
+
+### 依赖模块
+
+- **`lib/git/`**：Git 操作（`GitBranch`、`GitCommit`、`GitStash`）
+  - `GitBranch::current_branch()` - 获取当前分支
+  - `GitBranch::get_all_branches()` - 获取所有分支（本地+远程）
+  - `GitBranch::is_branch_exists()` - 检查分支是否存在
+  - `GitBranch::checkout_branch()` - 切换/创建分支
+  - `GitCommit::has_commit()` - 检查是否有未提交的更改
+  - `GitStash::stash_push()` - 保存未提交的更改
+  - `GitStash::stash_pop()` - 恢复保存的更改
+- **`commands/branch/helpers.rs`**：分支选择辅助函数（`select_branch()`）
+- **`commands/pr/helpers.rs`**：Stash 处理辅助函数（`handle_stash_pop_result()`）
+- **`lib/base/dialog/`**：对话框（`SelectDialog`、`ConfirmDialog`）
+
+---
+
+## 3. 分支重命名命令 (`rename.rs`)
+
+### 相关文件
+
+```
+src/commands/branch/rename.rs (~357 行)
+src/commands/branch/helpers.rs (分支选择辅助函数)
+src/main.rs (命令入口)
+```
+
+### 调用流程
+
+```
+src/main.rs::BranchSubcommand::Rename
+  ↓
+commands/branch/rename.rs::BranchRenameCommand::execute()
+  ↓
+  1. 运行环境检查（CheckCommand::run_all()）
+  2. 选择要重命名的分支（完全交互式）：
+     - 询问是否重命名当前分支（ConfirmDialog）
+     - 如果否：从分支列表选择（使用 helpers::select_branch()）
+  3. 输入并验证新分支名（完全交互式）：
+     - 输入新分支名（InputDialog）
+     - 验证分支名格式（Git 规范）
+     - 检查本地是否存在（如果存在则提示错误，重新输入）
+  4. 检查新分支名是否与旧分支名相同（如果是则退出）
+  5. 预览和确认（完全交互式）：
+     - 检查是否是默认分支（需要额外警告）
+     - 显示预览信息（旧分支名、新分支名、是否当前分支、远程分支状态）
+     - 最终确认（ConfirmDialog）
+  6. 执行重命名（完全交互式）：
+     - 重命名本地分支（GitBranch::rename()）
+     - 检查远程分支是否存在
+     - 如果存在：显示警告，询问是否更新远程分支
+     - 如果用户选择更新：二次确认后执行远程分支重命名（GitBranch::rename_remote()）
+  7. 显示完成信息
+```
+
+### 功能说明
+
+分支重命名命令提供完整的交互式分支重命名功能：
+
+1. **完全交互式流程**：
+   - 所有操作都通过交互式提示完成，无需记忆复杂参数
+   - 清晰的步骤引导，每一步都有明确提示
+
+2. **分支选择**：
+   - 优先询问是否重命名当前分支（最常用场景）
+   - 如果否，从分支列表选择（使用统一的分支选择辅助函数）
+
+3. **新分支名验证**：
+   - 验证分支名格式（Git 规范）：
+     - 不能为空、不能以 `.` 开头或结尾
+     - 不能包含 `..`、空格、特殊字符（`~ ^ : ? * [ \`）
+     - 不能以 `/` 结尾、不能包含连续斜杠 `//`
+     - 不能是保留名称（`HEAD`、`FETCH_HEAD` 等）
+   - 检查本地是否存在（如果存在则提示错误，重新输入）
+
+4. **预览和确认**：
+   - 检查是否是默认分支（需要额外警告和确认）
+   - 显示完整的预览信息：
+     - 旧分支名、新分支名
+     - 是否当前分支
+     - 远程分支状态（本地分支、远程分支、远程跟踪）
+   - 最终确认（ConfirmDialog）
+
+5. **远程分支处理**：
+   - 自动检测远程分支是否存在
+   - 如果存在：显示警告信息（影响其他协作者、PR、CI/CD 等）
+   - 询问是否更新远程分支
+   - 如果用户选择更新：二次确认后执行远程分支重命名
+   - 如果用户选择不更新：显示手动更新命令提示
+
+6. **安全机制**：
+   - 环境检查（运行所有检查）
+   - 多重验证（分支名格式、存在性检查）
+   - 多重确认（预览确认、远程分支更新确认）
+   - 默认分支额外警告
+
+### 关键步骤说明
+
+1. **分支名格式验证**：
+   - 实现完整的 Git 分支名规范验证
+   - 包含所有 Git 不允许的字符和格式
+   - 提供清晰的错误提示
+
+2. **默认分支检测**：
+   - 使用 `GitBranch::get_default_branch()` 获取默认分支
+   - 如果是默认分支，显示额外警告和确认
+
+3. **远程分支重命名**：
+   - 使用 `GitBranch::has_remote_branch()` 检查远程分支
+   - 使用 `GitBranch::rename_remote()` 重命名远程分支
+   - 包含推送新分支、删除旧分支、更新远程跟踪设置
+
+4. **远程跟踪检查**：
+   - 使用 `git config --get branch.{name}.remote` 检查远程跟踪设置
+   - 在预览信息中显示远程跟踪状态
+
+### 数据流
+
+```
+用户输入 (workflow branch rename)
+  ↓
+环境检查（CheckCommand::run_all()）
+  ↓
+选择要重命名的分支（交互式）
+  ↓
+输入并验证新分支名（交互式，循环直到通过）
+  ↓
+检查新分支名是否与旧分支名相同
+  ↓
+预览和确认（交互式）
+  ↓
+重命名本地分支
+  ↓
+检查远程分支并处理（交互式）
+  ↓
+显示完成信息
+```
+
+### 依赖模块
+
+- **`lib/git/`**：Git 操作（`GitBranch`）
+  - `GitBranch::current_branch()` - 获取当前分支
+  - `GitBranch::get_default_branch()` - 获取默认分支
+  - `GitBranch::get_local_branches()` - 获取所有本地分支
+  - `GitBranch::is_branch_exists()` - 检查分支是否存在
+  - `GitBranch::has_remote_branch()` - 检查远程分支是否存在
+  - `GitBranch::rename()` - 重命名本地分支
+  - `GitBranch::rename_remote()` - 重命名远程分支
+- **`commands/branch/helpers.rs`**：分支选择辅助函数（`select_branch()`）
+- **`commands/check/`**：环境检查（`CheckCommand::run_all()`）
+- **`lib/base/dialog/`**：对话框（`SelectDialog`、`ConfirmDialog`、`InputDialog`）
+
+---
+
+## 4. 分支清理命令 (`clean.rs`)
 
 ### 相关文件
 
@@ -308,7 +559,7 @@ commands/branch/clean.rs::BranchCleanCommand::clean(dry_run)
 
 ---
 
-## 3. 分支忽略列表管理命令 (`ignore.rs`)
+## 5. 分支忽略列表管理命令 (`ignore.rs`)
 
 ### 相关文件
 
@@ -397,7 +648,7 @@ commands/branch/ignore.rs::BranchIgnoreCommand::list()
 
 ---
 
-## 4. 分支前缀管理命令 (`prefix.rs`)
+## 6. 分支前缀管理命令 (`prefix.rs`)
 
 ### 相关文件
 
@@ -501,7 +752,7 @@ commands/branch/prefix.rs::BranchPrefixCommand::remove()
 
 ---
 
-## 5. 辅助函数 (`helpers.rs`)
+## 7. 辅助函数 (`helpers.rs`)
 
 ### 相关文件
 
@@ -646,6 +897,23 @@ workflow branch create
 workflow branch create PROJ-123 --dry-run
 ```
 
+### Switch 命令
+
+```bash
+# 直接指定分支名切换（不存在时询问是否创建）
+workflow branch switch feature/new-feature
+
+# 交互式选择分支（分支数量 > 25 时自动启用搜索）
+workflow branch switch
+```
+
+### Rename 命令
+
+```bash
+# 交互式重命名分支（完全交互式，支持本地和远程分支）
+workflow branch rename
+```
+
 ### Clean 命令
 
 ```bash
@@ -692,13 +960,17 @@ workflow branch prefix remove
 分支管理命令层采用清晰的分层架构设计：
 
 1. **智能创建**：支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名
-2. **智能清理**：自动识别已合并分支，安全删除
-3. **灵活配置**：支持按仓库配置忽略列表和分支前缀
-4. **安全机制**：预览、确认、分类处理，确保操作安全
-5. **分支前缀管理**：支持为不同仓库配置不同的分支前缀，自动应用到分支名生成
+2. **快速切换**：支持直接切换和交互式选择，自动处理未提交更改，分支不存在时自动询问是否创建
+3. **安全重命名**：提供完整的交互式流程，支持本地和远程分支重命名，包含多重验证和确认机制
+4. **智能清理**：自动识别已合并分支，安全删除
+5. **灵活配置**：支持按仓库配置忽略列表和分支前缀
+6. **安全机制**：预览、确认、分类处理，确保操作安全
+7. **分支前缀管理**：支持为不同仓库配置不同的分支前缀，自动应用到分支名生成
 
 **设计优势**：
 - ✅ **智能创建**：LLM 自动生成分支名，支持 JIRA 集成
+- ✅ **快速切换**：支持直接切换和交互式选择，智能搜索（自动启用 fuzzy filter），自动处理未提交更改
+- ✅ **安全重命名**：完全交互式流程，多重验证和确认，支持本地和远程分支重命名
 - ✅ **安全性**：多重确认机制，防止误删重要分支
 - ✅ **智能性**：自动识别已合并分支，分类处理
 - ✅ **灵活性**：支持按仓库配置忽略列表和分支前缀

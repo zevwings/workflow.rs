@@ -42,6 +42,27 @@ pub enum BranchSubcommand {
         #[command(flatten)]
         dry_run: DryRunArgs,
     },
+    /// Rename a branch
+    ///
+    /// Fully interactive branch rename command.
+    /// All operations are done through interactive prompts.
+    ///
+    /// Example:
+    ///   workflow branch rename    # Interactive mode
+    Rename,
+    /// Switch to a branch
+    ///
+    /// Switch to a branch, with interactive selection if branch name is not provided.
+    /// Fuzzy filter is automatically enabled when branch count > 25.
+    /// If branch does not exist, will prompt user to confirm creation.
+    ///
+    /// Examples:
+    ///   workflow branch switch feature/new-feature    # Switch to specified branch (prompt if not exists)
+    ///   workflow branch switch                        # Interactive selection (auto fuzzy if > 25 branches)
+    Switch {
+        /// Branch name (optional, will enter interactive mode if not provided)
+        branch_name: Option<String>,
+    },
 }
 
 /// Branch ignore list management subcommands

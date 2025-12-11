@@ -37,6 +37,7 @@ pub mod proxy;
 
 // 业务功能
 pub mod branch;
+pub mod commit;
 pub mod jira;
 pub mod log;
 pub mod migrate;
