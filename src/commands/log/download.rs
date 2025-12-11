@@ -71,9 +71,9 @@ impl DownloadCommand {
         // 创建 JiraLogs 实例
         let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
 
-        // 执行下载
+        // 执行下载（传递 None 表示让下载器自己获取附件）
         let result = logs
-            .download_from_jira(&jira_id, None, false, Some(callback))
+            .download_from_jira(&jira_id, None, false, Some(callback), None, None)
             .context("Failed to download attachments from Jira")?;
 
         // 完成进度条

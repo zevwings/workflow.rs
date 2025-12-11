@@ -59,23 +59,14 @@
 - **优先级**: 高优先级
 - **来源**: 从 `docs/todo/WORKFLOW_TODO.md` 迁移
 
-#### 2. [`CACHE.md`](./CACHE.md)
-- **状态**: 📋 需求分析中
-- **分类**: 性能优化
-- **内容**:
-  - API 响应缓存
-  - 本地数据缓存
-  - 智能刷新
-- **优先级**: 高优先级（API 响应缓存）、中优先级（本地数据缓存、智能刷新）
-
-#### 3. [`CONCURRENCY.md`](./CONCURRENCY.md)
+#### 2. [`CONCURRENCY.md`](./CONCURRENCY.md)
 - **状态**: 📋 需求分析中
 - **分类**: 性能优化
 - **内容**:
   - 并行下载
 - **优先级**: 高优先级（并行下载）
 
-#### 4. [`JIRA_COMMANDS.md`](./JIRA_COMMANDS.md)
+#### 3. [`JIRA_COMMANDS.md`](./JIRA_COMMANDS.md)
 - **状态**: 📋 需求分析中
 - **分类**: JIRA 模块
 - **内容**:
@@ -86,7 +77,7 @@
 - **优先级**: 高优先级（`jira comment`、`jira transition`）、中优先级（`jira list`、`jira search`）
 - **来源**: 从 `docs/todo/JIRA_TODO.md` 迁移
 
-#### 5. [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md)
+#### 4. [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md)
 - **状态**: 📋 需求分析中
 - **分类**: Git 工作流
 - **内容**:
@@ -96,7 +87,7 @@
 - **优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写、Stash 管理）
 - **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
 
-#### 6. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
+#### 5. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
 - **状态**: 📋 需求分析中
 - **分类**: 用户体验优化
 - **内容**:
@@ -106,7 +97,7 @@
 - **优先级**: 中优先级
 - **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
 
-#### 7. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+#### 6. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 - **状态**: 📋 需求分析中
 - **分类**: 配置管理
 - **内容**:

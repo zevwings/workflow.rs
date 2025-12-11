@@ -5,23 +5,25 @@ use anyhow::{Context, Result};
 use std::path::PathBuf;
 
 use crate::base::settings::defaults::default_download_base_dir;
+use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 
 // 子模块
-mod clean;
 mod constants;
 mod download;
 mod helpers;
 mod path;
 mod search;
 mod table;
-mod zip;
 
 // 重新导出 LogEntry 作为公共 API
 pub use helpers::LogEntry;
 
-// 重新导出下载相关的类型
-pub use download::{DownloadResult, ProgressCallback};
+// 重新导出下载相关的类型（从 attachments 模块）
+pub use crate::jira::attachments::{DownloadResult, ProgressCallback};
+
+// 重新导出清理相关的类型（从 attachments 模块，保持向后兼容）
+pub use crate::jira::attachments::{CleanResult, DirEntry, DirInfo};
 
 // 重新导出表格相关类型
 pub use table::SearchResultRow;
@@ -37,8 +39,6 @@ pub struct JiraLogs {
     pub(crate) base_dir: PathBuf,
     /// 缓存的日志输出文件夹名称
     pub(crate) output_folder_name: String,
-    /// 缓存的 HTTP 客户端
-    pub(crate) http_client: reqwest::blocking::Client,
 }
 
 impl JiraLogs {
@@ -53,21 +53,14 @@ impl JiraLogs {
         let settings = Settings::get().clone();
         let base_dir_str =
             settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
-        let base_dir = helpers::expand_path(&base_dir_str)
+        let base_dir = Paths::expand(&base_dir_str)
             .with_context(|| format!("Failed to expand path: {}", base_dir_str))?;
         let output_folder_name = settings.log.output_folder_name.clone();
-
-        // 创建并缓存 HTTP 客户端
-        let http_client = reqwest::blocking::Client::builder()
-            .timeout(std::time::Duration::from_secs(60))
-            .build()
-            .context("Failed to create HTTP client")?;
 
         Ok(Self {
             settings,
             base_dir,
             output_folder_name,
-            http_client,
         })
     }
 }

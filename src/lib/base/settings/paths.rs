@@ -156,6 +156,78 @@ impl Paths {
         Self::local_base_dir()
     }
 
+    // ==================== 路径工具方法 ====================
+
+    /// 展开路径字符串
+    ///
+    /// 支持的路径格式：
+    /// - Unix: `~` 和 `~/path` - 展开为用户主目录
+    /// - Windows: `%VAR%` 和 `%VAR%\path` - 展开环境变量
+    /// - 绝对路径: 直接使用
+    ///
+    /// # 示例
+    ///
+    /// ```text
+    /// // Unix
+    /// expand("~/Documents/Workflow") -> "/home/user/Documents/Workflow"
+    /// expand("~") -> "/home/user"
+    ///
+    /// // Windows
+    /// expand("%USERPROFILE%\\Documents\\Workflow") -> "C:\\Users\\User\\Documents\\Workflow"
+    /// expand("%APPDATA%\\workflow") -> "C:\\Users\\User\\AppData\\Roaming\\workflow"
+    ///
+    /// // 绝对路径
+    /// expand("/absolute/path") -> "/absolute/path"
+    /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
+    /// ```
+    pub fn expand(path_str: &str) -> Result<PathBuf> {
+        use std::env;
+
+        // 处理 Unix 风格的 ~ 展开
+        if let Some(rest) = path_str.strip_prefix("~/") {
+            let home = Self::home_dir()?;
+            return Ok(home.join(rest));
+        }
+        if path_str == "~" {
+            return Self::home_dir();
+        }
+
+        // 处理 Windows 风格的环境变量展开 %VAR%
+        if path_str.contains('%') {
+            let mut result = String::new();
+            let mut chars = path_str.chars().peekable();
+
+            while let Some(ch) = chars.next() {
+                if ch == '%' {
+                    // 提取环境变量名
+                    let mut var_name = String::new();
+                    while let Some(&next_ch) = chars.peek() {
+                        if next_ch == '%' {
+                            chars.next(); // 跳过结束的 %
+                            break;
+                        }
+                        var_name.push(chars.next().unwrap());
+                    }
+
+                    // 展开环境变量
+                    if !var_name.is_empty() {
+                        let var_value = env::var(&var_name).with_context(|| {
+                            format!("Environment variable not set: {}", var_name)
+                        })?;
+                        result.push_str(&var_value);
+                    }
+                } else {
+                    result.push(ch);
+                }
+            }
+
+            return Ok(PathBuf::from(result));
+        }
+
+        // 其他情况：直接使用路径（可能是绝对路径或相对路径）
+        Ok(PathBuf::from(path_str))
+    }
+
     // ==================== 配置路径相关方法 ====================
 
     /// 获取配置目录路径（支持 iCloud 同步）

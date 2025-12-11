@@ -124,6 +124,8 @@ impl Spinner {
     /// 使用 spinner 执行一个操作（便捷方法）
     ///
     /// 自动创建 spinner，执行操作，然后清理 spinner。
+    /// 如果操作很快完成（< 100ms），会使用 `finish_with_message` 显示完成消息，
+    /// 确保用户至少能看到一次输出。
     ///
     /// # 参数
     ///
@@ -152,9 +154,20 @@ impl Spinner {
     where
         F: FnOnce() -> Result<T, E>,
     {
-        let spinner = Self::new(message);
+        let message_str = message.as_ref().to_string();
+        let spinner = Self::new(&message_str);
+        let start = std::time::Instant::now();
         let result = operation();
-        spinner.finish();
+        let elapsed = start.elapsed();
+
+        // 如果操作很快完成（< 100ms），使用 finish_with_message 显示消息
+        // 确保用户至少能看到一次输出
+        if elapsed < Duration::from_millis(100) {
+            spinner.finish_with_message(&message_str);
+        } else {
+            spinner.finish();
+        }
+
         result
     }
 
