@@ -3032,7 +3032,7 @@ checksum = "f17a85883d4e6d00e8a97c586de764dabcc06133f7f1d55dce5cdc070ad7fe59"
 
 [[package]]
 name = "workflow"
-version = "1.5.3"
+version = "1.5.4"
 dependencies = [
  "base64 0.22.1",
  "chrono",
