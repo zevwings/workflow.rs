@@ -12,12 +12,13 @@ use super::helpers::extract_json_from_markdown;
 
 /// PR Reword 结果，包含标题和描述
 ///
-/// 由 LLM 基于 PR diff 生成的简洁标题和描述，用于更新现有 PR。
+/// 由 LLM 基于当前 PR 标题和 PR diff 生成的标题和完整描述，用于更新现有 PR。
+/// 与 create 流程保持一致：标题主要基于当前标题，PR diff 用于验证和细化。
 #[derive(Debug, Clone)]
 pub struct PullRequestReword {
-    /// PR 标题（简洁，不超过 8 个单词）
+    /// PR 标题（简洁，不超过 8 个单词，主要基于当前标题，如果当前标题包含 markdown 格式如 `#` 会保留）
     pub pr_title: String,
-    /// PR 描述（基于 PR diff 生成的简洁描述，可选）
+    /// PR 描述（基于 PR diff 生成的完整描述列表，包含所有重要变更，可选）
     pub description: Option<String>,
 }
 
@@ -25,22 +26,23 @@ pub struct PullRequestReword {
 pub struct RewordGenerator;
 
 impl RewordGenerator {
-    /// 基于 PR diff 生成 PR 标题和描述
+    /// 基于当前 PR 标题和 PR diff 生成更新的 PR 标题和描述
     ///
-    /// 根据 PR 的 diff 内容生成简洁的标题和描述，用于更新现有 PR。
-    /// 与 `summarize_pr()` 不同，这个方法生成的是简洁的标题和描述（适合作为 PR 的元数据），
+    /// 根据当前 PR 标题和 PR diff 内容生成更新的标题和完整的描述，用于更新现有 PR。
+    /// 与 `create` 流程保持一致：标题主要基于当前标题，PR diff 用于验证和细化。
+    /// 与 `summarize_pr()` 不同，这个方法生成的是适合作为 PR 元数据的标题和描述列表，
     /// 而不是详细的总结文档。
     ///
     /// # 参数
     ///
-    /// * `pr_diff` - PR 的 diff 内容
-    /// * `current_title` - 当前 PR 标题（可选，用于参考）
+    /// * `pr_diff` - PR 的 diff 内容（用于验证和细化标题）
+    /// * `current_title` - 当前 PR 标题（主要输入，如果包含 markdown 格式如 `#` 会保留）
     ///
     /// # 返回
     ///
     /// 返回 `PullRequestReword` 结构体，包含：
-    /// - `pr_title` - PR 标题（简洁，不超过 8 个单词）
-    /// - `description` - PR 描述（基于 PR diff 生成的简洁描述，可选）
+    /// - `pr_title` - PR 标题（简洁，不超过 8 个单词，主要基于当前标题，如果当前标题包含 markdown 格式会保留）
+    /// - `description` - PR 描述（基于 PR diff 生成的完整描述列表，包含所有重要变更，可选）
     ///
     /// # 错误
     ///
@@ -60,7 +62,7 @@ impl RewordGenerator {
         let params = LLMRequestParams {
             system_prompt,
             user_prompt,
-            max_tokens: Some(500), // 限制 token 数量，因为只需要简洁的标题和描述
+            max_tokens: None, // 增加 token 限制以支持更完整的描述
             temperature: 0.5,
             model: String::new(), // model 会从 Settings 自动获取，这里可以留空
         };
@@ -83,22 +85,24 @@ impl RewordGenerator {
     }
 
     /// 生成 PR reword 的 user prompt
+    ///
+    /// 与 create 流程保持一致：当前标题作为主要输入，PR diff 用于验证和细化。
     fn reword_user_prompt(pr_diff: &str, current_title: Option<&str>) -> String {
         let mut parts = Vec::new();
 
-        // 如果有当前标题，先显示它作为参考
+        // 如果有当前标题，将其作为主要输入（与 create 流程一致）
         if let Some(title) = current_title {
-            parts.push(format!("Current PR title: {}", title));
+            parts.push(format!("Current PR title (PRIMARY INPUT): {}", title));
             parts.push(String::new());
             parts.push("Instructions:".to_string());
-            parts.push("- Generate a new PR title based on the PR diff below".to_string());
             parts.push(
-                "- The new title should accurately reflect the actual changes in the PR"
-                    .to_string(),
+                "- Generate PR title primarily based on the current PR title above".to_string(),
             );
-            parts.push("- You can use the current title as a reference, but prioritize accuracy based on the diff".to_string());
+            parts.push("- Use PR diff below only to verify and refine, not to replace the current title's intent".to_string());
+            parts.push("- Focus on the business intent expressed in the current title, not implementation details".to_string());
             parts.push(String::new());
         } else {
+            // 如果没有当前标题，回退到基于 PR diff 生成
             parts.push("Instructions:".to_string());
             parts.push(
                 "- Generate a PR title and description based on the PR diff below".to_string(),
@@ -134,7 +138,7 @@ impl RewordGenerator {
                     pr_diff.to_string()
                 }
             };
-            parts.push("PR Diff:".to_string());
+            parts.push("PR Diff (for verification only):".to_string());
             parts.push(diff_trimmed);
         }
 

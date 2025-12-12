@@ -7,12 +7,15 @@ use anyhow::{Context, Result};
 use crate::base::dialog::ConfirmDialog;
 use crate::base::indicator::Spinner;
 use crate::git::GitRepo;
+use crate::jira::helpers::extract_jira_ticket_id;
+use crate::jira::Jira;
 use crate::log_break;
 use crate::log_debug;
 use crate::log_info;
 use crate::log_success;
 use crate::log_warning;
-use crate::pr::helpers::resolve_pull_request_id;
+use crate::pr::body_parser::{extract_jira_ticket_from_body, parse_change_types_from_body};
+use crate::pr::helpers::{generate_pull_request_body, resolve_pull_request_id};
 use crate::pr::llm::RewordGenerator;
 use crate::pr::platform::create_provider_auto;
 
@@ -103,6 +106,36 @@ impl PullRequestRewordCommand {
             log_break!();
         }
 
+        // 从当前 PR body 中提取信息
+        let current_change_types = current_body.as_deref().and_then(parse_change_types_from_body);
+
+        // 如果成功解析了 change_types，显示日志
+        if let Some(ref types) = current_change_types {
+            let selected_count = types.iter().filter(|&&t| t).count();
+            if selected_count > 0 {
+                log_success!(
+                    "Found {} selected change type(s) in current PR",
+                    selected_count
+                );
+                log_debug!("Change types: {:?}", types);
+            } else {
+                log_info!("No change types selected in current PR");
+            }
+        } else {
+            log_warning!("Could not parse change types from current PR body, will use default (none selected)");
+            if let Some(ref body) = current_body {
+                log_debug!(
+                    "Current PR body preview (first 500 chars): {}",
+                    &body.chars().take(500).collect::<String>()
+                );
+            }
+        }
+
+        let jira_ticket = current_body
+            .as_deref()
+            .and_then(extract_jira_ticket_from_body)
+            .or_else(|| extract_jira_ticket_id(&current_title));
+
         // 使用 LLM 生成新的标题和描述
         let reword_result = Spinner::with("Generating title and description with LLM...", || {
             RewordGenerator::reword_from_diff(&pr_diff, Some(&current_title))
@@ -143,9 +176,18 @@ impl PullRequestRewordCommand {
         if update_body {
             log_info!("Description:");
             let current_preview = current_body.as_deref().unwrap_or("(empty)");
-            let new_preview = reword_result.description.as_deref().unwrap_or("(empty)");
+            // 生成新的完整 PR body（用于预览）
+            let new_body_preview = Self::generate_new_pr_body(
+                &reword_result,
+                current_change_types.as_deref(),
+                jira_ticket.as_deref(),
+            )
+            .unwrap_or_else(|e| {
+                log_warning!("Failed to generate PR body preview: {}", e);
+                reword_result.description.as_deref().unwrap_or("(empty)").to_string()
+            });
             log_info!("  Current:  {}", current_preview);
-            log_info!("  New:      {}", new_preview);
+            log_info!("  New:      {}", new_body_preview);
         }
 
         log_break!();
@@ -176,11 +218,18 @@ impl PullRequestRewordCommand {
             None
         };
 
-        let new_body = if update_body {
-            reword_result.description.as_deref()
+        // 生成新的完整 PR body（如果需要更新）
+        let new_body_string = if update_body {
+            Some(Self::generate_new_pr_body(
+                &reword_result,
+                current_change_types.as_deref(),
+                jira_ticket.as_deref(),
+            )?)
         } else {
             None
         };
+
+        let new_body = new_body_string.as_deref();
 
         Spinner::with("Updating PR...", || {
             provider.update_pull_request(&pr_id, new_title, new_body)
@@ -203,5 +252,45 @@ impl PullRequestRewordCommand {
         log_info!("  URL:         {}", pr_url);
 
         Ok(())
+    }
+
+    /// 生成新的完整 PR body
+    ///
+    /// 使用模板系统生成包含标题、change_types 和描述的完整 PR body。
+    fn generate_new_pr_body(
+        reword_result: &crate::pr::llm::PullRequestReword,
+        current_change_types: Option<&[bool]>,
+        jira_ticket: Option<&str>,
+    ) -> Result<String> {
+        use crate::pr::platform::TYPES_OF_CHANGES;
+
+        // 使用当前 change_types，如果没有则默认都不选中
+        let selected_types: Vec<bool> = if let Some(types) = current_change_types {
+            log_debug!("Using parsed change_types: {:?}", types);
+            types.to_vec()
+        } else {
+            log_debug!("No change_types found, using default (all false)");
+            vec![false; TYPES_OF_CHANGES.len()]
+        };
+
+        // 获取 Jira 信息（如果存在）
+        let jira_info = if let Some(ticket) = jira_ticket {
+            Jira::get_ticket_info(ticket).ok()
+        } else {
+            None
+        };
+
+        // 使用 LLM 生成的描述作为 short_description
+        let short_description = reword_result.description.as_deref();
+
+        // 生成完整的 PR body
+        generate_pull_request_body(
+            &selected_types,
+            short_description,
+            jira_ticket,
+            None, // dependency 暂时为空
+            jira_info.as_ref(),
+        )
+        .context("Failed to generate PR body")
     }
 }
