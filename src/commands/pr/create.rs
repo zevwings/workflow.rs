@@ -17,7 +17,7 @@ use crate::pr::llm::PullRequestLLM;
 use crate::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
-use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
+use crate::{log_break, log_info, log_success, log_warning};
 
 /// PR 创建命令
 #[allow(dead_code)]
@@ -32,9 +32,6 @@ impl PullRequestCreateCommand {
         description: Option<String>,
         dry_run: bool,
     ) -> Result<()> {
-        // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
-
         // 1. 运行检查
         if !dry_run {
             check::CheckCommand::run_all()?;

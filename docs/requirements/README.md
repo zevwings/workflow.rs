@@ -49,15 +49,7 @@
 
 ### 进行中的需求
 
-#### 1. [`STEP_3_PR_UPDATE_HANG_ANALYSIS.md`](./STEP_3_PR_UPDATE_HANG_ANALYSIS.md)
-- **状态**: 📋 需求分析中
-- **分类**: PR 模块
-- **内容**:
-  - PR 更新挂起问题分析
-- **优先级**: 高优先级
-- **来源**: 从 `docs/todo/INTEGRATION_TODO.md` 迁移
-
-#### 2. [`STEP_4_ALIAS_SYSTEM.md`](./STEP_4_ALIAS_SYSTEM.md)
+#### 1. [`STEP_4_ALIAS_SYSTEM.md`](./STEP_4_ALIAS_SYSTEM.md)
 - **状态**: 📋 需求分析中
 - **分类**: 用户体验优化
 - **内容**:
@@ -67,7 +59,7 @@
 - **优先级**: 中优先级
 - **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
 
-#### 3. [`STEP_5_JIRA_COMMANDS.md`](./STEP_5_JIRA_COMMANDS.md)
+#### 2. [`STEP_5_JIRA_COMMANDS.md`](./STEP_5_JIRA_COMMANDS.md)
 - **状态**: 📋 需求分析中
 - **分类**: JIRA 模块
 - **内容**:
@@ -78,7 +70,7 @@
 - **优先级**: 高优先级（`jira comment`、`jira transition`）、中优先级（`jira list`、`jira search`）
 - **来源**: 从 `docs/todo/JIRA_TODO.md` 迁移
 
-#### 4. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+#### 3. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 - **状态**: 📋 需求分析中
 - **分类**: 配置管理
 - **内容**:
@@ -95,6 +87,7 @@
 - Git 工作流功能（2025-01-27 完成）- 分支管理（创建、切换、重命名、同步）、Commit 管理（修改、压缩、重写）
 - Stash 管理功能（2025-01-27 完成）- `stash list`、`stash apply`、`stash drop`、`stash pop`
 - 并发下载功能（2025-01-27 完成）- 并行下载 JIRA 附件，支持并发数限制和进度回调
+- PR 更新挂起问题（已解决）- 通过移除自动代理调用解决 `workflow pr update` 卡死问题
 
 ---
 

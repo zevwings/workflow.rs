@@ -582,6 +582,9 @@ workflow jira changelog [PROJ-123]            # 显示变更历史（JIRA ID 可
 workflow jira changelog [PROJ-123] --json     # JSON 格式输出
 workflow jira changelog [PROJ-123] --markdown  # Markdown 格式输出
 
+# 添加评论
+workflow jira comment [PROJ-123]              # 添加评论到 Jira ticket（JIRA ID 可选，不提供会交互式输入）
+
 # 显示评论
 workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
 

@@ -54,6 +54,7 @@ const JIRA_SUBCOMMANDS: &[&str] = &[
     "info",
     "related",
     "changelog",
+    "comment",
     "comments",
     "attachments",
     "clean",

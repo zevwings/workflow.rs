@@ -30,6 +30,24 @@ workflow jira assign PROJ-123 --unassign             # 取消分配
 - 支持用户名、邮箱、account_id 等多种输入方式
 - 支持交互式选择用户（从项目成员列表）
 
+#### 2.2 `jira list` - 列出 tickets
+- ❌ 列出项目中的 tickets，支持按状态、指派人等条件过滤
+
+**当前状态**：需要实现新的 API 方法。
+
+**命令示例**：
+```bash
+workflow jira list --project PROJ                      # 列出项目所有 tickets
+workflow jira list --project PROJ --status "In Progress"  # 按状态过滤
+workflow jira list --project PROJ --assignee me        # 按指派人过滤
+workflow jira list --project PROJ --limit 20           # 限制数量
+```
+
+**实现建议**：
+- 基于 `jira search` 实现，提供更友好的过滤选项
+- 支持表格、列表、卡片等多种显示格式
+- 使用 JIRA API 的搜索或列表端点
+
 #### 2.3 `jira create` - 创建 ticket
 - ❌ 创建新的 JIRA ticket
 
@@ -45,6 +63,23 @@ workflow jira create --interactive                    # 交互式创建
 - 支持必填字段验证
 - 支持模板（从现有 ticket 复制字段）
 
+#### 2.4 `jira transition` - 状态转换
+- ❌ 封装为 CLI 命令（API 已实现）
+
+**当前状态**：`JiraTicket::transition()` 已实现，需要封装为 CLI 命令。
+
+**命令示例**：
+```bash
+workflow jira transition PROJ-123 "In Progress"     # 转换到指定状态
+workflow jira transition PROJ-123 --list             # 列出可用状态
+workflow jira transition PROJ-123 --auto            # 自动转换到下一个状态
+```
+
+**实现建议**：
+- 在 `src/commands/jira/` 下创建 `transition.rs`
+- 在 `src/lib/cli/mod.rs` 的 `JiraSubcommand` 中添加 `Transition` 子命令
+- 调用 `JiraTicket::transition()` 或 `JiraTicket::get_transitions()`
+
 #### 2.5 `jira watch` - 关注/取消关注
 - ❌ 关注或取消关注 ticket
 
@@ -57,6 +92,31 @@ workflow jira watch --list                             # 列出关注的 tickets
 
 **实现建议**：
 - 使用 JIRA API `/issue/{issueIdOrKey}/watchers` 端点
+
+#### 2.6 `jira search` - JQL 搜索
+- ❌ 使用 JQL（Jira Query Language）搜索 tickets，提供强大的查询能力
+
+**当前状态**：需要实现新的 API 方法。
+
+**命令示例**：
+```bash
+workflow jira search "project = PROJ AND status = Open"  # JQL 搜索
+workflow jira search "assignee = currentUser()"         # 搜索分配给自己的
+workflow jira search --saved "my-open-tickets"          # 使用保存的查询
+workflow jira search --interactive                       # 交互式构建查询
+```
+
+**实现建议**：
+- 使用 JIRA API `/search` GET 端点
+- 支持保存常用查询到配置文件
+- 支持交互式查询构建器（逐步构建查询条件）
+- 实现 `JiraIssueApi::search_issues()` 方法（在 `src/lib/jira/api/issue.rs` 中）
+
+**关联功能**：
+- **动态补全支持**：`jira_ticket_keys()` 方法需要此 API 支持
+  - 位置：`src/lib/completion/dynamic.rs`
+  - 用途：为 `jira info` 等命令提供 ticket key 的自动补全
+  - 依赖：`JiraIssueApi::search_issues()` 方法
 
 #### 2.7 `jira update` - 更新 ticket
 - ❌ 更新 ticket 的字段（summary、description、priority 等）

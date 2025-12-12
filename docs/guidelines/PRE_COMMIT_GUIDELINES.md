@@ -713,7 +713,36 @@ fn get_system_proxy() -> Result<String> {
 
 ### 报告位置
 
-**文件路径**：`docs/report/CHECK_REPORT.md`
+**文件路径**：`docs/report/CHECK_REPORT_{timestamp}.md`
+
+其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
+
+**生成带时间戳的文件名**：
+
+在 Rust 代码中（自动获取当前时间）：
+```rust
+use workflow::base::util::date::format_filename_timestamp;
+
+// 函数会自动获取当前时间，无需提前获取
+let timestamp = format_filename_timestamp();
+let report_path = format!("docs/report/CHECK_REPORT_{}.md", timestamp);
+// 输出：docs/report/CHECK_REPORT_2024-12-19_14-30-00.md
+```
+
+> **注意**：`format_filename_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
+
+在命令行中（手动获取当前时间）：
+```bash
+# Unix/macOS/Linux
+TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+echo "docs/report/CHECK_REPORT_${TIMESTAMP}.md"
+
+# Windows PowerShell
+$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
+```
+
+**示例文件名**：`docs/report/CHECK_REPORT_2024-12-19_14-30-00.md`
 
 ### 报告内容
 

@@ -14,8 +14,8 @@ use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, Commit
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
-    AttachmentsCommand, ChangelogCommand, CleanCommand, CommentsCommand, InfoCommand,
-    RelatedCommand,
+    AttachmentsCommand, ChangelogCommand, CleanCommand, CommentCommand, CommentsCommand,
+    InfoCommand, RelatedCommand,
 };
 use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
@@ -321,6 +321,9 @@ fn main() -> Result<()> {
                 output_format,
             } => {
                 ChangelogCommand::show(jira_id.jira_id, output_format)?;
+            }
+            JiraSubcommand::Comment { jira_id } => {
+                CommentCommand::add(jira_id.jira_id)?;
             }
             JiraSubcommand::Comments {
                 jira_id,

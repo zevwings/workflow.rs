@@ -19,7 +19,7 @@ use crate::pr::helpers::{
 };
 use crate::pr::llm::PullRequestLLM;
 use crate::pr::TYPES_OF_CHANGES;
-use crate::{log_break, log_error, log_info, log_success, log_warning, ProxyManager};
+use crate::{log_break, log_error, log_info, log_success, log_warning};
 
 /// PR Pick 命令
 ///
@@ -52,9 +52,6 @@ impl PullRequestPickCommand {
     /// * `to_branch` - 目标分支名称
     /// * `dry_run` - 预览模式
     pub fn pick(from_branch: String, to_branch: String, dry_run: bool) -> Result<()> {
-        // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
-
         // 1. 运行预检查
         if !dry_run {
             log_info!("Running pre-flight checks...");

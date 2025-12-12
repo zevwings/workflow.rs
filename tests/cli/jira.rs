@@ -372,6 +372,10 @@ fn test_jira_command_parsing_all_subcommands() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog"]).unwrap();
     assert!(matches!(cli.command, JiraSubcommand::Changelog { .. }));
 
+    // Comment
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
+    assert!(matches!(cli.command, JiraSubcommand::Comment { .. }));
+
     // Comments
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments"]).unwrap();
     assert!(matches!(cli.command, JiraSubcommand::Comments { .. }));
@@ -406,6 +410,13 @@ fn test_jira_jira_id_parameter_optional() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "related"]).unwrap();
     match cli.command {
         JiraSubcommand::Related { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
+        _ => panic!(),
+    }
+
+    // Comment
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
+    match cli.command {
+        JiraSubcommand::Comment { jira_id } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
 
@@ -564,6 +575,47 @@ fn test_jira_changelog_command_all_flags() {
             assert!(output_format.markdown);
         }
         _ => panic!("Expected Changelog command"),
+    }
+}
+
+// ==================== Comment 命令测试 ====================
+
+#[test]
+fn test_jira_comment_command_structure() {
+    // 测试 Comment 命令基本结构
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment", "PROJ-123"]).unwrap();
+
+    match cli.command {
+        JiraSubcommand::Comment { jira_id } => {
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+        }
+        _ => panic!("Expected Comment command"),
+    }
+}
+
+#[test]
+fn test_jira_comment_command_with_jira_id() {
+    // 测试带 JIRA ID 的情况
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment", "PROJ-456"]).unwrap();
+
+    match cli.command {
+        JiraSubcommand::Comment { jira_id } => {
+            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
+        }
+        _ => panic!("Expected Comment command"),
+    }
+}
+
+#[test]
+fn test_jira_comment_command_without_id() {
+    // 测试不带 JIRA ID（交互式输入）
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
+
+    match cli.command {
+        JiraSubcommand::Comment { jira_id } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        _ => panic!("Expected Comment command"),
     }
 }
 

@@ -40,6 +40,14 @@ pub enum JiraSubcommand {
         #[command(flatten)]
         output_format: OutputFormatArgs,
     },
+    /// Add a comment to a Jira ticket
+    ///
+    /// Add a comment to a Jira ticket interactively.
+    /// You will be prompted to enter the comment message and optionally attach a file.
+    Comment {
+        #[command(flatten)]
+        jira_id: JiraIdArg,
+    },
     /// Show comments for a Jira ticket
     ///
     /// Display all comments for a Jira ticket with filtering and pagination options.
