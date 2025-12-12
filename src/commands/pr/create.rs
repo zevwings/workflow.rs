@@ -233,7 +233,7 @@ impl PullRequestCreateCommand {
             jira_ticket.as_deref(),
             &pr_title,
             Some(commit_type), // commit_type - 从分支类型映射
-            scope,              // scope - 使用 LLM 提取的 scope（如果可用）
+            scope,             // scope - 使用 LLM 提取的 scope（如果可用）
             None,              // body - optional
         )
         .unwrap_or_else(|_| {
