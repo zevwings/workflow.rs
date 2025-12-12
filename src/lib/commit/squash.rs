@@ -9,6 +9,7 @@
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use anyhow::{Context, Result};
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;

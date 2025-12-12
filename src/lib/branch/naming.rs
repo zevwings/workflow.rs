@@ -346,15 +346,33 @@ impl BranchNaming {
         // Sanitize the text (now should be in English)
         let sanitized = Self::sanitize(&text_to_sanitize);
 
+        // Check if sanitization removed too much (likely because translation failed and input was non-ASCII)
         if sanitized.is_empty() {
             // If sanitization removed everything, try slugify
             let slug = Self::slugify(&text_to_sanitize);
             if slug.is_empty() {
                 anyhow::bail!(
-                    "Branch name cannot be empty after sanitization. Please use English characters or provide a JIRA ticket ID."
+                    "Branch name cannot be empty after sanitization. The input '{}' contains non-English characters that were removed. Please provide an English title or a JIRA ticket ID for better branch name generation.",
+                    input
+                );
+            }
+            // If slug is too short (less than 3 characters), it's likely incomplete
+            if slug.len() < 3 && has_non_ascii {
+                anyhow::bail!(
+                    "Branch name '{}' is too short after sanitization. The input '{}' contains non-English characters that were removed. Please provide an English title or a JIRA ticket ID for better branch name generation.",
+                    slug,
+                    input
                 );
             }
             Ok(slug)
+        } else if sanitized.len() < 3 && has_non_ascii {
+            // If sanitized result is too short and original input had non-ASCII, warn user
+            log_warning!(
+                "Generated branch name '{}' is very short. This may be because the original input '{}' contained non-English characters that were removed. Consider providing an English title or a JIRA ticket ID for better results.",
+                sanitized,
+                input
+            );
+            Ok(sanitized)
         } else {
             Ok(sanitized)
         }
