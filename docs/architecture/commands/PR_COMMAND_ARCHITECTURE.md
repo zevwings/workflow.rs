@@ -1340,6 +1340,307 @@ workflow pr comment "This needs more tests"        # 多个单词自动组合
 
 ---
 
+## 13. Reword PR 命令 (`reword.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/reword.rs (214 行)
+src/lib/pr/llm/reword.rs (LLM 生成逻辑)
+src/lib/base/prompt/reword_pr.system.rs (System prompt)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Reword
+  ↓
+commands/pr/reword.rs::PullRequestRewordCommand::reword()
+  ↓
+  1. 检查是否在 Git 仓库中（GitRepo::is_git_repo()）
+  2. 创建平台提供者（create_provider_auto()）
+  3. 获取 PR ID（参数或自动检测当前分支）
+  4. 获取当前 PR 标题和描述（provider.get_pull_request_title()、get_pull_request_body()）
+  5. 获取 PR diff（provider.get_pull_request_diff()）
+  6. 验证 diff 不为空
+  7. 使用 LLM 生成新的标题和描述（RewordGenerator::reword_from_diff()）
+  8. 如果是 dry-run 模式，显示结果并退出
+  9. 确定要更新的内容（根据 --title 和 --description 标志）
+  10. 显示当前内容和新内容的对比
+  11. 用户确认（ConfirmDialog）
+  12. 执行更新（provider.update_pull_request()）
+  13. 显示 PR URL
+```
+
+### 功能说明
+
+Reword PR 命令用于基于 PR diff 自动生成并更新 PR 标题和描述：
+
+1. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+2. **PR 信息获取**：
+   - 自动获取当前 PR 的标题和描述
+   - 获取完整的 PR diff 内容
+   - 验证 diff 不为空（如果为空则报错）
+
+3. **LLM 生成**：
+   - 使用 `RewordGenerator::reword_from_diff()` 基于 PR diff 生成新的标题和描述
+   - 标题限制在 8 个单词以内，简洁明了
+   - 描述格式化为项目符号列表，描述主要变更
+   - 所有输出均为英文（如果 PR diff 包含非英文内容，LLM 会翻译）
+
+4. **更新选项**：
+   - `--title`：仅更新标题
+   - `--description`：仅更新描述
+   - 同时指定两者：更新标题和描述
+   - 都不指定：更新标题和描述（默认行为）
+
+5. **预览模式**：
+   - `--dry-run`：仅显示生成的结果，不实际更新 PR
+   - 用于预览 LLM 生成的内容，确认后再执行实际更新
+
+6. **用户确认**：
+   - 显示当前内容和新内容的对比
+   - 根据更新内容类型显示不同的确认消息
+   - 默认选择为确认（用户可以直接按 Enter）
+
+### 参数设计
+
+**可选参数**:
+- `PR_ID` - PR ID（可选，如果不提供则自动检测当前分支的 PR）
+- `--title` - 仅更新标题（可以与 --description 组合使用）
+- `--description` - 仅更新描述（可以与 --title 组合使用）
+- `--dry-run` - 预览模式（显示生成结果，不实际更新）
+
+**参数逻辑**:
+- 如果只指定 `--title`：只更新标题，不更新描述
+- 如果只指定 `--description`：只更新描述，不更新标题
+- 如果同时指定两者：两者都更新
+- 如果都不指定：两者都更新（默认行为）
+
+**注意**：
+- PR ID 会自动从当前分支检测，无需手动指定
+- 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+- 默认行为是更新标题和描述，除非明确指定只更新其中一个
+
+### 详细工作流程
+
+```
+1. 检查 Git 仓库
+   - 验证当前目录是 Git 仓库
+   - 如果不是，提示错误并退出
+
+2. 创建平台提供者
+   - 自动检测代码托管平台（GitHub、Codeup）
+   - 创建对应的平台提供者实例
+
+3. 获取 PR ID
+   - 如果提供了 PR ID 参数，使用该 ID
+   - 否则，自动检测当前分支对应的 PR
+   - 如果未找到 PR，提示错误并退出
+
+4. 获取当前 PR 信息
+   - 获取当前 PR 标题
+   - 获取当前 PR 描述（可能为空）
+   - 显示当前内容
+
+5. 获取 PR diff
+   - 获取完整的 PR diff 内容
+   - 验证 diff 不为空
+   - 显示 diff 统计信息（字符数、行数）
+   - 显示 diff 预览（前 10 行，用于调试）
+
+6. LLM 生成
+   - 调用 RewordGenerator::reword_from_diff()
+   - 传入 PR diff 和当前标题（可选，用于参考）
+   - 生成新的标题和描述
+   - 显示生成结果
+
+7. 预览模式检查
+   - 如果指定了 --dry-run，显示结果并退出
+   - 不执行实际更新
+
+8. 确定更新内容
+   - 根据 --title 和 --description 标志确定要更新的内容
+   - 逻辑：
+     * update_title = !description || title
+     * update_body = !title || description
+
+9. 显示对比
+   - 如果更新标题，显示当前标题和新标题
+   - 如果更新描述，显示当前描述和新描述
+
+10. 用户确认
+    - 根据更新内容类型显示不同的确认消息
+    - 默认选择为确认
+    - 如果用户取消，退出
+
+11. 执行更新
+    - 调用 provider.update_pull_request()
+    - 传入 PR ID、新标题（可选）、新描述（可选）
+
+12. 显示结果
+    - 显示更新成功消息
+    - 显示更新后的标题和描述
+    - 显示 PR URL
+```
+
+### 使用场景
+
+#### 场景 1：自动生成并更新 PR 标题和描述
+
+```bash
+# 在 PR 分支上
+workflow pr reword
+
+# 结果：
+# - 自动检测当前分支的 PR
+# - 获取 PR diff
+# - 使用 LLM 生成新的标题和描述
+# - 显示对比并确认
+# - 更新 PR 标题和描述
+```
+
+#### 场景 2：仅更新 PR 标题
+
+```bash
+workflow pr reword --title
+
+# 结果：
+# - 只生成并更新 PR 标题
+# - 不更新描述
+```
+
+#### 场景 3：仅更新 PR 描述
+
+```bash
+workflow pr reword --description
+
+# 结果：
+# - 只生成并更新 PR 描述
+# - 不更新标题
+```
+
+#### 场景 4：预览模式
+
+```bash
+workflow pr reword --dry-run
+
+# 结果：
+# - 显示生成的新标题和描述
+# - 不实际更新 PR
+# - 用于预览 LLM 生成的内容
+```
+
+#### 场景 5：指定 PR ID
+
+```bash
+workflow pr reword 123
+
+# 结果：
+# - 更新指定 PR ID 的标题和描述
+# - 不需要切换到对应的分支
+```
+
+### 边界情况处理
+
+#### 情况 1：不在 Git 仓库中
+
+**处理方式**:
+- 检查当前目录是否为 Git 仓库
+- 如果不是，提示错误并退出：
+  ```
+  Not in a Git repository. Please run this command in a Git repository directory.
+  ```
+
+#### 情况 2：PR ID 不存在或无法检测
+
+**处理方式**:
+- 如果提供了 PR ID 但不存在，API 调用会失败并返回错误
+- 如果未提供 PR ID 且当前分支没有对应的 PR，提示错误：
+  ```
+  No PR found for current branch. Please specify PR ID manually.
+  ```
+
+#### 情况 3：PR diff 为空
+
+**处理方式**:
+- 检查 PR diff 是否为空
+- 如果为空，提示错误并退出：
+  ```
+  PR diff is empty. Please ensure the PR has changes.
+  ```
+
+#### 情况 4：LLM 生成失败
+
+**处理方式**:
+- LLM API 调用失败时，返回错误并添加上下文信息
+- 错误消息包含当前标题信息，便于调试
+
+#### 情况 5：用户取消更新
+
+**处理方式**:
+- 在确认对话框中，如果用户选择取消，显示消息并退出
+- 不执行任何更新操作
+
+#### 情况 6：更新失败
+
+**处理方式**:
+- 如果 PR 更新失败（例如权限不足、PR 已关闭等），返回错误
+- 错误消息包含上下文信息，便于调试
+
+### 与其他命令的关系
+
+#### 与 `pr create` 的关系
+
+| 特性 | `pr reword` | `pr create` |
+|------|-------------|-------------|
+| **操作对象** | 现有 PR | 新 PR |
+| **标题生成** | 基于 PR diff 生成 | 基于 Jira ticket 或用户输入 |
+| **描述生成** | 基于 PR diff 生成 | 基于用户输入或模板 |
+| **使用场景** | 更新现有 PR 的标题和描述 | 创建新 PR |
+| **LLM 使用** | 分析代码变更生成标题和描述 | 生成分支名和 PR 标题 |
+
+#### 与 `pr summarize` 的关系
+
+| 特性 | `pr reword` | `pr summarize` |
+|------|-------------|----------------|
+| **输出格式** | PR 标题和描述（简洁） | 详细总结文档（Markdown） |
+| **输出位置** | 更新到 PR | 保存到文件 |
+| **用途** | 更新 PR 元数据 | 生成文档 |
+| **LLM 使用** | 生成简洁的标题和描述 | 生成详细的总结内容 |
+
+**使用建议**：
+- 使用 `pr reword` 快速更新 PR 的标题和描述，使其更准确地反映代码变更
+- 使用 `pr summarize` 生成详细的 PR 总结文档，用于文档记录或代码审查
+
+### 使用示例
+
+```bash
+# 基本用法：更新当前分支 PR 的标题和描述
+workflow pr reword
+
+# 仅更新标题
+workflow pr reword --title
+
+# 仅更新描述
+workflow pr reword --description
+
+# 预览模式（不实际更新）
+workflow pr reword --dry-run
+
+# 指定 PR ID
+workflow pr reword 123
+
+# 组合使用：预览并仅更新标题
+workflow pr reword --title --dry-run
+```
+
+---
+
 ## 🏗️ 架构设计
 
 ### 设计模式

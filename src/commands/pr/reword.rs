@@ -12,7 +12,7 @@ use crate::log_debug;
 use crate::log_info;
 use crate::log_success;
 use crate::log_warning;
-use crate::pr::helpers::get_current_branch_pr_id;
+use crate::pr::helpers::resolve_pull_request_id;
 use crate::pr::llm::RewordGenerator;
 use crate::pr::platform::create_provider_auto;
 
@@ -43,17 +43,11 @@ impl PullRequestRewordCommand {
             );
         }
 
+        // 获取 PR ID（从参数或当前分支）
+        let pr_id = resolve_pull_request_id(pull_request_id)?;
+
         // 创建平台提供者
         let provider = create_provider_auto()?;
-
-        // 获取 PR ID
-        let pr_id = if let Some(id) = pull_request_id {
-            id
-        } else {
-            // 自动检测当前分支的 PR
-            get_current_branch_pr_id()?
-                .context("No PR found for current branch. Please specify PR ID manually.")?
-        };
 
         // 获取当前 PR 标题和描述
         let current_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {

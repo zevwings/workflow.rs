@@ -138,6 +138,133 @@ fn test_update_pull_request_request_serialization() {
     assert!(json_str.contains("closed"), "JSON should contain state");
 }
 
+#[test]
+fn test_update_pull_request_request_with_title_only() {
+    // 测试更新 PR 请求（仅更新标题，用于 reword --title）
+    let request = UpdatePullRequestRequest {
+        title: Some("New PR Title".to_string()),
+        body: None,
+        state: None,
+        base: None,
+    };
+
+    assert_eq!(request.title, Some("New PR Title".to_string()));
+    assert_eq!(request.body, None);
+    assert_eq!(request.state, None);
+    assert_eq!(request.base, None);
+}
+
+#[test]
+fn test_update_pull_request_request_with_body_only() {
+    // 测试更新 PR 请求（仅更新描述，用于 reword --description）
+    let request = UpdatePullRequestRequest {
+        title: None,
+        body: Some("- Add new feature\n- Fix bug".to_string()),
+        state: None,
+        base: None,
+    };
+
+    assert_eq!(request.title, None);
+    assert_eq!(
+        request.body,
+        Some("- Add new feature\n- Fix bug".to_string())
+    );
+    assert_eq!(request.state, None);
+    assert_eq!(request.base, None);
+}
+
+#[test]
+fn test_update_pull_request_request_with_title_and_body() {
+    // 测试更新 PR 请求（同时更新标题和描述，用于 reword 默认行为）
+    let request = UpdatePullRequestRequest {
+        title: Some("Add user authentication".to_string()),
+        body: Some(
+            "- Add user authentication functionality\n- Implement JWT token generation".to_string(),
+        ),
+        state: None,
+        base: None,
+    };
+
+    assert_eq!(request.title, Some("Add user authentication".to_string()));
+    assert!(request.body.is_some());
+    assert_eq!(request.state, None);
+    assert_eq!(request.base, None);
+}
+
+#[test]
+fn test_update_pull_request_request_serialization_title_only() {
+    // 测试更新 PR 请求的序列化（仅标题，用于 reword --title）
+    let request = UpdatePullRequestRequest {
+        title: Some("New PR Title".to_string()),
+        body: None,
+        state: None,
+        base: None,
+    };
+
+    let json = serde_json::to_string(&request);
+    assert!(json.is_ok(), "Should serialize to JSON");
+
+    let json_str = json.unwrap();
+    assert!(
+        json_str.contains("New PR Title"),
+        "JSON should contain title"
+    );
+    assert!(!json_str.contains("body"), "None fields should be skipped");
+    assert!(!json_str.contains("state"), "None fields should be skipped");
+    assert!(!json_str.contains("base"), "None fields should be skipped");
+}
+
+#[test]
+fn test_update_pull_request_request_serialization_body_only() {
+    // 测试更新 PR 请求的序列化（仅描述，用于 reword --description）
+    let request = UpdatePullRequestRequest {
+        title: None,
+        body: Some("- Add new feature\n- Fix bug".to_string()),
+        state: None,
+        base: None,
+    };
+
+    let json = serde_json::to_string(&request);
+    assert!(json.is_ok(), "Should serialize to JSON");
+
+    let json_str = json.unwrap();
+    assert!(
+        json_str.contains("Add new feature"),
+        "JSON should contain body"
+    );
+    assert!(!json_str.contains("title"), "None fields should be skipped");
+    assert!(!json_str.contains("state"), "None fields should be skipped");
+    assert!(!json_str.contains("base"), "None fields should be skipped");
+}
+
+#[test]
+fn test_update_pull_request_request_serialization_title_and_body() {
+    // 测试更新 PR 请求的序列化（标题和描述，用于 reword 默认行为）
+    let request = UpdatePullRequestRequest {
+        title: Some("Add user authentication".to_string()),
+        body: Some(
+            "- Add user authentication functionality\n- Implement JWT token generation".to_string(),
+        ),
+        state: None,
+        base: None,
+    };
+
+    let json = serde_json::to_string(&request);
+    assert!(json.is_ok(), "Should serialize to JSON");
+
+    let json_str = json.unwrap();
+    assert!(
+        json_str.contains("Add user authentication"),
+        "JSON should contain title"
+    );
+    assert!(
+        json_str.contains("JWT token generation"),
+        "JSON should contain body"
+    );
+    assert!(!json_str.contains("state"), "None fields should be skipped");
+    assert!(!json_str.contains("base"), "None fields should be skipped");
+}
+
 // ==================== 响应结构体测试 ====================
 
 #[test]
