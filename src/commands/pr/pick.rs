@@ -812,12 +812,15 @@ impl PullRequestPickCommand {
         )?;
 
         // Step 3: 生成 commit title（使用模板系统）
+        // 从分支类型映射到 Conventional Commits 提交类型
+        let commit_type = branch_type.to_commit_type();
+
         let commit_title = generate_commit_title(
             jira_ticket.as_deref(),
             &pr_title,
-            None, // commit_type
-            None, // scope
-            None, // body
+            Some(commit_type), // commit_type - 从分支类型映射
+            None,              // scope
+            None,              // body
         )
         .unwrap_or_else(|_| {
             // Fallback to simple format if template fails
