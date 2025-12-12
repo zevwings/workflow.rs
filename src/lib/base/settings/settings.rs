@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use serde_with::skip_serializing_none;
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -167,13 +168,13 @@ pub struct GitHubAccount {
 }
 
 /// GitHub 配置（TOML）
+#[skip_serializing_none]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct GitHubSettings {
     /// 多个 GitHub 账号列表
     #[serde(default)]
     pub accounts: Vec<GitHubAccount>,
     /// 当前激活的账号名称
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub current: Option<String>,
 }
 
@@ -202,6 +203,7 @@ impl GitHubSettings {
 }
 
 /// 日志配置（TOML）
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogSettings {
     /// 日志输出文件夹名称
@@ -211,13 +213,11 @@ pub struct LogSettings {
     #[serde(default = "default_download_base_dir_option")]
     pub download_base_dir: Option<String>,
     /// 日志级别（none, error, warn, info, debug）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub level: Option<String>,
     /// 是否同时输出 tracing 日志到控制台（stderr）
     /// 如果为 `true`，tracing 日志会同时输出到文件和控制台
     /// 如果配置文件中不存在此字段，默认为 `false`（只输出到文件）
     /// 注意：只有设置为 `true` 时才会写入配置文件，设置为 `false` 时从配置文件中删除
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub enable_trace_console: Option<bool>,
 }
 
@@ -251,16 +251,14 @@ impl Default for LogSettings {
 // ==================== TOML LLM 配置结构体 ====================
 
 /// 单个 LLM Provider 的配置
+#[skip_serializing_none]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LLMProviderSettings {
     /// Provider URL（仅 proxy 使用）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     /// Provider API Key
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
     /// 模型名称
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
 }
 

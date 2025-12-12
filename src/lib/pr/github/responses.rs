@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use serde_with::skip_serializing_none;
 
 /// 创建 Pull Request 响应
 #[derive(Debug, Deserialize)]
@@ -42,12 +43,11 @@ pub struct RepositoryInfo {
 }
 
 /// GitHub 用户信息
+#[skip_serializing_none]
 #[derive(Debug, Deserialize)]
 pub struct GitHubUser {
     pub login: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
 }
 
