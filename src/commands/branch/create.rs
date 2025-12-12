@@ -15,7 +15,7 @@ use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
-use crate::pr::llm::PullRequestLLM;
+use crate::pr::llm::CreateGenerator;
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
@@ -173,7 +173,7 @@ impl CreateCommand {
         let exists_branches = GitBranch::get_all_branches(true).ok();
         let git_diff = None;
 
-        match PullRequestLLM::generate(&issue.fields.summary, exists_branches, git_diff) {
+        match CreateGenerator::generate(&issue.fields.summary, exists_branches, git_diff) {
             Ok(content) => {
                 log_success!("Generated branch name using LLM: {}", content.branch_name);
                 // Return just the slug part (without prefix)

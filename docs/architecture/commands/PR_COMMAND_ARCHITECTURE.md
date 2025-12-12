@@ -11,7 +11,7 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：12 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
+- 命令数量：13 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment, reword）
 - 总代码行数：约 4000+ 行
 - 支持平台：GitHub、Codeup
 - 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
@@ -29,7 +29,7 @@ src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment, reword）
 
 ### 命令封装层
 
@@ -48,7 +48,8 @@ src/commands/pr/
 ├── rebase.rs       # Rebase 分支并更新 PR base 命令（507 行）
 ├── pick.rs         # Pick 提交并创建新 PR 命令（978 行）
 ├── approve.rs      # 批准 PR 命令
-└── comment.rs      # 添加 PR 评论命令
+├── comment.rs      # 添加 PR 评论命令
+└── reword.rs       # Reword PR 标题和描述命令（214 行）
 ```
 
 **职责**：

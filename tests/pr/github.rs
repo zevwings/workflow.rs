@@ -112,17 +112,23 @@ fn test_merge_pull_request_request_serialization() {
 fn test_update_pull_request_request_structure() {
     // 测试更新 PR 请求结构
     let request = UpdatePullRequestRequest {
-        state: "closed".to_string(),
+        title: None,
+        body: None,
+        state: Some("closed".to_string()),
+        base: None,
     };
 
-    assert_eq!(request.state, "closed");
+    assert_eq!(request.state, Some("closed".to_string()));
 }
 
 #[test]
 fn test_update_pull_request_request_serialization() {
     // 测试更新 PR 请求的序列化
     let request = UpdatePullRequestRequest {
-        state: "closed".to_string(),
+        title: None,
+        body: None,
+        state: Some("closed".to_string()),
+        base: None,
     };
 
     let json = serde_json::to_string(&request);

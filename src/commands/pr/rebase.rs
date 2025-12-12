@@ -3,7 +3,7 @@ use crate::base::indicator::Spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -494,7 +494,7 @@ impl PullRequestRebaseCommand {
         .prompt()?;
 
         // 创建 PR provider
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 更新 PR base
         Spinner::with(

@@ -3,7 +3,7 @@
 //! 测试 Migrate CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
-use workflow::cli::{Commands, DryRunArgs};
+use workflow::cli::Commands;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
 #[derive(Parser)]

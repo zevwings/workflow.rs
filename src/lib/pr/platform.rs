@@ -1,6 +1,5 @@
 use crate::branch::BranchType;
 use crate::git::{GitRepo, RepoType};
-// use crate::pr::codeup::Codeup;  // Codeup support has been removed
 use crate::pr::github::GitHub;
 use crate::pr::PullRequestRow;
 use anyhow::Result;
@@ -140,7 +139,7 @@ pub struct PullRequestStatus {
 }
 
 /// PR 平台接口 trait
-/// 定义所有 PR 平台（GitHub、Codeup 等）必须实现的共同方法
+/// 定义所有 PR 平台（GitHub 等）必须实现的共同方法
 pub trait PlatformProvider {
     /// 创建 Pull Request
     ///
@@ -275,11 +274,31 @@ pub trait PlatformProvider {
     /// # Errors
     /// 如果更新失败，返回相应的错误信息。
     fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()>;
+
+    /// 更新 Pull Request 的标题和/或描述
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `title` - 新的标题（可选）
+    /// * `body` - 新的描述（可选）
+    ///
+    /// # Errors
+    /// 如果更新失败，返回相应的错误信息。
+    fn update_pull_request(
+        &self,
+        pull_request_id: &str,
+        title: Option<&str>,
+        body: Option<&str>,
+    ) -> Result<()>;
 }
 
 /// 创建平台提供者实例
 ///
-/// 根据当前仓库类型自动检测并创建对应的平台提供者。
+/// 根据提供的仓库类型创建对应的平台提供者。
+///
+/// # 参数
+///
+/// * `repo_type` - 仓库类型
 ///
 /// # 返回
 ///
@@ -293,9 +312,10 @@ pub trait PlatformProvider {
 ///
 /// ```rust,no_run
 /// use workflow::pr::platform::create_provider;
+/// use workflow::RepoType;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let provider = create_provider()?;
+/// let provider = create_provider(RepoType::GitHub)?;
 /// let pr_url = provider.create_pull_request(
 ///     "Title",
 ///     "Body",
@@ -305,14 +325,44 @@ pub trait PlatformProvider {
 /// # Ok(())
 /// # }
 /// ```
-pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
-    match GitRepo::detect_repo_type()? {
+pub fn create_provider(repo_type: RepoType) -> Result<Box<dyn PlatformProvider>> {
+    match repo_type {
         RepoType::GitHub => Ok(Box::new(GitHub)),
-        RepoType::Codeup => {
-            anyhow::bail!("Codeup support has been removed. Only GitHub is currently supported.")
-        }
-        RepoType::Unknown => {
+        RepoType::Codeup | RepoType::Unknown => {
             anyhow::bail!("Unsupported repository type. Only GitHub is currently supported.")
         }
     }
+}
+
+/// 自动检测仓库类型并创建平台提供者实例
+///
+/// 这是一个便捷函数，自动检测当前仓库类型并创建对应的平台提供者。
+///
+/// # 返回
+///
+/// 返回 `Box<dyn PlatformProvider>` trait 对象，可以用于调用平台无关的 PR 操作。
+///
+/// # 错误
+///
+/// 如果无法检测仓库类型或仓库类型不支持，返回错误。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::pr::platform::create_provider_auto;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let provider = create_provider_auto()?;
+/// let pr_url = provider.create_pull_request(
+///     "Title",
+///     "Body",
+///     "feature-branch",
+///     None,
+/// )?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_provider_auto() -> Result<Box<dyn PlatformProvider>> {
+    let repo_type = GitRepo::detect_repo_type()?;
+    create_provider(repo_type)
 }

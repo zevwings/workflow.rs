@@ -14,6 +14,8 @@
 
 #[path = "generate_branch.system.rs"]
 pub mod generate_branch_system;
+#[path = "reword_pr.system.rs"]
+pub mod reword_pr_system;
 #[path = "summarize_file_change.system.rs"]
 pub mod summarize_file_change_system;
 #[path = "summarize_pr.system.rs"]
@@ -23,6 +25,7 @@ pub mod translate_system;
 
 // 重新导出公共 API
 pub use generate_branch_system::GENERATE_BRANCH_SYSTEM_PROMPT;
+pub use reword_pr_system::REWORD_PR_SYSTEM_PROMPT;
 // 从 LLM 模块重新导出语言相关 API（保持向后兼容）
 pub use crate::base::llm::{
     find_language, get_language_instruction, get_supported_language_codes,

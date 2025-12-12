@@ -22,8 +22,8 @@ use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
 use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use workflow::commands::migrate::MigrateCommand;
 use workflow::commands::pr::{
-    approve, close, comment, create as pr_create, list, merge, pick, rebase, status, summarize,
-    sync, update as pr_update,
+    approve, close, comment, create as pr_create, list, merge, pick, rebase, reword, status,
+    summarize, sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
 use workflow::commands::repo::{setup as repo_setup, show as repo_show};
@@ -294,6 +294,19 @@ fn main() -> Result<()> {
                 dry_run,
             } => {
                 pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run.is_dry_run())?;
+            }
+            PRCommands::Reword {
+                pull_request_id,
+                title,
+                description,
+                dry_run,
+            } => {
+                reword::PullRequestRewordCommand::reword(
+                    pull_request_id,
+                    title,
+                    description,
+                    dry_run.is_dry_run(),
+                )?;
             }
         },
         // Jira 操作命令

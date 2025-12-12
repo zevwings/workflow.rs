@@ -167,4 +167,24 @@ pub enum PRCommands {
         #[command(flatten)]
         dry_run: DryRunArgs,
     },
+    /// Reword PR title and description from diff
+    ///
+    /// Automatically generate and update PR title and description based on PR diff.
+    /// Uses LLM to analyze code changes and generate concise title and description.
+    Reword {
+        /// PR ID (optional, auto-detect from current branch if not provided)
+        #[arg(value_name = "PR_ID")]
+        pull_request_id: Option<String>,
+
+        /// Update title (can be combined with --description to update both)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        title: bool,
+
+        /// Update description (can be combined with --title to update both)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        description: bool,
+
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+    },
 }

@@ -50,3 +50,30 @@ pub struct GitHubUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
 }
+
+/// Pull Request 文件信息
+#[derive(Debug, Deserialize)]
+pub struct PullRequestFile {
+    /// 文件路径
+    pub filename: String,
+    /// 文件状态（added, removed, modified, renamed, etc.）
+    pub status: String,
+    /// 添加的行数
+    pub additions: u32,
+    /// 删除的行数
+    pub deletions: u32,
+    /// 变更的行数
+    pub changes: u32,
+    /// 文件的 SHA（base）
+    #[serde(default)]
+    pub sha: Option<String>,
+    /// 文件的 blob URL
+    #[serde(default)]
+    pub blob_url: Option<String>,
+    /// 原始文件内容 URL（base）
+    #[serde(default)]
+    pub contents_url: Option<String>,
+    /// 补丁内容（如果文件较小）
+    #[serde(default)]
+    pub patch: Option<String>,
+}

@@ -13,7 +13,7 @@ use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::helpers::{generate_commit_title, generate_pull_request_body};
-use crate::pr::llm::PullRequestLLM;
+use crate::pr::llm::CreateGenerator;
 use crate::pr::{
     map_branch_type_to_change_type_index, map_branch_type_to_change_types, TYPES_OF_CHANGES,
 };
@@ -174,7 +174,7 @@ impl PullRequestCreateCommand {
 
         // Step 2: 先尝试 LLM（统一处理）
         let (pr_title, branch_name_slug, description, llm_content) =
-            match PullRequestLLM::generate(title, exists_branches, git_diff) {
+            match CreateGenerator::generate(title, exists_branches, git_diff) {
                 Ok(content) => {
                     // LLM 成功：统一处理（不管是否有 jira_ticket）
                     log_success!("Generated branch name using LLM: {}", content.branch_name);

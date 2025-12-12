@@ -13,11 +13,11 @@ use crate::git::{GitBranch, GitCherryPick, GitCommit, GitRepo, GitStash};
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::body_parser::{extract_info_from_source_pr, ExtractedPrInfo, SourcePrInfo};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::{
     generate_commit_title, generate_pull_request_body, get_current_branch_pr_id,
 };
-use crate::pr::llm::PullRequestLLM;
+use crate::pr::llm::CreateGenerator;
 use crate::pr::TYPES_OF_CHANGES;
 use crate::{log_break, log_error, log_info, log_success, log_warning};
 
@@ -504,7 +504,7 @@ impl PullRequestPickCommand {
         }
 
         if let Some(pr_id) = pr_id {
-            let provider = create_provider()?;
+            let provider = create_provider_auto()?;
             let title = provider.get_pull_request_title(&pr_id).ok();
             let url = provider.get_pull_request_url(&pr_id).ok();
             let body = provider.get_pull_request_body(&pr_id).ok().flatten();
@@ -784,7 +784,7 @@ impl PullRequestPickCommand {
 
         // Step 1: 生成分支名 slug（使用 LLM 或回退方法）
         let (pr_title, branch_name_slug) =
-            match PullRequestLLM::generate(llm_input, exists_branches, git_diff) {
+            match CreateGenerator::generate(llm_input, exists_branches, git_diff) {
                 Ok(content) => {
                     log_success!("Generated branch name using LLM: {}", content.branch_name);
                     // 提取 slug（移除可能的前缀）

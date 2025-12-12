@@ -2,15 +2,15 @@
 
 ## 📋 概述
 
-PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Request 的平台抽象层。支持 GitHub 和 Codeup 两种代码托管平台，通过 `PlatformProvider` trait 实现统一的平台接口，使用工厂函数实现多态分发。该模块专注于平台 API 的抽象和调用，不涉及命令层的业务逻辑。
+PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Request 的平台抽象层。目前支持 GitHub 平台，通过 `PlatformProvider` trait 实现统一的平台接口，使用工厂函数实现多态分发。该模块专注于平台 API 的抽象和调用，不涉及命令层的业务逻辑。
 
 **注意**：本文档仅描述 `lib/pr/` 模块的架构。关于 PR 命令层的详细内容，请参考 [PR 命令模块架构文档](../commands/PR_COMMAND_ARCHITECTURE.md)。
 
 **模块统计：**
-- 总代码行数：约 2500+ 行
-- 文件数量：16+ 个
-- 支持平台：GitHub、Codeup
-- 主要结构体：`PlatformProvider` trait、`GitHub`、`Codeup`、`PullRequestLLM`、`SourcePrInfo`、`ExtractedPrInfo`
+- 总代码行数：约 3000+ 行
+- 文件数量：20+ 个
+- 支持平台：GitHub
+- 主要结构体：`PlatformProvider` trait、`GitHub`、`CreateGenerator`、`RewordGenerator`、`SummaryGenerator`、`SourcePrInfo`、`ExtractedPrInfo`
 
 ---
 
@@ -18,26 +18,32 @@ PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Reques
 
 ```
 src/lib/pr/
-├── mod.rs              # PR 模块声明和导出 (18行)
-├── platform.rs         # PlatformProvider trait 和工厂函数 (150行)
-├── helpers.rs          # PR 辅助函数 (282行)
-├── llm.rs              # LLM 功能（PR 标题生成）(253行)
+├── mod.rs              # PR 模块声明和导出
+├── platform.rs         # PlatformProvider trait 定义
+├── factory.rs          # 平台工厂函数（create_provider）
 ├── body_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
-├── table.rs            # PR 表格显示结构体 (25行)
+├── table.rs            # PR 表格显示结构体
 │
 ├── github/             # GitHub 平台实现
 │   ├── mod.rs          # GitHub 模块导出
-│   ├── platform.rs    # GitHub 平台实现
+│   ├── platform.rs     # GitHub 平台实现
 │   ├── requests.rs     # GitHub API 请求结构体
 │   ├── responses.rs    # GitHub API 响应结构体
 │   └── errors.rs       # GitHub 错误处理
 │
-└── codeup/             # Codeup 平台实现
-    ├── mod.rs          # Codeup 模块导出
-    ├── platform.rs    # Codeup 平台实现
-    ├── requests.rs    # Codeup API 请求结构体
-    ├── responses.rs   # Codeup API 响应结构体
-    └── errors.rs      # Codeup 错误处理
+├── llm/                # LLM 内容生成
+│   ├── mod.rs          # LLM 模块导出
+│   ├── create.rs       # PR 创建内容生成
+│   ├── reword.rs       # PR 标题和描述重写
+│   ├── summary.rs      # PR 总结生成
+│   ├── file_summary.rs # 单文件总结生成
+│   └── helpers.rs      # LLM 辅助函数
+│
+└── helpers/            # PR 辅助函数（已拆分）
+    ├── mod.rs
+    ├── pr_id.rs        # PR ID 相关
+    ├── repo.rs         # 仓库信息相关
+    └── content.rs      # 内容生成相关
 ```
 
 ### 依赖模块
@@ -45,7 +51,7 @@ src/lib/pr/
 - **`lib/git/`**：Git 操作（检测仓库类型，用于工厂函数自动选择平台）
 - **`lib/base/llm/`**：AI 功能（PR 标题生成，通过 `llm.rs` 模块封装）
 - **`lib/base/http/`**：HTTP 客户端（API 请求）
-- **`lib/base/settings/`**：配置管理（环境变量读取，如 `GITHUB_TOKEN`、`CODEUP_PROJECT_ID` 等）
+- **`lib/base/settings/`**：配置管理（环境变量读取，如 `GITHUB_TOKEN` 等）
 
 **注意**：PR 模块不直接依赖 Jira、Git 分支操作、工具函数等模块，这些集成由命令层（`commands/pr/`）负责协调。
 
@@ -81,8 +87,8 @@ src/lib/pr/
   - `approve_pull_request()` - 批准 PR
   - `update_pr_base()` - 更新 PR 的 base 分支
 
-- **`create_provider()` 工厂函数**：
-  - 自动检测仓库类型（GitHub/Codeup）
+- **`create_provider()` 工厂函数**（位于 `factory.rs`）：
+  - 自动检测仓库类型（GitHub）
   - 返回 `Box<dyn PlatformProvider>` trait 对象
   - 实现真正的多态分发
 
@@ -104,40 +110,43 @@ src/lib/pr/
 - 需要 `GITHUB_TOKEN` 环境变量
 - 支持所有 trait 方法
 
-#### 3. Codeup 平台实现 (`codeup/`)
+#### 3. 工厂函数层 (`factory.rs`)
 
-**职责**：Codeup REST API 的完整实现
+**职责**：提供平台工厂函数，实现平台实例的创建
 
-- **`platform.rs`**：实现 `PlatformProvider` trait
-- **`requests.rs`**：Codeup API 请求结构体
-- **`responses.rs`**：Codeup API 响应结构体
-- **`errors.rs`**：Codeup 特定错误处理
+- **`create_provider()`**：根据仓库类型创建对应的平台提供者
+- 自动检测仓库类型（通过 `GitRepo::detect_repo_type()`）
+- 目前仅支持 GitHub 平台
+
+#### 4. LLM 功能层 (`llm/`)
+
+**职责**：提供使用 LLM 生成 PR 内容的功能
+
+- **`CreateGenerator`**：PR 创建内容生成（分支名、标题、描述）
+- **`RewordGenerator`**：PR 标题和描述重写（基于 PR diff）
+- **`SummaryGenerator`**：PR 总结生成（详细的总结文档）
+- **`FileSummaryGenerator`**：单文件修改总结生成
 
 **关键特性**：
-- 使用 Codeup REST API
-- 需要 `CODEUP_PROJECT_ID`、`CODEUP_CSRF_TOKEN`、`CODEUP_COOKIE` 环境变量
-- 支持所有 trait 方法
+- 统一的 Generator 模式（struct + impl）
+- 支持 diff 长度限制，避免超过 LLM token 限制
+- 使用 `lib/base/llm/` 模块进行 LLM 调用
 
-#### 4. 辅助函数层 (`helpers.rs`)
+#### 5. 辅助函数层 (`helpers/`)
 
 **职责**：提供 PR 相关的通用辅助函数
 
 **主要函数**：
-- `extract_pull_request_id_from_url()` - 从 URL 提取 PR ID
-- `extract_github_repo_from_url()` - 从 URL 提取 GitHub 仓库信息
-- `generate_branch_name()` - 生成分支名
-- `generate_commit_title()` - 生成 commit 标题
-- `generate_pull_request_body()` - 生成 PR body
-- `get_current_branch_pr_id()` - 获取当前分支的 PR ID
-- `detect_repo_type()` - 检测仓库类型（向后兼容）
-
-#### 5. LLM 功能层 (`llm.rs`)
-
-**职责**：提供 PR 标题的 AI 生成功能
-
-- **`PullRequestLLM`**：PR LLM 客户端包装器
-- **`PullRequestContent`**：PR 内容结构体
-- **主要方法**：`generate_title()` - 从 Jira ticket 描述生成 PR 标题
+- `pr_id.rs`：PR ID 相关函数
+  - `extract_pull_request_id_from_url()` - 从 URL 提取 PR ID
+- `repo.rs`：仓库信息相关函数
+  - `extract_github_repo_from_url()` - 从 URL 提取 GitHub 仓库信息
+- `content.rs`：内容生成相关函数
+  - `generate_commit_title()` - 生成 commit 标题
+  - `generate_pull_request_body()` - 生成 PR body
+- `mod.rs`：公共函数
+  - `get_current_branch_pr_id()` - 获取当前分支的 PR ID
+  - `detect_repo_type()` - 检测仓库类型（向后兼容）
 
 #### 6. PR Body 解析器 (`body_parser.rs`)
 
@@ -201,37 +210,33 @@ pub struct PullRequestRow {
 ```
 调用者（命令层或其他模块）
   ↓
-lib/pr/platform.rs (工厂函数 create_provider())
+lib/pr/factory.rs (工厂函数 create_provider())
   ↓
-lib/pr/github/platform.rs 或 lib/pr/codeup/platform.rs (平台实现)
+lib/pr/github/platform.rs (GitHub 平台实现)
   ↓
 lib/base/http/ (HTTP 客户端)
   ↓
-GitHub API 或 Codeup API
+GitHub API
 ```
 
 #### 架构流程图
 
 ```mermaid
 graph TB
-    Caller[调用者<br/>命令层或其他模块] --> Factory[lib/pr/platform.rs<br/>create_provider<br/>工厂函数]
+    Caller[调用者<br/>命令层或其他模块] --> Factory[lib/pr/factory.rs<br/>create_provider<br/>工厂函数]
 
     Factory -->|GitHub| GitHub[lib/pr/github/platform.rs<br/>GitHub 实现]
-    Factory -->|Codeup| Codeup[lib/pr/codeup/platform.rs<br/>Codeup 实现]
 
     GitHub --> Http[lib/base/http/<br/>HTTP 客户端]
-    Codeup --> Http
 
     Http --> GitHubAPI[GitHub API]
-    Http --> CodeupAPI[Codeup API]
 
-    Factory --> Helpers[lib/pr/helpers.rs<br/>辅助函数]
-    Factory --> LLM[lib/pr/llm.rs<br/>LLM 功能]
+    Factory --> Helpers[lib/pr/helpers/<br/>辅助函数]
+    Factory --> LLM[lib/pr/llm/<br/>LLM 功能]
 
     style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
     style GitHub fill:#e3f2fd
-    style Codeup fill:#fff3e0
     style Http fill:#f3e5f5
     style Helpers fill:#f3e5f5
     style LLM fill:#f3e5f5
@@ -303,20 +308,14 @@ provider.update_pr_base("123", "master")?;
 ```mermaid
 flowchart LR
     Caller[调用者<br/>提供参数] --> Factory[工厂函数<br/>create_provider]
-    Factory --> Platform{平台选择}
-    Platform -->|GitHub| GitHub[GitHub 实现<br/>构建请求]
-    Platform -->|Codeup| Codeup[Codeup 实现<br/>构建请求]
+    Factory --> GitHub[GitHub 实现<br/>构建请求]
     GitHub --> Http[HTTP 客户端<br/>发送请求]
-    Codeup --> Http
     Http --> GitHubAPI[GitHub API]
-    Http --> CodeupAPI[Codeup API]
     GitHubAPI --> Response[返回 PR URL]
-    CodeupAPI --> Response
 
     style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
     style GitHub fill:#e3f2fd
-    style Codeup fill:#fff3e0
     style Http fill:#f3e5f5
     style Response fill:#c8e6c9
 ```
@@ -326,21 +325,15 @@ flowchart LR
 ```mermaid
 flowchart LR
     Caller[调用者<br/>提供 PR ID] --> Factory[工厂函数<br/>create_provider]
-    Factory --> Platform{平台选择}
-    Platform -->|GitHub| GitHub[GitHub 实现<br/>构建请求]
-    Platform -->|Codeup| Codeup[Codeup 实现<br/>构建请求]
+    Factory --> GitHub[GitHub 实现<br/>构建请求]
     GitHub --> Http[HTTP 客户端<br/>发送请求]
-    Codeup --> Http
     Http --> GitHubAPI[GitHub API]
-    Http --> CodeupAPI[Codeup API]
     GitHubAPI --> Parse[解析响应]
-    CodeupAPI --> Parse
     Parse --> Response[返回 PR 信息]
 
     style Caller fill:#e1f5ff
     style Factory fill:#e8f5e9
     style GitHub fill:#e3f2fd
-    style Codeup fill:#fff3e0
     style Http fill:#f3e5f5
     style Parse fill:#fff9c4
     style Response fill:#c8e6c9
@@ -365,11 +358,10 @@ flowchart LR
 
 **示例**：
 ```rust
-// lib/pr/platform.rs
+// lib/pr/factory.rs
 pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
     match GitRepo::detect_repo_type()? {
         RepoType::GitHub => Ok(Box::new(GitHub)),
-        RepoType::Codeup => Ok(Box::new(Codeup)),
         RepoType::GitLab => Ok(Box::new(GitLab)),  // 新增
         RepoType::Unknown => anyhow::bail!("Unsupported repository type"),
     }
@@ -461,13 +453,9 @@ log_message!("{}", prs);
 
 ```rust
 use workflow::pr::helpers::{
-    generate_branch_name,
     generate_commit_title,
     generate_pull_request_body,
 };
-
-// 生成分支名
-let branch_name = generate_branch_name("PROJ-123", "Add new feature", None)?;
 
 // 生成 commit 标题
 let commit_title = generate_commit_title("PROJ-123", "Add new feature", false)?;
@@ -508,14 +496,21 @@ let output = TableBuilder::new(pr_rows)
 log_message!("{}", output);
 ```
 
-### 使用 LLM 生成标题
+### 使用 LLM 生成 PR 内容
 
 ```rust
-use workflow::pr::PullRequestLLM;
+use workflow::pr::llm::CreateGenerator;
 
-let llm = PullRequestLLM::new()?;
-let title = llm.generate_title("PROJ-123", "This is a description of the feature")?;
-log_message!("Generated title: {}", title);
+// 生成 PR 内容（分支名、标题、描述）
+let content = CreateGenerator::generate(
+    "Add user authentication",
+    Some(vec!["feature-login".to_string()]),
+    Some(git_diff),
+)?;
+
+log_message!("Branch: {}", content.branch_name);
+log_message!("Title: {}", content.pr_title);
+log_message!("Description: {:?}", content.description);
 ```
 
 ---
@@ -525,10 +520,10 @@ log_message!("Generated title: {}", title);
 PR 模块采用清晰的分层架构设计：
 
 1. **平台抽象层**：`PlatformProvider` trait 定义统一的平台接口
-2. **工厂函数**：`create_provider()` 实现多态分发，自动检测仓库类型
-3. **平台实现层**：GitHub 和 Codeup 分别实现 trait，模块化组织
-4. **辅助函数层**：提供通用的 PR 相关辅助函数
-5. **LLM 功能层**：提供 PR 标题的 AI 生成功能
+2. **工厂函数层**：`create_provider()` 实现多态分发，自动检测仓库类型
+3. **平台实现层**：GitHub 实现 trait，模块化组织
+4. **LLM 功能层**：提供 PR 内容的 AI 生成功能（创建、重写、总结）
+5. **辅助函数层**：提供通用的 PR 相关辅助函数（已按功能拆分）
 
 **设计优势**：
 - ✅ **多态支持**：通过 trait 对象实现真正的多态

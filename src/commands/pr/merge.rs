@@ -3,7 +3,7 @@ use crate::commands::pr::helpers;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::status::JiraStatus;
 use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::Result;
@@ -47,7 +47,7 @@ impl PullRequestMergeCommand {
     /// 合并 PR（根据仓库类型调用对应的实现）
     /// 返回 true 表示新合并，false 表示已经合并
     fn merge_pull_request(pull_request_id: &str) -> Result<bool> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 先检查 PR 状态
         let status = provider.get_pull_request_status(pull_request_id)?;
@@ -131,7 +131,7 @@ impl PullRequestMergeCommand {
 
     /// 从 PR 标题提取 Jira ticket ID
     fn extract_jira_ticket_from_pr_title(pull_request_id: &str) -> Result<Option<String>> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let title = provider.get_pull_request_title(pull_request_id).ok();
         Ok(title.and_then(|t| extract_jira_ticket_id(&t)))
     }

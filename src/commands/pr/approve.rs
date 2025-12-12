@@ -1,5 +1,5 @@
 use crate::log_success;
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use anyhow::{Context, Result};
 
@@ -17,7 +17,7 @@ impl PullRequestApproveCommand {
         log_success!("Approving PR: #{}", pr_id);
 
         // 创建平台提供者并批准 PR
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         match provider.approve_pull_request(&pr_id) {
             Ok(_) => {
                 log_success!("PR #{} approved successfully!", pr_id);

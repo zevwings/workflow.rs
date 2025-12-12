@@ -10,7 +10,7 @@ use crate::jira::status::JiraStatus;
 use crate::jira::Jira;
 use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
-use crate::pr::{create_provider, TYPES_OF_CHANGES};
+use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
 use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Error, Result};
 
@@ -554,7 +554,7 @@ pub fn create_or_get_pull_request(
 
     if let Some(pr_id) = existing_pr {
         log_info!("PR #{} already exists for branch '{}'", pr_id, branch_name);
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         provider.get_pull_request_url(&pr_id)
     } else {
         // 分支无 PR，创建新 PR
@@ -576,7 +576,7 @@ pub fn create_or_get_pull_request(
             );
         }
 
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let pull_request_url = Spinner::with("Creating PR...", || {
             provider.create_pull_request(pr_title, pull_request_body, branch_name, None)
         })?;

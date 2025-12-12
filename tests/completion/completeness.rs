@@ -46,6 +46,7 @@ const PR_SUBCOMMANDS: &[&str] = &[
     "approve",
     "comment",
     "pick",
+    "reword",
 ];
 
 /// Log 子命令列表

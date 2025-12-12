@@ -7,7 +7,7 @@
 
 use crate::branch::llm::BranchLLM;
 use crate::git::GitBranch;
-use crate::pr::llm::PullRequestLLM;
+use crate::pr::llm::CreateGenerator;
 use crate::repo::config::RepoConfig;
 use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
 use crate::{log_info, log_success, log_warning};
@@ -227,7 +227,7 @@ impl BranchNaming {
         let exists_branches = GitBranch::get_all_branches(true).ok();
         let git_diff = None;
 
-        match PullRequestLLM::generate(summary, exists_branches, git_diff) {
+        match CreateGenerator::generate(summary, exists_branches, git_diff) {
             Ok(content) => {
                 log_success!("Generated branch name using LLM: {}", content.branch_name);
                 let base_name = content.branch_name;

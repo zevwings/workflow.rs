@@ -2,7 +2,7 @@ use crate::base::dialog::ConfirmDialog;
 use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
 use crate::git::GitBranch;
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_debug, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -184,7 +184,7 @@ impl PullRequestSyncCommand {
 
                 if should_close {
                     // 关闭 PR
-                    let provider = create_provider()?;
+                    let provider = create_provider_auto()?;
                     match provider.close_pull_request(&pr_id) {
                         Ok(()) => {
                             log_success!("PR #{} closed successfully", pr_id);

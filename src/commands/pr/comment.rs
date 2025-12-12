@@ -1,5 +1,5 @@
 use crate::log_success;
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use anyhow::{Context, Result};
 
@@ -23,7 +23,7 @@ impl PullRequestCommentCommand {
         log_success!("Adding comment to PR: #{}", pr_id);
 
         // 创建平台提供者并添加评论
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         provider
             .add_comment(&pr_id, &comment_message)
             .context(format!("Failed to add comment to PR #{}", pr_id))?;

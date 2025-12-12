@@ -562,6 +562,12 @@ workflow pr approve [PR_ID]                    # 批准 PR（可选指定 PR ID�
 
 # 添加评论
 workflow pr comment [PR_ID] <MESSAGE>          # 添加评论到 PR（可选指定 PR ID，否则自动检测当前分支）
+
+# Reword PR 标题和描述
+workflow pr reword [PR_ID]                      # 基于 PR diff 自动生成并更新标题和描述
+workflow pr reword --title                     # 仅更新标题
+workflow pr reword --description               # 仅更新描述
+workflow pr reword --dry-run                   # 预览模式（不实际更新）
 ```
 
 ### Jira 操作
