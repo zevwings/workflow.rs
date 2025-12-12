@@ -1,7 +1,11 @@
 //! 交互式对话框模块
 //!
-//! 提供统一的交互式对话框接口，使用 `inquire` 作为后端实现。
+//! 提供统一的交互式对话框接口，使用 `inquire` 和 `dialoguer` 作为后端实现。
 //! 支持链式调用，提供更好的用户体验和代码可读性。
+//!
+//! **后端实现：**
+//! - `InputDialog`, `SelectDialog`, `MultiSelectDialog`：使用 `inquire`
+//! - `ConfirmDialog`：使用 `dialoguer`（支持单键自动完成和 Enter 使用默认值）
 //!
 //! ## 对话框类型
 //!

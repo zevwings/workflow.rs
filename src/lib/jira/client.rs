@@ -100,4 +100,20 @@ impl JiraClient {
     pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
         JiraTicket::add_comment(ticket, comment)
     }
+
+    /// 上传附件到 ticket
+    ///
+    /// 将文件作为附件上传到指定的 ticket。
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `file_path` - 要上传的文件路径
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回上传的附件信息列表。
+    pub fn upload_attachment(ticket: &str, file_path: &str) -> Result<Vec<JiraAttachment>> {
+        JiraTicket::upload_attachment(ticket, file_path)
+    }
 }

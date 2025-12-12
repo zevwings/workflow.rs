@@ -79,7 +79,7 @@ pub struct CommitTemplates {
 impl CommitTemplates {
     /// Get default commit template
     pub fn default_commit_template() -> String {
-        r#"{{commit_type}}({{#if scope}}{{scope}}{{/if}}): {{subject}}
+        r#"{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}# {{subject}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
