@@ -91,7 +91,6 @@ docs/todo/
    - 更多平台支持、通知系统
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
-> 详见：[配置验证与导入/导出需求文档](../requirements/CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 
 ### 文档维护
 
@@ -108,10 +107,6 @@ docs/todo/
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
-- **Git 工作流** → [Git 工作流需求文档](../requirements/GIT_WORKFLOW.md)
-- **工作流自动化** → [模板系统需求文档](../requirements/TEMPLATE_SYSTEM.md)
-- **别名系统** → [别名系统需求文档](../requirements/ALIAS_SYSTEM.md)
-- **配置管理** → [配置验证与导入/导出需求文档](../requirements/CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 
 ---
 

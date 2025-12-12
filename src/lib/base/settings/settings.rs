@@ -250,35 +250,123 @@ impl Default for LogSettings {
 
 // ==================== TOML LLM 配置结构体 ====================
 
-/// LLM 配置（TOML）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LLMSettings {
-    /// LLM Provider URL（proxy 时使用，openai/deepseek 时自动设置）
+/// 单个 LLM Provider 的配置
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct LLMProviderSettings {
+    /// Provider URL（仅 proxy 使用）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    /// LLM Provider Key（proxy/openai/deepseek 时使用）
+    /// Provider API Key
     #[serde(skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
-    /// LLM Provider (openai, deepseek, proxy)
-    #[serde(default = "default_llm_provider")]
-    pub provider: String,
-    /// LLM 模型名称（openai: 默认 gpt-4.0, deepseek: 默认 deepseek-chat, proxy: 必填）
+    /// 模型名称
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+}
+
+impl LLMProviderSettings {
+    /// 检查 Provider 配置是否为空
+    pub fn is_empty(&self) -> bool {
+        self.url.is_none() && self.key.is_none() && self.model.is_none()
+    }
+}
+
+/// LLM 配置（TOML）
+/// 支持按 provider 分组，每个 provider 有独立的配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LLMSettings {
+    /// 当前使用的 LLM Provider (openai, deepseek, proxy)
+    #[serde(default = "default_llm_provider")]
+    pub provider: String,
     /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
+    /// 所有 provider 共享此语言设置
     #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
     pub language: String,
+    /// OpenAI 配置
+    #[serde(default, skip_serializing_if = "LLMProviderSettings::is_empty")]
+    pub openai: LLMProviderSettings,
+    /// DeepSeek 配置
+    #[serde(default, skip_serializing_if = "LLMProviderSettings::is_empty")]
+    pub deepseek: LLMProviderSettings,
+    /// Proxy 配置
+    #[serde(default, skip_serializing_if = "LLMProviderSettings::is_empty")]
+    pub proxy: LLMProviderSettings,
 }
 
 impl Default for LLMSettings {
     fn default() -> Self {
         Self {
-            url: None,
-            key: None,
             provider: default_llm_provider(),
-            model: None,
             language: default_language(),
+            openai: LLMProviderSettings::default(),
+            deepseek: LLMProviderSettings::default(),
+            proxy: LLMProviderSettings::default(),
         }
+    }
+}
+
+impl LLMSettings {
+    /// 获取当前 provider 的配置
+    pub fn current_provider(&self) -> &LLMProviderSettings {
+        match self.provider.as_str() {
+            "openai" => &self.openai,
+            "deepseek" => &self.deepseek,
+            "proxy" => &self.proxy,
+            _ => &self.openai, // 默认返回 openai
+        }
+    }
+
+    /// 获取当前 provider 的配置（可变引用）
+    pub fn current_provider_mut(&mut self) -> &mut LLMProviderSettings {
+        match self.provider.as_str() {
+            "openai" => &mut self.openai,
+            "deepseek" => &mut self.deepseek,
+            "proxy" => &mut self.proxy,
+            _ => &mut self.openai, // 默认返回 openai
+        }
+    }
+
+    /// 检查 LLM 配置是否为空
+    fn is_empty(&self) -> bool {
+        self.openai.is_empty()
+            && self.deepseek.is_empty()
+            && self.proxy.is_empty()
+            && self.provider == default_llm_provider()
+            && self.language == default_language()
+    }
+
+    /// 从旧格式迁移配置（向后兼容）
+    /// 如果配置文件中存在旧的格式（url, key, model 在顶层），则迁移到新格式
+    pub fn migrate_from_old_format(
+        old_provider: &str,
+        old_url: &Option<String>,
+        old_key: &Option<String>,
+        old_model: &Option<String>,
+    ) -> Self {
+        let mut new = LLMSettings {
+            provider: old_provider.to_string(),
+            ..Default::default()
+        };
+
+        // 根据 provider 将旧配置迁移到对应的 provider 配置块
+        match old_provider {
+            "openai" => {
+                new.openai.key = old_key.clone();
+                new.openai.model = old_model.clone();
+            }
+            "deepseek" => {
+                new.deepseek.key = old_key.clone();
+                new.deepseek.model = old_model.clone();
+            }
+            "proxy" => {
+                new.proxy.url = old_url.clone();
+                new.proxy.key = old_key.clone();
+                new.proxy.model = old_model.clone();
+            }
+            _ => {}
+        }
+
+        new
     }
 }
 
@@ -303,17 +391,6 @@ pub struct Settings {
     pub llm: LLMSettings,
 }
 
-impl LLMSettings {
-    /// 检查 LLM 配置是否为空
-    fn is_empty(&self) -> bool {
-        self.url.is_none()
-            && self.key.is_none()
-            && self.model.is_none()
-            && self.provider == default_llm_provider()
-            && self.language == default_language()
-    }
-}
-
 impl Settings {
     /// 获取缓存的 Settings 实例
     /// 从 workflow.toml 配置文件加载，如果文件不存在则返回默认值
@@ -324,6 +401,7 @@ impl Settings {
 
     /// 从 workflow.toml 配置文件加载设置
     /// 如果配置文件不存在或字段缺失，使用默认值
+    /// 支持从旧格式（扁平结构）自动迁移到新格式（按 provider 分组）
     pub fn load() -> Self {
         match Paths::workflow_config() {
             Ok(config_path) => {
@@ -331,7 +409,57 @@ impl Settings {
                     Self::default()
                 } else {
                     match fs::read_to_string(&config_path) {
-                        Ok(content) => toml::from_str::<Self>(&content).unwrap_or_default(),
+                        Ok(content) => {
+                            // 先尝试解析为新格式
+                            match toml::from_str::<Self>(&content) {
+                                Ok(settings) => settings,
+                                Err(_) => {
+                                    // 如果解析失败，尝试解析为旧格式并迁移
+                                    #[derive(Debug, Default, Deserialize)]
+                                    struct OldLLMSettings {
+                                        #[serde(default = "default_llm_provider")]
+                                        provider: String,
+                                        url: Option<String>,
+                                        key: Option<String>,
+                                        model: Option<String>,
+                                        #[serde(default = "default_language")]
+                                        language: String,
+                                    }
+
+                                    #[derive(Debug, Deserialize)]
+                                    struct OldSettings {
+                                        #[serde(default)]
+                                        jira: JiraSettings,
+                                        #[serde(default)]
+                                        github: GitHubSettings,
+                                        #[serde(default)]
+                                        log: LogSettings,
+                                        #[serde(default)]
+                                        llm: OldLLMSettings,
+                                    }
+
+                                    match toml::from_str::<OldSettings>(&content) {
+                                        Ok(old_settings) => {
+                                            // 迁移旧格式到新格式
+                                            let mut llm = LLMSettings::migrate_from_old_format(
+                                                &old_settings.llm.provider,
+                                                &old_settings.llm.url,
+                                                &old_settings.llm.key,
+                                                &old_settings.llm.model,
+                                            );
+                                            llm.language = old_settings.llm.language;
+                                            Settings {
+                                                jira: old_settings.jira,
+                                                github: old_settings.github,
+                                                log: old_settings.log,
+                                                llm,
+                                            }
+                                        }
+                                        Err(_) => Self::default(),
+                                    }
+                                }
+                            }
+                        }
                         Err(_) => Self::default(),
                     }
                 }
@@ -398,8 +526,10 @@ impl Settings {
 
     /// 获取 LLM 配置信息
     pub fn get_llm_config(&self) -> LLMConfigInfo {
+        let current = self.llm.current_provider();
+
         // 获取 model（如果有保存的值，否则显示默认值）
-        let model = if let Some(ref model) = self.llm.model {
+        let model = if let Some(ref model) = current.model {
             model.clone()
         } else {
             default_llm_model(&self.llm.provider)
@@ -407,7 +537,7 @@ impl Settings {
 
         // 组合 model 和 URL（仅在 provider 为 "proxy" 时显示 URL）
         let model_display = if self.llm.provider == "proxy" {
-            if let Some(ref url) = self.llm.url {
+            if let Some(ref url) = current.url {
                 if !url.is_empty() {
                     format!("{}({})", model, url)
                 } else {
@@ -421,8 +551,7 @@ impl Settings {
         };
 
         // 获取 Key（掩码显示）
-        let key = self
-            .llm
+        let key = current
             .key
             .as_ref()
             .map(|k| mask_sensitive_value(k))

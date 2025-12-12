@@ -317,7 +317,6 @@ impl NotificationManager {
 ## 📚 相关文档
 
 - [JIRA 模块待办事项](./JIRA_TODO.md)
-- [Git 工作流需求文档](../requirements/GIT_WORKFLOW.md)
 
 ---
 

@@ -39,6 +39,13 @@ pub struct DryRunArgs {
     pub dry_run: bool,
 }
 
+impl DryRunArgs {
+    /// 获取 dry_run 标志
+    pub fn is_dry_run(&self) -> bool {
+        self.dry_run
+    }
+}
+
 /// 可选 JIRA ID 参数
 ///
 /// JIRA ticket ID，如果未提供则交互式输入。
@@ -47,4 +54,16 @@ pub struct JiraIdArg {
     /// Jira ticket ID (optional, will prompt interactively if not provided)
     #[arg(value_name = "JIRA_ID")]
     pub jira_id: Option<String>,
+}
+
+impl JiraIdArg {
+    /// 获取 JIRA ID（如果存在）
+    pub fn get(&self) -> Option<&str> {
+        self.jira_id.as_deref()
+    }
+
+    /// 获取 JIRA ID（移动所有权）
+    pub fn into_option(self) -> Option<String> {
+        self.jira_id
+    }
 }

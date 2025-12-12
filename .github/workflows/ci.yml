@@ -79,6 +79,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能
+          enableCrossOsArchive: false
 
       - name: Install system dependencies (Linux)
         run: |
@@ -151,6 +153,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能
+          enableCrossOsArchive: false
 
       - name: Install system dependencies (Linux)
         run: |

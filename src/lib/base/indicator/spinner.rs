@@ -2,7 +2,8 @@
 //!
 //! 提供统一的 loading spinner 功能，用于显示长时间运行的操作进度。
 
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use std::io::{self, Write};
 use std::time::Duration;
 
 /// Spinner 结构体
@@ -33,6 +34,17 @@ pub struct Spinner {
     inner: ProgressBar,
 }
 
+impl Drop for Spinner {
+    fn drop(&mut self) {
+        // 确保 Spinner 在析构时总是被清理
+        // 这可以防止在错误或中断情况下 Spinner 没有被正确清理
+        self.inner.finish_and_clear();
+        // 刷新 stderr 和 stdout，确保 Spinner 清除操作立即生效
+        let _ = io::stderr().flush();
+        let _ = io::stdout().flush();
+    }
+}
+
 impl Spinner {
     /// 创建一个新的 spinner 并立即开始显示
     ///
@@ -55,6 +67,8 @@ impl Spinner {
     /// ```
     pub fn new(message: impl AsRef<str>) -> Self {
         let spinner = ProgressBar::new_spinner();
+        // 将 Spinner 输出重定向到 stderr，避免与 stdout 的日志输出冲突
+        spinner.set_draw_target(ProgressDrawTarget::stderr());
         spinner.set_style(
             ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
         );
@@ -98,6 +112,10 @@ impl Spinner {
     /// ```
     pub fn finish(self) {
         self.inner.finish_and_clear();
+        // 刷新 stderr 和 stdout，确保 Spinner 清除操作立即生效
+        // 这样可以避免后续输出与 Spinner 冲突
+        let _ = io::stderr().flush();
+        let _ = io::stdout().flush();
     }
 
     /// 完成 spinner 并显示完成消息
@@ -119,6 +137,10 @@ impl Spinner {
     /// ```
     pub fn finish_with_message(self, message: impl AsRef<str>) {
         self.inner.finish_with_message(message.as_ref().to_string());
+        // 刷新 stderr 和 stdout，确保 Spinner 清除操作立即生效
+        // 这样可以避免后续输出与 Spinner 冲突
+        let _ = io::stderr().flush();
+        let _ = io::stdout().flush();
     }
 
     /// 使用 spinner 执行一个操作（便捷方法）

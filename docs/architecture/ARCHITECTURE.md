@@ -44,8 +44,12 @@ src/
 │   ├── branch/             # 分支管理命令
 │   │   ├── mod.rs          # Branch 命令模块声明
 │   │   ├── clean.rs        # 清理本地分支命令
-│   │   ├── ignore.rs      # 管理分支忽略列表命令
-│   │   └── prefix.rs       # 管理分支前缀命令（仓库级别）
+│   │   └── ignore.rs      # 管理分支忽略列表命令
+│   ├── commit/             # Commit 管理命令
+│   │   ├── mod.rs          # Commit 命令模块声明
+│   │   ├── amend.rs        # Commit amend 命令（修改最后一次提交）
+│   │   ├── reword.rs       # Commit reword 命令（修改提交消息）
+│   │   └── squash.rs       # Commit squash 命令（压缩多个提交）
 │   ├── github/             # GitHub 账号管理命令
 │   │   ├── mod.rs          # GitHub 命令模块声明
 │   │   ├── github.rs       # GitHub 账号管理实现
@@ -62,6 +66,10 @@ src/
 │   │   ├── show.rs         # 配置查看命令（显示当前配置）
 │   │   ├── log.rs           # 日志级别管理命令（set, check）
 │   │   └── completion.rs   # Shell Completion 管理命令
+│   ├── repo/               # 仓库配置管理命令
+│   │   ├── mod.rs          # Repo 命令模块声明
+│   │   ├── setup.rs        # 仓库设置命令（交互式配置）
+│   │   └── show.rs         # 仓库配置显示命令
 │   └── lifecycle/          # 生命周期管理命令
 │       ├── mod.rs          # Lifecycle 命令模块声明
 │       ├── install.rs      # 安装命令实现（安装二进制和补全脚本）
@@ -156,6 +164,11 @@ src/
     │       ├── requests.rs # Codeup API 请求结构体
     │       ├── responses.rs # Codeup API 响应结构体
     │       └── errors.rs   # Codeup 错误处理
+    ├── commit/             # Commit 业务逻辑
+    │   ├── mod.rs          # Commit 模块声明和导出
+    │   ├── amend.rs        # Commit Amend 业务逻辑（预览、格式化等）
+    │   ├── reword.rs       # Commit Reword 业务逻辑（预览、格式化、历史 reword）
+    │   └── squash.rs       # Commit Squash 业务逻辑（压缩多个提交）
     ├── completion/         # Shell Completion 管理
     │   ├── mod.rs          # Completion 模块声明
     │   ├── completion.rs   # Completion 管理工具
@@ -167,6 +180,14 @@ src/
     │   ├── system_reader.rs # 系统代理读取器
     │   ├── config_generator.rs # 代理配置生成器
     │   └── manager.rs      # 代理管理器
+    ├── repo/               # 仓库配置管理
+    │   ├── mod.rs          # Repo 模块声明
+    │   └── config.rs       # 仓库配置管理（配置检查、加载、保存）
+    ├── template/           # 模板系统
+    │   ├── mod.rs          # Template 模块声明
+    │   ├── config.rs       # 模板配置管理（加载全局和项目级配置）
+    │   ├── engine.rs       # 模板引擎封装（Handlebars）
+    │   └── vars.rs         # 模板变量定义
     └── rollback/           # 回滚管理
         ├── mod.rs          # Rollback 模块声明
         └── rollback.rs     # 回滚管理器（备份、恢复、清理）
@@ -191,10 +212,12 @@ src/
 │  - commands/jira/ (Jira 操作)             │
 │  - commands/pr/  (PR 操作)               │
 │  - commands/branch/ (分支管理)           │
+│  - commands/commit/ (Commit 管理)        │
 │  - commands/github/ (GitHub 账号管理)   │
 │  - commands/check/ (环境检查)            │
 │  - commands/proxy/ (代理管理)            │
 │  - commands/config/ (配置管理)           │
+│  - commands/repo/ (仓库配置管理)          │
 │  - commands/lifecycle/ (生命周期管理)    │
 └─────────────────┬───────────────────────┘
                   │
@@ -204,8 +227,11 @@ src/
 │  - lib/pr/       (PR 功能)               │
 │  - lib/jira/     (Jira 集成，包含日志处理) │
 │  - lib/git/      (Git 操作)              │
+│  - lib/commit/   (Commit 业务逻辑)       │
 │  - lib/completion/ (Completion 管理)    │
 │  - lib/proxy/    (代理管理)              │
+│  - lib/repo/     (仓库配置管理)          │
+│  - lib/template/ (模板系统)              │
 │  - lib/rollback/ (回滚管理)              │
 └─────────────────────────────────────────┘
 ```
@@ -223,10 +249,12 @@ src/
 用户输入 → main.rs → commands/log/*.rs → lib/jira/logs/*.rs → 执行操作
 用户输入 → main.rs → commands/jira/*.rs → lib/jira/*.rs → 执行操作
 用户输入 → main.rs → commands/branch/*.rs → lib/git/branch.rs → 执行操作
+用户输入 → main.rs → commands/commit/*.rs → lib/commit/*.rs → lib/git/*.rs → 执行操作
 用户输入 → main.rs → commands/github/*.rs → lib/git/config.rs → 执行操作
 用户输入 → main.rs → commands/check/*.rs → lib/git/*.rs → 执行操作
 用户输入 → main.rs → commands/proxy/*.rs → lib/proxy/*.rs → 执行操作
 用户输入 → main.rs → commands/config/*.rs → lib/base/settings/*.rs → 执行操作
+用户输入 → main.rs → commands/repo/*.rs → lib/repo/*.rs → .workflow/config.toml → 执行操作
 用户输入 → main.rs → commands/lifecycle/*.rs → lib/completion/*.rs → 执行操作
 ```
 
@@ -258,6 +286,11 @@ src/
 提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
 - 详细架构请参考 [GIT_ARCHITECTURE.md](./lib/GIT_ARCHITECTURE.md)
 
+### Commit 模块 (`lib::commit`)
+
+提供 Commit 相关的业务逻辑，包括 amend 和 reword 操作的预览信息生成、格式化显示、完成提示生成以及历史 commit reword 的执行逻辑。
+- 详细架构请参考 [COMMIT_ARCHITECTURE.md](./lib/COMMIT_ARCHITECTURE.md)
+
 ### Jira 模块 (`lib::jira`)
 
 提供 Jira API 集成功能，包括 Issue 管理、用户管理、状态管理、工作历史记录和日志处理等。
@@ -278,6 +311,16 @@ src/
 提供代理管理功能，包括系统代理读取、配置生成和管理。
 - 详细架构请参考 [PROXY_ARCHITECTURE.md](./lib/PROXY_ARCHITECTURE.md)
 
+### Repo 模块 (`lib::repo`)
+
+提供仓库级配置管理功能，包括配置检查、加载、保存等。配置存储在项目根目录的 `.workflow/config.toml` 文件中。
+- 详细架构请参考 [REPO_ARCHITECTURE.md](./lib/REPO_ARCHITECTURE.md)
+
+### Template 模块 (`lib::template`)
+
+提供模板渲染功能，支持分支命名模板、PR body 模板、Commit 消息模板等。使用 Handlebars 模板引擎，支持从全局配置和项目级配置加载模板。
+- 详细架构请参考 [TEMPLATE_ARCHITECTURE.md](./lib/TEMPLATE_ARCHITECTURE.md)
+
 ### Rollback 模块 (`lib::rollback`)
 
 提供回滚管理功能，支持备份、恢复和清理操作。
@@ -295,8 +338,9 @@ src/
 - `~/.workflow/config/llm.toml` - LLM 配置文件（可选，如果配置了 LLM）
 - `~/.workflow/config/jira-status.toml` - Jira 项目状态映射配置
 - `~/.workflow/config/jira-users.toml` - Jira 用户缓存配置
-- `~/.workflow/config/repositories.toml` - 分支配置（忽略列表和分支前缀，按仓库分组）
 - `~/.workflow/work-history/` - PR 和 Jira ticket 的关联历史（按仓库存储）
+
+**注意**：分支配置已迁移到项目级配置（`.workflow/config.toml`），不再使用全局配置文件。
 
 ### Jira Status 配置 (`jira-status.toml`)
 
@@ -317,43 +361,39 @@ merged-pr = "Done"
 - 创建 PR 时自动更新 Jira ticket 状态为 `created-pr` 配置的状态
 - 合并 PR 时自动更新 Jira ticket 状态为 `merged-pr` 配置的状态
 
-### Branch 配置 (`repositories.toml`)
+### Branch 配置（项目级配置）
 
-存储分支相关配置（忽略列表和分支前缀），按仓库名分组。
+分支配置已迁移到项目级配置文件（`.workflow/config.toml`），每个项目有独立的配置。
+
+**配置文件位置**：`.workflow/config.toml`（在项目根目录）
 
 **格式**：
 ```toml
-[zevwings/workflow.rs]
-branch_prefix = "feature"
-branch_ignore = [
+[branch]
+prefix = "feature"
+ignore = [
+    "main",
+    "master",
+    "develop",
     "zw/important-feature",
-    "zw/refactor-code-base",
-    "release/v1.0",
-]
-
-[company/project-name]
-branch_prefix = "fix"
-branch_ignore = [
-    "important-branch-name",
-    "hotfix/critical",
 ]
 ```
 
 **配置项说明**：
-- `branch_prefix` - 分支前缀（可选），用于生成分支名时自动添加前缀（如 `feature/xxx`、`fix/xxx`）
-- `branch_ignore` - 忽略分支列表，分支清理时会自动排除这些分支
-- 支持向后兼容：可以读取旧的 `ignore` 字段名
+- `prefix` - 分支前缀（可选），用于生成分支名时自动添加前缀（如 `feature/xxx`、`fix/xxx`）
+- `ignore` - 忽略分支列表，分支清理时会自动排除这些分支
 
 **使用场景**：
 - `workflow branch clean` 命令会自动排除配置文件中列出的分支
 - 通过 `workflow branch ignore` 命令管理忽略列表（add/remove/list）
-- 通过 `workflow branch prefix` 命令管理分支前缀（set/get/remove）
+- 通过 `workflow repo setup` 命令设置分支前缀
 - 创建 PR 时自动使用配置的分支前缀生成分支名
-- 首次使用时自动提示配置分支前缀
+- 配置可以提交到 Git，团队成员共享
 
 **相关文件**：
-- `src/commands/branch/helpers.rs` - 分支配置管理逻辑（BranchConfig、RepositoryConfig）
-- `src/commands/branch/` - 分支管理命令实现（clean、ignore、prefix）
+- `src/lib/repo/config.rs` - 项目级配置管理（RepoConfig、ProjectBranchConfig）
+- `src/commands/branch/` - 分支管理命令实现（clean、ignore）
+- `src/commands/repo/` - 仓库配置管理命令（setup、show）
 
 ### Work History (`~/.workflow/work-history/`)
 

@@ -136,13 +136,13 @@ impl LLMClient {
     fn build_url(&self) -> Result<String> {
         let settings: &Settings = Settings::get();
         let provider = &settings.llm.provider;
+        let current = settings.llm.current_provider();
 
         match provider.as_str() {
             "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
             "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
             "proxy" => {
-                let base_url =
-                    settings.llm.url.as_ref().context("LLM proxy URL is not configured")?;
+                let base_url = current.url.as_ref().context("LLM proxy URL is not configured")?;
                 Ok(format!(
                     "{}/chat/completions",
                     base_url.trim_end_matches('/')
@@ -156,7 +156,8 @@ impl LLMClient {
     fn build_headers(&self) -> Result<HeaderMap> {
         let mut headers = HeaderMap::new();
         let settings = Settings::get();
-        let llm_key = settings.llm.key.as_deref().unwrap_or_default();
+        let current = settings.llm.current_provider();
+        let llm_key = current.key.as_deref().unwrap_or_default();
         if llm_key.is_empty() {
             return Err(anyhow::anyhow!("LLM key is empty in settings"));
         }
@@ -176,13 +177,14 @@ impl LLMClient {
     fn build_model(&self) -> Result<String> {
         let settings: &Settings = Settings::get();
         let provider = &settings.llm.provider;
+        let current = settings.llm.current_provider();
 
         match provider.as_str() {
             "openai" | "deepseek" => {
-                Ok(settings.llm.model.clone().unwrap_or_else(|| default_llm_model(provider)))
+                Ok(current.model.clone().unwrap_or_else(|| default_llm_model(provider)))
             }
-            "proxy" => settings.llm.model.clone().context("Model is required for proxy provider"),
-            _ => settings.llm.model.clone().context("Model is required"),
+            "proxy" => current.model.clone().context("Model is required for proxy provider"),
+            _ => current.model.clone().context("Model is required"),
         }
     }
 

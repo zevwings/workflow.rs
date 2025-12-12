@@ -189,7 +189,8 @@ impl ConfigCommand {
             && settings.jira.api_token.is_none()
             && settings.github.accounts.is_empty()
             // && settings.codeup.project_id.is_none()  // Codeup support has been removed
-            && settings.llm.url.is_none()
-            && settings.llm.key.is_none()
+            && settings.llm.openai.is_empty()
+            && settings.llm.deepseek.is_empty()
+            && settings.llm.proxy.is_empty()
     }
 }

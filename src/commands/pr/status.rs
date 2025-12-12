@@ -1,4 +1,4 @@
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::{log_break, log_message};
 use anyhow::Result;
 
@@ -38,7 +38,7 @@ impl PullRequestStatusCommand {
 
     /// 显示 PR 信息
     fn show_pr_info(pr_identifier: &str) -> Result<()> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let info = provider.get_pull_request_info(pr_identifier)?;
 
         log_break!();

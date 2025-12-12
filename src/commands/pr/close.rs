@@ -1,6 +1,6 @@
 use crate::commands::pr::helpers;
 use crate::git::GitBranch;
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use crate::{log_break, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -64,7 +64,7 @@ impl PullRequestCloseCommand {
 
     /// 检查 PR 是否已经关闭
     fn check_if_already_closed(pull_request_id: &str) -> Result<bool> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let status = provider.get_pull_request_status(pull_request_id)?;
 
         // 如果状态是 closed 或 merged，说明已经关闭
@@ -82,7 +82,7 @@ impl PullRequestCloseCommand {
 
     /// 关闭 PR（根据仓库类型调用对应的实现）
     fn close_pull_request(pull_request_id: &str) -> Result<()> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         provider.close_pull_request(pull_request_id).context("Failed to close PR")?;
         log_success!("PR closed successfully");
         Ok(())

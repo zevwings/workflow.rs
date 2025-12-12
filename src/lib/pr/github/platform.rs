@@ -10,14 +10,16 @@ use crate::base::settings::Settings;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::history::JiraWorkHistory;
 use crate::pr::github::errors::handle_github_error;
-use crate::pr::helpers::extract_github_repo_from_url;
+use crate::pr::helpers::url::extract_github_repo_from_url;
 use crate::pr::platform::{PlatformProvider, PullRequestStatus};
 use crate::pr::PullRequestRow;
 
 use super::requests::{
     CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest,
 };
-use super::responses::{CreatePullRequestResponse, GitHubUser, PullRequestInfo, RepositoryInfo};
+use super::responses::{
+    CreatePullRequestResponse, GitHubUser, PullRequestFile, PullRequestInfo, RepositoryInfo,
+};
 
 /// GitHub 平台实现
 ///
@@ -279,6 +281,9 @@ impl PlatformProvider for GitHub {
     }
 
     /// 获取 PR 的 diff 内容
+    ///
+    /// 如果 PR diff 超过 GitHub API 的限制（20000 行），会返回 406 错误。
+    /// 此时会使用替代方案：通过 files API 获取文件列表，然后获取部分文件的 diff。
     fn get_pull_request_diff(&self, pull_request_id: &str) -> Result<String> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
         let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
@@ -308,8 +313,36 @@ impl PlatformProvider for GitHub {
         let config = RequestConfig::<Value, Value>::new().headers(&headers);
 
         let response = client.get(&url, config)?;
-        let diff = response.ensure_success_with(handle_github_error)?.as_text()?;
 
+        // 检查是否是 406 错误（diff too large）
+        if response.status == 406 {
+            // 尝试解析错误信息，检查是否是 too_large 错误
+            let is_too_large = if let Ok(data) = response.as_json::<Value>() {
+                if let Some(errors) = data.get("errors").and_then(|v| v.as_array()) {
+                    errors.iter().any(|err| {
+                        err.get("code")
+                            .and_then(|c| c.as_str())
+                            .map(|c| c == "too_large")
+                            .unwrap_or(false)
+                    })
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if is_too_large {
+                // 使用替代方案：通过 files API 获取部分 diff
+                crate::trace_debug!(
+                    "PR diff exceeds GitHub API limit (20000 lines), using fallback method"
+                );
+                return GitHub::get_pull_request_diff_fallback(owner, repo_name, pr_number);
+            }
+        }
+
+        // 正常情况：返回完整的 diff
+        let diff = response.ensure_success_with(handle_github_error)?.as_text()?;
         Ok(diff)
     }
 
@@ -327,7 +360,10 @@ impl PlatformProvider for GitHub {
         );
 
         let request = UpdatePullRequestRequest {
-            state: "closed".to_string(),
+            title: None,
+            body: None,
+            state: Some("closed".to_string()),
+            base: None,
         };
 
         let client = HttpClient::global()?;
@@ -453,6 +489,41 @@ impl PlatformProvider for GitHub {
         let request = serde_json::json!({
             "base": new_base
         });
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<_, Value>::new().body(&request).headers(&headers);
+
+        let response = client.patch(&url, config)?;
+        let _: serde_json::Value = response.ensure_success_with(handle_github_error)?.as_json()?;
+
+        Ok(())
+    }
+
+    /// 更新 Pull Request 的标题和/或描述
+    fn update_pull_request(
+        &self,
+        pull_request_id: &str,
+        title: Option<&str>,
+        body: Option<&str>,
+    ) -> Result<()> {
+        let (owner, repo_name) = Self::get_owner_and_repo()?;
+        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        let request = UpdatePullRequestRequest {
+            title: title.map(|s| s.to_string()),
+            body: body.map(|s| s.to_string()),
+            state: None,
+            base: None,
+        };
 
         let client = HttpClient::global()?;
         let headers = Self::get_headers(None)?;
@@ -669,5 +740,131 @@ impl GitHub {
         let user: GitHubUser = response.ensure_success_with(handle_github_error)?.as_json()?;
 
         Ok(user)
+    }
+
+    /// 获取 PR diff 的替代方案（当 diff 超过 20000 行时）
+    ///
+    /// 通过 `/pulls/{pr_number}/files` API 获取文件列表，然后获取部分文件的 diff。
+    /// 限制：最多处理前 50 个文件，以避免请求过大。
+    fn get_pull_request_diff_fallback(
+        owner: String,
+        repo_name: String,
+        pr_number: u64,
+    ) -> Result<String> {
+        const MAX_FILES: usize = 50; // 最多处理 50 个文件
+
+        // 获取 PR files 列表
+        let files = Self::get_pull_request_files_internal(&owner, &repo_name, pr_number)?;
+
+        if files.is_empty() {
+            anyhow::bail!("No files found in PR");
+        }
+
+        // 限制文件数量
+        let files_to_process = if files.len() > MAX_FILES {
+            crate::trace_debug!(
+                "PR has {} files, limiting to first {} files",
+                files.len(),
+                MAX_FILES
+            );
+            &files[..MAX_FILES]
+        } else {
+            &files
+        };
+
+        // 构建 diff 内容
+        let mut diff_parts = Vec::new();
+        let mut total_lines = 0;
+        const MAX_LINES: usize = 15000; // 限制总行数，留一些余量
+
+        for file in files_to_process {
+            // 如果文件有 patch 内容（小文件），直接使用
+            if let Some(ref patch) = file.patch {
+                let patch_lines: Vec<&str> = patch.lines().collect();
+                if total_lines + patch_lines.len() > MAX_LINES {
+                    // 如果加上这个文件会超过限制，只取部分
+                    let remaining_lines = MAX_LINES.saturating_sub(total_lines);
+                    if remaining_lines > 0 {
+                        let partial_patch =
+                            patch_lines[..remaining_lines.min(patch_lines.len())].join("\n");
+                        diff_parts.push(format!(
+                            "diff --git a/{} b/{}\n{}",
+                            file.filename, file.filename, partial_patch
+                        ));
+                    }
+                    diff_parts.push(format!(
+                        "\n... (diff truncated: {} files processed, {} total files in PR)",
+                        files_to_process.len(),
+                        files.len()
+                    ));
+                    break;
+                }
+
+                diff_parts.push(format!(
+                    "diff --git a/{} b/{}\n{}",
+                    file.filename, file.filename, patch
+                ));
+                total_lines += patch_lines.len();
+            } else {
+                // 大文件没有 patch，只添加文件信息
+                // 根据文件状态生成不同的 diff 头部
+                let diff_header = match file.status.as_str() {
+                    "added" => format!(
+                        "diff --git a/{} b/{}\nnew file mode 100644\n--- /dev/null\n+++ b/{}\n@@ -0,0 +1,{} @@\n... (file too large, {} additions)",
+                        file.filename, file.filename, file.filename, file.additions, file.additions
+                    ),
+                    "removed" => format!(
+                        "diff --git a/{} b/{}\ndeleted file mode 100644\n--- a/{}\n+++ /dev/null\n@@ -1,{} +0,0 @@\n... (file too large, {} deletions)",
+                        file.filename, file.filename, file.filename, file.deletions, file.deletions
+                    ),
+                    _ => format!(
+                        "diff --git a/{} b/{}\nindex 0000000..0000000\n--- a/{}\n+++ b/{}\n@@ -1,{} +1,{} @@\n... (file too large, {} additions, {} deletions)",
+                        file.filename,
+                        file.filename,
+                        file.filename,
+                        file.filename,
+                        file.deletions,
+                        file.additions,
+                        file.additions,
+                        file.deletions
+                    ),
+                };
+                diff_parts.push(diff_header);
+            }
+        }
+
+        if files.len() > files_to_process.len() {
+            diff_parts.push(format!(
+                "\n... ({} more files not included due to size limit)",
+                files.len() - files_to_process.len()
+            ));
+        }
+
+        Ok(diff_parts.join("\n"))
+    }
+
+    /// 获取 PR 文件列表（内部方法）
+    fn get_pull_request_files_internal(
+        owner: &str,
+        repo_name: &str,
+        pr_number: u64,
+    ) -> Result<Vec<PullRequestFile>> {
+        let url = format!(
+            "{}/repos/{}/{}/pulls/{}/files",
+            Self::base_url(),
+            owner,
+            repo_name,
+            pr_number
+        );
+
+        let client = HttpClient::global()?;
+        let headers = Self::get_headers(None)?;
+        let config = RequestConfig::<Value, Value>::new().headers(&headers);
+
+        let response = client.get(&url, config)?;
+        let files: Vec<PullRequestFile> =
+            response.ensure_success_with(handle_github_error)?.as_json()?;
+
+        Ok(files)
     }
 }

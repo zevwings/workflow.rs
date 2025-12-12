@@ -1,17 +1,131 @@
+use crate::branch::BranchType;
 use crate::git::{GitRepo, RepoType};
-// use crate::pr::codeup::Codeup;  // Codeup support has been removed
 use crate::pr::github::GitHub;
 use crate::pr::PullRequestRow;
 use anyhow::Result;
 
-/// PR 变更类型定义
+/// PR 变更类型结构体
+///
+/// 包含变更类型的完整信息，包括名称、描述和示例
+#[derive(Debug, Clone)]
+pub struct ChangeType {
+    /// 变更类型名称（用于显示和匹配）
+    pub name: &'static str,
+    /// 详细描述
+    pub description: &'static str,
+    /// 使用示例
+    pub example: &'static str,
+}
+
+/// PR 变更类型定义（扩展版）
+///
+/// 每个类型包含名称、描述和示例信息
+pub const CHANGE_TYPES: &[ChangeType] = &[
+    ChangeType {
+        name: "Bug fix (non-breaking change which fixes an issue)",
+        description: "Fix errors or issues in code without changing existing functionality interfaces or behavior",
+        example: "Fix null pointer exception in login validation logic",
+    },
+    ChangeType {
+        name: "New feature (non-breaking change which adds functionality)",
+        description: "Add new features or capabilities without affecting existing functionality",
+        example: "Add user avatar upload functionality",
+    },
+    ChangeType {
+        name: "Refactoring (non-breaking change which does not change functionality)",
+        description: "Restructure code to improve quality without changing functional behavior",
+        example: "Extract duplicate code into common functions and optimize code structure",
+    },
+    ChangeType {
+        name: "Hotfix (urgent fix for production issues)",
+        description: "Urgent fix for critical production issues that require immediate deployment",
+        example: "Fix critical security vulnerability in authentication system",
+    },
+    ChangeType {
+        name: "Chore (maintenance tasks and non-functional changes)",
+        description: "Maintenance tasks, dependency updates, configuration changes, or other non-functional improvements",
+        example: "Update dependencies, improve build configuration, or update documentation",
+    },
+];
+
+/// PR 变更类型定义（向后兼容的字符串数组）
 ///
 /// 用于生成 PR body 中的变更类型复选框和交互式选择
+/// 这个常量保持向后兼容，内部使用 CHANGE_TYPES 数组
 pub const TYPES_OF_CHANGES: &[&str] = &[
-    "Bug fix (non-breaking change which fixes an issue)",
-    "New feature (non-breaking change which adds functionality)",
-    "Refactoring (non-breaking change which does not change functionality)",
+    CHANGE_TYPES[0].name,
+    CHANGE_TYPES[1].name,
+    CHANGE_TYPES[2].name,
+    CHANGE_TYPES[3].name,
+    CHANGE_TYPES[4].name,
 ];
+
+/// 将分支类型映射到 PR 变更类型索引
+///
+/// # Arguments
+/// * `branch_type` - 分支类型
+///
+/// # Returns
+/// 返回对应的 PR 变更类型索引（在 TYPES_OF_CHANGES 中的位置）
+/// 如果无法映射，返回 None
+pub fn map_branch_type_to_change_type_index(
+    branch_type: crate::branch::BranchType,
+) -> Option<usize> {
+    match branch_type {
+        BranchType::Feature => Some(1),     // "New feature"
+        BranchType::Bugfix => Some(0),      // "Bug fix"
+        BranchType::Refactoring => Some(2), // "Refactoring"
+        BranchType::Hotfix => Some(3),      // "Hotfix"
+        BranchType::Chore => Some(4),       // "Chore"
+    }
+}
+
+/// 将分支类型映射到 PR 变更类型布尔向量
+///
+/// # Arguments
+/// * `branch_type` - 分支类型
+///
+/// # Returns
+/// 返回布尔向量，表示每个 PR 变更类型是否被选中
+pub fn map_branch_type_to_change_types(branch_type: crate::branch::BranchType) -> Vec<bool> {
+    let mut result = vec![false; TYPES_OF_CHANGES.len()];
+
+    if let Some(index) = map_branch_type_to_change_type_index(branch_type) {
+        result[index] = true;
+    }
+
+    result
+}
+
+/// 根据索引获取变更类型信息
+///
+/// # Arguments
+/// * `index` - 变更类型索引
+///
+/// # Returns
+/// 返回对应的 ChangeType，如果索引无效则返回 None
+pub fn get_change_type_by_index(index: usize) -> Option<&'static ChangeType> {
+    CHANGE_TYPES.get(index)
+}
+
+/// 根据名称查找变更类型信息
+///
+/// # Arguments
+/// * `name` - 变更类型名称
+///
+/// # Returns
+/// 返回对应的 ChangeType，如果未找到则返回 None
+pub fn get_change_type_by_name(name: &str) -> Option<&'static ChangeType> {
+    CHANGE_TYPES.iter().find(|ct| ct.name == name)
+}
+
+/// 获取所有变更类型的完整信息
+///
+/// # Returns
+/// 返回所有变更类型的切片
+pub fn get_all_change_types() -> &'static [ChangeType] {
+    CHANGE_TYPES
+}
 
 /// PR 状态信息
 #[derive(Debug, Clone)]
@@ -25,7 +139,7 @@ pub struct PullRequestStatus {
 }
 
 /// PR 平台接口 trait
-/// 定义所有 PR 平台（GitHub、Codeup 等）必须实现的共同方法
+/// 定义所有 PR 平台（GitHub 等）必须实现的共同方法
 pub trait PlatformProvider {
     /// 创建 Pull Request
     ///
@@ -160,11 +274,31 @@ pub trait PlatformProvider {
     /// # Errors
     /// 如果更新失败，返回相应的错误信息。
     fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()>;
+
+    /// 更新 Pull Request 的标题和/或描述
+    ///
+    /// # Arguments
+    /// * `pull_request_id` - PR ID
+    /// * `title` - 新的标题（可选）
+    /// * `body` - 新的描述（可选）
+    ///
+    /// # Errors
+    /// 如果更新失败，返回相应的错误信息。
+    fn update_pull_request(
+        &self,
+        pull_request_id: &str,
+        title: Option<&str>,
+        body: Option<&str>,
+    ) -> Result<()>;
 }
 
 /// 创建平台提供者实例
 ///
-/// 根据当前仓库类型自动检测并创建对应的平台提供者。
+/// 根据提供的仓库类型创建对应的平台提供者。
+///
+/// # 参数
+///
+/// * `repo_type` - 仓库类型
 ///
 /// # 返回
 ///
@@ -178,9 +312,10 @@ pub trait PlatformProvider {
 ///
 /// ```rust,no_run
 /// use workflow::pr::platform::create_provider;
+/// use workflow::RepoType;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// let provider = create_provider()?;
+/// let provider = create_provider(RepoType::GitHub)?;
 /// let pr_url = provider.create_pull_request(
 ///     "Title",
 ///     "Body",
@@ -190,14 +325,44 @@ pub trait PlatformProvider {
 /// # Ok(())
 /// # }
 /// ```
-pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
-    match GitRepo::detect_repo_type()? {
+pub fn create_provider(repo_type: RepoType) -> Result<Box<dyn PlatformProvider>> {
+    match repo_type {
         RepoType::GitHub => Ok(Box::new(GitHub)),
-        RepoType::Codeup => {
-            anyhow::bail!("Codeup support has been removed. Only GitHub is currently supported.")
-        }
-        RepoType::Unknown => {
+        RepoType::Codeup | RepoType::Unknown => {
             anyhow::bail!("Unsupported repository type. Only GitHub is currently supported.")
         }
     }
+}
+
+/// 自动检测仓库类型并创建平台提供者实例
+///
+/// 这是一个便捷函数，自动检测当前仓库类型并创建对应的平台提供者。
+///
+/// # 返回
+///
+/// 返回 `Box<dyn PlatformProvider>` trait 对象，可以用于调用平台无关的 PR 操作。
+///
+/// # 错误
+///
+/// 如果无法检测仓库类型或仓库类型不支持，返回错误。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::pr::platform::create_provider_auto;
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let provider = create_provider_auto()?;
+/// let pr_url = provider.create_pull_request(
+///     "Title",
+///     "Body",
+///     "feature-branch",
+///     None,
+/// )?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn create_provider_auto() -> Result<Box<dyn PlatformProvider>> {
+    let repo_type = GitRepo::detect_repo_type()?;
+    create_provider(repo_type)
 }

@@ -11,8 +11,8 @@
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
 **模块统计：**
-- 命令数量：11 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
-- 总代码行数：约 3900+ 行
+- 命令数量：13 个（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment, reword）
+- 总代码行数：约 4000+ 行
 - 支持平台：GitHub、Codeup
 - 主要依赖：`lib/pr/`（平台抽象层）、`lib/git/`、`lib/jira/`、`lib/base/llm/`
 
@@ -29,7 +29,7 @@ src/main.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow pr` 子命令分发到对应的命令处理函数
-- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment）
+- **命令枚举**：`PRCommands` 定义了所有 PR 相关的子命令（create, merge, close, status, list, update, sync, rebase, pick, summarize, approve, comment, reword）
 
 ### 命令封装层
 
@@ -48,7 +48,8 @@ src/commands/pr/
 ├── rebase.rs       # Rebase 分支并更新 PR base 命令（507 行）
 ├── pick.rs         # Pick 提交并创建新 PR 命令（978 行）
 ├── approve.rs      # 批准 PR 命令
-└── comment.rs      # 添加 PR 评论命令
+├── comment.rs      # 添加 PR 评论命令
+└── reword.rs       # Reword PR 标题和描述命令（214 行）
 ```
 
 **职责**：
@@ -85,7 +86,7 @@ src/commands/pr/
   - 运行环境检查（Git 状态、网络）
 
 - **`lib/proxy/`**：代理管理（`ProxyManager`）
-  - `ProxyManager::ensure_proxy_enabled()` - 自动启用代理（如果系统代理已启用）
+  - `ProxyManager::ensure_proxy_enabled()` - 确保代理已启用（已移除自动调用，需手动启用）
 
 ---
 
@@ -177,7 +178,6 @@ src/main.rs::PRCommands::Create
   ↓
 commands/pr/create.rs::PullRequestCreateCommand::create()
   ↓
-  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 运行检查（check::CheckCommand::run_all()）
   2. 获取或输入 Jira ticket（resolve_jira_ticket()）
   3. 配置 Jira 状态（ensure_jira_status()）
@@ -207,7 +207,6 @@ commands/pr/create.rs::PullRequestCreateCommand::create()
 
 创建 PR 命令是 PR 模块中最复杂的命令，提供完整的 PR 创建流程：
 
-0. **代理自动启用**：如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量，确保网络请求通过代理。
 1. **前置检查**：运行所有检查（git status、network 等），支持 dry-run 模式。
 2. **Jira 集成**：支持可选的 Jira ticket 输入，自动验证，自动配置状态，创建后自动更新 ticket。
 3. **PR 标题生成**：优先使用输入标题，或从 Jira 获取，或提示输入。
@@ -791,7 +790,6 @@ src/main.rs::PRCommands::Pick
   ↓
 commands/pr/pick.rs::PullRequestPickCommand::pick()
   ↓
-  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 运行预检查（check::CheckCommand::run_all()）
   2. 验证分支存在（validate_branches()）
   3. 拉取最新代码（GitRepo::fetch()）
@@ -855,7 +853,6 @@ Pick 提交命令用于跨分支移植代码，从源分支 cherry-pick 提交�
 
 ```
 1. 预检查
-   - 自动启用代理（如果系统代理已启用）
    - 运行环境检查（Git 状态、网络连接）
 
 2. 验证分支存在
@@ -1034,7 +1031,6 @@ src/main.rs::PRCommands::Merge
   ↓
 commands/pr/merge.rs::PullRequestMergeCommand::merge()
   ↓
-  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 运行检查，获取 PR ID
   2. 合并 PR（merge_pull_request()）
      └─ provider.merge_pull_request()
@@ -1046,7 +1042,6 @@ commands/pr/merge.rs::PullRequestMergeCommand::merge()
 ### 功能说明
 
 合并 PR 命令通过 API 合并 PR：
-0. **代理自动启用**：如果系统代理（VPN）已启用，自动在当前进程中设置代理环境变量。
 1. **PR ID 解析**：支持参数提供或自动检测。
 2. **合并操作**：通过平台 API 执行合并，处理竞态条件。
 3. **合并后清理**：切换到默认分支，删除当前分支（本地和远程）。
@@ -1126,7 +1121,6 @@ src/main.rs::PRCommands::Update
   ↓
 commands/pr/update.rs::PullRequestUpdateCommand::update()
   ↓
-  0. 自动启用代理（ProxyManager::ensure_proxy_enabled()）
   1. 获取当前分支的 PR 标题
   2. 提交更改（GitCommit::commit()）
   3. 推送到远程（GitBranch::push()）
@@ -1259,6 +1253,394 @@ workflow pr summarize --language zh      # 使用中文生成总结
 
 ---
 
+## 11. 批准 PR 命令 (`approve.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/approve.rs (44 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Approve
+  ↓
+commands/pr/approve.rs::PullRequestApproveCommand::approve()
+  ↓
+  1. 获取 PR ID（参数或自动检测当前分支）
+  2. 创建平台提供者（create_provider()）
+  3. 批准 PR（provider.approve_pull_request()）
+```
+
+### 功能说明
+
+批准 PR 命令用于批准指定的 Pull Request：
+
+1. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+2. **错误处理**：
+   - 如果尝试批准自己的 PR，会返回明确的错误信息
+   - 其他错误会添加上下文信息以便调试
+
+### 使用示例
+
+```bash
+workflow pr approve                    # 批准当前分支的 PR
+workflow pr approve 123                 # 批准指定 PR ID
+```
+
+---
+
+## 12. 添加 PR 评论命令 (`comment.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/comment.rs (39 行)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Comment
+  ↓
+commands/pr/comment.rs::PullRequestCommentCommand::comment()
+  ↓
+  1. 获取评论内容（将多个单词组合成一个字符串）
+  2. 获取 PR ID（参数或自动检测当前分支）
+  3. 创建平台提供者（create_provider()）
+  4. 添加评论（provider.add_comment()）
+```
+
+### 功能说明
+
+添加 PR 评论命令用于向指定的 Pull Request 添加评论：
+
+1. **评论内容**：
+   - 支持多个单词作为评论内容（使用 `trailing_var_arg` 参数）
+   - 多个单词会自动组合成一个字符串（用空格分隔）
+   - 评论内容为必需参数，如果为空会提示错误
+
+2. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+### 使用示例
+
+```bash
+workflow pr comment "Great work!"                    # 向当前分支的 PR 添加评论
+workflow pr comment 123 "Looks good to me"          # 向指定 PR ID 添加评论
+workflow pr comment "This needs more tests"        # 多个单词自动组合
+```
+
+---
+
+## 13. Reword PR 命令 (`reword.rs`)
+
+### 相关文件
+
+```
+src/commands/pr/reword.rs (214 行)
+src/lib/pr/llm/reword.rs (LLM 生成逻辑)
+src/lib/base/prompt/reword_pr.system.rs (System prompt)
+```
+
+### 调用流程
+
+```
+src/main.rs::PRCommands::Reword
+  ↓
+commands/pr/reword.rs::PullRequestRewordCommand::reword()
+  ↓
+  1. 检查是否在 Git 仓库中（GitRepo::is_git_repo()）
+  2. 创建平台提供者（create_provider_auto()）
+  3. 获取 PR ID（参数或自动检测当前分支）
+  4. 获取当前 PR 标题和描述（provider.get_pull_request_title()、get_pull_request_body()）
+  5. 获取 PR diff（provider.get_pull_request_diff()）
+  6. 验证 diff 不为空
+  7. 使用 LLM 生成新的标题和描述（RewordGenerator::reword_from_diff()）
+  8. 如果是 dry-run 模式，显示结果并退出
+  9. 确定要更新的内容（根据 --title 和 --description 标志）
+  10. 显示当前内容和新内容的对比
+  11. 用户确认（ConfirmDialog）
+  12. 执行更新（provider.update_pull_request()）
+  13. 显示 PR URL
+```
+
+### 功能说明
+
+Reword PR 命令用于基于 PR diff 自动生成并更新 PR 标题和描述：
+
+1. **PR ID 解析**：
+   - 支持通过参数指定 PR ID
+   - 如果不提供参数，自动检测当前分支对应的 PR
+   - 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+
+2. **PR 信息获取**：
+   - 自动获取当前 PR 的标题和描述
+   - 获取完整的 PR diff 内容
+   - 验证 diff 不为空（如果为空则报错）
+
+3. **LLM 生成**：
+   - 使用 `RewordGenerator::reword_from_diff()` 基于 PR diff 生成新的标题和描述
+   - 标题限制在 8 个单词以内，简洁明了
+   - 描述格式化为项目符号列表，描述主要变更
+   - 所有输出均为英文（如果 PR diff 包含非英文内容，LLM 会翻译）
+
+4. **更新选项**：
+   - `--title`：仅更新标题
+   - `--description`：仅更新描述
+   - 同时指定两者：更新标题和描述
+   - 都不指定：更新标题和描述（默认行为）
+
+5. **预览模式**：
+   - `--dry-run`：仅显示生成的结果，不实际更新 PR
+   - 用于预览 LLM 生成的内容，确认后再执行实际更新
+
+6. **用户确认**：
+   - 显示当前内容和新内容的对比
+   - 根据更新内容类型显示不同的确认消息
+   - 默认选择为确认（用户可以直接按 Enter）
+
+### 参数设计
+
+**可选参数**:
+- `PR_ID` - PR ID（可选，如果不提供则自动检测当前分支的 PR）
+- `--title` - 仅更新标题（可以与 --description 组合使用）
+- `--description` - 仅更新描述（可以与 --title 组合使用）
+- `--dry-run` - 预览模式（显示生成结果，不实际更新）
+
+**参数逻辑**:
+- 如果只指定 `--title`：只更新标题，不更新描述
+- 如果只指定 `--description`：只更新描述，不更新标题
+- 如果同时指定两者：两者都更新
+- 如果都不指定：两者都更新（默认行为）
+
+**注意**：
+- PR ID 会自动从当前分支检测，无需手动指定
+- 如果当前分支没有对应的 PR，会提示用户手动指定 PR ID
+- 默认行为是更新标题和描述，除非明确指定只更新其中一个
+
+### 详细工作流程
+
+```
+1. 检查 Git 仓库
+   - 验证当前目录是 Git 仓库
+   - 如果不是，提示错误并退出
+
+2. 创建平台提供者
+   - 自动检测代码托管平台（GitHub、Codeup）
+   - 创建对应的平台提供者实例
+
+3. 获取 PR ID
+   - 如果提供了 PR ID 参数，使用该 ID
+   - 否则，自动检测当前分支对应的 PR
+   - 如果未找到 PR，提示错误并退出
+
+4. 获取当前 PR 信息
+   - 获取当前 PR 标题
+   - 获取当前 PR 描述（可能为空）
+   - 显示当前内容
+
+5. 获取 PR diff
+   - 获取完整的 PR diff 内容
+   - 验证 diff 不为空
+   - 显示 diff 统计信息（字符数、行数）
+   - 显示 diff 预览（前 10 行，用于调试）
+
+6. LLM 生成
+   - 调用 RewordGenerator::reword_from_diff()
+   - 传入 PR diff 和当前标题（可选，用于参考）
+   - 生成新的标题和描述
+   - 显示生成结果
+
+7. 预览模式检查
+   - 如果指定了 --dry-run，显示结果并退出
+   - 不执行实际更新
+
+8. 确定更新内容
+   - 根据 --title 和 --description 标志确定要更新的内容
+   - 逻辑：
+     * update_title = !description || title
+     * update_body = !title || description
+
+9. 显示对比
+   - 如果更新标题，显示当前标题和新标题
+   - 如果更新描述，显示当前描述和新描述
+
+10. 用户确认
+    - 根据更新内容类型显示不同的确认消息
+    - 默认选择为确认
+    - 如果用户取消，退出
+
+11. 执行更新
+    - 调用 provider.update_pull_request()
+    - 传入 PR ID、新标题（可选）、新描述（可选）
+
+12. 显示结果
+    - 显示更新成功消息
+    - 显示更新后的标题和描述
+    - 显示 PR URL
+```
+
+### 使用场景
+
+#### 场景 1：自动生成并更新 PR 标题和描述
+
+```bash
+# 在 PR 分支上
+workflow pr reword
+
+# 结果：
+# - 自动检测当前分支的 PR
+# - 获取 PR diff
+# - 使用 LLM 生成新的标题和描述
+# - 显示对比并确认
+# - 更新 PR 标题和描述
+```
+
+#### 场景 2：仅更新 PR 标题
+
+```bash
+workflow pr reword --title
+
+# 结果：
+# - 只生成并更新 PR 标题
+# - 不更新描述
+```
+
+#### 场景 3：仅更新 PR 描述
+
+```bash
+workflow pr reword --description
+
+# 结果：
+# - 只生成并更新 PR 描述
+# - 不更新标题
+```
+
+#### 场景 4：预览模式
+
+```bash
+workflow pr reword --dry-run
+
+# 结果：
+# - 显示生成的新标题和描述
+# - 不实际更新 PR
+# - 用于预览 LLM 生成的内容
+```
+
+#### 场景 5：指定 PR ID
+
+```bash
+workflow pr reword 123
+
+# 结果：
+# - 更新指定 PR ID 的标题和描述
+# - 不需要切换到对应的分支
+```
+
+### 边界情况处理
+
+#### 情况 1：不在 Git 仓库中
+
+**处理方式**:
+- 检查当前目录是否为 Git 仓库
+- 如果不是，提示错误并退出：
+  ```
+  Not in a Git repository. Please run this command in a Git repository directory.
+  ```
+
+#### 情况 2：PR ID 不存在或无法检测
+
+**处理方式**:
+- 如果提供了 PR ID 但不存在，API 调用会失败并返回错误
+- 如果未提供 PR ID 且当前分支没有对应的 PR，提示错误：
+  ```
+  No PR found for current branch. Please specify PR ID manually.
+  ```
+
+#### 情况 3：PR diff 为空
+
+**处理方式**:
+- 检查 PR diff 是否为空
+- 如果为空，提示错误并退出：
+  ```
+  PR diff is empty. Please ensure the PR has changes.
+  ```
+
+#### 情况 4：LLM 生成失败
+
+**处理方式**:
+- LLM API 调用失败时，返回错误并添加上下文信息
+- 错误消息包含当前标题信息，便于调试
+
+#### 情况 5：用户取消更新
+
+**处理方式**:
+- 在确认对话框中，如果用户选择取消，显示消息并退出
+- 不执行任何更新操作
+
+#### 情况 6：更新失败
+
+**处理方式**:
+- 如果 PR 更新失败（例如权限不足、PR 已关闭等），返回错误
+- 错误消息包含上下文信息，便于调试
+
+### 与其他命令的关系
+
+#### 与 `pr create` 的关系
+
+| 特性 | `pr reword` | `pr create` |
+|------|-------------|-------------|
+| **操作对象** | 现有 PR | 新 PR |
+| **标题生成** | 基于 PR diff 生成 | 基于 Jira ticket 或用户输入 |
+| **描述生成** | 基于 PR diff 生成 | 基于用户输入或模板 |
+| **使用场景** | 更新现有 PR 的标题和描述 | 创建新 PR |
+| **LLM 使用** | 分析代码变更生成标题和描述 | 生成分支名和 PR 标题 |
+
+#### 与 `pr summarize` 的关系
+
+| 特性 | `pr reword` | `pr summarize` |
+|------|-------------|----------------|
+| **输出格式** | PR 标题和描述（简洁） | 详细总结文档（Markdown） |
+| **输出位置** | 更新到 PR | 保存到文件 |
+| **用途** | 更新 PR 元数据 | 生成文档 |
+| **LLM 使用** | 生成简洁的标题和描述 | 生成详细的总结内容 |
+
+**使用建议**：
+- 使用 `pr reword` 快速更新 PR 的标题和描述，使其更准确地反映代码变更
+- 使用 `pr summarize` 生成详细的 PR 总结文档，用于文档记录或代码审查
+
+### 使用示例
+
+```bash
+# 基本用法：更新当前分支 PR 的标题和描述
+workflow pr reword
+
+# 仅更新标题
+workflow pr reword --title
+
+# 仅更新描述
+workflow pr reword --description
+
+# 预览模式（不实际更新）
+workflow pr reword --dry-run
+
+# 指定 PR ID
+workflow pr reword 123
+
+# 组合使用：预览并仅更新标题
+workflow pr reword --title --dry-run
+```
+
+---
+
 ## 🏗️ 架构设计
 
 ### 设计模式
@@ -1333,6 +1715,18 @@ workflow pr pick develop master --dry-run
 workflow pr rebase master                     # Rebase 当前分支到 master（默认推送）
 workflow pr rebase master --no-push           # 只 rebase 到本地，不推送
 workflow pr rebase master --dry-run           # 预览模式
+```
+
+### Approve 命令
+```bash
+workflow pr approve                            # 批准当前分支的 PR
+workflow pr approve 123                       # 批准指定 PR ID
+```
+
+### Comment 命令
+```bash
+workflow pr comment "Great work!"             # 向当前分支的 PR 添加评论
+workflow pr comment 123 "Looks good to me"   # 向指定 PR ID 添加评论
 ```
 
 ---

@@ -7,7 +7,7 @@ Jira 命令层是 Workflow CLI 的命令接口，提供 Jira ticket 信息查看
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/jira/` 模块提供。
 
 **命令结构**：
-- `workflow jira` - Jira 操作命令（info, related, changelog, comments, attachments, clean）
+- `workflow jira` - Jira 操作命令（info, related, changelog, comment, comments, attachments, clean）
 
 ---
 
@@ -31,6 +31,7 @@ src/commands/jira/
 ├── info.rs         # 显示 ticket 信息命令（~354 行）
 ├── related.rs      # 显示关联信息命令（PR 和分支）
 ├── changelog.rs    # 显示变更历史命令（~200 行）
+├── comment.rs      # 添加评论命令（~191 行）
 ├── comments.rs     # 显示评论命令（~313 行）
 ├── attachments.rs  # 下载附件命令（~30 行）
 └── clean.rs        # 清理本地数据命令（~58 行）
@@ -88,6 +89,7 @@ Cli::parse() (解析命令行参数)
 match cli.subcommand
   ├─ Info → InfoCommand::show()
   ├─ Changelog → ChangelogCommand::show()
+  ├─ Comment → CommentCommand::add()
   ├─ Comments → CommentsCommand::show()
   ├─ Attachments → AttachmentsCommand::download()
   └─ Clean → CleanCommand::clean()
@@ -681,6 +683,7 @@ src/main.rs::main()
 match cli.subcommand
   ├─ Info → InfoCommand::show()
   ├─ Changelog → ChangelogCommand::show()
+  ├─ Comment → CommentCommand::add()
   ├─ Comments → CommentsCommand::show()
   ├─ Attachments → AttachmentsCommand::download()
   └─ Clean → CleanCommand::clean()

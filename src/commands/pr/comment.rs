@@ -1,6 +1,6 @@
-use crate::pr::create_provider;
+use crate::log_success;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{log_success, ProxyManager};
 use anyhow::{Context, Result};
 
 /// PR 评论命令
@@ -11,9 +11,6 @@ pub struct PullRequestCommentCommand;
 impl PullRequestCommentCommand {
     /// 添加评论到 Pull Request
     pub fn comment(pull_request_id: Option<String>, message: Vec<String>) -> Result<()> {
-        // 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
-
         // 获取评论内容（将多个单词组合成一个字符串）
         if message.is_empty() {
             anyhow::bail!("Comment message is required. Please provide a message.");
@@ -26,7 +23,7 @@ impl PullRequestCommentCommand {
         log_success!("Adding comment to PR: #{}", pr_id);
 
         // 创建平台提供者并添加评论
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         provider
             .add_comment(&pr_id, &comment_message)
             .context(format!("Failed to add comment to PR #{}", pr_id))?;

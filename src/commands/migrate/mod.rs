@@ -5,7 +5,6 @@
 //! ## 架构说明
 //!
 //! 迁移系统采用**版本化文件组织**，每个需要迁移的版本都有独立的文件：
-//! - `v1_0_0.rs` - v1.0.0 迁移实现（配置格式版本，独立于软件版本）
 //! - `v1_1_0.rs` - v1.1.0 迁移实现（未来）
 //! - `v2_0_0.rs` - v2.0.0 迁移实现（未来）
 //!
@@ -25,7 +24,6 @@ use anyhow::Result;
 
 pub mod history;
 pub mod migrations;
-pub mod v1_0_0;
 
 pub struct MigrateCommand;
 
@@ -62,24 +60,7 @@ impl MigrateCommand {
     }
 
     /// 执行特定版本的迁移
-    fn migrate_version(version: &str, dry_run: bool, cleanup: bool) -> Result<()> {
-        if !dry_run {
-            log_info!("Migrating to version: {}", version);
-        }
-
-        match version {
-            "v1.0.0" => {
-                v1_0_0::migrate_v1_0_0(dry_run, cleanup)?;
-            }
-            _ => {
-                anyhow::bail!("Unknown migration version: {}", version);
-            }
-        }
-
-        if !dry_run {
-            history::record_migration(version)?;
-        }
-
-        Ok(())
+    fn migrate_version(version: &str, _dry_run: bool, _cleanup: bool) -> Result<()> {
+        anyhow::bail!("Unknown migration version: {}", version);
     }
 }

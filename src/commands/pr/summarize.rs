@@ -13,8 +13,8 @@ use crate::git::GitRepo;
 use crate::log_info;
 use crate::log_success;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::pr::llm::PullRequestLLM;
-use crate::pr::platform::create_provider;
+use crate::pr::llm::{FileSummaryGenerator, SummaryGenerator};
+use crate::pr::platform::create_provider_auto;
 
 /// PR 总结命令
 pub struct SummarizeCommand;
@@ -42,7 +42,7 @@ impl SummarizeCommand {
         }
 
         // 创建平台提供者
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 获取 PR ID
         let pr_id = if let Some(id) = pull_request_id {
@@ -69,7 +69,7 @@ impl SummarizeCommand {
 
         // 使用 LLM 生成总结
         let summary = Spinner::with("Generating summary with LLM...", || {
-            PullRequestLLM::summarize_pr(&pr_title, &pr_diff)
+            SummaryGenerator::summarize_pr(&pr_title, &pr_diff)
         })
         .context("Failed to generate PR summary")?;
 
@@ -441,7 +441,7 @@ impl SummarizeCommand {
     /// 使用 LLM 生成文件的修改总结。
     fn generate_file_change_summary(file_path: &str, file_diff: &str) -> Result<String> {
         log_info!("Generating summary for file: {}", file_path);
-        PullRequestLLM::summarize_file_change(file_path, file_diff)
+        FileSummaryGenerator::summarize_file_change(file_path, file_diff)
             .with_context(|| format!("Failed to generate summary for file: {}", file_path))
     }
 

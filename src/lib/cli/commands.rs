@@ -5,8 +5,9 @@
 use clap::Subcommand;
 
 use super::{
-    BranchSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs, GitHubSubcommand,
-    JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands, ProxySubcommand,
+    BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs,
+    GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
+    ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 
 /// 主命令枚举
@@ -60,8 +61,8 @@ pub enum Commands {
     /// Manage log level (set/check)
     ///
     /// Set or view current log output level (none, error, warn, info, debug).
-    #[command(name = "log-level")]
-    LogLevel {
+    #[command(name = "log")]
+    Log {
         #[command(subcommand)]
         subcommand: LogLevelSubcommand,
     },
@@ -95,6 +96,13 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: BranchSubcommand,
     },
+    /// Manage Git commits
+    ///
+    /// Amend the last commit, including message and files.
+    Commit {
+        #[command(subcommand)]
+        subcommand: CommitSubcommand,
+    },
     /// Migrate configuration to new format
     ///
     /// Execute versioned migrations to update configuration files.
@@ -120,5 +128,19 @@ pub enum Commands {
     Jira {
         #[command(subcommand)]
         subcommand: JiraSubcommand,
+    },
+    /// Git stash management
+    ///
+    /// List, apply, drop, and pop Git stash entries.
+    Stash {
+        #[command(subcommand)]
+        subcommand: StashSubcommand,
+    },
+    /// Manage repository-level configuration
+    ///
+    /// Initialize and manage repository-level configuration including branch prefix and commit template settings.
+    Repo {
+        #[command(subcommand)]
+        subcommand: RepoSubcommand,
     },
 }

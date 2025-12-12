@@ -605,6 +605,56 @@ impl GitBranch {
             .with_context(|| format!("Failed to delete remote branch: {}", branch_name))
     }
 
+    /// 重命名本地分支
+    ///
+    /// 使用 `git branch -m` 重命名本地分支。
+    ///
+    /// # 参数
+    ///
+    /// * `old_name` - 旧分支名称（如果为 None，则重命名当前分支）
+    /// * `new_name` - 新分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果重命名失败，返回相应的错误信息。
+    pub fn rename(old_name: Option<&str>, new_name: &str) -> Result<()> {
+        let mut args = vec!["branch", "-m"];
+        if let Some(old) = old_name {
+            args.push(old);
+        }
+        args.push(new_name);
+        cmd_run(&args).with_context(|| {
+            if let Some(old) = old_name {
+                format!("Failed to rename branch from '{}' to '{}'", old, new_name)
+            } else {
+                format!("Failed to rename current branch to '{}'", new_name)
+            }
+        })
+    }
+
+    /// 重命名远程分支
+    ///
+    /// 通过推送新分支并删除旧远程分支来重命名远程分支。
+    /// 注意：必须先推送新分支，然后删除旧分支，以避免丢失远程引用。
+    ///
+    /// # 参数
+    ///
+    /// * `old_name` - 旧分支名称
+    /// * `new_name` - 新分支名称
+    ///
+    /// # 错误
+    ///
+    /// 如果重命名失败，返回相应的错误信息。
+    pub fn rename_remote(old_name: &str, new_name: &str) -> Result<()> {
+        // 先推送新分支并设置上游跟踪
+        Self::push(new_name, true)
+            .with_context(|| format!("Failed to push new branch '{}' to remote", new_name))?;
+        // 然后删除旧的远程分支
+        Self::delete_remote(old_name)
+            .with_context(|| format!("Failed to delete old remote branch '{}'", old_name))?;
+        Ok(())
+    }
+
     /// 合并指定分支到当前分支
     ///
     /// 根据指定的合并策略将源分支合并到当前分支。
@@ -841,5 +891,44 @@ impl GitBranch {
 
         // 如果 merge-base 等于 candidate_branch 的 HEAD，说明 from_branch 直接基于 candidate_branch
         Ok(merge_base_commit == candidate_head)
+    }
+
+    /// 检查 commit 是否在远程分支中
+    ///
+    /// 通过检查远程分支是否包含指定的 commit 来判断。
+    ///
+    /// # 参数
+    ///
+    /// * `branch` - 本地分支名称
+    /// * `commit_sha` - 要检查的 commit SHA
+    ///
+    /// # 返回
+    ///
+    /// - `Ok(true)` - 如果 commit 在远程分支中
+    /// - `Ok(false)` - 如果 commit 不在远程分支中或远程分支不存在
+    ///
+    /// # 错误
+    ///
+    /// 如果命令执行失败，返回相应的错误信息。
+    pub fn is_commit_in_remote(branch: &str, commit_sha: &str) -> Result<bool> {
+        // 首先检查远程分支是否存在
+        let (_, has_remote) = Self::is_branch_exists(branch)?;
+        if !has_remote {
+            return Ok(false);
+        }
+
+        // 获取远程分支名称（通常是 origin/branch）
+        let remote_branch = format!("origin/{}", branch);
+
+        // 检查远程分支是否包含该 commit
+        // 使用 git branch --contains 检查远程分支是否包含该 commit
+        let output = cmd_read(&["branch", "-r", "--contains", commit_sha])
+            .context("Failed to check if commit is in remote branch")?;
+
+        // 检查远程分支是否在输出中
+        Ok(output.lines().any(|line| {
+            let line = line.trim().trim_start_matches('*').trim();
+            line == remote_branch
+        }))
     }
 }

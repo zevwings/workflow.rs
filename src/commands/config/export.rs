@@ -185,9 +185,17 @@ impl ConfigExportCommand {
             }
         }
 
-        // 过滤 LLM key
-        if filtered.llm.key.is_some() {
-            filtered.llm.key = Some("***FILTERED***".to_string());
+        // 过滤 LLM keys（所有 provider）
+        if filtered.llm.openai.key.is_some() {
+            filtered.llm.openai.key = Some("***FILTERED***".to_string());
+            count += 1;
+        }
+        if filtered.llm.deepseek.key.is_some() {
+            filtered.llm.deepseek.key = Some("***FILTERED***".to_string());
+            count += 1;
+        }
+        if filtered.llm.proxy.key.is_some() {
+            filtered.llm.proxy.key = Some("***FILTERED***".to_string());
             count += 1;
         }
 
@@ -253,8 +261,16 @@ impl ConfigExportCommand {
                             .context("Failed to serialize log config to TOML")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
-                            if no_secrets && llm.key.is_some() {
-                                llm.key = Some("***FILTERED***".to_string());
+                            if no_secrets {
+                                if llm.openai.key.is_some() {
+                                    llm.openai.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.deepseek.key.is_some() {
+                                    llm.deepseek.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.proxy.key.is_some() {
+                                    llm.proxy.key = Some("***FILTERED***".to_string());
+                                }
                             }
                             toml::to_string_pretty(&llm)
                                 .context("Failed to serialize llm config to TOML")?
@@ -315,8 +331,16 @@ impl ConfigExportCommand {
                             .context("Failed to serialize log config to JSON")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
-                            if no_secrets && llm.key.is_some() {
-                                llm.key = Some("***FILTERED***".to_string());
+                            if no_secrets {
+                                if llm.openai.key.is_some() {
+                                    llm.openai.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.deepseek.key.is_some() {
+                                    llm.deepseek.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.proxy.key.is_some() {
+                                    llm.proxy.key = Some("***FILTERED***".to_string());
+                                }
                             }
                             serde_json::to_value(&llm)
                                 .context("Failed to serialize llm config to JSON")?
@@ -365,8 +389,16 @@ impl ConfigExportCommand {
                             .context("Failed to serialize log config to YAML")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
-                            if no_secrets && llm.key.is_some() {
-                                llm.key = Some("***FILTERED***".to_string());
+                            if no_secrets {
+                                if llm.openai.key.is_some() {
+                                    llm.openai.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.deepseek.key.is_some() {
+                                    llm.deepseek.key = Some("***FILTERED***".to_string());
+                                }
+                                if llm.proxy.key.is_some() {
+                                    llm.proxy.key = Some("***FILTERED***".to_string());
+                                }
                             }
                             serde_yaml::to_string(&llm)
                                 .context("Failed to serialize llm config to YAML")?

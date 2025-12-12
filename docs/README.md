@@ -130,6 +130,25 @@
 - 线程安全的 Prompt 管理
 - 扁平化文件结构设计
 
+#### [BRANCH_ARCHITECTURE.md](./architecture/lib/BRANCH_ARCHITECTURE.md)
+**Branch 模块架构文档**
+
+- 分支命名服务（从 JIRA ticket、标题、类型生成）
+- 分支前缀管理（JIRA ticket 前缀、仓库前缀）
+- 分支配置管理（仓库级别前缀、忽略列表）
+- 分支类型定义（feature/bugfix/refactoring/hotfix/chore）
+- 分支名生成（模板系统、LLM、简单回退）
+- 非英文翻译功能
+
+#### [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
+**Commit 模块架构文档**
+
+- Commit amend 业务逻辑（预览、格式化、完成提示）
+- Commit reword 业务逻辑（预览、格式化、完成提示）
+- 历史 commit reword（rebase 交互式编辑）
+- 预览信息生成和格式化显示
+- 无状态设计，职责单一
+
 ### 命令层架构文档（CLI 命令封装）
 
 #### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
@@ -176,11 +195,42 @@
 #### [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
 **分支管理命令层架构文档**
 
+- 分支创建功能（支持从 JIRA ticket 创建，使用 LLM 生成分支名）
 - 分支清理功能（清理已合并分支，保留重要分支）
 - 分支忽略列表管理（按仓库配置忽略分支）
 - 分支前缀管理（按仓库配置分支前缀，用于自动生成分支名）
 - 支持 dry-run 模式和确认机制
 - 首次使用自动提示配置分支前缀
+
+#### [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
+**Commit 管理命令层架构文档**
+
+- Commit amend 命令（修改最后一次提交的消息和文件）
+- Commit reword 命令（修改指定提交的消息，不改变内容）
+- Commit squash 命令（压缩多个 commits）
+- 交互式工作流（选择、输入、确认等）
+- 预览机制（在执行操作前生成预览信息）
+- 分支保护（检查默认分支，防止误操作）
+- 支持 HEAD 和历史 commit 的 reword
+
+#### [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+**Stash 管理命令层架构文档**
+
+- Stash list 命令（列出所有 stash 条目，支持统计信息）
+- Stash apply 命令（应用 stash，保留条目）
+- Stash drop 命令（删除 stash 条目，支持多选）
+- Stash pop 命令（应用并删除 stash 条目）
+- 交互式选择界面（支持选择特定的 stash）
+- 冲突检测和处理（自动检测冲突并提供解决提示）
+
+#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
+**配置迁移命令层架构文档**
+
+- 版本化迁移系统（迁移版本独立于软件版本）
+- 自动检测待迁移版本
+- 支持 dry-run 模式和保留旧配置文件选项
+- 迁移历史记录管理
+- 每个迁移版本独立实现，互不干扰
 
 #### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 **环境检查命令层架构文档**
@@ -217,12 +267,7 @@
 - 迁移前后配置对比
 - 回滚说明
 
-### [1.4.8 → 1.4.9 迁移指南](./migration/1.4.8-to-1.4.9.md)
-**从 1.4.8 升级到 1.4.9 的迁移说明**
-
-- 配置迁移系统（v1.0.0）迁移说明
-- 从 `branch.toml` 迁移到 `repositories.toml`
-- 详细的迁移步骤和验证方法
+**注意**：分支配置已迁移到项目级配置（`.workflow/config.toml`）。请使用 `workflow repo setup` 设置项目级配置。
 
 ---
 
@@ -318,6 +363,7 @@
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
 - 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
 - 想了解 Git 操作？ → [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+- 想了解 Commit 管理？ → [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
 - 想了解 HTTP 客户端？ → [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
 - 想了解配置管理？ → [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
 - 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
@@ -335,6 +381,9 @@
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
+- 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+- 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 - 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 - 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
 - 想了解代理管理命令？ → [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)

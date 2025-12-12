@@ -49,6 +49,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能：禁用跨 OS 归档可以避免 Windows 路径问题
+          enableCrossOsArchive: false
 
       - name: Check code format
         run: cargo fmt --check
@@ -84,6 +86,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能：禁用跨 OS 归档可以避免 Windows 路径问题
+          enableCrossOsArchive: false
 
       - name: Install system dependencies (Linux)
         run: |
@@ -848,6 +852,8 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能：禁用跨 OS 归档可以避免 Windows 路径问题
+          enableCrossOsArchive: false
 
       - name: Build release binaries
         shell: bash

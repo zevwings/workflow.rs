@@ -17,6 +17,9 @@ out/
 # IDE - RustRover
 .rustrover/
 
+# IDE - Cursor
+.cursor/
+
 # macOS
 .DS_Store
 .AppleDouble
@@ -77,3 +80,17 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+docs/report/
+
+docs/**
+!docs/README.md
+!docs/architecture/
+!docs/architecture/**
+!docs/guidelines/
+!docs/guidelines/**
+!docs/todo/
+!docs/todo/**
+!docs/migration/
+!docs/migration/**
+handlebars

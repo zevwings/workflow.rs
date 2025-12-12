@@ -3,11 +3,16 @@
 //! 本模块提供了所有 Issue/Ticket 相关的 REST API 方法。
 
 use anyhow::{Context, Result};
+use reqwest::blocking::multipart;
 use serde::Serialize;
 use serde_json::Value;
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 use super::helpers::{build_jira_url, jira_auth_config};
 use crate::base::http::{HttpClient, RequestConfig};
+use crate::jira::helpers::get_auth;
 use crate::jira::types::{
     JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraIssue,
     JiraTransition,
@@ -207,6 +212,110 @@ impl JiraIssueApi {
             .ensure_success()
             .context(format!("Failed to add comment to issue {}", ticket))?;
         Ok(())
+    }
+
+    /// 上传附件到 issue
+    ///
+    /// # 参数
+    ///
+    /// * `ticket` - Jira ticket ID，格式如 `PROJ-123`
+    /// * `file_path` - 要上传的文件路径
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回上传的附件信息列表（JIRA API 返回的是数组）。
+    ///
+    /// # 错误
+    ///
+    /// 如果文件不存在、无法读取或上传失败，返回相应的错误信息。
+    pub fn upload_attachment(ticket: &str, file_path: &str) -> Result<Vec<JiraAttachment>> {
+        let url = build_jira_url(&format!("issue/{}/attachments", ticket))?;
+        let (email, api_token) = get_auth()?;
+
+        // 读取文件
+        let path = Path::new(file_path);
+        let file_name = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .with_context(|| format!("Invalid file name: {}", file_path))?;
+
+        let mut file =
+            File::open(path).with_context(|| format!("Failed to open file: {}", file_path))?;
+
+        let mut file_data = Vec::new();
+        file.read_to_end(&mut file_data)
+            .with_context(|| format!("Failed to read file: {}", file_path))?;
+
+        // 创建 multipart form
+        // 根据文件扩展名确定 MIME 类型
+        let mime_type = Self::guess_mime_type(path);
+        let part = multipart::Part::bytes(file_data)
+            .file_name(file_name.to_string())
+            .mime_str(&mime_type)
+            .with_context(|| format!("Failed to create multipart part for: {}", file_path))?;
+
+        let form = multipart::Form::new().part("file", part);
+
+        // 创建 reqwest 客户端并发送请求
+        let client = reqwest::blocking::Client::builder()
+            .build()
+            .context("Failed to create HTTP client")?;
+
+        let response = client
+            .post(&url)
+            .basic_auth(&email, Some(&api_token))
+            .header("X-Atlassian-Token", "no-check")
+            .multipart(form)
+            .send()
+            .with_context(|| format!("Failed to upload attachment to issue {}", ticket))?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!(
+                "Failed to upload attachment: HTTP {} - {}",
+                status,
+                error_text
+            );
+        }
+
+        // 解析响应
+        let attachments: Vec<JiraAttachment> =
+            response.json().with_context(|| "Failed to parse attachment response")?;
+
+        Ok(attachments)
+    }
+
+    /// 根据文件路径猜测 MIME 类型
+    ///
+    /// # 参数
+    ///
+    /// * `path` - 文件路径
+    ///
+    /// # 返回
+    ///
+    /// 返回 MIME 类型字符串，如果无法确定则返回 "application/octet-stream"
+    fn guess_mime_type(path: &Path) -> String {
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+
+        match ext.as_str() {
+            "jpg" | "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "pdf" => "application/pdf",
+            "txt" => "text/plain",
+            "json" => "application/json",
+            "xml" => "application/xml",
+            "zip" => "application/zip",
+            "py" => "text/x-python",
+            "rs" => "text/x-rust",
+            "js" => "text/javascript",
+            "html" => "text/html",
+            "css" => "text/css",
+            "md" => "text/markdown",
+            _ => "application/octet-stream",
+        }
+        .to_string()
     }
 
     /// 获取 issue 的变更历史（changelog）

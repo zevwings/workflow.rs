@@ -1,9 +1,9 @@
 use crate::base::indicator::Spinner;
 use crate::git::{GitBranch, GitCommit, GitPreCommit};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
-use anyhow::{Context, Result};
+use crate::{log_break, log_info, log_success, log_warning};
+use anyhow::Result;
 
 /// 快速更新命令
 #[allow(dead_code)]
@@ -15,9 +15,6 @@ impl PullRequestUpdateCommand {
     ///
     /// 根据仓库类型自动选择对应的平台实现
     pub fn update() -> Result<()> {
-        // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
-
         // 获取当前分支的 PR 标题
         let pull_request_title = Self::get_pull_request_title()?;
 
@@ -62,7 +59,7 @@ impl PullRequestUpdateCommand {
         };
 
         // 获取 PR 标题
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let title = Spinner::with(format!("Fetching PR #{} title...", pr_id), || {
             provider.get_pull_request_title(&pr_id)
         })

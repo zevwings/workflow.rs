@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::DryRunArgs;
+use super::common::{DryRunArgs, JiraIdArg};
 
 /// Branch management subcommands
 ///
@@ -23,12 +23,65 @@ pub enum BranchSubcommand {
         #[command(subcommand)]
         subcommand: IgnoreSubcommand,
     },
-    /// Manage branch prefix for current repository
+    /// Create a new branch
     ///
-    /// Set, get, or remove branch prefix for the current repository.
-    Prefix {
-        #[command(subcommand)]
-        subcommand: PrefixSubcommand,
+    /// Create a new branch, optionally from a JIRA ticket.
+    Create {
+        #[command(flatten)]
+        jira_id: JiraIdArg,
+        /// Create from default branch (main/master)
+        #[arg(long)]
+        from_default: bool,
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+    },
+    /// Rename a branch
+    ///
+    /// Fully interactive branch rename command.
+    /// All operations are done through interactive prompts.
+    ///
+    /// Example:
+    ///   workflow branch rename    # Interactive mode
+    Rename,
+    /// Switch to a branch
+    ///
+    /// Switch to a branch, with interactive selection if branch name is not provided.
+    /// Fuzzy filter is automatically enabled when branch count > 25.
+    /// If branch does not exist, will prompt user to confirm creation.
+    ///
+    /// Examples:
+    ///   workflow branch switch feature/new-feature    # Switch to specified branch (prompt if not exists)
+    ///   workflow branch switch                        # Interactive selection (auto fuzzy if > 25 branches)
+    Switch {
+        /// Branch name (optional, will enter interactive mode if not provided)
+        branch_name: Option<String>,
+    },
+    /// Sync branch into current branch
+    ///
+    /// Sync specified branch into current branch, supporting merge, rebase, or squash.
+    /// This is a local Git operation without PR-specific logic.
+    /// Will prompt for confirmation before pushing to remote.
+    ///
+    /// Examples:
+    ///   workflow branch sync master                    # Merge master into current branch
+    ///   workflow branch sync master --rebase          # Rebase current branch onto master
+    ///   workflow branch sync feature-branch --squash  # Squash merge feature-branch
+    Sync {
+        /// Source branch name to sync (required)
+        #[arg(value_name = "SOURCE_BRANCH")]
+        source_branch: String,
+
+        /// Use rebase instead of merge (default: merge)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        rebase: bool,
+
+        /// Only allow fast-forward merge (fail if not possible)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        ff_only: bool,
+
+        /// Use squash merge (compress all commits into one)
+        #[arg(long, action = clap::ArgAction::SetTrue)]
+        squash: bool,
     },
 }
 
@@ -47,20 +100,4 @@ pub enum IgnoreSubcommand {
     },
     /// List ignored branches for current repository
     List,
-}
-
-/// Branch prefix management subcommands
-#[derive(Subcommand)]
-pub enum PrefixSubcommand {
-    /// Set branch prefix for current repository
-    ///
-    /// If prefix is not provided, will prompt interactively.
-    Set {
-        /// Branch prefix value, if not provided, will prompt interactively
-        prefix: Option<String>,
-    },
-    /// Get branch prefix for current repository
-    Get,
-    /// Remove branch prefix for current repository
-    Remove,
 }

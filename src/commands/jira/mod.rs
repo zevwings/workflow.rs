@@ -5,6 +5,7 @@
 pub mod attachments;
 pub mod changelog;
 pub mod clean;
+pub mod comment;
 pub mod comments;
 pub mod helpers;
 pub mod info;
@@ -13,6 +14,7 @@ pub mod related;
 pub use attachments::AttachmentsCommand;
 pub use changelog::ChangelogCommand;
 pub use clean::CleanCommand;
+pub use comment::CommentCommand;
 pub use comments::CommentsCommand;
 pub use helpers::{format_date, get_jira_id, OutputFormat};
 pub use info::InfoCommand;
