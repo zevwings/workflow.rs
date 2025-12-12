@@ -15,7 +15,7 @@ use crate::commands::github::helpers::{
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -135,10 +135,7 @@ impl GitHubCommand {
         // 先检查账号名称是否已存在
         let settings = Settings::load();
         if settings.github.accounts.iter().any(|a| a.name == account.name) {
-            return Err(anyhow::anyhow!(
-                "Account with name '{}' already exists",
-                account.name
-            ));
+            return Err(eyre!("Account with name '{}' already exists", account.name));
         }
 
         let is_first_account = settings.github.accounts.is_empty();
@@ -223,7 +220,7 @@ impl GitHubCommand {
             SelectDialog::new("Select account to remove", account_names_vec.clone())
                 .with_default(default_index)
                 .prompt()
-                .context("Failed to get account selection")?;
+                .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
             .iter()
             .position(|name| name == &selected_account)
@@ -345,7 +342,7 @@ impl GitHubCommand {
             SelectDialog::new("Select account to switch to", account_names_vec.clone())
                 .with_default(default_index)
                 .prompt()
-                .context("Failed to get account selection")?;
+                .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
             .iter()
             .position(|name| name == &selected_account)
@@ -399,7 +396,7 @@ impl GitHubCommand {
             SelectDialog::new("Select account to update", account_names_vec.clone())
                 .with_default(default_index)
                 .prompt()
-                .context("Failed to get account selection")?;
+                .wrap_err("Failed to get account selection")?;
         let selection = account_names_vec
             .iter()
             .position(|name| name == &selected_account)
@@ -427,7 +424,7 @@ impl GitHubCommand {
                 .enumerate()
                 .any(|(idx, a)| idx != selection && a.name == new_account.name)
         {
-            return Err(anyhow::anyhow!(
+            return Err(eyre!(
                 "Account with name '{}' already exists",
                 new_account.name
             ));

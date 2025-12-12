@@ -2,7 +2,7 @@
 //!
 //! 提供通用的 Git 命令执行辅助函数，减少代码重复。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 
 /// Git 命令执行常量
@@ -20,7 +20,7 @@ pub(crate) const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop
 pub(crate) fn cmd_read(args: &[&str]) -> Result<String> {
     let output = cmd("git", args)
         .read()
-        .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+        .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
     Ok(output.trim().to_string())
 }
 
@@ -32,7 +32,7 @@ pub(crate) fn cmd_read(args: &[&str]) -> Result<String> {
 pub(crate) fn cmd_run(args: &[&str]) -> Result<()> {
     cmd("git", args)
         .run()
-        .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+        .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
     Ok(())
 }
 
@@ -77,7 +77,7 @@ pub(crate) fn switch_or_checkout(
     let result = cmd("git", switch_args).stdout_null().stderr_null().run();
 
     if result.is_err() {
-        cmd_run(checkout_args).with_context(|| error_msg.as_ref().to_string())?;
+        cmd_run(checkout_args).wrap_err_with(|| error_msg.as_ref().to_string())?;
     }
     Ok(())
 }

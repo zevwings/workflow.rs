@@ -6,7 +6,7 @@ use crate::git::GitRepo;
 use crate::repo::config::RepoConfig;
 use crate::template::config::TemplateConfig;
 use crate::{log_break, log_info, log_message};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Repository show command
 pub struct RepoShowCommand;
@@ -17,7 +17,7 @@ impl RepoShowCommand {
         log_message!("Repository Configuration\n");
 
         // 1. 获取仓库名
-        let repo_name = GitRepo::extract_repo_name().context("Not in a Git repository")?;
+        let repo_name = GitRepo::extract_repo_name().wrap_err("Not in a Git repository")?;
 
         log_info!("Repository: {}", repo_name);
         log_break!();

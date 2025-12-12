@@ -3,7 +3,7 @@ use crate::git::GitBranch;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use crate::{log_break, log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 关闭命令
 #[allow(dead_code)]
@@ -27,7 +27,7 @@ impl PullRequestCloseCommand {
 
         // 4. 提前检查：如果当前分支是默认分支，不应该关闭
         if current_branch == default_branch {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Cannot close PR on default branch '{}'. Please switch to a feature branch first.",
                 default_branch
             );
@@ -83,7 +83,7 @@ impl PullRequestCloseCommand {
     /// 关闭 PR（根据仓库类型调用对应的实现）
     fn close_pull_request(pull_request_id: &str) -> Result<()> {
         let provider = create_provider_auto()?;
-        provider.close_pull_request(pull_request_id).context("Failed to close PR")?;
+        provider.close_pull_request(pull_request_id).wrap_err("Failed to close PR")?;
         log_success!("PR closed successfully");
         Ok(())
     }
@@ -92,7 +92,7 @@ impl PullRequestCloseCommand {
     fn delete_remote_branch(branch_name: &str) -> Result<()> {
         // 检查远程分支是否存在
         let exists_remote = GitBranch::has_remote_branch(branch_name)
-            .context("Failed to check if remote branch exists")?;
+            .wrap_err("Failed to check if remote branch exists")?;
 
         if !exists_remote {
             log_info!(

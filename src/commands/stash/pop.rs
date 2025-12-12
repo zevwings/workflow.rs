@@ -6,7 +6,7 @@ use crate::base::dialog::ConfirmDialog;
 use crate::commands::stash::helpers::select_stash_interactively;
 use crate::git::GitStash;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Stash pop command
 pub struct StashPopCommand;
@@ -18,7 +18,7 @@ impl StashPopCommand {
         log_message!("Stash Pop");
 
         // 获取所有 stash 条目
-        let entries = GitStash::stash_list().context("Failed to list stash entries")?;
+        let entries = GitStash::stash_list().wrap_err("Failed to list stash entries")?;
 
         if entries.is_empty() {
             log_warning!("No stash entries available");
@@ -38,7 +38,7 @@ impl StashPopCommand {
         let use_latest = ConfirmDialog::new(&prompt)
             .with_default(true)
             .prompt()
-            .context("Failed to get user confirmation")?;
+            .wrap_err("Failed to get user confirmation")?;
 
         // 确定要应用的 stash
         let target_stash = if use_latest {
@@ -51,7 +51,7 @@ impl StashPopCommand {
         log_info!("Popping stash: {}", target_stash);
 
         // 应用并删除 stash
-        let result = GitStash::stash_pop(Some(&target_stash)).context("Failed to pop stash")?;
+        let result = GitStash::stash_pop(Some(&target_stash)).wrap_err("Failed to pop stash")?;
 
         if result.restored {
             log_success!("Stash {} applied and removed", target_stash);

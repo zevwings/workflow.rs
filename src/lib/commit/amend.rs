@@ -6,7 +6,7 @@
 //! - 完成提示生成
 
 use crate::git::{CommitInfo, GitBranch, GitCommit, WorktreeStatus};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// Amend 预览信息
 #[derive(Debug, Clone)]

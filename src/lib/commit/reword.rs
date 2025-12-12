@@ -7,7 +7,7 @@
 //! - Rebase 相关操作
 
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -261,7 +261,7 @@ cp "{}" "$1"
         let sequence_editor_script =
             temp_dir.join(format!("workflow-sequence-editor-{}", std::process::id()));
         fs::write(&sequence_editor_script, script_content)
-            .with_context(|| "Failed to write sequence editor script")?;
+            .wrap_err_with(|| "Failed to write sequence editor script")?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -284,7 +284,7 @@ cp "{}" "$1"
         let message_editor_script =
             temp_dir.join(format!("workflow-message-editor-{}", std::process::id()));
         fs::write(&message_editor_script, message_script_content)
-            .with_context(|| "Failed to write message editor script")?;
+            .wrap_err_with(|| "Failed to write message editor script")?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -321,7 +321,7 @@ cp "{}" "$1"
             .env("GIT_SEQUENCE_EDITOR", &config.sequence_editor_script)
             .env("GIT_EDITOR", &config.message_editor_script)
             .output()
-            .with_context(|| "Failed to execute git rebase")?;
+            .wrap_err_with(|| "Failed to execute git rebase")?;
 
         if !rebase_result.status.success() {
             let stderr = String::from_utf8_lossy(&rebase_result.stderr);
@@ -331,7 +331,7 @@ cp "{}" "$1"
             } else {
                 stdout.to_string()
             };
-            anyhow::bail!("Rebase failed: {}", error_msg);
+            color_eyre::eyre::bail!("Rebase failed: {}", error_msg);
         }
 
         Ok(())
@@ -363,7 +363,7 @@ cp "{}" "$1"
                 if has_stashed {
                     let _ = GitStash::stash_pop(None);
                 }
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Cannot reword root commit (commit has no parent). Error: {}",
                     e
                 );
@@ -372,13 +372,13 @@ cp "{}" "$1"
 
         // 步骤3: 获取从父 commit 到 HEAD 的所有 commits
         let commits = GitCommit::get_commits_from_to_head(&parent_sha)
-            .with_context(|| "Failed to get commits for rebase")?;
+            .wrap_err_with(|| "Failed to get commits for rebase")?;
 
         if commits.is_empty() {
             if has_stashed {
                 let _ = GitStash::stash_pop(None);
             }
-            anyhow::bail!("No commits found between parent and HEAD");
+            color_eyre::eyre::bail!("No commits found between parent and HEAD");
         }
 
         // 步骤4: 创建 rebase todo 文件
@@ -387,12 +387,13 @@ cp "{}" "$1"
         // 步骤5: 创建临时文件用于 rebase todo
         let temp_dir = std::env::temp_dir();
         let todo_file = temp_dir.join(format!("workflow-rebase-todo-{}", std::process::id()));
-        fs::write(&todo_file, &todo_content).with_context(|| "Failed to write rebase todo file")?;
+        fs::write(&todo_file, &todo_content)
+            .wrap_err_with(|| "Failed to write rebase todo file")?;
 
         // 步骤6: 创建临时文件用于新消息
         let message_file = temp_dir.join(format!("workflow-commit-message-{}", std::process::id()));
         fs::write(&message_file, &options.new_message)
-            .with_context(|| "Failed to write commit message file")?;
+            .wrap_err_with(|| "Failed to write commit message file")?;
 
         // 步骤7: 创建编辑器脚本
         let editor_config = Self::create_rebase_editor_scripts(&todo_file, &message_file)?;
@@ -431,11 +432,11 @@ cp "{}" "$1"
                     error_msg.contains("conflict") || error_msg.contains("could not apply");
 
                 if has_conflicts {
-                    Err(e).with_context(|| {
+                    Err(e).wrap_err_with(|| {
                         "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
                     })
                 } else {
-                    Err(e).with_context(|| "Failed to execute rebase")
+                    Err(e).wrap_err_with(|| "Failed to execute rebase")
                 }
             }
         }

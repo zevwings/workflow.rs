@@ -1,5 +1,5 @@
-use anyhow::{Context, Result};
 use chrono::{DateTime, Local};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 use super::helpers::{cmd_read, cmd_run};
 use crate::trace_warn;
@@ -83,7 +83,7 @@ impl GitStash {
             args.push("-m");
             args.push(msg);
         }
-        cmd_run(&args).context("Failed to stash changes")
+        cmd_run(&args).wrap_err("Failed to stash changes")
     }
 
     /// 检查是否有未合并的文件（冲突文件）
@@ -93,7 +93,7 @@ impl GitStash {
     pub fn has_unmerged() -> Result<bool> {
         // 使用 git ls-files -u 检查是否有未合并的路径
         // -u 选项：显示未合并的文件
-        let output = cmd_read(&["ls-files", "-u"]).context("Failed to check unmerged files")?;
+        let output = cmd_read(&["ls-files", "-u"]).wrap_err("Failed to check unmerged files")?;
 
         Ok(!output.trim().is_empty())
     }
@@ -111,7 +111,7 @@ impl GitStash {
         // %ai = 作者日期（ISO 8601 格式）
         // %s = 提交消息（subject）
         let output = cmd_read(&["stash", "list", "--format=%gd|%ai|%s"])
-            .context("Failed to list stash entries")?;
+            .wrap_err("Failed to list stash entries")?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());
@@ -130,9 +130,7 @@ impl GitStash {
                     .strip_prefix("stash@{")
                     .and_then(|s| s.strip_suffix("}"))
                     .and_then(|s| s.parse::<usize>().ok())
-                    .ok_or_else(|| {
-                        anyhow::anyhow!("Failed to parse stash index from: {}", stash_ref)
-                    })?;
+                    .ok_or_else(|| eyre!("Failed to parse stash index from: {}", stash_ref))?;
 
                 // 解析时间戳
                 let timestamp = DateTime::parse_from_str(date_str, "%Y-%m-%d %H:%M:%S %z")
@@ -256,7 +254,7 @@ impl GitStash {
     pub fn stash_drop(stash_ref: Option<&str>) -> Result<()> {
         let stash_ref = stash_ref.unwrap_or("stash@{0}");
         cmd_run(&["stash", "drop", stash_ref])
-            .with_context(|| format!("Failed to drop stash {}", stash_ref))
+            .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref))
     }
 
     /// 应用并删除指定的 stash
@@ -339,7 +337,7 @@ impl GitStash {
     /// 返回 `StashStat`，包含文件变更统计信息。
     pub fn stash_show_stat(stash_ref: &str) -> Result<StashStat> {
         let output = cmd_read(&["stash", "show", "--stat", stash_ref])
-            .context("Failed to get stash statistics")?;
+            .wrap_err("Failed to get stash statistics")?;
 
         // 解析输出，例如：
         //  file1.txt | 2 +-

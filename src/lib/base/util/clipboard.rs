@@ -2,12 +2,12 @@
 //!
 //! 本模块提供了剪贴板的读写功能。
 
-use anyhow::Result;
 #[cfg(all(
     not(target_env = "musl"),
     not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
 ))]
 use clipboard::{ClipboardContext, ClipboardProvider};
+use color_eyre::{eyre::eyre, Result};
 
 /// 剪贴板操作模块
 ///
@@ -35,11 +35,11 @@ impl Clipboard {
         not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
     ))]
     pub fn copy(text: &str) -> Result<()> {
-        let mut ctx: ClipboardContext = ClipboardProvider::new()
-            .map_err(|e| anyhow::anyhow!("Failed to initialize clipboard: {}", e))?;
+        let mut ctx: ClipboardContext =
+            ClipboardProvider::new().map_err(|e| eyre!("Failed to initialize clipboard: {}", e))?;
 
         ctx.set_contents(text.to_string())
-            .map_err(|e| anyhow::anyhow!("Failed to copy to clipboard: {}", e))?;
+            .map_err(|e| eyre!("Failed to copy to clipboard: {}", e))?;
 
         Ok(())
     }

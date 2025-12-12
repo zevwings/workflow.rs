@@ -10,8 +10,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
 use clap_complete::Shell;
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::ShellConfigManager;
@@ -89,7 +89,7 @@ impl Completion {
             _ => return Ok(None),
         };
 
-        fs::write(&config_file, config_content).with_context(|| {
+        fs::write(&config_file, config_content).wrap_err_with(|| {
             format!(
                 "Failed to write workflow completion config file: {}",
                 config_file.display()
@@ -119,7 +119,7 @@ impl Completion {
                     source_pattern,
                     Some("Workflow CLI completions"),
                 )
-                .with_context(|| {
+                .wrap_err_with(|| {
                     format!("Failed to add completion source to {} config file", shell)
                 })?;
 
@@ -150,7 +150,7 @@ impl Completion {
                         workflow_source,
                         Some("Workflow CLI completions"),
                     )
-                    .with_context(|| {
+                    .wrap_err_with(|| {
                         format!(
                             "Failed to add workflow completion source to {} config",
                             shell
@@ -169,7 +169,7 @@ impl Completion {
                 }
             }
             _ => {
-                anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
+                color_eyre::eyre::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
             }
         };
 
@@ -187,7 +187,7 @@ impl Completion {
                 // zsh 和 bash 使用统一配置文件，移除 source 语句（指定 shell 类型）
                 let source_pattern = "$HOME/.workflow/.completions";
                 let removed = ShellConfigManager::remove_source_for_shell(shell, source_pattern)
-                    .with_context(|| {
+                    .wrap_err_with(|| {
                         format!(
                             "Failed to remove completion source from {} config file",
                             shell
@@ -295,7 +295,7 @@ impl Completion {
 
         // 使用 ShellConfigManager 移除 completion 文件的 source 语句
         let removed = ShellConfigManager::remove_source_for_shell(shell, workflow_source)
-            .with_context(|| {
+            .wrap_err_with(|| {
                 format!(
                     "Failed to remove workflow completion source from {} config",
                     shell
@@ -387,7 +387,7 @@ impl Completion {
         let workflow_config_file = Paths::workflow_dir()?.join(".completions");
 
         if workflow_config_file.exists() {
-            fs::remove_file(&workflow_config_file).with_context(|| {
+            fs::remove_file(&workflow_config_file).wrap_err_with(|| {
                 format!(
                     "Failed to remove workflow completion config file: {}",
                     workflow_config_file.display()

@@ -2,7 +2,7 @@ use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, RequestConfig};
 use crate::git::{GitCommit, GitRepo};
 use crate::{log_break, log_error, log_info, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 use serde_json::Value;
 use std::time::Duration;
@@ -24,10 +24,10 @@ impl CheckCommand {
         log_message!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
             log_error!("Not in a Git repository");
-            anyhow::bail!("Git check failed: Not in a Git repository");
+            color_eyre::eyre::bail!("Git check failed: Not in a Git repository");
         }
 
-        let git_output = GitCommit::status().context("Failed to check git status")?;
+        let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
         if git_output.trim().is_empty() {
             log_success!("Git repository is clean (no uncommitted changes)");
         } else {
@@ -38,7 +38,7 @@ impl CheckCommand {
 
         // 2. 检查网络连接
         log_message!("[2/2] Checking network connection to GitHub...");
-        let client = HttpClient::global().context("Failed to create HTTP client")?;
+        let client = HttpClient::global().wrap_err("Failed to create HTTP client")?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
         match client.stream(HttpMethod::Get, "https://github.com", config) {
             Ok(response) => {
@@ -49,7 +49,7 @@ impl CheckCommand {
                         "GitHub network check failed (status: {})",
                         response.status()
                     );
-                    anyhow::bail!("Network check failed");
+                    color_eyre::eyre::bail!("Network check failed");
                 }
             }
             Err(e) => {
@@ -57,7 +57,7 @@ impl CheckCommand {
                 log_error!(
                 "  This might be due to network issues, proxy settings, or firewall restrictions"
             );
-                anyhow::bail!("Network check failed: {}", e);
+                color_eyre::eyre::bail!("Network check failed: {}", e);
             }
         }
 
@@ -91,7 +91,7 @@ impl CheckCommand {
             log_error!("  cargo fmt --check");
             log_error!("  cargo clippy -- -D warnings");
             log_error!("  cargo check");
-            anyhow::bail!("make command not found");
+            color_eyre::eyre::bail!("make command not found");
         }
 
         // 使用 make lint 执行检查
@@ -100,7 +100,7 @@ impl CheckCommand {
             .stdout_capture()
             .stderr_capture()
             .run()
-            .context("Failed to run make lint")?;
+            .wrap_err("Failed to run make lint")?;
 
         if !lint_output.status.success() {
             let stderr = String::from_utf8_lossy(&lint_output.stderr);
@@ -113,7 +113,7 @@ impl CheckCommand {
                 log_error!("{}", stdout);
             }
             log_error!("Run 'make fix' to auto-fix some issues, or fix them manually");
-            anyhow::bail!("Lint check failed");
+            color_eyre::eyre::bail!("Lint check failed");
         }
 
         // 输出 make lint 的结果（成功时）
@@ -139,7 +139,7 @@ impl CheckCommand {
             .stdout_capture()
             .stderr_capture()
             .run()
-            .context("Failed to run cargo test")?;
+            .wrap_err("Failed to run cargo test")?;
 
         if !test_output.status.success() {
             let stderr = String::from_utf8_lossy(&test_output.stderr);
@@ -152,7 +152,7 @@ impl CheckCommand {
                 log_error!("{}", stdout);
             }
             log_error!("Please fix the failing tests before merging");
-            anyhow::bail!("Tests failed");
+            color_eyre::eyre::bail!("Tests failed");
         }
 
         // 输出测试结果（成功时）

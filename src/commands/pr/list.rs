@@ -1,7 +1,7 @@
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
 use crate::{log_break, log_message};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// PR 列表命令
 #[allow(dead_code)]

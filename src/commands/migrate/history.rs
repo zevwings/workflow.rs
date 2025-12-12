@@ -2,7 +2,7 @@
 //!
 //! 记录已执行的迁移，避免重复执行。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -63,7 +63,7 @@ pub fn record_migration(version: &str) -> Result<()> {
 
     // 保存
     let manager = ConfigManager::<MigrationHistory>::new(path);
-    manager.write(&history).context("Failed to save migration history")?;
+    manager.write(&history).wrap_err("Failed to save migration history")?;
 
     Ok(())
 }

@@ -2,7 +2,10 @@
 //!
 //! 本模块提供了所有项目相关的 REST API 方法。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use serde_json::Value;
 use std::time::Duration;
 
@@ -36,14 +39,14 @@ impl JiraProjectApi {
         let data: Value = response
             .ensure_success()?
             .as_json()
-            .context(format!("Failed to fetch project statuses for: {}", project))?;
+            .wrap_err(format!("Failed to fetch project statuses for: {}", project))?;
 
         let statuses = data
             .as_array()
             .and_then(|arr| arr.first())
             .and_then(|version| version.get("statuses"))
             .and_then(|s| s.as_array())
-            .with_context(|| {
+            .wrap_err_with(|| {
                 format!(
                     "Invalid statuses JSON structure for project '{}'. The API response format may have changed. Response: {}",
                     project,

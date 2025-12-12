@@ -12,7 +12,10 @@ use crate::jira::JiraWorkHistory;
 use crate::pr::helpers::{extract_pull_request_id_from_url, get_current_branch_pr_id};
 use crate::pr::{create_provider_auto, TYPES_OF_CHANGES};
 use crate::{log_break, log_info, log_success, log_warning};
-use anyhow::{Context, Error, Result};
+use color_eyre::{
+    eyre::{Report, WrapErr},
+    Result,
+};
 
 /// 处理 stash_pop 的结果
 ///
@@ -55,7 +58,7 @@ pub fn handle_stash_pop_result(result: Result<crate::git::StashPopResult>) {
 ///
 /// 如果错误表示 PR 已合并，返回 `true`，否则返回 `false`
 #[allow(dead_code)]
-pub fn is_pr_already_merged_error(error: &Error) -> bool {
+pub fn is_pr_already_merged_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 
     // 优先检查明确的错误消息
@@ -94,7 +97,7 @@ pub fn is_pr_already_merged_error(error: &Error) -> bool {
 ///
 /// 如果错误表示 PR 已关闭，返回 `true`，否则返回 `false`
 #[allow(dead_code)]
-pub fn is_pr_already_closed_error(error: &Error) -> bool {
+pub fn is_pr_already_closed_error(error: &Report) -> bool {
     let error_msg = error.to_string().to_lowercase();
 
     // 优先检查明确的错误消息
@@ -168,11 +171,11 @@ pub fn cleanup_branch(
 
     // 3. 切换到默认分支
     GitBranch::checkout_branch(default_branch)
-        .with_context(|| format!("Failed to checkout default branch: {}", default_branch))?;
+        .wrap_err_with(|| format!("Failed to checkout default branch: {}", default_branch))?;
 
     // 4. 更新本地默认分支
     GitBranch::pull(default_branch)
-        .with_context(|| format!("Failed to pull latest changes from {}", default_branch))?;
+        .wrap_err_with(|| format!("Failed to pull latest changes from {}", default_branch))?;
 
     // 5. 删除本地分支
     if GitBranch::has_local_branch(current_branch)? {
@@ -182,7 +185,7 @@ pub fn cleanup_branch(
                 log_info!("Branch may not be fully merged, trying force delete...");
                 GitBranch::delete(current_branch, true)
             })
-            .context("Failed to delete local branch")?;
+            .wrap_err("Failed to delete local branch")?;
         log_success!("Local branch deleted: {}", current_branch);
     } else {
         log_info!("Local branch already deleted: {}", current_branch);
@@ -241,7 +244,7 @@ pub fn detect_base_branch(branch: &str, exclude_branch: &str) -> Result<Option<S
 
     // Get all branches (excluding branch and exclude_branch)
     let all_branches = GitBranch::get_all_branches(false)
-        .context("Failed to get all branches for base branch detection")?;
+        .wrap_err("Failed to get all branches for base branch detection")?;
 
     // Sort by priority: check common base branches first
     let mut candidate_branches: Vec<String> = all_branches
@@ -316,7 +319,7 @@ pub fn ensure_jira_status(jira_ticket: &Option<String>) -> Result<Option<String>
                 ticket
             );
             let config_result = JiraStatus::configure_interactive(ticket)
-                .with_context(|| {
+                .wrap_err_with(|| {
                     format!(
                         "Failed to configure Jira ticket '{}'. Please ensure it's a valid ticket ID (e.g., PROJECT-123). If you don't need Jira integration, leave this field empty.",
                         ticket
@@ -355,7 +358,7 @@ pub fn input_pull_request_title() -> Result<String> {
             }
         })
         .prompt()
-        .context("Failed to get PR title")?;
+        .wrap_err("Failed to get PR title")?;
     Ok(title)
 }
 
@@ -377,7 +380,7 @@ pub fn resolve_description(description: Option<String>) -> Result<String> {
         let desc = InputDialog::new("Short description (optional)")
             .allow_empty(true)
             .prompt()
-            .context("Failed to get description")?;
+            .wrap_err("Failed to get description")?;
         Ok(desc)
     }
 }
@@ -397,7 +400,7 @@ pub fn select_change_types() -> Result<Vec<bool>> {
         options,
     )
     .prompt()
-    .context("Failed to select change types")?;
+    .wrap_err("Failed to select change types")?;
 
     // 转换选中的项为布尔向量
     let selected_types: Vec<bool> =
@@ -560,7 +563,7 @@ pub fn create_or_get_pull_request(
         // 分支无 PR，创建新 PR
         // 先检查分支是否有提交（相对于默认分支）
         let has_commits = GitBranch::is_branch_ahead(branch_name, default_branch)
-            .context("Failed to check branch commits")?;
+            .wrap_err("Failed to check branch commits")?;
 
         if !has_commits {
             log_warning!(
@@ -570,7 +573,7 @@ pub fn create_or_get_pull_request(
             );
             log_warning!("GitHub does not allow creating PRs for empty branches.");
             log_warning!("Please make some changes and commit them before creating a PR.");
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Cannot create PR: branch '{}' has no commits. Please commit changes first.",
                 branch_name
             );

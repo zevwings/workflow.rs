@@ -1,7 +1,7 @@
 use crate::git::GitBranch;
 use crate::jira::history::JiraWorkHistory;
 use crate::{log_break, log_message};
-use anyhow::Result;
+use color_eyre::Result;
 use serde_json;
 use std::collections::HashMap;
 

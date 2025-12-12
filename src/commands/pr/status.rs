@@ -1,6 +1,6 @@
 use crate::pr::create_provider_auto;
 use crate::{log_break, log_message};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// PR 状态命令
 #[allow(dead_code)]

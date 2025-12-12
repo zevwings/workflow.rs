@@ -3,7 +3,7 @@
 //! 本模块提供了 HTTP 响应的封装和解析功能。
 //! 响应体延迟解析，通过方法（as_json, as_text 等）来解析。
 
-use anyhow::Result;
+use color_eyre::Result;
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
 
@@ -154,7 +154,7 @@ impl HttpResponse {
     /// ```
     pub fn ensure_success(self) -> Result<Self> {
         if !self.is_success() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "HTTP request failed with status {}: {}",
                 self.status,
                 self.as_text().unwrap_or_else(|_| "Unable to read response body".to_string())
@@ -189,13 +189,13 @@ impl HttpResponse {
     /// # let config = workflow::base::http::RequestConfig::<Value, Value>::new();
     /// # let response = client.post(url, config)?;
     /// let response = response
-    ///     .ensure_success_with(|r| anyhow::anyhow!("Error: {}", r.status))?;
+    ///     .ensure_success_with(|r| color_eyre::eyre::eyre!("Error: {}", r.status))?;
     /// # Ok(())
     /// # }
     /// ```
     pub fn ensure_success_with<E>(self, error_handler: impl FnOnce(&Self) -> E) -> Result<Self>
     where
-        E: Into<anyhow::Error>,
+        E: Into<color_eyre::eyre::Report>,
     {
         if !self.is_success() {
             return Err(error_handler(&self).into());

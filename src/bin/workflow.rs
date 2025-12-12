@@ -3,8 +3,8 @@
 //! 这是 Workflow CLI 工具的主命令入口，提供配置管理、检查工具、代理管理等核心功能。
 //! 所有功能都通过 `workflow` 命令及其子命令提供，包括 `pr`、`log`、`jira` 等子命令。
 
-use anyhow::Result;
 use clap::Parser;
+use color_eyre::Result;
 
 use workflow::commands::branch::{
     clean, create as branch_create, ignore, rename, switch, sync as branch_sync,
@@ -27,7 +27,7 @@ use workflow::commands::pr::{
 };
 use workflow::commands::proxy::proxy;
 use workflow::commands::repo::{setup as repo_setup, show as repo_show};
-use workflow::commands::stash::{apply, drop, list as stash_list, pop};
+use workflow::commands::stash::{apply, drop, list as stash_list, pop, push};
 
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
@@ -42,6 +42,9 @@ use workflow::base::settings::Settings;
 ///
 /// 解析命令行参数并分发到相应的命令处理函数。
 fn main() -> Result<()> {
+    // 安装 color-eyre（最早调用）
+    color_eyre::install()?;
+
     // 初始化日志级别（从配置文件读取，用于 log_*! 宏）
     {
         let config_level = Settings::get()
@@ -399,6 +402,9 @@ fn main() -> Result<()> {
             StashSubcommand::Pop => {
                 pop::StashPopCommand::execute()?;
             }
+            StashSubcommand::Push => {
+                push::StashPushCommand::execute()?;
+            }
         },
         // Repository 管理命令
         Some(Commands::Repo { subcommand }) => match subcommand {
@@ -429,7 +435,7 @@ fn main() -> Result<()> {
             );
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
             log_message!("  workflow jira       - Jira operations (info/attachments/clean/log)");
-            log_message!("  workflow stash      - Git stash management (list/apply/drop/pop)");
+            log_message!("  workflow stash      - Git stash management (list/apply/drop/pop/push)");
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

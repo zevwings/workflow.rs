@@ -7,7 +7,7 @@
 //! - Rebase 相关操作
 
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -76,19 +76,19 @@ impl CommitSquash {
     pub fn get_branch_commits(current_branch: &str) -> Result<Vec<CommitInfo>> {
         // 1. 获取默认分支
         let default_branch =
-            GitBranch::get_default_branch().context("Failed to get default branch")?;
+            GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
 
         // 2. 尝试检测当前分支基于哪个分支创建
         let base_branch =
             crate::commands::pr::helpers::detect_base_branch(current_branch, &default_branch)
-                .context("Failed to detect base branch")?;
+                .wrap_err("Failed to detect base branch")?;
 
         // 3. 确定基础分支（优先使用检测到的分支，否则使用默认分支）
         let actual_base = base_branch.as_deref().unwrap_or(&default_branch);
 
         // 4. 获取从基础分支到当前分支的所有提交
         let commit_shas = GitBranch::get_commits_between(actual_base, current_branch)
-            .with_context(|| {
+            .wrap_err_with(|| {
                 format!(
                     "Failed to get commits between '{}' and '{}'",
                     actual_base, current_branch
@@ -103,7 +103,7 @@ impl CommitSquash {
         let mut commits = Vec::new();
         for sha in commit_shas {
             let commit_info = GitCommit::get_commit_info(&sha)
-                .with_context(|| format!("Failed to get commit info: {}", &sha[..8]))?;
+                .wrap_err_with(|| format!("Failed to get commit info: {}", &sha[..8]))?;
             commits.push(commit_info);
         }
 
@@ -127,16 +127,16 @@ impl CommitSquash {
         current_branch: &str,
     ) -> Result<SquashPreview> {
         if commits.is_empty() {
-            anyhow::bail!("No commits to squash");
+            color_eyre::eyre::bail!("No commits to squash");
         }
 
         // 获取基础 commit SHA（第一个要压缩的 commit 的父 commit）
         let base_sha = if commits.len() == 1 {
             // 如果只有一个 commit，获取它的父 commit
-            GitCommit::get_parent_commit(&commits[0].sha).context("Failed to get parent commit")?
+            GitCommit::get_parent_commit(&commits[0].sha).wrap_err("Failed to get parent commit")?
         } else {
             // 如果有多个 commits，获取第一个 commit 的父 commit
-            GitCommit::get_parent_commit(&commits[0].sha).context("Failed to get parent commit")?
+            GitCommit::get_parent_commit(&commits[0].sha).wrap_err("Failed to get parent commit")?
         };
 
         // 检查是否已推送（检查第一个 commit 是否在远程）
@@ -206,7 +206,7 @@ impl CommitSquash {
         selected_commit_shas: &[String],
     ) -> Result<String> {
         if selected_commit_shas.is_empty() {
-            anyhow::bail!("No commits selected for squash");
+            color_eyre::eyre::bail!("No commits selected for squash");
         }
 
         // 将选中的 SHA 转换为 HashSet 以便快速查找
@@ -267,7 +267,7 @@ cp "{}" "$1"
             std::process::id()
         ));
         fs::write(&sequence_editor_script, script_content)
-            .with_context(|| "Failed to write sequence editor script")?;
+            .wrap_err_with(|| "Failed to write sequence editor script")?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -291,7 +291,7 @@ cp "{}" "$1"
             std::process::id()
         ));
         fs::write(&message_editor_script, message_script_content)
-            .with_context(|| "Failed to write message editor script")?;
+            .wrap_err_with(|| "Failed to write message editor script")?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -326,7 +326,7 @@ cp "{}" "$1"
             .env("GIT_SEQUENCE_EDITOR", &config.sequence_editor_script)
             .env("GIT_EDITOR", &config.message_editor_script)
             .output()
-            .with_context(|| "Failed to execute git rebase")?;
+            .wrap_err_with(|| "Failed to execute git rebase")?;
 
         if !rebase_result.status.success() {
             let stderr = String::from_utf8_lossy(&rebase_result.stderr);
@@ -336,7 +336,7 @@ cp "{}" "$1"
             } else {
                 stdout.to_string()
             };
-            anyhow::bail!("Rebase failed: {}", error_msg);
+            color_eyre::eyre::bail!("Rebase failed: {}", error_msg);
         }
 
         Ok(())
@@ -353,7 +353,7 @@ cp "{}" "$1"
     /// 返回 squash 结果。
     pub fn execute_squash(options: SquashOptions) -> Result<SquashResult> {
         if options.commit_shas.is_empty() {
-            anyhow::bail!("No commits selected for squash");
+            color_eyre::eyre::bail!("No commits selected for squash");
         }
 
         // 步骤1: 检查工作区状态，如果有未提交的更改，需要 stash
@@ -371,7 +371,7 @@ cp "{}" "$1"
                 if has_stashed {
                     let _ = GitStash::stash_pop(None);
                 }
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Cannot squash root commit (commit has no parent). Error: {}",
                     e
                 );
@@ -380,13 +380,13 @@ cp "{}" "$1"
 
         // 步骤3: 获取从父 commit 到 HEAD 的所有 commits
         let commits = GitCommit::get_commits_from_to_head(&base_sha)
-            .with_context(|| "Failed to get commits for rebase")?;
+            .wrap_err_with(|| "Failed to get commits for rebase")?;
 
         if commits.is_empty() {
             if has_stashed {
                 let _ = GitStash::stash_pop(None);
             }
-            anyhow::bail!("No commits found between parent and HEAD");
+            color_eyre::eyre::bail!("No commits found between parent and HEAD");
         }
 
         // 步骤4: 创建 rebase todo 文件
@@ -395,12 +395,13 @@ cp "{}" "$1"
         // 步骤5: 创建临时文件用于 rebase todo
         let temp_dir = std::env::temp_dir();
         let todo_file = temp_dir.join(format!("workflow-squash-todo-{}", std::process::id()));
-        fs::write(&todo_file, &todo_content).with_context(|| "Failed to write rebase todo file")?;
+        fs::write(&todo_file, &todo_content)
+            .wrap_err_with(|| "Failed to write rebase todo file")?;
 
         // 步骤6: 创建临时文件用于新消息
         let message_file = temp_dir.join(format!("workflow-squash-message-{}", std::process::id()));
         fs::write(&message_file, &options.new_message)
-            .with_context(|| "Failed to write commit message file")?;
+            .wrap_err_with(|| "Failed to write commit message file")?;
 
         // 步骤7: 创建编辑器脚本
         let editor_config = Self::create_rebase_editor_scripts(&todo_file, &message_file)?;
@@ -439,11 +440,11 @@ cp "{}" "$1"
                     error_msg.contains("conflict") || error_msg.contains("could not apply");
 
                 if has_conflicts {
-                    Err(e).with_context(|| {
+                    Err(e).wrap_err_with(|| {
                         "Rebase conflicts detected. Please resolve manually:\n  1. Review conflicted files\n  2. Resolve conflicts\n  3. Stage resolved files: git add <files>\n  4. Continue rebase: git rebase --continue\n  5. Or abort rebase: git rebase --abort"
                     })
                 } else {
-                    Err(e).with_context(|| "Failed to execute rebase")
+                    Err(e).wrap_err_with(|| "Failed to execute rebase")
                 }
             }
         }

@@ -5,7 +5,7 @@
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
 use crate::base::prompt::TRANSLATE_SYSTEM_PROMPT;
-use anyhow::Result;
+use color_eyre::Result;
 
 /// Branch LLM 服务
 ///
@@ -47,7 +47,7 @@ impl BranchLLM {
         let cleaned = translated.trim().trim_matches('"').trim_matches('\'').trim().to_string();
 
         if cleaned.is_empty() {
-            anyhow::bail!("LLM returned empty translation");
+            color_eyre::eyre::bail!("LLM returned empty translation");
         }
 
         Ok(cleaned)

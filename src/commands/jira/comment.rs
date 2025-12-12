@@ -9,7 +9,7 @@ use crate::base::indicator::Spinner;
 use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::{log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 use std::path::Path;
 
@@ -40,17 +40,17 @@ impl CommentCommand {
         // 步骤 2: 输入评论内容
         let message = InputDialog::new("Enter comment message")
             .prompt()
-            .context("Failed to get comment message")?;
+            .wrap_err("Failed to get comment message")?;
 
         if message.trim().is_empty() {
-            anyhow::bail!("Comment message cannot be empty");
+            color_eyre::eyre::bail!("Comment message cannot be empty");
         }
 
         // 步骤 3: 询问是否需要附加文件
         let attach_file = ConfirmDialog::new("Do you want to attach a file?")
             .with_default(false)
             .prompt()
-            .context("Failed to get file attachment choice")?;
+            .wrap_err("Failed to get file attachment choice")?;
 
         // 步骤 4: 处理文件附件和构建评论内容
         let final_comment = if attach_file {
@@ -141,7 +141,7 @@ impl CommentCommand {
         Spinner::with(format!("Adding comment to ticket {}...", ticket), || {
             Jira::add_comment(&ticket, &final_comment)
         })
-        .context(format!("Failed to add comment to ticket {}", ticket))?;
+        .wrap_err(format!("Failed to add comment to ticket {}", ticket))?;
 
         log_success!("Comment added to ticket {} successfully!", ticket);
 
@@ -159,7 +159,7 @@ impl CommentCommand {
                 // 如果为空，提示输入
                 InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                     .prompt()
-                    .context("Failed to get Jira ticket ID")?
+                    .wrap_err("Failed to get Jira ticket ID")?
                     .trim()
                     .to_string()
             } else {
@@ -169,14 +169,14 @@ impl CommentCommand {
             // 如果没有提供，提示输入
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .context("Failed to get Jira ticket ID")?
+                .wrap_err("Failed to get Jira ticket ID")?
                 .trim()
                 .to_string()
         };
 
         // 统一验证逻辑
         if ticket.is_empty() {
-            anyhow::bail!("Jira ticket ID cannot be empty");
+            color_eyre::eyre::bail!("Jira ticket ID cannot be empty");
         }
         validate_jira_ticket_format(&ticket)?;
 
@@ -198,13 +198,13 @@ impl CommentCommand {
             // 输入文件路径
             let file_path = InputDialog::new("Enter file path")
                 .prompt()
-                .context("Failed to get file path")?;
+                .wrap_err("Failed to get file path")?;
 
             // 去除首尾空白和引号
             let trimmed = file_path.trim();
             let cleaned = Self::strip_quotes(trimmed);
             if cleaned.is_empty() {
-                anyhow::bail!("File path cannot be empty");
+                color_eyre::eyre::bail!("File path cannot be empty");
             }
 
             // 验证文件
@@ -227,7 +227,7 @@ impl CommentCommand {
             let add_more = ConfirmDialog::new("Do you want to add another file?")
                 .with_default(false)
                 .prompt()
-                .context("Failed to get add more files choice")?;
+                .wrap_err("Failed to get add more files choice")?;
 
             if !add_more {
                 break;
@@ -252,11 +252,11 @@ impl CommentCommand {
     fn read_from_file(file_path: &str) -> Result<FileInfo> {
         let path = Path::new(file_path);
         let metadata = fs::metadata(path)
-            .with_context(|| format!("Failed to get file metadata: {}", file_path))?;
+            .wrap_err_with(|| format!("Failed to get file metadata: {}", file_path))?;
         let file_size = metadata.len();
 
         let bytes =
-            fs::read(path).with_context(|| format!("Failed to read file: {}", file_path))?;
+            fs::read(path).wrap_err_with(|| format!("Failed to read file: {}", file_path))?;
 
         // 尝试将字节解码为 UTF-8 字符串
         match String::from_utf8(bytes.clone()) {

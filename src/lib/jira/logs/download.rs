@@ -4,7 +4,7 @@
 
 use crate::jira::attachments::{DownloadResult, JiraAttachmentDownloader, ProgressCallback};
 use crate::jira::JiraAttachment;
-use anyhow::Result;
+use color_eyre::Result;
 
 use super::JiraLogs;
 

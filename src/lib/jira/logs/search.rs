@@ -1,6 +1,6 @@
 //! 搜索和查找功能相关实现
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 use std::collections::HashSet;
 use std::io::BufRead;
@@ -26,7 +26,7 @@ impl JiraLogs {
         let mut found_id = false;
 
         for line_result in reader.lines() {
-            let line = line_result.context("Failed to read line")?;
+            let line = line_result.wrap_err("Failed to read line")?;
 
             // 检查是否包含请求 ID（匹配 shell 脚本：$0 ~ "#" rid）
             if line.contains(&format!("#{}", request_id)) {
@@ -116,7 +116,7 @@ impl JiraLogs {
         let mut found_in_current_block = false;
 
         for line_result in reader.lines() {
-            let line = line_result.context("Failed to read line")?;
+            let line = line_result.wrap_err("Failed to read line")?;
             let line_lower = line.to_lowercase();
 
             // 检查是否是新条目的开始

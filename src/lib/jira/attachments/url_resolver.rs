@@ -4,7 +4,7 @@ use crate::jira::helpers::get_base_url;
 use crate::jira::ticket::JiraTicket;
 use crate::Jira;
 use crate::JiraAttachment;
-use anyhow::Result;
+use color_eyre::Result;
 use regex::Regex;
 use std::collections::HashMap;
 

@@ -4,7 +4,7 @@
 
 use crate::base::dialog::SelectDialog;
 use crate::git::{GitStash, StashEntry};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 交互式选择 stash 条目
 ///
@@ -14,10 +14,10 @@ use anyhow::{Context, Result};
 ///
 /// 返回选中的 stash 引用，格式为 "stash@{n}"。
 pub fn select_stash_interactively() -> Result<String> {
-    let entries = GitStash::stash_list().context("Failed to list stash entries")?;
+    let entries = GitStash::stash_list().wrap_err("Failed to list stash entries")?;
 
     if entries.is_empty() {
-        anyhow::bail!("No stash entries available");
+        color_eyre::eyre::bail!("No stash entries available");
     }
 
     // 构建选项列表，格式：stash@{n}: <message> (On <branch>)
@@ -34,14 +34,14 @@ pub fn select_stash_interactively() -> Result<String> {
     let selected = SelectDialog::new("Select a stash entry", options)
         .with_default(0)
         .prompt()
-        .context("Failed to select stash entry")?;
+        .wrap_err("Failed to select stash entry")?;
 
     // 从选中的字符串中提取 stash 引用
     // 格式：stash@{n}: <message> (On <branch>)
     if let Some(stash_ref) = selected.split(':').next() {
         Ok(stash_ref.trim().to_string())
     } else {
-        anyhow::bail!("Failed to parse selected stash reference")
+        color_eyre::eyre::bail!("Failed to parse selected stash reference")
     }
 }
 

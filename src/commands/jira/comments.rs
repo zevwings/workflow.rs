@@ -1,7 +1,7 @@
 use crate::jira::Jira;
 use crate::{log_break, log_debug, log_message};
-use anyhow::{Context, Result};
 use chrono::{DateTime, FixedOffset};
+use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use std::collections::HashMap;
 
@@ -28,7 +28,7 @@ impl CommentsCommand {
 
         // 获取 ticket 信息
         let issue = Jira::get_ticket_info(&jira_id)
-            .with_context(|| format!("Failed to get ticket info for {}", jira_id))?;
+            .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))?;
 
         // 确定输出格式
         let format = OutputFormat::from(&output_format);

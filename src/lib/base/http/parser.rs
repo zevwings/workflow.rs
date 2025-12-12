@@ -2,7 +2,7 @@
 //!
 //! 本模块提供了 HTTP 响应解析的 Trait 和实现，支持多种格式（JSON、Text、XML、YAML 等）。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::Deserialize;
 
 /// 响应解析器 Trait
@@ -49,9 +49,9 @@ where
         if bytes.is_empty() || bytes.iter().all(|&b| b.is_ascii_whitespace()) {
             serde_json::from_slice(b"null")
                 .or_else(|_| serde_json::from_slice(b"{}"))
-                .context("Failed to parse empty response as JSON")
+                .wrap_err("Failed to parse empty response as JSON")
         } else {
-            serde_json::from_slice(bytes).with_context(|| {
+            serde_json::from_slice(bytes).wrap_err_with(|| {
                 let response_text = String::from_utf8_lossy(bytes);
                 let preview = if response_text.len() > 200 {
                     format!("{}...", &response_text[..200])
@@ -76,9 +76,9 @@ impl ResponseParser<String> for TextParser {
     fn parse(bytes: &[u8], status: u16) -> Result<String> {
         // 检查状态码
         if !(200..300).contains(&status) {
-            anyhow::bail!("HTTP request failed with status {}", status);
+            color_eyre::eyre::bail!("HTTP request failed with status {}", status);
         }
 
-        String::from_utf8(bytes.to_vec()).context("Failed to decode response body as UTF-8 text")
+        String::from_utf8(bytes.to_vec()).wrap_err("Failed to decode response body as UTF-8 text")
     }
 }

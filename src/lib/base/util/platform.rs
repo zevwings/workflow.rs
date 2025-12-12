@@ -2,7 +2,7 @@
 //!
 //! 提供平台检测相关的工具函数，用于识别当前运行的操作系统和架构。
 
-use anyhow::Result;
+use color_eyre::Result;
 use std::env;
 use std::fs;
 use std::process::Command;
@@ -81,6 +81,6 @@ pub fn detect_release_platform() -> Result<String> {
         ("linux", "aarch64") => Ok("Linux-ARM64".to_string()),
         ("windows", "x86_64") => Ok("Windows-x86_64".to_string()),
         ("windows", "aarch64") => Ok("Windows-ARM64".to_string()),
-        _ => anyhow::bail!("Unsupported platform: {}-{}", os, arch),
+        _ => color_eyre::eyre::bail!("Unsupported platform: {}-{}", os, arch),
     }
 }

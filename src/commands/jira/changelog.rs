@@ -1,6 +1,6 @@
 use crate::jira::JiraIssueApi;
 use crate::{log_break, log_debug, log_message};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use std::collections::HashMap;
 
@@ -35,7 +35,7 @@ impl ChangelogCommand {
     /// 表格格式输出
     fn output_table(jira_id: &str) -> Result<()> {
         let changelog = JiraIssueApi::get_issue_changelog(jira_id)
-            .with_context(|| format!("Failed to get changelog for {}", jira_id))?;
+            .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
         log_break!();
         log_break!('=', 40, "Changelog");
@@ -77,7 +77,7 @@ impl ChangelogCommand {
     /// JSON 格式输出
     fn output_json(jira_id: &str) -> Result<()> {
         let changelog = JiraIssueApi::get_issue_changelog(jira_id)
-            .with_context(|| format!("Failed to get changelog for {}", jira_id))?;
+            .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
         let mut output: HashMap<String, serde_json::Value> = HashMap::new();
         output.insert("changelog".to_string(), serde_json::to_value(changelog)?);
@@ -95,7 +95,7 @@ impl ChangelogCommand {
     /// Markdown 格式输出
     fn output_markdown(jira_id: &str) -> Result<()> {
         let changelog = JiraIssueApi::get_issue_changelog(jira_id)
-            .with_context(|| format!("Failed to get changelog for {}", jira_id))?;
+            .wrap_err_with(|| format!("Failed to get changelog for {}", jira_id))?;
 
         if changelog.histories.is_empty() {
             log_message!("# Changelog\n\nNo change history available.\n");

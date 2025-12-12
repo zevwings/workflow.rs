@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::process::Command;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 
 use super::commit::GitCommit;
@@ -101,7 +101,7 @@ impl GitPreCommit {
                         .stderr_capture()
                         .env("PRE_COMMIT_COLOR", "never")
                         .run()
-                        .context("Failed to run pre-commit")?;
+                        .wrap_err("Failed to run pre-commit")?;
 
                     last_output = Some(output.clone());
 
@@ -191,9 +191,9 @@ impl GitPreCommit {
                         log_error!("{}", stdout);
                     }
 
-                    anyhow::bail!("{}", error_msg);
+                    color_eyre::eyre::bail!("{}", error_msg);
                 }
-                anyhow::bail!("Pre-commit checks failed");
+                color_eyre::eyre::bail!("Pre-commit checks failed");
             } else {
                 // 配置文件存在但 pre-commit 命令不可用，回退到 Git hooks
                 trace_debug!(
@@ -216,7 +216,7 @@ impl GitPreCommit {
 
             // 如果是由 pre-commit 工具生成的 hook，检查配置文件是否存在
             if is_pre_commit_hook && !Path::new(".pre-commit-config.yaml").exists() {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Pre-commit hook requires .pre-commit-config.yaml but it doesn't exist.\n\
                     Please create the config file or remove the pre-commit hook.\n\
                     To uninstall: run `pre-commit uninstall`"
@@ -225,7 +225,7 @@ impl GitPreCommit {
 
             // 执行 Git pre-commit hook 脚本
             let output =
-                Command::new(&hooks_path).output().context("Failed to run pre-commit hooks")?;
+                Command::new(&hooks_path).output().wrap_err("Failed to run pre-commit hooks")?;
 
             if output.status.success() {
                 Ok(PreCommitResult {
@@ -255,7 +255,7 @@ impl GitPreCommit {
                     }
                 }
 
-                anyhow::bail!("{}", error_msg);
+                color_eyre::eyre::bail!("{}", error_msg);
             }
         } else {
             // 没有 pre-commit hooks，跳过
@@ -277,7 +277,7 @@ impl GitPreCommit {
     pub fn run_checks() -> Result<()> {
         if Self::has_pre_commit() {
             // First, stage all files (needed for pre-commit checks)
-            GitCommit::add_all().context("Failed to stage files for pre-commit checks")?;
+            GitCommit::add_all().wrap_err("Failed to stage files for pre-commit checks")?;
 
             // 使用 Spinner 显示执行过程
             Spinner::with("Running pre-commit checks...", Self::run_pre_commit)?;

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::indicator::Spinner;
@@ -222,7 +222,7 @@ impl PullRequestPickCommand {
     fn validate_branches(from_branch: &str, to_branch: &str) -> Result<()> {
         let (from_local, from_remote) = GitBranch::is_branch_exists(from_branch)?;
         if !from_local && !from_remote {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Source branch '{}' does not exist. Please check the branch name.",
                 from_branch
             );
@@ -230,7 +230,7 @@ impl PullRequestPickCommand {
 
         let (to_local, to_remote) = GitBranch::is_branch_exists(to_branch)?;
         if !to_local && !to_remote {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Target branch '{}' does not exist. Please check the branch name.",
                 to_branch
             );
@@ -276,7 +276,7 @@ impl PullRequestPickCommand {
         };
 
         // 3. 获取提交列表
-        GitBranch::get_commits_between(&actual_base, from_branch).with_context(|| {
+        GitBranch::get_commits_between(&actual_base, from_branch).wrap_err_with(|| {
             format!(
                 "Failed to get commits between '{}' and '{}'",
                 actual_base, from_branch
@@ -294,7 +294,9 @@ impl PullRequestPickCommand {
                 log_success!("Stashed changes");
                 Ok(true)
             } else {
-                anyhow::bail!("Operation cancelled: working directory has uncommitted changes");
+                color_eyre::eyre::bail!(
+                    "Operation cancelled: working directory has uncommitted changes"
+                );
             }
         } else {
             Ok(false)
@@ -316,7 +318,7 @@ impl PullRequestPickCommand {
     }
 
     /// 检查是否是 cherry-pick 冲突
-    fn is_cherry_pick_conflict(error: &anyhow::Error) -> bool {
+    fn is_cherry_pick_conflict(error: &color_eyre::eyre::Report) -> bool {
         // 首先检查是否有 CHERRY_PICK_HEAD 文件（最可靠的方法）
         if GitCherryPick::is_cherry_pick_in_progress() {
             return true;
@@ -418,7 +420,7 @@ impl PullRequestPickCommand {
 
         // 检查是否有未提交的更改（cherry-pick 的内容）
         let has_uncommitted = GitCommit::has_commit()
-            .context("Failed to check uncommitted changes before switching branch")?;
+            .wrap_err("Failed to check uncommitted changes before switching branch")?;
         let needs_stash = has_uncommitted;
 
         // 如果有未提交的更改，先 stash
@@ -429,7 +431,7 @@ impl PullRequestPickCommand {
 
         // 切换到源分支，确保成功
         if let Err(e) = GitBranch::checkout_branch(from_branch)
-            .with_context(|| format!("Failed to checkout source branch: {}", from_branch))
+            .wrap_err_with(|| format!("Failed to checkout source branch: {}", from_branch))
         {
             // 如果切换失败，尝试恢复 stash
             if needs_stash {
@@ -454,20 +456,20 @@ impl PullRequestPickCommand {
                         handle_stash_pop_result(GitStash::stash_pop(None));
                     }
                     return Err(e)
-                        .context("Failed to get PR ID from source branch")
-                        .context(format!("Also failed to restore branch: {}", restore_err));
+                        .wrap_err("Failed to get PR ID from source branch")
+                        .wrap_err(format!("Also failed to restore branch: {}", restore_err));
                 }
                 // 恢复 stash
                 if needs_stash {
                     handle_stash_pop_result(GitStash::stash_pop(None));
                 }
-                return Err(e).context("Failed to get PR ID from source branch");
+                return Err(e).wrap_err("Failed to get PR ID from source branch");
             }
         };
 
         // 恢复原分支（应该是 to_branch），确保成功
         GitBranch::checkout_branch(&current_branch)
-            .with_context(|| format!("Failed to restore branch: {}", current_branch))?;
+            .wrap_err_with(|| format!("Failed to restore branch: {}", current_branch))?;
 
         // 恢复 stash（如果有）
         if needs_stash {
@@ -495,7 +497,7 @@ impl PullRequestPickCommand {
                     log_error!(
                         "Cherry-picked changes may have been lost. Please check: git stash list"
                     );
-                    anyhow::bail!(
+                    color_eyre::eyre::bail!(
                         "Failed to restore stashed changes after getting PR info: {}",
                         e
                     );
@@ -699,7 +701,7 @@ impl PullRequestPickCommand {
         // 如果失败，需要清理已创建的分支（如果有）
         let (actual_branch_name, default_branch) =
             Self::create_or_update_branch(&branch_name, &commit_title)
-                .with_context(|| "Failed to create or update branch for PR")?;
+                .wrap_err_with(|| "Failed to create or update branch for PR")?;
 
         // 12. 创建或获取 PR
         let pull_request_url = create_or_get_pull_request(
@@ -708,7 +710,7 @@ impl PullRequestPickCommand {
             &title,
             &pull_request_body,
         )
-        .with_context(|| format!("Failed to create PR for branch: {}", actual_branch_name))?;
+        .wrap_err_with(|| format!("Failed to create PR for branch: {}", actual_branch_name))?;
 
         // 13. 更新 Jira（如果有 ticket）
         // 即使失败也不影响 PR 创建，只记录警告
@@ -750,7 +752,7 @@ impl PullRequestPickCommand {
             .with_default(jira_ticket.as_deref().unwrap_or("").to_string())
             .allow_empty(true)
             .prompt()
-            .context("Failed to get Jira ticket")?;
+            .wrap_err("Failed to get Jira ticket")?;
 
         let trimmed = input.trim().to_string();
         let ticket = if trimmed.is_empty() {
@@ -832,7 +834,7 @@ impl PullRequestPickCommand {
     fn create_or_update_branch(branch_name: &str, commit_title: &str) -> Result<(String, String)> {
         // 检查是否有未提交的修改（cherry-pick 的内容）
         let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check uncommitted changes")?;
+            GitCommit::has_commit().wrap_err("Failed to check uncommitted changes")?;
 
         let current_branch = GitBranch::current_branch()?;
         let default_branch = GitBranch::get_default_branch()?;
@@ -844,7 +846,7 @@ impl PullRequestPickCommand {
                 // 有 cherry-pick 的修改 → 创建新分支并提交
                 create_branch_from_default(branch_name, commit_title, &default_branch)
             } else {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "No changes on default branch '{}'. Cannot create PR without changes.",
                     default_branch
                 );
@@ -865,10 +867,10 @@ impl PullRequestPickCommand {
 
                 // 检查目标分支是否存在
                 let (exists_local, exists_remote) = GitBranch::is_branch_exists(branch_name)
-                    .context("Failed to check if branch exists")?;
+                    .wrap_err("Failed to check if branch exists")?;
 
                 if exists_local || exists_remote {
-                    anyhow::bail!(
+                    color_eyre::eyre::bail!(
                         "Branch '{}' already exists. Cannot create new branch with existing name.",
                         branch_name
                     );
@@ -877,7 +879,7 @@ impl PullRequestPickCommand {
                 // 创建新分支（Git 会自动把未提交的修改带到新分支）
                 log_success!("Creating branch: {}", branch_name);
                 GitBranch::checkout_branch(branch_name)
-                    .with_context(|| {
+                    .wrap_err_with(|| {
                         format!(
                             "Failed to create branch '{}'. You are still on '{}' with uncommitted changes.",
                             branch_name, current_branch
@@ -895,7 +897,9 @@ impl PullRequestPickCommand {
 
                 Ok((branch_name.to_string(), default_branch))
             } else {
-                anyhow::bail!("No cherry-picked changes found. Cannot create PR without changes.");
+                color_eyre::eyre::bail!(
+                    "No cherry-picked changes found. Cannot create PR without changes."
+                );
             }
         }
     }

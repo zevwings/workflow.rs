@@ -3,7 +3,7 @@ use crate::{
     log_break, log_debug, log_info, log_message, log_success, log_warning, ProxyManager,
     SystemProxyReader,
 };
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 代理检查命令
 pub struct ProxyCommand;
@@ -14,7 +14,7 @@ impl ProxyCommand {
         // 1. 获取系统代理设置
         log_debug!("Reading system proxy settings...");
         let proxy_info =
-            SystemProxyReader::read().context("Failed to read system proxy settings")?;
+            SystemProxyReader::read().wrap_err("Failed to read system proxy settings")?;
 
         // 2. 检查环境变量中的代理设置
         let env_proxy = ProxyManager::check_env_proxy();
@@ -103,7 +103,7 @@ impl ProxyCommand {
     /// * `temporary` - 如果为 `true`，只在当前 shell 启用，不写入配置文件；默认为 `false`，写入配置文件
     pub fn on(temporary: bool) -> Result<()> {
         log_debug!("Reading system proxy settings...");
-        let result = ProxyManager::enable(temporary).context("Failed to enable proxy")?;
+        let result = ProxyManager::enable(temporary).wrap_err("Failed to enable proxy")?;
 
         if result.already_configured {
             log_success!("Proxy is already configured correctly");
@@ -129,7 +129,7 @@ impl ProxyCommand {
             }
 
             // 复制到剪贴板
-            Clipboard::copy(proxy_cmd).context("Failed to copy proxy command to clipboard")?;
+            Clipboard::copy(proxy_cmd).wrap_err("Failed to copy proxy command to clipboard")?;
 
             log_success!("Proxy command copied to clipboard");
             log_message!(
@@ -151,7 +151,7 @@ impl ProxyCommand {
     ///
     /// 同时从 shell 配置文件和当前 shell 环境变量中移除代理设置。
     pub fn off() -> Result<()> {
-        let result = ProxyManager::disable().context("Failed to disable proxy")?;
+        let result = ProxyManager::disable().wrap_err("Failed to disable proxy")?;
 
         if !result.found_proxy {
             log_success!("Proxy is already off (no proxy environment variables set)");
@@ -175,7 +175,7 @@ impl ProxyCommand {
             log_message!("{}", unset_cmd);
 
             // 复制到剪贴板
-            Clipboard::copy(unset_cmd).context("Failed to copy unset command to clipboard")?;
+            Clipboard::copy(unset_cmd).wrap_err("Failed to copy unset command to clipboard")?;
 
             log_success!("Proxy unset command copied to clipboard");
             log_message!(

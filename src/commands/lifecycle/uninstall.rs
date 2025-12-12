@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use duct::cmd;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 use crate::base::dialog::ConfirmDialog;
 use crate::base::settings::paths::Paths;
@@ -247,7 +247,7 @@ impl UninstallCommand {
             log_break!();
             log_message!("Removing configuration...");
             let removed_files =
-                Self::remove_config_files().context("Failed to uninstall configuration")?;
+                Self::remove_config_files().wrap_err("Failed to uninstall configuration")?;
             log_message!("Configuration removed successfully");
             for file in &removed_files {
                 log_message!("  - {} removed", file);
@@ -300,7 +300,7 @@ impl UninstallCommand {
 
     /// 从 shell 环境变量中移除代理设置
     fn remove_proxy_settings() -> Result<()> {
-        let result = ProxyManager::disable().context("Failed to remove proxy settings")?;
+        let result = ProxyManager::disable().wrap_err("Failed to remove proxy settings")?;
 
         if !result.found_proxy {
             log_message!("No proxy settings found in shell configuration.");
@@ -350,7 +350,7 @@ impl UninstallCommand {
                         if e.kind() == std::io::ErrorKind::PermissionDenied {
                             need_sudo.push(binary_path);
                         } else {
-                            return Err(anyhow::anyhow!(
+                            return Err(eyre!(
                                 "Failed to remove binary file: {}: {}",
                                 binary_path,
                                 e
@@ -381,7 +381,8 @@ impl UninstallCommand {
         // 删除 workflow.toml
         if let Ok(workflow_config_path) = Paths::workflow_config() {
             if workflow_config_path.exists() {
-                fs::remove_file(&workflow_config_path).context("Failed to remove workflow.toml")?;
+                fs::remove_file(&workflow_config_path)
+                    .wrap_err("Failed to remove workflow.toml")?;
                 removed.push("workflow.toml".to_string());
             }
         }
@@ -390,7 +391,7 @@ impl UninstallCommand {
         if let Ok(jira_users_config_path) = Paths::jira_users_config() {
             if jira_users_config_path.exists() {
                 fs::remove_file(&jira_users_config_path)
-                    .context("Failed to remove jira-users.toml")?;
+                    .wrap_err("Failed to remove jira-users.toml")?;
                 removed.push("jira-users.toml".to_string());
             }
         }

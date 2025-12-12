@@ -2,7 +2,7 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{log_break, log_info, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::sync::{Arc, Mutex};
 
 use super::helpers::get_jira_id;
@@ -19,12 +19,12 @@ impl AttachmentsCommand {
         // 先获取附件列表以确定总数（使用 Spinner 显示加载状态）
         let attachments = Spinner::with(
             format!("Getting attachments info for {}...", jira_id),
-            || Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira"),
+            || Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira"),
         )?;
         let total_files = attachments.len() as u64;
 
         if total_files == 0 {
-            anyhow::bail!("No attachments found for {}", jira_id);
+            color_eyre::eyre::bail!("No attachments found for {}", jira_id);
         }
 
         // 显示下载前的提示信息
@@ -55,7 +55,7 @@ impl AttachmentsCommand {
         });
 
         // 创建 JiraLogs 实例
-        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        let logs = JiraLogs::new().wrap_err("Failed to initialize JiraLogs")?;
 
         // 执行下载（传递已获取的附件列表，避免重复 API 调用）
         let result = logs
@@ -67,7 +67,7 @@ impl AttachmentsCommand {
                 None,
                 Some(attachments),
             )
-            .context("Failed to download attachments from Jira")?;
+            .wrap_err("Failed to download attachments from Jira")?;
 
         // 完成进度条
         if let Ok(pb) = progress.lock() {

@@ -89,7 +89,7 @@ const LOG_LEVEL_SUBCOMMANDS: &[&str] = &["set", "check", "trace-console"];
 const COMPLETION_SUBCOMMANDS: &[&str] = &["generate", "check", "remove"];
 
 /// Stash 子命令列表
-const STASH_SUBCOMMANDS: &[&str] = &["list", "apply", "drop", "pop"];
+const STASH_SUBCOMMANDS: &[&str] = &["list", "apply", "drop", "pop", "push"];
 
 // 以下函数用于从补全脚本中提取命令（目前未使用，保留以备将来扩展）
 //

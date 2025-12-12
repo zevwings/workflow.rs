@@ -1,6 +1,6 @@
 //! HTTP 方法枚举
 
-use anyhow::Result;
+use color_eyre::Result;
 use std::fmt;
 use std::str::FromStr;
 
@@ -15,7 +15,7 @@ pub enum HttpMethod {
 }
 
 impl FromStr for HttpMethod {
-    type Err = anyhow::Error;
+    type Err = color_eyre::eyre::Report;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "GET" => Ok(HttpMethod::Get),
@@ -23,7 +23,7 @@ impl FromStr for HttpMethod {
             "PUT" => Ok(HttpMethod::Put),
             "DELETE" => Ok(HttpMethod::Delete),
             "PATCH" => Ok(HttpMethod::Patch),
-            _ => anyhow::bail!("Invalid HTTP method: {}", s),
+            _ => color_eyre::eyre::bail!("Invalid HTTP method: {}", s),
         }
     }
 }

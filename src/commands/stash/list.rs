@@ -5,7 +5,7 @@
 use crate::base::util::{TableBuilder, TableStyle};
 use crate::git::GitStash;
 use crate::{log_break, log_info, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use tabled::Tabled;
 
 /// Stash 表格行
@@ -34,7 +34,7 @@ impl StashListCommand {
         log_break!();
         log_message!("Stash List");
 
-        let entries = GitStash::stash_list().context("Failed to list stash entries")?;
+        let entries = GitStash::stash_list().wrap_err("Failed to list stash entries")?;
 
         if entries.is_empty() {
             log_info!("No stash entries found");

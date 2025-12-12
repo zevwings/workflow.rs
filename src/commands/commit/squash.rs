@@ -10,7 +10,7 @@ use crate::commands::commit::helpers::{
 };
 use crate::commit::{CommitSquash, SquashOptions};
 use crate::{log_break, log_info, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Commit squash command
 pub struct CommitSquashCommand;
@@ -41,10 +41,10 @@ impl CommitSquashCommand {
         );
 
         let commits = CommitSquash::get_branch_commits(&current_branch)
-            .context("Failed to get branch commits")?;
+            .wrap_err("Failed to get branch commits")?;
 
         if commits.is_empty() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "❌ Error: No commits found after branch '{}' was created\n\nCannot squash commits because there are no commits unique to this branch.",
                 current_branch
             );
@@ -82,10 +82,10 @@ impl CommitSquashCommand {
             options,
         )
         .prompt()
-        .context("Failed to select commits")?;
+        .wrap_err("Failed to select commits")?;
 
         if selected_options.is_empty() {
-            anyhow::bail!("No commits selected. Operation cancelled.");
+            color_eyre::eyre::bail!("No commits selected. Operation cancelled.");
         }
 
         // 步骤5: 从选中的选项解析出 commit SHA
@@ -110,7 +110,7 @@ impl CommitSquashCommand {
             .collect();
 
         if selected_commits.is_empty() {
-            anyhow::bail!("Failed to parse selected commits");
+            color_eyre::eyre::bail!("Failed to parse selected commits");
         }
 
         // 确保选中的 commits 按时间顺序排列（从旧到新）
@@ -142,12 +142,12 @@ impl CommitSquashCommand {
                 }
             })
             .prompt()
-            .context("Failed to get new commit message")?;
+            .wrap_err("Failed to get new commit message")?;
 
         // 步骤7: 预览和确认
         let preview =
             CommitSquash::create_preview(&selected_commits_sorted, &new_message, &current_branch)
-                .context("Failed to create preview")?;
+                .wrap_err("Failed to create preview")?;
 
         log_break!();
         log_message!("{}", CommitSquash::format_preview(&preview));
@@ -158,7 +158,7 @@ impl CommitSquashCommand {
             .with_default(true)
             .with_cancel_message("Operation cancelled")
             .prompt()
-            .context("Failed to get confirmation")?;
+            .wrap_err("Failed to get confirmation")?;
 
         // 步骤8: 执行 squash
         let commit_shas: Vec<String> =
@@ -170,7 +170,7 @@ impl CommitSquashCommand {
             auto_stash: true,
         };
 
-        CommitSquash::execute_squash(options).context("Failed to execute squash")?;
+        CommitSquash::execute_squash(options).wrap_err("Failed to execute squash")?;
 
         log_break!();
         log_success!("✓ Commit squash successful");

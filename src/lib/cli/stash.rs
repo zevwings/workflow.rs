@@ -41,4 +41,12 @@ pub enum StashSubcommand {
     /// Examples:
     ///   workflow stash pop                      # Prompt to pop latest or select
     Pop,
+    /// Push (save) current changes to stash
+    ///
+    /// Save current working directory and staged changes to stash.
+    /// Will prompt for an optional message to identify the stash entry.
+    ///
+    /// Examples:
+    ///   workflow stash push                     # Prompt for message and stash changes
+    Push,
 }

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use inquire::{error::InquireError, MultiSelect};
 
 /// 多选对话框
@@ -85,7 +85,7 @@ where
     /// 如果用户取消选择，返回错误
     pub fn prompt(self) -> Result<Vec<T>> {
         if self.options.is_empty() {
-            anyhow::bail!("No options available");
+            color_eyre::eyre::bail!("No options available");
         }
 
         let mut multi_select = MultiSelect::new(&self.prompt, self.options);
@@ -97,9 +97,9 @@ where
 
         multi_select.prompt().map_err(|e| match e {
             InquireError::OperationCanceled => {
-                anyhow::anyhow!("Operation cancelled by user")
+                eyre!("Operation cancelled by user")
             }
-            _ => anyhow::anyhow!("Multi-selection error: {}", e),
+            _ => eyre!("Multi-selection error: {}", e),
         })
     }
 }
