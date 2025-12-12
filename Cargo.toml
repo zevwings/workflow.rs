@@ -1,6 +1,6 @@
 [package]
 name = "workflow"
-version = "1.5.3"
+version = "1.5.4"
 edition = "2021"
 default-run = "workflow"
 
@@ -38,6 +38,12 @@ base64 = "0.22"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 handlebars = "5.1"
+
+[dev-dependencies]
+pretty_assertions = "1.4"
+rstest = "0.18"
+mockito = "1.2"
+insta = { version = "1.38", features = ["json"] }
 
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
 # Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能

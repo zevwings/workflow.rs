@@ -2,6 +2,7 @@
 //!
 //! 测试日志相关的功能，包括日志级别、日志输出格式和 tracing 宏等。
 
+use pretty_assertions::assert_eq;
 use workflow::base::logger::console::{debug, error, info, success, warning};
 use workflow::base::logger::LogLevel;
 use workflow::trace_debug;

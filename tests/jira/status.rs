@@ -2,19 +2,25 @@
 //!
 //! 测试 Jira 状态配置的读取、写入和交互式配置功能。
 
+use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::jira::status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
 
 // ==================== 状态配置读取测试 ====================
 
-#[test]
-fn test_read_pull_request_created_status_invalid_ticket() {
+#[rstest]
+#[case("invalid-ticket")]
+#[case("")]
+#[case("   ")]
+fn test_read_pull_request_created_status_invalid_ticket(#[case] ticket: &str) {
     // 测试读取无效 ticket 格式的状态配置
-    let result = JiraStatus::read_pull_request_created_status("invalid-ticket");
+    let result = JiraStatus::read_pull_request_created_status(ticket);
 
     // 应该返回错误，因为 ticket 格式无效
     assert!(
         result.is_err(),
-        "Should return error for invalid ticket format"
+        "Should return error for invalid ticket format: {}",
+        ticket
     );
     let error_msg = result.unwrap_err().to_string();
     assert!(
@@ -23,26 +29,37 @@ fn test_read_pull_request_created_status_invalid_ticket() {
     );
 }
 
-#[test]
-fn test_read_pull_request_created_status_valid_ticket() {
+#[rstest]
+#[case("PROJ-123")]
+#[case("PROJ-456")]
+#[case("ABC-789")]
+fn test_read_pull_request_created_status_valid_ticket(#[case] ticket: &str) {
     // 测试读取有效 ticket 的状态配置
     // 注意：如果配置文件不存在，应该返回 Ok(None)
-    let result = JiraStatus::read_pull_request_created_status("PROJ-123");
+    let result = JiraStatus::read_pull_request_created_status(ticket);
 
     // 应该返回 Ok，但可能为 None（如果配置不存在）
-    assert!(result.is_ok(), "Should return Ok for valid ticket format");
+    assert!(
+        result.is_ok(),
+        "Should return Ok for valid ticket format: {}",
+        ticket
+    );
     // 值可能是 None（如果配置不存在），这是可以接受的
 }
 
-#[test]
-fn test_read_pull_request_merged_status_invalid_ticket() {
+#[rstest]
+#[case("invalid-ticket")]
+#[case("")]
+#[case("   ")]
+fn test_read_pull_request_merged_status_invalid_ticket(#[case] ticket: &str) {
     // 测试读取无效 ticket 格式的合并状态配置
-    let result = JiraStatus::read_pull_request_merged_status("invalid-ticket");
+    let result = JiraStatus::read_pull_request_merged_status(ticket);
 
     // 应该返回错误，因为 ticket 格式无效
     assert!(
         result.is_err(),
-        "Should return error for invalid ticket format"
+        "Should return error for invalid ticket format: {}",
+        ticket
     );
     let error_msg = result.unwrap_err().to_string();
     assert!(
@@ -51,33 +68,22 @@ fn test_read_pull_request_merged_status_invalid_ticket() {
     );
 }
 
-#[test]
-fn test_read_pull_request_merged_status_valid_ticket() {
+#[rstest]
+#[case("PROJ-123")]
+#[case("PROJ-456")]
+#[case("ABC-789")]
+fn test_read_pull_request_merged_status_valid_ticket(#[case] ticket: &str) {
     // 测试读取有效 ticket 的合并状态配置
     // 注意：如果配置文件不存在，应该返回 Ok(None)
-    let result = JiraStatus::read_pull_request_merged_status("PROJ-123");
+    let result = JiraStatus::read_pull_request_merged_status(ticket);
 
     // 应该返回 Ok，但可能为 None（如果配置不存在）
-    assert!(result.is_ok(), "Should return Ok for valid ticket format");
+    assert!(
+        result.is_ok(),
+        "Should return Ok for valid ticket format: {}",
+        ticket
+    );
     // 值可能是 None（如果配置不存在），这是可以接受的
-}
-
-#[test]
-fn test_read_pull_request_created_status_with_project_name() {
-    // 测试使用项目名读取状态配置
-    let result = JiraStatus::read_pull_request_created_status("PROJ-456");
-
-    // 应该返回 Ok，但可能为 None（如果配置不存在）
-    assert!(result.is_ok(), "Should return Ok for valid project name");
-}
-
-#[test]
-fn test_read_pull_request_merged_status_with_project_name() {
-    // 测试使用项目名读取合并状态配置
-    let result = JiraStatus::read_pull_request_merged_status("PROJ-456");
-
-    // 应该返回 Ok，但可能为 None（如果配置不存在）
-    assert!(result.is_ok(), "Should return Ok for valid project name");
 }
 
 // ==================== 状态配置结构体测试 ====================
@@ -177,21 +183,40 @@ fn test_project_status_config_with_optional_fields() {
 
 // ==================== 交互式配置测试 ====================
 
-#[test]
-fn test_configure_interactive_invalid_project() {
+#[rstest]
+#[case("invalid/project")]
+#[case("PROJ/测试")]
+fn test_configure_interactive_invalid_project(#[case] project: &str) {
     // 测试使用无效项目名进行交互式配置
-    let result = JiraStatus::configure_interactive("invalid/project");
+    let result = JiraStatus::configure_interactive(project);
 
     // 应该返回错误，因为项目名格式无效
     assert!(
         result.is_err(),
-        "Should return error for invalid project name"
+        "Should return error for invalid project name: {}",
+        project
     );
     let error_msg = result.unwrap_err().to_string();
     assert!(
-        error_msg.contains("Invalid") || error_msg.contains("format"),
-        "Error message should mention invalid format"
+        error_msg.contains("Invalid")
+            || error_msg.contains("format")
+            || error_msg.contains("characters"),
+        "Error message should mention invalid format or characters: {}",
+        error_msg
     );
+}
+
+#[test]
+fn test_configure_interactive_empty_string() {
+    // 测试使用空字符串进行交互式配置
+    let result = JiraStatus::configure_interactive("");
+
+    // 应该返回错误，因为项目名格式无效
+    assert!(
+        result.is_err(),
+        "Should return error for empty project name"
+    );
+    // 空字符串的错误消息可能不同，所以不检查具体内容
 }
 
 #[test]
@@ -238,56 +263,4 @@ fn test_configure_interactive_with_project_name() {
             assert!(true, "API call may fail if Jira is not configured");
         }
     }
-}
-
-// ==================== 边界条件测试 ====================
-
-#[test]
-fn test_read_status_with_empty_ticket() {
-    // 测试使用空字符串读取状态配置
-    let result = JiraStatus::read_pull_request_created_status("");
-
-    // 应该返回错误，因为 ticket 格式无效
-    assert!(result.is_err(), "Should return error for empty ticket");
-}
-
-#[test]
-fn test_read_status_with_whitespace_ticket() {
-    // 测试使用空白字符读取状态配置
-    let result = JiraStatus::read_pull_request_created_status("   ");
-
-    // 应该返回错误，因为 ticket 格式无效
-    assert!(
-        result.is_err(),
-        "Should return error for whitespace-only ticket"
-    );
-}
-
-#[test]
-fn test_configure_interactive_with_empty_string() {
-    // 测试使用空字符串进行交互式配置
-    let result = JiraStatus::configure_interactive("");
-
-    // 应该返回错误，因为项目名格式无效
-    assert!(
-        result.is_err(),
-        "Should return error for empty project name"
-    );
-}
-
-#[test]
-fn test_configure_interactive_with_special_characters() {
-    // 测试使用特殊字符进行交互式配置
-    let result = JiraStatus::configure_interactive("PROJ/测试");
-
-    // 应该返回错误，因为项目名包含无效字符
-    assert!(
-        result.is_err(),
-        "Should return error for project name with special characters"
-    );
-    let error_msg = result.unwrap_err().to_string();
-    assert!(
-        error_msg.contains("Invalid") || error_msg.contains("characters"),
-        "Error message should mention invalid characters"
-    );
 }
