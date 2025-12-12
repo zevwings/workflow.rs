@@ -12,7 +12,7 @@ use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
 use crate::{log_info, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch switch command
 pub struct SwitchCommand;
@@ -54,13 +54,13 @@ impl SwitchCommand {
                 target_branch
             ))
             .prompt()
-            .context("Failed to get user confirmation")?
+            .wrap_err("Failed to get user confirmation")?
         } else {
             false
         };
 
         let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check uncommitted changes")?;
+            GitCommit::has_commit().wrap_err("Failed to check uncommitted changes")?;
 
         let has_stashed = if has_uncommitted {
             log_info!("Stashing uncommitted changes before switching branch...");
@@ -81,7 +81,7 @@ impl SwitchCommand {
         }
 
         if let Err(e) = GitBranch::checkout_branch(&target_branch)
-            .with_context(|| format!("Failed to switch to branch: {}", target_branch))
+            .wrap_err_with(|| format!("Failed to switch to branch: {}", target_branch))
         {
             // If checkout fails, try to restore stash
             if has_stashed {

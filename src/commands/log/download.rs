@@ -3,7 +3,7 @@ use crate::base::indicator::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
 use crate::jira::Jira;
 use crate::{log_break, log_info, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 use std::sync::{Arc, Mutex};
 
@@ -19,16 +19,16 @@ impl DownloadCommand {
         } else {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .context("Failed to read Jira ticket ID")?
+                .wrap_err("Failed to read Jira ticket ID")?
         };
 
         // 先获取附件列表并过滤日志附件以确定总数
         let attachments =
-            Jira::get_attachments(&jira_id).context("Failed to get attachments from Jira")?;
+            Jira::get_attachments(&jira_id).wrap_err("Failed to get attachments from Jira")?;
 
         // 过滤日志附件（与 JiraLogs 中的逻辑一致）
         let log_zip_pattern =
-            Regex::new(r"^log\.(zip|z\d+)$").context("Failed to create regex pattern")?;
+            Regex::new(r"^log\.(zip|z\d+)$").wrap_err("Failed to create regex pattern")?;
         let log_attachments: Vec<_> = attachments
             .iter()
             .filter(|a| {
@@ -42,7 +42,7 @@ impl DownloadCommand {
         let total_files = log_attachments.len() as u64;
 
         if total_files == 0 {
-            anyhow::bail!("No log attachments found for {}", jira_id);
+            color_eyre::eyre::bail!("No log attachments found for {}", jira_id);
         }
 
         // 创建 Progress Bar
@@ -69,12 +69,12 @@ impl DownloadCommand {
         });
 
         // 创建 JiraLogs 实例
-        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        let logs = JiraLogs::new().wrap_err("Failed to initialize JiraLogs")?;
 
         // 执行下载（传递 None 表示让下载器自己获取附件）
         let result = logs
             .download_from_jira(&jira_id, None, false, Some(callback), None, None)
-            .context("Failed to download attachments from Jira")?;
+            .wrap_err("Failed to download attachments from Jira")?;
 
         // 完成进度条
         if let Ok(pb) = progress.lock() {

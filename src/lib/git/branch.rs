@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
 
 use super::helpers::{
@@ -43,7 +43,7 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
-        cmd_read(&["branch", "--show-current"]).context("Failed to get current branch")
+        cmd_read(&["branch", "--show-current"]).wrap_err("Failed to get current branch")
     }
 
     /// 检查分支是否存在（本地或远程）
@@ -193,7 +193,7 @@ impl GitBranch {
         }
 
         // 尝试方法3：从远程分支列表中查找常见的默认分支名
-        Self::find_default_branch_from_remote().context("Failed to get default branch")
+        Self::find_default_branch_from_remote().wrap_err("Failed to get default branch")
     }
 
     /// 从 `git remote show origin` 获取默认分支
@@ -206,7 +206,7 @@ impl GitBranch {
                 }
             }
         }
-        anyhow::bail!("Could not determine default branch from remote show")
+        color_eyre::eyre::bail!("Could not determine default branch from remote show")
     }
 
     /// 解析 ls-remote --symref 的输出
@@ -249,7 +249,7 @@ impl GitBranch {
     /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
     fn find_default_branch_from_remote() -> Result<String> {
         let remote_branches =
-            cmd_read(&["branch", "-r"]).context("Failed to get default branch")?;
+            cmd_read(&["branch", "-r"]).wrap_err("Failed to get default branch")?;
 
         for default_name in COMMON_DEFAULT_BRANCHES {
             let branch_ref = format!("origin/{}", default_name);
@@ -258,7 +258,7 @@ impl GitBranch {
             }
         }
 
-        anyhow::bail!("Could not determine default branch")
+        color_eyre::eyre::bail!("Could not determine default branch")
     }
 
     /// 获取所有分支（本地和远程），并排除重复
@@ -297,10 +297,11 @@ impl GitBranch {
     /// ```
     pub fn get_all_branches(remove_prefix: bool) -> Result<Vec<String>> {
         // 获取本地分支列表
-        let local_output = cmd_read(&["branch"]).context("Failed to get local branches")?;
+        let local_output = cmd_read(&["branch"]).wrap_err("Failed to get local branches")?;
 
         // 获取远程分支列表
-        let remote_output = cmd_read(&["branch", "-r"]).context("Failed to get remote branches")?;
+        let remote_output =
+            cmd_read(&["branch", "-r"]).wrap_err("Failed to get remote branches")?;
 
         // 使用 HashSet 去重
         let mut branch_set = HashSet::new();
@@ -336,7 +337,7 @@ impl GitBranch {
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn get_local_branches() -> Result<Vec<String>> {
         // 获取本地分支列表
-        let local_output = cmd_read(&["branch"]).context("Failed to get local branches")?;
+        let local_output = cmd_read(&["branch"]).wrap_err("Failed to get local branches")?;
 
         // 使用 HashSet 去重
         let mut branch_set = HashSet::new();
@@ -447,9 +448,9 @@ impl GitBranch {
             "--count",
             &format!("{}..{}", base_branch, branch_name),
         ])
-        .context("Failed to check branch commits")?;
+        .wrap_err("Failed to check branch commits")?;
 
-        let count: u32 = output.parse().context("Failed to parse commit count")?;
+        let count: u32 = output.parse().wrap_err("Failed to parse commit count")?;
 
         Ok(count > 0)
     }
@@ -467,7 +468,7 @@ impl GitBranch {
     /// 如果拉取失败，返回相应的错误信息。
     pub fn pull(branch_name: &str) -> Result<()> {
         cmd_run(&["pull", "origin", branch_name])
-            .with_context(|| format!("Failed to pull latest changes from {}", branch_name))
+            .wrap_err_with(|| format!("Failed to pull latest changes from {}", branch_name))
     }
 
     /// 推送到远程仓库
@@ -490,7 +491,7 @@ impl GitBranch {
         args.push("origin");
         args.push(branch_name);
 
-        cmd_run(&args).with_context(|| format!("Failed to push branch: {}", branch_name))
+        cmd_run(&args).wrap_err_with(|| format!("Failed to push branch: {}", branch_name))
     }
 
     /// 使用 force-with-lease 强制推送到远程仓库
@@ -507,7 +508,7 @@ impl GitBranch {
     /// 如果推送失败，返回相应的错误信息。
     pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
         cmd_run(&["push", "--force-with-lease", "origin", branch_name])
-            .with_context(|| format!("Failed to force push branch: {}", branch_name))
+            .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))
     }
 
     /// 将当前分支 rebase 到目标分支
@@ -527,7 +528,7 @@ impl GitBranch {
     /// 如果遇到冲突，rebase 会暂停，需要用户手动解决冲突后继续。
     pub fn rebase_onto(target_branch: &str) -> Result<()> {
         cmd_run(&["rebase", target_branch])
-            .with_context(|| format!("Failed to rebase onto branch: {}", target_branch))
+            .wrap_err_with(|| format!("Failed to rebase onto branch: {}", target_branch))
     }
 
     /// 将指定范围的提交 rebase 到目标分支
@@ -563,7 +564,7 @@ impl GitBranch {
     /// # }
     /// ```
     pub fn rebase_onto_with_upstream(newbase: &str, upstream: &str, branch: &str) -> Result<()> {
-        cmd_run(&["rebase", "--onto", newbase, upstream, branch]).with_context(|| {
+        cmd_run(&["rebase", "--onto", newbase, upstream, branch]).wrap_err_with(|| {
             format!(
                 "Failed to rebase '{}' onto '{}' (excluding '{}' commits)",
                 branch, newbase, upstream
@@ -586,7 +587,7 @@ impl GitBranch {
     pub fn delete(branch_name: &str, force: bool) -> Result<()> {
         let flag = if force { "-D" } else { "-d" };
         cmd_run(&["branch", flag, branch_name])
-            .with_context(|| format!("Failed to delete local branch: {}", branch_name))
+            .wrap_err_with(|| format!("Failed to delete local branch: {}", branch_name))
     }
 
     /// 删除远程分支
@@ -602,7 +603,7 @@ impl GitBranch {
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(branch_name: &str) -> Result<()> {
         cmd_run(&["push", "origin", "--delete", branch_name])
-            .with_context(|| format!("Failed to delete remote branch: {}", branch_name))
+            .wrap_err_with(|| format!("Failed to delete remote branch: {}", branch_name))
     }
 
     /// 重命名本地分支
@@ -623,7 +624,7 @@ impl GitBranch {
             args.push(old);
         }
         args.push(new_name);
-        cmd_run(&args).with_context(|| {
+        cmd_run(&args).wrap_err_with(|| {
             if let Some(old) = old_name {
                 format!("Failed to rename branch from '{}' to '{}'", old, new_name)
             } else {
@@ -648,10 +649,10 @@ impl GitBranch {
     pub fn rename_remote(old_name: &str, new_name: &str) -> Result<()> {
         // 先推送新分支并设置上游跟踪
         Self::push(new_name, true)
-            .with_context(|| format!("Failed to push new branch '{}' to remote", new_name))?;
+            .wrap_err_with(|| format!("Failed to push new branch '{}' to remote", new_name))?;
         // 然后删除旧的远程分支
         Self::delete_remote(old_name)
-            .with_context(|| format!("Failed to delete old remote branch '{}'", old_name))?;
+            .wrap_err_with(|| format!("Failed to delete old remote branch '{}'", old_name))?;
         Ok(())
     }
 
@@ -703,7 +704,7 @@ impl GitBranch {
             }
 
             // 否则返回原始错误
-            return merge_result.with_context(|| {
+            return merge_result.wrap_err_with(|| {
                 format!(
                     "Failed to merge branch '{}' into current branch",
                     source_branch
@@ -780,7 +781,7 @@ impl GitBranch {
     /// 如果命令执行失败，返回相应的错误信息。
     pub fn is_branch_merged(branch: &str, base_branch: &str) -> Result<bool> {
         let output = cmd_read(&["branch", "--merged", base_branch])
-            .context("Failed to check merged branches")?;
+            .wrap_err("Failed to check merged branches")?;
 
         // 检查分支是否在输出中
         Ok(output.lines().any(|line| {
@@ -807,7 +808,7 @@ impl GitBranch {
     /// 如果分支不存在或命令执行失败，返回相应的错误信息。
     pub fn get_commits_between(base_branch: &str, head_branch: &str) -> Result<Vec<String>> {
         let output = cmd_read(&["rev-list", &format!("{}..{}", base_branch, head_branch)])
-            .context("Failed to get commits between branches")?;
+            .wrap_err("Failed to get commits between branches")?;
 
         let commits: Vec<String> = output
             .lines()
@@ -835,7 +836,7 @@ impl GitBranch {
     ///
     /// 如果分支不存在或命令执行失败，返回相应的错误信息。
     pub fn merge_base(branch1: &str, branch2: &str) -> Result<String> {
-        let output = cmd_read(&["merge-base", branch1, branch2]).with_context(|| {
+        let output = cmd_read(&["merge-base", branch1, branch2]).wrap_err_with(|| {
             format!(
                 "Failed to get merge base between '{}' and '{}'",
                 branch1, branch2
@@ -844,7 +845,7 @@ impl GitBranch {
 
         let merge_base = output.trim().to_string();
         if merge_base.is_empty() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "No common ancestor found between '{}' and '{}'",
                 branch1,
                 branch2
@@ -886,7 +887,7 @@ impl GitBranch {
 
         // 获取 candidate_branch 的 HEAD
         let candidate_head = cmd_read(&["rev-parse", candidate_branch])
-            .with_context(|| format!("Failed to get HEAD of branch '{}'", candidate_branch))?;
+            .wrap_err_with(|| format!("Failed to get HEAD of branch '{}'", candidate_branch))?;
         let candidate_head = candidate_head.trim();
 
         // 如果 merge-base 等于 candidate_branch 的 HEAD，说明 from_branch 直接基于 candidate_branch
@@ -923,7 +924,7 @@ impl GitBranch {
         // 检查远程分支是否包含该 commit
         // 使用 git branch --contains 检查远程分支是否包含该 commit
         let output = cmd_read(&["branch", "-r", "--contains", commit_sha])
-            .context("Failed to check if commit is in remote branch")?;
+            .wrap_err("Failed to check if commit is in remote branch")?;
 
         // 检查远程分支是否在输出中
         Ok(output.lines().any(|line| {

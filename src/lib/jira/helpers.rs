@@ -8,7 +8,7 @@
 //! 注意：日志处理相关的辅助函数已迁移到 `jira::logs::helpers` 模块。
 
 use crate::base::settings::Settings;
-use anyhow::Result;
+use color_eyre::Result;
 use regex::Regex;
 
 /// 从 Jira ticket 提取项目名
@@ -39,7 +39,7 @@ pub fn extract_jira_project(ticket: &str) -> Option<&str> {
 pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
     // 先检查是否为空或只包含空白字符
     if ticket.trim().is_empty() {
-        anyhow::bail!("Invalid Jira ticket format: ticket cannot be empty");
+        color_eyre::eyre::bail!("Invalid Jira ticket format: ticket cannot be empty");
     }
 
     let is_valid_format: bool = if let Some(project) = extract_jira_project(ticket) {
@@ -59,7 +59,7 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
     };
 
     if !is_valid_format {
-        anyhow::bail!(
+        color_eyre::eyre::bail!(
             "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
             ticket
         );
@@ -132,7 +132,7 @@ pub fn get_base_url() -> Result<String> {
     let base_url = settings.jira.service_address.clone().unwrap_or_default();
 
     if base_url.is_empty() {
-        anyhow::bail!(
+        color_eyre::eyre::bail!(
             "Jira service address is not configured. \
             Please run 'workflow setup' to configure it."
         );

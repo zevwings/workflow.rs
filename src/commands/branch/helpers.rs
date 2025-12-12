@@ -5,7 +5,7 @@
 use crate::base::dialog::SelectDialog;
 use crate::git::GitBranch;
 use crate::repo::config::RepoConfig;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Sort branches with priority
 ///
@@ -189,10 +189,10 @@ impl BranchSelectionOptions {
 /// ```
 pub fn select_branch(options: BranchSelectionOptions) -> Result<String> {
     // Get all branches (local + remote, deduplicated)
-    let all_branches = GitBranch::get_all_branches(false).context("Failed to get branch list")?;
+    let all_branches = GitBranch::get_all_branches(false).wrap_err("Failed to get branch list")?;
 
     if all_branches.is_empty() {
-        anyhow::bail!("No branches available");
+        color_eyre::eyre::bail!("No branches available");
     }
 
     // Get current branch (if needed)
@@ -221,7 +221,7 @@ pub fn select_branch(options: BranchSelectionOptions) -> Result<String> {
 
     // Sort branches with priority
     branch_options =
-        sort_branches_with_priority(branch_options).context("Failed to sort branches")?;
+        sort_branches_with_priority(branch_options).wrap_err("Failed to sort branches")?;
 
     // Mark current branch if needed
     if options.mark_current {
@@ -250,7 +250,7 @@ pub fn select_branch(options: BranchSelectionOptions) -> Result<String> {
     }
 
     // Prompt user
-    let selected = dialog.prompt().context("Failed to select branch")?;
+    let selected = dialog.prompt().wrap_err("Failed to select branch")?;
 
     // Extract branch name (remove [current] marker if present)
     let branch_name = selected.strip_suffix(" [current]").unwrap_or(&selected).to_string();

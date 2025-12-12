@@ -1,6 +1,6 @@
 //! Jira 附件下载实现
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::thread;
@@ -93,11 +93,11 @@ impl JiraAttachmentDownloader {
                 attachments
             } else {
                 self.call_callback(callback.as_ref(), "Fetching attachments...");
-                Jira::get_attachments(jira_id).context("Failed to get attachments from Jira")?
+                Jira::get_attachments(jira_id).wrap_err("Failed to get attachments from Jira")?
             };
 
             if attachments.is_empty() {
-                anyhow::bail!("No attachments found for {}", jira_id);
+                color_eyre::eyre::bail!("No attachments found for {}", jira_id);
             }
 
             // 调试：显示所有附件
@@ -111,7 +111,7 @@ impl JiraAttachmentDownloader {
             } else {
                 let log_attachments = AttachmentFilter::filter_log_attachments(&attachments);
                 if log_attachments.is_empty() {
-                    anyhow::bail!("No log attachments found for {}", jira_id);
+                    color_eyre::eyre::bail!("No log attachments found for {}", jira_id);
                 }
                 log_attachments
             };
@@ -320,7 +320,7 @@ impl JiraAttachmentDownloader {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().map_err(|e| anyhow::anyhow!("Thread join error: {:?}", e))?;
+            handle.join().map_err(|e| eyre!("Thread join error: {:?}", e))?;
         }
 
         // 收集结果
@@ -440,7 +440,7 @@ impl JiraAttachmentDownloader {
             } else {
                 // 单个 zip 文件，直接复制为 merged.zip
                 let merged_zip = download_dir.join(MERGED_ZIP_FILENAME);
-                std::fs::copy(&log_zip, &merged_zip).with_context(|| {
+                std::fs::copy(&log_zip, &merged_zip).wrap_err_with(|| {
                     format!(
                         "Failed to copy {} to {}",
                         LOG_ZIP_FILENAME, MERGED_ZIP_FILENAME
@@ -470,7 +470,7 @@ impl JiraAttachmentDownloader {
             });
 
             if !has_log_files {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "No log files found after download. All log attachments failed to download."
                 );
             }

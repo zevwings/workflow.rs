@@ -3,7 +3,7 @@
 //! 本模块提供了 HTTP 客户端的封装，支持多种 HTTP 方法和认证方式。
 //! 支持 Basic Authentication 和自定义 Headers。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use reqwest::blocking::Client;
 use serde::Serialize;
 use serde_json::Value;
@@ -37,7 +37,7 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let client = Client::builder().build().context("Failed to create HTTP client")?;
+        let client = Client::builder().build().wrap_err("Failed to create HTTP client")?;
         Ok(Self { client })
     }
 
@@ -78,7 +78,7 @@ impl HttpClient {
         CLIENT
             .get_or_init(HttpClient::new)
             .as_ref()
-            .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))
+            .map_err(|e| eyre!("Failed to create HTTP client: {}", e))
     }
 
     /// 构建 HTTP 请求（内部辅助方法）
@@ -169,7 +169,7 @@ impl HttpClient {
         let response = self
             .build_request(HttpMethod::Get, url, config)
             .send()
-            .with_context(|| format!("Failed to send GET request to: {}", url))?;
+            .wrap_err_with(|| format!("Failed to send GET request to: {}", url))?;
 
         HttpResponse::from_reqwest_response(response)
     }
@@ -198,7 +198,7 @@ impl HttpClient {
         let response = self
             .build_request(HttpMethod::Post, url, config)
             .send()
-            .with_context(|| format!("Failed to send POST request to: {}", url))?;
+            .wrap_err_with(|| format!("Failed to send POST request to: {}", url))?;
 
         HttpResponse::from_reqwest_response(response)
     }
@@ -227,7 +227,7 @@ impl HttpClient {
         let response = self
             .build_request(HttpMethod::Put, url, config)
             .send()
-            .with_context(|| format!("Failed to send PUT request to: {}", url))?;
+            .wrap_err_with(|| format!("Failed to send PUT request to: {}", url))?;
 
         HttpResponse::from_reqwest_response(response)
     }
@@ -254,7 +254,7 @@ impl HttpClient {
         let response = self
             .build_request(HttpMethod::Delete, url, config)
             .send()
-            .with_context(|| format!("Failed to send DELETE request to: {}", url))?;
+            .wrap_err_with(|| format!("Failed to send DELETE request to: {}", url))?;
 
         HttpResponse::from_reqwest_response(response)
     }
@@ -283,7 +283,7 @@ impl HttpClient {
         let response = self
             .build_request(HttpMethod::Patch, url, config)
             .send()
-            .with_context(|| format!("Failed to send PATCH request to: {}", url))?;
+            .wrap_err_with(|| format!("Failed to send PATCH request to: {}", url))?;
 
         HttpResponse::from_reqwest_response(response)
     }
@@ -319,6 +319,6 @@ impl HttpClient {
     {
         self.build_request(method, url, config)
             .send()
-            .with_context(|| format!("Failed to send {} request to: {}", method, url))
+            .wrap_err_with(|| format!("Failed to send {} request to: {}", method, url))
     }
 }

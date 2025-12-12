@@ -2,7 +2,7 @@
 //! 显示 Workflow CLI 的版本信息
 
 use crate::log_success;
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 版本命令
 pub struct VersionCommand;

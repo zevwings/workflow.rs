@@ -42,8 +42,8 @@
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::LogLevel;
-use anyhow::Context;
 use chrono::Local;
+use color_eyre::eyre::WrapErr;
 use std::fs;
 use std::fs::OpenOptions;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -137,13 +137,13 @@ impl Tracer {
     /// 返回格式：`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`
     ///
     /// 日志文件存储在应用配置目录下，强制本地存储（不使用 iCloud 同步）。
-    fn get_log_file_path() -> anyhow::Result<std::path::PathBuf> {
+    fn get_log_file_path() -> color_eyre::Result<std::path::PathBuf> {
         // 获取日志目录（~/.workflow/logs/），强制本地存储
-        let logs_dir = Paths::logs_dir().context("Failed to get logs directory")?;
+        let logs_dir = Paths::logs_dir().wrap_err("Failed to get logs directory")?;
 
         // 创建 tracing 子目录
         let tracing_dir = logs_dir.join("tracing");
-        fs::create_dir_all(&tracing_dir).with_context(|| {
+        fs::create_dir_all(&tracing_dir).wrap_err_with(|| {
             format!("Failed to create tracing log directory: {:?}", tracing_dir)
         })?;
 

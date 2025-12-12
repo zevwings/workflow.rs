@@ -258,6 +258,8 @@ cargo bloat --release --crates --verbose
 
 ### 输出示例解读
 
+#### Crate 分析输出示例
+
 ```bash
 $ cargo bloat --release --crates --limit 5
  File  .text     Size Crate
@@ -274,6 +276,40 @@ $ cargo bloat --release --crates --limit 5
 - `serde` 序列化库占用 650KB（1.2%）
 - `reqwest` HTTP 客户端占用 420KB（0.8%）
 - `regex` 正则表达式库占用 280KB（0.5%）
+
+#### 函数分析输出示例（包含总结行）
+
+```bash
+$ cargo bloat --release --functions
+ File  .text     Size     Size Crate
+ 0.5%   1.0%   50KiB   50KiB workflow::main
+ 0.3%   0.6%   30KiB   30KiB tokio::runtime::Runtime::new
+ ...
+48.7%  96.2%  6.7MiB                And 16633 smaller methods. Use -n N to show more.
+50.7% 100.0%  7.0MiB                .text section size, the file size is 13.8MiB
+```
+
+**总结行解读**：
+
+1. **第一行总结**：`48.7%  96.2%  6.7MiB                And 16633 smaller methods. Use -n N to show more.`
+   - **48.7%**：已显示的函数占整个二进制文件的 48.7%
+   - **96.2%**：已显示的函数占 .text 段的 96.2%
+   - **6.7MiB**：已显示的函数总大小为 6.7MB
+   - **And 16633 smaller methods**：还有 16633 个更小的函数未显示
+   - **Use -n N to show more**：提示可以使用 `-n N` 参数显示更多函数
+
+2. **第二行总结**：`50.7% 100.0%  7.0MiB                .text section size, the file size is 13.8MiB`
+   - **50.7%**：.text 段占整个二进制文件的 50.7%
+   - **100.0%**：.text 段占自身的 100%（这是 .text 段的总结行）
+   - **7.0MiB**：.text 段的总大小为 7.0MB（代码段大小）
+   - **the file size is 13.8MiB**：整个二进制文件大小为 13.8MB
+
+**重要说明**：
+- `.text` 段包含所有可执行代码
+- 二进制文件总大小（13.8MB）包含：
+  - `.text` 段（代码）：7.0MB（50.7%）
+  - 其他段（数据、符号表、调试信息等）：约 6.8MB（49.3%）
+- 如果使用 `strip` 或启用 `strip = true`，可以减小二进制文件大小（移除符号表和调试信息）
 
 ---
 

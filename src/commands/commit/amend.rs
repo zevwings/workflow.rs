@@ -11,7 +11,7 @@ use crate::commands::commit::helpers::{
 use crate::commit::CommitAmend;
 use crate::git::GitCommit;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Commit amend command
 pub struct CommitAmendCommand;
@@ -131,7 +131,7 @@ impl CommitAmendCommand {
             .with_default(true)
             .with_cancel_message("Operation cancelled")
             .prompt()
-            .context("Failed to get confirmation")?;
+            .wrap_err("Failed to get confirmation")?;
 
         // 步骤6: 执行 amend
         // 6.1 暂存文件（如果需要）
@@ -181,7 +181,7 @@ impl CommitAmendCommand {
 
         let selected = SelectDialog::new("Select operation to perform", options)
             .prompt()
-            .context("Failed to select operation")?;
+            .wrap_err("Failed to select operation")?;
 
         match selected {
             "Modify message only" => Ok(AmendOperation::MessageOnly),
@@ -204,7 +204,7 @@ impl CommitAmendCommand {
                 }
             })
             .prompt()
-            .context("Failed to get new commit message")?;
+            .wrap_err("Failed to get new commit message")?;
 
         Ok(new_message)
     }
@@ -224,7 +224,7 @@ impl CommitAmendCommand {
 
         let selected_files = MultiSelectDialog::new("Select files to add to commit", all_files)
             .prompt()
-            .context("Failed to select files")?;
+            .wrap_err("Failed to select files")?;
 
         if selected_files.is_empty() {
             // 询问是否继续（仅修改消息）
@@ -234,7 +234,7 @@ impl CommitAmendCommand {
                     .prompt()?;
 
             if !continue_without_files {
-                anyhow::bail!("Operation cancelled");
+                color_eyre::eyre::bail!("Operation cancelled");
             }
         }
 

@@ -7,15 +7,16 @@
 - Stash apply 功能（应用 stash，保留条目）
 - Stash drop 功能（删除 stash 条目）
 - Stash pop 功能（应用并删除 stash 条目）
+- Stash push 功能（保存当前工作区更改到 stash）
 
-Stash 命令模块提供完整的 Git Stash 管理功能，支持查看、应用、删除 stash 条目。所有命令都提供交互式界面，支持选择特定的 stash 条目进行操作。apply 和 pop 命令会自动检测冲突并提供友好的错误提示。
+Stash 命令模块提供完整的 Git Stash 管理功能，支持查看、应用、删除、保存 stash 条目。所有命令都提供交互式界面，支持选择特定的 stash 条目进行操作。apply 和 pop 命令会自动检测冲突并提供友好的错误提示。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/git/stash.rs` 模块提供。
 
 **模块统计：**
-- 命令数量：4 个（list、apply、drop、pop）
-- 总代码行数：约 350 行
-- 文件数量：5 个
+- 命令数量：5 个（list、apply、drop、pop、push）
+- 总代码行数：约 400 行
+- 文件数量：6 个
 - 主要依赖：`lib/git/stash.rs`、`lib/base/dialog/`、`lib/base/util/`
 
 ---
@@ -39,6 +40,7 @@ src/commands/stash/
 ├── apply.rs        # Stash apply 命令（83 行）
 ├── drop.rs         # Stash drop 命令（约 100 行）
 ├── pop.rs          # Stash pop 命令（72 行）
+├── push.rs         # Stash push 命令（56 行）
 └── helpers.rs      # 辅助函数（交互式选择 stash）
 ```
 
@@ -54,6 +56,7 @@ src/commands/stash/
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/git/stash.rs`**：Git Stash 操作
   - `GitStash::stash_list()` - 列出所有 stash 条目
+  - `GitStash::stash_push()` - 保存当前工作区更改到 stash
   - `GitStash::stash_apply()` - 应用 stash（不删除）
   - `GitStash::stash_drop()` - 删除 stash
   - `GitStash::stash_pop()` - 应用并删除 stash
@@ -167,6 +170,24 @@ GitStash::stash_pop(stash_ref) → 应用并删除 stash
 显示结果（成功/冲突/错误）
 ```
 
+#### 5. `stash push` 命令流程
+
+```
+用户输入: workflow stash push
+  ↓
+StashPushCommand::execute()
+  ↓
+GitCommit::has_commit() → 检查是否有未提交的更改
+  ↓
+如果没有更改，显示警告并返回
+  ↓
+InputDialog 提示输入 stash 消息（可选）
+  ↓
+GitStash::stash_push(message) → 保存更改到 stash
+  ↓
+显示成功消息
+```
+
 ---
 
 ## 功能说明
@@ -262,6 +283,28 @@ workflow stash pop                # 交互式选择要应用的 stash
 - 显示冲突提示和解决步骤
 - 用户解决冲突后可以再次尝试
 
+### 5. `stash push` - 保存当前更改到 stash
+
+**功能描述**：
+将当前工作区和暂存区的未提交更改保存到 stash。支持可选的 stash 消息来标识这次保存的内容。
+
+**命令格式**：
+```bash
+workflow stash push                # 保存当前更改到 stash（提示输入消息）
+```
+
+**实现细节**：
+- 首先检查工作区是否有未提交的更改（`GitCommit::has_commit()`）
+- 如果没有更改，显示警告并返回
+- 使用 `InputDialog` 提示用户输入可选的 stash 消息
+- 使用 `GitStash::stash_push()` 保存更改到 stash
+- 显示成功消息（包含消息内容，如果有）
+
+**使用场景**：
+- 临时保存当前工作进度，切换到其他分支
+- 在切换分支前保存未提交的更改
+- 保存实验性更改，稍后恢复
+
 ---
 
 ## 📊 数据流
@@ -337,6 +380,7 @@ GitStash::stash_list() → Vec<StashEntry>
 - `StashApplyCommand`
 - `StashDropCommand`
 - `StashPopCommand`
+- `StashPushCommand`
 
 ### 2. 交互式设计
 

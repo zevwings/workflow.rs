@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::completion::get_all_completion_files;
 use crate::{
@@ -114,7 +114,7 @@ impl RollbackManager {
                 .as_secs()
         ));
 
-        fs::create_dir_all(&backup_dir).with_context(|| {
+        fs::create_dir_all(&backup_dir).wrap_err_with(|| {
             format!(
                 "Failed to create backup directory: {}",
                 backup_dir.display()
@@ -165,7 +165,7 @@ impl RollbackManager {
                     .arg(&source)
                     .arg(&backup_path)
                     .status()
-                    .with_context(|| {
+                    .wrap_err_with(|| {
                         format!(
                             "Failed to backup binary file: {} -> {}",
                             source.display(),
@@ -174,7 +174,7 @@ impl RollbackManager {
                     })?;
 
                 if !status.success() {
-                    anyhow::bail!(
+                    color_eyre::eyre::bail!(
                         "Failed to backup binary file: {} -> {} (exit code: {})",
                         source.display(),
                         backup_path.display(),
@@ -183,7 +183,7 @@ impl RollbackManager {
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("chmod").arg("+x").arg(&backup_path).status().with_context(|| {
+                Command::new("chmod").arg("+x").arg(&backup_path).status().wrap_err_with(|| {
                     format!(
                         "Failed to set executable permission for backup file: {}",
                         backup_path.display()
@@ -192,7 +192,7 @@ impl RollbackManager {
             }
             #[cfg(windows)]
             {
-                fs::copy(&source, &backup_path).with_context(|| {
+                fs::copy(&source, &backup_path).wrap_err_with(|| {
                     format!(
                         "Failed to backup binary file: {} -> {}",
                         source.display(),
@@ -258,7 +258,7 @@ impl RollbackManager {
             let backup_path = backup_dir.join(file_name);
 
             // 复制文件
-            fs::copy(&source, &backup_path).with_context(|| {
+            fs::copy(&source, &backup_path).wrap_err_with(|| {
                 format!(
                     "Failed to backup completion script: {} -> {}",
                     source.display(),
@@ -293,12 +293,12 @@ impl RollbackManager {
         // 备份二进制文件
         let binaries = Paths::command_names();
         let binary_backups =
-            Self::backup_binaries(&backup_dir, binaries).context("Failed to backup binaries")?;
+            Self::backup_binaries(&backup_dir, binaries).wrap_err("Failed to backup binaries")?;
 
         // 备份补全脚本（不依赖 shell 检测）
         let completion_dir = Paths::completion_dir()?;
         let completion_backups = Self::backup_completions(&backup_dir, &completion_dir)
-            .context("Failed to backup completions")?;
+            .wrap_err("Failed to backup completions")?;
 
         let backup_info = BackupInfo {
             backup_dir,
@@ -359,7 +359,7 @@ impl RollbackManager {
                         .arg(backup_path)
                         .arg(&target)
                         .status()
-                        .with_context(|| {
+                        .wrap_err_with(|| {
                             format!(
                                 "Failed to restore binary file: {} -> {}",
                                 backup_path.display(),
@@ -368,7 +368,7 @@ impl RollbackManager {
                         })?;
 
                     if !status.success() {
-                        anyhow::bail!(
+                        color_eyre::eyre::bail!(
                             "Failed to restore binary file: {} -> {} (exit code: {})",
                             backup_path.display(),
                             target.display(),
@@ -382,7 +382,7 @@ impl RollbackManager {
                         .arg("+x")
                         .arg(&target)
                         .status()
-                        .with_context(|| {
+                        .wrap_err_with(|| {
                             format!(
                                 "Failed to set executable permission for restored binary file: {}",
                                 target.display()
@@ -391,7 +391,7 @@ impl RollbackManager {
                 }
                 #[cfg(windows)]
                 {
-                    fs::copy(backup_path, &target).with_context(|| {
+                    fs::copy(backup_path, &target).wrap_err_with(|| {
                         format!(
                             "Failed to restore binary file: {} -> {}",
                             backup_path.display(),
@@ -439,7 +439,7 @@ impl RollbackManager {
         completion_dir: &Path,
     ) -> Result<RestoreResult> {
         // 确保补全脚本目录存在
-        fs::create_dir_all(completion_dir).with_context(|| {
+        fs::create_dir_all(completion_dir).wrap_err_with(|| {
             format!(
                 "Failed to create completion directory: {}",
                 completion_dir.display()
@@ -611,7 +611,7 @@ impl RollbackManager {
                 "Cleaning up backup directory: {}",
                 backup_info.backup_dir.display()
             );
-            fs::remove_dir_all(&backup_info.backup_dir).with_context(|| {
+            fs::remove_dir_all(&backup_info.backup_dir).wrap_err_with(|| {
                 format!(
                     "Failed to remove backup directory: {}",
                     backup_info.backup_dir.display()

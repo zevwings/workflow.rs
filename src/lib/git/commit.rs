@@ -7,7 +7,7 @@
 //! - 修改最后一次提交（amend）
 //! - 修改历史提交消息（reword）
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 
 use super::helpers::{check_success, cmd_read, cmd_run};
@@ -64,7 +64,7 @@ impl GitCommit {
     ///
     /// 返回 Git 状态的简洁输出字符串。
     pub fn status() -> Result<String> {
-        cmd_read(&["status", "--porcelain"]).context("Failed to run git status")
+        cmd_read(&["status", "--porcelain"]).wrap_err("Failed to run git status")
     }
 
     /// 检查工作区是否有未提交的更改
@@ -112,7 +112,7 @@ impl GitCommit {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
-        cmd_run(&["add", "--all"]).context("Failed to add all files")
+        cmd_run(&["add", "--all"]).wrap_err("Failed to add all files")
     }
 
     /// 提交更改
@@ -150,7 +150,7 @@ impl GitCommit {
         // 3. 暂存所有已修改的文件
         // 注意：即使文件已经在暂存区，执行 add_all() 也是安全的，不会造成问题
         // 这样可以确保所有更改都被暂存，包括未暂存和已暂存的更改
-        Self::add_all().context("Failed to stage changes")?;
+        Self::add_all().wrap_err("Failed to stage changes")?;
 
         // 6. 如果不需要跳过验证，且存在 pre-commit，则先执行 pre-commit
         let should_skip_hook = if !no_verify && GitPreCommit::has_pre_commit() {
@@ -171,9 +171,9 @@ impl GitCommit {
             cmd("git", &args)
                 .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
                 .run()
-                .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+                .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
         } else {
-            cmd_run(&args).context("Failed to commit")?;
+            cmd_run(&args).wrap_err("Failed to commit")?;
         }
 
         Ok(CommitResult {
@@ -246,7 +246,7 @@ impl GitCommit {
     pub fn reset_hard(target: Option<&str>) -> Result<()> {
         let target = target.unwrap_or("HEAD");
         cmd_run(&["reset", "--hard", target])
-            .with_context(|| format!("Failed to reset working directory to {}", target))
+            .wrap_err_with(|| format!("Failed to reset working directory to {}", target))
     }
 
     /// 检查是否有最后一次 commit
@@ -286,7 +286,7 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的完整 SHA。
     pub fn get_last_commit_sha() -> Result<String> {
-        cmd_read(&["log", "-1", "--format=%H"]).context("Failed to get last commit SHA")
+        cmd_read(&["log", "-1", "--format=%H"]).wrap_err("Failed to get last commit SHA")
     }
 
     /// 获取最后一次 commit 的消息
@@ -295,7 +295,7 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的提交消息。
     pub fn get_last_commit_message() -> Result<String> {
-        cmd_read(&["log", "-1", "--format=%s"]).context("Failed to get last commit message")
+        cmd_read(&["log", "-1", "--format=%s"]).wrap_err("Failed to get last commit message")
     }
 
     /// 获取已修改但未暂存的文件列表
@@ -345,7 +345,7 @@ impl GitCommit {
             args.push(file);
         }
 
-        cmd_run(&args).context("Failed to add files")
+        cmd_run(&args).wrap_err("Failed to add files")
     }
 
     /// 执行 commit amend
@@ -392,9 +392,9 @@ impl GitCommit {
             cmd("git", &args)
                 .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
                 .run()
-                .with_context(|| format!("Failed to run: git {}", args.join(" ")))?;
+                .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
         } else {
-            cmd_run(&args).context("Failed to amend commit")?;
+            cmd_run(&args).wrap_err("Failed to amend commit")?;
         }
 
         // 返回新的 commit SHA
@@ -414,7 +414,7 @@ impl GitCommit {
     /// 返回完整的 commit SHA（40 个字符）。
     pub fn parse_commit_ref(reference: &str) -> Result<String> {
         let sha = cmd_read(&["rev-parse", reference])
-            .context(format!("Failed to parse commit reference: {}", reference))?;
+            .wrap_err(format!("Failed to parse commit reference: {}", reference))?;
         Ok(sha.trim().to_string())
     }
 
@@ -429,13 +429,13 @@ impl GitCommit {
     /// 返回指定 commit 的详细信息。
     pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
         let sha = cmd_read(&["log", "-1", "--format=%H", commit_ref])
-            .context(format!("Failed to get commit info for: {}", commit_ref))?;
+            .wrap_err(format!("Failed to get commit info for: {}", commit_ref))?;
         let message = cmd_read(&["log", "-1", "--format=%s", commit_ref])
-            .context(format!("Failed to get commit message for: {}", commit_ref))?;
+            .wrap_err(format!("Failed to get commit message for: {}", commit_ref))?;
         let author = cmd_read(&["log", "-1", "--format=%an <%ae>", commit_ref])
-            .context(format!("Failed to get commit author for: {}", commit_ref))?;
+            .wrap_err(format!("Failed to get commit author for: {}", commit_ref))?;
         let date = cmd_read(&["log", "-1", "--format=%ai", commit_ref])
-            .context(format!("Failed to get commit date for: {}", commit_ref))?;
+            .wrap_err(format!("Failed to get commit date for: {}", commit_ref))?;
 
         Ok(CommitInfo {
             sha: sha.trim().to_string(),
@@ -532,7 +532,7 @@ impl GitCommit {
     /// 返回父 commit 的完整 SHA。如果 commit 没有父 commit（根 commit），返回错误。
     pub fn get_parent_commit(commit_sha: &str) -> Result<String> {
         let parent_sha = cmd_read(&["rev-parse", &format!("{}^", commit_sha)])
-            .with_context(|| format!("Failed to get parent commit of: {}", commit_sha))?;
+            .wrap_err_with(|| format!("Failed to get parent commit of: {}", commit_sha))?;
         Ok(parent_sha.trim().to_string())
     }
 

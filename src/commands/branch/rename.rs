@@ -8,7 +8,7 @@ use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
 use crate::git::GitBranch;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::process::Command;
 
 /// Branch rename command
@@ -52,13 +52,14 @@ impl BranchRenameCommand {
     /// Select branch to rename (fully interactive)
     fn select_branch_to_rename() -> Result<String> {
         // Interactive selection: ask if rename current branch first
-        let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
+        let current_branch =
+            GitBranch::current_branch().wrap_err("Failed to get current branch")?;
 
         let rename_current =
             ConfirmDialog::new(format!("Rename current branch '{}'?", current_branch))
                 .with_default(true)
                 .prompt()
-                .context("Failed to get user confirmation")?;
+                .wrap_err("Failed to get user confirmation")?;
 
         if rename_current {
             Ok(current_branch)
@@ -82,7 +83,7 @@ impl BranchRenameCommand {
             );
 
             let new_name =
-                InputDialog::new(&prompt).prompt().context("Failed to get new branch name")?;
+                InputDialog::new(&prompt).prompt().wrap_err("Failed to get new branch name")?;
 
             // Validate new branch name
             // 1. Validate branch name format
@@ -94,7 +95,7 @@ impl BranchRenameCommand {
 
             // 2. Check if exists locally
             let (exists_local, _) =
-                GitBranch::is_branch_exists(&new_name).context("Failed to check branch")?;
+                GitBranch::is_branch_exists(&new_name).wrap_err("Failed to check branch")?;
 
             if exists_local {
                 log_warning!("⚠️  Error: Branch '{}' already exists locally", new_name);
@@ -129,7 +130,7 @@ impl BranchRenameCommand {
                 .with_default(false)
                 .with_cancel_message("Operation cancelled")
                 .prompt()
-                .context("Failed to get confirmation")?
+                .wrap_err("Failed to get confirmation")?
             {
                 return Ok(());
             }
@@ -141,7 +142,7 @@ impl BranchRenameCommand {
         let is_current = current_branch.as_deref() == Some(old_branch_name);
 
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(old_branch_name)
-            .context("Failed to check branch status")?;
+            .wrap_err("Failed to check branch status")?;
 
         // Check remote tracking
         let has_remote_tracking = Self::check_remote_tracking(old_branch_name)?;
@@ -189,7 +190,7 @@ impl BranchRenameCommand {
             .with_default(true)
             .with_cancel_message("Operation cancelled")
             .prompt()
-            .context("Failed to get confirmation")?;
+            .wrap_err("Failed to get confirmation")?;
 
         Ok(())
     }
@@ -199,10 +200,10 @@ impl BranchRenameCommand {
         // Rename local branch
         let is_current_branch = old_branch_name == GitBranch::current_branch()?;
         if is_current_branch {
-            GitBranch::rename(None, new_branch_name).context("Failed to rename current branch")?;
+            GitBranch::rename(None, new_branch_name).wrap_err("Failed to rename current branch")?;
         } else {
             GitBranch::rename(Some(old_branch_name), new_branch_name)
-                .context("Failed to rename branch")?;
+                .wrap_err("Failed to rename branch")?;
         }
         log_success!(
             "✓ Renamed local branch: {} -> {}",
@@ -212,7 +213,7 @@ impl BranchRenameCommand {
 
         // Handle remote branch
         let exists_remote = GitBranch::has_remote_branch(old_branch_name)
-            .context("Failed to check remote branch")?;
+            .wrap_err("Failed to check remote branch")?;
 
         if exists_remote {
             // Display warning information
@@ -235,7 +236,7 @@ impl BranchRenameCommand {
                 .with_default(false)
                 .with_cancel_message("Operation cancelled")
                 .prompt()
-                .context("Failed to get user confirmation")?;
+                .wrap_err("Failed to get user confirmation")?;
 
             if should_rename_remote {
                 // Second confirmation
@@ -253,10 +254,10 @@ impl BranchRenameCommand {
                     .with_default(false)
                     .with_cancel_message("Operation cancelled")
                     .prompt()
-                    .context("Failed to get final confirmation")?
+                    .wrap_err("Failed to get final confirmation")?
                 {
                     GitBranch::rename_remote(old_branch_name, new_branch_name)
-                        .context("Failed to rename remote branch")?;
+                        .wrap_err("Failed to rename remote branch")?;
                     log_success!(
                         "✓ Renamed remote branch: origin/{} -> origin/{}",
                         old_branch_name,
@@ -328,46 +329,46 @@ impl BranchRenameCommand {
     pub fn validate_branch_name(name: &str) -> Result<()> {
         // 1. Cannot be empty
         if name.is_empty() {
-            anyhow::bail!("Branch name cannot be empty");
+            color_eyre::eyre::bail!("Branch name cannot be empty");
         }
 
         // 2. Cannot start or end with `.`
         if name.starts_with('.') || name.ends_with('.') {
-            anyhow::bail!("Branch name cannot start or end with '.'");
+            color_eyre::eyre::bail!("Branch name cannot start or end with '.'");
         }
 
         // 3. Cannot contain `..`
         if name.contains("..") {
-            anyhow::bail!("Branch name cannot contain '..'");
+            color_eyre::eyre::bail!("Branch name cannot contain '..'");
         }
 
         // 4. Cannot contain spaces
         if name.contains(' ') {
-            anyhow::bail!("Branch name cannot contain spaces");
+            color_eyre::eyre::bail!("Branch name cannot contain spaces");
         }
 
         // 5. Cannot contain special characters: `~ ^ : ? * [ \`
         let invalid_chars = ['~', '^', ':', '?', '*', '[', '\\'];
         for &ch in &invalid_chars {
             if name.contains(ch) {
-                anyhow::bail!("Branch name cannot contain special character: '{}'", ch);
+                color_eyre::eyre::bail!("Branch name cannot contain special character: '{}'", ch);
             }
         }
 
         // 6. Cannot end with `/`
         if name.ends_with('/') {
-            anyhow::bail!("Branch name cannot end with '/'");
+            color_eyre::eyre::bail!("Branch name cannot end with '/'");
         }
 
         // 7. Cannot contain consecutive slashes `//`
         if name.contains("//") {
-            anyhow::bail!("Branch name cannot contain consecutive slashes '//'");
+            color_eyre::eyre::bail!("Branch name cannot contain consecutive slashes '//'");
         }
 
         // 8. Cannot be reserved names
         let reserved_names = ["HEAD", "FETCH_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
         if reserved_names.contains(&name) {
-            anyhow::bail!("Branch name cannot be reserved name: '{}'", name);
+            color_eyre::eyre::bail!("Branch name cannot be reserved name: '{}'", name);
         }
 
         Ok(())
@@ -378,7 +379,7 @@ impl BranchRenameCommand {
         let output = Command::new("git")
             .args(["config", "--get", &format!("branch.{}.remote", branch_name)])
             .output()
-            .context("Failed to check remote tracking")?;
+            .wrap_err("Failed to check remote tracking")?;
 
         Ok(output.status.success() && !output.stdout.is_empty())
     }

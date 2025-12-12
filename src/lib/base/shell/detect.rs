@@ -1,5 +1,5 @@
-use anyhow::Result;
 use clap_complete::shells::Shell;
+use color_eyre::{eyre::eyre, Result};
 use std::fs;
 
 /// Shell 检测工具
@@ -28,7 +28,7 @@ impl Detect {
             })
             .ok_or_else(|| {
                 let shell = std::env::var("SHELL").unwrap_or_else(|_| "unknown".to_string());
-                anyhow::anyhow!("Unsupported shell: {}", shell)
+                eyre!("Unsupported shell: {}", shell)
             })
     }
 

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::Result;
 use std::sync::Arc;
 
 /// Type alias for validator functions to reduce type complexity

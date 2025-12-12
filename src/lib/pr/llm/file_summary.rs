@@ -2,7 +2,7 @@
 //!
 //! 用于生成单个文件的修改总结。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
 use crate::base::prompt::generate_summarize_file_change_system_prompt;
@@ -48,7 +48,7 @@ impl FileSummaryGenerator {
         };
 
         // 调用 LLM API
-        let response = client.call(&params).with_context(|| {
+        let response = client.call(&params).wrap_err_with(|| {
             format!(
                 "Failed to call LLM API for summarizing file change: '{}'",
                 file_path

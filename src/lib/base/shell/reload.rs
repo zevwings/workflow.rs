@@ -1,5 +1,5 @@
-use anyhow::Result;
 use clap_complete::Shell;
+use color_eyre::{eyre::eyre, Result};
 use duct::cmd;
 
 use crate::base::settings::paths::Paths;
@@ -64,12 +64,12 @@ impl Reload {
             cmd(&shell_type, &["-NoProfile", "-Command", &shell_cmd])
                 .run()
                 .map(|_| ())
-                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e))
+                .map_err(|e| eyre!("Failed to reload config: {}", e))
         } else {
             cmd(&shell_type, &["-c", &shell_cmd])
                 .run()
                 .map(|_| ())
-                .map_err(|e| anyhow::anyhow!("Failed to reload config: {}", e))
+                .map_err(|e| eyre!("Failed to reload config: {}", e))
         };
 
         match status {

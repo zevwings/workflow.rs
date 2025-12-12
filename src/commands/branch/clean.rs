@@ -7,7 +7,7 @@ use crate::commands::check;
 use crate::git::{GitBranch, GitRepo};
 use crate::repo::config::RepoConfig;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 分支清理命令
 pub struct BranchCleanCommand;
@@ -22,21 +22,22 @@ impl BranchCleanCommand {
         log_message!("Branch Cleanup");
 
         // 2. 初始化：获取当前分支、默认分支、仓库名
-        let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
+        let current_branch =
+            GitBranch::current_branch().wrap_err("Failed to get current branch")?;
         log_info!("Current branch: {}", current_branch);
 
         let default_branch =
-            GitBranch::get_default_branch().context("Failed to get default branch")?;
+            GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
         log_info!("Default branch: {}", default_branch);
 
         // 获取仓库名
         let repo_name =
-            GitRepo::extract_repo_name().context("Failed to extract repository name")?;
+            GitRepo::extract_repo_name().wrap_err("Failed to extract repository name")?;
         log_info!("Repository: {}", repo_name);
 
         // 3. 清理远端引用
         log_info!("Cleaning remote references...");
-        GitRepo::prune_remote().context("Failed to prune remote references")?;
+        GitRepo::prune_remote().wrap_err("Failed to prune remote references")?;
 
         // 4. 读取配置文件（项目级配置）
         let ignore_branches = RepoConfig::get_ignore_branches();
@@ -53,7 +54,7 @@ impl BranchCleanCommand {
 
         // 6. 获取所有本地分支
         let all_branches =
-            GitBranch::get_local_branches().context("Failed to get local branches")?;
+            GitBranch::get_local_branches().wrap_err("Failed to get local branches")?;
 
         // 7. 过滤出需要删除的分支
         let branches_to_delete: Vec<String> = all_branches

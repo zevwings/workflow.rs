@@ -5,7 +5,7 @@
 use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::git::GitStash;
 use crate::{log_break, log_info, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Stash drop command
 pub struct StashDropCommand;
@@ -17,7 +17,7 @@ impl StashDropCommand {
         log_message!("Stash Drop");
 
         // 获取所有 stash 条目
-        let entries = GitStash::stash_list().context("Failed to list stash entries")?;
+        let entries = GitStash::stash_list().wrap_err("Failed to list stash entries")?;
 
         if entries.is_empty() {
             log_info!("No stash entries available");
@@ -38,7 +38,7 @@ impl StashDropCommand {
         // 多选列表
         let selected = MultiSelectDialog::new("Select stash entries to delete", options)
             .prompt()
-            .context("Failed to select stash entries")?;
+            .wrap_err("Failed to select stash entries")?;
 
         if selected.is_empty() {
             log_info!("No stash entries selected");
@@ -69,7 +69,7 @@ impl StashDropCommand {
         ))
         .with_default(false)
         .prompt()
-        .context("Failed to get user confirmation")?;
+        .wrap_err("Failed to get user confirmation")?;
 
         if !confirmed {
             log_info!("Operation cancelled");

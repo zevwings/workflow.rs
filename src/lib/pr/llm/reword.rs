@@ -2,7 +2,10 @@
 //!
 //! 基于 PR diff 生成简洁的 PR 标题和描述，用于更新现有 PR。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
@@ -68,7 +71,7 @@ impl RewordGenerator {
         };
 
         // 调用 LLM API
-        let response = client.call(&params).with_context(|| {
+        let response = client.call(&params).wrap_err_with(|| {
             format!(
                 "Failed to call LLM API for rewording PR from diff (current title: {:?})",
                 current_title
@@ -76,7 +79,7 @@ impl RewordGenerator {
         })?;
 
         // 解析响应
-        Self::parse_reword_response(response).with_context(|| {
+        Self::parse_reword_response(response).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response for PR reword (current title: {:?})",
                 current_title
@@ -166,7 +169,7 @@ impl RewordGenerator {
         let json_str = extract_json_from_markdown(response);
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(&json_str).with_context(|| {
+        let json: Value = serde_json::from_str(&json_str).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response as JSON. Raw response: {}",
                 json_str
@@ -176,7 +179,7 @@ impl RewordGenerator {
         let pr_title = json
             .get("pr_title")
             .and_then(|v| v.as_str())
-            .context("Missing 'pr_title' field in LLM response")?
+            .wrap_err("Missing 'pr_title' field in LLM response")?
             .to_string();
 
         // description 是可选的

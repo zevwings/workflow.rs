@@ -6,8 +6,11 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
@@ -33,7 +36,7 @@ impl InstallCommand {
         log_debug!("Detected: {}", shell);
 
         // 创建 completion 目录
-        fs::create_dir_all(&completion_dir).context("Failed to create completion directory")?;
+        fs::create_dir_all(&completion_dir).wrap_err("Failed to create completion directory")?;
         log_debug!("Completion directory: {}", completion_dir.display());
 
         // 生成 completion 脚本
@@ -93,12 +96,12 @@ impl InstallCommand {
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
-        fs::create_dir_all(&install_path).context("Failed to create install directory")?;
+        fs::create_dir_all(&install_path).wrap_err("Failed to create install directory")?;
 
         // 获取当前可执行文件所在目录
-        let current_exe = env::current_exe().context("Failed to get current executable path")?;
+        let current_exe = env::current_exe().wrap_err("Failed to get current executable path")?;
         let current_dir =
-            current_exe.parent().context("Failed to get parent directory of executable")?;
+            current_exe.parent().wrap_err("Failed to get parent directory of executable")?;
 
         log_debug!("Current directory: {}", current_dir.display());
         log_debug!("Install directory: {}", install_dir);
@@ -125,7 +128,7 @@ impl InstallCommand {
             // Unix: 使用 sudo 复制文件
             // Windows: 直接复制文件
             if cfg!(target_os = "windows") {
-                fs::copy(&source, &target).with_context(|| {
+                fs::copy(&source, &target).wrap_err_with(|| {
                     format!(
                         "Failed to copy {} to {}",
                         source.display(),
@@ -134,7 +137,7 @@ impl InstallCommand {
                 })?;
             } else {
                 let status =
-                    Command::new("sudo").arg("cp").arg(&source).arg(&target).status().context(
+                    Command::new("sudo").arg("cp").arg(&source).arg(&target).status().wrap_err(
                         format!(
                             "Failed to copy {} to {}",
                             source.display(),
@@ -143,11 +146,11 @@ impl InstallCommand {
                     )?;
 
                 if !status.success() {
-                    anyhow::bail!("Failed to install {}", binary);
+                    color_eyre::eyre::bail!("Failed to install {}", binary);
                 }
 
                 // 设置执行权限（仅 Unix）
-                Command::new("sudo").arg("chmod").arg("+x").arg(&target).status().context(
+                Command::new("sudo").arg("chmod").arg("+x").arg(&target).status().wrap_err(
                     format!(
                         "Failed to set executable permission for {}",
                         target.display()
@@ -167,7 +170,7 @@ impl InstallCommand {
             log_info!("Installed commands:");
             log_info!("  - workflow (main command with subcommands: pr, log, jira, etc.)");
         } else {
-            anyhow::bail!("No installable binary files found");
+            color_eyre::eyre::bail!("No installable binary files found");
         }
 
         Ok(())

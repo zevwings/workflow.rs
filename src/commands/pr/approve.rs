@@ -1,7 +1,7 @@
 use crate::log_success;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 批准命令
 #[allow(dead_code)]
@@ -30,7 +30,7 @@ impl PullRequestApproveCommand {
                     return Err(e);
                 } else {
                     // 对于其他错误，添加上下文信息
-                    return Err(e).context(format!("Failed to approve PR #{}", pr_id));
+                    return Err(e).wrap_err(format!("Failed to approve PR #{}", pr_id));
                 }
             }
         }

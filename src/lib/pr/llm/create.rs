@@ -2,7 +2,10 @@
 //!
 //! 用于创建 PR 时生成分支名、PR 标题、描述和 scope。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
@@ -77,7 +80,7 @@ impl CreateGenerator {
         };
 
         // 调用 LLM API
-        let response = client.call(&params).with_context(|| {
+        let response = client.call(&params).wrap_err_with(|| {
             format!(
                 "Failed to call LLM API for generating branch name from commit title: '{}'",
                 commit_title
@@ -85,7 +88,7 @@ impl CreateGenerator {
         })?;
 
         // 解析响应
-        Self::parse_llm_response(response).with_context(|| {
+        Self::parse_llm_response(response).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response for commit title: '{}'",
                 commit_title
@@ -182,7 +185,7 @@ impl CreateGenerator {
         let json_str = extract_json_from_markdown(response);
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(&json_str).with_context(|| {
+        let json: Value = serde_json::from_str(&json_str).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response as JSON. Raw response: {}",
                 json_str
@@ -192,13 +195,13 @@ impl CreateGenerator {
         let branch_name = json
             .get("branch_name")
             .and_then(|v| v.as_str())
-            .context("Missing 'branch_name' field in LLM response")?
+            .wrap_err("Missing 'branch_name' field in LLM response")?
             .to_string();
 
         let pr_title = json
             .get("pr_title")
             .and_then(|v| v.as_str())
-            .context("Missing 'pr_title' field in LLM response")?
+            .wrap_err("Missing 'pr_title' field in LLM response")?
             .to_string();
 
         // description 是可选的

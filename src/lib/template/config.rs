@@ -3,7 +3,7 @@
 //! Loads templates from configuration files (global and project-level).
 
 use crate::base::settings::paths::Paths;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fs;
@@ -191,59 +191,60 @@ impl TemplateConfig {
     fn load_project() -> Result<Self> {
         // Check for .workflow/config.toml in project root
         let project_config_path = std::env::current_dir()
-            .context("Failed to get current directory")?
+            .wrap_err("Failed to get current directory")?
             .join(".workflow")
             .join("config.toml");
 
         if !project_config_path.exists() {
-            anyhow::bail!("Project config not found");
+            color_eyre::eyre::bail!("Project config not found");
         }
 
         let content = fs::read_to_string(&project_config_path)
-            .context("Failed to read project template config")?;
+            .wrap_err("Failed to read project template config")?;
 
         // Parse TOML and extract template section
         let value: toml::Value =
-            toml::from_str(&content).context("Failed to parse project template config")?;
+            toml::from_str(&content).wrap_err("Failed to parse project template config")?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {
             let config: TemplateConfig = toml::from_str(
                 &toml::to_string(template_section)
-                    .context("Failed to serialize template section")?,
+                    .wrap_err("Failed to serialize template section")?,
             )
-            .context("Failed to parse template config")?;
+            .wrap_err("Failed to parse template config")?;
             Ok(config)
         } else {
-            anyhow::bail!("No template section in project config")
+            color_eyre::eyre::bail!("No template section in project config")
         }
     }
 
     /// Load global template config
     fn load_global() -> Result<Self> {
         // Try to load from workflow.toml
-        let config_path = Paths::workflow_config().context("Failed to get workflow config path")?;
+        let config_path =
+            Paths::workflow_config().wrap_err("Failed to get workflow config path")?;
 
         if !config_path.exists() {
-            anyhow::bail!("Global config not found");
+            color_eyre::eyre::bail!("Global config not found");
         }
 
         let content =
-            fs::read_to_string(&config_path).context("Failed to read global template config")?;
+            fs::read_to_string(&config_path).wrap_err("Failed to read global template config")?;
 
         let value: toml::Value =
-            toml::from_str(&content).context("Failed to parse global template config")?;
+            toml::from_str(&content).wrap_err("Failed to parse global template config")?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {
             let config: TemplateConfig = toml::from_str(
                 &toml::to_string(template_section)
-                    .context("Failed to serialize template section")?,
+                    .wrap_err("Failed to serialize template section")?,
             )
-            .context("Failed to parse template config")?;
+            .wrap_err("Failed to parse template config")?;
             Ok(config)
         } else {
-            anyhow::bail!("No template section in global config")
+            color_eyre::eyre::bail!("No template section in global config")
         }
     }
 

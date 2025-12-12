@@ -2,7 +2,7 @@ use crate::branch::BranchType;
 use crate::git::{GitRepo, RepoType};
 use crate::pr::github::GitHub;
 use crate::pr::PullRequestRow;
-use anyhow::Result;
+use color_eyre::Result;
 
 /// PR 变更类型结构体
 ///
@@ -222,7 +222,7 @@ pub trait PlatformProvider {
         _limit: Option<u32>,
     ) -> Result<Vec<PullRequestRow>> {
         // 默认实现：返回不支持的错误
-        anyhow::bail!("get_pull_requests is not supported by this platform")
+        color_eyre::eyre::bail!("get_pull_requests is not supported by this platform")
     }
 
     /// 获取 PR 状态
@@ -249,7 +249,7 @@ pub trait PlatformProvider {
     /// PR 的 diff 内容（字符串格式）
     fn get_pull_request_diff(&self, _pull_request_id: &str) -> Result<String> {
         // 默认实现：返回不支持的错误
-        anyhow::bail!("get_pull_request_diff is not supported by this platform")
+        color_eyre::eyre::bail!("get_pull_request_diff is not supported by this platform")
     }
 
     /// 添加评论到 Pull Request
@@ -329,7 +329,9 @@ pub fn create_provider(repo_type: RepoType) -> Result<Box<dyn PlatformProvider>>
     match repo_type {
         RepoType::GitHub => Ok(Box::new(GitHub)),
         RepoType::Codeup | RepoType::Unknown => {
-            anyhow::bail!("Unsupported repository type. Only GitHub is currently supported.")
+            color_eyre::eyre::bail!(
+                "Unsupported repository type. Only GitHub is currently supported."
+            )
         }
     }
 }

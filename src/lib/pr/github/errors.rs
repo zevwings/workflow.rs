@@ -1,5 +1,5 @@
 use crate::base::http::HttpResponse;
-use anyhow::Error;
+use color_eyre::eyre::{eyre, Report};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -21,7 +21,7 @@ pub struct GitHubError {
 /// 格式化 GitHub 错误信息
 ///
 /// 将 GitHub API 错误响应格式化为用户友好的错误消息
-pub fn format_error(error: &GitHubErrorResponse, response: &HttpResponse) -> Error {
+pub fn format_error(error: &GitHubErrorResponse, response: &HttpResponse) -> Report {
     let mut msg = format!(
         "GitHub API error: {} (Status: {})",
         error.message, response.status
@@ -53,13 +53,13 @@ pub fn format_error(error: &GitHubErrorResponse, response: &HttpResponse) -> Err
         }
     }
 
-    anyhow::anyhow!(msg)
+    eyre!(msg)
 }
 
 /// 处理 GitHub API 错误
 ///
 /// 尝试解析 GitHub 错误格式，如果无法解析则返回通用错误信息
-pub fn handle_github_error(response: &HttpResponse) -> Error {
+pub fn handle_github_error(response: &HttpResponse) -> Report {
     // 尝试解析 JSON 错误
     if let Ok(data) = response.as_json::<Value>() {
         // 尝试解析为 GitHub 错误格式
@@ -69,7 +69,7 @@ pub fn handle_github_error(response: &HttpResponse) -> Error {
 
         // 如果无法解析为 GitHub 格式，返回 JSON 字符串
         if let Ok(json_str) = serde_json::to_string_pretty(&data) {
-            return anyhow::anyhow!(
+            return eyre!(
                 "GitHub API request failed: {} - {}\n\nResponse:\n{}",
                 response.status,
                 response.status_text,
@@ -79,7 +79,7 @@ pub fn handle_github_error(response: &HttpResponse) -> Error {
     }
 
     // 回退到简单错误
-    anyhow::anyhow!(
+    eyre!(
         "GitHub API request failed: {} - {}",
         response.status,
         response.status_text

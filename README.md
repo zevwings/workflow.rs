@@ -499,6 +499,9 @@ workflow stash drop                                # 交互式选择要删除的
 
 # 应用并删除 stash
 workflow stash pop                                # 应用并删除最新的 stash（交互式选择）
+
+# 保存当前更改到 stash
+workflow stash push                               # 将当前工作区和暂存区的更改保存到 stash（可选消息）
 ```
 
 ### 安装命令

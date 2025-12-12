@@ -5,7 +5,7 @@
 //! - 路径处理
 //! - 文件操作
 
-use anyhow::Result;
+use color_eyre::Result;
 use regex::Regex;
 use std::collections::HashSet;
 use std::sync::OnceLock;

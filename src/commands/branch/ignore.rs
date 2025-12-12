@@ -8,7 +8,7 @@ use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::git::BranchRow;
 use crate::repo::config::RepoConfig;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 分支忽略列表管理命令
 pub struct BranchIgnoreCommand;
@@ -24,11 +24,11 @@ impl BranchIgnoreCommand {
         } else {
             InputDialog::new("Enter branch name to add to ignore list")
                 .prompt()
-                .context("Failed to read branch name")?
+                .wrap_err("Failed to read branch name")?
         };
 
         // 加载项目级配置
-        let mut project_config = RepoConfig::load().context("Failed to load project config")?;
+        let mut project_config = RepoConfig::load().wrap_err("Failed to load project config")?;
 
         // 检查是否已存在
         if project_config.branch.ignore.contains(&branch_name) {
@@ -40,7 +40,7 @@ impl BranchIgnoreCommand {
         project_config.branch.ignore.push(branch_name.clone());
 
         // 保存到项目级配置
-        RepoConfig::save(&project_config).context("Failed to save project config")?;
+        RepoConfig::save(&project_config).wrap_err("Failed to save project config")?;
 
         log_success!(
             "Branch '{}' added to ignore list (project-level config)",
@@ -56,7 +56,7 @@ impl BranchIgnoreCommand {
     /// 从项目级配置（.workflow/config.toml）中移除
     pub fn remove(branch_name: Option<String>) -> Result<()> {
         // 加载项目级配置
-        let mut project_config = RepoConfig::load().context("Failed to load project config")?;
+        let mut project_config = RepoConfig::load().wrap_err("Failed to load project config")?;
 
         // 获取要移除的分支名（从参数或交互式选择）
         let branch_names = if let Some(name) = branch_name {
@@ -87,7 +87,7 @@ impl BranchIgnoreCommand {
                 options_vec,
             )
             .prompt()
-            .context("Failed to get user selection")?;
+            .wrap_err("Failed to get user selection")?;
 
             if selected_branches.is_empty() {
                 log_info!("No branches selected, operation cancelled");
@@ -148,7 +148,7 @@ impl BranchIgnoreCommand {
 
         // 如果有成功移除的分支，保存配置
         if success_count > 0 {
-            RepoConfig::save(&project_config).context("Failed to save project config")?;
+            RepoConfig::save(&project_config).wrap_err("Failed to save project config")?;
             log_success!(
                 "Removed {} branch(es) from ignore list (project-level config)",
                 success_count

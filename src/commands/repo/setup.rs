@@ -8,7 +8,7 @@ use crate::base::settings::paths::Paths;
 use crate::git::GitRepo;
 use crate::repo::{ProjectConfig, RepoConfig};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::io::{self, IsTerminal};
 use toml::Value;
 
@@ -41,7 +41,7 @@ impl RepoSetupCommand {
     ///
     /// ```rust,no_run
     /// use workflow::commands::repo::setup::RepoSetupCommand;
-    /// use anyhow::Result;
+    /// use color_eyre::Result;
     ///
     /// pub fn execute() -> Result<()> {
     ///     RepoSetupCommand::ensure()?;
@@ -74,7 +74,7 @@ impl RepoSetupCommand {
             ConfirmDialog::new("Run 'workflow repo setup' to configure this repository?")
                 .with_default(true)
                 .prompt()
-                .context("Failed to get user confirmation")?;
+                .wrap_err("Failed to get user confirmation")?;
 
         if should_setup {
             // 5. Run setup
@@ -82,7 +82,7 @@ impl RepoSetupCommand {
             log_info!("Running repository setup...");
             log_break!();
 
-            Self::run().context("Failed to run repository setup")?;
+            Self::run().wrap_err("Failed to run repository setup")?;
 
             log_break!();
             log_success!("Repository configuration completed!");
@@ -104,7 +104,7 @@ impl RepoSetupCommand {
     ///
     /// ```rust,no_run
     /// use workflow::commands::repo::setup::RepoSetupCommand;
-    /// use anyhow::Result;
+    /// use color_eyre::Result;
     ///
     /// // Called by other commands
     /// fn example() -> Result<()> {
@@ -117,7 +117,7 @@ impl RepoSetupCommand {
 
         // 1. 检查是否在 Git 仓库中
         let repo_name = GitRepo::extract_repo_name()
-            .context("Not in a Git repository. Please run this command in a Git repository.")?;
+            .wrap_err("Not in a Git repository. Please run this command in a Git repository.")?;
 
         log_info!("Repository: {}", repo_name);
         log_break!();
@@ -169,7 +169,7 @@ impl RepoSetupCommand {
                 dialog = dialog.with_default(current.clone());
             }
 
-            dialog.prompt().context("Failed to get branch prefix")?
+            dialog.prompt().wrap_err("Failed to get branch prefix")?
         };
 
         // 处理输入：如果有现有值且用户输入为空，保持原值；否则使用新值或清空
@@ -195,7 +195,7 @@ impl RepoSetupCommand {
         let use_scope = ConfirmDialog::new("Use scope for commit messages?")
             .with_default(current_use_scope)
             .prompt()
-            .context("Failed to get use_scope setting")?;
+            .wrap_err("Failed to get use_scope setting")?;
 
         config
             .template_commit
@@ -205,14 +205,14 @@ impl RepoSetupCommand {
         let configure_commit_template = ConfirmDialog::new("Configure commit templates?")
             .with_default(false)
             .prompt()
-            .context("Failed to get commit template preference")?;
+            .wrap_err("Failed to get commit template preference")?;
 
         if configure_commit_template {
             // 询问是否使用默认模板
             let use_default = ConfirmDialog::new("Use default commit template?")
                 .with_default(true)
                 .prompt()
-                .context("Failed to get template preference")?;
+                .wrap_err("Failed to get template preference")?;
 
             if !use_default {
                 // 用户选择自定义模板，询问自定义模板内容
@@ -220,7 +220,7 @@ impl RepoSetupCommand {
                 let custom_template = InputDialog::new("Enter custom commit template:")
                     .allow_empty(false)
                     .prompt()
-                    .context("Failed to get custom template")?;
+                    .wrap_err("Failed to get custom template")?;
 
                 config.template_commit.insert(
                     "default".to_string(),
@@ -234,21 +234,21 @@ impl RepoSetupCommand {
         let configure_branch_template = ConfirmDialog::new("Configure branch templates?")
             .with_default(false)
             .prompt()
-            .context("Failed to get branch template preference")?;
+            .wrap_err("Failed to get branch template preference")?;
 
         if configure_branch_template {
             // 询问是否使用默认模板
             let use_default_branch = ConfirmDialog::new("Use default branch template?")
                 .with_default(true)
                 .prompt()
-                .context("Failed to get branch template preference")?;
+                .wrap_err("Failed to get branch template preference")?;
 
             if !use_default_branch {
                 let custom_branch_template =
                     InputDialog::new("Enter custom default branch template:")
                         .allow_empty(false)
                         .prompt()
-                        .context("Failed to get custom branch template")?;
+                        .wrap_err("Failed to get custom branch template")?;
 
                 config.template_branch.insert(
                     "default".to_string(),
@@ -262,20 +262,20 @@ impl RepoSetupCommand {
         let configure_pr_template = ConfirmDialog::new("Configure pull request templates?")
             .with_default(false)
             .prompt()
-            .context("Failed to get PR template preference")?;
+            .wrap_err("Failed to get PR template preference")?;
 
         if configure_pr_template {
             // 询问是否使用默认模板
             let use_default_pr = ConfirmDialog::new("Use default PR template?")
                 .with_default(true)
                 .prompt()
-                .context("Failed to get PR template preference")?;
+                .wrap_err("Failed to get PR template preference")?;
 
             if !use_default_pr {
                 let custom_pr_template = InputDialog::new("Enter custom PR template:")
                     .allow_empty(false)
                     .prompt()
-                    .context("Failed to get custom PR template")?;
+                    .wrap_err("Failed to get custom PR template")?;
 
                 config.template_pull_requests.insert(
                     "default".to_string(),
@@ -298,7 +298,7 @@ impl RepoSetupCommand {
         )
         .with_default(current_auto_accept)
         .prompt()
-        .context("Failed to get auto_accept_change_type setting")?;
+        .wrap_err("Failed to get auto_accept_change_type setting")?;
 
         config.auto_accept_change_type = Some(auto_accept);
 

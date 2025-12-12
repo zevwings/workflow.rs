@@ -4,7 +4,10 @@
 
 use std::sync::OnceLock;
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{eyre, ContextCompat, WrapErr},
+    Result,
+};
 use reqwest::blocking::Client;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
@@ -73,7 +76,7 @@ impl LLMClient {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(60))
             .build()
-            .context("Failed to create HTTP client with timeout")?;
+            .wrap_err("Failed to create HTTP client with timeout")?;
 
         // 构建请求体（统一格式）
         let payload = self.build_payload(params)?;
@@ -103,7 +106,7 @@ impl LLMClient {
         let response = request
             .json(&payload)
             .send()
-            .with_context(|| format!("Failed to send LLM request to {}", provider))?;
+            .wrap_err_with(|| format!("Failed to send LLM request to {}", provider))?;
 
         // 转换为 HttpResponse
         let http_response = HttpResponse::from_reqwest_response(response)?;
@@ -112,7 +115,7 @@ impl LLMClient {
         let http_response = http_response.ensure_success_with(|r| {
             let provider = self.get_provider_name().unwrap_or_else(|_| "unknown".to_string());
             let error_message = r.extract_error_message();
-            anyhow::anyhow!(
+            eyre!(
                 "LLM API request failed ({}): {} - {}",
                 provider,
                 r.status,
@@ -142,13 +145,13 @@ impl LLMClient {
             "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
             "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
             "proxy" => {
-                let base_url = current.url.as_ref().context("LLM proxy URL is not configured")?;
+                let base_url = current.url.as_ref().wrap_err("LLM proxy URL is not configured")?;
                 Ok(format!(
                     "{}/chat/completions",
                     base_url.trim_end_matches('/')
                 ))
             }
-            _ => Err(anyhow::anyhow!("Unsupported LLM provider: {}", provider)),
+            _ => Err(eyre!("Unsupported LLM provider: {}", provider)),
         }
     }
 
@@ -159,7 +162,7 @@ impl LLMClient {
         let current = settings.llm.current_provider();
         let llm_key = current.key.as_deref().unwrap_or_default();
         if llm_key.is_empty() {
-            return Err(anyhow::anyhow!("LLM key is empty in settings"));
+            return Err(eyre!("LLM key is empty in settings"));
         }
         headers.insert(
             AUTHORIZATION,
@@ -183,8 +186,8 @@ impl LLMClient {
             "openai" | "deepseek" => {
                 Ok(current.model.clone().unwrap_or_else(|| default_llm_model(provider)))
             }
-            "proxy" => current.model.clone().context("Model is required for proxy provider"),
-            _ => current.model.clone().context("Model is required"),
+            "proxy" => current.model.clone().wrap_err("Model is required for proxy provider"),
+            _ => current.model.clone().wrap_err("Model is required"),
         }
     }
 
@@ -223,16 +226,16 @@ impl LLMClient {
         // 解析为标准结构体
         // 先将 Value 转换为 JSON 字符串，再反序列化（这样可以处理 DeserializeOwned 的要求）
         let json_str = serde_json::to_string(response)
-            .context("Failed to serialize response to JSON string")?;
+            .wrap_err("Failed to serialize response to JSON string")?;
         let completion: ChatCompletionResponse = serde_json::from_str(&json_str)
-            .context("Failed to parse response as OpenAI ChatCompletion format")?;
+            .wrap_err("Failed to parse response as OpenAI ChatCompletion format")?;
 
         // 提取内容
         let content = completion
             .choices
             .first()
             .and_then(|choice| choice.message.content.as_ref())
-            .context("No content in response: choices array is empty or content is null")?;
+            .wrap_err("No content in response: choices array is empty or content is null")?;
 
         Ok(content.trim().to_string())
     }

@@ -20,7 +20,7 @@ use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -167,7 +167,7 @@ impl SetupCommand {
             let selected_option = SelectDialog::new("GitHub account management", options.clone())
                 .with_default(1)
                 .prompt()
-                .context("Failed to get GitHub account management choice")?;
+                .wrap_err("Failed to get GitHub account management choice")?;
             let selection = options.iter().position(|opt| opt == &selected_option).unwrap_or(1);
 
             let mut account_added = false;
@@ -214,7 +214,7 @@ impl SetupCommand {
                     SelectDialog::new("Select current GitHub account", account_names_vec.clone())
                         .with_default(default_index)
                         .prompt()
-                        .context("Failed to select current account")?;
+                        .wrap_err("Failed to select current account")?;
                 let selection = account_names_vec
                     .iter()
                     .position(|name| name == &selected_account)
@@ -266,14 +266,14 @@ impl SetupCommand {
                 }
             })
             .prompt()
-            .context("Failed to get Jira email address")?;
+            .wrap_err("Failed to get Jira email address")?;
 
         let jira_email = if !jira_email.is_empty() {
             Some(jira_email)
         } else if existing.jira_email.is_some() {
             existing.jira_email.clone()
         } else {
-            anyhow::bail!("Jira email address is required");
+            color_eyre::eyre::bail!("Jira email address is required");
         };
 
         let has_jira_address = existing.jira_service_address.is_some();
@@ -304,14 +304,14 @@ impl SetupCommand {
                 }
             })
             .prompt()
-            .context("Failed to get Jira service address")?;
+            .wrap_err("Failed to get Jira service address")?;
 
         let jira_service_address = if !jira_service_address.is_empty() {
             Some(jira_service_address)
         } else if existing.jira_service_address.is_some() {
             existing.jira_service_address.clone()
         } else {
-            anyhow::bail!("Jira service address is required");
+            color_eyre::eyre::bail!("Jira service address is required");
         };
 
         let jira_token_prompt = if existing.jira_api_token.is_some() {
@@ -323,14 +323,14 @@ impl SetupCommand {
         let jira_api_token = InputDialog::new(&jira_token_prompt)
             .allow_empty(existing.jira_api_token.is_some())
             .prompt()
-            .context("Failed to get Jira API token")?;
+            .wrap_err("Failed to get Jira API token")?;
 
         let jira_api_token = if !jira_api_token.is_empty() {
             Some(jira_api_token)
         } else if existing.jira_api_token.is_some() {
             existing.jira_api_token.clone()
         } else {
-            anyhow::bail!("Jira API token is required");
+            color_eyre::eyre::bail!("Jira API token is required");
         };
 
         // ==================== 可选：文档基础路径配置 ====================
@@ -365,7 +365,7 @@ impl SetupCommand {
         }
 
         let log_download_base_dir =
-            dialog.prompt().context("Failed to get document base directory")?;
+            dialog.prompt().wrap_err("Failed to get document base directory")?;
 
         let log_download_base_dir = if log_download_base_dir.is_empty() {
             // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
@@ -408,7 +408,7 @@ impl SetupCommand {
         )
         .with_default(current_trace_console_idx)
         .prompt()
-        .context("Failed to select trace console option")?;
+        .wrap_err("Failed to select trace console option")?;
 
         // true 时写入配置文件，false 时从配置文件中删除（设置为 None）
         let enable_trace_console = trace_console_options
@@ -435,7 +435,7 @@ impl SetupCommand {
         let llm_provider = SelectDialog::new(&llm_provider_prompt, llm_providers_vec)
             .with_default(current_provider_idx)
             .prompt()
-            .context("Failed to select LLM provider")?;
+            .wrap_err("Failed to select LLM provider")?;
 
         // 初始化各 provider 的配置（从 existing 加载，保持其他 provider 的配置不变）
         let mut llm_openai_key = existing.llm_openai_key.clone();
@@ -459,7 +459,7 @@ impl SetupCommand {
                 let llm_key_input = InputDialog::new(&key_prompt)
                     .allow_empty(true)
                     .prompt()
-                    .context("Failed to get OpenAI API key")?;
+                    .wrap_err("Failed to get OpenAI API key")?;
 
                 if !llm_key_input.is_empty() {
                     llm_openai_key = Some(llm_key_input);
@@ -479,7 +479,7 @@ impl SetupCommand {
                     .allow_empty(true)
                     .with_default(default_model.clone())
                     .prompt()
-                    .context("Failed to get OpenAI model")?;
+                    .wrap_err("Failed to get OpenAI model")?;
 
                 if !llm_model_input.is_empty() {
                     llm_openai_model = Some(llm_model_input);
@@ -499,7 +499,7 @@ impl SetupCommand {
                 let llm_key_input = InputDialog::new(&key_prompt)
                     .allow_empty(true)
                     .prompt()
-                    .context("Failed to get DeepSeek API key")?;
+                    .wrap_err("Failed to get DeepSeek API key")?;
 
                 if !llm_key_input.is_empty() {
                     llm_deepseek_key = Some(llm_key_input);
@@ -519,7 +519,7 @@ impl SetupCommand {
                     .allow_empty(true)
                     .with_default(default_model.clone())
                     .prompt()
-                    .context("Failed to get DeepSeek model")?;
+                    .wrap_err("Failed to get DeepSeek model")?;
 
                 if !llm_model_input.is_empty() {
                     llm_deepseek_model = Some(llm_model_input);
@@ -559,7 +559,7 @@ impl SetupCommand {
                         }
                     });
 
-                    dialog.prompt().context("Failed to get LLM proxy URL")?
+                    dialog.prompt().wrap_err("Failed to get LLM proxy URL")?
                 };
 
                 if !llm_url_input.is_empty() {
@@ -568,7 +568,7 @@ impl SetupCommand {
                     // 用户按 Enter 保留现有值
                     llm_proxy_url = existing_url;
                 } else {
-                    anyhow::bail!("LLM proxy URL is required");
+                    color_eyre::eyre::bail!("LLM proxy URL is required");
                 }
 
                 // 配置 Proxy API key（必填）
@@ -597,7 +597,7 @@ impl SetupCommand {
                         }
                     });
 
-                    dialog.prompt().context("Failed to get LLM proxy key")?
+                    dialog.prompt().wrap_err("Failed to get LLM proxy key")?
                 };
 
                 if !llm_key_input.is_empty() {
@@ -606,7 +606,7 @@ impl SetupCommand {
                     // 用户按 Enter 保留现有值
                     llm_proxy_key = existing_key;
                 } else {
-                    anyhow::bail!("LLM proxy key is required");
+                    color_eyre::eyre::bail!("LLM proxy key is required");
                 }
 
                 // 配置 Proxy model（必填）
@@ -630,12 +630,12 @@ impl SetupCommand {
                         }
                     })
                     .prompt()
-                    .context("Failed to get LLM model")?;
+                    .wrap_err("Failed to get LLM model")?;
 
                 if !llm_model_input.is_empty() {
                     llm_proxy_model = Some(llm_model_input);
                 } else {
-                    anyhow::bail!("Model is required for proxy provider");
+                    color_eyre::eyre::bail!("Model is required for proxy provider");
                 }
             }
             _ => {}
@@ -649,7 +649,7 @@ impl SetupCommand {
         };
 
         let llm_language =
-            select_language(current_language).context("Failed to select LLM output language")?;
+            select_language(current_language).wrap_err("Failed to select LLM output language")?;
 
         // Codeup 配置已移除（Codeup support has been removed）
         // ==================== 可选：Codeup 配置 ====================

@@ -5,7 +5,7 @@
 use crate::base::dialog::SelectDialog;
 use crate::log_info;
 use crate::repo::config::RepoConfig;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::fmt;
 
 /// Branch type enumeration
@@ -81,13 +81,13 @@ impl BranchType {
         let selected = SelectDialog::new("选择分支类型 (Select branch type)", display_options)
             .with_default(0) // Default to feature
             .prompt()
-            .context("Failed to select branch type")?;
+            .wrap_err("Failed to select branch type")?;
 
         // Find the corresponding BranchType
         options
             .into_iter()
             .find(|ty| ty.display_name() == selected)
-            .ok_or_else(|| anyhow::anyhow!("Invalid branch type selection"))
+            .ok_or_else(|| eyre!("Invalid branch type selection"))
     }
 
     /// Resolve branch type with repository prefix fallback

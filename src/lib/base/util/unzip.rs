@@ -1,7 +1,7 @@
 //! 解压工具模块
 //! 提供 tar.gz 和 zip 文件解压功能
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use flate2::read::GzDecoder;
 use std::fs::{self, File};
 use std::io::BufReader;
@@ -44,18 +44,18 @@ impl Unzip {
     /// ```
     pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
-        fs::create_dir_all(output_dir).context("Failed to create output directory")?;
+        fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
 
         // 打开 tar.gz 文件
         let file = File::open(tar_gz_path)
-            .with_context(|| format!("Failed to open file: {}", tar_gz_path.display()))?;
+            .wrap_err_with(|| format!("Failed to open file: {}", tar_gz_path.display()))?;
 
         // 创建 Gzip 解码器
         let decoder = GzDecoder::new(BufReader::new(file));
         let mut archive = Archive::new(decoder);
 
         // 解压到目标目录
-        archive.unpack(output_dir).context("Failed to extract tar.gz archive")?;
+        archive.unpack(output_dir).wrap_err("Failed to extract tar.gz archive")?;
 
         Ok(())
     }
@@ -89,40 +89,40 @@ impl Unzip {
     /// ```
     pub fn extract_zip(zip_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
-        fs::create_dir_all(output_dir).context("Failed to create output directory")?;
+        fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
 
         // 打开 zip 文件
         let file = File::open(zip_path)
-            .with_context(|| format!("Failed to open zip file: {}", zip_path.display()))?;
+            .wrap_err_with(|| format!("Failed to open zip file: {}", zip_path.display()))?;
 
-        let mut archive = ZipArchive::new(file).context("Failed to read zip archive")?;
+        let mut archive = ZipArchive::new(file).wrap_err("Failed to read zip archive")?;
 
         // 解压所有文件
         for i in 0..archive.len() {
             let mut file = archive
                 .by_index(i)
-                .with_context(|| format!("Failed to read file {} from zip", i))?;
+                .wrap_err_with(|| format!("Failed to read file {} from zip", i))?;
 
             let outpath = output_dir.join(file.name());
 
             if file.name().ends_with('/') {
                 // 目录
-                fs::create_dir_all(&outpath).with_context(|| {
+                fs::create_dir_all(&outpath).wrap_err_with(|| {
                     format!("Failed to create directory: {}", outpath.display())
                 })?;
             } else {
                 // 文件
                 if let Some(parent) = outpath.parent() {
-                    fs::create_dir_all(parent).with_context(|| {
+                    fs::create_dir_all(parent).wrap_err_with(|| {
                         format!("Failed to create parent directory: {}", parent.display())
                     })?;
                 }
 
                 let mut outfile = File::create(&outpath)
-                    .with_context(|| format!("Failed to create file: {}", outpath.display()))?;
+                    .wrap_err_with(|| format!("Failed to create file: {}", outpath.display()))?;
 
                 std::io::copy(&mut file, &mut outfile)
-                    .with_context(|| format!("Failed to extract file: {}", outpath.display()))?;
+                    .wrap_err_with(|| format!("Failed to extract file: {}", outpath.display()))?;
             }
         }
 

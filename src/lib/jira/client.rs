@@ -6,7 +6,7 @@
 //! - Ticket/Issue 相关方法 → `ticket` 模块
 //! - 项目状态相关方法 → `status` 模块（`get_project_statuses`）
 
-use anyhow::Result;
+use color_eyre::Result;
 
 use super::ticket::JiraTicket;
 use super::types::{JiraAttachment, JiraIssue, JiraUser};

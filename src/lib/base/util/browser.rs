@@ -2,7 +2,7 @@
 //!
 //! 本模块提供了在浏览器中打开 URL 的功能。
 
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 浏览器操作模块
 ///

@@ -6,7 +6,7 @@ use crate::base::settings::settings::Settings;
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::fs;
 use std::path::PathBuf;
 
@@ -31,10 +31,11 @@ impl ConfigExportCommand {
         } else {
             "toml" // 默认格式
         };
-        let config_path = Paths::workflow_config().context("Failed to get workflow config path")?;
+        let config_path =
+            Paths::workflow_config().wrap_err("Failed to get workflow config path")?;
 
         if !config_path.exists() {
-            return Err(anyhow::anyhow!(
+            return Err(eyre!(
                 "Configuration file does not exist: {:?}",
                 config_path
             ));
@@ -55,7 +56,7 @@ impl ConfigExportCommand {
                 for error in &validation_result.errors {
                     log_message!("  - {}: {}", error.field, error.message);
                 }
-                return Err(anyhow::anyhow!(
+                return Err(eyre!(
                     "Export cancelled. Please fix configuration errors before exporting."
                 ));
             }
@@ -78,7 +79,7 @@ impl ConfigExportCommand {
                 for error in &validation_result.errors {
                     log_message!("  - {}: {}", error.field, error.message);
                 }
-                return Err(anyhow::anyhow!(
+                return Err(eyre!(
                     "Export cancelled. Please fix configuration errors before exporting."
                 ));
             }
@@ -228,7 +229,7 @@ impl ConfigExportCommand {
         // 确保父目录存在
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
-                .context(format!("Failed to create directory: {:?}", parent))?;
+                .wrap_err(format!("Failed to create directory: {:?}", parent))?;
         }
 
         let content = match format.to_lowercase().as_str() {
@@ -243,7 +244,7 @@ impl ConfigExportCommand {
                                 jira.api_token = Some("***FILTERED***".to_string());
                             }
                             toml::to_string_pretty(&jira)
-                                .context("Failed to serialize jira config to TOML")?
+                                .wrap_err("Failed to serialize jira config to TOML")?
                         }
                         "github" => {
                             let mut github = config.github.clone();
@@ -255,10 +256,10 @@ impl ConfigExportCommand {
                                 }
                             }
                             toml::to_string_pretty(&github)
-                                .context("Failed to serialize github config to TOML")?
+                                .wrap_err("Failed to serialize github config to TOML")?
                         }
                         "log" => toml::to_string_pretty(&config.log)
-                            .context("Failed to serialize log config to TOML")?,
+                            .wrap_err("Failed to serialize log config to TOML")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
                             if no_secrets {
@@ -273,16 +274,16 @@ impl ConfigExportCommand {
                                 }
                             }
                             toml::to_string_pretty(&llm)
-                                .context("Failed to serialize llm config to TOML")?
+                                .wrap_err("Failed to serialize llm config to TOML")?
                         }
                         _ => {
-                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                            return Err(eyre!("Unknown section: '{}'", section_name));
                         }
                     };
 
                     // 解析为 toml::Value，然后构建包含 section 标题的 TOML
                     let section_value: toml::Value = toml::from_str(&section_str)
-                        .context("Failed to parse section config as TOML value")?;
+                        .wrap_err("Failed to parse section config as TOML value")?;
 
                     // 构建包含 section 标题的 TOML 表
                     let mut table = toml::map::Map::new();
@@ -290,7 +291,7 @@ impl ConfigExportCommand {
                     let root_table = toml::Value::Table(table);
 
                     toml::to_string_pretty(&root_table)
-                        .context("Failed to serialize section config to TOML")?
+                        .wrap_err("Failed to serialize section config to TOML")?
                 } else {
                     // 导出完整配置
                     let config_to_serialize = if no_secrets {
@@ -300,7 +301,7 @@ impl ConfigExportCommand {
                         config.clone()
                     };
                     toml::to_string_pretty(&config_to_serialize)
-                        .context("Failed to serialize config to TOML")?
+                        .wrap_err("Failed to serialize config to TOML")?
                 }
             }
             "json" => {
@@ -313,7 +314,7 @@ impl ConfigExportCommand {
                                 jira.api_token = Some("***FILTERED***".to_string());
                             }
                             serde_json::to_value(&jira)
-                                .context("Failed to serialize jira config to JSON")?
+                                .wrap_err("Failed to serialize jira config to JSON")?
                         }
                         "github" => {
                             let mut github = config.github.clone();
@@ -325,10 +326,10 @@ impl ConfigExportCommand {
                                 }
                             }
                             serde_json::to_value(&github)
-                                .context("Failed to serialize github config to JSON")?
+                                .wrap_err("Failed to serialize github config to JSON")?
                         }
                         "log" => serde_json::to_value(&config.log)
-                            .context("Failed to serialize log config to JSON")?,
+                            .wrap_err("Failed to serialize log config to JSON")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
                             if no_secrets {
@@ -343,13 +344,13 @@ impl ConfigExportCommand {
                                 }
                             }
                             serde_json::to_value(&llm)
-                                .context("Failed to serialize llm config to JSON")?
+                                .wrap_err("Failed to serialize llm config to JSON")?
                         }
                         _ => {
-                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                            return Err(eyre!("Unknown section: '{}'", section_name));
                         }
                     };
-                    serde_json::to_string_pretty(&json_value).context("Failed to format JSON")?
+                    serde_json::to_string_pretty(&json_value).wrap_err("Failed to format JSON")?
                 } else {
                     let config_to_serialize = if no_secrets {
                         let (filtered, _) = Self::filter_secrets(config.clone());
@@ -358,7 +359,7 @@ impl ConfigExportCommand {
                         config.clone()
                     };
                     serde_json::to_string_pretty(&config_to_serialize)
-                        .context("Failed to serialize config to JSON")?
+                        .wrap_err("Failed to serialize config to JSON")?
                 }
             }
             "yaml" | "yml" => {
@@ -371,7 +372,7 @@ impl ConfigExportCommand {
                                 jira.api_token = Some("***FILTERED***".to_string());
                             }
                             serde_yaml::to_string(&jira)
-                                .context("Failed to serialize jira config to YAML")?
+                                .wrap_err("Failed to serialize jira config to YAML")?
                         }
                         "github" => {
                             let mut github = config.github.clone();
@@ -383,10 +384,10 @@ impl ConfigExportCommand {
                                 }
                             }
                             serde_yaml::to_string(&github)
-                                .context("Failed to serialize github config to YAML")?
+                                .wrap_err("Failed to serialize github config to YAML")?
                         }
                         "log" => serde_yaml::to_string(&config.log)
-                            .context("Failed to serialize log config to YAML")?,
+                            .wrap_err("Failed to serialize log config to YAML")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
                             if no_secrets {
@@ -401,10 +402,10 @@ impl ConfigExportCommand {
                                 }
                             }
                             serde_yaml::to_string(&llm)
-                                .context("Failed to serialize llm config to YAML")?
+                                .wrap_err("Failed to serialize llm config to YAML")?
                         }
                         _ => {
-                            return Err(anyhow::anyhow!("Unknown section: '{}'", section_name));
+                            return Err(eyre!("Unknown section: '{}'", section_name));
                         }
                     }
                 } else {
@@ -415,18 +416,18 @@ impl ConfigExportCommand {
                         config.clone()
                     };
                     serde_yaml::to_string(&config_to_serialize)
-                        .context("Failed to serialize config to YAML")?
+                        .wrap_err("Failed to serialize config to YAML")?
                 }
             }
             _ => {
-                return Err(anyhow::anyhow!(
+                return Err(eyre!(
                     "Unsupported format: '{}'. Supported formats: toml, json, yaml",
                     format
                 ));
             }
         };
 
-        fs::write(path, content).context(format!("Failed to write config file: {:?}", path))?;
+        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
 
         Ok(())
     }
