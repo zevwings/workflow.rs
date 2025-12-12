@@ -33,9 +33,9 @@ fn test_branch_create_command_structure() {
             from_default,
             dry_run,
         } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+            assert_eq!(jira_id.into_option(), Some("PROJ-123".to_string()));
             assert!(from_default);
-            assert!(dry_run.dry_run);
+            assert!(dry_run.is_dry_run());
         }
         _ => panic!("Expected Create command"),
     }
@@ -52,9 +52,9 @@ fn test_branch_create_command_minimal() {
             from_default,
             dry_run,
         } => {
-            assert_eq!(jira_id.jira_id, None);
+            assert_eq!(jira_id.into_option(), None);
             assert!(!from_default);
-            assert!(!dry_run.dry_run);
+            assert!(!dry_run.is_dry_run());
         }
         _ => panic!("Expected Create command"),
     }
@@ -71,9 +71,9 @@ fn test_branch_create_command_with_jira_ticket_only() {
             from_default,
             dry_run,
         } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
+            assert_eq!(jira_id.into_option(), Some("PROJ-456".to_string()));
             assert!(!from_default);
-            assert!(!dry_run.dry_run);
+            assert!(!dry_run.is_dry_run());
         }
         _ => panic!("Expected Create command"),
     }
@@ -90,9 +90,9 @@ fn test_branch_create_command_with_from_default() {
             from_default,
             dry_run,
         } => {
-            assert_eq!(jira_id.jira_id, None);
+            assert_eq!(jira_id.into_option(), None);
             assert!(from_default);
-            assert!(!dry_run.dry_run);
+            assert!(!dry_run.is_dry_run());
         }
         _ => panic!("Expected Create command"),
     }

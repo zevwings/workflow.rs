@@ -349,6 +349,8 @@ src/
 - 修复分支：`fix/pr-merge-error`
 - 热修复分支：`hotfix/critical-bug`
 
+**注意**：Workflow CLI 支持通过模板系统自定义分支命名格式。详细配置方法请参考 [模板配置指南](./TEMPLATE_GUIDELINES.md#分支命名模板-templatebranch)。
+
 ### 工作流程
 
 1. **创建分支**：从 `master` 创建新分支
@@ -422,6 +424,8 @@ Extract retry logic into a separate module for better maintainability.
 - **主题行**：不超过 50 个字符，使用祈使语气
 - **正文**：详细说明变更原因和方式，每行不超过 72 个字符
 - **页脚**：引用相关 issue（如 `Closes #123`）
+
+**注意**：Workflow CLI 支持通过模板系统自定义提交消息格式，包括是否使用 Conventional Commits 格式。详细配置方法请参考 [模板配置指南](./TEMPLATE_GUIDELINES.md#提交消息模板-templatecommit)。
 
 ---
 
@@ -587,6 +591,7 @@ cargo fmt --check && cargo clippy -- -D warnings
 ## 📚 相关文档
 
 - [文档编写指南](./DOCUMENT_GUIDELINES.md) - 架构文档编写规范
+- [模板配置指南](./TEMPLATE_GUIDELINES.md) - 模板系统配置和使用方法
 - [主架构文档](../architecture/ARCHITECTURE.md) - 项目总体架构
 - [Rust 官方文档](https://doc.rust-lang.org/) - Rust 语言文档
 - [Rust API 指南](https://rust-lang.github.io/api-guidelines/) - Rust API 设计指南

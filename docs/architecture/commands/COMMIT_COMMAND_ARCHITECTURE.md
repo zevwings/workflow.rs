@@ -5,16 +5,17 @@
 本文档描述 Workflow CLI 的 Commit 命令模块架构，包括：
 - Commit amend 功能（修改最后一次提交的消息和文件）
 - Commit reword 功能（修改指定提交的消息，不改变内容）
+- Commit squash 功能（压缩多个提交为一个提交）
 
-Commit 命令模块提供交互式的提交修改功能，支持修改最后一次提交（amend）和修改历史提交（reword）。amend 命令支持修改提交消息、添加文件或两者同时进行，并提供完整的预览和确认机制。reword 命令支持修改 HEAD 或历史提交的消息，对于历史提交使用 rebase 交互式编辑，对于 HEAD 使用 amend。
+Commit 命令模块提供交互式的提交修改功能，支持修改最后一次提交（amend）、修改历史提交（reword）和压缩多个提交（squash）。amend 命令支持修改提交消息、添加文件或两者同时进行，并提供完整的预览和确认机制。reword 命令支持修改 HEAD 或历史提交的消息，对于历史提交使用 rebase 交互式编辑，对于 HEAD 使用 amend。squash 命令支持将多个提交压缩为一个提交，使用交互式多选界面选择要压缩的提交，并提供完整的预览和确认机制。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/commit/` 模块提供。
 
 **模块统计：**
-- 命令数量：2 个（amend、reword）
-- 总代码行数：约 476 行
-- 文件数量：3 个
-- 主要依赖：`lib/commit/`、`lib/git/`、`commands/check/`、`lib/base/dialog/`
+- 命令数量：3 个（amend、reword、squash）
+- 总代码行数：约 875 行
+- 文件数量：4 个
+- 主要依赖：`lib/commit/`、`lib/git/`、`commands/check/`、`lib/base/dialog/`、`commands/repo/`
 
 ---
 
@@ -32,9 +33,10 @@ src/bin/workflow.rs
 
 ```
 src/commands/commit/
-├── mod.rs          # Commit 命令模块声明（7 行）
+├── mod.rs          # Commit 命令模块声明（11 行）
 ├── amend.rs        # Commit amend 命令（240 行）
-└── reword.rs       # Commit reword 命令（229 行）
+├── reword.rs       # Commit reword 命令（229 行）
+└── squash.rs       # Commit squash 命令（199 行）
 ```
 
 **职责**：
@@ -56,6 +58,12 @@ src/commands/commit/
   - `CommitReword::format_preview()` - 格式化预览信息
   - `CommitReword::format_commit_info()` - 格式化 commit 信息
   - `CommitReword::reword_history_commit()` - 执行历史 commit reword
+  - `CommitSquash::get_branch_commits()` - 获取当前分支创建之后的提交
+  - `CommitSquash::create_preview()` - 创建 squash 预览信息
+  - `CommitSquash::format_preview()` - 格式化预览信息
+  - `CommitSquash::execute_squash()` - 执行 squash 操作
+  - `CommitSquash::should_show_force_push_warning()` - 检查是否需要显示 force push 警告
+  - `CommitSquash::format_completion_message()` - 生成完成提示信息
 - **`lib/git/`**：Git 操作
   - `GitBranch::current_branch()` - 获取当前分支
   - `GitBranch::get_default_branch()` - 获取默认分支
@@ -117,6 +125,8 @@ match cli.command {
       CommitAmendCommand::execute(message, no_edit, no_verify)
     CommitSubcommand::Reword { commit_id } =>
       CommitRewordCommand::execute(commit_id)
+    CommitSubcommand::Squash =>
+      CommitSquashCommand::execute()
   }
 }
 ```
@@ -402,6 +412,201 @@ Commit reword 命令用于修改指定提交的消息，不改变提交内容，
 
 ---
 
+## 3. Commit Squash 命令 (`squash.rs`)
+
+### 相关文件
+
+```
+src/commands/commit/squash.rs (199 行)
+```
+
+### 调用流程
+
+```
+CommitSquashCommand::execute()
+  ↓
+RepoSetupCommand::ensure() (确保仓库配置存在)
+  ↓
+CheckCommand::run_all() (环境检查)
+  ↓
+check_not_on_default_branch() (检查是否是默认分支)
+  ↓
+check_has_last_commit() (检查是否有最后一次 commit)
+  ↓
+CommitSquash::get_branch_commits() (获取当前分支创建之后的提交)
+  ↓
+显示可用的 commits 列表
+  ↓
+MultiSelectDialog::prompt() (交互式多选要压缩的 commits)
+  ↓
+解析选中的 commits
+  ↓
+InputDialog::prompt() (输入新的提交消息)
+  ↓
+CommitSquash::create_preview() (创建预览信息)
+  ↓
+CommitSquash::format_preview() (格式化预览信息)
+  ↓
+ConfirmDialog::prompt() (最终确认)
+  ↓
+CommitSquash::execute_squash() (执行 squash 操作)
+  ↓
+CommitSquash::format_completion_message() (生成完成提示)
+  ↓
+handle_force_push_warning() (如果 commits 已推送，询问是否 force push)
+```
+
+### 功能说明
+
+Commit squash 命令用于将多个提交压缩为一个提交，支持以下功能：
+
+1. **获取分支提交**：
+   - 自动检测当前分支基于哪个分支创建
+   - 获取当前分支创建之后的所有提交
+   - 只显示可以压缩的提交（排除已合并到基础分支的提交）
+
+2. **交互式多选**：
+   - 显示所有可用的 commits（包含 SHA 和消息）
+   - 使用 `MultiSelectDialog` 进行多选
+   - 标记最旧的提交（`[OLDEST]`）
+   - 支持选择多个连续的或不连续的提交
+
+3. **新消息输入**：
+   - 交互式输入新的提交消息
+   - 验证消息不能为空
+   - 支持重新输入（如果用户不满意）
+
+4. **预览和确认**：
+   - 显示详细的预览信息（要压缩的 commits、新消息、基础 commit 等）
+   - 如果 commits 已推送到远程，显示 force push 警告
+   - 最终确认机制
+
+5. **执行 squash**：
+   - 使用 `git rebase -i` 进行交互式 rebase
+   - 自动创建 rebase todo 文件（将选中的 commits 标记为 `squash`）
+   - 自动创建编辑器脚本（自动编辑 todo 文件和消息文件）
+   - 自动处理 stash（如果有未提交的更改）
+   - 支持冲突检测和处理
+
+6. **自动推送确认**：
+   - 如果 commits 已推送到远程，squash 完成后会询问是否要 force push
+   - 使用 `--force-with-lease` 安全地强制推送
+   - 用户可以选择跳过推送，稍后手动执行
+
+### 关键步骤说明
+
+1. **分支保护检查**：
+   - 检查当前分支是否是默认分支
+   - 默认分支不允许直接修改提交历史
+
+2. **获取分支提交**：
+   - 使用 `CommitSquash::get_branch_commits()` 获取当前分支创建之后的提交
+   - 通过检测当前分支基于哪个分支创建来确定提交范围
+   - 如果分支没有提交，提示错误
+
+3. **交互式多选**：
+   - 显示所有可用的 commits（格式：`[SHA] message`）
+   - 标记最旧的提交（`[OLDEST]`）
+   - 使用 `MultiSelectDialog` 进行多选
+   - 从选中的选项解析出 commit SHA
+
+4. **提交排序**：
+   - 确保选中的 commits 按时间顺序排列（从旧到新）
+   - 这对于 rebase 操作很重要
+
+5. **新消息输入**：
+   - 使用 `InputDialog` 输入新消息
+   - 验证消息不能为空
+   - 支持重新输入
+
+6. **预览信息生成**：
+   - 检查 commits 是否已推送到远程
+   - 生成包含要压缩的 commits、新消息、基础 commit 等的预览信息
+   - 如果已推送，添加 force push 警告
+
+7. **执行 squash（rebase）**：
+   - 自动 stash 未提交的更改（如果启用）
+   - 获取第一个要压缩的 commit 的父 commit（rebase 起点）
+   - 获取从父 commit 到 HEAD 的所有 commits
+   - 创建 rebase todo 文件（将选中的 commits 标记为 `squash`，第一个标记为 `pick`）
+   - 创建编辑器脚本（自动编辑 todo 文件和消息文件）
+   - 执行 rebase
+   - 处理冲突（如果发生）
+   - 恢复 stash（如果之前 stash 了）
+
+8. **完成提示和推送**：
+   - 如果 commits 已推送，显示 force push 提示
+   - 询问用户是否要推送（使用 `--force-with-lease`）
+   - 如果用户确认，自动执行 force push
+   - 如果用户取消，提示可以稍后手动推送
+
+### 数据流
+
+```
+用户输入 (workflow commit squash)
+  ↓
+检查仓库配置（RepoSetupCommand::ensure()）
+  ↓
+环境检查（CheckCommand::run_all()）
+  ↓
+检查是否是默认分支
+  ↓
+检查是否有最后一次 commit
+  ↓
+获取当前分支创建之后的提交
+  ↓
+显示可用的 commits
+  ↓
+交互式多选要压缩的 commits
+  ↓
+输入新的提交消息
+  ↓
+创建预览信息
+  ↓
+格式化预览信息
+  ↓
+最终确认
+  ↓
+执行 squash（rebase）
+  ↓
+生成完成提示
+  ↓
+如果 commits 已推送：询问是否 force push
+```
+
+### 依赖模块
+
+- **`lib/commit/`**：Commit 业务逻辑
+  - `CommitSquash::get_branch_commits()` - 获取分支提交
+  - `CommitSquash::create_preview()` - 创建预览信息
+  - `CommitSquash::format_preview()` - 格式化预览信息
+  - `CommitSquash::execute_squash()` - 执行 squash 操作
+  - `CommitSquash::should_show_force_push_warning()` - 检查是否需要显示 force push 警告
+  - `CommitSquash::format_completion_message()` - 生成完成提示信息
+- **`lib/git/`**：Git 操作
+  - `GitBranch::get_default_branch()` - 获取默认分支
+  - `GitBranch::get_commits_between()` - 获取两个分支之间的提交
+  - `GitBranch::is_commit_in_remote()` - 检查 commit 是否在远程
+  - `GitCommit::get_commit_info()` - 获取 commit 信息
+  - `GitCommit::get_parent_commit()` - 获取父 commit
+  - `GitCommit::get_commits_from_to_head()` - 获取从指定 commit 到 HEAD 的所有 commits
+  - `GitStash::stash_push()` - 保存未提交的更改
+  - `GitStash::stash_pop()` - 恢复保存的更改
+- **`commands/check/`**：环境检查
+  - `CheckCommand::run_all()` - 运行所有检查
+- **`commands/repo/`**：仓库配置管理
+  - `RepoSetupCommand::ensure()` - 确保仓库配置存在
+- **`commands/commit/helpers.rs`**：辅助函数
+  - `check_not_on_default_branch()` - 检查是否是默认分支
+  - `check_has_last_commit()` - 检查是否有最后一次 commit
+  - `handle_force_push_warning()` - 处理 force push 警告
+- **`lib/base/dialog/`**：用户交互对话框
+  - `ConfirmDialog` - 确认对话框
+  - `InputDialog` - 输入对话框
+  - `MultiSelectDialog` - 多选对话框
+
+---
+
 ## 🏗️ 架构设计
 
 ### 设计模式
@@ -484,6 +689,13 @@ workflow commit reword HEAD~2
 workflow commit reword abc1234
 ```
 
+### Commit Squash 命令
+
+```bash
+# 交互式 squash（选择要压缩的 commits）
+workflow commit squash
+```
+
 ---
 
 ## 📝 扩展性（可选）
@@ -537,6 +749,7 @@ Commit 命令模块采用清晰的分层架构设计：
 **当前实现状态**：
 - ✅ Commit amend 功能完整实现
 - ✅ Commit reword 功能完整实现（支持 HEAD 和历史 commit）
+- ✅ Commit squash 功能完整实现（支持多选、预览、确认）
 - ✅ 交互式工作流完整
 - ✅ 预览和确认机制完整
 - ✅ 分支保护机制完整

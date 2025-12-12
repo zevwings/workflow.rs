@@ -48,7 +48,8 @@ src/
 │   ├── commit/             # Commit 管理命令
 │   │   ├── mod.rs          # Commit 命令模块声明
 │   │   ├── amend.rs        # Commit amend 命令（修改最后一次提交）
-│   │   └── reword.rs       # Commit reword 命令（修改提交消息）
+│   │   ├── reword.rs       # Commit reword 命令（修改提交消息）
+│   │   └── squash.rs       # Commit squash 命令（压缩多个提交）
 │   ├── github/             # GitHub 账号管理命令
 │   │   ├── mod.rs          # GitHub 命令模块声明
 │   │   ├── github.rs       # GitHub 账号管理实现
@@ -65,6 +66,10 @@ src/
 │   │   ├── show.rs         # 配置查看命令（显示当前配置）
 │   │   ├── log.rs           # 日志级别管理命令（set, check）
 │   │   └── completion.rs   # Shell Completion 管理命令
+│   ├── repo/               # 仓库配置管理命令
+│   │   ├── mod.rs          # Repo 命令模块声明
+│   │   ├── setup.rs        # 仓库设置命令（交互式配置）
+│   │   └── show.rs         # 仓库配置显示命令
 │   └── lifecycle/          # 生命周期管理命令
 │       ├── mod.rs          # Lifecycle 命令模块声明
 │       ├── install.rs      # 安装命令实现（安装二进制和补全脚本）
@@ -162,7 +167,8 @@ src/
     ├── commit/             # Commit 业务逻辑
     │   ├── mod.rs          # Commit 模块声明和导出
     │   ├── amend.rs        # Commit Amend 业务逻辑（预览、格式化等）
-    │   └── reword.rs       # Commit Reword 业务逻辑（预览、格式化、历史 reword）
+    │   ├── reword.rs       # Commit Reword 业务逻辑（预览、格式化、历史 reword）
+    │   └── squash.rs       # Commit Squash 业务逻辑（压缩多个提交）
     ├── completion/         # Shell Completion 管理
     │   ├── mod.rs          # Completion 模块声明
     │   ├── completion.rs   # Completion 管理工具
@@ -174,6 +180,14 @@ src/
     │   ├── system_reader.rs # 系统代理读取器
     │   ├── config_generator.rs # 代理配置生成器
     │   └── manager.rs      # 代理管理器
+    ├── repo/               # 仓库配置管理
+    │   ├── mod.rs          # Repo 模块声明
+    │   └── config.rs       # 仓库配置管理（配置检查、加载、保存）
+    ├── template/           # 模板系统
+    │   ├── mod.rs          # Template 模块声明
+    │   ├── config.rs       # 模板配置管理（加载全局和项目级配置）
+    │   ├── engine.rs       # 模板引擎封装（Handlebars）
+    │   └── vars.rs         # 模板变量定义
     └── rollback/           # 回滚管理
         ├── mod.rs          # Rollback 模块声明
         └── rollback.rs     # 回滚管理器（备份、恢复、清理）
@@ -203,6 +217,7 @@ src/
 │  - commands/check/ (环境检查)            │
 │  - commands/proxy/ (代理管理)            │
 │  - commands/config/ (配置管理)           │
+│  - commands/repo/ (仓库配置管理)          │
 │  - commands/lifecycle/ (生命周期管理)    │
 └─────────────────┬───────────────────────┘
                   │
@@ -215,6 +230,8 @@ src/
 │  - lib/commit/   (Commit 业务逻辑)       │
 │  - lib/completion/ (Completion 管理)    │
 │  - lib/proxy/    (代理管理)              │
+│  - lib/repo/     (仓库配置管理)          │
+│  - lib/template/ (模板系统)              │
 │  - lib/rollback/ (回滚管理)              │
 └─────────────────────────────────────────┘
 ```
@@ -237,6 +254,7 @@ src/
 用户输入 → main.rs → commands/check/*.rs → lib/git/*.rs → 执行操作
 用户输入 → main.rs → commands/proxy/*.rs → lib/proxy/*.rs → 执行操作
 用户输入 → main.rs → commands/config/*.rs → lib/base/settings/*.rs → 执行操作
+用户输入 → main.rs → commands/repo/*.rs → lib/repo/*.rs → .workflow/config.toml → 执行操作
 用户输入 → main.rs → commands/lifecycle/*.rs → lib/completion/*.rs → 执行操作
 ```
 
@@ -292,6 +310,16 @@ src/
 
 提供代理管理功能，包括系统代理读取、配置生成和管理。
 - 详细架构请参考 [PROXY_ARCHITECTURE.md](./lib/PROXY_ARCHITECTURE.md)
+
+### Repo 模块 (`lib::repo`)
+
+提供仓库级配置管理功能，包括配置检查、加载、保存等。配置存储在项目根目录的 `.workflow/config.toml` 文件中。
+- 详细架构请参考 [REPO_ARCHITECTURE.md](./lib/REPO_ARCHITECTURE.md)
+
+### Template 模块 (`lib::template`)
+
+提供模板渲染功能，支持分支命名模板、PR body 模板、Commit 消息模板等。使用 Handlebars 模板引擎，支持从全局配置和项目级配置加载模板。
+- 详细架构请参考 [TEMPLATE_ARCHITECTURE.md](./lib/TEMPLATE_ARCHITECTURE.md)
 
 ### Rollback 模块 (`lib::rollback`)
 

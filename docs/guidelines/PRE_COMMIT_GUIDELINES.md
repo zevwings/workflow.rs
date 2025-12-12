@@ -49,6 +49,7 @@
 - 集成测试
 - 文档测试
 - 测试数据和边界情况
+- 测试冗余检查（重复测试、过时测试、无效测试）
 
 **对应章节**：[测试用例检查](#-测试用例检查)
 
@@ -530,6 +531,83 @@ cargo test --doc              # 仅文档测试
 - [ ] 测试 fixtures（`tests/fixtures/`）是否需要更新
 - [ ] Mock 数据是否准确
 
+### 4.5 测试冗余检查
+
+**检查项**：
+- [ ] 是否存在重复的测试用例（测试相同功能或相同代码路径）
+- [ ] 是否有过时或不再需要的测试（功能已移除或重构，但测试未更新）
+- [ ] 测试是否真正有效（是否测试了正确的功能，断言是否正确）
+- [ ] 是否有测试用例测试了已不存在的代码路径（代码已删除但测试仍存在）
+- [ ] 是否有测试用例测试了已废弃的 API 或方法
+
+**检查方法**：
+1. **查找重复测试**：检查是否有多个测试用例测试相同的功能
+   ```bash
+   # 搜索测试文件，查找相似的测试用例
+   grep -r "test_" tests/ src/ | sort | uniq -d
+   ```
+
+2. **检查过时测试**：
+   - 查看测试是否引用了已删除的函数或模块
+   - 检查测试是否使用了已废弃的 API
+   - 运行 `cargo test` 查看是否有编译错误或警告
+
+3. **验证测试有效性**：
+   - 检查测试的断言是否正确（是否真正验证了功能）
+   - 检查测试是否可能因为实现变更而失效
+   - 检查测试是否测试了边界情况和错误情况
+
+**示例**：
+```rust
+// ❌ 错误：重复测试相同功能
+#[test]
+fn test_parse_jira_id_1() {
+    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123"));
+}
+
+#[test]
+fn test_parse_jira_id_2() {
+    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123")); // 重复
+}
+
+// ✅ 正确：测试不同的场景
+#[test]
+fn test_parse_jira_id_valid() {
+    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123"));
+}
+
+#[test]
+fn test_parse_jira_id_invalid() {
+    assert_eq!(parse_jira_id("invalid"), None);
+}
+
+// ❌ 错误：测试已删除的函数
+#[test]
+fn test_old_function() {
+    old_function(); // 函数已删除，测试无效
+}
+
+// ❌ 错误：测试断言不正确
+#[test]
+fn test_calculate_total() {
+    let result = calculate_total(&[1, 2, 3]);
+    assert!(result > 0); // 断言太弱，没有验证具体值
+}
+
+// ✅ 正确：测试断言明确
+#[test]
+fn test_calculate_total() {
+    let result = calculate_total(&[1, 2, 3]);
+    assert_eq!(result, 6); // 断言明确，验证具体值
+}
+```
+
+**优势**：
+- ✅ 减少测试维护成本（删除无效测试）
+- ✅ 提高测试质量（确保测试真正有效）
+- ✅ 避免测试混乱（减少重复测试）
+- ✅ 提高测试运行效率（减少不必要的测试执行时间）
+
 ---
 
 ## ✅ 代码质量检查
@@ -774,6 +852,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 - [ ] 集成测试覆盖情况
 - [ ] 文档测试结果
 - [ ] 测试数据和边界情况
+- [ ] 测试冗余检查结果（重复测试、过时测试、无效测试）
 - 问题记录和修复情况
 
 **第四步：代码质量检查**
@@ -891,6 +970,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 - [x] 集成测试覆盖情况：[描述]
 - [x] 文档测试结果：[描述]
 - [x] 测试数据和边界情况：[描述]
+- [x] 测试冗余检查结果：[描述]（重复测试、过时测试、无效测试）
 
 **问题记录**：
 - [问题描述] - [修复状态] - [修复方案]

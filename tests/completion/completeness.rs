@@ -28,6 +28,8 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "migrate",
     "pr",
     "jira",
+    "stash",
+    "repo",
 ];
 
 /// PR 子命令列表

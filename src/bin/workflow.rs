@@ -112,7 +112,7 @@ fn main() -> Result<()> {
                     input_path,
                     overwrite,
                     section,
-                    dry_run.dry_run,
+                    dry_run.is_dry_run(),
                 )?;
             }
             None => {
@@ -167,7 +167,7 @@ fn main() -> Result<()> {
         // 分支管理命令
         Some(Commands::Branch { subcommand }) => match subcommand {
             BranchSubcommand::Clean { dry_run } => {
-                clean::BranchCleanCommand::clean(dry_run.dry_run)?;
+                clean::BranchCleanCommand::clean(dry_run.is_dry_run())?;
             }
             BranchSubcommand::Ignore { subcommand } => match subcommand {
                 IgnoreSubcommand::Add { branch_name } => {
@@ -186,9 +186,9 @@ fn main() -> Result<()> {
                 dry_run,
             } => {
                 branch_create::CreateCommand::execute(
-                    jira_id.jira_id,
+                    jira_id.into_option(),
                     from_default,
-                    dry_run.dry_run,
+                    dry_run.is_dry_run(),
                 )?;
             }
             BranchSubcommand::Rename => {
@@ -234,7 +234,7 @@ fn main() -> Result<()> {
                     jira_ticket,
                     title,
                     description,
-                    dry_run.dry_run,
+                    dry_run.is_dry_run(),
                 )?;
             }
             PRCommands::Merge {
@@ -267,7 +267,11 @@ fn main() -> Result<()> {
                 no_push,
                 dry_run,
             } => {
-                rebase::PullRequestRebaseCommand::rebase(target_branch, !no_push, dry_run.dry_run)?;
+                rebase::PullRequestRebaseCommand::rebase(
+                    target_branch,
+                    !no_push,
+                    dry_run.is_dry_run(),
+                )?;
             }
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
@@ -289,7 +293,7 @@ fn main() -> Result<()> {
                 to_branch,
                 dry_run,
             } => {
-                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run.dry_run)?;
+                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run.is_dry_run())?;
             }
         },
         // Jira 操作命令
@@ -298,22 +302,22 @@ fn main() -> Result<()> {
                 jira_id,
                 output_format,
             } => {
-                InfoCommand::show(jira_id.jira_id, output_format)?;
+                InfoCommand::show(jira_id.into_option(), output_format)?;
             }
             JiraSubcommand::Related {
                 jira_id,
                 output_format,
             } => {
-                RelatedCommand::show(jira_id.jira_id, output_format)?;
+                RelatedCommand::show(jira_id.into_option(), output_format)?;
             }
             JiraSubcommand::Changelog {
                 jira_id,
                 output_format,
             } => {
-                ChangelogCommand::show(jira_id.jira_id, output_format)?;
+                ChangelogCommand::show(jira_id.into_option(), output_format)?;
             }
             JiraSubcommand::Comment { jira_id } => {
-                CommentCommand::add(jira_id.jira_id)?;
+                CommentCommand::add(jira_id.into_option())?;
             }
             JiraSubcommand::Comments {
                 jira_id,
@@ -324,7 +328,7 @@ fn main() -> Result<()> {
                 output_format,
             } => {
                 CommentsCommand::show(
-                    jira_id.jira_id,
+                    jira_id.into_option(),
                     limit,
                     offset,
                     author,
@@ -333,7 +337,7 @@ fn main() -> Result<()> {
                 )?;
             }
             JiraSubcommand::Attachments { jira_id } => {
-                AttachmentsCommand::download(jira_id.jira_id)?;
+                AttachmentsCommand::download(jira_id.into_option())?;
             }
             JiraSubcommand::Clean {
                 jira_id,
@@ -341,23 +345,23 @@ fn main() -> Result<()> {
                 dry_run,
                 list,
             } => {
-                CleanCommand::clean(jira_id.jira_id, all, dry_run.dry_run, list)?;
+                CleanCommand::clean(jira_id.into_option(), all, dry_run.is_dry_run(), list)?;
             }
             JiraSubcommand::Log { subcommand } => match subcommand {
                 LogSubcommand::Download { jira_id } => {
-                    DownloadCommand::download(jira_id.jira_id)?;
+                    DownloadCommand::download(jira_id.into_option())?;
                 }
                 LogSubcommand::Find {
                     jira_id,
                     request_id,
                 } => {
-                    FindCommand::find_request_id(jira_id.jira_id, request_id)?;
+                    FindCommand::find_request_id(jira_id.into_option(), request_id)?;
                 }
                 LogSubcommand::Search {
                     jira_id,
                     search_term,
                 } => {
-                    SearchCommand::search(jira_id.jira_id, search_term)?;
+                    SearchCommand::search(jira_id.into_option(), search_term)?;
                 }
             },
         },
@@ -366,7 +370,7 @@ fn main() -> Result<()> {
             // cleanup = true 表示删除旧文件，keep_old = true 表示保留旧文件
             // 所以 cleanup = !keep_old
             let cleanup = !keep_old;
-            MigrateCommand::migrate(dry_run.dry_run, cleanup)?;
+            MigrateCommand::migrate(dry_run.is_dry_run(), cleanup)?;
         }
         // Stash 管理命令
         Some(Commands::Stash { subcommand }) => match subcommand {
