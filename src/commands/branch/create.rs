@@ -17,7 +17,7 @@ use crate::jira::helpers::validate_jira_ticket_format;
 use crate::jira::Jira;
 use crate::pr::llm::CreateGenerator;
 use crate::{log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// Branch create command
 pub struct CreateCommand;
@@ -78,9 +78,9 @@ impl CreateCommand {
             if let Some(base) = &base_branch {
                 // Verify that the base branch exists
                 let (exists_local, exists_remote) = GitBranch::is_branch_exists(base)
-                    .context("Failed to check if base branch exists")?;
+                    .wrap_err("Failed to check if base branch exists")?;
                 if !exists_local && !exists_remote {
-                    anyhow::bail!("[DRY RUN] Base branch '{}' does not exist", base);
+                    color_eyre::eyre::bail!("[DRY RUN] Base branch '{}' does not exist", base);
                 }
                 log_info!("[DRY RUN] Would switch to base branch: {}", base);
             }
@@ -126,7 +126,7 @@ impl CreateCommand {
             let input = InputDialog::new("Jira ticket (optional)")
                 .allow_empty(true)
                 .prompt()
-                .context("Failed to get Jira ticket")?;
+                .wrap_err("Failed to get Jira ticket")?;
             let trimmed = input.trim().to_string();
             if trimmed.is_empty() {
                 None
@@ -155,7 +155,7 @@ impl CreateCommand {
                 }
             })
             .prompt()
-            .context("Failed to get branch name")?;
+            .wrap_err("Failed to get branch name")?;
         Ok(name.trim().to_string())
     }
 
@@ -167,7 +167,7 @@ impl CreateCommand {
         let issue = Spinner::with(format!("Getting ticket info for {}...", ticket_id), || {
             Jira::get_ticket_info(ticket_id)
         })
-        .with_context(|| format!("Failed to get ticket info for {}", ticket_id))?;
+        .wrap_err_with(|| format!("Failed to get ticket info for {}", ticket_id))?;
 
         // Use LLM to generate branch name
         let exists_branches = GitBranch::get_all_branches(true).ok();
@@ -214,12 +214,12 @@ impl CreateCommand {
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(from_branch)?;
 
         if !exists_local && !exists_remote {
-            anyhow::bail!("Branch '{}' does not exist", from_branch);
+            color_eyre::eyre::bail!("Branch '{}' does not exist", from_branch);
         }
 
         // Check if there are uncommitted changes and stash if needed
         let has_uncommitted = GitCommit::has_commit()
-            .context("Failed to check uncommitted changes before switching branch")?;
+            .wrap_err("Failed to check uncommitted changes before switching branch")?;
         let has_stashed = if has_uncommitted {
             log_info!("Stashing uncommitted changes before switching branch...");
             GitStash::stash_push(Some(&format!(
@@ -234,7 +234,7 @@ impl CreateCommand {
         // Switch to base branch
         log_info!("Switching to branch '{}'...", from_branch);
         if let Err(e) = GitBranch::checkout_branch(from_branch)
-            .with_context(|| format!("Failed to checkout branch: {}", from_branch))
+            .wrap_err_with(|| format!("Failed to checkout branch: {}", from_branch))
         {
             // If checkout fails, try to restore stash
             if has_stashed {
@@ -269,7 +269,7 @@ impl CreateCommand {
 
         // Check if remote branch exists
         let has_remote = GitBranch::has_remote_branch(&current_branch)
-            .context("Failed to check if remote branch exists")?;
+            .wrap_err("Failed to check if remote branch exists")?;
 
         if !has_remote {
             log_info!("No remote branch for '{}', skipping pull", current_branch);
@@ -281,7 +281,7 @@ impl CreateCommand {
             ConfirmDialog::new(format!("Pull latest changes from '{}'?", current_branch))
                 .with_default(true)
                 .prompt()
-                .context("Failed to confirm pull")?;
+                .wrap_err("Failed to confirm pull")?;
 
         if !should_pull {
             log_info!("Skipping pull, using current branch state");
@@ -309,7 +309,7 @@ impl CreateCommand {
     fn pull_with_stash(branch_name: &str, stash_message: &str) -> Result<()> {
         // Check if there are uncommitted changes and stash if needed
         let has_uncommitted = GitCommit::has_commit()
-            .context("Failed to check uncommitted changes before pulling")?;
+            .wrap_err("Failed to check uncommitted changes before pulling")?;
         let has_stashed = if has_uncommitted {
             log_info!("Stashing uncommitted changes before pulling latest changes...");
             GitStash::stash_push(Some(stash_message))?;
@@ -321,7 +321,7 @@ impl CreateCommand {
         // Pull latest changes
         log_info!("Pulling latest changes from '{}'...", branch_name);
         if let Err(e) = GitBranch::pull(branch_name)
-            .with_context(|| format!("Failed to pull latest changes from {}", branch_name))
+            .wrap_err_with(|| format!("Failed to pull latest changes from {}", branch_name))
         {
             // If pull fails, try to restore stash
             if has_stashed {

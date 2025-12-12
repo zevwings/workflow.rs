@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use dialoguer::Confirm;
 
 /// 确认对话框
@@ -126,12 +126,11 @@ impl ConfirmDialog {
             confirm = confirm.default(default);
         }
 
-        let confirmed =
-            confirm.interact().map_err(|e| anyhow::anyhow!("Confirmation error: {}", e))?;
+        let confirmed = confirm.interact().map_err(|e| eyre!("Confirmation error: {}", e))?;
 
         // 如果用户取消且设置了取消消息，返回错误
         if !confirmed && self.cancel_message.is_some() {
-            anyhow::bail!("{}", self.cancel_message.unwrap());
+            color_eyre::eyre::bail!("{}", self.cancel_message.unwrap());
         }
 
         Ok(confirmed)

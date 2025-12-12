@@ -2,7 +2,7 @@
 //!
 //! 本模块提供了所有用户相关的 REST API 方法。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde_json::Value;
 
 use super::helpers::{build_jira_url, jira_auth_config};
@@ -25,6 +25,6 @@ impl JiraUserApi {
         let auth = jira_auth_config()?;
         let config = RequestConfig::<Value, Value>::new().auth(auth);
         let response = client.get(&url, config)?;
-        response.ensure_success()?.as_json().context("Failed to get current Jira user")
+        response.ensure_success()?.as_json().wrap_err("Failed to get current Jira user")
     }
 }

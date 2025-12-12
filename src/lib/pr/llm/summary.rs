@@ -2,7 +2,10 @@
 //!
 //! 用于生成详细的 PR 总结文档并保存到文件。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use serde_json::Value;
 
 use crate::base::llm::{LLMClient, LLMRequestParams};
@@ -62,12 +65,12 @@ impl SummaryGenerator {
         };
 
         // 调用 LLM API
-        let response = client.call(&params).with_context(|| {
+        let response = client.call(&params).wrap_err_with(|| {
             format!("Failed to call LLM API for summarizing PR: '{}'", pr_title)
         })?;
 
         // 解析响应
-        Self::parse_summary_response(response).with_context(|| {
+        Self::parse_summary_response(response).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response for PR summary: '{}'",
                 pr_title
@@ -134,7 +137,7 @@ impl SummaryGenerator {
         let json_str = extract_json_from_markdown(response);
 
         // 解析 JSON
-        let json: Value = serde_json::from_str(&json_str).with_context(|| {
+        let json: Value = serde_json::from_str(&json_str).wrap_err_with(|| {
             format!(
                 "Failed to parse LLM response as JSON. Raw response: {}",
                 json_str
@@ -144,13 +147,13 @@ impl SummaryGenerator {
         let summary = json
             .get("summary")
             .and_then(|v| v.as_str())
-            .context("Missing 'summary' field in LLM response")?
+            .wrap_err("Missing 'summary' field in LLM response")?
             .to_string();
 
         let filename = json
             .get("filename")
             .and_then(|v| v.as_str())
-            .context("Missing 'filename' field in LLM response")?
+            .wrap_err("Missing 'filename' field in LLM response")?
             .to_string();
 
         // 清理文件名，确保只包含有效的文件名字符
@@ -166,7 +169,7 @@ impl SummaryGenerator {
         let cleaned_filename = cleaned_filename.trim_end_matches(".md").to_string();
 
         if cleaned_filename.is_empty() {
-            anyhow::bail!("Generated filename is empty after cleaning");
+            color_eyre::eyre::bail!("Generated filename is empty after cleaning");
         }
 
         Ok(PullRequestSummary {

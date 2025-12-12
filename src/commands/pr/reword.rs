@@ -2,7 +2,7 @@
 //!
 //! 基于 PR diff 自动生成并更新 PR 标题和描述。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::ConfirmDialog;
 use crate::base::indicator::Spinner;
@@ -41,7 +41,7 @@ impl PullRequestRewordCommand {
     ) -> Result<()> {
         // 检查是否在 Git 仓库中
         if !GitRepo::is_git_repo() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Not in a Git repository. Please run this command in a Git repository directory."
             );
         }
@@ -56,12 +56,12 @@ impl PullRequestRewordCommand {
         let current_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {
             provider.get_pull_request_title(&pr_id)
         })
-        .context("Failed to get PR title")?;
+        .wrap_err("Failed to get PR title")?;
 
         let current_body = Spinner::with("Fetching PR description...", || {
             provider.get_pull_request_body(&pr_id)
         })
-        .context("Failed to get PR body")?;
+        .wrap_err("Failed to get PR body")?;
 
         log_info!("Current PR #{}:", pr_id);
         log_info!("  Title:       {}", current_title);
@@ -77,11 +77,11 @@ impl PullRequestRewordCommand {
         let pr_diff = Spinner::with("Fetching PR diff...", || {
             provider.get_pull_request_diff(&pr_id)
         })
-        .context("Failed to get PR diff")?;
+        .wrap_err("Failed to get PR diff")?;
 
         if pr_diff.trim().is_empty() {
             log_warning!("PR diff is empty. Cannot generate new title and description.");
-            anyhow::bail!("PR diff is empty. Please ensure the PR has changes.");
+            color_eyre::eyre::bail!("PR diff is empty. Please ensure the PR has changes.");
         }
 
         // 显示 PR diff 信息（用于调试）
@@ -140,7 +140,7 @@ impl PullRequestRewordCommand {
         let reword_result = Spinner::with("Generating title and description with LLM...", || {
             RewordGenerator::reword_from_diff(&pr_diff, Some(&current_title))
         })
-        .context("Failed to generate PR title and description")?;
+        .wrap_err("Failed to generate PR title and description")?;
 
         log_info!("Generated from PR diff:");
         log_info!("  Title:       {}", reword_result.pr_title);
@@ -234,7 +234,7 @@ impl PullRequestRewordCommand {
         Spinner::with("Updating PR...", || {
             provider.update_pull_request(&pr_id, new_title, new_body)
         })
-        .context("Failed to update PR")?;
+        .wrap_err("Failed to update PR")?;
 
         log_break!();
         log_success!("PR #{} updated successfully!", pr_id);
@@ -291,6 +291,6 @@ impl PullRequestRewordCommand {
             None, // dependency 暂时为空
             jira_info.as_ref(),
         )
-        .context("Failed to generate PR body")
+        .wrap_err("Failed to generate PR body")
     }
 }

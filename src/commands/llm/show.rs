@@ -5,7 +5,7 @@ use crate::base::settings::settings::Settings;
 use crate::base::settings::table::LLMConfigRow;
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// LLM 配置查看命令
 pub struct LLMShowCommand;

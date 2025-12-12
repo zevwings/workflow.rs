@@ -5,8 +5,11 @@
 //! - 安装路径（二进制文件和补全脚本的安装路径和名称）
 //! - Shell 相关路径（shell 配置文件和 completion 目录）
 
-use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -35,7 +38,7 @@ impl Paths {
     ///
     /// 如果无法确定主目录，返回错误信息。
     pub(crate) fn home_dir() -> Result<PathBuf> {
-        dirs::home_dir().context("Cannot determine home directory")
+        dirs::home_dir().wrap_err("Cannot determine home directory")
     }
 
     /// 尝试获取 iCloud 基础目录（仅 macOS）
@@ -106,13 +109,13 @@ impl Paths {
         let workflow_dir = home.join(".workflow");
 
         // 确保目录存在
-        fs::create_dir_all(&workflow_dir).context("Failed to create local .workflow directory")?;
+        fs::create_dir_all(&workflow_dir).wrap_err("Failed to create local .workflow directory")?;
 
         // 设置目录权限为 700（仅用户可访问）
         #[cfg(unix)]
         {
             fs::set_permissions(&workflow_dir, fs::Permissions::from_mode(0o700))
-                .context("Failed to set workflow directory permissions")?;
+                .wrap_err("Failed to set workflow directory permissions")?;
         }
 
         Ok(workflow_dir)
@@ -210,7 +213,7 @@ impl Paths {
 
                     // 展开环境变量
                     if !var_name.is_empty() {
-                        let var_value = env::var(&var_name).with_context(|| {
+                        let var_value = env::var(&var_name).wrap_err_with(|| {
                             format!("Environment variable not set: {}", var_name)
                         })?;
                         result.push_str(&var_value);
@@ -251,13 +254,13 @@ impl Paths {
         let config_dir = Self::config_base_dir()?.join("config");
 
         // 确保配置目录存在
-        fs::create_dir_all(&config_dir).context("Failed to create config directory")?;
+        fs::create_dir_all(&config_dir).wrap_err("Failed to create config directory")?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&config_dir, fs::Permissions::from_mode(0o700))
-                .context("Failed to set config directory permissions")?;
+                .wrap_err("Failed to set config directory permissions")?;
         }
 
         Ok(config_dir)
@@ -309,7 +312,7 @@ impl Paths {
     /// 如果无法获取当前工作目录，返回相应的错误信息。
     pub fn project_config() -> Result<PathBuf> {
         Ok(std::env::current_dir()
-            .context("Failed to get current directory")?
+            .wrap_err("Failed to get current directory")?
             .join(".workflow")
             .join("config.toml"))
     }
@@ -357,13 +360,13 @@ impl Paths {
 
         // 确保目录存在
         fs::create_dir_all(&history_dir)
-            .context("Failed to create .workflow/work-history directory")?;
+            .wrap_err("Failed to create .workflow/work-history directory")?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&history_dir, fs::Permissions::from_mode(0o700))
-                .context("Failed to set work-history directory permissions")?;
+                .wrap_err("Failed to set work-history directory permissions")?;
         }
 
         Ok(history_dir)
@@ -394,13 +397,13 @@ impl Paths {
         let logs_dir = Self::local_base_dir()?.join("logs");
 
         // 确保目录存在
-        fs::create_dir_all(&logs_dir).context("Failed to create .workflow/logs directory")?;
+        fs::create_dir_all(&logs_dir).wrap_err("Failed to create .workflow/logs directory")?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
         {
             fs::set_permissions(&logs_dir, fs::Permissions::from_mode(0o700))
-                .context("Failed to set logs directory permissions")?;
+                .wrap_err("Failed to set logs directory permissions")?;
         }
 
         Ok(logs_dir)
@@ -537,7 +540,7 @@ impl Paths {
 
         // 确保目录存在
         fs::create_dir_all(&completion_dir)
-            .context("Failed to create .workflow/completions directory")?;
+            .wrap_err("Failed to create .workflow/completions directory")?;
 
         Ok(completion_dir)
     }
@@ -709,7 +712,7 @@ impl Paths {
             #[cfg(not(target_os = "windows"))]
             Shell::Elvish => home.join(".elvish/rc.elv"),
 
-            _ => anyhow::bail!("Unsupported shell type"),
+            _ => color_eyre::eyre::bail!("Unsupported shell type"),
         };
 
         Ok(config_file)

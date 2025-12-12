@@ -7,7 +7,7 @@ use crate::template::{
     ChangeTypeItem, CommitTemplateVars, CommitTemplates, PullRequestTemplateVars,
     PullRequestsTemplates, TemplateConfig, TemplateEngine,
 };
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use super::super::platform::TYPES_OF_CHANGES;
 
@@ -61,7 +61,7 @@ pub fn generate_pull_request_body(
     let engine = TemplateEngine::new();
     engine
         .render_string(&template_str, &vars)
-        .context("Failed to render PR body template")
+        .wrap_err("Failed to render PR body template")
 }
 
 /// 生成 commit 标题（使用模板系统）
@@ -108,5 +108,5 @@ pub fn generate_commit_title(
     let engine = TemplateEngine::new();
     engine
         .render_string(&template_str, &vars)
-        .context("Failed to render commit title template")
+        .wrap_err("Failed to render commit title template")
 }

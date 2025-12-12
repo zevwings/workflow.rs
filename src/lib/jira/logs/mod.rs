@@ -1,7 +1,7 @@
 //! Jira 日志处理结构体
 //! 提供从 Jira 下载的日志文件的下载、搜索、查找和处理功能
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
 
 use crate::base::settings::defaults::default_download_base_dir;
@@ -54,7 +54,7 @@ impl JiraLogs {
         let base_dir_str =
             settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
         let base_dir = Paths::expand(&base_dir_str)
-            .with_context(|| format!("Failed to expand path: {}", base_dir_str))?;
+            .wrap_err_with(|| format!("Failed to expand path: {}", base_dir_str))?;
         let output_folder_name = settings.log.output_folder_name.clone();
 
         Ok(Self {

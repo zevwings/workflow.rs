@@ -4,7 +4,7 @@
 //! - 基础目录获取（展开配置路径）
 //! - Ticket 基础目录构建
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::path::PathBuf;
 
 use crate::base::settings::defaults::default_download_base_dir;
@@ -33,7 +33,7 @@ impl AttachmentPaths {
         let base_dir_str =
             settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
         Paths::expand(&base_dir_str)
-            .with_context(|| format!("Failed to expand path: {}", base_dir_str))
+            .wrap_err_with(|| format!("Failed to expand path: {}", base_dir_str))
     }
 
     /// 获取 ticket 基础目录

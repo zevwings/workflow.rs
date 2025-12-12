@@ -2,7 +2,10 @@
 //!
 //! 本模块提供了所有 Issue/Ticket 相关的 REST API 方法。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use reqwest::blocking::multipart;
 use serde::Serialize;
 use serde_json::Value;
@@ -75,7 +78,7 @@ impl JiraIssueApi {
         response
             .ensure_success()?
             .as_json()
-            .context(format!("Failed to get issue: {}", ticket))
+            .wrap_err(format!("Failed to get issue: {}", ticket))
     }
 
     /// 获取 issue 的附件列表
@@ -110,12 +113,12 @@ impl JiraIssueApi {
         let data: Value = response
             .ensure_success()?
             .as_json()
-            .context(format!("Failed to get transitions for ticket: {}", ticket))?;
+            .wrap_err(format!("Failed to get transitions for ticket: {}", ticket))?;
 
         let transitions = data
             .get("transitions")
             .and_then(|t| t.as_array())
-            .context("Invalid transitions JSON structure")?;
+            .wrap_err("Invalid transitions JSON structure")?;
 
         let result: Vec<JiraTransition> = transitions
             .iter()
@@ -152,7 +155,7 @@ impl JiraIssueApi {
 
         let config = RequestConfig::<TransitionRequest, Value>::new().body(&body).auth(auth);
         let response = client.post(&url, config)?;
-        response.ensure_success().context(format!(
+        response.ensure_success().wrap_err(format!(
             "Failed to transition issue {} to transition {}",
             ticket, transition_id
         ))?;
@@ -180,7 +183,7 @@ impl JiraIssueApi {
 
         let config = RequestConfig::<AssigneeRequest, Value>::new().body(&body).auth(auth);
         let response = client.put(&url, config)?;
-        response.ensure_success().context(format!(
+        response.ensure_success().wrap_err(format!(
             "Failed to assign issue {} to {}",
             ticket, account_id
         ))?;
@@ -210,7 +213,7 @@ impl JiraIssueApi {
         let response = client.post(&url, config)?;
         response
             .ensure_success()
-            .context(format!("Failed to add comment to issue {}", ticket))?;
+            .wrap_err(format!("Failed to add comment to issue {}", ticket))?;
         Ok(())
     }
 
@@ -237,14 +240,14 @@ impl JiraIssueApi {
         let file_name = path
             .file_name()
             .and_then(|n| n.to_str())
-            .with_context(|| format!("Invalid file name: {}", file_path))?;
+            .wrap_err_with(|| format!("Invalid file name: {}", file_path))?;
 
         let mut file =
-            File::open(path).with_context(|| format!("Failed to open file: {}", file_path))?;
+            File::open(path).wrap_err_with(|| format!("Failed to open file: {}", file_path))?;
 
         let mut file_data = Vec::new();
         file.read_to_end(&mut file_data)
-            .with_context(|| format!("Failed to read file: {}", file_path))?;
+            .wrap_err_with(|| format!("Failed to read file: {}", file_path))?;
 
         // 创建 multipart form
         // 根据文件扩展名确定 MIME 类型
@@ -252,14 +255,14 @@ impl JiraIssueApi {
         let part = multipart::Part::bytes(file_data)
             .file_name(file_name.to_string())
             .mime_str(&mime_type)
-            .with_context(|| format!("Failed to create multipart part for: {}", file_path))?;
+            .wrap_err_with(|| format!("Failed to create multipart part for: {}", file_path))?;
 
         let form = multipart::Form::new().part("file", part);
 
         // 创建 reqwest 客户端并发送请求
         let client = reqwest::blocking::Client::builder()
             .build()
-            .context("Failed to create HTTP client")?;
+            .wrap_err("Failed to create HTTP client")?;
 
         let response = client
             .post(&url)
@@ -267,12 +270,12 @@ impl JiraIssueApi {
             .header("X-Atlassian-Token", "no-check")
             .multipart(form)
             .send()
-            .with_context(|| format!("Failed to upload attachment to issue {}", ticket))?;
+            .wrap_err_with(|| format!("Failed to upload attachment to issue {}", ticket))?;
 
         if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Failed to upload attachment: HTTP {} - {}",
                 status,
                 error_text
@@ -281,7 +284,7 @@ impl JiraIssueApi {
 
         // 解析响应
         let attachments: Vec<JiraAttachment> =
-            response.json().with_context(|| "Failed to parse attachment response")?;
+            response.json().wrap_err_with(|| "Failed to parse attachment response")?;
 
         Ok(attachments)
     }
@@ -334,7 +337,7 @@ impl JiraIssueApi {
     pub fn get_issue_changelog(ticket: &str) -> Result<JiraChangelog> {
         // 先验证 ticket 是否存在
         let _issue = Self::get_issue(ticket)
-            .with_context(|| format!("Ticket {} does not exist or is not accessible", ticket))?;
+            .wrap_err_with(|| format!("Ticket {} does not exist or is not accessible", ticket))?;
 
         // 使用专门的 changelog 端点
         // API v2: /rest/api/2/issue/{issueIdOrKey}/changelog
@@ -345,9 +348,9 @@ impl JiraIssueApi {
         let response = client.get(&url, config)?;
         let data: Value = response
             .ensure_success()
-            .with_context(|| format!("Failed to get changelog for ticket: {}. The ticket may not exist or you may not have permission to view it.", ticket))?
+            .wrap_err_with(|| format!("Failed to get changelog for ticket: {}. The ticket may not exist or you may not have permission to view it.", ticket))?
             .as_json()
-            .context(format!("Failed to parse changelog response for ticket: {}", ticket))?;
+            .wrap_err(format!("Failed to parse changelog response for ticket: {}", ticket))?;
 
         // 提取 changelog 数据
         // API v2 返回格式: { "id": "...", "histories": [...] }

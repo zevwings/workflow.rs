@@ -86,6 +86,21 @@ fn test_stash_pop_command_structure() {
     }
 }
 
+// ==================== Push 命令测试 ====================
+
+#[test]
+fn test_stash_push_command_structure() {
+    // 测试 Push 命令结构
+    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).unwrap();
+
+    match cli.command {
+        StashSubcommand::Push => {
+            assert!(true, "Push command parsed successfully");
+        }
+        _ => panic!("Expected Push command"),
+    }
+}
+
 // ==================== 命令解析完整性测试 ====================
 
 #[test]
@@ -107,6 +122,10 @@ fn test_stash_command_parsing_all_subcommands() {
     // Pop
     let cli = TestStashCli::try_parse_from(&["test-stash", "pop"]).unwrap();
     assert!(matches!(cli.command, StashSubcommand::Pop));
+
+    // Push
+    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).unwrap();
+    assert!(matches!(cli.command, StashSubcommand::Push));
 }
 
 #[test]

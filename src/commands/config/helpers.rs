@@ -6,7 +6,10 @@
 use crate::base::dialog::SelectDialog;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::settings::Settings;
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{eyre, ContextCompat, WrapErr},
+    Result,
+};
 use std::path::Path;
 
 /// 交互式选择语言
@@ -51,13 +54,13 @@ pub fn select_language(current_language: Option<&str>) -> Result<String> {
     let selected_display_name = SelectDialog::new(&prompt, language_display_names_vec)
         .with_default(current_idx)
         .prompt()
-        .context("Failed to select language")?;
+        .wrap_err("Failed to select language")?;
 
     // 查找选中的语言代码
     let selected_idx = language_display_names
         .iter()
         .position(|name| name == &selected_display_name)
-        .context("Selected language not found")?;
+        .wrap_err("Selected language not found")?;
 
     // 返回选中的语言代码
     Ok(SUPPORTED_LANGUAGES[selected_idx].code.to_string())
@@ -93,23 +96,23 @@ pub fn parse_config(content: &str, path: &Path) -> Result<Settings> {
     let extension = path.extension().and_then(|s| s.to_str()).unwrap_or("toml").to_lowercase();
 
     match extension.as_str() {
-        "toml" => toml::from_str::<Settings>(content).context("Failed to parse TOML config file"),
+        "toml" => toml::from_str::<Settings>(content).wrap_err("Failed to parse TOML config file"),
         "json" => {
-            serde_json::from_str::<Settings>(content).context("Failed to parse JSON config file")
+            serde_json::from_str::<Settings>(content).wrap_err("Failed to parse JSON config file")
         }
         "yaml" | "yml" => {
-            serde_yaml::from_str::<Settings>(content).context("Failed to parse YAML config file")
+            serde_yaml::from_str::<Settings>(content).wrap_err("Failed to parse YAML config file")
         }
         _ => {
             // 尝试自动检测格式
             if content.trim_start().starts_with('{') {
                 serde_json::from_str::<Settings>(content)
-                    .context("Failed to parse JSON config file")
+                    .wrap_err("Failed to parse JSON config file")
             } else if content.trim_start().starts_with("---") || content.contains(':') {
                 serde_yaml::from_str::<Settings>(content)
-                    .context("Failed to parse YAML config file")
+                    .wrap_err("Failed to parse YAML config file")
             } else {
-                toml::from_str::<Settings>(content).context("Failed to parse TOML config file")
+                toml::from_str::<Settings>(content).wrap_err("Failed to parse TOML config file")
             }
         }
     }
@@ -155,7 +158,7 @@ pub fn extract_section(settings: &Settings, section: &str) -> Result<Settings> {
             extracted.llm = settings.llm.clone();
         }
         _ => {
-            return Err(anyhow::anyhow!(
+            return Err(eyre!(
                 "Unknown section: '{}'. Valid sections: jira, github, log, llm",
                 section
             ));

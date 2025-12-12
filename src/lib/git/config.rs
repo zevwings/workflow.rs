@@ -4,7 +4,7 @@
 //! - 设置全局 user.email 和 user.name
 //! - 读取 Git 配置
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use super::helpers::{cmd_read, cmd_run};
 use crate::trace_info;
@@ -43,11 +43,11 @@ impl GitConfig {
 
         // 设置全局 user.email
         cmd_run(&["config", "--global", "user.email", email])
-            .context("Failed to set git global user.email")?;
+            .wrap_err("Failed to set git global user.email")?;
 
         // 设置全局 user.name
         cmd_run(&["config", "--global", "user.name", name])
-            .context("Failed to set git global user.name")?;
+            .wrap_err("Failed to set git global user.name")?;
 
         trace_info!("Git global config updated successfully");
 

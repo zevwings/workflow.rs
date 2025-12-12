@@ -2,7 +2,7 @@
 //!
 //! 管理所有可用的迁移版本，检测待迁移的版本。
 
-use anyhow::Result;
+use color_eyre::Result;
 
 use crate::commands::migrate::history;
 

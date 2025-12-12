@@ -3,8 +3,8 @@
 
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::{ConfirmDialog, MultiSelectDialog};
 use crate::base::settings::paths::Paths;
@@ -190,7 +190,7 @@ impl CompletionCommand {
             options_vec,
         )
         .prompt()
-        .context("Failed to get user selection")?;
+        .wrap_err("Failed to get user selection")?;
 
         let selections: Vec<usize> = options
             .iter()
@@ -278,7 +278,7 @@ impl CompletionCommand {
         log_info!("Generating shell completion scripts...");
 
         // 1. 自动检测当前 shell 类型（使用 Detect::shell()）
-        let shell = Detect::shell().context("Failed to detect current shell type")?;
+        let shell = Detect::shell().wrap_err("Failed to detect current shell type")?;
         log_debug!("Detected shell type: {}", shell);
 
         let completion_dir = Paths::completion_dir()?;

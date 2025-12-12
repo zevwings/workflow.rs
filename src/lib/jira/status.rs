@@ -7,7 +7,7 @@
 
 use std::collections::HashMap;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
@@ -102,7 +102,7 @@ impl JiraStatus {
             if proj.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
                 proj
             } else {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Invalid Jira project name format: '{}'. Jira project names should contain only ASCII letters, numbers, and underscores (e.g., 'PROJ', 'PROJ-123').",
                     proj
                 );
@@ -110,7 +110,7 @@ impl JiraStatus {
         } else if jira_ticket_or_project.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
             jira_ticket_or_project
         } else {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Invalid Jira ticket or project name: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name). The input contains invalid characters (like '/', Chinese characters, etc.).",
                 jira_ticket_or_project
             );
@@ -118,28 +118,28 @@ impl JiraStatus {
 
         trace_debug!("Fetching status list for project: {}", project);
         let statuses = JiraProjectApi::get_project_statuses(project)
-            .with_context(|| {
+            .wrap_err_with(|| {
                 format!(
                     "Failed to fetch project statuses for '{}'. Please check:\n  - The project name is correct\n  - The project exists in your Jira instance\n  - You have access to this project\n  - The project name format is correct (e.g., 'PROJ', not 'zw/修改打包脚本问题')",
                     project
                 )
             })
-            .context("Failed to get project statuses")?;
+            .wrap_err("Failed to get project statuses")?;
 
         if statuses.is_empty() {
-            anyhow::bail!("No statuses found for project: {}", project);
+            color_eyre::eyre::bail!("No statuses found for project: {}", project);
         }
 
         let statuses_vec: Vec<String> = statuses.to_vec();
         let created_pull_request_status =
             SelectDialog::new("Select status for PR created", statuses_vec.clone())
                 .prompt()
-                .context("Failed to select status")?;
+                .wrap_err("Failed to select status")?;
 
         let merged_pull_request_status =
             SelectDialog::new("Select status for PR merged", statuses_vec)
                 .prompt()
-                .context("Failed to select status")?;
+                .wrap_err("Failed to select status")?;
 
         let jira_config = JiraStatusConfig {
             project: project.to_string(),
@@ -148,7 +148,7 @@ impl JiraStatus {
         };
 
         Self::write_status_config(&jira_config)
-            .context("Failed to write Jira status configuration")?;
+            .wrap_err("Failed to write Jira status configuration")?;
 
         trace_info!("Jira status configuration saved");
         trace_debug!("  PR created status: {}", created_pull_request_status);
@@ -179,13 +179,13 @@ impl JiraStatus {
     pub fn read_pull_request_created_status(jira_ticket: &str) -> Result<Option<String>> {
         // 先验证 ticket 格式
         super::helpers::validate_jira_ticket_format(jira_ticket)
-            .context("Invalid Jira ticket format")?;
+            .wrap_err("Invalid Jira ticket format")?;
 
         let project = extract_jira_project(jira_ticket)
-            .ok_or_else(|| anyhow::anyhow!("Invalid Jira ticket format: cannot extract project"))?;
+            .ok_or_else(|| eyre!("Invalid Jira ticket format: cannot extract project"))?;
 
         let config = Self::read_status_config(project)
-            .context("Failed to read Jira status configuration")?;
+            .wrap_err("Failed to read Jira status configuration")?;
 
         Ok(config.created_pull_request_status)
     }
@@ -208,13 +208,13 @@ impl JiraStatus {
     pub fn read_pull_request_merged_status(jira_ticket: &str) -> Result<Option<String>> {
         // 先验证 ticket 格式
         super::helpers::validate_jira_ticket_format(jira_ticket)
-            .context("Invalid Jira ticket format")?;
+            .wrap_err("Invalid Jira ticket format")?;
 
         let project = extract_jira_project(jira_ticket)
-            .ok_or_else(|| anyhow::anyhow!("Invalid Jira ticket format: cannot extract project"))?;
+            .ok_or_else(|| eyre!("Invalid Jira ticket format: cannot extract project"))?;
 
         let config = Self::read_status_config(project)
-            .context("Failed to read Jira status configuration")?;
+            .wrap_err("Failed to read Jira status configuration")?;
 
         Ok(config.merged_pull_request_status)
     }

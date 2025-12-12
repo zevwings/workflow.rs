@@ -7,7 +7,10 @@
 //! - 添加评论到 ticket
 //! - 获取 ticket 的附件列表
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use regex::Regex;
 
 use super::api::issue::JiraIssueApi;
@@ -41,7 +44,7 @@ impl JiraTicket {
     /// 返回 `JiraIssue` 结构体，包含 ticket 的所有信息。
     pub fn get_info(ticket: &str) -> Result<JiraIssue> {
         JiraIssueApi::get_issue(ticket)
-            .context(format!("Failed to get ticket info for: {}", ticket))
+            .wrap_err(format!("Failed to get ticket info for: {}", ticket))
     }
 
     /// 从 URL 中提取附件 ID
@@ -129,7 +132,7 @@ impl JiraTicket {
     /// 返回可用的 transitions 列表，每个 transition 包含 ID 和名称。
     fn get_transitions(ticket: &str) -> Result<Vec<JiraTransition>> {
         JiraIssueApi::get_issue_transitions(ticket)
-            .context(format!("Failed to get transitions for ticket: {}", ticket))
+            .wrap_err(format!("Failed to get transitions for ticket: {}", ticket))
     }
 
     /// 更新 ticket 状态
@@ -146,16 +149,15 @@ impl JiraTicket {
     /// 如果指定的状态不在可用 transitions 列表中，返回错误。
     pub fn transition(ticket: &str, status: &str) -> Result<()> {
         let transitions = Self::get_transitions(ticket)?;
-        let transition =
-            transitions
-                .iter()
-                .find(|t| t.name.eq_ignore_ascii_case(status))
-                .context(format!(
-                    "Status '{}' not found in available transitions for ticket {}",
-                    status, ticket
-                ))?;
+        let transition = transitions
+            .iter()
+            .find(|t| t.name.eq_ignore_ascii_case(status))
+            .wrap_err(format!(
+                "Status '{}' not found in available transitions for ticket {}",
+                status, ticket
+            ))?;
 
-        JiraIssueApi::transition_issue(ticket, &transition.id).context(format!(
+        JiraIssueApi::transition_issue(ticket, &transition.id).wrap_err(format!(
             "Failed to move ticket {} to status {}",
             ticket, status
         ))
@@ -178,7 +180,7 @@ impl JiraTicket {
             }
         };
 
-        JiraIssueApi::assign_issue(ticket, &assignee_account_id).context(format!(
+        JiraIssueApi::assign_issue(ticket, &assignee_account_id).wrap_err(format!(
             "Failed to assign ticket {} to {}",
             ticket, assignee_account_id
         ))
@@ -194,7 +196,7 @@ impl JiraTicket {
     /// * `comment` - 评论内容
     pub fn add_comment(ticket: &str, comment: &str) -> Result<()> {
         JiraIssueApi::add_issue_comment(ticket, comment)
-            .context(format!("Failed to add comment to ticket {}", ticket))
+            .wrap_err(format!("Failed to add comment to ticket {}", ticket))
     }
 
     /// 上传附件到 ticket
@@ -211,6 +213,6 @@ impl JiraTicket {
     /// 成功时返回上传的附件信息列表。
     pub fn upload_attachment(ticket: &str, file_path: &str) -> Result<Vec<JiraAttachment>> {
         JiraIssueApi::upload_attachment(ticket, file_path)
-            .context(format!("Failed to upload attachment to ticket {}", ticket))
+            .wrap_err(format!("Failed to upload attachment to ticket {}", ticket))
     }
 }

@@ -4,7 +4,7 @@ use crate::base::settings::settings::Settings;
 use crate::base::LogLevel;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// 日志级别管理命令
 pub struct LogCommand;
@@ -31,9 +31,8 @@ impl LogCommand {
         let selected_level_str = SelectDialog::new(&prompt, log_levels_vec)
             .with_default(current_idx)
             .prompt()
-            .context("Failed to select log level")?;
-        let selected_level =
-            selected_level_str.parse::<LogLevel>().map_err(|e| anyhow::anyhow!("{}", e))?;
+            .wrap_err("Failed to select log level")?;
+        let selected_level = selected_level_str.parse::<LogLevel>().map_err(|e| eyre!("{}", e))?;
 
         // 设置日志级别（内存中）
         LogLevel::set_level(selected_level);
@@ -125,7 +124,7 @@ impl LogCommand {
             SelectDialog::new("Select trace console output mode", options.clone())
                 .with_default(current_idx)
                 .prompt()
-                .context("Failed to select trace console option")?;
+                .wrap_err("Failed to select trace console option")?;
 
         let selected_idx = options.iter().position(|&opt| opt == selected_option).unwrap_or(1);
 

@@ -1,6 +1,6 @@
 //! 并发任务执行器实现
 
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 
@@ -24,7 +24,7 @@ pub enum TaskResult<T, E> {
 ///
 /// ```rust
 /// use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
-/// use anyhow::Result;
+/// use color_eyre::Result;
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let executor = ConcurrentExecutor::new(5); // 最大并发数 5
@@ -147,7 +147,7 @@ impl ConcurrentExecutor {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().map_err(|e| anyhow::anyhow!("Thread join error: {:?}", e))?;
+            handle.join().map_err(|e| eyre!("Thread join error: {:?}", e))?;
         }
 
         Ok(results)
@@ -275,7 +275,7 @@ impl ConcurrentExecutor {
 
         // 等待所有线程完成
         for handle in handles {
-            handle.join().map_err(|e| anyhow::anyhow!("Thread join error: {:?}", e))?;
+            handle.join().map_err(|e| eyre!("Thread join error: {:?}", e))?;
         }
 
         Ok(results)

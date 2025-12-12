@@ -5,7 +5,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::git::GitRepo;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 use std::fs;
@@ -51,10 +51,10 @@ impl RepoConfig {
         use std::fs;
         use toml::Value;
 
-        let content = fs::read_to_string(path).context("Failed to read configuration file")?;
+        let content = fs::read_to_string(path).wrap_err("Failed to read configuration file")?;
 
         let value: Value =
-            toml::from_str(&content).context("Failed to parse configuration file")?;
+            toml::from_str(&content).wrap_err("Failed to parse configuration file")?;
 
         // 检查是否有 [template.commit] 或 [branch] 节
         let has_template = value.get("template").and_then(|t| t.get("commit")).is_some();
@@ -78,16 +78,17 @@ impl RepoConfig {
     ///
     /// Returns an error if file reading or parsing fails (but not if file doesn't exist).
     pub fn load() -> Result<ProjectConfig> {
-        let path = Paths::project_config().context("Failed to get project config path")?;
+        let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
         // 如果文件不存在，返回默认配置
         if !path.exists() {
             return Ok(ProjectConfig::default());
         }
 
-        let content = fs::read_to_string(&path).context("Failed to read existing configuration")?;
+        let content =
+            fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
 
-        let value: Value = toml::from_str(&content).context("Failed to parse configuration")?;
+        let value: Value = toml::from_str(&content).wrap_err("Failed to parse configuration")?;
 
         // 解析配置
         let mut config = ProjectConfig::default();
@@ -123,7 +124,7 @@ impl RepoConfig {
         if let Some(branch_section) = value.get("branch") {
             // Try to deserialize as ProjectBranchConfig
             if let Ok(branch_config) = toml::from_str::<ProjectBranchConfig>(
-                &toml::to_string(branch_section).context("Failed to serialize branch section")?,
+                &toml::to_string(branch_section).wrap_err("Failed to serialize branch section")?,
             ) {
                 config.branch = branch_config;
             } else {
@@ -189,18 +190,18 @@ impl RepoConfig {
     ///
     /// Returns an error if directory creation, file reading, parsing, or writing fails.
     pub fn save(config: &ProjectConfig) -> Result<()> {
-        let path = Paths::project_config().context("Failed to get project config path")?;
+        let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
         // 确保目录存在
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).context("Failed to create .workflow directory")?;
+            fs::create_dir_all(parent).wrap_err("Failed to create .workflow directory")?;
         }
 
         // 读取现有配置（如果存在）
         let mut existing_value: Value = if path.exists() {
             let content =
-                fs::read_to_string(&path).context("Failed to read existing configuration")?;
-            toml::from_str(&content).context("Failed to parse existing configuration")?
+                fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
+            toml::from_str(&content).wrap_err("Failed to parse existing configuration")?
         } else {
             Value::Table(Map::new())
         };
@@ -258,9 +259,9 @@ impl RepoConfig {
                 if let Some(branch_map) = branch_table.as_table_mut() {
                     // Serialize ProjectBranchConfig to TOML
                     let branch_toml = toml::to_string(&config.branch)
-                        .context("Failed to serialize branch config")?;
+                        .wrap_err("Failed to serialize branch config")?;
                     let branch_value: Value =
-                        toml::from_str(&branch_toml).context("Failed to parse branch config")?;
+                        toml::from_str(&branch_toml).wrap_err("Failed to parse branch config")?;
 
                     if let Some(branch_value_table) = branch_value.as_table() {
                         for (key, value) in branch_value_table {
@@ -287,10 +288,10 @@ impl RepoConfig {
         }
 
         // 写入文件
-        let content =
-            toml::to_string_pretty(&existing_value).context("Failed to serialize configuration")?;
+        let content = toml::to_string_pretty(&existing_value)
+            .wrap_err("Failed to serialize configuration")?;
 
-        fs::write(&path, content).context("Failed to write configuration file")?;
+        fs::write(&path, content).wrap_err("Failed to write configuration file")?;
 
         Ok(())
     }

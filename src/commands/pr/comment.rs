@@ -1,7 +1,7 @@
 use crate::log_success;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 评论命令
 #[allow(dead_code)]
@@ -13,7 +13,7 @@ impl PullRequestCommentCommand {
     pub fn comment(pull_request_id: Option<String>, message: Vec<String>) -> Result<()> {
         // 获取评论内容（将多个单词组合成一个字符串）
         if message.is_empty() {
-            anyhow::bail!("Comment message is required. Please provide a message.");
+            color_eyre::eyre::bail!("Comment message is required. Please provide a message.");
         }
         let comment_message = message.join(" ");
 
@@ -26,7 +26,7 @@ impl PullRequestCommentCommand {
         let provider = create_provider_auto()?;
         provider
             .add_comment(&pr_id, &comment_message)
-            .context(format!("Failed to add comment to PR #{}", pr_id))?;
+            .wrap_err(format!("Failed to add comment to PR #{}", pr_id))?;
 
         log_success!("Comment added to PR #{} successfully!", pr_id);
 

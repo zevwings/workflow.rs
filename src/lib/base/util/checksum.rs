@@ -10,7 +10,7 @@ use std::fs::File;
 use std::io::Read;
 use std::path::Path;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use sha2::{Digest, Sha256};
 
 /// 校验和验证结果
@@ -55,14 +55,15 @@ impl Checksum {
     /// ```
     pub fn calculate_file_sha256(file_path: &Path) -> Result<String> {
         let mut file = File::open(file_path)
-            .with_context(|| format!("Failed to open file: {}", file_path.display()))?;
+            .wrap_err_with(|| format!("Failed to open file: {}", file_path.display()))?;
 
         let mut hasher = Sha256::new();
         let mut buffer = vec![0u8; 8192];
 
         loop {
-            let bytes_read =
-                file.read(&mut buffer).context("Failed to read file for checksum calculation")?;
+            let bytes_read = file
+                .read(&mut buffer)
+                .wrap_err("Failed to read file for checksum calculation")?;
 
             if bytes_read == 0 {
                 break;
@@ -108,7 +109,7 @@ impl Checksum {
                 // 提取 SHA256 哈希值（格式可能是 "hash  filename" 或只有 "hash"）
                 line.split_whitespace().next().map(|s| s.to_string())
             })
-            .ok_or_else(|| anyhow::anyhow!("Invalid checksum file format"))
+            .ok_or_else(|| eyre!("Invalid checksum file format"))
     }
 
     /// 验证文件完整性（通过比较哈希值）
@@ -150,7 +151,7 @@ impl Checksum {
                 ],
             })
         } else {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "File integrity verification failed!\n  Expected: {}\n  Actual: {}",
                 expected_hash,
                 actual_hash

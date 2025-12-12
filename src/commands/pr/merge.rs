@@ -6,7 +6,7 @@ use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
 use crate::{log_break, log_info, log_success, log_warning};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// PR 合并命令
 #[allow(dead_code)]

@@ -3,7 +3,7 @@ use crate::git::{GitBranch, GitCommit, GitPreCommit};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_info, log_success, log_warning};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 快速更新命令
 #[allow(dead_code)]

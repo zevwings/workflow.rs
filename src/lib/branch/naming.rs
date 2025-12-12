@@ -11,7 +11,7 @@ use crate::pr::llm::CreateGenerator;
 use crate::repo::config::RepoConfig;
 use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
 use crate::{log_info, log_success, log_warning};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// Branch naming service
 ///
@@ -351,14 +351,14 @@ impl BranchNaming {
             // If sanitization removed everything, try slugify
             let slug = Self::slugify(&text_to_sanitize);
             if slug.is_empty() {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Branch name cannot be empty after sanitization. The input '{}' contains non-English characters that were removed. Please provide an English title or a JIRA ticket ID for better branch name generation.",
                     input
                 );
             }
             // If slug is too short (less than 3 characters), it's likely incomplete
             if slug.len() < 3 && has_non_ascii {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Branch name '{}' is too short after sanitization. The input '{}' contains non-English characters that were removed. Please provide an English title or a JIRA ticket ID for better branch name generation.",
                     slug,
                     input

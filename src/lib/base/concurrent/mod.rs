@@ -6,7 +6,7 @@
 //!
 //! ```rust
 //! use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
-//! use anyhow::Result;
+//! use color_eyre::Result;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let executor = ConcurrentExecutor::new(5); // 最大并发数 5

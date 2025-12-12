@@ -5,7 +5,7 @@
 use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
 use crate::{log_info, log_success};
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 分支同步命令（无 PR 逻辑）
 pub struct BranchSyncCommand;

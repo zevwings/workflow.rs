@@ -6,7 +6,7 @@ use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_error, log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// PR Rebase 命令
 ///
@@ -396,7 +396,7 @@ impl PullRequestRebaseCommand {
             return Ok(());
         }
 
-        anyhow::bail!(
+        color_eyre::eyre::bail!(
             "Target branch '{}' does not exist. Please check the branch name.",
             target_branch
         );
@@ -405,7 +405,7 @@ impl PullRequestRebaseCommand {
     /// 检查工作区状态并 stash
     fn check_working_directory() -> Result<bool> {
         let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check working directory status")?;
+            GitCommit::has_commit().wrap_err("Failed to check working directory status")?;
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
@@ -416,7 +416,7 @@ impl PullRequestRebaseCommand {
             let selected = SelectDialog::new("How would you like to proceed?", options)
                 .with_default(0)
                 .prompt()
-                .context("Failed to get user choice")?;
+                .wrap_err("Failed to get user choice")?;
             let choice = if selected == "Stash changes and continue" {
                 0
             } else {
@@ -431,7 +431,7 @@ impl PullRequestRebaseCommand {
                     Ok(true)
                 }
                 1 => {
-                    anyhow::bail!("Operation cancelled by user");
+                    color_eyre::eyre::bail!("Operation cancelled by user");
                 }
                 _ => unreachable!(),
             }
@@ -441,7 +441,7 @@ impl PullRequestRebaseCommand {
     }
 
     /// 检查是否是 rebase 冲突
-    fn is_rebase_conflict(error: &anyhow::Error) -> bool {
+    fn is_rebase_conflict(error: &color_eyre::eyre::Report) -> bool {
         let error_msg = error.to_string().to_lowercase();
         error_msg.contains("conflict") || error_msg.contains("could not apply")
     }
@@ -457,7 +457,7 @@ impl PullRequestRebaseCommand {
         log_info!("  5. Push when ready: git push --force-with-lease");
         log_info!("\nTo abort: git rebase --abort");
 
-        anyhow::bail!("Rebase conflicts detected. Please resolve manually.");
+        color_eyre::eyre::bail!("Rebase conflicts detected. Please resolve manually.");
     }
 
     /// 更新 PR base 分支
@@ -504,7 +504,7 @@ impl PullRequestRebaseCommand {
             ),
             || provider.update_pr_base(&pr_id, target_branch),
         )
-        .context("Failed to update PR base branch")?;
+        .wrap_err("Failed to update PR base branch")?;
 
         log_success!("PR #{} base branch updated to '{}'", pr_id, target_branch);
         Ok(())
@@ -515,7 +515,7 @@ impl PullRequestRebaseCommand {
         // 使用 force-with-lease 推送
         log_info!("Pushing to remote (force-with-lease)...");
         GitBranch::push_force_with_lease(current_branch)
-            .context("Failed to push to remote (force-with-lease)")?;
+            .wrap_err("Failed to push to remote (force-with-lease)")?;
 
         log_success!("Pushed to remote successfully");
         Ok(())

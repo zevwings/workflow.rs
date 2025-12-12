@@ -9,7 +9,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use walkdir::WalkDir;
 
 use crate::base::dialog::ConfirmDialog;
@@ -170,7 +170,7 @@ impl AttachmentCleaner {
         }
 
         std::fs::remove_dir_all(&dir)
-            .with_context(|| format!("Failed to delete {}: {:?}", dir_name, dir))?;
+            .wrap_err_with(|| format!("Failed to delete {}: {:?}", dir_name, dir))?;
 
         trace_info!("{} deleted successfully: {:?}", dir_name, dir);
         Ok(CleanResult {
@@ -243,12 +243,12 @@ impl AttachmentCleaner {
     fn get_base_dir_contents(base_dir: &Path) -> Result<Vec<DirEntry>> {
         // 读取基础目录下的所有条目
         let entries = fs::read_dir(base_dir)
-            .with_context(|| format!("Failed to read directory: {:?}", base_dir))?;
+            .wrap_err_with(|| format!("Failed to read directory: {:?}", base_dir))?;
 
         let mut ticket_dirs: Vec<(String, PathBuf)> = Vec::new();
 
         for entry in entries {
-            let entry = entry.context("Failed to read directory entry")?;
+            let entry = entry.wrap_err("Failed to read directory entry")?;
             let path = entry.path();
             if path.is_dir() {
                 // 提取 ticket ID（目录名）
@@ -309,8 +309,8 @@ impl AttachmentCleaner {
         }
 
         for entry in WalkDir::new(dir) {
-            let entry = entry.context("Failed to read directory entry")?;
-            let metadata = entry.metadata().context("Failed to get file metadata")?;
+            let entry = entry.wrap_err("Failed to read directory entry")?;
+            let metadata = entry.metadata().wrap_err("Failed to get file metadata")?;
 
             if metadata.is_file() {
                 total_size += metadata.len();
@@ -330,7 +330,7 @@ impl AttachmentCleaner {
         }
 
         for entry in WalkDir::new(dir).max_depth(3) {
-            let entry = entry.context("Failed to read directory entry")?;
+            let entry = entry.wrap_err("Failed to read directory entry")?;
             contents.push(entry.path().to_path_buf());
         }
 

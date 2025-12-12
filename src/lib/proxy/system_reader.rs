@@ -2,7 +2,7 @@
 //!
 //! 负责从 macOS 系统设置读取代理配置。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use duct::cmd;
 
 use crate::proxy::{ProxyInfo, ProxyType};
@@ -28,7 +28,7 @@ impl SystemProxyReader {
         // 使用 scutil --proxy 获取系统代理设置
         let output = cmd("scutil", &["--proxy"])
             .read()
-            .context("Failed to get system proxy settings")?;
+            .wrap_err("Failed to get system proxy settings")?;
 
         // 解析输出
         let mut proxy_info = ProxyInfo::new();

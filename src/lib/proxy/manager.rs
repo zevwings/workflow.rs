@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::shell::ShellConfigManager;
 use crate::proxy::config_generator::ProxyConfigGenerator;
@@ -87,7 +87,7 @@ impl ProxyManager {
     pub fn ensure_proxy_enabled() -> Result<()> {
         // 1. 获取系统代理设置
         let proxy_info =
-            SystemProxyReader::read().context("Failed to read system proxy settings")?;
+            SystemProxyReader::read().wrap_err("Failed to read system proxy settings")?;
 
         // 2. 检查系统代理是否启用
         if !Self::is_system_proxy_enabled(&proxy_info) {
@@ -146,9 +146,12 @@ impl ProxyManager {
         let shell_config_path = if !temporary && !env_vars.is_empty() {
             // 默认行为：写入 shell 配置文件
             ShellConfigManager::set_env_vars(&env_vars)
-                .context("Failed to save proxy settings to shell config")?;
+                .wrap_err("Failed to save proxy settings to shell config")?;
 
-            Some(ShellConfigManager::get_config_path().context("Failed to get shell config path")?)
+            Some(
+                ShellConfigManager::get_config_path()
+                    .wrap_err("Failed to get shell config path")?,
+            )
         } else {
             // 临时模式：不写入配置文件
             None
@@ -245,16 +248,17 @@ impl ProxyManager {
 
         if removed_from_block {
             ShellConfigManager::save_env_vars(&env_vars)
-                .context("Failed to remove proxy settings from shell config")?;
+                .wrap_err("Failed to remove proxy settings from shell config")?;
         }
 
         // 从整个文件移除
         let has_in_file = ShellConfigManager::remove_env_vars(&proxy_keys)
-            .context("Failed to remove proxy settings from shell config")?;
+            .wrap_err("Failed to remove proxy settings from shell config")?;
 
         if removed_from_block || has_in_file {
             Ok(Some(
-                ShellConfigManager::get_config_path().context("Failed to get shell config path")?,
+                ShellConfigManager::get_config_path()
+                    .wrap_err("Failed to get shell config path")?,
             ))
         } else {
             Ok(None)

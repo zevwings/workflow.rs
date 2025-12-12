@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, UNIX_EPOCH};
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
@@ -97,10 +97,10 @@ impl TempDirManager {
         let temp_dir = env::temp_dir().join(format!("workflow-update-{}", version));
 
         if temp_dir.exists() {
-            fs::remove_dir_all(&temp_dir).context("Failed to remove existing temp directory")?;
+            fs::remove_dir_all(&temp_dir).wrap_err("Failed to remove existing temp directory")?;
         }
 
-        fs::create_dir_all(&temp_dir).context("Failed to create temp directory")?;
+        fs::create_dir_all(&temp_dir).wrap_err("Failed to create temp directory")?;
 
         let archive_name = format!("workflow-{}-{}.tar.gz", version, platform);
         let archive_path = temp_dir.join(&archive_name);
@@ -226,7 +226,7 @@ impl UpdateCommand {
             }
         };
 
-        anyhow::bail!("{}", error_msg)
+        color_eyre::eyre::bail!("{}", error_msg)
     }
 
     /// 第二步：获取版本号
@@ -251,7 +251,7 @@ impl UpdateCommand {
                                 "User-Agent",
                                 "workflow-cli"
                                     .parse()
-                                    .context("Failed to parse User-Agent header")?,
+                                    .wrap_err("Failed to parse User-Agent header")?,
                             );
 
                             // 添加 Accept 头（GitHub API 推荐）
@@ -259,7 +259,7 @@ impl UpdateCommand {
                                 "Accept",
                                 "application/vnd.github+json"
                                     .parse()
-                                    .context("Failed to parse Accept header")?,
+                                    .wrap_err("Failed to parse Accept header")?,
                             );
 
                             // 可选地使用 GitHub token（如果用户已配置）
@@ -270,7 +270,7 @@ impl UpdateCommand {
                                     "Authorization",
                                     format!("Bearer {}", token)
                                         .parse()
-                                        .context("Failed to parse Authorization header")?,
+                                        .wrap_err("Failed to parse Authorization header")?,
                                 );
                                 log_debug!("Using GitHub token for API request");
                             }
@@ -279,7 +279,7 @@ impl UpdateCommand {
                             let config = RequestConfig::<Value, Value>::new().headers(&headers);
                             client
                                 .get(url, config)
-                                .context("Failed to fetch latest release from GitHub")
+                                .wrap_err("Failed to fetch latest release from GitHub")
                         },
                         &retry_config,
                         "Fetching latest version information",
@@ -345,10 +345,10 @@ impl UpdateCommand {
                 let http_client = HttpClient::global()?;
                 let mut response = http_client
                     .stream(HttpMethod::Get, url, RequestConfig::<Value, Value>::new())
-                    .context("Failed to send HTTP request")?;
+                    .wrap_err("Failed to send HTTP request")?;
 
                 if !response.status().is_success() {
-                    anyhow::bail!("Download failed: HTTP {}", response.status());
+                    color_eyre::eyre::bail!("Download failed: HTTP {}", response.status());
                 }
 
                 // 获取文件总大小（如果可用）
@@ -379,21 +379,22 @@ impl UpdateCommand {
                     pb
                 };
 
-                let mut file = File::create(output_path)
-                    .with_context(|| format!("Failed to create file: {}", output_path.display()))?;
+                let mut file = File::create(output_path).wrap_err_with(|| {
+                    format!("Failed to create file: {}", output_path.display())
+                })?;
 
                 let mut buffer = vec![0u8; 8192];
                 let mut downloaded_bytes = 0u64;
 
                 loop {
                     let bytes_read =
-                        response.read(&mut buffer).context("Failed to read response data")?;
+                        response.read(&mut buffer).wrap_err("Failed to read response data")?;
 
                     if bytes_read == 0 {
                         break;
                     }
 
-                    file.write_all(&buffer[..bytes_read]).context("Failed to write to file")?;
+                    file.write_all(&buffer[..bytes_read]).wrap_err("Failed to write to file")?;
 
                     downloaded_bytes += bytes_read as u64;
                     pb.set_position(downloaded_bytes);
@@ -453,7 +454,7 @@ impl UpdateCommand {
         let install_binary = extract_dir.join(Paths::binary_name("install"));
 
         if !install_binary.exists() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Install binary does not exist: {}",
                 install_binary.display()
             );
@@ -466,7 +467,7 @@ impl UpdateCommand {
                 .arg("+x")
                 .arg(&install_binary)
                 .status()
-                .context("Failed to set executable permission for install")?;
+                .wrap_err("Failed to set executable permission for install")?;
         }
 
         // 运行 ./install 安装二进制文件和补全脚本（默认安装全部）
@@ -476,10 +477,10 @@ impl UpdateCommand {
                 let status = Command::new(&install_binary)
                     .current_dir(extract_dir)
                     .status()
-                    .context("Failed to run install")?;
+                    .wrap_err("Failed to run install")?;
 
                 if !status.success() {
-                    anyhow::bail!("Installation failed");
+                    color_eyre::eyre::bail!("Installation failed");
                 }
                 Ok(())
             },
@@ -503,7 +504,7 @@ impl UpdateCommand {
         }
 
         let metadata = fs::metadata(path)
-            .with_context(|| format!("Failed to get metadata for: {}", path.display()))?;
+            .wrap_err_with(|| format!("Failed to get metadata for: {}", path.display()))?;
 
         let permissions = metadata.permissions();
         let mode = permissions.mode();
@@ -860,9 +861,9 @@ impl UpdateCommand {
                     // 使用 ensure_success_with 统一处理 404 错误
                     let response = response.ensure_success_with(|r| {
                         if r.status == 404 {
-                            anyhow::anyhow!("Checksum file not found (404)")
+                            eyre!("Checksum file not found (404)")
                         } else {
-                            anyhow::anyhow!(
+                            eyre!(
                                 "HTTP request failed with status {}: {}",
                                 r.status,
                                 r.status_text
@@ -884,7 +885,7 @@ impl UpdateCommand {
                     }
                     // 解析哈希值（使用 checksum 模块）
                     let expected_hash = Checksum::parse_hash_from_content(&checksum_content)
-                        .context("Failed to parse checksum file")?;
+                        .wrap_err("Failed to parse checksum file")?;
 
                     // 验证文件（使用 checksum 模块）
                     Checksum::verify(&temp_manager.archive_path, &expected_hash)?;
@@ -907,7 +908,7 @@ impl UpdateCommand {
                         }
                     } else {
                         // 其他错误，仍然返回错误
-                        return Err(e.context("Failed to download checksum file"));
+                        return Err(e.wrap_err("Failed to download checksum file"));
                     }
                 }
             }
@@ -928,7 +929,9 @@ impl UpdateCommand {
 
             // 如果验证失败，说明文件不存在或没有执行权限，这是真正的安装失败
             if !verification_result.all_checks_passed {
-                anyhow::bail!("Installation verification failed, some checks did not pass");
+                color_eyre::eyre::bail!(
+                    "Installation verification failed, some checks did not pass"
+                );
             }
 
             Ok(())
@@ -1047,7 +1050,7 @@ impl UpdateCommand {
                     &temp_manager.temp_dir,
                     backup_info.as_ref().map(|b| &b.backup_info),
                 );
-                Err(e.context("Update failed"))
+                Err(e.wrap_err("Update failed"))
             }
         }
     }

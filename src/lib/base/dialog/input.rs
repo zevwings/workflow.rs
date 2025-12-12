@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use inquire::{error::InquireError, validator::Validation, Text};
 use std::error::Error;
 use std::sync::Arc;
@@ -170,9 +170,9 @@ impl InputDialog {
         text.prompt()
             .map_err(|e| match e {
                 InquireError::OperationCanceled => {
-                    anyhow::anyhow!("Operation cancelled by user")
+                    eyre!("Operation cancelled by user")
                 }
-                _ => anyhow::anyhow!("Input error: {}", e),
+                _ => eyre!("Input error: {}", e),
             })
             .map(|s| s.trim().to_string())
     }

@@ -1,4 +1,4 @@
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use fuzzy_matcher::skim::SkimMatcherV2;
 use fuzzy_matcher::FuzzyMatcher;
 use inquire::{error::InquireError, Select};
@@ -111,7 +111,7 @@ where
     /// 如果用户取消选择，返回错误
     pub fn prompt(self) -> Result<T> {
         if self.options.is_empty() {
-            anyhow::bail!("No options available");
+            color_eyre::eyre::bail!("No options available");
         }
 
         let mut select = Select::new(&self.prompt, self.options);
@@ -150,9 +150,9 @@ where
 
         select.prompt().map_err(|e| match e {
             InquireError::OperationCanceled => {
-                anyhow::anyhow!("Operation cancelled by user")
+                eyre!("Operation cancelled by user")
             }
-            _ => anyhow::anyhow!("Selection error: {}", e),
+            _ => eyre!("Selection error: {}", e),
         })
     }
 }

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::indicator::Spinner;
@@ -135,7 +135,7 @@ impl PullRequestCreateCommand {
             let input = InputDialog::new("Jira ticket (optional)")
                 .allow_empty(true)
                 .prompt()
-                .context("Failed to get Jira ticket")?;
+                .wrap_err("Failed to get Jira ticket")?;
             let trimmed = input.trim().to_string();
             if trimmed.is_empty() {
                 None
@@ -198,7 +198,9 @@ impl PullRequestCreateCommand {
                             Spinner::with(format!("Getting ticket info for {}...", ticket), || {
                                 Jira::get_ticket_info(ticket)
                             })
-                            .with_context(|| format!("Failed to get ticket info for {}", ticket))?;
+                            .wrap_err_with(|| {
+                                format!("Failed to get ticket info for {}", ticket)
+                            })?;
                         let slug = BranchNaming::slugify(&issue.fields.summary);
                         (title.to_string(), slug, None, None)
                     } else {
@@ -319,7 +321,7 @@ impl PullRequestCreateCommand {
                 let confirmed = ConfirmDialog::new(&prompt_message)
                     .with_default(true)
                     .prompt()
-                    .context("Failed to confirm change type")?;
+                    .wrap_err("Failed to confirm change type")?;
 
                 if confirmed {
                     log_success!("Using auto-selected change type: {}", change_type_name);
@@ -353,7 +355,7 @@ impl PullRequestCreateCommand {
 
         // 检查是否已推送
         let exists_remote = GitBranch::has_remote_branch(current_branch)
-            .context("Failed to check if branch exists on remote")?;
+            .wrap_err("Failed to check if branch exists on remote")?;
 
         // 提交
         Spinner::with("Committing changes...", || {
@@ -416,11 +418,11 @@ impl PullRequestCreateCommand {
         )?;
 
         // 检查目标分支是否存在，如果存在则报错（此方法应该创建新分支）
-        let (exists_local, exists_remote) =
-            GitBranch::is_branch_exists(branch_name).context("Failed to check if branch exists")?;
+        let (exists_local, exists_remote) = GitBranch::is_branch_exists(branch_name)
+            .wrap_err("Failed to check if branch exists")?;
 
         if exists_local || exists_remote {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Branch '{}' already exists. Cannot create new branch with existing name.",
                 branch_name
             );
@@ -522,7 +524,7 @@ impl PullRequestCreateCommand {
     fn create_or_update_branch(branch_name: &str, commit_title: &str) -> Result<(String, String)> {
         // 1. 检查是否有未提交的修改
         let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check uncommitted changes")?;
+            GitCommit::has_commit().wrap_err("Failed to check uncommitted changes")?;
 
         // 2. 获取当前分支和默认分支
         let current_branch = GitBranch::current_branch()?;
@@ -537,7 +539,7 @@ impl PullRequestCreateCommand {
                 create_branch_from_default(branch_name, commit_title, &default_branch)
             } else {
                 // 无未提交修改 → 提示：默认分支上没有更改，无法创建 PR
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "No changes on default branch '{}'. Cannot create PR without changes.",
                     default_branch
                 );
@@ -576,14 +578,14 @@ impl PullRequestCreateCommand {
             } else {
                 // 无未提交的代码 → 判断当前分支是否在远程分支上
                 let exists_remote = GitBranch::has_remote_branch(&current_branch)
-                    .context("Failed to check if branch exists on remote")?;
+                    .wrap_err("Failed to check if branch exists on remote")?;
 
                 // 检查当前分支是否有提交（相对于默认分支）
                 let has_commits = GitBranch::is_branch_ahead(&current_branch, &default_branch)
-                    .context("Failed to check if current branch has commits")?;
+                    .wrap_err("Failed to check if current branch has commits")?;
 
                 if !has_commits {
-                    anyhow::bail!("Current branch '{}' has no commits compared to '{}'. Cannot create PR without commits.", current_branch, default_branch);
+                    color_eyre::eyre::bail!("Current branch '{}' has no commits compared to '{}'. Cannot create PR without commits.", current_branch, default_branch);
                 }
 
                 if exists_remote {

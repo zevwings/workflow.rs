@@ -3,7 +3,7 @@ use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
 use crate::{log_break, log_debug, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 搜索关键词命令
 pub struct SearchCommand;
@@ -17,13 +17,13 @@ impl SearchCommand {
         } else {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .context("Failed to read Jira ticket ID")?
+                .wrap_err("Failed to read Jira ticket ID")?
         };
 
         // 2. 创建 JiraLogs 实例并确保日志文件存在
-        let logs = JiraLogs::new().context("Failed to initialize JiraLogs")?;
+        let logs = JiraLogs::new().wrap_err("Failed to initialize JiraLogs")?;
         logs.ensure_log_file_exists(&jira_id)
-            .context("Failed to ensure log file exists")?;
+            .wrap_err("Failed to ensure log file exists")?;
 
         // 3. 获取搜索词（从参数或交互式输入）
         let term = if let Some(t) = search_term {
@@ -31,7 +31,7 @@ impl SearchCommand {
         } else {
             InputDialog::new("Enter search term")
                 .prompt()
-                .context("Failed to read search term")?
+                .wrap_err("Failed to read search term")?
         };
 
         // 4. 调用库函数执行搜索

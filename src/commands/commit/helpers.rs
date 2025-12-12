@@ -5,7 +5,7 @@
 use crate::base::dialog::ConfirmDialog;
 use crate::git::{GitBranch, GitCommit};
 use crate::{log_break, log_info, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 检查是否在默认分支上（保护分支不允许修改提交历史）
 ///
@@ -17,11 +17,12 @@ use anyhow::{Context, Result};
 ///
 /// 如果在默认分支上，返回错误；否则返回当前分支名和默认分支名
 pub fn check_not_on_default_branch(operation_name: &str) -> Result<(String, String)> {
-    let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
-    let default_branch = GitBranch::get_default_branch().context("Failed to get default branch")?;
+    let current_branch = GitBranch::current_branch().wrap_err("Failed to get current branch")?;
+    let default_branch =
+        GitBranch::get_default_branch().wrap_err("Failed to get default branch")?;
 
     if current_branch == default_branch {
-        anyhow::bail!(
+        color_eyre::eyre::bail!(
             "❌ Error: Cannot {} commits on protected branch '{}'\n\nProtected branches (default branches) do not allow direct modification of commit history.\nPlease switch to a feature branch first.",
             operation_name,
             default_branch
@@ -60,14 +61,14 @@ where
             .with_default(true)
             .with_cancel_message("Push cancelled by user")
             .prompt()
-            .context("Failed to get push confirmation")?;
+            .wrap_err("Failed to get push confirmation")?;
 
         if should_push {
             log_break!();
             log_info!("Pushing to remote (force-with-lease)...");
             log_break!();
             GitBranch::push_force_with_lease(current_branch)
-                .context("Failed to push to remote (force-with-lease)")?;
+                .wrap_err("Failed to push to remote (force-with-lease)")?;
             log_break!();
             log_success!("Pushed to remote successfully");
         } else {
@@ -86,7 +87,7 @@ where
 /// 如果没有 commit，返回错误；否则返回 `Ok(())`
 pub fn check_has_last_commit() -> Result<()> {
     if !GitCommit::has_last_commit()? {
-        anyhow::bail!(
+        color_eyre::eyre::bail!(
             "❌ Error: No commits found in current branch\n\nCannot perform operation because the current branch has no commit history.\nPlease create a commit first."
         );
     }

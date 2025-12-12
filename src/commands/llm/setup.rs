@@ -8,7 +8,7 @@ use crate::base::settings::settings::Settings;
 use crate::commands::config::helpers::select_language;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// LLM 配置设置命令
 pub struct LLMSetupCommand;
@@ -37,7 +37,7 @@ impl LLMSetupCommand {
         let llm_provider = SelectDialog::new(&llm_provider_prompt, llm_providers_vec)
             .with_default(current_provider_idx)
             .prompt()
-            .context("Failed to select LLM provider")?;
+            .wrap_err("Failed to select LLM provider")?;
         let llm_provider_idx = llm_providers
             .iter()
             .position(|&p| p == llm_provider.as_str())
@@ -57,7 +57,7 @@ impl LLMSetupCommand {
                 let llm_key_input = InputDialog::new(&key_prompt)
                     .allow_empty(true)
                     .prompt()
-                    .context("Failed to get OpenAI API key")?;
+                    .wrap_err("Failed to get OpenAI API key")?;
 
                 let llm_key = if !llm_key_input.is_empty() {
                     Some(llm_key_input)
@@ -79,7 +79,7 @@ impl LLMSetupCommand {
                     .allow_empty(true)
                     .with_default(default_model.clone())
                     .prompt()
-                    .context("Failed to get OpenAI model")?;
+                    .wrap_err("Failed to get OpenAI model")?;
 
                 let llm_model = if !llm_model_input.is_empty() {
                     Some(llm_model_input)
@@ -117,7 +117,7 @@ impl LLMSetupCommand {
                 let llm_key_input = InputDialog::new(&key_prompt)
                     .allow_empty(true)
                     .prompt()
-                    .context("Failed to get DeepSeek API key")?;
+                    .wrap_err("Failed to get DeepSeek API key")?;
 
                 let llm_key = if !llm_key_input.is_empty() {
                     Some(llm_key_input)
@@ -142,7 +142,7 @@ impl LLMSetupCommand {
                     .allow_empty(true)
                     .with_default(default_model.clone())
                     .prompt()
-                    .context("Failed to get DeepSeek model")?;
+                    .wrap_err("Failed to get DeepSeek model")?;
 
                 let llm_model = if !llm_model_input.is_empty() {
                     Some(llm_model_input)
@@ -201,7 +201,7 @@ impl LLMSetupCommand {
                         }
                     });
 
-                    dialog.prompt().context("Failed to get LLM proxy URL")?
+                    dialog.prompt().wrap_err("Failed to get LLM proxy URL")?
                 };
 
                 let llm_url = if !llm_url_input.is_empty() {
@@ -210,7 +210,7 @@ impl LLMSetupCommand {
                     // 用户按 Enter 保留现有值
                     existing_url
                 } else {
-                    anyhow::bail!("LLM proxy URL is required");
+                    color_eyre::eyre::bail!("LLM proxy URL is required");
                 };
 
                 // 配置 Proxy API key（必填）
@@ -239,7 +239,7 @@ impl LLMSetupCommand {
                         }
                     });
 
-                    dialog.prompt().context("Failed to get LLM proxy key")?
+                    dialog.prompt().wrap_err("Failed to get LLM proxy key")?
                 };
 
                 let llm_key = if !llm_key_input.is_empty() {
@@ -248,7 +248,7 @@ impl LLMSetupCommand {
                     // 用户按 Enter 保留现有值
                     existing_key
                 } else {
-                    anyhow::bail!("LLM proxy key is required");
+                    color_eyre::eyre::bail!("LLM proxy key is required");
                 };
 
                 // 配置 Proxy model（必填）
@@ -272,12 +272,12 @@ impl LLMSetupCommand {
                         }
                     })
                     .prompt()
-                    .context("Failed to get LLM model")?;
+                    .wrap_err("Failed to get LLM model")?;
 
                 let llm_model = if !llm_model_input.is_empty() {
                     Some(llm_model_input)
                 } else {
-                    anyhow::bail!("Model is required for proxy provider");
+                    color_eyre::eyre::bail!("Model is required for proxy provider");
                 };
 
                 // 保存配置
@@ -302,7 +302,7 @@ impl LLMSetupCommand {
                 }
             }
             _ => {
-                anyhow::bail!("Unsupported provider: {}", llm_provider);
+                color_eyre::eyre::bail!("Unsupported provider: {}", llm_provider);
             }
         }
 
@@ -315,7 +315,7 @@ impl LLMSetupCommand {
         };
 
         let llm_language =
-            select_language(current_language).context("Failed to select LLM output language")?;
+            select_language(current_language).wrap_err("Failed to select LLM output language")?;
 
         // 保存语言配置
         let config_path = Paths::workflow_config()?;

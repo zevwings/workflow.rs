@@ -2,7 +2,7 @@
 //!
 //! 提供文件读取相关的工具函数。
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -30,7 +30,7 @@ impl FileReader {
     /// 如果文件无法打开，返回相应的错误信息。
     pub fn open(file_path: &Path) -> Result<BufReader<File>> {
         let file = File::open(file_path)
-            .with_context(|| format!("Failed to open file: {:?}", file_path))?;
+            .wrap_err_with(|| format!("Failed to open file: {:?}", file_path))?;
         Ok(BufReader::new(file))
     }
 }

@@ -1,7 +1,7 @@
 //! 目录管理
 
 use super::constants::DOWNLOADS_FOLDER;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::path::{Path, PathBuf};
 
 /// 目录管理器
@@ -37,10 +37,10 @@ impl DirectoryManager {
         // 如果目录已存在，删除它
         if download_base_dir.exists() {
             std::fs::remove_dir_all(&download_base_dir)
-                .context("Failed to remove existing directory")?;
+                .wrap_err("Failed to remove existing directory")?;
         }
 
-        std::fs::create_dir_all(&download_dir).context("Failed to create output directory")?;
+        std::fs::create_dir_all(&download_dir).wrap_err("Failed to create output directory")?;
 
         Ok((download_base_dir, download_dir))
     }
@@ -58,7 +58,7 @@ impl DirectoryManager {
     /// 如果清理成功，返回 `Ok(())`；否则返回错误。
     pub fn cleanup_on_failure(dir: &Path) -> Result<()> {
         if dir.exists() {
-            std::fs::remove_dir_all(dir).context("Failed to cleanup directory")?;
+            std::fs::remove_dir_all(dir).wrap_err("Failed to cleanup directory")?;
         }
         Ok(())
     }

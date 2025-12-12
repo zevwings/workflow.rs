@@ -2,7 +2,7 @@
 //!
 //! Provides a unified interface for template rendering using handlebars.
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use handlebars::Handlebars;
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -40,7 +40,7 @@ impl TemplateEngine {
     pub fn register_template(&mut self, name: &str, template: &str) -> Result<()> {
         self.handlebars
             .register_template_string(name, template)
-            .with_context(|| format!("Failed to register template: {}", name))?;
+            .wrap_err_with(|| format!("Failed to register template: {}", name))?;
         Ok(())
     }
 
@@ -57,7 +57,7 @@ impl TemplateEngine {
     pub fn render<T: Serialize>(&self, name: &str, vars: &T) -> Result<String> {
         self.handlebars
             .render(name, vars)
-            .map_err(|e| anyhow::anyhow!("Failed to render template '{}': {}", name, e))
+            .map_err(|e| eyre!("Failed to render template '{}': {}", name, e))
     }
 
     /// Render a template string directly (without registration)

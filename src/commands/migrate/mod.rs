@@ -20,7 +20,7 @@
 //! 详细说明请参考 `README.md`。
 
 use crate::{log_info, log_success};
-use anyhow::Result;
+use color_eyre::Result;
 
 pub mod history;
 pub mod migrations;
@@ -61,6 +61,6 @@ impl MigrateCommand {
 
     /// 执行特定版本的迁移
     fn migrate_version(version: &str, _dry_run: bool, _cleanup: bool) -> Result<()> {
-        anyhow::bail!("Unknown migration version: {}", version);
+        color_eyre::eyre::bail!("Unknown migration version: {}", version);
     }
 }

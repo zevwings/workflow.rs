@@ -4,7 +4,7 @@
 
 use crate::base::dialog::InputDialog;
 use crate::base::settings::settings::GitHubAccount;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 收集 GitHub 账号信息
 ///
@@ -31,7 +31,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
             }
         })
         .prompt()
-        .context("Failed to get GitHub account name")?;
+        .wrap_err("Failed to get GitHub account name")?;
 
     let email = InputDialog::new("GitHub account email")
         .with_validator(|input: &str| {
@@ -44,7 +44,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
             }
         })
         .prompt()
-        .context("Failed to get GitHub account email")?;
+        .wrap_err("Failed to get GitHub account email")?;
 
     let api_token = InputDialog::new("GitHub API token")
         .with_validator(|input: &str| {
@@ -55,7 +55,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
             }
         })
         .prompt()
-        .context("Failed to get GitHub API token")?;
+        .wrap_err("Failed to get GitHub API token")?;
 
     Ok(GitHubAccount {
         name: name.trim().to_string(),
@@ -91,7 +91,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
             }
         })
         .prompt()
-        .context("Failed to get GitHub account name")?;
+        .wrap_err("Failed to get GitHub account name")?;
 
     let email = InputDialog::new("GitHub account email")
         .with_default(old_account.email.clone())
@@ -105,7 +105,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
             }
         })
         .prompt()
-        .context("Failed to get GitHub account email")?;
+        .wrap_err("Failed to get GitHub account email")?;
 
     let api_token = InputDialog::new("GitHub API token")
         .with_default(old_account.api_token.clone())
@@ -117,7 +117,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
             }
         })
         .prompt()
-        .context("Failed to get GitHub API token")?;
+        .wrap_err("Failed to get GitHub API token")?;
 
     Ok(GitHubAccount {
         name: name.trim().to_string(),

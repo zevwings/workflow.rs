@@ -7,7 +7,7 @@
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 
 use crate::base::dialog::ConfirmDialog;
 use crate::{trace_debug, trace_info, trace_warn};
@@ -196,7 +196,7 @@ impl HttpRetry {
                                 Ok(false) => {
                                     // 用户选择取消
                                     trace_warn!("User cancelled operation");
-                                    return Err(anyhow::anyhow!("User cancelled operation"));
+                                    return Err(eyre!("User cancelled operation"));
                                 }
                                 Err(e) => {
                                     // 交互失败，可能是非交互式终端，直接继续
@@ -234,7 +234,7 @@ impl HttpRetry {
 
         // 所有重试都失败，返回最后一次的错误，并添加上下文信息
         let final_error = last_error.unwrap();
-        Err(final_error.context(format!(
+        Err(final_error.wrap_err(format!(
             "{} failed after {} retries",
             operation_name, config.max_retries
         )))
@@ -260,7 +260,7 @@ impl HttpRetry {
     /// # 返回
     ///
     /// 返回 `true` 如果错误可重试，否则返回 `false`。
-    fn is_retryable_error(error: &anyhow::Error) -> bool {
+    fn is_retryable_error(error: &color_eyre::eyre::Report) -> bool {
         // 检查是否是 reqwest 网络错误
         if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
             // 检查是否是网络连接错误
@@ -349,7 +349,7 @@ impl HttpRetry {
     /// # 返回
     ///
     /// 返回错误的简短描述。
-    fn get_error_description(error: &anyhow::Error) -> String {
+    fn get_error_description(error: &color_eyre::eyre::Report) -> String {
         // 尝试从 reqwest 错误中提取状态码
         if let Some(reqwest_error) = error.downcast_ref::<reqwest::Error>() {
             if let Some(status) = reqwest_error.status() {

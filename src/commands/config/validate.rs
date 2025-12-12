@@ -5,7 +5,7 @@ use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::commands::config::helpers::parse_config;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -43,7 +43,7 @@ impl ConfigValidateCommand {
     pub fn validate(config_path: Option<String>, fix: bool, strict: bool) -> Result<()> {
         // 确定要验证的配置文件路径
         let default_path =
-            Paths::workflow_config().context("Failed to get workflow config path")?;
+            Paths::workflow_config().wrap_err("Failed to get workflow config path")?;
         let config_path = if let Some(path) = config_path {
             std::path::PathBuf::from(path)
         } else {
@@ -60,7 +60,7 @@ impl ConfigValidateCommand {
 
         // 读取配置文件内容
         let content = fs::read_to_string(&config_path)
-            .context(format!("Failed to read config file: {:?}", config_path))?;
+            .wrap_err(format!("Failed to read config file: {:?}", config_path))?;
 
         // 解析配置文件（支持 TOML、JSON、YAML）
         let mut settings = parse_config(&content, &config_path)?;
@@ -326,7 +326,7 @@ impl ConfigValidateCommand {
                             }
                         }
                     }
-                    return Err(e.context("Failed to save fixed configuration"));
+                    return Err(e.wrap_err("Failed to save fixed configuration"));
                 }
             }
         } else if backup_created {
@@ -400,7 +400,7 @@ impl ConfigValidateCommand {
         let backup_path = config_path.parent().unwrap().join(backup_filename);
 
         fs::copy(config_path, &backup_path)
-            .context(format!("Failed to create backup: {:?}", backup_path))?;
+            .wrap_err(format!("Failed to create backup: {:?}", backup_path))?;
 
         Ok(backup_path)
     }
@@ -408,7 +408,7 @@ impl ConfigValidateCommand {
     /// 从备份恢复
     fn restore_from_backup(backup_path: &Path, config_path: &Path) -> Result<()> {
         fs::copy(backup_path, config_path)
-            .context(format!("Failed to restore from backup: {:?}", backup_path))?;
+            .wrap_err(format!("Failed to restore from backup: {:?}", backup_path))?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
@@ -426,14 +426,14 @@ impl ConfigValidateCommand {
         // 根据文件格式保存
         let content = match path.extension().and_then(|s| s.to_str()) {
             Some("json") => serde_json::to_string_pretty(settings)
-                .context("Failed to serialize config to JSON")?,
+                .wrap_err("Failed to serialize config to JSON")?,
             Some("yaml") | Some("yml") => {
-                serde_yaml::to_string(settings).context("Failed to serialize config to YAML")?
+                serde_yaml::to_string(settings).wrap_err("Failed to serialize config to YAML")?
             }
-            _ => toml::to_string_pretty(settings).context("Failed to serialize config to TOML")?,
+            _ => toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?,
         };
 
-        fs::write(path, content).context(format!("Failed to write config file: {:?}", path))?;
+        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]

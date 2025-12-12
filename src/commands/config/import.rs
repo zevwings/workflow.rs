@@ -6,7 +6,7 @@ use crate::base::settings::settings::Settings;
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -43,7 +43,7 @@ impl ImportTransaction {
     /// 回滚到原始配置
     fn rollback(&self) -> Result<()> {
         // 从备份恢复
-        fs::copy(&self.backup_path, &self.config_path).context("Failed to restore from backup")?;
+        fs::copy(&self.backup_path, &self.config_path).wrap_err("Failed to restore from backup")?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
@@ -71,7 +71,7 @@ impl ImportTransaction {
     /// 提交事务（删除备份）
     fn commit(&self) -> Result<()> {
         if self.backup_path.exists() {
-            fs::remove_file(&self.backup_path).context("Failed to remove backup file")?;
+            fs::remove_file(&self.backup_path).wrap_err("Failed to remove backup file")?;
         }
         Ok(())
     }
@@ -79,7 +79,7 @@ impl ImportTransaction {
     /// 创建备份文件
     fn create_backup(config_path: &Path) -> Result<PathBuf> {
         if !config_path.exists() {
-            return Err(anyhow::anyhow!(
+            return Err(eyre!(
                 "Configuration file does not exist: {:?}",
                 config_path
             ));
@@ -90,7 +90,7 @@ impl ImportTransaction {
         let backup_path = config_path.parent().unwrap().join(backup_filename);
 
         fs::copy(config_path, &backup_path)
-            .context(format!("Failed to create backup: {:?}", backup_path))?;
+            .wrap_err(format!("Failed to create backup: {:?}", backup_path))?;
 
         Ok(backup_path)
     }
@@ -110,15 +110,12 @@ impl ConfigImportCommand {
         let input_path = PathBuf::from(input_path);
 
         if !input_path.exists() {
-            return Err(anyhow::anyhow!(
-                "Input file does not exist: {:?}",
-                input_path
-            ));
+            return Err(eyre!("Input file does not exist: {:?}", input_path));
         }
 
         // 读取并解析输入文件
         let content = fs::read_to_string(&input_path)
-            .context(format!("Failed to read input file: {:?}", input_path))?;
+            .wrap_err(format!("Failed to read input file: {:?}", input_path))?;
 
         let imported_settings = parse_config(&content, &input_path)?;
 
@@ -136,9 +133,7 @@ impl ConfigImportCommand {
             for error in &validation_result.errors {
                 log_message!("  - {}: {}", error.field, error.message);
             }
-            return Err(anyhow::anyhow!(
-                "Import cancelled. Configuration validation failed."
-            ));
+            return Err(eyre!("Import cancelled. Configuration validation failed."));
         }
 
         if dry_run {
@@ -150,7 +145,7 @@ impl ConfigImportCommand {
 
         // 获取配置文件路径
         let current_config_path =
-            Paths::workflow_config().context("Failed to get workflow config path")?;
+            Paths::workflow_config().wrap_err("Failed to get workflow config path")?;
 
         // 创建事务（包含备份）
         let transaction = ImportTransaction::new(current_config_path.clone())?;
@@ -194,9 +189,7 @@ impl ConfigImportCommand {
                     log_error!("Please manually restore from backup if needed");
                 }
             }
-            return Err(anyhow::anyhow!(
-                "Import cancelled. Configuration validation failed."
-            ));
+            return Err(eyre!("Import cancelled. Configuration validation failed."));
         }
 
         // 保存配置
@@ -212,7 +205,7 @@ impl ConfigImportCommand {
                     log_error!("Backup file is available at: {:?}", transaction.backup_path);
                 }
             }
-            return Err(e.context("Failed to save configuration"));
+            return Err(e.wrap_err("Failed to save configuration"));
         }
 
         // 验证保存后的配置（确保文件写入正确）
@@ -228,7 +221,7 @@ impl ConfigImportCommand {
                     log_error!("Backup file is available at: {:?}", transaction.backup_path);
                 }
             }
-            return Err(anyhow::anyhow!("Post-save validation failed"));
+            return Err(eyre!("Post-save validation failed"));
         }
 
         // 提交事务（删除备份）
@@ -337,7 +330,7 @@ impl ConfigImportCommand {
     /// 验证保存后的配置
     fn verify_saved_config(config_path: &Path) -> Result<bool> {
         // 重新读取配置文件
-        let content = fs::read_to_string(config_path).context(format!(
+        let content = fs::read_to_string(config_path).wrap_err(format!(
             "Failed to read saved config file: {:?}",
             config_path
         ))?;
@@ -361,9 +354,9 @@ impl ConfigImportCommand {
     /// 保存配置
     fn save_config(settings: &Settings, path: &PathBuf) -> Result<()> {
         let content =
-            toml::to_string_pretty(settings).context("Failed to serialize config to TOML")?;
+            toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?;
 
-        fs::write(path, content).context(format!("Failed to write config file: {:?}", path))?;
+        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]

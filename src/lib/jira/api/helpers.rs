@@ -5,7 +5,7 @@
 
 use crate::base::http::Authorization;
 use crate::jira::helpers::{get_auth, get_base_url};
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use std::sync::OnceLock;
 
 /// 获取 Jira API 基础 URL（使用 OnceLock 缓存）
@@ -44,7 +44,7 @@ pub fn jira_base_url() -> Result<&'static str> {
         })
         .as_ref()
         .map(|s| *s)
-        .map_err(|e| anyhow::anyhow!("Failed to get Jira base URL: {}", e))
+        .map_err(|e| eyre!("Failed to get Jira base URL: {}", e))
 }
 
 /// 构建完整的 Jira API URL
@@ -112,5 +112,5 @@ pub fn jira_auth_config() -> Result<&'static Authorization> {
         Ok(Authorization::new(email, api_token))
     })
     .as_ref()
-    .map_err(|e| anyhow::anyhow!("Failed to get Jira auth: {}", e))
+    .map_err(|e| eyre!("Failed to get Jira auth: {}", e))
 }

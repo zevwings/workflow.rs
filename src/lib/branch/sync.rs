@@ -8,7 +8,7 @@ use crate::base::indicator::Spinner;
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
 use crate::{log_break, log_error, log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// 源分支信息
 #[derive(Debug, Clone)]
@@ -134,7 +134,7 @@ impl BranchSync {
         // 注意：如果回调已经推送了（skip_stash_pop == true），可能已经推送过了
         // 但为了确保所有情况都覆盖，我们仍然检查并询问用户
         let current_branch_exists_remote = GitBranch::has_remote_branch(&result.current_branch)
-            .context("Failed to check if current branch exists on remote")?;
+            .wrap_err("Failed to check if current branch exists on remote")?;
 
         if current_branch_exists_remote {
             // 如果回调已经推送了（通常发生在 PR Sync 且当前分支有 PR 的情况），
@@ -167,7 +167,7 @@ impl BranchSync {
     /// 返回是否执行了 stash 操作。
     fn check_working_directory() -> Result<bool> {
         let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check working directory status")?;
+            GitCommit::has_commit().wrap_err("Failed to check working directory status")?;
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
@@ -178,7 +178,7 @@ impl BranchSync {
             let selected = SelectDialog::new("How would you like to proceed?", options)
                 .with_default(0)
                 .prompt()
-                .context("Failed to get user choice")?;
+                .wrap_err("Failed to get user choice")?;
             let choice = if selected == "Stash changes and continue" {
                 0
             } else {
@@ -193,7 +193,7 @@ impl BranchSync {
                     Ok(true)
                 }
                 1 => {
-                    anyhow::bail!("Operation cancelled by user");
+                    color_eyre::eyre::bail!("Operation cancelled by user");
                 }
                 _ => unreachable!(),
             }
@@ -208,10 +208,10 @@ impl BranchSync {
     /// 返回源分支信息（类型、合并引用）。
     fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
-            .context("Failed to check if source branch exists")?;
+            .wrap_err("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Source branch '{}' does not exist locally or remotely",
                 source_branch
             );
@@ -221,7 +221,7 @@ impl BranchSync {
             // 分支只在远程，需要先 fetch 以确保有最新的引用
             log_info!("Source branch '{}' only exists on remote", source_branch);
             Spinner::with("Fetching from remote...", || {
-                GitRepo::fetch().context("Failed to fetch from remote")
+                GitRepo::fetch().wrap_err("Failed to fetch from remote")
             })?;
             log_success!("Fetched latest changes from remote");
             // 返回远程分支引用
@@ -291,7 +291,9 @@ impl BranchSync {
                                 log_info!("  3. Stage resolved files: git add <files>");
                                 log_info!("  4. Complete the merge: git commit");
                                 log_info!("  5. Push when ready: git push");
-                                anyhow::bail!("Merge conflicts detected. Please resolve manually.");
+                                color_eyre::eyre::bail!(
+                                    "Merge conflicts detected. Please resolve manually."
+                                );
                             }
                         }
                         Err(e)
@@ -327,7 +329,9 @@ impl BranchSync {
                             log_info!("  3. Stage resolved files: git add <files>");
                             log_info!("  4. Continue rebase: git rebase --continue");
                             log_info!("  5. Push when ready: git push --force-with-lease");
-                            anyhow::bail!("Rebase conflicts detected. Please resolve manually.");
+                            color_eyre::eyre::bail!(
+                                "Rebase conflicts detected. Please resolve manually."
+                            );
                         }
                         Err(e)
                     }
@@ -369,7 +373,7 @@ impl BranchSync {
     /// 推送同步后的更改
     fn push_after_sync(result: &BranchSyncResult) -> Result<()> {
         let exists_remote = GitBranch::has_remote_branch(&result.current_branch)
-            .context("Failed to check if branch exists on remote")?;
+            .wrap_err("Failed to check if branch exists on remote")?;
 
         // 如果是 rebase，使用 force-with-lease
         let use_force = matches!(result.strategy, SyncStrategy::Rebase);
@@ -378,10 +382,10 @@ impl BranchSync {
         log_break!();
         if use_force {
             GitBranch::push_force_with_lease(&result.current_branch)
-                .context("Failed to push to remote (force-with-lease)")?;
+                .wrap_err("Failed to push to remote (force-with-lease)")?;
         } else {
             GitBranch::push(&result.current_branch, !exists_remote)
-                .context("Failed to push to remote")?;
+                .wrap_err("Failed to push to remote")?;
         }
         log_break!();
         log_success!("Pushed to remote successfully");

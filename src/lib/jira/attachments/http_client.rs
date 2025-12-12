@@ -3,7 +3,7 @@
 use crate::base::http::{Authorization, HttpClient, HttpMethod, RequestConfig};
 use crate::jira::helpers::{get_auth, get_base_url};
 use crate::trace_debug;
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use reqwest::header::HeaderMap;
 use std::fs::File;
 use std::path::Path;
@@ -68,7 +68,7 @@ impl AttachmentDownloader {
         // 第一次尝试
         let mut response = client
             .stream(HttpMethod::Get, url, config)
-            .with_context(|| format!("Failed to download: {}", url))?;
+            .wrap_err_with(|| format!("Failed to download: {}", url))?;
 
         // 如果失败且是 CloudFront URL，重试时使用 Basic Auth
         if !response.status().is_success() && is_cloudfront {
@@ -101,27 +101,27 @@ impl AttachmentDownloader {
 
             response = client
                 .stream(HttpMethod::Get, url, config_with_auth)
-                .with_context(|| format!("Failed to download with Basic Auth: {}", url))?;
+                .wrap_err_with(|| format!("Failed to download with Basic Auth: {}", url))?;
 
             if !response.status().is_success() {
                 let status = response.status();
                 let error_text = response.text().unwrap_or_default();
                 let error_msg = Self::format_download_error(status, error_text);
-                anyhow::bail!("{}", error_msg);
+                color_eyre::eyre::bail!("{}", error_msg);
             }
         } else if !response.status().is_success() {
             let status = response.status();
             let error_text = response.text().unwrap_or_default();
             let error_msg = Self::format_download_error(status, error_text);
-            anyhow::bail!("{}", error_msg);
+            color_eyre::eyre::bail!("{}", error_msg);
         }
 
         // 写入文件
         let mut file = File::create(output_path)
-            .with_context(|| format!("Failed to create file: {:?}", output_path))?;
+            .wrap_err_with(|| format!("Failed to create file: {:?}", output_path))?;
 
         std::io::copy(&mut response, &mut file)
-            .with_context(|| format!("Failed to write file: {:?}", output_path))?;
+            .wrap_err_with(|| format!("Failed to write file: {:?}", output_path))?;
 
         Ok(())
     }

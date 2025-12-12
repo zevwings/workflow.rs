@@ -3,7 +3,7 @@ use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::{log_break, log_message};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
 use std::collections::HashMap;
 
@@ -22,7 +22,7 @@ impl InfoCommand {
         // 获取 ticket 信息（使用 Spinner 显示加载状态）
         let issue = Spinner::with(format!("Getting ticket info for {}...", jira_id), || {
             Jira::get_ticket_info(&jira_id)
-                .with_context(|| format!("Failed to get ticket info for {}", jira_id))
+                .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))
         })?;
 
         // 确定输出格式

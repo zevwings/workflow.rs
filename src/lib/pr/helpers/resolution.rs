@@ -4,7 +4,7 @@
 
 use crate::git::{GitRepo, RepoType};
 use crate::pr::platform::create_provider_auto;
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 获取当前分支的 PR ID
 ///
@@ -50,7 +50,7 @@ pub fn resolve_pull_request_id(pull_request_id: Option<String>) -> Result<String
                     "Unsupported repository type. Only GitHub is currently supported."
                 }
             };
-            anyhow::bail!("{}", error_msg);
+            color_eyre::eyre::bail!("{}", error_msg);
         }
     }
 }

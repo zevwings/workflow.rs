@@ -5,7 +5,7 @@ use crate::git::GitBranch;
 use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_debug, log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
 #[allow(dead_code)]
@@ -87,12 +87,12 @@ impl PullRequestSyncCommand {
 
             // 检查当前分支是否在远程存在
             let exists_remote = GitBranch::has_remote_branch(current_branch)
-                .context("Failed to check if current branch exists on remote")?;
+                .wrap_err("Failed to check if current branch exists on remote")?;
 
             // 推送代码以更新 PR
             log_info!("Pushing changes to update PR...");
             GitBranch::push(current_branch, !exists_remote)
-                .context("Failed to push to remote to update PR")?;
+                .wrap_err("Failed to push to remote to update PR")?;
             log_success!("PR #{} updated successfully", pr_id);
             Ok(true)
         } else {
@@ -145,7 +145,7 @@ impl PullRequestSyncCommand {
 
         // 检查源分支是否存在
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
-            .context("Failed to check if source branch exists")?;
+            .wrap_err("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
             log_info!(
@@ -228,7 +228,7 @@ impl PullRequestSyncCommand {
     fn delete_merged_branch(source_branch: &str) -> Result<()> {
         // 检查源分支是否存在
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
-            .context("Failed to check if source branch exists")?;
+            .wrap_err("Failed to check if source branch exists")?;
 
         if !exists_local && !exists_remote {
             log_info!(
@@ -248,7 +248,7 @@ impl PullRequestSyncCommand {
                     log_info!("Branch may not be fully merged, attempting force delete...");
                     GitBranch::delete(source_branch, true)
                 })
-                .with_context(|| format!("Failed to delete local branch: {}", source_branch))?;
+                .wrap_err_with(|| format!("Failed to delete local branch: {}", source_branch))?;
             log_success!("Local branch '{}' deleted successfully", source_branch);
         }
 

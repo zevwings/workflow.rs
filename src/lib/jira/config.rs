@@ -5,7 +5,7 @@
 //! - 统一的错误处理
 //! - Unix 系统下的文件权限设置（600）
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fs;
@@ -98,8 +98,8 @@ where
             return Ok(T::default());
         }
         let content = fs::read_to_string(&self.path)
-            .context(format!("Failed to read config file: {:?}", self.path))?;
-        toml::from_str(&content).context(format!("Failed to parse TOML config: {:?}", self.path))
+            .wrap_err(format!("Failed to read config file: {:?}", self.path))?;
+        toml::from_str(&content).wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
     /// 写入配置文件
@@ -116,9 +116,9 @@ where
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write(&self, config: &T) -> Result<()> {
         let toml_content =
-            toml::to_string_pretty(config).context("Failed to serialize config to TOML")?;
+            toml::to_string_pretty(config).wrap_err("Failed to serialize config to TOML")?;
         fs::write(&self.path, toml_content)
-            .context(format!("Failed to write config file: {:?}", self.path))?;
+            .wrap_err(format!("Failed to write config file: {:?}", self.path))?;
         self.set_permissions()?;
         Ok(())
     }
@@ -146,7 +146,7 @@ where
     #[cfg(unix)]
     fn set_permissions(&self) -> Result<()> {
         fs::set_permissions(&self.path, fs::Permissions::from_mode(0o600))
-            .context("Failed to set config file permissions")?;
+            .wrap_err("Failed to set config file permissions")?;
         Ok(())
     }
 

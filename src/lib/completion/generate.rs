@@ -5,9 +5,9 @@
 use std::fs;
 use std::path::PathBuf;
 
-use anyhow::{Context, Result};
 use clap::{Command, CommandFactory};
 use clap_complete::{generate, shells::Shell as ClapShell};
+use color_eyre::{eyre::WrapErr, Result};
 
 use super::helpers::get_completion_filename;
 use crate::base::settings::paths::Paths;
@@ -74,7 +74,7 @@ impl CompletionGenerator {
             "powershell" => ClapShell::PowerShell,
             "elvish" => ClapShell::Elvish,
             _ => {
-                anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
+                color_eyre::eyre::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell);
             }
         };
 
@@ -103,7 +103,7 @@ impl CompletionGenerator {
         crate::trace_debug!("Output directory: {}", self.output_dir.display());
 
         // 创建输出目录
-        fs::create_dir_all(&self.output_dir).with_context(|| {
+        fs::create_dir_all(&self.output_dir).wrap_err_with(|| {
             format!(
                 "Failed to create output directory: {} (shell: {})",
                 self.output_dir.display(),
@@ -148,7 +148,7 @@ impl CompletionGenerator {
         let filename = get_completion_filename(&shell_type_str, command_name)?;
         let output_file = self.output_dir.join(&filename);
 
-        fs::write(&output_file, buffer).with_context(|| {
+        fs::write(&output_file, buffer).wrap_err_with(|| {
             format!(
                 "Failed to write completion file: {} (command: {}, shell: {})",
                 output_file.display(),

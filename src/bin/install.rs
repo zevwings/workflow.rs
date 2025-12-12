@@ -10,8 +10,8 @@
 //! - `./install --binaries` - 只安装二进制文件
 //! - `./install --completions` - 只安装补全脚本
 
-use anyhow::Result;
 use clap::Parser;
+use color_eyre::Result;
 use workflow::commands::lifecycle::install::InstallCommand;
 use workflow::log_break;
 
@@ -41,6 +41,8 @@ struct Cli {
 /// 解析命令行参数并执行相应的操作。
 /// 默认行为（无参数）：安装全部（二进制文件 + completions）
 fn main() -> Result<()> {
+    // 安装 color-eyre（最早调用）
+    color_eyre::install()?;
     let cli = Cli::parse();
 
     // 确定要安装的内容

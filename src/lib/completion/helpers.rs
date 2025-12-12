@@ -2,7 +2,7 @@
 //!
 //! 提供 completion 文件命名和列表相关的工具函数。
 
-use anyhow::Result;
+use color_eyre::Result;
 
 /// 根据 shell 类型和命令名生成补全脚本文件名
 ///
@@ -31,7 +31,7 @@ pub fn get_completion_filename(shell_type: &str, command: &str) -> Result<String
         "fish" => Ok(format!("{}.fish", command)),
         "powershell" => Ok(format!("_{}.ps1", command)),
         "elvish" => Ok(format!("{}.elv", command)),
-        _ => anyhow::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell_type),
+        _ => color_eyre::eyre::bail!("Unsupported shell type: {}. Supported shell types: zsh, bash, fish, powershell, elvish", shell_type),
     }
 }
 

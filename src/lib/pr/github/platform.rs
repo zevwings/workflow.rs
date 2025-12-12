@@ -1,7 +1,10 @@
 use std::fmt::Write;
 use std::sync::OnceLock;
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{eyre, ContextCompat, WrapErr},
+    Result,
+};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use serde_json::Value;
 
@@ -71,7 +74,7 @@ impl PlatformProvider for GitHub {
     /// 合并 Pull Request
     fn merge_pull_request(&self, pull_request_id: &str, delete_branch: bool) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         // 检测仓库支持的合并方法：优先使用 squash，否则使用 merge
         let merge_method = Self::get_preferred_merge_method(&owner, &repo_name)?;
@@ -138,7 +141,7 @@ impl PlatformProvider for GitHub {
 
     /// 获取 PR 信息
     fn get_pull_request_info(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
 
         let mut info = String::new();
@@ -157,28 +160,28 @@ impl PlatformProvider for GitHub {
     /// 获取 PR URL
     #[allow(dead_code)]
     fn get_pull_request_url(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.html_url)
     }
 
     /// 获取 PR 标题
     fn get_pull_request_title(&self, pull_request_id: &str) -> Result<String> {
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.title)
     }
 
     /// 获取 PR body 内容
     fn get_pull_request_body(&self, pull_request_id: &str) -> Result<Option<String>> {
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(pr.body)
     }
 
     /// 获取 PR 状态
     fn get_pull_request_status(&self, pull_request_id: &str) -> Result<PullRequestStatus> {
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(PullRequestStatus {
             state: pr.state,
@@ -286,7 +289,7 @@ impl PlatformProvider for GitHub {
     /// 此时会使用替代方案：通过 files API 获取文件列表，然后获取部分文件的 diff。
     fn get_pull_request_diff(&self, pull_request_id: &str) -> Result<String> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         // 使用 GitHub API 获取 PR diff
         // 格式: GET /repos/{owner}/{repo}/pulls/{pr_number}.diff
@@ -349,7 +352,7 @@ impl PlatformProvider for GitHub {
     /// 关闭 Pull Request
     fn close_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}",
@@ -380,7 +383,7 @@ impl PlatformProvider for GitHub {
     /// 添加评论到 Pull Request
     fn add_comment(&self, pull_request_id: &str, comment: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         // GitHub API: POST /repos/{owner}/{repo}/issues/{issue_number}/comments
         // 注意：PR 在 GitHub API 中也是 issue，所以使用 issues 端点
@@ -414,7 +417,7 @@ impl PlatformProvider for GitHub {
     /// 批准 Pull Request
     fn approve_pull_request(&self, pull_request_id: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         // 先获取 PR 信息以检查是否是自己的 PR
         let pr_info = Self::fetch_pr_info_internal(pr_number)?;
@@ -423,7 +426,7 @@ impl PlatformProvider for GitHub {
         // 检查是否是自己的 PR
         if let Some(ref pr_user) = pr_info.user {
             if pr_user.login == current_user.login {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Cannot approve your own pull request. GitHub does not allow users to approve their own PRs."
                 );
             }
@@ -464,7 +467,7 @@ impl PlatformProvider for GitHub {
                 if error_msg.contains("can not approve your own pull request")
                     || error_msg.contains("cannot approve your own")
                 {
-                    anyhow::bail!(
+                    color_eyre::eyre::bail!(
                         "Cannot approve your own pull request. GitHub does not allow users to approve their own PRs."
                     );
                 }
@@ -476,7 +479,7 @@ impl PlatformProvider for GitHub {
     /// 更新 PR 的 base 分支
     fn update_pr_base(&self, pull_request_id: &str, new_base: &str) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}",
@@ -508,7 +511,7 @@ impl PlatformProvider for GitHub {
         body: Option<&str>,
     ) -> Result<()> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
-        let pr_number = pull_request_id.parse::<u64>().context("Invalid PR number")?;
+        let pr_number = pull_request_id.parse::<u64>().wrap_err("Invalid PR number")?;
 
         let url = format!(
             "{}/repos/{}/{}/pulls/{}",
@@ -552,7 +555,7 @@ impl GitHub {
             token
         } else {
             let settings = Settings::get();
-            settings.github.get_current_token().context(
+            settings.github.get_current_token().wrap_err(
                 "GitHub API token is not configured. Please run 'workflow setup' to configure it",
             )?
         };
@@ -562,19 +565,21 @@ impl GitHub {
             "Authorization",
             format!("Bearer {}", token)
                 .parse()
-                .context("Failed to parse Authorization header")?,
+                .wrap_err("Failed to parse Authorization header")?,
         );
         headers.insert(
             "Accept",
-            "application/vnd.github+json".parse().context("Failed to parse Accept header")?,
+            "application/vnd.github+json"
+                .parse()
+                .wrap_err("Failed to parse Accept header")?,
         );
         headers.insert(
             "X-GitHub-Api-Version",
-            "2022-11-28".parse().context("Failed to parse X-GitHub-Api-Version header")?,
+            "2022-11-28".parse().wrap_err("Failed to parse X-GitHub-Api-Version header")?,
         );
         headers.insert(
             "User-Agent",
-            "workflow-cli".parse().context("Failed to parse User-Agent header")?,
+            "workflow-cli".parse().wrap_err("Failed to parse User-Agent header")?,
         );
 
         Ok(headers)
@@ -588,22 +593,22 @@ impl GitHub {
             Self::parse_repo(&repo)
         }) {
             Ok((owner, repo)) => Ok((owner.clone(), repo.clone())),
-            Err(e) => Err(anyhow::anyhow!("{}", e)),
+            Err(e) => Err(eyre!("{}", e)),
         }
     }
 
     /// 获取 GitHub 仓库信息（owner/repo）
     fn get_repo() -> Result<String> {
-        let remote_url = GitRepo::get_remote_url().context("Failed to get remote URL")?;
+        let remote_url = GitRepo::get_remote_url().wrap_err("Failed to get remote URL")?;
         extract_github_repo_from_url(&remote_url)
-            .context("Failed to extract GitHub repo from remote URL")
+            .wrap_err("Failed to extract GitHub repo from remote URL")
     }
 
     /// 解析仓库字符串为 owner 和 repo_name
     fn parse_repo(repo: &str) -> Result<(String, String)> {
         let parts: Vec<&str> = repo.split('/').collect();
         if parts.len() != 2 {
-            anyhow::bail!("Invalid repo format: {}", repo);
+            color_eyre::eyre::bail!("Invalid repo format: {}", repo);
         }
         Ok((parts[0].to_string(), parts[1].to_string()))
     }
@@ -688,7 +693,9 @@ impl GitHub {
         }
 
         // 如果都不支持，返回错误
-        anyhow::bail!("Repository does not support squash, rebase, or merge commit methods");
+        color_eyre::eyre::bail!(
+            "Repository does not support squash, rebase, or merge commit methods"
+        );
     }
 
     /// 内部方法：获取 PR 信息（不缓存，避免数据不一致）
@@ -757,7 +764,7 @@ impl GitHub {
         let files = Self::get_pull_request_files_internal(&owner, &repo_name, pr_number)?;
 
         if files.is_empty() {
-            anyhow::bail!("No files found in PR");
+            color_eyre::eyre::bail!("No files found in PR");
         }
 
         // 限制文件数量

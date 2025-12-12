@@ -6,7 +6,7 @@
 //! - 预览操作（dry-run）
 //! - 列出将要删除的内容（list-only）
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::InputDialog;
 use crate::base::util::format_size;
@@ -36,7 +36,7 @@ impl CleanCommand {
             // 如果提供了参数，验证是否为空字符串
             let trimmed = id.trim();
             if trimmed.is_empty() {
-                anyhow::bail!(
+                color_eyre::eyre::bail!(
                     "Empty JIRA ID is not allowed. Use '--all' flag or omit the argument to enter interactive mode."
                 );
             }
@@ -46,7 +46,7 @@ impl CleanCommand {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .allow_empty(true)
                 .prompt()
-                .context("Failed to read Jira ticket ID")?
+                .wrap_err("Failed to read Jira ticket ID")?
                 .trim()
                 .to_string()
         };
@@ -72,7 +72,7 @@ impl CleanCommand {
         let cleaner = AttachmentCleaner::new();
         let result = cleaner
             .clean_dir(&jira_id, dry_run, list_only)
-            .context("Failed to clean logs directory")?;
+            .wrap_err("Failed to clean logs directory")?;
 
         // 显示目录信息
         if let Some(ref dir_info) = result.dir_info {

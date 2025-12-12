@@ -1,6 +1,6 @@
 //! 路径管理相关功能
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::path::{Path, PathBuf};
 
 use super::constants::*;
@@ -41,7 +41,7 @@ impl JiraLogs {
     pub fn ensure_log_file_exists(&self, jira_id: &str) -> Result<PathBuf> {
         let log_file = self.get_log_file_path(jira_id)?;
         if !log_file.exists() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Log file not found at: {:?}\nTry downloading logs first with: workflow qk {} download",
                 log_file, jira_id
             );
@@ -54,7 +54,7 @@ impl JiraLogs {
     fn find_log_file(&self, base_dir: &Path) -> Result<PathBuf> {
         // 尝试查找 flutter-api*.log 文件
         let log_files: Vec<_> = std::fs::read_dir(base_dir)
-            .context("Failed to read directory")?
+            .wrap_err("Failed to read directory")?
             .filter_map(|entry| entry.ok())
             .filter(|entry| {
                 if let Ok(metadata) = entry.metadata() {
@@ -87,7 +87,7 @@ impl JiraLogs {
         let flutter_api_log = self.get_log_file_path(jira_id)?;
         let api_log = flutter_api_log
             .parent()
-            .ok_or_else(|| anyhow::anyhow!("Failed to get parent directory"))?
+            .ok_or_else(|| eyre!("Failed to get parent directory"))?
             .join("api.log");
         Ok(api_log)
     }

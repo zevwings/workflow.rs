@@ -5,7 +5,10 @@
 //! - 本地缓存用户信息到 `${HOME}/.workflow/config/jira-users.toml`
 //! - 优先使用本地缓存，减少 API 调用
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::base::settings::paths::Paths;
@@ -74,13 +77,13 @@ impl JiraUsers {
 
         if config.users.is_empty() {
             let config_path = Paths::jira_users_config()?;
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Jira users config file does not exist or is empty: {:?}",
                 config_path
             );
         }
 
-        let user_entry = config.users.iter().find(|u| u.email == email).context(format!(
+        let user_entry = config.users.iter().find(|u| u.email == email).wrap_err(format!(
             "User with email '{}' not found in jira-users.toml",
             email
         ))?;
@@ -106,10 +109,10 @@ impl JiraUsers {
     ///
     /// 返回 `JiraUser` 结构体，包含用户的完整信息。
     fn from_remote(email: &str, _api_token: &str) -> Result<JiraUser> {
-        let user = JiraUserApi::get_current_user().context("Failed to get current Jira user")?;
+        let user = JiraUserApi::get_current_user().wrap_err("Failed to get current Jira user")?;
 
         if user.account_id.is_empty() {
-            anyhow::bail!("Failed to extract accountId from Jira user response");
+            color_eyre::eyre::bail!("Failed to extract accountId from Jira user response");
         }
 
         Self::to_local(email, &user)?;

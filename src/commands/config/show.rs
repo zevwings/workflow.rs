@@ -6,7 +6,7 @@ use crate::base::settings::settings::Settings;
 use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
 use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use anyhow::Result;
+use color_eyre::{eyre::eyre, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -20,8 +20,8 @@ impl ConfigCommand {
         log_break!();
 
         // 显示配置文件路径
-        let workflow_config_path = Paths::workflow_config()
-            .map_err(|_| anyhow::anyhow!("Failed to get workflow config path"))?;
+        let workflow_config_path =
+            Paths::workflow_config().map_err(|_| eyre!("Failed to get workflow config path"))?;
 
         log_info!("Workflow config: {:?}\n", workflow_config_path);
 

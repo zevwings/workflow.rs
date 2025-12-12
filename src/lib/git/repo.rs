@@ -5,7 +5,7 @@
 //! - 检测远程仓库类型（GitHub、Codeup 等）
 //! - 获取远程仓库 URL
 
-use anyhow::{Context, Result};
+use color_eyre::{eyre::WrapErr, Result};
 use regex::Regex;
 
 use super::helpers::{check_success, cmd_read, cmd_run};
@@ -92,7 +92,7 @@ impl GitRepo {
     /// 如果无法获取远程 URL，返回相应的错误信息。
     #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
-        cmd_read(&["remote", "get-url", "origin"]).context("Failed to get remote URL")
+        cmd_read(&["remote", "get-url", "origin"]).wrap_err("Failed to get remote URL")
     }
 
     /// 获取 Git 目录路径
@@ -107,7 +107,7 @@ impl GitRepo {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        cmd_read(&["rev-parse", "--git-dir"]).context("Failed to get git directory")
+        cmd_read(&["rev-parse", "--git-dir"]).wrap_err("Failed to get git directory")
     }
 
     /// 从远程仓库获取更新
@@ -118,7 +118,7 @@ impl GitRepo {
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        cmd_run(&["fetch", "origin"]).context("Failed to fetch from origin")
+        cmd_run(&["fetch", "origin"]).wrap_err("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用
@@ -129,7 +129,7 @@ impl GitRepo {
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        cmd_run(&["remote", "prune", "origin"]).context("Failed to prune remote references")
+        cmd_run(&["remote", "prune", "origin"]).wrap_err("Failed to prune remote references")
     }
 
     /// 从 Git remote URL 提取仓库名（owner/repo 格式）
@@ -173,32 +173,32 @@ impl GitRepo {
     pub fn extract_repo_name_from_url(url: &str) -> Result<String> {
         // GitHub SSH 格式: git@github.com:owner/repo.git 或 git@github-xxx:owner/repo.git
         let github_ssh_re =
-            Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").context("Invalid regex pattern")?;
+            Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").wrap_err("Invalid regex pattern")?;
         if let Some(caps) = github_ssh_re.captures(url) {
             return Ok(caps.get(1).unwrap().as_str().to_string());
         }
 
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
         let github_https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
-            .context("Invalid regex pattern")?;
+            .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = github_https_re.captures(url) {
             return Ok(caps.get(1).unwrap().as_str().to_string());
         }
 
         // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
         let codeup_ssh_re = Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
-            .context("Invalid regex pattern")?;
+            .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = codeup_ssh_re.captures(url) {
             return Ok(caps.get(1).unwrap().as_str().to_string());
         }
 
         // Codeup HTTPS 格式: https://codeup.aliyun.com/owner/repo.git
         let codeup_https_re = Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
-            .context("Invalid regex pattern")?;
+            .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = codeup_https_re.captures(url) {
             return Ok(caps.get(1).unwrap().as_str().to_string());
         }
 
-        anyhow::bail!("Failed to extract repo name from URL: {}", url)
+        color_eyre::eyre::bail!("Failed to extract repo name from URL: {}", url)
     }
 }

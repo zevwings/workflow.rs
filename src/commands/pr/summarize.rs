@@ -2,7 +2,10 @@
 //!
 //! 读取 PR 修改的内容，然后使用 LLM 总结成文档。
 
-use anyhow::{Context, Result};
+use color_eyre::{
+    eyre::{ContextCompat, WrapErr},
+    Result,
+};
 use std::fs;
 use std::path::PathBuf;
 
@@ -36,7 +39,7 @@ impl SummarizeCommand {
     pub fn summarize(pull_request_id: Option<String>) -> Result<String> {
         // 检查是否在 Git 仓库中
         if !GitRepo::is_git_repo() {
-            anyhow::bail!(
+            color_eyre::eyre::bail!(
                 "Not in a Git repository. Please run this command in a Git repository directory."
             );
         }
@@ -50,14 +53,14 @@ impl SummarizeCommand {
         } else {
             // 自动检测当前分支的 PR
             get_current_branch_pr_id()?
-                .context("No PR found for current branch. Please specify PR ID manually.")?
+                .wrap_err("No PR found for current branch. Please specify PR ID manually.")?
         };
 
         // 获取 PR 标题
         let pr_title = Spinner::with(format!("Fetching PR #{} information...", pr_id), || {
             provider.get_pull_request_title(&pr_id)
         })
-        .context("Failed to get PR title")?;
+        .wrap_err("Failed to get PR title")?;
 
         log_info!("PR Title: {}", pr_title);
 
@@ -65,13 +68,13 @@ impl SummarizeCommand {
         let pr_diff = Spinner::with("Fetching PR diff...", || {
             provider.get_pull_request_diff(&pr_id)
         })
-        .context("Failed to get PR diff")?;
+        .wrap_err("Failed to get PR diff")?;
 
         // 使用 LLM 生成总结
         let summary = Spinner::with("Generating summary with LLM...", || {
             SummaryGenerator::summarize_pr(&pr_title, &pr_diff)
         })
-        .context("Failed to generate PR summary")?;
+        .wrap_err("Failed to generate PR summary")?;
 
         // 解析 diff，提取所有文件的修改
         log_info!("Parsing PR diff to extract file changes...");
@@ -89,7 +92,7 @@ impl SummarizeCommand {
         }
 
         let file_changes =
-            Self::parse_diff_to_file_changes(&pr_diff).context("Failed to parse PR diff")?;
+            Self::parse_diff_to_file_changes(&pr_diff).wrap_err("Failed to parse PR diff")?;
         log_info!("Found {} file(s) with changes", file_changes.len());
 
         if !file_changes.is_empty() {
@@ -150,12 +153,12 @@ impl SummarizeCommand {
         // 确保目录存在
         if let Some(parent) = output_path.parent() {
             fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create directory: {:?}", parent))?;
+                .wrap_err_with(|| format!("Failed to create directory: {:?}", parent))?;
         }
 
         // 写入文件
         fs::write(&output_path, &final_summary)
-            .with_context(|| format!("Failed to write summary to: {:?}", output_path))?;
+            .wrap_err_with(|| format!("Failed to write summary to: {:?}", output_path))?;
 
         log_success!("PR summary saved to: {}", output_path.display());
 
@@ -178,11 +181,11 @@ impl SummarizeCommand {
 
         // 获取仓库名称（owner/repo 格式，提取 repo 部分）
         let repo_name_full = GitRepo::extract_repo_name()
-            .context("Failed to extract repository name from git remote URL")?;
+            .wrap_err("Failed to extract repository name from git remote URL")?;
         let repo_name = repo_name_full
             .split('/')
             .next_back()
-            .context("Failed to extract repo name from owner/repo format")?;
+            .wrap_err("Failed to extract repo name from owner/repo format")?;
 
         // 清理仓库名，移除文件名中不允许的字符
         let sanitized_repo_name = Self::sanitize_for_filename(repo_name);
@@ -363,7 +366,7 @@ impl SummarizeCommand {
             let path = &line[path_start..];
             Ok(path.trim().to_string())
         } else {
-            anyhow::bail!("Invalid diff line format: {}", line)
+            color_eyre::eyre::bail!("Invalid diff line format: {}", line)
         }
     }
 
@@ -442,7 +445,7 @@ impl SummarizeCommand {
     fn generate_file_change_summary(file_path: &str, file_diff: &str) -> Result<String> {
         log_info!("Generating summary for file: {}", file_path);
         FileSummaryGenerator::summarize_file_change(file_path, file_diff)
-            .with_context(|| format!("Failed to generate summary for file: {}", file_path))
+            .wrap_err_with(|| format!("Failed to generate summary for file: {}", file_path))
     }
 
     /// 从文件路径推断文件用途
