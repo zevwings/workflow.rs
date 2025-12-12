@@ -2,91 +2,106 @@
 //!
 //! 测试 GitHub PR 平台的 API 集成、请求构建和响应解析。
 
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+
 use workflow::pr::github::{
     requests::{CreatePullRequestRequest, MergePullRequestRequest, UpdatePullRequestRequest},
     responses::{CreatePullRequestResponse, GitHubUser, PullRequestBranch, PullRequestInfo},
 };
 
+// ==================== Fixtures ====================
+
+#[fixture]
+fn sample_create_request() -> CreatePullRequestRequest {
+    CreatePullRequestRequest {
+        title: "Test PR".to_string(),
+        body: "Test body".to_string(),
+        head: "feature/test".to_string(),
+        base: "main".to_string(),
+    }
+}
+
+#[fixture]
+fn sample_merge_request() -> MergePullRequestRequest {
+    MergePullRequestRequest {
+        commit_title: None,
+        commit_message: None,
+        merge_method: "squash".to_string(),
+    }
+}
+
 // ==================== 请求结构体测试 ====================
 
-#[test]
-fn test_create_pull_request_request_structure() {
-    // 测试创建 PR 请求结构
-    let request = CreatePullRequestRequest {
-        title: "Test PR".to_string(),
-        body: "Test body".to_string(),
-        head: "feature/test".to_string(),
-        base: "main".to_string(),
-    };
-
-    assert_eq!(request.title, "Test PR");
-    assert_eq!(request.body, "Test body");
-    assert_eq!(request.head, "feature/test");
-    assert_eq!(request.base, "main");
+#[rstest]
+fn test_create_request_structure(sample_create_request: CreatePullRequestRequest) {
+    assert_eq!(sample_create_request.title, "Test PR");
+    assert_eq!(sample_create_request.body, "Test body");
+    assert_eq!(sample_create_request.head, "feature/test");
+    assert_eq!(sample_create_request.base, "main");
 }
 
-#[test]
-fn test_create_pull_request_request_serialization() {
-    // 测试创建 PR 请求的序列化
+#[rstest]
+#[case("Test PR", "Test body", "feature/test", "main")]
+#[case("", "", "", "")]
+#[case(
+    "Long Title with Special Chars !@#",
+    "Long Body\nwith\nmultiple\nlines",
+    "feature/long-branch-name",
+    "develop"
+)]
+fn test_create_pr_request_serialization(
+    #[case] title: &str,
+    #[case] body: &str,
+    #[case] head: &str,
+    #[case] base: &str,
+) {
     let request = CreatePullRequestRequest {
-        title: "Test PR".to_string(),
-        body: "Test body".to_string(),
-        head: "feature/test".to_string(),
-        base: "main".to_string(),
+        title: title.to_string(),
+        body: body.to_string(),
+        head: head.to_string(),
+        base: base.to_string(),
     };
 
-    // 验证可以序列化为 JSON
     let json = serde_json::to_string(&request);
     assert!(json.is_ok(), "Should serialize to JSON");
 
     let json_str = json.unwrap();
-    assert!(json_str.contains("Test PR"), "JSON should contain title");
-    assert!(json_str.contains("Test body"), "JSON should contain body");
-    assert!(
-        json_str.contains("feature/test"),
-        "JSON should contain head"
-    );
-    assert!(json_str.contains("main"), "JSON should contain base");
+
+    // 验证 JSON 是有效的，并包含必要的字段
+    let json_value: Result<serde_json::Value, _> = serde_json::from_str(&json_str);
+    assert!(json_value.is_ok(), "Serialized JSON should be valid");
+
+    let json_value = json_value.unwrap();
+    let obj = json_value.as_object().expect("Should be a JSON object");
+
+    // 验证字段存在且值正确
+    assert_eq!(obj.get("title").and_then(|v| v.as_str()), Some(title));
+    assert_eq!(obj.get("body").and_then(|v| v.as_str()), Some(body));
+    assert_eq!(obj.get("head").and_then(|v| v.as_str()), Some(head));
+    assert_eq!(obj.get("base").and_then(|v| v.as_str()), Some(base));
 }
 
-#[test]
-fn test_merge_pull_request_request_structure() {
-    // 测试合并 PR 请求结构
-    let request = MergePullRequestRequest {
-        commit_title: None,
-        commit_message: None,
-        merge_method: "squash".to_string(),
-    };
-
-    assert_eq!(request.commit_title, None);
-    assert_eq!(request.commit_message, None);
-    assert_eq!(request.merge_method, "squash");
+#[rstest]
+fn test_merge_request_structure(sample_merge_request: MergePullRequestRequest) {
+    assert_eq!(sample_merge_request.commit_title, None);
+    assert_eq!(sample_merge_request.commit_message, None);
+    assert_eq!(sample_merge_request.merge_method, "squash");
 }
 
-#[test]
-fn test_merge_pull_request_request_with_optional_fields() {
-    // 测试合并 PR 请求（带可选字段）
+#[rstest]
+#[case(None, None, "squash")]
+#[case(Some("Merge PR #123"), Some("Merged via workflow"), "merge")]
+#[case(Some("Custom Title"), None, "rebase")]
+fn test_merge_pr_request_serialization(
+    #[case] commit_title: Option<&str>,
+    #[case] commit_message: Option<&str>,
+    #[case] merge_method: &str,
+) {
     let request = MergePullRequestRequest {
-        commit_title: Some("Merge PR #123".to_string()),
-        commit_message: Some("Merged via workflow".to_string()),
-        merge_method: "merge".to_string(),
-    };
-
-    assert_eq!(request.commit_title, Some("Merge PR #123".to_string()));
-    assert_eq!(
-        request.commit_message,
-        Some("Merged via workflow".to_string())
-    );
-    assert_eq!(request.merge_method, "merge");
-}
-
-#[test]
-fn test_merge_pull_request_request_serialization() {
-    // 测试合并 PR 请求的序列化
-    let request = MergePullRequestRequest {
-        commit_title: None,
-        commit_message: None,
-        merge_method: "squash".to_string(),
+        commit_title: commit_title.map(|s| s.to_string()),
+        commit_message: commit_message.map(|s| s.to_string()),
+        merge_method: merge_method.to_string(),
     };
 
     let json = serde_json::to_string(&request);
@@ -94,175 +109,78 @@ fn test_merge_pull_request_request_serialization() {
 
     let json_str = json.unwrap();
     assert!(
-        json_str.contains("squash"),
+        json_str.contains(merge_method),
         "JSON should contain merge_method"
     );
-    // None 字段应该被跳过（skip_serializing_if）
-    assert!(
-        !json_str.contains("commit_title"),
-        "None fields should be skipped"
-    );
-    assert!(
-        !json_str.contains("commit_message"),
-        "None fields should be skipped"
-    );
+
+    // 验证 None 字段被跳过
+    if commit_title.is_none() {
+        assert!(
+            !json_str.contains("commit_title"),
+            "None fields should be skipped"
+        );
+    }
+    if commit_message.is_none() {
+        assert!(
+            !json_str.contains("commit_message"),
+            "None fields should be skipped"
+        );
+    }
 }
 
-#[test]
-fn test_update_pull_request_request_structure() {
-    // 测试更新 PR 请求结构
+#[rstest]
+#[case(None, None, Some("closed"), None)]
+#[case(Some("New Title"), None, None, None)]
+#[case(None, Some("New Body"), None, None)]
+#[case(Some("New Title"), Some("New Body"), None, None)]
+fn test_update_pr_request_serialization(
+    #[case] title: Option<&str>,
+    #[case] body: Option<&str>,
+    #[case] state: Option<&str>,
+    #[case] base: Option<&str>,
+) {
     let request = UpdatePullRequestRequest {
-        title: None,
-        body: None,
-        state: Some("closed".to_string()),
-        base: None,
-    };
-
-    assert_eq!(request.state, Some("closed".to_string()));
-}
-
-#[test]
-fn test_update_pull_request_request_serialization() {
-    // 测试更新 PR 请求的序列化
-    let request = UpdatePullRequestRequest {
-        title: None,
-        body: None,
-        state: Some("closed".to_string()),
-        base: None,
-    };
-
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
-    assert!(json_str.contains("closed"), "JSON should contain state");
-}
-
-#[test]
-fn test_update_pull_request_request_with_title_only() {
-    // 测试更新 PR 请求（仅更新标题，用于 reword --title）
-    let request = UpdatePullRequestRequest {
-        title: Some("New PR Title".to_string()),
-        body: None,
-        state: None,
-        base: None,
-    };
-
-    assert_eq!(request.title, Some("New PR Title".to_string()));
-    assert_eq!(request.body, None);
-    assert_eq!(request.state, None);
-    assert_eq!(request.base, None);
-}
-
-#[test]
-fn test_update_pull_request_request_with_body_only() {
-    // 测试更新 PR 请求（仅更新描述，用于 reword --description）
-    let request = UpdatePullRequestRequest {
-        title: None,
-        body: Some("- Add new feature\n- Fix bug".to_string()),
-        state: None,
-        base: None,
-    };
-
-    assert_eq!(request.title, None);
-    assert_eq!(
-        request.body,
-        Some("- Add new feature\n- Fix bug".to_string())
-    );
-    assert_eq!(request.state, None);
-    assert_eq!(request.base, None);
-}
-
-#[test]
-fn test_update_pull_request_request_with_title_and_body() {
-    // 测试更新 PR 请求（同时更新标题和描述，用于 reword 默认行为）
-    let request = UpdatePullRequestRequest {
-        title: Some("Add user authentication".to_string()),
-        body: Some(
-            "- Add user authentication functionality\n- Implement JWT token generation".to_string(),
-        ),
-        state: None,
-        base: None,
-    };
-
-    assert_eq!(request.title, Some("Add user authentication".to_string()));
-    assert!(request.body.is_some());
-    assert_eq!(request.state, None);
-    assert_eq!(request.base, None);
-}
-
-#[test]
-fn test_update_pull_request_request_serialization_title_only() {
-    // 测试更新 PR 请求的序列化（仅标题，用于 reword --title）
-    let request = UpdatePullRequestRequest {
-        title: Some("New PR Title".to_string()),
-        body: None,
-        state: None,
-        base: None,
+        title: title.map(|s| s.to_string()),
+        body: body.map(|s| s.to_string()),
+        state: state.map(|s| s.to_string()),
+        base: base.map(|s| s.to_string()),
     };
 
     let json = serde_json::to_string(&request);
     assert!(json.is_ok(), "Should serialize to JSON");
 
     let json_str = json.unwrap();
-    assert!(
-        json_str.contains("New PR Title"),
-        "JSON should contain title"
-    );
-    assert!(!json_str.contains("body"), "None fields should be skipped");
-    assert!(!json_str.contains("state"), "None fields should be skipped");
-    assert!(!json_str.contains("base"), "None fields should be skipped");
-}
 
-#[test]
-fn test_update_pull_request_request_serialization_body_only() {
-    // 测试更新 PR 请求的序列化（仅描述，用于 reword --description）
-    let request = UpdatePullRequestRequest {
-        title: None,
-        body: Some("- Add new feature\n- Fix bug".to_string()),
-        state: None,
-        base: None,
-    };
+    // 验证存在的字段
+    if let Some(t) = title {
+        assert!(json_str.contains(t), "JSON should contain title");
+    }
+    if let Some(b) = body {
+        assert!(json_str.contains(b), "JSON should contain body");
+    }
+    if let Some(s) = state {
+        assert!(json_str.contains(s), "JSON should contain state");
+    }
 
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
-    assert!(
-        json_str.contains("Add new feature"),
-        "JSON should contain body"
-    );
-    assert!(!json_str.contains("title"), "None fields should be skipped");
-    assert!(!json_str.contains("state"), "None fields should be skipped");
-    assert!(!json_str.contains("base"), "None fields should be skipped");
-}
-
-#[test]
-fn test_update_pull_request_request_serialization_title_and_body() {
-    // 测试更新 PR 请求的序列化（标题和描述，用于 reword 默认行为）
-    let request = UpdatePullRequestRequest {
-        title: Some("Add user authentication".to_string()),
-        body: Some(
-            "- Add user authentication functionality\n- Implement JWT token generation".to_string(),
-        ),
-        state: None,
-        base: None,
-    };
-
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
-    assert!(
-        json_str.contains("Add user authentication"),
-        "JSON should contain title"
-    );
-    assert!(
-        json_str.contains("JWT token generation"),
-        "JSON should contain body"
-    );
-    assert!(!json_str.contains("state"), "None fields should be skipped");
-    assert!(!json_str.contains("base"), "None fields should be skipped");
+    // 验证 None 字段被跳过
+    if title.is_none() {
+        assert!(
+            !json_str.contains("\"title\""),
+            "None title should be skipped"
+        );
+    }
+    if body.is_none() {
+        assert!(
+            !json_str.contains("\"body\""),
+            "None body should be skipped"
+        );
+    }
+    if state.is_none() {
+        assert!(
+            !json_str.contains("\"state\""),
+            "None state should be skipped"
+        );
+    }
 }
 
 // ==================== 响应结构体测试 ====================
@@ -434,18 +352,24 @@ fn test_github_user_deserialization() {
 
 // ==================== 序列化/反序列化边界测试 ====================
 
-#[test]
-fn test_request_empty_strings() {
-    // 测试空字符串的处理
+#[rstest]
+#[case("", "", "", "")]
+#[case("a", "b", "c", "d")]
+fn test_request_edge_cases(
+    #[case] title: &str,
+    #[case] body: &str,
+    #[case] head: &str,
+    #[case] base: &str,
+) {
     let request = CreatePullRequestRequest {
-        title: "".to_string(),
-        body: "".to_string(),
-        head: "".to_string(),
-        base: "".to_string(),
+        title: title.to_string(),
+        body: body.to_string(),
+        head: head.to_string(),
+        base: base.to_string(),
     };
 
     let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should handle empty strings");
+    assert!(json.is_ok(), "Should handle edge cases");
 }
 
 #[test]

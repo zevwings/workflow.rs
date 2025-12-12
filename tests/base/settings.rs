@@ -3,26 +3,33 @@
 //! 测试配置加载、初始化和路径管理功能。
 
 use clap_complete::shells::Shell;
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
 use std::fs;
 use workflow::base::settings::paths::Paths;
 use workflow::base::settings::settings::Settings;
 
+// ==================== Fixtures ====================
+
+#[fixture]
+fn settings() -> Settings {
+    Settings::load()
+}
+
 // ==================== Settings 测试 ====================
 
-#[test]
-fn test_settings_initialization() {
+#[rstest]
+fn test_settings_initialization(settings: Settings) {
     // 测试初始化（使用默认值）
-    let settings = Settings::load();
     // 注意：这些测试会加载实际的配置文件，所以只测试结构是否正确加载
     assert_eq!(settings.log.output_folder_name, "logs");
     // LLM provider 可能是 openai 或用户配置的其他值
     assert!(!settings.llm.provider.is_empty());
 }
 
-#[test]
-fn test_llm_provider() {
+#[rstest]
+fn test_llm_provider(settings: Settings) {
     // 测试 LLM provider 是否被正确加载
-    let settings = Settings::load();
     // 可能是 openai (默认) 或用户配置的其他值
     assert!(!settings.llm.provider.is_empty());
 }
@@ -182,31 +189,41 @@ fn test_path_consistency() {
 
 // ==================== 基础路径测试 ====================
 
-#[test]
-fn test_config_dir() {
-    let config_dir = Paths::config_dir().unwrap();
-    assert!(config_dir.exists());
-    assert!(config_dir.is_dir());
-    assert!(
-        config_dir.ends_with(".workflow/config")
-            || config_dir.to_string_lossy().contains("workflow")
-    );
-}
+#[rstest]
+#[case("config_dir", ".workflow/config", "workflow")]
+#[case("work_history_dir", "work-history", "")]
+#[case("completion_dir", "completions", "")]
+fn test_path_directories(
+    #[case] method_name: &str,
+    #[case] expected_contains: &str,
+    #[case] alt_contains: &str,
+) {
+    let dir = match method_name {
+        "config_dir" => Paths::config_dir().unwrap(),
+        "work_history_dir" => Paths::work_history_dir().unwrap(),
+        "completion_dir" => Paths::completion_dir().unwrap(),
+        _ => panic!("Unknown method name"),
+    };
 
-#[test]
-fn test_work_history_dir() {
-    let history_dir = Paths::work_history_dir().unwrap();
-    assert!(history_dir.exists());
-    assert!(history_dir.is_dir());
-    let path_str = history_dir.to_string_lossy();
-    assert!(path_str.contains("work-history"));
-}
-
-#[test]
-fn test_completion_dir() {
-    let completion_dir = Paths::completion_dir().unwrap();
-    let path_str = completion_dir.to_string_lossy();
-    assert!(path_str.contains("completions"));
+    let path_str = dir.to_string_lossy();
+    if !expected_contains.is_empty() {
+        assert!(
+            path_str.contains(expected_contains),
+            "Path should contain '{}': {}",
+            expected_contains,
+            path_str
+        );
+    }
+    if !alt_contains.is_empty() {
+        // 对于 config_dir，可能包含 workflow 或 .workflow/config
+        assert!(
+            path_str.contains(expected_contains) || path_str.contains(alt_contains),
+            "Path should contain '{}' or '{}': {}",
+            expected_contains,
+            alt_contains,
+            path_str
+        );
+    }
 }
 
 #[test]
@@ -216,32 +233,27 @@ fn test_workflow_dir() {
     assert!(workflow_dir.is_dir());
 }
 
-#[test]
-fn test_config_file_paths() {
+#[rstest]
+#[case(Shell::Zsh)]
+#[case(Shell::Bash)]
+#[case(Shell::Fish)]
+#[case(Shell::PowerShell)]
+#[case(Shell::Elvish)]
+fn test_config_file_paths(#[case] shell: Shell) {
     // 测试所有支持的 shell 配置文件路径
-    let shells = vec![
-        Shell::Zsh,
-        Shell::Bash,
-        Shell::Fish,
-        Shell::PowerShell,
-        Shell::Elvish,
-    ];
-
-    for shell in shells {
-        let config_file = Paths::config_file(&shell);
-        match config_file {
-            Ok(path) => {
-                // 验证路径格式正确
-                assert!(!path.to_string_lossy().is_empty());
-            }
-            Err(_) => {
-                // Windows 上某些 shell 可能不支持，这是正常的
-                #[cfg(target_os = "windows")]
-                {
-                    // Windows 上只有 PowerShell 应该成功
-                    if matches!(shell, Shell::PowerShell) {
-                        panic!("PowerShell config file should be available on Windows");
-                    }
+    let config_file = Paths::config_file(&shell);
+    match config_file {
+        Ok(path) => {
+            // 验证路径格式正确
+            assert!(!path.to_string_lossy().is_empty());
+        }
+        Err(_) => {
+            // Windows 上某些 shell 可能不支持，这是正常的
+            #[cfg(target_os = "windows")]
+            {
+                // Windows 上只有 PowerShell 应该成功
+                if matches!(shell, Shell::PowerShell) {
+                    panic!("PowerShell config file should be available on Windows");
                 }
             }
         }
@@ -262,32 +274,42 @@ fn test_shell_config_paths_unix() {
     );
 }
 
-#[test]
-fn test_work_history_always_local() {
-    let work_history = Paths::work_history_dir().unwrap();
-    // 通过路径字符串验证，不直接调用 home_dir()
-    let path_str = work_history.to_string_lossy();
+#[rstest]
+#[case("work_history_dir", ".workflow", "work-history", "com~apple~CloudDocs")]
+#[case("completion_dir", ".workflow", "completions", "com~apple~CloudDocs")]
+fn test_local_directories(
+    #[case] method_name: &str,
+    #[case] expected1: &str,
+    #[case] expected2: &str,
+    #[case] not_expected: &str,
+) {
+    let dir = match method_name {
+        "work_history_dir" => Paths::work_history_dir().unwrap(),
+        "completion_dir" => Paths::completion_dir().unwrap(),
+        _ => panic!("Unknown method name"),
+    };
 
-    // work_history 应该总是在本地路径下（包含 .workflow/work-history）
-    assert!(path_str.contains(".workflow"));
-    assert!(path_str.contains("work-history"));
-
+    let path_str = dir.to_string_lossy();
+    // 应该总是在本地路径下
+    assert!(
+        path_str.contains(expected1),
+        "Path should contain '{}': {}",
+        expected1,
+        path_str
+    );
+    assert!(
+        path_str.contains(expected2),
+        "Path should contain '{}': {}",
+        expected2,
+        path_str
+    );
     // 确保不在 iCloud 路径下
-    assert!(!path_str.contains("com~apple~CloudDocs"));
-}
-
-#[test]
-fn test_completion_dir_is_local() {
-    let completion_dir = Paths::completion_dir().unwrap();
-    // 通过路径字符串验证，不直接调用 home_dir()
-    let path_str = completion_dir.to_string_lossy();
-
-    // completion 应该总是在本地路径下
-    assert!(path_str.contains(".workflow"));
-    assert!(path_str.contains("completions"));
-
-    // 确保不在 iCloud 路径下
-    assert!(!path_str.contains("com~apple~CloudDocs"));
+    assert!(
+        !path_str.contains(not_expected),
+        "Path should not contain '{}': {}",
+        not_expected,
+        path_str
+    );
 }
 
 #[test]

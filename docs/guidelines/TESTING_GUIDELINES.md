@@ -330,10 +330,171 @@ fn test_parse_ticket_id_boundary() {
 
 ---
 
+## 🛠️ 测试工具
+
+### 1. pretty_assertions
+
+`pretty_assertions` 提供更清晰的断言输出，显示彩色 diff。
+
+**使用方式**：
+
+```rust
+use pretty_assertions::assert_eq;
+
+#[test]
+fn test_example() {
+    let actual = "Hello";
+    let expected = "World";
+    assert_eq!(actual, expected);  // 会显示清晰的彩色 diff
+}
+```
+
+**效果**：失败时会显示清晰的彩色 diff，更容易定位问题。
+
+### 2. rstest
+
+`rstest` 支持参数化测试和 fixtures，减少代码重复。
+
+**参数化测试**：
+
+```rust
+use rstest::rstest;
+
+#[rstest]
+#[case("input1", "output1")]
+#[case("input2", "output2")]
+#[case("input3", "output3")]
+fn test_multiple_cases(#[case] input: &str, #[case] expected: &str) {
+    let result = process(input);
+    assert_eq!(result, expected);
+}
+```
+
+**Fixtures**：
+
+```rust
+use rstest::{fixture, rstest};
+
+#[fixture]
+fn sample_data() -> Vec<i32> {
+    vec![1, 2, 3, 4, 5]
+}
+
+#[rstest]
+fn test_with_fixture(sample_data: Vec<i32>) {
+    assert_eq!(sample_data.len(), 5);
+}
+```
+
+**优势**：
+- 减少代码重复
+- 更容易添加新的测试用例
+- 测试用例更清晰
+
+### 3. insta
+
+`insta` 提供快照测试功能，特别适合测试 JSON 响应和复杂数据结构。
+
+**使用方式**：
+
+```rust
+use insta::assert_json_snapshot;
+
+#[test]
+fn test_json_response() {
+    let json = json!({
+        "id": 123,
+        "name": "Test",
+        "data": [1, 2, 3]
+    });
+
+    // 首次运行会创建快照文件
+    // 后续运行会与快照对比
+    assert_json_snapshot!("test_response", json);
+}
+```
+
+**快照管理**：
+
+```bash
+# 首次运行会创建快照文件
+cargo test
+
+# 如果快照需要更新
+INSTA_UPDATE=1 cargo test
+
+# 或者使用 cargo-insta
+cargo install cargo-insta
+cargo insta review
+```
+
+**快照文件位置**：`tests/__snapshots__/` 或 `tests/{module}/snapshots/`
+
+**注意事项**：
+- 快照文件需要提交到版本控制
+- 更新快照时要谨慎，确保变更是正确的
+- 适合测试稳定的数据结构
+
+### 4. mockito
+
+`mockito` 用于 HTTP API 的 Mock 测试，避免实际调用外部 API。
+
+**使用方式**：
+
+```rust
+use crate::common::http_helpers::MockServer;
+use mockito::Matcher;
+
+#[test]
+fn test_api_call() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建 Mock
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .match_header("authorization", Matcher::Regex(r"token .+".to_string()))
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+
+    // 执行测试
+    // let result = client.call_api()?;
+    // assert_eq!(result, "success");
+
+    // 验证 Mock 被调用
+    // _mock.assert();
+}
+```
+
+**MockServer 工具**：
+
+`tests/common/http_helpers.rs` 提供了 `MockServer` 包装器，简化 Mock 服务器的使用：
+
+```rust
+use crate::common::http_helpers::MockServer;
+
+let mut mock_server = MockServer::new();
+mock_server.setup_github_base_url();  // 设置 GitHub API Mock
+mock_server.setup_jira_base_url();    // 设置 Jira API Mock
+// MockServer 会在 Drop 时自动清理环境变量
+```
+
+**优势**：
+- 不依赖外部 API
+- 测试执行速度快
+- 可以模拟各种错误情况
+- 测试更稳定
+
+---
+
 ## 🔗 相关文档
 
 - [开发规范](./DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
 - [PR 平台指南](./PR_PLATFORM_GUIDELINES.md) - PR 平台测试相关指南
+- [测试迁移指南](../requirements/TESTING_MIGRATION_GUIDE.md) - 详细的测试工具迁移指南
 
 ---
 
@@ -342,7 +503,11 @@ fn test_parse_ticket_id_boundary() {
 - [The Rust Book - Test Organization](https://doc.rust-lang.org/book/ch11-03-test-organization.html)
 - [Rust API Guidelines - Testing](https://rust-lang.github.io/api-guidelines/documentation.html#c-test)
 - [Cargo Book - Tests](https://doc.rust-lang.org/cargo/guide/tests.html)
+- [pretty_assertions 文档](https://docs.rs/pretty_assertions/)
+- [rstest 文档](https://docs.rs/rstest/)
+- [insta 文档](https://docs.rs/insta/)
+- [mockito 文档](https://docs.rs/mockito/)
 
 ---
 
-**最后更新**: 2025-12-09
+**最后更新**: 2025-12-12

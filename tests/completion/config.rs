@@ -4,56 +4,39 @@
 
 use crate::common::helpers::create_temp_test_dir;
 use clap_complete::Shell;
+use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::completion::Completion;
 
 // ==================== Completion 配置检查测试 ====================
 
-#[test]
-fn test_is_shell_configured_zsh() {
-    // 测试检查 zsh 是否已配置 completion
-    let result = Completion::is_shell_configured(&Shell::Zsh);
+#[rstest]
+#[case(Shell::Zsh, "zsh", ".zshrc")]
+#[case(Shell::Bash, "bash", ".bashrc")]
+#[case(Shell::Fish, "fish", ".config")]
+#[case(Shell::Elvish, "elvish", ".elv")]
+fn test_is_shell_configured(
+    #[case] shell: Shell,
+    #[case] shell_name: &str,
+    #[case] config_identifier: &str,
+) {
+    // 测试检查 shell 是否已配置 completion
+    let result = Completion::is_shell_configured(&shell);
 
     // 应该返回 Ok，包含配置状态和配置文件路径
-    assert!(result.is_ok(), "Should return Ok for zsh shell check");
-    let (_configured, config_path) = result.unwrap();
-    // configured 可能是 true 或 false，取决于实际配置
     assert!(
-        config_path.to_string_lossy().contains("zsh")
-            || config_path.to_string_lossy().contains(".zshrc"),
-        "Config path should be related to zsh"
+        result.is_ok(),
+        "Should return Ok for {} shell check",
+        shell_name
     );
-}
-
-#[test]
-fn test_is_shell_configured_bash() {
-    // 测试检查 bash 是否已配置 completion
-    let result = Completion::is_shell_configured(&Shell::Bash);
-
-    // 应该返回 Ok，包含配置状态和配置文件路径
-    assert!(result.is_ok(), "Should return Ok for bash shell check");
     let (_configured, config_path) = result.unwrap();
     // configured 可能是 true 或 false，取决于实际配置
+    let path_str = config_path.to_string_lossy();
     assert!(
-        config_path.to_string_lossy().contains("bash")
-            || config_path.to_string_lossy().contains(".bashrc")
-            || config_path.to_string_lossy().contains(".bash_profile"),
-        "Config path should be related to bash"
-    );
-}
-
-#[test]
-fn test_is_shell_configured_fish() {
-    // 测试检查 fish 是否已配置 completion
-    let result = Completion::is_shell_configured(&Shell::Fish);
-
-    // 应该返回 Ok，包含配置状态和配置文件路径
-    assert!(result.is_ok(), "Should return Ok for fish shell check");
-    let (_configured, config_path) = result.unwrap();
-    // configured 可能是 true 或 false，取决于实际配置
-    assert!(
-        config_path.to_string_lossy().contains("fish")
-            || config_path.to_string_lossy().contains(".config"),
-        "Config path should be related to fish"
+        path_str.contains(shell_name) || path_str.contains(config_identifier),
+        "Config path should be related to {}: {}",
+        shell_name,
+        path_str
     );
 }
 
@@ -69,71 +52,29 @@ fn test_is_shell_configured_powershell() {
     // PowerShell 配置文件路径可能包含 "powershell" 或 "Microsoft"
 }
 
-#[test]
-fn test_is_shell_configured_elvish() {
-    // 测试检查 elvish 是否已配置 completion
-    let result = Completion::is_shell_configured(&Shell::Elvish);
-
-    // 应该返回 Ok，包含配置状态和配置文件路径
-    assert!(result.is_ok(), "Should return Ok for elvish shell check");
-    let (_configured, config_path) = result.unwrap();
-    // configured 可能是 true 或 false，取决于实际配置
-    assert!(
-        config_path.to_string_lossy().contains("elvish")
-            || config_path.to_string_lossy().contains(".elv"),
-        "Config path should be related to elvish"
-    );
-}
-
 // ==================== Completion 文件列表测试 ====================
 
-#[test]
-fn test_get_completion_files_zsh() {
-    // 测试获取 zsh 的 completion 文件列表
-    let files = Completion::get_completion_files(&Shell::Zsh);
+#[rstest]
+#[case(Shell::Zsh, "completion", "_workflow")]
+#[case(Shell::Bash, "completion", "workflow.bash")]
+#[case(Shell::Fish, "completion", ".fish")]
+fn test_get_completion_files(
+    #[case] shell: Shell,
+    #[case] identifier1: &str,
+    #[case] identifier2: &str,
+) {
+    // 测试获取 shell 的 completion 文件列表
+    let files = Completion::get_completion_files(&shell);
 
     // 应该返回文件路径列表（可能为空）
     assert!(true, "Should return a list of file paths");
-    // 如果列表不为空，文件路径应该与 zsh 相关
+    // 如果列表不为空，文件路径应该与 shell 相关
     for file in &files {
         let file_str = file.to_string_lossy();
         assert!(
-            file_str.contains("completion") || file_str.contains("_workflow"),
-            "File path should be related to completion"
-        );
-    }
-}
-
-#[test]
-fn test_get_completion_files_bash() {
-    // 测试获取 bash 的 completion 文件列表
-    let files = Completion::get_completion_files(&Shell::Bash);
-
-    // 应该返回文件路径列表（可能为空）
-    assert!(true, "Should return a list of file paths");
-    // 如果列表不为空，文件路径应该与 bash 相关
-    for file in &files {
-        let file_str = file.to_string_lossy();
-        assert!(
-            file_str.contains("completion") || file_str.contains("workflow.bash"),
-            "File path should be related to completion"
-        );
-    }
-}
-
-#[test]
-fn test_get_completion_files_fish() {
-    // 测试获取 fish 的 completion 文件列表
-    let files = Completion::get_completion_files(&Shell::Fish);
-
-    // 应该返回文件路径列表（可能为空）
-    assert!(true, "Should return a list of file paths");
-    // 如果列表不为空，文件路径应该与 fish 相关
-    for file in &files {
-        let file_str = file.to_string_lossy();
-        assert!(
-            file_str.contains("completion") || file_str.contains(".fish"),
-            "File path should be related to completion"
+            file_str.contains(identifier1) || file_str.contains(identifier2),
+            "File path should be related to completion: {}",
+            file_str
         );
     }
 }
@@ -150,31 +91,20 @@ fn test_remove_completion_config_file() {
     // 返回值可能是 true（文件存在并删除）或 false（文件不存在）
 }
 
-#[test]
-fn test_remove_completion_config_zsh() {
-    // 测试删除 zsh 的 completion 配置
-    let result = Completion::remove_completion_config(&Shell::Zsh);
+#[rstest]
+#[case(Shell::Zsh)]
+#[case(Shell::Bash)]
+#[case(Shell::Fish)]
+fn test_remove_completion_config(#[case] shell: Shell) {
+    // 测试删除 shell 的 completion 配置
+    let result = Completion::remove_completion_config(&shell);
 
     // 应该返回 Ok（即使配置不存在）
-    assert!(result.is_ok(), "Should return Ok when removing zsh config");
-}
-
-#[test]
-fn test_remove_completion_config_bash() {
-    // 测试删除 bash 的 completion 配置
-    let result = Completion::remove_completion_config(&Shell::Bash);
-
-    // 应该返回 Ok（即使配置不存在）
-    assert!(result.is_ok(), "Should return Ok when removing bash config");
-}
-
-#[test]
-fn test_remove_completion_config_fish() {
-    // 测试删除 fish 的 completion 配置
-    let result = Completion::remove_completion_config(&Shell::Fish);
-
-    // 应该返回 Ok（即使配置不存在）
-    assert!(result.is_ok(), "Should return Ok when removing fish config");
+    assert!(
+        result.is_ok(),
+        "Should return Ok when removing {:?} config",
+        shell
+    );
 }
 
 #[test]
@@ -188,15 +118,19 @@ fn test_remove_all_completion_configs() {
 
 // ==================== Completion 文件删除测试 ====================
 
-#[test]
-fn test_remove_completion_files_zsh() {
-    // 测试删除 zsh 的 completion 文件
-    let result = Completion::remove_completion_files(&Shell::Zsh);
+#[rstest]
+#[case(Shell::Zsh)]
+#[case(Shell::Bash)]
+#[case(Shell::Fish)]
+fn test_remove_completion_files(#[case] shell: Shell) {
+    // 测试删除 shell 的 completion 文件
+    let result = Completion::remove_completion_files(&shell);
 
     // 应该返回 Ok，包含删除结果
     assert!(
         result.is_ok(),
-        "Should return Ok when removing zsh completion files"
+        "Should return Ok when removing {:?} completion files",
+        shell
     );
     let removal_result = result.unwrap();
     assert!(true, "Removed count should be non-negative");
@@ -204,34 +138,6 @@ fn test_remove_completion_files_zsh() {
         removal_result.removed_files.len() == removal_result.removed_count as usize,
         "Removed files count should match removed count"
     );
-}
-
-#[test]
-fn test_remove_completion_files_bash() {
-    // 测试删除 bash 的 completion 文件
-    let result = Completion::remove_completion_files(&Shell::Bash);
-
-    // 应该返回 Ok，包含删除结果
-    assert!(
-        result.is_ok(),
-        "Should return Ok when removing bash completion files"
-    );
-    let _removal_result = result.unwrap();
-    assert!(true, "Removed count should be non-negative");
-}
-
-#[test]
-fn test_remove_completion_files_fish() {
-    // 测试删除 fish 的 completion 文件
-    let result = Completion::remove_completion_files(&Shell::Fish);
-
-    // 应该返回 Ok，包含删除结果
-    assert!(
-        result.is_ok(),
-        "Should return Ok when removing fish completion files"
-    );
-    let _removal_result = result.unwrap();
-    assert!(true, "Removed count should be non-negative");
 }
 
 // ==================== Completion 配置结果结构体测试 ====================
@@ -294,6 +200,23 @@ fn test_generate_all_completions_with_shell_type() {
 }
 
 #[test]
+fn test_generate_all_completions_auto_detect() {
+    // 测试自动检测 shell 类型生成所有 completion
+    let result = Completion::generate_all_completions(None, None);
+
+    // 如果路径解析成功，应该能生成；否则返回错误
+    match result {
+        Ok(_) => {
+            assert!(true, "Should succeed when path resolution works");
+        }
+        Err(_) => {
+            // 路径解析失败或 shell 检测失败，这也是可以接受的
+            assert!(true, "Path resolution or shell detection may fail");
+        }
+    }
+}
+
+#[test]
 fn test_generate_all_completions_with_output_dir() {
     // 测试使用指定输出目录生成所有 completion
     let test_dir = create_temp_test_dir("completion_test");
@@ -314,21 +237,4 @@ fn test_generate_all_completions_with_output_dir() {
     }
 
     crate::common::helpers::cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_generate_all_completions_auto_detect() {
-    // 测试自动检测 shell 类型生成所有 completion
-    let result = Completion::generate_all_completions(None, None);
-
-    // 如果路径解析成功，应该能生成；否则返回错误
-    match result {
-        Ok(_) => {
-            assert!(true, "Should succeed when path resolution works");
-        }
-        Err(_) => {
-            // 路径解析失败或 shell 检测失败，这也是可以接受的
-            assert!(true, "Path resolution or shell detection may fail");
-        }
-    }
 }

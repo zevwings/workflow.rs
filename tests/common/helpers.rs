@@ -227,3 +227,29 @@ pub fn random_string(length: usize) -> String {
     std::time::SystemTime::now().hash(&mut hasher);
     format!("{:x}", hasher.finish())[..length.min(16)].to_string()
 }
+
+/// 断言错误消息包含预期的关键词
+///
+/// 用于测试错误处理，验证错误消息是否包含预期的关键词。
+///
+/// # 参数
+///
+/// * `error_msg` - 错误消息
+/// * `keywords` - 预期的关键词列表（至少包含一个）
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::assert_error_contains;
+///
+/// let error_msg = "Log file not found";
+/// assert_error_contains(&error_msg, &["not found", "Log file"]);
+/// ```
+pub fn assert_error_contains(error_msg: &str, keywords: &[&str]) {
+    let found = keywords.iter().any(|keyword| error_msg.contains(keyword));
+    assert!(
+        found,
+        "Error message should contain at least one of {:?}: {}",
+        keywords, error_msg
+    );
+}

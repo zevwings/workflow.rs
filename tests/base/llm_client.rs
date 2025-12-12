@@ -2,6 +2,9 @@
 //!
 //! 测试 LLM 客户端的 JSON 解析功能，支持多种 OpenAI 兼容格式。
 
+use insta::assert_json_snapshot;
+use pretty_assertions::assert_eq;
+
 use serde_json::json;
 use workflow::base::llm::client::LLMClient;
 
@@ -31,6 +34,9 @@ fn test_extract_from_openai_standard() {
     let client = LLMClient::global();
     let result = client.extract_content(&json).unwrap();
     assert_eq!(result, "Test content");
+
+    // 使用快照测试验证 JSON 结构
+    assert_json_snapshot!("openai_standard_response", json);
 }
 
 #[test]
@@ -74,6 +80,9 @@ fn test_extract_from_openai_proxy() {
     let client = LLMClient::global();
     let result = client.extract_content(&json).unwrap();
     assert_eq!(result, "Test response content");
+
+    // 使用快照测试验证 JSON 结构
+    assert_json_snapshot!("openai_proxy_response", json);
 }
 
 #[test]
@@ -110,4 +119,7 @@ fn test_extract_from_cerebras_proxy() {
     let client = LLMClient::global();
     let result = client.extract_content(&json).unwrap();
     assert_eq!(result, "Test response content");
+
+    // 使用快照测试验证 JSON 结构
+    assert_json_snapshot!("cerebras_proxy_response", json);
 }

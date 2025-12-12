@@ -54,7 +54,7 @@ brew install workflow
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 
 # 安装指定版本
-VERSION=v1.5.1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.5.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 ```
 
 **功能特性**：
@@ -123,7 +123,7 @@ powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.5.1"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.5.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -396,7 +396,7 @@ workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模
 workflow config import <INPUT> --section jira   # 只导入指定配置段
 workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
 workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
-workflow update --version 1.5.1    # 更新到指定版本
+workflow update --version 1.5.4    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 workflow version                   # 显示 Workflow CLI 版本
 workflow migrate                   # 执行配置迁移（自动检测并迁移所有待迁移版本）

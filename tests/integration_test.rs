@@ -9,6 +9,7 @@ mod base;
 mod cli;
 mod completion;
 mod git;
+mod http;
 mod integration;
 mod jira;
 mod pr;

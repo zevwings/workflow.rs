@@ -3,89 +3,30 @@
 //! 测试 Completion 脚本生成器的功能。
 
 use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir};
+use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::completion::generate::CompletionGenerator;
 
 // ==================== CompletionGenerator 创建测试 ====================
 
-#[test]
-fn test_completion_generator_new_with_zsh() {
-    // 测试使用 zsh 创建 CompletionGenerator
+#[rstest]
+#[case("zsh")]
+#[case("bash")]
+#[case("fish")]
+#[case("powershell")]
+#[case("elvish")]
+fn test_completion_generator_new_with_shell(#[case] shell: &str) {
+    // 测试使用指定 shell 创建 CompletionGenerator
     let test_dir = create_temp_test_dir("completion_gen");
     let result = CompletionGenerator::new(
-        Some("zsh".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    );
-
-    assert!(result.is_ok(), "Should create CompletionGenerator for zsh");
-    let _generator = result.unwrap();
-    // shell 字段是私有的，我们只能验证创建成功
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_new_with_bash() {
-    // 测试使用 bash 创建 CompletionGenerator
-    let test_dir = create_temp_test_dir("completion_gen");
-    let result = CompletionGenerator::new(
-        Some("bash".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    );
-
-    assert!(result.is_ok(), "Should create CompletionGenerator for bash");
-    let _generator = result.unwrap();
-    // shell 字段是私有的，我们只能验证创建成功
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_new_with_fish() {
-    // 测试使用 fish 创建 CompletionGenerator
-    let test_dir = create_temp_test_dir("completion_gen");
-    let result = CompletionGenerator::new(
-        Some("fish".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    );
-
-    assert!(result.is_ok(), "Should create CompletionGenerator for fish");
-    let _generator = result.unwrap();
-    // shell 字段是私有的，我们只能验证创建成功
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_new_with_powershell() {
-    // 测试使用 PowerShell 创建 CompletionGenerator
-    let test_dir = create_temp_test_dir("completion_gen");
-    let result = CompletionGenerator::new(
-        Some("powershell".to_string()),
+        Some(shell.to_string()),
         Some(test_dir.to_string_lossy().to_string()),
     );
 
     assert!(
         result.is_ok(),
-        "Should create CompletionGenerator for PowerShell"
-    );
-    let _generator = result.unwrap();
-    // shell 字段是私有的，我们只能验证创建成功
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_new_with_elvish() {
-    // 测试使用 elvish 创建 CompletionGenerator
-    let test_dir = create_temp_test_dir("completion_gen");
-    let result = CompletionGenerator::new(
-        Some("elvish".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    );
-
-    assert!(
-        result.is_ok(),
-        "Should create CompletionGenerator for elvish"
+        "Should create CompletionGenerator for {}",
+        shell
     );
     let _generator = result.unwrap();
     // shell 字段是私有的，我们只能验证创建成功
@@ -141,12 +82,15 @@ fn test_completion_generator_new_with_default_output_dir() {
 
 // ==================== Completion 生成测试 ====================
 
-#[test]
-fn test_completion_generator_generate_all_zsh() {
-    // 测试生成 zsh 的 completion 脚本
+#[rstest]
+#[case("zsh")]
+#[case("bash")]
+#[case("fish")]
+fn test_completion_generator_generate_all(#[case] shell: &str) {
+    // 测试生成 shell 的 completion 脚本
     let test_dir = create_temp_test_dir("completion_gen");
     let generator = CompletionGenerator::new(
-        Some("zsh".to_string()),
+        Some(shell.to_string()),
         Some(test_dir.to_string_lossy().to_string()),
     )
     .expect("Should create generator");
@@ -160,78 +104,22 @@ fn test_completion_generator_generate_all_zsh() {
                 generate_result.messages.len() > 0,
                 "Should have generation messages"
             );
-            // 验证文件是否生成
-            let files: Vec<_> = std::fs::read_dir(&test_dir)
-                .unwrap()
-                .map(|entry| entry.unwrap().file_name())
-                .collect();
-            // 应该至少有一个 completion 文件
-            assert!(
-                files.len() > 0,
-                "Should generate at least one completion file"
-            );
+            // 对于 zsh，验证文件是否生成
+            if shell == "zsh" {
+                let files: Vec<_> = std::fs::read_dir(&test_dir)
+                    .unwrap()
+                    .map(|entry| entry.unwrap().file_name())
+                    .collect();
+                // 应该至少有一个 completion 文件
+                assert!(
+                    files.len() > 0,
+                    "Should generate at least one completion file"
+                );
+            }
         }
         Err(_) => {
             // 生成失败，这也是可以接受的（例如 CLI 结构体问题）
             assert!(true, "Generation may fail due to CLI structure issues");
-        }
-    }
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_generate_all_bash() {
-    // 测试生成 bash 的 completion 脚本
-    let test_dir = create_temp_test_dir("completion_gen");
-    let generator = CompletionGenerator::new(
-        Some("bash".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    )
-    .expect("Should create generator");
-
-    let result = generator.generate_all();
-
-    // 如果目录创建成功，应该能生成；否则返回错误
-    match result {
-        Ok(generate_result) => {
-            assert!(
-                generate_result.messages.len() > 0,
-                "Should have generation messages"
-            );
-        }
-        Err(_) => {
-            // 生成失败，这也是可以接受的
-            assert!(true, "Generation may fail");
-        }
-    }
-
-    cleanup_temp_test_dir(&test_dir);
-}
-
-#[test]
-fn test_completion_generator_generate_all_fish() {
-    // 测试生成 fish 的 completion 脚本
-    let test_dir = create_temp_test_dir("completion_gen");
-    let generator = CompletionGenerator::new(
-        Some("fish".to_string()),
-        Some(test_dir.to_string_lossy().to_string()),
-    )
-    .expect("Should create generator");
-
-    let result = generator.generate_all();
-
-    // 如果目录创建成功，应该能生成；否则返回错误
-    match result {
-        Ok(generate_result) => {
-            assert!(
-                generate_result.messages.len() > 0,
-                "Should have generation messages"
-            );
-        }
-        Err(_) => {
-            // 生成失败，这也是可以接受的
-            assert!(true, "Generation may fail");
         }
     }
 

@@ -2,6 +2,7 @@
 //!
 //! 测试平台检测、路径处理和系统信息获取功能。
 
+use pretty_assertions::assert_eq;
 use std::env;
 use workflow::base::util::platform::detect_release_platform;
 

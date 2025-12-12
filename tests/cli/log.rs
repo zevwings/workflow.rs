@@ -5,6 +5,7 @@
 //! 注意：Log 命令现在是 Jira 命令的子命令，路径为 `workflow jira log`.
 
 use clap::Parser;
+use pretty_assertions::assert_eq;
 use workflow::cli::{JiraSubcommand, LogSubcommand};
 
 // 创建一个测试用的 CLI 结构来测试参数解析（通过 Jira 命令）

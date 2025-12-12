@@ -2,50 +2,51 @@
 //!
 //! 测试从 PR body 中提取信息的功能。
 
+use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::pr::body_parser::{
     extract_description_from_body, extract_info_from_source_pr, extract_jira_ticket_from_body,
     parse_change_types_from_body, SourcePrInfo,
 };
 
-#[test]
-fn test_extract_jira_ticket_from_body() {
-    let body = r#"#### Jira Link:
+#[rstest]
+#[case(
+    r#"#### Jira Link:
 
-https://jira.example.com/browse/PROJ-123"#;
-    assert_eq!(
-        extract_jira_ticket_from_body(body),
-        Some("PROJ-123".to_string())
-    );
+https://jira.example.com/browse/PROJ-123"#,
+    Some("PROJ-123")
+)]
+#[case(
+    r#"#### Jira Link:
 
-    let body = r#"#### Jira Link:
-
-https://jira.example.com/browse/ABC-456"#;
-    assert_eq!(
-        extract_jira_ticket_from_body(body),
-        Some("ABC-456".to_string())
-    );
-
-    let body = "No Jira link";
-    assert_eq!(extract_jira_ticket_from_body(body), None);
+https://jira.example.com/browse/ABC-456"#,
+    Some("ABC-456")
+)]
+#[case("No Jira link", None)]
+#[case("", None)]
+fn test_extract_jira_ticket_from_body(#[case] body: &str, #[case] expected: Option<&str>) {
+    let result = extract_jira_ticket_from_body(body);
+    assert_eq!(result, expected.map(|s| s.to_string()));
 }
 
-#[test]
-fn test_extract_description_from_body() {
-    let body = r#"#### Short description:
+#[rstest]
+#[case(
+    r#"#### Short description:
 
-This is a test description"#;
-    assert_eq!(
-        extract_description_from_body(body),
-        Some("This is a test description".to_string())
-    );
+This is a test description"#,
+    Some("This is a test description")
+)]
+#[case(
+    r#"#### Short description:
 
-    let body = r#"#### Short description:
-
-"#;
-    assert_eq!(extract_description_from_body(body), None);
-
-    let body = "No description";
-    assert_eq!(extract_description_from_body(body), None);
+"#,
+    None
+)]
+#[case("No description", None)]
+#[case("", None)]
+fn test_extract_description_from_body(#[case] body: &str, #[case] expected: Option<&str>) {
+    let result = extract_description_from_body(body);
+    assert_eq!(result, expected.map(|s| s.to_string()));
 }
 
 #[test]

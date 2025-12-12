@@ -1,0 +1,33 @@
+---
+source: tests/base/llm_client.rs
+expression: json
+---
+{
+  "choices": [
+    {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+        "content": "Test response content",
+        "role": "assistant"
+      }
+    }
+  ],
+  "created": 1764083329,
+  "id": "chatcmpl-97c1fe15-05df-490d-a1b9-8540771db334",
+  "model": "qwen-3-235b-a22b-instruct-2507",
+  "object": "chat.completion",
+  "system_fingerprint": "fp_d2d9b827ee854c39818d",
+  "time_info": {
+    "completion_time": 0.120426404,
+    "created": 1764083329.0582647,
+    "prompt_time": 0.003562439,
+    "queue_time": 0.001855552,
+    "total_time": 0.12685751914978027
+  },
+  "usage": {
+    "completion_tokens": 123,
+    "prompt_tokens": 63,
+    "total_tokens": 186
+  }
+}

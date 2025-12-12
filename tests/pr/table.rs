@@ -2,6 +2,7 @@
 //!
 //! 测试 PullRequestRow 结构体的创建、字段访问和表格显示功能。
 
+use pretty_assertions::assert_eq;
 use workflow::pr::table::PullRequestRow;
 
 // ==================== PullRequestRow 结构体创建测试 ====================

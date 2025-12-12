@@ -3,6 +3,8 @@
 //! 测试 Jira CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
 use workflow::cli::JiraSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -11,6 +13,18 @@ use workflow::cli::JiraSubcommand;
 struct TestJiraCli {
     #[command(subcommand)]
     command: JiraSubcommand,
+}
+
+// ==================== Fixtures ====================
+
+#[fixture]
+fn test_jira_id() -> &'static str {
+    "PROJ-123"
+}
+
+#[fixture]
+fn test_jira_id_alt() -> &'static str {
+    "PROJ-456"
 }
 
 // ==================== 命令结构测试 ====================
@@ -22,136 +36,236 @@ fn test_jira_subcommand_enum_creation() {
     assert!(true, "JiraSubcommand enum should be defined");
 }
 
-#[test]
-fn test_jira_info_command_structure() {
-    // 测试 Info 命令结构
-    // 验证命令可以解析
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123"]).unwrap();
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+#[case("comment", "PROJ-123")]
+#[case("comments", "PROJ-123")]
+#[case("attachments", "PROJ-456")]
+fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id]).unwrap();
 
-    match cli.command {
-        JiraSubcommand::Info { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+    match &cli.command {
+        JiraSubcommand::Info { jira_id: id, .. } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
         }
-        _ => panic!("Expected Info command"),
+        JiraSubcommand::Related { jira_id: id, .. } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        }
+        JiraSubcommand::Changelog { jira_id: id, .. } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        }
+        JiraSubcommand::Comment { jira_id: id } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        }
+        JiraSubcommand::Comments { jira_id: id, .. } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        }
+        JiraSubcommand::Attachments { jira_id: id } => {
+            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        }
+        _ => panic!("Unexpected command variant"),
     }
 }
 
-#[test]
-fn test_jira_info_command_without_id() {
-    // 测试 Info 命令不带 ID（应该为 None）
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
+#[rstest]
+#[case("info")]
+#[case("related")]
+#[case("changelog")]
+#[case("comment")]
+#[case("comments")]
+#[case("attachments")]
+#[case("clean")]
+fn test_jira_command_without_id(#[case] subcommand: &str) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
 
-    match cli.command {
+    match &cli.command {
         JiraSubcommand::Info { jira_id, .. } => {
             assert_eq!(jira_id.jira_id, None);
         }
-        _ => panic!("Expected Info command"),
-    }
-}
-
-// ==================== Related 命令测试 ====================
-
-#[test]
-fn test_jira_related_command_structure() {
-    // 测试 Related 命令基本结构
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-        }
-        _ => panic!("Expected Related command"),
-    }
-}
-
-#[test]
-fn test_jira_related_command_with_jira_id() {
-    // 测试带 JIRA ID 的情况
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-456"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
-        }
-        _ => panic!("Expected Related command"),
-    }
-}
-
-#[test]
-fn test_jira_related_command_without_id() {
-    // 测试不带 JIRA ID（交互式输入）
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related"]).unwrap();
-
-    match cli.command {
         JiraSubcommand::Related { jira_id, .. } => {
             assert_eq!(jira_id.jira_id, None);
         }
-        _ => panic!("Expected Related command"),
+        JiraSubcommand::Changelog { jira_id, .. } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        JiraSubcommand::Comment { jira_id } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        JiraSubcommand::Comments { jira_id, .. } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        JiraSubcommand::Attachments { jira_id } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        JiraSubcommand::Clean { jira_id, .. } => {
+            assert_eq!(jira_id.jira_id, None);
+        }
+        _ => panic!("Unexpected command variant"),
     }
 }
 
-#[test]
-fn test_jira_related_command_output_formats() {
-    // 测试输出格式（table, json, yaml, markdown）
+// ==================== 输出格式测试 ====================
 
-    // Table format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--table"]).unwrap();
-    match cli.command {
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+#[case("comments", "PROJ-123")]
+fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_id: &str) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"]).unwrap();
+
+    match &cli.command {
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
         JiraSubcommand::Related { output_format, .. } => {
             assert!(output_format.table);
             assert!(!output_format.json);
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Expected Related command"),
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        _ => panic!("Unexpected command variant"),
     }
+}
 
-    // JSON format
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--json"]).unwrap();
-    match cli.command {
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+#[case("comments", "PROJ-123")]
+fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_id: &str) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"]).unwrap();
+
+    match &cli.command {
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
         JiraSubcommand::Related { output_format, .. } => {
             assert!(!output_format.table);
             assert!(output_format.json);
             assert!(!output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Expected Related command"),
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(output_format.json);
+            assert!(!output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        _ => panic!("Unexpected command variant"),
     }
+}
 
-    // YAML format
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--yaml"]).unwrap();
-    match cli.command {
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+#[case("comments", "PROJ-123")]
+fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_id: &str) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"]).unwrap();
+
+    match &cli.command {
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
+        }
         JiraSubcommand::Related { output_format, .. } => {
             assert!(!output_format.table);
             assert!(!output_format.json);
             assert!(output_format.yaml);
             assert!(!output_format.markdown);
         }
-        _ => panic!("Expected Related command"),
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(output_format.yaml);
+            assert!(!output_format.markdown);
+        }
+        _ => panic!("Unexpected command variant"),
     }
+}
 
-    // Markdown format
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+#[case("comments", "PROJ-123")]
+fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] jira_id: &str) {
     let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "related", "PROJ-123", "--markdown"]).unwrap();
-    match cli.command {
+        TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"]).unwrap();
+
+    match &cli.command {
+        JiraSubcommand::Info { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
+        }
         JiraSubcommand::Related { output_format, .. } => {
             assert!(!output_format.table);
             assert!(!output_format.json);
             assert!(!output_format.yaml);
             assert!(output_format.markdown);
         }
-        _ => panic!("Expected Related command"),
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
+        }
+        JiraSubcommand::Comments { output_format, .. } => {
+            assert!(!output_format.table);
+            assert!(!output_format.json);
+            assert!(!output_format.yaml);
+            assert!(output_format.markdown);
+        }
+        _ => panic!("Unexpected command variant"),
     }
 }
 
-#[test]
-fn test_jira_related_command_all_flags() {
-    // 测试所有标志组合
+#[rstest]
+#[case("info", "PROJ-123")]
+#[case("related", "PROJ-123")]
+#[case("changelog", "PROJ-123")]
+fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] jira_id: &str) {
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
-        "related",
-        "PROJ-123",
+        subcommand,
+        jira_id,
         "--table",
         "--json",
         "--yaml",
@@ -159,46 +273,30 @@ fn test_jira_related_command_all_flags() {
     ])
     .unwrap();
 
-    match cli.command {
-        JiraSubcommand::Related {
-            jira_id,
-            output_format,
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+    match &cli.command {
+        JiraSubcommand::Info { output_format, .. } => {
             assert!(output_format.table);
             assert!(output_format.json);
             assert!(output_format.yaml);
             assert!(output_format.markdown);
         }
-        _ => panic!("Expected Related command"),
-    }
-}
-
-#[test]
-fn test_jira_attachments_command_structure() {
-    // 测试 Attachments 命令结构
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "attachments", "PROJ-456"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Attachments { jira_id } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
+        JiraSubcommand::Related { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(output_format.json);
+            assert!(output_format.yaml);
+            assert!(output_format.markdown);
         }
-        _ => panic!("Expected Attachments command"),
-    }
-}
-
-#[test]
-fn test_jira_attachments_command_without_id() {
-    // 测试 Attachments 命令不带 ID
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "attachments"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Attachments { jira_id } => {
-            assert_eq!(jira_id.jira_id, None);
+        JiraSubcommand::Changelog { output_format, .. } => {
+            assert!(output_format.table);
+            assert!(output_format.json);
+            assert!(output_format.yaml);
+            assert!(output_format.markdown);
         }
-        _ => panic!("Expected Attachments command"),
+        _ => panic!("Unexpected command variant"),
     }
 }
+
+// ==================== Clean 命令测试 ====================
 
 #[test]
 fn test_jira_clean_command_structure() {
@@ -229,86 +327,52 @@ fn test_jira_clean_command_structure() {
     }
 }
 
-#[test]
-fn test_jira_clean_command_with_jira_id_only() {
-    // 测试 Clean 命令只带 JIRA ID
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Clean {
-            jira_id,
-            all,
-            dry_run,
-            list,
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert!(!all);
-            assert!(!dry_run.dry_run);
-            assert!(!list);
-        }
-        _ => panic!("Expected Clean command"),
+#[rstest]
+#[case("PROJ-123", false, false, false, false)]
+#[case("PROJ-123", true, false, false, false)]
+#[case("PROJ-123", false, true, false, false)]
+#[case("PROJ-123", false, false, true, false)]
+#[case("PROJ-123", true, true, true, false)]
+#[case("", false, false, false, true)]
+#[case("", true, false, false, true)]
+fn test_jira_clean_command_flags(
+    #[case] jira_id: &str,
+    #[case] all: bool,
+    #[case] dry_run: bool,
+    #[case] list: bool,
+    #[case] no_jira_id: bool,
+) {
+    let mut args = vec!["test-jira", "clean"];
+    if !no_jira_id && !jira_id.is_empty() {
+        args.push(jira_id);
     }
-}
-
-#[test]
-fn test_jira_clean_command_with_all_flag() {
-    // 测试 Clean 命令带 --all 标志
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "--all"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Clean {
-            jira_id,
-            all,
-            dry_run,
-            list,
-        } => {
-            assert_eq!(jira_id.jira_id, None);
-            assert!(all);
-            assert!(!dry_run.dry_run);
-            assert!(!list);
-        }
-        _ => panic!("Expected Clean command"),
+    if all {
+        args.push("--all");
     }
-}
-
-#[test]
-fn test_jira_clean_command_with_dry_run() {
-    // 测试 Clean 命令带 --dry-run 标志
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "clean", "PROJ-123", "--dry-run"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Clean {
-            jira_id,
-            all,
-            dry_run,
-            list,
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert!(!all);
-            assert!(dry_run.dry_run);
-            assert!(!list);
-        }
-        _ => panic!("Expected Clean command"),
+    if dry_run {
+        args.push("--dry-run");
     }
-}
+    if list {
+        args.push("--list");
+    }
 
-#[test]
-fn test_jira_clean_command_with_list_flag() {
-    // 测试 Clean 命令带 --list 标志
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "PROJ-123", "--list"]).unwrap();
+    let cli = TestJiraCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         JiraSubcommand::Clean {
-            jira_id,
-            all,
-            dry_run,
-            list,
+            jira_id: id,
+            all: a,
+            dry_run: dr,
+            list: l,
         } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert!(!all);
-            assert!(!dry_run.dry_run);
-            assert!(list);
+            if no_jira_id {
+                assert_eq!(id.jira_id, None);
+            } else {
+                assert_eq!(id.jira_id, Some(jira_id.to_string()));
+            }
+            assert_eq!(a, all);
+            assert_eq!(dr.dry_run, dry_run);
+            assert_eq!(l, list);
         }
         _ => panic!("Expected Clean command"),
     }
@@ -335,366 +399,30 @@ fn test_jira_clean_command_short_flags() {
     }
 }
 
-#[test]
-fn test_jira_clean_command_without_jira_id() {
-    // 测试 Clean 命令不带 JIRA ID
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Clean {
-            jira_id,
-            all,
-            dry_run,
-            list,
-        } => {
-            assert_eq!(jira_id.jira_id, None);
-            assert!(!all);
-            assert!(!dry_run.dry_run);
-            assert!(!list);
-        }
-        _ => panic!("Expected Clean command"),
-    }
-}
-
-#[test]
-fn test_jira_command_parsing_all_subcommands() {
-    // 测试所有子命令都可以正确解析
-
-    // Info
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Info { .. }));
-
-    // Related
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Related { .. }));
-
-    // Changelog
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Changelog { .. }));
-
-    // Comment
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Comment { .. }));
-
-    // Comments
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Comments { .. }));
-
-    // Attachments
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "attachments"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Attachments { .. }));
-
-    // Clean
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean"]).unwrap();
-    assert!(matches!(cli.command, JiraSubcommand::Clean { .. }));
-}
-
-#[test]
-fn test_jira_command_error_handling_invalid_subcommand() {
-    // 测试无效子命令的错误处理
-    let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
-    assert!(result.is_err(), "Should fail on invalid subcommand");
-}
-
-#[test]
-fn test_jira_jira_id_parameter_optional() {
-    // 测试 JIRA ID 参数在所有命令中都是可选的
-    // Info
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Info { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
-    }
-
-    // Related
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "related"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Related { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
-    }
-
-    // Comment
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Comment { jira_id } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
-    }
-
-    // Attachments
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "attachments"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Attachments { jira_id } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
-    }
-
-    // Clean
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "clean"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Clean { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
-        _ => panic!(),
-    }
-}
-
-// ==================== Changelog 命令测试 ====================
-
-#[test]
-fn test_jira_changelog_command_structure() {
-    // 测试 Changelog 命令基本结构
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-#[test]
-fn test_jira_changelog_command_with_jira_id() {
-    // 测试带 JIRA ID 的情况
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-456"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-#[test]
-fn test_jira_changelog_command_without_id() {
-    // 测试不带 JIRA ID（交互式输入）
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, None);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-#[test]
-fn test_jira_changelog_command_with_field_filter() {
-    // 测试 --field 参数
-    // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
-    // 如果将来添加了 field 字段，这个测试需要更新
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            // field 字段当前不存在于枚举定义中
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-#[test]
-fn test_jira_changelog_command_output_formats() {
-    // 测试输出格式（table, json, yaml, markdown）
-
-    // Table format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--table"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-
-    // JSON format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--json"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-
-    // YAML format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--yaml"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-
-    // Markdown format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123", "--markdown"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-#[test]
-fn test_jira_changelog_command_all_flags() {
-    // 测试所有标志组合
-    let cli = TestJiraCli::try_parse_from(&[
-        "test-jira",
-        "changelog",
-        "PROJ-123",
-        "--table",
-        "--json",
-        "--yaml",
-        "--markdown",
-    ])
-    .unwrap();
-
-    match cli.command {
-        JiraSubcommand::Changelog {
-            jira_id,
-            output_format,
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert!(output_format.table);
-            assert!(output_format.json);
-            assert!(output_format.yaml);
-            assert!(output_format.markdown);
-        }
-        _ => panic!("Expected Changelog command"),
-    }
-}
-
-// ==================== Comment 命令测试 ====================
-
-#[test]
-fn test_jira_comment_command_structure() {
-    // 测试 Comment 命令基本结构
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comment { jira_id } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-        }
-        _ => panic!("Expected Comment command"),
-    }
-}
-
-#[test]
-fn test_jira_comment_command_with_jira_id() {
-    // 测试带 JIRA ID 的情况
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment", "PROJ-456"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comment { jira_id } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
-        }
-        _ => panic!("Expected Comment command"),
-    }
-}
-
-#[test]
-fn test_jira_comment_command_without_id() {
-    // 测试不带 JIRA ID（交互式输入）
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comment"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comment { jira_id } => {
-            assert_eq!(jira_id.jira_id, None);
-        }
-        _ => panic!("Expected Comment command"),
-    }
-}
-
-// ==================== Comments 命令测试 ====================
-
-#[test]
-fn test_jira_comments_command_structure() {
-    // 测试 Comments 命令基本结构
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-        }
-        _ => panic!("Expected Comments command"),
-    }
-}
-
-#[test]
-fn test_jira_comments_command_with_jira_id() {
-    // 测试带 JIRA ID 的情况
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-456"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-456".to_string()));
-        }
-        _ => panic!("Expected Comments command"),
-    }
-}
-
-#[test]
-fn test_jira_comments_command_without_id() {
-    // 测试不带 JIRA ID（交互式输入）
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments"]).unwrap();
-
-    match cli.command {
-        JiraSubcommand::Comments { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, None);
-        }
-        _ => panic!("Expected Comments command"),
-    }
-}
+// ==================== Comments 命令参数测试 ====================
 
 #[test]
 fn test_jira_comments_command_with_limit() {
-    // 测试 --limit 参数
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])
         .unwrap();
-
     match cli.command {
-        JiraSubcommand::Comments { jira_id, limit, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert_eq!(limit, Some(10));
-        }
+        JiraSubcommand::Comments { limit, .. } => assert_eq!(limit, Some(10)),
         _ => panic!("Expected Comments command"),
     }
 }
 
 #[test]
 fn test_jira_comments_command_with_offset() {
-    // 测试 --offset 参数
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])
         .unwrap();
-
     match cli.command {
-        JiraSubcommand::Comments {
-            jira_id, offset, ..
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert_eq!(offset, Some(5));
-        }
+        JiraSubcommand::Comments { offset, .. } => assert_eq!(offset, Some(5)),
         _ => panic!("Expected Comments command"),
     }
 }
 
 #[test]
 fn test_jira_comments_command_with_author() {
-    // 测试 --author 参数
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -703,12 +431,8 @@ fn test_jira_comments_command_with_author() {
         "user@example.com",
     ])
     .unwrap();
-
     match cli.command {
-        JiraSubcommand::Comments {
-            jira_id, author, ..
-        } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+        JiraSubcommand::Comments { author, .. } => {
             assert_eq!(author, Some("user@example.com".to_string()));
         }
         _ => panic!("Expected Comments command"),
@@ -717,7 +441,6 @@ fn test_jira_comments_command_with_author() {
 
 #[test]
 fn test_jira_comments_command_with_since() {
-    // 测试 --since 参数
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -726,68 +449,9 @@ fn test_jira_comments_command_with_since() {
         "2024-01-01T00:00:00Z",
     ])
     .unwrap();
-
     match cli.command {
-        JiraSubcommand::Comments { jira_id, since, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+        JiraSubcommand::Comments { since, .. } => {
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
-        }
-        _ => panic!("Expected Comments command"),
-    }
-}
-
-#[test]
-fn test_jira_comments_command_output_formats() {
-    // 测试输出格式（table, json, yaml, markdown）
-
-    // Table format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--table"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Comments { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Comments command"),
-    }
-
-    // JSON format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--json"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Comments { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Comments command"),
-    }
-
-    // YAML format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--yaml"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Comments { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Comments command"),
-    }
-
-    // Markdown format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--markdown"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Comments { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
         }
         _ => panic!("Expected Comments command"),
     }
@@ -859,83 +523,48 @@ fn test_jira_comments_command_pagination() {
     }
 }
 
-// ==================== Info 命令输出格式测试 ====================
+// ==================== 命令枚举测试 ====================
 
-#[test]
-fn test_jira_info_command_output_formats() {
-    // 测试输出格式（table, json, yaml, markdown）
-
-    // Table format
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--table"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Info command"),
-    }
-
-    // JSON format
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--json"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Info command"),
-    }
-
-    // YAML format
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--yaml"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
-        }
-        _ => panic!("Expected Info command"),
-    }
-
-    // Markdown format
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", "info", "PROJ-123", "--markdown"]).unwrap();
-    match cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
-        }
-        _ => panic!("Expected Info command"),
-    }
+#[rstest]
+#[case("info", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Info { .. }))]
+#[case("related", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Related { .. }))]
+#[case("changelog", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Changelog { .. }))]
+#[case("comment", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Comment { .. }))]
+#[case("comments", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Comments { .. }))]
+#[case("attachments", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Attachments { .. }))]
+#[case("clean", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Clean { .. }))]
+fn test_jira_command_parsing_all_subcommands(
+    #[case] subcommand: &str,
+    #[case] assert_fn: fn(&JiraSubcommand) -> bool,
+) {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
+    assert!(
+        assert_fn(&cli.command),
+        "Command should match expected variant"
+    );
 }
 
 #[test]
-fn test_jira_info_command_format_flags_combination() {
-    // 测试格式标志的组合
-    let cli = TestJiraCli::try_parse_from(&[
-        "test-jira",
-        "info",
-        "PROJ-123",
-        "--table",
-        "--json",
-        "--yaml",
-        "--markdown",
-    ])
-    .unwrap();
+fn test_jira_command_error_handling_invalid_subcommand() {
+    // 测试无效子命令的错误处理
+    let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
+    assert!(result.is_err(), "Should fail on invalid subcommand");
+}
+
+// ==================== Changelog 命令测试 ====================
+
+#[test]
+fn test_jira_changelog_command_with_field_filter() {
+    // 测试 --field 参数
+    // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
+    // 如果将来添加了 field 字段，这个测试需要更新
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
 
     match cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(output_format.json);
-            assert!(output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Changelog { jira_id, .. } => {
+            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+            // field 字段当前不存在于枚举定义中
         }
-        _ => panic!("Expected Info command"),
+        _ => panic!("Expected Changelog command"),
     }
 }
