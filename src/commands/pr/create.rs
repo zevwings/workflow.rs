@@ -226,12 +226,15 @@ impl PullRequestCreateCommand {
         // 如果使用了 LLM 生成内容，尝试使用 LLM 提取的 scope
         let scope = llm_content.as_ref().and_then(|c| c.scope.as_deref());
 
+        // 从分支类型映射到 Conventional Commits 提交类型
+        let commit_type = branch_type.to_commit_type();
+
         let commit_title = generate_commit_title(
             jira_ticket.as_deref(),
             &pr_title,
-            None,  // commit_type - can be extracted from context if needed
-            scope, // scope - 使用 LLM 提取的 scope（如果可用）
-            None,  // body - optional
+            Some(commit_type), // commit_type - 从分支类型映射
+            scope,             // scope - 使用 LLM 提取的 scope（如果可用）
+            None,              // body - optional
         )
         .unwrap_or_else(|_| {
             // Fallback to simple format if template fails

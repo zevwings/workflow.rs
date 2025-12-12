@@ -48,6 +48,24 @@ impl BranchType {
         }
     }
 
+    /// Get Conventional Commits commit type from branch type
+    ///
+    /// Maps branch type to Conventional Commits commit type:
+    /// - Feature → "feat"
+    /// - Bugfix → "fix"
+    /// - Refactoring → "refactor"
+    /// - Hotfix → "fix" (hotfix is a type of bug fix)
+    /// - Chore → "chore"
+    pub fn to_commit_type(&self) -> &'static str {
+        match self {
+            BranchType::Feature => "feat",
+            BranchType::Bugfix => "fix",
+            BranchType::Refactoring => "refactor",
+            BranchType::Hotfix => "fix",
+            BranchType::Chore => "chore",
+        }
+    }
+
     /// Get display name with description
     pub fn display_name(&self) -> &'static str {
         match self {
@@ -173,5 +191,14 @@ mod tests {
     fn test_branch_type_display() {
         assert_eq!(format!("{}", BranchType::Feature), "feature");
         assert_eq!(format!("{}", BranchType::Bugfix), "bugfix");
+    }
+
+    #[test]
+    fn test_branch_type_to_commit_type() {
+        assert_eq!(BranchType::Feature.to_commit_type(), "feat");
+        assert_eq!(BranchType::Bugfix.to_commit_type(), "fix");
+        assert_eq!(BranchType::Refactoring.to_commit_type(), "refactor");
+        assert_eq!(BranchType::Hotfix.to_commit_type(), "fix");
+        assert_eq!(BranchType::Chore.to_commit_type(), "chore");
     }
 }
