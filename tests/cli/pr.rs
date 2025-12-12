@@ -261,7 +261,6 @@ fn test_pr_sync_command_structure() {
         "--rebase",
         "--ff-only",
         "--squash",
-        "--no-push",
     ])
     .unwrap();
 
@@ -271,13 +270,11 @@ fn test_pr_sync_command_structure() {
             rebase,
             ff_only,
             squash,
-            no_push,
         } => {
             assert_eq!(source_branch, "feature/source");
             assert!(rebase);
             assert!(ff_only);
             assert!(squash);
-            assert!(no_push);
         }
         _ => panic!("Expected Sync command"),
     }
@@ -294,13 +291,11 @@ fn test_pr_sync_command_minimal() {
             rebase,
             ff_only,
             squash,
-            no_push,
         } => {
             assert_eq!(source_branch, "feature/source");
             assert!(!rebase);
             assert!(!ff_only);
             assert!(!squash);
-            assert!(!no_push);
         }
         _ => panic!("Expected Sync command"),
     }
@@ -567,6 +562,142 @@ fn test_pr_pick_command_minimal() {
     }
 }
 
+// ==================== Reword 命令测试 ====================
+
+#[test]
+fn test_pr_reword_command_structure() {
+    // 测试 Reword 命令结构（带所有参数）
+    let cli = TestPRCli::try_parse_from(&[
+        "test-pr",
+        "reword",
+        "123",
+        "--title",
+        "--description",
+        "--dry-run",
+    ])
+    .unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, Some("123".to_string()));
+            assert!(title);
+            assert!(description);
+            assert!(dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
+#[test]
+fn test_pr_reword_command_minimal() {
+    // 测试 Reword 命令最小参数（不指定 PR ID，自动检测）
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword"]).unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, None);
+            assert!(!title);
+            assert!(!description);
+            assert!(!dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
+#[test]
+fn test_pr_reword_command_with_pr_id() {
+    // 测试 Reword 命令指定 PR ID
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "456"]).unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, Some("456".to_string()));
+            assert!(!title);
+            assert!(!description);
+            assert!(!dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
+#[test]
+fn test_pr_reword_command_title_only() {
+    // 测试 Reword 命令仅更新标题
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--title"]).unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, None);
+            assert!(title);
+            assert!(!description);
+            assert!(!dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
+#[test]
+fn test_pr_reword_command_description_only() {
+    // 测试 Reword 命令仅更新描述
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--description"]).unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, None);
+            assert!(!title);
+            assert!(description);
+            assert!(!dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
+#[test]
+fn test_pr_reword_command_dry_run() {
+    // 测试 Reword 命令预览模式
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--dry-run"]).unwrap();
+
+    match cli.command {
+        PRCommands::Reword {
+            pull_request_id,
+            title,
+            description,
+            dry_run,
+        } => {
+            assert_eq!(pull_request_id, None);
+            assert!(!title);
+            assert!(!description);
+            assert!(dry_run.dry_run);
+        }
+        _ => panic!("Expected Reword command"),
+    }
+}
+
 // ==================== 命令枚举测试 ====================
 
 #[test]
@@ -620,6 +751,10 @@ fn test_pr_commands_enum_all_variants() {
     // Pick
     let cli = TestPRCli::try_parse_from(&["test-pr", "pick", "from", "to"]).unwrap();
     assert!(matches!(cli.command, PRCommands::Pick { .. }));
+
+    // Reword
+    let cli = TestPRCli::try_parse_from(&["test-pr", "reword"]).unwrap();
+    assert!(matches!(cli.command, PRCommands::Reword { .. }));
 }
 
 #[test]

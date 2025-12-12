@@ -19,13 +19,17 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "uninstall",
     "version",
     "update",
-    "log-level",
+    "log",
     "github",
     "llm",
     "completion",
     "branch",
+    "commit",
+    "migrate",
     "pr",
     "jira",
+    "stash",
+    "repo",
 ];
 
 /// PR 子命令列表
@@ -42,6 +46,7 @@ const PR_SUBCOMMANDS: &[&str] = &[
     "approve",
     "comment",
     "pick",
+    "reword",
 ];
 
 /// Log 子命令列表
@@ -52,6 +57,7 @@ const JIRA_SUBCOMMANDS: &[&str] = &[
     "info",
     "related",
     "changelog",
+    "comment",
     "comments",
     "attachments",
     "clean",
@@ -65,7 +71,10 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix"];
+const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "create", "rename", "switch", "sync"];
+
+/// Commit 子命令列表
+const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword", "squash"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
@@ -73,11 +82,14 @@ const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "prefix"];
 /// Proxy 子命令列表
 const PROXY_SUBCOMMANDS: &[&str] = &["on", "off", "check"];
 
-/// LogLevel 子命令列表
+/// Log 子命令列表
 const LOG_LEVEL_SUBCOMMANDS: &[&str] = &["set", "check", "trace-console"];
 
 /// Completion 子命令列表
 const COMPLETION_SUBCOMMANDS: &[&str] = &["generate", "check", "remove"];
+
+/// Stash 子命令列表
+const STASH_SUBCOMMANDS: &[&str] = &["list", "apply", "drop", "pop"];
 
 // 以下函数用于从补全脚本中提取命令（目前未使用，保留以备将来扩展）
 //
@@ -148,6 +160,40 @@ fn test_pr_subcommands_completeness() {
         subcommands.len(),
         PR_SUBCOMMANDS.len(),
         "PR subcommands count mismatch"
+    );
+}
+
+/// 验证 Commit 子命令完整性
+#[test]
+fn test_commit_subcommands_completeness() {
+    let cmd = Cli::command();
+    let commit_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "commit")
+        .expect("commit command should exist");
+
+    let subcommands: Vec<String> =
+        commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+    let subcommand_set: HashSet<String> = subcommands.iter().cloned().collect();
+
+    for expected_subcmd in COMMIT_SUBCOMMANDS {
+        assert!(
+            subcommand_set.contains(*expected_subcmd),
+            "Missing Commit subcommand: {}",
+            expected_subcmd
+        );
+    }
+
+    println!(
+        "Found {} Commit subcommands: {:?}",
+        subcommands.len(),
+        subcommands
+    );
+    assert_eq!(
+        subcommands.len(),
+        COMMIT_SUBCOMMANDS.len(),
+        "Commit subcommands count mismatch"
     );
 }
 
@@ -346,6 +392,15 @@ fn test_all_subcommands_completeness() {
         branch_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(branch_subcommands.len(), BRANCH_SUBCOMMANDS.len());
 
+    // 验证 Commit 子命令
+    let commit_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "commit")
+        .expect("commit command should exist");
+    let commit_subcommands: Vec<String> =
+        commit_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(commit_subcommands.len(), COMMIT_SUBCOMMANDS.len());
+
     // 验证 Proxy 子命令
     let proxy_cmd = cmd
         .get_subcommands()
@@ -355,14 +410,14 @@ fn test_all_subcommands_completeness() {
         proxy_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(proxy_subcommands.len(), PROXY_SUBCOMMANDS.len());
 
-    // 验证 LogLevel 子命令
-    let log_level_cmd = cmd
+    // 验证 Log 子命令
+    let log_cmd = cmd
         .get_subcommands()
-        .find(|sc| sc.get_name() == "log-level")
-        .expect("log-level command should exist");
-    let log_level_subcommands: Vec<String> =
-        log_level_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
-    assert_eq!(log_level_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
+        .find(|sc| sc.get_name() == "log")
+        .expect("log command should exist");
+    let log_subcommands: Vec<String> =
+        log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(log_subcommands.len(), LOG_LEVEL_SUBCOMMANDS.len());
 
     // 验证 Completion 子命令
     let completion_cmd = cmd
@@ -372,6 +427,15 @@ fn test_all_subcommands_completeness() {
     let completion_subcommands: Vec<String> =
         completion_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(completion_subcommands.len(), COMPLETION_SUBCOMMANDS.len());
+
+    // 验证 Stash 子命令
+    let stash_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "stash")
+        .expect("stash command should exist");
+    let stash_subcommands: Vec<String> =
+        stash_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(stash_subcommands.len(), STASH_SUBCOMMANDS.len());
 
     println!("All subcommands verified successfully!");
 }

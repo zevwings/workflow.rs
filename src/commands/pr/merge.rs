@@ -3,10 +3,10 @@ use crate::commands::pr::helpers;
 use crate::git::{GitBranch, GitRepo};
 use crate::jira::status::JiraStatus;
 use crate::jira::{extract_jira_ticket_id, Jira, JiraWorkHistory};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::resolve_pull_request_id;
-use crate::{log_break, log_info, log_success, log_warning, ProxyManager};
-use anyhow::{Context, Result};
+use crate::{log_break, log_info, log_success, log_warning};
+use anyhow::Result;
 
 /// PR 合并命令
 #[allow(dead_code)]
@@ -16,9 +16,6 @@ pub struct PullRequestMergeCommand;
 impl PullRequestMergeCommand {
     /// 合并 PR
     pub fn merge(pull_request_id: Option<String>, _force: bool) -> Result<()> {
-        // 0. 如果 VPN 开启，自动启用代理
-        ProxyManager::ensure_proxy_enabled().context("Failed to enable proxy")?;
-
         // 1. 运行环境检查
         check::CheckCommand::run_all()?;
 
@@ -50,7 +47,7 @@ impl PullRequestMergeCommand {
     /// 合并 PR（根据仓库类型调用对应的实现）
     /// 返回 true 表示新合并，false 表示已经合并
     fn merge_pull_request(pull_request_id: &str) -> Result<bool> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 先检查 PR 状态
         let status = provider.get_pull_request_status(pull_request_id)?;
@@ -134,7 +131,7 @@ impl PullRequestMergeCommand {
 
     /// 从 PR 标题提取 Jira ticket ID
     fn extract_jira_ticket_from_pr_title(pull_request_id: &str) -> Result<Option<String>> {
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
         let title = provider.get_pull_request_title(pull_request_id).ok();
         Ok(title.and_then(|t| extract_jira_ticket_id(&t)))
     }

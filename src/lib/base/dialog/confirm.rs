@@ -1,34 +1,32 @@
 use anyhow::Result;
-use inquire::{error::InquireError, Confirm};
+use dialoguer::Confirm;
 
 /// 确认对话框
 ///
 /// 提供确认功能，用于获取用户的 yes/no 选择。
 ///
+/// ## 特性
+///
+/// - **单键自动完成**：按 `y` 或 `n` 立即响应，无需按 Enter
+/// - **Enter 使用默认值**：按 Enter 键会使用设置的默认值
+///
 /// ## 样式示例
 ///
 /// 默认值为 true 时：
 /// ```text
-/// ┌─────────────────────────────────────┐
-/// │ Continue? (Y/n)                     │
-/// │ > Yes                               │ ← 默认选中
-/// │   No                                │
-/// │                                     │
-/// │ [Y: Yes, n: No, Enter: Confirm]     │
-/// └─────────────────────────────────────┘
+/// Continue? (Y/n)
 /// ```
+/// - 按 `y` → 立即确认
+/// - 按 `n` → 立即取消
+/// - 按 Enter → 使用默认值 `true`
 ///
 /// 默认值为 false 时：
 /// ```text
-/// ┌─────────────────────────────────────┐
-/// │ This operation cannot be undone.    │
-/// │ Continue? (y/N)                     │
-/// │   Yes                               │
-/// │ > No                                │ ← 默认选中
-/// │                                     │
-/// │ [y: Yes, N: No, Enter: Confirm]     │
-/// └─────────────────────────────────────┘
+/// This operation cannot be undone. Continue? (y/N)
 /// ```
+/// - 按 `y` → 立即确认
+/// - 按 `n` → 立即取消
+/// - 按 Enter → 使用默认值 `false`
 ///
 /// # 示例
 ///
@@ -114,24 +112,22 @@ impl ConfirmDialog {
     /// # 错误
     ///
     /// 如果设置了 `cancel_message` 且用户取消，返回错误
+    ///
+    /// # 交互方式
+    ///
+    /// - 按 `y` 键：立即确认（无需按 Enter）
+    /// - 按 `n` 键：立即取消（无需按 Enter）
+    /// - 按 Enter 键：使用默认值（如果设置了 `with_default()`）
     pub fn prompt(self) -> Result<bool> {
-        let mut confirm = Confirm::new(&self.prompt);
+        let mut confirm = Confirm::new().with_prompt(&self.prompt).wait_for_newline(false); // 启用单键自动完成
 
         // 设置默认值
         if let Some(default) = self.default {
-            confirm = confirm.with_default(default);
+            confirm = confirm.default(default);
         }
 
-        let confirmed = confirm.prompt().map_err(|e| match e {
-            InquireError::OperationCanceled => {
-                if let Some(ref msg) = self.cancel_message {
-                    anyhow::anyhow!("{}", msg)
-                } else {
-                    anyhow::anyhow!("Operation cancelled by user")
-                }
-            }
-            _ => anyhow::anyhow!("Confirmation error: {}", e),
-        })?;
+        let confirmed =
+            confirm.interact().map_err(|e| anyhow::anyhow!("Confirmation error: {}", e))?;
 
         // 如果用户取消且设置了取消消息，返回错误
         if !confirmed && self.cancel_message.is_some() {

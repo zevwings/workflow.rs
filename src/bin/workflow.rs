@@ -6,28 +6,33 @@
 use anyhow::Result;
 use clap::Parser;
 
-use workflow::commands::branch::{clean, ignore, prefix};
+use workflow::commands::branch::{
+    clean, create as branch_create, ignore, rename, switch, sync as branch_sync,
+};
 use workflow::commands::check::check;
+use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
-    AttachmentsCommand, ChangelogCommand, CleanCommand, CommentsCommand, InfoCommand,
-    RelatedCommand,
+    AttachmentsCommand, ChangelogCommand, CleanCommand, CommentCommand, CommentsCommand,
+    InfoCommand, RelatedCommand,
 };
 use workflow::commands::lifecycle::{uninstall, update as lifecycle_update, version};
 use workflow::commands::llm::{LLMSetupCommand, LLMShowCommand};
 use workflow::commands::log::{DownloadCommand, FindCommand, SearchCommand};
 use workflow::commands::migrate::MigrateCommand;
 use workflow::commands::pr::{
-    approve, close, comment, create, list, merge, pick, rebase, status, summarize, sync,
-    update as pr_update,
+    approve, close, comment, create as pr_create, list, merge, pick, rebase, reword, status,
+    summarize, sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
+use workflow::commands::repo::{setup as repo_setup, show as repo_show};
+use workflow::commands::stash::{apply, drop, list as stash_list, pop};
 
 use workflow::cli::{
-    BranchSubcommand, Cli, Commands, CompletionSubcommand, ConfigSubcommand, GitHubSubcommand,
-    IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, LogSubcommand, PRCommands,
-    PrefixSubcommand, ProxySubcommand,
+    BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
+    GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
+    LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 use workflow::*;
 
@@ -107,7 +112,7 @@ fn main() -> Result<()> {
                     input_path,
                     overwrite,
                     section,
-                    dry_run.dry_run,
+                    dry_run.is_dry_run(),
                 )?;
             }
             None => {
@@ -134,7 +139,7 @@ fn main() -> Result<()> {
             lifecycle_update::UpdateCommand::update(version)?;
         }
         // 日志级别管理命令
-        Some(Commands::LogLevel { subcommand }) => match subcommand {
+        Some(Commands::Log { subcommand }) => match subcommand {
             LogLevelSubcommand::Set => log::LogCommand::set()?,
             LogLevelSubcommand::Check => log::LogCommand::check()?,
             LogLevelSubcommand::TraceConsole => log::LogCommand::trace_console()?,
@@ -162,7 +167,7 @@ fn main() -> Result<()> {
         // 分支管理命令
         Some(Commands::Branch { subcommand }) => match subcommand {
             BranchSubcommand::Clean { dry_run } => {
-                clean::BranchCleanCommand::clean(dry_run.dry_run)?;
+                clean::BranchCleanCommand::clean(dry_run.is_dry_run())?;
             }
             BranchSubcommand::Ignore { subcommand } => match subcommand {
                 IgnoreSubcommand::Add { branch_name } => {
@@ -175,17 +180,47 @@ fn main() -> Result<()> {
                     ignore::BranchIgnoreCommand::list()?;
                 }
             },
-            BranchSubcommand::Prefix { subcommand } => match subcommand {
-                PrefixSubcommand::Set { prefix } => {
-                    prefix::BranchPrefixCommand::set(prefix)?;
-                }
-                PrefixSubcommand::Get => {
-                    prefix::BranchPrefixCommand::get()?;
-                }
-                PrefixSubcommand::Remove => {
-                    prefix::BranchPrefixCommand::remove()?;
-                }
-            },
+            BranchSubcommand::Create {
+                jira_id,
+                from_default,
+                dry_run,
+            } => {
+                branch_create::CreateCommand::execute(
+                    jira_id.into_option(),
+                    from_default,
+                    dry_run.is_dry_run(),
+                )?;
+            }
+            BranchSubcommand::Rename => {
+                rename::BranchRenameCommand::execute()?;
+            }
+            BranchSubcommand::Switch { branch_name } => {
+                switch::SwitchCommand::execute(branch_name)?;
+            }
+            BranchSubcommand::Sync {
+                source_branch,
+                rebase,
+                ff_only,
+                squash,
+            } => {
+                branch_sync::BranchSyncCommand::sync(source_branch, rebase, ff_only, squash)?;
+            }
+        },
+        // Commit 操作命令
+        Some(Commands::Commit { subcommand }) => match subcommand {
+            CommitSubcommand::Amend {
+                message,
+                no_edit,
+                no_verify,
+            } => {
+                CommitAmendCommand::execute(message, no_edit, no_verify)?;
+            }
+            CommitSubcommand::Reword { commit_id } => {
+                CommitRewordCommand::execute(commit_id)?;
+            }
+            CommitSubcommand::Squash => {
+                CommitSquashCommand::execute()?;
+            }
         },
         // PR 操作命令
         Some(Commands::Pr { subcommand }) => match subcommand {
@@ -195,11 +230,11 @@ fn main() -> Result<()> {
                 description,
                 dry_run,
             } => {
-                create::PullRequestCreateCommand::create(
+                pr_create::PullRequestCreateCommand::create(
                     jira_ticket,
                     title,
                     description,
-                    dry_run.dry_run,
+                    dry_run.is_dry_run(),
                 )?;
             }
             PRCommands::Merge {
@@ -224,23 +259,19 @@ fn main() -> Result<()> {
                 rebase,
                 ff_only,
                 squash,
-                no_push,
             } => {
-                let should_push = !no_push;
-                sync::PullRequestSyncCommand::sync(
-                    source_branch,
-                    rebase,
-                    ff_only,
-                    squash,
-                    should_push,
-                )?;
+                sync::PullRequestSyncCommand::sync(source_branch, rebase, ff_only, squash)?;
             }
             PRCommands::Rebase {
                 target_branch,
                 no_push,
                 dry_run,
             } => {
-                rebase::PullRequestRebaseCommand::rebase(target_branch, !no_push, dry_run.dry_run)?;
+                rebase::PullRequestRebaseCommand::rebase(
+                    target_branch,
+                    !no_push,
+                    dry_run.is_dry_run(),
+                )?;
             }
             PRCommands::Close { pull_request_id } => {
                 close::PullRequestCloseCommand::close(pull_request_id)?;
@@ -262,7 +293,20 @@ fn main() -> Result<()> {
                 to_branch,
                 dry_run,
             } => {
-                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run.dry_run)?;
+                pick::PullRequestPickCommand::pick(from_branch, to_branch, dry_run.is_dry_run())?;
+            }
+            PRCommands::Reword {
+                pull_request_id,
+                title,
+                description,
+                dry_run,
+            } => {
+                reword::PullRequestRewordCommand::reword(
+                    pull_request_id,
+                    title,
+                    description,
+                    dry_run.is_dry_run(),
+                )?;
             }
         },
         // Jira 操作命令
@@ -271,19 +315,22 @@ fn main() -> Result<()> {
                 jira_id,
                 output_format,
             } => {
-                InfoCommand::show(jira_id.jira_id, output_format)?;
+                InfoCommand::show(jira_id.into_option(), output_format)?;
             }
             JiraSubcommand::Related {
                 jira_id,
                 output_format,
             } => {
-                RelatedCommand::show(jira_id.jira_id, output_format)?;
+                RelatedCommand::show(jira_id.into_option(), output_format)?;
             }
             JiraSubcommand::Changelog {
                 jira_id,
                 output_format,
             } => {
-                ChangelogCommand::show(jira_id.jira_id, output_format)?;
+                ChangelogCommand::show(jira_id.into_option(), output_format)?;
+            }
+            JiraSubcommand::Comment { jira_id } => {
+                CommentCommand::add(jira_id.into_option())?;
             }
             JiraSubcommand::Comments {
                 jira_id,
@@ -294,7 +341,7 @@ fn main() -> Result<()> {
                 output_format,
             } => {
                 CommentsCommand::show(
-                    jira_id.jira_id,
+                    jira_id.into_option(),
                     limit,
                     offset,
                     author,
@@ -303,7 +350,7 @@ fn main() -> Result<()> {
                 )?;
             }
             JiraSubcommand::Attachments { jira_id } => {
-                AttachmentsCommand::download(jira_id.jira_id)?;
+                AttachmentsCommand::download(jira_id.into_option())?;
             }
             JiraSubcommand::Clean {
                 jira_id,
@@ -311,23 +358,23 @@ fn main() -> Result<()> {
                 dry_run,
                 list,
             } => {
-                CleanCommand::clean(jira_id.jira_id, all, dry_run.dry_run, list)?;
+                CleanCommand::clean(jira_id.into_option(), all, dry_run.is_dry_run(), list)?;
             }
             JiraSubcommand::Log { subcommand } => match subcommand {
                 LogSubcommand::Download { jira_id } => {
-                    DownloadCommand::download(jira_id.jira_id)?;
+                    DownloadCommand::download(jira_id.into_option())?;
                 }
                 LogSubcommand::Find {
                     jira_id,
                     request_id,
                 } => {
-                    FindCommand::find_request_id(jira_id.jira_id, request_id)?;
+                    FindCommand::find_request_id(jira_id.into_option(), request_id)?;
                 }
                 LogSubcommand::Search {
                     jira_id,
                     search_term,
                 } => {
-                    SearchCommand::search(jira_id.jira_id, search_term)?;
+                    SearchCommand::search(jira_id.into_option(), search_term)?;
                 }
             },
         },
@@ -336,8 +383,32 @@ fn main() -> Result<()> {
             // cleanup = true 表示删除旧文件，keep_old = true 表示保留旧文件
             // 所以 cleanup = !keep_old
             let cleanup = !keep_old;
-            MigrateCommand::migrate(dry_run.dry_run, cleanup)?;
+            MigrateCommand::migrate(dry_run.is_dry_run(), cleanup)?;
         }
+        // Stash 管理命令
+        Some(Commands::Stash { subcommand }) => match subcommand {
+            StashSubcommand::List { stat } => {
+                stash_list::StashListCommand::execute(stat)?;
+            }
+            StashSubcommand::Apply => {
+                apply::StashApplyCommand::execute()?;
+            }
+            StashSubcommand::Drop => {
+                drop::StashDropCommand::execute()?;
+            }
+            StashSubcommand::Pop => {
+                pop::StashPopCommand::execute()?;
+            }
+        },
+        // Repository 管理命令
+        Some(Commands::Repo { subcommand }) => match subcommand {
+            RepoSubcommand::Setup => {
+                repo_setup::RepoSetupCommand::run()?;
+            }
+            RepoSubcommand::Show => {
+                repo_show::RepoShowCommand::show()?;
+            }
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
@@ -347,7 +418,7 @@ fn main() -> Result<()> {
             log_message!("  workflow completion - Manage shell completion (generate/check/remove)");
             log_message!("  workflow config     - View current configuration");
             log_message!("  workflow github     - Manage GitHub accounts (list/add/remove/switch/update/current)");
-            log_message!("  workflow log-level  - Manage log level (set/check)");
+            log_message!("  workflow log        - Manage log level (set/check)");
             log_message!("  workflow migrate    - Migrate configuration to new format");
             log_message!("  workflow proxy      - Manage proxy settings (on/off/check)");
             log_message!("  workflow setup      - Initialize or update configuration");
@@ -358,6 +429,7 @@ fn main() -> Result<()> {
             );
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
             log_message!("  workflow jira       - Jira operations (info/attachments/clean/log)");
+            log_message!("  workflow stash      - Git stash management (list/apply/drop/pop)");
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

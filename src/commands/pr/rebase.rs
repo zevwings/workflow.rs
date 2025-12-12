@@ -3,7 +3,7 @@ use crate::base::indicator::Spinner;
 use crate::commands::check;
 use crate::commands::pr::helpers::{detect_base_branch, handle_stash_pop_result};
 use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::pr::create_provider;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
 use crate::{log_break, log_error, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
@@ -349,7 +349,7 @@ impl PullRequestRebaseCommand {
             // 如果 rebase 失败，恢复 stash
             if has_stashed {
                 log_info!("Rebase failed, attempting to restore stashed changes...");
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
 
             // 检查是否是冲突
@@ -369,7 +369,7 @@ impl PullRequestRebaseCommand {
         // 11. 恢复 stash
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            handle_stash_pop_result(GitStash::stash_pop());
+            handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
         // 12. 推送到远程（默认推送）
@@ -494,7 +494,7 @@ impl PullRequestRebaseCommand {
         .prompt()?;
 
         // 创建 PR provider
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 更新 PR base
         Spinner::with(

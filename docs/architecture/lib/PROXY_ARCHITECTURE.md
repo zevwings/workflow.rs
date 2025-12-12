@@ -117,7 +117,7 @@ src/lib/proxy/
 - `is_proxy_configured(proxy_info)` - 检查代理设置是否匹配
 - `enable(temporary)` - 开启代理（支持临时模式和持久化模式）
 - `disable()` - 关闭代理（同时从配置文件和当前 shell 移除）
-- `ensure_proxy_enabled()` - 确保代理已启用（如果系统代理已启用，自动设置环境变量）
+- `ensure_proxy_enabled()` - 确保代理已启用（如果系统代理已启用，自动设置环境变量）**注意：此函数已不再自动调用，需手动使用**
 
 **关键特性**：
 - 协调 `SystemProxyReader` 和 `ProxyConfigGenerator`
@@ -198,7 +198,7 @@ ProxyManager::check_env_proxy()
   4. ProxyManager::is_proxy_configured()             # 检查代理是否已正确配置
 ```
 
-### 自动启用代理流程
+### 自动启用代理流程（已弃用自动调用）
 
 ```
 ProxyManager::ensure_proxy_enabled()
@@ -214,7 +214,11 @@ ProxyManager::ensure_proxy_enabled()
 - 如果系统代理（VPN）未启用，静默跳过，不影响正常流程
 - 如果系统代理已启用但环境变量未设置，自动在当前进程中设置环境变量
 - 如果环境变量已配置，无需操作
-- 主要用于在需要网络访问的命令执行前自动启用代理
+
+**重要变更**：
+- ⚠️ **此函数已不再自动调用**：所有 PR 相关命令已移除自动代理启用
+- 如需使用代理，请手动运行 `workflow proxy on` 命令
+- 此变更解决了 `scutil --proxy` 命令可能导致的阻塞问题
 
 ### 数据流
 
@@ -334,7 +338,8 @@ if let Some(cmd) = result.unset_command {
 let env_proxy = ProxyManager::check_env_proxy();
 let is_configured = ProxyManager::is_proxy_configured(&proxy_info);
 
-// 自动启用代理（如果系统代理已启用）
+// 手动启用代理（如果系统代理已启用）
+// 注意：此函数已不再自动调用，需手动使用
 ProxyManager::ensure_proxy_enabled()?;
 ```
 

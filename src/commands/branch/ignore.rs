@@ -1,14 +1,12 @@
 //! 分支忽略列表管理命令
 //!
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
+//! 配置保存在项目级配置（.workflow/config.toml）中，可以提交到 Git。
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::util::table::{TableBuilder, TableStyle};
-use crate::commands::branch::{
-    add_ignore_branch, get_ignore_branches, remove_ignore_branch, save, BranchConfig,
-};
 use crate::git::BranchRow;
-use crate::git::GitRepo;
+use crate::repo::config::RepoConfig;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 
@@ -17,6 +15,8 @@ pub struct BranchIgnoreCommand;
 
 impl BranchIgnoreCommand {
     /// 添加分支到忽略列表
+    ///
+    /// 保存到项目级配置（.workflow/config.toml）
     pub fn add(branch_name: Option<String>) -> Result<()> {
         // 获取分支名（从参数或交互式输入）
         let branch_name = if let Some(name) = branch_name {
@@ -27,47 +27,46 @@ impl BranchIgnoreCommand {
                 .context("Failed to read branch name")?
         };
 
-        let repo_name =
-            GitRepo::extract_repo_name().context("Failed to extract repository name")?;
+        // 加载项目级配置
+        let mut project_config = RepoConfig::load().context("Failed to load project config")?;
 
-        let mut config = BranchConfig::load().context("Failed to load branch config")?;
-
-        let is_new = add_ignore_branch(&mut config, repo_name.clone(), branch_name.clone())?;
-
-        if is_new {
-            save(&config).context("Failed to save branch config")?;
-            log_success!(
-                "Branch '{}' added to ignore list (repository: {})",
-                branch_name,
-                repo_name
-            );
-        } else {
-            log_info!(
-                "Branch '{}' is already in ignore list (repository: {})",
-                branch_name,
-                repo_name
-            );
+        // 检查是否已存在
+        if project_config.branch.ignore.contains(&branch_name) {
+            log_info!("Branch '{}' is already in ignore list", branch_name);
+            return Ok(());
         }
+
+        // 添加到忽略列表
+        project_config.branch.ignore.push(branch_name.clone());
+
+        // 保存到项目级配置
+        RepoConfig::save(&project_config).context("Failed to save project config")?;
+
+        log_success!(
+            "Branch '{}' added to ignore list (project-level config)",
+            branch_name
+        );
+        log_info!("Configuration saved to .workflow/config.toml");
 
         Ok(())
     }
 
     /// 从忽略列表移除分支
+    ///
+    /// 从项目级配置（.workflow/config.toml）中移除
     pub fn remove(branch_name: Option<String>) -> Result<()> {
-        let repo_name =
-            GitRepo::extract_repo_name().context("Failed to extract repository name")?;
-
-        let mut config = BranchConfig::load().context("Failed to load branch config")?;
+        // 加载项目级配置
+        let mut project_config = RepoConfig::load().context("Failed to load project config")?;
 
         // 获取要移除的分支名（从参数或交互式选择）
         let branch_names = if let Some(name) = branch_name {
             vec![name]
         } else {
             // 获取当前仓库的忽略分支列表
-            let ignore_branches = get_ignore_branches(&config, &repo_name);
+            let ignore_branches = project_config.branch.ignore.clone();
 
             if ignore_branches.is_empty() {
-                log_info!("No ignored branches found (repository: {})", repo_name);
+                log_info!("No ignored branches found");
                 return Ok(());
             }
 
@@ -75,10 +74,7 @@ impl BranchIgnoreCommand {
             let options: Vec<String> = ignore_branches.clone();
 
             log_break!();
-            log_message!(
-                "Found the following ignored branches (repository: {}):",
-                repo_name
-            );
+            log_message!("Found the following ignored branches:");
             for (i, option) in options.iter().enumerate() {
                 log_message!("  [{}] {}", i, option);
             }
@@ -141,28 +137,23 @@ impl BranchIgnoreCommand {
         let mut fail_count = 0;
 
         for branch_name in &branch_names {
-            let removed = remove_ignore_branch(&mut config, &repo_name, branch_name)?;
-
-            if removed {
+            if let Some(pos) = project_config.branch.ignore.iter().position(|b| b == branch_name) {
+                project_config.branch.ignore.remove(pos);
                 success_count += 1;
             } else {
-                log_warning!(
-                    "Branch '{}' is not in ignore list (repository: {})",
-                    branch_name,
-                    repo_name
-                );
+                log_warning!("Branch '{}' is not in ignore list", branch_name);
                 fail_count += 1;
             }
         }
 
         // 如果有成功移除的分支，保存配置
         if success_count > 0 {
-            save(&config).context("Failed to save branch config")?;
+            RepoConfig::save(&project_config).context("Failed to save project config")?;
             log_success!(
-                "Removed {} branch(es) from ignore list (repository: {})",
-                success_count,
-                repo_name
+                "Removed {} branch(es) from ignore list (project-level config)",
+                success_count
             );
+            log_info!("Configuration saved to .workflow/config.toml");
         }
 
         if fail_count > 0 {
@@ -173,16 +164,14 @@ impl BranchIgnoreCommand {
     }
 
     /// 列出当前仓库的忽略分支
+    ///
+    /// 从项目级配置和全局配置中读取（项目级优先）
     pub fn list() -> Result<()> {
-        let repo_name =
-            GitRepo::extract_repo_name().context("Failed to extract repository name")?;
-
-        let config = BranchConfig::load().context("Failed to load branch config")?;
-
-        let ignore_branches = get_ignore_branches(&config, &repo_name);
+        // 从项目级配置读取忽略分支列表
+        let ignore_branches = RepoConfig::get_ignore_branches();
 
         if ignore_branches.is_empty() {
-            log_info!("No ignored branches for repository: {}", repo_name);
+            log_info!("No ignored branches found");
             return Ok(());
         }
 
@@ -200,7 +189,7 @@ impl BranchIgnoreCommand {
         log_message!(
             "{}",
             TableBuilder::new(rows)
-                .with_title(format!("Ignored Branches (repository: {})", repo_name))
+                .with_title("Ignored Branches")
                 .with_style(TableStyle::Modern)
                 .render()
         );

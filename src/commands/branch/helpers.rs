@@ -1,349 +1,259 @@
-//! 分支命令辅助函数
+//! Branch command helper functions
 //!
-//! 提供分支清理忽略列表和分支前缀的配置文件管理功能。
+//! Provides reusable helper functions for branch-related operations.
 
+use crate::base::dialog::SelectDialog;
+use crate::git::GitBranch;
+use crate::repo::config::RepoConfig;
 use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::io::{self, IsTerminal};
-use std::path::PathBuf;
 
-use crate::base::dialog::InputDialog;
-use crate::base::settings::paths::Paths;
-use crate::git::GitRepo;
-use crate::jira::config::ConfigManager;
-use crate::{log_info, log_success, log_warning};
-
-/// 分支配置结构体
+/// Sort branches with priority
 ///
-/// 用于管理分支相关配置，包括忽略列表和分支前缀，按仓库名分组。
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct BranchConfig {
-    /// 按仓库名分组的配置
-    /// Key: 仓库名 (如 "owner/repo")
-    /// Value: 仓库的分支配置
-    #[serde(flatten)]
-    pub repositories: HashMap<String, RepositoryConfig>,
-}
-
-/// 仓库配置
+/// Sorts branches according to the following priority:
+/// 1. main, master (in that order)
+/// 2. develop
+/// 3. Branches with the same prefix as current branch (if current branch has a prefix)
+///    OR branches with the configured repository prefix (if current branch has no prefix)
+/// 4. Other branches (alphabetically)
 ///
-/// 每个仓库的分支相关配置，包括忽略分支列表和分支前缀。
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct RepositoryConfig {
-    /// 分支前缀（可选）
-    ///
-    /// 用于生成分支名时添加前缀，例如 "feature"、"fix" 等。
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub branch_prefix: Option<String>,
-    /// 需要忽略的分支列表
-    ///
-    /// 在分支清理时，这些分支不会被删除。
-    /// 支持向后兼容：可以读取旧的 "ignore" 字段名。
-    #[serde(default, alias = "ignore")]
-    pub branch_ignore: Vec<String>,
-    /// 是否已提示过设置分支前缀（用于避免重复提示）
-    ///
-    /// 这是一个内部字段，用于记录是否已经提示过用户设置分支前缀。
-    /// 当值为 false 时，不会序列化到配置文件中。
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub branch_prefix_prompted: bool,
-}
-
-/// 辅助函数：用于 skip_serializing_if，当值为 false 时跳过序列化
-fn is_false(b: &bool) -> bool {
-    !b
-}
-
-/// 验证仓库名格式
+/// # Arguments
 ///
-/// 验证仓库名是否符合 `owner/repo` 格式。
+/// * `branches` - List of branch names to sort
 ///
-/// # 参数
-/// * `repo_name` - 仓库名
+/// # Returns
 ///
-/// # 返回
-/// 如果格式正确返回 `Ok(())`，否则返回错误。
-///
-/// # 示例
-/// ```
-/// use workflow::commands::branch::validate_repo_name_format;
-/// assert!(validate_repo_name_format("owner/repo").is_ok());
-/// assert!(validate_repo_name_format("invalid").is_err());
-/// ```
-pub fn validate_repo_name_format(repo_name: &str) -> Result<()> {
-    let parts: Vec<&str> = repo_name.split('/').collect();
-    if parts.len() != 2 {
-        anyhow::bail!(
-            "Invalid repository name format: '{}'. Expected format: 'owner/repo'",
-            repo_name
-        );
-    }
-
-    let owner = parts[0];
-    let repo = parts[1];
-
-    if owner.is_empty() {
-        anyhow::bail!(
-            "Invalid repository name format: '{}'. Owner cannot be empty",
-            repo_name
-        );
-    }
-
-    if repo.is_empty() {
-        anyhow::bail!(
-            "Invalid repository name format: '{}'. Repository name cannot be empty",
-            repo_name
-        );
-    }
-
-    Ok(())
-}
-
-impl BranchConfig {
-    /// 获取配置文件路径
-    pub fn config_path() -> Result<PathBuf> {
-        Paths::branch_config()
-    }
-
-    /// 读取配置文件
-    pub fn load() -> Result<Self> {
-        let path = Self::config_path()?;
-        let manager = ConfigManager::<Self>::new(path);
-        manager.read()
-    }
-
-    /// 获取指定仓库的分支前缀
-    ///
-    /// # 参数
-    /// * `repo_name` - 仓库名（格式：`owner/repo`）
-    ///
-    /// # 返回
-    /// 如果仓库配置了 `branch_prefix`，返回前缀字符串的引用；否则返回 `None`。
-    pub fn get_branch_prefix_for_repo(&self, repo_name: &str) -> Option<&str> {
-        self.repositories
-            .get(repo_name)
-            .and_then(|repo_config| repo_config.branch_prefix.as_deref())
-    }
-
-    /// 获取当前仓库的分支前缀
-    ///
-    /// 从当前 Git 仓库获取 owner/repo，然后查找对应的配置。
-    /// 如果当前仓库未配置 prefix，返回 None。
-    ///
-    /// # 返回
-    /// 如果当前仓库配置了 `branch_prefix`，返回前缀字符串的引用；否则返回 `None`。
-    ///
-    /// # 错误
-    /// 如果无法获取当前仓库信息，返回相应的错误。
-    pub fn get_current_repo_branch_prefix(&self) -> Result<Option<&str>> {
-        let repo_name = GitRepo::extract_repo_name().context("Failed to extract repo name")?;
-        Ok(self.get_branch_prefix_for_repo(&repo_name))
-    }
-}
-
-/// 保存配置文件
-pub fn save(config: &BranchConfig) -> Result<()> {
-    let path = BranchConfig::config_path()?;
-    let manager = ConfigManager::<BranchConfig>::new(path);
-    manager.write(config)
-}
-
-/// 获取指定仓库的忽略分支列表
-pub fn get_ignore_branches(config: &BranchConfig, repo_name: &str) -> Vec<String> {
-    config
-        .repositories
-        .get(repo_name)
-        .map(|repo| repo.branch_ignore.clone())
-        .unwrap_or_default()
-}
-
-/// 添加分支到忽略列表
-pub fn add_ignore_branch(
-    config: &mut BranchConfig,
-    repo_name: String,
-    branch_name: String,
-) -> Result<bool> {
-    let repo = config.repositories.entry(repo_name).or_default();
-
-    if repo.branch_ignore.contains(&branch_name) {
-        return Ok(false); // 已存在
-    }
-
-    repo.branch_ignore.push(branch_name);
-    Ok(true) // 新添加
-}
-
-/// 从忽略列表移除分支
-pub fn remove_ignore_branch(
-    config: &mut BranchConfig,
-    repo_name: &str,
-    branch_name: &str,
-) -> Result<bool> {
-    if let Some(repo) = config.repositories.get_mut(repo_name) {
-        if let Some(pos) = repo.branch_ignore.iter().position(|b| b == branch_name) {
-            repo.branch_ignore.remove(pos);
-            // 如果列表为空且没有其他配置，移除整个仓库配置
-            if repo.branch_ignore.is_empty()
-                && repo.branch_prefix.is_none()
-                && !repo.branch_prefix_prompted
-            {
-                config.repositories.remove(repo_name);
-            }
-            return Ok(true); // 已移除
-        }
-    }
-    Ok(false) // 不存在
-}
-
-/// 为当前仓库设置分支前缀
-///
-/// # 参数
-/// * `prefix` - 分支前缀，如果为 None 则通过交互式输入获取
-///
-/// # 返回
-/// 成功返回 `Ok(())`，失败返回错误
-pub fn set_branch_prefix(prefix: Option<String>) -> Result<()> {
-    let repo_name = GitRepo::extract_repo_name().context("Failed to extract repository name")?;
-
-    // 验证仓库名格式
-    validate_repo_name_format(&repo_name).context("Invalid repository name format")?;
-
-    let prefix = if let Some(p) = prefix {
-        p
-    } else {
-        InputDialog::new("Enter branch prefix (e.g., 'feature', 'fix'), or press Enter to remove:")
-            .allow_empty(true)
-            .prompt()
-            .context("Failed to get branch prefix")?
-    };
-
-    let mut config = BranchConfig::load().context("Failed to load branch config")?;
-    let repo_config = config.repositories.entry(repo_name.clone()).or_default();
-
-    if prefix.trim().is_empty() {
-        // 移除 prefix
-        repo_config.branch_prefix = None;
-        log_success!("Branch prefix removed for repository: {}", repo_name);
-    } else {
-        repo_config.branch_prefix = Some(prefix.trim().to_string());
-        log_success!(
-            "Branch prefix set to '{}' for repository: {}",
-            prefix.trim(),
-            repo_name
-        );
-    }
-
-    save(&config).context("Failed to save branch config")?;
-    Ok(())
-}
-
-/// 获取当前仓库的分支前缀
-///
-/// # 返回
-/// 如果当前仓库配置了分支前缀，返回前缀字符串；否则返回 None
-pub fn get_branch_prefix() -> Option<String> {
-    let repo_name = match GitRepo::extract_repo_name() {
-        Ok(name) => name,
-        Err(_) => return None,
-    };
-
-    let config = match BranchConfig::load() {
-        Ok(c) => c,
-        Err(_) => return None,
-    };
-
-    config.get_branch_prefix_for_repo(&repo_name).map(|s| s.to_string())
-}
-
-/// 移除当前仓库的分支前缀
-///
-/// # 返回
-/// 成功返回 `Ok(())`，失败返回错误
-pub fn remove_branch_prefix() -> Result<()> {
-    set_branch_prefix(Some(String::new()))
-}
-
-/// 检测并提示设置 branch_prefix（如果需要）
-///
-/// 第一次在某个仓库使用需要生成分支名的命令时，如果未配置 branch_prefix，
-/// 直接提示用户输入 prefix。
-///
-/// # 注意事项
-/// - 只在交互式环境中提示（检查是否为 TTY）
-/// - 每个仓库只提示一次（使用配置文件中的 `branch_prefix_prompted` 字段持久化记录）
-/// - 如果已配置或已提示过，直接返回
-/// - **不会打断调用流程**：即使发生错误（如用户按 Ctrl+C），也会返回 Ok(())，不影响主流程
-pub fn check_and_prompt_branch_prefix() -> Result<()> {
-    // 检查是否为交互式环境
-    if !io::stdin().is_terminal() || !io::stdout().is_terminal() {
-        return Ok(()); // 非交互式环境，跳过提示
-    }
-
-    // 获取当前仓库名
-    let repo_name = match GitRepo::extract_repo_name() {
-        Ok(name) => name,
-        Err(_) => return Ok(()), // 不在 Git 仓库中，跳过
-    };
-
-    // 检查是否已配置
-    let mut config = match BranchConfig::load() {
-        Ok(c) => c,
-        Err(_) => return Ok(()), // 加载失败，跳过提示
-    };
-    if config.get_branch_prefix_for_repo(&repo_name).is_some() {
-        return Ok(()); // 已配置，无需提示
-    }
-
-    // 检查是否已经提示过（从配置文件中读取）
-    let repo_config = config.repositories.get(&repo_name);
-    if let Some(repo) = repo_config {
-        if repo.branch_prefix_prompted {
-            return Ok(()); // 已提示过，跳过
-        }
-    }
-
-    // 提示用户并直接进入输入
-    log_warning!(
-        "Branch prefix is not configured for repository: {}",
-        repo_name
-    );
-    log_info!("Branch prefix helps organize branches (e.g., 'feature/', 'fix/').");
-
-    // 直接引导用户输入，无需确认对话框
-    let prefix = match InputDialog::new(
-        "Branch prefix is not set. Enter branch prefix (e.g., 'feature'), or press Enter to skip:",
-    )
-    .allow_empty(true)
-    .prompt()
-    {
-        Ok(value) => value,
-        Err(_) => {
-            // 用户取消输入，视为跳过，不输出任何提示信息
-            // 标记为已提示，避免下次再提示
-            let repo_config = config.repositories.entry(repo_name.clone()).or_default();
-            repo_config.branch_prefix_prompted = true;
-            let _ = save(&config); // 忽略保存错误
-            return Ok(()); // 不中断流程
-        }
-    };
-
-    if !prefix.trim().is_empty() {
-        // 设置 prefix（如果出错，记录但不中断流程）
-        if let Err(e) = set_branch_prefix(Some(prefix.trim().to_string())) {
-            log_warning!(
-                "Failed to save branch prefix: {}. PR creation will continue without prefix.",
-                e
-            );
+/// Returns sorted branch list
+pub fn sort_branches_with_priority(mut branches: Vec<String>) -> Result<Vec<String>> {
+    // Get current branch to extract prefix
+    let current_prefix = GitBranch::current_branch().ok().and_then(|current| {
+        // Extract prefix from current branch (e.g., "zw/feature-branch" -> "zw")
+        if current.contains('/') {
+            current.split('/').next().map(|s| s.to_string())
         } else {
-            log_success!("Branch prefix configured successfully!");
+            None
+        }
+    });
+
+    // If current branch has no prefix, try to get prefix from repository configuration
+    let prefix_to_use = if current_prefix.is_some() {
+        current_prefix
+    } else {
+        // Try to get repository prefix from configuration
+        RepoConfig::get_branch_prefix()
+    };
+
+    // Sort branches with priority
+    branches.sort_by(|a, b| {
+        let priority_a = get_branch_priority(a, prefix_to_use.as_deref());
+        let priority_b = get_branch_priority(b, prefix_to_use.as_deref());
+        priority_a.cmp(&priority_b)
+    });
+
+    Ok(branches)
+}
+
+/// Get branch priority for sorting
+///
+/// Returns a tuple (priority, sort_key) where:
+/// - priority: 1 for main/master, 2 for develop, 3 for prefix branches, 4 for others
+/// - sort_key: used for secondary sorting within the same priority
+fn get_branch_priority(branch: &str, current_prefix: Option<&str>) -> (usize, String) {
+    // Priority 1: main, master (in that order)
+    match branch {
+        "main" => return (1, "0-main".to_string()),
+        "master" => return (1, "1-master".to_string()),
+        _ => {}
+    }
+
+    // Priority 2: develop
+    if branch == "develop" {
+        return (2, branch.to_string());
+    }
+
+    // Priority 3: branches with the same prefix as current branch or configured prefix
+    if let Some(prefix) = current_prefix {
+        let prefix_with_slash = format!("{}/", prefix);
+        if branch.starts_with(&prefix_with_slash) {
+            return (3, branch.to_string());
         }
     }
 
-    // 无论用户是否输入了 prefix，都标记为已提示，避免下次再提示
-    let repo_config = config.repositories.entry(repo_name).or_default();
-    repo_config.branch_prefix_prompted = true;
-    let _ = save(&config); // 忽略保存错误
+    // Priority 4: other branches (alphabetically)
+    (4, branch.to_string())
+}
 
-    Ok(())
+/// Options for branch selection
+#[derive(Debug, Clone)]
+pub struct BranchSelectionOptions {
+    /// Whether to include current branch in the list
+    pub include_current: bool,
+    /// Whether to mark current branch with [current] marker
+    pub mark_current: bool,
+    /// Custom prompt message
+    pub prompt: Option<String>,
+    /// Default selection index (None means no default)
+    pub default_index: Option<usize>,
+}
+
+impl Default for BranchSelectionOptions {
+    fn default() -> Self {
+        Self {
+            include_current: true,
+            mark_current: false,
+            prompt: None,
+            default_index: None,
+        }
+    }
+}
+
+impl BranchSelectionOptions {
+    /// Create new options with default values
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Exclude current branch from the list
+    pub fn exclude_current(mut self) -> Self {
+        self.include_current = false;
+        self
+    }
+
+    /// Mark current branch with [current] marker
+    pub fn mark_current_branch(mut self) -> Self {
+        self.mark_current = true;
+        self
+    }
+
+    /// Set custom prompt message
+    pub fn with_prompt(mut self, prompt: impl Into<String>) -> Self {
+        self.prompt = Some(prompt.into());
+        self
+    }
+
+    /// Set default selection index
+    pub fn with_default_index(mut self, index: usize) -> Self {
+        self.default_index = Some(index);
+        self
+    }
+}
+
+/// Select a branch interactively
+///
+/// This function provides a unified way to select branches across different commands.
+/// Fuzzy matching is always enabled for better search experience.
+///
+/// # Arguments
+///
+/// * `options` - Selection options (use `BranchSelectionOptions::new()` for defaults)
+///
+/// # Returns
+///
+/// Returns the selected branch name (without any markers)
+///
+/// # Behavior
+///
+/// - Gets all branches (local + remote, deduplicated)
+/// - Filters branches based on options
+/// - Always uses fuzzy matching (SkimMatcherV2) for search
+/// - Returns the selected branch name
+///
+/// # Examples
+///
+/// ## Basic usage (for switch command)
+/// ```rust,no_run
+/// use workflow::commands::branch::helpers::{select_branch, BranchSelectionOptions};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let branch = select_branch(
+///     BranchSelectionOptions::new()
+///         .mark_current_branch()
+///         .with_default_index(0)
+///         .with_prompt("Select branch to switch to")
+/// )?;
+/// # Ok(())
+/// # }
+/// ```
+///
+/// ## Exclude current branch (for rename command)
+/// ```rust,no_run
+/// use workflow::commands::branch::helpers::{select_branch, BranchSelectionOptions};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let branch = select_branch(
+///     BranchSelectionOptions::new()
+///         .exclude_current()
+///         .with_prompt("Select branch to rename")
+/// )?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn select_branch(options: BranchSelectionOptions) -> Result<String> {
+    // Get all branches (local + remote, deduplicated)
+    let all_branches = GitBranch::get_all_branches(false).context("Failed to get branch list")?;
+
+    if all_branches.is_empty() {
+        anyhow::bail!("No branches available");
+    }
+
+    // Get current branch (if needed)
+    let current_branch = if !options.include_current || options.mark_current {
+        GitBranch::current_branch().ok()
+    } else {
+        None
+    };
+
+    // Prepare branch list
+    let mut branch_options: Vec<String> = if options.include_current {
+        all_branches
+    } else {
+        // Exclude current branch
+        all_branches
+            .into_iter()
+            .filter(|b| {
+                if let Some(ref current) = current_branch {
+                    b != current
+                } else {
+                    true
+                }
+            })
+            .collect()
+    };
+
+    // Sort branches with priority
+    branch_options =
+        sort_branches_with_priority(branch_options).context("Failed to sort branches")?;
+
+    // Mark current branch if needed
+    if options.mark_current {
+        if let Some(ref current) = current_branch {
+            let current_marker = format!("{} [current]", current);
+            // Remove current branch from its original position
+            branch_options.retain(|b| b != current);
+            // Insert at the top
+            branch_options.insert(0, current_marker);
+        }
+    }
+
+    // Build prompt message (fuzzy matching is always enabled)
+    let prompt = if let Some(custom_prompt) = &options.prompt {
+        format!("{} (type to search)", custom_prompt)
+    } else {
+        "Select branch (type to search)".to_string()
+    };
+
+    // Create dialog (fuzzy matching is enabled by default)
+    let mut dialog = SelectDialog::new(&prompt, branch_options);
+
+    // Set default index if provided
+    if let Some(default_idx) = options.default_index {
+        dialog = dialog.with_default(default_idx);
+    }
+
+    // Prompt user
+    let selected = dialog.prompt().context("Failed to select branch")?;
+
+    // Extract branch name (remove [current] marker if present)
+    let branch_name = selected.strip_suffix(" [current]").unwrap_or(&selected).to_string();
+
+    Ok(branch_name)
 }

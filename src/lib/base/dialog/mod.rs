@@ -1,7 +1,11 @@
 //! 交互式对话框模块
 //!
-//! 提供统一的交互式对话框接口，使用 `inquire` 作为后端实现。
+//! 提供统一的交互式对话框接口，使用 `inquire` 和 `dialoguer` 作为后端实现。
 //! 支持链式调用，提供更好的用户体验和代码可读性。
+//!
+//! **后端实现：**
+//! - `InputDialog`, `SelectDialog`, `MultiSelectDialog`：使用 `inquire`
+//! - `ConfirmDialog`：使用 `dialoguer`（支持单键自动完成和 Enter 使用默认值）
 //!
 //! ## 对话框类型
 //!
@@ -52,11 +56,18 @@
 //! use workflow::base::dialog::SelectDialog;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! // 基本用法
 //! let options = vec!["Option 1", "Option 2", "Option 3"];
 //! let selected = SelectDialog::new("Choose an option", options)
 //!     .with_default(0)
 //!     .prompt()?;
 //! // selected 是 "Option 1" 或 "Option 2" 或 "Option 3"
+//!
+//! // 使用模糊匹配过滤器（适用于选项较多时）
+//! let branches = vec!["feature/user-auth", "feature/payment", "bugfix/login"];
+//! let selected = SelectDialog::new("选择分支", branches)
+//!     // 模糊匹配默认启用，支持输入关键词过滤
+//!     .prompt()?;
 //! # Ok(())
 //! # }
 //! ```

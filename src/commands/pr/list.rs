@@ -1,5 +1,5 @@
 use crate::base::util::table::{TableBuilder, TableStyle};
-use crate::pr::platform::create_provider;
+use crate::pr::platform::create_provider_auto;
 use crate::{log_break, log_message};
 use anyhow::Result;
 
@@ -12,7 +12,7 @@ impl PullRequestListCommand {
     /// 列出 PR
     pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
         log_break!('=', 40, "PR List");
-        let provider = create_provider()?;
+        let provider = create_provider_auto()?;
 
         // 默认只获取 open 状态的 PR
         let state = state.as_deref().unwrap_or("open");

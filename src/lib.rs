@@ -9,8 +9,12 @@
 // 核心库模块声明
 #[path = "lib/base/mod.rs"]
 pub mod base;
+#[path = "lib/branch/mod.rs"]
+pub mod branch;
 #[path = "lib/cli/mod.rs"]
 pub mod cli;
+#[path = "lib/commit/mod.rs"]
+pub mod commit;
 #[path = "lib/completion/mod.rs"]
 pub mod completion;
 #[path = "lib/git/mod.rs"]
@@ -21,8 +25,12 @@ pub mod jira;
 pub mod pr;
 #[path = "lib/proxy/mod.rs"]
 pub mod proxy;
+#[path = "lib/repo/mod.rs"]
+pub mod repo;
 #[path = "lib/rollback/mod.rs"]
 pub mod rollback;
+#[path = "lib/template/mod.rs"]
+pub mod template;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]
@@ -46,6 +54,7 @@ pub use base::prompt::{
 pub use base::llm::get_language_requirement;
 
 // 业务模块导出
+pub use branch::BranchNaming;
 pub use completion::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell, Completion,
     CompletionGenerator,
@@ -61,19 +70,10 @@ pub use jira::{
 };
 pub use jira::{JiraLogs, LogEntry};
 pub use pr::{
-    detect_repo_type,
-    extract_pull_request_id_from_url,
-    generate_branch_name,
-    generate_commit_title,
-    generate_pull_request_body,
-    get_current_branch_pr_id,
-    // Codeup, CodeupUser,  // Codeup support has been removed
-    GitHub,
-    GitHubUser,
-    PlatformProvider,
-    PullRequestContent,
-    PullRequestLLM,
-    PullRequestSummary,
+    extract_pull_request_id_from_url, get_all_change_types, get_change_type_by_index,
+    get_change_type_by_name, get_current_branch_pr_id, resolve_pull_request_id, ChangeType,
+    CreateGenerator, FileSummaryGenerator, GitHub, GitHubUser, PlatformProvider,
+    PullRequestContent, PullRequestSummary, RewordGenerator, SummaryGenerator, CHANGE_TYPES,
     TYPES_OF_CHANGES,
 };
 pub use proxy::{
@@ -81,3 +81,7 @@ pub use proxy::{
     ProxyType, SystemProxyReader,
 };
 pub use rollback::{BackupInfo, RollbackManager};
+pub use template::{
+    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
+    TemplateEngine, TemplateEngineType,
+};

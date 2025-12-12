@@ -94,6 +94,31 @@ pub fn format_last_updated_with_time() -> String {
     format_document_timestamp(DateFormat::DateTime, Timezone::Local)
 }
 
+/// 生成文件名时间戳（格式：YYYY-MM-DD_HH-MM-SS）
+///
+/// 用于在文件名中添加时间戳，格式为 `YYYY-MM-DD_HH-MM-SS`（如：2024-12-19_14-30-00）。
+/// 这个格式适合作为文件名的一部分，不包含空格或冒号等特殊字符，使用下划线和连字符分隔。
+///
+/// **自动获取当前时间**：函数会在调用时自动获取当前系统时间，无需提前获取。
+/// 每次调用都会返回最新的时间戳。
+///
+/// # 示例
+///
+/// ```rust
+/// use workflow::base::util::date::format_filename_timestamp;
+///
+/// // 直接调用，自动获取当前时间
+/// let timestamp = format_filename_timestamp();
+/// // 输出：2024-12-19_14-30-00
+///
+/// // 用于生成带时间戳的文件名
+/// let filename = format!("CHECK_REPORT_{}.md", timestamp);
+/// // 输出：CHECK_REPORT_2024-12-19_14-30-00.md
+/// ```
+pub fn format_filename_timestamp() -> String {
+    Local::now().format("%Y-%m-%d_%H-%M-%S").to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +159,15 @@ mod tests {
         let result = format_last_updated_with_time();
         // 验证格式：YYYY-MM-DD HH:MM:SS
         assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+            .unwrap()
+            .is_match(&result));
+    }
+
+    #[test]
+    fn test_format_filename_timestamp() {
+        let result = format_filename_timestamp();
+        // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
+        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
             .unwrap()
             .is_match(&result));
     }

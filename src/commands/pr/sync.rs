@@ -1,32 +1,39 @@
-use crate::base::dialog::{ConfirmDialog, SelectDialog};
-use crate::base::indicator::Spinner;
+use crate::base::dialog::ConfirmDialog;
+use crate::branch::sync::{BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult};
 use crate::commands::check;
-use crate::commands::pr::helpers::handle_stash_pop_result;
-use crate::git::{GitBranch, GitCommit, GitRepo, GitStash};
-use crate::pr::create_provider;
+use crate::git::GitBranch;
+use crate::pr::create_provider_auto;
 use crate::pr::helpers::get_current_branch_pr_id;
-use crate::{log_break, log_debug, log_error, log_info, log_success, log_warning};
+use crate::{log_break, log_debug, log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
 /// PR 分支同步的命令（合并了 integrate 和 sync 的功能）
 #[allow(dead_code)]
 pub struct PullRequestSyncCommand;
 
-/// 源分支信息
-struct SourceBranchInfo {
-    /// 分支类型：true 表示远程分支，false 表示本地分支
-    is_remote: bool,
-    /// 用于合并的分支引用（本地分支名或 origin/branch-name）
-    merge_ref: String,
-}
+/// PR 同步回调实现
+struct PRSyncCallbacks;
 
-/// 同步策略
-#[derive(Debug, Clone, Copy)]
-enum SyncStrategy {
-    /// Merge 合并
-    Merge(crate::MergeStrategy),
-    /// Rebase 变基
-    Rebase,
+impl BranchSyncCallbacks for PRSyncCallbacks {
+    fn on_sync_success(&self, result: &BranchSyncResult, is_remote: bool) -> Result<bool> {
+        if is_remote {
+            // 远程分支：检查并更新当前分支的 PR
+            let pr_updated =
+                PullRequestSyncCommand::check_and_update_current_branch_pr(&result.current_branch)?;
+            if pr_updated {
+                // 已更新 PR，不需要 stash pop（代码已推送）
+                log_info!("PR updated, skipping stash pop");
+            }
+            Ok(pr_updated) // 如果更新了 PR，跳过 stash pop
+        } else {
+            Ok(false) // 本地分支，不跳过 stash pop
+        }
+    }
+
+    fn on_after_sync(&self, result: &BranchSyncResult, source_branch: &str) -> Result<()> {
+        // 处理源分支的 PR 和分支清理
+        PullRequestSyncCommand::handle_source_branch_cleanup(source_branch, &result.current_branch)
+    }
 }
 
 impl PullRequestSyncCommand {
@@ -34,19 +41,12 @@ impl PullRequestSyncCommand {
     ///
     /// # 参数
     ///
-    /// * `source_branch` - 要同步的源分支名称
+    /// * `source_branch` - 要合并到当前分支的源分支名称
     /// * `rebase` - 是否使用 rebase（默认使用 merge）
     /// * `ff_only` - 是否只允许 fast-forward 合并
     /// * `squash` - 是否使用 squash 合并
-    /// * `push` - 是否在同步后自动推送
     #[allow(dead_code)]
-    pub fn sync(
-        source_branch: String,
-        rebase: bool,
-        ff_only: bool,
-        squash: bool,
-        push: bool,
-    ) -> Result<()> {
+    pub fn sync(source_branch: String, rebase: bool, ff_only: bool, squash: bool) -> Result<()> {
         // 1. 运行检查（可选，但建议运行）
         log_info!("Running pre-flight checks...");
         if let Err(e) = check::CheckCommand::run_all() {
@@ -57,236 +57,21 @@ impl PullRequestSyncCommand {
                 .prompt()?;
         }
 
-        // 2. 获取当前分支
-        let current_branch = GitBranch::current_branch()?;
-        log_success!("Current branch: {}", current_branch);
+        let options = BranchSyncOptions {
+            source_branch: source_branch.clone(),
+            rebase,
+            ff_only,
+            squash,
+        };
 
-        // 3. 检查工作区状态并 stash（如果需要）
-        let has_stashed = Self::check_working_directory()?;
+        // 使用 PR 回调
+        let callbacks = Box::new(PRSyncCallbacks);
 
-        // 4. 验证并准备源分支，获取分支信息
-        let source_branch_info = Self::prepare_source_branch(&source_branch)?;
-
-        // 5. 确定同步策略
-        let strategy = Self::determine_sync_strategy(rebase, ff_only, squash);
-
-        // 6. 执行同步（merge 或 rebase）
-        match strategy {
-            SyncStrategy::Merge(merge_strategy) => {
-                let merge_result = Spinner::with(
-                    format!("Merging '{}' into '{}'...", source_branch, current_branch),
-                    || GitBranch::merge_branch(&source_branch_info.merge_ref, merge_strategy),
-                );
-
-                // 如果合并失败，恢复 stash（如果有）
-                if merge_result.is_err() && has_stashed {
-                    log_info!("Merge failed, attempting to restore stashed changes...");
-                    handle_stash_pop_result(GitStash::stash_pop());
-                }
-
-                match merge_result {
-                    Ok(()) => {
-                        log_success!("Merge completed successfully");
-                    }
-                    Err(e) => {
-                        // 检查是否是合并冲突
-                        if let Ok(has_conflicts) = GitBranch::has_merge_conflicts() {
-                            if has_conflicts {
-                                log_error!("Merge conflicts detected!");
-                                log_info!("Please resolve the conflicts manually:");
-                                log_info!("  1. Review conflicted files");
-                                log_info!("  2. Resolve conflicts");
-                                log_info!("  3. Stage resolved files: git add <files>");
-                                log_info!("  4. Complete the merge: git commit");
-                                log_info!("  5. Push when ready: git push");
-                                anyhow::bail!("Merge conflicts detected. Please resolve manually.");
-                            }
-                        }
-                        return Err(e);
-                    }
-                }
-            }
-            SyncStrategy::Rebase => {
-                // 执行 rebase
-                let rebase_result = Spinner::with(
-                    format!("Rebasing '{}' onto '{}'...", current_branch, source_branch),
-                    || GitBranch::rebase_onto(&source_branch_info.merge_ref),
-                );
-
-                // 如果 rebase 失败，恢复 stash（如果有）
-                if rebase_result.is_err() && has_stashed {
-                    log_info!("Rebase failed, attempting to restore stashed changes...");
-                    handle_stash_pop_result(GitStash::stash_pop());
-                }
-
-                match rebase_result {
-                    Ok(()) => {
-                        log_success!("Rebase completed successfully");
-                    }
-                    Err(e) => {
-                        // 检查是否是 rebase 冲突
-                        let error_msg = e.to_string().to_lowercase();
-                        if error_msg.contains("conflict") || error_msg.contains("could not apply") {
-                            log_error!("Rebase conflicts detected!");
-                            log_info!("Please resolve the conflicts manually:");
-                            log_info!("  1. Review conflicted files");
-                            log_info!("  2. Resolve conflicts");
-                            log_info!("  3. Stage resolved files: git add <files>");
-                            log_info!("  4. Continue rebase: git rebase --continue");
-                            log_info!("  5. Push when ready: git push --force-with-lease");
-                            anyhow::bail!("Rebase conflicts detected. Please resolve manually.");
-                        }
-                        return Err(e);
-                    }
-                }
-            }
-        }
-
-        // 7. 根据分支类型处理同步后的操作
-        if source_branch_info.is_remote {
-            // 远程分支：检查当前分支是否已创建 PR
-            let pr_updated = Self::check_and_update_current_branch_pr(&current_branch)?;
-            if pr_updated {
-                // 已更新 PR，不需要 stash pop（代码已推送）
-                log_info!("PR updated, skipping stash pop");
-            } else {
-                // 未创建 PR，恢复 stash（如果有）
-                if has_stashed {
-                    log_info!("Restoring stashed changes...");
-                    handle_stash_pop_result(GitStash::stash_pop());
-                }
-            }
-        } else {
-            // 本地分支：同步后立即恢复 stash（如果有）
-            if has_stashed {
-                log_info!("Restoring stashed changes...");
-                handle_stash_pop_result(GitStash::stash_pop());
-            }
-
-            // 推送到远程（如果需要）
-            if push {
-                let exists_remote = GitBranch::has_remote_branch(&current_branch)
-                    .context("Failed to check if branch exists on remote")?;
-
-                // 如果是 rebase，使用 force-with-lease
-                let use_force = matches!(strategy, SyncStrategy::Rebase);
-                log_break!();
-                log_info!("Pushing to remote...");
-                log_break!();
-                if use_force {
-                    GitBranch::push_force_with_lease(&current_branch)
-                        .context("Failed to push to remote (force-with-lease)")?;
-                } else {
-                    GitBranch::push(&current_branch, !exists_remote)
-                        .context("Failed to push to remote")?;
-                }
-                log_break!();
-                log_success!("Pushed to remote successfully");
-            } else {
-                log_info!("Skipping push (--no-push flag set)");
-                log_info!("You can push manually with: git push");
-            }
-        }
-
-        // 8. 管理 PR 和分支清理（交互式）
-        Self::handle_source_branch_cleanup(&source_branch, &current_branch)?;
+        BranchSync::sync(options, Some(callbacks))?;
 
         log_break!();
         log_success!("Sync completed successfully!");
         Ok(())
-    }
-
-    /// 检查工作区状态
-    ///
-    /// 检查是否有未提交的更改，如果有则提示用户处理。
-    /// 返回是否执行了 stash 操作。
-    fn check_working_directory() -> Result<bool> {
-        let has_uncommitted =
-            GitCommit::has_commit().context("Failed to check working directory status")?;
-
-        if has_uncommitted {
-            log_warning!("Working directory has uncommitted changes");
-            let options = vec![
-                "Stash changes and continue".to_string(),
-                "Abort operation".to_string(),
-            ];
-            let selected = SelectDialog::new("How would you like to proceed?", options)
-                .with_default(0)
-                .prompt()
-                .context("Failed to get user choice")?;
-            let choice = if selected == "Stash changes and continue" {
-                0
-            } else {
-                1
-            };
-
-            match choice {
-                0 => {
-                    log_info!("Stashing uncommitted changes...");
-                    GitStash::stash_push(Some("Auto-stash before branch sync"))?;
-                    log_success!("Changes stashed successfully");
-                    Ok(true)
-                }
-                1 => {
-                    anyhow::bail!("Operation cancelled by user");
-                }
-                _ => unreachable!(),
-            }
-        } else {
-            Ok(false)
-        }
-    }
-
-    /// 验证并准备源分支
-    ///
-    /// 检查源分支是否存在（本地或远程），如果只在远程则先 fetch。
-    /// 返回源分支信息（类型、合并引用）。
-    fn prepare_source_branch(source_branch: &str) -> Result<SourceBranchInfo> {
-        let (exists_local, exists_remote) = GitBranch::is_branch_exists(source_branch)
-            .context("Failed to check if source branch exists")?;
-
-        if !exists_local && !exists_remote {
-            anyhow::bail!(
-                "Source branch '{}' does not exist locally or remotely",
-                source_branch
-            );
-        }
-
-        if !exists_local && exists_remote {
-            // 分支只在远程，需要先 fetch 以确保有最新的引用
-            log_info!("Source branch '{}' only exists on remote", source_branch);
-            Spinner::with("Fetching from remote...", || {
-                GitRepo::fetch().context("Failed to fetch from remote")
-            })?;
-            log_success!("Fetched latest changes from remote");
-            // 返回远程分支引用
-            Ok(SourceBranchInfo {
-                is_remote: true,
-                merge_ref: format!("origin/{}", source_branch),
-            })
-        } else {
-            // 分支在本地存在，直接使用分支名
-            log_success!("Source branch '{}' is ready", source_branch);
-            Ok(SourceBranchInfo {
-                is_remote: false,
-                merge_ref: source_branch.to_string(),
-            })
-        }
-    }
-
-    /// 确定同步策略
-    ///
-    /// 根据命令行参数确定使用的同步策略。
-    fn determine_sync_strategy(rebase: bool, ff_only: bool, squash: bool) -> SyncStrategy {
-        if rebase {
-            SyncStrategy::Rebase
-        } else if ff_only {
-            SyncStrategy::Merge(crate::MergeStrategy::FastForwardOnly)
-        } else if squash {
-            SyncStrategy::Merge(crate::MergeStrategy::Squash)
-        } else {
-            SyncStrategy::Merge(crate::MergeStrategy::Merge)
-        }
     }
 
     /// 检查并更新当前分支的 PR
@@ -323,7 +108,7 @@ impl PullRequestSyncCommand {
     /// 返回 PR ID（如果找到），否则返回 None。
     fn find_source_branch_pr_id(source_branch: &str) -> Result<Option<String>> {
         // 方法 1: 通过工作历史查找（主要方式，支持所有平台）
-        let remote_url = GitRepo::get_remote_url().ok();
+        let remote_url = crate::git::GitRepo::get_remote_url().ok();
         if let Some(pr_id) = crate::jira::history::JiraWorkHistory::find_pr_id_by_branch(
             source_branch,
             remote_url.as_deref(),
@@ -399,7 +184,7 @@ impl PullRequestSyncCommand {
 
                 if should_close {
                     // 关闭 PR
-                    let provider = create_provider()?;
+                    let provider = create_provider_auto()?;
                     match provider.close_pull_request(&pr_id) {
                         Ok(()) => {
                             log_success!("PR #{} closed successfully", pr_id);

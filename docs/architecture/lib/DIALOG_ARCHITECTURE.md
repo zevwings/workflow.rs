@@ -8,7 +8,7 @@
 - 多选对话框（MultiSelectDialog）
 - 确认对话框（ConfirmDialog）
 
-该模块提供统一的交互式对话框接口，使用 `inquire` 作为后端实现。支持链式调用，提供更好的用户体验和代码可读性。
+该模块提供统一的交互式对话框接口，使用 `inquire` 和 `dialoguer` 作为后端实现。支持链式调用，提供更好的用户体验和代码可读性。
 
 **注意**：本模块是基础设施模块，被整个项目广泛使用。所有需要用户交互的命令都使用这些对话框组件。
 
@@ -16,7 +16,9 @@
 - 总代码行数：约 600+ 行
 - 文件数量：5 个核心文件
 - 主要组件：4 个对话框类型（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
-- 依赖库：`inquire`（交互式终端 UI）
+- 依赖库：
+  - `inquire`（InputDialog, SelectDialog, MultiSelectDialog）
+  - `dialoguer`（ConfirmDialog，支持单键自动完成和 Enter 使用默认值）
 
 ---
 
@@ -467,4 +469,4 @@ Dialog 模块为整个项目提供统一的交互式对话框接口：
 - ✅ **一致性**：统一的错误处理方式
 - ✅ **类型安全**：使用泛型支持任意类型
 - ✅ **灵活性**：支持默认值、验证器、空值处理等多种配置
-- ✅ **用户体验**：使用 `inquire` 提供美观的终端 UI
+- ✅ **用户体验**：使用 `inquire` 和 `dialoguer` 提供美观的终端 UI，`ConfirmDialog` 支持单键自动完成

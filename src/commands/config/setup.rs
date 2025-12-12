@@ -43,10 +43,15 @@ struct CollectedConfig {
     // codeup_cookie: Option<String>,  // Codeup support has been removed
     // LLM 配置
     llm_provider: String,
-    llm_url: Option<String>,
-    llm_key: Option<String>,
-    llm_model: Option<String>,
-    llm_language: String, // LLM 输出语言
+    llm_language: String, // LLM 输出语言（所有 provider 共享）
+    // 各 provider 的配置
+    llm_openai_key: Option<String>,
+    llm_openai_model: Option<String>,
+    llm_deepseek_key: Option<String>,
+    llm_deepseek_model: Option<String>,
+    llm_proxy_url: Option<String>,
+    llm_proxy_key: Option<String>,
+    llm_proxy_model: Option<String>,
 }
 
 impl SetupCommand {
@@ -119,14 +124,18 @@ impl SetupCommand {
             // codeup_csrf_token: settings.codeup.csrf_token.clone(),  // Codeup support has been removed
             // codeup_cookie: settings.codeup.cookie.clone(),  // Codeup support has been removed
             llm_provider: llm.provider.clone(),
-            llm_url: llm.url.clone(),
-            llm_key: llm.key.clone(),
-            llm_model: llm.model.clone(),
             llm_language: if llm.language.is_empty() {
                 default_language()
             } else {
                 llm.language.clone()
             },
+            llm_openai_key: llm.openai.key.clone(),
+            llm_openai_model: llm.openai.model.clone(),
+            llm_deepseek_key: llm.deepseek.key.clone(),
+            llm_deepseek_model: llm.deepseek.model.clone(),
+            llm_proxy_url: llm.proxy.url.clone(),
+            llm_proxy_key: llm.proxy.key.clone(),
+            llm_proxy_model: llm.proxy.model.clone(),
         })
     }
 
@@ -306,7 +315,7 @@ impl SetupCommand {
         };
 
         let jira_token_prompt = if existing.jira_api_token.is_some() {
-            "Jira API token [current: ***]".to_string()
+            "Jira API token [current: ***] (press Enter to keep)".to_string()
         } else {
             "Jira API token".to_string()
         };
@@ -329,25 +338,39 @@ impl SetupCommand {
         log_message!("  Document Base Directory (Optional)");
         log_break!('─', 65);
 
+        // 检查是否是用户自定义的值（不等于默认值）
+        // 由于 serde default，即使配置文件中没有这个字段，也会使用默认值
+        // 所以需要检查值是否等于默认值来判断是否是用户配置的
+        let default_dir = default_download_base_dir();
+        let is_custom_dir = existing
+            .log_download_base_dir
+            .as_ref()
+            .map(|dir| dir != &default_dir)
+            .unwrap_or(false);
+
         // 设置文档基础目录
-        let base_dir_prompt = if existing.log_download_base_dir.is_some() {
+        let base_dir_prompt = if is_custom_dir {
             "Document base directory (press Enter to keep)".to_string()
         } else {
             "Document base directory (press Enter to use default)".to_string()
         };
 
-        let log_download_base_dir = InputDialog::new(&base_dir_prompt)
-            .allow_empty(true)
-            .with_default(
-                existing.log_download_base_dir.clone().unwrap_or_else(default_download_base_dir),
-            )
-            .prompt()
-            .context("Failed to get document base directory")?;
+        // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
+        let mut dialog = InputDialog::new(&base_dir_prompt).allow_empty(true);
+        if is_custom_dir {
+            // 用户自定义的值，作为默认值显示
+            if let Some(ref existing_dir) = existing.log_download_base_dir {
+                dialog = dialog.with_default(existing_dir.clone());
+            }
+        }
+
+        let log_download_base_dir =
+            dialog.prompt().context("Failed to get document base directory")?;
 
         let log_download_base_dir = if log_download_base_dir.is_empty() {
             // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
             None
-        } else if log_download_base_dir == default_download_base_dir() {
+        } else if log_download_base_dir == default_dir {
             // 如果等于默认值，也不保存（使用 None）
             None
         } else {
@@ -414,133 +437,211 @@ impl SetupCommand {
             .prompt()
             .context("Failed to select LLM provider")?;
 
-        // 根据 provider 设置 URL（只有 proxy 需要输入和保存）
-        // 对于 openai/deepseek，必须设置为 None，避免使用旧的 proxy URL 导致错误
-        let llm_url = match llm_provider.as_str() {
-            "openai" => None,   // openai 不使用 proxy URL，必须为 None
-            "deepseek" => None, // deepseek 不使用 proxy URL，必须为 None
-            "proxy" => {
-                let llm_url_prompt = if let Some(ref url) = existing.llm_url {
-                    format!("LLM proxy URL [current: {}] (press Enter to keep)", url)
-                } else {
-                    "LLM proxy URL (optional, press Enter to skip)".to_string()
-                };
+        // 初始化各 provider 的配置（从 existing 加载，保持其他 provider 的配置不变）
+        let mut llm_openai_key = existing.llm_openai_key.clone();
+        let mut llm_openai_model = existing.llm_openai_model.clone();
+        let mut llm_deepseek_key = existing.llm_deepseek_key.clone();
+        let mut llm_deepseek_model = existing.llm_deepseek_model.clone();
+        let mut llm_proxy_url = existing.llm_proxy_url.clone();
+        let mut llm_proxy_key = existing.llm_proxy_key.clone();
+        let mut llm_proxy_model = existing.llm_proxy_model.clone();
 
-                let llm_url_input = InputDialog::new(&llm_url_prompt)
-                    .allow_empty(true)
-                    .prompt()
-                    .context("Failed to get LLM proxy URL")?;
-
-                if !llm_url_input.is_empty() {
-                    Some(llm_url_input)
-                } else {
-                    existing.llm_url.clone()
-                }
-            }
-            _ => None,
-        };
-
-        // 收集 API key
-        let key_prompt = match llm_provider.as_str() {
+        // 根据选择的 provider 配置对应的设置
+        match llm_provider.as_str() {
             "openai" => {
-                if existing.llm_key.is_some() {
+                // 配置 OpenAI API key
+                let key_prompt = if llm_openai_key.is_some() {
                     "OpenAI API key [current: ***] (press Enter to keep)".to_string()
                 } else {
                     "OpenAI API key (optional, press Enter to skip)".to_string()
+                };
+
+                let llm_key_input = InputDialog::new(&key_prompt)
+                    .allow_empty(true)
+                    .prompt()
+                    .context("Failed to get OpenAI API key")?;
+
+                if !llm_key_input.is_empty() {
+                    llm_openai_key = Some(llm_key_input);
                 }
-            }
-            "deepseek" => {
-                if existing.llm_key.is_some() {
-                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "DeepSeek API key (optional, press Enter to skip)".to_string()
-                }
-            }
-            "proxy" => {
-                if existing.llm_key.is_some() {
-                    "LLM proxy key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "LLM proxy key (optional, press Enter to skip)".to_string()
-                }
-            }
-            _ => "LLM API key (optional, press Enter to skip)".to_string(),
-        };
 
-        let llm_key_input = InputDialog::new(&key_prompt)
-            .allow_empty(true)
-            .prompt()
-            .context("Failed to get LLM API key")?;
+                // 配置 OpenAI model
+                let default_model =
+                    llm_openai_model.clone().unwrap_or_else(|| default_llm_model("openai"));
 
-        let llm_key = if !llm_key_input.is_empty() {
-            Some(llm_key_input)
-        } else {
-            existing.llm_key.clone()
-        };
-
-        // 配置模型
-        let default_model =
-            existing.llm_model.clone().unwrap_or_else(|| default_llm_model(&llm_provider));
-
-        let model_prompt = match llm_provider.as_str() {
-            "openai" => {
-                if existing.llm_model.is_some() {
+                let model_prompt = if llm_openai_model.is_some() {
                     "OpenAI model (press Enter to keep)".to_string()
                 } else {
                     "OpenAI model (optional, press Enter to skip)".to_string()
+                };
+
+                let llm_model_input = InputDialog::new(&model_prompt)
+                    .allow_empty(true)
+                    .with_default(default_model.clone())
+                    .prompt()
+                    .context("Failed to get OpenAI model")?;
+
+                if !llm_model_input.is_empty() {
+                    llm_openai_model = Some(llm_model_input);
+                } else if llm_openai_model.is_none() {
+                    // 如果用户没有输入且之前也没有值，设置为 None（使用默认值）
+                    llm_openai_model = None;
                 }
             }
             "deepseek" => {
-                if existing.llm_model.is_some() {
+                // 配置 DeepSeek API key
+                let key_prompt = if llm_deepseek_key.is_some() {
+                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "DeepSeek API key (optional, press Enter to skip)".to_string()
+                };
+
+                let llm_key_input = InputDialog::new(&key_prompt)
+                    .allow_empty(true)
+                    .prompt()
+                    .context("Failed to get DeepSeek API key")?;
+
+                if !llm_key_input.is_empty() {
+                    llm_deepseek_key = Some(llm_key_input);
+                }
+
+                // 配置 DeepSeek model
+                let default_model =
+                    llm_deepseek_model.clone().unwrap_or_else(|| default_llm_model("deepseek"));
+
+                let model_prompt = if llm_deepseek_model.is_some() {
                     "DeepSeek model (press Enter to keep)".to_string()
                 } else {
                     "DeepSeek model (optional, press Enter to skip)".to_string()
+                };
+
+                let llm_model_input = InputDialog::new(&model_prompt)
+                    .allow_empty(true)
+                    .with_default(default_model.clone())
+                    .prompt()
+                    .context("Failed to get DeepSeek model")?;
+
+                if !llm_model_input.is_empty() {
+                    llm_deepseek_model = Some(llm_model_input);
+                } else if llm_deepseek_model.is_none() {
+                    llm_deepseek_model = None;
                 }
             }
             "proxy" => {
-                if existing.llm_model.is_some() {
-                    "LLM model (press Enter to keep)".to_string()
+                // 配置 Proxy URL（必填）
+                let llm_url_prompt = if llm_proxy_url.is_some() {
+                    "LLM proxy URL (required) (press Enter to keep)".to_string()
+                } else {
+                    "LLM proxy URL (required)".to_string()
+                };
+
+                let has_existing_url = llm_proxy_url.is_some();
+                let existing_url = llm_proxy_url.clone();
+
+                let llm_url_input = {
+                    let mut dialog = InputDialog::new(&llm_url_prompt);
+
+                    // 如果存在现有值，允许空输入（表示保留现有值）
+                    // 如果不存在现有值，不允许空输入（必须输入）
+                    dialog = dialog.allow_empty(has_existing_url);
+
+                    // 如果存在现有值，设置为默认值
+                    if let Some(ref url) = llm_proxy_url {
+                        dialog = dialog.with_default(url.clone());
+                    }
+
+                    // 验证器：只有当不存在现有值且输入为空时才报错
+                    dialog = dialog.with_validator(move |input: &str| {
+                        if input.is_empty() && !has_existing_url {
+                            Err("LLM proxy URL is required".to_string())
+                        } else {
+                            Ok(())
+                        }
+                    });
+
+                    dialog.prompt().context("Failed to get LLM proxy URL")?
+                };
+
+                if !llm_url_input.is_empty() {
+                    llm_proxy_url = Some(llm_url_input);
+                } else if has_existing_url {
+                    // 用户按 Enter 保留现有值
+                    llm_proxy_url = existing_url;
+                } else {
+                    anyhow::bail!("LLM proxy URL is required");
+                }
+
+                // 配置 Proxy API key（必填）
+                let key_prompt = if llm_proxy_key.is_some() {
+                    "LLM proxy key [current: ***] (press Enter to keep)".to_string()
+                } else {
+                    "LLM proxy key (required)".to_string()
+                };
+
+                let has_existing_key = llm_proxy_key.is_some();
+                let existing_key = llm_proxy_key.clone();
+
+                let llm_key_input = {
+                    let mut dialog = InputDialog::new(&key_prompt);
+
+                    // 如果存在现有值，允许空输入（表示保留现有值）
+                    // 如果不存在现有值，不允许空输入（必须输入）
+                    dialog = dialog.allow_empty(has_existing_key);
+
+                    // 验证器：只有当不存在现有值且输入为空时才报错
+                    dialog = dialog.with_validator(move |input: &str| {
+                        if input.is_empty() && !has_existing_key {
+                            Err("LLM proxy key is required".to_string())
+                        } else {
+                            Ok(())
+                        }
+                    });
+
+                    dialog.prompt().context("Failed to get LLM proxy key")?
+                };
+
+                if !llm_key_input.is_empty() {
+                    llm_proxy_key = Some(llm_key_input);
+                } else if has_existing_key {
+                    // 用户按 Enter 保留现有值
+                    llm_proxy_key = existing_key;
+                } else {
+                    anyhow::bail!("LLM proxy key is required");
+                }
+
+                // 配置 Proxy model（必填）
+                let default_model =
+                    llm_proxy_model.clone().unwrap_or_else(|| default_llm_model("proxy"));
+
+                let model_prompt = if llm_proxy_model.is_some() {
+                    "LLM model (required) (press Enter to keep)".to_string()
                 } else {
                     "LLM model (required)".to_string()
+                };
+
+                let llm_model_input = InputDialog::new(&model_prompt)
+                    .allow_empty(false)
+                    .with_default(default_model.clone())
+                    .with_validator(|input: &str| {
+                        if input.is_empty() {
+                            Err("Model is required for proxy provider".to_string())
+                        } else {
+                            Ok(())
+                        }
+                    })
+                    .prompt()
+                    .context("Failed to get LLM model")?;
+
+                if !llm_model_input.is_empty() {
+                    llm_proxy_model = Some(llm_model_input);
+                } else {
+                    anyhow::bail!("Model is required for proxy provider");
                 }
             }
-            _ => "LLM model".to_string(),
-        };
+            _ => {}
+        }
 
-        let is_proxy = llm_provider == "proxy";
-        // 只有当之前有保存的值时，才设置默认值；否则不设置，让用户明确输入或留空使用默认值
-        let has_existing_model = existing.llm_model.is_some();
-
-        let llm_model_input = {
-            let mut dialog = InputDialog::new(&model_prompt).allow_empty(!is_proxy);
-
-            // 只有之前有保存的值时，才设置默认值
-            if has_existing_model {
-                dialog = dialog.with_default(default_model.clone());
-            }
-
-            dialog
-                .with_validator(move |input: &str| {
-                    if input.is_empty() && is_proxy {
-                        Err("Model is required for proxy provider".to_string())
-                    } else {
-                        Ok(())
-                    }
-                })
-                .prompt()
-                .context("Failed to get LLM model")?
-        };
-
-        let llm_model = if !llm_model_input.is_empty() {
-            Some(llm_model_input)
-        } else if is_proxy {
-            anyhow::bail!("Model is required for proxy provider");
-        } else {
-            // 对于 openai 和 deepseek，如果为空则设置为 None
-            // 这样不会保存到 TOML，运行时会在 build_model() 中使用默认值
-            None
-        };
-
-        // 配置 LLM 输出语言
+        // 配置 LLM 输出语言（所有 provider 共享）
         let current_language = if !existing.llm_language.is_empty() {
             Some(existing.llm_language.as_str())
         } else {
@@ -566,10 +667,14 @@ impl SetupCommand {
             // codeup_csrf_token,  // Codeup support has been removed
             // codeup_cookie,  // Codeup support has been removed
             llm_provider,
-            llm_url,
-            llm_key,
-            llm_model,
             llm_language,
+            llm_openai_key,
+            llm_openai_model,
+            llm_deepseek_key,
+            llm_deepseek_model,
+            llm_proxy_url,
+            llm_proxy_key,
+            llm_proxy_model,
         })
     }
 
@@ -598,11 +703,23 @@ impl SetupCommand {
             //     cookie: config.codeup_cookie.clone(),
             // },
             llm: crate::base::settings::settings::LLMSettings {
-                url: config.llm_url.clone(),
-                key: config.llm_key.clone(),
                 provider: config.llm_provider.clone(),
-                model: config.llm_model.clone(),
                 language: config.llm_language.clone(),
+                openai: crate::base::settings::settings::LLMProviderSettings {
+                    url: None,
+                    key: config.llm_openai_key.clone(),
+                    model: config.llm_openai_model.clone(),
+                },
+                deepseek: crate::base::settings::settings::LLMProviderSettings {
+                    url: None,
+                    key: config.llm_deepseek_key.clone(),
+                    model: config.llm_deepseek_model.clone(),
+                },
+                proxy: crate::base::settings::settings::LLMProviderSettings {
+                    url: config.llm_proxy_url.clone(),
+                    key: config.llm_proxy_key.clone(),
+                    model: config.llm_proxy_model.clone(),
+                },
             },
         };
 

@@ -54,7 +54,7 @@ brew install workflow
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 
 # 安装指定版本
-VERSION=v1.4.8 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.5.1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 ```
 
 **功能特性**：
@@ -123,7 +123,7 @@ powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.4.8"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.5.1"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -396,8 +396,12 @@ workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模
 workflow config import <INPUT> --section jira   # 只导入指定配置段
 workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
 workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
-workflow update --version 1.1.2    # 更新到指定版本
+workflow update --version 1.5.1    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
+workflow version                   # 显示 Workflow CLI 版本
+workflow migrate                   # 执行配置迁移（自动检测并迁移所有待迁移版本）
+workflow migrate --dry-run         # 预览迁移操作
+workflow migrate --keep-old        # 迁移后保留旧配置文件
 ```
 
 ### GitHub 账号管理
@@ -412,15 +416,14 @@ workflow github update             # 更新 GitHub 账号信息（交互式选�
 
 ### 日志级别管理
 ```bash
-workflow log-level set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
-workflow log-level check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+workflow log set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
+workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
 ```
 
 ### LLM 配置管理
 ```bash
 workflow llm show                        # 显示当前 LLM 配置（显示提供者、API Key（已掩码）、模型、语言设置）
-workflow llm setup                       # 设置 LLM 配置（交互式配置提供者、代理 URL、API Key、模型）
-workflow llm language                    # 设置摘要语言（交互式选择 PR 摘要的语言）
+workflow llm setup                       # 设置 LLM 配置（交互式配置提供者、代理 URL、API Key、模型、语言设置）
 ```
 
 ### Shell Completion 管理
@@ -432,6 +435,18 @@ workflow completion remove         # 移除 completion 配置（交互式选择�
 
 ### 分支管理
 ```bash
+# 创建新分支
+workflow branch create [JIRA_ID]              # 创建新分支（可选 JIRA ticket，使用 LLM 生成分支名）
+workflow branch create --from-default         # 从默认分支（main/master）创建
+workflow branch create [JIRA_ID] --dry-run   # 预览模式
+
+# 切换分支
+workflow branch switch [BRANCH_NAME]          # 切换到指定分支（不存在时询问是否创建）
+workflow branch switch                        # 交互式选择分支（分支数量 > 25 时自动启用搜索）
+
+# 重命名分支
+workflow branch rename                        # 交互式重命名分支（支持本地和远程分支）
+
 # 清理本地分支
 workflow branch clean              # 清理已合并的分支（保留 main/master、develop、当前分支和忽略列表中的分支）
 workflow branch clean --dry-run    # 预览将要删除的分支，不实际删除
@@ -442,9 +457,48 @@ workflow branch ignore remove <BRANCH_NAME>  # 从忽略列表移除分支
 workflow branch ignore list                   # 列出当前仓库的忽略分支
 
 # 管理分支前缀（仓库级别）
-workflow branch prefix set [PREFIX]            # 设置当前仓库的分支前缀（如 "feature"、"fix"）
-workflow branch prefix get                     # 获取当前仓库的分支前缀
-workflow branch prefix remove                  # 移除当前仓库的分支前缀
+workflow repo setup                            # 配置项目级设置（包括分支前缀）
+workflow repo show                             # 显示项目级配置（包括分支前缀）
+
+# 同步分支
+workflow branch sync <SOURCE_BRANCH>          # 将指定分支同步到当前分支（merge）
+workflow branch sync <SOURCE_BRANCH> --rebase # 使用 rebase 同步
+workflow branch sync <SOURCE_BRANCH> --squash  # 使用 squash 合并
+workflow branch sync <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
+```
+
+### Commit 管理
+```bash
+# 修改最后一次 commit
+workflow commit amend                              # 交互式修改最后一次 commit
+workflow commit amend --message "New message"      # 修改 commit 消息
+workflow commit amend --no-edit                    # 不编辑消息直接提交
+workflow commit amend --no-verify                  # 跳过 pre-commit hooks
+
+# 修改 commit 消息（不改变内容）
+workflow commit reword                              # 修改 HEAD 的 commit 消息（默认）
+workflow commit reword HEAD                         # 明确指定 HEAD
+workflow commit reword HEAD~2                      # 修改倒数第二个 commit
+workflow commit reword abc1234                     # 通过 SHA 修改指定 commit
+
+# 压缩多个 commits
+workflow commit squash                             # 交互式选择要压缩的 commits
+```
+
+### Stash 管理
+```bash
+# 列出所有 stash
+workflow stash list                                # 列出所有 stash 条目
+workflow stash list --stat                         # 显示统计信息
+
+# 应用 stash（保留条目）
+workflow stash apply                               # 应用最新的 stash（交互式选择）
+
+# 删除 stash
+workflow stash drop                                # 交互式选择要删除的 stash
+
+# 应用并删除 stash
+workflow stash pop                                # 应用并删除最新的 stash（交互式选择）
 ```
 
 ### 安装命令
@@ -502,6 +556,18 @@ workflow pr pick <FROM_BRANCH> <TO_BRANCH> --dry-run  # 预览模式
 # 总结 PR
 workflow pr summarize [PR_ID]                 # 使用 LLM 总结 PR（可选指定 PR ID，否则自动检测当前分支）
 workflow pr summarize --language zh            # 指定总结语言（en, zh, zh-CN, zh-TW 等）
+
+# 批准 PR
+workflow pr approve [PR_ID]                    # 批准 PR（可选指定 PR ID，否则自动检测当前分支）
+
+# 添加评论
+workflow pr comment [PR_ID] <MESSAGE>          # 添加评论到 PR（可选指定 PR ID，否则自动检测当前分支）
+
+# Reword PR 标题和描述
+workflow pr reword [PR_ID]                      # 基于 PR diff 自动生成并更新标题和描述
+workflow pr reword --title                     # 仅更新标题
+workflow pr reword --description               # 仅更新描述
+workflow pr reword --dry-run                   # 预览模式（不实际更新）
 ```
 
 ### Jira 操作
@@ -520,6 +586,9 @@ workflow jira related [PROJ-123] --markdown   # Markdown 格式输出
 workflow jira changelog [PROJ-123]            # 显示变更历史（JIRA ID 可选，不提供会交互式输入）
 workflow jira changelog [PROJ-123] --json     # JSON 格式输出
 workflow jira changelog [PROJ-123] --markdown  # Markdown 格式输出
+
+# 添加评论
+workflow jira comment [PROJ-123]              # 添加评论到 Jira ticket（JIRA ID 可选，不提供会交互式输入）
 
 # 显示评论
 workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
@@ -739,66 +808,6 @@ graph TB
     style HttpLib fill:#e8f5e9
     style UtilsLib fill:#e8f5e9
     style SettingsLib fill:#e8f5e9
-```
-
-## 📦 项目结构
-
-```
-workflow/
-├── Cargo.toml           # 项目配置和依赖管理
-├── Makefile             # 构建和安装脚本
-├── Formula/             # Homebrew Formula 定义
-│   └── workflow.rb      # Homebrew 安装配方
-├── src/
-│   ├── main.rs          # 主 CLI 入口（workflow 命令）
-│   ├── lib.rs           # 库入口，重新导出所有公共 API
-│   ├── lib/             # 核心库模块（业务逻辑层）
-│   │   ├── git/         # Git 操作（命令封装、仓库检测、类型定义）
-│   │   ├── http/        # HTTP 客户端（支持认证和代理）
-│   │   ├── jira/        # Jira API 集成（客户端、状态管理、工作历史）
-│   │   ├── pr/          # PR 相关功能（GitHub/Codeup 支持、提供者抽象）
-│   │   ├── llm/         # LLM 集成（AI 功能，支持 OpenAI/DeepSeek/Proxy）
-│   │   ├── log/         # 日志处理（下载、搜索、提取）
-│   │   ├── settings/    # 配置管理（环境变量单例）
-│   │   └── utils/       # 工具函数（浏览器、剪贴板、日志、代理等）
-│   ├── bin/             # 独立可执行文件（CLI 入口层）
-│   │   └── install.rs   # 安装命令入口（独立的 install 命令）
-│   └── commands/        # 命令实现（命令封装层）
-│       ├── pr/          # PR 相关命令（create, merge, close, status, list, update）
-│       ├── log/          # 日志操作命令（download, find, search）
-│       ├── jira/         # Jira 操作命令（info, attachments, clean）
-│       ├── branch/       # 分支管理命令（clean, ignore, prefix）
-│       ├── check/       # 环境检查命令（check）
-│       ├── proxy/       # 代理管理命令（on, off, check）
-│       ├── github/       # GitHub 账号管理命令（list, current, add, remove, switch, update）
-│       ├── config/       # 配置管理命令（setup, show, log, completion）
-│       └── lifecycle/   # 生命周期管理命令（install, uninstall, update）
-└── docs/                # 文档目录
-    ├── README.md        # 文档索引
-    └── architecture/    # 架构文档目录
-        ├── ARCHITECTURE.md  # 总体架构设计文档
-        ├── lib/         # Lib 层架构文档（核心业务逻辑）
-        │   ├── PR_ARCHITECTURE.md      # PR 模块架构文档
-        │   ├── JIRA_ARCHITECTURE.md    # Jira 模块架构文档
-        │   ├── GIT_ARCHITECTURE.md     # Git 模块架构文档
-        │   ├── HTTP_ARCHITECTURE.md    # HTTP 模块架构文档
-        │   ├── LLM_ARCHITECTURE.md     # LLM 模块架构文档
-        │   ├── SETTINGS_ARCHITECTURE.md # Settings 模块架构文档
-        │   ├── SHELL_ARCHITECTURE.md   # Shell 模块架构文档
-        │   ├── COMPLETION_ARCHITECTURE.md # Completion 模块架构文档
-        │   ├── PROXY_ARCHITECTURE.md   # 代理管理模块架构文档
-        │   ├── ROLLBACK_ARCHITECTURE.md # 回滚模块架构文档
-        │   └── TOOLS_ARCHITECTURE.md   # 工具函数模块架构文档
-        └── commands/    # 命令层架构文档（CLI 命令封装）
-            ├── PR_COMMAND_ARCHITECTURE.md      # PR 命令架构文档
-            ├── LOG_COMMAND_ARCHITECTURE.md     # 日志操作命令架构文档
-            ├── JIRA_COMMAND_ARCHITECTURE.md    # Jira 操作命令架构文档
-            ├── CONFIG_COMMAND_ARCHITECTURE.md  # 配置管理命令架构文档
-            ├── LIFECYCLE_COMMAND_ARCHITECTURE.md # 生命周期管理命令架构文档
-            ├── BRANCH_COMMAND_ARCHITECTURE.md  # 分支管理命令架构文档
-            ├── CHECK_COMMAND_ARCHITECTURE.md   # 环境检查命令架构文档
-            ├── GITHUB_COMMAND_ARCHITECTURE.md  # GitHub 账号管理命令架构文档
-            └── PROXY_COMMAND_ARCHITECTURE.md  # 代理管理命令架构文档
 ```
 
 ## 📝 贡献

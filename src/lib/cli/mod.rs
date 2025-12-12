@@ -8,6 +8,7 @@ use clap::Parser;
 // 导入所有子命令枚举
 mod branch;
 mod commands;
+mod commit;
 mod common;
 mod config;
 mod github;
@@ -16,11 +17,14 @@ mod llm;
 mod log;
 mod pr;
 mod proxy;
+mod repo;
+mod stash;
 
 // 重新导出所有子命令枚举和主结构体，保持向后兼容
 // 这些导出是必需的，因为 bin/workflow.rs 需要使用它们进行命令分发
-pub use branch::{BranchSubcommand, IgnoreSubcommand, PrefixSubcommand};
+pub use branch::{BranchSubcommand, IgnoreSubcommand};
 pub use commands::Commands;
+pub use commit::CommitSubcommand;
 pub use common::{DryRunArgs, JiraIdArg, OutputFormatArgs};
 pub use config::{CompletionSubcommand, ConfigSubcommand, LogLevelSubcommand};
 pub use github::GitHubSubcommand;
@@ -29,6 +33,8 @@ pub use llm::LLMSubcommand;
 pub use log::LogSubcommand;
 pub use pr::PRCommands;
 pub use proxy::ProxySubcommand;
+pub use repo::RepoSubcommand;
+pub use stash::StashSubcommand;
 
 /// CLI 主结构体
 ///

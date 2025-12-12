@@ -7,6 +7,7 @@ pub mod list;
 pub mod merge;
 pub mod pick;
 pub mod rebase;
+pub mod reword;
 pub mod status;
 pub mod summarize;
 pub mod sync;

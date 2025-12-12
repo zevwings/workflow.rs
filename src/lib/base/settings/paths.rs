@@ -7,6 +7,7 @@
 
 use anyhow::{Context, Result};
 use clap_complete::shells::Shell;
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 
@@ -181,8 +182,6 @@ impl Paths {
     /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
     /// ```
     pub fn expand(path_str: &str) -> Result<PathBuf> {
-        use std::env;
-
         // 处理 Unix 风格的 ~ 展开
         if let Some(rest) = path_str.strip_prefix("~/") {
             let home = Self::home_dir()?;
@@ -292,13 +291,27 @@ impl Paths {
         Ok(Self::config_dir()?.join("jira-users.toml"))
     }
 
-    /// 获取仓库配置文件路径
+    /// 获取项目级配置文件路径
     ///
-    /// 返回 `~/.workflow/config/repositories.toml` 的路径。
+    /// 返回当前工作目录下的 `.workflow/config.toml` 路径。
+    /// 这是项目级别的配置文件，用于存储仓库特定的配置（如分支前缀、提交模板等）。
     ///
-    /// **注意**：配置文件名称使用复数 `repositories.toml`，因为文件中存储多个仓库的配置。
-    pub fn branch_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("repositories.toml"))
+    /// # 路径示例
+    ///
+    /// - 相对于当前工作目录：`.workflow/config.toml`
+    ///
+    /// # 返回
+    ///
+    /// 返回项目级配置文件的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法获取当前工作目录，返回相应的错误信息。
+    pub fn project_config() -> Result<PathBuf> {
+        Ok(std::env::current_dir()
+            .context("Failed to get current directory")?
+            .join(".workflow")
+            .join("config.toml"))
     }
 
     /// 获取工作流目录路径（支持 iCloud）
