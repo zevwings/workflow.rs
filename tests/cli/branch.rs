@@ -3,6 +3,7 @@
 //! 测试 Branch CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use pretty_assertions::assert_eq;
 use workflow::cli::BranchSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析

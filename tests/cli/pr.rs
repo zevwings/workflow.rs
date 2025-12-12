@@ -3,6 +3,8 @@
 //! 测试 PR CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
 use workflow::cli::PRCommands;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -13,76 +15,59 @@ struct TestPRCli {
     command: PRCommands,
 }
 
+// ==================== Fixtures ====================
+
+#[fixture]
+fn test_pr_id() -> &'static str {
+    "123"
+}
+
+#[fixture]
+fn test_branch() -> &'static str {
+    "feature/my-branch"
+}
+
 // ==================== Create 命令测试 ====================
 
-#[test]
-fn test_pr_create_command_structure() {
-    // 测试 Create 命令结构（带所有参数）
-    let cli = TestPRCli::try_parse_from(&[
-        "test-pr",
-        "create",
-        "PROJ-123",
-        "--title",
-        "Test PR",
-        "--description",
-        "Test description",
-        "--dry-run",
-    ])
-    .unwrap();
-
-    match cli.command {
-        PRCommands::Create {
-            jira_ticket,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(jira_ticket, Some("PROJ-123".to_string()));
-            assert_eq!(title, Some("Test PR".to_string()));
-            assert_eq!(description, Some("Test description".to_string()));
-            assert!(dry_run.dry_run);
-        }
-        _ => panic!("Expected Create command"),
+#[rstest]
+#[case(None, None, None, false)]
+#[case(Some("PROJ-123"), None, None, false)]
+#[case(Some("PROJ-123"), Some("Test PR"), Some("Test description"), true)]
+fn test_pr_create_command(
+    #[case] jira_ticket: Option<&str>,
+    #[case] title: Option<&str>,
+    #[case] description: Option<&str>,
+    #[case] dry_run: bool,
+) {
+    let mut args = vec!["test-pr", "create"];
+    if let Some(ticket) = jira_ticket {
+        args.push(ticket);
     }
-}
-
-#[test]
-fn test_pr_create_command_minimal() {
-    // 测试 Create 命令最小参数
-    let cli = TestPRCli::try_parse_from(&["test-pr", "create"]).unwrap();
-
-    match cli.command {
-        PRCommands::Create {
-            jira_ticket,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(jira_ticket, None);
-            assert_eq!(title, None);
-            assert_eq!(description, None);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Create command"),
+    if let Some(t) = title {
+        args.push("--title");
+        args.push(t);
     }
-}
+    if let Some(d) = description {
+        args.push("--description");
+        args.push(d);
+    }
+    if dry_run {
+        args.push("--dry-run");
+    }
 
-#[test]
-fn test_pr_create_command_with_jira_ticket_only() {
-    // 测试 Create 命令只带 JIRA ticket
-    let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-456"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Create {
-            jira_ticket,
-            title,
-            description,
-            dry_run,
+            jira_ticket: ticket,
+            title: t,
+            description: d,
+            dry_run: dr,
         } => {
-            assert_eq!(jira_ticket, Some("PROJ-456".to_string()));
-            assert_eq!(title, None);
-            assert_eq!(description, None);
-            assert!(!dry_run.dry_run);
+            assert_eq!(ticket, jira_ticket.map(|s| s.to_string()));
+            assert_eq!(t, title.map(|s| s.to_string()));
+            assert_eq!(d, description.map(|s| s.to_string()));
+            assert_eq!(dr.dry_run, dry_run);
         }
         _ => panic!("Expected Create command"),
     }
@@ -90,35 +75,28 @@ fn test_pr_create_command_with_jira_ticket_only() {
 
 // ==================== Merge 命令测试 ====================
 
-#[test]
-fn test_pr_merge_command_structure() {
-    // 测试 Merge 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "merge", "123", "--force"]).unwrap();
-
-    match cli.command {
-        PRCommands::Merge {
-            pull_request_id,
-            force,
-        } => {
-            assert_eq!(pull_request_id, Some("123".to_string()));
-            assert!(force);
-        }
-        _ => panic!("Expected Merge command"),
+#[rstest]
+#[case(None, false)]
+#[case(Some("123"), false)]
+#[case(Some("123"), true)]
+fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: bool) {
+    let mut args = vec!["test-pr", "merge"];
+    if let Some(id) = pull_request_id {
+        args.push(id);
     }
-}
+    if force {
+        args.push("--force");
+    }
 
-#[test]
-fn test_pr_merge_command_without_id() {
-    // 测试 Merge 命令不带 PR ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "merge"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Merge {
-            pull_request_id,
-            force,
+            pull_request_id: id,
+            force: f,
         } => {
-            assert_eq!(pull_request_id, None);
-            assert!(!force);
+            assert_eq!(id, pull_request_id.map(|s| s.to_string()));
+            assert_eq!(f, force);
         }
         _ => panic!("Expected Merge command"),
     }
@@ -126,49 +104,23 @@ fn test_pr_merge_command_without_id() {
 
 // ==================== Status 命令测试 ====================
 
-#[test]
-fn test_pr_status_command_structure() {
-    // 测试 Status 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "status", "123"]).unwrap();
-
-    match cli.command {
-        PRCommands::Status {
-            pull_request_id_or_branch,
-        } => {
-            assert_eq!(pull_request_id_or_branch, Some("123".to_string()));
-        }
-        _ => panic!("Expected Status command"),
+#[rstest]
+#[case(None)]
+#[case(Some("123"))]
+#[case(Some("feature/my-branch"))]
+fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
+    let mut args = vec!["test-pr", "status"];
+    if let Some(id) = pull_request_id_or_branch {
+        args.push(id);
     }
-}
 
-#[test]
-fn test_pr_status_command_with_branch_name() {
-    // 测试 Status 命令带分支名
-    let cli = TestPRCli::try_parse_from(&["test-pr", "status", "feature/my-branch"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Status {
-            pull_request_id_or_branch,
+            pull_request_id_or_branch: id,
         } => {
-            assert_eq!(
-                pull_request_id_or_branch,
-                Some("feature/my-branch".to_string())
-            );
-        }
-        _ => panic!("Expected Status command"),
-    }
-}
-
-#[test]
-fn test_pr_status_command_without_id() {
-    // 测试 Status 命令不带 ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "status"]).unwrap();
-
-    match cli.command {
-        PRCommands::Status {
-            pull_request_id_or_branch,
-        } => {
-            assert_eq!(pull_request_id_or_branch, None);
+            assert_eq!(id, pull_request_id_or_branch.map(|s| s.to_string()));
         }
         _ => panic!("Expected Status command"),
     }
@@ -176,58 +128,29 @@ fn test_pr_status_command_without_id() {
 
 // ==================== List 命令测试 ====================
 
-#[test]
-fn test_pr_list_command_structure() {
-    // 测试 List 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--state", "open", "--limit", "10"])
-        .unwrap();
-
-    match cli.command {
-        PRCommands::List { state, limit } => {
-            assert_eq!(state, Some("open".to_string()));
-            assert_eq!(limit, Some(10));
-        }
-        _ => panic!("Expected List command"),
+#[rstest]
+#[case(None, None)]
+#[case(Some("open"), None)]
+#[case(None, Some(10))]
+#[case(Some("closed"), Some(5))]
+fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<u32>) {
+    let mut args = vec!["test-pr", "list"];
+    if let Some(s) = state {
+        args.push("--state");
+        args.push(s);
     }
-}
-
-#[test]
-fn test_pr_list_command_minimal() {
-    // 测试 List 命令最小参数
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list"]).unwrap();
-
-    match cli.command {
-        PRCommands::List { state, limit } => {
-            assert_eq!(state, None);
-            assert_eq!(limit, None);
-        }
-        _ => panic!("Expected List command"),
+    let limit_str = limit.map(|l| l.to_string());
+    if let Some(ref l) = limit_str {
+        args.push("--limit");
+        args.push(l);
     }
-}
 
-#[test]
-fn test_pr_list_command_with_state_only() {
-    // 测试 List 命令只带 state
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--state", "closed"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        PRCommands::List { state, limit } => {
-            assert_eq!(state, Some("closed".to_string()));
-            assert_eq!(limit, None);
-        }
-        _ => panic!("Expected List command"),
-    }
-}
-
-#[test]
-fn test_pr_list_command_with_limit_only() {
-    // 测试 List 命令只带 limit
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "5"]).unwrap();
-
-    match cli.command {
-        PRCommands::List { state, limit } => {
-            assert_eq!(state, None);
-            assert_eq!(limit, Some(5));
+        PRCommands::List { state: s, limit: l } => {
+            assert_eq!(s, state.map(|s| s.to_string()));
+            assert_eq!(l, limit);
         }
         _ => panic!("Expected List command"),
     }
@@ -251,51 +174,42 @@ fn test_pr_update_command_structure() {
 
 // ==================== Sync 命令测试 ====================
 
-#[test]
-fn test_pr_sync_command_structure() {
-    // 测试 Sync 命令结构（带所有参数）
-    let cli = TestPRCli::try_parse_from(&[
-        "test-pr",
-        "sync",
-        "feature/source",
-        "--rebase",
-        "--ff-only",
-        "--squash",
-    ])
-    .unwrap();
-
-    match cli.command {
-        PRCommands::Sync {
-            source_branch,
-            rebase,
-            ff_only,
-            squash,
-        } => {
-            assert_eq!(source_branch, "feature/source");
-            assert!(rebase);
-            assert!(ff_only);
-            assert!(squash);
-        }
-        _ => panic!("Expected Sync command"),
+#[rstest]
+#[case("feature/source", false, false, false)]
+#[case("feature/source", true, false, false)]
+#[case("feature/source", false, true, false)]
+#[case("feature/source", false, false, true)]
+#[case("feature/source", true, true, true)]
+fn test_pr_sync_command(
+    #[case] source_branch: &str,
+    #[case] rebase: bool,
+    #[case] ff_only: bool,
+    #[case] squash: bool,
+) {
+    let mut args = vec!["test-pr", "sync", source_branch];
+    if rebase {
+        args.push("--rebase");
     }
-}
+    if ff_only {
+        args.push("--ff-only");
+    }
+    if squash {
+        args.push("--squash");
+    }
 
-#[test]
-fn test_pr_sync_command_minimal() {
-    // 测试 Sync 命令最小参数（只需要 source_branch）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "sync", "feature/source"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Sync {
-            source_branch,
-            rebase,
-            ff_only,
-            squash,
+            source_branch: sb,
+            rebase: r,
+            ff_only: ff,
+            squash: s,
         } => {
-            assert_eq!(source_branch, "feature/source");
-            assert!(!rebase);
-            assert!(!ff_only);
-            assert!(!squash);
+            assert_eq!(sb, source_branch);
+            assert_eq!(r, rebase);
+            assert_eq!(ff, ff_only);
+            assert_eq!(s, squash);
         }
         _ => panic!("Expected Sync command"),
     }
@@ -303,40 +217,35 @@ fn test_pr_sync_command_minimal() {
 
 // ==================== Rebase 命令测试 ====================
 
-#[test]
-fn test_pr_rebase_command_structure() {
-    // 测试 Rebase 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "rebase", "main", "--no-push", "--dry-run"])
-        .unwrap();
-
-    match cli.command {
-        PRCommands::Rebase {
-            target_branch,
-            no_push,
-            dry_run,
-        } => {
-            assert_eq!(target_branch, "main");
-            assert!(no_push);
-            assert!(dry_run.dry_run);
-        }
-        _ => panic!("Expected Rebase command"),
+#[rstest]
+#[case("main", false, false)]
+#[case("main", true, false)]
+#[case("main", false, true)]
+#[case("main", true, true)]
+fn test_pr_rebase_command(
+    #[case] target_branch: &str,
+    #[case] no_push: bool,
+    #[case] dry_run: bool,
+) {
+    let mut args = vec!["test-pr", "rebase", target_branch];
+    if no_push {
+        args.push("--no-push");
     }
-}
+    if dry_run {
+        args.push("--dry-run");
+    }
 
-#[test]
-fn test_pr_rebase_command_minimal() {
-    // 测试 Rebase 命令最小参数
-    let cli = TestPRCli::try_parse_from(&["test-pr", "rebase", "main"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Rebase {
-            target_branch,
-            no_push,
-            dry_run,
+            target_branch: tb,
+            no_push: np,
+            dry_run: dr,
         } => {
-            assert_eq!(target_branch, "main");
-            assert!(!no_push);
-            assert!(!dry_run.dry_run);
+            assert_eq!(tb, target_branch);
+            assert_eq!(np, no_push);
+            assert_eq!(dr.dry_run, dry_run);
         }
         _ => panic!("Expected Rebase command"),
     }
@@ -344,27 +253,22 @@ fn test_pr_rebase_command_minimal() {
 
 // ==================== Close 命令测试 ====================
 
-#[test]
-fn test_pr_close_command_structure() {
-    // 测试 Close 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "close", "123"]).unwrap();
-
-    match cli.command {
-        PRCommands::Close { pull_request_id } => {
-            assert_eq!(pull_request_id, Some("123".to_string()));
-        }
-        _ => panic!("Expected Close command"),
+#[rstest]
+#[case(None)]
+#[case(Some("123"))]
+fn test_pr_close_command(#[case] pull_request_id: Option<&str>) {
+    let mut args = vec!["test-pr", "close"];
+    if let Some(id) = pull_request_id {
+        args.push(id);
     }
-}
 
-#[test]
-fn test_pr_close_command_without_id() {
-    // 测试 Close 命令不带 ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "close"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        PRCommands::Close { pull_request_id } => {
-            assert_eq!(pull_request_id, None);
+        PRCommands::Close {
+            pull_request_id: id,
+        } => {
+            assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
         _ => panic!("Expected Close command"),
     }
@@ -372,27 +276,22 @@ fn test_pr_close_command_without_id() {
 
 // ==================== Summarize 命令测试 ====================
 
-#[test]
-fn test_pr_summarize_command_structure() {
-    // 测试 Summarize 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "summarize", "123"]).unwrap();
-
-    match cli.command {
-        PRCommands::Summarize { pull_request_id } => {
-            assert_eq!(pull_request_id, Some("123".to_string()));
-        }
-        _ => panic!("Expected Summarize command"),
+#[rstest]
+#[case(None)]
+#[case(Some("123"))]
+fn test_pr_summarize_command(#[case] pull_request_id: Option<&str>) {
+    let mut args = vec!["test-pr", "summarize"];
+    if let Some(id) = pull_request_id {
+        args.push(id);
     }
-}
 
-#[test]
-fn test_pr_summarize_command_without_id() {
-    // 测试 Summarize 命令不带 ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "summarize"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        PRCommands::Summarize { pull_request_id } => {
-            assert_eq!(pull_request_id, None);
+        PRCommands::Summarize {
+            pull_request_id: id,
+        } => {
+            assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
         _ => panic!("Expected Summarize command"),
     }
@@ -400,27 +299,22 @@ fn test_pr_summarize_command_without_id() {
 
 // ==================== Approve 命令测试 ====================
 
-#[test]
-fn test_pr_approve_command_structure() {
-    // 测试 Approve 命令结构
-    let cli = TestPRCli::try_parse_from(&["test-pr", "approve", "123"]).unwrap();
-
-    match cli.command {
-        PRCommands::Approve { pull_request_id } => {
-            assert_eq!(pull_request_id, Some("123".to_string()));
-        }
-        _ => panic!("Expected Approve command"),
+#[rstest]
+#[case(None)]
+#[case(Some("123"))]
+fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
+    let mut args = vec!["test-pr", "approve"];
+    if let Some(id) = pull_request_id {
+        args.push(id);
     }
-}
 
-#[test]
-fn test_pr_approve_command_without_id() {
-    // 测试 Approve 命令不带 ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "approve"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        PRCommands::Approve { pull_request_id } => {
-            assert_eq!(pull_request_id, None);
+        PRCommands::Approve {
+            pull_request_id: id,
+        } => {
+            assert_eq!(id, pull_request_id.map(|s| s.to_string()));
         }
         _ => panic!("Expected Approve command"),
     }
@@ -430,7 +324,6 @@ fn test_pr_approve_command_without_id() {
 
 #[test]
 fn test_pr_comment_command_structure() {
-    // 测试 Comment 命令结构
     let cli =
         TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"]).unwrap();
 
@@ -448,7 +341,6 @@ fn test_pr_comment_command_structure() {
 
 #[test]
 fn test_pr_comment_command_with_multiple_words() {
-    // 测试 Comment 命令带多个单词
     let cli = TestPRCli::try_parse_from(&[
         "test-pr",
         "comment",
@@ -475,33 +367,7 @@ fn test_pr_comment_command_with_multiple_words() {
 
 #[test]
 fn test_pr_comment_command_without_id() {
-    // 测试 Comment 命令不带 ID
-    // 注意：由于 pull_request_id 是 Option<String> 且 message 是 trailing_var_arg，
-    // clap 的行为是：第一个参数会被解析为 pull_request_id（如果存在），
-    // 后续参数会进入 message。当只有一个参数时，它会被解析为 pull_request_id。
-    // 要测试不带 ID 的情况，我们需要接受这个行为，或者测试实际的命令行使用场景。
-    // 在实际使用中，用户可以通过明确指定 PR ID 或使用多个单词来区分。
-
-    // 测试场景：多个单词（会被解析为 message，第一个可能被解析为 PR ID）
-    // 由于 trailing_var_arg 的特性，我们测试一个更实际的场景
-    let cli =
-        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a message"]).unwrap();
-
-    match cli.command {
-        PRCommands::Comment {
-            pull_request_id,
-            message,
-        } => {
-            // 当明确提供 PR ID 时
-            assert_eq!(pull_request_id, Some("123".to_string()));
-            assert_eq!(message, vec!["This is a message"]);
-        }
-        _ => panic!("Expected Comment command"),
-    }
-
     // 测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
-    // 这在实际使用中可能不是期望的行为，但这是 clap 的默认行为
-    // 我们测试这个行为以确保测试覆盖所有情况
     let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"]).unwrap();
 
     match cli.command {
@@ -522,41 +388,26 @@ fn test_pr_comment_command_without_id() {
 
 // ==================== Pick 命令测试 ====================
 
-#[test]
-fn test_pr_pick_command_structure() {
-    // 测试 Pick 命令结构
-    let cli =
-        TestPRCli::try_parse_from(&["test-pr", "pick", "feature/source", "main", "--dry-run"])
-            .unwrap();
-
-    match cli.command {
-        PRCommands::Pick {
-            from_branch,
-            to_branch,
-            dry_run,
-        } => {
-            assert_eq!(from_branch, "feature/source");
-            assert_eq!(to_branch, "main");
-            assert!(dry_run.dry_run);
-        }
-        _ => panic!("Expected Pick command"),
+#[rstest]
+#[case("feature/source", "main", false)]
+#[case("feature/source", "main", true)]
+fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[case] dry_run: bool) {
+    let mut args = vec!["test-pr", "pick", from_branch, to_branch];
+    if dry_run {
+        args.push("--dry-run");
     }
-}
 
-#[test]
-fn test_pr_pick_command_minimal() {
-    // 测试 Pick 命令最小参数
-    let cli = TestPRCli::try_parse_from(&["test-pr", "pick", "feature/source", "main"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Pick {
-            from_branch,
-            to_branch,
-            dry_run,
+            from_branch: fb,
+            to_branch: tb,
+            dry_run: dr,
         } => {
-            assert_eq!(from_branch, "feature/source");
-            assert_eq!(to_branch, "main");
-            assert!(!dry_run.dry_run);
+            assert_eq!(fb, from_branch);
+            assert_eq!(tb, to_branch);
+            assert_eq!(dr.dry_run, dry_run);
         }
         _ => panic!("Expected Pick command"),
     }
@@ -564,135 +415,46 @@ fn test_pr_pick_command_minimal() {
 
 // ==================== Reword 命令测试 ====================
 
-#[test]
-fn test_pr_reword_command_structure() {
-    // 测试 Reword 命令结构（带所有参数）
-    let cli = TestPRCli::try_parse_from(&[
-        "test-pr",
-        "reword",
-        "123",
-        "--title",
-        "--description",
-        "--dry-run",
-    ])
-    .unwrap();
-
-    match cli.command {
-        PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(pull_request_id, Some("123".to_string()));
-            assert!(title);
-            assert!(description);
-            assert!(dry_run.dry_run);
-        }
-        _ => panic!("Expected Reword command"),
+#[rstest]
+#[case(None, false, false, false)]
+#[case(Some("456"), false, false, false)]
+#[case(None, true, false, false)]
+#[case(None, false, true, false)]
+#[case(None, false, false, true)]
+#[case(Some("123"), true, true, true)]
+fn test_pr_reword_command(
+    #[case] pull_request_id: Option<&str>,
+    #[case] title: bool,
+    #[case] description: bool,
+    #[case] dry_run: bool,
+) {
+    let mut args = vec!["test-pr", "reword"];
+    if let Some(id) = pull_request_id {
+        args.push(id);
     }
-}
-
-#[test]
-fn test_pr_reword_command_minimal() {
-    // 测试 Reword 命令最小参数（不指定 PR ID，自动检测）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword"]).unwrap();
-
-    match cli.command {
-        PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(pull_request_id, None);
-            assert!(!title);
-            assert!(!description);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Reword command"),
+    if title {
+        args.push("--title");
     }
-}
-
-#[test]
-fn test_pr_reword_command_with_pr_id() {
-    // 测试 Reword 命令指定 PR ID
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "456"]).unwrap();
-
-    match cli.command {
-        PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(pull_request_id, Some("456".to_string()));
-            assert!(!title);
-            assert!(!description);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Reword command"),
+    if description {
+        args.push("--description");
     }
-}
-
-#[test]
-fn test_pr_reword_command_title_only() {
-    // 测试 Reword 命令仅更新标题
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--title"]).unwrap();
-
-    match cli.command {
-        PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(pull_request_id, None);
-            assert!(title);
-            assert!(!description);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Reword command"),
+    if dry_run {
+        args.push("--dry-run");
     }
-}
 
-#[test]
-fn test_pr_reword_command_description_only() {
-    // 测试 Reword 命令仅更新描述
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--description"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
+            pull_request_id: id,
+            title: t,
+            description: d,
+            dry_run: dr,
         } => {
-            assert_eq!(pull_request_id, None);
-            assert!(!title);
-            assert!(description);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Reword command"),
-    }
-}
-
-#[test]
-fn test_pr_reword_command_dry_run() {
-    // 测试 Reword 命令预览模式
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword", "--dry-run"]).unwrap();
-
-    match cli.command {
-        PRCommands::Reword {
-            pull_request_id,
-            title,
-            description,
-            dry_run,
-        } => {
-            assert_eq!(pull_request_id, None);
-            assert!(!title);
-            assert!(!description);
-            assert!(dry_run.dry_run);
+            assert_eq!(id, pull_request_id.map(|s| s.to_string()));
+            assert_eq!(t, title);
+            assert_eq!(d, description);
+            assert_eq!(dr.dry_run, dry_run);
         }
         _ => panic!("Expected Reword command"),
     }
@@ -700,61 +462,41 @@ fn test_pr_reword_command_dry_run() {
 
 // ==================== 命令枚举测试 ====================
 
-#[test]
-fn test_pr_commands_enum_all_variants() {
-    // 测试所有 PR 命令变体都可以正确解析
+#[rstest]
+#[case("create", |cmd: &PRCommands| matches!(cmd, PRCommands::Create { .. }))]
+#[case("merge", |cmd: &PRCommands| matches!(cmd, PRCommands::Merge { .. }))]
+#[case("status", |cmd: &PRCommands| matches!(cmd, PRCommands::Status { .. }))]
+#[case("list", |cmd: &PRCommands| matches!(cmd, PRCommands::List { .. }))]
+#[case("update", |cmd: &PRCommands| matches!(cmd, PRCommands::Update))]
+#[case("sync", |cmd: &PRCommands| matches!(cmd, PRCommands::Sync { .. }))]
+#[case("rebase", |cmd: &PRCommands| matches!(cmd, PRCommands::Rebase { .. }))]
+#[case("close", |cmd: &PRCommands| matches!(cmd, PRCommands::Close { .. }))]
+#[case("summarize", |cmd: &PRCommands| matches!(cmd, PRCommands::Summarize { .. }))]
+#[case("approve", |cmd: &PRCommands| matches!(cmd, PRCommands::Approve { .. }))]
+#[case("comment", |cmd: &PRCommands| matches!(cmd, PRCommands::Comment { .. }))]
+#[case("pick", |cmd: &PRCommands| matches!(cmd, PRCommands::Pick { .. }))]
+#[case("reword", |cmd: &PRCommands| matches!(cmd, PRCommands::Reword { .. }))]
+fn test_pr_commands_enum_all_variants(
+    #[case] subcommand: &str,
+    #[case] assert_fn: fn(&PRCommands) -> bool,
+) {
+    let mut args = vec!["test-pr", subcommand];
+    // 为需要参数的命令添加最小参数
+    match subcommand {
+        "sync" => args.push("source"),
+        "rebase" => args.push("main"),
+        "pick" => {
+            args.push("from");
+            args.push("to");
+        }
+        _ => {}
+    }
 
-    // Create
-    let cli = TestPRCli::try_parse_from(&["test-pr", "create"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Create { .. }));
-
-    // Merge
-    let cli = TestPRCli::try_parse_from(&["test-pr", "merge"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Merge { .. }));
-
-    // Status
-    let cli = TestPRCli::try_parse_from(&["test-pr", "status"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Status { .. }));
-
-    // List
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::List { .. }));
-
-    // Update
-    let cli = TestPRCli::try_parse_from(&["test-pr", "update"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Update));
-
-    // Sync
-    let cli = TestPRCli::try_parse_from(&["test-pr", "sync", "source"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Sync { .. }));
-
-    // Rebase
-    let cli = TestPRCli::try_parse_from(&["test-pr", "rebase", "main"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Rebase { .. }));
-
-    // Close
-    let cli = TestPRCli::try_parse_from(&["test-pr", "close"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Close { .. }));
-
-    // Summarize
-    let cli = TestPRCli::try_parse_from(&["test-pr", "summarize"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Summarize { .. }));
-
-    // Approve
-    let cli = TestPRCli::try_parse_from(&["test-pr", "approve"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Approve { .. }));
-
-    // Comment
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "msg"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Comment { .. }));
-
-    // Pick
-    let cli = TestPRCli::try_parse_from(&["test-pr", "pick", "from", "to"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Pick { .. }));
-
-    // Reword
-    let cli = TestPRCli::try_parse_from(&["test-pr", "reword"]).unwrap();
-    assert!(matches!(cli.command, PRCommands::Reword { .. }));
+    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    assert!(
+        assert_fn(&cli.command),
+        "Command should match expected variant"
+    );
 }
 
 #[test]

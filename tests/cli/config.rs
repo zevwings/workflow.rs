@@ -3,6 +3,8 @@
 //! 测试 Config CLI 命令的参数解析、命令执行流程和错误处理。
 
 use clap::Parser;
+use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::cli::ConfigSubcommand;
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -42,123 +44,39 @@ fn test_config_show_command_no_arguments() {
 
 // ==================== Validate 命令测试 ====================
 
-#[test]
-fn test_config_validate_command_structure() {
-    // 测试 Validate 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate"]).unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
-        } => {
-            assert_eq!(config_path, None);
-            assert!(!fix);
-            assert!(!strict);
-        }
-        _ => panic!("Expected Validate command"),
+#[rstest]
+#[case(None, false, false)]
+#[case(Some("/path/to/config.toml"), false, false)]
+#[case(None, true, false)]
+#[case(None, false, true)]
+#[case(Some("/path/to/config.toml"), true, true)]
+fn test_config_validate_command(
+    #[case] config_path: Option<&str>,
+    #[case] fix: bool,
+    #[case] strict: bool,
+) {
+    let mut args = vec!["test-config", "validate"];
+    if let Some(path) = config_path {
+        args.push(path);
     }
-}
-
-#[test]
-fn test_config_validate_command_with_config_path() {
-    // 测试指定配置文件路径
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate", "/path/to/config.toml"])
-        .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
-        } => {
-            assert_eq!(config_path, Some("/path/to/config.toml".to_string()));
-            assert!(!fix);
-            assert!(!strict);
-        }
-        _ => panic!("Expected Validate command"),
+    if fix {
+        args.push("--fix");
     }
-}
-
-#[test]
-fn test_config_validate_command_without_config_path() {
-    // 测试使用默认配置文件路径
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate"]).unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
-        } => {
-            assert_eq!(config_path, None);
-            assert!(!fix);
-            assert!(!strict);
-        }
-        _ => panic!("Expected Validate command"),
+    if strict {
+        args.push("--strict");
     }
-}
 
-#[test]
-fn test_config_validate_command_with_fix_flag() {
-    // 测试 --fix 标志
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate", "--fix"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
+            config_path: cp,
+            fix: f,
+            strict: s,
         } => {
-            assert_eq!(config_path, None);
-            assert!(fix);
-            assert!(!strict);
-        }
-        _ => panic!("Expected Validate command"),
-    }
-}
-
-#[test]
-fn test_config_validate_command_with_strict_flag() {
-    // 测试 --strict 标志
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate", "--strict"]).unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
-        } => {
-            assert_eq!(config_path, None);
-            assert!(!fix);
-            assert!(strict);
-        }
-        _ => panic!("Expected Validate command"),
-    }
-}
-
-#[test]
-fn test_config_validate_command_all_flags() {
-    // 测试所有标志组合
-    let cli = TestConfigCli::try_parse_from(&[
-        "test-config",
-        "validate",
-        "/path/to/config.toml",
-        "--fix",
-        "--strict",
-    ])
-    .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Validate {
-            config_path,
-            fix,
-            strict,
-        } => {
-            assert_eq!(config_path, Some("/path/to/config.toml".to_string()));
-            assert!(fix);
-            assert!(strict);
+            assert_eq!(cp, config_path.map(|s| s.to_string()));
+            assert_eq!(f, fix);
+            assert_eq!(s, strict);
         }
         _ => panic!("Expected Validate command"),
     }
@@ -191,143 +109,85 @@ fn test_config_export_command_structure() {
     }
 }
 
-#[test]
-fn test_config_export_command_with_output_path() {
-    // 测试指定输出路径
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "/path/to/output.json"]).unwrap();
+#[rstest]
+#[case("output.toml", None, false, false, false, false)]
+#[case("/path/to/output.json", None, false, false, false, false)]
+#[case("output.toml", Some("jira"), false, false, false, false)]
+#[case("output.toml", None, true, false, false, false)]
+#[case("output.toml", None, false, true, false, false)]
+#[case("output.toml", None, false, false, true, false)]
+#[case("output.toml", None, false, false, false, true)]
+#[case("output.toml", Some("jira"), true, true, true, true)]
+fn test_config_export_command(
+    #[case] output_path: &str,
+    #[case] section: Option<&str>,
+    #[case] no_secrets: bool,
+    #[case] toml: bool,
+    #[case] json: bool,
+    #[case] yaml: bool,
+) {
+    let mut args = vec!["test-config", "export", output_path];
+    if let Some(s) = section {
+        args.push("--section");
+        args.push(s);
+    }
+    if no_secrets {
+        args.push("--no-secrets");
+    }
+    if toml {
+        args.push("--toml");
+    }
+    if json {
+        args.push("--json");
+    }
+    if yaml {
+        args.push("--yaml");
+    }
+
+    let cli = TestConfigCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        ConfigSubcommand::Export { output_path, .. } => {
-            assert_eq!(output_path, "/path/to/output.json");
+        ConfigSubcommand::Export {
+            output_path: op,
+            section: s,
+            no_secrets: ns,
+            toml: t,
+            json: j,
+            yaml: y,
+        } => {
+            assert_eq!(op, output_path);
+            assert_eq!(s, section.map(|s| s.to_string()));
+            assert_eq!(ns, no_secrets);
+            assert_eq!(t, toml);
+            assert_eq!(j, json);
+            assert_eq!(y, yaml);
         }
         _ => panic!("Expected Export command"),
     }
 }
 
-#[test]
-fn test_config_export_command_with_section() {
-    // 测试 --section 参数
-    let cli = TestConfigCli::try_parse_from(&[
-        "test-config",
-        "export",
-        "output.toml",
-        "--section",
-        "jira",
-    ])
-    .unwrap();
-
+#[rstest]
+#[case("--toml", true, false, false)]
+#[case("--json", false, true, false)]
+#[case("--yaml", false, false, true)]
+fn test_config_export_command_output_formats(
+    #[case] flag: &str,
+    #[case] toml: bool,
+    #[case] json: bool,
+    #[case] yaml: bool,
+) {
+    let cli =
+        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag]).unwrap();
     match cli.command {
         ConfigSubcommand::Export {
-            output_path,
-            section,
+            toml: t,
+            json: j,
+            yaml: y,
             ..
         } => {
-            assert_eq!(output_path, "output.toml");
-            assert_eq!(section, Some("jira".to_string()));
-        }
-        _ => panic!("Expected Export command"),
-    }
-}
-
-#[test]
-fn test_config_export_command_with_no_secrets() {
-    // 测试 --no-secrets 标志
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", "--no-secrets"])
-            .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Export {
-            output_path,
-            no_secrets,
-            ..
-        } => {
-            assert_eq!(output_path, "output.toml");
-            assert!(no_secrets);
-        }
-        _ => panic!("Expected Export command"),
-    }
-}
-
-#[test]
-fn test_config_export_command_output_formats() {
-    // 测试输出格式（toml, json, yaml）
-
-    // TOML format
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", "--toml"]).unwrap();
-    match cli.command {
-        ConfigSubcommand::Export {
-            toml, json, yaml, ..
-        } => {
-            assert!(toml);
-            assert!(!json);
-            assert!(!yaml);
-        }
-        _ => panic!("Expected Export command"),
-    }
-
-    // JSON format
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.json", "--json"]).unwrap();
-    match cli.command {
-        ConfigSubcommand::Export {
-            toml, json, yaml, ..
-        } => {
-            assert!(!toml);
-            assert!(json);
-            assert!(!yaml);
-        }
-        _ => panic!("Expected Export command"),
-    }
-
-    // YAML format
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.yaml", "--yaml"]).unwrap();
-    match cli.command {
-        ConfigSubcommand::Export {
-            toml, json, yaml, ..
-        } => {
-            assert!(!toml);
-            assert!(!json);
-            assert!(yaml);
-        }
-        _ => panic!("Expected Export command"),
-    }
-}
-
-#[test]
-fn test_config_export_command_all_flags() {
-    // 测试所有标志组合
-    let cli = TestConfigCli::try_parse_from(&[
-        "test-config",
-        "export",
-        "output.toml",
-        "--section",
-        "jira",
-        "--no-secrets",
-        "--toml",
-        "--json",
-        "--yaml",
-    ])
-    .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Export {
-            output_path,
-            section,
-            no_secrets,
-            toml,
-            json,
-            yaml,
-        } => {
-            assert_eq!(output_path, "output.toml");
-            assert_eq!(section, Some("jira".to_string()));
-            assert!(no_secrets);
-            assert!(toml);
-            assert!(json);
-            assert!(yaml);
+            assert_eq!(t, toml);
+            assert_eq!(j, json);
+            assert_eq!(y, yaml);
         }
         _ => panic!("Expected Export command"),
     }
@@ -335,125 +195,44 @@ fn test_config_export_command_all_flags() {
 
 // ==================== Import 命令测试 ====================
 
-#[test]
-fn test_config_import_command_structure() {
-    // 测试 Import 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "import", "input.toml"]).unwrap();
+#[rstest]
+#[case("input.toml", false, None, false)]
+#[case("/path/to/input.json", false, None, false)]
+#[case("input.toml", true, None, false)]
+#[case("input.toml", false, Some("pr"), false)]
+#[case("input.toml", false, None, true)]
+#[case("input.toml", true, Some("jira"), true)]
+fn test_config_import_command(
+    #[case] input_path: &str,
+    #[case] overwrite: bool,
+    #[case] section: Option<&str>,
+    #[case] dry_run: bool,
+) {
+    let mut args = vec!["test-config", "import", input_path];
+    if overwrite {
+        args.push("--overwrite");
+    }
+    if let Some(s) = section {
+        args.push("--section");
+        args.push(s);
+    }
+    if dry_run {
+        args.push("--dry-run");
+    }
+
+    let cli = TestConfigCli::try_parse_from(&args).unwrap();
 
     match cli.command {
         ConfigSubcommand::Import {
-            input_path,
-            overwrite,
-            section,
-            dry_run,
+            input_path: ip,
+            overwrite: o,
+            section: s,
+            dry_run: dr,
         } => {
-            assert_eq!(input_path, "input.toml");
-            assert!(!overwrite);
-            assert_eq!(section, None);
-            assert!(!dry_run.dry_run);
-        }
-        _ => panic!("Expected Import command"),
-    }
-}
-
-#[test]
-fn test_config_import_command_with_input_path() {
-    // 测试指定输入文件路径
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "import", "/path/to/input.json"]).unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Import { input_path, .. } => {
-            assert_eq!(input_path, "/path/to/input.json");
-        }
-        _ => panic!("Expected Import command"),
-    }
-}
-
-#[test]
-fn test_config_import_command_with_overwrite() {
-    // 测试 --overwrite 标志
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "import", "input.toml", "--overwrite"])
-            .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Import {
-            input_path,
-            overwrite,
-            ..
-        } => {
-            assert_eq!(input_path, "input.toml");
-            assert!(overwrite);
-        }
-        _ => panic!("Expected Import command"),
-    }
-}
-
-#[test]
-fn test_config_import_command_with_section() {
-    // 测试 --section 参数
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "import", "input.toml", "--section", "pr"])
-            .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Import {
-            input_path,
-            section,
-            ..
-        } => {
-            assert_eq!(input_path, "input.toml");
-            assert_eq!(section, Some("pr".to_string()));
-        }
-        _ => panic!("Expected Import command"),
-    }
-}
-
-#[test]
-fn test_config_import_command_with_dry_run() {
-    // 测试 --dry-run 标志
-    let cli = TestConfigCli::try_parse_from(&["test-config", "import", "input.toml", "--dry-run"])
-        .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Import {
-            input_path,
-            dry_run,
-            ..
-        } => {
-            assert_eq!(input_path, "input.toml");
-            assert!(dry_run.dry_run);
-        }
-        _ => panic!("Expected Import command"),
-    }
-}
-
-#[test]
-fn test_config_import_command_all_flags() {
-    // 测试所有标志组合
-    let cli = TestConfigCli::try_parse_from(&[
-        "test-config",
-        "import",
-        "input.toml",
-        "--overwrite",
-        "--section",
-        "jira",
-        "--dry-run",
-    ])
-    .unwrap();
-
-    match cli.command {
-        ConfigSubcommand::Import {
-            input_path,
-            overwrite,
-            section,
-            dry_run,
-        } => {
-            assert_eq!(input_path, "input.toml");
-            assert!(overwrite);
-            assert_eq!(section, Some("jira".to_string()));
-            assert!(dry_run.dry_run);
+            assert_eq!(ip, input_path);
+            assert_eq!(o, overwrite);
+            assert_eq!(s, section.map(|s| s.to_string()));
+            assert_eq!(dr.dry_run, dry_run);
         }
         _ => panic!("Expected Import command"),
     }
@@ -461,25 +240,28 @@ fn test_config_import_command_all_flags() {
 
 // ==================== Config 命令通用测试 ====================
 
-#[test]
-fn test_config_command_parsing_all_subcommands() {
-    // 测试所有子命令都可以正确解析
+#[rstest]
+#[case("show", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Show))]
+#[case("validate", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Validate { .. }))]
+#[case("export", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Export { .. }))]
+#[case("import", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Import { .. }))]
+fn test_config_command_parsing_all_subcommands(
+    #[case] subcommand: &str,
+    #[case] assert_fn: fn(&ConfigSubcommand) -> bool,
+) {
+    let mut args = vec!["test-config", subcommand];
+    // 为需要参数的命令添加最小参数
+    match subcommand {
+        "export" => args.push("output.toml"),
+        "import" => args.push("input.toml"),
+        _ => {}
+    }
 
-    // Show
-    let cli = TestConfigCli::try_parse_from(&["test-config", "show"]).unwrap();
-    assert!(matches!(cli.command, ConfigSubcommand::Show));
-
-    // Validate
-    let cli = TestConfigCli::try_parse_from(&["test-config", "validate"]).unwrap();
-    assert!(matches!(cli.command, ConfigSubcommand::Validate { .. }));
-
-    // Export
-    let cli = TestConfigCli::try_parse_from(&["test-config", "export", "output.toml"]).unwrap();
-    assert!(matches!(cli.command, ConfigSubcommand::Export { .. }));
-
-    // Import
-    let cli = TestConfigCli::try_parse_from(&["test-config", "import", "input.toml"]).unwrap();
-    assert!(matches!(cli.command, ConfigSubcommand::Import { .. }));
+    let cli = TestConfigCli::try_parse_from(&args).unwrap();
+    assert!(
+        assert_fn(&cli.command),
+        "Command should match expected variant"
+    );
 }
 
 #[test]
