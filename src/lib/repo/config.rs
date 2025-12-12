@@ -162,10 +162,13 @@ impl RepoConfig {
                     }
                 }
             }
-        } else if let Some(auto_accept) = value.get("auto_accept_change_type") {
-            // 向后兼容：支持顶层配置
-            if let Some(b) = auto_accept.as_bool() {
-                config.auto_accept_change_type = Some(b);
+        }
+        // 如果 [pr] 节中没有找到，尝试顶层配置（向后兼容）
+        if config.auto_accept_change_type.is_none() {
+            if let Some(auto_accept) = value.get("auto_accept_change_type") {
+                if let Some(b) = auto_accept.as_bool() {
+                    config.auto_accept_change_type = Some(b);
+                }
             }
         }
 

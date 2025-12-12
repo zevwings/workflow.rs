@@ -7,6 +7,7 @@ use crate::commands::config::helpers::parse_config;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use std::fs;
+#[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
