@@ -3,8 +3,8 @@
 //! Defines branch types and provides selection functionality.
 
 use crate::base::dialog::SelectDialog;
-use crate::branch::config::BranchConfig;
 use crate::log_info;
+use crate::repo::config::RepoConfig;
 use anyhow::{Context, Result};
 use std::fmt;
 
@@ -105,7 +105,7 @@ impl BranchType {
     /// Returns an error if the user selection fails or if the repository prefix cannot be converted to a branch type.
     pub fn resolve_with_repo_prefix() -> Result<Self> {
         // Check if repository prefix exists and use it as branch type
-        if let Some(repo_prefix) = BranchConfig::get_prefix_for_current_repo() {
+        if let Some(repo_prefix) = RepoConfig::get_branch_prefix() {
             if let Some(ty) = Self::from_str(&repo_prefix) {
                 log_info!("Using repository prefix '{}' as branch type", repo_prefix);
                 return Ok(ty);

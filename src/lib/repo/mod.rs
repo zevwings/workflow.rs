@@ -4,4 +4,4 @@
 
 pub mod config;
 
-pub use config::{RepoConfig, ProjectConfig};
+pub use config::{ProjectBranchConfig, ProjectConfig, RepoConfig};

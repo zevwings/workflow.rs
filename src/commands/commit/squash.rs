@@ -18,6 +18,9 @@ pub struct CommitSquashCommand;
 impl CommitSquashCommand {
     /// Execute the commit squash command
     pub fn execute() -> Result<()> {
+        // 0. 检查并确保仓库配置存在
+        crate::commands::repo::setup::RepoSetupCommand::ensure()?;
+
         // 1. Run checks
         check::CheckCommand::run_all()?;
 

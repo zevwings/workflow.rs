@@ -23,17 +23,7 @@
 
 按照以下步骤依次完成检查：
 
-### 第一步：文档检查
-
-检查所有文档是否已更新，包括：
-- README.md 命令清单和版本号
-- 架构文档更新
-- 文档索引更新
-- 迁移文档（如有需要）
-
-**对应章节**：[文档检查](#-文档检查)
-
-### 第二步：CLI 和 Completion 检查
+### 第一步：CLI 和 Completion 检查
 
 检查 CLI 命令结构和补全脚本：
 - CLI 命令注册和参数定义
@@ -42,7 +32,7 @@
 
 **对应章节**：[CLI 和 Completion 检查](#-cli-和-completion-检查)
 
-### 第三步：代码优化检查
+### 第二步：代码优化检查
 
 检查代码是否已优化：
 - 共用代码提取（参数、工具函数、错误处理）
@@ -52,7 +42,7 @@
 
 **对应章节**：[代码优化检查](#-代码优化检查)
 
-### 第四步：测试用例检查
+### 第三步：测试用例检查
 
 检查测试覆盖：
 - 单元测试
@@ -62,7 +52,7 @@
 
 **对应章节**：[测试用例检查](#-测试用例检查)
 
-### 第五步：代码质量检查
+### 第四步：代码质量检查
 
 检查代码质量：
 - 代码格式化
@@ -72,6 +62,16 @@
 - 自动修复
 
 **对应章节**：[代码质量检查](#-代码质量检查)
+
+### 第五步：文档检查
+
+检查所有文档是否已更新，包括：
+- README.md 命令清单和版本号
+- 架构文档更新
+- 文档索引更新
+- 迁移文档（如有需要）
+
+**对应章节**：[文档检查](#-文档检查)
 
 ### 第六步：其他检查项
 
@@ -592,22 +592,20 @@ cargo check
 **正确示例**：
 ```rust
 // 文件顶部统一导入
-use crate::commands::branch::check_and_prompt_branch_prefix;
+use crate::repo::config::RepoConfig;
 use anyhow::{Context, Result};
 
-pub fn apply(mut branch_name: String, jira_ticket: Option<&str>) -> Result<String> {
+pub fn get_branch_prefix() -> Option<String> {
     // 使用顶部导入的函数
-    let _ = check_and_prompt_branch_prefix();
-    // ...
+    RepoConfig::get_branch_prefix()
 }
 ```
 
 **错误示例**：
 ```rust
 // ❌ 错误：在代码中间使用 crate:: 路径直接调用
-pub fn apply(mut branch_name: String, jira_ticket: Option<&str>) -> Result<String> {
-    let _ = crate::commands::branch::check_and_prompt_branch_prefix();
-    // ...
+pub fn get_branch_prefix() -> Option<String> {
+    crate::repo::config::RepoConfig::get_branch_prefix()
 }
 ```
 
@@ -627,7 +625,7 @@ use anyhow::{Context, Result};
 use clap::Args;
 
 // 本地模块
-use crate::commands::branch::BranchConfig;
+use crate::repo::config::RepoConfig;
 use crate::base::util::format_size;
 ```
 
@@ -758,39 +756,39 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 按照检查步骤，记录每个步骤的检查结果：
 
-**第一步：文档检查**
-- [ ] README.md 更新情况
-- [ ] 架构文档更新情况
-- [ ] 文档索引更新情况
-- [ ] 迁移文档情况
-- 问题记录和修复情况
-
-**第二步：CLI 和 Completion 检查**
+**第一步：CLI 和 Completion 检查**
 - [ ] CLI 命令结构检查结果
 - [ ] 补全脚本完整性测试结果
 - [ ] 补全脚本优化情况
 - 问题记录和修复情况
 
-**第三步：代码优化检查**
+**第二步：代码优化检查**
 - [ ] 共用代码提取情况
 - [ ] 代码重复检查结果
 - [ ] 工具函数复用情况
 - [ ] 配置管理情况
 - 问题记录和修复情况
 
-**第四步：测试用例检查**
+**第三步：测试用例检查**
 - [ ] 单元测试覆盖情况
 - [ ] 集成测试覆盖情况
 - [ ] 文档测试结果
 - [ ] 测试数据和边界情况
 - 问题记录和修复情况
 
-**第五步：代码质量检查**
+**第四步：代码质量检查**
 - [ ] 代码格式化结果
 - [ ] Clippy 警告检查结果
 - [ ] 编译检查结果
 - [ ] 导入语句检查结果
 - [ ] 自动修复情况
+- 问题记录和修复情况
+
+**第五步：文档检查**
+- [ ] README.md 更新情况
+- [ ] 架构文档更新情况
+- [ ] 文档索引更新情况
+- [ ] 迁移文档情况
 - 问题记录和修复情况
 
 **第六步：其他检查项**
@@ -855,22 +853,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 ## 各步骤检查结果
 
-### 第一步：文档检查
-
-**状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
-
-**检查项**：
-- [x] README.md 更新情况：[描述]
-- [x] 架构文档更新情况：[描述]
-- [x] 文档索引更新情况：[描述]
-- [x] 迁移文档情况：[描述]
-
-**问题记录**：
-- [问题描述] - [修复状态] - [修复方案]
-
----
-
-### 第二步：CLI 和 Completion 检查
+### 第一步：CLI 和 Completion 检查
 
 **状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
 
@@ -884,7 +867,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 ---
 
-### 第三步：代码优化检查
+### 第二步：代码优化检查
 
 **状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
 
@@ -899,7 +882,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 ---
 
-### 第四步：测试用例检查
+### 第三步：测试用例检查
 
 **状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
 
@@ -914,7 +897,7 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 ---
 
-### 第五步：代码质量检查
+### 第四步：代码质量检查
 
 **状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
 
@@ -924,6 +907,21 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 - [x] 编译检查结果：[描述]
 - [x] 导入语句检查结果：[描述]
 - [x] 自动修复情况：[描述]
+
+**问题记录**：
+- [问题描述] - [修复状态] - [修复方案]
+
+---
+
+### 第五步：文档检查
+
+**状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
+
+**检查项**：
+- [x] README.md 更新情况：[描述]
+- [x] 架构文档更新情况：[描述]
+- [x] 文档索引更新情况：[描述]
+- [x] 迁移文档情况：[描述]
 
 **问题记录**：
 - [问题描述] - [修复状态] - [修复方案]

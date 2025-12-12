@@ -25,12 +25,12 @@ pub mod jira;
 pub mod pr;
 #[path = "lib/proxy/mod.rs"]
 pub mod proxy;
+#[path = "lib/repo/mod.rs"]
+pub mod repo;
 #[path = "lib/rollback/mod.rs"]
 pub mod rollback;
 #[path = "lib/template/mod.rs"]
 pub mod template;
-#[path = "lib/repo/mod.rs"]
-pub mod repo;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]
@@ -54,7 +54,7 @@ pub use base::prompt::{
 pub use base::llm::get_language_requirement;
 
 // 业务模块导出
-pub use branch::{BranchNaming, BranchPrefix};
+pub use branch::BranchNaming;
 pub use completion::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell, Completion,
     CompletionGenerator,

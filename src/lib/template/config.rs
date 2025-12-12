@@ -74,12 +74,22 @@ pub struct CommitTemplates {
     /// Default commit template
     #[serde(default = "CommitTemplates::default_commit_template")]
     pub default: String,
+    /// Whether to use scope for commit messages (when no ticket id)
+    ///
+    /// When `true`, uses Conventional Commits format: `{commit_type}({scope}): {title}`
+    /// When `false`, uses simple format: `# {title}`
+    #[serde(default = "default_use_scope")]
+    pub use_scope: bool,
+}
+
+fn default_use_scope() -> bool {
+    false // Keep backward compatibility
 }
 
 impl CommitTemplates {
     /// Get default commit template
     pub fn default_commit_template() -> String {
-        r#"{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}# {{subject}}{{/if}}
+        r#"{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
@@ -92,6 +102,7 @@ impl Default for CommitTemplates {
     fn default() -> Self {
         Self {
             default: CommitTemplates::default_commit_template(),
+            use_scope: default_use_scope(),
         }
     }
 }

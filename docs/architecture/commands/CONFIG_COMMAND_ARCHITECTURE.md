@@ -545,7 +545,7 @@ Settings 管理（读取/写入 TOML 配置文件）
     └── jira-users.toml    # Jira 用户缓存
 ```
 
-**注意**：其他配置文件（如 `repositories.toml`）由对应的命令模块管理，详见相关模块文档。
+**注意**：分支配置已迁移到项目级配置（`.workflow/config.toml`），由 `repo` 命令模块管理，详见相关模块文档。
 
 ---
 

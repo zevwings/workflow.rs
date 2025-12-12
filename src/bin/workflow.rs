@@ -7,7 +7,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use workflow::commands::branch::{
-    clean, create as branch_create, ignore, prefix, rename, switch, sync as branch_sync,
+    clean, create as branch_create, ignore, rename, switch, sync as branch_sync,
 };
 use workflow::commands::check::check;
 use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
@@ -32,7 +32,7 @@ use workflow::commands::stash::{apply, drop, list as stash_list, pop};
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
     GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
-    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand, RepoSubcommand, StashSubcommand,
+    LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 use workflow::*;
 
@@ -178,17 +178,6 @@ fn main() -> Result<()> {
                 }
                 IgnoreSubcommand::List => {
                     ignore::BranchIgnoreCommand::list()?;
-                }
-            },
-            BranchSubcommand::Prefix { subcommand } => match subcommand {
-                PrefixSubcommand::Set { prefix } => {
-                    prefix::BranchPrefixCommand::set(prefix)?;
-                }
-                PrefixSubcommand::Get => {
-                    prefix::BranchPrefixCommand::get()?;
-                }
-                PrefixSubcommand::Remove => {
-                    prefix::BranchPrefixCommand::remove()?;
                 }
             },
             BranchSubcommand::Create {

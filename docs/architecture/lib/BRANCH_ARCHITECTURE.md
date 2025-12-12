@@ -7,10 +7,12 @@ Branch 模块（`lib/branch/`）是 Workflow CLI 的核心库模块，提供分�
 **注意**：本文档仅描述 `lib/branch/` 模块的架构。关于分支命令层的详细内容，请参考 [Branch 命令模块架构文档](../commands/BRANCH_COMMAND_ARCHITECTURE.md)。
 
 **模块统计：**
-- 总代码行数：约 1200+ 行
-- 文件数量：6 个
-- 主要组件：`BranchNaming`、`BranchPrefix`、`BranchConfig`、`BranchType`、`BranchLLM`
-- 支持功能：分支名生成（模板系统、LLM、简单回退）、分支前缀管理、分支配置管理、分支类型定义、非英文翻译
+- 总代码行数：约 700+ 行
+- 文件数量：4 个
+- 主要组件：`BranchNaming`、`BranchType`、`BranchLLM`
+- 支持功能：分支名生成（模板系统、LLM、简单回退）、分支类型定义、非英文翻译
+
+**注意**：分支配置管理已迁移到 `lib/repo/config.rs`，使用 `RepoConfig` 和 `ProjectBranchConfig` 进行管理。
 
 ---
 
@@ -20,13 +22,14 @@ Branch 模块（`lib/branch/`）是 Workflow CLI 的核心库模块，提供分�
 
 ```
 src/lib/branch/
-├── mod.rs          # Branch 模块声明和导出 (41行)
-├── config.rs       # 分支配置管理（仓库级别前缀、忽略列表）(412行)
-├── naming.rs       # 分支命名服务（从 JIRA ticket、标题、类型生成）(461行)
-├── prefix.rs       # 分支前缀管理（JIRA ticket 前缀、仓库前缀）(103行)
-├── types.rs        # 分支类型定义（feature/bugfix/refactoring/hotfix/chore）(152行)
-└── llm.rs          # Branch LLM 服务（非英文翻译）(56行)
+├── mod.rs          # Branch 模块声明和导出 (46行)
+├── naming.rs       # 分支命名服务（从 JIRA ticket、标题、类型生成）(455行)
+├── types.rs        # 分支类型定义（feature/bugfix/refactoring/hotfix/chore）(178行)
+├── llm.rs          # Branch LLM 服务（非英文翻译）(56行)
+└── sync.rs         # 分支同步功能
 ```
+
+**注意**：分支配置管理已迁移到 `lib/repo/config.rs`，使用 `RepoConfig` 和 `ProjectBranchConfig` 进行管理。
 
 ### 依赖模块
 
@@ -45,18 +48,17 @@ src/lib/branch/
   - `SelectDialog` - 选择对话框
   - `InputDialog` - 输入对话框
 - **`lib/base/settings/`**：配置管理（配置文件路径）
-  - `Paths::branch_config()` - 分支配置文件路径
+  - `Paths::project_config()` - 项目级配置文件路径
 - **`lib/pr/llm/`**：PR LLM 服务（分支名生成回退）
   - `PullRequestLLM::generate()` - 生成分支名（作为回退方案）
 
 ### 模块集成
 
 - **`commands/branch/`**：分支命令层
-  - `create.rs` - 使用 `BranchNaming`、`BranchType`、`BranchConfig` 创建分支
+  - `create.rs` - 使用 `BranchNaming`、`BranchType` 创建分支
   - `switch.rs` - 分支切换命令（使用 `GitBranch` 进行分支操作）
   - `rename.rs` - 分支重命名命令（使用 `GitBranch` 进行分支操作）
-  - `prefix.rs` - 使用 `BranchConfig` 管理分支前缀
-  - `ignore.rs` - 使用 `BranchConfig` 管理忽略列表
+  - `ignore.rs` - 使用 `RepoConfig` 管理忽略列表
 - **`commands/pr/`**：PR 命令层
   - `create.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
   - `pick.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
@@ -92,57 +94,14 @@ src/lib/branch/
 - 支持三种生成策略：模板系统优先，LLM 次之，简单方法最后
 - 自动处理非英文字符（使用 LLM 翻译）
 - 支持两种格式：`prefix/ticket-slug` 和 `ticket--slug`
-- 自动应用仓库级别分支前缀
+- 模板系统自动处理前缀（JIRA ticket 前缀和仓库前缀）
 
 **使用场景**：
 - `branch create` 命令：从 JIRA ticket 创建分支
 - `pr create` 命令：生成 PR 分支名
 - `pr pick` 命令：从源 PR 生成新分支名
 
-#### 2. 分支前缀管理 (`prefix.rs`)
-
-**职责**：统一处理分支名前缀逻辑（JIRA ticket 前缀、仓库前缀）
-
-**主要方法**：
-- `apply()` - 应用分支名前缀（JIRA ticket 前缀 + 仓库前缀）
-
-**关键特性**：
-- 自动检测并避免重复前缀
-- 支持跳过已使用的仓库前缀（当模板已包含类型前缀时）
-- 自动检查和提示配置分支前缀（首次使用时）
-
-**使用场景**：
-- 所有需要生成分支名的场景（通过 `BranchNaming` 调用）
-
-#### 3. 分支配置管理 (`config.rs`)
-
-**职责**：管理分支相关配置（按仓库分组）
-
-**核心结构体**：
-- `BranchConfig` - 分支配置（包含多个仓库配置）
-- `RepositoryConfig` - 仓库配置（分支前缀、忽略列表、提示标记）
-
-**主要方法**：
-- `load()` / `save()` - 加载/保存配置
-- `get_branch_prefix_for_repo()` - 获取仓库分支前缀
-- `get_current_repo_branch_prefix()` - 获取当前仓库分支前缀
-- `set_branch_prefix_for_repo()` - 设置仓库分支前缀
-- `get_ignore_branches()` - 获取忽略分支列表
-- `add_ignore_branch()` / `remove_ignore_branch()` - 管理忽略分支
-- `check_and_prompt_prefix()` - 检查并提示配置分支前缀（首次使用）
-
-**关键特性**：
-- 按仓库分组配置（`owner/repo` 格式）
-- 支持向后兼容（可读取旧的 `ignore` 字段名）
-- 首次使用时自动提示配置分支前缀（仅交互式环境）
-- 每个仓库只提示一次（使用 `branch_prefix_prompted` 标记）
-
-**使用场景**：
-- `branch prefix` 命令：管理分支前缀
-- `branch ignore` 命令：管理忽略列表
-- 所有生成分支名的场景：自动应用仓库前缀
-
-#### 4. 分支类型定义 (`types.rs`)
+#### 2. 分支类型定义 (`types.rs`)
 
 **职责**：定义分支类型枚举和提供选择功能
 
@@ -246,13 +205,11 @@ src/lib/branch/
 lib/branch/naming.rs (BranchNaming)
   ↓
 策略选择：
-  1. 模板系统 (lib/template/)
+  1. 模板系统 (lib/template/) - 自动处理前缀
   2. LLM 生成 (lib/pr/llm/ 或 lib/base/llm/)
   3. 简单回退 (sanitize/slugify)
   ↓
-lib/branch/prefix.rs (BranchPrefix::apply)
-  ↓
-lib/branch/config.rs (BranchConfig)
+模板系统自动处理前缀（JIRA ticket 前缀和仓库前缀）
   ↓
 最终分支名（带前缀）
 ```
@@ -268,12 +225,9 @@ graph TB
     Strategy -->|次之| LLM[lib/pr/llm/<br/>或 lib/base/llm/<br/>LLM 生成]
     Strategy -->|回退| Simple[简单方法<br/>sanitize/slugify]
 
-    Template --> Prefix[lib/branch/prefix.rs<br/>BranchPrefix::apply]
-    LLM --> Prefix
-    Simple --> Prefix
-
-    Prefix --> Config[lib/branch/config.rs<br/>BranchConfig]
-    Config --> Final[最终分支名<br/>带前缀]
+    Template --> Final[最终分支名<br/>模板系统已处理前缀]
+    LLM --> Final
+    Simple --> Final
 
     Naming -.->|非英文输入| BranchLLM[lib/branch/llm.rs<br/>BranchLLM<br/>翻译]
     BranchLLM --> Naming
@@ -283,8 +237,6 @@ graph TB
     style Template fill:#e3f2fd
     style LLM fill:#fff3e0
     style Simple fill:#f3e5f5
-    style Prefix fill:#e8f5e9
-    style Config fill:#e3f2fd
     style Final fill:#c8e6c9
     style BranchLLM fill:#fff9c4
 ```
@@ -309,10 +261,7 @@ BranchNaming::from_jira_ticket("PROJ-123", "Add user auth", Some("Feature"), tru
     成功 → 格式化分支名
     失败 → 简单方法 (slugify)
   ↓
-BranchPrefix::apply(branch_name, Some("PROJ-123"), false)
-  ↓
-  添加 JIRA ticket 前缀（如果不存在）
-  添加仓库前缀（如果配置且不存在）
+模板系统自动处理前缀（JIRA ticket 前缀和仓库前缀）
   ↓
 返回最终分支名
 ```
@@ -334,35 +283,11 @@ BranchNaming::from_type_and_slug("feature", "my-branch", Some("PROJ-123"))
   加载模板：load_branch_template_by_type("feature")
   渲染模板：TemplateEngine::render_string()
   ↓
-BranchPrefix::apply(branch_name, Some("PROJ-123"), true)
-  ↓
-  跳过仓库前缀（已作为类型使用）
-  添加 JIRA ticket 前缀（如果不存在）
+模板系统自动处理前缀（JIRA ticket 前缀和仓库前缀）
   ↓
 返回最终分支名
 ```
 
-#### 3. 首次使用时的前缀配置提示
-
-```
-BranchPrefix::apply() 或 BranchNaming::from_title()
-  ↓
-BranchConfig::check_and_prompt_prefix()
-  ↓
-  检查是否交互式环境
-  检查是否已配置前缀
-  检查是否已提示过
-  ↓
-  需要提示 → InputDialog::prompt()
-  ↓
-  用户输入前缀 → BranchConfig::set_prefix_for_current_repo()
-  ↓
-  保存配置 → BranchConfig::save()
-  ↓
-  标记为已提示 → branch_prefix_prompted = true
-  ↓
-继续执行（不中断流程）
-```
 
 ### 数据流
 
@@ -379,39 +304,31 @@ flowchart LR
     LLM -->|成功| LLMResult[LLM 生成分支名]
     LLM -->|失败| Simple[简单方法<br/>slugify]
 
-    TemplateRender --> Prefix[BranchPrefix<br/>apply]
-    LLMResult --> Prefix
-    Simple --> Prefix
-
-    Prefix --> Config[BranchConfig<br/>获取仓库前缀]
-    Config --> JiraPrefix[添加 JIRA 前缀]
-    JiraPrefix --> RepoPrefix[添加仓库前缀]
-    RepoPrefix --> Output[输出<br/>最终分支名]
+    TemplateRender --> Output[输出<br/>最终分支名<br/>模板系统已处理前缀]
+    LLMResult --> Output
+    Simple --> Output
 
     style Input fill:#e1f5ff
     style Naming fill:#e8f5e9
     style Template fill:#fff9c4
     style LLM fill:#fff9c4
-    style Prefix fill:#e8f5e9
     style Output fill:#c8e6c9
 ```
 
 #### 配置管理数据流
 
+**注意**：分支配置管理已迁移到 `lib/repo/config.rs`。配置通过 `workflow repo setup` 命令进行管理。
+
 ```mermaid
 flowchart LR
-    Command[命令层<br/>branch prefix set] --> Config[BranchConfig<br/>load]
+    Command[命令层<br/>repo setup] --> Config[RepoConfig<br/>load]
 
-    Config --> Repo[提取仓库名<br/>GitRepo::extract_repo_name]
-    Repo --> Validate[验证仓库名格式<br/>RepositoryConfig::validate_name]
-    Validate --> Update[更新配置<br/>set_branch_prefix_for_repo]
+    Config --> Update[更新配置<br/>ProjectBranchConfig]
     Update --> Save[保存配置<br/>save]
-    Save --> File[配置文件<br/>~/.workflow/config/branch.toml]
+    Save --> File[配置文件<br/>.workflow/config.toml]
 
     style Command fill:#e1f5ff
     style Config fill:#e8f5e9
-    style Repo fill:#e3f2fd
-    style Validate fill:#fff9c4
     style Update fill:#e8f5e9
     style Save fill:#e8f5e9
     style File fill:#c8e6c9
@@ -424,18 +341,16 @@ flowchart LR
 ### 基本使用
 
 ```rust
-use workflow::branch::{BranchNaming, BranchPrefix};
+use workflow::branch::BranchNaming;
 
-// 从 JIRA ticket 生成分支名
+// 从 JIRA ticket 生成分支名（模板系统自动处理前缀）
 let branch_name = BranchNaming::from_jira_ticket(
     "PROJ-123",
     "Add user authentication",
     Some("Feature"),
     true,
 )?;
-
-// 应用前缀（JIRA ticket 前缀 + 仓库前缀）
-let final_name = BranchPrefix::apply(branch_name, Some("PROJ-123"), false)?;
+// branch_name 已包含所有前缀（JIRA ticket 前缀和仓库前缀）
 ```
 
 ### 从分支类型和 slug 生成
@@ -490,7 +405,9 @@ config.add_ignore_branch("owner/repo".to_string(), "develop".to_string())?;
 config.save()?;
 
 // 获取当前仓库分支前缀
-if let Some(prefix) = config.get_current_repo_branch_prefix()? {
+use workflow::repo::config::RepoConfig;
+
+if let Some(prefix) = RepoConfig::get_branch_prefix() {
     println!("Current repo prefix: {}", prefix);
 }
 ```
@@ -632,14 +549,13 @@ Branch 模块采用清晰的分层架构和策略模式设计：
 
 1. **分支命名服务**：提供多种生成策略（模板系统 → LLM → 简单回退）
 2. **分支前缀管理**：统一处理前缀逻辑，智能避免重复
-3. **分支配置管理**：按仓库分组配置，支持多仓库场景
-4. **分支类型定义**：类型安全的分支类型枚举
-5. **LLM 集成**：支持非英文翻译和智能生成
+3. **分支类型定义**：类型安全的分支类型枚举
+4. **LLM 集成**：支持非英文翻译和智能生成
 
 **设计优势**：
 - ✅ **策略模式**：灵活的分支名生成策略，易于扩展
-- ✅ **配置分离**：按仓库分组配置，支持多仓库场景
 - ✅ **智能前缀**：自动检测并避免重复前缀
+- ✅ **配置集中**：分支配置统一通过 `lib/repo/config.rs` 管理
 - ✅ **容错设计**：多层回退机制，确保总能生成分支名
 - ✅ **类型安全**：使用枚举和类型系统保证类型安全
 - ✅ **用户友好**：自动提示配置，支持非英文输入翻译

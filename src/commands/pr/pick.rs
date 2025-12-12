@@ -52,6 +52,9 @@ impl PullRequestPickCommand {
     /// * `to_branch` - 目标分支名称
     /// * `dry_run` - 预览模式
     pub fn pick(from_branch: String, to_branch: String, dry_run: bool) -> Result<()> {
+        // 0. 检查并确保仓库配置存在
+        crate::commands::repo::setup::RepoSetupCommand::ensure()?;
+
         // 1. 运行预检查
         if !dry_run {
             log_info!("Running pre-flight checks...");

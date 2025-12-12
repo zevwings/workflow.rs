@@ -8,7 +8,8 @@
 - 分支重命名功能（支持本地和远程分支重命名，提供完整的交互式流程）
 - 本地分支清理功能
 - 分支忽略列表管理功能
-- 分支前缀管理功能（仓库级别）
+
+**注意**：分支前缀配置已迁移到 `workflow repo setup` 命令，通过项目级配置文件（`.workflow/config.toml`）管理。
 
 分支管理命令提供智能的分支清理功能，可以安全地删除已合并的分支，同时保留重要的分支（如 main/master、develop、当前分支和用户配置的忽略分支）。同时支持为不同仓库配置不同的分支前缀，用于生成分支名时自动添加前缀。新增的分支创建功能支持从 JIRA ticket 创建分支，使用 LLM 自动生成分支名，并支持从默认分支创建。分支切换功能支持快速切换分支，当分支不存在时自动询问是否创建，并自动处理未提交的更改。分支重命名功能提供完整的交互式流程，支持重命名本地和远程分支，包含多重验证和确认机制。
 
@@ -37,8 +38,8 @@ src/commands/branch/
 ├── switch.rs       # 分支切换命令（~104 行）
 ├── rename.rs       # 分支重命名命令（~357 行）
 ├── clean.rs        # 分支清理命令（~195 行）
-├── ignore.rs       # 分支忽略列表管理命令（~94 行）
-└── helpers.rs      # 辅助函数（BranchConfig 管理，分支选择等，~330 行）
+├── ignore.rs       # 分支忽略列表管理命令（~199 行）
+└── helpers.rs      # 辅助函数（分支选择等，~260 行）
 ```
 
 **职责**：
@@ -46,7 +47,7 @@ src/commands/branch/
 - 处理用户交互（确认、预览等）
 - 格式化输出
 - 调用核心业务逻辑层 (`lib/git/`) 的功能
-- 管理分支配置文件（`repositories.toml`）
+- 管理项目级分支配置文件（`.workflow/config.toml`）
 
 ### 依赖模块
 
@@ -79,7 +80,7 @@ commands/branch/*.rs (命令封装层，处理交互)
   ↓
 lib/git/* (通过 Git API 调用，具体实现见相关模块文档)
   ↓
-~/.workflow/config/repositories.toml (配置文件)
+.workflow/config.toml (项目级配置文件)
 ```
 
 ### 命令分发流程
@@ -99,10 +100,8 @@ match cli.subcommand {
     IgnoreSubcommand::Remove { branch_name } => BranchIgnoreCommand::remove()
     IgnoreSubcommand::List => BranchIgnoreCommand::list()
   }
-  BranchSubcommand::Prefix { subcommand } => match subcommand {
-    PrefixSubcommand::Set { prefix } => BranchPrefixCommand::set()
-    PrefixSubcommand::Get => BranchPrefixCommand::get()
-    PrefixSubcommand::Remove => BranchPrefixCommand::remove()
+    // Note: Branch prefix command has been removed.
+    // Use 'workflow repo setup' to configure branch prefix.
   }
 }
 ```
@@ -504,7 +503,7 @@ commands/branch/clean.rs::BranchCleanCommand::clean(dry_run)
 1. **前置检查**：运行所有环境检查（git status、network 等）
 2. **分支分类**：
    - 自动排除：当前分支、默认分支（main/master）、develop 分支
-   - 配置文件排除：从 `repositories.toml` 读取忽略列表
+   - 配置文件排除：从项目级配置（`.workflow/config.toml`）读取忽略列表
    - 合并状态分类：区分已合并和未合并的分支
 3. **安全机制**：
    - 预览模式：显示将要删除的分支列表
@@ -531,9 +530,9 @@ commands/branch/clean.rs::BranchCleanCommand::clean(dry_run)
    - 未合并分支：需要用户确认后强制删除（`GitBranch::delete(branch, true)`）
 
 4. **配置文件管理**：
-   - 配置文件路径：`~/.workflow/config/repositories.toml`
-   - 按仓库名分组存储忽略分支列表和分支前缀
-   - 使用 `ConfigManager` 进行配置读写
+   - 配置文件路径：`.workflow/config.toml`（项目级配置）
+   - 存储忽略分支列表和分支前缀
+   - 使用 `RepoConfig` 进行配置读写
 
 ### 数据流
 
@@ -544,7 +543,7 @@ commands/branch/clean.rs::BranchCleanCommand::clean(dry_run)
   ↓
 获取分支信息 (GitBranch, GitRepo)
   ↓
-读取配置文件 (BranchConfig::load())
+读取配置文件 (BranchConfig::get_ignore_branches_for_current_repo())
   ↓
 过滤和分类分支
   ↓
@@ -648,111 +647,7 @@ commands/branch/ignore.rs::BranchIgnoreCommand::list()
 
 ---
 
-## 6. 分支前缀管理命令 (`prefix.rs`)
-
-### 相关文件
-
-```
-src/commands/branch/prefix.rs (~50 行)
-src/main.rs (命令入口)
-```
-
-### 调用流程
-
-#### Set 命令
-
-```
-src/main.rs::PrefixSubcommand::Set { prefix }
-  ↓
-commands/branch/prefix.rs::BranchPrefixCommand::set(prefix)
-  ↓
-  1. 调用 helpers::set_branch_prefix(prefix)
-  2. 获取仓库名（GitRepo::extract_repo_name()）
-  3. 读取配置文件（BranchConfig::load()）
-  4. 设置或更新分支前缀（RepositoryConfig.branch_prefix）
-  5. 保存配置文件（save()）
-  6. 显示结果
-```
-
-#### Get 命令
-
-```
-src/main.rs::PrefixSubcommand::Get
-  ↓
-commands/branch/prefix.rs::BranchPrefixCommand::get()
-  ↓
-  1. 获取仓库名（GitRepo::extract_repo_name()）
-  2. 调用 helpers::get_branch_prefix()
-  3. 读取配置文件（BranchConfig::load()）
-  4. 获取分支前缀（get_branch_prefix_for_repo()）
-  5. 显示结果
-```
-
-#### Remove 命令
-
-```
-src/main.rs::PrefixSubcommand::Remove
-  ↓
-commands/branch/prefix.rs::BranchPrefixCommand::remove()
-  ↓
-  1. 调用 helpers::remove_branch_prefix()
-  2. 获取仓库名（GitRepo::extract_repo_name()）
-  3. 读取配置文件（BranchConfig::load()）
-  4. 移除分支前缀（设置 RepositoryConfig.branch_prefix = None）
-  5. 保存配置文件（save()）
-  6. 显示结果
-```
-
-### 功能说明
-
-分支前缀管理命令提供仓库级别的分支前缀配置功能：
-
-1. **设置分支前缀**：
-   - 自动检测当前仓库名
-   - 支持交互式输入或命令行参数
-   - 按仓库分组存储
-   - 用于生成分支名时自动添加前缀（如 `feature/xxx`、`fix/xxx`）
-
-2. **获取分支前缀**：
-   - 自动检测当前仓库名
-   - 显示当前仓库配置的分支前缀
-   - 如果未配置，显示提示信息
-
-3. **移除分支前缀**：
-   - 自动检测当前仓库名
-   - 清除当前仓库的分支前缀配置
-
-### 关键步骤说明
-
-1. **配置文件结构**：
-   ```toml
-   [owner/repo1]
-   branch_prefix = "feature"
-   branch_ignore = ["branch1", "branch2"]
-
-   [owner/repo2]
-   branch_prefix = "fix"
-   branch_ignore = ["branch3"]
-   ```
-
-2. **仓库名提取**：
-   - 使用 `GitRepo::extract_repo_name()` 提取仓库名
-   - 格式：`owner/repo`（如 `github.com/owner/repo` → `owner/repo`）
-
-3. **配置管理**：
-   - 使用 `ConfigManager<BranchConfig>` 进行配置读写
-   - 自动创建配置文件（如果不存在）
-   - 按仓库分组管理，支持多仓库配置
-   - 分支前缀和忽略列表共享同一个配置文件
-
-4. **首次使用提示**：
-   - 当用户首次在某个仓库执行需要生成分支名的命令时（如 `workflow pr create`）
-   - 如果未配置分支前缀，会自动提示用户设置
-   - 每个仓库只提示一次（使用 `branch_prefix_prompted` 字段记录）
-
----
-
-## 7. 辅助函数 (`helpers.rs`)
+## 6. 辅助函数 (`helpers.rs`)
 
 ### 相关文件
 
@@ -765,38 +660,32 @@ src/commands/branch/helpers.rs (~330 行)
 辅助函数模块提供分支配置文件的完整管理功能：
 
 1. **配置结构体**：
-   - `BranchConfig` - 分支配置根结构
-   - `RepositoryConfig` - 仓库配置（包含忽略列表和分支前缀）
+   - `ProjectBranchConfig` - 项目级分支配置（包含前缀和忽略列表）
+   - `RepoConfig` - 项目级配置管理
 
 2. **配置管理函数**：
-   - `BranchConfig::load()` - 读取配置文件
-   - `BranchConfig::get_branch_prefix_for_repo()` - 获取指定仓库的分支前缀
-   - `BranchConfig::get_current_repo_branch_prefix()` - 获取当前仓库的分支前缀
-   - `save()` - 保存配置文件
-   - `get_ignore_branches()` - 获取指定仓库的忽略分支列表
-   - `add_ignore_branch()` - 添加分支到忽略列表
-   - `remove_ignore_branch()` - 从忽略列表移除分支
-   - `set_branch_prefix()` - 设置当前仓库的分支前缀
-   - `get_branch_prefix()` - 获取当前仓库的分支前缀
-   - `remove_branch_prefix()` - 移除当前仓库的分支前缀
-   - `check_and_prompt_branch_prefix()` - 检测并提示设置分支前缀（首次使用）
+   - `RepoConfig::get_branch_prefix()` - 获取当前仓库的分支前缀（从项目级配置）
+   - `RepoConfig::get_ignore_branches()` - 获取当前仓库的忽略分支列表（从项目级配置）
+   - `RepoConfig::load()` - 读取项目级配置文件
+   - `RepoConfig::save()` - 保存项目级配置文件
+   - `RepoSetupCommand::run()` - 交互式设置项目级配置（包括分支前缀）
+   - `BranchIgnoreCommand::add()` - 添加分支到忽略列表（保存到项目级配置）
+   - `BranchIgnoreCommand::remove()` - 从忽略列表移除分支（从项目级配置）
+   - `BranchIgnoreCommand::list()` - 列出忽略分支（从项目级配置）
 
 ### 配置文件结构
 
 ```toml
-[owner/repo1]
-branch_prefix = "feature"
-branch_ignore = ["feature-branch", "hotfix-branch"]
-
-[owner/repo2]
-branch_prefix = "fix"
-branch_ignore = ["staging", "production"]
+[branch]
+prefix = "feature"
+ignore = ["feature-branch", "hotfix-branch"]
 ```
 
 **注意**：
-- 配置文件路径：`~/.workflow/config/repositories.toml`（使用复数，因为存储多个仓库的配置）
-- `branch_prefix` 字段是可选的，如果未设置则不会序列化到配置文件
-- `branch_prefix_prompted` 是内部字段，用于记录是否已提示过，通常不会显示在配置文件中
+- 配置文件路径：`.workflow/config.toml`（项目级配置）
+- `prefix` 字段是可选的，如果未设置则不会序列化到配置文件
+- 配置可以提交到 Git，团队成员共享
+- 分支前缀通过 `workflow repo setup` 命令配置
 
 ---
 
@@ -812,17 +701,17 @@ branch_ignore = ["staging", "production"]
 - `BranchIgnoreCommand::add()` - 添加忽略分支
 - `BranchIgnoreCommand::remove()` - 移除忽略分支
 - `BranchIgnoreCommand::list()` - 列出忽略分支
-- `BranchPrefixCommand::set()` - 设置分支前缀
-- `BranchPrefixCommand::get()` - 获取分支前缀
-- `BranchPrefixCommand::remove()` - 移除分支前缀
+- `RepoSetupCommand::run()` - 设置项目级配置（包括分支前缀和忽略列表）
+- `RepoShowCommand::show()` - 显示项目级配置
 
 #### 2. 配置管理模式
 
-使用 `ConfigManager` 统一管理配置文件：
-- 配置文件路径：`~/.workflow/config/repositories.toml`
-- 按仓库分组存储，支持多仓库配置
+使用 `RepoConfig` 管理项目级配置文件：
+- 配置文件路径：`.workflow/config.toml`（项目级配置）
+- 每个项目有独立的配置
 - 自动创建配置文件（如果不存在）
 - 同时管理分支前缀和忽略列表，统一配置结构
+- 配置可以提交到 Git，团队成员共享
 
 #### 3. 安全机制
 
@@ -937,20 +826,16 @@ workflow branch ignore remove feature-branch
 workflow branch ignore list
 ```
 
-### Prefix 命令
+### 分支前缀配置
+
+**注意**：分支前缀配置已迁移到 `workflow repo setup` 命令。
 
 ```bash
-# 设置当前仓库的分支前缀（交互式）
-workflow branch prefix set
+# 配置项目级设置（包括分支前缀）
+workflow repo setup
 
-# 设置当前仓库的分支前缀（直接指定）
-workflow branch prefix set "feature"
-
-# 获取当前仓库的分支前缀
-workflow branch prefix get
-
-# 移除当前仓库的分支前缀
-workflow branch prefix remove
+# 显示项目级配置（包括分支前缀）
+workflow repo show
 ```
 
 ---

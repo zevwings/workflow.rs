@@ -291,15 +291,6 @@ impl Paths {
         Ok(Self::config_dir()?.join("jira-users.toml"))
     }
 
-    /// 获取仓库配置文件路径
-    ///
-    /// 返回 `~/.workflow/config/repositories.toml` 的路径。
-    ///
-    /// **注意**：配置文件名称使用复数 `repositories.toml`，因为文件中存储多个仓库的配置。
-    pub fn branch_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("repositories.toml"))
-    }
-
     /// 获取项目级配置文件路径
     ///
     /// 返回当前工作目录下的 `.workflow/config.toml` 路径。

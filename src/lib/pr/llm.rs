@@ -13,9 +13,9 @@ use crate::base::prompt::{
 };
 use crate::branch::BranchNaming;
 
-/// PR 内容，包含分支名、PR 标题和描述
+/// PR 内容，包含分支名、PR 标题、描述和 scope
 ///
-/// 由 LLM 生成的分支名、PR 标题和描述，用于创建 Pull Request。
+/// 由 LLM 生成的分支名、PR 标题、描述和 scope，用于创建 Pull Request。
 #[derive(Debug, Clone)]
 pub struct PullRequestContent {
     /// 分支名称（小写，使用连字符分隔）
@@ -24,6 +24,11 @@ pub struct PullRequestContent {
     pub pr_title: String,
     /// PR 描述（基于 Git 修改内容生成）
     pub description: Option<String>,
+    /// Commit scope（从 git diff 提取，用于 Conventional Commits 格式）
+    ///
+    /// Scope 表示变更涉及的模块或功能区域，例如 "api", "auth", "jira" 等。
+    /// 如果无法确定 scope，此字段为 `None`。
+    pub scope: Option<String>,
 }
 
 /// Pull Request LLM 服务
@@ -33,16 +38,16 @@ pub struct PullRequestContent {
 pub struct PullRequestLLM;
 
 impl PullRequestLLM {
-    /// 同时生成分支名和 PR 标题（通过一个 LLM 请求）
+    /// 同时生成分支名、PR 标题、描述和 scope（通过一个 LLM 请求）
     ///
-    /// 根据 commit 标题生成符合规范的分支名和 PR 标题。
+    /// 根据 commit 标题和 git diff 生成符合规范的分支名、PR 标题、描述和 scope。
     /// 分支名和 PR 标题都会自动翻译为英文（如果输入包含非英文内容）。
     ///
     /// # 参数
     ///
     /// * `commit_title` - commit 标题或描述
     /// * `exists_branches` - 已存在的分支列表（可选）
-    /// * `git_diff` - Git 工作区和暂存区的修改内容（可选）
+    /// * `git_diff` - Git 工作区和暂存区的修改内容（可选，用于生成描述和提取 scope）
     ///
     /// # 返回
     ///
@@ -50,6 +55,7 @@ impl PullRequestLLM {
     /// - `branch_name` - 分支名称（小写，使用连字符分隔）
     /// - `pr_title` - PR 标题（简洁，不超过 8 个单词）
     /// - `description` - PR 描述（基于 Git 修改内容生成，可选）
+    /// - `scope` - Commit scope（从 git diff 提取，用于 Conventional Commits 格式，可选）
     ///
     /// # 错误
     ///
@@ -150,9 +156,9 @@ impl PullRequestLLM {
         parts.join("\n")
     }
 
-    /// 解析 LLM 返回的 JSON 响应，提取分支名和 PR 标题
+    /// 解析 LLM 返回的 JSON 响应，提取分支名、PR 标题、描述和 scope
     ///
-    /// 从 LLM 的 JSON 响应中提取 `branch_name` 和 `pr_title` 字段。
+    /// 从 LLM 的 JSON 响应中提取 `branch_name`、`pr_title`、`description` 和 `scope` 字段。
     /// 支持处理包含 markdown 代码块的响应格式。
     ///
     /// # 参数
@@ -161,7 +167,7 @@ impl PullRequestLLM {
     ///
     /// # 返回
     ///
-    /// 返回 `PullRequestContent` 结构体，包含清理后的分支名和 PR 标题。
+    /// 返回 `PullRequestContent` 结构体，包含清理后的分支名、PR 标题、描述和 scope。
     ///
     /// # 错误
     ///
@@ -197,6 +203,13 @@ impl PullRequestLLM {
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty());
 
+        // scope 是可选的
+        let scope = json
+            .get("scope")
+            .and_then(|v| v.as_str())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+
         // 清理分支名，确保只保留 ASCII 字符
         let cleaned_branch_name = BranchNaming::sanitize(branch_name.trim());
 
@@ -204,6 +217,7 @@ impl PullRequestLLM {
             branch_name: cleaned_branch_name,
             pr_title: pr_title.trim().to_string(),
             description,
+            scope,
         })
     }
 }

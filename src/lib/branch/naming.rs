@@ -5,13 +5,13 @@
 //! - Titles/text
 //! - Templates (when template system is available)
 
-use crate::branch::config::BranchConfig;
 use crate::branch::llm::BranchLLM;
 use crate::git::GitBranch;
 use crate::pr::llm::PullRequestLLM;
+use crate::repo::config::RepoConfig;
 use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
 use crate::{log_info, log_success, log_warning};
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 /// Branch naming service
 ///
@@ -33,7 +33,7 @@ impl BranchNaming {
     ///
     /// # Returns
     ///
-    /// Returns generated branch name (without repository prefix, need to call `BranchPrefix::apply()` later)
+    /// Returns generated branch name (prefixes are handled automatically by the template system)
     pub fn from_jira_ticket(
         ticket_id: &str,
         summary: &str,
@@ -96,7 +96,7 @@ impl BranchNaming {
     ///
     /// # Returns
     ///
-    /// Returns generated branch name (without repository prefix, need to call `BranchPrefix::apply()` later)
+    /// Returns generated branch name (prefixes are handled automatically by the template system)
     pub fn from_type_and_slug(
         branch_type: &str,
         branch_name_slug: &str,
@@ -137,7 +137,7 @@ impl BranchNaming {
     ///
     /// # Returns
     ///
-    /// Returns generated branch name (without repository prefix, need to call `BranchPrefix::apply()` later)
+    /// Returns generated branch name (prefixes are handled automatically)
     pub fn from_title(jira_ticket: Option<&str>, title: &str) -> Result<String> {
         let mut branch_name = String::new();
 
@@ -152,8 +152,7 @@ impl BranchNaming {
         branch_name.push_str(&cleaned_title);
 
         // If repository-level branch_prefix exists, add prefix
-        let branch_config = BranchConfig::load().context("Failed to load branch config")?;
-        if let Some(prefix) = branch_config.get_current_repo_branch_prefix()? {
+        if let Some(prefix) = RepoConfig::get_branch_prefix() {
             let trimmed = prefix.trim();
             if !trimmed.is_empty() {
                 branch_name = format!("{}/{}", trimmed, branch_name);

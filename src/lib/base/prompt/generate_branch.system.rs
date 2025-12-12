@@ -40,6 +40,17 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 - Keep it concise but comprehensive (typically 3-8 bullet points)
 - In English only
 
+### Scope Rules
+
+- Extract the scope from git changes and file paths
+- Scope should be a short identifier (1-3 words) representing the module/feature being changed
+- Follow Conventional Commits scope format (lowercase, hyphenated)
+- Examples: "api", "auth", "database", "ui", "config", "jira", "pr", "branch"
+- Analyze file paths to identify the primary module (e.g., `src/lib/jira/` → "jira", `src/commands/pr/` → "pr")
+- If multiple scopes are involved, choose the primary one based on the most significant changes
+- If no clear scope can be determined from the changes, you can omit this field (return null)
+- In English only
+
 **Examples**
 
 | Input | Output |
@@ -57,7 +68,7 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"You're a git assistant that g
 
 ## Response Format
 
-Return your response in JSON format with three fields: `branch_name`, `pr_title`, and `description` (optional).
+Return your response in JSON format with four fields: `branch_name`, `pr_title`, `description` (optional), and `scope` (optional).
 
 **Example 1**
 
@@ -65,7 +76,8 @@ Return your response in JSON format with three fields: `branch_name`, `pr_title`
 {
   "branch_name": "add-user-authentication",
   "pr_title": "Add user authentication",
-  "description": "- Add user authentication functionality with login and registration\n- Implement JWT token generation and validation\n- Add password hashing using bcrypt\n- Update API endpoints for authentication\n- Add unit tests for authentication flow"
+  "description": "- Add user authentication functionality with login and registration\n- Implement JWT token generation and validation\n- Add password hashing using bcrypt\n- Update API endpoints for authentication\n- Add unit tests for authentication flow",
+  "scope": "auth"
 }
 ```
 
@@ -75,6 +87,17 @@ Return your response in JSON format with three fields: `branch_name`, `pr_title`
 {
   "branch_name": "feat-branch-create-command",
   "pr_title": "Add branch create command",
-  "description": "- Add workflow branch create command with JIRA ticket support\n- Support LLM-based branch name generation\n- Add dry-run mode and --from-default option\n- Update README.md with new commands\n- Fix doctest in branch module\n- Add CLI parameter parsing tests for branch create\n- Add unit tests for branch naming and types"
+  "description": "- Add workflow branch create command with JIRA ticket support\n- Support LLM-based branch name generation\n- Add dry-run mode and --from-default option\n- Update README.md with new commands\n- Fix doctest in branch module\n- Add CLI parameter parsing tests for branch create\n- Add unit tests for branch naming and types",
+  "scope": "branch"
+}
+```
+
+**Example 3** (without scope)
+
+```json
+{
+  "branch_name": "update-documentation",
+  "pr_title": "Update documentation",
+  "description": "- Update README with new features\n- Fix typos in API documentation"
 }
 ```"#;

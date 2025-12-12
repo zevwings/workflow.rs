@@ -303,18 +303,31 @@ impl ConfigImportCommand {
         }
 
         // 合并 LLM 配置
-        if imported.llm.url.is_some() {
-            merged.llm.url = imported.llm.url.clone();
-        }
-        if imported.llm.key.is_some() {
-            merged.llm.key = imported.llm.key.clone();
-        }
         merged.llm.provider = imported.llm.provider.clone();
-        if imported.llm.model.is_some() {
-            merged.llm.model = imported.llm.model.clone();
-        }
         if !imported.llm.language.is_empty() {
             merged.llm.language = imported.llm.language.clone();
+        }
+        // 合并各 provider 的配置
+        if imported.llm.openai.key.is_some() {
+            merged.llm.openai.key = imported.llm.openai.key.clone();
+        }
+        if imported.llm.openai.model.is_some() {
+            merged.llm.openai.model = imported.llm.openai.model.clone();
+        }
+        if imported.llm.deepseek.key.is_some() {
+            merged.llm.deepseek.key = imported.llm.deepseek.key.clone();
+        }
+        if imported.llm.deepseek.model.is_some() {
+            merged.llm.deepseek.model = imported.llm.deepseek.model.clone();
+        }
+        if imported.llm.proxy.url.is_some() {
+            merged.llm.proxy.url = imported.llm.proxy.url.clone();
+        }
+        if imported.llm.proxy.key.is_some() {
+            merged.llm.proxy.key = imported.llm.proxy.key.clone();
+        }
+        if imported.llm.proxy.model.is_some() {
+            merged.llm.proxy.model = imported.llm.proxy.model.clone();
         }
 
         merged
@@ -442,8 +455,25 @@ impl ConfigImportCommand {
             if current.llm.provider != final_settings.llm.provider {
                 changes.push("  - Updated: llm.provider".to_string());
             }
-            if current.llm.model != final_settings.llm.model {
-                changes.push("  - Updated: llm.model".to_string());
+            if current.llm.language != final_settings.llm.language {
+                changes.push("  - Updated: llm.language".to_string());
+            }
+            // 检查各 provider 的配置变更
+            if current.llm.openai.key != final_settings.llm.openai.key
+                || current.llm.openai.model != final_settings.llm.openai.model
+            {
+                changes.push("  - Updated: llm.openai".to_string());
+            }
+            if current.llm.deepseek.key != final_settings.llm.deepseek.key
+                || current.llm.deepseek.model != final_settings.llm.deepseek.model
+            {
+                changes.push("  - Updated: llm.deepseek".to_string());
+            }
+            if current.llm.proxy.url != final_settings.llm.proxy.url
+                || current.llm.proxy.key != final_settings.llm.proxy.key
+                || current.llm.proxy.model != final_settings.llm.proxy.model
+            {
+                changes.push("  - Updated: llm.proxy".to_string());
             }
         }
 

@@ -13,7 +13,7 @@ pub enum RepoSubcommand {
     ///
     /// Interactively set up repository configuration including:
     /// - Branch prefix
-    /// - Commit template settings (use_scope, auto_extract_scope)
+    /// - Commit template settings (use_scope)
     Setup,
     /// Show current repository configuration
     ///

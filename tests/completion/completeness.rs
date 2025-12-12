@@ -68,9 +68,7 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &[
-    "clean", "ignore", "prefix", "create", "rename", "switch", "sync",
-];
+const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "create", "rename", "switch", "sync"];
 
 /// Commit 子命令列表
 const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword", "squash"];

@@ -195,28 +195,6 @@ impl ConfigValidateCommand {
         }
 
         // 验证 LLM 配置
-        if settings.llm.provider == "proxy"
-            && (settings.llm.url.is_none()
-                || settings.llm.url.as_ref().map(|s| s.is_empty()).unwrap_or(true))
-        {
-            errors.push(ValidationError {
-                field: "llm.url".to_string(),
-                message: "LLM URL is required when provider is 'proxy'".to_string(),
-                fixable: false,
-                fix_suggestion: None,
-            });
-        }
-
-        if settings.llm.provider == "proxy" && settings.llm.model.is_none() {
-            errors.push(ValidationError {
-                field: "llm.model".to_string(),
-                message: "LLM model is required when provider is 'proxy'".to_string(),
-                fixable: false,
-                fix_suggestion: None,
-            });
-        }
-
-        // 验证 provider 枚举值
         let valid_providers = ["openai", "deepseek", "proxy"];
         if !valid_providers.contains(&settings.llm.provider.as_str()) {
             errors.push(ValidationError {
@@ -228,6 +206,55 @@ impl ConfigValidateCommand {
                 ),
                 fixable: false,
                 fix_suggestion: None,
+            });
+        }
+
+        // 验证当前 provider 的配置
+        match settings.llm.provider.as_str() {
+            "openai" => {
+                // OpenAI 需要 key（可选，但建议配置）
+                // model 可选，有默认值
+            }
+            "deepseek" => {
+                // DeepSeek 需要 key（可选，但建议配置）
+                // model 可选，有默认值
+            }
+            "proxy" => {
+                // Proxy 需要 URL
+                if settings.llm.proxy.url.is_none()
+                    || settings.llm.proxy.url.as_ref().map(|s| s.is_empty()).unwrap_or(true)
+                {
+                    errors.push(ValidationError {
+                        field: "llm.proxy.url".to_string(),
+                        message: "LLM proxy URL is required when provider is 'proxy'".to_string(),
+                        fixable: false,
+                        fix_suggestion: None,
+                    });
+                }
+
+                // Proxy 需要 model
+                if settings.llm.proxy.model.is_none() {
+                    errors.push(ValidationError {
+                        field: "llm.proxy.model".to_string(),
+                        message: "LLM model is required when provider is 'proxy'".to_string(),
+                        fixable: false,
+                        fix_suggestion: None,
+                    });
+                }
+            }
+            _ => {}
+        }
+
+        // 验证所有 provider 的 key（建议配置，但不强制）
+        // 这里只验证当前 provider 的 key，其他 provider 的 key 是可选的
+        let current = settings.llm.current_provider();
+        if current.key.is_none() || current.key.as_ref().map(|s| s.is_empty()).unwrap_or(true) {
+            warnings.push(ValidationWarning {
+                field: format!("llm.{}.key", settings.llm.provider),
+                message: format!(
+                    "LLM API key is not configured for provider '{}'. Some features may not work.",
+                    settings.llm.provider
+                ),
             });
         }
 

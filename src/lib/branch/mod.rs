@@ -3,16 +3,19 @@
 //! This module provides branch naming functionality, including:
 //! - Branch name generation from JIRA tickets, titles, and templates
 //! - Branch name sanitization and validation
-//! - Branch prefix management
-//! - Branch configuration management
+//!
+//! **Note**: Branch configuration management has been migrated to `lib/repo/config.rs`.
+//! Use `RepoConfig` and `ProjectBranchConfig` for configuration management.
+//!
+//! Branch naming now uses the template system, which handles prefixes automatically.
 //!
 //! # Usage
 //!
 //! ```rust
-//! use workflow::branch::{BranchNaming, BranchPrefix};
+//! use workflow::branch::BranchNaming;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! // Generate branch name from JIRA ticket
+//! // Generate branch name from JIRA ticket (uses template system)
 //! let branch_name = BranchNaming::from_jira_ticket(
 //!     "PROJ-123",
 //!     "Add user authentication",
@@ -20,24 +23,24 @@
 //!     true,
 //! )?;
 //!
-//! // Apply prefixes
-//! let final_name = BranchPrefix::apply(branch_name, Some("PROJ-123"), false)?;
+//! // Or generate from branch type and slug (uses template system)
+//! let branch_name = BranchNaming::from_type_and_slug(
+//!     "feature",
+//!     "add-user-auth",
+//!     Some("PROJ-123"),
+//! )?;
 //! # Ok(())
 //! # }
 //! ```
 
-pub mod config;
 pub mod llm;
 pub mod naming;
-pub mod prefix;
 pub mod sync;
 pub mod types;
 
 // Re-export structs and functions
-pub use config::{BranchConfig, RepositoryConfig};
 pub use llm::BranchLLM;
 pub use naming::BranchNaming;
-pub use prefix::BranchPrefix;
 pub use sync::{
     BranchSync, BranchSyncCallbacks, BranchSyncOptions, BranchSyncResult, SourceBranchInfo,
     SyncStrategy,

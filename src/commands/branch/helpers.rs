@@ -3,8 +3,8 @@
 //! Provides reusable helper functions for branch-related operations.
 
 use crate::base::dialog::SelectDialog;
-use crate::branch::config::BranchConfig;
 use crate::git::GitBranch;
+use crate::repo::config::RepoConfig;
 use anyhow::{Context, Result};
 
 /// Sort branches with priority
@@ -39,7 +39,7 @@ pub fn sort_branches_with_priority(mut branches: Vec<String>) -> Result<Vec<Stri
         current_prefix
     } else {
         // Try to get repository prefix from configuration
-        BranchConfig::get_prefix_for_current_repo()
+        RepoConfig::get_branch_prefix()
     };
 
     // Sort branches with priority

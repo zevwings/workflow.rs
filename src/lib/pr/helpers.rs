@@ -126,19 +126,29 @@ pub fn generate_commit_title(
     scope: Option<&str>,
     body: Option<&str>,
 ) -> Result<String> {
+    // Load template configuration
+    let config = TemplateConfig::load().unwrap_or_default();
+
     // Load commit template
     let template_str = TemplateConfig::load_commit_template().unwrap_or_else(|_| {
         // Fallback to default template
         CommitTemplates::default_commit_template()
     });
 
+    // Scope extraction is handled by LLM (PullRequestLLM::generate).
+    // If LLM doesn't return a scope, we keep it as None and let the template system
+    // handle it based on the `use_scope` configuration.
+    // When `use_scope = true` and scope is None, the template will use `commit_type: title` format.
+    let final_scope = scope.map(|s| s.to_string());
+
     // Prepare template variables
     let vars = CommitTemplateVars {
         commit_type: commit_type.unwrap_or("feat").to_string(),
-        scope: scope.map(|s| s.to_string()),
+        scope: final_scope,
         subject: title.to_string(),
         body: body.map(|s| s.to_string()),
         jira_key: jira_ticket.map(|s| s.to_string()),
+        use_scope: config.commit.use_scope,
     };
 
     // Render template

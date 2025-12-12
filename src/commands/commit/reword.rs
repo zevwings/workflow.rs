@@ -23,6 +23,9 @@ impl CommitRewordCommand {
     ///
     /// * `commit_id` - Optional commit reference (defaults to HEAD if not provided)
     pub fn execute(commit_id: Option<String>) -> Result<()> {
+        // 0. 检查并确保仓库配置存在
+        crate::commands::repo::setup::RepoSetupCommand::ensure()?;
+
         // 1. Run checks
         check::CheckCommand::run_all()?;
 

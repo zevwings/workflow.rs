@@ -50,9 +50,9 @@ impl LLMShowCommand {
 
     /// 检查 LLM 配置是否为空
     fn is_empty_config(llm: &crate::base::settings::settings::LLMSettings) -> bool {
-        llm.url.is_none()
-            && llm.key.is_none()
-            && llm.model.is_none()
+        llm.openai.is_empty()
+            && llm.deepseek.is_empty()
+            && llm.proxy.is_empty()
             && llm.provider == crate::base::settings::defaults::default_llm_provider()
             && llm.language == crate::base::settings::defaults::default_language()
     }

@@ -6,7 +6,7 @@
 use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::settings::paths::Paths;
 use crate::git::GitRepo;
-use crate::repo::{RepoConfig, ProjectConfig};
+use crate::repo::{ProjectConfig, RepoConfig};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use anyhow::{Context, Result};
 use std::io::{self, IsTerminal};
@@ -39,12 +39,14 @@ impl RepoSetupCommand {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use crate::commands::repo::setup::RepoSetupCommand;
+    /// ```rust,no_run
+    /// use workflow::commands::repo::setup::RepoSetupCommand;
+    /// use anyhow::Result;
     ///
-    /// pub fn execute(...) -> Result<()> {
+    /// pub fn execute() -> Result<()> {
     ///     RepoSetupCommand::ensure()?;
     ///     // ... 继续执行操作
+    ///     Ok(())
     /// }
     /// ```
     pub fn ensure() -> Result<()> {
@@ -68,10 +70,11 @@ impl RepoSetupCommand {
         log_break!();
 
         // 4. Ask user if they want to run setup
-        let should_setup = ConfirmDialog::new("Run 'workflow repo setup' to configure this repository?")
-            .with_default(true)
-            .prompt()
-            .context("Failed to get user confirmation")?;
+        let should_setup =
+            ConfirmDialog::new("Run 'workflow repo setup' to configure this repository?")
+                .with_default(true)
+                .prompt()
+                .context("Failed to get user confirmation")?;
 
         if should_setup {
             // 5. Run setup
@@ -79,8 +82,7 @@ impl RepoSetupCommand {
             log_info!("Running repository setup...");
             log_break!();
 
-            Self::run()
-                .context("Failed to run repository setup")?;
+            Self::run().context("Failed to run repository setup")?;
 
             log_break!();
             log_success!("Repository configuration completed!");
@@ -100,11 +102,15 @@ impl RepoSetupCommand {
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use crate::commands::repo::setup::RepoSetupCommand;
+    /// ```rust,no_run
+    /// use workflow::commands::repo::setup::RepoSetupCommand;
+    /// use anyhow::Result;
     ///
     /// // Called by other commands
-    /// RepoSetupCommand::run()?;
+    /// fn example() -> Result<()> {
+    ///     RepoSetupCommand::run()?;
+    ///     Ok(())
+    /// }
     /// ```
     pub fn run() -> Result<()> {
         log_success!("Repository Configuration Setup\n");
@@ -116,10 +122,10 @@ impl RepoSetupCommand {
         log_info!("Repository: {}", repo_name);
         log_break!();
 
-        // 2. 检查项目级配置文件是否存在
+        // 2. 加载现有配置（如果存在）
         let config_path = Paths::project_config()?;
         let existing_config = if config_path.exists() {
-            Some(RepoConfig::load(&config_path)?)
+            Some(RepoConfig::load()?)
         } else {
             None
         };
@@ -128,7 +134,7 @@ impl RepoSetupCommand {
         let config = Self::collect_config(&existing_config)?;
 
         // 4. 保存配置
-        RepoConfig::save(&config_path, &config)?;
+        RepoConfig::save(&config)?;
 
         log_break!();
         log_success!("Repository configuration saved successfully!");
@@ -146,16 +152,13 @@ impl RepoSetupCommand {
         log_break!('-', 40);
 
         // 1. Branch prefix
-        let current_prefix = existing
-            .as_ref()
-            .and_then(|c| c.branch.get("prefix"))
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        let current_prefix = existing.as_ref().and_then(|c| c.branch.prefix.clone());
 
         let prefix_prompt = if let Some(ref p) = current_prefix {
             format!("Enter branch prefix (press Enter to keep) ({})", p)
         } else {
-            "Enter branch prefix (optional, press Enter to skip, e.g., 'feature', 'fix'):".to_string()
+            "Enter branch prefix (optional, press Enter to skip, e.g., 'feature', 'fix'):"
+                .to_string()
         };
 
         let prefix_input = {
@@ -166,26 +169,20 @@ impl RepoSetupCommand {
                 dialog = dialog.with_default(current.clone());
             }
 
-            dialog
-                .prompt()
-                .context("Failed to get branch prefix")?
+            dialog.prompt().context("Failed to get branch prefix")?
         };
 
         // 处理输入：如果有现有值且用户输入为空，保持原值；否则使用新值或清空
         if !prefix_input.trim().is_empty() {
-            config
-                .branch
-                .insert("prefix".to_string(), Value::String(prefix_input.trim().to_string()));
+            config.branch.prefix = Some(prefix_input.trim().to_string());
         } else if let Some(ref current) = current_prefix {
             // 用户按 Enter 保持原值
-            config
-                .branch
-                .insert("prefix".to_string(), Value::String(current.clone()));
+            config.branch.prefix = Some(current.clone());
         }
         // 如果既没有输入也没有现有值，则不设置（跳过）
 
         log_break!();
-        log_message!("Commit Template Configuration");
+        log_message!("Template Configuration");
         log_break!('-', 40);
 
         // 2. Use scope
@@ -200,47 +197,110 @@ impl RepoSetupCommand {
             .prompt()
             .context("Failed to get use_scope setting")?;
 
-        config.template_commit.insert(
-            "use_scope".to_string(),
-            Value::Boolean(use_scope),
-        );
+        config
+            .template_commit
+            .insert("use_scope".to_string(), Value::Boolean(use_scope));
 
-        // 3. Auto-extract scope
-        let current_auto_extract = existing
-            .as_ref()
-            .and_then(|c| c.template_commit.get("auto_extract_scope"))
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
-
-        let auto_extract = ConfirmDialog::new("Auto-extract scope from git diff?")
-            .with_default(current_auto_extract)
+        // 3. Commit template configuration
+        let configure_commit_template = ConfirmDialog::new("Configure commit templates?")
+            .with_default(false)
             .prompt()
-            .context("Failed to get auto_extract_scope setting")?;
+            .context("Failed to get commit template preference")?;
 
-        config.template_commit.insert(
-            "auto_extract_scope".to_string(),
-            Value::Boolean(auto_extract),
-        );
+        if configure_commit_template {
+            // 询问是否使用默认模板
+            let use_default = ConfirmDialog::new("Use default commit template?")
+                .with_default(true)
+                .prompt()
+                .context("Failed to get template preference")?;
 
-        // 4. Use default template
-        let use_default = ConfirmDialog::new("Use default commit template?")
-            .with_default(true)
-            .prompt()
-            .context("Failed to get template preference")?;
+            if !use_default {
+                // 用户选择自定义模板，询问自定义模板内容
+                // 如果使用默认模板，不写入 default 字段，让 serde default 机制处理
+                let custom_template = InputDialog::new("Enter custom commit template:")
+                    .allow_empty(false)
+                    .prompt()
+                    .context("Failed to get custom template")?;
 
-        if use_default {
-            // 使用默认模板
-            let default_template = r#"{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
-
-{{#if body}}{{body}}{{/if}}
-
-{{#if jira_key}}Closes {{jira_key}}{{/if}}"#;
-
-            config.template_commit.insert(
-                "default".to_string(),
-                Value::String(default_template.to_string()),
-            );
+                config.template_commit.insert(
+                    "default".to_string(),
+                    Value::String(custom_template.trim().to_string()),
+                );
+            }
+            // 如果使用默认模板，不写入 default 字段
         }
+
+        // 4. Branch template configuration
+        let configure_branch_template = ConfirmDialog::new("Configure branch templates?")
+            .with_default(false)
+            .prompt()
+            .context("Failed to get branch template preference")?;
+
+        if configure_branch_template {
+            // 询问是否使用默认模板
+            let use_default_branch = ConfirmDialog::new("Use default branch template?")
+                .with_default(true)
+                .prompt()
+                .context("Failed to get branch template preference")?;
+
+            if !use_default_branch {
+                let custom_branch_template =
+                    InputDialog::new("Enter custom default branch template:")
+                        .allow_empty(false)
+                        .prompt()
+                        .context("Failed to get custom branch template")?;
+
+                config.template_branch.insert(
+                    "default".to_string(),
+                    Value::String(custom_branch_template.trim().to_string()),
+                );
+            }
+            // 如果使用默认模板，不写入 default 字段
+        }
+
+        // 5. Pull request template configuration
+        let configure_pr_template = ConfirmDialog::new("Configure pull request templates?")
+            .with_default(false)
+            .prompt()
+            .context("Failed to get PR template preference")?;
+
+        if configure_pr_template {
+            // 询问是否使用默认模板
+            let use_default_pr = ConfirmDialog::new("Use default PR template?")
+                .with_default(true)
+                .prompt()
+                .context("Failed to get PR template preference")?;
+
+            if !use_default_pr {
+                let custom_pr_template = InputDialog::new("Enter custom PR template:")
+                    .allow_empty(false)
+                    .prompt()
+                    .context("Failed to get custom PR template")?;
+
+                config.template_pull_requests.insert(
+                    "default".to_string(),
+                    Value::String(custom_pr_template.trim().to_string()),
+                );
+            }
+            // 如果使用默认模板，不写入 default 字段
+        }
+
+        log_break!();
+        log_message!("PR Configuration");
+        log_break!('-', 40);
+
+        // 6. Auto-accept change type
+        let current_auto_accept =
+            existing.as_ref().and_then(|c| c.auto_accept_change_type).unwrap_or(false);
+
+        let auto_accept = ConfirmDialog::new(
+            "Auto-accept auto-selected change type in PR creation? (skip confirmation prompt)",
+        )
+        .with_default(current_auto_accept)
+        .prompt()
+        .context("Failed to get auto_accept_change_type setting")?;
+
+        config.auto_accept_change_type = Some(auto_accept);
 
         Ok(config)
     }

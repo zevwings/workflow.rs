@@ -209,8 +209,8 @@ pub fn cleanup_branch(
     Ok(())
 }
 
-// apply_branch_name_prefixes has been moved to lib/branch module
-// Use branch::BranchPrefix::apply() instead
+// apply_branch_name_prefixes has been deprecated
+// Branch naming now uses the template system which handles prefixes automatically
 
 /// Detect which branch a given branch might be based on
 ///

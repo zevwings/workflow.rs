@@ -457,9 +457,8 @@ workflow branch ignore remove <BRANCH_NAME>  # 从忽略列表移除分支
 workflow branch ignore list                   # 列出当前仓库的忽略分支
 
 # 管理分支前缀（仓库级别）
-workflow branch prefix set [PREFIX]            # 设置当前仓库的分支前缀（如 "feature"、"fix"）
-workflow branch prefix get                     # 获取当前仓库的分支前缀
-workflow branch prefix remove                  # 移除当前仓库的分支前缀
+workflow repo setup                            # 配置项目级设置（包括分支前缀）
+workflow repo show                             # 显示项目级配置（包括分支前缀）
 
 # 同步分支
 workflow branch sync <SOURCE_BRANCH>          # 将指定分支同步到当前分支（merge）

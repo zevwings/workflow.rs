@@ -37,6 +37,10 @@ pub struct CommitTemplateVars {
     /// JIRA ticket key (optional)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jira_key: Option<String>,
+    /// Whether to use scope (when no ticket id)
+    ///
+    /// This value comes from configuration and is passed to the template
+    pub use_scope: bool,
 }
 
 /// Template variables for PR body

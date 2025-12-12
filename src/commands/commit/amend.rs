@@ -38,6 +38,9 @@ impl CommitAmendCommand {
     /// * `no_edit` - Don't edit the commit message
     /// * `no_verify` - Skip pre-commit hooks
     pub fn execute(message: Option<String>, no_edit: bool, no_verify: bool) -> Result<()> {
+        // 0. 检查并确保仓库配置存在
+        crate::commands::repo::setup::RepoSetupCommand::ensure()?;
+
         // 1. Run checks
         check::CheckCommand::run_all()?;
 
