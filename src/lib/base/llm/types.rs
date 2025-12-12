@@ -1,6 +1,7 @@
 //! LLM 客户端共享类型和工具
 
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 /// LLM 请求参数
 ///
@@ -37,6 +38,7 @@ impl Default for LLMRequestParams {
 /// OpenAI Chat Completions API 响应
 ///
 /// 完整的 OpenAI 标准响应格式，支持所有标准字段和扩展字段。
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatCompletionResponse {
     /// 响应唯一标识符
@@ -48,7 +50,6 @@ pub struct ChatCompletionResponse {
     /// 使用的模型名称
     pub model: String,
     /// 系统指纹（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub system_fingerprint: Option<String>,
     /// 选择列表
     pub choices: Vec<ChatCompletionChoice>,
@@ -57,6 +58,7 @@ pub struct ChatCompletionResponse {
 }
 
 /// Chat Completion 选择项
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatCompletionChoice {
     /// 选择索引
@@ -64,7 +66,6 @@ pub struct ChatCompletionChoice {
     /// 消息对象
     pub message: ChatMessage,
     /// 对数概率（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub logprobs: Option<serde_json::Value>, // 使用 Value 以支持各种格式
     /// 完成原因
     pub finish_reason: String,

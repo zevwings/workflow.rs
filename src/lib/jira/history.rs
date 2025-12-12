@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use anyhow::{Context, Result};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::base::settings::paths::Paths;
 use crate::trace_warn;
@@ -21,24 +22,20 @@ use crate::trace_warn;
 /// 工作历史记录条目
 ///
 /// 记录 PR 的创建和合并信息，包括 Jira ticket、PR URL、时间戳等。
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkHistoryEntry {
     /// Jira ticket ID（如 `"PROJ-123"`）
     pub jira_ticket: String,
     /// Pull Request URL（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub pull_request_url: Option<String>,
     /// PR 创建时间（ISO 8601 格式，可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub created_at: Option<String>,
     /// PR 合并时间（ISO 8601 格式，可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub merged_at: Option<String>,
     /// 仓库地址（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub repository: Option<String>,
     /// 分支名称（可选）
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub branch: Option<String>,
 }
 

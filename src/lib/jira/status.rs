@@ -9,6 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use super::api::project::JiraProjectApi;
 use super::config::ConfigManager;
@@ -33,6 +34,7 @@ pub struct StatusConfigResult {
 /// 项目状态配置
 ///
 /// 存储单个项目的状态配置，包括 PR 创建和合并时的目标状态。
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectStatusConfig {
     /// PR 创建时的目标状态（JSON 字段名：`created-pr`）
@@ -46,6 +48,7 @@ pub struct ProjectStatusConfig {
 /// Jira 状态配置（兼容现有接口）
 ///
 /// 包含项目名称和对应的状态配置。
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JiraStatusConfig {
     /// 项目名称（如 `"PROJ"`）

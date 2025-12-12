@@ -7,6 +7,7 @@ use crate::base::settings::paths::Paths;
 use crate::git::GitRepo;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::fs;
 use std::path::PathBuf;
 use toml::map::Map;
@@ -161,10 +162,13 @@ impl RepoConfig {
                     }
                 }
             }
-        } else if let Some(auto_accept) = value.get("auto_accept_change_type") {
-            // 向后兼容：支持顶层配置
-            if let Some(b) = auto_accept.as_bool() {
-                config.auto_accept_change_type = Some(b);
+        }
+        // 如果 [pr] 节中没有找到，尝试顶层配置（向后兼容）
+        if config.auto_accept_change_type.is_none() {
+            if let Some(auto_accept) = value.get("auto_accept_change_type") {
+                if let Some(b) = auto_accept.as_bool() {
+                    config.auto_accept_change_type = Some(b);
+                }
             }
         }
 
@@ -322,12 +326,12 @@ impl RepoConfig {
 }
 
 /// Project-level branch configuration
+#[skip_serializing_none]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ProjectBranchConfig {
     /// Branch prefix (optional)
     ///
     /// Used to add prefix when generating branch names, e.g., "feature", "fix", etc.
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix: Option<String>,
     /// List of branches to ignore (optional)
     ///

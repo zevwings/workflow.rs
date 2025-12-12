@@ -5,6 +5,7 @@
 use crate::base::settings::paths::Paths;
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use std::fs;
 
 /// Template configuration
@@ -29,25 +30,21 @@ fn default_engine() -> String {
 }
 
 /// Branch templates configuration
+#[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BranchTemplates {
     /// Default branch template
     #[serde(default = "default_branch_template")]
     pub default: String,
     /// Feature branch template
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub feature: Option<String>,
     /// Bugfix branch template
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub bugfix: Option<String>,
     /// Hotfix branch template
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub hotfix: Option<String>,
     /// Refactoring branch template
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub refactoring: Option<String>,
     /// Chore branch template
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub chore: Option<String>,
 }
 

@@ -308,6 +308,16 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 快速检查清单和常见问题
 
+### [CARGO_BLOAT_GUIDELINES.md](./guidelines/CARGO_BLOAT_GUIDELINES.md)
+**cargo-bloat 使用指南**
+
+- cargo-bloat 工具安装和基本使用
+- 常用命令和参数说明
+- 输出结果解读
+- 二进制大小优化最佳实践
+- 常见问题解答
+- 相关工具和资源
+
 ### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
 **为什么需要同时生成 zsh 和 bash 的补全脚本**
 

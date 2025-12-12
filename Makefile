@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint fix setup uninstall tag dev
+.PHONY: help build release clean install test lint fix setup uninstall tag dev bloat
 
 # 项目名称
 BINARY_NAME = workflow
@@ -25,9 +25,10 @@ help:
 	@echo "  make test               - 运行测试"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make fix                - 自动修复代码问题（格式化 + Clippy + Cargo Fix）"
-	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer）"
+	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat）"
 	@echo "  make uninstall          - 卸载二进制文件和 shell completion 脚本"
 	@echo "  make tag VERSION=v1.0.0 - 创建 git tag 并推送到远程仓库"
+	@echo "  make bloat              - 分析二进制文件大小（需要先运行 make setup）"
 
 # 构建 debug 版本
 dev:
@@ -59,6 +60,13 @@ setup:
 	@echo "安装开发工具..."
 	@rustup component add rustfmt 2>/dev/null || echo "rustfmt 已安装或安装失败"
 	@rustup component add clippy 2>/dev/null || echo "clippy 已安装或安装失败"
+	@echo ""
+	@echo "安装 cargo-bloat..."
+	@if command -v cargo-bloat >/dev/null 2>&1; then \
+		echo "cargo-bloat 已安装"; \
+	else \
+		cargo install cargo-bloat --locked 2>/dev/null || echo "⚠ cargo-bloat 安装失败，可稍后手动运行: cargo install cargo-bloat"; \
+	fi
 	@echo "开发工具安装完成"
 	@echo ""
 	@echo "=========================================="
@@ -184,3 +192,19 @@ tag:
 	@echo "推送 tag 到远程仓库..."
 	@git push origin $(VERSION)
 	@echo "✓ Tag 推送成功: $(VERSION)"
+
+# 分析二进制文件大小（需要先安装 cargo-bloat）
+# 使用: make bloat [ARGS="--crates --limit 10"]
+bloat:
+	@if ! command -v cargo-bloat >/dev/null 2>&1; then \
+		echo "错误: cargo-bloat 未安装"; \
+		echo ""; \
+		echo "请运行以下命令安装:"; \
+		echo "  make setup"; \
+		echo ""; \
+		echo "或者手动安装:"; \
+		echo "  cargo install cargo-bloat"; \
+		exit 1; \
+	fi
+	@echo "分析二进制文件大小..."
+	@cargo bloat --release $(ARGS) || cargo bloat --release
