@@ -85,7 +85,7 @@ impl SwitchCommand {
         {
             // If checkout fails, try to restore stash
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             return Err(e);
         }
@@ -95,7 +95,7 @@ impl SwitchCommand {
         // Restore stash if needed
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            handle_stash_pop_result(GitStash::stash_pop());
+            handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
         Ok(())

@@ -16,7 +16,7 @@ use anyhow::{Context, Error, Result};
 
 /// 处理 stash_pop 的结果
 ///
-/// 统一处理 `GitStash::stash_pop()` 的返回结果，显示消息和警告。
+/// 统一处理 `GitStash::stash_pop(None)` 的返回结果，显示消息和警告。
 ///
 /// # 参数
 ///
@@ -191,7 +191,7 @@ pub fn cleanup_branch(
     // 6. 恢复 stash
     if has_stashed {
         log_info!("Restoring stashed changes...");
-        handle_stash_pop_result(GitStash::stash_pop());
+        handle_stash_pop_result(GitStash::stash_pop(None));
     }
 
     // 7. 清理远程分支引用

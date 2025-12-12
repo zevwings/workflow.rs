@@ -17,10 +17,8 @@ use anyhow::{Context, Result};
 ///
 /// 如果在默认分支上，返回错误；否则返回当前分支名和默认分支名
 pub fn check_not_on_default_branch(operation_name: &str) -> Result<(String, String)> {
-    let current_branch = GitBranch::current_branch()
-        .context("Failed to get current branch")?;
-    let default_branch = GitBranch::get_default_branch()
-        .context("Failed to get default branch")?;
+    let current_branch = GitBranch::current_branch().context("Failed to get current branch")?;
+    let default_branch = GitBranch::get_default_branch().context("Failed to get default branch")?;
 
     if current_branch == default_branch {
         anyhow::bail!(

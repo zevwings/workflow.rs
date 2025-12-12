@@ -9,9 +9,7 @@ use crate::branch::config::BranchConfig;
 use crate::branch::llm::BranchLLM;
 use crate::git::GitBranch;
 use crate::pr::llm::PullRequestLLM;
-use crate::template::{
-    load_branch_template, load_branch_template_by_type, BranchTemplateVars, TemplateEngine,
-};
+use crate::template::{BranchTemplateVars, TemplateConfig, TemplateEngine};
 use crate::{log_info, log_success, log_warning};
 use anyhow::{Context, Result};
 
@@ -43,7 +41,7 @@ impl BranchNaming {
         use_prefix_format: bool,
     ) -> Result<String> {
         // Try template system first
-        match load_branch_template(jira_type) {
+        match TemplateConfig::load_branch_template(jira_type) {
             Ok(template_str) => {
                 // Prepare template variables
                 let summary_slug = Self::slugify(summary);
@@ -111,7 +109,7 @@ impl BranchNaming {
 
         // If JIRA ticket exists, use template system
         // Load template for the branch type
-        let template_str = load_branch_template_by_type(Some(branch_type))?;
+        let template_str = TemplateConfig::load_branch_template_by_type(Some(branch_type))?;
 
         // Prepare template variables
         let vars = BranchTemplateVars {

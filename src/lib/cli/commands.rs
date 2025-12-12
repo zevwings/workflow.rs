@@ -7,7 +7,7 @@ use clap::Subcommand;
 use super::{
     BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs,
     GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
-    ProxySubcommand,
+    ProxySubcommand, StashSubcommand,
 };
 
 /// 主命令枚举
@@ -128,5 +128,12 @@ pub enum Commands {
     Jira {
         #[command(subcommand)]
         subcommand: JiraSubcommand,
+    },
+    /// Git stash management
+    ///
+    /// List, apply, drop, and pop Git stash entries.
+    Stash {
+        #[command(subcommand)]
+        subcommand: StashSubcommand,
     },
 }

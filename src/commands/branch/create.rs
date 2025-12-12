@@ -235,7 +235,7 @@ impl CreateCommand {
         {
             // If checkout fails, try to restore stash
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             return Err(e);
         }
@@ -251,7 +251,7 @@ impl CreateCommand {
         // Restore stash if we stashed changes
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            handle_stash_pop_result(GitStash::stash_pop());
+            handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
         Ok(())
@@ -322,7 +322,7 @@ impl CreateCommand {
         {
             // If pull fails, try to restore stash
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             return Err(e);
         }
@@ -330,7 +330,7 @@ impl CreateCommand {
         // Restore stash if we stashed changes
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            handle_stash_pop_result(GitStash::stash_pop());
+            handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
         Ok(())

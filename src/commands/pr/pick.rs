@@ -126,7 +126,7 @@ impl PullRequestPickCommand {
                 // 其他错误，恢复原分支
                 GitBranch::checkout_branch(&current_branch)?;
                 if has_stashed {
-                    handle_stash_pop_result(GitStash::stash_pop());
+                    handle_stash_pop_result(GitStash::stash_pop(None));
                 }
                 return Err(e);
             }
@@ -138,7 +138,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             return Ok(());
         }
@@ -166,7 +166,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(&current_branch)?;
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             log_info!("Pick operation completed (PR not created)");
             return Ok(());
@@ -188,7 +188,7 @@ impl PullRequestPickCommand {
 
         if has_stashed {
             log_info!("Restoring stashed changes...");
-            match GitStash::stash_pop() {
+            match GitStash::stash_pop(None) {
                 Ok(result) => {
                     if result.restored {
                         if let Some(ref msg) = result.message {
@@ -385,7 +385,7 @@ impl PullRequestPickCommand {
             // 恢复原分支
             GitBranch::checkout_branch(current_branch)?;
             if has_stashed {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
         } else {
             // 用户选择保留冲突状态，保持在 to_branch 上
@@ -400,7 +400,7 @@ impl PullRequestPickCommand {
                 .with_default(false)
                 .prompt()?;
                 if restore_stash {
-                    handle_stash_pop_result(GitStash::stash_pop());
+                    handle_stash_pop_result(GitStash::stash_pop(None));
                 }
             }
         }
@@ -433,7 +433,7 @@ impl PullRequestPickCommand {
         {
             // 如果切换失败，尝试恢复 stash
             if needs_stash {
-                handle_stash_pop_result(GitStash::stash_pop());
+                handle_stash_pop_result(GitStash::stash_pop(None));
             }
             return Err(e);
         }
@@ -451,7 +451,7 @@ impl PullRequestPickCommand {
                     );
                     // 如果之前有 stash，尝试恢复
                     if needs_stash {
-                        handle_stash_pop_result(GitStash::stash_pop());
+                        handle_stash_pop_result(GitStash::stash_pop(None));
                     }
                     return Err(e)
                         .context("Failed to get PR ID from source branch")
@@ -459,7 +459,7 @@ impl PullRequestPickCommand {
                 }
                 // 恢复 stash
                 if needs_stash {
-                    handle_stash_pop_result(GitStash::stash_pop());
+                    handle_stash_pop_result(GitStash::stash_pop(None));
                 }
                 return Err(e).context("Failed to get PR ID from source branch");
             }
@@ -472,7 +472,7 @@ impl PullRequestPickCommand {
         // 恢复 stash（如果有）
         if needs_stash {
             log_info!("Restoring stashed cherry-picked changes...");
-            match GitStash::stash_pop() {
+            match GitStash::stash_pop(None) {
                 Ok(result) => {
                     if result.restored {
                         if let Some(ref msg) = result.message {

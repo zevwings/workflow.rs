@@ -5,7 +5,9 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::commands::check;
-use crate::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch, handle_force_push_warning};
+use crate::commands::commit::helpers::{
+    check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
+};
 use crate::commit::{CommitReword, RewordHistoryOptions};
 use crate::git::{CommitInfo, GitCommit};
 use crate::{log_break, log_info, log_message, log_success};
@@ -120,7 +122,7 @@ impl CommitRewordCommand {
         handle_force_push_warning(
             &current_branch,
             &commit_info.sha,
-            |branch, sha| CommitReword::should_show_force_push_warning(branch, sha),
+            CommitReword::should_show_force_push_warning,
         )?;
 
         Ok(())

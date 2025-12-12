@@ -1,5 +1,7 @@
 # `workflow pr update` 卡死问题分析
 
+> **实施步骤**: STEP_3
+
 ## 问题描述
 
 运行 `workflow pr update` 命令时，程序会直接卡死，需要多次按 Ctrl+C 才能退出。

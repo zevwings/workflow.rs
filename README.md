@@ -479,8 +479,27 @@ workflow commit amend --no-verify                  # 跳过 pre-commit hooks
 # 修改 commit 消息（不改变内容）
 workflow commit reword                              # 修改 HEAD 的 commit 消息（默认）
 workflow commit reword HEAD                         # 明确指定 HEAD
-workflow commit reword HEAD~2                       # 修改倒数第二个 commit
-workflow commit reword abc1234                      # 通过 SHA 修改指定 commit
+workflow commit reword HEAD~2                      # 修改倒数第二个 commit
+workflow commit reword abc1234                     # 通过 SHA 修改指定 commit
+
+# 压缩多个 commits
+workflow commit squash                             # 交互式选择要压缩的 commits
+```
+
+### Stash 管理
+```bash
+# 列出所有 stash
+workflow stash list                                # 列出所有 stash 条目
+workflow stash list --stat                         # 显示统计信息
+
+# 应用 stash（保留条目）
+workflow stash apply                               # 应用最新的 stash（交互式选择）
+
+# 删除 stash
+workflow stash drop                                # 交互式选择要删除的 stash
+
+# 应用并删除 stash
+workflow stash pop                                # 应用并删除最新的 stash（交互式选择）
 ```
 
 ### 安装命令

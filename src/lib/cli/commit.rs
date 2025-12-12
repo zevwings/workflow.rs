@@ -41,4 +41,12 @@ pub enum CommitSubcommand {
         #[arg(value_name = "COMMIT_ID")]
         commit_id: Option<String>,
     },
+    /// Squash multiple commits
+    ///
+    /// Combine multiple commits into one, simplifying commit history.
+    /// Only commits created after the current branch was created can be squashed.
+    ///
+    /// Examples:
+    ///   workflow commit squash                              # Interactive squash (select commits)
+    Squash,
 }

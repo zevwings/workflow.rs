@@ -10,7 +10,7 @@ use workflow::commands::branch::{
     clean, create as branch_create, ignore, prefix, rename, switch, sync as branch_sync,
 };
 use workflow::commands::check::check;
-use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand};
+use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
 use workflow::commands::config::{completion, export, import, log, setup, show, validate};
 use workflow::commands::github::github;
 use workflow::commands::jira::{
@@ -26,11 +26,12 @@ use workflow::commands::pr::{
     sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
+use workflow::commands::stash::{apply, drop, list as stash_list, pop};
 
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
     GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
-    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand,
+    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand, StashSubcommand,
 };
 use workflow::*;
 
@@ -227,6 +228,9 @@ fn main() -> Result<()> {
             CommitSubcommand::Reword { commit_id } => {
                 CommitRewordCommand::execute(commit_id)?;
             }
+            CommitSubcommand::Squash => {
+                CommitSquashCommand::execute()?;
+            }
         },
         // PR 操作命令
         Some(Commands::Pr { subcommand }) => match subcommand {
@@ -371,6 +375,21 @@ fn main() -> Result<()> {
             let cleanup = !keep_old;
             MigrateCommand::migrate(dry_run.dry_run, cleanup)?;
         }
+        // Stash 管理命令
+        Some(Commands::Stash { subcommand }) => match subcommand {
+            StashSubcommand::List { stat } => {
+                stash_list::StashListCommand::execute(stat)?;
+            }
+            StashSubcommand::Apply => {
+                apply::StashApplyCommand::execute()?;
+            }
+            StashSubcommand::Drop => {
+                drop::StashDropCommand::execute()?;
+            }
+            StashSubcommand::Pop => {
+                pop::StashPopCommand::execute()?;
+            }
+        },
         // 无命令时显示帮助信息
         None => {
             log_message!("Workflow CLI - Configuration Management");
@@ -391,6 +410,7 @@ fn main() -> Result<()> {
             );
             log_message!("  workflow pr         - Pull Request operations (create/merge/close/status/list/update/sync)");
             log_message!("  workflow jira       - Jira operations (info/attachments/clean/log)");
+            log_message!("  workflow stash      - Git stash management (list/apply/drop/pop)");
             log_message!("\nOther CLI tools:");
             log_message!("  install             - Install Workflow CLI components (binaries and/or completions)");
             log_message!("\nUse '<command> --help' for more information about each command.");

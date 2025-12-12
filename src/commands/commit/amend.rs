@@ -5,7 +5,9 @@
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 use crate::commands::check;
-use crate::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch, handle_force_push_warning};
+use crate::commands::commit::helpers::{
+    check_has_last_commit, check_not_on_default_branch, handle_force_push_warning,
+};
 use crate::commit::CommitAmend;
 use crate::git::GitCommit;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
@@ -159,7 +161,7 @@ impl CommitAmendCommand {
         handle_force_push_warning(
             &current_branch,
             &commit_info.sha,
-            |branch, sha| CommitAmend::should_show_force_push_warning(branch, sha),
+            CommitAmend::should_show_force_push_warning,
         )?;
 
         Ok(())

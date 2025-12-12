@@ -38,6 +38,6 @@ pub use commit::{CommitInfo, GitCommit, WorktreeStatus};
 pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
 pub use repo::GitRepo;
-pub use stash::{GitStash, StashPopResult};
+pub use stash::{GitStash, StashApplyResult, StashEntry, StashPopResult, StashStat};
 pub use table::BranchRow;
 pub use types::RepoType;

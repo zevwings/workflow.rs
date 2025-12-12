@@ -207,10 +207,21 @@
 
 - Commit amend 命令（修改最后一次提交的消息和文件）
 - Commit reword 命令（修改指定提交的消息，不改变内容）
+- Commit squash 命令（压缩多个 commits）
 - 交互式工作流（选择、输入、确认等）
 - 预览机制（在执行操作前生成预览信息）
 - 分支保护（检查默认分支，防止误操作）
 - 支持 HEAD 和历史 commit 的 reword
+
+#### [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+**Stash 管理命令层架构文档**
+
+- Stash list 命令（列出所有 stash 条目，支持统计信息）
+- Stash apply 命令（应用 stash，保留条目）
+- Stash drop 命令（删除 stash 条目，支持多选）
+- Stash pop 命令（应用并删除 stash 条目）
+- 交互式选择界面（支持选择特定的 stash）
+- 冲突检测和处理（自动检测冲突并提供解决提示）
 
 #### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 **配置迁移命令层架构文档**
@@ -376,6 +387,7 @@
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
 - 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
+- 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
 - 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 - 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 - 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)

@@ -137,12 +137,7 @@ fn test_commit_amend_command_with_all_flags() {
 #[test]
 fn test_commit_reword_command_structure() {
     // 测试 Reword 命令结构（带 commit ID）
-    let cli = TestCommitCli::try_parse_from(&[
-        "test-commit",
-        "reword",
-        "abc1234",
-    ])
-    .unwrap();
+    let cli = TestCommitCli::try_parse_from(&["test-commit", "reword", "abc1234"]).unwrap();
 
     match cli.command {
         CommitSubcommand::Reword { commit_id } => {

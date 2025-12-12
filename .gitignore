@@ -77,3 +77,5 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+docs/report/

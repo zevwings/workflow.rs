@@ -127,7 +127,7 @@ impl BranchSync {
         // 7. 恢复 stash（如果需要）
         if !skip_stash_pop && has_stashed {
             log_info!("Restoring stashed changes...");
-            handle_stash_pop_result(GitStash::stash_pop());
+            handle_stash_pop_result(GitStash::stash_pop(None));
         }
 
         // 8. 推送（如果当前分支在远程存在，使用 ConfirmDialog 确认）
@@ -272,7 +272,7 @@ impl BranchSync {
                 // 如果合并失败，恢复 stash（如果有）
                 if merge_result.is_err() && has_stashed {
                     log_info!("Merge failed, attempting to restore stashed changes...");
-                    handle_stash_pop_result(GitStash::stash_pop());
+                    handle_stash_pop_result(GitStash::stash_pop(None));
                 }
 
                 match merge_result {
@@ -308,7 +308,7 @@ impl BranchSync {
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if rebase_result.is_err() && has_stashed {
                     log_info!("Rebase failed, attempting to restore stashed changes...");
-                    handle_stash_pop_result(GitStash::stash_pop());
+                    handle_stash_pop_result(GitStash::stash_pop(None));
                 }
 
                 match rebase_result {

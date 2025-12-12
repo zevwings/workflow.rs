@@ -49,14 +49,25 @@
 
 ### 进行中的需求
 
-#### 1. [`CONCURRENCY.md`](./CONCURRENCY.md)
+#### 1. [`STEP_3_PR_UPDATE_HANG_ANALYSIS.md`](./STEP_3_PR_UPDATE_HANG_ANALYSIS.md)
 - **状态**: 📋 需求分析中
-- **分类**: 性能优化
+- **分类**: PR 模块
 - **内容**:
-  - 并行下载
-- **优先级**: 高优先级（并行下载）
+  - PR 更新挂起问题分析
+- **优先级**: 高优先级
+- **来源**: 从 `docs/todo/INTEGRATION_TODO.md` 迁移
 
-#### 3. [`JIRA_COMMANDS.md`](./JIRA_COMMANDS.md)
+#### 2. [`STEP_4_ALIAS_SYSTEM.md`](./STEP_4_ALIAS_SYSTEM.md)
+- **状态**: 📋 需求分析中
+- **分类**: 用户体验优化
+- **内容**:
+  - 别名配置（配置文件定义别名）
+  - 别名展开（自动展开别名）
+  - 别名管理命令（添加、删除、列出）
+- **优先级**: 中优先级
+- **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
+
+#### 3. [`STEP_5_JIRA_COMMANDS.md`](./STEP_5_JIRA_COMMANDS.md)
 - **状态**: 📋 需求分析中
 - **分类**: JIRA 模块
 - **内容**:
@@ -67,38 +78,7 @@
 - **优先级**: 高优先级（`jira comment`、`jira transition`）、中优先级（`jira list`、`jira search`）
 - **来源**: 从 `docs/todo/JIRA_TODO.md` 迁移
 
-#### 4. [`GIT_WORKFLOW.md`](./GIT_WORKFLOW.md)
-- **状态**: 📋 需求分析中
-- **分类**: Git 工作流
-- **内容**:
-  - 分支管理（创建、切换、重命名、同步）
-  - Commit 管理（修改、压缩、重写）
-  - Stash 管理（列出、应用、删除）
-- **优先级**: 高优先级（分支创建/切换、Commit 修改）、中优先级（分支同步/重命名、Commit 压缩/重写、Stash 管理）
-- **来源**: 从 `docs/todo/GIT_TODO.md` 迁移
-
-#### 5. [`STASH_MANAGEMENT.md`](./STASH_MANAGEMENT.md)
-- **状态**: 📋 需求分析中
-- **分类**: Git 工作流
-- **内容**:
-  - `stash list` - 列出所有 stash
-  - `stash apply` - 应用 stash（保留条目）
-  - `stash drop` - 删除 stash
-  - `stash pop` - 应用并删除 stash
-- **优先级**: 中优先级
-- **来源**: 从 `docs/requirements/GIT_WORKFLOW.md` 提取
-
-#### 6. [`ALIAS_SYSTEM.md`](./ALIAS_SYSTEM.md)
-- **状态**: 📋 需求分析中
-- **分类**: 用户体验优化
-- **内容**:
-  - 别名配置（配置文件定义别名）
-  - 别名展开（自动展开别名）
-  - 别名管理命令（添加、删除、列出）
-- **优先级**: 中优先级
-- **来源**: 从 `docs/todo/ALIAS_TODO.md` 迁移
-
-#### 7. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
+#### 4. [`CONFIG_VALIDATION_AND_IMPORT_EXPORT.md`](./CONFIG_VALIDATION_AND_IMPORT_EXPORT.md)
 - **状态**: 📋 需求分析中
 - **分类**: 配置管理
 - **内容**:
@@ -112,6 +92,9 @@
 - 配置迁移系统（2024-12-19 完成）
 - 模板系统（2025-01-27 完成）- PR 模板、Commit 模板、分支命名模板
 - UX 用户体验优化需求（已转换为 TODO 文档）
+- Git 工作流功能（2025-01-27 完成）- 分支管理（创建、切换、重命名、同步）、Commit 管理（修改、压缩、重写）
+- Stash 管理功能（2025-01-27 完成）- `stash list`、`stash apply`、`stash drop`、`stash pop`
+- 并发下载功能（2025-01-27 完成）- 并行下载 JIRA 附件，支持并发数限制和进度回调
 
 ---
 

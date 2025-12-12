@@ -406,7 +406,7 @@ impl PullRequestCreateCommand {
 
         // 恢复 stash
         log_info!("Restoring stashed changes...");
-        handle_stash_pop_result(GitStash::stash_pop());
+        handle_stash_pop_result(GitStash::stash_pop(None));
 
         // 提交并推送
         Spinner::with("Committing changes...", || {

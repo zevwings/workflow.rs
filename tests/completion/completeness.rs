@@ -72,7 +72,7 @@ const BRANCH_SUBCOMMANDS: &[&str] = &[
 ];
 
 /// Commit 子命令列表
-const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword"];
+const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword", "squash"];
 
 // Branch ignore 子命令列表（目前未在测试中使用，保留以备将来扩展）
 // const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
@@ -85,6 +85,9 @@ const LOG_LEVEL_SUBCOMMANDS: &[&str] = &["set", "check", "trace-console"];
 
 /// Completion 子命令列表
 const COMPLETION_SUBCOMMANDS: &[&str] = &["generate", "check", "remove"];
+
+/// Stash 子命令列表
+const STASH_SUBCOMMANDS: &[&str] = &["list", "apply", "drop", "pop"];
 
 // 以下函数用于从补全脚本中提取命令（目前未使用，保留以备将来扩展）
 //
@@ -422,6 +425,15 @@ fn test_all_subcommands_completeness() {
     let completion_subcommands: Vec<String> =
         completion_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(completion_subcommands.len(), COMPLETION_SUBCOMMANDS.len());
+
+    // 验证 Stash 子命令
+    let stash_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "stash")
+        .expect("stash command should exist");
+    let stash_subcommands: Vec<String> =
+        stash_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(stash_subcommands.len(), STASH_SUBCOMMANDS.len());
 
     println!("All subcommands verified successfully!");
 }

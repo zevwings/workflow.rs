@@ -360,7 +360,7 @@ cp "{}" "$1"
             Err(e) => {
                 // 如果是根 commit，无法 rebase
                 if has_stashed {
-                    let _ = GitStash::stash_pop();
+                    let _ = GitStash::stash_pop(None);
                 }
                 anyhow::bail!(
                     "Cannot reword root commit (commit has no parent). Error: {}",
@@ -375,7 +375,7 @@ cp "{}" "$1"
 
         if commits.is_empty() {
             if has_stashed {
-                let _ = GitStash::stash_pop();
+                let _ = GitStash::stash_pop(None);
             }
             anyhow::bail!("No commits found between parent and HEAD");
         }
@@ -410,7 +410,7 @@ cp "{}" "$1"
             Ok(()) => {
                 // 恢复 stash（如果有）
                 if has_stashed {
-                    let _ = GitStash::stash_pop();
+                    let _ = GitStash::stash_pop(None);
                 }
                 Ok(RewordHistoryResult {
                     success: true,
@@ -421,7 +421,7 @@ cp "{}" "$1"
             Err(e) => {
                 // 如果 rebase 失败，恢复 stash（如果有）
                 if has_stashed {
-                    let _ = GitStash::stash_pop();
+                    let _ = GitStash::stash_pop(None);
                 }
 
                 // 检查是否是 rebase 冲突
