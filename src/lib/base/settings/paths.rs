@@ -300,6 +300,29 @@ impl Paths {
         Ok(Self::config_dir()?.join("repositories.toml"))
     }
 
+    /// 获取项目级配置文件路径
+    ///
+    /// 返回当前工作目录下的 `.workflow/config.toml` 路径。
+    /// 这是项目级别的配置文件，用于存储仓库特定的配置（如分支前缀、提交模板等）。
+    ///
+    /// # 路径示例
+    ///
+    /// - 相对于当前工作目录：`.workflow/config.toml`
+    ///
+    /// # 返回
+    ///
+    /// 返回项目级配置文件的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法获取当前工作目录，返回相应的错误信息。
+    pub fn project_config() -> Result<PathBuf> {
+        Ok(std::env::current_dir()
+            .context("Failed to get current directory")?
+            .join(".workflow")
+            .join("config.toml"))
+    }
+
     /// 获取工作流目录路径（支持 iCloud）
     ///
     /// 返回工作流基础目录。如果配置在 iCloud，此方法返回 iCloud 路径。

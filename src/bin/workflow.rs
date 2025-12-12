@@ -26,12 +26,13 @@ use workflow::commands::pr::{
     sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
+use workflow::commands::repo::{setup as repo_setup, show as repo_show};
 use workflow::commands::stash::{apply, drop, list as stash_list, pop};
 
 use workflow::cli::{
     BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
     GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
-    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand, StashSubcommand,
+    LogSubcommand, PRCommands, PrefixSubcommand, ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 use workflow::*;
 
@@ -391,6 +392,15 @@ fn main() -> Result<()> {
             }
             StashSubcommand::Pop => {
                 pop::StashPopCommand::execute()?;
+            }
+        },
+        // Repository 管理命令
+        Some(Commands::Repo { subcommand }) => match subcommand {
+            RepoSubcommand::Setup => {
+                repo_setup::RepoSetupCommand::run()?;
+            }
+            RepoSubcommand::Show => {
+                repo_show::RepoShowCommand::show()?;
             }
         },
         // 无命令时显示帮助信息

@@ -42,4 +42,5 @@ pub mod jira;
 pub mod log;
 pub mod migrate;
 pub mod pr;
+pub mod repo;
 pub mod stash;

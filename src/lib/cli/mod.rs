@@ -17,6 +17,7 @@ mod llm;
 mod log;
 mod pr;
 mod proxy;
+mod repo;
 mod stash;
 
 // 重新导出所有子命令枚举和主结构体，保持向后兼容
@@ -32,6 +33,7 @@ pub use llm::LLMSubcommand;
 pub use log::LogSubcommand;
 pub use pr::PRCommands;
 pub use proxy::ProxySubcommand;
+pub use repo::RepoSubcommand;
 pub use stash::StashSubcommand;
 
 /// CLI 主结构体

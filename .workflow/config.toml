@@ -1,0 +1,9 @@
+[template.commit]
+auto_extract_scope = true
+default = """
+{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
+
+{{#if body}}{{body}}{{/if}}
+
+{{#if jira_key}}Closes {{jira_key}}{{/if}}"""
+use_scope = true

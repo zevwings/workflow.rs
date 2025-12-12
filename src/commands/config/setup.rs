@@ -336,11 +336,13 @@ impl SetupCommand {
             "Document base directory (press Enter to use default)".to_string()
         };
 
-        let log_download_base_dir = InputDialog::new(&base_dir_prompt)
-            .allow_empty(true)
-            .with_default(
-                existing.log_download_base_dir.clone().unwrap_or_else(default_download_base_dir),
-            )
+        // 只有当用户之前设置过值时，才显示默认值；否则留空，让用户知道这是可选的
+        let mut dialog = InputDialog::new(&base_dir_prompt).allow_empty(true);
+        if let Some(ref existing_dir) = existing.log_download_base_dir {
+            dialog = dialog.with_default(existing_dir.clone());
+        }
+
+        let log_download_base_dir = dialog
             .prompt()
             .context("Failed to get document base directory")?;
 

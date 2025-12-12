@@ -29,6 +29,8 @@ pub mod proxy;
 pub mod rollback;
 #[path = "lib/template/mod.rs"]
 pub mod template;
+#[path = "lib/repo/mod.rs"]
+pub mod repo;
 
 // 命令模块声明
 #[path = "commands/mod.rs"]

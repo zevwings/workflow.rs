@@ -7,7 +7,7 @@ use clap::Subcommand;
 use super::{
     BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs,
     GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
-    ProxySubcommand, StashSubcommand,
+    ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 
 /// 主命令枚举
@@ -135,5 +135,12 @@ pub enum Commands {
     Stash {
         #[command(subcommand)]
         subcommand: StashSubcommand,
+    },
+    /// Manage repository-level configuration
+    ///
+    /// Initialize and manage repository-level configuration including branch prefix and commit template settings.
+    Repo {
+        #[command(subcommand)]
+        subcommand: RepoSubcommand,
     },
 }

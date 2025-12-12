@@ -36,6 +36,9 @@ impl CreateCommand {
     /// * `from_default` - Whether to create from default branch
     /// * `dry_run` - Whether to run in dry-run mode (preview without executing)
     pub fn execute(ticket_id: Option<String>, from_default: bool, dry_run: bool) -> Result<()> {
+        // 0. 检查并确保仓库配置存在
+        crate::commands::repo::setup::RepoSetupCommand::ensure()?;
+
         // Step 1: Resolve ticket ID (optional, interactive if not provided)
         let ticket_id = Self::resolve_ticket_id(ticket_id)?;
 

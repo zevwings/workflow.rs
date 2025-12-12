@@ -17,6 +17,9 @@ out/
 # IDE - RustRover
 .rustrover/
 
+# IDE - Cursor
+.cursor/
+
 # macOS
 .DS_Store
 .AppleDouble
