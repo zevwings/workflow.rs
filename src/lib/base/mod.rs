@@ -11,6 +11,7 @@
 //! - LLM 客户端（通用 LLM 接口）
 //! - Prompt 管理（统一管理 LLM Prompt）
 
+pub mod alias;
 pub mod concurrent;
 pub mod dialog;
 pub mod http;
@@ -23,6 +24,7 @@ pub mod shell;
 pub mod util;
 
 // 重新导出常用类型，方便使用
+pub use alias::{AliasManager, CommandsConfig};
 pub use concurrent::{ConcurrentExecutor, TaskResult};
 pub use dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};

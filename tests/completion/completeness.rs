@@ -31,6 +31,7 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "jira",
     "stash",
     "repo",
+    "alias",
 ];
 
 /// PR 子命令列表

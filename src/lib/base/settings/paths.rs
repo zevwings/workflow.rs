@@ -288,6 +288,13 @@ impl Paths {
         Ok(Self::config_dir()?.join("jira.toml"))
     }
 
+    /// 获取常用命令配置文件路径
+    ///
+    /// 返回 `~/.workflow/config/commands.toml` 的路径。
+    pub fn commands_config() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("commands.toml"))
+    }
+
     /// 获取项目级配置文件路径
     ///
     /// 返回当前工作目录下的 `.workflow/config.toml` 路径。

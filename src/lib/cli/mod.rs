@@ -6,6 +6,7 @@
 use clap::Parser;
 
 // 导入所有子命令枚举
+mod alias;
 mod branch;
 mod commands;
 mod commit;
@@ -22,6 +23,7 @@ mod stash;
 
 // 重新导出所有子命令枚举和主结构体，保持向后兼容
 // 这些导出是必需的，因为 bin/workflow.rs 需要使用它们进行命令分发
+pub use alias::AliasSubcommand;
 pub use branch::{BranchSubcommand, IgnoreSubcommand};
 pub use commands::Commands;
 pub use commit::CommitSubcommand;
