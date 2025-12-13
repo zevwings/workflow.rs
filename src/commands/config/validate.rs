@@ -5,7 +5,7 @@ use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::commands::config::helpers::parse_config;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -397,7 +397,10 @@ impl ConfigValidateCommand {
             config_path.file_name().and_then(|n| n.to_str()).unwrap_or("config"),
             timestamp
         );
-        let backup_path = config_path.parent().unwrap().join(backup_filename);
+        let backup_path = config_path
+            .parent()
+            .ok_or_else(|| eyre!("Config path has no parent directory: {:?}", config_path))?
+            .join(backup_filename);
 
         fs::copy(config_path, &backup_path)
             .wrap_err(format!("Failed to create backup: {:?}", backup_path))?;

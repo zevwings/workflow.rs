@@ -5,7 +5,7 @@
 //! - 检测远程仓库类型（GitHub、Codeup 等）
 //! - 获取远程仓库 URL
 
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
 
 use super::helpers::{check_success, cmd_read, cmd_run};
@@ -175,28 +175,44 @@ impl GitRepo {
         let github_ssh_re =
             Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").wrap_err("Invalid regex pattern")?;
         if let Some(caps) = github_ssh_re.captures(url) {
-            return Ok(caps.get(1).unwrap().as_str().to_string());
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from GitHub SSH URL: {}", url))?
+                .as_str()
+                .to_string());
         }
 
         // GitHub HTTPS 格式: https://github.com/owner/repo.git
         let github_https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
             .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = github_https_re.captures(url) {
-            return Ok(caps.get(1).unwrap().as_str().to_string());
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from GitHub HTTPS URL: {}", url))?
+                .as_str()
+                .to_string());
         }
 
         // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
         let codeup_ssh_re = Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
             .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = codeup_ssh_re.captures(url) {
-            return Ok(caps.get(1).unwrap().as_str().to_string());
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from Codeup SSH URL: {}", url))?
+                .as_str()
+                .to_string());
         }
 
         // Codeup HTTPS 格式: https://codeup.aliyun.com/owner/repo.git
         let codeup_https_re = Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
             .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = codeup_https_re.captures(url) {
-            return Ok(caps.get(1).unwrap().as_str().to_string());
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from Codeup HTTPS URL: {}", url))?
+                .as_str()
+                .to_string());
         }
 
         color_eyre::eyre::bail!("Failed to extract repo name from URL: {}", url)
