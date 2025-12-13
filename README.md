@@ -504,6 +504,22 @@ workflow stash pop                                # 应用并删除最新的 sta
 workflow stash push                               # 将当前工作区和暂存区的更改保存到 stash（可选消息）
 ```
 
+### 别名管理
+```bash
+# 列出所有别名
+workflow alias list                                # 列出所有已定义的别名
+
+# 添加别名
+workflow alias add <name> <command>                # 直接模式：添加别名（例如：workflow alias add ci "pr create"）
+workflow alias add                                 # 交互式模式：通过对话框输入别名名称和命令
+
+# 删除别名
+workflow alias remove <name>                       # 直接模式：删除指定别名
+workflow alias remove                              # 交互式模式：通过对话框选择要删除的别名
+```
+
+> **注意**：别名功能允许您为常用命令创建简短别名。例如，创建别名 `ci` 映射到 `pr create` 后，可以直接使用 `workflow ci` 来创建 PR。别名会在命令解析前自动展开。
+
 ### 安装命令
 ```bash
 install                            # 安装 Workflow CLI 到系统（默认安装二进制文件 + shell completions）

@@ -22,6 +22,7 @@ use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use indicatif::{ProgressBar, ProgressStyle};
+use std::collections::HashMap;
 use std::time::Duration;
 
 /// 初始化设置命令
@@ -686,6 +687,7 @@ impl SetupCommand {
     fn save_config(config: &CollectedConfig) -> Result<()> {
         // 构建 Settings 结构体
         let settings = Settings {
+            aliases: HashMap::new(),
             jira: JiraSettings {
                 email: config.jira_email.clone(),
                 api_token: config.jira_api_token.clone(),

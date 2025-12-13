@@ -6,6 +6,7 @@
 use clap::Parser;
 use color_eyre::Result;
 
+use workflow::commands::alias::{AliasAddCommand, AliasListCommand, AliasRemoveCommand};
 use workflow::commands::branch::{
     clean, create as branch_create, ignore, rename, switch, sync as branch_sync,
 };
@@ -30,12 +31,14 @@ use workflow::commands::repo::{setup as repo_setup, show as repo_show};
 use workflow::commands::stash::{apply, drop, list as stash_list, pop, push};
 
 use workflow::cli::{
-    BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
-    GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand,
-    LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand, StashSubcommand,
+    AliasSubcommand, BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand,
+    ConfigSubcommand, GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand,
+    LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand,
+    StashSubcommand,
 };
 use workflow::*;
 
+use workflow::base::alias::AliasManager;
 use workflow::base::settings::Settings;
 
 /// 主函数
@@ -58,7 +61,12 @@ fn main() -> Result<()> {
     // 初始化 tracing（从配置文件读取，统一管理）
     workflow::Tracer::init();
 
-    let cli = Cli::parse();
+    // 别名展开：在解析前展开别名
+    let args: Vec<String> = std::env::args().collect();
+    let expanded_args = AliasManager::expand_args(args)?;
+
+    // 使用展开后的参数重新解析
+    let cli = Cli::parse_from(expanded_args);
 
     match cli.command {
         // 代理管理命令
@@ -414,6 +422,12 @@ fn main() -> Result<()> {
             RepoSubcommand::Show => {
                 repo_show::RepoShowCommand::show()?;
             }
+        },
+        // 别名管理命令
+        Some(Commands::Alias { subcommand }) => match subcommand {
+            AliasSubcommand::List => AliasListCommand::list()?,
+            AliasSubcommand::Add { name, command } => AliasAddCommand::add(name, command)?,
+            AliasSubcommand::Remove { name } => AliasRemoveCommand::remove(name)?,
         },
         // 无命令时显示帮助信息
         None => {

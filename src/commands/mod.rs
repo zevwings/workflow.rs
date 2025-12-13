@@ -36,6 +36,7 @@ pub mod llm;
 pub mod proxy;
 
 // 业务功能
+pub mod alias;
 pub mod branch;
 pub mod commit;
 pub mod jira;

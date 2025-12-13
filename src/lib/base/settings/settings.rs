@@ -13,6 +13,7 @@ use crate::base::http::{Authorization, HttpClient, RequestConfig};
 use crate::jira::types::JiraUser;
 use crate::mask_sensitive_value;
 use crate::pr::GitHub;
+use std::collections::HashMap;
 
 use super::defaults::{
     default_download_base_dir_option, default_language, default_llm_provider, default_log_folder,
@@ -387,6 +388,9 @@ pub struct Settings {
     /// LLM 配置
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
+    /// 别名配置（TOML section: [aliases]）
+    #[serde(default)]
+    pub aliases: HashMap<String, String>,
 }
 
 impl Settings {
@@ -451,6 +455,7 @@ impl Settings {
                                                 github: old_settings.github,
                                                 log: old_settings.log,
                                                 llm,
+                                                aliases: HashMap::new(),
                                             }
                                         }
                                         Err(_) => Self::default(),
