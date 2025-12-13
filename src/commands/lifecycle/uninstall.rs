@@ -227,16 +227,52 @@ impl UninstallCommand {
             log_info!("  Completion script files removed");
         }
 
+        // 删除 completions 文件夹
+        let completion_dir = Paths::completion_dir();
+        if let Ok(dir) = completion_dir {
+            if dir.exists() {
+                // 先尝试删除空文件夹，如果失败（非空）则删除整个文件夹及其内容
+                match fs::remove_dir(&dir) {
+                    Ok(_) => {
+                        log_info!("  Removed: {}", dir.display());
+                    }
+                    Err(e) => {
+                        // 如果文件夹非空，使用 remove_dir_all 删除整个文件夹
+                        if e.kind() == std::io::ErrorKind::DirectoryNotEmpty {
+                            match fs::remove_dir_all(&dir) {
+                                Ok(_) => {
+                                    log_info!("  Removed: {}", dir.display());
+                                }
+                                Err(e2) => {
+                                    log_debug!(
+                                        "  Could not remove completions directory: {} ({})",
+                                        dir.display(),
+                                        e2
+                                    );
+                                }
+                            }
+                        } else {
+                            log_debug!(
+                                "  Could not remove completions directory: {} ({})",
+                                dir.display(),
+                                e
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
         let config_file_removed = Completion::remove_completion_config_file()?;
         if config_file_removed {
             log_info!(
                 "  Removed: {}",
-                Paths::workflow_dir()?.join(".completions").display()
+                Paths::local_base_dir()?.join(".completions").display()
             );
         } else {
             log_info!(
                 "  Completion config file not found: {}",
-                Paths::workflow_dir()?.join(".completions").display()
+                Paths::local_base_dir()?.join(".completions").display()
             );
         }
         // 移除所有 shell 的 completion 配置
@@ -388,7 +424,8 @@ impl UninstallCommand {
         }
 
         // 删除 jira-users.toml
-        if let Ok(jira_users_config_path) = Paths::jira_users_config() {
+        if let Ok(config_dir) = Paths::config_dir() {
+            let jira_users_config_path = config_dir.join("jira-users.toml");
             if jira_users_config_path.exists() {
                 fs::remove_file(&jira_users_config_path)
                     .wrap_err("Failed to remove jira-users.toml")?;

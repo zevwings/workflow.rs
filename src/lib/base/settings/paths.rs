@@ -104,7 +104,7 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建目录，返回相应的错误信息。
-    fn local_base_dir() -> Result<PathBuf> {
+    pub fn local_base_dir() -> Result<PathBuf> {
         let home = Self::home_dir()?;
         let workflow_dir = home.join(".workflow");
 
@@ -280,18 +280,12 @@ impl Paths {
         Ok(Self::config_dir()?.join("llm.toml"))
     }
 
-    /// 获取 Jira 状态配置文件路径
+    /// 获取 Jira 配置文件路径
     ///
-    /// 返回 `~/.workflow/config/jira-status.toml` 的路径。
-    pub fn jira_status_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("jira-status.toml"))
-    }
-
-    /// 获取 Jira 用户配置文件路径
-    ///
-    /// 返回 `~/.workflow/config/jira-users.toml` 的路径。
-    pub fn jira_users_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("jira-users.toml"))
+    /// 返回 `~/.workflow/config/jira.toml` 的路径。
+    /// 这是合并后的 Jira 配置文件，包含用户和状态配置。
+    pub fn jira_config() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("jira.toml"))
     }
 
     /// 获取项目级配置文件路径

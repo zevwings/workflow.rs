@@ -324,29 +324,6 @@ impl<T: Tabled> TableBuilder<T> {
             table_output
         }
     }
-
-    /// 构建并打印表格（已废弃，请使用 `render()` 并在 commands 层打印）
-    ///
-    /// # 弃用
-    ///
-    /// 此方法已废弃。请使用 `render()` 方法获取字符串，然后在 commands 层使用 `log_message!` 打印。
-    ///
-    /// # 示例
-    ///
-    /// ```rust,no_run
-    /// use workflow::base::util::TableBuilder;
-    /// use workflow::log_message;
-    /// # let data = vec![("name", "value")];
-    /// // 旧方式（已废弃）
-    /// TableBuilder::new(data.clone()).print();
-    ///
-    /// // 新方式
-    /// log_message!("{}", TableBuilder::new(data).render());
-    /// ```
-    #[deprecated(note = "Use render() instead and print in commands layer")]
-    pub fn print(self) {
-        println!("{}", self.render());
-    }
 }
 
 impl<T: Tabled> fmt::Display for TableBuilder<T> {

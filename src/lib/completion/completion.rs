@@ -51,10 +51,15 @@ pub struct CompletionRemovalResult {
 pub struct Completion;
 
 impl Completion {
-    /// 创建 workflow 配置文件目录
+    /// 创建 workflow 配置文件目录（强制本地路径）
+    ///
+    /// **重要**：completion 配置文件使用本地路径，不使用 iCloud 同步，因为：
+    /// - Shell 配置文件需要快速访问，不应该受 iCloud 同步延迟影响
+    /// - 每个设备的 shell 配置可能不同，不应该跨设备同步
+    /// - 代码中硬编码的 source 路径是 `$HOME/.workflow/.completions`，期望本地路径
     fn create_workflow_dir() -> Result<PathBuf> {
-        // 直接复用 Paths::workflow_dir()
-        Paths::workflow_dir()
+        // 强制使用本地路径，不使用 iCloud
+        Paths::local_base_dir()
     }
 
     /// 创建并写入 workflow completion 配置文件
@@ -383,8 +388,8 @@ impl Completion {
     pub fn remove_completion_config_file() -> Result<bool> {
         trace_debug!("Removing completion config file");
 
-        // 使用 Paths::workflow_dir()
-        let workflow_config_file = Paths::workflow_dir()?.join(".completions");
+        // 使用本地路径（强制本地，不使用 iCloud）
+        let workflow_config_file = Paths::local_base_dir()?.join(".completions");
 
         if workflow_config_file.exists() {
             fs::remove_file(&workflow_config_file).wrap_err_with(|| {

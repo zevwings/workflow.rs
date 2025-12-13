@@ -5,14 +5,12 @@
 //! - 交互式配置状态映射（PR 创建/合并时的状态）
 //! - 读取状态配置
 
-use std::collections::HashMap;
-
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 use super::api::project::JiraProjectApi;
-use super::config::ConfigManager;
+use super::config::{ConfigManager, JiraConfig};
 use super::helpers::extract_jira_project;
 use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
@@ -59,15 +57,6 @@ pub struct JiraStatusConfig {
     pub merged_pull_request_status: Option<String>,
 }
 
-/// Jira 状态配置存储格式（TOML 表）
-///
-/// TOML 格式示例：
-/// ```toml
-/// [PROJ]
-/// created-pr = "In Progress"
-/// merged-pr = "Done"
-/// ```
-type JiraStatusMap = HashMap<String, ProjectStatusConfig>;
 
 /// Jira 状态管理（用于 PR 流程）
 ///
@@ -221,7 +210,7 @@ impl JiraStatus {
 
     /// 读取 Jira 状态配置（内部方法）
     ///
-    /// 从配置文件中读取指定项目的状态配置。
+    /// 从 `jira.toml` 配置文件中读取指定项目的状态配置。
     ///
     /// # 参数
     ///
@@ -236,24 +225,29 @@ impl JiraStatus {
     ///
     /// 如果读取或解析文件失败，返回相应的错误信息。
     fn read_status_config(project: &str) -> Result<JiraStatusConfig> {
-        let config_path = Paths::jira_status_config()?;
-        let manager = ConfigManager::<JiraStatusMap>::new(config_path);
+        let config_path = Paths::jira_config()?;
+        let manager = ConfigManager::<JiraConfig>::new(config_path);
+        let config = manager.read()?;
 
-        let status_map = manager.read()?;
-        let project_config = status_map.get(project);
-
-        Ok(JiraStatusConfig {
-            project: project.to_string(),
-            created_pull_request_status: project_config
-                .and_then(|c| c.created_pull_request_status.clone()),
-            merged_pull_request_status: project_config
-                .and_then(|c| c.merged_pull_request_status.clone()),
-        })
+        if let Some(project_config) = config.status.get(project) {
+            Ok(JiraStatusConfig {
+                project: project.to_string(),
+                created_pull_request_status: project_config.created_pull_request_status.clone(),
+                merged_pull_request_status: project_config.merged_pull_request_status.clone(),
+            })
+        } else {
+            // 返回空配置
+            Ok(JiraStatusConfig {
+                project: project.to_string(),
+                created_pull_request_status: None,
+                merged_pull_request_status: None,
+            })
+        }
     }
 
     /// 写入 Jira 状态配置（内部方法）
     ///
-    /// 将状态配置写入配置文件。
+    /// 将状态配置写入 `jira.toml` 配置文件。
     /// 如果项目配置已存在，则更新；如果不存在，则创建新配置。
     ///
     /// # 参数
@@ -262,19 +256,19 @@ impl JiraStatus {
     ///
     /// # 行为
     ///
-    /// 1. 读取现有的状态配置（如果文件存在）
-    /// 2. 更新或插入项目配置
+    /// 1. 读取现有的 Jira 配置（如果文件存在）
+    /// 2. 更新或插入项目状态配置
     /// 3. 将更新后的配置写入文件（使用 pretty print 格式）
     ///
     /// # 错误
     ///
     /// 如果读取或写入文件失败，返回相应的错误信息。
     fn write_status_config(config: &JiraStatusConfig) -> Result<()> {
-        let config_path = Paths::jira_status_config()?;
-        let manager = ConfigManager::<JiraStatusMap>::new(config_path);
+        let config_path = Paths::jira_config()?;
+        let manager = ConfigManager::<JiraConfig>::new(config_path);
 
-        manager.update(|status_map| {
-            status_map.insert(
+        manager.update(|jira_config| {
+            jira_config.status.insert(
                 config.project.clone(),
                 ProjectStatusConfig {
                     created_pull_request_status: config.created_pull_request_status.clone(),

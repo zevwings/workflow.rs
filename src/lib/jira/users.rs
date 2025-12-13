@@ -5,20 +5,17 @@
 //! - 本地缓存用户信息到 `${HOME}/.workflow/config/jira-users.toml`
 //! - 优先使用本地缓存，减少 API 调用
 
-use color_eyre::{
-    eyre::{ContextCompat, WrapErr},
-    Result,
-};
+use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::base::settings::paths::Paths;
 
 use super::api::user::JiraUserApi;
-use super::config::ConfigManager;
+use super::config::{ConfigManager, JiraConfig, JiraUserEntry};
 use super::helpers::get_auth;
 use super::types::JiraUser;
 
-/// Jira 用户配置（TOML）
+/// 旧格式的 Jira 用户配置（用于向后兼容和迁移）
 ///
 /// TOML 格式示例：
 /// ```toml
@@ -39,17 +36,6 @@ struct JiraUsersConfig {
     users: Vec<JiraUserEntry>,
 }
 
-/// Jira 用户条目（TOML）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct JiraUserEntry {
-    /// 用户邮箱（必需，用于查找）
-    email: String,
-    /// 账户 ID
-    account_id: String,
-    /// 显示名称
-    display_name: String,
-}
-
 /// Jira 用户管理
 ///
 /// 提供用户信息获取和本地缓存功能：
@@ -61,7 +47,7 @@ pub struct JiraUsers;
 impl JiraUsers {
     /// 从本地 TOML 文件读取用户信息
     ///
-    /// 从 `jira-users.toml` 配置文件中读取指定邮箱的用户信息。
+    /// 优先从新的 `jira.toml` 配置文件中读取，如果不存在则从旧的 `jira-users.toml` 读取。
     ///
     /// # 参数
     ///
@@ -71,28 +57,40 @@ impl JiraUsers {
     ///
     /// 返回 `JiraUser` 结构体，如果文件不存在或用户不存在则返回错误。
     fn from_local(email: &str) -> Result<JiraUser> {
-        let config_path = Paths::jira_users_config()?;
-        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
-        let config = manager.read()?;
+        // 优先尝试从新的合并配置文件读取
+        let new_config_path = Paths::jira_config()?;
+        if new_config_path.exists() {
+            let manager = ConfigManager::<JiraConfig>::new(new_config_path);
+            let config = manager.read()?;
 
-        if config.users.is_empty() {
-            let config_path = Paths::jira_users_config()?;
-            color_eyre::eyre::bail!(
-                "Jira users config file does not exist or is empty: {:?}",
-                config_path
-            );
+            if let Some(user_entry) = config.users.iter().find(|u| u.email == email) {
+                return Ok(JiraUser {
+                    account_id: user_entry.account_id.clone(),
+                    display_name: user_entry.display_name.clone(),
+                    email_address: Some(user_entry.email.clone()),
+                });
+            }
         }
 
-        let user_entry = config.users.iter().find(|u| u.email == email).wrap_err(format!(
-            "User with email '{}' not found in jira-users.toml",
-            email
-        ))?;
+        // 回退到旧配置文件（用于迁移期间）
+        let config_dir = Paths::config_dir()?;
+        let old_config_path = config_dir.join("jira-users.toml");
+        if old_config_path.exists() {
+            let manager = ConfigManager::<JiraUsersConfig>::new(old_config_path.clone());
+            let config = manager.read()?;
 
-        Ok(JiraUser {
-            account_id: user_entry.account_id.clone(),
-            display_name: user_entry.display_name.clone(),
-            email_address: Some(user_entry.email.clone()),
-        })
+            if !config.users.is_empty() {
+                if let Some(user_entry) = config.users.iter().find(|u| u.email == email) {
+                    return Ok(JiraUser {
+                        account_id: user_entry.account_id.clone(),
+                        display_name: user_entry.display_name.clone(),
+                        email_address: Some(user_entry.email.clone()),
+                    });
+                }
+            }
+        }
+
+        color_eyre::eyre::bail!("User with email '{}' not found in Jira config files", email)
     }
 
     /// 从远程 API 获取用户信息并保存到本地
@@ -122,15 +120,15 @@ impl JiraUsers {
 
     /// 保存用户信息到本地 TOML 文件
     ///
-    /// 将用户信息添加到或更新到 `jira-users.toml` 配置文件中。
+    /// 将用户信息添加到或更新到 `jira.toml` 配置文件中。
     ///
     /// # 参数
     ///
     /// * `email` - 用户邮箱地址
     /// * `user` - JiraUser 结构体
     fn to_local(email: &str, user: &JiraUser) -> Result<()> {
-        let config_path = Paths::jira_users_config()?;
-        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
+        let config_path = Paths::jira_config()?;
+        let manager = ConfigManager::<JiraConfig>::new(config_path);
 
         manager.update(|config| {
             let email_to_save = user.email_address.as_deref().unwrap_or(email);

@@ -428,7 +428,7 @@ impl ConfigValidateCommand {
             Some("json") => serde_json::to_string_pretty(settings)
                 .wrap_err("Failed to serialize config to JSON")?,
             Some("yaml") | Some("yml") => {
-                serde_yaml::to_string(settings).wrap_err("Failed to serialize config to YAML")?
+                serde_saphyr::to_string(settings).wrap_err("Failed to serialize config to YAML")?
             }
             _ => toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?,
         };
