@@ -5,8 +5,8 @@
 use clap::Subcommand;
 
 use super::{
-    BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand, DryRunArgs,
-    GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
+    AliasSubcommand, BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
+    DryRunArgs, GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
     ProxySubcommand, RepoSubcommand, StashSubcommand,
 };
 
@@ -142,5 +142,12 @@ pub enum Commands {
     Repo {
         #[command(subcommand)]
         subcommand: RepoSubcommand,
+    },
+    /// Manage command aliases
+    ///
+    /// Create, list, and remove command aliases to simplify common commands.
+    Alias {
+        #[command(subcommand)]
+        subcommand: AliasSubcommand,
     },
 }

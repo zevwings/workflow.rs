@@ -223,6 +223,15 @@
 - 交互式选择界面（支持选择特定的 stash）
 - 冲突检测和处理（自动检测冲突并提供解决提示）
 
+#### [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
+**别名管理命令层架构文档**
+
+- Alias list 命令（列出所有别名）
+- Alias add 命令（添加别名，支持直接模式和交互式模式）
+- Alias remove 命令（删除别名，支持直接模式和交互式多选模式）
+- 别名展开功能（支持嵌套别名和循环检测）
+- 命令行参数展开（在命令解析前自动展开别名）
+
 #### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 **配置迁移命令层架构文档**
 
@@ -393,6 +402,7 @@
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
 - 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
 - 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+- 想了解别名管理命令？ → [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
 - 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
 - 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
 - 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
