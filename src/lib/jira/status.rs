@@ -57,7 +57,6 @@ pub struct JiraStatusConfig {
     pub merged_pull_request_status: Option<String>,
 }
 
-
 /// Jira 状态管理（用于 PR 流程）
 ///
 /// 提供 PR 创建和合并时的状态自动更新功能。
