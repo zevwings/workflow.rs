@@ -113,13 +113,11 @@ fn test_completion_dir_creation() {
 fn test_all_config_paths() {
     // 测试所有配置路径方法都能正常工作
     let workflow_config = Paths::workflow_config().unwrap();
-    let jira_status = Paths::jira_status_config().unwrap();
-    let jira_users = Paths::jira_users_config().unwrap();
+    let jira_config = Paths::jira_config().unwrap();
 
     // 验证所有路径都在同一个目录下
     let config_dir = workflow_config.parent().unwrap();
-    assert_eq!(config_dir, jira_status.parent().unwrap());
-    assert_eq!(config_dir, jira_users.parent().unwrap());
+    assert_eq!(config_dir, jira_config.parent().unwrap());
 
     // 验证目录存在
     assert!(config_dir.exists());

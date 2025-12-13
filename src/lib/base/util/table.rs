@@ -28,13 +28,14 @@
 //! ];
 //!
 //! // 链式调用方式
-//! TableBuilder::new(users.clone())
+//! let output = TableBuilder::new(users.clone())
 //!     .with_title("Users")
 //!     .with_style(TableStyle::Modern)
-//!     .print();
+//!     .render();
+//! println!("{}", output);
 //!
-//! // 或者使用便捷方法
-//! TableBuilder::new(users).print();
+//! // 或者使用 Display trait
+//! println!("{}", TableBuilder::new(users));
 //! ```
 
 use std::fmt;
@@ -148,12 +149,13 @@ fn fix_title_separator(table_output: String) -> String {
 ///     User { name: "Alice".to_string(), age: 30 },
 /// ];
 ///
-/// // 链式配置
-/// TableBuilder::new(users)
+/// // 链式配置并渲染
+/// let output = TableBuilder::new(users)
 ///     .with_title("Users List")
 ///     .with_style(TableStyle::Modern)
 ///     .with_max_width(80)
-///     .print();
+///     .render();
+/// println!("{}", output);
 /// ```
 pub struct TableBuilder<T> {
     data: Vec<T>,
@@ -323,29 +325,6 @@ impl<T: Tabled> TableBuilder<T> {
         } else {
             table_output
         }
-    }
-
-    /// 构建并打印表格（已废弃，请使用 `render()` 并在 commands 层打印）
-    ///
-    /// # 弃用
-    ///
-    /// 此方法已废弃。请使用 `render()` 方法获取字符串，然后在 commands 层使用 `log_message!` 打印。
-    ///
-    /// # 示例
-    ///
-    /// ```rust,no_run
-    /// use workflow::base::util::TableBuilder;
-    /// use workflow::log_message;
-    /// # let data = vec![("name", "value")];
-    /// // 旧方式（已废弃）
-    /// TableBuilder::new(data.clone()).print();
-    ///
-    /// // 新方式
-    /// log_message!("{}", TableBuilder::new(data).render());
-    /// ```
-    #[deprecated(note = "Use render() instead and print in commands layer")]
-    pub fn print(self) {
-        println!("{}", self.render());
     }
 }
 

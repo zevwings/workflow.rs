@@ -6,7 +6,7 @@ use crate::base::dialog::ConfirmDialog;
 use crate::commands::stash::helpers::select_stash_interactively;
 use crate::git::GitStash;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
 /// Stash pop command
 pub struct StashPopCommand;
@@ -26,7 +26,7 @@ impl StashPopCommand {
         }
 
         // 获取最新的 stash 信息
-        let latest_stash = entries.first().unwrap();
+        let latest_stash = entries.first().ok_or_else(|| eyre!("No stash entries available"))?;
         let latest_stash_ref = format!("stash@{{{}}}", latest_stash.index);
 
         // 第一步：提示是否应用最新的 stash

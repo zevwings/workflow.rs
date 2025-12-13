@@ -243,7 +243,10 @@ impl JiraAttachmentDownloader {
 
         // 如果只有一个任务，直接执行
         if tasks.len() == 1 {
-            let (name, task) = tasks.into_iter().next().unwrap();
+            let (name, task) = tasks
+                .into_iter()
+                .next()
+                .ok_or_else(|| eyre!("Expected exactly one task, but got none"))?;
             let result = match task() {
                 Ok(value) => {
                     if let Some(cb) = callback {

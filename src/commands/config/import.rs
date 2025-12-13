@@ -87,7 +87,10 @@ impl ImportTransaction {
 
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let backup_filename = format!("config.backup.{}.toml", timestamp);
-        let backup_path = config_path.parent().unwrap().join(backup_filename);
+        let backup_path = config_path
+            .parent()
+            .ok_or_else(|| eyre!("Config path has no parent directory: {:?}", config_path))?
+            .join(backup_filename);
 
         fs::copy(config_path, &backup_path)
             .wrap_err(format!("Failed to create backup: {:?}", backup_path))?;

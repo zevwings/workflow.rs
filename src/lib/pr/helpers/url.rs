@@ -3,7 +3,7 @@
 //! 提供从 URL 中提取 PR ID 和仓库信息的函数。
 
 use color_eyre::{
-    eyre::{ContextCompat, WrapErr},
+    eyre::{eyre, ContextCompat, WrapErr},
     Result,
 };
 use regex::Regex;
@@ -19,7 +19,11 @@ pub fn extract_pull_request_id_from_url(url: &str) -> Result<String> {
     let re = Regex::new(r"/(\d+)(?:/|$)").wrap_err("Invalid regex pattern")?;
     let caps = re.captures(url).wrap_err("Failed to extract PR ID from URL")?;
 
-    Ok(caps.get(1).unwrap().as_str().to_string())
+    Ok(caps
+        .get(1)
+        .ok_or_else(|| eyre!("Failed to extract PR ID from URL: {}", url))?
+        .as_str()
+        .to_string())
 }
 
 /// 从 Git remote URL 提取 GitHub 仓库的 owner/repo
@@ -39,14 +43,22 @@ pub fn extract_github_repo_from_url(url: &str) -> Result<String> {
     let ssh_re =
         Regex::new(r"git@github[^:]*:(.+?)(?:\.git)?$").wrap_err("Invalid regex pattern")?;
     if let Some(caps) = ssh_re.captures(url) {
-        return Ok(caps.get(1).unwrap().as_str().to_string());
+        return Ok(caps
+            .get(1)
+            .ok_or_else(|| eyre!("Failed to extract repo name from GitHub SSH URL: {}", url))?
+            .as_str()
+            .to_string());
     }
 
     // 匹配 HTTPS 格式: https://github.com/owner/repo.git
     let https_re = Regex::new(r"https?://(?:www\.)?github\.com/(.+?)(?:\.git)?/?$")
         .wrap_err("Invalid regex pattern")?;
     if let Some(caps) = https_re.captures(url) {
-        return Ok(caps.get(1).unwrap().as_str().to_string());
+        return Ok(caps
+            .get(1)
+            .ok_or_else(|| eyre!("Failed to extract repo name from GitHub HTTPS URL: {}", url))?
+            .as_str()
+            .to_string());
     }
 
     color_eyre::eyre::bail!("Failed to extract GitHub repo from URL: {}", url)

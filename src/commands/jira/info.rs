@@ -5,6 +5,7 @@ use crate::jira::Jira;
 use crate::{log_break, log_message};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
+use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
@@ -249,11 +250,13 @@ impl InfoCommand {
         Ok(())
     }
 
-    /// YAML 格式输出（暂时使用 JSON，后续可以添加 serde_yaml）
+    /// YAML 格式输出
     fn output_yaml(issue: &crate::jira::JiraIssue) -> Result<()> {
-        // 暂时使用 JSON 格式，因为项目中没有 serde_yaml
-        // 如果需要真正的 YAML 支持，需要添加 serde_yaml 依赖
-        Self::output_json(issue)
+        let mut output: HashMap<String, serde_json::Value> = HashMap::new();
+        output.insert("issue".to_string(), serde_json::to_value(issue)?);
+
+        log_message!("{}", serde_saphyr::to_string(&output)?);
+        Ok(())
     }
 
     /// Markdown 格式输出

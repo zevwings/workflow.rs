@@ -2,66 +2,30 @@
 //!
 //! 本模块提供了用户信息获取和本地缓存功能：
 //! - 从 Jira API 获取用户信息
-//! - 本地缓存用户信息到 `${HOME}/.workflow/config/jira-users.toml`
+//! - 本地缓存用户信息到 `${HOME}/.workflow/config/jira.toml`
 //! - 优先使用本地缓存，减少 API 调用
 
-use color_eyre::{
-    eyre::{ContextCompat, WrapErr},
-    Result,
-};
-use serde::{Deserialize, Serialize};
+use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::settings::paths::Paths;
 
 use super::api::user::JiraUserApi;
-use super::config::ConfigManager;
+use super::config::{ConfigManager, JiraConfig, JiraUserEntry};
 use super::helpers::get_auth;
 use super::types::JiraUser;
-
-/// Jira 用户配置（TOML）
-///
-/// TOML 格式示例：
-/// ```toml
-/// [[users]]  # 数组表（array of tables），可以包含多个用户条目
-/// email = "user@example.com"
-/// account_id = "628d9616269a9a0068f27e0c"
-/// display_name = "User Name"
-///
-/// [[users]]  # 第二个用户条目
-/// email = "another@example.com"
-/// account_id = "another_account_id"
-/// display_name = "Another User"
-/// ```
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-struct JiraUsersConfig {
-    /// 用户列表
-    #[serde(default)]
-    users: Vec<JiraUserEntry>,
-}
-
-/// Jira 用户条目（TOML）
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct JiraUserEntry {
-    /// 用户邮箱（必需，用于查找）
-    email: String,
-    /// 账户 ID
-    account_id: String,
-    /// 显示名称
-    display_name: String,
-}
 
 /// Jira 用户管理
 ///
 /// 提供用户信息获取和本地缓存功能：
 /// - 从 Jira API 获取用户信息
-/// - 本地缓存用户信息到 `${HOME}/.workflow/config/jira-users.toml`
+/// - 本地缓存用户信息到 `${HOME}/.workflow/config/jira.toml`
 /// - 优先使用本地缓存，减少 API 调用
 pub struct JiraUsers;
 
 impl JiraUsers {
     /// 从本地 TOML 文件读取用户信息
     ///
-    /// 从 `jira-users.toml` 配置文件中读取指定邮箱的用户信息。
+    /// 从 `jira.toml` 配置文件中读取指定邮箱的用户信息。
     ///
     /// # 参数
     ///
@@ -71,28 +35,19 @@ impl JiraUsers {
     ///
     /// 返回 `JiraUser` 结构体，如果文件不存在或用户不存在则返回错误。
     fn from_local(email: &str) -> Result<JiraUser> {
-        let config_path = Paths::jira_users_config()?;
-        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
+        let config_path = Paths::jira_config()?;
+        let manager = ConfigManager::<JiraConfig>::new(config_path);
         let config = manager.read()?;
 
-        if config.users.is_empty() {
-            let config_path = Paths::jira_users_config()?;
-            color_eyre::eyre::bail!(
-                "Jira users config file does not exist or is empty: {:?}",
-                config_path
-            );
+        if let Some(user_entry) = config.users.iter().find(|u| u.email == email) {
+            Ok(JiraUser {
+                account_id: user_entry.account_id.clone(),
+                display_name: user_entry.display_name.clone(),
+                email_address: Some(user_entry.email.clone()),
+            })
+        } else {
+            color_eyre::eyre::bail!("User with email '{}' not found in jira.toml", email)
         }
-
-        let user_entry = config.users.iter().find(|u| u.email == email).wrap_err(format!(
-            "User with email '{}' not found in jira-users.toml",
-            email
-        ))?;
-
-        Ok(JiraUser {
-            account_id: user_entry.account_id.clone(),
-            display_name: user_entry.display_name.clone(),
-            email_address: Some(user_entry.email.clone()),
-        })
     }
 
     /// 从远程 API 获取用户信息并保存到本地
@@ -122,15 +77,15 @@ impl JiraUsers {
 
     /// 保存用户信息到本地 TOML 文件
     ///
-    /// 将用户信息添加到或更新到 `jira-users.toml` 配置文件中。
+    /// 将用户信息添加到或更新到 `jira.toml` 配置文件中。
     ///
     /// # 参数
     ///
     /// * `email` - 用户邮箱地址
     /// * `user` - JiraUser 结构体
     fn to_local(email: &str, user: &JiraUser) -> Result<()> {
-        let config_path = Paths::jira_users_config()?;
-        let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
+        let config_path = Paths::jira_config()?;
+        let manager = ConfigManager::<JiraConfig>::new(config_path);
 
         manager.update(|config| {
             let email_to_save = user.email_address.as_deref().unwrap_or(email);
