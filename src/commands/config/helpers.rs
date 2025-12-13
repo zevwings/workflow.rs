@@ -101,7 +101,7 @@ pub fn parse_config(content: &str, path: &Path) -> Result<Settings> {
             serde_json::from_str::<Settings>(content).wrap_err("Failed to parse JSON config file")
         }
         "yaml" | "yml" => {
-            serde_yaml::from_str::<Settings>(content).wrap_err("Failed to parse YAML config file")
+            serde_saphyr::from_str::<Settings>(content).wrap_err("Failed to parse YAML config file")
         }
         _ => {
             // 尝试自动检测格式
@@ -109,7 +109,7 @@ pub fn parse_config(content: &str, path: &Path) -> Result<Settings> {
                 serde_json::from_str::<Settings>(content)
                     .wrap_err("Failed to parse JSON config file")
             } else if content.trim_start().starts_with("---") || content.contains(':') {
-                serde_yaml::from_str::<Settings>(content)
+                serde_saphyr::from_str::<Settings>(content)
                     .wrap_err("Failed to parse YAML config file")
             } else {
                 toml::from_str::<Settings>(content).wrap_err("Failed to parse TOML config file")

@@ -166,7 +166,9 @@ impl HttpRetry {
                                     error_desc
                                 );
                             }
-                            return Err(last_error.unwrap());
+                            return Err(last_error.ok_or_else(|| {
+                                eyre!("No error available but retryable check failed")
+                            })?);
                         }
                     }
 
@@ -233,7 +235,8 @@ impl HttpRetry {
         }
 
         // 所有重试都失败，返回最后一次的错误，并添加上下文信息
-        let final_error = last_error.unwrap();
+        let final_error =
+            last_error.ok_or_else(|| eyre!("All retries failed but no error available"))?;
         Err(final_error.wrap_err(format!(
             "{} failed after {} retries",
             operation_name, config.max_retries

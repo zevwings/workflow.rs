@@ -98,7 +98,7 @@ impl CommitSquashCommand {
                     after_oldest.find(']').map(|end_pos| after_oldest[..end_pos].to_string())
                 } else if option.starts_with('[') {
                     // 格式: "[def5678] message"
-                    let sha_start = option.find('[').unwrap() + 1;
+                    let sha_start = option.find('[')? + 1;
                     let sha_part = &option[sha_start..];
                     sha_part.find(']').map(|end_pos| sha_part[..end_pos].to_string())
                 } else {

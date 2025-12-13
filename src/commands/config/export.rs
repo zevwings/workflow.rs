@@ -371,7 +371,7 @@ impl ConfigExportCommand {
                             if no_secrets && jira.api_token.is_some() {
                                 jira.api_token = Some("***FILTERED***".to_string());
                             }
-                            serde_yaml::to_string(&jira)
+                            serde_saphyr::to_string(&jira)
                                 .wrap_err("Failed to serialize jira config to YAML")?
                         }
                         "github" => {
@@ -383,10 +383,10 @@ impl ConfigExportCommand {
                                     }
                                 }
                             }
-                            serde_yaml::to_string(&github)
+                            serde_saphyr::to_string(&github)
                                 .wrap_err("Failed to serialize github config to YAML")?
                         }
-                        "log" => serde_yaml::to_string(&config.log)
+                        "log" => serde_saphyr::to_string(&config.log)
                             .wrap_err("Failed to serialize log config to YAML")?,
                         "llm" => {
                             let mut llm = config.llm.clone();
@@ -401,7 +401,7 @@ impl ConfigExportCommand {
                                     llm.proxy.key = Some("***FILTERED***".to_string());
                                 }
                             }
-                            serde_yaml::to_string(&llm)
+                            serde_saphyr::to_string(&llm)
                                 .wrap_err("Failed to serialize llm config to YAML")?
                         }
                         _ => {
@@ -415,7 +415,7 @@ impl ConfigExportCommand {
                     } else {
                         config.clone()
                     };
-                    serde_yaml::to_string(&config_to_serialize)
+                    serde_saphyr::to_string(&config_to_serialize)
                         .wrap_err("Failed to serialize config to YAML")?
                 }
             }

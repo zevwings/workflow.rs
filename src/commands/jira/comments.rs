@@ -3,6 +3,7 @@ use crate::{log_break, log_debug, log_message};
 use chrono::{DateTime, FixedOffset};
 use color_eyre::{eyre::WrapErr, Result};
 use serde_json;
+use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
@@ -175,10 +176,17 @@ impl CommentsCommand {
         Ok(())
     }
 
-    /// YAML 格式输出（暂时使用 JSON）
-    fn output_yaml(comments: &Option<crate::jira::JiraComments>, jira_id: &str) -> Result<()> {
-        // 暂时使用 JSON 格式，因为项目中没有 serde_yaml
-        Self::output_json(comments, jira_id)
+    /// YAML 格式输出
+    fn output_yaml(comments: &Option<crate::jira::JiraComments>, _jira_id: &str) -> Result<()> {
+        let mut output: HashMap<String, serde_json::Value> = HashMap::new();
+        if let Some(comments_data) = comments {
+            output.insert("comments".to_string(), serde_json::to_value(comments_data)?);
+        } else {
+            output.insert("comments".to_string(), serde_json::json!([]));
+        }
+
+        log_message!("{}", serde_saphyr::to_string(&output)?);
+        Ok(())
     }
 
     /// Markdown 格式输出

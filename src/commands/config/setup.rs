@@ -20,7 +20,7 @@ use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
-use color_eyre::{eyre::WrapErr, Result};
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
@@ -179,7 +179,9 @@ impl SetupCommand {
                     account_added = true;
                     // 如果是第一个账号，自动设置为当前账号
                     if github_accounts.len() == 1 {
-                        let first_account = github_accounts.first().unwrap();
+                        let first_account = github_accounts
+                            .first()
+                            .ok_or_else(|| eyre!("Expected at least one GitHub account"))?;
                         github_current = Some(first_account.name.clone());
                         let _ =
                             GitConfig::set_global_user(&first_account.email, &first_account.name)?;
@@ -235,7 +237,9 @@ impl SetupCommand {
             log_message!("No GitHub accounts configured. Let's add one:");
             let account = collect_github_account()?;
             github_accounts.push(account);
-            let first_account = github_accounts.first().unwrap();
+            let first_account = github_accounts
+                .first()
+                .ok_or_else(|| eyre!("Expected at least one GitHub account"))?;
             github_current = Some(first_account.name.clone());
             let _ = GitConfig::set_global_user(&first_account.email, &first_account.name)?;
         }
