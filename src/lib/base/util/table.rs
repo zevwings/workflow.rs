@@ -28,13 +28,14 @@
 //! ];
 //!
 //! // 链式调用方式
-//! TableBuilder::new(users.clone())
+//! let output = TableBuilder::new(users.clone())
 //!     .with_title("Users")
 //!     .with_style(TableStyle::Modern)
-//!     .print();
+//!     .render();
+//! println!("{}", output);
 //!
-//! // 或者使用便捷方法
-//! TableBuilder::new(users).print();
+//! // 或者使用 Display trait
+//! println!("{}", TableBuilder::new(users));
 //! ```
 
 use std::fmt;
@@ -148,12 +149,13 @@ fn fix_title_separator(table_output: String) -> String {
 ///     User { name: "Alice".to_string(), age: 30 },
 /// ];
 ///
-/// // 链式配置
-/// TableBuilder::new(users)
+/// // 链式配置并渲染
+/// let output = TableBuilder::new(users)
 ///     .with_title("Users List")
 ///     .with_style(TableStyle::Modern)
 ///     .with_max_width(80)
-///     .print();
+///     .render();
+/// println!("{}", output);
 /// ```
 pub struct TableBuilder<T> {
     data: Vec<T>,
