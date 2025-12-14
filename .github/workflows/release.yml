@@ -1213,15 +1213,49 @@ jobs:
         with:
           path: artifacts
 
+      - name: Prepare release info
+        id: release_info
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          IS_MASTER="${{ needs.update-version.outputs.is_master_branch }}"
+
+          if [ "$IS_MASTER" == "true" ]; then
+            RELEASE_NAME="Release $VERSION"
+            RELEASE_BODY="## Release $VERSION
+
+            See the [changelog](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for details."
+          else
+            RELEASE_NAME="Pre-release $VERSION"
+            RELEASE_BODY="## Pre-release $VERSION
+
+            ⚠️ **This is a pre-release version** (alpha build)
+
+            See the [changelog](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for details."
+          fi
+
+          # 使用多行输出（使用 EOF 分隔符）
+          {
+            echo "name<<EOF"
+            echo "$RELEASE_NAME"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          {
+            echo "body<<EOF"
+            echo "$RELEASE_BODY"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+          echo "✅ Release name: $RELEASE_NAME"
+          echo "✅ Is pre-release: $([ "$IS_MASTER" != "true" ] && echo "true" || echo "false")"
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: Release ${{ steps.version.outputs.version }}
-          body: |
-            ## Release ${{ steps.version.outputs.version }}
-
-            See the [changelog](https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md) for details.
+          name: ${{ steps.release_info.outputs.name }}
+          body: ${{ steps.release_info.outputs.body }}
           files: |
             artifacts/**/*
           draft: false
