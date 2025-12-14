@@ -8,6 +8,8 @@
 - 对于分析、解释、讨论类的问题，仅提供文字回答，不要自动生成代码或文档文件
 - 如果用户只是询问问题或需要解释，不要主动创建文件或修改代码
 - **禁止性规则**：**在没有用户明确指示需要生成代码或文档的情况下，禁止通过 AI 自动生成任何代码文件或文档文件。仅提供分析、解释、建议等文字回答。**
+- **代码修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有代码文件。如需修改代码，必须先获得用户同意或用户明确说明需要修改。**
+- **文档修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有文档文件。如需修改文档，必须先获得用户同意或用户明确说明需要修改。**
 
 ## 项目概述
 
@@ -54,65 +56,9 @@
 - **错误处理**：使用 `anyhow::Result<T>` 和 `Context` 添加上下文
 - **文档注释**：所有公共 API 必须有 `///` 文档注释，包含参数、返回值、错误、示例
 
-**文档分类和存放位置**：
-
-根据文档类型，自动归类到对应目录：
-
-1. **架构设计文档** → `docs/architecture/`
-   - Lib 层模块架构文档 → `docs/architecture/lib/{MODULE}_ARCHITECTURE.md`
-   - 命令层模块架构文档 → `docs/architecture/commands/{MODULE}_COMMAND_ARCHITECTURE.md`
-   - 总体架构文档 → `docs/architecture/ARCHITECTURE.md`
-   - **识别关键词**：架构、架构设计、Architecture、模块架构、系统设计
-
-2. **开发指南和规范文档** → `docs/guidelines/`
-   - 开发规范 → `docs/guidelines/DEVELOPMENT_GUIDELINES.md`
-   - 文档编写指南 → `docs/guidelines/DOCUMENT_GUIDELINES.md`
-   - 测试指南 → `docs/guidelines/TESTING_GUIDELINES.md`
-   - 提交前检查指南 → `docs/guidelines/PRE_COMMIT_GUIDELINES.md`
-   - 其他指南文档 → `docs/guidelines/{TOPIC}_GUIDELINES.md`
-   - **识别关键词**：指南、规范、Guidelines、开发规范、测试规范、文档规范
-
-3. **版本迁移文档** → `docs/migration/`
-   - 迁移文档 → `docs/migration/{VERSION}-to-{VERSION}.md`
-   - 迁移索引 → `docs/migration/README.md`
-   - **识别关键词**：迁移、Migration、版本升级、配置迁移
-
-4. **待办事项文档** → `docs/todo/`
-   - TODO 文档 → `docs/todo/{TOPIC}_TODO.md`
-   - TODO 索引 → `docs/todo/README.md`
-   - **识别关键词**：TODO、待办、待实现、计划
-
-5. **分析报告文档** → `docs/report/`
-   - **特殊规则**：只有从 `@docs/guidelines/PRE_COMMIT_GUIDELINES.md` 生成的内容存放到这里
-   - 分析报告 → `docs/report/{TOPIC}_REPORT.md`
-   - **识别关键词**：分析报告、检查报告、代码分析、质量报告（且来源是 PRE_COMMIT_GUIDELINES.md）
-
-6. **需求分析文档（默认）** → `docs/requirements/`
-   - **默认存放位置**：如果文档类型不明确或未指定，默认存放到 `docs/requirements/`
-   - 需求文档 → `docs/requirements/{TOPIC}.md`
-   - **适用场景**：需求分析、功能说明、实现计划等未明确分类的文档
-
-**文档存放决策流程**：
-
-1. 检查用户是否明确指定了文档类型或存放位置
-2. 如果指定了类型，根据上述分类规则自动归类
-3. 如果未指定类型，检查文档内容中的关键词
-4. 如果无法确定类型，默认存放到 `docs/requirements/`
-
-**文档命名规范**：
-- 架构文档：`{MODULE}_ARCHITECTURE.md`（Lib 层）或 `{MODULE}_COMMAND_ARCHITECTURE.md`（命令层）
-- 指南文档：`{TOPIC}_GUIDELINES.md`
-- 迁移文档：`{VERSION}-to-{VERSION}.md`
-- TODO 文档：`{TOPIC}_TODO.md`
-- 报告文档：`{TOPIC}_REPORT.md`
-- 需求文档：`{TOPIC}.md` 或 `{TOPIC}_REQUIREMENT.md`
-
-**创建新文档时的注意事项**：
-- 使用模板创建新文档（参考 `docs/guidelines/DOCUMENT_GUIDELINES.md`）
-- 更新 `docs/README.md` 中的文档索引（如适用）
-- 确保文档遵循项目的文档编写规范
-
 ## 文档文件管理
+
+**核心原则**：**所有生成的文档文件，无论类型，都必须存放在 `docs/` 目录下。在没有明确指定存放位置的情况下，根据文档类型自动归类到 `docs/` 下的相应子目录；如果无法确定类型，默认存放到 `docs/requirements/`。**
 
 **重要规则**：所有文档文件必须存放在 `docs/` 目录下，禁止在项目根目录或其他位置创建文档文件。
 
