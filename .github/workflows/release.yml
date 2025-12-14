@@ -4,13 +4,11 @@ on:
   push:
     branches:
       - master  # 当合并到 master 分支时触发
+      # 排除 bump-version-* 分支，避免触发 release workflow
+      - '!bump-version-*'
     tags:
       - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
-  workflow_dispatch:  # 允许手动触发
-    inputs:
-      version:
-        description: 'Version tag (e.g., v0.1.0)'
-        required: true
+  workflow_dispatch:  # 允许手动触发（仅非 master 分支）
 
 # 配置工作流权限，允许创建 Release 和更新仓库
 permissions:
@@ -28,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -67,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -134,7 +132,7 @@ jobs:
     needs: [check-lint, tests]
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
-      github.event_name == 'workflow_dispatch'
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
     steps:
       - name: Check lint and test status
         run: |
@@ -154,13 +152,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: [check-status]
     if: |
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
       (github.ref == 'refs/heads/master' && github.event_name == 'push')
+    # 仅 master push 时需要 environment 批准，手动触发时不需要
+    environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'release' || null }}
     permissions:
       contents: write  # 允许创建和推送 tag
       pull-requests: write  # 允许创建和合并 PR（用于版本更新）
     outputs:
       tag: ${{ steps.job_outputs.outputs.tag }}
+      version: ${{ steps.job_outputs.outputs.version }}
       tag_created: ${{ steps.job_outputs.outputs.tag_created }}
 
     steps:
@@ -170,123 +171,137 @@ jobs:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
           # 使用默认的 GITHUB_TOKEN，有 contents: write 权限，可以推送 tag
 
-      - name: Get version from Cargo.toml
-        id: version
+      - name: Get latest version from git tags
+        id: get_latest_version
         shell: bash
         run: |
-          # 从 Cargo.toml 读取版本号
-          VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
-          if [ -z "$VERSION" ]; then
-            echo "❌ Error: Cannot read version from Cargo.toml"
-            exit 1
+          # 从 git tags 获取最新的标准版本号（排除 alpha/beta 预发布版本）
+          # 获取所有标准版本 tag（格式：vx.x.x），按版本号排序
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # 如果没有找到标准版本 tag，使用默认版本
+            LATEST_VERSION="0.0.0"
+            echo "⚠️  No standard version tag found, using default: $LATEST_VERSION"
+          else
+            # 移除 v 前缀
+            LATEST_VERSION=${LATEST_TAG#v}
+            echo "✅ Latest standard version from git tags: $LATEST_TAG ($LATEST_VERSION)"
           fi
-          TAG="v$VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
       - name: Detect branch type and trigger mode
         id: detect_mode
         shell: bash
         run: |
-          # 检测是否是 feature 分支
-          if [[ "${{ github.ref }}" == refs/heads/feature/* ]]; then
-            IS_FEATURE_BRANCH="true"
+          # 检测是否是 master 分支
+          if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
+            IS_MASTER_BRANCH="true"
+            SHOULD_CREATE_TAG="true"
           else
-            IS_FEATURE_BRANCH="false"
+            IS_MASTER_BRANCH="false"
+            SHOULD_CREATE_TAG="false"
           fi
 
           # 检测触发类型
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             IS_MANUAL_TRIGGER="true"
-            INPUT_VERSION="${{ github.event.inputs.version }}"
-            INPUT_VERSION=${INPUT_VERSION#v}
-
-            # 验证版本格式
-            if [[ "$IS_FEATURE_BRANCH" == "true" ]]; then
-              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.(alpha|beta)-[0-9]+$ ]]; then
-                echo "❌ Error: Feature branch version must be in format: vx.x.x.alpha-xxx or vx.x.x.beta-xxx"
-                exit 1
-              fi
-            else
-              if [[ ! "$INPUT_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                echo "❌ Error: Master branch version must be in standard format: vx.x.x"
-                exit 1
-              fi
-            fi
-
-            SHOULD_CREATE_TAG="false"
           else
             IS_MANUAL_TRIGGER="false"
-            if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
-              SHOULD_CREATE_TAG="true"
-            else
-              SHOULD_CREATE_TAG="false"
-            fi
           fi
 
-          echo "is_feature_branch=$IS_FEATURE_BRANCH" >> $GITHUB_OUTPUT
+          echo "is_master_branch=$IS_MASTER_BRANCH" >> $GITHUB_OUTPUT
           echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
           echo "should_create_tag=$SHOULD_CREATE_TAG" >> $GITHUB_OUTPUT
 
-      - name: Check if tag exists and increment version if needed
-        if: steps.detect_mode.outputs.should_create_tag == 'true'
-        id: check_tag
+      - name: Generate version number
+        id: generate_version
         shell: bash
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
+          LATEST_VERSION="${{ steps.get_latest_version.outputs.latest_version }}"
+          IS_MASTER="${{ steps.detect_mode.outputs.is_master_branch }}"
 
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            if [ "$(git rev-parse HEAD)" = "$(git rev-parse $TAG)" ]; then
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "needs_increment=false" >> $GITHUB_OUTPUT
-              echo "version=$VERSION" >> $GITHUB_OUTPUT
-              echo "tag=$TAG" >> $GITHUB_OUTPUT
+          if [[ "$IS_MASTER" == "true" ]]; then
+            # Master 分支：生成标准版本号
+            # 解析最新版本号
+            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+            MAJOR="${VERSION_PARTS[0]:-0}"
+            MINOR="${VERSION_PARTS[1]:-0}"
+            PATCH="${VERSION_PARTS[2]:-0}"
+
+            # 检查当前 commit 是否已有 tag
+            CURRENT_TAG="v$LATEST_VERSION"
+            if git rev-parse "$CURRENT_TAG" >/dev/null 2>&1; then
+              if [ "$(git rev-parse HEAD)" = "$(git rev-parse $CURRENT_TAG)" ]; then
+                # Tag 已存在且指向当前 commit，使用当前版本号
+                VERSION="$LATEST_VERSION"
+                TAG="$CURRENT_TAG"
+                NEEDS_INCREMENT="false"
+              else
+                # Tag 存在但指向其他 commit，需要递增版本号
+                PATCH=$((PATCH + 1))
+                VERSION="$MAJOR.$MINOR.$PATCH"
+                TAG="v$VERSION"
+                NEEDS_INCREMENT="true"
+              fi
             else
-              echo "exists=true" >> $GITHUB_OUTPUT
-              echo "needs_increment=true" >> $GITHUB_OUTPUT
-
-              # 自动递增 patch 版本号 (0.0.1 -> 0.0.2)
-              IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
-              MAJOR="${VERSION_PARTS[0]:-0}"
-              MINOR="${VERSION_PARTS[1]:-0}"
-              PATCH="${VERSION_PARTS[2]:-0}"
-
-              PATCH=$((PATCH + 1))
-              if [ $PATCH -gt 9 ]; then
-                PATCH=0
-                MINOR=$((MINOR + 1))
-              fi
-
-              if [ $MINOR -gt 9 ]; then
-                MINOR=0
-                MAJOR=$((MAJOR + 1))
-              fi
-
-              NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-              NEW_TAG="v$NEW_VERSION"
-
-              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-              echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-              echo "old_version=$VERSION" >> $GITHUB_OUTPUT
-              echo "old_tag=$TAG" >> $GITHUB_OUTPUT
+              # Tag 不存在，使用当前版本号
+              VERSION="$LATEST_VERSION"
+              TAG="$CURRENT_TAG"
+              NEEDS_INCREMENT="false"
             fi
+
+            echo "✅ Master branch: Generated version $VERSION ($TAG)"
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
-            echo "needs_increment=false" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            # 非 Master 分支：生成预发布版本号 (vx.x.x.alpha-xxx)
+            # 基于最新版本号 + 1 的 patch 版本
+            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+            MAJOR="${VERSION_PARTS[0]:-0}"
+            MINOR="${VERSION_PARTS[1]:-0}"
+            PATCH="${VERSION_PARTS[2]:-0}"
+
+            # Patch 版本号 + 1
+            PATCH=$((PATCH + 1))
+            BASE_VERSION="$MAJOR.$MINOR.$PATCH"
+
+            # 查找该基础版本的所有 alpha 预发布版本
+            ALPHA_PATTERN="v${BASE_VERSION}.alpha-[0-9]*"
+            EXISTING_ALPHAS=$(git tag -l "$ALPHA_PATTERN" | sort -V)
+
+            if [ -z "$EXISTING_ALPHAS" ]; then
+              # 没有现有的 alpha 版本，从 001 开始
+              ALPHA_NUM=1
+            else
+              # 找到最大的 alpha 编号并递增
+              LAST_ALPHA=$(echo "$EXISTING_ALPHAS" | tail -1)
+              ALPHA_NUM=$(echo "$LAST_ALPHA" | grep -oE 'alpha-[0-9]+' | grep -oE '[0-9]+')
+              ALPHA_NUM=$((ALPHA_NUM + 1))
+            fi
+
+            # 格式化 alpha 编号为 3 位数字（001, 002, ...）
+            ALPHA_NUM_FORMATTED=$(printf "%03d" $ALPHA_NUM)
+            VERSION="${BASE_VERSION}.alpha-${ALPHA_NUM_FORMATTED}"
+            TAG="v$VERSION"
+            NEEDS_INCREMENT="false"
+
+            echo "✅ Non-master branch: Generated pre-release version $VERSION ($TAG)"
           fi
 
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "needs_increment=$NEEDS_INCREMENT" >> $GITHUB_OUTPUT
+
       - name: Setup Rust
-        if: steps.check_tag.outputs.needs_increment == 'true'
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Update Cargo.toml and Cargo.lock version
-        if: steps.check_tag.outputs.needs_increment == 'true'
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         run: |
-          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          NEW_VERSION="${{ steps.generate_version.outputs.version }}"
 
           # 更新 Cargo.toml 中的版本号
           if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -316,7 +331,7 @@ jobs:
           fi
 
       - name: Create and merge version update pull request
-        if: steps.check_tag.outputs.needs_increment == 'true'
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         env:
           # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
@@ -326,7 +341,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          NEW_VERSION="${{ steps.check_tag.outputs.version }}"
+          NEW_VERSION="${{ steps.generate_version.outputs.version }}"
           BRANCH_NAME="bump-version-${NEW_VERSION}"
 
           # 第一步：创建新分支
@@ -522,10 +537,10 @@ jobs:
       - name: Create and push tag
         if: |
           steps.detect_mode.outputs.should_create_tag == 'true' &&
-          (steps.check_tag.outputs.exists == 'false' || steps.check_tag.outputs.needs_increment == 'true')
+          steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         run: |
-          TAG="${{ steps.check_tag.outputs.tag }}"
+          TAG="${{ steps.generate_version.outputs.tag }}"
           echo "Creating tag: $TAG"
 
           # 配置 Git
@@ -575,48 +590,43 @@ jobs:
         id: job_outputs
         shell: bash
         run: |
-          # 如果是 feature 分支手动触发，使用 version 步骤的 outputs，不创建 tag
-          if [[ "${{ steps.detect_mode.outputs.is_feature_branch }}" == "true" && "${{ steps.detect_mode.outputs.is_manual_trigger }}" == "true" ]]; then
-            TAG="${{ steps.version.outputs.tag }}"
-            TAG_CREATED="false"
-            echo "ℹ️  Feature branch manual trigger: using version from Cargo.toml, tag_created=false"
-          elif [[ "${{ steps.detect_mode.outputs.should_create_tag }}" == "true" ]]; then
-            # 正常流程：使用 check_tag 的 outputs
-            TAG="${{ steps.check_tag.outputs.tag }}"
-            TAG_CREATED="false"
-            if [ "${{ steps.check_tag.outputs.exists }}" == "false" ] || [ "${{ steps.check_tag.outputs.needs_increment }}" == "true" ]; then
+          VERSION="${{ steps.generate_version.outputs.version }}"
+          TAG="${{ steps.generate_version.outputs.tag }}"
+
+          # 只有 master 分支才创建 tag
+          if [[ "${{ steps.detect_mode.outputs.is_master_branch }}" == "true" ]]; then
+            # Master 分支：检查是否创建了新 tag
+            if [ "${{ steps.generate_version.outputs.needs_increment }}" == "true" ]; then
+              # 需要递增版本号，会创建新 tag
               TAG_CREATED="true"
+            else
+              # 检查 tag 是否已存在
+              if git rev-parse "$TAG" >/dev/null 2>&1; then
+                TAG_CREATED="false"
+              else
+                TAG_CREATED="true"
+              fi
             fi
           else
-            # 其他情况（不应该到达这里，但为了安全）
-            TAG="${{ steps.version.outputs.tag }}"
+            # 非 Master 分支：不创建 tag
             TAG_CREATED="false"
-            echo "⚠️  Unexpected condition, using version from Cargo.toml"
+            echo "ℹ️  Non-master branch: tag_created=false (pre-release version: $TAG)"
           fi
 
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "tag_created=$TAG_CREATED" >> $GITHUB_OUTPUT
-          echo "✅ Job outputs set: tag=$TAG, tag_created=$TAG_CREATED"
+          echo "✅ Job outputs set: version=$VERSION, tag=$TAG, tag_created=$TAG_CREATED"
 
-      - name: Skip tag creation
-        if: |
-          steps.detect_mode.outputs.should_create_tag == 'true' &&
-          steps.check_tag.outputs.exists == 'true' &&
-          steps.check_tag.outputs.needs_increment == 'false'
+      - name: Skip tag creation (non-master branch)
+        if: steps.detect_mode.outputs.is_master_branch == 'false'
         shell: bash
         run: |
-          echo "⏭️  Skipping tag creation: tag ${{ steps.check_tag.outputs.tag }} already exists and points to current commit"
-
-      - name: Skip tag creation (feature branch)
-        if: |
-          steps.detect_mode.outputs.is_feature_branch == 'true' &&
-          steps.detect_mode.outputs.is_manual_trigger == 'true'
-        shell: bash
-        run: |
-          echo "ℹ️  Feature branch manual trigger: skipping tag creation"
+          echo "ℹ️  Non-master branch: skipping tag creation"
           echo "   Branch: ${{ github.ref }}"
-          echo "   Version: ${{ steps.version.outputs.version }}"
-          echo "   Tag: ${{ steps.version.outputs.tag }}"
+          echo "   Version: ${{ steps.generate_version.outputs.version }}"
+          echo "   Tag: ${{ steps.generate_version.outputs.tag }}"
+          echo "   Note: Pre-release versions are tracked via GitHub Releases, not git tags"
 
   # 构建所有平台的二进制文件
   build:
@@ -624,7 +634,7 @@ jobs:
     needs: [check-status, create-tag]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
     strategy:
       fail-fast: false
@@ -660,41 +670,29 @@ jobs:
           # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
           ref: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
 
-      - name: Get version from tag
+      - name: Get version from create-tag job
         id: version
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-            # 移除 v 前缀（如果有）
-            VERSION=${VERSION#v}
+          # 统一从 create-tag job 的 outputs 获取版本号
+          if [ -n "${{ needs.create-tag.outputs.version }}" ]; then
+            VERSION="${{ needs.create-tag.outputs.version }}"
+            TAG="${{ needs.create-tag.outputs.tag }}"
+            echo "✅ Using version from create-tag job: $VERSION ($TAG)"
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # 从标签获取版本号
-            VERSION=${GITHUB_REF#refs/tags/}
-            # 移除 v 前缀（如果有）
-            VERSION=${VERSION#v}
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
-            # 从 create-tag job 的 outputs 获取版本号
-            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
-              VERSION="${{ needs.create-tag.outputs.tag }}"
-              # 移除 v 前缀（如果有）
-              VERSION=${VERSION#v}
-            else
-              # 如果 outputs 不可用，从 Cargo.toml 读取
-              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
-              if [ -z "$VERSION" ]; then
-                echo "❌ Error: Cannot read version from Cargo.toml"
-                exit 1
-              fi
-            fi
+            # Tag push 触发：从 tag 获取版本号（create-tag job 未运行）
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION=${TAG#v}
+            echo "✅ Using version from tag push: $VERSION ($TAG)"
           else
             echo "❌ Error: Cannot determine version from context"
             exit 1
           fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Version: $VERSION"
-          echo "✅ Tag: v$VERSION"
+          echo "✅ Tag: $TAG"
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -1255,7 +1253,9 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+    environment: release-confirm
     permissions:
       contents: write  # 允许创建 Release 和上传文件
       pull-requests: read  # 读取 PR（如果需要）
@@ -1266,41 +1266,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get version from tag
+      - name: Get version from create-tag job
         id: version
         shell: bash
         run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ github.event.inputs.version }}"
-            # 移除 v 前缀（如果有）
-            VERSION=${VERSION#v}
+          # 统一从 create-tag job 的 outputs 获取版本号
+          if [ -n "${{ needs.create-tag.outputs.version }}" ]; then
+            VERSION="${{ needs.create-tag.outputs.version }}"
+            TAG="${{ needs.create-tag.outputs.tag }}"
+            echo "✅ Using version from create-tag job: $VERSION ($TAG)"
           elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # 从标签获取版本号
-            VERSION=${GITHUB_REF#refs/tags/}
-            # 移除 v 前缀（如果有）
-            VERSION=${VERSION#v}
-          elif [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/master" ]]; then
-            # 从 create-tag job 的 outputs 获取版本号
-            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
-              VERSION="${{ needs.create-tag.outputs.tag }}"
-              # 移除 v 前缀（如果有）
-              VERSION=${VERSION#v}
-            else
-              # 如果 outputs 不可用，从 Cargo.toml 读取
-              VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
-              if [ -z "$VERSION" ]; then
-                echo "❌ Error: Cannot read version from Cargo.toml"
-                exit 1
-              fi
-            fi
+            # Tag push 触发：从 tag 获取版本号（create-tag job 未运行）
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION=${TAG#v}
+            echo "✅ Using version from tag push: $VERSION ($TAG)"
           else
             echo "❌ Error: Cannot determine version from context"
             exit 1
           fi
+
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Version: $VERSION"
-          echo "✅ Tag: v$VERSION"
+          echo "✅ Tag: $TAG"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -1468,9 +1456,11 @@ jobs:
     name: Run update-homebrew
     needs: [create-tag, build, release]
     runs-on: ubuntu-latest
+    # 只在 master 分支执行（tag push 或 master push）
     if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+      (startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')) &&
+      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
     permissions:
       contents: write  # 允许推送到 homebrew-workflow 仓库
 
@@ -1509,23 +1499,26 @@ jobs:
             # 是 branch push 触发的 workflow（非 master，或 master 但没有创建 tag）
             INSTALL_TYPE="branch"
             VERSION_REF="${GITHUB_REF#refs/heads/}"
-            # 对于 branch，版本号可以从 workflow_dispatch input 或使用默认版本
-            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-              VERSION="${{ github.event.inputs.version }}"
+            # 从 create-tag job 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.version }}" ]; then
+              VERSION="${{ needs.create-tag.outputs.version }}"
             else
-              # 对于 branch，使用默认版本号（因为 branch 名可能包含特殊字符，不适合作为 version）
-              # 可以将 branch 名转换为有效的版本号格式，或使用固定的开发版本号
-              # 例如：zw/update-completions -> 0.0.0-dev (或者使用日期等)
-              VERSION="0.0.0-dev"
+              echo "❌ Error: Cannot determine version from create-tag job"
+              exit 1
             fi
             echo "✅ Detected as BRANCH: $VERSION_REF"
             echo "ℹ️  Using default version for branch: $VERSION"
           elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            # 手动触发，默认使用 tag
-            INSTALL_TYPE="tag"
-            VERSION_REF="${{ github.event.inputs.version }}"
-            VERSION="${VERSION_REF#v}"
-            echo "✅ Manual trigger, using as TAG: $VERSION_REF"
+            # 手动触发，从 create-tag job 获取版本号
+            if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+              INSTALL_TYPE="tag"
+              VERSION_REF="${{ needs.create-tag.outputs.tag }}"
+              VERSION="${{ needs.create-tag.outputs.version }}"
+              echo "✅ Manual trigger, using version from create-tag job: $VERSION_REF"
+            else
+              echo "❌ Error: Cannot determine version from create-tag job"
+              exit 1
+            fi
           else
             echo "❌ Error: Cannot determine install type from ${{ github.ref }}"
             exit 1
