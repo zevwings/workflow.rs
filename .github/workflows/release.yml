@@ -159,7 +159,6 @@ jobs:
       tag: ${{ steps.generate_version.outputs.tag }}
       needs_increment: ${{ steps.generate_version.outputs.needs_increment }}
       is_master_branch: ${{ steps.detect_mode.outputs.is_master_branch }}
-      should_create_tag: ${{ steps.detect_mode.outputs.should_create_tag }}
 
     steps:
       - name: Checkout code
@@ -196,11 +195,8 @@ jobs:
           # 检测是否是 master 分支
           if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
             IS_MASTER_BRANCH="true"
-            SHOULD_CREATE_TAG="true"
           else
             IS_MASTER_BRANCH="false"
-            # 非 master 分支也创建 tag（用于 pre-release）
-            SHOULD_CREATE_TAG="true"
           fi
 
           # 检测触发类型
@@ -212,7 +208,6 @@ jobs:
 
           echo "is_master_branch=$IS_MASTER_BRANCH" >> $GITHUB_OUTPUT
           echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
-          echo "should_create_tag=$SHOULD_CREATE_TAG" >> $GITHUB_OUTPUT
 
       - name: Generate version number
         id: generate_version
@@ -839,8 +834,7 @@ jobs:
     if: |
       needs.update-version.result == 'success' &&
       needs.build.result == 'success' &&
-      needs.release-confirm.result == 'success' &&
-      needs.update-version.outputs.should_create_tag == 'true'
+      needs.release-confirm.result == 'success'
     permissions:
       contents: write
       pull-requests: write
