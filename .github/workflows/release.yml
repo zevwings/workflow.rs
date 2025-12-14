@@ -838,6 +838,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      workflows: write  # 允许创建指向包含 workflow 文件更改的 commit 的 tag
     outputs:
       tag: ${{ steps.job_outputs.outputs.tag }}
       version: ${{ steps.job_outputs.outputs.version }}
