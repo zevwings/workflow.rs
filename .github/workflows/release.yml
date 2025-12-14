@@ -845,7 +845,7 @@ jobs:
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
       pr_url: ${{ steps.create_pr.outputs.pr_url }}
       pr_merged: ${{ steps.merge_pr.outputs.pr_merged }}
-      merge_commit_sha: ${{ steps.merge_pr.outputs.merge_commit_sha }}
+      merge_commit_sha: ${{ steps.get_merge_sha.outputs.merge_commit_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -975,35 +975,62 @@ jobs:
           echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
       # Step 2: Merge version update PR (only if needs_increment is true and master branch)
-      - name: Merge version update pull request
-        id: merge_pr
+      - name: Wait for PR status update
+        id: wait_pr_status
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        shell: bash
+        run: |
+          echo "⏳ Waiting 30s for PR status to be updated and CI to complete..."
+          sleep 30
+
+      - name: Check PR mergeable status
+        id: check_pr_status
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
-          PR_URL="${{ steps.create_pr.outputs.pr_url }}"
-          NEW_VERSION="${{ needs.update-version.outputs.version }}"
 
           if [ -z "$PR_NUMBER" ]; then
             echo "❌ Error: PR_NUMBER is not set"
             exit 1
           fi
 
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "Step 2: Merging version update PR"
-          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "ℹ️  Using GITHUB_TOKEN to merge PR (workflow has pull-requests: write permission)"
+          # 使用 GITHUB_TOKEN 检查 PR 状态（默认 token，有 read 权限）
+          PR_STATUS=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
 
-          # 初始等待时间，让 GitHub 有时间更新 PR 状态和触发 CI
-          echo "⏳ Waiting 30s for PR status to be updated..."
-          sleep 30
+          MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+          MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
 
-          # 等待 PR 可合并（最多等待 5 分钟，每 5 秒检查一次）
+          echo "merged=$MERGED" >> $GITHUB_OUTPUT
+          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
+
+      - name: Wait for PR to be mergeable
+        id: wait_mergeable
+        if: |
+          needs.update-version.outputs.needs_increment == 'true' &&
+          needs.update-version.outputs.is_master_branch == 'true' &&
+          steps.check_pr_status.outputs.merged != 'true' &&
+          (steps.check_pr_status.outputs.mergeable == 'null' || steps.check_pr_status.outputs.mergeable == 'false')
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
           MAX_WAIT=300
-          CHECK_INTERVAL=5
-          ELAPSED=30  # 从 30 秒开始计数，因为已经等待了 30 秒
+          INITIAL_CHECK_INTERVAL=3  # 前 60 秒每 3 秒检查一次
+          NORMAL_CHECK_INTERVAL=5   # 之后每 5 秒检查一次
+          ELAPSED=30  # 从 30 秒开始计数（已等待 CI 完成）
 
           while [ $ELAPSED -lt $MAX_WAIT ]; do
+            # 动态调整检查间隔（前 60 秒更频繁检查）
+            if [ $ELAPSED -lt 60 ]; then
+              CHECK_INTERVAL=$INITIAL_CHECK_INTERVAL
+            else
+              CHECK_INTERVAL=$NORMAL_CHECK_INTERVAL
+            fi
+
             # 使用 GITHUB_TOKEN 检查 PR 状态（默认 token，有 read 权限）
             PR_STATUS=$(curl -s \
               -H "Accept: application/vnd.github+json" \
@@ -1017,20 +1044,33 @@ jobs:
             if [ "$MERGED" = "true" ]; then
               echo "✅ PR already merged"
 
-              # 获取合并后的 commit SHA（从 PR API）
+              # 获取合并后的 commit SHA（从 PR API）- 使用轮询替代固定等待
               echo "Step 2.1: Getting merge commit SHA from PR API..."
-              PR_INFO=$(curl -s \
-                -H "Accept: application/vnd.github+json" \
-                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+              MERGE_SHA_MAX_WAIT=10  # 最多等待 10 秒
+              MERGE_SHA_ELAPSED=0
+              MERGE_SHA_INTERVAL=1   # 每秒检查一次
+              MERGE_COMMIT_SHA=""
 
-              MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
-              if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
-                echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA"
-                echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
-              else
-                echo "⚠️  Warning: Could not get merge_commit_sha from PR API, will use git pull method"
+              while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
+                sleep $MERGE_SHA_INTERVAL
+                MERGE_SHA_ELAPSED=$((MERGE_SHA_ELAPSED + MERGE_SHA_INTERVAL))
+
+                PR_INFO=$(curl -s \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+                MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+                if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+                  echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA (after ${MERGE_SHA_ELAPSED}s)"
+                  echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+                  break
+                fi
+              done
+
+              if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
+                echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s, will use git pull method"
                 echo "merge_commit_sha=" >> $GITHUB_OUTPUT
               fi
 
@@ -1082,21 +1122,33 @@ jobs:
               if [ "$MERGE_CODE" = "200" ]; then
                 echo "✅ PR merged successfully"
 
-                # 获取合并后的 commit SHA（从 PR API）
+                # 获取合并后的 commit SHA（从 PR API）- 使用轮询替代固定等待
                 echo "Step 2.1: Getting merge commit SHA from PR API..."
-                sleep 2  # 等待 GitHub 处理合并
-                PR_INFO=$(curl -s \
-                  -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                  -H "X-GitHub-Api-Version: 2022-11-28" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+                MERGE_SHA_MAX_WAIT=10  # 最多等待 10 秒
+                MERGE_SHA_ELAPSED=0
+                MERGE_SHA_INTERVAL=1   # 每秒检查一次
+                MERGE_COMMIT_SHA=""
 
-                MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
-                if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
-                  echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA"
-                  echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
-                else
-                  echo "⚠️  Warning: Could not get merge_commit_sha from PR API, will use git pull method"
+                while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
+                  sleep $MERGE_SHA_INTERVAL
+                  MERGE_SHA_ELAPSED=$((MERGE_SHA_ELAPSED + MERGE_SHA_INTERVAL))
+
+                  PR_INFO=$(curl -s \
+                    -H "Accept: application/vnd.github+json" \
+                    -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                    -H "X-GitHub-Api-Version: 2022-11-28" \
+                    "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+                  MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+                  if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+                    echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA (after ${MERGE_SHA_ELAPSED}s)"
+                    echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+                    break
+                  fi
+                done
+
+                if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
+                  echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s, will use git pull method"
                   echo "merge_commit_sha=" >> $GITHUB_OUTPUT
                 fi
 
@@ -1156,7 +1208,7 @@ jobs:
 
           # Master 分支：如果 PR 已合并，使用 merge_commit_sha 或拉取最新的 master 分支
           if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
-            MERGE_COMMIT_SHA="${{ steps.merge_pr.outputs.merge_commit_sha }}"
+            MERGE_COMMIT_SHA="${{ steps.get_merge_sha.outputs.merge_commit_sha }}"
 
             if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
               # 使用从 PR API 获取的 merge_commit_sha
