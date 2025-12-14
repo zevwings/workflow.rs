@@ -199,7 +199,8 @@ jobs:
             SHOULD_CREATE_TAG="true"
           else
             IS_MASTER_BRANCH="false"
-            SHOULD_CREATE_TAG="false"
+            # 非 master 分支也创建 tag（用于 pre-release）
+            SHOULD_CREATE_TAG="true"
           fi
 
           # 检测触发类型
@@ -839,8 +840,7 @@ jobs:
       needs.update-version.result == 'success' &&
       needs.build.result == 'success' &&
       needs.release-confirm.result == 'success' &&
-      needs.update-version.outputs.should_create_tag == 'true' &&
-      needs.update-version.outputs.is_master_branch == 'true'
+      needs.update-version.outputs.should_create_tag == 'true'
     permissions:
       contents: write
       pull-requests: write
@@ -864,10 +864,10 @@ jobs:
           name: updated-version-files
           path: .
 
-      # Step 1: Create version update PR (only if needs_increment is true)
+      # Step 1: Create version update PR (only if needs_increment is true and master branch)
       - name: Create version update pull request
         id: create_pr
-        if: needs.update-version.outputs.needs_increment == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
         env:
           WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
@@ -964,10 +964,10 @@ jobs:
 
           echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
-      # Step 2: Merge version update PR (only if needs_increment is true)
+      # Step 2: Merge version update PR (only if needs_increment is true and master branch)
       - name: Merge version update pull request
         id: merge_pr
-        if: needs.update-version.outputs.needs_increment == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
@@ -1093,6 +1093,8 @@ jobs:
         run: |
           TAG="${{ needs.update-version.outputs.tag }}"
           NEW_VERSION="${{ needs.update-version.outputs.version }}"
+          IS_MASTER="${{ needs.update-version.outputs.is_master_branch }}"
+          NEEDS_INCREMENT="${{ needs.update-version.outputs.needs_increment }}"
 
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "Step 3: Creating and pushing tag"
@@ -1103,8 +1105,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # 如果 PR 已合并，需要拉取最新的 master 分支
-          if [ "${{ needs.update-version.outputs.needs_increment }}" == "true" ]; then
+          # Master 分支：如果 PR 已合并，需要拉取最新的 master 分支
+          if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
             echo "Step 3.1: Fetching latest changes from origin (after PR merge)..."
             git fetch origin master:master 2>/dev/null || git fetch origin main:main 2>/dev/null || true
 
@@ -1113,16 +1115,14 @@ jobs:
 
             echo "Step 3.3: Pulling latest changes..."
             git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || true
-          fi
 
-          # 验证当前提交包含版本更新
-          echo "Step 3.4: Verifying current commit..."
-          LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
-          LATEST_COMMIT_SHA=$(git rev-parse HEAD)
-          echo "Latest commit SHA: $LATEST_COMMIT_SHA"
-          echo "Latest commit message: $LATEST_COMMIT_MSG"
+            # 验证当前提交包含版本更新
+            echo "Step 3.4: Verifying current commit..."
+            LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
+            LATEST_COMMIT_SHA=$(git rev-parse HEAD)
+            echo "Latest commit SHA: $LATEST_COMMIT_SHA"
+            echo "Latest commit message: $LATEST_COMMIT_MSG"
 
-          if [ "${{ needs.update-version.outputs.needs_increment }}" == "true" ]; then
             if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
               echo "✅ Found version bump commit on master"
             else
@@ -1130,10 +1130,18 @@ jobs:
               echo "   This might happen if PR was merged with a different commit message"
               echo "   Continuing to create tag on current commit..."
             fi
+          else
+            # 非 Master 分支：使用当前分支的 commit
+            echo "Step 3.1: Using current branch for tag creation (non-master branch)"
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
+            echo "Current branch: $CURRENT_BRANCH"
+            echo "Current commit SHA: $CURRENT_COMMIT_SHA"
           fi
 
-          # 创建 tag（基于当前 HEAD，即最新的 master 提交）
-          echo "Step 3.5: Creating tag $TAG on commit $LATEST_COMMIT_SHA..."
+          # 获取要创建 tag 的 commit SHA
+          TAG_COMMIT_SHA=$(git rev-parse HEAD)
+          echo "Step 3.5: Creating tag $TAG on commit $TAG_COMMIT_SHA..."
           git tag "$TAG"
 
           # 推送 tag（使用 GITHUB_TOKEN，workflow 有 contents: write 权限）
@@ -1150,11 +1158,13 @@ jobs:
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
           TAG="${{ needs.update-version.outputs.tag }}"
+          IS_MASTER="${{ needs.update-version.outputs.is_master_branch }}"
+          NEEDS_INCREMENT="${{ needs.update-version.outputs.needs_increment }}"
 
-          # 只有 master 分支才创建 tag
-          if [[ "${{ needs.update-version.outputs.is_master_branch }}" == "true" ]]; then
+          # 检查是否创建了新 tag
+          if [ "$IS_MASTER" == "true" ]; then
             # Master 分支：检查是否创建了新 tag
-            if [ "${{ needs.update-version.outputs.needs_increment }}" == "true" ]; then
+            if [ "$NEEDS_INCREMENT" == "true" ]; then
               # 需要递增版本号，会创建新 tag
               TAG_CREATED="true"
             else
@@ -1166,9 +1176,14 @@ jobs:
               fi
             fi
           else
-            # 非 Master 分支：不创建 tag
-            TAG_CREATED="false"
-            echo "ℹ️  Non-master branch: tag_created=false (pre-release version: $TAG)"
+            # 非 Master 分支：检查 tag 是否已存在
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              TAG_CREATED="false"
+              echo "ℹ️  Tag already exists: $TAG"
+            else
+              TAG_CREATED="true"
+              echo "ℹ️  Created new pre-release tag: $TAG"
+            fi
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
