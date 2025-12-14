@@ -6,8 +6,6 @@ on:
       - master  # 当合并到 master 分支时触发
       # 排除 bump-version-* 分支，避免触发 release workflow
       - '!bump-version-*'
-    tags:
-      - 'v*'  # 匹配所有以 v 开头的 tag，如 v0.1.0, v1.0.0
   workflow_dispatch:  # 允许手动触发（仅非 master 分支）
 
 # 配置工作流权限，允许创建 Release 和更新仓库
@@ -154,8 +152,7 @@ jobs:
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
       (github.ref == 'refs/heads/master' && github.event_name == 'push')
-    # 仅 master push 时需要 environment 批准，手动触发时不需要
-    environment: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' && 'release' || null }}
+    # 不需要 environment 批准：质量检查已通过，且 release job 有最终批准
     permissions:
       contents: write  # 允许创建和推送 tag
       pull-requests: write  # 允许创建和合并 PR（用于版本更新）
@@ -632,10 +629,10 @@ jobs:
   build:
     runs-on: ${{ matrix.os }}
     needs: [check-status, create-tag]
+    # 手动触发/ Master Push: 需要依赖成功
     if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.check-status.result == 'success' && needs.create-tag.result == 'success') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.check-status.result == 'success' && needs.create-tag.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
     strategy:
       fail-fast: false
       matrix:
@@ -667,7 +664,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           # 如果是 master push 且 create-tag 创建了新 tag，checkout 该 tag（包含更新后的 Cargo.toml）
-          # 否则 checkout 原始的 ref（tag push 或 workflow_dispatch 的情况）
+          # 否则 checkout 原始的 ref（workflow_dispatch 的情况）
           ref: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true' && needs.create-tag.outputs.tag) || github.ref }}
 
       - name: Get version from create-tag job
@@ -679,13 +676,8 @@ jobs:
             VERSION="${{ needs.create-tag.outputs.version }}"
             TAG="${{ needs.create-tag.outputs.tag }}"
             echo "✅ Using version from create-tag job: $VERSION ($TAG)"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Tag push 触发：从 tag 获取版本号（create-tag job 未运行）
-            TAG="${GITHUB_REF#refs/tags/}"
-            VERSION=${TAG#v}
-            echo "✅ Using version from tag push: $VERSION ($TAG)"
           else
-            echo "❌ Error: Cannot determine version from context"
+            echo "❌ Error: Cannot determine version from create-tag job"
             exit 1
           fi
 
@@ -1251,11 +1243,12 @@ jobs:
     name: Run create-release
     needs: [create-tag, build]
     runs-on: ubuntu-latest
+    # 手动触发/ Master Push: 需要依赖成功
     if: |
-      startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')
-    environment: release-confirm
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.create-tag.result == 'success' && needs.build.result == 'success') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
+    # 仅在非 master 分支时需要 environment 批准，master push 时自动发布
+    environment: ${{ github.ref != 'refs/heads/master' && 'release-confirm' || null }}
     permissions:
       contents: write  # 允许创建 Release 和上传文件
       pull-requests: read  # 读取 PR（如果需要）
@@ -1275,13 +1268,8 @@ jobs:
             VERSION="${{ needs.create-tag.outputs.version }}"
             TAG="${{ needs.create-tag.outputs.tag }}"
             echo "✅ Using version from create-tag job: $VERSION ($TAG)"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # Tag push 触发：从 tag 获取版本号（create-tag job 未运行）
-            TAG="${GITHUB_REF#refs/tags/}"
-            VERSION=${TAG#v}
-            echo "✅ Using version from tag push: $VERSION ($TAG)"
           else
-            echo "❌ Error: Cannot determine version from context"
+            echo "❌ Error: Cannot determine version from create-tag job"
             exit 1
           fi
 
@@ -1456,11 +1444,10 @@ jobs:
     name: Run update-homebrew
     needs: [create-tag, build, release]
     runs-on: ubuntu-latest
-    # 只在 master 分支执行（tag push 或 master push）
+    # 只在 master 分支执行
+    # Master Push: 需要依赖成功且创建了 tag
     if: |
-      (startsWith(github.ref, 'refs/tags/v') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.outputs.tag_created == 'true')) &&
-      (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.release.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write  # 允许推送到 homebrew-workflow 仓库
 
@@ -1489,12 +1476,6 @@ jobs:
               echo "✅ Detected as BRANCH: $VERSION_REF"
               echo "ℹ️  Using default version for branch: $VERSION"
             fi
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            # 是 tag push 触发的 workflow
-            INSTALL_TYPE="tag"
-            VERSION_REF="${GITHUB_REF#refs/tags/}"
-            VERSION="${VERSION_REF#v}"  # 移除 v 前缀
-            echo "✅ Detected as TAG: $VERSION_REF"
           elif [[ "${{ github.ref }}" == refs/heads/* ]]; then
             # 是 branch push 触发的 workflow（非 master，或 master 但没有创建 tag）
             INSTALL_TYPE="branch"
