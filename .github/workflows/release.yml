@@ -845,11 +845,23 @@ jobs:
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
       pr_url: ${{ steps.create_pr.outputs.pr_url }}
       pr_merged: ${{ steps.merge_pr.outputs.pr_merged }}
+      merge_commit_sha: ${{ steps.merge_pr.outputs.merge_commit_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Install jq (for JSON parsing)
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "✅ jq is already installed"
+          fi
+          jq --version
 
       - name: Download updated version files
         if: needs.update-version.outputs.needs_increment == 'true'
@@ -859,6 +871,13 @@ jobs:
           path: .
 
       # Step 1: Create version update PR (only if needs_increment is true and master branch)
+      - name: Configure Git for PR creation
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create version update pull request
         id: create_pr
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
@@ -866,9 +885,6 @@ jobs:
         env:
           WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          # 配置 Git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           NEW_VERSION="${{ needs.update-version.outputs.version }}"
           BRANCH_NAME="bump-version-${NEW_VERSION}"
@@ -1000,8 +1016,26 @@ jobs:
 
             if [ "$MERGED" = "true" ]; then
               echo "✅ PR already merged"
+
+              # 获取合并后的 commit SHA（从 PR API）
+              echo "Step 2.1: Getting merge commit SHA from PR API..."
+              PR_INFO=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+              MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+              if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+                echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA"
+                echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+              else
+                echo "⚠️  Warning: Could not get merge_commit_sha from PR API, will use git pull method"
+                echo "merge_commit_sha=" >> $GITHUB_OUTPUT
+              fi
+
               # 删除远程分支
-              echo "Step 2.1: Deleting remote branch"
+              echo "Step 2.2: Deleting remote branch"
               BRANCH_NAME="bump-version-${NEW_VERSION}"
               if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
                 git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
@@ -1047,8 +1081,27 @@ jobs:
 
               if [ "$MERGE_CODE" = "200" ]; then
                 echo "✅ PR merged successfully"
+
+                # 获取合并后的 commit SHA（从 PR API）
+                echo "Step 2.1: Getting merge commit SHA from PR API..."
+                sleep 2  # 等待 GitHub 处理合并
+                PR_INFO=$(curl -s \
+                  -H "Accept: application/vnd.github+json" \
+                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+                MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+                if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+                  echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA"
+                  echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+                else
+                  echo "⚠️  Warning: Could not get merge_commit_sha from PR API, will use git pull method"
+                  echo "merge_commit_sha=" >> $GITHUB_OUTPUT
+                fi
+
                 # 删除远程分支
-                echo "Step 2.1: Deleting remote branch"
+                echo "Step 2.2: Deleting remote branch"
                 BRANCH_NAME="bump-version-${NEW_VERSION}"
                 if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
                   git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
@@ -1082,6 +1135,12 @@ jobs:
           fi
 
       # Step 3: Create and push tag
+      - name: Configure Git
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Create and push tag
         shell: bash
         run: |
@@ -1095,55 +1154,117 @@ jobs:
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "Creating tag: $TAG"
 
-          # 配置 Git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Master 分支：如果 PR 已合并，需要拉取最新的 master 分支
+          # Master 分支：如果 PR 已合并，使用 merge_commit_sha 或拉取最新的 master 分支
           if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
-            echo "Step 3.1: Fetching latest changes from origin (after PR merge)..."
-            git fetch origin master:master 2>/dev/null || git fetch origin main:main 2>/dev/null || true
+            MERGE_COMMIT_SHA="${{ steps.merge_pr.outputs.merge_commit_sha }}"
 
-            echo "Step 3.2: Checking out master branch..."
-            git checkout master 2>/dev/null || git checkout main 2>/dev/null || true
+            if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+              # 使用从 PR API 获取的 merge_commit_sha
+              echo "Step 3.1: Using merge_commit_sha from PR API: $MERGE_COMMIT_SHA"
+              TAG_COMMIT_SHA="$MERGE_COMMIT_SHA"
 
-            echo "Step 3.3: Pulling latest changes..."
-            git pull origin master 2>/dev/null || git pull origin main 2>/dev/null || true
-
-            # 验证当前提交包含版本更新
-            echo "Step 3.4: Verifying current commit..."
-            LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
-            LATEST_COMMIT_SHA=$(git rev-parse HEAD)
-            echo "Latest commit SHA: $LATEST_COMMIT_SHA"
-            echo "Latest commit message: $LATEST_COMMIT_MSG"
-
-            if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
-              echo "✅ Found version bump commit on master"
+              # 验证该 commit 是否存在
+              if git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
+                echo "✅ Merge commit exists locally"
+              else
+                echo "Step 3.2: Fetching merge commit from origin..."
+                # 尝试通过 refs 获取 commit
+                git fetch origin "$TAG_COMMIT_SHA" 2>/dev/null || \
+                git fetch origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null || true
+                if ! git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
+                  echo "⚠️  Warning: Merge commit not found, falling back to git pull method"
+                  TAG_COMMIT_SHA=""
+                fi
+              fi
             else
-              echo "⚠️  Warning: Latest commit may not be the version bump commit"
-              echo "   This might happen if PR was merged with a different commit message"
-              echo "   Continuing to create tag on current commit..."
+              TAG_COMMIT_SHA=""
+            fi
+
+            # 如果没有 merge_commit_sha，使用 git pull 方法（回退方案）
+            if [ -z "$TAG_COMMIT_SHA" ]; then
+              echo "Step 3.1: Fetching latest changes from origin (after PR merge)..."
+              # 尝试获取默认分支名称（master 或 main）
+              DEFAULT_BRANCH=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5 || echo "master")
+              echo "Detected default branch: $DEFAULT_BRANCH"
+
+              git fetch origin "$DEFAULT_BRANCH:$DEFAULT_BRANCH" 2>/dev/null || true
+
+              echo "Step 3.2: Checking out $DEFAULT_BRANCH branch..."
+              git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
+
+              echo "Step 3.3: Pulling latest changes..."
+              git pull origin "$DEFAULT_BRANCH" 2>/dev/null || true
+
+              # 验证当前提交包含版本更新
+              echo "Step 3.4: Verifying current commit..."
+              LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
+              TAG_COMMIT_SHA=$(git rev-parse HEAD)
+              echo "Latest commit SHA: $TAG_COMMIT_SHA"
+              echo "Latest commit message: $LATEST_COMMIT_MSG"
+
+              if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
+                echo "✅ Found version bump commit on master"
+              else
+                echo "⚠️  Warning: Latest commit may not be the version bump commit"
+                echo "   This might happen if PR was merged with a different commit message"
+                echo "   Continuing to create tag on current commit..."
+              fi
             fi
           else
             # 非 Master 分支：使用当前分支的 commit
             echo "Step 3.1: Using current branch for tag creation (non-master branch)"
             CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
+            TAG_COMMIT_SHA=$(git rev-parse HEAD)
             echo "Current branch: $CURRENT_BRANCH"
-            echo "Current commit SHA: $CURRENT_COMMIT_SHA"
+            echo "Current commit SHA: $TAG_COMMIT_SHA"
           fi
 
-          # 获取要创建 tag 的 commit SHA
-          TAG_COMMIT_SHA=$(git rev-parse HEAD)
+          # 检查 tag 是否已存在
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            EXISTING_TAG_SHA=$(git rev-parse "$TAG")
+            if [ "$EXISTING_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
+              echo "✅ Tag $TAG already exists and points to the correct commit: $TAG_COMMIT_SHA"
+            else
+              echo "⚠️  Warning: Tag $TAG already exists but points to different commit"
+              echo "   Existing tag SHA: $EXISTING_TAG_SHA"
+              echo "   Target commit SHA: $TAG_COMMIT_SHA"
+              echo "   Deleting existing tag and recreating..."
+              git tag -d "$TAG" 2>/dev/null || true
+              git push origin ":refs/tags/$TAG" 2>/dev/null || true
+            fi
+          fi
+
+          # 创建 tag（基于指定的 commit SHA）
           echo "Step 3.5: Creating tag $TAG on commit $TAG_COMMIT_SHA..."
-          git tag "$TAG"
+          git tag "$TAG" "$TAG_COMMIT_SHA"
 
           # 推送 tag（使用 GITHUB_TOKEN，workflow 有 contents: write 权限）
           echo "Step 3.6: Pushing tag: $TAG"
           echo "ℹ️  Using GITHUB_TOKEN to push tag (workflow has contents: write permission)"
-          git push origin "$TAG"
-
-          echo "✅ Successfully created and pushed tag: $TAG"
+          if git push origin "$TAG" 2>&1; then
+            echo "✅ Successfully created and pushed tag: $TAG"
+          else
+            PUSH_ERROR=$?
+            echo "❌ Error: Failed to push tag: $TAG (exit code: $PUSH_ERROR)"
+            echo "Checking if tag already exists remotely..."
+            if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+              REMOTE_TAG_SHA=$(git ls-remote --tags origin "$TAG" | cut -f1)
+              if [ "$REMOTE_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
+                echo "✅ Tag already exists remotely and points to the correct commit"
+                echo "   Remote tag SHA: $REMOTE_TAG_SHA"
+                echo "   Target commit SHA: $TAG_COMMIT_SHA"
+              else
+                echo "⚠️  Warning: Tag exists remotely but points to different commit"
+                echo "   Remote tag SHA: $REMOTE_TAG_SHA"
+                echo "   Target commit SHA: $TAG_COMMIT_SHA"
+                echo "   This may indicate a conflict. Please check manually."
+                exit 1
+              fi
+            else
+              echo "❌ Tag does not exist remotely. Push failed."
+              exit 1
+            fi
+          fi
 
       # Step 4: Set job outputs
       - name: Set job outputs
@@ -1189,10 +1310,10 @@ jobs:
   release:
     name: Run create-release
     runs-on: ubuntu-latest
-    needs: [update-version, create-tag, build]
+    needs: [update-version, create-tag, build, release-confirm]
     if: |
-      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.update-version.result == 'success' && (needs.create-tag.result == 'success' || needs.create-tag.result == 'skipped') && needs.build.result == 'success') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.update-version.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.update-version.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.release-confirm.result == 'success') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.update-version.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.release-confirm.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write
     steps:
@@ -1206,11 +1327,13 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
-          # 如果 create-tag job 被跳过，从 update-version 获取 tag
-          if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+          # 如果 create-tag job 成功运行，使用其 outputs；否则使用 update-version 的 outputs
+          if [ "${{ needs.create-tag.result }}" == "success" ] && [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
             TAG="${{ needs.create-tag.outputs.tag }}"
+            echo "✅ Using tag from create-tag job: $TAG"
           else
             TAG="${{ needs.update-version.outputs.tag }}"
+            echo "✅ Using tag from update-version job: $TAG"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -1289,11 +1412,13 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
-          # 如果 create-tag job 被跳过，从 update-version 获取 tag
-          if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+          # 如果 create-tag job 成功运行，使用其 outputs；否则使用 update-version 的 outputs
+          if [ "${{ needs.create-tag.result }}" == "success" ] && [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
             TAG="${{ needs.create-tag.outputs.tag }}"
+            echo "✅ Using tag from create-tag job: $TAG"
           else
             TAG="${{ needs.update-version.outputs.tag }}"
+            echo "✅ Using tag from update-version job: $TAG"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
@@ -1361,16 +1486,19 @@ jobs:
             diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
           fi
 
+      - name: Configure Git for Homebrew update
+        shell: bash
+        run: |
+          cd homebrew-workflow
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Commit and push changes
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           cd homebrew-workflow
-
-          # 配置 Git
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 检查是否有更改
           git add Formula/workflow.rb
