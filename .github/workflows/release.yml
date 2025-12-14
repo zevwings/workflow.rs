@@ -844,8 +844,8 @@ jobs:
       tag_created: ${{ steps.job_outputs.outputs.tag_created }}
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
       pr_url: ${{ steps.create_pr.outputs.pr_url }}
-      pr_merged: ${{ steps.merge_pr.outputs.pr_merged }}
-      merge_commit_sha: ${{ steps.get_merge_sha.outputs.merge_commit_sha }}
+      pr_merged: ${{ steps.wait_mergeable.outputs.pr_merged }}
+      merge_commit_sha: ${{ steps.wait_mergeable.outputs.merge_commit_sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -1208,7 +1208,7 @@ jobs:
 
           # Master 分支：如果 PR 已合并，使用 merge_commit_sha 或拉取最新的 master 分支
           if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
-            MERGE_COMMIT_SHA="${{ steps.get_merge_sha.outputs.merge_commit_sha }}"
+            MERGE_COMMIT_SHA="${{ steps.wait_mergeable.outputs.merge_commit_sha }}"
 
             if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
               # 使用从 PR API 获取的 merge_commit_sha
