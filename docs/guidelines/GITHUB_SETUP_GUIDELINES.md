@@ -9,6 +9,7 @@
 - [Repository Secrets](#-repository-secrets)
 - [Repository Variables](#-repository-variables)
 - [分支保护规则](#-分支保护规则)
+- [Environment Protection Rules](#-environment-protection-rules)
 - [Workflow 权限配置](#-workflow-权限配置)
 - [验证配置](#-验证配置)
 - [故障排除](#-故障排除)
@@ -140,6 +141,52 @@ Repository Variables 用于存储非敏感配置信息，可以在 workflow 中�
 
 ---
 
+## 🔒 Environment Protection Rules
+
+Environment Protection Rules 用于控制敏感操作的执行，需要人工批准才能继续。
+
+### 配置位置
+
+**Settings → Environments**
+
+### 必需的 Environment
+
+#### 1. release-confirm
+
+**用途**：用于非 master 分支的预发布流程，需要人工批准才能创建 GitHub Release
+
+**配置步骤**：
+
+1. 访问：Settings → Environments
+2. 点击 "New environment"
+3. 输入 Environment name: `release-confirm`
+4. 配置以下选项：
+
+**Protection rules**：
+- ✅ **Required reviewers**: 至少 1 个 reviewer（建议设置为项目维护者）
+- ✅ **Wait timer**: 可选，设置等待时间（例如：5 分钟）
+
+**Deployment branches**：
+- ✅ **All branches**（允许所有分支使用此 environment）
+
+**保存**：点击 "Save protection rules"
+
+**行为说明**：
+- **Master push**：`release` job 的 environment 为 `null`，**不需要批准**，自动发布
+- **非 master 分支**（手动触发）：`release` job 使用 `release-confirm` environment，**需要批准**才能发布
+
+**验证**：
+- 在非 master 分支手动触发 release workflow
+- 检查 `release` job 是否等待批准
+- 批准后，检查 Release 是否成功创建
+
+**安全注意事项**：
+- ⚠️ 确保只有授权的维护者可以批准
+- ⚠️ 定期审查 reviewer 列表
+- ⚠️ Master 分支的发布不需要批准（已通过质量检查）
+
+---
+
 ## ⚙️ Workflow 权限配置
 
 Workflow 权限在 workflow 文件中配置，确保 workflow 有足够的权限执行操作。
@@ -205,13 +252,13 @@ permissions:
 **测试步骤**：
 1. 合并 `bump-version-*` PR
 2. 检查是否创建了 tag
-3. 检查 tag push 是否触发了 build job
+3. 检查 build job 是否被触发
 4. 检查是否创建了 Release
 
 **预期结果**：
 - ✅ Tag 成功创建和推送
-- ✅ Build job 被触发
-- ✅ Release 成功创建
+- ✅ Build job 被触发（由 master push 触发，不是 tag push）
+- ✅ Release 成功创建（master push 时自动发布，不需要批准）
 
 ### 4. Homebrew 更新验证
 
@@ -245,13 +292,15 @@ permissions:
 **症状**：`check-skip-ci` job 失败，提示 PR 创建者不匹配
 
 **可能原因**：
-- `WORKFLOW_PUI` 未配置或配置错误
-- PR 创建者与 `WORKFLOW_PUI` 不匹配
+- `WORKFLOW_USER_NAME` 未配置或配置错误
+- PR 创建者与 `WORKFLOW_USER_NAME` 不匹配
+- `WORKFLOW_PAT` 的所有者与 `WORKFLOW_USER_NAME` 不一致
 
 **解决方案**：
-1. 检查 `WORKFLOW_PUI` 是否与 `WORKFLOW_PAT` 的所有者匹配
-2. 检查 PR 创建者是否是 `WORKFLOW_PUI` 指定的用户
-3. 确认 `WORKFLOW_PAT` 的所有者是正确的用户
+1. 检查 `WORKFLOW_USER_NAME` Repository Variable 是否配置
+2. 确认 `WORKFLOW_USER_NAME` 与 `WORKFLOW_PAT` 的所有者匹配
+3. 检查 PR 创建者是否是 `WORKFLOW_USER_NAME` 指定的用户
+4. 参考 [CI Workflow Guidelines](./CI_WORKFLOW_GUIDELINES.md) 了解详细说明
 
 ### 问题 3：无法合并 PR
 
@@ -266,18 +315,20 @@ permissions:
 2. 检查 `check-status` job 的状态
 3. 确认 `check-skip-ci` job 成功并设置了 `should_skip=true`
 
-### 问题 4：Tag 推送未触发 Build
+### 问题 4：Release 需要批准但无法批准
 
-**症状**：Tag 推送后，build job 没有运行
+**症状**：非 master 分支的 release job 等待批准，但无法找到批准按钮
 
 **可能原因**：
-- 使用了 `GITHUB_TOKEN` 而不是 `WORKFLOW_PAT` 推送 tag
-- Tag 格式不正确（应该是 `v*` 格式）
+- `release-confirm` environment 未配置
+- 当前用户不在 reviewer 列表中
+- Environment protection rules 配置错误
 
 **解决方案**：
-1. 检查 release.yml 中 tag 推送是否使用 `WORKFLOW_PAT`
-2. 检查 tag 格式是否符合 `v*` 模式
-3. 确认 workflow 监听 `tags: - 'v*'` 事件
+1. 检查 `release-confirm` environment 是否已创建
+2. 确认当前用户在 reviewer 列表中
+3. 检查 environment protection rules 配置
+4. 确认 workflow 中的 environment 配置正确：`environment: ${{ github.ref != 'refs/heads/master' && 'release-confirm' || null }}`
 
 ### 问题 5：Homebrew 更新失败
 
@@ -296,10 +347,16 @@ permissions:
 
 ## 📚 相关文档
 
+### 项目文档
+- [CI Workflow Guidelines](./CI_WORKFLOW_GUIDELINES.md)：CI Workflow 使用指南
+- [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
+
+### GitHub 官方文档
 - [GitHub Actions: Using secrets in a workflow](https://docs.github.com/en/actions/security-guides/encrypted-secrets)
 - [GitHub Actions: Using variables in a workflow](https://docs.github.com/en/actions/learn-github-actions/variables)
 - [GitHub: Managing a branch protection rule](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches)
 - [GitHub: Creating a personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
+- [GitHub: Using environments for deployment](https://docs.github.com/en/actions/deployment/targeting-different-environments/using-environments-for-deployment)
 
 ---
 
@@ -323,14 +380,20 @@ permissions:
 - [ ] 要求 `check-status` 状态检查通过
 - [ ] 不允许绕过保护规则
 
+### Environment Protection Rules
+- [ ] `release-confirm` environment 已创建
+- [ ] 配置了至少 1 个 reviewer
+- [ ] Reviewer 列表包含项目维护者
+
 ### 功能验证
 - [ ] 可以创建 PR
 - [ ] PR 可以触发 CI
 - [ ] CI 验证通过
 - [ ] PR 可以合并
 - [ ] Tag 可以创建和推送
-- [ ] Tag push 触发 build
-- [ ] Release 可以创建
+- [ ] Build job 被触发（master push）
+- [ ] Release 可以创建（master push 自动发布）
+- [ ] 非 master 分支的 release 需要批准
 - [ ] Homebrew 可以更新
 
 ---
@@ -359,4 +422,4 @@ permissions:
 
 ---
 
-**最后更新**：2025-12-10
+**最后更新**：2025-12-14

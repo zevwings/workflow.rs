@@ -18,6 +18,7 @@ env:
   # 允许创建 bump-version-* PR 的用户（必须与 WORKFLOW_PAT 的所有者匹配）
   # 可以通过 Repository Variables 设置 WORKFLOW_USER_NAME 来覆盖默认值
   # 默认值：使用仓库所有者（github.repository_owner）
+  # yamllint disable-line rule:context-access
   WORKFLOW_USER_NAME: ${{ vars.WORKFLOW_USER_NAME || github.repository_owner }}
 
 jobs:
