@@ -15,15 +15,14 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # 允许创建 bump-version-* PR 的用户（必须与 WORKFLOW_PAT 的所有者匹配）
-  # 可以通过 Repository Variables 设置 WORKFLOW_USER_NAME 来覆盖默认值
-  # 默认值：使用仓库所有者（github.repository_owner）
-  WORKFLOW_USER_NAME: ${{ vars.WORKFLOW_USER_NAME || github.repository_owner }}
 
 jobs:
   # 检查是否应该跳过 CI（只检查版本更新分支）
   check-skip-ci:
     name: Check skip CI
+    env:
+      # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
+      WORKFLOW_USER_NAME: ${{ secrets.WORKFLOW_USER_NAME }}
     runs-on: ubuntu-latest
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
