@@ -1182,7 +1182,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [update-version, create-tag, build]
     if: |
-      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.update-version.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.update-version.result == 'success' && (needs.create-tag.result == 'success' || needs.create-tag.result == 'skipped') && needs.build.result == 'success') ||
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.update-version.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
     permissions:
       contents: write
@@ -1197,7 +1197,12 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
-          TAG="${{ needs.create-tag.outputs.tag }}"
+          # 如果 create-tag job 被跳过，从 update-version 获取 tag
+          if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+            TAG="${{ needs.create-tag.outputs.tag }}"
+          else
+            TAG="${{ needs.update-version.outputs.tag }}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Version: $VERSION"
@@ -1223,6 +1228,7 @@ jobs:
           prerelease: ${{ needs.update-version.outputs.is_master_branch != 'true' }}
 
   # 更新 Homebrew Formula
+  # 注意：只在 master 分支的 push 事件时更新，非 master 分支不更新
   update-homebrew:
     name: Run update-homebrew
     runs-on: ubuntu-latest
@@ -1240,7 +1246,12 @@ jobs:
         shell: bash
         run: |
           VERSION="${{ needs.update-version.outputs.version }}"
-          TAG="${{ needs.create-tag.outputs.tag }}"
+          # 如果 create-tag job 被跳过，从 update-version 获取 tag
+          if [ -n "${{ needs.create-tag.outputs.tag }}" ]; then
+            TAG="${{ needs.create-tag.outputs.tag }}"
+          else
+            TAG="${{ needs.update-version.outputs.tag }}"
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "✅ Version: $VERSION"
