@@ -129,7 +129,7 @@ jobs:
   # 如果任何检查失败，此 job 会失败，从而阻止后续操作
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
   check-status:
-    name: Run check-status
+    name: ✅ Run check-status
     runs-on: ubuntu-latest
     needs: [check-lint, tests]
     if: |
@@ -228,26 +228,34 @@ jobs:
             MINOR="${VERSION_PARTS[1]:-0}"
             PATCH="${VERSION_PARTS[2]:-0}"
 
-            # 检查当前 commit 是否已有 tag
-            CURRENT_TAG="v$LATEST_VERSION"
-            if git rev-parse "$CURRENT_TAG" >/dev/null 2>&1; then
-              if [ "$(git rev-parse HEAD)" = "$(git rev-parse $CURRENT_TAG)" ]; then
-                # Tag 已存在且指向当前 commit，使用当前版本号
-                VERSION="$LATEST_VERSION"
-                TAG="$CURRENT_TAG"
-                NEEDS_INCREMENT="false"
-              else
+            # 首先检查当前 commit 是否已经有任何标准版本 tag 指向它
+            CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
+            EXISTING_TAG_ON_COMMIT=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+
+            if [ -n "$EXISTING_TAG_ON_COMMIT" ]; then
+              # 当前 commit 已经有 tag，使用该 tag 的版本号
+              VERSION=${EXISTING_TAG_ON_COMMIT#v}
+              TAG="$EXISTING_TAG_ON_COMMIT"
+              NEEDS_INCREMENT="false"
+              echo "✅ Found existing tag $TAG on current commit, reusing it"
+            else
+              # 当前 commit 没有 tag，检查 LATEST_VERSION 对应的 tag 是否存在
+              CURRENT_TAG="v$LATEST_VERSION"
+              if git rev-parse "$CURRENT_TAG" >/dev/null 2>&1; then
                 # Tag 存在但指向其他 commit，需要递增版本号
                 PATCH=$((PATCH + 1))
                 VERSION="$MAJOR.$MINOR.$PATCH"
                 TAG="v$VERSION"
                 NEEDS_INCREMENT="true"
+                echo "✅ Tag $CURRENT_TAG exists but points to different commit, incrementing to $VERSION"
+              else
+                # Tag 不存在，需要递增版本号（避免连续 release 使用相同版本号）
+                PATCH=$((PATCH + 1))
+                VERSION="$MAJOR.$MINOR.$PATCH"
+                TAG="v$VERSION"
+                NEEDS_INCREMENT="true"
+                echo "✅ Tag $CURRENT_TAG does not exist, incrementing to $VERSION for new release"
               fi
-            else
-              # Tag 不存在，使用当前版本号
-              VERSION="$LATEST_VERSION"
-              TAG="$CURRENT_TAG"
-              NEEDS_INCREMENT="false"
             fi
 
             echo "✅ Master branch: Generated version $VERSION ($TAG)"
