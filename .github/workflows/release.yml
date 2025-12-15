@@ -257,36 +257,106 @@ jobs:
               NEEDS_INCREMENT="false"
               echo "✅ Found existing tag $TAG on current commit, reusing it"
             else
-              # 当前 commit 没有 tag，检查 LATEST_VERSION 对应的 tag 是否存在
-              CURRENT_TAG="v$LATEST_VERSION"
-              if git rev-parse "$CURRENT_TAG" >/dev/null 2>&1; then
-                # Tag 存在但指向其他 commit，需要递增版本号
-                PATCH=$((PATCH + 1))
-                VERSION="$MAJOR.$MINOR.$PATCH"
-                TAG="v$VERSION"
-                NEEDS_INCREMENT="true"
-                echo "✅ Tag $CURRENT_TAG exists but points to different commit, incrementing to $VERSION"
+              # 当前 commit 没有 tag，需要根据 Conventional Commits 规范确定版本更新类型
+              # 获取从最新 tag 到当前 commit 的所有 commit messages
+              LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
+
+              if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+                # 从最新 tag 到当前 commit 的所有提交
+                COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
               else
-                # Tag 不存在，需要递增版本号（避免连续 release 使用相同版本号）
-                PATCH=$((PATCH + 1))
-                VERSION="$MAJOR.$MINOR.$PATCH"
-                TAG="v$VERSION"
-                NEEDS_INCREMENT="true"
-                echo "✅ Tag $CURRENT_TAG does not exist, incrementing to $VERSION for new release"
+                # 如果没有找到 tag，使用最近的提交
+                COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
               fi
+
+              # 根据 Conventional Commits 规范确定版本更新类型
+              # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
+              VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
+
+              if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
+                # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
+                VERSION_INCREMENT_TYPE="major"
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
+              elif [ "$PATCH" -ge 9 ]; then
+                # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
+                VERSION_INCREMENT_TYPE="minor"
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
+              elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
+                # 检测到 feat: 或 feature:，递增 minor 版本
+                VERSION_INCREMENT_TYPE="minor"
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                echo "🟢 Detected feat: commit, incrementing MINOR version"
+              else
+                # 其他情况（fix、chore、docs 等），递增 patch 版本
+                VERSION_INCREMENT_TYPE="patch"
+                PATCH=$((PATCH + 1))
+                echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
+              fi
+
+              VERSION="$MAJOR.$MINOR.$PATCH"
+              TAG="v$VERSION"
+              NEEDS_INCREMENT="true"
+
+              echo "✅ Version increment type: $VERSION_INCREMENT_TYPE"
+              echo "✅ Generated version $VERSION ($TAG) based on Conventional Commits"
             fi
 
             echo "✅ Master branch: Generated version $VERSION ($TAG)"
           else
             # 非 Master 分支：生成预发布版本号 (vx.x.x.alpha-xxx)
-            # 基于最新版本号 + 1 的 patch 版本
+            # 应用与 master 分支相同的版本递增规则
             IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
             MAJOR="${VERSION_PARTS[0]:-0}"
             MINOR="${VERSION_PARTS[1]:-0}"
             PATCH="${VERSION_PARTS[2]:-0}"
 
-            # Patch 版本号 + 1
-            PATCH=$((PATCH + 1))
+            # 获取从最新 tag 到当前 commit 的所有 commit messages
+            LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
+
+            if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+              # 从最新 tag 到当前 commit 的所有提交
+              COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
+            else
+              # 如果没有找到 tag，使用最近的提交
+              COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
+            fi
+
+            # 根据 Conventional Commits 规范确定版本更新类型
+            # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
+            VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
+
+            if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
+              # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
+              VERSION_INCREMENT_TYPE="major"
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
+            elif [ "$PATCH" -ge 9 ]; then
+              # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
+            elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
+              # 检测到 feat: 或 feature:，递增 minor 版本
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟢 Detected feat: commit, incrementing MINOR version"
+            else
+              # 其他情况（fix、chore、docs 等），递增 patch 版本
+              VERSION_INCREMENT_TYPE="patch"
+              PATCH=$((PATCH + 1))
+              echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
+            fi
+
             BASE_VERSION="$MAJOR.$MINOR.$PATCH"
 
             # 查找该基础版本的所有 alpha 预发布版本
@@ -1728,4 +1798,135 @@ jobs:
           fi
 
           echo "✅ Homebrew Formula updated successfully!"
+
+  # 清理已合并分支的 alpha tag
+  # 当 PR 合并到 master 后，清理指向已合并提交的 alpha tag
+  cleanup-alpha-tags:
+    name: 🧹 Cleanup Alpha Tags
+    runs-on: ubuntu-latest
+    needs: [create-tag]
+    # 只在 master 分支的 push 事件时运行，且 create-tag job 成功
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      needs.create-tag.result == 'success' &&
+      needs.create-tag.outputs.pr_merged == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # 使用 PAT 以支持删除 tag
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: 🧹 Cleanup Alpha Tags
+        id: cleanup
+        shell: bash
+        run: |
+          set -e
+
+          echo "🔍 Starting alpha tag cleanup..."
+
+          # 获取合并提交的 SHA
+          MERGE_COMMIT_SHA="${{ needs.create-tag.outputs.merge_commit_sha }}"
+
+          if [ -z "$MERGE_COMMIT_SHA" ]; then
+            echo "⚠️  No merge commit SHA found, skipping cleanup"
+            exit 0
+          fi
+
+          echo "📌 Merge commit SHA: $MERGE_COMMIT_SHA"
+
+          # 获取合并提交的第一个父提交（master 分支的 previous commit）
+          # 这是 master 分支在合并前的最后一个提交
+          FIRST_PARENT=$(git rev-parse ${MERGE_COMMIT_SHA}^1)
+          echo "   First parent (master before merge): $FIRST_PARENT"
+
+          # 获取 master 分支的当前 HEAD（合并后的状态）
+          MASTER_HEAD=$(git rev-parse HEAD)
+          echo "   Master HEAD (after merge): $MASTER_HEAD"
+
+          # 对于 squash merge，合并提交只有一个父提交
+          # 对于常规 merge，合并提交有两个父提交
+          # 我们通过检查 tag 是否在 master 的 first-parent 路径上来判断
+          # 如果 tag 不在 first-parent 路径上，说明它来自已合并的分支
+
+          # 查找所有 alpha tag
+          echo ""
+          echo "🏷️  Finding alpha tags..."
+          ALPHA_TAGS=$(git tag -l '*.alpha-*' | sort -V || echo "")
+
+          if [ -z "$ALPHA_TAGS" ]; then
+            echo "✅ No alpha tags found, nothing to clean up"
+            exit 0
+          fi
+
+          echo "📋 Found alpha tags:"
+          echo "$ALPHA_TAGS" | while read tag; do
+            echo "   - $tag"
+          done
+
+          # 检查每个 alpha tag 是否指向已合并的提交
+          TAGS_TO_DELETE=""
+          DELETED_COUNT=0
+
+          echo ""
+          echo "🔍 Checking which alpha tags point to merged commits..."
+
+          for tag in $ALPHA_TAGS; do
+            TAG_COMMIT=$(git rev-parse "$tag" 2>/dev/null || echo "")
+
+            if [ -z "$TAG_COMMIT" ]; then
+              echo "   ⚠️  Tag $tag: Could not resolve commit"
+              continue
+            fi
+
+            # 检查 tag 是否在 master 分支的 first-parent 路径上
+            # 如果不在，说明它来自已合并的分支（包括 squash merge 的情况）
+            if git merge-base --is-ancestor "$TAG_COMMIT" "$FIRST_PARENT" 2>/dev/null; then
+              # Tag 在 master 的 first-parent 路径上，保留它
+              echo "   ⏭️  Tag $tag ($TAG_COMMIT) is in master branch first-parent path, keeping"
+            elif git merge-base --is-ancestor "$TAG_COMMIT" "$MASTER_HEAD" 2>/dev/null; then
+              # Tag 在合并提交的祖先中，但不在 first-parent 路径上
+              # 说明它来自已合并的分支，应该删除
+              echo "   ✅ Tag $tag ($TAG_COMMIT) is from merged branch, will delete"
+              TAGS_TO_DELETE="$TAGS_TO_DELETE $tag"
+            else
+              # Tag 不在合并提交的祖先中，可能是其他分支的 tag，保留
+              echo "   ⏭️  Tag $tag ($TAG_COMMIT) is not related to this merge, keeping"
+            fi
+          done
+
+          if [ -z "$TAGS_TO_DELETE" ]; then
+            echo ""
+            echo "✅ No alpha tags to delete"
+            exit 0
+          fi
+
+          echo ""
+          echo "🗑️  Deleting alpha tags..."
+
+          # 删除本地 tag
+          for tag in $TAGS_TO_DELETE; do
+            echo "   Deleting local tag: $tag"
+            git tag -d "$tag" || echo "   ⚠️  Failed to delete local tag $tag (may not exist)"
+          done
+
+          # 删除远程 tag
+          echo ""
+          echo "🗑️  Deleting remote tags..."
+          for tag in $TAGS_TO_DELETE; do
+            echo "   Deleting remote tag: $tag"
+            git push origin --delete "$tag" || echo "   ⚠️  Failed to delete remote tag $tag (may not exist or already deleted)"
+            DELETED_COUNT=$((DELETED_COUNT + 1))
+          done
+
+          echo ""
+          echo "✅ Cleanup completed: Deleted $DELETED_COUNT alpha tag(s)"
+          echo "deleted_count=$DELETED_COUNT" >> $GITHUB_OUTPUT
+          echo "deleted_tags<<EOF" >> $GITHUB_OUTPUT
+          echo "$TAGS_TO_DELETE" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
