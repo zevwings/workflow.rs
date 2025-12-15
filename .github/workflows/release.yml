@@ -196,6 +196,7 @@ jobs:
         id: detect_mode
         shell: bash
         run: |
+          set -e
           # 检测是否是 master 分支
           if [[ "${{ github.ref }}" == "refs/heads/master" ]]; then
             IS_MASTER_BRANCH="true"
@@ -213,12 +214,29 @@ jobs:
           echo "is_master_branch=$IS_MASTER_BRANCH" >> $GITHUB_OUTPUT
           echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
 
+          echo "✅ Branch detection completed:"
+          echo "   Branch: ${{ github.ref }}"
+          echo "   Is Master: $IS_MASTER_BRANCH"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Is Manual: $IS_MANUAL_TRIGGER"
+
       - name: 📦 Generate version number
         id: generate_version
         shell: bash
         run: |
+          set -e
           LATEST_VERSION="${{ steps.get_latest_version.outputs.latest_version }}"
           IS_MASTER="${{ steps.detect_mode.outputs.is_master_branch }}"
+
+          # 验证 LATEST_VERSION 不为空
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "❌ Error: LATEST_VERSION is empty"
+            exit 1
+          fi
+
+          echo "📋 Version generation inputs:"
+          echo "   LATEST_VERSION: $LATEST_VERSION"
+          echo "   IS_MASTER: $IS_MASTER"
 
           if [[ "$IS_MASTER" == "true" ]]; then
             # Master 分支：生成标准版本号
@@ -230,7 +248,7 @@ jobs:
 
             # 首先检查当前 commit 是否已经有任何标准版本 tag 指向它
             CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
-            EXISTING_TAG_ON_COMMIT=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+            EXISTING_TAG_ON_COMMIT=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
 
             if [ -n "$EXISTING_TAG_ON_COMMIT" ]; then
               # 当前 commit 已经有 tag，使用该 tag 的版本号
@@ -273,7 +291,7 @@ jobs:
 
             # 查找该基础版本的所有 alpha 预发布版本
             ALPHA_PATTERN="v${BASE_VERSION}.alpha-[0-9]*"
-            EXISTING_ALPHAS=$(git tag -l "$ALPHA_PATTERN" | sort -V)
+            EXISTING_ALPHAS=$(git tag -l "$ALPHA_PATTERN" | sort -V || true)
 
             if [ -z "$EXISTING_ALPHAS" ]; then
               # 没有现有的 alpha 版本，从 001 开始
@@ -281,7 +299,7 @@ jobs:
             else
               # 找到最大的 alpha 编号并递增
               LAST_ALPHA=$(echo "$EXISTING_ALPHAS" | tail -1)
-              ALPHA_NUM=$(echo "$LAST_ALPHA" | grep -oE 'alpha-[0-9]+' | grep -oE '[0-9]+')
+              ALPHA_NUM=$(echo "$LAST_ALPHA" | grep -oE 'alpha-[0-9]+' | grep -oE '[0-9]+' || echo "0")
               ALPHA_NUM=$((ALPHA_NUM + 1))
             fi
 
