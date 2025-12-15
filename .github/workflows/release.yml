@@ -17,7 +17,6 @@ permissions:
   contents: write  # 允许创建 Release 和上传文件
   pull-requests: write  # 允许创建 PR（用于版本更新）
   statuses: write  # 允许创建状态检查（用于满足分支保护规则）
-  workflows: write  # 允许推送指向修改了 workflow 文件的 commit 的 tag
 
 env:
   CARGO_TERM_COLOR: always
@@ -865,6 +864,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # 使用 PAT 以支持推送指向修改了 workflow 文件的 commit 的 tag
+          # 当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
+          token: ${{ secrets.WORKFLOW_PAT }}
 
       - name: 🔧 Install jq
         shell: bash
@@ -1403,9 +1405,10 @@ jobs:
           echo "Step 3.5: Creating tag $TAG on commit $TAG_COMMIT_SHA..."
           git tag "$TAG" "$TAG_COMMIT_SHA"
 
-          # 推送 tag（使用 GITHUB_TOKEN，workflow 有 contents: write 权限）
+          # 推送 tag（使用 PAT，因为 tag 可能指向修改了 workflow 文件的 commit）
+          # 注意：当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
           echo "Step 3.6: Pushing tag: $TAG"
-          echo "ℹ️  Using GITHUB_TOKEN to push tag (workflow has contents: write permission)"
+          echo "ℹ️  Using WORKFLOW_PAT to push tag (required when tag points to commit that modifies workflow files)"
           if git push origin "$TAG" 2>&1; then
             echo "✅ Successfully created and pushed tag: $TAG"
           else
