@@ -19,7 +19,7 @@ env:
 jobs:
   # 检查是否应该跳过 CI（只检查版本更新分支）
   check-skip-ci:
-    name: Check skip CI
+    name: ⏭️ Check Skip CI
     env:
       # 使用 WORKFLOW_PAT 创建 PR，这样可以触发后续的 workflow
       WORKFLOW_USER_NAME: ${{ secrets.WORKFLOW_USER_NAME }}
@@ -27,47 +27,64 @@ jobs:
     outputs:
       should_skip: ${{ steps.check.outputs.should_skip }}
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
-      - name: Check if version bump branch
+      - name: 🔍 Check if version bump branch
         id: check
         run: |
-          # 只检查是否是版本更新分支（bump-version-*）
-          if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
-            # 验证分支是否由 CI 创建
-            PR_CREATOR="${{ github.event.pull_request.user.login }}"
-            WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
+          # 获取分支名称（对于 PR 事件使用 head_ref，对于其他事件使用 ref）
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
 
-            if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
-              echo "❌ Error: bump-version-* branches can only be created by authorized user"
-              echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
-              exit 1
+          echo "🔍 Checking branch: $BRANCH_NAME"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Head ref: ${{ github.head_ref }}"
+          echo "   Ref name: ${{ github.ref_name }}"
+
+          # 只检查是否是版本更新分支（bump-version-*）
+          if [[ "$BRANCH_NAME" =~ ^bump-version- ]]; then
+            echo "✅ Detected bump-version-* branch: $BRANCH_NAME"
+
+            # 对于 PR 事件，验证分支是否由 CI 创建
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              PR_CREATOR="${{ github.event.pull_request.user.login }}"
+              WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
+
+              echo "   PR creator: ${PR_CREATOR:-'unknown'}"
+              echo "   Expected user: $WORKFLOW_USER_NAME"
+
+              if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
+                echo "❌ Error: bump-version-* branches can only be created by authorized user"
+                echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
+                exit 1
+              fi
             fi
 
+            echo "✅ Setting should_skip=true (bump-version-* branch detected)"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
+            echo "ℹ️  Not a bump-version-* branch, CI will run normally"
             echo "should_skip=false" >> $GITHUB_OUTPUT
           fi
   # 代码质量检查（Lint）
   check-lint:
-    name: Run check-lint
+    name: 🔍 Code Quality Check
     runs-on: ubuntu-latest
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
+      - name: 💾 Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -81,7 +98,7 @@ jobs:
           # 优化 Windows 上的缓存性能
           enableCrossOsArchive: false
 
-      - name: Install system dependencies (Linux)
+      - name: 📦 Install system dependencies (Linux)
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
@@ -118,30 +135,30 @@ jobs:
           which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
           python3 --version || echo "⚠️  Python3 not found"
 
-      - name: Check code format
+      - name: ✨ Check code formatting
         run: cargo fmt --check
 
-      - name: Run Clippy
+      - name: 🔍 Run Clippy linter
         run: cargo clippy -- -D warnings
 
-      - name: Run cargo check
+      - name: ✅ Verify compilation
         run: cargo check
 
   # 运行测试
   tests:
-    name: Run tests
+    name: 🧪 Run Tests
     runs-on: ubuntu-latest
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo registry
+      - name: 💾 Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -155,7 +172,7 @@ jobs:
           # 优化 Windows 上的缓存性能
           enableCrossOsArchive: false
 
-      - name: Install system dependencies (Linux)
+      - name: 📦 Install system dependencies (Linux)
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
@@ -192,15 +209,17 @@ jobs:
           which xcb-proto || echo "⚠️  xcb-proto not found in PATH"
           python3 --version || echo "⚠️  Python3 not found"
 
-      - name: Run tests
+      - name: 🧪 Run tests
         run: cargo test --verbose
 
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
+  # 状态检查名称：CI / ✅ Verify All Checks
+  # 注意：job 名称必须与分支保护规则中配置的状态检查名称匹配
   check-status:
-    name: Run check-status
+    name: ✅ Verify All Checks
     runs-on: ubuntu-latest
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
@@ -208,7 +227,7 @@ jobs:
     needs: [check-skip-ci, check-lint, tests]
     if: always()
     steps:
-      - name: Check lint and test status
+      - name: ✅ Check lint and test status
         id: status_check
         run: |
           set +e  # 允许命令失败，继续执行
@@ -219,25 +238,60 @@ jobs:
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
 
-          # 优先级1: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
-            exit 0
-          fi
+          echo "📊 Checking job status:"
+          echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
+          echo "  check-lint: $LINT_RESULT"
+          echo "  tests: $TEST_RESULT"
 
-          # 优先级2: 如果 check-skip-ci 成功且 should_skip 为 true，直接通过
+          # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
+            echo "✅ CI should be skipped for version bump branch"
             exit 0
           fi
 
-          # 检查是否有失败的检查
-          if [ -n "$LINT_RESULT" ] && [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
-            echo "❌ Lint check failed: $LINT_RESULT"
+          # 优先级2: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
+            echo "✅ CI checks were skipped"
+            exit 0
+          fi
+
+          # 检查 check-skip-ci 是否失败（这不应该发生，但需要处理）
+          if [ "$SKIP_CI_RESULT" == "failure" ]; then
+            echo "❌ check-skip-ci failed"
             exit 1
           fi
 
-          if [ -n "$TEST_RESULT" ] && [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
-            echo "❌ Test check failed: $TEST_RESULT"
-            exit 1
+          # 检查 check-lint 状态
+          if [ -n "$LINT_RESULT" ]; then
+            if [ "$LINT_RESULT" == "failure" ] || [ "$LINT_RESULT" == "cancelled" ]; then
+              echo "❌ Lint check failed: $LINT_RESULT"
+              exit 1
+            elif [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
+              echo "❌ Lint check has unexpected status: $LINT_RESULT"
+              exit 1
+            fi
           fi
 
-          exit 0
+          # 检查 tests 状态
+          if [ -n "$TEST_RESULT" ]; then
+            if [ "$TEST_RESULT" == "failure" ] || [ "$TEST_RESULT" == "cancelled" ]; then
+              echo "❌ Test check failed: $TEST_RESULT"
+              exit 1
+            elif [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
+              echo "❌ Test check has unexpected status: $TEST_RESULT"
+              exit 1
+            fi
+          fi
+
+          # 如果 check-lint 和 tests 都成功或被跳过，则通过
+          if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
+            if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
+              echo "✅ All checks passed or were skipped"
+              exit 0
+            fi
+          fi
+
+          # 如果到达这里，说明有未处理的状况
+          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT"
+          echo "   This should not happen. Please check the workflow configuration."
+          exit 1
