@@ -220,25 +220,60 @@ jobs:
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
 
-          # 优先级1: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
-            exit 0
-          fi
+          echo "📊 Checking job status:"
+          echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
+          echo "  check-lint: $LINT_RESULT"
+          echo "  tests: $TEST_RESULT"
 
-          # 优先级2: 如果 check-skip-ci 成功且 should_skip 为 true，直接通过
+          # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
+            echo "✅ CI should be skipped for version bump branch"
             exit 0
           fi
 
-          # 检查是否有失败的检查
-          if [ -n "$LINT_RESULT" ] && [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
-            echo "❌ Lint check failed: $LINT_RESULT"
+          # 优先级2: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
+            echo "✅ CI checks were skipped"
+            exit 0
+          fi
+
+          # 检查 check-skip-ci 是否失败（这不应该发生，但需要处理）
+          if [ "$SKIP_CI_RESULT" == "failure" ]; then
+            echo "❌ check-skip-ci failed"
             exit 1
           fi
 
-          if [ -n "$TEST_RESULT" ] && [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
-            echo "❌ Test check failed: $TEST_RESULT"
-            exit 1
+          # 检查 check-lint 状态
+          if [ -n "$LINT_RESULT" ]; then
+            if [ "$LINT_RESULT" == "failure" ] || [ "$LINT_RESULT" == "cancelled" ]; then
+              echo "❌ Lint check failed: $LINT_RESULT"
+              exit 1
+            elif [ "$LINT_RESULT" != "success" ] && [ "$LINT_RESULT" != "skipped" ]; then
+              echo "❌ Lint check has unexpected status: $LINT_RESULT"
+              exit 1
+            fi
           fi
 
-          exit 0
+          # 检查 tests 状态
+          if [ -n "$TEST_RESULT" ]; then
+            if [ "$TEST_RESULT" == "failure" ] || [ "$TEST_RESULT" == "cancelled" ]; then
+              echo "❌ Test check failed: $TEST_RESULT"
+              exit 1
+            elif [ "$TEST_RESULT" != "success" ] && [ "$TEST_RESULT" != "skipped" ]; then
+              echo "❌ Test check has unexpected status: $TEST_RESULT"
+              exit 1
+            fi
+          fi
+
+          # 如果 check-lint 和 tests 都成功或被跳过，则通过
+          if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
+            if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
+              echo "✅ All checks passed or were skipped"
+              exit 0
+            fi
+          fi
+
+          # 如果到达这里，说明有未处理的状况
+          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT"
+          echo "   This should not happen. Please check the workflow configuration."
+          exit 1
