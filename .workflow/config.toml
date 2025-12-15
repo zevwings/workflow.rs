@@ -1,5 +1,0 @@
-[pr]
-auto_accept_change_type = true
-
-[template.commit]
-use_scope = true
