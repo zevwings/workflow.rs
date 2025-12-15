@@ -17,6 +17,7 @@ permissions:
   contents: write  # 允许创建 Release 和上传文件
   pull-requests: write  # 允许创建 PR（用于版本更新）
   statuses: write  # 允许创建状态检查（用于满足分支保护规则）
+  workflows: write  # 允许推送指向修改了 workflow 文件的 commit 的 tag
 
 env:
   CARGO_TERM_COLOR: always
