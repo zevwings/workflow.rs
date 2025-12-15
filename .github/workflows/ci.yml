@@ -35,20 +35,37 @@ jobs:
       - name: 🔍 Check if version bump branch
         id: check
         run: |
-          # 只检查是否是版本更新分支（bump-version-*）
-          if [[ "${{ github.head_ref }}" =~ ^bump-version- ]]; then
-            # 验证分支是否由 CI 创建
-            PR_CREATOR="${{ github.event.pull_request.user.login }}"
-            WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
+          # 获取分支名称（对于 PR 事件使用 head_ref，对于其他事件使用 ref）
+          BRANCH_NAME="${{ github.head_ref || github.ref_name }}"
 
-            if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
-              echo "❌ Error: bump-version-* branches can only be created by authorized user"
-              echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
-              exit 1
+          echo "🔍 Checking branch: $BRANCH_NAME"
+          echo "   Event: ${{ github.event_name }}"
+          echo "   Head ref: ${{ github.head_ref }}"
+          echo "   Ref name: ${{ github.ref_name }}"
+
+          # 只检查是否是版本更新分支（bump-version-*）
+          if [[ "$BRANCH_NAME" =~ ^bump-version- ]]; then
+            echo "✅ Detected bump-version-* branch: $BRANCH_NAME"
+
+            # 对于 PR 事件，验证分支是否由 CI 创建
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              PR_CREATOR="${{ github.event.pull_request.user.login }}"
+              WORKFLOW_USER_NAME="${{ env.WORKFLOW_USER_NAME }}"
+
+              echo "   PR creator: ${PR_CREATOR:-'unknown'}"
+              echo "   Expected user: $WORKFLOW_USER_NAME"
+
+              if [[ "$PR_CREATOR" != "$WORKFLOW_USER_NAME" ]]; then
+                echo "❌ Error: bump-version-* branches can only be created by authorized user"
+                echo "   PR creator: ${PR_CREATOR:-'unknown'}, expected: $WORKFLOW_USER_NAME"
+                exit 1
+              fi
             fi
 
+            echo "✅ Setting should_skip=true (bump-version-* branch detected)"
             echo "should_skip=true" >> $GITHUB_OUTPUT
           else
+            echo "ℹ️  Not a bump-version-* branch, CI will run normally"
             echo "should_skip=false" >> $GITHUB_OUTPUT
           fi
   # 代码质量检查（Lint）
