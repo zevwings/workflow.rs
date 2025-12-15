@@ -310,14 +310,53 @@ jobs:
             echo "✅ Master branch: Generated version $VERSION ($TAG)"
           else
             # 非 Master 分支：生成预发布版本号 (vx.x.x.alpha-xxx)
-            # 基于最新版本号 + 1 的 patch 版本
+            # 应用与 master 分支相同的版本递增规则
             IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
             MAJOR="${VERSION_PARTS[0]:-0}"
             MINOR="${VERSION_PARTS[1]:-0}"
             PATCH="${VERSION_PARTS[2]:-0}"
 
-            # Patch 版本号 + 1
-            PATCH=$((PATCH + 1))
+            # 获取从最新 tag 到当前 commit 的所有 commit messages
+            LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
+
+            if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+              # 从最新 tag 到当前 commit 的所有提交
+              COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
+            else
+              # 如果没有找到 tag，使用最近的提交
+              COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
+            fi
+
+            # 根据 Conventional Commits 规范确定版本更新类型
+            # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
+            VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
+
+            if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
+              # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
+              VERSION_INCREMENT_TYPE="major"
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
+            elif [ "$PATCH" -ge 9 ]; then
+              # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
+            elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
+              # 检测到 feat: 或 feature:，递增 minor 版本
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟢 Detected feat: commit, incrementing MINOR version"
+            else
+              # 其他情况（fix、chore、docs 等），递增 patch 版本
+              VERSION_INCREMENT_TYPE="patch"
+              PATCH=$((PATCH + 1))
+              echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
+            fi
+
             BASE_VERSION="$MAJOR.$MINOR.$PATCH"
 
             # 查找该基础版本的所有 alpha 预发布版本
