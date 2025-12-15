@@ -24,21 +24,21 @@ env:
 jobs:
   # 代码质量检查（Lint）
   check-lint:
-    name: Run check-lint
+    name: 🔍 Code Quality Check
     runs-on: ubuntu-latest
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
-      - name: Cache cargo registry
+      - name: 💾 Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -52,30 +52,30 @@ jobs:
           # 优化 Windows 上的缓存性能：禁用跨 OS 归档可以避免 Windows 路径问题
           enableCrossOsArchive: false
 
-      - name: Check code format
+      - name: ✨ Check code formatting
         run: cargo fmt --check
 
-      - name: Run Clippy
+      - name: 🔍 Run Clippy linter
         run: cargo clippy -- -D warnings
 
-      - name: Run cargo check
+      - name: ✅ Verify compilation
         run: cargo check
   #
   # 运行测试
   tests:
-    name: Run tests
+    name: 🧪 Run Tests
     runs-on: ubuntu-latest
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache cargo registry
+      - name: 💾 Cache Cargo dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -89,7 +89,7 @@ jobs:
           # 优化 Windows 上的缓存性能：禁用跨 OS 归档可以避免 Windows 路径问题
           enableCrossOsArchive: false
 
-      - name: Install system dependencies (Linux)
+      - name: 📦 Install system dependencies (Linux)
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
@@ -121,7 +121,7 @@ jobs:
             libxkbcommon-dev \
             libxkbcommon-x11-dev
 
-      - name: Run tests
+      - name: 🧪 Run tests
         run: cargo test --verbose
   #
   # 确保所有检查都通过（汇总 job）
@@ -150,7 +150,7 @@ jobs:
 
   # 生成版本号并更新 Cargo.toml 和 Cargo.lock
   update-version:
-    name: Run update-version
+    name: 📦 Generate Version
     runs-on: ubuntu-latest
     needs: [check-status]
     if: |
@@ -165,13 +165,13 @@ jobs:
       is_master_branch: ${{ steps.detect_mode.outputs.is_master_branch }}
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # 需要完整历史记录来检查 tag
           # 使用默认的 GITHUB_TOKEN，有 contents: write 权限，可以推送 tag
 
-      - name: Get latest version from git tags
+      - name: 🔍 Get latest version from git tags
         id: get_latest_version
         shell: bash
         run: |
@@ -192,7 +192,7 @@ jobs:
           echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-      - name: Detect branch type and trigger mode
+      - name: 🎯 Detect branch type and trigger mode
         id: detect_mode
         shell: bash
         run: |
@@ -213,7 +213,7 @@ jobs:
           echo "is_master_branch=$IS_MASTER_BRANCH" >> $GITHUB_OUTPUT
           echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
 
-      - name: Generate version number
+      - name: 📦 Generate version number
         id: generate_version
         shell: bash
         run: |
@@ -290,11 +290,11 @@ jobs:
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           echo "needs_increment=$NEEDS_INCREMENT" >> $GITHUB_OUTPUT
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust toolchain
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Update Cargo.toml and Cargo.lock version
+      - name: 📝 Update Cargo.toml and Cargo.lock version
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         shell: bash
         run: |
@@ -329,7 +329,7 @@ jobs:
 
           echo "✅ Version updated to $NEW_VERSION in Cargo.toml and Cargo.lock"
 
-      - name: Upload updated version files as artifact
+      - name: 📤 Upload updated version files
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
         uses: actions/upload-artifact@v4
         with:
@@ -341,6 +341,7 @@ jobs:
 
   # 构建所有平台的二进制文件
   build:
+    name: 🔨 Build Binaries - ${{ matrix.platform }}
     runs-on: ${{ matrix.os }}
     needs: [check-status, update-version]
     # 手动触发/ Master Push: 需要依赖成功
@@ -374,17 +375,17 @@ jobs:
             platform: Windows-ARM64
 
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download updated version files
+      - name: 📥 Download updated version files
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         uses: actions/download-artifact@v4
         with:
           name: updated-version-files
           path: .
 
-      - name: Get version from update-version job
+      - name: 🔍 Get version from update-version job
         id: version
         shell: bash
         run: |
@@ -403,19 +404,19 @@ jobs:
           echo "✅ Version: $VERSION"
           echo "✅ Tag: $TAG"
 
-      - name: Setup Rust
+      - name: 🔧 Setup Rust for ${{ matrix.target }}
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install musl target (if needed)
+      - name: 📦 Install musl target
         if: contains(matrix.target, 'musl')
         run: |
           rustup target add ${{ matrix.target }}
           sudo apt-get update
           sudo apt-get install -y musl-tools
 
-      - name: Install cross-compilation toolchain (Linux ARM64)
+      - name: 📦 Install cross-compilation toolchain (Linux ARM64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
@@ -424,7 +425,7 @@ jobs:
           # 因此不需要安装 XCB 开发库，简化构建流程
           # 但需要安装 Python3 用于处理 Cargo.lock 脚本
 
-      - name: Install system dependencies (Linux x86_64)
+      - name: 📦 Install system dependencies (Linux x86_64)
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
         run: |
           sudo apt-get update
@@ -522,7 +523,7 @@ jobs:
           # 验证 pkg-config 能找到 xcb 库
           pkg-config --exists xcb && echo "✅ xcb pkg-config found" || echo "⚠️  xcb pkg-config not found"
 
-      - name: Install system dependencies (macOS)
+      - name: 📦 Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           # 检查 pkg-config 是否已安装，避免重复安装警告
@@ -532,7 +533,7 @@ jobs:
             echo "✅ pkg-config is already installed"
           fi
 
-      - name: Get Cargo.lock hash
+      - name: 🔍 Get Cargo.lock hash
         id: cargo_lock
         shell: bash
         run: |
@@ -546,7 +547,7 @@ jobs:
             echo "hash=$HASH" >> $GITHUB_OUTPUT
           fi
 
-      - name: Cache cargo registry
+      - name: 💾 Cache cargo registry
         uses: actions/cache@v4
         with:
           path: |
@@ -559,7 +560,7 @@ jobs:
             ${{ runner.os }}-cargo-
           enableCrossOsArchive: false
 
-      - name: Build
+      - name: 🔨 Build binaries
         shell: bash
         run: |
           # 设置交叉编译环境变量（仅 Linux ARM64）
@@ -725,7 +726,7 @@ jobs:
             exit 1
           fi
 
-      - name: Create package directory
+      - name: 📦 Create package directory for binaries
         shell: bash
         run: |
           mkdir -p package
@@ -739,7 +740,7 @@ jobs:
             echo "✅ Copied workflow and install binaries to package/"
           fi
 
-      - name: Create archive (Windows)
+      - name: 📦 Create archive (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
@@ -764,7 +765,7 @@ jobs:
             Pop-Location
           }
 
-      - name: Create archive (Unix)
+      - name: 📦 Create archive (Unix)
         if: matrix.os != 'windows-latest'
         shell: bash
         run: |
@@ -778,7 +779,7 @@ jobs:
           echo "📦 Archive contents:"
           tar tzf "$ARCHIVE_NAME"
 
-      - name: Calculate SHA256
+      - name: 🔐 Calculate SHA256 checksum for archive
         id: sha256
         shell: bash
         run: |
@@ -795,7 +796,7 @@ jobs:
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "$SHA256" > "sha256-${{ matrix.platform }}.txt"
 
-      - name: Upload archive
+      - name: 📤 Upload build archive to artifacts
         uses: actions/upload-artifact@v4
         with:
           name: workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}
@@ -803,7 +804,7 @@ jobs:
             workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.${{ matrix.os == 'windows-latest' && 'zip' || 'tar.gz' }}
           retention-days: 30
 
-      - name: Upload SHA256
+      - name: 📤 Upload SHA256 checksum file
         uses: actions/upload-artifact@v4
         with:
           name: sha256-${{ matrix.platform }}
@@ -813,7 +814,7 @@ jobs:
 
   # 用户确认是否继续发布流程
   release-confirm:
-    name: Release confirmation
+    name: ⏸️ Release Confirmation
     runs-on: ubuntu-latest
     needs: [update-version, build]
     if: |
@@ -823,7 +824,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Wait for approval
+      - name: ⏸️ Wait for approval
         run: |
           echo "✅ Release confirmation approved"
           echo "   Version: ${{ needs.update-version.outputs.version }}"
@@ -832,7 +833,7 @@ jobs:
 
   # 创建版本更新 PR、合并 PR 并创建 tag（合并后的 job）
   create-tag:
-    name: Run create-tag
+    name: 🏷️ Create Tag & Merge PR
     runs-on: ubuntu-latest
     needs: [update-version, build, release-confirm]
     if: |
@@ -851,12 +852,12 @@ jobs:
       pr_merged: ${{ steps.handle_pr_merged.outputs.pr_merged || steps.merge_pr.outputs.pr_merged }}
       merge_commit_sha: ${{ steps.handle_pr_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Install jq (for JSON parsing)
+      - name: 🔧 Install jq
         shell: bash
         run: |
           if ! command -v jq >/dev/null 2>&1; then
@@ -867,7 +868,7 @@ jobs:
           fi
           jq --version
 
-      - name: Download updated version files
+      - name: 📥 Download updated version files
         if: needs.update-version.outputs.needs_increment == 'true'
         uses: actions/download-artifact@v4
         with:
@@ -875,14 +876,14 @@ jobs:
           path: .
 
       # Step 1: Create version update PR (only if needs_increment is true and master branch)
-      - name: Configure Git for PR creation
+      - name: ⚙️ Configure Git for PR creation
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create version update pull request
+      - name: 🌿 Create version update PR
         id: create_pr
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
@@ -979,7 +980,7 @@ jobs:
           echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
       # Step 2: Merge version update PR (only if needs_increment is true and master branch)
-      - name: Wait for PR status update
+      - name: ⏳ Wait for PR status update
         id: wait_pr_status
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
@@ -987,7 +988,7 @@ jobs:
           echo "⏳ Waiting 30s for PR status to be updated and CI to complete..."
           sleep 30
 
-      - name: Check PR mergeable status
+      - name: 🔍 Check PR mergeable status
         id: check_pr_status
         if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
         shell: bash
@@ -1012,7 +1013,7 @@ jobs:
           echo "merged=$MERGED" >> $GITHUB_OUTPUT
           echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
 
-      - name: Handle PR already merged
+      - name: ✅ Handle already merged PR
         id: handle_pr_merged
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
@@ -1065,7 +1066,7 @@ jobs:
             echo "ℹ️  Remote branch already deleted"
           fi
 
-      - name: Wait for PR to be mergeable
+      - name: ⏳ Wait for PR to be mergeable
         id: wait_mergeable
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
@@ -1187,7 +1188,7 @@ jobs:
             exit 1
           fi
 
-      - name: Merge PR
+      - name: 🔀 Merge version update PR
         id: merge_pr
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
@@ -1232,7 +1233,7 @@ jobs:
             exit 1
           fi
 
-      - name: Get merge commit SHA
+      - name: 🔍 Get merge commit SHA
         id: get_merge_sha
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
@@ -1271,7 +1272,7 @@ jobs:
             echo "merge_commit_sha=" >> $GITHUB_OUTPUT
           fi
 
-      - name: Delete remote branch
+      - name: 🗑️ Delete remote branch
         id: delete_branch
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
@@ -1290,13 +1291,13 @@ jobs:
           fi
 
       # Step 3: Create and push tag
-      - name: Configure Git
+      - name: ⚙️ Configure Git for tag creation
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Create and push tag
+      - name: 🏷️ Create and push tag
         shell: bash
         run: |
           TAG="${{ needs.update-version.outputs.tag }}"
@@ -1422,7 +1423,7 @@ jobs:
           fi
 
       # Step 4: Set job outputs
-      - name: Set job outputs
+      - name: 📊 Set job outputs for downstream jobs
         id: job_outputs
         shell: bash
         run: |
@@ -1463,7 +1464,7 @@ jobs:
 
   # 创建 GitHub Release
   release:
-    name: Run create-release
+    name: 🚀 Create Release
     runs-on: ubuntu-latest
     needs: [update-version, create-tag, build, release-confirm]
     if: |
@@ -1472,12 +1473,12 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get version and tag
+      - name: 🔍 Get version and tag from previous jobs
         id: version
         shell: bash
         run: |
@@ -1495,12 +1496,12 @@ jobs:
           echo "✅ Version: $VERSION"
           echo "✅ Tag: $TAG"
 
-      - name: Download all artifacts
+      - name: 📥 Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
-      - name: Prepare release info
+      - name: 📝 Prepare release info
         id: release_info
         shell: bash
         run: |
@@ -1537,7 +1538,7 @@ jobs:
           echo "✅ Release name: $RELEASE_NAME"
           echo "✅ Is pre-release: $([ "$IS_MASTER" != "true" ] && echo "true" || echo "false")"
 
-      - name: Create Release
+      - name: 🚀 Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -1551,7 +1552,7 @@ jobs:
   # 更新 Homebrew Formula
   # 注意：只在 master 分支的 push 事件时更新，非 master 分支不更新
   update-homebrew:
-    name: Run update-homebrew
+    name: 🍺 Update Homebrew Formula
     runs-on: ubuntu-latest
     needs: [update-version, create-tag, build, release]
     if: |
@@ -1559,10 +1560,10 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Checkout code
+      - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get version and tag
+      - name: 🔍 Get version and tag from previous jobs
         id: version
         shell: bash
         run: |
@@ -1580,14 +1581,14 @@ jobs:
           echo "✅ Version: $VERSION"
           echo "✅ Tag: $TAG"
 
-      - name: Checkout homebrew-workflow
+      - name: 📥 Checkout homebrew-workflow
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/homebrew-workflow
           token: ${{ secrets.WORKFLOW_PAT }}
           path: homebrew-workflow
 
-      - name: Generate Formula file
+      - name: 📝 Generate Formula file
         shell: bash
         run: |
           cd homebrew-workflow
@@ -1641,14 +1642,14 @@ jobs:
             diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
           fi
 
-      - name: Configure Git for Homebrew update
+      - name: ⚙️ Configure Git for Homebrew update
         shell: bash
         run: |
           cd homebrew-workflow
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit and push changes
+      - name: 📤 Commit and push changes
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
