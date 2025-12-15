@@ -129,7 +129,7 @@ jobs:
   # 如果任何检查失败，此 job 会失败，从而阻止后续操作
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
   check-status:
-    name: ✅ Run check-status
+    name: ✅ Verify All Checks
     runs-on: ubuntu-latest
     needs: [check-lint, tests]
     if: |
