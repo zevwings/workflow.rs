@@ -199,6 +199,7 @@ jobs:
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
+  # 状态检查名称：CI / ✅ Verify All Checks
   check-status:
     name: ✅ Verify All Checks
     runs-on: ubuntu-latest
