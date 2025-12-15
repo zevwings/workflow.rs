@@ -8,7 +8,11 @@ on:
       - '!bump-version-*'
   workflow_dispatch:  # 允许手动触发（仅非 master 分支）
 
-# 配置工作流权限，允许创建 Release 和更新仓库
+# 统一 workflow run 的显示名称
+# 策略：对于 push 事件，如果 commit message 包含 "Merge pull request"（PR 合并），
+# GitHub 会自动使用 PR 标题作为显示名称（这是 GitHub 的默认行为，优先级高于 run-name）
+# 对于 workflow_dispatch 或其他情况，使用自定义名称
+run-name: ${{ github.event_name == 'workflow_dispatch' && format('Release - {0} (manual)', github.ref_name) || format('Release - {0} ({1})', github.ref_name, github.event_name) }}
 permissions:
   contents: write  # 允许创建 Release 和上传文件
   pull-requests: write  # 允许创建 PR（用于版本更新）
