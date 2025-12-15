@@ -58,13 +58,15 @@ impl BranchNaming {
                     Ok(rendered) => {
                         log_success!("Generated branch name using template: {}", rendered);
                         // Apply format conversion if needed
-                        if use_prefix_format {
-                            // Template already includes prefix, just return
-                            Ok(rendered)
+                        let formatted = if use_prefix_format {
+                            // Template already includes prefix, but still check for repo prefix
+                            rendered
                         } else {
                             // Convert prefix/ticket-slug to ticket--slug format
-                            Ok(Self::convert_to_double_dash_format(&rendered, ticket_id))
-                        }
+                            Self::convert_to_double_dash_format(&rendered, ticket_id)
+                        };
+                        // Apply repository prefix if needed
+                        Ok(Self::apply_repo_prefix_if_needed(formatted))
                     }
                     Err(e) => {
                         log_warning!(
@@ -104,7 +106,8 @@ impl BranchNaming {
     ) -> Result<String> {
         // If no JIRA ticket, use simple format: {type}/{slug}
         if jira_ticket.is_none() {
-            return Ok(format!("{}/{}", branch_type, branch_name_slug));
+            let branch_name = format!("{}/{}", branch_type, branch_name_slug);
+            return Ok(Self::apply_repo_prefix_if_needed(branch_name));
         }
 
         // If JIRA ticket exists, use template system
@@ -123,7 +126,8 @@ impl BranchNaming {
         let engine = TemplateEngine::new();
         let rendered = engine.render_string(&template_str, &vars)?;
 
-        Ok(rendered)
+        // Apply repository prefix if needed
+        Ok(Self::apply_repo_prefix_if_needed(rendered))
     }
 
     /// Generate branch name from title
@@ -151,15 +155,8 @@ impl BranchNaming {
         let cleaned_title = Self::sanitize(title);
         branch_name.push_str(&cleaned_title);
 
-        // If repository-level branch_prefix exists, add prefix
-        if let Some(prefix) = RepoConfig::get_branch_prefix() {
-            let trimmed = prefix.trim();
-            if !trimmed.is_empty() {
-                branch_name = format!("{}/{}", trimmed, branch_name);
-            }
-        }
-
-        Ok(branch_name)
+        // Apply repository prefix if needed
+        Ok(Self::apply_repo_prefix_if_needed(branch_name))
     }
 
     /// Sanitize string to branch name format
@@ -231,11 +228,10 @@ impl BranchNaming {
             Ok(content) => {
                 log_success!("Generated branch name using LLM: {}", content.branch_name);
                 let base_name = content.branch_name;
-                Ok(Self::format_branch_name_with_ticket(
-                    use_prefix_format,
-                    ticket_id,
-                    &base_name,
-                ))
+                let formatted =
+                    Self::format_branch_name_with_ticket(use_prefix_format, ticket_id, &base_name);
+                // Apply repository prefix if needed
+                Ok(Self::apply_repo_prefix_if_needed(formatted))
             }
             Err(e) => {
                 log_warning!(
@@ -244,11 +240,10 @@ impl BranchNaming {
                 );
                 // Fallback to simple method
                 let slug = Self::slugify(summary);
-                Ok(Self::format_branch_name_simple(
-                    use_prefix_format,
-                    ticket_id,
-                    &slug,
-                ))
+                let formatted =
+                    Self::format_branch_name_simple(use_prefix_format, ticket_id, &slug);
+                // Apply repository prefix if needed
+                Ok(Self::apply_repo_prefix_if_needed(formatted))
             }
         }
     }
@@ -299,6 +294,34 @@ impl BranchNaming {
         } else {
             format!("{}--{}", ticket_id, slug)
         }
+    }
+
+    /// Apply repository prefix to branch name if configured and not already present
+    ///
+    /// This method ensures that all branch names respect the repository-level
+    /// branch prefix configuration, while avoiding duplicate prefixes.
+    ///
+    /// # Arguments
+    ///
+    /// * `branch_name` - The branch name to potentially prefix
+    ///
+    /// # Returns
+    ///
+    /// Returns the branch name with repository prefix applied if:
+    /// - Repository prefix is configured
+    /// - Branch name doesn't already start with the prefix
+    fn apply_repo_prefix_if_needed(branch_name: String) -> String {
+        if let Some(prefix) = RepoConfig::get_branch_prefix() {
+            let trimmed = prefix.trim();
+            if !trimmed.is_empty() {
+                // Check if branch name already starts with the prefix
+                let prefix_with_slash = format!("{}/", trimmed);
+                if !branch_name.starts_with(&prefix_with_slash) {
+                    return format!("{}/{}", trimmed, branch_name);
+                }
+            }
+        }
+        branch_name
     }
 
     /// 清理并翻译分支名称（处理非英文输入）

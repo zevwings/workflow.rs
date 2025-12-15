@@ -1,3 +1,5 @@
+.workflow
+
 # Rust
 /target/
 **/*.rs.bk

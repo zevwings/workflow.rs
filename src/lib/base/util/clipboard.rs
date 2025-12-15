@@ -7,7 +7,13 @@
     not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
 ))]
 use clipboard::{ClipboardContext, ClipboardProvider};
-use color_eyre::{eyre::eyre, Result};
+use color_eyre::Result;
+
+#[cfg(all(
+    not(target_env = "musl"),
+    not(all(target_arch = "aarch64", target_os = "linux", target_env = "gnu"))
+))]
+use color_eyre::eyre::eyre;
 
 /// 剪贴板操作模块
 ///
