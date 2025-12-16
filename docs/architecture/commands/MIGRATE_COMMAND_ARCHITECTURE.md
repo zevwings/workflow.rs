@@ -154,3 +154,7 @@ fn needs_migration(version: &str) -> Result<bool> {
 - 合并到新配置
 - 保存新配置
 - 可选清理旧文件
+
+---
+
+**最后更新**: 2025-12-16

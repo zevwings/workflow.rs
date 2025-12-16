@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::file::FileReader;
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
@@ -117,8 +118,7 @@ impl ConfigImportCommand {
         }
 
         // 读取并解析输入文件
-        let content = fs::read_to_string(&input_path)
-            .wrap_err(format!("Failed to read input file: {:?}", input_path))?;
+        let content = FileReader::read_to_string(&input_path)?;
 
         let imported_settings = parse_config(&content, &input_path)?;
 
@@ -333,10 +333,7 @@ impl ConfigImportCommand {
     /// 验证保存后的配置
     fn verify_saved_config(config_path: &Path) -> Result<bool> {
         // 重新读取配置文件
-        let content = fs::read_to_string(config_path).wrap_err(format!(
-            "Failed to read saved config file: {:?}",
-            config_path
-        ))?;
+        let content = FileReader::read_to_string(config_path)?;
 
         let saved_settings = parse_config(&content, config_path)?;
 

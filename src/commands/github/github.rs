@@ -2,6 +2,7 @@
 //! 用于管理多个 GitHub 账号的配置
 
 use crate::base::dialog::{ConfirmDialog, SelectDialog};
+use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::GitHubAccountListRow;
@@ -16,8 +17,6 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
-use indicatif::{ProgressBar, ProgressStyle};
-use std::time::Duration;
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
@@ -28,18 +27,13 @@ impl GitHubCommand {
         let settings = Settings::load();
 
         // 创建 spinner 显示验证进度
-        let spinner = ProgressBar::new_spinner();
-        spinner.set_style(
-            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
-        );
-        spinner.enable_steady_tick(Duration::from_millis(100));
-        spinner.set_message("Verifying GitHub accounts...");
+        let spinner = Spinner::new("Verifying GitHub accounts...");
 
         // 使用 verify_github() 获取验证结果
         let verification_result = settings.verify_github()?;
 
         // 完成 spinner
-        spinner.finish_and_clear();
+        spinner.finish();
 
         if !verification_result.configured || verification_result.accounts.is_empty() {
             log_warning!("No GitHub accounts configured.");

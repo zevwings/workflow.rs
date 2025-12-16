@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use crate::base::util::file::FileReader;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -410,7 +411,7 @@ impl Settings {
                 if !config_path.exists() {
                     Self::default()
                 } else {
-                    match fs::read_to_string(&config_path) {
+                    match FileReader::read_to_string(&config_path) {
                         Ok(content) => {
                             // 先尝试解析为新格式
                             match toml::from_str::<Self>(&content) {

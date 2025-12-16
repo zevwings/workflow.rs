@@ -2,6 +2,7 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::base::dialog::{InputDialog, SelectDialog};
+use crate::base::indicator::Spinner;
 use crate::base::settings::defaults::{
     default_download_base_dir, default_language, default_llm_model, default_log_folder,
 };
@@ -21,9 +22,7 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
-use std::time::Duration;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -84,19 +83,14 @@ impl SetupCommand {
         }
 
         // 创建 spinner 显示验证进度
-        let spinner = ProgressBar::new_spinner();
-        spinner.set_style(
-            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
-        );
-        spinner.enable_steady_tick(Duration::from_millis(100));
-        spinner.set_message("Verifying configurations...");
+        let spinner = Spinner::new("Verifying configurations...");
 
         // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
         let settings = Settings::load();
         let result = settings.verify()?;
 
         // 完成 spinner
-        spinner.finish_and_clear();
+        spinner.finish();
 
         crate::commands::config::show::ConfigCommand::print_verification_result(&result);
 

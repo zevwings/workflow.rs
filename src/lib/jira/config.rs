@@ -5,6 +5,7 @@
 //! - 统一的错误处理
 //! - Unix 系统下的文件权限设置（600）
 
+use crate::base::util::file::FileReader;
 use color_eyre::{eyre::WrapErr, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -101,8 +102,7 @@ where
         if !self.path.exists() {
             return Ok(T::default());
         }
-        let content = fs::read_to_string(&self.path)
-            .wrap_err(format!("Failed to read config file: {:?}", self.path))?;
+        let content = FileReader::read_to_string(&self.path)?;
         toml::from_str(&content).wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
@@ -179,8 +179,7 @@ impl ConfigManager<Value> {
         if !self.path.exists() {
             return Ok(Value::Table(Map::new()));
         }
-        let content = fs::read_to_string(&self.path)
-            .wrap_err(format!("Failed to read config file: {:?}", self.path))?;
+        let content = FileReader::read_to_string(&self.path)?;
         toml::from_str(&content)
             .wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }

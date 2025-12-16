@@ -734,3 +734,7 @@ cargo fmt --check && cargo clippy -- -D warnings
 - [Rust API 指南](https://rust-lang.github.io/api-guidelines/) - Rust API 设计指南
 
 ---
+
+---
+
+**最后更新**: 2025-12-16
