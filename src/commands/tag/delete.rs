@@ -181,10 +181,7 @@ impl TagDeleteCommand {
     /// 通过模式匹配过滤 tag
     fn filter_tags_by_pattern(tags: &[crate::git::TagInfo], pattern: &str) -> Result<Vec<String>> {
         // 将 shell 通配符模式转换为正则表达式
-        let regex_pattern = pattern
-            .replace(".", "\\.")
-            .replace("*", ".*")
-            .replace("?", ".");
+        let regex_pattern = pattern.replace(".", "\\.").replace("*", ".*").replace("?", ".");
 
         let regex = Regex::new(&format!("^{}$", regex_pattern))
             .wrap_err_with(|| format!("Invalid pattern: {}", pattern))?;

@@ -67,8 +67,8 @@ impl GitTag {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn list_remote_tags() -> Result<Vec<String>> {
-        let output = cmd_read(&["ls-remote", "--tags", "origin"])
-            .wrap_err("Failed to list remote tags")?;
+        let output =
+            cmd_read(&["ls-remote", "--tags", "origin"]).wrap_err("Failed to list remote tags")?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());
@@ -109,11 +109,8 @@ impl GitTag {
         let remote_tags = Self::list_remote_tags()?;
 
         // 合并本地和远程 tag，去重
-        let all_tag_names: std::collections::HashSet<String> = local_tags
-            .iter()
-            .chain(remote_tags.iter())
-            .cloned()
-            .collect();
+        let all_tag_names: std::collections::HashSet<String> =
+            local_tags.iter().chain(remote_tags.iter()).cloned().collect();
 
         let mut tags = Vec::new();
         for tag_name in all_tag_names {
@@ -127,11 +124,7 @@ impl GitTag {
                 // 从远程获取 commit hash
                 let output = cmd_read(&["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
                     .unwrap_or_else(|_| String::new());
-                output
-                    .split_whitespace()
-                    .next()
-                    .unwrap_or("")
-                    .to_string()
+                output.split_whitespace().next().unwrap_or("").to_string()
             } else {
                 String::new()
             };
@@ -172,7 +165,12 @@ impl GitTag {
         let exists_local = check_ref_exists(&format!("refs/tags/{}", tag_name));
 
         // 检查远程 tag
-        let exists_remote = check_success(&["ls-remote", "--exit-code", "origin", &format!("refs/tags/{}", tag_name)]);
+        let exists_remote = check_success(&[
+            "ls-remote",
+            "--exit-code",
+            "origin",
+            &format!("refs/tags/{}", tag_name),
+        ]);
 
         Ok((exists_local, exists_remote))
     }
@@ -204,11 +202,7 @@ impl GitTag {
             // 从远程获取
             let output = cmd_read(&["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
                 .wrap_err("Failed to get remote tag commit hash")?;
-            output
-                .split_whitespace()
-                .next()
-                .unwrap_or("")
-                .to_string()
+            output.split_whitespace().next().unwrap_or("").to_string()
         };
 
         Ok(TagInfo {

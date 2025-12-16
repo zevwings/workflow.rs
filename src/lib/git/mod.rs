@@ -30,8 +30,8 @@ mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;
-mod tag;
 mod table;
+mod tag;
 mod types;
 
 // 重新导出所有公共 API
@@ -42,6 +42,6 @@ pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
 pub use repo::GitRepo;
 pub use stash::{GitStash, StashApplyResult, StashEntry, StashPopResult, StashStat};
-pub use tag::{GitTag, TagInfo};
 pub use table::BranchRow;
+pub use tag::{GitTag, TagInfo};
 pub use types::RepoType;

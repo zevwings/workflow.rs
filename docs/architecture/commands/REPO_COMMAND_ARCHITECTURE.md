@@ -5,15 +5,16 @@
 本文档描述 Workflow CLI 的 Repo 命令模块架构，包括：
 - 仓库级配置初始化功能（交互式设置）
 - 仓库级配置查看功能
+- 仓库清理功能（清理本地分支和 tag）
 
 Repo 命令模块提供仓库级配置管理功能，支持为每个项目独立配置分支前缀、提交模板、PR 模板等设置。配置存储在项目根目录的 `.workflow/config.toml` 文件中，可以提交到 Git 与团队成员共享。
 
 **定位**：命令层专注于用户交互、参数解析和输出格式化，核心业务逻辑由 `lib/repo/` 模块提供。
 
 **模块统计：**
-- 命令数量：2 个（setup、show）
-- 总代码行数：约 387 行
-- 文件数量：2 个
+- 命令数量：3 个（setup、show、clean）
+- 总代码行数：约 646 行
+- 文件数量：3 个
 - 主要依赖：`lib/repo/`、`lib/template/`、`lib/git/`、`lib/base/dialog/`
 
 ---
@@ -27,7 +28,7 @@ src/bin/workflow.rs
 ```
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：使用 `clap` 解析命令行参数，将 `workflow repo` 子命令分发到对应的命令处理函数
-- **命令枚举**：`RepoSubcommand` 定义了所有 Repo 相关的子命令（setup、show）
+- **命令枚举**：`RepoSubcommand` 定义了所有 Repo 相关的子命令（setup、show、clean）
 
 ### 命令封装层
 
@@ -35,7 +36,8 @@ src/bin/workflow.rs
 src/commands/repo/
 ├── mod.rs          # Repo 命令模块声明（10 行）
 ├── setup.rs        # 仓库设置命令（308 行）
-└── show.rs         # 仓库配置显示命令（79 行）
+├── show.rs         # 仓库配置显示命令（79 行）
+└── clean.rs        # 仓库清理命令（259 行）
 ```
 
 **职责**：
@@ -93,6 +95,7 @@ match cli.command {
   Commands::Repo { subcommand } => match subcommand {
     RepoSubcommand::Setup => RepoSetupCommand::run()
     RepoSubcommand::Show => RepoShowCommand::show()
+    RepoSubcommand::Clean { dry_run } => RepoCleanCommand::clean(dry_run.dry_run)
   }
 }
 ```
@@ -244,7 +247,182 @@ Repo Setup 命令用于交互式初始化仓库级配置，支持以下功能：
 
 ---
 
-## 2. Repo Show 命令 (`show.rs`)
+## 2. Repo Clean 命令 (`clean.rs`)
+
+### 相关文件
+
+```
+src/commands/repo/clean.rs (259 行)
+```
+
+### 调用流程
+
+```
+RepoCleanCommand::clean(dry_run)
+  ↓
+CheckCommand::run_all() (运行环境检查)
+  ↓
+GitBranch::current_branch() (获取当前分支)
+  ↓
+GitBranch::get_default_branch() (获取默认分支)
+  ↓
+GitRepo::extract_repo_name() (获取仓库名)
+  ↓
+GitRepo::prune_remote() (清理远端引用)
+  ↓
+RepoConfig::get_ignore_branches() (读取忽略分支列表)
+  ↓
+GitBranch::get_local_branches() (获取所有本地分支)
+  ↓
+分类分支（已合并 vs 未合并）
+  ↓
+显示预览（已合并分支、未合并分支）
+  ↓
+[如果是 dry-run 模式，直接返回]
+  ↓
+确认删除
+  ↓
+删除已合并分支
+  ↓
+[如果有未合并分支，询问是否强制删除]
+  ↓
+清理本地 tag（只存在于本地但不在远程的 tag）
+  ↓
+显示清理结果
+```
+
+### 功能说明
+
+Repo Clean 命令用于清理本地分支和本地 tag，支持以下功能：
+
+1. **分支清理**：
+   - 清理已合并的分支（相对于默认分支）
+   - 支持强制删除未合并的分支（需要用户确认）
+   - 自动排除以下分支：
+     - 当前分支
+     - 默认分支（main/master）
+     - develop 分支
+     - 忽略列表中的分支（从仓库配置读取）
+
+2. **Tag 清理**：
+   - 清理只存在于本地但不在远程的 tag
+   - 自动检测本地和远程 tag 的差异
+
+3. **安全机制**：
+   - 运行前进行环境检查（Git 状态、网络连接）
+   - 显示预览信息（将要删除的分支和 tag）
+   - 支持 dry-run 模式（预览模式，不实际删除）
+   - 删除前需要用户确认
+   - 已合并分支和未合并分支分别处理
+
+### 关键步骤说明
+
+1. **环境检查**：
+   - 检查 Git 仓库状态
+   - 检查网络连接（GitHub）
+
+2. **初始化信息收集**：
+   - 获取当前分支（不能删除）
+   - 获取默认分支（不能删除）
+   - 获取仓库名（用于显示）
+
+3. **清理远端引用**：
+   - 使用 `git remote prune origin` 清理已删除的远程分支引用
+
+4. **读取配置**：
+   - 从仓库配置读取忽略分支列表
+   - 构建排除分支列表（当前分支、默认分支、develop、忽略列表）
+
+5. **分支分类**：
+   - 检查每个分支是否已合并到默认分支
+   - 分类为已合并分支和未合并分支
+
+6. **预览显示**：
+   - 显示将要删除的已合并分支列表
+   - 显示将要删除的未合并分支列表（警告标记）
+
+7. **Dry-run 模式**：
+   - 如果启用 dry-run，只显示预览，不实际删除
+
+8. **删除确认**：
+   - 显示删除统计信息（总数、已合并数、未合并数）
+   - 用户确认后才执行删除
+
+9. **删除已合并分支**：
+   - 逐个删除已合并分支
+   - 记录删除成功和失败的数量
+
+10. **处理未合并分支**：
+    - 询问用户是否强制删除未合并分支
+    - 如果确认，逐个强制删除
+    - 如果取消，跳过这些分支
+
+11. **清理本地 tag**：
+    - 获取所有 tag 信息（本地和远程）
+    - 筛选出只存在于本地但不在远程的 tag
+    - 显示预览
+    - 用户确认后删除
+
+12. **显示结果**：
+    - 显示分支清理结果（删除数量、跳过数量）
+    - 显示 tag 清理结果（删除数量、跳过数量）
+
+### 数据流
+
+```
+用户输入 (workflow repo clean [--dry-run])
+  ↓
+环境检查（Git 状态、网络连接）
+  ↓
+获取当前分支、默认分支、仓库名
+  ↓
+清理远端引用
+  ↓
+读取忽略分支列表（仓库配置）
+  ↓
+获取所有本地分支
+  ↓
+过滤排除分支
+  ↓
+分类分支（已合并 vs 未合并）
+  ↓
+显示预览
+  ↓
+[如果是 dry-run，直接返回]
+  ↓
+确认删除
+  ↓
+删除已合并分支
+  ↓
+[如果有未合并分支，询问是否强制删除]
+  ↓
+清理本地 tag（只存在于本地但不在远程）
+  ↓
+显示清理结果
+```
+
+### 依赖模块
+
+- **`lib/git/`**：Git 操作
+  - `GitBranch::current_branch()` - 获取当前分支
+  - `GitBranch::get_default_branch()` - 获取默认分支
+  - `GitBranch::get_local_branches()` - 获取本地分支列表
+  - `GitBranch::is_branch_merged()` - 检查分支是否已合并
+  - `GitBranch::delete()` - 删除分支
+  - `GitRepo::extract_repo_name()` - 提取仓库名
+  - `GitRepo::prune_remote()` - 清理远端引用
+  - `GitTag::list_all_tags()` - 获取所有 tag 信息
+  - `GitTag::delete_local()` - 删除本地 tag
+- **`lib/repo/`**：仓库配置管理
+  - `RepoConfig::get_ignore_branches()` - 获取忽略分支列表
+- **`lib/base/dialog/`**：对话框
+  - `ConfirmDialog` - 确认对话框
+- **`commands/check/`**：环境检查
+  - `CheckCommand::run_all()` - 运行所有检查
+
+---
+
+## 3. Repo Show 命令 (`show.rs`)
 
 ### 相关文件
 
@@ -380,6 +558,16 @@ Repo Show 命令用于显示当前仓库的配置信息，包括：
 workflow repo setup
 ```
 
+### Repo Clean 命令
+
+```bash
+# 清理本地分支和本地 tag
+workflow repo clean
+
+# 预览模式（不实际删除）
+workflow repo clean --dry-run
+```
+
 ### Repo Show 命令
 
 ```bash
@@ -427,5 +615,7 @@ Repo 命令模块采用清晰的分层架构设计：
 **当前实现状态**：
 - ✅ Repo Setup 功能完整实现
 - ✅ Repo Show 功能完整实现
+- ✅ Repo Clean 功能完整实现
 - ✅ 交互式工作流完整
 - ✅ 自动检测机制完整
+- ✅ 分支和 tag 清理功能完整

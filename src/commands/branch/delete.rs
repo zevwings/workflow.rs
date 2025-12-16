@@ -75,8 +75,7 @@ impl BranchDeleteCommand {
 
             // 检查是否已合并（仅对本地分支）
             let is_merged = if exists_local {
-                GitBranch::is_branch_merged(branch_name, &default_branch)
-                    .unwrap_or(false)
+                GitBranch::is_branch_merged(branch_name, &default_branch).unwrap_or(false)
             } else {
                 false
             };
@@ -118,12 +117,7 @@ impl BranchDeleteCommand {
                 "✅"
             };
 
-            log_info!(
-                "  {} {} (locations: {})",
-                status,
-                info.name,
-                locations
-            );
+            log_info!("  {} {} (locations: {})", status, info.name, locations);
         }
 
         // 6. Dry-run 模式
@@ -134,10 +128,8 @@ impl BranchDeleteCommand {
         }
 
         // 7. 安全检查：受保护的分支需要额外确认
-        let protected_branches: Vec<_> = branches_info
-            .iter()
-            .filter(|info| info.is_protected)
-            .collect();
+        let protected_branches: Vec<_> =
+            branches_info.iter().filter(|info| info.is_protected).collect();
 
         if !protected_branches.is_empty() && !force {
             log_break!();
@@ -169,10 +161,8 @@ impl BranchDeleteCommand {
                 "local and remote"
             };
 
-            let unmerged_count = branches_info
-                .iter()
-                .filter(|info| !info.is_merged && info.exists_local)
-                .count();
+            let unmerged_count =
+                branches_info.iter().filter(|info| !info.is_merged && info.exists_local).count();
 
             let prompt = if unmerged_count > 0 {
                 format!(
@@ -307,8 +297,8 @@ impl BranchDeleteCommand {
     /// 交互式选择分支
     fn select_branches_interactively() -> Result<Vec<String>> {
         // 获取所有分支（本地 + 远程，去重）- 与 branch switch 保持一致
-        let all_branches = GitBranch::get_all_branches(false)
-            .wrap_err("Failed to get branch list")?;
+        let all_branches =
+            GitBranch::get_all_branches(false).wrap_err("Failed to get branch list")?;
 
         if all_branches.is_empty() {
             log_info!("No branches available");
@@ -321,14 +311,12 @@ impl BranchDeleteCommand {
         let ignore_branches = RepoConfig::get_ignore_branches();
 
         // 排除当前分支（不能删除当前分支）
-        let mut branch_options: Vec<String> = all_branches
-            .into_iter()
-            .filter(|b| b != &current_branch)
-            .collect();
+        let mut branch_options: Vec<String> =
+            all_branches.into_iter().filter(|b| b != &current_branch).collect();
 
         // 使用优先级排序 - 与 branch switch 保持一致
-        branch_options = sort_branches_with_priority(branch_options)
-            .wrap_err("Failed to sort branches")?;
+        branch_options =
+            sort_branches_with_priority(branch_options).wrap_err("Failed to sort branches")?;
 
         // 构建选项列表（添加标记信息）
         let options: Vec<String> = branch_options
@@ -383,9 +371,7 @@ impl BranchDeleteCommand {
                 // 格式可能是：<branch_name> [current] (default) [remote]
                 // 或者：<branch_name> (default) (protected) [local+remote]
                 // 我们需要提取第一个空格之前的部分
-                s.split_whitespace()
-                    .next()
-                    .map(|name| name.trim().to_string())
+                s.split_whitespace().next().map(|name| name.trim().to_string())
             })
             .collect();
 
