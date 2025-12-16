@@ -6,12 +6,10 @@
 //! - 提交更改（commit）
 //! - 获取提交信息
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::GitCommit;
 
@@ -180,7 +178,11 @@ fn test_add_files_empty() {
 fn test_commit_with_changes() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "commit_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "commit_test.txt",
+            "content",
+        );
 
         // 提交
         let result = GitCommit::commit("Test commit", true).unwrap();
@@ -206,7 +208,11 @@ fn test_commit_no_changes() {
 fn test_commit_with_message() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "message_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "message_test.txt",
+            "content",
+        );
 
         // 提交并验证消息
         let result = GitCommit::commit("Custom commit message", true).unwrap();
@@ -269,7 +275,11 @@ fn test_get_modified_files() {
         assert!(modified.is_empty());
 
         // 修改文件
-        create_test_file(&std::env::current_dir().unwrap(), "README.md", "# Modified\n");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "README.md",
+            "# Modified\n",
+        );
 
         // 现在应该有修改的文件
         let modified = GitCommit::get_modified_files().unwrap();
@@ -281,7 +291,11 @@ fn test_get_modified_files() {
 fn test_get_untracked_files() {
     with_test_repo(|_| {
         // 创建未跟踪的文件
-        create_test_file(&std::env::current_dir().unwrap(), "untracked.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "untracked.txt",
+            "content",
+        );
 
         // 获取未跟踪的文件
         let untracked = GitCommit::get_untracked_files().unwrap();
@@ -295,7 +309,11 @@ fn test_get_untracked_files() {
 fn test_get_diff_with_changes() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "diff_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "diff_test.txt",
+            "content",
+        );
 
         // 获取 diff
         let diff = GitCommit::get_diff();
@@ -309,7 +327,7 @@ fn test_get_diff_with_changes() {
 fn test_get_diff_no_changes() {
     with_test_repo(|_| {
         // 没有更改时应该返回 None
-        let diff = GitCommit::get_diff();
+        let _diff = GitCommit::get_diff();
         // 可能返回 None 或空字符串，取决于实现
     });
 }
@@ -320,7 +338,11 @@ fn test_get_diff_no_changes() {
 fn test_reset_hard() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "reset_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "reset_test.txt",
+            "content",
+        );
 
         // 重置到 HEAD
         GitCommit::reset_hard(None).unwrap();
@@ -348,7 +370,11 @@ fn test_worktree_status() {
 fn test_worktree_status_with_changes() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "status_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "status_test.txt",
+            "content",
+        );
 
         // 获取工作区状态
         let status = GitCommit::get_worktree_status().unwrap();

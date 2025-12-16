@@ -7,6 +7,8 @@ use color_eyre::{
     Result,
 };
 use reqwest::blocking::multipart;
+use reqwest::header::HeaderMap;
+use reqwest::header::HeaderValue;
 use serde::Serialize;
 use serde_json::Value;
 use std::fs::File;
@@ -14,8 +16,7 @@ use std::io::Read;
 use std::path::Path;
 
 use super::helpers::{build_jira_url, jira_auth_config};
-use crate::base::http::{HttpClient, RequestConfig};
-use crate::jira::helpers::get_auth;
+use crate::base::http::{HttpClient, MultipartRequestConfig, RequestConfig};
 use crate::jira::types::{
     JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraIssue,
     JiraTransition,
@@ -233,7 +234,7 @@ impl JiraIssueApi {
     /// 如果文件不存在、无法读取或上传失败，返回相应的错误信息。
     pub fn upload_attachment(ticket: &str, file_path: &str) -> Result<Vec<JiraAttachment>> {
         let url = build_jira_url(&format!("issue/{}/attachments", ticket))?;
-        let (email, api_token) = get_auth()?;
+        let auth = jira_auth_config()?;
 
         // 读取文件
         let path = Path::new(file_path);
@@ -259,32 +260,32 @@ impl JiraIssueApi {
 
         let form = multipart::Form::new().part("file", part);
 
-        // 创建 reqwest 客户端并发送请求
-        let client = reqwest::blocking::Client::builder()
-            .build()
-            .wrap_err("Failed to create HTTP client")?;
+        // 设置自定义 headers（Jira 需要 X-Atlassian-Token）
+        let mut headers = HeaderMap::new();
+        headers.insert("X-Atlassian-Token", HeaderValue::from_static("no-check"));
+
+        // 使用 HttpClient 发送 multipart 请求
+        let client = HttpClient::global()?;
+        let config = MultipartRequestConfig::<Value>::new()
+            .multipart(form)
+            .auth(auth.clone())
+            .headers(headers);
 
         let response = client
-            .post(&url)
-            .basic_auth(&email, Some(&api_token))
-            .header("X-Atlassian-Token", "no-check")
-            .multipart(form)
-            .send()
+            .post_multipart(&url, config)
             .wrap_err_with(|| format!("Failed to upload attachment to issue {}", ticket))?;
 
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_text = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-            color_eyre::eyre::bail!(
+        // 检查响应状态并解析
+        let response = response.ensure_success_with(|r| {
+            color_eyre::eyre::eyre!(
                 "Failed to upload attachment: HTTP {} - {}",
-                status,
-                error_text
-            );
-        }
+                r.status,
+                r.extract_error_message()
+            )
+        })?;
 
-        // 解析响应
         let attachments: Vec<JiraAttachment> =
-            response.json().wrap_err_with(|| "Failed to parse attachment response")?;
+            response.as_json().wrap_err_with(|| "Failed to parse attachment response")?;
 
         Ok(attachments)
     }

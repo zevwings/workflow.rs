@@ -4,12 +4,10 @@
 //! - 预览信息生成
 //! - 格式化显示
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::commit::CommitReword;
 use workflow::git::{CommitInfo, GitBranch, GitCommit};
@@ -135,13 +133,16 @@ fn test_create_preview_not_head() {
             .args(&["rev-parse", "HEAD~1"])
             .output()
             .expect("Failed to get commit SHA");
-        let first_commit_sha = String::from_utf8(first_commit_sha.stdout)
-            .unwrap()
-            .trim()
-            .to_string();
+        let first_commit_sha =
+            String::from_utf8(first_commit_sha.stdout).unwrap().trim().to_string();
 
         let commit_info = Command::new("git")
-            .args(&["log", "-1", "--format=%H|%s|%an <%ae>|%ai", &first_commit_sha])
+            .args(&[
+                "log",
+                "-1",
+                "--format=%H|%s|%an <%ae>|%ai",
+                &first_commit_sha,
+            ])
             .output()
             .expect("Failed to get commit info");
         let info_str = String::from_utf8(commit_info.stdout).unwrap();
@@ -179,13 +180,9 @@ fn test_format_preview() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 创建预览信息
-        let preview = CommitReword::create_preview(
-            &commit_info,
-            "New commit message",
-            true,
-            &current_branch,
-        )
-        .unwrap();
+        let preview =
+            CommitReword::create_preview(&commit_info, "New commit message", true, &current_branch)
+                .unwrap();
 
         // 格式化预览
         let formatted = CommitReword::format_preview(&preview);
@@ -205,13 +202,9 @@ fn test_format_preview_with_pushed_warning() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 创建预览信息（模拟已推送的情况）
-        let mut preview = CommitReword::create_preview(
-            &commit_info,
-            "New message",
-            true,
-            &current_branch,
-        )
-        .unwrap();
+        let mut preview =
+            CommitReword::create_preview(&commit_info, "New message", true, &current_branch)
+                .unwrap();
         preview.is_pushed = true;
 
         // 格式化预览

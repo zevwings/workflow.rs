@@ -5,7 +5,6 @@
 //! - 生成环境变量
 
 use pretty_assertions::assert_eq;
-use std::collections::HashMap;
 use workflow::proxy::{ProxyConfig, ProxyConfigGenerator, ProxyInfo, ProxyType};
 
 // ==================== 生成代理命令测试 ====================

@@ -470,7 +470,12 @@ impl GitCommit {
         // 使用 git merge-base --is-ancestor <commit_sha> HEAD
         // 如果 commit_sha 是 HEAD 的祖先，返回 true
         // 注意：如果 commit_sha == HEAD，也返回 true
-        Ok(check_success(&["merge-base", "--is-ancestor", commit_sha, "HEAD"]))
+        Ok(check_success(&[
+            "merge-base",
+            "--is-ancestor",
+            commit_sha,
+            "HEAD",
+        ]))
     }
 
     /// 获取当前分支的 commits 列表

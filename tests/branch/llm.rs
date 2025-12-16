@@ -4,7 +4,6 @@
 //! - LLM 分支生成
 //! - 错误处理
 
-use pretty_assertions::assert_eq;
 use workflow::branch::llm::BranchLLM;
 
 // ==================== LLM 翻译测试 ====================
@@ -37,7 +36,7 @@ fn test_translate_to_english_empty() {
     // 空文本应该导致错误或返回空结果
     // 实际行为取决于 LLM API 的实现
     if result.is_ok() {
-        let translated = result.unwrap();
+        let _translated = result.unwrap();
         // 如果 LLM 返回空结果，应该被检测为错误
         // 但这里我们只验证不会 panic
         assert!(true);

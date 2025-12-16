@@ -157,7 +157,7 @@ impl SummarizeCommand {
         }
 
         // 写入文件
-        fs::write(&output_path, &final_summary)
+        crate::base::util::file::write_file_with_context(&output_path, &final_summary)
             .wrap_err_with(|| format!("Failed to write summary to: {:?}", output_path))?;
 
         log_success!("PR summary saved to: {}", output_path.display());

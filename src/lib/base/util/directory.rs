@@ -39,7 +39,8 @@ use walkdir::WalkDir;
 pub fn list_dirs(path: &Path) -> Result<Vec<PathBuf>> {
     let mut dirs = Vec::new();
     for entry in WalkDir::new(path) {
-        let entry = entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
+        let entry =
+            entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
         if entry.file_type().is_dir() {
             dirs.push(entry.path().to_path_buf());
         }
@@ -80,7 +81,8 @@ pub fn list_dirs(path: &Path) -> Result<Vec<PathBuf>> {
 pub fn list_files(path: &Path) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     for entry in WalkDir::new(path) {
-        let entry = entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
+        let entry =
+            entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
         if entry.file_type().is_file() {
             files.push(entry.path().to_path_buf());
         }
@@ -123,7 +125,8 @@ pub fn list_files(path: &Path) -> Result<Vec<PathBuf>> {
 pub fn find_files(path: &Path, pattern: &str) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     for entry in WalkDir::new(path) {
-        let entry = entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
+        let entry =
+            entry.wrap_err_with(|| format!("Failed to read directory entry: {:?}", path))?;
         if entry.file_type().is_file() {
             let file_name = entry.file_name().to_string_lossy();
             if file_name.contains(pattern) {
@@ -167,10 +170,7 @@ pub fn find_files(path: &Path, pattern: &str) -> Result<Vec<PathBuf>> {
 pub fn list_direct_dirs(path: &Path) -> Result<Vec<PathBuf>> {
     use crate::base::util::path::read_dir_safe;
     let entries = read_dir_safe(path)?;
-    Ok(entries
-        .into_iter()
-        .filter(|p| p.is_dir())
-        .collect())
+    Ok(entries.into_iter().filter(|p| p.is_dir()).collect())
 }
 
 /// 列出目录中的直接文件（非递归）
@@ -206,8 +206,5 @@ pub fn list_direct_dirs(path: &Path) -> Result<Vec<PathBuf>> {
 pub fn list_direct_files(path: &Path) -> Result<Vec<PathBuf>> {
     use crate::base::util::path::read_dir_safe;
     let entries = read_dir_safe(path)?;
-    Ok(entries
-        .into_iter()
-        .filter(|p| p.is_file())
-        .collect())
+    Ok(entries.into_iter().filter(|p| p.is_file()).collect())
 }

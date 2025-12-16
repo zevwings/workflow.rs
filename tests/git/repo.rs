@@ -5,12 +5,10 @@
 //! - 检测远程仓库类型（GitHub、Codeup 等）
 //! - 获取远程仓库 URL
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::{GitRepo, RepoType};
 
@@ -250,9 +248,7 @@ fn test_extract_repo_name() {
 fn test_get_remote_url_wrong_remote() {
     with_test_repo(|_| {
         // 尝试获取不存在的远程仓库 URL 应该失败
-        let result = Command::new("git")
-            .args(&["remote", "get-url", "nonexistent"])
-            .output();
+        let result = Command::new("git").args(&["remote", "get-url", "nonexistent"]).output();
         assert!(result.is_err() || !result.unwrap().status.success());
     });
 }

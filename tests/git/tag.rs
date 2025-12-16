@@ -6,12 +6,10 @@
 //! - 检查 tag 是否存在
 //! - 获取 tag 信息
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::GitTag;
 

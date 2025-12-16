@@ -94,12 +94,13 @@ impl Completion {
             _ => return Ok(None),
         };
 
-        fs::write(&config_file, config_content).wrap_err_with(|| {
-            format!(
-                "Failed to write workflow completion config file: {}",
-                config_file.display()
-            )
-        })?;
+        crate::base::util::file::write_file_with_context(&config_file, &config_content)
+            .wrap_err_with(|| {
+                format!(
+                    "Failed to write workflow completion config file: {}",
+                    config_file.display()
+                )
+            })?;
 
         Ok(Some(config_file))
     }

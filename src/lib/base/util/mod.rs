@@ -68,9 +68,7 @@ pub use date::{
 };
 
 // 重新导出 directory
-pub use directory::{
-    find_files, list_direct_dirs, list_direct_files, list_dirs, list_files,
-};
+pub use directory::{find_files, list_direct_dirs, list_direct_files, list_dirs, list_files};
 
 // 重新导出 file
 pub use file::{

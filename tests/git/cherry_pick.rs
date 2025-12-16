@@ -6,11 +6,9 @@
 //! - 中止 Cherry-pick
 //! - 状态检查
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::{GitBranch, GitCherryPick};
 
@@ -80,7 +78,11 @@ fn test_cherry_pick() {
         GitBranch::checkout_branch("feature").unwrap();
 
         // 在新分支上创建提交
-        create_test_file(&std::env::current_dir().unwrap(), "feature.txt", "feature content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "feature.txt",
+            "feature content",
+        );
         Command::new("git")
             .args(&["add", "feature.txt"])
             .output()
@@ -116,7 +118,11 @@ fn test_cherry_pick_no_commit() {
         GitBranch::checkout_branch("feature").unwrap();
 
         // 在新分支上创建提交
-        create_test_file(&std::env::current_dir().unwrap(), "feature.txt", "feature content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "feature.txt",
+            "feature content",
+        );
         Command::new("git")
             .args(&["add", "feature.txt"])
             .output()
@@ -169,6 +175,9 @@ fn test_cherry_pick_abort_no_operation() {
     with_test_repo(|_| {
         // 没有进行 cherry-pick 时中止应该失败
         let result = GitCherryPick::cherry_pick_abort();
-        assert!(result.is_err(), "Should fail when no cherry-pick in progress");
+        assert!(
+            result.is_err(),
+            "Should fail when no cherry-pick in progress"
+        );
     });
 }

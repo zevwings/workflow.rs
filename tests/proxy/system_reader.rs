@@ -5,7 +5,7 @@
 //! - 解析代理配置
 
 use pretty_assertions::assert_eq;
-use workflow::proxy::{ProxyConfig, ProxyInfo, ProxyType, SystemProxyReader};
+use workflow::proxy::{ProxyInfo, ProxyType, SystemProxyReader};
 
 // ==================== 读取系统代理测试 ====================
 
@@ -18,7 +18,7 @@ fn test_read_system_proxy() {
 
     // 可能成功或失败，取决于系统环境
     if result.is_ok() {
-        let proxy_info = result.unwrap();
+        let _proxy_info = result.unwrap();
         // 验证返回的是 ProxyInfo 结构
         assert!(true); // 如果能成功读取，说明结构正确
     } else {

@@ -8,12 +8,10 @@
 //! - 合并分支
 //! - 推送和删除分支
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::GitBranch;
 
@@ -266,7 +264,11 @@ fn test_merge_branch_fast_forward() {
         GitBranch::checkout_branch("feature").unwrap();
 
         // 在新分支上创建提交
-        create_test_file(&std::env::current_dir().unwrap(), "feature.txt", "feature content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "feature.txt",
+            "feature content",
+        );
         Command::new("git")
             .args(&["add", "feature.txt"])
             .output()
@@ -281,8 +283,7 @@ fn test_merge_branch_fast_forward() {
         GitBranch::checkout_branch(&default_branch).unwrap();
 
         // 合并 feature 分支（应该可以 fast-forward）
-        GitBranch::merge_branch("feature", workflow::git::MergeStrategy::FastForwardOnly)
-            .unwrap();
+        GitBranch::merge_branch("feature", workflow::git::MergeStrategy::FastForwardOnly).unwrap();
 
         // 验证合并成功（文件应该存在）
         assert!(Path::new("feature.txt").exists());
@@ -296,7 +297,11 @@ fn test_merge_branch_merge_strategy() {
         GitBranch::checkout_branch("feature").unwrap();
 
         // 在新分支上创建提交
-        create_test_file(&std::env::current_dir().unwrap(), "feature.txt", "feature content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "feature.txt",
+            "feature content",
+        );
         Command::new("git")
             .args(&["add", "feature.txt"])
             .output()
@@ -309,7 +314,11 @@ fn test_merge_branch_merge_strategy() {
         // 切换回主分支并创建另一个提交
         let default_branch = GitBranch::get_default_branch().unwrap();
         GitBranch::checkout_branch(&default_branch).unwrap();
-        create_test_file(&std::env::current_dir().unwrap(), "main.txt", "main content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "main.txt",
+            "main content",
+        );
         Command::new("git")
             .args(&["add", "main.txt"])
             .output()
@@ -400,7 +409,7 @@ fn test_rename_branch() {
 #[test]
 fn test_rename_current_branch() {
     with_test_repo(|_| {
-        let original_branch = GitBranch::current_branch().unwrap();
+        let _original_branch = GitBranch::current_branch().unwrap();
 
         // 创建新分支并切换
         GitBranch::checkout_branch("to-rename").unwrap();

@@ -6,7 +6,6 @@
 //! - 启用/禁用代理
 
 use pretty_assertions::assert_eq;
-use std::collections::HashMap;
 use workflow::proxy::{ProxyConfig, ProxyInfo, ProxyManager, ProxyType};
 
 // ==================== 检查环境变量代理测试 ====================

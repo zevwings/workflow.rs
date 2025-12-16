@@ -152,14 +152,15 @@ impl CompletionGenerator {
         let filename = get_completion_filename(&shell_type_str, command_name)?;
         let output_file = self.output_dir.join(&filename);
 
-        fs::write(&output_file, buffer).wrap_err_with(|| {
-            format!(
-                "Failed to write completion file: {} (command: {}, shell: {})",
-                output_file.display(),
-                command_name,
-                self.shell
-            )
-        })?;
+        crate::base::util::file::write_file_bytes_with_context(&output_file, &buffer)
+            .wrap_err_with(|| {
+                format!(
+                    "Failed to write completion file: {} (command: {}, shell: {})",
+                    output_file.display(),
+                    command_name,
+                    self.shell
+                )
+            })?;
 
         Ok(())
     }

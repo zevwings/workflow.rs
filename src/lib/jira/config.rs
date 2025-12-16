@@ -119,10 +119,8 @@ where
     ///
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write(&self, config: &T) -> Result<()> {
-        let toml_content =
-            toml::to_string_pretty(config).wrap_err("Failed to serialize config to TOML")?;
-        fs::write(&self.path, toml_content)
-            .wrap_err(format!("Failed to write config file: {:?}", self.path))?;
+        crate::base::util::file::write_toml_file(&self.path, config)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", self.path))?;
         self.set_permissions()?;
         Ok(())
     }
@@ -180,8 +178,7 @@ impl ConfigManager<Value> {
             return Ok(Value::Table(Map::new()));
         }
         let content = FileReader::read_to_string(&self.path)?;
-        toml::from_str(&content)
-            .wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
+        toml::from_str(&content).wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
     /// 写入 `toml::Value` 到配置文件
@@ -197,10 +194,8 @@ impl ConfigManager<Value> {
     ///
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write_value(&self, value: &Value) -> Result<()> {
-        let toml_content =
-            toml::to_string_pretty(value).wrap_err("Failed to serialize config to TOML")?;
-        fs::write(&self.path, toml_content)
-            .wrap_err(format!("Failed to write config file: {:?}", self.path))?;
+        crate::base::util::file::write_toml_value(&self.path, value)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", self.path))?;
         Self::set_permissions_for_path(&self.path)?;
         Ok(())
     }

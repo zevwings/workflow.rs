@@ -13,7 +13,7 @@ use workflow::template::engine::TemplateEngine;
 #[test]
 fn test_template_engine_new() {
     // 测试创建新的模板引擎
-    let engine = TemplateEngine::new();
+    let _engine = TemplateEngine::new();
     // 应该成功创建
     assert!(true); // 如果能创建，说明成功
 }
@@ -21,7 +21,7 @@ fn test_template_engine_new() {
 #[test]
 fn test_template_engine_default() {
     // 测试默认模板引擎
-    let engine = TemplateEngine::default();
+    let _engine = TemplateEngine::default();
     // 应该成功创建
     assert!(true);
 }
@@ -73,7 +73,10 @@ fn test_render_template_with_multiple_vars() {
     // 测试渲染包含多个变量的模板
     let mut engine = TemplateEngine::new();
     engine
-        .register_template("message", "{{greeting}} {{name}}, you are {{age}} years old.")
+        .register_template(
+            "message",
+            "{{greeting}} {{name}}, you are {{age}} years old.",
+        )
         .unwrap();
 
     #[derive(serde::Serialize)]
@@ -189,9 +192,7 @@ fn test_render_nonexistent_template() {
 fn test_render_template_missing_var() {
     // 测试渲染缺少变量的模板（应该使用空值或默认值）
     let mut engine = TemplateEngine::new();
-    engine
-        .register_template("missing", "Hello {{name}}!")
-        .unwrap();
+    engine.register_template("missing", "Hello {{name}}!").unwrap();
 
     #[derive(serde::Serialize)]
     struct EmptyVars {}

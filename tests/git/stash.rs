@@ -6,12 +6,10 @@
 //! - 列出 stash 条目
 //! - 删除 stash
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::git::GitStash;
 
@@ -78,7 +76,11 @@ where
 fn test_stash_push() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "stash_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "stash_test.txt",
+            "content",
+        );
 
         // 保存到 stash
         GitStash::stash_push(None).unwrap();
@@ -97,7 +99,11 @@ fn test_stash_push() {
 fn test_stash_push_with_message() {
     with_test_repo(|_| {
         // 创建修改
-        create_test_file(&std::env::current_dir().unwrap(), "stash_msg.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "stash_msg.txt",
+            "content",
+        );
 
         // 保存到 stash 并带消息
         GitStash::stash_push(Some("Test stash message")).unwrap();
@@ -145,7 +151,11 @@ fn test_stash_list_with_entries() {
 fn test_stash_apply() {
     with_test_repo(|_| {
         // 创建修改并保存到 stash
-        create_test_file(&std::env::current_dir().unwrap(), "apply_test.txt", "original content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "apply_test.txt",
+            "original content",
+        );
         GitStash::stash_push(Some("Apply test")).unwrap();
 
         // 应用 stash
@@ -220,7 +230,11 @@ fn test_stash_pop_specific() {
 fn test_stash_drop() {
     with_test_repo(|_| {
         // 创建 stash
-        create_test_file(&std::env::current_dir().unwrap(), "drop_test.txt", "content");
+        create_test_file(
+            &std::env::current_dir().unwrap(),
+            "drop_test.txt",
+            "content",
+        );
         GitStash::stash_push(Some("Drop test")).unwrap();
 
         // 删除 stash

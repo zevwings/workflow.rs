@@ -127,10 +127,8 @@ impl JiraWorkHistory {
             return Ok(None);
         }
 
-        let content =
-            fs::read_to_string(&repo_file).wrap_err("Failed to read work-history file")?;
-        let history_map: WorkHistoryMap =
-            serde_json::from_str(&content).wrap_err("Failed to parse work-history file")?;
+        let history_map: WorkHistoryMap = crate::base::util::file::read_json_file(&repo_file)
+            .wrap_err("Failed to read or parse work-history file")?;
         for (pr_id, entry) in history_map.iter() {
             if let Some(ref branch) = entry.branch {
                 if branch == branch_name {
@@ -179,9 +177,7 @@ impl JiraWorkHistory {
         let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         let mut history_map: WorkHistoryMap = if repo_file.exists() {
-            let content = fs::read_to_string(&repo_file)
-                .wrap_err("Failed to read existing work-history file")?;
-            serde_json::from_str(&content).unwrap_or_else(|_| HashMap::new())
+            crate::base::util::file::read_json_file(&repo_file).unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
         };
@@ -199,10 +195,8 @@ impl JiraWorkHistory {
             },
         );
 
-        let json = serde_json::to_string_pretty(&history_map)
-            .wrap_err("Failed to serialize work-history")?;
-
-        fs::write(&repo_file, json).wrap_err("Failed to write work-history file")?;
+        crate::base::util::file::write_json_file(&repo_file, &history_map)
+            .wrap_err("Failed to write work-history file")?;
 
         Ok(())
     }
@@ -242,20 +236,16 @@ impl JiraWorkHistory {
             return Ok(());
         }
 
-        let content =
-            fs::read_to_string(&repo_file).wrap_err("Failed to read work-history file")?;
-
         let mut history_map: WorkHistoryMap =
-            serde_json::from_str(&content).wrap_err("Failed to parse work-history file")?;
+            crate::base::util::file::read_json_file(&repo_file)
+                .wrap_err("Failed to read or parse work-history file")?;
 
         if let Some(entry) = history_map.get_mut(pull_request_id) {
             entry.merged_at = Some(Utc::now().to_rfc3339());
         }
 
-        let json = serde_json::to_string_pretty(&history_map)
-            .wrap_err("Failed to serialize work-history file")?;
-
-        fs::write(&repo_file, json).wrap_err("Failed to write work-history file")?;
+        crate::base::util::file::write_json_file(&repo_file, &history_map)
+            .wrap_err("Failed to write work-history file")?;
 
         Ok(())
     }
@@ -297,11 +287,9 @@ impl JiraWorkHistory {
             });
         }
 
-        let content =
-            fs::read_to_string(&repo_file).wrap_err("Failed to read work-history file")?;
-
         let mut history_map: WorkHistoryMap =
-            serde_json::from_str(&content).wrap_err("Failed to parse work-history file")?;
+            crate::base::util::file::read_json_file(&repo_file)
+                .wrap_err("Failed to read or parse work-history file")?;
 
         let mut messages = Vec::new();
         let mut warnings = Vec::new();
@@ -313,10 +301,8 @@ impl JiraWorkHistory {
                 fs::remove_file(&repo_file).wrap_err("Failed to remove empty work-history file")?;
                 messages.push("Removed empty work-history file".to_string());
             } else {
-                let json = serde_json::to_string_pretty(&history_map)
-                    .wrap_err("Failed to serialize work-history file")?;
-
-                fs::write(&repo_file, json).wrap_err("Failed to write work-history file")?;
+                crate::base::util::file::write_json_file(&repo_file, &history_map)
+                    .wrap_err("Failed to write work-history file")?;
             }
         } else {
             let warning_msg = format!(
@@ -360,10 +346,8 @@ impl JiraWorkHistory {
             return Ok(None);
         }
 
-        let content =
-            fs::read_to_string(&repo_file).wrap_err("Failed to read work-history file")?;
-        let history_map: WorkHistoryMap =
-            serde_json::from_str(&content).wrap_err("Failed to parse work-history file")?;
+        let history_map: WorkHistoryMap = crate::base::util::file::read_json_file(&repo_file)
+            .wrap_err("Failed to read or parse work-history file")?;
 
         Ok(history_map.get(pull_request_id).cloned())
     }
@@ -436,10 +420,9 @@ impl JiraWorkHistory {
                 let path = entry.path();
 
                 if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                    let content =
-                        fs::read_to_string(&path).wrap_err("Failed to read work-history file")?;
-                    let history_map: WorkHistoryMap = serde_json::from_str(&content)
-                        .wrap_err("Failed to parse work-history file")?;
+                    let history_map: WorkHistoryMap =
+                        crate::base::util::file::read_json_file(&path)
+                            .wrap_err("Failed to read or parse work-history file")?;
 
                     // 查找匹配的条目
                     for (_, entry) in history_map.iter() {

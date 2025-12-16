@@ -5,15 +5,13 @@
 //! - 格式化显示
 //! - 完成提示生成
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::commit::CommitAmend;
-use workflow::git::{CommitInfo, GitBranch, GitCommit};
+use workflow::git::{GitBranch, GitCommit};
 
 // ==================== 测试辅助函数 ====================
 
@@ -107,14 +105,9 @@ fn test_create_preview_without_new_message() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 创建预览信息（不带新消息）
-        let preview = CommitAmend::create_preview(
-            &commit_info,
-            &None,
-            &[],
-            "amend",
-            &current_branch,
-        )
-        .unwrap();
+        let preview =
+            CommitAmend::create_preview(&commit_info, &None, &[], "amend", &current_branch)
+                .unwrap();
 
         assert_eq!(preview.original_sha, commit_info.sha);
         assert_eq!(preview.new_message, None);
@@ -161,14 +154,9 @@ fn test_format_preview_without_new_message() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 创建预览信息（不带新消息）
-        let preview = CommitAmend::create_preview(
-            &commit_info,
-            &None,
-            &[],
-            "amend",
-            &current_branch,
-        )
-        .unwrap();
+        let preview =
+            CommitAmend::create_preview(&commit_info, &None, &[], "amend", &current_branch)
+                .unwrap();
 
         // 格式化预览
         let formatted = CommitAmend::format_preview(&preview);
@@ -217,11 +205,8 @@ fn test_format_commit_info_detailed() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 格式化详细提交信息
-        let formatted = CommitAmend::format_commit_info_detailed(
-            &commit_info,
-            &current_branch,
-            None,
-        );
+        let formatted =
+            CommitAmend::format_commit_info_detailed(&commit_info, &current_branch, None);
 
         // 验证包含关键信息
         assert!(formatted.contains("当前 Commit 信息"));
@@ -242,11 +227,8 @@ fn test_format_commit_info_detailed_with_status() {
         let status = GitCommit::get_worktree_status().unwrap();
 
         // 格式化详细提交信息（带状态）
-        let formatted = CommitAmend::format_commit_info_detailed(
-            &commit_info,
-            &current_branch,
-            Some(&status),
-        );
+        let formatted =
+            CommitAmend::format_commit_info_detailed(&commit_info, &current_branch, Some(&status));
 
         // 验证包含状态信息
         assert!(formatted.contains("当前 Commit 信息"));
@@ -263,11 +245,8 @@ fn test_should_show_force_push_warning_not_pushed() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 检查是否需要显示 force push 警告（未推送）
-        let should_show = CommitAmend::should_show_force_push_warning(
-            &current_branch,
-            &commit_info.sha,
-        )
-        .unwrap();
+        let should_show =
+            CommitAmend::should_show_force_push_warning(&current_branch, &commit_info.sha).unwrap();
 
         // 未推送时应该返回 false
         assert!(!should_show);
@@ -284,11 +263,8 @@ fn test_format_completion_message_not_pushed() {
         let current_branch = GitBranch::current_branch().unwrap();
 
         // 格式化完成消息（未推送）
-        let message = CommitAmend::format_completion_message(
-            &current_branch,
-            &commit_info.sha,
-        )
-        .unwrap();
+        let message =
+            CommitAmend::format_completion_message(&current_branch, &commit_info.sha).unwrap();
 
         // 未推送时应该返回 None
         assert!(message.is_none());

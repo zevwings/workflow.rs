@@ -56,8 +56,7 @@ impl FileReader {
     ///
     /// 如果文件读取失败，返回相应的错误信息。
     pub fn read_to_string(path: &Path) -> Result<String> {
-        fs::read_to_string(path)
-            .wrap_err_with(|| format!("Failed to read file: {:?}", path))
+        fs::read_to_string(path).wrap_err_with(|| format!("Failed to read file: {:?}", path))
     }
 
     /// 读取文件的所有行
@@ -76,12 +75,12 @@ impl FileReader {
     ///
     /// 如果文件读取失败，返回相应的错误信息。
     pub fn read_lines(path: &Path) -> Result<Vec<String>> {
-        let file = File::open(path)
-            .wrap_err_with(|| format!("Failed to open file: {:?}", path))?;
+        let file = File::open(path).wrap_err_with(|| format!("Failed to open file: {:?}", path))?;
         let reader = BufReader::new(file);
         let mut lines = Vec::new();
         for line in reader.lines() {
-            let line = line.wrap_err_with(|| format!("Failed to read line from file: {:?}", path))?;
+            let line =
+                line.wrap_err_with(|| format!("Failed to read line from file: {:?}", path))?;
             lines.push(line);
         }
         Ok(lines)
@@ -103,8 +102,8 @@ impl FileReader {
     ///
     /// 如果文件读取失败，返回相应的错误信息。
     pub fn read_bytes(path: &Path) -> Result<Vec<u8>> {
-        let mut file = File::open(path)
-            .wrap_err_with(|| format!("Failed to open file: {:?}", path))?;
+        let mut file =
+            File::open(path).wrap_err_with(|| format!("Failed to open file: {:?}", path))?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)
             .wrap_err_with(|| format!("Failed to read file: {:?}", path))?;
@@ -155,8 +154,7 @@ where
 {
     let content = fs::read_to_string(path)
         .wrap_err_with(|| format!("Failed to read config file: {:?}", path))?;
-    toml::from_str(&content)
-        .wrap_err_with(|| format!("Failed to parse TOML config: {:?}", path))
+    toml::from_str(&content).wrap_err_with(|| format!("Failed to parse TOML config: {:?}", path))
 }
 
 /// 读取 TOML 文件并解析为 `toml::Value`
@@ -437,4 +435,61 @@ where
 /// ```
 pub fn write_json_value(path: &Path, value: &serde_json::Value) -> Result<()> {
     write_json_file(path, value)
+}
+
+/// 将字符串内容写入文件
+///
+/// 将字符串内容写入指定路径的文件，提供统一的错误处理。
+///
+/// # 参数
+///
+/// * `path` - 目标文件路径
+/// * `content` - 要写入的字符串内容
+///
+/// # 错误
+///
+/// 如果文件写入失败，返回包含上下文信息的错误。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::base::util::file::write_file_with_context;
+/// use std::path::PathBuf;
+///
+/// # fn main() -> color_eyre::Result<()> {
+/// write_file_with_context(PathBuf::from("output.txt").as_path(), "Hello, World!")?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn write_file_with_context(path: &Path, content: &str) -> Result<()> {
+    fs::write(path, content).wrap_err_with(|| format!("Failed to write file: {:?}", path))
+}
+
+/// 将字节内容写入文件
+///
+/// 将字节内容写入指定路径的文件，提供统一的错误处理。
+///
+/// # 参数
+///
+/// * `path` - 目标文件路径
+/// * `content` - 要写入的字节内容
+///
+/// # 错误
+///
+/// 如果文件写入失败，返回包含上下文信息的错误。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::base::util::file::write_file_bytes_with_context;
+/// use std::path::PathBuf;
+///
+/// # fn main() -> color_eyre::Result<()> {
+/// let data = b"binary data";
+/// write_file_bytes_with_context(PathBuf::from("output.bin").as_path(), data)?;
+/// # Ok(())
+/// # }
+/// ```
+pub fn write_file_bytes_with_context(path: &Path, content: &[u8]) -> Result<()> {
+    fs::write(path, content).wrap_err_with(|| format!("Failed to write file: {:?}", path))
 }

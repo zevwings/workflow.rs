@@ -160,13 +160,8 @@ fn test_branch_sync_command_merge() {
 #[test]
 fn test_branch_sync_command_rebase() {
     // 测试 Sync 命令（rebase 模式）
-    let cli = TestBranchCli::try_parse_from(&[
-        "test-branch",
-        "sync",
-        "develop",
-        "--rebase",
-    ])
-    .unwrap();
+    let cli =
+        TestBranchCli::try_parse_from(&["test-branch", "sync", "develop", "--rebase"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Sync {
@@ -184,13 +179,7 @@ fn test_branch_sync_command_rebase() {
 #[test]
 fn test_branch_sync_command_ff_only() {
     // 测试 Sync 命令（fast-forward only 模式）
-    let cli = TestBranchCli::try_parse_from(&[
-        "test-branch",
-        "sync",
-        "main",
-        "--ff-only",
-    ])
-    .unwrap();
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "sync", "main", "--ff-only"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Sync {
@@ -208,13 +197,8 @@ fn test_branch_sync_command_ff_only() {
 #[test]
 fn test_branch_sync_command_squash() {
     // 测试 Sync 命令（squash 模式）
-    let cli = TestBranchCli::try_parse_from(&[
-        "test-branch",
-        "sync",
-        "feature",
-        "--squash",
-    ])
-    .unwrap();
+    let cli =
+        TestBranchCli::try_parse_from(&["test-branch", "sync", "feature", "--squash"]).unwrap();
 
     match cli.command {
         BranchSubcommand::Sync {
@@ -264,7 +248,10 @@ fn test_branch_sync_command_all_options() {
 fn test_branch_sync_command_required_source() {
     // 测试 Sync 命令需要 source_branch 参数
     let result = TestBranchCli::try_parse_from(&["test-branch", "sync"]);
-    assert!(result.is_err(), "Sync should require source_branch parameter");
+    assert!(
+        result.is_err(),
+        "Sync should require source_branch parameter"
+    );
 }
 
 // ==================== Delete 命令测试 ====================
@@ -294,13 +281,8 @@ fn test_branch_delete_command() {
 #[test]
 fn test_branch_delete_command_local_only() {
     // 测试 Delete 命令（只删除本地分支）
-    let cli = TestBranchCli::try_parse_from(&[
-        "test-branch",
-        "delete",
-        "feature/old",
-        "--local",
-    ])
-    .unwrap();
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "delete", "feature/old", "--local"])
+        .unwrap();
 
     match cli.command {
         BranchSubcommand::Delete { local, remote, .. } => {
@@ -314,13 +296,8 @@ fn test_branch_delete_command_local_only() {
 #[test]
 fn test_branch_delete_command_force() {
     // 测试 Delete 命令（force 模式）
-    let cli = TestBranchCli::try_parse_from(&[
-        "test-branch",
-        "delete",
-        "feature/old",
-        "--force",
-    ])
-    .unwrap();
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "delete", "feature/old", "--force"])
+        .unwrap();
 
     match cli.command {
         BranchSubcommand::Delete { force, .. } => {

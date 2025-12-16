@@ -5,7 +5,6 @@ use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 

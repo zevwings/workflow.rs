@@ -5,15 +5,13 @@
 //! - 预览信息生成
 //! - 格式化显示
 
+use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::process::Command;
-use crate::common::helpers::{
-    cleanup_temp_test_dir, create_temp_test_dir, create_test_file,
-};
 
 use workflow::commit::CommitSquash;
-use workflow::git::{GitBranch, GitCommit};
+use workflow::git::GitBranch;
 
 // ==================== 测试辅助函数 ====================
 
@@ -150,12 +148,8 @@ fn test_create_preview() {
         let commits = CommitSquash::get_branch_commits("feature").unwrap();
 
         // 创建预览信息
-        let preview = CommitSquash::create_preview(
-            &commits,
-            "Squashed commit message",
-            "feature",
-        )
-        .unwrap();
+        let preview =
+            CommitSquash::create_preview(&commits, "Squashed commit message", "feature").unwrap();
 
         assert_eq!(preview.commits.len(), 2);
         assert_eq!(preview.new_message, "Squashed commit message");
@@ -186,12 +180,8 @@ fn test_format_preview() {
         let commits = CommitSquash::get_branch_commits("feature").unwrap();
 
         // 创建预览信息
-        let preview = CommitSquash::create_preview(
-            &commits,
-            "Squashed message",
-            "feature",
-        )
-        .unwrap();
+        let preview =
+            CommitSquash::create_preview(&commits, "Squashed message", "feature").unwrap();
 
         // 格式化预览
         let formatted = CommitSquash::format_preview(&preview);
@@ -224,12 +214,8 @@ fn test_format_preview_with_pushed_warning() {
         let commits = CommitSquash::get_branch_commits("feature").unwrap();
 
         // 创建预览信息（模拟已推送的情况）
-        let mut preview = CommitSquash::create_preview(
-            &commits,
-            "Squashed message",
-            "feature",
-        )
-        .unwrap();
+        let mut preview =
+            CommitSquash::create_preview(&commits, "Squashed message", "feature").unwrap();
         preview.is_pushed = true;
 
         // 格式化预览

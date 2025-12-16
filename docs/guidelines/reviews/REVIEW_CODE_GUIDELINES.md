@@ -23,6 +23,7 @@
 1. **消除重复代码**：识别并抽取重复的代码模式为公共方法
 2. **复用已有工具**：识别可以使用已封装工具函数替换的代码
 3. **优化依赖使用**：识别可以使用第三方库替换的自实现代码
+4. **规范代码风格**：确保代码遵循项目规范，包括导入顺序等
 
 ---
 
@@ -343,6 +344,73 @@ grep -r "indicatif" src/
 - [ ] 是否直接使用 `indicatif` 而不是封装的 Spinner/Progress？
 - [ ] 是否有重复的样式配置？
 - [ ] 是否可以使用封装的指示器？
+
+#### 11. 导入顺序模式
+
+**检查目标**：检查导入语句是否遵循从顶部导入的规范
+
+**导入顺序规范**：
+1. **标准库导入**：`std::` 和 `core::` 相关导入
+2. **第三方库导入**：外部 crate 的导入
+3. **项目内部导入**：`crate::` 或相对路径导入
+4. **每个分组之间用空行分隔**
+
+**搜索模式**：
+```bash
+# 查找文件中的导入语句
+grep -r "^use " src/ -A 0 -B 0
+
+# 查找可能违反导入顺序的文件（导入语句不在文件顶部）
+# 需要手动检查或使用代码分析工具
+```
+
+**常见问题模式**：
+- 导入语句分散在代码中间
+- 导入顺序不符合规范（标准库、第三方库、项目内部）
+- 导入分组之间没有空行分隔
+- 在函数或模块中间使用 `use` 语句
+
+**检查方法**：
+1. **手动检查**：查看每个文件的导入部分
+2. **自动化检查**：使用 `rustfmt` 或 `cargo clippy` 检查导入顺序
+3. **代码审查**：在代码审查时重点关注导入顺序
+
+**正确的导入顺序示例**：
+```rust
+// 标准库导入
+use std::fs;
+use std::path::Path;
+use std::io::BufRead;
+
+// 第三方库导入
+use color_eyre::Result;
+use serde::{Deserialize, Serialize};
+
+// 项目内部导入
+use crate::base::util::file::FileReader;
+use crate::base::settings::Settings;
+```
+
+**错误的导入顺序示例**：
+```rust
+// ❌ 不好的做法：导入分散在代码中
+fn some_function() {
+    use std::fs;  // 不应该在函数内部导入
+    // ...
+}
+
+// ❌ 不好的做法：导入顺序混乱
+use crate::base::util::file::FileReader;  // 项目内部导入
+use std::fs;  // 标准库导入应该在前面
+use color_eyre::Result;  // 第三方库导入
+```
+
+**检查清单**：
+- [ ] 所有导入语句是否都在文件顶部？
+- [ ] 导入顺序是否符合规范（标准库 → 第三方库 → 项目内部）？
+- [ ] 导入分组之间是否有空行分隔？
+- [ ] 是否在函数或模块中间使用了 `use` 语句？
+- [ ] 是否使用了 `rustfmt` 格式化导入顺序？
 
 ---
 
@@ -746,6 +814,7 @@ grep -r "Result\|Error\|anyhow\|color_eyre" src/
 - [ ] **日志输出**：检查是否使用 `println!` 而不是日志宏
 - [ ] **用户交互**：检查是否直接使用 `dialoguer` 而不是封装的 Dialog
 - [ ] **进度指示器**：检查是否直接使用 `indicatif` 而不是封装的 Spinner/Progress
+- [ ] **导入顺序**：检查导入语句是否遵循从顶部导入的规范（标准库 → 第三方库 → 项目内部）
 
 ### 已封装工具检查清单
 
@@ -886,6 +955,40 @@ use crate::base::dialog::InputDialog;
 
 let input = InputDialog::new("Enter branch name")
     .interact()?;
+```
+
+### 示例 6：导入顺序不规范
+
+**问题代码**：
+```rust
+// ❌ 不好的做法：导入顺序混乱，导入分散
+use crate::base::util::file::FileReader;  // 项目内部导入应该在最后
+use std::fs;  // 标准库导入应该在前面
+use color_eyre::Result;  // 第三方库导入
+
+fn some_function() {
+    use std::path::Path;  // 不应该在函数内部导入
+    // ...
+}
+```
+
+**改进方案**：
+```rust
+// ✅ 好的做法：导入顺序规范，都在文件顶部
+// 标准库导入
+use std::fs;
+use std::path::Path;
+
+// 第三方库导入
+use color_eyre::Result;
+
+// 项目内部导入
+use crate::base::util::file::FileReader;
+
+fn some_function() {
+    // 使用已导入的类型
+    // ...
+}
 ```
 
 ---

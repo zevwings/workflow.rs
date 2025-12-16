@@ -110,8 +110,8 @@ pub fn ensure_parent_dir_exists(path: &Path) -> Result<()> {
 /// # }
 /// ```
 pub fn read_dir_safe(path: &Path) -> Result<Vec<PathBuf>> {
-    let entries = fs::read_dir(path)
-        .wrap_err_with(|| format!("Failed to read directory: {:?}", path))?;
+    let entries =
+        fs::read_dir(path).wrap_err_with(|| format!("Failed to read directory: {:?}", path))?;
     let mut paths = Vec::new();
     for entry in entries {
         match entry {

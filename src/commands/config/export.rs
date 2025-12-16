@@ -427,7 +427,8 @@ impl ConfigExportCommand {
             }
         };
 
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        crate::base::util::file::write_file_with_context(path, &content)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", path))?;
 
         Ok(())
     }

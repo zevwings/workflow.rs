@@ -6,9 +6,7 @@
 //! - 回调处理
 
 use pretty_assertions::assert_eq;
-use workflow::branch::sync::{
-    BranchSyncOptions, BranchSyncResult, SourceBranchInfo, SyncStrategy,
-};
+use workflow::branch::sync::{BranchSyncOptions, BranchSyncResult, SourceBranchInfo, SyncStrategy};
 
 // ==================== 同步选项测试 ====================
 

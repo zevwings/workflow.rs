@@ -436,7 +436,8 @@ impl ConfigValidateCommand {
             _ => toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?,
         };
 
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        crate::base::util::file::write_file_with_context(path, &content)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", path))?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
