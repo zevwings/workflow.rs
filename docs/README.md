@@ -140,6 +140,15 @@
 - 分支名生成（模板系统、LLM、简单回退）
 - 非英文翻译功能
 
+#### [TAG_ARCHITECTURE.md](./architecture/lib/TAG_ARCHITECTURE.md)
+**Tag 模块架构文档**
+
+- Tag 列表操作（本地、远程、全部）
+- Tag 信息获取（名称、commit hash、存在位置）
+- Tag 删除操作（本地、远程、同时删除）
+- Tag 存在性检查
+- 类型定义（TagInfo 结构体）
+
 #### [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
 **Commit 模块架构文档**
 
@@ -201,6 +210,15 @@
 - 分支前缀管理（按仓库配置分支前缀，用于自动生成分支名）
 - 支持 dry-run 模式和确认机制
 - 首次使用自动提示配置分支前缀
+
+#### [TAG_COMMAND_ARCHITECTURE.md](./architecture/commands/TAG_COMMAND_ARCHITECTURE.md)
+**Tag 管理命令层架构文档**
+
+- Tag 删除功能（支持本地和远程 tag 删除）
+- 模式匹配批量删除（支持 shell 通配符）
+- 交互式选择多个 tag
+- 预览和确认机制
+- 支持 dry-run 模式和强制删除
 
 #### [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
 **Commit 管理命令层架构文档**
@@ -317,6 +335,27 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 快速检查清单和常见问题
 
+### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/REVIEW_DOCUMENT_GUIDELINES.md)
+**文档检查指南**
+
+- 检查概述和检查步骤
+- README.md 检查（基本结构、命令清单、配置说明、文档链接、版本号、架构总览）
+- docs/ 目录检查（目录结构、架构文档、指南文档、迁移文档、文档索引）
+- CHANGELOG.md 检查（格式、内容完整性、版本一致性、变更分类）
+- 重复内容检查（跨文档重复、文档内部重复、链接和引用）
+- 文档位置检查（文档分类、文档命名、临时文档）
+- 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
+- 检查报告生成和快速检查清单
+
+### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/REVIEW_TEST_CASE_GUIDELINES.md)
+**测试用例检查指南**
+
+- 检查目标（测试覆盖、合理性、缺失测试）
+- 检查步骤（收集信息、覆盖检查、合理性检查、缺失识别、生成报告）
+- 检查内容（模块覆盖、功能覆盖、测试工具使用、测试结构、测试内容）
+- 检查方法（自动化工具、手动检查）
+- 检查报告格式
+
 ### [CARGO_BLOAT_GUIDELINES.md](./guidelines/CARGO_BLOAT_GUIDELINES.md)
 **cargo-bloat 使用指南**
 
@@ -326,6 +365,16 @@
 - 二进制大小优化最佳实践
 - 常见问题解答
 - 相关工具和资源
+
+### [REVIEW_CODE_GUIDELINES.md](./guidelines/REVIEW_CODE_GUIDELINES.md)
+**代码检查指南**
+
+- 系统化的代码检查方法
+- 重复代码识别和抽取方法
+- 已封装工具函数的使用检查
+- 第三方库替换机会识别
+- 详细的检查清单和示例分析
+- 适用于 AI 辅助代码审查和人工代码审查
 
 ### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
 **为什么需要同时生成 zsh 和 bash 的补全脚本**
@@ -382,6 +431,7 @@
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
 - 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
 - 想了解 Git 操作？ → [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+- 想了解 Tag 管理？ → [TAG_ARCHITECTURE.md](./architecture/lib/TAG_ARCHITECTURE.md)
 - 想了解 Commit 管理？ → [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
 - 想了解 HTTP 客户端？ → [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
 - 想了解配置管理？ → [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
@@ -400,6 +450,7 @@
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解 Tag 管理命令？ → [TAG_COMMAND_ARCHITECTURE.md](./architecture/commands/TAG_COMMAND_ARCHITECTURE.md)
 - 想了解 Repo 管理命令？ → [REPO_COMMAND_ARCHITECTURE.md](./architecture/commands/REPO_COMMAND_ARCHITECTURE.md)
 - 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
 - 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)

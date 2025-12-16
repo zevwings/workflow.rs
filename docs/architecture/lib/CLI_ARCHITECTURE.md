@@ -25,7 +25,7 @@ CLI 模块是 Workflow CLI 的基础设施模块，定义了整个 CLI 的命令
 ```
 src/lib/cli/
 ├── mod.rs        # CLI 命令结构定义（~526 行）
-├── common.rs     # 共用参数定义（OutputFormatArgs, DryRunArgs）
+├── args.rs       # 共用参数定义（OutputFormatArgs, DryRunArgs, JiraIdArg）
 ├── branch.rs     # 分支管理子命令
 ├── commands.rs   # 主命令枚举
 ├── config.rs     # 配置管理子命令
@@ -163,7 +163,7 @@ pub enum Commands {
 
 **职责**：定义多个命令共享的参数组，减少代码重复
 
-**位置**：`src/lib/cli/common.rs`
+**位置**：`src/lib/cli/args.rs`
 
 **定义**：
 
@@ -171,23 +171,62 @@ pub enum Commands {
 use clap::Args;
 
 /// 输出格式选项
+/// 支持多种输出格式：table（默认）、json、yaml、markdown。
+/// 优先级：json > yaml > markdown > table
 #[derive(Args, Debug, Clone)]
 pub struct OutputFormatArgs {
+    /// Output in table format (default)
     #[arg(long)]
     pub table: bool,
+
+    /// Output in JSON format
     #[arg(long)]
     pub json: bool,
+
+    /// Output in YAML format
     #[arg(long)]
     pub yaml: bool,
+
+    /// Output in Markdown format
     #[arg(long)]
     pub markdown: bool,
 }
 
 /// Dry run 模式选项
+/// 预览操作而不实际执行。
 #[derive(Args, Debug, Clone)]
 pub struct DryRunArgs {
+    /// Dry run mode (preview changes without actually executing)
     #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
     pub dry_run: bool,
+}
+
+impl DryRunArgs {
+    /// 获取 dry_run 标志
+    pub fn is_dry_run(&self) -> bool {
+        self.dry_run
+    }
+}
+
+/// 可选 JIRA ID 参数
+/// JIRA ticket ID，如果未提供则交互式输入。
+#[derive(Args, Debug, Clone)]
+pub struct JiraIdArg {
+    /// Jira ticket ID (optional, will prompt interactively if not provided)
+    #[arg(value_name = "JIRA_ID")]
+    pub jira_id: Option<String>,
+}
+
+impl JiraIdArg {
+    /// 获取 JIRA ID（如果存在）
+    pub fn get(&self) -> Option<&str> {
+        self.jira_id.as_deref()
+    }
+
+    /// 获取 JIRA ID（移动所有权）
+    pub fn into_option(self) -> Option<String> {
+        self.jira_id
+    }
 }
 ```
 
@@ -196,14 +235,23 @@ pub struct DryRunArgs {
 使用 `#[command(flatten)]` 特性将共用参数组展开到命令中：
 
 ```rust
+use super::args::{JiraIdArg, OutputFormatArgs, DryRunArgs};
+
 #[derive(Subcommand)]
 pub enum JiraSubcommand {
     Info {
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
         #[command(flatten)]
         output_format: OutputFormatArgs,
+    },
+    Clean {
+        #[command(flatten)]
+        jira_id: JiraIdArg,
+
+        #[command(flatten)]
+        dry_run: DryRunArgs,
     },
     // ...
 }
@@ -211,13 +259,15 @@ pub enum JiraSubcommand {
 
 **优势**：
 - ✅ 减少代码重复：参数定义在一个地方
-- ✅ 类型安全：使用结构体而非重复的 bool 参数
+- ✅ 类型安全：使用结构体而非重复的参数定义
 - ✅ 自动生成 completion：clap 自动为共用参数组生成 completion
 - ✅ 易于维护：修改时只需更新一处
+- ✅ 提供便捷方法：如 `is_dry_run()`、`get()` 等
 
 **当前使用的命令**：
 - `OutputFormatArgs`：Jira 命令（Info, Related, Changelog, Comments）
-- `DryRunArgs`：PR 命令（Create, Rebase, Pick）、Branch 命令（Clean）、Jira 命令（Clean）、Config 命令（Import）、Migrate 命令
+- `DryRunArgs`：PR 命令（Create, Rebase, Pick）、Branch 命令（Clean）、Jira 命令（Clean）、Config 命令（Import）、Tag 命令（Delete）、Repo 命令（Clean）、Migrate 命令
+- `JiraIdArg`：Jira 命令（Info, Related, Changelog, Comment, Attachments, Clean, Log）、Log 命令（Download, Find, Search）、Branch 命令（Create）
 
 #### 4. 子命令枚举（Subcommands）
 

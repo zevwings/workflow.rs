@@ -4,6 +4,7 @@
 //! This configuration is stored in `~/.workflow/config/repository.toml` and supports iCloud sync.
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{read_toml_value, write_toml_value};
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
@@ -105,11 +106,7 @@ impl PrivateRepoConfig {
             return Ok(Self::default());
         }
 
-        let content =
-            fs::read_to_string(&config_path).wrap_err("Failed to read repository config")?;
-
-        let value: Value =
-            toml::from_str(&content).wrap_err("Failed to parse repository config")?;
+        let value = read_toml_value(&config_path)?;
 
         // Find current repository's configuration sections
         // Format: [${repo_id}], [${repo_id}.branch] and [${repo_id}.pr]
@@ -198,9 +195,7 @@ impl PrivateRepoConfig {
 
         // Read existing configuration (if exists)
         let mut existing_value: Value = if config_path.exists() {
-            let content = fs::read_to_string(&config_path)
-                .wrap_err("Failed to read existing repository config")?;
-            toml::from_str(&content).wrap_err("Failed to parse existing repository config")?
+            read_toml_value(&config_path)?
         } else {
             Value::Table(Map::new())
         };
@@ -257,10 +252,7 @@ impl PrivateRepoConfig {
         }
 
         // Write to file
-        let content = toml::to_string_pretty(&existing_value)
-            .wrap_err("Failed to serialize repository config")?;
-
-        fs::write(&config_path, content).wrap_err("Failed to write repository config file")?;
+        write_toml_value(&config_path, &existing_value)?;
 
         Ok(())
     }

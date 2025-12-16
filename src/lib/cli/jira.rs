@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::{DryRunArgs, JiraIdArg, OutputFormatArgs};
+use super::args::{DryRunArgs, JiraIdArg, OutputFormatArgs};
 use super::log::LogSubcommand;
 
 /// Jira operations subcommands

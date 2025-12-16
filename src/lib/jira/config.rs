@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::marker::PhantomData;
 use std::path::PathBuf;
+use toml::{map::Map, Value};
 
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
@@ -156,6 +157,73 @@ where
     #[cfg(not(unix))]
     fn set_permissions(&self) -> Result<()> {
         Ok(())
+    }
+}
+
+/// ConfigManager 对 `toml::Value` 的特化实现
+///
+/// 提供对 `toml::Value` 类型的配置管理支持，适用于需要部分读取或动态操作配置的场景。
+impl ConfigManager<Value> {
+    /// 读取配置文件为 `toml::Value`
+    ///
+    /// 如果文件不存在，返回空的 `Value::Table`。
+    ///
+    /// # 返回
+    ///
+    /// 返回解析后的 `toml::Value` 实例。
+    ///
+    /// # 错误
+    ///
+    /// 如果文件存在但读取或解析失败，返回相应的错误信息。
+    pub fn read_value(&self) -> Result<Value> {
+        if !self.path.exists() {
+            return Ok(Value::Table(HashMap::new()));
+        }
+        let content = fs::read_to_string(&self.path)
+            .wrap_err(format!("Failed to read config file: {:?}", self.path))?;
+        toml::from_str(&content)
+            .wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
+    }
+
+    /// 写入 `toml::Value` 到配置文件
+    ///
+    /// 将 `toml::Value` 序列化为 TOML 格式并写入文件。
+    /// 在 Unix 系统上会自动设置文件权限为 600。
+    ///
+    /// # 参数
+    ///
+    /// * `value` - 要写入的 `toml::Value` 实例
+    ///
+    /// # 错误
+    ///
+    /// 如果序列化或写入失败，返回相应的错误信息。
+    pub fn write_value(&self, value: &Value) -> Result<()> {
+        let toml_content =
+            toml::to_string_pretty(value).wrap_err("Failed to serialize config to TOML")?;
+        fs::write(&self.path, toml_content)
+            .wrap_err(format!("Failed to write config file: {:?}", self.path))?;
+        self.set_permissions()?;
+        Ok(())
+    }
+
+    /// 更新 `toml::Value` 配置文件
+    ///
+    /// 读取现有配置，应用更新函数，然后写回文件。
+    ///
+    /// # 参数
+    ///
+    /// * `f` - 更新函数，接收可变的 `toml::Value` 引用
+    ///
+    /// # 错误
+    ///
+    /// 如果读取、更新或写入失败，返回相应的错误信息。
+    pub fn update_value<F>(&self, f: F) -> Result<()>
+    where
+        F: FnOnce(&mut Value),
+    {
+        let mut value = self.read_value()?;
+        f(&mut value);
+        self.write_value(&value)
     }
 }
 

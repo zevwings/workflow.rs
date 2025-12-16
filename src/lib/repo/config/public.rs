@@ -4,6 +4,7 @@
 //! This configuration is stored in `.workflow/config.toml` in the project root.
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{read_toml_value, write_toml_value};
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use std::fs;
@@ -39,10 +40,7 @@ impl PublicRepoConfig {
             return Ok(Self::default());
         }
 
-        let content =
-            fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
-
-        let value: Value = toml::from_str(&content).wrap_err("Failed to parse configuration")?;
+        let value = read_toml_value(&path)?;
 
         let mut config = Self::default();
 
@@ -87,9 +85,7 @@ impl PublicRepoConfig {
         }
 
         let mut existing_value: Value = if path.exists() {
-            let content =
-                fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
-            toml::from_str(&content).wrap_err("Failed to parse existing configuration")?
+            read_toml_value(&path)?
         } else {
             Value::Table(Map::new())
         };
@@ -139,10 +135,7 @@ impl PublicRepoConfig {
             }
         }
 
-        let content = toml::to_string_pretty(&existing_value)
-            .wrap_err("Failed to serialize configuration")?;
-
-        fs::write(&path, content).wrap_err("Failed to write configuration file")?;
+        write_toml_value(&path, &existing_value)?;
 
         Ok(())
     }

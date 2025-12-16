@@ -2,12 +2,12 @@
 //!
 //! 提供别名的加载、展开和管理功能。
 
+use crate::base::settings::paths::Paths;
+use crate::base::settings::Settings;
+use crate::base::util::file::write_toml_file;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::{HashMap, HashSet};
 use std::fs;
-
-use crate::base::settings::paths::Paths;
-use crate::base::settings::Settings;
 
 /// 别名管理器
 ///
@@ -167,10 +167,7 @@ impl AliasManager {
         settings.aliases.insert(name.to_string(), command.to_string());
 
         // 保存配置
-        let toml_content =
-            toml::to_string_pretty(&settings).wrap_err("Failed to serialize settings to TOML")?;
-        fs::write(&config_path, toml_content)
-            .wrap_err(format!("Failed to write config file: {:?}", config_path))?;
+        write_toml_file(&config_path, &settings)?;
 
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]
@@ -211,10 +208,7 @@ impl AliasManager {
         settings.aliases.remove(name);
 
         // 保存配置
-        let toml_content =
-            toml::to_string_pretty(&settings).wrap_err("Failed to serialize settings to TOML")?;
-        fs::write(&config_path, toml_content)
-            .wrap_err(format!("Failed to write config file: {:?}", config_path))?;
+        write_toml_file(&config_path, &settings)?;
 
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]

@@ -30,8 +30,10 @@ pub mod browser;
 pub mod checksum;
 pub mod clipboard;
 pub mod date;
+pub mod directory;
 pub mod file;
 pub mod format;
+pub mod path;
 pub mod platform;
 pub mod string;
 pub mod table;
@@ -65,8 +67,21 @@ pub use date::{
     Timezone,
 };
 
+// 重新导出 directory
+pub use directory::{
+    find_files, list_direct_dirs, list_direct_files, list_dirs, list_files,
+};
+
 // 重新导出 file
-pub use file::FileReader;
+pub use file::{
+    read_json_file, read_json_value, read_toml_file, read_toml_value, write_json_file,
+    write_json_value, write_toml_file, write_toml_value, FileReader,
+};
+
+// 重新导出 path
+pub use path::{
+    ensure_dir_exists, ensure_parent_dir_exists, is_dir, is_file, path_exists, read_dir_safe,
+};
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

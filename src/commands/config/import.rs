@@ -356,10 +356,8 @@ impl ConfigImportCommand {
 
     /// 保存配置
     fn save_config(settings: &Settings, path: &PathBuf) -> Result<()> {
-        let content =
-            toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?;
-
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        use crate::base::util::file::write_toml_file;
+        write_toml_file(path, settings)?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]
