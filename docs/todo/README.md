@@ -36,6 +36,16 @@
 - **优先级**: 高优先级（命令封装、info 增强）
 
 
+#### 2. [`REPO_TODO.md`](./REPO_TODO.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: Repo 配置模块
+- **内容**:
+  - 分支前缀全局配置支持
+  - PR 自动接受变更类型全局配置支持
+  - 配置优先级文档完善
+- **优先级**: 高优先级（配置层级优化）
+
 #### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
@@ -54,6 +64,7 @@ docs/todo/
 ├── README.md                      # 本文件（索引文档）
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
+├── REPO_TODO.md                   # Repo 配置模块待办事项（⏳ 待实施）
 └── INTEGRATION_TODO.md            # 集成与扩展待办事项
 ```
 
@@ -64,14 +75,15 @@ docs/todo/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| ⏳ 待实施 | 1 个 | 按模块分类的待办事项 |
-| **总计** | **2 个** | - |
+| ⏳ 待实施 | 2 个 | Repo 配置模块、集成与扩展 |
+| **总计** | **3 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **INTEGRATION_TODO.md** - 集成与扩展待办事项
+2. **REPO_TODO.md** - Repo 配置模块待办事项（⏳ 待实施，0%）
+3. **INTEGRATION_TODO.md** - 集成与扩展待办事项
 
 ---
 
@@ -79,15 +91,20 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 2 个文档：
+本目录包含 3 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-#### 待实施文档（1 个）
-2. **集成与扩展** (`INTEGRATION_TODO.md`)
+#### 待实施文档（2 个）
+2. **Repo 配置模块** (`REPO_TODO.md`) - ⏳ 待实施（0%）
+   - 分支前缀全局配置支持
+   - PR 自动接受变更类型全局配置支持
+   - 配置优先级文档完善
+
+3. **集成与扩展** (`INTEGRATION_TODO.md`)
    - 更多平台支持、通知系统
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
@@ -106,6 +123,7 @@ docs/todo/
 
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
+- **Repo 配置相关** → [`REPO_TODO.md`](./REPO_TODO.md) ⏳ 待实施
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 
 ---
@@ -118,6 +136,8 @@ docs/todo/
 ## 📝 更新说明
 
 ### 2025-01-27 更新
+- ✅ 新增 REPO_TODO.md - Repo 配置模块待办事项
+- ✅ 更新了统计信息和目录结构
 - ✅ 更新了 JIRA 和 Git 模块的完成状态
 - ✅ 移除了不存在的文档引用
 - ✅ 更新了统计信息和目录结构
