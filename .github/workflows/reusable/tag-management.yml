@@ -1,0 +1,596 @@
+name: Tag Management (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version number'
+        required: true
+        type: string
+      tag:
+        description: 'Tag name'
+        required: true
+        type: string
+      needs_increment:
+        description: 'Whether version needs increment'
+        required: true
+        type: boolean
+      is_master_branch:
+        description: 'Whether this is master branch'
+        required: true
+        type: boolean
+    secrets:
+      WORKFLOW_PAT:
+        required: true
+      GITHUB_TOKEN:
+        required: true
+    outputs:
+      tag:
+        description: 'Tag name'
+        value: ${{ jobs.create-tag.outputs.tag }}
+      version:
+        description: 'Version number'
+        value: ${{ jobs.create-tag.outputs.version }}
+      tag_created:
+        description: 'Whether tag was created'
+        value: ${{ jobs.create-tag.outputs.tag_created }}
+      pr_number:
+        description: 'PR number'
+        value: ${{ jobs.create-tag.outputs.pr_number }}
+      pr_url:
+        description: 'PR URL'
+        value: ${{ jobs.create-tag.outputs.pr_url }}
+      pr_merged:
+        description: 'Whether PR was merged'
+        value: ${{ jobs.create-tag.outputs.pr_merged }}
+      merge_commit_sha:
+        description: 'Merge commit SHA'
+        value: ${{ jobs.create-tag.outputs.merge_commit_sha }}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-tag:
+    name: 🏷️ Create Tag & Merge PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      tag: ${{ steps.job_outputs.outputs.tag }}
+      version: ${{ steps.job_outputs.outputs.version }}
+      tag_created: ${{ steps.job_outputs.outputs.tag_created }}
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
+      pr_url: ${{ steps.create_pr.outputs.pr_url }}
+      pr_merged: ${{ steps.handle_pr_merged.outputs.pr_merged || steps.merge_pr.outputs.pr_merged }}
+      merge_commit_sha: ${{ steps.get_merge_sha_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: 🔧 Install jq
+        shell: bash
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y jq
+          else
+            echo "✅ jq is already installed"
+          fi
+          jq --version
+
+      - name: 📥 Download updated version files
+        if: inputs.needs_increment == true
+        uses: actions/download-artifact@v4
+        with:
+          name: updated-version-files
+          path: .
+
+      # Step 1: Create version update PR (only if needs_increment is true and master branch)
+      - name: ⚙️ Configure Git for PR creation
+        if: inputs.needs_increment == true && inputs.is_master_branch == true
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 🌿 Create version update PR
+        id: create_pr
+        if: inputs.needs_increment == true && inputs.is_master_branch == true
+        shell: bash
+        env:
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          NEW_VERSION="${{ inputs.version }}"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Step 1: Creating version update PR"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+          echo "Step 1.1: Creating branch $BRANCH_NAME"
+          git checkout -b "$BRANCH_NAME"
+
+          echo "Step 1.2: Staging Cargo.toml and Cargo.lock"
+          git add Cargo.toml Cargo.lock
+
+          echo "Step 1.3: Committing changes"
+          git commit -m "chore: bump version to ${NEW_VERSION}"
+
+          echo "Step 1.4: Pushing branch to origin"
+          git push origin "$BRANCH_NAME"
+
+          echo "Step 1.5: Creating Pull Request"
+          echo "Branch: $BRANCH_NAME"
+          echo "Version: $NEW_VERSION"
+
+          PR_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $WORKFLOW_PAT" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls" \
+            -d '{
+              "title": "chore: bump version to '"$NEW_VERSION"'",
+              "head": "'"$BRANCH_NAME"'",
+              "base": "master",
+              "body": "Automated version bump to '"$NEW_VERSION"'\n\nThis PR was created automatically by the release workflow.\n\n**Changes:**\n- Updated version in Cargo.toml to '"$NEW_VERSION"'\n- Updated version in Cargo.lock to '"$NEW_VERSION"'\n\n**Workflow Run:** https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }')
+
+          HTTP_CODE=$(echo "$PR_RESPONSE" | tail -n1)
+          PR_BODY=$(echo "$PR_RESPONSE" | head -n-1)
+
+          echo "HTTP Status Code: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "⚠️  Failed to create PR (HTTP $HTTP_CODE)"
+            echo "Response body:"
+            echo "$PR_BODY" | jq '.' 2>/dev/null || echo "$PR_BODY"
+
+            if [ "$HTTP_CODE" = "422" ]; then
+              echo "Checking for existing PR..."
+              EXISTING_PR=$(curl -s \
+                -H "Accept: application/vnd.github+json" \
+                -H "Authorization: Bearer $WORKFLOW_PAT" \
+                -H "X-GitHub-Api-Version: 2022-11-28" \
+                "https://api.github.com/repos/${{ github.repository }}/pulls?head=${{ github.repository_owner }}:$BRANCH_NAME&base=master&state=open")
+
+              PR_NUMBER=$(echo "$EXISTING_PR" | jq -r '.[0].number // empty' 2>/dev/null)
+              if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+                PR_URL=$(echo "$EXISTING_PR" | jq -r '.[0].html_url // empty' 2>/dev/null)
+                echo "✅ Found existing PR #$PR_NUMBER: $PR_URL"
+                echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+                echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+              else
+                exit 1
+              fi
+            else
+              exit 1
+            fi
+          else
+            PR_NUMBER=$(echo "$PR_BODY" | jq -r '.number // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"number":[0-9]*' | head -1 | cut -d':' -f2)
+            PR_URL=$(echo "$PR_BODY" | jq -r '.html_url // empty' 2>/dev/null || echo "$PR_BODY" | grep -o '"html_url":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "✅ PR #$PR_NUMBER created: $PR_URL"
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "PR_URL=$PR_URL" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❌ Error: PR_NUMBER is not set"
+            exit 1
+          fi
+
+          echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
+
+      # Step 2: Merge version update PR
+      - name: ⏳ Wait for PR status update
+        id: wait_pr_status
+        if: inputs.needs_increment == true && inputs.is_master_branch == true
+        shell: bash
+        run: |
+          echo "⏳ Waiting 30s for PR status to be updated and CI to complete..."
+          sleep 30
+
+      - name: 🔍 Check PR mergeable status
+        id: check_pr_status
+        if: inputs.needs_increment == true && inputs.is_master_branch == true
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+
+          if [ -z "$PR_NUMBER" ]; then
+            echo "❌ Error: PR_NUMBER is not set"
+            exit 1
+          fi
+
+          PR_STATUS=$(curl -s \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+          MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+          MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+
+          echo "merged=$MERGED" >> $GITHUB_OUTPUT
+          echo "mergeable=$MERGEABLE" >> $GITHUB_OUTPUT
+
+      - name: ✅ Handle already merged PR
+        id: handle_pr_merged
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          steps.check_pr_status.outputs.merged == 'true'
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          NEW_VERSION="${{ inputs.version }}"
+
+          echo "✅ PR already merged"
+          echo "pr_merged=true" >> $GITHUB_OUTPUT
+
+          echo "Step 2.2: Deleting remote branch"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+            git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
+          else
+            echo "ℹ️  Remote branch already deleted"
+          fi
+
+      - name: 🔍 Get merge commit SHA (for already merged PR)
+        id: get_merge_sha_merged
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          steps.handle_pr_merged.outputs.pr_merged == 'true'
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          echo "Getting merge commit SHA from PR API..."
+          MERGE_SHA_MAX_WAIT=10
+          MERGE_SHA_ELAPSED=0
+          MERGE_SHA_INTERVAL=1
+          MERGE_COMMIT_SHA=""
+
+          while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
+            sleep $MERGE_SHA_INTERVAL
+            MERGE_SHA_ELAPSED=$((MERGE_SHA_ELAPSED + MERGE_SHA_INTERVAL))
+
+            PR_INFO=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+            MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+            if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+              echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA (after ${MERGE_SHA_ELAPSED}s)"
+              echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+              break
+            fi
+          done
+
+          if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
+            echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s"
+            echo "merge_commit_sha=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: ⏳ Wait for PR to be mergeable
+        id: wait_mergeable
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          steps.check_pr_status.outputs.merged != 'true' &&
+          (steps.check_pr_status.outputs.mergeable == 'null' || steps.check_pr_status.outputs.mergeable == 'false')
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          MAX_WAIT=300
+          INITIAL_CHECK_INTERVAL=3
+          NORMAL_CHECK_INTERVAL=5
+          ELAPSED=30
+
+          while [ $ELAPSED -lt $MAX_WAIT ]; do
+            if [ $ELAPSED -lt 60 ]; then
+              CHECK_INTERVAL=$INITIAL_CHECK_INTERVAL
+            else
+              CHECK_INTERVAL=$NORMAL_CHECK_INTERVAL
+            fi
+
+            PR_STATUS=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+            MERGED=$(echo "$PR_STATUS" | grep -o '"merged":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+            MERGEABLE=$(echo "$PR_STATUS" | grep -o '"mergeable":[^,}]*' | cut -d':' -f2 | tr -d ' "')
+
+            if [ "$MERGED" = "true" ]; then
+              echo "✅ PR already merged"
+              echo "pr_merged=true" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            if [ "$MERGEABLE" = "null" ]; then
+              echo "⏳ PR mergeable status is still being calculated (elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            if [ "$MERGEABLE" = "false" ]; then
+              echo "⏳ PR is not mergeable yet (may have conflicts or pending checks, elapsed: ${ELAPSED}s), waiting..."
+              sleep $CHECK_INTERVAL
+              ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+              continue
+            fi
+
+            if [ "$MERGEABLE" = "true" ]; then
+              echo "✅ PR is mergeable, proceeding to merge..."
+              echo "pr_mergeable=true" >> $GITHUB_OUTPUT
+              break
+            fi
+
+            sleep $CHECK_INTERVAL
+            ELAPSED=$((ELAPSED + CHECK_INTERVAL))
+          done
+
+          if [ $ELAPSED -ge $MAX_WAIT ]; then
+            echo "⏰ Timeout: PR did not become mergeable within ${MAX_WAIT}s"
+            exit 1
+          fi
+
+      - name: 🔀 Merge version update PR
+        id: merge_pr
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          steps.check_pr_status.outputs.merged != 'true' &&
+          (steps.wait_mergeable.outputs.pr_mergeable == 'true' || steps.check_pr_status.outputs.mergeable == 'true')
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          NEW_VERSION="${{ inputs.version }}"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Step 2: Merging version update PR"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "🔀 Attempting to merge PR #$PR_NUMBER..."
+
+          MERGE_RESPONSE=$(curl -s -w "\n%{http_code}" -X PUT \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER/merge" \
+            -d '{
+              "commit_title": "chore: bump version to '"$NEW_VERSION"'",
+              "commit_message": "Automated version bump to '"$NEW_VERSION"'\n\nMerged via GitHub Actions workflow",
+              "merge_method": "squash"
+            }')
+
+          MERGE_CODE=$(echo "$MERGE_RESPONSE" | tail -n1)
+          MERGE_BODY=$(echo "$MERGE_RESPONSE" | head -n-1)
+
+          if [ "$MERGE_CODE" = "200" ]; then
+            echo "✅ PR merged successfully"
+            echo "pr_merged=true" >> $GITHUB_OUTPUT
+          elif [ "$MERGE_CODE" = "405" ]; then
+            echo "⚠️  PR not ready to merge yet (HTTP 405), but continuing..."
+            echo "pr_merged=false" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Failed to merge PR (HTTP $MERGE_CODE)"
+            echo "Response: $MERGE_BODY" | jq '.' 2>/dev/null || echo "$MERGE_BODY"
+            exit 1
+          fi
+
+      - name: 🔍 Get merge commit SHA (for merged PR)
+        id: get_merge_sha
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true' || steps.wait_mergeable.outputs.pr_merged == 'true')
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          echo "Getting merge commit SHA from PR API..."
+          MERGE_SHA_MAX_WAIT=10
+          MERGE_SHA_ELAPSED=0
+          MERGE_SHA_INTERVAL=1
+          MERGE_COMMIT_SHA=""
+
+          while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
+            sleep $MERGE_SHA_INTERVAL
+            MERGE_SHA_ELAPSED=$((MERGE_SHA_ELAPSED + MERGE_SHA_INTERVAL))
+
+            PR_INFO=$(curl -s \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
+
+            MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
+            if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+              echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA (after ${MERGE_SHA_ELAPSED}s)"
+              echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
+              break
+            fi
+          done
+
+          if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
+            echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s"
+            echo "merge_commit_sha=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🗑️ Delete remote branch
+        id: delete_branch
+        if: |
+          inputs.needs_increment == true &&
+          inputs.is_master_branch == true &&
+          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true')
+        shell: bash
+        run: |
+          NEW_VERSION="${{ inputs.version }}"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+
+          echo "Step 2.2: Deleting remote branch"
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+            git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
+          else
+            echo "ℹ️  Remote branch already deleted"
+          fi
+
+      # Step 3: Create and push tag
+      - name: ⚙️ Configure Git for tag creation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 🏷️ Create and push tag
+        shell: bash
+        run: |
+          TAG="${{ inputs.tag }}"
+          NEW_VERSION="${{ inputs.version }}"
+          IS_MASTER="${{ inputs.is_master_branch }}"
+          NEEDS_INCREMENT="${{ inputs.needs_increment }}"
+
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Step 3: Creating and pushing tag"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Creating tag: $TAG"
+
+          if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
+            MERGE_COMMIT_SHA="${{ steps.get_merge_sha_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}"
+
+            if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
+              echo "Step 3.1: Using merge_commit_sha from PR API: $MERGE_COMMIT_SHA"
+              TAG_COMMIT_SHA="$MERGE_COMMIT_SHA"
+
+              if git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
+                echo "✅ Merge commit exists locally"
+              else
+                echo "Step 3.2: Fetching merge commit from origin..."
+                git fetch origin "$TAG_COMMIT_SHA" 2>/dev/null || \
+                git fetch origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null || true
+                if ! git cat-file -e "$TAG_COMMIT_SHA" 2>/dev/null; then
+                  echo "⚠️  Warning: Merge commit not found, falling back to git pull method"
+                  TAG_COMMIT_SHA=""
+                fi
+              fi
+            else
+              TAG_COMMIT_SHA=""
+            fi
+
+            if [ -z "$TAG_COMMIT_SHA" ]; then
+              echo "Step 3.1: Fetching latest changes from origin (after PR merge)..."
+              DEFAULT_BRANCH=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5 || echo "master")
+              echo "Detected default branch: $DEFAULT_BRANCH"
+
+              git fetch origin "$DEFAULT_BRANCH:$DEFAULT_BRANCH" 2>/dev/null || true
+
+              echo "Step 3.2: Checking out $DEFAULT_BRANCH branch..."
+              git checkout "$DEFAULT_BRANCH" 2>/dev/null || true
+
+              echo "Step 3.3: Pulling latest changes..."
+              git pull origin "$DEFAULT_BRANCH" 2>/dev/null || true
+
+              echo "Step 3.4: Verifying current commit..."
+              LATEST_COMMIT_MSG=$(git log -1 --format='%s' HEAD)
+              TAG_COMMIT_SHA=$(git rev-parse HEAD)
+              echo "Latest commit SHA: $TAG_COMMIT_SHA"
+              echo "Latest commit message: $LATEST_COMMIT_MSG"
+
+              if [[ "$LATEST_COMMIT_MSG" =~ "bump version" ]] || [[ "$LATEST_COMMIT_MSG" =~ "chore: bump version" ]]; then
+                echo "✅ Found version bump commit on master"
+              else
+                echo "⚠️  Warning: Latest commit may not be the version bump commit"
+                echo "   Continuing to create tag on current commit..."
+              fi
+            fi
+          else
+            echo "Step 3.1: Using current branch for tag creation (non-master branch)"
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            TAG_COMMIT_SHA=$(git rev-parse HEAD)
+            echo "Current branch: $CURRENT_BRANCH"
+            echo "Current commit SHA: $TAG_COMMIT_SHA"
+          fi
+
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            EXISTING_TAG_SHA=$(git rev-parse "$TAG")
+            if [ "$EXISTING_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
+              echo "✅ Tag $TAG already exists and points to the correct commit: $TAG_COMMIT_SHA"
+            else
+              echo "⚠️  Warning: Tag $TAG already exists but points to different commit"
+              echo "   Deleting existing tag and recreating..."
+              git tag -d "$TAG" 2>/dev/null || true
+              git push origin ":refs/tags/$TAG" 2>/dev/null || true
+            fi
+          fi
+
+          echo "Step 3.5: Creating tag $TAG on commit $TAG_COMMIT_SHA..."
+          git tag "$TAG" "$TAG_COMMIT_SHA"
+
+          echo "Step 3.6: Pushing tag: $TAG"
+          echo "ℹ️  Using WORKFLOW_PAT to push tag"
+          if git push origin "$TAG" 2>&1; then
+            echo "✅ Successfully created and pushed tag: $TAG"
+          else
+            PUSH_ERROR=$?
+            echo "❌ Error: Failed to push tag: $TAG (exit code: $PUSH_ERROR)"
+            echo "Checking if tag already exists remotely..."
+            if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+              REMOTE_TAG_SHA=$(git ls-remote --tags origin "$TAG" | cut -f1)
+              if [ "$REMOTE_TAG_SHA" = "$TAG_COMMIT_SHA" ]; then
+                echo "✅ Tag already exists remotely and points to the correct commit"
+              else
+                echo "⚠️  Warning: Tag exists remotely but points to different commit"
+                exit 1
+              fi
+            else
+              echo "❌ Tag does not exist remotely. Push failed."
+              exit 1
+            fi
+          fi
+
+      # Step 4: Set job outputs
+      - name: 📊 Set job outputs for downstream jobs
+        id: job_outputs
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag }}"
+          IS_MASTER="${{ inputs.is_master_branch }}"
+          NEEDS_INCREMENT="${{ inputs.needs_increment }}"
+
+          if [ "$IS_MASTER" == "true" ]; then
+            if [ "$NEEDS_INCREMENT" == "true" ]; then
+              TAG_CREATED="true"
+            else
+              if git rev-parse "$TAG" >/dev/null 2>&1; then
+                TAG_CREATED="false"
+              else
+                TAG_CREATED="true"
+              fi
+            fi
+          else
+            if git rev-parse "$TAG" >/dev/null 2>&1; then
+              TAG_CREATED="false"
+              echo "ℹ️  Tag already exists: $TAG"
+            else
+              TAG_CREATED="true"
+              echo "ℹ️  Created new pre-release tag: $TAG"
+            fi
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag_created=$TAG_CREATED" >> $GITHUB_OUTPUT
+          echo "✅ Job outputs set: version=$VERSION, tag=$TAG, tag_created=$TAG_CREATED"
