@@ -6,16 +6,9 @@ use super::common::{DryRunArgs, JiraIdArg};
 
 /// Branch management subcommands
 ///
-/// Used to clean branches and manage branch ignore list.
+/// Used to manage branches and branch ignore list.
 #[derive(Subcommand)]
 pub enum BranchSubcommand {
-    /// Clean local branches
-    ///
-    /// Delete all local branches except main/master, develop, current branch, and branches in ignore list.
-    Clean {
-        #[command(flatten)]
-        dry_run: DryRunArgs,
-    },
     /// Manage branch ignore list
     ///
     /// Add, remove, or list branches in the ignore list.
@@ -82,6 +75,36 @@ pub enum BranchSubcommand {
         /// Use squash merge (compress all commits into one)
         #[arg(long, action = clap::ArgAction::SetTrue)]
         squash: bool,
+    },
+    /// Delete a branch
+    ///
+    /// Delete local and/or remote branch.
+    /// If branch name is not provided, will show an interactive list to select branch.
+    ///
+    /// Examples:
+    ///   workflow branch delete feature/old-feature     # Delete specified branch (local and remote)
+    ///   workflow branch delete feature/old-feature --local    # Delete only local branch
+    ///   workflow branch delete feature/old-feature --remote   # Delete only remote branch
+    ///   workflow branch delete                          # Interactive selection
+    Delete {
+        /// Branch name (optional, will enter interactive mode if not provided)
+        branch_name: Option<String>,
+
+        /// Delete only local branch
+        #[arg(long)]
+        local: bool,
+
+        /// Delete only remote branch
+        #[arg(long)]
+        remote: bool,
+
+        /// Preview mode (do not actually delete)
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+
+        /// Force delete (skip confirmation and merge check)
+        #[arg(long, short = 'f')]
+        force: bool,
     },
 }
 

@@ -8,6 +8,7 @@
 //! - 暂存管理（stash push/pop、冲突检测）
 //! - Pre-commit hooks 支持（检测和执行）
 //! - 配置管理（设置和读取 Git 全局配置）
+//! - Tag 管理（列出、删除本地和远程 tag）
 //!
 //! ## 模块结构
 //!
@@ -16,6 +17,7 @@
 //! - `cherry_pick` - Cherry-pick 操作（`GitCherryPick` 结构体）
 //! - `repo` - 仓库检测和类型识别
 //! - `stash` - 暂存管理
+//! - `tag` - Tag 管理（`GitTag` 结构体）
 //! - `pre_commit` - Pre-commit hooks 支持
 //! - `config` - Git 配置管理（`GitConfig` 结构体）
 //! - `types` - 类型定义（`RepoType` 枚举）
@@ -28,6 +30,7 @@ mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;
+mod tag;
 mod table;
 mod types;
 
@@ -39,5 +42,6 @@ pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
 pub use repo::GitRepo;
 pub use stash::{GitStash, StashApplyResult, StashEntry, StashPopResult, StashStat};
+pub use tag::{GitTag, TagInfo};
 pub use table::BranchRow;
 pub use types::RepoType;

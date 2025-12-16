@@ -1,25 +1,25 @@
-//! 分支清理命令
+//! Repository cleanup command
 //!
-//! 清理本地分支，保留 main/master、develop 和当前分支，以及配置文件中的忽略分支。
+//! Clean local branches, keeping main/master, develop, current branch, and branches in ignore list.
 
 use crate::base::dialog::ConfirmDialog;
 use crate::commands::check;
-use crate::git::{GitBranch, GitRepo};
+use crate::git::{GitBranch, GitRepo, GitTag};
 use crate::repo::config::RepoConfig;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 
-/// 分支清理命令
-pub struct BranchCleanCommand;
+/// Repository cleanup command
+pub struct RepoCleanCommand;
 
-impl BranchCleanCommand {
-    /// 清理本地分支
+impl RepoCleanCommand {
+    /// Clean local branches
     pub fn clean(dry_run: bool) -> Result<()> {
         // 1. 运行检查
         check::CheckCommand::run_all()?;
 
         log_break!();
-        log_message!("Branch Cleanup");
+        log_message!("Repository Cleanup");
 
         // 2. 初始化：获取当前分支、默认分支、仓库名
         let current_branch =
@@ -150,12 +150,88 @@ impl BranchCleanCommand {
             }
         }
 
-        // 14. 显示结果
+        // 14. 显示分支清理结果
         log_break!();
-        log_success!("Cleanup completed!");
+        log_success!("Branch cleanup completed!");
         log_info!("Deleted: {} branch(es)", deleted_count);
         if skipped_count > 0 {
             log_info!("Skipped: {} branch(es)", skipped_count);
+        }
+
+        // 15. 清理本地 tag（只存在于本地但不在远程的 tag）
+        Self::clean_local_only_tags(dry_run)?;
+
+        Ok(())
+    }
+
+    /// 清理只存在于本地但不在远程的 tag
+    fn clean_local_only_tags(dry_run: bool) -> Result<()> {
+        log_break!();
+        log_message!("Tag Cleanup");
+
+        // 获取所有 tag 信息
+        let all_tags = GitTag::list_all_tags().wrap_err("Failed to list tags")?;
+
+        // 筛选出只存在于本地但不在远程的 tag
+        let local_only_tags: Vec<String> = all_tags
+            .into_iter()
+            .filter(|tag| tag.exists_local && !tag.exists_remote)
+            .map(|tag| tag.name)
+            .collect();
+
+        if local_only_tags.is_empty() {
+            log_info!("No local-only tags to clean");
+            return Ok(());
+        }
+
+        // 显示预览
+        log_break!();
+        log_message!("Local-only tags to be deleted:");
+        for tag in &local_only_tags {
+            log_info!("  {}", tag);
+        }
+
+        // Dry-run 模式
+        if dry_run {
+            log_break!();
+            log_info!("Dry-run mode: tags will not be actually deleted");
+            return Ok(());
+        }
+
+        // 确认删除
+        log_break!();
+        let prompt = format!(
+            "Are you sure you want to delete {} local-only tag(s)?",
+            local_only_tags.len()
+        );
+        ConfirmDialog::new(&prompt)
+            .with_default(false)
+            .with_cancel_message("Tag cleanup cancelled")
+            .prompt()?;
+
+        // 删除本地 tag
+        let mut deleted_count = 0;
+        let mut skipped_count = 0;
+
+        for tag_name in &local_only_tags {
+            match GitTag::delete_local(tag_name) {
+                Ok(_) => {
+                    log_success!("Deleted local tag: {}", tag_name);
+                    deleted_count += 1;
+                }
+                Err(e) => {
+                    log_warning!("Failed to delete tag {}: {}", tag_name, e);
+                    skipped_count += 1;
+                }
+            }
+        }
+
+        // 显示结果
+        log_break!();
+        log_success!("Tag cleanup completed!");
+        log_info!("Deleted: {} tag(s)", deleted_count);
+        if skipped_count > 0 {
+            log_info!("Skipped: {} tag(s)", skipped_count);
         }
 
         Ok(())

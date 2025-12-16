@@ -72,7 +72,7 @@ impl CommandsConfig {
             "jira search",
             "branch create",
             "branch switch",
-            "branch clean",
+            "repo clean",
             "branch rename",
             "branch sync",
             "commit amend",
