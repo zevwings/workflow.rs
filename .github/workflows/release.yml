@@ -1,3 +1,5 @@
+name: Release
+
 on:
   push:
     branches:
@@ -11,6 +13,14 @@ on:
 # - 对于 push 事件（PR merge），不设置 run-name，让 GitHub 自动使用 PR 标题
 # - 对于 workflow_dispatch，使用自定义名称
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('Release - {0} (manual)', github.ref_name) || '' }}
+
+# 并发控制：仅对 master 分支限制并发，确保同一时间只有一个 release
+# - Master 分支：所有 release 共享同一个 group，确保按顺序执行
+# - 非 Master 分支：每个分支使用不同的 group，允许多个并发
+concurrency:
+  group: release-workflow-${{ github.ref == 'refs/heads/master' && 'master' || github.ref_name }}
+  cancel-in-progress: false  # 不取消正在运行的，让新的等待
+
 permissions:
   contents: write  # 允许创建 Release 和上传文件
   pull-requests: write  # 允许创建 PR（用于版本更新）
@@ -357,27 +367,19 @@ jobs:
 
             BASE_VERSION="$MAJOR.$MINOR.$PATCH"
 
-            # 查找该基础版本的所有 alpha 预发布版本
-            ALPHA_PATTERN="v${BASE_VERSION}.alpha-[0-9]*"
-            EXISTING_ALPHAS=$(git tag -l "$ALPHA_PATTERN" | sort -V || true)
+            # 使用时间戳格式确保唯一性：YYYYMMDDHHmmssSSS
+            # 格式：vx.x.x.alpha-YYYYMMDDHHmmssSSS
+            # 示例：v1.6.1.alpha-20251216101712000
+            # 注意：此 job 运行在 ubuntu-latest 上，date 支持 %3N（毫秒）
+            TIMESTAMP=$(date +%Y%m%d%H%M%S%3N)
 
-            if [ -z "$EXISTING_ALPHAS" ]; then
-              # 没有现有的 alpha 版本，从 001 开始
-              ALPHA_NUM=1
-            else
-              # 找到最大的 alpha 编号并递增
-              LAST_ALPHA=$(echo "$EXISTING_ALPHAS" | tail -1)
-              ALPHA_NUM=$(echo "$LAST_ALPHA" | grep -oE 'alpha-[0-9]+' | grep -oE '[0-9]+' || echo "0")
-              ALPHA_NUM=$((ALPHA_NUM + 1))
-            fi
-
-            # 格式化 alpha 编号为 3 位数字（001, 002, ...）
-            ALPHA_NUM_FORMATTED=$(printf "%03d" $ALPHA_NUM)
-            VERSION="${BASE_VERSION}.alpha-${ALPHA_NUM_FORMATTED}"
+            VERSION="${BASE_VERSION}.alpha-${TIMESTAMP}"
             TAG="v$VERSION"
             NEEDS_INCREMENT="false"
 
             echo "✅ Non-master branch: Generated pre-release version $VERSION ($TAG)"
+            echo "   Timestamp format: YYYYMMDDHHmmssSSS"
+            echo "   Example: v1.6.1.alpha-20251216101712000"
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -556,66 +558,10 @@ jobs:
             libxkbcommon-dev \
             libxkbcommon-x11-dev \
             pkg-config
-          # 验证 xcb-proto 包和 Python 已正确安装
-          echo "🔍 Verifying xcb-proto package installation..."
-          # xcb-proto 不是一个可执行程序，而是一个包含协议描述文件的包
-          if dpkg -l | grep -q "^ii.*xcb-proto"; then
-            echo "✅ xcb-proto package is installed"
-            # 验证协议文件目录存在
-            if [ -d "/usr/share/xcb" ]; then
-              echo "✅ xcb protocol files directory found: /usr/share/xcb"
-              # 列出一些协议文件以确认
-              PROTO_COUNT=$(find /usr/share/xcb -name "*.xml" 2>/dev/null | wc -l)
-              if [ "$PROTO_COUNT" -gt 0 ]; then
-                echo "✅ Found $PROTO_COUNT protocol XML files"
-              else
-                echo "⚠️  Warning: No protocol XML files found in /usr/share/xcb"
-              fi
-            else
-              echo "⚠️  Warning: /usr/share/xcb directory not found"
-              # 尝试查找实际位置
-              XCB_PROTO_DIR=$(dpkg -L xcb-proto 2>/dev/null | grep "/usr/share/xcb" | head -1 | xargs dirname 2>/dev/null || echo "")
-              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
-                echo "✅ Found xcb protocol directory at: $XCB_PROTO_DIR"
-              fi
-            fi
-          else
-            echo "❌ Error: xcb-proto package is not installed"
-            echo "   Please ensure xcb-proto package is installed via apt-get"
-            exit 1
-          fi
-          python3 --version || echo "⚠️  Python3 not found"
-          # 验证 xcbgen Python 模块是否可用（xcb crate 构建脚本需要）
-          echo "🔍 Checking for xcbgen Python module..."
-          if python3 -c "import xcbgen" 2>/dev/null; then
-            echo "✅ xcbgen Python module is importable"
-            # 显示模块位置
-            python3 -c "import xcbgen; print(f'xcbgen location: {xcbgen.__file__}')" 2>/dev/null || true
-          else
-            echo "❌ Error: xcbgen Python module is not importable"
-            echo "   This is required for xcb crate to build"
-            echo "   Please ensure python3-xcbgen package is installed"
-            # 尝试查找 xcbgen 模块的位置
-            XCBGEN_PATH=$(find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
-            if [ -n "$XCBGEN_PATH" ]; then
-              echo "   Found xcbgen directory at: $XCBGEN_PATH"
-              echo "   Trying to add to PYTHONPATH..."
-              export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
-              echo "   PYTHONPATH: $PYTHONPATH"
-              # 再次尝试导入
-              if python3 -c "import xcbgen" 2>/dev/null; then
-                echo "✅ xcbgen module is now importable after setting PYTHONPATH"
-              else
-                echo "❌ xcbgen still not importable"
-                exit 1
-              fi
-            else
-              echo "   xcbgen directory not found"
-              exit 1
-            fi
-          fi
-          # 验证 pkg-config 能找到 xcb 库
-          pkg-config --exists xcb && echo "✅ xcb pkg-config found" || echo "⚠️  xcb pkg-config not found"
+          # 基本验证：检查关键依赖是否可用
+          python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+          pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          echo "✅ xcb dependencies verified"
 
       - name: 📦 Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -674,124 +620,30 @@ jobs:
             fi
           fi
 
-          # 对于 Linux x86_64，需要设置环境变量以支持 xcb 构建
+          # 对于 Linux x86_64，设置环境变量以支持 xcb 构建
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
-            echo "🔍 Pre-build verification for xcb dependencies..."
-            # 重新设置环境变量（因为每个 step 是独立的 shell）
             export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
             export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
             # 确保 PYTHONPATH 包含 xcbgen 模块路径
-            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
+            if ! python3 -c "import xcbgen" 2>/dev/null; then
               XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
               if [ -n "$XCBGEN_DIR" ]; then
                 export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
               fi
             fi
-            # 验证 xcb-proto 包已安装
-            if dpkg -l | grep -q "^ii.*xcb-proto"; then
-              echo "✅ xcb-proto package is installed"
-              # 验证协议文件目录存在
-              if [ -n "$XCB_PROTO_DIR" ] && [ -d "$XCB_PROTO_DIR" ]; then
-                echo "✅ xcb protocol directory: $XCB_PROTO_DIR"
-                # 列出一些协议文件
-                echo "   Protocol files found:"
-                ls -1 "$XCB_PROTO_DIR"/*.xml 2>/dev/null | head -5 | xargs -n1 basename || echo "   (none found)"
-              else
-                echo "⚠️  Warning: XCB_PROTO_DIR not set or directory not found"
-              fi
-            else
-              echo "❌ xcb-proto package is not installed"
-              exit 1
-            fi
-            # 验证 Python
-            if command -v python3 >/dev/null 2>&1; then
-              echo "✅ python3: $(which python3)"
-            else
-              echo "❌ python3 not found"
-              exit 1
-            fi
-            # 验证 xcbgen Python 模块（必需）
-            if python3 -c "import xcbgen" 2>/dev/null; then
-              echo "✅ xcbgen Python module is importable"
-              python3 -c "import xcbgen; import os; print(f'   xcbgen location: {os.path.dirname(xcbgen.__file__)}')" 2>/dev/null || true
-            else
-              echo "❌ Error: xcbgen module not importable"
-              echo "   This is required for xcb crate to build"
-              echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
-              echo "   Python path: $(python3 -c 'import sys; print(":".join(sys.path))' 2>/dev/null || echo 'unknown')"
-              exit 1
-            fi
-            # 验证 pkg-config
-            if pkg-config --exists xcb; then
-              echo "✅ xcb libraries found via pkg-config"
-              pkg-config --modversion xcb
-            else
-              echo "⚠️  Warning: xcb not found via pkg-config"
-            fi
-            # 显示最终环境变量
-            echo "📋 Environment variables for build:"
-            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
-            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
-            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
+            # 基本验证
+            python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+            pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
           fi
           # 构建项目
-          # 对于 Linux x86_64，启用详细输出以便调试 xcb 构建问题
           if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
-            echo "🔨 Building with verbose output for xcb debugging..."
-            # 确保环境变量在构建时可用
-            # xcb crate 的构建脚本需要这些环境变量
-            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
-            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
-            # 确保 PYTHONPATH 包含 xcbgen 模块路径
-            if [ -z "$PYTHONPATH" ] || ! python3 -c "import xcbgen" 2>/dev/null; then
-              XCBGEN_PATH=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
-              if [ -n "$XCBGEN_PATH" ]; then
-                export PYTHONPATH="$(dirname $XCBGEN_PATH):${PYTHONPATH:-}"
-              fi
-            fi
-            # 清理之前的构建缓存，避免缓存问题
-            echo "🧹 Cleaning xcb build artifacts..."
-            # 清理 xcb 包的构建缓存
-            cargo clean -p xcb 2>/dev/null || true
-            # 也清理构建输出目录中的 xcb 相关文件
-            rm -rf target/${{ matrix.target }}/release/build/xcb-* 2>/dev/null || true
-            rm -rf target/${{ matrix.target }}/release/deps/libxcb-* 2>/dev/null || true
-            # 显示最终的环境变量设置
-            echo "📋 Final environment variables:"
-            echo "   XCB_PROTO_DIR: ${XCB_PROTO_DIR}"
-            echo "   PKG_CONFIG_PATH: ${PKG_CONFIG_PATH}"
-            echo "   PYTHONPATH: ${PYTHONPATH:-not set}"
-            echo "   Python version: $(python3 --version 2>&1 || echo "unknown")"
-            echo "   Python xcbgen: $(python3 -c 'import xcbgen; print("OK")' 2>&1 || echo "FAILED")"
-            # 验证 Python 版本兼容性（xcbgen 需要 Python 3.6+）
-            PYTHON_VERSION=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "unknown")
-            echo "   Python version check: $PYTHON_VERSION"
-            if [ "$PYTHON_VERSION" != "unknown" ]; then
-              MAJOR=$(echo "$PYTHON_VERSION" | cut -d. -f1)
-              MINOR=$(echo "$PYTHON_VERSION" | cut -d. -f2)
-              if [ "$MAJOR" -lt 3 ] || ([ "$MAJOR" -eq 3 ] && [ "$MINOR" -lt 6 ]); then
-                echo "⚠️  Warning: Python version $PYTHON_VERSION may be too old for xcbgen"
-              else
-                echo "✅ Python version $PYTHON_VERSION is compatible"
-              fi
-            fi
-            # 测试 xcbgen 是否能正常工作
-            echo "🧪 Testing xcbgen functionality..."
-            if python3 -c "import xcbgen; import os; import sys; proto_dir = '${XCB_PROTO_DIR}'; print('✅ Protocol directory exists:', proto_dir) if os.path.isdir(proto_dir) else (print('❌ Protocol directory not found:', proto_dir), sys.exit(1)); import xcbgen.state, xcbgen.xtypes; print('✅ xcbgen modules imported successfully')" 2>/dev/null; then
-              echo "✅ xcbgen test passed"
-            else
-              echo "⚠️  xcbgen test failed, but continuing with build..."
-            fi
-            # 构建
+            # Linux x86_64 使用详细输出以便调试
             if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
               BUILD_SUCCESS=true
             else
               BUILD_SUCCESS=false
               echo "❌ Build failed. Checking build log for xcb-related errors..."
-              grep -i "xcb\|xproto\|big_requests\|xcbgen\|xc_misc\|render\|shape\|xfixes" build.log || echo "No xcb-related errors found in log"
-              # 显示构建脚本输出（如果有）
-              echo "📋 Checking for build script errors..."
-              grep -i "error\|warning\|failed" build.log | head -20 || true
+              grep -i "xcb\|xproto\|xcbgen" build.log | head -20 || true
             fi
           elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
             # Linux ARM64 交叉编译
@@ -944,7 +796,7 @@ jobs:
       pr_number: ${{ steps.create_pr.outputs.pr_number }}
       pr_url: ${{ steps.create_pr.outputs.pr_url }}
       pr_merged: ${{ steps.handle_pr_merged.outputs.pr_merged || steps.merge_pr.outputs.pr_merged }}
-      merge_commit_sha: ${{ steps.handle_pr_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}
+      merge_commit_sha: ${{ steps.get_merge_sha_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -1124,11 +976,28 @@ jobs:
           echo "✅ PR already merged"
           echo "pr_merged=true" >> $GITHUB_OUTPUT
 
-          # 获取合并后的 commit SHA（从 PR API）- 使用轮询替代固定等待
-          echo "Step 2.1: Getting merge commit SHA from PR API..."
-          MERGE_SHA_MAX_WAIT=10  # 最多等待 10 秒
+          # 删除远程分支
+          echo "Step 2.2: Deleting remote branch"
+          BRANCH_NAME="bump-version-${NEW_VERSION}"
+          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
+            git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
+          else
+            echo "ℹ️  Remote branch already deleted"
+          fi
+
+      - name: 🔍 Get merge commit SHA (for already merged PR)
+        id: get_merge_sha_merged
+        if: |
+          needs.update-version.outputs.needs_increment == 'true' &&
+          needs.update-version.outputs.is_master_branch == 'true' &&
+          steps.handle_pr_merged.outputs.pr_merged == 'true'
+        shell: bash
+        run: |
+          PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
+          echo "Getting merge commit SHA from PR API..."
+          MERGE_SHA_MAX_WAIT=10
           MERGE_SHA_ELAPSED=0
-          MERGE_SHA_INTERVAL=1   # 每秒检查一次
+          MERGE_SHA_INTERVAL=1
           MERGE_COMMIT_SHA=""
 
           while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
@@ -1152,15 +1021,6 @@ jobs:
           if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
             echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s, will use git pull method"
             echo "merge_commit_sha=" >> $GITHUB_OUTPUT
-          fi
-
-          # 删除远程分支
-          echo "Step 2.2: Deleting remote branch"
-          BRANCH_NAME="bump-version-${NEW_VERSION}"
-          if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
-            git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
-          else
-            echo "ℹ️  Remote branch already deleted"
           fi
 
       - name: ⏳ Wait for PR to be mergeable
@@ -1198,45 +1058,6 @@ jobs:
 
             if [ "$MERGED" = "true" ]; then
               echo "✅ PR already merged"
-
-              # 获取合并后的 commit SHA（从 PR API）- 使用轮询替代固定等待
-              echo "Step 2.1: Getting merge commit SHA from PR API..."
-              MERGE_SHA_MAX_WAIT=10  # 最多等待 10 秒
-              MERGE_SHA_ELAPSED=0
-              MERGE_SHA_INTERVAL=1   # 每秒检查一次
-              MERGE_COMMIT_SHA=""
-
-              while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
-                sleep $MERGE_SHA_INTERVAL
-                MERGE_SHA_ELAPSED=$((MERGE_SHA_ELAPSED + MERGE_SHA_INTERVAL))
-
-                PR_INFO=$(curl -s \
-                  -H "Accept: application/vnd.github+json" \
-                  -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-                  -H "X-GitHub-Api-Version: 2022-11-28" \
-                  "https://api.github.com/repos/${{ github.repository }}/pulls/$PR_NUMBER")
-
-                MERGE_COMMIT_SHA=$(echo "$PR_INFO" | jq -r '.merge_commit_sha // empty' 2>/dev/null)
-                if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
-                  echo "✅ Got merge commit SHA: $MERGE_COMMIT_SHA (after ${MERGE_SHA_ELAPSED}s)"
-                  echo "merge_commit_sha=$MERGE_COMMIT_SHA" >> $GITHUB_OUTPUT
-                  break
-                fi
-              done
-
-              if [ -z "$MERGE_COMMIT_SHA" ] || [ "$MERGE_COMMIT_SHA" = "null" ]; then
-                echo "⚠️  Warning: Could not get merge_commit_sha from PR API after ${MERGE_SHA_MAX_WAIT}s, will use git pull method"
-                echo "merge_commit_sha=" >> $GITHUB_OUTPUT
-              fi
-
-              # 删除远程分支
-              echo "Step 2.2: Deleting remote branch"
-              BRANCH_NAME="bump-version-${NEW_VERSION}"
-              if git ls-remote --exit-code --heads origin "$BRANCH_NAME" >/dev/null 2>&1; then
-                git push origin --delete "$BRANCH_NAME" 2>/dev/null || echo "⚠️  Failed to delete remote branch (may already be deleted)"
-              else
-                echo "ℹ️  Remote branch already deleted"
-              fi
               echo "pr_merged=true" >> $GITHUB_OUTPUT
               break
             fi
@@ -1261,18 +1082,6 @@ jobs:
               echo "✅ PR is mergeable, proceeding to merge..."
               echo "pr_mergeable=true" >> $GITHUB_OUTPUT
               break
-              elif [ "$MERGE_CODE" = "405" ]; then
-                # HTTP 405 通常表示 PR 还没有准备好合并，继续等待
-                echo "⏳ PR not ready to merge yet (HTTP 405), waiting..."
-                sleep $CHECK_INTERVAL
-                ELAPSED=$((ELAPSED + CHECK_INTERVAL))
-                continue
-              else
-                echo "⚠️  Failed to merge PR (HTTP $MERGE_CODE)"
-                echo "Response: $MERGE_BODY" | jq '.' 2>/dev/null || echo "$MERGE_BODY"
-                echo "Please manually merge: $PR_URL"
-                exit 1
-              fi
             fi
 
             sleep $CHECK_INTERVAL
@@ -1330,20 +1139,19 @@ jobs:
             exit 1
           fi
 
-      - name: 🔍 Get merge commit SHA
+      - name: 🔍 Get merge commit SHA (for merged PR)
         id: get_merge_sha
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
-          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true')
+          (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true' || steps.wait_mergeable.outputs.pr_merged == 'true')
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
-
-          echo "Step 2.1: Getting merge commit SHA from PR API..."
-          MERGE_SHA_MAX_WAIT=10  # 最多等待 10 秒
+          echo "Getting merge commit SHA from PR API..."
+          MERGE_SHA_MAX_WAIT=10
           MERGE_SHA_ELAPSED=0
-          MERGE_SHA_INTERVAL=1   # 每秒检查一次
+          MERGE_SHA_INTERVAL=1
           MERGE_COMMIT_SHA=""
 
           while [ $MERGE_SHA_ELAPSED -lt $MERGE_SHA_MAX_WAIT ] && [ -z "$MERGE_COMMIT_SHA" ]; do
@@ -1409,7 +1217,7 @@ jobs:
 
           # Master 分支：如果 PR 已合并，使用 merge_commit_sha 或拉取最新的 master 分支
           if [ "$IS_MASTER" == "true" ] && [ "$NEEDS_INCREMENT" == "true" ]; then
-            MERGE_COMMIT_SHA="${{ steps.handle_pr_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}"
+            MERGE_COMMIT_SHA="${{ steps.get_merge_sha_merged.outputs.merge_commit_sha || steps.get_merge_sha.outputs.merge_commit_sha }}"
 
             if [ -n "$MERGE_COMMIT_SHA" ] && [ "$MERGE_COMMIT_SHA" != "null" ]; then
               # 使用从 PR API 获取的 merge_commit_sha
@@ -1837,6 +1645,12 @@ jobs:
 
           echo "📌 Merge commit SHA: $MERGE_COMMIT_SHA"
 
+          # 获取当前发布的版本号（例如：1.6.0）
+          CURRENT_VERSION="${{ needs.create-tag.outputs.version }}"
+          # 移除版本号中的 'v' 前缀和可能的 alpha 后缀，只保留基础版本号
+          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+          echo "📌 Current release version: $CURRENT_VERSION"
+
           # 获取合并提交的第一个父提交（master 分支的 previous commit）
           # 这是 master 分支在合并前的最后一个提交
           FIRST_PARENT=$(git rev-parse ${MERGE_COMMIT_SHA}^1)
@@ -1881,6 +1695,14 @@ jobs:
               continue
             fi
 
+            # 提取 tag 的版本号（例如：v1.6.0.alpha-001 -> 1.6.0）
+            # 使用 sed 提取版本号，如果失败则设置为空字符串
+            TAG_VERSION=$(echo "$tag" | sed -E 's/^v?([0-9]+\.[0-9]+\.[0-9]+)\.alpha-.*/\1/' 2>/dev/null || echo "")
+            # 验证提取的版本号格式是否正确（应该是 x.y.z 格式）
+            if [ -n "$TAG_VERSION" ] && ! echo "$TAG_VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+              TAG_VERSION=""
+            fi
+
             # 检查 tag 是否在 master 分支的 first-parent 路径上
             # 如果不在，说明它来自已合并的分支（包括 squash merge 的情况）
             if git merge-base --is-ancestor "$TAG_COMMIT" "$FIRST_PARENT" 2>/dev/null; then
@@ -1889,11 +1711,25 @@ jobs:
             elif git merge-base --is-ancestor "$TAG_COMMIT" "$MASTER_HEAD" 2>/dev/null; then
               # Tag 在合并提交的祖先中，但不在 first-parent 路径上
               # 说明它来自已合并的分支，应该删除
-              echo "   ✅ Tag $tag ($TAG_COMMIT) is from merged branch, will delete"
+              if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" == "$CURRENT_VERSION" ]; then
+                echo "   ✅ Tag $tag ($TAG_COMMIT) version $TAG_VERSION matches current version $CURRENT_VERSION and is from merged branch, will delete"
+              else
+                echo "   ✅ Tag $tag ($TAG_COMMIT) is from merged branch, will delete"
+              fi
               TAGS_TO_DELETE="$TAGS_TO_DELETE $tag"
             else
-              # Tag 不在合并提交的祖先中，可能是其他分支的 tag，保留
-              echo "   ⏭️  Tag $tag ($TAG_COMMIT) is not related to this merge, keeping"
+              # Tag 不在合并提交的祖先中，检查版本号是否匹配
+              if [ -n "$TAG_VERSION" ] && [ "$TAG_VERSION" == "$CURRENT_VERSION" ]; then
+                # 版本号匹配但 commit 不在祖先中，可能是特殊情况
+                # 例如：tag 指向的 commit 在合并之后创建，或者来自不同的分支
+                # 由于版本号匹配，我们仍然考虑删除它
+                echo "   ⚠️  Tag $tag ($TAG_COMMIT) version $TAG_VERSION matches current version $CURRENT_VERSION but commit is not in merge ancestry"
+                echo "   💡 Considering deletion due to version match..."
+                TAGS_TO_DELETE="$TAGS_TO_DELETE $tag"
+              else
+                # Tag 不在合并提交的祖先中，且版本号不匹配，可能是其他分支的 tag，保留
+                echo "   ⏭️  Tag $tag ($TAG_COMMIT) is not related to this merge, keeping"
+              fi
             fi
           done
 

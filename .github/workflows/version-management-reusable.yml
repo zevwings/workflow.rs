@@ -1,0 +1,295 @@
+name: Version Management (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      is_master_branch:
+        description: 'Whether this is master branch'
+        required: true
+        type: boolean
+      event_name:
+        description: 'GitHub event name'
+        required: true
+        type: string
+    outputs:
+      version:
+        description: 'Generated version number'
+        value: ${{ jobs.update-version.outputs.version }}
+      tag:
+        description: 'Generated tag name'
+        value: ${{ jobs.update-version.outputs.tag }}
+      needs_increment:
+        description: 'Whether version needs increment'
+        value: ${{ jobs.update-version.outputs.needs_increment }}
+      is_master_branch:
+        description: 'Whether this is master branch'
+        value: ${{ jobs.update-version.outputs.is_master_branch }}
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  update-version:
+    name: 📦 Generate Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.generate_version.outputs.version }}
+      tag: ${{ steps.generate_version.outputs.tag }}
+      needs_increment: ${{ steps.generate_version.outputs.needs_increment }}
+      is_master_branch: ${{ steps.detect_mode.outputs.is_master_branch }}
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Get latest version from git tags
+        id: get_latest_version
+        shell: bash
+        run: |
+          # 从 git tags 获取最新的标准版本号（排除 alpha/beta 预发布版本）
+          # 获取所有标准版本 tag（格式：vx.x.x），按版本号排序
+          LATEST_TAG=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # 如果没有找到标准版本 tag，使用默认版本
+            LATEST_VERSION="0.0.0"
+            echo "⚠️  No standard version tag found, using default: $LATEST_VERSION"
+          else
+            # 移除 v 前缀
+            LATEST_VERSION=${LATEST_TAG#v}
+            echo "✅ Latest standard version from git tags: $LATEST_TAG ($LATEST_VERSION)"
+          fi
+
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+      - name: 🎯 Detect branch type and trigger mode
+        id: detect_mode
+        shell: bash
+        run: |
+          set -e
+          # 使用输入参数
+          IS_MASTER_BRANCH="${{ inputs.is_master_branch }}"
+          IS_MANUAL_TRIGGER="${{ inputs.event_name == 'workflow_dispatch' }}"
+
+          echo "is_master_branch=$IS_MASTER_BRANCH" >> $GITHUB_OUTPUT
+          echo "is_manual_trigger=$IS_MANUAL_TRIGGER" >> $GITHUB_OUTPUT
+
+          echo "✅ Branch detection completed:"
+          echo "   Is Master: $IS_MASTER_BRANCH"
+          echo "   Event: ${{ inputs.event_name }}"
+          echo "   Is Manual: $IS_MANUAL_TRIGGER"
+
+      - name: 📦 Generate version number
+        id: generate_version
+        shell: bash
+        run: |
+          set -e
+          LATEST_VERSION="${{ steps.get_latest_version.outputs.latest_version }}"
+          IS_MASTER="${{ steps.detect_mode.outputs.is_master_branch }}"
+
+          # 验证 LATEST_VERSION 不为空
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "❌ Error: LATEST_VERSION is empty"
+            exit 1
+          fi
+
+          echo "📋 Version generation inputs:"
+          echo "   LATEST_VERSION: $LATEST_VERSION"
+          echo "   IS_MASTER: $IS_MASTER"
+
+          if [[ "$IS_MASTER" == "true" ]]; then
+            # Master 分支：生成标准版本号
+            # 解析最新版本号
+            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+            MAJOR="${VERSION_PARTS[0]:-0}"
+            MINOR="${VERSION_PARTS[1]:-0}"
+            PATCH="${VERSION_PARTS[2]:-0}"
+
+            # 首先检查当前 commit 是否已经有任何标准版本 tag 指向它
+            CURRENT_COMMIT_SHA=$(git rev-parse HEAD)
+            EXISTING_TAG_ON_COMMIT=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -1 || true)
+
+            if [ -n "$EXISTING_TAG_ON_COMMIT" ]; then
+              # 当前 commit 已经有 tag，使用该 tag 的版本号
+              VERSION=${EXISTING_TAG_ON_COMMIT#v}
+              TAG="$EXISTING_TAG_ON_COMMIT"
+              NEEDS_INCREMENT="false"
+              echo "✅ Found existing tag $TAG on current commit, reusing it"
+            else
+              # 当前 commit 没有 tag，需要根据 Conventional Commits 规范确定版本更新类型
+              # 获取从最新 tag 到当前 commit 的所有 commit messages
+              LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
+
+              if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+                # 从最新 tag 到当前 commit 的所有提交
+                COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
+              else
+                # 如果没有找到 tag，使用最近的提交
+                COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
+              fi
+
+              # 根据 Conventional Commits 规范确定版本更新类型
+              # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
+              VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
+
+              if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
+                # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
+                VERSION_INCREMENT_TYPE="major"
+                MAJOR=$((MAJOR + 1))
+                MINOR=0
+                PATCH=0
+                echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
+              elif [ "$PATCH" -ge 9 ]; then
+                # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
+                VERSION_INCREMENT_TYPE="minor"
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
+              elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
+                # 检测到 feat: 或 feature:，递增 minor 版本
+                VERSION_INCREMENT_TYPE="minor"
+                MINOR=$((MINOR + 1))
+                PATCH=0
+                echo "🟢 Detected feat: commit, incrementing MINOR version"
+              else
+                # 其他情况（fix、chore、docs 等），递增 patch 版本
+                VERSION_INCREMENT_TYPE="patch"
+                PATCH=$((PATCH + 1))
+                echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
+              fi
+
+              VERSION="$MAJOR.$MINOR.$PATCH"
+              TAG="v$VERSION"
+              NEEDS_INCREMENT="true"
+
+              echo "✅ Version increment type: $VERSION_INCREMENT_TYPE"
+              echo "✅ Generated version $VERSION ($TAG) based on Conventional Commits"
+            fi
+
+            echo "✅ Master branch: Generated version $VERSION ($TAG)"
+          else
+            # 非 Master 分支：生成预发布版本号 (vx.x.x.alpha-xxx)
+            # 应用与 master 分支相同的版本递增规则
+            IFS='.' read -ra VERSION_PARTS <<< "$LATEST_VERSION"
+            MAJOR="${VERSION_PARTS[0]:-0}"
+            MINOR="${VERSION_PARTS[1]:-0}"
+            PATCH="${VERSION_PARTS[2]:-0}"
+
+            # 获取从最新 tag 到当前 commit 的所有 commit messages
+            LATEST_TAG="${{ steps.get_latest_version.outputs.latest_tag }}"
+
+            if [ -n "$LATEST_TAG" ] && git rev-parse "$LATEST_TAG" >/dev/null 2>&1; then
+              # 从最新 tag 到当前 commit 的所有提交
+              COMMITS=$(git log ${LATEST_TAG}..HEAD --format="%s" --no-merges || echo "")
+            else
+              # 如果没有找到 tag，使用最近的提交
+              COMMITS=$(git log -10 --format="%s" --no-merges || echo "")
+            fi
+
+            # 根据 Conventional Commits 规范确定版本更新类型
+            # 优先级：BREAKING CHANGE > patch >= 9 > feat: > 其他
+            VERSION_INCREMENT_TYPE="patch"  # 默认是 patch
+
+            if echo "$COMMITS" | grep -qE "(BREAKING CHANGE|BREAKING:)" || echo "$COMMITS" | grep -qE "^[^:]*!:"; then
+              # 检测到 BREAKING CHANGE 或 ! 标记，递增 major 版本（最高优先级）
+              VERSION_INCREMENT_TYPE="major"
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              echo "🔴 Detected BREAKING CHANGE, incrementing MAJOR version"
+            elif [ "$PATCH" -ge 9 ]; then
+              # 规则：如果 patch 版本达到 9，自动递增 minor 版本（如 v1.5.9 → v1.6.0）
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟡 Patch version reached 9, incrementing MINOR version (v${MAJOR}.${MINOR}.${PATCH})"
+            elif echo "$COMMITS" | grep -qE "^(feat|feature):"; then
+              # 检测到 feat: 或 feature:，递增 minor 版本
+              VERSION_INCREMENT_TYPE="minor"
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              echo "🟢 Detected feat: commit, incrementing MINOR version"
+            else
+              # 其他情况（fix、chore、docs 等），递增 patch 版本
+              VERSION_INCREMENT_TYPE="patch"
+              PATCH=$((PATCH + 1))
+              echo "🔵 No feat: or BREAKING CHANGE detected, incrementing PATCH version"
+            fi
+
+            BASE_VERSION="$MAJOR.$MINOR.$PATCH"
+
+            # 使用时间戳格式确保唯一性：YYYYMMDDHHmmssSSS
+            # 格式：vx.x.x.alpha-YYYYMMDDHHmmssSSS
+            # 示例：v1.6.1.alpha-20251216101712000
+            # 注意：此 job 运行在 ubuntu-latest 上，date 支持 %3N（毫秒）
+            TIMESTAMP=$(date +%Y%m%d%H%M%S%3N)
+
+            VERSION="${BASE_VERSION}.alpha-${TIMESTAMP}"
+            TAG="v$VERSION"
+            NEEDS_INCREMENT="false"
+
+            echo "✅ Non-master branch: Generated pre-release version $VERSION ($TAG)"
+            echo "   Timestamp format: YYYYMMDDHHmmssSSS"
+            echo "   Example: v1.6.1.alpha-20251216101712000"
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "needs_increment=$NEEDS_INCREMENT" >> $GITHUB_OUTPUT
+
+      - name: 🔧 Setup Rust toolchain
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📝 Update Cargo.toml and Cargo.lock version
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.generate_version.outputs.version }}"
+
+          # 更新 Cargo.toml 中的版本号
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          else
+            sed -i "s/^version = \".*\"/version = \"$NEW_VERSION\"/" Cargo.toml
+          fi
+
+          # 验证 Cargo.toml 更新
+          UPDATED_VERSION=$(grep -E '^version\s*=' Cargo.toml | head -1 | sed -E 's/^version\s*=\s*"([^"]+)".*/\1/')
+          if [ "$UPDATED_VERSION" != "$NEW_VERSION" ]; then
+            echo "❌ Error: Failed to update version in Cargo.toml"
+            exit 1
+          fi
+
+          # 更新 Cargo.lock 中的版本号
+          if grep -q 'name = "workflow"' Cargo.lock; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+              sed -i '' '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            else
+              sed -i '/^name = "workflow"$/,/^version = /{
+                /^version = /s/version = "[^"]*"/version = "'"$NEW_VERSION"'"/
+              }' Cargo.lock
+            fi
+          fi
+
+          echo "✅ Version updated to $NEW_VERSION in Cargo.toml and Cargo.lock"
+
+      - name: 📤 Upload updated version files
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-version-files
+          path: |
+            Cargo.toml
+            Cargo.lock
+          retention-days: 1

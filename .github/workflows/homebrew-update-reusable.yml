@@ -1,0 +1,144 @@
+name: Homebrew Update (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Version number'
+        required: true
+        type: string
+      tag:
+        description: 'Tag name'
+        required: true
+        type: string
+    secrets:
+      WORKFLOW_PAT:
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  update-homebrew:
+    name: 🍺 Update Homebrew Formula
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Get version and tag from inputs
+        id: version
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="${{ inputs.tag }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "✅ Version: $VERSION"
+          echo "✅ Tag: $TAG"
+
+      - name: 📥 Checkout homebrew-workflow
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-workflow
+          token: ${{ secrets.WORKFLOW_PAT }}
+          path: homebrew-workflow
+
+      - name: 📝 Generate Formula file
+        shell: bash
+        run: |
+          cd homebrew-workflow
+
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          FORMULA_FILE="Formula/workflow.rb"
+
+          if [ -f "$FORMULA_FILE" ]; then
+            cp "$FORMULA_FILE" "$FORMULA_FILE.bak"
+          fi
+
+          if [ -f "Formula/workflow.rb.template" ]; then
+            echo "📝 Generating Formula file from template..."
+            sed -e "s|{{VERSION}}|$VERSION|g" \
+                -e "s|{{TAG}}|$TAG|g" \
+                "Formula/workflow.rb.template" > "$FORMULA_FILE"
+            echo "✅ Formula file generated from template"
+          else
+            echo "📝 Updating version in Formula file..."
+            sed -i.bak "s/version \".*\"/version \"$VERSION\"/" "$FORMULA_FILE" || true
+            sed -i.bak "s|url \".*\"|url \"https://github.com/${{ github.repository }}/releases/download/$TAG/workflow-$VERSION-x86_64-apple-darwin.tar.gz\"|" "$FORMULA_FILE" || true
+            echo "✅ Formula file updated"
+          fi
+
+          echo "🔍 Validating Formula file structure..."
+          if ! ruby -c "$FORMULA_FILE" 2>/dev/null; then
+            echo "❌ Error: Formula file has syntax errors"
+            ruby -c "$FORMULA_FILE" || true
+            exit 1
+          fi
+          echo "✅ Formula file syntax is valid"
+
+          echo ""
+          echo "📄 Generated Formula file:"
+          echo "--- Formula/workflow.rb ---"
+          cat "$FORMULA_FILE"
+          echo ""
+
+          if [ -f "$FORMULA_FILE.bak" ]; then
+            echo "--- Diff (Before vs After) ---"
+            diff "$FORMULA_FILE.bak" "$FORMULA_FILE" || true
+          fi
+
+      - name: ⚙️ Configure Git for Homebrew update
+        shell: bash
+        run: |
+          cd homebrew-workflow
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 📤 Commit and push changes
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          cd homebrew-workflow
+
+          git add Formula/workflow.rb
+
+          if git diff --staged --quiet; then
+            echo "No changes to commit. Formula file is already up to date."
+            exit 0
+          fi
+
+          if ! brew audit --strict Formula/workflow.rb 2>/dev/null; then
+            echo "Warning: brew audit failed, but continuing..."
+          fi
+
+          git commit -m "Update workflow to ${{ steps.version.outputs.tag }}"
+
+          CURRENT_BRANCH=$(git branch --show-current)
+          echo "Current branch: $CURRENT_BRANCH"
+
+          echo "Pushing to branch: $CURRENT_BRANCH"
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed to $CURRENT_BRANCH branch"
+          else
+            echo "❌ Error: Failed to push changes to $CURRENT_BRANCH"
+            echo "Remote URL: $(git remote get-url origin | sed 's|://.*@|://***@|')"
+            echo "Branch: $CURRENT_BRANCH"
+            git status
+            git log --oneline -5
+            echo ""
+            echo "Possible issues:"
+            echo "1. WORKFLOW_PAT may not have write access to ${{ github.repository_owner }}/homebrew-workflow"
+            echo "2. Token may have expired or been revoked"
+            echo "3. Repository may not exist or be accessible"
+            exit 1
+          fi
+
+          echo "✅ Homebrew Formula updated successfully!"
