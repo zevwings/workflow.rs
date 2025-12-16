@@ -118,10 +118,7 @@ impl RepoConfig {
             Ok(config) => {
                 if let Some(ref pr_config) = config.pr {
                     if let Some(auto_accept) = pr_config.auto_accept_change_type {
-                        tracing::debug!(
-                            "get_auto_accept_change_type: returning {}",
-                            auto_accept
-                        );
+                        tracing::debug!("get_auto_accept_change_type: returning {}", auto_accept);
                         return auto_accept;
                     } else {
                         tracing::debug!("get_auto_accept_change_type: pr_config.auto_accept_change_type is None");
@@ -134,7 +131,10 @@ impl RepoConfig {
             Err(e) => {
                 // 静默失败，返回默认值 false
                 // 如果配置文件不存在或读取失败，不应该影响 PR 创建流程
-                tracing::debug!("Failed to load repository config for auto_accept_change_type: {}", e);
+                tracing::debug!(
+                    "Failed to load repository config for auto_accept_change_type: {}",
+                    e
+                );
                 false
             }
         }

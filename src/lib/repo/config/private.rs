@@ -40,9 +40,13 @@ pub struct PrivateRepoConfig {
     ///
     /// ```rust,no_run
     /// use workflow::repo::RepoConfig;
+    /// use color_eyre::Result;
     ///
-    /// if RepoConfig::exists()? {
-    ///     // Repository has been configured
+    /// fn check_repo_config() -> Result<()> {
+    ///     if RepoConfig::exists()? {
+    ///         // Repository has been configured
+    ///     }
+    ///     Ok(())
     /// }
     /// ```
     #[serde(default)]
@@ -164,10 +168,7 @@ impl PrivateRepoConfig {
                         );
                     }
                 } else {
-                    tracing::debug!(
-                        "auto_accept_change_type not found in [{}] section",
-                        pr_key
-                    );
+                    tracing::debug!("auto_accept_change_type not found in [{}] section", pr_key);
                 }
                 config.pr = Some(pr_config);
             } else {
