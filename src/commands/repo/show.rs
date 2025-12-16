@@ -26,11 +26,11 @@ impl RepoShowCommand {
         log_message!("Branch Configuration");
         log_break!('-', 40);
 
-        // Load from project-level config only
-        let project_prefix = RepoConfig::load().ok().and_then(|config| config.branch.prefix);
+        // Load from personal preference config
+        let prefix = RepoConfig::get_branch_prefix();
 
-        if let Some(prefix) = project_prefix {
-            log_info!("Prefix: {} (project-level)", prefix);
+        if let Some(prefix) = prefix {
+            log_info!("Prefix: {} (personal preference)", prefix);
         } else {
             log_info!("Prefix: (not set)");
             log_info!("Run 'workflow repo setup' to configure branch prefix");

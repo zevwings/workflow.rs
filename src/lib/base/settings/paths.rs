@@ -318,6 +318,27 @@ impl Paths {
             .join("config.toml"))
     }
 
+    /// 获取个人偏好配置文件路径
+    ///
+    /// 返回 `~/.workflow/config/repository.toml` 的路径。
+    /// 支持 iCloud 同步（在 macOS 上，如果 iCloud 可用）。
+    ///
+    /// # 路径示例
+    ///
+    /// - macOS + iCloud：`~/Library/Mobile Documents/com~apple~CloudDocs/.workflow/config/repository.toml`
+    /// - macOS 无 iCloud / 其他系统：`~/.workflow/config/repository.toml`
+    ///
+    /// # 返回
+    ///
+    /// 返回个人偏好配置文件的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建配置目录，返回相应的错误信息。
+    pub fn repository_config() -> Result<PathBuf> {
+        Ok(Self::config_dir()?.join("repository.toml"))
+    }
+
     /// 获取工作流目录路径（支持 iCloud）
     ///
     /// 返回工作流基础目录。如果配置在 iCloud，此方法返回 iCloud 路径。

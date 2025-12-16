@@ -789,7 +789,7 @@ fn get_system_proxy() -> Result<String> {
 
 ### 报告位置
 
-**文件路径**：`docs/report/CHECK_REPORT_{timestamp}.md`
+**文件路径**：`report/CHECK_REPORT_{timestamp}.md`
 
 其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
 
@@ -801,8 +801,8 @@ use workflow::base::util::date::format_filename_timestamp;
 
 // 函数会自动获取当前时间，无需提前获取
 let timestamp = format_filename_timestamp();
-let report_path = format!("docs/report/CHECK_REPORT_{}.md", timestamp);
-// 输出：docs/report/CHECK_REPORT_2024-12-19_14-30-00.md
+let report_path = format!("report/CHECK_REPORT_{}.md", timestamp);
+// 输出：report/CHECK_REPORT_2024-12-19_14-30-00.md
 ```
 
 > **注意**：`format_filename_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
@@ -811,14 +811,14 @@ let report_path = format!("docs/report/CHECK_REPORT_{}.md", timestamp);
 ```bash
 # Unix/macOS/Linux
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-echo "docs/report/CHECK_REPORT_${TIMESTAMP}.md"
+echo "report/CHECK_REPORT_${TIMESTAMP}.md"
 
 # Windows PowerShell
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
+Write-Host "report/CHECK_REPORT_${timestamp}.md"
 ```
 
-**示例文件名**：`docs/report/CHECK_REPORT_2024-12-19_14-30-00.md`
+**示例文件名**：`report/CHECK_REPORT_2024-12-19_14-30-00.md`
 
 ### 报告内容
 
@@ -1078,13 +1078,13 @@ Write-Host "docs/report/CHECK_REPORT_${timestamp}.md"
 
 ```bash
 # 创建或更新检查报告
-vim docs/CHECK_REPORT.md
+vim report/CHECK_REPORT_{timestamp}.md
 # 或使用其他编辑器
 ```
 
 ### 报告使用
 
-- 报告应保存在 `docs/CHECK_REPORT.md`
+- 报告应保存在 `report/CHECK_REPORT_{timestamp}.md`
 - 报告应在提交代码前完成
 - 报告可用于代码审查和问题追踪
 - 报告应包含所有检查步骤的详细结果

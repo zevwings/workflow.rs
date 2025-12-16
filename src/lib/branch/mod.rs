@@ -5,7 +5,7 @@
 //! - Branch name sanitization and validation
 //!
 //! **Note**: Branch configuration management has been migrated to `lib/repo/config.rs`.
-//! Use `RepoConfig` and `ProjectBranchConfig` for configuration management.
+//! Use `RepoConfig` for configuration management.
 //!
 //! Branch naming now uses the template system, which handles prefixes automatically.
 //!
