@@ -8,9 +8,8 @@
 //! - 修改历史提交消息（reword）
 
 use color_eyre::{eyre::WrapErr, Result};
-use duct::cmd;
 
-use super::helpers::{check_success, cmd_read, cmd_run};
+use super::helpers::{check_success, cmd_read, cmd_run, cmd_run_with_env};
 use super::pre_commit::GitPreCommit;
 
 /// Git 提交结果
@@ -168,10 +167,7 @@ impl GitCommit {
 
         // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
         if should_skip_hook {
-            cmd("git", &args)
-                .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
-                .run()
-                .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
+            cmd_run_with_env(&args, &[("WORKFLOW_PRE_COMMIT_SKIP", "1")])?;
         } else {
             cmd_run(&args).wrap_err("Failed to commit")?;
         }
@@ -389,10 +385,7 @@ impl GitCommit {
 
         // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
         if should_skip_hook {
-            cmd("git", &args)
-                .env("WORKFLOW_PRE_COMMIT_SKIP", "1")
-                .run()
-                .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
+            cmd_run_with_env(&args, &[("WORKFLOW_PRE_COMMIT_SKIP", "1")])?;
         } else {
             cmd_run(&args).wrap_err("Failed to amend commit")?;
         }
@@ -477,8 +470,7 @@ impl GitCommit {
         // 使用 git merge-base --is-ancestor <commit_sha> HEAD
         // 如果 commit_sha 是 HEAD 的祖先，返回 true
         // 注意：如果 commit_sha == HEAD，也返回 true
-        let result = cmd("git", &["merge-base", "--is-ancestor", commit_sha, "HEAD"]).run();
-        Ok(result.is_ok())
+        Ok(check_success(&["merge-base", "--is-ancestor", commit_sha, "HEAD"]))
     }
 
     /// 获取当前分支的 commits 列表

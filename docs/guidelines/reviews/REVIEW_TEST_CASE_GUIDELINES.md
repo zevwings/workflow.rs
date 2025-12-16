@@ -542,9 +542,9 @@
 
 ## 📚 参考文档
 
-- [测试规范指南](./TESTING_GUIDELINES.md) - 测试组织规范和最佳实践
-- [开发规范指南](./DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
-- [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) - 包含测试用例检查的简要说明
+- [测试规范指南](../TESTING_GUIDELINES.md) - 测试组织规范和最佳实践
+- [开发规范指南](../DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
+- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 包含测试用例检查的简要说明
 
 ---
 

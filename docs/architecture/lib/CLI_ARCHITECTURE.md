@@ -376,7 +376,7 @@ pub enum Commands {
 ```rust
 Commands::Pr {
     subcommand: PRCommands::Create {
-        jira_ticket: Option<String>,
+        jira_id: JiraIdArg,
         title: Option<String>,
         // ...
     }
@@ -505,7 +505,7 @@ fn main() -> Result<()> {
             LLMSubcommand::Setup => LLMSetupCommand::setup()?,
         },
         Some(Commands::Pr { subcommand }) => match subcommand {
-            PRCommands::Create { jira_ticket, title, .. } => {
+            PRCommands::Create { jira_id, title, .. } => {
                 // 处理 PR 创建命令
             },
             // ... 其他 PR 子命令

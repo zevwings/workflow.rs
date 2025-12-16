@@ -5,11 +5,11 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::util::file::{read_toml_value, write_toml_value};
+use crate::base::util::path::ensure_parent_dir_exists;
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::fs;
 use toml::map::Map;
 use toml::Value;
 
@@ -189,9 +189,7 @@ impl PrivateRepoConfig {
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
-        if let Some(parent) = config_path.parent() {
-            fs::create_dir_all(parent).wrap_err("Failed to create config directory")?;
-        }
+        ensure_parent_dir_exists(&config_path)?;
 
         // Read existing configuration (if exists)
         let mut existing_value: Value = if config_path.exists() {

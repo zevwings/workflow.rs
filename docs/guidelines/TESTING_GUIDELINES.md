@@ -493,7 +493,7 @@ mock_server.setup_jira_base_url();    // 设置 Jira API Mock
 ## 🔗 相关文档
 
 - [开发规范](./DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
-- [测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md) - 如何检查测试用例的覆盖情况、合理性和完整性
+- [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) - 如何检查测试用例的覆盖情况、合理性和完整性
 - [PR 平台指南](./PR_PLATFORM_GUIDELINES.md) - PR 平台测试相关指南
 - [测试迁移指南](../requirements/TESTING_MIGRATION_GUIDE.md) - 详细的测试工具迁移指南
 

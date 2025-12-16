@@ -249,13 +249,13 @@ fn main() -> Result<()> {
         // PR 操作命令
         Some(Commands::Pr { subcommand }) => match subcommand {
             PRCommands::Create {
-                jira_ticket,
+                jira_id,
                 title,
                 description,
                 dry_run,
             } => {
                 pr_create::PullRequestCreateCommand::create(
-                    jira_ticket,
+                    jira_id.into_option(),
                     title,
                     description,
                     dry_run.is_dry_run(),

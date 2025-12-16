@@ -177,7 +177,7 @@ impl ConfigManager<Value> {
     /// 如果文件存在但读取或解析失败，返回相应的错误信息。
     pub fn read_value(&self) -> Result<Value> {
         if !self.path.exists() {
-            return Ok(Value::Table(HashMap::new()));
+            return Ok(Value::Table(Map::new()));
         }
         let content = fs::read_to_string(&self.path)
             .wrap_err(format!("Failed to read config file: {:?}", self.path))?;
@@ -202,7 +202,7 @@ impl ConfigManager<Value> {
             toml::to_string_pretty(value).wrap_err("Failed to serialize config to TOML")?;
         fs::write(&self.path, toml_content)
             .wrap_err(format!("Failed to write config file: {:?}", self.path))?;
-        self.set_permissions()?;
+        Self::set_permissions_for_path(&self.path)?;
         Ok(())
     }
 
@@ -224,6 +224,18 @@ impl ConfigManager<Value> {
         let mut value = self.read_value()?;
         f(&mut value);
         self.write_value(&value)
+    }
+
+    #[cfg(unix)]
+    fn set_permissions_for_path(path: &PathBuf) -> Result<()> {
+        fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+            .wrap_err("Failed to set config file permissions")?;
+        Ok(())
+    }
+
+    #[cfg(not(unix))]
+    fn set_permissions_for_path(_path: &PathBuf) -> Result<()> {
+        Ok(())
     }
 }
 

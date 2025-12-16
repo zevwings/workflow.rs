@@ -3,10 +3,11 @@
 > 本文档定义了代码开发完成后、提交代码前需要完成的检查项，确保代码质量和项目规范。
 >
 > **相关详细指南**：
-> - [代码检查指南](./REVIEW_CODE_GUIDELINES.md) - 系统化的代码检查方法，包含重复代码检查、已封装工具检查和第三方工具检查
-> - [测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖情况、测试用例合理性和缺失测试用例的检查方法
-> - [文档检查指南](./REVIEW_DOCUMENT_GUIDELINES.md) - 系统化的文档检查流程，包含 README.md、docs/ 目录和 CHANGELOG.md 的完整检查方法
-> - [CLI 和 Completion 检查指南](./REVIEW_CLI_COMPLETION_GUIDELINES.md) - 系统化的 CLI 命令结构和补全脚本检查方法，包含完整性检查、参数复用检查和参数提取指南
+> - [检查指南](./REVIEW_GUIDELINES.md) - 综合深入检查指南，整合所有检查领域，用于功能完成后、定期全面审查和重大重构前的全面检查（2-4 小时）
+> - [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) - 系统化的代码检查方法，包含重复代码检查、已封装工具检查和第三方工具检查
+> - [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖情况、测试用例合理性和缺失测试用例的检查方法
+> - [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) - 系统化的文档检查流程，包含 README.md、docs/ 目录和 CHANGELOG.md 的完整检查方法
+> - [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 系统化的 CLI 命令结构和补全脚本检查方法，包含完整性检查、参数复用检查和参数提取指南
 
 ---
 
@@ -102,7 +103,7 @@
 
 ## 📚 文档检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./REVIEW_DOCUMENT_GUIDELINES.md)，该指南包含完整的检查流程、检查方法和示例。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md)，该指南包含完整的检查流程、检查方法和示例。
 
 ### 快速检查清单
 
@@ -155,13 +156,13 @@
 - 文档位置检查（文档分类、命名规范）
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性）
 
-**参考**：[文档检查指南](./REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查方法和示例。
+**参考**：[文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查方法和示例。
 
 ---
 
 ## 🔧 CLI 和 Completion 检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统化的 CLI 和 Completion 检查，请参考 [CLI 和 Completion 检查指南](./REVIEW_CLI_COMPLETION_GUIDELINES.md)，该指南包含完整的检查流程、参数复用检查、参数提取指南和自动化检查工具。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统化的 CLI 和 Completion 检查，请参考 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)，该指南包含完整的检查流程、参数复用检查、参数提取指南和自动化检查工具。
 
 ### 快速检查清单
 
@@ -198,14 +199,14 @@ cargo run -- completion generate
 - 参数检查测试：`tests/args_check.rs`（已从 `tests/cli/args_check.rs` 移至根目录）
 
 **参考**：
-- [CLI 和 Completion 检查指南](./REVIEW_CLI_COMPLETION_GUIDELINES.md) - 完整的检查方法和参数提取指南
+- [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 完整的检查方法和参数提取指南
 - [代码优化检查 - 提取共用参数](#提取共用参数)
 
 ---
 
 ## 🔍 代码优化检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的代码检查，请参考 [代码检查指南](./REVIEW_CODE_GUIDELINES.md)，该指南包含完整的检查流程、10 种重复代码模式检查、已封装工具清单和第三方工具检查方法。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的代码检查，请参考 [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md)，该指南包含完整的检查流程、10 种重复代码模式检查、已封装工具清单和第三方工具检查方法。
 
 ### 快速检查清单
 
@@ -224,7 +225,7 @@ cargo run -- completion generate
 - [ ] 共用工具函数是否已提取到 `helpers.rs` 模块
 - [ ] 错误处理是否统一使用 `anyhow::Context`
 
-**参考**：见 [代码检查指南 - 重复代码检查](./REVIEW_CODE_GUIDELINES.md#-重复代码检查) 获取详细的提取方法和示例。
+**参考**：见 [代码检查指南 - 重复代码检查](./reviews/REVIEW_CODE_GUIDELINES.md#-重复代码检查) 获取详细的提取方法和示例。
 
 #### 3.2 代码重复检查
 
@@ -248,7 +249,7 @@ cargo run -- completion generate
 - [ ] 是否使用 `lib/base/dialog` 进行用户交互
 - [ ] 是否使用 `lib/base/indicator` 显示进度
 
-**参考**：见 [代码检查指南 - 已封装工具检查](./REVIEW_CODE_GUIDELINES.md#️-已封装工具检查) 获取完整的工具函数清单和使用方法。
+**参考**：见 [代码检查指南 - 已封装工具检查](./reviews/REVIEW_CODE_GUIDELINES.md#️-已封装工具检查) 获取完整的工具函数清单和使用方法。
 
 #### 3.4 配置管理
 
@@ -264,13 +265,13 @@ cargo run -- completion generate
 - **已封装工具检查**：文件操作工具、字符串处理工具、格式化工具、平台检测工具、浏览器和剪贴板工具、解压和校验和工具、日期格式化工具、表格输出工具、Git 操作工具、HTTP 客户端工具、日志工具、对话框工具、进度指示器工具、配置管理工具
 - **第三方工具检查**：正则表达式处理、JSON 处理、TOML 处理、命令行参数解析、异步处理、并发处理、时间处理、路径处理、环境变量处理、错误处理
 
-**参考**：[代码检查指南](./REVIEW_CODE_GUIDELINES.md) 获取完整的检查方法、搜索模式和示例分析。
+**参考**：[代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) 获取完整的检查方法、搜索模式和示例分析。
 
 ---
 
 ## 🧪 测试用例检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的测试用例检查，请参考 [测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md)，该指南包含完整的检查流程、测试覆盖情况分析、测试用例合理性检查和缺失测试用例识别方法。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的测试用例检查，请参考 [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md)，该指南包含完整的检查流程、测试覆盖情况分析、测试用例合理性检查和缺失测试用例识别方法。
 
 ### 快速检查清单
 
@@ -349,7 +350,7 @@ grep -r "test_" tests/ src/ | sort | uniq -d
 - **测试用例合理性检查**：测试工具使用检查（参数化测试、断言工具、快照测试、Mock 测试）、测试结构检查（AAA 模式、测试组织、测试数据管理）、测试内容检查（成功路径测试、错误路径测试、边界条件测试、集成测试）
 - **缺失测试用例检查**：缺失模块测试识别、缺失功能测试识别、缺失测试类型识别（错误路径测试、边界条件测试、集成测试）
 
-**参考**：[测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法、检查报告格式和示例输出。
+**参考**：[测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法、检查报告格式和示例输出。
 
 ---
 
@@ -589,7 +590,7 @@ Write-Host "report/CHECK_REPORT_${timestamp}.md"
 
 **说明**：
 - 快速检查汇总报告：提供各检查步骤的概览和关键问题，适合快速了解检查结果
-- 详细检查报告：按照专门的检查指南（如 `REVIEW_CODE_GUIDELINES.md`）生成的深度检查报告，包含具体的问题位置、代码示例、改进方案等
+- 详细检查报告：按照专门的检查指南（如 `reviews/REVIEW_CODE_GUIDELINES.md`）生成的深度检查报告，包含具体的问题位置、代码示例、改进方案等
 - 建议：在提交前，先运行快速检查汇总，如果发现问题，再运行相应的详细检查报告获取更多信息
 
 #### 2. 各步骤检查结果
@@ -914,7 +915,7 @@ workflow check
 
 ### Q: 如何提取共用代码？
 
-**A**: 参考 [代码检查指南](./REVIEW_CODE_GUIDELINES.md) 获取详细的提取方法和示例：
+**A**: 参考 [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) 获取详细的提取方法和示例：
 - 使用 clap 的 `Args` trait 和 `#[command(flatten)]` 提取共用参数
 - 创建 `helpers.rs` 模块提取共用工具函数
 - 使用 `anyhow::Context` 统一错误处理
@@ -922,21 +923,21 @@ workflow check
 
 ### Q: 如何进行详细的测试用例检查？
 
-**A**: 参考 [测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法：
+**A**: 参考 [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法：
 - 测试覆盖情况分析（模块覆盖、功能覆盖、覆盖率评估）
 - 测试用例合理性检查（测试工具使用、测试结构、测试内容）
 - 缺失测试用例识别（缺失模块测试、缺失功能测试、缺失测试类型）
 
 ### Q: 如何进行详细的文档检查？
 
-**A**: 参考 [文档检查指南](./REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查流程：
+**A**: 参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查流程：
 - README.md、docs/ 目录和 CHANGELOG.md 的系统化检查
 - 重复内容检查（跨文档重复、文档内部重复）
 - 文档位置检查和文档优化补全检查
 
 ### Q: 文档更新优先级？
 
-**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。详细检查方法请参考 [文档检查指南](./REVIEW_DOCUMENT_GUIDELINES.md)。
+**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。详细检查方法请参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md)。
 
 ### Q: 如何验证补全脚本？
 

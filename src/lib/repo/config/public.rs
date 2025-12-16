@@ -5,9 +5,9 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::util::file::{read_toml_value, write_toml_value};
+use crate::base::util::path::ensure_parent_dir_exists;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
-use std::fs;
 use toml::map::Map;
 use toml::Value;
 
@@ -80,9 +80,7 @@ impl PublicRepoConfig {
     pub fn save(&self) -> Result<()> {
         let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).wrap_err("Failed to create .workflow directory")?;
-        }
+        ensure_parent_dir_exists(&path)?;
 
         let mut existing_value: Value = if path.exists() {
             read_toml_value(&path)?

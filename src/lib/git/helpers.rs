@@ -36,6 +36,34 @@ pub(crate) fn cmd_run(args: &[&str]) -> Result<()> {
     Ok(())
 }
 
+/// 执行 Git 命令（带环境变量）
+///
+/// # 参数
+///
+/// * `args` - Git 命令参数
+/// * `env` - 环境变量键值对数组
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::git::helpers::cmd_run_with_env;
+///
+/// # fn main() -> color_eyre::Result<()> {
+/// cmd_run_with_env(&["commit", "-m", "message"], &[("WORKFLOW_PRE_COMMIT_SKIP", "1")])?;
+/// # Ok(())
+/// # }
+/// ```
+pub(crate) fn cmd_run_with_env(args: &[&str], env: &[(&str, &str)]) -> Result<()> {
+    let mut cmd_builder = cmd("git", args);
+    for (key, value) in env {
+        cmd_builder = cmd_builder.env(key, value);
+    }
+    cmd_builder
+        .run()
+        .wrap_err_with(|| format!("Failed to run: git {}", args.join(" ")))?;
+    Ok(())
+}
+
 /// 静默执行 Git 命令并检查是否成功
 ///
 /// # 参数

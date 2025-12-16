@@ -6,7 +6,9 @@
 
 // 引入各个模块的测试
 mod base;
+mod branch;
 mod cli;
+mod commit;
 mod completion;
 mod git;
 mod http;
@@ -14,7 +16,9 @@ mod integration;
 mod jira;
 mod pr;
 mod proxy;
+mod repo;
 mod rollback;
+mod template;
 
 // 共享测试工具
 mod common;

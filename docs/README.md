@@ -335,7 +335,7 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 快速检查清单和常见问题
 
-### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/REVIEW_DOCUMENT_GUIDELINES.md)
+### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/reviews/REVIEW_DOCUMENT_GUIDELINES.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -347,7 +347,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/REVIEW_TEST_CASE_GUIDELINES.md)
+### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/reviews/REVIEW_TEST_CASE_GUIDELINES.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -366,7 +366,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [REVIEW_CODE_GUIDELINES.md](./guidelines/REVIEW_CODE_GUIDELINES.md)
+### [REVIEW_CODE_GUIDELINES.md](./guidelines/reviews/REVIEW_CODE_GUIDELINES.md)
 **代码检查指南**
 
 - 系统化的代码检查方法

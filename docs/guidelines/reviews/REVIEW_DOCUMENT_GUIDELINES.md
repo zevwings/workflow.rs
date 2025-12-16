@@ -697,9 +697,9 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 ## 🔗 相关文档
 
-- [文档编写指南](./DOCUMENT_GUIDELINES.md) - 文档编写规范和模板
-- [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) - 提交前检查清单
-- [开发规范](./DEVELOPMENT_GUIDELINES.md) - 开发规范和最佳实践
+- [文档编写指南](../DOCUMENT_GUIDELINES.md) - 文档编写规范和模板
+- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 提交前检查清单
+- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 开发规范和最佳实践
 
 ---
 

@@ -927,7 +927,7 @@ let input = InputDialog::new("Enter branch name")
 
 ### 项目文档
 
-- [开发规范](./DEVELOPMENT_GUIDELINES.md) - 代码风格和开发规范
+- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 代码风格和开发规范
 - [架构文档](../architecture/) - 各模块架构文档
 - [工具函数架构](../architecture/lib/TOOLS_ARCHITECTURE.md) - 工具函数模块架构
 

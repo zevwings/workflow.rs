@@ -1,4 +1,4 @@
-# CLI 和 Completion 检查指南
+# CLI 检查指南
 
 > 本文档提供系统化的 CLI 命令结构和补全脚本检查方法，用于确保 CLI 命令完整性、参数复用和补全脚本同步。适用于 AI 辅助代码审查和人工代码审查。
 
@@ -19,7 +19,7 @@
 
 ## 🎯 检查目标
 
-CLI 和 Completion 检查的主要目标：
+CLI 检查的主要目标：
 
 1. **确保命令完整性**：所有命令和子命令都已正确注册和定义
 2. **确保补全同步**：补全脚本与实际命令结构保持同步
@@ -546,7 +546,7 @@ cargo run -- completion generate --shell zsh
 ## 📚 参考文档
 
 - [开发规范](../DEVELOPMENT_GUIDELINES.md) - 包含参数命名规范
-- [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) - 快速检查清单
+- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 快速检查清单
 - [代码检查指南](./REVIEW_CODE_GUIDELINES.md) - 代码优化检查
 - [CLI 架构文档](../../architecture/lib/CLI_ARCHITECTURE.md) - CLI 架构设计
 

@@ -74,9 +74,6 @@ fn test_jira_id_arg_usage() {
         eprintln!("     jira_id: JiraIdArg,");
     }
 
-    // 注意：这个测试目前只做检查，不强制失败
-    // 因为 pr.rs 中的 Create 命令确实使用了 jira_ticket 而不是 JiraIdArg
-    // 这是一个已知问题，应该在代码审查时修复
     println!("JiraIdArg usage check completed. Found {} potential issue(s)", issues.len());
 }
 

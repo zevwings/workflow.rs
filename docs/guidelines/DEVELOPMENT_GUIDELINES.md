@@ -388,7 +388,7 @@ pub jira_id: Option<String>,
 
 #### 共用参数规范
 
-对于在多个命令中重复使用的参数，应该提取为共用参数组（见 [CLI 和 Completion 检查指南](./REVIEW_CLI_COMPLETION_GUIDELINES.md)）：
+对于在多个命令中重复使用的参数，应该提取为共用参数组（见 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)）：
 
 ```rust
 // src/lib/cli/args.rs
@@ -429,7 +429,7 @@ Create {
 ```
 
 **参考**：
-- [CLI 和 Completion 检查指南](./REVIEW_CLI_COMPLETION_GUIDELINES.md) - 参数复用检查和参数提取指南
+- [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 参数复用检查和参数提取指南
 - [clap 文档](https://docs.rs/clap/) - clap 参数定义规范
 
 ---

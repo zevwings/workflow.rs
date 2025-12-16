@@ -271,7 +271,8 @@ impl GitTag {
         if exists_local {
             if let Err(e) = Self::delete_local(tag_name) {
                 // 记录错误但继续删除远程 tag
-                eprintln!("Warning: Failed to delete local tag: {}", e);
+                use crate::base::logger::console::Logger;
+                Logger::print_warning(format!("Failed to delete local tag: {}", e));
             }
         }
 
