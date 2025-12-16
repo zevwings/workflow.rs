@@ -11,6 +11,14 @@ on:
 # - 对于 push 事件（PR merge），不设置 run-name，让 GitHub 自动使用 PR 标题
 # - 对于 workflow_dispatch，使用自定义名称
 run-name: ${{ github.event_name == 'workflow_dispatch' && format('Release - {0} (manual)', github.ref_name) || '' }}
+
+# 并发控制：仅对 master 分支限制并发，确保同一时间只有一个 release
+# - Master 分支：所有 release 共享同一个 group，确保按顺序执行
+# - 非 Master 分支：每个分支使用不同的 group，允许多个并发
+concurrency:
+  group: release-workflow-${{ github.ref == 'refs/heads/master' && 'master' || github.ref_name }}
+  cancel-in-progress: false  # 不取消正在运行的，让新的等待
+
 permissions:
   contents: write  # 允许创建 Release 和上传文件
   pull-requests: write  # 允许创建 PR（用于版本更新）
@@ -357,27 +365,19 @@ jobs:
 
             BASE_VERSION="$MAJOR.$MINOR.$PATCH"
 
-            # 查找该基础版本的所有 alpha 预发布版本
-            ALPHA_PATTERN="v${BASE_VERSION}.alpha-[0-9]*"
-            EXISTING_ALPHAS=$(git tag -l "$ALPHA_PATTERN" | sort -V || true)
+            # 使用时间戳格式确保唯一性：YYYYMMDDHHmmssSSS
+            # 格式：vx.x.x.alpha-YYYYMMDDHHmmssSSS
+            # 示例：v1.6.1.alpha-20251216101712000
+            # 注意：此 job 运行在 ubuntu-latest 上，date 支持 %3N（毫秒）
+            TIMESTAMP=$(date +%Y%m%d%H%M%S%3N)
 
-            if [ -z "$EXISTING_ALPHAS" ]; then
-              # 没有现有的 alpha 版本，从 001 开始
-              ALPHA_NUM=1
-            else
-              # 找到最大的 alpha 编号并递增
-              LAST_ALPHA=$(echo "$EXISTING_ALPHAS" | tail -1)
-              ALPHA_NUM=$(echo "$LAST_ALPHA" | grep -oE 'alpha-[0-9]+' | grep -oE '[0-9]+' || echo "0")
-              ALPHA_NUM=$((ALPHA_NUM + 1))
-            fi
-
-            # 格式化 alpha 编号为 3 位数字（001, 002, ...）
-            ALPHA_NUM_FORMATTED=$(printf "%03d" $ALPHA_NUM)
-            VERSION="${BASE_VERSION}.alpha-${ALPHA_NUM_FORMATTED}"
+            VERSION="${BASE_VERSION}.alpha-${TIMESTAMP}"
             TAG="v$VERSION"
             NEEDS_INCREMENT="false"
 
             echo "✅ Non-master branch: Generated pre-release version $VERSION ($TAG)"
+            echo "   Timestamp format: YYYYMMDDHHmmssSSS"
+            echo "   Example: v1.6.1.alpha-20251216101712000"
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
