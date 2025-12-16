@@ -6,7 +6,7 @@
 use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::base::settings::paths::Paths;
 use crate::git::GitRepo;
-use crate::repo::{ProjectConfig, RepoConfig};
+use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::io::{self, IsTerminal};
@@ -21,7 +21,10 @@ impl RepoSetupCommand {
     /// Ensure repository configuration exists
     ///
     /// This function should be called at the beginning of branch/commit/pr operations.
-    /// If project-level configuration doesn't exist, it will:
+    /// Checks if `repo setup` has been completed by calling `RepoConfig::exists()`,
+    /// which checks `PrivateRepoConfig.configured` field.
+    ///
+    /// If configuration doesn't exist, it will:
     /// 1. Check if in interactive environment
     /// 2. Prompt user to run setup
     /// 3. Run setup automatically if user confirms
@@ -35,7 +38,8 @@ impl RepoSetupCommand {
     ///
     /// - Only prompts in interactive environment (checks if TTY)
     /// - Does not interrupt calling flow: Even if user cancels, returns Ok(())
-    /// - If configuration exists, returns immediately
+    /// - If configuration exists (checked via `PrivateRepoConfig.configured`), returns immediately
+    /// - Uses unified check: `RepoConfig::exists()` which checks `PrivateRepoConfig.configured`
     ///
     /// # Example
     ///
@@ -123,36 +127,48 @@ impl RepoSetupCommand {
         log_break!();
 
         // 2. 加载现有配置（如果存在）
-        let config_path = Paths::project_config()?;
-        let existing_config = if config_path.exists() {
-            Some(RepoConfig::load()?)
-        } else {
-            None
-        };
+        let existing_config = RepoConfig::load().ok();
 
         // 3. 收集配置信息
         let config = Self::collect_config(&existing_config)?;
 
         // 4. 保存配置
-        RepoConfig::save(&config)?;
+        config.save().wrap_err("Failed to save config")?;
 
         log_break!();
         log_success!("Repository configuration saved successfully!");
-        log_info!("Configuration file: {}", config_path.display());
-        log_info!("You can commit this file to Git to share with your team.");
+        log_info!(
+            "Project template configuration: {}",
+            Paths::project_config()?.display()
+        );
+        log_info!(
+            "Personal preference configuration: {}",
+            Paths::repository_config()?.display()
+        );
+        log_info!(
+            "You can commit the project template configuration to Git to share with your team."
+        );
 
         Ok(())
     }
 
     /// Collect configuration interactively
-    fn collect_config(existing: &Option<ProjectConfig>) -> Result<ProjectConfig> {
-        let mut config = ProjectConfig::default();
+    ///
+    /// Collects configuration from user input
+    ///
+    /// Returns unified configuration containing both public (project template) and private (personal preference) settings.
+    fn collect_config(existing: &Option<RepoConfig>) -> Result<RepoConfig> {
+        let mut config = existing.clone().unwrap_or_default();
 
-        log_message!("Branch Configuration");
+        log_message!("Personal Preference Configuration");
         log_break!('-', 40);
+        log_info!(
+            "These settings are personal preferences and will be saved to your global config."
+        );
+        log_break!();
 
-        // 1. Branch prefix
-        let current_prefix = existing.as_ref().and_then(|c| c.branch.prefix.clone());
+        // 1. Branch prefix (个人偏好)
+        let current_prefix = config.branch.as_ref().and_then(|b| b.prefix.clone());
 
         let prefix_prompt = if let Some(ref p) = current_prefix {
             format!("Enter branch prefix (press Enter to keep) ({})", p)
@@ -173,22 +189,29 @@ impl RepoSetupCommand {
         };
 
         // 处理输入：如果有现有值且用户输入为空，保持原值；否则使用新值或清空
-        if !prefix_input.trim().is_empty() {
-            config.branch.prefix = Some(prefix_input.trim().to_string());
-        } else if let Some(ref current) = current_prefix {
-            // 用户按 Enter 保持原值
-            config.branch.prefix = Some(current.clone());
+        let branch_prefix: Option<String> = if !prefix_input.trim().is_empty() {
+            Some(prefix_input.trim().to_string())
+        } else {
+            current_prefix.clone()
+        };
+
+        if branch_prefix.is_some() {
+            config.branch = Some(BranchConfig {
+                prefix: branch_prefix,
+                ignore: config.branch.as_ref().map(|b| b.ignore.clone()).unwrap_or_default(),
+            });
         }
-        // 如果既没有输入也没有现有值，则不设置（跳过）
 
         log_break!();
-        log_message!("Template Configuration");
+        log_message!("Project Template Configuration");
         log_break!('-', 40);
+        log_info!("These settings are project standards and will be saved to .workflow/config.toml (can be committed to Git).");
+        log_break!();
 
-        // 2. Use scope
-        let current_use_scope = existing
-            .as_ref()
-            .and_then(|c| c.template_commit.get("use_scope"))
+        // 2. Use scope (项目规范)
+        let current_use_scope = config
+            .template_commit
+            .get("use_scope")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
@@ -286,12 +309,14 @@ impl RepoSetupCommand {
         }
 
         log_break!();
-        log_message!("PR Configuration");
+        log_message!("PR Configuration (Personal Preference)");
         log_break!('-', 40);
+        log_info!("This setting is a personal preference and will be saved to your global config.");
+        log_break!();
 
-        // 6. Auto-accept change type
+        // 6. Auto-accept change type (个人偏好)
         let current_auto_accept =
-            existing.as_ref().and_then(|c| c.auto_accept_change_type).unwrap_or(false);
+            config.pr.as_ref().and_then(|p| p.auto_accept_change_type).unwrap_or(false);
 
         let auto_accept = ConfirmDialog::new(
             "Auto-accept auto-selected change type in PR creation? (skip confirmation prompt)",
@@ -300,7 +325,12 @@ impl RepoSetupCommand {
         .prompt()
         .wrap_err("Failed to get auto_accept_change_type setting")?;
 
-        config.auto_accept_change_type = Some(auto_accept);
+        config.pr = Some(PullRequestsConfig {
+            auto_accept_change_type: Some(auto_accept),
+        });
+
+        // Mark as configured
+        config.configured = true;
 
         Ok(config)
     }

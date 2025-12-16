@@ -277,23 +277,11 @@ impl PullRequestCreateCommand {
             if let Some(index) = map_branch_type_to_change_type_index(ty) {
                 let change_type_name = TYPES_OF_CHANGES[index];
 
-                // 检查项目配置中是否设置了自动接受
-                let should_auto_accept = match RepoConfig::load() {
-                    Ok(config) => {
-                        let auto_accept = config.auto_accept_change_type.unwrap_or(false);
-                        if auto_accept {
-                            log_info!("Auto-accept change type is enabled in project config");
-                        }
-                        auto_accept
-                    }
-                    Err(e) => {
-                        log_warning!(
-                            "Failed to load project config for auto_accept_change_type: {}. Using default (false).",
-                            e
-                        );
-                        false
-                    }
-                };
+                // 检查个人偏好配置中是否设置了自动接受
+                let should_auto_accept = RepoConfig::get_auto_accept_change_type();
+                if should_auto_accept {
+                    log_info!("Auto-accept change type is enabled in personal preference config");
+                }
 
                 // 如果配置为自动接受，直接使用自动选择的结果
                 if should_auto_accept {

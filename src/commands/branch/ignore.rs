@@ -1,7 +1,7 @@
 //! 分支忽略列表管理命令
 //!
 //! 管理分支清理时的忽略列表，支持添加、移除、列出操作。
-//! 配置保存在项目级配置（.workflow/config.toml）中，可以提交到 Git。
+//! 配置保存在个人偏好配置（~/.workflow/config/repository.toml）中，不提交到 Git。
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::util::table::{TableBuilder, TableStyle};
@@ -16,7 +16,7 @@ pub struct BranchIgnoreCommand;
 impl BranchIgnoreCommand {
     /// 添加分支到忽略列表
     ///
-    /// 保存到项目级配置（.workflow/config.toml）
+    /// 保存到个人偏好配置（~/.workflow/config/repository.toml）
     pub fn add(branch_name: Option<String>) -> Result<()> {
         // 获取分支名（从参数或交互式输入）
         let branch_name = if let Some(name) = branch_name {
@@ -27,44 +27,47 @@ impl BranchIgnoreCommand {
                 .wrap_err("Failed to read branch name")?
         };
 
-        // 加载项目级配置
-        let mut project_config = RepoConfig::load().wrap_err("Failed to load project config")?;
+        // 加载统一配置
+        let mut config = RepoConfig::load().wrap_err("Failed to load repository config")?;
+
+        // 获取或创建分支配置
+        let branch_config = config.branch.get_or_insert_with(Default::default);
 
         // 检查是否已存在
-        if project_config.branch.ignore.contains(&branch_name) {
+        if branch_config.ignore.contains(&branch_name) {
             log_info!("Branch '{}' is already in ignore list", branch_name);
             return Ok(());
         }
 
         // 添加到忽略列表
-        project_config.branch.ignore.push(branch_name.clone());
+        branch_config.ignore.push(branch_name.clone());
 
-        // 保存到项目级配置
-        RepoConfig::save(&project_config).wrap_err("Failed to save project config")?;
+        // 保存配置
+        config.save().wrap_err("Failed to save repository config")?;
 
         log_success!(
-            "Branch '{}' added to ignore list (project-level config)",
+            "Branch '{}' added to ignore list (personal preference)",
             branch_name
         );
-        log_info!("Configuration saved to .workflow/config.toml");
+        log_info!("Configuration saved to ~/.workflow/config/repository.toml");
 
         Ok(())
     }
 
     /// 从忽略列表移除分支
     ///
-    /// 从项目级配置（.workflow/config.toml）中移除
+    /// 从个人偏好配置（~/.workflow/config/repository.toml）中移除
     pub fn remove(branch_name: Option<String>) -> Result<()> {
-        // 加载项目级配置
-        let mut project_config = RepoConfig::load().wrap_err("Failed to load project config")?;
+        // 加载统一配置
+        let mut config = RepoConfig::load().wrap_err("Failed to load repository config")?;
+
+        // 获取当前仓库的忽略分支列表
+        let ignore_branches = RepoConfig::get_ignore_branches();
 
         // 获取要移除的分支名（从参数或交互式选择）
         let branch_names = if let Some(name) = branch_name {
             vec![name]
         } else {
-            // 获取当前仓库的忽略分支列表
-            let ignore_branches = project_config.branch.ignore.clone();
-
             if ignore_branches.is_empty() {
                 log_info!("No ignored branches found");
                 return Ok(());
@@ -132,13 +135,16 @@ impl BranchIgnoreCommand {
             selections.iter().map(|&idx| options[idx].clone()).collect()
         };
 
+        // 获取或创建分支配置
+        let branch_config = config.branch.get_or_insert_with(Default::default);
+
         // 移除选中的分支
         let mut success_count = 0;
         let mut fail_count = 0;
 
         for branch_name in &branch_names {
-            if let Some(pos) = project_config.branch.ignore.iter().position(|b| b == branch_name) {
-                project_config.branch.ignore.remove(pos);
+            if let Some(pos) = branch_config.ignore.iter().position(|b| b == branch_name) {
+                branch_config.ignore.remove(pos);
                 success_count += 1;
             } else {
                 log_warning!("Branch '{}' is not in ignore list", branch_name);
@@ -148,12 +154,12 @@ impl BranchIgnoreCommand {
 
         // 如果有成功移除的分支，保存配置
         if success_count > 0 {
-            RepoConfig::save(&project_config).wrap_err("Failed to save project config")?;
+            RepoConfig::save(&config).wrap_err("Failed to save repository config")?;
             log_success!(
-                "Removed {} branch(es) from ignore list (project-level config)",
+                "Removed {} branch(es) from ignore list (personal preference)",
                 success_count
             );
-            log_info!("Configuration saved to .workflow/config.toml");
+            log_info!("Configuration saved to ~/.workflow/config/repository.toml");
         }
 
         if fail_count > 0 {
@@ -165,7 +171,7 @@ impl BranchIgnoreCommand {
 
     /// 列出当前仓库的忽略分支
     ///
-    /// 从项目级配置和全局配置中读取（项目级优先）
+    /// 从个人偏好配置中读取
     pub fn list() -> Result<()> {
         // 从项目级配置读取忽略分支列表
         let ignore_branches = RepoConfig::get_ignore_branches();
