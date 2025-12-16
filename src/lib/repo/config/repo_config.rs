@@ -114,14 +114,30 @@ impl RepoConfig {
     ///
     /// If auto-accept is enabled, returns `true`; otherwise returns `false`.
     pub fn get_auto_accept_change_type() -> bool {
-        if let Ok(config) = PrivateRepoConfig::load() {
-            if let Some(ref pr_config) = config.pr {
-                if let Some(auto_accept) = pr_config.auto_accept_change_type {
-                    return auto_accept;
+        match PrivateRepoConfig::load() {
+            Ok(config) => {
+                if let Some(ref pr_config) = config.pr {
+                    if let Some(auto_accept) = pr_config.auto_accept_change_type {
+                        tracing::debug!(
+                            "get_auto_accept_change_type: returning {}",
+                            auto_accept
+                        );
+                        return auto_accept;
+                    } else {
+                        tracing::debug!("get_auto_accept_change_type: pr_config.auto_accept_change_type is None");
+                    }
+                } else {
+                    tracing::debug!("get_auto_accept_change_type: config.pr is None");
                 }
+                false
+            }
+            Err(e) => {
+                // 静默失败，返回默认值 false
+                // 如果配置文件不存在或读取失败，不应该影响 PR 创建流程
+                tracing::debug!("Failed to load repository config for auto_accept_change_type: {}", e);
+                false
             }
         }
-        false
     }
 
     /// Get template commit configuration (only reads from PublicRepoConfig, project standard)
@@ -190,45 +206,5 @@ impl RepoConfig {
         private_config.save().wrap_err("Failed to save private repository config")?;
 
         Ok(())
-    }
-
-    /// Load public repository configuration (project template)
-    ///
-    /// Loads project template configuration from `.workflow/config.toml`.
-    ///
-    /// **Note**: Prefer using `load()` to get unified configuration.
-    #[deprecated(note = "Use RepoConfig::load() instead to get unified configuration")]
-    pub fn load_public() -> Result<PublicRepoConfig> {
-        PublicRepoConfig::load()
-    }
-
-    /// Save public repository configuration (project template)
-    ///
-    /// Saves project template configuration to `.workflow/config.toml`.
-    ///
-    /// **Note**: Prefer using `save()` to save unified configuration.
-    #[deprecated(note = "Use RepoConfig::save() instead to save unified configuration")]
-    pub fn save_public(config: &PublicRepoConfig) -> Result<()> {
-        config.save()
-    }
-
-    /// Load private repository configuration (personal preference)
-    ///
-    /// Loads personal preference configuration from `~/.workflow/config/repository.toml`.
-    ///
-    /// **Note**: Prefer using `load()` to get unified configuration.
-    #[deprecated(note = "Use RepoConfig::load() instead to get unified configuration")]
-    pub fn load_private() -> Result<PrivateRepoConfig> {
-        PrivateRepoConfig::load()
-    }
-
-    /// Save private repository configuration (personal preference)
-    ///
-    /// Saves personal preference configuration to `~/.workflow/config/repository.toml`.
-    ///
-    /// **Note**: Prefer using `save()` to save unified configuration.
-    #[deprecated(note = "Use RepoConfig::save() instead to save unified configuration")]
-    pub fn save_private(config: &PrivateRepoConfig) -> Result<()> {
-        config.save()
     }
 }

@@ -111,11 +111,12 @@ impl PrivateRepoConfig {
         // Format: [${repo_id}], [${repo_id}.branch] and [${repo_id}.pr]
         let branch_key = format!("{}.branch", repo_id);
         let pr_key = format!("{}.pr", repo_id);
+        let repo_id_str = repo_id.clone();
 
         let mut config = Self::default();
 
         // Parse [${repo_id}] (top-level configuration)
-        if let Some(repo_section) = value.get(repo_id) {
+        if let Some(repo_section) = value.get(&repo_id_str) {
             if let Some(table) = repo_section.as_table() {
                 if let Some(configured) = table.get("configured") {
                     if let Some(configured_bool) = configured.as_bool() {
@@ -151,10 +152,29 @@ impl PrivateRepoConfig {
                 if let Some(auto_accept) = table.get("auto_accept_change_type") {
                     if let Some(auto_accept_bool) = auto_accept.as_bool() {
                         pr_config.auto_accept_change_type = Some(auto_accept_bool);
+                        tracing::debug!(
+                            "Loaded auto_accept_change_type = {} for repo_id: {}",
+                            auto_accept_bool,
+                            repo_id
+                        );
+                    } else {
+                        tracing::warn!(
+                            "auto_accept_change_type is not a boolean for repo_id: {}",
+                            repo_id
+                        );
                     }
+                } else {
+                    tracing::debug!(
+                        "auto_accept_change_type not found in [{}] section",
+                        pr_key
+                    );
                 }
                 config.pr = Some(pr_config);
+            } else {
+                tracing::warn!("[{}] section is not a table", pr_key);
             }
+        } else {
+            tracing::debug!("[{}] section not found in config", pr_key);
         }
 
         Ok(config)
