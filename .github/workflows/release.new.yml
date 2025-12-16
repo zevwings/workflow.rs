@@ -24,7 +24,7 @@ env:
 jobs:
   # 代码质量检查（使用可重用工作流）
   code-quality:
-    uses: ./.github/workflows/reusable/code-quality.yml
+    uses: ./.github/workflows/code-quality-reusable.yml
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
@@ -35,7 +35,7 @@ jobs:
 
   # 版本管理（使用可重用工作流）
   version-management:
-    uses: ./.github/workflows/reusable/version-management.yml
+    uses: ./.github/workflows/version-management-reusable.yml
     needs: [code-quality]
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master') ||
@@ -47,7 +47,7 @@ jobs:
 
   # 构建（使用可重用工作流）
   build:
-    uses: ./.github/workflows/reusable/build-binaries.yml
+    uses: ./.github/workflows/build-binaries-reusable.yml
     needs: [code-quality, version-management]
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.code-quality.result == 'success' && needs.version-management.result == 'success') ||
@@ -80,7 +80,7 @@ jobs:
 
   # Tag 管理（使用可重用工作流）
   create-tag:
-    uses: ./.github/workflows/reusable/tag-management.yml
+    uses: ./.github/workflows/tag-management-reusable.yml
     needs: [version-management, build, release-confirm]
     if: |
       needs.version-management.result == 'success' &&
@@ -97,7 +97,7 @@ jobs:
 
   # Release 发布（使用可重用工作流）
   release:
-    uses: ./.github/workflows/reusable/release-publish.yml
+    uses: ./.github/workflows/release-publish-reusable.yml
     needs: [version-management, create-tag, build, release-confirm]
     if: |
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master' && needs.version-management.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.release-confirm.result == 'success') ||
@@ -110,7 +110,7 @@ jobs:
 
   # Homebrew 更新（使用可重用工作流）
   update-homebrew:
-    uses: ./.github/workflows/reusable/homebrew-update.yml
+    uses: ./.github/workflows/homebrew-update-reusable.yml
     needs: [version-management, create-tag, build, release]
     if: |
       (github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.version-management.result == 'success' && needs.create-tag.result == 'success' && needs.build.result == 'success' && needs.release.result == 'success' && needs.create-tag.outputs.tag_created == 'true')
@@ -122,7 +122,7 @@ jobs:
 
   # Alpha Tag 清理（使用可重用工作流）
   cleanup-alpha-tags:
-    uses: ./.github/workflows/reusable/alpha-cleanup.yml
+    uses: ./.github/workflows/alpha-cleanup-reusable.yml
     needs: [create-tag]
     if: |
       github.event_name == 'push' &&
