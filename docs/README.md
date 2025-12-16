@@ -400,6 +400,7 @@
 - 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
 - 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
 - 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+- 想了解 Repo 管理命令？ → [REPO_COMMAND_ARCHITECTURE.md](./architecture/commands/REPO_COMMAND_ARCHITECTURE.md)
 - 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
 - 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
 - 想了解别名管理命令？ → [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)

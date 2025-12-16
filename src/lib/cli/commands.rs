@@ -7,7 +7,7 @@ use clap::Subcommand;
 use super::{
     AliasSubcommand, BranchSubcommand, CommitSubcommand, CompletionSubcommand, ConfigSubcommand,
     DryRunArgs, GitHubSubcommand, JiraSubcommand, LLMSubcommand, LogLevelSubcommand, PRCommands,
-    ProxySubcommand, RepoSubcommand, StashSubcommand,
+    ProxySubcommand, RepoSubcommand, StashSubcommand, TagSubcommand,
 };
 
 /// 主命令枚举
@@ -91,7 +91,7 @@ pub enum Commands {
     },
     /// Manage Git branches
     ///
-    /// Clean local branches and manage branch ignore list.
+    /// Create, switch, rename, sync, delete branches and manage branch ignore list.
     Branch {
         #[command(subcommand)]
         subcommand: BranchSubcommand,
@@ -138,7 +138,7 @@ pub enum Commands {
     },
     /// Manage repository-level configuration
     ///
-    /// Initialize and manage repository-level configuration including branch prefix and commit template settings.
+    /// Initialize and manage repository-level configuration including branch prefix, commit template settings, and cleanup operations.
     Repo {
         #[command(subcommand)]
         subcommand: RepoSubcommand,
@@ -149,5 +149,12 @@ pub enum Commands {
     Alias {
         #[command(subcommand)]
         subcommand: AliasSubcommand,
+    },
+    /// Manage Git tags
+    ///
+    /// Delete local and remote tags.
+    Tag {
+        #[command(subcommand)]
+        subcommand: TagSubcommand,
     },
 }

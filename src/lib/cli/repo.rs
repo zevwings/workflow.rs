@@ -4,6 +4,8 @@
 
 use clap::Subcommand;
 
+use super::common::DryRunArgs;
+
 /// Repository management subcommands
 ///
 /// Used to initialize and manage repository-level configuration.
@@ -19,4 +21,11 @@ pub enum RepoSubcommand {
     ///
     /// Display all repository-level configuration settings.
     Show,
+    /// Clean local branches
+    ///
+    /// Delete all local branches except main/master, develop, current branch, and branches in ignore list.
+    Clean {
+        #[command(flatten)]
+        dry_run: DryRunArgs,
+    },
 }

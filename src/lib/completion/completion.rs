@@ -70,7 +70,7 @@ impl Completion {
     ///
     /// 注意：`_workflow` 文件包含 `workflow` 命令及其所有子命令的 completion，
     /// 包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、
-    /// `log`（set、check）、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`proxy`、`branch`（clean、ignore、create、rename、switch、sync）等子命令。
+    /// `log`（set、check）、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`proxy`、`branch`（ignore、create、rename、switch、sync、delete）、`repo`（setup、show、clean）等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
         let config_file = workflow_dir.join(".completions");
@@ -326,7 +326,7 @@ impl Completion {
     /// 获取 completion 文件列表（根据 shell 类型）
     ///
     /// 返回 completion 文件列表：
-    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`branch`（clean、ignore、create、rename、switch、sync）等）
+    /// - `_workflow` / `workflow.bash`: 包含 `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`branch`（ignore、create、rename、switch、sync、delete）、`repo`（setup、show、clean）等）
     pub fn get_completion_files(shell: &Shell) -> Vec<PathBuf> {
         let completion_dir = Paths::completion_dir().unwrap_or_default();
         let commands = Paths::command_names();
@@ -415,7 +415,7 @@ impl Completion {
     /// 生成所有 completion 脚本文件
     ///
     /// 为所有命令生成 completion 脚本：
-    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`（set、check）、`jira`、`github`、`llm`、`proxy`、`branch`（clean、ignore、create、rename、switch、sync）等）
+    /// - `workflow` 命令及其所有子命令（包括 `pr`（create、merge、approve、comment、close、status、list、update、sync、rebase、pick、summarize）、`log`（set、check）、`jira`、`github`、`llm`、`proxy`、`branch`（ignore、create、rename、switch、sync、delete）、`repo`（setup、show、clean）等）
     pub fn generate_all_completions(
         shell_type: Option<String>,
         output_dir: Option<String>,

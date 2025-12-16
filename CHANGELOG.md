@@ -8,7 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- 新功能和改进将在这里记录
+- **仓库清理命令**：新增 `workflow repo clean` 命令
+  - `workflow repo clean` - 清理本地分支和本地 tag（保留 main/master、develop、当前分支和忽略列表中的分支）
+  - `workflow repo clean --dry-run` - 预览将要删除的分支和 tag，不实际删除
+  - 支持自动分类已合并和未合并分支
+  - 支持清理只存在于本地但不在远程的 tag
 
 ### Changed
 - 变更将在这里记录

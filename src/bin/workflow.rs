@@ -8,7 +8,7 @@ use color_eyre::Result;
 
 use workflow::commands::alias::{AliasAddCommand, AliasListCommand, AliasRemoveCommand};
 use workflow::commands::branch::{
-    clean, create as branch_create, ignore, rename, switch, sync as branch_sync,
+    create as branch_create, delete, ignore, rename, switch, sync as branch_sync,
 };
 use workflow::commands::check::check;
 use workflow::commands::commit::{CommitAmendCommand, CommitRewordCommand, CommitSquashCommand};
@@ -27,14 +27,15 @@ use workflow::commands::pr::{
     summarize, sync, update as pr_update,
 };
 use workflow::commands::proxy::proxy;
-use workflow::commands::repo::{setup as repo_setup, show as repo_show};
+use workflow::commands::repo::{clean as repo_clean, setup as repo_setup, show as repo_show};
 use workflow::commands::stash::{apply, drop, list as stash_list, pop, push};
+use workflow::commands::tag::TagDeleteCommand;
 
 use workflow::cli::{
     AliasSubcommand, BranchSubcommand, Cli, Commands, CommitSubcommand, CompletionSubcommand,
     ConfigSubcommand, GitHubSubcommand, IgnoreSubcommand, JiraSubcommand, LLMSubcommand,
     LogLevelSubcommand, LogSubcommand, PRCommands, ProxySubcommand, RepoSubcommand,
-    StashSubcommand,
+    StashSubcommand, TagSubcommand,
 };
 use workflow::*;
 
@@ -177,9 +178,6 @@ fn main() -> Result<()> {
         },
         // 分支管理命令
         Some(Commands::Branch { subcommand }) => match subcommand {
-            BranchSubcommand::Clean { dry_run } => {
-                clean::BranchCleanCommand::clean(dry_run.is_dry_run())?;
-            }
             BranchSubcommand::Ignore { subcommand } => match subcommand {
                 IgnoreSubcommand::Add { branch_name } => {
                     ignore::BranchIgnoreCommand::add(branch_name)?;
@@ -215,6 +213,21 @@ fn main() -> Result<()> {
                 squash,
             } => {
                 branch_sync::BranchSyncCommand::sync(source_branch, rebase, ff_only, squash)?;
+            }
+            BranchSubcommand::Delete {
+                branch_name,
+                local,
+                remote,
+                dry_run,
+                force,
+            } => {
+                delete::BranchDeleteCommand::execute(
+                    branch_name,
+                    local,
+                    remote,
+                    dry_run.is_dry_run(),
+                    force,
+                )?;
             }
         },
         // Commit 操作命令
@@ -422,12 +435,35 @@ fn main() -> Result<()> {
             RepoSubcommand::Show => {
                 repo_show::RepoShowCommand::show()?;
             }
+            RepoSubcommand::Clean { dry_run } => {
+                repo_clean::RepoCleanCommand::clean(dry_run.is_dry_run())?;
+            }
         },
         // 别名管理命令
         Some(Commands::Alias { subcommand }) => match subcommand {
             AliasSubcommand::List => AliasListCommand::list()?,
             AliasSubcommand::Add { name, command } => AliasAddCommand::add(name, command)?,
             AliasSubcommand::Remove { name } => AliasRemoveCommand::remove(name)?,
+        },
+        // Tag 管理命令
+        Some(Commands::Tag { subcommand }) => match subcommand {
+            TagSubcommand::Delete {
+                tag_name,
+                local,
+                remote,
+                pattern,
+                dry_run,
+                force,
+            } => {
+                TagDeleteCommand::execute(
+                    tag_name,
+                    local,
+                    remote,
+                    pattern,
+                    dry_run.is_dry_run(),
+                    force,
+                )?;
+            }
         },
         // 无命令时显示帮助信息
         None => {
