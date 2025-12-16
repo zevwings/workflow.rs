@@ -45,3 +45,4 @@ pub mod migrate;
 pub mod pr;
 pub mod repo;
 pub mod stash;
+pub mod tag;

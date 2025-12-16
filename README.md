@@ -459,6 +459,8 @@ workflow branch ignore list                   # 列出当前仓库的忽略分�
 # 管理分支前缀（仓库级别）
 workflow repo setup                            # 配置项目级设置（包括分支前缀）
 workflow repo show                             # 显示项目级配置（包括分支前缀）
+workflow repo clean                            # 清理本地分支和本地 tag（保留 main/master、develop、当前分支和忽略列表中的分支）
+workflow repo clean --dry-run                  # 预览将要删除的分支和 tag，不实际删除
 
 # 同步分支
 workflow branch sync <SOURCE_BRANCH>          # 将指定分支同步到当前分支（merge）

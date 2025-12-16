@@ -172,6 +172,11 @@ auto_accept_change_type = false  # 项目统一行为（覆盖全局配置）
 - 用户不清楚哪些配置应该放在全局，哪些应该放在仓库
 - 缺少配置选择指南
 
+**前置分析**：
+- 已创建 [仓库配置组织方案分析](../requirements/REPO_CONFIG_ORGANIZATION_ANALYSIS.md)
+- **推荐方案 3**：全局仓库特定配置（基于仓库标识符）
+- 需要根据选定的方案完善文档
+
 #### 3.2 实现目标
 
 - ✅ 明确配置分类原则
@@ -244,7 +249,9 @@ auto_accept_change_type = false  # 项目统一行为（覆盖全局配置）
 - [Repo 模块架构文档](../architecture/lib/REPO_ARCHITECTURE.md)
 - [Settings 模块架构文档](../architecture/lib/SETTINGS_ARCHITECTURE.md)
 - [Template 模块架构文档](../architecture/lib/TEMPLATE_ARCHITECTURE.md)
-- [配置合理性分析](../requirements/REPO_CONFIG_ANALYSIS.md)（待创建）
+- [仓库配置组织方案分析](../requirements/REPO_CONFIG_ORGANIZATION_ANALYSIS.md) - **配置文件组织方式对比分析**
+- [仓库配置管理器架构设计分析](../requirements/REPO_CONFIG_ARCHITECTURE_DESIGN.md) - **配置管理器架构设计对比（拆分 vs 单一）**
+- [仓库配置全局化实现文档](../requirements/REPO_CONFIG_IMPLEMENTATION.md) - **详细实现步骤和代码示例**
 
 ---
 
@@ -254,6 +261,12 @@ auto_accept_change_type = false  # 项目统一行为（覆盖全局配置）
 - ✅ 创建 REPO_TODO 文档
 - ✅ 记录分支前缀和 PR 自动接受变更类型的全局配置支持需求
 - ✅ 记录配置优先级文档完善需求
+- ✅ 创建仓库配置组织方案分析文档（方案 1 vs 方案 2 vs 方案 3 对比）
+- ✅ 明确每个仓库的分支前缀可能不同，需要灵活支持
+- ✅ **推荐方案 3**：全局仓库特定配置（`~/.workflow/config/repository.toml`，基于仓库标识符）
+- ✅ 创建实现文档，包含详细实现步骤、代码示例和测试计划
+- ✅ 确定使用 `repository.toml` 作为配置文件名，支持 iCloud 同步
+- ✅ **推荐架构设计**：拆分为 `PublicRepoConfig` 和 `PrivateRepoConfig`，`RepoConfig` 提供统一接口
 
 ---
 
