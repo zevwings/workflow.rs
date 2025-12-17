@@ -55,6 +55,13 @@ pub fn generate_pull_request_body(
         change_types,
         short_description: short_description.map(|s| s.to_string()),
         dependency: dependency.map(|s| s.to_string()),
+        title: None, // 可以根据需要设置 PR 标题
+        description: None, // 可以根据需要设置 PR 描述
+        branch_name: None, // 可以根据需要设置分支名称
+        author: None, // 可以根据需要设置作者
+        files_changed: None, // 可以根据需要设置变更文件列表
+        commit_count: None, // 可以根据需要设置提交数量
+        timestamp: None, // 可以根据需要设置时间戳
     };
 
     // Render template

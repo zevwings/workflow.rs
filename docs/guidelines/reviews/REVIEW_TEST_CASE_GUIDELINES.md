@@ -1,21 +1,16 @@
-# 测试用例检查指南
+# 测试用例审查指南
 
-> 本文档定义了如何检查测试用例的覆盖情况、合理性和完整性，用于指导 AI 进行测试用例检查。
+> 快速、实用的测试用例检查指南，帮助开发者和 AI 高效地进行测试覆盖检查。
 
----
+## 🎯 核心原则
 
-## 📋 目录
+**测试边界**：测试我们自己的业务逻辑，不测试外部依赖和第三方库。
 
-- [测试边界和范围](#-测试边界和范围)
-- [检查目标](#-检查目标)
-- [检查步骤](#-检查步骤)
-- [检查内容](#-检查内容)
-  - [1. 测试覆盖情况检查](#1-测试覆盖情况检查)
-  - [2. 测试用例合理性检查](#2-测试用例合理性检查)
-  - [3. 缺失测试用例检查](#3-缺失测试用例检查)
-- [检查方法](#-检查方法)
-- [检查报告格式](#-检查报告格式)
-- [参考文档](#-参考文档)
+**检查重点**：
+- ✅ 业务逻辑、数据转换、状态管理、错误处理
+- ✅ CLI 参数解析、用户交互、输出格式化
+- ✅ API 封装、重试机制、响应处理
+- ❌ 外部工具功能、第三方库实现、远程 API 业务逻辑
 
 ---
 
@@ -50,7 +45,110 @@
   - 数据结构的序列化/反序列化
   - 数据结构的默认值和验证
 
-#### 2. 错误处理逻辑
+#### 2. CLI 命令层测试
+
+测试命令行接口的正确性和用户体验：
+
+- ✅ **命令参数解析**
+  - 参数验证逻辑（必需参数、可选参数、默认值）
+  - 参数类型转换和格式验证（如 Jira ID 格式、PR 标题长度）
+  - 参数组合的有效性检查（互斥参数、依赖参数）
+  - 错误参数的处理和友好提示
+
+- ✅ **命令执行流程**
+  - 命令的主要执行路径和业务逻辑
+  - 前置条件检查（Git 仓库、配置文件、网络连接）
+  - 命令间的依赖关系处理和执行顺序
+  - 命令执行的状态管理和错误恢复
+
+- ✅ **用户交互测试**
+  - Dialog 组件的配置和验证逻辑
+  - 用户输入的处理和验证（输入框、选择框、多选框）
+  - 交互流程的正确性（确认、取消、重试）
+  - 用户体验的一致性（提示信息、错误处理）
+
+- ✅ **输出格式化**
+  - 多种输出格式的正确性（Table、JSON、YAML、Markdown）
+  - 输出内容的一致性和完整性
+  - 错误消息和警告信息的格式化
+  - 国际化和本地化支持
+
+**CLI 测试示例**：
+```rust
+// ✅ 测试命令参数解析（我们的业务逻辑）
+#[test]
+fn test_pr_create_args_validation() {
+    let args = PrCreateArgs {
+        jira_ticket: Some("PROJ-123".to_string()),
+        title: Some("Test PR".to_string()),
+        description: None,
+        dry_run: false,
+    };
+
+    // 测试我们的参数验证逻辑
+    let result = validate_pr_create_args(&args);
+    assert!(result.is_ok());
+
+    // 测试无效的 Jira ID
+    let invalid_args = PrCreateArgs {
+        jira_ticket: Some("invalid-id".to_string()),
+        ..args
+    };
+    let result = validate_pr_create_args(&invalid_args);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("Jira ID 格式无效"));
+}
+
+// ✅ 测试用户交互逻辑（我们的业务逻辑）
+#[test]
+fn test_branch_selection_dialog_config() {
+    let branches = vec!["main", "develop", "feature/test"];
+    let dialog = create_branch_selection_dialog(&branches);
+
+    // 测试我们的 Dialog 配置逻辑
+    assert_eq!(dialog.prompt(), "选择目标分支:");
+    assert_eq!(dialog.options().len(), 3);
+    assert_eq!(dialog.default_index(), Some(0));
+    assert!(dialog.enable_filter()); // 启用模糊匹配
+}
+
+// ✅ 测试输出格式化（我们的业务逻辑）
+#[test]
+fn test_pr_list_output_formats() {
+    let prs = create_mock_pr_list();
+
+    // 测试表格格式
+    let table_output = format_pr_list_as_table(&prs);
+    assert!(table_output.contains("ID"));
+    assert!(table_output.contains("Title"));
+    assert!(table_output.contains("Status"));
+
+    // 测试 JSON 格式
+    let json_output = format_pr_list_as_json(&prs);
+    let parsed: serde_json::Value = serde_json::from_str(&json_output).unwrap();
+    assert!(parsed.is_array());
+    assert_eq!(parsed.as_array().unwrap().len(), prs.len());
+}
+
+// ✅ 测试命令执行前置条件（我们的业务逻辑）
+#[test]
+fn test_pr_create_preconditions() {
+    // 测试 Git 仓库检查
+    let temp_dir = tempfile::tempdir().unwrap();
+    std::env::set_current_dir(&temp_dir).unwrap();
+
+    let result = PrCreateCommand::validate_git_repo();
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("不是 Git 仓库"));
+
+    // 测试配置文件检查
+    let result = PrCreateCommand::validate_github_config();
+    assert!(result.is_err());
+    assert!(result.unwrap_err().to_string().contains("GitHub 配置"));
+}
+```
+
+#### 3. 错误处理逻辑
 
 测试我们如何处理错误，而不是测试错误是否会发生：
 
@@ -83,10 +181,13 @@
   - 超大结果处理
   - 格式化输出的正确性
 
-- ✅ **并发场景**
-  - 并发执行的安全性
-  - 资源竞争处理
-  - 并发错误处理
+- ✅ **并发和异步场景**
+  - 异步函数的正确性测试（使用 `#[tokio::test]`）
+  - 并发执行的安全性测试（数据竞争、死锁检测）
+  - 并发限制和资源管理（如并发执行器的限制）
+  - 超时和取消机制测试（任务超时、用户取消）
+  - 异步错误处理和传播
+  - 并发场景下的状态一致性
 
 #### 4. 集成逻辑
 
@@ -176,6 +277,68 @@
   - 测试外部依赖超时或不可用时的处理
 
 ### 📚 具体示例
+
+#### 示例 0: 项目实际结构对照
+
+**实际项目模块结构**：
+
+##### Core 业务模块 (`src/lib/`)
+- ✅ **Base 模块** (`lib/base/`): HTTP 客户端、LLM 客户端、Settings、Dialog、Logger 等基础组件
+- ✅ **Git 模块** (`lib/git/`): 分支管理、提交管理、仓库操作、Stash 管理
+- ✅ **Jira 模块** (`lib/jira/`): API 集成、日志管理、附件处理、状态管理
+- ✅ **PR 模块** (`lib/pr/`): GitHub 平台集成、LLM 生成、Body 解析
+- ✅ **Branch 模块** (`lib/branch/`): 分支命名、LLM 生成、同步管理
+- ✅ **Commit 模块** (`lib/commit/`): 提交修改、重写、压缩
+- ✅ **Template 模块** (`lib/template/`): 模板配置、引擎、变量管理
+- ✅ **Proxy 模块** (`lib/proxy/`): 代理配置生成和管理
+- ✅ **Repo 模块** (`lib/repo/`): 仓库配置管理
+- ✅ **Rollback 模块** (`lib/rollback/`): 操作回滚
+
+##### CLI 命令层 (`src/commands/`)
+- ✅ **配置管理**: `config/`, `github/`, `check/`, `proxy/`, `llm/`
+- ✅ **业务功能**: `pr/`, `jira/`, `branch/`, `commit/`, `stash/`, `log/`
+- ✅ **工具管理**: `lifecycle/`, `migrate/`, `repo/`, `alias/`, `tag/`
+
+**实际测试工具配置** (`Cargo.toml`):
+```toml
+[dev-dependencies]
+pretty_assertions = "1.4"    # 清晰的断言输出
+rstest = "0.18"             # 参数化测试和 fixtures
+mockito = "1.2"             # HTTP API Mock 测试
+insta = "1.38"              # 快照测试（JSON 功能）
+assert_cmd = "2.0"          # CLI 命令测试
+predicates = "3.0"          # 断言谓词
+tempfile = "3.8"            # 临时文件和目录
+```
+
+**实际测试目录结构**:
+```
+tests/
+├── base/           # Base 模块测试（LLM、Settings、Dialog、Util）
+├── cli/            # CLI 命令测试（所有 commands/ 对应测试）
+│   ├── basic_cli.rs        # 基础 CLI 测试
+│   ├── integration_cli.rs  # CLI 集成测试
+│   └── [各命令测试文件]    # PR、Branch、Config 等
+├── completion/     # 自动补全测试
+├── git/            # Git 模块测试（目前为空，需要补充）
+├── http/           # HTTP 客户端测试
+├── integration/    # 集成测试
+├── jira/           # Jira 模块测试
+├── pr/             # PR 模块测试
+├── proxy/          # Proxy 模块测试
+├── rollback/       # Rollback 模块测试
+├── common/         # 共享测试工具
+│   ├── cli_helpers.rs      # CLI 测试辅助工具
+│   ├── helpers.rs          # 通用测试工具
+│   └── http_helpers.rs     # HTTP 测试工具
+└── fixtures/       # 测试数据文件
+```
+
+**测试覆盖现状**:
+- 🟢 **已完整覆盖**: Base 模块（LLM、Settings、Dialog）、CLI 参数解析、PR 模块、Jira 模块
+- 🟢 **CLI 测试工具**: 已添加 assert_cmd、predicates、tempfile 和完整的测试辅助工具
+- 🟡 **部分覆盖**: HTTP 模块、Completion 模块、Proxy 模块、CLI 集成测试（基础框架已建立）
+- 🔴 **缺失覆盖**: Git 模块（测试文件为空）、Template 模块、Branch 模块、Commit 模块、Stash 模块
 
 #### 示例 1: Git 模块
 
@@ -359,6 +522,113 @@ fn test_jira_calculates_time_tracking() {
 }
 ```
 
+#### 示例 4: 并发和异步测试
+
+**✅ 应该测试的**：
+
+```rust
+// ✅ 测试异步函数的正确性（我们的业务逻辑）
+#[tokio::test]
+async fn test_concurrent_http_requests() {
+    let client = HttpClient::new();
+    let urls = vec!["url1", "url2", "url3"];
+
+    // 测试我们的并发请求逻辑
+    let results = client.fetch_all(urls).await;
+    assert_eq!(results.len(), 3);
+    assert!(results.iter().all(|r| r.is_ok()));
+}
+
+// ✅ 测试并发执行器的限制（我们的业务逻辑）
+#[tokio::test]
+async fn test_concurrent_executor_limits() {
+    let executor = ConcurrentExecutor::new(2); // 最大2个并发
+    let tasks = create_test_tasks(5); // 5个任务
+
+    // 测试我们的并发控制逻辑
+    let start_time = Instant::now();
+    let results = executor.execute_all(tasks).await;
+    let duration = start_time.elapsed();
+
+    // 验证结果和并发限制
+    assert_eq!(results.len(), 5);
+    assert!(duration >= Duration::from_millis(500)); // 至少需要3轮执行
+}
+
+// ✅ 测试超时和取消机制（我们的业务逻辑）
+#[tokio::test]
+async fn test_task_timeout_handling() {
+    let executor = ConcurrentExecutor::new(1);
+    let timeout_task = create_long_running_task(Duration::from_secs(10));
+
+    // 测试我们的超时处理逻辑
+    let result = tokio::time::timeout(
+        Duration::from_millis(100),
+        executor.execute(timeout_task)
+    ).await;
+
+    assert!(result.is_err()); // 应该超时
+}
+
+// ✅ 测试并发安全性（我们的业务逻辑）
+#[tokio::test]
+async fn test_concurrent_state_consistency() {
+    let shared_state = Arc::new(Mutex::new(Vec::new()));
+    let tasks = (0..10).map(|i| {
+        let state = shared_state.clone();
+        tokio::spawn(async move {
+            let mut guard = state.lock().await;
+            guard.push(i);
+        })
+    }).collect::<Vec<_>>();
+
+    // 等待所有任务完成
+    for task in tasks {
+        task.await.unwrap();
+    }
+
+    // 验证状态一致性
+    let final_state = shared_state.lock().await;
+    assert_eq!(final_state.len(), 10);
+}
+
+// ✅ 测试异步错误处理（我们的业务逻辑）
+#[tokio::test]
+async fn test_async_error_propagation() {
+    let client = HttpClient::new();
+
+    // 测试我们的异步错误处理
+    let result = client.fetch_with_retry("invalid-url", 3).await;
+    assert!(result.is_err());
+
+    let error = result.unwrap_err();
+    assert!(error.to_string().contains("网络请求失败"));
+    assert!(error.to_string().contains("重试 3 次后仍然失败"));
+}
+```
+
+**❌ 不应该测试的**：
+
+```rust
+// ❌ 不要测试 tokio 运行时的正确性（这是 tokio 的责任）
+#[tokio::test]
+async fn test_tokio_runtime_behavior() {
+    // 这是在测试 tokio 本身，而不是我们的代码
+    tokio::spawn(async {
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }).await.unwrap();
+}
+
+// ❌ 不要测试标准库的并发原语（这是标准库的责任）
+#[test]
+fn test_mutex_locking() {
+    // 这是在测试 Mutex 的实现，而不是我们的代码
+    let mutex = Mutex::new(0);
+    let guard = mutex.lock().unwrap();
+    assert_eq!(*guard, 0);
+}
+```
+
 ### 🎯 测试边界总结
 
 | 测试类型 | 应该测试 ✅ | 不应该测试 ❌ |
@@ -369,539 +639,456 @@ fn test_jira_calculates_time_tracking() {
 | **API 集成** | 我们如何调用 API、处理响应、错误处理 | API 本身的实现和正确性 |
 | **Git 操作** | 我们的 Git 封装、参数构建、结果解析 | Git 命令本身的功能 |
 | **HTTP 请求** | 我们的请求配置、重试逻辑、响应处理 | HTTP 客户端库的实现 |
+| **CLI 命令** | 我们的参数解析、执行流程、用户交互 | clap 库本身的参数解析功能 |
+| **并发异步** | 我们的并发控制、异步逻辑、错误处理 | tokio 运行时和标准库并发原语 |
 
 **关键原则**：**测试我们自己写的代码，信任外部依赖已经过充分测试。**
 
 ---
 
-## 🎯 检查目标
-
-检查测试用例的三个核心方面：
-
-1. **测试覆盖情况**：检查哪些模块/功能已有测试，哪些缺失
-2. **测试用例合理性**：检查现有测试是否合理、规范、有效
-3. **缺失测试用例**：识别需要补充的测试用例
-
----
-
 ## 🚀 检查步骤
 
-按照以下步骤依次完成检查：
+### 步骤 1：项目结构扫描
 
-### 第一步：收集测试信息
+#### 1.1 收集源代码信息
+```bash
+# 列出所有 lib 模块
+echo "=== Core 业务模块 (src/lib/) ==="
+find src/lib -name "*.rs" -not -name "mod.rs" | sort
 
-1. **扫描测试目录结构**
-   - 列出 `tests/` 目录下的所有测试文件
-   - 列出源代码中 `#[cfg(test)]` 模块的单元测试
-   - 记录测试文件与源代码模块的对应关系
+# 列出所有 commands 模块
+echo "=== CLI 命令模块 (src/commands/) ==="
+find src/commands -name "*.rs" -not -name "mod.rs" | sort
 
-2. **扫描源代码结构**
-   - 列出 `src/lib/` 目录下的所有模块
-   - 列出 `src/commands/` 目录下的所有命令
-   - 识别公共 API 和关键业务逻辑
-
-3. **统计测试数据**
-   - 统计测试文件数量
-   - 统计测试用例数量（估算）
-   - 统计单元测试模块数量
-
-### 第二步：检查测试覆盖情况
-
-1. **模块覆盖检查**
-   - 检查每个 `lib/` 模块是否有对应的测试
-   - 检查每个 `commands/` 命令是否有对应的测试
-   - 标记已覆盖、部分覆盖、完全缺失的模块
-
-2. **功能覆盖检查**
-   - 检查每个模块的主要功能是否有测试
-   - 检查公共函数是否有测试
-   - 检查关键业务逻辑是否有测试
-
-3. **覆盖率评估**
-   - 估算总体覆盖率
-   - 估算核心模块覆盖率
-   - 估算工具模块覆盖率
-
-### 第三步：检查测试用例合理性
-
-1. **测试工具使用检查**
-   - 检查是否使用了合适的测试工具（`rstest`、`pretty_assertions`、`insta`、`mockito` 等）
-   - 检查测试工具使用是否规范
-
-2. **测试结构检查**
-   - 检查测试是否遵循 AAA 模式（Arrange-Act-Assert）
-   - 检查测试组织是否合理（模块分组、命名规范）
-   - 检查测试数据管理是否规范（fixtures、快照）
-
-3. **测试内容检查**
-   - 检查是否包含成功路径测试
-   - 检查是否包含错误路径测试
-   - 检查是否包含边界条件测试
-   - 检查是否包含集成测试
-
-### 第四步：识别缺失的测试用例
-
-1. **缺失模块测试识别**
-   - 识别完全没有测试的模块
-   - 识别测试文件存在但为空的模块
-   - 识别部分子模块缺少测试的情况
-
-2. **缺失功能测试识别**
-   - 识别主要功能缺少测试的情况
-   - 识别公共函数缺少测试的情况
-   - 识别关键业务逻辑缺少测试的情况
-
-3. **缺失测试类型识别**
-   - 识别缺少错误路径测试的情况
-   - 识别缺少边界条件测试的情况
-   - 识别缺少集成测试的情况
-
-### 第五步：生成检查报告
-
-根据检查结果生成结构化的检查报告。
-
-**对应章节**：[检查报告格式](#-检查报告格式)
-
----
-
-## 📝 检查内容
-
-### 1. 测试覆盖情况检查
-
-#### 1.1 模块覆盖检查
-
-**检查项**：
-
-- [ ] **已覆盖的模块**：列出所有有完整测试的模块
-  - 检查测试文件是否存在
-  - 检查测试文件是否包含实际测试用例
-  - 检查测试是否覆盖主要功能
-
-- [ ] **部分覆盖的模块**：列出测试不完整的模块
-  - 检查测试文件是否存在但为空
-  - 检查是否只覆盖了部分子模块
-  - 检查是否只覆盖了部分功能
-
-- [ ] **完全缺失的模块**：列出完全没有测试的模块
-  - 检查是否有对应的测试文件
-  - 检查是否有单元测试
-
-**检查方法**：
-
-1. 遍历 `src/lib/` 目录，列出所有模块
-2. 检查 `tests/` 目录是否有对应的测试文件
-3. 检查测试文件是否包含实际测试代码（不只是注释）
-4. 检查源代码中是否有 `#[cfg(test)]` 模块
-
-**示例输出**：
-
-```markdown
-#### Base 模块 (`lib/base/`)
-- ✅ `base/llm_client.rs` - LLM 客户端测试
-- ✅ `base/logger.rs` - 日志功能测试
-- ⚠️ `base/http.rs` - 测试文件存在但为空
-- ❌ `base/alias/config.rs` - 无测试文件
+# 统计模块数量
+echo "Core 模块数量: $(find src/lib -name "*.rs" -not -name "mod.rs" | wc -l)"
+echo "Commands 模块数量: $(find src/commands -name "*.rs" -not -name "mod.rs" | wc -l)"
 ```
 
-#### 1.2 功能覆盖检查
+#### 1.2 收集测试文件信息
+```bash
+# 列出所有测试文件
+echo "=== 测试文件 (tests/) ==="
+find tests -name "*.rs" | sort
 
-**检查项**：
+# 统计测试文件数量
+echo "测试文件数量: $(find tests -name "*.rs" | wc -l)"
 
-- [ ] **公共函数覆盖**：检查公共函数是否有测试
-  - 列出所有公共函数
-  - 检查是否有对应的测试用例
-
-- [ ] **关键业务逻辑覆盖**：检查关键业务逻辑是否有测试
-  - 识别关键业务逻辑（如 PR 创建、Jira 集成、Git 操作等）
-  - 检查是否有对应的测试用例
-
-- [ ] **错误处理覆盖**：检查错误处理逻辑是否有测试
-  - 检查错误路径是否有测试
-  - 检查错误消息是否正确
-
-**检查方法**：
-
-1. 读取源代码文件，识别公共函数（`pub fn`）
-2. 检查测试文件中是否有对应的测试用例
-3. 使用代码搜索工具查找测试用例
-
-**示例输出**：
-
-```markdown
-#### Git 模块功能覆盖
-- ✅ `GitRepo::is_git_repo()` - 有测试
-- ✅ `GitBranch::create()` - 有测试
-- ❌ `GitBranch::merge()` - 无测试
-- ❌ `GitStash::push()` - 无测试
+# 检查测试目录结构
+echo "=== 测试目录结构 ==="
+tree tests/ -I "target|snapshots" 2>/dev/null || find tests -type d | sort
 ```
 
-#### 1.3 覆盖率评估
+### 步骤 2：覆盖情况检查
 
-**检查项**：
+#### 2.1 模块覆盖对比
+```bash
+# 创建模块覆盖检查脚本
+cat > check_coverage.sh << 'EOF'
+#!/bin/bash
+echo "=== 模块覆盖情况检查 ==="
 
-- [ ] **总体覆盖率估算**：估算整体测试覆盖率
-- [ ] **核心模块覆盖率**：估算核心模块（Git、Commit、PR 等）的覆盖率
-- [ ] **工具模块覆盖率**：估算工具模块的覆盖率
-- [ ] **CLI 层覆盖率**：估算 CLI 命令层的覆盖率
+echo "🟢 已覆盖的模块:"
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        echo "  ✅ $module_name ($(basename $lib_file))"
+    fi
+done
 
-**评估标准**：
+echo ""
+echo "🟡 部分覆盖的模块:"
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -eq 0 ]]; then
+        echo "  ⚠️  $module_name (测试文件存在但为空)"
+    fi
+done
 
-- 🟢 **良好** (80%+)：覆盖率 >= 80%
-- 🟡 **中等** (60-79%)：覆盖率 60-79%
-- 🔴 **不足** (< 60%)：覆盖率 < 60%
+echo ""
+echo "🔴 缺失覆盖的模块:"
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ ! -f "$test_file" ]]; then
+        echo "  ❌ $module_name (无测试文件)"
+    fi
+done
+EOF
 
-**检查方法**：
-
-1. 统计有测试的模块数量 vs 总模块数量
-2. 统计有测试的函数数量 vs 总函数数量（估算）
-3. 根据测试文件数量和测试用例数量估算覆盖率
-
-**示例输出**：
-
-```markdown
-### 覆盖率评估
-- **总体覆盖率估算**: 🟡 约 50-60%
-- **核心模块覆盖率**: 🔴 约 40-50%（Git、Commit 等核心模块缺失）
-- **工具模块覆盖率**: 🟡 约 60-70%
-- **CLI 层覆盖率**: 🟢 约 75-80%
+chmod +x check_coverage.sh
+./check_coverage.sh
 ```
 
----
+#### 2.2 功能覆盖检查
+```bash
+# 检查公共函数覆盖情况
+echo "=== 公共函数覆盖检查 ==="
+for module in src/lib/*/mod.rs; do
+    module_name=$(basename $(dirname $module))
+    echo "检查模块: $module_name"
 
-### 2. 测试用例合理性检查
+    # 提取公共函数
+    pub_functions=$(grep -n "pub fn " $module 2>/dev/null | head -5)
+    if [[ -n "$pub_functions" ]]; then
+        echo "  公共函数:"
+        echo "$pub_functions" | sed 's/^/    /'
 
-#### 2.1 测试工具使用检查
-
-**检查项**：
-
-- [ ] **参数化测试**：检查是否使用 `rstest` 进行参数化测试
-  - 查找 `#[rstest]` 标记的测试
-  - 检查参数化测试是否合理
-
-- [ ] **断言工具**：检查是否使用 `pretty_assertions` 提供清晰的错误输出
-  - 查找 `use pretty_assertions::assert_eq;` 等导入
-  - 检查是否在关键测试中使用
-
-- [ ] **快照测试**：检查是否使用 `insta` 进行快照测试
-  - 查找 `insta::assert_json_snapshot!` 等调用
-  - 检查快照文件是否管理规范
-
-- [ ] **Mock 测试**：检查是否使用 `mockito` 进行 HTTP API Mock 测试
-  - 查找 `mockito` 相关代码
-  - 检查 Mock 服务器设置是否规范
-
-**检查方法**：
-
-1. 搜索测试文件中的测试工具使用情况
-2. 检查测试工具使用是否符合规范（参考 `TESTING_GUIDELINES.md`）
-
-**示例输出**：
-
-```markdown
-### 测试工具使用情况
-- ✅ **参数化测试**: 使用 `rstest` 进行参数化测试，减少代码重复
-- ✅ **断言工具**: 使用 `pretty_assertions` 提供清晰的错误输出
-- ✅ **快照测试**: 使用 `insta` 进行快照测试（LLM 响应）
-- ✅ **Mock 测试**: 使用 `mockito` 进行 HTTP API Mock 测试
+        # 检查对应测试
+        test_file="tests/${module_name}/mod.rs"
+        if [[ -f "$test_file" ]]; then
+            test_count=$(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0)
+            echo "  测试用例数量: $test_count"
+        else
+            echo "  ❌ 无测试文件"
+        fi
+    fi
+    echo ""
+done
 ```
 
-#### 2.2 测试结构检查
+### 步骤 3：测试质量评估
 
-**检查项**：
+#### 3.1 测试工具使用检查
+```bash
+echo "=== 测试工具使用情况 ==="
 
-- [ ] **AAA 模式**：检查测试是否遵循 Arrange-Act-Assert 模式
-  - 检查测试是否有清晰的准备、执行、断言阶段
-  - 检查测试结构是否清晰
+# 检查 rstest 使用
+rstest_count=$(grep -r "#\[rstest\]" tests/ 2>/dev/null | wc -l)
+echo "📊 rstest 参数化测试: $rstest_count 个"
 
-- [ ] **测试组织**：检查测试组织是否合理
-  - 检查是否使用模块分组组织相关测试
-  - 检查测试命名是否规范（`test_` 前缀）
-  - 检查测试目录结构是否与源代码对应
+# 检查 pretty_assertions 使用
+pretty_assertions=$(grep -r "use pretty_assertions" tests/ 2>/dev/null | wc -l)
+echo "📊 pretty_assertions 使用: $pretty_assertions 个文件"
 
-- [ ] **测试数据管理**：检查测试数据管理是否规范
-  - 检查是否使用 `tests/fixtures/` 目录存放测试数据
-  - 检查是否使用共享测试工具（`tests/common/`）
-  - 检查快照文件是否管理规范
+# 检查 insta 快照测试
+insta_count=$(grep -r "insta::" tests/ 2>/dev/null | wc -l)
+echo "📊 insta 快照测试: $insta_count 个"
 
-**检查方法**：
+# 检查 mockito Mock 测试
+mockito_count=$(grep -r "mockito::" tests/ 2>/dev/null | wc -l)
+echo "📊 mockito Mock 测试: $mockito_count 个"
 
-1. 读取测试文件，检查测试结构
-2. 检查测试命名规范
-3. 检查测试数据管理方式
-
-**示例输出**：
-
-```markdown
-### 测试结构
-- ✅ **AAA 模式**: 大部分测试遵循 Arrange-Act-Assert 模式
-- ✅ **模块化组织**: 测试目录结构与源代码对应
-- ✅ **共享工具**: `tests/common/` 提供共享测试工具
-- ✅ **测试数据**: 使用 `tests/fixtures/` 目录存放测试数据
+# 检查 tokio 异步测试
+tokio_test_count=$(grep -r "#\[tokio::test\]" tests/ 2>/dev/null | wc -l)
+echo "📊 tokio 异步测试: $tokio_test_count 个"
 ```
 
-#### 2.3 测试内容检查
+#### 3.2 测试结构检查
+```bash
+echo "=== 测试结构和质量检查 ==="
 
-**检查项**：
+# 检查测试命名规范
+echo "🔍 测试命名规范检查:"
+non_standard_tests=$(grep -r "fn test" tests/ | grep -v "fn test_" | wc -l)
+if [[ $non_standard_tests -eq 0 ]]; then
+    echo "  ✅ 所有测试都遵循 test_ 命名规范"
+else
+    echo "  ⚠️  发现 $non_standard_tests 个不规范的测试命名"
+fi
 
-- [ ] **成功路径测试**：检查是否包含成功路径测试
-  - 检查主要功能是否有成功路径测试
-  - 检查测试是否验证了预期结果
+# 检查测试文档注释
+documented_tests=$(grep -r "/// " tests/ 2>/dev/null | wc -l)
+total_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
+echo "📝 测试文档覆盖: $documented_tests/$total_tests"
 
-- [ ] **错误路径测试**：检查是否包含错误路径测试
-  - 检查是否有错误情况测试（网络错误、文件系统错误、权限错误等）
-  - 检查错误消息是否正确
+# 检查错误处理测试
+error_tests=$(grep -r "assert.*is_err\|expect.*err\|unwrap_err" tests/ 2>/dev/null | wc -l)
+echo "🚨 错误处理测试: $error_tests 个"
 
-- [ ] **边界条件测试**：检查是否包含边界条件测试
-  - 检查是否有空输入/输出测试
-  - 检查是否有最大/最小长度测试
-  - 检查是否有特殊字符测试
-  - 检查是否有 Unicode 字符处理测试
+# 检查边界条件测试
+boundary_tests=$(grep -r "empty\|null\|zero\|max\|min\|boundary" tests/ 2>/dev/null | wc -l)
+echo "🎯 边界条件测试: $boundary_tests 个"
+```
 
-- [ ] **集成测试**：检查是否包含集成测试
-  - 检查是否有端到端的工作流测试
-  - 检查是否有模块间交互测试
+### 步骤 4：缺失测试识别
 
-**检查方法**：
+#### 4.1 生成缺失测试报告
+```bash
+cat > generate_missing_tests_report.sh << 'EOF'
+#!/bin/bash
+echo "# 缺失测试分析报告"
+echo ""
+echo "## 📊 统计概览"
+echo ""
 
-1. 读取测试文件，分析测试内容
-2. 检查测试是否覆盖成功路径、错误路径、边界条件
-3. 检查是否有集成测试文件
+# 统计总体情况
+total_lib_modules=$(find src/lib -name "*.rs" -not -name "mod.rs" | wc -l)
+total_test_files=$(find tests -name "*.rs" | wc -l)
+total_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
 
-**示例输出**：
+echo "- **Core 模块总数**: $total_lib_modules"
+echo "- **测试文件总数**: $total_test_files"
+echo "- **测试用例总数**: $total_tests"
+echo ""
 
-```markdown
-### 测试内容合理性
-#### 正面示例
-1. **参数解析测试**: CLI 命令的参数解析测试完整
-2. **边界条件测试**: 部分测试包含边界条件
-3. **错误处理测试**: 部分测试包含错误情况
-4. **集成测试**: 有端到端的工作流测试
+# 计算覆盖率
+covered_modules=0
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        covered_modules=$((covered_modules + 1))
+    fi
+done
 
-#### 需要改进的地方
-1. **错误路径测试不足**: 部分测试主要关注成功路径，错误处理测试较少
-2. **边界条件测试不完整**: 某些模块缺少边界条件测试
-3. **并发测试缺失**: 虽然有并发执行器，但缺少并发场景测试
+coverage_percent=$(echo "scale=1; $covered_modules * 100 / $total_lib_modules" | bc -l 2>/dev/null || echo "0")
+echo "- **模块覆盖率**: $covered_modules/$total_lib_modules ($coverage_percent%)"
+echo ""
+
+echo "## 🔴 完全缺失测试的模块"
+echo ""
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ ! -f "$test_file" ]]; then
+        echo "- ❌ **$module_name** (\`$(basename $lib_file)\`)"
+        # 尝试识别主要功能
+        pub_functions=$(grep "pub fn " $lib_file 2>/dev/null | head -3 | sed 's/.*pub fn \([^(]*\).*/  - \1()/')
+        if [[ -n "$pub_functions" ]]; then
+            echo "  - 主要功能:"
+            echo "$pub_functions"
+        fi
+        echo ""
+    fi
+done
+
+echo "## 🟡 测试文件为空的模块"
+echo ""
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -eq 0 ]]; then
+        echo "- ⚠️  **$module_name** (测试文件存在但无实际测试)"
+        echo ""
+    fi
+done
+
+echo "## 🟢 已完整覆盖的模块"
+echo ""
+for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module_name=$(basename $(dirname $lib_file))
+    test_file="tests/${module_name}/mod.rs"
+    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        test_count=$(grep -c "#\[test\]" "$test_file")
+        echo "- ✅ **$module_name** ($test_count 个测试)"
+    fi
+done
+EOF
+
+chmod +x generate_missing_tests_report.sh
+./generate_missing_tests_report.sh
+```
+
+### 步骤 5：生成检查报告
+
+#### 5.1 创建完整报告
+```bash
+cat > generate_full_report.sh << 'EOF'
+#!/bin/bash
+REPORT_FILE="report/TEST_COVERAGE_REPORT_$(date +%Y%m%d_%H%M%S).md"
+mkdir -p report
+
+echo "# 测试用例检查报告" > $REPORT_FILE
+echo "" >> $REPORT_FILE
+echo "**生成时间**: $(date '+%Y-%m-%d %H:%M:%S')" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+
+# 执行所有检查并写入报告
+echo "## 📈 覆盖情况总结" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+
+# 这里可以调用之前的检查脚本并将结果追加到报告中
+./check_coverage.sh >> $REPORT_FILE 2>&1
+echo "" >> $REPORT_FILE
+
+./generate_missing_tests_report.sh >> $REPORT_FILE 2>&1
+
+echo "## 🛠️ 改进建议" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+echo "### 高优先级" >> $REPORT_FILE
+echo "- [ ] 补充 Git 模块核心功能测试" >> $REPORT_FILE
+echo "- [ ] 添加 Template 模块测试" >> $REPORT_FILE
+echo "- [ ] 实现 Branch 模块测试" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+echo "### 中优先级" >> $REPORT_FILE
+echo "- [ ] 完善 HTTP 模块重试逻辑测试" >> $REPORT_FILE
+echo "- [ ] 增强 Proxy 模块配置验证测试" >> $REPORT_FILE
+echo "" >> $REPORT_FILE
+
+echo "报告已生成: $REPORT_FILE"
+EOF
+
+chmod +x generate_full_report.sh
+./generate_full_report.sh
 ```
 
 ---
 
-### 3. 缺失测试用例检查
+## 📊 项目测试现状
 
-#### 3.1 缺失模块测试识别
-
-**检查项**：
-
-- [ ] **完全缺失的模块**：识别完全没有测试的模块
-  - 列出所有没有测试文件的模块
-  - 列出所有没有单元测试的模块
-
-- [ ] **测试文件为空的模块**：识别测试文件存在但为空的模块
-  - 检查测试文件是否只包含注释
-  - 检查测试文件是否没有实际测试代码
-
-- [ ] **部分子模块缺失测试**：识别部分子模块缺少测试的情况
-  - 检查模块的主要子模块是否有测试
-  - 检查关键功能是否有测试
-
-**检查方法**：
-
-1. 对比源代码模块列表和测试文件列表
-2. 检查测试文件内容，识别空文件
-3. 检查模块的子模块测试覆盖情况
-
-**示例输出**：
-
-```markdown
-### 缺失模块测试
-#### 完全缺失的模块 ❌
-- ❌ **Template 模块** (`lib/template/`)
-  - 无测试文件
-  - 缺少测试的子模块:
-    - `template/config.rs` - 模板配置
-    - `template/engine.rs` - 模板引擎
-    - `template/vars.rs` - 模板变量
-
-#### 测试文件为空的模块 ⚠️
-- ⚠️ **Git 模块** (`lib/git/`)
-  - 测试文件存在但为空: `tests/git/mod.rs` 只有注释，没有实际测试
-  - 缺少测试的子模块:
-    - `git/branch.rs` - 分支管理操作
-    - `git/commit.rs` - 提交管理
+### 测试工具配置
+```toml
+[dev-dependencies]
+pretty_assertions = "1.4"    # 清晰的断言输出
+rstest = "0.18"             # 参数化测试
+mockito = "1.2"             # HTTP Mock 测试
+insta = "1.38"              # 快照测试
+tempfile = "3.8"            # 临时文件管理
 ```
 
-#### 3.2 缺失功能测试识别
-
-**检查项**：
-
-- [ ] **主要功能缺失测试**：识别主要功能缺少测试的情况
-  - 列出每个模块的主要功能
-  - 检查是否有对应的测试用例
-
-- [ ] **公共函数缺失测试**：识别公共函数缺少测试的情况
-  - 列出所有公共函数
-  - 检查是否有对应的测试用例
-
-- [ ] **关键业务逻辑缺失测试**：识别关键业务逻辑缺少测试的情况
-  - 识别关键业务逻辑（如 PR 创建、Jira 集成、Git 操作等）
-  - 检查是否有对应的测试用例
-
-**检查方法**：
-
-1. 读取源代码文件，识别主要功能和公共函数
-2. 检查测试文件中是否有对应的测试用例
-3. 使用代码搜索工具查找测试用例
-
-**示例输出**：
-
-```markdown
-### 缺失功能测试
-#### Git 模块 (`lib/git/`)
-需要添加的测试：
-1. **分支管理** (`git/branch.rs`)
-   - 创建分支
-   - 切换分支
-   - 合并分支（不同策略）
-   - 删除分支
-   - 获取默认分支
-   - 分支存在性检查
-
-2. **提交管理** (`git/commit.rs`)
-   - 提交状态检查
-   - 暂存文件
-   - 创建提交
-   - 获取提交信息
-   - Worktree 状态检查
+### 测试目录结构
+```
+tests/
+├── base/           # Base 模块测试
+├── cli/            # CLI 命令测试
+├── git/            # Git 模块测试（目前为空）
+├── jira/           # Jira 模块测试
+├── pr/             # PR 模块测试
+├── common/         # 共享测试工具
+└── fixtures/       # 测试数据文件
 ```
 
-#### 3.3 缺失测试类型识别
+### 当前覆盖状态
+- 🟢 **已完整覆盖**：Base（LLM、Settings、Dialog）、PR、Jira、CLI 参数解析
+- 🟡 **部分覆盖**：HTTP、Completion、Proxy
+- 🔴 **缺失覆盖**：Git、Template、Branch、Commit、Stash
 
-**检查项**：
+---
+## 🎯 测试示例
 
-- [ ] **错误路径测试缺失**：识别缺少错误路径测试的情况
-  - 检查每个公共函数是否有错误情况测试
-  - 检查是否有网络错误、文件系统错误、权限错误等测试
+### ✅ 好的测试示例
 
-- [ ] **边界条件测试缺失**：识别缺少边界条件测试的情况
-  - 检查是否有空输入/输出测试
-  - 检查是否有最大/最小长度测试
-  - 检查是否有特殊字符测试
+```rust
+// ✅ 测试业务逻辑：分支名称格式化
+#[test]
+fn test_format_branch_name() {
+    assert_eq!(format_branch_name("feature", "login"), "feature/login");
+    assert_eq!(format_branch_name("", "test"), "test");
+}
 
-- [ ] **集成测试缺失**：识别缺少集成测试的情况
-  - 检查是否有端到端的工作流测试
-  - 检查是否有模块间交互测试
+// ✅ 测试错误处理：参数验证
+#[test]
+fn test_validate_jira_id() {
+    assert!(validate_jira_id("PROJ-123").is_ok());
+    assert!(validate_jira_id("invalid").is_err());
+}
 
-**检查方法**：
+// ✅ 使用 Mock 测试：HTTP API 调用
+#[test]
+async fn test_github_api_call() {
+    let mut server = mockito::Server::new();
+    let mock = server.mock("GET", "/repos/owner/repo")
+        .with_status(200)
+        .with_body(r#"{"name": "repo"}"#)
+        .create();
 
-1. 分析现有测试内容，识别缺失的测试类型
-2. 检查是否有错误路径测试、边界条件测试、集成测试
+    let result = github_client.get_repo("owner/repo").await;
+    assert!(result.is_ok());
+    mock.assert();
+}
 
-**示例输出**：
+// ✅ 参数化测试：多种输入验证
+#[rstest]
+#[case("feature/test", true)]
+#[case("invalid//name", false)]
+#[case("", false)]
+fn test_branch_name_validation(#[case] name: &str, #[case] expected: bool) {
+    assert_eq!(is_valid_branch_name(name), expected);
+}
+```
 
-```markdown
-### 缺失测试类型
-#### 错误路径测试缺失
-- 部分测试主要关注成功路径，错误处理测试较少
-- 需要为每个公共函数添加错误情况测试
-- 需要测试网络错误、文件系统错误、权限错误等
+### ❌ 避免的测试
 
-#### 边界条件测试缺失
-- 某些模块缺少边界条件测试
-- 需要添加空输入/输出测试
-- 需要添加最大/最小长度测试
-- 需要添加特殊字符测试
+```rust
+// ❌ 不要测试外部工具
+#[test]
+fn test_git_command() {
+    Command::new("git").args(["status"]).status().unwrap();
+}
+
+// ❌ 不要测试第三方库
+#[test]
+fn test_reqwest_http() {
+    reqwest::blocking::get("https://api.github.com").unwrap();
+}
 ```
 
 ---
 
-## 🔍 检查方法
+## 📋 快速检查脚本
 
-### 自动化检查工具
+### 检查测试覆盖
+```bash
+# 检查缺失的测试文件
+for module in src/lib/*/mod.rs; do
+    test_file="tests/$(basename $(dirname $module))/mod.rs"
+    if [[ ! -f "$test_file" ]]; then
+        echo "❌ 缺失测试: $module"
+    fi
+done
 
-1. **代码搜索工具**
-   - 使用 `grep` 搜索测试文件
-   - 使用 `codebase_search` 进行语义搜索
-   - 使用 `glob_file_search` 查找测试文件
+# 检查空的测试文件
+find tests -name "*.rs" -exec sh -c 'if [ $(grep -c "#\[test\]" "$1") -eq 0 ]; then echo "⚠️  空测试文件: $1"; fi' _ {} \;
+```
 
-2. **文件读取工具**
-   - 使用 `read_file` 读取测试文件内容
-   - 使用 `list_dir` 列出目录结构
-
-3. **统计分析**
-   - 统计测试文件数量
-   - 统计测试用例数量（估算）
-   - 统计模块覆盖情况
-
-### 手动检查项
-
-1. **测试内容分析**
-   - 阅读测试代码，分析测试覆盖范围
-   - 检查测试是否合理、有效
-
-2. **测试质量评估**
-   - 评估测试工具使用是否规范
-   - 评估测试结构是否合理
-   - 评估测试内容是否完整
+### 检查测试工具使用
+```bash
+# 检查是否使用推荐的测试工具
+grep -r "use pretty_assertions" tests/ || echo "❌ 未使用 pretty_assertions"
+grep -r "#\[rstest\]" tests/ || echo "❌ 未使用 rstest"
+grep -r "insta::" tests/ || echo "❌ 未使用 insta"
+grep -r "mockito::" tests/ || echo "❌ 未使用 mockito"
+```
 
 ---
 
-## 📊 检查报告格式
+## 📊 检查报告模板
 
-检查报告应包含以下部分：
+```markdown
+# 测试用例检查报告
 
-### 1. 执行摘要
+## 📈 覆盖情况总结
+- **总测试文件数**: X 个
+- **已覆盖模块**: X/Y (Z%)
+- **测试用例总数**: ~X 个
 
-- 总体情况（测试文件数、测试用例数、覆盖率评估）
-- 主要发现（优点、问题、改进建议）
+## 🟢 已完整覆盖
+- Base 模块 (LLM、Settings、Dialog)
+- PR 模块 (GitHub 集成、LLM 生成)
+- Jira 模块 (API 集成、日志管理)
 
-### 2. 测试覆盖情况分析
+## 🟡 部分覆盖
+- HTTP 模块 (缺少重试逻辑测试)
+- Proxy 模块 (缺少配置验证测试)
 
-- 已覆盖的模块
-- 部分覆盖的模块
-- 完全缺失的模块
-- 覆盖率统计表
+## 🔴 缺失覆盖
+- Git 模块 (测试文件为空)
+- Template 模块 (无测试文件)
+- Branch 模块 (无测试文件)
 
-### 3. 测试用例合理性分析
+## 🛠️ 改进建议
+1. **优先级 1**: 补充 Git 模块核心功能测试
+2. **优先级 2**: 添加 Template 和 Branch 模块测试
+3. **优先级 3**: 完善 HTTP 和 Proxy 模块测试
 
-- 测试工具使用情况
-- 测试结构合理性
-- 测试内容合理性
-- 测试命名规范
-
-### 4. 缺失的测试用例
-
-- 高优先级缺失测试（核心模块）
-- 中优先级缺失测试（工具模块）
-- 低优先级缺失测试（命令层补充）
-
-### 5. 测试质量改进建议
-
-- 测试覆盖改进建议
-- 测试组织改进建议
-- 测试工具改进建议
-
-### 6. 优先级行动计划
-
-- 阶段 1: 核心模块测试（高优先级）
-- 阶段 2: 工具模块测试（中优先级）
-- 阶段 3: Commands 层测试补充（低优先级）
-- 阶段 4: 测试质量提升（持续改进）
-
-### 7. 结论
-
-- 总体评估
-- 主要问题
-- 改进建议
-
-**参考示例**：`report/TEST_COVERAGE_REPORT.md`
+## 📋 行动计划
+- [ ] 创建 Git 模块测试框架
+- [ ] 实现分支管理功能测试
+- [ ] 添加提交管理功能测试
+- [ ] 补充错误处理和边界条件测试
+```
 
 ---
 
-## 📚 参考文档
+## 📚 参考资源
 
-- [测试规范指南](../TESTING_GUIDELINES.md) - 测试组织规范和最佳实践
+- [测试规范指南](../TESTING_GUIDELINES.md) - 详细的测试组织和最佳实践
 - [开发规范指南](../DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 包含测试用例检查的简要说明
+- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 测试检查的简要说明
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-17

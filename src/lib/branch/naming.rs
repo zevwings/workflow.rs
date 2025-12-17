@@ -50,6 +50,8 @@ impl BranchNaming {
                     jira_summary: Some(summary.to_string()),
                     summary_slug: Some(summary_slug),
                     jira_type: jira_type.map(|s| s.to_string()),
+                    prefix: None, // 可以根据需要设置分支前缀
+                    timestamp: None, // 可以根据需要设置时间戳
                 };
 
                 // Render template
@@ -120,6 +122,8 @@ impl BranchNaming {
             jira_summary: None,
             summary_slug: Some(branch_name_slug.to_string()),
             jira_type: None,
+            prefix: None, // 可以根据需要设置分支前缀
+            timestamp: None, // 可以根据需要设置时间戳
         };
 
         // Render template

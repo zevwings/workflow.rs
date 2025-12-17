@@ -1,0 +1,496 @@
+//! Template 引擎测试
+//!
+//! 测试 Template 引擎的模板注册、渲染和变量处理功能。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use serde_json::json;
+// use std::collections::HashMap;
+use workflow::template::{TemplateEngine, TemplateEngineType};
+
+// ==================== Fixtures ====================
+
+/// 创建基础模板引擎
+#[fixture]
+fn template_engine() -> TemplateEngine {
+    TemplateEngine::new()
+}
+
+/// 创建带有预注册模板的引擎
+#[fixture]
+fn engine_with_templates() -> TemplateEngine {
+    let mut engine = TemplateEngine::new();
+
+    // 注册一些测试模板
+    engine.register_template("simple", "Hello {{name}}!").unwrap();
+    engine.register_template("branch", "{{prefix}}/{{ticket}}-{{slug}}").unwrap();
+    engine.register_template("pr_title", "{{type}}: {{summary}}").unwrap();
+
+    engine
+}
+
+// ==================== 模板引擎创建测试 ====================
+
+#[test]
+fn test_template_engine_new() {
+    let engine = TemplateEngine::new();
+
+    // 验证引擎创建成功（通过编译验证）
+    // 由于 TemplateEngine 的内部字段是私有的，我们主要通过功能测试验证
+}
+
+#[test]
+fn test_template_engine_type_enum() {
+    // 测试模板引擎类型枚举
+    let engine_type = TemplateEngineType::Handlebars;
+
+    // 验证枚举可以正常使用
+    let debug_str = format!("{:?}", engine_type);
+    assert!(!debug_str.is_empty());
+}
+
+// ==================== 模板注册测试 ====================
+
+#[rstest]
+fn test_register_simple_template(mut template_engine: TemplateEngine) {
+    let result = template_engine.register_template("test", "Hello {{name}}!");
+    assert!(result.is_ok(), "Failed to register template: {:?}", result);
+}
+
+#[rstest]
+fn test_register_complex_template(mut template_engine: TemplateEngine) {
+    let complex_template = r#"
+{{#if jira_key}}
+{{prefix}}/{{jira_key}}-{{summary_slug}}
+{{else}}
+{{prefix}}/{{summary_slug}}
+{{/if}}
+"#
+    .trim();
+
+    let result = template_engine.register_template("complex", complex_template);
+    assert!(
+        result.is_ok(),
+        "Failed to register complex template: {:?}",
+        result
+    );
+}
+
+#[rstest]
+fn test_register_invalid_template(mut template_engine: TemplateEngine) {
+    // 测试无效的模板语法
+    let invalid_template = "{{#if unclosed";
+
+    let result = template_engine.register_template("invalid", invalid_template);
+    assert!(result.is_err(), "Invalid template should fail to register");
+}
+
+#[rstest]
+fn test_register_duplicate_template(mut template_engine: TemplateEngine) {
+    // 注册第一个模板
+    template_engine.register_template("duplicate", "First template").unwrap();
+
+    // 注册同名模板应该覆盖
+    let result = template_engine.register_template("duplicate", "Second template");
+    assert!(
+        result.is_ok(),
+        "Duplicate template registration should succeed"
+    );
+}
+
+#[rstest]
+fn test_register_empty_template(mut template_engine: TemplateEngine) {
+    let result = template_engine.register_template("empty", "");
+    assert!(result.is_ok(), "Empty template should be valid");
+}
+
+// ==================== 模板渲染测试 ====================
+
+#[rstest]
+fn test_render_simple_template(engine_with_templates: TemplateEngine) {
+    let data = json!({"name": "World"});
+
+    let result = engine_with_templates.render("simple", &data);
+    assert!(result.is_ok(), "Failed to render template: {:?}", result);
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "Hello World!");
+}
+
+#[rstest]
+fn test_render_branch_template(engine_with_templates: TemplateEngine) {
+    let data = json!({
+        "prefix": "feature",
+        "ticket": "PROJ-123",
+        "slug": "user-authentication"
+    });
+
+    let result = engine_with_templates.render("branch", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "feature/PROJ-123-user-authentication");
+}
+
+#[rstest]
+fn test_render_with_missing_variable(engine_with_templates: TemplateEngine) {
+    let data = json!({"name": "World"}); // 缺少其他变量
+
+    let result = engine_with_templates.render("branch", &data);
+    assert!(result.is_ok()); // Handlebars 在 non-strict 模式下应该成功
+
+    let rendered = result.unwrap();
+    // 缺少的变量应该被渲染为空字符串
+    assert_eq!(rendered, "/-");
+}
+
+#[rstest]
+fn test_render_nonexistent_template(engine_with_templates: TemplateEngine) {
+    let data = json!({"name": "World"});
+
+    let result = engine_with_templates.render("nonexistent", &data);
+    assert!(
+        result.is_err(),
+        "Rendering nonexistent template should fail"
+    );
+}
+
+#[rstest]
+fn test_render_with_empty_data(engine_with_templates: TemplateEngine) {
+    let data = json!({});
+
+    let result = engine_with_templates.render("simple", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "Hello !"); // 缺少 name 变量
+}
+
+// ==================== 复杂模板测试 ====================
+
+#[rstest]
+fn test_conditional_template(mut template_engine: TemplateEngine) {
+    let template = r#"
+{{#if has_jira}}
+JIRA: {{jira_id}} - {{title}}
+{{else}}
+Feature: {{title}}
+{{/if}}
+"#
+    .trim();
+
+    template_engine.register_template("conditional", template).unwrap();
+
+    // 测试有 JIRA 的情况
+    let data_with_jira = json!({
+        "has_jira": true,
+        "jira_id": "PROJ-123",
+        "title": "User Authentication"
+    });
+
+    let result = template_engine.render("conditional", &data_with_jira);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "JIRA: PROJ-123 - User Authentication");
+
+    // 测试没有 JIRA 的情况
+    let data_without_jira = json!({
+        "has_jira": false,
+        "title": "User Authentication"
+    });
+
+    let result = template_engine.render("conditional", &data_without_jira);
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap(), "Feature: User Authentication");
+}
+
+#[rstest]
+fn test_loop_template(mut template_engine: TemplateEngine) {
+    let template = r#"
+Files:
+{{#each files}}
+- {{this}}
+{{/each}}
+"#
+    .trim();
+
+    template_engine.register_template("loop", template).unwrap();
+
+    let data = json!({
+        "files": ["src/main.rs", "src/lib.rs", "tests/mod.rs"]
+    });
+
+    let result = template_engine.render("loop", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    let expected = "Files:\n- src/main.rs\n- src/lib.rs\n- tests/mod.rs";
+    assert_eq!(rendered, expected);
+}
+
+#[rstest]
+fn test_nested_object_template(mut template_engine: TemplateEngine) {
+    let template = "{{user.name}} ({{user.email}}) - {{project.name}}";
+
+    template_engine.register_template("nested", template).unwrap();
+
+    let data = json!({
+        "user": {
+            "name": "John Doe",
+            "email": "john@example.com"
+        },
+        "project": {
+            "name": "Workflow CLI"
+        }
+    });
+
+    let result = template_engine.render("nested", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "John Doe (john@example.com) - Workflow CLI");
+}
+
+// ==================== 特殊字符和转义测试 ====================
+
+#[rstest]
+fn test_html_no_escape(mut template_engine: TemplateEngine) {
+    let template = "Content: {{html_content}}";
+
+    template_engine.register_template("html", template).unwrap();
+
+    let data = json!({
+        "html_content": "<div>Hello & Goodbye</div>"
+    });
+
+    let result = template_engine.render("html", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    // 由于设置了 no_escape，HTML 应该不被转义
+    assert_eq!(rendered, "Content: <div>Hello & Goodbye</div>");
+}
+
+#[rstest]
+fn test_special_characters(mut template_engine: TemplateEngine) {
+    let template = "{{message}}";
+
+    template_engine.register_template("special", template).unwrap();
+
+    let data = json!({
+        "message": "Hello 世界! 🌍 Émojis & Ñoñó"
+    });
+
+    let result = template_engine.render("special", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "Hello 世界! 🌍 Émojis & Ñoñó");
+}
+
+#[rstest]
+fn test_multiline_template(mut template_engine: TemplateEngine) {
+    let template = r#"
+Title: {{title}}
+Description:
+{{description}}
+
+Author: {{author}}
+"#
+    .trim();
+
+    template_engine.register_template("multiline", template).unwrap();
+
+    let data = json!({
+        "title": "Test PR",
+        "description": "This is a test\nwith multiple lines",
+        "author": "John Doe"
+    });
+
+    let result = template_engine.render("multiline", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    let expected =
+        "Title: Test PR\nDescription:\nThis is a test\nwith multiple lines\n\nAuthor: John Doe";
+    assert_eq!(rendered, expected);
+}
+
+// ==================== 边界条件测试 ====================
+
+#[rstest]
+fn test_very_long_template(mut template_engine: TemplateEngine) {
+    // 创建很长的模板
+    let long_template = "Hello ".repeat(1000) + "{{name}}!";
+
+    let result = template_engine.register_template("long", &long_template);
+    assert!(result.is_ok(), "Long template should be registerable");
+
+    let data = json!({"name": "World"});
+    let render_result = template_engine.render("long", &data);
+    assert!(render_result.is_ok(), "Long template should be renderable");
+}
+
+#[rstest]
+fn test_many_variables_template(mut template_engine: TemplateEngine) {
+    // 创建包含很多变量的模板
+    let mut template_parts = Vec::new();
+    let mut data_map = serde_json::Map::new();
+
+    for i in 0..50 {
+        template_parts.push(format!("{{{{var{}}}}}", i));
+        data_map.insert(format!("var{}", i), json!(format!("value{}", i)));
+    }
+
+    let template = template_parts.join(" ");
+    template_engine.register_template("many_vars", &template).unwrap();
+
+    let data = json!(data_map);
+    let result = template_engine.render("many_vars", &data);
+    assert!(result.is_ok(), "Template with many variables should render");
+}
+
+#[rstest]
+fn test_empty_variable_values(mut template_engine: TemplateEngine) {
+    let template = "Start-{{empty}}-{{null}}-{{zero}}-End";
+
+    template_engine.register_template("empty_vars", template).unwrap();
+
+    let data = json!({
+        "empty": "",
+        "null": null,
+        "zero": 0
+    });
+
+    let result = template_engine.render("empty_vars", &data);
+    assert!(result.is_ok());
+
+    let rendered = result.unwrap();
+    assert_eq!(rendered, "Start---0-End");
+}
+
+// ==================== 错误处理测试 ====================
+
+#[rstest]
+fn test_invalid_json_data(engine_with_templates: TemplateEngine) {
+    // 测试无效的数据类型
+    let invalid_data = "not json";
+
+    // 注意：这个测试取决于 render 方法的实现
+    // 如果 render 方法接受 &impl Serialize，这个测试可能需要调整
+}
+
+#[rstest]
+fn test_circular_reference_template(mut template_engine: TemplateEngine) {
+    // 测试可能导致循环引用的模板
+    let template = "{{#with self}}{{name}}{{/with}}";
+
+    template_engine.register_template("circular", template).unwrap();
+
+    let data = json!({
+        "name": "Test",
+        "self": {"name": "Nested"}
+    });
+
+    let result = template_engine.render("circular", &data);
+    assert!(result.is_ok()); // Handlebars 应该能处理这种情况
+}
+
+// ==================== 性能测试 ====================
+
+#[rstest]
+fn test_template_registration_performance(mut template_engine: TemplateEngine) {
+    use std::time::Instant;
+
+    let start = Instant::now();
+
+    // 注册多个模板
+    for i in 0..100 {
+        let template_name = format!("template_{}", i);
+        let template_content = format!("Hello {{{{name{}}}}}!", i);
+
+        template_engine.register_template(&template_name, &template_content).unwrap();
+    }
+
+    let duration = start.elapsed();
+
+    // 模板注册应该相对快速
+    assert!(
+        duration.as_millis() < 1000,
+        "Template registration too slow: {:?}",
+        duration
+    );
+}
+
+#[rstest]
+fn test_template_rendering_performance(engine_with_templates: TemplateEngine) {
+    use std::time::Instant;
+
+    let data = json!({"name": "World"});
+
+    let start = Instant::now();
+
+    // 渲染模板多次
+    for _ in 0..1000 {
+        let _ = engine_with_templates.render("simple", &data);
+    }
+
+    let duration = start.elapsed();
+
+    // 模板渲染应该很快
+    assert!(
+        duration.as_millis() < 1000,
+        "Template rendering too slow: {:?}",
+        duration
+    );
+}
+
+// ==================== 集成测试 ====================
+
+#[rstest]
+fn test_complete_template_workflow(mut template_engine: TemplateEngine) {
+    // 1. 注册分支模板
+    let branch_template = "{{prefix}}/{{#if jira_key}}{{jira_key}}-{{/if}}{{summary_slug}}";
+    template_engine.register_template("branch", branch_template).unwrap();
+
+    // 2. 注册 PR 标题模板
+    let pr_template = "{{type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}";
+    template_engine.register_template("pr_title", pr_template).unwrap();
+
+    // 3. 渲染分支名
+    let branch_data = json!({
+        "prefix": "feature",
+        "jira_key": "PROJ-123",
+        "summary_slug": "user-authentication"
+    });
+
+    let branch_result = template_engine.render("branch", &branch_data);
+    assert!(branch_result.is_ok());
+    assert_eq!(
+        branch_result.unwrap(),
+        "feature/PROJ-123-user-authentication"
+    );
+
+    // 4. 渲染 PR 标题
+    let pr_data = json!({
+        "type": "feat",
+        "scope": "auth",
+        "subject": "add user authentication system"
+    });
+
+    let pr_result = template_engine.render("pr_title", &pr_data);
+    assert!(pr_result.is_ok());
+    assert_eq!(
+        pr_result.unwrap(),
+        "feat(auth): add user authentication system"
+    );
+
+    // 5. 渲染没有 scope 的 PR 标题
+    let pr_data_no_scope = json!({
+        "type": "fix",
+        "subject": "resolve login issue"
+    });
+
+    let pr_result_no_scope = template_engine.render("pr_title", &pr_data_no_scope);
+    assert!(pr_result_no_scope.is_ok());
+    assert_eq!(pr_result_no_scope.unwrap(), "fix: resolve login issue");
+}

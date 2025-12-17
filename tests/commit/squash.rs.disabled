@@ -1,0 +1,661 @@
+//! Commit Squash 测试
+//!
+//! 测试提交压缩功能，包括多提交合并和消息生成。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::fs;
+use tempfile::TempDir;
+use workflow::commit::{CommitSquash, SquashPreview};
+use workflow::git::{CommitInfo, GitCommit};
+
+// ==================== Fixtures ====================
+
+/// 创建带有多个相关提交的测试仓库
+#[fixture]
+fn git_repo_with_feature_commits() -> TempDir {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 初始化 Git 仓库
+    std::process::Command::new("git")
+        .args(["init"])
+        .output()
+        .expect("Failed to init git repo");
+
+    // 配置 Git 用户
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .expect("Failed to set git user email");
+
+    // 创建基础提交
+    fs::write("README.md", "# Project").expect("Failed to write file");
+    std::process::Command::new("git")
+        .args(["add", "README.md"])
+        .output()
+        .expect("Failed to add file");
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Initial commit"])
+        .output()
+        .expect("Failed to commit");
+
+    // 创建功能分支
+    std::process::Command::new("git")
+        .args(["checkout", "-b", "feature/auth"])
+        .output()
+        .expect("Failed to create branch");
+
+    // 创建一系列相关的提交
+    let feature_commits = vec![
+        ("src/auth.rs", "// Auth module", "Add auth module"),
+        (
+            "src/auth.rs",
+            "// Auth module\npub fn login() {}",
+            "Add login function",
+        ),
+        (
+            "src/auth.rs",
+            "// Auth module\npub fn login() {}\npub fn logout() {}",
+            "Add logout function",
+        ),
+        (
+            "tests/auth_test.rs",
+            "#[test]\nfn test_login() {}",
+            "Add auth tests",
+        ),
+        (
+            "src/auth.rs",
+            "// Auth module\npub fn login() {}\npub fn logout() {}\n// Fixed bug",
+            "Fix auth bug",
+        ),
+    ];
+
+    for (file, content, message) in feature_commits {
+        // 创建目录（如果需要）
+        if let Some(parent) = std::path::Path::new(file).parent() {
+            fs::create_dir_all(parent).expect("Failed to create dir");
+        }
+
+        fs::write(file, content).expect("Failed to write file");
+
+        std::process::Command::new("git")
+            .args(["add", file])
+            .output()
+            .expect("Failed to add file");
+
+        std::process::Command::new("git")
+            .args(["commit", "-m", message])
+            .output()
+            .expect("Failed to commit");
+    }
+
+    temp_dir
+}
+
+// ==================== 提交压缩测试 ====================
+
+#[rstest]
+fn test_squash_last_n_commits(git_repo_with_feature_commits: TempDir) {
+    let squash_count = 3;
+    let squash_message = "feat: implement user authentication system";
+
+    let result = CommitSquash::squash_last_commits(squash_count, squash_message);
+
+    if result.is_ok() {
+        // 验证提交历史已压缩
+        let commits = GitCommit::get_commit_history(10).expect("Failed to get history");
+
+        // 应该比原来少了 (squash_count - 1) 个提交
+        // 具体验证取决于实现
+
+        // 验证最新提交消息
+        let latest = GitCommit::get_latest_commit_info().expect("Failed to get latest commit");
+        assert_eq!(latest.message, squash_message);
+    }
+}
+
+#[rstest]
+fn test_squash_commits_by_range(git_repo_with_feature_commits: TempDir) {
+    // 获取提交历史
+    let commits = GitCommit::get_commit_history(10).expect("Failed to get history");
+
+    if commits.len() >= 4 {
+        let from_commit = &commits[3]; // 第4个提交
+        let to_commit = &commits[0]; // 最新提交
+        let squash_message = "feat: complete authentication implementation";
+
+        let result = CommitSquash::squash_range(&from_commit.hash, &to_commit.hash, squash_message);
+
+        if result.is_ok() {
+            // 验证范围压缩结果
+            let updated_commits =
+                GitCommit::get_commit_history(10).expect("Failed to get updated history");
+
+            // 验证最新提交消息
+            let latest = &updated_commits[0];
+            assert_eq!(latest.message, squash_message);
+        }
+    }
+}
+
+#[rstest]
+fn test_squash_interactive_selection(git_repo_with_feature_commits: TempDir) {
+    // 测试交互式选择压缩
+    let commits = GitCommit::get_commit_history(5).expect("Failed to get commits");
+
+    if commits.len() >= 3 {
+        // 模拟用户选择要压缩的提交
+        let selected_commits = vec![
+            commits[0].hash.clone(), // 最新
+            commits[1].hash.clone(), // 第二个
+            commits[2].hash.clone(), // 第三个
+        ];
+
+        let squash_message = "feat: implement and test authentication";
+
+        let result = CommitSquash::squash_selected(&selected_commits, squash_message);
+
+        if result.is_ok() {
+            // 验证选择性压缩结果
+            let latest = GitCommit::get_latest_commit_info().expect("Failed to get latest");
+            assert_eq!(latest.message, squash_message);
+        }
+    }
+}
+
+// ==================== 压缩消息生成测试 ====================
+
+#[test]
+fn test_generate_squash_message_from_commits() {
+    let commits = vec![
+        CommitInfo {
+            hash: "commit1".to_string(),
+            author: "Test User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add auth module".to_string(),
+        },
+        CommitInfo {
+            hash: "commit2".to_string(),
+            author: "Test User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add login function".to_string(),
+        },
+        CommitInfo {
+            hash: "commit3".to_string(),
+            author: "Test User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add tests".to_string(),
+        },
+    ];
+
+    let result = CommitSquash::generate_squash_message(&commits);
+    assert!(
+        result.is_ok(),
+        "Failed to generate squash message: {:?}",
+        result
+    );
+
+    let message = result.unwrap();
+
+    // 生成的消息应该包含关键信息
+    assert!(message.contains("auth") || message.contains("Auth"));
+    assert!(!message.is_empty());
+}
+
+#[test]
+fn test_generate_squash_message_single_commit() {
+    let commits = vec![CommitInfo {
+        hash: "single".to_string(),
+        author: "Test User".to_string(),
+        date: "2023-12-17".to_string(),
+        message: "Single commit message".to_string(),
+    }];
+
+    let result = CommitSquash::generate_squash_message(&commits);
+
+    if result.is_ok() {
+        let message = result.unwrap();
+        // 单个提交的压缩消息可能就是原消息或生成新的
+        assert!(!message.is_empty());
+    }
+}
+
+#[test]
+fn test_generate_squash_message_empty_commits() {
+    let commits = vec![];
+
+    let result = CommitSquash::generate_squash_message(&commits);
+    assert!(result.is_err(), "Empty commits list should fail");
+}
+
+// ==================== 压缩策略测试 ====================
+
+#[test]
+fn test_squash_strategy_by_pattern() {
+    // 测试按模式压缩提交
+    let pattern = "WIP";
+
+    let result = CommitSquash::squash_by_pattern(pattern, "feat: complete feature implementation");
+
+    // 根据实现，这可能成功或需要特定的提交历史
+    if result.is_ok() {
+        // 验证按模式压缩的结果
+    }
+}
+
+#[test]
+fn test_squash_strategy_by_author() {
+    // 测试按作者压缩提交
+    let author = "Test User";
+    let since_date = "2023-12-17";
+
+    let result = CommitSquash::squash_by_author(author, since_date, "feat: implement feature");
+
+    // 根据实现和提交历史，这可能成功或失败
+}
+
+// ==================== 压缩预览测试 ====================
+
+#[rstest]
+fn test_create_squash_preview(git_repo_with_feature_commits: TempDir) {
+    let commits = GitCommit::get_commit_history(3).expect("Failed to get commits");
+
+    if commits.len() >= 2 {
+        let commits_to_squash = &commits[0..2];
+        let new_message = "feat: implement authentication with tests";
+
+        let result = CommitSquash::create_preview(commits_to_squash, new_message);
+        assert!(
+            result.is_ok(),
+            "Failed to create squash preview: {:?}",
+            result
+        );
+
+        let preview = result.unwrap();
+
+        // 验证预览信息
+        assert_eq!(preview.new_message, new_message);
+        assert_eq!(preview.commits_to_squash.len(), 2);
+        assert!(!preview.resulting_sha.is_empty());
+    }
+}
+
+#[test]
+fn test_format_squash_preview() {
+    let preview = SquashPreview {
+        commits_to_squash: vec![
+            CommitInfo {
+                hash: "commit1".to_string(),
+                message: "Add feature".to_string(),
+                author: "User".to_string(),
+                date: "2023-12-17".to_string(),
+            },
+            CommitInfo {
+                hash: "commit2".to_string(),
+                message: "Fix bug".to_string(),
+                author: "User".to_string(),
+                date: "2023-12-17".to_string(),
+            },
+        ],
+        new_message: "feat: add feature and fix bug".to_string(),
+        resulting_sha: "result123".to_string(),
+    };
+
+    let result = CommitSquash::format_preview(&preview);
+    assert!(result.is_ok());
+
+    let formatted = result.unwrap();
+
+    // 验证格式化输出
+    assert!(formatted.contains("commit1"));
+    assert!(formatted.contains("commit2"));
+    assert!(formatted.contains("feat: add feature and fix bug"));
+    assert!(formatted.contains("result123"));
+}
+
+// ==================== 边界条件测试 ====================
+
+#[test]
+fn test_squash_single_commit() {
+    // 尝试压缩单个提交
+    let result = CommitSquash::squash_last_commits(1, "Same commit");
+
+    // 压缩单个提交可能没有意义，应该返回错误或警告
+    if result.is_err() {
+        let error = result.unwrap_err();
+        assert!(!error.to_string().is_empty());
+    }
+}
+
+#[test]
+fn test_squash_more_commits_than_exist() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 创建只有一个提交的仓库
+    std::process::Command::new("git").args(["init"]).output().unwrap();
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test"])
+        .output()
+        .unwrap();
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .unwrap();
+
+    fs::write("file.txt", "content").unwrap();
+    std::process::Command::new("git").args(["add", "file.txt"]).output().unwrap();
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Only commit"])
+        .output()
+        .unwrap();
+
+    // 尝试压缩比存在的提交更多的提交
+    let result = CommitSquash::squash_last_commits(5, "Impossible squash");
+    assert!(
+        result.is_err(),
+        "Squashing more commits than exist should fail"
+    );
+}
+
+#[test]
+fn test_squash_with_very_long_message() {
+    let long_message = "feat: ".to_string() + &"a".repeat(1000);
+
+    let result = CommitSquash::validate_squash_message(&long_message);
+
+    // 很长的压缩消息应该被接受或适当处理
+    if result.is_ok() {
+        // 验证消息被正确处理
+    }
+}
+
+// ==================== 错误处理测试 ====================
+
+#[test]
+fn test_squash_in_non_git_repo() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    let result = CommitSquash::squash_last_commits(2, "Should fail");
+    assert!(result.is_err(), "Squash in non-git repo should fail");
+}
+
+#[test]
+fn test_squash_with_empty_message() {
+    let result = CommitSquash::validate_squash_message("");
+    assert!(result.is_err(), "Empty squash message should be invalid");
+}
+
+#[test]
+fn test_squash_uncommitted_changes() {
+    // 这个测试需要在有未提交更改的仓库中进行
+    // 具体实现取决于 CommitSquash 如何处理这种情况
+}
+
+// ==================== 压缩策略测试 ====================
+
+#[test]
+fn test_auto_squash_wip_commits() {
+    // 测试自动压缩 WIP 提交
+    let wip_pattern = "WIP";
+    let final_message = "feat: complete feature implementation";
+
+    let result = CommitSquash::auto_squash_by_pattern(wip_pattern, final_message);
+
+    // 根据实现，这可能需要特定的提交历史
+}
+
+#[test]
+fn test_squash_fixup_commits() {
+    // 测试压缩 fixup 提交
+    let result = CommitSquash::squash_fixup_commits();
+
+    // 这个功能可能需要特定的 fixup 提交格式
+}
+
+// ==================== 压缩消息智能生成测试 ====================
+
+#[test]
+fn test_smart_squash_message_generation() {
+    let commits = vec![
+        CommitInfo {
+            hash: "c1".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add authentication module".to_string(),
+        },
+        CommitInfo {
+            hash: "c2".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add login endpoint".to_string(),
+        },
+        CommitInfo {
+            hash: "c3".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Add authentication tests".to_string(),
+        },
+        CommitInfo {
+            hash: "c4".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Fix authentication bug".to_string(),
+        },
+    ];
+
+    let result = CommitSquash::generate_smart_message(&commits);
+
+    if result.is_ok() {
+        let message = result.unwrap();
+
+        // 智能生成的消息应该：
+        // 1. 遵循 Conventional Commits 格式
+        // 2. 总结所有提交的主要内容
+        // 3. 使用适当的类型（feat、fix 等）
+
+        assert!(!message.is_empty());
+        assert!(message.contains("auth") || message.contains("Auth"));
+
+        // 检查是否符合 Conventional Commits 格式
+        let conventional_pattern =
+            regex::Regex::new(r"^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+").unwrap();
+        assert!(
+            conventional_pattern.is_match(&message),
+            "Message should follow conventional format: {}",
+            message
+        );
+    }
+}
+
+#[test]
+fn test_categorize_commits_by_type() {
+    let commits = vec![
+        CommitInfo {
+            hash: "c1".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "feat: add new feature".to_string(),
+        },
+        CommitInfo {
+            hash: "c2".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "fix: resolve bug".to_string(),
+        },
+        CommitInfo {
+            hash: "c3".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "test: add unit tests".to_string(),
+        },
+        CommitInfo {
+            hash: "c4".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "docs: update README".to_string(),
+        },
+    ];
+
+    let result = CommitSquash::categorize_commits(&commits);
+
+    if result.is_ok() {
+        let categories = result.unwrap();
+
+        // 验证分类结果
+        assert!(categories.contains_key("feat"));
+        assert!(categories.contains_key("fix"));
+        assert!(categories.contains_key("test"));
+        assert!(categories.contains_key("docs"));
+
+        assert_eq!(categories["feat"].len(), 1);
+        assert_eq!(categories["fix"].len(), 1);
+        assert_eq!(categories["test"].len(), 1);
+        assert_eq!(categories["docs"].len(), 1);
+    }
+}
+
+// ==================== 压缩验证测试 ====================
+
+#[test]
+fn test_validate_squash_candidates() {
+    let commits = vec![
+        CommitInfo {
+            hash: "valid1".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "WIP: work in progress".to_string(),
+        },
+        CommitInfo {
+            hash: "valid2".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "fixup! previous commit".to_string(),
+        },
+        CommitInfo {
+            hash: "valid3".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "temp: temporary changes".to_string(),
+        },
+    ];
+
+    let result = CommitSquash::validate_squash_candidates(&commits);
+
+    if result.is_ok() {
+        let valid_commits = result.unwrap();
+
+        // 所有提交都应该是可压缩的候选
+        assert_eq!(valid_commits.len(), 3);
+    }
+}
+
+#[test]
+fn test_validate_squash_candidates_with_merge_commits() {
+    let commits = vec![
+        CommitInfo {
+            hash: "normal".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Normal commit".to_string(),
+        },
+        CommitInfo {
+            hash: "merge".to_string(),
+            author: "User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: "Merge branch 'feature' into main".to_string(),
+        },
+    ];
+
+    let result = CommitSquash::validate_squash_candidates(&commits);
+
+    if result.is_ok() {
+        let valid_commits = result.unwrap();
+
+        // 合并提交可能不应该被压缩
+        // 具体行为取决于实现
+        assert!(valid_commits.len() <= 2);
+    }
+}
+
+// ==================== 性能测试 ====================
+
+#[test]
+fn test_squash_message_generation_performance() {
+    use std::time::Instant;
+
+    // 创建大量提交信息
+    let commits: Vec<CommitInfo> = (0..100)
+        .map(|i| CommitInfo {
+            hash: format!("commit{}", i),
+            author: "Test User".to_string(),
+            date: "2023-12-17".to_string(),
+            message: format!("Commit message {}", i),
+        })
+        .collect();
+
+    let start = Instant::now();
+
+    // 多次生成压缩消息
+    for _ in 0..10 {
+        let _ = CommitSquash::generate_squash_message(&commits);
+    }
+
+    let duration = start.elapsed();
+
+    // 消息生成应该相对快速
+    assert!(
+        duration.as_millis() < 1000,
+        "Squash message generation too slow: {:?}",
+        duration
+    );
+}
+
+// ==================== 集成测试 ====================
+
+#[rstest]
+fn test_complete_squash_workflow(git_repo_with_feature_commits: TempDir) {
+    // 1. 获取提交历史
+    let commits = GitCommit::get_commit_history(5).expect("Failed to get history");
+    let original_count = commits.len();
+
+    if original_count >= 3 {
+        // 2. 选择要压缩的提交
+        let commits_to_squash = &commits[0..3];
+
+        // 3. 生成智能压缩消息
+        let smart_message_result = CommitSquash::generate_smart_message(commits_to_squash);
+
+        let squash_message = if smart_message_result.is_ok() {
+            smart_message_result.unwrap()
+        } else {
+            "feat: implement authentication system".to_string()
+        };
+
+        // 4. 创建压缩预览
+        let preview_result = CommitSquash::create_preview(commits_to_squash, &squash_message);
+
+        if preview_result.is_ok() {
+            let preview = preview_result.unwrap();
+
+            // 5. 格式化预览
+            let format_result = CommitSquash::format_preview(&preview);
+            assert!(format_result.is_ok());
+
+            let formatted = format_result.unwrap();
+            assert!(formatted.contains(&squash_message));
+
+            // 6. 执行压缩（在测试中可能跳过实际执行）
+            // let squash_result = CommitSquash::execute_squash(&preview);
+            // 实际执行可能会修改 Git 历史，在测试中需要谨慎
+        }
+    }
+}

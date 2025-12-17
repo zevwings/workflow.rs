@@ -30,13 +30,14 @@ pub trait Sensitive {
 /// 为 `str` 实现 `Sensitive` trait
 impl Sensitive for str {
     fn mask(&self) -> String {
-        if self.len() <= 12 {
+        let chars: Vec<char> = self.chars().collect();
+        if chars.len() <= 12 {
             // 如果值较短，完全隐藏
             "***".to_string()
         } else {
             // 显示前4个字符和后4个字符，中间用 *** 代替
-            let start = &self[..4.min(self.len())];
-            let end = &self[self.len().saturating_sub(4)..];
+            let start: String = chars.iter().take(4).collect();
+            let end: String = chars.iter().skip(chars.len().saturating_sub(4)).collect();
             format!("{}***{}", start, end)
         }
     }

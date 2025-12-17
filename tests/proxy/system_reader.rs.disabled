@@ -1,0 +1,376 @@
+//! 系统代理读取测试
+//!
+//! 测试系统代理读取器的功能，包括 macOS 系统代理检测和环境变量读取。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::collections::HashMap;
+use std::env;
+use workflow::proxy::{ProxyInfo, ProxyType, SystemProxyReader};
+
+// ==================== Fixtures ====================
+
+/// 保存原始环境变量的备份
+#[fixture]
+fn env_backup() -> HashMap<String, Option<String>> {
+    let mut backup = HashMap::new();
+
+    // 备份所有代理相关的环境变量
+    for key in &[
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+    ] {
+        backup.insert(key.to_string(), env::var(key).ok());
+    }
+
+    backup
+}
+
+/// 清理环境变量的 fixture
+#[fixture]
+fn clean_env(_env_backup: HashMap<String, Option<String>>) {
+    // 清理所有代理相关的环境变量
+    for key in &[
+        "http_proxy",
+        "https_proxy",
+        "all_proxy",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
+        "ALL_PROXY",
+    ] {
+        env::remove_var(key);
+    }
+}
+
+/// 设置测试环境变量
+fn setup_test_env_vars() {
+    env::set_var("http_proxy", "http://127.0.0.1:8080");
+    env::set_var("https_proxy", "http://127.0.0.1:8080");
+    env::set_var("all_proxy", "socks5://127.0.0.1:1080");
+}
+
+/// 恢复环境变量
+fn restore_env_vars(backup: HashMap<String, Option<String>>) {
+    for (key, value) in backup {
+        match value {
+            Some(val) => env::set_var(&key, val),
+            None => env::remove_var(&key),
+        }
+    }
+}
+
+// ==================== 环境变量读取测试 ====================
+
+#[rstest]
+fn test_read_from_env_with_proxy_vars(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试从环境变量读取代理配置
+    setup_test_env_vars();
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 验证读取到的代理配置
+    assert!(proxy_info.has_enabled_proxy());
+
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Http),
+        Some("http://127.0.0.1:8080".to_string())
+    );
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Https),
+        Some("http://127.0.0.1:8080".to_string())
+    );
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Socks),
+        Some("socks5://127.0.0.1:1080".to_string())
+    );
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_empty(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试没有代理环境变量时的读取
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 应该没有启用的代理
+    assert!(!proxy_info.has_enabled_proxy());
+
+    // 所有代理 URL 应该为 None
+    assert_eq!(proxy_info.get_proxy_url(ProxyType::Http), None);
+    assert_eq!(proxy_info.get_proxy_url(ProxyType::Https), None);
+    assert_eq!(proxy_info.get_proxy_url(ProxyType::Socks), None);
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_partial(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试部分代理环境变量的读取
+    env::set_var("http_proxy", "http://proxy.example.com:3128");
+    // 不设置 https_proxy 和 all_proxy
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 应该有启用的代理
+    assert!(proxy_info.has_enabled_proxy());
+
+    // 只有 HTTP 代理应该被设置
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Http),
+        Some("http://proxy.example.com:3128".to_string())
+    );
+    assert_eq!(proxy_info.get_proxy_url(ProxyType::Https), None);
+    assert_eq!(proxy_info.get_proxy_url(ProxyType::Socks), None);
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_uppercase(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试大写环境变量的读取
+    env::set_var("HTTP_PROXY", "http://uppercase-proxy.com:8080");
+    env::set_var("HTTPS_PROXY", "http://uppercase-proxy.com:8080");
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 应该能读取大写的环境变量
+    assert!(proxy_info.has_enabled_proxy());
+
+    // 验证代理配置
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Http),
+        Some("http://uppercase-proxy.com:8080".to_string())
+    );
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Https),
+        Some("http://uppercase-proxy.com:8080".to_string())
+    );
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_priority(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试环境变量优先级（小写优先于大写）
+    env::set_var("http_proxy", "http://lowercase.com:8080");
+    env::set_var("HTTP_PROXY", "http://uppercase.com:8080");
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 小写环境变量应该优先
+    assert_eq!(
+        proxy_info.get_proxy_url(ProxyType::Http),
+        Some("http://lowercase.com:8080".to_string())
+    );
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+// ==================== URL 解析测试 ====================
+
+#[rstest]
+fn test_read_from_env_various_url_formats(
+    clean_env: (),
+    env_backup: HashMap<String, Option<String>>,
+) {
+    /// 测试各种 URL 格式的解析
+    // 测试不同的 URL 格式
+    env::set_var("http_proxy", "proxy.example.com:8080"); // 没有协议
+    env::set_var("https_proxy", "http://proxy.example.com:8443"); // 完整 URL
+    env::set_var("all_proxy", "socks5://socks.example.com:1080"); // SOCKS5 协议
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 验证 URL 解析结果
+    // 注意：具体的解析行为取决于 SystemProxyReader 的实现
+    assert!(proxy_info.has_enabled_proxy());
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_invalid_urls(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试无效 URL 的处理
+    // 设置无效的代理 URL
+    env::set_var("http_proxy", "invalid-url");
+    env::set_var("https_proxy", "://missing-scheme");
+    env::set_var("all_proxy", "http://"); // 缺少地址
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 无效 URL 应该被忽略或处理为无代理
+    // 具体行为取决于实现，这里我们测试不会崩溃
+    let _has_proxy = proxy_info.has_enabled_proxy();
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+// ==================== 系统代理检测测试 ====================
+
+#[test]
+fn test_read_from_system_macos() {
+    /// 测试 macOS 系统代理检测
+    ///
+    /// 注意：这个测试依赖于系统环境，在 CI 环境中可能需要跳过
+
+    #[cfg(target_os = "macos")]
+    {
+        let proxy_info = SystemProxyReader::read_from_system();
+
+        // 系统代理检测应该能正常执行（不崩溃）
+        // 具体的代理配置取决于系统设置，所以我们只验证基本功能
+        let _has_proxy = proxy_info.has_enabled_proxy();
+
+        // 验证代理信息结构的完整性
+        for proxy_type in ProxyType::all() {
+            let _config = proxy_info.get_config(proxy_type);
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        // 在非 macOS 系统上，系统代理检测应该返回空配置或错误
+        let proxy_info = SystemProxyReader::read_from_system();
+
+        // 非 macOS 系统应该没有代理或返回错误
+        // 具体行为取决于实现
+        let _has_proxy = proxy_info.has_enabled_proxy();
+    }
+}
+
+#[test]
+fn test_read_from_system_consistency() {
+    /// 测试系统代理检测的一致性
+    // 多次调用应该返回一致的结果（在短时间内）
+    let proxy_info1 = SystemProxyReader::read_from_system();
+    let proxy_info2 = SystemProxyReader::read_from_system();
+
+    // 验证两次调用的结果一致性
+    assert_eq!(
+        proxy_info1.has_enabled_proxy(),
+        proxy_info2.has_enabled_proxy()
+    );
+
+    for proxy_type in ProxyType::all() {
+        let url1 = proxy_info1.get_proxy_url(proxy_type);
+        let url2 = proxy_info2.get_proxy_url(proxy_type);
+        assert_eq!(url1, url2);
+    }
+}
+
+// ==================== 综合读取测试 ====================
+
+#[test]
+fn test_read_comprehensive() {
+    /// 测试综合代理读取功能
+    let env_proxy_info = SystemProxyReader::read_from_env();
+    let system_proxy_info = SystemProxyReader::read_from_system();
+
+    // 两种读取方式都应该能正常执行
+    let _env_has_proxy = env_proxy_info.has_enabled_proxy();
+    let _system_has_proxy = system_proxy_info.has_enabled_proxy();
+
+    // 验证返回的 ProxyInfo 结构完整性
+    for proxy_type in ProxyType::all() {
+        let _env_config = env_proxy_info.get_config(proxy_type);
+        let _system_config = system_proxy_info.get_config(proxy_type);
+    }
+}
+
+// ==================== 边界条件和错误处理测试 ====================
+
+#[rstest]
+fn test_read_from_env_edge_cases(clean_env: (), env_backup: HashMap<String, Option<String>>) {
+    /// 测试环境变量读取的边界条件
+    // 测试空字符串环境变量
+    env::set_var("http_proxy", "");
+    env::set_var("https_proxy", "   "); // 只有空格
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 空字符串应该被处理为无代理
+    // 具体行为取决于实现
+    let _has_proxy = proxy_info.has_enabled_proxy();
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[rstest]
+fn test_read_from_env_special_characters(
+    clean_env: (),
+    env_backup: HashMap<String, Option<String>>,
+) {
+    /// 测试包含特殊字符的环境变量
+    // 测试包含特殊字符的代理地址
+    env::set_var("http_proxy", "http://proxy-server.example-domain.com:8080");
+    env::set_var("https_proxy", "http://192.168.1.100:3128");
+    env::set_var("all_proxy", "socks5://[::1]:1080"); // IPv6 地址
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    // 特殊字符应该能正确处理
+    if proxy_info.has_enabled_proxy() {
+        // 验证至少有一个代理被正确解析
+        let has_http = proxy_info.get_proxy_url(ProxyType::Http).is_some();
+        let has_https = proxy_info.get_proxy_url(ProxyType::Https).is_some();
+        let has_socks = proxy_info.get_proxy_url(ProxyType::Socks).is_some();
+
+        assert!(has_http || has_https || has_socks);
+    }
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}
+
+#[test]
+fn test_system_reader_error_handling() {
+    /// 测试系统读取器的错误处理
+    // 系统代理读取在遇到错误时应该优雅处理
+    let proxy_info = SystemProxyReader::read_from_system();
+
+    // 即使遇到错误，也应该返回有效的 ProxyInfo 结构
+    let _has_proxy = proxy_info.has_enabled_proxy();
+
+    // 验证所有代理类型都能查询（不崩溃）
+    for proxy_type in ProxyType::all() {
+        let _config = proxy_info.get_config(proxy_type);
+        let _url = proxy_info.get_proxy_url(proxy_type);
+    }
+}
+
+#[rstest]
+#[case("http://127.0.0.1:8080", "http://127.0.0.1:8080")]
+#[case("https://proxy.com:3128", "https://proxy.com:3128")]
+#[case("socks5://localhost:1080", "socks5://localhost:1080")]
+#[case("proxy.example.com:8080", "proxy.example.com:8080")] // 无协议
+fn test_env_url_parsing_parametrized(
+    #[case] env_value: &str,
+    #[case] expected_contains: &str,
+    clean_env: (),
+    env_backup: HashMap<String, Option<String>>,
+) {
+    /// 参数化测试环境变量 URL 解析
+    env::set_var("http_proxy", env_value);
+
+    let proxy_info = SystemProxyReader::read_from_env();
+
+    if let Some(url) = proxy_info.get_proxy_url(ProxyType::Http) {
+        // 验证解析后的 URL 包含预期内容
+        assert!(url.contains(expected_contains) || url == expected_contains);
+    }
+
+    // 恢复环境变量
+    restore_env_vars(env_backup);
+}

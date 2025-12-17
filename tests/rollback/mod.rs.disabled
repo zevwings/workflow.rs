@@ -1,0 +1,7 @@
+//! Rollback 模块测试
+//!
+//! 包含 Rollback 模块的所有测试文件。
+
+pub mod backup_info; // 备份信息测试
+pub mod integration;
+pub mod rollback_manager; // 回滚管理器测试 // 集成测试

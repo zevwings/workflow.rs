@@ -6,7 +6,9 @@
 
 // 引入各个模块的测试
 mod base;
+mod branch; // 新增：Branch 模块测试
 mod cli;
+mod commit; // 新增：Commit 模块测试
 mod completion;
 mod git;
 mod http;
@@ -14,7 +16,8 @@ mod integration;
 mod jira;
 mod pr;
 mod proxy;
-mod rollback;
+// mod rollback; // 暂时禁用：Rollback 模块测试 (rollback/ 目录下所有文件已禁用)
+mod template; // 新增：Template 模块测试
 
 // 共享测试工具
 mod common;

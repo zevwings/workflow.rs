@@ -7,7 +7,7 @@ use serde_with::skip_serializing_none;
 
 /// Template variables for branch naming
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct BranchTemplateVars {
     /// JIRA ticket key (e.g., "PROJ-123")
     pub jira_key: Option<String>,
@@ -17,6 +17,10 @@ pub struct BranchTemplateVars {
     pub summary_slug: Option<String>,
     /// JIRA ticket type (e.g., "Feature", "Bug")
     pub jira_type: Option<String>,
+    /// Branch prefix (e.g., "feature", "hotfix")
+    pub prefix: Option<String>,
+    /// Timestamp for branch creation
+    pub timestamp: Option<String>,
 }
 
 /// Template variables for commit messages
@@ -59,6 +63,20 @@ pub struct PullRequestTemplateVars {
     pub short_description: Option<String>,
     /// Dependency information (optional)
     pub dependency: Option<String>,
+    /// PR title
+    pub title: Option<String>,
+    /// PR description
+    pub description: Option<String>,
+    /// Branch name
+    pub branch_name: Option<String>,
+    /// Author name
+    pub author: Option<String>,
+    /// List of changed files
+    pub files_changed: Option<Vec<String>>,
+    /// Number of commits
+    pub commit_count: Option<usize>,
+    /// Timestamp
+    pub timestamp: Option<String>,
 }
 
 /// Change type item for PR template
@@ -68,4 +86,26 @@ pub struct ChangeTypeItem {
     pub name: String,
     /// Whether this change type is selected
     pub selected: bool,
+}
+
+impl Default for PullRequestTemplateVars {
+    fn default() -> Self {
+        Self {
+            jira_key: None,
+            jira_summary: None,
+            jira_description: None,
+            jira_type: None,
+            jira_service_address: None,
+            change_types: Vec::new(),
+            short_description: None,
+            dependency: None,
+            title: None,
+            description: None,
+            branch_name: None,
+            author: None,
+            files_changed: None,
+            commit_count: None,
+            timestamp: None,
+        }
+    }
 }

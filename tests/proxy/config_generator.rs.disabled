@@ -1,0 +1,466 @@
+//! 代理配置生成器测试
+//!
+//! 测试代理配置生成器的命令生成和环境变量生成功能。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::collections::HashMap;
+use workflow::proxy::{ProxyConfig, ProxyConfigGenerator, ProxyInfo, ProxyType};
+
+// ==================== Fixtures ====================
+
+/// 创建包含所有代理类型的测试数据
+#[fixture]
+fn full_proxy_info() -> ProxyInfo {
+    let mut proxy_info = ProxyInfo::new();
+
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: true,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(1080),
+        },
+    );
+
+    proxy_info
+}
+
+/// 创建部分启用代理的测试数据
+#[fixture]
+fn partial_proxy_info() -> ProxyInfo {
+    let mut proxy_info = ProxyInfo::new();
+
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy.example.com".to_string()),
+            port: Some(3128),
+        },
+    );
+
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: false,
+            address: Some("proxy.example.com".to_string()),
+            port: Some(3128),
+        },
+    );
+
+    proxy_info
+}
+
+/// 创建空的代理信息
+#[fixture]
+fn empty_proxy_info() -> ProxyInfo {
+    ProxyInfo::new()
+}
+
+/// 创建禁用所有代理的测试数据
+#[fixture]
+fn disabled_proxy_info() -> ProxyInfo {
+    let mut proxy_info = ProxyInfo::new();
+
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: false,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: false,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    proxy_info
+}
+
+// ==================== 命令生成测试 ====================
+
+#[rstest]
+fn test_generate_command_full_proxy(full_proxy_info: ProxyInfo) {
+    /// 测试生成包含所有代理的命令
+    let command = ProxyConfigGenerator::generate_command(&full_proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    // 验证命令格式
+    assert!(cmd.starts_with("export "));
+
+    // 验证包含所有代理环境变量
+    assert!(cmd.contains("http_proxy=http://127.0.0.1:8080"));
+    assert!(cmd.contains("https_proxy=http://127.0.0.1:8080"));
+    assert!(cmd.contains("all_proxy=socks5://127.0.0.1:1080"));
+}
+
+#[rstest]
+fn test_generate_command_partial_proxy(partial_proxy_info: ProxyInfo) {
+    /// 测试生成部分代理的命令
+    let command = ProxyConfigGenerator::generate_command(&partial_proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    // 验证命令格式
+    assert!(cmd.starts_with("export "));
+
+    // 验证只包含启用的代理
+    assert!(cmd.contains("http_proxy=http://proxy.example.com:3128"));
+    assert!(!cmd.contains("https_proxy"));
+    assert!(!cmd.contains("all_proxy"));
+}
+
+#[rstest]
+fn test_generate_command_empty_proxy(empty_proxy_info: ProxyInfo) {
+    /// 测试空代理信息的命令生成
+    let command = ProxyConfigGenerator::generate_command(&empty_proxy_info);
+
+    assert!(command.is_none());
+}
+
+#[rstest]
+fn test_generate_command_disabled_proxy(disabled_proxy_info: ProxyInfo) {
+    /// 测试禁用代理的命令生成
+    let command = ProxyConfigGenerator::generate_command(&disabled_proxy_info);
+
+    assert!(command.is_none());
+}
+
+#[test]
+fn test_generate_command_single_proxy() {
+    /// 测试单个代理的命令生成
+    let mut proxy_info = ProxyInfo::new();
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("localhost".to_string()),
+            port: Some(9050),
+        },
+    );
+
+    let command = ProxyConfigGenerator::generate_command(&proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    assert_eq!(cmd, "export all_proxy=socks5://localhost:9050");
+}
+
+#[test]
+fn test_generate_command_format() {
+    /// 测试命令格式的正确性
+    let mut proxy_info = ProxyInfo::new();
+
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy1.com".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy2.com".to_string()),
+            port: Some(8443),
+        },
+    );
+
+    let command = ProxyConfigGenerator::generate_command(&proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    // 验证命令以 "export " 开头
+    assert!(cmd.starts_with("export "));
+
+    // 验证包含正确的键值对格式
+    assert!(cmd.contains("http_proxy=http://proxy1.com:8080"));
+    assert!(cmd.contains("https_proxy=http://proxy2.com:8443"));
+
+    // 验证键值对之间用空格分隔
+    let export_part = &cmd[7..]; // 去掉 "export " 前缀
+    let parts: Vec<&str> = export_part.split(' ').collect();
+    assert_eq!(parts.len(), 2);
+}
+
+// ==================== 环境变量生成测试 ====================
+
+#[rstest]
+fn test_generate_env_vars_full_proxy(full_proxy_info: ProxyInfo) {
+    /// 测试生成包含所有代理的环境变量
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&full_proxy_info);
+
+    assert_eq!(env_vars.len(), 3);
+
+    assert_eq!(
+        env_vars.get("http_proxy"),
+        Some(&"http://127.0.0.1:8080".to_string())
+    );
+    assert_eq!(
+        env_vars.get("https_proxy"),
+        Some(&"http://127.0.0.1:8080".to_string())
+    );
+    assert_eq!(
+        env_vars.get("all_proxy"),
+        Some(&"socks5://127.0.0.1:1080".to_string())
+    );
+}
+
+#[rstest]
+fn test_generate_env_vars_partial_proxy(partial_proxy_info: ProxyInfo) {
+    /// 测试生成部分代理的环境变量
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&partial_proxy_info);
+
+    assert_eq!(env_vars.len(), 1);
+
+    assert_eq!(
+        env_vars.get("http_proxy"),
+        Some(&"http://proxy.example.com:3128".to_string())
+    );
+    assert!(!env_vars.contains_key("https_proxy"));
+    assert!(!env_vars.contains_key("all_proxy"));
+}
+
+#[rstest]
+fn test_generate_env_vars_empty_proxy(empty_proxy_info: ProxyInfo) {
+    /// 测试空代理信息的环境变量生成
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&empty_proxy_info);
+
+    assert!(env_vars.is_empty());
+}
+
+#[rstest]
+fn test_generate_env_vars_disabled_proxy(disabled_proxy_info: ProxyInfo) {
+    /// 测试禁用代理的环境变量生成
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&disabled_proxy_info);
+
+    assert!(env_vars.is_empty());
+}
+
+#[test]
+fn test_generate_env_vars_single_proxy() {
+    /// 测试单个代理的环境变量生成
+    let mut proxy_info = ProxyInfo::new();
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("single-proxy.com".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
+
+    assert_eq!(env_vars.len(), 1);
+    assert_eq!(
+        env_vars.get("http_proxy"),
+        Some(&"http://single-proxy.com:8080".to_string())
+    );
+}
+
+#[test]
+fn test_generate_env_vars_type_consistency() {
+    /// 测试环境变量类型的一致性
+    let env_vars = HashMap::<String, String>::new();
+
+    // 验证返回类型与预期一致
+    let _: HashMap<String, String> = ProxyConfigGenerator::generate_env_vars(&ProxyInfo::new());
+
+    // 验证键值都是 String 类型
+    for (key, value) in env_vars.iter() {
+        assert!(key.is_ascii());
+        assert!(value.starts_with("http://") || value.starts_with("socks5://"));
+    }
+}
+
+// ==================== 命令和环境变量一致性测试 ====================
+
+#[rstest]
+fn test_command_and_env_vars_consistency(full_proxy_info: ProxyInfo) {
+    /// 测试命令生成和环境变量生成的一致性
+    let command = ProxyConfigGenerator::generate_command(&full_proxy_info);
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&full_proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    // 验证命令中包含的环境变量与 env_vars 一致
+    for (key, value) in env_vars.iter() {
+        let expected_part = format!("{}={}", key, value);
+        assert!(cmd.contains(&expected_part));
+    }
+}
+
+#[rstest]
+fn test_empty_consistency(empty_proxy_info: ProxyInfo) {
+    /// 测试空代理信息的一致性
+    let command = ProxyConfigGenerator::generate_command(&empty_proxy_info);
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&empty_proxy_info);
+
+    assert!(command.is_none());
+    assert!(env_vars.is_empty());
+}
+
+// ==================== 边界条件和特殊情况测试 ====================
+
+#[test]
+fn test_generate_command_special_characters() {
+    /// 测试包含特殊字符的代理地址
+    let mut proxy_info = ProxyInfo::new();
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy-server.example-domain.com".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    let command = ProxyConfigGenerator::generate_command(&proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    assert!(cmd.contains("http_proxy=http://proxy-server.example-domain.com:8080"));
+}
+
+#[test]
+fn test_generate_env_vars_special_ports() {
+    /// 测试特殊端口号的处理
+    let mut proxy_info = ProxyInfo::new();
+
+    // 测试端口 1（最小有效端口）
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(1),
+        },
+    );
+
+    // 测试端口 65535（最大端口）
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("127.0.0.1".to_string()),
+            port: Some(65535),
+        },
+    );
+
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
+
+    assert_eq!(
+        env_vars.get("http_proxy"),
+        Some(&"http://127.0.0.1:1".to_string())
+    );
+    assert_eq!(
+        env_vars.get("all_proxy"),
+        Some(&"socks5://127.0.0.1:65535".to_string())
+    );
+}
+
+#[test]
+fn test_generate_command_ipv6_address() {
+    /// 测试 IPv6 地址的处理
+    let mut proxy_info = ProxyInfo::new();
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("::1".to_string()),
+            port: Some(8080),
+        },
+    );
+
+    let command = ProxyConfigGenerator::generate_command(&proxy_info);
+
+    assert!(command.is_some());
+    let cmd = command.unwrap();
+
+    // IPv6 地址应该正常处理（不需要特殊格式化）
+    assert!(cmd.contains("http_proxy=http://::1:8080"));
+}
+
+#[rstest]
+#[case(
+    ProxyType::Http,
+    "test-proxy.com",
+    8080,
+    "http_proxy=http://test-proxy.com:8080"
+)]
+#[case(
+    ProxyType::Https,
+    "secure-proxy.org",
+    8443,
+    "https_proxy=http://secure-proxy.org:8443"
+)]
+#[case(
+    ProxyType::Socks,
+    "socks-proxy.net",
+    1080,
+    "all_proxy=socks5://socks-proxy.net:1080"
+)]
+fn test_generate_parametrized(
+    #[case] proxy_type: ProxyType,
+    #[case] address: &str,
+    #[case] port: u16,
+    #[case] expected_part: &str,
+) {
+    /// 参数化测试不同代理类型的生成
+    let mut proxy_info = ProxyInfo::new();
+    proxy_info.set_config(
+        proxy_type,
+        ProxyConfig {
+            enable: true,
+            address: Some(address.to_string()),
+            port: Some(port),
+        },
+    );
+
+    let command = ProxyConfigGenerator::generate_command(&proxy_info);
+    let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
+
+    assert!(command.is_some());
+    assert!(command.unwrap().contains(expected_part));
+
+    assert_eq!(env_vars.len(), 1);
+    let (key, value) = env_vars.iter().next().unwrap();
+    let env_part = format!("{}={}", key, value);
+    assert_eq!(env_part, expected_part);
+}

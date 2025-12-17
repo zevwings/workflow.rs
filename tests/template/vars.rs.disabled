@@ -1,0 +1,446 @@
+//! Template 变量测试
+//!
+//! 测试模板变量结构体的创建、序列化和使用。
+
+use pretty_assertions::assert_eq;
+// use rstest::{fixture, rstest};
+use serde_json::json;
+use workflow::template::{BranchTemplateVars, PullRequestTemplateVars};
+
+// ==================== BranchTemplateVars 测试 ====================
+
+#[test]
+fn test_branch_template_vars_new() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: Some("User Authentication".to_string()),
+        jira_type: Some("Feature".to_string()),
+        summary_slug: Some("user-authentication".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: Some("20231217".to_string()),
+    };
+
+    // 验证字段设置正确
+    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
+    assert_eq!(vars.jira_summary, Some("User Authentication".to_string()));
+    assert_eq!(vars.jira_type, Some("Feature".to_string()));
+    assert_eq!(vars.summary_slug, Some("user-authentication".to_string()));
+    assert_eq!(vars.prefix, Some("feature".to_string()));
+    assert_eq!(vars.timestamp, Some("20231217".to_string()));
+}
+
+#[test]
+fn test_branch_template_vars_default() {
+    let vars = BranchTemplateVars::default();
+
+    // 默认值应该都是 None
+    assert_eq!(vars.jira_key, None);
+    assert_eq!(vars.jira_summary, None);
+    assert_eq!(vars.jira_type, None);
+    assert_eq!(vars.summary_slug, None);
+    assert_eq!(vars.prefix, None);
+    assert_eq!(vars.timestamp, None);
+}
+
+#[test]
+fn test_branch_template_vars_partial() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        summary_slug: Some("user-auth".to_string()),
+        prefix: Some("feature".to_string()),
+        ..Default::default()
+    };
+
+    // 部分字段设置
+    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
+    assert_eq!(vars.summary_slug, Some("user-auth".to_string()));
+    assert_eq!(vars.prefix, Some("feature".to_string()));
+
+    // 其他字段应该是 None
+    assert_eq!(vars.jira_summary, None);
+    assert_eq!(vars.jira_type, None);
+    assert_eq!(vars.timestamp, None);
+}
+
+#[test]
+fn test_branch_template_vars_serialization() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: Some("User Authentication".to_string()),
+        jira_type: Some("Feature".to_string()),
+        summary_slug: Some("user-authentication".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: Some("20231217".to_string()),
+    };
+
+    // 测试序列化为 JSON
+    let json_result = serde_json::to_value(&vars);
+    assert!(
+        json_result.is_ok(),
+        "Failed to serialize BranchTemplateVars: {:?}",
+        json_result
+    );
+
+    let json_value = json_result.unwrap();
+
+    // 验证 JSON 结构
+    assert_eq!(json_value["jira_key"], "PROJ-123");
+    assert_eq!(json_value["jira_summary"], "User Authentication");
+    assert_eq!(json_value["jira_type"], "Feature");
+    assert_eq!(json_value["summary_slug"], "user-authentication");
+    assert_eq!(json_value["prefix"], "feature");
+    assert_eq!(json_value["timestamp"], "20231217");
+}
+
+#[test]
+fn test_branch_template_vars_with_none_values() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: None,
+        jira_type: None,
+        summary_slug: Some("feature".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: None,
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+
+    // None 值应该序列化为 null
+    assert_eq!(json_value["jira_key"], "PROJ-123");
+    assert_eq!(json_value["jira_summary"], json!(null));
+    assert_eq!(json_value["jira_type"], json!(null));
+    assert_eq!(json_value["summary_slug"], "feature");
+    assert_eq!(json_value["prefix"], "feature");
+    assert_eq!(json_value["timestamp"], json!(null));
+}
+
+// ==================== PullRequestTemplateVars 测试 ====================
+
+#[test]
+fn test_pr_template_vars_new() {
+    let vars = PullRequestTemplateVars {
+        title: Some("Add user authentication".to_string()),
+        description: Some("This PR adds user authentication system".to_string()),
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: Some("User Authentication".to_string()),
+        branch_name: Some("feature/PROJ-123-user-auth".to_string()),
+        author: Some("John Doe".to_string()),
+        files_changed: Some(vec![
+            "src/auth.rs".to_string(),
+            "tests/auth_test.rs".to_string(),
+        ]),
+        commit_count: Some(3),
+        timestamp: Some("2023-12-17T10:30:00Z".to_string()),
+    };
+
+    // 验证字段设置正确
+    assert_eq!(vars.title, Some("Add user authentication".to_string()));
+    assert_eq!(
+        vars.description,
+        Some("This PR adds user authentication system".to_string())
+    );
+    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
+    assert_eq!(vars.jira_summary, Some("User Authentication".to_string()));
+    assert_eq!(
+        vars.branch_name,
+        Some("feature/PROJ-123-user-auth".to_string())
+    );
+    assert_eq!(vars.author, Some("John Doe".to_string()));
+    assert_eq!(
+        vars.files_changed,
+        Some(vec![
+            "src/auth.rs".to_string(),
+            "tests/auth_test.rs".to_string()
+        ])
+    );
+    assert_eq!(vars.commit_count, Some(3));
+    assert_eq!(vars.timestamp, Some("2023-12-17T10:30:00Z".to_string()));
+}
+
+#[test]
+fn test_pr_template_vars_default() {
+    let vars = PullRequestTemplateVars::default();
+
+    // 默认值应该都是 None
+    assert_eq!(vars.title, None);
+    assert_eq!(vars.description, None);
+    assert_eq!(vars.jira_key, None);
+    assert_eq!(vars.jira_summary, None);
+    assert_eq!(vars.branch_name, None);
+    assert_eq!(vars.author, None);
+    assert_eq!(vars.files_changed, None);
+    assert_eq!(vars.commit_count, None);
+    assert_eq!(vars.timestamp, None);
+}
+
+#[test]
+fn test_pr_template_vars_serialization() {
+    let vars = PullRequestTemplateVars {
+        title: Some("Fix login bug".to_string()),
+        description: Some("Fixes the login issue reported in PROJ-456".to_string()),
+        jira_key: Some("PROJ-456".to_string()),
+        branch_name: Some("hotfix/PROJ-456-login-fix".to_string()),
+        author: Some("Jane Smith".to_string()),
+        files_changed: Some(vec!["src/login.rs".to_string()]),
+        commit_count: Some(1),
+        ..Default::default()
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+
+    // 验证 JSON 结构
+    assert_eq!(json_value["title"], "Fix login bug");
+    assert_eq!(
+        json_value["description"],
+        "Fixes the login issue reported in PROJ-456"
+    );
+    assert_eq!(json_value["jira_key"], "PROJ-456");
+    assert_eq!(json_value["branch_name"], "hotfix/PROJ-456-login-fix");
+    assert_eq!(json_value["author"], "Jane Smith");
+    assert_eq!(json_value["files_changed"], json!(["src/login.rs"]));
+    assert_eq!(json_value["commit_count"], 1);
+    assert_eq!(json_value["jira_summary"], json!(null));
+    assert_eq!(json_value["timestamp"], json!(null));
+}
+
+// ==================== 边界条件测试 ====================
+
+#[test]
+fn test_branch_vars_empty_strings() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("".to_string()),
+        jira_summary: Some("".to_string()),
+        jira_type: Some("".to_string()),
+        summary_slug: Some("".to_string()),
+        prefix: Some("".to_string()),
+        timestamp: Some("".to_string()),
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+
+    // 空字符串应该正常序列化
+    assert_eq!(json_value["jira_key"], "");
+    assert_eq!(json_value["jira_summary"], "");
+    assert_eq!(json_value["jira_type"], "");
+}
+
+#[test]
+fn test_pr_vars_empty_collections() {
+    let vars = PullRequestTemplateVars {
+        files_changed: Some(vec![]),
+        commit_count: Some(0),
+        ..Default::default()
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+
+    // 空集合和零值应该正常序列化
+    assert_eq!(json_value["files_changed"], json!([]));
+    assert_eq!(json_value["commit_count"], 0);
+}
+
+#[test]
+fn test_vars_with_special_characters() {
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: Some("用户认证 & 授权 🔐".to_string()),
+        jira_type: Some("Feature/Story".to_string()),
+        summary_slug: Some("user-auth-权限".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: Some("2023-12-17T10:30:00+08:00".to_string()),
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+
+    // 特殊字符应该正确处理
+    assert_eq!(json_value["jira_summary"], "用户认证 & 授权 🔐");
+    assert_eq!(json_value["jira_type"], "Feature/Story");
+    assert_eq!(json_value["summary_slug"], "user-auth-权限");
+}
+
+#[test]
+fn test_vars_with_very_long_strings() {
+    let long_string = "a".repeat(1000);
+
+    let vars = BranchTemplateVars {
+        jira_summary: Some(long_string.clone()),
+        summary_slug: Some(long_string.clone()),
+        ..Default::default()
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+    assert_eq!(json_value["jira_summary"], long_string);
+    assert_eq!(json_value["summary_slug"], long_string);
+}
+
+// ==================== 实际使用场景测试 ====================
+
+#[test]
+fn test_branch_vars_jira_workflow() {
+    // 模拟从 JIRA 获取信息创建分支变量
+    let jira_response = json!({
+        "key": "PROJ-123",
+        "fields": {
+            "summary": "Implement user authentication system",
+            "issuetype": {
+                "name": "Story"
+            }
+        }
+    });
+
+    // 创建分支模板变量
+    let vars = BranchTemplateVars {
+        jira_key: Some(jira_response["key"].as_str().unwrap().to_string()),
+        jira_summary: Some(jira_response["fields"]["summary"].as_str().unwrap().to_string()),
+        jira_type: Some(jira_response["fields"]["issuetype"]["name"].as_str().unwrap().to_string()),
+        summary_slug: Some("implement-user-authentication-system".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: Some("20231217".to_string()),
+    };
+
+    // 验证变量创建正确
+    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
+    assert_eq!(
+        vars.jira_summary,
+        Some("Implement user authentication system".to_string())
+    );
+    assert_eq!(vars.jira_type, Some("Story".to_string()));
+
+    // 序列化用于模板渲染
+    let json_vars = serde_json::to_value(&vars).unwrap();
+    assert_eq!(json_vars["jira_key"], "PROJ-123");
+}
+
+#[test]
+fn test_pr_vars_git_workflow() {
+    // 模拟从 Git 信息创建 PR 变量
+    let git_info = json!({
+        "branch": "feature/PROJ-123-user-auth",
+        "commits": [
+            {"message": "Add authentication service"},
+            {"message": "Add login endpoint"},
+            {"message": "Add tests for auth"}
+        ],
+        "files": ["src/auth/mod.rs", "src/auth/service.rs", "tests/auth_test.rs"]
+    });
+
+    let vars = PullRequestTemplateVars {
+        title: Some("feat: implement user authentication system".to_string()),
+        description: Some("Implements user authentication with JWT tokens".to_string()),
+        jira_key: Some("PROJ-123".to_string()),
+        branch_name: Some(git_info["branch"].as_str().unwrap().to_string()),
+        author: Some("Developer".to_string()),
+        files_changed: Some(
+            git_info["files"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|f| f.as_str().unwrap().to_string())
+                .collect(),
+        ),
+        commit_count: Some(git_info["commits"].as_array().unwrap().len()),
+        timestamp: Some("2023-12-17T10:30:00Z".to_string()),
+        ..Default::default()
+    };
+
+    // 验证 PR 变量创建正确
+    assert_eq!(
+        vars.branch_name,
+        Some("feature/PROJ-123-user-auth".to_string())
+    );
+    assert_eq!(vars.commit_count, Some(3));
+    assert_eq!(vars.files_changed.as_ref().unwrap().len(), 3);
+
+    // 序列化用于模板渲染
+    let json_vars = serde_json::to_value(&vars).unwrap();
+    assert_eq!(json_vars["commit_count"], 3);
+    assert_eq!(json_vars["files_changed"].as_array().unwrap().len(), 3);
+}
+
+// ==================== 模板变量构建器测试 ====================
+
+#[test]
+fn test_branch_vars_builder_pattern() {
+    // 测试构建器模式（如果实现了的话）
+    let mut vars = BranchTemplateVars::default();
+
+    // 逐步设置字段
+    vars.jira_key = Some("PROJ-123".to_string());
+    vars.prefix = Some("feature".to_string());
+    vars.summary_slug = Some("user-auth".to_string());
+
+    // 验证部分设置
+    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
+    assert_eq!(vars.prefix, Some("feature".to_string()));
+    assert_eq!(vars.summary_slug, Some("user-auth".to_string()));
+    assert_eq!(vars.jira_summary, None);
+}
+
+// ==================== 性能测试 ====================
+
+#[test]
+fn test_vars_serialization_performance() {
+    use std::time::Instant;
+
+    let vars = BranchTemplateVars {
+        jira_key: Some("PROJ-123".to_string()),
+        jira_summary: Some("Test performance".to_string()),
+        jira_type: Some("Feature".to_string()),
+        summary_slug: Some("test-performance".to_string()),
+        prefix: Some("feature".to_string()),
+        timestamp: Some("20231217".to_string()),
+    };
+
+    let start = Instant::now();
+
+    // 多次序列化
+    for _ in 0..1000 {
+        let _ = serde_json::to_value(&vars);
+    }
+
+    let duration = start.elapsed();
+
+    // 序列化应该很快
+    assert!(
+        duration.as_millis() < 100,
+        "Vars serialization too slow: {:?}",
+        duration
+    );
+}
+
+#[test]
+fn test_large_vars_handling() {
+    // 测试处理大量数据的变量
+    let large_files: Vec<String> = (0..1000).map(|i| format!("src/file_{}.rs", i)).collect();
+
+    let vars = PullRequestTemplateVars {
+        files_changed: Some(large_files.clone()),
+        commit_count: Some(large_files.len()),
+        ..Default::default()
+    };
+
+    let json_result = serde_json::to_value(&vars);
+    assert!(json_result.is_ok());
+
+    let json_value = json_result.unwrap();
+    assert_eq!(json_value["files_changed"].as_array().unwrap().len(), 1000);
+    assert_eq!(json_value["commit_count"], 1000);
+}

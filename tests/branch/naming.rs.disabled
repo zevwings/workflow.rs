@@ -1,0 +1,444 @@
+//! Branch 命名测试
+//!
+//! 测试分支命名的生成、验证和格式化功能。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use workflow::branch::BranchNaming;
+
+// ==================== Fixtures ====================
+
+/// 测试用的 JIRA 数据
+#[fixture]
+fn sample_jira_data() -> (&'static str, &'static str, Option<&'static str>) {
+    (
+        "PROJ-123",
+        "Implement user authentication system",
+        Some("Feature"),
+    )
+}
+
+/// 测试用的简单标题
+#[fixture]
+fn sample_titles() -> Vec<&'static str> {
+    vec![
+        "Add user authentication",
+        "Fix login bug",
+        "Update documentation",
+        "Refactor code structure",
+        "Add unit tests",
+    ]
+}
+
+// ==================== Slugify 功能测试 ====================
+
+#[test]
+fn test_slugify_basic() {
+    // 测试基本的 slugify 功能
+    let result = BranchNaming::slugify("Hello World");
+    assert_eq!(result, "hello-world");
+}
+
+#[test]
+fn test_slugify_with_special_characters() {
+    let result = BranchNaming::slugify("User Authentication & Authorization");
+    assert_eq!(result, "user-authentication-authorization");
+}
+
+#[test]
+fn test_slugify_with_numbers() {
+    let result = BranchNaming::slugify("Version 2.0 Update");
+    assert_eq!(result, "version-2-0-update");
+}
+
+#[test]
+fn test_slugify_with_unicode() {
+    let result = BranchNaming::slugify("用户认证系统");
+    // Unicode 字符的处理取决于具体实现
+    assert!(!result.is_empty());
+}
+
+#[test]
+fn test_slugify_multiple_spaces() {
+    let result = BranchNaming::slugify("Multiple   Spaces    Here");
+    assert_eq!(result, "multiple-spaces-here");
+}
+
+#[test]
+fn test_slugify_leading_trailing_spaces() {
+    let result = BranchNaming::slugify("  Leading and Trailing  ");
+    assert_eq!(result, "leading-and-trailing");
+}
+
+#[test]
+fn test_slugify_empty_string() {
+    let result = BranchNaming::slugify("");
+    assert_eq!(result, "");
+}
+
+#[test]
+fn test_slugify_only_special_chars() {
+    let _result = BranchNaming::slugify("!@#$%^&*()");
+    // 只有特殊字符的情况，结果可能是空字符串或其他
+    // 具体取决于实现
+}
+
+#[rstest]
+#[case("Simple Title", "simple-title")]
+#[case("Complex: Title & Description", "complex-title-description")]
+#[case("Version 1.2.3 Release", "version-1-2-3-release")]
+#[case("Fix Bug #123", "fix-bug-123")]
+#[case("Add/Update Feature", "add-update-feature")]
+fn test_slugify_parametrized(#[case] input: &str, #[case] expected: &str) {
+    let result = BranchNaming::slugify(input);
+    assert_eq!(result, expected);
+}
+
+// ==================== JIRA 分支命名测试 ====================
+
+#[rstest]
+fn test_from_jira_ticket_basic(sample_jira_data: (&str, &str, Option<&str>)) {
+    let (ticket_id, summary, jira_type) = sample_jira_data;
+
+    let result = BranchNaming::from_jira_ticket(ticket_id, summary, jira_type, true);
+
+    // 根据实现，这可能成功或失败（如果需要模板系统或 LLM）
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 验证分支名包含关键信息
+        assert!(branch_name.contains("PROJ-123") || branch_name.contains("proj-123"));
+        assert!(!branch_name.is_empty());
+    }
+}
+
+#[rstest]
+fn test_from_jira_ticket_prefix_format(sample_jira_data: (&str, &str, Option<&str>)) {
+    let (ticket_id, summary, jira_type) = sample_jira_data;
+
+    // 测试前缀格式 (prefix/ticket-slug)
+    let result = BranchNaming::from_jira_ticket(ticket_id, summary, jira_type, true);
+
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 前缀格式应该包含 '/'
+        if branch_name.contains('/') {
+            let parts: Vec<&str> = branch_name.split('/').collect();
+            assert!(
+                parts.len() >= 2,
+                "Branch name should have prefix/suffix format"
+            );
+        }
+    }
+}
+
+#[rstest]
+fn test_from_jira_ticket_double_dash_format(sample_jira_data: (&str, &str, Option<&str>)) {
+    let (ticket_id, summary, jira_type) = sample_jira_data;
+
+    // 测试双破折号格式 (ticket--slug)
+    let result = BranchNaming::from_jira_ticket(ticket_id, summary, jira_type, false);
+
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 双破折号格式应该包含 '--'
+        if branch_name.contains("--") {
+            let parts: Vec<&str> = branch_name.split("--").collect();
+            assert!(
+                parts.len() >= 2,
+                "Branch name should have ticket--slug format"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_from_jira_ticket_empty_summary() {
+    let result = BranchNaming::from_jira_ticket("PROJ-123", "", Some("Feature"), true);
+
+    // 空摘要应该能处理（可能使用默认值或返回错误）
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+        assert!(branch_name.contains("PROJ-123") || branch_name.contains("proj-123"));
+    }
+}
+
+#[test]
+fn test_from_jira_ticket_no_type() {
+    let result = BranchNaming::from_jira_ticket("PROJ-123", "Test summary", None, true);
+
+    // 没有类型应该能处理（使用默认模板或回退逻辑）
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+        assert!(!branch_name.is_empty());
+    }
+}
+
+#[test]
+fn test_from_jira_ticket_invalid_ticket_id() {
+    let result = BranchNaming::from_jira_ticket("", "Test summary", Some("Feature"), true);
+
+    // 空的 ticket ID 应该返回错误或使用回退逻辑
+    if result.is_err() {
+        // 验证错误消息有意义
+        let error = result.unwrap_err();
+        assert!(!error.to_string().is_empty());
+    }
+}
+
+// ==================== 标题分支命名测试 ====================
+
+#[rstest]
+fn test_from_title_basic(sample_titles: Vec<&str>) {
+    for title in sample_titles {
+        let result = BranchNaming::from_title(None, title);
+
+        if result.is_ok() {
+            let branch_name = result.unwrap();
+
+            // 验证分支名不为空且格式合理
+            assert!(!branch_name.is_empty());
+
+            // 分支名应该是小写且用连字符分隔
+            assert!(!branch_name.contains(' '));
+            assert_eq!(branch_name, branch_name.to_lowercase());
+        }
+    }
+}
+
+#[test]
+fn test_from_title_with_prefix() {
+    let result = BranchNaming::from_title(None, "Add user authentication");
+
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 使用前缀格式应该包含 '/'
+        if branch_name.contains('/') {
+            let parts: Vec<&str> = branch_name.split('/').collect();
+            assert!(parts.len() >= 2);
+
+            // 第一部分应该是前缀
+            let prefix = parts[0];
+            assert!(!prefix.is_empty());
+        }
+    }
+}
+
+#[test]
+fn test_from_title_without_prefix() {
+    let result = BranchNaming::from_title(Some("PROJ-123"), "Add user authentication");
+
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 不使用前缀格式，可能使用其他格式
+        assert!(!branch_name.is_empty());
+    }
+}
+
+#[test]
+fn test_from_title_empty() {
+    let result = BranchNaming::from_title(None, "");
+
+    // 空标题应该返回错误
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_from_title_very_long() {
+    let long_title = "This is a very long title that might exceed normal branch name limits and should be handled appropriately by the branch naming system";
+
+    let result = BranchNaming::from_title(None, long_title);
+
+    if result.is_ok() {
+        let branch_name = result.unwrap();
+
+        // 长标题应该被适当截断或处理
+        assert!(!branch_name.is_empty());
+
+        // 通常分支名不应该过长
+        assert!(
+            branch_name.len() < 200,
+            "Branch name too long: {}",
+            branch_name
+        );
+    }
+}
+
+// ==================== 分支名验证测试 ====================
+// 注意：这些函数可能不存在，这里仅作为示例测试
+
+#[test]
+fn test_branch_name_patterns() {
+    // 测试不同的分支名模式
+    let patterns = vec![
+        "feature/user-auth",
+        "hotfix/login-bug",
+        "PROJ-123--implement-feature",
+        "develop",
+        "main",
+    ];
+
+    for pattern in patterns {
+        // 简单验证分支名不为空且符合基本格式
+        assert!(!pattern.is_empty());
+        assert!(!pattern.contains(' '));
+    }
+}
+
+// ==================== 边界条件测试 ====================
+
+#[test]
+fn test_special_characters_handling() {
+    let special_titles = vec![
+        "Fix: Authentication & Authorization",
+        "Add C++ support",
+        "Update README.md file",
+        "Fix issue #123",
+        "Add @mention feature",
+        "Support UTF-8 encoding 中文",
+    ];
+
+    for title in special_titles {
+        let result = BranchNaming::from_title(None, title);
+
+        if result.is_ok() {
+            let branch_name = result.unwrap();
+
+            // 特殊字符应该被适当处理
+            assert!(!branch_name.is_empty());
+
+            // 分支名不应该包含不安全的字符
+            assert!(!branch_name.contains(' '));
+            assert!(!branch_name.contains('\t'));
+            assert!(!branch_name.contains('\n'));
+        }
+    }
+}
+
+#[test]
+fn test_numeric_only_titles() {
+    let numeric_titles = vec!["123", "2023", "1.0.0", "404"];
+
+    for title in numeric_titles {
+        let result = BranchNaming::from_title(None, title);
+
+        if result.is_ok() {
+            let branch_name = result.unwrap();
+            assert!(!branch_name.is_empty());
+        }
+    }
+}
+
+// ==================== 错误处理测试 ====================
+
+#[test]
+fn test_error_handling_invalid_input() {
+    // 测试各种无效输入的错误处理
+    let invalid_inputs = vec![
+        ("", "Empty summary"),
+        ("   ", "Whitespace only"),
+        ("\n\t", "Control characters"),
+    ];
+
+    for (input, description) in invalid_inputs {
+        let result = BranchNaming::from_title(None, input);
+
+        if result.is_err() {
+            let error = result.unwrap_err();
+            assert!(
+                !error.to_string().is_empty(),
+                "Error message should not be empty for: {}",
+                description
+            );
+        }
+    }
+}
+
+// ==================== 性能测试 ====================
+
+#[test]
+fn test_slugify_performance() {
+    use std::time::Instant;
+
+    let test_string = "This is a test string for performance measurement";
+
+    let start = Instant::now();
+
+    // 多次执行 slugify
+    for _ in 0..1000 {
+        let _ = BranchNaming::slugify(test_string);
+    }
+
+    let duration = start.elapsed();
+
+    // Slugify 应该很快
+    assert!(
+        duration.as_millis() < 100,
+        "Slugify too slow: {:?}",
+        duration
+    );
+}
+
+#[test]
+fn test_branch_naming_performance() {
+    use std::time::Instant;
+
+    let start = Instant::now();
+
+    // 多次执行分支命名
+    for i in 0..100 {
+        let title = format!("Test branch naming performance {}", i);
+        let _ = BranchNaming::from_title(None, &title);
+    }
+
+    let duration = start.elapsed();
+
+    // 分支命名应该相对快速
+    assert!(
+        duration.as_millis() < 1000,
+        "Branch naming too slow: {:?}",
+        duration
+    );
+}
+
+// ==================== 集成测试 ====================
+
+#[test]
+fn test_complete_branch_naming_workflow() {
+    // 1. 从 JIRA ticket 生成分支名
+    let jira_result = BranchNaming::from_jira_ticket(
+        "PROJ-123",
+        "Implement user authentication system",
+        Some("Feature"),
+        true,
+    );
+
+    if jira_result.is_ok() {
+        let jira_branch = jira_result.unwrap();
+
+        // 2. 验证生成的分支名
+        // 简单验证分支名不为空
+        assert!(
+            !jira_branch.is_empty(),
+            "Generated branch name should not be empty"
+        );
+    }
+
+    // 3. 从标题生成分支名
+    let title_result = BranchNaming::from_title(None, "Add user authentication");
+
+    if title_result.is_ok() {
+        let title_branch = title_result.unwrap();
+
+        // 4. 验证生成的分支名
+        // 简单验证分支名不为空
+        assert!(
+            !title_branch.is_empty(),
+            "Generated branch name should not be empty"
+        );
+    }
+}

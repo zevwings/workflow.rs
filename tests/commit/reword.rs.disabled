@@ -1,0 +1,415 @@
+//! Commit Reword 测试
+//!
+//! 测试提交消息重写功能。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::fs;
+use tempfile::TempDir;
+use workflow::commit::CommitReword;
+use workflow::git::GitCommit;
+
+// ==================== Fixtures ====================
+
+/// 创建带有多个提交的测试仓库
+#[fixture]
+fn git_repo_with_history() -> TempDir {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 初始化 Git 仓库
+    std::process::Command::new("git")
+        .args(["init"])
+        .output()
+        .expect("Failed to init git repo");
+
+    // 配置 Git 用户
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .expect("Failed to set git user email");
+
+    // 创建提交历史
+    let commits = vec![
+        ("README.md", "# Project", "Initial commit"),
+        ("src/main.rs", "fn main() {}", "Add main function"),
+        ("src/lib.rs", "// Library", "Add library file"),
+        ("tests/test.rs", "// Tests", "Add tests"),
+    ];
+
+    for (file, content, message) in commits {
+        // 创建目录（如果需要）
+        if let Some(parent) = std::path::Path::new(file).parent() {
+            fs::create_dir_all(parent).expect("Failed to create dir");
+        }
+
+        fs::write(file, content).expect("Failed to write file");
+
+        std::process::Command::new("git")
+            .args(["add", file])
+            .output()
+            .expect("Failed to add file");
+
+        std::process::Command::new("git")
+            .args(["commit", "-m", message])
+            .output()
+            .expect("Failed to commit");
+    }
+
+    temp_dir
+}
+
+// ==================== 提交消息重写测试 ====================
+
+#[rstest]
+fn test_reword_latest_commit(git_repo_with_history: TempDir) {
+    let new_message = "feat: add comprehensive test suite";
+
+    let result = CommitReword::reword_latest(new_message);
+
+    if result.is_ok() {
+        // 验证提交消息已更新
+        let updated_info =
+            GitCommit::get_latest_commit_info().expect("Failed to get updated commit");
+        assert_eq!(updated_info.message, new_message);
+    }
+}
+
+#[rstest]
+fn test_reword_specific_commit(git_repo_with_history: TempDir) {
+    // 获取提交历史
+    let commits = GitCommit::get_commit_history(5).expect("Failed to get commit history");
+
+    if commits.len() >= 2 {
+        let target_commit = &commits[1]; // 第二个提交
+        let new_message = "refactor: improve library structure";
+
+        let result = CommitReword::reword_commit(&target_commit.hash, new_message);
+
+        // 重写特定提交可能需要 rebase，在测试中可能复杂
+        // 根据实现，这可能成功或需要特殊处理
+        if result.is_ok() {
+            // 验证提交历史已更新
+            let updated_commits =
+                GitCommit::get_commit_history(5).expect("Failed to get updated history");
+
+            // 找到对应的提交并验证消息
+            let updated_commit = updated_commits.iter().find(|c| c.message == new_message);
+            assert!(updated_commit.is_some(), "Reworded commit not found");
+        }
+    }
+}
+
+#[rstest]
+fn test_reword_commit_interactive(git_repo_with_history: TempDir) {
+    // 测试交互式重写（如果实现了的话）
+    let commits = GitCommit::get_commit_history(3).expect("Failed to get commits");
+
+    if commits.len() >= 2 {
+        let commit_to_reword = &commits[1];
+
+        // 模拟用户选择和输入
+        let mock_user_input = MockUserInput {
+            selected_commit: commit_to_reword.hash.clone(),
+            new_message: "docs: update documentation with examples".to_string(),
+        };
+
+        let result = CommitReword::interactive_reword(mock_user_input);
+
+        // 交互式重写的测试
+        if result.is_ok() {
+            // 验证结果
+        }
+    }
+}
+
+// ==================== 提交消息验证测试 ====================
+
+#[test]
+fn test_validate_commit_message_conventional() {
+    // 测试 Conventional Commits 格式验证
+    let valid_messages = vec![
+        "feat: add user authentication",
+        "fix: resolve login issue",
+        "docs: update API documentation",
+        "style: format code with prettier",
+        "refactor: restructure auth module",
+        "test: add unit tests for auth",
+        "chore: update dependencies",
+        "perf: optimize database queries",
+        "ci: update GitHub Actions workflow",
+        "feat(auth): add OAuth2 support",
+        "fix(ui): resolve button alignment issue",
+    ];
+
+    for message in valid_messages {
+        let result = CommitReword::validate_message(message);
+        assert!(
+            result.is_ok(),
+            "Valid conventional commit should pass: {}",
+            message
+        );
+    }
+}
+
+#[test]
+fn test_validate_commit_message_invalid() {
+    let invalid_messages = vec![
+        "",                          // 空消息
+        " ",                         // 只有空格
+        "add feature",               // 缺少类型
+        "feat:",                     // 缺少描述
+        "FEAT: add feature",         // 类型应该小写
+        "feat : add feature",        // 冒号前有空格
+        "feat:add feature",          // 冒号后缺少空格
+        "feat(: add feature",        // 无效的 scope
+        "feat): add feature",        // 无效的 scope
+        "invalid-type: add feature", // 无效的类型
+    ];
+
+    for message in invalid_messages {
+        let result = CommitReword::validate_message(message);
+        if result.is_err() {
+            let error = result.unwrap_err();
+            assert!(
+                !error.to_string().is_empty(),
+                "Error message should not be empty for: '{}'",
+                message
+            );
+        }
+    }
+}
+
+#[test]
+fn test_validate_commit_message_length() {
+    // 测试消息长度限制
+    let short_message = "feat: add";
+    let normal_message = "feat: add user authentication system";
+    let long_subject = format!("feat: {}", "a".repeat(100));
+    let very_long_message = format!("feat: add feature\n\n{}", "Long description. ".repeat(100));
+
+    // 短消息
+    let result = CommitReword::validate_message(&short_message);
+    assert!(result.is_ok(), "Short message should be valid");
+
+    // 正常消息
+    let result = CommitReword::validate_message(&normal_message);
+    assert!(result.is_ok(), "Normal message should be valid");
+
+    // 长主题行
+    let result = CommitReword::validate_message(&long_subject);
+    // 根据实现，可能警告或错误
+
+    // 很长的消息（包含正文）
+    let result = CommitReword::validate_message(&very_long_message);
+    assert!(result.is_ok(), "Long message with body should be valid");
+}
+
+// ==================== 消息格式化测试 ====================
+
+#[test]
+fn test_format_commit_message_conventional() {
+    let result =
+        CommitReword::format_conventional_message("feat", Some("auth"), "add user authentication");
+    assert!(result.is_ok());
+
+    let formatted = result.unwrap();
+    assert_eq!(formatted, "feat(auth): add user authentication");
+}
+
+#[test]
+fn test_format_commit_message_no_scope() {
+    let result = CommitReword::format_conventional_message("fix", None, "resolve login bug");
+    assert!(result.is_ok());
+
+    let formatted = result.unwrap();
+    assert_eq!(formatted, "fix: resolve login bug");
+}
+
+#[test]
+fn test_format_commit_message_with_body() {
+    let result = CommitReword::format_conventional_message_with_body(
+        "feat",
+        Some("auth"),
+        "add OAuth2 support",
+        Some("Implements OAuth2 authentication flow\n\nCloses #123"),
+    );
+
+    assert!(result.is_ok());
+
+    let formatted = result.unwrap();
+    let expected =
+        "feat(auth): add OAuth2 support\n\nImplements OAuth2 authentication flow\n\nCloses #123";
+    assert_eq!(formatted, expected);
+}
+
+#[test]
+fn test_format_commit_message_invalid_type() {
+    let result = CommitReword::format_conventional_message("", None, "description");
+    assert!(result.is_err(), "Empty type should fail");
+
+    let result = CommitReword::format_conventional_message("INVALID", None, "description");
+    // 根据实现，可能失败或转换为小写
+}
+
+// ==================== 提交历史处理测试 ====================
+
+#[rstest]
+fn test_get_rewordable_commits(git_repo_with_history: TempDir) {
+    let result = CommitReword::get_rewordable_commits(5);
+    assert!(
+        result.is_ok(),
+        "Failed to get rewordable commits: {:?}",
+        result
+    );
+
+    let commits = result.unwrap();
+
+    // 应该有多个提交
+    assert!(commits.len() >= 3, "Should have multiple commits");
+
+    // 验证提交信息完整
+    for commit in &commits {
+        assert!(!commit.hash.is_empty());
+        assert!(!commit.message.is_empty());
+        assert!(!commit.author.is_empty());
+    }
+}
+
+#[rstest]
+fn test_find_commit_by_message_pattern(git_repo_with_history: TempDir) {
+    let pattern = "Add main";
+
+    let result = CommitReword::find_commits_by_pattern(pattern);
+
+    if result.is_ok() {
+        let matching_commits = result.unwrap();
+
+        // 应该找到匹配的提交
+        for commit in &matching_commits {
+            assert!(commit.message.contains("main") || commit.message.contains("Main"));
+        }
+    }
+}
+
+// ==================== 边界条件测试 ====================
+
+#[test]
+fn test_reword_empty_message() {
+    let result = CommitReword::validate_message("");
+    assert!(result.is_err(), "Empty message should be invalid");
+}
+
+#[test]
+fn test_reword_whitespace_only_message() {
+    let result = CommitReword::validate_message("   \t\n   ");
+    assert!(result.is_err(), "Whitespace-only message should be invalid");
+}
+
+#[test]
+fn test_reword_message_with_newlines() {
+    let multiline_message = "feat: add authentication\n\nThis commit adds user authentication\nwith JWT tokens and session management.";
+
+    let result = CommitReword::validate_message(multiline_message);
+    assert!(result.is_ok(), "Multiline message should be valid");
+}
+
+// ==================== 错误处理测试 ====================
+
+#[test]
+fn test_reword_nonexistent_commit() {
+    let fake_sha = "nonexistent123456789";
+    let new_message = "Updated message";
+
+    let result = CommitReword::reword_commit(fake_sha, new_message);
+    assert!(result.is_err(), "Rewriting nonexistent commit should fail");
+
+    let error = result.unwrap_err();
+    assert!(error.to_string().contains("not found") || error.to_string().contains("不存在"));
+}
+
+#[test]
+fn test_reword_in_non_git_repo() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    let result = CommitReword::reword_latest("New message");
+    assert!(result.is_err(), "Reword in non-git repo should fail");
+}
+
+// ==================== 集成测试 ====================
+
+#[rstest]
+fn test_complete_reword_workflow(git_repo_with_history: TempDir) {
+    // 1. 获取提交历史
+    let commits = GitCommit::get_commit_history(3).expect("Failed to get history");
+    assert!(commits.len() >= 2);
+
+    // 2. 选择要重写的提交（最新的）
+    let target_commit = &commits[0];
+    let original_message = target_commit.message.clone();
+
+    // 3. 验证新消息格式
+    let new_message = "feat: add comprehensive test coverage";
+    let validation = CommitReword::validate_message(new_message);
+    assert!(validation.is_ok(), "New message should be valid");
+
+    // 4. 执行重写
+    let reword_result = CommitReword::reword_latest(new_message);
+
+    if reword_result.is_ok() {
+        // 5. 验证重写结果
+        let updated_commit =
+            GitCommit::get_latest_commit_info().expect("Failed to get updated commit");
+        assert_eq!(updated_commit.message, new_message);
+        assert_ne!(updated_commit.message, original_message);
+
+        // 6. 验证提交 SHA 已更改（因为消息变了）
+        assert_ne!(updated_commit.hash, target_commit.hash);
+    }
+}
+
+// ==================== 性能测试 ====================
+
+#[test]
+fn test_message_validation_performance() {
+    use std::time::Instant;
+
+    let test_messages = vec![
+        "feat: add new feature",
+        "fix: resolve critical bug",
+        "docs: update README",
+        "test: add unit tests",
+        "refactor: improve code structure",
+    ];
+
+    let start = Instant::now();
+
+    // 多次验证消息
+    for _ in 0..1000 {
+        for message in &test_messages {
+            let _ = CommitReword::validate_message(message);
+        }
+    }
+
+    let duration = start.elapsed();
+
+    // 消息验证应该很快
+    assert!(
+        duration.as_millis() < 100,
+        "Message validation too slow: {:?}",
+        duration
+    );
+}
+
+// Mock 结构用于测试
+struct MockUserInput {
+    selected_commit: String,
+    new_message: String,
+}

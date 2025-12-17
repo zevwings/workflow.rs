@@ -1,0 +1,342 @@
+//! CLI 集成测试
+//!
+//! 完整的 CLI 集成测试，测试各种命令组合和工作流。
+
+use crate::common::cli_helpers::{
+    contains_error, CliCommandBuilder, CliTestEnv, TestDataGenerator,
+};
+
+// ==================== 基础集成测试 ====================
+
+#[test]
+fn test_basic_commands_available() {
+    let commands = vec![
+        vec!["--help"],
+        vec!["--version"],
+        vec!["pr", "--help"],
+        vec!["branch", "--help"],
+        vec!["config", "--help"],
+        vec!["jira", "--help"],
+    ];
+
+    for cmd_args in commands {
+        let output = CliCommandBuilder::new().args(&cmd_args).assert_success().get_output();
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            !stdout.is_empty(),
+            "Command {:?} produced no output",
+            cmd_args
+        );
+    }
+}
+
+// ==================== Git 仓库集成测试 ====================
+
+#[test]
+fn test_git_repo_detection() {
+    // 测试非 Git 目录
+    let non_git_env = CliTestEnv::new();
+
+    let output = CliCommandBuilder::new()
+        .args(["pr", "create", "--dry-run"])
+        .current_dir(non_git_env.path())
+        .assert_failure()
+        .get_output();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(contains_error(&stderr));
+
+    // 测试 Git 目录
+    let git_env = CliTestEnv::new();
+    git_env
+        .init_git_repo()
+        .create_file("README.md", "# Test Project")
+        .create_commit("Initial commit");
+
+    let output = CliCommandBuilder::new()
+        .args(["pr", "create", "--dry-run"])
+        .current_dir(git_env.path())
+        .assert()
+        .get_output();
+
+    // 在 Git 仓库中，不应该因为没有 Git 而失败
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stderr.contains("not a git repository"));
+}
+
+// ==================== 配置管理集成测试 ====================
+
+#[test]
+fn test_config_management_workflow() {
+    let env = CliTestEnv::new();
+
+    // 1. 显示配置（应该显示默认或空配置）
+    let output = CliCommandBuilder::new()
+        .args(["config", "show"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+
+    // 2. 创建配置文件
+    env.create_config(&TestDataGenerator::config_content());
+
+    // 3. 再次显示配置
+    let output = CliCommandBuilder::new()
+        .args(["config", "show"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+}
+
+// ==================== 分支管理集成测试 ====================
+
+#[test]
+fn test_branch_management_workflow() {
+    let env = CliTestEnv::new();
+    env.init_git_repo()
+        .create_file("src/main.rs", "fn main() {}")
+        .create_commit("Initial commit");
+
+    // 1. 尝试创建分支（dry-run）
+    let output = CliCommandBuilder::new()
+        .args(["branch", "create", "feature/test-branch", "--dry-run"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    // 应该有输出（成功或失败都可以）
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+
+    // 2. 列出分支（如果支持的话）
+    let output = CliCommandBuilder::new()
+        .args(["branch", "list"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+}
+
+// ==================== PR 管理集成测试 ====================
+
+#[test]
+fn test_pr_management_workflow() {
+    let env = CliTestEnv::new();
+    env.init_git_repo()
+        .create_file("feature.rs", "// New feature")
+        .create_commit("Add new feature")
+        .create_config(&TestDataGenerator::config_content());
+
+    // 1. 创建 PR（dry-run）
+    let output = CliCommandBuilder::new()
+        .args(["pr", "create", "--dry-run"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+
+    // 2. 列出 PR（如果支持的话）
+    let output = CliCommandBuilder::new()
+        .args(["pr", "list"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+}
+
+// ==================== JIRA 集成测试 ====================
+
+#[test]
+fn test_jira_integration_workflow() {
+    let env = CliTestEnv::new();
+    env.create_config(&TestDataGenerator::config_content());
+
+    // 1. 获取 JIRA issue 信息（会失败，因为是测试配置）
+    let output = CliCommandBuilder::new()
+        .args(["jira", "info", &TestDataGenerator::jira_id()])
+        .current_dir(env.path())
+        .assert_failure()
+        .get_output();
+
+    // 应该有错误信息
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(contains_error(&stderr));
+
+    // 2. 列出 JIRA issues（会失败，因为是测试配置）
+    let output = CliCommandBuilder::new()
+        .args(["jira", "list"])
+        .current_dir(env.path())
+        .assert_failure()
+        .get_output();
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(contains_error(&stderr));
+}
+
+// ==================== 错误处理集成测试 ====================
+
+#[test]
+fn test_error_handling_integration() {
+    let env = CliTestEnv::new();
+
+    // 测试各种错误情况
+    let error_scenarios = vec![
+        (vec!["invalid-command"], "Invalid command"),
+        (vec!["pr", "create"], "Missing Git repo"),
+        (vec!["jira", "info"], "Missing arguments"),
+        (vec!["branch", "create"], "Missing arguments"),
+    ];
+
+    for (args, description) in error_scenarios {
+        let output = CliCommandBuilder::new()
+            .args(&args)
+            .current_dir(env.path())
+            .assert_failure()
+            .get_output();
+
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            contains_error(&stderr) || !stderr.is_empty(),
+            "Error scenario '{}' should produce error output",
+            description
+        );
+    }
+}
+
+// ==================== 环境变量集成测试 ====================
+
+#[test]
+fn test_environment_variables_integration() {
+    let env = CliTestEnv::new();
+    env.create_config(&TestDataGenerator::config_content());
+
+    // 测试各种环境变量
+    let env_vars = vec![
+        (
+            "WORKFLOW_CONFIG_DIR",
+            env.path().to_string_lossy().to_string(),
+        ),
+        ("WORKFLOW_LOG_LEVEL", "debug".to_string()),
+        ("NO_COLOR", "1".to_string()),
+    ];
+
+    for (var_name, var_value) in env_vars {
+        let output = CliCommandBuilder::new()
+            .args(["config", "show"])
+            .env(var_name, &var_value)
+            .current_dir(env.path())
+            .assert()
+            .get_output();
+
+        // 环境变量设置后，命令应该能运行
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(
+            !stdout.is_empty() || !stderr.is_empty(),
+            "Command with env var {}={} produced no output",
+            var_name,
+            var_value
+        );
+    }
+}
+
+// ==================== 性能集成测试 ====================
+
+#[test]
+fn test_performance_integration() {
+    use std::time::Instant;
+
+    let env = CliTestEnv::new();
+    env.init_git_repo()
+        .create_file("large_file.txt", &"x".repeat(10000))
+        .create_commit("Add large file");
+
+    let commands = vec![
+        vec!["--help"],
+        vec!["config", "show"],
+        vec!["pr", "create", "--dry-run"],
+    ];
+
+    for cmd_args in commands {
+        let start = Instant::now();
+
+        let _output = CliCommandBuilder::new()
+            .args(&cmd_args)
+            .current_dir(env.path())
+            .assert()
+            .get_output();
+
+        let duration = start.elapsed();
+
+        // 所有命令都应该在合理时间内完成（< 10秒）
+        assert!(
+            duration.as_secs() < 10,
+            "Command {:?} too slow: {:?}",
+            cmd_args,
+            duration
+        );
+    }
+}
+
+// ==================== 完整工作流集成测试 ====================
+
+#[test]
+fn test_complete_development_workflow() {
+    let env = CliTestEnv::new();
+
+    // 1. 初始化项目
+    env.init_git_repo()
+        .create_file("README.md", "# Test Project")
+        .create_commit("Initial commit")
+        .create_config(&TestDataGenerator::config_content());
+
+    // 2. 创建功能分支
+    let _output = CliCommandBuilder::new()
+        .args(["branch", "create", "feature/new-feature", "--dry-run"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    // 3. 添加一些工作
+    env.create_file("src/feature.rs", "// New feature implementation")
+        .create_commit("Implement new feature");
+
+    // 4. 创建 PR
+    let _output = CliCommandBuilder::new()
+        .args(["pr", "create", "--dry-run", "--title", "Add new feature"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    // 5. 检查配置
+    let output = CliCommandBuilder::new()
+        .args(["config", "show"])
+        .current_dir(env.path())
+        .assert()
+        .get_output();
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(!stdout.is_empty() || !stderr.is_empty());
+
+    // 整个工作流应该完成而不崩溃
+}

@@ -115,6 +115,15 @@ impl ProxyInfo {
                 .map(|(addr, port)| format!("{}://{}:{}", proxy_type.url_scheme(), addr, port))
         })
     }
+
+    /// 检查是否有启用的代理
+    ///
+    /// # 返回
+    ///
+    /// 如果至少有一个代理类型被启用且配置完整，返回 `true`，否则返回 `false`。
+    pub fn has_enabled_proxy(&self) -> bool {
+        ProxyType::all().any(|proxy_type| self.get_proxy_url(proxy_type).is_some())
+    }
 }
 
 /// 开启代理的结果

@@ -1,0 +1,531 @@
+//! Commit Amend 测试
+//!
+//! 测试提交修改功能，包括预览生成、格式化和操作执行。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::fs;
+use tempfile::TempDir;
+use workflow::commit::{AmendPreview, CommitAmend};
+use workflow::git::{CommitInfo, GitCommit};
+
+// ==================== Fixtures ====================
+
+/// 创建带有提交的测试 Git 仓库
+#[fixture]
+fn git_repo_with_commits() -> TempDir {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 初始化 Git 仓库
+    std::process::Command::new("git")
+        .args(["init"])
+        .output()
+        .expect("Failed to init git repo");
+
+    // 配置 Git 用户
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .expect("Failed to set git user email");
+
+    // 创建初始提交
+    fs::write("README.md", "# Test Repository").expect("Failed to write file");
+
+    std::process::Command::new("git")
+        .args(["add", "README.md"])
+        .output()
+        .expect("Failed to add file");
+
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Initial commit"])
+        .output()
+        .expect("Failed to commit");
+
+    // 创建第二个提交
+    fs::write("src/main.rs", "fn main() { println!(\"Hello, world!\"); }")
+        .expect("Failed to write file");
+
+    std::process::Command::new("git")
+        .args(["add", "src/main.rs"])
+        .output()
+        .expect("Failed to add file");
+
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Add main.rs"])
+        .output()
+        .expect("Failed to commit");
+
+    temp_dir
+}
+
+/// 示例提交信息
+#[fixture]
+fn sample_commit_info() -> CommitInfo {
+    CommitInfo {
+        sha: "abc123def456".to_string(),
+        author: "Test User <test@example.com>".to_string(),
+        date: "2023-12-17 10:30:00 +0800".to_string(),
+        message: "Add user authentication feature".to_string(),
+    }
+}
+
+// ==================== AmendPreview 结构体测试 ====================
+
+#[test]
+fn test_amend_preview_creation() {
+    let preview = AmendPreview {
+        original_sha: "abc123".to_string(),
+        new_message: Some("Updated commit message".to_string()),
+        original_message: "Original commit message".to_string(),
+        files_to_add: vec!["src/auth.rs".to_string(), "tests/auth_test.rs".to_string()],
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    // 验证字段设置正确
+    assert_eq!(preview.original_sha, "abc123");
+    assert_eq!(
+        preview.new_message,
+        Some("Updated commit message".to_string())
+    );
+    assert_eq!(preview.original_message, "Original commit message");
+    assert_eq!(preview.files_to_add.len(), 2);
+    assert_eq!(preview.operation_type, "amend");
+    assert!(!preview.is_pushed);
+}
+
+#[test]
+fn test_amend_preview_without_new_message() {
+    let preview = AmendPreview {
+        original_sha: "def456".to_string(),
+        new_message: None,
+        original_message: "Keep original message".to_string(),
+        files_to_add: vec!["new_file.rs".to_string()],
+        operation_type: "amend-no-edit".to_string(),
+        is_pushed: true,
+    };
+
+    assert_eq!(preview.new_message, None);
+    assert!(preview.is_pushed);
+}
+
+// ==================== CommitAmend 预览创建测试 ====================
+
+#[rstest]
+fn test_create_preview_basic(sample_commit_info: CommitInfo) {
+    let new_message = Some("Updated: Add user authentication feature".to_string());
+    let files_to_add = vec!["src/auth.rs".to_string()];
+    let operation_type = "amend";
+    let current_branch = "feature/auth";
+
+    let result = CommitAmend::create_preview(
+        &sample_commit_info,
+        &new_message,
+        &files_to_add,
+        operation_type,
+        current_branch,
+    );
+
+    assert!(result.is_ok(), "Failed to create preview: {:?}", result);
+
+    let preview = result.unwrap();
+    assert_eq!(preview.original_sha, sample_commit_info.sha);
+    assert_eq!(preview.new_message, new_message);
+    assert_eq!(preview.original_message, sample_commit_info.message);
+    assert_eq!(preview.files_to_add, files_to_add);
+    assert_eq!(preview.operation_type, operation_type);
+}
+
+#[rstest]
+fn test_create_preview_no_new_message(sample_commit_info: CommitInfo) {
+    let new_message = None;
+    let files_to_add = vec!["src/utils.rs".to_string()];
+
+    let result = CommitAmend::create_preview(
+        &sample_commit_info,
+        &new_message,
+        &files_to_add,
+        "amend-no-edit",
+        "main",
+    );
+
+    assert!(result.is_ok());
+
+    let preview = result.unwrap();
+    assert_eq!(preview.new_message, None);
+    assert_eq!(preview.original_message, sample_commit_info.message);
+}
+
+#[rstest]
+fn test_create_preview_empty_files(sample_commit_info: CommitInfo) {
+    let files_to_add = vec![];
+
+    let result = CommitAmend::create_preview(
+        &sample_commit_info,
+        &None,
+        &files_to_add,
+        "amend",
+        "develop",
+    );
+
+    assert!(result.is_ok());
+
+    let preview = result.unwrap();
+    assert!(preview.files_to_add.is_empty());
+}
+
+// ==================== 预览格式化测试 ====================
+
+#[test]
+fn test_format_preview_with_new_message() {
+    let preview = AmendPreview {
+        original_sha: "abc123def456".to_string(),
+        new_message: Some("feat: add user authentication system".to_string()),
+        original_message: "Add user auth".to_string(),
+        files_to_add: vec!["src/auth.rs".to_string(), "tests/auth_test.rs".to_string()],
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    let formatted = CommitAmend::format_preview(&preview);
+
+    // 验证格式化输出包含关键信息
+    assert!(formatted.contains("abc123def456"));
+    assert!(formatted.contains("feat: add user authentication system"));
+    assert!(formatted.contains("Add user auth"));
+    assert!(formatted.contains("src/auth.rs"));
+    assert!(formatted.contains("tests/auth_test.rs"));
+}
+
+#[test]
+fn test_format_preview_without_new_message() {
+    let preview = AmendPreview {
+        original_sha: "def456abc123".to_string(),
+        new_message: None,
+        original_message: "Original commit message".to_string(),
+        files_to_add: vec!["new_file.rs".to_string()],
+        operation_type: "amend-no-edit".to_string(),
+        is_pushed: false,
+    };
+
+    let formatted = CommitAmend::format_preview(&preview);
+
+    // 没有新消息时，应该显示保持原消息的信息
+    assert!(formatted.contains("Original commit message"));
+    assert!(formatted.contains("new_file.rs"));
+}
+
+#[test]
+fn test_format_preview_pushed_commit() {
+    let preview = AmendPreview {
+        original_sha: "pushed123".to_string(),
+        new_message: Some("Updated message".to_string()),
+        original_message: "Original".to_string(),
+        files_to_add: vec![],
+        operation_type: "amend".to_string(),
+        is_pushed: true,
+    };
+
+    let formatted = CommitAmend::format_preview(&preview);
+
+    // 已推送的提交应该有警告信息
+    assert!(
+        formatted.contains("警告") || formatted.contains("warning") || formatted.contains("pushed")
+    );
+}
+
+#[test]
+fn test_format_preview_empty_files() {
+    let preview = AmendPreview {
+        original_sha: "empty123".to_string(),
+        new_message: Some("Only message change".to_string()),
+        original_message: "Original".to_string(),
+        files_to_add: vec![],
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    let formatted = CommitAmend::format_preview(&preview);
+
+    // 没有文件更改时的处理
+    assert!(formatted.contains("Only message change"));
+}
+
+// ==================== 完成消息生成测试 ====================
+
+#[test]
+fn test_generate_completion_message_success() {
+    let preview = AmendPreview {
+        original_sha: "success123".to_string(),
+        new_message: Some("Updated commit message".to_string()),
+        original_message: "Original message".to_string(),
+        files_to_add: vec!["file1.rs".to_string(), "file2.rs".to_string()],
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    let _new_sha = "newsha456";
+    let current_branch = "feature/test";
+
+    let result = CommitAmend::format_completion_message(current_branch, &preview.original_sha);
+    assert!(result.is_ok());
+
+    let message = result.unwrap();
+
+    // 验证完成消息包含关键信息（如果有的话）
+    if let Some(msg) = message {
+        assert!(msg.contains("force") || msg.contains("push"));
+    }
+}
+
+#[test]
+fn test_generate_completion_message_no_edit() {
+    let preview = AmendPreview {
+        original_sha: "noedit123".to_string(),
+        new_message: None,
+        original_message: "Keep this message".to_string(),
+        files_to_add: vec!["added_file.rs".to_string()],
+        operation_type: "amend-no-edit".to_string(),
+        is_pushed: false,
+    };
+
+    let result = CommitAmend::format_completion_message("main", &preview.original_sha);
+    assert!(result.is_ok());
+
+    let message = result.unwrap();
+
+    // 没有编辑消息的情况
+    if let Some(msg) = message {
+        assert!(!msg.is_empty());
+    }
+}
+
+#[test]
+fn test_generate_completion_message_pushed_warning() {
+    let preview = AmendPreview {
+        original_sha: "pushed456".to_string(),
+        new_message: Some("Force updated".to_string()),
+        original_message: "Original".to_string(),
+        files_to_add: vec![],
+        operation_type: "amend".to_string(),
+        is_pushed: true,
+    };
+
+    let result = CommitAmend::format_completion_message("hotfix/urgent", &preview.original_sha);
+    assert!(result.is_ok());
+
+    let message = result.unwrap();
+
+    // 已推送提交的警告
+    if let Some(msg) = message {
+        assert!(msg.contains("force") || msg.contains("推送") || msg.contains("push"));
+    }
+}
+
+// ==================== 边界条件测试 ====================
+
+#[test]
+fn test_create_preview_very_long_message() {
+    let commit_info = CommitInfo {
+        hash: "long123".to_string(),
+        author: "Test User".to_string(),
+        date: "2023-12-17".to_string(),
+        message: "Short".to_string(),
+    };
+
+    let very_long_message = "A".repeat(1000);
+    let new_message = Some(very_long_message.clone());
+
+    let result = CommitAmend::create_preview(&commit_info, &new_message, &[], "amend", "test");
+    assert!(result.is_ok());
+
+    let preview = result.unwrap();
+    assert_eq!(preview.new_message, Some(very_long_message));
+}
+
+#[test]
+fn test_create_preview_many_files() {
+    let commit_info = CommitInfo {
+        hash: "many123".to_string(),
+        author: "Test User".to_string(),
+        date: "2023-12-17".to_string(),
+        message: "Many files".to_string(),
+    };
+
+    let many_files: Vec<String> = (0..100).map(|i| format!("file_{}.rs", i)).collect();
+
+    let result = CommitAmend::create_preview(&commit_info, &None, &many_files, "amend", "test");
+    assert!(result.is_ok());
+
+    let preview = result.unwrap();
+    assert_eq!(preview.files_to_add.len(), 100);
+}
+
+#[test]
+fn test_format_preview_special_characters() {
+    let preview = AmendPreview {
+        original_sha: "special123".to_string(),
+        new_message: Some("feat: 添加用户认证 🔐 & 授权系统".to_string()),
+        original_message: "Add auth & 权限".to_string(),
+        files_to_add: vec!["src/认证.rs".to_string()],
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    let formatted = CommitAmend::format_preview(&preview);
+
+    // 特殊字符应该正确处理
+    assert!(formatted.contains("添加用户认证 🔐 & 授权系统"));
+    assert!(formatted.contains("src/认证.rs"));
+}
+
+// ==================== 错误处理测试 ====================
+
+#[test]
+fn test_create_preview_empty_sha() {
+    let commit_info = CommitInfo {
+        hash: "".to_string(),
+        author: "Test User".to_string(),
+        date: "2023-12-17".to_string(),
+        message: "Test".to_string(),
+    };
+
+    let result = CommitAmend::create_preview(&commit_info, &None, &[], "amend", "test");
+
+    // 空 SHA 可能导致错误或使用默认值
+    if result.is_err() {
+        let error = result.unwrap_err();
+        assert!(!error.to_string().is_empty());
+    }
+}
+
+#[test]
+fn test_format_preview_invalid_operation_type() {
+    let preview = AmendPreview {
+        original_sha: "invalid123".to_string(),
+        new_message: None,
+        original_message: "Test".to_string(),
+        files_to_add: vec![],
+        operation_type: "".to_string(), // 空操作类型
+        is_pushed: false,
+    };
+
+    let result = CommitAmend::format_preview(&preview);
+
+    // 无效操作类型的处理
+    if result.is_err() {
+        let error = result.unwrap_err();
+        assert!(!error.to_string().is_empty());
+    }
+}
+
+// ==================== 集成测试 ====================
+
+#[rstest]
+fn test_complete_amend_workflow(git_repo_with_commits: TempDir) {
+    // 1. 获取最新提交信息
+    let commit_info = GitCommit::get_latest_commit_info().expect("Failed to get commit info");
+
+    // 2. 准备修改
+    fs::write("new_feature.rs", "// New feature implementation").expect("Failed to write file");
+    GitCommit::stage_file("new_feature.rs").expect("Failed to stage file");
+
+    let new_message = Some("feat: add new feature with tests".to_string());
+    let files_to_add = vec!["new_feature.rs".to_string()];
+
+    // 3. 创建预览
+    let preview_result = CommitAmend::create_preview(
+        &commit_info,
+        &new_message,
+        &files_to_add,
+        "amend",
+        "feature/new-feature",
+    );
+
+    assert!(preview_result.is_ok());
+    let preview = preview_result.unwrap();
+
+    // 4. 格式化预览
+    let formatted = CommitAmend::format_preview(&preview);
+    assert!(formatted.contains("feat: add new feature with tests"));
+    assert!(formatted.contains("new_feature.rs"));
+
+    // 5. 生成完成消息
+    let completion_result =
+        CommitAmend::format_completion_message("feature/new-feature", &preview.original_sha);
+
+    assert!(completion_result.is_ok());
+    if let Some(completion_message) = completion_result.unwrap() {
+        assert!(completion_message.contains("force"));
+    }
+}
+
+// ==================== 性能测试 ====================
+
+#[test]
+fn test_preview_creation_performance() {
+    use std::time::Instant;
+
+    let commit_info = CommitInfo {
+        hash: "perf123".to_string(),
+        author: "Test User".to_string(),
+        date: "2023-12-17".to_string(),
+        message: "Performance test".to_string(),
+    };
+
+    let start = Instant::now();
+
+    // 多次创建预览
+    for i in 0..100 {
+        let new_message = Some(format!("Updated message {}", i));
+        let files = vec![format!("file_{}.rs", i)];
+
+        let _ = CommitAmend::create_preview(&commit_info, &new_message, &files, "amend", "test");
+    }
+
+    let duration = start.elapsed();
+
+    // 预览创建应该很快
+    assert!(
+        duration.as_millis() < 100,
+        "Preview creation too slow: {:?}",
+        duration
+    );
+}
+
+#[test]
+fn test_format_preview_performance() {
+    use std::time::Instant;
+
+    let preview = AmendPreview {
+        original_sha: "perf456".to_string(),
+        new_message: Some("Performance test message".to_string()),
+        original_message: "Original".to_string(),
+        files_to_add: (0..50).map(|i| format!("file_{}.rs", i)).collect(),
+        operation_type: "amend".to_string(),
+        is_pushed: false,
+    };
+
+    let start = Instant::now();
+
+    // 多次格式化
+    for _ in 0..100 {
+        let _ = CommitAmend::format_preview(&preview);
+    }
+
+    let duration = start.elapsed();
+
+    // 格式化应该很快
+    assert!(
+        duration.as_millis() < 200,
+        "Preview formatting too slow: {:?}",
+        duration
+    );
+}
