@@ -20,6 +20,12 @@
 - [测试用例检查](#-测试用例检查)
 - [代码质量检查](#-代码质量检查)
 - [其他检查项](#-其他检查项)
+  - [版本管理](#61-版本管理)
+  - [依赖管理](#62-依赖管理)
+  - [平台兼容性](#63-平台兼容性)
+  - [性能检查](#64-性能检查)
+  - [安全性检查](#65-安全性检查)
+  - [用户体验](#66-用户体验)
 - [生成检查报告](#-生成检查报告)
 - [快速检查清单](#-快速检查清单)
 - [常见问题](#-常见问题)
@@ -472,10 +478,112 @@ cargo fix --allow-dirty --allow-staged
 
 ### 6.1 版本管理
 
-**检查项**：
+#### 6.1.1 判断是否需要更新版本号
+
+**检查场景**：
+- 新增功能（feat）→ 需要更新版本号（minor 或 patch）
+- Bug 修复（fix）→ 需要更新版本号（patch）
+- 重构（refactor）→ 通常不需要更新版本号（除非影响 API）
+- 文档更新（docs）→ 不需要更新版本号
+- 代码风格（style）→ 不需要更新版本号
+- 测试（test）→ 不需要更新版本号
+- 构建/工具（chore、ci）→ 不需要更新版本号
+
+**判断依据**：
+1. **功能性变更**：如果提交包含了新功能或修复了 bug，需要更新版本号
+2. **用户可见变更**：如果变更会影响用户使用，需要更新版本号
+3. **API 变更**：如果变更了公共 API，需要更新版本号
+4. **发布周期**：如果计划发布新版本，需要更新版本号
+
+**版本号规则**（遵循语义化版本）：
+- **Major (x.0.0)**：破坏性变更（BREAKING CHANGE）
+- **Minor (x.x.0)**：新功能，向后兼容（feat）或 patch >= 9
+- **Patch (x.x.x)**：Bug 修复和小改进（fix、perf）
+
+#### 6.1.2 检查版本号是否已更新
+
+**快速检查命令**：
+```bash
+# 检查当前分支是否修改了版本号
+git diff master -- Cargo.toml | grep "^+version"
+
+# 或检查最近一次提交
+git diff HEAD~1 HEAD -- Cargo.toml | grep "version ="
+```
+
+**详细检查清单**：
 - [ ] `Cargo.toml` 版本号是否已更新
-- [ ] `Cargo.lock` 是否已更新
-- [ ] 变更日志是否需要更新
+- [ ] `Cargo.lock` 是否已同步更新
+- [ ] `CHANGELOG.md` 是否已添加新版本记录
+- [ ] `README.md` 中的版本示例是否已更新（可选）
+- [ ] 版本号是否符合语义化版本规范
+- [ ] 新版本号是否已正确递增
+
+**检查方法**：
+
+1. **检查 Cargo.toml**：
+```bash
+# 查看当前版本
+grep "^version" Cargo.toml
+
+# 查看版本变更
+git diff master -- Cargo.toml
+```
+
+2. **检查 Cargo.lock**：
+```bash
+# 查看 workflow 包的版本
+grep -A 1 'name = "workflow"' Cargo.lock | grep version
+
+# 验证版本是否同步
+git diff master -- Cargo.lock | grep -A 5 'name = "workflow"'
+```
+
+3. **检查 CHANGELOG.md**：
+```bash
+# 查看最新版本记录
+head -30 CHANGELOG.md
+
+# 验证版本格式
+grep "\[.*\] - 20" CHANGELOG.md | head -5
+```
+
+4. **检查 README.md**（可选）：
+```bash
+# 查看版本号引用
+grep -n "VERSION=v" README.md
+grep -n "version.*1\." README.md
+```
+
+**常见问题**：
+
+1. **忘记更新 Cargo.lock**：
+   - 问题：只更新了 Cargo.toml，没有同步 Cargo.lock
+   - 解决：运行 `cargo update -p workflow --precise <version>`
+
+2. **CHANGELOG.md 未更新**：
+   - 问题：版本号已更新，但 CHANGELOG.md 未添加新版本记录
+   - 解决：将 `[Unreleased]` 内容移到新版本记录
+
+3. **版本号递增错误**：
+   - 问题：版本号跳跃或递增错误（如 1.6.3 → 1.6.5）
+   - 解决：按照语义化版本规范正确递增
+
+**示例**：
+
+正确的版本更新应该包含以下文件：
+```bash
+$ git status
+modified:   Cargo.toml      # 版本号 1.6.3 → 1.6.4
+modified:   Cargo.lock      # 自动同步版本号
+modified:   CHANGELOG.md    # 添加 [1.6.4] 记录
+modified:   README.md       # 更新版本示例（可选）
+```
+
+**提示**：
+- 如果不确定是否需要更新版本号，可以先提交到特性分支，由 code review 确认
+- 版本号更新应该在功能完成后、合并到 master 前进行
+- GitHub Actions 会根据 Cargo.toml 中的版本号自动创建 tag 和 release
 
 ### 6.2 依赖管理
 
@@ -776,11 +884,49 @@ Write-Host "report/CHECK_REPORT_${timestamp}.md"
 **状态**：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
 
 **检查项**：
-- [x] 版本管理检查结果：[描述]
+
+#### 6.1 版本管理检查结果
+
+- [x] **是否需要更新版本号**：[是/否] - [判断依据：新功能/bug修复/重构/文档等]
+- [x] **Cargo.toml 版本号**：[原版本] → [新版本] / [未修改]
+- [x] **Cargo.lock 同步状态**：[已同步/未同步/不适用]
+- [x] **CHANGELOG.md 更新**：[已添加版本记录/未添加/不适用]
+- [x] **README.md 版本示例**：[已更新/未更新/不适用]
+- [x] **版本号递增规则**：[符合/不符合] - [major/minor/patch]
+
+**检查命令结果**：
+```bash
+# Cargo.toml 版本检查
+$ grep "^version" Cargo.toml
+[输出结果]
+
+# Cargo.lock 版本检查
+$ grep -A 1 'name = "workflow"' Cargo.lock | grep version
+[输出结果]
+
+# CHANGELOG.md 最新版本
+$ head -30 CHANGELOG.md
+[输出结果]
+```
+
+#### 6.2 依赖管理检查结果
+
 - [x] 依赖管理检查结果：[描述]
+
+#### 6.3 平台兼容性检查结果
+
 - [x] 平台兼容性检查结果：[描述]
+
+#### 6.4 性能检查结果
+
 - [x] 性能检查结果：[描述]
+
+#### 6.5 安全性检查结果
+
 - [x] 安全性检查结果：[描述]
+
+#### 6.6 用户体验检查结果
+
 - [x] 用户体验检查结果：[描述]
 
 **问题记录**：
@@ -865,6 +1011,12 @@ vim report/CHECK_REPORT_{timestamp}.md
 在提交代码前，运行以下命令：
 
 ```bash
+# 0. 版本检查（如果包含功能性变更）
+# 检查是否需要更新版本号
+git diff master -- Cargo.toml | grep "^+version"
+# 验证 CHANGELOG.md 是否已更新
+head -30 CHANGELOG.md
+
 # 1. 代码质量检查
 make lint
 
@@ -886,10 +1038,14 @@ workflow check
 ### 检查优先级
 
 #### 必须完成（P0）
-1. ✅ 代码质量检查（`make lint`）
-2. ✅ 测试通过（`make test`）
-3. ✅ 补全脚本完整性（`cargo test --test completeness`）
-4. ✅ 编译通过（`cargo check`）
+1. ✅ **版本检查**（如果包含新功能或 bug 修复）
+   - 检查 `Cargo.toml` 版本号是否已更新
+   - 检查 `Cargo.lock` 是否已同步
+   - 检查 `CHANGELOG.md` 是否已添加版本记录
+2. ✅ 代码质量检查（`make lint`）
+3. ✅ 测试通过（`make test`）
+4. ✅ 补全脚本完整性（`cargo test --test completeness`）
+5. ✅ 编译通过（`cargo check`）
 
 #### 应该完成（P1）
 1. ✅ 文档更新（README.md、架构文档）
@@ -904,6 +1060,35 @@ workflow check
 ---
 
 ## ❓ 常见问题
+
+### Q: 如何判断是否需要更新版本号？
+
+**A**: 按照以下规则判断：
+- ✅ **需要更新**：新功能（feat）、bug 修复（fix）、性能优化（perf）、破坏性变更（BREAKING CHANGE）
+- ❌ **不需要更新**：文档更新（docs）、代码风格（style）、测试（test）、构建/工具（chore、ci）、不影响用户的重构（refactor）
+
+**快速检查命令**：
+```bash
+# 检查当前分支的提交类型
+git log master..HEAD --oneline
+
+# 检查是否有功能性变更
+git diff master --stat
+```
+
+### Q: 更新版本号时忘记更新 Cargo.lock 怎么办？
+
+**A**: 运行以下命令同步版本号：
+```bash
+# 方法 1：使用 cargo update（推荐）
+cargo update -p workflow --precise <新版本号>
+
+# 方法 2：重新构建（会自动更新）
+cargo build
+
+# 验证版本是否已同步
+grep -A 1 'name = "workflow"' Cargo.lock | grep version
+```
 
 ### Q: 如何快速检查所有项？
 
