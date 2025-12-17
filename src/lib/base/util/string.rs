@@ -35,8 +35,10 @@ impl Sensitive for str {
             "***".to_string()
         } else {
             // 显示前4个字符和后4个字符，中间用 *** 代替
-            let start = &self[..4.min(self.len())];
-            let end = &self[self.len().saturating_sub(4)..];
+            let chars: Vec<char> = self.chars().collect();
+            let len = chars.len();
+            let start: String = chars.iter().take(4.min(len)).collect();
+            let end: String = chars.iter().skip(len.saturating_sub(4)).collect();
             format!("{}***{}", start, end)
         }
     }
