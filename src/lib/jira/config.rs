@@ -5,7 +5,7 @@
 //! - 统一的错误处理
 //! - Unix 系统下的文件权限设置（600）
 
-use crate::base::util::file::FileReader;
+use crate::base::util::file::{FileReader, FileWriter};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -102,7 +102,7 @@ where
         if !self.path.exists() {
             return Ok(T::default());
         }
-        let content = FileReader::read_to_string(&self.path)?;
+        let content = FileReader::new(&self.path).to_string()?;
         toml::from_str(&content).wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
@@ -119,7 +119,8 @@ where
     ///
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write(&self, config: &T) -> Result<()> {
-        crate::base::util::file::write_toml_file(&self.path, config)
+        FileWriter::new(&self.path)
+            .write_toml(config)
             .wrap_err_with(|| format!("Failed to write config file: {:?}", self.path))?;
         self.set_permissions()?;
         Ok(())
@@ -177,7 +178,7 @@ impl ConfigManager<Value> {
         if !self.path.exists() {
             return Ok(Value::Table(Map::new()));
         }
-        let content = FileReader::read_to_string(&self.path)?;
+        let content = FileReader::new(&self.path).to_string()?;
         toml::from_str(&content).wrap_err(format!("Failed to parse TOML config: {:?}", self.path))
     }
 
@@ -194,7 +195,8 @@ impl ConfigManager<Value> {
     ///
     /// 如果序列化或写入失败，返回相应的错误信息。
     pub fn write_value(&self, value: &Value) -> Result<()> {
-        crate::base::util::file::write_toml_value(&self.path, value)
+        FileWriter::new(&self.path)
+            .write_toml(value)
             .wrap_err_with(|| format!("Failed to write config file: {:?}", self.path))?;
         Self::set_permissions_for_path(&self.path)?;
         Ok(())

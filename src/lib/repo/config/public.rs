@@ -4,8 +4,8 @@
 //! This configuration is stored in `.workflow/config.toml` in the project root.
 
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::{read_toml_value, write_toml_value};
-use crate::base::util::path::ensure_parent_dir_exists;
+use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::util::path::PathAccess;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
 use toml::map::Map;
@@ -40,7 +40,7 @@ impl PublicRepoConfig {
             return Ok(Self::default());
         }
 
-        let value = read_toml_value(&path)?;
+        let value: Value = FileReader::new(&path).toml()?;
 
         let mut config = Self::default();
 
@@ -80,13 +80,10 @@ impl PublicRepoConfig {
     pub fn save(&self) -> Result<()> {
         let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
-        ensure_parent_dir_exists(&path)?;
+        PathAccess::new(&path).ensure_parent_dir_exists()?;
 
-        let mut existing_value: Value = if path.exists() {
-            read_toml_value(&path)?
-        } else {
-            Value::Table(Map::new())
-        };
+        let mut existing_value: Value =
+            if path.exists() { FileReader::new(&path).toml()? } else { Value::Table(Map::new()) };
 
         if let Some(table) = existing_value.as_table_mut() {
             // Update [template] section
@@ -133,7 +130,7 @@ impl PublicRepoConfig {
             }
         }
 
-        write_toml_value(&path, &existing_value)?;
+        FileWriter::new(&path).write_toml(&existing_value)?;
 
         Ok(())
     }

@@ -410,7 +410,7 @@ impl Settings {
                 if !config_path.exists() {
                     Self::default()
                 } else {
-                    match FileReader::read_to_string(&config_path) {
+                    match FileReader::new(&config_path).to_string() {
                         Ok(content) => {
                             // 先尝试解析为新格式
                             match toml::from_str::<Self>(&content) {

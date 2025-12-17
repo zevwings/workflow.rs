@@ -4,7 +4,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
-use crate::base::util::file::write_toml_file;
+use crate::base::util::file::FileWriter;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::{HashMap, HashSet};
 use std::fs;
@@ -167,7 +167,7 @@ impl AliasManager {
         settings.aliases.insert(name.to_string(), command.to_string());
 
         // 保存配置
-        write_toml_file(&config_path, &settings)?;
+        FileWriter::new(&config_path).write_toml(&settings)?;
 
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]
@@ -208,7 +208,7 @@ impl AliasManager {
         settings.aliases.remove(name);
 
         // 保存配置
-        write_toml_file(&config_path, &settings)?;
+        FileWriter::new(&config_path).write_toml(&settings)?;
 
         // 设置文件权限（仅 Unix）
         #[cfg(unix)]

@@ -8,6 +8,7 @@
 //! 支持 zsh、bash、fish、powershell、elvish 等 shell 的配置文件。
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{FileReader, FileWriter};
 use clap_complete::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
@@ -538,8 +539,7 @@ impl ShellConfigManager {
     /// 读取配置文件内容
     fn read_config_file(path: &std::path::Path) -> Result<String> {
         if path.exists() {
-            crate::base::util::file::FileReader::read_to_string(path)
-                .wrap_err("Failed to read shell config file")
+            FileReader::new(path).to_string().wrap_err("Failed to read shell config file")
         } else {
             Ok(String::new())
         }
@@ -547,7 +547,8 @@ impl ShellConfigManager {
 
     /// 写入配置文件内容
     fn write_config_file(path: &std::path::Path, content: &str) -> Result<()> {
-        crate::base::util::file::write_file_with_context(path, content)
+        FileWriter::new(path)
+            .write_str(content)
             .wrap_err("Failed to write to shell config file")?;
         Ok(())
     }

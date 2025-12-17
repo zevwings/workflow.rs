@@ -4,8 +4,8 @@
 //! This configuration is stored in `~/.workflow/config/repository.toml` and supports iCloud sync.
 
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::{read_toml_value, write_toml_value};
-use crate::base::util::path::ensure_parent_dir_exists;
+use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::util::path::PathAccess;
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
@@ -106,7 +106,7 @@ impl PrivateRepoConfig {
             return Ok(Self::default());
         }
 
-        let value = read_toml_value(&config_path)?;
+        let value: Value = FileReader::new(&config_path).toml()?;
 
         // Find current repository's configuration sections
         // Format: [${repo_id}], [${repo_id}.branch] and [${repo_id}.pr]
@@ -189,14 +189,11 @@ impl PrivateRepoConfig {
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
-        ensure_parent_dir_exists(&config_path)?;
+        PathAccess::new(&config_path).ensure_parent_dir_exists()?;
 
         // Read existing configuration (if exists)
-        let mut existing_value: Value = if config_path.exists() {
-            read_toml_value(&config_path)?
-        } else {
-            Value::Table(Map::new())
-        };
+        let mut existing_value: Value =
+            if config_path.exists() { FileReader::new(&config_path).toml()? } else { Value::Table(Map::new()) };
 
         // Merge configuration
         if let Some(table) = existing_value.as_table_mut() {
@@ -250,7 +247,7 @@ impl PrivateRepoConfig {
         }
 
         // Write to file
-        write_toml_value(&config_path, &existing_value)?;
+        FileWriter::new(&config_path).write_toml(&existing_value)?;
 
         Ok(())
     }

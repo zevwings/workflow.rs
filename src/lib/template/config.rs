@@ -3,7 +3,7 @@
 //! Loads templates from configuration files (global and project-level).
 
 use crate::base::settings::paths::Paths;
-use crate::base::util::file::read_toml_value;
+use crate::base::util::file::FileReader;
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -200,7 +200,7 @@ impl TemplateConfig {
         }
 
         // Parse TOML and extract template section
-        let value = read_toml_value(&project_config_path)?;
+        let value: toml::Value = FileReader::new(&project_config_path).toml()?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {
@@ -225,7 +225,7 @@ impl TemplateConfig {
             color_eyre::eyre::bail!("Global config not found");
         }
 
-        let value = read_toml_value(&config_path)?;
+        let value: toml::Value = FileReader::new(&config_path).toml()?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {

@@ -12,6 +12,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use super::helpers::get_completion_filename;
 use crate::base::alias::AliasManager;
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::FileWriter;
 
 /// 生成结果
 #[derive(Debug, Clone)]
@@ -152,7 +153,8 @@ impl CompletionGenerator {
         let filename = get_completion_filename(&shell_type_str, command_name)?;
         let output_file = self.output_dir.join(&filename);
 
-        crate::base::util::file::write_file_bytes_with_context(&output_file, &buffer)
+        FileWriter::new(&output_file)
+            .write_bytes(&buffer)
             .wrap_err_with(|| {
                 format!(
                     "Failed to write completion file: {} (command: {}, shell: {})",
