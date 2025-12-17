@@ -109,8 +109,10 @@ fn test_exists_main_branch() {
         current_branch
     );
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 #[test]
@@ -129,8 +131,10 @@ fn test_exists_nonexistent_branch() {
         nonexistent_branch
     );
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 分支创建测试 ====================
@@ -138,7 +142,7 @@ fn test_exists_nonexistent_branch() {
 // 辅助函数：使用 gix 创建带有初始提交的临时 Git 仓库
 fn setup_git_repo_with_gix() -> (TempDir, std::path::PathBuf) {
     // 保存原始目录在创建临时目录之前
-    let original_dir = std::env::current_dir().unwrap();
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
 
     let temp_dir = TempDir::new().unwrap();
     let temp_path = temp_dir.path();
@@ -211,8 +215,10 @@ fn test_create_simple_branch_with_gix() {
     let current_branch = GitBranch::current_branch().unwrap();
     assert_eq!(current_branch, branch_name);
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 #[test]
@@ -234,8 +240,10 @@ fn test_create_branch_with_prefix_with_gix() {
     let current_branch = GitBranch::current_branch().unwrap();
     assert_eq!(current_branch, branch_name);
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 分支切换测试 ====================
@@ -284,8 +292,10 @@ fn test_delete_existing_branch() {
         "Branch should not exist after deletion"
     );
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 分支列表测试 ====================
@@ -329,8 +339,10 @@ fn test_list_branches() {
         );
     }
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 合并策略测试 ====================
@@ -373,8 +385,10 @@ fn test_empty_branch_name() {
     let exists = GitBranch::has_local_branch("").unwrap_or(true);
     assert!(!exists, "Empty branch name should not exist");
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 错误处理测试 ====================

@@ -13,7 +13,7 @@ use workflow::git::GitCommit;
 // 辅助函数：创建带有初始提交的临时 Git 仓库
 fn setup_git_repo() -> (TempDir, std::path::PathBuf) {
     // 保存原始目录在创建临时目录之前
-    let original_dir = std::env::current_dir().unwrap();
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
 
     let temp_dir = TempDir::new().unwrap();
     let temp_path = temp_dir.path();
@@ -188,7 +188,10 @@ fn test_worktree_status_clean_with_gix() {
     assert_eq!(status.staged_count, 0, "Expected no staged files");
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 更改检查测试 ====================
@@ -212,7 +215,10 @@ fn test_has_changes_clean_repo_with_gix() {
     assert!(!result.unwrap(), "Clean repo should have no changes");
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 #[test]
@@ -237,7 +243,10 @@ fn test_has_changes_with_untracked_files_with_gix() {
     );
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 #[test]
@@ -262,7 +271,10 @@ fn test_has_changes_with_modified_files_with_gix() {
     );
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 暂存操作测试 ====================
@@ -291,7 +303,10 @@ fn test_stage_all_changes() {
     assert!(status.staged_count > 0, "Should have staged files");
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 #[test]
@@ -322,7 +337,10 @@ fn test_stage_specific_file() {
     );
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== 提交创建测试 ====================
@@ -368,7 +386,10 @@ fn test_get_latest_commit_info() {
     );
 
     // 恢复原始目录
-    std::env::set_current_dir(original_dir).unwrap();
+    // 恢复原始目录（如果目录仍然存在）
+    if original_dir.exists() {
+        let _ = std::env::set_current_dir(original_dir);
+    }
 }
 
 // ==================== WorktreeStatus 结构体测试 ====================
@@ -398,7 +419,7 @@ fn test_operations_outside_git_repo_with_container() {
 
     // 在非 Git 目录中测试操作
     let temp_dir = tempdir().expect("Failed to create temp dir");
-    let original_dir = std::env::current_dir().expect("Failed to get current dir");
+    let original_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
 
     // 切换到非Git目录
     std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
@@ -410,7 +431,7 @@ fn test_operations_outside_git_repo_with_container() {
     );
 
     // 验证当前工作目录确实是临时目录（处理 macOS 路径规范化）
-    let current_dir = std::env::current_dir().expect("Failed to get current dir");
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
     let current_canonical = current_dir.canonicalize().unwrap_or(current_dir);
     let temp_canonical =
         temp_dir.path().canonicalize().unwrap_or_else(|_| temp_dir.path().to_path_buf());

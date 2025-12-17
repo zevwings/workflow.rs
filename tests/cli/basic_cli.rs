@@ -76,9 +76,7 @@ fn test_pr_with_git_repo() {
 
 #[test]
 fn test_branch_help() {
-    let binding = CliCommandBuilder::new()
-        .args(["branch", "--help"])
-        .assert_success();
+    let binding = CliCommandBuilder::new().args(["branch", "--help"]).assert_success();
     let output = binding.get_output();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -103,9 +101,7 @@ fn test_branch_without_git() {
 
 #[test]
 fn test_config_help() {
-    let binding = CliCommandBuilder::new()
-        .args(["config", "--help"])
-        .assert_success();
+    let binding = CliCommandBuilder::new().args(["config", "--help"]).assert_success();
     let output = binding.get_output();
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -159,9 +155,7 @@ fn test_jira_info_without_config() {
 
 #[test]
 fn test_json_output_format() {
-    let binding = CliCommandBuilder::new()
-        .args(["--help", "--format", "json"])
-        .assert();
+    let binding = CliCommandBuilder::new().args(["--help", "--format", "json"]).assert();
     let output = binding.get_output();
 
     // 检查是否支持 JSON 格式（可能不支持，这是正常的）
@@ -257,10 +251,7 @@ fn test_complete_workflow_dry_run() {
     ];
 
     for cmd_args in commands {
-        let binding = CliCommandBuilder::new()
-            .args(&cmd_args)
-            .current_dir(env.path())
-            .assert();
+        let binding = CliCommandBuilder::new().args(&cmd_args).current_dir(env.path()).assert();
         let output = binding.get_output();
 
         // 每个命令都应该有输出（成功或失败都可以）
