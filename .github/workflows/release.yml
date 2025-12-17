@@ -171,6 +171,7 @@ jobs:
       tag: ${{ steps.generate_version.outputs.tag }}
       needs_increment: ${{ steps.generate_version.outputs.needs_increment }}
       is_master_branch: ${{ steps.detect_mode.outputs.is_master_branch }}
+      has_changes: ${{ steps.check_changes.outputs.has_changes }}
 
     steps:
       - name: 📥 Checkout repository
@@ -425,8 +426,29 @@ jobs:
 
           echo "✅ Version updated to $NEW_VERSION in Cargo.toml and Cargo.lock"
 
-      - name: 📤 Upload updated version files
+      - name: 🔍 Check if version files have changes
+        id: check_changes
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
+        shell: bash
+        run: |
+          # 检查 Cargo.toml 和 Cargo.lock 是否有实际的更改
+          if git diff --quiet Cargo.toml Cargo.lock; then
+            echo "⚠️  No changes detected in Cargo.toml and Cargo.lock"
+            echo "   This usually means:"
+            echo "   - Cargo.toml already has the target version"
+            echo "   - Cargo.lock is already up to date"
+            echo "   - No version increment is needed"
+            echo ""
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Changes detected in version files"
+            git diff Cargo.toml Cargo.lock
+            echo ""
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📤 Upload updated version files
+        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true' && steps.check_changes.outputs.has_changes == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: updated-version-files
@@ -475,7 +497,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 📥 Download updated version files
-        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         uses: actions/download-artifact@v4
         with:
           name: updated-version-files
@@ -826,7 +848,7 @@ jobs:
 
       # Step 1: Create version update PR (only if needs_increment is true and master branch)
       - name: ⚙️ Configure Git for PR creation
-        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -834,7 +856,7 @@ jobs:
 
       - name: 🌿 Create version update PR
         id: create_pr
-        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         shell: bash
         env:
           WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
@@ -928,10 +950,10 @@ jobs:
 
           echo "✅ Using WORKFLOW_PAT to create PR, CI will trigger automatically"
 
-      # Step 2: Merge version update PR (only if needs_increment is true and master branch)
+      # Step 2: Merge version update PR (only if needs_increment is true and master branch and has changes)
       - name: ⏳ Wait for PR status update
         id: wait_pr_status
-        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         shell: bash
         run: |
           echo "⏳ Waiting 30s for PR status to be updated and CI to complete..."
@@ -939,7 +961,7 @@ jobs:
 
       - name: 🔍 Check PR mergeable status
         id: check_pr_status
-        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         shell: bash
         run: |
           PR_NUMBER="${{ steps.create_pr.outputs.pr_number }}"
@@ -967,6 +989,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           steps.check_pr_status.outputs.merged == 'true'
         shell: bash
         run: |
@@ -990,6 +1013,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           steps.handle_pr_merged.outputs.pr_merged == 'true'
         shell: bash
         run: |
@@ -1028,6 +1052,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           steps.check_pr_status.outputs.merged != 'true' &&
           (steps.check_pr_status.outputs.mergeable == 'null' || steps.check_pr_status.outputs.mergeable == 'false')
         shell: bash
@@ -1099,6 +1124,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           steps.check_pr_status.outputs.merged != 'true' &&
           (steps.wait_mergeable.outputs.pr_mergeable == 'true' || steps.check_pr_status.outputs.mergeable == 'true')
         shell: bash
@@ -1144,6 +1170,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true' || steps.wait_mergeable.outputs.pr_merged == 'true')
         shell: bash
         run: |
@@ -1182,6 +1209,7 @@ jobs:
         if: |
           needs.update-version.outputs.needs_increment == 'true' &&
           needs.update-version.outputs.is_master_branch == 'true' &&
+          needs.update-version.outputs.has_changes == 'true' &&
           (steps.handle_pr_merged.outputs.pr_merged == 'true' || steps.merge_pr.outputs.pr_merged == 'true')
         shell: bash
         run: |
