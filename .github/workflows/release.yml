@@ -840,7 +840,7 @@ jobs:
           jq --version
 
       - name: 📥 Download updated version files
-        if: needs.update-version.outputs.needs_increment == 'true'
+        if: needs.update-version.outputs.needs_increment == 'true' && needs.update-version.outputs.is_master_branch == 'true' && needs.update-version.outputs.has_changes == 'true'
         uses: actions/download-artifact@v4
         with:
           name: updated-version-files
