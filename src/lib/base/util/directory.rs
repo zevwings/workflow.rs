@@ -2,10 +2,10 @@
 //!
 //! 提供基于路径的目录遍历助手 `DirectoryWalker`，统一使用 `walkdir` 进行遍历。
 
-use std::path::PathBuf;
-use color_eyre::{eyre::WrapErr, Result};
-use walkdir::WalkDir;
 use crate::base::util::path::PathAccess;
+use color_eyre::{eyre::WrapErr, Result};
+use std::path::PathBuf;
+use walkdir::WalkDir;
 
 /// 目录遍历助手，基于固定根路径提供常用操作。
 pub struct DirectoryWalker {

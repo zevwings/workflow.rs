@@ -81,7 +81,6 @@ impl FileReader {
         serde_json::from_str(&content)
             .wrap_err_with(|| format!("Failed to parse JSON file: {:?}", self.path))
     }
-
 }
 
 /// 文件写入器，基于路径提供常用写入操作。
@@ -122,13 +121,8 @@ impl FileWriter {
     where
         T: Serialize,
     {
-        let json_content = serde_json::to_string_pretty(data).wrap_err_with(|| {
-            format!(
-                "Failed to serialize config to JSON: {:?}",
-                self.path
-            )
-        })?;
+        let json_content = serde_json::to_string_pretty(data)
+            .wrap_err_with(|| format!("Failed to serialize config to JSON: {:?}", self.path))?;
         self.write_str(&json_content)
     }
-
 }

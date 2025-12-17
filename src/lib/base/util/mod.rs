@@ -71,9 +71,7 @@ pub use date::{
 pub use directory::DirectoryWalker;
 
 // 重新导出 file
-pub use file::{
-    FileReader, FileWriter,
-};
+pub use file::{FileReader, FileWriter};
 
 // 重新导出 path
 pub use path::PathAccess;

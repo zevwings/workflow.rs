@@ -192,8 +192,11 @@ impl PrivateRepoConfig {
         PathAccess::new(&config_path).ensure_parent_dir_exists()?;
 
         // Read existing configuration (if exists)
-        let mut existing_value: Value =
-            if config_path.exists() { FileReader::new(&config_path).toml()? } else { Value::Table(Map::new()) };
+        let mut existing_value: Value = if config_path.exists() {
+            FileReader::new(&config_path).toml()?
+        } else {
+            Value::Table(Map::new())
+        };
 
         // Merge configuration
         if let Some(table) = existing_value.as_table_mut() {

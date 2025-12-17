@@ -179,9 +179,7 @@ impl JiraWorkHistory {
         let repo_file = Self::get_repo_work_history_path(repo_url)?;
 
         let mut history_map: WorkHistoryMap = if repo_file.exists() {
-            FileReader::new(&repo_file)
-                .json()
-                .unwrap_or_else(|_| HashMap::new())
+            FileReader::new(&repo_file).json().unwrap_or_else(|_| HashMap::new())
         } else {
             HashMap::new()
         };

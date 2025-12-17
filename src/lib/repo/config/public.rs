@@ -82,8 +82,11 @@ impl PublicRepoConfig {
 
         PathAccess::new(&path).ensure_parent_dir_exists()?;
 
-        let mut existing_value: Value =
-            if path.exists() { FileReader::new(&path).toml()? } else { Value::Table(Map::new()) };
+        let mut existing_value: Value = if path.exists() {
+            FileReader::new(&path).toml()?
+        } else {
+            Value::Table(Map::new())
+        };
 
         if let Some(table) = existing_value.as_table_mut() {
             // Update [template] section

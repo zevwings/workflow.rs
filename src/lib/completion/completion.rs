@@ -95,14 +95,12 @@ impl Completion {
             _ => return Ok(None),
         };
 
-        FileWriter::new(&config_file)
-            .write_str(&config_content)
-            .wrap_err_with(|| {
-                format!(
-                    "Failed to write workflow completion config file: {}",
-                    config_file.display()
-                )
-            })?;
+        FileWriter::new(&config_file).write_str(&config_content).wrap_err_with(|| {
+            format!(
+                "Failed to write workflow completion config file: {}",
+                config_file.display()
+            )
+        })?;
 
         Ok(Some(config_file))
     }

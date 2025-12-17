@@ -8,8 +8,8 @@
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
 
-use super::helpers::{check_success, cmd_read, cmd_run};
 use super::types::RepoType;
+use super::GitCommand;
 
 /// Git 仓库管理
 ///
@@ -29,7 +29,7 @@ impl GitRepo {
     ///
     /// 返回 `true` 如果当前目录是 Git 仓库，否则返回 `false`。
     pub fn is_git_repo() -> bool {
-        check_success(&["rev-parse", "--git-dir", "--quiet"])
+        GitCommand::new(["rev-parse", "--git-dir", "--quiet"]).quiet_success()
     }
 
     /// 检测远程仓库类型（GitHub）
@@ -92,7 +92,9 @@ impl GitRepo {
     /// 如果无法获取远程 URL，返回相应的错误信息。
     #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
-        cmd_read(&["remote", "get-url", "origin"]).wrap_err("Failed to get remote URL")
+        GitCommand::new(["remote", "get-url", "origin"])
+            .read()
+            .wrap_err("Failed to get remote URL")
     }
 
     /// 获取 Git 目录路径
@@ -107,7 +109,9 @@ impl GitRepo {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        cmd_read(&["rev-parse", "--git-dir"]).wrap_err("Failed to get git directory")
+        GitCommand::new(["rev-parse", "--git-dir"])
+            .read()
+            .wrap_err("Failed to get git directory")
     }
 
     /// 从远程仓库获取更新
@@ -118,7 +122,9 @@ impl GitRepo {
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        cmd_run(&["fetch", "origin"]).wrap_err("Failed to fetch from origin")
+        GitCommand::new(["fetch", "origin"])
+            .run()
+            .wrap_err("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用
@@ -129,7 +135,9 @@ impl GitRepo {
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        cmd_run(&["remote", "prune", "origin"]).wrap_err("Failed to prune remote references")
+        GitCommand::new(["remote", "prune", "origin"])
+            .run()
+            .wrap_err("Failed to prune remote references")
     }
 
     /// 从 Git remote URL 提取仓库名（owner/repo 格式）

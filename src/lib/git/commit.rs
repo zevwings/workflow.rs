@@ -9,8 +9,8 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use super::helpers::{check_success, cmd_read, cmd_run, cmd_run_with_env};
 use super::pre_commit::GitPreCommit;
+use super::GitCommand;
 
 /// Git 提交结果
 #[derive(Debug, Clone)]
@@ -63,7 +63,9 @@ impl GitCommit {
     ///
     /// 返回 Git 状态的简洁输出字符串。
     pub fn status() -> Result<String> {
-        cmd_read(&["status", "--porcelain"]).wrap_err("Failed to run git status")
+        GitCommand::new(["status", "--porcelain"])
+            .read()
+            .wrap_err("Failed to run git status")
     }
 
     /// 检查工作区是否有未提交的更改
@@ -79,7 +81,7 @@ impl GitCommit {
     pub fn has_commit() -> Result<bool> {
         // 检查工作区是否有未提交的更改
         // 如果有差异，返回非零退出码（is_err() 返回 true）
-        let has_worktree_changes = !check_success(&["diff", "--quiet"]);
+        let has_worktree_changes = !GitCommand::new(["diff", "--quiet"]).quiet_success();
 
         // 检查暂存区是否有未提交的更改
         let has_staged_changes = Self::has_staged()?;
@@ -100,7 +102,7 @@ impl GitCommit {
         // 使用 git diff --cached --quiet 检查是否有暂存的文件
         // --quiet 选项：如果有差异，返回非零退出码；如果没有差异，返回 0
         // 所以如果命令成功（返回 true），说明没有暂存的文件；如果失败（返回 false），说明有暂存的文件
-        Ok(!check_success(&["diff", "--cached", "--quiet"]))
+        Ok(!GitCommand::new(["diff", "--cached", "--quiet"]).quiet_success())
     }
 
     /// 添加所有文件到暂存区
@@ -111,7 +113,7 @@ impl GitCommit {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn add_all() -> Result<()> {
-        cmd_run(&["add", "--all"]).wrap_err("Failed to add all files")
+        GitCommand::new(["add", "--all"]).run().wrap_err("Failed to add all files")
     }
 
     /// 提交更改
@@ -167,9 +169,9 @@ impl GitCommit {
 
         // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
         if should_skip_hook {
-            cmd_run_with_env(&args, &[("WORKFLOW_PRE_COMMIT_SKIP", "1")])?;
+            GitCommand::new(args).with_env("WORKFLOW_PRE_COMMIT_SKIP", "1").run()?;
         } else {
-            cmd_run(&args).wrap_err("Failed to commit")?;
+            GitCommand::new(args).run().wrap_err("Failed to commit")?;
         }
 
         Ok(CommitResult {
@@ -202,14 +204,14 @@ impl GitCommit {
         let mut diff_parts = Vec::new();
 
         // 获取暂存区的修改
-        if let Ok(staged_diff) = cmd_read(&["diff", "--cached"]) {
+        if let Ok(staged_diff) = GitCommand::new(["diff", "--cached"]).read() {
             if !staged_diff.trim().is_empty() {
                 diff_parts.push(format!("Staged changes:\n{}", staged_diff));
             }
         }
 
         // 获取工作区的修改
-        if let Ok(worktree_diff) = cmd_read(&["diff"]) {
+        if let Ok(worktree_diff) = GitCommand::new(["diff"]).read() {
             if !worktree_diff.trim().is_empty() {
                 diff_parts.push(format!("Working tree changes:\n{}", worktree_diff));
             }
@@ -241,7 +243,8 @@ impl GitCommit {
     /// 如果重置失败，返回相应的错误信息。
     pub fn reset_hard(target: Option<&str>) -> Result<()> {
         let target = target.unwrap_or("HEAD");
-        cmd_run(&["reset", "--hard", target])
+        GitCommand::new(["reset", "--hard", target])
+            .run()
             .wrap_err_with(|| format!("Failed to reset working directory to {}", target))
     }
 
@@ -254,7 +257,7 @@ impl GitCommit {
     /// - `Ok(true)` - 如果有 commit
     /// - `Ok(false)` - 如果没有 commit
     pub fn has_last_commit() -> Result<bool> {
-        Ok(check_success(&["log", "-1", "--oneline"]))
+        Ok(GitCommand::new(["log", "-1", "--oneline"]).quiet_success())
     }
 
     /// 获取最后一次 commit 信息
@@ -263,10 +266,10 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的详细信息。
     pub fn get_last_commit_info() -> Result<CommitInfo> {
-        let sha = cmd_read(&["log", "-1", "--format=%H"])?;
-        let message = cmd_read(&["log", "-1", "--format=%s"])?;
-        let author = cmd_read(&["log", "-1", "--format=%an <%ae>"])?;
-        let date = cmd_read(&["log", "-1", "--format=%ai"])?;
+        let sha = GitCommand::new(["log", "-1", "--format=%H"]).read()?;
+        let message = GitCommand::new(["log", "-1", "--format=%s"]).read()?;
+        let author = GitCommand::new(["log", "-1", "--format=%an <%ae>"]).read()?;
+        let date = GitCommand::new(["log", "-1", "--format=%ai"]).read()?;
 
         Ok(CommitInfo {
             sha,
@@ -282,7 +285,9 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的完整 SHA。
     pub fn get_last_commit_sha() -> Result<String> {
-        cmd_read(&["log", "-1", "--format=%H"]).wrap_err("Failed to get last commit SHA")
+        GitCommand::new(["log", "-1", "--format=%H"])
+            .read()
+            .wrap_err("Failed to get last commit SHA")
     }
 
     /// 获取最后一次 commit 的消息
@@ -291,7 +296,9 @@ impl GitCommit {
     ///
     /// 返回最后一次 commit 的提交消息。
     pub fn get_last_commit_message() -> Result<String> {
-        cmd_read(&["log", "-1", "--format=%s"]).wrap_err("Failed to get last commit message")
+        GitCommand::new(["log", "-1", "--format=%s"])
+            .read()
+            .wrap_err("Failed to get last commit message")
     }
 
     /// 获取已修改但未暂存的文件列表
@@ -300,7 +307,7 @@ impl GitCommit {
     ///
     /// 返回已修改但未暂存的文件路径列表。
     pub fn get_modified_files() -> Result<Vec<String>> {
-        let output = cmd_read(&["diff", "--name-only"])?;
+        let output = GitCommand::new(["diff", "--name-only"]).read()?;
         if output.trim().is_empty() {
             Ok(Vec::new())
         } else {
@@ -314,7 +321,7 @@ impl GitCommit {
     ///
     /// 返回未跟踪的文件路径列表。
     pub fn get_untracked_files() -> Result<Vec<String>> {
-        let output = cmd_read(&["ls-files", "--others", "--exclude-standard"])?;
+        let output = GitCommand::new(["ls-files", "--others", "--exclude-standard"]).read()?;
         if output.trim().is_empty() {
             Ok(Vec::new())
         } else {
@@ -341,7 +348,7 @@ impl GitCommit {
             args.push(file);
         }
 
-        cmd_run(&args).wrap_err("Failed to add files")
+        GitCommand::new(args).run().wrap_err("Failed to add files")
     }
 
     /// 执行 commit amend
@@ -385,9 +392,9 @@ impl GitCommit {
 
         // 如果已经通过 Rust 代码执行了检查，设置环境变量告诉 hook 脚本跳过执行
         if should_skip_hook {
-            cmd_run_with_env(&args, &[("WORKFLOW_PRE_COMMIT_SKIP", "1")])?;
+            GitCommand::new(args).with_env("WORKFLOW_PRE_COMMIT_SKIP", "1").run()?;
         } else {
-            cmd_run(&args).wrap_err("Failed to amend commit")?;
+            GitCommand::new(args).run().wrap_err("Failed to amend commit")?;
         }
 
         // 返回新的 commit SHA
@@ -406,7 +413,8 @@ impl GitCommit {
     ///
     /// 返回完整的 commit SHA（40 个字符）。
     pub fn parse_commit_ref(reference: &str) -> Result<String> {
-        let sha = cmd_read(&["rev-parse", reference])
+        let sha = GitCommand::new(["rev-parse", reference])
+            .read()
             .wrap_err(format!("Failed to parse commit reference: {}", reference))?;
         Ok(sha.trim().to_string())
     }
@@ -421,13 +429,17 @@ impl GitCommit {
     ///
     /// 返回指定 commit 的详细信息。
     pub fn get_commit_info(commit_ref: &str) -> Result<CommitInfo> {
-        let sha = cmd_read(&["log", "-1", "--format=%H", commit_ref])
+        let sha = GitCommand::new(["log", "-1", "--format=%H", commit_ref])
+            .read()
             .wrap_err(format!("Failed to get commit info for: {}", commit_ref))?;
-        let message = cmd_read(&["log", "-1", "--format=%s", commit_ref])
+        let message = GitCommand::new(["log", "-1", "--format=%s", commit_ref])
+            .read()
             .wrap_err(format!("Failed to get commit message for: {}", commit_ref))?;
-        let author = cmd_read(&["log", "-1", "--format=%an <%ae>", commit_ref])
+        let author = GitCommand::new(["log", "-1", "--format=%an <%ae>", commit_ref])
+            .read()
             .wrap_err(format!("Failed to get commit author for: {}", commit_ref))?;
-        let date = cmd_read(&["log", "-1", "--format=%ai", commit_ref])
+        let date = GitCommand::new(["log", "-1", "--format=%ai", commit_ref])
+            .read()
             .wrap_err(format!("Failed to get commit date for: {}", commit_ref))?;
 
         Ok(CommitInfo {
@@ -470,12 +482,7 @@ impl GitCommit {
         // 使用 git merge-base --is-ancestor <commit_sha> HEAD
         // 如果 commit_sha 是 HEAD 的祖先，返回 true
         // 注意：如果 commit_sha == HEAD，也返回 true
-        Ok(check_success(&[
-            "merge-base",
-            "--is-ancestor",
-            commit_sha,
-            "HEAD",
-        ]))
+        Ok(GitCommand::new(["merge-base", "--is-ancestor", commit_sha, "HEAD"]).quiet_success())
     }
 
     /// 获取当前分支的 commits 列表
@@ -492,11 +499,12 @@ impl GitCommit {
     pub fn get_branch_commits(count: usize) -> Result<Vec<CommitInfo>> {
         // 使用 git log 获取当前分支的 commits
         // git log -n <count> --format="%H|%s|%an <%ae>|%ai"
-        let output = cmd_read(&[
+        let output = GitCommand::new([
             "log",
             &format!("-{}", count),
             "--format=%H|%s|%an <%ae>|%ai",
-        ])?;
+        ])
+        .read()?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());
@@ -528,7 +536,8 @@ impl GitCommit {
     ///
     /// 返回父 commit 的完整 SHA。如果 commit 没有父 commit（根 commit），返回错误。
     pub fn get_parent_commit(commit_sha: &str) -> Result<String> {
-        let parent_sha = cmd_read(&["rev-parse", &format!("{}^", commit_sha)])
+        let parent_sha = GitCommand::new(["rev-parse", &format!("{}^", commit_sha)])
+            .read()
             .wrap_err_with(|| format!("Failed to get parent commit of: {}", commit_sha))?;
         Ok(parent_sha.trim().to_string())
     }
@@ -548,12 +557,13 @@ impl GitCommit {
         // 使用 git log 获取从 from_commit 到 HEAD 的所有 commits
         // git log from_commit..HEAD --format="%H|%s|%an <%ae>|%ai" --reverse
         // --reverse 表示从旧到新排列
-        let output = cmd_read(&[
+        let output = GitCommand::new([
             "log",
             &format!("{}..HEAD", from_commit),
             "--format=%H|%s|%an <%ae>|%ai",
             "--reverse",
-        ])?;
+        ])
+        .read()?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());

@@ -153,16 +153,14 @@ impl CompletionGenerator {
         let filename = get_completion_filename(&shell_type_str, command_name)?;
         let output_file = self.output_dir.join(&filename);
 
-        FileWriter::new(&output_file)
-            .write_bytes(&buffer)
-            .wrap_err_with(|| {
-                format!(
-                    "Failed to write completion file: {} (command: {}, shell: {})",
-                    output_file.display(),
-                    command_name,
-                    self.shell
-                )
-            })?;
+        FileWriter::new(&output_file).write_bytes(&buffer).wrap_err_with(|| {
+            format!(
+                "Failed to write completion file: {} (command: {}, shell: {})",
+                output_file.display(),
+                command_name,
+                self.shell
+            )
+        })?;
 
         Ok(())
     }

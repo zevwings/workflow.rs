@@ -39,10 +39,8 @@ impl PathAccess {
         let entries = fs::read_dir(&self.path)
             .wrap_err_with(|| format!("Failed to read directory: {:?}", self.path))?;
         let mut paths = Vec::new();
-        for entry in entries {
-            if let Ok(entry) = entry {
-                paths.push(entry.path());
-            }
+        for entry in entries.flatten() {
+            paths.push(entry.path());
         }
         Ok(paths)
     }

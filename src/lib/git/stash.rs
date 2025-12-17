@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
-use super::helpers::{cmd_read, cmd_run};
+use super::GitCommand;
 use crate::trace_warn;
 
 /// Stash 条目信息
@@ -83,7 +83,7 @@ impl GitStash {
             args.push("-m");
             args.push(msg);
         }
-        cmd_run(&args).wrap_err("Failed to stash changes")
+        GitCommand::new(args).run().wrap_err("Failed to stash changes")
     }
 
     /// 检查是否有未合并的文件（冲突文件）
@@ -93,7 +93,9 @@ impl GitStash {
     pub fn has_unmerged() -> Result<bool> {
         // 使用 git ls-files -u 检查是否有未合并的路径
         // -u 选项：显示未合并的文件
-        let output = cmd_read(&["ls-files", "-u"]).wrap_err("Failed to check unmerged files")?;
+        let output = GitCommand::new(["ls-files", "-u"])
+            .read()
+            .wrap_err("Failed to check unmerged files")?;
 
         Ok(!output.trim().is_empty())
     }
@@ -110,7 +112,8 @@ impl GitStash {
         // %gd = stash@{n} 格式的引用
         // %ai = 作者日期（ISO 8601 格式）
         // %s = 提交消息（subject）
-        let output = cmd_read(&["stash", "list", "--format=%gd|%ai|%s"])
+        let output = GitCommand::new(["stash", "list", "--format=%gd|%ai|%s"])
+            .read()
             .wrap_err("Failed to list stash entries")?;
 
         if output.trim().is_empty() {
@@ -142,8 +145,9 @@ impl GitStash {
                 let (branch, message) = Self::extract_branch_and_message(&full_message);
 
                 // 获取 commit hash
-                let commit_hash =
-                    cmd_read(&["rev-parse", stash_ref]).unwrap_or_else(|_| String::new());
+                let commit_hash = GitCommand::new(["rev-parse", stash_ref])
+                    .read()
+                    .unwrap_or_else(|_| String::new());
 
                 entries.push(StashEntry {
                     index: stash_index,
@@ -201,7 +205,7 @@ impl GitStash {
     /// 返回 `StashApplyResult`，包含应用状态、冲突信息和警告。
     pub fn stash_apply(stash_ref: Option<&str>) -> Result<StashApplyResult> {
         let stash_ref = stash_ref.unwrap_or("stash@{0}");
-        let result = cmd_run(&["stash", "apply", stash_ref]);
+        let result = GitCommand::new(["stash", "apply", stash_ref]).run();
 
         match result {
             Ok(_) => {
@@ -253,7 +257,8 @@ impl GitStash {
     /// 如果删除失败，返回相应的错误信息。
     pub fn stash_drop(stash_ref: Option<&str>) -> Result<()> {
         let stash_ref = stash_ref.unwrap_or("stash@{0}");
-        cmd_run(&["stash", "drop", stash_ref])
+        GitCommand::new(["stash", "drop", stash_ref])
+            .run()
             .wrap_err_with(|| format!("Failed to drop stash {}", stash_ref))
     }
 
@@ -271,7 +276,7 @@ impl GitStash {
     /// 返回 `StashPopResult`，包含恢复状态、消息和警告信息。
     pub fn stash_pop(stash_ref: Option<&str>) -> Result<StashPopResult> {
         let stash_ref = stash_ref.unwrap_or("stash@{0}");
-        let result = cmd_run(&["stash", "pop", stash_ref]);
+        let result = GitCommand::new(["stash", "pop", stash_ref]).run();
 
         match result {
             Ok(_) => Ok(StashPopResult {
@@ -336,7 +341,8 @@ impl GitStash {
     ///
     /// 返回 `StashStat`，包含文件变更统计信息。
     pub fn stash_show_stat(stash_ref: &str) -> Result<StashStat> {
-        let output = cmd_read(&["stash", "show", "--stat", stash_ref])
+        let output = GitCommand::new(["stash", "show", "--stat", stash_ref])
+            .read()
             .wrap_err("Failed to get stash statistics")?;
 
         // 解析输出，例如：
