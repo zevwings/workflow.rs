@@ -258,12 +258,11 @@ where
 ///
 /// ```rust,no_run
 /// use workflow::base::util::file::write_toml_value;
-/// use toml::Value;
-/// use std::collections::HashMap;
+/// use toml::{map::Map, Value};
 /// use std::path::PathBuf;
 ///
 /// # fn main() -> color_eyre::Result<()> {
-/// let mut table = HashMap::new();
+/// let mut table = Map::new();
 /// table.insert("key".to_string(), Value::String("value".to_string()));
 /// let value = Value::Table(table);
 /// write_toml_value(PathBuf::from("config.toml").as_path(), &value)?;

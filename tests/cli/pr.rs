@@ -5,7 +5,7 @@
 use clap::Parser;
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
-use workflow::cli::PRCommands;
+use workflow::cli::{JiraIdArg, PRCommands};
 
 // 创建一个测试用的 CLI 结构来测试参数解析
 #[derive(Parser)]
@@ -59,7 +59,7 @@ fn test_pr_create_command(
 
     match cli.command {
         PRCommands::Create {
-            jira_ticket: ticket,
+            jira_id: JiraIdArg { jira_id: ticket },
             title: t,
             description: d,
             dry_run: dr,

@@ -45,7 +45,7 @@ pub(crate) fn cmd_run(args: &[&str]) -> Result<()> {
 ///
 /// # 示例
 ///
-/// ```rust,no_run
+/// ```rust,ignore
 /// use workflow::git::helpers::cmd_run_with_env;
 ///
 /// # fn main() -> color_eyre::Result<()> {

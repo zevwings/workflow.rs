@@ -215,7 +215,7 @@ impl<'a, B, Q: ?Sized> RequestConfig<'a, B, Q> {
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = HttpClient::global()?;
 /// let form = multipart::Form::new();
-/// let config = MultipartRequestConfig::new()
+/// let config = MultipartRequestConfig::<()>::new()
 ///     .multipart(form);
 /// let response = client.post_multipart("https://api.example.com/upload", config)?;
 /// # Ok(())
