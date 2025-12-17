@@ -1,4 +1,4 @@
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
 use crate::{log_break, log_message};
 use color_eyre::Result;

@@ -473,7 +473,7 @@ let pr_body = generate_pull_request_body(
 
 ```rust
 use workflow::pr::table::PullRequestRow;
-use workflow::base::util::table::{TableBuilder, TableStyle};
+use workflow::base::table::{TableBuilder, TableStyle};
 
 // 构建 PR 行数据
 let pr_rows = vec![

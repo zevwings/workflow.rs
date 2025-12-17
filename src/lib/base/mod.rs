@@ -6,6 +6,7 @@
 //! - 工具函数（string, format, platform, browser, clipboard, checksum, unzip）
 //! - 交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
 //! - 进度指示器（Spinner, Progress）
+//! - 表格输出工具（TableBuilder, TableStyle）
 //! - 配置管理
 //! - Shell 检测和管理
 //! - LLM 客户端（通用 LLM 接口）
@@ -21,6 +22,7 @@ pub mod logger;
 pub mod prompt;
 pub mod settings;
 pub mod shell;
+pub mod table;
 pub mod util;
 
 // 重新导出常用类型，方便使用
@@ -33,4 +35,5 @@ pub use logger::{LogLevel, Logger, Tracer};
 pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
+pub use table::{TableBuilder, TableStyle};
 pub use util::{format_size, mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};

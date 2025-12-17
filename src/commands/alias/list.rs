@@ -3,7 +3,7 @@
 //! 显示所有已定义的别名，使用表格格式。
 
 use crate::base::alias::AliasManager;
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success};
 use color_eyre::Result;
 use tabled::Tabled;

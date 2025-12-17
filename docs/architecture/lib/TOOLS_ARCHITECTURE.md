@@ -995,7 +995,7 @@ log_message!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilico
 
 ```rust
 use tabled::Tabled;
-use workflow::base::util::table::{TableBuilder, TableStyle};
+use workflow::base::table::{TableBuilder, TableStyle};
 
 #[derive(Tabled)]
 struct User {

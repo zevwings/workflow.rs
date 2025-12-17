@@ -10,7 +10,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::base::indicator::Spinner;
-use crate::base::settings::defaults::default_download_base_dir;
+use crate::base::settings::settings::default_download_base_dir;
 use crate::base::settings::Settings;
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;

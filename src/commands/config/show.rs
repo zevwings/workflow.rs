@@ -5,7 +5,7 @@ use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
 use crate::base::settings::table::{GitHubAccountRow, JiraConfigRow, LLMConfigRow};
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, Result};
 
