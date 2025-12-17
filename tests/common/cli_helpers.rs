@@ -209,4 +209,3 @@ pub fn is_json_format(output: &str) -> bool {
     let trimmed = output.trim();
     trimmed.starts_with('{') && trimmed.ends_with('}')
 }
-
