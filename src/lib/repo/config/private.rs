@@ -4,11 +4,12 @@
 //! This configuration is stored in `~/.workflow/config/repository.toml` and supports iCloud sync.
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::util::path::PathAccess;
 use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::fs;
 use toml::map::Map;
 use toml::Value;
 
@@ -105,11 +106,7 @@ impl PrivateRepoConfig {
             return Ok(Self::default());
         }
 
-        let content =
-            fs::read_to_string(&config_path).wrap_err("Failed to read repository config")?;
-
-        let value: Value =
-            toml::from_str(&content).wrap_err("Failed to parse repository config")?;
+        let value: Value = FileReader::new(&config_path).toml()?;
 
         // Find current repository's configuration sections
         // Format: [${repo_id}], [${repo_id}.branch] and [${repo_id}.pr]
@@ -192,15 +189,11 @@ impl PrivateRepoConfig {
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
-        if let Some(parent) = config_path.parent() {
-            fs::create_dir_all(parent).wrap_err("Failed to create config directory")?;
-        }
+        PathAccess::new(&config_path).ensure_parent_dir_exists()?;
 
         // Read existing configuration (if exists)
         let mut existing_value: Value = if config_path.exists() {
-            let content = fs::read_to_string(&config_path)
-                .wrap_err("Failed to read existing repository config")?;
-            toml::from_str(&content).wrap_err("Failed to parse existing repository config")?
+            FileReader::new(&config_path).toml()?
         } else {
             Value::Table(Map::new())
         };
@@ -257,10 +250,7 @@ impl PrivateRepoConfig {
         }
 
         // Write to file
-        let content = toml::to_string_pretty(&existing_value)
-            .wrap_err("Failed to serialize repository config")?;
-
-        fs::write(&config_path, content).wrap_err("Failed to write repository config file")?;
+        FileWriter::new(&config_path).write_toml(&existing_value)?;
 
         Ok(())
     }

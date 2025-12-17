@@ -1,5 +1,11 @@
 # Workflow - Rust CLI 工具
 
+![GitHub Release](https://img.shields.io/github/v/release/zevwings/workflow.rs)
+![License](https://img.shields.io/badge/license-MIT-green)
+![CI](https://github.com/zevwings/workflow.rs/workflows/CI/badge.svg)
+![Rust Version](https://img.shields.io/badge/rust-1.89+-orange)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
+
 工作流自动化工具的 Rust 实现版本。
 
 ## 🌐 跨平台支持
@@ -54,7 +60,7 @@ brew install workflow
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 
 # 安装指定版本
-VERSION=v1.5.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
 ```
 
 **功能特性**：
@@ -123,7 +129,7 @@ powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.5.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -396,7 +402,7 @@ workflow config import <INPUT> --overwrite      # 导入配置文件（覆盖模
 workflow config import <INPUT> --section jira   # 只导入指定配置段
 workflow config import <INPUT> --dry-run        # 预览导入变更（不实际导入）
 workflow update                    # 更新 Workflow CLI（重新构建并更新所有组件）
-workflow update --version 1.5.4    # 更新到指定版本
+workflow update --version 1.6.4    # 更新到指定版本
 workflow uninstall                 # 卸载 Workflow CLI（删除二进制文件、补全脚本、配置文件）
 workflow version                   # 显示 Workflow CLI 版本
 workflow migrate                   # 执行配置迁移（自动检测并迁移所有待迁移版本）
@@ -467,6 +473,24 @@ workflow branch sync <SOURCE_BRANCH>          # 将指定分支同步到当前�
 workflow branch sync <SOURCE_BRANCH> --rebase # 使用 rebase 同步
 workflow branch sync <SOURCE_BRANCH> --squash  # 使用 squash 合并
 workflow branch sync <SOURCE_BRANCH> --ff-only # 只允许 fast-forward 合并
+
+# 删除分支
+workflow branch delete [BRANCH_NAME]          # 删除指定分支（交互式选择）
+workflow branch delete [BRANCH_NAME] --local-only  # 只删除本地分支
+workflow branch delete [BRANCH_NAME] --remote-only # 只删除远程分支
+workflow branch delete [BRANCH_NAME] --dry-run     # 预览模式
+workflow branch delete [BRANCH_NAME] --force       # 强制删除（跳过确认）
+```
+
+### Tag 管理
+```bash
+# 删除 Tag
+workflow tag delete [TAG_NAME]                # 删除指定 tag（本地和远程）
+workflow tag delete [TAG_NAME] --local        # 只删除本地 tag
+workflow tag delete [TAG_NAME] --remote       # 只删除远程 tag
+workflow tag delete --pattern "v1.*"          # 删除匹配模式的 tag
+workflow tag delete [TAG_NAME] --dry-run      # 预览模式
+workflow tag delete [TAG_NAME] --force        # 强制删除（跳过确认）
 ```
 
 ### Commit 管理

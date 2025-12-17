@@ -127,7 +127,7 @@ impl AliasAddCommand {
         );
 
         // 询问是否更新补全脚本
-        let should_update = ConfirmDialog::new("Update completion scripts? (Y/n)")
+        let should_update = ConfirmDialog::new("Update completion scripts?")
             .with_default(true)
             .prompt()
             .unwrap_or(false);

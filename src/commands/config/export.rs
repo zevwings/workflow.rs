@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::file::FileWriter;
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
@@ -427,7 +428,9 @@ impl ConfigExportCommand {
             }
         };
 
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        FileWriter::new(path)
+            .write_str(&content)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", path))?;
 
         Ok(())
     }

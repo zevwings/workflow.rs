@@ -219,7 +219,7 @@ pub trait PlatformProvider {
     fn get_pull_requests(
         &self,
         _state: Option<&str>,
-        _limit: Option<u32>,
+        _limit: Option<usize>,
     ) -> Result<Vec<PullRequestRow>> {
         // 默认实现：返回不支持的错误
         color_eyre::eyre::bail!("get_pull_requests is not supported by this platform")

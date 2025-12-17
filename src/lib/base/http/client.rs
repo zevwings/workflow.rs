@@ -10,7 +10,7 @@ use serde_json::Value;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use super::config::RequestConfig;
+use super::config::{MultipartRequestConfig, RequestConfig};
 use super::method::HttpMethod;
 use super::response::HttpResponse;
 
@@ -320,5 +320,112 @@ impl HttpClient {
         self.build_request(method, url, config)
             .send()
             .wrap_err_with(|| format!("Failed to send {} request to: {}", method, url))
+    }
+
+    /// 构建 Multipart 请求（内部辅助方法）
+    ///
+    /// 根据指定的 URL 和配置构建 multipart 请求。
+    ///
+    /// # 参数
+    ///
+    /// * `url` - 请求 URL
+    /// * `config` - Multipart 请求配置，包含 multipart form 数据、查询参数、认证信息、Headers 和超时时间
+    ///
+    /// # 类型参数
+    ///
+    /// * `Q` - 查询参数的类型，必须实现 `Serialize` trait
+    ///
+    /// # 返回
+    ///
+    /// 返回配置好的 `RequestBuilder`。
+    fn build_multipart_request<Q>(
+        &self,
+        url: &str,
+        mut config: MultipartRequestConfig<Q>,
+    ) -> reqwest::blocking::RequestBuilder
+    where
+        Q: Serialize,
+    {
+        let mut request = self.client.post(url);
+
+        // 添加 multipart form 数据（必须）
+        if let Some(multipart) = config.multipart.take() {
+            request = request.multipart(multipart);
+        }
+
+        // 添加 query 参数
+        if let Some(query) = config.query {
+            request = request.query(&query);
+        }
+
+        // 添加 auth
+        if let Some(auth) = config.auth {
+            request = request.basic_auth(&auth.username, Some(&auth.password));
+        }
+
+        // 添加 headers
+        if let Some(headers) = config.headers {
+            for (key, value) in headers.iter() {
+                request = request.header(key, value);
+            }
+        }
+
+        // 设置超时（如果提供了则使用，否则使用默认 30 秒）
+        let timeout_duration = config.timeout.unwrap_or_else(|| Duration::from_secs(30));
+        request = request.timeout(timeout_duration);
+
+        request
+    }
+
+    /// POST Multipart 请求
+    ///
+    /// 发送 multipart/form-data 请求，通常用于文件上传。
+    ///
+    /// # 参数
+    ///
+    /// * `url` - 请求 URL
+    /// * `config` - Multipart 请求配置
+    ///
+    /// # 类型参数
+    ///
+    /// * `Q` - 查询参数的类型，必须实现 `Serialize` trait
+    ///
+    /// # 返回
+    ///
+    /// 返回 `HttpResponse`。
+    ///
+    /// # 错误
+    ///
+    /// 如果请求失败，返回相应的错误信息。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::base::http::{HttpClient, MultipartRequestConfig};
+    /// use reqwest::blocking::multipart;
+    ///
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = HttpClient::global()?;
+    /// let form = multipart::Form::new();
+    /// let config = MultipartRequestConfig::<serde_json::Value>::new()
+    ///     .multipart(form);
+    /// let response = client.post_multipart("https://api.example.com/upload", config)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn post_multipart<Q>(
+        &self,
+        url: &str,
+        config: MultipartRequestConfig<Q>,
+    ) -> Result<HttpResponse>
+    where
+        Q: Serialize,
+    {
+        let response = self
+            .build_multipart_request(url, config)
+            .send()
+            .wrap_err_with(|| format!("Failed to send POST multipart request to: {}", url))?;
+
+        HttpResponse::from_reqwest_response(response)
     }
 }

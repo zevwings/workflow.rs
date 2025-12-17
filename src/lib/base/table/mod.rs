@@ -14,7 +14,7 @@
 //!
 //! ```rust
 //! use tabled::Tabled;
-//! use workflow::base::util::{TableBuilder, TableStyle};
+//! use workflow::base::table::{TableBuilder, TableStyle};
 //!
 //! #[derive(Tabled, Clone)]
 //! struct User {
@@ -137,7 +137,7 @@ fn fix_title_separator(table_output: String) -> String {
 ///
 /// ```rust
 /// use tabled::Tabled;
-/// use workflow::base::util::{TableBuilder, TableStyle};
+/// use workflow::base::table::{TableBuilder, TableStyle};
 ///
 /// #[derive(Tabled)]
 /// struct User {
@@ -176,7 +176,7 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// ```rust
     /// use tabled::Tabled;
-    /// use workflow::base::util::TableBuilder;
+    /// use workflow::base::table::TableBuilder;
     ///
     /// #[derive(Tabled)]
     /// struct Item {
@@ -205,7 +205,7 @@ impl<T: Tabled> TableBuilder<T> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::util::TableBuilder;
+    /// use workflow::base::table::TableBuilder;
     /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_title("My Table");
     /// ```
@@ -223,7 +223,7 @@ impl<T: Tabled> TableBuilder<T> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::util::{TableBuilder, TableStyle};
+    /// use workflow::base::table::{TableBuilder, TableStyle};
     /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_style(TableStyle::Modern);
     /// ```
@@ -241,7 +241,7 @@ impl<T: Tabled> TableBuilder<T> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::util::TableBuilder;
+    /// use workflow::base::table::TableBuilder;
     /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data).with_max_width(80);
     /// ```
@@ -260,7 +260,7 @@ impl<T: Tabled> TableBuilder<T> {
     ///
     /// ```rust,no_run
     /// use tabled::settings::Alignment;
-    /// use workflow::base::util::TableBuilder;
+    /// use workflow::base::table::TableBuilder;
     /// # let data = vec![("name", "value")];
     /// TableBuilder::new(data)
     ///     .with_alignment(vec![Alignment::left(), Alignment::right()]);
@@ -279,7 +279,7 @@ impl<T: Tabled> TableBuilder<T> {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::util::TableBuilder;
+    /// use workflow::base::table::TableBuilder;
     /// use workflow::log_message;
     /// # let data = vec![("name", "value")];
     /// let output = TableBuilder::new(data).render();

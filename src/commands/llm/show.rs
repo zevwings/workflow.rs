@@ -1,9 +1,9 @@
 //! LLM 配置查看命令
 //! 显示当前的 LLM 配置信息
 
-use crate::base::settings::settings::Settings;
+use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::base::settings::table::LLMConfigRow;
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::Result;
 
@@ -49,11 +49,11 @@ impl LLMShowCommand {
     }
 
     /// 检查 LLM 配置是否为空
-    fn is_empty_config(llm: &crate::base::settings::settings::LLMSettings) -> bool {
+    fn is_empty_config(llm: &LLMSettings) -> bool {
         llm.openai.is_empty()
             && llm.deepseek.is_empty()
             && llm.proxy.is_empty()
-            && llm.provider == crate::base::settings::defaults::default_llm_provider()
-            && llm.language == crate::base::settings::defaults::default_language()
+            && llm.provider == LLMSettings::default_provider()
+            && llm.language == LLMSettings::default_language()
     }
 }

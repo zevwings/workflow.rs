@@ -2,9 +2,8 @@
 //! 交互式设置 LLM 相关配置（provider, url, key, model, language）
 
 use crate::base::dialog::{InputDialog, SelectDialog};
-use crate::base::settings::defaults::default_llm_model;
 use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
+use crate::base::settings::settings::{LLMSettings, Settings};
 use crate::commands::config::helpers::select_language;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success};
@@ -66,8 +65,11 @@ impl LLMSetupCommand {
                 };
 
                 // 配置 OpenAI model
-                let default_model =
-                    existing.openai.model.clone().unwrap_or_else(|| default_llm_model("openai"));
+                let default_model = existing
+                    .openai
+                    .model
+                    .clone()
+                    .unwrap_or_else(|| LLMSettings::default_model("openai"));
 
                 let model_prompt = if existing.openai.model.is_some() {
                     "OpenAI model (press Enter to keep)".to_string()
@@ -130,7 +132,7 @@ impl LLMSetupCommand {
                     .deepseek
                     .model
                     .clone()
-                    .unwrap_or_else(|| default_llm_model("deepseek"));
+                    .unwrap_or_else(|| LLMSettings::default_model("deepseek"));
 
                 let model_prompt = if existing.deepseek.model.is_some() {
                     "DeepSeek model (press Enter to keep)".to_string()
@@ -252,8 +254,11 @@ impl LLMSetupCommand {
                 };
 
                 // 配置 Proxy model（必填）
-                let default_model =
-                    existing.proxy.model.clone().unwrap_or_else(|| default_llm_model("proxy"));
+                let default_model = existing
+                    .proxy
+                    .model
+                    .clone()
+                    .unwrap_or_else(|| LLMSettings::default_model("proxy"));
 
                 let model_prompt = if existing.proxy.model.is_some() {
                     "LLM model (required) (press Enter to keep)".to_string()

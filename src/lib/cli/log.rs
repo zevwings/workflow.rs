@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::JiraIdArg;
+use super::args::JiraIdArg;
 
 /// Log operations subcommands
 ///

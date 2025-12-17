@@ -1,5 +1,5 @@
 use crate::base::indicator::Spinner;
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
 use crate::jira::Jira;
 use crate::{log_break, log_message};

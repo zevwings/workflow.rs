@@ -1,25 +1,19 @@
 use std::sync::OnceLock;
 
+use crate::base::util::file::FileReader;
 use color_eyre::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use serde_with::skip_serializing_none;
-use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 
-use super::defaults::default_llm_model;
+use super::paths::Paths;
 use crate::base::http::{Authorization, HttpClient, RequestConfig};
 use crate::jira::types::JiraUser;
 use crate::mask_sensitive_value;
 use crate::pr::GitHub;
 use std::collections::HashMap;
-
-use super::defaults::{
-    default_download_base_dir_option, default_language, default_llm_provider, default_log_folder,
-    default_log_settings,
-};
-use super::paths::Paths;
 
 // ==================== 返回结构体 ====================
 
@@ -203,15 +197,33 @@ impl GitHubSettings {
     }
 }
 
+/// 默认下载基础目录路径
+///
+/// 跨平台支持：
+/// - Unix (macOS/Linux): `~/Documents/Workflow`
+/// - Windows: `%USERPROFILE%\Documents\Workflow`
+pub fn default_download_base_dir() -> String {
+    // 使用 dirs::home_dir() 获取主目录
+    dirs::home_dir()
+        .map(|h| h.join("Documents").join("Workflow").to_string_lossy().to_string())
+        .unwrap_or_else(|| {
+            if cfg!(target_os = "windows") {
+                "C:\\Users\\User\\Documents\\Workflow".to_string()
+            } else {
+                "~/Documents/Workflow".to_string()
+            }
+        })
+}
+
 /// 日志配置（TOML）
 #[skip_serializing_none]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogSettings {
     /// 日志输出文件夹名称
-    #[serde(default = "default_log_folder")]
+    #[serde(default = "LogSettings::default_log_folder")]
     pub output_folder_name: String,
     /// 日志下载基础目录
-    #[serde(default = "default_download_base_dir_option")]
+    #[serde(default = "LogSettings::default_download_base_dir_option")]
     pub download_base_dir: Option<String>,
     /// 日志级别（none, error, warn, info, debug）
     pub level: Option<String>,
@@ -222,9 +234,26 @@ pub struct LogSettings {
     pub enable_trace_console: Option<bool>,
 }
 
+impl LogSettings {
+    /// 默认日志文件夹名称
+    pub fn default_log_folder() -> String {
+        "logs".to_string()
+    }
+
+    /// 默认下载基础目录路径（Option 类型）
+    pub fn default_download_base_dir_option() -> Option<String> {
+        Some(default_download_base_dir())
+    }
+}
+
 impl Default for LogSettings {
     fn default() -> Self {
-        default_log_settings()
+        Self {
+            output_folder_name: Self::default_log_folder(),
+            download_base_dir: Self::default_download_base_dir_option(),
+            level: None,
+            enable_trace_console: None,
+        }
     }
 }
 
@@ -275,11 +304,14 @@ impl LLMProviderSettings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LLMSettings {
     /// 当前使用的 LLM Provider (openai, deepseek, proxy)
-    #[serde(default = "default_llm_provider")]
+    #[serde(default = "LLMSettings::default_provider")]
     pub provider: String,
     /// LLM 输出语言（en, zh, zh-CN, zh-TW 等，默认 en），用于控制 AI 生成内容（如 PR 总结等）的语言
     /// 所有 provider 共享此语言设置
-    #[serde(default = "default_language", skip_serializing_if = "String::is_empty")]
+    #[serde(
+        default = "LLMSettings::default_language",
+        skip_serializing_if = "String::is_empty"
+    )]
     pub language: String,
     /// OpenAI 配置
     #[serde(default, skip_serializing_if = "LLMProviderSettings::is_empty")]
@@ -295,8 +327,8 @@ pub struct LLMSettings {
 impl Default for LLMSettings {
     fn default() -> Self {
         Self {
-            provider: default_llm_provider(),
-            language: default_language(),
+            provider: Self::default_provider(),
+            language: Self::default_language(),
             openai: LLMProviderSettings::default(),
             deepseek: LLMProviderSettings::default(),
             proxy: LLMProviderSettings::default(),
@@ -305,6 +337,25 @@ impl Default for LLMSettings {
 }
 
 impl LLMSettings {
+    /// 默认 LLM Provider
+    pub fn default_provider() -> String {
+        "openai".to_string()
+    }
+
+    /// 根据 Provider 获取默认模型
+    pub fn default_model(provider: &str) -> String {
+        match provider {
+            "openai" => "gpt-4.0".to_string(),
+            "deepseek" => "deepseek-chat".to_string(),
+            _ => String::new(), // proxy 必须输入，没有默认值
+        }
+    }
+
+    /// 默认 LLM 输出语言
+    pub fn default_language() -> String {
+        "en".to_string()
+    }
+
     /// 获取当前 provider 的配置
     pub fn current_provider(&self) -> &LLMProviderSettings {
         match self.provider.as_str() {
@@ -330,42 +381,8 @@ impl LLMSettings {
         self.openai.is_empty()
             && self.deepseek.is_empty()
             && self.proxy.is_empty()
-            && self.provider == default_llm_provider()
-            && self.language == default_language()
-    }
-
-    /// 从旧格式迁移配置（向后兼容）
-    /// 如果配置文件中存在旧的格式（url, key, model 在顶层），则迁移到新格式
-    pub fn migrate_from_old_format(
-        old_provider: &str,
-        old_url: &Option<String>,
-        old_key: &Option<String>,
-        old_model: &Option<String>,
-    ) -> Self {
-        let mut new = LLMSettings {
-            provider: old_provider.to_string(),
-            ..Default::default()
-        };
-
-        // 根据 provider 将旧配置迁移到对应的 provider 配置块
-        match old_provider {
-            "openai" => {
-                new.openai.key = old_key.clone();
-                new.openai.model = old_model.clone();
-            }
-            "deepseek" => {
-                new.deepseek.key = old_key.clone();
-                new.deepseek.model = old_model.clone();
-            }
-            "proxy" => {
-                new.proxy.url = old_url.clone();
-                new.proxy.key = old_key.clone();
-                new.proxy.model = old_model.clone();
-            }
-            _ => {}
-        }
-
-        new
+            && self.provider == Self::default_provider()
+            && self.language == Self::default_language()
     }
 }
 
@@ -403,66 +420,14 @@ impl Settings {
 
     /// 从 workflow.toml 配置文件加载设置
     /// 如果配置文件不存在或字段缺失，使用默认值
-    /// 支持从旧格式（扁平结构）自动迁移到新格式（按 provider 分组）
     pub fn load() -> Self {
         match Paths::workflow_config() {
             Ok(config_path) => {
                 if !config_path.exists() {
                     Self::default()
                 } else {
-                    match fs::read_to_string(&config_path) {
-                        Ok(content) => {
-                            // 先尝试解析为新格式
-                            match toml::from_str::<Self>(&content) {
-                                Ok(settings) => settings,
-                                Err(_) => {
-                                    // 如果解析失败，尝试解析为旧格式并迁移
-                                    #[derive(Debug, Default, Deserialize)]
-                                    struct OldLLMSettings {
-                                        #[serde(default = "default_llm_provider")]
-                                        provider: String,
-                                        url: Option<String>,
-                                        key: Option<String>,
-                                        model: Option<String>,
-                                        #[serde(default = "default_language")]
-                                        language: String,
-                                    }
-
-                                    #[derive(Debug, Deserialize)]
-                                    struct OldSettings {
-                                        #[serde(default)]
-                                        jira: JiraSettings,
-                                        #[serde(default)]
-                                        github: GitHubSettings,
-                                        #[serde(default)]
-                                        log: LogSettings,
-                                        #[serde(default)]
-                                        llm: OldLLMSettings,
-                                    }
-
-                                    match toml::from_str::<OldSettings>(&content) {
-                                        Ok(old_settings) => {
-                                            // 迁移旧格式到新格式
-                                            let mut llm = LLMSettings::migrate_from_old_format(
-                                                &old_settings.llm.provider,
-                                                &old_settings.llm.url,
-                                                &old_settings.llm.key,
-                                                &old_settings.llm.model,
-                                            );
-                                            llm.language = old_settings.llm.language;
-                                            Settings {
-                                                jira: old_settings.jira,
-                                                github: old_settings.github,
-                                                log: old_settings.log,
-                                                llm,
-                                                aliases: HashMap::new(),
-                                            }
-                                        }
-                                        Err(_) => Self::default(),
-                                    }
-                                }
-                            }
-                        }
+                    match FileReader::new(&config_path).to_string() {
+                        Ok(content) => toml::from_str::<Self>(&content).unwrap_or_default(),
                         Err(_) => Self::default(),
                     }
                 }
@@ -535,7 +500,7 @@ impl Settings {
         let model = if let Some(ref model) = current.model {
             model.clone()
         } else {
-            default_llm_model(&self.llm.provider)
+            LLMSettings::default_model(&self.llm.provider)
         };
 
         // 组合 model 和 URL（仅在 provider 为 "proxy" 时显示 URL）
@@ -564,7 +529,7 @@ impl Settings {
         let language = if !self.llm.language.is_empty() {
             self.llm.language.clone()
         } else {
-            default_language()
+            LLMSettings::default_language()
         };
 
         LLMConfigInfo {

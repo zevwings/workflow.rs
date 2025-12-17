@@ -9,7 +9,6 @@ use std::process::Command;
 use std::time::{Duration, UNIX_EPOCH};
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
-use indicatif::{ProgressBar, ProgressStyle};
 use reqwest::header::HeaderMap;
 use serde::Deserialize;
 use serde_json::Value;
@@ -19,7 +18,7 @@ use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
 };
-use crate::base::indicator::Spinner;
+use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
@@ -359,24 +358,11 @@ impl UpdateCommand {
                     .and_then(|s| s.parse::<u64>().ok());
 
                 // 创建进度条
-                let pb = if let Some(size) = total_size {
+                let progress = if let Some(size) = total_size {
                     log_info!("File size: {}", format_size(size));
-                    let pb = ProgressBar::new(size);
-                    pb.set_style(
-                        ProgressStyle::default_bar()
-                            .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")
-                            .unwrap()
-                            .progress_chars("#>-"),
-                    );
-                    pb
+                    Progress::new_download(size, "Downloading update package...")
                 } else {
-                    let pb = ProgressBar::new_spinner();
-                    pb.set_style(
-                        ProgressStyle::default_spinner()
-                            .template("{spinner:.green} [{elapsed_precise}] {bytes} downloaded...")
-                            .unwrap(),
-                    );
-                    pb
+                    Progress::new_unknown("Downloading update package...")
                 };
 
                 let mut file = File::create(output_path).wrap_err_with(|| {
@@ -397,10 +383,10 @@ impl UpdateCommand {
                     file.write_all(&buffer[..bytes_read]).wrap_err("Failed to write to file")?;
 
                     downloaded_bytes += bytes_read as u64;
-                    pb.set_position(downloaded_bytes);
+                    progress.set_position(downloaded_bytes);
                 }
 
-                pb.finish_with_message("Download complete");
+                progress.finish_with_message("Download complete");
                 Ok(())
             },
             &retry_config,

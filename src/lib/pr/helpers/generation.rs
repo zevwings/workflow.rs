@@ -50,7 +50,7 @@ pub fn generate_pull_request_body(
         jira_key: jira_ticket.map(|s| s.to_string()),
         jira_summary: jira_info.as_ref().map(|i| i.fields.summary.clone()),
         jira_description: jira_info.as_ref().and_then(|i| i.fields.description.clone()),
-        jira_type: None, // TODO: Extract from jira_info if available
+        jira_type: None,
         jira_service_address,
         change_types,
         short_description: short_description.map(|s| s.to_string()),

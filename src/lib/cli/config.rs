@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::DryRunArgs;
+use super::args::DryRunArgs;
 
 /// Log level management subcommands
 ///

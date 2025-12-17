@@ -15,6 +15,7 @@ use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::ShellConfigManager;
+use crate::base::util::file::FileWriter;
 use crate::trace_debug;
 use crate::trace_info;
 
@@ -94,7 +95,7 @@ impl Completion {
             _ => return Ok(None),
         };
 
-        fs::write(&config_file, config_content).wrap_err_with(|| {
+        FileWriter::new(&config_file).write_str(&config_content).wrap_err_with(|| {
             format!(
                 "Failed to write workflow completion config file: {}",
                 config_file.display()

@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::{DryRunArgs, JiraIdArg};
+use super::args::{DryRunArgs, JiraIdArg};
 
 /// Branch management subcommands
 ///

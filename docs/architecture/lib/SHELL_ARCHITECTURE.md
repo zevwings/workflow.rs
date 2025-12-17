@@ -552,3 +552,7 @@ export KEY2="value2"
 - [主架构文档](../ARCHITECTURE.md)
 
 ---
+
+---
+
+**最后更新**: 2025-12-16

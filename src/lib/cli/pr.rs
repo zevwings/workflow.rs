@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::common::DryRunArgs;
+use super::args::{DryRunArgs, JiraIdArg, PaginationArgs};
 
 /// PR commands enumeration
 ///
@@ -14,9 +14,8 @@ pub enum PRCommands {
     /// Supports auto-detection of repository type (GitHub), and optionally uses AI to generate PR title.
     /// If a Jira ticket is provided, will automatically update Jira status.
     Create {
-        /// Jira ticket ID (optional, e.g., PROJ-123)
-        #[arg(value_name = "JIRA_TICKET")]
-        jira_ticket: Option<String>,
+        #[command(flatten)]
+        jira_id: JiraIdArg,
 
         /// PR title (optional, will use AI generation if not provided)
         #[arg(short, long)]
@@ -58,9 +57,8 @@ pub enum PRCommands {
         #[arg(short, long)]
         state: Option<String>,
 
-        /// Limit the number of results
-        #[arg(short, long)]
-        limit: Option<u32>,
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
     /// Update code (use PR title as commit message)
     ///

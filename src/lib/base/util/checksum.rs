@@ -54,6 +54,8 @@ impl Checksum {
     /// # }
     /// ```
     pub fn calculate_file_sha256(file_path: &Path) -> Result<String> {
+        // 注意：这里直接使用 File::open() 进行流式读取，使用自定义缓冲区分块读取
+        // 不需要 BufReader，因为代码已经手动管理了固定大小的缓冲区（8192 字节）
         let mut file = File::open(file_path)
             .wrap_err_with(|| format!("Failed to open file: {}", file_path.display()))?;
 

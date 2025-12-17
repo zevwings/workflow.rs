@@ -1,4 +1,4 @@
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::pr::platform::create_provider_auto;
 use crate::{log_break, log_message};
 use color_eyre::Result;
@@ -10,7 +10,7 @@ pub struct PullRequestListCommand;
 #[allow(dead_code)]
 impl PullRequestListCommand {
     /// 列出 PR
-    pub fn list(state: Option<String>, limit: Option<u32>) -> Result<()> {
+    pub fn list(state: Option<String>, limit: Option<usize>) -> Result<()> {
         log_break!('=', 40, "PR List");
         let provider = create_provider_auto()?;
 

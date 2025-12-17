@@ -6,7 +6,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use super::helpers::{cmd_read, cmd_run};
+use super::GitCommand;
 use crate::trace_info;
 
 /// Git 配置结果
@@ -42,11 +42,13 @@ impl GitConfig {
         trace_info!("Updating Git global config: email={}, name={}", email, name);
 
         // 设置全局 user.email
-        cmd_run(&["config", "--global", "user.email", email])
+        GitCommand::new(["config", "--global", "user.email", email])
+            .run()
             .wrap_err("Failed to set git global user.email")?;
 
         // 设置全局 user.name
-        cmd_run(&["config", "--global", "user.name", name])
+        GitCommand::new(["config", "--global", "user.name", name])
+            .run()
             .wrap_err("Failed to set git global user.name")?;
 
         trace_info!("Git global config updated successfully");
@@ -69,9 +71,15 @@ impl GitConfig {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn get_global_user() -> Result<(Option<String>, Option<String>)> {
-        let email = cmd_read(&["config", "--global", "user.email"]).ok().filter(|s| !s.is_empty());
+        let email = GitCommand::new(["config", "--global", "user.email"])
+            .read()
+            .ok()
+            .filter(|s| !s.is_empty());
 
-        let name = cmd_read(&["config", "--global", "user.name"]).ok().filter(|s| !s.is_empty());
+        let name = GitCommand::new(["config", "--global", "user.name"])
+            .read()
+            .ok()
+            .filter(|s| !s.is_empty());
 
         Ok((email, name))
     }

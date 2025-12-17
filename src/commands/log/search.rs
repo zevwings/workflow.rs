@@ -1,5 +1,5 @@
 use crate::base::dialog::InputDialog;
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::jira::logs::JiraLogs;
 use crate::jira::logs::SearchResultRow;
 use crate::{log_break, log_debug, log_message, log_success, log_warning};

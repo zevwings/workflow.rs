@@ -13,7 +13,10 @@ use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
 
 use super::types::{ChatCompletionResponse, LLMRequestParams};
-use crate::{base::http::HttpResponse, base::settings::defaults::default_llm_model, Settings};
+use crate::{
+    base::{http::HttpResponse, settings::settings::LLMSettings},
+    Settings,
+};
 
 /// LLM 客户端
 ///
@@ -184,7 +187,7 @@ impl LLMClient {
 
         match provider.as_str() {
             "openai" | "deepseek" => {
-                Ok(current.model.clone().unwrap_or_else(|| default_llm_model(provider)))
+                Ok(current.model.clone().unwrap_or_else(|| LLMSettings::default_model(provider)))
             }
             "proxy" => current.model.clone().wrap_err("Model is required for proxy provider"),
             _ => current.model.clone().wrap_err("Model is required"),

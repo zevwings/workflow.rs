@@ -295,6 +295,143 @@ pub const MAX_DOWNLOAD_SIZE: usize = 100 * 1024 * 1024; // 100MB
 pub const DEFAULT_TIMEOUT_SECS: u64 = 30;
 ```
 
+### CLI 参数命名规范
+
+CLI 参数命名需要遵循以下规范，确保一致性和可维护性。
+
+#### 结构体字段名
+
+- 使用 `snake_case`（如 `jira_id`、`dry_run`、`output_format`）
+
+```rust
+#[derive(Args, Debug, Clone)]
+pub struct JiraIdArg {
+    pub jira_id: Option<String>,  // ✅ snake_case
+}
+```
+
+#### value_name 规范
+
+- 使用 `SCREAMING_SNAKE_CASE`（如 `JIRA_ID`、`DRY_RUN`、`PR_ID`）
+- 用于在帮助信息中显示参数值的占位符
+
+```rust
+/// Jira ticket ID (optional, will prompt interactively if not provided)
+#[arg(value_name = "JIRA_ID")]  // ✅ SCREAMING_SNAKE_CASE
+pub jira_id: Option<String>,
+```
+
+#### 参数长名规范
+
+- 使用 `kebab-case`（clap 自动从字段名转换，如 `--jira-id`、`--dry-run`）
+- 字段名使用 `snake_case`，clap 会自动转换为 `kebab-case`
+
+```rust
+#[arg(long)]  // 自动生成 --jira-id
+pub jira_id: Option<String>,
+```
+
+#### 参数短名规范
+
+- 使用单个字符（如 `-n`、`-f`、`-v`）
+- 优先使用常见的短名（如 `-n` 用于 dry-run，`-f` 用于 force）
+
+```rust
+#[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
+pub dry_run: bool,  // --dry-run 或 -n
+```
+
+#### 参数类型规范
+
+- **可选参数**：使用 `Option<T>`
+- **必需参数**：直接使用类型（如 `String`、`usize`）
+- **布尔标志**：使用 `bool` + `action = clap::ArgAction::SetTrue`
+
+```rust
+// ✅ 可选参数
+#[arg(value_name = "JIRA_ID")]
+pub jira_id: Option<String>,
+
+// ✅ 必需参数
+#[arg(value_name = "BRANCH_NAME")]
+pub branch_name: String,
+
+// ✅ 布尔标志
+#[arg(long, short = 'f', action = clap::ArgAction::SetTrue)]
+pub force: bool,
+```
+
+#### 文档注释规范
+
+所有参数必须有文档注释，说明参数的用途、格式和默认行为：
+
+```rust
+/// Jira ticket ID (optional, will prompt interactively if not provided)
+///
+/// Examples:
+///   workflow jira info PROJ-123
+///   workflow jira info  # Will prompt for JIRA ID
+#[arg(value_name = "JIRA_ID")]
+pub jira_id: Option<String>,
+```
+
+#### 命名一致性规范
+
+- **相同语义的参数必须使用相同的命名**：
+  - ✅ 统一使用 `jira_id`（而不是 `jira_ticket`、`jira-id` 等）
+  - ✅ 统一使用 `dry_run`（而不是 `dry-run`、`dryrun` 等）
+  - ✅ 统一使用 `output_format`（而不是 `format`、`output` 等）
+
+- **value_name 必须与字段名语义一致**：
+  - 字段名：`jira_id` → value_name：`JIRA_ID`
+  - 字段名：`dry_run` → value_name：`DRY_RUN`（但通常布尔标志不需要 value_name）
+
+#### 共用参数规范
+
+对于在多个命令中重复使用的参数，应该提取为共用参数组（见 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)）：
+
+```rust
+// src/lib/cli/args.rs
+/// 可选 JIRA ID 参数
+#[derive(Args, Debug, Clone)]
+pub struct JiraIdArg {
+    /// Jira ticket ID (optional, will prompt interactively if not provided)
+    #[arg(value_name = "JIRA_ID")]
+    pub jira_id: Option<String>,
+}
+
+// 在命令中使用
+use super::args::JiraIdArg;
+
+#[derive(Subcommand)]
+pub enum MySubcommand {
+    Info {
+        #[command(flatten)]
+        jira_id: JiraIdArg,  // ✅ 使用共用参数
+    },
+}
+```
+
+#### 示例对比
+
+```rust
+// ❌ 不好的做法
+Create {
+    #[arg(value_name = "jira_ticket")]  // value_name 应该大写
+    jira_ticket: Option<String>,  // 命名不一致（应该用 jira_id）
+}
+
+// ✅ 好的做法
+Create {
+    #[command(flatten)]
+    jira_id: JiraIdArg,  // 使用共用参数，命名一致
+}
+```
+
+**参考**：
+- [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 参数复用检查和参数提取指南
+- [clap 文档](https://docs.rs/clap/) - clap 参数定义规范
+
 ---
 
 ## 📁 模块组织
@@ -597,3 +734,7 @@ cargo fmt --check && cargo clippy -- -D warnings
 - [Rust API 指南](https://rust-lang.github.io/api-guidelines/) - Rust API 设计指南
 
 ---
+
+---
+
+**最后更新**: 2025-12-16

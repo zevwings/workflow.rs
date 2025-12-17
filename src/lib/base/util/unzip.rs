@@ -4,10 +4,11 @@
 use color_eyre::{eyre::WrapErr, Result};
 use flate2::read::GzDecoder;
 use std::fs::{self, File};
-use std::io::BufReader;
 use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
+
+use crate::base::util::FileReader;
 
 /// 解压工具
 ///
@@ -46,12 +47,11 @@ impl Unzip {
         // 创建输出目录
         fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
 
-        // 打开 tar.gz 文件
-        let file = File::open(tar_gz_path)
-            .wrap_err_with(|| format!("Failed to open file: {}", tar_gz_path.display()))?;
+        // 打开 tar.gz 文件并创建 BufReader
+        let reader = FileReader::new(tar_gz_path).open()?;
 
         // 创建 Gzip 解码器
-        let decoder = GzDecoder::new(BufReader::new(file));
+        let decoder = GzDecoder::new(reader);
         let mut archive = Archive::new(decoder);
 
         // 解压到目标目录
@@ -92,6 +92,7 @@ impl Unzip {
         fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
 
         // 打开 zip 文件
+        // 注意：ZipArchive::new() 需要 File 类型，不能使用 FileReader::open() 返回的 BufReader<File>
         let file = File::open(zip_path)
             .wrap_err_with(|| format!("Failed to open zip file: {}", zip_path.display()))?;
 

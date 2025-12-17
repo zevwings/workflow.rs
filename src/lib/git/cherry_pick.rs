@@ -8,7 +8,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use super::helpers::cmd_run;
+use super::GitCommand;
 
 /// Git Cherry-pick 管理
 ///
@@ -36,7 +36,8 @@ impl GitCherryPick {
     ///
     /// 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续。
     pub fn cherry_pick(commit: &str) -> Result<()> {
-        cmd_run(&["cherry-pick", commit])
+        GitCommand::new(["cherry-pick", commit])
+            .run()
             .wrap_err_with(|| format!("Failed to cherry-pick commit: {}", commit))
     }
 
@@ -58,7 +59,8 @@ impl GitCherryPick {
     /// - 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续
     /// - 修改会保留在工作区，需要手动提交
     pub fn cherry_pick_no_commit(commit: &str) -> Result<()> {
-        cmd_run(&["cherry-pick", "--no-commit", commit])
+        GitCommand::new(["cherry-pick", "--no-commit", commit])
+            .run()
             .wrap_err_with(|| format!("Failed to cherry-pick commit (no-commit): {}", commit))
     }
 
@@ -70,7 +72,9 @@ impl GitCherryPick {
     ///
     /// 如果继续操作失败，返回相应的错误信息。
     pub fn cherry_pick_continue() -> Result<()> {
-        cmd_run(&["cherry-pick", "--continue"]).wrap_err("Failed to continue cherry-pick")
+        GitCommand::new(["cherry-pick", "--continue"])
+            .run()
+            .wrap_err("Failed to continue cherry-pick")
     }
 
     /// 中止 cherry-pick 操作
@@ -81,7 +85,9 @@ impl GitCherryPick {
     ///
     /// 如果中止操作失败，返回相应的错误信息。
     pub fn cherry_pick_abort() -> Result<()> {
-        cmd_run(&["cherry-pick", "--abort"]).wrap_err("Failed to abort cherry-pick")
+        GitCommand::new(["cherry-pick", "--abort"])
+            .run()
+            .wrap_err("Failed to abort cherry-pick")
     }
 
     /// 检查是否正在进行 cherry-pick 操作

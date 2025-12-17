@@ -995,7 +995,7 @@ log_message!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilico
 
 ```rust
 use tabled::Tabled;
-use workflow::base::util::table::{TableBuilder, TableStyle};
+use workflow::base::table::{TableBuilder, TableStyle};
 
 #[derive(Tabled)]
 struct User {
@@ -1039,3 +1039,7 @@ log_message!("{}", output);
 - ✅ **跨平台**：所有工具函数支持多平台
 - ✅ **高性能**：宏在编译时展开，流式处理文件
 - ✅ **类型安全**：使用泛型和 trait 保证类型安全
+
+---
+
+**最后更新**: 2025-12-16
