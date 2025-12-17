@@ -147,16 +147,24 @@ fn setup_git_repo_with_gix() -> (TempDir, std::path::PathBuf) {
     let temp_dir = TempDir::new().unwrap();
     let temp_path = temp_dir.path();
 
-    // 使用 gix 初始化仓库
-    let _repo = gix::init(temp_path).unwrap();
+    // 切换到临时目录，确保 gix::init 有正确的工作目录上下文
+    std::env::set_current_dir(temp_path).unwrap();
+
+    // 使用 gix 初始化仓库（在临时目录中）
+    let _repo = gix::init(".").unwrap();
 
     // 设置基本的 Git 配置
-    let config_path = temp_path.join(".git").join("config");
-    std::fs::write(
-        &config_path,
-        "[user]\n\tname = Test User\n\temail = test@example.com\n",
-    )
-    .unwrap();
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .current_dir(temp_path)
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(temp_path)
+        .output()
+        .expect("Failed to set git user email");
 
     // 创建初始文件
     let readme_path = temp_path.join("README.md");

@@ -107,7 +107,7 @@ impl CliCommandBuilder {
     /// 创建新的命令构建器
     pub fn new() -> Self {
         Self {
-            cmd: Command::cargo_bin("workflow").expect("Failed to find workflow binary"),
+            cmd: Command::new(assert_cmd::cargo::cargo_bin!("workflow")),
         }
     }
 
@@ -163,21 +163,6 @@ impl CliCommandBuilder {
 pub struct TestDataGenerator;
 
 impl TestDataGenerator {
-    /// 生成测试用的 JIRA ID
-    pub fn jira_id() -> String {
-        "TEST-123".to_string()
-    }
-
-    /// 生成测试用的分支名
-    pub fn branch_name() -> String {
-        "feature/test-branch".to_string()
-    }
-
-    /// 生成测试用的提交消息
-    pub fn commit_message() -> String {
-        "feat: add test feature".to_string()
-    }
-
     /// 生成测试用的配置内容
     pub fn config_content() -> String {
         r#"
@@ -214,19 +199,9 @@ macro_rules! cli_integration_test {
     };
 }
 
-/// 辅助函数：检查输出是否包含成功消息
-pub fn contains_success(output: &str) -> bool {
-    output.contains("✅") || output.contains("成功") || output.contains("Success")
-}
-
 /// 辅助函数：检查输出是否包含错误消息
 pub fn contains_error(output: &str) -> bool {
     output.contains("❌") || output.contains("错误") || output.contains("Error")
-}
-
-/// 辅助函数：检查输出是否包含警告消息
-pub fn contains_warning(output: &str) -> bool {
-    output.contains("⚠️") || output.contains("警告") || output.contains("Warning")
 }
 
 /// 辅助函数：检查输出是否为 JSON 格式
@@ -235,7 +210,3 @@ pub fn is_json_format(output: &str) -> bool {
     trimmed.starts_with('{') && trimmed.ends_with('}')
 }
 
-/// 辅助函数：检查输出是否为表格格式
-pub fn is_table_format(output: &str) -> bool {
-    output.contains('|') && output.contains('-')
-}
