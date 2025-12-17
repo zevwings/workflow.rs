@@ -67,3 +67,29 @@ impl JiraIdArg {
         self.jira_id
     }
 }
+
+/// 分页参数
+///
+/// 用于控制结果的分页显示，支持限制结果数量和偏移量。
+#[derive(Args, Debug, Clone)]
+pub struct PaginationArgs {
+    /// Limit number of results to display
+    #[arg(long, value_name = "LIMIT")]
+    pub limit: Option<usize>,
+
+    /// Offset for pagination
+    #[arg(long, value_name = "OFFSET")]
+    pub offset: Option<usize>,
+}
+
+impl PaginationArgs {
+    /// 获取 limit 值
+    pub fn get_limit(&self) -> Option<usize> {
+        self.limit
+    }
+
+    /// 获取 offset 值
+    pub fn get_offset(&self) -> Option<usize> {
+        self.offset
+    }
+}

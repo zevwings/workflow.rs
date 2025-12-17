@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::{extract_section, parse_config};
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
@@ -117,8 +118,7 @@ impl ConfigImportCommand {
         }
 
         // 读取并解析输入文件
-        let content = fs::read_to_string(&input_path)
-            .wrap_err(format!("Failed to read input file: {:?}", input_path))?;
+        let content = FileReader::new(&input_path).to_string()?;
 
         let imported_settings = parse_config(&content, &input_path)?;
 
@@ -333,10 +333,7 @@ impl ConfigImportCommand {
     /// 验证保存后的配置
     fn verify_saved_config(config_path: &Path) -> Result<bool> {
         // 重新读取配置文件
-        let content = fs::read_to_string(config_path).wrap_err(format!(
-            "Failed to read saved config file: {:?}",
-            config_path
-        ))?;
+        let content = FileReader::new(config_path).to_string()?;
 
         let saved_settings = parse_config(&content, config_path)?;
 
@@ -356,10 +353,7 @@ impl ConfigImportCommand {
 
     /// 保存配置
     fn save_config(settings: &Settings, path: &PathBuf) -> Result<()> {
-        let content =
-            toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?;
-
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        FileWriter::new(path).write_toml(settings)?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]

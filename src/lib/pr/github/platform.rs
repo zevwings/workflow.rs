@@ -194,7 +194,7 @@ impl PlatformProvider for GitHub {
     fn get_pull_requests(
         &self,
         state: Option<&str>,
-        limit: Option<u32>,
+        limit: Option<usize>,
     ) -> Result<Vec<PullRequestRow>> {
         let prs = Self::get_pull_requests_raw(state, limit)?;
         let rows: Vec<PullRequestRow> = prs
@@ -638,7 +638,7 @@ impl GitHub {
     /// PR 信息列表
     pub fn get_pull_requests_raw(
         state: Option<&str>,
-        limit: Option<u32>,
+        limit: Option<usize>,
     ) -> Result<Vec<PullRequestInfo>> {
         let (owner, repo_name) = Self::get_owner_and_repo()?;
 

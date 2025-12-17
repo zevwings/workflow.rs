@@ -603,3 +603,7 @@ LLM 命令模块采用清晰的命令模式设计：
 - 配置文件位置：`~/.workflow/config/workflow.toml`（或 iCloud 路径）
 - 配置项：`provider`、`url`（仅 proxy）、`key`、`model`、`language`
 - 默认值：Provider 为 `openai`，Language 为 `en`
+
+---
+
+**最后更新**: 2025-12-16

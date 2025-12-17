@@ -10,8 +10,9 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::base::indicator::Spinner;
-use crate::base::settings::defaults::default_download_base_dir;
+use crate::base::settings::settings::default_download_base_dir;
 use crate::base::settings::Settings;
+use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::log_info;
 use crate::log_success;
@@ -157,7 +158,8 @@ impl SummarizeCommand {
         }
 
         // 写入文件
-        fs::write(&output_path, &final_summary)
+        FileWriter::new(&output_path)
+            .write_str(&final_summary)
             .wrap_err_with(|| format!("Failed to write summary to: {:?}", output_path))?;
 
         log_success!("PR summary saved to: {}", output_path.display());

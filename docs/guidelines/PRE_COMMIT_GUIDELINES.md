@@ -1,6 +1,13 @@
 # 提交前检查指南
 
 > 本文档定义了代码开发完成后、提交代码前需要完成的检查项，确保代码质量和项目规范。
+>
+> **相关详细指南**：
+> - [检查指南](./REVIEW_GUIDELINES.md) - 综合深入检查指南，整合所有检查领域，用于功能完成后、定期全面审查和重大重构前的全面检查（2-4 小时）
+> - [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) - 系统化的代码检查方法，包含重复代码检查、已封装工具检查和第三方工具检查
+> - [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖情况、测试用例合理性和缺失测试用例的检查方法
+> - [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) - 系统化的文档检查流程，包含 README.md、docs/ 目录和 CHANGELOG.md 的完整检查方法
+> - [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 系统化的 CLI 命令结构和补全脚本检查方法，包含完整性检查、参数复用检查和参数提取指南
 
 ---
 
@@ -96,17 +103,29 @@
 
 ## 📚 文档检查
 
-### 1.1 README.md 更新
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md)，该指南包含完整的检查流程、检查方法和示例。
+
+### 快速检查清单
 
 **检查项**：
-- [ ] 命令清单部分（第 367-541 行）是否已更新新增/修改的命令
-- [ ] 架构总览部分（第 666-742 行）是否反映了架构变更
+- [ ] README.md 命令清单和版本号是否已更新
+- [ ] 架构文档是否已更新（`docs/architecture/`）
+- [ ] 文档索引是否已更新（`docs/README.md`）
+- [ ] 迁移文档是否已创建（如有破坏性变更）
+
+### 详细检查项
+
+#### 1.1 README.md 更新
+
+**检查项**：
+- [ ] 命令清单部分是否已更新新增/修改的命令
+- [ ] 架构总览部分是否反映了架构变更
 - [ ] 快速开始部分是否准确
 - [ ] 版本号是否与 `Cargo.toml` 一致
 
 **位置**：`README.md`
 
-### 1.2 架构文档更新
+#### 1.2 架构文档更新
 
 **检查项**：
 - [ ] 相关命令架构文档是否已更新（`docs/architecture/commands/*_COMMAND_ARCHITECTURE.md`）
@@ -116,288 +135,99 @@
 
 **位置**：`docs/architecture/`
 
-### 1.3 文档索引更新
+#### 1.3 文档索引更新
 
 **检查项**：
 - [ ] 新增文档是否已添加到 `docs/README.md` 索引
 
 **位置**：`docs/README.md`
 
-### 1.4 迁移文档
+#### 1.4 迁移文档
 
 **检查项**：
 - [ ] 如有破坏性变更，是否已创建迁移指南（`docs/migration/`）
 - [ ] 版本号是否正确
 
+### 更多检查项
+
+详细的文档检查包括但不限于：
+- 文档完整性检查（README.md、docs/ 目录、CHANGELOG.md）
+- 重复内容检查（跨文档重复、文档内部重复）
+- 文档位置检查（文档分类、命名规范）
+- 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性）
+
+**参考**：[文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查方法和示例。
+
 ---
 
 ## 🔧 CLI 和 Completion 检查
 
-### 2.1 CLI 命令结构
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统化的 CLI 和 Completion 检查，请参考 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)，该指南包含完整的检查流程、参数复用检查、参数提取指南和自动化检查工具。
+
+### 快速检查清单
 
 **检查项**：
 - [ ] 新增命令是否已在 `Commands` 枚举中注册（`src/lib/cli/commands.rs`）
 - [ ] 子命令是否已在对应枚举中定义
 - [ ] 命令文档注释（`///`）是否完整
-- [ ] 参数命名是否一致（如 `jira_id` vs `JIRA_ID`）
-- [ ] 共用参数是否已提取（参考 [代码优化检查](#-代码优化检查)）
-
-**位置**：`src/lib/cli/`
-
-**示例**：
-```rust
-// src/lib/cli/commands.rs
-#[derive(Subcommand)]
-pub enum Commands {
-    /// 新增命令的描述
-    NewCommand {
-        #[command(subcommand)]
-        subcommand: NewSubcommand,
-    },
-}
-```
-
-### 2.2 Completion 完整性
-
-**检查项**：
+- [ ] 参数文档注释（`///`）是否完整
+- [ ] 参数命名是否一致（如 `jira_id` vs `jira_ticket`）
 - [ ] 运行补全完整性测试：`cargo test --test completeness`
 - [ ] 新增命令是否包含在补全脚本中
-- [ ] 所有 shell 类型（zsh, bash, fish, powershell, elvish）是否正常生成
-- [ ] 补全脚本文件命名是否正确
+- [ ] 需要输出格式的命令是否使用了 `OutputFormatArgs`？
+- [ ] 需要 dry-run 模式的命令是否使用了 `DryRunArgs`？
+- [ ] 需要 JIRA ID 的命令是否使用了 `JiraIdArg`？
+- [ ] 重复参数是否已提取为共用参数组（出现 2+ 次必须提取）
+- [ ] 是否使用 `#[command(flatten)]` 复用参数组
 
 **测试命令**：
 ```bash
 # 运行补全完整性测试
 cargo test --test completeness
 
+# 运行参数检查测试
+cargo test --test args_check
+
 # 手动生成补全脚本验证
 cargo run -- completion generate
 ```
 
-**位置**：`tests/completion/completeness.rs`
+**位置**：
+- CLI 命令定义：`src/lib/cli/`
+- 共用参数定义：`src/lib/cli/args.rs`
+- 补全完整性测试：`tests/completion/completeness.rs`
+- 参数检查测试：`tests/args_check.rs`（已从 `tests/cli/args_check.rs` 移至根目录）
 
-### 2.3 CLI 参数优化
-
-**检查项**：
-- [ ] 重复参数是否已提取为共用结构体（如 `OutputFormatArgs`、`DryRunArgs`）
-- [ ] 是否使用 `#[command(flatten)]` 复用参数组
-- [ ] 参数验证逻辑是否统一
-
-**参考**：见 [代码优化检查 - 提取共用参数](#提取共用参数)
+**参考**：
+- [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 完整的检查方法和参数提取指南
+- [代码优化检查 - 提取共用参数](#提取共用参数)
 
 ---
 
 ## 🔍 代码优化检查
 
-### 3.1 如何提取共用代码
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的代码检查，请参考 [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md)，该指南包含完整的检查流程、10 种重复代码模式检查、已封装工具清单和第三方工具检查方法。
 
-#### 提取共用参数
+### 快速检查清单
 
-**场景**：多个命令使用相同的参数（如输出格式、dry-run 等）
+**检查项**：
+- [ ] 共用代码是否已提取（参数、工具函数、错误处理）
+- [ ] 代码重复是否已消除
+- [ ] 工具函数是否已复用
+- [ ] 配置管理是否统一
 
-**步骤**：
+### 基本检查项
 
-1. **创建共用参数结构体**
+#### 3.1 共用代码提取
 
-在 `src/lib/cli/common.rs` 中定义：
+**检查项**：
+- [ ] 共用参数是否已提取为共用结构体（如 `OutputFormatArgs`、`DryRunArgs`）
+- [ ] 共用工具函数是否已提取到 `helpers.rs` 模块
+- [ ] 错误处理是否统一使用 `anyhow::Context`
 
-```rust
-//! 共用 CLI 参数定义
-//!
-//! 提供多个命令共享的参数组，减少代码重复。
+**参考**：见 [代码检查指南 - 重复代码检查](./reviews/REVIEW_CODE_GUIDELINES.md#-重复代码检查) 获取详细的提取方法和示例。
 
-use clap::Args;
-
-/// 输出格式选项
-///
-/// 支持多种输出格式：table（默认）、json、yaml、markdown。
-/// 优先级：json > yaml > markdown > table
-#[derive(Args, Debug, Clone)]
-pub struct OutputFormatArgs {
-    /// Output in table format (default)
-    #[arg(long)]
-    pub table: bool,
-
-    /// Output in JSON format
-    #[arg(long)]
-    pub json: bool,
-
-    /// Output in YAML format
-    #[arg(long)]
-    pub yaml: bool,
-
-    /// Output in Markdown format
-    #[arg(long)]
-    pub markdown: bool,
-}
-
-/// Dry-run 选项
-///
-/// 预览操作而不实际执行。
-#[derive(Args, Debug, Clone)]
-pub struct DryRunArgs {
-    /// Dry run mode (preview changes without actually doing it)
-    #[arg(long, short = 'n')]
-    pub dry_run: bool,
-}
-```
-
-2. **在 CLI 模块中导出**
-
-在 `src/lib/cli/mod.rs` 中：
-
-```rust
-mod common;
-pub use common::{OutputFormatArgs, DryRunArgs};
-```
-
-3. **在命令中使用**
-
-在命令枚举中使用 `#[command(flatten)]`：
-
-```rust
-// src/lib/cli/jira.rs
-use super::common::OutputFormatArgs;
-
-#[derive(Subcommand)]
-pub enum JiraSubcommand {
-    Info {
-        #[arg(value_name = "JIRA_ID")]
-        jira_id: Option<String>,
-
-        #[command(flatten)]
-        output_format: OutputFormatArgs,
-    },
-    // ... 其他命令
-}
-```
-
-4. **在命令实现中使用**
-
-```rust
-// src/commands/jira/info.rs
-use crate::cli::OutputFormatArgs;
-use crate::commands::jira::helpers::OutputFormat;
-
-pub fn show(
-    jira_id: Option<String>,
-    output_format: &OutputFormatArgs,
-) -> Result<()> {
-    // 转换为内部格式
-    let format = OutputFormat::from(output_format);
-
-    // 使用 format 进行输出
-    match format {
-        OutputFormat::Json => output_json(&issue)?,
-        OutputFormat::Yaml => output_yaml(&issue)?,
-        // ...
-    }
-
-    Ok(())
-}
-```
-
-**优势**：
-- ✅ 减少代码重复（每个命令不再需要重复定义 4 个布尔参数）
-- ✅ 类型安全（使用结构体而非多个独立参数）
-- ✅ 自动生成补全脚本（clap 自动处理）
-- ✅ 易于维护（修改一处即可影响所有使用该参数的命令）
-
-#### 提取共用工具函数
-
-**场景**：多个命令使用相同的逻辑（如获取 JIRA ID、格式化日期等）
-
-**步骤**：
-
-1. **创建 helpers 模块**
-
-在命令目录下创建 `helpers.rs`：
-
-```rust
-// src/commands/jira/helpers.rs
-//! Jira 命令公共帮助函数
-//!
-//! 提供 Jira 命令之间共享的公共功能，避免代码重复。
-
-use crate::base::dialog::InputDialog;
-use anyhow::{Context, Result};
-
-/// 获取 JIRA ID（从参数或交互式输入）
-pub fn get_jira_id(
-    jira_id: Option<String>,
-    prompt_message: Option<&str>,
-) -> Result<String> {
-    if let Some(id) = jira_id {
-        Ok(id)
-    } else {
-        let message = prompt_message
-            .unwrap_or("Enter Jira ticket ID (e.g., PROJ-123)");
-        InputDialog::new(message)
-            .prompt()
-            .context("Failed to read Jira ticket ID")
-    }
-}
-```
-
-2. **在命令中使用**
-
-```rust
-// src/commands/jira/info.rs
-use super::helpers::get_jira_id;
-
-pub fn show(jira_id: Option<String>, ...) -> Result<()> {
-    let jira_id = get_jira_id(jira_id, None)?;
-    // ... 使用 jira_id
-}
-```
-
-**优势**：
-- ✅ 统一错误处理
-- ✅ 减少代码重复
-- ✅ 易于测试和维护
-
-#### 提取共用错误处理
-
-**场景**：多个命令使用相同的错误处理模式
-
-**步骤**：
-
-1. **使用 anyhow 的 Context**
-
-```rust
-use anyhow::{Context, Result};
-
-pub fn download_file(url: &str) -> Result<Vec<u8>> {
-    reqwest::blocking::get(url)
-        .context("Failed to download file")?
-        .bytes()
-        .context("Failed to read response body")?
-        .to_vec()
-        .context("Failed to convert to bytes")
-}
-```
-
-2. **创建自定义错误类型**（如果需要）
-
-```rust
-use thiserror::Error;
-
-#[derive(Error, Debug)]
-pub enum JiraError {
-    #[error("Jira ticket not found: {0}")]
-    NotFound(String),
-
-    #[error("Failed to parse response: {0}")]
-    ParseError(#[from] serde_json::Error),
-}
-```
-
-**优势**：
-- ✅ 统一的错误消息格式
-- ✅ 更好的错误上下文信息
-- ✅ 易于调试和排查问题
-
-### 3.2 代码重复检查
+#### 3.2 代码重复检查
 
 **检查项**：
 - [ ] 输出格式处理逻辑是否已提取
@@ -412,62 +242,48 @@ pub enum JiraError {
 - `lib/base/indicator/` - 进度指示器
 - `commands/*/helpers.rs` - 命令特定帮助函数
 
-### 3.3 工具函数复用
+#### 3.3 工具函数复用
 
 **检查项**：
 - [ ] 是否使用 `lib/base/util` 中的工具函数
-  - `format_size()` - 文件大小格式化
-  - `mask_sensitive_value()` - 敏感值隐藏
-  - `Browser`、`Clipboard` - 浏览器和剪贴板操作
-  - `Checksum`、`Unzip` - 文件操作
 - [ ] 是否使用 `lib/base/dialog` 进行用户交互
 - [ ] 是否使用 `lib/base/indicator` 显示进度
 
-**示例**：
-```rust
-use crate::base::util::{format_size, Browser, Clipboard};
-use crate::base::dialog::InputDialog;
-use crate::base::indicator::Spinner;
+**参考**：见 [代码检查指南 - 已封装工具检查](./reviews/REVIEW_CODE_GUIDELINES.md#️-已封装工具检查) 获取完整的工具函数清单和使用方法。
 
-// 使用工具函数
-let size = format_size(1024 * 1024); // "1.0 MB"
-Browser::open("https://example.com")?;
-Clipboard::copy("text")?;
-
-// 使用对话框
-let input = InputDialog::new("Enter value:").prompt()?;
-
-// 使用进度指示器
-let result = Spinner::with("Processing...", || {
-    // 执行耗时操作
-})?;
-```
-
-### 3.4 配置管理
+#### 3.4 配置管理
 
 **检查项**：
 - [ ] 是否使用 `Settings` 统一管理配置
 - [ ] 是否使用 `Paths` 统一管理路径
 - [ ] 配置验证是否统一
 
-**示例**：
-```rust
-use crate::base::settings::{Settings, Paths};
+### 更多检查项
 
-// 使用 Settings
-let settings = Settings::load()?;
-let jira_config = &settings.jira;
+详细的代码检查包括但不限于：
+- **10 种重复代码模式检查**：文件操作、Git 命令、错误处理、字符串处理、路径处理、HTTP 请求、配置读取、日志输出、用户交互、进度指示器
+- **已封装工具检查**：文件操作工具、字符串处理工具、格式化工具、平台检测工具、浏览器和剪贴板工具、解压和校验和工具、日期格式化工具、表格输出工具、Git 操作工具、HTTP 客户端工具、日志工具、对话框工具、进度指示器工具、配置管理工具
+- **第三方工具检查**：正则表达式处理、JSON 处理、TOML 处理、命令行参数解析、异步处理、并发处理、时间处理、路径处理、环境变量处理、错误处理
 
-// 使用 Paths
-let config_dir = Paths::config_dir()?;
-let completion_dir = Paths::completion_dir()?;
-```
+**参考**：[代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) 获取完整的检查方法、搜索模式和示例分析。
 
 ---
 
 ## 🧪 测试用例检查
 
-### 4.1 单元测试
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的测试用例检查，请参考 [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md)，该指南包含完整的检查流程、测试覆盖情况分析、测试用例合理性检查和缺失测试用例识别方法。
+
+### 快速检查清单
+
+**检查项**：
+- [ ] 单元测试是否覆盖新增功能
+- [ ] 集成测试是否覆盖主要流程
+- [ ] 测试是否全部通过
+- [ ] 测试冗余是否已清理
+
+### 基本检查项
+
+#### 4.1 单元测试
 
 **检查项**：
 - [ ] 新增功能是否有对应的单元测试
@@ -475,34 +291,6 @@ let completion_dir = Paths::completion_dir()?;
 - [ ] 错误处理是否已测试
 
 **位置**：与源代码在同一文件中（`#[cfg(test)]` 模块）
-
-**示例**：
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_get_jira_id_with_param() {
-        let result = get_jira_id(Some("PROJ-123".to_string()), None);
-        assert_eq!(result.unwrap(), "PROJ-123");
-    }
-
-    #[test]
-    fn test_get_jira_id_without_param() {
-        // 需要 mock InputDialog
-    }
-}
-```
-
-### 4.2 集成测试
-
-**检查项**：
-- [ ] CLI 命令是否在 `tests/cli/` 中有测试
-- [ ] 补全完整性测试是否通过（`tests/completion/completeness.rs`）
-- [ ] 集成测试是否覆盖主要流程（`tests/integration/`）
-
-**位置**：`tests/` 目录
 
 **运行测试**：
 ```bash
@@ -517,7 +305,16 @@ cargo test --lib --tests      # 仅单元测试和集成测试（不包括文档
 cargo test --doc              # 仅文档测试
 ```
 
-### 4.3 测试覆盖率
+#### 4.2 集成测试
+
+**检查项**：
+- [ ] CLI 命令是否在 `tests/cli/` 中有测试
+- [ ] 补全完整性测试是否通过（`tests/completion/completeness.rs`）
+- [ ] 集成测试是否覆盖主要流程（`tests/integration/`）
+
+**位置**：`tests/` 目录
+
+#### 4.3 测试覆盖率
 
 **检查项**：
 - [ ] 运行 `make test` 或 `cargo test --verbose` 确保所有测试通过（包括 doctest）
@@ -525,13 +322,13 @@ cargo test --doc              # 仅文档测试
 - [ ] 测试用例命名是否清晰（`test_*`）
 - [ ] 文档中的代码示例（doctest）是否能够正常编译和运行
 
-### 4.4 测试数据
+#### 4.4 测试数据
 
 **检查项**：
 - [ ] 测试 fixtures（`tests/fixtures/`）是否需要更新
 - [ ] Mock 数据是否准确
 
-### 4.5 测试冗余检查
+#### 4.5 测试冗余检查
 
 **检查项**：
 - [ ] 是否存在重复的测试用例（测试相同功能或相同代码路径）
@@ -541,72 +338,19 @@ cargo test --doc              # 仅文档测试
 - [ ] 是否有测试用例测试了已废弃的 API 或方法
 
 **检查方法**：
-1. **查找重复测试**：检查是否有多个测试用例测试相同的功能
-   ```bash
-   # 搜索测试文件，查找相似的测试用例
-   grep -r "test_" tests/ src/ | sort | uniq -d
-   ```
-
-2. **检查过时测试**：
-   - 查看测试是否引用了已删除的函数或模块
-   - 检查测试是否使用了已废弃的 API
-   - 运行 `cargo test` 查看是否有编译错误或警告
-
-3. **验证测试有效性**：
-   - 检查测试的断言是否正确（是否真正验证了功能）
-   - 检查测试是否可能因为实现变更而失效
-   - 检查测试是否测试了边界情况和错误情况
-
-**示例**：
-```rust
-// ❌ 错误：重复测试相同功能
-#[test]
-fn test_parse_jira_id_1() {
-    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123"));
-}
-
-#[test]
-fn test_parse_jira_id_2() {
-    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123")); // 重复
-}
-
-// ✅ 正确：测试不同的场景
-#[test]
-fn test_parse_jira_id_valid() {
-    assert_eq!(parse_jira_id("PROJ-123"), Some("PROJ-123"));
-}
-
-#[test]
-fn test_parse_jira_id_invalid() {
-    assert_eq!(parse_jira_id("invalid"), None);
-}
-
-// ❌ 错误：测试已删除的函数
-#[test]
-fn test_old_function() {
-    old_function(); // 函数已删除，测试无效
-}
-
-// ❌ 错误：测试断言不正确
-#[test]
-fn test_calculate_total() {
-    let result = calculate_total(&[1, 2, 3]);
-    assert!(result > 0); // 断言太弱，没有验证具体值
-}
-
-// ✅ 正确：测试断言明确
-#[test]
-fn test_calculate_total() {
-    let result = calculate_total(&[1, 2, 3]);
-    assert_eq!(result, 6); // 断言明确，验证具体值
-}
+```bash
+# 搜索测试文件，查找相似的测试用例
+grep -r "test_" tests/ src/ | sort | uniq -d
 ```
 
-**优势**：
-- ✅ 减少测试维护成本（删除无效测试）
-- ✅ 提高测试质量（确保测试真正有效）
-- ✅ 避免测试混乱（减少重复测试）
-- ✅ 提高测试运行效率（减少不必要的测试执行时间）
+### 更多检查项
+
+详细的测试用例检查包括但不限于：
+- **测试覆盖情况检查**：模块覆盖检查、功能覆盖检查、覆盖率评估（总体覆盖率、核心模块覆盖率、工具模块覆盖率、CLI 层覆盖率）
+- **测试用例合理性检查**：测试工具使用检查（参数化测试、断言工具、快照测试、Mock 测试）、测试结构检查（AAA 模式、测试组织、测试数据管理）、测试内容检查（成功路径测试、错误路径测试、边界条件测试、集成测试）
+- **缺失测试用例检查**：缺失模块测试识别、缺失功能测试识别、缺失测试类型识别（错误路径测试、边界条件测试、集成测试）
+
+**参考**：[测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法、检查报告格式和示例输出。
 
 ---
 
@@ -829,6 +573,25 @@ Write-Host "report/CHECK_REPORT_${timestamp}.md"
 - 检查日期和时间
 - 检查人员
 - 检查范围（本次提交涉及的功能/模块）
+- **重要**：说明这是快速检查汇总，详细检查请参考单个检查报告
+
+#### 1.1 详细检查报告引用（可选）
+
+如果已生成详细的单个检查报告，应在概览部分引用：
+
+```markdown
+> **详细检查报告**：
+> - [代码检查报告](../report/CODE_CHECK_REPORT.md) - 详细的重复代码、已封装工具、第三方工具检查
+> - [测试覆盖报告](../report/TEST_COVERAGE_REPORT.md) - 详细的测试覆盖情况分析
+> - [文档检查报告](../report/DOCUMENT_CHECK_REPORT.md) - 详细的文档完整性、准确性检查
+> - [CLI 和 Completion 检查报告](../report/CODE_REVIEW_CHECK_REPORT.md) - 详细的 CLI 命令结构和补全脚本检查
+> - [测试用例检查报告](../report/TEST_CASE_GUIDELINES_CHECK_REPORT.md) - 详细的测试用例合理性检查
+```
+
+**说明**：
+- 快速检查汇总报告：提供各检查步骤的概览和关键问题，适合快速了解检查结果
+- 详细检查报告：按照专门的检查指南（如 `reviews/REVIEW_CODE_GUIDELINES.md`）生成的深度检查报告，包含具体的问题位置、代码示例、改进方案等
+- 建议：在提交前，先运行快速检查汇总，如果发现问题，再运行相应的详细检查报告获取更多信息
 
 #### 2. 各步骤检查结果
 
@@ -1087,7 +850,13 @@ vim report/CHECK_REPORT_{timestamp}.md
 - 报告应保存在 `report/CHECK_REPORT_{timestamp}.md`
 - 报告应在提交代码前完成
 - 报告可用于代码审查和问题追踪
-- 报告应包含所有检查步骤的详细结果
+- **报告类型说明**：
+  - **快速检查汇总报告**（`CHECK_REPORT_*.md`）：按照本指南模板生成，提供各检查步骤的概览和关键问题
+  - **详细检查报告**（`CODE_CHECK_REPORT.md`、`TEST_COVERAGE_REPORT.md` 等）：按照专门的检查指南生成，包含详细的问题分析、代码示例、改进方案等
+- **使用建议**：
+  - 日常提交前：使用快速检查汇总报告，快速了解检查结果
+  - 发现问题时：参考相应的详细检查报告，获取详细的问题分析和改进建议
+  - 代码审查时：结合快速汇总和详细报告，全面了解代码质量
 
 ---
 
@@ -1146,14 +915,29 @@ workflow check
 
 ### Q: 如何提取共用代码？
 
-**A**: 参考 [代码优化检查](#-代码优化检查) 部分的具体示例：
+**A**: 参考 [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md) 获取详细的提取方法和示例：
 - 使用 clap 的 `Args` trait 和 `#[command(flatten)]` 提取共用参数
 - 创建 `helpers.rs` 模块提取共用工具函数
 - 使用 `anyhow::Context` 统一错误处理
+- 检查 10 种重复代码模式（文件操作、Git 命令、错误处理等）
+
+### Q: 如何进行详细的测试用例检查？
+
+**A**: 参考 [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md) 获取完整的检查方法：
+- 测试覆盖情况分析（模块覆盖、功能覆盖、覆盖率评估）
+- 测试用例合理性检查（测试工具使用、测试结构、测试内容）
+- 缺失测试用例识别（缺失模块测试、缺失功能测试、缺失测试类型）
+
+### Q: 如何进行详细的文档检查？
+
+**A**: 参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md) 获取完整的检查流程：
+- README.md、docs/ 目录和 CHANGELOG.md 的系统化检查
+- 重复内容检查（跨文档重复、文档内部重复）
+- 文档位置检查和文档优化补全检查
 
 ### Q: 文档更新优先级？
 
-**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。
+**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。详细检查方法请参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md)。
 
 ### Q: 如何验证补全脚本？
 
@@ -1183,3 +967,7 @@ workflow check
 ---
 
 **完成以上检查后，代码即可提交！** 🎉
+
+---
+
+**最后更新**: 2025-12-16

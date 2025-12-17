@@ -8,10 +8,10 @@
 //! 支持 zsh、bash、fish、powershell、elvish 等 shell 的配置文件。
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{FileReader, FileWriter};
 use clap_complete::Shell;
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
-use std::fs;
 use std::path::PathBuf;
 
 use super::detect::Detect;
@@ -537,22 +537,24 @@ impl ShellConfigManager {
     }
 
     /// 读取配置文件内容
-    fn read_config_file(path: &PathBuf) -> Result<String> {
+    fn read_config_file(path: &std::path::Path) -> Result<String> {
         if path.exists() {
-            fs::read_to_string(path).wrap_err("Failed to read shell config file")
+            FileReader::new(path).to_string().wrap_err("Failed to read shell config file")
         } else {
             Ok(String::new())
         }
     }
 
     /// 写入配置文件内容
-    fn write_config_file(path: &PathBuf, content: &str) -> Result<()> {
-        fs::write(path, content).wrap_err("Failed to write to shell config file")?;
+    fn write_config_file(path: &std::path::Path, content: &str) -> Result<()> {
+        FileWriter::new(path)
+            .write_str(content)
+            .wrap_err("Failed to write to shell config file")?;
         Ok(())
     }
 
     /// 加载现有配置
-    fn load_existing_config(path: &PathBuf) -> Result<ExistingConfig> {
+    fn load_existing_config(path: &std::path::Path) -> Result<ExistingConfig> {
         let content = Self::read_config_file(path)?;
         let (env_in_block, content_without_block) = Self::parse_config_block(&content)?;
 

@@ -3,10 +3,10 @@
 //! Loads templates from configuration files (global and project-level).
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::FileReader;
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
-use std::fs;
 
 /// Template configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -199,12 +199,8 @@ impl TemplateConfig {
             color_eyre::eyre::bail!("Project config not found");
         }
 
-        let content = fs::read_to_string(&project_config_path)
-            .wrap_err("Failed to read project template config")?;
-
         // Parse TOML and extract template section
-        let value: toml::Value =
-            toml::from_str(&content).wrap_err("Failed to parse project template config")?;
+        let value: toml::Value = FileReader::new(&project_config_path).toml()?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {
@@ -229,11 +225,7 @@ impl TemplateConfig {
             color_eyre::eyre::bail!("Global config not found");
         }
 
-        let content =
-            fs::read_to_string(&config_path).wrap_err("Failed to read global template config")?;
-
-        let value: toml::Value =
-            toml::from_str(&content).wrap_err("Failed to parse global template config")?;
+        let value: toml::Value = FileReader::new(&config_path).toml()?;
 
         // Extract template section if exists
         if let Some(template_section) = value.get("template") {

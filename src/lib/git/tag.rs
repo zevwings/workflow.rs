@@ -8,7 +8,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
-use super::helpers::{check_ref_exists, check_success, cmd_read, cmd_run};
+use super::GitCommand;
 
 /// Tag 信息
 #[derive(Debug, Clone)]
@@ -44,7 +44,7 @@ impl GitTag {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn list_local_tags() -> Result<Vec<String>> {
-        let output = cmd_read(&["tag", "-l"]).wrap_err("Failed to list local tags")?;
+        let output = GitCommand::new(["tag", "-l"]).read().wrap_err("Failed to list local tags")?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());
@@ -67,8 +67,9 @@ impl GitTag {
     ///
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn list_remote_tags() -> Result<Vec<String>> {
-        let output =
-            cmd_read(&["ls-remote", "--tags", "origin"]).wrap_err("Failed to list remote tags")?;
+        let output = GitCommand::new(["ls-remote", "--tags", "origin"])
+            .read()
+            .wrap_err("Failed to list remote tags")?;
 
         if output.trim().is_empty() {
             return Ok(Vec::new());
@@ -119,11 +120,15 @@ impl GitTag {
 
             // 获取 tag 指向的 commit hash
             let commit_hash = if exists_local {
-                cmd_read(&["rev-parse", &tag_name]).unwrap_or_else(|_| String::new())
+                GitCommand::new(["rev-parse", &tag_name])
+                    .read()
+                    .unwrap_or_else(|_| String::new())
             } else if exists_remote {
                 // 从远程获取 commit hash
-                let output = cmd_read(&["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
-                    .unwrap_or_else(|_| String::new());
+                let output =
+                    GitCommand::new(["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
+                        .read()
+                        .unwrap_or_else(|_| String::new());
                 output.split_whitespace().next().unwrap_or("").to_string()
             } else {
                 String::new()
@@ -162,15 +167,18 @@ impl GitTag {
     /// 如果 Git 命令执行失败，返回相应的错误信息。
     pub fn is_tag_exists(tag_name: &str) -> Result<(bool, bool)> {
         // 检查本地 tag
-        let exists_local = check_ref_exists(&format!("refs/tags/{}", tag_name));
+        let exists_local =
+            GitCommand::new(["rev-parse", "--verify", &format!("refs/tags/{}", tag_name)])
+                .quiet_success();
 
         // 检查远程 tag
-        let exists_remote = check_success(&[
+        let exists_remote = GitCommand::new([
             "ls-remote",
             "--exit-code",
             "origin",
             &format!("refs/tags/{}", tag_name),
-        ]);
+        ])
+        .quiet_success();
 
         Ok((exists_local, exists_remote))
     }
@@ -197,11 +205,15 @@ impl GitTag {
 
         // 获取 commit hash
         let commit_hash = if exists_local {
-            cmd_read(&["rev-parse", tag_name]).wrap_err("Failed to get tag commit hash")?
+            GitCommand::new(["rev-parse", tag_name])
+                .read()
+                .wrap_err("Failed to get tag commit hash")?
         } else {
             // 从远程获取
-            let output = cmd_read(&["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
-                .wrap_err("Failed to get remote tag commit hash")?;
+            let output =
+                GitCommand::new(["ls-remote", "origin", &format!("refs/tags/{}", tag_name)])
+                    .read()
+                    .wrap_err("Failed to get remote tag commit hash")?;
             output.split_whitespace().next().unwrap_or("").to_string()
         };
 
@@ -225,7 +237,8 @@ impl GitTag {
     ///
     /// 如果 tag 不存在或删除失败，返回相应的错误信息。
     pub fn delete_local(tag_name: &str) -> Result<()> {
-        cmd_run(&["tag", "-d", tag_name])
+        GitCommand::new(["tag", "-d", tag_name])
+            .run()
             .wrap_err_with(|| format!("Failed to delete local tag: {}", tag_name))
     }
 
@@ -242,11 +255,12 @@ impl GitTag {
     /// 如果删除失败，返回相应的错误信息。
     pub fn delete_remote(tag_name: &str) -> Result<()> {
         // 尝试使用 --delete 方式
-        let result = cmd_run(&["push", "origin", "--delete", tag_name]);
+        let result = GitCommand::new(["push", "origin", "--delete", tag_name]).run();
 
         if result.is_err() {
             // 回退到使用 :refs/tags/ 方式
-            cmd_run(&["push", "origin", &format!(":refs/tags/{}", tag_name)])
+            GitCommand::new(["push", "origin", &format!(":refs/tags/{}", tag_name)])
+                .run()
                 .wrap_err_with(|| format!("Failed to delete remote tag: {}", tag_name))?;
         }
 
@@ -271,7 +285,8 @@ impl GitTag {
         if exists_local {
             if let Err(e) = Self::delete_local(tag_name) {
                 // 记录错误但继续删除远程 tag
-                eprintln!("Warning: Failed to delete local tag: {}", e);
+                use crate::base::logger::console::Logger;
+                Logger::print_warning(format!("Failed to delete local tag: {}", e));
             }
         }
 

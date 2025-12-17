@@ -9,8 +9,8 @@
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::base::dialog::InputDialog;
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::base::util::format_size;
-use crate::base::util::table::{TableBuilder, TableStyle};
 use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
 use crate::{log_break, log_info, log_message, log_success};

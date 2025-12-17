@@ -2,15 +2,14 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::base::dialog::{InputDialog, SelectDialog};
-use crate::base::settings::defaults::{
-    default_download_base_dir, default_language, default_llm_model, default_log_folder,
-};
+use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
-    // CodeupSettings,  // Codeup support has been removed
+    default_download_base_dir, // CodeupSettings,  // Codeup support has been removed
     GitHubAccount,
     GitHubSettings,
     JiraSettings,
+    LLMSettings,
     LogSettings,
     Settings,
 };
@@ -21,9 +20,7 @@ use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
-use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
-use std::time::Duration;
 
 /// 初始化设置命令
 pub struct SetupCommand;
@@ -84,19 +81,14 @@ impl SetupCommand {
         }
 
         // 创建 spinner 显示验证进度
-        let spinner = ProgressBar::new_spinner();
-        spinner.set_style(
-            ProgressStyle::default_spinner().template("{spinner:.white} {msg}").unwrap(),
-        );
-        spinner.enable_steady_tick(Duration::from_millis(100));
-        spinner.set_message("Verifying configurations...");
+        let spinner = Spinner::new("Verifying configurations...");
 
         // 验证配置（使用 load() 获取最新配置，避免 OnceLock 缓存问题）
         let settings = Settings::load();
         let result = settings.verify()?;
 
         // 完成 spinner
-        spinner.finish_and_clear();
+        spinner.finish();
 
         crate::commands::config::show::ConfigCommand::print_verification_result(&result);
 
@@ -126,7 +118,7 @@ impl SetupCommand {
             // codeup_cookie: settings.codeup.cookie.clone(),  // Codeup support has been removed
             llm_provider: llm.provider.clone(),
             llm_language: if llm.language.is_empty() {
-                default_language()
+                LLMSettings::default_language()
             } else {
                 llm.language.clone()
             },
@@ -471,8 +463,9 @@ impl SetupCommand {
                 }
 
                 // 配置 OpenAI model
-                let default_model =
-                    llm_openai_model.clone().unwrap_or_else(|| default_llm_model("openai"));
+                let default_model = llm_openai_model
+                    .clone()
+                    .unwrap_or_else(|| LLMSettings::default_model("openai"));
 
                 let model_prompt = if llm_openai_model.is_some() {
                     "OpenAI model (press Enter to keep)".to_string()
@@ -511,8 +504,9 @@ impl SetupCommand {
                 }
 
                 // 配置 DeepSeek model
-                let default_model =
-                    llm_deepseek_model.clone().unwrap_or_else(|| default_llm_model("deepseek"));
+                let default_model = llm_deepseek_model
+                    .clone()
+                    .unwrap_or_else(|| LLMSettings::default_model("deepseek"));
 
                 let model_prompt = if llm_deepseek_model.is_some() {
                     "DeepSeek model (press Enter to keep)".to_string()
@@ -616,7 +610,7 @@ impl SetupCommand {
 
                 // 配置 Proxy model（必填）
                 let default_model =
-                    llm_proxy_model.clone().unwrap_or_else(|| default_llm_model("proxy"));
+                    llm_proxy_model.clone().unwrap_or_else(|| LLMSettings::default_model("proxy"));
 
                 let model_prompt = if llm_proxy_model.is_some() {
                     "LLM model (required) (press Enter to keep)".to_string()
@@ -698,7 +692,7 @@ impl SetupCommand {
                 current: config.github_current.clone(),
             },
             log: LogSettings {
-                output_folder_name: default_log_folder(), // 使用默认值，不再允许用户配置
+                output_folder_name: LogSettings::default_log_folder(), // 使用默认值，不再允许用户配置
                 download_base_dir: config.log_download_base_dir.clone(),
                 level: None, // 日志级别通过 workflow log set 命令设置
                 enable_trace_console: config.enable_trace_console,

@@ -4,7 +4,7 @@
 //! 配置保存在个人偏好配置（~/.workflow/config/repository.toml）中，不提交到 Git。
 
 use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
-use crate::base::util::table::{TableBuilder, TableStyle};
+use crate::base::table::{TableBuilder, TableStyle};
 use crate::git::BranchRow;
 use crate::repo::config::RepoConfig;
 use crate::{log_break, log_info, log_message, log_success, log_warning};

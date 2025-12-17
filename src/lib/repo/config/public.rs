@@ -4,9 +4,10 @@
 //! This configuration is stored in `.workflow/config.toml` in the project root.
 
 use crate::base::settings::paths::Paths;
+use crate::base::util::file::{FileReader, FileWriter};
+use crate::base::util::path::PathAccess;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
-use std::fs;
 use toml::map::Map;
 use toml::Value;
 
@@ -39,10 +40,7 @@ impl PublicRepoConfig {
             return Ok(Self::default());
         }
 
-        let content =
-            fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
-
-        let value: Value = toml::from_str(&content).wrap_err("Failed to parse configuration")?;
+        let value: Value = FileReader::new(&path).toml()?;
 
         let mut config = Self::default();
 
@@ -82,14 +80,10 @@ impl PublicRepoConfig {
     pub fn save(&self) -> Result<()> {
         let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent).wrap_err("Failed to create .workflow directory")?;
-        }
+        PathAccess::new(&path).ensure_parent_dir_exists()?;
 
         let mut existing_value: Value = if path.exists() {
-            let content =
-                fs::read_to_string(&path).wrap_err("Failed to read existing configuration")?;
-            toml::from_str(&content).wrap_err("Failed to parse existing configuration")?
+            FileReader::new(&path).toml()?
         } else {
             Value::Table(Map::new())
         };
@@ -139,10 +133,7 @@ impl PublicRepoConfig {
             }
         }
 
-        let content = toml::to_string_pretty(&existing_value)
-            .wrap_err("Failed to serialize configuration")?;
-
-        fs::write(&path, content).wrap_err("Failed to write configuration file")?;
+        FileWriter::new(&path).write_toml(&existing_value)?;
 
         Ok(())
     }

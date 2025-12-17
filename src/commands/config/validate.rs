@@ -3,6 +3,7 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::file::{FileReader, FileWriter};
 use crate::commands::config::helpers::parse_config;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
@@ -59,8 +60,7 @@ impl ConfigValidateCommand {
         }
 
         // 读取配置文件内容
-        let content = fs::read_to_string(&config_path)
-            .wrap_err(format!("Failed to read config file: {:?}", config_path))?;
+        let content = FileReader::new(&config_path).to_string()?;
 
         // 解析配置文件（支持 TOML、JSON、YAML）
         let mut settings = parse_config(&content, &config_path)?;
@@ -436,7 +436,9 @@ impl ConfigValidateCommand {
             _ => toml::to_string_pretty(settings).wrap_err("Failed to serialize config to TOML")?,
         };
 
-        fs::write(path, content).wrap_err(format!("Failed to write config file: {:?}", path))?;
+        FileWriter::new(path)
+            .write_str(&content)
+            .wrap_err_with(|| format!("Failed to write config file: {:?}", path))?;
 
         // 设置文件权限（Unix 系统）
         #[cfg(unix)]

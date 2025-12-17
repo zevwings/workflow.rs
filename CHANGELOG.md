@@ -8,17 +8,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **仓库清理命令**：新增 `workflow repo clean` 命令
-  - `workflow repo clean` - 清理本地分支和本地 tag（保留 main/master、develop、当前分支和忽略列表中的分支）
-  - `workflow repo clean --dry-run` - 预览将要删除的分支和 tag，不实际删除
-  - 支持自动分类已合并和未合并分支
-  - 支持清理只存在于本地但不在远程的 tag
+- 新增功能将在这里记录
 
 ### Changed
 - 变更将在这里记录
 
 ### Fixed
 - 修复将在这里记录
+
+---
+
+## [1.6.4] - 2025-12-17
+
+### Added
+- **仓库清理命令**：新增 `workflow repo clean` 命令
+  - `workflow repo clean` - 清理本地分支和本地 tag（保留 main/master、develop、当前分支和忽略列表中的分支）
+  - `workflow repo clean --dry-run` - 预览将要删除的分支和 tag，不实际删除
+  - 支持自动分类已合并和未合并分支
+  - 支持清理只存在于本地但不在远程的 tag
+- **Tag 删除命令**：新增 `workflow tag delete` 命令
+  - `workflow tag delete [TAG_NAME]` - 删除指定 tag（本地和远程）
+  - `workflow tag delete [TAG_NAME] --local` - 只删除本地 tag
+  - `workflow tag delete [TAG_NAME] --remote` - 只删除远程 tag
+  - `workflow tag delete --pattern "v1.*"` - 删除匹配模式的 tag
+  - `workflow tag delete [TAG_NAME] --dry-run` - 预览模式
+  - `workflow tag delete [TAG_NAME] --force` - 强制删除（跳过确认）
+  - 支持交互式选择多个 tag 进行删除
+- **分支删除命令**：新增 `workflow branch delete` 命令
+  - `workflow branch delete [BRANCH_NAME]` - 删除指定分支（本地和远程）
+  - `workflow branch delete [BRANCH_NAME] --local-only` - 只删除本地分支
+  - `workflow branch delete [BRANCH_NAME] --remote-only` - 只删除远程分支
+  - `workflow branch delete [BRANCH_NAME] --dry-run` - 预览模式
+  - `workflow branch delete [BRANCH_NAME] --force` - 强制删除（跳过确认）
+  - 支持交互式选择多个分支进行删除
+  - 自动检测受保护分支（默认分支、develop、忽略列表中的分支）
+  - 自动检测未合并分支并提示确认
 
 ---
 
@@ -126,4 +150,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-**最后更新**: 2025-12-14
+**最后更新**: 2025-12-16

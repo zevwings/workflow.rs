@@ -638,3 +638,7 @@ Logger 模块采用清晰的**职责分离**设计：
 - 调试日志默认输出到文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）
 - 可通过 `log.enable_trace_console` 配置同时输出到控制台
 - 日志文件按日期分割，便于管理和分析
+
+---
+
+**最后更新**: 2025-12-16

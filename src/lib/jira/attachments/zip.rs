@@ -64,6 +64,8 @@ impl ZipProcessor {
             .wrap_err_with(|| format!("Failed to create {}", MERGED_ZIP_FILENAME))?;
 
         // 写入 log.zip
+        // 注意：这里直接使用 File::open()，因为 std::io::copy() 适用于任何实现 Read 的类型
+        // 直接使用 File 比 BufReader<File> 更简洁，且 std::io::copy 内部已有缓冲
         let mut input = File::open(&log_zip)
             .wrap_err_with(|| format!("Failed to open {}", LOG_ZIP_FILENAME))?;
         std::io::copy(&mut input, &mut output)
@@ -71,6 +73,7 @@ impl ZipProcessor {
 
         // 写入所有分片文件
         for split_file in &split_files {
+            // 注意：同上，直接使用 File::open() 用于文件复制
             let mut input = File::open(split_file)
                 .wrap_err_with(|| format!("Failed to open {:?}", split_file))?;
             std::io::copy(&mut input, &mut output)
@@ -102,6 +105,7 @@ impl ZipProcessor {
 
     /// 解压 zip 文件
     pub fn extract_zip(&self, zip_path: &Path, output_dir: &Path) -> Result<()> {
+        // 注意：ZipArchive::new() 需要 File 类型，不能使用 FileReader::open() 返回的 BufReader<File>
         let file = File::open(zip_path)
             .wrap_err_with(|| format!("Failed to open zip file: {:?}", zip_path))?;
 
