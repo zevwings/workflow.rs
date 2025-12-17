@@ -1,0 +1,474 @@
+//! Git 提交管理测试
+//!
+//! 测试 Git 提交状态检查、暂存操作和提交创建功能。
+
+use pretty_assertions::assert_eq;
+use rstest::{fixture, rstest};
+use std::fs;
+use tempfile::TempDir;
+use workflow::git::{GitCommit, WorktreeStatus};
+
+// ==================== Fixtures ====================
+
+/// 创建带有初始提交的 Git 仓库
+#[fixture]
+fn git_repo_with_commit() -> TempDir {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 初始化 Git 仓库
+    std::process::Command::new("git")
+        .args(["init"])
+        .output()
+        .expect("Failed to init git repo");
+
+    // 配置 Git 用户
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .expect("Failed to set git user email");
+
+    // 创建初始提交
+    fs::write("README.md", "# Test Repository").expect("Failed to write file");
+
+    std::process::Command::new("git")
+        .args(["add", "README.md"])
+        .output()
+        .expect("Failed to add file");
+
+    std::process::Command::new("git")
+        .args(["commit", "-m", "Initial commit"])
+        .output()
+        .expect("Failed to commit");
+
+    temp_dir
+}
+
+/// 创建干净的 Git 仓库（无提交）
+#[fixture]
+fn clean_git_repo() -> TempDir {
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 初始化 Git 仓库
+    std::process::Command::new("git")
+        .args(["init"])
+        .output()
+        .expect("Failed to init git repo");
+
+    // 配置 Git 用户
+    std::process::Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .output()
+        .expect("Failed to set git user name");
+
+    std::process::Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .output()
+        .expect("Failed to set git user email");
+
+    temp_dir
+}
+
+// ==================== 工作树状态检查测试 ====================
+
+#[rstest]
+fn test_worktree_status_clean(git_repo_with_commit: TempDir) {
+    // 测试干净的工作树状态
+    let result = GitCommit::get_worktree_status();
+    assert!(
+        result.is_ok(),
+        "Failed to get worktree status: {:?}",
+        result
+    );
+
+    let status = result.unwrap();
+
+    // 干净的工作树应该没有未跟踪或修改的文件
+    assert_eq!(status.untracked_count, 0, "Expected no untracked files");
+    assert_eq!(status.modified_count, 0, "Expected no modified files");
+    assert_eq!(status.staged_count, 0, "Expected no staged files");
+}
+
+#[rstest]
+fn test_worktree_status_with_untracked_files(git_repo_with_commit: TempDir) {
+    // 创建未跟踪的文件
+    fs::write("untracked.txt", "This file is not tracked").expect("Failed to write file");
+
+    let result = GitCommit::get_worktree_status();
+    assert!(result.is_ok());
+
+    let status = result.unwrap();
+
+    // 应该检测到未跟踪的文件
+    assert!(status.untracked_count > 0, "Expected untracked files");
+}
+
+#[rstest]
+fn test_worktree_status_with_modified_files(git_repo_with_commit: TempDir) {
+    // 修改已跟踪的文件
+    fs::write("README.md", "# Modified Test Repository").expect("Failed to write file");
+
+    let result = GitCommit::get_worktree_status();
+    assert!(result.is_ok());
+
+    let status = result.unwrap();
+
+    // 应该检测到修改的文件
+    assert!(status.modified_count > 0, "Expected modified files");
+}
+
+#[rstest]
+fn test_worktree_status_with_staged_files(git_repo_with_commit: TempDir) {
+    // 创建并暂存新文件
+    fs::write("staged.txt", "This file is staged").expect("Failed to write file");
+
+    std::process::Command::new("git")
+        .args(["add", "staged.txt"])
+        .output()
+        .expect("Failed to stage file");
+
+    let result = GitCommit::get_worktree_status();
+    assert!(result.is_ok());
+
+    let status = result.unwrap();
+
+    // 应该检测到暂存的文件
+    assert!(status.staged_count > 0, "Expected staged files");
+    // Note: 无法检查具体文件名，只能检查数量
+}
+
+#[rstest]
+fn test_worktree_status_mixed_changes(git_repo_with_commit: TempDir) {
+    // 创建混合状态：未跟踪、修改、暂存
+    fs::write("untracked.txt", "Untracked file").expect("Failed to write file");
+    fs::write("README.md", "# Modified README").expect("Failed to write file");
+    fs::write("staged.txt", "Staged file").expect("Failed to write file");
+
+    std::process::Command::new("git")
+        .args(["add", "staged.txt"])
+        .output()
+        .expect("Failed to stage file");
+
+    let result = GitCommit::get_worktree_status();
+    assert!(result.is_ok());
+
+    let status = result.unwrap();
+
+    // 验证所有类型的更改都被检测到
+    assert!(status.untracked_count > 0, "Expected untracked files");
+    assert!(status.modified_count > 0, "Expected modified files");
+    assert!(status.staged_count > 0, "Expected staged files");
+}
+
+// ==================== 更改检查测试 ====================
+
+#[rstest]
+fn test_has_changes_clean_repo(git_repo_with_commit: TempDir) {
+    // 干净的仓库应该没有更改
+    // 使用 get_worktree_status 检查是否有变更
+    let status = GitCommit::get_worktree_status();
+    let result = status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
+    assert!(result.is_ok());
+    assert!(!result.unwrap(), "Clean repo should have no changes");
+}
+
+#[rstest]
+fn test_has_changes_with_untracked_files(git_repo_with_commit: TempDir) {
+    // 创建未跟踪文件
+    fs::write("new_file.txt", "New content").expect("Failed to write file");
+
+    // 使用 get_worktree_status 检查是否有变更
+    let status = GitCommit::get_worktree_status();
+    let result = status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
+    assert!(result.is_ok());
+    assert!(
+        result.unwrap(),
+        "Repo with untracked files should have changes"
+    );
+}
+
+#[rstest]
+fn test_has_changes_with_modified_files(git_repo_with_commit: TempDir) {
+    // 修改现有文件
+    fs::write("README.md", "# Updated README").expect("Failed to write file");
+
+    // 使用 get_worktree_status 检查是否有变更
+    let status = GitCommit::get_worktree_status();
+    let result = status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
+    assert!(result.is_ok());
+    assert!(
+        result.unwrap(),
+        "Repo with modified files should have changes"
+    );
+}
+
+// ==================== 暂存操作测试 ====================
+
+#[rstest]
+fn test_stage_all_changes(git_repo_with_commit: TempDir) {
+    // 创建一些更改
+    fs::write("new_file.txt", "New file content").expect("Failed to write file");
+    fs::write("README.md", "# Updated README").expect("Failed to write file");
+
+    // 暂存所有更改
+    let result = GitCommit::add_all();
+    assert!(result.is_ok(), "Failed to stage all changes: {:?}", result);
+
+    // 验证文件已暂存
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(status.staged_count >= 2, "Expected at least 2 staged files");
+}
+
+#[rstest]
+fn test_stage_specific_file(git_repo_with_commit: TempDir) {
+    // 创建多个文件
+    fs::write("file1.txt", "Content 1").expect("Failed to write file");
+    fs::write("file2.txt", "Content 2").expect("Failed to write file");
+
+    // 只暂存一个文件
+    let result = GitCommit::add_files(&["file1.txt".to_string()]);
+    assert!(result.is_ok(), "Failed to stage file: {:?}", result);
+
+    // 验证有文件被暂存，还有未跟踪文件
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(status.staged_count > 0, "Expected staged files");
+    assert!(status.untracked_count > 0, "Expected untracked files");
+}
+
+#[rstest]
+fn test_stage_nonexistent_file(git_repo_with_commit: TempDir) {
+    // 尝试暂存不存在的文件
+    let result = GitCommit::add_files(&["nonexistent.txt".to_string()]);
+    assert!(result.is_err(), "Staging nonexistent file should fail");
+}
+
+// ==================== 提交创建测试 ====================
+
+#[rstest]
+fn test_create_commit_with_staged_changes(git_repo_with_commit: TempDir) {
+    // 创建并暂存更改
+    fs::write("feature.txt", "New feature implementation").expect("Failed to write file");
+    GitCommit::add_files(&["feature.txt".to_string()]).expect("Failed to stage file");
+
+    // 创建提交
+    let commit_message = "Add new feature";
+    let result = GitCommit::commit(commit_message, false);
+    assert!(result.is_ok(), "Failed to create commit: {:?}", result);
+
+    // 验证提交已创建（工作树应该是干净的）
+    // 使用 get_worktree_status 检查是否有变更
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    let has_changes = status.modified_count > 0 || status.staged_count > 0 || status.untracked_count > 0;
+    assert!(!has_changes, "Worktree should be clean after commit");
+}
+
+#[rstest]
+fn test_create_commit_without_staged_changes(git_repo_with_commit: TempDir) {
+    // 尝试在没有暂存更改的情况下提交
+    let result = GitCommit::commit("Empty commit", false);
+    assert!(result.is_err(), "Commit without staged changes should fail");
+}
+
+#[rstest]
+fn test_create_commit_with_empty_message(git_repo_with_commit: TempDir) {
+    // 创建并暂存更改
+    fs::write("test.txt", "Test content").expect("Failed to write file");
+    GitCommit::add_files(&["test.txt".to_string()]).expect("Failed to stage file");
+
+    // 尝试使用空提交消息
+    let result = GitCommit::commit("", false);
+    assert!(result.is_err(), "Commit with empty message should fail");
+}
+
+// ==================== 提交信息获取测试 ====================
+
+#[rstest]
+fn test_get_latest_commit_info(git_repo_with_commit: TempDir) {
+    let result = GitCommit::get_latest_commit_info();
+    assert!(
+        result.is_ok(),
+        "Failed to get latest commit info: {:?}",
+        result
+    );
+
+    let commit_info = result.unwrap();
+
+    // 验证提交信息的基本字段
+    assert!(
+        !commit_info.hash.is_empty(),
+        "Commit hash should not be empty"
+    );
+    assert!(!commit_info.author.is_empty(), "Author should not be empty");
+    assert!(
+        !commit_info.message.is_empty(),
+        "Message should not be empty"
+    );
+    assert_eq!(commit_info.message, "Initial commit");
+}
+
+#[rstest]
+fn test_get_commit_info_empty_repo(clean_git_repo: TempDir) {
+    // 在没有提交的仓库中获取提交信息应该失败
+    let result = GitCommit::get_latest_commit_info();
+    assert!(
+        result.is_err(),
+        "Getting commit info from empty repo should fail"
+    );
+}
+
+// ==================== WorktreeStatus 结构体测试 ====================
+
+// 注意：WorktreeStatus 没有 Default trait，跳过此测试
+// #[test]
+// fn test_worktree_status_default() {
+//     // WorktreeStatus 不支持 Default trait
+// }
+
+// 注意：WorktreeStatus 没有 has_changes 方法，跳过此测试
+// #[test]
+// fn test_worktree_status_has_changes() {
+//     // WorktreeStatus 不支持 has_changes 方法
+// }
+
+// ==================== 边界条件测试 ====================
+
+#[rstest]
+fn test_very_long_commit_message(git_repo_with_commit: TempDir) {
+    // 创建并暂存更改
+    fs::write("test.txt", "Test content").expect("Failed to write file");
+    GitCommit::add_files(&["test.txt".to_string()]).expect("Failed to stage file");
+
+    // 测试很长的提交消息
+    let long_message = "A".repeat(1000);
+    let result = GitCommit::commit(&long_message, false);
+
+    // 很长的提交消息应该被接受
+    assert!(result.is_ok(), "Long commit message should be accepted");
+}
+
+#[rstest]
+fn test_commit_message_with_special_characters(git_repo_with_commit: TempDir) {
+    // 创建并暂存更改
+    fs::write("test.txt", "Test content").expect("Failed to write file");
+    GitCommit::add_files(&["test.txt".to_string()]).expect("Failed to stage file");
+
+    // 测试包含特殊字符的提交消息
+    let special_message = "Fix: 修复了一个 bug 🐛 (issue #123)";
+    let result = GitCommit::commit(special_message, false);
+
+    assert!(
+        result.is_ok(),
+        "Commit message with special characters should be accepted"
+    );
+}
+
+#[rstest]
+fn test_stage_file_with_spaces(git_repo_with_commit: TempDir) {
+    // 创建文件名包含空格的文件
+    let filename = "file with spaces.txt";
+    fs::write(filename, "Content").expect("Failed to write file");
+
+    // 暂存文件
+    let result = GitCommit::add_files(&[filename.to_string()]);
+    assert!(
+        result.is_ok(),
+        "Should be able to stage file with spaces in name"
+    );
+
+    // 验证文件已暂存
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(status.staged_count > 0, "Expected staged files");
+}
+
+// ==================== 错误处理测试 ====================
+
+#[test]
+fn test_operations_outside_git_repo() {
+    // 在非 Git 目录中测试操作
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+
+    // 所有 Git 操作都应该失败
+    assert!(GitCommit::worktree_status().is_err());
+    assert!(GitCommit::get_worktree_status().is_err());
+    assert!(GitCommit::add_all().is_err());
+    assert!(GitCommit::commit("test", false).is_err());
+    assert!(GitCommit::get_last_commit_info().is_err());
+}
+
+// ==================== 集成测试 ====================
+
+#[rstest]
+fn test_complete_commit_workflow(git_repo_with_commit: TempDir) {
+    // 1. 验证初始状态是干净的
+    let initial_status = GitCommit::worktree_status().expect("Failed to get status");
+    assert!(!initial_status.has_changes());
+
+    // 2. 创建一些更改
+    fs::write("feature1.txt", "Feature 1 implementation").expect("Failed to write file");
+    fs::write("feature2.txt", "Feature 2 implementation").expect("Failed to write file");
+    fs::write("README.md", "# Updated README with new features").expect("Failed to write file");
+
+    // 3. 验证有未暂存的更改
+    // 检查是否有变更
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(status.modified_count > 0 || status.staged_count > 0 || status.untracked_count > 0);
+
+    // 4. 暂存所有更改
+    GitCommit::add_all().expect("Failed to stage all");
+
+    // 5. 验证更改已暂存
+    let staged_status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(staged_status.staged_count >= 3, "Expected at least 3 staged files");
+
+    // 6. 创建提交
+    let commit_message = "Add new features and update README";
+    GitCommit::commit(commit_message, false).expect("Failed to commit");
+
+    // 7. 验证工作树现在是干净的
+    // 检查没有变更
+    let status = GitCommit::get_worktree_status().expect("Failed to get status");
+    assert!(status.modified_count == 0 && status.staged_count == 0 && status.untracked_count == 0);
+
+    // 8. 验证提交信息
+    let commit_info = GitCommit::get_last_commit_info().expect("Failed to get commit info");
+    assert_eq!(commit_info.message, commit_message);
+}
+
+// ==================== 性能测试 ====================
+
+#[rstest]
+fn test_status_check_performance(git_repo_with_commit: TempDir) {
+    use std::time::Instant;
+
+    // 创建一些文件
+    for i in 0..10 {
+        fs::write(format!("file_{}.txt", i), format!("Content {}", i))
+            .expect("Failed to write file");
+    }
+
+    let start = Instant::now();
+
+    // 执行多次状态检查
+    for _ in 0..5 {
+        let _ = GitCommit::worktree_status();
+        let _ = GitCommit::has_changes();
+    }
+
+    let duration = start.elapsed();
+
+    // 状态检查应该相对快速
+    assert!(
+        duration.as_millis() < 1000,
+        "Status checks too slow: {:?}",
+        duration
+    );
+}
