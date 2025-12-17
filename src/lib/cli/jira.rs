@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::args::{DryRunArgs, JiraIdArg, OutputFormatArgs};
+use super::args::{DryRunArgs, JiraIdArg, OutputFormatArgs, PaginationArgs};
 use super::log::LogSubcommand;
 
 /// Jira operations subcommands
@@ -55,13 +55,8 @@ pub enum JiraSubcommand {
         #[command(flatten)]
         jira_id: JiraIdArg,
 
-        /// Limit number of comments to display
-        #[arg(long, value_name = "LIMIT")]
-        limit: Option<usize>,
-
-        /// Offset for pagination
-        #[arg(long, value_name = "OFFSET")]
-        offset: Option<usize>,
+        #[command(flatten)]
+        pagination: PaginationArgs,
 
         /// Filter comments by author email
         #[arg(long, value_name = "EMAIL")]

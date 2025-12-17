@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::args::{DryRunArgs, JiraIdArg};
+use super::args::{DryRunArgs, JiraIdArg, PaginationArgs};
 
 /// PR commands enumeration
 ///
@@ -57,9 +57,8 @@ pub enum PRCommands {
         #[arg(short, long)]
         state: Option<String>,
 
-        /// Limit the number of results
-        #[arg(short, long)]
-        limit: Option<u32>,
+        #[command(flatten)]
+        pagination: PaginationArgs,
     },
     /// Update code (use PR title as commit message)
     ///

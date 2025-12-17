@@ -32,6 +32,7 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "stash",
     "repo",
     "alias",
+    "tag",
 ];
 
 /// PR 子命令列表
@@ -73,7 +74,7 @@ const GITHUB_SUBCOMMANDS: &[&str] = &["list", "current", "add", "remove", "switc
 const LLM_SUBCOMMANDS: &[&str] = &["show", "setup"];
 
 /// Branch 子命令列表
-const BRANCH_SUBCOMMANDS: &[&str] = &["clean", "ignore", "create", "rename", "switch", "sync"];
+const BRANCH_SUBCOMMANDS: &[&str] = &["ignore", "create", "rename", "switch", "sync", "delete"];
 
 /// Commit 子命令列表
 const COMMIT_SUBCOMMANDS: &[&str] = &["amend", "reword", "squash"];
@@ -92,6 +93,18 @@ const COMPLETION_SUBCOMMANDS: &[&str] = &["generate", "check", "remove"];
 
 /// Stash 子命令列表
 const STASH_SUBCOMMANDS: &[&str] = &["list", "apply", "drop", "pop", "push"];
+
+/// Repo 子命令列表
+const REPO_SUBCOMMANDS: &[&str] = &["setup", "show", "clean"];
+
+/// Alias 子命令列表
+const ALIAS_SUBCOMMANDS: &[&str] = &["list", "add", "remove"];
+
+/// Tag 子命令列表
+const TAG_SUBCOMMANDS: &[&str] = &["delete"];
+
+/// 所有支持的 shell 类型
+const SHELL_TYPES: &[&str] = &["zsh", "bash", "fish", "powershell", "elvish"];
 
 // 以下函数用于从补全脚本中提取命令（目前未使用，保留以备将来扩展）
 //
@@ -439,6 +452,33 @@ fn test_all_subcommands_completeness() {
         stash_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
     assert_eq!(stash_subcommands.len(), STASH_SUBCOMMANDS.len());
 
+    // 验证 Repo 子命令
+    let repo_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "repo")
+        .expect("repo command should exist");
+    let repo_subcommands: Vec<String> =
+        repo_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(repo_subcommands.len(), REPO_SUBCOMMANDS.len());
+
+    // 验证 Alias 子命令
+    let alias_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "alias")
+        .expect("alias command should exist");
+    let alias_subcommands: Vec<String> =
+        alias_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(alias_subcommands.len(), ALIAS_SUBCOMMANDS.len());
+
+    // 验证 Tag 子命令
+    let tag_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "tag")
+        .expect("tag command should exist");
+    let tag_subcommands: Vec<String> =
+        tag_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    assert_eq!(tag_subcommands.len(), TAG_SUBCOMMANDS.len());
+
     println!("All subcommands verified successfully!");
 }
 
@@ -503,5 +543,270 @@ fn test_cli_structure_summary() {
     assert!(
         total_subcommands >= 20,
         "Should have at least 20 subcommands"
+    );
+}
+
+/// 参数化测试：验证所有 shell 类型的补全生成
+#[test]
+fn test_all_shell_types_completion_generation() {
+    // 使用系统临时目录
+    let output_dir = std::env::temp_dir().join("workflow_all_shells_test");
+    fs::create_dir_all(&output_dir).expect("Failed to create temp directory");
+
+    let expected_filenames = [
+        "_workflow",
+        "workflow.bash",
+        "workflow.fish",
+        "_workflow.ps1",
+        "workflow.elv",
+    ];
+
+    for (shell_type, expected_filename) in SHELL_TYPES.iter().zip(expected_filenames.iter()) {
+        println!("Testing {} completion generation...", shell_type);
+
+        let generator = CompletionGenerator::new(
+            Some(shell_type.to_string()),
+            Some(output_dir.to_string_lossy().to_string()),
+        )
+        .expect(&format!("Failed to create generator for {}", shell_type));
+
+        // 生成补全脚本
+        let result = generator.generate_all();
+        assert!(
+            result.is_ok(),
+            "Failed to generate completion for {}: {:?}",
+            shell_type,
+            result.err()
+        );
+
+        // 验证文件命名
+        let filename = get_completion_filename(shell_type, "workflow")
+            .expect(&format!("Failed to get filename for {}", shell_type));
+        assert_eq!(
+            &filename, expected_filename,
+            "Wrong filename for {}: expected {}, got {}",
+            shell_type, expected_filename, filename
+        );
+
+        // 验证文件存在
+        let file_path = output_dir.join(&filename);
+        assert!(
+            file_path.exists(),
+            "Completion file not generated for {}: {}",
+            shell_type,
+            file_path.display()
+        );
+
+        // 验证文件内容
+        let content = fs::read_to_string(&file_path).expect(&format!(
+            "Failed to read completion file for {}",
+            shell_type
+        ));
+
+        assert!(
+            !content.is_empty(),
+            "Completion file is empty for {}",
+            shell_type
+        );
+
+        assert!(
+            content.contains("workflow"),
+            "{} completion should contain 'workflow'",
+            shell_type
+        );
+
+        println!(
+            "✓ {} completion: {} bytes, filename: {}",
+            shell_type,
+            content.len(),
+            filename
+        );
+    }
+
+    // 清理临时文件
+    fs::remove_dir_all(&output_dir).ok();
+}
+
+/// 参数化测试：验证所有带子命令的命令完整性
+#[test]
+fn test_all_commands_with_subcommands() {
+    let cmd = Cli::command();
+
+    // 定义所有带子命令的命令及其预期子命令列表
+    let commands_with_subcommands = [
+        ("pr", PR_SUBCOMMANDS),
+        ("commit", COMMIT_SUBCOMMANDS),
+        ("jira", JIRA_SUBCOMMANDS),
+        ("github", GITHUB_SUBCOMMANDS),
+        ("llm", LLM_SUBCOMMANDS),
+        ("branch", BRANCH_SUBCOMMANDS),
+        ("proxy", PROXY_SUBCOMMANDS),
+        ("log", LOG_LEVEL_SUBCOMMANDS),
+        ("completion", COMPLETION_SUBCOMMANDS),
+        ("stash", STASH_SUBCOMMANDS),
+        ("repo", REPO_SUBCOMMANDS),
+        ("alias", ALIAS_SUBCOMMANDS),
+        ("tag", TAG_SUBCOMMANDS),
+    ];
+
+    for (cmd_name, expected_subcommands) in &commands_with_subcommands {
+        println!("Testing {} subcommands...", cmd_name);
+
+        let subcommand = cmd
+            .get_subcommands()
+            .find(|sc| sc.get_name() == *cmd_name)
+            .expect(&format!("{} command should exist", cmd_name));
+
+        let actual_subcommands: Vec<String> =
+            subcommand.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+        let subcommand_set: HashSet<String> = actual_subcommands.iter().cloned().collect();
+
+        // 检查所有预期的子命令都存在
+        for expected_subcmd in *expected_subcommands {
+            assert!(
+                subcommand_set.contains(*expected_subcmd),
+                "Missing {} subcommand: {}",
+                cmd_name,
+                expected_subcmd
+            );
+        }
+
+        // 检查数量匹配
+        assert_eq!(
+            actual_subcommands.len(),
+            expected_subcommands.len(),
+            "{} subcommands count mismatch. Expected: {:?}, Found: {:?}",
+            cmd_name,
+            expected_subcommands,
+            actual_subcommands
+        );
+
+        println!(
+            "✓ {} has {} subcommands: {:?}",
+            cmd_name,
+            actual_subcommands.len(),
+            actual_subcommands
+        );
+    }
+}
+
+/// 参数化测试：验证嵌套子命令（如 jira log）
+#[test]
+fn test_nested_subcommands() {
+    let cmd = Cli::command();
+
+    // 验证 Jira Log 子命令（log 是 jira 的子命令）
+    let jira_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "jira")
+        .expect("jira command should exist");
+
+    let jira_log_cmd = jira_cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "log")
+        .expect("jira log command should exist");
+
+    let log_subcommands: Vec<String> =
+        jira_log_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+    let subcommand_set: HashSet<String> = log_subcommands.iter().cloned().collect();
+
+    for expected_subcmd in LOG_SUBCOMMANDS {
+        assert!(
+            subcommand_set.contains(*expected_subcmd),
+            "Missing jira log subcommand: {}",
+            expected_subcmd
+        );
+    }
+
+    assert_eq!(
+        log_subcommands.len(),
+        LOG_SUBCOMMANDS.len(),
+        "Jira log subcommands count mismatch"
+    );
+
+    println!(
+        "✓ jira log has {} subcommands: {:?}",
+        log_subcommands.len(),
+        log_subcommands
+    );
+
+    // 验证 Branch Ignore 子命令（ignore 是 branch 的子命令）
+    let branch_cmd = cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "branch")
+        .expect("branch command should exist");
+
+    let branch_ignore_cmd = branch_cmd
+        .get_subcommands()
+        .find(|sc| sc.get_name() == "ignore")
+        .expect("branch ignore command should exist");
+
+    let ignore_subcommands: Vec<String> =
+        branch_ignore_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+    // Branch ignore 有 add, remove, list 子命令
+    const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
+    let ignore_subcommand_set: HashSet<String> = ignore_subcommands.iter().cloned().collect();
+
+    for expected_subcmd in BRANCH_IGNORE_SUBCOMMANDS {
+        assert!(
+            ignore_subcommand_set.contains(*expected_subcmd),
+            "Missing branch ignore subcommand: {}",
+            expected_subcmd
+        );
+    }
+
+    assert_eq!(
+        ignore_subcommands.len(),
+        BRANCH_IGNORE_SUBCOMMANDS.len(),
+        "Branch ignore subcommands count mismatch"
+    );
+
+    println!(
+        "✓ branch ignore has {} subcommands: {:?}",
+        ignore_subcommands.len(),
+        ignore_subcommands
+    );
+}
+
+/// 验证所有顶级命令在常量列表中都有定义
+#[test]
+fn test_top_level_commands_sync() {
+    let cmd = Cli::command();
+    let actual_commands: Vec<String> =
+        cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+
+    let expected_set: HashSet<&str> = TOP_LEVEL_COMMANDS.iter().copied().collect();
+    let actual_set: HashSet<String> = actual_commands.iter().cloned().collect();
+
+    // 检查是否有遗漏的命令
+    for actual_cmd in &actual_commands {
+        assert!(
+            expected_set.contains(actual_cmd.as_str()),
+            "Command '{}' is missing from TOP_LEVEL_COMMANDS constant",
+            actual_cmd
+        );
+    }
+
+    // 检查是否有多余的命令
+    for expected_cmd in TOP_LEVEL_COMMANDS {
+        assert!(
+            actual_set.contains(*expected_cmd),
+            "Command '{}' in TOP_LEVEL_COMMANDS constant does not exist in CLI",
+            expected_cmd
+        );
+    }
+
+    assert_eq!(
+        actual_commands.len(),
+        TOP_LEVEL_COMMANDS.len(),
+        "Top-level commands count mismatch"
+    );
+
+    println!(
+        "✓ All {} top-level commands are synchronized",
+        actual_commands.len()
     );
 }

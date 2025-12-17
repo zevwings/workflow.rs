@@ -406,7 +406,7 @@ fn test_jira_comments_command_with_limit() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])
         .unwrap();
     match cli.command {
-        JiraSubcommand::Comments { limit, .. } => assert_eq!(limit, Some(10)),
+        JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
         _ => panic!("Expected Comments command"),
     }
 }
@@ -416,7 +416,7 @@ fn test_jira_comments_command_with_offset() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])
         .unwrap();
     match cli.command {
-        JiraSubcommand::Comments { offset, .. } => assert_eq!(offset, Some(5)),
+        JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
         _ => panic!("Expected Comments command"),
     }
 }
@@ -478,15 +478,14 @@ fn test_jira_comments_command_all_filters() {
     match cli.command {
         JiraSubcommand::Comments {
             jira_id,
-            limit,
-            offset,
+            pagination,
             author,
             since,
             ..
         } => {
             assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert_eq!(limit, Some(20));
-            assert_eq!(offset, Some(10));
+            assert_eq!(pagination.limit, Some(20));
+            assert_eq!(pagination.offset, Some(10));
             assert_eq!(author, Some("user@example.com".to_string()));
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
@@ -511,13 +510,12 @@ fn test_jira_comments_command_pagination() {
     match cli.command {
         JiraSubcommand::Comments {
             jira_id,
-            limit,
-            offset,
+            pagination,
             ..
         } => {
             assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
-            assert_eq!(limit, Some(15));
-            assert_eq!(offset, Some(30));
+            assert_eq!(pagination.limit, Some(15));
+            assert_eq!(pagination.offset, Some(30));
         }
         _ => panic!("Expected Comments command"),
     }

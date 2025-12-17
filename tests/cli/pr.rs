@@ -133,7 +133,7 @@ fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
 #[case(Some("open"), None)]
 #[case(None, Some(10))]
 #[case(Some("closed"), Some(5))]
-fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<u32>) {
+fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize>) {
     let mut args = vec!["test-pr", "list"];
     if let Some(s) = state {
         args.push("--state");
@@ -148,9 +148,12 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<u32>)
     let cli = TestPRCli::try_parse_from(&args).unwrap();
 
     match cli.command {
-        PRCommands::List { state: s, limit: l } => {
+        PRCommands::List {
+            state: s,
+            pagination,
+        } => {
             assert_eq!(s, state.map(|s| s.to_string()));
-            assert_eq!(l, limit);
+            assert_eq!(pagination.limit, limit);
         }
         _ => panic!("Expected List command"),
     }

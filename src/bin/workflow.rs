@@ -272,8 +272,8 @@ fn main() -> Result<()> {
             } => {
                 status::PullRequestStatusCommand::show(pull_request_id_or_branch)?;
             }
-            PRCommands::List { state, limit } => {
-                list::PullRequestListCommand::list(state, limit)?;
+            PRCommands::List { state, pagination } => {
+                list::PullRequestListCommand::list(state, pagination.limit)?;
             }
             PRCommands::Update => {
                 pr_update::PullRequestUpdateCommand::update()?;
@@ -358,16 +358,15 @@ fn main() -> Result<()> {
             }
             JiraSubcommand::Comments {
                 jira_id,
-                limit,
-                offset,
+                pagination,
                 author,
                 since,
                 output_format,
             } => {
                 CommentsCommand::show(
                     jira_id.into_option(),
-                    limit,
-                    offset,
+                    pagination.limit,
+                    pagination.offset,
                     author,
                     since,
                     output_format,

@@ -11,12 +11,11 @@ use reqwest::header::HeaderMap;
 use reqwest::header::HeaderValue;
 use serde::Serialize;
 use serde_json::Value;
-use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 
 use super::helpers::{build_jira_url, jira_auth_config};
 use crate::base::http::{HttpClient, MultipartRequestConfig, RequestConfig};
+use crate::base::util::FileReader;
 use crate::jira::types::{
     JiraAttachment, JiraChangelog, JiraChangelogHistory, JiraChangelogItem, JiraIssue,
     JiraTransition,
@@ -243,12 +242,7 @@ impl JiraIssueApi {
             .and_then(|n| n.to_str())
             .wrap_err_with(|| format!("Invalid file name: {}", file_path))?;
 
-        let mut file =
-            File::open(path).wrap_err_with(|| format!("Failed to open file: {}", file_path))?;
-
-        let mut file_data = Vec::new();
-        file.read_to_end(&mut file_data)
-            .wrap_err_with(|| format!("Failed to read file: {}", file_path))?;
+        let file_data = FileReader::new(path).bytes()?;
 
         // 创建 multipart form
         // 根据文件扩展名确定 MIME 类型

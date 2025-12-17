@@ -1,5 +1,11 @@
 # Workflow - Rust CLI 工具
 
+![GitHub Release](https://img.shields.io/github/v/release/zevwings/workflow.rs)
+![License](https://img.shields.io/badge/license-MIT-green)
+![CI](https://github.com/zevwings/workflow.rs/workflows/CI/badge.svg)
+![Rust Version](https://img.shields.io/badge/rust-1.89+-orange)
+![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
+
 工作流自动化工具的 Rust 实现版本。
 
 ## 🌐 跨平台支持
