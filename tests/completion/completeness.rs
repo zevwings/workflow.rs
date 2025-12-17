@@ -1,6 +1,6 @@
-// 补全完整性验证测试
-//
-// 验证所有命令和子命令是否都包含在补全脚本中。
+//! 补全完整性验证测试
+//!
+//! 验证所有命令和子命令是否都包含在补全脚本中。
 
 use pretty_assertions::assert_eq;
 use std::collections::HashSet;

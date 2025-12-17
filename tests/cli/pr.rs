@@ -59,12 +59,12 @@ fn test_pr_create_command(
 
     match cli.command {
         PRCommands::Create {
-            jira_id,
+            jira_ticket: ticket,
             title: t,
             description: d,
             dry_run: dr,
         } => {
-            assert_eq!(jira_id.into_option(), jira_ticket.map(|s| s.to_string()));
+            assert_eq!(ticket, jira_ticket.map(|s| s.to_string()));
             assert_eq!(t, title.map(|s| s.to_string()));
             assert_eq!(d, description.map(|s| s.to_string()));
             assert_eq!(dr.dry_run, dry_run);
