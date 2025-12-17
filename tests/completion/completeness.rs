@@ -743,8 +743,10 @@ fn test_nested_subcommands() {
         .find(|sc| sc.get_name() == "ignore")
         .expect("branch ignore command should exist");
 
-    let ignore_subcommands: Vec<String> =
-        branch_ignore_cmd.get_subcommands().map(|sc| sc.get_name().to_string()).collect();
+    let ignore_subcommands: Vec<String> = branch_ignore_cmd
+        .get_subcommands()
+        .map(|sc| sc.get_name().to_string())
+        .collect();
 
     // Branch ignore 有 add, remove, list 子命令
     const BRANCH_IGNORE_SUBCOMMANDS: &[&str] = &["add", "remove", "list"];
