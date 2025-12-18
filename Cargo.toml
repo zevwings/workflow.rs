@@ -1,6 +1,6 @@
 [package]
 name = "workflow"
-version = "1.6.4"
+version = "1.6.5"
 edition = "2021"
 rust-version = "1.89.0"
 default-run = "workflow"
