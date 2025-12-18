@@ -46,3 +46,15 @@ pub use stash::{GitStash, StashApplyResult, StashEntry, StashPopResult, StashSta
 pub use table::BranchRow;
 pub use tag::{GitTag, TagInfo};
 pub use types::RepoType;
+
+// GitHub 服务相关常量
+pub mod github {
+    /// GitHub API 基础 URL
+    pub const API_BASE: &str = "https://api.github.com";
+
+    /// GitHub 网站基础 URL
+    pub const BASE: &str = "https://github.com";
+
+    /// GitHub 域名
+    pub const DOMAIN: &str = "github.com";
+}

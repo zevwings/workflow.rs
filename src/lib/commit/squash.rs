@@ -6,6 +6,7 @@
 //! - 格式化显示
 //! - Rebase 相关操作
 
+use crate::base::constants::errors::file_operations;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
@@ -13,6 +14,10 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+// Git 环境变量常量
+const GIT_SEQUENCE_EDITOR: &str = "GIT_SEQUENCE_EDITOR";
+const GIT_EDITOR: &str = "GIT_EDITOR";
 
 /// Squash 预览信息
 #[derive(Debug, Clone)]
@@ -267,7 +272,7 @@ cp "{}" "$1"
             std::process::id()
         ));
         fs::write(&sequence_editor_script, script_content)
-            .wrap_err_with(|| "Failed to write sequence editor script")?;
+            .wrap_err_with(|| file_operations::WRITE_SEQUENCE_EDITOR_SCRIPT_FAILED)?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -291,7 +296,7 @@ cp "{}" "$1"
             std::process::id()
         ));
         fs::write(&message_editor_script, message_script_content)
-            .wrap_err_with(|| "Failed to write message editor script")?;
+            .wrap_err_with(|| file_operations::WRITE_MESSAGE_EDITOR_SCRIPT_FAILED)?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
@@ -323,8 +328,8 @@ cp "{}" "$1"
             .arg("rebase")
             .arg("-i")
             .arg(base_sha)
-            .env("GIT_SEQUENCE_EDITOR", &config.sequence_editor_script)
-            .env("GIT_EDITOR", &config.message_editor_script)
+            .env(GIT_SEQUENCE_EDITOR, &config.sequence_editor_script)
+            .env(GIT_EDITOR, &config.message_editor_script)
             .output()
             .wrap_err_with(|| "Failed to execute git rebase")?;
 

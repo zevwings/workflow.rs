@@ -275,7 +275,7 @@ mod tests {
         assert!(timestamp2 > timestamp1);
 
         // 验证时间戳在合理范围内（2020年之后）
-        let year_2020_timestamp_nanos = 1577836800_000_000_000u128; // 2020-01-01 00:00:00 UTC in nanos
+        let year_2020_timestamp_nanos = 1_577_836_800_000_000_000_u128; // 2020-01-01 00:00:00 UTC in nanos
         assert!(timestamp1 > year_2020_timestamp_nanos);
 
         // 验证纳秒时间戳比秒时间戳精度更高

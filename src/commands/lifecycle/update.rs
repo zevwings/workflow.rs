@@ -239,7 +239,10 @@ impl UpdateCommand {
                 Ok(v)
             }
             None => {
-                let url = "https://api.github.com/repos/zevwings/workflow.rs/releases/latest";
+                let url = format!(
+                    "{}/repos/zevwings/workflow.rs/releases/latest",
+                    crate::git::github::API_BASE
+                );
                 let retry_config = HttpRetryConfig::new();
 
                 let retry_result = Spinner::with("Fetching latest version...", || {
@@ -278,7 +281,7 @@ impl UpdateCommand {
                             let client = HttpClient::global()?;
                             let config = RequestConfig::<Value, Value>::new().headers(&headers);
                             client
-                                .get(url, config)
+                                .get(&url, config)
                                 .wrap_err("Failed to fetch latest release from GitHub")
                         },
                         &retry_config,
@@ -316,8 +319,12 @@ impl UpdateCommand {
             "tar.gz"
         };
         format!(
-            "https://github.com/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.{}",
-            version, version, platform, extension
+            "{}/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.{}",
+            crate::git::github::BASE,
+            version,
+            version,
+            platform,
+            extension
         )
     }
 
@@ -387,7 +394,8 @@ impl UpdateCommand {
                     progress.set_position(downloaded_bytes);
                 }
 
-                progress.finish_with_message("Download complete");
+                progress
+                    .finish_with_message(crate::base::constants::messages::user::DOWNLOAD_COMPLETE);
                 Ok(())
             },
             &retry_config,

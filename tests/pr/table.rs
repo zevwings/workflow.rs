@@ -276,7 +276,7 @@ fn test_pull_request_row_from_github_pr() {
 
     // 验证字段符合预期格式
     assert!(row.number.parse::<u32>().is_ok());
-    assert!(row.url.starts_with("https://github.com"));
+    assert!(row.url.starts_with(workflow::git::github::BASE));
     assert!(row.url.contains("/pull/"));
 }
 

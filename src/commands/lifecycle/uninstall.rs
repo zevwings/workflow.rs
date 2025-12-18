@@ -419,7 +419,7 @@ impl UninstallCommand {
             if workflow_config_path.exists() {
                 fs::remove_file(&workflow_config_path)
                     .wrap_err("Failed to remove workflow.toml")?;
-                removed.push("workflow.toml".to_string());
+                removed.push(crate::base::settings::paths::WORKFLOW_CONFIG_FILE.to_string());
             }
         }
 
