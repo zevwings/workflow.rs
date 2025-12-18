@@ -639,6 +639,12 @@ workflow jira comment [PROJ-123]              # 添加评论到 Jira ticket（JI
 
 # 显示评论
 workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
+workflow jira comments [PROJ-123] --json      # JSON 格式输出
+workflow jira comments [PROJ-123] --markdown  # Markdown 格式输出
+workflow jira comments [PROJ-123] --limit 10  # 限制结果数量
+workflow jira comments [PROJ-123] --offset 0  # 设置偏移量
+workflow jira comments [PROJ-123] --author "user@example.com"  # 按作者邮箱过滤
+workflow jira comments [PROJ-123] --since "2024-01-01"  # 按日期过滤（ISO 8601 格式）
 
 # 下载所有附件
 workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）
