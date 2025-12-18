@@ -189,7 +189,7 @@ impl PrivateRepoConfig {
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
-        PathAccess::new(&config_path).ensure_parent_dir_exists()?;
+        PathAccess::new(&config_path).ensure_parent_exists()?;
 
         // Read existing configuration (if exists)
         let mut existing_value: Value = if config_path.exists() {

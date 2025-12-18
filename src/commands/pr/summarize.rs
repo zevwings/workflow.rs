@@ -6,12 +6,12 @@ use color_eyre::{
     eyre::{ContextCompat, WrapErr},
     Result,
 };
-use std::fs;
 use std::path::PathBuf;
 
 use crate::base::indicator::Spinner;
 use crate::base::settings::settings::default_download_base_dir;
 use crate::base::settings::Settings;
+use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::log_info;
@@ -152,10 +152,7 @@ impl SummarizeCommand {
         let output_path = Self::build_output_path(&pr_id, &summary.filename)?;
 
         // 确保目录存在
-        if let Some(parent) = output_path.parent() {
-            fs::create_dir_all(parent)
-                .wrap_err_with(|| format!("Failed to create directory: {:?}", parent))?;
-        }
+        DirectoryWalker::new(".").ensure_parent_exists(&output_path)?;
 
         // 写入文件
         FileWriter::new(&output_path)

@@ -2,7 +2,6 @@
 //!
 //! 提供生成各种 shell 的 completion 脚本文件的功能。
 
-use std::fs;
 use std::path::PathBuf;
 
 use clap::{Command, CommandFactory};
@@ -12,6 +11,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use super::helpers::get_completion_filename;
 use crate::base::alias::AliasManager;
 use crate::base::settings::paths::Paths;
+use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 
 /// 生成结果
@@ -105,13 +105,7 @@ impl CompletionGenerator {
         crate::trace_debug!("Output directory: {}", self.output_dir.display());
 
         // 创建输出目录
-        fs::create_dir_all(&self.output_dir).wrap_err_with(|| {
-            format!(
-                "Failed to create output directory: {} (shell: {})",
-                self.output_dir.display(),
-                self.shell
-            )
-        })?;
+        DirectoryWalker::new(&self.output_dir).ensure_exists()?;
 
         // 生成 completion 脚本
         self.generate_workflow()?;
