@@ -20,7 +20,7 @@
 #### 1. [`JIRA_TODO.md`](./JIRA_TODO.md)
 - **状态**: 🚧 部分完成
 - **实现度**: ~40%
-- **分类**: JIRA 模块
+- **分类**: JIRA 模块TEST_ARCHITECTURE_IMPROVEMENT_TODO
 - **已完成**:
   - ✅ `jira info` - 显示 ticket 基本信息（支持多种输出格式）
   - ✅ `jira changelog` - 显示变更历史（支持字段过滤、多种输出格式）
@@ -36,15 +36,16 @@
 - **优先级**: 高优先级（命令封装、info 增强）
 
 
-#### 2. [`REPO_TODO.md`](./REPO_TODO.md)
-- **状态**: ⏳ 待实施
+#### 2. [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md)
+- **状态**: 🔄 进行中
 - **实现度**: 0%
-- **分类**: Repo 配置模块
+- **分类**: 测试架构改进
 - **内容**:
-  - 分支前缀全局配置支持
-  - PR 自动接受变更类型全局配置支持
-  - 配置优先级文档完善
-- **优先级**: 高优先级（配置层级优化）
+  - 测试覆盖率监控系统 (cargo-tarpaulin)
+  - 测试数据管理架构 (工厂模式 + Mock服务器)
+  - 系统化性能测试 (Criterion基准测试)
+  - CI/CD流水线集成
+- **优先级**: 高优先级（测试质量提升）
 
 #### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 - **状态**: ⏳ 待实施
@@ -55,6 +56,17 @@
   - 通知系统（桌面通知、邮件通知）
 - **优先级**: 中优先级
 
+#### 4. [`CONSTANTS_REFACTORING_TODO.md`](./CONSTANTS_REFACTORING_TODO.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 常量化重构
+- **内容**:
+  - 分支验证错误消息常量化
+  - API URL 常量化
+  - 网络连接错误消息常量化
+  - Git 检查错误消息常量化
+- **优先级**: 中低优先级
+
 ---
 
 ## 📁 目录结构
@@ -64,8 +76,9 @@ docs/todo/
 ├── README.md                      # 本文件（索引文档）
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
-├── REPO_TODO.md                   # Repo 配置模块待办事项（⏳ 待实施）
-└── INTEGRATION_TODO.md            # 集成与扩展待办事项
+├── TEST_ARCHITECTURE_IMPROVEMENT_TODO.md  # 测试架构改进待办事项（🔄 进行中）
+├── INTEGRATION_TODO.md            # 集成与扩展待办事项
+└── CONSTANTS_REFACTORING_TODO.md  # 常量化重构待办事项（⏳ 待实施）
 ```
 
 ---
@@ -75,15 +88,17 @@ docs/todo/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| ⏳ 待实施 | 2 个 | Repo 配置模块、集成与扩展 |
-| **总计** | **3 个** | - |
+| 🔄 进行中 | 1 个 | 测试架构改进 |
+| ⏳ 待实施 | 2 个 | 集成扩展、常量化重构 |
+| **总计** | **4 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **REPO_TODO.md** - Repo 配置模块待办事项（⏳ 待实施，0%）
-3. **INTEGRATION_TODO.md** - 集成与扩展待办事项
+2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，0%）
+3. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
+4. **CONSTANTS_REFACTORING_TODO.md** - 常量化重构待办事项（⏳ 待实施，0%）
 
 ---
 
@@ -91,21 +106,29 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 3 个文档：
+本目录包含 4 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-#### 待实施文档（2 个）
-2. **Repo 配置模块** (`REPO_TODO.md`) - ⏳ 待实施（0%）
-   - 分支前缀全局配置支持
-   - PR 自动接受变更类型全局配置支持
-   - 配置优先级文档完善
+#### 进行中文档（1 个）
+2. **测试架构改进** (`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`) - 🔄 进行中（0%）
+   - 测试覆盖率监控系统 (cargo-tarpaulin)
+   - 测试数据管理架构 (工厂模式 + Mock服务器)
+   - 系统化性能测试 (Criterion基准测试)
+   - CI/CD流水线集成
 
-3. **集成与扩展** (`INTEGRATION_TODO.md`)
+#### 待实施文档（2 个）
+3. **集成与扩展** (`INTEGRATION_TODO.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
+
+4. **常量化重构** (`CONSTANTS_REFACTORING_TODO.md`) - ⏳ 待实施（0%）
+   - 分支验证错误消息常量化
+   - API URL 常量化
+   - 网络连接错误消息常量化
+   - Git 检查错误消息常量化
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
 
@@ -123,17 +146,25 @@ docs/todo/
 
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
-- **Repo 配置相关** → [`REPO_TODO.md`](./REPO_TODO.md) ⏳ 待实施
-- **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+- **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中
+- **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md) ⏳ 待实施
+- **常量化重构** → [`CONSTANTS_REFACTORING_TODO.md`](./CONSTANTS_REFACTORING_TODO.md) ⏳ 待实施
 
 ---
 
-**最后更新**: 2025-01-27
-**文档维护**: 定期审查，保持目录整洁
+**最后更新**: 2025-12-18
 
 ---
 
 ## 📝 更新说明
+
+### 2025-12-18 更新
+- ✅ 新增 CONSTANTS_REFACTORING_TODO.md - 常量化重构待办事项
+- ✅ 删除 CODE_QUALITY_IMPROVEMENTS_TODO.md - 所有核心任务已完成，仅剩可选测试改进
+- ✅ 删除 REPO_TODO.md 索引 - Repo 配置模块相关功能已完成
+- ✅ 整合了 P2_IMPROVEMENT_PLAN.md 和 FILE_OPERATION_BEST_PRACTICES.md 的内容
+- ✅ 删除了已完成的指南文档，转为TODO形式管理
+- ✅ 更新了统计信息和目录结构
 
 ### 2025-01-27 更新
 - ✅ 新增 REPO_TODO.md - Repo 配置模块待办事项

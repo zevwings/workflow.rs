@@ -23,6 +23,7 @@ help:
 	@echo "  make install            - 一次性安装全部（构建 + 安装二进制 + 安装 completion）"
 	@echo "  make update             - 更新 Workflow CLI（重新构建 + 更新二进制 + 更新 completion）"
 	@echo "  make test               - 运行测试"
+	@echo "  make test-all           - 运行所有测试（包括被忽略的）"
 	@echo "  make lint               - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make fix                - 自动修复代码问题（格式化 + Clippy + Cargo Fix）"
 	@echo "  make setup              - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat）"
@@ -54,6 +55,11 @@ clean:
 test:
 	@echo "运行测试..."
 	cargo test
+
+# 运行所有测试（包括被忽略的）
+test-all:
+	@echo "运行所有测试（包括被忽略的）..."
+	cargo test -- --include-ignored
 
 # 安装所需的开发工具
 setup:
@@ -208,3 +214,4 @@ bloat:
 	fi
 	@echo "分析二进制文件大小..."
 	@cargo bloat --release $(ARGS) || cargo bloat --release
+

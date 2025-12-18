@@ -2,6 +2,7 @@
 //!
 //! 包含 CLI 命令层的所有测试文件。
 
+pub mod basic_cli;
 pub mod branch;
 pub mod check;
 pub mod commit;

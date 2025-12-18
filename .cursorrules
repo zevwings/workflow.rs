@@ -89,6 +89,7 @@
    - TODO 文档 → `docs/todo/{TOPIC}_TODO.md`
    - TODO 索引 → `docs/todo/README.md`
    - **识别关键词**：TODO、待办、待实现、计划
+   - **索引限制**：TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
 
 5. **分析报告文档** → `report/`
    - **特殊规则**：只有从 `@docs/guidelines/PRE_COMMIT_GUIDELINES.md` 生成的内容存放到这里
@@ -119,13 +120,16 @@
 
 **创建新文档时的注意事项**：
 - 使用模板创建新文档（参考 `docs/guidelines/DOCUMENT_GUIDELINES.md`）
-- 更新 `docs/README.md` 中的文档索引（如适用）
+- 更新相应的文档索引（如适用）：
+  - TODO 文档：只在 `docs/todo/README.md` 中索引
+  - 其他参考文档：在 `docs/README.md` 中索引
 - 确保文档遵循项目的文档编写规范
 
 **文档索引规则**：
 - **禁止索引**：`report/` 和 `requirements/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 中
 - 这两个目录包含**临时分析文档**，不是参考文档，不需要在文档索引中展示
-- **参考文档**：`docs/` 目录下的文档是参考文档和架构文档，应该被索引到 `docs/README.md` 中
+- **TODO 文档索引限制**：`docs/todo/` 目录下的 TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 中索引
+- **参考文档**：`docs/` 目录下的其他文档（架构文档、指南文档、迁移文档）是参考文档，应该被索引到 `docs/README.md` 中
 
 **文档删除规则**：
 - **临时文档（可直接删除）**：
@@ -136,6 +140,7 @@
   - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
   - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/todo/`）
   - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
+  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/todo/README.md` 中维护索引，不在主文档索引中展示
 
 ## 核心模块
 

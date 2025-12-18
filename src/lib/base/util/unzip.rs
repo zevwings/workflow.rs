@@ -3,11 +3,12 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 use flate2::read::GzDecoder;
-use std::fs::{self, File};
+use std::fs::File;
 use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
 
+use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::FileReader;
 
 /// 解压工具
@@ -45,7 +46,7 @@ impl Unzip {
     /// ```
     pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
-        fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
+        DirectoryWalker::new(output_dir).ensure_exists()?;
 
         // 打开 tar.gz 文件并创建 BufReader
         let reader = FileReader::new(tar_gz_path).open()?;
@@ -89,7 +90,7 @@ impl Unzip {
     /// ```
     pub fn extract_zip(zip_path: &Path, output_dir: &Path) -> Result<()> {
         // 创建输出目录
-        fs::create_dir_all(output_dir).wrap_err("Failed to create output directory")?;
+        DirectoryWalker::new(output_dir).ensure_exists()?;
 
         // 打开 zip 文件
         // 注意：ZipArchive::new() 需要 File 类型，不能使用 FileReader::open() 返回的 BufReader<File>
@@ -108,15 +109,11 @@ impl Unzip {
 
             if file.name().ends_with('/') {
                 // 目录
-                fs::create_dir_all(&outpath).wrap_err_with(|| {
-                    format!("Failed to create directory: {}", outpath.display())
-                })?;
+                DirectoryWalker::new(&outpath).ensure_exists()?;
             } else {
                 // 文件
                 if let Some(parent) = outpath.parent() {
-                    fs::create_dir_all(parent).wrap_err_with(|| {
-                        format!("Failed to create parent directory: {}", parent.display())
-                    })?;
+                    DirectoryWalker::new(parent).ensure_exists()?;
                 }
 
                 let mut outfile = File::create(&outpath)

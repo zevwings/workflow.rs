@@ -425,7 +425,7 @@ let timestamp = format_last_updated();
 ```markdown
 ---
 
-*最后更新：2025-12-09*
+*最后更新: 2025-12-09*
 ```
 
 ### 对于 AI 助手（Cursor/Claude 等）
@@ -437,7 +437,7 @@ let timestamp = format_last_updated();
 1. **使用当前日期**：使用当前本地日期（格式：`YYYY-MM-DD`）
 2. **格式统一**：使用以下格式之一：
    - `**最后更新**: YYYY-MM-DD`
-   - `*最后更新：YYYY-MM-DD*`
+   - `*最后更新: YYYY-MM-DD*`
 3. **位置**：放在文档末尾，分隔线之后
 
 #### 获取当前日期的方法
@@ -534,7 +534,7 @@ let iso = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
 ---
 
 *模板版本：2.0*
-*最后更新：2025-12-09*
+*最后更新: 2025-12-09*
 
 ---
 
@@ -558,3 +558,7 @@ let iso = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
    - 在"核心组件"中添加"使用场景"字段
 
 简化后的模板减少了约 15% 的内容，同时保持了所有必要信息，结构更加清晰。
+
+---
+
+**最后更新**: 2025-12-18

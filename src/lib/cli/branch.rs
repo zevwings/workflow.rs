@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::args::{DryRunArgs, JiraIdArg};
+use super::args::{DryRunArgs, ForceArgs, JiraIdArg};
 
 /// Branch management subcommands
 ///
@@ -102,9 +102,8 @@ pub enum BranchSubcommand {
         #[command(flatten)]
         dry_run: DryRunArgs,
 
-        /// Force delete (skip confirmation and merge check)
-        #[arg(long, short = 'f')]
-        force: bool,
+        #[command(flatten)]
+        force: ForceArgs,
     },
 }
 

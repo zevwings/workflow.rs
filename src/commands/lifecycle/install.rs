@@ -14,6 +14,7 @@ use color_eyre::{
 
 use crate::base::settings::paths::Paths;
 use crate::base::shell::Detect;
+use crate::base::util::directory::DirectoryWalker;
 use crate::{log_break, log_debug, log_info, log_success, log_warning, Completion};
 
 /// 安装命令
@@ -36,7 +37,7 @@ impl InstallCommand {
         log_debug!("Detected: {}", shell);
 
         // 创建 completion 目录
-        fs::create_dir_all(&completion_dir).wrap_err("Failed to create completion directory")?;
+        DirectoryWalker::new(&completion_dir).ensure_exists()?;
         log_debug!("Completion directory: {}", completion_dir.display());
 
         // 生成 completion 脚本
@@ -96,7 +97,7 @@ impl InstallCommand {
 
         // 创建安装目录（Windows 需要）
         let install_path = PathBuf::from(&install_dir);
-        fs::create_dir_all(&install_path).wrap_err("Failed to create install directory")?;
+        DirectoryWalker::new(&install_path).ensure_exists()?;
 
         // 获取当前可执行文件所在目录
         let current_exe = env::current_exe().wrap_err("Failed to get current executable path")?;

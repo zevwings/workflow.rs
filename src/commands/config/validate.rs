@@ -1,17 +1,22 @@
 //! 配置验证命令
 //! 验证配置文件的完整性和有效性
 
-use crate::base::settings::paths::Paths;
-use crate::base::settings::settings::Settings;
-use crate::base::util::file::{FileReader, FileWriter};
-use crate::commands::config::helpers::parse_config;
-use crate::{log_error, log_info, log_message, log_success, log_warning};
-use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+// 标准库导入
 use std::fs;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
+
+// 第三方库导入
+use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+
+// 项目内部导入
+use crate::base::settings::paths::Paths;
+use crate::base::settings::settings::Settings;
+use crate::base::util::date::get_unix_timestamp;
+use crate::base::util::file::{FileReader, FileWriter};
+use crate::commands::config::helpers::parse_config;
+use crate::{log_error, log_info, log_message, log_success, log_warning};
 
 /// 配置验证错误
 #[derive(Debug, Clone)]
@@ -391,7 +396,7 @@ impl ConfigValidateCommand {
 
     /// 创建备份
     fn create_backup(config_path: &Path) -> Result<PathBuf> {
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let timestamp = get_unix_timestamp();
         let backup_filename = format!(
             "{}.backup.{}",
             config_path.file_name().and_then(|n| n.to_str()).unwrap_or("config"),

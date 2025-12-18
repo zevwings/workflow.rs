@@ -298,9 +298,9 @@
 
 ---
 
-## 📋 设计文档和指南
+## 📋 待办事项和设计指南
 
-> 设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
+> 待办事项文档位于 [`todo/`](./todo/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
 ### [DEVELOPMENT_GUIDELINES.md](./guidelines/DEVELOPMENT_GUIDELINES.md)
 **开发规范文档**
@@ -324,16 +324,63 @@
 - 章节检查清单
 - 文档编写规范
 
-### [PRE_COMMIT_GUIDELINES.md](./guidelines/PRE_COMMIT_GUIDELINES.md)
-**提交前检查指南**
+### [DOCUMENT_TIMESTAMP_GUIDELINES.md](./guidelines/DOCUMENT_TIMESTAMP_GUIDELINES.md)
+**文档更新时间维护指南**
 
+- 更新时间格式规范
+- 维护流程和最佳实践
+- 自动化检查工具使用
+
+## 🤖 AI 工作流指南
+
+> AI 工作流指南位于 [`workflows/`](./guidelines/workflows/) 目录下
+
+### [工作流指南索引](./guidelines/workflows/README.md)
+**AI 工作流完整指南**
+
+- 工作流概述和使用场景
+- 快速参考和详细指南导航
+- 工作流文档组织结构
+
+### [PRE_COMMIT_GUIDELINES.md](./guidelines/workflows/PRE_COMMIT_GUIDELINES.md)
+**提交前检查指南（5-15分钟）**
+
+- 快速检查清单和一键执行命令
 - 文档检查清单
 - CLI 和 Completion 检查
 - 代码优化检查（包含如何提取共用代码的具体示例）
 - 测试用例检查
 - 代码质量检查（make lint/fix）
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
-- 快速检查清单和常见问题
+- 检查优先级对照表和常见问题
+
+### [REVIEW_GUIDELINES.md](./guidelines/workflows/REVIEW_GUIDELINES.md)
+**综合深入检查指南（2-4小时）**
+
+- 深入检查概述和场景选择
+- 专门检查指南集成（CLI、代码、测试、文档）
+- 跨领域问题关联分析
+- 综合检查报告生成
+- 定期审查工作流建议
+
+### [QUICK_REFERENCE_GUIDELINES.md](./guidelines/workflows/references/QUICK_REFERENCE_GUIDELINES.md)
+**快速参考指南**
+
+- 检查类型选择指南（快速检查 vs 深入检查）
+- 核心检查命令汇总
+- 检查清单速览
+- 问题优先级对照表
+- 报告文件位置和命名规范
+- 常用工具函数和故障排除
+
+### [STYLE_GUIDELINES.md](./guidelines/workflows/references/STYLE_GUIDELINES.md)
+**样式规范指南**
+
+- 术语规范（检查类型、优先级、状态）
+- 视觉元素规范（图标、标题、代码块、表格）
+- 检查清单格式和链接格式
+- 信息框和文档结构模板
+- 更新规范和变更记录
 
 ### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/reviews/REVIEW_DOCUMENT_GUIDELINES.md)
 **文档检查指南**
@@ -462,4 +509,4 @@
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-18

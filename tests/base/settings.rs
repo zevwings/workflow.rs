@@ -1,326 +1,472 @@
-//! Settings 模块测试
+//! Settings 配置管理测试
 //!
-//! 测试配置加载、初始化和路径管理功能。
+//! 测试 Settings 模块的核心功能，包括：
+//! - 配置结构体创建和字段访问
+//! - 配置加载和默认值处理
+//! - 配置验证和序列化
+//! - 表格显示结构测试
 
-use clap_complete::shells::Shell;
 use pretty_assertions::assert_eq;
-use rstest::{fixture, rstest};
-use std::fs;
-use workflow::base::settings::paths::Paths;
-use workflow::base::settings::settings::Settings;
+use std::collections::HashMap;
+use workflow::base::settings::settings::{
+    GitHubAccount, GitHubSettings, JiraSettings, LLMProviderSettings, LogSettings,
+};
+use workflow::base::settings::{
+    GitHubAccountListRow, GitHubAccountRow, JiraConfigRow, LLMConfigRow, LLMSettings, Settings,
+};
 
-// ==================== Fixtures ====================
+// ==================== Helper Functions ====================
 
-#[fixture]
-fn settings() -> Settings {
-    Settings::load()
-}
-
-// ==================== Settings 测试 ====================
-
-#[rstest]
-fn test_settings_initialization(settings: Settings) {
-    // 测试初始化（使用默认值）
-    // 注意：这些测试会加载实际的配置文件，所以只测试结构是否正确加载
-    assert_eq!(settings.log.output_folder_name, "logs");
-    // LLM provider 可能是 openai 或用户配置的其他值
-    assert!(!settings.llm.provider.is_empty());
-}
-
-#[rstest]
-fn test_llm_provider(settings: Settings) {
-    // 测试 LLM provider 是否被正确加载
-    // 可能是 openai (默认) 或用户配置的其他值
-    assert!(!settings.llm.provider.is_empty());
-}
-
-// ==================== Paths 测试 ====================
-
-#[test]
-fn test_config_persistence() {
-    // 获取配置目录
-    let config_dir = Paths::config_dir().unwrap();
-
-    // 验证目录存在
-    assert!(config_dir.exists());
-    assert!(config_dir.is_dir());
-
-    // 创建测试文件
-    let test_file = config_dir.join("test_integration.txt");
-    fs::write(&test_file, "test content").unwrap();
-
-    // 验证文件存在
-    assert!(test_file.exists());
-
-    // 读取文件
-    let content = fs::read_to_string(&test_file).unwrap();
-    assert_eq!(content, "test content");
-
-    // 清理
-    fs::remove_file(&test_file).ok();
-}
-
-#[test]
-fn test_work_history_independence() {
-    let config_dir = Paths::config_dir().unwrap();
-    let work_history_dir = Paths::work_history_dir().unwrap();
-
-    // 验证两个目录存在且不同
-    assert!(config_dir.exists());
-    assert!(work_history_dir.exists());
-    assert_ne!(config_dir, work_history_dir);
-
-    // 在两个目录下创建同名文件
-    let config_test = config_dir.join("test.json");
-    let history_test = work_history_dir.join("test.json");
-
-    fs::write(&config_test, r#"{"type": "config"}"#).unwrap();
-    fs::write(&history_test, r#"{"type": "history"}"#).unwrap();
-
-    // 验证两个文件独立存在
-    assert!(config_test.exists());
-    assert!(history_test.exists());
-
-    // 验证内容不同
-    let config_content = fs::read_to_string(&config_test).unwrap();
-    let history_content = fs::read_to_string(&history_test).unwrap();
-    assert_ne!(config_content, history_content);
-
-    // 清理
-    fs::remove_file(&config_test).ok();
-    fs::remove_file(&history_test).ok();
-}
-
-#[test]
-fn test_completion_dir_creation() {
-    let completion_dir = Paths::completion_dir().unwrap();
-
-    // 验证目录存在（或可以创建）
-    assert!(completion_dir.parent().unwrap().exists());
-
-    // 创建测试文件
-    let test_file = completion_dir.join("test_completion.bash");
-    fs::write(&test_file, "# test completion").unwrap();
-
-    // 验证文件存在
-    assert!(test_file.exists());
-
-    // 清理
-    fs::remove_file(&test_file).ok();
-}
-
-#[test]
-fn test_all_config_paths() {
-    // 测试所有配置路径方法都能正常工作
-    let workflow_config = Paths::workflow_config().unwrap();
-    let jira_config = Paths::jira_config().unwrap();
-
-    // 验证所有路径都在同一个目录下
-    let config_dir = workflow_config.parent().unwrap();
-    assert_eq!(config_dir, jira_config.parent().unwrap());
-
-    // 验证目录存在
-    assert!(config_dir.exists());
-    assert!(config_dir.is_dir());
-}
-
-#[test]
-#[cfg(target_os = "macos")]
-fn test_icloud_detection_integration() {
-    // 测试 iCloud 检测逻辑
-    let is_icloud = Paths::is_config_in_icloud();
-    let location = Paths::storage_location();
-    let config_dir = Paths::config_dir().unwrap();
-
-    if is_icloud {
-        assert_eq!(location, "iCloud Drive (synced across devices)");
-
-        // 验证配置目录在 iCloud 路径下
-        let path_str = config_dir.to_string_lossy();
-        assert!(path_str.contains("com~apple~CloudDocs"));
-    } else {
-        assert_eq!(location, "Local storage");
-
-        // 验证配置目录在本地路径下
-        let path_str = config_dir.to_string_lossy();
-        assert!(path_str.contains(".workflow") || path_str.contains("workflow"));
+/// 创建测试用的 JiraSettings
+fn create_test_jira_settings() -> JiraSettings {
+    JiraSettings {
+        email: Some("test@example.com".to_string()),
+        api_token: Some("test_token_123".to_string()),
+        service_address: Some("https://company.atlassian.net".to_string()),
     }
 }
 
-#[test]
-fn test_storage_info_format() {
-    let info = Paths::storage_info().unwrap();
-
-    // 验证信息格式正确
-    assert!(!info.is_empty());
-    assert!(info.contains("Storage Type"));
-    assert!(info.contains("Configuration"));
-    assert!(info.contains("Work History"));
-
-    // 验证包含路径信息
-    let config_dir = Paths::config_dir().unwrap();
-    let work_history_dir = Paths::work_history_dir().unwrap();
-
-    assert!(info.contains(&*config_dir.to_string_lossy()));
-    assert!(info.contains(&*work_history_dir.to_string_lossy()));
+/// 创建测试用的 GitHubSettings
+fn create_test_github_settings() -> GitHubSettings {
+    GitHubSettings {
+        accounts: vec![
+            GitHubAccount {
+                name: "personal".to_string(),
+                email: "personal@example.com".to_string(),
+                api_token: "ghp_personal_token".to_string(),
+            },
+            GitHubAccount {
+                name: "work".to_string(),
+                email: "work@company.com".to_string(),
+                api_token: "ghp_work_token".to_string(),
+            },
+        ],
+        current: Some("personal".to_string()),
+    }
 }
 
-#[test]
-fn test_path_consistency() {
-    // 测试路径的一致性
-    let config_dir1 = Paths::config_dir().unwrap();
-    let config_dir2 = Paths::config_dir().unwrap();
-
-    // 多次调用应该返回相同路径
-    assert_eq!(config_dir1, config_dir2);
-
-    // 测试工作历史目录
-    let history_dir1 = Paths::work_history_dir().unwrap();
-    let history_dir2 = Paths::work_history_dir().unwrap();
-    assert_eq!(history_dir1, history_dir2);
-
-    // 测试补全目录
-    let completion_dir1 = Paths::completion_dir().unwrap();
-    let completion_dir2 = Paths::completion_dir().unwrap();
-    assert_eq!(completion_dir1, completion_dir2);
+/// 创建测试用的 LLMSettings
+fn create_test_llm_settings() -> LLMSettings {
+    LLMSettings {
+        provider: "openai".to_string(),
+        language: "English".to_string(),
+        openai: LLMProviderSettings {
+            url: None,
+            key: Some("sk-test_openai_key".to_string()),
+            model: Some("gpt-4".to_string()),
+        },
+        deepseek: LLMProviderSettings {
+            url: None,
+            key: Some("sk-test_deepseek_key".to_string()),
+            model: Some("deepseek-chat".to_string()),
+        },
+        proxy: LLMProviderSettings {
+            url: Some("https://api.proxy.com".to_string()),
+            key: Some("proxy_key".to_string()),
+            model: Some("proxy-model".to_string()),
+        },
+    }
 }
 
-// ==================== 基础路径测试 ====================
+// ==================== JiraSettings 测试 ====================
 
-#[rstest]
-#[case("config_dir", ".workflow/config", "workflow")]
-#[case("work_history_dir", "work-history", "")]
-#[case("completion_dir", "completions", "")]
-fn test_path_directories(
-    #[case] method_name: &str,
-    #[case] expected_contains: &str,
-    #[case] alt_contains: &str,
-) {
-    let dir = match method_name {
-        "config_dir" => Paths::config_dir().unwrap(),
-        "work_history_dir" => Paths::work_history_dir().unwrap(),
-        "completion_dir" => Paths::completion_dir().unwrap(),
-        _ => panic!("Unknown method name"),
+/// 测试 JiraSettings 创建和字段访问
+#[test]
+fn test_jira_settings_creation() {
+    let jira_settings = create_test_jira_settings();
+
+    assert_eq!(jira_settings.email, Some("test@example.com".to_string()));
+    assert_eq!(jira_settings.api_token, Some("test_token_123".to_string()));
+    assert_eq!(
+        jira_settings.service_address,
+        Some("https://company.atlassian.net".to_string())
+    );
+}
+
+/// 测试 JiraSettings 默认实现
+#[test]
+fn test_jira_settings_default() {
+    let default_jira = JiraSettings::default();
+
+    assert_eq!(default_jira.email, None);
+    assert_eq!(default_jira.api_token, None);
+    assert_eq!(default_jira.service_address, None);
+}
+
+/// 测试 JiraSettings 克隆和调试输出
+#[test]
+fn test_jira_settings_clone_and_debug() {
+    let original_jira = create_test_jira_settings();
+    let cloned_jira = original_jira.clone();
+
+    assert_eq!(original_jira.email, cloned_jira.email);
+    assert_eq!(original_jira.api_token, cloned_jira.api_token);
+    assert_eq!(original_jira.service_address, cloned_jira.service_address);
+
+    // 测试调试输出
+    let debug_str = format!("{:?}", original_jira);
+    assert!(debug_str.contains("JiraSettings"));
+    assert!(debug_str.contains("test@example.com"));
+}
+
+// ==================== GitHubSettings 测试 ====================
+
+/// 测试 GitHubSettings 创建和账号管理
+#[test]
+fn test_github_settings_creation() {
+    let github_settings = create_test_github_settings();
+
+    assert_eq!(github_settings.accounts.len(), 2);
+    assert_eq!(github_settings.current, Some("personal".to_string()));
+
+    // 验证账号信息
+    let personal_account = &github_settings.accounts[0];
+    assert_eq!(personal_account.name, "personal");
+    assert_eq!(personal_account.email, "personal@example.com");
+    assert_eq!(personal_account.api_token, "ghp_personal_token");
+}
+
+/// 测试 GitHubSettings 当前账号获取
+#[test]
+fn test_github_settings_current_account() {
+    let github_settings = create_test_github_settings();
+
+    // 测试获取当前账号
+    let current_account = github_settings.get_current_account();
+    assert!(current_account.is_some());
+
+    let account = current_account.unwrap();
+    assert_eq!(account.name, "personal");
+    assert_eq!(account.email, "personal@example.com");
+
+    // 测试获取当前 token
+    let current_token = github_settings.get_current_token();
+    assert_eq!(current_token, Some("ghp_personal_token"));
+}
+
+/// 测试 GitHubSettings 无当前账号设置
+#[test]
+fn test_github_settings_no_current_account() {
+    let mut github_settings = create_test_github_settings();
+    github_settings.current = None;
+
+    // 应该返回第一个账号
+    let current_account = github_settings.get_current_account();
+    assert!(current_account.is_some());
+
+    let account = current_account.unwrap();
+    assert_eq!(account.name, "personal");
+}
+
+/// 测试 GitHubSettings 空账号列表
+#[test]
+fn test_github_settings_empty_accounts() {
+    let empty_github = GitHubSettings {
+        accounts: vec![],
+        current: None,
     };
 
-    let path_str = dir.to_string_lossy();
-    if !expected_contains.is_empty() {
-        assert!(
-            path_str.contains(expected_contains),
-            "Path should contain '{}': {}",
-            expected_contains,
-            path_str
-        );
-    }
-    if !alt_contains.is_empty() {
-        // 对于 config_dir，可能包含 workflow 或 .workflow/config
-        assert!(
-            path_str.contains(expected_contains) || path_str.contains(alt_contains),
-            "Path should contain '{}' or '{}': {}",
-            expected_contains,
-            alt_contains,
-            path_str
-        );
-    }
+    assert!(empty_github.get_current_account().is_none());
+    assert!(empty_github.get_current_token().is_none());
 }
 
+/// 测试 GitHubSettings 默认实现
 #[test]
-fn test_workflow_dir() {
-    let workflow_dir = Paths::workflow_dir().unwrap();
-    assert!(workflow_dir.exists());
-    assert!(workflow_dir.is_dir());
+fn test_github_settings_default() {
+    let default_github = GitHubSettings::default();
+
+    assert!(default_github.accounts.is_empty());
+    assert_eq!(default_github.current, None);
 }
 
-#[rstest]
-#[case(Shell::Zsh)]
-#[case(Shell::Bash)]
-#[case(Shell::Fish)]
-#[case(Shell::PowerShell)]
-#[case(Shell::Elvish)]
-fn test_config_file_paths(#[case] shell: Shell) {
-    // 测试所有支持的 shell 配置文件路径
-    let config_file = Paths::config_file(&shell);
-    match config_file {
-        Ok(path) => {
-            // 验证路径格式正确
-            assert!(!path.to_string_lossy().is_empty());
-        }
-        Err(_) => {
-            // Windows 上某些 shell 可能不支持，这是正常的
-            #[cfg(target_os = "windows")]
-            {
-                // Windows 上只有 PowerShell 应该成功
-                if matches!(shell, Shell::PowerShell) {
-                    panic!("PowerShell config file should be available on Windows");
-                }
-            }
-        }
-    }
-}
+// ==================== LLMSettings 测试 ====================
 
+/// 测试 LLMSettings 创建和提供商管理
 #[test]
-#[cfg(not(target_os = "windows"))]
-fn test_shell_config_paths_unix() {
-    let zsh_config = Paths::config_file(&Shell::Zsh).unwrap();
-    assert!(zsh_config.to_string_lossy().ends_with(".zshrc"));
+fn test_llm_settings_creation() {
+    let llm_settings = create_test_llm_settings();
 
-    let bash_config = Paths::config_file(&Shell::Bash).unwrap();
-    let bash_path = bash_config.to_string_lossy();
-    assert!(
-        bash_path.ends_with(".bash_profile") || bash_path.ends_with(".bashrc"),
-        "Bash config should be .bash_profile or .bashrc"
+    assert_eq!(llm_settings.provider, "openai");
+    assert_eq!(llm_settings.language, "English");
+
+    // 验证各个提供商配置
+    assert_eq!(
+        llm_settings.openai.key,
+        Some("sk-test_openai_key".to_string())
+    );
+    assert_eq!(llm_settings.openai.model, Some("gpt-4".to_string()));
+    assert_eq!(
+        llm_settings.deepseek.key,
+        Some("sk-test_deepseek_key".to_string())
+    );
+    assert_eq!(
+        llm_settings.proxy.url,
+        Some("https://api.proxy.com".to_string())
     );
 }
 
-#[rstest]
-#[case("work_history_dir", ".workflow", "work-history", "com~apple~CloudDocs")]
-#[case("completion_dir", ".workflow", "completions", "com~apple~CloudDocs")]
-fn test_local_directories(
-    #[case] method_name: &str,
-    #[case] expected1: &str,
-    #[case] expected2: &str,
-    #[case] not_expected: &str,
-) {
-    let dir = match method_name {
-        "work_history_dir" => Paths::work_history_dir().unwrap(),
-        "completion_dir" => Paths::completion_dir().unwrap(),
-        _ => panic!("Unknown method name"),
+/// 测试 LLMSettings 当前提供商获取
+#[test]
+fn test_llm_settings_current_provider() {
+    let llm_settings = create_test_llm_settings();
+
+    let current_provider = llm_settings.current_provider();
+    assert_eq!(current_provider.key, Some("sk-test_openai_key".to_string()));
+    assert_eq!(current_provider.model, Some("gpt-4".to_string()));
+}
+
+/// 测试 LLMSettings 默认值
+#[test]
+fn test_llm_settings_defaults() {
+    assert_eq!(LLMSettings::default_provider(), "openai");
+    assert_eq!(LLMSettings::default_language(), "en");
+    assert_eq!(LLMSettings::default_model("openai"), "gpt-4.0");
+    assert_eq!(LLMSettings::default_model("deepseek"), "deepseek-chat");
+    assert_eq!(LLMSettings::default_model("unknown"), ""); // proxy 必须输入，没有默认值
+}
+
+/// 测试 LLMProviderSettings 创建
+#[test]
+fn test_llm_provider_settings_creation() {
+    let provider_settings = LLMProviderSettings {
+        url: Some("https://api.example.com".to_string()),
+        key: Some("test_key".to_string()),
+        model: Some("test_model".to_string()),
     };
 
-    let path_str = dir.to_string_lossy();
-    // 应该总是在本地路径下
-    assert!(
-        path_str.contains(expected1),
-        "Path should contain '{}': {}",
-        expected1,
-        path_str
+    assert_eq!(
+        provider_settings.url,
+        Some("https://api.example.com".to_string())
     );
-    assert!(
-        path_str.contains(expected2),
-        "Path should contain '{}': {}",
-        expected2,
-        path_str
-    );
-    // 确保不在 iCloud 路径下
-    assert!(
-        !path_str.contains(not_expected),
-        "Path should not contain '{}': {}",
-        not_expected,
-        path_str
-    );
+    assert_eq!(provider_settings.key, Some("test_key".to_string()));
+    assert_eq!(provider_settings.model, Some("test_model".to_string()));
+
+    // 测试默认值
+    let default_provider = LLMProviderSettings::default();
+    assert_eq!(default_provider.url, None);
+    assert_eq!(default_provider.key, None);
+    assert_eq!(default_provider.model, None);
 }
 
+// ==================== LogSettings 测试 ====================
+
+/// 测试 LogSettings 创建和默认值
 #[test]
-fn test_storage_location() {
-    let location = Paths::storage_location();
-    assert!(!location.is_empty());
-    // 应该是 "iCloud Drive (synced across devices)" 或 "Local storage"
-    assert!(location == "iCloud Drive (synced across devices)" || location == "Local storage");
+fn test_log_settings_creation() {
+    let log_settings = LogSettings {
+        output_folder_name: "custom_logs".to_string(),
+        download_base_dir: Some("/custom/path".to_string()),
+        level: Some("debug".to_string()),
+        enable_trace_console: Some(true),
+    };
+
+    assert_eq!(log_settings.output_folder_name, "custom_logs");
+    assert_eq!(
+        log_settings.download_base_dir,
+        Some("/custom/path".to_string())
+    );
+    assert_eq!(log_settings.level, Some("debug".to_string()));
+    assert_eq!(log_settings.enable_trace_console, Some(true));
 }
 
+/// 测试 LogSettings 默认实现
 #[test]
-#[cfg(not(target_os = "macos"))]
-fn test_non_macos_always_local() {
-    assert!(!Paths::is_config_in_icloud());
-    assert_eq!(Paths::storage_location(), "Local storage");
+fn test_log_settings_default() {
+    let default_log = LogSettings::default();
+
+    assert_eq!(default_log.output_folder_name, "logs");
+    assert!(default_log.download_base_dir.is_some());
+    assert_eq!(default_log.level, None);
+    assert_eq!(default_log.enable_trace_console, None);
+}
+
+/// 测试 LogSettings 默认方法
+#[test]
+fn test_log_settings_default_methods() {
+    assert_eq!(LogSettings::default_log_folder(), "logs");
+
+    let default_base_dir = LogSettings::default_download_base_dir_option();
+    assert!(default_base_dir.is_some());
+    assert!(default_base_dir.unwrap().contains("Workflow"));
+}
+
+// ==================== Settings 主结构测试 ====================
+
+/// 测试 Settings 创建和默认实现
+#[test]
+fn test_settings_creation() {
+    let settings = Settings {
+        jira: create_test_jira_settings(),
+        github: create_test_github_settings(),
+        log: LogSettings::default(),
+        llm: create_test_llm_settings(),
+        aliases: {
+            let mut aliases = HashMap::new();
+            aliases.insert("st".to_string(), "status".to_string());
+            aliases.insert("co".to_string(), "checkout".to_string());
+            aliases
+        },
+    };
+
+    assert!(settings.jira.email.is_some());
+    assert_eq!(settings.github.accounts.len(), 2);
+    assert_eq!(settings.aliases.len(), 2);
+    assert_eq!(settings.aliases.get("st"), Some(&"status".to_string()));
+}
+
+/// 测试 Settings 默认实现
+#[test]
+fn test_settings_default() {
+    let default_settings = Settings::default();
+
+    assert_eq!(default_settings.jira.email, None);
+    assert!(default_settings.github.accounts.is_empty());
+    assert_eq!(default_settings.log.output_folder_name, "logs");
+    assert_eq!(default_settings.llm.provider, "openai");
+    assert!(default_settings.aliases.is_empty());
+}
+
+// ==================== 表格显示结构测试 ====================
+
+/// 测试表格行结构创建
+#[test]
+fn test_table_row_structures() {
+    // 测试 LLMConfigRow
+    let llm_row = LLMConfigRow {
+        provider: "openai".to_string(),
+        model: "gpt-4".to_string(),
+        key: "sk-****".to_string(),
+        language: "English".to_string(),
+    };
+
+    assert_eq!(llm_row.provider, "openai");
+    assert_eq!(llm_row.model, "gpt-4");
+
+    // 测试 JiraConfigRow
+    let jira_row = JiraConfigRow {
+        email: "jira@example.com".to_string(),
+        service_address: "https://jira.company.com".to_string(),
+        api_token: "****".to_string(),
+    };
+
+    assert_eq!(jira_row.email, "jira@example.com");
+    assert!(jira_row.service_address.contains("jira.company.com"));
+
+    // 测试 GitHubAccountRow
+    let github_row = GitHubAccountRow {
+        name: "personal".to_string(),
+        email: "github@example.com".to_string(),
+        token: "ghp_****".to_string(),
+        status: "Active".to_string(),
+        verification: "Success".to_string(),
+    };
+
+    assert_eq!(github_row.name, "personal");
+    assert_eq!(github_row.status, "Active");
+
+    // 测试 GitHubAccountListRow
+    let github_list_row = GitHubAccountListRow {
+        index: "1".to_string(),
+        name: "work".to_string(),
+        email: "work@company.com".to_string(),
+        token: "ghp_****".to_string(),
+        status: "Inactive".to_string(),
+    };
+
+    assert_eq!(github_list_row.index, "1");
+    assert_eq!(github_list_row.status, "Inactive");
+}
+
+/// 测试复杂配置场景
+#[test]
+fn test_complex_configuration_scenario() {
+    // 创建包含所有配置的复杂设置
+    let mut aliases = HashMap::new();
+    aliases.insert("s".to_string(), "status".to_string());
+    aliases.insert("c".to_string(), "commit".to_string());
+    aliases.insert("p".to_string(), "push".to_string());
+
+    let complex_settings = Settings {
+        jira: JiraSettings {
+            email: Some("complex@jira.com".to_string()),
+            api_token: Some("complex_jira_token".to_string()),
+            service_address: Some("https://complex.atlassian.net".to_string()),
+        },
+        github: GitHubSettings {
+            accounts: vec![
+                GitHubAccount {
+                    name: "main".to_string(),
+                    email: "main@github.com".to_string(),
+                    api_token: "ghp_main_token".to_string(),
+                },
+                GitHubAccount {
+                    name: "backup".to_string(),
+                    email: "backup@github.com".to_string(),
+                    api_token: "ghp_backup_token".to_string(),
+                },
+                GitHubAccount {
+                    name: "test".to_string(),
+                    email: "test@github.com".to_string(),
+                    api_token: "ghp_test_token".to_string(),
+                },
+            ],
+            current: Some("main".to_string()),
+        },
+        log: LogSettings {
+            output_folder_name: "complex_logs".to_string(),
+            download_base_dir: Some("/complex/logs/path".to_string()),
+            level: Some("info".to_string()),
+            enable_trace_console: Some(false),
+        },
+        llm: LLMSettings {
+            provider: "proxy".to_string(),
+            language: "Chinese".to_string(),
+            openai: LLMProviderSettings {
+                url: None,
+                key: Some("sk-openai_complex".to_string()),
+                model: Some("gpt-4-turbo".to_string()),
+            },
+            deepseek: LLMProviderSettings {
+                url: None,
+                key: Some("sk-deepseek_complex".to_string()),
+                model: Some("deepseek-coder".to_string()),
+            },
+            proxy: LLMProviderSettings {
+                url: Some("https://complex.proxy.api.com".to_string()),
+                key: Some("proxy_complex_key".to_string()),
+                model: Some("complex-model".to_string()),
+            },
+        },
+        aliases,
+    };
+
+    // 验证复杂配置的各个方面
+    assert!(complex_settings.jira.email.is_some());
+    assert_eq!(complex_settings.github.accounts.len(), 3);
+    assert_eq!(complex_settings.log.level, Some("info".to_string()));
+    assert_eq!(complex_settings.llm.provider, "proxy");
+    assert_eq!(complex_settings.aliases.len(), 3);
+
+    // 验证 GitHub 当前账号功能
+    let current_account = complex_settings.github.get_current_account();
+    assert!(current_account.is_some());
+    assert_eq!(current_account.unwrap().name, "main");
+
+    // 验证 LLM 当前提供商功能
+    let current_llm = complex_settings.llm.current_provider();
+    assert_eq!(
+        current_llm.url,
+        Some("https://complex.proxy.api.com".to_string())
+    );
+
+    // 验证别名功能
+    assert_eq!(
+        complex_settings.aliases.get("s"),
+        Some(&"status".to_string())
+    );
+    assert_eq!(
+        complex_settings.aliases.get("c"),
+        Some(&"commit".to_string())
+    );
+    assert_eq!(complex_settings.aliases.get("p"), Some(&"push".to_string()));
 }

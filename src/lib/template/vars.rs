@@ -41,7 +41,7 @@ pub struct CommitTemplateVars {
 
 /// Template variables for PR body
 #[skip_serializing_none]
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Default)]
 pub struct PullRequestTemplateVars {
     /// JIRA ticket key (optional)
     pub jira_key: Option<String>,

@@ -1,6 +1,7 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
+use crate::base::util::directory::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -99,7 +100,7 @@ impl TempDirManager {
             fs::remove_dir_all(&temp_dir).wrap_err("Failed to remove existing temp directory")?;
         }
 
-        fs::create_dir_all(&temp_dir).wrap_err("Failed to create temp directory")?;
+        DirectoryWalker::new(&temp_dir).ensure_exists()?;
 
         let archive_name = format!("workflow-{}-{}.tar.gz", version, platform);
         let archive_path = temp_dir.join(&archive_name);

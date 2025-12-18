@@ -4,7 +4,7 @@
 
 use clap::Subcommand;
 
-use super::args::DryRunArgs;
+use super::args::{DryRunArgs, ForceArgs};
 
 /// Tag management subcommands
 ///
@@ -42,8 +42,7 @@ pub enum TagSubcommand {
         #[command(flatten)]
         dry_run: DryRunArgs,
 
-        /// Force delete (skip confirmation)
-        #[arg(long, short = 'f')]
-        force: bool,
+        #[command(flatten)]
+        force: ForceArgs,
     },
 }

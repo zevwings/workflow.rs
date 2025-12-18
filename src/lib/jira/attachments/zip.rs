@@ -1,5 +1,6 @@
 //! ZIP 处理相关功能
 
+use crate::base::util::directory::DirectoryWalker;
 use crate::Logger;
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs::{File, OpenOptions};
@@ -121,14 +122,11 @@ impl ZipProcessor {
 
             if file.name().ends_with('/') {
                 // 目录
-                std::fs::create_dir_all(&outpath)
-                    .wrap_err_with(|| format!("Failed to create directory: {:?}", outpath))?;
+                DirectoryWalker::new(&outpath).ensure_exists()?;
             } else {
                 // 文件
                 if let Some(parent) = outpath.parent() {
-                    std::fs::create_dir_all(parent).wrap_err_with(|| {
-                        format!("Failed to create parent directory: {:?}", parent)
-                    })?;
+                    DirectoryWalker::new(parent).ensure_exists()?;
                 }
 
                 let mut outfile = File::create(&outpath)
