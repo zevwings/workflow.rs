@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::args::{DryRunArgs, JiraIdArg, PaginationArgs};
+use super::args::{DryRunArgs, ForceArgs, JiraIdArg, PaginationArgs};
 
 /// PR commands enumeration
 ///
@@ -37,9 +37,8 @@ pub enum PRCommands {
         #[arg(value_name = "PR_ID")]
         pull_request_id: Option<String>,
 
-        /// Force merge (skip checks)
-        #[arg(short, long, action = clap::ArgAction::SetTrue)]
-        force: bool,
+        #[command(flatten)]
+        force: ForceArgs,
     },
     /// Show PR status information
     ///

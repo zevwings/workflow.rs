@@ -226,7 +226,7 @@ fn main() -> Result<()> {
                     local,
                     remote,
                     dry_run.is_dry_run(),
-                    force,
+                    force.is_force(),
                 )?;
             }
         },
@@ -265,7 +265,7 @@ fn main() -> Result<()> {
                 pull_request_id,
                 force,
             } => {
-                merge::PullRequestMergeCommand::merge(pull_request_id, force)?;
+                merge::PullRequestMergeCommand::merge(pull_request_id, force.is_force())?;
             }
             PRCommands::Status {
                 pull_request_id_or_branch,
@@ -460,7 +460,7 @@ fn main() -> Result<()> {
                     remote,
                     pattern,
                     dry_run.is_dry_run(),
-                    force,
+                    force.is_force(),
                 )?;
             }
         },

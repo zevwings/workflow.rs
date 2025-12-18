@@ -1,4 +1,4 @@
-.PHONY: help build release clean install test lint fix setup uninstall tag dev bloat
+.PHONY: help build release clean install test lint fix setup uninstall tag dev bloat check-docs
 
 # 项目名称
 BINARY_NAME = workflow
@@ -30,6 +30,7 @@ help:
 	@echo "  make uninstall          - 卸载二进制文件和 shell completion 脚本"
 	@echo "  make tag VERSION=v1.0.0 - 创建 git tag 并推送到远程仓库"
 	@echo "  make bloat              - 分析二进制文件大小（需要先运行 make setup）"
+	@echo "  make check-docs         - 检查文档更新时间格式"
 
 # 构建 debug 版本
 dev:
@@ -214,3 +215,8 @@ bloat:
 	fi
 	@echo "分析二进制文件大小..."
 	@cargo bloat --release $(ARGS) || cargo bloat --release
+
+# 检查文档更新时间格式
+check-docs:
+	@echo "检查文档更新时间格式..."
+	@./scripts/check-doc-timestamps.sh

@@ -93,3 +93,20 @@ impl PaginationArgs {
         self.offset
     }
 }
+
+/// 强制执行参数
+///
+/// 用于跳过确认和检查，强制执行操作。
+#[derive(Args, Debug, Clone)]
+pub struct ForceArgs {
+    /// Force operation (skip checks and confirmations)
+    #[arg(long, short = 'f', action = clap::ArgAction::SetTrue)]
+    pub force: bool,
+}
+
+impl ForceArgs {
+    /// 获取 force 标志
+    pub fn is_force(&self) -> bool {
+        self.force
+    }
+}

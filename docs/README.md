@@ -324,6 +324,13 @@
 - 章节检查清单
 - 文档编写规范
 
+### [DOCUMENT_TIMESTAMP_GUIDELINES.md](./guidelines/DOCUMENT_TIMESTAMP_GUIDELINES.md)
+**文档更新时间维护指南**
+
+- 更新时间格式规范
+- 维护流程和最佳实践
+- 自动化检查工具使用
+
 ## 🤖 AI 工作流指南
 
 > AI 工作流指南位于 [`workflows/`](./guidelines/workflows/) 目录下
@@ -502,4 +509,4 @@
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-18
