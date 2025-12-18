@@ -17,6 +17,7 @@
 - [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) - 重复代码、工具复用、第三方库检查
 - [测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖、合理性、缺失测试检查
 - [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) - README、架构文档、CHANGELOG 检查
+- [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
 - [CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md) - CLI 命令结构、补全脚本检查
 
 ---
@@ -171,12 +172,13 @@ graph TD
 
 ## 📚 文档检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)，该指南包含完整的检查流程、检查方法和示例。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)，该指南包含完整的检查流程、检查方法和示例。如需进行架构文档与代码一致性检查，请参考 [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)。
 
 ### 快速检查清单
 
 **检查项**：
 - [ ] README.md 命令清单和版本号是否已更新
+- [ ] 架构文档与代码实现一致（如适用，参考 [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)）
 - [ ] 架构文档是否已更新（`docs/architecture/`）
 - [ ] 文档索引是否已更新（`docs/README.md`）
 - [ ] 迁移文档是否已创建（如有破坏性变更）

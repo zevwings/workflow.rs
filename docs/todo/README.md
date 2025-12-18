@@ -56,16 +56,16 @@
   - 通知系统（桌面通知、邮件通知）
 - **优先级**: 中优先级
 
-#### 4. [`CONSTANTS_REFACTORING_TODO.md`](./CONSTANTS_REFACTORING_TODO.md)
+#### 4. [`DOC_CHECK_TODO.md`](./DOC_CHECK_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
-- **分类**: 常量化重构
+- **分类**: 文档检查工具
 - **内容**:
-  - 分支验证错误消息常量化
-  - API URL 常量化
-  - 网络连接错误消息常量化
-  - Git 检查错误消息常量化
-- **优先级**: 中低优先级
+  - 文档路径验证脚本
+  - 模块统计验证脚本
+  - 综合检查脚本（可选）
+  - CI 集成（可选）
+- **优先级**: P2（可选，但建议实施以提升效率）
 
 ---
 
@@ -78,7 +78,7 @@ docs/todo/
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
 ├── TEST_ARCHITECTURE_IMPROVEMENT_TODO.md  # 测试架构改进待办事项（🔄 进行中）
 ├── INTEGRATION_TODO.md            # 集成与扩展待办事项
-└── CONSTANTS_REFACTORING_TODO.md  # 常量化重构待办事项（⏳ 待实施）
+└── DOC_CHECK_TODO.md              # 架构文档检查工具待办事项（⏳ 待实施）
 ```
 
 ---
@@ -89,7 +89,7 @@ docs/todo/
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 1 个 | 测试架构改进 |
-| ⏳ 待实施 | 2 个 | 集成扩展、常量化重构 |
+| ⏳ 待实施 | 2 个 | 集成扩展、文档检查工具 |
 | **总计** | **4 个** | - |
 
 ### 文档列表
@@ -98,7 +98,7 @@ docs/todo/
 1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
 2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，0%）
 3. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
-4. **CONSTANTS_REFACTORING_TODO.md** - 常量化重构待办事项（⏳ 待实施，0%）
+4. **DOC_CHECK_TODO.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
 
 ---
 
@@ -124,11 +124,13 @@ docs/todo/
 3. **集成与扩展** (`INTEGRATION_TODO.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
-4. **常量化重构** (`CONSTANTS_REFACTORING_TODO.md`) - ⏳ 待实施（0%）
-   - 分支验证错误消息常量化
-   - API URL 常量化
-   - 网络连接错误消息常量化
-   - Git 检查错误消息常量化
+4. **架构文档检查工具** (`DOC_CHECK_TODO.md`) - ⏳ 待实施（0%）
+   - 文档路径验证脚本
+   - 模块统计验证脚本
+   - 综合检查脚本（可选）
+   - CI 集成（可选）
+
+> **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`。
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
 
@@ -148,7 +150,7 @@ docs/todo/
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
 - **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md) ⏳ 待实施
-- **常量化重构** → [`CONSTANTS_REFACTORING_TODO.md`](./CONSTANTS_REFACTORING_TODO.md) ⏳ 待实施
+- **文档检查工具** → [`DOC_CHECK_TODO.md`](./DOC_CHECK_TODO.md) ⏳ 待实施
 
 ---
 
@@ -157,6 +159,11 @@ docs/todo/
 ---
 
 ## 📝 更新说明
+
+### 2025-12-18 更新
+- ✅ 删除 ARCHITECTURE_DOC_SYNC_TODO.md - 架构文档同步机制任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`
+- ✅ 新增 DOC_CHECK_TODO.md - 架构文档检查工具待办事项（⏳ 待实施）
+- ✅ 更新了统计信息和目录结构
 
 ### 2025-12-18 更新
 - ✅ 新增 CONSTANTS_REFACTORING_TODO.md - 常量化重构待办事项

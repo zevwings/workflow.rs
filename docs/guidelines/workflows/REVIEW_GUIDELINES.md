@@ -18,6 +18,7 @@
 - [💻 代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) - 重复代码、工具复用、第三方库
 - [🧪 测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖、合理性、缺失测试
 - [📚 文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) - README、架构文档、CHANGELOG
+- [🏗️ 架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
 
 ---
 
@@ -33,6 +34,7 @@
 - [💻 代码检查](#2-代码检查) - 重复代码、工具复用（1-2小时）
 - [🧪 测试检查](#3-测试用例检查) - 测试覆盖、合理性（1-2小时）
 - [📚 文档检查](#4-文档检查) - 文档完整性、准确性（30分钟-1小时）
+- [🏗️ 架构文档检查](#5-架构文档与代码一致性检查) - 架构文档与代码一致性（30分钟-1小时）
 
 ### 📊 分析和报告
 - [🔗 跨领域分析](#-跨领域问题关联分析) - 识别问题关联
@@ -62,6 +64,7 @@
 | 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) |
 | 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) |
 | 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) |
+| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) |
 
 ### ⏱️ 时间投入规划
 
@@ -553,6 +556,58 @@ Write-Host "report/REVIEW_DOCUMENT_${timestamp}.md"
 
 **时间估算**：30 分钟-1 小时
 
+### 5. 架构文档与代码一致性检查
+
+**指南**：[架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
+
+**检查内容**：
+- 模块结构检查
+- 模块统计检查
+- API 接口检查
+- 功能描述检查
+- 依赖关系检查
+- 错误处理检查
+
+**检查方法**：
+```bash
+# 检查模块结构
+MODULE=pr
+find src/lib/$MODULE -name "*.rs" -type f | grep -v mod.rs | sort
+
+# 统计代码行数
+find src/lib/$MODULE -name "*.rs" -type f | xargs wc -l | tail -1
+
+# 提取公共 API
+grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
+```
+
+**报告位置**：`report/REVIEW_ARCHITECTURE_DOC_{timestamp}.md`
+
+其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
+
+**生成带时间戳的文件名**：
+
+在 Rust 代码中：
+```rust
+use workflow::base::util::date::format_filename_timestamp;
+
+let timestamp = format_filename_timestamp();
+let report_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
+```
+
+在命令行中：
+```bash
+# Unix/macOS/Linux
+TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+echo "report/REVIEW_ARCHITECTURE_DOC_${TIMESTAMP}.md"
+
+# Windows PowerShell
+$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+Write-Host "report/REVIEW_ARCHITECTURE_DOC_${timestamp}.md"
+```
+
+**时间估算**：30 分钟-1 小时
+
 ---
 
 ## 🔗 跨领域问题关联分析
@@ -1018,6 +1073,7 @@ grep -r "#[cfg(test)]" src/
 - [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md)
 - [测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md)
 - [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)
+- [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
 
 ### 报告位置
 
