@@ -96,7 +96,10 @@ fn test_remove_branch_prefix_with_slash() {
 #[test]
 #[serial]
 fn test_exists_main_branch() {
-    let (temp_dir, original_dir) = setup_git_repo_with_gix();
+    let Some((temp_dir, original_dir)) = setup_git_repo_with_gix() else {
+        // Git 不可用，跳过测试
+        return;
+    };
 
     // 切换到临时目录
     std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -118,7 +121,10 @@ fn test_exists_main_branch() {
 #[test]
 #[serial]
 fn test_exists_nonexistent_branch() {
-    let (temp_dir, original_dir) = setup_git_repo_with_gix();
+    let Some((temp_dir, original_dir)) = setup_git_repo_with_gix() else {
+        // Git 不可用，跳过测试
+        return;
+    };
 
     // 切换到临时目录
     std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -240,7 +246,10 @@ fn test_create_simple_branch_with_gix() {
 #[test]
 #[serial]
 fn test_create_branch_with_prefix_with_gix() {
-    let (temp_dir, original_dir) = setup_git_repo_with_gix();
+    let Some((temp_dir, original_dir)) = setup_git_repo_with_gix() else {
+        // Git 不可用，跳过测试
+        return;
+    };
 
     // 切换到临时目录
     std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -269,7 +278,10 @@ fn test_create_branch_with_prefix_with_gix() {
 #[test]
 #[serial]
 fn test_delete_existing_branch() {
-    let (temp_dir, original_dir) = setup_git_repo_with_gix();
+    let Some((temp_dir, original_dir)) = setup_git_repo_with_gix() else {
+        // Git 不可用，跳过测试
+        return;
+    };
 
     // 切换到临时目录
     std::env::set_current_dir(temp_dir.path()).unwrap();
@@ -319,7 +331,10 @@ fn test_delete_existing_branch() {
 #[test]
 #[serial]
 fn test_list_branches() {
-    let (temp_dir, original_dir) = setup_git_repo_with_gix();
+    let Some((temp_dir, original_dir)) = setup_git_repo_with_gix() else {
+        // Git 不可用，跳过测试
+        return;
+    };
 
     // 切换到临时目录
     std::env::set_current_dir(temp_dir.path()).unwrap();
