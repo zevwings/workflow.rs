@@ -96,10 +96,14 @@ fn test_render_with_variables() {
 
     // 测试嵌套变量访问
     let nested_vars = create_nested_variables();
-    let nested_template = "User: {{user.name}}, Email: {{user.profile.email}}, Role: {{user.profile.role}}";
+    let nested_template =
+        "User: {{user.name}}, Email: {{user.profile.email}}, Role: {{user.profile.role}}";
     let nested_result = engine.render_string(nested_template, &nested_vars);
     assert!(nested_result.is_ok());
-    assert_eq!(nested_result.unwrap(), "User: Alice, Email: alice@example.com, Role: admin");
+    assert_eq!(
+        nested_result.unwrap(),
+        "User: Alice, Email: alice@example.com, Role: admin"
+    );
 }
 
 /// 测试条件渲染
@@ -143,7 +147,8 @@ fn test_render_with_loops() {
     assert_eq!(result.unwrap(), "Items: apple, banana, cherry");
 
     // 测试对象数组循环
-    let object_template = "{{#each users}}{{@index}}: {{name}} ({{role}}){{#unless @last}}\n{{/unless}}{{/each}}";
+    let object_template =
+        "{{#each users}}{{@index}}: {{name}} ({{role}}){{#unless @last}}\n{{/unless}}{{/each}}";
     let object_vars = json!({
         "users": [
             {"name": "Alice", "role": "admin"},

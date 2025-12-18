@@ -9,8 +9,8 @@
 
 use pretty_assertions::assert_eq;
 use serde_json::json;
-use workflow::template::{CommitTemplates, PullRequestsTemplates, TemplateConfig};
 use workflow::template::config::BranchTemplates;
+use workflow::template::{CommitTemplates, PullRequestsTemplates, TemplateConfig};
 
 // ==================== 测试用例 ====================
 

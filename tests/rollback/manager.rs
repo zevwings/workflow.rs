@@ -48,8 +48,11 @@ fn create_test_backup_info(temp_dir: &TempDir) -> BackupInfo {
     fs::create_dir_all(&backup_dir).expect("Failed to create backup dir");
 
     // 创建一些备份文件
-    fs::write(backup_dir.join("workflow"), "#!/bin/bash\necho 'workflow backup'")
-        .expect("Failed to create backup binary");
+    fs::write(
+        backup_dir.join("workflow"),
+        "#!/bin/bash\necho 'workflow backup'",
+    )
+    .expect("Failed to create backup binary");
     fs::write(backup_dir.join("workflow.bash"), "# bash completion backup")
         .expect("Failed to create backup completion");
 
@@ -60,7 +63,10 @@ fn create_test_backup_info(temp_dir: &TempDir) -> BackupInfo {
             ("install".to_string(), backup_dir.join("install")),
         ],
         completion_backups: vec![
-            ("workflow.bash".to_string(), backup_dir.join("workflow.bash")),
+            (
+                "workflow.bash".to_string(),
+                backup_dir.join("workflow.bash"),
+            ),
             ("workflow.zsh".to_string(), backup_dir.join("workflow.zsh")),
         ],
     }
@@ -80,9 +86,10 @@ fn test_backup_info_creation() {
             ("workflow".to_string(), backup_dir.join("workflow")),
             ("install".to_string(), backup_dir.join("install")),
         ],
-        completion_backups: vec![
-            ("workflow.bash".to_string(), backup_dir.join("workflow.bash")),
-        ],
+        completion_backups: vec![(
+            "workflow.bash".to_string(),
+            backup_dir.join("workflow.bash"),
+        )],
     };
 
     // 验证字段访问
@@ -101,8 +108,14 @@ fn test_backup_info_clone() {
     let cloned_info = original_info.clone();
 
     assert_eq!(original_info.backup_dir, cloned_info.backup_dir);
-    assert_eq!(original_info.binary_backups.len(), cloned_info.binary_backups.len());
-    assert_eq!(original_info.completion_backups.len(), cloned_info.completion_backups.len());
+    assert_eq!(
+        original_info.binary_backups.len(),
+        cloned_info.binary_backups.len()
+    );
+    assert_eq!(
+        original_info.completion_backups.len(),
+        cloned_info.completion_backups.len()
+    );
 
     // 验证深度克隆
     for (i, (name, path)) in original_info.binary_backups.iter().enumerate() {
@@ -157,7 +170,10 @@ fn test_backup_result_clone_and_debug() {
     // 测试克隆
     let cloned_result = original_result.clone();
     assert_eq!(original_result.binary_count, cloned_result.binary_count);
-    assert_eq!(original_result.completion_count, cloned_result.completion_count);
+    assert_eq!(
+        original_result.completion_count,
+        cloned_result.completion_count
+    );
 
     // 测试调试输出
     let debug_str = format!("{:?}", original_result);
@@ -174,7 +190,10 @@ fn test_rollback_result_creation() {
         restored_binaries: vec!["workflow".to_string(), "install".to_string()],
         restored_completions: vec!["workflow.bash".to_string()],
         failed_binaries: vec![("failed_binary".to_string(), "Permission denied".to_string())],
-        failed_completions: vec![("failed_completion".to_string(), "File not found".to_string())],
+        failed_completions: vec![(
+            "failed_completion".to_string(),
+            "File not found".to_string(),
+        )],
         shell_reload_success: Some(true),
         shell_config_file: Some(PathBuf::from("/home/user/.bashrc")),
     };
@@ -226,9 +245,10 @@ fn test_rollback_result_complete_failure() {
             ("workflow".to_string(), "System error".to_string()),
             ("install".to_string(), "Access denied".to_string()),
         ],
-        failed_completions: vec![
-            ("workflow.bash".to_string(), "Directory not found".to_string()),
-        ],
+        failed_completions: vec![(
+            "workflow.bash".to_string(),
+            "Directory not found".to_string(),
+        )],
         shell_reload_success: None,
         shell_config_file: None,
     };
@@ -256,10 +276,22 @@ fn test_rollback_result_clone_and_debug() {
 
     // 测试克隆
     let cloned_result = original_result.clone();
-    assert_eq!(original_result.restored_binaries, cloned_result.restored_binaries);
-    assert_eq!(original_result.restored_completions, cloned_result.restored_completions);
-    assert_eq!(original_result.shell_reload_success, cloned_result.shell_reload_success);
-    assert_eq!(original_result.shell_config_file, cloned_result.shell_config_file);
+    assert_eq!(
+        original_result.restored_binaries,
+        cloned_result.restored_binaries
+    );
+    assert_eq!(
+        original_result.restored_completions,
+        cloned_result.restored_completions
+    );
+    assert_eq!(
+        original_result.shell_reload_success,
+        cloned_result.shell_reload_success
+    );
+    assert_eq!(
+        original_result.shell_config_file,
+        cloned_result.shell_config_file
+    );
 
     // 测试调试输出
     let debug_str = format!("{:?}", original_result);
@@ -312,10 +344,9 @@ fn test_backup_info_internal_methods() {
     assert!(backup_info.completion_backups.is_empty());
 
     // 手动添加备份项来测试结构
-    backup_info.binary_backups.push((
-        "test_binary".to_string(),
-        backup_dir.join("test_binary"),
-    ));
+    backup_info
+        .binary_backups
+        .push(("test_binary".to_string(), backup_dir.join("test_binary")));
     backup_info.completion_backups.push((
         "test_completion".to_string(),
         backup_dir.join("test_completion"),
@@ -379,20 +410,34 @@ fn test_complex_backup_rollback_scenario() {
         binary_backups: vec![
             ("workflow".to_string(), backup_dir.join("workflow")),
             ("install".to_string(), backup_dir.join("install")),
-            ("missing_binary".to_string(), backup_dir.join("missing_binary")),
+            (
+                "missing_binary".to_string(),
+                backup_dir.join("missing_binary"),
+            ),
         ],
         completion_backups: vec![
-            ("workflow.bash".to_string(), backup_dir.join("workflow.bash")),
+            (
+                "workflow.bash".to_string(),
+                backup_dir.join("workflow.bash"),
+            ),
             ("workflow.zsh".to_string(), backup_dir.join("workflow.zsh")),
-            ("workflow.fish".to_string(), backup_dir.join("workflow.fish")),
-            ("missing_completion".to_string(), backup_dir.join("missing_completion")),
+            (
+                "workflow.fish".to_string(),
+                backup_dir.join("workflow.fish"),
+            ),
+            (
+                "missing_completion".to_string(),
+                backup_dir.join("missing_completion"),
+            ),
         ],
     };
 
     // 只创建部分备份文件，模拟部分备份成功的情况
     fs::write(backup_dir.join("workflow"), "workflow backup").expect("Failed to write file");
-    fs::write(backup_dir.join("workflow.bash"), "bash completion backup").expect("Failed to write file");
-    fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup").expect("Failed to write file");
+    fs::write(backup_dir.join("workflow.bash"), "bash completion backup")
+        .expect("Failed to write file");
+    fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup")
+        .expect("Failed to write file");
 
     // 验证备份信息的完整性
     assert_eq!(complex_backup_info.binary_backups.len(), 3);
@@ -410,11 +455,20 @@ fn test_complex_backup_rollback_scenario() {
         restored_completions: vec!["workflow.bash".to_string(), "workflow.zsh".to_string()],
         failed_binaries: vec![
             ("install".to_string(), "Permission denied".to_string()),
-            ("missing_binary".to_string(), "Backup file not found".to_string()),
+            (
+                "missing_binary".to_string(),
+                "Backup file not found".to_string(),
+            ),
         ],
         failed_completions: vec![
-            ("workflow.fish".to_string(), "Directory not writable".to_string()),
-            ("missing_completion".to_string(), "Backup file not found".to_string()),
+            (
+                "workflow.fish".to_string(),
+                "Directory not writable".to_string(),
+            ),
+            (
+                "missing_completion".to_string(),
+                "Backup file not found".to_string(),
+            ),
         ],
         shell_reload_success: Some(false),
         shell_config_file: Some(PathBuf::from("/home/user/.bashrc")),
@@ -427,14 +481,18 @@ fn test_complex_backup_rollback_scenario() {
     assert_eq!(complex_rollback_result.failed_completions.len(), 2);
 
     // 验证成功率计算
-    let total_binaries = complex_rollback_result.restored_binaries.len() + complex_rollback_result.failed_binaries.len();
-    let total_completions = complex_rollback_result.restored_completions.len() + complex_rollback_result.failed_completions.len();
+    let total_binaries = complex_rollback_result.restored_binaries.len()
+        + complex_rollback_result.failed_binaries.len();
+    let total_completions = complex_rollback_result.restored_completions.len()
+        + complex_rollback_result.failed_completions.len();
 
     assert_eq!(total_binaries, 3);
     assert_eq!(total_completions, 4);
 
-    let binary_success_rate = complex_rollback_result.restored_binaries.len() as f64 / total_binaries as f64;
-    let completion_success_rate = complex_rollback_result.restored_completions.len() as f64 / total_completions as f64;
+    let binary_success_rate =
+        complex_rollback_result.restored_binaries.len() as f64 / total_binaries as f64;
+    let completion_success_rate =
+        complex_rollback_result.restored_completions.len() as f64 / total_completions as f64;
 
     assert!((binary_success_rate - 0.33).abs() < 0.01); // 约 33%
     assert!((completion_success_rate - 0.5).abs() < 0.01); // 50%

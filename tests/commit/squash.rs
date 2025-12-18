@@ -44,7 +44,8 @@ fn create_sample_commits() -> Vec<CommitInfo> {
 fn create_single_commit() -> CommitInfo {
     CommitInfo {
         sha: "single123456789012345678901234567890abcd".to_string(),
-        message: "feat: implement single feature\n\nImplement a single feature for testing.".to_string(),
+        message: "feat: implement single feature\n\nImplement a single feature for testing."
+            .to_string(),
         author: "Single Author <single@example.com>".to_string(),
         date: "2023-12-03 15:30:00 +0000".to_string(),
     }
@@ -78,7 +79,8 @@ fn create_git_repo_with_multiple_commits() -> TempDir {
     // 创建多个提交
     for i in 1..=5 {
         let file_path = temp_path.join(format!("feature{}.txt", i));
-        fs::write(&file_path, format!("Feature {} implementation\n", i)).expect("Failed to write file");
+        fs::write(&file_path, format!("Feature {} implementation\n", i))
+            .expect("Failed to write file");
 
         Command::new("git")
             .args(["add", &format!("feature{}.txt", i)])
@@ -174,11 +176,7 @@ fn test_format_preview() {
 #[test]
 fn test_squash_options() {
     let options = SquashOptions {
-        commit_shas: vec![
-            "sha1".to_string(),
-            "sha2".to_string(),
-            "sha3".to_string(),
-        ],
+        commit_shas: vec!["sha1".to_string(), "sha2".to_string(), "sha3".to_string()],
         new_message: "Squashed commit message".to_string(),
         auto_stash: true,
     };

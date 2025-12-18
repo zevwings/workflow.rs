@@ -16,25 +16,34 @@ fn create_test_proxy_info() -> ProxyInfo {
     let mut proxy_info = ProxyInfo::new();
 
     // 设置 HTTP 代理
-    proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("proxy.example.com".to_string()),
-        port: Some(8080),
-    });
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy.example.com".to_string()),
+            port: Some(8080),
+        },
+    );
 
     // 设置 HTTPS 代理
-    proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: true,
-        address: Some("secure-proxy.example.com".to_string()),
-        port: Some(8443),
-    });
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: true,
+            address: Some("secure-proxy.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
     // 设置 SOCKS 代理
-    proxy_info.set_config(ProxyType::Socks, ProxyConfig {
-        enable: false,
-        address: Some("socks-proxy.example.com".to_string()),
-        port: Some(1080),
-    });
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: false,
+            address: Some("socks-proxy.example.com".to_string()),
+            port: Some(1080),
+        },
+    );
 
     proxy_info
 }
@@ -43,11 +52,14 @@ fn create_test_proxy_info() -> ProxyInfo {
 fn create_minimal_proxy_info() -> ProxyInfo {
     let mut proxy_info = ProxyInfo::new();
 
-    proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("simple.proxy.com".to_string()),
-        port: Some(3128),
-    });
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("simple.proxy.com".to_string()),
+            port: Some(3128),
+        },
+    );
 
     proxy_info
 }
@@ -58,11 +70,14 @@ fn create_empty_proxy_info() -> ProxyInfo {
 
     // 设置所有代理为禁用状态
     for proxy_type in [ProxyType::Http, ProxyType::Https, ProxyType::Socks] {
-        proxy_info.set_config(proxy_type, ProxyConfig {
-            enable: false,
-            address: None,
-            port: None,
-        });
+        proxy_info.set_config(
+            proxy_type,
+            ProxyConfig {
+                enable: false,
+                address: None,
+                port: None,
+            },
+        );
     }
 
     proxy_info
@@ -177,13 +192,19 @@ fn test_proxy_info_creation() {
     // 验证 HTTPS 代理配置
     let https_config = proxy_info.get_config(ProxyType::Https).unwrap();
     assert_eq!(https_config.enable, true);
-    assert_eq!(https_config.address, Some("secure-proxy.example.com".to_string()));
+    assert_eq!(
+        https_config.address,
+        Some("secure-proxy.example.com".to_string())
+    );
     assert_eq!(https_config.port, Some(8443));
 
     // 验证 SOCKS 代理配置
     let socks_config = proxy_info.get_config(ProxyType::Socks).unwrap();
     assert_eq!(socks_config.enable, false);
-    assert_eq!(socks_config.address, Some("socks-proxy.example.com".to_string()));
+    assert_eq!(
+        socks_config.address,
+        Some("socks-proxy.example.com".to_string())
+    );
     assert_eq!(socks_config.port, Some(1080));
 }
 
@@ -273,27 +294,36 @@ fn test_proxy_config_generator_empty_command() {
 fn test_proxy_config_generator_different_types() {
     // 测试 HTTP 代理
     let mut http_proxy_info = ProxyInfo::new();
-    http_proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("http.example.com".to_string()),
-        port: Some(8080),
-    });
+    http_proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("http.example.com".to_string()),
+            port: Some(8080),
+        },
+    );
 
     // 测试 HTTPS 代理
     let mut https_proxy_info = ProxyInfo::new();
-    https_proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: true,
-        address: Some("https.example.com".to_string()),
-        port: Some(8443),
-    });
+    https_proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: true,
+            address: Some("https.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
     // 测试 SOCKS 代理
     let mut socks_proxy_info = ProxyInfo::new();
-    socks_proxy_info.set_config(ProxyType::Socks, ProxyConfig {
-        enable: true,
-        address: Some("socks.example.com".to_string()),
-        port: Some(1080),
-    });
+    socks_proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("socks.example.com".to_string()),
+            port: Some(1080),
+        },
+    );
 
     // 测试每种类型的环境变量生成
     let http_env_vars = ProxyConfigGenerator::generate_env_vars(&http_proxy_info);
@@ -340,23 +370,32 @@ fn test_complex_proxy_info_configuration() {
     let mut proxy_info = ProxyInfo::new();
 
     // 设置混合配置：HTTP 启用，HTTPS 禁用，SOCKS 启用
-    proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("http-proxy.example.com".to_string()),
-        port: Some(8080),
-    });
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("http-proxy.example.com".to_string()),
+            port: Some(8080),
+        },
+    );
 
-    proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: false,
-        address: Some("https-proxy.example.com".to_string()),
-        port: Some(8443),
-    });
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: false,
+            address: Some("https-proxy.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
-    proxy_info.set_config(ProxyType::Socks, ProxyConfig {
-        enable: true,
-        address: Some("socks-proxy.example.com".to_string()),
-        port: Some(1080),
-    });
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("socks-proxy.example.com".to_string()),
+            port: Some(1080),
+        },
+    );
 
     // 验证环境变量生成
     let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
@@ -383,11 +422,14 @@ fn test_complex_proxy_info_configuration() {
 fn test_edge_cases_and_error_handling() {
     // 测试无效的代理配置（空地址）
     let mut invalid_proxy_info = ProxyInfo::new();
-    invalid_proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: None, // 空地址
-        port: Some(8080),
-    });
+    invalid_proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: None, // 空地址
+            port: Some(8080),
+        },
+    );
 
     let env_vars = ProxyConfigGenerator::generate_env_vars(&invalid_proxy_info);
     // 无效配置不应该生成环境变量
@@ -395,11 +437,14 @@ fn test_edge_cases_and_error_handling() {
 
     // 测试无效端口
     let mut invalid_port_proxy = ProxyInfo::new();
-    invalid_port_proxy.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("test.com".to_string()),
-        port: None, // 无端口
-    });
+    invalid_port_proxy.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("test.com".to_string()),
+            port: None, // 无端口
+        },
+    );
 
     let env_vars_no_port = ProxyConfigGenerator::generate_env_vars(&invalid_port_proxy);
     // 无端口配置不应该生成环境变量
@@ -426,11 +471,14 @@ fn test_proxy_info_mutable_operations() {
     assert!(proxy_info.get_config(ProxyType::Http).is_none());
 
     // 添加配置
-    proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("new-proxy.example.com".to_string()),
-        port: Some(9090),
-    });
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("new-proxy.example.com".to_string()),
+            port: Some(9090),
+        },
+    );
 
     // 验证配置已添加
     let config = proxy_info.get_config(ProxyType::Http).unwrap();

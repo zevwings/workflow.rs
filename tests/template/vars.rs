@@ -8,7 +8,9 @@
 //! - 特殊字符处理
 
 use pretty_assertions::assert_eq;
-use workflow::template::{BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars};
+use workflow::template::{
+    BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
+};
 
 // ==================== 测试用例 ====================
 
@@ -23,8 +25,14 @@ fn test_branch_template_vars_creation() {
     };
 
     assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
-    assert_eq!(vars.jira_summary, Some("Implement user authentication".to_string()));
-    assert_eq!(vars.summary_slug, Some("implement-user-authentication".to_string()));
+    assert_eq!(
+        vars.jira_summary,
+        Some("Implement user authentication".to_string())
+    );
+    assert_eq!(
+        vars.summary_slug,
+        Some("implement-user-authentication".to_string())
+    );
     assert_eq!(vars.jira_type, Some("Feature".to_string()));
 }
 
@@ -51,7 +59,9 @@ fn test_commit_template_vars_creation() {
         commit_type: "feat".to_string(),
         scope: Some("auth".to_string()),
         subject: "implement user authentication system".to_string(),
-        body: Some("Add comprehensive authentication with JWT tokens and session management.".to_string()),
+        body: Some(
+            "Add comprehensive authentication with JWT tokens and session management.".to_string(),
+        ),
         jira_key: Some("AUTH-789".to_string()),
         use_scope: true,
     };
@@ -59,7 +69,12 @@ fn test_commit_template_vars_creation() {
     assert_eq!(vars.commit_type, "feat");
     assert_eq!(vars.scope, Some("auth".to_string()));
     assert_eq!(vars.subject, "implement user authentication system");
-    assert_eq!(vars.body, Some("Add comprehensive authentication with JWT tokens and session management.".to_string()));
+    assert_eq!(
+        vars.body,
+        Some(
+            "Add comprehensive authentication with JWT tokens and session management.".to_string()
+        )
+    );
     assert_eq!(vars.jira_key, Some("AUTH-789".to_string()));
     assert_eq!(vars.use_scope, true);
 }
@@ -109,18 +124,30 @@ fn test_pr_template_vars_creation() {
         jira_type: Some("Bug".to_string()),
         jira_service_address: Some("https://company.atlassian.net".to_string()),
         change_types: change_types.clone(),
-        short_description: Some("This PR fixes the authentication bug that was preventing users from logging in.".to_string()),
+        short_description: Some(
+            "This PR fixes the authentication bug that was preventing users from logging in."
+                .to_string(),
+        ),
         dependency: Some("Requires backend API v2.1+".to_string()),
     };
 
     assert_eq!(vars.jira_key, Some("PR-101".to_string()));
-    assert_eq!(vars.jira_summary, Some("Fix authentication bug".to_string()));
+    assert_eq!(
+        vars.jira_summary,
+        Some("Fix authentication bug".to_string())
+    );
     assert_eq!(vars.jira_type, Some("Bug".to_string()));
     assert_eq!(vars.change_types.len(), 3);
     assert_eq!(vars.change_types[0].name, "Bug fix");
     assert_eq!(vars.change_types[0].selected, true);
     assert_eq!(vars.change_types[1].selected, false);
-    assert_eq!(vars.short_description, Some("This PR fixes the authentication bug that was preventing users from logging in.".to_string()));
+    assert_eq!(
+        vars.short_description,
+        Some(
+            "This PR fixes the authentication bug that was preventing users from logging in."
+                .to_string()
+        )
+    );
 }
 
 /// 测试 PR 模板变量默认实现
@@ -314,8 +341,14 @@ fn test_vars_clone() {
 
     let cloned_branch_vars = original_branch_vars.clone();
     assert_eq!(original_branch_vars.jira_key, cloned_branch_vars.jira_key);
-    assert_eq!(original_branch_vars.jira_summary, cloned_branch_vars.jira_summary);
-    assert_eq!(original_branch_vars.summary_slug, cloned_branch_vars.summary_slug);
+    assert_eq!(
+        original_branch_vars.jira_summary,
+        cloned_branch_vars.jira_summary
+    );
+    assert_eq!(
+        original_branch_vars.summary_slug,
+        cloned_branch_vars.summary_slug
+    );
     assert_eq!(original_branch_vars.jira_type, cloned_branch_vars.jira_type);
 
     let original_commit_vars = CommitTemplateVars {
@@ -328,7 +361,10 @@ fn test_vars_clone() {
     };
 
     let cloned_commit_vars = original_commit_vars.clone();
-    assert_eq!(original_commit_vars.commit_type, cloned_commit_vars.commit_type);
+    assert_eq!(
+        original_commit_vars.commit_type,
+        cloned_commit_vars.commit_type
+    );
     assert_eq!(original_commit_vars.scope, cloned_commit_vars.scope);
     assert_eq!(original_commit_vars.subject, cloned_commit_vars.subject);
     assert_eq!(original_commit_vars.jira_key, cloned_commit_vars.jira_key);

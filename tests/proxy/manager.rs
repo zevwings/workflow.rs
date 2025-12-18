@@ -8,7 +8,9 @@
 
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
-use workflow::proxy::{ProxyConfig, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager, ProxyType};
+use workflow::proxy::{
+    ProxyConfig, ProxyDisableResult, ProxyEnableResult, ProxyInfo, ProxyManager, ProxyType,
+};
 
 // ==================== Helper Functions ====================
 
@@ -16,17 +18,23 @@ use workflow::proxy::{ProxyConfig, ProxyDisableResult, ProxyEnableResult, ProxyI
 fn create_test_proxy_info() -> ProxyInfo {
     let mut proxy_info = ProxyInfo::new();
 
-    proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("proxy.example.com".to_string()),
-        port: Some(8080),
-    });
+    proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("proxy.example.com".to_string()),
+            port: Some(8080),
+        },
+    );
 
-    proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: true,
-        address: Some("secure-proxy.example.com".to_string()),
-        port: Some(8443),
-    });
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: true,
+            address: Some("secure-proxy.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
     proxy_info
 }
@@ -35,11 +43,14 @@ fn create_test_proxy_info() -> ProxyInfo {
 fn create_https_proxy_info() -> ProxyInfo {
     let mut proxy_info = ProxyInfo::new();
 
-    proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: false,
-        address: Some("secure-proxy.example.com".to_string()),
-        port: Some(8443),
-    });
+    proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: false,
+            address: Some("secure-proxy.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
     proxy_info
 }
@@ -48,11 +59,14 @@ fn create_https_proxy_info() -> ProxyInfo {
 fn create_socks_proxy_info() -> ProxyInfo {
     let mut proxy_info = ProxyInfo::new();
 
-    proxy_info.set_config(ProxyType::Socks, ProxyConfig {
-        enable: true,
-        address: Some("socks.example.com".to_string()),
-        port: Some(1080),
-    });
+    proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("socks.example.com".to_string()),
+            port: Some(1080),
+        },
+    );
 
     proxy_info
 }
@@ -73,7 +87,10 @@ fn test_proxy_info_creation() {
     // 验证 HTTPS 代理配置
     let https_config = proxy_info.get_config(ProxyType::Https).unwrap();
     assert_eq!(https_config.enable, true);
-    assert_eq!(https_config.address, Some("secure-proxy.example.com".to_string()));
+    assert_eq!(
+        https_config.address,
+        Some("secure-proxy.example.com".to_string())
+    );
     assert_eq!(https_config.port, Some(8443));
 }
 
@@ -222,8 +239,14 @@ fn test_proxy_disable_result_creation() {
     use std::path::PathBuf;
 
     let mut current_env_proxy = HashMap::new();
-    current_env_proxy.insert("http_proxy".to_string(), "http://proxy.example.com:8080".to_string());
-    current_env_proxy.insert("https_proxy".to_string(), "https://proxy.example.com:8080".to_string());
+    current_env_proxy.insert(
+        "http_proxy".to_string(),
+        "http://proxy.example.com:8080".to_string(),
+    );
+    current_env_proxy.insert(
+        "https_proxy".to_string(),
+        "https://proxy.example.com:8080".to_string(),
+    );
 
     let disable_result = ProxyDisableResult {
         found_proxy: true,
@@ -267,7 +290,10 @@ fn test_proxy_disable_result_no_proxy_found() {
 #[test]
 fn test_proxy_disable_result_env_only() {
     let mut current_env_proxy = HashMap::new();
-    current_env_proxy.insert("http_proxy".to_string(), "http://env.proxy.com:8080".to_string());
+    current_env_proxy.insert(
+        "http_proxy".to_string(),
+        "http://env.proxy.com:8080".to_string(),
+    );
 
     let disable_result = ProxyDisableResult {
         found_proxy: true,
@@ -296,9 +322,15 @@ fn test_results_clone() {
     };
 
     let cloned_enable = original_enable.clone();
-    assert_eq!(original_enable.already_configured, cloned_enable.already_configured);
+    assert_eq!(
+        original_enable.already_configured,
+        cloned_enable.already_configured
+    );
     assert_eq!(original_enable.proxy_command, cloned_enable.proxy_command);
-    assert_eq!(original_enable.shell_config_path, cloned_enable.shell_config_path);
+    assert_eq!(
+        original_enable.shell_config_path,
+        cloned_enable.shell_config_path
+    );
 
     // 测试 ProxyDisableResult 克隆
     let mut env_proxy = HashMap::new();
@@ -313,9 +345,15 @@ fn test_results_clone() {
 
     let cloned_disable = original_disable.clone();
     assert_eq!(original_disable.found_proxy, cloned_disable.found_proxy);
-    assert_eq!(original_disable.shell_config_path, cloned_disable.shell_config_path);
+    assert_eq!(
+        original_disable.shell_config_path,
+        cloned_disable.shell_config_path
+    );
     assert_eq!(original_disable.unset_command, cloned_disable.unset_command);
-    assert_eq!(original_disable.current_env_proxy.len(), cloned_disable.current_env_proxy.len());
+    assert_eq!(
+        original_disable.current_env_proxy.len(),
+        cloned_disable.current_env_proxy.len()
+    );
 }
 
 /// 测试结构体调试输出
@@ -409,37 +447,52 @@ fn test_proxy_manager_static_methods() {
 fn test_complex_proxy_scenarios() {
     // 测试 HTTP 代理配置
     let mut http_proxy_info = ProxyInfo::new();
-    http_proxy_info.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("auth-proxy.example.com".to_string()),
-        port: Some(3128),
-    });
+    http_proxy_info.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("auth-proxy.example.com".to_string()),
+            port: Some(3128),
+        },
+    );
 
     // 测试禁用的 HTTPS 代理
     let mut https_proxy_info = ProxyInfo::new();
-    https_proxy_info.set_config(ProxyType::Https, ProxyConfig {
-        enable: false,
-        address: Some("public-proxy.example.com".to_string()),
-        port: Some(8443),
-    });
+    https_proxy_info.set_config(
+        ProxyType::Https,
+        ProxyConfig {
+            enable: false,
+            address: Some("public-proxy.example.com".to_string()),
+            port: Some(8443),
+        },
+    );
 
     // 测试 SOCKS 代理配置
     let mut socks_proxy_info = ProxyInfo::new();
-    socks_proxy_info.set_config(ProxyType::Socks, ProxyConfig {
-        enable: true,
-        address: Some("localhost".to_string()),
-        port: Some(1080),
-    });
+    socks_proxy_info.set_config(
+        ProxyType::Socks,
+        ProxyConfig {
+            enable: true,
+            address: Some("localhost".to_string()),
+            port: Some(1080),
+        },
+    );
 
     // 验证不同类型代理的配置
     let http_config = http_proxy_info.get_config(ProxyType::Http).unwrap();
     assert_eq!(http_config.enable, true);
-    assert_eq!(http_config.address, Some("auth-proxy.example.com".to_string()));
+    assert_eq!(
+        http_config.address,
+        Some("auth-proxy.example.com".to_string())
+    );
     assert_eq!(http_config.port, Some(3128));
 
     let https_config = https_proxy_info.get_config(ProxyType::Https).unwrap();
     assert_eq!(https_config.enable, false);
-    assert_eq!(https_config.address, Some("public-proxy.example.com".to_string()));
+    assert_eq!(
+        https_config.address,
+        Some("public-proxy.example.com".to_string())
+    );
     assert_eq!(https_config.port, Some(8443));
 
     let socks_config = socks_proxy_info.get_config(ProxyType::Socks).unwrap();
@@ -458,22 +511,28 @@ fn test_complex_proxy_scenarios() {
 fn test_edge_cases_and_error_handling() {
     // 测试极端端口号
     let mut extreme_port_proxy = ProxyInfo::new();
-    extreme_port_proxy.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: Some("test.example.com".to_string()),
-        port: Some(65535), // 最大端口号
-    });
+    extreme_port_proxy.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: Some("test.example.com".to_string()),
+            port: Some(65535), // 最大端口号
+        },
+    );
 
     let config = extreme_port_proxy.get_config(ProxyType::Http).unwrap();
     assert_eq!(config.port, Some(65535));
 
     // 测试空主机名（虽然在实际使用中不应该这样）
     let mut empty_host_proxy = ProxyInfo::new();
-    empty_host_proxy.set_config(ProxyType::Http, ProxyConfig {
-        enable: false,
-        address: Some("".to_string()),
-        port: Some(8080),
-    });
+    empty_host_proxy.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: false,
+            address: Some("".to_string()),
+            port: Some(8080),
+        },
+    );
 
     let empty_config = empty_host_proxy.get_config(ProxyType::Http).unwrap();
     assert_eq!(empty_config.address, Some("".to_string()));
@@ -481,11 +540,14 @@ fn test_edge_cases_and_error_handling() {
 
     // 测试 None 地址和端口
     let mut invalid_proxy = ProxyInfo::new();
-    invalid_proxy.set_config(ProxyType::Http, ProxyConfig {
-        enable: true,
-        address: None,
-        port: None,
-    });
+    invalid_proxy.set_config(
+        ProxyType::Http,
+        ProxyConfig {
+            enable: true,
+            address: None,
+            port: None,
+        },
+    );
 
     // 无效配置不应该生成 URL
     assert!(invalid_proxy.get_proxy_url(ProxyType::Http).is_none());

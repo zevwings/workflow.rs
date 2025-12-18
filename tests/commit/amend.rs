@@ -91,7 +91,10 @@ fn test_create_preview() {
     assert!(result.is_ok());
 
     let preview = result.unwrap();
-    assert_eq!(preview.original_sha, "abc123def456789012345678901234567890abcd");
+    assert_eq!(
+        preview.original_sha,
+        "abc123def456789012345678901234567890abcd"
+    );
     assert_eq!(preview.original_message, "feat: add user authentication system\n\nImplement comprehensive user authentication with JWT tokens and session management.");
     assert!(preview.new_message.is_some());
     assert_eq!(preview.new_message.as_ref().unwrap(), "feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.");
@@ -118,7 +121,10 @@ fn test_create_preview_without_new_message() {
     assert!(result.is_ok());
 
     let preview = result.unwrap();
-    assert_eq!(preview.original_sha, "abc123def456789012345678901234567890abcd");
+    assert_eq!(
+        preview.original_sha,
+        "abc123def456789012345678901234567890abcd"
+    );
     assert_eq!(preview.original_message, "feat: add user authentication system\n\nImplement comprehensive user authentication with JWT tokens and session management.");
     assert!(preview.new_message.is_none());
     assert!(preview.files_to_add.is_empty());

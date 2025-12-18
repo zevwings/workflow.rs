@@ -86,7 +86,10 @@ fn test_create_preview() {
     assert!(result.is_ok());
 
     let preview = result.unwrap();
-    assert_eq!(preview.original_sha, "def456abc789012345678901234567890abcdef12");
+    assert_eq!(
+        preview.original_sha,
+        "def456abc789012345678901234567890abcdef12"
+    );
     assert_eq!(preview.original_message, "fix: resolve login authentication bug\n\nFix critical authentication issue that prevented users from logging in with valid credentials.");
     assert_eq!(preview.new_message, "fix: resolve critical login authentication issue\n\nFix authentication bug that was blocking user access with proper credentials.");
     assert_eq!(preview.is_head, true);
