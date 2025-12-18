@@ -2,6 +2,7 @@
 //!
 //! 提供基于路径的助手 `PathAccess`，封装常用的目录/文件检查与创建。
 
+use crate::base::util::directory::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 use std::path::PathBuf;
@@ -20,14 +21,13 @@ impl PathAccess {
     /// 确保目录存在（若不存在则递归创建）。
     pub fn ensure_dir_exists(&self) -> Result<()> {
         if !self.path.exists() {
-            fs::create_dir_all(&self.path)
-                .wrap_err_with(|| format!("Failed to create directory: {:?}", self.path))?;
+            DirectoryWalker::new(&self.path).ensure_exists()?;
         }
         Ok(())
     }
 
     /// 确保父目录存在（若父目录缺失则递归创建）。
-    pub fn ensure_parent_dir_exists(&self) -> Result<()> {
+    pub fn ensure_parent_exists(&self) -> Result<()> {
         if let Some(parent) = self.path.parent() {
             PathAccess::new(parent).ensure_dir_exists()?;
         }

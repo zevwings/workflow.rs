@@ -2,10 +2,10 @@
 //!
 //! Provides a unified interface for template rendering using handlebars.
 
+use crate::base::util::date::get_unix_timestamp_nanos;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use handlebars::Handlebars;
 use serde::Serialize;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Template engine type
 #[derive(Debug, Clone, Copy)]
@@ -72,7 +72,7 @@ impl TemplateEngine {
     /// Rendered template string
     pub fn render_string<T: Serialize>(&self, template: &str, vars: &T) -> Result<String> {
         // Register template with a temporary name
-        let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+        let timestamp = get_unix_timestamp_nanos();
         let temp_name = format!("__temp_{}", timestamp);
         let mut engine = TemplateEngine::new();
         engine.register_template(&temp_name, template)?;

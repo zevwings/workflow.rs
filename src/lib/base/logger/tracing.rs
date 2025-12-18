@@ -41,10 +41,10 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
+use crate::base::util::directory::DirectoryWalker;
 use crate::base::LogLevel;
 use chrono::Local;
 use color_eyre::eyre::WrapErr;
-use std::fs;
 use std::fs::OpenOptions;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
@@ -143,9 +143,7 @@ impl Tracer {
 
         // 创建 tracing 子目录
         let tracing_dir = logs_dir.join("tracing");
-        fs::create_dir_all(&tracing_dir).wrap_err_with(|| {
-            format!("Failed to create tracing log directory: {:?}", tracing_dir)
-        })?;
+        DirectoryWalker::new(&tracing_dir).ensure_exists()?;
 
         // 生成带日期的日志文件名
         let date = Local::now().format("%Y-%m-%d");

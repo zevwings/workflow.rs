@@ -96,7 +96,7 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
             force: f,
         } => {
             assert_eq!(id, pull_request_id.map(|s| s.to_string()));
-            assert_eq!(f, force);
+            assert_eq!(f.is_force(), force);
         }
         _ => panic!("Expected Merge command"),
     }

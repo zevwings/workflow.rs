@@ -860,3 +860,5 @@ graph TB
 请参考以下文档了解更多信息：
 - [docs/README.md](./docs/README.md) - 完整文档索引
 - [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+
+---

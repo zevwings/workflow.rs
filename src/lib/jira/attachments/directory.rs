@@ -1,6 +1,7 @@
 //! 目录管理
 
 use super::constants::DOWNLOADS_FOLDER;
+use crate::base::util::directory::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 use std::path::{Path, PathBuf};
 
@@ -40,7 +41,7 @@ impl DirectoryManager {
                 .wrap_err("Failed to remove existing directory")?;
         }
 
-        std::fs::create_dir_all(&download_dir).wrap_err("Failed to create output directory")?;
+        DirectoryWalker::new(&download_dir).ensure_exists()?;
 
         Ok((download_base_dir, download_dir))
     }

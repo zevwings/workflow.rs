@@ -45,6 +45,11 @@ pretty_assertions = "1.4"
 rstest = "0.18"
 mockito = "1.2"
 insta = { version = "1.38", features = ["json"] }
+assert_cmd = "2.0"      # CLI 命令测试
+predicates = "3.0"      # 断言谓词
+tempfile = "3.8"        # 临时文件和目录
+serial_test = "3.2.0"
+gix = "0.66"            # 现代 Git 操作库 (仅用于测试)
 
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
 # Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能

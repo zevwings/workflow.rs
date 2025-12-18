@@ -5,6 +5,7 @@
 //! - 安装路径（二进制文件和补全脚本的安装路径和名称）
 //! - Shell 相关路径（shell 配置文件和 completion 目录）
 
+use crate::base::util::directory::DirectoryWalker;
 use clap_complete::shells::Shell;
 use color_eyre::{
     eyre::{ContextCompat, WrapErr},
@@ -69,7 +70,7 @@ impl Paths {
 
         // 尝试创建 .workflow 目录
         let workflow_dir = icloud_base.join(".workflow");
-        if fs::create_dir_all(&workflow_dir).is_err() {
+        if DirectoryWalker::new(&workflow_dir).ensure_exists().is_err() {
             return None;
         }
 
@@ -109,7 +110,7 @@ impl Paths {
         let workflow_dir = home.join(".workflow");
 
         // 确保目录存在
-        fs::create_dir_all(&workflow_dir).wrap_err("Failed to create local .workflow directory")?;
+        DirectoryWalker::new(&workflow_dir).ensure_exists()?;
 
         // 设置目录权限为 700（仅用户可访问）
         #[cfg(unix)]
@@ -254,7 +255,7 @@ impl Paths {
         let config_dir = Self::config_base_dir()?.join("config");
 
         // 确保配置目录存在
-        fs::create_dir_all(&config_dir).wrap_err("Failed to create config directory")?;
+        DirectoryWalker::new(&config_dir).ensure_exists()?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
@@ -381,8 +382,7 @@ impl Paths {
         let history_dir = Self::local_base_dir()?.join("work-history");
 
         // 确保目录存在
-        fs::create_dir_all(&history_dir)
-            .wrap_err("Failed to create .workflow/work-history directory")?;
+        DirectoryWalker::new(&history_dir).ensure_exists()?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
@@ -419,7 +419,7 @@ impl Paths {
         let logs_dir = Self::local_base_dir()?.join("logs");
 
         // 确保目录存在
-        fs::create_dir_all(&logs_dir).wrap_err("Failed to create .workflow/logs directory")?;
+        DirectoryWalker::new(&logs_dir).ensure_exists()?;
 
         // 设置目录权限为 700（仅用户可访问，仅 Unix）
         #[cfg(unix)]
@@ -561,8 +561,7 @@ impl Paths {
         let completion_dir = Self::local_base_dir()?.join("completions");
 
         // 确保目录存在
-        fs::create_dir_all(&completion_dir)
-            .wrap_err("Failed to create .workflow/completions directory")?;
+        DirectoryWalker::new(&completion_dir).ensure_exists()?;
 
         Ok(completion_dir)
     }

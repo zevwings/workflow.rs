@@ -80,7 +80,7 @@ impl PublicRepoConfig {
     pub fn save(&self) -> Result<()> {
         let path = Paths::project_config().wrap_err("Failed to get project config path")?;
 
-        PathAccess::new(&path).ensure_parent_dir_exists()?;
+        PathAccess::new(&path).ensure_parent_exists()?;
 
         let mut existing_value: Value = if path.exists() {
             FileReader::new(&path).toml()?

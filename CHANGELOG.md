@@ -149,5 +149,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - [架构文档](https://github.com/zevwings/workflow.rs/tree/master/docs)
 
 ---
-
-**最后更新**: 2025-12-16

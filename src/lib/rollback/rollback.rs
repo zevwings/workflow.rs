@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 #[cfg(unix)]
 use std::process::Command;
 
+use crate::base::util::directory::DirectoryWalker;
 use color_eyre::{eyre::WrapErr, Result};
 
 use crate::completion::get_all_completion_files;
@@ -114,12 +115,7 @@ impl RollbackManager {
                 .as_secs()
         ));
 
-        fs::create_dir_all(&backup_dir).wrap_err_with(|| {
-            format!(
-                "Failed to create backup directory: {}",
-                backup_dir.display()
-            )
-        })?;
+        DirectoryWalker::new(&backup_dir).ensure_exists()?;
 
         trace_debug!("Created backup directory: {}", backup_dir.display());
         Ok(backup_dir)
@@ -439,12 +435,7 @@ impl RollbackManager {
         completion_dir: &Path,
     ) -> Result<RestoreResult> {
         // 确保补全脚本目录存在
-        fs::create_dir_all(completion_dir).wrap_err_with(|| {
-            format!(
-                "Failed to create completion directory: {}",
-                completion_dir.display()
-            )
-        })?;
+        DirectoryWalker::new(completion_dir).ensure_exists()?;
 
         let mut restored = Vec::new();
         let mut failed = Vec::new();

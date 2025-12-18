@@ -3,12 +3,12 @@
 
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
+use crate::base::util::directory::DirectoryWalker;
 use crate::base::util::file::FileWriter;
 use crate::commands::config::helpers::extract_section;
 use crate::commands::config::validate::ConfigValidateCommand;
 use crate::{log_error, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
-use std::fs;
 use std::path::PathBuf;
 
 /// 配置导出命令
@@ -228,10 +228,7 @@ impl ConfigExportCommand {
         no_secrets: bool,
     ) -> Result<()> {
         // 确保父目录存在
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .wrap_err(format!("Failed to create directory: {:?}", parent))?;
-        }
+        DirectoryWalker::new(".").ensure_parent_exists(path)?;
 
         let content = match format.to_lowercase().as_str() {
             "toml" => {
