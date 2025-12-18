@@ -1,7 +1,6 @@
 //! 更新命令
 //! 提供从 GitHub Releases 更新 Workflow CLI 的功能
 
-use crate::base::constants::api::github;
 use crate::base::util::directory::DirectoryWalker;
 use std::env;
 use std::fs::{self, File};
@@ -242,7 +241,7 @@ impl UpdateCommand {
             None => {
                 let url = format!(
                     "{}/repos/zevwings/workflow.rs/releases/latest",
-                    github::API_BASE
+                    crate::git::github::API_BASE
                 );
                 let retry_config = HttpRetryConfig::new();
 
@@ -321,7 +320,7 @@ impl UpdateCommand {
         };
         format!(
             "{}/zevwings/workflow.rs/releases/download/v{}/workflow-{}-{}.{}",
-            github::BASE,
+            crate::git::github::BASE,
             version,
             version,
             platform,

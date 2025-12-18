@@ -1,4 +1,4 @@
-use crate::base::constants::{api::github, errors::http_client, git::check_errors, messages::log};
+use crate::base::constants::{errors::http_client, git::check_errors, messages::log};
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, RequestConfig};
 use crate::git::{GitCommit, GitRepo};
@@ -41,7 +41,7 @@ impl CheckCommand {
         log_message!("[2/2] Checking network connection to GitHub...");
         let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
-        match client.stream(HttpMethod::Get, github::BASE, config) {
+        match client.stream(HttpMethod::Get, crate::git::github::BASE, config) {
             Ok(response) => {
                 if response.status().is_success() {
                     log_success!("GitHub network is available");

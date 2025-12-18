@@ -1,3 +1,4 @@
+use crate::base::constants::messages::log;
 use crate::base::dialog::SelectDialog;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::Settings;
@@ -45,13 +46,12 @@ impl LogCommand {
         log_success!("Log level set to: {}", selected_level_str);
         log_message!("  Current log level: {}", selected_level.as_str());
         if let Ok(config_path) = crate::base::Paths::workflow_config() {
-            log_message!(
-                "  {} {}",
-                crate::base::constants::messages::log::CONFIG_SAVED_PREFIX,
-                config_path.display()
-            );
+            log_message!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
         } else {
-            log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+            log_message!(
+                "  {} ~/.workflow/config/workflow.toml",
+                log::CONFIG_SAVED_PREFIX
+            );
         }
 
         Ok(())
@@ -154,13 +154,12 @@ impl LogCommand {
             log_success!("Trace console output enabled");
             log_message!("  Tracing logs will be output to both file and console (stderr)");
             if let Ok(config_path) = crate::base::Paths::workflow_config() {
-                log_message!(
-                    "  {} {}",
-                    crate::base::constants::messages::log::CONFIG_SAVED_PREFIX,
-                    config_path.display()
-                );
+                log_message!("  {} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
             } else {
-                log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+                log_message!(
+                    "  {} ~/.workflow/config/workflow.toml",
+                    log::CONFIG_SAVED_PREFIX
+                );
             }
         } else {
             log_success!("Trace console output disabled");

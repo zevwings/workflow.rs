@@ -8,10 +8,10 @@ use color_eyre::{
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT};
 use serde_json::Value;
 
-use crate::base::constants::{api::github, errors::validation_errors, messages::pull_requests};
+use crate::base::constants::{errors::validation_errors, messages::pull_requests};
 use crate::base::http::{HttpClient, RequestConfig};
 use crate::base::settings::Settings;
-use crate::git::{GitBranch, GitRepo};
+use crate::git::{self, GitBranch, GitRepo};
 use crate::jira::history::JiraWorkHistory;
 use crate::pr::github::errors::handle_github_error;
 use crate::pr::helpers::url::extract_github_repo_from_url;
@@ -555,7 +555,7 @@ impl PlatformProvider for GitHub {
 impl GitHub {
     /// 获取 GitHub API 基础 URL
     fn base_url() -> &'static str {
-        github::API_BASE
+        git::github::API_BASE
     }
 
     /// 创建 GitHub API 请求的 headers（内部方法）
