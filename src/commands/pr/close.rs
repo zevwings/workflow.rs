@@ -19,16 +19,17 @@ impl PullRequestCloseCommand {
         log_break!();
         log_success!("Closing PR: #{}", pull_request_id);
 
-        // 2. 获取当前分支名（关闭前保存）
+        // 2. 获取当前分支名和 PR 对应的分支名
         let current_branch = GitBranch::current_branch()?;
+        let pr_branch = Self::get_pr_branch_name(&pull_request_id)?;
 
         // 3. 获取默认分支
         let default_branch = GitBranch::get_default_branch()?;
 
-        // 4. 提前检查：如果当前分支是默认分支，不应该关闭
-        if current_branch == default_branch {
+        // 4. 提前检查：如果 PR 分支是默认分支，不应该关闭
+        if pr_branch == default_branch {
             color_eyre::eyre::bail!(
-                "Cannot close PR on default branch '{}'. Please switch to a feature branch first.",
+                "Cannot close PR on default branch '{}'. The PR branch should be a feature branch.",
                 default_branch
             );
         }
@@ -54,10 +55,10 @@ impl PullRequestCloseCommand {
         }
 
         // 7. 删除远程分支
-        Self::delete_remote_branch(&current_branch)?;
+        Self::delete_remote_branch(&pr_branch)?;
 
-        // 8. 清理本地：切换到默认分支并删除当前分支
-        Self::cleanup_after_close(&current_branch, &default_branch)?;
+        // 8. 智能清理：根据当前分支和 PR 分支的关系决定是否需要切换
+        Self::cleanup_after_close(&current_branch, &pr_branch, &default_branch)?;
 
         Ok(())
     }
@@ -132,8 +133,81 @@ impl PullRequestCloseCommand {
         Ok(())
     }
 
-    /// 关闭后清理：切换到默认分支并删除当前分支
-    fn cleanup_after_close(current_branch: &str, default_branch: &str) -> Result<()> {
-        helpers::cleanup_branch(current_branch, default_branch, "PR close")
+    /// 获取 PR 对应的分支名
+    fn get_pr_branch_name(pull_request_id: &str) -> Result<String> {
+        let provider = create_provider_auto()?;
+
+        // 从 PR 信息中获取源分支名
+        let info = provider.get_pull_request_info(pull_request_id)?;
+
+        // 解析 PR 信息，提取源分支名
+        // PR 信息格式包含 "Source Branch: branch_name"
+        for line in info.lines() {
+            if let Some(branch_line) = line.strip_prefix("Source Branch: ") {
+                return Ok(branch_line.trim().to_string());
+            }
+        }
+
+        color_eyre::eyre::bail!("Failed to extract branch name from PR #{}", pull_request_id)
+    }
+
+    /// 关闭后清理：智能判断是否需要切换分支，并删除 PR 分支
+    fn cleanup_after_close(
+        current_branch: &str,
+        pr_branch: &str,
+        default_branch: &str
+    ) -> Result<()> {
+        // 情况判断：
+        // 1. 如果当前分支就是要删除的 PR 分支，需要切换到默认分支
+        // 2. 如果当前分支不是要删除的 PR 分支，只删除 PR 分支，不切换
+
+        if current_branch == pr_branch {
+            // 情况二：在要删除的分支上，需要切换到默认分支
+            log_info!(
+                "Currently on PR branch '{}', switching to default branch '{}' before deletion",
+                pr_branch,
+                default_branch
+            );
+            helpers::cleanup_branch(current_branch, default_branch, "PR close")
+        } else {
+            // 情况一：不在要删除的分支上，只删除 PR 分支，不切换当前分支
+            log_info!(
+                "Currently on '{}', will delete PR branch '{}' without switching",
+                current_branch,
+                pr_branch
+            );
+            Self::delete_pr_branch_only(pr_branch)
+        }
+    }
+
+    /// 仅删除指定的 PR 分支（不切换当前分支）
+    fn delete_pr_branch_only(pr_branch: &str) -> Result<()> {
+        use crate::git::GitRepo;
+
+        // 1. 更新远程分支信息
+        GitRepo::fetch()?;
+
+        // 2. 删除本地分支（如果存在）
+        if GitBranch::has_local_branch(pr_branch)? {
+            log_info!("Deleting local PR branch: {}", pr_branch);
+            GitBranch::delete(pr_branch, false)
+                .or_else(|_| {
+                    log_info!("Branch may not be fully merged, trying force delete...");
+                    GitBranch::delete(pr_branch, true)
+                })
+                .wrap_err("Failed to delete local PR branch")?;
+            log_success!("Local PR branch deleted: {}", pr_branch);
+        } else {
+            log_info!("Local PR branch already deleted: {}", pr_branch);
+        }
+
+        // 3. 清理远程分支引用
+        if let Err(e) = GitRepo::prune_remote() {
+            log_info!("Warning: Failed to prune remote references: {}", e);
+            log_info!("This is a non-critical cleanup operation. Local cleanup is complete.");
+        }
+
+        log_success!("PR branch '{}' cleanup completed", pr_branch);
+        Ok(())
     }
 }

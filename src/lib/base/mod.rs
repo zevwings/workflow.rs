@@ -20,6 +20,7 @@ pub mod http;
 pub mod indicator;
 pub mod llm;
 pub mod logger;
+pub mod mcp;
 pub mod prompt;
 pub mod settings;
 pub mod shell;
