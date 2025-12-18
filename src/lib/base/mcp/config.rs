@@ -2,14 +2,11 @@
 //!
 //! 提供 `.cursor/mcp.json` 配置文件的读写和管理功能。
 
+use crate::base::util::file::{FileReader, FileWriter};
 use color_eyre::{eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs;
 use std::path::PathBuf;
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 
 /// MCP 服务器配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,47 +68,14 @@ impl MCPConfigManager {
             return Ok(MCPConfig::default());
         }
 
-        let content = fs::read_to_string(&self.config_path).wrap_err(format!(
-            "Failed to read MCP config file: {:?}",
-            self.config_path
-        ))?;
-
-        let config: MCPConfig = serde_json::from_str(&content).wrap_err(format!(
-            "Failed to parse MCP config JSON: {:?}",
-            self.config_path
-        ))?;
-
-        Ok(config)
+        FileReader::new(&self.config_path).json()
     }
 
     /// 写入配置文件
     ///
     /// 自动创建目录和文件，并设置适当的权限。
     pub fn write(&self, config: &MCPConfig) -> Result<()> {
-        // 确保目录存在
-        if let Some(parent) = self.config_path.parent() {
-            fs::create_dir_all(parent)
-                .wrap_err(format!("Failed to create config directory: {:?}", parent))?;
-        }
-
-        // 序列化为 JSON
-        let content = serde_json::to_string_pretty(config)
-            .wrap_err("Failed to serialize MCP config to JSON")?;
-
-        // 写入文件
-        fs::write(&self.config_path, content).wrap_err(format!(
-            "Failed to write MCP config file: {:?}",
-            self.config_path
-        ))?;
-
-        // 设置文件权限（仅 Unix）
-        #[cfg(unix)]
-        {
-            fs::set_permissions(&self.config_path, fs::Permissions::from_mode(0o600))
-                .wrap_err("Failed to set config file permissions")?;
-        }
-
-        Ok(())
+        FileWriter::new(&self.config_path).write_json_secure(config)
     }
 
     /// 更新配置文件

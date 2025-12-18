@@ -18,6 +18,7 @@
 - [💻 代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) - 重复代码、工具复用、第三方库
 - [🧪 测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖、合理性、缺失测试
 - [📚 文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) - README、架构文档、CHANGELOG
+- [🏗️ 架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
 
 ---
 
@@ -33,6 +34,7 @@
 - [💻 代码检查](#2-代码检查) - 重复代码、工具复用（1-2小时）
 - [🧪 测试检查](#3-测试用例检查) - 测试覆盖、合理性（1-2小时）
 - [📚 文档检查](#4-文档检查) - 文档完整性、准确性（30分钟-1小时）
+- [🏗️ 架构文档检查](#5-架构文档与代码一致性检查) - 架构文档与代码一致性（30分钟-1小时）
 
 ### 📊 分析和报告
 - [🔗 跨领域分析](#-跨领域问题关联分析) - 识别问题关联
@@ -53,6 +55,7 @@
 | 🚨 **问题识别** | 发现代码重复、测试缺失等 | 问题清单和优先级 |
 | 💡 **改进建议** | 提供具体解决方案 | 改进计划和时间安排 |
 | 🔗 **跨领域分析** | 识别问题关联和优化机会 | 关联分析和整体优化 |
+| ⚖️ **避免过度设计** | 保持代码简洁实用，避免不必要的抽象 | 简化建议和重构方案 |
 
 ### 📊 检查范围
 
@@ -62,6 +65,7 @@
 | 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) |
 | 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) |
 | 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) |
+| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) |
 
 ### ⏱️ 时间投入规划
 
@@ -220,6 +224,7 @@ graph TD
     F --> F1[🔍 重复代码检查]
     F --> F2[🛠️ 工具复用检查]
     F --> F3[📦 第三方库检查]
+    F --> F4[⚖️ 过度设计检查]
 
     G --> G1[📊 覆盖情况检查]
     G --> G2[✅ 合理性检查]
@@ -235,6 +240,7 @@ graph TD
     F1 --> I
     F2 --> I
     F3 --> I
+    F4 --> I
     G1 --> I
     G2 --> I
     G3 --> I
@@ -415,6 +421,7 @@ Write-Host "report/REVIEW_CLI_${timestamp}.md"
 - 重复代码检查（10 种模式）
 - 已封装工具检查
 - 第三方工具检查
+- 过度设计检查（不必要的抽象、过度封装、过早优化）
 
 **检查方法**：
 ```bash
@@ -549,6 +556,58 @@ echo "report/REVIEW_DOCUMENT_${TIMESTAMP}.md"
 # Windows PowerShell
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
 Write-Host "report/REVIEW_DOCUMENT_${timestamp}.md"
+```
+
+**时间估算**：30 分钟-1 小时
+
+### 5. 架构文档与代码一致性检查
+
+**指南**：[架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
+
+**检查内容**：
+- 模块结构检查
+- 模块统计检查
+- API 接口检查
+- 功能描述检查
+- 依赖关系检查
+- 错误处理检查
+
+**检查方法**：
+```bash
+# 检查模块结构
+MODULE=pr
+find src/lib/$MODULE -name "*.rs" -type f | grep -v mod.rs | sort
+
+# 统计代码行数
+find src/lib/$MODULE -name "*.rs" -type f | xargs wc -l | tail -1
+
+# 提取公共 API
+grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
+```
+
+**报告位置**：`report/REVIEW_ARCHITECTURE_DOC_{timestamp}.md`
+
+其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
+
+**生成带时间戳的文件名**：
+
+在 Rust 代码中：
+```rust
+use workflow::base::util::date::format_filename_timestamp;
+
+let timestamp = format_filename_timestamp();
+let report_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
+```
+
+在命令行中：
+```bash
+# Unix/macOS/Linux
+TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+echo "report/REVIEW_ARCHITECTURE_DOC_${TIMESTAMP}.md"
+
+# Windows PowerShell
+$timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
+Write-Host "report/REVIEW_ARCHITECTURE_DOC_${timestamp}.md"
 ```
 
 **时间估算**：30 分钟-1 小时
@@ -689,7 +748,7 @@ Write-Host "report/REVIEW_REPORT_${timestamp}.md"
 
 **代码检查结果**：
 - 检查状态：✅ 通过 / ⚠️ 部分通过 / ❌ 未通过
-- 主要发现：重复代码数量、工具复用机会、第三方库替换机会
+- 主要发现：重复代码数量、工具复用机会、第三方库替换机会、过度设计问题
 - 详细报告：引用 `report/REVIEW_CODE_{timestamp}.md`
 
 **测试用例检查结果**：
@@ -749,7 +808,7 @@ Write-Host "report/REVIEW_REPORT_${timestamp}.md"
 
 #### 5. 统计信息
 
-- **代码检查**：重复代码数量、工具复用机会、第三方库替换机会
+- **代码检查**：重复代码数量、工具复用机会、第三方库替换机会、过度设计问题数量
 - **测试检查**：测试覆盖情况、缺失测试数量、测试合理性评分
 - **文档检查**：文档完整性评分、文档准确性评分、文档一致性评分
 - **CLI 检查**：命令完整性、补全脚本同步、参数复用情况
@@ -816,6 +875,7 @@ Write-Host "report/REVIEW_REPORT_${timestamp}.md"
 - 重复代码：X 处
 - 工具复用机会：X 处
 - 第三方库替换机会：X 处
+- 过度设计问题：X 处
 
 **详细报告**：[代码检查报告](./REVIEW_CODE_{timestamp}.md)（替换 `{timestamp}` 为实际时间戳）
 
@@ -889,7 +949,7 @@ Write-Host "report/REVIEW_REPORT_${timestamp}.md"
 
 ## 统计信息
 
-- **代码检查**：重复代码 X 处，工具复用机会 X 处，第三方库替换机会 X 处
+- **代码检查**：重复代码 X 处，工具复用机会 X 处，第三方库替换机会 X 处，过度设计问题 X 处
 - **测试检查**：测试覆盖 X%，缺失测试 X 个
 - **文档检查**：文档完整性 X%，文档准确性 X%
 - **CLI 检查**：命令完整性 X%，补全脚本同步 X%
@@ -1018,6 +1078,7 @@ grep -r "#[cfg(test)]" src/
 - [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md)
 - [测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md)
 - [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)
+- [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
 
 ### 报告位置
 

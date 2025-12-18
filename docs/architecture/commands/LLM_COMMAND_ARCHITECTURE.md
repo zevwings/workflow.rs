@@ -11,7 +11,7 @@
 
 **模块统计：**
 - 命令数量：2 个（`setup`, `show`）
-- 总代码行数：约 290 行
+- 总代码行数：约 406 行
 - 文件数量：3 个
 - 主要依赖：`lib/base/settings/`、`lib/jira/config.rs`、`lib/base/llm/`
 

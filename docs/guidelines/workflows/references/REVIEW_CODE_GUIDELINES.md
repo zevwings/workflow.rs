@@ -11,6 +11,7 @@
 - ✅ 工具复用：使用已封装的工具函数替换重复实现
 - ✅ 依赖优化：识别可用第三方库替换的自实现代码
 - ✅ 规范遵循：确保代码风格和导入顺序符合项目规范
+- ✅ **避免过度设计**：保持代码简洁，避免不必要的抽象和复杂性
 
 ---
 
@@ -34,6 +35,7 @@
 2. **复用已有工具**：识别可以使用已封装工具函数替换的代码
 3. **优化依赖使用**：识别可以使用第三方库替换的自实现代码
 4. **规范代码风格**：确保代码遵循项目规范，包括导入顺序等
+5. **避免过度设计**：保持代码简洁实用，避免不必要的抽象层和复杂性
 
 ---
 
@@ -63,7 +65,13 @@
 2. **库匹配**：查找是否有成熟的第三方库可以替换
 3. **替换评估**：评估替换的可行性和收益
 
-### 步骤 5：生成报告
+### 步骤 5：过度设计检查
+
+1. **抽象层评估**：检查是否有不必要的抽象层或中间层
+2. **复杂度评估**：评估代码复杂度是否与实际需求匹配
+3. **实用性评估**：确保设计满足当前需求，避免为未来可能的需求过度设计
+
+### 步骤 6：生成报告
 
 1. **问题汇总**：汇总所有发现的问题
 2. **优先级排序**：按影响范围和收益排序
@@ -421,6 +429,154 @@ use color_eyre::Result;  // 第三方库导入
 - [ ] 导入分组之间是否有空行分隔？
 - [ ] 是否在函数或模块中间使用了 `use` 语句？
 - [ ] 是否使用了 `rustfmt` 格式化导入顺序？
+
+#### 12. 过度设计模式
+
+**检查目标**：识别不必要的抽象和过度设计
+
+**检查原则**：
+1. **YAGNI（You Aren't Gonna Need It）**：不要为未来可能的需求添加功能
+2. **KISS（Keep It Simple, Stupid）**：保持简单，避免不必要的复杂性
+3. **实用主义**：优先满足当前需求，避免过度抽象
+
+**搜索模式**：
+```bash
+# 查找可能过度设计的模式
+# - 过多的 trait 定义
+grep -r "trait " src/ | wc -l
+
+# - 过多的抽象层
+grep -r "impl.*for" src/ | wc -l
+
+# - 不必要的泛型
+grep -r "<T>" src/ | grep -v "test"
+
+# - 过多的中间层或包装器
+grep -r "Wrapper\|Adapter\|Facade" src/
+```
+
+**常见过度设计模式**：
+
+1. **不必要的抽象层**：
+   - 为单一实现创建 trait
+   - 创建多层抽象但只有一层实现
+   - 过度使用设计模式（如为简单场景使用策略模式）
+
+2. **过早优化**：
+   - 为未来可能的需求添加功能
+   - 创建过于灵活的配置系统但实际只需要简单配置
+   - 添加不必要的泛型参数
+
+3. **过度封装**：
+   - 将简单函数包装成复杂的结构体
+   - 创建不必要的中间层
+   - 过度使用 Builder 模式
+
+4. **不必要的复杂性**：
+   - 使用复杂的数据结构处理简单数据
+   - 创建复杂的错误处理系统处理简单错误
+   - 过度使用宏或代码生成
+
+**检查清单**：
+- [ ] 是否有为单一实现创建的 trait？是否可以简化为直接实现？
+- [ ] 是否有不必要的抽象层？是否可以减少中间层？
+- [ ] 是否有为未来需求添加的功能？是否可以移除？
+- [ ] 是否有过度封装的简单函数？是否可以简化为直接函数调用？
+- [ ] 代码复杂度是否与实际需求匹配？
+- [ ] 是否使用了不必要的设计模式？
+- [ ] 是否有不必要的泛型参数？
+
+**示例：过度设计 vs 简洁设计**
+
+**过度设计示例**：
+```rust
+// ❌ 过度设计：为单一实现创建 trait
+trait FileReader {
+    fn read(&self, path: &Path) -> Result<String>;
+}
+
+struct SimpleFileReader;
+
+impl FileReader for SimpleFileReader {
+    fn read(&self, path: &Path) -> Result<String> {
+        fs::read_to_string(path)
+            .context(format!("Failed to read file: {:?}", path))
+    }
+}
+
+// 使用
+let reader = SimpleFileReader;
+let content = reader.read(&path)?;
+```
+
+**简洁设计示例**：
+```rust
+// ✅ 简洁设计：直接使用函数
+pub fn read_file(path: &Path) -> Result<String> {
+    fs::read_to_string(path)
+        .context(format!("Failed to read file: {:?}", path))
+}
+
+// 使用
+let content = read_file(&path)?;
+```
+
+**过度设计示例**：
+```rust
+// ❌ 过度设计：为简单场景使用复杂的 Builder 模式
+struct ConfigBuilder {
+    host: Option<String>,
+    port: Option<u16>,
+}
+
+impl ConfigBuilder {
+    fn new() -> Self {
+        Self {
+            host: None,
+            port: None,
+        }
+    }
+
+    fn host(mut self, host: String) -> Self {
+        self.host = Some(host);
+        self
+    }
+
+    fn port(mut self, port: u16) -> Self {
+        self.port = Some(port);
+        self
+    }
+
+    fn build(self) -> Result<Config> {
+        Ok(Config {
+            host: self.host.unwrap_or_else(|| "localhost".to_string()),
+            port: self.port.unwrap_or(8080),
+        })
+    }
+}
+```
+
+**简洁设计示例**：
+```rust
+// ✅ 简洁设计：直接使用结构体初始化
+pub struct Config {
+    pub host: String,
+    pub port: u16,
+}
+
+impl Config {
+    pub fn new(host: String, port: u16) -> Self {
+        Self { host, port }
+    }
+
+    pub fn default() -> Self {
+        Self {
+            host: "localhost".to_string(),
+            port: 8080,
+        }
+    }
+}
+```
 
 ---
 
@@ -825,6 +981,7 @@ grep -r "Result\|Error\|anyhow\|color_eyre" src/
 - [ ] **用户交互**：检查是否直接使用 `dialoguer` 而不是封装的 Dialog
 - [ ] **进度指示器**：检查是否直接使用 `indicatif` 而不是封装的 Spinner/Progress
 - [ ] **导入顺序**：检查导入语句是否遵循从顶部导入的规范（标准库 → 第三方库 → 项目内部）
+- [ ] **过度设计**：检查是否有不必要的抽象层、过度封装或过早优化
 
 ### 已封装工具检查清单
 

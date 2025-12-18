@@ -622,6 +622,8 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 ### 6.7 架构文档与代码一致性检查
 
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统化的架构文档与代码一致性检查，请参考 [架构文档审查指南](./REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)，该指南包含完整的检查流程、详细的检查方法和示例。
+
 #### 检查项
 
 - [ ] **模块结构一致性**：架构文档中描述的模块结构与实际代码结构一致
@@ -632,6 +634,8 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 - [ ] **错误处理一致性**：文档中描述的错误处理与实际代码实现一致
 
 #### 检查方法
+
+> **参考**：[架构文档审查指南](./REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 获取完整的检查方法、检查步骤和详细示例。
 
 1. **模块结构对比**：
    ```bash

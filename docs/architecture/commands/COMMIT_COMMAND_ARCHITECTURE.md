@@ -13,8 +13,8 @@ Commit 命令模块提供交互式的提交修改功能，支持修改最后一�
 
 **模块统计：**
 - 命令数量：3 个（amend、reword、squash）
-- 总代码行数：约 875 行
-- 文件数量：4 个
+- 总代码行数：约 776 行
+- 文件数量：5 个
 - 主要依赖：`lib/commit/`、`lib/git/`、`commands/check/`、`lib/base/dialog/`、`commands/repo/`
 
 ---

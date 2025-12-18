@@ -382,7 +382,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/reviews/REVIEW_DOCUMENT_GUIDELINES.md)
+### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/workflows/references/REVIEW_DOCUMENT_GUIDELINES.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -394,7 +394,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/reviews/REVIEW_TEST_CASE_GUIDELINES.md)
+### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/workflows/references/REVIEW_TEST_CASE_GUIDELINES.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -413,7 +413,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [REVIEW_CODE_GUIDELINES.md](./guidelines/reviews/REVIEW_CODE_GUIDELINES.md)
+### [REVIEW_CODE_GUIDELINES.md](./guidelines/workflows/references/REVIEW_CODE_GUIDELINES.md)
 **代码检查指南**
 
 - 系统化的代码检查方法
@@ -423,28 +423,6 @@
 - 详细的检查清单和示例分析
 - 适用于 AI 辅助代码审查和人工代码审查
 
-### [WHY_BOTH_ZSH_BASH.md](./WHY_BOTH_ZSH_BASH.md)
-**为什么需要同时生成 zsh 和 bash 的补全脚本**
-
-- 配置文件设计说明
-- 多 shell 环境支持场景
-- 设计决策和实现方案
-
-### [FUTURE_IMPROVEMENTS.md](./FUTURE_IMPROVEMENTS.md)
-**未来改进计划**
-
-- 未实现功能列表
-- 改进建议和优先级
-- 贡献指南
-
-### [FEATURE_EXTENSIONS.md](./FEATURE_EXTENSIONS.md)
-**功能拓展分析文档**
-
-- 基于代码库分析的功能拓展方向
-- 10 个主要功能模块的详细拓展建议
-- 每个功能的命令示例和实现建议
-- 优先级建议和开发顺序
-- 技术考虑和贡献指南
 
 ---
 
@@ -472,7 +450,7 @@
 
 ### 版本迁移
 - 需要升级版本？ → [迁移文档索引](./migration/README.md)
-- 从 1.4.8 升级到 1.4.9？ → [1.4.8 → 1.4.9 迁移指南](./migration/1.4.8-to-1.4.9.md)
+- 从 1.5.6 升级到 1.5.7？ → [1.5.6 → 1.5.7 迁移指南](./migration/1.5.6-to-1.5.7.md)
 
 ### Lib 层模块（核心业务逻辑）
 - 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)

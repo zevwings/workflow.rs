@@ -7,11 +7,10 @@
 //! - Rebase 相关操作
 
 use crate::base::constants::errors::file_operations;
+use crate::base::util::file::FileWriter;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -271,15 +270,16 @@ cp "{}" "$1"
             "workflow-squash-sequence-editor-{}",
             std::process::id()
         ));
-        fs::write(&sequence_editor_script, script_content)
+        FileWriter::new(&sequence_editor_script)
+            .write_str(&script_content)
             .wrap_err_with(|| file_operations::WRITE_SEQUENCE_EDITOR_SCRIPT_FAILED)?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
         {
-            let mut perms = fs::metadata(&sequence_editor_script)?.permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&sequence_editor_script, perms)?;
+            FileWriter::new(&sequence_editor_script)
+                .set_permissions(0o755)
+                .wrap_err_with(|| file_operations::WRITE_SEQUENCE_EDITOR_SCRIPT_FAILED)?;
         }
 
         // 创建脚本来自动提供新消息
@@ -295,15 +295,16 @@ cp "{}" "$1"
             "workflow-squash-message-editor-{}",
             std::process::id()
         ));
-        fs::write(&message_editor_script, message_script_content)
+        FileWriter::new(&message_editor_script)
+            .write_str(&message_script_content)
             .wrap_err_with(|| file_operations::WRITE_MESSAGE_EDITOR_SCRIPT_FAILED)?;
 
         // 设置脚本可执行权限（仅 Unix 系统）
         #[cfg(unix)]
         {
-            let mut perms = fs::metadata(&message_editor_script)?.permissions();
-            perms.set_mode(0o755);
-            fs::set_permissions(&message_editor_script, perms)?;
+            FileWriter::new(&message_editor_script)
+                .set_permissions(0o755)
+                .wrap_err_with(|| file_operations::WRITE_MESSAGE_EDITOR_SCRIPT_FAILED)?;
         }
 
         Ok(RebaseEditorConfig {
@@ -400,12 +401,14 @@ cp "{}" "$1"
         // 步骤5: 创建临时文件用于 rebase todo
         let temp_dir = std::env::temp_dir();
         let todo_file = temp_dir.join(format!("workflow-squash-todo-{}", std::process::id()));
-        fs::write(&todo_file, &todo_content)
+        FileWriter::new(&todo_file)
+            .write_str(&todo_content)
             .wrap_err_with(|| "Failed to write rebase todo file")?;
 
         // 步骤6: 创建临时文件用于新消息
         let message_file = temp_dir.join(format!("workflow-squash-message-{}", std::process::id()));
-        fs::write(&message_file, &options.new_message)
+        FileWriter::new(&message_file)
+            .write_str(&options.new_message)
             .wrap_err_with(|| "Failed to write commit message file")?;
 
         // 步骤7: 创建编辑器脚本

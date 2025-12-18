@@ -2,11 +2,12 @@
 //!
 //! 交互式配置 MCP 服务器，支持从 TOML 配置自动填充。
 
+use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::settings::Settings;
 use crate::{log_break, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
-use dialoguer::{Confirm, Input, MultiSelect, Password};
+use dialoguer::Password;
 use std::collections::{HashMap, HashSet};
 
 /// MCP 配置设置命令
@@ -109,23 +110,38 @@ impl SetupCommand {
         ];
 
         let items: Vec<&str> = options.iter().map(|(name, _, _)| *name).collect();
-        let defaults: Vec<bool> = options
+
+        // 将 bool 默认值转换为索引列表
+        let default_indices: Vec<usize> = options
             .iter()
-            .map(|(_, _, is_configured)| *is_configured)
+            .enumerate()
+            .filter_map(|(i, (_, _, is_configured))| {
+                if *is_configured {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
             .collect();
 
-        let selections = MultiSelect::new()
-            .with_prompt(
-                "Select MCP servers to configure (multi-select, space to toggle, enter to confirm)",
-            )
-            .items(&items)
-            .defaults(&defaults)
-            .interact()
-            .wrap_err("Failed to get MCP server selection")?;
+        let selected_items = MultiSelectDialog::new(
+            "Select MCP servers to configure (multi-select, space to toggle, enter to confirm)",
+            items,
+        )
+        .with_default(default_indices)
+        .prompt()
+        .wrap_err("Failed to get MCP server selection")?;
 
-        let selected: Vec<String> = selections
+        // 将选中的选项名称映射回服务器名称
+        let selected: Vec<String> = options
             .iter()
-            .map(|&i| options[i].1.to_string())
+            .filter_map(|(name, server_name, _)| {
+                if selected_items.contains(name) {
+                    Some(server_name.to_string())
+                } else {
+                    None
+                }
+            })
             .collect();
 
         Ok(selected)
@@ -140,10 +156,9 @@ impl SetupCommand {
 
         // 如果 TOML 配置完整，询问是否使用
         if toml_status.jira.is_complete {
-            let use_toml = Confirm::new()
-                .with_prompt("Complete JIRA configuration found in config file, use it?")
-                .default(true)
-                .interact()
+            let use_toml = ConfirmDialog::new("Complete JIRA configuration found in config file, use it?")
+                .with_default(true)
+                .prompt()
                 .wrap_err("Failed to get confirmation")?;
 
             if use_toml {
@@ -173,48 +188,41 @@ impl SetupCommand {
 
         // 交互式输入
         let service_address = if let Some(addr) = &settings.jira.service_address {
-            let use_toml = Confirm::new()
-                .with_prompt(format!("Use server address from config file ({})?", addr))
-                .default(true)
-                .interact()?;
+            let use_toml = ConfirmDialog::new(format!("Use server address from config file ({})?", addr))
+                .with_default(true)
+                .prompt()?;
 
             if use_toml {
                 addr.clone()
             } else {
-                Input::<String>::new()
-                    .with_prompt("Enter JIRA server URL")
-                    .interact_text()?
+                InputDialog::new("Enter JIRA server URL")
+                    .prompt()?
             }
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter JIRA server URL")
-                .interact_text()?
+            InputDialog::new("Enter JIRA server URL")
+                .prompt()?
         };
 
         let username = if let Some(email) = &settings.jira.email {
-            let use_toml = Confirm::new()
-                .with_prompt(format!("Use username from config file ({})?", email))
-                .default(true)
-                .interact()?;
+            let use_toml = ConfirmDialog::new(format!("Use username from config file ({})?", email))
+                .with_default(true)
+                .prompt()?;
 
             if use_toml {
                 email.clone()
             } else {
-                Input::<String>::new()
-                    .with_prompt("Enter JIRA username/email")
-                    .interact_text()?
+                InputDialog::new("Enter JIRA username/email")
+                    .prompt()?
             }
         } else {
-            Input::<String>::new()
-                .with_prompt("Enter JIRA username/email")
-                .interact_text()?
+            InputDialog::new("Enter JIRA username/email")
+                .prompt()?
         };
 
         let api_token = if let Some(toml_token) = &settings.jira.api_token {
-            let use_toml = Confirm::new()
-                .with_prompt("Use API token from config file?")
-                .default(true)
-                .interact()?;
+            let use_toml = ConfirmDialog::new("Use API token from config file?")
+                .with_default(true)
+                .prompt()?;
 
             if use_toml {
                 toml_token.clone()
@@ -255,13 +263,12 @@ impl SetupCommand {
         // 如果 TOML 配置中有账号，询问是否使用
         if toml_status.github.has_accounts {
             if let Some(account) = &toml_status.github.current_account {
-                let use_toml = Confirm::new()
-                    .with_prompt(format!(
-                        "Use token from current account {} ({})?",
-                        account.name, account.email
-                    ))
-                    .default(true)
-                    .interact()?;
+                let use_toml = ConfirmDialog::new(format!(
+                    "Use token from current account {} ({})?",
+                    account.name, account.email
+                ))
+                .with_default(true)
+                .prompt()?;
 
                 if use_toml {
                     return Ok(MCPServerConfig {
