@@ -47,14 +47,14 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { jira_id: id, .. } => {
-            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        JiraSubcommand::Info { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, Some(jira_id.to_string()));
         }
-        JiraSubcommand::Related { jira_id: id, .. } => {
-            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        JiraSubcommand::Related { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, Some(jira_id.to_string()));
         }
-        JiraSubcommand::Changelog { jira_id: id, .. } => {
-            assert_eq!(id.jira_id, Some(jira_id.to_string()));
+        JiraSubcommand::Changelog { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, Some(jira_id.to_string()));
         }
         JiraSubcommand::Comment { jira_id: id } => {
             assert_eq!(id.jira_id, Some(jira_id.to_string()));
@@ -81,14 +81,14 @@ fn test_jira_command_without_id(#[case] subcommand: &str) {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, None);
+        JiraSubcommand::Info { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, None);
         }
-        JiraSubcommand::Related { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, None);
+        JiraSubcommand::Related { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, None);
         }
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, None);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, None);
         }
         JiraSubcommand::Comment { jira_id } => {
             assert_eq!(jira_id.jira_id, None);
@@ -117,23 +117,23 @@ fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Info { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Related { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Related { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
         JiraSubcommand::Comments { output_format, .. } => {
             assert!(output_format.table);
@@ -154,23 +154,23 @@ fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_i
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Info { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Related { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Related { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(output_format.json);
-            assert!(!output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
         JiraSubcommand::Comments { output_format, .. } => {
             assert!(!output_format.table);
@@ -191,23 +191,23 @@ fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_i
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Info { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Related { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Related { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(output_format.yaml);
-            assert!(!output_format.markdown);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(!args.query_display.output_format.markdown);
         }
         JiraSubcommand::Comments { output_format, .. } => {
             assert!(!output_format.table);
@@ -229,23 +229,23 @@ fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] ji
         TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"]).unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Info { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Related { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Related { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(!output_format.table);
-            assert!(!output_format.json);
-            assert!(!output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert!(!args.query_display.output_format.table);
+            assert!(!args.query_display.output_format.json);
+            assert!(!args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
         JiraSubcommand::Comments { output_format, .. } => {
             assert!(!output_format.table);
@@ -274,23 +274,23 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
     .unwrap();
 
     match &cli.command {
-        JiraSubcommand::Info { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(output_format.json);
-            assert!(output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Info { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Related { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(output_format.json);
-            assert!(output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Related { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
-        JiraSubcommand::Changelog { output_format, .. } => {
-            assert!(output_format.table);
-            assert!(output_format.json);
-            assert!(output_format.yaml);
-            assert!(output_format.markdown);
+        JiraSubcommand::Changelog { args, .. } => {
+            assert!(args.query_display.output_format.table);
+            assert!(args.query_display.output_format.json);
+            assert!(args.query_display.output_format.yaml);
+            assert!(args.query_display.output_format.markdown);
         }
         _ => panic!("Unexpected command variant"),
     }
@@ -559,8 +559,8 @@ fn test_jira_changelog_command_with_field_filter() {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"]).unwrap();
 
     match cli.command {
-        JiraSubcommand::Changelog { jira_id, .. } => {
-            assert_eq!(jira_id.jira_id, Some("PROJ-123".to_string()));
+        JiraSubcommand::Changelog { args, .. } => {
+            assert_eq!(args.jira_id.jira_id, Some("PROJ-123".to_string()));
             // field 字段当前不存在于枚举定义中
         }
         _ => panic!("Expected Changelog command"),

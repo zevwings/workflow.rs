@@ -15,13 +15,13 @@ use color_eyre::Result;
 use rstest::rstest;
 use tempfile::tempdir;
 
+use workflow::base::format::DisplayFormatter;
 use workflow::base::util::{
     checksum::Checksum,
     date::{
         format_document_timestamp, format_filename_timestamp, format_last_updated,
         format_last_updated_with_time, DateFormat, Timezone,
     },
-    format::format_size,
     string::{mask_sensitive_value, Sensitive},
 };
 
@@ -33,44 +33,44 @@ mod format_size_tests {
 
     #[test]
     fn test_format_size_bytes() {
-        assert_eq!(format_size(0), "0 B");
-        assert_eq!(format_size(1), "1 B");
-        assert_eq!(format_size(512), "512 B");
-        assert_eq!(format_size(1023), "1023 B");
+        assert_eq!(DisplayFormatter::size(0), "0 B");
+        assert_eq!(DisplayFormatter::size(1), "1 B");
+        assert_eq!(DisplayFormatter::size(512), "512 B");
+        assert_eq!(DisplayFormatter::size(1023), "1023 B");
     }
 
     #[test]
     fn test_format_size_kilobytes() {
-        assert_eq!(format_size(1024), "1.00 KB");
-        assert_eq!(format_size(1536), "1.50 KB"); // 1024 + 512
-        assert_eq!(format_size(2048), "2.00 KB");
-        assert_eq!(format_size(1024 * 1023), "1023.00 KB");
+        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
+        assert_eq!(DisplayFormatter::size(1536), "1.50 KB"); // 1024 + 512
+        assert_eq!(DisplayFormatter::size(2048), "2.00 KB");
+        assert_eq!(DisplayFormatter::size(1024 * 1023), "1023.00 KB");
     }
 
     #[test]
     fn test_format_size_megabytes() {
-        assert_eq!(format_size(1024 * 1024), "1.00 MB");
-        assert_eq!(format_size(1024 * 1024 + 512 * 1024), "1.50 MB");
-        assert_eq!(format_size(1024 * 1024 * 5), "5.00 MB");
-        assert_eq!(format_size(1024 * 1024 * 1023), "1023.00 MB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024), "1.00 MB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024 + 512 * 1024), "1.50 MB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024 * 5), "5.00 MB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024 * 1023), "1023.00 MB");
     }
 
     #[test]
     fn test_format_size_gigabytes() {
-        assert_eq!(format_size(1024_u64.pow(3)), "1.00 GB");
+        assert_eq!(DisplayFormatter::size(1024_u64.pow(3)), "1.00 GB");
         assert_eq!(
-            format_size(1024_u64.pow(3) + 512 * 1024_u64.pow(2)),
+            DisplayFormatter::size(1024_u64.pow(3) + 512 * 1024_u64.pow(2)),
             "1.50 GB"
         );
-        assert_eq!(format_size(1024_u64.pow(3) * 10), "10.00 GB");
+        assert_eq!(DisplayFormatter::size(1024_u64.pow(3) * 10), "10.00 GB");
     }
 
     #[test]
     fn test_format_size_terabytes() {
-        assert_eq!(format_size(1024_u64.pow(4)), "1.00 TB");
-        assert_eq!(format_size(1024_u64.pow(4) * 2), "2.00 TB");
+        assert_eq!(DisplayFormatter::size(1024_u64.pow(4)), "1.00 TB");
+        assert_eq!(DisplayFormatter::size(1024_u64.pow(4) * 2), "2.00 TB");
         assert_eq!(
-            format_size(1024_u64.pow(4) + 512 * 1024_u64.pow(3)),
+            DisplayFormatter::size(1024_u64.pow(4) + 512 * 1024_u64.pow(3)),
             "1.50 TB"
         );
     }
@@ -87,30 +87,30 @@ mod format_size_tests {
     #[case(2147483648, "2.00 GB")] // 2 * 1024^3
     #[case(5368709120, "5.00 GB")] // 5 * 1024^3
     fn test_format_size_parametrized(#[case] bytes: u64, #[case] expected: &str) {
-        assert_eq!(format_size(bytes), expected);
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
     #[test]
     fn test_format_size_precision() {
         // 测试小数精度
-        assert_eq!(format_size(1024 + 256), "1.25 KB"); // 1.25 KB
-        assert_eq!(format_size(1024 + 102), "1.10 KB"); // 约1.10 KB
-        assert_eq!(format_size(1024 + 51), "1.05 KB"); // 约1.05 KB
+        assert_eq!(DisplayFormatter::size(1024 + 256), "1.25 KB"); // 1.25 KB
+        assert_eq!(DisplayFormatter::size(1024 + 102), "1.10 KB"); // 约1.10 KB
+        assert_eq!(DisplayFormatter::size(1024 + 51), "1.05 KB"); // 约1.05 KB
     }
 
     #[test]
     fn test_format_size_edge_cases() {
         // 测试边界值
         assert_eq!(
-            format_size(u64::MAX),
+            DisplayFormatter::size(u64::MAX),
             format!("{:.2} TB", u64::MAX as f64 / 1024_f64.powi(4))
         );
 
         // 测试刚好达到下一个单位的值
-        assert_eq!(format_size(1024 - 1), "1023 B");
-        assert_eq!(format_size(1024), "1.00 KB");
-        assert_eq!(format_size(1024 * 1024 - 1), "1024.00 KB");
-        assert_eq!(format_size(1024 * 1024), "1.00 MB");
+        assert_eq!(DisplayFormatter::size(1024 - 1), "1023 B");
+        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024 - 1), "1024.00 KB");
+        assert_eq!(DisplayFormatter::size(1024 * 1024), "1.00 MB");
     }
 }
 
@@ -531,7 +531,7 @@ mod integration_tests {
     #[test]
     fn test_format_utilities_integration() {
         // 测试各种格式化工具的集成使用
-        let file_size = format_size(1024 * 1024 * 5); // 5MB
+        let file_size = DisplayFormatter::size(1024 * 1024 * 5); // 5MB
         let timestamp = format_filename_timestamp();
         let masked_key = "very_long_api_key_123456789".mask();
 
@@ -567,7 +567,7 @@ mod integration_tests {
 
         // 计算文件大小和哈希值
         let file_metadata = fs::metadata(&file_path)?;
-        let file_size = format_size(file_metadata.len());
+        let file_size = DisplayFormatter::size(file_metadata.len());
         let hash = Checksum::calculate_file_sha256(&file_path)?;
         let masked_hash = hash.mask();
 
@@ -611,7 +611,7 @@ mod integration_tests {
         // 测试格式化函数的性能特征（应该很快）
         let start = Instant::now();
         for i in 0..1000 {
-            let _ = format_size(i * 1024);
+            let _ = DisplayFormatter::size(i * 1024);
             let _ = format!("key_{}", i).mask();
         }
         let duration = start.elapsed();

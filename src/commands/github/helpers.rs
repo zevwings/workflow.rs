@@ -22,7 +22,7 @@ use color_eyre::{eyre::WrapErr, Result};
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account() -> Result<GitHubAccount> {
-    let name = InputDialog::new("GitHub account name")
+    let name = InputDialog::new("GitHub account name (required)")
         .with_validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("Account name is required and cannot be empty".to_string())
@@ -33,7 +33,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
         .prompt()
         .wrap_err("Failed to get GitHub account name")?;
 
-    let email = InputDialog::new("GitHub account email")
+    let email = InputDialog::new("GitHub account email (required)")
         .with_validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("Email is required and cannot be empty".to_string())
@@ -46,7 +46,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
         .prompt()
         .wrap_err("Failed to get GitHub account email")?;
 
-    let api_token = InputDialog::new("GitHub API token")
+    let api_token = InputDialog::new("GitHub API token (required)")
         .with_validator(|input: &str| {
             if input.trim().is_empty() {
                 Err("GitHub API token is required and cannot be empty".to_string())
@@ -81,7 +81,7 @@ pub fn collect_github_account() -> Result<GitHubAccount> {
 ///
 /// 如果用户输入验证失败或输入过程中出错，返回错误
 pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Result<GitHubAccount> {
-    let name = InputDialog::new("GitHub account name")
+    let name = InputDialog::new("GitHub account name (press Enter to keep)")
         .with_default(old_account.name.clone())
         .with_validator(|input: &str| {
             if input.trim().is_empty() {
@@ -93,7 +93,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
         .prompt()
         .wrap_err("Failed to get GitHub account name")?;
 
-    let email = InputDialog::new("GitHub account email")
+    let email = InputDialog::new("GitHub account email (press Enter to keep)")
         .with_default(old_account.email.clone())
         .with_validator(|input: &str| {
             if input.trim().is_empty() {
@@ -107,7 +107,7 @@ pub fn collect_github_account_with_defaults(old_account: &GitHubAccount) -> Resu
         .prompt()
         .wrap_err("Failed to get GitHub account email")?;
 
-    let api_token = InputDialog::new("GitHub API token")
+    let api_token = InputDialog::new("GitHub API token (press Enter to keep)")
         .with_default(old_account.api_token.clone())
         .with_validator(|input: &str| {
             if input.trim().is_empty() {

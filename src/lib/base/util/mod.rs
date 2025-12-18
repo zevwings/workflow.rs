@@ -10,7 +10,6 @@
 //! ## 模块结构
 //!
 //! - `string` - 字符串处理工具
-//! - `format` - 格式化工具（文件大小格式化等）
 //! - `platform` - 平台检测工具（操作系统和架构检测）
 //! - `browser` - 浏览器操作（`Browser`）
 //! - `clipboard` - 剪贴板操作（`Clipboard`）
@@ -33,7 +32,6 @@ pub mod clipboard;
 pub mod date;
 pub mod directory;
 pub mod file;
-pub mod format;
 pub mod path;
 pub mod platform;
 pub mod string;
@@ -41,9 +39,6 @@ pub mod unzip;
 
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;
-
-// 重新导出 format 模块的函数
-pub use format::format_size;
 
 // 重新导出 platform 模块的结构体和函数
 pub use platform::{detect_release_platform, Platform};

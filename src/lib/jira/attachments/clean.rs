@@ -13,7 +13,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use walkdir::WalkDir;
 
 use crate::base::dialog::ConfirmDialog;
-use crate::base::util::format_size;
+use crate::base::format::DisplayFormatter;
 use crate::trace_info;
 
 use super::paths::AttachmentPaths;
@@ -135,7 +135,7 @@ impl AttachmentCleaner {
 
         if dry_run {
             trace_info!("[DRY RUN] Would delete {}: {:?}", dir_name, dir);
-            trace_info!("[DRY RUN] Total size: {}", format_size(size));
+            trace_info!("[DRY RUN] Total size: {}", DisplayFormatter::size(size));
             trace_info!("[DRY RUN] Total files: {}", file_count);
             return Ok(CleanResult {
                 deleted: false,
@@ -151,7 +151,7 @@ impl AttachmentCleaner {
             "Are you sure you want to delete {}? This will remove {} files ({}).",
             dir_name,
             file_count,
-            format_size(size)
+            DisplayFormatter::size(size)
         ))
         .with_default(false)
         .with_cancel_message("Operation cancelled")
@@ -209,7 +209,7 @@ impl AttachmentCleaner {
             for path in dir_contents {
                 if path.is_file() {
                     let size_str = if let Ok(metadata) = std::fs::metadata(&path) {
-                        Some(format_size(metadata.len()))
+                        Some(DisplayFormatter::size(metadata.len()))
                     } else {
                         None
                     };
@@ -275,7 +275,7 @@ impl AttachmentCleaner {
                 }
                 if path.is_file() {
                     let size_str = if let Ok(metadata) = std::fs::metadata(&path) {
-                        Some(format_size(metadata.len()))
+                        Some(DisplayFormatter::size(metadata.len()))
                     } else {
                         None
                     };

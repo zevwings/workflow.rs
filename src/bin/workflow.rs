@@ -335,23 +335,14 @@ fn main() -> Result<()> {
         },
         // Jira 操作命令
         Some(Commands::Jira { subcommand }) => match subcommand {
-            JiraSubcommand::Info {
-                jira_id,
-                output_format,
-            } => {
-                InfoCommand::show(jira_id.into_option(), output_format)?;
+            JiraSubcommand::Info { args } => {
+                InfoCommand::show(args)?;
             }
-            JiraSubcommand::Related {
-                jira_id,
-                output_format,
-            } => {
-                RelatedCommand::show(jira_id.into_option(), output_format)?;
+            JiraSubcommand::Related { args } => {
+                RelatedCommand::show(args)?;
             }
-            JiraSubcommand::Changelog {
-                jira_id,
-                output_format,
-            } => {
-                ChangelogCommand::show(jira_id.into_option(), output_format)?;
+            JiraSubcommand::Changelog { args } => {
+                ChangelogCommand::show(args)?;
             }
             JiraSubcommand::Comment { jira_id } => {
                 CommentCommand::add(jira_id.into_option())?;
