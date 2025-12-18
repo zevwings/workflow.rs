@@ -392,6 +392,7 @@ workflow setup                     # 初始化或更新配置（交互式设置�
 workflow config                    # 查看当前配置（显示所有配置项）
 workflow config show               # 查看当前配置（显示所有配置项）
 workflow config validate           # 验证配置文件（检查完整性和有效性）
+workflow config validate [CONFIG_PATH]  # 验证指定路径的配置文件（默认：workflow.toml）
 workflow config validate --fix     # 验证并自动修复配置错误
 workflow config validate --strict  # 严格模式（将所有警告视为错误）
 workflow config export <OUTPUT>    # 导出配置文件（支持 TOML/JSON/YAML）
@@ -424,6 +425,7 @@ workflow github update             # 更新 GitHub 账号信息（交互式选�
 ```bash
 workflow log set                   # 设置日志级别（交互式选择：none/error/warn/info/debug）
 workflow log check                 # 检查当前日志级别（显示当前、默认和配置文件中的级别）
+workflow log trace-console         # 管理 tracing 控制台输出（交互式选择：启用/禁用同时输出到文件和控制台）
 ```
 
 ### LLM 配置管理
@@ -637,6 +639,12 @@ workflow jira comment [PROJ-123]              # 添加评论到 Jira ticket（JI
 
 # 显示评论
 workflow jira comments [PROJ-123]             # 显示评论（JIRA ID 可选，不提供会交互式输入）
+workflow jira comments [PROJ-123] --json      # JSON 格式输出
+workflow jira comments [PROJ-123] --markdown  # Markdown 格式输出
+workflow jira comments [PROJ-123] --limit 10  # 限制结果数量
+workflow jira comments [PROJ-123] --offset 0  # 设置偏移量
+workflow jira comments [PROJ-123] --author "user@example.com"  # 按作者邮箱过滤
+workflow jira comments [PROJ-123] --since "2024-01-01"  # 按日期过滤（ISO 8601 格式）
 
 # 下载所有附件
 workflow jira attachments [PROJ-123]          # 下载所有附件（JIRA ID 可选，不提供会交互式输入）

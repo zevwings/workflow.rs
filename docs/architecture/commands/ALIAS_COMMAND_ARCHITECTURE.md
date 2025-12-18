@@ -13,7 +13,7 @@ Alias 命令模块提供完整的命令别名管理功能，允许用户为常�
 
 **模块统计：**
 - 命令数量：3 个（list、add、remove）
-- 总代码行数：约 350 行
+- 总代码行数：约 342 行
 - 文件数量：4 个
 - 主要依赖：`lib/base/alias/`、`lib/base/dialog/`、`lib/base/util/`
 
