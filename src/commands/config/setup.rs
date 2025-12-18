@@ -254,24 +254,25 @@ impl SetupCommand {
         let jira_email_prompt = if existing.jira_email.is_some() {
             "Jira email address (press Enter to keep)".to_string()
         } else {
-            "Jira email address".to_string()
+            "Jira email address (required)".to_string()
         };
 
-        let default_jira_email = existing.jira_email.clone().unwrap_or_default();
-
-        let jira_email = InputDialog::new(&jira_email_prompt)
-            .with_default(default_jira_email)
-            .with_validator(move |input: &str| {
-                if input.is_empty() && !has_jira_email {
-                    Err("Jira email address is required".to_string())
-                } else if !input.is_empty() && !input.contains('@') {
-                    Err("Please enter a valid email address".to_string())
-                } else {
-                    Ok(())
-                }
-            })
-            .prompt()
-            .wrap_err("Failed to get Jira email address")?;
+        let jira_email = if let Some(email) = &existing.jira_email {
+            InputDialog::new(&jira_email_prompt).with_default(email.clone())
+        } else {
+            InputDialog::new(&jira_email_prompt)
+        }
+        .with_validator(move |input: &str| {
+            if input.is_empty() && !has_jira_email {
+                Err("Jira email address is required".to_string())
+            } else if !input.is_empty() && !input.contains('@') {
+                Err("Please enter a valid email address".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .prompt()
+        .wrap_err("Failed to get Jira email address")?;
 
         let jira_email = if !jira_email.is_empty() {
             Some(jira_email)
@@ -285,31 +286,28 @@ impl SetupCommand {
         let jira_address_prompt = if existing.jira_service_address.is_some() {
             "Jira service address (press Enter to keep)".to_string()
         } else {
-            "Jira service address".to_string()
+            "Jira service address (required)".to_string()
         };
 
-        let default_jira_address =
-            existing.jira_service_address.clone().unwrap_or_else(|| String::from(""));
-
-        let jira_service_address = InputDialog::new(&jira_address_prompt)
-            .with_default(default_jira_address)
-            .with_validator(move |input: &str| {
-                if input.is_empty() && !has_jira_address {
-                    Err("Jira service address is required".to_string())
-                } else if !input.is_empty()
-                    && !input.starts_with("http://")
-                    && !input.starts_with("https://")
-                {
-                    Err(
-                        "Please enter a valid URL (must start with http:// or https://)"
-                            .to_string(),
-                    )
-                } else {
-                    Ok(())
-                }
-            })
-            .prompt()
-            .wrap_err("Failed to get Jira service address")?;
+        let jira_service_address = if let Some(addr) = &existing.jira_service_address {
+            InputDialog::new(&jira_address_prompt).with_default(addr.clone())
+        } else {
+            InputDialog::new(&jira_address_prompt)
+        }
+        .with_validator(move |input: &str| {
+            if input.is_empty() && !has_jira_address {
+                Err("Jira service address is required".to_string())
+            } else if !input.is_empty()
+                && !input.starts_with("http://")
+                && !input.starts_with("https://")
+            {
+                Err("Please enter a valid URL (must start with http:// or https://)".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .prompt()
+        .wrap_err("Failed to get Jira service address")?;
 
         let jira_service_address = if !jira_service_address.is_empty() {
             Some(jira_service_address)
@@ -322,7 +320,7 @@ impl SetupCommand {
         let jira_token_prompt = if existing.jira_api_token.is_some() {
             "Jira API token [current: ***] (press Enter to keep)".to_string()
         } else {
-            "Jira API token".to_string()
+            "Jira API token (required)".to_string()
         };
 
         let jira_api_token = InputDialog::new(&jira_token_prompt)
@@ -617,27 +615,26 @@ impl SetupCommand {
                 }
 
                 // 配置 Proxy model（必填）
-                let default_model =
-                    llm_proxy_model.clone().unwrap_or_else(|| LLMSettings::default_model("proxy"));
-
                 let model_prompt = if llm_proxy_model.is_some() {
-                    "LLM model (required) (press Enter to keep)".to_string()
+                    "LLM model (press Enter to keep)".to_string()
                 } else {
                     "LLM model (required)".to_string()
                 };
 
-                let llm_model_input = InputDialog::new(&model_prompt)
-                    .allow_empty(false)
-                    .with_default(default_model.clone())
-                    .with_validator(|input: &str| {
-                        if input.is_empty() {
-                            Err("Model is required for proxy provider".to_string())
-                        } else {
-                            Ok(())
-                        }
-                    })
-                    .prompt()
-                    .wrap_err("Failed to get LLM model")?;
+                let llm_model_input = if let Some(model) = &llm_proxy_model {
+                    InputDialog::new(&model_prompt).allow_empty(false).with_default(model.clone())
+                } else {
+                    InputDialog::new(&model_prompt).allow_empty(false)
+                }
+                .with_validator(|input: &str| {
+                    if input.is_empty() {
+                        Err("Model is required for proxy provider".to_string())
+                    } else {
+                        Ok(())
+                    }
+                })
+                .prompt()
+                .wrap_err("Failed to get LLM model")?;
 
                 if !llm_model_input.is_empty() {
                     llm_proxy_model = Some(llm_model_input);

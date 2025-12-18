@@ -2,7 +2,7 @@
 
 use clap::Subcommand;
 
-use super::args::{DryRunArgs, JiraIdArg, OutputFormatArgs, PaginationArgs};
+use super::args::{DryRunArgs, JiraIdArg, JiraQueryArgs, OutputFormatArgs, PaginationArgs};
 use super::log::LogSubcommand;
 
 /// Jira operations subcommands
@@ -15,30 +15,21 @@ pub enum JiraSubcommand {
     /// Display detailed information about a Jira ticket.
     Info {
         #[command(flatten)]
-        jira_id: JiraIdArg,
-
-        #[command(flatten)]
-        output_format: OutputFormatArgs,
+        args: JiraQueryArgs,
     },
     /// Show related PRs and branches for a Jira ticket
     ///
     /// Display all Pull Requests and Git branches associated with a Jira ticket.
     Related {
         #[command(flatten)]
-        jira_id: JiraIdArg,
-
-        #[command(flatten)]
-        output_format: OutputFormatArgs,
+        args: JiraQueryArgs,
     },
     /// Show changelog (change history) for a Jira ticket
     ///
     /// Display change history for a Jira ticket.
     Changelog {
         #[command(flatten)]
-        jira_id: JiraIdArg,
-
-        #[command(flatten)]
-        output_format: OutputFormatArgs,
+        args: JiraQueryArgs,
     },
     /// Add a comment to a Jira ticket
     ///

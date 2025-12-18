@@ -15,6 +15,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::base::dialog::ConfirmDialog;
+use crate::base::format::DisplayFormatter;
 use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
@@ -23,7 +24,7 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{detect_release_platform, format_size, Checksum, Unzip};
+use crate::base::util::{detect_release_platform, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -367,7 +368,7 @@ impl UpdateCommand {
 
                 // 创建进度条
                 let progress = if let Some(size) = total_size {
-                    log_info!("File size: {}", format_size(size));
+                    log_info!("File size: {}", DisplayFormatter::size(size));
                     Progress::new_download(size, "Downloading update package...")
                 } else {
                     Progress::new_unknown("Downloading update package...")

@@ -6,21 +6,24 @@ use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
-use crate::cli::OutputFormatArgs;
+use crate::cli::JiraQueryArgs;
 
 /// 显示变更历史命令
 pub struct ChangelogCommand;
 
 impl ChangelogCommand {
     /// 显示 ticket 的变更历史
-    pub fn show(jira_id: Option<String>, output_format: OutputFormatArgs) -> Result<()> {
+    pub fn show(args: JiraQueryArgs) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
-        let jira_id = get_jira_id(jira_id, None)?;
+        let jira_id = get_jira_id(args.jira_id.into_option(), None)?;
 
-        log_debug!("Getting changelog for {}...", jira_id);
+        // 根据详细程度控制日志输出
+        if args.query_display.verbosity.is_verbose() {
+            log_debug!("Getting changelog for {}...", jira_id);
+        }
 
         // 确定输出格式
-        let format = OutputFormat::from(&output_format);
+        let format = OutputFormat::from(&args.query_display.output_format);
 
         // 根据输出格式选择不同的显示方式
         match format {

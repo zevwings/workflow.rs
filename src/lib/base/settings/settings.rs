@@ -151,6 +151,13 @@ pub struct JiraSettings {
     pub service_address: Option<String>,
 }
 
+impl JiraSettings {
+    /// 检查 JIRA 配置是否为空
+    pub fn is_empty(&self) -> bool {
+        self.email.is_none() && self.api_token.is_none() && self.service_address.is_none()
+    }
+}
+
 /// GitHub 账号配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitHubAccount {
@@ -174,6 +181,11 @@ pub struct GitHubSettings {
 }
 
 impl GitHubSettings {
+    /// 检查 GitHub 配置是否为空
+    pub fn is_empty(&self) -> bool {
+        self.accounts.is_empty() && self.current.is_none()
+    }
+
     /// 获取当前激活的账号
     ///
     /// 如果设置了 `current`，返回对应的账号；否则返回第一个账号。
@@ -235,6 +247,15 @@ pub struct LogSettings {
 }
 
 impl LogSettings {
+    /// 检查日志配置是否为空（所有字段都是默认值）
+    pub fn is_empty(&self) -> bool {
+        let default = LogSettings::default();
+        self.output_folder_name == default.output_folder_name
+            && self.download_base_dir == default.download_base_dir
+            && self.level == default.level
+            && self.enable_trace_console == default.enable_trace_console
+    }
+
     /// 默认日志文件夹名称
     pub fn default_log_folder() -> String {
         "logs".to_string()
@@ -391,13 +412,13 @@ impl LLMSettings {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Settings {
     /// Jira 配置
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "JiraSettings::is_empty")]
     pub jira: JiraSettings,
     /// GitHub 配置
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "GitHubSettings::is_empty")]
     pub github: GitHubSettings,
     /// 日志配置
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "LogSettings::is_empty")]
     pub log: LogSettings,
     // /// Codeup 配置  // Codeup support has been removed
     // #[serde(default, skip_serializing_if = "CodeupSettings::is_empty")]
@@ -406,7 +427,7 @@ pub struct Settings {
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
     /// 别名配置（TOML section: [aliases]）
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     pub aliases: HashMap<String, String>,
 }
 
