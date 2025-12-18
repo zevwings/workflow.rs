@@ -20,7 +20,7 @@
 #### 1. [`JIRA_TODO.md`](./JIRA_TODO.md)
 - **状态**: 🚧 部分完成
 - **实现度**: ~40%
-- **分类**: JIRA 模块
+- **分类**: JIRA 模块TEST_ARCHITECTURE_IMPROVEMENT_TODO
 - **已完成**:
   - ✅ `jira info` - 显示 ticket 基本信息（支持多种输出格式）
   - ✅ `jira changelog` - 显示变更历史（支持字段过滤、多种输出格式）
@@ -36,7 +36,18 @@
 - **优先级**: 高优先级（命令封装、info 增强）
 
 
-#### 2. [`REPO_TODO.md`](./REPO_TODO.md)
+#### 2. [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md)
+- **状态**: 🔄 进行中
+- **实现度**: 0%
+- **分类**: 测试架构改进
+- **内容**:
+  - 测试覆盖率监控系统 (cargo-tarpaulin)
+  - 测试数据管理架构 (工厂模式 + Mock服务器)
+  - 系统化性能测试 (Criterion基准测试)
+  - CI/CD流水线集成
+- **优先级**: 高优先级（测试质量提升）
+
+#### 3. [`REPO_TODO.md`](./REPO_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: Repo 配置模块
@@ -46,7 +57,7 @@
   - 配置优先级文档完善
 - **优先级**: 高优先级（配置层级优化）
 
-#### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+#### 4. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 集成与扩展
@@ -64,6 +75,7 @@ docs/todo/
 ├── README.md                      # 本文件（索引文档）
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
+├── TEST_ARCHITECTURE_IMPROVEMENT_TODO.md  # 测试架构改进待办事项（🔄 进行中）
 ├── REPO_TODO.md                   # Repo 配置模块待办事项（⏳ 待实施）
 └── INTEGRATION_TODO.md            # 集成与扩展待办事项
 ```
@@ -82,8 +94,9 @@ docs/todo/
 
 #### 分类待办事项文档
 1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **REPO_TODO.md** - Repo 配置模块待办事项（⏳ 待实施，0%）
-3. **INTEGRATION_TODO.md** - 集成与扩展待办事项
+2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，0%）
+3. **REPO_TODO.md** - Repo 配置模块待办事项（⏳ 待实施，0%）
+4. **INTEGRATION_TODO.md** - 集成与扩展待办事项
 
 ---
 
@@ -91,20 +104,27 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 3 个文档：
+本目录包含 4 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
+#### 进行中文档（1 个）
+2. **测试架构改进** (`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`) - 🔄 进行中（0%）
+   - 测试覆盖率监控系统 (cargo-tarpaulin)
+   - 测试数据管理架构 (工厂模式 + Mock服务器)
+   - 系统化性能测试 (Criterion基准测试)
+   - CI/CD流水线集成
+
 #### 待实施文档（2 个）
-2. **Repo 配置模块** (`REPO_TODO.md`) - ⏳ 待实施（0%）
+3. **Repo 配置模块** (`REPO_TODO.md`) - ⏳ 待实施（0%）
    - 分支前缀全局配置支持
    - PR 自动接受变更类型全局配置支持
    - 配置优先级文档完善
 
-3. **集成与扩展** (`INTEGRATION_TODO.md`)
+4. **集成与扩展** (`INTEGRATION_TODO.md`)
    - 更多平台支持、通知系统
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
@@ -123,6 +143,7 @@ docs/todo/
 
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
+- **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中
 - **Repo 配置相关** → [`REPO_TODO.md`](./REPO_TODO.md) ⏳ 待实施
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 
