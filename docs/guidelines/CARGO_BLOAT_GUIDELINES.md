@@ -548,7 +548,7 @@ cargo bloat --release --crates --bin workflow
 
 - [开发规范指南](./DEVELOPMENT_GUIDELINES.md)
 - [测试规范指南](./TESTING_GUIDELINES.md)
-- [提交前检查指南](./PRE_COMMIT_GUIDELINES.md)
+- [提交前检查指南](./workflows/PRE_COMMIT_GUIDELINES.md)
 
 ---
 
