@@ -155,7 +155,7 @@ impl PullRequestCloseCommand {
     fn cleanup_after_close(
         current_branch: &str,
         pr_branch: &str,
-        default_branch: &str
+        default_branch: &str,
     ) -> Result<()> {
         // 情况判断：
         // 1. 如果当前分支就是要删除的 PR 分支，需要切换到默认分支

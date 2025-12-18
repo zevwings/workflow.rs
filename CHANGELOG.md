@@ -18,6 +18,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.7] - 2025-12-18
+
+### Added
+- **MCP 配置支持**：新增 MCP (Model Context Protocol) 配置管理功能
+  - 支持 JIRA MCP 服务器配置（服务器地址、用户名、API Token）
+  - 支持 GitHub MCP 服务器配置（API Token）
+  - 集成到 `workflow config setup` 和 `workflow repo setup` 命令中
+  - 自动同步 MCP 配置与全局 Settings 配置
+  - 支持环境变量管理敏感信息
+
+### Changed
+- **配置管理优化**：改进配置设置流程，支持 MCP 配置的交互式设置
+- **错误处理增强**：为 MCP 配置相关操作添加了更详细的错误上下文
+
+---
+
 ## [1.6.4] - 2025-12-17
 
 ### Added

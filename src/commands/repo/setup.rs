@@ -390,7 +390,10 @@ impl RepoSetupCommand {
             log_break!();
             log_message!("Saving MCP configuration...");
             mcp_manager.merge(&new_config)?;
-            log_success!("MCP configuration saved to: {:?}", mcp_manager.config_path());
+            log_success!(
+                "MCP configuration saved to: {:?}",
+                mcp_manager.config_path()
+            );
         } else {
             log_warning!("No MCP servers configured, skipping save");
         }
@@ -409,19 +412,21 @@ impl RepoSetupCommand {
         let existing_jira_config = existing_mcp_config.mcp_servers.get("jira");
 
         // 从 MCP 配置中提取现有值
-        let (existing_jira_url, existing_jira_username, existing_jira_token) = if let Some(jira_config) = existing_jira_config {
-            (
-                jira_config.env.get("JIRA_SERVER_URL").cloned(),
-                jira_config.env.get("JIRA_USERNAME").cloned(),
-                jira_config.env.get("JIRA_API_TOKEN").cloned(),
-            )
-        } else {
-            (None, None, None)
-        };
+        let (existing_jira_url, existing_jira_username, existing_jira_token) =
+            if let Some(jira_config) = existing_jira_config {
+                (
+                    jira_config.env.get("JIRA_SERVER_URL").cloned(),
+                    jira_config.env.get("JIRA_USERNAME").cloned(),
+                    jira_config.env.get("JIRA_API_TOKEN").cloned(),
+                )
+            } else {
+                (None, None, None)
+            };
 
         // JIRA 服务器地址（必填）
         // 优先级：MCP 配置 > Settings 配置
-        let current_jira_address = existing_jira_url.or_else(|| settings.jira.service_address.clone());
+        let current_jira_address =
+            existing_jira_url.or_else(|| settings.jira.service_address.clone());
         let has_jira_address = current_jira_address.is_some();
         let jira_address_prompt = if current_jira_address.is_some() {
             "JIRA server URL (press Enter to keep)".to_string()
@@ -430,33 +435,33 @@ impl RepoSetupCommand {
         };
 
         let jira_service_address = if let Some(addr) = &current_jira_address {
-            InputDialog::new(&jira_address_prompt)
-                .with_default(addr.clone())
+            InputDialog::new(&jira_address_prompt).with_default(addr.clone())
         } else {
             InputDialog::new(&jira_address_prompt)
         }
-            .with_validator(move |input: &str| {
-                if input.is_empty() && !has_jira_address {
-                    Err("JIRA server URL is required".to_string())
-                } else if !input.is_empty()
-                    && !input.starts_with("http://")
-                    && !input.starts_with("https://")
-                {
-                    Err("Please enter a valid URL (must start with http:// or https://)"
-                        .to_string())
-                } else {
-                    Ok(())
-                }
-            })
-            .prompt()
-            .wrap_err("Failed to get JIRA server URL")?;
+        .with_validator(move |input: &str| {
+            if input.is_empty() && !has_jira_address {
+                Err("JIRA server URL is required".to_string())
+            } else if !input.is_empty()
+                && !input.starts_with("http://")
+                && !input.starts_with("https://")
+            {
+                Err("Please enter a valid URL (must start with http:// or https://)".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .prompt()
+        .wrap_err("Failed to get JIRA server URL")?;
 
         let service_address = if !jira_service_address.is_empty() {
             jira_service_address
         } else if let Some(addr) = &current_jira_address {
             addr.clone()
         } else {
-            return Err(color_eyre::eyre::eyre!("JIRA server URL is required for MCP configuration"));
+            return Err(color_eyre::eyre::eyre!(
+                "JIRA server URL is required for MCP configuration"
+            ));
         };
 
         // JIRA 邮箱（必填）
@@ -470,29 +475,30 @@ impl RepoSetupCommand {
         };
 
         let jira_email = if let Some(email) = &current_jira_email {
-            InputDialog::new(&jira_email_prompt)
-                .with_default(email.clone())
+            InputDialog::new(&jira_email_prompt).with_default(email.clone())
         } else {
             InputDialog::new(&jira_email_prompt)
         }
-            .with_validator(move |input: &str| {
-                if input.is_empty() && !has_jira_email {
-                    Err("JIRA email address is required".to_string())
-                } else if !input.is_empty() && !input.contains('@') {
-                    Err("Please enter a valid email address".to_string())
-                } else {
-                    Ok(())
-                }
-            })
-            .prompt()
-            .wrap_err("Failed to get JIRA email address")?;
+        .with_validator(move |input: &str| {
+            if input.is_empty() && !has_jira_email {
+                Err("JIRA email address is required".to_string())
+            } else if !input.is_empty() && !input.contains('@') {
+                Err("Please enter a valid email address".to_string())
+            } else {
+                Ok(())
+            }
+        })
+        .prompt()
+        .wrap_err("Failed to get JIRA email address")?;
 
         let username = if !jira_email.is_empty() {
             jira_email
         } else if let Some(email) = &current_jira_email {
             email.clone()
         } else {
-            return Err(color_eyre::eyre::eyre!("JIRA email address is required for MCP configuration"));
+            return Err(color_eyre::eyre::eyre!(
+                "JIRA email address is required for MCP configuration"
+            ));
         };
 
         // JIRA API Token（必填）
@@ -522,7 +528,9 @@ impl RepoSetupCommand {
         } else if let Some(token) = &current_jira_token {
             token.clone()
         } else {
-            return Err(color_eyre::eyre::eyre!("JIRA API token is required for MCP configuration"));
+            return Err(color_eyre::eyre::eyre!(
+                "JIRA API token is required for MCP configuration"
+            ));
         };
 
         // 检查是否需要更新全局配置
@@ -598,7 +606,9 @@ impl RepoSetupCommand {
         } else if let Some(token) = &current_github_token {
             token.clone()
         } else {
-            return Err(color_eyre::eyre::eyre!("GitHub API token is required for MCP configuration"));
+            return Err(color_eyre::eyre::eyre!(
+                "GitHub API token is required for MCP configuration"
+            ));
         };
 
         // 检查是否需要更新全局配置
@@ -635,7 +645,10 @@ impl RepoSetupCommand {
         if updated_settings.jira.service_address.is_none() {
             updated_settings.jira.service_address = Some(service_address.to_string());
             needs_update = true;
-            log_info!("Syncing JIRA server URL to global config: {}", service_address);
+            log_info!(
+                "Syncing JIRA server URL to global config: {}",
+                service_address
+            );
         }
 
         // 检查并更新 JIRA 邮箱（只在为空时更新）

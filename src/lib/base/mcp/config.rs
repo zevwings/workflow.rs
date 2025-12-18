@@ -135,16 +135,11 @@ impl MCPConfigManager {
                 // 如果已存在，合并环境变量（不覆盖已有）
                 if let Some(existing_server) = existing.mcp_servers.get_mut(name) {
                     for (key, value) in &server_config.env {
-                        existing_server
-                            .env
-                            .entry(key.clone())
-                            .or_insert_with(|| value.clone());
+                        existing_server.env.entry(key.clone()).or_insert_with(|| value.clone());
                     }
                 } else {
                     // 如果不存在，直接添加
-                    existing
-                        .mcp_servers
-                        .insert(name.clone(), server_config.clone());
+                    existing.mcp_servers.insert(name.clone(), server_config.clone());
                 }
             }
         })
