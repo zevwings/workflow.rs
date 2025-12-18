@@ -15,6 +15,7 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::base::dialog::ConfirmDialog;
+use crate::base::format::DisplayFormatter;
 use crate::base::http::client::HttpClient;
 use crate::base::http::{
     response::HttpResponse, HttpMethod, HttpRetry, HttpRetryConfig, RequestConfig,
@@ -23,7 +24,6 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::format::DisplayFormatter;
 use crate::base::util::{detect_release_platform, Checksum, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{

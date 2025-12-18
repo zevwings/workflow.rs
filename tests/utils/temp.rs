@@ -1,6 +1,8 @@
 //! 临时文件管理工具模块
 //!
 //! 提供统一的临时文件和临时目录管理功能，确保资源的正确清理。
+//!
+//! 本模块专门用于测试代码，提供测试中临时文件和目录的管理功能。
 
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
@@ -33,7 +35,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let temp_manager = TempManager::new()?;
     /// # Ok::<(), Box<dyn std::error::Error>>(())
@@ -56,7 +58,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let temp_manager = TempManager::new()?;
     /// let temp_path = temp_manager.temp_dir();
@@ -85,7 +87,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let mut temp_manager = TempManager::new()?;
     /// let file_path = temp_manager.create_file("test.txt", "Hello, World!")?;
@@ -119,7 +121,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let temp_manager = TempManager::new()?;
     /// let dir_path = temp_manager.create_dir("subdir")?;
@@ -129,8 +131,12 @@ impl TempManager {
     pub fn create_dir(&self, dirname: &str) -> Result<PathBuf> {
         let dir_path = self.temp_dir.path().join(dirname);
 
-        fs::create_dir_all(&dir_path)
-            .with_context(|| format!("Failed to create temporary directory: {}", dir_path.display()))?;
+        fs::create_dir_all(&dir_path).with_context(|| {
+            format!(
+                "Failed to create temporary directory: {}",
+                dir_path.display()
+            )
+        })?;
 
         Ok(dir_path)
     }
@@ -148,13 +154,14 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let temp_manager = TempManager::new()?;
     /// let file_path = temp_manager.file_path("config.toml");
     /// println!("File path: {}", file_path.display());
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
+    #[allow(dead_code)]
     pub fn file_path(&self, filename: &str) -> PathBuf {
         self.temp_dir.path().join(filename)
     }
@@ -176,7 +183,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let mut temp_manager = TempManager::new()?;
     /// let file_path = temp_manager.create_file("temp.txt", "content")?;
@@ -186,8 +193,9 @@ impl TempManager {
     /// ```
     pub fn cleanup_file(&mut self, file_path: &Path) -> Result<()> {
         if file_path.exists() {
-            fs::remove_file(file_path)
-                .with_context(|| format!("Failed to cleanup temporary file: {}", file_path.display()))?;
+            fs::remove_file(file_path).with_context(|| {
+                format!("Failed to cleanup temporary file: {}", file_path.display())
+            })?;
         }
 
         // 从跟踪列表中移除
@@ -209,7 +217,7 @@ impl TempManager {
     /// # 示例
     ///
     /// ```
-    /// use workflow::base::util::temp::TempManager;
+    /// use utils::temp::TempManager;
     ///
     /// let mut temp_manager = TempManager::new()?;
     /// temp_manager.create_file("file1.txt", "content1")?;
@@ -261,28 +269,6 @@ impl Drop for TempManager {
     }
 }
 
-/// 创建临时文件管理器的便捷函数
-///
-/// # 返回值
-///
-/// 返回 `Result<TempManager>`，包含新创建的临时文件管理器
-///
-/// # 错误
-///
-/// 当无法创建临时目录时返回错误
-///
-/// # 示例
-///
-/// ```
-/// use workflow::base::util::temp::create_temp_manager;
-///
-/// let temp_manager = create_temp_manager()?;
-/// # Ok::<(), Box<dyn std::error::Error>>(())
-/// ```
-pub fn create_temp_manager() -> Result<TempManager> {
-    TempManager::new()
-}
-
 /// 在临时目录中执行操作的便捷函数
 ///
 /// # 参数
@@ -300,7 +286,7 @@ pub fn create_temp_manager() -> Result<TempManager> {
 /// # 示例
 ///
 /// ```
-/// use workflow::base::util::temp::with_temp_dir;
+/// use utils::temp::with_temp_dir;
 /// use std::fs;
 ///
 /// let result = with_temp_dir(|temp_path| {

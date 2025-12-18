@@ -10,7 +10,6 @@
 //! ## 模块结构
 //!
 //! - `string` - 字符串处理工具
-//! - `temp` - 临时文件管理工具（统一的临时文件创建和清理）
 //! - `platform` - 平台检测工具（操作系统和架构检测）
 //! - `browser` - 浏览器操作（`Browser`）
 //! - `clipboard` - 剪贴板操作（`Clipboard`）
@@ -36,12 +35,10 @@ pub mod file;
 pub mod path;
 pub mod platform;
 pub mod string;
-pub mod temp;
 pub mod unzip;
 
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;
-
 
 // 重新导出 platform 模块的结构体和函数
 pub use platform::{detect_release_platform, Platform};
@@ -70,9 +67,6 @@ pub use file::{FileReader, FileWriter};
 
 // 重新导出 path
 pub use path::PathAccess;
-
-// 重新导出 temp
-pub use temp::{create_temp_manager, with_temp_dir, TempManager};
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

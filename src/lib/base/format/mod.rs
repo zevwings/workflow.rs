@@ -7,9 +7,9 @@
 //! - `message` - 消息格式化器（错误消息、操作消息、进度信息）
 //! - `display` - 显示格式化器（路径、列表项、键值对、文件大小）
 
-pub mod message;
 pub mod display;
+pub mod message;
 
 // 重新导出子模块的结构体
-pub use message::MessageFormatter;
 pub use display::DisplayFormatter;
+pub use message::MessageFormatter;

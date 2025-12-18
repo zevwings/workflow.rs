@@ -95,5 +95,6 @@ pub mod validation_errors {
     pub const JIRA_ID_EMPTY: &str = "JIRA ID cannot be empty";
 
     /// JIRA ID 格式验证失败的完整消息模板
-    pub const JIRA_ID_VALIDATION_ERROR_TEMPLATE: &str = "Invalid JIRA ID format.\n{}\n\nError details: {}";
+    pub const JIRA_ID_VALIDATION_ERROR_TEMPLATE: &str =
+        "Invalid JIRA ID format.\n{}\n\nError details: {}";
 }

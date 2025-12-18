@@ -9,8 +9,8 @@
 //! 4. Apply repository prefix if configured
 
 use crate::base::dialog::{ConfirmDialog, InputDialog};
-use crate::base::indicator::Spinner;
 use crate::base::format::MessageFormatter;
+use crate::base::indicator::Spinner;
 use crate::branch::{BranchNaming, BranchType};
 use crate::commands::pr::helpers::handle_stash_pop_result;
 use crate::git::{GitBranch, GitCommit, GitStash};
@@ -165,9 +165,10 @@ impl CreateCommand {
     /// Gets JIRA ticket info and uses LLM to generate a branch name slug.
     fn generate_branch_name_from_jira(ticket_id: &str) -> Result<String> {
         // Get JIRA ticket info
-        let issue = Spinner::with(MessageFormatter::operation("Getting ticket info for", ticket_id), || {
-            Jira::get_ticket_info(ticket_id)
-        })
+        let issue = Spinner::with(
+            MessageFormatter::operation("Getting ticket info for", ticket_id),
+            || Jira::get_ticket_info(ticket_id),
+        )
         .wrap_err_with(|| MessageFormatter::error("get ticket info for", ticket_id, ""))?;
 
         // Use LLM to generate branch name

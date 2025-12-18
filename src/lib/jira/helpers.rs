@@ -40,7 +40,11 @@ pub fn extract_jira_project(ticket: &str) -> Option<&str> {
 pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
     // 先检查是否为空或只包含空白字符
     if ticket.trim().is_empty() {
-        color_eyre::eyre::bail!("{}: {}", validation_errors::INVALID_JIRA_ID_FORMAT, validation_errors::JIRA_ID_EMPTY);
+        color_eyre::eyre::bail!(
+            "{}: {}",
+            validation_errors::INVALID_JIRA_ID_FORMAT,
+            validation_errors::JIRA_ID_EMPTY
+        );
     }
 
     let is_valid_format: bool = if let Some(project) = extract_jira_project(ticket) {

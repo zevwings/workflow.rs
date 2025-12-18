@@ -369,11 +369,15 @@ impl CompletionGenerator {
     fn generate_zsh_dynamic_completion(&self, _command_name: &str) -> String {
         let mut code = String::from("\n# Dynamic completion support\n");
         code.push_str("# This provides dynamic completion for branch names, PR IDs, etc.\n");
-        code.push_str("# Includes performance optimizations: caching, timeouts, error handling\n\n");
+        code.push_str(
+            "# Includes performance optimizations: caching, timeouts, error handling\n\n",
+        );
 
         if self.enable_performance_optimization {
             code.push_str("# Performance optimization: cache directory\n");
-            code.push_str("typeset -g _WORKFLOW_CACHE_DIR=\"${HOME}/.workflow/.completion_cache\"\n");
+            code.push_str(
+                "typeset -g _WORKFLOW_CACHE_DIR=\"${HOME}/.workflow/.completion_cache\"\n",
+            );
             code.push_str("typeset -g _WORKFLOW_CACHE_TTL=300  # 5 minutes\n\n");
 
             code.push_str("# Ensure cache directory exists\n");
@@ -413,7 +417,9 @@ impl CompletionGenerator {
             code.push_str("    # Cache the results\n");
             code.push_str("    echo \"$branches\" > \"$cache_file\" 2>/dev/null\n");
         } else {
-            code.push_str("  if branches=$(git branch --format='%(refname:short)' 2>/dev/null); then\n");
+            code.push_str(
+                "  if branches=$(git branch --format='%(refname:short)' 2>/dev/null); then\n",
+            );
         }
         code.push_str("    local branch_array=(${(f)branches})\n");
         code.push_str("    _describe 'branches' branch_array\n");
@@ -584,7 +590,9 @@ impl CompletionGenerator {
             code.push_str("  fi\n");
         } else {
             code.push_str("  if command -v gh >/dev/null 2>&1; then\n");
-            code.push_str("    gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null\n");
+            code.push_str(
+                "    gh pr list --limit 20 --json number --jq '.[].number' 2>/dev/null\n",
+            );
             code.push_str("  fi\n");
         }
         code.push_str("}\n\n");
@@ -595,7 +603,9 @@ impl CompletionGenerator {
         if self.enable_performance_optimization {
             code.push_str("  timeout 2s git log --oneline -20 | grep -oE '[A-Z]+-[0-9]+' | sort -u 2>/dev/null\n");
         } else {
-            code.push_str("  git log --oneline -20 | grep -oE '[A-Z]+-[0-9]+' | sort -u 2>/dev/null\n");
+            code.push_str(
+                "  git log --oneline -20 | grep -oE '[A-Z]+-[0-9]+' | sort -u 2>/dev/null\n",
+            );
         }
         code.push_str("}\n\n");
 
@@ -615,7 +625,9 @@ impl CompletionGenerator {
         code.push_str("        branch)\n");
         code.push_str("          case \"${COMP_WORDS[2]}\" in\n");
         code.push_str("            switch|delete|rename)\n");
-        code.push_str("              COMPREPLY=($(compgen -W \"$(_workflow_get_branches)\" -- \"$cur\"))\n");
+        code.push_str(
+            "              COMPREPLY=($(compgen -W \"$(_workflow_get_branches)\" -- \"$cur\"))\n",
+        );
         code.push_str("              return\n");
         code.push_str("              ;;\n");
         code.push_str("          esac\n");
@@ -623,7 +635,9 @@ impl CompletionGenerator {
         code.push_str("        pr)\n");
         code.push_str("          case \"${COMP_WORDS[2]}\" in\n");
         code.push_str("            close|merge|approve|comment|status|update|sync|rebase)\n");
-        code.push_str("              COMPREPLY=($(compgen -W \"$(_workflow_get_pr_ids)\" -- \"$cur\"))\n");
+        code.push_str(
+            "              COMPREPLY=($(compgen -W \"$(_workflow_get_pr_ids)\" -- \"$cur\"))\n",
+        );
         code.push_str("              return\n");
         code.push_str("              ;;\n");
         code.push_str("          esac\n");
