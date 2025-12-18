@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use color_eyre::{eyre::eyre, Result};
 
+use crate::base::constants::network::errors;
 use crate::base::dialog::ConfirmDialog;
 use crate::{trace_debug, trace_info, trace_warn};
 
@@ -359,10 +360,10 @@ impl HttpRetry {
                 return format!("HTTP {}", status.as_u16());
             }
             if reqwest_error.is_timeout() {
-                return "Network timeout".to_string();
+                return errors::TIMEOUT.to_string();
             }
             if reqwest_error.is_connect() {
-                return "Connection failed".to_string();
+                return errors::CONNECTION_FAILED.to_string();
             }
         }
 

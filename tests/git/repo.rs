@@ -89,7 +89,7 @@ fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case]
 #[case("ftp://github.com/owner/repo")]
 #[case("https://github.com/")]
 #[case("git@github.com:")]
-#[case("https://github.com")]
+#[case(workflow::base::constants::api::github::BASE)]
 #[case("git@github.com")]
 fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
     // 测试无效 URL 的错误处理

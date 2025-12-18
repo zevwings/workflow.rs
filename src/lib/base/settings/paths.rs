@@ -6,6 +6,14 @@
 //! - Shell 相关路径（shell 配置文件和 completion 目录）
 
 use crate::base::util::directory::DirectoryWalker;
+
+// 配置文件和目录名称常量
+pub const WORKFLOW_DIR: &str = ".workflow";
+pub const CONFIG_DIR: &str = "config";
+pub const WORKFLOW_CONFIG_FILE: &str = "workflow.toml";
+pub const JIRA_CONFIG_FILE: &str = "jira.toml";
+pub const LLM_CONFIG_FILE: &str = "llm.toml";
+pub const COMPLETIONS_FILE: &str = ".completions";
 use clap_complete::shells::Shell;
 use color_eyre::{
     eyre::{ContextCompat, WrapErr},
@@ -69,7 +77,7 @@ impl Paths {
         }
 
         // 尝试创建 .workflow 目录
-        let workflow_dir = icloud_base.join(".workflow");
+        let workflow_dir = icloud_base.join(WORKFLOW_DIR);
         if DirectoryWalker::new(&workflow_dir).ensure_exists().is_err() {
             return None;
         }
@@ -107,7 +115,7 @@ impl Paths {
     /// 如果无法创建目录，返回相应的错误信息。
     pub fn local_base_dir() -> Result<PathBuf> {
         let home = Self::home_dir()?;
-        let workflow_dir = home.join(".workflow");
+        let workflow_dir = home.join(WORKFLOW_DIR);
 
         // 确保目录存在
         DirectoryWalker::new(&workflow_dir).ensure_exists()?;
@@ -252,7 +260,7 @@ impl Paths {
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn config_dir() -> Result<PathBuf> {
         // 使用支持 iCloud 的配置基础目录
-        let config_dir = Self::config_base_dir()?.join("config");
+        let config_dir = Self::config_base_dir()?.join(CONFIG_DIR);
 
         // 确保配置目录存在
         DirectoryWalker::new(&config_dir).ensure_exists()?;
@@ -271,14 +279,14 @@ impl Paths {
     ///
     /// 返回 `~/.workflow/config/workflow.toml` 的路径。
     pub fn workflow_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("workflow.toml"))
+        Ok(Self::config_dir()?.join(WORKFLOW_CONFIG_FILE))
     }
 
     /// 获取 LLM 配置文件路径
     ///
     /// 返回 `~/.workflow/config/llm.toml` 的路径。
     pub fn llm_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("llm.toml"))
+        Ok(Self::config_dir()?.join(LLM_CONFIG_FILE))
     }
 
     /// 获取 Jira 配置文件路径
@@ -286,7 +294,7 @@ impl Paths {
     /// 返回 `~/.workflow/config/jira.toml` 的路径。
     /// 这是合并后的 Jira 配置文件，包含用户和状态配置。
     pub fn jira_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("jira.toml"))
+        Ok(Self::config_dir()?.join(JIRA_CONFIG_FILE))
     }
 
     /// 获取常用命令配置文件路径
@@ -315,7 +323,7 @@ impl Paths {
     pub fn project_config() -> Result<PathBuf> {
         Ok(std::env::current_dir()
             .wrap_err("Failed to get current directory")?
-            .join(".workflow")
+            .join(WORKFLOW_DIR)
             .join("config.toml"))
     }
 

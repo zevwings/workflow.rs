@@ -44,7 +44,15 @@ impl LogCommand {
         log_break!();
         log_success!("Log level set to: {}", selected_level_str);
         log_message!("  Current log level: {}", selected_level.as_str());
-        log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+        if let Ok(config_path) = crate::base::Paths::workflow_config() {
+            log_message!(
+                "  {} {}",
+                crate::base::constants::messages::log::CONFIG_SAVED_PREFIX,
+                config_path.display()
+            );
+        } else {
+            log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+        }
 
         Ok(())
     }
@@ -145,7 +153,15 @@ impl LogCommand {
         if selected_idx == 0 {
             log_success!("Trace console output enabled");
             log_message!("  Tracing logs will be output to both file and console (stderr)");
-            log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+            if let Ok(config_path) = crate::base::Paths::workflow_config() {
+                log_message!(
+                    "  {} {}",
+                    crate::base::constants::messages::log::CONFIG_SAVED_PREFIX,
+                    config_path.display()
+                );
+            } else {
+                log_message!("  Configuration saved to ~/.workflow/config/workflow.toml");
+            }
         } else {
             log_success!("Trace console output disabled");
             log_message!("  Tracing logs will only be output to file");

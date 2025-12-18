@@ -13,6 +13,7 @@ use std::time::Duration;
 use super::config::{MultipartRequestConfig, RequestConfig};
 use super::method::HttpMethod;
 use super::response::HttpResponse;
+use crate::base::constants::errors::http_client;
 
 /// HTTP 客户端
 ///
@@ -37,7 +38,7 @@ impl HttpClient {
     ///
     /// 如果创建客户端失败，返回相应的错误信息。
     fn new() -> Result<Self> {
-        let client = Client::builder().build().wrap_err("Failed to create HTTP client")?;
+        let client = Client::builder().build().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         Ok(Self { client })
     }
 
@@ -78,7 +79,7 @@ impl HttpClient {
         CLIENT
             .get_or_init(HttpClient::new)
             .as_ref()
-            .map_err(|e| eyre!("Failed to create HTTP client: {}", e))
+            .map_err(|e| eyre!("{}: {}", http_client::CREATE_CLIENT_FAILED, e))
     }
 
     /// 构建 HTTP 请求（内部辅助方法）

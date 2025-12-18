@@ -1,3 +1,4 @@
+use crate::base::constants::{api::github, errors::http_client, git::check_errors, messages::log};
 use crate::base::http::client::HttpClient;
 use crate::base::http::{HttpMethod, RequestConfig};
 use crate::git::{GitCommit, GitRepo};
@@ -24,7 +25,7 @@ impl CheckCommand {
         log_message!("[1/2] Checking Git repository status...");
         if !GitRepo::is_git_repo() {
             log_error!("Not in a Git repository");
-            color_eyre::eyre::bail!("Git check failed: Not in a Git repository");
+            color_eyre::eyre::bail!("{}", check_errors::NOT_GIT_REPO);
         }
 
         let git_output = GitCommit::status().wrap_err("Failed to check git status")?;
@@ -38,9 +39,9 @@ impl CheckCommand {
 
         // 2. 检查网络连接
         log_message!("[2/2] Checking network connection to GitHub...");
-        let client = HttpClient::global().wrap_err("Failed to create HTTP client")?;
+        let client = HttpClient::global().wrap_err(http_client::CREATE_CLIENT_FAILED)?;
         let config = RequestConfig::<Value, Value>::new().timeout(Duration::from_secs(10));
-        match client.stream(HttpMethod::Get, "https://github.com", config) {
+        match client.stream(HttpMethod::Get, github::BASE, config) {
             Ok(response) => {
                 if response.status().is_success() {
                     log_success!("GitHub network is available");
@@ -144,7 +145,7 @@ impl CheckCommand {
         if !test_output.status.success() {
             let stderr = String::from_utf8_lossy(&test_output.stderr);
             let stdout = String::from_utf8_lossy(&test_output.stdout);
-            log_error!("Tests failed");
+            log_error!("{}", log::TESTS_FAILED);
             if !stderr.is_empty() {
                 log_error!("{}", stderr);
             }
@@ -152,7 +153,7 @@ impl CheckCommand {
                 log_error!("{}", stdout);
             }
             log_error!("Please fix the failing tests before merging");
-            color_eyre::eyre::bail!("Tests failed");
+            color_eyre::eyre::bail!("{}", log::TESTS_FAILED);
         }
 
         // 输出测试结果（成功时）

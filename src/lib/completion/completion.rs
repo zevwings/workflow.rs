@@ -19,6 +19,10 @@ use crate::base::util::file::FileWriter;
 use crate::trace_debug;
 use crate::trace_info;
 
+// Completion 相关常量
+const COMPLETIONS_FILE: &str = ".completions";
+const COMPLETIONS_SOURCE_PATH: &str = "$HOME/.workflow/.completions";
+
 // ==================== 返回结构体 ====================
 
 /// Completion 配置结果
@@ -74,7 +78,7 @@ impl Completion {
     /// `log`（set、check）、`jira`（info、related、changelog、comments、attachments、clean）、`github`、`llm`、`proxy`、`branch`（ignore、create、rename、switch、sync、delete）、`repo`（setup、show、clean）等子命令。
     fn create_completion_config_file(shell: &Shell) -> Result<Option<PathBuf>> {
         let workflow_dir = Self::create_workflow_dir()?;
-        let config_file = workflow_dir.join(".completions");
+        let config_file = workflow_dir.join(COMPLETIONS_FILE);
 
         let config_content = match shell {
             Shell::Zsh => "# Workflow CLI completions\n\
@@ -119,7 +123,7 @@ impl Completion {
                 let workflow_config_file = Self::create_completion_config_file(shell)?;
 
                 // 使用 ShellConfigManager 添加 source 语句（指定 shell 类型）
-                let source_pattern = "$HOME/.workflow/.completions";
+                let source_pattern = COMPLETIONS_SOURCE_PATH;
                 let added = ShellConfigManager::add_source_for_shell(
                     shell,
                     source_pattern,
@@ -191,7 +195,7 @@ impl Completion {
         match shell {
             Shell::Zsh | Shell::Bash => {
                 // zsh 和 bash 使用统一配置文件，移除 source 语句（指定 shell 类型）
-                let source_pattern = "$HOME/.workflow/.completions";
+                let source_pattern = COMPLETIONS_SOURCE_PATH;
                 let removed = ShellConfigManager::remove_source_for_shell(shell, source_pattern)
                     .wrap_err_with(|| {
                         format!(
@@ -268,7 +272,7 @@ impl Completion {
         let configured = match shell {
             Shell::Zsh | Shell::Bash => {
                 // zsh 和 bash 使用统一配置文件，检查 source 语句
-                let source_pattern = "$HOME/.workflow/.completions";
+                let source_pattern = COMPLETIONS_SOURCE_PATH;
                 ShellConfigManager::has_source_for_shell(shell, source_pattern).unwrap_or(false)
             }
             Shell::Fish | Shell::PowerShell | Shell::Elvish => {
@@ -390,7 +394,7 @@ impl Completion {
         trace_debug!("Removing completion config file");
 
         // 使用本地路径（强制本地，不使用 iCloud）
-        let workflow_config_file = Paths::local_base_dir()?.join(".completions");
+        let workflow_config_file = Paths::local_base_dir()?.join(COMPLETIONS_FILE);
 
         if workflow_config_file.exists() {
             fs::remove_file(&workflow_config_file).wrap_err_with(|| {
