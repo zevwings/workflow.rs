@@ -1,3 +1,4 @@
+use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
 use crate::base::indicator::Progress;
 use crate::jira::logs::{JiraLogs, ProgressCallback};
@@ -19,7 +20,7 @@ impl DownloadCommand {
         } else {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .wrap_err("Failed to read Jira ticket ID")?
+                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };
 
         // 先获取附件列表并过滤日志附件以确定总数

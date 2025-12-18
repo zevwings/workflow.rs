@@ -14,6 +14,7 @@
 
 pub mod alias;
 pub mod concurrent;
+pub mod constants;
 pub mod dialog;
 pub mod http;
 pub mod indicator;

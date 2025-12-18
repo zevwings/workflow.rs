@@ -1,3 +1,4 @@
+use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
 use crate::base::util::Clipboard;
 use crate::jira::logs::JiraLogs;
@@ -16,7 +17,7 @@ impl FindCommand {
         } else {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123)")
                 .prompt()
-                .wrap_err("Failed to read Jira ticket ID")?
+                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
         };
 
         // 2. 创建 JiraLogs 实例

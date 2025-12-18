@@ -3,6 +3,7 @@
 //! Rename a local branch, optionally update the remote branch.
 //! Provides interactive workflow following the implementation document.
 
+use crate::base::constants::validation::branch;
 use crate::base::dialog::{ConfirmDialog, InputDialog};
 use crate::commands::branch::helpers::{select_branch, BranchSelectionOptions};
 use crate::commands::check;
@@ -10,6 +11,9 @@ use crate::git::GitBranch;
 use crate::{log_break, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::process::Command;
+
+// Git 保留分支名称常量
+const GIT_RESERVED_NAMES: &[&str] = &["HEAD", "FETCH_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
 
 /// Branch rename command
 pub struct BranchRenameCommand;
@@ -23,7 +27,7 @@ impl BranchRenameCommand {
         check::CheckCommand::run_all()?;
 
         log_break!();
-        log_message!("Branch Rename");
+        log_message!("{}", crate::base::constants::messages::log::BRANCH_RENAME);
 
         // Select branch to rename (fully interactive)
         let branch_to_rename = Self::select_branch_to_rename()?;
@@ -329,46 +333,45 @@ impl BranchRenameCommand {
     pub fn validate_branch_name(name: &str) -> Result<()> {
         // 1. Cannot be empty
         if name.is_empty() {
-            color_eyre::eyre::bail!("Branch name cannot be empty");
+            color_eyre::eyre::bail!("{}", branch::EMPTY_NAME);
         }
 
         // 2. Cannot start or end with `.`
         if name.starts_with('.') || name.ends_with('.') {
-            color_eyre::eyre::bail!("Branch name cannot start or end with '.'");
+            color_eyre::eyre::bail!("{}", branch::INVALID_DOT_POSITION);
         }
 
         // 3. Cannot contain `..`
         if name.contains("..") {
-            color_eyre::eyre::bail!("Branch name cannot contain '..'");
+            color_eyre::eyre::bail!("{}", branch::DOUBLE_DOT);
         }
 
         // 4. Cannot contain spaces
         if name.contains(' ') {
-            color_eyre::eyre::bail!("Branch name cannot contain spaces");
+            color_eyre::eyre::bail!("{}", branch::CONTAINS_SPACES);
         }
 
         // 5. Cannot contain special characters: `~ ^ : ? * [ \`
         let invalid_chars = ['~', '^', ':', '?', '*', '[', '\\'];
         for &ch in &invalid_chars {
             if name.contains(ch) {
-                color_eyre::eyre::bail!("Branch name cannot contain special character: '{}'", ch);
+                color_eyre::eyre::bail!("{}: '{}'", branch::INVALID_SPECIAL_CHAR, ch);
             }
         }
 
         // 6. Cannot end with `/`
         if name.ends_with('/') {
-            color_eyre::eyre::bail!("Branch name cannot end with '/'");
+            color_eyre::eyre::bail!("{}", branch::TRAILING_SLASH);
         }
 
         // 7. Cannot contain consecutive slashes `//`
         if name.contains("//") {
-            color_eyre::eyre::bail!("Branch name cannot contain consecutive slashes '//'");
+            color_eyre::eyre::bail!("{}", branch::DOUBLE_SLASH);
         }
 
         // 8. Cannot be reserved names
-        let reserved_names = ["HEAD", "FETCH_HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD"];
-        if reserved_names.contains(&name) {
-            color_eyre::eyre::bail!("Branch name cannot be reserved name: '{}'", name);
+        if GIT_RESERVED_NAMES.contains(&name) {
+            color_eyre::eyre::bail!("{}: '{}'", branch::RESERVED_NAME, name);
         }
 
         Ok(())

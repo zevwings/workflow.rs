@@ -1,6 +1,7 @@
 //! 初始化设置命令
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
+use crate::base::constants::messages::log;
 use crate::base::dialog::{InputDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
@@ -66,7 +67,14 @@ impl SetupCommand {
         // 保存配置到 TOML 文件
         log_message!("Saving configuration...");
         Self::save_config(&config)?;
-        log_success!("Configuration saved to ~/.workflow/config/workflow.toml");
+        if let Ok(config_path) = crate::base::Paths::workflow_config() {
+            log_success!("{} {}", log::CONFIG_SAVED_PREFIX, config_path.display());
+        } else {
+            log_success!(
+                "{} ~/.workflow/config/workflow.toml",
+                log::CONFIG_SAVED_PREFIX
+            );
+        }
 
         log_break!();
         log_info!("Verifying configuration...");

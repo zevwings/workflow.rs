@@ -8,6 +8,7 @@
 
 use color_eyre::{eyre::WrapErr, Result};
 
+use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
 use crate::base::table::{TableBuilder, TableStyle};
 use crate::base::util::format_size;
@@ -46,7 +47,7 @@ impl CleanCommand {
             InputDialog::new("Enter Jira ticket ID (e.g., PROJ-123, or leave empty to clean all)")
                 .allow_empty(true)
                 .prompt()
-                .wrap_err("Failed to read Jira ticket ID")?
+                .wrap_err(input_reading::READ_JIRA_TICKET_ID_FAILED)?
                 .trim()
                 .to_string()
         };
