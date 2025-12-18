@@ -10,38 +10,33 @@ use tempfile::TempDir;
 /// CLI 测试环境
 pub struct CliTestEnv {
     pub temp_dir: TempDir,
-    pub original_dir: std::path::PathBuf,
 }
 
 impl CliTestEnv {
     /// 创建新的 CLI 测试环境
     pub fn new() -> Self {
-        let original_dir = std::env::current_dir().expect("Failed to get current dir");
         let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
 
-        // 切换到临时目录
-        std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
-
-        Self {
-            temp_dir,
-            original_dir,
-        }
+        Self { temp_dir }
     }
 
     /// 初始化 Git 仓库
     pub fn init_git_repo(&self) -> &Self {
         std::process::Command::new("git")
             .args(["init"])
+            .current_dir(self.path())
             .output()
             .expect("Failed to init git repo");
 
         std::process::Command::new("git")
             .args(["config", "user.name", "Test User"])
+            .current_dir(self.path())
             .output()
             .expect("Failed to set git user name");
 
         std::process::Command::new("git")
             .args(["config", "user.email", "test@example.com"])
+            .current_dir(self.path())
             .output()
             .expect("Failed to set git user email");
 
@@ -50,10 +45,11 @@ impl CliTestEnv {
 
     /// 创建文件
     pub fn create_file(&self, path: &str, content: &str) -> &Self {
-        if let Some(parent) = Path::new(path).parent() {
+        let full_path = self.temp_dir.path().join(path);
+        if let Some(parent) = full_path.parent() {
             fs::create_dir_all(parent).expect("Failed to create parent dir");
         }
-        fs::write(path, content).expect("Failed to write file");
+        fs::write(full_path, content).expect("Failed to write file");
         self
     }
 
@@ -61,11 +57,13 @@ impl CliTestEnv {
     pub fn create_commit(&self, message: &str) -> &Self {
         std::process::Command::new("git")
             .args(["add", "."])
+            .current_dir(self.path())
             .output()
             .expect("Failed to add files");
 
         std::process::Command::new("git")
             .args(["commit", "-m", message])
+            .current_dir(self.path())
             .output()
             .expect("Failed to commit");
 
@@ -89,14 +87,7 @@ impl CliTestEnv {
     }
 }
 
-impl Drop for CliTestEnv {
-    fn drop(&mut self) {
-        // 恢复原始目录
-        if let Err(e) = std::env::set_current_dir(&self.original_dir) {
-            eprintln!("Failed to restore original directory: {}", e);
-        }
-    }
-}
+// 移除 Drop 实现，因为我们不再改变全局工作目录
 
 /// CLI 命令构建器
 pub struct CliCommandBuilder {
