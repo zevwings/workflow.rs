@@ -7,6 +7,7 @@
 //!
 //! 注意：日志处理相关的辅助函数已迁移到 `jira::logs::helpers` 模块。
 
+use crate::base::constants::errors::validation_errors;
 use crate::base::settings::Settings;
 use color_eyre::Result;
 use regex::Regex;
@@ -39,7 +40,7 @@ pub fn extract_jira_project(ticket: &str) -> Option<&str> {
 pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
     // 先检查是否为空或只包含空白字符
     if ticket.trim().is_empty() {
-        color_eyre::eyre::bail!("Invalid Jira ticket format: ticket cannot be empty");
+        color_eyre::eyre::bail!("{}: {}", validation_errors::INVALID_JIRA_ID_FORMAT, validation_errors::JIRA_ID_EMPTY);
     }
 
     let is_valid_format: bool = if let Some(project) = extract_jira_project(ticket) {
@@ -60,8 +61,10 @@ pub fn validate_jira_ticket_format(ticket: &str) -> Result<()> {
 
     if !is_valid_format {
         color_eyre::eyre::bail!(
-            "Invalid Jira ticket format: '{}'. Expected format: 'PROJ-123' (ticket) or 'PROJ' (project name).\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
-            ticket
+            "{}: '{}'. {}\n  - Ticket names should contain only letters, numbers, and hyphens\n  - Project names should contain only letters, numbers, and underscores\n  - Do not use branch names or paths (e.g., 'zw/修改打包脚本问题')",
+            validation_errors::INVALID_JIRA_ID_FORMAT,
+            ticket,
+            validation_errors::JIRA_ID_FORMAT_HELP
         );
     }
 

@@ -11,7 +11,7 @@ use color_eyre::{eyre::WrapErr, Result};
 use crate::base::constants::errors::input_reading;
 use crate::base::dialog::InputDialog;
 use crate::base::table::{TableBuilder, TableStyle};
-use crate::base::util::format_size;
+use crate::base::format::DisplayFormatter;
 use crate::jira::attachments::AttachmentCleaner;
 use crate::jira::table::FileRow;
 use crate::{log_break, log_info, log_message, log_success};
@@ -84,7 +84,7 @@ impl CleanCommand {
                 log_info!("{}: {:?}", dir_info.dir_name, dir_info.dir);
             }
             log_info!("Directory: {:?}", dir_info.dir);
-            log_info!("Total size: {}", format_size(dir_info.size));
+            log_info!("Total size: {}", DisplayFormatter::size(dir_info.size));
             log_info!("Total files: {}", dir_info.file_count);
             log_break!();
             log_info!("Contents:");

@@ -3,7 +3,8 @@
 //! 本模块包含所有不关联业务的通用基础设施代码，包括：
 //! - HTTP 客户端和网络工具
 //! - 日志功能（LogLevel, Logger, Tracer）
-//! - 工具函数（string, format, platform, browser, clipboard, checksum, unzip）
+//! - 格式化工具（format - MessageFormatter, DisplayFormatter）
+//! - 工具函数（string, platform, browser, clipboard, checksum, unzip）
 //! - 交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
 //! - 进度指示器（Spinner, Progress）
 //! - 表格输出工具（TableBuilder, TableStyle）
@@ -16,6 +17,7 @@ pub mod alias;
 pub mod concurrent;
 pub mod constants;
 pub mod dialog;
+pub mod format;
 pub mod http;
 pub mod indicator;
 pub mod llm;
@@ -38,4 +40,5 @@ pub use prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 pub use settings::{LLMSettings, Paths, Settings};
 pub use shell::{Detect, Reload, ShellConfigManager};
 pub use table::{TableBuilder, TableStyle};
-pub use util::{format_size, mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};
+pub use format::DisplayFormatter;
+pub use util::{mask_sensitive_value, Browser, Checksum, Clipboard, Unzip};

@@ -1,3 +1,4 @@
+use crate::base::format::DisplayFormatter;
 use crate::base::indicator::Spinner;
 use crate::base::table::{TableBuilder, TableStyle};
 use crate::jira::table::AttachmentRow;
@@ -9,25 +10,32 @@ use serde_saphyr;
 use std::collections::HashMap;
 
 use super::helpers::{format_date, get_jira_id, OutputFormat};
-use crate::cli::OutputFormatArgs;
+use crate::cli::JiraQueryArgs;
 
 /// 显示 ticket 信息命令
 pub struct InfoCommand;
 
 impl InfoCommand {
     /// 显示 ticket 信息
-    pub fn show(jira_id: Option<String>, output_format: OutputFormatArgs) -> Result<()> {
+    pub fn show(args: JiraQueryArgs) -> Result<()> {
         // 获取 JIRA ID（从参数或交互式输入）
-        let jira_id = get_jira_id(jira_id, None)?;
+        let jira_id = get_jira_id(args.jira_id.into_option(), None)?;
 
-        // 获取 ticket 信息（使用 Spinner 显示加载状态）
-        let issue = Spinner::with(format!("Getting ticket info for {}...", jira_id), || {
+        // 根据详细程度控制 Spinner 显示
+        let issue = if args.query_display.verbosity.is_quiet() {
+            // 静默模式：不显示 Spinner
             Jira::get_ticket_info(&jira_id)
-                .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))
-        })?;
+                .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))?
+        } else {
+            // 正常/详细模式：显示 Spinner
+            Spinner::with(format!("Getting ticket info for {}...", jira_id), || {
+                Jira::get_ticket_info(&jira_id)
+                    .wrap_err_with(|| format!("Failed to get ticket info for {}", jira_id))
+            })?
+        };
 
         // 确定输出格式
-        let format = OutputFormat::from(&output_format);
+        let format = OutputFormat::from(&args.query_display.output_format);
 
         // 根据输出格式选择不同的显示方式
         match format {
@@ -181,7 +189,7 @@ impl InfoCommand {
                     .enumerate()
                     .map(|(idx, attachment)| {
                         let size_str = if let Some(size) = attachment.size {
-                            format_size(size)
+                            DisplayFormatter::size(size)
                         } else {
                             "Unknown".to_string()
                         };
@@ -389,7 +397,7 @@ impl InfoCommand {
                 log_message!("\n## Attachments ({})\n\n", attachments.len());
                 for attachment in attachments {
                     let size_str = if let Some(size) = attachment.size {
-                        format_size(size)
+                        DisplayFormatter::size(size)
                     } else {
                         "Unknown".to_string()
                     };
@@ -431,20 +439,3 @@ impl InfoCommand {
     }
 }
 
-/// 格式化文件大小
-fn format_size(bytes: u64) -> String {
-    const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
-    let mut size = bytes as f64;
-    let mut unit_index = 0;
-
-    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
-        size /= 1024.0;
-        unit_index += 1;
-    }
-
-    if unit_index == 0 {
-        format!("{} {}", bytes, UNITS[unit_index])
-    } else {
-        format!("{:.2} {}", size, UNITS[unit_index])
-    }
-}
