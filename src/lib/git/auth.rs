@@ -121,12 +121,16 @@ impl GitAuth {
                             // 提供详细的错误信息
                             let error_msg = format!(
                                 "SSH authentication failed: {}\n\n\
+                                Note: git2 (libssh2) does not support macOS Keychain integration.\n\
+                                Even if system SSH works (ssh -T git@github.com), git2 requires SSH agent.\n\n\
                                 Possible solutions:\n\
-                                1. Check if SSH agent is running: ssh-add -l\n\
-                                2. Add your SSH key to agent: ssh-add ~/.ssh/id_ed25519\n\
-                                3. Verify SSH key is added to GitHub/GitLab: ssh -T git@github.com\n\
-                                4. Check SSH key file permissions: chmod 600 ~/.ssh/id_ed25519\n\
-                                5. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
+                                1. Start SSH agent and add key:\n\
+                                   eval \"$(ssh-agent -s)\"\n\
+                                   ssh-add ~/.ssh/id_ed25519\n\
+                                2. For macOS, use keychain integration:\n\
+                                   ssh-add --apple-use-keychain ~/.ssh/id_ed25519\n\
+                                3. Verify SSH agent has keys: ssh-add -l\n\
+                                4. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
                                 e.message()
                             );
                             return Err(git2::Error::from_str(&error_msg));
@@ -280,6 +284,100 @@ impl GitAuth {
             }
         }
         None
+    }
+
+    /// 诊断认证配置状态
+    ///
+    /// 用于快速测试和诊断认证模块的配置状态。
+    /// 返回当前认证信息的摘要。
+    ///
+    /// # 返回
+    ///
+    /// 返回包含认证配置状态的字符串。
+    ///
+    /// # 示例
+    ///
+    /// ```rust,no_run
+    /// use workflow::git::GitAuth;
+    ///
+    /// println!("{}", GitAuth::diagnose());
+    /// ```
+    pub fn diagnose() -> String {
+        let auth_info = Self::get_cached_auth_info();
+        let mut result = String::new();
+
+        result.push_str("=== Git Authentication Diagnosis ===\n\n");
+
+        // SSH 配置
+        result.push_str("SSH Configuration:\n");
+        if let Some(ref key_path) = auth_info.ssh_key_path {
+            result.push_str(&format!("  ✓ SSH key found: {:?}\n", key_path));
+
+            // 检查文件权限
+            if let Ok(metadata) = std::fs::metadata(key_path) {
+                let permissions = metadata.permissions();
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let mode = permissions.mode();
+                    result.push_str(&format!("  - File permissions: {:o}\n", mode & 0o777));
+                    if (mode & 0o077) != 0 {
+                        result.push_str("  ⚠ Warning: File permissions too open (should be 600)\n");
+                    }
+                }
+            }
+        } else {
+            result.push_str("  ✗ No SSH key found\n");
+            result.push_str("    Searched paths:\n");
+            result.push_str("      - ~/.ssh/id_ed25519\n");
+            result.push_str("      - ~/.ssh/id_rsa\n");
+            result.push_str("      - ~/.ssh/id_ecdsa\n");
+        }
+
+        // 检查 SSH agent
+        result.push_str("\nSSH Agent:\n");
+        if let Ok(output) = std::process::Command::new("ssh-add").arg("-l").output() {
+            if output.status.success() {
+                let keys = String::from_utf8_lossy(&output.stdout);
+                if keys.trim().is_empty() {
+                    result.push_str("  ✗ SSH agent is running but has no keys\n");
+                } else {
+                    result.push_str("  ✓ SSH agent is running with keys:\n");
+                    for line in keys.lines() {
+                        result.push_str(&format!("    {}\n", line));
+                    }
+                }
+            } else {
+                result.push_str("  ✗ SSH agent is not running or has no keys\n");
+            }
+        } else {
+            result.push_str("  ? Could not check SSH agent status\n");
+        }
+
+        // HTTPS 配置
+        result.push_str("\nHTTPS Configuration:\n");
+        if let Some(ref token) = auth_info.https_token {
+            let token_preview = if token.len() > 8 {
+                format!("{}...{}", &token[..4], &token[token.len() - 4..])
+            } else {
+                "***".to_string()
+            };
+            result.push_str(&format!("  ✓ HTTPS token found: {}\n", token_preview));
+        } else {
+            result.push_str("  ✗ No HTTPS token found\n");
+            result.push_str("    Checked environment variables:\n");
+            result.push_str("      - GITHUB_TOKEN\n");
+            result.push_str("      - GIT_TOKEN\n");
+        }
+
+        if let Some(ref username) = auth_info.https_username {
+            result.push_str(&format!("  ✓ HTTPS username: {}\n", username));
+        } else {
+            result.push_str("  - No HTTPS username set (will use default or extract from URL)\n");
+        }
+
+        result.push_str("\n=== End Diagnosis ===\n");
+        result
     }
 }
 

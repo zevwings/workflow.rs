@@ -11,10 +11,12 @@ use crate::base::util::mask_sensitive_value;
 use crate::commands::github::helpers::{
     collect_github_account, collect_github_account_with_defaults,
 };
-use crate::git::GitConfig;
+use crate::git::{GitAuth, GitConfig, GitRepo};
 use crate::jira::config::ConfigManager;
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::pr::github::platform::GitHub;
+use crate::{log_break, log_error, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
+use git2::{FetchOptions, Repository};
 
 /// GitHub 账号管理命令
 pub struct GitHubCommand;
@@ -462,6 +464,161 @@ impl GitHubCommand {
         }
 
         log_success!("Account '{}' updated.", new_account_name);
+
+        Ok(())
+    }
+
+    /// 测试并显示 Git 认证状态
+    ///
+    /// 主要测试 git2 认证是否正确配置和工作。
+    /// 包括：
+    /// 1. Git 远程操作认证诊断（SSH/HTTPS）
+    /// 2. 实际测试 Git 远程认证（通过 fetch 测试）
+    /// 3. GitHub API 认证状态（辅助信息）
+    pub fn show() -> Result<()> {
+        log_break!('=', 50, "Git Authentication Test");
+        log_break!();
+
+        // 1. 显示 Git 认证诊断信息
+        log_info!("1. Git Remote Authentication Configuration");
+        log_break!();
+        let diagnosis = GitAuth::diagnose();
+        log_message!("{}", diagnosis);
+
+        // 2. 测试 Git 远程认证（实际测试）
+        log_break!();
+        log_info!("2. Testing Git Remote Authentication");
+        log_break!();
+
+        let git_auth_result = if GitRepo::is_git_repo() {
+            // 尝试实际测试 Git 远程认证
+            match Repository::open(".") {
+                Ok(repo) => {
+                    if let Ok(mut remote) = repo.find_remote("origin") {
+                        log_message!("Testing authentication with remote 'origin'...");
+
+                        let callbacks = GitAuth::get_remote_callbacks();
+                        let mut fetch_options = FetchOptions::new();
+                        fetch_options.remote_callbacks(callbacks);
+
+                        // 尝试 fetch（这会触发认证回调）
+                        // 使用 Spinner 显示进度，避免看起来卡住
+                        let result = Spinner::with("Testing Git remote authentication...", || {
+                            remote.fetch(&[] as &[&str], Some(&mut fetch_options), None)
+                        });
+
+                        match result {
+                            Ok(_) => {
+                                log_success!("✓ Git remote authentication: Success");
+                                log_message!("  Successfully authenticated with remote repository");
+                                true
+                            }
+                            Err(e) => {
+                                log_error!("✗ Git remote authentication: Failed");
+                                log_message!("  Error: {}", e.message());
+
+                                // 提供详细的错误信息和建议
+                                if e.message().contains("authentication")
+                                    || e.message().contains("Auth")
+                                {
+                                    log_break!();
+                                    log_warning!("Authentication failed. Important note:");
+                                    log_message!("  git2 (libssh2) does NOT support macOS Keychain integration.");
+                                    log_message!("  Even if 'ssh -T git@github.com' works, git2 requires SSH agent.");
+                                    log_break!();
+                                    log_warning!("Possible solutions:");
+                                    log_message!("  1. Start SSH agent and add key:");
+                                    log_message!("     eval \"$(ssh-agent -s)\"");
+                                    log_message!("     ssh-add ~/.ssh/id_ed25519");
+                                    log_message!("  2. For macOS, use keychain integration:");
+                                    log_message!(
+                                        "     ssh-add --apple-use-keychain ~/.ssh/id_ed25519"
+                                    );
+                                    log_message!("  3. Verify: ssh-add -l");
+                                    log_message!("  4. Or use HTTPS: Set GITHUB_TOKEN and switch to HTTPS URL");
+                                } else if e.message().contains("timeout")
+                                    || e.message().contains("network")
+                                {
+                                    log_break!();
+                                    log_warning!("Network error. Possible solutions:");
+                                    log_message!("  - Check network connection");
+                                    log_message!("  - Check firewall settings");
+                                    log_message!("  - Try again later");
+                                }
+                                false
+                            }
+                        }
+                    } else {
+                        log_warning!("No remote 'origin' found. Cannot test authentication.");
+                        false
+                    }
+                }
+                Err(e) => {
+                    log_warning!("Failed to open repository: {}", e);
+                    false
+                }
+            }
+        } else {
+            log_warning!("Not in a Git repository. Cannot test remote authentication.");
+            false
+        };
+
+        // 3. GitHub API 认证状态（辅助信息）
+        log_break!();
+        log_info!("3. GitHub API Authentication Status");
+        log_break!();
+
+        let settings = Settings::load();
+        if let Some(account) = settings.github.get_current_account() {
+            log_message!("Current Account: {}", account.name);
+            log_message!("Email: {}", account.email);
+
+            // 测试 GitHub API 认证
+            match GitHub::get_user_info(Some(&account.api_token)) {
+                Ok(user) => {
+                    log_success!("✓ GitHub API authentication: Success");
+                    log_message!(
+                        "  User: {} ({})",
+                        user.login,
+                        user.name.as_deref().unwrap_or("N/A")
+                    );
+                    if let Some(email) = user.email {
+                        log_message!("  Email: {}", email);
+                    }
+                }
+                Err(e) => {
+                    log_warning!("✗ GitHub API authentication: Failed");
+                    log_message!("  Error: {}", e);
+                }
+            }
+        } else {
+            log_warning!("No GitHub account configured");
+            log_message!("  Run 'workflow github add' to add an account");
+        }
+
+        // 4. 总结
+        log_break!();
+        log_info!("4. Summary");
+        log_break!();
+
+        if git_auth_result {
+            log_success!("Git remote authentication: ✓ Working");
+        } else {
+            log_error!("Git remote authentication: ✗ Failed");
+        }
+
+        if let Some(account) = settings.github.get_current_account() {
+            match GitHub::get_user_info(Some(&account.api_token)) {
+                Ok(_) => {
+                    log_success!("GitHub API authentication: ✓ Working");
+                }
+                Err(_) => {
+                    log_warning!("GitHub API authentication: ✗ Failed");
+                }
+            }
+        }
+
+        log_break!();
 
         Ok(())
     }

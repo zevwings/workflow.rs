@@ -164,6 +164,7 @@ fn main() -> Result<()> {
             GitHubSubcommand::Remove => github::GitHubCommand::remove()?,
             GitHubSubcommand::Switch => github::GitHubCommand::switch()?,
             GitHubSubcommand::Update => github::GitHubCommand::update()?,
+            GitHubSubcommand::Show => github::GitHubCommand::show()?,
         },
         // LLM 配置管理命令
         Some(Commands::Llm { subcommand }) => match subcommand {
