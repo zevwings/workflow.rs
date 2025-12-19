@@ -8,8 +8,10 @@
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
 
+use super::auth::GitAuth;
 use super::helpers::open_repo;
 use super::types::RepoType;
+use git2::FetchOptions;
 
 /// Git 仓库管理
 ///
@@ -129,8 +131,19 @@ impl GitRepo {
     pub fn fetch() -> Result<()> {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置获取选项
+        let mut fetch_options = FetchOptions::new();
+        fetch_options.remote_callbacks(callbacks);
+
+        // 获取远程更新
         let refspecs: &[&str] = &[];
-        remote.fetch(refspecs, None, None).wrap_err("Failed to fetch from origin")
+        remote
+            .fetch(refspecs, Some(&mut fetch_options), None)
+            .wrap_err("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用

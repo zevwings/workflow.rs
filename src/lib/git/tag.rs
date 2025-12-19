@@ -8,7 +8,9 @@
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 
+use super::auth::GitAuth;
 use super::helpers::open_repo;
+use git2::PushOptions;
 
 /// Tag 信息
 #[derive(Debug, Clone)]
@@ -299,9 +301,16 @@ impl GitTag {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
         let refspec = format!(":refs/tags/{}", tag_name);
         remote
-            .push(&[&refspec], None)
+            .push(&[&refspec], Some(&mut push_options))
             .wrap_err_with(|| format!("Failed to delete remote tag: {}", tag_name))
     }
 

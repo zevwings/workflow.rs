@@ -1,8 +1,9 @@
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashSet;
 
+use super::auth::GitAuth;
 use super::helpers::open_repo;
-use git2::{build::CheckoutBuilder, BranchType, Signature};
+use git2::{build::CheckoutBuilder, BranchType, FetchOptions, PushOptions, Signature};
 
 const COMMON_DEFAULT_BRANCHES: &[&str] = &["main", "master", "develop", "dev"];
 
@@ -478,9 +479,18 @@ impl GitBranch {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
 
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置获取选项
+        let mut fetch_options = FetchOptions::new();
+        fetch_options.remote_callbacks(callbacks);
+
         // Fetch 远程分支
         let refspecs: &[&str] = &[];
-        remote.fetch(refspecs, None, None).wrap_err("Failed to fetch from origin")?;
+        remote
+            .fetch(refspecs, Some(&mut fetch_options), None)
+            .wrap_err("Failed to fetch from origin")?;
 
         // 获取远程分支的 commit
         let remote_branch_ref = format!("refs/remotes/origin/{}", branch_name);
@@ -579,10 +589,23 @@ impl GitBranch {
     pub fn push(branch_name: &str, set_upstream: bool) -> Result<()> {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
+        // 构建 refspec
         let refspec = format!("refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+
+        // 推送
         remote
-            .push(&[&refspec], None)
+            .push(&[&refspec], Some(&mut push_options))
             .wrap_err_with(|| format!("Failed to push branch: {}", branch_name))?;
+
+        // 如果设置了 upstream，更新本地分支的上游跟踪
         if set_upstream {
             let mut branch = repo
                 .find_branch(branch_name, BranchType::Local)
@@ -591,6 +614,7 @@ impl GitBranch {
                 .set_upstream(Some(&format!("origin/{}", branch_name)))
                 .wrap_err_with(|| format!("Failed to set upstream for branch: {}", branch_name))?;
         }
+
         Ok(())
     }
 
@@ -609,9 +633,20 @@ impl GitBranch {
     pub fn push_force_with_lease(branch_name: &str) -> Result<()> {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
+        // 构建 refspec（带 force-with-lease）
         let refspec = format!("+refs/heads/{}:refs/heads/{}", branch_name, branch_name);
+
+        // 推送
         remote
-            .push(&[&refspec], None)
+            .push(&[&refspec], Some(&mut push_options))
             .wrap_err_with(|| format!("Failed to force push branch: {}", branch_name))
     }
 
@@ -847,9 +882,17 @@ impl GitBranch {
     pub fn delete_remote(branch_name: &str) -> Result<()> {
         let repo = open_repo()?;
         let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+
+        // 获取认证回调
+        let callbacks = GitAuth::get_remote_callbacks();
+
+        // 配置推送选项
+        let mut push_options = PushOptions::new();
+        push_options.remote_callbacks(callbacks);
+
         let refspec = format!(":refs/heads/{}", branch_name);
         remote
-            .push(&[&refspec], None)
+            .push(&[&refspec], Some(&mut push_options))
             .wrap_err_with(|| format!("Failed to delete remote branch: {}", branch_name))
     }
 
