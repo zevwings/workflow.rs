@@ -93,10 +93,17 @@ impl GitAuth {
                 // 优先尝试 SSH agent（最方便，适合开发环境）
                 let username = username_from_url.unwrap_or("git");
                 trace_debug!("Trying SSH agent for user: {}", username);
-                if let Ok(cred) = Cred::ssh_key_from_agent(username) {
-                    trace_debug!("SSH authentication succeeded via SSH agent");
-                    return Ok(cred);
+                match Cred::ssh_key_from_agent(username) {
+                    Ok(cred) => {
+                        trace_debug!("SSH authentication succeeded via SSH agent");
+                        return Ok(cred);
+                    }
+                    Err(e) => {
+                        trace_debug!("SSH agent authentication failed: {} (code: {}, class: {})",
+                            e.message(), e.code() as i32, e.class() as i32);
+                    }
                 }
+
                 trace_debug!("SSH agent authentication failed, trying SSH key file");
 
                 // 回退到缓存的 SSH 密钥文件
@@ -108,8 +115,21 @@ impl GitAuth {
                             return Ok(cred);
                         }
                         Err(e) => {
-                            trace_debug!("SSH key file authentication failed: {}", e);
-                            return Err(e);
+                            trace_debug!("SSH key file authentication failed: {} (code: {}, class: {})",
+                                e.message(), e.code() as i32, e.class() as i32);
+
+                            // 提供详细的错误信息
+                            let error_msg = format!(
+                                "SSH authentication failed: {}\n\n\
+                                Possible solutions:\n\
+                                1. Check if SSH agent is running: ssh-add -l\n\
+                                2. Add your SSH key to agent: ssh-add ~/.ssh/id_ed25519\n\
+                                3. Verify SSH key is added to GitHub/GitLab: ssh -T git@github.com\n\
+                                4. Check SSH key file permissions: chmod 600 ~/.ssh/id_ed25519\n\
+                                5. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
+                                e.message()
+                            );
+                            return Err(git2::Error::from_str(&error_msg));
                         }
                     }
                 }
@@ -118,8 +138,10 @@ impl GitAuth {
                 trace_debug!("All SSH authentication methods failed");
                 return Err(git2::Error::from_str(
                     "No SSH key found. Please ensure:\n\
-                    1. SSH agent is running and has keys added (ssh-add)\n\
-                    2. Or SSH key file exists at ~/.ssh/id_ed25519, ~/.ssh/id_rsa, or ~/.ssh/id_ecdsa",
+                    1. SSH agent is running and has keys added (ssh-add ~/.ssh/id_ed25519)\n\
+                    2. Or SSH key file exists at ~/.ssh/id_ed25519, ~/.ssh/id_rsa, or ~/.ssh/id_ecdsa\n\
+                    3. Verify SSH key is added to your Git provider (GitHub/GitLab)\n\
+                    4. Consider using HTTPS with token instead"
                 ));
             }
 
