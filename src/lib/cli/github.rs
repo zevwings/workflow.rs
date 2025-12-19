@@ -31,4 +31,8 @@ pub enum GitHubSubcommand {
     ///
     /// Update existing GitHub account configuration.
     Update,
+    /// Test and show Git authentication status
+    ///
+    /// Test Git remote authentication (SSH/HTTPS) using git2 and display authentication status.
+    Show,
 }
