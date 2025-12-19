@@ -3,6 +3,7 @@
 //! 提供统一的认证回调机制，支持 SSH 和 HTTPS 两种认证方式。
 //! 使用智能检测和缓存机制，自动选择最合适的认证方式。
 
+use crate::trace_debug;
 use git2::{Cred, CredentialType, RemoteCallbacks};
 use std::path::PathBuf;
 use std::sync::OnceLock;
@@ -75,28 +76,46 @@ impl GitAuth {
         let auth_info = Self::get_cached_auth_info();
 
         callbacks.credentials(move |url, username_from_url, allowed_types| {
+            trace_debug!("Git authentication requested for URL: {}", url);
+            trace_debug!("Username from URL: {:?}", username_from_url);
+            trace_debug!("Allowed credential types: {:?}", allowed_types);
+
             // 1. 检测 URL 类型
             let is_ssh = url.starts_with("git@") || url.starts_with("ssh://");
             let is_https = url.starts_with("https://");
 
+            trace_debug!("URL type detected - SSH: {}, HTTPS: {}", is_ssh, is_https);
+
             // 2. SSH 认证
             if is_ssh && allowed_types.contains(CredentialType::SSH_KEY) {
+                trace_debug!("Attempting SSH authentication...");
+
                 // 优先尝试 SSH agent（最方便，适合开发环境）
-                if let Ok(cred) = Cred::ssh_key_from_agent(username_from_url.unwrap_or("git")) {
+                let username = username_from_url.unwrap_or("git");
+                trace_debug!("Trying SSH agent for user: {}", username);
+                if let Ok(cred) = Cred::ssh_key_from_agent(username) {
+                    trace_debug!("SSH authentication succeeded via SSH agent");
                     return Ok(cred);
                 }
+                trace_debug!("SSH agent authentication failed, trying SSH key file");
 
                 // 回退到缓存的 SSH 密钥文件
                 if let Some(ref key_path) = auth_info.ssh_key_path {
-                    return Cred::ssh_key(
-                        username_from_url.unwrap_or("git"),
-                        None,
-                        key_path,
-                        None,
-                    );
+                    trace_debug!("Using SSH key file: {:?}", key_path);
+                    match Cred::ssh_key(username, None, key_path, None) {
+                        Ok(cred) => {
+                            trace_debug!("SSH authentication succeeded via key file");
+                            return Ok(cred);
+                        }
+                        Err(e) => {
+                            trace_debug!("SSH key file authentication failed: {}", e);
+                            return Err(e);
+                        }
+                    }
                 }
 
                 // 所有 SSH 认证方式都失败
+                trace_debug!("All SSH authentication methods failed");
                 return Err(git2::Error::from_str(
                     "No SSH key found. Please ensure:\n\
                     1. SSH agent is running and has keys added (ssh-add)\n\
@@ -106,6 +125,8 @@ impl GitAuth {
 
             // 3. HTTPS 认证
             if is_https && allowed_types.contains(CredentialType::USER_PASS_PLAINTEXT) {
+                trace_debug!("Attempting HTTPS authentication...");
+
                 let username = auth_info
                     .https_username
                     .as_deref()
@@ -114,12 +135,25 @@ impl GitAuth {
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| "git".to_string());
 
+                trace_debug!("Using username: {}", username);
+
                 // 使用缓存的 HTTPS token
                 if let Some(ref token) = auth_info.https_token {
-                    return Cred::userpass_plaintext(&username, token);
+                    trace_debug!("HTTPS token found, attempting authentication");
+                    match Cred::userpass_plaintext(&username, token) {
+                        Ok(cred) => {
+                            trace_debug!("HTTPS authentication succeeded");
+                            return Ok(cred);
+                        }
+                        Err(e) => {
+                            trace_debug!("HTTPS authentication failed: {}", e);
+                            return Err(e);
+                        }
+                    }
                 }
 
                 // HTTPS 认证失败
+                trace_debug!("No HTTPS token found in environment variables");
                 return Err(git2::Error::from_str(
                     "No HTTPS credentials found. Please set one of:\n\
                     1. GITHUB_TOKEN environment variable\n\
@@ -128,6 +162,7 @@ impl GitAuth {
             }
 
             // 不支持的认证类型
+            trace_debug!("Unsupported credential type for URL: {}", url);
             Err(git2::Error::from_str(&format!(
                 "Unsupported credential type for URL: {}. \
                 Supported types: SSH_KEY, USER_PASS_PLAINTEXT",
@@ -150,10 +185,27 @@ impl GitAuth {
 
         AUTH_INFO.get_or_init(|| {
             // 初始化时读取一次认证信息
+            trace_debug!("Initializing Git authentication cache...");
+
             let ssh_key_path = Self::find_ssh_key();
+            if let Some(ref key_path) = ssh_key_path {
+                trace_debug!("Found SSH key: {:?}", key_path);
+            } else {
+                trace_debug!("No SSH key found");
+            }
+
             let https_token =
                 std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GIT_TOKEN")).ok();
+            if https_token.is_some() {
+                trace_debug!("HTTPS token found in environment");
+            } else {
+                trace_debug!("No HTTPS token found in environment");
+            }
+
             let https_username = std::env::var("GIT_USERNAME").ok();
+            if let Some(ref username) = https_username {
+                trace_debug!("HTTPS username found: {}", username);
+            }
 
             CachedAuthInfo {
                 ssh_key_path,
