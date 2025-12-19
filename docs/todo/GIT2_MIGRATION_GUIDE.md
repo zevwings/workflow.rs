@@ -1001,6 +1001,117 @@ pub fn cherry_pick_abort() -> Result<()> {
 }
 ```
 
+## 阶段 4：认证模块实现 ✅ **已完成**
+
+### 4.1 Git 远程操作认证
+
+**目标：** 实现统一的认证回调机制，支持 SSH 和 HTTPS 两种认证方式
+
+**状态：** ✅ **已完成**
+
+#### 4.1.1 创建认证模块
+
+**文件：** `src/lib/git/auth.rs`
+
+**功能：**
+- ✅ 实现 `GitAuth::get_remote_callbacks()` - 获取认证回调
+- ✅ 实现 SSH 认证（SSH agent + SSH key 文件，支持 passphrase）
+- ✅ 实现 HTTPS 认证（环境变量 token）
+- ✅ 实现智能检测和缓存机制
+- ✅ 实现 `GitAuth::diagnose()` - 认证诊断功能
+
+**关键实现：**
+
+```rust
+// SSH 认证优先级：
+// 1. SSH agent（如果可用）
+// 2. SSH key 文件（直接从 ~/.ssh 读取，支持 passphrase）
+
+// HTTPS 认证优先级：
+// 1. 环境变量 GITHUB_TOKEN 或 GIT_TOKEN
+// 2. 环境变量 GIT_USERNAME（如果设置了）
+```
+
+#### 4.1.2 在远程操作中集成认证
+
+**已集成的操作：**
+- ✅ `GitBranch::push()` - 使用 `PushOptions` + 认证回调
+- ✅ `GitBranch::push_force_with_lease()` - 使用 `PushOptions` + 认证回调
+- ✅ `GitBranch::pull()` - 使用 `FetchOptions` + 认证回调
+- ✅ `GitBranch::delete_remote()` - 使用 `PushOptions` + 认证回调
+- ✅ `GitRepo::fetch()` - 使用 `FetchOptions` + 认证回调
+- ✅ `GitTag::delete_remote()` - 使用 `PushOptions` + 认证回调
+
+**使用示例：**
+
+```rust
+// 在 push 操作中使用
+let callbacks = GitAuth::get_remote_callbacks();
+let mut push_options = PushOptions::new();
+push_options.remote_callbacks(callbacks);
+remote.push(&[&refspec], Some(&mut push_options))?;
+
+// 在 fetch 操作中使用
+let callbacks = GitAuth::get_remote_callbacks();
+let mut fetch_options = FetchOptions::new();
+fetch_options.remote_callbacks(callbacks);
+remote.fetch(&[&refspec], Some(&mut fetch_options), None)?;
+```
+
+#### 4.1.3 认证测试命令
+
+**命令：** `workflow github show`
+
+**功能：**
+- ✅ 显示 Git 认证配置诊断
+- ✅ 实际测试 Git 远程认证（通过 fetch 操作）
+- ✅ 显示 GitHub API 认证状态
+- ✅ 提供详细的错误信息和修复建议
+
+**使用方式：**
+
+```bash
+# 测试认证状态
+workflow github show
+```
+
+#### 4.1.4 认证特性
+
+**SSH 认证：**
+- ✅ 支持 SSH agent（优先）
+- ✅ 支持直接从 `~/.ssh` 读取密钥文件
+- ✅ 自动查找对应的 `.pub` 公钥文件
+- ✅ 支持从环境变量 `SSH_PASSPHRASE` 读取 passphrase
+- ✅ 智能检测 URL 类型（SSH/HTTPS）
+
+**HTTPS 认证：**
+- ✅ 支持环境变量 `GITHUB_TOKEN` 或 `GIT_TOKEN`
+- ✅ 支持环境变量 `GIT_USERNAME`（可选）
+- ✅ 自动从 URL 提取用户名
+
+**缓存机制：**
+- ✅ 使用 `OnceLock` 缓存认证信息，避免重复查找
+- ✅ 在程序运行期间只初始化一次
+
+**错误处理：**
+- ✅ 详细的错误信息和诊断
+- ✅ 针对性的修复建议
+- ✅ 区分认证错误和网络错误
+
+#### 4.1.5 已知限制
+
+**git2 (libssh2) 的限制：**
+- ⚠️ 不支持 macOS Keychain 集成（与系统 SSH 不同）
+- ⚠️ 需要 SSH agent 运行才能使用 SSH agent 认证
+- ⚠️ 如果 SSH key 有 passphrase，需要：
+  - 通过环境变量 `SSH_PASSPHRASE` 提供，或
+  - 使用 SSH agent（推荐）
+
+**解决方案：**
+- 启动 SSH agent 并添加密钥：`ssh-add ~/.ssh/id_ed25519`
+- 对于 macOS，使用 keychain 集成：`ssh-add --apple-use-keychain ~/.ssh/id_ed25519`
+- 或者使用 HTTPS 认证：设置 `GITHUB_TOKEN` 环境变量
+
 ## 常见问题和解决方案
 
 ### 1. 错误处理
@@ -1333,6 +1444,15 @@ fn test_performance_improvement() {
 1. 运行所有测试确保通过
 2. 性能测试和优化
 3. 更新文档
+
+### 步骤 6：认证模块实现 ✅ **已完成**
+
+1. ✅ 创建 `src/lib/git/auth.rs` 认证模块
+2. ✅ 实现 SSH 和 HTTPS 认证回调
+3. ✅ 在所有远程操作中集成认证回调
+4. ✅ 添加 `workflow github show` 命令用于测试认证
+5. ✅ 添加认证模块单元测试和集成测试
+6. ✅ 改进错误处理和诊断信息
 
 ## 注意事项
 

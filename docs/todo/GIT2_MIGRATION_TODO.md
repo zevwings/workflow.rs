@@ -47,11 +47,11 @@
 - [x] 迁移 `GitBranch::is_branch_exists()` - 使用 `repo.find_branch()` 检查本地和远程
 - [x] 迁移 `GitBranch::checkout_branch()` - 使用 `repo.branch()` + `repo.checkout_tree()` + `repo.set_head()`
 - [x] 迁移 `GitBranch::get_default_branch()` - 使用 `repo.find_reference()` + `remote.fetch()` + `repo.branches()`
-- [x] 迁移 `GitBranch::pull()` - 使用 `remote.fetch()` + `repo.merge()`
-- [x] 迁移 `GitBranch::push()` - 使用 `remote.push()`
-- [x] 迁移 `GitBranch::push_force_with_lease()` - 使用 `remote.push()` 带 force-with-lease 选项
+- [x] 迁移 `GitBranch::pull()` - 使用 `remote.fetch()` + `repo.merge()` + 认证回调 ✅
+- [x] 迁移 `GitBranch::push()` - 使用 `remote.push()` + 认证回调 ✅
+- [x] 迁移 `GitBranch::push_force_with_lease()` - 使用 `remote.push()` 带 force-with-lease 选项 + 认证回调 ✅
 - [x] 迁移 `GitBranch::delete()` - 使用 `repo.find_branch()` + `branch.delete()`
-- [x] 迁移 `GitBranch::delete_remote()` - 使用 `remote.push()` 删除远程引用
+- [x] 迁移 `GitBranch::delete_remote()` - 使用 `remote.push()` 删除远程引用 + 认证回调 ✅
 - [x] 迁移 `GitBranch::rename()` - 使用 `repo.find_branch()` + `branch.rename()`
 - [x] 迁移 `GitBranch::merge_branch()` - 使用 `repo.merge()`
 - [x] 迁移 `GitBranch::is_branch_merged()` - 使用 `repo.merge_base()` 检查合并状态
@@ -75,7 +75,7 @@
 - [x] 迁移 `GitTag::list_remote_tags()` - 使用 `repo.find_remote()` + `remote.fetch()` + `remote.list()`
 - [x] 迁移 `GitTag::is_tag_exists()` - 使用 `repo.find_reference()` + `remote.list()`
 - [x] 迁移 `GitTag::delete_local()` - 使用 `repo.tag_delete()`
-- [x] 迁移 `GitTag::delete_remote()` - 使用 `remote.push()`
+- [x] 迁移 `GitTag::delete_remote()` - 使用 `remote.push()` + 认证回调 ✅
 - [x] 迁移 `GitTag::list_all_tags()` - 依赖其他已迁移的方法
 - [x] 迁移 `GitTag::get_tag_info()` - 依赖其他已迁移的方法
 - [ ] 更新相关测试用例
@@ -93,7 +93,7 @@
 - [x] 迁移 `GitRepo::is_git_repo()` - 使用 `Repository::open()` 尝试打开仓库
 - [x] 迁移 `GitRepo::get_remote_url()` - 使用 `repo.find_remote("origin")?.url()`
 - [x] 迁移 `GitRepo::get_git_dir()` - 使用 `repo.path()` 获取 Git 目录路径
-- [x] 迁移 `GitRepo::fetch()` - 使用 `repo.find_remote("origin")?.fetch()`
+- [x] 迁移 `GitRepo::fetch()` - 使用 `repo.find_remote("origin")?.fetch()` + 认证回调 ✅
 - [x] 迁移 `GitRepo::prune_remote()` - 使用 `remote.prune()` 或手动清理引用
 - [x] 保留 `GitRepo::detect_repo_type()` - 仅依赖 `get_remote_url()`，无需修改
 - [x] 保留 `GitRepo::extract_repo_name()` 和 `extract_repo_name_from_url()` - 纯字符串解析，无需修改
@@ -117,6 +117,34 @@
 - [x] 迁移 `GitCherryPick::cherry_pick_continue()` - 处理冲突后继续提交
 - [x] 迁移 `GitCherryPick::cherry_pick_abort()` - 使用 `repo.cleanup_state()` 或 `repo.reset()` 重置状态
 - [x] 迁移 `GitCherryPick::is_cherry_pick_in_progress()` - 使用 `repo.state()` 或检查 `CHERRY_PICK_HEAD` 文件
+- [ ] 更新相关测试用例
+
+#### 8. 认证模块 (`src/lib/git/auth.rs`)
+- [x] **优先级：高** - Git 远程操作认证 ✅ **已完成**
+- [x] 创建 `GitAuth` 结构体和认证回调机制
+- [x] 实现 SSH 认证（SSH agent + SSH key 文件）
+  - [x] 支持 SSH agent 认证（优先）
+  - [x] 支持直接从 `~/.ssh` 读取密钥文件
+  - [x] 自动查找对应的 `.pub` 公钥文件
+  - [x] 支持从环境变量 `SSH_PASSPHRASE` 读取 passphrase
+- [x] 实现 HTTPS 认证（环境变量 token）
+  - [x] 支持 `GITHUB_TOKEN` 或 `GIT_TOKEN` 环境变量
+  - [x] 支持 `GIT_USERNAME` 环境变量（可选）
+  - [x] 自动从 URL 提取用户名
+- [x] 实现智能检测和缓存机制
+  - [x] 使用 `OnceLock` 缓存认证信息
+  - [x] 根据 URL 类型自动选择认证方式
+- [x] 实现认证诊断功能 `GitAuth::diagnose()`
+- [x] 在所有远程操作中集成认证回调
+  - [x] `GitBranch::push()` - 使用 `PushOptions` + 认证回调
+  - [x] `GitBranch::push_force_with_lease()` - 使用 `PushOptions` + 认证回调
+  - [x] `GitBranch::pull()` - 使用 `FetchOptions` + 认证回调
+  - [x] `GitBranch::delete_remote()` - 使用 `PushOptions` + 认证回调
+  - [x] `GitRepo::fetch()` - 使用 `FetchOptions` + 认证回调
+  - [x] `GitTag::delete_remote()` - 使用 `PushOptions` + 认证回调
+- [x] 添加 `workflow github show` 命令用于测试认证
+- [x] 添加认证模块单元测试和集成测试
+- [x] 改进错误处理和诊断信息
 - [ ] 更新相关测试用例
 
 ### ⚠️ 需要特殊处理的操作（约 5%）
@@ -179,6 +207,25 @@
 - [ ] 更新文档
 - [ ] 代码审查
 
+### 阶段 6：认证模块实现 ✅ **已完成**
+- [x] **优先级：高** - Git 远程操作认证 ✅ **已完成**
+- [x] 创建 `src/lib/git/auth.rs` 认证模块 ✅
+  - [x] 实现 `GitAuth::get_remote_callbacks()` - 获取认证回调
+  - [x] 实现 SSH 认证（SSH agent + SSH key 文件）
+  - [x] 实现 HTTPS 认证（环境变量 token）
+  - [x] 实现智能检测和缓存机制
+  - [x] 实现 `GitAuth::diagnose()` - 认证诊断功能
+- [x] 在远程操作中使用认证回调 ✅
+  - [x] `GitBranch::push()` - 使用认证回调
+  - [x] `GitBranch::push_force_with_lease()` - 使用认证回调
+  - [x] `GitBranch::pull()` - 使用认证回调
+  - [x] `GitBranch::delete_remote()` - 使用认证回调
+  - [x] `GitRepo::fetch()` - 使用认证回调
+  - [x] `GitTag::delete_remote()` - 使用认证回调
+- [x] 添加 `workflow github show` 命令用于测试认证 ✅
+- [x] 添加认证模块单元测试 ✅
+- [x] 改进错误处理和诊断信息 ✅
+
 ## 迁移进度统计
 
 ### 最新更新
@@ -215,7 +262,8 @@
 | `stash.rs` | ~7 | 7 | 0 | ~0 | 100% |
 | `cherry_pick.rs` | ~5 | 5 | 0 | ~0 | 100% |
 | `pre_commit.rs` | ~3 | 2 | 0 | ~1 | 67% |
-| **总计** | **~82** | **82** | **0** | **~5** | **100%** |
+| `auth.rs` | ~1 | 1 | 0 | ~0 | 100% ✅ **新增** |
+| **总计** | **~83** | **83** | **0** | **~5** | **100%** |
 
 ## 风险评估与缓解
 
