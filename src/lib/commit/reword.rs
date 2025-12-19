@@ -6,17 +6,9 @@
 //! - 历史 commit reword 执行
 //! - Rebase 相关操作
 
-use crate::base::constants::errors::file_operations;
-use crate::base::util::file::FileWriter;
 use crate::git::{CommitInfo, GitBranch, GitCommit, GitStash};
 use color_eyre::{eyre::WrapErr, Result};
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
-// Git 环境变量常量
-const GIT_SEQUENCE_EDITOR: &str = "GIT_SEQUENCE_EDITOR";
-const GIT_EDITOR: &str = "GIT_EDITOR";
+use git2::Repository;
 
 /// Reword 预览信息
 #[derive(Debug, Clone)]
@@ -53,15 +45,6 @@ pub struct RewordHistoryResult {
     pub has_conflicts: bool,
     /// 是否进行了 stash
     pub was_stashed: bool,
-}
-
-/// Rebase 编辑器配置
-#[derive(Debug, Clone)]
-struct RebaseEditorConfig {
-    /// Sequence editor 脚本路径
-    sequence_editor_script: PathBuf,
-    /// Message editor 脚本路径
-    message_editor_script: PathBuf,
 }
 
 /// Commit Reword 业务逻辑
@@ -196,149 +179,77 @@ impl CommitReword {
         }
     }
 
-    /// 创建 rebase todo 文件内容
-    ///
-    /// 将目标 commit 标记为指定的操作（如 `reword`），其他 commits 保持 `pick`。
-    ///
-    /// # 参数
-    ///
-    /// * `commits` - Commits 列表
-    /// * `target_commit_sha` - 目标 commit SHA
-    /// * `action` - 对目标 commit 执行的操作（如 "reword", "pick" 等）
-    ///
-    /// # 返回
-    ///
-    /// 返回 rebase todo 文件内容。
-    fn create_rebase_todo(
-        commits: &[CommitInfo],
-        target_commit_sha: &str,
-        action: &str,
-    ) -> Result<String> {
-        let mut todo_lines = Vec::new();
-
-        for commit in commits {
-            let commit_action = if commit.sha == target_commit_sha {
-                action
-            } else {
-                "pick"
-            };
-            // rebase todo 格式: action sha message
-            // 注意：消息可能包含特殊字符，需要适当处理
-            let message = commit.message.replace('\n', " ");
-            todo_lines.push(format!(
-                "{} {} {}",
-                commit_action,
-                &commit.sha[..12],
-                message
-            ));
-        }
-
-        Ok(todo_lines.join("\n"))
-    }
-
-    /// 创建 rebase 编辑器脚本
-    ///
-    /// # 参数
-    ///
-    /// * `todo_file` - Rebase todo 文件路径
-    /// * `message_file` - Commit 消息文件路径
-    ///
-    /// # 返回
-    ///
-    /// 返回编辑器配置。
-    fn create_rebase_editor_scripts(
-        todo_file: &Path,
-        message_file: &Path,
-    ) -> Result<RebaseEditorConfig> {
-        let temp_dir = std::env::temp_dir();
-
-        // 创建脚本来自动编辑 rebase todo 文件
-        // Git 会将 todo 文件路径作为第一个参数 ($1) 传递给编辑器
-        let script_content = format!(
-            r#"#!/bin/sh
-# 自动编辑 rebase todo 文件
-cp "{}" "$1"
-"#,
-            todo_file.to_string_lossy().replace('\\', "/")
-        );
-
-        let sequence_editor_script =
-            temp_dir.join(format!("workflow-sequence-editor-{}", std::process::id()));
-        FileWriter::new(&sequence_editor_script)
-            .write_str(&script_content)
-            .wrap_err_with(|| file_operations::WRITE_SEQUENCE_EDITOR_SCRIPT_FAILED)?;
-
-        // 设置脚本可执行权限（仅 Unix 系统）
-        #[cfg(unix)]
-        {
-            FileWriter::new(&sequence_editor_script)
-                .set_permissions(0o755)
-                .wrap_err_with(|| file_operations::WRITE_SEQUENCE_EDITOR_SCRIPT_FAILED)?;
-        }
-
-        // 创建脚本来自动提供新消息
-        // Git 会将 commit message 文件路径作为第一个参数 ($1) 传递给编辑器
-        let message_script_content = format!(
-            r#"#!/bin/sh
-# 自动提供新 commit 消息
-cp "{}" "$1"
-"#,
-            message_file.to_string_lossy().replace('\\', "/")
-        );
-
-        let message_editor_script =
-            temp_dir.join(format!("workflow-message-editor-{}", std::process::id()));
-        FileWriter::new(&message_editor_script)
-            .write_str(&message_script_content)
-            .wrap_err_with(|| file_operations::WRITE_MESSAGE_EDITOR_SCRIPT_FAILED)?;
-
-        // 设置脚本可执行权限（仅 Unix 系统）
-        #[cfg(unix)]
-        {
-            FileWriter::new(&message_editor_script)
-                .set_permissions(0o755)
-                .wrap_err_with(|| file_operations::WRITE_MESSAGE_EDITOR_SCRIPT_FAILED)?;
-        }
-
-        Ok(RebaseEditorConfig {
-            sequence_editor_script,
-            message_editor_script,
-        })
-    }
-
-    /// 执行 rebase，使用自定义编辑器脚本
+    /// 使用 git2 执行 reword rebase
     ///
     /// # 参数
     ///
     /// * `parent_sha` - 父 commit SHA（rebase 起点）
-    /// * `config` - Rebase 编辑器配置
+    /// * `commits` - 所有 commits 列表（从旧到新）
+    /// * `target_commit_sha` - 要修改消息的 commit SHA
+    /// * `new_message` - 新的提交消息
     ///
     /// # 返回
     ///
     /// 如果成功，返回 `Ok(())`；如果失败，返回错误。
-    fn execute_rebase_with_editors(parent_sha: &str, config: &RebaseEditorConfig) -> Result<()> {
-        // 执行 rebase
-        // GIT_SEQUENCE_EDITOR: 用于编辑 rebase todo 文件
-        // GIT_EDITOR: 用于编辑 commit 消息（当遇到 reword 时）
-        let rebase_result = Command::new("git")
-            .arg("rebase")
-            .arg("-i")
-            .arg(parent_sha)
-            .env(GIT_SEQUENCE_EDITOR, &config.sequence_editor_script)
-            .env(GIT_EDITOR, &config.message_editor_script)
-            .output()
-            .wrap_err_with(|| "Failed to execute git rebase")?;
+    fn execute_reword_rebase(
+        parent_sha: &str,
+        _commits: &[CommitInfo],
+        target_commit_sha: &str,
+        new_message: &str,
+    ) -> Result<()> {
+        let repo = Repository::open(".").wrap_err("Failed to open repository")?;
 
-        if !rebase_result.status.success() {
-            let stderr = String::from_utf8_lossy(&rebase_result.stderr);
-            let stdout = String::from_utf8_lossy(&rebase_result.stdout);
-            let error_msg = if !stderr.is_empty() {
-                stderr.to_string()
+        // 1. 获取父 commit
+        let parent_oid = repo
+            .revparse_single(parent_sha)
+            .wrap_err_with(|| format!("Failed to parse parent commit: {}", parent_sha))?
+            .id();
+        let parent_annotated = repo
+            .find_annotated_commit(parent_oid)
+            .wrap_err("Failed to create annotated commit for parent")?;
+
+        // 2. 获取当前 HEAD
+        let head = repo.head().wrap_err("Failed to get HEAD")?;
+        let head_commit = head.peel_to_commit().wrap_err("Failed to get HEAD commit")?;
+        let head_annotated = repo
+            .find_annotated_commit(head_commit.id())
+            .wrap_err("Failed to create annotated commit for HEAD")?;
+
+        // 3. 初始化 rebase
+        let mut rebase_opts = git2::RebaseOptions::new();
+        rebase_opts.inmemory(false); // 需要写入到仓库
+        let mut rebase = repo
+            .rebase(
+                Some(&head_annotated),
+                Some(&parent_annotated),
+                None,
+                Some(&mut rebase_opts),
+            )
+            .wrap_err("Failed to initialize rebase")?;
+
+        // 4. 处理每个 rebase 操作
+        while let Some(op) = rebase.next() {
+            let op = op?;
+            let commit_oid = op.id();
+            let commit_sha = commit_oid.to_string();
+            let commit = repo.find_commit(commit_oid)?;
+            let author = commit.author();
+
+            if commit_sha == target_commit_sha {
+                // 这是要 reword 的 commit，使用新消息
+                rebase
+                    .commit(Some(&author), &author, Some(new_message))
+                    .wrap_err("Failed to commit reword operation")?;
             } else {
-                stdout.to_string()
-            };
-            color_eyre::eyre::bail!("Rebase failed: {}", error_msg);
+                // 其他 commit，保持原消息
+                rebase
+                    .commit(Some(&author), &author, None)
+                    .wrap_err("Failed to commit rebase operation")?;
+            }
         }
+
+        // 5. 完成 rebase
+        rebase.finish(None).wrap_err("Failed to finish rebase")?;
 
         Ok(())
     }
@@ -387,33 +298,13 @@ cp "{}" "$1"
             color_eyre::eyre::bail!("No commits found between parent and HEAD");
         }
 
-        // 步骤4: 创建 rebase todo 文件
-        let todo_content = Self::create_rebase_todo(&commits, &options.commit_sha, "reword")?;
-
-        // 步骤5: 创建临时文件用于 rebase todo
-        let temp_dir = std::env::temp_dir();
-        let todo_file = temp_dir.join(format!("workflow-rebase-todo-{}", std::process::id()));
-        FileWriter::new(&todo_file)
-            .write_str(&todo_content)
-            .wrap_err_with(|| "Failed to write rebase todo file")?;
-
-        // 步骤6: 创建临时文件用于新消息
-        let message_file = temp_dir.join(format!("workflow-commit-message-{}", std::process::id()));
-        FileWriter::new(&message_file)
-            .write_str(&options.new_message)
-            .wrap_err_with(|| "Failed to write commit message file")?;
-
-        // 步骤7: 创建编辑器脚本
-        let editor_config = Self::create_rebase_editor_scripts(&todo_file, &message_file)?;
-
-        // 步骤8: 执行 rebase
-        let rebase_result = Self::execute_rebase_with_editors(&parent_sha, &editor_config);
-
-        // 清理临时文件
-        let _ = fs::remove_file(&todo_file);
-        let _ = fs::remove_file(&message_file);
-        let _ = fs::remove_file(&editor_config.sequence_editor_script);
-        let _ = fs::remove_file(&editor_config.message_editor_script);
+        // 步骤4: 使用 git2 执行 reword rebase
+        let rebase_result = Self::execute_reword_rebase(
+            &parent_sha,
+            &commits,
+            &options.commit_sha,
+            &options.new_message,
+        );
 
         // 步骤9: 处理 rebase 结果
         match rebase_result {

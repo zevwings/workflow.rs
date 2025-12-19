@@ -8,8 +8,8 @@
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use regex::Regex;
 
+use super::helpers::open_repo;
 use super::types::RepoType;
-use super::GitCommand;
 
 /// Git 仓库管理
 ///
@@ -23,13 +23,13 @@ pub struct GitRepo;
 impl GitRepo {
     /// 检查是否在 Git 仓库中
     ///
-    /// 使用 `git rev-parse --git-dir` 检查当前目录是否为 Git 仓库。
+    /// 使用 git2 尝试打开仓库来检查当前目录是否为 Git 仓库。
     ///
     /// # 返回
     ///
     /// 返回 `true` 如果当前目录是 Git 仓库，否则返回 `false`。
     pub fn is_git_repo() -> bool {
-        GitCommand::new(["rev-parse", "--git-dir", "--quiet"]).quiet_success()
+        git2::Repository::open(".").is_ok()
     }
 
     /// 检测远程仓库类型（GitHub）
@@ -81,63 +81,69 @@ impl GitRepo {
 
     /// 获取远程仓库 URL
     ///
-    /// 使用 `git remote get-url origin` 获取远程仓库的 URL。
+    /// 使用 git2 获取远程仓库的 URL。
     ///
     /// # 返回
     ///
-    /// 返回远程仓库的 URL 字符串（去除首尾空白）。
+    /// 返回远程仓库的 URL 字符串。
     ///
     /// # 错误
     ///
     /// 如果无法获取远程 URL，返回相应的错误信息。
     #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
-        GitCommand::new(["remote", "get-url", "origin"])
-            .read()
-            .wrap_err("Failed to get remote URL")
+        let repo = open_repo()?;
+        let remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        remote
+            .url()
+            .ok_or_else(|| eyre!("Remote 'origin' has no URL"))
+            .map(|s| s.to_string())
     }
 
     /// 获取 Git 目录路径
     ///
-    /// 使用 `git rev-parse --git-dir` 获取 `.git` 目录的路径。
+    /// 使用 git2 获取 `.git` 目录的路径。
     ///
     /// # 返回
     ///
-    /// 返回 `.git` 目录的路径字符串（去除首尾空白）。
+    /// 返回 `.git` 目录的路径字符串。
     ///
     /// # 错误
     ///
-    /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
+    /// 如果不在 Git 仓库中或打开失败，返回相应的错误信息。
     pub(crate) fn get_git_dir() -> Result<String> {
-        GitCommand::new(["rev-parse", "--git-dir"])
-            .read()
-            .wrap_err("Failed to get git directory")
+        let repo = open_repo()?;
+        repo.path()
+            .to_str()
+            .ok_or_else(|| eyre!("Git directory path is not valid UTF-8"))
+            .map(|s: &str| s.to_string())
     }
 
     /// 从远程仓库获取更新
     ///
-    /// 使用 `git fetch origin` 从远程仓库获取最新的分支和提交信息。
+    /// 使用 git2 从远程仓库获取最新的分支和提交信息。
     ///
     /// # 错误
     ///
     /// 如果获取失败，返回相应的错误信息。
     pub fn fetch() -> Result<()> {
-        GitCommand::new(["fetch", "origin"])
-            .run()
-            .wrap_err("Failed to fetch from origin")
+        let repo = open_repo()?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        let refspecs: &[&str] = &[];
+        remote.fetch(refspecs, None, None).wrap_err("Failed to fetch from origin")
     }
 
     /// 清理远程分支引用
     ///
-    /// 使用 `git remote prune origin` 移除已删除的远程分支引用。
+    /// 使用 git2 移除已删除的远程分支引用。
     ///
     /// # 错误
     ///
     /// 如果清理失败，返回相应的错误信息。
     pub fn prune_remote() -> Result<()> {
-        GitCommand::new(["remote", "prune", "origin"])
-            .run()
-            .wrap_err("Failed to prune remote references")
+        let repo = open_repo()?;
+        let mut remote = repo.find_remote("origin").wrap_err("Failed to find remote 'origin'")?;
+        remote.prune(None).wrap_err("Failed to prune remote references")
     }
 
     /// 从 Git remote URL 提取仓库名（owner/repo 格式）

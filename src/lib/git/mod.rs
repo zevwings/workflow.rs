@@ -24,9 +24,9 @@
 
 mod branch;
 mod cherry_pick;
-mod command;
 mod commit;
 mod config;
+mod helpers;
 mod pre_commit;
 mod repo;
 mod stash;
@@ -37,7 +37,6 @@ mod types;
 // 重新导出所有公共 API
 pub use branch::{GitBranch, MergeStrategy};
 pub use cherry_pick::GitCherryPick;
-pub(crate) use command::GitCommand;
 pub use commit::{CommitInfo, GitCommit, WorktreeStatus};
 pub use config::GitConfig;
 pub use pre_commit::GitPreCommit;
