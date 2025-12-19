@@ -14,6 +14,10 @@ use std::sync::OnceLock;
 struct CachedAuthInfo {
     /// SSH 密钥文件路径（如果找到）
     ssh_key_path: Option<PathBuf>,
+    /// SSH 公钥文件路径（如果找到）
+    ssh_pubkey_path: Option<PathBuf>,
+    /// SSH 密钥 passphrase（从环境变量读取，可选）
+    ssh_passphrase: Option<String>,
     /// HTTPS token（从环境变量读取）
     https_token: Option<String>,
     /// HTTPS 用户名（从环境变量读取）
@@ -109,7 +113,16 @@ impl GitAuth {
                 // 回退到缓存的 SSH 密钥文件
                 if let Some(ref key_path) = auth_info.ssh_key_path {
                     trace_debug!("Using SSH key file: {:?}", key_path);
-                    match Cred::ssh_key(username, None, key_path, None) {
+
+                    // 尝试使用公钥文件（如果存在）
+                    let pubkey_path = auth_info.ssh_pubkey_path.as_deref();
+                    let passphrase = auth_info.ssh_passphrase.as_deref();
+
+                    trace_debug!("Public key path: {:?}, Has passphrase: {}",
+                        pubkey_path, passphrase.is_some());
+
+                    // 尝试使用密钥文件（带或不带 passphrase）
+                    match Cred::ssh_key(username, pubkey_path, key_path, passphrase) {
                         Ok(cred) => {
                             trace_debug!("SSH authentication succeeded via key file");
                             return Ok(cred);
@@ -118,19 +131,43 @@ impl GitAuth {
                             trace_debug!("SSH key file authentication failed: {} (code: {}, class: {})",
                                 e.message(), e.code() as i32, e.class() as i32);
 
+                            // 如果失败且没有提供 passphrase，可能是需要 passphrase
+                            let needs_passphrase = e.message().contains("passphrase")
+                                || e.message().contains("decrypt")
+                                || e.message().contains("wrong passphrase");
+
+                            if needs_passphrase && passphrase.is_none() {
+                                let error_msg = format!(
+                                    "SSH key requires passphrase, but none provided.\n\n\
+                                    The SSH key file appears to be encrypted with a passphrase.\n\
+                                    git2 (libssh2) cannot prompt for passphrase interactively.\n\n\
+                                    Possible solutions:\n\
+                                    1. Set SSH_PASSPHRASE environment variable:\n\
+                                       export SSH_PASSPHRASE=your_passphrase\n\
+                                    2. Start SSH agent and add key (recommended):\n\
+                                       eval \"$(ssh-agent -s)\"\n\
+                                       ssh-add ~/.ssh/id_ed25519\n\
+                                    3. For macOS, use keychain integration:\n\
+                                       ssh-add --apple-use-keychain ~/.ssh/id_ed25519\n\
+                                    4. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
+                                );
+                                return Err(git2::Error::from_str(&error_msg));
+                            }
+
                             // 提供详细的错误信息
                             let error_msg = format!(
                                 "SSH authentication failed: {}\n\n\
                                 Note: git2 (libssh2) does not support macOS Keychain integration.\n\
-                                Even if system SSH works (ssh -T git@github.com), git2 requires SSH agent.\n\n\
+                                Even if system SSH works (ssh -T git@github.com), git2 may need SSH agent.\n\n\
                                 Possible solutions:\n\
                                 1. Start SSH agent and add key:\n\
                                    eval \"$(ssh-agent -s)\"\n\
                                    ssh-add ~/.ssh/id_ed25519\n\
                                 2. For macOS, use keychain integration:\n\
                                    ssh-add --apple-use-keychain ~/.ssh/id_ed25519\n\
-                                3. Verify SSH agent has keys: ssh-add -l\n\
-                                4. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
+                                3. If key has passphrase, set SSH_PASSPHRASE environment variable\n\
+                                4. Verify SSH agent has keys: ssh-add -l\n\
+                                5. Consider using HTTPS with token: git remote set-url origin https://github.com/owner/repo.git",
                                 e.message()
                             );
                             return Err(git2::Error::from_str(&error_msg));
@@ -214,10 +251,28 @@ impl GitAuth {
             trace_debug!("Initializing Git authentication cache...");
 
             let ssh_key_path = Self::find_ssh_key();
+            let ssh_pubkey_path = ssh_key_path.as_ref().and_then(|key_path| {
+                // 尝试查找对应的 .pub 文件
+                let pub_path = key_path.with_extension("pub");
+                if pub_path.exists() {
+                    trace_debug!("Found SSH public key: {:?}", pub_path);
+                    Some(pub_path)
+                } else {
+                    trace_debug!("No SSH public key found for {:?}", key_path);
+                    None
+                }
+            });
+
             if let Some(ref key_path) = ssh_key_path {
                 trace_debug!("Found SSH key: {:?}", key_path);
             } else {
                 trace_debug!("No SSH key found");
+            }
+
+            // 从环境变量读取 SSH passphrase（可选）
+            let ssh_passphrase = std::env::var("SSH_PASSPHRASE").ok();
+            if ssh_passphrase.is_some() {
+                trace_debug!("SSH passphrase found in environment");
             }
 
             let https_token =
@@ -235,6 +290,8 @@ impl GitAuth {
 
             CachedAuthInfo {
                 ssh_key_path,
+                ssh_pubkey_path,
+                ssh_passphrase,
                 https_token,
                 https_username,
             }
