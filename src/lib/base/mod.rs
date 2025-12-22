@@ -32,7 +32,7 @@ pub mod util;
 // 重新导出常用类型，方便使用
 pub use alias::{AliasManager, CommandsConfig};
 pub use concurrent::{ConcurrentExecutor, TaskResult};
-pub use dialog::{ConfirmDialog, InputDialog, MultiSelectDialog, SelectDialog};
+pub use dialog::{ConfirmDialog, FormBuilder, FormResult, InputDialog, MultiSelectDialog, SelectDialog};
 pub use format::DisplayFormatter;
 pub use http::{Authorization, HttpClient, HttpResponse, HttpRetry, HttpRetryConfig};
 pub use indicator::{Progress, Spinner};

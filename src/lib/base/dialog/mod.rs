@@ -107,12 +107,14 @@
 //! ```
 
 mod confirm;
+mod form;
 mod input;
 mod multi_select;
 mod select;
 mod types;
 
 pub use confirm::ConfirmDialog;
+pub use form::{FormBuilder, FormResult};
 pub use input::InputDialog;
 pub use multi_select::MultiSelectDialog;
 pub use select::SelectDialog;

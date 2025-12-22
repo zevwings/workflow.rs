@@ -254,13 +254,13 @@ fn test_llm_provider_settings_creation() {
 #[test]
 fn test_log_settings_creation() {
     let log_settings = LogSettings {
-        output_folder_name: "custom_logs".to_string(),
+        output_folder_name: Some("custom_logs".to_string()),
         download_base_dir: Some("/custom/path".to_string()),
         level: Some("debug".to_string()),
         enable_trace_console: Some(true),
     };
 
-    assert_eq!(log_settings.output_folder_name, "custom_logs");
+    assert_eq!(log_settings.get_output_folder_name(), "custom_logs");
     assert_eq!(
         log_settings.download_base_dir,
         Some("/custom/path".to_string())
@@ -274,7 +274,8 @@ fn test_log_settings_creation() {
 fn test_log_settings_default() {
     let default_log = LogSettings::default();
 
-    assert_eq!(default_log.output_folder_name, "logs");
+    assert_eq!(default_log.get_output_folder_name(), "logs");
+    assert_eq!(default_log.output_folder_name, None);
     assert!(default_log.download_base_dir.is_some());
     assert_eq!(default_log.level, None);
     assert_eq!(default_log.enable_trace_console, None);
@@ -413,7 +414,7 @@ fn test_complex_configuration_scenario() {
             current: Some("main".to_string()),
         },
         log: LogSettings {
-            output_folder_name: "complex_logs".to_string(),
+            output_folder_name: Some("complex_logs".to_string()),
             download_base_dir: Some("/complex/logs/path".to_string()),
             level: Some("info".to_string()),
             enable_trace_console: Some(false),

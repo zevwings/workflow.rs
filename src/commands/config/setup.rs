@@ -2,7 +2,7 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::base::constants::messages::log;
-use crate::base::dialog::{InputDialog, SelectDialog};
+use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
 use crate::base::indicator::Spinner;
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
@@ -14,7 +14,6 @@ use crate::base::settings::settings::{
     LogSettings,
     Settings,
 };
-// use crate::base::dialog::ConfirmDialog;  // Unused after Codeup removal
 use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
@@ -35,6 +34,7 @@ struct CollectedConfig {
     jira_service_address: Option<String>,
     github_accounts: Vec<GitHubAccount>,
     github_current: Option<String>,
+    log_output_folder_name: Option<String>,
     log_download_base_dir: Option<String>,
     enable_trace_console: Option<bool>,
     // codeup_project_id: Option<u64>,  // Codeup support has been removed
@@ -119,6 +119,7 @@ impl SetupCommand {
             jira_service_address: settings.jira.service_address.clone(),
             github_accounts: settings.github.accounts.clone(),
             github_current: settings.github.current.clone(),
+            log_output_folder_name: settings.log.output_folder_name.clone(),
             log_download_base_dir: settings.log.download_base_dir.clone(),
             enable_trace_console: settings.log.enable_trace_console,
             // codeup_project_id: settings.codeup.project_id,  // Codeup support has been removed
@@ -336,14 +337,86 @@ impl SetupCommand {
             color_eyre::eyre::bail!("Jira API token is required");
         };
 
+        // ==================== 可选：日志输出文件夹名称配置 ====================
+        log_break!();
+        log_message!("  Log Output Folder Name (Optional)");
+        log_break!('─', 65);
+
+        // 先询问用户是否需要配置
+        let default_folder_name = LogSettings::default_log_folder();
+        let is_custom_folder_name = existing
+            .log_output_folder_name
+            .as_ref()
+            .map(|name| name != &default_folder_name)
+            .unwrap_or(false);
+
+        let should_configure = if is_custom_folder_name {
+            // 如果已有自定义值，询问是否要修改
+            ConfirmDialog::new("Do you want to configure log output folder name?")
+                .with_default(true)
+                .prompt()
+                .wrap_err("Failed to get confirmation")?
+        } else {
+            // 如果没有自定义值，询问是否需要配置
+            ConfirmDialog::new("Do you want to configure log output folder name?")
+                .with_default(false)
+                .prompt()
+                .wrap_err("Failed to get confirmation")?
+        };
+
+        let log_output_folder_name = if should_configure {
+            // 用户选择配置，显示输入框
+            let folder_name_prompt = if is_custom_folder_name {
+                "Log output folder name (press Enter to keep)".to_string()
+            } else {
+                format!(
+                    "Log output folder name (press Enter to use default: {})",
+                    default_folder_name
+                )
+            };
+
+            // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
+            let mut dialog = InputDialog::new(&folder_name_prompt).allow_empty(true);
+            if is_custom_folder_name {
+                // 用户自定义的值，作为默认值显示
+                if let Some(ref existing_name) = existing.log_output_folder_name {
+                    dialog = dialog.with_default(existing_name.clone());
+                }
+            } else {
+                // 显示默认值作为提示
+                dialog = dialog.with_default(default_folder_name.clone());
+            }
+
+            let input_value =
+                dialog.prompt().wrap_err("Failed to get log output folder name")?;
+
+            if input_value.is_empty() {
+                // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
+                None
+            } else if input_value == default_folder_name {
+                // 如果等于默认值，也不保存（使用 None）
+                None
+            } else {
+                // 自定义名称，保存到配置文件
+                Some(input_value)
+            }
+        } else {
+            // 用户选择不配置，保持现有值或使用默认值（None）
+            if is_custom_folder_name {
+                // 保持现有的自定义值
+                existing.log_output_folder_name.clone()
+            } else {
+                // 使用默认值（不保存到配置文件）
+                None
+            }
+        };
+
         // ==================== 可选：文档基础路径配置 ====================
         log_break!();
         log_message!("  Document Base Directory (Optional)");
         log_break!('─', 65);
 
-        // 检查是否是用户自定义的值（不等于默认值）
-        // 由于 serde default，即使配置文件中没有这个字段，也会使用默认值
-        // 所以需要检查值是否等于默认值来判断是否是用户配置的
+        // 先询问用户是否需要配置
         let default_dir = default_download_base_dir();
         let is_custom_dir = existing
             .log_download_base_dir
@@ -351,34 +424,65 @@ impl SetupCommand {
             .map(|dir| dir != &default_dir)
             .unwrap_or(false);
 
-        // 设置文档基础目录
-        let base_dir_prompt = if is_custom_dir {
-            "Document base directory (press Enter to keep)".to_string()
+        let should_configure = if is_custom_dir {
+            // 如果已有自定义值，询问是否要修改
+            ConfirmDialog::new("Do you want to configure document base directory?")
+                .with_default(true)
+                .prompt()
+                .wrap_err("Failed to get confirmation")?
         } else {
-            "Document base directory (press Enter to use default)".to_string()
+            // 如果没有自定义值，询问是否需要配置
+            ConfirmDialog::new("Do you want to configure document base directory?")
+                .with_default(false)
+                .prompt()
+                .wrap_err("Failed to get confirmation")?
         };
 
-        // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
-        let mut dialog = InputDialog::new(&base_dir_prompt).allow_empty(true);
-        if is_custom_dir {
-            // 用户自定义的值，作为默认值显示
-            if let Some(ref existing_dir) = existing.log_download_base_dir {
-                dialog = dialog.with_default(existing_dir.clone());
+        let log_download_base_dir = if should_configure {
+            // 用户选择配置，显示输入框
+            let base_dir_prompt = if is_custom_dir {
+                "Document base directory (press Enter to keep)".to_string()
+            } else {
+                format!(
+                    "Document base directory (press Enter to use default: {})",
+                    default_dir
+                )
+            };
+
+            // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
+            let mut dialog = InputDialog::new(&base_dir_prompt).allow_empty(true);
+            if is_custom_dir {
+                // 用户自定义的值，作为默认值显示
+                if let Some(ref existing_dir) = existing.log_download_base_dir {
+                    dialog = dialog.with_default(existing_dir.clone());
+                }
+            } else {
+                // 显示默认值作为提示
+                dialog = dialog.with_default(default_dir.clone());
             }
-        }
 
-        let log_download_base_dir =
-            dialog.prompt().wrap_err("Failed to get document base directory")?;
+            let input_value =
+                dialog.prompt().wrap_err("Failed to get document base directory")?;
 
-        let log_download_base_dir = if log_download_base_dir.is_empty() {
-            // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
-            None
-        } else if log_download_base_dir == default_dir {
-            // 如果等于默认值，也不保存（使用 None）
-            None
+            if input_value.is_empty() {
+                // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
+                None
+            } else if input_value == default_dir {
+                // 如果等于默认值，也不保存（使用 None）
+                None
+            } else {
+                // 自定义路径，保存到配置文件
+                Some(input_value)
+            }
         } else {
-            // 自定义路径，保存到配置文件
-            Some(log_download_base_dir)
+            // 用户选择不配置，保持现有值或使用默认值（None）
+            if is_custom_dir {
+                // 保持现有的自定义值
+                existing.log_download_base_dir.clone()
+            } else {
+                // 使用默认值（不保存到配置文件）
+                None
+            }
         };
 
         // ==================== 可选：Tracing 控制台输出配置 ====================
@@ -665,6 +769,7 @@ impl SetupCommand {
             jira_service_address,
             github_accounts,
             github_current,
+            log_output_folder_name,
             log_download_base_dir,
             enable_trace_console,
             // codeup_project_id,  // Codeup support has been removed
@@ -697,7 +802,7 @@ impl SetupCommand {
                 current: config.github_current.clone(),
             },
             log: LogSettings {
-                output_folder_name: LogSettings::default_log_folder(), // 使用默认值，不再允许用户配置
+                output_folder_name: config.log_output_folder_name.clone(),
                 download_base_dir: config.log_download_base_dir.clone(),
                 level: None, // 日志级别通过 workflow log set 命令设置
                 enable_trace_console: config.enable_trace_console,

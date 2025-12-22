@@ -293,7 +293,10 @@ impl ConfigImportCommand {
         }
 
         // 合并日志配置
-        merged.log.output_folder_name = imported.log.output_folder_name.clone();
+        // 只有当导入的值不是默认值时才合并 output_folder_name
+        if imported.log.output_folder_name.is_some() {
+            merged.log.output_folder_name = imported.log.output_folder_name.clone();
+        }
         if imported.log.download_base_dir.is_some() {
             merged.log.download_base_dir = imported.log.download_base_dir.clone();
         }
@@ -442,7 +445,7 @@ impl ConfigImportCommand {
         }
 
         if (section.is_none() || section == Some("log"))
-            && current.log.output_folder_name != final_settings.log.output_folder_name
+            && current.log.get_output_folder_name() != final_settings.log.get_output_folder_name()
         {
             changes.push("  - Updated: log.output_folder_name".to_string());
         }
