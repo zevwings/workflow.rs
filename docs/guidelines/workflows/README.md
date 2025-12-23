@@ -68,7 +68,7 @@ graph TD
 
 ### ⚡ 提交前检查工作流（5-15分钟）
 
-**文档**：[PRE_COMMIT_GUIDELINES.md](./PRE_COMMIT_GUIDELINES.md)
+**文档**：[pre-commit.md](./pre-commit.md)
 
 **使用场景**：日常开发，代码提交前的快速验证
 
@@ -81,7 +81,7 @@ graph TD
 
 ### 🔍 综合深入检查工作流（2-4小时）
 
-**文档**：[REVIEW_GUIDELINES.md](./REVIEW_GUIDELINES.md)
+**文档**：[review.md](./review.md)
 
 **使用场景**：功能完成后、定期审查、重大重构前、发布前
 
@@ -100,7 +100,7 @@ graph TD
 
 ### 🚀 快速参考
 
-**文档**：[QUICK_REFERENCE_GUIDELINES.md](./references/QUICK_REFERENCE_GUIDELINES.md)
+**文档**：[quick-reference.md](./references/quick-reference.md)
 
 **核心价值**：1分钟快速查找所有关键信息
 
@@ -113,7 +113,7 @@ graph TD
 
 ### 📝 样式规范
 
-**文档**：[STYLE_GUIDELINES.md](./references/STYLE_GUIDELINES.md)
+**文档**：[style.md](./references/style.md)
 
 **核心价值**：统一文档格式和术语标准
 
@@ -127,11 +127,11 @@ graph TD
 
 | 检查领域 | 文档 | 时间投入 | 核心内容 |
 |---------|------|----------|----------|
-| 🔧 **CLI** | [REVIEW_CLI_GUIDELINES.md](./references/REVIEW_CLI_GUIDELINES.md) | 30分钟-1小时 | 命令结构、补全脚本、参数复用 |
-| 💻 **代码** | [REVIEW_CODE_GUIDELINES.md](./references/REVIEW_CODE_GUIDELINES.md) | 1-2小时 | 重复代码、工具复用、第三方库 |
-| 🧪 **测试** | [REVIEW_TEST_CASE_GUIDELINES.md](./references/REVIEW_TEST_CASE_GUIDELINES.md) | 1-2小时 | 覆盖情况、合理性、缺失测试 |
-| 📊 **测试覆盖检查** | [TEST_COVERAGE_CHECK_GUIDELINES.md](./references/TEST_COVERAGE_CHECK_GUIDELINES.md) | 30分钟-1小时 | 测试覆盖检查机制、定期检查流程 |
-| 📚 **文档** | [REVIEW_DOCUMENT_GUIDELINES.md](./references/REVIEW_DOCUMENT_GUIDELINES.md) | 30分钟-1小时 | README、架构文档、CHANGELOG |
+| 🔧 **CLI** | [review-cli.md](./references/review-cli.md) | 30分钟-1小时 | 命令结构、补全脚本、参数复用 |
+| 💻 **代码** | [review-code.md](./references/review-code.md) | 1-2小时 | 重复代码、工具复用、第三方库 |
+| 🧪 **测试** | [review-test-case.md](./references/review-test-case.md) | 1-2小时 | 覆盖情况、合理性、缺失测试 |
+| 📊 **测试覆盖检查** | [test-coverage-check.md](./references/test-coverage-check.md) | 30分钟-1小时 | 测试覆盖检查机制、定期检查流程 |
+| 📚 **文档** | [review-document.md](./references/review-document.md) | 30分钟-1小时 | README、架构文档、CHANGELOG |
 
 ---
 
@@ -183,9 +183,9 @@ graph TD
 
 #### 1️⃣ 新手入门
 ```markdown
-1. 阅读 [快速参考指南](./references/QUICK_REFERENCE_GUIDELINES.md)（1分钟）
-2. 尝试 [提交前检查](./PRE_COMMIT_GUIDELINES.md)（5-15分钟）
-3. 熟悉后进行 [综合深入检查](./REVIEW_GUIDELINES.md)（2-4小时）
+1. 阅读 [快速参考指南](./references/quick-reference.md)（1分钟）
+2. 尝试 [提交前检查](./pre-commit.md)（5-15分钟）
+3. 熟悉后进行 [综合深入检查](./review.md)（2-4小时）
 ```
 
 #### 2️⃣ 日常使用
@@ -209,16 +209,16 @@ graph TD
 ```
 docs/guidelines/workflows/
 ├── README.md                           # 本文件（工作流索引）
-├── PRE_COMMIT_GUIDELINES.md           # 提交前检查工作流
-├── REVIEW_GUIDELINES.md               # 综合深入检查工作流
-└── references/                        # 参考文档
-    ├── QUICK_REFERENCE_GUIDELINES.md     # 快速参考指南
-    ├── STYLE_GUIDELINES.md               # 样式规范指南
-    ├── REVIEW_CLI_GUIDELINES.md          # CLI 检查指南
-    ├── REVIEW_CODE_GUIDELINES.md         # 代码检查指南
-    ├── REVIEW_TEST_CASE_GUIDELINES.md    # 测试检查指南
-    ├── TEST_COVERAGE_CHECK_GUIDELINES.md # 测试覆盖检查机制指南
-    └── REVIEW_DOCUMENT_GUIDELINES.md     # 文档检查指南
+├── pre-commit.md                       # 提交前检查工作流
+├── review.md                           # 综合深入检查工作流
+└── references/                         # 参考文档
+    ├── quick-reference.md                 # 快速参考指南
+    ├── style.md                           # 样式规范指南
+    ├── review-cli.md                      # CLI 检查指南
+    ├── review-code.md                     # 代码检查指南
+    ├── review-test-case.md                # 测试检查指南
+    ├── test-coverage-check.md             # 测试覆盖检查机制指南
+    └── review-document.md                 # 文档检查指南
 ```
 
 ---
@@ -226,13 +226,13 @@ docs/guidelines/workflows/
 ## 🔗 相关文档
 
 ### 传统开发指南
-- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 传统开发规范和最佳实践
-- [测试规范](../TESTING_GUIDELINES.md) - 传统测试规范和方法
-- [文档编写指南](../DOCUMENT_GUIDELINES.md) - 传统文档编写规范
+- [开发规范](../development.md) - 传统开发规范和最佳实践
+- [测试规范](../testing.md) - 传统测试规范和方法
+- [文档编写指南](../document.md) - 传统文档编写规范
 
 ### 架构文档
-- [总体架构](../../architecture/ARCHITECTURE.md) - 项目整体架构设计
-- [CLI 架构](../../architecture/lib/CLI_ARCHITECTURE.md) - CLI 层架构设计
+- [总体架构](../../architecture/architecture.md) - 项目整体架构设计
+- [CLI 架构](../../architecture/cli.md) - CLI 层架构设计
 
 ---
 

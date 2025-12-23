@@ -70,7 +70,7 @@ workflow migrate cleanup
 ## 🔗 相关文档
 
 - [迁移系统架构说明](../../src/commands/migrate/README.md) - 迁移系统的技术实现
-- [分支命令架构](../architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md) - 分支配置相关说明
+- [分支命令架构](../architecture/branch.md) - 分支配置相关说明
 
 ---
 
