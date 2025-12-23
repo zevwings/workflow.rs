@@ -189,19 +189,94 @@ mod tests {
         assert!(duration <= Duration::from_millis(4000)); // 最多4秒
     }
 
-    #[rstest]
-    #[case(1, 2.0, 30, vec![1, 2, 4, 8, 16, 30, 30])] // 标准指数退避
-    #[case(2, 1.5, 10, vec![2, 3, 4, 6, 9, 10, 10])] // 不同参数
-    #[case(5, 3.0, 20, vec![5, 15, 20, 20, 20])] // 快速达到最大值
-    #[ignore] // 需要等待很长时间（case1: 91秒, case2: 44秒, case3: 80秒），影响测试速度
-    fn test_backoff_calculation(
-        #[case] initial_delay: u64,
-        #[case] multiplier: f64,
-        #[case] max_delay: u64,
-        #[case] expected_delays: Vec<u64>,
-    ) {
-        // 这个测试验证退避算法的计算逻辑
-        // 由于我们无法直接访问内部的延迟计算，我们通过测试多次失败的时间来验证
+    // 这个测试验证退避算法的计算逻辑
+    // 由于我们无法直接访问内部的延迟计算，我们通过测试多次失败的时间来验证
+    // 注意：这些测试需要等待很长时间（case1: 91秒, case2: 44秒, case3: 80秒），影响测试速度
+    // 运行方式：cargo test -- --ignored
+
+    #[test]
+    #[ignore] // 需要等待约91秒，影响测试速度
+    fn test_backoff_calculation_case_1() {
+        let initial_delay = 1;
+        let multiplier = 2.0;
+        let max_delay = 30;
+        let expected_delays = vec![1, 2, 4, 8, 16, 30, 30]; // 标准指数退避
+
+        let config = HttpRetryConfig {
+            max_retries: expected_delays.len() as u32,
+            initial_delay,
+            max_delay,
+            backoff_multiplier: multiplier,
+            interactive: false,
+        };
+
+        let start_time = Instant::now();
+        let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
+        let duration = start_time.elapsed();
+
+        // 计算预期总时间
+        let expected_total_seconds: u64 = expected_delays.iter().sum();
+        let expected_duration = Duration::from_secs(expected_total_seconds);
+
+        // 允许±500ms的误差
+        let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
+        let max_expected = expected_duration + Duration::from_millis(500);
+
+        assert!(
+            duration >= min_expected && duration <= max_expected,
+            "Duration {:?} not in expected range [{:?}, {:?}] for delays {:?}",
+            duration,
+            min_expected,
+            max_expected,
+            expected_delays
+        );
+    }
+
+    #[test]
+    #[ignore] // 需要等待约44秒，影响测试速度
+    fn test_backoff_calculation_case_2() {
+        let initial_delay = 2;
+        let multiplier = 1.5;
+        let max_delay = 10;
+        let expected_delays = vec![2, 3, 4, 6, 9, 10, 10]; // 不同参数
+
+        let config = HttpRetryConfig {
+            max_retries: expected_delays.len() as u32,
+            initial_delay,
+            max_delay,
+            backoff_multiplier: multiplier,
+            interactive: false,
+        };
+
+        let start_time = Instant::now();
+        let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
+        let duration = start_time.elapsed();
+
+        // 计算预期总时间
+        let expected_total_seconds: u64 = expected_delays.iter().sum();
+        let expected_duration = Duration::from_secs(expected_total_seconds);
+
+        // 允许±500ms的误差
+        let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
+        let max_expected = expected_duration + Duration::from_millis(500);
+
+        assert!(
+            duration >= min_expected && duration <= max_expected,
+            "Duration {:?} not in expected range [{:?}, {:?}] for delays {:?}",
+            duration,
+            min_expected,
+            max_expected,
+            expected_delays
+        );
+    }
+
+    #[test]
+    #[ignore] // 需要等待约80秒，影响测试速度
+    fn test_backoff_calculation_case_3() {
+        let initial_delay = 5;
+        let multiplier = 3.0;
+        let max_delay = 20;
+        let expected_delays = vec![5, 15, 20, 20, 20]; // 快速达到最大值
 
         let config = HttpRetryConfig {
             max_retries: expected_delays.len() as u32,

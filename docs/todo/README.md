@@ -38,14 +38,25 @@
 
 #### 2. [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md)
 - **状态**: 🔄 进行中
-- **实现度**: 0%
+- **实现度**: 65% (阶段1、阶段2、阶段3已完成)
 - **分类**: 测试架构改进
 - **内容**:
-  - 测试覆盖率监控系统 (cargo-tarpaulin)
-  - 测试数据管理架构 (工厂模式 + Mock服务器)
-  - 系统化性能测试 (Criterion基准测试)
-  - CI/CD流水线集成
+  - ✅ 测试覆盖率监控系统 (cargo-tarpaulin) - 已完成
+  - ✅ 测试数据管理架构 (工厂模式 + Mock服务器) - 已完成
+  - ✅ 系统化性能测试 (Criterion基准测试) - 已完成
+  - ⏳ CI/CD流水线集成 - 待开始
 - **优先级**: 高优先级（测试质量提升）
+
+#### 2.1 [`COVERAGE_IMPROVEMENT_TODO.md`](./COVERAGE_IMPROVEMENT_TODO.md)
+- **状态**: 🔄 进行中
+- **实现度**: 18.09% 覆盖率（目标：75%+）
+- **分类**: 测试覆盖率提升
+- **内容**:
+  - 📊 当前覆盖率分析（18.09%，2751/15206 行）
+  - 🎯 覆盖率提升计划（分阶段：20% → 25% → 30% → 75%）
+  - 📋 模块优先级分类（100%模块、高覆盖率模块、中等覆盖率模块、低覆盖率模块）
+  - 📝 实施建议和测试编写指南
+- **优先级**: 高优先级（持续提升测试覆盖率）
 
 #### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
 - **状态**: ⏳ 待实施
@@ -88,17 +99,18 @@ docs/todo/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| 🔄 进行中 | 1 个 | 测试架构改进 |
+| 🔄 进行中 | 2 个 | 测试架构改进、覆盖率提升 |
 | ⏳ 待实施 | 2 个 | 集成扩展、文档检查工具 |
-| **总计** | **4 个** | - |
+| **总计** | **5 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，0%）
-3. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
-4. **DOC_CHECK_TODO.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
+2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，65%）
+3. **COVERAGE_IMPROVEMENT_TODO.md** - 测试覆盖率提升待办事项（🔄 进行中，18.09%）
+4. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
+5. **DOC_CHECK_TODO.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
 
 ---
 
@@ -113,12 +125,17 @@ docs/todo/
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-#### 进行中文档（1 个）
-2. **测试架构改进** (`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`) - 🔄 进行中（0%）
-   - 测试覆盖率监控系统 (cargo-tarpaulin)
-   - 测试数据管理架构 (工厂模式 + Mock服务器)
-   - 系统化性能测试 (Criterion基准测试)
-   - CI/CD流水线集成
+#### 进行中文档（2 个）
+2. **测试架构改进** (`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`) - 🔄 进行中（65%）
+   - ✅ 测试覆盖率监控系统 (cargo-tarpaulin) - 已完成
+   - ✅ 测试数据管理架构 (工厂模式 + Mock服务器) - 已完成
+   - ✅ 系统化性能测试 (Criterion基准测试) - 已完成
+   - ⏳ CI/CD流水线集成 - 待开始
+
+2.1. **测试覆盖率提升** (`COVERAGE_IMPROVEMENT_TODO.md`) - 🔄 进行中（18.09%）
+   - 📊 当前覆盖率：18.09% (2751/15206 行)
+   - 🎯 目标覆盖率：75%+
+   - 📋 分阶段提升计划（20% → 25% → 30% → 75%）
 
 #### 待实施文档（2 个）
 3. **集成与扩展** (`INTEGRATION_TODO.md`) - ⏳ 待实施（0%）
@@ -148,7 +165,8 @@ docs/todo/
 
 ### 按模块查找
 - **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
-- **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中
+- **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中（65%）
+- **测试覆盖率提升** → [`COVERAGE_IMPROVEMENT_TODO.md`](./COVERAGE_IMPROVEMENT_TODO.md) 🔄 进行中（18.09%）
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md) ⏳ 待实施
 - **文档检查工具** → [`DOC_CHECK_TODO.md`](./DOC_CHECK_TODO.md) ⏳ 待实施
 

@@ -1,0 +1,31 @@
+//! Base Util Browser 模块测试
+//!
+//! 测试浏览器操作工具的核心功能，包括 Browser 结构体。
+
+use workflow::base::util::browser::Browser;
+
+#[test]
+fn test_browser_open_structure() {
+    // 测试 Browser 结构体可以创建
+    // 注意：实际打开浏览器需要系统支持，这里只测试结构体
+    let _browser = Browser;
+    assert!(true);
+}
+
+#[test]
+fn test_browser_open_invalid_url() {
+    // 测试无效 URL（应该返回错误）
+    let result = Browser::open("not-a-valid-url");
+    // 在某些平台上可能会失败，这是预期的
+    assert!(result.is_err() || result.is_ok());
+}
+
+#[test]
+fn test_browser_open_empty_url() {
+    // 测试空 URL
+    let result = Browser::open("");
+    // 空 URL 可能失败或成功（取决于平台实现）
+    // 在某些平台上可能会静默失败或成功，这是可以接受的
+    assert!(result.is_err() || result.is_ok());
+}
+

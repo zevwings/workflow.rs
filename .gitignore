@@ -85,8 +85,14 @@ __pycache__/
 *.so
 .Python
 
+coverage/
+coverage/**
+
+# documentation
+
 report/
 requirements/
+analysis/
 
 docs/**
 !docs/README.md
