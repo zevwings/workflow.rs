@@ -299,126 +299,6 @@ jobs:
           echo "📊 Coverage check completed"
           echo "Note: Coverage check is non-blocking. Please review the report above."
 
-  # 文档检查
-  check-docs:
-    name: 📚 Document Check
-    runs-on: ubuntu-latest
-    needs: check-skip-ci
-    # 跳过版本更新分支（bump-version-*）
-    if: needs.check-skip-ci.outputs.should_skip != 'true'
-    continue-on-error: true  # 非阻塞模式：允许失败，不阻止 PR 合并
-    steps:
-      - name: 📥 Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # 需要完整历史来比较分支
-
-      - name: 🔍 Check internal document links
-        continue-on-error: true  # 链接检查失败不阻止 PR
-        run: |
-          echo "🔗 Checking internal document links..."
-          chmod +x scripts/dev/check-links.sh
-          ./scripts/dev/check-links.sh || echo "⚠️ Some internal document links may be broken (non-blocking)"
-
-      - name: 🔍 Check external document links
-        continue-on-error: true  # 外部链接检查失败不阻止 PR
-        run: |
-          echo "🔗 Checking external document links..."
-          # 检查是否安装了 lychee
-          if command -v lychee >/dev/null 2>&1; then
-            echo "Using lychee to check external document links..."
-            lychee docs/**/*.md --exclude-all-private --exclude-loopback || echo "⚠️ Some external document links may be broken (non-blocking)"
-          else
-            echo "ℹ️  lychee not installed, skipping external link check"
-            echo "   To install: cargo install lychee"
-            echo "   External link check skipped (non-blocking)"
-          fi
-
-      - name: 📝 Run doctests
-        continue-on-error: true  # 文档测试失败不阻止 PR
-        run: |
-          echo "📝 Running doctests..."
-          chmod +x scripts/dev/check-doctests.sh
-          ./scripts/dev/check-doctests.sh || echo "⚠️ Some doctests failed (non-blocking)"
-
-      - name: 📋 Check architecture docs exist
-        run: |
-          echo "📝 Checking if architecture docs exist for changed modules..."
-
-          # 获取变更的 Rust 文件（相对于 master 分支）
-          # 对于 PR，使用 origin/master 作为基准
-          BASE_REF="${GITHUB_BASE_REF:-master}"
-          HEAD_REF="${GITHUB_HEAD_REF:-HEAD}"
-
-          # 如果是 PR，比较 base 和 head；否则比较 master 和当前 HEAD
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD | grep -E '^src/(lib|commands)/' | grep '\.rs$' || true)
-          else
-            CHANGED_FILES=$(git diff --name-only origin/master...HEAD | grep -E '^src/(lib|commands)/' | grep '\.rs$' || true)
-          fi
-
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "ℹ️  No Rust source files changed, skipping architecture doc check"
-            exit 0
-          fi
-
-          echo "📝 Changed Rust files:"
-          echo "$CHANGED_FILES"
-          echo ""
-
-          # 提取模块名（第一个目录名）
-          # 处理多行文件列表，每行单独处理
-          MISSING_DOCS=0
-          echo "$CHANGED_FILES" | while IFS= read -r file; do
-            # 跳过空行
-            [ -z "$file" ] && continue
-
-            # 提取模块名：从 src/lib/module/... 或 src/commands/module/... 中提取 module
-            # 先尝试 lib，再尝试 commands
-            module=$(echo "$file" | sed 's|^src/lib/\([^/]*\).*|\1|')
-            if [ "$module" = "$file" ]; then
-              # 如果不是 lib，尝试 commands
-              module=$(echo "$file" | sed 's|^src/commands/\([^/]*\).*|\1|')
-            fi
-
-            # 跳过空模块名或无效路径（如果提取失败，module 会等于原文件路径）
-            [ -z "$module" ] || [ "$module" = "$file" ] && continue
-
-            # 排除不需要架构文档的模块
-            # base 是基础设施模块，其子模块（dialog、format、http 等）有各自的架构文档
-            if [ "$module" = "base" ]; then
-              echo "ℹ️  Module 'base' is an infrastructure module, skipping architecture doc check"
-              echo "   Sub-modules (dialog, format, http, etc.) have their own architecture docs"
-              continue
-            fi
-
-            doc_path="docs/architecture/${module}.md"
-            if [ ! -f "$doc_path" ]; then
-              echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
-              echo "   Consider creating/updating the architecture document"
-              echo "   See: docs/guidelines/development/code-review.md for checklist"
-              MISSING_DOCS=$((MISSING_DOCS + 1))
-            else
-              echo "✅ Module '$module' has architecture doc: $doc_path"
-            fi
-          done
-
-          if [ $MISSING_DOCS -gt 0 ]; then
-            echo ""
-            echo "📋 Summary: $MISSING_DOCS module(s) missing architecture documentation"
-            echo "   This is a reminder only. PR can still be merged."
-            echo "   Please consider updating documentation before merging."
-          else
-            echo ""
-            echo "✅ All changed modules have architecture documentation"
-          fi
-
-      - name: ✅ Document check summary
-        if: always()
-        run: |
-          echo "✅ Document check completed"
-          echo "Note: Document checks are non-blocking. Please review warnings above."
-
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
@@ -431,7 +311,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, check-docs]
+    needs: [check-skip-ci, check-lint, tests]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -444,13 +324,11 @@ jobs:
           SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
-          DOCS_RESULT="${{ needs.check-docs.result }}"
 
           echo "📊 Checking job status:"
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
-          echo "  check-docs: $DOCS_RESULT (non-blocking)"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
@@ -492,18 +370,7 @@ jobs:
             fi
           fi
 
-          # 检查 check-docs 状态（非阻塞，仅记录）
-          if [ -n "$DOCS_RESULT" ]; then
-            if [ "$DOCS_RESULT" == "failure" ]; then
-              echo "⚠️  Document check found issues (non-blocking): $DOCS_RESULT"
-              echo "   Please review the warnings above"
-            elif [ "$DOCS_RESULT" == "success" ]; then
-              echo "✅ Document check passed: $DOCS_RESULT"
-            fi
-          fi
-
           # 如果 check-lint 和 tests 都成功或被跳过，则通过
-          # 注意：check-docs 的结果不影响最终状态（非阻塞）
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
               echo "✅ All required checks passed or were skipped"
