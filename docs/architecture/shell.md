@@ -17,7 +17,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -544,15 +544,96 @@ export KEY2="value2"
 
 ---
 
+## 📋 使用示例
+
+### Shell 检测
+
+```rust
+use workflow::base::shell::Detect;
+
+// 检测当前 Shell
+let shell = Detect::shell()?;
+println!("Current shell: {:?}", shell);
+
+// 检测 Shell 类型（返回 clap_complete::Shell）
+let shell_type = Detect::shell_type()?;
+```
+
+### Shell 配置管理
+
+```rust
+use workflow::base::shell::ShellConfigManager;
+
+// 添加 source 语句
+ShellConfigManager::add_source_for_shell(
+    shell,
+    "$HOME/.workflow/.completions",
+    Some("Workflow CLI completions"),
+)?;
+
+// 检查 source 语句是否存在
+let exists = ShellConfigManager::has_source_for_shell(
+    shell,
+    "$HOME/.workflow/.completions",
+)?;
+
+// 移除 source 语句
+ShellConfigManager::remove_source_for_shell(
+    shell,
+    "$HOME/.workflow/.completions",
+)?;
+
+// 设置环境变量（保存到配置块）
+let env_vars = vec![
+    ("http_proxy", "http://proxy.example.com:8080"),
+    ("https_proxy", "http://proxy.example.com:8080"),
+];
+ShellConfigManager::set_env_vars(&env_vars)?;
+
+// 加载环境变量
+let env_vars = ShellConfigManager::load_env_vars()?;
+
+// 移除环境变量
+ShellConfigManager::remove_env_vars(&["http_proxy", "https_proxy"])?;
+```
+
+### Shell 配置重载
+
+```rust
+use workflow::base::shell::Reload;
+
+// 重新加载 Shell 配置
+Reload::shell(&shell)?;
+```
+
+---
+
 ## 📚 相关文档
 
 - [Settings 模块架构文档](./settings.md) - 配置文件路径管理（`Paths::config-_file()`）
 - [Completion 架构文档](./completion.md) - Completion 模块如何使用 ShellConfigManager
 - [Proxy 架构文档](./proxy.md) - Proxy 模块如何使用 ShellConfigManager
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 
 ---
 
+## ✅ 总结
+
+Shell 检测与管理模块采用清晰的模块化设计：
+
+1. **Shell 检测**：自动检测当前 Shell 类型，支持多种 Shell
+2. **配置管理**：统一的 Shell 配置文件管理接口，支持 source 语句和环境变量
+3. **配置重载**：支持重新加载 Shell 配置，使更改立即生效
+
+**设计优势**：
+- ✅ **统一接口**：提供统一的 Shell 配置管理接口，屏蔽不同 Shell 的差异
+- ✅ **类型安全**：使用 `clap_complete::Shell` 枚举确保类型安全
+- ✅ **易于使用**：简单的 API 设计，易于集成到其他模块
+- ✅ **跨平台支持**：支持多种 Shell 类型（zsh, bash, fish, powershell, elvish）
+- ✅ **配置块管理**：使用配置块标记，便于管理和清理
+
+该模块为 Completion 和 Proxy 模块提供了通用的 Shell 配置文件管理功能，实现了代码复用和统一管理。
+
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-23

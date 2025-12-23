@@ -271,6 +271,8 @@ impl LLMClient {
 
 LLM 命令层是 Workflow CLI 的命令接口，提供 LLM 配置的交互式设置和查看功能。该层采用命令模式设计，通过调用 `lib/base/settings/` 模块提供的 API 实现配置管理。
 
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
+
 ### 相关文件
 
 #### CLI 入口层

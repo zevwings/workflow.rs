@@ -13,7 +13,7 @@ HTTP 模块是 Workflow CLI 的基础设施模块之一，提供完整的 HTTP �
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 文件组织
 
@@ -74,6 +74,25 @@ src/lib/base/http/
 
 - **网络检查**：使用 `HttpClient::global()` 检查网络连接
 - **版本检查**：使用 `HttpClient::global()` 检查更新，使用 `HttpRetry` 进行重试
+
+---
+
+## 🔄 集成关系
+
+HTTP 模块是 Workflow CLI 的基础设施模块，为所有需要网络请求的模块提供统一的 HTTP 客户端。该模块通过以下方式与其他模块集成：
+
+1. **单例模式**：使用 `HttpClient::global()` 获取全局单例，所有模块共享同一个 HTTP 客户端实例
+2. **统一接口**：提供统一的请求接口（`get()`、`post()`、`put()`、`delete()`、`patch()`），屏蔽底层实现细节
+3. **认证支持**：通过 `Authorization` 和 `RequestConfig` 支持多种认证方式（Basic Auth、Bearer Token 等）
+4. **错误处理**：通过 `HttpResponse::ensure-_success()` 提供统一的错误处理机制
+5. **重试机制**：通过 `HttpRetry` 提供可配置的重试功能
+
+### 主要集成场景
+
+- **Jira 模块**：`JiraHttpClient` 使用 `HttpClient::global()` 发送请求，使用 `Authorization` 进行 Basic Authentication
+- **PR 模块**：GitHub 和 Codeup 平台实现使用 `HttpClient::global()` 发送 API 请求
+- **网络检查**：使用 `HttpClient::global()` 检查网络连接状态
+- **版本检查**：使用 `HttpClient::global()` 和 `HttpRetry` 检查更新
 
 ---
 

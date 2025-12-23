@@ -13,7 +13,9 @@ GitHub 账号管理命令提供完整的 GitHub 多账号管理功能，支持�
 
 ---
 
-## 📁 相关文件
+## 📁 Commands 层架构（命令封装）
+
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
 
 ### CLI 入口层
 
@@ -55,6 +57,23 @@ src/commands/github/
 - **`dialoguer`**：交互式输入（`Input`、`Select`）
 
 详细架构文档：参见 [Settings 模块架构文档](../architecture/settings.md) 和 [Git 模块架构文档](../architecture/git.md)
+
+---
+
+## 🔄 集成关系
+
+GitHub 命令模块是 Workflow CLI 的账号管理命令，提供 GitHub 账号的添加、删除、切换等功能。该命令通过以下方式与 Lib 层集成：
+
+1. **Settings 模块集成**：使用 `Settings` 和 `Paths` 管理 GitHub 账号配置
+2. **Git 模块集成**：使用 `GitConfig::set-_global-_user()` 设置 Git 全局用户配置，同步 GitHub 账号
+3. **Jira 模块集成**：使用 `ConfigManager` 更新配置
+4. **工具模块集成**：使用 `confirm()` 进行用户确认，使用 `mask-_sensitive-_value()` 掩码敏感值
+
+### 主要集成场景
+
+- **账号添加**：添加 GitHub 账号到配置文件，并设置 Git 全局配置
+- **账号切换**：切换当前使用的 GitHub 账号，更新 Git 全局配置
+- **账号管理**：查看、删除、更新 GitHub 账号
 
 ---
 

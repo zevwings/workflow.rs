@@ -323,6 +323,8 @@ src/lib/jira/
 
 Jira 命令层是 Workflow CLI 的命令接口，提供 Jira ticket 信息查看和附件下载等功能。该层采用命令模式设计，通过调用 `lib/jira/` 模块提供的 API 实现业务功能。
 
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
+
 ### 相关文件
 
 #### CLI 入口层

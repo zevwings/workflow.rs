@@ -215,6 +215,8 @@ pub struct PullRequestRow {
 
 PR 命令模块是 Workflow CLI 的核心功能之一，提供完整的 Pull Request 生命周期管理，支持 GitHub 和 Codeup 两种代码托管平台。
 
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
+
 ### 相关文件
 
 #### CLI 入口层

@@ -13,7 +13,9 @@
 
 ---
 
-## 📁 相关文件
+## 📁 Commands 层架构（命令封装）
+
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
 
 ### CLI 入口层
 
@@ -49,6 +51,22 @@ src/commands/check/
   - `HttpClient::stream()` - 发送 HTTP 请求
 
 详细架构文档：参见 [Git 模块架构文档](../architecture/git.md) 和 [HTTP 模块架构文档](../architecture/http.md)
+
+---
+
+## 🔄 集成关系
+
+Check 命令模块是 Workflow CLI 的工具命令，提供环境检查功能。该命令通过以下方式与 Lib 层集成：
+
+1. **Git 模块集成**：使用 `GitRepo::is-_git-_repo()` 检查是否在 Git 仓库中，使用 `GitCommit::status()` 获取 Git 状态
+2. **HTTP 模块集成**：使用 `HttpClient::global()` 获取全局 HTTP 客户端，使用 `HttpClient::stream()` 检查网络连接
+3. **前置检查**：作为其他命令的前置检查步骤，确保环境满足要求
+
+### 主要集成场景
+
+- **Git 仓库检查**：检查是否在 Git 仓库中，以及 Git 状态是否干净
+- **网络连接检查**：检查网络连接是否正常
+- **环境验证**：在 PR 创建等操作前验证环境
 
 ---
 

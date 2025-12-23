@@ -14,7 +14,7 @@ Template 模块（`lib/template/`）是 Workflow CLI 的核心库模块，提供
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -46,6 +46,23 @@ src/lib/template/
   - 使用 `TemplateEngine` 渲染提交消息
 - **`commands/repo/`**：仓库配置管理
   - 使用 `TemplateConfig::load()` 加载模板配置用于显示
+
+---
+
+## 🔄 集成关系
+
+Template 模块是 Workflow CLI 的工具模块，提供模板渲染功能。该模块通过以下方式与其他模块集成：
+
+1. **Branch 模块集成**：使用 `TemplateConfig::load-_branch-_template()` 加载分支模板，使用 `TemplateEngine` 渲染分支名
+2. **PR 模块集成**：使用 `TemplateConfig::load-_pull-_request-_template()` 加载 PR 模板，使用 `TemplateEngine` 渲染 PR body
+3. **Commit 命令集成**：使用 `TemplateConfig::load-_commit-_template()` 加载提交模板，使用 `TemplateEngine` 渲染提交消息
+4. **Repo 命令集成**：使用 `TemplateConfig::load()` 加载模板配置用于显示
+
+### 主要集成场景
+
+- **分支名生成**：Branch 模块使用模板系统生成分支名
+- **PR 创建**：PR 模块使用模板系统生成 PR body
+- **提交消息**：Commit 命令使用模板系统生成提交消息
 
 ---
 

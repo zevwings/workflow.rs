@@ -18,8 +18,8 @@
 - [💻 代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库
 - [🧪 测试检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试
 - [📊 测试覆盖检查机制指南](./references/test-coverage-check.md) - 测试覆盖检查机制、定期检查流程
-- [📚 文档检查指南](./references/review-document.md) - README、架构文档、CHANGELOG
-- [🏗️ 架构文档审查指南](./references/review-architecture-doc.md) - 架构文档与代码一致性检查
+- [📚 文档完整性检查指南](./references/review-document-completeness.md) - README、架构文档、CHANGELOG 完整性检查
+- [🏗️ 架构文档与代码一致性检查指南](./references/review-architecture-consistency.md) - 架构文档与代码一致性检查
 
 ---
 
@@ -65,8 +65,8 @@
 | 🔧 **CLI** | 命令结构、补全脚本、参数复用 | 30分钟-1小时 | [CLI检查指南](./references/review-cli.md) |
 | 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/review-code.md) |
 | 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/review-test-case.md) |
-| 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/review-document.md) |
-| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/review-architecture-doc.md) |
+| 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档完整性检查指南](./references/review-document-completeness.md) |
+| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md) |
 
 ### ⏱️ 时间投入规划
 
@@ -312,7 +312,7 @@ graph TD
 1. **CLI 检查**（`workflows/references/review-cli.md`）
 2. **代码检查**（`reviews/review-code.md`）
 3. **测试用例检查**（`reviews/review-test-case.md`）
-4. **文档检查**（`reviews/review-document.md`）
+4. **文档完整性检查**（`references/review-document-completeness.md`）
 
 **说明**：
 - 每个专门指南都会生成详细的检查报告
@@ -512,7 +512,7 @@ Write-Host "report/REVIEW_TEST_${timestamp}.md"
 
 ### 4. 文档检查
 
-**指南**：[文档检查指南](./references/review-document.md)
+**指南**：[文档完整性检查指南](./references/review-document-completeness.md)
 
 **检查内容**：
 - README.md 检查
@@ -563,7 +563,7 @@ Write-Host "report/REVIEW_DOCUMENT_${timestamp}.md"
 
 ### 5. 架构文档与代码一致性检查
 
-**指南**：[架构文档审查指南](./references/review-architecture-doc.md)
+**指南**：[架构文档与代码一致性检查指南](./references/review-architecture-consistency.md)
 
 **检查内容**：
 - 模块结构检查
@@ -1079,8 +1079,8 @@ grep -r "#[cfg(test)]" src/
 - [代码检查指南](./references/review-code.md)
 - [测试用例检查指南](./references/review-test-case.md)
 - [测试覆盖检查机制指南](./references/test-coverage-check.md)
-- [文档检查指南](./references/review-document.md)
-- [架构文档审查指南](./references/review-architecture-doc.md)
+- [文档完整性检查指南](./references/review-document-completeness.md)
+- [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md)
 
 ### 报告位置
 
@@ -1135,8 +1135,21 @@ grep -r "#[cfg(test)]" src/
 
 ---
 
+## 📚 相关文档
+
+- [提交前检查指南](./pre-commit.md) - 日常提交前的快速检查流程
+- [快速参考指南](./references/quick-reference.md) - 快速查找命令和清单
+- [CLI 检查指南](./references/review-cli.md) - CLI 命令结构、补全脚本检查
+- [代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库检查
+- [测试用例检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试检查
+- [测试覆盖检查机制指南](./references/test-coverage-check.md) - 测试覆盖检查机制、定期检查流程
+- [文档完整性检查指南](./references/review-document-completeness.md) - README、架构文档、CHANGELOG 完整性检查
+- [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md) - 架构文档与代码一致性检查
+
+---
+
 **完成综合深入检查后，代码质量将得到全面提升！** 🎉
 
 ---
 
-**最后更新**: 2025-12-19
+**最后更新**: 2025-12-23

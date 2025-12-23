@@ -6,6 +6,7 @@
 
 ## 📋 目录
 
+- [概述](#-概述)
 - [Repository Secrets](#-repository-secrets)
 - [Repository Variables](#-repository-variables)
 - [分支保护规则](#-分支保护规则)
@@ -13,6 +14,27 @@
 - [Workflow 权限配置](#-workflow-权限配置)
 - [验证配置](#-验证配置)
 - [故障排除](#-故障排除)
+
+---
+
+## 📋 概述
+
+本文档描述了 Workflow CLI 项目在 GitHub 上需要配置的内容，包括 Secrets、Variables、分支保护规则等。
+
+### 配置内容
+
+- **Repository Secrets**：存储敏感信息，如 Personal Access Token (PAT)
+- **Repository Variables**：存储非敏感配置信息
+- **分支保护规则**：保护主分支，确保代码质量
+- **Environment Protection Rules**：保护生产环境，控制部署流程
+- **Workflow 权限配置**：配置 GitHub Actions 的权限范围
+
+### 配置位置
+
+所有配置都在 GitHub 仓库的 Settings 页面进行：
+- **Settings → Secrets and variables → Actions**：配置 Secrets 和 Variables
+- **Settings → Branches**：配置分支保护规则
+- **Settings → Environments**：配置环境保护规则
 
 ---
 
@@ -422,4 +444,4 @@ permissions:
 
 ---
 
-**最后更新**: 2025-12-14
+**最后更新**: 2025-12-23

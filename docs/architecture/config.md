@@ -15,7 +15,9 @@
 
 ---
 
-## 📁 相关文件
+## 📁 Commands 层架构（命令封装）
+
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
 
 ### CLI 入口层
 
@@ -45,6 +47,25 @@ src/commands/config/
 - **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
 - **`lib/git/config.rs`**：Git 配置管理（`GitConfig`）
 - **`lib/base/util/`**：工具函数（`LogLevel`、`mask-_sensitive-_value()`）
+
+---
+
+## 🔄 集成关系
+
+Config 命令模块是 Workflow CLI 的配置管理命令，提供配置的查看、验证、导入导出等功能。该命令通过以下方式与 Lib 层集成：
+
+1. **Settings 模块集成**：使用 `Settings` 和 `Paths` 管理配置文件，提供配置查看、验证等功能
+2. **Git 模块集成**：使用 `GitRepo` 和 `GitCommit` 检查 Git 状态，使用 `GitConfig` 设置 Git 配置
+3. **HTTP 模块集成**：使用 `HttpClient` 验证配置中的网络连接
+4. **Jira 模块集成**：使用 `ConfigManager` 管理 Jira 配置
+5. **Git 配置模块集成**：使用 `GitConfig` 设置 Git 全局配置
+6. **工具模块集成**：使用 `LogLevel` 管理日志级别，使用 `mask-_sensitive-_value()` 掩码敏感值
+
+### 主要集成场景
+
+- **配置初始化**：使用 Settings 模块初始化配置
+- **配置验证**：使用 Git、HTTP、Jira 等模块验证配置正确性
+- **配置导入导出**：使用 Settings 模块导入导出配置
 
 ---
 

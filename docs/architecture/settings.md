@@ -20,7 +20,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -81,6 +81,25 @@ src/lib/base/settings/
 
 - **`lib/rollback/`**：回滚管理
   - `Paths::completion-_dir()` - 获取 completion 目录路径（用于备份）
+
+---
+
+## 🔄 集成关系
+
+Settings 模块是整个应用的基础设施模块，为所有其他模块提供配置管理服务。该模块通过以下方式与其他模块集成：
+
+1. **配置读取**：所有模块通过 `Settings::get()` 获取配置，使用单例模式确保配置只加载一次
+2. **路径管理**：所有模块通过 `Paths` 统一获取配置文件路径，避免硬编码
+3. **配置验证**：提供 `Settings::verify()` 方法，供其他模块验证配置正确性
+4. **默认值管理**：配置文件不存在或字段缺失时使用默认值，确保程序正常运行
+
+### 主要集成场景
+
+- **LLM 模块**：通过 `Settings::get().llm` 获取 LLM 配置
+- **Jira 模块**：通过 `Settings::get().jira` 获取 Jira 配置，使用 `Paths` 获取状态和用户配置文件路径
+- **PR 模块**：通过 `Settings::get().github` 和 `Settings::get().codeup` 获取平台配置
+- **Completion 模块**：通过 `Paths::completion-_dir()` 获取补全脚本目录路径
+- **Shell 模块**：通过 `Paths::config-_file()` 获取 Shell 配置文件路径
 
 ---
 

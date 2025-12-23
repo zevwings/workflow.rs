@@ -29,7 +29,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -70,6 +70,25 @@ Dialog 模块被所有需要用户交互的命令广泛使用：
 - **MCP 命令**：使用 `FormBuilder` 构建 MCP 配置表单
 - **GitHub 命令**：使用 `SelectDialog` 选择账号
 - **Lifecycle 命令**：使用 `ConfirmDialog` 确认操作
+
+---
+
+## 🔄 集成关系
+
+Dialog 模块是 Workflow CLI 的基础设施模块，为所有需要用户交互的命令提供统一的对话框接口。该模块通过以下方式与其他模块集成：
+
+1. **命令层集成**：所有命令层模块通过 Dialog 模块提供的接口进行用户交互
+2. **表单构建**：通过 `FormBuilder` 提供复杂的表单构建功能，支持条件显示、验证等
+3. **统一体验**：提供统一的用户交互体验，确保所有命令的交互方式一致
+
+### 主要集成场景
+
+- **PR 命令**：使用 `InputDialog` 输入 PR 标题、描述等
+- **Jira 命令**：使用 `InputDialog` 输入 Jira ID，使用 `SelectDialog` 选择操作
+- **Branch 命令**：使用 `MultiSelectDialog` 选择要清理的分支
+- **Config 命令**：使用 `FormBuilder` 构建完整的配置表单
+- **LLM 命令**：使用 `FormBuilder` 构建 LLM 配置表单
+- **Alias 命令**：使用 `FormBuilder` 构建别名配置表单
 
 ---
 

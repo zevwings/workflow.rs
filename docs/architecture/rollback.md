@@ -12,7 +12,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -28,6 +28,23 @@ src/lib/rollback/
 - **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion-_dir()`, `Paths::config-_file()`）
 - **`lib/base/shell/detect.rs`**：Shell 检测（`Detect::shell()`）
 - **`lib/base/shell/reload.rs`**：Shell 配置重新加载（`Reload::shell()`）
+
+---
+
+## 🔄 集成关系
+
+Rollback 模块是 Workflow CLI 的工具模块，提供更新失败时的回滚功能。该模块通过以下方式与其他模块集成：
+
+1. **Completion 模块集成**：使用 `get-_all-_completion-_files()` 获取所有补全脚本文件列表，用于备份和恢复
+2. **Settings 模块集成**：使用 `Paths` 获取补全脚本目录和配置文件路径
+3. **Shell 模块集成**：使用 `Detect::shell()` 检测 Shell 类型，`Reload::shell()` 重新加载 Shell 配置
+4. **更新流程集成**：在更新流程中创建备份，更新失败时执行回滚
+
+### 主要集成场景
+
+- **更新前备份**：在更新前备份二进制文件和补全脚本文件
+- **更新失败回滚**：更新失败时恢复备份的文件
+- **Shell 配置重载**：回滚后重新加载 Shell 配置
 
 ---
 

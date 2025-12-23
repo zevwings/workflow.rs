@@ -27,7 +27,7 @@
 3. **保留中文关键词匹配**: 文档分类规则中的中文关键词需要保留，用于匹配用户输入
 
 ### 主要目标（结构优化相关）
-1. **精简文件长度**: 从 269 行压缩至 180-200 行（减少约 25-30%）
+1. **精简文件长度**: 从 293 行压缩至 180-200 行（减少约 30-40%）
 2. **提升可读性**: 通过结构优化和表格化，提升 30-40% 的可读性
 3. **提升维护性**: 减少重复内容，优化结构，提升 50% 的维护性
 
@@ -125,7 +125,7 @@
 
 #### 预期效果
 
-- **文件长度**: 从 269 行降至约 180-200 行（减少约 25-30%）
+- **文件长度**: 从 293 行降至约 180-200 行（减少约 30-40%）
 - **可读性**: 提升 30-40%
 - **维护性**: 提升 50%
 - **AI 理解**: 结构更清晰，理解更准确
@@ -142,6 +142,8 @@
 
 ## 📋 详细任务清单
 
+**注意**：以下任务清单中的行号引用基于 269 行的原始文件。由于文件已更新至 293 行（新增指南文档引用），实际翻译时需要重新检查并更新行号引用。
+
 ### 阶段 0: 结构优化（高优先级，与翻译同步进行）
 
 #### 0.1 精简文档文件管理部分
@@ -154,6 +156,7 @@
 - [ ] 合并"代码规范"和"开发指南"的重复引用
 - [ ] 将"代码生成建议"合并到"代码规范"部分
 - [ ] 统一引用 `development.md` 的方式
+- [ ] **修正文件路径引用**：将所有 `DEVELOPMENT_GUIDELINES.md` 改为 `development.md`，`DOCUMENT_GUIDELINES.md` 改为 `document.md`
 
 #### 0.3 优化结构顺序
 - [ ] 将"核心模块"合并到"项目概述"部分
@@ -195,7 +198,7 @@
 #### 2.1 开发规范引用（第 26-47 行）
 - [ ] 翻译开发规范引用说明
 - [ ] 翻译规范列表（代码风格、错误处理、文档规范等）
-- [ ] 保持文档路径引用不变
+- [ ] **更新文档路径引用**：将 `DEVELOPMENT_GUIDELINES.md` 改为 `development.md`
 
 #### 2.2 快速参考（第 49-58 行）
 - [ ] 翻译快速参考说明
@@ -231,7 +234,7 @@
 
 #### 3.5 创建新文档注意事项（第 137-142 行）
 - [ ] 翻译注意事项说明
-- [ ] 保持文档路径引用不变
+- [ ] **更新文档路径引用**：将 `DOCUMENT_GUIDELINES.md` 改为 `document.md`
 
 #### 3.6 文档索引规则（第 144-148 行）
 - [ ] 翻译索引规则说明
@@ -308,10 +311,11 @@
 
 ### 必须保留的内容
 
-1. **文档路径引用**: 所有 `docs/`、`analysis/` 等路径引用必须保持不变
-2. **命令示例**: 所有 `cargo fmt`、`cargo clippy` 等命令必须保持不变
-3. **代码示例**: 所有代码块和示例必须保持不变
-4. **中文关键词**: 文档分类规则中的中文关键词必须保留，用于匹配用户输入
+1. **文档路径引用**: 所有 `docs/`、`analysis/` 等目录路径引用必须保持不变
+2. **文件名引用**: **需要修正**：将 `DEVELOPMENT_GUIDELINES.md` 改为 `development.md`，`DOCUMENT_GUIDELINES.md` 改为 `document.md`
+3. **命令示例**: 所有 `cargo fmt`、`cargo clippy` 等命令必须保持不变
+4. **代码示例**: 所有代码块和示例必须保持不变
+5. **中文关键词**: 文档分类规则中的中文关键词必须保留，用于匹配用户输入
 
 ### 需要特别注意的术语
 
@@ -346,7 +350,7 @@
 ### 功能验证
 - [ ] 所有规则逻辑保持不变
 - [ ] 文档分类规则中的中文关键词已保留
-- [ ] 所有文档路径引用正确
+- [ ] 所有文档路径引用正确（已修正文件名：`development.md`、`document.md`）
 - [ ] 所有命令示例正确
 - [ ] 文档分类功能正常工作
 - [ ] 关键词匹配逻辑完整
@@ -387,7 +391,7 @@
 3. **一致性提升**: 与代码库的英文风格保持一致
 
 ### 结构优化带来的直接收益
-1. **文件长度减少**: 从 269 行降至约 180-200 行（减少约 25-30%）
+1. **文件长度减少**: 从 293 行降至约 180-200 行（减少约 30-40%）
 2. **可读性提升**: 结构更清晰，逻辑更顺畅，提升 30-40%
 3. **维护性提升**: 减少重复内容，表格化规则，提升 50%
 4. **AI 理解提升**: 结构更清晰，AI 理解更准确
@@ -472,15 +476,62 @@
 
 ## 🔗 相关文档
 
-- [`.cursorrules`](../../.cursorrules) - 当前规则文件（中文版本）
+- [`.cursorrules`](../../.cursorrules) - 当前规则文件（中文版本，293 行）
 - [`docs/guidelines/development.md`](../guidelines/development.md) - 开发规范文档
 - [`docs/guidelines/document.md`](../guidelines/document.md) - 文档编写指南
+- [`docs/guidelines/document-timestamp.md`](../guidelines/document-timestamp.md) - 文档时间戳维护指南
+- [`docs/guidelines/testing.md`](../guidelines/testing.md) - 测试指南
+- [`docs/guidelines/ci-workflow.md`](../guidelines/ci-workflow.md) - CI 工作流指南
+- [`docs/guidelines/github-setup.md`](../guidelines/github-setup.md) - GitHub 配置指南
+- [`docs/guidelines/pr-platform.md`](../guidelines/pr-platform.md) - PR 平台新增指南
+- [`docs/guidelines/cargo-bloat.md`](../guidelines/cargo-bloat.md) - cargo-bloat 使用指南
+- [`docs/guidelines/workflows/pre-commit.md`](../guidelines/workflows/pre-commit.md) - 提交前检查指南
+- [`docs/guidelines/workflows/review.md`](../guidelines/workflows/review.md) - 代码审查工作流指南
+
+---
+
+## ⚠️ 已知问题
+
+### 文件路径不一致问题（已解决）
+
+**问题**: `.cursorrules` 文件中引用的文件名与实际文件名不一致。
+
+**状态**: ✅ **已修复**（2025-01-27）
+
+**修复内容**:
+- ✅ 将所有 `DEVELOPMENT_GUIDELINES.md` 引用改为 `development.md`
+- ✅ 将所有 `DOCUMENT_GUIDELINES.md` 引用改为 `document.md`
+- ✅ 将所有 `TESTING_GUIDELINES.md` 引用改为 `testing.md`
+- ✅ 将所有 `PRE_COMMIT_GUIDELINES.md` 引用改为 `workflows/pre-commit.md`
+- ✅ 修正了文档命名规范：指南文档从 `{TOPIC}_GUIDELINES.md` 改为 `{TOPIC}.md`
+
+**新增指南文档引用**:
+- ✅ 添加了 `ci-workflow.md` 引用
+- ✅ 添加了 `github-setup.md` 引用
+- ✅ 添加了 `pr-platform.md` 引用
+- ✅ 添加了 `cargo-bloat.md` 引用
+- ✅ 添加了 `document-timestamp.md` 引用
+- ✅ 添加了 `workflows/review.md` 引用
+
+**当前文件状态**: `.cursorrules` 文件已从 269 行更新至 293 行（新增 24 行，主要是新增指南文档引用和代码审查工作流说明）
 
 ---
 
 **创建时间**: 2025-01-27
 
-**最后更新**: 2025-01-27（添加结构优化方案）
+**最后更新**: 2025-01-27（更新文件状态和已知问题修复情况）
 
 **状态**: ⏳ 待实施
+
+**当前进度**:
+- ✅ 任务规划完成
+- ✅ 结构优化方案确定
+- ✅ 文件路径引用已修正（所有指南文档引用已更新）
+- ✅ 新增指南文档引用已添加（ci-workflow、github-setup、pr-platform、cargo-bloat、document-timestamp、workflows/review）
+- ✅ 文档命名规范已修正
+- ⏳ 翻译和结构优化待开始
+
+**文件状态更新**:
+- 文件行数：从 269 行更新至 293 行（+24 行）
+- 主要变化：新增指南文档引用、代码审查工作流说明、文档编写和时间戳维护指南引用
 

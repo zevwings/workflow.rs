@@ -12,7 +12,7 @@ Git 模块是 Workflow CLI 的核心功能之一，提供完整的 Git 仓库操
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -58,6 +58,24 @@ src/lib/git/
   - `GitBranch::is-_merged()` - 检查分支是否已合并
   - `GitRepo::extract-_repo-_name()` - 提取仓库名（用于配置分组）
   - `GitRepo::prune-_remote()` - 清理远程分支引用
+
+---
+
+## 🔄 集成关系
+
+Git 模块是 Workflow CLI 的核心功能模块，为所有需要 Git 操作的模块提供统一的 Git 操作接口。该模块通过以下方式与其他模块集成：
+
+1. **PR 模块**：提供分支管理、提交管理、仓库检测等功能，支持 PR 的创建、合并、同步等操作
+2. **分支管理命令**：提供分支列表、合并检查、仓库名提取等功能
+3. **环境检查**：提供仓库检测和状态检查功能
+4. **配置管理**：提供 Git 全局配置设置功能，用于初始化设置和账号切换
+
+### 主要集成场景
+
+- **PR 创建**：使用 `GitBranch::checkout-_branch()` 创建分支，`GitCommit::commit()` 提交更改
+- **PR 合并**：使用 `GitBranch::merge-_branch()` 合并分支，`GitStash` 管理工作区状态
+- **仓库检测**：使用 `GitRepo::detect-_repo-_type()` 检测仓库类型，用于平台选择
+- **分支清理**：使用 `GitBranch::is-_merged()` 和 `GitRepo::prune-_remote()` 清理已合并的分支
 
 ---
 

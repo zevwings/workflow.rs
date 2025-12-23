@@ -16,8 +16,8 @@
 
 - [代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库检查
 - [测试用例检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试检查
-- [文档检查指南](./references/review-document.md) - README、架构文档、CHANGELOG 检查
-- [架构文档审查指南](./references/review-architecture-doc.md) - 架构文档与代码一致性检查
+- [文档完整性检查指南](./references/review-document-completeness.md) - README、架构文档、CHANGELOG 完整性检查
+- [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md) - 架构文档与代码一致性检查
 - [CLI 检查指南](./references/review-cli.md) - CLI 命令结构、补全脚本检查
 
 ---
@@ -170,15 +170,40 @@ graph TD
 
 ---
 
+## 🎯 检查概述
+
+> ⚡ **快速质量保障**：提交前快速检查，确保代码质量和基本规范
+
+### 🎯 检查目标
+
+| 目标 | 描述 | 输出 |
+|------|------|------|
+| ✅ **代码质量** | 格式化、Clippy、编译检查 | 无错误和警告 |
+| 🧪 **测试通过** | 单元测试、集成测试、文档测试 | 所有测试通过 |
+| 📚 **文档更新** | README、架构文档、版本号 | 文档同步更新 |
+| 🔧 **CLI 完整性** | 命令注册、补全脚本 | 补全脚本测试通过 |
+
+### 📊 检查范围
+
+| 领域 | 检查内容 | 时间估算 | 专门指南 |
+|------|----------|----------|----------|
+| ✅ **代码质量** | 格式化、Clippy、编译 | 2-5分钟 | - |
+| 🧪 **测试** | 运行测试、检查覆盖 | 3-8分钟 | [测试用例检查指南](./references/review-test-case.md) |
+| 📚 **文档** | README、架构文档 | 2-5分钟 | [文档完整性检查指南](./references/review-document-completeness.md) |
+| 🔧 **CLI** | 命令注册、补全脚本 | 2-5分钟 | [CLI 检查指南](./references/review-cli.md) |
+| 🔍 **代码优化** | 重复代码、工具复用 | 5-10分钟（可选） | [代码检查指南](./references/review-code.md) |
+
+---
+
 ## 📚 文档检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./references/review-document.md)，该指南包含完整的检查流程、检查方法和示例。如需进行架构文档与代码一致性检查，请参考 [架构文档审查指南](./references/review-architecture-doc.md)。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档完整性检查，请参考 [文档完整性检查指南](./references/review-document-completeness.md)，该指南包含完整的检查流程、检查方法和示例。如需进行架构文档与代码一致性检查，请参考 [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md)。
 
 ### 快速检查清单
 
 **检查项**：
 - [ ] README.md 命令清单和版本号是否已更新
-- [ ] 架构文档与代码实现一致（如适用，参考 [架构文档审查指南](./references/review-architecture-doc.md)）
+- [ ] 架构文档与代码实现一致（如适用，参考 [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md)）
 - [ ] 架构文档是否已更新（`docs/architecture/`）
 - [ ] 文档索引是否已更新（`docs/README.md`）
 - [ ] 迁移文档是否已创建（如有破坏性变更）
@@ -226,7 +251,7 @@ graph TD
 - 文档位置检查（文档分类、命名规范）
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性）
 
-**参考**：[文档检查指南](./references/review-document.md) 获取完整的检查方法和示例。
+**参考**：[文档完整性检查指南](./references/review-document-completeness.md) 获取完整的检查方法和示例。
 
 ---
 
@@ -1299,14 +1324,14 @@ grep -A 1 'name = "workflow"' Cargo.lock | grep version
 
 ### Q: 如何进行详细的文档检查？
 
-**A**: 参考 [文档检查指南](./references/review-document.md) 获取完整的检查流程：
+**A**: 参考 [文档完整性检查指南](./references/review-document-completeness.md) 获取完整的检查流程：
 - README.md、docs/ 目录和 CHANGELOG.md 的系统化检查
 - 重复内容检查（跨文档重复、文档内部重复）
 - 文档位置检查和文档优化补全检查
 
 ### Q: 文档更新优先级？
 
-**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。详细检查方法请参考 [文档检查指南](./references/review-document.md)。
+**A**: 优先更新 README.md 和相关的命令架构文档，其他文档可以后续补充。详细检查方法请参考 [文档完整性检查指南](./references/review-document-completeness.md)。
 
 ### Q: 如何验证补全脚本？
 
@@ -1339,4 +1364,16 @@ grep -A 1 'name = "workflow"' Cargo.lock | grep version
 
 ---
 
-**最后更新**: 2025-12-16
+## 📚 相关文档
+
+- [综合深入检查指南](./review.md) - 功能完成后、定期审查的深入检查流程
+- [快速参考指南](./references/quick-reference.md) - 快速查找命令和清单
+- [CLI 检查指南](./references/review-cli.md) - CLI 命令结构、补全脚本检查
+- [代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库检查
+- [测试用例检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试检查
+- [文档完整性检查指南](./references/review-document-completeness.md) - README、架构文档、CHANGELOG 完整性检查
+- [架构文档与代码一致性检查指南](./references/review-architecture-consistency.md) - 架构文档与代码一致性检查
+
+---
+
+**最后更新**: 2025-12-23

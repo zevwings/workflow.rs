@@ -190,6 +190,8 @@ src/lib/commit/
 
 Commit 命令模块提供交互式的提交修改功能，支持修改最后一次提交（amend）、修改历史提交（reword）和压缩多个提交（squash）。
 
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
+
 ### 相关文件
 
 #### CLI 入口层

@@ -18,7 +18,7 @@ CLI 模块是 Workflow CLI 的基础设施模块，定义了整个 CLI 的命令
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -74,6 +74,22 @@ use workflow::cli::get-_cli-_command;
 let command = get-_cli-_command();
 clap-_complete::generate(shell, &mut command, "workflow", &mut output);
 ```
+
+---
+
+## 🔄 集成关系
+
+CLI 模块是 Workflow CLI 的基础设施模块，定义了整个 CLI 的命令结构。该模块通过以下方式与其他模块集成：
+
+1. **主入口集成**：`bin/workflow.rs` 使用 `Cli::parse()` 解析命令行参数，通过 `match` 语句分发到对应的命令处理函数
+2. **补全脚本生成器集成**：`completion/generate.rs` 使用 `get-_cli-_command()` 获取命令结构，生成补全脚本
+3. **命令结构同步**：通过单一来源原则，确保补全脚本与实际命令结构保持同步
+
+### 主要集成场景
+
+- **命令解析**：主入口使用 CLI 模块的命令结构解析用户输入
+- **补全脚本生成**：补全脚本生成器使用 CLI 模块的命令结构生成补全脚本
+- **命令扩展**：添加新命令时，只需在 CLI 模块中定义，补全脚本会自动更新
 
 ---
 

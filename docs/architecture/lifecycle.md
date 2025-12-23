@@ -12,7 +12,9 @@
 
 ---
 
-## 📁 相关文件
+## 📁 Commands 层架构（命令封装）
+
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
 
 ### CLI 入口层
 
@@ -41,6 +43,26 @@ src/commands/lifecycle/
 - **`lib/base/util/`**：工具函数（`Checksum`, `Unzip`, `confirm`）
 - **`lib/rollback/`**：回滚管理器（`RollbackManager`）
 - **`lib/proxy/`**：代理管理器（`ProxyManager`）
+
+---
+
+## 🔄 集成关系
+
+Lifecycle 命令模块是 Workflow CLI 的生命周期管理命令，提供安装、卸载、更新等功能。该命令通过以下方式与 Lib 层集成：
+
+1. **Settings 模块集成**：使用 `Paths` 获取安装路径、配置文件路径等
+2. **Shell 模块集成**：使用 `Detect` 检测 Shell 类型，使用 `Reload` 重新加载 Shell 配置
+3. **Completion 模块集成**：使用 `Completion` 生成和配置补全脚本
+4. **HTTP 模块集成**：使用 `HttpClient` 下载更新文件
+5. **工具模块集成**：使用 `Checksum` 验证文件完整性，使用 `Unzip` 解压文件，使用 `confirm` 进行用户确认
+6. **Rollback 模块集成**：使用 `RollbackManager` 在更新失败时回滚
+7. **Proxy 模块集成**：使用 `ProxyManager` 管理代理
+
+### 主要集成场景
+
+- **安装**：下载二进制文件，生成补全脚本，配置 Shell
+- **更新**：下载新版本，验证完整性，更新文件，失败时回滚
+- **卸载**：删除文件，清理配置
 
 ---
 

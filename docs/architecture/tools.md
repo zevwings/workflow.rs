@@ -18,7 +18,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -61,6 +61,26 @@ src/lib/base/util/
 - **格式化工具**：Lifecycle 命令使用 `format-_size()` 格式化文件大小
 - **平台检测**：Lifecycle 命令使用 `detect-_release-_platform()` 检测平台
 - **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
+
+---
+
+## 🔄 集成关系
+
+Tools 模块是 Workflow CLI 的基础设施模块，为所有其他模块提供通用的工具函数。该模块通过以下方式与其他模块集成：
+
+1. **日志系统**：所有模块使用 `log_*!` 宏输出日志
+2. **剪贴板操作**：PR、Log 和 Jira 命令使用 `Clipboard::copy()` 复制内容到剪贴板
+3. **浏览器操作**：PR 命令使用 `Browser::open()` 在浏览器中打开 URL
+4. **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 解压文件，`Checksum::verify()` 验证文件完整性
+5. **用户确认**：多个命令使用 `confirm()` 函数进行用户确认
+6. **格式化工具**：Lifecycle 命令使用 `format-_size()` 格式化文件大小
+7. **平台检测**：Lifecycle 命令使用 `detect-_release-_platform()` 检测平台
+8. **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
+
+### 主要集成场景
+
+- **通用工具**：所有模块都可以使用 Tools 模块提供的工具函数
+- **用户体验**：提供统一的用户体验，如剪贴板、浏览器、表格等
 
 ---
 

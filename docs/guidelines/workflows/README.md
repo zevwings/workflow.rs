@@ -131,7 +131,7 @@ graph TD
 | 💻 **代码** | [review-code.md](./references/review-code.md) | 1-2小时 | 重复代码、工具复用、第三方库 |
 | 🧪 **测试** | [review-test-case.md](./references/review-test-case.md) | 1-2小时 | 覆盖情况、合理性、缺失测试 |
 | 📊 **测试覆盖检查** | [test-coverage-check.md](./references/test-coverage-check.md) | 30分钟-1小时 | 测试覆盖检查机制、定期检查流程 |
-| 📚 **文档** | [review-document.md](./references/review-document.md) | 30分钟-1小时 | README、架构文档、CHANGELOG |
+| 📚 **文档** | [review-document-completeness.md](./references/review-document-completeness.md) | 30分钟-1小时 | README、架构文档、CHANGELOG 完整性检查 |
 
 ---
 
@@ -218,7 +218,8 @@ docs/guidelines/workflows/
     ├── review-code.md                     # 代码检查指南
     ├── review-test-case.md                # 测试检查指南
     ├── test-coverage-check.md             # 测试覆盖检查机制指南
-    └── review-document.md                 # 文档检查指南
+    ├── review-document-completeness.md     # 文档完整性检查指南
+    └── review-architecture-consistency.md # 架构文档与代码一致性检查指南
 ```
 
 ---

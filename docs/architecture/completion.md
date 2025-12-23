@@ -13,7 +13,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -55,6 +55,24 @@ src/lib/completion/
 - **`lib/rollback/rollback.rs`**：`RollbackManager`
   - 备份 completion 脚本文件
   - 恢复 completion 脚本文件
+
+---
+
+## 🔄 集成关系
+
+Completion 模块是 Workflow CLI 的基础设施模块，为 CLI 命令提供 Shell 自动补全功能。该模块通过以下方式与其他模块集成：
+
+1. **CLI 模块集成**：通过 `get-_cli-_command()` 获取命令结构，确保补全脚本与实际命令结构同步
+2. **Shell 模块集成**：使用 `ShellConfigManager` 管理 Shell 配置文件，添加和移除 source 语句
+3. **Settings 模块集成**：使用 `Paths::completion-_dir()` 获取补全脚本目录路径
+4. **Rollback 模块集成**：使用 `RollbackManager` 备份和恢复补全脚本文件
+
+### 主要集成场景
+
+- **补全脚本生成**：使用 CLI 模块的命令结构生成补全脚本
+- **Shell 配置管理**：使用 Shell 模块的配置管理器添加 source 语句
+- **路径管理**：使用 Settings 模块的路径管理功能获取补全脚本目录
+- **备份恢复**：使用 Rollback 模块备份和恢复补全脚本文件
 
 ---
 

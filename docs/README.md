@@ -12,10 +12,12 @@
 **总体架构设计文档**
 
 - 项目概述和模块划分
-- 三层架构设计（CLI 入口层、命令封装层、核心业务逻辑层）
+- **三层架构设计**（CLI 入口层、命令封装层、核心业务逻辑层）- 所有模块架构文档的基础架构
 - 核心模块设计（AI、日志处理等）
 - 数据存储和配置管理
 - 开发规范
+
+> **重要**：所有模块架构文档都基于三层架构设计，详细说明请参考 [architecture.md](./architecture/architecture.md#三层架构设计)
 
 ---
 
@@ -168,9 +170,10 @@
 - PR 创建、合并、关闭、查询等命令
 - PR Pick 命令（跨分支移植代码并创建新 PR）
 - PR 总结命令（使用 LLM 生成详细总结文档）
-- 命令层设计（CLI 入口层、命令封装层）
 - 与 lib/pr 模块的集成
 - 命令使用示例
+
+> **架构说明**：所有命令层文档遵循统一的三层架构设计，详见 [architecture.md](./architecture/architecture.md#三层架构设计)
 
 #### [log.md](./architecture/log.md)
 **日志操作命令层架构文档**
@@ -180,9 +183,10 @@
 
 - 日志下载、查找、搜索功能（`workflow log` 子命令）
 - Jira ticket 信息显示（`workflow jira` 子命令）
-- 命令层设计（CLI 入口层、命令封装层）
 - 与 Jira 日志处理模块的集成
 - 命令使用示例
+
+> **架构说明**：所有命令层文档遵循统一的三层架构设计，详见 [architecture.md](./architecture/architecture.md#三层架构设计)
 
 #### [config.md](./architecture/config.md)
 **配置管理命令层架构文档**

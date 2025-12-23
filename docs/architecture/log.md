@@ -11,7 +11,9 @@
 
 ---
 
-## 📁 相关文件
+## 📁 Commands 层架构（命令封装）
+
+> **架构说明**：本模块遵循项目的三层架构设计，详见 [architecture.md](./architecture.md#三层架构设计)
 
 ### CLI 入口层
 
@@ -55,6 +57,22 @@ src/commands/log/
   - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
 详细架构文档：参见 [Jira 模块架构文档](../architecture/jira.md)
+
+---
+
+## 🔄 集成关系
+
+Log 命令模块是 Workflow CLI 的日志管理命令，提供 Jira 日志的下载、查找、搜索等功能。该命令通过以下方式与 Lib 层集成：
+
+1. **Jira 模块集成**：使用 `JiraLogs` 进行日志下载、提取、搜索等操作
+2. **工具模块集成**：使用 `Clipboard::copy()` 复制内容到剪贴板
+3. **Settings 模块集成**：使用 `Settings::get()` 获取日志配置（输出文件夹名称、下载基础目录等）
+
+### 主要集成场景
+
+- **日志下载**：使用 `JiraLogs::download-_from-_jira()` 从 Jira 下载日志附件
+- **日志搜索**：使用 `JiraLogs::search-_keyword-_both-_files()` 搜索关键词
+- **请求 ID 查找**：使用 `JiraLogs::find-_request-_id()` 查找请求 ID
 
 ---
 

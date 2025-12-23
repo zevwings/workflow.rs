@@ -17,7 +17,7 @@
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
 ### 核心模块文件
 
@@ -45,6 +45,21 @@ src/lib/base/prompt/
 
 - **Prompt 使用**：所有需要 LLM prompt 的模块直接使用编译时嵌入的常量或函数
 - **多语言支持**：通过 `get-_language-_requirement` 函数增强 prompt 中的语言要求
+
+---
+
+## 🔄 集成关系
+
+Prompt 模块是 Workflow CLI 的工具模块，专门管理 LLM prompt 的生成和管理。该模块通过以下方式与其他模块集成：
+
+1. **PR 模块集成**：`lib/pr/llm.rs` 使用 Prompt 模块提供的 prompt 常量生成分支名和 PR 总结
+2. **编译时嵌入**：Prompt 作为编译时常量直接嵌入到二进制文件中，无需运行时文件读取
+3. **多语言支持**：通过 `get-_language-_requirement` 函数根据语言动态增强 prompt
+
+### 主要集成场景
+
+- **分支名生成**：PR 模块使用 `GENERATE_BRANCH_SYSTEM_PROMPT` 常量生成分支名和 PR 标题
+- **PR 总结生成**：PR 模块使用 `generate-_summarize-_pr-_system-_prompt` 函数根据语言生成 PR 总结 prompt
 
 ---
 

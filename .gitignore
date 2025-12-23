@@ -97,6 +97,7 @@ requirements/
 analysis/
 
 docs/**
+!docs/cursorrules.md
 !docs/README.md
 !docs/architecture/
 !docs/architecture/**
