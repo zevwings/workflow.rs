@@ -273,23 +273,23 @@ src/
   - 详细架构请参考 [llm.md](./lib/llm.md)
 
 - **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理，支持 iCloud 存储（macOS）
-  - 详细架构请参考 [SETTINGS_architecture.md](./lib/SETTINGS_architecture.md)
+  - 详细架构请参考 [settings.md](./lib/settings.md)
 
 - **Shell 模块** (`lib::base::shell`) - Shell 检测与管理，支持配置自动加载
-  - 详细架构请参考 [SHELL_architecture.md](./lib/SHELL_architecture.md)
+  - 详细架构请参考 [shell.md](./lib/shell.md)
 
 - **工具函数模块** (`lib::base::util`) - 通用工具函数（日志、字符串、浏览器、剪贴板等）
-  - 详细架构请参考 [TOOLS_architecture.md](./lib/TOOLS_architecture.md)
+  - 详细架构请参考 [tools.md](./lib/tools.md)
 
 ### Git 模块 (`lib::git`)
 
 提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
-- 详细架构请参考 [GIT_architecture.md](./lib/GIT_architecture.md)
+- 详细架构请参考 [git.md](./lib/git.md)
 
 ### Commit 模块 (`lib::commit`)
 
 提供 Commit 相关的业务逻辑，包括 amend 和 reword 操作的预览信息生成、格式化显示、完成提示生成以及历史 commit reword 的执行逻辑。
-- 详细架构请参考 [COMMIT_architecture.md](./lib/COMMIT_architecture.md)
+- 详细架构请参考 [commit.md](./lib/commit.md)
 
 ### Jira 模块 (`lib::jira`)
 
@@ -309,7 +309,7 @@ src/
 ### Proxy 模块 (`lib::proxy`)
 
 提供代理管理功能，包括系统代理读取、配置生成和管理。
-- 详细架构请参考 [PROXY_architecture.md](./lib/PROXY_architecture.md)
+- 详细架构请参考 [proxy.md](./lib/proxy.md)
 
 ### Repo 模块 (`lib::repo`)
 
@@ -319,7 +319,7 @@ src/
 ### Template 模块 (`lib::template`)
 
 提供模板渲染功能，支持分支命名模板、PR body 模板、Commit 消息模板等。使用 Handlebars 模板引擎，支持从全局配置和项目级配置加载模板。
-- 详细架构请参考 [TEMPLATE_architecture.md](./lib/TEMPLATE_architecture.md)
+- 详细架构请参考 [template.md](./lib/template.md)
 
 ### Rollback 模块 (`lib::rollback`)
 

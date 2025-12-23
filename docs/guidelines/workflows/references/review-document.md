@@ -263,14 +263,14 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 **Lib 层模块**（`docs/architecture/lib/`）：
 - pr.md
 - jira.md
-- GIT_architecture.md
+- git.md
 - http.md
-- SETTINGS_architecture.md
+- settings.md
 - llm.md
 - ...（其他 Lib 层模块）
 
 **命令层模块**（`docs/architecture/commands/`）：
-- PR_COMMAND_architecture.md
+- pr.md
 - JIRA_COMMAND_architecture.md
 - LOG_COMMAND_architecture.md
 - config.md

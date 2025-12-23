@@ -303,7 +303,7 @@ pb.set-_style(
 ## 📚 相关文档
 
 - [总体架构文档](../architecture.md)
-- [TOOLS 模块架构文档](./TOOLS_architecture.md)
+- [TOOLS 模块架构文档](./tools.md)
 - [Dialog 模块架构文档](./DIALOG_architecture.md)
 
 ---

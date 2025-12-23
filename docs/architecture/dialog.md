@@ -654,7 +654,7 @@ InputDialog::new("Enter value")
 ## 📚 相关文档
 
 - [总体架构文档](../architecture.md)
-- [TOOLS 模块架构文档](./TOOLS_architecture.md)
+- [TOOLS 模块架构文档](./tools.md)
 - [Indicator 模块架构文档](./INDICATOR_architecture.md)
 
 ---

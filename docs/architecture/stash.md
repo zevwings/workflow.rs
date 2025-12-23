@@ -70,7 +70,7 @@ src/commands/stash/
   - `TableBuilder` - 表格构建器
   - `TableStyle` - 表格样式
 
-详细架构文档：参见 [Git 模块架构文档](../lib/GIT_architecture.md)
+详细架构文档：参见 [Git 模块架构文档](../lib/git.md)
 
 ---
 
@@ -447,7 +447,7 @@ Warning: Please resolve conflicts manually:
 
 ## 📚 相关文档
 
-- [Git 模块架构文档](../lib/GIT_architecture.md) - Git 操作底层实现
+- [Git 模块架构文档](../lib/git.md) - Git 操作底层实现
 - [CLI 架构文档](../CLI_architecture.md) - CLI 命令结构设计
 - [开发规范文档](../../guidelines/development.md) - 代码风格和开发规范
 
