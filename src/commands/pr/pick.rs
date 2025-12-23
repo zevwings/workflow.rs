@@ -591,10 +591,13 @@ impl PullRequestPickCommand {
         // 5. 确定最终的 ticket（如果能提取到，不需要输入；否则询问是否需要输入）
         let jira_ticket = if let Some(ref ticket) = extracted_info.jira_ticket {
             log_success!("Extracted Jira ticket from source PR: {}", ticket);
+            // 确认是否使用提取的 ticket
             let use_extracted =
                 ConfirmDialog::new(format!("Use extracted Jira ticket: '{}'?", ticket))
                     .with_default(true)
-                    .prompt()?;
+                    .prompt()
+                    .wrap_err("Failed to confirm Jira ticket")?;
+
             if use_extracted {
                 Some(ticket.clone())
             } else {
@@ -923,5 +926,3 @@ impl PullRequestPickCommand {
         Ok(())
     }
 }
-
-// SourcePrInfo 和 ExtractedPrInfo 已迁移到 lib/pr/body_parser.rs

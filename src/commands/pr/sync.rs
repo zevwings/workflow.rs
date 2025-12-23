@@ -121,10 +121,6 @@ impl PullRequestSyncCommand {
             return Ok(Some(pr_id));
         }
 
-        // Codeup 特定逻辑已移除（Codeup support has been removed）
-        // 方法 2: 对于 Codeup，尝试通过 API 查找（如果工作历史中没有）
-        // ... (removed)
-
         Ok(None)
     }
 
@@ -170,6 +166,7 @@ impl PullRequestSyncCommand {
         // 查找源分支的 PR ID
         let source_pr_id = Self::find_source_branch_pr_id(source_branch)?;
 
+        // 处理分支清理
         match source_pr_id {
             Some(pr_id) => {
                 // 有 PR：询问是否关闭 PR
@@ -179,8 +176,8 @@ impl PullRequestSyncCommand {
                     pr_id, source_branch
                 ))
                 .with_default(true)
-                .with_cancel_message("PR and branch cleanup cancelled by user")
-                .prompt()?;
+                .prompt()
+                .wrap_err("Failed to collect cleanup confirmation")?;
 
                 if should_close {
                     // 关闭 PR
@@ -208,8 +205,8 @@ impl PullRequestSyncCommand {
                     source_branch
                 ))
                 .with_default(true)
-                .with_cancel_message("Branch deletion cancelled by user")
-                .prompt()?;
+                .prompt()
+                .wrap_err("Failed to collect cleanup confirmation")?;
 
                 if should_delete {
                     Self::delete_merged_branch(source_branch)?;

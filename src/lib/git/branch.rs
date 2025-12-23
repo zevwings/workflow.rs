@@ -212,7 +212,7 @@ impl GitBranch {
     /// 获取默认分支
     ///
     /// 统一使用 Git 命令从远程获取默认分支，适用于所有 Git 仓库类型
-    /// （包括 GitHub、Codeup、GitLab 等）
+    /// （包括 GitHub、GitLab 等）
     ///
     /// 尝试通过以下方式获取默认分支：
     /// 1. 使用 `git ls-remote --symref origin HEAD` 直接从远程获取符号引用

@@ -25,6 +25,9 @@ impl GitCommand {
     }
 
     /// 设置工作目录
+    ///
+    /// 此方法用于在指定目录中执行 Git 命令。
+    /// 虽然当前代码中未使用，但保留作为公共 API 以供将来需要时使用。
     #[allow(dead_code)]
     pub fn with_cwd(mut self, cwd: impl Into<PathBuf>) -> Self {
         self.cwd = Some(cwd.into());
@@ -55,6 +58,9 @@ impl GitCommand {
     }
 
     /// 运行命令并捕获 stdout/stderr
+    ///
+    /// 此方法用于调试和测试场景，可以获取命令的完整输出。
+    /// 虽然当前代码中未使用，但保留作为公共 API 以供调试和测试使用。
     #[allow(dead_code)]
     pub fn capture(&self) -> Result<Output> {
         self.build()

@@ -9,7 +9,8 @@
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use workflow::base::settings::settings::{
-    GitHubAccount, GitHubSettings, JiraSettings, LLMProviderSettings, LogSettings,
+    default_download_base_dir, GitHubAccount, GitHubSettings, JiraSettings, LLMProviderSettings,
+    LogSettings,
 };
 use workflow::base::settings::{
     GitHubAccountListRow, GitHubAccountRow, JiraConfigRow, LLMConfigRow, LLMSettings, Settings,
@@ -254,13 +255,13 @@ fn test_llm_provider_settings_creation() {
 #[test]
 fn test_log_settings_creation() {
     let log_settings = LogSettings {
-        output_folder_name: "custom_logs".to_string(),
+        output_folder_name: Some("custom_logs".to_string()),
         download_base_dir: Some("/custom/path".to_string()),
         level: Some("debug".to_string()),
         enable_trace_console: Some(true),
     };
 
-    assert_eq!(log_settings.output_folder_name, "custom_logs");
+    assert_eq!(log_settings.get_output_folder_name(), "custom_logs");
     assert_eq!(
         log_settings.download_base_dir,
         Some("/custom/path".to_string())
@@ -274,8 +275,9 @@ fn test_log_settings_creation() {
 fn test_log_settings_default() {
     let default_log = LogSettings::default();
 
-    assert_eq!(default_log.output_folder_name, "logs");
-    assert!(default_log.download_base_dir.is_some());
+    assert_eq!(default_log.get_output_folder_name(), "logs");
+    assert_eq!(default_log.output_folder_name, None);
+    assert_eq!(default_log.download_base_dir, None);
     assert_eq!(default_log.level, None);
     assert_eq!(default_log.enable_trace_console, None);
 }
@@ -285,9 +287,13 @@ fn test_log_settings_default() {
 fn test_log_settings_default_methods() {
     assert_eq!(LogSettings::default_log_folder(), "logs");
 
-    let default_base_dir = LogSettings::default_download_base_dir_option();
-    assert!(default_base_dir.is_some());
-    assert!(default_base_dir.unwrap().contains("Workflow"));
+    // default_download_base_dir_option() returns None (to indicate using default without writing to config)
+    let default_base_dir_option = LogSettings::default_download_base_dir_option();
+    assert_eq!(default_base_dir_option, None);
+
+    // Check the actual default path function
+    let default_base_dir = default_download_base_dir();
+    assert!(default_base_dir.contains("Workflow"));
 }
 
 // ==================== Settings 主结构测试 ====================
@@ -321,7 +327,7 @@ fn test_settings_default() {
 
     assert_eq!(default_settings.jira.email, None);
     assert!(default_settings.github.accounts.is_empty());
-    assert_eq!(default_settings.log.output_folder_name, "logs");
+    assert_eq!(default_settings.log.get_output_folder_name(), "logs");
     assert_eq!(default_settings.llm.provider, "openai");
     assert!(default_settings.aliases.is_empty());
 }
@@ -413,7 +419,7 @@ fn test_complex_configuration_scenario() {
             current: Some("main".to_string()),
         },
         log: LogSettings {
-            output_folder_name: "complex_logs".to_string(),
+            output_folder_name: Some("complex_logs".to_string()),
             download_base_dir: Some("/complex/logs/path".to_string()),
             level: Some("info".to_string()),
             enable_trace_console: Some(false),

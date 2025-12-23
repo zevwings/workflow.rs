@@ -78,8 +78,6 @@ impl ConfigCommand {
             TableBuilder::new(config_rows).with_style(TableStyle::Modern).render()
         );
 
-        // Codeup 配置显示已移除（Codeup support has been removed）
-
         // 打印 Jira 配置
         if result.jira.configured {
             log_break!();
@@ -182,7 +180,6 @@ impl ConfigCommand {
         settings.jira.email.is_none()
             && settings.jira.api_token.is_none()
             && settings.github.accounts.is_empty()
-            // && settings.codeup.project_id.is_none()  // Codeup support has been removed
             && settings.llm.openai.is_empty()
             && settings.llm.deepseek.is_empty()
             && settings.llm.proxy.is_empty()

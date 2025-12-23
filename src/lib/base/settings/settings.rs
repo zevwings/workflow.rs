@@ -39,17 +39,6 @@ pub struct LLMConfigInfo {
     pub language: String,
 }
 
-// Codeup 配置信息已移除（Codeup support has been removed）
-// #[derive(Debug, Clone)]
-// pub struct CodeupConfigInfo {
-//     /// 项目 ID
-//     pub project_id: Option<u64>,
-//     /// CSRF Token（掩码显示）
-//     pub csrf_token: Option<String>,
-//     /// Cookie（掩码显示）
-//     pub cookie: Option<String>,
-// }
-
 /// Jira 验证结果
 #[derive(Debug, Clone)]
 pub struct JiraVerificationResult {
@@ -130,8 +119,6 @@ pub struct VerificationResult {
     pub log: LogConfigInfo,
     /// LLM 配置
     pub llm: LLMConfigInfo,
-    // /// Codeup 配置  // Codeup support has been removed
-    // pub codeup: CodeupConfigInfo,
     /// Jira 验证结果
     pub jira: JiraVerificationResult,
     /// GitHub 验证结果
@@ -232,8 +219,9 @@ pub fn default_download_base_dir() -> String {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogSettings {
     /// 日志输出文件夹名称
-    #[serde(default = "LogSettings::default_log_folder")]
-    pub output_folder_name: String,
+    /// 如果为 `None`，使用默认值 `logs`，且不写入配置文件
+    #[serde(default = "LogSettings::default_log_folder_option")]
+    pub output_folder_name: Option<String>,
     /// 日志下载基础目录
     #[serde(default = "LogSettings::default_download_base_dir_option")]
     pub download_base_dir: Option<String>,
@@ -261,40 +249,33 @@ impl LogSettings {
         "logs".to_string()
     }
 
-    /// 默认下载基础目录路径（Option 类型）
+    /// 默认日志文件夹名称（Option 类型，用于序列化）
+    pub fn default_log_folder_option() -> Option<String> {
+        None // None 表示使用默认值，不写入配置文件
+    }
+
+    /// 获取日志文件夹名称（如果为 None，返回默认值）
+    pub fn get_output_folder_name(&self) -> String {
+        self.output_folder_name.clone().unwrap_or_else(Self::default_log_folder)
+    }
+
+    /// 默认下载基础目录路径（Option 类型，用于序列化）
+    /// 返回 `None` 表示使用默认值，不写入配置文件
     pub fn default_download_base_dir_option() -> Option<String> {
-        Some(default_download_base_dir())
+        None // None 表示使用默认值，不写入配置文件
     }
 }
 
 impl Default for LogSettings {
     fn default() -> Self {
         Self {
-            output_folder_name: Self::default_log_folder(),
-            download_base_dir: Self::default_download_base_dir_option(),
+            output_folder_name: Self::default_log_folder_option(), // None
+            download_base_dir: Self::default_download_base_dir_option(), // None
             level: None,
             enable_trace_console: None,
         }
     }
 }
-
-// Codeup 配置已移除（Codeup support has been removed）
-// #[derive(Debug, Clone, Default, Serialize, Deserialize)]
-// pub struct CodeupSettings {
-//     /// Codeup 项目 ID
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub project_id: Option<u64>,
-//     /// Codeup CSRF Token
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub csrf_token: Option<String>,
-//     /// Codeup Cookie
-//     #[serde(skip_serializing_if = "Option::is_none")]
-//     pub cookie: Option<String>,
-// }
-//
-// impl CodeupSettings {
-//     /// 检查 Codeup 配置是否为空（所有字段都是 None）
-//     fn is_empty(&self) -> bool {
 //         self.project_id.is_none() && self.csrf_token.is_none() && self.cookie.is_none()
 //     }
 // }
@@ -420,9 +401,6 @@ pub struct Settings {
     /// 日志配置
     #[serde(default, skip_serializing_if = "LogSettings::is_empty")]
     pub log: LogSettings,
-    // /// Codeup 配置  // Codeup support has been removed
-    // #[serde(default, skip_serializing_if = "CodeupSettings::is_empty")]
-    // pub codeup: CodeupSettings,
     /// LLM 配置
     #[serde(default, skip_serializing_if = "LLMSettings::is_empty")]
     pub llm: LLMSettings,
@@ -495,19 +473,10 @@ impl Settings {
     pub fn verify(&self) -> Result<VerificationResult> {
         Ok(VerificationResult {
             log: LogConfigInfo {
-                output_folder_name: self.log.output_folder_name.clone(),
+                output_folder_name: self.log.get_output_folder_name(),
                 download_base_dir: self.log.download_base_dir.clone(),
             },
             llm: self.get_llm_config(),
-            // codeup: CodeupConfigInfo {  // Codeup support has been removed
-            //     project_id: self.codeup.project_id,
-            //     csrf_token: self
-            //         .codeup
-            //         .csrf_token
-            //         .as_ref()
-            //         .map(|t| mask_sensitive_value(t)),
-            //     cookie: self.codeup.cookie.as_ref().map(|c| mask_sensitive_value(c)),
-            // },
             jira: self.verify_jira()?,
             github: self.verify_github()?,
         })

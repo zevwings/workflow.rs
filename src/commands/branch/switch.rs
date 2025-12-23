@@ -47,6 +47,7 @@ impl SwitchCommand {
         // Check if branch exists
         let (exists_local, exists_remote) = GitBranch::is_branch_exists(&target_branch)?;
 
+        // 确认分支创建
         let should_create = if !exists_local && !exists_remote {
             // Branch does not exist, prompt user to confirm creation
             ConfirmDialog::new(format!(

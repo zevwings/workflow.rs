@@ -2,7 +2,7 @@
 //!
 //! 本模块提供了 Git 仓库相关的检测功能：
 //! - 检测当前目录是否为 Git 仓库
-//! - 检测远程仓库类型（GitHub、Codeup 等）
+//! - 检测远程仓库类型（GitHub 等）
 //! - 获取远程仓库 URL
 
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
@@ -15,7 +15,7 @@ use super::GitCommand;
 ///
 /// 提供仓库相关的操作功能，包括：
 /// - 检测当前目录是否为 Git 仓库
-/// - 检测远程仓库类型（GitHub、Codeup 等）
+/// - 检测远程仓库类型（GitHub 等）
 /// - 获取远程仓库 URL
 /// - 从远程获取更新
 pub struct GitRepo;
@@ -35,8 +35,6 @@ impl GitRepo {
     /// 检测远程仓库类型（GitHub）
     ///
     /// 通过解析远程仓库 URL 来识别仓库类型。
-    /// 注意：Codeup 支持已移除，检测到 Codeup URL 将返回 `RepoType::Codeup`，
-    /// 但 PR 功能将不支持。
     ///
     /// # 返回
     ///
@@ -63,7 +61,7 @@ impl GitRepo {
     ///
     /// 返回对应的 `RepoType`：
     /// - 包含 `github.com` 或 host 以 `github` 开头 → `RepoType::GitHub`
-    /// - 包含 `codeup.aliyun.com` → `RepoType::Codeup`（保留枚举值，但不支持 PR 功能）
+    /// - 包含 `codeup.aliyun.com` → `RepoType::Codeup`（检测支持，但 PR 功能不支持）
     /// - 其他 → `RepoType::Unknown`
     fn parse_repo_type_from_url(url: &str) -> RepoType {
         // 检查 GitHub：包含 github.com 或 SSH host 以 github 开头（处理 SSH Host 别名，如 git@github-brainim:user/repo.git）
@@ -90,7 +88,6 @@ impl GitRepo {
     /// # 错误
     ///
     /// 如果无法获取远程 URL，返回相应的错误信息。
-    #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
         GitCommand::new(["remote", "get-url", "origin"])
             .read()
@@ -142,9 +139,8 @@ impl GitRepo {
 
     /// 从 Git remote URL 提取仓库名（owner/repo 格式）
     ///
-    /// 支持 GitHub 和 Codeup 两种平台：
+    /// 支持 GitHub 平台：
     /// - GitHub: git@github.com:owner/repo.git → owner/repo
-    /// - Codeup: git@codeup.aliyun.com:owner/repo.git → owner/repo
     ///
     /// # 返回
     ///
@@ -161,11 +157,12 @@ impl GitRepo {
     /// 从 URL 字符串提取仓库名
     ///
     /// 支持多种 URL 格式：
-    /// - SSH: git@github.com:owner/repo.git
-    /// - SSH (别名): git@github-brainim:owner/repo.git
-    /// - HTTPS: https://github.com/owner/repo.git
+    /// - GitHub SSH: git@github.com:owner/repo.git
+    /// - GitHub SSH (别名): git@github-brainim:owner/repo.git
+    /// - GitHub HTTPS: https://github.com/owner/repo.git
     /// - Codeup SSH: git@codeup.aliyun.com:owner/repo.git
     /// - Codeup HTTPS: https://codeup.aliyun.com/owner/repo.git
+    /// - Codeup HTTP: http://codeup.aliyun.com/owner/repo
     ///
     /// # 参数
     ///
@@ -212,7 +209,7 @@ impl GitRepo {
                 .to_string());
         }
 
-        // Codeup HTTPS 格式: https://codeup.aliyun.com/owner/repo.git
+        // Codeup HTTPS/HTTP 格式: https://codeup.aliyun.com/owner/repo.git 或 http://codeup.aliyun.com/owner/repo
         let codeup_https_re = Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
             .wrap_err("Invalid regex pattern")?;
         if let Some(caps) = codeup_https_re.captures(url) {
