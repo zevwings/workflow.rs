@@ -8,6 +8,7 @@
 - 对于分析、解释、讨论类的问题，仅提供文字回答，不要自动生成代码或文档文件
 - 如果用户只是询问问题或需要解释，不要主动创建文件或修改代码
 - **禁止性规则**：**在没有用户明确指示需要生成代码或文档的情况下，禁止通过 AI 自动生成任何代码文件或文档文件。仅提供分析、解释、建议等文字回答。**
+- **分析类问题规则**：**对于分析、讨论、询问类的问题，只提供文字回答和分析，不要自动生成分析文档文件。只有在用户明确要求生成文档时，才创建文档文件。**
 - **代码修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有代码文件。如需修改代码，必须先获得用户同意或用户明确说明需要修改。**
 - **文档修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有文档文件。如需修改文档，必须先获得用户同意或用户明确说明需要修改。**
 
@@ -58,7 +59,7 @@
 
 ## 文档文件管理
 
-**核心原则**：**所有生成的文档文件，根据文档类型自动归类到对应目录；如果无法确定类型，默认存放到 `requirements/`。**
+**核心原则**：**所有生成的文档文件，根据文档类型自动归类到对应目录；如果无法确定类型，优先检查是否包含"分析"等关键词，匹配则存放到 `analysis/`，否则默认存放到 `docs/requirements/`。**
 
 **重要规则**：文档文件根据类型存放在对应目录，禁止在项目根目录或其他位置随意创建文档文件。
 
@@ -85,62 +86,78 @@
    - 迁移索引 → `docs/migration/README.md`
    - **识别关键词**：迁移、Migration、版本升级、配置迁移
 
-4. **待办事项文档** → `docs/todo/`
-   - TODO 文档 → `docs/todo/{TOPIC}_TODO.md`
-   - TODO 索引 → `docs/todo/README.md`
+4. **待办事项文档** → `docs/requirements/`
+   - TODO 文档 → `docs/requirements/{TOPIC}_TODO.md`
+   - TODO 索引 → `docs/requirements/README.md`
    - **识别关键词**：TODO、待办、待实现、计划
-   - **索引限制**：TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
+   - **索引限制**：TODO 文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
 
-5. **分析报告文档** → `report/`
+5. **技术分析文档** → `analysis/`
+   - 技术分析文档 → `analysis/{TOPIC}_ANALYSIS.md` 或 `analysis/{TOPIC}_ANALYSIS_REPORT.md`
+   - **识别关键词**：分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析
+   - **适用场景**：问题分析、测试分析、代码分析、性能分析、架构分析等技术分析文档
+   - **⚠️ 重要**：这是**临时分析文档**，不是参考文档，可以直接删除
+
+6. **实现/实施文档** → `analysis/impl/`
+   - 实现文档 → `analysis/impl/{TOPIC}_IMPLEMENTATION.md` 或 `analysis/impl/{TOPIC}_IMPL.md`
+   - **识别关键词**：实现、实施、IMPLEMENTATION、IMPL、实现文档、实施文档、实现方案、实施方案
+   - **适用场景**：功能实现文档、技术实施方案、实现细节记录等
+   - **⚠️ 重要**：这是**临时实现文档**，不是参考文档，可以直接删除
+
+7. **分析报告文档** → `report/`
    - **特殊规则**：只有从 `@docs/guidelines/PRE_COMMIT_GUIDELINES.md` 生成的内容存放到这里
    - 分析报告 → `report/{TOPIC}_REPORT.md`
    - **识别关键词**：分析报告、检查报告、代码分析、质量报告（且来源是 PRE_COMMIT_GUIDELINES.md）
    - **⚠️ 重要**：这是**临时分析文档**，不是参考文档，可以直接删除
 
-6. **需求分析文档（默认）** → `requirements/`
-   - **默认存放位置**：如果文档类型不明确或未指定，默认存放到 `requirements/`
-   - 需求文档 → `requirements/{TOPIC}.md`
-   - **适用场景**：需求分析、功能说明、实现计划等未明确分类的文档
-   - **⚠️ 重要**：这是**临时分析文档**，不是参考文档，可以直接删除
+**注意**：需求分析、功能说明、实现计划等未明确分类的文档，默认存放到 `docs/requirements/` 目录。
 
 **文档存放决策流程**：
 
 1. 检查用户是否明确指定了文档类型或存放位置
 2. 如果指定了类型，根据上述分类规则自动归类
-3. 如果未指定类型，检查文档内容中的关键词
-4. 如果无法确定类型，默认存放到 `requirements/`
+3. **重要限制**：
+   - **分析文档**（`analysis/`）：**必须**用户明确指明需要生成分析文档时才生成，不能根据关键词自动判断
+   - **需求文档**（`docs/requirements/` 中的需求文档）：**必须**用户明确指明需要生成需求文档时才生成，不能根据关键词自动判断
+4. 如果未指定类型，检查文档内容中的关键词：
+   - 包含"TODO"、"待办"、"待实现"、"计划"等关键词 → `docs/requirements/`
+   - 其他未明确分类的文档 → `docs/requirements/`
+5. 如果无法确定类型，默认存放到 `docs/requirements/`
 
 **文档命名规范**：
 - 架构文档：`{MODULE}_ARCHITECTURE.md`（Lib 层）或 `{MODULE}_COMMAND_ARCHITECTURE.md`（命令层）
 - 指南文档：`{TOPIC}_GUIDELINES.md`
 - 迁移文档：`{VERSION}-to-{VERSION}.md`
-- TODO 文档：`{TOPIC}_TODO.md`
+- TODO 文档：`{TOPIC}_TODO.md`（存放到 `docs/requirements/`）
+- 分析文档：`{TOPIC}_ANALYSIS.md` 或 `{TOPIC}_ANALYSIS_REPORT.md`
+- 实现文档：`{TOPIC}_IMPLEMENTATION.md` 或 `{TOPIC}_IMPL.md`（存放到 `analysis/impl/`）
 - 报告文档：`{TOPIC}_REPORT.md`
-- 需求文档：`{TOPIC}.md` 或 `{TOPIC}_REQUIREMENT.md`
+- 需求文档：`{TOPIC}.md` 或 `{TOPIC}_REQUIREMENT.md`（存放到 `docs/requirements/`）
 
 **创建新文档时的注意事项**：
 - 使用模板创建新文档（参考 `docs/guidelines/DOCUMENT_GUIDELINES.md`）
 - 更新相应的文档索引（如适用）：
-  - TODO 文档：只在 `docs/todo/README.md` 中索引
+  - TODO 文档：只在 `docs/requirements/README.md` 中索引
   - 其他参考文档：在 `docs/README.md` 中索引
 - 确保文档遵循项目的文档编写规范
 
 **文档索引规则**：
-- **禁止索引**：`report/` 和 `requirements/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 中
-- 这两个目录包含**临时分析文档**，不是参考文档，不需要在文档索引中展示
-- **TODO 文档索引限制**：`docs/todo/` 目录下的 TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 中索引
+- **禁止索引**：`analysis/`、`analysis/impl/` 和 `report/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 中
+- 这些目录包含**临时分析文档和实现文档**，不是参考文档，不需要在文档索引中展示
+- **TODO 文档索引限制**：`docs/requirements/` 目录下的 TODO 文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 中索引
 - **参考文档**：`docs/` 目录下的其他文档（架构文档、指南文档、迁移文档）是参考文档，应该被索引到 `docs/README.md` 中
 
 **文档删除规则**：
 - **临时文档（可直接删除）**：
+  - `analysis/` 目录下的所有文档都是临时技术分析，可以随时删除
+  - `analysis/impl/` 目录下的所有文档都是临时实现文档，可以随时删除
   - `report/` 目录下的所有文档都是临时分析报告，可以随时删除
-  - `requirements/` 目录下的所有文档都是临时需求分析，可以随时删除
-  - 这些文档用于开发过程中的分析和记录，不需要长期保留
+  - 这些文档用于开发过程中的分析、实现和记录，不需要长期保留
 - **参考文档（删除需谨慎）**：
   - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
-  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/todo/`）
+  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/requirements/`）
   - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
-  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/todo/README.md` 中维护索引，不在主文档索引中展示
+  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/requirements/README.md` 中维护索引，不在主文档索引中展示
 
 ## 核心模块
 

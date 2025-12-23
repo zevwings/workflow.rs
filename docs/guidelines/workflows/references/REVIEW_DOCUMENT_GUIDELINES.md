@@ -228,7 +228,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
   - `docs/architecture/` - 架构文档
   - `docs/guidelines/` - 指南文档
   - `docs/migration/` - 迁移文档
-  - `docs/todo/` - 待办文档
+  - `docs/requirements/` - 待办文档
 - [ ] **文档索引**：`docs/README.md` 包含完整的文档索引
 - [ ] **文档分类**：文档按类型正确分类
 - [ ] **文档命名**：文档命名符合规范（如 `{MODULE}_ARCHITECTURE.md`）
@@ -339,7 +339,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 - `docs/architecture/` - 架构文档
 - `docs/guidelines/` - 指南文档
 - `docs/migration/` - 迁移文档
-- `docs/todo/` - 待办文档（可选）
+- `docs/requirements/` - 待办文档（可选）
 
 ---
 
@@ -475,7 +475,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
   - 命令层架构文档 → `docs/architecture/commands/`
 - [ ] **指南文档位置**：指南文档是否在 `docs/guidelines/` 目录下
 - [ ] **迁移文档位置**：迁移文档是否在 `docs/migration/` 目录下
-- [ ] **待办文档位置**：待办文档是否在 `docs/todo/` 目录下
+- [ ] **待办文档位置**：待办文档是否在 `docs/requirements/` 目录下
 
 #### 检查方法
 

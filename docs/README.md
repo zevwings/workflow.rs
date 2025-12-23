@@ -300,7 +300,7 @@
 
 ## 📋 待办事项和设计指南
 
-> 待办事项文档位于 [`todo/`](./todo/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
+> 待办事项文档位于 [`requirements/`](./requirements/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
 ### [DEVELOPMENT_GUIDELINES.md](./guidelines/DEVELOPMENT_GUIDELINES.md)
 **开发规范文档**
