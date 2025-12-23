@@ -299,9 +299,9 @@ jobs:
           echo "📊 Coverage check completed"
           echo "Note: Coverage check is non-blocking. Please review the report above."
 
-  # 文档检查
+  # 文档一致性检查（架构文档存在性、时间戳格式等）
   check-docs:
-    name: 📚 Document Check
+    name: 📚 Document Consistency Check
     runs-on: ubuntu-latest
     needs: check-skip-ci
     # 跳过版本更新分支（bump-version-*）
@@ -329,32 +329,217 @@ jobs:
             ${{ runner.os }}-cargo-
           enableCrossOsArchive: false
 
-      - name: 📦 Install lychee (optional)
-        continue-on-error: true
+      - name: 📚 Run document consistency checks
         run: |
-          echo "📦 Installing lychee for link checking..."
-          cargo install lychee || echo "⚠️ Failed to install lychee, link checking will be skipped"
+          echo "📚 Running document consistency checks..."
 
-      - name: 📚 Run document check script
-        run: |
-          echo "📚 Running document check script..."
-          chmod +x scripts/dev/check-docs.sh
-          ./scripts/dev/check-docs.sh || echo "⚠️ Some document checks failed (non-blocking)"
+          # 检查变更文件的架构文档存在性
+          echo ""
+          echo "📝 Checking architecture documents for changed files..."
+
+          # 获取变更的文件（相对于基础分支）
+          BASE_REF="${{ github.event.pull_request.base.ref || 'master' }}"
+          CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD 2>/dev/null | grep -E '^src/(lib|commands)/' || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "ℹ️  No changed files in src/lib/ or src/commands/ directories"
+          else
+            # 使用临时文件存储缺失的文档
+            MISSING_DOCS_FILE=$(mktemp)
+            trap "rm -f $MISSING_DOCS_FILE" EXIT
+
+            echo "$CHANGED_FILES" | while IFS= read -r file; do
+              [ -z "$file" ] && continue
+
+              # 提取模块名
+              module=$(echo "$file" | sed 's|^src/lib/\([^/]*\).*|\1|')
+              if [ "$module" = "$file" ]; then
+                module=$(echo "$file" | sed 's|^src/commands/\([^/]*\).*|\1|')
+              fi
+
+              # 跳过空模块名或无效路径
+              [ -z "$module" ] || [ "$module" = "$file" ] && continue
+
+              doc_path="docs/architecture/${module}.md"
+              if [ ! -f "$doc_path" ]; then
+                echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
+                echo "$doc_path" >> "$MISSING_DOCS_FILE"
+              fi
+            done
+
+            # 统计缺失的文档数量
+            MISSING_DOCS=0
+            if [ -f "$MISSING_DOCS_FILE" ] && [ -s "$MISSING_DOCS_FILE" ]; then
+              MISSING_DOCS=$(wc -l < "$MISSING_DOCS_FILE")
+            fi
+
+            if [ $MISSING_DOCS -gt 0 ]; then
+              echo ""
+              echo "📋 Found $MISSING_DOCS module(s) missing architecture documentation"
+              echo "::warning::Found $MISSING_DOCS module(s) missing architecture documentation"
+            else
+              echo ""
+              echo "✅ All changed modules have architecture documentation"
+            fi
+          fi
+
+          # 检查文档时间戳格式
+          echo ""
+          echo "📅 Checking document timestamp format..."
+          INVALID_TIMESTAMPS=0
+          while IFS= read -r file; do
+            if ! tail -5 "$file" | grep -qE '\*\*最后更新\*\*: [0-9]{4}-[0-9]{2}-[0-9]{2}'; then
+              echo "⚠️  Invalid timestamp format: $file"
+              INVALID_TIMESTAMPS=$((INVALID_TIMESTAMPS + 1))
+            fi
+          done < <(find docs -name "*.md" -type f ! -path "*/templates/*" ! -name "README.md")
+
+          if [ $INVALID_TIMESTAMPS -gt 0 ]; then
+            echo "📋 Found $INVALID_TIMESTAMPS document(s) with invalid timestamp format"
+            echo "::warning::Found $INVALID_TIMESTAMPS document(s) with invalid timestamp format"
+          else
+            echo "✅ All documents have valid timestamp format"
+          fi
+
+          echo ""
+          echo "✅ Document consistency checks completed"
 
       - name: 📤 Upload document check reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: document-check-reports
+          name: document-consistency-reports
           path: report/doc-consistency-check-test-*.md
           retention-days: 7
           if-no-files-found: ignore
 
-      - name: ✅ Document check summary
+      - name: ✅ Document consistency check summary
         if: always()
         run: |
-          echo "✅ Document check completed"
-          echo "Note: Document checks are non-blocking. Please review warnings above."
+          echo "✅ Document consistency check completed"
+          echo "Note: Document consistency checks are non-blocking. Please review warnings above."
+
+  # 文档链接验证（内部链接和外部链接）
+  check-links:
+    name: 🔗 Document Link Validation
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    continue-on-error: true  # 非阻塞模式：允许失败，不阻止 PR 合并
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install lychee
+        continue-on-error: true
+        run: |
+          echo "📦 Installing lychee for external link checking..."
+          cargo install lychee || echo "⚠️ Failed to install lychee, external link checking will be skipped"
+
+      - name: 🔗 Run document link validation
+        run: |
+          echo "🔗 Running document link validation..."
+
+          # 检查内部链接
+          echo ""
+          echo "📋 Checking internal links..."
+
+          # 临时文件存储断链信息
+          BROKEN_LINKS_FILE=$(mktemp)
+          trap "rm -f $BROKEN_LINKS_FILE" EXIT
+
+          find docs -name "*.md" -type f ! -path "*/templates/*" | while read -r file; do
+            # 提取所有内部链接（格式：](path/to/file.md) 或 [text](path/to/file.md#anchor)）
+            grep -oP '\]\([^)]+\)' "$file" 2>/dev/null | sed 's/](//;s/)//' | while read -r link; do
+              # 跳过空链接
+              [ -z "$link" ] && continue
+
+              # 跳过外部链接
+              [[ "$link" =~ ^https?:// ]] && continue
+
+              # 跳过锚点链接（只检查文件存在性，不检查锚点）
+              if [[ "$link" =~ ^# ]]; then
+                continue
+              fi
+
+              # 解析链接路径
+              if [[ "$link" =~ ^/ ]]; then
+                # 绝对路径（从项目根目录开始）
+                target_file="${link#/}"
+              else
+                # 相对路径
+                file_dir=$(dirname "$file")
+                target_file="$file_dir/$link"
+              fi
+
+              # 移除锚点部分（#anchor）
+              target_file="${target_file%%#*}"
+
+              # 规范化路径（移除多余的 ./ 和 ..）
+              target_file=$(echo "$target_file" | sed 's|^\./||' | sed 's|/\./|/|g')
+
+              # 检查文件是否存在
+              if [ ! -f "$target_file" ]; then
+                echo "❌ Broken link: $file -> $link (target file: $target_file)" >> "$BROKEN_LINKS_FILE"
+              fi
+            done
+          done
+
+          # 统计断链数量
+          BROKEN_LINKS=0
+          if [ -f "$BROKEN_LINKS_FILE" ] && [ -s "$BROKEN_LINKS_FILE" ]; then
+            BROKEN_LINKS=$(wc -l < "$BROKEN_LINKS_FILE")
+            echo ""
+            echo "Found broken links:"
+            cat "$BROKEN_LINKS_FILE"
+            echo ""
+            echo "::warning::Found $BROKEN_LINKS broken internal link(s)"
+          fi
+
+          if [ $BROKEN_LINKS -gt 0 ]; then
+            echo "❌ Found $BROKEN_LINKS broken link(s)"
+          else
+            echo "✅ All internal links are valid"
+          fi
+
+          # 检查外部链接（如果 lychee 可用）
+          if command -v lychee >/dev/null 2>&1; then
+            echo ""
+            echo "📋 Checking external links..."
+            lychee docs/**/*.md --exclude-all-private --exclude-loopback || {
+              echo "⚠️  Found external link issues (non-blocking)"
+              echo "   Please review the output above for details"
+            }
+          else
+            echo ""
+            echo "ℹ️  lychee not installed, skipping external link check"
+          fi
+
+          echo ""
+          echo "✅ Document link validation completed"
+
+      - name: ✅ Document link validation summary
+        if: always()
+        run: |
+          echo "✅ Document link validation completed"
+          echo "Note: Document link validation is non-blocking. Please review warnings above."
 
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
@@ -368,7 +553,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, check-docs]
+    needs: [check-skip-ci, check-lint, tests, check-docs, check-links]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -382,12 +567,14 @@ jobs:
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
           DOCS_RESULT="${{ needs.check-docs.result }}"
+          LINKS_RESULT="${{ needs.check-links.result }}"
 
           echo "📊 Checking job status:"
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
           echo "  check-docs: $DOCS_RESULT (non-blocking)"
+          echo "  check-links: $LINKS_RESULT (non-blocking)"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
@@ -432,15 +619,25 @@ jobs:
           # 检查 check-docs 状态（非阻塞，仅记录）
           if [ -n "$DOCS_RESULT" ]; then
             if [ "$DOCS_RESULT" == "failure" ]; then
-              echo "⚠️  Document check found issues (non-blocking): $DOCS_RESULT"
+              echo "⚠️  Document consistency check found issues (non-blocking): $DOCS_RESULT"
               echo "   Please review the warnings above"
             elif [ "$DOCS_RESULT" == "success" ]; then
-              echo "✅ Document check passed: $DOCS_RESULT"
+              echo "✅ Document consistency check passed: $DOCS_RESULT"
+            fi
+          fi
+
+          # 检查 check-links 状态（非阻塞，仅记录）
+          if [ -n "$LINKS_RESULT" ]; then
+            if [ "$LINKS_RESULT" == "failure" ]; then
+              echo "⚠️  Document link validation found issues (non-blocking): $LINKS_RESULT"
+              echo "   Please review the warnings above"
+            elif [ "$LINKS_RESULT" == "success" ]; then
+              echo "✅ Document link validation passed: $LINKS_RESULT"
             fi
           fi
 
           # 如果 check-lint 和 tests 都成功或被跳过，则通过
-          # 注意：check-docs 的结果不影响最终状态（非阻塞）
+          # 注意：check-docs 和 check-links 的结果不影响最终状态（非阻塞）
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
               echo "✅ All required checks passed or were skipped"
