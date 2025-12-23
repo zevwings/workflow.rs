@@ -88,7 +88,6 @@ impl GitRepo {
     /// # 错误
     ///
     /// 如果无法获取远程 URL，返回相应的错误信息。
-    #[allow(dead_code)]
     pub fn get_remote_url() -> Result<String> {
         GitCommand::new(["remote", "get-url", "origin"])
             .read()

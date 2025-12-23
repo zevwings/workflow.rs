@@ -161,7 +161,6 @@ impl PlatformProvider for GitHub {
     }
 
     /// 获取 PR URL
-    #[allow(dead_code)]
     fn get_pull_request_url(&self, pull_request_id: &str) -> Result<String> {
         let pr_number =
             pull_request_id.parse::<u64>().wrap_err(validation_errors::INVALID_PR_NUMBER)?;
