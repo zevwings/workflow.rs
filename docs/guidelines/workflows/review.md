@@ -19,7 +19,7 @@
 - [🧪 测试检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试
 - [📊 测试覆盖检查机制指南](./references/test-coverage-check.md) - 测试覆盖检查机制、定期检查流程
 - [📚 文档检查指南](./references/review-document.md) - README、架构文档、CHANGELOG
-- [🏗️ 架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
+- [🏗️ 架构文档审查指南](./references/review-architecture-doc.md) - 架构文档与代码一致性检查
 
 ---
 
@@ -66,7 +66,7 @@
 | 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/review-code.md) |
 | 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/review-test-case.md) |
 | 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/review-document.md) |
-| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) |
+| 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/review-architecture-doc.md) |
 
 ### ⏱️ 时间投入规划
 
@@ -563,7 +563,7 @@ Write-Host "report/REVIEW_DOCUMENT_${timestamp}.md"
 
 ### 5. 架构文档与代码一致性检查
 
-**指南**：[架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
+**指南**：[架构文档审查指南](./references/review-architecture-doc.md)
 
 **检查内容**：
 - 模块结构检查
@@ -1080,7 +1080,7 @@ grep -r "#[cfg(test)]" src/
 - [测试用例检查指南](./references/review-test-case.md)
 - [测试覆盖检查机制指南](./references/test-coverage-check.md)
 - [文档检查指南](./references/review-document.md)
-- [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
+- [架构文档审查指南](./references/review-architecture-doc.md)
 
 ### 报告位置
 

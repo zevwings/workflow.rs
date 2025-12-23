@@ -114,9 +114,9 @@
 
 ## 🔗 相关文档
 
-- [架构文档审查指南](../guidelines/workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
+- [架构文档审查指南](../guidelines/workflows/references/review-architecture-doc.md) - 详细的架构文档检查方法和流程
 - [开发规范](../guidelines/development.md) - 开发规范和定期检查机制
-- [架构文档检查工具 TODO](../todo/DOC_CHECK_TODO.md) - 自动化检查工具实施计划
+- [架构文档检查工具 TODO](../todo/doc-check.md) - 自动化检查工具实施计划
 
 ---
 

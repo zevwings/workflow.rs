@@ -17,7 +17,7 @@
 - [代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库检查
 - [测试用例检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试检查
 - [文档检查指南](./references/review-document.md) - README、架构文档、CHANGELOG 检查
-- [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
+- [架构文档审查指南](./references/review-architecture-doc.md) - 架构文档与代码一致性检查
 - [CLI 检查指南](./references/review-cli.md) - CLI 命令结构、补全脚本检查
 
 ---
@@ -172,13 +172,13 @@ graph TD
 
 ## 📚 文档检查
 
-> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./references/review-document.md)，该指南包含完整的检查流程、检查方法和示例。如需进行架构文档与代码一致性检查，请参考 [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)。
+> **详细检查指南**：本文档提供快速检查清单，如需进行系统性的文档检查，请参考 [文档检查指南](./references/review-document.md)，该指南包含完整的检查流程、检查方法和示例。如需进行架构文档与代码一致性检查，请参考 [架构文档审查指南](./references/review-architecture-doc.md)。
 
 ### 快速检查清单
 
 **检查项**：
 - [ ] README.md 命令清单和版本号是否已更新
-- [ ] 架构文档与代码实现一致（如适用，参考 [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)）
+- [ ] 架构文档与代码实现一致（如适用，参考 [架构文档审查指南](./references/review-architecture-doc.md)）
 - [ ] 架构文档是否已更新（`docs/architecture/`）
 - [ ] 文档索引是否已更新（`docs/README.md`）
 - [ ] 迁移文档是否已创建（如有破坏性变更）
@@ -200,7 +200,7 @@ graph TD
 **检查项**：
 - [ ] 相关命令架构文档是否已更新（`docs/architecture/commands/*_COMMAND_architecture.md`）
 - [ ] 相关 lib 层架构文档是否已更新（`docs/architecture/lib/*_architecture.md`）
-- [ ] `CLI_architecture.md` 是否反映了命令结构变更
+- [ ] `cli.md` 是否反映了命令结构变更
 - [ ] `completion.md` 是否反映了补全相关变更
 
 **位置**：`docs/architecture/`

@@ -630,7 +630,7 @@ grep -r "^use " src/lib/{MODULE}/ | grep -v "crate::"
 - [文档审查指南](./review-document.md) - 详细的文档检查方法和流程
 - [文档编写指南](../document.md) - 架构文档编写规范和模板
 - [开发规范](../development.md) - 开发规范和代码审查清单
-- [架构文档检查工具 TODO](../../todo/DOC_CHECK_TODO.md) - 自动化检查工具实施计划
+- [架构文档检查工具 TODO](../../todo/doc-check.md) - 自动化检查工具实施计划
 - [提交前检查指南](../pre-commit.md) - 提交前检查清单
 - [深入检查指南](../review.md) - 综合深入检查流程
 

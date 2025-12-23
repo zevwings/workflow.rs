@@ -239,7 +239,7 @@ PR 可以合并
 1. 检查 `WORKFLOW_USER_NAME` Repository Variable 是否配置
 2. 确认 `WORKFLOW_USER_NAME` 与 `WORKFLOW_PAT` 的所有者匹配
 3. 检查 PR 创建者是否是预期的用户
-4. 参考 [GITHUB_SETUP_GUIDELINES.md](./GITHUB_SETUP_GUIDELINES.md) 配置 `WORKFLOW_USER_NAME`
+4. 参考 [github-setup.md](./github-setup.md) 配置 `WORKFLOW_USER_NAME`
 
 ### 问题 3：check-status 失败
 
@@ -309,7 +309,7 @@ PR 可以合并
 
 ## 📚 相关文档
 
-- [GitHub Setup Guidelines](./GITHUB_SETUP_GUIDELINES.md)：GitHub 配置指南
+- [GitHub Setup Guidelines](./github-setup.md)：GitHub 配置指南
 - [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
 - [Development Guidelines](./development.md)：开发规范
 - [Testing Guidelines](./testing.md)：测试指南

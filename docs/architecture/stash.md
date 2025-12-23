@@ -448,7 +448,7 @@ Warning: Please resolve conflicts manually:
 ## 📚 相关文档
 
 - [Git 模块架构文档](../architecture/git.md) - Git 操作底层实现
-- [CLI 架构文档](../CLI_architecture.md) - CLI 命令结构设计
+- [CLI 架构文档](../cli.md) - CLI 命令结构设计
 - [开发规范文档](../../guidelines/development.md) - 代码风格和开发规范
 
 ---

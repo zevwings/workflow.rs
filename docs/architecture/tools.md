@@ -12,7 +12,7 @@
 - 平台检测工具（GitHub Releases 平台识别）
 - 表格输出工具（统一的表格显示接口）
 
-**注意**：交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./DIALOG_architecture.md)。进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./INDICATOR_architecture.md)。
+**注意**：交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./dialog.md)。进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./indicator.md)。
 
 这些工具函数为整个项目提供通用的基础设施支持，被所有模块广泛使用。
 
@@ -888,8 +888,8 @@ util (基础设施)
 - [总体架构文档](../architecture.md)
 - [Settings 模块架构文档](./settings.md)
 - [HTTP 架构文档](./http.md)
-- [Dialog 模块架构文档](./DIALOG_architecture.md)
-- [Indicator 模块架构文档](./INDICATOR_architecture.md)
+- [Dialog 模块架构文档](./dialog.md)
+- [Indicator 模块架构文档](./indicator.md)
 
 ---
 

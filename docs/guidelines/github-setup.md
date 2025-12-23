@@ -300,7 +300,7 @@ permissions:
 1. 检查 `WORKFLOW_USER_NAME` Repository Variable 是否配置
 2. 确认 `WORKFLOW_USER_NAME` 与 `WORKFLOW_PAT` 的所有者匹配
 3. 检查 PR 创建者是否是 `WORKFLOW_USER_NAME` 指定的用户
-4. 参考 [CI Workflow Guidelines](./CI_WORKFLOW_GUIDELINES.md) 了解详细说明
+4. 参考 [CI Workflow Guidelines](./ci-workflow.md) 了解详细说明
 
 ### 问题 3：无法合并 PR
 
@@ -348,7 +348,7 @@ permissions:
 ## 📚 相关文档
 
 ### 项目文档
-- [CI Workflow Guidelines](./CI_WORKFLOW_GUIDELINES.md)：CI Workflow 使用指南
+- [CI Workflow Guidelines](./ci-workflow.md)：CI Workflow 使用指南
 - [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
 
 ### GitHub 官方文档

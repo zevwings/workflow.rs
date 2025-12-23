@@ -284,7 +284,7 @@ let delay = (1 << retry-_count).min(60);
      - API 接口变更
      - 功能描述更新
      - 依赖关系变化
-   - 验证一致性：使用 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 验证文档与代码的一致性
+   - 验证一致性：使用 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 验证文档与代码的一致性
 
 3. **API 变更时**：
    - **必须**更新文档中的接口描述
@@ -343,7 +343,7 @@ let delay = (1 << retry-_count).min(60);
    - 确保所有相关文档都已更新
 
 2. **使用检查指南**：
-   - 参考 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行系统化检查
+   - 参考 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行系统化检查
    - 验证文档与代码的一致性
 
 3. **快速验证**：
@@ -356,7 +356,7 @@ let delay = (1 << retry-_count).min(60);
 #### 相关文档
 
 - [文档编写指南](./document.md) - 架构文档编写规范和模板
-- [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
+- [架构文档审查指南](./workflows/references/review-architecture-doc.md) - 详细的架构文档检查方法和流程
 - [代码审查清单](#-代码审查) - 包含文档更新检查项
 
 ---
@@ -588,7 +588,7 @@ src/
 - 修复分支：`fix/pr-merge-error`
 - 热修复分支：`hotfix/critical-bug`
 
-**注意**：Workflow CLI 支持通过模板系统自定义分支命名格式。详细配置方法请参考 [模板配置指南](./TEMPLATE_GUIDELINES.md#分支命名模板-templatebranch)。
+**注意**：Workflow CLI 支持通过模板系统自定义分支命名格式。详细配置方法请参考 [模板配置指南](./template.md#分支命名模板-templatebranch)。
 
 ### 工作流程
 
@@ -664,7 +664,7 @@ Extract retry logic into a separate module for better maintainability.
 - **正文**：详细说明变更原因和方式，每行不超过 72 个字符
 - **页脚**：引用相关 issue（如 `Closes #123`）
 
-**注意**：Workflow CLI 支持通过模板系统自定义提交消息格式，包括是否使用 Conventional Commits 格式。详细配置方法请参考 [模板配置指南](./TEMPLATE_GUIDELINES.md#提交消息模板-templatecommit)。
+**注意**：Workflow CLI 支持通过模板系统自定义提交消息格式，包括是否使用 Conventional Commits 格式。详细配置方法请参考 [模板配置指南](./template.md#提交消息模板-templatecommit)。
 
 ---
 
@@ -775,7 +775,7 @@ fn test-_pr-_create-_command() {
 
 **架构文档与代码一致性**：
 - [ ] 所有架构文档已与代码实现同步
-  - [ ] 使用 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行全面检查
+  - [ ] 使用 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行全面检查
   - [ ] 检查范围：`docs/architecture/` 目录下的所有文档（约 30+ 个文档）
   - [ ] 模块结构与实际代码结构一致
   - [ ] API 接口描述与代码实现一致
@@ -815,7 +815,7 @@ fn test-_pr-_create-_command() {
 
 ```bash
 # 参考架构文档审查指南
-# docs/guidelines/workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md
+# docs/guidelines/workflows/references/review-architecture-doc.md
 
 # 快速检查命令示例：
 # 1. 检查模块结构
@@ -841,12 +841,12 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 
 - **必须完成**：发布前必须完成所有架构文档检查
 - **检查范围**：`docs/architecture/` 目录下的所有文档（约 30+ 个文档）
-- **检查工具**：使用 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行全面检查
-- **检查记录**：建议记录检查结果到 `docs/architecture/CHECK_LOG.md`（如已创建）
+- **检查工具**：使用 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行全面检查
+- **检查记录**：建议记录检查结果到 `docs/architecture/check-log.md`（如已创建）
 
 ### 相关文档
 
-- [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
+- [架构文档审查指南](./workflows/references/review-architecture-doc.md) - 详细的架构文档检查方法和流程
 - [文档审查指南](./workflows/references/review-document.md) - 完整的文档检查指南
 - [深入检查指南](./workflows/review.md) - 综合深入检查流程
 
@@ -861,22 +861,22 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 #### 检查频率
 
 1. **每次发布前**：全面检查所有架构文档
-   - 使用 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行全面检查
+   - 使用 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行全面检查
    - 检查范围：`docs/architecture/` 目录下的所有文档（约 30+ 个文档）
    - 检查内容：模块结构、API 接口、功能描述、配置项、依赖关系、错误处理
-   - 检查结果：记录到 `docs/architecture/CHECK_LOG.md`
+   - 检查结果：记录到 `docs/architecture/check-log.md`
 
 2. **每月**：抽查部分模块的文档准确性
    - 随机选择 5-10 个模块进行抽查
    - 重点关注最近有代码变更的模块
    - 检查内容：模块结构、API 接口、功能描述
-   - 检查结果：记录到 `docs/architecture/CHECK_LOG.md`
+   - 检查结果：记录到 `docs/architecture/check-log.md`
 
 3. **每季度**：全面审查所有架构文档
-   - 使用 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行全面检查
+   - 使用 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行全面检查
    - 检查范围：所有架构文档
    - 检查内容：所有检查项（模块结构、统计、API、功能、依赖、错误处理）
-   - 检查结果：记录到 `docs/architecture/CHECK_LOG.md`
+   - 检查结果：记录到 `docs/architecture/check-log.md`
 
 #### 检查责任人
 
@@ -887,11 +887,11 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 #### 检查方法
 
 1. **使用检查指南**：
-   - 参考 [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) 进行系统化检查
+   - 参考 [架构文档审查指南](./workflows/references/review-architecture-doc.md) 进行系统化检查
    - 使用快速检查清单进行快速验证
 
 2. **记录检查结果**：
-   - 在 `docs/architecture/CHECK_LOG.md` 中记录每次检查的结果
+   - 在 `docs/architecture/check-log.md` 中记录每次检查的结果
    - 记录发现的问题和修复状态
    - 跟踪问题的修复进度
 
@@ -902,7 +902,7 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 
 ### 检查记录
 
-所有检查结果应记录到 `docs/architecture/CHECK_LOG.md` 文件中。
+所有检查结果应记录到 `docs/architecture/check-log.md` 文件中。
 
 **记录格式**：
 - 检查日期
@@ -912,12 +912,12 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 - 修复状态（待修复/已修复）
 - 检查结果（通过/需要更新）
 
-**记录模板**：参考 `docs/architecture/CHECK_LOG.md` 文件中的记录格式。
+**记录模板**：参考 `docs/architecture/check-log.md` 文件中的记录格式。
 
 ### 相关文档
 
-- [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
-- [检查记录文件](../architecture/CHECK_LOG.md) - 架构文档检查记录
+- [架构文档审查指南](./workflows/references/review-architecture-doc.md) - 详细的架构文档检查方法和流程
+- [检查记录文件](../architecture/check-log.md) - 架构文档检查记录
 
 ---
 
@@ -1010,7 +1010,7 @@ cargo fmt --check && cargo clippy -- -D warnings
 ## 📚 相关文档
 
 - [文档编写指南](./document.md) - 架构文档编写规范
-- [模板配置指南](./TEMPLATE_GUIDELINES.md) - 模板系统配置和使用方法
+- [模板配置指南](./template.md) - 模板系统配置和使用方法
 - [主架构文档](../architecture/architecture.md) - 项目总体架构
 - [Rust 官方文档](https://doc.rust-lang.org/) - Rust 语言文档
 - [Rust API 指南](https://rust-lang.github.io/api-guidelines/) - Rust API 设计指南

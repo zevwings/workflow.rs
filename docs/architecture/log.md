@@ -85,7 +85,7 @@ match cli.subcommand
   └─ Search → SearchCommand::search()
 ```
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./jira.md)。
 
 ---
 
@@ -366,7 +366,7 @@ JiraLogs::search-_keyword-_both-_files()
 - `FindCommand::find-_request-_id()` - 查找请求 ID
 - `SearchCommand::search()` - 搜索关键词
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./jira.md)。
 
 ### 2. 分层调用模式
 
@@ -381,7 +381,7 @@ match cli.subcommand
   └─ Search → SearchCommand::search()
 ```
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./jira.md)。
 
 **库层调用（Commands → JiraLogs）**：
 命令层通过 `JiraLogs` API 调用核心业务逻辑：
@@ -456,7 +456,7 @@ JiraLogs::download-_from-_jira()
 
 - [主架构文档](../architecture.md)
 - [Jira 模块架构文档](../architecture/jira.md)
-- [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)
+- [Jira 命令模块架构文档](./jira.md)
 - [PR 命令模块架构文档](./pr.md)
 
 ---

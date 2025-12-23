@@ -83,7 +83,7 @@
 **需要合并的文档对**：
 
 - [x] `lib/pr.md` + `commands/pr.md` → `pr.md` ✅ **已完成**
-- [x] `lib/jira.md` + `commands/JIRA_COMMAND_architecture.md` → `jira.md` ✅ **已完成**
+- [x] `lib/jira.md` + `commands/jira.md` → `jira.md` ✅ **已完成**
 - [x] `branch.md` + `branch.md` → `branch.md` ✅ **已完成**
 - [x] `lib/commit.md` + `commands/COMMIT_COMMAND_architecture.md` → `commit.md` ✅ **已完成**
 - [x] `lib/TAG_architecture.md` + `commands/TAG_COMMAND_architecture.md` → `tag.md` ✅ **已完成**
@@ -93,9 +93,9 @@
 - [ ] `lib/CONFIG_architecture.md` + `commands/config.md` → `config.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [ ] `lib/LOG_architecture.md` + `commands/LOG_COMMAND_architecture.md` → `log.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [x] `lib/llm.md` + `commands/llm.md` → `llm.md` ✅ **已完成**
-- [ ] `lib/LIFECYCLE_architecture.md` + `commands/LIFECYCLE_COMMAND_architecture.md` → `lifecycle.md` ⚠️ **无对应 lib 文档，已独立重命名**
-- [ ] `lib/GITHUB_architecture.md` + `commands/GITHUB_COMMAND_architecture.md` → `github.md` ⚠️ **无对应 lib 文档，已独立重命名**
-- [ ] `lib/CHECK_architecture.md` + `commands/CHECK_COMMAND_architecture.md` → `check.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/LIFECYCLE_architecture.md` + `commands/lifecycle.md` → `lifecycle.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/GITHUB_architecture.md` + `commands/github.md` → `github.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/CHECK_architecture.md` + `commands/check.md` → `check.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [ ] `lib/ALIAS_architecture.md` + `commands/ALIAS_COMMAND_architecture.md` → `alias.md` ⚠️ **无对应 lib 文档，已独立重命名**
 
 **注意**：如果某个模块只有 lib 层或只有 commands 层文档，则直接重命名，无需合并。✅ **已完成**
@@ -107,11 +107,11 @@
 - [x] `lib/git.md` → `git.md` ✅ **已完成**
 - [x] `lib/http.md` → `http.md` ✅ **已完成**
 - [x] `lib/settings.md` → `settings.md` ✅ **已完成**
-- [x] `lib/CLI_architecture.md` → `cli.md` ✅ **已完成**
+- [x] `lib/cli.md` → `cli.md` ✅ **已完成**
 - [x] `lib/completion.md` → `completion.md` ✅ **已完成**
 - [x] `lib/CONCURRENT_architecture.md` → `concurrent.md` ✅ **已完成**
-- [x] `lib/DIALOG_architecture.md` → `dialog.md` ✅ **已完成**
-- [x] `lib/INDICATOR_architecture.md` → `indicator.md` ✅ **已完成**
+- [x] `lib/dialog.md` → `dialog.md` ✅ **已完成**
+- [x] `lib/indicator.md` → `indicator.md` ✅ **已完成**
 - [x] `lib/LOGGER_architecture.md` → `logger.md` ✅ **已完成**
 - [x] `lib/PROMPT_architecture.md` → `prompt.md` ✅ **已完成**
 - [x] `lib/rollback.md` → `rollback.md` ✅ **已完成**
@@ -125,35 +125,35 @@
 
 - [x] `commands/MIGRATE_COMMAND_architecture.md` → `migrate.md` ✅ **已完成**
 - [x] `commands/ALIAS_COMMAND_architecture.md` → `alias.md` ✅ **已完成**
-- [x] `commands/CHECK_COMMAND_architecture.md` → `check.md` ✅ **已完成**
+- [x] `commands/check.md` → `check.md` ✅ **已完成**
 - [x] `commands/config.md` → `config.md` ✅ **已完成**
-- [x] `commands/GITHUB_COMMAND_architecture.md` → `github.md` ✅ **已完成**
-- [x] `commands/LIFECYCLE_COMMAND_architecture.md` → `lifecycle.md` ✅ **已完成**
+- [x] `commands/github.md` → `github.md` ✅ **已完成**
+- [x] `commands/lifecycle.md` → `lifecycle.md` ✅ **已完成**
 - [x] `commands/LOG_COMMAND_architecture.md` → `log.md` ✅ **已完成**
 - [x] `commands/STASH_COMMAND_architecture.md` → `stash.md` ✅ **已完成**
 
 #### 2.4 处理其他架构文档
 
 - [x] `architecture.md` → `architecture.md`（总体架构文档）✅ **已完成**
-- [x] `CHECK_LOG.md` → `check-log.md` ✅ **已完成**
+- [x] `check-log.md` → `check-log.md` ✅ **已完成**
 
 ### 阶段 3：文件重命名（其他目录）
 
 #### 3.1 `docs/guidelines/` 目录
 
 - [x] `CARGO_BLOAT_GUIDELINES.md` → `cargo-bloat.md` ✅ **已完成**
-- [x] `CI_WORKFLOW_GUIDELINES.md` → `ci-workflow.md` ✅ **已完成**
+- [x] `ci-workflow.md` → `ci-workflow.md` ✅ **已完成**
 - [x] `development.md` → `development.md` ✅ **已完成**
 - [x] `document.md` → `document.md` ✅ **已完成**
 - [x] `DOCUMENT_TIMESTAMP_GUIDELINES.md` → `document-timestamp.md` ✅ **已完成**
-- [x] `GITHUB_SETUP_GUIDELINES.md` → `github-setup.md` ✅ **已完成**
-- [x] `PR_PLATFORM_GUIDELINES.md` → `pr-platform.md` ✅ **已完成**
-- [x] `TEMPLATE_GUIDELINES.md` → `template.md` ✅ **已完成**
+- [x] `github-setup.md` → `github-setup.md` ✅ **已完成**
+- [x] `pr-platform.md` → `pr-platform.md` ✅ **已完成**
+- [x] `template.md` → `template.md` ✅ **已完成**
 - [x] `testing.md` → `testing.md` ✅ **已完成**
 - [x] `workflows/pre-commit.md` → `workflows/pre-commit.md` ✅ **已完成**
 - [x] `workflows/review.md` → `workflows/review.md` ✅ **已完成**
 - [x] `workflows/references/quick-reference.md` → `workflows/references/quick-reference.md` ✅ **已完成**
-- [x] `workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md` → `workflows/references/review-architecture-doc.md` ✅ **已完成**
+- [x] `workflows/references/review-architecture-doc.md` → `workflows/references/review-architecture-doc.md` ✅ **已完成**
 - [x] `workflows/references/review-cli.md` → `workflows/references/review-cli.md` ✅ **已完成**
 - [x] `workflows/references/review-code.md` → `workflows/references/review-code.md` ✅ **已完成**
 - [x] `workflows/references/review-document.md` → `workflows/references/review-document.md` ✅ **已完成**
