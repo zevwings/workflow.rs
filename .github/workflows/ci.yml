@@ -143,7 +143,7 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
 
-  # 运行测试
+  # 运行单元测试和集成测试（并行执行）
   tests:
     name: 🧪 Run Tests
     runs-on: ubuntu-latest
@@ -207,14 +207,78 @@ jobs:
           # 基本验证
           python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
 
-      - name: 🧪 Run tests
+      - name: 🧪 Run unit and integration tests
         run: cargo test --verbose
-
-      - name: 📝 Run doctests
-        run: cargo test --doc --verbose
 
       - name: ✅ Run completion completeness tests
         run: cargo test --test completeness
+
+  # 运行文档测试（与单元测试并行执行）
+  doctests:
+    name: 📝 Run Doctests
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          # 优化 Windows 上的缓存性能
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+          # 基本验证
+          python3 --version || (echo "❌ Error: Python3 not found" && exit 1)
+
+      - name: 📝 Run doctests
+        run: cargo test --doc --verbose
 
   # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
   # 该 workflow 支持 PR 触发和定期检查，功能更完整
@@ -232,7 +296,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests]
+    needs: [check-skip-ci, check-lint, tests, doctests]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -245,11 +309,13 @@ jobs:
           SKIP_CI_SHOULD_SKIP="${{ needs.check-skip-ci.outputs.should_skip }}"
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
+          DOCTEST_RESULT="${{ needs.doctests.result }}"
 
           echo "📊 Checking job status:"
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
+          echo "  doctests: $DOCTEST_RESULT"
           echo "  Note: Document checks are handled by doc-consistency-check.yml workflow"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
@@ -258,8 +324,8 @@ jobs:
             exit 0
           fi
 
-          # 优先级2: 如果 check-lint 和 tests 都被跳过，说明应该跳过 CI
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ]; then
+          # 优先级2: 如果 check-lint、tests 和 doctests 都被跳过，说明应该跳过 CI
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ] && [ "$DOCTEST_RESULT" == "skipped" ]; then
             echo "✅ CI checks were skipped"
             exit 0
           fi
@@ -292,16 +358,29 @@ jobs:
             fi
           fi
 
-          # 如果 check-lint 和 tests 都成功或被跳过，则通过
+          # 检查 doctests 状态
+          if [ -n "$DOCTEST_RESULT" ]; then
+            if [ "$DOCTEST_RESULT" == "failure" ] || [ "$DOCTEST_RESULT" == "cancelled" ]; then
+              echo "❌ Doctest check failed: $DOCTEST_RESULT"
+              exit 1
+            elif [ "$DOCTEST_RESULT" != "success" ] && [ "$DOCTEST_RESULT" != "skipped" ]; then
+              echo "❌ Doctest check has unexpected status: $DOCTEST_RESULT"
+              exit 1
+            fi
+          fi
+
+          # 如果 check-lint、tests 和 doctests 都成功或被跳过，则通过
           # 注意：文档检查已移至 doc-consistency-check.yml workflow
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
-              echo "✅ All required checks passed or were skipped"
-              exit 0
+              if [ "$DOCTEST_RESULT" == "success" ] || [ "$DOCTEST_RESULT" == "skipped" ]; then
+                echo "✅ All required checks passed or were skipped"
+                exit 0
+              fi
             fi
           fi
 
           # 如果到达这里，说明有未处理的状况
-          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT"
+          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT, doctest=$DOCTEST_RESULT"
           echo "   This should not happen. Please check the workflow configuration."
           exit 1
