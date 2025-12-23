@@ -138,7 +138,7 @@ make check-docs
   - 架构文档 (`docs/architecture/`)
   - 指南文档 (`docs/guidelines/`)
   - 迁移文档 (`docs/migration/`)
-  - 待办文档 (`docs/todo/`)
+  - 待办文档 (`docs/requirements/`)
 
 ### 不需要更新时间的文档
 

@@ -54,11 +54,7 @@ fn test_retry_result_structure() {
         interactive: false,
     };
 
-    let result = HttpRetry::retry(
-        || Ok("success".to_string()),
-        &config,
-        "test",
-    ).unwrap();
+    let result = HttpRetry::retry(|| Ok("success".to_string()), &config, "test").unwrap();
 
     assert_eq!(result.result, "success");
     assert_eq!(result.retry_count, 0);
@@ -87,16 +83,14 @@ fn test_retry_result_retry_count() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
         &config,
         "test",
-    ).unwrap();
+    )
+    .unwrap();
 
     assert_eq!(result.result, "success");
     assert_eq!(result.retry_count, 1);
@@ -115,9 +109,7 @@ fn test_retry_with_non_retryable_error() {
 
     // 创建一个不可重试的错误（非网络错误）
     let result = HttpRetry::retry(
-        || {
-            Err::<String, _>(eyre!("Bad Request: invalid input"))
-        },
+        || Err::<String, _>(eyre!("Bad Request: invalid input")),
         &config,
         "test",
     );
@@ -147,10 +139,7 @@ fn test_retry_with_retryable_error() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -183,10 +172,7 @@ fn test_retry_with_io_error() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -366,10 +352,7 @@ fn test_retry_with_interactive_mode_first_attempt() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -404,10 +387,7 @@ fn test_retry_countdown_short_delay() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -441,10 +421,7 @@ fn test_retry_non_interactive_after_first_attempt() {
             if current >= 3 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -471,10 +448,7 @@ fn test_retry_error_description_reqwest_status() {
     // 由于无法直接创建 reqwest::Error，我们使用 IO 错误来测试
     let result = HttpRetry::retry(
         || {
-            let error = std::io::Error::new(
-                std::io::ErrorKind::TimedOut,
-                "timeout",
-            );
+            let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
             Err::<String, _>(eyre!(error))
         },
         &config,
@@ -498,9 +472,7 @@ fn test_retry_error_description_long_message() {
 
     let long_error_msg = "x".repeat(150);
     let result = HttpRetry::retry(
-        move || {
-            Err::<String, _>(eyre!(long_error_msg.clone()))
-        },
+        move || Err::<String, _>(eyre!(long_error_msg.clone())),
         &config,
         "test",
     );
@@ -535,10 +507,7 @@ fn test_retry_countdown_long_delay() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -574,10 +543,7 @@ fn test_retry_interactive_user_cancel() {
             if current >= 3 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -612,10 +578,7 @@ fn test_retry_interactive_confirm_dialog_error() {
             if current >= 2 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -639,9 +602,7 @@ fn test_retry_non_retryable_error_first_attempt() {
 
     // 创建一个不可重试的错误（非网络错误）
     let result = HttpRetry::retry(
-        || {
-            Err::<String, _>(eyre!("Bad Request: invalid input"))
-        },
+        || Err::<String, _>(eyre!("Bad Request: invalid input")),
         &config,
         "test",
     );
@@ -663,10 +624,7 @@ fn test_retry_all_retries_exhausted() {
 
     let result = HttpRetry::retry(
         || {
-            let error = std::io::Error::new(
-                std::io::ErrorKind::TimedOut,
-                "timeout",
-            );
+            let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
             Err::<String, _>(eyre!(error))
         },
         &config,
@@ -702,10 +660,7 @@ fn test_retry_success_after_multiple_attempts() {
             if current >= 3 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -744,10 +699,7 @@ fn test_retry_delay_backoff_calculation() {
             if current >= 4 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -785,10 +737,7 @@ fn test_retry_delay_max_limit() {
             if current >= 4 {
                 Ok("success".to_string())
             } else {
-                let error = std::io::Error::new(
-                    std::io::ErrorKind::TimedOut,
-                    "timeout",
-                );
+                let error = std::io::Error::new(std::io::ErrorKind::TimedOut, "timeout");
                 Err(eyre!(error))
             }
         },
@@ -815,9 +764,9 @@ fn test_retry_with_reqwest_error_timeout() {
     let result = HttpRetry::retry(
         || {
             let client = HttpClient::global().unwrap();
-            let config = RequestConfig::<Value, Value>::new()
-                .timeout(std::time::Duration::from_millis(1)); // 很短的超时
-            // 使用一个不存在的 URL，会导致超时或连接错误
+            let config =
+                RequestConfig::<Value, Value>::new().timeout(std::time::Duration::from_millis(1)); // 很短的超时
+                                                                                                   // 使用一个不存在的 URL，会导致超时或连接错误
             let url = "http://127.0.0.1:1/invalid"; // 无效的端口
             client.get(url, config).map(|_| "success".to_string())
         },

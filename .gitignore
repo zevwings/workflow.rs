@@ -102,8 +102,8 @@ docs/**
 !docs/architecture/**
 !docs/guidelines/
 !docs/guidelines/**
-!docs/todo/
-!docs/todo/**
+!docs/requirements/
+!docs/requirements/**
 !docs/migration/
 !docs/migration/**
 handlebars
