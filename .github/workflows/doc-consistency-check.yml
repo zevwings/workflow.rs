@@ -42,11 +42,18 @@ jobs:
         run: |
           echo "📋 Running basic document checks..."
 
+          HAS_ISSUES=false
+
           # 检查文档链接
           echo "🔗 Checking document links..."
+          BROKEN_LINKS=0
           if command -v lychee >/dev/null 2>&1; then
             echo "Using lychee to check document links..."
-            lychee docs/**/*.md --exclude-all-private --exclude-loopback || echo "⚠️ Some document links may be broken"
+            if ! lychee docs/**/*.md --exclude-all-private --exclude-loopback; then
+              echo "⚠️ Some document links may be broken"
+              BROKEN_LINKS=1
+              HAS_ISSUES=true
+            fi
           else
             echo "ℹ️  lychee not installed, skipping link check"
             echo "   To install: cargo install lychee"
@@ -85,6 +92,7 @@ jobs:
             echo ""
             echo "📋 Found $MISSING_DOCS missing architecture document(s)"
             echo "::warning::Found $MISSING_DOCS missing architecture document(s)"
+            HAS_ISSUES=true
           else
             echo "✅ All modules have architecture documentation"
           fi
@@ -103,8 +111,20 @@ jobs:
           if [ $INVALID_TIMESTAMPS -gt 0 ]; then
             echo "📋 Found $INVALID_TIMESTAMPS document(s) with invalid timestamp format"
             echo "::warning::Found $INVALID_TIMESTAMPS document(s) with invalid timestamp format"
+            HAS_ISSUES=true
           else
             echo "✅ All documents have valid timestamp format"
+          fi
+
+          # 输出是否有问题的标志
+          if [ "$HAS_ISSUES" = true ]; then
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+            echo ""
+            echo "❌ Found issues that need to be addressed"
+          else
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+            echo ""
+            echo "✅ All checks passed"
           fi
 
       - name: 📊 Generate report
@@ -158,9 +178,9 @@ jobs:
           echo "📄 Report generated: $REPORT_FILE"
           echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
 
-      # 可选：创建 Issue 汇总问题（仅在发现问题时）
+      # 创建 Issue 汇总问题（仅在发现问题时）
       - name: 📝 Create issue if problems found
-        if: failure()
+        if: steps.check.outputs.has_issues == 'true'
         uses: actions/github-script@v7
         with:
           script: |

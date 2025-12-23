@@ -2,9 +2,13 @@ name: Coverage Check
 
 on:
   schedule:
-    # 每周一运行
+    # 每周一 00:00 UTC 运行
     - cron: '0 0 * * 1'
-  workflow_dispatch:
+  workflow_dispatch:  # 允许手动触发
+
+permissions:
+  contents: write  # 需要写入权限以提交报告到仓库（使用 PAT）
+  issues: write  # 创建 Issue 的权限（使用 GITHUB_TOKEN）
 
 jobs:
   coverage-check:
@@ -13,6 +17,10 @@ jobs:
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 需要完整历史以支持推送
+          # 使用 PAT 以支持推送报告到仓库
+          token: ${{ secrets.WORKFLOW_PAT }}
 
       - name: 🔧 Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -65,50 +73,270 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: 📊 Generate coverage report
-        run: cargo tarpaulin --out Html --output-dir coverage
+        run: cargo tarpaulin --out Html --output-dir coverage --tests
 
       - name: 📋 Check coverage threshold
+        id: check
+        continue-on-error: true
         run: |
           echo "📊 Checking coverage threshold..."
           # 生成 JSON 格式的覆盖率报告用于解析
-          cargo tarpaulin --out Json --output-dir coverage > coverage/coverage.json 2>/dev/null || true
+          cargo tarpaulin --out Json --output-dir coverage --tests > coverage/coverage.json 2>/dev/null || true
 
           # 检查覆盖率是否达到阈值（80%）
+          COVERAGE_STATUS="pass"
+          COVERAGE_VALUE="0"
+          TARGET_COVERAGE=80.0
+
           if [ -f "coverage/coverage.json" ]; then
             # 使用 Python 解析 JSON（如果可用）
             if command -v python3 >/dev/null 2>&1; then
-              COVERAGE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
-              TARGET_COVERAGE=80.0
+              COVERAGE_VALUE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
 
-              echo "当前覆盖率: ${COVERAGE}%"
+              echo "当前覆盖率: ${COVERAGE_VALUE}%"
               echo "目标覆盖率: ${TARGET_COVERAGE}%"
 
               # 使用 awk 进行浮点数比较
-              if awk "BEGIN {exit !($COVERAGE >= $TARGET_COVERAGE)}"; then
+              if awk "BEGIN {exit !($COVERAGE_VALUE >= $TARGET_COVERAGE)}"; then
                 echo "✅ 覆盖率已达到目标阈值"
+                echo "coverage_status=pass" >> $GITHUB_OUTPUT
               else
                 echo "⚠️  覆盖率未达到目标阈值"
-                echo "   当前覆盖率: ${COVERAGE}%"
+                echo "   当前覆盖率: ${COVERAGE_VALUE}%"
                 echo "   目标覆盖率: ${TARGET_COVERAGE}%"
                 echo "   请考虑添加更多测试用例以提高覆盖率"
+                echo "::warning::Coverage ${COVERAGE_VALUE}% is below target ${TARGET_COVERAGE}%"
+                COVERAGE_STATUS="fail"
+                echo "coverage_status=fail" >> $GITHUB_OUTPUT
               fi
+              echo "coverage_value=${COVERAGE_VALUE}" >> $GITHUB_OUTPUT
             else
               echo "⚠️  Python3 不可用，无法解析覆盖率数据"
+              echo "coverage_status=unknown" >> $GITHUB_OUTPUT
             fi
           else
             echo "⚠️  无法生成覆盖率 JSON 报告"
+            echo "coverage_status=unknown" >> $GITHUB_OUTPUT
           fi
 
+          echo "target_coverage=${TARGET_COVERAGE}" >> $GITHUB_OUTPUT
+
+      - name: 📊 Generate report
+        id: generate_report
+        if: always()
+        run: |
+          mkdir -p report
+          TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+          REPORT_FILE="report/coverage-check-${TIMESTAMP}.md"
+          CHECK_DATE=$(date '+%Y-%m-%d %H:%M:%S')
+          UPDATE_DATE=$(date '+%Y-%m-%d')
+
+          # 从 JSON 文件读取覆盖率数据（如果存在）
+          COVERAGE_VALUE="0"
+          TARGET_COVERAGE="80.0"
+          COVERAGE_STATUS="unknown"
+
+          if [ -f "coverage/coverage.json" ] && command -v python3 >/dev/null 2>&1; then
+            COVERAGE_VALUE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
+            if awk "BEGIN {exit !($COVERAGE_VALUE >= $TARGET_COVERAGE)}"; then
+              COVERAGE_STATUS="pass"
+            else
+              COVERAGE_STATUS="fail"
+            fi
+          fi
+
+          # 确定状态
+          if [ "$COVERAGE_STATUS" = "pass" ]; then
+            STATUS_EMOJI="✅"
+            STATUS_TEXT="通过"
+          elif [ "$COVERAGE_STATUS" = "fail" ]; then
+            STATUS_EMOJI="⚠️"
+            STATUS_TEXT="未达标"
+            GAP=$(awk "BEGIN {printf \"%.2f\", $TARGET_COVERAGE - $COVERAGE_VALUE}")
+          else
+            STATUS_EMOJI="❓"
+            STATUS_TEXT="未知"
+          fi
+
+          cat > "$REPORT_FILE" << EOF
+          # 测试覆盖率检查报告
+
+          **检查日期**：${CHECK_DATE}
+          **检查类型**：定期审查
+
+          ## 检查结果
+
+          ### 覆盖率统计
+
+          - **当前覆盖率**：${COVERAGE_VALUE}%
+          - **目标覆盖率**：${TARGET_COVERAGE}%
+          - **检查状态**：${STATUS_EMOJI} ${STATUS_TEXT}
+
+          ### 详细说明
+
+          $(if [ "$COVERAGE_STATUS" = "pass" ]; then
+            echo "✅ 测试覆盖率已达到目标阈值（${TARGET_COVERAGE}%）。"
+          elif [ "$COVERAGE_STATUS" = "fail" ]; then
+            echo "⚠️  测试覆盖率未达到目标阈值。"
+            echo ""
+            echo "**当前覆盖率**：${COVERAGE_VALUE}%"
+            echo "**目标覆盖率**：${TARGET_COVERAGE}%"
+            echo "**差距**：${GAP}%"
+            echo ""
+            echo "建议："
+            echo "1. 检查未覆盖的代码模块"
+            echo "2. 为关键业务逻辑添加更多测试用例"
+            echo "3. 参考 \`docs/requirements/QUICK_COVERAGE_MODULES.md\` 了解快速提升覆盖率的模块"
+          else
+            echo "❓ 无法获取覆盖率数据，请检查检查日志。"
+          fi)
+
+          ## 报告文件
+
+          - HTML 报告已上传为 Artifact：\`coverage-report\`
+          - 查看详细覆盖率数据：下载 Artifact 中的 \`coverage/tarpaulin-report.html\`
+
+          ## 改进建议
+
+          1. 确保关键业务逻辑的测试覆盖率 > 90%
+          2. 定期审查未覆盖的代码模块
+          3. 为新功能添加相应的测试用例
+
+          参考文档：
+          - [测试覆盖率改进分析](docs/requirements/coverage-improvement.md)
+          - [快速覆盖率提升模块](docs/requirements/QUICK_COVERAGE_MODULES.md)
+          - [测试规范](docs/guidelines/testing.md)
+
+          ---
+
+          **最后更新**: ${UPDATE_DATE}
+          EOF
+
+          echo "📄 Report generated: $REPORT_FILE"
+          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
+
       - name: 📤 Upload coverage report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: coverage/
           retention-days: 30
 
+      - name: 📤 Upload check report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-check-report
+          path: report/coverage-check-*.md
+          retention-days: 90
+
+      - name: ⚙️ Configure Git for report commit
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: 📤 Commit and push report to repository
+        if: always() && steps.generate_report.outputs.report_file != ''
+        run: |
+          REPORT_FILE="${{ steps.generate_report.outputs.report_file }}"
+
+          if [ -z "$REPORT_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
+            echo "⚠️  Report file not found, skipping commit"
+            exit 0
+          fi
+
+          echo "📤 Committing report to repository..."
+          echo "Report file: $REPORT_FILE"
+
+          # 添加报告文件
+          git add "$REPORT_FILE"
+
+          # 检查是否有更改
+          if git diff --staged --quiet; then
+            echo "ℹ️  No changes to commit. Report file may already be committed."
+            exit 0
+          fi
+
+          # 提交更改
+          COMMIT_MESSAGE="docs(report): add coverage check report $(date +%Y-%m-%d)"
+          git commit -m "$COMMIT_MESSAGE"
+
+          # 推送到当前分支（通常是 master/main）
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD || echo "master")
+          echo "Pushing to branch: $CURRENT_BRANCH"
+
+          if git push origin "$CURRENT_BRANCH"; then
+            echo "✅ Successfully pushed report to $CURRENT_BRANCH branch"
+            echo "📄 Report available at: $REPORT_FILE"
+          else
+            echo "⚠️  Failed to push report to repository"
+            echo "   This may be due to:"
+            echo "   1. WORKFLOW_PAT may not have write access"
+            echo "   2. Branch protection rules may prevent direct push"
+            echo "   Report is still available as artifact"
+          fi
+
+      # 创建 Issue 汇总问题（仅在覆盖率未达标时）
+      # 注意：使用 GITHUB_TOKEN（actions/github-script 默认使用），不需要 PAT
+      - name: 📝 Create issue if coverage below threshold
+        if: failure() && steps.check.outputs.coverage_status == 'fail'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const timestamp = new Date().toISOString().split('T')[0];
+            const checkDate = new Date().toISOString();
+            const coverageValue = '${{ steps.check.outputs.coverage_value }}';
+            const targetCoverage = '${{ steps.check.outputs.target_coverage }}';
+
+            // 检查是否已经存在相同标题的 Issue
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'coverage-check'
+            });
+
+            const existingIssue = issues.find(issue =>
+              issue.title.includes('[Coverage Check]') &&
+              issue.title.includes(timestamp)
+            );
+
+            if (existingIssue) {
+              console.log(`Issue already exists: #${existingIssue.number}`);
+              return;
+            }
+
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[Coverage Check] Test coverage below threshold - ${timestamp}`,
+              body: `## 测试覆盖率检查发现问题
+
+              定期检查发现测试覆盖率未达到目标阈值，请查看检查报告。
+
+              **检查日期**：${checkDate}
+              **当前覆盖率**：${coverageValue}%
+              **目标覆盖率**：${targetCoverage}%
+              **报告位置**：\`report/coverage-check-*.md\`
+
+              请参考以下文档进行改进：
+              - [测试覆盖率改进分析](docs/requirements/coverage-improvement.md)
+              - [快速覆盖率提升模块](docs/requirements/QUICK_COVERAGE_MODULES.md)
+              - [测试规范](docs/guidelines/testing.md)
+
+              ---
+
+              **注意**：此 Issue 由自动化检查创建，请及时处理。
+              `,
+              labels: ['coverage-check', 'testing', 'documentation']
+            });
+
       - name: 📋 Coverage check summary
         if: always()
         run: |
           echo "📊 Weekly coverage check completed"
           echo "Coverage report has been uploaded as an artifact"
+          echo "Check report has been generated and uploaded"
 
