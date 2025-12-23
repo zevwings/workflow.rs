@@ -681,8 +681,8 @@ fn test-_cli-_parsing() {
 
 - [主架构文档](../architecture.md)
 - [补全脚本管理架构文档](./completion.md) - 补全脚本生成器
-- [LLM 命令架构文档](../commands/llm.md) - LLM 命令实现
-- [PR 命令架构文档](../commands/pr.md) - PR 命令实现
+- [LLM 命令架构文档](../architecture/llm.md) - LLM 命令实现
+- [PR 命令架构文档](../architecture/pr.md) - PR 命令实现
 
 ---
 

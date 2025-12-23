@@ -54,7 +54,7 @@ src/commands/log/
 - **`lib/base/settings/`**：配置管理
   - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
-详细架构文档：参见 [Jira 模块架构文档](../lib/jira.md)
+详细架构文档：参见 [Jira 模块架构文档](../architecture/jira.md)
 
 ---
 
@@ -208,7 +208,7 @@ commands/log/find.rs::FindCommand::find-_request-_id(jira-_id, request-_id)
 
 4. **剪贴板操作**：
    - 使用 `Clipboard::copy()` 复制响应内容到剪贴板
-   - 注意：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（详见 [工具函数模块架构文档](../lib/tools.md)）
+   - 注意：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（详见 [工具函数模块架构文档](../architecture/tools.md)）
 
 ### JiraLogs API 调用
 
@@ -455,7 +455,7 @@ JiraLogs::download-_from-_jira()
 ## 📚 相关文档
 
 - [主架构文档](../architecture.md)
-- [Jira 模块架构文档](../lib/jira.md)
+- [Jira 模块架构文档](../architecture/jira.md)
 - [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)
 - [PR 命令模块架构文档](./pr.md)
 

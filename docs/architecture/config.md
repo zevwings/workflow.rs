@@ -620,9 +620,9 @@ Settings 管理（读取/写入 TOML 配置文件）
 - [生命周期管理命令模块架构文档](./LIFECYCLE_COMMAND_architecture.md)
 - [GitHub 命令架构文档](./GITHUB_COMMAND_architecture.md) - GitHub 账号管理相关
 - [环境检查命令架构文档](./CHECK_COMMAND_architecture.md) - 环境检查相关
-- [Git 模块架构文档](../lib/git.md) - Git 操作相关
-- [HTTP 模块架构文档](../lib/http.md) - HTTP 客户端相关
-- [Jira 模块架构文档](../lib/jira.md) - ConfigManager 使用说明
+- [Git 模块架构文档](../architecture/git.md) - Git 操作相关
+- [HTTP 模块架构文档](../architecture/http.md) - HTTP 客户端相关
+- [Jira 模块架构文档](../architecture/jira.md) - ConfigManager 使用说明
 
 ---
 

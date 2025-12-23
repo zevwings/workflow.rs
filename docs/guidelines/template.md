@@ -724,8 +724,8 @@ default = '''
 
 - [开发规范文档](./development.md) - 代码风格和开发规范
 - [分支管理架构文档](../architecture/branch.md) - 分支命名实现细节
-- [PR 模块架构文档](../architecture/lib/pr.md) - PR 生成实现细节
-- [设置模块架构文档](../architecture/lib/settings.md) - 配置加载实现细节
+- [PR 模块架构文档](../architecture/pr.md) - PR 生成实现细节
+- [设置模块架构文档](../architecture/settings.md) - 配置加载实现细节
 
 ---
 

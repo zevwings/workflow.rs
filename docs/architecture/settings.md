@@ -474,7 +474,7 @@ impl Paths {
 ## 📚 相关文档
 
 - [主架构文档](../architecture.md)
-- [配置管理命令模块架构文档](../commands/config.md) - 命令层如何使用 Settings 模块
+- [配置管理命令模块架构文档](../architecture/config.md) - 命令层如何使用 Settings 模块
 - [LLM 模块架构文档](./llm.md) - LLM 模块如何使用 Settings
 - [Jira 模块架构文档](./jira.md) - Jira 模块如何使用 Settings
 - [Shell 模块架构文档](./shell.md) - Shell 模块如何使用 Paths
