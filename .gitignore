@@ -85,17 +85,33 @@ __pycache__/
 *.so
 .Python
 
-report/
+# Coverage
+*.profraw
+coverage/
+coverage/**
+
+# documentation
+
+# report 目录：忽略所有内容，但保留目录结构和 .gitkeep
+report/**
+!report/.gitkeep
 requirements/
+# analysis 目录：忽略所有内容，但保留目录结构和 .gitkeep
+analysis/**
+!analysis/.gitkeep
+!analysis/impl/
+analysis/impl/**
+!analysis/impl/.gitkeep
 
 docs/**
+!docs/cursorrules.md
 !docs/README.md
 !docs/architecture/
 !docs/architecture/**
 !docs/guidelines/
 !docs/guidelines/**
-!docs/todo/
-!docs/todo/**
+!docs/requirements/
+!docs/requirements/**
 !docs/migration/
 !docs/migration/**
 handlebars

@@ -49,6 +49,7 @@ mod group_builder;
 mod types;
 
 pub use builder::FormBuilder;
+pub use condition_evaluator::ConditionEvaluator;
 pub use types::{
     Condition, ConditionOperator, ConditionValue, FieldDefaultValue, FormField, FormFieldType,
     FormGroup, FormResult, FormStep, GroupConfig, StepType,

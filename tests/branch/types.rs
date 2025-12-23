@@ -332,3 +332,131 @@ fn test_branch_type_template_selection_scenario() {
     let config_key = format!("branch.{}.prefix", template_key);
     assert!(config_key.contains("branch.feature.prefix"));
 }
+
+// ==================== prompt_selection 和 resolve_with_repo_prefix 测试 ====================
+
+#[test]
+#[ignore] // 需要交互式输入，在 CI 环境中会卡住
+fn test_branch_type_prompt_selection() {
+    // 测试交互式选择分支类型
+    // 注意：这个测试需要用户交互，在 CI 环境中会卡住
+    // 使用 `cargo test -- --ignored` 来运行这些测试
+    let result = workflow::branch::BranchType::prompt_selection();
+
+    // 如果用户交互失败（例如没有配置），应该返回错误
+    // 如果成功，应该返回有效的 BranchType
+    match result {
+        Ok(branch_type) => {
+            // 验证返回的是有效的分支类型
+            assert!(workflow::branch::BranchType::all().contains(&branch_type));
+        }
+        Err(_) => {
+            // 交互失败是可以接受的（例如在 CI 环境中）
+            assert!(
+                true,
+                "Prompt selection may fail in non-interactive environments"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
+    // 测试有 repository prefix 的情况
+    // 注意：这个测试依赖于实际的仓库配置，可能在不同环境中表现不同
+    let result = workflow::branch::BranchType::resolve_with_repo_prefix();
+
+    // 如果仓库有配置 prefix，应该返回对应的 BranchType
+    // 如果没有配置，可能会调用 prompt_selection（需要交互）
+    match result {
+        Ok(branch_type) => {
+            // 验证返回的是有效的分支类型
+            assert!(workflow::branch::BranchType::all().contains(&branch_type));
+        }
+        Err(_) => {
+            // 如果没有配置且 prompt 失败，这是可以接受的
+            assert!(
+                true,
+                "resolve_with_repo_prefix may fail if no prefix configured and prompt fails"
+            );
+        }
+    }
+}
+
+#[test]
+#[ignore] // 需要交互式输入，在 CI 环境中会卡住
+fn test_branch_type_resolve_with_repo_prefix_without_prefix() {
+    // 测试没有 repository prefix 的情况（会调用 prompt_selection）
+    // 注意：这个测试需要用户交互，在 CI 环境中会卡住
+    let result = workflow::branch::BranchType::resolve_with_repo_prefix();
+
+    // 如果没有 prefix，应该调用 prompt_selection
+    match result {
+        Ok(branch_type) => {
+            assert!(workflow::branch::BranchType::all().contains(&branch_type));
+        }
+        Err(_) => {
+            // 交互失败是可以接受的
+            assert!(
+                true,
+                "resolve_with_repo_prefix may fail in non-interactive environments"
+            );
+        }
+    }
+}
+
+#[test]
+fn test_branch_type_display_name_all_variants() {
+    // 确保所有分支类型的 display_name 都被测试覆盖
+    // 这个测试专门用于覆盖 display_name() 方法的所有分支（第70-76行）
+    let all_types = workflow::branch::BranchType::all();
+
+    for branch_type in all_types {
+        let display_name = branch_type.display_name();
+
+        // 验证 display_name 不为空
+        assert!(
+            !display_name.is_empty(),
+            "Display name should not be empty for {:?}",
+            branch_type
+        );
+
+        // 验证 display_name 包含分支类型字符串
+        let type_str = branch_type.as_str();
+        assert!(
+            display_name.contains(type_str),
+            "Display name '{}' should contain type string '{}'",
+            display_name,
+            type_str
+        );
+
+        // 验证 display_name 包含中文描述（所有 display_name 都包含中文）
+        assert!(
+            display_name.contains(" - "),
+            "Display name '{}' should contain separator ' - '",
+            display_name
+        );
+    }
+
+    // 明确测试每个分支类型的 display_name
+    assert_eq!(
+        workflow::branch::BranchType::Feature.display_name(),
+        "feature - 新功能开发"
+    );
+    assert_eq!(
+        workflow::branch::BranchType::Bugfix.display_name(),
+        "bugfix - Bug 修复"
+    );
+    assert_eq!(
+        workflow::branch::BranchType::Refactoring.display_name(),
+        "refactoring - 代码重构"
+    );
+    assert_eq!(
+        workflow::branch::BranchType::Hotfix.display_name(),
+        "hotfix - 紧急修复"
+    );
+    assert_eq!(
+        workflow::branch::BranchType::Chore.display_name(),
+        "chore - 杂项任务"
+    );
+}

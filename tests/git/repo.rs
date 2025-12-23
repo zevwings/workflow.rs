@@ -378,9 +378,9 @@ fn test_performance_with_many_urls() {
 
     let duration = start.elapsed();
 
-    // 性能基准：4000个URL应该在合理时间内完成（放宽到15秒，考虑到CI环境的性能差异）
+    // 性能基准：4000个URL应该在合理时间内完成（放宽到30秒，考虑到CI环境的性能差异）
     assert!(
-        duration.as_secs() < 15,
+        duration.as_secs() < 30,
         "Performance test took too long: {:?}",
         duration
     );

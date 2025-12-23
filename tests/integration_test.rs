@@ -6,6 +6,7 @@
 
 // 引入各个模块的测试
 mod base;
+mod branch;
 mod cli;
 mod commit;
 mod completion;

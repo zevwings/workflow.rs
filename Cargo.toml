@@ -50,6 +50,7 @@ predicates = "3.0"      # 断言谓词
 tempfile = "3.8"        # 临时文件和目录
 serial_test = "3.2.0"
 gix = "0.66"            # 现代 Git 操作库 (仅用于测试)
+criterion = { version = "0.5", features = ["html_reports"] }
 
 # clipboard 依赖：在 musl 和 Linux ARM64 目标上禁用（避免 XCB 依赖问题）
 # Linux ARM64 交叉编译时，XCB 库在 Ubuntu 源中不可用，因此禁用 clipboard 功能
@@ -63,6 +64,31 @@ path = "src/bin/workflow.rs"
 [[bin]]
 name = "install"
 path = "src/bin/install.rs"
+
+[[bench]]
+name = "core_operations"
+harness = false
+
+[[bench]]
+name = "cli_performance"
+harness = false
+
+[[bench]]
+name = "network_operations"
+harness = false
+
+# 独立测试目标配置
+[[test]]
+name = "completeness"
+path = "tests/completion/completeness.rs"
+
+# 测试覆盖率配置
+[package.metadata.tarpaulin]
+target-coverage = 80.0
+exclude = ["src/bin/*", "tests/*", "src/*/mod.rs"]
+output = ["Html", "Lcov", "Json"]
+out = "coverage/"
+run-types = ["Tests", "Doctests"]
 
 # Release 构建优化配置
 [profile.release]

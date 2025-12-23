@@ -57,10 +57,10 @@ brew install workflow
 
 ```bash
 # 安装最新版本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 
 # 安装指定版本
-VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.sh)"
+VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.sh)"
 ```
 
 **功能特性**：
@@ -89,7 +89,7 @@ VERSION=v1.6.4 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevw
 
 ```bash
 # 使用卸载脚本
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.sh)"
 
 # 或使用已安装的命令
 workflow uninstall
@@ -121,15 +121,15 @@ workflow uninstall
 **PowerShell (推荐)**:
 ```powershell
 # 安装最新版本
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1" -OutFile install.ps1; .\install.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1" -OutFile install.ps1; .\install.ps1
 
 # 或一行命令
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **安装指定版本**:
 ```powershell
-$env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install.ps1' -OutFile install.ps1; .\install.ps1"
+$env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/install.ps1' -OutFile install.ps1; .\install.ps1"
 ```
 
 **功能特性**：
@@ -159,10 +159,10 @@ $env:VERSION="v1.6.4"; powershell -ExecutionPolicy Bypass -Command "Invoke-WebRe
 
 ```powershell
 # 使用卸载脚本（PowerShell 推荐）
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1" -OutFile uninstall.ps1; .\uninstall.ps1
 
 # 或一行命令
-powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
+powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/zevwings/workflow.rs/master/scripts/install/uninstall.ps1' -OutFile uninstall.ps1; .\uninstall.ps1"
 
 # 或使用已安装的命令
 workflow uninstall
@@ -865,8 +865,10 @@ graph TB
 
 ## 📝 贡献
 
-请参考以下文档了解更多信息：
+欢迎贡献 Workflow CLI！请参考以下文档：
+
+- **[贡献指南](./CONTRIBUTING.md)** - 如何开始贡献、提交 PR、开发规范
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+- [docs/architecture/architecture.md](./docs/architecture/architecture.md) - 了解架构设计和核心模块详情
 
 ---

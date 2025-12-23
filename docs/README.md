@@ -4,18 +4,30 @@
 
 本文档目录包含 Workflow CLI 的完整架构文档和使用说明。
 
+## 📋 目录
+
+- [文档概览](#-文档概览)
+- [核心架构文档](#-核心架构文档)
+- [模块架构文档](#-模块架构文档)
+- [迁移文档](#-迁移文档)
+- [待办事项和设计指南](#-待办事项和设计指南)
+- [文档结构说明](#-文档结构说明)
+- [快速导航](#-快速导航)
+
 ---
 
 ## 🏗️ 核心架构文档
 
-### [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+### [architecture.md](./architecture/architecture.md)
 **总体架构设计文档**
 
 - 项目概述和模块划分
-- 三层架构设计（CLI 入口层、命令封装层、核心业务逻辑层）
+- **三层架构设计**（CLI 入口层、命令封装层、核心业务逻辑层）- 所有模块架构文档的基础架构
 - 核心模块设计（AI、日志处理等）
 - 数据存储和配置管理
 - 开发规范
+
+> **重要**：所有模块架构文档都基于三层架构设计，详细说明请参考 [architecture.md](./architecture/architecture.md#三层架构设计)
 
 ---
 
@@ -25,7 +37,7 @@
 
 ### Lib 层架构文档（核心业务逻辑）
 
-#### [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
+#### [pr.md](./architecture/pr.md)
 **Pull Request 模块架构文档**
 
 - PR 创建、合并、关闭、查询等操作
@@ -35,7 +47,7 @@
 - LLM 标题生成功能
 - LLM PR 总结功能（支持多语言）
 
-#### [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
+#### [jira.md](./architecture/jira.md)
 **Jira 模块架构文档**
 
 - 分层架构设计（HTTP 客户端层、API 方法层、业务逻辑层）
@@ -44,7 +56,7 @@
 - 业务功能（用户管理、Ticket 操作、状态管理、工作历史记录）
 - 日志处理模块（JiraLogs）
 
-#### [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
+#### [git.md](./architecture/git.md)
 **Git 模块架构文档**
 
 - 分支管理操作（创建、切换、合并、删除）
@@ -54,7 +66,7 @@
 - Pre-commit hooks 支持
 - Git 配置管理
 
-#### [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
+#### [http.md](./architecture/http.md)
 **HTTP 模块架构文档**
 
 - HTTP 客户端封装（单例模式）
@@ -63,7 +75,7 @@
 - 重试机制（指数退避、智能错误判断）
 - 认证支持（Basic Authentication）
 
-#### [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
+#### [settings.md](./architecture/settings.md)
 **Settings 模块架构文档**
 
 - TOML 配置文件加载和管理
@@ -72,7 +84,7 @@
 - 默认值管理
 - 配置验证功能
 
-#### [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
+#### [llm.md](./architecture/llm.md)
 **LLM 模块架构文档**
 
 - 统一配置驱动的 LLM 客户端实现
@@ -81,7 +93,7 @@
 - PR 标题和分支名生成功能
 - PR 总结文档生成功能（支持多语言，自动生成文件名）
 
-#### [SHELL_ARCHITECTURE.md](./architecture/lib/SHELL_ARCHITECTURE.md)
+#### [shell.md](./architecture/shell.md)
 **Shell 检测与管理模块架构文档**
 
 - Shell 类型检测（zsh、bash、fish、powershell、elvish）
@@ -90,7 +102,7 @@
 - 多 shell 支持策略
 - 与 Completion 和 Proxy 模块的集成
 
-#### [COMPLETION_ARCHITECTURE.md](./architecture/lib/COMPLETION_ARCHITECTURE.md)
+#### [completion.md](./architecture/completion.md)
 **Shell Completion 模块架构文档**
 
 - Completion 脚本生成（workflow 及其所有子命令）
@@ -98,7 +110,7 @@
 - 多 Shell 支持（zsh、bash、fish、powershell、elvish）
 - Shell 配置文件管理集成
 
-#### [PROXY_ARCHITECTURE.md](./architecture/lib/PROXY_ARCHITECTURE.md)
+#### [proxy.md](./architecture/proxy.md)
 **代理管理模块架构文档**
 
 - 代理开启/关闭/检查功能
@@ -106,14 +118,14 @@
 - 环境变量代理配置管理
 - 临时模式和持久化模式
 
-#### [ROLLBACK_ARCHITECTURE.md](./architecture/lib/ROLLBACK_ARCHITECTURE.md)
+#### [rollback.md](./architecture/rollback.md)
 **回滚模块架构文档**
 
 - 更新失败时的备份和恢复机制
 - 二进制文件和补全脚本的备份
 - 自动回滚功能
 
-#### [TOOLS_ARCHITECTURE.md](./architecture/lib/TOOLS_ARCHITECTURE.md)
+#### [tools.md](./architecture/tools.md)
 **工具函数模块架构文档**
 
 - 日志输出系统（带颜色的日志宏和日志级别管理）
@@ -122,7 +134,21 @@
 - 文件解压和校验和验证
 - 用户确认对话框
 
-#### [PROMPT_ARCHITECTURE.md](./architecture/lib/PROMPT_ARCHITECTURE.md)
+#### [format.md](./architecture/format.md)
+**Format 模块架构文档**
+
+- 显示格式化器（DisplayFormatter）：路径、列表项、键值对、文件大小格式化
+- 消息格式化器（MessageFormatter）：错误消息、操作消息、进度信息格式化
+- 统一的格式化接口，确保输出格式一致
+
+#### [table.md](./architecture/table.md)
+**Table 模块架构文档**
+
+- 表格构建器（TableBuilder）：链式配置和渲染功能
+- 表格样式（TableStyle）：5 种样式选择（Modern、Default、Compact、Minimal、Grid）
+- 支持自定义样式、边框、对齐、标题等丰富的表格格式化功能
+
+#### [prompt.md](./architecture/prompt.md)
 **Prompt 管理模块架构文档**
 
 - Prompt 文件的加载和管理
@@ -130,7 +156,7 @@
 - 线程安全的 Prompt 管理
 - 扁平化文件结构设计
 
-#### [BRANCH_ARCHITECTURE.md](./architecture/lib/BRANCH_ARCHITECTURE.md)
+#### [branch.md](./architecture/branch.md)
 **Branch 模块架构文档**
 
 - 分支命名服务（从 JIRA ticket、标题、类型生成）
@@ -140,7 +166,7 @@
 - 分支名生成（模板系统、LLM、简单回退）
 - 非英文翻译功能
 
-#### [TAG_ARCHITECTURE.md](./architecture/lib/TAG_ARCHITECTURE.md)
+#### [tag.md](./architecture/tag.md)
 **Tag 模块架构文档**
 
 - Tag 列表操作（本地、远程、全部）
@@ -149,7 +175,7 @@
 - Tag 存在性检查
 - 类型定义（TagInfo 结构体）
 
-#### [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
+#### [commit.md](./architecture/commit.md)
 **Commit 模块架构文档**
 
 - Commit amend 业务逻辑（预览、格式化、完成提示）
@@ -160,29 +186,33 @@
 
 ### 命令层架构文档（CLI 命令封装）
 
-#### [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
+> **注意**：部分模块的 Lib 层和 Commands 层文档已合并为单个文档，请参考对应的模块架构文档。
+
+#### [pr.md](./architecture/pr.md)
 **PR 命令层架构文档**
 
 - PR 创建、合并、关闭、查询等命令
 - PR Pick 命令（跨分支移植代码并创建新 PR）
 - PR 总结命令（使用 LLM 生成详细总结文档）
-- 命令层设计（CLI 入口层、命令封装层）
 - 与 lib/pr 模块的集成
 - 命令使用示例
 
-#### [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
+> **架构说明**：所有命令层文档遵循统一的三层架构设计，详见 [architecture.md](./architecture/architecture.md#三层架构设计)
+
+#### [log.md](./architecture/log.md)
 **日志操作命令层架构文档**
 
-#### [JIRA_COMMAND_ARCHITECTURE.md](./architecture/commands/JIRA_COMMAND_ARCHITECTURE.md)
+#### [jira.md](./architecture/jira.md)
 **Jira 操作命令层架构文档**
 
 - 日志下载、查找、搜索功能（`workflow log` 子命令）
 - Jira ticket 信息显示（`workflow jira` 子命令）
-- 命令层设计（CLI 入口层、命令封装层）
 - 与 Jira 日志处理模块的集成
 - 命令使用示例
 
-#### [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
+> **架构说明**：所有命令层文档遵循统一的三层架构设计，详见 [architecture.md](./architecture/architecture.md#三层架构设计)
+
+#### [config.md](./architecture/config.md)
 **配置管理命令层架构文档**
 
 - 初始化设置命令（setup）
@@ -192,16 +222,16 @@
 - 环境检查功能（Git 仓库状态、网络连接）
 - Completion 管理命令
 
-#### [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
+#### [lifecycle.md](./architecture/lifecycle.md)
 **生命周期管理命令层架构文档**
 
 - 安装功能（二进制文件和 shell completion 脚本）
 - 卸载功能（清理所有相关文件和配置）
 - 更新功能（从 GitHub Releases 更新到新版本）
 - GitHub Actions 发布流程
-- HOMEBREW_TAP_TOKEN 配置说明
+- HOMEBREW-TAP-TOKEN 配置说明
 
-#### [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
+#### [branch.md](./architecture/branch.md)
 **分支管理命令层架构文档**
 
 - 分支创建功能（支持从 JIRA ticket 创建，使用 LLM 生成分支名）
@@ -211,7 +241,7 @@
 - 支持 dry-run 模式和确认机制
 - 首次使用自动提示配置分支前缀
 
-#### [TAG_COMMAND_ARCHITECTURE.md](./architecture/commands/TAG_COMMAND_ARCHITECTURE.md)
+#### [tag.md](./architecture/tag.md)
 **Tag 管理命令层架构文档**
 
 - Tag 删除功能（支持本地和远程 tag 删除）
@@ -220,7 +250,7 @@
 - 预览和确认机制
 - 支持 dry-run 模式和强制删除
 
-#### [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
+#### [commit.md](./architecture/commit.md)
 **Commit 管理命令层架构文档**
 
 - Commit amend 命令（修改最后一次提交的消息和文件）
@@ -231,7 +261,7 @@
 - 分支保护（检查默认分支，防止误操作）
 - 支持 HEAD 和历史 commit 的 reword
 
-#### [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+#### [stash.md](./architecture/stash.md)
 **Stash 管理命令层架构文档**
 
 - Stash list 命令（列出所有 stash 条目，支持统计信息）
@@ -241,7 +271,7 @@
 - 交互式选择界面（支持选择特定的 stash）
 - 冲突检测和处理（自动检测冲突并提供解决提示）
 
-#### [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
+#### [alias.md](./architecture/alias.md)
 **别名管理命令层架构文档**
 
 - Alias list 命令（列出所有别名）
@@ -250,7 +280,7 @@
 - 别名展开功能（支持嵌套别名和循环检测）
 - 命令行参数展开（在命令解析前自动展开别名）
 
-#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
+#### [migrate.md](./architecture/migrate.md)
 **配置迁移命令层架构文档**
 
 - 版本化迁移系统（迁移版本独立于软件版本）
@@ -259,21 +289,21 @@
 - 迁移历史记录管理
 - 每个迁移版本独立实现，互不干扰
 
-#### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
+#### [check.md](./architecture/check.md)
 **环境检查命令层架构文档**
 
 - Git 仓库状态检查
 - 网络连接检查（到 GitHub）
 - 作为其他命令的前置检查步骤
 
-#### [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
+#### [github.md](./architecture/github.md)
 **GitHub 账号管理命令层架构文档**
 
 - 多账号管理（支持配置多个 GitHub 账号）
 - 账号切换功能（自动更新 Git 配置）
 - 账号配置管理（添加、删除、更新）
 
-#### [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)
+#### [proxy.md](./architecture/proxy.md)
 **代理管理命令层架构文档**
 
 - 代理启用/禁用功能（临时模式和持久模式）
@@ -300,31 +330,50 @@
 
 ## 📋 待办事项和设计指南
 
-> 待办事项文档位于 [`todo/`](./todo/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
+> 待办事项文档位于 [`requirements/`](./requirements/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
-### [DEVELOPMENT_GUIDELINES.md](./guidelines/DEVELOPMENT_GUIDELINES.md)
-**开发规范文档**
+### [development/](./guidelines/development/)
+**开发规范目录**
 
-- 代码风格规范（格式化、Lint、命名约定）
-- 错误处理规范（anyhow、上下文信息）
-- 文档规范（公共 API 文档、注释格式）
-- 命名规范（文件、函数、结构体、常量）
-- 模块组织规范（目录结构、模块职责）
-- Git 工作流（分支策略、工作流程）
+包含完整的开发规范文档：
+
+**核心规范**：
+- [代码风格规范](./guidelines/development/code-style.md) - 格式化、Lint、命名约定
+- [错误处理规范](./guidelines/development/error-handling.md) - color-eyre、上下文信息
+- [命名规范](./guidelines/development/naming.md) - 文件、函数、结构体、常量、CLI 参数
+- [模块组织规范](./guidelines/development/module-organization.md) - 目录结构、模块职责
+
+**流程规范**：
+- [Git 工作流规范](./guidelines/development/git-workflow.md) - 分支策略、工作流程
+- [提交规范](./guidelines/development/commit.md) - Conventional Commits 格式
+- [代码审查规范](./guidelines/development/code-review.md) - 审查清单、审查重点
+
+**参考文档**：
+- [日志和调试规范](./guidelines/development/references/logging.md) - 日志系统架构、敏感信息过滤
+- [文档规范](./guidelines/development/references/documentation.md) - 公共 API 文档、文档同步要求
+- [配置管理规范](./guidelines/development/references/configuration.md) - 配置验证、配置迁移
+- [安全性规则](./guidelines/development/references/security.md) - API Token 处理、输入验证
+- [依赖管理规范](./guidelines/development/references/dependency-management.md) - 添加依赖、依赖更新
+
+**开发工作流**：
+- [开发工作流索引](./guidelines/development/workflows/README.md) - 新功能开发、重构、添加依赖等流程
+
+**快速导航**：
+- [开发规范索引](./guidelines/development/README.md) - 开发规范总览和快速导航
 - 提交规范（Conventional Commits）
 - 测试规范（单元测试、集成测试）
 - 代码审查（审查清单、审查重点）
 - 依赖管理（添加依赖、版本管理）
 - 开发工具（必需工具、常用命令）
 
-### [DOCUMENT_GUIDELINES.md](./guidelines/DOCUMENT_GUIDELINES.md)
+### [document.md](./guidelines/document.md)
 **文档编写指南**
 
 - 文档模板使用说明
 - 章节检查清单
 - 文档编写规范
 
-### [DOCUMENT_TIMESTAMP_GUIDELINES.md](./guidelines/DOCUMENT_TIMESTAMP_GUIDELINES.md)
+### [document-timestamp.md](./guidelines/document-timestamp.md)
 **文档更新时间维护指南**
 
 - 更新时间格式规范
@@ -333,16 +382,16 @@
 
 ## 🤖 AI 工作流指南
 
-> AI 工作流指南位于 [`workflows/`](./guidelines/workflows/) 目录下
+> AI 工作流指南位于 [`workflows/`](./guidelines/development/workflows/) 目录下
 
-### [工作流指南索引](./guidelines/workflows/README.md)
+### [工作流指南索引](./guidelines/development/workflows/README.md)
 **AI 工作流完整指南**
 
 - 工作流概述和使用场景
 - 快速参考和详细指南导航
 - 工作流文档组织结构
 
-### [PRE_COMMIT_GUIDELINES.md](./guidelines/workflows/PRE_COMMIT_GUIDELINES.md)
+### [pre-commit.md](./guidelines/development/workflows/pre-commit.md)
 **提交前检查指南（5-15分钟）**
 
 - 快速检查清单和一键执行命令
@@ -354,7 +403,7 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 检查优先级对照表和常见问题
 
-### [REVIEW_GUIDELINES.md](./guidelines/workflows/REVIEW_GUIDELINES.md)
+### [review.md](./guidelines/development/workflows/review.md)
 **综合深入检查指南（2-4小时）**
 
 - 深入检查概述和场景选择
@@ -363,7 +412,7 @@
 - 综合检查报告生成
 - 定期审查工作流建议
 
-### [QUICK_REFERENCE_GUIDELINES.md](./guidelines/workflows/references/QUICK_REFERENCE_GUIDELINES.md)
+### [quick-reference.md](./guidelines/development/references/quick-reference.md)
 **快速参考指南**
 
 - 检查类型选择指南（快速检查 vs 深入检查）
@@ -373,7 +422,7 @@
 - 报告文件位置和命名规范
 - 常用工具函数和故障排除
 
-### [STYLE_GUIDELINES.md](./guidelines/workflows/references/STYLE_GUIDELINES.md)
+### [style.md](./guidelines/development/references/style.md)
 **样式规范指南**
 
 - 术语规范（检查类型、优先级、状态）
@@ -382,7 +431,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [REVIEW_DOCUMENT_GUIDELINES.md](./guidelines/workflows/references/REVIEW_DOCUMENT_GUIDELINES.md)
+### [review-document-completeness.md](./guidelines/development/references/review-document-completeness.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -394,7 +443,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [REVIEW_TEST_CASE_GUIDELINES.md](./guidelines/workflows/references/REVIEW_TEST_CASE_GUIDELINES.md)
+### [review-test-case.md](./guidelines/development/references/review-test-case.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -403,7 +452,7 @@
 - 检查方法（自动化工具、手动检查）
 - 检查报告格式
 
-### [CARGO_BLOAT_GUIDELINES.md](./guidelines/CARGO_BLOAT_GUIDELINES.md)
+### [cargo-bloat.md](./guidelines/cargo-bloat.md)
 **cargo-bloat 使用指南**
 
 - cargo-bloat 工具安装和基本使用
@@ -413,7 +462,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [REVIEW_CODE_GUIDELINES.md](./guidelines/workflows/references/REVIEW_CODE_GUIDELINES.md)
+### [review-code.md](./guidelines/development/references/review-code.md)
 **代码检查指南**
 
 - 系统化的代码检查方法
@@ -446,44 +495,46 @@
 ## 📖 快速导航
 
 ### 整体架构
-- 想了解整体架构？ → [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+- 想了解整体架构？ → [architecture.md](./architecture/architecture.md)
 
 ### 版本迁移
 - 需要升级版本？ → [迁移文档索引](./migration/README.md)
 - 从 1.5.6 升级到 1.5.7？ → [1.5.6 → 1.5.7 迁移指南](./migration/1.5.6-to-1.5.7.md)
 
 ### Lib 层模块（核心业务逻辑）
-- 想了解 PR 功能？ → [PR_ARCHITECTURE.md](./architecture/lib/PR_ARCHITECTURE.md)
-- 想了解 Jira 集成？ → [JIRA_ARCHITECTURE.md](./architecture/lib/JIRA_ARCHITECTURE.md)
-- 想了解 Git 操作？ → [GIT_ARCHITECTURE.md](./architecture/lib/GIT_ARCHITECTURE.md)
-- 想了解 Tag 管理？ → [TAG_ARCHITECTURE.md](./architecture/lib/TAG_ARCHITECTURE.md)
-- 想了解 Commit 管理？ → [COMMIT_ARCHITECTURE.md](./architecture/lib/COMMIT_ARCHITECTURE.md)
-- 想了解 HTTP 客户端？ → [HTTP_ARCHITECTURE.md](./architecture/lib/HTTP_ARCHITECTURE.md)
-- 想了解配置管理？ → [SETTINGS_ARCHITECTURE.md](./architecture/lib/SETTINGS_ARCHITECTURE.md)
-- 想了解 LLM/AI 功能？ → [LLM_ARCHITECTURE.md](./architecture/lib/LLM_ARCHITECTURE.md)
-- 想了解 Shell 检测与管理？ → [SHELL_ARCHITECTURE.md](./architecture/lib/SHELL_ARCHITECTURE.md)
-- 想了解 Completion 功能？ → [COMPLETION_ARCHITECTURE.md](./architecture/lib/COMPLETION_ARCHITECTURE.md)
-- 想了解代理管理？ → [PROXY_ARCHITECTURE.md](./architecture/lib/PROXY_ARCHITECTURE.md)
-- 想了解回滚机制？ → [ROLLBACK_ARCHITECTURE.md](./architecture/lib/ROLLBACK_ARCHITECTURE.md)
-- 想了解工具函数？ → [TOOLS_ARCHITECTURE.md](./architecture/lib/TOOLS_ARCHITECTURE.md)
-- 想了解 Prompt 管理？ → [PROMPT_ARCHITECTURE.md](./architecture/lib/PROMPT_ARCHITECTURE.md)
+- 想了解 PR 功能？ → [pr.md](./architecture/pr.md)
+- 想了解 Jira 集成？ → [jira.md](./architecture/jira.md)
+- 想了解 Git 操作？ → [git.md](./architecture/git.md)
+- 想了解 Tag 管理？ → [tag.md](./architecture/tag.md)
+- 想了解 Commit 管理？ → [commit.md](./architecture/commit.md)
+- 想了解 HTTP 客户端？ → [http.md](./architecture/http.md)
+- 想了解配置管理？ → [settings.md](./architecture/settings.md)
+- 想了解 LLM/AI 功能？ → [llm.md](./architecture/llm.md)
+- 想了解 Shell 检测与管理？ → [shell.md](./architecture/shell.md)
+- 想了解 Completion 功能？ → [completion.md](./architecture/completion.md)
+- 想了解代理管理？ → [proxy.md](./architecture/proxy.md)
+- 想了解回滚机制？ → [rollback.md](./architecture/rollback.md)
+- 想了解工具函数？ → [tools.md](./architecture/tools.md)
+- 想了解格式化工具？ → [format.md](./architecture/format.md)
+- 想了解表格输出工具？ → [table.md](./architecture/table.md)
+- 想了解 Prompt 管理？ → [prompt.md](./architecture/prompt.md)
 
 ### 命令层模块（CLI 命令封装）
-- 想了解 PR 命令？ → [PR_COMMAND_ARCHITECTURE.md](./architecture/commands/PR_COMMAND_ARCHITECTURE.md)
-- 想了解日志操作命令？ → [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
-- 想了解 Jira 操作命令？ → [JIRA_COMMAND_ARCHITECTURE.md](./architecture/commands/JIRA_COMMAND_ARCHITECTURE.md)
-- 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
-- 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
-- 想了解分支管理命令？ → [BRANCH_COMMAND_ARCHITECTURE.md](./architecture/commands/BRANCH_COMMAND_ARCHITECTURE.md)
-- 想了解 Tag 管理命令？ → [TAG_COMMAND_ARCHITECTURE.md](./architecture/commands/TAG_COMMAND_ARCHITECTURE.md)
-- 想了解 Repo 管理命令？ → [REPO_COMMAND_ARCHITECTURE.md](./architecture/commands/REPO_COMMAND_ARCHITECTURE.md)
-- 想了解 Commit 管理命令？ → [COMMIT_COMMAND_ARCHITECTURE.md](./architecture/commands/COMMIT_COMMAND_ARCHITECTURE.md)
-- 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
-- 想了解别名管理命令？ → [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
-- 想了解配置迁移命令？ → [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
-- 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
-- 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
-- 想了解代理管理命令？ → [PROXY_COMMAND_ARCHITECTURE.md](./architecture/commands/PROXY_COMMAND_ARCHITECTURE.md)
+- 想了解 PR 命令？ → [pr.md](./architecture/pr.md)
+- 想了解日志操作命令？ → [log.md](./architecture/log.md)
+- 想了解 Jira 操作命令？ → [jira.md](./architecture/jira.md)
+- 想了解配置管理命令？ → [config.md](./architecture/config.md)
+- 想了解生命周期管理命令（安装/卸载/更新）？ → [lifecycle.md](./architecture/lifecycle.md)
+- 想了解分支管理命令？ → [branch.md](./architecture/branch.md)
+- 想了解 Tag 管理命令？ → [tag.md](./architecture/tag.md)
+- 想了解 Repo 管理命令？ → [repo.md](./architecture/repo.md)
+- 想了解 Commit 管理命令？ → [commit.md](./architecture/commit.md)
+- 想了解 Stash 管理命令？ → [stash.md](./architecture/stash.md)
+- 想了解别名管理命令？ → [alias.md](./architecture/alias.md)
+- 想了解配置迁移命令？ → [migrate.md](./architecture/migrate.md)
+- 想了解环境检查命令？ → [check.md](./architecture/check.md)
+- 想了解 GitHub 账号管理命令？ → [github.md](./architecture/github.md)
+- 想了解代理管理命令？ → [proxy.md](./architecture/proxy.md)
 
 ---
 

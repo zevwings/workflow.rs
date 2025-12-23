@@ -40,8 +40,8 @@ pub mod unzip;
 // 重新导出 string 模块的函数，保持向后兼容
 pub use string::mask_sensitive_value;
 
-// 重新导出 platform 模块的结构体和函数
-pub use platform::{detect_release_platform, Platform};
+// 重新导出 platform 模块的结构体
+pub use platform::Platform;
 
 // 重新导出 browser 和 clipboard
 pub use browser::Browser;

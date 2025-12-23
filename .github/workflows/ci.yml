@@ -210,12 +210,22 @@ jobs:
       - name: 🧪 Run tests
         run: cargo test --verbose
 
+      - name: 📝 Run doctests
+        run: cargo test --doc --verbose
+
+      - name: ✅ Run completion completeness tests
+        run: cargo test --test completeness
+
+  # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
+  # 该 workflow 支持 PR 触发和定期检查，功能更完整
+
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
   # 注意：需要在 GitHub 仓库设置中配置分支保护规则，将此工作流设为必需的状态检查
   # 状态检查名称：CI / ✅ Verify All Checks
   # 注意：job 名称必须与分支保护规则中配置的状态检查名称匹配
+  # 注意：文档检查已移至 doc-consistency-check.yml workflow
   check-status:
     name: ✅ Verify All Checks
     runs-on: ubuntu-latest
@@ -240,6 +250,7 @@ jobs:
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
+          echo "  Note: Document checks are handled by doc-consistency-check.yml workflow"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
           if [ "$SKIP_CI_RESULT" == "success" ] && [ "$SKIP_CI_SHOULD_SKIP" == "true" ]; then
@@ -282,9 +293,10 @@ jobs:
           fi
 
           # 如果 check-lint 和 tests 都成功或被跳过，则通过
+          # 注意：文档检查已移至 doc-consistency-check.yml workflow
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
-              echo "✅ All checks passed or were skipped"
+              echo "✅ All required checks passed or were skipped"
               exit 0
             fi
           fi
