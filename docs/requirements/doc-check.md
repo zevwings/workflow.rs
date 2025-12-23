@@ -245,17 +245,17 @@ fn validate-_module-_path(module-_path: &str) -> bool {
 ## 检查结果
 
 ### ✅ 通过的路径
-- `src/lib/pr/github/platform.rs` (docs/architecture/lib/PR_architecture.md)
+- `src/lib/pr/github/platform.rs` (docs/architecture/LPRE.md)
 
 ### ❌ 不存在的路径
 1. `src/lib/pr/old-_module.rs`
-   - **文档位置**：docs/architecture/lib/PR_architecture.md
+   - **文档位置**：docs/architecture/LPRE.md
    - **问题类型**：文件不存在
    - **建议**：检查文件是否已删除或重命名
 
 ### ⚠️ 无效的模块路径
 1. `crate::pr::old::Module`
-   - **文档位置**：docs/architecture/lib/PR_architecture.md
+   - **文档位置**：docs/architecture/LPRE.md
    - **问题类型**：模块不存在
    - **建议**：检查模块是否已重构或删除
 ```

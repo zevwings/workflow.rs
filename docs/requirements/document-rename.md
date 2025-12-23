@@ -273,7 +273,7 @@ git mv docs/todo docs/requirements
 
 ```bash
 # 示例：重命名独立 Lib 文档
-git mv docs/architecture/lib/GIT_architecture.md docs/architecture/git.md
+git mv docs/architecture/LGITE.md docs/architecture/git.md
 ```
 
 ### 步骤 2：使用 Git 重命名文件（保留历史）
