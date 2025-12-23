@@ -2,19 +2,27 @@
 
 ## 📋 概述
 
-Tag 模块是 Workflow CLI 的 Git 操作模块的一部分，提供完整的 Git tag 操作功能，包括列出 tag、删除 tag、检查 tag 存在性和获取 tag 信息。该模块采用模块化设计，使用零大小结构体组织相关函数，通过统一的辅助函数减少代码重复。
+Tag 模块是 Workflow CLI 的核心模块，提供完整的 Git tag 操作功能。该模块采用分层架构设计，包括：
+
+- **Lib 层**（`lib/git/tag.rs`）：提供 Git tag 操作的核心业务逻辑，包括列出 tag、删除 tag、检查 tag 存在性和获取 tag 信息等功能
+- **Commands 层**（`commands/tag/`）：提供 CLI 命令封装，处理用户交互，包括 tag 删除功能（支持本地和远程 tag 删除，支持模式匹配和交互式选择）
+
+Tag 模块采用模块化设计，使用零大小结构体组织相关函数，通过统一的辅助函数减少代码重复。
 
 **模块统计：**
-- 总代码行数：约 286 行
-- 文件数量：1 个（`src/lib/git/tag.rs`）
-- 主要结构体：1 个（`GitTag`）
-- 类型定义：1 个（`TagInfo`）
+- Lib 层代码行数：约 286 行
+- Commands 层代码行数：约 248 行
+- 命令数量：1 个（delete）
+- 文件数量：Lib 层 1 个，Commands 层 2 个
+- 主要结构体：`GitTag`、`TagInfo`
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
-### 核心模块文件
+Tag 模块（`lib/git/tag.rs`）是 Workflow CLI 的 Git 操作模块的一部分，提供完整的 Git tag 操作功能。
+
+### 模块结构
 
 ```
 src/lib/git/
@@ -42,7 +50,7 @@ src/lib/git/
 
 ---
 
-## 🏗️ 架构设计
+## 🏗️ Lib 层架构设计
 
 ### 设计原则
 
@@ -178,9 +186,62 @@ if result.is_err() {
 
 ---
 
-## 🔄 调用流程与数据流
+## 📁 Commands 层架构（命令封装）
 
-### 整体架构流程
+Tag 命令层是 Workflow CLI 的命令接口，提供安全的 tag 删除功能。该层采用命令模式设计，通过调用 `lib/git/` 模块提供的 API 实现业务功能。
+
+### 相关文件
+
+#### CLI 入口层
+
+Tag 管理命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Tag` 枚举定义。
+
+```
+src/main.rs
+```
+- **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
+- **功能**：使用 `clap` 解析命令行参数，将 `workflow tag` 子命令分发到对应的命令处理函数
+
+#### 命令封装层
+
+```
+src/commands/tag/
+├── mod.rs          # Tag 命令模块声明
+└── delete.rs       # Tag 删除命令（~248 行）
+```
+
+**职责**：
+- 解析命令参数
+- 处理用户交互（确认、预览等）
+- 格式化输出
+- 调用核心业务逻辑层 (`lib/git/`) 的功能
+
+### 依赖模块
+
+命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
+- **`lib/git/`**：Git 操作（`GitTag`）
+  - `GitTag::list_all_tags()` - 获取所有 tag（本地和远程）
+  - `GitTag::get_tag_info()` - 获取 tag 信息
+  - `GitTag::delete_local()` - 删除本地 tag
+  - `GitTag::delete_remote()` - 删除远程 tag
+- **`lib/base/dialog/`**：对话框（`ConfirmDialog`、`MultiSelectDialog`）
+
+---
+
+## 🔄 集成关系
+
+### Lib 层和 Commands 层的协作
+
+Tag 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
+
+1. **Tag 操作**：Commands 层调用 `GitTag` 的方法进行 tag 操作
+2. **Tag 列表**：Commands 层使用 `GitTag::list_all_tags()` 获取所有 tag
+3. **Tag 信息**：Commands 层使用 `GitTag::get_tag_info()` 获取 tag 详细信息
+4. **用户交互**：Commands 层负责格式化输出和用户提示
+
+### 调用流程
+
+#### 整体架构流程
 
 ```
 调用者（命令层或其他模块）
@@ -203,6 +264,65 @@ helpers.rs (辅助函数层)
 duct::cmd (命令执行层)
   └── git 命令
 ```
+
+#### 命令分发流程
+
+```
+src/main.rs::main()
+  ↓
+Cli::parse() (解析命令行参数)
+  ↓
+match cli.subcommand {
+  TagSubcommand::Delete { tag_name, local, remote, pattern, dry_run, force } => TagDeleteCommand::execute()
+}
+```
+
+---
+
+## 📋 Commands 层命令详情
+
+### Tag 删除命令 (`delete.rs`)
+
+Tag 删除命令提供安全的 tag 删除功能：
+
+1. **多种选择方式**：
+   - 直接指定 tag 名称
+   - 使用模式匹配（`--pattern`，支持 shell 通配符：`*`、`?`）
+   - 交互式选择（不提供参数时）
+
+2. **删除范围控制**：
+   - `--local`：只删除本地 tag
+   - `--remote`：只删除远程 tag
+   - 默认：删除本地和远程 tag（如果存在）
+
+3. **安全机制**：
+   - 预览模式：显示将要删除的 tag 列表（tag 名称、commit hash、存在位置）
+   - Dry-run 模式：只预览，不实际删除
+   - 确认机制：删除前需要用户确认（除非使用 `--force`）
+
+4. **交互式选择**：
+   - 使用 `MultiSelectDialog` 支持多选
+   - 显示 tag 信息（名称、commit hash、存在位置）
+   - 格式：`<tag_name> (commit: <hash>, local/remote/both)`
+
+5. **模式匹配**：
+   - 支持 shell 通配符：`*`（匹配任意字符）、`?`（匹配单个字符）、`.`（转义为字面量）
+   - 自动转换为正则表达式进行匹配
+   - 示例：`--pattern "v1.*"` 匹配所有以 `v1.` 开头的 tag
+
+**关键步骤**：
+1. 使用 `GitTag::list_all_tags()` 获取所有 tag（本地和远程）
+2. 确定要删除的 tag 列表（模式匹配/指定名称/交互式选择）
+3. 使用 `GitTag::get_tag_info()` 获取每个 tag 的详细信息
+4. 显示预览（tag 名称、commit hash、存在位置）
+5. Dry-run 模式（如果启用，只预览不执行）
+6. 确认删除（除非使用 force）
+7. 执行删除（根据 `--local` 和 `--remote` 参数确定删除范围）
+8. 显示结果
+
+---
+
+## 🔄 调用流程与数据流
 
 ### 典型调用示例
 
@@ -250,43 +370,58 @@ helpers::cmd_read()  # 获取 commit hash（git rev-parse 或 git ls-remote）
 
 ### 数据流
 
-#### 列出 Tag 数据流
-
-```
-用户请求（列出所有 tag）
-  ↓
-GitTag::list_all_tags()
-  ↓
-获取本地 tag（GitTag::list_local_tags()）
-  ↓
-获取远程 tag（GitTag::list_remote_tags()）
-  ↓
-合并去重
-  ↓
-获取每个 tag 的 commit hash
-  ↓
-构建 TagInfo 列表
-  ↓
-返回结果
-```
-
 #### 删除 Tag 数据流
 
 ```
-用户请求（删除 tag）
+用户输入 (workflow tag delete [TAG_NAME] [--local] [--remote] [--pattern PATTERN] [--dry-run] [--force])
   ↓
-GitTag::delete_local(tag_name) / GitTag::delete_remote(tag_name)
+获取所有 tag（GitTag::list_all_tags()）
   ↓
-执行 Git 命令（git tag -d / git push origin --delete）
+确定要删除的 tag 列表（模式匹配/指定名称/交互式选择）
   ↓
-返回结果
+获取 tag 信息（GitTag::get_tag_info()）
+  ↓
+显示预览
+  ↓
+Dry-run 模式（如果启用）
+  ↓
+确认删除（除非使用 force）
+  ↓
+执行删除（GitTag::delete_local() / GitTag::delete_remote()）
+  ↓
+显示结果
 ```
 
 ---
 
 ## 📋 使用示例
 
-### 基本使用
+### Delete 命令
+
+```bash
+# 删除指定 tag（本地和远程）
+workflow tag delete v1.0.0
+
+# 只删除本地 tag
+workflow tag delete v1.0.0 --local
+
+# 只删除远程 tag
+workflow tag delete v1.0.0 --remote
+
+# 使用模式匹配删除多个 tag
+workflow tag delete --pattern "v1.*"
+
+# 预览模式（不实际删除）
+workflow tag delete v1.0.0 --dry-run
+
+# 强制删除（跳过确认）
+workflow tag delete v1.0.0 --force
+
+# 交互式选择（不提供参数）
+workflow tag delete
+```
+
+### 基本使用（Lib 层）
 
 ```rust
 use workflow::git::GitTag;
@@ -378,24 +513,42 @@ impl GitTag {
 1. 在 `TagInfo` 结构体中添加新字段
 2. 更新相关方法以填充新字段
 
-**示例**：
-```rust
-pub struct TagInfo {
-    pub name: String,
-    pub commit_hash: String,
-    pub exists_local: bool,
-    pub exists_remote: bool,
-    pub created_date: Option<String>,  // 新增字段
-}
-```
+### 添加新的命令
+
+1. 在 `tag/` 目录下创建新的命令文件
+2. 在 `src/lib/cli/tag.rs` 中添加新的子命令枚举
+3. 在 `src/main.rs` 中添加命令分发逻辑
+4. 在 `lib/git/tag.rs` 中添加对应的 Git 操作方法（如需要）
+
+---
+
+## 🔍 错误处理
+
+### 分层错误处理
+
+1. **CLI 层**：参数验证错误
+   - `clap` 自动处理参数验证和错误提示
+
+2. **命令层**：用户交互错误、业务逻辑错误
+   - Tag 不存在：记录警告，继续处理其他 tag
+   - 删除失败：记录警告，继续处理其他 tag
+
+3. **库层**：Git 操作错误、文件操作错误
+   - 通过 `GitTag` API 返回的错误信息
+   - Git 操作失败、文件读写错误等
+
+### 容错机制
+
+- **Tag 不存在**：记录警告，继续处理其他 tag
+- **删除失败**：记录警告，继续处理其他 tag
+- **模式匹配失败**：返回错误，提示用户检查模式格式
 
 ---
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [Git 模块架构文档](./GIT_ARCHITECTURE.md) - Git 操作相关
-- [Tag 命令架构文档](../commands/TAG_COMMAND_ARCHITECTURE.md) - Tag 命令层详细说明
+- [主架构文档](./architecture.md)
+- [Git 模块架构文档](./git.md) - Git 操作相关
 
 ---
 
@@ -409,6 +562,8 @@ Tag 模块采用清晰的模块化设计：
 4. **错误处理统一**：使用 `anyhow::Result` 和 `context` 提供清晰的错误信息
 5. **易于扩展**：模块化设计便于添加新功能
 6. **完整功能**：支持列出、检查、删除本地和远程 tag
+7. **安全删除**：支持本地和远程 tag 删除，提供完整的预览和确认机制
+8. **灵活选择**：支持直接指定、模式匹配和交互式选择
 
 **设计优势**：
 - ✅ **职责清晰**：每个方法负责单一功能领域
@@ -416,9 +571,13 @@ Tag 模块采用清晰的模块化设计：
 - ✅ **易于维护**：模块化设计，低耦合
 - ✅ **类型安全**：结构体保证类型安全
 - ✅ **兼容性好**：自动回退机制支持不同 Git 版本和配置
+- ✅ **安全性**：多重确认机制，防止误删重要 tag
+- ✅ **灵活性**：支持多种选择方式和删除范围控制
+- ✅ **用户友好**：清晰的预览和确认提示，详细的错误信息
 
-通过模块化设计和统一辅助函数，实现了代码复用、易于维护和扩展的目标。
+通过模块化设计和统一辅助函数，实现了代码复用、易于维护和扩展的目标。命令层专注于用户交互和输出格式化，核心业务逻辑由 Lib 层提供，实现了清晰的职责分离。
 
 ---
 
 **最后更新**: 2025-12-16
+
