@@ -304,7 +304,7 @@
 
 > 待办事项文档位于 [`requirements/`](./requirements/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
-### [development_guidelines.md](./guidelines/development_guidelines.md)
+### [development.md](./guidelines/development.md)
 **开发规范文档**
 
 - 代码风格规范（格式化、Lint、命名约定）
@@ -319,14 +319,14 @@
 - 依赖管理（添加依赖、版本管理）
 - 开发工具（必需工具、常用命令）
 
-### [document_guidelines.md](./guidelines/document_guidelines.md)
+### [document.md](./guidelines/document.md)
 **文档编写指南**
 
 - 文档模板使用说明
 - 章节检查清单
 - 文档编写规范
 
-### [document_timestamp_guidelines.md](./guidelines/document_timestamp_guidelines.md)
+### [document_timestamp.md](./guidelines/document_timestamp.md)
 **文档更新时间维护指南**
 
 - 更新时间格式规范
@@ -344,7 +344,7 @@
 - 快速参考和详细指南导航
 - 工作流文档组织结构
 
-### [pre_commit_guidelines.md](./guidelines/workflows/pre_commit_guidelines.md)
+### [pre_commit.md](./guidelines/workflows/pre_commit.md)
 **提交前检查指南（5-15分钟）**
 
 - 快速检查清单和一键执行命令
@@ -356,7 +356,7 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 检查优先级对照表和常见问题
 
-### [review_guidelines.md](./guidelines/workflows/review_guidelines.md)
+### [review.md](./guidelines/workflows/review.md)
 **综合深入检查指南（2-4小时）**
 
 - 深入检查概述和场景选择
@@ -365,7 +365,7 @@
 - 综合检查报告生成
 - 定期审查工作流建议
 
-### [quick_reference_guidelines.md](./guidelines/workflows/references/quick_reference_guidelines.md)
+### [quick_reference.md](./guidelines/workflows/references/quick_reference.md)
 **快速参考指南**
 
 - 检查类型选择指南（快速检查 vs 深入检查）
@@ -375,7 +375,7 @@
 - 报告文件位置和命名规范
 - 常用工具函数和故障排除
 
-### [style_guidelines.md](./guidelines/workflows/references/style_guidelines.md)
+### [style.md](./guidelines/workflows/references/style.md)
 **样式规范指南**
 
 - 术语规范（检查类型、优先级、状态）
@@ -384,7 +384,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [REVIEW_document_guidelines.md](./guidelines/workflows/references/REVIEW_document_guidelines.md)
+### [REVIEW_document.md](./guidelines/workflows/references/REVIEW_document.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -396,7 +396,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [review_test_case_guidelines.md](./guidelines/workflows/references/review_test_case_guidelines.md)
+### [review_test_case.md](./guidelines/workflows/references/review_test_case.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -405,7 +405,7 @@
 - 检查方法（自动化工具、手动检查）
 - 检查报告格式
 
-### [cargo_bloat_guidelines.md](./guidelines/cargo_bloat_guidelines.md)
+### [cargo_bloat.md](./guidelines/cargo_bloat.md)
 **cargo-bloat 使用指南**
 
 - cargo-bloat 工具安装和基本使用
@@ -415,7 +415,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [review_code_guidelines.md](./guidelines/workflows/references/review_code_guidelines.md)
+### [review_code.md](./guidelines/workflows/references/review_code.md)
 **代码检查指南**
 
 - 系统化的代码检查方法
