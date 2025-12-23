@@ -103,7 +103,7 @@
 ## 📁 目录结构
 
 ```
-docs/todo/
+docs/requirements/
 ├── README.md                      # 本文件（索引文档）
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
@@ -182,7 +182,7 @@ docs/todo/
    - 提升 Cursor AI 的理解准确性和执行效果
    - 保留中文关键词匹配逻辑（用于文档分类识别）
 
-> **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`。
+> **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/requirements/DOC_CHECK_TODO.md`。
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
 
@@ -221,7 +221,7 @@ docs/todo/
 - ✅ 更新了统计信息和目录结构
 
 ### 2025-12-18 更新
-- ✅ 删除 ARCHITECTURE_DOC_SYNC_TODO.md - 架构文档同步机制任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`
+- ✅ 删除 ARCHITECTURE_DOC_SYNC_TODO.md - 架构文档同步机制任务已完成，自动化检查工具实施计划已迁移至 `docs/requirements/DOC_CHECK_TODO.md`
 - ✅ 新增 DOC_CHECK_TODO.md - 架构文档检查工具待办事项（⏳ 待实施）
 - ✅ 更新了统计信息和目录结构
 

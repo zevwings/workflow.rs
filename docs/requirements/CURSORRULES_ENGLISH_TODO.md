@@ -334,7 +334,7 @@
    - `docs/architecture/` → `docs/architecture/`（路径不变）
    - `docs/guidelines/` → `docs/guidelines/`（路径不变）
    - `docs/migration/` → `docs/migration/`（路径不变）
-   - `docs/todo/` → `docs/todo/`（路径不变）
+   - `docs/requirements/` → `docs/requirements/`（路径不变）
    - `analysis/` → `analysis/`（路径不变）
 
 ---
