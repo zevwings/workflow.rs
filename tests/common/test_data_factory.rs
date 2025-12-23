@@ -96,7 +96,10 @@ impl GitHubPRBuilder {
         vars.insert("created_at".to_string(), "2024-01-01T10:00:00Z".to_string());
         vars.insert("updated_at".to_string(), "2024-01-02T15:30:00Z".to_string());
         vars.insert("merged".to_string(), "false".to_string());
-        vars.insert("html_url".to_string(), "https://github.com/owner/repo/pull/123".to_string());
+        vars.insert(
+            "html_url".to_string(),
+            "https://github.com/owner/repo/pull/123".to_string(),
+        );
 
         Self {
             templates_dir: templates_dir.clone(),
@@ -172,17 +175,32 @@ impl JiraIssueBuilder {
         // 设置默认值
         vars.insert("id".to_string(), "12345".to_string());
         vars.insert("key".to_string(), "PROJ-123".to_string());
-        vars.insert("self_url".to_string(), "https://jira.example.com/rest/api/3/issue/12345".to_string());
+        vars.insert(
+            "self_url".to_string(),
+            "https://jira.example.com/rest/api/3/issue/12345".to_string(),
+        );
         vars.insert("summary".to_string(), "Test Issue Summary".to_string());
-        vars.insert("description".to_string(), "This is a test issue description".to_string());
+        vars.insert(
+            "description".to_string(),
+            "This is a test issue description".to_string(),
+        );
         vars.insert("status_name".to_string(), "In Progress".to_string());
         vars.insert("status_id".to_string(), "3".to_string());
         vars.insert("assignee_name".to_string(), "Test User".to_string());
         vars.insert("assignee_email".to_string(), "test@example.com".to_string());
         vars.insert("reporter_name".to_string(), "Reporter User".to_string());
-        vars.insert("reporter_email".to_string(), "reporter@example.com".to_string());
-        vars.insert("created".to_string(), "2024-01-01T10:00:00.000+0000".to_string());
-        vars.insert("updated".to_string(), "2024-01-02T15:30:00.000+0000".to_string());
+        vars.insert(
+            "reporter_email".to_string(),
+            "reporter@example.com".to_string(),
+        );
+        vars.insert(
+            "created".to_string(),
+            "2024-01-01T10:00:00.000+0000".to_string(),
+        );
+        vars.insert(
+            "updated".to_string(),
+            "2024-01-02T15:30:00.000+0000".to_string(),
+        );
         vars.insert("issue_type".to_string(), "Bug".to_string());
         vars.insert("issue_type_id".to_string(), "1".to_string());
         vars.insert("project_key".to_string(), "PROJ".to_string());
@@ -388,4 +406,3 @@ mod tests {
         assert_eq!(config["log"]["method"], "file");
     }
 }
-

@@ -213,7 +213,11 @@ impl MockServerManager {
 /// Jira API Mock 预设
 impl MockServerManager {
     /// 设置 Jira 获取 Issue 成功响应
-    pub fn setup_jira_get_issue_success(&mut self, issue_key: &str, issue_data: &Value) -> &mut Self {
+    pub fn setup_jira_get_issue_success(
+        &mut self,
+        issue_key: &str,
+        issue_data: &Value,
+    ) -> &mut Self {
         let response_body = serde_json::to_string(issue_data).unwrap();
         self.mock_jira_issue(
             "GET",
@@ -251,6 +255,28 @@ impl MockServerManager {
         .to_string();
 
         self.mock_jira_issue("POST", "/rest/api/3/search", &response_body, 200);
+        self
+    }
+
+    /// 设置 Jira 获取当前用户（/myself）成功响应
+    pub fn setup_jira_get_current_user_success(&mut self, user_data: &Value) -> &mut Self {
+        let response_body = serde_json::to_string(user_data).unwrap();
+        self.mock_jira_issue("GET", "/rest/api/2/myself", &response_body, 200);
+        self
+    }
+
+    /// 设置 Jira 获取当前用户失败响应
+    pub fn setup_jira_get_current_user_error(
+        &mut self,
+        status: u16,
+        error_message: &str,
+    ) -> &mut Self {
+        let error_body = json!({
+            "errorMessages": [error_message]
+        })
+        .to_string();
+
+        self.mock_jira_issue("GET", "/rest/api/2/myself", &error_body, status);
         self
     }
 }
@@ -313,4 +339,3 @@ mod tests {
         assert_eq!(manager.mocks.len(), 1);
     }
 }
-

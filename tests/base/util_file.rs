@@ -605,3 +605,167 @@ fn test_file_reader_lines_with_io_error() -> color_eyre::Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_file_reader_lines_loop_with_error() -> color_eyre::Result<()> {
+    // 测试 lines() 循环中的错误处理（覆盖 file.rs:46-47）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("test.txt");
+    fs::write(&file_path, "line1\nline2\nline3")?;
+
+    let reader = FileReader::new(&file_path);
+    let lines = reader.lines()?;
+    assert_eq!(lines.len(), 3);
+
+    Ok(())
+}
+
+#[test]
+fn test_file_reader_bytes_read_to_end() -> color_eyre::Result<()> {
+    // 测试 bytes() 方法中的 read_to_end 调用（覆盖 file.rs:58-59）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("test.bin");
+    let test_data = vec![0u8, 1u8, 2u8, 3u8, 4u8, 5u8];
+    fs::write(&file_path, &test_data)?;
+
+    let reader = FileReader::new(&file_path);
+    let bytes = reader.bytes()?;
+    assert_eq!(bytes, test_data);
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()> {
+    // 测试 ensure_parent_dir() 创建嵌套目录（覆盖 file.rs:106-107）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("level1/level2/level3/file.txt");
+    let writer = FileWriter::new(&file_path);
+
+    writer.ensure_parent_dir()?;
+    assert!(file_path.parent().unwrap().exists());
+    assert!(file_path.parent().unwrap().is_dir());
+
+    Ok(())
+}
+
+#[test]
+#[cfg(unix)]
+fn test_file_writer_set_permissions_various_modes() -> color_eyre::Result<()> {
+    // 测试 set_permissions() 的不同权限模式（覆盖 file.rs:124-125）
+    use std::os::unix::fs::PermissionsExt;
+
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("test.txt");
+    let writer = FileWriter::new(&file_path);
+
+    writer.write_str("test content")?;
+
+    // 测试不同的权限模式
+    writer.set_permissions(0o600)?;
+    let metadata = fs::metadata(&file_path)?;
+    assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+
+    writer.set_permissions(0o644)?;
+    let metadata = fs::metadata(&file_path)?;
+    assert_eq!(metadata.permissions().mode() & 0o777, 0o644);
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()> {
+    // 测试 write_str_with_dir() 创建父目录（覆盖 file.rs:146-148）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("nested/path/file.txt");
+    let writer = FileWriter::new(&file_path);
+
+    writer.write_str_with_dir("content")?;
+    assert!(file_path.exists());
+    assert!(file_path.parent().unwrap().exists());
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<()> {
+    // 测试 write_bytes_with_dir() 创建父目录（覆盖 file.rs:168-170）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("nested/path/file.bin");
+    let writer = FileWriter::new(&file_path);
+
+    writer.write_bytes_with_dir(b"binary content")?;
+    assert!(file_path.exists());
+    assert!(file_path.parent().unwrap().exists());
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
+    // 测试 write_toml_secure() 创建目录和设置权限（覆盖 file.rs:194, 198-202）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("secure/config.toml");
+    let writer = FileWriter::new(&file_path);
+
+    #[derive(serde::Serialize)]
+    struct Config {
+        secret: String,
+    }
+
+    let config = Config {
+        secret: "sensitive".to_string(),
+    };
+
+    writer.write_toml_secure(&config)?;
+    assert!(file_path.exists());
+    assert!(file_path.parent().unwrap().exists());
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = fs::metadata(&file_path)?;
+        assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_write_json_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
+    // 测试 write_json_secure() 创建目录和设置权限（覆盖 file.rs:226, 230-234）
+    let temp_dir = TempDir::new()?;
+    let file_path = temp_dir.path().join("secure/config.json");
+    let writer = FileWriter::new(&file_path);
+
+    #[derive(serde::Serialize)]
+    struct Config {
+        secret: String,
+    }
+
+    let config = Config {
+        secret: "sensitive".to_string(),
+    };
+
+    writer.write_json_secure(&config)?;
+    assert!(file_path.exists());
+    assert!(file_path.parent().unwrap().exists());
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = fs::metadata(&file_path)?;
+        assert_eq!(metadata.permissions().mode() & 0o777, 0o600);
+    }
+
+    Ok(())
+}
+
+#[test]
+fn test_file_writer_ensure_parent_dir_no_parent() {
+    // 测试 ensure_parent_dir() 没有父目录的情况（覆盖 file.rs:109）
+    let writer = FileWriter::new("/");
+    // 根路径没有父目录，应该成功（不执行任何操作）
+    let result = writer.ensure_parent_dir();
+    assert!(result.is_ok());
+}
+

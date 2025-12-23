@@ -3,10 +3,10 @@
 //! 测试 HTTP 响应的核心功能，包括 HttpResponse 结构体。
 //! 使用 mock server 来创建真实的 HTTP 响应进行测试。
 
+use crate::common::mock_server::MockServerManager;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 use workflow::base::http::{HttpClient, RequestConfig};
-use crate::common::mock_server::MockServerManager;
 
 #[test]
 fn test_http_response_is_success_200() -> color_eyre::Result<()> {
@@ -282,9 +282,8 @@ fn test_http_response_ensure_success_with_custom_handler() -> color_eyre::Result
     let url = format!("{}/test", manager.base_url());
     let response = client.get(&url, config)?;
 
-    let result = response.ensure_success_with(|r| {
-        color_eyre::eyre::eyre!("Custom error: {}", r.status)
-    })?;
+    let result =
+        response.ensure_success_with(|r| color_eyre::eyre::eyre!("Custom error: {}", r.status))?;
     assert_eq!(result.status, 200);
 
     mock.assert();
@@ -309,9 +308,8 @@ fn test_http_response_ensure_success_with_custom_handler_error() -> color_eyre::
     let url = format!("{}/test", manager.base_url());
     let response = client.get(&url, config)?;
 
-    let result = response.ensure_success_with(|r| {
-        color_eyre::eyre::eyre!("Custom error: {}", r.status)
-    });
+    let result =
+        response.ensure_success_with(|r| color_eyre::eyre::eyre!("Custom error: {}", r.status));
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("500"));
@@ -416,6 +414,33 @@ fn test_http_response_debug() -> color_eyre::Result<()> {
 
     let debug_str = format!("{:?}", response);
     assert!(debug_str.contains("200") || debug_str.contains("OK"));
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
+}
+
+#[test]
+fn test_http_response_extract_error_message_no_error_field() -> color_eyre::Result<()> {
+    // 测试 extract_error_message 当 JSON 响应没有 error/message 字段时（覆盖 response.rs:251）
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("GET", "/test")
+        .with_status(400)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"data": {"key": "value"}, "status": "error"}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.get(&url, config)?;
+
+    let error_msg = response.extract_error_message();
+    // 应该返回完整的 JSON 字符串（因为没有 error/message 字段）
+    assert!(error_msg.contains("data") || error_msg.contains("status"));
 
     mock.assert();
     manager.cleanup();

@@ -86,11 +86,11 @@
    - 迁移索引 → `docs/migration/README.md`
    - **识别关键词**：迁移、Migration、版本升级、配置迁移
 
-4. **待办事项文档** → `docs/todo/`
-   - TODO 文档 → `docs/todo/{TOPIC}_TODO.md`
-   - TODO 索引 → `docs/todo/README.md`
+4. **待办事项文档** → `docs/requirements/`
+   - TODO 文档 → `docs/requirements/{TOPIC}_TODO.md`
+   - TODO 索引 → `docs/requirements/README.md`
    - **识别关键词**：TODO、待办、待实现、计划
-   - **索引限制**：TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
+   - **索引限制**：TODO 文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
 
 5. **技术分析文档** → `analysis/`
    - 技术分析文档 → `analysis/{TOPIC}_ANALYSIS.md` 或 `analysis/{TOPIC}_ANALYSIS_REPORT.md`
@@ -137,7 +137,7 @@
 **创建新文档时的注意事项**：
 - 使用模板创建新文档（参考 `docs/guidelines/DOCUMENT_GUIDELINES.md`）
 - 更新相应的文档索引（如适用）：
-  - TODO 文档：只在 `docs/todo/README.md` 中索引
+  - TODO 文档：只在 `docs/requirements/README.md` 中索引
   - 其他参考文档：在 `docs/README.md` 中索引
 - 确保文档遵循项目的文档编写规范
 
@@ -155,9 +155,9 @@
   - 这些文档用于开发过程中的分析、实现和记录，不需要长期保留
 - **参考文档（删除需谨慎）**：
   - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
-  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/todo/`）
+  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/requirements/`）
   - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
-  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/todo/README.md` 中维护索引，不在主文档索引中展示
+  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/requirements/README.md` 中维护索引，不在主文档索引中展示
 
 ## 核心模块
 

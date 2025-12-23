@@ -126,3 +126,15 @@ fn test_json_parser_custom_struct() -> color_eyre::Result<()> {
     Ok(())
 }
 
+#[test]
+fn test_json_parser_long_response_with_status() {
+    // 测试长响应（>200字符）且解析失败时，status 参数在错误消息中的使用（覆盖 parser.rs:63）
+    let long_invalid_json = format!("{{\"key\": \"value\"{}", "x".repeat(300)); // 超过200字符的无效JSON
+    let result: color_eyre::Result<serde_json::Value> =
+        JsonParser::parse(long_invalid_json.as_bytes(), 500);
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    // 验证错误消息包含状态码
+    assert!(error_msg.contains("500"));
+    assert!(error_msg.contains("Failed to parse JSON"));
+}
