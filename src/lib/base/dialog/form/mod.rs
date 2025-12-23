@@ -13,7 +13,7 @@
 //! ## 使用示例
 //!
 //! ```rust,no_run
-//! use workflow::base::dialog::form::{FormBuilder, GroupConfig};
+//! use workflow::base::dialog::{FormBuilder, GroupConfig};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let form_result = FormBuilder::new()
@@ -29,7 +29,7 @@
 //!     // Group 2: LLM 配置（可选）
 //!     .add_group("llm", |g| {
 //!         g.step(|f| {
-//!             f.add_selection("llm_provider", "Select LLM provider", vec!["openai", "deepseek"])
+//!             f.add_selection("llm_provider", "Select LLM provider", vec!["openai".into(), "deepseek".into()])
 //!         })
 //!         .step_if("llm_provider", "openai", |f| {
 //!             f.add_text("openai_key", "OpenAI API key")

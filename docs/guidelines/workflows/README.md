@@ -130,6 +130,7 @@ graph TD
 | 🔧 **CLI** | [REVIEW_CLI_GUIDELINES.md](./references/REVIEW_CLI_GUIDELINES.md) | 30分钟-1小时 | 命令结构、补全脚本、参数复用 |
 | 💻 **代码** | [REVIEW_CODE_GUIDELINES.md](./references/REVIEW_CODE_GUIDELINES.md) | 1-2小时 | 重复代码、工具复用、第三方库 |
 | 🧪 **测试** | [REVIEW_TEST_CASE_GUIDELINES.md](./references/REVIEW_TEST_CASE_GUIDELINES.md) | 1-2小时 | 覆盖情况、合理性、缺失测试 |
+| 📊 **测试覆盖检查** | [TEST_COVERAGE_CHECK_GUIDELINES.md](./references/TEST_COVERAGE_CHECK_GUIDELINES.md) | 30分钟-1小时 | 测试覆盖检查机制、定期检查流程 |
 | 📚 **文档** | [REVIEW_DOCUMENT_GUIDELINES.md](./references/REVIEW_DOCUMENT_GUIDELINES.md) | 30分钟-1小时 | README、架构文档、CHANGELOG |
 
 ---
@@ -216,6 +217,7 @@ docs/guidelines/workflows/
     ├── REVIEW_CLI_GUIDELINES.md          # CLI 检查指南
     ├── REVIEW_CODE_GUIDELINES.md         # 代码检查指南
     ├── REVIEW_TEST_CASE_GUIDELINES.md    # 测试检查指南
+    ├── TEST_COVERAGE_CHECK_GUIDELINES.md # 测试覆盖检查机制指南
     └── REVIEW_DOCUMENT_GUIDELINES.md     # 文档检查指南
 ```
 

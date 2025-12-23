@@ -19,7 +19,7 @@ use crate::{log_break, log_debug, log_message};
 /// # 示例
 ///
 /// ```rust,no_run
-/// use workflow::base::dialog::form::{FormBuilder, GroupConfig};
+/// use workflow::base::dialog::{FormBuilder, GroupConfig};
 ///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// // 必填组
@@ -29,12 +29,12 @@ use crate::{log_break, log_debug, log_message};
 ///             f.add_text("jira_email", "Jira email address").required()
 ///         })
 ///     }, GroupConfig::required())
-///     // 可选组（带标题）
-///     .add_group("llm", |g| {
-///         g.step(|f| {
-///             f.add_selection("llm_provider", "Select LLM provider", vec!["openai", "deepseek"])
-///         })
-///     }, GroupConfig::optional()
+    ///     // 可选组（带标题）
+    ///     .add_group("llm", |g| {
+    ///         g.step(|f| {
+    ///             f.add_selection("llm_provider", "Select LLM provider", vec!["openai".into(), "deepseek".into()])
+    ///         })
+    ///     }, GroupConfig::optional()
 ///         .with_title("LLM/AI Configuration")
 ///         .with_default_enabled(true))
 ///     .run()?;
@@ -65,7 +65,7 @@ impl FormBuilder {
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::dialog::form::{FormBuilder, GroupConfig};
+    /// use workflow::base::dialog::{FormBuilder, GroupConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // 必填组
@@ -78,7 +78,7 @@ impl FormBuilder {
     ///     // 可选组（带标题）
     ///     .add_group("llm", |g| {
     ///         g.step(|f| {
-    ///             f.add_selection("llm_provider", "...", vec!["openai", "deepseek"])
+    ///             f.add_selection("llm_provider", "...", vec!["openai".into(), "deepseek".into()])
     ///         })
     ///     }, GroupConfig::optional()
     ///         .with_title("LLM Configuration"))
