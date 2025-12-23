@@ -212,9 +212,6 @@ pub fn cleanup_branch(
     Ok(())
 }
 
-// apply_branch_name_prefixes has been deprecated
-// Branch naming now uses the template system which handles prefixes automatically
-
 /// Detect which branch a given branch might be based on
 ///
 /// By checking all branches, find the branch that the given branch might be directly based on.

@@ -121,10 +121,6 @@ impl PullRequestSyncCommand {
             return Ok(Some(pr_id));
         }
 
-        // Codeup 特定逻辑已移除（Codeup support has been removed）
-        // 方法 2: 对于 Codeup，尝试通过 API 查找（如果工作历史中没有）
-        // ... (removed)
-
         Ok(None)
     }
 

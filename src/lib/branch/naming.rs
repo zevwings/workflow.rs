@@ -481,7 +481,11 @@ mod tests {
     fn test_from_type_and_slug_without_ticket() {
         let result = BranchNaming::from_type_and_slug("feature", "my-branch", None).unwrap();
         // The result may include a repo prefix if configured, so check that it ends with the expected format
-        assert!(result.ends_with("feature/my-branch"), "Expected result to end with 'feature/my-branch', got: {}", result);
+        assert!(
+            result.ends_with("feature/my-branch"),
+            "Expected result to end with 'feature/my-branch', got: {}",
+            result
+        );
     }
 
     #[test]

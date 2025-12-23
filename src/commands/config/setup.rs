@@ -7,13 +7,8 @@ use crate::base::indicator::Spinner;
 use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
-    default_download_base_dir, // CodeupSettings,  // Codeup support has been removed
-    GitHubAccount,
-    GitHubSettings,
-    JiraSettings,
-    LLMSettings,
-    LogSettings,
-    Settings,
+    default_download_base_dir, GitHubAccount, GitHubSettings, JiraSettings, LLMSettings,
+    LogSettings, Settings,
 };
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
@@ -37,9 +32,6 @@ struct CollectedConfig {
     log_output_folder_name: Option<String>,
     log_download_base_dir: Option<String>,
     enable_trace_console: Option<bool>,
-    // codeup_project_id: Option<u64>,  // Codeup support has been removed
-    // codeup_csrf_token: Option<String>,  // Codeup support has been removed
-    // codeup_cookie: Option<String>,  // Codeup support has been removed
     // LLM 配置
     llm_provider: String,
     llm_language: String, // LLM 输出语言（所有 provider 共享）
@@ -122,9 +114,6 @@ impl SetupCommand {
             log_output_folder_name: settings.log.output_folder_name.clone(),
             log_download_base_dir: settings.log.download_base_dir.clone(),
             enable_trace_console: settings.log.enable_trace_console,
-            // codeup_project_id: settings.codeup.project_id,  // Codeup support has been removed
-            // codeup_csrf_token: settings.codeup.csrf_token.clone(),  // Codeup support has been removed
-            // codeup_cookie: settings.codeup.cookie.clone(),  // Codeup support has been removed
             llm_provider: llm.provider.clone(),
             llm_language: if llm.language.is_empty() {
                 LLMSettings::default_language()
@@ -840,10 +829,6 @@ impl SetupCommand {
             existing.llm_language.clone()
         };
 
-        // Codeup 配置已移除（Codeup support has been removed）
-        // ==================== 可选：Codeup 配置 ====================
-        // ... (removed)
-
         Ok(CollectedConfig {
             jira_email,
             jira_api_token,
@@ -853,9 +838,6 @@ impl SetupCommand {
             log_output_folder_name,
             log_download_base_dir,
             enable_trace_console,
-            // codeup_project_id,  // Codeup support has been removed
-            // codeup_csrf_token,  // Codeup support has been removed
-            // codeup_cookie,  // Codeup support has been removed
             llm_provider,
             llm_language,
             llm_openai_key,
@@ -888,11 +870,6 @@ impl SetupCommand {
                 level: None, // 日志级别通过 workflow log set 命令设置
                 enable_trace_console: config.enable_trace_console,
             },
-            // codeup: CodeupSettings {  // Codeup support has been removed
-            //     project_id: config.codeup_project_id,
-            //     csrf_token: config.codeup_csrf_token.clone(),
-            //     cookie: config.codeup_cookie.clone(),
-            // },
             llm: crate::base::settings::settings::LLMSettings {
                 provider: config.llm_provider.clone(),
                 language: config.llm_language.clone(),

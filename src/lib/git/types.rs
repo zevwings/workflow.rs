@@ -7,7 +7,7 @@
 pub enum RepoType {
     /// GitHub 仓库
     GitHub,
-    /// 阿里云 Codeup 仓库
+    /// Codeup 仓库（检测支持，但 PR 功能不支持）
     Codeup,
     /// 未知类型的仓库
     Unknown,

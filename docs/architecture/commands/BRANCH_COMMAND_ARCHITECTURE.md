@@ -100,8 +100,6 @@ match cli.subcommand {
     IgnoreSubcommand::Remove { branch_name } => BranchIgnoreCommand::remove()
     IgnoreSubcommand::List => BranchIgnoreCommand::list()
   }
-    // Note: Branch prefix command has been removed.
-    // Use 'workflow repo setup' to configure branch prefix.
   }
 }
 ```

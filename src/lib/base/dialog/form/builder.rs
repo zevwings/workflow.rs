@@ -29,12 +29,12 @@ use crate::{log_break, log_debug, log_message};
 ///             f.add_text("jira_email", "Jira email address").required()
 ///         })
 ///     }, GroupConfig::required())
-    ///     // 可选组（带标题）
-    ///     .add_group("llm", |g| {
-    ///         g.step(|f| {
-    ///             f.add_selection("llm_provider", "Select LLM provider", vec!["openai".into(), "deepseek".into()])
-    ///         })
-    ///     }, GroupConfig::optional()
+///     // 可选组（带标题）
+///     .add_group("llm", |g| {
+///         g.step(|f| {
+///             f.add_selection("llm_provider", "Select LLM provider", vec!["openai".into(), "deepseek".into()])
+///         })
+///     }, GroupConfig::optional()
 ///         .with_title("LLM/AI Configuration")
 ///         .with_default_enabled(true))
 ///     .run()?;

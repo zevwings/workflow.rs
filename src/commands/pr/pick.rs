@@ -926,5 +926,3 @@ impl PullRequestPickCommand {
         Ok(())
     }
 }
-
-// SourcePrInfo 和 ExtractedPrInfo 已迁移到 lib/pr/body_parser.rs
