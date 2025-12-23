@@ -2,23 +2,24 @@
 
 ## 📋 概述
 
-将 `docs/` 和 `analysis/` 目录下的所有文档文件名从 `SCREAMING_SNAKE_CASE`（全大写+下划线）改为 `snake-_case`（小写+下划线），以提升可读性和一致性。
+将 `docs/` 和 `analysis/` 目录下的所有文档文件名从 `SCREAMING_SNAKE_CASE`（全大写+下划线）改为 `kebab-case`（小写+连字符），以提升可读性和一致性。
 
-**目录重命名**：`docs/todo/` → `docs/requirements/`
+**目录重命名**：`docs/todo/` → `docs/requirements/` ✅ **已完成**
 
-**架构文档重组**：采用**方案 C（混合方案）**，按功能模块组织架构文档，合并 lib 层和 commands 层文档
+**架构文档重组**：采用**方案 C（混合方案）**，按功能模块组织架构文档，合并 lib 层和 commands 层文档 ✅ **已完成**
 
 **命名规则**：
-- 架构文档：删除 `_architecture` 后缀（重组后无重名风险）
-- 其他文档：保留类型后缀（`_guidelines`、`_todo`、`_analysis` 等）
+- 架构文档：删除 `_architecture` 后缀，使用 kebab-case（重组后无重名风险）✅ **已完成**
+- 指南文档：删除 `_guidelines` 后缀，使用 kebab-case ✅ **已完成**
+- 需求文档：删除 `-todo` 后缀，使用 kebab-case ✅ **已完成**
 
 **示例转换**：
-- `ARCHITECTURE.md` → `architecture.md`（总体架构文档，保留原名）
-- `DEVELOPMENT_GUIDELINES.md` → `development-_guidelines.md`
-- `PR_COMMAND_ARCHITECTURE.md` + `lib/PR_ARCHITECTURE.md` → `pr.md`（合并，删除后缀）
-- `lib/GIT_ARCHITECTURE.md` → `git.md`（删除后缀）
-- `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication-_analysis.md`
-- `docs/todo/` → `docs/requirements/`
+- `ARCHITECTURE.md` → `architecture.md`（总体架构文档，保留原名）✅
+- `DEVELOPMENT_GUIDELINES.md` → `development.md` ✅
+- `PR_COMMAND_ARCHITECTURE.md` + `lib/PR_ARCHITECTURE.md` → `pr.md`（合并，删除后缀）✅
+- `lib/GIT_ARCHITECTURE.md` → `git.md`（删除后缀）✅
+- `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2-authentication-analysis.md` ✅
+- `docs/todo/` → `docs/requirements/` ✅
 
 ---
 
@@ -27,18 +28,18 @@
 | 目录/操作 | 文档数量 | 状态 |
 |---------|---------|------|
 | **目录重命名** | | |
-| `docs/todo/` → `docs/requirements/` | 1 个目录 | ⏳ 待处理 |
+| `docs/todo/` → `docs/requirements/` | 1 个目录 | ✅ 已完成 |
 | **架构文档重组** | | |
-| Lib + Commands 合并 | ~15 对文档 | ⏳ 待处理 |
-| 独立 Lib 文档 | ~10 个 | ⏳ 待处理 |
-| 独立 Commands 文档 | ~5 个 | ⏳ 待处理 |
+| Lib + Commands 合并 | 8 对文档 | ✅ 已完成 |
+| 独立 Lib 文档 | ~15 个 | ✅ 已完成 |
+| 独立 Commands 文档 | 7 个 | ✅ 已完成 |
 | **文件重命名** | | |
-| `docs/architecture/`（重组后） | ~30 | ⏳ 待处理 |
-| `docs/guidelines/` | ~20+ | ⏳ 待处理 |
-| `docs/requirements/`（重命名后） | 7 | ⏳ 待处理 |
-| `analysis/` | 3 | ⏳ 待处理 |
-| `analysis/impl/` | 1 | ⏳ 待处理 |
-| **总计** | **~70+** | ⏳ 待处理 |
+| `docs/architecture/`（重组后） | ~30 | ✅ 已完成 |
+| `docs/guidelines/` | 19 个 | ✅ 已完成 |
+| `docs/requirements/`（重命名后） | 9 个 | ✅ 已完成 |
+| `analysis/` | 4 个 | ✅ 已完成 |
+| `analysis/impl/` | 1 个 | ✅ 已完成 |
+| **总计** | **~70+** | ✅ 已完成 |
 
 ---
 
@@ -48,28 +49,28 @@
 
 #### 0.1 重命名目录
 
-- [ ] `docs/todo/` → `docs/requirements/`（使用 `git mv` 保留历史）
+- [x] `docs/todo/` → `docs/requirements/`（使用 `git mv` 保留历史）✅ **已完成**
 
 #### 0.2 更新目录引用
 
-- [ ] 更新 `.cursorrules` 中的所有 `docs/todo/` 引用（~16 处）
-  - [ ] 更新文档存放规则中的路径引用
-  - [ ] 更新文档命名规范中的路径引用
-  - [ ] 更新文档索引规则中的路径引用
-  - [ ] 更新文档删除规则中的路径引用
-- [ ] 更新 `docs/README.md` 中的目录引用（~1 处）
-- [ ] 更新其他文档中的 `docs/todo/` 引用
-  - [ ] `docs/guidelines/workflows/references/REVIEW_DOCUMENT_GUIDELINES.md`
-  - [ ] `docs/guidelines/DOCUMENT_TIMESTAMP_GUIDELINES.md`
-  - [ ] 其他可能包含引用的文档
+- [x] 更新 `.cursorrules` 中的所有 `docs/todo/` 引用（~16 处）✅ **已完成**
+  - [x] 更新文档存放规则中的路径引用 ✅
+  - [x] 更新文档命名规范中的路径引用 ✅
+  - [x] 更新文档索引规则中的路径引用 ✅
+  - [x] 更新文档删除规则中的路径引用 ✅
+- [x] 更新 `docs/README.md` 中的目录引用（~1 处）✅ **已完成**
+- [x] 更新其他文档中的 `docs/todo/` 引用 ✅ **已完成**
+  - [x] `docs/guidelines/workflows/references/review-document.md` ✅
+  - [x] `docs/guidelines/document-timestamp.md` ✅
+  - [x] 其他可能包含引用的文档 ✅
 
 ### 阶段 1：准备工作
 
-- [ ] 创建备份分支（可选，用于安全回滚）
-- [ ] 列出所有需要重命名的文件清单
-- [ ] 识别所有包含文档链接的文件
-- [ ] 检查 CI/CD 流程中是否有硬编码的文档路径
-- [ ] 检查代码中是否有硬编码的文档路径引用
+- [x] 创建备份分支（可选，用于安全回滚）✅ **已完成**
+- [x] 列出所有需要重命名的文件清单 ✅ **已完成**
+- [x] 识别所有包含文档链接的文件 ✅ **已完成**
+- [x] 检查 CI/CD 流程中是否有硬编码的文档路径 ✅ **已完成**
+- [x] 检查代码中是否有硬编码的文档路径引用 ✅ **已完成**
 
 ### 阶段 2：架构文档重组（方案 C）
 
@@ -81,124 +82,135 @@
 
 **需要合并的文档对**：
 
-- [ ] `lib/PR_ARCHITECTURE.md` + `commands/PR_COMMAND_ARCHITECTURE.md` → `pr.md`
-- [ ] `lib/JIRA_ARCHITECTURE.md` + `commands/JIRA_COMMAND_ARCHITECTURE.md` → `jira.md`
-- [ ] `lib/BRANCH_ARCHITECTURE.md` + `commands/BRANCH_COMMAND_ARCHITECTURE.md` → `branch.md`
-- [ ] `lib/COMMIT_ARCHITECTURE.md` + `commands/COMMIT_COMMAND_ARCHITECTURE.md` → `commit.md`
-- [ ] `lib/TAG_ARCHITECTURE.md` + `commands/TAG_COMMAND_ARCHITECTURE.md` → `tag.md`
-- [ ] `lib/STASH_ARCHITECTURE.md` + `commands/STASH_COMMAND_ARCHITECTURE.md` → `stash.md`
-- [ ] `lib/PROXY_ARCHITECTURE.md` + `commands/PROXY_COMMAND_ARCHITECTURE.md` → `proxy.md`
-- [ ] `lib/REPO_ARCHITECTURE.md` + `commands/REPO_COMMAND_ARCHITECTURE.md` → `repo.md`
-- [ ] `lib/CONFIG_ARCHITECTURE.md` + `commands/CONFIG_COMMAND_ARCHITECTURE.md` → `config.md`
-- [ ] `lib/LOG_ARCHITECTURE.md` + `commands/LOG_COMMAND_ARCHITECTURE.md` → `log.md`
-- [ ] `lib/LLM_ARCHITECTURE.md` + `commands/LLM_COMMAND_ARCHITECTURE.md` → `llm.md`
-- [ ] `lib/LIFECYCLE_ARCHITECTURE.md` + `commands/LIFECYCLE_COMMAND_ARCHITECTURE.md` → `lifecycle.md`
-- [ ] `lib/GITHUB_ARCHITECTURE.md` + `commands/GITHUB_COMMAND_ARCHITECTURE.md` → `github.md`
-- [ ] `lib/CHECK_ARCHITECTURE.md` + `commands/CHECK_COMMAND_ARCHITECTURE.md` → `check.md`
-- [ ] `lib/ALIAS_ARCHITECTURE.md` + `commands/ALIAS_COMMAND_ARCHITECTURE.md` → `alias.md`
+- [x] `lib/PR_ARCHITECTURE.md` + `commands/PR_COMMAND_ARCHITECTURE.md` → `pr.md` ✅ **已完成**
+- [x] `lib/JIRA_ARCHITECTURE.md` + `commands/JIRA_COMMAND_ARCHITECTURE.md` → `jira.md` ✅ **已完成**
+- [x] `lib/BRANCH_ARCHITECTURE.md` + `commands/BRANCH_COMMAND_ARCHITECTURE.md` → `branch.md` ✅ **已完成**
+- [x] `lib/COMMIT_ARCHITECTURE.md` + `commands/COMMIT_COMMAND_ARCHITECTURE.md` → `commit.md` ✅ **已完成**
+- [x] `lib/TAG_ARCHITECTURE.md` + `commands/TAG_COMMAND_ARCHITECTURE.md` → `tag.md` ✅ **已完成**
+- [ ] `lib/STASH_ARCHITECTURE.md` + `commands/STASH_COMMAND_ARCHITECTURE.md` → `stash.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [x] `lib/PROXY_ARCHITECTURE.md` + `commands/PROXY_COMMAND_ARCHITECTURE.md` → `proxy.md` ✅ **已完成**
+- [x] `lib/REPO_ARCHITECTURE.md` + `commands/REPO_COMMAND_ARCHITECTURE.md` → `repo.md` ✅ **已完成**
+- [ ] `lib/CONFIG_ARCHITECTURE.md` + `commands/CONFIG_COMMAND_ARCHITECTURE.md` → `config.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/LOG_ARCHITECTURE.md` + `commands/LOG_COMMAND_ARCHITECTURE.md` → `log.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [x] `lib/LLM_ARCHITECTURE.md` + `commands/LLM_COMMAND_ARCHITECTURE.md` → `llm.md` ✅ **已完成**
+- [ ] `lib/LIFECYCLE_ARCHITECTURE.md` + `commands/LIFECYCLE_COMMAND_ARCHITECTURE.md` → `lifecycle.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/GITHUB_ARCHITECTURE.md` + `commands/GITHUB_COMMAND_ARCHITECTURE.md` → `github.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/CHECK_ARCHITECTURE.md` + `commands/CHECK_COMMAND_ARCHITECTURE.md` → `check.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [ ] `lib/ALIAS_ARCHITECTURE.md` + `commands/ALIAS_COMMAND_ARCHITECTURE.md` → `alias.md` ⚠️ **无对应 lib 文档，已独立重命名**
 
-**注意**：如果某个模块只有 lib 层或只有 commands 层文档，则直接重命名，无需合并。
+**注意**：如果某个模块只有 lib 层或只有 commands 层文档，则直接重命名，无需合并。✅ **已完成**
 
 #### 2.2 处理独立 Lib 文档
 
 以下文档只有 lib 层，直接重命名（删除 `_architecture` 后缀）：
 
-- [ ] `lib/GIT_ARCHITECTURE.md` → `git.md`
-- [ ] `lib/HTTP_ARCHITECTURE.md` → `http.md`
-- [ ] `lib/SETTINGS_ARCHITECTURE.md` → `settings.md`
-- [ ] `lib/CLI_ARCHITECTURE.md` → `cli.md`
-- [ ] `lib/COMPLETION_ARCHITECTURE.md` → `completion.md`
-- [ ] `lib/CONCURRENT_ARCHITECTURE.md` → `concurrent.md`
-- [ ] `lib/DIALOG_ARCHITECTURE.md` → `dialog.md`
-- [ ] `lib/INDICATOR_ARCHITECTURE.md` → `indicator.md`
-- [ ] `lib/LOGGER_ARCHITECTURE.md` → `logger.md`
-- [ ] `lib/PROMPT_ARCHITECTURE.md` → `prompt.md`
-- [ ] `lib/ROLLBACK_ARCHITECTURE.md` → `rollback.md`
-- [ ] `lib/SHELL_ARCHITECTURE.md` → `shell.md`
-- [ ] `lib/TEMPLATE_ARCHITECTURE.md` → `template.md`
-- [ ] `lib/TOOLS_ARCHITECTURE.md` → `tools.md`
+- [x] `lib/GIT_ARCHITECTURE.md` → `git.md` ✅ **已完成**
+- [x] `lib/HTTP_ARCHITECTURE.md` → `http.md` ✅ **已完成**
+- [x] `lib/SETTINGS_ARCHITECTURE.md` → `settings.md` ✅ **已完成**
+- [x] `lib/CLI_ARCHITECTURE.md` → `cli.md` ✅ **已完成**
+- [x] `lib/COMPLETION_ARCHITECTURE.md` → `completion.md` ✅ **已完成**
+- [x] `lib/CONCURRENT_ARCHITECTURE.md` → `concurrent.md` ✅ **已完成**
+- [x] `lib/DIALOG_ARCHITECTURE.md` → `dialog.md` ✅ **已完成**
+- [x] `lib/INDICATOR_ARCHITECTURE.md` → `indicator.md` ✅ **已完成**
+- [x] `lib/LOGGER_ARCHITECTURE.md` → `logger.md` ✅ **已完成**
+- [x] `lib/PROMPT_ARCHITECTURE.md` → `prompt.md` ✅ **已完成**
+- [x] `lib/ROLLBACK_ARCHITECTURE.md` → `rollback.md` ✅ **已完成**
+- [x] `lib/SHELL_ARCHITECTURE.md` → `shell.md` ✅ **已完成**
+- [x] `lib/TEMPLATE_ARCHITECTURE.md` → `template.md` ✅ **已完成**
+- [x] `lib/TOOLS_ARCHITECTURE.md` → `tools.md` ✅ **已完成**
 
 #### 2.3 处理独立 Commands 文档
 
 以下文档只有 commands 层，直接重命名（删除 `_architecture` 后缀）：
 
-- [ ] `commands/MIGRATE_COMMAND_ARCHITECTURE.md` → `migrate.md`
+- [x] `commands/MIGRATE_COMMAND_ARCHITECTURE.md` → `migrate.md` ✅ **已完成**
+- [x] `commands/ALIAS_COMMAND_ARCHITECTURE.md` → `alias.md` ✅ **已完成**
+- [x] `commands/CHECK_COMMAND_ARCHITECTURE.md` → `check.md` ✅ **已完成**
+- [x] `commands/CONFIG_COMMAND_ARCHITECTURE.md` → `config.md` ✅ **已完成**
+- [x] `commands/GITHUB_COMMAND_ARCHITECTURE.md` → `github.md` ✅ **已完成**
+- [x] `commands/LIFECYCLE_COMMAND_ARCHITECTURE.md` → `lifecycle.md` ✅ **已完成**
+- [x] `commands/LOG_COMMAND_ARCHITECTURE.md` → `log.md` ✅ **已完成**
+- [x] `commands/STASH_COMMAND_ARCHITECTURE.md` → `stash.md` ✅ **已完成**
 
 #### 2.4 处理其他架构文档
 
-- [ ] `ARCHITECTURE.md` → `architecture.md`（总体架构文档）
-- [ ] `CHECK_LOG.md` → `check-_log.md`
+- [x] `ARCHITECTURE.md` → `architecture.md`（总体架构文档）✅ **已完成**
+- [x] `CHECK_LOG.md` → `check-log.md` ✅ **已完成**
 
 ### 阶段 3：文件重命名（其他目录）
 
 #### 3.1 `docs/guidelines/` 目录
 
-- [ ] `CARGO_BLOAT_GUIDELINES.md` → `cargo-_bloat-_guidelines.md`
-- [ ] `CI_WORKFLOW_GUIDELINES.md` → `ci-_workflow-_guidelines.md`
-- [ ] `DEVELOPMENT_GUIDELINES.md` → `development-_guidelines.md`
-- [ ] `DOCUMENT_GUIDELINES.md` → `document-_guidelines.md`
-- [ ] `DOCUMENT_TIMESTAMP_GUIDELINES.md` → `document-_timestamp-_guidelines.md`
-- [ ] `GITHUB_SETUP_GUIDELINES.md` → `github-_setup-_guidelines.md`
-- [ ] `PR_PLATFORM_GUIDELINES.md` → `pr-_platform-_guidelines.md`
-- [ ] `TEMPLATE_GUIDELINES.md` → `template-_guidelines.md`
-- [ ] `TESTING_GUIDELINES.md` → `testing-_guidelines.md`
-- [ ] `workflows/PRE_COMMIT_GUIDELINES.md` → `workflows/pre-_commit-_guidelines.md`
-- [ ] `workflows/REVIEW_GUIDELINES.md` → `workflows/review-_guidelines.md`
-- [ ] `workflows/references/QUICK_REFERENCE_GUIDELINES.md` → `workflows/references/quick-_reference-_guidelines.md`
-- [ ] `workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md` → `workflows/references/review-_architecture-_doc-_guidelines.md`
-- [ ] `workflows/references/REVIEW_CLI_GUIDELINES.md` → `workflows/references/review-_cli-_guidelines.md`
-- [ ] `workflows/references/REVIEW_CODE_GUIDELINES.md` → `workflows/references/review-_code-_guidelines.md`
-- [ ] `workflows/references/REVIEW_DOCUMENT_GUIDELINES.md` → `workflows/references/review-_document-_guidelines.md`
-- [ ] `workflows/references/REVIEW_TEST_CASE_GUIDELINES.md` → `workflows/references/review-_test-_case-_guidelines.md`
-- [ ] `workflows/references/STYLE_GUIDELINES.md` → `workflows/references/style-_guidelines.md`
-- [ ] `workflows/references/TEST_COVERAGE_CHECK_GUIDELINES.md` → `workflows/references/test-_coverage-_check-_guidelines.md`
+- [x] `CARGO_BLOAT_GUIDELINES.md` → `cargo-bloat.md` ✅ **已完成**
+- [x] `CI_WORKFLOW_GUIDELINES.md` → `ci-workflow.md` ✅ **已完成**
+- [x] `DEVELOPMENT_GUIDELINES.md` → `development.md` ✅ **已完成**
+- [x] `DOCUMENT_GUIDELINES.md` → `document.md` ✅ **已完成**
+- [x] `DOCUMENT_TIMESTAMP_GUIDELINES.md` → `document-timestamp.md` ✅ **已完成**
+- [x] `GITHUB_SETUP_GUIDELINES.md` → `github-setup.md` ✅ **已完成**
+- [x] `PR_PLATFORM_GUIDELINES.md` → `pr-platform.md` ✅ **已完成**
+- [x] `TEMPLATE_GUIDELINES.md` → `template.md` ✅ **已完成**
+- [x] `TESTING_GUIDELINES.md` → `testing.md` ✅ **已完成**
+- [x] `workflows/PRE_COMMIT_GUIDELINES.md` → `workflows/pre-commit.md` ✅ **已完成**
+- [x] `workflows/REVIEW_GUIDELINES.md` → `workflows/review.md` ✅ **已完成**
+- [x] `workflows/references/QUICK_REFERENCE_GUIDELINES.md` → `workflows/references/quick-reference.md` ✅ **已完成**
+- [x] `workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md` → `workflows/references/review-architecture-doc.md` ✅ **已完成**
+- [x] `workflows/references/REVIEW_CLI_GUIDELINES.md` → `workflows/references/review-cli.md` ✅ **已完成**
+- [x] `workflows/references/REVIEW_CODE_GUIDELINES.md` → `workflows/references/review-code.md` ✅ **已完成**
+- [x] `workflows/references/REVIEW_DOCUMENT_GUIDELINES.md` → `workflows/references/review-document.md` ✅ **已完成**
+- [x] `workflows/references/REVIEW_TEST_CASE_GUIDELINES.md` → `workflows/references/review-test-case.md` ✅ **已完成**
+- [x] `workflows/references/STYLE_GUIDELINES.md` → `workflows/references/style.md` ✅ **已完成**
+- [x] `workflows/references/TEST_COVERAGE_CHECK_GUIDELINES.md` → `workflows/references/test-coverage-check.md` ✅ **已完成**
 
 #### 3.2 `docs/requirements/` 目录（目录重命名后）
 
-- [ ] `COVERAGE_IMPROVEMENT_TODO.md` → `coverage-_improvement-_todo.md`
-- [ ] `DOC_CHECK_TODO.md` → `doc-_check-_todo.md`
-- [ ] `GIX_MIGRATION_TODO.md` → `gix-_migration-_todo.md`
-- [ ] `INTEGRATION_TODO.md` → `integration-_todo.md`
-- [ ] `JIRA_TODO.md` → `jira-_todo.md`
-- [ ] `TEST_ARCHITECTURE_IMPROVEMENT_TODO.md` → `test-_architecture-_improvement-_todo.md`
-- [ ] `DOCUMENT_RENAME_TODO.md` → `document-_rename-_todo.md`（本文件）
+- [x] `COVERAGE_IMPROVEMENT_TODO.md` → `coverage-improvement.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `DOC_CHECK_TODO.md` → `doc-check.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `GIX_MIGRATION_TODO.md` → `gix-migration.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `INTEGRATION_TODO.md` → `integration.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `JIRA_TODO.md` → `jira.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `TEST_ARCHITECTURE_IMPROVEMENT_TODO.md` → `test-architecture-improvement.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `DOCUMENT_RENAME_TODO.md` → `document-rename.md` ✅ **已完成**（已移除 -todo 后缀，本文件）
+- [x] `CURSORRULES_ENGLISH_TODO.md` → `cursorrules-english.md` ✅ **已完成**（已移除 -todo 后缀）
 
 #### 3.3 `analysis/` 目录
 
-- [ ] `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication-_analysis.md`
-- [ ] `GIT2_MIGRATION_STATUS.md` → `git2_migration-_status.md`
-- [ ] `TEST_ANALYSIS_REPORT.md` → `test-_analysis-_report.md`
+- [x] `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2-authentication-analysis.md` ✅ **已完成**
+- [x] `GIT2_MIGRATION_STATUS.md` → `git2-migration-status.md` ✅ **已完成**
+- [x] `TEST_ANALYSIS_REPORT.md` → `test-analysis-report.md` ✅ **已完成**
 
 #### 3.4 `analysis/impl/` 目录（实现/实施文档）
 
 **注意**：实现文档或实施文档应存放到 `analysis/impl/` 目录下。
 
-- [ ] `GIT2_AUTHENTICATION_IMPLEMENTATION.md` → `analysis/impl/git2_authentication-_implementation.md`（移动到 impl 目录）
+- [x] `GIT2_AUTHENTICATION_IMPLEMENTATION.md` → `analysis/impl/git2-authentication-implementation.md` ✅ **已完成**（已移动到 impl 目录）
 
 ### 阶段 4：更新文档引用
 
 #### 4.1 更新索引文件
 
-- [ ] 更新 `docs/README.md` 中的所有链接（~50+ 处）
-  - [ ] 更新目录引用：`todo/` → `requirements/`
-- [ ] 更新 `docs/requirements/README.md` 中的所有链接（~10+ 处）
-  - [ ] 更新文档内部链接（文件名大小写）
-- [ ] 更新 `docs/migration/README.md` 中的链接
-- [ ] 更新 `docs/guidelines/workflows/README.md` 中的所有链接（~15+ 处）
+- [x] 更新 `docs/README.md` 中的所有链接（~50+ 处）✅ **已完成**
+  - [x] 更新目录引用：`todo/` → `requirements/` ✅
+  - [x] 更新架构文档链接（lib/XXX_ARCHITECTURE.md → XXX.md）✅
+  - [x] 更新命令文档链接（commands/XXX_COMMAND_ARCHITECTURE.md → XXX.md）✅
+  - [x] 更新指南文档链接（XXX_GUIDELINES.md → XXX.md）✅
+- [x] 更新 `docs/requirements/README.md` 中的所有链接（~10+ 处）✅ **已完成**
+  - [x] 更新文档内部链接（文件名 kebab-case）✅
+- [ ] 更新 `docs/migration/README.md` 中的链接 ⏳ **待检查**
+- [ ] 更新 `docs/guidelines/workflows/README.md` 中的所有链接（~15+ 处）⏳ **待检查**
 
 #### 4.2 更新文档内部交叉引用
 
-- [ ] 搜索所有 `.md` 文件中的文档链接引用
-- [ ] 更新文档内部的交叉引用链接
-- [ ] 验证所有链接的有效性
+- [x] 搜索所有 `.md` 文件中的文档链接引用 ✅ **已完成**
+- [x] 更新文档内部的交叉引用链接 ✅ **已完成**（批量更新）
+- [ ] 验证所有链接的有效性 ⏳ **待验证**（可使用 markdown-link-check 工具）
 
 ### 阶段 5：验证和测试
 
-- [ ] 验证所有重命名后的文件存在且内容完整
-- [ ] 验证所有链接正常工作（无 404 错误）
-- [ ] 检查 Git 历史记录（使用 `git mv` 保留历史）
-- [ ] 运行文档检查工具（如有）
-- [ ] 检查 CI/CD 流程是否正常
+- [x] 验证所有重命名后的文件存在且内容完整 ✅ **已完成**
+- [ ] 验证所有链接正常工作（无 404 错误）⏳ **待验证**（建议使用 markdown-link-check）
+- [x] 检查 Git 历史记录（使用 `git mv` 保留历史）✅ **已完成**（所有文件都使用 git mv）
+- [ ] 运行文档检查工具（如有）⏳ **待执行**
+- [ ] 检查 CI/CD 流程是否正常 ⏳ **待检查**
 
 ---
 
@@ -335,12 +347,12 @@ done
 - TODO 文档：`{TOPIC}_TODO.md`
 - 分析文档：`{TOPIC}_ANALYSIS.md` 或 `{TOPIC}_ANALYSIS_REPORT.md`
 
-**更新后规范**：
-- 架构文档：`{module}.md`（按功能模块组织，包含 Lib 层和 Commands 层，删除 `_architecture` 后缀）
-- 指南文档：`{topic}_guidelines.md`
-- 需求文档：`{topic}_todo.md`（存放到 `docs/requirements/`）
-- 分析文档：`{topic}_analysis.md` 或 `{topic}_analysis-_report.md`（存放到 `analysis/`）
-- 实现文档：`{topic}_implementation.md` 或 `{topic}_impl.md`（存放到 `analysis/impl/`）
+**更新后规范**（✅ **已实施**）：
+- 架构文档：`{module}.md`（按功能模块组织，包含 Lib 层和 Commands 层，删除 `_architecture` 后缀，使用 kebab-case）✅
+- 指南文档：`{topic}.md`（删除 `_guidelines` 后缀，使用 kebab-case）✅
+- 需求文档：`{topic}.md`（删除 `-todo` 后缀，使用 kebab-case，存放到 `docs/requirements/`）✅
+- 分析文档：`{topic}-analysis.md` 或 `{topic}-analysis-report.md`（使用 kebab-case，存放到 `analysis/`）✅
+- 实现文档：`{topic}-implementation.md` 或 `{topic}-impl.md`（使用 kebab-case，存放到 `analysis/impl/`）✅
 
 **目录路径更新**：
 - `docs/todo/` → `docs/requirements/`
@@ -486,7 +498,45 @@ analysis/impl/
 ---
 
 **创建时间**: 2025-01-27
-**最后更新**: 2025-01-27
-**状态**: ⏳ 待实施
+**最后更新**: 2025-12-23
+**状态**: ✅ **基本完成**（剩余少量验证工作）
 **优先级**: 中优先级（代码质量改进）
+
+## ✅ 完成总结
+
+### 已完成的工作
+
+1. **目录重命名** ✅
+   - `docs/todo/` → `docs/requirements/`
+   - 更新了所有相关引用
+
+2. **架构文档重组** ✅
+   - 合并了 8 对 Lib + Commands 文档（PR、BRANCH、COMMIT、JIRA、LLM、PROXY、REPO、TAG）
+   - 重命名了所有独立 Lib 文档（~15 个）
+   - 重命名了所有独立 Commands 文档（7 个）
+   - 删除了空的 `lib/` 和 `commands/` 子目录
+
+3. **文件重命名** ✅
+   - 所有文档从 `SCREAMING_SNAKE_CASE` 改为 `kebab-case`
+   - 架构文档：删除 `_architecture` 后缀
+   - 指南文档：删除 `_guidelines` 后缀
+   - 需求文档：删除 `-todo` 后缀
+   - 分析文档：使用 kebab-case 格式
+
+4. **文档引用更新** ✅
+   - 更新了 `docs/README.md` 中的所有链接
+   - 更新了 `docs/requirements/README.md` 中的链接
+   - 批量更新了所有文档中的交叉引用
+
+### 待完成的工作
+
+1. **链接验证** ⏳
+   - 使用工具验证所有链接的有效性（建议使用 `markdown-link-check`）
+
+2. **其他索引文件** ⏳
+   - 检查并更新 `docs/migration/README.md` 中的链接
+   - 检查并更新 `docs/guidelines/workflows/README.md` 中的链接
+
+3. **CI/CD 检查** ⏳
+   - 确认 CI/CD 流程正常运行
 
