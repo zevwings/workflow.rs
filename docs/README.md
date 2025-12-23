@@ -252,7 +252,7 @@
 - 别名展开功能（支持嵌套别名和循环检测）
 - 命令行参数展开（在命令解析前自动展开别名）
 
-#### [MIGRATE-COMMAND-architecture.md](./architecture/MIGRATE-COMMAND-architecture.md)
+#### [migrate.md](./architecture/migrate.md)
 **配置迁移命令层架构文档**
 
 - 版本化迁移系统（迁移版本独立于软件版本）

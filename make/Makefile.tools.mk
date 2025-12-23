@@ -71,7 +71,7 @@ check-docs-links:
 	@if command -v lychee >/dev/null 2>&1; then \
 		echo "使用 lychee 验证文档链接..."; \
 		echo ""; \
-		lychee docs/**/*.md --exclude-all-private --exclude-localhost || exit 1; \
+		lychee docs/**/*.md --exclude-all-private --exclude-loopback || exit 1; \
 	else \
 		echo "⚠ lychee 未安装"; \
 		echo "安装方法: cargo install lychee"; \
