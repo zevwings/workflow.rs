@@ -558,7 +558,7 @@ cargo run -- completion generate --shell zsh
 - [开发规范](../development.md) - 包含参数命名规范
 - [提交前检查指南](../pre-commit.md) - 快速检查清单
 - [代码检查指南](./review-code.md) - 代码优化检查
-- [CLI 架构文档](../../architecture/lib/CLI_architecture.md) - CLI 架构设计
+- [CLI 架构文档](../../architecture/cli.md) - CLI 架构设计
 
 ---
 

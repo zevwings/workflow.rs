@@ -42,7 +42,7 @@
 
 ```bash
 # 复制 Lib 层模板
-cp docs/guidelines/templates/MODULE.template docs/architecture/lib/{MODULE}_architecture.md
+cp docs/guidelines/templates/MODULE.template do../architecture/{module}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -217,7 +217,7 @@ pub fn new-_feature() -> Result<()> {
 ## 📚 相关文档
 
 - [主架构文档](../architecture/architecture.md)
-- [{相关 Lib 模块}架构文档](../architecture/lib/{MODULE}_architecture.md) - Lib 层模块
+- [{相关 Lib 模块}架构文档](../architecture/{module}.md) - Lib 层模块
 - [{相关命令模块}命令模块架构文档](../architecture/commands/{MODULE}_COMMAND_architecture.md) - 命令层模块（如适用）
 
 ---
