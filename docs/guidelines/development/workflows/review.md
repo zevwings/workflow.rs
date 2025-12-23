@@ -700,7 +700,7 @@ Write-Host "report/REVIEW_ARCHITECTURE_DOC_${timestamp}.md"
 
 ### 报告位置
 
-**文件路径**：`report/REVIEW_REPORT_{timestamp}.md`
+**文件路径**：`report/review-report-{timestamp}.md`
 
 其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
 
@@ -712,8 +712,8 @@ use workflow::base::util::date::format-_filename-_timestamp;
 
 // 函数会自动获取当前时间，无需提前获取
 let timestamp = format-_filename-_timestamp();
-let report-_path = format!("report/REVIEW_REPORT_{}.md", timestamp);
-// 输出：report/REVIEW_REPORT_2024-12-19_14-30-00.md
+let report-_path = format!("report/review-report-{}.md", timestamp);
+// 输出：report/review-report-2024-12-19_14-30-00.md
 ```
 
 > **注意**：`format-_filename-_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
@@ -722,14 +722,14 @@ let report-_path = format!("report/REVIEW_REPORT_{}.md", timestamp);
 ```bash
 # Unix/macOS/Linux
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-echo "report/REVIEW_REPORT_${TIMESTAMP}.md"
+echo "report/review-report-${TIMESTAMP}.md"
 
 # Windows PowerShell
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-Write-Host "report/REVIEW_REPORT_${timestamp}.md"
+Write-Host "report/review-report-${timestamp}.md"
 ```
 
-**示例文件名**：`report/REVIEW_REPORT_2024-12-19_14-30-00.md`
+**示例文件名**：`report/review-report-2024-12-19_14-30-00.md`
 
 ### 报告内容
 
@@ -1090,7 +1090,7 @@ grep -r "#[cfg(test)]" src/
 - 代码检查报告：`report/REVIEW_CODE_{timestamp}.md`
 - 测试覆盖报告：`report/REVIEW_TEST_{timestamp}.md`
 - 文档检查报告：`report/REVIEW_DOCUMENT_{timestamp}.md`
-- 综合检查报告：`report/REVIEW_REPORT_{timestamp}.md`
+- 综合检查报告：`report/review-report-{timestamp}.md`
 
 其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
 

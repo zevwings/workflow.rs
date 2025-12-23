@@ -771,7 +771,7 @@ fn get-_system-_proxy() -> Result<String> {
 
 ### 报告位置
 
-**文件路径**：`report/CHECK_REPORT_{timestamp}.md`
+**文件路径**：`report/pre-commit-report-{timestamp}.md`
 
 其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
 
@@ -783,8 +783,8 @@ use workflow::base::util::date::format-_filename-_timestamp;
 
 // 函数会自动获取当前时间，无需提前获取
 let timestamp = format-_filename-_timestamp();
-let report-_path = format!("report/CHECK_REPORT_{}.md", timestamp);
-// 输出：report/CHECK_REPORT_2024-12-19_14-30-00.md
+let report-_path = format!("report/pre-commit-report-{}.md", timestamp);
+// 输出：report/pre-commit-report-2024-12-19_14-30-00.md
 ```
 
 > **注意**：`format-_filename-_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
@@ -793,14 +793,14 @@ let report-_path = format!("report/CHECK_REPORT_{}.md", timestamp);
 ```bash
 # Unix/macOS/Linux
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-echo "report/CHECK_REPORT_${TIMESTAMP}.md"
+echo "report/pre-commit-report-${TIMESTAMP}.md"
 
 # Windows PowerShell
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-Write-Host "report/CHECK_REPORT_${timestamp}.md"
+Write-Host "report/pre-commit-report-${timestamp}.md"
 ```
 
-**示例文件名**：`report/CHECK_REPORT_2024-12-19_14-30-00.md`
+**示例文件名**：`report/pre-commit-report-2024-12-19_14-30-00.md`
 
 ### 报告内容
 
@@ -1117,17 +1117,17 @@ $ head -30 CHANGELOG.md
 
 ```bash
 # 创建或更新检查报告
-vim report/CHECK_REPORT_{timestamp}.md
+vim report/pre-commit-report-{timestamp}.md
 # 或使用其他编辑器
 ```
 
 ### 报告使用
 
-- 报告应保存在 `report/CHECK_REPORT_{timestamp}.md`
+- 报告应保存在 `report/pre-commit-report-{timestamp}.md`
 - 报告应在提交代码前完成
 - 报告可用于代码审查和问题追踪
 - **报告类型说明**：
-  - **快速检查汇总报告**（`CHECK_REPORT_*.md`）：按照本指南模板生成，提供各检查步骤的概览和关键问题
+  - **快速检查汇总报告**（`pre-commit-report-*.md`）：按照本指南模板生成，提供各检查步骤的概览和关键问题
   - **详细检查报告**（`CODE_CHECK_REPORT.md`、`TEST_COVERAGE_REPORT.md` 等）：按照专门的检查指南生成，包含详细的问题分析、代码示例、改进方案等
 - **使用建议**：
   - 日常提交前：使用快速检查汇总报告，快速了解检查结果

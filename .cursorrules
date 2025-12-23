@@ -1,5 +1,7 @@
 # Workflow CLI - Cursor AI Rules
 
+> **⚠️ Important Note**: When modifying this file, you must also update the Chinese version `docs/cursorrules.md` to keep both versions synchronized.
+
 ## ⚠️ Important Notes
 
 **Code and Document Generation Rules**:
@@ -11,6 +13,12 @@
 - **Analysis Question Rule**: **For analysis, discussion, or inquiry questions, only provide text answers and analysis without automatically generating analysis document files. Only create document files when the user explicitly requests document generation.**
 - **Code Modification Rule**: **Prohibited from modifying existing code files without explicit user consent or instruction. If code modification is needed, user consent or explicit instruction must be obtained first.**
 - **Document Modification Rule**: **Prohibited from modifying existing document files without explicit user consent or instruction. If document modification is needed, user consent or explicit instruction must be obtained first.**
+- **Review Workflow Report Generation Rule**: **When executing the review workflows described in `docs/guidelines/development/workflows/review.md` or `docs/guidelines/development/workflows/pre-commit.md`, reports must be automatically generated:**
+  - **Comprehensive Deep Review** (`review.md`): After executing the review, must automatically generate `report/review-report-{timestamp}.md` report document
+  - **Pre-commit Check** (`pre-commit.md`): After executing the check, must automatically generate `report/pre-commit-report-{timestamp}.md` report document
+  - **Timestamp Format**: `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-12-23_22-55-15`)
+  - **Report Content**: Must generate complete check reports according to the report templates in the corresponding workflow documents
+  - **Report Location**: All report documents must be saved in the `report/` directory
 
 ## 📋 Project Overview
 
