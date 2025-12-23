@@ -2,13 +2,18 @@ name: Document Consistency Check
 
 on:
   schedule:
-    # 每周日 00:00 UTC 运行
-    - cron: '0 0 * * 0'
+    # 每周六 00:00 UTC 运行
+    - cron: '0 0 * * 6'
+  pull_request:
+    branches:
+      - master
+      - main
   workflow_dispatch:  # 允许手动触发
 
 permissions:
   contents: read
   issues: write  # 如果需要创建 Issue
+  pull-requests: read  # PR 触发时需要读取 PR 信息
 
 jobs:
   check-architecture-docs:
@@ -36,65 +41,102 @@ jobs:
             ${{ runner.os }}-cargo-
           enableCrossOsArchive: false
 
-      - name: 🔍 Run basic document checks
+      - name: 📦 Install lychee
+        continue-on-error: true
+        run: |
+          echo "📦 Installing lychee for external link checking..."
+          cargo install lychee || echo "⚠️ Failed to install lychee, external link checking will be skipped"
+
+      - name: 🔍 Run document consistency checks
         id: check
         continue-on-error: true
         run: |
-          echo "📋 Running basic document checks..."
+          echo "📋 Running document consistency checks..."
 
           HAS_ISSUES=false
-
-          # 检查文档链接
-          echo "🔗 Checking document links..."
-          BROKEN_LINKS=0
-          if command -v lychee >/dev/null 2>&1; then
-            echo "Using lychee to check document links..."
-            if ! lychee docs/**/*.md --exclude-all-private --exclude-loopback; then
-              echo "⚠️ Some document links may be broken"
-              BROKEN_LINKS=1
-              HAS_ISSUES=true
-            fi
-          else
-            echo "ℹ️  lychee not installed, skipping link check"
-            echo "   To install: cargo install lychee"
-          fi
+          IS_PR="${{ github.event_name == 'pull_request' }}"
 
           # 检查架构文档是否存在
           echo ""
-          echo "📝 Checking architecture documents..."
-          MISSING_DOCS=0
+          if [ "$IS_PR" = "true" ]; then
+            echo "📝 Checking architecture documents for changed files..."
+            BASE_REF="${{ github.event.pull_request.base.ref || 'master' }}"
+            CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD 2>/dev/null | grep -E '^src/(lib|commands)/' || true)
 
-          # 检查所有 lib 层模块
-          for module_dir in src/lib/*/; do
-            if [ -d "$module_dir" ]; then
-              module=$(basename "$module_dir")
-              doc_path="docs/architecture/${module}.md"
-              if [ ! -f "$doc_path" ]; then
-                echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
-                MISSING_DOCS=$((MISSING_DOCS + 1))
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "ℹ️  No changed files in src/lib/ or src/commands/ directories"
+              MISSING_DOCS=0
+            else
+              MISSING_DOCS_FILE=$(mktemp)
+              trap "rm -f $MISSING_DOCS_FILE" EXIT
+
+              echo "$CHANGED_FILES" | while IFS= read -r file; do
+                [ -z "$file" ] && continue
+
+                module=$(echo "$file" | sed 's|^src/lib/\([^/]*\).*|\1|')
+                if [ "$module" = "$file" ]; then
+                  module=$(echo "$file" | sed 's|^src/commands/\([^/]*\).*|\1|')
+                fi
+
+                [ -z "$module" ] || [ "$module" = "$file" ] && continue
+
+                doc_path="docs/architecture/${module}.md"
+                if [ ! -f "$doc_path" ]; then
+                  echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
+                  echo "$doc_path" >> "$MISSING_DOCS_FILE"
+                fi
+              done
+
+              MISSING_DOCS=0
+              if [ -f "$MISSING_DOCS_FILE" ] && [ -s "$MISSING_DOCS_FILE" ]; then
+                MISSING_DOCS=$(wc -l < "$MISSING_DOCS_FILE")
               fi
             fi
-          done
+          else
+            echo "📝 Checking architecture documents..."
+            MISSING_DOCS=0
 
-          # 检查所有 commands 层模块
-          for module_dir in src/commands/*/; do
-            if [ -d "$module_dir" ]; then
-              module=$(basename "$module_dir")
-              doc_path="docs/architecture/${module}.md"
-              if [ ! -f "$doc_path" ]; then
-                echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
-                MISSING_DOCS=$((MISSING_DOCS + 1))
+            # 检查所有 lib 层模块
+            for module_dir in src/lib/*/; do
+              if [ -d "$module_dir" ]; then
+                module=$(basename "$module_dir")
+                doc_path="docs/architecture/${module}.md"
+                if [ ! -f "$doc_path" ]; then
+                  echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
+                  MISSING_DOCS=$((MISSING_DOCS + 1))
+                fi
               fi
-            fi
-          done
+            done
+
+            # 检查所有 commands 层模块
+            for module_dir in src/commands/*/; do
+              if [ -d "$module_dir" ]; then
+                module=$(basename "$module_dir")
+                doc_path="docs/architecture/${module}.md"
+                if [ ! -f "$doc_path" ]; then
+                  echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
+                  MISSING_DOCS=$((MISSING_DOCS + 1))
+                fi
+              fi
+            done
+          fi
 
           if [ $MISSING_DOCS -gt 0 ]; then
             echo ""
-            echo "📋 Found $MISSING_DOCS missing architecture document(s)"
+            if [ "$IS_PR" = "true" ]; then
+              echo "📋 Found $MISSING_DOCS module(s) missing architecture documentation"
+            else
+              echo "📋 Found $MISSING_DOCS missing architecture document(s)"
+            fi
             echo "::warning::Found $MISSING_DOCS missing architecture document(s)"
             HAS_ISSUES=true
           else
-            echo "✅ All modules have architecture documentation"
+            if [ "$IS_PR" = "true" ]; then
+              echo ""
+              echo "✅ All changed modules have architecture documentation"
+            else
+              echo "✅ All modules have architecture documentation"
+            fi
           fi
 
           # 检查文档时间戳格式
@@ -116,6 +158,66 @@ jobs:
             echo "✅ All documents have valid timestamp format"
           fi
 
+          # 检查内部链接
+          echo ""
+          echo "🔗 Checking internal links..."
+          BROKEN_LINKS_FILE=$(mktemp)
+          trap "rm -f $BROKEN_LINKS_FILE" EXIT
+
+          find docs -name "*.md" -type f ! -path "*/templates/*" | while read -r file; do
+            grep -oP '\]\([^)]+\)' "$file" 2>/dev/null | sed 's/](//;s/)//' | while read -r link; do
+              [ -z "$link" ] && continue
+              [[ "$link" =~ ^https?:// ]] && continue
+              if [[ "$link" =~ ^# ]]; then
+                continue
+              fi
+
+              if [[ "$link" =~ ^/ ]]; then
+                target_file="${link#/}"
+              else
+                file_dir=$(dirname "$file")
+                target_file="$file_dir/$link"
+              fi
+
+              target_file="${target_file%%#*}"
+              target_file=$(echo "$target_file" | sed 's|^\./||' | sed 's|/\./|/|g')
+
+              if [ ! -f "$target_file" ]; then
+                echo "❌ Broken link: $file -> $link (target file: $target_file)" >> "$BROKEN_LINKS_FILE"
+              fi
+            done
+          done
+
+          BROKEN_LINKS=0
+          if [ -f "$BROKEN_LINKS_FILE" ] && [ -s "$BROKEN_LINKS_FILE" ]; then
+            BROKEN_LINKS=$(wc -l < "$BROKEN_LINKS_FILE")
+            echo ""
+            echo "Found broken links:"
+            cat "$BROKEN_LINKS_FILE"
+            echo ""
+            echo "::warning::Found $BROKEN_LINKS broken internal link(s)"
+            HAS_ISSUES=true
+          fi
+
+          if [ $BROKEN_LINKS -gt 0 ]; then
+            echo "❌ Found $BROKEN_LINKS broken link(s)"
+          else
+            echo "✅ All internal links are valid"
+          fi
+
+          # 检查外部链接（如果 lychee 可用）
+          if command -v lychee >/dev/null 2>&1; then
+            echo ""
+            echo "📋 Checking external links..."
+            if ! lychee docs/**/*.md --exclude-all-private --exclude-loopback; then
+              echo "⚠️  Found external link issues"
+              HAS_ISSUES=true
+            fi
+          else
+            echo ""
+            echo "ℹ️  lychee not installed, skipping external link check"
+          fi
+
           # 输出是否有问题的标志
           if [ "$HAS_ISSUES" = true ]; then
             echo "has_issues=true" >> $GITHUB_OUTPUT
@@ -127,12 +229,27 @@ jobs:
             echo "✅ All checks passed"
           fi
 
+          if [ "$IS_PR" = "true" ]; then
+            echo ""
+            echo "✅ Document consistency checks completed (PR mode)"
+            echo "Note: Document consistency checks are non-blocking. Please review warnings above."
+          fi
+
       - name: 📊 Generate report
         if: always()
         run: |
           mkdir -p report
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-          REPORT_FILE="report/doc-consistency-check-${TIMESTAMP}.md"
+          IS_PR="${{ github.event_name == 'pull_request' }}"
+
+          if [ "$IS_PR" = "true" ]; then
+            REPORT_FILE="report/doc-consistency-check-pr-${TIMESTAMP}.md"
+            CHECK_TYPE="PR 检查"
+          else
+            REPORT_FILE="report/doc-consistency-check-${TIMESTAMP}.md"
+            CHECK_TYPE="定期审查"
+          fi
+
           CHECK_DATE=$(date '+%Y-%m-%d %H:%M:%S')
           UPDATE_DATE=$(date '+%Y-%m-%d')
 
@@ -140,7 +257,7 @@ jobs:
           # 架构文档一致性检查报告
 
           **检查日期**：${CHECK_DATE}
-          **检查类型**：定期审查
+          **检查类型**：${CHECK_TYPE}
 
           ## 检查结果
 
@@ -178,9 +295,18 @@ jobs:
           echo "📄 Report generated: $REPORT_FILE"
           echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
 
-      # 创建 Issue 汇总问题（仅在发现问题时）
+      - name: 📤 Upload document check reports
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-consistency-reports
+          path: report/doc-consistency-check-pr-*.md
+          retention-days: 7
+          if-no-files-found: ignore
+
+      # 创建 Issue 汇总问题（仅在发现问题时，且仅在定期检查时）
       - name: 📝 Create issue if problems found
-        if: steps.check.outputs.has_issues == 'true'
+        if: steps.check.outputs.has_issues == 'true' && github.event_name != 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
