@@ -345,6 +345,14 @@ jobs:
             # 跳过空模块名或无效路径（如果提取失败，module 会等于原文件路径）
             [ -z "$module" ] || [ "$module" = "$file" ] && continue
 
+            # 排除不需要架构文档的模块
+            # base 是基础设施模块，其子模块（dialog、format、http 等）有各自的架构文档
+            if [ "$module" = "base" ]; then
+              echo "ℹ️  Module 'base' is an infrastructure module, skipping architecture doc check"
+              echo "   Sub-modules (dialog, format, http, etc.) have their own architecture docs"
+              continue
+            fi
+
             doc_path="docs/architecture/${module}.md"
             if [ ! -f "$doc_path" ]; then
               echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
