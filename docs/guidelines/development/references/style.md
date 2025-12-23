@@ -138,10 +138,10 @@ use workflow::base::util::date::format-_filename-_timestamp;
 [跳转到快速检查](#-快速检查清单)
 
 # 文档引用
-[提交前检查指南](./pre-commit.md)
+[提交前检查指南](../workflows/pre-commit.md)
 
 # 相对路径
-[代码检查指南](./reviews/review-code.md)
+[代码检查指南](./review-code.md)
 ```
 
 ### 外部链接

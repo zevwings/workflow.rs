@@ -472,7 +472,7 @@ JiraLogs::download-_from-_jira()
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [Jira 模块架构文档](../architecture/jira.md)
 - [Jira 命令模块架构文档](./jira.md)
 - [PR 命令模块架构文档](./pr.md)

@@ -865,8 +865,10 @@ graph TB
 
 ## 📝 贡献
 
-请参考以下文档了解更多信息：
+欢迎贡献 Workflow CLI！请参考以下文档：
+
+- **[贡献指南](./CONTRIBUTING.md)** - 如何开始贡献、提交 PR、开发规范
 - [docs/README.md](./docs/README.md) - 完整文档索引
-- [docs/architecture/ARCHITECTURE.md](./docs/architecture/ARCHITECTURE.md) - 了解架构设计和核心模块详情
+- [docs/architecture/architecture.md](./docs/architecture/architecture.md) - 了解架构设计和核心模块详情
 
 ---

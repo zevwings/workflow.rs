@@ -78,8 +78,7 @@
 
 ### 检查范围
 
-- **Lib 层架构文档**：`docs/architecture/lib/` 目录下的所有文档
-- **命令层架构文档**：`docs/architecture/commands/` 目录下的所有文档
+- **模块架构文档**：`docs/architecture/` 目录下的所有模块架构文档（包含 Lib 层和 Commands 层两部分）
 - **总体架构文档**：`docs/architecture/architecture.md`
 
 ### 检查原则
@@ -660,11 +659,12 @@ grep -r "^use " src/lib/{MODULE}/ | grep -v "crate::"
 ## 📚 相关文档
 
 - [文档完整性检查指南](./review-document-completeness.md) - 详细的文档完整性检查方法和流程
-- [文档编写指南](../document.md) - 架构文档编写规范和模板
-- [开发规范](../development.md) - 开发规范和代码审查清单
-- [架构文档检查工具 TODO](../../todo/doc-check.md) - 自动化检查工具实施计划
-- [提交前检查指南](../pre-commit.md) - 提交前检查清单
-- [深入检查指南](../review.md) - 综合深入检查流程
+- [文档编写指南](../../document.md) - 架构文档编写规范和模板
+- [代码审查规范](../../development/code-review.md) - 代码审查规范和审查清单
+- [开发规范索引](../../development/README.md) - 开发规范总览
+- [架构文档检查工具 TODO](../../../requirements/doc-check.md) - 自动化检查工具实施计划
+- [提交前检查指南](../workflows/pre-commit.md) - 提交前检查清单
+- [深入检查指南](../workflows/review.md) - 综合深入检查流程
 
 ---
 

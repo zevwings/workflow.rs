@@ -4,7 +4,7 @@
 # Help 信息
 define HELP_TOOLS
 	@echo "工具安装相关："
-	@echo "  make setup            - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat）"
+	@echo "  make setup            - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat, cargo-audit, cargo-outdated）"
 	@echo ""
 endef
 
@@ -19,6 +19,20 @@ setup:
 		echo "cargo-bloat 已安装"; \
 	else \
 		cargo install cargo-bloat --locked 2>/dev/null || echo "⚠ cargo-bloat 安装失败，可稍后手动运行: cargo install cargo-bloat"; \
+	fi
+	@echo ""
+	@echo "安装 cargo-audit..."
+	@if command -v cargo-audit >/dev/null 2>&1; then \
+		echo "cargo-audit 已安装"; \
+	else \
+		cargo install cargo-audit --locked 2>/dev/null || echo "⚠ cargo-audit 安装失败，可稍后手动运行: cargo install cargo-audit"; \
+	fi
+	@echo ""
+	@echo "安装 cargo-outdated..."
+	@if command -v cargo-outdated >/dev/null 2>&1; then \
+		echo "cargo-outdated 已安装"; \
+	else \
+		cargo install cargo-outdated --locked 2>/dev/null || echo "⚠ cargo-outdated 安装失败，可稍后手动运行: cargo install cargo-outdated"; \
 	fi
 	@echo "开发工具安装完成"
 	@echo ""

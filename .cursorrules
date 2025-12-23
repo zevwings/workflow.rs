@@ -27,35 +27,39 @@ For detailed module architecture information, refer to `docs/architecture/archit
 
 ## 📐 Development Standards and Guidelines
 
-**Important**: All development standards and guidelines must strictly follow the detailed descriptions in `docs/guidelines/development.md`.
+**Important**: All development standards and guidelines must strictly follow the detailed descriptions in `docs/guidelines/development/README.md`.
 
 ### Development Guidelines Reference
 
-**Mandatory Development Guidelines Document**: `docs/guidelines/development.md`
+**Mandatory Development Guidelines Document**: `docs/guidelines/development/README.md` (Development Guidelines Index)
 
-This document contains complete development guidelines, including code style, error handling, documentation standards, naming conventions, module organization, Git workflow, commit standards, testing standards, code review, dependency management, and development tools.
+This directory contains complete development guidelines, including:
+- **Core Guidelines**: Code style, error handling, naming conventions, module organization
+- **Process Guidelines**: Git workflow, commit standards, code review
+- **Reference Documents**: Logging, documentation, configuration management, security, dependency management, performance optimization, development tools, etc.
 
 ### Quick Reference
 
-The following are the most commonly used standards quick reference (**for detailed descriptions and complete standards, see `docs/guidelines/development.md`**):
+The following are the most commonly used standards quick reference (**for detailed descriptions and complete standards, see `docs/guidelines/development/README.md`**):
 
 - **Code Formatting**: `cargo fmt` (must run before commit)
 - **Code Checking**: `cargo clippy -- -D warnings` (all warnings must be fixed)
 - **Naming Conventions**: Modules/functions/variables `snake_case`, Types/Traits `PascalCase`, Constants `SCREAMING_SNAKE_CASE`
 - **Import Order**: Standard library → Third-party libraries → Project internal
-- **Error Handling**: Use `anyhow::Result<T>` and `Context` to add context
+- **Error Handling**: Use `color_eyre::Result<T>` and add context to error messages
 - **Documentation Comments**: All public APIs must have `///` documentation comments, including parameters, return values, errors, examples
 
 ### Code Generation Rules
 
 **Important**: Only execute code generation operations when the user explicitly requests code generation.
 
-When generating code, must strictly follow all development standards in `docs/guidelines/development.md`, including:
+When generating code, must strictly follow all development standards in `docs/guidelines/development/` directory, including:
 
 - **Code Style**: Follow project naming conventions and code style, use `rustfmt` for formatting, pass `clippy` checks
-- **Error Handling**: Use `anyhow::Result<T>`, use `Context` to add context, consider all error cases
+- **Error Handling**: Use `color_eyre::Result<T>`, add context to error messages, consider all error cases
 - **Documentation Comments**: Add complete documentation comments for new features (including parameters, return values, errors, examples)
 - **Document Writing**: If generating documents, must reference `docs/guidelines/document.md` to select appropriate templates, and add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
+- **API Design**: Follow public API design principles, maintain backward compatibility, use `#[deprecated]` for deprecated APIs, reference `docs/guidelines/development/references/documentation.md` for detailed documentation standards
 - **Module Organization**: Follow three-layer architecture, correctly organize modules and dependencies
 - **Testing**: Add unit tests and integration tests for new features (as applicable)
 - **Commit Standards**: If involving Git commits, follow Conventional Commits format
@@ -73,7 +77,7 @@ When generating code, must strictly follow all development standards in `docs/gu
 
 ### Git Workflow and Commit Standards
 
-**Must Follow**: Git workflow and commit standards in `docs/guidelines/development.md`.
+**Must Follow**: Git workflow and commit standards in `docs/guidelines/development/git-workflow.md` and `docs/guidelines/development/commit.md`.
 
 - **Branch Strategy**: Use `feature/*`, `fix/*`, `hotfix/*` branches
 - **Commit Format**: Use Conventional Commits format (`<type>(<scope>): <subject>`)
@@ -82,7 +86,7 @@ When generating code, must strictly follow all development standards in `docs/gu
 
 ### Testing Standards
 
-**Detailed Standards**: Reference `docs/guidelines/development.md` and `docs/guidelines/testing.md`.
+**Detailed Standards**: Reference `docs/guidelines/development/README.md` and `docs/guidelines/testing.md`.
 
 - Unit tests placed in `#[cfg(test)]` modules of corresponding modules
 - Integration tests placed in `tests/` directory
@@ -91,7 +95,7 @@ When generating code, must strictly follow all development standards in `docs/gu
 
 ### Code Review
 
-**Review Checklist**: Reference code review section in `docs/guidelines/development.md`.
+**Review Checklist**: Reference `docs/guidelines/development/code-review.md` for code review standards.
 
 **Code Review Workflow**:
 - **Pre-commit Check** (5-15 minutes): Reference `docs/guidelines/workflows/pre-commit.md`
@@ -107,7 +111,7 @@ Before submitting PR, ensure:
 
 ### Dependency Management
 
-**Detailed Principles**: Reference dependency management section in `docs/guidelines/development.md`.
+**Detailed Principles**: Reference `docs/guidelines/development/references/dependency-management.md` for dependency management standards.
 
 - Use `cargo add <package-name>` to add dependencies
 - Prefer stable versions of crates
@@ -116,7 +120,7 @@ Before submitting PR, ensure:
 
 ### Development Tools
 
-**Required Tools and Common Commands**: Reference development tools section in `docs/guidelines/development.md`.
+**Required Tools and Common Commands**: Reference `docs/guidelines/development/references/development-tools.md` for development tools standards (if created).
 
 **CI/CD Configuration**:
 - **CI Workflow Configuration**: Reference `docs/guidelines/ci-workflow.md`
@@ -126,6 +130,38 @@ Before submitting PR, ensure:
 - **Binary Size Analysis**: Reference `docs/guidelines/cargo-bloat.md` (use `cargo-bloat` to analyze binary file size)
 
 Install development tools: `make setup`
+
+## 🔄 File Synchronization Rules
+
+**Important**: `.cursorrules` and `docs/cursorrules.md` must always be kept in sync.
+
+### Synchronization Trigger
+
+**Rule**: Whenever `.cursorrules` or `docs/cursorrules.md` is modified, the other file must be immediately updated to maintain consistency.
+
+### Synchronization Direction
+
+- **Modifying `.cursorrules` (English version)** → Must immediately synchronize and update `docs/cursorrules.md` (Chinese version)
+- **Modifying `docs/cursorrules.md` (Chinese version)** → Must immediately synchronize and update `.cursorrules` (English version)
+
+### Verification Methods
+
+- **Manual Checklist**:
+  1. Check that the chapter structure is consistent (heading levels, chapter order)
+  2. Check that key rules exist in both files (e.g., code generation rules, document management rules)
+  3. Check that the "Last Updated" timestamps are consistent
+  4. Check that the directory structure is consistent
+- **Automated Validation Script** (recommended):
+  - Check that chapter headings are consistent (ignoring language differences)
+  - Check that line counts are similar (considering Chinese/English length differences)
+  - Check that key markers (e.g., `##`, `###`) have consistent counts
+  - Check that "Last Updated" timestamps are consistent
+- **Git Hooks Validation** (recommended):
+  - In pre-commit hook: If `.cursorrules` or `docs/cursorrules.md` is modified, check if the other file is also modified in the same commit
+  - If only one file is modified, prompt to synchronize and update the other file
+- **CI/CD Validation** (recommended):
+  - Check synchronization status of both files in CI pipeline
+  - If out of sync is detected, fail CI build and prompt to synchronize
 
 ## 📝 Document Management
 
@@ -167,11 +203,12 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 ### Creating New Documents
 
 - **Document Writing Guidelines**: Use templates to create new documents (reference `docs/guidelines/document.md`)
-  - Select appropriate template based on document type (architecture, guidelines, requirements, workflow, review guide documents)
+  - Select appropriate template based on document type (architecture, guidelines, requirements, review workflow, development workflow, review guide documents)
   - Follow document writing standards and chapter checklist
 - **Document Timestamp**: Add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
   - Format: `**最后更新**: YYYY-MM-DD`
   - Location: End of document, after separator line
+  - **Important**: When updating document content, must update the timestamp at the end of the document to the current date
 - **Document Index**: Update corresponding document index (as applicable):
   - TODO Documents: Only index in `docs/requirements/README.md`
   - Other Reference Documents: Index in `docs/README.md`
@@ -199,7 +236,7 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 
 ## ⚙️ Notes
 
-1. **Cross-platform Support**: Project supports macOS, Linux, Windows, pay attention to platform-specific code
+1. **Cross-platform Support**: Project supports macOS, Linux, Windows, pay attention to platform-specific code. For platform-specific code organization and testing requirements, reference `docs/guidelines/development/module-organization.md` (Platform-specific Code Organization section)
 2. **Clipboard Functionality**: Linux ARM64 and musl static linking versions do not support clipboard functionality
 3. **Configuration Files**: Configuration files stored in `~/.workflow/config/workflow.toml` (macOS/Linux) or `%APPDATA%\workflow\config\workflow.toml` (Windows)
 4. **Error Handling**: All errors should provide clear error messages and context

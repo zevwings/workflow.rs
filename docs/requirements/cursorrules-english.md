@@ -485,8 +485,8 @@
 - [`docs/guidelines/github-setup.md`](../guidelines/github-setup.md) - GitHub 配置指南
 - [`docs/guidelines/pr-platform.md`](../guidelines/pr-platform.md) - PR 平台新增指南
 - [`docs/guidelines/cargo-bloat.md`](../guidelines/cargo-bloat.md) - cargo-bloat 使用指南
-- [`docs/guidelines/workflows/pre-commit.md`](../guidelines/workflows/pre-commit.md) - 提交前检查指南
-- [`docs/guidelines/workflows/review.md`](../guidelines/workflows/review.md) - 代码审查工作流指南
+- [`docs/guidelines/development/workflows/pre-commit.md`](../guidelines/development/workflows/pre-commit.md) - 提交前检查指南
+- [`docs/guidelines/development/workflows/review.md`](../guidelines/development/workflows/review.md) - 代码审查工作流指南
 
 ---
 
@@ -502,7 +502,7 @@
 - ✅ 将所有 `DEVELOPMENT_GUIDELINES.md` 引用改为 `development.md`
 - ✅ 将所有 `DOCUMENT_GUIDELINES.md` 引用改为 `document.md`
 - ✅ 将所有 `TESTING_GUIDELINES.md` 引用改为 `testing.md`
-- ✅ 将所有 `PRE_COMMIT_GUIDELINES.md` 引用改为 `workflows/pre-commit.md`
+- ✅ 将所有 `PRE_COMMIT_GUIDELINES.md` 引用改为 `development/workflows/pre-commit.md`
 - ✅ 修正了文档命名规范：指南文档从 `{TOPIC}_GUIDELINES.md` 改为 `{TOPIC}.md`
 
 **新增指南文档引用**:
@@ -511,7 +511,7 @@
 - ✅ 添加了 `pr-platform.md` 引用
 - ✅ 添加了 `cargo-bloat.md` 引用
 - ✅ 添加了 `document-timestamp.md` 引用
-- ✅ 添加了 `workflows/review.md` 引用
+- ✅ 添加了 `development/workflows/review.md` 引用
 
 **当前文件状态**: `.cursorrules` 文件已从 269 行更新至 293 行（新增 24 行，主要是新增指南文档引用和代码审查工作流说明）
 
@@ -527,7 +527,7 @@
 - ✅ 任务规划完成
 - ✅ 结构优化方案确定
 - ✅ 文件路径引用已修正（所有指南文档引用已更新）
-- ✅ 新增指南文档引用已添加（ci-workflow、github-setup、pr-platform、cargo-bloat、document-timestamp、workflows/review）
+- ✅ 新增指南文档引用已添加（ci-workflow、github-setup、pr-platform、cargo-bloat、document-timestamp、development/workflows/review）
 - ✅ 文档命名规范已修正
 - ⏳ 翻译和结构优化待开始
 

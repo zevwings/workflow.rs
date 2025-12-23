@@ -350,7 +350,7 @@ SupportedLanguage {
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [LLM 模块架构文档](./llm.md) - LLM 客户端使用 Prompt
 - [PR 模块架构文档](./pr.md) - PR 模块使用 Prompt 生成分支名和 PR 标题
 

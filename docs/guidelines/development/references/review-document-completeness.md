@@ -259,7 +259,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
   - `docs/requirements/` - 待办文档
 - [ ] **文档索引**：`docs/README.md` 包含完整的文档索引
 - [ ] **文档分类**：文档按类型正确分类
-- [ ] **文档命名**：文档命名符合规范（如 `{MODULE}_architecture.md`）
+- [ ] **文档命名**：文档命名符合规范（如 `{module}.md`，使用 kebab-case）
 
 #### 检查方法
 
@@ -288,21 +288,16 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 #### 架构文档清单
 
-**Lib 层模块**（`docs/architecture/lib/`）：
-- pr.md
-- jira.md
+**架构文档**（`docs/architecture/`）：
+- pr.md（包含 Lib 层和 Commands 层）
+- jira.md（包含 Lib 层和 Commands 层）
 - git.md
 - http.md
 - settings.md
 - llm.md
-- ...（其他 Lib 层模块）
-
-**命令层模块**（`docs/architecture/commands/`）：
-- pr.md
-- jira.md
-- LOG_COMMAND_architecture.md
 - config.md
-- ...（其他命令层模块）
+- log.md
+- ...（其他模块架构文档）
 
 ### 2.3 指南文档检查
 
@@ -320,7 +315,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 #### 指南文档清单
 
-- development.md - 开发规范
+- development/ - 开发规范目录（包含所有开发规范文档）
 - document.md - 文档编写指南
 - pre-commit.md - 提交前检查指南
 - testing.md - 测试指南
@@ -499,8 +494,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 #### 检查项
 
 - [ ] **架构文档位置**：架构文档是否在 `docs/architecture/` 目录下
-  - Lib 层架构文档 → `docs/architecture/lib/`
-  - 命令层架构文档 → `docs/architecture/commands/`
+  - 模块架构文档 → `docs/architecture/{module}.md`（包含 Lib 层和 Commands 层两部分）
 - [ ] **指南文档位置**：指南文档是否在 `docs/guidelines/` 目录下
 - [ ] **迁移文档位置**：迁移文档是否在 `docs/migration/` 目录下
 - [ ] **待办文档位置**：待办文档是否在 `docs/requirements/` 目录下
@@ -516,10 +510,10 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 #### 检查项
 
 - [ ] **命名规范**：文档命名是否符合项目规范
-  - 架构文档：`{MODULE}_architecture.md`（Lib 层）或 `{MODULE}_COMMAND_architecture.md`（命令层）
-  - 指南文档：`{TOPIC}_GUIDELINES.md`
-  - 迁移文档：`{VERSION}-to-{VERSION}.md`
-  - 待办文档：`{TOPIC}_TODO.md`
+  - 架构文档：`{module}.md`（包含 Lib 层和 Commands 层两部分，使用 kebab-case）
+  - 指南文档：`{topic}.md`（使用 kebab-case）
+  - 迁移文档：`{version}-to-{version}.md`（使用 kebab-case）
+  - 需求文档：`{topic}.md`（使用 kebab-case，存放到 `docs/requirements/`）
 - [ ] **命名一致性**：同类文档的命名格式是否一致
 - [ ] **命名准确性**：文档名称是否准确反映内容
 
@@ -835,9 +829,10 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 ## 📚 参考文档
 
-- [文档编写指南](../document.md) - 文档编写规范和模板
-- [提交前检查指南](../pre-commit.md) - 提交前检查清单
-- [开发规范](../development.md) - 开发规范和最佳实践
+- [文档编写指南](../../document.md) - 文档编写规范和模板
+- [提交前检查指南](../workflows/pre-commit.md) - 提交前检查清单
+- [文档规范](../../development/references/documentation.md) - 文档规范和文档同步要求
+- [开发规范索引](../../development/README.md) - 开发规范总览
 
 ---
 

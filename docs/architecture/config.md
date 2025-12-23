@@ -314,7 +314,7 @@ commands/config/validate.rs::ConfigValidateCommand::validate()
 
 2. **自动修复**：
    - 使用 `--fix` 选项可以自动修复常见错误
-   - 修复 URL 格式错误（自动添加 https://）
+   - 修复 URL 格式错误（自动添加 `https://`）
    - 修复其他可修复的配置问题
 
 3. **严格模式**：
@@ -637,7 +637,7 @@ Settings 管理（读取/写入 TOML 配置文件）
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [生命周期管理命令模块架构文档](./lifecycle.md)
 - [GitHub 命令架构文档](./github.md) - GitHub 账号管理相关
 - [环境检查命令架构文档](./check.md) - 环境检查相关

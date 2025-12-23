@@ -371,7 +371,7 @@ permissions:
 
 ### 项目文档
 - [CI Workflow Guidelines](./ci-workflow.md)：CI Workflow 使用指南
-- [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
+- [CI 工作流配置指南](./ci-workflow.md)：CI 工作流详细配置说明
 
 ### GitHub 官方文档
 - [GitHub Actions: Using secrets in a workflow](https://docs.github.com/en/actions/security-guides/encrypted-secrets)

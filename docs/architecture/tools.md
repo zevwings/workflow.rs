@@ -12,7 +12,11 @@
 - 平台检测工具（GitHub Releases 平台识别）
 - 表格输出工具（统一的表格显示接口）
 
-**注意**：交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./dialog.md)。进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./indicator.md)。
+**注意**：
+- 交互式对话框（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）已移至独立的 Dialog 模块，请参考 [Dialog 模块架构文档](./dialog.md)
+- 进度指示器（Spinner, Progress）已移至独立的 Indicator 模块，请参考 [Indicator 模块架构文档](./indicator.md)
+- 格式化工具（DisplayFormatter, MessageFormatter）已有独立文档，请参考 [Format 模块架构文档](./format.md)
+- 表格输出工具（TableBuilder, TableStyle）已有独立文档，请参考 [Table 模块架构文档](./table.md)
 
 这些工具函数为整个项目提供通用的基础设施支持，被所有模块广泛使用。
 
@@ -610,21 +614,101 @@ confirm(
    - 返回 `Ok(false)`：允许调用者根据返回值决定后续逻辑
    - 返回错误：强制要求用户确认，取消则终止操作
 
-#### 8. 格式化工具 (`format.rs`)
+#### 8. 格式化工具模块 (`format/`)
 
 ### 功能概述
 
-提供各种格式化函数，包括文件大小格式化等。
+提供统一的格式化功能，包括显示格式化和消息格式化两大类。格式化工具模块分为两个子模块：
+- **`display`** - 显示格式化器（路径、列表项、键值对、文件大小）
+- **`message`** - 消息格式化器（错误消息、操作消息、进度信息）
 
-### 核心函数
+### 核心组件
 
-#### format-_size
+#### DisplayFormatter 结构体
+
+提供统一的显示格式化功能，包括路径、列表项、键值对和文件大小的格式化。
+
+**主要方法**：
+
+##### DisplayFormatter::path
 
 ```rust
-pub fn format-_size(bytes: u64) -> String
+pub fn path(path: &Path) -> String
 ```
 
-**功能**：格式化文件大小
+**功能**：格式化路径显示，优先显示相对路径
+
+**参数**：
+- `path` - 要格式化的路径
+
+**返回**：格式化后的路径字符串（相对路径或绝对路径）
+
+**示例**：
+```rust
+use workflow::base::format::DisplayFormatter;
+use std::path::Path;
+
+let path = Path::new("/home/user/project/src/main.rs");
+let formatted = DisplayFormatter::path(path);
+// 如果路径在当前工作目录下，返回相对路径
+// 否则返回完整路径
+```
+
+##### DisplayFormatter::list_item
+
+```rust
+pub fn list_item(prefix: &str, item: &str) -> String
+```
+
+**功能**：格式化列表项显示
+
+**参数**：
+- `prefix` - 前缀符号（如 "  -"、"  *"）
+- `item` - 项目内容
+
+**返回**：格式化后的列表项字符串
+
+**示例**：
+```rust
+use workflow::base::format::DisplayFormatter;
+
+let item = DisplayFormatter::list_item("  -", "config.toml");
+assert_eq!(item, "  - config.toml");
+```
+
+##### DisplayFormatter::key_value
+
+```rust
+pub fn key_value(key: &str, value: &str, separator: Option<&str>) -> String
+```
+
+**功能**：格式化键值对显示
+
+**参数**：
+- `key` - 键名
+- `value` - 值
+- `separator` - 分隔符（默认为 ": "）
+
+**返回**：格式化后的键值对字符串
+
+**示例**：
+```rust
+use workflow::base::format::DisplayFormatter;
+
+let kv = DisplayFormatter::key_value("Version", "1.0.0", None);
+assert_eq!(kv, "Version: 1.0.0");
+
+let kv = DisplayFormatter::key_value("Status", "Active", Some(" = "));
+assert_eq!(kv, "Status = Active");
+```
+
+##### DisplayFormatter::size
+
+```rust
+pub fn size(bytes: u64) -> String
+```
+
+**功能**：格式化文件大小显示
 
 **参数**：
 - `bytes` - 字节数
@@ -638,17 +722,114 @@ pub fn format-_size(bytes: u64) -> String
 
 **示例**：
 ```rust
-use workflow::base::util::format-_size;
+use workflow::base::format::DisplayFormatter;
 
-assert-_eq!(format-_size(0), "0 B");
-assert-_eq!(format-_size(1024), "1.00 KB");
-assert-_eq!(format-_size(1048576), "1.00 MB");
+assert_eq!(DisplayFormatter::size(0), "0 B");
+assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
+assert_eq!(DisplayFormatter::size(1048576), "1.00 MB");
+```
+
+#### MessageFormatter 结构体
+
+提供统一的消息格式化功能，包括错误消息、操作消息和进度信息的格式化。
+
+**主要方法**：
+
+##### MessageFormatter::error
+
+```rust
+pub fn error(operation: &str, target: &str, error: &str) -> String
+```
+
+**功能**：格式化错误消息
+
+**参数**：
+- `operation` - 操作名称（如 "read"、"write"）
+- `target` - 操作目标（文件、路径等）
+- `error` - 错误信息
+
+**返回**：格式化后的错误消息字符串
+
+**格式**：`"Failed to {operation} {target}: {error}"`
+
+**示例**：
+```rust
+use workflow::base::format::MessageFormatter;
+
+let msg = MessageFormatter::error("read", "config.toml", "Permission denied");
+assert_eq!(msg, "Failed to read config.toml: Permission denied");
+```
+
+##### MessageFormatter::operation
+
+```rust
+pub fn operation(action: &str, target: &str) -> String
+```
+
+**功能**：格式化操作消息
+
+**参数**：
+- `action` - 动作名称（如 "Creating"、"Updating"）
+- `target` - 操作目标
+
+**返回**：格式化后的操作消息字符串
+
+**格式**：`"{action} {target}..."`
+
+**示例**：
+```rust
+use workflow::base::format::MessageFormatter;
+
+let msg = MessageFormatter::operation("Creating", "new branch");
+assert_eq!(msg, "Creating new branch...");
+```
+
+##### MessageFormatter::progress
+
+```rust
+pub fn progress(current: usize, total: usize, item: &str) -> String
+```
+
+**功能**：格式化进度信息
+
+**参数**：
+- `current` - 当前进度
+- `total` - 总进度
+- `item` - 进度项目名称
+
+**返回**：格式化后的进度字符串
+
+**格式**：`"[{current}/{total}] Processing {item}"`
+
+**示例**：
+```rust
+use workflow::base::format::MessageFormatter;
+
+let msg = MessageFormatter::progress(3, 10, "files");
+assert_eq!(msg, "[3/10] Processing files");
 ```
 
 ### 使用场景
 
+#### DisplayFormatter 使用场景
+
+- **路径显示**：在日志、错误消息中显示文件路径（优先显示相对路径）
+- **配置显示**：在配置查看命令中格式化键值对显示
+- **列表显示**：在命令输出中格式化列表项
 - **文件大小显示**：在下载、更新等命令中显示文件大小
-- **进度提示**：显示下载进度和文件大小
+
+#### MessageFormatter 使用场景
+
+- **错误消息**：统一格式化错误消息，提升用户体验
+- **操作提示**：在命令执行过程中显示操作进度
+- **进度信息**：在批量操作中显示处理进度
+
+### 设计优势
+
+1. **统一格式**：所有格式化功能统一管理，确保输出格式一致
+2. **易于维护**：集中管理格式化逻辑，修改时只需更新一处
+3. **类型安全**：使用 Rust 类型系统保证参数类型正确
+4. **易于扩展**：可以轻松添加新的格式化方法
 
 #### 9. 平台检测工具 (`platform.rs`)
 
@@ -692,62 +873,229 @@ log-_message!("Detected platform: {}", platform);
 - **更新功能**：检测平台以匹配对应的 GitHub Release 资源文件
 - **安装功能**：检测平台以选择正确的安装包
 
-#### 10. 表格输出工具 (`table.rs`)
+#### 10. 表格输出工具模块 (`table/`)
 
 ### 功能概述
 
-提供统一的表格输出接口，使用 `tabled` 库。支持自定义样式、边框、对齐等。
+提供统一的表格输出接口，使用 `tabled` 库。支持自定义样式、边框、对齐、标题等丰富的表格格式化功能。
 
 ### 核心组件
 
-#### TableBuilder
+#### TableBuilder 结构体
+
+表格构建器，提供链式配置和渲染功能。
 
 ```rust
 pub struct TableBuilder<T> {
     data: Vec<T>,
     title: Option<String>,
     style: Option<TableStyle>,
-    max-_width: Option<usize>,
+    max_width: Option<usize>,
     alignments: Vec<Alignment>,
 }
 ```
 
 **主要方法**：
-- `new(data)` - 创建新的表格构建器
-- `with-_title(title)` - 设置表格标题
-- `with-_style(style)` - 设置表格样式
-- `with-_max-_width(width)` - 设置最大宽度（自动换行）
-- `with-_alignment(alignments)` - 设置列对齐方式
-- `render()` - 构建并渲染表格为字符串
+
+##### TableBuilder::new
+
+```rust
+pub fn new(data: Vec<T>) -> Self
+```
+
+**功能**：创建新的表格构建器
+
+**参数**：
+- `data` - 要显示的数据，必须实现 `Tabled` trait
+
+**返回**：新的 `TableBuilder` 实例
+
+**要求**：数据类型 `T` 必须实现 `tabled::Tabled` trait
+
+##### TableBuilder::with_title
+
+```rust
+pub fn with_title(mut self, title: impl Into<String>) -> Self
+```
+
+**功能**：设置表格标题
+
+**参数**：
+- `title` - 表格标题
+
+**返回**：返回 `Self`，支持链式调用
 
 **特性**：
-- 支持链式调用
-- 支持自定义样式和边框
-- 支持列对齐和宽度控制
-- 支持紧凑模式和完整模式
+- 标题会显示在表格顶部，居中对齐
+- 标题行下方会有分隔线
+
+##### TableBuilder::with_style
+
+```rust
+pub fn with_style(mut self, style: TableStyle) -> Self
+```
+
+**功能**：设置表格样式
+
+**参数**：
+- `style` - 表格样式（见 `TableStyle` 枚举）
+
+**返回**：返回 `Self`，支持链式调用
+
+##### TableBuilder::with_max_width
+
+```rust
+pub fn with_max_width(mut self, width: usize) -> Self
+```
+
+**功能**：设置最大宽度（自动换行）
+
+**参数**：
+- `width` - 最大宽度（字符数）
+
+**返回**：返回 `Self`，支持链式调用
+
+**特性**：
+- 当内容超过最大宽度时，自动换行
+- 适用于终端显示，避免表格过宽
+
+##### TableBuilder::with_alignment
+
+```rust
+pub fn with_alignment(mut self, alignments: Vec<Alignment>) -> Self
+```
+
+**功能**：设置列对齐方式
+
+**参数**：
+- `alignments` - 每列的对齐方式，按列索引顺序
+
+**返回**：返回 `Self`，支持链式调用
+
+**示例**：
+```rust
+use tabled::settings::Alignment;
+use workflow::base::table::TableBuilder;
+
+TableBuilder::new(data)
+    .with_alignment(vec![Alignment::left(), Alignment::right()]);
+```
+
+##### TableBuilder::render
+
+```rust
+pub fn render(self) -> String
+```
+
+**功能**：构建并渲染表格为字符串
+
+**返回**：格式化后的表格字符串
+
+**特性**：
+- 如果数据为空，返回空字符串或标题（如果有）
+- 自动修复标题行下方的分隔线格式
 
 #### TableStyle 枚举
+
+表格样式配置，定义不同的边框和显示风格。
 
 ```rust
 pub enum TableStyle {
     Default,  // 默认样式（ASCII）
-    Modern,   // 现代样式（带边框）
+    Modern,   // 现代样式（带边框，推荐）
     Compact,  // 紧凑样式（无边框）
     Minimal,  // 最小样式（仅分隔符）
     Grid,     // 网格样式（完整网格）
 }
 ```
 
+**样式说明**：
+
+- **Default**：ASCII 字符边框，兼容性好
+- **Modern**：现代样式，带圆角边框，视觉效果最佳（推荐）
+- **Compact**：紧凑样式，无边框，节省空间
+- **Minimal**：最小样式，仅使用分隔符
+- **Grid**：完整网格样式，所有单元格都有边框
+
+**选择建议**：
+- 一般情况：使用 `Modern` 样式
+- 需要兼容性：使用 `Default` 样式
+- 需要节省空间：使用 `Compact` 样式
+
+### 使用示例
+
+#### 基本使用
+
+```rust
+use tabled::Tabled;
+use workflow::base::table::{TableBuilder, TableStyle};
+
+#[derive(Tabled)]
+struct User {
+    name: String,
+    age: u32,
+}
+
+let users = vec![
+    User { name: "Alice".to_string(), age: 30 },
+    User { name: "Bob".to_string(), age: 25 },
+];
+
+let output = TableBuilder::new(users)
+    .with_title("Users List")
+    .with_style(TableStyle::Modern)
+    .render();
+println!("{}", output);
+```
+
+#### 链式配置
+
+```rust
+let output = TableBuilder::new(data)
+    .with_title("My Table")
+    .with_style(TableStyle::Modern)
+    .with_max_width(80)
+    .with_alignment(vec![Alignment::left(), Alignment::right()])
+    .render();
+```
+
+#### 使用 Display trait
+
+```rust
+use std::fmt;
+
+impl<T: Tabled> fmt::Display for TableBuilder<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // 自动渲染表格
+    }
+}
+
+// 直接使用
+println!("{}", TableBuilder::new(users));
+```
+
 ### 使用场景
 
 - **PR 列表显示**：使用 `PullRequestRow` 结构体显示 PR 列表
-- **数据表格**：显示任何需要表格格式的数据
+- **配置显示**：显示配置项和值的表格
+- **数据统计**：显示统计数据表格
+- **命令输出**：任何需要表格格式的数据展示
 
-### 设计决策
+### 设计优势
 
 1. **链式调用**：支持链式配置，提供更好的代码可读性
 2. **类型安全**：使用泛型和 `Tabled` trait 保证类型安全
-3. **灵活配置**：支持多种样式和对齐方式
+3. **灵活配置**：支持多种样式、对齐方式和宽度控制
+4. **自动格式化**：自动处理标题、边框、对齐等格式
+5. **易于使用**：简单的 API，易于集成到现有代码中
+
+### 最佳实践
+
+1. **样式选择**：优先使用 `TableStyle::Modern`，视觉效果最佳
+2. **宽度控制**：在终端显示时，使用 `with_max_width(80)` 避免过宽
+3. **列对齐**：数字列使用右对齐，文本列使用左对齐
+4. **标题使用**：为表格添加有意义的标题，提升可读性
+5. **空数据处理**：处理空数据情况，避免显示空表格
 
 ### 设计模式
 
@@ -905,11 +1253,13 @@ util (基础设施)
 
 ## 📚 相关文档
 
-- [总体架构文档](../architecture.md)
+- [总体架构文档](./architecture.md)
 - [Settings 模块架构文档](./settings.md)
 - [HTTP 架构文档](./http.md)
 - [Dialog 模块架构文档](./dialog.md)
 - [Indicator 模块架构文档](./indicator.md)
+- [Format 模块架构文档](./format.md) - 格式化工具详细文档
+- [Table 模块架构文档](./table.md) - 表格输出工具详细文档
 
 ---
 
@@ -993,12 +1343,52 @@ if confirm("Do you want to continue?")? {
 
 ### 格式化工具
 
-```rust
-use workflow::base::util::format-_size;
-use workflow::log-_message;
+#### DisplayFormatter 使用示例
 
-let size = format-_size(1048576);
-log-_message!("File size: {}", size);  // 输出：File size: 1.00 MB
+```rust
+use workflow::base::format::DisplayFormatter;
+use std::path::Path;
+use workflow::log_message;
+
+// 格式化路径
+let path = Path::new("/home/user/project/src/main.rs");
+let formatted_path = DisplayFormatter::path(path);
+log_message!("File: {}", formatted_path);
+
+// 格式化列表项
+let item = DisplayFormatter::list_item("  -", "config.toml");
+log_message!("{}", item);  // 输出：  - config.toml
+
+// 格式化键值对
+let kv = DisplayFormatter::key_value("Version", "1.0.0", None);
+log_message!("{}", kv);  // 输出：Version: 1.0.0
+
+// 格式化文件大小
+let size = DisplayFormatter::size(1048576);
+log_message!("File size: {}", size);  // 输出：File size: 1.00 MB
+```
+
+#### MessageFormatter 使用示例
+
+```rust
+use workflow::base::format::MessageFormatter;
+use workflow::log_error;
+use workflow::log_message;
+
+// 格式化错误消息
+let error_msg = MessageFormatter::error("read", "config.toml", "Permission denied");
+log_error!("{}", error_msg);
+// 输出：Failed to read config.toml: Permission denied
+
+// 格式化操作消息
+let operation_msg = MessageFormatter::operation("Creating", "new branch");
+log_message!("{}", operation_msg);
+// 输出：Creating new branch...
+
+// 格式化进度信息
+let progress_msg = MessageFormatter::progress(3, 10, "files");
+log_message!("{}", progress_msg);
+// 输出：[3/10] Processing files
 ```
 
 ### 平台检测
@@ -1050,7 +1440,10 @@ log-_message!("{}", output);
 7. **平台检测**：GitHub Releases 平台识别
 8. **表格输出**：统一的表格显示接口
 
-**注意**：交互式对话框和进度指示器已移至独立模块，请参考相关架构文档。
+**注意**：
+- 交互式对话框和进度指示器已移至独立模块，请参考相关架构文档
+- 格式化工具（DisplayFormatter, MessageFormatter）已有独立文档，请参考 [Format 模块架构文档](./format.md)
+- 表格输出工具（TableBuilder, TableStyle）已有独立文档，请参考 [Table 模块架构文档](./table.md)
 
 **设计优势**：
 - ✅ **易用性**：简洁的 API 和宏，支持链式调用

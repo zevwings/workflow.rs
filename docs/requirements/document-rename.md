@@ -60,7 +60,7 @@
   - [x] 更新文档删除规则中的路径引用 ✅
 - [x] 更新 `docs/README.md` 中的目录引用（~1 处）✅ **已完成**
 - [x] 更新其他文档中的 `docs/todo/` 引用 ✅ **已完成**
-  - [x] `docs/guidelines/workflows/references/review-document.md` ✅
+  - [x] `docs/guidelines/development/references/review-document.md` ✅
   - [x] `docs/guidelines/document-timestamp.md` ✅
   - [x] 其他可能包含引用的文档 ✅
 
@@ -150,16 +150,16 @@
 - [x] `pr-platform.md` → `pr-platform.md` ✅ **已完成**
 - [x] `template.md` → `template.md` ✅ **已完成**
 - [x] `testing.md` → `testing.md` ✅ **已完成**
-- [x] `workflows/pre-commit.md` → `workflows/pre-commit.md` ✅ **已完成**
-- [x] `workflows/review.md` → `workflows/review.md` ✅ **已完成**
-- [x] `workflows/references/quick-reference.md` → `workflows/references/quick-reference.md` ✅ **已完成**
-- [x] `workflows/references/review-architecture-doc.md` → `workflows/references/review-architecture-doc.md` ✅ **已完成**
-- [x] `workflows/references/review-cli.md` → `workflows/references/review-cli.md` ✅ **已完成**
-- [x] `workflows/references/review-code.md` → `workflows/references/review-code.md` ✅ **已完成**
-- [x] `workflows/references/review-document.md` → `workflows/references/review-document.md` ✅ **已完成**
-- [x] `workflows/references/review-test-case.md` → `workflows/references/review-test-case.md` ✅ **已完成**
-- [x] `workflows/references/style.md` → `workflows/references/style.md` ✅ **已完成**
-- [x] `workflows/references/test-coverage-check.md` → `workflows/references/test-coverage-check.md` ✅ **已完成**
+- [x] `development/workflows/pre-commit.md` → `development/workflows/pre-commit.md` ✅ **已完成**
+- [x] `development/workflows/review.md` → `development/workflows/review.md` ✅ **已完成**
+- [x] `development/references/quick-reference.md` → `development/references/quick-reference.md` ✅ **已完成**
+- [x] `development/references/review-architecture-doc.md` → `development/references/review-architecture-doc.md` ✅ **已完成**
+- [x] `development/references/review-cli.md` → `development/references/review-cli.md` ✅ **已完成**
+- [x] `development/references/review-code.md` → `development/references/review-code.md` ✅ **已完成**
+- [x] `development/references/review-document.md` → `development/references/review-document.md` ✅ **已完成**
+- [x] `development/references/review-test-case.md` → `development/references/review-test-case.md` ✅ **已完成**
+- [x] `development/references/style.md` → `development/references/style.md` ✅ **已完成**
+- [x] `development/references/test-coverage-check.md` → `development/references/test-coverage-check.md` ✅ **已完成**
 
 #### 3.2 `docs/requirements/` 目录（目录重命名后）
 
@@ -393,7 +393,7 @@ done
    - 待办事项文档目录引用
 
 3. **其他文档**：
-   - `docs/guidelines/workflows/references/review-document.md`
+   - `docs/guidelines/development/references/review-document.md`
    - `docs/guidelines/DOCUMENT_TIMESTAMP_GUIDELINES.md`
    - 其他可能包含 `docs/todo/` 引用的文档
 

@@ -547,7 +547,7 @@ impl HttpResponse {
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [Jira 模块架构文档](./jira.md) - Jira 模块如何使用 HTTP 客户端
 - [PR 模块架构文档](./pr.md) - PR 模块如何使用 HTTP 客户端
 - [LLM 模块架构文档](./llm.md) - LLM 模块如何使用 HTTP 客户端

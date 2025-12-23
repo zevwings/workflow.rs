@@ -65,6 +65,7 @@
 ```markdown
 **最后更新：** 2025-12-18
 ```
+（注意：这里使用中文冒号 `：` 是错误的，应该使用英文冒号 `:`）
 
 ❌ 错误的日期格式：
 ```markdown
@@ -225,7 +226,7 @@ find docs -name "*.md" -exec grep -L "最后更新" {} \;
 
 - [文档编写指南](./document.md) - 完整的文档编写规范
 - [开发规范](./development.md) - 项目开发规范
-- [提交前检查指南](./workflows/pre-commit.md) - 提交前的检查清单
+- [提交前检查指南](./development/workflows/pre-commit.md) - 提交前的检查清单
 
 ---
 

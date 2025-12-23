@@ -310,7 +310,7 @@ PR 可以合并
 ## 📚 相关文档
 
 - [GitHub Setup Guidelines](./github-setup.md)：GitHub 配置指南
-- [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
+- [CI 工作流配置指南](./ci-workflow.md)：CI 工作流详细配置说明
 - [Development Guidelines](./development.md)：开发规范
 - [Testing Guidelines](./testing.md)：测试指南
 

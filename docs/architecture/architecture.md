@@ -428,7 +428,7 @@ ignore = [
 
 ## 📝 开发规范
 
-详细的开发规范请参考 [开发规范文档](../guidelines/development.md)。
+详细的开发规范请参考 [开发规范索引](../guidelines/development/README.md)。
 
 该文档包含：
 - 代码风格规范（格式化、Lint、命名约定）

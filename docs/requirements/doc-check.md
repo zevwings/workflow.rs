@@ -679,7 +679,7 @@ walkdir = "2.4"
 
 ## 📚 相关文档
 
-- [架构文档审查指南](../guidelines/workflows/references/review-architecture-doc.md) - 详细的检查方法和流程
+- [架构文档审查指南](../guidelines/development/references/review-architecture-consistency.md) - 详细的检查方法和流程
 - [开发规范](../guidelines/development.md) - 开发规范和最佳实践
 
 ---

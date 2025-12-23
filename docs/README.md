@@ -124,6 +124,20 @@
 - 文件解压和校验和验证
 - 用户确认对话框
 
+#### [format.md](./architecture/format.md)
+**Format 模块架构文档**
+
+- 显示格式化器（DisplayFormatter）：路径、列表项、键值对、文件大小格式化
+- 消息格式化器（MessageFormatter）：错误消息、操作消息、进度信息格式化
+- 统一的格式化接口，确保输出格式一致
+
+#### [table.md](./architecture/table.md)
+**Table 模块架构文档**
+
+- 表格构建器（TableBuilder）：链式配置和渲染功能
+- 表格样式（TableStyle）：5 种样式选择（Modern、Default、Compact、Minimal、Grid）
+- 支持自定义样式、边框、对齐、标题等丰富的表格格式化功能
+
 #### [prompt.md](./architecture/prompt.md)
 **Prompt 管理模块架构文档**
 
@@ -308,15 +322,34 @@
 
 > 待办事项文档位于 [`requirements/`](./requirements/) 目录下，设计文档和指南位于 [`guidelines/`](./guidelines/) 目录下
 
-### [development.md](./guidelines/development.md)
-**开发规范文档**
+### [development/](./guidelines/development/)
+**开发规范目录**
 
-- 代码风格规范（格式化、Lint、命名约定）
-- 错误处理规范（anyhow、上下文信息）
-- 文档规范（公共 API 文档、注释格式）
-- 命名规范（文件、函数、结构体、常量）
-- 模块组织规范（目录结构、模块职责）
-- Git 工作流（分支策略、工作流程）
+包含完整的开发规范文档：
+
+**核心规范**：
+- [代码风格规范](./guidelines/development/code-style.md) - 格式化、Lint、命名约定
+- [错误处理规范](./guidelines/development/error-handling.md) - color-eyre、上下文信息
+- [命名规范](./guidelines/development/naming.md) - 文件、函数、结构体、常量、CLI 参数
+- [模块组织规范](./guidelines/development/module-organization.md) - 目录结构、模块职责
+
+**流程规范**：
+- [Git 工作流规范](./guidelines/development/git-workflow.md) - 分支策略、工作流程
+- [提交规范](./guidelines/development/commit.md) - Conventional Commits 格式
+- [代码审查规范](./guidelines/development/code-review.md) - 审查清单、审查重点
+
+**参考文档**：
+- [日志和调试规范](./guidelines/development/references/logging.md) - 日志系统架构、敏感信息过滤
+- [文档规范](./guidelines/development/references/documentation.md) - 公共 API 文档、文档同步要求
+- [配置管理规范](./guidelines/development/references/configuration.md) - 配置验证、配置迁移
+- [安全性规则](./guidelines/development/references/security.md) - API Token 处理、输入验证
+- [依赖管理规范](./guidelines/development/references/dependency-management.md) - 添加依赖、依赖更新
+
+**开发工作流**：
+- [开发工作流索引](./guidelines/development/workflows/README.md) - 新功能开发、重构、添加依赖等流程
+
+**快速导航**：
+- [开发规范索引](./guidelines/development/README.md) - 开发规范总览和快速导航
 - 提交规范（Conventional Commits）
 - 测试规范（单元测试、集成测试）
 - 代码审查（审查清单、审查重点）
@@ -339,16 +372,16 @@
 
 ## 🤖 AI 工作流指南
 
-> AI 工作流指南位于 [`workflows/`](./guidelines/workflows/) 目录下
+> AI 工作流指南位于 [`workflows/`](./guidelines/development/workflows/) 目录下
 
-### [工作流指南索引](./guidelines/workflows/README.md)
+### [工作流指南索引](./guidelines/development/workflows/README.md)
 **AI 工作流完整指南**
 
 - 工作流概述和使用场景
 - 快速参考和详细指南导航
 - 工作流文档组织结构
 
-### [pre-commit.md](./guidelines/workflows/pre-commit.md)
+### [pre-commit.md](./guidelines/development/workflows/pre-commit.md)
 **提交前检查指南（5-15分钟）**
 
 - 快速检查清单和一键执行命令
@@ -360,7 +393,7 @@
 - 其他检查项（版本管理、Git、依赖、平台兼容性等）
 - 检查优先级对照表和常见问题
 
-### [review.md](./guidelines/workflows/review.md)
+### [review.md](./guidelines/development/workflows/review.md)
 **综合深入检查指南（2-4小时）**
 
 - 深入检查概述和场景选择
@@ -369,7 +402,7 @@
 - 综合检查报告生成
 - 定期审查工作流建议
 
-### [quick-reference.md](./guidelines/workflows/references/quick-reference.md)
+### [quick-reference.md](./guidelines/development/references/quick-reference.md)
 **快速参考指南**
 
 - 检查类型选择指南（快速检查 vs 深入检查）
@@ -379,7 +412,7 @@
 - 报告文件位置和命名规范
 - 常用工具函数和故障排除
 
-### [style.md](./guidelines/workflows/references/style.md)
+### [style.md](./guidelines/development/references/style.md)
 **样式规范指南**
 
 - 术语规范（检查类型、优先级、状态）
@@ -388,7 +421,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [review-document.md](./guidelines/workflows/references/review-document.md)
+### [review-document-completeness.md](./guidelines/development/references/review-document-completeness.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -400,7 +433,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [review-test-case.md](./guidelines/workflows/references/review-test-case.md)
+### [review-test-case.md](./guidelines/development/references/review-test-case.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -419,7 +452,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [review-code.md](./guidelines/workflows/references/review-code.md)
+### [review-code.md](./guidelines/development/references/review-code.md)
 **代码检查指南**
 
 - 系统化的代码检查方法
@@ -472,6 +505,8 @@
 - 想了解代理管理？ → [proxy.md](./architecture/proxy.md)
 - 想了解回滚机制？ → [rollback.md](./architecture/rollback.md)
 - 想了解工具函数？ → [tools.md](./architecture/tools.md)
+- 想了解格式化工具？ → [format.md](./architecture/format.md)
+- 想了解表格输出工具？ → [table.md](./architecture/table.md)
 - 想了解 Prompt 管理？ → [prompt.md](./architecture/prompt.md)
 
 ### 命令层模块（CLI 命令封装）

@@ -229,7 +229,7 @@ log-_message!("[3/3] Checking proxy configuration...");
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [Git 模块架构文档](../architecture/git.md) - Git 操作相关
 - [HTTP 模块架构文档](../architecture/http.md) - HTTP 客户端相关
 - [配置管理命令模块架构文档](./config.md) - 配置管理相关

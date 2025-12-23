@@ -448,7 +448,7 @@ commands/github/github.rs::GitHubCommand::update()
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture.md)
+- [主架构文档](./architecture.md)
 - [Settings 模块架构文档](../architecture/settings.md) - 配置管理相关
 - [Git 模块架构文档](../architecture/git.md) - Git 配置相关
 - [配置管理命令模块架构文档](./config.md) - 配置管理相关
