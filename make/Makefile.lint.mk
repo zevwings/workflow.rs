@@ -6,6 +6,7 @@ define HELP_LINT
 	@echo "代码检查相关："
 	@echo "  make lint             - 运行完整的代码检查（格式化 + Clippy + Check）"
 	@echo "  make fix              - 自动修复代码问题（格式化 + Clippy + Cargo Fix）"
+	@echo "  make check-docs-links - 验证文档中的链接有效性（使用 lychee）"
 	@echo ""
 endef
 
@@ -60,3 +61,28 @@ fix: check-rustfmt check-clippy
 	@echo "✓ Cargo Fix 完成"
 	@echo ""
 	@echo "✓ 所有修复完成！"
+
+# ============================================
+# 文档链接检查
+# ============================================
+
+# 验证文档链接有效性
+check-docs-links:
+	@echo "=========================================="
+	@echo "验证文档链接有效性"
+	@echo "=========================================="
+	@echo ""
+	@if command -v lychee >/dev/null 2>&1; then \
+		echo "使用 lychee 验证文档链接..."; \
+		echo ""; \
+		lychee docs/**/*.md --exclude-all-private --exclude-loopback || exit 1; \
+	else \
+		echo "⚠ lychee 未安装"; \
+		echo "安装方法: cargo install lychee"; \
+		echo ""; \
+		echo "或者使用 markdown-link-check (需要 Node.js):"; \
+		echo "  npm install -g markdown-link-check"; \
+		echo "  find docs -name '*.md' -type f -exec markdown-link-check {} \\;"; \
+		exit 1; \
+	fi
+

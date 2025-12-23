@@ -1,268 +1,256 @@
-# Workflow CLI - Cursor AI 规则
+# Workflow CLI - Cursor AI Rules
 
-## ⚠️ 重要提示
+> **⚠️ Important Note**: When modifying this file, you must also update the Chinese version `docs/cursorrules.md` to keep both versions synchronized.
 
-**代码和文档生成规则**：
-- **如果没有明确说明，不需要生成代码和文档**
-- 只有在用户明确要求生成代码或文档时，才执行相应的操作
-- 对于分析、解释、讨论类的问题，仅提供文字回答，不要自动生成代码或文档文件
-- 如果用户只是询问问题或需要解释，不要主动创建文件或修改代码
-- **禁止性规则**：**在没有用户明确指示需要生成代码或文档的情况下，禁止通过 AI 自动生成任何代码文件或文档文件。仅提供分析、解释、建议等文字回答。**
-- **分析类问题规则**：**对于分析、讨论、询问类的问题，只提供文字回答和分析，不要自动生成分析文档文件。只有在用户明确要求生成文档时，才创建文档文件。**
-- **代码修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有代码文件。如需修改代码，必须先获得用户同意或用户明确说明需要修改。**
-- **文档修改规则**：**禁止在没有用户明确同意或说明的情况下修改现有文档文件。如需修改文档，必须先获得用户同意或用户明确说明需要修改。**
-
-## 项目概述
+## ⚠️ Important Notes
 
-这是一个用 Rust 编写的 CLI 工具，用于自动化开发工作流，提供 PR 管理、Jira 集成、日志处理等功能。
+**Code and Document Generation Rules**:
+- **Do not generate code or documents unless explicitly requested**
+- Only execute code or document generation when explicitly requested by the user
+- For analysis, explanation, or discussion questions, provide text-only answers without automatically generating code or document files
+- If the user is only asking questions or needs explanations, do not proactively create files or modify code
+- **Prohibition Rule**: **Without explicit user instruction to generate code or documents, AI is prohibited from automatically generating any code files or document files. Only provide analysis, explanations, suggestions, and other text responses.**
+- **Analysis Question Rule**: **For analysis, discussion, or inquiry questions, only provide text answers and analysis without automatically generating analysis document files. Only create document files when the user explicitly requests document generation.**
+- **Code Modification Rule**: **Prohibited from modifying existing code files without explicit user consent or instruction. If code modification is needed, user consent or explicit instruction must be obtained first.**
+- **Document Modification Rule**: **Prohibited from modifying existing document files without explicit user consent or instruction. If document modification is needed, user consent or explicit instruction must be obtained first.**
+- **Review Workflow Report Generation Rule**: **When executing the review workflows described in `docs/guidelines/development/workflows/review.md` or `docs/guidelines/development/workflows/pre-commit.md`, reports must be automatically generated:**
+  - **Comprehensive Deep Review** (`review.md`): After executing the review, must automatically generate `report/review-report-{timestamp}.md` report document
+  - **Pre-commit Check** (`pre-commit.md`): After executing the check, must automatically generate `report/pre-commit-report-{timestamp}.md` report document
+  - **Timestamp Format**: `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-12-23_22-55-15`)
+  - **Report Content**: Must generate complete check reports according to the report templates in the corresponding workflow documents
+  - **Report Location**: All report documents must be saved in the `report/` directory
 
-## 架构设计
+## 📋 Project Overview
 
-项目采用三层架构：
-- **CLI 入口层** (`bin/`, `main.rs`): 命令行参数解析和命令分发
-- **命令封装层** (`commands/`): CLI 命令封装，处理用户交互
-- **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
-
-## 代码规范
-
-**重要**：所有代码规范请严格遵循 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的开发规范。
-
-### 开发规范引用
-
-**必须遵守的开发规范文档**：`docs/guidelines/DEVELOPMENT_GUIDELINES.md`
-
-该文档包含完整的开发规范，包括：
-- **代码风格**：代码格式化、Lint 检查、Rust 命名约定、代码组织
-- **错误处理**：错误类型、错误信息、错误处理模式、分层错误处理
-- **文档规范**：公共 API 文档、文档注释格式、内部文档
-- **命名规范**：文件命名、函数命名、结构体命名、常量命名
-- **模块组织**：目录结构、模块职责、模块依赖规则
-- **Git 工作流**：分支策略、分支命名、工作流程
-- **提交规范**：Conventional Commits 格式、提交类型、提交示例
-- **测试规范**：单元测试、测试组织、测试覆盖率、集成测试
-- **代码审查**：审查清单、审查重点
-- **依赖管理**：添加依赖、依赖原则、依赖审查
-- **开发工具**：必需工具、常用命令、IDE 配置、预提交钩子
-
-**在生成代码时，必须参考并遵循上述文档中的所有规范。**
-
-### 快速参考
-
-以下是最常用的规范快速参考（**详细说明和完整规范请查看 `docs/guidelines/DEVELOPMENT_GUIDELINES.md`**）：
-
-- **代码格式化**：`cargo fmt`（提交前必须运行）
-- **代码检查**：`cargo clippy -- -D warnings`（所有警告必须修复）
-- **命名约定**：模块/函数/变量 `snake_case`，类型/Trait `PascalCase`，常量 `SCREAMING_SNAKE_CASE`
-- **导入顺序**：标准库 → 第三方库 → 项目内部
-- **错误处理**：使用 `anyhow::Result<T>` 和 `Context` 添加上下文
-- **文档注释**：所有公共 API 必须有 `///` 文档注释，包含参数、返回值、错误、示例
-
-## 文档文件管理
-
-**核心原则**：**所有生成的文档文件，根据文档类型自动归类到对应目录；如果无法确定类型，优先检查是否包含"分析"等关键词，匹配则存放到 `analysis/`，否则默认存放到 `docs/todo/`。**
-
-**重要规则**：文档文件根据类型存放在对应目录，禁止在项目根目录或其他位置随意创建文档文件。
-
-**文档分类和存放位置**：
-
-根据文档类型，自动归类到对应目录：
-
-1. **架构设计文档** → `docs/architecture/`
-   - Lib 层模块架构文档 → `docs/architecture/lib/{MODULE}_ARCHITECTURE.md`
-   - 命令层模块架构文档 → `docs/architecture/commands/{MODULE}_COMMAND_ARCHITECTURE.md`
-   - 总体架构文档 → `docs/architecture/ARCHITECTURE.md`
-   - **识别关键词**：架构、架构设计、Architecture、模块架构、系统设计
-
-2. **开发指南和规范文档** → `docs/guidelines/`
-   - 开发规范 → `docs/guidelines/DEVELOPMENT_GUIDELINES.md`
-   - 文档编写指南 → `docs/guidelines/DOCUMENT_GUIDELINES.md`
-   - 测试指南 → `docs/guidelines/TESTING_GUIDELINES.md`
-   - 提交前检查指南 → `docs/guidelines/PRE_COMMIT_GUIDELINES.md`
-   - 其他指南文档 → `docs/guidelines/{TOPIC}_GUIDELINES.md`
-   - **识别关键词**：指南、规范、Guidelines、开发规范、测试规范、文档规范
-
-3. **版本迁移文档** → `docs/migration/`
-   - 迁移文档 → `docs/migration/{VERSION}-to-{VERSION}.md`
-   - 迁移索引 → `docs/migration/README.md`
-   - **识别关键词**：迁移、Migration、版本升级、配置迁移
-
-4. **待办事项文档** → `docs/requirements/`
-   - TODO 文档 → `docs/requirements/{TOPIC}_TODO.md`
-   - TODO 索引 → `docs/requirements/README.md`
-   - **识别关键词**：TODO、待办、待实现、计划
-   - **索引限制**：TODO 文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 或其他索引文件中索引
-
-5. **技术分析文档** → `analysis/`
-   - 技术分析文档 → `analysis/{TOPIC}_ANALYSIS.md` 或 `analysis/{TOPIC}_ANALYSIS_REPORT.md`
-   - **识别关键词**：分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析
-   - **适用场景**：问题分析、测试分析、代码分析、性能分析、架构分析等技术分析文档
-   - **⚠️ 重要**：这是**临时分析文档**，不是参考文档，可以直接删除
-
-6. **实现/实施文档** → `analysis/impl/`
-   - 实现文档 → `analysis/impl/{TOPIC}_IMPLEMENTATION.md` 或 `analysis/impl/{TOPIC}_IMPL.md`
-   - **识别关键词**：实现、实施、IMPLEMENTATION、IMPL、实现文档、实施文档、实现方案、实施方案
-   - **适用场景**：功能实现文档、技术实施方案、实现细节记录等
-   - **⚠️ 重要**：这是**临时实现文档**，不是参考文档，可以直接删除
-
-7. **分析报告文档** → `report/`
-   - **特殊规则**：只有从 `@docs/guidelines/PRE_COMMIT_GUIDELINES.md` 生成的内容存放到这里
-   - 分析报告 → `report/{TOPIC}_REPORT.md`
-   - **识别关键词**：分析报告、检查报告、代码分析、质量报告（且来源是 PRE_COMMIT_GUIDELINES.md）
-   - **⚠️ 重要**：这是**临时分析文档**，不是参考文档，可以直接删除
-
-**注意**：需求分析、功能说明、实现计划等未明确分类的文档，默认存放到 `docs/todo/` 目录。
-
-**文档存放决策流程**：
-
-1. 检查用户是否明确指定了文档类型或存放位置
-2. 如果指定了类型，根据上述分类规则自动归类
-3. **重要限制**：
-   - **分析文档**（`analysis/`）：**必须**用户明确指明需要生成分析文档时才生成，不能根据关键词自动判断
-   - **需求文档**（`docs/todo/` 中的需求文档）：**必须**用户明确指明需要生成需求文档时才生成，不能根据关键词自动判断
-4. 如果未指定类型，检查文档内容中的关键词：
-   - 包含"TODO"、"待办"、"待实现"、"计划"等关键词 → `docs/todo/`
-   - 其他未明确分类的文档 → `docs/todo/`
-5. 如果无法确定类型，默认存放到 `docs/todo/`
-
-**文档命名规范**：
-- 架构文档：`{MODULE}_ARCHITECTURE.md`（Lib 层）或 `{MODULE}_COMMAND_ARCHITECTURE.md`（命令层）
-- 指南文档：`{TOPIC}_GUIDELINES.md`
-- 迁移文档：`{VERSION}-to-{VERSION}.md`
-- TODO 文档：`{TOPIC}_TODO.md`（存放到 `docs/todo/`）
-- 分析文档：`{TOPIC}_ANALYSIS.md` 或 `{TOPIC}_ANALYSIS_REPORT.md`
-- 实现文档：`{TOPIC}_IMPLEMENTATION.md` 或 `{TOPIC}_IMPL.md`（存放到 `analysis/impl/`）
-- 报告文档：`{TOPIC}_REPORT.md`
-- 需求文档：`{TOPIC}.md` 或 `{TOPIC}_REQUIREMENT.md`（存放到 `docs/todo/`）
-
-**创建新文档时的注意事项**：
-- 使用模板创建新文档（参考 `docs/guidelines/DOCUMENT_GUIDELINES.md`）
-- 更新相应的文档索引（如适用）：
-  - TODO 文档：只在 `docs/requirements/README.md` 中索引
-  - 其他参考文档：在 `docs/README.md` 中索引
-- 确保文档遵循项目的文档编写规范
-
-**文档索引规则**：
-- **禁止索引**：`analysis/`、`analysis/impl/` 和 `report/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 中
-- 这些目录包含**临时分析文档和实现文档**，不是参考文档，不需要在文档索引中展示
-- **TODO 文档索引限制**：`docs/todo/` 目录下的 TODO 文档**只需要**在 `docs/todo/README.md` 中索引，**不需要**在 `docs/README.md` 中索引
-- **参考文档**：`docs/` 目录下的其他文档（架构文档、指南文档、迁移文档）是参考文档，应该被索引到 `docs/README.md` 中
-
-**文档删除规则**：
-- **临时文档（可直接删除）**：
-  - `analysis/` 目录下的所有文档都是临时技术分析，可以随时删除
-  - `analysis/impl/` 目录下的所有文档都是临时实现文档，可以随时删除
-  - `report/` 目录下的所有文档都是临时分析报告，可以随时删除
-  - 这些文档用于开发过程中的分析、实现和记录，不需要长期保留
-- **参考文档（删除需谨慎）**：
-  - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
-  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/requirements/`）
-  - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
-  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/requirements/README.md` 中维护索引，不在主文档索引中展示
-
-## 核心模块
-
-### PR 模块 (`lib/pr/`)
-- 支持 GitHub 和 Codeup 平台
-- 使用 PlatformProvider Trait 实现平台抽象
-- 支持 LLM 标题生成和 PR 总结功能
-
-### Jira 模块 (`lib/jira/`)
-- 分层架构：HTTP 客户端层、API 方法层、业务逻辑层
-- 支持 Issue、User、Project 等 API
-- 日志处理模块（JiraLogs）
-
-### Git 模块 (`lib/git/`)
-- 分支管理操作（创建、切换、合并、删除）
-- 提交管理（状态检查、暂存、提交）
-- 暂存管理（stash push/pop）
-- Pre-commit hooks 支持
-
-### HTTP 模块 (`lib/http/`)
-- HTTP 客户端封装（单例模式）
-- 请求配置（body、query、auth、headers、timeout）
-- 响应处理（延迟解析、JSON/Text 解析）
-- 重试机制（指数退避、智能错误判断）
-
-### Settings 模块 (`lib/base/settings/`)
-- TOML 配置文件加载和管理
-- 配置验证和迁移
-- 多平台路径管理
-
-## 开发指南
-
-**重要**：所有开发指南请参考 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的详细说明。
-
-### 添加新功能
-1. 在 `lib/` 中实现核心业务逻辑
-2. 在 `commands/` 中添加 CLI 命令封装
-3. 在 `main.rs` 中注册命令
-4. 添加测试用例（参考测试规范）
-5. 更新文档
-
-### Git 工作流和提交规范
-
-**必须遵循**：`docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的 Git 工作流和提交规范。
-
-- **分支策略**：使用 `feature/*`、`fix/*`、`hotfix/*` 分支
-- **提交格式**：使用 Conventional Commits 格式（`<type>(<scope>): <subject>`）
-- **提交类型**：`feat`、`fix`、`docs`、`style`、`refactor`、`test`、`chore`、`perf`、`ci`
-- **提交信息要求**：主题行不超过 50 个字符，使用祈使语气
-
-### 测试规范
-
-**详细规范**：请参考 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 和 `docs/guidelines/TESTING_GUIDELINES.md`。
-
-- 单元测试放在对应模块的 `#[cfg(test)]` 模块中
-- 集成测试放在 `tests/` 目录
-- 使用 `cargo test` 运行测试
-- 目标覆盖率：> 80%，关键业务逻辑：> 90%
-
-### 代码审查
-
-**审查清单**：请参考 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的代码审查部分。
-
-提交 PR 前，确保：
-- [ ] 代码已格式化（`cargo fmt`）
-- [ ] 通过 Clippy 检查（`cargo clippy`）
-- [ ] 所有测试通过（`cargo test`）
-- [ ] 添加了必要的文档注释
-- [ ] 遵循了错误处理规范
-- [ ] 提交信息符合规范
-
-### 依赖管理
-
-**详细原则**：请参考 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的依赖管理部分。
-
-- 使用 `cargo add <package-name>` 添加依赖
-- 优先使用稳定版本的 crate
-- 避免不必要的依赖
-- 添加新依赖前，考虑是否真的需要、是否有更轻量的替代方案
-
-### 开发工具
-
-**必需工具和常用命令**：请参考 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的开发工具部分。
-
-安装开发工具：`make setup`
-
-## 注意事项
-
-1. **跨平台支持**：项目支持 macOS、Linux、Windows，注意平台特定代码
-2. **剪贴板功能**：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能
-3. **配置文件**：配置文件存储在 `~/.workflow/config/workflow.toml`（macOS/Linux）或 `%APPDATA%\workflow\config\workflow.toml`（Windows）
-4. **错误处理**：所有错误都应该提供清晰的错误消息和上下文
-5. **日志**：使用 `tracing` 进行日志记录，支持不同日志级别
-
-## 代码生成建议
-
-**重要**：只有在用户明确要求生成代码时，才执行代码生成操作。
-
-生成代码时必须严格遵循 `docs/guidelines/DEVELOPMENT_GUIDELINES.md` 中的所有开发规范，包括：
-
-- **代码风格**：遵循项目的命名约定和代码风格，使用 `rustfmt` 格式化，通过 `clippy` 检查
-- **错误处理**：使用 `anyhow::Result<T>`，使用 `Context` 添加上下文，考虑所有错误情况
-- **文档注释**：为新功能添加完整的文档注释（包含参数、返回值、错误、示例）
-- **模块组织**：遵循三层架构，正确组织模块和依赖关系
-- **测试**：为新功能添加单元测试和集成测试（如适用）
-- **提交规范**：如果涉及 Git 提交，遵循 Conventional Commits 格式
-- **代码质量**：保持代码简洁和可读性，遵循 Rust 最佳实践（如使用 `Result` 类型、避免 `unwrap()` 等）
-- **代码审查**：确保代码符合审查清单要求
+This is a CLI tool written in Rust for automating development workflows, providing PR management, Jira integration, log processing, and other features.
+
+### Architecture
+
+The project adopts a three-layer architecture:
+- **CLI Entry Layer** (`bin/`, `main.rs`): Command-line argument parsing and command dispatching
+- **Command Wrapper Layer** (`commands/`): CLI command wrappers, handling user interactions
+- **Core Business Logic Layer** (`lib/`): All business logic implementation
+
+For detailed module architecture information, refer to `docs/architecture/architecture.md`.
+
+## 📐 Development Standards and Guidelines
+
+**Important**: All development standards and guidelines must strictly follow the detailed descriptions in `docs/guidelines/development/README.md`.
+
+### Development Guidelines Reference
+
+**Mandatory Development Guidelines Document**: `docs/guidelines/development/README.md` (Development Guidelines Index)
+
+This directory contains complete development guidelines, including:
+- **Core Guidelines**: Code style, error handling, naming conventions, module organization
+- **Process Guidelines**: Git workflow, commit standards, code review
+- **Reference Documents**: Logging, documentation, configuration management, security, dependency management, performance optimization, development tools, etc.
+
+### Quick Reference
+
+The following are the most commonly used standards quick reference (**for detailed descriptions and complete standards, see `docs/guidelines/development/README.md`**):
+
+- **Code Formatting**: `cargo fmt` (must run before commit)
+- **Code Checking**: `cargo clippy -- -D warnings` (all warnings must be fixed)
+- **Naming Conventions**: Modules/functions/variables `snake_case`, Types/Traits `PascalCase`, Constants `SCREAMING_SNAKE_CASE`
+- **Import Order**: Standard library → Third-party libraries → Project internal
+- **Error Handling**: Use `color_eyre::Result<T>` and add context to error messages
+- **Documentation Comments**: All public APIs must have `///` documentation comments, including parameters, return values, errors, examples
+
+### Code Generation Rules
+
+**Important**: Only execute code generation operations when the user explicitly requests code generation.
+
+When generating code, must strictly follow all development standards in `docs/guidelines/development/` directory, including:
+
+- **Code Style**: Follow project naming conventions and code style, use `rustfmt` for formatting, pass `clippy` checks
+- **Error Handling**: Use `color_eyre::Result<T>`, add context to error messages, consider all error cases
+- **Documentation Comments**: Add complete documentation comments for new features (including parameters, return values, errors, examples)
+- **Document Writing**: If generating documents, must reference `docs/guidelines/document.md` to select appropriate templates, and add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
+- **API Design**: Follow public API design principles, maintain backward compatibility, use `#[deprecated]` for deprecated APIs, reference `docs/guidelines/development/references/documentation.md` for detailed documentation standards
+- **Module Organization**: Follow three-layer architecture, correctly organize modules and dependencies
+- **Testing**: Add unit tests and integration tests for new features (as applicable)
+- **Commit Standards**: If involving Git commits, follow Conventional Commits format
+- **Code Quality**: Keep code concise and readable, follow Rust best practices (e.g., use `Result` types, avoid `unwrap()`, etc.)
+- **Code Review**: Ensure code meets review checklist requirements
+
+### Adding New Features
+
+1. Implement core business logic in `lib/`
+2. Add CLI command wrappers in `commands/`
+3. Register commands in `main.rs`
+4. Add test cases (reference testing standards)
+5. Update documentation
+6. **Extending PR Platform Support**: To add new PR platforms (e.g., GitLab, Bitbucket), reference `docs/guidelines/pr-platform.md`
+
+### Git Workflow and Commit Standards
+
+**Must Follow**: Git workflow and commit standards in `docs/guidelines/development/git-workflow.md` and `docs/guidelines/development/commit.md`.
+
+- **Branch Strategy**: Use `feature/*`, `fix/*`, `hotfix/*` branches
+- **Commit Format**: Use Conventional Commits format (`<type>(<scope>): <subject>`)
+- **Commit Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`
+- **Commit Message Requirements**: Subject line no more than 50 characters, use imperative mood
+
+### Testing Standards
+
+**Detailed Standards**: Reference `docs/guidelines/development/README.md` and `docs/guidelines/testing.md`.
+
+- Unit tests placed in `#[cfg(test)]` modules of corresponding modules
+- Integration tests placed in `tests/` directory
+- Use `cargo test` to run tests
+- Target coverage: > 80%, critical business logic: > 90%
+
+### Code Review
+
+**Review Checklist**: Reference `docs/guidelines/development/code-review.md` for code review standards.
+
+**Code Review Workflow**:
+- **Pre-commit Check** (5-15 minutes): Reference `docs/guidelines/workflows/pre-commit.md`
+- **Comprehensive Deep Review** (2-4 hours): Reference `docs/guidelines/workflows/review.md` (after feature completion, periodic review, before major refactoring)
+
+Before submitting PR, ensure:
+- [ ] Code is formatted (`cargo fmt`)
+- [ ] Passes Clippy checks (`cargo clippy`)
+- [ ] All tests pass (`cargo test`)
+- [ ] Added necessary documentation comments
+- [ ] Followed error handling standards
+- [ ] Commit messages meet standards
+
+### Dependency Management
+
+**Detailed Principles**: Reference `docs/guidelines/development/references/dependency-management.md` for dependency management standards.
+
+- Use `cargo add <package-name>` to add dependencies
+- Prefer stable versions of crates
+- Avoid unnecessary dependencies
+- Before adding new dependencies, consider if really needed, if there are lighter alternatives
+
+### Development Tools
+
+**Required Tools and Common Commands**: Reference `docs/guidelines/development/references/development-tools.md` for development tools standards (if created).
+
+**CI/CD Configuration**:
+- **CI Workflow Configuration**: Reference `docs/guidelines/ci-workflow.md`
+- **GitHub Configuration**: Reference `docs/guidelines/github-setup.md` (Secrets, Variables, branch protection rules, etc.)
+
+**Performance Analysis Tools**:
+- **Binary Size Analysis**: Reference `docs/guidelines/cargo-bloat.md` (use `cargo-bloat` to analyze binary file size)
+
+Install development tools: `make setup`
+
+## 🔄 File Synchronization Rules
+
+**Important**: `.cursorrules` and `docs/cursorrules.md` must always be kept in sync.
+
+### Synchronization Trigger
+
+**Rule**: Whenever `.cursorrules` or `docs/cursorrules.md` is modified, the other file must be immediately updated to maintain consistency.
+
+### Synchronization Direction
+
+- **Modifying `.cursorrules` (English version)** → Must immediately synchronize and update `docs/cursorrules.md` (Chinese version)
+- **Modifying `docs/cursorrules.md` (Chinese version)** → Must immediately synchronize and update `.cursorrules` (English version)
+
+### Verification Methods
+
+- **Manual Checklist**:
+  1. Check that the chapter structure is consistent (heading levels, chapter order)
+  2. Check that key rules exist in both files (e.g., code generation rules, document management rules)
+  3. Check that the "Last Updated" timestamps are consistent
+  4. Check that the directory structure is consistent
+- **Automated Validation Script** (recommended):
+  - Check that chapter headings are consistent (ignoring language differences)
+  - Check that line counts are similar (considering Chinese/English length differences)
+  - Check that key markers (e.g., `##`, `###`) have consistent counts
+  - Check that "Last Updated" timestamps are consistent
+- **Git Hooks Validation** (recommended):
+  - In pre-commit hook: If `.cursorrules` or `docs/cursorrules.md` is modified, check if the other file is also modified in the same commit
+  - If only one file is modified, prompt to synchronize and update the other file
+- **CI/CD Validation** (recommended):
+  - Check synchronization status of both files in CI pipeline
+  - If out of sync is detected, fail CI build and prompt to synchronize
+
+## 📝 Document Management
+
+**Core Principle**: **All generated document files are automatically categorized into corresponding directories based on document type; if the type cannot be determined, prioritize checking for keywords like "分析" (analysis), matching then store in `analysis/`, otherwise default to `docs/requirements/`.**
+
+**Important Rule**: Document files are stored in corresponding directories by type. Creating document files arbitrarily in the project root or other locations is prohibited.
+
+### Document Classification Table
+
+| Document Type | Directory | Naming Pattern | Keywords (保留中文关键词) |
+|--------------|-----------|----------------|---------------------------|
+| Architecture Documents | `docs/architecture/` | `{TOPIC}.md` | 架构、架构设计、Architecture、模块架构、系统设计 |
+| Guidelines Documents | `docs/guidelines/` | `{TOPIC}.md` | 指南、规范、Guidelines、开发规范、测试规范、文档规范 |
+| Migration Documents | `docs/migration/` | `{TOPIC}.md` | 迁移、Migration、版本升级、配置迁移 |
+| TODO Documents | `docs/requirements/` | `{TOPIC}.md` | TODO、待办、待实现、计划 |
+| Requirement Documents | `docs/requirements/` | `{TOPIC}.md` | 需求、需求分析、功能需求、需求文档 |
+| Analysis Documents | `analysis/` | `{TOPIC}.md` | 分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析、架构分析、设计分析、代码审查分析、问题诊断 |
+| Implementation Documents | `analysis/impl/` | `{TOPIC}.md` | 实现、实施、IMPLEMENTATION、IMPL、实现文档、实施文档、实现方案、实施方案 |
+| Report Documents | `report/` | `{TOPIC}.md` | 分析报告、检查报告、代码分析、质量报告（from pre-commit.md） |
+
+**Note**: Requirement analysis, feature descriptions, implementation plans, and other unclassified documents default to `docs/requirements/` directory.
+
+### Document Storage Decision Process
+
+1. Check if the user explicitly specified document type or storage location
+2. If type is specified, automatically categorize according to the above classification rules
+3. **Important Restrictions**:
+   - **Analysis Documents** (`analysis/`): **Must** only generate when user explicitly requests analysis documents, cannot auto-judge based on keywords
+   - **Requirement Documents** (`docs/requirements/`): **Must** only generate when user explicitly requests requirement documents, cannot auto-judge based on keywords
+4. If type is not specified, check keywords in document content:
+   - Contains "TODO", "待办", "待实现", "计划" (plan), "需求" (requirement), "需求分析", "功能需求", "需求文档" → `docs/requirements/`
+   - Other unclassified documents → `docs/requirements/`
+5. If type cannot be determined, default to `docs/requirements/`
+
+### Document Naming Standards
+
+All documents use the `{TOPIC}.md` format. Refer to the **Document Classification Table** above for document type classification and storage locations.
+
+### Creating New Documents
+
+- **Document Writing Guidelines**: Use templates to create new documents (reference `docs/guidelines/document.md`)
+  - Select appropriate template based on document type (architecture, guidelines, requirements, review workflow, development workflow, review guide documents)
+  - Follow document writing standards and chapter checklist
+- **Document Timestamp**: Add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
+  - Format: `**最后更新**: YYYY-MM-DD`
+  - Location: End of document, after separator line
+  - **Important**: When updating document content, must update the timestamp at the end of the document to the current date
+- **Document Index**: Update corresponding document index (as applicable):
+  - TODO Documents: Only index in `docs/requirements/README.md`
+  - Other Reference Documents: Index in `docs/README.md`
+- **Document Standards**: Ensure documents follow project document writing standards
+
+### Document Index Rules
+
+- **Prohibited Indexing**: Documents in `analysis/`, `analysis/impl/`, and `report/` directories **must not** be indexed in `docs/README.md` or project root `README.md`
+- These directories contain **temporary analysis and implementation documents**, not reference documents, and do not need to be displayed in document index
+- **Requirement Document Index Restriction**: Requirement documents in `docs/requirements/` directory **only** need to be indexed in `docs/requirements/README.md`, **not** in `docs/README.md` or project root `README.md`
+- **Reference Documents**: Other documents in `docs/` directory (architecture documents, guidelines documents, migration documents) are reference documents and should be indexed in `docs/README.md`
+
+### Document Deletion Rules
+
+- **Temporary Documents (can be deleted directly)**:
+  - All documents in `analysis/` directory are temporary technical analysis and can be deleted at any time
+  - All documents in `analysis/impl/` directory are temporary implementation documents and can be deleted at any time
+  - All documents in `report/` directory are temporary analysis reports and can be deleted at any time
+  - These documents are used for analysis, implementation, and recording during development and do not need long-term retention
+- **Reference Documents (deletion requires caution)**:
+  - Documents in `docs/` directory are **reference documents and architecture documents**, deletion requires great care
+  - Including: architecture documents (`docs/architecture/`), guidelines documents (`docs/guidelines/`), migration documents (`docs/migration/`), TODO documents (`docs/requirements/`)
+  - These documents are the project's knowledge base and reference materials, must confirm no longer needed before deletion
+  - **Special Note**: TODO documents, although reference documents, are only indexed in `docs/requirements/README.md`, not in the main document index
+
+## ⚙️ Notes
+
+1. **Cross-platform Support**: Project supports macOS, Linux, Windows, pay attention to platform-specific code. For platform-specific code organization and testing requirements, reference `docs/guidelines/development/module-organization.md` (Platform-specific Code Organization section)
+2. **Clipboard Functionality**: Linux ARM64 and musl static linking versions do not support clipboard functionality
+3. **Configuration Files**: Configuration files stored in `~/.workflow/config/workflow.toml` (macOS/Linux) or `%APPDATA%\workflow\config\workflow.toml` (Windows)
+4. **Error Handling**: All errors should provide clear error messages and context
+5. **Logging**: Use `tracing` for logging, supports different log levels
+6. **GitHub Configuration**: When setting up the project for the first time, need to configure GitHub Secrets, Variables, and branch protection rules, reference `docs/guidelines/github-setup.md`
+
+---
+
+**最后更新**: 2025-12-23

@@ -92,11 +92,19 @@ coverage/**
 
 # documentation
 
-report/
+# report 目录：忽略所有内容，但保留目录结构和 .gitkeep
+report/**
+!report/.gitkeep
 requirements/
-analysis/
+# analysis 目录：忽略所有内容，但保留目录结构和 .gitkeep
+analysis/**
+!analysis/.gitkeep
+!analysis/impl/
+analysis/impl/**
+!analysis/impl/.gitkeep
 
 docs/**
+!docs/cursorrules.md
 !docs/README.md
 !docs/architecture/
 !docs/architecture/**
