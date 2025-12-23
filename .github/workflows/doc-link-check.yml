@@ -1,0 +1,57 @@
+name: Document Link Check
+
+on:
+  schedule:
+    # 每周一运行
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  link-check:
+    name: 🔗 Weekly Document Link Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 📦 Install lychee
+        run: cargo install lychee
+
+      - name: 🔍 Check internal document links
+        run: |
+          chmod +x scripts/dev/check-links.sh
+          ./scripts/dev/check-links.sh
+
+      - name: 🔍 Check external document links
+        run: |
+          echo "Checking external document links..."
+          lychee docs/**/*.md --exclude-all-private --exclude-loopback || {
+            echo "⚠️ Some external document links may be broken"
+            exit 1
+          }
+
+      - name: 📋 Create issue if broken links found
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Broken document links detected',
+              body: 'Weekly document link check found broken links. Please check the workflow run for details: ' + context.serverUrl + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId
+            })
+
+      - name: 📋 Link check summary
+        if: always()
+        run: |
+          echo "🔗 Weekly document link check completed"
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ All document links are valid"
+          else
+            echo "⚠️ Some document links may be broken. Please check the output above."
+          fi
+

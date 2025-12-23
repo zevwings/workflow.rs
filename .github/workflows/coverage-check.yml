@@ -1,0 +1,114 @@
+name: Coverage Check
+
+on:
+  schedule:
+    # 每周一运行
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+jobs:
+  coverage-check:
+    name: 📊 Weekly Coverage Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: 📦 Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 📊 Generate coverage report
+        run: cargo tarpaulin --out Html --output-dir coverage
+
+      - name: 📋 Check coverage threshold
+        run: |
+          echo "📊 Checking coverage threshold..."
+          # 生成 JSON 格式的覆盖率报告用于解析
+          cargo tarpaulin --out Json --output-dir coverage > coverage/coverage.json 2>/dev/null || true
+
+          # 检查覆盖率是否达到阈值（80%）
+          if [ -f "coverage/coverage.json" ]; then
+            # 使用 Python 解析 JSON（如果可用）
+            if command -v python3 >/dev/null 2>&1; then
+              COVERAGE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
+              TARGET_COVERAGE=80.0
+
+              echo "当前覆盖率: ${COVERAGE}%"
+              echo "目标覆盖率: ${TARGET_COVERAGE}%"
+
+              # 使用 awk 进行浮点数比较
+              if awk "BEGIN {exit !($COVERAGE >= $TARGET_COVERAGE)}"; then
+                echo "✅ 覆盖率已达到目标阈值"
+              else
+                echo "⚠️  覆盖率未达到目标阈值"
+                echo "   当前覆盖率: ${COVERAGE}%"
+                echo "   目标覆盖率: ${TARGET_COVERAGE}%"
+                echo "   请考虑添加更多测试用例以提高覆盖率"
+              fi
+            else
+              echo "⚠️  Python3 不可用，无法解析覆盖率数据"
+            fi
+          else
+            echo "⚠️  无法生成覆盖率 JSON 报告"
+          fi
+
+      - name: 📤 Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+      - name: 📋 Coverage check summary
+        if: always()
+        run: |
+          echo "📊 Weekly coverage check completed"
+          echo "Coverage report has been uploaded as an artifact"
+

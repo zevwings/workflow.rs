@@ -73,6 +73,96 @@ pub fn download_from_jira(&self, ticket_id: &str) -> Result<Vec<u8>> {
 - 使用 `//!` 为模块添加文档
 - 包含参数说明、返回值说明、错误说明、使用示例
 
+### 代码示例编写规范（Doctest）
+
+所有公共 API 的文档注释中的代码示例应该使用 doctest 格式，确保代码示例可以编译和运行。
+
+#### 使用 doctest 格式
+
+代码示例应该使用 `rust` 代码块，并且可以编译和运行：
+
+```rust
+/// 函数说明
+///
+/// # 示例
+///
+/// ```rust
+/// use crate::module::function;
+///
+/// let result = function();
+/// assert_eq!(result, expected_value);
+/// ```
+pub fn function() -> String {
+    // 实现
+}
+```
+
+#### 注意事项
+
+1. **代码示例应该可以编译和运行**：使用 `cargo test --doc` 验证
+2. **代码示例应该包含必要的导入**：确保所有使用的类型都已导入
+3. **代码示例应该包含断言验证结果**：使用 `assert_eq!` 或其他断言宏
+4. **避免使用 `unwrap()`**：应该使用 `?` 或错误处理，或者使用 `Result` 类型
+5. **使用正确的模块路径**：确保导入路径正确（使用 `crate::` 或完整路径）
+
+#### 示例：好的做法
+
+```rust
+/// 生成文件名时间戳（格式：YYYY-MM-DD_HH-MM-SS）
+///
+/// # 示例
+///
+/// ```rust
+/// use workflow::base::util::date::format_filename_timestamp;
+///
+/// let timestamp = format_filename_timestamp();
+/// // 输出：2024-12-19_14-30-00
+/// assert!(timestamp.len() > 0);
+/// ```
+pub fn format_filename_timestamp() -> String {
+    // 实现
+}
+```
+
+#### 示例：不好的做法
+
+```rust
+/// 生成文件名时间戳
+///
+/// # 示例
+///
+/// ```rust
+/// let timestamp = format_filename_timestamp();  // ❌ 缺少导入
+/// println!("{}", timestamp);  // ❌ 没有断言验证
+/// ```
+pub fn format_filename_timestamp() -> String {
+    // 实现
+}
+```
+
+#### 运行文档测试
+
+使用以下命令运行文档测试：
+
+```bash
+# 运行所有文档测试
+cargo test --doc
+
+# 运行特定模块的文档测试
+cargo test --doc module_name
+```
+
+#### 检查文档测试
+
+项目提供了文档测试检查脚本：
+
+```bash
+# 运行文档测试检查
+./scripts/dev/check-doctests.sh
+```
+
+CI/CD 会自动运行文档测试，确保所有代码示例正确。
+
 ---
 
 ## 内部文档

@@ -210,6 +210,56 @@ jobs:
       - name: 🧪 Run tests
         run: cargo test --verbose
 
+      - name: ✅ Run completion completeness tests
+        run: cargo test --test completeness
+
+  # 测试覆盖率检查（非阻塞）
+  coverage:
+    name: 📊 Test Coverage
+    runs-on: ubuntu-latest
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    continue-on-error: true  # 非阻塞模式：覆盖率检查失败不阻止 PR 合并
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 📊 Generate coverage report
+        run: cargo tarpaulin --out Lcov --output-dir coverage
+
+      - name: 📤 Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      - name: 📋 Coverage summary
+        if: always()
+        run: |
+          echo "📊 Coverage check completed"
+          echo "Note: Coverage check is non-blocking. Please review the report above."
+
   # 文档检查
   check-docs:
     name: 📚 Document Check
@@ -224,19 +274,33 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来比较分支
 
-      - name: 🔍 Check document links
+      - name: 🔍 Check internal document links
         continue-on-error: true  # 链接检查失败不阻止 PR
         run: |
-          echo "🔗 Checking document links..."
+          echo "🔗 Checking internal document links..."
+          chmod +x scripts/dev/check-links.sh
+          ./scripts/dev/check-links.sh || echo "⚠️ Some internal document links may be broken (non-blocking)"
+
+      - name: 🔍 Check external document links
+        continue-on-error: true  # 外部链接检查失败不阻止 PR
+        run: |
+          echo "🔗 Checking external document links..."
           # 检查是否安装了 lychee
           if command -v lychee >/dev/null 2>&1; then
-            echo "Using lychee to check document links..."
-            lychee docs/**/*.md --exclude-all-private --exclude-loopback || echo "⚠️ Some document links may be broken (non-blocking)"
+            echo "Using lychee to check external document links..."
+            lychee docs/**/*.md --exclude-all-private --exclude-loopback || echo "⚠️ Some external document links may be broken (non-blocking)"
           else
-            echo "ℹ️  lychee not installed, skipping link check"
+            echo "ℹ️  lychee not installed, skipping external link check"
             echo "   To install: cargo install lychee"
-            echo "   Link check skipped (non-blocking)"
+            echo "   External link check skipped (non-blocking)"
           fi
+
+      - name: 📝 Run doctests
+        continue-on-error: true  # 文档测试失败不阻止 PR
+        run: |
+          echo "📝 Running doctests..."
+          chmod +x scripts/dev/check-doctests.sh
+          ./scripts/dev/check-doctests.sh || echo "⚠️ Some doctests failed (non-blocking)"
 
       - name: 📋 Check architecture docs exist
         run: |

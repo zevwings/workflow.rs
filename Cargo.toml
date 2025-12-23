@@ -77,6 +77,19 @@ harness = false
 name = "network_operations"
 harness = false
 
+# 独立测试目标配置
+[[test]]
+name = "completeness"
+path = "tests/completion/completeness.rs"
+
+# 测试覆盖率配置
+[package.metadata.tarpaulin]
+target-coverage = 80.0
+exclude = ["src/bin/*", "tests/*", "src/*/mod.rs"]
+output = ["Html", "Lcov", "Json"]
+out = "coverage/"
+run-types = ["Tests", "Doctests"]
+
 # Release 构建优化配置
 [profile.release]
 # 启用链接时优化（Link Time Optimization），可以显著减小二进制文件大小
