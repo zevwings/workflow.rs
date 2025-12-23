@@ -242,7 +242,7 @@ pub fn generate-_new-_command-_completion(shell: &ClapShell, output-_dir: &Path)
 
 - [主架构文档](../architecture.md)
 - [生命周期管理命令模块架构文档](../commands/LIFECYCLE_COMMAND_architecture.md)
-- [回滚模块架构文档](./ROLLBACK_architecture.md)
+- [回滚模块架构文档](./rollback.md)
 
 ---
 

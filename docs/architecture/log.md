@@ -54,7 +54,7 @@ src/commands/log/
 - **`lib/base/settings/`**：配置管理
   - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
-详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_architecture.md)
+详细架构文档：参见 [Jira 模块架构文档](../lib/jira.md)
 
 ---
 
@@ -455,7 +455,7 @@ JiraLogs::download-_from-_jira()
 ## 📚 相关文档
 
 - [主架构文档](../architecture.md)
-- [Jira 模块架构文档](../lib/JIRA_architecture.md)
+- [Jira 模块架构文档](../lib/jira.md)
 - [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)
 - [PR 命令模块架构文档](./PR_COMMAND_architecture.md)
 

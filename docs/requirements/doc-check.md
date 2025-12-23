@@ -495,10 +495,10 @@ fn extract-_statistics(doc-_content: &str) -> DocStats {
 
 ### 难点4：模块映射
 
-**问题**：需要将文档与代码模块对应（如 `PR_architecture.md` 对应 `src/lib/pr/`）。
+**问题**：需要将文档与代码模块对应（如 `pr.md` 对应 `src/lib/pr/`）。
 
 **解决方案**：
-1. 从文档文件名推断模块名（`PR_architecture.md` → `pr`）
+1. 从文档文件名推断模块名（`pr.md` → `pr`）
 2. 支持 Lib 层和命令层的不同结构
 3. 使用配置文件定义映射关系（如需要）
 
@@ -507,7 +507,7 @@ fn extract-_statistics(doc-_content: &str) -> DocStats {
 fn doc-_to-_module-_path(doc-_path: &Path) -> Option<PathBuf> {
     let file-_name = doc-_path.file-_stem()?.to-_str()?;
 
-    // PR_architecture.md -> pr
+    // pr.md -> pr
     let module-_name = file-_name
         .strip-_suffix("_ARCHITECTURE")?
         .strip-_suffix("_COMMAND_ARCHITECTURE")?

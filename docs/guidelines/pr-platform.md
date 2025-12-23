@@ -773,7 +773,7 @@ impl PlatformProvider for GitLab {
 ### 文档
 
 - [ ] 为新平台添加代码注释
-- [ ] 更新相关架构文档（如 `PR_architecture.md`）
+- [ ] 更新相关架构文档（如 `pr.md`）
 - [ ] 更新 README（如需要）
 
 ### 代码质量
@@ -788,7 +788,7 @@ impl PlatformProvider for GitLab {
 ## 🔗 相关文档
 
 - [开发规范](./development.md) - 代码风格和最佳实践
-- [PR 模块架构文档](../architecture/lib/PR_architecture.md) - PR 模块的详细架构
+- [PR 模块架构文档](../architecture/lib/pr.md) - PR 模块的详细架构
 - [Git 模块架构文档](../architecture/lib/GIT_architecture.md) - Git 模块的详细架构
 
 ---

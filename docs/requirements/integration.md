@@ -316,7 +316,7 @@ impl NotificationManager {
 
 ## 📚 相关文档
 
-- [JIRA 模块待办事项](./JIRA_TODO.md)
+- [JIRA 模块待办事项](./jira.md)
 
 ---
 

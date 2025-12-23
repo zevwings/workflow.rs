@@ -201,7 +201,7 @@ graph TD
 - [ ] 相关命令架构文档是否已更新（`docs/architecture/commands/*_COMMAND_architecture.md`）
 - [ ] 相关 lib 层架构文档是否已更新（`docs/architecture/lib/*_architecture.md`）
 - [ ] `CLI_architecture.md` 是否反映了命令结构变更
-- [ ] `COMPLETION_architecture.md` 是否反映了补全相关变更
+- [ ] `completion.md` 是否反映了补全相关变更
 
 **位置**：`docs/architecture/`
 

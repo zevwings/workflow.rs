@@ -29,12 +29,12 @@
 1. **Lib 层模块模板** (`MODULE.template`)
    - 适用于：`lib/` 下的核心业务逻辑模块
    - 特点：关注核心组件、设计原则、架构设计
-   - 示例：`PR_architecture.md`、`GIT_architecture.md`、`JIRA_architecture.md`
+   - 示例：`pr.md`、`GIT_architecture.md`、`jira.md`
 
 2. **命令层模块模板** (`COMMAND.template`)
    - 适用于：`commands/` 下的命令封装层模块
    - 特点：关注命令说明、调用流程、用户交互
-   - 示例：`PR_COMMAND_architecture.md`、`LOG_COMMAND_architecture.md`、`JIRA_COMMAND_architecture.md`、`CONFIG_COMMAND_architecture.md`
+   - 示例：`PR_COMMAND_architecture.md`、`LOG_COMMAND_architecture.md`、`JIRA_COMMAND_architecture.md`、`config.md`
 
 ### 快速使用
 

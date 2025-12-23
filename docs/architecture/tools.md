@@ -887,7 +887,7 @@ util (基础设施)
 
 - [总体架构文档](../architecture.md)
 - [Settings 模块架构文档](./SETTINGS_architecture.md)
-- [HTTP 架构文档](./HTTP_architecture.md)
+- [HTTP 架构文档](./http.md)
 - [Dialog 模块架构文档](./DIALOG_architecture.md)
 - [Indicator 模块架构文档](./INDICATOR_architecture.md)
 

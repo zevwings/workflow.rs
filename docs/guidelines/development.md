@@ -367,12 +367,12 @@ let delay = (1 << retry-_count).min(60);
 
 - **模块文件**：`snake-_case.rs`（如 `jira-_client.rs`、`pr-_helpers.rs`）
 - **测试文件**：与源文件同名，放在 `tests/` 目录或使用 `#[cfg(test)]` 模块
-- **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `development.md`、`PR_architecture.md`）
-  - **架构文档**：`{MODULE}_architecture.md`（如 `PR_architecture.md`、`GIT_architecture.md`）
+- **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `development.md`、`pr.md`）
+  - **架构文档**：`{MODULE}_architecture.md`（如 `pr.md`、`GIT_architecture.md`）
   - **命令文档**：`{MODULE}_COMMAND_architecture.md`（如 `PR_COMMAND_architecture.md`、`LOG_COMMAND_architecture.md`）
   - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `development.md`、`document.md`）
   - **需求文档**：`{FEATURE}_REQUIREMENT.md` 或 `{FEATURE}_REQUIREMENTS.md`（如 `GITHUB_BRANCH_PREFIX_REPO_BASED_REQUIREMENT.md`）
-  - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `JIRA_TODO.md`、`INTEGRATION_TODO.md`）
+  - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `jira.md`、`integration.md`）
 
 ### 函数命名
 

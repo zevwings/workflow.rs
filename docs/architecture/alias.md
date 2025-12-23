@@ -457,7 +457,7 @@ AliasManager::expand("ci")
 
 - [Settings 模块架构文档](../lib/SETTINGS_architecture.md) - 配置管理
 - [Dialog 模块架构文档](../lib/DIALOG_architecture.md) - 用户交互
-- [Completion 模块架构文档](../lib/COMPLETION_architecture.md) - 补全脚本生成
+- [Completion 模块架构文档](../lib/completion.md) - 补全脚本生成
 
 ---
 

@@ -432,7 +432,7 @@ commands/github/github.rs::GitHubCommand::update()
 - [主架构文档](../architecture.md)
 - [Settings 模块架构文档](../lib/SETTINGS_architecture.md) - 配置管理相关
 - [Git 模块架构文档](../lib/GIT_architecture.md) - Git 配置相关
-- [配置管理命令模块架构文档](./CONFIG_COMMAND_architecture.md) - 配置管理相关
+- [配置管理命令模块架构文档](./config.md) - 配置管理相关
 
 ---
 

@@ -16,7 +16,7 @@
 **示例转换**：
 - `architecture.md` → `architecture.md`（总体架构文档，保留原名）✅
 - `development.md` → `development.md` ✅
-- `PR_COMMAND_architecture.md` + `lib/PR_architecture.md` → `pr.md`（合并，删除后缀）✅
+- `PR_COMMAND_architecture.md` + `lib/pr.md` → `pr.md`（合并，删除后缀）✅
 - `lib/GIT_architecture.md` → `git.md`（删除后缀）✅
 - `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2-authentication-analysis.md` ✅
 - `docs/todo/` → `docs/requirements/` ✅
@@ -82,17 +82,17 @@
 
 **需要合并的文档对**：
 
-- [x] `lib/PR_architecture.md` + `commands/PR_COMMAND_architecture.md` → `pr.md` ✅ **已完成**
-- [x] `lib/JIRA_architecture.md` + `commands/JIRA_COMMAND_architecture.md` → `jira.md` ✅ **已完成**
+- [x] `lib/pr.md` + `commands/PR_COMMAND_architecture.md` → `pr.md` ✅ **已完成**
+- [x] `lib/jira.md` + `commands/JIRA_COMMAND_architecture.md` → `jira.md` ✅ **已完成**
 - [x] `branch.md` + `branch.md` → `branch.md` ✅ **已完成**
 - [x] `lib/COMMIT_architecture.md` + `commands/COMMIT_COMMAND_architecture.md` → `commit.md` ✅ **已完成**
 - [x] `lib/TAG_architecture.md` + `commands/TAG_COMMAND_architecture.md` → `tag.md` ✅ **已完成**
 - [ ] `lib/STASH_architecture.md` + `commands/STASH_COMMAND_architecture.md` → `stash.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [x] `lib/PROXY_architecture.md` + `commands/PROXY_COMMAND_architecture.md` → `proxy.md` ✅ **已完成**
-- [x] `lib/REPO_architecture.md` + `commands/REPO_COMMAND_architecture.md` → `repo.md` ✅ **已完成**
-- [ ] `lib/CONFIG_architecture.md` + `commands/CONFIG_COMMAND_architecture.md` → `config.md` ⚠️ **无对应 lib 文档，已独立重命名**
+- [x] `lib/repo.md` + `commands/REPO_COMMAND_architecture.md` → `repo.md` ✅ **已完成**
+- [ ] `lib/CONFIG_architecture.md` + `commands/config.md` → `config.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [ ] `lib/LOG_architecture.md` + `commands/LOG_COMMAND_architecture.md` → `log.md` ⚠️ **无对应 lib 文档，已独立重命名**
-- [x] `lib/LLM_architecture.md` + `commands/LLM_COMMAND_architecture.md` → `llm.md` ✅ **已完成**
+- [x] `lib/llm.md` + `commands/LLM_COMMAND_architecture.md` → `llm.md` ✅ **已完成**
 - [ ] `lib/LIFECYCLE_architecture.md` + `commands/LIFECYCLE_COMMAND_architecture.md` → `lifecycle.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [ ] `lib/GITHUB_architecture.md` + `commands/GITHUB_COMMAND_architecture.md` → `github.md` ⚠️ **无对应 lib 文档，已独立重命名**
 - [ ] `lib/CHECK_architecture.md` + `commands/CHECK_COMMAND_architecture.md` → `check.md` ⚠️ **无对应 lib 文档，已独立重命名**
@@ -105,16 +105,16 @@
 以下文档只有 lib 层，直接重命名（删除 `_architecture` 后缀）：
 
 - [x] `lib/GIT_architecture.md` → `git.md` ✅ **已完成**
-- [x] `lib/HTTP_architecture.md` → `http.md` ✅ **已完成**
+- [x] `lib/http.md` → `http.md` ✅ **已完成**
 - [x] `lib/SETTINGS_architecture.md` → `settings.md` ✅ **已完成**
 - [x] `lib/CLI_architecture.md` → `cli.md` ✅ **已完成**
-- [x] `lib/COMPLETION_architecture.md` → `completion.md` ✅ **已完成**
+- [x] `lib/completion.md` → `completion.md` ✅ **已完成**
 - [x] `lib/CONCURRENT_architecture.md` → `concurrent.md` ✅ **已完成**
 - [x] `lib/DIALOG_architecture.md` → `dialog.md` ✅ **已完成**
 - [x] `lib/INDICATOR_architecture.md` → `indicator.md` ✅ **已完成**
 - [x] `lib/LOGGER_architecture.md` → `logger.md` ✅ **已完成**
 - [x] `lib/PROMPT_architecture.md` → `prompt.md` ✅ **已完成**
-- [x] `lib/ROLLBACK_architecture.md` → `rollback.md` ✅ **已完成**
+- [x] `lib/rollback.md` → `rollback.md` ✅ **已完成**
 - [x] `lib/SHELL_architecture.md` → `shell.md` ✅ **已完成**
 - [x] `lib/TEMPLATE_architecture.md` → `template.md` ✅ **已完成**
 - [x] `lib/TOOLS_architecture.md` → `tools.md` ✅ **已完成**
@@ -126,7 +126,7 @@
 - [x] `commands/MIGRATE_COMMAND_architecture.md` → `migrate.md` ✅ **已完成**
 - [x] `commands/ALIAS_COMMAND_architecture.md` → `alias.md` ✅ **已完成**
 - [x] `commands/CHECK_COMMAND_architecture.md` → `check.md` ✅ **已完成**
-- [x] `commands/CONFIG_COMMAND_architecture.md` → `config.md` ✅ **已完成**
+- [x] `commands/config.md` → `config.md` ✅ **已完成**
 - [x] `commands/GITHUB_COMMAND_architecture.md` → `github.md` ✅ **已完成**
 - [x] `commands/LIFECYCLE_COMMAND_architecture.md` → `lifecycle.md` ✅ **已完成**
 - [x] `commands/LOG_COMMAND_architecture.md` → `log.md` ✅ **已完成**
@@ -166,10 +166,10 @@
 - [x] `COVERAGE_IMPROVEMENT_TODO.md` → `coverage-improvement.md` ✅ **已完成**（已移除 -todo 后缀）
 - [x] `DOC_CHECK_TODO.md` → `doc-check.md` ✅ **已完成**（已移除 -todo 后缀）
 - [x] `GIX_MIGRATION_TODO.md` → `gix-migration.md` ✅ **已完成**（已移除 -todo 后缀）
-- [x] `INTEGRATION_TODO.md` → `integration.md` ✅ **已完成**（已移除 -todo 后缀）
-- [x] `JIRA_TODO.md` → `jira.md` ✅ **已完成**（已移除 -todo 后缀）
-- [x] `TEST_ARCHITECTURE_IMPROVEMENT_TODO.md` → `test-architecture-improvement.md` ✅ **已完成**（已移除 -todo 后缀）
-- [x] `DOCUMENT_RENAME_TODO.md` → `document-rename.md` ✅ **已完成**（已移除 -todo 后缀，本文件）
+- [x] `integration.md` → `integration.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `jira.md` → `jira.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `test-architecture-improvement.md` → `test-architecture-improvement.md` ✅ **已完成**（已移除 -todo 后缀）
+- [x] `document-rename.md` → `document-rename.md` ✅ **已完成**（已移除 -todo 后缀，本文件）
 - [x] `CURSORRULES_ENGLISH_TODO.md` → `cursorrules-english.md` ✅ **已完成**（已移除 -todo 后缀）
 
 #### 3.3 `analysis/` 目录
@@ -232,11 +232,11 @@ git mv docs/todo docs/requirements
 
 ```bash
 # 示例：合并 PR 模块文档
-# 1. 读取 lib/PR_architecture.md 和 commands/PR_COMMAND_architecture.md
+# 1. 读取 lib/pr.md 和 commands/PR_COMMAND_architecture.md
 # 2. 创建新的 pr.md（删除 _architecture 后缀），包含两部分：
 #    - Lib 层架构部分
 #    - Commands 层架构部分
-# 3. 删除旧的 lib/PR_architecture.md 和 commands/PR_COMMAND_architecture.md
+# 3. 删除旧的 lib/pr.md 和 commands/PR_COMMAND_architecture.md
 ```
 
 **合并文档结构模板**：
@@ -304,7 +304,7 @@ done
 # 在 .cursorrules、docs/README.md 等文件中
 
 # 2. 更新文件名引用：architecture.md -> architecture.md
-# PR_architecture.md -> pr-_architecture.md
+# pr.md -> pr-_architecture.md
 # 等等...
 ```
 
@@ -492,7 +492,7 @@ analysis/impl/
 
 ### 合并策略
 
-- **有对应关系的文档对**：合并为一个文档（如 `lib/PR_architecture.md` + `commands/PR_COMMAND_architecture.md`）
+- **有对应关系的文档对**：合并为一个文档（如 `lib/pr.md` + `commands/PR_COMMAND_architecture.md`）
 - **只有 Lib 层的文档**：直接重命名，保留 Lib 层内容（如 `lib/GIT_architecture.md`）
 - **只有 Commands 层的文档**：直接重命名，保留 Commands 层内容（如 `commands/MIGRATE_COMMAND_architecture.md`）
 

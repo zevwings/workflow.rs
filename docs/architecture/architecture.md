@@ -267,10 +267,10 @@ src/
 ### 基础设施模块 (`lib::base`)
 
 - **HTTP 模块** (`lib::base::http`) - 统一 HTTP 客户端，支持认证、重试、延迟解析等特性
-  - 详细架构请参考 [HTTP_architecture.md](./lib/HTTP_architecture.md)
+  - 详细架构请参考 [http.md](./lib/http.md)
 
 - **LLM 模块** (`lib::base::llm`) - 统一配置驱动的 LLM 客户端，支持 OpenAI、DeepSeek 和代理 API
-  - 详细架构请参考 [LLM_architecture.md](./lib/LLM_architecture.md)
+  - 详细架构请参考 [llm.md](./lib/llm.md)
 
 - **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理，支持 iCloud 存储（macOS）
   - 详细架构请参考 [SETTINGS_architecture.md](./lib/SETTINGS_architecture.md)
@@ -294,17 +294,17 @@ src/
 ### Jira 模块 (`lib::jira`)
 
 提供 Jira API 集成功能，包括 Issue 管理、用户管理、状态管理、工作历史记录和日志处理等。
-- 详细架构请参考 [JIRA_architecture.md](./lib/JIRA_architecture.md)
+- 详细架构请参考 [jira.md](./lib/jira.md)
 
 ### PR 模块 (`lib::pr`)
 
 提供跨平台 PR 管理功能，支持 GitHub 和 Codeup，包括创建、合并、关闭、更新等操作。
-- 详细架构请参考 [PR_architecture.md](./lib/PR_architecture.md)
+- 详细架构请参考 [pr.md](./lib/pr.md)
 
 ### Completion 模块 (`lib::completion`)
 
 提供 Shell 补全脚本生成和管理功能。
-- 详细架构请参考 [COMPLETION_architecture.md](./lib/COMPLETION_architecture.md)
+- 详细架构请参考 [completion.md](./lib/completion.md)
 
 ### Proxy 模块 (`lib::proxy`)
 
@@ -314,7 +314,7 @@ src/
 ### Repo 模块 (`lib::repo`)
 
 提供仓库级配置管理功能，包括配置检查、加载、保存等。配置存储在项目根目录的 `.workflow/config.toml` 文件中。
-- 详细架构请参考 [REPO_architecture.md](./lib/REPO_architecture.md)
+- 详细架构请参考 [repo.md](./lib/repo.md)
 
 ### Template 模块 (`lib::template`)
 
@@ -324,7 +324,7 @@ src/
 ### Rollback 模块 (`lib::rollback`)
 
 提供回滚管理功能，支持备份、恢复和清理操作。
-- 详细架构请参考 [ROLLBACK_architecture.md](./lib/ROLLBACK_architecture.md)
+- 详细架构请参考 [rollback.md](./lib/rollback.md)
 
 ---
 

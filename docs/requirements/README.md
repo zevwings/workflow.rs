@@ -17,7 +17,7 @@
 
 ### 📋 分类待办事项文档
 
-#### 1. [`JIRA_TODO.md`](./JIRA_TODO.md)
+#### 1. [`jira.md`](./jira.md)
 - **状态**: 🚧 部分完成
 - **实现度**: ~40%
 - **分类**: JIRA 模块TEST_ARCHITECTURE_IMPROVEMENT_TODO
@@ -36,7 +36,7 @@
 - **优先级**: 高优先级（命令封装、info 增强）
 
 
-#### 2. [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md)
+#### 2. [`test-architecture-improvement.md`](./test-architecture-improvement.md)
 - **状态**: 🔄 进行中
 - **实现度**: 65% (阶段1、阶段2、阶段3已完成)
 - **分类**: 测试架构改进
@@ -58,7 +58,7 @@
   - 📝 实施建议和测试编写指南
 - **优先级**: 高优先级（持续提升测试覆盖率）
 
-#### 3. [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md)
+#### 3. [`integration.md`](./integration.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 集成与扩展
@@ -78,7 +78,7 @@
   - CI 集成（可选）
 - **优先级**: P2（可选，但建议实施以提升效率）
 
-#### 5. [`DOCUMENT_RENAME_TODO.md`](./DOCUMENT_RENAME_TODO.md)
+#### 5. [`document-rename.md`](./document-rename.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 文档管理
@@ -106,12 +106,12 @@
 docs/requirements/
 ├── README.md                      # 本文件（索引文档）
 │
-├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
-├── TEST_ARCHITECTURE_IMPROVEMENT_TODO.md  # 测试架构改进待办事项（🔄 进行中）
+├── jira.md                   # JIRA 模块待办事项（🚧 部分完成）
+├── test-architecture-improvement.md  # 测试架构改进待办事项（🔄 进行中）
 ├── COVERAGE_IMPROVEMENT_TODO.md   # 测试覆盖率提升待办事项（🔄 进行中）
-├── INTEGRATION_TODO.md            # 集成与扩展待办事项（⏳ 待实施）
+├── integration.md            # 集成与扩展待办事项（⏳ 待实施）
 ├── DOC_CHECK_TODO.md              # 架构文档检查工具待办事项（⏳ 待实施）
-├── DOCUMENT_RENAME_TODO.md        # 文档重命名待办事项（⏳ 待实施）
+├── document-rename.md        # 文档重命名待办事项（⏳ 待实施）
 └── CURSORRULES_ENGLISH_TODO.md    # Cursor Rules 英文翻译待办事项（⏳ 待实施）
 ```
 
@@ -129,12 +129,12 @@ docs/requirements/
 ### 文档列表
 
 #### 分类待办事项文档
-1. **JIRA_TODO.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **TEST_ARCHITECTURE_IMPROVEMENT_TODO.md** - 测试架构改进待办事项（🔄 进行中，65%）
+1. **jira.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
+2. **test-architecture-improvement.md** - 测试架构改进待办事项（🔄 进行中，65%）
 3. **COVERAGE_IMPROVEMENT_TODO.md** - 测试覆盖率提升待办事项（🔄 进行中，18.09%）
-4. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
+4. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
 5. **DOC_CHECK_TODO.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
-6. **DOCUMENT_RENAME_TODO.md** - 文档重命名待办事项（⏳ 待实施，0%）
+6. **document-rename.md** - 文档重命名待办事项（⏳ 待实施，0%）
 7. **CURSORRULES_ENGLISH_TODO.md** - Cursor Rules 英文翻译待办事项（⏳ 待实施，0%）
 
 ---
@@ -146,12 +146,12 @@ docs/requirements/
 本目录包含 7 个文档：
 
 #### 部分完成文档（1 个）
-1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
+1. **JIRA 模块** (`jira.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
 #### 进行中文档（2 个）
-2. **测试架构改进** (`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`) - 🔄 进行中（65%）
+2. **测试架构改进** (`test-architecture-improvement.md`) - 🔄 进行中（65%）
    - ✅ 测试覆盖率监控系统 (cargo-tarpaulin) - 已完成
    - ✅ 测试数据管理架构 (工厂模式 + Mock服务器) - 已完成
    - ✅ 系统化性能测试 (Criterion基准测试) - 已完成
@@ -163,7 +163,7 @@ docs/requirements/
    - 📋 分阶段提升计划（20% → 25% → 30% → 75%）
 
 #### 待实施文档（4 个）
-3. **集成与扩展** (`INTEGRATION_TODO.md`) - ⏳ 待实施（0%）
+3. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
 4. **架构文档检查工具** (`DOC_CHECK_TODO.md`) - ⏳ 待实施（0%）
@@ -172,7 +172,7 @@ docs/requirements/
    - 综合检查脚本（可选）
    - CI 集成（可选）
 
-5. **文档重命名** (`DOCUMENT_RENAME_TODO.md`) - ⏳ 待实施（0%）
+5. **文档重命名** (`document-rename.md`) - ⏳ 待实施（0%）
    - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake-_case`
    - 更新所有文档链接引用
    - 更新文档命名规范
@@ -199,12 +199,12 @@ docs/requirements/
 ## 🔗 快速导航
 
 ### 按模块查找
-- **JIRA 相关** → [`JIRA_TODO.md`](./JIRA_TODO.md) 🚧 部分完成
-- **测试架构改进** → [`TEST_ARCHITECTURE_IMPROVEMENT_TODO.md`](./TEST_ARCHITECTURE_IMPROVEMENT_TODO.md) 🔄 进行中（65%）
+- **JIRA 相关** → [`jira.md`](./jira.md) 🚧 部分完成
+- **测试架构改进** → [`test-architecture-improvement.md`](./test-architecture-improvement.md) 🔄 进行中（65%）
 - **测试覆盖率提升** → [`COVERAGE_IMPROVEMENT_TODO.md`](./COVERAGE_IMPROVEMENT_TODO.md) 🔄 进行中（18.09%）
-- **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md) ⏳ 待实施
+- **集成与扩展** → [`integration.md`](./integration.md) ⏳ 待实施
 - **文档检查工具** → [`DOC_CHECK_TODO.md`](./DOC_CHECK_TODO.md) ⏳ 待实施
-- **文档重命名** → [`DOCUMENT_RENAME_TODO.md`](./DOCUMENT_RENAME_TODO.md) ⏳ 待实施
+- **文档重命名** → [`document-rename.md`](./document-rename.md) ⏳ 待实施
 - **Cursor Rules 英文翻译** → [`CURSORRULES_ENGLISH_TODO.md`](./CURSORRULES_ENGLISH_TODO.md) ⏳ 待实施
 
 ---
@@ -217,7 +217,7 @@ docs/requirements/
 
 ### 2025-01-27 更新
 - ✅ 新增 CURSORRULES_ENGLISH_TODO.md - Cursor Rules 英文翻译待办事项（⏳ 待实施）
-- ✅ 新增 DOCUMENT_RENAME_TODO.md - 文档重命名待办事项（⏳ 待实施）
+- ✅ 新增 document-rename.md - 文档重命名待办事项（⏳ 待实施）
 - ✅ 更新了统计信息和目录结构
 
 ### 2025-12-18 更新

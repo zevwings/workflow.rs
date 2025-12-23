@@ -474,9 +474,9 @@ impl Paths {
 ## 📚 相关文档
 
 - [主架构文档](../architecture.md)
-- [配置管理命令模块架构文档](../commands/CONFIG_COMMAND_architecture.md) - 命令层如何使用 Settings 模块
-- [LLM 模块架构文档](./LLM_architecture.md) - LLM 模块如何使用 Settings
-- [Jira 模块架构文档](./JIRA_architecture.md) - Jira 模块如何使用 Settings
+- [配置管理命令模块架构文档](../commands/config.md) - 命令层如何使用 Settings 模块
+- [LLM 模块架构文档](./llm.md) - LLM 模块如何使用 Settings
+- [Jira 模块架构文档](./jira.md) - Jira 模块如何使用 Settings
 - [Shell 模块架构文档](./SHELL_architecture.md) - Shell 模块如何使用 Paths
 
 **注意**：iCloud 存储功能是 Settings 模块的一部分，通过 `Paths` 结构体实现。详细说明见本文档的"Paths（路径管理器）"章节。
