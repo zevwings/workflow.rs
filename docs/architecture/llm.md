@@ -2,13 +2,20 @@
 
 ## 📋 概述
 
-LLM 模块是 Workflow CLI 的核心功能之一，提供统一配置驱动的 LLM（大语言模型）客户端实现。该模块通过**统一客户端**和**Settings 配置系统**，实现所有 LLM 提供商的统一调用，支持 OpenAI、DeepSeek 和代理 API。所有 LLM 提供商都遵循 OpenAI 兼容格式，使用相同的请求和响应处理逻辑。
+LLM 模块是 Workflow CLI 的核心模块，提供统一配置驱动的 LLM（大语言模型）客户端实现和配置管理功能。该模块采用分层架构设计，包括：
+
+- **Lib 层**（`lib/base/llm/`）：提供统一配置驱动的 LLM 客户端实现，支持 OpenAI、DeepSeek 和代理 API。所有 LLM 提供商都遵循 OpenAI 兼容格式，使用相同的请求和响应处理逻辑
+- **Commands 层**（`commands/llm/`）：提供 CLI 命令封装，处理用户交互，包括 LLM 配置的交互式设置和查看功能
+
+LLM 模块通过**统一客户端**和**Settings 配置系统**，实现所有 LLM 提供商的统一调用，支持 OpenAI、DeepSeek 和代理 API。
 
 **模块统计：**
-- 总代码行数：约 790 行
-- 文件数量：4 个
+- Lib 层代码行数：约 790 行
+- Commands 层代码行数：约 406 行
+- 命令数量：2 个（setup, show）
+- 文件数量：Lib 层 4 个，Commands 层 3 个
 - 支持提供商：OpenAI、DeepSeek、Proxy（代理 API）
-- 主要结构体：`LLMClient`、`LLMRequestParams`、`PullRequestLLM`、`PullRequestContent`
+- 主要结构体：`LLMClient`、`LLMRequestParams`、`PullRequestLLM`、`PullRequestContent`、`PullRequestSummary`
 
 ### 核心设计原则
 
@@ -29,7 +36,11 @@ LLM 模块是 Workflow CLI 的核心功能之一，提供统一配置驱动的 L
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
+
+LLM 模块（`lib/base/llm/`）是 Workflow CLI 的核心库模块，提供统一配置驱动的 LLM（大语言模型）客户端实现。
+
+### 模块结构
 
 ```
 src/lib/base/llm/
@@ -78,7 +89,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 
 ---
 
-## 🏗️ 架构设计
+## 🏗️ Lib 层架构设计
 
 ### 设计原则
 
@@ -150,28 +161,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 - ✅ **响应解析**：支持 JSON 和 Markdown 代码块格式
 - ✅ **文件名生成**：LLM 根据 PR 内容自动生成合适的文件名
 
-#### 4. PullRequestContent（业务数据）
-
-**职责**：定义 PR 内容结构（用于生成分支名和 PR 标题）
-
-**位置**：`src/lib/pr/llm.rs`
-
-**字段**：
-- `branch_name` - 分支名称（小写，使用连字符分隔）
-- `pr_title` - PR 标题（简洁，不超过 8 个单词）
-- `description` - PR 描述（基于 Git 修改内容生成，可选）
-
-#### 5. PullRequestSummary（业务数据）
-
-**职责**：定义 PR 总结文档结构（用于生成 PR 总结）
-
-**位置**：`src/lib/pr/llm.rs`
-
-**字段**：
-- `summary` - PR 总结文档（Markdown 格式，包含 PR 标题、概述、需求分析、功能说明、用户场景、技术实现等）
-- `filename` - 文件名（不含路径和扩展名，由 LLM 根据 PR 内容自动生成，已清理特殊字符）
-
-#### 5. Settings（配置系统）
+#### 4. Settings（配置系统）
 
 **职责**：从 `workflow.toml` 读取 LLM 配置
 
@@ -186,6 +176,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 | `url` | String | ⚠️ | API URL（仅 `proxy` 提供商需要） |
 | `model` | String | ⚠️ | 模型名称（`openai`/`deepseek` 有默认值，`proxy` 必填） |
 | `response_format` | String | ❌ | 响应格式路径（默认：`choices[0].message.content`） |
+| `language` | String | ❌ | 输出语言（默认：`en`） |
 
 **默认值**：
 - `provider`: `"openai"`
@@ -194,6 +185,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
   - `deepseek`: `"deepseek-chat"`
   - `proxy`: 无默认值，必须配置
 - `response_format`: `"choices[0].message.content"`
+- `language`: `"en"`
 
 ### 设计模式
 
@@ -245,23 +237,6 @@ impl LLMClient {
 - 易于维护，修改一处即可
 - 统一的错误处理和日志记录
 
-#### 4. 策略模式（隐式）
-
-通过配置选择不同的 LLM 提供商：
-
-```rust
-match provider.as_str() {
-    "openai" => "https://api.openai.com/v1/chat/completions",
-    "deepseek" => "https://api.deepseek.com/chat/completions",
-    "proxy" => format!("{}/chat/completions", url),
-    _ => bail!("Unsupported LLM provider: {}", provider),
-}
-```
-
-**优势**：
-- 易于扩展，添加新提供商只需配置
-- 无需修改代码，只需配置文件
-
 ### 错误处理
 
 #### 分层错误处理
@@ -292,9 +267,61 @@ match provider.as_str() {
 
 ---
 
-## 🔄 调用流程与数据流
+## 📁 Commands 层架构（命令封装）
 
-### 整体架构流程
+LLM 命令层是 Workflow CLI 的命令接口，提供 LLM 配置的交互式设置和查看功能。该层采用命令模式设计，通过调用 `lib/base/settings/` 模块提供的 API 实现配置管理。
+
+### 相关文件
+
+#### CLI 入口层
+
+```
+src/bin/workflow.rs
+```
+
+#### 命令封装层
+
+```
+src/commands/llm/
+├── mod.rs        # 模块声明和导出（~11 行）
+├── setup.rs      # LLM 配置设置命令（~210 行）
+└── show.rs       # LLM 配置查看命令（~80 行）
+```
+
+**职责**：
+- 解析命令参数
+- 处理用户交互（输入、选择等）
+- 格式化输出
+- 调用核心业务逻辑层 (`lib/base/settings/`) 的功能
+
+### 依赖模块
+
+命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
+- **`lib/base/settings/`**：配置管理（`Settings`、`Paths`、`defaults`）
+  - `Settings::load()` - 加载配置
+  - `Paths::workflow_config()` - 获取配置文件路径
+  - `default_llm_model()` - 获取默认模型
+- **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
+  - `ConfigManager::update()` - 更新配置
+- **`lib/base/llm/`**：LLM 客户端（配置读取，不直接调用）
+- **`lib/commands/config/helpers.rs`**：配置辅助函数
+  - `select_language()` - 选择语言
+
+---
+
+## 🔄 集成关系
+
+### Lib 层和 Commands 层的协作
+
+LLM 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
+
+1. **配置管理**：Commands 层通过 `ConfigManager` 更新配置，Lib 层从 `Settings` 读取配置
+2. **配置展示**：Commands 层读取配置并格式化输出，Lib 层不直接参与展示
+3. **配置验证**：Commands 层在设置时验证配置，Lib 层在使用时验证配置
+
+### 调用流程
+
+#### 整体架构流程
 
 ```
 用户输入（commit 标题、Git diff）
@@ -317,7 +344,67 @@ LLM API (OpenAI/DeepSeek/Proxy)
 解析响应并返回
 ```
 
-#### PR 总结流程
+#### 命令分发流程
+
+```
+bin/workflow.rs::main()
+  ↓
+Cli::parse() (clap 解析)
+  ↓
+match Commands::Llm { subcommand }
+  ↓
+  ├─ LLMSubcommand::Setup → LLMSetupCommand::setup()
+  └─ LLMSubcommand::Show → LLMShowCommand::show()
+```
+
+---
+
+## 📋 Commands 层命令详情
+
+### 1. Setup 命令 (`setup.rs`)
+
+Setup 命令提供交互式的 LLM 配置设置功能：
+
+1. **交互式配置收集**：
+   - 提供友好的交互式界面
+   - 显示当前配置值（如果存在）
+   - 支持保留现有配置（按 Enter 跳过）
+
+2. **Provider 选择**：
+   - 支持三种 Provider：`openai`、`deepseek`、`proxy`
+   - 根据选择的 Provider 动态调整配置项
+
+3. **配置项验证**：
+   - Proxy Provider 要求 Model 必须配置
+   - 其他 Provider 的 Model 为可选
+
+4. **配置保存**：
+   - 使用 `ConfigManager` 原子性更新配置
+   - 保存到 `workflow.toml` 文件
+
+### 2. Show 命令 (`show.rs`)
+
+Show 命令提供 LLM 配置的查看和展示功能：
+
+1. **配置展示**：
+   - 显示所有 LLM 配置项
+   - 根据 Provider 类型显示不同的配置项
+   - 掩码显示敏感信息（API Key）
+
+2. **空配置检测**：
+   - 检测配置是否为空（使用默认值）
+   - 如果为空，提示用户运行 `workflow llm setup`
+
+3. **格式化输出**：
+   - 使用日志宏格式化输出
+   - 区分已配置和未配置的项
+   - 显示默认值信息
+
+---
+
+## 🔄 调用流程与数据流
+
+### PR 总结流程
 
 ```
 用户输入（PR 标题、PR diff、语言）
@@ -360,125 +447,86 @@ parse_summary_response() (解析响应)
 - **响应格式**：LLM 返回 JSON 格式，包含 `summary`（Markdown 文档）和 `filename`（文件名）
 - **文件名处理**：自动清理文件名，移除特殊字符，限制长度，确保文件名安全可用
 
-#### 架构流程图
+---
 
-```mermaid
-graph TB
-    User[用户输入<br/>commit 标题<br/>Git diff] --> PRLLM[PullRequestLLM::generate<br/>业务层封装]
-    User2[用户输入<br/>PR 标题<br/>PR diff<br/>语言] --> PRLLM2[PullRequestLLM::summarize_pr<br/>PR 总结]
+## 📋 使用示例
 
-    PRLLM --> Client[LLMClient::global<br/>获取全局单例]
-    PRLLM2 --> Client
+### Setup 命令
 
-    Client --> BuildURL[build_url<br/>构建 API URL]
-    Client --> BuildHeaders[build_headers<br/>构建请求头]
-    Client --> BuildModel[build_model<br/>获取模型名称]
-    Client --> BuildPayload[build_payload<br/>构建请求体]
+```bash
+# 交互式设置 LLM 配置
+workflow llm setup
 
-    BuildURL --> Settings[Settings::get<br/>读取配置]
-    BuildHeaders --> Settings
-    BuildModel --> Settings
-
-    Settings --> Config[workflow.toml<br/>配置文件]
-
-    BuildPayload --> HTTP[reqwest HTTP Client<br/>发送请求]
-
-    HTTP --> Provider{LLM Provider}
-
-    Provider -->|openai| OpenAI[OpenAI API<br/>https://api.openai.com]
-    Provider -->|deepseek| DeepSeek[DeepSeek API<br/>https://api.deepseek.com]
-    Provider -->|proxy| Proxy[Proxy API<br/>自定义 URL]
-
-    OpenAI --> Response[解析响应]
-    DeepSeek --> Response
-    Proxy --> Response
-
-    Response --> Extract[extract_content<br/>提取内容]
-    Extract --> Parse[parse_llm_response<br/>解析 JSON]
-    Parse --> Result[PullRequestContent<br/>返回结果]
-
-    style User fill:#e1f5ff
-    style PRLLM fill:#fff4e1
-    style Client fill:#e8f5e9
-    style Settings fill:#f3e5f5
-    style Config fill:#f3e5f5
-    style HTTP fill:#e3f2fd
-    style OpenAI fill:#e3f2fd
-    style DeepSeek fill:#e3f2fd
-    style Proxy fill:#e3f2fd
-    style Result fill:#c8e6c9
+# 执行流程：
+# 1. 选择 Provider（openai/deepseek/proxy）
+# 2. 输入 URL（仅 proxy 需要）
+# 3. 输入 API Key
+# 4. 输入 Model（proxy 必须，其他可选）
+# 5. 选择输出语言
+# 6. 保存配置
 ```
 
-### 典型调用示例
+### Show 命令
 
-#### 1. 生成 PR 标题和分支名
-
-```
-PullRequestLLM::generate(commit_title, exists_branches, git_diff)
-  ↓
-LLMClient::global() (获取全局单例)
-  ↓
-LLMClient::call(&params)
-  ├─ build_url() → Settings::get().llm.provider
-  │   ├─ "openai" → "https://api.openai.com/v1/chat/completions"
-  │   ├─ "deepseek" → "https://api.deepseek.com/chat/completions"
-  │   └─ "proxy" → Settings::get().llm.url + "/chat/completions"
-  ├─ build_headers() → Settings::get().llm.key
-  ├─ build_model() → Settings::get().llm.model (或默认值)
-  ├─ build_payload() → 构建统一格式的请求体
-  └─ extract_content() → 根据 response_format 提取内容
-  ↓
-reqwest::Client::post() (发送 HTTP 请求)
-  ↓
-LLM API 响应
-  ↓
-parse_llm_response() → PullRequestContent
+```bash
+# 查看当前 LLM 配置
+workflow llm show
 ```
 
-### 数据流
+### 基本使用（业务层）
 
-#### 生成 PR 标题和分支名数据流
+```rust
+use workflow::pr::PullRequestLLM;
 
-```mermaid
-flowchart LR
-    Input[用户输入<br/>commit 标题<br/>Git diff] --> PRLLM[PullRequestLLM::generate]
+// 生成分支名和 PR 标题
+let content = PullRequestLLM::generate(
+    "Fix login bug",
+    Some(vec!["feature-1".to_string(), "feature-2".to_string()]),
+    Some(git_diff),
+)?;
 
-    PRLLM --> BuildParams[构建请求参数<br/>system_prompt<br/>user_prompt]
+log_message!("Branch: {}", content.branch_name);
+log_message!("PR Title: {}", content.pr_title);
+if let Some(desc) = content.description {
+    log_message!("Description: {}", desc);
+}
+```
 
-    BuildParams --> Client[LLMClient::global<br/>获取单例]
+### 配置示例
 
-    Client --> ReadConfig[读取配置<br/>Settings::get]
+#### 配置 OpenAI
 
-    ReadConfig --> Config[workflow.toml<br/>llm.provider<br/>llm.key<br/>llm.model]
+```toml
+# workflow.toml
+[llm]
+provider = "openai"
+key = "sk-xxx"
+model = "gpt-4.0"  # 可选，默认 "gpt-4.0"
+language = "en"    # 可选，默认 "en"
+```
 
-    Config --> BuildRequest[构建请求<br/>URL/Headers/Payload]
+#### 配置 DeepSeek
 
-    BuildRequest --> HTTP[发送 HTTP 请求<br/>reqwest]
+```toml
+# workflow.toml
+[llm]
+provider = "deepseek"
+key = "sk-xxx"
+model = "deepseek-chat"  # 可选，默认 "deepseek-chat"
+language = "en"
+```
 
-    HTTP --> Provider{LLM Provider}
+#### 配置 Proxy（代理 API）
 
-    Provider -->|openai| OpenAI[OpenAI API]
-    Provider -->|deepseek| DeepSeek[DeepSeek API]
-    Provider -->|proxy| Proxy[Proxy API]
-
-    OpenAI --> Response[HTTP 响应]
-    DeepSeek --> Response
-    Proxy --> Response
-
-    Response --> ParseJSON[解析 JSON]
-    ParseJSON --> Extract[提取内容<br/>extract_content]
-    Extract --> ParseResponse[解析业务数据<br/>parse_llm_response]
-    ParseResponse --> Result[PullRequestContent<br/>branch_name<br/>pr_title<br/>description]
-
-    style Input fill:#e1f5ff
-    style PRLLM fill:#fff4e1
-    style Client fill:#e8f5e9
-    style Config fill:#f3e5f5
-    style HTTP fill:#e3f2fd
-    style OpenAI fill:#e3f2fd
-    style DeepSeek fill:#e3f2fd
-    style Proxy fill:#e3f2fd
-    style Result fill:#c8e6c9
+```toml
+# workflow.toml
+[llm]
+provider = "proxy"
+url = "https://proxy.example.com"  # 必需
+key = "your-api-key"                # 必需
+model = "qwen-3-235b"               # 必需
+response_format = "choices[0].message.content"  # 可选，默认值
+language = "en"
 ```
 
 ---
@@ -491,21 +539,7 @@ flowchart LR
 2. 在 `LLMClient::build_url()` 中添加新 provider 的 URL 构建逻辑
 3. 在 `LLMClient::build_model()` 中添加新 provider 的默认模型（如需要）
 4. 在 `workflow.toml` 中配置新 provider 的 URL 和 API Key
-
-**示例**：
-```rust
-// lib/base/llm/client.rs
-fn build_url(&self) -> Result<String> {
-    let settings = Settings::get();
-    match settings.llm.provider.as_str() {
-        "openai" => Ok("https://api.openai.com/v1/chat/completions".to_string()),
-        "deepseek" => Ok("https://api.deepseek.com/chat/completions".to_string()),
-        "proxy" => Ok(format!("{}/chat/completions", settings.llm.url?)),
-        "new_provider" => Ok("https://api.newprovider.com/chat/completions".to_string()), // 新增
-        _ => Err(anyhow::anyhow!("Unsupported LLM provider: {}", provider)),
-    }
-}
-```
+5. 在 `setup.rs` 的 `llm_providers` 列表中添加新 Provider
 
 ### 添加新的业务功能
 
@@ -530,95 +564,9 @@ response_format = "candidates[0].content.parts[0].text"  # 自定义路径
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 LLM 功能
-- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - Settings 配置系统架构
-
----
-
-## 📋 使用示例
-
-### 基本使用（业务层）
-
-```rust
-use workflow::pr::PullRequestLLM;
-
-// 生成分支名和 PR 标题
-let content = PullRequestLLM::generate(
-    "Fix login bug",
-    Some(vec!["feature-1".to_string(), "feature-2".to_string()]),
-    Some(git_diff),
-)?;
-
-log_message!("Branch: {}", content.branch_name);
-log_message!("PR Title: {}", content.pr_title);
-if let Some(desc) = content.description {
-    log_message!("Description: {}", desc);
-}
-```
-
-### 直接使用 LLMClient
-
-```rust
-use workflow::base::llm::{LLMClient, LLMRequestParams};
-
-let client = LLMClient::global();
-
-let params = LLMRequestParams {
-    system_prompt: "You are a helpful assistant.".to_string(),
-    user_prompt: "What is Rust?".to_string(),
-    max_tokens: 100,
-    temperature: 0.5,
-    model: String::new(), // 从 Settings 自动获取
-};
-
-let response = client.call(&params)?;
-log_message!("{}", response);
-```
-
-### 配置 OpenAI
-
-```toml
-# workflow.toml
-[llm]
-provider = "openai"
-key = "sk-xxx"
-model = "gpt-4.0"  # 可选，默认 "gpt-4.0"
-```
-
-### 配置 DeepSeek
-
-```toml
-# workflow.toml
-[llm]
-provider = "deepseek"
-key = "sk-xxx"
-model = "deepseek-chat"  # 可选，默认 "deepseek-chat"
-```
-
-### 配置 Proxy（代理 API）
-
-```toml
-# workflow.toml
-[llm]
-provider = "proxy"
-url = "https://proxy.example.com"  # 必需
-key = "your-api-key"                # 必需
-model = "qwen-3-235b"               # 必需
-response_format = "choices[0].message.content"  # 可选，默认值
-```
-
-### 自定义响应格式
-
-```toml
-# workflow.toml
-[llm]
-provider = "proxy"
-url = "https://api.example.com"
-key = "your-api-key"
-model = "custom-model"
-response_format = "candidates[0].content.parts[0].text"  # 自定义 JSON path
-```
+- [主架构文档](./architecture.md)
+- [PR 模块架构文档](./pr.md) - PR 模块如何使用 LLM 功能
+- [Settings 模块架构文档](./settings.md) - Settings 配置系统架构
 
 ---
 
@@ -631,6 +579,7 @@ LLM 模块采用统一配置驱动架构设计：
 3. **单例模式**：使用 `OnceLock` 实现线程安全的全局单例
 4. **业务封装**：`PullRequestLLM` 提供业务友好的接口
 5. **灵活扩展**：添加新提供商只需配置，无需写代码
+6. **命令封装**：提供交互式配置设置和查看功能
 
 **设计优势**：
 - ✅ **代码复用**：消除代码重复，从多个独立客户端减少到一个统一客户端
@@ -639,6 +588,7 @@ LLM 模块采用统一配置驱动架构设计：
 - ✅ **灵活配置**：支持自定义响应格式（JSON path）
 - ✅ **向后兼容**：保持现有 API 不变
 - ✅ **维护成本低**：只需维护一个统一客户端
+- ✅ **用户友好**：交互式配置，支持默认值和验证
 
 **当前实现状态**：
 
@@ -649,12 +599,15 @@ LLM 模块采用统一配置驱动架构设计：
 - 自定义响应格式支持（JSON path）
 - PR 业务层封装（`PullRequestLLM`）
 - 单例模式实现
+- Setup 命令（交互式配置）
+- Show 命令（配置展示）
 
 **配置说明**：
 - 当前实现使用 `workflow.toml` 的 `[llm]` 部分进行配置
 - 所有 LLM 相关配置统一存储在 `workflow.toml` 中，与项目配置统一管理
-- 通过 `workflow setup` 命令可以交互式配置 LLM 提供商
+- 通过 `workflow llm setup` 命令可以交互式配置 LLM 提供商
 
 ---
 
 **最后更新**: 2025-12-16
+
