@@ -1,23 +1,18 @@
-name: Document Consistency Check
+name: Document Check
 
 on:
   schedule:
     # 每周六 00:00 UTC 运行
     - cron: '0 0 * * 6'
-  pull_request:
-    branches:
-      - master
-      - main
   workflow_dispatch:  # 允许手动触发
 
 permissions:
   contents: read
   issues: write  # 如果需要创建 Issue
-  pull-requests: read  # PR 触发时需要读取 PR 信息
 
 jobs:
   check-architecture-docs:
-    name: 📚 Architecture Document Consistency Check
+    name: 📚 Document Check
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
@@ -47,96 +42,50 @@ jobs:
           echo "📦 Installing lychee for external link checking..."
           cargo install lychee || echo "⚠️ Failed to install lychee, external link checking will be skipped"
 
-      - name: 🔍 Run document consistency checks
+      - name: 🔍 Run document checks
         id: check
         continue-on-error: true
         run: |
-          echo "📋 Running document consistency checks..."
+          echo "📋 Running document checks..."
 
           HAS_ISSUES=false
-          IS_PR="${{ github.event_name == 'pull_request' }}"
 
           # 检查架构文档是否存在
           echo ""
-          if [ "$IS_PR" = "true" ]; then
-            echo "📝 Checking architecture documents for changed files..."
-            BASE_REF="${{ github.event.pull_request.base.ref || 'master' }}"
-            CHANGED_FILES=$(git diff --name-only origin/${BASE_REF}...HEAD 2>/dev/null | grep -E '^src/(lib|commands)/' || true)
+          echo "📝 Checking architecture documents..."
+          MISSING_DOCS=0
 
-            if [ -z "$CHANGED_FILES" ]; then
-              echo "ℹ️  No changed files in src/lib/ or src/commands/ directories"
-              MISSING_DOCS=0
-            else
-              MISSING_DOCS_FILE=$(mktemp)
-              trap "rm -f $MISSING_DOCS_FILE" EXIT
-
-              echo "$CHANGED_FILES" | while IFS= read -r file; do
-                [ -z "$file" ] && continue
-
-                module=$(echo "$file" | sed 's|^src/lib/\([^/]*\).*|\1|')
-                if [ "$module" = "$file" ]; then
-                  module=$(echo "$file" | sed 's|^src/commands/\([^/]*\).*|\1|')
-                fi
-
-                [ -z "$module" ] || [ "$module" = "$file" ] && continue
-
-                doc_path="docs/architecture/${module}.md"
-                if [ ! -f "$doc_path" ]; then
-                  echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
-                  echo "$doc_path" >> "$MISSING_DOCS_FILE"
-                fi
-              done
-
-              MISSING_DOCS=0
-              if [ -f "$MISSING_DOCS_FILE" ] && [ -s "$MISSING_DOCS_FILE" ]; then
-                MISSING_DOCS=$(wc -l < "$MISSING_DOCS_FILE")
+          # 检查所有 lib 层模块
+          for module_dir in src/lib/*/; do
+            if [ -d "$module_dir" ]; then
+              module=$(basename "$module_dir")
+              doc_path="docs/architecture/${module}.md"
+              if [ ! -f "$doc_path" ]; then
+                echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
+                MISSING_DOCS=$((MISSING_DOCS + 1))
               fi
             fi
-          else
-            echo "📝 Checking architecture documents..."
-            MISSING_DOCS=0
+          done
 
-            # 检查所有 lib 层模块
-            for module_dir in src/lib/*/; do
-              if [ -d "$module_dir" ]; then
-                module=$(basename "$module_dir")
-                doc_path="docs/architecture/${module}.md"
-                if [ ! -f "$doc_path" ]; then
-                  echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
-                  MISSING_DOCS=$((MISSING_DOCS + 1))
-                fi
+          # 检查所有 commands 层模块
+          for module_dir in src/commands/*/; do
+            if [ -d "$module_dir" ]; then
+              module=$(basename "$module_dir")
+              doc_path="docs/architecture/${module}.md"
+              if [ ! -f "$doc_path" ]; then
+                echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
+                MISSING_DOCS=$((MISSING_DOCS + 1))
               fi
-            done
-
-            # 检查所有 commands 层模块
-            for module_dir in src/commands/*/; do
-              if [ -d "$module_dir" ]; then
-                module=$(basename "$module_dir")
-                doc_path="docs/architecture/${module}.md"
-                if [ ! -f "$doc_path" ]; then
-                  echo "⚠️  Missing architecture doc: $doc_path (for module: $module)"
-                  MISSING_DOCS=$((MISSING_DOCS + 1))
-                fi
-              fi
-            done
-          fi
+            fi
+          done
 
           if [ $MISSING_DOCS -gt 0 ]; then
             echo ""
-            if [ "$IS_PR" = "true" ]; then
-              echo "📋 Found $MISSING_DOCS module(s) missing architecture documentation"
-            else
-              echo "📋 Found $MISSING_DOCS missing architecture document(s)"
-            fi
+            echo "📋 Found $MISSING_DOCS missing architecture document(s)"
             echo "::warning::Found $MISSING_DOCS missing architecture document(s)"
             HAS_ISSUES=true
           else
-            if [ "$IS_PR" = "true" ]; then
-              echo ""
-              echo "✅ All changed modules have architecture documentation"
-            else
-              echo "✅ All modules have architecture documentation"
-            fi
+            echo "✅ All modules have architecture documentation"
           fi
 
           # 检查文档时间戳格式
@@ -229,32 +178,22 @@ jobs:
             echo "✅ All checks passed"
           fi
 
-          if [ "$IS_PR" = "true" ]; then
-            echo ""
-            echo "✅ Document consistency checks completed (PR mode)"
-            echo "Note: Document consistency checks are non-blocking. Please review warnings above."
-          fi
+          echo ""
+          echo "✅ Document checks completed"
 
       - name: 📊 Generate report
         if: always()
         run: |
           mkdir -p report
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-          IS_PR="${{ github.event_name == 'pull_request' }}"
-
-          if [ "$IS_PR" = "true" ]; then
-            REPORT_FILE="report/doc-consistency-check-pr-${TIMESTAMP}.md"
-            CHECK_TYPE="PR 检查"
-          else
-            REPORT_FILE="report/doc-consistency-check-${TIMESTAMP}.md"
-            CHECK_TYPE="定期审查"
-          fi
+          REPORT_FILE="report/doc-check-${TIMESTAMP}.md"
+          CHECK_TYPE="定期审查"
 
           CHECK_DATE=$(date '+%Y-%m-%d %H:%M:%S')
           UPDATE_DATE=$(date '+%Y-%m-%d')
 
           cat > "$REPORT_FILE" << EOF
-          # 架构文档一致性检查报告
+          # 文档检查报告
 
           **检查日期**：${CHECK_DATE}
           **检查类型**：${CHECK_TYPE}
@@ -296,17 +235,17 @@ jobs:
           echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
 
       - name: 📤 Upload document check reports
-        if: always() && github.event_name == 'pull_request'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: document-consistency-reports
-          path: report/doc-consistency-check-pr-*.md
+          name: document-reports
+          path: report/doc-check-*.md
           retention-days: 7
           if-no-files-found: ignore
 
-      # 创建 Issue 汇总问题（仅在发现问题时，且仅在定期检查时）
+      # 创建 Issue 汇总问题（仅在发现问题时）
       - name: 📝 Create issue if problems found
-        if: steps.check.outputs.has_issues == 'true' && github.event_name != 'pull_request'
+        if: steps.check.outputs.has_issues == 'true'
         uses: actions/github-script@v7
         with:
           script: |
@@ -334,13 +273,13 @@ jobs:
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `[Document Check] Architecture document consistency issues found - ${timestamp}`,
-              body: `## 架构文档一致性检查发现问题
+              title: `[Document Check] Document issues found - ${timestamp}`,
+              body: `## 文档检查发现问题
 
-              定期检查发现架构文档与代码一致性问题，请查看检查报告。
+              定期检查发现文档问题，请查看检查报告。
 
               **检查日期**：${checkDate}
-              **报告位置**：\`report/doc-consistency-check-*.md\`
+              **报告位置**：\`report/doc-check-*.md\`
 
               请参考以下文档进行修复：
               - [架构文档审查指南](docs/guidelines/development/references/review-architecture-consistency.md)
