@@ -29,12 +29,12 @@
 1. **Lib 层模块模板** (`MODULE.template`)
    - 适用于：`lib/` 下的核心业务逻辑模块
    - 特点：关注核心组件、设计原则、架构设计
-   - 示例：`PR_ARCHITECTURE.md`、`GIT_ARCHITECTURE.md`、`JIRA_ARCHITECTURE.md`
+   - 示例：`PR_architecture.md`、`GIT_architecture.md`、`JIRA_architecture.md`
 
 2. **命令层模块模板** (`COMMAND.template`)
    - 适用于：`commands/` 下的命令封装层模块
    - 特点：关注命令说明、调用流程、用户交互
-   - 示例：`PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`、`JIRA_COMMAND_ARCHITECTURE.md`、`CONFIG_COMMAND_ARCHITECTURE.md`
+   - 示例：`PR_COMMAND_architecture.md`、`LOG_COMMAND_architecture.md`、`JIRA_COMMAND_architecture.md`、`CONFIG_COMMAND_architecture.md`
 
 ### 快速使用
 
@@ -42,7 +42,7 @@
 
 ```bash
 # 复制 Lib 层模板
-cp docs/guidelines/templates/MODULE.template docs/architecture/lib/{MODULE}_ARCHITECTURE.md
+cp docs/guidelines/templates/MODULE.template docs/architecture/lib/{MODULE}_architecture.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -51,7 +51,7 @@ cp docs/guidelines/templates/MODULE.template docs/architecture/lib/{MODULE}_ARCH
 
 ```bash
 # 复制命令层模板
-cp docs/guidelines/templates/COMMAND.template docs/architecture/commands/{MODULE}_COMMAND_ARCHITECTURE.md
+cp docs/guidelines/templates/COMMAND.template docs/architecture/commands/{MODULE}_COMMAND_architecture.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -216,9 +216,9 @@ pub fn new-_feature() -> Result<()> {
 
 ## 📚 相关文档
 
-- [主架构文档](../architecture/ARCHITECTURE.md)
-- [{相关 Lib 模块}架构文档](../architecture/lib/{MODULE}_ARCHITECTURE.md) - Lib 层模块
-- [{相关命令模块}命令模块架构文档](../architecture/commands/{MODULE}_COMMAND_ARCHITECTURE.md) - 命令层模块（如适用）
+- [主架构文档](../architecture/architecture.md)
+- [{相关 Lib 模块}架构文档](../architecture/lib/{MODULE}_architecture.md) - Lib 层模块
+- [{相关命令模块}命令模块架构文档](../architecture/commands/{MODULE}_COMMAND_architecture.md) - 命令层模块（如适用）
 
 ---
 
@@ -529,7 +529,7 @@ let iso = format-_document-_timestamp(DateFormat::Iso8601, Timezone::Local);
 
 - [Lib 层模板文件](./templates/MODULE.template) - Lib 层模块架构文档模板
 - [命令层模板文件](./templates/COMMAND.template) - 命令层模块架构文档模板
-- [主架构文档](../architecture/ARCHITECTURE.md) - 总体架构设计文档
+- [主架构文档](../architecture/architecture.md) - 总体架构设计文档
 
 ---
 

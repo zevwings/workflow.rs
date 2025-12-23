@@ -528,10 +528,10 @@ impl HttpResponse {
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [Jira 模块架构文档](./JIRA_ARCHITECTURE.md) - Jira 模块如何使用 HTTP 客户端
-- [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 HTTP 客户端
-- [LLM 模块架构文档](./LLM_ARCHITECTURE.md) - LLM 模块如何使用 HTTP 客户端
+- [主架构文档](../architecture.md)
+- [Jira 模块架构文档](./JIRA_architecture.md) - Jira 模块如何使用 HTTP 客户端
+- [PR 模块架构文档](./PR_architecture.md) - PR 模块如何使用 HTTP 客户端
+- [LLM 模块架构文档](./LLM_architecture.md) - LLM 模块如何使用 HTTP 客户端
 
 ---
 

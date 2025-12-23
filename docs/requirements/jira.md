@@ -275,7 +275,7 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 ## 📚 相关文档
 
-- [JIRA 模块架构文档](../architecture/lib/JIRA_ARCHITECTURE.md)
+- [JIRA 模块架构文档](../architecture/lib/JIRA_architecture.md)
 
 ---
 

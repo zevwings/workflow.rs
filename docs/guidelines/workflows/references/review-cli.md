@@ -417,7 +417,7 @@ pub enum MySubcommand {
 
 **参数短名**：单个字符（如 `-n`、`-f`）
 
-**参考**：见 [开发规范 - 参数命名规范](../DEVELOPMENT_GUIDELINES.md#参数命名规范)
+**参考**：见 [开发规范 - 参数命名规范](../development.md#参数命名规范)
 
 ---
 
@@ -555,10 +555,10 @@ cargo run -- completion generate --shell zsh
 
 ## 📚 参考文档
 
-- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 包含参数命名规范
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 快速检查清单
-- [代码检查指南](./REVIEW_CODE_GUIDELINES.md) - 代码优化检查
-- [CLI 架构文档](../../architecture/lib/CLI_ARCHITECTURE.md) - CLI 架构设计
+- [开发规范](../development.md) - 包含参数命名规范
+- [提交前检查指南](../pre-commit.md) - 快速检查清单
+- [代码检查指南](./review-code.md) - 代码优化检查
+- [CLI 架构文档](../../architecture/lib/CLI_architecture.md) - CLI 架构设计
 
 ---
 

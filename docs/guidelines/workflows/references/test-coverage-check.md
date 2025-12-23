@@ -378,9 +378,9 @@ open coverage/index.html
 
 ## 📚 相关文档
 
-- [测试规范指南](../TESTING_GUIDELINES.md) - 完整的测试规范
-- [测试用例检查指南](./REVIEW_TEST_CASE_GUIDELINES.md) - 详细的测试检查方法
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 提交前的测试检查清单
+- [测试规范指南](../testing.md) - 完整的测试规范
+- [测试用例检查指南](./review-test-case.md) - 详细的测试检查方法
+- [提交前检查指南](../pre-commit.md) - 提交前的测试检查清单
 
 ---
 

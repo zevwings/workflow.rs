@@ -245,17 +245,17 @@ fn validate-_module-_path(module-_path: &str) -> bool {
 ## 检查结果
 
 ### ✅ 通过的路径
-- `src/lib/pr/github/platform.rs` (docs/architecture/lib/PR_ARCHITECTURE.md)
+- `src/lib/pr/github/platform.rs` (docs/architecture/lib/PR_architecture.md)
 
 ### ❌ 不存在的路径
 1. `src/lib/pr/old-_module.rs`
-   - **文档位置**：docs/architecture/lib/PR_ARCHITECTURE.md
+   - **文档位置**：docs/architecture/lib/PR_architecture.md
    - **问题类型**：文件不存在
    - **建议**：检查文件是否已删除或重命名
 
 ### ⚠️ 无效的模块路径
 1. `crate::pr::old::Module`
-   - **文档位置**：docs/architecture/lib/PR_ARCHITECTURE.md
+   - **文档位置**：docs/architecture/lib/PR_architecture.md
    - **问题类型**：模块不存在
    - **建议**：检查模块是否已重构或删除
 ```
@@ -495,10 +495,10 @@ fn extract-_statistics(doc-_content: &str) -> DocStats {
 
 ### 难点4：模块映射
 
-**问题**：需要将文档与代码模块对应（如 `PR_ARCHITECTURE.md` 对应 `src/lib/pr/`）。
+**问题**：需要将文档与代码模块对应（如 `PR_architecture.md` 对应 `src/lib/pr/`）。
 
 **解决方案**：
-1. 从文档文件名推断模块名（`PR_ARCHITECTURE.md` → `pr`）
+1. 从文档文件名推断模块名（`PR_architecture.md` → `pr`）
 2. 支持 Lib 层和命令层的不同结构
 3. 使用配置文件定义映射关系（如需要）
 
@@ -507,7 +507,7 @@ fn extract-_statistics(doc-_content: &str) -> DocStats {
 fn doc-_to-_module-_path(doc-_path: &Path) -> Option<PathBuf> {
     let file-_name = doc-_path.file-_stem()?.to-_str()?;
 
-    // PR_ARCHITECTURE.md -> pr
+    // PR_architecture.md -> pr
     let module-_name = file-_name
         .strip-_suffix("_ARCHITECTURE")?
         .strip-_suffix("_COMMAND_ARCHITECTURE")?
@@ -680,7 +680,7 @@ walkdir = "2.4"
 ## 📚 相关文档
 
 - [架构文档审查指南](../docs/guidelines/workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的检查方法和流程
-- [开发规范](../docs/guidelines/DEVELOPMENT_GUIDELINES.md) - 开发规范和最佳实践
+- [开发规范](../docs/guidelines/development.md) - 开发规范和最佳实践
 
 ---
 

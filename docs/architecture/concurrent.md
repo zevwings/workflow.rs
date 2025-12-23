@@ -358,8 +358,8 @@ impl ConcurrentExecutor {
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [JIRA 模块架构文档](./JIRA_ARCHITECTURE.md) - 使用并发执行器进行附件下载
+- [主架构文档](../architecture.md)
+- [JIRA 模块架构文档](./JIRA_architecture.md) - 使用并发执行器进行附件下载
 - [并发处理需求文档](../../requirements/CONCURRENCY.md) - 并发处理需求说明
 
 ---

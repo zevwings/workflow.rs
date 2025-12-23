@@ -54,7 +54,7 @@ src/commands/log/
 - **`lib/base/settings/`**：配置管理
   - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
-详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
+详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_architecture.md)
 
 ---
 
@@ -85,7 +85,7 @@ match cli.subcommand
   └─ Search → SearchCommand::search()
 ```
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
 
 ---
 
@@ -208,7 +208,7 @@ commands/log/find.rs::FindCommand::find-_request-_id(jira-_id, request-_id)
 
 4. **剪贴板操作**：
    - 使用 `Clipboard::copy()` 复制响应内容到剪贴板
-   - 注意：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（详见 [工具函数模块架构文档](../lib/TOOLS_ARCHITECTURE.md)）
+   - 注意：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能（详见 [工具函数模块架构文档](../lib/TOOLS_architecture.md)）
 
 ### JiraLogs API 调用
 
@@ -366,7 +366,7 @@ JiraLogs::search-_keyword-_both-_files()
 - `FindCommand::find-_request-_id()` - 查找请求 ID
 - `SearchCommand::search()` - 搜索关键词
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
 
 ### 2. 分层调用模式
 
@@ -381,7 +381,7 @@ match cli.subcommand
   └─ Search → SearchCommand::search()
 ```
 
-**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
+**注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)。
 
 **库层调用（Commands → JiraLogs）**：
 命令层通过 `JiraLogs` API 调用核心业务逻辑：
@@ -454,10 +454,10 @@ JiraLogs::download-_from-_jira()
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
-- [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)
-- [PR 命令模块架构文档](./PR_COMMAND_ARCHITECTURE.md)
+- [主架构文档](../architecture.md)
+- [Jira 模块架构文档](../lib/JIRA_architecture.md)
+- [Jira 命令模块架构文档](./JIRA_COMMAND_architecture.md)
+- [PR 命令模块架构文档](./PR_COMMAND_architecture.md)
 
 ---
 

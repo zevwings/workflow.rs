@@ -2,23 +2,23 @@
 
 > 🔍 **深度检查流程**：系统化的综合检查方法，用于功能完成后、定期全面审查和重大重构前（2-4小时）
 >
-> 🚀 **快速开始**：[选择检查场景](#-何时进行深入检查) | [查看快速参考](./references/QUICK_REFERENCE_GUIDELINES.md)
+> 🚀 **快速开始**：[选择检查场景](#-何时进行深入检查) | [查看快速参考](./references/quick-reference.md)
 
 ## 📖 检查指南体系
 
 | 指南类型 | 时间投入 | 使用场景 | 链接 |
 |---------|----------|----------|------|
-| 🚀 **快速参考** | 1分钟 | 快速查找命令和清单 | [快速参考指南](./references/QUICK_REFERENCE_GUIDELINES.md) |
-| ⚡ **提交前检查** | 5-15分钟 | 日常提交前验证 | [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) |
+| 🚀 **快速参考** | 1分钟 | 快速查找命令和清单 | [快速参考指南](./references/quick-reference.md) |
+| ⚡ **提交前检查** | 5-15分钟 | 日常提交前验证 | [提交前检查指南](./pre-commit.md) |
 | 🔍 **深入检查** | 2-4小时 | 功能完成后、定期审查 | 本文档 |
 
 ### 专门检查指南
 
-- [🔧 CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md) - 命令结构、补全脚本、参数复用
-- [💻 代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) - 重复代码、工具复用、第三方库
-- [🧪 测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖、合理性、缺失测试
-- [📊 测试覆盖检查机制指南](./references/TEST_COVERAGE_CHECK_GUIDELINES.md) - 测试覆盖检查机制、定期检查流程
-- [📚 文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) - README、架构文档、CHANGELOG
+- [🔧 CLI 检查指南](./references/review-cli.md) - 命令结构、补全脚本、参数复用
+- [💻 代码检查指南](./references/review-code.md) - 重复代码、工具复用、第三方库
+- [🧪 测试检查指南](./references/review-test-case.md) - 测试覆盖、合理性、缺失测试
+- [📊 测试覆盖检查机制指南](./references/test-coverage-check.md) - 测试覆盖检查机制、定期检查流程
+- [📚 文档检查指南](./references/review-document.md) - README、架构文档、CHANGELOG
 - [🏗️ 架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
 
 ---
@@ -62,10 +62,10 @@
 
 | 领域 | 检查内容 | 时间估算 | 专门指南 |
 |------|----------|----------|----------|
-| 🔧 **CLI** | 命令结构、补全脚本、参数复用 | 30分钟-1小时 | [CLI检查指南](./references/REVIEW_CLI_GUIDELINES.md) |
-| 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) |
-| 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) |
-| 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) |
+| 🔧 **CLI** | 命令结构、补全脚本、参数复用 | 30分钟-1小时 | [CLI检查指南](./references/review-cli.md) |
+| 💻 **代码** | 重复代码、工具复用、依赖优化 | 1-2小时 | [代码检查指南](./references/review-code.md) |
+| 🧪 **测试** | 覆盖情况、合理性、缺失测试 | 1-2小时 | [测试检查指南](./references/review-test-case.md) |
+| 📚 **文档** | README、架构文档、CHANGELOG | 30分钟-1小时 | [文档检查指南](./references/review-document.md) |
 | 🏗️ **架构文档** | 架构文档与代码一致性 | 30分钟-1小时 | [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) |
 
 ### ⏱️ 时间投入规划
@@ -309,10 +309,10 @@ graph TD
 
 按照以下顺序运行各个专门指南的检查：
 
-1. **CLI 检查**（`reviews/REVIEW_CLI_GUIDELINES.md`）
-2. **代码检查**（`reviews/REVIEW_CODE_GUIDELINES.md`）
-3. **测试用例检查**（`reviews/REVIEW_TEST_CASE_GUIDELINES.md`）
-4. **文档检查**（`reviews/REVIEW_DOCUMENT_GUIDELINES.md`）
+1. **CLI 检查**（`reviews/review-cli.md`）
+2. **代码检查**（`reviews/review-code.md`）
+3. **测试用例检查**（`reviews/review-test-case.md`）
+4. **文档检查**（`reviews/review-document.md`）
 
 **说明**：
 - 每个专门指南都会生成详细的检查报告
@@ -366,7 +366,7 @@ graph TD
 
 ### 1. CLI 检查
 
-**指南**：[CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md)
+**指南**：[CLI 检查指南](./references/review-cli.md)
 
 **检查内容**：
 - 命令完整性检查
@@ -416,7 +416,7 @@ Write-Host "report/REVIEW_CLI_${timestamp}.md"
 
 ### 2. 代码检查
 
-**指南**：[代码检查指南](./references/REVIEW_CODE_GUIDELINES.md)
+**指南**：[代码检查指南](./references/review-code.md)
 
 **检查内容**：
 - 重复代码检查（10 种模式）
@@ -464,7 +464,7 @@ Write-Host "report/REVIEW_CODE_${timestamp}.md"
 
 ### 3. 测试用例检查
 
-**指南**：[测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md)
+**指南**：[测试用例检查指南](./references/review-test-case.md)
 
 **检查内容**：
 - 测试覆盖情况检查
@@ -512,7 +512,7 @@ Write-Host "report/REVIEW_TEST_${timestamp}.md"
 
 ### 4. 文档检查
 
-**指南**：[文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)
+**指南**：[文档检查指南](./references/review-document.md)
 
 **检查内容**：
 - README.md 检查
@@ -1000,7 +1000,7 @@ Write-Host "report/REVIEW_REPORT_${timestamp}.md"
 **时间**：每周一次（建议周五下午）
 
 **检查范围**：
-- 快速检查（`PRE_COMMIT_GUIDELINES.md`）
+- 快速检查（`pre-commit.md`）
 - 重点领域深入检查（选择 2-3 个领域）
 
 **检查流程**：
@@ -1075,11 +1075,11 @@ grep -r "#[cfg(test)]" src/
 
 ### 专门指南链接
 
-- [CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md)
-- [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md)
-- [测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md)
-- [测试覆盖检查机制指南](./references/TEST_COVERAGE_CHECK_GUIDELINES.md)
-- [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)
+- [CLI 检查指南](./references/review-cli.md)
+- [代码检查指南](./references/review-code.md)
+- [测试用例检查指南](./references/review-test-case.md)
+- [测试覆盖检查机制指南](./references/test-coverage-check.md)
+- [文档检查指南](./references/review-document.md)
 - [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
 
 ### 报告位置
@@ -1101,8 +1101,8 @@ grep -r "#[cfg(test)]" src/
 ### Q: 什么时候使用快速检查，什么时候使用深入检查？
 
 **A**:
-- **快速检查**（`PRE_COMMIT_GUIDELINES.md`）：日常提交前，快速验证代码质量（5-15 分钟）
-- **深入检查**（`REVIEW_GUIDELINES.md`）：功能完成后、定期审查、重大重构前（2-4 小时）
+- **快速检查**（`pre-commit.md`）：日常提交前，快速验证代码质量（5-15 分钟）
+- **深入检查**（`review.md`）：功能完成后、定期审查、重大重构前（2-4 小时）
 
 ### Q: 必须运行所有专门指南吗？
 

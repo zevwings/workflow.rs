@@ -570,9 +570,9 @@ pub enum RepoType {
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 Git 操作
-- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置管理如何使用 Git 配置
+- [主架构文档](../architecture.md)
+- [PR 模块架构文档](./PR_architecture.md) - PR 模块如何使用 Git 操作
+- [Settings 模块架构文档](./SETTINGS_architecture.md) - 配置管理如何使用 Git 配置
 
 ---
 

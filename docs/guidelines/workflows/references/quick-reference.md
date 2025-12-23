@@ -6,8 +6,8 @@
 
 | 检查类型 | 时间 | 使用场景 | 参考文档 |
 |---------|------|----------|----------|
-| **快速检查** | 5-15分钟 | 日常提交前 | [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) |
-| **深入检查** | 2-4小时 | 功能完成后、定期审查 | [检查指南](./REVIEW_GUIDELINES.md) |
+| **快速检查** | 5-15分钟 | 日常提交前 | [提交前检查指南](./pre-commit.md) |
+| **深入检查** | 2-4小时 | 功能完成后、定期审查 | [检查指南](./review.md) |
 
 ---
 
@@ -140,18 +140,18 @@ Write-Host "report/CHECK_REPORT_${timestamp}.md"
 
 ### 获取详细帮助
 
-- **代码问题**：参考 [代码检查指南](./reviews/REVIEW_CODE_GUIDELINES.md)
-- **测试问题**：参考 [测试用例检查指南](./reviews/REVIEW_TEST_CASE_GUIDELINES.md)
-- **文档问题**：参考 [文档检查指南](./reviews/REVIEW_DOCUMENT_GUIDELINES.md)
-- **CLI 问题**：参考 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)
+- **代码问题**：参考 [代码检查指南](./reviews/review-code.md)
+- **测试问题**：参考 [测试用例检查指南](./reviews/review-test-case.md)
+- **文档问题**：参考 [文档检查指南](./reviews/review-document.md)
+- **CLI 问题**：参考 [CLI 检查指南](./reviews/review-cli.md)
 
 ---
 
 ## 📞 联系方式
 
 如需更详细的检查指南，请查看：
-- [提交前检查指南](./PRE_COMMIT_GUIDELINES.md) - 完整的快速检查流程
-- [检查指南](./REVIEW_GUIDELINES.md) - 完整的深入检查流程
+- [提交前检查指南](./pre-commit.md) - 完整的快速检查流程
+- [检查指南](./review.md) - 完整的深入检查流程
 
 ---
 

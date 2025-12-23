@@ -311,8 +311,8 @@ PR 可以合并
 
 - [GitHub Setup Guidelines](./GITHUB_SETUP_GUIDELINES.md)：GitHub 配置指南
 - [Release Workflow Analysis](../requirements/RELEASE_WORKFLOW_ANALYSIS.md)：Release Workflow 详细分析
-- [Development Guidelines](./DEVELOPMENT_GUIDELINES.md)：开发规范
-- [Testing Guidelines](./TESTING_GUIDELINES.md)：测试指南
+- [Development Guidelines](./development.md)：开发规范
+- [Testing Guidelines](./testing.md)：测试指南
 
 ---
 

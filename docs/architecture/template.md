@@ -4,7 +4,7 @@
 
 Template 模块（`lib/template/`）是 Workflow CLI 的核心库模块，提供模板渲染功能，支持分支命名模板、PR body 模板、Commit 消息模板等。使用 Handlebars 模板引擎，支持从全局配置和项目级配置加载模板。
 
-**注意**：本文档仅描述 `lib/template/` 模块的架构。关于模板配置的详细内容，请参考 [Repo 模块架构文档](./REPO_ARCHITECTURE.md)。
+**注意**：本文档仅描述 `lib/template/` 模块的架构。关于模板配置的详细内容，请参考 [Repo 模块架构文档](./REPO_architecture.md)。
 
 **模块统计：**
 - 总代码行数：约 488 行
@@ -439,10 +439,10 @@ println!("PR body:\n{}", pr-_body);
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [Repo 模块架构文档](./REPO_ARCHITECTURE.md) - 配置管理
-- [Branch 模块架构文档](./BRANCH_ARCHITECTURE.md) - 分支管理
-- [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 管理
+- [主架构文档](../architecture.md)
+- [Repo 模块架构文档](./REPO_architecture.md) - 配置管理
+- [Branch 模块架构文档](./BRANCH_architecture.md) - 分支管理
+- [PR 模块架构文档](./PR_architecture.md) - PR 管理
 
 ---
 

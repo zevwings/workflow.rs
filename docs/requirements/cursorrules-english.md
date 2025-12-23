@@ -153,7 +153,7 @@
 #### 0.2 合并重复内容
 - [ ] 合并"代码规范"和"开发指南"的重复引用
 - [ ] 将"代码生成建议"合并到"代码规范"部分
-- [ ] 统一引用 `DEVELOPMENT_GUIDELINES.md` 的方式
+- [ ] 统一引用 `development.md` 的方式
 
 #### 0.3 优化结构顺序
 - [ ] 将"核心模块"合并到"项目概述"部分
@@ -473,8 +473,8 @@
 ## 🔗 相关文档
 
 - [`.cursorrules`](../../.cursorrules) - 当前规则文件（中文版本）
-- [`docs/guidelines/DEVELOPMENT_GUIDELINES.md`](../guidelines/DEVELOPMENT_GUIDELINES.md) - 开发规范文档
-- [`docs/guidelines/DOCUMENT_GUIDELINES.md`](../guidelines/DOCUMENT_GUIDELINES.md) - 文档编写指南
+- [`docs/guidelines/development.md`](../guidelines/development.md) - 开发规范文档
+- [`docs/guidelines/document.md`](../guidelines/document.md) - 文档编写指南
 
 ---
 

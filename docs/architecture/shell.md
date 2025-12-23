@@ -546,10 +546,10 @@ export KEY2="value2"
 
 ## 📚 相关文档
 
-- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置文件路径管理（`Paths::config-_file()`）
-- [Completion 架构文档](./COMPLETION_ARCHITECTURE.md) - Completion 模块如何使用 ShellConfigManager
-- [Proxy 架构文档](./PROXY_ARCHITECTURE.md) - Proxy 模块如何使用 ShellConfigManager
-- [主架构文档](../ARCHITECTURE.md)
+- [Settings 模块架构文档](./SETTINGS_architecture.md) - 配置文件路径管理（`Paths::config-_file()`）
+- [Completion 架构文档](./COMPLETION_architecture.md) - Completion 模块如何使用 ShellConfigManager
+- [Proxy 架构文档](./PROXY_architecture.md) - Proxy 模块如何使用 ShellConfigManager
+- [主架构文档](../architecture.md)
 
 ---
 

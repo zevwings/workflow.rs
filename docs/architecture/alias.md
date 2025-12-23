@@ -91,7 +91,7 @@ src/lib/base/alias/
   - `Settings::get()` - 获取配置
   - `Paths::workflow-_config()` - 获取配置文件路径
 
-详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md)
+详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_architecture.md)
 
 ---
 
@@ -455,9 +455,9 @@ AliasManager::expand("ci")
 
 ## 🔗 相关文档
 
-- [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md) - 配置管理
-- [Dialog 模块架构文档](../lib/DIALOG_ARCHITECTURE.md) - 用户交互
-- [Completion 模块架构文档](../lib/COMPLETION_ARCHITECTURE.md) - 补全脚本生成
+- [Settings 模块架构文档](../lib/SETTINGS_architecture.md) - 配置管理
+- [Dialog 模块架构文档](../lib/DIALOG_architecture.md) - 用户交互
+- [Completion 模块架构文档](../lib/COMPLETION_architecture.md) - 补全脚本生成
 
 ---
 

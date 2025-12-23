@@ -48,7 +48,7 @@
 
 - **Lib 层架构文档**：`docs/architecture/lib/` 目录下的所有文档
 - **命令层架构文档**：`docs/architecture/commands/` 目录下的所有文档
-- **总体架构文档**：`docs/architecture/ARCHITECTURE.md`
+- **总体架构文档**：`docs/architecture/architecture.md`
 
 ### 检查原则
 
@@ -627,12 +627,12 @@ grep -r "^use " src/lib/{MODULE}/ | grep -v "crate::"
 
 ## 📚 相关文档
 
-- [文档审查指南](./REVIEW_DOCUMENT_GUIDELINES.md) - 详细的文档检查方法和流程
-- [文档编写指南](../DOCUMENT_GUIDELINES.md) - 架构文档编写规范和模板
-- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 开发规范和代码审查清单
+- [文档审查指南](./review-document.md) - 详细的文档检查方法和流程
+- [文档编写指南](../document.md) - 架构文档编写规范和模板
+- [开发规范](../development.md) - 开发规范和代码审查清单
 - [架构文档检查工具 TODO](../../todo/DOC_CHECK_TODO.md) - 自动化检查工具实施计划
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 提交前检查清单
-- [深入检查指南](../REVIEW_GUIDELINES.md) - 综合深入检查流程
+- [提交前检查指南](../pre-commit.md) - 提交前检查清单
+- [深入检查指南](../review.md) - 综合深入检查流程
 
 ---
 
@@ -643,8 +643,8 @@ grep -r "^use " src/lib/{MODULE}/ | grep -v "crate::"
 **问题**：代码中新增了模块，但架构文档中没有说明。
 
 **解决方法**：
-1. 创建对应的架构文档（参考 `DOCUMENT_GUIDELINES.md`）
-2. 更新总体架构文档（`ARCHITECTURE.md`）
+1. 创建对应的架构文档（参考 `document.md`）
+2. 更新总体架构文档（`architecture.md`）
 3. 更新文档索引（`docs/README.md`）
 
 ### 2. API 接口变更后文档未更新

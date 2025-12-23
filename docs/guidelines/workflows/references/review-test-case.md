@@ -1085,9 +1085,9 @@ grep -r "mockito::" tests/ || echo "❌ 未使用 mockito"
 
 ## 📚 参考资源
 
-- [测试规范指南](../TESTING_GUIDELINES.md) - 详细的测试组织和最佳实践
-- [开发规范指南](../DEVELOPMENT_GUIDELINES.md) - 包含测试规范的基础内容
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 测试检查的简要说明
+- [测试规范指南](../testing.md) - 详细的测试组织和最佳实践
+- [开发规范指南](../development.md) - 包含测试规范的基础内容
+- [提交前检查指南](../pre-commit.md) - 测试检查的简要说明
 
 ---
 

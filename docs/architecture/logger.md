@@ -602,9 +602,9 @@ let json-_layer = tracing-_subscriber::fmt::layer()
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md) - 总体架构设计文档
-- [LOG 命令架构文档](../commands/LOG_COMMAND_ARCHITECTURE.md) - 日志命令模块架构文档
-- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置管理模块（日志配置相关）
+- [主架构文档](../architecture.md) - 总体架构设计文档
+- [LOG 命令架构文档](../commands/LOG_COMMAND_architecture.md) - 日志命令模块架构文档
+- [Settings 模块架构文档](./SETTINGS_architecture.md) - 配置管理模块（日志配置相关）
 
 ---
 

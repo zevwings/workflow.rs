@@ -8,7 +8,7 @@
 
 ## 🏗️ 核心架构文档
 
-### [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+### [architecture.md](./architecture/architecture.md)
 **总体架构设计文档**
 
 - 项目概述和模块划分
@@ -252,7 +252,7 @@
 - 别名展开功能（支持嵌套别名和循环检测）
 - 命令行参数展开（在命令解析前自动展开别名）
 
-#### [MIGRATE-COMMAND-ARCHITECTURE.md](./architecture/MIGRATE-COMMAND-ARCHITECTURE.md)
+#### [MIGRATE-COMMAND-architecture.md](./architecture/MIGRATE-COMMAND-architecture.md)
 **配置迁移命令层架构文档**
 
 - 版本化迁移系统（迁移版本独立于软件版本）
@@ -448,7 +448,7 @@
 ## 📖 快速导航
 
 ### 整体架构
-- 想了解整体架构？ → [ARCHITECTURE.md](./architecture/ARCHITECTURE.md)
+- 想了解整体架构？ → [architecture.md](./architecture/architecture.md)
 
 ### 版本迁移
 - 需要升级版本？ → [迁移文档索引](./migration/README.md)

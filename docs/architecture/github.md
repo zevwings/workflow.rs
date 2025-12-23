@@ -54,7 +54,7 @@ src/commands/github/
 - **`lib/base/util/`**：工具函数（`confirm()`、`mask-_sensitive-_value()`）
 - **`dialoguer`**：交互式输入（`Input`、`Select`）
 
-详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md) 和 [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md)
+详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_architecture.md) 和 [Git 模块架构文档](../lib/GIT_architecture.md)
 
 ---
 
@@ -429,10 +429,10 @@ commands/github/github.rs::GitHubCommand::update()
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md) - 配置管理相关
-- [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md) - Git 配置相关
-- [配置管理命令模块架构文档](./CONFIG_COMMAND_ARCHITECTURE.md) - 配置管理相关
+- [主架构文档](../architecture.md)
+- [Settings 模块架构文档](../lib/SETTINGS_architecture.md) - 配置管理相关
+- [Git 模块架构文档](../lib/GIT_architecture.md) - Git 配置相关
+- [配置管理命令模块架构文档](./CONFIG_COMMAND_architecture.md) - 配置管理相关
 
 ---
 

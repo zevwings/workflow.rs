@@ -272,9 +272,9 @@ let delay = (1 << retry-_count).min(60);
 1. **新增模块时**：
    - **必须**同步创建对应的架构文档
    - 文档位置：
-     - Lib 层模块 → `docs/architecture/lib/{MODULE}_ARCHITECTURE.md`
-     - 命令层模块 → `docs/architecture/commands/{MODULE}_COMMAND_ARCHITECTURE.md`
-   - 文档内容：参考 [文档编写指南](./DOCUMENT_GUIDELINES.md) 创建完整的架构文档
+     - Lib 层模块 → `docs/architecture/lib/{MODULE}_architecture.md`
+     - 命令层模块 → `docs/architecture/commands/{MODULE}_COMMAND_architecture.md`
+   - 文档内容：参考 [文档编写指南](./document.md) 创建完整的架构文档
    - 更新索引：更新 `docs/README.md` 中的文档索引（如适用）
 
 2. **重构模块时**：
@@ -355,7 +355,7 @@ let delay = (1 << retry-_count).min(60);
 
 #### 相关文档
 
-- [文档编写指南](./DOCUMENT_GUIDELINES.md) - 架构文档编写规范和模板
+- [文档编写指南](./document.md) - 架构文档编写规范和模板
 - [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
 - [代码审查清单](#-代码审查) - 包含文档更新检查项
 
@@ -367,10 +367,10 @@ let delay = (1 << retry-_count).min(60);
 
 - **模块文件**：`snake-_case.rs`（如 `jira-_client.rs`、`pr-_helpers.rs`）
 - **测试文件**：与源文件同名，放在 `tests/` 目录或使用 `#[cfg(test)]` 模块
-- **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `DEVELOPMENT_GUIDELINES.md`、`PR_ARCHITECTURE.md`）
-  - **架构文档**：`{MODULE}_ARCHITECTURE.md`（如 `PR_ARCHITECTURE.md`、`GIT_ARCHITECTURE.md`）
-  - **命令文档**：`{MODULE}_COMMAND_ARCHITECTURE.md`（如 `PR_COMMAND_ARCHITECTURE.md`、`LOG_COMMAND_ARCHITECTURE.md`）
-  - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `DEVELOPMENT_GUIDELINES.md`、`DOCUMENT_GUIDELINES.md`）
+- **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `development.md`、`PR_architecture.md`）
+  - **架构文档**：`{MODULE}_architecture.md`（如 `PR_architecture.md`、`GIT_architecture.md`）
+  - **命令文档**：`{MODULE}_COMMAND_architecture.md`（如 `PR_COMMAND_architecture.md`、`LOG_COMMAND_architecture.md`）
+  - **指南文档**：`{TOPIC}_GUIDELINES.md`（如 `development.md`、`document.md`）
   - **需求文档**：`{FEATURE}_REQUIREMENT.md` 或 `{FEATURE}_REQUIREMENTS.md`（如 `GITHUB_BRANCH_PREFIX_REPO_BASED_REQUIREMENT.md`）
   - **待办文档**：`{MODULE}_TODO.md` 或 `{TOPIC}_TODO.md`（如 `JIRA_TODO.md`、`INTEGRATION_TODO.md`）
 
@@ -490,7 +490,7 @@ pub jira-_id: Option<String>,
 
 #### 共用参数规范
 
-对于在多个命令中重复使用的参数，应该提取为共用参数组（见 [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md)）：
+对于在多个命令中重复使用的参数，应该提取为共用参数组（见 [CLI 检查指南](./reviews/review-cli.md)）：
 
 ```rust
 // src/lib/cli/args.rs
@@ -531,7 +531,7 @@ Create {
 ```
 
 **参考**：
-- [CLI 检查指南](./reviews/REVIEW_CLI_GUIDELINES.md) - 参数复用检查和参数提取指南
+- [CLI 检查指南](./reviews/review-cli.md) - 参数复用检查和参数提取指南
 - [clap 文档](https://docs.rs/clap/) - clap 参数定义规范
 
 ---
@@ -670,7 +670,7 @@ Extract retry logic into a separate module for better maintainability.
 
 ## 🧪 测试规范
 
-> **详细测试规范**：请参考 [测试规范指南](./TESTING_GUIDELINES.md)
+> **详细测试规范**：请参考 [测试规范指南](./testing.md)
 
 ### 单元测试
 
@@ -694,7 +694,7 @@ mod tests {
 - 测试模块放在源文件底部，使用 `#[cfg(test)]`
 - 测试函数使用 `test_` 前缀或 `#[test]` 属性
 - 使用描述性的测试名称
-- 集成测试使用目录结构组织（详见 [测试规范指南](./TESTING_GUIDELINES.md)）
+- 集成测试使用目录结构组织（详见 [测试规范指南](./testing.md)）
 
 ### 测试覆盖率
 
@@ -847,8 +847,8 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 ### 相关文档
 
 - [架构文档审查指南](./workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 详细的架构文档检查方法和流程
-- [文档审查指南](./workflows/references/REVIEW_DOCUMENT_GUIDELINES.md) - 完整的文档检查指南
-- [深入检查指南](./workflows/REVIEW_GUIDELINES.md) - 综合深入检查流程
+- [文档审查指南](./workflows/references/review-document.md) - 完整的文档检查指南
+- [深入检查指南](./workflows/review.md) - 综合深入检查流程
 
 ---
 
@@ -1009,9 +1009,9 @@ cargo fmt --check && cargo clippy -- -D warnings
 
 ## 📚 相关文档
 
-- [文档编写指南](./DOCUMENT_GUIDELINES.md) - 架构文档编写规范
+- [文档编写指南](./document.md) - 架构文档编写规范
 - [模板配置指南](./TEMPLATE_GUIDELINES.md) - 模板系统配置和使用方法
-- [主架构文档](../architecture/ARCHITECTURE.md) - 项目总体架构
+- [主架构文档](../architecture/architecture.md) - 项目总体架构
 - [Rust 官方文档](https://doc.rust-lang.org/) - Rust 语言文档
 - [Rust API 指南](https://rust-lang.github.io/api-guidelines/) - Rust API 设计指南
 

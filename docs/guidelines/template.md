@@ -722,10 +722,10 @@ default = '''
 
 ## 📚 相关文档
 
-- [开发规范文档](./DEVELOPMENT_GUIDELINES.md) - 代码风格和开发规范
-- [分支管理架构文档](../architecture/lib/BRANCH_ARCHITECTURE.md) - 分支命名实现细节
-- [PR 模块架构文档](../architecture/lib/PR_ARCHITECTURE.md) - PR 生成实现细节
-- [设置模块架构文档](../architecture/lib/SETTINGS_ARCHITECTURE.md) - 配置加载实现细节
+- [开发规范文档](./development.md) - 代码风格和开发规范
+- [分支管理架构文档](../architecture/branch.md) - 分支命名实现细节
+- [PR 模块架构文档](../architecture/lib/PR_architecture.md) - PR 生成实现细节
+- [设置模块架构文档](../architecture/lib/SETTINGS_architecture.md) - 配置加载实现细节
 
 ---
 

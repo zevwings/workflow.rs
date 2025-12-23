@@ -327,7 +327,7 @@ cargo test --test integration-_test -- --nocapture
 - [cargo-tarpaulin 文档](https://github.com/xd009642/tarpaulin)
 - [Rust 测试指南](https://doc.rust-lang.org/book/ch11-00-testing.html)
 - [Mockito 文档](https://docs.rs/mockito/)
-- [项目测试规范](../guidelines/TESTING_GUIDELINES.md)
+- [项目测试规范](../guidelines/testing.md)
 
 ---
 

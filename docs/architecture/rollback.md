@@ -235,10 +235,10 @@ fn verify-_backup(backup-_info: &BackupInfo) -> Result<()> {
 
 ## 📚 相关文档
 
-- [总体架构文档](../ARCHITECTURE.md)
-- [生命周期管理命令模块架构文档](../commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
-- [Completion 模块架构文档](./COMPLETION_ARCHITECTURE.md)
-- [Shell 检测与管理模块架构文档](./SHELL_ARCHITECTURE.md)
+- [总体架构文档](../architecture.md)
+- [生命周期管理命令模块架构文档](../commands/LIFECYCLE_COMMAND_architecture.md)
+- [Completion 模块架构文档](./COMPLETION_architecture.md)
+- [Shell 检测与管理模块架构文档](./SHELL_architecture.md)
 
 ---
 

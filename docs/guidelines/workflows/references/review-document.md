@@ -231,7 +231,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
   - `docs/requirements/` - 待办文档
 - [ ] **文档索引**：`docs/README.md` 包含完整的文档索引
 - [ ] **文档分类**：文档按类型正确分类
-- [ ] **文档命名**：文档命名符合规范（如 `{MODULE}_ARCHITECTURE.md`）
+- [ ] **文档命名**：文档命名符合规范（如 `{MODULE}_architecture.md`）
 
 #### 检查方法
 
@@ -245,7 +245,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 #### 检查项
 
 - [ ] **文档完整性**：所有 Lib 层和命令层模块都有架构文档
-- [ ] **文档结构**：文档结构符合模板要求（参考 `DOCUMENT_GUIDELINES.md`）
+- [ ] **文档结构**：文档结构符合模板要求（参考 `document.md`）
 - [ ] **文档内容**：文档内容完整，包含所有必选章节
 - [ ] **文档链接**：文档之间的链接正确
 - [ ] **文档更新**：文档反映最新的代码实现
@@ -261,19 +261,19 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 #### 架构文档清单
 
 **Lib 层模块**（`docs/architecture/lib/`）：
-- PR_ARCHITECTURE.md
-- JIRA_ARCHITECTURE.md
-- GIT_ARCHITECTURE.md
-- HTTP_ARCHITECTURE.md
-- SETTINGS_ARCHITECTURE.md
-- LLM_ARCHITECTURE.md
+- PR_architecture.md
+- JIRA_architecture.md
+- GIT_architecture.md
+- HTTP_architecture.md
+- SETTINGS_architecture.md
+- LLM_architecture.md
 - ...（其他 Lib 层模块）
 
 **命令层模块**（`docs/architecture/commands/`）：
-- PR_COMMAND_ARCHITECTURE.md
-- JIRA_COMMAND_ARCHITECTURE.md
-- LOG_COMMAND_ARCHITECTURE.md
-- CONFIG_COMMAND_ARCHITECTURE.md
+- PR_COMMAND_architecture.md
+- JIRA_COMMAND_architecture.md
+- LOG_COMMAND_architecture.md
+- CONFIG_COMMAND_architecture.md
 - ...（其他命令层模块）
 
 ### 2.3 指南文档检查
@@ -292,11 +292,11 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 #### 指南文档清单
 
-- DEVELOPMENT_GUIDELINES.md - 开发规范
-- DOCUMENT_GUIDELINES.md - 文档编写指南
-- PRE_COMMIT_GUIDELINES.md - 提交前检查指南
-- TESTING_GUIDELINES.md - 测试指南
-- REVIEW_DOCUMENT_GUIDELINES.md - 文档检查指南（本文档）
+- development.md - 开发规范
+- document.md - 文档编写指南
+- pre-commit.md - 提交前检查指南
+- testing.md - 测试指南
+- review-document.md - 文档检查指南（本文档）
 - ...（其他指南文档）
 
 ### 2.4 迁移文档检查
@@ -488,7 +488,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 #### 检查项
 
 - [ ] **命名规范**：文档命名是否符合项目规范
-  - 架构文档：`{MODULE}_ARCHITECTURE.md`（Lib 层）或 `{MODULE}_COMMAND_ARCHITECTURE.md`（命令层）
+  - 架构文档：`{MODULE}_architecture.md`（Lib 层）或 `{MODULE}_COMMAND_architecture.md`（命令层）
   - 指南文档：`{TOPIC}_GUIDELINES.md`
   - 迁移文档：`{VERSION}-to-{VERSION}.md`
   - 待办文档：`{TOPIC}_TODO.md`
@@ -525,14 +525,14 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 #### 检查项
 
-- [ ] **必选章节**：文档是否包含所有必选章节（参考 `DOCUMENT_GUIDELINES.md`）
+- [ ] **必选章节**：文档是否包含所有必选章节（参考 `document.md`）
 - [ ] **推荐章节**：文档是否包含推荐章节
 - [ ] **内容详细度**：内容是否足够详细，易于理解
 - [ ] **示例完整性**：是否包含足够的使用示例
 
 #### 检查方法
 
-1. 对照 `DOCUMENT_GUIDELINES.md` 中的模板
+1. 对照 `document.md` 中的模板
 2. 检查文档是否包含所有必选章节
 3. 验证内容是否详细
 4. 检查示例是否完整
@@ -790,9 +790,9 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 
 ## 🔗 相关文档
 
-- [文档编写指南](../DOCUMENT_GUIDELINES.md) - 文档编写规范和模板
-- [提交前检查指南](../PRE_COMMIT_GUIDELINES.md) - 提交前检查清单
-- [开发规范](../DEVELOPMENT_GUIDELINES.md) - 开发规范和最佳实践
+- [文档编写指南](../document.md) - 文档编写规范和模板
+- [提交前检查指南](../pre-commit.md) - 提交前检查清单
+- [开发规范](../development.md) - 开发规范和最佳实践
 
 ---
 

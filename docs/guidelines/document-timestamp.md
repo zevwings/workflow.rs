@@ -205,9 +205,9 @@ find docs -name "*.md" -exec grep -L "最后更新" {} \;
 
 ## 📚 相关文档
 
-- [文档编写指南](./DOCUMENT_GUIDELINES.md) - 完整的文档编写规范
-- [开发规范](./DEVELOPMENT_GUIDELINES.md) - 项目开发规范
-- [提交前检查指南](./workflows/PRE_COMMIT_GUIDELINES.md) - 提交前的检查清单
+- [文档编写指南](./document.md) - 完整的文档编写规范
+- [开发规范](./development.md) - 项目开发规范
+- [提交前检查指南](./workflows/pre-commit.md) - 提交前的检查清单
 
 ---
 

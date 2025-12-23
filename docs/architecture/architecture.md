@@ -267,64 +267,64 @@ src/
 ### 基础设施模块 (`lib::base`)
 
 - **HTTP 模块** (`lib::base::http`) - 统一 HTTP 客户端，支持认证、重试、延迟解析等特性
-  - 详细架构请参考 [HTTP_ARCHITECTURE.md](./lib/HTTP_ARCHITECTURE.md)
+  - 详细架构请参考 [HTTP_architecture.md](./lib/HTTP_architecture.md)
 
 - **LLM 模块** (`lib::base::llm`) - 统一配置驱动的 LLM 客户端，支持 OpenAI、DeepSeek 和代理 API
-  - 详细架构请参考 [LLM_ARCHITECTURE.md](./lib/LLM_ARCHITECTURE.md)
+  - 详细架构请参考 [LLM_architecture.md](./lib/LLM_architecture.md)
 
 - **Settings 模块** (`lib::base::settings`) - 配置管理，提供统一的配置加载和路径管理，支持 iCloud 存储（macOS）
-  - 详细架构请参考 [SETTINGS_ARCHITECTURE.md](./lib/SETTINGS_ARCHITECTURE.md)
+  - 详细架构请参考 [SETTINGS_architecture.md](./lib/SETTINGS_architecture.md)
 
 - **Shell 模块** (`lib::base::shell`) - Shell 检测与管理，支持配置自动加载
-  - 详细架构请参考 [SHELL_ARCHITECTURE.md](./lib/SHELL_ARCHITECTURE.md)
+  - 详细架构请参考 [SHELL_architecture.md](./lib/SHELL_architecture.md)
 
 - **工具函数模块** (`lib::base::util`) - 通用工具函数（日志、字符串、浏览器、剪贴板等）
-  - 详细架构请参考 [TOOLS_ARCHITECTURE.md](./lib/TOOLS_ARCHITECTURE.md)
+  - 详细架构请参考 [TOOLS_architecture.md](./lib/TOOLS_architecture.md)
 
 ### Git 模块 (`lib::git`)
 
 提供 Git 仓库操作功能，包括分支管理、提交、暂存、配置管理等。
-- 详细架构请参考 [GIT_ARCHITECTURE.md](./lib/GIT_ARCHITECTURE.md)
+- 详细架构请参考 [GIT_architecture.md](./lib/GIT_architecture.md)
 
 ### Commit 模块 (`lib::commit`)
 
 提供 Commit 相关的业务逻辑，包括 amend 和 reword 操作的预览信息生成、格式化显示、完成提示生成以及历史 commit reword 的执行逻辑。
-- 详细架构请参考 [COMMIT_ARCHITECTURE.md](./lib/COMMIT_ARCHITECTURE.md)
+- 详细架构请参考 [COMMIT_architecture.md](./lib/COMMIT_architecture.md)
 
 ### Jira 模块 (`lib::jira`)
 
 提供 Jira API 集成功能，包括 Issue 管理、用户管理、状态管理、工作历史记录和日志处理等。
-- 详细架构请参考 [JIRA_ARCHITECTURE.md](./lib/JIRA_ARCHITECTURE.md)
+- 详细架构请参考 [JIRA_architecture.md](./lib/JIRA_architecture.md)
 
 ### PR 模块 (`lib::pr`)
 
 提供跨平台 PR 管理功能，支持 GitHub 和 Codeup，包括创建、合并、关闭、更新等操作。
-- 详细架构请参考 [PR_ARCHITECTURE.md](./lib/PR_ARCHITECTURE.md)
+- 详细架构请参考 [PR_architecture.md](./lib/PR_architecture.md)
 
 ### Completion 模块 (`lib::completion`)
 
 提供 Shell 补全脚本生成和管理功能。
-- 详细架构请参考 [COMPLETION_ARCHITECTURE.md](./lib/COMPLETION_ARCHITECTURE.md)
+- 详细架构请参考 [COMPLETION_architecture.md](./lib/COMPLETION_architecture.md)
 
 ### Proxy 模块 (`lib::proxy`)
 
 提供代理管理功能，包括系统代理读取、配置生成和管理。
-- 详细架构请参考 [PROXY_ARCHITECTURE.md](./lib/PROXY_ARCHITECTURE.md)
+- 详细架构请参考 [PROXY_architecture.md](./lib/PROXY_architecture.md)
 
 ### Repo 模块 (`lib::repo`)
 
 提供仓库级配置管理功能，包括配置检查、加载、保存等。配置存储在项目根目录的 `.workflow/config.toml` 文件中。
-- 详细架构请参考 [REPO_ARCHITECTURE.md](./lib/REPO_ARCHITECTURE.md)
+- 详细架构请参考 [REPO_architecture.md](./lib/REPO_architecture.md)
 
 ### Template 模块 (`lib::template`)
 
 提供模板渲染功能，支持分支命名模板、PR body 模板、Commit 消息模板等。使用 Handlebars 模板引擎，支持从全局配置和项目级配置加载模板。
-- 详细架构请参考 [TEMPLATE_ARCHITECTURE.md](./lib/TEMPLATE_ARCHITECTURE.md)
+- 详细架构请参考 [TEMPLATE_architecture.md](./lib/TEMPLATE_architecture.md)
 
 ### Rollback 模块 (`lib::rollback`)
 
 提供回滚管理功能，支持备份、恢复和清理操作。
-- 详细架构请参考 [ROLLBACK_ARCHITECTURE.md](./lib/ROLLBACK_ARCHITECTURE.md)
+- 详细架构请参考 [ROLLBACK_architecture.md](./lib/ROLLBACK_architecture.md)
 
 ---
 
@@ -428,7 +428,7 @@ ignore = [
 
 ## 📝 开发规范
 
-详细的开发规范请参考 [开发规范文档](../guidelines/DEVELOPMENT_GUIDELINES.md)。
+详细的开发规范请参考 [开发规范文档](../guidelines/development.md)。
 
 该文档包含：
 - 代码风格规范（格式化、Lint、命名约定）
