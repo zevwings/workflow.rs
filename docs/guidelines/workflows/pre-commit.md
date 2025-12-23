@@ -241,7 +241,7 @@ graph TD
 - [ ] 子命令是否已在对应枚举中定义
 - [ ] 命令文档注释（`///`）是否完整
 - [ ] 参数文档注释（`///`）是否完整
-- [ ] 参数命名是否一致（如 `jira_id` vs `jira_ticket`）
+- [ ] 参数命名是否一致（如 `jira-_id` vs `jira-_ticket`）
 - [ ] 运行补全完整性测试：`cargo test --test completeness`
 - [ ] 新增命令是否包含在补全脚本中
 - [ ] 需要输出格式的命令是否使用了 `OutputFormatArgs`？
@@ -256,7 +256,7 @@ graph TD
 cargo test --test completeness
 
 # 运行参数检查测试
-cargo test --test args_check
+cargo test --test args-_check
 
 # 手动生成补全脚本验证
 cargo run -- completion generate
@@ -266,7 +266,7 @@ cargo run -- completion generate
 - CLI 命令定义：`src/lib/cli/`
 - 共用参数定义：`src/lib/cli/args.rs`
 - 补全完整性测试：`tests/completion/completeness.rs`
-- 参数检查测试：`tests/args_check.rs`（已从 `tests/cli/args_check.rs` 移至根目录）
+- 参数检查测试：`tests/args-_check.rs`（已从 `tests/cli/args-_check.rs` 移至根目录）
 
 **参考**：
 - [CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md) - 完整的检查方法和参数提取指南
@@ -361,8 +361,8 @@ trait FileReader {
 }
 
 // ✅ 简洁设计：直接使用函数
-pub fn read_file(path: &Path) -> Result<String> {
-    fs::read_to_string(path)
+pub fn read-_file(path: &Path) -> Result<String> {
+    fs::read-_to-_string(path)
         .context(format!("Failed to read file: {:?}", path))
 }
 ```
@@ -527,17 +527,17 @@ cargo check
 use crate::repo::config::RepoConfig;
 use anyhow::{Context, Result};
 
-pub fn get_branch_prefix() -> Option<String> {
+pub fn get-_branch-_prefix() -> Option<String> {
     // 使用顶部导入的函数
-    RepoConfig::get_branch_prefix()
+    RepoConfig::get-_branch-_prefix()
 }
 ```
 
 **错误示例**：
 ```rust
 // ❌ 错误：在代码中间使用 crate:: 路径直接调用
-pub fn get_branch_prefix() -> Option<String> {
-    crate::repo::config::RepoConfig::get_branch_prefix()
+pub fn get-_branch-_prefix() -> Option<String> {
+    crate::repo::config::RepoConfig::get-_branch-_prefix()
 }
 ```
 
@@ -558,7 +558,7 @@ use clap::Args;
 
 // 本地模块
 use crate::repo::config::RepoConfig;
-use crate::base::util::format_size;
+use crate::base::util::format-_size;
 ```
 
 ### 5.5 自动修复
@@ -705,13 +705,13 @@ modified:   README.md       # 更新版本示例（可选）
 
 **示例**：
 ```rust
-#[cfg(target_os = "macos")]
-fn get_system_proxy() -> Result<String> {
+#[cfg(target-_os = "macos")]
+fn get-_system-_proxy() -> Result<String> {
     // macOS 特定实现
 }
 
-#[cfg(target_os = "linux")]
-fn get_system_proxy() -> Result<String> {
+#[cfg(target-_os = "linux")]
+fn get-_system-_proxy() -> Result<String> {
     // Linux 特定实现
 }
 ```
@@ -753,15 +753,15 @@ fn get_system_proxy() -> Result<String> {
 
 在 Rust 代码中（自动获取当前时间）：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
 // 函数会自动获取当前时间，无需提前获取
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/CHECK_REPORT_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/CHECK_REPORT_{}.md", timestamp);
 // 输出：report/CHECK_REPORT_2024-12-19_14-30-00.md
 ```
 
-> **注意**：`format_filename_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
+> **注意**：`format-_filename-_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
 
 在命令行中（手动获取当前时间）：
 ```bash

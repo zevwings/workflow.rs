@@ -52,42 +52,42 @@ Workflow CLI 使用模板系统来生成：
 engine = "handlebars"
 
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feature/{{jira_key}}-{{summary_slug}}"
-bugfix = "bugfix/{{jira_key}}-{{summary_slug}}"
-hotfix = "hotfix/{{jira_key}}-{{summary_slug}}"
-refactoring = "refactoring/{{jira_key}}-{{summary_slug}}"
-chore = "chore/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feature/{{jira-_key}}-{{summary-_slug}}"
+bugfix = "bugfix/{{jira-_key}}-{{summary-_slug}}"
+hotfix = "hotfix/{{jira-_key}}-{{summary-_slug}}"
+refactoring = "refactoring/{{jira-_key}}-{{summary-_slug}}"
+chore = "chore/{{jira-_key}}-{{summary-_slug}}"
 
 [template.commit]
-default = """{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
+default = """{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}{{#if use-_scope}}{{commit-_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
-{{#if jira_key}}Closes {{jira_key}}{{/if}}"""
-use_scope = false
+{{#if jira-_key}}Closes {{jira-_key}}{{/if}}"""
+use-_scope = false
 
-[template.pull_requests]
+[template.pull-_requests]
 default = """
 # PR Ready
 
 ## Types of changes
 
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 
-{{#if short_description}}
+{{#if short-_description}}
 #### Short description:
 
-{{short_description}}
+{{short-_description}}
 {{/if}}
 
-{{#if jira_key}}
-{{#if jira_service_address}}
+{{#if jira-_key}}
+{{#if jira-_service-_address}}
 #### Jira Link:
 
-{{jira_service_address}}/browse/{{jira_key}}
+{{jira-_service-_address}}/browse/{{jira-_key}}
 {{/if}}
 {{/if}}
 
@@ -114,11 +114,11 @@ default = """
 engine = "handlebars"
 
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feat/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feat/{{jira-_key}}-{{summary-_slug}}"
 
 [template.commit]
-use_scope = true
+use-_scope = true
 ```
 
 ---
@@ -151,12 +151,12 @@ use_scope = true
 
 ```toml
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feature/{{jira_key}}-{{summary_slug}}"
-bugfix = "bugfix/{{jira_key}}-{{summary_slug}}"
-hotfix = "hotfix/{{jira_key}}-{{summary_slug}}"
-refactoring = "refactoring/{{jira_key}}-{{summary_slug}}"
-chore = "chore/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feature/{{jira-_key}}-{{summary-_slug}}"
+bugfix = "bugfix/{{jira-_key}}-{{summary-_slug}}"
+hotfix = "hotfix/{{jira-_key}}-{{summary-_slug}}"
+refactoring = "refactoring/{{jira-_key}}-{{summary-_slug}}"
+chore = "chore/{{jira-_key}}-{{summary-_slug}}"
 ```
 
 ### 2. 提交消息模板 (`[template.commit]`)
@@ -166,26 +166,26 @@ chore = "chore/{{jira_key}}-{{summary_slug}}"
 #### 配置项
 
 - **`default`**：提交消息模板（必需）
-- **`use_scope`**：是否使用 Conventional Commits 格式的 scope（可选，默认：`false`）
+- **`use-_scope`**：是否使用 Conventional Commits 格式的 scope（可选，默认：`false`）
 
-#### `use_scope` 说明
+#### `use-_scope` 说明
 
 - **`false`**（默认）：当没有 JIRA ticket 时，使用简单格式 `# {title}`
-- **`true`**：当没有 JIRA ticket 时，使用 Conventional Commits 格式 `{commit_type}({scope}): {title}`
+- **`true`**：当没有 JIRA ticket 时，使用 Conventional Commits 格式 `{commit-_type}({scope}): {title}`
 
 #### 默认模板
 
 ```toml
 [template.commit]
-default = """{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
+default = """{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}{{#if use-_scope}}{{commit-_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
-{{#if jira_key}}Closes {{jira_key}}{{/if}}"""
-use_scope = false
+{{#if jira-_key}}Closes {{jira-_key}}{{/if}}"""
+use-_scope = false
 ```
 
-### 3. PR 正文模板 (`[template.pull_requests]`)
+### 3. PR 正文模板 (`[template.pull-_requests]`)
 
 用于生成 PR 描述正文。
 
@@ -196,27 +196,27 @@ use_scope = false
 #### 默认模板
 
 ```toml
-[template.pull_requests]
+[template.pull-_requests]
 default = """
 # PR Ready
 
 ## Types of changes
 
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 
-{{#if short_description}}
+{{#if short-_description}}
 #### Short description:
 
-{{short_description}}
+{{short-_description}}
 {{/if}}
 
-{{#if jira_key}}
-{{#if jira_service_address}}
+{{#if jira-_key}}
+{{#if jira-_service-_address}}
 #### Jira Link:
 
-{{jira_service_address}}/browse/{{jira_key}}
+{{jira-_service-_address}}/browse/{{jira-_key}}
 {{/if}}
 {{/if}}
 
@@ -263,44 +263,44 @@ engine = "handlebars"
 
 # 分支命名模板
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feature/{{jira_key}}-{{summary_slug}}"
-bugfix = "bugfix/{{jira_key}}-{{summary_slug}}"
-hotfix = "hotfix/{{jira_key}}-{{summary_slug}}"
-refactoring = "refactoring/{{jira_key}}-{{summary_slug}}"
-chore = "chore/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feature/{{jira-_key}}-{{summary-_slug}}"
+bugfix = "bugfix/{{jira-_key}}-{{summary-_slug}}"
+hotfix = "hotfix/{{jira-_key}}-{{summary-_slug}}"
+refactoring = "refactoring/{{jira-_key}}-{{summary-_slug}}"
+chore = "chore/{{jira-_key}}-{{summary-_slug}}"
 
 # 提交消息模板
 [template.commit]
-default = """{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
+default = """{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}{{#if use-_scope}}{{commit-_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
-{{#if jira_key}}Closes {{jira_key}}{{/if}}"""
-use_scope = false
+{{#if jira-_key}}Closes {{jira-_key}}{{/if}}"""
+use-_scope = false
 
 # PR 正文模板
-[template.pull_requests]
+[template.pull-_requests]
 default = """
 # PR Ready
 
 ## Types of changes
 
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 
-{{#if short_description}}
+{{#if short-_description}}
 #### Short description:
 
-{{short_description}}
+{{short-_description}}
 {{/if}}
 
-{{#if jira_key}}
-{{#if jira_service_address}}
+{{#if jira-_key}}
+{{#if jira-_service-_address}}
 #### Jira Link:
 
-{{jira_service_address}}/browse/{{jira_key}}
+{{jira-_service-_address}}/browse/{{jira-_key}}
 {{/if}}
 {{/if}}
 
@@ -318,10 +318,10 @@ default = """
 
 ```toml
 [template.branch]
-feature = "feat/{{jira_key}}-{{summary_slug}}"
+feature = "feat/{{jira-_key}}-{{summary-_slug}}"
 
 [template.commit]
-use_scope = true
+use-_scope = true
 ```
 
 未配置的部分将使用默认值。
@@ -334,15 +334,15 @@ use_scope = true
 
 | 变量名 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
-| `jira_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
-| `jira_summary` | `Option<String>` | JIRA ticket 摘要 | `"Add user authentication"` |
-| `summary_slug` | `Option<String>` | JIRA ticket 摘要的 URL 友好格式 | `"add-user-authentication"` |
-| `jira_type` | `Option<String>` | JIRA ticket 类型 | `"Feature"` |
+| `jira-_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
+| `jira-_summary` | `Option<String>` | JIRA ticket 摘要 | `"Add user authentication"` |
+| `summary-_slug` | `Option<String>` | JIRA ticket 摘要的 URL 友好格式 | `"add-user-authentication"` |
+| `jira-_type` | `Option<String>` | JIRA ticket 类型 | `"Feature"` |
 
 **使用示例**：
 
 ```handlebars
-{{jira_key}}-{{summary_slug}}
+{{jira-_key}}-{{summary-_slug}}
 ```
 
 **输出示例**：`PROJ-123-add-user-authentication`
@@ -351,17 +351,17 @@ use_scope = true
 
 | 变量名 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
-| `commit_type` | `String` | 提交类型 | `"feat"`, `"fix"`, `"docs"` |
+| `commit-_type` | `String` | 提交类型 | `"feat"`, `"fix"`, `"docs"` |
 | `scope` | `Option<String>` | 提交范围 | `"auth"`, `"api"` |
 | `subject` | `String` | 提交主题 | `"Add user authentication"` |
 | `body` | `Option<String>` | 提交正文 | `"Implement OAuth2 flow"` |
-| `jira_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
-| `use_scope` | `bool` | 是否使用 scope（来自配置） | `true`, `false` |
+| `jira-_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
+| `use-_scope` | `bool` | 是否使用 scope（来自配置） | `true`, `false` |
 
 **使用示例**：
 
 ```handlebars
-{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{/if}}
+{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}{{commit-_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{/if}}
 ```
 
 **输出示例**：
@@ -372,13 +372,13 @@ use_scope = true
 
 | 变量名 | 类型 | 说明 | 示例 |
 |--------|------|------|------|
-| `jira_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
-| `jira_summary` | `Option<String>` | JIRA ticket 摘要 | `"Add user authentication"` |
-| `jira_description` | `Option<String>` | JIRA ticket 描述 | `"Implement OAuth2..."` |
-| `jira_type` | `Option<String>` | JIRA ticket 类型 | `"Feature"` |
-| `jira_service_address` | `Option<String>` | JIRA 服务地址 | `"https://jira.example.com"` |
-| `change_types` | `Vec<ChangeTypeItem>` | 变更类型列表 | 见下方说明 |
-| `short_description` | `Option<String>` | 简短描述 | `"Add OAuth2 support"` |
+| `jira-_key` | `Option<String>` | JIRA ticket ID | `"PROJ-123"` |
+| `jira-_summary` | `Option<String>` | JIRA ticket 摘要 | `"Add user authentication"` |
+| `jira-_description` | `Option<String>` | JIRA ticket 描述 | `"Implement OAuth2..."` |
+| `jira-_type` | `Option<String>` | JIRA ticket 类型 | `"Feature"` |
+| `jira-_service-_address` | `Option<String>` | JIRA 服务地址 | `"https://jira.example.com"` |
+| `change-_types` | `Vec<ChangeTypeItem>` | 变更类型列表 | 见下方说明 |
+| `short-_description` | `Option<String>` | 简短描述 | `"Add OAuth2 support"` |
 | `dependency` | `Option<String>` | 依赖信息 | `"Depends on #456"` |
 
 **`ChangeTypeItem` 结构**：
@@ -393,7 +393,7 @@ use_scope = true
 **使用示例**：
 
 ```handlebars
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 ```
@@ -415,13 +415,13 @@ use_scope = true
 #### 1. 变量插值
 
 ```handlebars
-{{variable_name}}
+{{variable-_name}}
 ```
 
 **示例**：
 
 ```handlebars
-{{jira_key}}-{{summary_slug}}
+{{jira-_key}}-{{summary-_slug}}
 ```
 
 #### 2. 条件判断
@@ -437,8 +437,8 @@ use_scope = true
 **示例**：
 
 ```handlebars
-{{#if jira_key}}
-  {{jira_key}}: {{subject}}
+{{#if jira-_key}}
+  {{jira-_key}}: {{subject}}
 {{else}}
   # {{subject}}
 {{/if}}
@@ -456,7 +456,7 @@ use_scope = true
 **示例**：
 
 ```handlebars
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 ```
@@ -474,9 +474,9 @@ use_scope = true
 **示例**：
 
 ```handlebars
-{{#if jira_key}}
-  {{#if jira_service_address}}
-    {{jira_service_address}}/browse/{{jira_key}}
+{{#if jira-_key}}
+  {{#if jira-_service-_address}}
+    {{jira-_service-_address}}/browse/{{jira-_key}}
   {{/if}}
 {{/if}}
 ```
@@ -486,10 +486,10 @@ use_scope = true
 #### 可选字段显示
 
 ```handlebars
-{{#if optional_field}}
+{{#if optional-_field}}
 #### Field Name:
 
-{{optional_field}}
+{{optional-_field}}
 {{/if}}
 ```
 
@@ -542,25 +542,25 @@ use_scope = true
 
 ```toml
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feature/{{jira_key}}-{{summary_slug}}"
-bugfix = "bugfix/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feature/{{jira-_key}}-{{summary-_slug}}"
+bugfix = "bugfix/{{jira-_key}}-{{summary-_slug}}"
 ```
 
 **项目级配置** (`.workflow/config.toml`)：
 
 ```toml
 [template.branch]
-feature = "feat/{{jira_key}}-{{summary_slug}}"
+feature = "feat/{{jira-_key}}-{{summary-_slug}}"
 ```
 
 **最终生效的配置**：
 
 ```toml
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"        # 来自全局配置
-feature = "feat/{{jira_key}}-{{summary_slug}}"  # 来自项目级配置（覆盖）
-bugfix = "bugfix/{{jira_key}}-{{summary_slug}}" # 来自全局配置
+default = "{{jira-_key}}-{{summary-_slug}}"        # 来自全局配置
+feature = "feat/{{jira-_key}}-{{summary-_slug}}"  # 来自项目级配置（覆盖）
+bugfix = "bugfix/{{jira-_key}}-{{summary-_slug}}" # 来自全局配置
 ```
 
 ---
@@ -575,7 +575,7 @@ bugfix = "bugfix/{{jira_key}}-{{summary_slug}}" # 来自全局配置
 
 ```toml
 [template.branch]
-feature = "feat/{{jira_key}}-{{summary_slug}}"
+feature = "feat/{{jira-_key}}-{{summary-_slug}}"
 ```
 
 ### 场景 2：启用 Conventional Commits 格式
@@ -586,7 +586,7 @@ feature = "feat/{{jira_key}}-{{summary_slug}}"
 
 ```toml
 [template.commit]
-use_scope = true
+use-_scope = true
 ```
 
 ### 场景 3：自定义 PR 模板
@@ -596,27 +596,27 @@ use_scope = true
 **配置**：
 
 ```toml
-[template.pull_requests]
+[template.pull-_requests]
 default = """
 # PR Ready
 
 ## Types of changes
 
-{{#each change_types}}
+{{#each change-_types}}
 - [{{#if this.selected}}x{{else}} {{/if}}] {{this.name}}
 {{/each}}
 
-{{#if short_description}}
+{{#if short-_description}}
 #### Short description:
 
-{{short_description}}
+{{short-_description}}
 {{/if}}
 
-{{#if jira_key}}
-{{#if jira_service_address}}
+{{#if jira-_key}}
+{{#if jira-_service-_address}}
 #### Jira Link:
 
-{{jira_service_address}}/browse/{{jira_key}}
+{{jira-_service-_address}}/browse/{{jira-_key}}
 {{/if}}
 {{/if}}
 
@@ -642,7 +642,7 @@ default = """
 
 ```toml
 [template.commit]
-default = """[{{jira_key}}] {{subject}}
+default = """[{{jira-_key}}] {{subject}}
 
 {{#if body}}{{body}}{{/if}}"""
 ```

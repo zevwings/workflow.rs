@@ -28,8 +28,8 @@ Proxy 模块负责从 macOS 系统设置读取代理配置，并管理代理相�
 src/lib/proxy/
 ├── mod.rs                  # 模块声明和导出
 ├── proxy.rs                # 类型定义（ProxyType, ProxyInfo, ProxyConfig, 结果类型）
-├── system_reader.rs        # 系统代理读取器（从 macOS 系统设置读取）
-├── config_generator.rs     # 代理配置生成器（生成命令和环境变量）
+├── system-_reader.rs        # 系统代理读取器（从 macOS 系统设置读取）
+├── config-_generator.rs     # 代理配置生成器（生成命令和环境变量）
 └── manager.rs              # 代理管理器（协调其他组件，提供高级功能）
 ```
 
@@ -59,8 +59,8 @@ src/lib/proxy/
 
 **关键方法**：
 - `all()` - 返回所有代理类型的迭代器
-- `env_key()` - 返回对应的环境变量键名
-- `url_scheme()` - 返回对应的 URL 协议方案
+- `env-_key()` - 返回对应的环境变量键名
+- `url-_scheme()` - 返回对应的 URL 协议方案
 
 **设计优势**：
 - 消除硬编码的环境变量名
@@ -77,9 +77,9 @@ src/lib/proxy/
 
 **关键方法**：
 - `new()` - 创建新实例
-- `get_config(proxy_type)` - 获取指定代理类型的配置
-- `get_config_mut(proxy_type)` - 获取可变引用
-- `get_proxy_url(proxy_type)` - 获取代理 URL
+- `get-_config(proxy-_type)` - 获取指定代理类型的配置
+- `get-_config-_mut(proxy-_type)` - 获取可变引用
+- `get-_proxy-_url(proxy-_type)` - 获取代理 URL
 
 **设计优势**：
 - 消除字段重复（从 9 个字段减少到 1 个 HashMap）
@@ -90,7 +90,7 @@ src/lib/proxy/
 
 **职责**：从 macOS 系统设置读取代理配置
 
-**位置**：`src/lib/proxy/system_reader.rs`
+**位置**：`src/lib/proxy/system-_reader.rs`
 
 **关键方法**：
 - `read()` - 从系统设置读取代理配置
@@ -104,14 +104,14 @@ src/lib/proxy/
 
 **职责**：生成代理命令和环境变量
 
-**位置**：`src/lib/proxy/config_generator.rs`
+**位置**：`src/lib/proxy/config-_generator.rs`
 
 **关键方法**：
-- `generate_command(proxy_info)` - 生成 `export` 命令字符串
-- `generate_env_vars(proxy_info)` - 生成环境变量 HashMap
+- `generate-_command(proxy-_info)` - 生成 `export` 命令字符串
+- `generate-_env-_vars(proxy-_info)` - 生成环境变量 HashMap
 
 **关键特性**：
-- 提取公共逻辑（`generate_proxy_pairs()`）
+- 提取公共逻辑（`generate-_proxy-_pairs()`）
 - 减少代码重复
 - 统一处理所有代理类型
 
@@ -122,11 +122,11 @@ src/lib/proxy/
 **位置**：`src/lib/proxy/manager.rs`
 
 **关键方法**：
-- `check_env_proxy()` - 检查环境变量中的代理设置
-- `is_proxy_configured(proxy_info)` - 检查代理设置是否匹配
+- `check-_env-_proxy()` - 检查环境变量中的代理设置
+- `is-_proxy-_configured(proxy-_info)` - 检查代理设置是否匹配
 - `enable(temporary)` - 开启代理（支持临时模式和持久化模式）
 - `disable()` - 关闭代理（同时从配置文件和当前 shell 移除）
-- `ensure_proxy_enabled()` - 确保代理已启用（如果系统代理已启用，自动设置环境变量）**注意：此函数已不再自动调用，需手动使用**
+- `ensure-_proxy-_enabled()` - 确保代理已启用（如果系统代理已启用，自动设置环境变量）**注意：此函数已不再自动调用，需手动使用**
 
 **关键特性**：
 - 协调 `SystemProxyReader` 和 `ProxyConfigGenerator`
@@ -140,12 +140,12 @@ src/lib/proxy/
 **位置**：`src/lib/base/shell/config.rs`
 
 **关键方法**：
-- `load_env_vars()` - 从配置块加载环境变量
-- `save_env_vars(env_vars)` - 保存环境变量到配置块
-- `set_env_vars(env_vars)` - 批量设置环境变量
-- `remove_env_vars(keys)` - 从文件中移除指定的 export 语句
-- `add_source(source_path, comment)` - 添加 source 语句
-- `remove_source(source_path)` - 移除 source 语句
+- `load-_env-_vars()` - 从配置块加载环境变量
+- `save-_env-_vars(env-_vars)` - 保存环境变量到配置块
+- `set-_env-_vars(env-_vars)` - 批量设置环境变量
+- `remove-_env-_vars(keys)` - 从文件中移除指定的 export 语句
+- `add-_source(source-_path, comment)` - 添加 source 语句
+- `remove-_source(source-_path)` - 移除 source 语句
 
 **关键特性**：
 - 通用的 Shell 配置文件管理工具
@@ -159,7 +159,7 @@ src/lib/proxy/
 使用 `ProxyType::all()` 迭代器统一处理所有代理类型：
 
 ```rust
-for proxy_type in ProxyType::all() {
+for proxy-_type in ProxyType::all() {
     // 统一处理所有代理类型
 }
 ```
@@ -218,11 +218,11 @@ src/commands/proxy/
 - **`lib/proxy/`**：代理管理模块（`ProxyManager`、`SystemProxyReader`、`ProxyConfigGenerator`）
   - `ProxyManager::enable()` - 启用代理
   - `ProxyManager::disable()` - 禁用代理
-  - `ProxyManager::check_env_proxy()` - 检查环境变量中的代理设置
-  - `ProxyManager::is_proxy_configured()` - 检查代理是否已正确配置
+  - `ProxyManager::check-_env-_proxy()` - 检查环境变量中的代理设置
+  - `ProxyManager::is-_proxy-_configured()` - 检查代理是否已正确配置
   - `SystemProxyReader::read()` - 读取系统代理设置
 - **`lib/base/shell/`**：Shell 配置管理（`ShellConfigManager`）
-  - `ShellConfigManager::load_env_vars()` - 加载 shell 配置文件中的环境变量
+  - `ShellConfigManager::load-_env-_vars()` - 加载 shell 配置文件中的环境变量
 - **`lib/base/util/`**：工具函数（`Clipboard`）
   - `Clipboard::copy()` - 复制到剪贴板
 
@@ -279,7 +279,7 @@ match cli.subcommand {
    - 关闭 shell 后失效
 
 2. **持久模式**（默认）：
-   - 写入 shell 配置文件（`~/.zshrc` 或 `~/.bash_profile`）
+   - 写入 shell 配置文件（`~/.zshrc` 或 `~/.bash-_profile`）
    - 新打开的 shell 自动启用代理
    - 持久化配置
 
@@ -334,10 +334,10 @@ match cli.subcommand {
 ProxyManager::enable(temporary)
   ↓
   1. SystemProxyReader::read()                    # 获取系统代理设置
-  2. ProxyManager::is_proxy_configured()          # 检查代理是否已配置
-  3. ProxyConfigGenerator::generate_command()     # 生成代理命令
-  4. ProxyConfigGenerator::generate_env_vars()    # 生成环境变量
-  5. ShellConfigManager::set_env_vars()          # 保存到配置文件（如果非临时模式）
+  2. ProxyManager::is-_proxy-_configured()          # 检查代理是否已配置
+  3. ProxyConfigGenerator::generate-_command()     # 生成代理命令
+  4. ProxyConfigGenerator::generate-_env-_vars()    # 生成环境变量
+  5. ShellConfigManager::set-_env-_vars()          # 保存到配置文件（如果非临时模式）
 ```
 
 **模式说明**：
@@ -349,9 +349,9 @@ ProxyManager::enable(temporary)
 ```
 ProxyManager::disable()
   ↓
-  1. ProxyManager::collect_current_proxy()        # 收集当前代理设置（环境变量和配置文件）
-  2. ProxyManager::remove_from_config_file()      # 从配置文件移除
-  3. ProxyManager::generate_unset_command()       # 生成 unset 命令
+  1. ProxyManager::collect-_current-_proxy()        # 收集当前代理设置（环境变量和配置文件）
+  2. ProxyManager::remove-_from-_config-_file()      # 从配置文件移除
+  3. ProxyManager::generate-_unset-_command()       # 生成 unset 命令
 ```
 
 **行为说明**：
@@ -361,12 +361,12 @@ ProxyManager::disable()
 ### 检查代理流程
 
 ```
-ProxyManager::check_env_proxy()
+ProxyManager::check-_env-_proxy()
   ↓
   1. SystemProxyReader::read()                       # 获取系统代理设置
-  2. ProxyManager::check_env_proxy()                 # 检查环境变量
-  3. ShellConfigManager::load_env_vars()              # 加载配置文件
-  4. ProxyManager::is_proxy_configured()             # 检查代理是否已正确配置
+  2. ProxyManager::check-_env-_proxy()                 # 检查环境变量
+  3. ShellConfigManager::load-_env-_vars()              # 加载配置文件
+  4. ProxyManager::is-_proxy-_configured()             # 检查代理是否已正确配置
 ```
 
 ### 数据流
@@ -380,11 +380,11 @@ SystemProxyReader::read()
   ↓
 ProxyInfo (HashMap<ProxyType, ProxyConfig>)
   ↓
-ProxyConfigGenerator::generate_env_vars()
+ProxyConfigGenerator::generate-_env-_vars()
   ↓
-ShellConfigManager::set_env_vars() (持久化模式)
+ShellConfigManager::set-_env-_vars() (持久化模式)
   ↓
-Shell 配置文件 (~/.zshrc, ~/.bash_profile)
+Shell 配置文件 (~/.zshrc, ~/.bash-_profile)
 ```
 
 #### 当前 Shell 会话数据流
@@ -392,9 +392,9 @@ Shell 配置文件 (~/.zshrc, ~/.bash_profile)
 ```
 ProxyInfo
   ↓
-ProxyConfigGenerator::generate_command()
+ProxyConfigGenerator::generate-_command()
   ↓
-export http_proxy=... https_proxy=... all_proxy=...
+export http-_proxy=... https-_proxy=... all-_proxy=...
   ↓
 用户执行 eval $(workflow proxy on)
   ↓
@@ -444,29 +444,29 @@ use workflow::ProxyManager;
 
 // 开启代理（持久化模式）
 let result = ProxyManager::enable(false)?;
-if let Some(cmd) = result.proxy_command {
-    log_message!("Run: eval $({})", cmd);
+if let Some(cmd) = result.proxy-_command {
+    log-_message!("Run: eval $({})", cmd);
 }
 
 // 开启代理（临时模式）
 let result = ProxyManager::enable(true)?;
-if let Some(cmd) = result.proxy_command {
-    log_message!("Run: {}", cmd);
+if let Some(cmd) = result.proxy-_command {
+    log-_message!("Run: {}", cmd);
 }
 
 // 关闭代理
 let result = ProxyManager::disable()?;
-if let Some(cmd) = result.unset_command {
-    log_message!("Run: {}", cmd);
+if let Some(cmd) = result.unset-_command {
+    log-_message!("Run: {}", cmd);
 }
 
 // 检查代理
-let env_proxy = ProxyManager::check_env_proxy();
-let is_configured = ProxyManager::is_proxy_configured(&proxy_info);
+let env-_proxy = ProxyManager::check-_env-_proxy();
+let is-_configured = ProxyManager::is-_proxy-_configured(&proxy-_info);
 
 // 手动启用代理（如果系统代理已启用）
 // 注意：此函数已不再自动调用，需手动使用
-ProxyManager::ensure_proxy_enabled()?;
+ProxyManager::ensure-_proxy-_enabled()?;
 ```
 
 ---
@@ -476,7 +476,7 @@ ProxyManager::ensure_proxy_enabled()?;
 ### 添加新代理类型
 
 1. 在 `ProxyType` 枚举中添加新类型
-2. 实现 `env_key()` 和 `url_scheme()` 方法
+2. 实现 `env-_key()` 和 `url-_scheme()` 方法
 3. 更新 `SystemProxyReader` 的映射表（如果需要）
 4. 所有使用 `ProxyType::all()` 迭代器的代码会自动支持新类型
 

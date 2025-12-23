@@ -24,8 +24,8 @@ src/lib/git/
 ├── repo.rs         # 仓库检测和类型识别 (203行)
 ├── stash.rs        # 暂存管理 (102行)
 ├── config.rs       # Git 配置管理 (67行)
-├── pre_commit.rs   # Pre-commit hooks 支持 (107行)
-├── cherry_pick.rs  # Cherry-pick 操作 (98行)
+├── pre-_commit.rs   # Pre-commit hooks 支持 (107行)
+├── cherry-_pick.rs  # Cherry-pick 操作 (98行)
 ├── helpers.rs      # Git 操作辅助函数 (115行)
 └── types.rs        # 类型定义 (15行)
 ```
@@ -38,26 +38,26 @@ src/lib/git/
 ### 模块集成
 
 - **PR 模块集成** (`lib/pr/`)：
-  - `GitBranch::checkout_branch()` - 创建或切换分支
+  - `GitBranch::checkout-_branch()` - 创建或切换分支
   - `GitCommit::commit()` - 提交更改
   - `GitBranch::push()` - 推送到远程
-  - `GitRepo::detect_repo_type()` - 检测仓库类型（用于工厂函数）
-  - `GitBranch::merge_branch()` - 合并分支
-  - `GitStash::stash_push()` / `stash_pop()` - 保存/恢复工作区更改
+  - `GitRepo::detect-_repo-_type()` - 检测仓库类型（用于工厂函数）
+  - `GitBranch::merge-_branch()` - 合并分支
+  - `GitStash::stash-_push()` / `stash-_pop()` - 保存/恢复工作区更改
 
 - **配置管理集成**：
-  - `GitConfig::set_global_user()` - 设置 Git 全局配置
+  - `GitConfig::set-_global-_user()` - 设置 Git 全局配置
   - 用于初始化设置和 GitHub 账号切换
 
 - **环境检查集成** (`commands/check/`)：
-  - `GitRepo::is_git_repo()` - 检查是否在 Git 仓库中
+  - `GitRepo::is-_git-_repo()` - 检查是否在 Git 仓库中
   - `GitCommit::status()` - 检查 Git 状态
 
 - **分支管理集成** (`commands/branch/`)：
-  - `GitBranch::get_all_branches()` - 获取所有分支
-  - `GitBranch::is_merged()` - 检查分支是否已合并
-  - `GitRepo::extract_repo_name()` - 提取仓库名（用于配置分组）
-  - `GitRepo::prune_remote()` - 清理远程分支引用
+  - `GitBranch::get-_all-_branches()` - 获取所有分支
+  - `GitBranch::is-_merged()` - 检查分支是否已合并
+  - `GitRepo::extract-_repo-_name()` - 提取仓库名（用于配置分组）
+  - `GitRepo::prune-_remote()` - 清理远程分支引用
 
 ---
 
@@ -80,21 +80,21 @@ src/lib/git/
 - **`GitBranch`**：分支管理结构体（零大小结构体）
 
 **主要方法**：
-- `current_branch()` - 获取当前分支名
-- `is_branch_exists()` - 检查分支是否存在（本地或远程）
-- `has_local_branch()` - 检查本地分支是否存在
-- `has_remote_branch()` - 检查远程分支是否存在
-- `checkout_branch()` - 创建或切换到分支
-- `get_default_branch()` - 获取默认分支
-- `get_all_branches()` - 获取所有分支（本地和远程）
-- `extract_base_branch_names()` - 提取分支基础名称（去掉前缀）
-- `is_branch_ahead()` - 检查分支是否领先于指定分支
+- `current-_branch()` - 获取当前分支名
+- `is-_branch-_exists()` - 检查分支是否存在（本地或远程）
+- `has-_local-_branch()` - 检查本地分支是否存在
+- `has-_remote-_branch()` - 检查远程分支是否存在
+- `checkout-_branch()` - 创建或切换到分支
+- `get-_default-_branch()` - 获取默认分支
+- `get-_all-_branches()` - 获取所有分支（本地和远程）
+- `extract-_base-_branch-_names()` - 提取分支基础名称（去掉前缀）
+- `is-_branch-_ahead()` - 检查分支是否领先于指定分支
 - `pull()` - 从远程拉取分支
 - `push()` - 推送到远程仓库
 - `delete()` - 删除本地分支
-- `delete_remote()` - 删除远程分支
-- `merge_branch()` - 合并分支
-- `has_merge_conflicts()` - 检查是否有合并冲突
+- `delete-_remote()` - 删除远程分支
+- `merge-_branch()` - 合并分支
+- `has-_merge-_conflicts()` - 检查是否有合并冲突
 
 **关键特性**：
 - 支持 `git switch` 和 `git checkout` 的自动回退
@@ -115,11 +115,11 @@ src/lib/git/
 
 **主要方法**：
 - `status()` - 检查 Git 状态
-- `has_commit()` - 检查是否有未提交的更改
-- `has_staged()` - 检查是否有暂存的文件
-- `add_all()` - 添加所有文件到暂存区
+- `has-_commit()` - 检查是否有未提交的更改
+- `has-_staged()` - 检查是否有暂存的文件
+- `add-_all()` - 添加所有文件到暂存区
 - `commit()` - 提交更改（支持 pre-commit hooks）
-- `get_diff()` - 获取 Git 修改内容（工作区和暂存区）
+- `get-_diff()` - 获取 Git 修改内容（工作区和暂存区）
 
 **关键特性**：
 - 自动暂存所有更改
@@ -138,12 +138,12 @@ src/lib/git/
 - **`GitRepo`**：仓库检测结构体（零大小结构体）
 
 **主要方法**：
-- `is_git_repo()` - 检查是否在 Git 仓库中
-- `detect_repo_type()` - 检测远程仓库类型（GitHub、Codeup 等）
-- `get_remote_url()` - 获取远程仓库 URL
-- `get_git_dir()` - 获取 Git 目录路径
+- `is-_git-_repo()` - 检查是否在 Git 仓库中
+- `detect-_repo-_type()` - 检测远程仓库类型（GitHub、Codeup 等）
+- `get-_remote-_url()` - 获取远程仓库 URL
+- `get-_git-_dir()` - 获取 Git 目录路径
 - `fetch()` - 从远程获取更新
-- `prune_remote()` - 清理远程分支引用
+- `prune-_remote()` - 清理远程分支引用
 
 **关键特性**：
 - 支持 GitHub 和 Codeup 仓库类型识别
@@ -161,9 +161,9 @@ src/lib/git/
 - **`GitStash`**：暂存管理结构体（零大小结构体）
 
 **主要方法**：
-- `stash_push()` - 保存未提交的修改到 stash
-- `stash_pop()` - 恢复 stash 中的修改
-- `has_unmerged()` - 检查是否有未合并的文件（冲突）
+- `stash-_push()` - 保存未提交的修改到 stash
+- `stash-_pop()` - 恢复 stash 中的修改
+- `has-_unmerged()` - 检查是否有未合并的文件（冲突）
 
 **关键特性**：
 - 自动检测合并冲突
@@ -180,22 +180,22 @@ src/lib/git/
 - **`GitConfig`**：配置管理结构体（零大小结构体）
 
 **主要方法**：
-- `set_global_user()` - 设置 Git 全局配置（email 和 name）
-- `get_global_user()` - 读取 Git 全局配置
+- `set-_global-_user()` - 设置 Git 全局配置（email 和 name）
+- `get-_global-_user()` - 读取 Git 全局配置
 
 **使用场景**：
 - 初始化设置时配置 Git 用户信息
 - GitHub 账号切换时更新配置
 
-#### 6. Pre-commit Hooks (`pre_commit.rs`)
+#### 6. Pre-commit Hooks (`pre-_commit.rs`)
 
 **职责**：提供 pre-commit hooks 支持
 
 - **`GitPreCommit`**：Pre-commit hooks 结构体（零大小结构体）
 
 **主要方法**：
-- `has_pre_commit()` - 检查是否存在 pre-commit hooks
-- `run_pre_commit()` - 执行 pre-commit hooks
+- `has-_pre-_commit()` - 检查是否存在 pre-commit hooks
+- `run-_pre-_commit()` - 执行 pre-commit hooks
 
 **关键特性**：
 - 支持 Git hooks 和 pre-commit 工具
@@ -205,18 +205,18 @@ src/lib/git/
 - 提交前自动执行 hooks
 - 支持代码质量检查
 
-#### 7. Cherry-pick 操作 (`cherry_pick.rs`)
+#### 7. Cherry-pick 操作 (`cherry-_pick.rs`)
 
 **职责**：提供 Git cherry-pick 相关的完整功能
 
 - **`GitCherryPick`**：Cherry-pick 管理结构体（零大小结构体）
 
 **主要方法**：
-- `cherry_pick(commit)` - Cherry-pick 提交到当前分支
-- `cherry_pick_no_commit(commit)` - Cherry-pick 但不提交（保留在工作区）
-- `cherry_pick_continue()` - 继续 cherry-pick 操作
-- `cherry_pick_abort()` - 中止 cherry-pick 操作
-- `is_cherry_pick_in_progress()` - 检查是否正在进行 cherry-pick 操作
+- `cherry-_pick(commit)` - Cherry-pick 提交到当前分支
+- `cherry-_pick-_no-_commit(commit)` - Cherry-pick 但不提交（保留在工作区）
+- `cherry-_pick-_continue()` - 继续 cherry-pick 操作
+- `cherry-_pick-_abort()` - 中止 cherry-pick 操作
+- `is-_cherry-_pick-_in-_progress()` - 检查是否正在进行 cherry-pick 操作
 
 **关键特性**：
 - 支持普通 cherry-pick 和 no-commit 模式
@@ -230,19 +230,19 @@ src/lib/git/
 
 **注意**：
 - 如果遇到冲突，cherry-pick 会暂停，需要用户手动解决冲突后继续
-- `cherry_pick_no_commit()` 会将修改保留在工作区，需要手动提交
+- `cherry-_pick-_no-_commit()` 会将修改保留在工作区，需要手动提交
 
 #### 8. 辅助函数 (`helpers.rs`)
 
 **职责**：提供通用的 Git 命令执行辅助函数
 
 **主要函数**：
-- `cmd_read()` - 执行 Git 命令并读取输出
-- `cmd_run()` - 执行 Git 命令（不读取输出）
-- `check_success()` - 静默执行并检查是否成功
-- `check_ref_exists()` - 检查 Git 引用是否存在
-- `switch_or_checkout()` - 尝试 git switch，失败时回退到 git checkout
-- `remove_branch_prefix()` - 移除分支名称的前缀
+- `cmd-_read()` - 执行 Git 命令并读取输出
+- `cmd-_run()` - 执行 Git 命令（不读取输出）
+- `check-_success()` - 静默执行并检查是否成功
+- `check-_ref-_exists()` - 检查 Git 引用是否存在
+- `switch-_or-_checkout()` - 尝试 git switch，失败时回退到 git checkout
+- `remove-_branch-_prefix()` - 移除分支名称的前缀
 
 **常量**：
 - `COMMON_DEFAULT_BRANCHES` - 常见默认分支名常量
@@ -269,14 +269,14 @@ src/lib/git/
 ```rust
 pub struct GitBranch;  // 零大小结构体
 impl GitBranch {
-    pub fn current_branch() -> Result<String> { ... }
+    pub fn current-_branch() -> Result<String> { ... }
     // ...
 }
 ```
 
 **优势**：
 - 职责清晰，符合单一职责原则
-- 命名空间明确（`GitBranch::current_branch()`）
+- 命名空间明确（`GitBranch::current-_branch()`）
 - 易于维护和扩展
 
 #### 2. 辅助函数模式
@@ -285,9 +285,9 @@ impl GitBranch {
 
 ```rust
 // 统一接口
-cmd_read(&["branch", "--show-current"])
-cmd_run(&["add", "--all"])
-check_success(&["diff", "--quiet"])
+cmd-_read(&["branch", "--show-current"])
+cmd-_run(&["add", "--all"])
+check-_success(&["diff", "--quiet"])
 ```
 
 **优势**：
@@ -313,14 +313,14 @@ pub enum MergeStrategy {
 
 #### 4. 回退模式
 
-`switch_or_checkout()` 函数实现自动回退：
+`switch-_or-_checkout()` 函数实现自动回退：
 
 ```rust
 // 优先使用 git switch，失败时回退到 git checkout
-switch_or_checkout(
-    &["switch", branch_name],
-    &["checkout", branch_name],
-    error_msg,
+switch-_or-_checkout(
+    &["switch", branch-_name],
+    &["checkout", branch-_name],
+    error-_msg,
 )?;
 ```
 
@@ -334,14 +334,14 @@ switch_or_checkout(
 
 1. **辅助函数层**：统一错误上下文
    ```rust
-   cmd_read(&["branch", "--show-current"])
+   cmd-_read(&["branch", "--show-current"])
        .context("Failed to get current branch")
    ```
 
 2. **业务逻辑层**：添加业务上下文
    ```rust
-   GitBranch::checkout_branch(branch_name)
-       .with_context(|| format!("Failed to checkout branch: {}", branch_name))
+   GitBranch::checkout-_branch(branch-_name)
+       .with-_context(|| format!("Failed to checkout branch: {}", branch-_name))
    ```
 
 3. **命令层**：用户友好的错误提示
@@ -372,9 +372,9 @@ lib/git/*.rs (核心业务逻辑层)
   └── GitCherryPick::xxx()  # Cherry-pick 操作
   ↓
 helpers.rs (辅助函数层)
-  ├── cmd_read()
-  ├── cmd_run()
-  └── check_success()
+  ├── cmd-_read()
+  ├── cmd-_run()
+  └── check-_success()
   ↓
 duct::cmd (命令执行层)
   └── git 命令
@@ -385,35 +385,35 @@ duct::cmd (命令执行层)
 #### 1. 分支操作
 
 ```
-GitBranch::checkout_branch(branch_name)
+GitBranch::checkout-_branch(branch-_name)
   ↓
-helpers::switch_or_checkout()  # 尝试 git switch，失败时回退
+helpers::switch-_or-_checkout()  # 尝试 git switch，失败时回退
   ↓
-helpers::cmd_run()  # 执行 git 命令
+helpers::cmd-_run()  # 执行 git 命令
 ```
 
 #### 2. 提交操作
 
 ```
-GitCommit::commit(commit_title, true)
+GitCommit::commit(commit-_title, true)
   ↓
-GitPreCommit::run_pre_commit()  # 如果存在 pre-commit hooks
+GitPreCommit::run-_pre-_commit()  # 如果存在 pre-commit hooks
   ↓
-GitCommit::add_all()  # 暂存所有文件
+GitCommit::add-_all()  # 暂存所有文件
   ↓
-helpers::cmd_run()  # 执行 git commit
+helpers::cmd-_run()  # 执行 git commit
 ```
 
 #### 3. 合并操作
 
 ```
-GitBranch::merge_branch(source_branch, strategy)
+GitBranch::merge-_branch(source-_branch, strategy)
   ↓
-GitBranch::has_merge_conflicts()  # 检查冲突
+GitBranch::has-_merge-_conflicts()  # 检查冲突
   ↓
-GitBranch::checkout_branch(default_branch)  # 切换到默认分支
+GitBranch::checkout-_branch(default-_branch)  # 切换到默认分支
   ↓
-GitBranch::delete(branch_name, false)  # 删除本地分支
+GitBranch::delete(branch-_name, false)  # 删除本地分支
 ```
 
 ### 数据流
@@ -423,13 +423,13 @@ GitBranch::delete(branch_name, false)  # 删除本地分支
 ```
 用户输入（分支名）
   ↓
-GitBranch::checkout_branch()
+GitBranch::checkout-_branch()
   ↓
 检查分支存在性（本地/远程）
   ↓
-switch_or_checkout()  # 尝试 git switch，失败时回退
+switch-_or-_checkout()  # 尝试 git switch，失败时回退
   ↓
-helpers::cmd_run()  # 执行 git 命令
+helpers::cmd-_run()  # 执行 git 命令
   ↓
 返回结果
 ```
@@ -443,11 +443,11 @@ GitCommit::commit()
   ↓
 检查是否有更改
   ↓
-GitCommit::add_all()  # 暂存所有文件
+GitCommit::add-_all()  # 暂存所有文件
   ↓
-GitPreCommit::run_pre_commit()  # 如果存在 hooks
+GitPreCommit::run-_pre-_commit()  # 如果存在 hooks
   ↓
-helpers::cmd_run()  # 执行 git commit
+helpers::cmd-_run()  # 执行 git commit
   ↓
 返回结果
 ```
@@ -462,13 +462,13 @@ helpers::cmd_run()  # 执行 git commit
 use workflow::git::{GitBranch, GitCommit, GitRepo, GitStash};
 
 // 获取当前分支
-let branch = GitBranch::current_branch()?;
+let branch = GitBranch::current-_branch()?;
 
 // 检查分支是否存在
-let (local, remote) = GitBranch::is_branch_exists("feature/new")?;
+let (local, remote) = GitBranch::is-_branch-_exists("feature/new")?;
 
 // 创建或切换分支
-GitBranch::checkout_branch("feature/new")?;
+GitBranch::checkout-_branch("feature/new")?;
 
 // 提交更改
 GitCommit::commit("Fix bug", false)?;
@@ -477,23 +477,23 @@ GitCommit::commit("Fix bug", false)?;
 GitBranch::push("feature/new", true)?;
 
 // 检测仓库类型
-let repo_type = GitRepo::detect_repo_type()?;
+let repo-_type = GitRepo::detect-_repo-_type()?;
 
 // 保存工作区更改
-GitStash::stash_push(Some("WIP: working on feature"))?;
+GitStash::stash-_push(Some("WIP: working on feature"))?;
 
 // Cherry-pick 提交
-GitCherryPick::cherry_pick("abc123")?;
+GitCherryPick::cherry-_pick("abc123")?;
 
 // Cherry-pick 但不提交
-GitCherryPick::cherry_pick_no_commit("abc123")?;
+GitCherryPick::cherry-_pick-_no-_commit("abc123")?;
 
 // 检查是否正在进行 cherry-pick
-if GitCherryPick::is_cherry_pick_in_progress() {
+if GitCherryPick::is-_cherry-_pick-_in-_progress() {
     // 解决冲突后继续
-    GitCherryPick::cherry_pick_continue()?;
+    GitCherryPick::cherry-_pick-_continue()?;
     // 或中止操作
-    // GitCherryPick::cherry_pick_abort()?;
+    // GitCherryPick::cherry-_pick-_abort()?;
 }
 ```
 
@@ -503,13 +503,13 @@ if GitCherryPick::is_cherry_pick_in_progress() {
 use workflow::git::{GitBranch, MergeStrategy};
 
 // 普通合并
-GitBranch::merge_branch("feature/new", MergeStrategy::Merge)?;
+GitBranch::merge-_branch("feature/new", MergeStrategy::Merge)?;
 
 // Squash 合并
-GitBranch::merge_branch("feature/new", MergeStrategy::Squash)?;
+GitBranch::merge-_branch("feature/new", MergeStrategy::Squash)?;
 
 // 只允许 fast-forward
-GitBranch::merge_branch("feature/new", MergeStrategy::FastForwardOnly)?;
+GitBranch::merge-_branch("feature/new", MergeStrategy::FastForwardOnly)?;
 ```
 
 ### 检查冲突
@@ -518,7 +518,7 @@ GitBranch::merge_branch("feature/new", MergeStrategy::FastForwardOnly)?;
 use workflow::git::GitBranch;
 
 // 检查是否有合并冲突
-if GitBranch::has_merge_conflicts()? {
+if GitBranch::has-_merge-_conflicts()? {
     // 处理冲突
 }
 ```
@@ -538,8 +538,8 @@ if GitBranch::has_merge_conflicts()? {
 ```rust
 // branch.rs
 impl GitBranch {
-    pub fn rename_branch(old_name: &str, new_name: &str) -> Result<()> {
-        helpers::cmd_run(&["branch", "-m", old_name, new_name])
+    pub fn rename-_branch(old-_name: &str, new-_name: &str) -> Result<()> {
+        helpers::cmd-_run(&["branch", "-m", old-_name, new-_name])
             .context("Failed to rename branch")
     }
 }
@@ -548,7 +548,7 @@ impl GitBranch {
 ### 添加新的仓库类型
 
 1. 在 `types.rs` 中添加新的 `RepoType` 变体
-2. 在 `repo.rs` 的 `parse_repo_type_from_url()` 中添加识别逻辑
+2. 在 `repo.rs` 的 `parse-_repo-_type-_from-_url()` 中添加识别逻辑
 
 **示例**：
 ```rust
@@ -564,7 +564,7 @@ pub enum RepoType {
 ### 添加新的合并策略
 
 1. 在 `types.rs` 中添加新的 `MergeStrategy` 变体
-2. 在 `branch.rs` 的 `merge_branch()` 方法中添加对应的处理逻辑
+2. 在 `branch.rs` 的 `merge-_branch()` 方法中添加对应的处理逻辑
 
 ---
 

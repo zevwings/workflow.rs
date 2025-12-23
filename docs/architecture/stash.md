@@ -55,13 +55,13 @@ src/commands/stash/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/git/stash.rs`**：Git Stash 操作
-  - `GitStash::stash_list()` - 列出所有 stash 条目
-  - `GitStash::stash_push()` - 保存当前工作区更改到 stash
-  - `GitStash::stash_apply()` - 应用 stash（不删除）
-  - `GitStash::stash_drop()` - 删除 stash
-  - `GitStash::stash_pop()` - 应用并删除 stash
-  - `GitStash::stash_show_stat()` - 获取 stash 统计信息
-  - `GitStash::has_unmerged()` - 检查是否有冲突
+  - `GitStash::stash-_list()` - 列出所有 stash 条目
+  - `GitStash::stash-_push()` - 保存当前工作区更改到 stash
+  - `GitStash::stash-_apply()` - 应用 stash（不删除）
+  - `GitStash::stash-_drop()` - 删除 stash
+  - `GitStash::stash-_pop()` - 应用并删除 stash
+  - `GitStash::stash-_show-_stat()` - 获取 stash 统计信息
+  - `GitStash::has-_unmerged()` - 检查是否有冲突
 - **`lib/base/dialog/`**：用户交互对话框
   - `ConfirmDialog` - 确认对话框
   - `SelectDialog` - 选择对话框
@@ -97,9 +97,9 @@ Git 命令执行
 ```
 用户输入: workflow stash list [--stat]
   ↓
-StashListCommand::execute(show_stat)
+StashListCommand::execute(show-_stat)
   ↓
-GitStash::stash_list() → 获取所有 stash 条目
+GitStash::stash-_list() → 获取所有 stash 条目
   ↓
 格式化表格数据 (StashRow)
   ↓
@@ -115,15 +115,15 @@ TableBuilder 构建表格
   ↓
 StashApplyCommand::execute()
   ↓
-GitStash::stash_list() → 获取所有 stash 条目
+GitStash::stash-_list() → 获取所有 stash 条目
   ↓
 显示最新 stash 信息，询问是否应用
   ↓
-如果用户选择其他，调用 select_stash_interactively()
+如果用户选择其他，调用 select-_stash-_interactively()
   ↓
-GitStash::stash_apply(stash_ref) → 应用 stash
+GitStash::stash-_apply(stash-_ref) → 应用 stash
   ↓
-检查冲突 (GitStash::has_unmerged())
+检查冲突 (GitStash::has-_unmerged())
   ↓
 显示结果（成功/冲突/错误）
 ```
@@ -135,7 +135,7 @@ GitStash::stash_apply(stash_ref) → 应用 stash
   ↓
 StashDropCommand::execute()
   ↓
-GitStash::stash_list() → 获取所有 stash 条目
+GitStash::stash-_list() → 获取所有 stash 条目
   ↓
 MultiSelectDialog 多选要删除的 stash
   ↓
@@ -143,7 +143,7 @@ MultiSelectDialog 多选要删除的 stash
   ↓
 确认删除
   ↓
-GitStash::stash_drop(stash_ref) → 删除每个选中的 stash
+GitStash::stash-_drop(stash-_ref) → 删除每个选中的 stash
   ↓
 显示删除结果
 ```
@@ -155,15 +155,15 @@ GitStash::stash_drop(stash_ref) → 删除每个选中的 stash
   ↓
 StashPopCommand::execute()
   ↓
-GitStash::stash_list() → 获取所有 stash 条目
+GitStash::stash-_list() → 获取所有 stash 条目
   ↓
 显示最新 stash 信息，询问是否应用
   ↓
-如果用户选择其他，调用 select_stash_interactively()
+如果用户选择其他，调用 select-_stash-_interactively()
   ↓
-GitStash::stash_pop(stash_ref) → 应用并删除 stash
+GitStash::stash-_pop(stash-_ref) → 应用并删除 stash
   ↓
-检查冲突 (GitStash::has_unmerged())
+检查冲突 (GitStash::has-_unmerged())
   ↓
 如果冲突，保留 stash 条目
   ↓
@@ -177,13 +177,13 @@ GitStash::stash_pop(stash_ref) → 应用并删除 stash
   ↓
 StashPushCommand::execute()
   ↓
-GitCommit::has_commit() → 检查是否有未提交的更改
+GitCommit::has-_commit() → 检查是否有未提交的更改
   ↓
 如果没有更改，显示警告并返回
   ↓
 InputDialog 提示输入 stash 消息（可选）
   ↓
-GitStash::stash_push(message) → 保存更改到 stash
+GitStash::stash-_push(message) → 保存更改到 stash
   ↓
 显示成功消息
 ```
@@ -204,9 +204,9 @@ workflow stash list --stat       # 显示统计信息
 ```
 
 **实现细节**：
-- 使用 `GitStash::stash_list()` 获取所有 stash 条目
+- 使用 `GitStash::stash-_list()` 获取所有 stash 条目
 - 使用 `TableBuilder` 构建表格，显示索引、消息、分支、创建时间
-- 如果指定 `--stat`，使用 `GitStash::stash_show_stat()` 获取每个 stash 的文件变更统计
+- 如果指定 `--stat`，使用 `GitStash::stash-_show-_stat()` 获取每个 stash 的文件变更统计
 
 **输出示例**：
 ```
@@ -231,9 +231,9 @@ workflow stash apply              # 交互式选择要应用的 stash
 
 **实现细节**：
 - 首先显示最新的 stash 信息，询问用户是否应用
-- 如果用户选择其他，使用 `select_stash_interactively()` 交互式选择
-- 使用 `GitStash::stash_apply()` 应用 stash
-- 自动检测冲突（`GitStash::has_unmerged()`）
+- 如果用户选择其他，使用 `select-_stash-_interactively()` 交互式选择
+- 使用 `GitStash::stash-_apply()` 应用 stash
+- 自动检测冲突（`GitStash::has-_unmerged()`）
 - 如果成功，显示文件变更统计；如果有冲突，显示冲突提示
 
 **冲突处理**：
@@ -253,7 +253,7 @@ workflow stash drop               # 交互式选择要删除的 stash
 **实现细节**：
 - 使用 `MultiSelectDialog` 多选要删除的 stash
 - 显示将要删除的 stash 列表供用户确认
-- 使用 `GitStash::stash_drop()` 删除每个选中的 stash
+- 使用 `GitStash::stash-_drop()` 删除每个选中的 stash
 - 显示删除结果
 
 **安全机制**：
@@ -273,9 +273,9 @@ workflow stash pop                # 交互式选择要应用的 stash
 
 **实现细节**：
 - 首先显示最新的 stash 信息，询问用户是否应用
-- 如果用户选择其他，使用 `select_stash_interactively()` 交互式选择
-- 使用 `GitStash::stash_pop()` 应用并删除 stash
-- 自动检测冲突（`GitStash::has_unmerged()`）
+- 如果用户选择其他，使用 `select-_stash-_interactively()` 交互式选择
+- 使用 `GitStash::stash-_pop()` 应用并删除 stash
+- 自动检测冲突（`GitStash::has-_unmerged()`）
 - **重要**：如果应用失败（冲突），stash 条目保留，不删除
 
 **冲突处理**：
@@ -294,10 +294,10 @@ workflow stash push                # 保存当前更改到 stash（提示输入�
 ```
 
 **实现细节**：
-- 首先检查工作区是否有未提交的更改（`GitCommit::has_commit()`）
+- 首先检查工作区是否有未提交的更改（`GitCommit::has-_commit()`）
 - 如果没有更改，显示警告并返回
 - 使用 `InputDialog` 提示用户输入可选的 stash 消息
-- 使用 `GitStash::stash_push()` 保存更改到 stash
+- 使用 `GitStash::stash-_push()` 保存更改到 stash
 - 显示成功消息（包含消息内容，如果有）
 
 **使用场景**：
@@ -317,20 +317,20 @@ pub struct StashEntry {
     pub index: usize,              // stash@{n} 中的 n
     pub branch: String,             // 创建时的分支
     pub message: String,             // stash 消息
-    pub commit_hash: String,        // commit hash
+    pub commit-_hash: String,        // commit hash
     pub timestamp: Option<DateTime<Local>>,  // 创建时间
 }
 
 pub struct StashApplyResult {
     pub applied: bool,               // 是否成功应用
-    pub has_conflicts: bool,         // 是否有冲突
+    pub has-_conflicts: bool,         // 是否有冲突
     pub message: Option<String>,     // 消息
     pub warnings: Vec<String>,       // 警告列表
     pub stat: Option<StashStat>,     // 统计信息
 }
 
 pub struct StashStat {
-    pub files_changed: usize,        // 变更的文件数
+    pub files-_changed: usize,        // 变更的文件数
     pub insertions: usize,           // 插入的行数
     pub deletions: usize,            // 删除的行数
 }
@@ -341,7 +341,7 @@ pub struct StashStat {
 ```
 Git 命令输出
   ↓
-GitStash::stash_list() → Vec<StashEntry>
+GitStash::stash-_list() → Vec<StashEntry>
   ↓
 命令层格式化 → 表格显示
 ```

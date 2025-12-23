@@ -90,14 +90,14 @@
 **搜索模式**：
 ```bash
 # 查找文件读取操作
-grep -r "fs::read_to_string" src/
+grep -r "fs::read-_to-_string" src/
 grep -r "File::open" src/
 grep -r "BufReader::new" src/
 
 # 查找文件写入操作
 grep -r "fs::write" src/
-grep -r "fs::create_dir" src/
-grep -r "fs::create_dir_all" src/
+grep -r "fs::create-_dir" src/
+grep -r "fs::create-_dir-_all" src/
 ```
 
 **常见重复模式**：
@@ -107,7 +107,7 @@ grep -r "fs::create_dir_all" src/
 
 **已封装工具**：
 - `lib/base/util/file.rs` - `FileReader::open()` - 文件打开和 BufReader 创建
-- 建议封装：`read_file_with_context()`, `write_file_with_context()`
+- 建议封装：`read-_file-_with-_context()`, `write-_file-_with-_context()`
 
 **检查清单**：
 - [ ] 是否有多个地方使用相同的文件读取模式？
@@ -132,14 +132,14 @@ grep -r "duct::cmd" src/
 
 **已封装工具**：
 - `lib/git/helpers.rs`：
-  - `cmd_read()` - 执行 Git 命令并读取输出
-  - `cmd_run()` - 执行 Git 命令（不读取输出）
-  - `check_success()` - 静默执行并检查成功
-  - `check_ref_exists()` - 检查 Git 引用是否存在
-  - `switch_or_checkout()` - 尝试 switch，失败时回退到 checkout
+  - `cmd-_read()` - 执行 Git 命令并读取输出
+  - `cmd-_run()` - 执行 Git 命令（不读取输出）
+  - `check-_success()` - 静默执行并检查成功
+  - `check-_ref-_exists()` - 检查 Git 引用是否存在
+  - `switch-_or-_checkout()` - 尝试 switch，失败时回退到 checkout
 
 **检查清单**：
-- [ ] 是否直接使用 `cmd("git", ...)` 而不是 `cmd_read()` 或 `cmd_run()`？
+- [ ] 是否直接使用 `cmd("git", ...)` 而不是 `cmd-_read()` 或 `cmd-_run()`？
 - [ ] 是否有重复的错误处理逻辑？
 - [ ] 是否可以复用 `git/helpers.rs` 中的函数？
 
@@ -150,9 +150,9 @@ grep -r "duct::cmd" src/
 **搜索模式**：
 ```bash
 # 查找错误处理模式
-grep -r "\.wrap_err" src/
+grep -r "\.wrap-_err" src/
 grep -r "\.context" src/
-grep -r "\.with_context" src/
+grep -r "\.with-_context" src/
 grep -r "bail!" src/
 grep -r "ensure!" src/
 ```
@@ -180,8 +180,8 @@ grep -r "ensure!" src/
 ```bash
 # 查找字符串处理
 grep -r "\.trim()" src/
-grep -r "\.to_string()" src/
-grep -r "\.to_lowercase()" src/
+grep -r "\.to-_string()" src/
+grep -r "\.to-_lowercase()" src/
 grep -r "format!" src/
 ```
 
@@ -192,11 +192,11 @@ grep -r "format!" src/
 
 **已封装工具**：
 - `lib/base/util/string.rs`：
-  - `mask_sensitive_value()` - 隐藏敏感值
+  - `mask-_sensitive-_value()` - 隐藏敏感值
 
 **检查清单**：
 - [ ] 是否有重复的字符串处理逻辑？
-- [ ] 是否可以使用 `mask_sensitive_value()` 隐藏敏感信息？
+- [ ] 是否可以使用 `mask-_sensitive-_value()` 隐藏敏感信息？
 - [ ] 是否可以抽取为公共函数？
 
 #### 5. 路径处理模式
@@ -257,7 +257,7 @@ grep -r "reqwest" src/
 # 查找配置读取
 grep -r "Settings::get" src/
 grep -r "Settings::load" src/
-grep -r "toml::from_str" src/
+grep -r "toml::from-_str" src/
 ```
 
 **常见重复模式**：
@@ -299,7 +299,7 @@ grep -r "error!" src/
   - `success!()` - 成功日志
   - `debug!()` - 调试日志
   - `separator!()` - 分隔符
-  - `separator_with_text!()` - 带文本的分隔符
+  - `separator-_with-_text!()` - 带文本的分隔符
 
 **检查清单**：
 - [ ] 是否使用 `println!` 而不是日志宏？
@@ -401,7 +401,7 @@ use std::path::Path;
 use std::io::BufRead;
 
 // 第三方库导入
-use color_eyre::Result;
+use color-_eyre::Result;
 use serde::{Deserialize, Serialize};
 
 // 项目内部导入
@@ -412,7 +412,7 @@ use crate::base::settings::Settings;
 **错误的导入顺序示例**：
 ```rust
 // ❌ 不好的做法：导入分散在代码中
-fn some_function() {
+fn some-_function() {
     use std::fs;  // 不应该在函数内部导入
     // ...
 }
@@ -420,7 +420,7 @@ fn some_function() {
 // ❌ 不好的做法：导入顺序混乱
 use crate::base::util::file::FileReader;  // 项目内部导入
 use std::fs;  // 标准库导入应该在前面
-use color_eyre::Result;  // 第三方库导入
+use color-_eyre::Result;  // 第三方库导入
 ```
 
 **检查清单**：
@@ -499,7 +499,7 @@ struct SimpleFileReader;
 
 impl FileReader for SimpleFileReader {
     fn read(&self, path: &Path) -> Result<String> {
-        fs::read_to_string(path)
+        fs::read-_to-_string(path)
             .context(format!("Failed to read file: {:?}", path))
     }
 }
@@ -512,13 +512,13 @@ let content = reader.read(&path)?;
 **简洁设计示例**：
 ```rust
 // ✅ 简洁设计：直接使用函数
-pub fn read_file(path: &Path) -> Result<String> {
-    fs::read_to_string(path)
+pub fn read-_file(path: &Path) -> Result<String> {
+    fs::read-_to-_string(path)
         .context(format!("Failed to read file: {:?}", path))
 }
 
 // 使用
-let content = read_file(&path)?;
+let content = read-_file(&path)?;
 ```
 
 **过度设计示例**：
@@ -549,8 +549,8 @@ impl ConfigBuilder {
 
     fn build(self) -> Result<Config> {
         Ok(Config {
-            host: self.host.unwrap_or_else(|| "localhost".to_string()),
-            port: self.port.unwrap_or(8080),
+            host: self.host.unwrap-_or-_else(|| "localhost".to-_string()),
+            port: self.port.unwrap-_or(8080),
         })
     }
 }
@@ -571,7 +571,7 @@ impl Config {
 
     pub fn default() -> Self {
         Self {
-            host: "localhost".to_string(),
+            host: "localhost".to-_string(),
             port: 8080,
         }
     }
@@ -600,7 +600,7 @@ grep -r "File::open" src/ | grep -v "lib/base/util/file.rs"
 
 **位置**：`lib/base/util/string.rs`
 
-- `mask_sensitive_value(value)` - 隐藏敏感值（如密码、token）
+- `mask-_sensitive-_value(value)` - 隐藏敏感值（如密码、token）
 
 **检查方法**：
 ```bash
@@ -612,7 +612,7 @@ grep -r "password\|token\|secret\|key" src/ -i
 
 **位置**：`lib/base/util/format.rs`
 
-- `format_size(bytes)` - 格式化文件大小（B, KB, MB, GB）
+- `format-_size(bytes)` - 格式化文件大小（B, KB, MB, GB）
 
 **检查方法**：
 ```bash
@@ -624,12 +624,12 @@ grep -r "1024\|bytes\|KB\|MB\|GB" src/ -i
 
 **位置**：`lib/base/util/platform.rs`
 
-- `detect_release_platform()` - 检测发布平台（操作系统和架构）
+- `detect-_release-_platform()` - 检测发布平台（操作系统和架构）
 
 **检查方法**：
 ```bash
 # 查找平台检测代码
-grep -r "target_os\|target_arch\|cfg!" src/
+grep -r "target-_os\|target-_arch\|cfg!" src/
 ```
 
 #### 浏览器和剪贴板工具
@@ -662,9 +662,9 @@ grep -r "tar::\|sha2\|sha256" src/
 
 **位置**：`lib/base/util/date.rs`
 
-- `format_document_timestamp()` - 格式化文档时间戳
-- `format_last_updated()` - 格式化最后更新时间
-- `format_last_updated_with_time()` - 格式化最后更新时间（带时间）
+- `format-_document-_timestamp()` - 格式化文档时间戳
+- `format-_last-_updated()` - 格式化最后更新时间
+- `format-_last-_updated-_with-_time()` - 格式化最后更新时间（带时间）
 
 **检查方法**：
 ```bash
@@ -689,12 +689,12 @@ grep -r "tabled\|Table" src/
 
 **位置**：`lib/git/helpers.rs`
 
-- `cmd_read(args)` - 执行 Git 命令并读取输出
-- `cmd_run(args)` - 执行 Git 命令（不读取输出）
-- `check_success(args)` - 静默执行并检查成功
-- `check_ref_exists(ref_path)` - 检查 Git 引用是否存在
-- `switch_or_checkout(switch_args, checkout_args, error_msg)` - 尝试 switch，失败时回退到 checkout
-- `remove_branch_prefix(branch)` - 移除分支名称前缀
+- `cmd-_read(args)` - 执行 Git 命令并读取输出
+- `cmd-_run(args)` - 执行 Git 命令（不读取输出）
+- `check-_success(args)` - 静默执行并检查成功
+- `check-_ref-_exists(ref-_path)` - 检查 Git 引用是否存在
+- `switch-_or-_checkout(switch-_args, checkout-_args, error-_msg)` - 尝试 switch，失败时回退到 checkout
+- `remove-_branch-_prefix(branch)` - 移除分支名称前缀
 
 **检查方法**：
 ```bash
@@ -726,7 +726,7 @@ grep -r "reqwest::\|Client::new" src/ | grep -v "lib/base/http"
 - `success!(...)` - 成功日志
 - `debug!(...)` - 调试日志
 - `separator!()` - 分隔符
-- `separator_with_text!(text)` - 带文本的分隔符
+- `separator-_with-_text!(text)` - 带文本的分隔符
 
 **检查方法**：
 ```bash
@@ -773,7 +773,7 @@ grep -r "indicatif::" src/ | grep -v "lib/base/indicator"
 **检查方法**：
 ```bash
 # 查找直接读取配置文件的地方
-grep -r "fs::read_to_string.*toml\|toml::from_str" src/ | grep -v "lib/base/settings"
+grep -r "fs::read-_to-_string.*toml\|toml::from-_str" src/ | grep -v "lib/base/settings"
 ```
 
 ---
@@ -807,12 +807,12 @@ grep -r "Regex::new\|regex::" src/
 **搜索模式**：
 ```bash
 # 查找 JSON 处理
-grep -r "serde_json\|json::" src/
-grep -r "\.to_string()\|from_str" src/
+grep -r "serde-_json\|json::" src/
+grep -r "\.to-_string()\|from-_str" src/
 ```
 
 **第三方工具**：
-- `serde_json` - JSON 序列化/反序列化（已使用）
+- `serde-_json` - JSON 序列化/反序列化（已使用）
 - `serde` - 序列化框架（已使用）
 
 **检查清单**：
@@ -826,12 +826,12 @@ grep -r "\.to_string()\|from_str" src/
 **搜索模式**：
 ```bash
 # 查找 TOML 处理
-grep -r "toml::\|toml_edit" src/
+grep -r "toml::\|toml-_edit" src/
 ```
 
 **第三方工具**：
 - `toml` - TOML 解析（已使用）
-- `toml_edit` - TOML 编辑（如果需要修改 TOML）
+- `toml-_edit` - TOML 编辑（如果需要修改 TOML）
 
 **检查清单**：
 - [ ] 是否使用统一的 TOML 解析方式？
@@ -936,7 +936,7 @@ grep -r "PathBuf\|Path::\|\.join\|\.parent" src/
 **搜索模式**：
 ```bash
 # 查找环境变量
-grep -r "std::env\|env::var\|env::set_var" src/
+grep -r "std::env\|env::var\|env::set-_var" src/
 ```
 
 **第三方工具**：
@@ -954,11 +954,11 @@ grep -r "std::env\|env::var\|env::set_var" src/
 **搜索模式**：
 ```bash
 # 查找错误处理
-grep -r "Result\|Error\|anyhow\|color_eyre" src/
+grep -r "Result\|Error\|anyhow\|color-_eyre" src/
 ```
 
 **第三方工具**：
-- `anyhow` / `color_eyre` - 错误处理（已使用）
+- `anyhow` / `color-_eyre` - 错误处理（已使用）
 
 **检查清单**：
 - [ ] 是否统一使用 `anyhow::Result`？
@@ -971,7 +971,7 @@ grep -r "Result\|Error\|anyhow\|color_eyre" src/
 ### 重复代码检查清单
 
 - [ ] **文件操作**：检查是否有重复的文件读写模式
-- [ ] **Git 命令**：检查是否直接使用 `cmd("git", ...)` 而不是 `cmd_read()` 或 `cmd_run()`
+- [ ] **Git 命令**：检查是否直接使用 `cmd("git", ...)` 而不是 `cmd-_read()` 或 `cmd-_run()`
 - [ ] **错误处理**：检查是否有重复的错误处理逻辑
 - [ ] **字符串处理**：检查是否有重复的字符串处理逻辑
 - [ ] **路径处理**：检查是否有重复的路径处理逻辑
@@ -986,9 +986,9 @@ grep -r "Result\|Error\|anyhow\|color_eyre" src/
 ### 已封装工具检查清单
 
 - [ ] **文件操作**：是否可以使用 `FileReader::open()`？
-- [ ] **字符串处理**：是否可以使用 `mask_sensitive_value()`？
-- [ ] **格式化**：是否可以使用 `format_size()`？
-- [ ] **平台检测**：是否可以使用 `detect_release_platform()`？
+- [ ] **字符串处理**：是否可以使用 `mask-_sensitive-_value()`？
+- [ ] **格式化**：是否可以使用 `format-_size()`？
+- [ ] **平台检测**：是否可以使用 `detect-_release-_platform()`？
 - [ ] **浏览器/剪贴板**：是否可以使用 `Browser::open()` 或 `Clipboard::copy()`？
 - [ ] **解压/校验和**：是否可以使用 `Unzip::extract()` 或 `Checksum::verify()`？
 - [ ] **日期格式化**：是否可以使用日期格式化函数？
@@ -1022,24 +1022,24 @@ grep -r "Result\|Error\|anyhow\|color_eyre" src/
 **问题代码**：
 ```rust
 // 文件 A
-let content = fs::read_to_string(&config_path)
-    .wrap_err(format!("Failed to read config file: {:?}", config_path))?;
+let content = fs::read-_to-_string(&config-_path)
+    .wrap-_err(format!("Failed to read config file: {:?}", config-_path))?;
 
 // 文件 B
-let content = fs::read_to_string(&input_path)
-    .wrap_err(format!("Failed to read file: {:?}", input_path))?;
+let content = fs::read-_to-_string(&input-_path)
+    .wrap-_err(format!("Failed to read file: {:?}", input-_path))?;
 ```
 
 **改进方案**：
 ```rust
 // 抽取为公共函数
-pub fn read_file_with_context(path: &Path, context: &str) -> Result<String> {
-    fs::read_to_string(path)
-        .wrap_err(format!("{}: {:?}", context, path))
+pub fn read-_file-_with-_context(path: &Path, context: &str) -> Result<String> {
+    fs::read-_to-_string(path)
+        .wrap-_err(format!("{}: {:?}", context, path))
 }
 
 // 使用
-let content = read_file_with_context(&config_path, "Failed to read config file")?;
+let content = read-_file-_with-_context(&config-_path, "Failed to read config file")?;
 ```
 
 ### 示例 2：Git 命令执行重复代码
@@ -1049,15 +1049,15 @@ let content = read_file_with_context(&config_path, "Failed to read config file")
 // 直接使用 cmd("git", ...)
 let output = cmd("git", &["rev-parse", "--abbrev-ref", "HEAD"])
     .read()
-    .wrap_err("Failed to get current branch")?;
+    .wrap-_err("Failed to get current branch")?;
 ```
 
 **改进方案**：
 ```rust
 // 使用已封装的工具函数
-use crate::git::helpers::cmd_read;
+use crate::git::helpers::cmd-_read;
 
-let output = cmd_read(&["rev-parse", "--abbrev-ref", "HEAD"])?;
+let output = cmd-_read(&["rev-parse", "--abbrev-ref", "HEAD"])?;
 ```
 
 ### 示例 3：日志输出重复代码
@@ -1065,7 +1065,7 @@ let output = cmd_read(&["rev-parse", "--abbrev-ref", "HEAD"])?;
 **问题代码**：
 ```rust
 // 直接使用 println!
-println!("✓ Successfully created branch: {}", branch_name);
+println!("✓ Successfully created branch: {}", branch-_name);
 println!("✗ Failed to create branch: {}", error);
 ```
 
@@ -1074,7 +1074,7 @@ println!("✗ Failed to create branch: {}", error);
 // 使用日志宏
 use crate::base::util::{success, error};
 
-success!("Successfully created branch: {}", branch_name);
+success!("Successfully created branch: {}", branch-_name);
 error!("Failed to create branch: {}", error);
 ```
 
@@ -1111,7 +1111,7 @@ let response = client
 use dialoguer::Input;
 
 let input: String = Input::new()
-    .with_prompt("Enter branch name")
+    .with-_prompt("Enter branch name")
     .interact()?;
 ```
 
@@ -1131,9 +1131,9 @@ let input = InputDialog::new("Enter branch name")
 // ❌ 不好的做法：导入顺序混乱，导入分散
 use crate::base::util::file::FileReader;  // 项目内部导入应该在最后
 use std::fs;  // 标准库导入应该在前面
-use color_eyre::Result;  // 第三方库导入
+use color-_eyre::Result;  // 第三方库导入
 
-fn some_function() {
+fn some-_function() {
     use std::path::Path;  // 不应该在函数内部导入
     // ...
 }
@@ -1147,12 +1147,12 @@ use std::fs;
 use std::path::Path;
 
 // 第三方库导入
-use color_eyre::Result;
+use color-_eyre::Result;
 
 // 项目内部导入
 use crate::base::util::file::FileReader;
 
-fn some_function() {
+fn some-_function() {
     // 使用已导入的类型
     // ...
 }

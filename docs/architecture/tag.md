@@ -34,19 +34,19 @@ src/lib/git/
 ### 依赖模块
 
 - **`duct`**：命令执行库（执行 Git 命令）
-- **`lib/git/helpers.rs`**：Git 操作辅助函数（`cmd_read`、`cmd_run`、`check_ref_exists`、`check_success`）
+- **`lib/git/helpers.rs`**：Git 操作辅助函数（`cmd-_read`、`cmd-_run`、`check-_ref-_exists`、`check-_success`）
 
 ### 模块集成
 
 - **Tag 命令集成** (`commands/tag/`)：
-  - `GitTag::list_all_tags()` - 获取所有 tag
-  - `GitTag::get_tag_info()` - 获取 tag 信息
-  - `GitTag::delete_local()` - 删除本地 tag
-  - `GitTag::delete_remote()` - 删除远程 tag
+  - `GitTag::list-_all-_tags()` - 获取所有 tag
+  - `GitTag::get-_tag-_info()` - 获取 tag 信息
+  - `GitTag::delete-_local()` - 删除本地 tag
+  - `GitTag::delete-_remote()` - 删除远程 tag
 
 - **仓库清理集成** (`commands/repo/`)：
-  - `GitTag::list_local_tags()` - 获取本地 tag 列表
-  - `GitTag::is_tag_exists()` - 检查 tag 是否存在
+  - `GitTag::list-_local-_tags()` - 获取本地 tag 列表
+  - `GitTag::is-_tag-_exists()` - 检查 tag 是否存在
 
 ---
 
@@ -69,14 +69,14 @@ src/lib/git/
 - **`GitTag`**：Tag 管理结构体（零大小结构体）
 
 **主要方法**：
-- `list_local_tags()` - 列出所有本地 tag
-- `list_remote_tags()` - 列出所有远程 tag
-- `list_all_tags()` - 列出所有 tag（本地和远程，合并去重）
-- `is_tag_exists()` - 检查 tag 是否存在（本地或远程）
-- `get_tag_info()` - 获取 tag 信息（名称、commit hash、存在位置）
-- `delete_local()` - 删除本地 tag
-- `delete_remote()` - 删除远程 tag
-- `delete_both()` - 删除本地和远程 tag
+- `list-_local-_tags()` - 列出所有本地 tag
+- `list-_remote-_tags()` - 列出所有远程 tag
+- `list-_all-_tags()` - 列出所有 tag（本地和远程，合并去重）
+- `is-_tag-_exists()` - 检查 tag 是否存在（本地或远程）
+- `get-_tag-_info()` - 获取 tag 信息（名称、commit hash、存在位置）
+- `delete-_local()` - 删除本地 tag
+- `delete-_remote()` - 删除远程 tag
+- `delete-_both()` - 删除本地和远程 tag
 
 **关键特性**：
 - 支持列出本地和远程 tag
@@ -95,9 +95,9 @@ src/lib/git/
 ```rust
 pub struct TagInfo {
     pub name: String,              // Tag 名称
-    pub commit_hash: String,        // Tag 指向的 commit hash
-    pub exists_local: bool,        // Tag 是否在本地存在
-    pub exists_remote: bool,       // Tag 是否在远程存在
+    pub commit-_hash: String,        // Tag 指向的 commit hash
+    pub exists-_local: bool,        // Tag 是否在本地存在
+    pub exists-_remote: bool,       // Tag 是否在远程存在
 }
 ```
 
@@ -115,14 +115,14 @@ pub struct TagInfo {
 ```rust
 pub struct GitTag;  // 零大小结构体
 impl GitTag {
-    pub fn list_local_tags() -> Result<Vec<String>> { ... }
+    pub fn list-_local-_tags() -> Result<Vec<String>> { ... }
     // ...
 }
 ```
 
 **优势**：
 - 职责清晰，符合单一职责原则
-- 命名空间明确（`GitTag::list_local_tags()`）
+- 命名空间明确（`GitTag::list-_local-_tags()`）
 - 易于维护和扩展
 
 #### 2. 辅助函数模式
@@ -131,9 +131,9 @@ impl GitTag {
 
 ```rust
 // 统一接口
-cmd_read(&["tag", "-l"])
-cmd_run(&["tag", "-d", tag_name])
-check_ref_exists(&format!("refs/tags/{}", tag_name))
+cmd-_read(&["tag", "-l"])
+cmd-_run(&["tag", "-d", tag-_name])
+check-_ref-_exists(&format!("refs/tags/{}", tag-_name))
 ```
 
 **优势**：
@@ -143,15 +143,15 @@ check_ref_exists(&format!("refs/tags/{}", tag_name))
 
 #### 3. 回退模式
 
-`delete_remote()` 方法实现自动回退：
+`delete-_remote()` 方法实现自动回退：
 
 ```rust
 // 优先使用 --delete 方式
-let result = cmd_run(&["push", "origin", "--delete", tag_name]);
+let result = cmd-_run(&["push", "origin", "--delete", tag-_name]);
 
-if result.is_err() {
+if result.is-_err() {
     // 回退到使用 :refs/tags/ 方式
-    cmd_run(&["push", "origin", &format!(":refs/tags/{}", tag_name)])?;
+    cmd-_run(&["push", "origin", &format!(":refs/tags/{}", tag-_name)])?;
 }
 ```
 
@@ -166,14 +166,14 @@ if result.is_err() {
 
 1. **辅助函数层**：统一错误上下文
    ```rust
-   cmd_read(&["tag", "-l"])
-       .wrap_err("Failed to list local tags")
+   cmd-_read(&["tag", "-l"])
+       .wrap-_err("Failed to list local tags")
    ```
 
 2. **业务逻辑层**：添加业务上下文
    ```rust
-   GitTag::delete_local(tag_name)
-       .wrap_err_with(|| format!("Failed to delete local tag: {}", tag_name))
+   GitTag::delete-_local(tag-_name)
+       .wrap-_err-_with(|| format!("Failed to delete local tag: {}", tag-_name))
    ```
 
 3. **命令层**：用户友好的错误提示
@@ -220,10 +220,10 @@ src/commands/tag/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/git/`**：Git 操作（`GitTag`）
-  - `GitTag::list_all_tags()` - 获取所有 tag（本地和远程）
-  - `GitTag::get_tag_info()` - 获取 tag 信息
-  - `GitTag::delete_local()` - 删除本地 tag
-  - `GitTag::delete_remote()` - 删除远程 tag
+  - `GitTag::list-_all-_tags()` - 获取所有 tag（本地和远程）
+  - `GitTag::get-_tag-_info()` - 获取 tag 信息
+  - `GitTag::delete-_local()` - 删除本地 tag
+  - `GitTag::delete-_remote()` - 删除远程 tag
 - **`lib/base/dialog/`**：对话框（`ConfirmDialog`、`MultiSelectDialog`）
 
 ---
@@ -235,8 +235,8 @@ src/commands/tag/
 Tag 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
 
 1. **Tag 操作**：Commands 层调用 `GitTag` 的方法进行 tag 操作
-2. **Tag 列表**：Commands 层使用 `GitTag::list_all_tags()` 获取所有 tag
-3. **Tag 信息**：Commands 层使用 `GitTag::get_tag_info()` 获取 tag 详细信息
+2. **Tag 列表**：Commands 层使用 `GitTag::list-_all-_tags()` 获取所有 tag
+3. **Tag 信息**：Commands 层使用 `GitTag::get-_tag-_info()` 获取 tag 详细信息
 4. **用户交互**：Commands 层负责格式化输出和用户提示
 
 ### 调用流程
@@ -247,19 +247,19 @@ Tag 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方�
 调用者（命令层或其他模块）
   ↓
 lib/git/tag.rs (核心业务逻辑层)
-  ├── GitTag::list_local_tags()      # 列出本地 tag
-  ├── GitTag::list_remote_tags()     # 列出远程 tag
-  ├── GitTag::list_all_tags()        # 列出所有 tag
-  ├── GitTag::is_tag_exists()        # 检查 tag 是否存在
-  ├── GitTag::get_tag_info()         # 获取 tag 信息
-  ├── GitTag::delete_local()         # 删除本地 tag
-  └── GitTag::delete_remote()         # 删除远程 tag
+  ├── GitTag::list-_local-_tags()      # 列出本地 tag
+  ├── GitTag::list-_remote-_tags()     # 列出远程 tag
+  ├── GitTag::list-_all-_tags()        # 列出所有 tag
+  ├── GitTag::is-_tag-_exists()        # 检查 tag 是否存在
+  ├── GitTag::get-_tag-_info()         # 获取 tag 信息
+  ├── GitTag::delete-_local()         # 删除本地 tag
+  └── GitTag::delete-_remote()         # 删除远程 tag
   ↓
 helpers.rs (辅助函数层)
-  ├── cmd_read()
-  ├── cmd_run()
-  ├── check_ref_exists()
-  └── check_success()
+  ├── cmd-_read()
+  ├── cmd-_run()
+  ├── check-_ref-_exists()
+  └── check-_success()
   ↓
 duct::cmd (命令执行层)
   └── git 命令
@@ -273,7 +273,7 @@ src/main.rs::main()
 Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand {
-  TagSubcommand::Delete { tag_name, local, remote, pattern, dry_run, force } => TagDeleteCommand::execute()
+  TagSubcommand::Delete { tag-_name, local, remote, pattern, dry-_run, force } => TagDeleteCommand::execute()
 }
 ```
 
@@ -303,7 +303,7 @@ Tag 删除命令提供安全的 tag 删除功能：
 4. **交互式选择**：
    - 使用 `MultiSelectDialog` 支持多选
    - 显示 tag 信息（名称、commit hash、存在位置）
-   - 格式：`<tag_name> (commit: <hash>, local/remote/both)`
+   - 格式：`<tag-_name> (commit: <hash>, local/remote/both)`
 
 5. **模式匹配**：
    - 支持 shell 通配符：`*`（匹配任意字符）、`?`（匹配单个字符）、`.`（转义为字面量）
@@ -311,9 +311,9 @@ Tag 删除命令提供安全的 tag 删除功能：
    - 示例：`--pattern "v1.*"` 匹配所有以 `v1.` 开头的 tag
 
 **关键步骤**：
-1. 使用 `GitTag::list_all_tags()` 获取所有 tag（本地和远程）
+1. 使用 `GitTag::list-_all-_tags()` 获取所有 tag（本地和远程）
 2. 确定要删除的 tag 列表（模式匹配/指定名称/交互式选择）
-3. 使用 `GitTag::get_tag_info()` 获取每个 tag 的详细信息
+3. 使用 `GitTag::get-_tag-_info()` 获取每个 tag 的详细信息
 4. 显示预览（tag 名称、commit hash、存在位置）
 5. Dry-run 模式（如果启用，只预览不执行）
 6. 确认删除（除非使用 force）
@@ -329,13 +329,13 @@ Tag 删除命令提供安全的 tag 删除功能：
 #### 1. 列出所有 Tag
 
 ```
-GitTag::list_all_tags()
+GitTag::list-_all-_tags()
   ↓
-GitTag::list_local_tags()  # 获取本地 tag
-GitTag::list_remote_tags() # 获取远程 tag
+GitTag::list-_local-_tags()  # 获取本地 tag
+GitTag::list-_remote-_tags() # 获取远程 tag
   ↓
-helpers::cmd_read()  # 执行 git tag -l
-helpers::cmd_read()  # 执行 git ls-remote --tags
+helpers::cmd-_read()  # 执行 git tag -l
+helpers::cmd-_read()  # 执行 git ls-remote --tags
   ↓
 合并去重，构建 TagInfo 列表
 ```
@@ -343,27 +343,27 @@ helpers::cmd_read()  # 执行 git ls-remote --tags
 #### 2. 删除 Tag
 
 ```
-GitTag::delete_local(tag_name)
+GitTag::delete-_local(tag-_name)
   ↓
-helpers::cmd_run()  # 执行 git tag -d <tag_name>
+helpers::cmd-_run()  # 执行 git tag -d <tag-_name>
 ```
 
 ```
-GitTag::delete_remote(tag_name)
+GitTag::delete-_remote(tag-_name)
   ↓
-helpers::cmd_run()  # 执行 git push origin --delete <tag_name>
+helpers::cmd-_run()  # 执行 git push origin --delete <tag-_name>
   ↓
-如果失败，回退到 git push origin :refs/tags/<tag_name>
+如果失败，回退到 git push origin :refs/tags/<tag-_name>
 ```
 
 #### 3. 获取 Tag 信息
 
 ```
-GitTag::get_tag_info(tag_name)
+GitTag::get-_tag-_info(tag-_name)
   ↓
-GitTag::is_tag_exists(tag_name)  # 检查存在性
+GitTag::is-_tag-_exists(tag-_name)  # 检查存在性
   ↓
-helpers::cmd_read()  # 获取 commit hash（git rev-parse 或 git ls-remote）
+helpers::cmd-_read()  # 获取 commit hash（git rev-parse 或 git ls-remote）
   ↓
 构建 TagInfo 结构体
 ```
@@ -375,11 +375,11 @@ helpers::cmd_read()  # 获取 commit hash（git rev-parse 或 git ls-remote）
 ```
 用户输入 (workflow tag delete [TAG_NAME] [--local] [--remote] [--pattern PATTERN] [--dry-run] [--force])
   ↓
-获取所有 tag（GitTag::list_all_tags()）
+获取所有 tag（GitTag::list-_all-_tags()）
   ↓
 确定要删除的 tag 列表（模式匹配/指定名称/交互式选择）
   ↓
-获取 tag 信息（GitTag::get_tag_info()）
+获取 tag 信息（GitTag::get-_tag-_info()）
   ↓
 显示预览
   ↓
@@ -387,7 +387,7 @@ Dry-run 模式（如果启用）
   ↓
 确认删除（除非使用 force）
   ↓
-执行删除（GitTag::delete_local() / GitTag::delete_remote()）
+执行删除（GitTag::delete-_local() / GitTag::delete-_remote()）
   ↓
 显示结果
 ```
@@ -427,29 +427,29 @@ workflow tag delete
 use workflow::git::GitTag;
 
 // 列出所有本地 tag
-let local_tags = GitTag::list_local_tags()?;
+let local-_tags = GitTag::list-_local-_tags()?;
 
 // 列出所有远程 tag
-let remote_tags = GitTag::list_remote_tags()?;
+let remote-_tags = GitTag::list-_remote-_tags()?;
 
 // 列出所有 tag（本地和远程，合并去重）
-let all_tags = GitTag::list_all_tags()?;
+let all-_tags = GitTag::list-_all-_tags()?;
 
 // 检查 tag 是否存在
-let (exists_local, exists_remote) = GitTag::is_tag_exists("v1.0.0")?;
+let (exists-_local, exists-_remote) = GitTag::is-_tag-_exists("v1.0.0")?;
 
 // 获取 tag 信息
-let tag_info = GitTag::get_tag_info("v1.0.0")?;
-println!("Tag: {}, Commit: {}", tag_info.name, tag_info.commit_hash);
+let tag-_info = GitTag::get-_tag-_info("v1.0.0")?;
+println!("Tag: {}, Commit: {}", tag-_info.name, tag-_info.commit-_hash);
 
 // 删除本地 tag
-GitTag::delete_local("v1.0.0")?;
+GitTag::delete-_local("v1.0.0")?;
 
 // 删除远程 tag
-GitTag::delete_remote("v1.0.0")?;
+GitTag::delete-_remote("v1.0.0")?;
 
 // 删除本地和远程 tag
-GitTag::delete_both("v1.0.0")?;
+GitTag::delete-_both("v1.0.0")?;
 ```
 
 ### 批量操作
@@ -458,19 +458,19 @@ GitTag::delete_both("v1.0.0")?;
 use workflow::git::GitTag;
 
 // 列出所有 tag
-let all_tags = GitTag::list_all_tags()?;
+let all-_tags = GitTag::list-_all-_tags()?;
 
 // 过滤需要删除的 tag（例如：所有 v1.x 版本的 tag）
-let tags_to_delete: Vec<String> = all_tags
+let tags-_to-_delete: Vec<String> = all-_tags
     .iter()
-    .filter(|tag| tag.name.starts_with("v1."))
+    .filter(|tag| tag.name.starts-_with("v1."))
     .map(|tag| tag.name.clone())
     .collect();
 
 // 批量删除
-for tag_name in tags_to_delete {
-    if let Err(e) = GitTag::delete_both(&tag_name) {
-        eprintln!("Failed to delete tag {}: {}", tag_name, e);
+for tag-_name in tags-_to-_delete {
+    if let Err(e) = GitTag::delete-_both(&tag-_name) {
+        eprintln!("Failed to delete tag {}: {}", tag-_name, e);
     }
 }
 ```
@@ -490,20 +490,20 @@ for tag_name in tags_to_delete {
 ```rust
 // tag.rs
 impl GitTag {
-    pub fn create_tag(tag_name: &str, message: Option<&str>) -> Result<()> {
+    pub fn create-_tag(tag-_name: &str, message: Option<&str>) -> Result<()> {
         let mut args = vec!["tag"];
 
         if let Some(msg) = message {
             args.push("-a");
-            args.push(tag_name);
+            args.push(tag-_name);
             args.push("-m");
             args.push(msg);
         } else {
-            args.push(tag_name);
+            args.push(tag-_name);
         }
 
-        helpers::cmd_run(&args)
-            .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))
+        helpers::cmd-_run(&args)
+            .wrap-_err-_with(|| format!("Failed to create tag: {}", tag-_name))
     }
 }
 ```

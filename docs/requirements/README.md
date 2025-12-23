@@ -27,7 +27,7 @@
   - ✅ `jira comments` - 显示评论（支持分页、过滤、多种输出格式）
   - ✅ `jira attachments` - 下载附件
   - ✅ `jira clean` - 清理本地数据
-  - ✅ JIRA API：`transition`、`assign`、`add_comment`（已实现，待封装为命令）
+  - ✅ JIRA API：`transition`、`assign`、`add-_comment`（已实现，待封装为命令）
   - ✅ PR 创建和合并时自动更新 JIRA 状态
 - **待实现**:
   - `jira info` 增强功能（显示更多字段）
@@ -83,7 +83,7 @@
 - **实现度**: 0%
 - **分类**: 文档管理
 - **内容**:
-  - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake_case`
+  - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake-_case`
   - 更新所有文档链接引用
   - 更新文档命名规范
 - **优先级**: 中优先级（代码质量改进）
@@ -173,7 +173,7 @@ docs/requirements/
    - CI 集成（可选）
 
 5. **文档重命名** (`DOCUMENT_RENAME_TODO.md`) - ⏳ 待实施（0%）
-   - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake_case`
+   - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake-_case`
    - 更新所有文档链接引用
    - 更新文档命名规范
 

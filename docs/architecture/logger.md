@@ -18,7 +18,7 @@
 - 总代码行数：约 848 行
 - 文件数量：4 个核心文件
 - 主要组件：3 个（LogLevel, Logger, Tracer）
-- 日志宏：8 个（log_success!, log_error!, log_warning!, log_info!, log_debug!, log_message!, log_break!, trace_debug!, trace_info!, trace_warn!, trace_error!）
+- 日志宏：8 个（log-_success!, log-_error!, log-_warning!, log-_info!, log-_debug!, log-_message!, log-_break!, trace-_debug!, trace-_info!, trace-_warn!, trace-_error!）
 
 ---
 
@@ -29,7 +29,7 @@
 ```
 src/lib/base/logger/
 ├── mod.rs          # 模块声明和导出 (16行)
-├── log_level.rs    # 日志级别管理 (122行)
+├── log-_level.rs    # 日志级别管理 (122行)
 ├── console.rs      # 用户友好的控制台输出 (421行)
 └── tracing.rs      # 结构化日志记录封装 (289行)
 ```
@@ -47,21 +47,21 @@ src/lib/base/logger/
 #### Commands 层使用
 
 - **所有命令模块**：使用 `log_*!` 宏输出用户可见的消息
-  - `log_success!()` - 成功消息（绿色 ✓）
-  - `log_error!()` - 错误消息（红色 ✗）
-  - `log_warning!()` - 警告消息（黄色 ⚠）
-  - `log_info!()` - 信息消息（蓝色 ℹ）
-  - `log_debug!()` - 调试消息（灰色 ⚙）
-  - `log_message!()` - 说明信息（无图标，总是输出）
-  - `log_break!()` - 分隔线或换行
+  - `log-_success!()` - 成功消息（绿色 ✓）
+  - `log-_error!()` - 错误消息（红色 ✗）
+  - `log-_warning!()` - 警告消息（黄色 ⚠）
+  - `log-_info!()` - 信息消息（蓝色 ℹ）
+  - `log-_debug!()` - 调试消息（灰色 ⚙）
+  - `log-_message!()` - 说明信息（无图标，总是输出）
+  - `log-_break!()` - 分隔线或换行
 
 #### Lib 层使用
 
 - **所有业务逻辑模块**：使用 `trace_*!` 宏记录内部调试日志
-  - `trace_debug!()` - 调试级别日志
-  - `trace_info!()` - 信息级别日志
-  - `trace_warn!()` - 警告级别日志
-  - `trace_error!()` - 错误级别日志
+  - `trace-_debug!()` - 调试级别日志
+  - `trace-_info!()` - 信息级别日志
+  - `trace-_warn!()` - 警告级别日志
+  - `trace-_error!()` - 错误级别日志
 
 #### 初始化
 
@@ -99,17 +99,17 @@ src/lib/base/logger/
 
 #### 1. LogLevel（日志级别管理）
 
-**文件路径**：`src/lib/base/logger/log_level.rs`
+**文件路径**：`src/lib/base/logger/log-_level.rs`
 
 **职责**：管理全局日志级别，提供级别判断和转换功能
 
 **主要方法**：
-- `default_level()` - 获取默认日志级别（根据编译模式自动决定）
+- `default-_level()` - 获取默认日志级别（根据编译模式自动决定）
 - `init(level)` - 初始化日志级别（从参数或使用默认值）
-- `set_level(level)` - 设置日志级别
-- `get_level()` - 获取当前日志级别
-- `as_str()` - 将 LogLevel 转换为字符串
-- `should_log(level)` - 检查是否应该输出指定级别的日志
+- `set-_level(level)` - 设置日志级别
+- `get-_level()` - 获取当前日志级别
+- `as-_str()` - 将 LogLevel 转换为字符串
+- `should-_log(level)` - 检查是否应该输出指定级别的日志
 
 **关键特性**：
 - 使用 `Mutex` 保证线程安全
@@ -129,21 +129,21 @@ src/lib/base/logger/
 **职责**：提供带颜色的日志输出功能，用于 Commands 层
 
 **主要方法**：
-- `print_success(message)` - 打印成功消息（总是输出）
-- `print_error(message)` - 打印错误消息（日志级别 >= Error）
-- `print_warning(message)` - 打印警告消息（日志级别 >= Warn）
-- `print_info(message)` - 打印信息消息（日志级别 >= Info）
-- `print_debug(message)` - 打印调试消息（日志级别 >= Debug）
-- `print_message(message)` - 打印说明信息（总是输出）
-- `print_separator(char, length)` - 打印分隔线
-- `print_separator_with_text(char, length, text)` - 打印带文本的分隔线
-- `print_newline()` - 打印换行符
+- `print-_success(message)` - 打印成功消息（总是输出）
+- `print-_error(message)` - 打印错误消息（日志级别 >= Error）
+- `print-_warning(message)` - 打印警告消息（日志级别 >= Warn）
+- `print-_info(message)` - 打印信息消息（日志级别 >= Info）
+- `print-_debug(message)` - 打印调试消息（日志级别 >= Debug）
+- `print-_message(message)` - 打印说明信息（总是输出）
+- `print-_separator(char, length)` - 打印分隔线
+- `print-_separator-_with-_text(char, length, text)` - 打印带文本的分隔线
+- `print-_newline()` - 打印换行符
 
 **关键特性**：
 - 使用 `console` crate 实现颜色和样式
 - 支持多种日志级别样式（success, error, warning, info, debug）
 - 使用 ASCII 字符作为图标（✓✗⚠ℹ⚙）
-- 支持分隔线样式（separator, separator_with_text）
+- 支持分隔线样式（separator, separator-_with-_text）
 - 根据当前日志级别决定是否输出（success 和 message 除外）
 
 **使用场景**：
@@ -163,17 +163,17 @@ src/lib/base/logger/
 - `info(message)` - 记录信息级别日志
 - `warn(message)` - 记录警告级别日志
 - `error(message)` - 记录错误级别日志
-- `debug_fmt(args)` - 记录带格式化的调试级别日志
-- `info_fmt(args)` - 记录带格式化的信息级别日志
-- `warn_fmt(args)` - 记录带格式化的警告级别日志
-- `error_fmt(args)` - 记录带格式化的错误级别日志
-- `get_log_file_path()` - 获取日志文件路径（私有方法）
+- `debug-_fmt(args)` - 记录带格式化的调试级别日志
+- `info-_fmt(args)` - 记录带格式化的信息级别日志
+- `warn-_fmt(args)` - 记录带格式化的警告级别日志
+- `error-_fmt(args)` - 记录带格式化的错误级别日志
+- `get-_log-_file-_path()` - 获取日志文件路径（私有方法）
 
 **关键特性**：
 - 封装 tracing crate，提供统一的接口
 - 默认情况下不输出到控制台（通过配置控制）
 - 支持输出到文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）
-- 支持同时输出到文件和控制台（通过 `enable_trace_console` 配置）
+- 支持同时输出到文件和控制台（通过 `enable-_trace-_console` 配置）
 - 如果日志级别为 "off"，输出到 sink（/dev/null）
 - 日志文件按日期分割，便于管理
 
@@ -344,13 +344,13 @@ Tracer::init() - 初始化 tracing subscriber
 ```
 用户执行命令
   ↓
-log_success!("Operation completed")
+log-_success!("Operation completed")
   ↓
-Logger::print_success("Operation completed")
+Logger::print-_success("Operation completed")
   ↓
 success("Operation completed") - 格式化（添加绿色和 ✓ 图标）
   ↓
-log_success!("Operation completed") - 输出到控制台（通过日志系统）
+log-_success!("Operation completed") - 输出到控制台（通过日志系统）
 ```
 
 #### 2. Lib 层记录调试日志
@@ -358,9 +358,9 @@ log_success!("Operation completed") - 输出到控制台（通过日志系统）
 ```
 Lib 层函数执行
   ↓
-trace_debug!("Processing data: {}", data)
+trace-_debug!("Processing data: {}", data)
   ↓
-Tracer::debug_fmt(format_args!("Processing data: {}", data))
+Tracer::debug-_fmt(format-_args!("Processing data: {}", data))
   ↓
 tracing::debug!("Processing data: {}", data)
   ↓
@@ -373,11 +373,11 @@ tracing subscriber 处理
 #### 3. 日志级别控制流程
 
 ```
-Logger::print_info("message")
+Logger::print-_info("message")
   ↓
 LogLevel::current() - 获取当前日志级别
   ↓
-current_level.should_log(LogLevel::Info) - 检查是否应该输出
+current-_level.should-_log(LogLevel::Info) - 检查是否应该输出
   ↓
 如果 true：格式化并输出
 如果 false：不输出
@@ -435,46 +435,46 @@ flowchart TD
 #### Commands 层使用
 
 ```rust
-use workflow::log_success;
-use workflow::log_error;
-use workflow::log_info;
-use workflow::log_break;
+use workflow::log-_success;
+use workflow::log-_error;
+use workflow::log-_info;
+use workflow::log-_break;
 
 // 输出成功消息（总是显示）
-log_success!("Operation completed");
+log-_success!("Operation completed");
 
 // 输出错误消息（日志级别 >= Error）
-log_error!("Operation failed: {}", error);
+log-_error!("Operation failed: {}", error);
 
 // 输出信息消息（日志级别 >= Info）
-log_info!("Processing {} items", count);
+log-_info!("Processing {} items", count);
 
 // 输出分隔线
-log_break!('-', 80);
+log-_break!('-', 80);
 
 // 输出带文本的分隔线
-log_break!('=', 80, "Section Title");
+log-_break!('=', 80, "Section Title");
 ```
 
 #### Lib 层使用
 
 ```rust
-use workflow::trace_debug;
-use workflow::trace_info;
-use workflow::trace_warn;
-use workflow::trace_error;
+use workflow::trace-_debug;
+use workflow::trace-_info;
+use workflow::trace-_warn;
+use workflow::trace-_error;
 
 // 记录调试日志（默认不输出，可通过配置启用）
-trace_debug!("Processing data: {}", data);
+trace-_debug!("Processing data: {}", data);
 
 // 记录信息日志
-trace_info!("Starting download");
+trace-_info!("Starting download");
 
 // 记录警告日志
-trace_warn!("Retrying operation");
+trace-_warn!("Retrying operation");
 
 // 记录错误日志
-trace_error!("Operation failed: {}", error);
+trace-_error!("Operation failed: {}", error);
 ```
 
 ### 初始化使用
@@ -500,7 +500,7 @@ Tracer::init();
 ```toml
 [log]
 level = "debug"  # none, error, warn, info, debug
-enable_trace_console = false  # 是否同时输出到控制台
+enable-_trace-_console = false  # 是否同时输出到控制台
 ```
 
 #### 环境变量
@@ -518,13 +518,13 @@ RUST_LOG=lib=debug workflow config
 
 1. 在 `LogLevel` 枚举中添加新级别
 2. 在 `FromStr` 实现中添加字符串解析
-3. 在 `as_str` 方法中添加字符串转换
-4. 在 `should_log` 方法中确保级别比较正确
+3. 在 `as-_str` 方法中添加字符串转换
+4. 在 `should-_log` 方法中确保级别比较正确
 5. 添加对应的日志宏（如果需要）
 
 **示例**：
 ```rust
-// 在 log_level.rs 中添加
+// 在 log-_level.rs 中添加
 pub enum LogLevel {
     // ... 现有级别
     Trace = 5,  // 新增级别
@@ -533,7 +533,7 @@ pub enum LogLevel {
 // 在 FromStr 实现中添加
 "trace" => Ok(LogLevel::Trace),
 
-// 在 as_str 方法中添加
+// 在 as-_str 方法中添加
 LogLevel::Trace => "trace",
 ```
 
@@ -541,29 +541,29 @@ LogLevel::Trace => "trace",
 
 1. 在 `console.rs` 中添加格式化函数（如果需要）
 2. 在 `Logger` 中添加打印方法
-3. 添加对应的宏定义（使用 `#[macro_export]`）
+3. 添加对应的宏定义（使用 `#[macro-_export]`）
 
 **示例**：
 ```rust
 // 在 console.rs 中添加
 pub fn trace(text: impl fmt::Display) -> String {
-    style(format!("→ {}", text)).cyan().to_string()
+    style(format!("→ {}", text)).cyan().to-_string()
 }
 
 impl Logger {
-    pub fn print_trace(message: impl fmt::Display) {
-        let current_level = LogLevel::current();
-        if current_level.should_log(LogLevel::Trace) {
-            log_message!("{}", trace(message));
+    pub fn print-_trace(message: impl fmt::Display) {
+        let current-_level = LogLevel::current();
+        if current-_level.should-_log(LogLevel::Trace) {
+            log-_message!("{}", trace(message));
         }
     }
 }
 
 // 添加宏
-#[macro_export]
-macro_rules! log_trace {
+#[macro-_export]
+macro-_rules! log-_trace {
     ($($arg:tt)*) => {
-        $crate::Logger::print_trace(format!($($arg)*));
+        $crate::Logger::print-_trace(format!($($arg)*));
     };
 }
 ```
@@ -576,10 +576,10 @@ macro_rules! log_trace {
 **示例**：
 ```rust
 // 在 tracing.rs 中添加
-if enable_network {
-    let network_layer = tracing_subscriber::fmt::layer()
-        .with_writer(network_writer);
-    registry = registry.with(network_layer);
+if enable-_network {
+    let network-_layer = tracing-_subscriber::fmt::layer()
+        .with-_writer(network-_writer);
+    registry = registry.with(network-_layer);
 }
 ```
 
@@ -591,11 +591,11 @@ if enable_network {
 
 **示例**：
 ```rust
-use tracing_subscriber::fmt::format::JsonFields;
+use tracing-_subscriber::fmt::format::JsonFields;
 
-let json_layer = tracing_subscriber::fmt::layer()
+let json-_layer = tracing-_subscriber::fmt::layer()
     .json()
-    .with_writer(file);
+    .with-_writer(file);
 ```
 
 ---
@@ -636,7 +636,7 @@ Logger 模块采用清晰的**职责分离**设计：
 **配置说明**：
 - 日志级别通过 `~/.workflow/config/workflow.toml` 配置文件中的 `log.level` 字段控制
 - 调试日志默认输出到文件（`~/.workflow/logs/tracing/workflow-YYYY-MM-DD.log`）
-- 可通过 `log.enable_trace_console` 配置同时输出到控制台
+- 可通过 `log.enable-_trace-_console` 配置同时输出到控制台
 - 日志文件按日期分割，便于管理和分析
 
 ---

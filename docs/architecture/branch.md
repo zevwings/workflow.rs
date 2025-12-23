@@ -40,13 +40,13 @@ src/lib/branch/
 ### 依赖模块
 
 - **`lib/git/`**：Git 操作（获取分支列表、提取仓库名）
-  - `GitBranch::get_all_branches()` - 获取所有分支（用于 LLM 生成）
-  - `GitRepo::extract_repo_name()` - 提取仓库名（用于配置管理）
+  - `GitBranch::get-_all-_branches()` - 获取所有分支（用于 LLM 生成）
+  - `GitRepo::extract-_repo-_name()` - 提取仓库名（用于配置管理）
 - **`lib/jira/`**：JIRA 集成（JIRA ticket 信息获取）
   - 通过命令层传入 JIRA ticket ID 和 summary
 - **`lib/template/`**：模板系统（分支名模板渲染）
-  - `load_branch_template()` - 加载分支模板
-  - `load_branch_template_by_type()` - 按类型加载模板
+  - `load-_branch-_template()` - 加载分支模板
+  - `load-_branch-_template-_by-_type()` - 按类型加载模板
   - `TemplateEngine` - 模板渲染引擎
 - **`lib/base/llm/`**：LLM 客户端（分支名生成、翻译）
   - `LLMClient` - LLM API 调用
@@ -54,7 +54,7 @@ src/lib/branch/
   - `SelectDialog` - 选择对话框
   - `InputDialog` - 输入对话框
 - **`lib/base/settings/`**：配置管理（配置文件路径）
-  - `Paths::project_config()` - 项目级配置文件路径
+  - `Paths::project-_config()` - 项目级配置文件路径
 - **`lib/pr/llm/`**：PR LLM 服务（分支名生成回退）
   - `PullRequestLLM::generate()` - 生成分支名（作为回退方案）
 
@@ -68,7 +68,7 @@ src/lib/branch/
 - **`commands/pr/`**：PR 命令层
   - `create.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
   - `pick.rs` - 使用 `BranchNaming`、`BranchType` 生成分支名
-  - `helpers.rs` - 提供 stash 处理辅助函数（`handle_stash_pop_result()`），被 `branch switch` 命令使用
+  - `helpers.rs` - 提供 stash 处理辅助函数（`handle-_stash-_pop-_result()`），被 `branch switch` 命令使用
 
 ---
 
@@ -89,12 +89,12 @@ src/lib/branch/
 **职责**：提供从多种来源生成分支名的功能
 
 **主要方法**：
-- `from_jira_ticket()` - 从 JIRA ticket 生成分支名（模板系统 → LLM → 简单回退）
-- `from_type_and_slug()` - 从分支类型和 slug 生成分支名（使用模板系统）
-- `from_title()` - 从标题生成分支名
+- `from-_jira-_ticket()` - 从 JIRA ticket 生成分支名（模板系统 → LLM → 简单回退）
+- `from-_type-_and-_slug()` - 从分支类型和 slug 生成分支名（使用模板系统）
+- `from-_title()` - 从标题生成分支名
 - `sanitize()` - 清理字符串为分支名格式（仅保留 ASCII 字母数字）
 - `slugify()` - 转换为 slug 格式（保留更多字符）
-- `sanitize_and_translate_branch_name()` - 清理并翻译分支名（处理非英文输入）
+- `sanitize-_and-_translate-_branch-_name()` - 清理并翻译分支名（处理非英文输入）
 
 **关键特性**：
 - 支持三种生成策略：模板系统优先，LLM 次之，简单方法最后
@@ -116,10 +116,10 @@ src/lib/branch/
 
 **主要方法**：
 - `all()` - 获取所有分支类型
-- `as_str()` - 转换为字符串（用于模板选择）
-- `display_name()` - 获取显示名称（带描述）
-- `from_str()` - 从字符串解析
-- `prompt_selection()` - 交互式选择分支类型
+- `as-_str()` - 转换为字符串（用于模板选择）
+- `display-_name()` - 获取显示名称（带描述）
+- `from-_str()` - 从字符串解析
+- `prompt-_selection()` - 交互式选择分支类型
 
 **关键特性**：
 - 支持多种字符串格式（如 "bug"、"fix" 都映射到 Bugfix）
@@ -136,7 +136,7 @@ src/lib/branch/
 **职责**：提供使用 LLM 处理分支名称的功能
 
 **主要方法**：
-- `translate_to_english()` - 将非英文文本翻译为英文
+- `translate-_to-_english()` - 将非英文文本翻译为英文
 
 **关键特性**：
 - 使用统一的 LLM 客户端（支持多种提供商）
@@ -144,7 +144,7 @@ src/lib/branch/
 - 自动清理响应（去除引号、多余空格）
 
 **使用场景**：
-- `BranchNaming::sanitize_and_translate_branch_name()` - 处理非英文输入
+- `BranchNaming::sanitize-_and-_translate-_branch-_name()` - 处理非英文输入
 
 ### 设计模式
 
@@ -187,7 +187,7 @@ src/lib/branch/
 
 #### 分层错误处理
 
-1. **配置层错误**：配置加载/保存失败时，返回错误但不会中断流程（`check_and_prompt_prefix()`）
+1. **配置层错误**：配置加载/保存失败时，返回错误但不会中断流程（`check-_and-_prompt-_prefix()`）
 2. **LLM 层错误**：LLM 调用失败时，自动回退到简单方法
 3. **模板层错误**：模板渲染失败时，自动回退到 LLM 或简单方法
 4. **验证层错误**：分支名验证失败时，返回明确的错误信息
@@ -241,13 +241,13 @@ src/commands/branch/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/git/`**：Git 操作（`GitBranch`、`GitRepo`）
-  - `GitBranch::current_branch()` - 获取当前分支
-  - `GitBranch::get_default_branch()` - 获取默认分支
-  - `GitBranch::get_all_branches()` - 获取所有本地分支
+  - `GitBranch::current-_branch()` - 获取当前分支
+  - `GitBranch::get-_default-_branch()` - 获取默认分支
+  - `GitBranch::get-_all-_branches()` - 获取所有本地分支
   - `GitBranch::delete()` - 删除分支
-  - `GitRepo::extract_repo_name()` - 提取仓库名
-  - `GitRepo::prune_remote()` - 清理远端引用
-- **`commands/check/`**：环境检查（`CheckCommand::run_all()`）
+  - `GitRepo::extract-_repo-_name()` - 提取仓库名
+  - `GitRepo::prune-_remote()` - 清理远端引用
+- **`commands/check/`**：环境检查（`CheckCommand::run-_all()`）
 - **`lib/base/util/`**：工具函数（`confirm()`）
 - **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
 
@@ -273,7 +273,7 @@ Branch 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下�
   ↓
 Commands 层 (解析参数、处理交互)
   ↓
-Lib 层 (BranchNaming::from_jira_ticket())
+Lib 层 (BranchNaming::from-_jira-_ticket())
   ↓
 模板系统/LLM/简单方法
   ↓
@@ -289,7 +289,7 @@ Commands 层 (GitBranch::create())
   ↓
 Commands 层 (分支选择、stash 处理)
   ↓
-Lib 层 (GitBranch::checkout_branch())
+Lib 层 (GitBranch::checkout-_branch())
   ↓
 Git 操作
 ```
@@ -435,13 +435,13 @@ src/main.rs::main()
 Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand {
-  BranchSubcommand::Create { jira_id, from_default, dry_run } => CreateCommand::execute()
-  BranchSubcommand::Switch { branch_name } => SwitchCommand::execute()
+  BranchSubcommand::Create { jira-_id, from-_default, dry-_run } => CreateCommand::execute()
+  BranchSubcommand::Switch { branch-_name } => SwitchCommand::execute()
   BranchSubcommand::Rename => BranchRenameCommand::execute()
-  BranchSubcommand::Clean { dry_run } => BranchCleanCommand::clean()
+  BranchSubcommand::Clean { dry-_run } => BranchCleanCommand::clean()
   BranchSubcommand::Ignore { subcommand } => match subcommand {
-    IgnoreSubcommand::Add { branch_name } => BranchIgnoreCommand::add()
-    IgnoreSubcommand::Remove { branch_name } => BranchIgnoreCommand::remove()
+    IgnoreSubcommand::Add { branch-_name } => BranchIgnoreCommand::add()
+    IgnoreSubcommand::Remove { branch-_name } => BranchIgnoreCommand::remove()
     IgnoreSubcommand::List => BranchIgnoreCommand::list()
   }
 }
@@ -514,14 +514,14 @@ workflow branch ignore list
 ### 添加新的分支类型
 
 1. 在 `lib/branch/types.rs` 的 `BranchType` 枚举中添加新变体
-2. 在 `as_str()` 方法中添加字符串映射
-3. 在 `display_name()` 方法中添加显示名称
-4. 在 `from_str()` 方法中添加解析逻辑
+2. 在 `as-_str()` 方法中添加字符串映射
+3. 在 `display-_name()` 方法中添加显示名称
+4. 在 `from-_str()` 方法中添加解析逻辑
 5. 在 `all()` 方法中添加新类型
 
 ### 添加新的分支名生成策略
 
-1. 在 `lib/branch/naming.rs` 的 `from_jira_ticket()` 方法中添加新策略
+1. 在 `lib/branch/naming.rs` 的 `from-_jira-_ticket()` 方法中添加新策略
 2. 实现新的生成函数
 3. 在策略链中插入新策略（按优先级顺序）
 

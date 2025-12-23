@@ -28,8 +28,8 @@ PR 模块（`lib/pr/`）是 Workflow CLI 的核心库模块，提供 Pull Reques
 src/lib/pr/
 ├── mod.rs              # PR 模块声明和导出
 ├── platform.rs         # PlatformProvider trait 定义
-├── factory.rs          # 平台工厂函数（create_provider）
-├── body_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
+├── factory.rs          # 平台工厂函数（create-_provider）
+├── body-_parser.rs      # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
 ├── table.rs            # PR 表格显示结构体
 │
 ├── github/             # GitHub 平台实现
@@ -44,12 +44,12 @@ src/lib/pr/
 │   ├── create.rs       # PR 创建内容生成
 │   ├── reword.rs       # PR 标题和描述重写
 │   ├── summary.rs      # PR 总结生成
-│   ├── file_summary.rs # 单文件总结生成
+│   ├── file-_summary.rs # 单文件总结生成
 │   └── helpers.rs      # LLM 辅助函数
 │
 └── helpers/            # PR 辅助函数（已拆分）
     ├── mod.rs
-    ├── pr_id.rs        # PR ID 相关
+    ├── pr-_id.rs        # PR ID 相关
     ├── repo.rs         # 仓库信息相关
     └── content.rs      # 内容生成相关
 ```
@@ -70,7 +70,7 @@ src/lib/pr/
 ### 设计原则
 
 1. **平台抽象**：通过 `PlatformProvider` trait 实现统一的平台接口
-2. **多态分发**：使用工厂函数 `create_provider()` 实现动态分发
+2. **多态分发**：使用工厂函数 `create-_provider()` 实现动态分发
 3. **模块化设计**：按平台拆分模块，职责清晰
 4. **统一错误处理**：平台特定错误处理统一封装
 5. **代码复用**：请求/响应结构体分离，便于维护
@@ -82,25 +82,25 @@ src/lib/pr/
 **职责**：定义统一的 PR 平台接口和工厂函数
 
 - **`PlatformProvider` trait**：定义所有平台必须实现的 12 个方法
-  - `create_pull_request()` - 创建 PR
-  - `merge_pull_request()` - 合并 PR
-  - `get_pull_request_info()` - 获取 PR 信息
-  - `get_pull_request_url()` - 获取 PR URL
-  - `get_pull_request_title()` - 获取 PR 标题
-  - `get_current_branch_pull_request()` - 获取当前分支的 PR ID
-  - `get_pull_requests()` - 列出 PR（可选）
-  - `get_pull_request_status()` - 获取 PR 状态
-  - `close_pull_request()` - 关闭 PR
-  - `add_comment()` - 添加 PR 评论
-  - `approve_pull_request()` - 批准 PR
-  - `update_pr_base()` - 更新 PR 的 base 分支
+  - `create-_pull-_request()` - 创建 PR
+  - `merge-_pull-_request()` - 合并 PR
+  - `get-_pull-_request-_info()` - 获取 PR 信息
+  - `get-_pull-_request-_url()` - 获取 PR URL
+  - `get-_pull-_request-_title()` - 获取 PR 标题
+  - `get-_current-_branch-_pull-_request()` - 获取当前分支的 PR ID
+  - `get-_pull-_requests()` - 列出 PR（可选）
+  - `get-_pull-_request-_status()` - 获取 PR 状态
+  - `close-_pull-_request()` - 关闭 PR
+  - `add-_comment()` - 添加 PR 评论
+  - `approve-_pull-_request()` - 批准 PR
+  - `update-_pr-_base()` - 更新 PR 的 base 分支
 
-- **`create_provider()` 工厂函数**（位于 `factory.rs`）：
+- **`create-_provider()` 工厂函数**（位于 `factory.rs`）：
   - 自动检测仓库类型（GitHub）
   - 返回 `Box<dyn PlatformProvider>` trait 对象
   - 实现真正的多态分发
 
-- **`PullRequestStatus` 结构体**：PR 状态信息（state, merged, merged_at）
+- **`PullRequestStatus` 结构体**：PR 状态信息（state, merged, merged-_at）
 
 - **`TYPES_OF_CHANGES` 常量**：PR 变更类型定义
 
@@ -122,8 +122,8 @@ src/lib/pr/
 
 **职责**：提供平台工厂函数，实现平台实例的创建
 
-- **`create_provider()`**：根据仓库类型创建对应的平台提供者
-- 自动检测仓库类型（通过 `GitRepo::detect_repo_type()`）
+- **`create-_provider()`**：根据仓库类型创建对应的平台提供者
+- 自动检测仓库类型（通过 `GitRepo::detect-_repo-_type()`）
 - 目前仅支持 GitHub 平台
 
 #### 4. LLM 功能层 (`llm/`)
@@ -145,26 +145,26 @@ src/lib/pr/
 **职责**：提供 PR 相关的通用辅助函数
 
 **主要函数**：
-- `pr_id.rs`：PR ID 相关函数
-  - `extract_pull_request_id_from_url()` - 从 URL 提取 PR ID
+- `pr-_id.rs`：PR ID 相关函数
+  - `extract-_pull-_request-_id-_from-_url()` - 从 URL 提取 PR ID
 - `repo.rs`：仓库信息相关函数
-  - `extract_github_repo_from_url()` - 从 URL 提取 GitHub 仓库信息
+  - `extract-_github-_repo-_from-_url()` - 从 URL 提取 GitHub 仓库信息
 - `content.rs`：内容生成相关函数
-  - `generate_commit_title()` - 生成 commit 标题
-  - `generate_pull_request_body()` - 生成 PR body
+  - `generate-_commit-_title()` - 生成 commit 标题
+  - `generate-_pull-_request-_body()` - 生成 PR body
 - `mod.rs`：公共函数
-  - `get_current_branch_pr_id()` - 获取当前分支的 PR ID
-  - `detect_repo_type()` - 检测仓库类型（向后兼容）
+  - `get-_current-_branch-_pr-_id()` - 获取当前分支的 PR ID
+  - `detect-_repo-_type()` - 检测仓库类型（向后兼容）
 
-#### 6. PR Body 解析器 (`body_parser.rs`)
+#### 6. PR Body 解析器 (`body-_parser.rs`)
 
 **职责**：从 PR body 中提取信息的纯函数，无用户交互
 
 **主要函数**：
-- `extract_info_from_source_pr()` - 从源 PR 提取所有信息（Jira ticket、描述、变更类型）
-- `extract_jira_ticket_from_body()` - 从 PR body 提取 Jira ticket ID
-- `extract_description_from_body()` - 从 PR body 提取描述
-- `parse_change_types_from_body()` - 从 PR body 解析变更类型
+- `extract-_info-_from-_source-_pr()` - 从源 PR 提取所有信息（Jira ticket、描述、变更类型）
+- `extract-_jira-_ticket-_from-_body()` - 从 PR body 提取 Jira ticket ID
+- `extract-_description-_from-_body()` - 从 PR body 提取描述
+- `parse-_change-_types-_from-_body()` - 从 PR body 解析变更类型
 
 **数据结构**：
 - `SourcePrInfo` - 源 PR 信息（标题、URL、body）
@@ -260,10 +260,10 @@ src/commands/pr/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 
-- **`lib/pr/`**：PR 平台抽象层（`create_provider()`、`helpers::*`、`llm::PullRequestLLM`）
-  - `create_provider()` - 创建平台提供者
-  - `helpers::resolve_pull_request_id()` - 解析 PR ID
-  - `helpers::get_current_branch_pr_id()` - 获取当前分支 PR
+- **`lib/pr/`**：PR 平台抽象层（`create-_provider()`、`helpers::*`、`llm::PullRequestLLM`）
+  - `create-_provider()` - 创建平台提供者
+  - `helpers::resolve-_pull-_request-_id()` - 解析 PR ID
+  - `helpers::get-_current-_branch-_pr-_id()` - 获取当前分支 PR
   - `PullRequestLLM::generate()` - 生成 PR 标题
 
 - **`lib/git/`**：Git 操作（`GitBranch`、`GitCommit`、`GitRepo`、`GitStash`）
@@ -271,19 +271,19 @@ src/commands/pr/
   - `GitCommit` - 提交管理
 
 - **`lib/jira/`**：Jira 集成（`Jira`、`JiraStatus`、`JiraWorkHistory`）
-  - `Jira::get_ticket_info()` - 获取 ticket 信息
-  - `Jira::move_ticket()` - 更新状态
-  - `Jira::add_comment()` - 添加评论
+  - `Jira::get-_ticket-_info()` - 获取 ticket 信息
+  - `Jira::move-_ticket()` - 更新状态
+  - `Jira::add-_comment()` - 添加评论
 
 - **`lib/base/util/`**：工具函数（`Browser`、`Clipboard`、`confirm()`）
   - `Browser::open()` - 打开浏览器
   - `confirm()` - 用户确认
 
-- **`commands/check/`**：检查命令（`CheckCommand::run_all()`）
+- **`commands/check/`**：检查命令（`CheckCommand::run-_all()`）
   - 运行环境检查（Git 状态、网络）
 
 - **`lib/proxy/`**：代理管理（`ProxyManager`）
-  - `ProxyManager::ensure_proxy_enabled()` - 确保代理已启用（已移除自动调用，需手动启用）
+  - `ProxyManager::ensure-_proxy-_enabled()` - 确保代理已启用（已移除自动调用，需手动启用）
 
 ---
 
@@ -293,7 +293,7 @@ src/commands/pr/
 
 PR 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
 
-1. **平台抽象**：Commands 层通过 `create_provider()` 工厂函数获取平台提供者，无需关心具体平台实现
+1. **平台抽象**：Commands 层通过 `create-_provider()` 工厂函数获取平台提供者，无需关心具体平台实现
 2. **业务逻辑分离**：Lib 层专注于平台 API 调用，Commands 层负责用户交互和业务流程协调
 3. **模块协调**：Commands 层协调 Git、Jira、LLM 等模块，实现完整的 PR 生命周期管理
 
@@ -306,7 +306,7 @@ PR 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式
   ↓
 Commands 层 (处理交互、参数解析)
   ↓
-Lib 层 (create_provider() → GitHub 实现)
+Lib 层 (create-_provider() → GitHub 实现)
   ↓
 GitHub API
 ```
@@ -318,7 +318,7 @@ GitHub API
   ↓
 Commands 层 (解析 PR ID、检查状态)
   ↓
-Lib 层 (merge_pull_request())
+Lib 层 (merge-_pull-_request())
   ↓
 GitHub API
   ↓
@@ -465,7 +465,7 @@ PR 总结命令使用 LLM 生成 PR 的详细总结文档：
 
 添加 PR 评论命令用于向指定的 Pull Request 添加评论：
 
-1. **评论内容**：支持多个单词作为评论内容（使用 `trailing_var_arg` 参数）
+1. **评论内容**：支持多个单词作为评论内容（使用 `trailing-_var-_arg` 参数）
 2. **PR ID 解析**：支持通过参数指定 PR ID，或自动检测当前分支对应的 PR
 
 ### 13. Reword PR 命令 (`reword.rs`)
@@ -474,7 +474,7 @@ Reword PR 命令用于基于 PR diff 自动生成并更新 PR 标题和描述：
 
 1. **PR ID 解析**：支持通过参数指定 PR ID，或自动检测当前分支对应的 PR
 2. **PR 信息获取**：自动获取当前 PR 的标题和描述，获取完整的 PR diff 内容
-3. **LLM 生成**：使用 `RewordGenerator::reword_from_diff()` 基于 PR diff 生成新的标题和描述
+3. **LLM 生成**：使用 `RewordGenerator::reword-_from-_diff()` 基于 PR diff 生成新的标题和描述
 4. **更新选项**：支持 `--title`、`--description` 和 `--dry-run` 参数
 5. **用户确认**：显示当前内容和新内容的对比，用户确认后执行更新
 
@@ -488,13 +488,13 @@ Reword PR 命令用于基于 PR diff 自动生成并更新 PR 标题和描述：
 每个命令都是一个独立的结构体，实现统一的方法接口。
 
 #### 2. 工厂模式
-使用工厂函数 `create_provider()` 创建平台提供者，命令层无需关心平台差异。
+使用工厂函数 `create-_provider()` 创建平台提供者，命令层无需关心平台差异。
 
 #### 3. 策略模式
 不同的合并策略（FastForwardOnly, Squash, Merge, Rebase）在 sync 命令中实现。
 
 #### 4. 辅助函数模式
-将通用逻辑（如 `cleanup_branch`）提取到 `helpers.rs` 中共享。
+将通用逻辑（如 `cleanup-_branch`）提取到 `helpers.rs` 中共享。
 
 ### 错误处理
 
@@ -522,7 +522,7 @@ Reword PR 命令用于基于 PR diff 自动生成并更新 PR 标题和描述：
    - `requests.rs` - API 请求结构体
    - `responses.rs` - API 响应结构体
    - `errors.rs` - 错误处理
-3. 在 `lib/pr/platform.rs` 的 `create_provider()` 函数中添加新平台的分支
+3. 在 `lib/pr/platform.rs` 的 `create-_provider()` 函数中添加新平台的分支
 4. 在 `lib/git/repo.rs` 中添加仓库类型检测逻辑
 5. 在 `lib/pr/mod.rs` 中导出新平台
 
@@ -628,7 +628,7 @@ workflow pr reword 123
 PR 模块采用清晰的分层架构设计：
 
 1. **平台抽象层**：`PlatformProvider` trait 定义统一的平台接口
-2. **工厂函数层**：`create_provider()` 实现多态分发，自动检测仓库类型
+2. **工厂函数层**：`create-_provider()` 实现多态分发，自动检测仓库类型
 3. **平台实现层**：GitHub 实现 trait，模块化组织
 4. **LLM 功能层**：提供 PR 内容的 AI 生成功能（创建、重写、总结）
 5. **辅助函数层**：提供通用的 PR 相关辅助函数（已按功能拆分）

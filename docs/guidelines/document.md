@@ -207,7 +207,7 @@ flowchart LR
 **示例**：
 ```rust
 // 示例代码
-pub fn new_feature() -> Result<()> {
+pub fn new-_feature() -> Result<()> {
     // 实现
 }
 ```
@@ -403,10 +403,10 @@ let result = Module::method()?;
 #### 在 Rust 代码中使用
 
 ```rust
-use workflow::base::util::date::format_last_updated;
+use workflow::base::util::date::format-_last-_updated;
 
 // 生成"最后更新"时间戳（格式：YYYY-MM-DD）
-let timestamp = format_last_updated();
+let timestamp = format-_last-_updated();
 // 输出示例：2025-12-09
 ```
 
@@ -465,9 +465,9 @@ let timestamp = format_last_updated();
 
 在 Rust 代码中使用：
 ```rust
-use workflow::base::util::date::format_last_updated;
+use workflow::base::util::date::format-_last-_updated;
 
-let timestamp = format_last_updated();
+let timestamp = format-_last-_updated();
 // 输出：2025-12-09
 ```
 
@@ -477,29 +477,29 @@ let timestamp = format_last_updated();
 
 ```rust
 use workflow::base::util::date::{
-    format_document_timestamp, format_last_updated_with_time, DateFormat, Timezone,
+    format-_document-_timestamp, format-_last-_updated-_with-_time, DateFormat, Timezone,
 };
 
 // 只生成日期（本地时区）
-let date = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
+let date = format-_document-_timestamp(DateFormat::DateOnly, Timezone::Local);
 
 // 生成日期和时间（本地时区）
-let datetime = format_last_updated_with_time();
+let datetime = format-_last-_updated-_with-_time();
 
 // 使用 UTC 时区
-let utc_date = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
+let utc-_date = format-_document-_timestamp(DateFormat::DateOnly, Timezone::Utc);
 
 // ISO 8601 格式
-let iso = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
+let iso = format-_document-_timestamp(DateFormat::Iso8601, Timezone::Local);
 ```
 
 ### 支持的格式
 
 | 格式 | 函数 | 输出示例 |
 |------|------|----------|
-| 日期（YYYY-MM-DD） | `format_last_updated()` | `2025-12-09` |
-| 日期时间（YYYY-MM-DD HH:MM:SS） | `format_last_updated_with_time()` | `2025-12-09 14:30:00` |
-| ISO 8601 | `format_document_timestamp(DateFormat::Iso8601, ...)` | `2025-12-09T14:30:00+08:00` |
+| 日期（YYYY-MM-DD） | `format-_last-_updated()` | `2025-12-09` |
+| 日期时间（YYYY-MM-DD HH:MM:SS） | `format-_last-_updated-_with-_time()` | `2025-12-09 14:30:00` |
+| ISO 8601 | `format-_document-_timestamp(DateFormat::Iso8601, ...)` | `2025-12-09T14:30:00+08:00` |
 
 ### 注意事项
 

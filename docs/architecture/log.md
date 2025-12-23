@@ -44,15 +44,15 @@ src/commands/log/
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
   - `JiraLogs::new()` - 创建日志管理器
-  - `JiraLogs::download_from_jira()` - 下载日志
-  - `JiraLogs::extract_response_content()` - 提取响应内容
-  - `JiraLogs::search_keyword_both_files()` - 同时搜索 api.log 和 flutter-api.log
-  - `JiraLogs::ensure_log_file_exists()` - 确保日志文件存在
-  - `JiraLogs::get_api_log_file_path()` - 获取 api.log 文件路径
+  - `JiraLogs::download-_from-_jira()` - 下载日志
+  - `JiraLogs::extract-_response-_content()` - 提取响应内容
+  - `JiraLogs::search-_keyword-_both-_files()` - 同时搜索 api.log 和 flutter-api.log
+  - `JiraLogs::ensure-_log-_file-_exists()` - 确保日志文件存在
+  - `JiraLogs::get-_api-_log-_file-_path()` - 获取 api.log 文件路径
 - **`lib/base/util/`**：工具函数
   - `Clipboard::copy()` - 复制到剪贴板
 - **`lib/base/settings/`**：配置管理
-  - `Settings::get()` - 获取配置（`log_output_folder_name`、`log_download_base_dir` 等）
+  - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
 详细架构文档：参见 [Jira 模块架构文档](../lib/JIRA_ARCHITECTURE.md)
 
@@ -81,7 +81,7 @@ Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand
   ├─ Download → DownloadCommand::download()
-  ├─ Find → FindCommand::find_request_id()
+  ├─ Find → FindCommand::find-_request-_id()
   └─ Search → SearchCommand::search()
 ```
 
@@ -103,12 +103,12 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Download
   ↓
-commands/log/download.rs::DownloadCommand::download(jira_id)
+commands/log/download.rs::DownloadCommand::download(jira-_id)
   ↓
   1. 获取 JIRA ID（从参数或交互式输入）
   2. 显示下载提示信息
   3. 创建 JiraLogs 实例：JiraLogs::new()
-  4. 调用 JiraLogs::download_from_jira(jira_id, None, false)
+  4. 调用 JiraLogs::download-_from-_jira(jira-_id, None, false)
      └─ 内部处理：下载日志附件、合并分片、解压文件
   5. 输出成功信息和文件路径
 ```
@@ -116,14 +116,14 @@ commands/log/download.rs::DownloadCommand::download(jira_id)
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
 
 2. **用户交互**：
-   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `jira-_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
    - 显示下载进度和结果
 
 3. **核心功能**：
-   - 通过 `JiraLogs::download_from_jira()` API 实现下载功能
+   - 通过 `JiraLogs::download-_from-_jira()` API 实现下载功能
    - 只下载日志附件（文件匹配 log.zip, *.log, *.txt 模式）
    - 自动处理附件下载、分片合并、文件解压等操作
 
@@ -133,8 +133,8 @@ commands/log/download.rs::DownloadCommand::download(jira_id)
    - 创建 `JiraLogs` 实例（自动加载配置和初始化 HTTP 客户端）
 
 2. **下载执行**：
-   - 调用 `JiraLogs::download_from_jira()` 执行下载
-   - 只下载日志附件（`download_all_attachments = false`）
+   - 调用 `JiraLogs::download-_from-_jira()` 执行下载
+   - 只下载日志附件（`download-_all-_attachments = false`）
    - 自动处理分片 ZIP 文件的合并和解压
 
 3. **结果输出**：
@@ -144,11 +144,11 @@ commands/log/download.rs::DownloadCommand::download(jira_id)
 ### JiraLogs API 调用
 
 - **`JiraLogs::new()`** - 创建 JiraLogs 实例
-- **`JiraLogs::download_from_jira(jira_id, output_folder, download_all_attachments)`** - 下载日志附件
+- **`JiraLogs::download-_from-_jira(jira-_id, output-_folder, download-_all-_attachments)`** - 下载日志附件
   - 参数：
-    - `jira_id` - Jira ticket ID
-    - `output_folder` - 输出文件夹名称（可选，None 时使用配置的默认值）
-    - `download_all_attachments` - 是否下载所有附件（false，只下载日志附件）
+    - `jira-_id` - Jira ticket ID
+    - `output-_folder` - 输出文件夹名称（可选，None 时使用配置的默认值）
+    - `download-_all-_attachments` - 是否下载所有附件（false，只下载日志附件）
   - 返回：基础目录路径
 
 ---
@@ -167,12 +167,12 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Find
   ↓
-commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
+commands/log/find.rs::FindCommand::find-_request-_id(jira-_id, request-_id)
   ↓
   1. 获取 JIRA ID（从参数或交互式输入）
   2. 创建 JiraLogs 实例：JiraLogs::new()
   3. 获取请求 ID（从参数或交互式输入）
-  4. 调用 JiraLogs::extract_response_content(jira_id, request_id)
+  4. 调用 JiraLogs::extract-_response-_content(jira-_id, request-_id)
      └─ 内部处理：解析日志文件、查找请求 ID、提取响应内容
   5. Clipboard::copy() 复制响应内容到剪贴板
   6. 输出成功信息
@@ -181,15 +181,15 @@ commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `request_id` - 请求 ID（可选，不提供时交互式输入）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `request-_id` - 请求 ID（可选，不提供时交互式输入）
 
 2. **用户交互**：
-   - 如果未提供 `request_id`，使用 `dialoguer::Input` 交互式输入
+   - 如果未提供 `request-_id`，使用 `dialoguer::Input` 交互式输入
    - 显示查找进度和结果
 
 3. **核心功能**：
-   - 通过 `JiraLogs::extract_response_content()` API 提取响应内容
+   - 通过 `JiraLogs::extract-_response-_content()` API 提取响应内容
    - 自动复制响应内容到剪贴板
 
 ### 关键步骤说明
@@ -199,11 +199,11 @@ commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
 
 2. **JIRA ID 和请求 ID 获取**：
    - 优先使用命令行参数
-   - 如果未提供 `jira_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
-   - 如果未提供 `request_id`，交互式输入（提示："Enter request ID to find"）
+   - 如果未提供 `jira-_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `request-_id`，交互式输入（提示："Enter request ID to find"）
 
 3. **内容提取**：
-   - 调用 `JiraLogs::extract_response_content()` 提取响应内容
+   - 调用 `JiraLogs::extract-_response-_content()` 提取响应内容
    - 自动处理日志文件解析和内容提取
 
 4. **剪贴板操作**：
@@ -213,10 +213,10 @@ commands/log/find.rs::FindCommand::find_request_id(jira_id, request_id)
 ### JiraLogs API 调用
 
 - **`JiraLogs::new()`** - 创建 JiraLogs 实例
-- **`JiraLogs::extract_response_content(jira_id, request_id)`** - 提取响应内容
+- **`JiraLogs::extract-_response-_content(jira-_id, request-_id)`** - 提取响应内容
   - 参数：
-    - `jira_id` - Jira ticket ID
-    - `request_id` - 请求 ID
+    - `jira-_id` - Jira ticket ID
+    - `request-_id` - 请求 ID
   - 返回：响应内容字符串
 
 ---
@@ -235,13 +235,13 @@ src/main.rs (命令入口)
 ```
 src/main.rs::LogSubcommand::Search
   ↓
-commands/log/search.rs::SearchCommand::search(jira_id, search_term)
+commands/log/search.rs::SearchCommand::search(jira-_id, search-_term)
   ↓
   1. 获取 JIRA ID（从参数或交互式输入）
   2. 创建 JiraLogs 实例：JiraLogs::new()
-  3. 确保日志文件存在：JiraLogs::ensure_log_file_exists(jira_id)
+  3. 确保日志文件存在：JiraLogs::ensure-_log-_file-_exists(jira-_id)
   4. 获取搜索词（从参数或交互式输入）
-  5. 调用 JiraLogs::search_keyword_both_files(jira_id, search_term)
+  5. 调用 JiraLogs::search-_keyword-_both-_files(jira-_id, search-_term)
      └─ 内部处理：同时搜索 api.log 和 flutter-api.log，解析日志文件、搜索关键词、收集匹配结果
   6. 格式化输出结果（按文件分组显示匹配的 URL 和 ID）
 ```
@@ -249,16 +249,16 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
 ### 功能说明
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `search_term` - 搜索关键词（可选，不提供时交互式输入）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `search-_term` - 搜索关键词（可选，不提供时交互式输入）
 
 2. **用户交互**：
-   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
-   - 如果未提供 `search_term`，使用 `dialoguer::Input` 交互式输入（提示："Enter search term"）
+   - 如果未提供 `jira-_id`，使用 `dialoguer::Input` 交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `search-_term`，使用 `dialoguer::Input` 交互式输入（提示："Enter search term"）
    - 格式化输出匹配结果（按 api.log 和 flutter-api.log 分组显示）
 
 3. **核心功能**：
-   - 通过 `JiraLogs::search_keyword_both_files()` API 同时搜索两个日志文件
+   - 通过 `JiraLogs::search-_keyword-_both-_files()` API 同时搜索两个日志文件
    - 同时搜索 api.log 和 flutter-api.log 两个文件
    - 自动去重和格式化输出
    - 按文件分组显示搜索结果
@@ -271,11 +271,11 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
 
 2. **JIRA ID 和搜索词获取**：
    - 优先使用命令行参数
-   - 如果未提供 `jira_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
-   - 如果未提供 `search_term`，交互式输入（提示："Enter search term"）
+   - 如果未提供 `jira-_id`，交互式输入（提示："Enter Jira ticket ID (e.g., PROJ-123)"）
+   - 如果未提供 `search-_term`，交互式输入（提示："Enter search term"）
 
 3. **搜索执行**：
-   - 调用 `JiraLogs::search_keyword_both_files()` 执行搜索
+   - 调用 `JiraLogs::search-_keyword-_both-_files()` 执行搜索
    - 同时搜索 api.log 和 flutter-api.log 两个文件
 
 4. **结果展示**：
@@ -286,17 +286,17 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
 ### JiraLogs API 调用
 
 - **`JiraLogs::new()`** - 创建 JiraLogs 实例
-- **`JiraLogs::ensure_log_file_exists(jira_id)`** - 确保日志文件存在
-  - 参数：`jira_id` - Jira ticket ID
+- **`JiraLogs::ensure-_log-_file-_exists(jira-_id)`** - 确保日志文件存在
+  - 参数：`jira-_id` - Jira ticket ID
   - 返回：日志文件路径
-- **`JiraLogs::get_api_log_file_path(jira_id)`** - 获取 api.log 文件路径
-  - 参数：`jira_id` - Jira ticket ID
+- **`JiraLogs::get-_api-_log-_file-_path(jira-_id)`** - 获取 api.log 文件路径
+  - 参数：`jira-_id` - Jira ticket ID
   - 返回：api.log 文件路径（基于 flutter-api.log 的路径在同一目录下查找）
-- **`JiraLogs::search_keyword_both_files(jira_id, search_term)`** - 同时搜索两个日志文件
+- **`JiraLogs::search-_keyword-_both-_files(jira-_id, search-_term)`** - 同时搜索两个日志文件
   - 参数：
-    - `jira_id` - Jira ticket ID
-    - `search_term` - 搜索关键词
-  - 返回：`(api_results, flutter_api_results)` - 两个文件的结果元组，每个都是 `Vec<LogEntry>`
+    - `jira-_id` - Jira ticket ID
+    - `search-_term` - 搜索关键词
+  - 返回：`(api-_results, flutter-_api-_results)` - 两个文件的结果元组，每个都是 `Vec<LogEntry>`
   - 说明：同时搜索 api.log 和 flutter-api.log，如果文件不存在则返回空结果（不报错）
 
 ---
@@ -310,7 +310,7 @@ commands/log/search.rs::SearchCommand::search(jira_id, search_term)
   ↓
 DownloadCommand::download()
   ↓
-JiraLogs::download_from_jira()
+JiraLogs::download-_from-_jira()
   ↓
 Jira API (获取附件列表)
   ↓
@@ -326,9 +326,9 @@ Jira API (获取附件列表)
 ```
 命令行参数或交互式输入 (JIRA_ID, REQUEST_ID)
   ↓
-FindCommand::find_request_id()
+FindCommand::find-_request-_id()
   ↓
-JiraLogs::extract_response_content()
+JiraLogs::extract-_response-_content()
   ↓
 解析日志文件、提取响应内容
   ↓
@@ -344,7 +344,7 @@ Clipboard::copy() 复制到剪贴板
   ↓
 SearchCommand::search()
   ↓
-JiraLogs::search_keyword_both_files()
+JiraLogs::search-_keyword-_both-_files()
   ↓
 解析日志文件、搜索关键词
   ↓
@@ -363,7 +363,7 @@ JiraLogs::search_keyword_both_files()
 
 每个命令都是一个独立的结构体，实现统一的方法接口：
 - `DownloadCommand::download()` - 下载日志
-- `FindCommand::find_request_id()` - 查找请求 ID
+- `FindCommand::find-_request-_id()` - 查找请求 ID
 - `SearchCommand::search()` - 搜索关键词
 
 **注意**：`Clean` 命令已迁移到 `workflow jira` 子命令，请参考 [Jira 命令模块架构文档](./JIRA_COMMAND_ARCHITECTURE.md)。
@@ -377,7 +377,7 @@ src/main.rs::main()
   ↓
 match cli.subcommand
   ├─ Download → DownloadCommand::download()
-  ├─ Find → FindCommand::find_request_id()
+  ├─ Find → FindCommand::find-_request-_id()
   └─ Search → SearchCommand::search()
 ```
 
@@ -390,7 +390,7 @@ DownloadCommand::download()
   ↓
 JiraLogs::new()
   ↓
-JiraLogs::download_from_jira()
+JiraLogs::download-_from-_jira()
 ```
 
 ### 3. 依赖注入模式
@@ -432,7 +432,7 @@ JiraLogs::download_from_jira()
 
 ### 添加新命令
 
-1. 在 `commands/log/` 下创建新的命令文件（如 `new_command.rs`）
+1. 在 `commands/log/` 下创建新的命令文件（如 `new-_command.rs`）
 2. 实现命令结构体和处理方法（如 `NewCommand::execute()`）
 3. 在 `commands/log/mod.rs` 中导出命令结构体
 4. 在 `src/main.rs` 中添加命令枚举（`LogSubcommand`）
@@ -448,7 +448,7 @@ JiraLogs::download_from_jira()
 
 1. 在命令方法中格式化输出
 2. 使用 `log_*!` 宏输出信息
-3. 使用 `log_break!` 宏添加分隔线
+3. 使用 `log-_break!` 宏添加分隔线
 
 ---
 

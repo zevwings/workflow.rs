@@ -43,7 +43,7 @@ CI Workflow 在以下情况下触发：
 - 对所有 PR 运行 CI 检查
 - 版本更新分支（`bump-version-*`）会跳过 lint 和测试，但会通过状态检查
 
-### 2. 手动触发（workflow_dispatch）
+### 2. 手动触发（workflow-_dispatch）
 
 **触发条件**：
 - 在 GitHub Actions 页面手动触发
@@ -64,12 +64,12 @@ CI Workflow 在以下情况下触发：
 1. 检查 PR 源分支是否为 `bump-version-*` 格式
 2. 如果是版本更新分支：
    - 验证 PR 创建者是否与 `WORKFLOW_USER_NAME` 匹配
-   - 如果匹配，设置 `should_skip=true`
+   - 如果匹配，设置 `should-_skip=true`
    - 如果不匹配，失败并报错
-3. 如果不是版本更新分支，设置 `should_skip=false`
+3. 如果不是版本更新分支，设置 `should-_skip=false`
 
 **输出**：
-- `should_skip`: `true` 或 `false`
+- `should-_skip`: `true` 或 `false`
 
 **安全机制**：
 - 只有由 release workflow 创建的版本更新 PR 才能跳过 CI
@@ -80,7 +80,7 @@ CI Workflow 在以下情况下触发：
 **目的**：代码质量检查
 
 **执行条件**：
-- `check-skip-ci.outputs.should_skip != 'true'`
+- `check-skip-ci.outputs.should-_skip != 'true'`
 - 即：非版本更新分支会执行此 job
 
 **步骤**：
@@ -102,7 +102,7 @@ CI Workflow 在以下情况下触发：
 **目的**：运行测试套件
 
 **执行条件**：
-- `check-skip-ci.outputs.should_skip != 'true'`
+- `check-skip-ci.outputs.should-_skip != 'true'`
 - 即：非版本更新分支会执行此 job
 
 **步骤**：
@@ -124,7 +124,7 @@ CI Workflow 在以下情况下触发：
 
 **执行逻辑**：
 1. **优先级 1**：如果 `check-lint` 和 `tests` 都被跳过，直接通过（版本更新分支的情况）
-2. **优先级 2**：如果 `check-skip-ci` 成功且 `should_skip=true`，直接通过
+2. **优先级 2**：如果 `check-skip-ci` 成功且 `should-_skip=true`，直接通过
 3. **优先级 3**：检查 `check-lint` 和 `tests` 的结果
    - 如果有失败的检查，此 job 失败
    - 如果所有检查都成功或跳过，此 job 成功
@@ -193,7 +193,7 @@ PR 可以合并
 
 2. **CI 验证**：
    - `check-skip-ci` job 验证 PR 创建者
-   - 如果创建者匹配 `WORKFLOW_USER_NAME`，设置 `should_skip=true`
+   - 如果创建者匹配 `WORKFLOW_USER_NAME`，设置 `should-_skip=true`
    - `check-lint` 和 `tests` job 被跳过
    - `check-status` job 通过（因为应该跳过）
 
@@ -263,12 +263,12 @@ PR 可以合并
 **可能原因**：
 - 分支名不符合 `bump-version-*` 格式
 - `check-skip-ci` job 失败
-- `should_skip` output 未正确设置
+- `should-_skip` output 未正确设置
 
 **解决方案**：
 1. 检查分支名是否符合 `bump-version-*` 格式
 2. 检查 `check-skip-ci` job 是否成功
-3. 查看 `check-skip-ci` job 的输出，确认 `should_skip` 的值
+3. 查看 `check-skip-ci` job 的输出，确认 `should-_skip` 的值
 4. 检查 `check-lint` 和 `tests` job 的 `if` 条件
 
 ---

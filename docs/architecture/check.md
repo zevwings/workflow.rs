@@ -42,7 +42,7 @@ src/commands/check/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/git/`**：Git 操作（`GitRepo`、`GitCommit`）
-  - `GitRepo::is_git_repo()` - 检查是否在 Git 仓库中
+  - `GitRepo::is-_git-_repo()` - 检查是否在 Git 仓库中
   - `GitCommit::status()` - 获取 Git 状态
 - **`lib/base/http/`**：HTTP 客户端（`HttpClient`）
   - `HttpClient::global()` - 获取全局 HTTP 客户端
@@ -74,17 +74,17 @@ src/main.rs::main()
 Cli::parse() (解析命令行参数)
   ↓
 match cli.subcommand {
-  Commands::Check => CheckCommand::run_all()
+  Commands::Check => CheckCommand::run-_all()
 }
 ```
 
 ### 检查流程
 
 ```
-CheckCommand::run_all()
+CheckCommand::run-_all()
   ↓
 [1/2] Git 仓库状态检查
-  ├─ GitRepo::is_git_repo() (检查是否在 Git 仓库中)
+  ├─ GitRepo::is-_git-_repo() (检查是否在 Git 仓库中)
   └─ GitCommit::status() (获取 Git 状态)
   ↓
 [2/2] 网络连接检查
@@ -109,7 +109,7 @@ CheckCommand::run_all()
 - Git 工作区状态（是否有未提交的更改）
 
 **实现**：
-- 使用 `GitRepo::is_git_repo()` 检查是否在 Git 仓库中
+- 使用 `GitRepo::is-_git-_repo()` 检查是否在 Git 仓库中
 - 使用 `GitCommit::status()` 获取 Git 状态输出
 - 如果工作区干净（无未提交更改），显示成功消息
 - 如果有未提交更改，显示 Git 状态输出
@@ -145,8 +145,8 @@ CheckCommand::run_all()
 
 3. **输出格式**：
    - 使用步骤编号（[1/2]、[2/2]）清晰标识检查进度
-   - 使用分隔线（`log_break!()`）分隔不同检查步骤
-   - 使用不同日志级别（`log_success!`、`log_error!`、`log_info!`）区分结果
+   - 使用分隔线（`log-_break!()`）分隔不同检查步骤
+   - 使用不同日志级别（`log-_success!`、`log-_error!`、`log-_info!`）区分结果
 
 ---
 
@@ -157,7 +157,7 @@ CheckCommand::run_all()
 #### 1. 命令模式
 
 检查命令是一个独立的结构体，实现统一的方法接口：
-- `CheckCommand::run_all()` - 执行所有检查
+- `CheckCommand::run-_all()` - 执行所有检查
 
 #### 2. 工具函数模式
 
@@ -195,7 +195,7 @@ CheckCommand::run_all()
 
 ### 添加新的检查项
 
-1. 在 `check.rs` 的 `run_all()` 方法中添加新的检查步骤
+1. 在 `check.rs` 的 `run-_all()` 方法中添加新的检查步骤
 2. 调用相应的工具函数或库函数
 3. 提供清晰的错误提示和解决建议
 4. 更新检查步骤的编号和日志输出
@@ -203,7 +203,7 @@ CheckCommand::run_all()
 **示例**：
 ```rust
 // 3. 检查代理配置
-log_message!("[3/3] Checking proxy configuration...");
+log-_message!("[3/3] Checking proxy configuration...");
 // ... 检查逻辑
 ```
 

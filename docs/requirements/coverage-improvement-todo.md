@@ -45,12 +45,12 @@
 ### 🔄 高覆盖率模块（90%+，接近完成）
 
 - ✅ `util/date.rs`: 26/26 (100%) - 已完成
-- 🔄 `logger/log_level.rs`: 37/38 (97%) - 还需 1 行（第 32 行，release 模式下的默认级别，需要在 release 模式下运行测试才能覆盖）
+- 🔄 `logger/log-_level.rs`: 37/38 (97%) - 还需 1 行（第 32 行，release 模式下的默认级别，需要在 release 模式下运行测试才能覆盖）
 - ✅ `format/display.rs`: 18/18 (100%) - 已完成
 
 **优先级**: ⭐⭐⭐ 高 - 快速达到 100%
 
-**注意**: `logger/log_level.rs:32` 是 release 模式下的默认级别分支，需要在 release 模式下运行测试才能覆盖。可以使用 `cargo test --release` 来覆盖这一行。
+**注意**: `logger/log-_level.rs:32` 是 release 模式下的默认级别分支，需要在 release 模式下运行测试才能覆盖。可以使用 `cargo test --release` 来覆盖这一行。
 
 ---
 
@@ -58,33 +58,33 @@
 
 #### util 层
 - 🔄 `util/platform.rs`: 35/45 (78%) - 还需 10 行（已提升 24 行）
-  - ✅ 已添加：基础方法测试、`release_identifier()` 的各种平台组合测试、`is_static_required()` 的间接测试
+  - ✅ 已添加：基础方法测试、`release-_identifier()` 的各种平台组合测试、`is-_static-_required()` 的间接测试
   - ⚠️ 覆盖率工具显示以下行未覆盖：
     - **可测试但需要特殊环境**：
       - 第 118 行：非 Linux x86_64 平台的返回 - ✅ 已通过其他平台测试覆盖
-      - 第 186 行：`release_identifier()` 中 `is_static_required()` 返回 false 的分支 - ✅ 已通过 Linux x86_64 测试覆盖（取决于系统环境）
+      - 第 186 行：`release-_identifier()` 中 `is-_static-_required()` 返回 false 的分支 - ✅ 已通过 Linux x86_64 测试覆盖（取决于系统环境）
     - **难以在测试环境中模拟**：
       - 第 123-124 行：Alpine Linux 检测（需要 `/etc/os-release` 文件）- ⚠️ 需要 Alpine 环境或模拟文件
       - 第 132, 135-137, 139 行：`ldd` 命令检测（依赖于系统环境）- ⚠️ 需要 Linux 环境且 `ldd` 命令可用
       - 第 147 行：最后的 `return false`（当所有条件都不满足时）- ⚠️ 需要特定的系统环境组合
 - 🔄 `util/file.rs`: 31/79 (39%) - 还需 48 行（已提升 4 行）
-  - ✅ 已添加：`FileReader` 和 `FileWriter` 的大部分方法测试，包括 `lines()`, `bytes()`, `write_toml()`, `write_json()` 等
+  - ✅ 已添加：`FileReader` 和 `FileWriter` 的大部分方法测试，包括 `lines()`, `bytes()`, `write-_toml()`, `write-_json()` 等
   - ⚠️ 覆盖率工具显示以下行未覆盖（**测试已存在，可能是覆盖率工具问题**）：
-    - 第 40-48, 50, 54-60 行（`lines()` 和 `bytes()` 的循环逻辑）- ✅ 测试已存在：`test_file_reader_lines`, `test_file_reader_bytes`, `test_file_reader_lines_multiple_iterations`, `test_file_reader_bytes_large_file`
-    - 第 104-107, 109 行（`ensure_parent_dir()`）- ✅ 测试已存在：`test_file_writer_ensure_parent_dir`
-    - 第 122, 124-126 行（`set_permissions()`）- ✅ 测试已存在：`test_file_writer_set_permissions`（仅在 Unix 系统上）
-    - 第 146-148, 168-170 行（`write_str_with_dir()` 和 `write_bytes_with_dir()`）- ✅ 测试已存在
-    - 第 174, 178-180 行（`write_toml()`）- ✅ 测试已存在：`test_file_writer_write_toml`
-    - 第 194, 198-202 行（`write_toml_secure()`）- ✅ 测试已存在：`test_file_writer_write_toml_secure`
-    - 第 226, 230-234 行（`write_json()` 和 `write_json_secure()`）- ✅ 测试已存在：`test_file_writer_write_json`, `test_file_writer_write_json_secure`
+    - 第 40-48, 50, 54-60 行（`lines()` 和 `bytes()` 的循环逻辑）- ✅ 测试已存在：`test-_file-_reader-_lines`, `test-_file-_reader-_bytes`, `test-_file-_reader-_lines-_multiple-_iterations`, `test-_file-_reader-_bytes-_large-_file`
+    - 第 104-107, 109 行（`ensure-_parent-_dir()`）- ✅ 测试已存在：`test-_file-_writer-_ensure-_parent-_dir`
+    - 第 122, 124-126 行（`set-_permissions()`）- ✅ 测试已存在：`test-_file-_writer-_set-_permissions`（仅在 Unix 系统上）
+    - 第 146-148, 168-170 行（`write-_str-_with-_dir()` 和 `write-_bytes-_with-_dir()`）- ✅ 测试已存在
+    - 第 174, 178-180 行（`write-_toml()`）- ✅ 测试已存在：`test-_file-_writer-_write-_toml`
+    - 第 194, 198-202 行（`write-_toml-_secure()`）- ✅ 测试已存在：`test-_file-_writer-_write-_toml-_secure`
+    - 第 226, 230-234 行（`write-_json()` 和 `write-_json-_secure()`）- ✅ 测试已存在：`test-_file-_writer-_write-_json`, `test-_file-_writer-_write-_json-_secure`
 - 🔄 `util/directory.rs`: 5/42 (12%) - 还需 37 行
-  - ✅ 已添加：`DirectoryWalker` 的所有主要方法测试，包括 `list_dirs()`, `list_files()`, `find_files()` 等
+  - ✅ 已添加：`DirectoryWalker` 的所有主要方法测试，包括 `list-_dirs()`, `list-_files()`, `find-_files()` 等
   - ⚠️ 覆盖率工具显示以下行未覆盖（**测试已存在，可能是覆盖率工具问题**）：
-    - 第 23-29, 32 行（`list_dirs()` 的循环逻辑）- ✅ 测试已存在：`test_directory_walker_list_dirs`, `test_directory_walker_list_dirs_deep_nesting`
-    - 第 36-42, 45 行（`list_files()` 的循环逻辑）- ✅ 测试已存在：`test_directory_walker_list_files`, `test_directory_walker_list_files_deep_nesting`
-    - 第 49-57, 61 行（`find_files()` 的循环逻辑）- ✅ 测试已存在：`test_directory_walker_find_files`, `test_directory_walker_find_files_multiple_matches`
-    - 第 65-67, 71-73 行（`list_direct_dirs()` 和 `list_direct_files()`）- ✅ 测试已存在
-    - 第 122-125, 127 行（`ensure_exists()` 和 `ensure_parent_exists()`）- ✅ 测试已存在
+    - 第 23-29, 32 行（`list-_dirs()` 的循环逻辑）- ✅ 测试已存在：`test-_directory-_walker-_list-_dirs`, `test-_directory-_walker-_list-_dirs-_deep-_nesting`
+    - 第 36-42, 45 行（`list-_files()` 的循环逻辑）- ✅ 测试已存在：`test-_directory-_walker-_list-_files`, `test-_directory-_walker-_list-_files-_deep-_nesting`
+    - 第 49-57, 61 行（`find-_files()` 的循环逻辑）- ✅ 测试已存在：`test-_directory-_walker-_find-_files`, `test-_directory-_walker-_find-_files-_multiple-_matches`
+    - 第 65-67, 71-73 行（`list-_direct-_dirs()` 和 `list-_direct-_files()`）- ✅ 测试已存在
+    - 第 122-125, 127 行（`ensure-_exists()` 和 `ensure-_parent-_exists()`）- ✅ 测试已存在
 - ✅ `util/path.rs`: 23/23 (100%) - 已完成
 - ✅ `util/browser.rs`: 3/3 (100%) - 已完成
 - ✅ `util/clipboard.rs`: 6/6 (100%) - 已完成
@@ -96,13 +96,13 @@
   - ✅ 已添加：格式化函数测试、Logger 方法测试、日志级别过滤测试
   - ✅ 新增：边界情况测试（零长度、默认参数、不同字符和长度）
   - ✅ 新增：不同日志级别下的过滤行为测试（10+ 个测试用例）
-  - 📝 测试文件：`tests/base/logger_console.rs`
+  - 📝 测试文件：`tests/base/logger-_console.rs`
 - 🔄 `logger/tracing.rs`: 20/50 (40%) → 85%+ ✅ 已完成测试补充
   - ✅ 已添加：Tracer 方法测试、格式化方法测试、trace_* 宏测试
   - ✅ 新增：多次初始化测试、不同输入类型测试、边界情况测试（7+ 个测试用例）
-  - 📝 测试文件：`tests/base/logger_tracing.rs`
-- 🔄 `logger/log_level.rs`: 37/38 (97%) → 100% ✅ 测试已存在
-  - ✅ 测试已存在：`test_log_level_default_level_release`
+  - 📝 测试文件：`tests/base/logger-_tracing.rs`
+- 🔄 `logger/log-_level.rs`: 37/38 (97%) → 100% ✅ 测试已存在
+  - ✅ 测试已存在：`test-_log-_level-_default-_level-_release`
   - 📝 方法：在 release 模式下运行 `cargo test --release` 即可覆盖第32行
 
 #### http 层
@@ -123,7 +123,7 @@
 - 🔄 `http/retry.rs`: 63/117 (54%) → 90%+ ✅ 已完成测试补充
   - ✅ 已添加：配置测试、可重试/不可重试错误测试、不同错误类型测试
   - ✅ 新增：自定义配置值测试、重试次数记录测试、不同 IO 错误类型测试（3+ 个测试用例）
-  - 📝 测试文件：`tests/http/retry.rs`（补充测试，主要测试在 `tests/base/http_retry.rs`）
+  - 📝 测试文件：`tests/http/retry.rs`（补充测试，主要测试在 `tests/base/http-_retry.rs`）
 
 **优先级**: ⭐⭐ 中 - 逐步提升
 
@@ -167,7 +167,7 @@
 
 1. **完成高覆盖率模块** (预计 +0.3%)
    - [x] `util/date.rs`: 25/26 → 26/26 (100%) ✅
-   - [ ] `logger/log_level.rs`: 37/38 → 38/38 (100%) - 需要在 release 模式下运行测试
+   - [ ] `logger/log-_level.rs`: 37/38 → 38/38 (100%) - 需要在 release 模式下运行测试
    - [x] `format/display.rs`: 17/18 → 18/18 (100%) ✅
 
 2. **补充零覆盖率工具模块** (预计 +1.5%)
@@ -314,10 +314,10 @@ make coverage-trend
 cargo test
 
 # 运行特定模块测试
-cargo test --test integration_test base::util_file
+cargo test --test integration-_test base::util-_file
 
 # 运行测试并显示输出
-cargo test --test integration_test -- --nocapture
+cargo test --test integration-_test -- --nocapture
 ```
 
 ---
@@ -351,7 +351,7 @@ cargo test --test integration_test -- --nocapture
 2. **`tests/http/response.rs`** - HTTP 响应测试
    - 成功/错误状态判断
    - JSON/Text/Bytes 解析
-   - `ensure_success` 和 `ensure_success_with` 测试
+   - `ensure-_success` 和 `ensure-_success-_with` 测试
    - 错误消息提取测试
    - Headers 和状态文本测试
    - 多次解析测试
@@ -371,13 +371,13 @@ cargo test --test integration_test -- --nocapture
    - 不同错误类型测试
 
 #### Logger 层测试补充
-1. **`tests/base/logger_console.rs`** - 控制台日志测试
+1. **`tests/base/logger-_console.rs`** - 控制台日志测试
    - 格式化函数测试（success、error、warning、info、debug）
    - 分隔线测试
    - Logger 方法测试
    - 日志级别过滤测试
 
-2. **`tests/base/logger_tracing.rs`** - Tracing 封装测试
+2. **`tests/base/logger-_tracing.rs`** - Tracing 封装测试
    - Tracer 方法测试
    - 格式化方法测试
    - trace_* 宏测试
@@ -390,7 +390,7 @@ cargo test --test integration_test -- --nocapture
 - http/retry.rs: 54% → 90%+ ✅ 已完成进一步测试补充
 - logger/console.rs: 63% → 93%+ ✅ 已完成进一步测试补充
 - logger/tracing.rs: 40% → 85%+ ✅ 已完成进一步测试补充
-- logger/log_level.rs: 97% → 100% ✅ 测试已存在（需 release 模式验证）
+- logger/log-_level.rs: 97% → 100% ✅ 测试已存在（需 release 模式验证）
 
 **已完成进一步测试补充**（2025-12-23）：
 - ✅ `logger/console.rs`: 新增 10+ 个测试用例（日志级别过滤、边界情况）
@@ -410,18 +410,18 @@ cargo test --test integration_test -- --nocapture
 - http/retry.rs: 64/117 (54.7%) → 预计 70%+ ✅ 已补充测试（新增 16+ 个测试用例）
 - logger/console.rs: 53/54 (98.1%) ✅ 超出预期（目标 93%+）
 - logger/tracing.rs: 28/50 (56%) → 预计 70%+ ✅ 已补充测试（新增 6 个测试用例）
-- logger/log_level.rs: 37/38 (97.4%) → 100% ✅ 已验证 release 模式测试
+- logger/log-_level.rs: 37/38 (97.4%) → 100% ✅ 已验证 release 模式测试
 
 **整体覆盖率**: 17.27% (+0.12%)，约 2626/15204 行被覆盖（基于新增测试估算）
 
 **分析**：
 - ✅ **HTTP 层核心模块**（client、response、config、parser）覆盖率均超过 90%，表现优秀
 - ⚠️ **`http/retry.rs`** 和 **`logger/tracing.rs`** 覆盖率未达预期，需要进一步分析未覆盖的代码行
-- ⚠️ **`logger/log_level.rs`** 需要运行 release 模式测试来覆盖第32行
+- ⚠️ **`logger/log-_level.rs`** 需要运行 release 模式测试来覆盖第32行
 
 **已完成进一步工作**（2025-12-23）：
 
-1. ✅ **验证 logger/log_level.rs 的 release 模式测试**
+1. ✅ **验证 logger/log-_level.rs 的 release 模式测试**
    - 运行 `cargo test --release` 验证第32行覆盖
    - 测试已存在，在 release 模式下运行即可达到 100% 覆盖率
 
@@ -434,7 +434,7 @@ cargo test --test integration_test -- --nocapture
 3. ✅ **提升 util/platform.rs 覆盖率（78% → 90%+）**
    - 新增 2 个测试用例
    - 补充了 Alpine Linux 检测和 ldd 输出场景的测试
-   - **测试文件**: `tests/base/util_platform.rs`
+   - **测试文件**: `tests/base/util-_platform.rs`
 
 4. ✅ **分析并补充 http/retry.rs 的针对性测试**
    - 新增 5 个测试用例
@@ -443,8 +443,8 @@ cargo test --test integration_test -- --nocapture
 
 5. ✅ **分析并补充 logger/tracing.rs 的针对性测试**
    - 新增 4 个测试用例
-   - 补充了 enable_console 配置、文件创建失败回退、LogLevel::None 分支等测试
-   - **测试文件**: `tests/base/logger_tracing.rs`
+   - 补充了 enable-_console 配置、文件创建失败回退、LogLevel::None 分支等测试
+   - **测试文件**: `tests/base/logger-_tracing.rs`
 
 **测试统计**：
 - 总测试用例数：1162+ 个
@@ -461,13 +461,13 @@ cargo test --test integration_test -- --nocapture
 
 2. ✅ **补充 logger/tracing.rs 的针对性测试**
    - 新增 6 个测试用例
-   - 补充了 enable_console 配置分支、文件创建失败回退、LogLevel::None 分支等测试
-   - 补充了 get_log_file_path 错误处理路径的间接测试
-   - **测试文件**: `tests/base/logger_tracing.rs`
+   - 补充了 enable-_console 配置分支、文件创建失败回退、LogLevel::None 分支等测试
+   - 补充了 get-_log-_file-_path 错误处理路径的间接测试
+   - **测试文件**: `tests/base/logger-_tracing.rs`
 
-3. ✅ **验证 logger/log_level.rs 的 100% 覆盖率**
+3. ✅ **验证 logger/log-_level.rs 的 100% 覆盖率**
    - 运行 `cargo test --release` 验证第32行覆盖
-   - 测试已存在（`test_log_level_default_level_release`），在 release 模式下运行即可达到 100% 覆盖率
+   - 测试已存在（`test-_log-_level-_default-_level-_release`），在 release 模式下运行即可达到 100% 覆盖率
 
 **测试统计**：
 - 总测试用例数：1178+ 个

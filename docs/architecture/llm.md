@@ -82,7 +82,7 @@ let llm = PullRequestLLM::new(commits, config);
 let result = llm.generate()?;
 
 // 生成 PR 总结
-let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
+let summary = PullRequestLLM::summarize-_pr(&pr-_title, &pr-_diff, language)?;
 ```
 
 **位置**：`src/lib/pr/llm.rs`
@@ -110,13 +110,13 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 **关键方法**：
 - `global()` - 获取全局单例
 - `call()` - 调用 LLM API
-- `build_url()` - 构建 API URL（根据 provider 动态构建）
-- `build_headers()` - 构建请求头（从 Settings 获取 API Key）
-- `build_model()` - 构建模型名称（根据 provider 获取默认值）
-- `build_payload()` - 构建请求体（统一格式）
-- `extract_content()` - 提取响应内容（支持标准格式和自定义 JSON path）
-- `extract_by_path()` - 通过 JSON path 提取内容
-- `handle_error()` - 统一错误处理
+- `build-_url()` - 构建 API URL（根据 provider 动态构建）
+- `build-_headers()` - 构建请求头（从 Settings 获取 API Key）
+- `build-_model()` - 构建模型名称（根据 provider 获取默认值）
+- `build-_payload()` - 构建请求体（统一格式）
+- `extract-_content()` - 提取响应内容（支持标准格式和自定义 JSON path）
+- `extract-_by-_path()` - 通过 JSON path 提取内容
+- `handle-_error()` - 统一错误处理
 
 **关键特性**：
 - ✅ **单例模式**：使用 `OnceLock` 实现线程安全的全局单例
@@ -133,9 +133,9 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 **位置**：`src/lib/base/llm/types.rs`
 
 **字段**：
-- `system_prompt` - 系统提示词
-- `user_prompt` - 用户提示词
-- `max_tokens` - 最大 token 数
+- `system-_prompt` - 系统提示词
+- `user-_prompt` - 用户提示词
+- `max-_tokens` - 最大 token 数
 - `temperature` - 温度参数（控制输出的随机性）
 - `model` - 模型名称（实际使用时从 Settings 获取）
 
@@ -147,11 +147,11 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 
 **关键方法**：
 - `generate()` - 生成分支名、PR 标题和描述
-- `summarize_pr()` - 生成 PR 总结文档和文件名（支持多语言）
-- `system_prompt()` - 生成系统提示词
-- `user_prompt()` - 生成用户提示词
-- `parse_llm_response()` - 解析 LLM 响应
-- `parse_summary_response()` - 解析 PR 总结响应（JSON 格式）
+- `summarize-_pr()` - 生成 PR 总结文档和文件名（支持多语言）
+- `system-_prompt()` - 生成系统提示词
+- `user-_prompt()` - 生成用户提示词
+- `parse-_llm-_response()` - 解析 LLM 响应
+- `parse-_summary-_response()` - 解析 PR 总结响应（JSON 格式）
 
 **关键特性**：
 - ✅ **业务封装**：封装 LLM 调用逻辑，提供业务友好的接口
@@ -175,7 +175,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 | `key` | String | ✅ | API Key |
 | `url` | String | ⚠️ | API URL（仅 `proxy` 提供商需要） |
 | `model` | String | ⚠️ | 模型名称（`openai`/`deepseek` 有默认值，`proxy` 必填） |
-| `response_format` | String | ❌ | 响应格式路径（默认：`choices[0].message.content`） |
+| `response-_format` | String | ❌ | 响应格式路径（默认：`choices[0].message.content`） |
 | `language` | String | ❌ | 输出语言（默认：`en`） |
 
 **默认值**：
@@ -184,7 +184,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
   - `openai`: `"gpt-4.0"`
   - `deepseek`: `"deepseek-chat"`
   - `proxy`: 无默认值，必须配置
-- `response_format`: `"choices[0].message.content"`
+- `response-_format`: `"choices[0].message.content"`
 - `language`: `"en"`
 
 ### 设计模式
@@ -196,7 +196,7 @@ let summary = PullRequestLLM::summarize_pr(&pr_title, &pr_diff, language)?;
 ```rust
 pub fn global() -> &'static Self {
     static CLIENT: OnceLock<Self> = OnceLock::new();
-    CLIENT.get_or_init(Self::new)
+    CLIENT.get-_or-_init(Self::new)
 }
 ```
 
@@ -211,8 +211,8 @@ pub fn global() -> &'static Self {
 
 ```rust
 let settings = Settings::get();
-let url = self.build_url(&settings.llm.provider, &settings.llm.url)?;
-let model = self.build_model(&settings.llm)?;
+let url = self.build-_url(&settings.llm.provider, &settings.llm.url)?;
+let model = self.build-_model(&settings.llm)?;
 ```
 
 **优势**：
@@ -299,13 +299,13 @@ src/commands/llm/
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/base/settings/`**：配置管理（`Settings`、`Paths`、`defaults`）
   - `Settings::load()` - 加载配置
-  - `Paths::workflow_config()` - 获取配置文件路径
-  - `default_llm_model()` - 获取默认模型
+  - `Paths::workflow-_config()` - 获取配置文件路径
+  - `default-_llm-_model()` - 获取默认模型
 - **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
   - `ConfigManager::update()` - 更新配置
 - **`lib/base/llm/`**：LLM 客户端（配置读取，不直接调用）
 - **`lib/commands/config/helpers.rs`**：配置辅助函数
-  - `select_language()` - 选择语言
+  - `select-_language()` - 选择语言
 
 ---
 
@@ -331,11 +331,11 @@ PullRequestLLM::generate()
 LLMClient::global() (获取全局单例)
   ↓
 LLMClient::call() (调用 LLM API)
-  ├─ build_url() (从 Settings 获取 URL)
-  ├─ build_headers() (从 Settings 获取 API Key)
-  ├─ build_model() (从 Settings 获取 Model)
-  ├─ build_payload() (构建请求体)
-  └─ extract_content() (提取响应内容)
+  ├─ build-_url() (从 Settings 获取 URL)
+  ├─ build-_headers() (从 Settings 获取 API Key)
+  ├─ build-_model() (从 Settings 获取 Model)
+  ├─ build-_payload() (构建请求体)
+  └─ extract-_content() (提取响应内容)
   ↓
 reqwest HTTP Client (发送请求)
   ↓
@@ -409,27 +409,27 @@ Show 命令提供 LLM 配置的查看和展示功能：
 ```
 用户输入（PR 标题、PR diff、语言）
   ↓
-PullRequestLLM::summarize_pr()
+PullRequestLLM::summarize-_pr()
   ├─ 确定语言（命令行参数 > 配置文件 > 默认值 "en"）
   ├─ 构建 user prompt（包含 PR 标题和完整 diff）
-  ├─ 根据语言生成 system prompt（generate_summarize_pr_system_prompt()）
+  ├─ 根据语言生成 system prompt（generate-_summarize-_pr-_system-_prompt()）
   │   └─ 使用语言系统获取多语言指令
-  └─ 构建请求参数（max_tokens: 2000, temperature: 0.3）
+  └─ 构建请求参数（max-_tokens: 2000, temperature: 0.3）
   ↓
 LLMClient::global() (获取全局单例)
   ↓
 LLMClient::call() (调用 LLM API)
-  ├─ build_url() (从 Settings 获取 URL)
-  ├─ build_headers() (从 Settings 获取 API Key)
-  ├─ build_model() (从 Settings 获取 Model)
-  ├─ build_payload() (构建请求体)
-  └─ extract_content() (提取响应内容)
+  ├─ build-_url() (从 Settings 获取 URL)
+  ├─ build-_headers() (从 Settings 获取 API Key)
+  ├─ build-_model() (从 Settings 获取 Model)
+  ├─ build-_payload() (构建请求体)
+  └─ extract-_content() (提取响应内容)
   ↓
 reqwest HTTP Client (发送请求)
   ↓
 LLM API (OpenAI/DeepSeek/Proxy)
   ↓
-parse_summary_response() (解析响应)
+parse-_summary-_response() (解析响应)
   ├─ 提取 JSON（支持 markdown 代码块格式）
   ├─ 解析 JSON 获取 summary 和 filename
   ├─ 清理文件名（移除特殊字符，限制长度）
@@ -442,7 +442,7 @@ parse_summary_response() (解析响应)
 - **语言优先级**：命令行参数 > 配置文件（`llm.language`）> 默认值（"en"）
 - **System Prompt**：根据语言动态生成，包含详细的要求分析、功能说明、用户场景等指导
 - **请求参数**：
-  - `max_tokens: 2000` - 确保有足够空间返回完整的总结文档
+  - `max-_tokens: 2000` - 确保有足够空间返回完整的总结文档
   - `temperature: 0.3` - 降低温度，使输出更稳定和一致
 - **响应格式**：LLM 返回 JSON 格式，包含 `summary`（Markdown 文档）和 `filename`（文件名）
 - **文件名处理**：自动清理文件名，移除特殊字符，限制长度，确保文件名安全可用
@@ -481,14 +481,14 @@ use workflow::pr::PullRequestLLM;
 // 生成分支名和 PR 标题
 let content = PullRequestLLM::generate(
     "Fix login bug",
-    Some(vec!["feature-1".to_string(), "feature-2".to_string()]),
-    Some(git_diff),
+    Some(vec!["feature-1".to-_string(), "feature-2".to-_string()]),
+    Some(git-_diff),
 )?;
 
-log_message!("Branch: {}", content.branch_name);
-log_message!("PR Title: {}", content.pr_title);
+log-_message!("Branch: {}", content.branch-_name);
+log-_message!("PR Title: {}", content.pr-_title);
 if let Some(desc) = content.description {
-    log_message!("Description: {}", desc);
+    log-_message!("Description: {}", desc);
 }
 ```
 
@@ -525,7 +525,7 @@ provider = "proxy"
 url = "https://proxy.example.com"  # 必需
 key = "your-api-key"                # 必需
 model = "qwen-3-235b"               # 必需
-response_format = "choices[0].message.content"  # 可选，默认值
+response-_format = "choices[0].message.content"  # 可选，默认值
 language = "en"
 ```
 
@@ -536,10 +536,10 @@ language = "en"
 ### 添加新的 LLM 提供商
 
 1. 在 `Settings` 中添加新的 provider 名称
-2. 在 `LLMClient::build_url()` 中添加新 provider 的 URL 构建逻辑
-3. 在 `LLMClient::build_model()` 中添加新 provider 的默认模型（如需要）
+2. 在 `LLMClient::build-_url()` 中添加新 provider 的 URL 构建逻辑
+3. 在 `LLMClient::build-_model()` 中添加新 provider 的默认模型（如需要）
 4. 在 `workflow.toml` 中配置新 provider 的 URL 和 API Key
-5. 在 `setup.rs` 的 `llm_providers` 列表中添加新 Provider
+5. 在 `setup.rs` 的 `llm-_providers` 列表中添加新 Provider
 
 ### 添加新的业务功能
 
@@ -549,7 +549,7 @@ language = "en"
 
 ### 自定义响应格式
 
-通过 `response_format` 配置支持自定义 JSON path：
+通过 `response-_format` 配置支持自定义 JSON path：
 
 ```toml
 [llm]
@@ -557,7 +557,7 @@ provider = "proxy"
 url = "https://api.example.com"
 key = "your-api-key"
 model = "custom-model"
-response_format = "candidates[0].content.parts[0].text"  # 自定义路径
+response-_format = "candidates[0].content.parts[0].text"  # 自定义路径
 ```
 
 ---

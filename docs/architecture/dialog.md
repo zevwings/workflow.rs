@@ -38,15 +38,15 @@ src/lib/base/dialog/
 ├── mod.rs          # 模块声明和导出 (121行)
 ├── input.rs        # 文本输入对话框 (180行)
 ├── select.rs       # 单选对话框 (159行)
-├── multi_select.rs # 多选对话框 (106行)
+├── multi-_select.rs # 多选对话框 (106行)
 ├── confirm.rs      # 确认对话框 (139行)
 ├── types.rs        # 类型定义 (6行)
 └── form/           # 表单构建器子模块
     ├── mod.rs              # Form 模块声明和导出
     ├── builder.rs          # FormBuilder 主实现 (391行)
-    ├── group_builder.rs     # GroupBuilder 实现 (137行)
-    ├── field_builder.rs     # FieldBuilder 实现 (182行)
-    ├── condition_evaluator.rs # 条件评估器 (58行)
+    ├── group-_builder.rs     # GroupBuilder 实现 (137行)
+    ├── field-_builder.rs     # FieldBuilder 实现 (182行)
+    ├── condition-_evaluator.rs # 条件评估器 (58行)
     └── types.rs             # Form 类型定义 (281行)
 ```
 
@@ -54,7 +54,7 @@ src/lib/base/dialog/
 
 - **`inquire` crate**：提供交互式终端 UI 功能
 - **`dialoguer` crate**：提供确认对话框和密码输入功能
-- **`color_eyre` crate**：错误处理
+- **`color-_eyre` crate**：错误处理
 
 ### 模块集成
 
@@ -90,9 +90,9 @@ Dialog 模块被所有需要用户交互的命令广泛使用：
 
 **主要方法**：
 - `new(prompt)` - 创建新的输入对话框
-- `with_default(default)` - 设置默认值
-- `with_validator(validator)` - 设置验证器
-- `allow_empty(allow)` - 允许空值
+- `with-_default(default)` - 设置默认值
+- `with-_validator(validator)` - 设置验证器
+- `allow-_empty(allow)` - 允许空值
 - `prompt()` - 显示对话框并获取用户输入
 
 **特性**：
@@ -121,23 +121,23 @@ let name = InputDialog::new("Enter your name")
 
 // 带默认值
 let email = InputDialog::new("Enter email")
-    .with_default("user@example.com")
+    .with-_default("user@example.com")
     .prompt()?;
 
 // 带验证器
 let age = InputDialog::new("Enter age")
-    .with_validator(|input: &str| {
-        if input.parse::<u32>().is_ok() {
+    .with-_validator(|input: &str| {
+        if input.parse::<u32>().is-_ok() {
             Ok(())
         } else {
-            Err("Please enter a valid number".to_string())
+            Err("Please enter a valid number".to-_string())
         }
     })
     .prompt()?;
 
 // 允许空值
 let optional = InputDialog::new("Enter value (optional)")
-    .allow_empty(true)
+    .allow-_empty(true)
     .prompt()?;
 ```
 
@@ -147,7 +147,7 @@ let optional = InputDialog::new("Enter value (optional)")
 
 **主要方法**：
 - `new(prompt, options)` - 创建新的单选对话框
-- `with_default(index)` - 设置默认选项索引
+- `with-_default(index)` - 设置默认选项索引
 - `prompt()` - 显示对话框并获取用户选择
 
 **特性**：
@@ -174,7 +174,7 @@ use workflow::base::dialog::SelectDialog;
 
 let options = vec!["Option 1", "Option 2", "Option 3"];
 let selected = SelectDialog::new("Choose an option", options)
-    .with_default(0)
+    .with-_default(0)
     .prompt()?;
 // selected 是 "Option 1" 或 "Option 2" 或 "Option 3"
 ```
@@ -185,7 +185,7 @@ let selected = SelectDialog::new("Choose an option", options)
 
 **主要方法**：
 - `new(prompt, options)` - 创建新的多选对话框
-- `with_default(indices)` - 设置默认选中的选项索引
+- `with-_default(indices)` - 设置默认选中的选项索引
 - `prompt()` - 显示对话框并获取用户选择（返回 `Vec<T>`）
 
 **特性**：
@@ -222,8 +222,8 @@ let selected = MultiSelectDialog::new("Choose options", options)
 
 **主要方法**：
 - `new(prompt)` - 创建新的确认对话框
-- `with_default(default)` - 设置默认选择
-- `with_cancel_message(message)` - 设置取消消息（取消时返回错误）
+- `with-_default(default)` - 设置默认选择
+- `with-_cancel-_message(message)` - 设置取消消息（取消时返回错误）
 - `prompt()` - 显示对话框并获取用户确认
 
 **特性**：
@@ -261,13 +261,13 @@ use workflow::base::dialog::ConfirmDialog;
 
 // 简单确认
 let confirmed = ConfirmDialog::new("Continue?")
-    .with_default(true)
+    .with-_default(true)
     .prompt()?;
 
 // 取消时返回错误
 ConfirmDialog::new("This operation cannot be undone. Continue?")
-    .with_default(false)
-    .with_cancel_message("Operation cancelled.")
+    .with-_default(false)
+    .with-_cancel-_message("Operation cancelled.")
     .prompt()?;
 ```
 
@@ -282,30 +282,30 @@ ConfirmDialog::new("This operation cannot be undone. Continue?")
 
 **主要方法**：
 - `new()` - 创建新的表单构建器
-- `add_group(id, builder, config)` - 添加表单组
+- `add-_group(id, builder, config)` - 添加表单组
 - `run()` - 执行表单并收集用户输入
 
 **GroupBuilder 方法**：
 - `step(builder)` - 添加无条件步骤
-- `step_if(field_name, value, builder)` - 添加单条件步骤（字段值等于指定值时执行）
-- `step_if_all(conditions, builder)` - 添加多条件步骤（所有条件都满足时执行，AND 逻辑）
-- `step_if_any(conditions, builder)` - 添加多条件步骤（任一条件满足时执行，OR 逻辑）
-- `step_if_dynamic(condition_fn, builder)` - 添加动态条件步骤（基于运行时值）
+- `step-_if(field-_name, value, builder)` - 添加单条件步骤（字段值等于指定值时执行）
+- `step-_if-_all(conditions, builder)` - 添加多条件步骤（所有条件都满足时执行，AND 逻辑）
+- `step-_if-_any(conditions, builder)` - 添加多条件步骤（任一条件满足时执行，OR 逻辑）
+- `step-_if-_dynamic(condition-_fn, builder)` - 添加动态条件步骤（基于运行时值）
 
 **FieldBuilder 方法**：
-- `add_text(name, message)` - 添加文本输入字段
-- `add_password(name, message)` - 添加密码输入字段
-- `add_selection(name, message, choices)` - 添加选择字段
-- `add_confirmation(name, message)` - 添加确认字段
+- `add-_text(name, message)` - 添加文本输入字段
+- `add-_password(name, message)` - 添加密码输入字段
+- `add-_selection(name, message, choices)` - 添加选择字段
+- `add-_confirmation(name, message)` - 添加确认字段
 - `required()` - 标记字段为必填
 - `default(value)` - 设置字段默认值
 - `validate(validator)` - 设置字段验证器
-- `allow_empty(allow)` - 允许字段为空
+- `allow-_empty(allow)` - 允许字段为空
 
 **特性**：
 - 支持 Group/Step/Field 三层结构
 - 支持必填组和可选组
-- 支持步骤级条件逻辑（step_if, step_if_all, step_if_any, step_if_dynamic）
+- 支持步骤级条件逻辑（step-_if, step-_if-_all, step-_if-_any, step-_if-_dynamic）
 - 支持字段级条件逻辑
 - 支持多种字段类型（Text, Password, Selection, Confirmation）
 - 支持字段验证和默认值
@@ -317,78 +317,78 @@ ConfirmDialog::new("This operation cannot be undone. Continue?")
 use workflow::base::dialog::{FormBuilder, GroupConfig};
 
 // 基本用法：必填组
-let form_result = FormBuilder::new()
-    .add_group("jira", |g| {
+let form-_result = FormBuilder::new()
+    .add-_group("jira", |g| {
         g.step(|f| {
-            f.add_text("jira_email", "Jira email address").required()
+            f.add-_text("jira-_email", "Jira email address").required()
         })
         .step(|f| {
-            f.add_text("jira_service_address", "Jira service address").required()
+            f.add-_text("jira-_service-_address", "Jira service address").required()
         })
     }, GroupConfig::required())
     .run()?;
 
 // 可选组（带标题和描述）
-let form_result = FormBuilder::new()
-    .add_group("llm", |g| {
+let form-_result = FormBuilder::new()
+    .add-_group("llm", |g| {
         g.step(|f| {
-            f.add_selection("llm_provider", "Select LLM provider",
+            f.add-_selection("llm-_provider", "Select LLM provider",
                 vec!["openai".into(), "deepseek".into()])
         })
-        .step_if("llm_provider", "openai", |f| {
-            f.add_text("openai_key", "OpenAI API key").required()
+        .step-_if("llm-_provider", "openai", |f| {
+            f.add-_text("openai-_key", "OpenAI API key").required()
         })
-        .step_if("llm_provider", "deepseek", |f| {
-            f.add_text("deepseek_key", "DeepSeek API key").required()
+        .step-_if("llm-_provider", "deepseek", |f| {
+            f.add-_text("deepseek-_key", "DeepSeek API key").required()
         })
     }, GroupConfig::optional()
-        .with_title("LLM/AI Configuration")
-        .with_description("Configure LLM provider and API keys")
-        .with_default_enabled(true))
+        .with-_title("LLM/AI Configuration")
+        .with-_description("Configure LLM provider and API keys")
+        .with-_default-_enabled(true))
     .run()?;
 
 // 多条件步骤
-let form_result = FormBuilder::new()
-    .add_group("advanced", |g| {
+let form-_result = FormBuilder::new()
+    .add-_group("advanced", |g| {
         g.step(|f| {
-            f.add_text("provider", "Provider").required()
+            f.add-_text("provider", "Provider").required()
         })
-        .step_if_all([
+        .step-_if-_all([
             ("provider", "openai"),
             ("environment", "production")
         ], |f| {
-            f.add_text("api_key", "Production API key").required()
+            f.add-_text("api-_key", "Production API key").required()
         })
-        .step_if_any([
+        .step-_if-_any([
             ("provider", "openai"),
             ("provider", "deepseek")
         ], |f| {
-            f.add_confirmation("use_proxy", "Use proxy?")
+            f.add-_confirmation("use-_proxy", "Use proxy?")
         })
     }, GroupConfig::required())
     .run()?;
 
 // 动态条件步骤
-let form_result = FormBuilder::new()
-    .add_group("dynamic", |g| {
+let form-_result = FormBuilder::new()
+    .add-_group("dynamic", |g| {
         g.step(|f| {
-            f.add_text("count", "Item count").required()
+            f.add-_text("count", "Item count").required()
         })
-        .step_if_dynamic(|result| {
+        .step-_if-_dynamic(|result| {
             result.get("count")
-                .and_then(|v| v.parse::<i32>().ok())
+                .and-_then(|v| v.parse::<i32>().ok())
                 .map(|n| n > 10)
-                .unwrap_or(false)
+                .unwrap-_or(false)
         }, |f| {
-            f.add_text("bulk_discount", "Bulk discount code")
+            f.add-_text("bulk-_discount", "Bulk discount code")
         })
     }, GroupConfig::required())
     .run()?;
 
 // 访问表单结果
-let jira_email = form_result.get_required("jira_email")?;
-let llm_provider = form_result.get("llm_provider").cloned();
-let use_proxy = form_result.get_bool("use_proxy").unwrap_or(false);
+let jira-_email = form-_result.get-_required("jira-_email")?;
+let llm-_provider = form-_result.get("llm-_provider").cloned();
+let use-_proxy = form-_result.get-_bool("use-_proxy").unwrap-_or(false);
 ```
 
 **架构设计**：
@@ -423,10 +423,10 @@ FieldBuilder (字段构建器)
 
 FormBuilder 支持多种条件类型：
 
-- **单条件**：`step_if(field_name, value)` - 字段值等于指定值时执行
-- **多条件 AND**：`step_if_all([...])` - 所有条件都满足时执行
-- **多条件 OR**：`step_if_any([...])` - 任一条件满足时执行
-- **动态条件**：`step_if_dynamic(fn)` - 基于运行时值判断
+- **单条件**：`step-_if(field-_name, value)` - 字段值等于指定值时执行
+- **多条件 AND**：`step-_if-_all([...])` - 所有条件都满足时执行
+- **多条件 OR**：`step-_if-_any([...])` - 任一条件满足时执行
+- **动态条件**：`step-_if-_dynamic(fn)` - 基于运行时值判断
 
 条件操作符：
 - `Equals`：等于（不区分大小写）
@@ -442,12 +442,12 @@ FormBuilder 支持多种条件类型：
 
 ```rust
 let result = InputDialog::new("Enter value")
-    .with_default("default")
-    .with_validator(|s| {
+    .with-_default("default")
+    .with-_validator(|s| {
         // 验证逻辑
         Ok(())
     })
-    .allow_empty(false)
+    .allow-_empty(false)
     .prompt()?;
 ```
 
@@ -467,7 +467,7 @@ match dialog.prompt() {
     }
     Err(e) => {
         // 处理错误（通常是用户取消）
-        log_error!("{}", e);
+        log-_error!("{}", e);
     }
 }
 ```
@@ -524,11 +524,11 @@ inquire/dialoguer 库（底层终端 UI）
 ```
 InputDialog::new("prompt")
   ↓
-with_default("default")  // 可选
+with-_default("default")  // 可选
   ↓
-with_validator(|s| {...})  // 可选
+with-_validator(|s| {...})  // 可选
   ↓
-allow_empty(true)  // 可选
+allow-_empty(true)  // 可选
   ↓
 prompt()
   ↓
@@ -546,7 +546,7 @@ prompt()
 ```
 SelectDialog::new("prompt", options)
   ↓
-with_default(0)  // 可选
+with-_default(0)  // 可选
   ↓
 prompt()
   ↓
@@ -562,11 +562,11 @@ prompt()
 ```
 FormBuilder::new()
   ↓
-add_group("id", |g| {...}, GroupConfig::required())
+add-_group("id", |g| {...}, GroupConfig::required())
   ↓
 GroupBuilder::step(|f| {...})
   ↓
-FieldBuilder::add_text(...).required()
+FieldBuilder::add-_text(...).required()
   ↓
 run()
   ↓
@@ -601,9 +601,9 @@ Dialog 模块是基础设施模块，被整个项目广泛使用：
 dialog (基础设施)
   ├── form/ (FormBuilder 子模块)
   │   ├── builder.rs (使用基础对话框)
-  │   ├── group_builder.rs
-  │   ├── field_builder.rs
-  │   └── condition_evaluator.rs
+  │   ├── group-_builder.rs
+  │   ├── field-_builder.rs
+  │   └── condition-_evaluator.rs
   └── 基础对话框 (InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog)
   ↓
 所有业务模块（commands, lib/*）
@@ -615,7 +615,7 @@ dialog (基础设施)
 
 ### 添加新的对话框类型
 
-1. 在 `dialog/` 目录下创建新的模块文件（如 `date_picker.rs`）
+1. 在 `dialog/` 目录下创建新的模块文件（如 `date-_picker.rs`）
 2. 实现对话框结构体和 `prompt()` 方法
 3. 在 `mod.rs` 中声明模块并重新导出
 4. 在 `src/lib/base/mod.rs` 中添加到全局导出（如果需要）
@@ -627,27 +627,27 @@ dialog (基础设施)
 ```rust
 let validator = |input: &str| -> Result<(), String> {
     if input.len() < 5 {
-        Err("Input must be at least 5 characters".to_string())
+        Err("Input must be at least 5 characters".to-_string())
     } else {
         Ok(())
     }
 };
 
 InputDialog::new("Enter value")
-    .with_validator(validator)
+    .with-_validator(validator)
     .prompt()?;
 ```
 
 ### 添加新的表单字段类型
 
 1. 在 `form/types.rs` 中的 `FormFieldType` 枚举添加新类型
-2. 在 `form/field_builder.rs` 中添加对应的 `add_xxx` 方法
-3. 在 `form/builder.rs` 的 `ask_field` 方法中添加字段类型的处理逻辑
+2. 在 `form/field-_builder.rs` 中添加对应的 `add-_xxx` 方法
+3. 在 `form/builder.rs` 的 `ask-_field` 方法中添加字段类型的处理逻辑
 
 ### 添加新的条件操作符
 
 1. 在 `form/types.rs` 中的 `ConditionOperator` 枚举添加新操作符
-2. 在 `form/condition_evaluator.rs` 的 `evaluate` 方法中添加对应的评估逻辑
+2. 在 `form/condition-_evaluator.rs` 的 `evaluate` 方法中添加对应的评估逻辑
 
 ---
 
@@ -667,7 +667,7 @@ InputDialog::new("Enter value")
 use workflow::base::dialog::InputDialog;
 
 let name = InputDialog::new("Enter your name")
-    .with_default("John Doe")
+    .with-_default("John Doe")
     .prompt()?;
 ```
 
@@ -678,7 +678,7 @@ use workflow::base::dialog::SelectDialog;
 
 let options = vec!["Option 1", "Option 2", "Option 3"];
 let selected = SelectDialog::new("Choose an option", options)
-    .with_default(0)
+    .with-_default(0)
     .prompt()?;
 ```
 
@@ -698,7 +698,7 @@ let selected = MultiSelectDialog::new("Choose options", options)
 use workflow::base::dialog::ConfirmDialog;
 
 let confirmed = ConfirmDialog::new("Continue?")
-    .with_default(true)
+    .with-_default(true)
     .prompt()?;
 ```
 
@@ -707,31 +707,31 @@ let confirmed = ConfirmDialog::new("Continue?")
 ```rust
 use workflow::base::dialog::{FormBuilder, GroupConfig};
 
-let form_result = FormBuilder::new()
-    .add_group("jira", |g| {
+let form-_result = FormBuilder::new()
+    .add-_group("jira", |g| {
         g.step(|f| {
-            f.add_text("jira_email", "Jira email address").required()
+            f.add-_text("jira-_email", "Jira email address").required()
         })
         .step(|f| {
-            f.add_text("jira_service_address", "Jira service address").required()
+            f.add-_text("jira-_service-_address", "Jira service address").required()
         })
     }, GroupConfig::required())
-    .add_group("llm", |g| {
+    .add-_group("llm", |g| {
         g.step(|f| {
-            f.add_selection("llm_provider", "Select LLM provider",
+            f.add-_selection("llm-_provider", "Select LLM provider",
                 vec!["openai".into(), "deepseek".into()])
         })
-        .step_if("llm_provider", "openai", |f| {
-            f.add_text("openai_key", "OpenAI API key").required()
+        .step-_if("llm-_provider", "openai", |f| {
+            f.add-_text("openai-_key", "OpenAI API key").required()
         })
     }, GroupConfig::optional()
-        .with_title("LLM Configuration")
-        .with_default_enabled(true))
+        .with-_title("LLM Configuration")
+        .with-_default-_enabled(true))
     .run()?;
 
 // 访问结果
-let jira_email = form_result.get_required("jira_email")?;
-let llm_provider = form_result.get("llm_provider");
+let jira-_email = form-_result.get-_required("jira-_email")?;
+let llm-_provider = form-_result.get("llm-_provider");
 ```
 
 ---

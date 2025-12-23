@@ -24,8 +24,8 @@ src/lib/rollback/
 
 ### 依赖模块
 
-- **`lib/completion/files.rs`**：获取所有补全脚本文件列表（`get_all_completion_files()`）
-- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion_dir()`, `Paths::config_file()`）
+- **`lib/completion/files.rs`**：获取所有补全脚本文件列表（`get-_all-_completion-_files()`）
+- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion-_dir()`, `Paths::config-_file()`）
 - **`lib/base/shell/detect.rs`**：Shell 检测（`Detect::shell()`）
 - **`lib/base/shell/reload.rs`**：Shell 配置重新加载（`Reload::shell()`）
 
@@ -70,24 +70,24 @@ RollbackManager (回滚管理层)
 ### 备份流程
 
 ```
-RollbackManager::create_backup()
+RollbackManager::create-_backup()
   ↓
-  1. RollbackManager::create_backup_dir()           # 创建备份目录
-  2. RollbackManager::backup_binaries()              # 备份二进制文件
-     └─ sudo cp /usr/local/bin/{binary} {backup_dir}/
-  3. RollbackManager::backup_completions()           # 备份补全脚本
-     └─ fs::copy() {completion_dir}/{file} {backup_dir}/
+  1. RollbackManager::create-_backup-_dir()           # 创建备份目录
+  2. RollbackManager::backup-_binaries()              # 备份二进制文件
+     └─ sudo cp /usr/local/bin/{binary} {backup-_dir}/
+  3. RollbackManager::backup-_completions()           # 备份补全脚本
+     └─ fs::copy() {completion-_dir}/{file} {backup-_dir}/
 ```
 
 ### 回滚流程
 
 ```
-RollbackManager::rollback(backup_info)
+RollbackManager::rollback(backup-_info)
   ↓
-  1. RollbackManager::restore_binaries()             # 恢复二进制文件
-     └─ sudo cp {backup_dir}/{binary} /usr/local/bin/
-  2. RollbackManager::restore_completions()          # 恢复补全脚本
-     └─ fs::copy() {backup_dir}/{file} {completion_dir}/
+  1. RollbackManager::restore-_binaries()             # 恢复二进制文件
+     └─ sudo cp {backup-_dir}/{binary} /usr/local/bin/
+  2. RollbackManager::restore-_completions()          # 恢复补全脚本
+     └─ fs::copy() {backup-_dir}/{file} {completion-_dir}/
   3. 尝试重新加载 shell 配置（可选）
      └─ Reload::shell()                              # 重新加载 shell 配置
 ```
@@ -95,18 +95,18 @@ RollbackManager::rollback(backup_info)
 ### 备份流程
 
 ```
-create_backup()
+create-_backup()
   ↓
-  1. create_backup_dir()
+  1. create-_backup-_dir()
      └─ 在临时目录创建唯一备份目录（workflow-backup-{timestamp}）
   ↓
-  2. backup_binaries(backup_dir, ["workflow"])
+  2. backup-_binaries(backup-_dir, ["workflow"])
      ├─ 遍历二进制文件列表
      ├─ 检查文件是否存在
      ├─ 使用 sudo cp 复制到备份目录
      └─ 设置执行权限
   ↓
-  3. backup_completions(backup_dir, completion_dir)
+  3. backup-_completions(backup-_dir, completion-_dir)
      ├─ 获取所有补全脚本文件列表（所有 shell 类型）
      ├─ 遍历文件列表
      ├─ 检查文件是否存在
@@ -118,15 +118,15 @@ create_backup()
 ### 回滚流程
 
 ```
-rollback(backup_info)
+rollback(backup-_info)
   ↓
-  1. restore_binaries(backup_info.binary_backups)
+  1. restore-_binaries(backup-_info.binary-_backups)
      ├─ 遍历备份的二进制文件列表
      ├─ 检查备份文件是否存在
      ├─ 使用 sudo cp 恢复到 /usr/local/bin
      └─ 设置执行权限
   ↓
-  2. restore_completions(backup_info.completion_backups, completion_dir)
+  2. restore-_completions(backup-_info.completion-_backups, completion-_dir)
      ├─ 确保补全脚本目录存在
      ├─ 遍历备份的补全脚本文件列表
      ├─ 检查备份文件是否存在
@@ -143,11 +143,11 @@ rollback(backup_info)
 ### 清理流程
 
 ```
-cleanup_backup(backup_info)
+cleanup-_backup(backup-_info)
   ↓
   1. 检查备份目录是否存在
   ↓
-  2. fs::remove_dir_all(backup_info.backup_dir)
+  2. fs::remove-_dir-_all(backup-_info.backup-_dir)
   ↓
   3. 返回成功
 ```
@@ -163,29 +163,29 @@ cleanup_backup(backup_info)
   ↓
 sudo cp (复制)
   ↓
-{temp_dir}/workflow-backup-{timestamp}/workflow
+{temp-_dir}/workflow-backup-{timestamp}/workflow
   ↓
-BackupInfo.binary_backups
+BackupInfo.binary-_backups
 
 ~/.workflow/completions/* (补全脚本文件)
   ↓
 fs::copy (复制)
   ↓
-{temp_dir}/workflow-backup-{timestamp}/*.bash, _*, etc.
+{temp-_dir}/workflow-backup-{timestamp}/*.bash, _*, etc.
   ↓
-BackupInfo.completion_backups
+BackupInfo.completion-_backups
 ```
 
 ### 恢复数据流
 
 ```
-BackupInfo.binary_backups
+BackupInfo.binary-_backups
   ↓
 sudo cp (恢复)
   ↓
 /usr/local/bin/workflow
 
-BackupInfo.completion_backups
+BackupInfo.completion-_backups
   ↓
 fs::copy (恢复)
   ↓
@@ -199,20 +199,20 @@ fs::copy (恢复)
 ### 添加新的备份内容
 
 1. 在 `BackupInfo` 中添加新的备份列表字段
-2. 在 `create_backup()` 中添加新的备份逻辑
+2. 在 `create-_backup()` 中添加新的备份逻辑
 3. 在 `rollback()` 中添加新的恢复逻辑
 
 **示例**：
 ```rust
 pub struct BackupInfo {
-    pub backup_dir: PathBuf,
-    binary_backups: Vec<(String, PathBuf)>,
-    completion_backups: Vec<(String, PathBuf)>,
-    config_backups: Vec<(String, PathBuf)>, // 新增配置备份
+    pub backup-_dir: PathBuf,
+    binary-_backups: Vec<(String, PathBuf)>,
+    completion-_backups: Vec<(String, PathBuf)>,
+    config-_backups: Vec<(String, PathBuf)>, // 新增配置备份
 }
 
 impl RollbackManager {
-    fn backup_configs(backup_dir: &Path) -> Result<Vec<(String, PathBuf)>> {
+    fn backup-_configs(backup-_dir: &Path) -> Result<Vec<(String, PathBuf)>> {
         // 备份配置文件
     }
 }
@@ -225,7 +225,7 @@ impl RollbackManager {
 
 **示例**：
 ```rust
-fn verify_backup(backup_info: &BackupInfo) -> Result<()> {
+fn verify-_backup(backup-_info: &BackupInfo) -> Result<()> {
     // 验证所有备份文件存在
     // 验证文件完整性（可选：校验和）
 }
@@ -250,17 +250,17 @@ fn verify_backup(backup_info: &BackupInfo) -> Result<()> {
 use workflow::rollback::RollbackManager;
 
 // 创建备份
-let backup_info = RollbackManager::create_backup()?;
+let backup-_info = RollbackManager::create-_backup()?;
 
 // 执行更新操作...
-match update_result {
+match update-_result {
     Ok(_) => {
         // 更新成功，清理备份
-        RollbackManager::cleanup_backup(&backup_info)?;
+        RollbackManager::cleanup-_backup(&backup-_info)?;
     }
     Err(e) => {
         // 更新失败，执行回滚
-        RollbackManager::rollback(&backup_info)?;
+        RollbackManager::rollback(&backup-_info)?;
     }
 }
 ```

@@ -77,74 +77,74 @@
 ```rust
 // ✅ 测试命令参数解析（我们的业务逻辑）
 #[test]
-fn test_pr_create_args_validation() {
+fn test-_pr-_create-_args-_validation() {
     let args = PrCreateArgs {
-        jira_ticket: Some("PROJ-123".to_string()),
-        title: Some("Test PR".to_string()),
+        jira-_ticket: Some("PROJ-123".to-_string()),
+        title: Some("Test PR".to-_string()),
         description: None,
-        dry_run: false,
+        dry-_run: false,
     };
 
     // 测试我们的参数验证逻辑
-    let result = validate_pr_create_args(&args);
-    assert!(result.is_ok());
+    let result = validate-_pr-_create-_args(&args);
+    assert!(result.is-_ok());
 
     // 测试无效的 Jira ID
-    let invalid_args = PrCreateArgs {
-        jira_ticket: Some("invalid-id".to_string()),
+    let invalid-_args = PrCreateArgs {
+        jira-_ticket: Some("invalid-id".to-_string()),
         ..args
     };
-    let result = validate_pr_create_args(&invalid_args);
-    assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("Jira ID 格式无效"));
+    let result = validate-_pr-_create-_args(&invalid-_args);
+    assert!(result.is-_err());
+    assert!(result.unwrap-_err().to-_string().contains("Jira ID 格式无效"));
 }
 
 // ✅ 测试用户交互逻辑（我们的业务逻辑）
 #[test]
-fn test_branch_selection_dialog_config() {
+fn test-_branch-_selection-_dialog-_config() {
     let branches = vec!["main", "develop", "feature/test"];
-    let dialog = create_branch_selection_dialog(&branches);
+    let dialog = create-_branch-_selection-_dialog(&branches);
 
     // 测试我们的 Dialog 配置逻辑
-    assert_eq!(dialog.prompt(), "选择目标分支:");
-    assert_eq!(dialog.options().len(), 3);
-    assert_eq!(dialog.default_index(), Some(0));
-    assert!(dialog.enable_filter()); // 启用模糊匹配
+    assert-_eq!(dialog.prompt(), "选择目标分支:");
+    assert-_eq!(dialog.options().len(), 3);
+    assert-_eq!(dialog.default-_index(), Some(0));
+    assert!(dialog.enable-_filter()); // 启用模糊匹配
 }
 
 // ✅ 测试输出格式化（我们的业务逻辑）
 #[test]
-fn test_pr_list_output_formats() {
-    let prs = create_mock_pr_list();
+fn test-_pr-_list-_output-_formats() {
+    let prs = create-_mock-_pr-_list();
 
     // 测试表格格式
-    let table_output = format_pr_list_as_table(&prs);
-    assert!(table_output.contains("ID"));
-    assert!(table_output.contains("Title"));
-    assert!(table_output.contains("Status"));
+    let table-_output = format-_pr-_list-_as-_table(&prs);
+    assert!(table-_output.contains("ID"));
+    assert!(table-_output.contains("Title"));
+    assert!(table-_output.contains("Status"));
 
     // 测试 JSON 格式
-    let json_output = format_pr_list_as_json(&prs);
-    let parsed: serde_json::Value = serde_json::from_str(&json_output).unwrap();
-    assert!(parsed.is_array());
-    assert_eq!(parsed.as_array().unwrap().len(), prs.len());
+    let json-_output = format-_pr-_list-_as-_json(&prs);
+    let parsed: serde-_json::Value = serde-_json::from-_str(&json-_output).unwrap();
+    assert!(parsed.is-_array());
+    assert-_eq!(parsed.as-_array().unwrap().len(), prs.len());
 }
 
 // ✅ 测试命令执行前置条件（我们的业务逻辑）
 #[test]
-fn test_pr_create_preconditions() {
+fn test-_pr-_create-_preconditions() {
     // 测试 Git 仓库检查
-    let temp_dir = tempfile::tempdir().unwrap();
-    std::env::set_current_dir(&temp_dir).unwrap();
+    let temp-_dir = tempfile::tempdir().unwrap();
+    std::env::set-_current-_dir(&temp-_dir).unwrap();
 
-    let result = PrCreateCommand::validate_git_repo();
-    assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("不是 Git 仓库"));
+    let result = PrCreateCommand::validate-_git-_repo();
+    assert!(result.is-_err());
+    assert!(result.unwrap-_err().to-_string().contains("不是 Git 仓库"));
 
     // 测试配置文件检查
-    let result = PrCreateCommand::validate_github_config();
-    assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("GitHub 配置"));
+    let result = PrCreateCommand::validate-_github-_config();
+    assert!(result.is-_err());
+    assert!(result.unwrap-_err().to-_string().contains("GitHub 配置"));
 }
 ```
 
@@ -302,11 +302,11 @@ fn test_pr_create_preconditions() {
 **实际测试工具配置** (`Cargo.toml`):
 ```toml
 [dev-dependencies]
-pretty_assertions = "1.4"    # 清晰的断言输出
+pretty-_assertions = "1.4"    # 清晰的断言输出
 rstest = "0.18"             # 参数化测试和 fixtures
 mockito = "1.2"             # HTTP API Mock 测试
 insta = "1.38"              # 快照测试（JSON 功能）
-assert_cmd = "2.0"          # CLI 命令测试
+assert-_cmd = "2.0"          # CLI 命令测试
 predicates = "3.0"          # 断言谓词
 tempfile = "3.8"            # 临时文件和目录
 ```
@@ -316,8 +316,8 @@ tempfile = "3.8"            # 临时文件和目录
 tests/
 ├── base/           # Base 模块测试（LLM、Settings、Dialog、Util）
 ├── cli/            # CLI 命令测试（所有 commands/ 对应测试）
-│   ├── basic_cli.rs        # 基础 CLI 测试
-│   ├── integration_cli.rs  # CLI 集成测试
+│   ├── basic-_cli.rs        # 基础 CLI 测试
+│   ├── integration-_cli.rs  # CLI 集成测试
 │   └── [各命令测试文件]    # PR、Branch、Config 等
 ├── completion/     # 自动补全测试
 ├── git/            # Git 模块测试（目前为空，需要补充）
@@ -328,15 +328,15 @@ tests/
 ├── proxy/          # Proxy 模块测试
 ├── rollback/       # Rollback 模块测试
 ├── common/         # 共享测试工具
-│   ├── cli_helpers.rs      # CLI 测试辅助工具
+│   ├── cli-_helpers.rs      # CLI 测试辅助工具
 │   ├── helpers.rs          # 通用测试工具
-│   └── http_helpers.rs     # HTTP 测试工具
+│   └── http-_helpers.rs     # HTTP 测试工具
 └── fixtures/       # 测试数据文件
 ```
 
 **测试覆盖现状**:
 - 🟢 **已完整覆盖**: Base 模块（LLM、Settings、Dialog）、CLI 参数解析、PR 模块、Jira 模块
-- 🟢 **CLI 测试工具**: 已添加 assert_cmd、predicates、tempfile 和完整的测试辅助工具
+- 🟢 **CLI 测试工具**: 已添加 assert-_cmd、predicates、tempfile 和完整的测试辅助工具
 - 🟡 **部分覆盖**: HTTP 模块、Completion 模块、Proxy 模块、CLI 集成测试（基础框架已建立）
 - 🔴 **缺失覆盖**: Git 模块（测试文件为空）、Template 模块、Branch 模块、Commit 模块、Stash 模块
 
@@ -347,42 +347,42 @@ tests/
 ```rust
 // ✅ 测试分支前缀处理逻辑（我们的业务逻辑）
 #[test]
-fn test_format_branch_name_with_prefix() {
-    let result = format_branch_name("feature", "login");
-    assert_eq!(result, "feature/login");
+fn test-_format-_branch-_name-_with-_prefix() {
+    let result = format-_branch-_name("feature", "login");
+    assert-_eq!(result, "feature/login");
 }
 
 // ✅ 测试合并策略选择逻辑（我们的业务逻辑）
 #[test]
-fn test_merge_strategy_selection() {
-    let strategy = determine_merge_strategy(true, false);
-    assert_eq!(strategy, MergeStrategy::NoFastForward);
+fn test-_merge-_strategy-_selection() {
+    let strategy = determine-_merge-_strategy(true, false);
+    assert-_eq!(strategy, MergeStrategy::NoFastForward);
 }
 
 // ✅ 测试分支名称验证逻辑（我们的业务逻辑）
 #[test]
-fn test_validate_branch_name() {
-    assert!(validate_branch_name("feature/login").is_ok());
-    assert!(validate_branch_name("invalid//name").is_err());
-    assert!(validate_branch_name("").is_err());
+fn test-_validate-_branch-_name() {
+    assert!(validate-_branch-_name("feature/login").is-_ok());
+    assert!(validate-_branch-_name("invalid//name").is-_err());
+    assert!(validate-_branch-_name("").is-_err());
 }
 
 // ✅ 测试 Git 命令执行失败时的错误处理（我们的错误处理）
 #[test]
-fn test_branch_create_error_handling() {
+fn test-_branch-_create-_error-_handling() {
     // 使用 Mock 模拟 Git 命令失败
     let result = GitBranch::create("invalid/name");
-    assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("分支名称无效"));
+    assert!(result.is-_err());
+    assert!(result.unwrap-_err().to-_string().contains("分支名称无效"));
 }
 
 // ✅ 测试 CommitInfo 数据结构解析（我们的数据处理）
 #[test]
-fn test_parse_commit_info() {
+fn test-_parse-_commit-_info() {
     let output = "abc123\nJohn Doe\n2024-01-01\nInitial commit";
-    let info = CommitInfo::from_output(output).unwrap();
-    assert_eq!(info.hash, "abc123");
-    assert_eq!(info.author, "John Doe");
+    let info = CommitInfo::from-_output(output).unwrap();
+    assert-_eq!(info.hash, "abc123");
+    assert-_eq!(info.author, "John Doe");
 }
 ```
 
@@ -391,23 +391,23 @@ fn test_parse_commit_info() {
 ```rust
 // ❌ 不要测试 Git 命令本身是否正确（这是 Git 的责任）
 #[test]
-fn test_git_branch_command_creates_branch() {
+fn test-_git-_branch-_command-_creates-_branch() {
     // 这是在测试 Git 本身，而不是我们的代码
     Command::new("git").args(["branch", "test"]).status().unwrap();
     let output = Command::new("git").args(["branch", "--list", "test"]).output().unwrap();
-    assert!(String::from_utf8_lossy(&output.stdout).contains("test"));
+    assert!(String::from-_utf8_lossy(&output.stdout).contains("test"));
 }
 
 // ❌ 不要测试 Git 参数的功能（这是 Git 的责任）
 #[test]
-fn test_git_merge_ff_only_parameter() {
+fn test-_git-_merge-_ff-_only-_parameter() {
     // 这是在测试 Git 的 --ff-only 参数，而不是我们的代码
     Command::new("git").args(["merge", "--ff-only", "feature"]).status().unwrap();
 }
 
 // ❌ 不要测试 Git 的底层实现（这是 Git 的责任）
 #[test]
-fn test_git_internal_merge_algorithm() {
+fn test-_git-_internal-_merge-_algorithm() {
     // 这是在测试 Git 的合并算法，而不是我们的代码
 }
 ```
@@ -419,37 +419,37 @@ fn test_git_internal_merge_algorithm() {
 ```rust
 // ✅ 测试请求配置构建逻辑（我们的业务逻辑）
 #[test]
-fn test_build_request_with_auth() {
+fn test-_build-_request-_with-_auth() {
     let client = HttpClient::new();
     let request = client.request("https://api.example.com")
-        .with_auth("token", "abc123")
+        .with-_auth("token", "abc123")
         .build();
 
-    assert!(request.headers().contains_key("Authorization"));
-    assert_eq!(request.headers().get("Authorization").unwrap(), "Bearer abc123");
+    assert!(request.headers().contains-_key("Authorization"));
+    assert-_eq!(request.headers().get("Authorization").unwrap(), "Bearer abc123");
 }
 
 // ✅ 测试重试逻辑（我们的业务逻辑）
 #[test]
-fn test_retry_on_network_error() {
-    let mut mock_server = mockito::Server::new();
-    let mock = mock_server.mock("GET", "/api")
-        .with_status(500)
+fn test-_retry-_on-_network-_error() {
+    let mut mock-_server = mockito::Server::new();
+    let mock = mock-_server.mock("GET", "/api")
+        .with-_status(500)
         .expect(3)  // 应该重试 3 次
         .create();
 
-    let result = HttpClient::new().get(&format!("{}/api", mock_server.url())).await;
-    assert!(result.is_err());
+    let result = HttpClient::new().get(&format!("{}/api", mock-_server.url())).await;
+    assert!(result.is-_err());
     mock.assert();
 }
 
 // ✅ 测试响应数据解析（我们的业务逻辑）
 #[test]
-fn test_parse_api_response() {
+fn test-_parse-_api-_response() {
     let json = r#"{"id": 123, "name": "test"}"#;
-    let data: ApiResponse = serde_json::from_str(json).unwrap();
-    assert_eq!(data.id, 123);
-    assert_eq!(data.name, "test");
+    let data: ApiResponse = serde-_json::from-_str(json).unwrap();
+    assert-_eq!(data.id, 123);
+    assert-_eq!(data.name, "test");
 }
 ```
 
@@ -458,15 +458,15 @@ fn test_parse_api_response() {
 ```rust
 // ❌ 不要测试 reqwest 是否正确发送 HTTP 请求（这是 reqwest 的责任）
 #[test]
-fn test_reqwest_sends_http_request() {
+fn test-_reqwest-_sends-_http-_request() {
     // 这是在测试 reqwest 库，而不是我们的代码
     let response = reqwest::blocking::get("https://httpbin.org/get").unwrap();
-    assert_eq!(response.status(), 200);
+    assert-_eq!(response.status(), 200);
 }
 
 // ❌ 不要测试 HTTP 协议的正确性（这是标准协议）
 #[test]
-fn test_http_protocol() {
+fn test-_http-_protocol() {
     // 这是在测试 HTTP 协议，而不是我们的代码
 }
 ```
@@ -478,29 +478,29 @@ fn test_http_protocol() {
 ```rust
 // ✅ 测试 Jira API 请求构建（我们的业务逻辑）
 #[test]
-fn test_build_jira_search_request() {
-    let query = build_jira_query("PROJECT-123");
-    assert_eq!(query, "project = PROJECT AND key = PROJECT-123");
+fn test-_build-_jira-_search-_request() {
+    let query = build-_jira-_query("PROJECT-123");
+    assert-_eq!(query, "project = PROJECT AND key = PROJECT-123");
 }
 
 // ✅ 测试 Jira 响应数据转换（我们的业务逻辑）
 #[test]
-fn test_convert_jira_issue_to_internal_format() {
-    let jira_issue = mock_jira_issue();
-    let issue = Issue::from_jira_response(jira_issue);
-    assert_eq!(issue.key, "PROJECT-123");
-    assert_eq!(issue.summary, "Test Issue");
+fn test-_convert-_jira-_issue-_to-_internal-_format() {
+    let jira-_issue = mock-_jira-_issue();
+    let issue = Issue::from-_jira-_response(jira-_issue);
+    assert-_eq!(issue.key, "PROJECT-123");
+    assert-_eq!(issue.summary, "Test Issue");
 }
 
 // ✅ 测试日志格式化（我们的业务逻辑）
 #[test]
-fn test_format_worklog() {
+fn test-_format-_worklog() {
     let worklog = Worklog {
-        time_spent: 3600,
+        time-_spent: 3600,
         comment: "Fixed bug",
     };
-    let formatted = format_worklog(&worklog);
-    assert_eq!(formatted, "1h - Fixed bug");
+    let formatted = format-_worklog(&worklog);
+    assert-_eq!(formatted, "1h - Fixed bug");
 }
 ```
 
@@ -509,15 +509,15 @@ fn test_format_worklog() {
 ```rust
 // ❌ 不要测试 Jira API 本身的功能（这是 Jira 的责任）
 #[test]
-fn test_jira_api_returns_correct_issue() {
+fn test-_jira-_api-_returns-_correct-_issue() {
     // 这是在测试 Jira API，而不是我们的代码
-    let issue = jira_client.get_issue("PROJECT-123").await.unwrap();
-    assert_eq!(issue.fields.summary, "Expected Summary");
+    let issue = jira-_client.get-_issue("PROJECT-123").await.unwrap();
+    assert-_eq!(issue.fields.summary, "Expected Summary");
 }
 
 // ❌ 不要测试 Jira 的业务逻辑（这是 Jira 的责任）
 #[test]
-fn test_jira_calculates_time_tracking() {
+fn test-_jira-_calculates-_time-_tracking() {
     // 这是在测试 Jira 的时间跟踪逻辑，而不是我们的代码
 }
 ```
@@ -529,53 +529,53 @@ fn test_jira_calculates_time_tracking() {
 ```rust
 // ✅ 测试异步函数的正确性（我们的业务逻辑）
 #[tokio::test]
-async fn test_concurrent_http_requests() {
+async fn test-_concurrent-_http-_requests() {
     let client = HttpClient::new();
     let urls = vec!["url1", "url2", "url3"];
 
     // 测试我们的并发请求逻辑
-    let results = client.fetch_all(urls).await;
-    assert_eq!(results.len(), 3);
-    assert!(results.iter().all(|r| r.is_ok()));
+    let results = client.fetch-_all(urls).await;
+    assert-_eq!(results.len(), 3);
+    assert!(results.iter().all(|r| r.is-_ok()));
 }
 
 // ✅ 测试并发执行器的限制（我们的业务逻辑）
 #[tokio::test]
-async fn test_concurrent_executor_limits() {
+async fn test-_concurrent-_executor-_limits() {
     let executor = ConcurrentExecutor::new(2); // 最大2个并发
-    let tasks = create_test_tasks(5); // 5个任务
+    let tasks = create-_test-_tasks(5); // 5个任务
 
     // 测试我们的并发控制逻辑
-    let start_time = Instant::now();
-    let results = executor.execute_all(tasks).await;
-    let duration = start_time.elapsed();
+    let start-_time = Instant::now();
+    let results = executor.execute-_all(tasks).await;
+    let duration = start-_time.elapsed();
 
     // 验证结果和并发限制
-    assert_eq!(results.len(), 5);
-    assert!(duration >= Duration::from_millis(500)); // 至少需要3轮执行
+    assert-_eq!(results.len(), 5);
+    assert!(duration >= Duration::from-_millis(500)); // 至少需要3轮执行
 }
 
 // ✅ 测试超时和取消机制（我们的业务逻辑）
 #[tokio::test]
-async fn test_task_timeout_handling() {
+async fn test-_task-_timeout-_handling() {
     let executor = ConcurrentExecutor::new(1);
-    let timeout_task = create_long_running_task(Duration::from_secs(10));
+    let timeout-_task = create-_long-_running-_task(Duration::from-_secs(10));
 
     // 测试我们的超时处理逻辑
     let result = tokio::time::timeout(
-        Duration::from_millis(100),
-        executor.execute(timeout_task)
+        Duration::from-_millis(100),
+        executor.execute(timeout-_task)
     ).await;
 
-    assert!(result.is_err()); // 应该超时
+    assert!(result.is-_err()); // 应该超时
 }
 
 // ✅ 测试并发安全性（我们的业务逻辑）
 #[tokio::test]
-async fn test_concurrent_state_consistency() {
-    let shared_state = Arc::new(Mutex::new(Vec::new()));
+async fn test-_concurrent-_state-_consistency() {
+    let shared-_state = Arc::new(Mutex::new(Vec::new()));
     let tasks = (0..10).map(|i| {
-        let state = shared_state.clone();
+        let state = shared-_state.clone();
         tokio::spawn(async move {
             let mut guard = state.lock().await;
             guard.push(i);
@@ -588,22 +588,22 @@ async fn test_concurrent_state_consistency() {
     }
 
     // 验证状态一致性
-    let final_state = shared_state.lock().await;
-    assert_eq!(final_state.len(), 10);
+    let final-_state = shared-_state.lock().await;
+    assert-_eq!(final-_state.len(), 10);
 }
 
 // ✅ 测试异步错误处理（我们的业务逻辑）
 #[tokio::test]
-async fn test_async_error_propagation() {
+async fn test-_async-_error-_propagation() {
     let client = HttpClient::new();
 
     // 测试我们的异步错误处理
-    let result = client.fetch_with_retry("invalid-url", 3).await;
-    assert!(result.is_err());
+    let result = client.fetch-_with-_retry("invalid-url", 3).await;
+    assert!(result.is-_err());
 
-    let error = result.unwrap_err();
-    assert!(error.to_string().contains("网络请求失败"));
-    assert!(error.to_string().contains("重试 3 次后仍然失败"));
+    let error = result.unwrap-_err();
+    assert!(error.to-_string().contains("网络请求失败"));
+    assert!(error.to-_string().contains("重试 3 次后仍然失败"));
 }
 ```
 
@@ -612,20 +612,20 @@ async fn test_async_error_propagation() {
 ```rust
 // ❌ 不要测试 tokio 运行时的正确性（这是 tokio 的责任）
 #[tokio::test]
-async fn test_tokio_runtime_behavior() {
+async fn test-_tokio-_runtime-_behavior() {
     // 这是在测试 tokio 本身，而不是我们的代码
     tokio::spawn(async {
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(Duration::from-_millis(100)).await;
     }).await.unwrap();
 }
 
 // ❌ 不要测试标准库的并发原语（这是标准库的责任）
 #[test]
-fn test_mutex_locking() {
+fn test-_mutex-_locking() {
     // 这是在测试 Mutex 的实现，而不是我们的代码
     let mutex = Mutex::new(0);
     let guard = mutex.lock().unwrap();
-    assert_eq!(*guard, 0);
+    assert-_eq!(*guard, 0);
 }
 ```
 
@@ -684,42 +684,42 @@ tree tests/ -I "target|snapshots" 2>/dev/null || find tests -type d | sort
 #### 2.1 模块覆盖对比
 ```bash
 # 创建模块覆盖检查脚本
-cat > check_coverage.sh << 'EOF'
+cat > check-_coverage.sh << 'EOF'
 #!/bin/bash
 echo "=== 模块覆盖情况检查 ==="
 
 echo "🟢 已覆盖的模块:"
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
-        echo "  ✅ $module_name ($(basename $lib_file))"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ -f "$test-_file" ]] && [[ $(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        echo "  ✅ $module-_name ($(basename $lib-_file))"
     fi
 done
 
 echo ""
 echo "🟡 部分覆盖的模块:"
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -eq 0 ]]; then
-        echo "  ⚠️  $module_name (测试文件存在但为空)"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ -f "$test-_file" ]] && [[ $(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0) -eq 0 ]]; then
+        echo "  ⚠️  $module-_name (测试文件存在但为空)"
     fi
 done
 
 echo ""
 echo "🔴 缺失覆盖的模块:"
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ ! -f "$test_file" ]]; then
-        echo "  ❌ $module_name (无测试文件)"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ ! -f "$test-_file" ]]; then
+        echo "  ❌ $module-_name (无测试文件)"
     fi
 done
 EOF
 
-chmod +x check_coverage.sh
-./check_coverage.sh
+chmod +x check-_coverage.sh
+./check-_coverage.sh
 ```
 
 #### 2.2 功能覆盖检查
@@ -727,20 +727,20 @@ chmod +x check_coverage.sh
 # 检查公共函数覆盖情况
 echo "=== 公共函数覆盖检查 ==="
 for module in src/lib/*/mod.rs; do
-    module_name=$(basename $(dirname $module))
-    echo "检查模块: $module_name"
+    module-_name=$(basename $(dirname $module))
+    echo "检查模块: $module-_name"
 
     # 提取公共函数
-    pub_functions=$(grep -n "pub fn " $module 2>/dev/null | head -5)
-    if [[ -n "$pub_functions" ]]; then
+    pub-_functions=$(grep -n "pub fn " $module 2>/dev/null | head -5)
+    if [[ -n "$pub-_functions" ]]; then
         echo "  公共函数:"
-        echo "$pub_functions" | sed 's/^/    /'
+        echo "$pub-_functions" | sed 's/^/    /'
 
         # 检查对应测试
-        test_file="tests/${module_name}/mod.rs"
-        if [[ -f "$test_file" ]]; then
-            test_count=$(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0)
-            echo "  测试用例数量: $test_count"
+        test-_file="tests/${module-_name}/mod.rs"
+        if [[ -f "$test-_file" ]]; then
+            test-_count=$(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0)
+            echo "  测试用例数量: $test-_count"
         else
             echo "  ❌ 无测试文件"
         fi
@@ -756,24 +756,24 @@ done
 echo "=== 测试工具使用情况 ==="
 
 # 检查 rstest 使用
-rstest_count=$(grep -r "#\[rstest\]" tests/ 2>/dev/null | wc -l)
-echo "📊 rstest 参数化测试: $rstest_count 个"
+rstest-_count=$(grep -r "#\[rstest\]" tests/ 2>/dev/null | wc -l)
+echo "📊 rstest 参数化测试: $rstest-_count 个"
 
-# 检查 pretty_assertions 使用
-pretty_assertions=$(grep -r "use pretty_assertions" tests/ 2>/dev/null | wc -l)
-echo "📊 pretty_assertions 使用: $pretty_assertions 个文件"
+# 检查 pretty-_assertions 使用
+pretty-_assertions=$(grep -r "use pretty-_assertions" tests/ 2>/dev/null | wc -l)
+echo "📊 pretty-_assertions 使用: $pretty-_assertions 个文件"
 
 # 检查 insta 快照测试
-insta_count=$(grep -r "insta::" tests/ 2>/dev/null | wc -l)
-echo "📊 insta 快照测试: $insta_count 个"
+insta-_count=$(grep -r "insta::" tests/ 2>/dev/null | wc -l)
+echo "📊 insta 快照测试: $insta-_count 个"
 
 # 检查 mockito Mock 测试
-mockito_count=$(grep -r "mockito::" tests/ 2>/dev/null | wc -l)
-echo "📊 mockito Mock 测试: $mockito_count 个"
+mockito-_count=$(grep -r "mockito::" tests/ 2>/dev/null | wc -l)
+echo "📊 mockito Mock 测试: $mockito-_count 个"
 
 # 检查 tokio 异步测试
-tokio_test_count=$(grep -r "#\[tokio::test\]" tests/ 2>/dev/null | wc -l)
-echo "📊 tokio 异步测试: $tokio_test_count 个"
+tokio-_test-_count=$(grep -r "#\[tokio::test\]" tests/ 2>/dev/null | wc -l)
+echo "📊 tokio 异步测试: $tokio-_test-_count 个"
 ```
 
 #### 3.2 测试结构检查
@@ -782,32 +782,32 @@ echo "=== 测试结构和质量检查 ==="
 
 # 检查测试命名规范
 echo "🔍 测试命名规范检查:"
-non_standard_tests=$(grep -r "fn test" tests/ | grep -v "fn test_" | wc -l)
-if [[ $non_standard_tests -eq 0 ]]; then
+non-_standard-_tests=$(grep -r "fn test" tests/ | grep -v "fn test_" | wc -l)
+if [[ $non-_standard-_tests -eq 0 ]]; then
     echo "  ✅ 所有测试都遵循 test_ 命名规范"
 else
-    echo "  ⚠️  发现 $non_standard_tests 个不规范的测试命名"
+    echo "  ⚠️  发现 $non-_standard-_tests 个不规范的测试命名"
 fi
 
 # 检查测试文档注释
-documented_tests=$(grep -r "/// " tests/ 2>/dev/null | wc -l)
-total_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
-echo "📝 测试文档覆盖: $documented_tests/$total_tests"
+documented-_tests=$(grep -r "/// " tests/ 2>/dev/null | wc -l)
+total-_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
+echo "📝 测试文档覆盖: $documented-_tests/$total-_tests"
 
 # 检查错误处理测试
-error_tests=$(grep -r "assert.*is_err\|expect.*err\|unwrap_err" tests/ 2>/dev/null | wc -l)
-echo "🚨 错误处理测试: $error_tests 个"
+error-_tests=$(grep -r "assert.*is-_err\|expect.*err\|unwrap-_err" tests/ 2>/dev/null | wc -l)
+echo "🚨 错误处理测试: $error-_tests 个"
 
 # 检查边界条件测试
-boundary_tests=$(grep -r "empty\|null\|zero\|max\|min\|boundary" tests/ 2>/dev/null | wc -l)
-echo "🎯 边界条件测试: $boundary_tests 个"
+boundary-_tests=$(grep -r "empty\|null\|zero\|max\|min\|boundary" tests/ 2>/dev/null | wc -l)
+echo "🎯 边界条件测试: $boundary-_tests 个"
 ```
 
 ### 步骤 4：缺失测试识别
 
 #### 4.1 生成缺失测试报告
 ```bash
-cat > generate_missing_tests_report.sh << 'EOF'
+cat > generate-_missing-_tests-_report.sh << 'EOF'
 #!/bin/bash
 echo "# 缺失测试分析报告"
 echo ""
@@ -815,41 +815,41 @@ echo "## 📊 统计概览"
 echo ""
 
 # 统计总体情况
-total_lib_modules=$(find src/lib -name "*.rs" -not -name "mod.rs" | wc -l)
-total_test_files=$(find tests -name "*.rs" | wc -l)
-total_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
+total-_lib-_modules=$(find src/lib -name "*.rs" -not -name "mod.rs" | wc -l)
+total-_test-_files=$(find tests -name "*.rs" | wc -l)
+total-_tests=$(grep -r "#\[test\]" tests/ 2>/dev/null | wc -l)
 
-echo "- **Core 模块总数**: $total_lib_modules"
-echo "- **测试文件总数**: $total_test_files"
-echo "- **测试用例总数**: $total_tests"
+echo "- **Core 模块总数**: $total-_lib-_modules"
+echo "- **测试文件总数**: $total-_test-_files"
+echo "- **测试用例总数**: $total-_tests"
 echo ""
 
 # 计算覆盖率
-covered_modules=0
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
-        covered_modules=$((covered_modules + 1))
+covered-_modules=0
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ -f "$test-_file" ]] && [[ $(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        covered-_modules=$((covered-_modules + 1))
     fi
 done
 
-coverage_percent=$(echo "scale=1; $covered_modules * 100 / $total_lib_modules" | bc -l 2>/dev/null || echo "0")
-echo "- **模块覆盖率**: $covered_modules/$total_lib_modules ($coverage_percent%)"
+coverage-_percent=$(echo "scale=1; $covered-_modules * 100 / $total-_lib-_modules" | bc -l 2>/dev/null || echo "0")
+echo "- **模块覆盖率**: $covered-_modules/$total-_lib-_modules ($coverage-_percent%)"
 echo ""
 
 echo "## 🔴 完全缺失测试的模块"
 echo ""
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ ! -f "$test_file" ]]; then
-        echo "- ❌ **$module_name** (\`$(basename $lib_file)\`)"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ ! -f "$test-_file" ]]; then
+        echo "- ❌ **$module-_name** (\`$(basename $lib-_file)\`)"
         # 尝试识别主要功能
-        pub_functions=$(grep "pub fn " $lib_file 2>/dev/null | head -3 | sed 's/.*pub fn \([^(]*\).*/  - \1()/')
-        if [[ -n "$pub_functions" ]]; then
+        pub-_functions=$(grep "pub fn " $lib-_file 2>/dev/null | head -3 | sed 's/.*pub fn \([^(]*\).*/  - \1()/')
+        if [[ -n "$pub-_functions" ]]; then
             echo "  - 主要功能:"
-            echo "$pub_functions"
+            echo "$pub-_functions"
         fi
         echo ""
     fi
@@ -857,36 +857,36 @@ done
 
 echo "## 🟡 测试文件为空的模块"
 echo ""
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -eq 0 ]]; then
-        echo "- ⚠️  **$module_name** (测试文件存在但无实际测试)"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ -f "$test-_file" ]] && [[ $(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0) -eq 0 ]]; then
+        echo "- ⚠️  **$module-_name** (测试文件存在但无实际测试)"
         echo ""
     fi
 done
 
 echo "## 🟢 已完整覆盖的模块"
 echo ""
-for lib_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
-    module_name=$(basename $(dirname $lib_file))
-    test_file="tests/${module_name}/mod.rs"
-    if [[ -f "$test_file" ]] && [[ $(grep -c "#\[test\]" "$test_file" 2>/dev/null || echo 0) -gt 0 ]]; then
-        test_count=$(grep -c "#\[test\]" "$test_file")
-        echo "- ✅ **$module_name** ($test_count 个测试)"
+for lib-_file in $(find src/lib -name "*.rs" -not -name "mod.rs"); do
+    module-_name=$(basename $(dirname $lib-_file))
+    test-_file="tests/${module-_name}/mod.rs"
+    if [[ -f "$test-_file" ]] && [[ $(grep -c "#\[test\]" "$test-_file" 2>/dev/null || echo 0) -gt 0 ]]; then
+        test-_count=$(grep -c "#\[test\]" "$test-_file")
+        echo "- ✅ **$module-_name** ($test-_count 个测试)"
     fi
 done
 EOF
 
-chmod +x generate_missing_tests_report.sh
-./generate_missing_tests_report.sh
+chmod +x generate-_missing-_tests-_report.sh
+./generate-_missing-_tests-_report.sh
 ```
 
 ### 步骤 5：生成检查报告
 
 #### 5.1 创建完整报告
 ```bash
-cat > generate_full_report.sh << 'EOF'
+cat > generate-_full-_report.sh << 'EOF'
 #!/bin/bash
 REPORT_FILE="report/TEST_COVERAGE_REPORT_$(date +%Y%m%d_%H%M%S).md"
 mkdir -p report
@@ -901,10 +901,10 @@ echo "## 📈 覆盖情况总结" >> $REPORT_FILE
 echo "" >> $REPORT_FILE
 
 # 这里可以调用之前的检查脚本并将结果追加到报告中
-./check_coverage.sh >> $REPORT_FILE 2>&1
+./check-_coverage.sh >> $REPORT_FILE 2>&1
 echo "" >> $REPORT_FILE
 
-./generate_missing_tests_report.sh >> $REPORT_FILE 2>&1
+./generate-_missing-_tests-_report.sh >> $REPORT_FILE 2>&1
 
 echo "## 🛠️ 改进建议" >> $REPORT_FILE
 echo "" >> $REPORT_FILE
@@ -921,8 +921,8 @@ echo "" >> $REPORT_FILE
 echo "报告已生成: $REPORT_FILE"
 EOF
 
-chmod +x generate_full_report.sh
-./generate_full_report.sh
+chmod +x generate-_full-_report.sh
+./generate-_full-_report.sh
 ```
 
 ---
@@ -932,7 +932,7 @@ chmod +x generate_full_report.sh
 ### 测试工具配置
 ```toml
 [dev-dependencies]
-pretty_assertions = "1.4"    # 清晰的断言输出
+pretty-_assertions = "1.4"    # 清晰的断言输出
 rstest = "0.18"             # 参数化测试
 mockito = "1.2"             # HTTP Mock 测试
 insta = "1.38"              # 快照测试
@@ -964,29 +964,29 @@ tests/
 ```rust
 // ✅ 测试业务逻辑：分支名称格式化
 #[test]
-fn test_format_branch_name() {
-    assert_eq!(format_branch_name("feature", "login"), "feature/login");
-    assert_eq!(format_branch_name("", "test"), "test");
+fn test-_format-_branch-_name() {
+    assert-_eq!(format-_branch-_name("feature", "login"), "feature/login");
+    assert-_eq!(format-_branch-_name("", "test"), "test");
 }
 
 // ✅ 测试错误处理：参数验证
 #[test]
-fn test_validate_jira_id() {
-    assert!(validate_jira_id("PROJ-123").is_ok());
-    assert!(validate_jira_id("invalid").is_err());
+fn test-_validate-_jira-_id() {
+    assert!(validate-_jira-_id("PROJ-123").is-_ok());
+    assert!(validate-_jira-_id("invalid").is-_err());
 }
 
 // ✅ 使用 Mock 测试：HTTP API 调用
 #[test]
-async fn test_github_api_call() {
+async fn test-_github-_api-_call() {
     let mut server = mockito::Server::new();
     let mock = server.mock("GET", "/repos/owner/repo")
-        .with_status(200)
-        .with_body(r#"{"name": "repo"}"#)
+        .with-_status(200)
+        .with-_body(r#"{"name": "repo"}"#)
         .create();
 
-    let result = github_client.get_repo("owner/repo").await;
-    assert!(result.is_ok());
+    let result = github-_client.get-_repo("owner/repo").await;
+    assert!(result.is-_ok());
     mock.assert();
 }
 
@@ -995,8 +995,8 @@ async fn test_github_api_call() {
 #[case("feature/test", true)]
 #[case("invalid//name", false)]
 #[case("", false)]
-fn test_branch_name_validation(#[case] name: &str, #[case] expected: bool) {
-    assert_eq!(is_valid_branch_name(name), expected);
+fn test-_branch-_name-_validation(#[case] name: &str, #[case] expected: bool) {
+    assert-_eq!(is-_valid-_branch-_name(name), expected);
 }
 ```
 
@@ -1005,13 +1005,13 @@ fn test_branch_name_validation(#[case] name: &str, #[case] expected: bool) {
 ```rust
 // ❌ 不要测试外部工具
 #[test]
-fn test_git_command() {
+fn test-_git-_command() {
     Command::new("git").args(["status"]).status().unwrap();
 }
 
 // ❌ 不要测试第三方库
 #[test]
-fn test_reqwest_http() {
+fn test-_reqwest-_http() {
     reqwest::blocking::get("https://api.github.com").unwrap();
 }
 ```
@@ -1024,8 +1024,8 @@ fn test_reqwest_http() {
 ```bash
 # 检查缺失的测试文件
 for module in src/lib/*/mod.rs; do
-    test_file="tests/$(basename $(dirname $module))/mod.rs"
-    if [[ ! -f "$test_file" ]]; then
+    test-_file="tests/$(basename $(dirname $module))/mod.rs"
+    if [[ ! -f "$test-_file" ]]; then
         echo "❌ 缺失测试: $module"
     fi
 done
@@ -1037,7 +1037,7 @@ find tests -name "*.rs" -exec sh -c 'if [ $(grep -c "#\[test\]" "$1") -eq 0 ]; t
 ### 检查测试工具使用
 ```bash
 # 检查是否使用推荐的测试工具
-grep -r "use pretty_assertions" tests/ || echo "❌ 未使用 pretty_assertions"
+grep -r "use pretty-_assertions" tests/ || echo "❌ 未使用 pretty-_assertions"
 grep -r "#\[rstest\]" tests/ || echo "❌ 未使用 rstest"
 grep -r "insta::" tests/ || echo "❌ 未使用 insta"
 grep -r "mockito::" tests/ || echo "❌ 未使用 mockito"

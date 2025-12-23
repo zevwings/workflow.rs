@@ -10,7 +10,7 @@
 - 总代码行数：约 389 行（包含测试代码）
 - 文件数量：2 个
 - 主要组件：2 个（`ConcurrentExecutor`、`TaskResult`）
-- 支持方法：3 个（`new()`、`execute()`、`execute_with_progress()`）
+- 支持方法：3 个（`new()`、`execute()`、`execute-_with-_progress()`）
 - 测试用例：4 个
 
 ---
@@ -39,12 +39,12 @@ src/lib/base/concurrent/
 #### JIRA 附件下载集成
 
 - **并发下载**：
-  - `JiraAttachmentDownloader::download_attachments_concurrent()` 使用 `ConcurrentExecutor::new()` 创建执行器
+  - `JiraAttachmentDownloader::download-_attachments-_concurrent()` 使用 `ConcurrentExecutor::new()` 创建执行器
   - 使用 `ConcurrentExecutor::execute()` 并行下载多个附件
   - 使用 `TaskResult` 处理成功和失败的结果
 
 **关键方法**：
-- `JiraAttachmentDownloader::download_attachments_concurrent()` - 使用 `ConcurrentExecutor` 实现并发下载
+- `JiraAttachmentDownloader::download-_attachments-_concurrent()` - 使用 `ConcurrentExecutor` 实现并发下载
 
 #### 其他潜在使用场景
 
@@ -93,13 +93,13 @@ pub enum TaskResult<T, E> {
 **职责**：管理并发任务的执行，包括并发数控制、任务分发、结果收集
 
 **主要方法**：
-- `new(max_concurrent: usize)` - 创建新的并发执行器，设置最大并发数
+- `new(max-_concurrent: usize)` - 创建新的并发执行器，设置最大并发数
 - `execute<T, E>(tasks: Vec<(String, Box<dyn Fn() -> Result<T, E> + Send + Sync>)>)` - 执行多个任务（并行）
-- `execute_with_progress<T, E, F>(tasks, on_progress)` - 执行多个任务（并行），带进度回调
+- `execute-_with-_progress<T, E, F>(tasks, on-_progress)` - 执行多个任务（并行），带进度回调
 
 **关键特性**：
-- **并发数限制**：通过 `max_concurrent` 参数控制同时执行的任务数
-- **分批处理**：将任务分成多个批次，每批最多 `max_concurrent` 个并行执行
+- **并发数限制**：通过 `max-_concurrent` 参数控制同时执行的任务数
+- **分批处理**：将任务分成多个批次，每批最多 `max-_concurrent` 个并行执行
 - **单任务优化**：如果只有一个任务，直接执行，避免线程开销
 - **结果收集**：使用 `mpsc::channel` 收集各线程的执行结果
 - **进度回调**：支持可选的进度回调函数，实时反馈任务执行状态
@@ -118,7 +118,7 @@ pub enum TaskResult<T, E> {
 
 **实现方式**：
 - 将任务列表分成多个批次（chunks）
-- 每批最多 `max_concurrent` 个任务
+- 每批最多 `max-_concurrent` 个任务
 - 每个批次在一个线程中串行执行，不同批次并行执行
 
 **优势**：
@@ -182,7 +182,7 @@ flowchart TD
 #### 1. 基本并发执行
 
 ```
-1. 创建执行器：ConcurrentExecutor::new(max_concurrent)
+1. 创建执行器：ConcurrentExecutor::new(max-_concurrent)
 2. 准备任务列表：Vec<(String, Box<dyn Fn() -> Result<T, E> + Send + Sync>)>
 3. 执行任务：executor.execute(tasks)
 4. 处理结果：遍历结果列表，根据 TaskResult 处理成功和失败
@@ -191,9 +191,9 @@ flowchart TD
 #### 2. 带进度回调的并发执行
 
 ```
-1. 创建执行器：ConcurrentExecutor::new(max_concurrent)
+1. 创建执行器：ConcurrentExecutor::new(max-_concurrent)
 2. 准备任务列表和进度回调：tasks + Arc<Mutex<Option<F>>>
-3. 执行任务：executor.execute_with_progress(tasks, on_progress)
+3. 执行任务：executor.execute-_with-_progress(tasks, on-_progress)
 4. 进度回调：每个任务完成时调用回调函数
 5. 处理结果：遍历结果列表，处理成功和失败
 ```
@@ -233,11 +233,11 @@ let executor = ConcurrentExecutor::new(5);
 
 // 准备任务列表
 let tasks: Vec<(String, Box<dyn Fn() -> Result<String, String> + Send + Sync>)> = vec![
-    ("task1".to_string(), Box::new(|| -> Result<String, String> {
-        Ok("result1".to_string())
+    ("task1".to-_string(), Box::new(|| -> Result<String, String> {
+        Ok("result1".to-_string())
     })),
-    ("task2".to_string(), Box::new(|| -> Result<String, String> {
-        Ok("result2".to_string())
+    ("task2".to-_string(), Box::new(|| -> Result<String, String> {
+        Ok("result2".to-_string())
     })),
 ];
 
@@ -263,23 +263,23 @@ use anyhow::Result;
 let executor = ConcurrentExecutor::new(5);
 
 // 准备进度回调
-let progress_callback = Arc::new(Mutex::new(Some(|name: &str, success: bool, err: Option<&str>| {
+let progress-_callback = Arc::new(Mutex::new(Some(|name: &str, success: bool, err: Option<&str>| {
     if success {
         println!("Task {} completed successfully", name);
     } else {
-        println!("Task {} failed: {}", name, err.unwrap_or("unknown error"));
+        println!("Task {} failed: {}", name, err.unwrap-_or("unknown error"));
     }
 })));
 
 // 准备任务列表
 let tasks = vec![
-    ("task1".to_string(), Box::new(|| -> Result<String, String> {
-        Ok("result1".to_string())
+    ("task1".to-_string(), Box::new(|| -> Result<String, String> {
+        Ok("result1".to-_string())
     }) as Box<dyn Fn() -> Result<String, String> + Send + Sync>),
 ];
 
 // 执行任务（带进度回调）
-let results = executor.execute_with_progress(tasks, Some(progress_callback))?;
+let results = executor.execute-_with-_progress(tasks, Some(progress-_callback))?;
 ```
 
 ### JIRA 附件下载使用示例
@@ -288,14 +288,14 @@ let results = executor.execute_with_progress(tasks, Some(progress_callback))?;
 use workflow::base::concurrent::{ConcurrentExecutor, TaskResult};
 
 // 在 JiraAttachmentDownloader 中使用
-let executor = ConcurrentExecutor::new(max_concurrent);
+let executor = ConcurrentExecutor::new(max-_concurrent);
 
 // 准备下载任务
 let mut tasks = Vec::new();
 for attachment in attachments {
     let task = Box::new(move || -> Result<PathBuf, String> {
         // 下载逻辑
-        download_attachment(attachment)
+        download-_attachment(attachment)
     }) as Box<dyn Fn() -> Result<PathBuf, String> + Send + Sync>;
     tasks.push((attachment.filename.clone(), task));
 }
@@ -342,7 +342,7 @@ for (filename, result) in results {
 ```rust
 impl ConcurrentExecutor {
     /// 执行任务，支持超时
-    pub fn execute_with_timeout<T, E>(
+    pub fn execute-_with-_timeout<T, E>(
         &self,
         tasks: Vec<(String, Box<dyn Fn() -> Result<T, E> + Send + Sync>)>,
         timeout: Duration,

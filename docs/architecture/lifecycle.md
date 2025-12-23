@@ -78,27 +78,27 @@ src/bin/install.rs (独立可执行文件入口)
 ```
 bin/install.rs::main()
   ↓
-commands/lifecycle/install.rs::InstallCommand::{install_binaries|install_completions}()
+commands/lifecycle/install.rs::InstallCommand::{install-_binaries|install-_completions}()
   ↓
-  1. install_binaries()                       # 安装二进制文件（可选）
+  1. install-_binaries()                       # 安装二进制文件（可选）
      └─ 复制 workflow 到 /usr/local/bin
-  2. install_completions()                    # 安装 shell completion（可选）
+  2. install-_completions()                    # 安装 shell completion（可选）
      ├─ Detect::shell()                      # 检测 shell 类型
-     ├─ Completion::generate_all_completions() # 生成 completion 脚本
-     └─ Completion::configure_shell_config()  # 配置 shell 配置文件
+     ├─ Completion::generate-_all-_completions() # 生成 completion 脚本
+     └─ Completion::configure-_shell-_config()  # 配置 shell 配置文件
 ```
 
 ### 功能说明
 
 安装命令提供两个独立的功能，可以通过 `bin/install.rs` 的参数选择：
 
-1. **安装二进制文件** (`install_binaries()`)：
+1. **安装二进制文件** (`install-_binaries()`)：
    - 在当前可执行文件所在目录查找 `workflow` 二进制文件
    - 将它复制到 `/usr/local/bin`
    - 使用 `sudo` 复制文件并设置执行权限
    - 显示安装进度和结果
 
-2. **安装 Shell Completion** (`install_completions()`)：
+2. **安装 Shell Completion** (`install-_completions()`)：
    - 自动检测当前 shell 类型（zsh, bash, fish, powershell, elvish）
    - 只生成当前检测到的 shell 类型的 completion 脚本
    - 为 `workflow` 命令及其所有子命令生成 completion 脚本
@@ -114,12 +114,12 @@ commands/lifecycle/install.rs::InstallCommand::{install_binaries|install_complet
    - 跳过不存在的二进制文件（给出警告）
 
 2. **Completion 脚本生成**：
-   - 使用 `Completion::generate_all_completions()` 生成脚本
+   - 使用 `Completion::generate-_all-_completions()` 生成脚本
    - 只生成当前 shell 类型的脚本（简化安装流程）
    - 根据 shell 类型生成对应的文件（如 zsh 的 `_workflow`）
 
 3. **Shell 配置管理**：
-   - 使用 `Completion::configure_shell_config()` 配置 shell 配置文件
+   - 使用 `Completion::configure-_shell-_config()` 配置 shell 配置文件
    - 在 `~/.zshrc` 或 `~/.bashrc` 等文件中添加 completion 加载代码
    - 根据检测到的 shell 类型提供相应的重新加载命令提示
 
@@ -143,13 +143,13 @@ commands/lifecycle/uninstall.rs::UninstallCommand::run()
   1. 显示卸载信息（确认提示）
   2. 第一步确认：是否删除二进制文件和 completion 脚本
   3. 第二步确认：是否删除 TOML 配置文件
-  4. remove_binaries()                      # 删除二进制文件
+  4. remove-_binaries()                      # 删除二进制文件
      └─ 直接删除或使用 sudo 删除
-  5. Completion::remove_completion_files()  # 删除 completion 脚本
-  6. Completion::remove_completion_config_file() # 删除 completion 配置文件
-  7. Completion::remove_all_completion_configs() # 移除所有 shell 的 completion 配置
-  8. remove_config_files()                  # 删除 TOML 配置文件（如果确认）
-  9. remove_proxy_settings()                # 移除代理设置
+  5. Completion::remove-_completion-_files()  # 删除 completion 脚本
+  6. Completion::remove-_completion-_config-_file() # 删除 completion 配置文件
+  7. Completion::remove-_all-_completion-_configs() # 移除所有 shell 的 completion 配置
+  8. remove-_config-_files()                  # 删除 TOML 配置文件（如果确认）
+  9. remove-_proxy-_settings()                # 移除代理设置
      └─ ProxyManager::disable()
   10. Reload::shell()                        # 重新加载 shell 配置
 ```
@@ -215,18 +215,18 @@ main.rs::Commands::Update { version }
   ↓
 commands/lifecycle/update.rs::UpdateCommand::update(version)
   ↓
-  1. get_current_version()                   # 获取当前版本
-  2. detect_platform()                       # 检测平台（macOS-Intel/macOS-AppleSilicon）
-  3. get_version(version)                     # 获取目标版本（指定或最新）
-  4. compare_versions()                      # 比较版本
+  1. get-_current-_version()                   # 获取当前版本
+  2. detect-_platform()                       # 检测平台（macOS-Intel/macOS-AppleSilicon）
+  3. get-_version(version)                     # 获取目标版本（指定或最新）
+  4. compare-_versions()                      # 比较版本
   5. confirm()                                # 用户确认
-  6. RollbackManager::create_backup()        # 创建备份
-  7. build_download_url()                     # 构建下载 URL
-  8. download_file()                         # 下载 tar.gz 文件
+  6. RollbackManager::create-_backup()        # 创建备份
+  7. build-_download-_url()                     # 构建下载 URL
+  8. download-_file()                         # 下载 tar.gz 文件
   9. Checksum::verify()                      # 验证文件完整性（SHA256）
-  10. extract_archive()                      # 解压文件
+  10. extract-_archive()                      # 解压文件
   11. install()                              # 运行 ./install 安装
-  12. verify_installation()                 # 验证安装结果
+  12. verify-_installation()                 # 验证安装结果
   13. RollbackManager::rollback()            # 如果失败，回滚（可选）
 ```
 
@@ -397,7 +397,7 @@ commands/lifecycle/version.rs::VersionCommand::show()
    - 注意：`env!` 宏在编译时展开，所以这个值在运行时总是可用的
 
 2. **版本显示**：
-   - 使用 `log_success!` 宏显示版本信息
+   - 使用 `log-_success!` 宏显示版本信息
    - 格式：`workflow v{version}`
 
 ### 关键步骤说明
@@ -408,7 +408,7 @@ commands/lifecycle/version.rs::VersionCommand::show()
    - 在运行时总是可用，无需额外处理
 
 2. **版本显示**：
-   - 使用 `log_success!` 宏显示版本信息
+   - 使用 `log-_success!` 宏显示版本信息
    - 提供清晰的版本输出格式
 
 ### 使用场景
@@ -476,19 +476,19 @@ commands/lifecycle/version.rs::VersionCommand::show()
 ### 添加新的 Shell 支持
 
 1. 在 `lib/completion/` 中添加新的 shell 类型支持（参考相关模块文档）
-2. `Completion::generate_all_completions()` 会自动支持新的 shell 类型
+2. `Completion::generate-_all-_completions()` 会自动支持新的 shell 类型
 
 ### 添加新的二进制文件
 
-1. 在 `lib/base/settings/paths.rs` 的 `binary_paths()` 方法中添加新的二进制路径（参考相关模块文档）
-2. 在 `update.rs` 的 `verify_binaries()` 方法中添加新的二进制文件验证
-3. 在 `install.rs` 的 `install_binaries()` 方法中添加新的二进制文件安装逻辑
+1. 在 `lib/base/settings/paths.rs` 的 `binary-_paths()` 方法中添加新的二进制路径（参考相关模块文档）
+2. 在 `update.rs` 的 `verify-_binaries()` 方法中添加新的二进制文件验证
+3. 在 `install.rs` 的 `install-_binaries()` 方法中添加新的二进制文件安装逻辑
 
 **注意**：当前架构中，所有功能都通过 `workflow` 主命令及其子命令提供，不再需要独立的二进制文件。
 
 ### 添加新的更新验证项
 
-1. 在 `update.rs` 的 `verify_installation()` 方法中添加新的验证步骤
+1. 在 `update.rs` 的 `verify-_installation()` 方法中添加新的验证步骤
 2. 更新 `VerificationResult` 结构体以包含新的验证结果
 
 ---
@@ -515,7 +515,7 @@ homebrew/Formula.template       # Homebrew Formula 模板
 1. **触发条件**：
    - 推送到 `master` 分支时自动创建 tag
    - 创建版本 tag（如 `v1.0.0`）时触发发布
-   - 手动触发（workflow_dispatch）
+   - 手动触发（workflow-_dispatch）
 
 2. **自动版本管理机制**：
 

@@ -66,11 +66,11 @@
 
 - [ ] **创建目录结构**
   ```bash
-  mkdir -p tests/fixtures/{templates,scenarios,mock_responses/{github,jira}}
+  mkdir -p tests/fixtures/{templates,scenarios,mock-_responses/{github,jira}}
   mkdir -p tests/common
   ```
 
-- [ ] **实现测试数据工厂 (tests/common/test_data_factory.rs)**
+- [ ] **实现测试数据工厂 (tests/common/test-_data-_factory.rs)**
   - [ ] `TestDataFactory` 主工厂类
   - [ ] `GitHubPRBuilder` - GitHub PR数据构建器
   - [ ] `JiraIssueBuilder` - Jira Issue数据构建器
@@ -78,13 +78,13 @@
   - [ ] 添加单元测试验证工厂功能
 
 - [ ] **创建模板文件**
-  - [ ] `tests/fixtures/templates/github_pr.json`
-  - [ ] `tests/fixtures/templates/jira_issue.json`
+  - [ ] `tests/fixtures/templates/github-_pr.json`
+  - [ ] `tests/fixtures/templates/jira-_issue.json`
   - [ ] 支持变量替换和默认值
 
 ### ✅ 2.2 Mock 服务器管理
 
-- [ ] **实现 Mock 服务器管理器 (tests/common/mock_server.rs)**
+- [ ] **实现 Mock 服务器管理器 (tests/common/mock-_server.rs)**
   - [ ] `MockServerManager` 主管理类
   - [ ] GitHub API Mock 设置
   - [ ] Jira API Mock 设置
@@ -100,11 +100,11 @@
 ### ✅ 2.3 测试场景数据
 
 - [ ] **创建测试场景文件**
-  - [ ] `tests/fixtures/scenarios/auth_failure.json`
-  - [ ] `tests/fixtures/scenarios/network_timeout.json`
-  - [ ] `tests/fixtures/scenarios/large_response.json`
+  - [ ] `tests/fixtures/scenarios/auth-_failure.json`
+  - [ ] `tests/fixtures/scenarios/network-_timeout.json`
+  - [ ] `tests/fixtures/scenarios/large-_response.json`
 
-- [ ] **实现数据迁移系统 (tests/common/data_migration.rs)**
+- [ ] **实现数据迁移系统 (tests/common/data-_migration.rs)**
   - [ ] 版本检查机制
   - [ ] 数据迁移逻辑
   - [ ] 向后兼容性
@@ -124,18 +124,18 @@
 - [ ] **更新 Cargo.toml 配置**
   ```toml
   [dev-dependencies]
-  criterion = { version = "0.5", features = ["html_reports"] }
+  criterion = { version = "0.5", features = ["html-_reports"] }
 
   [[bench]]
-  name = "cli_performance"
+  name = "cli-_performance"
   harness = false
 
   [[bench]]
-  name = "core_operations"
+  name = "core-_operations"
   harness = false
 
   [[bench]]
-  name = "network_operations"
+  name = "network-_operations"
   harness = false
   ```
 
@@ -146,19 +146,19 @@
 
 ### ✅ 3.2 实现性能基准测试
 
-- [ ] **CLI 性能基准测试 (benches/cli_performance.rs)**
+- [ ] **CLI 性能基准测试 (benches/cli-_performance.rs)**
   - [ ] 帮助命令性能测试
   - [ ] 版本命令性能测试
   - [ ] 配置显示性能测试
   - [ ] 启动时间基准测试
   - [ ] 命令解析性能测试
 
-- [ ] **核心操作基准测试 (benches/core_operations.rs)**
+- [ ] **核心操作基准测试 (benches/core-_operations.rs)**
   - [ ] 字符串操作性能测试
   - [ ] 分支操作性能测试
   - [ ] 配置操作性能测试
 
-- [ ] **网络操作基准测试 (benches/network_operations.rs)**
+- [ ] **网络操作基准测试 (benches/network-_operations.rs)**
   - [ ] HTTP重试机制性能测试
   - [ ] 立即成功场景测试
   - [ ] 重试后成功场景测试
@@ -372,7 +372,7 @@
 - [mockito](https://docs.rs/mockito/) - Mock 服务器
 - [rstest](https://docs.rs/rstest/) - 参数化测试
 - [insta](https://docs.rs/insta/) - 快照测试
-- [pretty_assertions](https://docs.rs/pretty_assertions/) - 更好的断言
+- [pretty-_assertions](https://docs.rs/pretty-_assertions/) - 更好的断言
 
 ---
 

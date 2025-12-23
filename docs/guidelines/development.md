@@ -62,9 +62,9 @@ make lint
 
 遵循 Rust 官方命名约定：
 
-- **模块名**：`snake_case`（如 `jira_logs`、`pr_helpers`）
-- **函数名**：`snake_case`（如 `download_logs`、`create_pr`）
-- **变量名**：`snake_case`（如 `api_token`、`response_data`）
+- **模块名**：`snake-_case`（如 `jira-_logs`、`pr-_helpers`）
+- **函数名**：`snake-_case`（如 `download-_logs`、`create-_pr`）
+- **变量名**：`snake-_case`（如 `api-_token`、`response-_data`）
 - **常量名**：`SCREAMING_SNAKE_CASE`（如 `MAX_RETRIES`、`DEFAULT_TIMEOUT`）
 - **类型名**：`PascalCase`（如 `HttpClient`、`JiraTicket`）
 - **Trait 名**：`PascalCase`（如 `PlatformProvider`、`ResponseParser`）
@@ -119,7 +119,7 @@ pub use ticket::JiraTicket;
 ```rust
 use anyhow::Result;
 
-pub fn download_logs(ticket_id: &str) -> Result<Vec<u8>> {
+pub fn download-_logs(ticket-_id: &str) -> Result<Vec<u8>> {
     // 实现
 }
 ```
@@ -132,18 +132,18 @@ pub fn download_logs(ticket_id: &str) -> Result<Vec<u8>> {
 // ✅ 好的做法
 use anyhow::{Context, Result};
 
-pub fn parse_config(path: &Path) -> Result<Config> {
-    let content = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read config file: {}", path.display()))?;
+pub fn parse-_config(path: &Path) -> Result<Config> {
+    let content = fs::read-_to-_string(path)
+        .with-_context(|| format!("Failed to read config file: {}", path.display()))?;
 
-    toml::from_str(&content)
+    toml::from-_str(&content)
         .context("Failed to parse TOML config")?;
 }
 
 // ❌ 不好的做法
-pub fn parse_config(path: &Path) -> Result<Config> {
-    let content = fs::read_to_string(path)?;  // 错误信息不清晰
-    toml::from_str(&content)?;
+pub fn parse-_config(path: &Path) -> Result<Config> {
+    let content = fs::read-_to-_string(path)?;  // 错误信息不清晰
+    toml::from-_str(&content)?;
 }
 ```
 
@@ -155,7 +155,7 @@ pub fn parse_config(path: &Path) -> Result<Config> {
 use anyhow::{Context, Result};
 
 let result = operation()
-    .with_context(|| format!("Failed to perform operation with id: {}", id))?;
+    .with-_context(|| format!("Failed to perform operation with id: {}", id))?;
 ```
 
 #### 2. 使用 `bail!` 快速返回错误
@@ -174,9 +174,9 @@ if value < 0 {
 use anyhow::{ensure, Result};
 
 ensure!(
-    status_code < 400,
+    status-_code < 400,
     "HTTP request failed with status: {}",
-    status_code
+    status-_code
 );
 ```
 
@@ -190,19 +190,19 @@ ensure!(
 
 ```rust
 // 命令层：提供友好的错误提示
-pub fn download_command(ticket_id: Option<&str>) -> Result<()> {
-    let id = ticket_id
-        .map(|s| s.to_string())
-        .or_else(|| {
+pub fn download-_command(ticket-_id: Option<&str>) -> Result<()> {
+    let id = ticket-_id
+        .map(|s| s.to-_string())
+        .or-_else(|| {
             Input::new()
-                .with_prompt("Enter JIRA ticket ID")
-                .interact_text()
+                .with-_prompt("Enter JIRA ticket ID")
+                .interact-_text()
                 .ok()
         })
-        .ok_or_else(|| anyhow::anyhow!("JIRA ticket ID is required"))?;
+        .ok-_or-_else(|| anyhow::anyhow!("JIRA ticket ID is required"))?;
 
     // 调用库层，传递详细错误
-    JiraLogs::new()?.download_from_jira(&id)?;
+    JiraLogs::new()?.download-_from-_jira(&id)?;
     Ok(())
 }
 ```
@@ -220,7 +220,7 @@ pub fn download_command(ticket_id: Option<&str>) -> Result<()> {
 ///
 /// # 参数
 ///
-/// * `ticket_id` - JIRA ticket ID（如 "PROJ-123"）
+/// * `ticket-_id` - JIRA ticket ID（如 "PROJ-123"）
 ///
 /// # 返回
 ///
@@ -236,9 +236,9 @@ pub fn download_command(ticket_id: Option<&str>) -> Result<()> {
 /// use workflow::jira::logs::JiraLogs;
 ///
 /// let logs = JiraLogs::new()?;
-/// let data = logs.download_from_jira("PROJ-123")?;
+/// let data = logs.download-_from-_jira("PROJ-123")?;
 /// ```
-pub fn download_from_jira(&self, ticket_id: &str) -> Result<Vec<u8>> {
+pub fn download-_from-_jira(&self, ticket-_id: &str) -> Result<Vec<u8>> {
     // 实现
 }
 ```
@@ -256,7 +256,7 @@ pub fn download_from_jira(&self, ticket_id: &str) -> Result<Vec<u8>> {
 ```rust
 // 使用指数退避策略进行重试
 // 初始延迟 1 秒，每次重试延迟翻倍，最大延迟 60 秒
-let delay = (1 << retry_count).min(60);
+let delay = (1 << retry-_count).min(60);
 ```
 
 ### 文档同步要求
@@ -365,7 +365,7 @@ let delay = (1 << retry_count).min(60);
 
 ### 文件命名
 
-- **模块文件**：`snake_case.rs`（如 `jira_client.rs`、`pr_helpers.rs`）
+- **模块文件**：`snake-_case.rs`（如 `jira-_client.rs`、`pr-_helpers.rs`）
 - **测试文件**：与源文件同名，放在 `tests/` 目录或使用 `#[cfg(test)]` 模块
 - **文档文件**：`SCREAMING_SNAKE_CASE.md`（如 `DEVELOPMENT_GUIDELINES.md`、`PR_ARCHITECTURE.md`）
   - **架构文档**：`{MODULE}_ARCHITECTURE.md`（如 `PR_ARCHITECTURE.md`、`GIT_ARCHITECTURE.md`）
@@ -377,9 +377,9 @@ let delay = (1 << retry_count).min(60);
 ### 函数命名
 
 - **动作函数**：使用动词（如 `download`、`create`、`merge`）
-- **查询函数**：使用 `get_` 前缀（如 `get_status`、`get_info`）
-- **检查函数**：使用 `is_` 或 `has_` 前缀（如 `is_valid`、`has_permission`）
-- **转换函数**：使用 `to_` 或 `into_` 前缀（如 `to_string`、`into_json`）
+- **查询函数**：使用 `get_` 前缀（如 `get-_status`、`get-_info`）
+- **检查函数**：使用 `is_` 或 `has_` 前缀（如 `is-_valid`、`has-_permission`）
+- **转换函数**：使用 `to_` 或 `into_` 前缀（如 `to-_string`、`into-_json`）
 
 ### 结构体命名
 
@@ -403,34 +403,34 @@ CLI 参数命名需要遵循以下规范，确保一致性和可维护性。
 
 #### 结构体字段名
 
-- 使用 `snake_case`（如 `jira_id`、`dry_run`、`output_format`）
+- 使用 `snake-_case`（如 `jira-_id`、`dry-_run`、`output-_format`）
 
 ```rust
 #[derive(Args, Debug, Clone)]
 pub struct JiraIdArg {
-    pub jira_id: Option<String>,  // ✅ snake_case
+    pub jira-_id: Option<String>,  // ✅ snake-_case
 }
 ```
 
-#### value_name 规范
+#### value-_name 规范
 
 - 使用 `SCREAMING_SNAKE_CASE`（如 `JIRA_ID`、`DRY_RUN`、`PR_ID`）
 - 用于在帮助信息中显示参数值的占位符
 
 ```rust
 /// Jira ticket ID (optional, will prompt interactively if not provided)
-#[arg(value_name = "JIRA_ID")]  // ✅ SCREAMING_SNAKE_CASE
-pub jira_id: Option<String>,
+#[arg(value-_name = "JIRA_ID")]  // ✅ SCREAMING_SNAKE_CASE
+pub jira-_id: Option<String>,
 ```
 
 #### 参数长名规范
 
 - 使用 `kebab-case`（clap 自动从字段名转换，如 `--jira-id`、`--dry-run`）
-- 字段名使用 `snake_case`，clap 会自动转换为 `kebab-case`
+- 字段名使用 `snake-_case`，clap 会自动转换为 `kebab-case`
 
 ```rust
 #[arg(long)]  // 自动生成 --jira-id
-pub jira_id: Option<String>,
+pub jira-_id: Option<String>,
 ```
 
 #### 参数短名规范
@@ -440,7 +440,7 @@ pub jira_id: Option<String>,
 
 ```rust
 #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
-pub dry_run: bool,  // --dry-run 或 -n
+pub dry-_run: bool,  // --dry-run 或 -n
 ```
 
 #### 参数类型规范
@@ -451,12 +451,12 @@ pub dry_run: bool,  // --dry-run 或 -n
 
 ```rust
 // ✅ 可选参数
-#[arg(value_name = "JIRA_ID")]
-pub jira_id: Option<String>,
+#[arg(value-_name = "JIRA_ID")]
+pub jira-_id: Option<String>,
 
 // ✅ 必需参数
-#[arg(value_name = "BRANCH_NAME")]
-pub branch_name: String,
+#[arg(value-_name = "BRANCH_NAME")]
+pub branch-_name: String,
 
 // ✅ 布尔标志
 #[arg(long, short = 'f', action = clap::ArgAction::SetTrue)]
@@ -473,20 +473,20 @@ pub force: bool,
 /// Examples:
 ///   workflow jira info PROJ-123
 ///   workflow jira info  # Will prompt for JIRA ID
-#[arg(value_name = "JIRA_ID")]
-pub jira_id: Option<String>,
+#[arg(value-_name = "JIRA_ID")]
+pub jira-_id: Option<String>,
 ```
 
 #### 命名一致性规范
 
 - **相同语义的参数必须使用相同的命名**：
-  - ✅ 统一使用 `jira_id`（而不是 `jira_ticket`、`jira-id` 等）
-  - ✅ 统一使用 `dry_run`（而不是 `dry-run`、`dryrun` 等）
-  - ✅ 统一使用 `output_format`（而不是 `format`、`output` 等）
+  - ✅ 统一使用 `jira-_id`（而不是 `jira-_ticket`、`jira-id` 等）
+  - ✅ 统一使用 `dry-_run`（而不是 `dry-run`、`dryrun` 等）
+  - ✅ 统一使用 `output-_format`（而不是 `format`、`output` 等）
 
-- **value_name 必须与字段名语义一致**：
-  - 字段名：`jira_id` → value_name：`JIRA_ID`
-  - 字段名：`dry_run` → value_name：`DRY_RUN`（但通常布尔标志不需要 value_name）
+- **value-_name 必须与字段名语义一致**：
+  - 字段名：`jira-_id` → value-_name：`JIRA_ID`
+  - 字段名：`dry-_run` → value-_name：`DRY_RUN`（但通常布尔标志不需要 value-_name）
 
 #### 共用参数规范
 
@@ -498,8 +498,8 @@ pub jira_id: Option<String>,
 #[derive(Args, Debug, Clone)]
 pub struct JiraIdArg {
     /// Jira ticket ID (optional, will prompt interactively if not provided)
-    #[arg(value_name = "JIRA_ID")]
-    pub jira_id: Option<String>,
+    #[arg(value-_name = "JIRA_ID")]
+    pub jira-_id: Option<String>,
 }
 
 // 在命令中使用
@@ -509,7 +509,7 @@ use super::args::JiraIdArg;
 pub enum MySubcommand {
     Info {
         #[command(flatten)]
-        jira_id: JiraIdArg,  // ✅ 使用共用参数
+        jira-_id: JiraIdArg,  // ✅ 使用共用参数
     },
 }
 ```
@@ -519,14 +519,14 @@ pub enum MySubcommand {
 ```rust
 // ❌ 不好的做法
 Create {
-    #[arg(value_name = "jira_ticket")]  // value_name 应该大写
-    jira_ticket: Option<String>,  // 命名不一致（应该用 jira_id）
+    #[arg(value-_name = "jira-_ticket")]  // value-_name 应该大写
+    jira-_ticket: Option<String>,  // 命名不一致（应该用 jira-_id）
 }
 
 // ✅ 好的做法
 Create {
     #[command(flatten)]
-    jira_id: JiraIdArg,  // 使用共用参数，命名一致
+    jira-_id: JiraIdArg,  // 使用共用参数，命名一致
 }
 ```
 
@@ -682,9 +682,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_ticket_id() {
-        assert_eq!(parse_ticket_id("PROJ-123"), Some("PROJ-123"));
-        assert_eq!(parse_ticket_id("invalid"), None);
+    fn test-_parse-_ticket-_id() {
+        assert-_eq!(parse-_ticket-_id("PROJ-123"), Some("PROJ-123"));
+        assert-_eq!(parse-_ticket-_id("invalid"), None);
     }
 }
 ```
@@ -707,9 +707,9 @@ mod tests {
 对于 CLI 命令，编写集成测试：
 
 ```rust
-// tests/integration_test.rs
+// tests/integration-_test.rs
 #[test]
-fn test_pr_create_command() {
+fn test-_pr-_create-_command() {
     // 测试 CLI 命令
 }
 ```

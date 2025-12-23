@@ -35,15 +35,15 @@ src/lib/commit/
 ### 依赖模块
 
 - **`lib/git/`**：Git 操作（获取分支信息、commit 信息、工作区状态等）
-  - `GitBranch::current_branch()` - 获取当前分支
-  - `GitBranch::is_commit_in_remote()` - 检查 commit 是否在远程
-  - `GitCommit::get_worktree_status()` - 获取工作区状态
-  - `GitCommit::format_worktree_status()` - 格式化工作区状态
-  - `GitCommit::get_parent_commit()` - 获取父 commit
-  - `GitCommit::get_commits_from_to_head()` - 获取从指定 commit 到 HEAD 的所有 commits
+  - `GitBranch::current-_branch()` - 获取当前分支
+  - `GitBranch::is-_commit-_in-_remote()` - 检查 commit 是否在远程
+  - `GitCommit::get-_worktree-_status()` - 获取工作区状态
+  - `GitCommit::format-_worktree-_status()` - 格式化工作区状态
+  - `GitCommit::get-_parent-_commit()` - 获取父 commit
+  - `GitCommit::get-_commits-_from-_to-_head()` - 获取从指定 commit 到 HEAD 的所有 commits
 - **`lib/git/stash.rs`**：Git stash 操作（历史 commit reword 时自动 stash）
-  - `GitStash::stash_push()` - 暂存更改
-  - `GitStash::stash_pop()` - 恢复暂存
+  - `GitStash::stash-_push()` - 暂存更改
+  - `GitStash::stash-_pop()` - 恢复暂存
 
 ### 模块集成
 
@@ -70,11 +70,11 @@ src/lib/commit/
 **职责**：提供 amend 操作相关的业务逻辑
 
 **主要方法**：
-- `create_preview()` - 创建 amend 预览信息
-- `format_preview()` - 格式化预览信息为字符串
-- `format_commit_info_detailed()` - 格式化详细 commit 信息（包含工作区状态）
-- `should_show_force_push_warning()` - 检查是否需要显示 force push 警告
-- `format_completion_message()` - 生成完成提示信息
+- `create-_preview()` - 创建 amend 预览信息
+- `format-_preview()` - 格式化预览信息为字符串
+- `format-_commit-_info-_detailed()` - 格式化详细 commit 信息（包含工作区状态）
+- `should-_show-_force-_push-_warning()` - 检查是否需要显示 force push 警告
+- `format-_completion-_message()` - 生成完成提示信息
 
 **关键特性**：
 - 预览信息包含原始 SHA、新消息、文件列表、操作类型等
@@ -90,12 +90,12 @@ src/lib/commit/
 **职责**：提供 reword 操作相关的业务逻辑
 
 **主要方法**：
-- `format_commit_info()` - 格式化 commit 信息为字符串
-- `create_preview()` - 创建 reword 预览信息
-- `format_preview()` - 格式化预览信息为字符串
-- `should_show_force_push_warning()` - 检查是否需要显示 force push 警告
-- `format_completion_message()` - 生成完成提示信息
-- `reword_history_commit()` - 执行历史 commit reword（核心业务逻辑）
+- `format-_commit-_info()` - 格式化 commit 信息为字符串
+- `create-_preview()` - 创建 reword 预览信息
+- `format-_preview()` - 格式化预览信息为字符串
+- `should-_show-_force-_push-_warning()` - 检查是否需要显示 force push 警告
+- `format-_completion-_message()` - 生成完成提示信息
+- `reword-_history-_commit()` - 执行历史 commit reword（核心业务逻辑）
 
 **关键特性**：
 - 预览信息包含原始 SHA、新消息、操作类型（HEAD amend 或历史 rebase）等
@@ -110,29 +110,29 @@ src/lib/commit/
 #### 3. 数据结构
 
 **`AmendPreview`**：
-- `original_sha` - 原始 commit SHA
-- `new_message` - 新提交消息（可选）
-- `original_message` - 原始提交消息
-- `files_to_add` - 要添加的文件列表
-- `operation_type` - 操作类型
-- `is_pushed` - 是否已推送到远程
+- `original-_sha` - 原始 commit SHA
+- `new-_message` - 新提交消息（可选）
+- `original-_message` - 原始提交消息
+- `files-_to-_add` - 要添加的文件列表
+- `operation-_type` - 操作类型
+- `is-_pushed` - 是否已推送到远程
 
 **`RewordPreview`**：
-- `original_sha` - 原始 commit SHA
-- `original_message` - 原始提交消息
-- `new_message` - 新提交消息
-- `is_head` - 是否是 HEAD
-- `is_pushed` - 是否已推送到远程
+- `original-_sha` - 原始 commit SHA
+- `original-_message` - 原始提交消息
+- `new-_message` - 新提交消息
+- `is-_head` - 是否是 HEAD
+- `is-_pushed` - 是否已推送到远程
 
 **`RewordHistoryOptions`**：
-- `commit_sha` - 要修改的 commit SHA
-- `new_message` - 新的提交消息
-- `auto_stash` - 是否自动 stash
+- `commit-_sha` - 要修改的 commit SHA
+- `new-_message` - 新的提交消息
+- `auto-_stash` - 是否自动 stash
 
 **`RewordHistoryResult`**：
 - `success` - 是否成功
-- `has_conflicts` - 是否有冲突
-- `was_stashed` - 是否进行了 stash
+- `has-_conflicts` - 是否有冲突
+- `was-_stashed` - 是否进行了 stash
 
 ### 设计模式
 
@@ -221,40 +221,40 @@ src/commands/commit/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/commit/`**：Commit 业务逻辑
-  - `CommitAmend::create_preview()` - 创建 amend 预览信息
-  - `CommitAmend::format_preview()` - 格式化预览信息
-  - `CommitAmend::format_commit_info_detailed()` - 格式化详细 commit 信息
-  - `CommitAmend::format_completion_message()` - 生成完成提示信息
-  - `CommitReword::create_preview()` - 创建 reword 预览信息
-  - `CommitReword::format_preview()` - 格式化预览信息
-  - `CommitReword::format_commit_info()` - 格式化 commit 信息
-  - `CommitReword::reword_history_commit()` - 执行历史 commit reword
-  - `CommitSquash::get_branch_commits()` - 获取当前分支创建之后的提交
-  - `CommitSquash::create_preview()` - 创建 squash 预览信息
-  - `CommitSquash::format_preview()` - 格式化预览信息
-  - `CommitSquash::execute_squash()` - 执行 squash 操作
-  - `CommitSquash::should_show_force_push_warning()` - 检查是否需要显示 force push 警告
-  - `CommitSquash::format_completion_message()` - 生成完成提示信息
+  - `CommitAmend::create-_preview()` - 创建 amend 预览信息
+  - `CommitAmend::format-_preview()` - 格式化预览信息
+  - `CommitAmend::format-_commit-_info-_detailed()` - 格式化详细 commit 信息
+  - `CommitAmend::format-_completion-_message()` - 生成完成提示信息
+  - `CommitReword::create-_preview()` - 创建 reword 预览信息
+  - `CommitReword::format-_preview()` - 格式化预览信息
+  - `CommitReword::format-_commit-_info()` - 格式化 commit 信息
+  - `CommitReword::reword-_history-_commit()` - 执行历史 commit reword
+  - `CommitSquash::get-_branch-_commits()` - 获取当前分支创建之后的提交
+  - `CommitSquash::create-_preview()` - 创建 squash 预览信息
+  - `CommitSquash::format-_preview()` - 格式化预览信息
+  - `CommitSquash::execute-_squash()` - 执行 squash 操作
+  - `CommitSquash::should-_show-_force-_push-_warning()` - 检查是否需要显示 force push 警告
+  - `CommitSquash::format-_completion-_message()` - 生成完成提示信息
 - **`lib/git/`**：Git 操作
-  - `GitBranch::current_branch()` - 获取当前分支
-  - `GitBranch::get_default_branch()` - 获取默认分支
-  - `GitBranch::is_commit_in_remote()` - 检查 commit 是否在远程
-  - `GitCommit::has_last_commit()` - 检查是否有最后一次 commit
-  - `GitCommit::get_last_commit_info()` - 获取最后一次 commit 信息
-  - `GitCommit::get_commit_info()` - 获取指定 commit 信息
-  - `GitCommit::get_worktree_status()` - 获取工作区状态
-  - `GitCommit::get_modified_files()` - 获取修改的文件
-  - `GitCommit::get_untracked_files()` - 获取未跟踪的文件
-  - `GitCommit::get_branch_commits()` - 获取分支 commits
-  - `GitCommit::parse_commit_ref()` - 解析 commit 引用
-  - `GitCommit::is_commit_in_current_branch()` - 检查 commit 是否在当前分支
-  - `GitCommit::is_head_commit()` - 检查是否是 HEAD commit
-  - `GitCommit::has_commit()` - 检查是否有未提交的更改
-  - `GitCommit::add_all()` - 暂存所有文件
-  - `GitCommit::add_files()` - 暂存指定文件
+  - `GitBranch::current-_branch()` - 获取当前分支
+  - `GitBranch::get-_default-_branch()` - 获取默认分支
+  - `GitBranch::is-_commit-_in-_remote()` - 检查 commit 是否在远程
+  - `GitCommit::has-_last-_commit()` - 检查是否有最后一次 commit
+  - `GitCommit::get-_last-_commit-_info()` - 获取最后一次 commit 信息
+  - `GitCommit::get-_commit-_info()` - 获取指定 commit 信息
+  - `GitCommit::get-_worktree-_status()` - 获取工作区状态
+  - `GitCommit::get-_modified-_files()` - 获取修改的文件
+  - `GitCommit::get-_untracked-_files()` - 获取未跟踪的文件
+  - `GitCommit::get-_branch-_commits()` - 获取分支 commits
+  - `GitCommit::parse-_commit-_ref()` - 解析 commit 引用
+  - `GitCommit::is-_commit-_in-_current-_branch()` - 检查 commit 是否在当前分支
+  - `GitCommit::is-_head-_commit()` - 检查是否是 HEAD commit
+  - `GitCommit::has-_commit()` - 检查是否有未提交的更改
+  - `GitCommit::add-_all()` - 暂存所有文件
+  - `GitCommit::add-_files()` - 暂存指定文件
   - `GitCommit::amend()` - 执行 amend 操作
 - **`commands/check/`**：环境检查
-  - `CheckCommand::run_all()` - 运行所有检查
+  - `CheckCommand::run-_all()` - 运行所有检查
 - **`lib/base/dialog/`**：用户交互对话框
   - `ConfirmDialog` - 确认对话框
   - `InputDialog` - 输入对话框
@@ -269,10 +269,10 @@ src/commands/commit/
 
 Commit 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
 
-1. **预览信息生成**：Commands 层调用 Lib 层的 `create_preview()` 方法生成预览信息
-2. **格式化显示**：Commands 层调用 Lib 层的 `format_preview()` 方法格式化输出
-3. **执行操作**：Commands 层调用 Lib 层的执行方法（如 `reword_history_commit()`）执行实际操作
-4. **完成提示**：Commands 层调用 Lib 层的 `format_completion_message()` 生成完成提示
+1. **预览信息生成**：Commands 层调用 Lib 层的 `create-_preview()` 方法生成预览信息
+2. **格式化显示**：Commands 层调用 Lib 层的 `format-_preview()` 方法格式化输出
+3. **执行操作**：Commands 层调用 Lib 层的执行方法（如 `reword-_history-_commit()`）执行实际操作
+4. **完成提示**：Commands 层调用 Lib 层的 `format-_completion-_message()` 生成完成提示
 
 ### 调用流程
 
@@ -297,10 +297,10 @@ Cli::parse() (解析命令行参数)
   ↓
 match cli.command {
   Commands::Commit { subcommand } => match subcommand {
-    CommitSubcommand::Amend { message, no_edit, no_verify } =>
-      CommitAmendCommand::execute(message, no_edit, no_verify)
-    CommitSubcommand::Reword { commit_id } =>
-      CommitRewordCommand::execute(commit_id)
+    CommitSubcommand::Amend { message, no-_edit, no-_verify } =>
+      CommitAmendCommand::execute(message, no-_edit, no-_verify)
+    CommitSubcommand::Reword { commit-_id } =>
+      CommitRewordCommand::execute(commit-_id)
     CommitSubcommand::Squash =>
       CommitSquashCommand::execute()
   }
@@ -423,13 +423,13 @@ Commit squash 命令用于将多个提交压缩为一个提交，支持以下功
 ```
 CommitAmendCommand::execute()
   ↓
-CommitAmend::create_preview()
+CommitAmend::create-_preview()
   ↓
-GitBranch::is_commit_in_remote() (检查是否已推送)
+GitBranch::is-_commit-_in-_remote() (检查是否已推送)
   ↓
 返回 AmendPreview
   ↓
-CommitAmend::format_preview() (格式化输出)
+CommitAmend::format-_preview() (格式化输出)
 ```
 
 #### 2. Reword 历史 Commit
@@ -437,15 +437,15 @@ CommitAmend::format_preview() (格式化输出)
 ```
 CommitRewordCommand::execute()
   ↓
-CommitReword::reword_history_commit()
+CommitReword::reword-_history-_commit()
   ↓
 检查工作区状态
   ↓
-GitStash::stash_push() (如果需要)
+GitStash::stash-_push() (如果需要)
   ↓
-GitCommit::get_parent_commit() (获取父 commit)
+GitCommit::get-_parent-_commit() (获取父 commit)
   ↓
-GitCommit::get_commits_from_to_head() (获取 commits 列表)
+GitCommit::get-_commits-_from-_to-_head() (获取 commits 列表)
   ↓
 创建 rebase todo 文件
   ↓
@@ -453,7 +453,7 @@ GitCommit::get_commits_from_to_head() (获取 commits 列表)
   ↓
 执行 rebase (git rebase -i)
   ↓
-GitStash::stash_pop() (恢复 stash)
+GitStash::stash-_pop() (恢复 stash)
   ↓
 返回 RewordHistoryResult
 ```
@@ -581,7 +581,7 @@ workflow commit squash
 
 1. 在 `src/lib/cli/commit.rs` 中添加新的 `CommitSubcommand` 变体
 2. 在 `src/commands/commit/mod.rs` 中声明新命令模块
-3. 创建新命令文件（如 `src/commands/commit/new_command.rs`）
+3. 创建新命令文件（如 `src/commands/commit/new-_command.rs`）
 4. 在 `src/bin/workflow.rs` 中添加命令分发逻辑
 5. 在 `lib/commit/` 中添加相应的业务逻辑（如果需要）
 

@@ -29,7 +29,7 @@ src/bin/workflow.rs
 - **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
 - **功能**：
   - 使用 `clap` 解析命令行参数，将 `workflow alias` 子命令分发到对应的命令处理函数
-  - 在命令解析前调用 `AliasManager::expand_args()` 展开别名
+  - 在命令解析前调用 `AliasManager::expand-_args()` 展开别名
 
 ### 命令封装层
 
@@ -70,15 +70,15 @@ src/lib/base/alias/
 - **`lib/base/alias/manager.rs`**：别名管理器
   - `AliasManager::load()` - 加载别名配置
   - `AliasManager::expand()` - 展开别名（支持嵌套）
-  - `AliasManager::expand_args()` - 展开命令行参数
+  - `AliasManager::expand-_args()` - 展开命令行参数
   - `AliasManager::add()` - 添加别名
   - `AliasManager::remove()` - 删除别名
   - `AliasManager::list()` - 列出所有别名
   - `AliasManager::exists()` - 检查别名是否存在
-  - `AliasManager::check_circular()` - 检查循环别名
+  - `AliasManager::check-_circular()` - 检查循环别名
 - **`lib/base/alias/config.rs`**：别名配置管理
   - `CommandsConfig::load()` - 加载命令配置
-  - `CommandsConfig::get_common_commands()` - 获取常用命令列表
+  - `CommandsConfig::get-_common-_commands()` - 获取常用命令列表
 - **`lib/base/dialog/`**：用户交互对话框
   - `InputDialog` - 输入对话框（支持验证器）
   - `ConfirmDialog` - 确认对话框
@@ -89,7 +89,7 @@ src/lib/base/alias/
   - `TableStyle` - 表格样式
 - **`lib/base/settings/`**：配置管理
   - `Settings::get()` - 获取配置
-  - `Paths::workflow_config()` - 获取配置文件路径
+  - `Paths::workflow-_config()` - 获取配置文件路径
 
 详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md)
 
@@ -104,7 +104,7 @@ src/lib/base/alias/
   ↓
 src/bin/workflow.rs (workflow 主命令，参数解析)
   ↓
-AliasManager::expand_args() (别名展开)
+AliasManager::expand-_args() (别名展开)
   ↓
 commands/alias/*.rs (命令封装层，处理交互)
   ↓
@@ -120,7 +120,7 @@ lib/base/settings/ (配置读写)
 ```
 用户输入: workflow ci
   ↓
-AliasManager::expand_args() (检查第一个参数是否为别名)
+AliasManager::expand-_args() (检查第一个参数是否为别名)
   ↓
 AliasManager::expand() (递归展开别名，支持嵌套)
   ↓
@@ -154,10 +154,10 @@ pub fn list() -> Result<()> {
     let aliases = AliasManager::list()?;
     // 构建表格并显示
     let table = TableBuilder::new(rows)
-        .with_title("Defined Aliases")
-        .with_style(TableStyle::Modern)
+        .with-_title("Defined Aliases")
+        .with-_style(TableStyle::Modern)
         .render();
-    log_message!("{}", table);
+    log-_message!("{}", table);
     Ok(())
 }
 ```
@@ -170,7 +170,7 @@ pub fn list() -> Result<()> {
   ↓
 AliasAddCommand::add(Some("ci"), Some("pr create"))
   ↓
-检查循环别名 (AliasManager::check_circular())
+检查循环别名 (AliasManager::check-_circular())
   ↓
 检查别名是否已存在 (AliasManager::exists())
   ↓
@@ -208,7 +208,7 @@ AliasManager::add() (保存别名)
 ```rust
 // src/commands/alias/add.rs
 pub fn add(name: Option<String>, command: Option<String>) -> Result<()> {
-    let (alias_name, alias_command, is_direct_mode) = if let (Some(name), Some(cmd)) = (name, command) {
+    let (alias-_name, alias-_command, is-_direct-_mode) = if let (Some(name), Some(cmd)) = (name, command) {
         // 直接模式
         (name, cmd, true)
     } else {
@@ -217,12 +217,12 @@ pub fn add(name: Option<String>, command: Option<String>) -> Result<()> {
     };
 
     // 检查循环别名
-    if AliasManager::check_circular(&alias_name, &alias_command)? {
+    if AliasManager::check-_circular(&alias-_name, &alias-_command)? {
         return Err(...);
     }
 
     // 保存别名
-    AliasManager::add(&alias_name, &alias_command)?;
+    AliasManager::add(&alias-_name, &alias-_command)?;
     Ok(())
 }
 ```
@@ -263,21 +263,21 @@ MultiSelectDialog 多选要删除的别名
 ```rust
 // src/commands/alias/remove.rs
 pub fn remove(name: Option<String>) -> Result<()> {
-    let names_to_remove = if let Some(name) = name {
+    let names-_to-_remove = if let Some(name) = name {
         // 直接模式
         vec![name]
     } else {
         // 交互式模式：多选
         let selected = MultiSelectDialog::new(...).prompt()?;
         // 提取别名名称
-        selected.iter().filter_map(...).collect()
+        selected.iter().filter-_map(...).collect()
     };
 
     // 确认删除
     let confirmed = ConfirmDialog::new(...).prompt()?;
 
     // 批量删除
-    for name in &names_to_remove {
+    for name in &names-_to-_remove {
         AliasManager::remove(name)?;
     }
     Ok(())
@@ -373,10 +373,10 @@ st = "pr status"
 ```rust
 // 别名展开：在解析前展开别名
 let args: Vec<String> = std::env::args().collect();
-let expanded_args = AliasManager::expand_args(args)?;
+let expanded-_args = AliasManager::expand-_args(args)?;
 
 // 使用展开后的参数重新解析
-let cli = Cli::parse_from(expanded_args);
+let cli = Cli::parse-_from(expanded-_args);
 ```
 
 ### 2. 循环检测
@@ -426,7 +426,7 @@ AliasManager::load() (返回别名映射)
 ```
 命令行参数: ["workflow", "ci", "PROJ-123"]
   ↓
-AliasManager::expand_args()
+AliasManager::expand-_args()
   ↓
 检查 "ci" 是否是别名
   ↓

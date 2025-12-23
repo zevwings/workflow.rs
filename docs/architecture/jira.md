@@ -30,7 +30,7 @@ src/lib/jira/
 ├── mod.rs              # 模块导出和向后兼容别名 (56行)
 ├── api/                # API 方法子模块
 │   ├── mod.rs          # API 统一入口
-│   ├── http_client.rs  # JiraHttpClient (HTTP 层，~155行)
+│   ├── http-_client.rs  # JiraHttpClient (HTTP 层，~155行)
 │   ├── issue.rs        # Issue/Ticket 相关 API (~182行)
 │   ├── user.rs         # 用户相关 API (~30行)
 │   └── project.rs      # 项目相关 API (~60行)
@@ -58,22 +58,22 @@ src/lib/jira/
 ### 依赖模块
 
 - **`lib/base/http/`**：HTTP 客户端（统一的 HTTP 请求接口）
-- **`lib/base/settings/`**：配置管理（Jira 配置：base_url, email, api_token）
+- **`lib/base/settings/`**：配置管理（Jira 配置：base-_url, email, api-_token）
 - **`lib/base/util/`**：工具函数（日志输出、字符串处理等）
 
 ### 模块集成
 
 - **PR 模块集成** (`lib/pr/`)：
-  - 创建 PR 时：`JiraStatus::configure_interactive()` 配置状态，`JiraTicket::transition()` 更新状态，`JiraWorkHistory::write_work_history()` 保存历史
-  - 合并 PR 时：`JiraWorkHistory::read_work_history()` 查找 ticket，`JiraTicket::transition()` 更新状态
+  - 创建 PR 时：`JiraStatus::configure-_interactive()` 配置状态，`JiraTicket::transition()` 更新状态，`JiraWorkHistory::write-_work-_history()` 保存历史
+  - 合并 PR 时：`JiraWorkHistory::read-_work-_history()` 查找 ticket，`JiraTicket::transition()` 更新状态
 
 - **Log 和 Jira 命令集成** (`commands/log/` 和 `commands/jira/`)：
-  - 下载日志：`JiraTicket::get_attachments()` 获取附件，`JiraLogs::download_from_jira()` 下载
-  - 显示信息：`JiraTicket::get_info()` 获取 ticket 信息
+  - 下载日志：`JiraTicket::get-_attachments()` 获取附件，`JiraLogs::download-_from-_jira()` 下载
+  - 显示信息：`JiraTicket::get-_info()` 获取 ticket 信息
 
 - **HTTP 模块集成** (`lib/base/http/`)：
   - `HttpClient::global()` - 获取全局 HTTP 客户端
-  - `HttpResponse::ensure_success()` - 统一错误处理
+  - `HttpResponse::ensure-_success()` - 统一错误处理
 
 ---
 
@@ -89,14 +89,14 @@ src/lib/jira/
 
 ### 核心组件
 
-#### 1. HTTP 客户端层 (`api/http_client.rs`)
+#### 1. HTTP 客户端层 (`api/http-_client.rs`)
 
 **职责**：提供统一的 Jira REST API 请求接口
 
 - **`JiraHttpClient`**：Jira HTTP 客户端
   - 单例模式（`OnceLock`），线程安全
   - 缓存认证信息和客户端实例
-  - 统一错误处理（`HttpResponse::ensure_success()`）
+  - 统一错误处理（`HttpResponse::ensure-_success()`）
   - 支持 GET、POST、PUT 请求
 
 **主要方法**：
@@ -121,23 +121,23 @@ src/lib/jira/
 ##### `issue.rs` - JiraIssueApi
 
 **主要方法**：
-- `get_issue()` - 获取 issue 信息
-- `get_issue_attachments()` - 获取附件列表
-- `get_issue_transitions()` - 获取可用 transitions
-- `transition_issue()` - 更新 issue 状态
-- `assign_issue()` - 分配 issue 给用户
-- `add_issue_comment()` - 添加评论
-- `get_issue_changelog()` - 获取变更历史
+- `get-_issue()` - 获取 issue 信息
+- `get-_issue-_attachments()` - 获取附件列表
+- `get-_issue-_transitions()` - 获取可用 transitions
+- `transition-_issue()` - 更新 issue 状态
+- `assign-_issue()` - 分配 issue 给用户
+- `add-_issue-_comment()` - 添加评论
+- `get-_issue-_changelog()` - 获取变更历史
 
 ##### `user.rs` - JiraUserApi
 
 **主要方法**：
-- `get_current_user()` - 获取当前用户信息
+- `get-_current-_user()` - 获取当前用户信息
 
 ##### `project.rs` - JiraProjectApi
 
 **主要方法**：
-- `get_project_statuses()` - 获取项目状态列表
+- `get-_project-_statuses()` - 获取项目状态列表
 
 #### 3. 配置管理层 (`config.rs`)
 
@@ -180,20 +180,20 @@ src/lib/jira/
 **职责**：Ticket/Issue 操作
 
 **主要方法**：
-- `get_info()` - 获取 ticket 信息
-- `get_attachments()` - 获取附件列表
+- `get-_info()` - 获取 ticket 信息
+- `get-_attachments()` - 获取附件列表
 - `transition()` - 更新 ticket 状态
 - `assign()` - 分配 ticket 给用户
-- `add_comment()` - 添加评论
+- `add-_comment()` - 添加评论
 
 ##### `status.rs` - JiraStatus
 
 **职责**：状态管理（项目状态获取、状态配置）
 
 **主要方法**：
-- `configure_interactive()` - 交互式配置状态映射
-- `read_pull_request_created_status()` - 读取 PR 创建时的状态
-- `read_pull_request_merged_status()` - 读取 PR 合并时的状态
+- `configure-_interactive()` - 交互式配置状态映射
+- `read-_pull-_request-_created-_status()` - 读取 PR 创建时的状态
+- `read-_pull-_request-_merged-_status()` - 读取 PR 合并时的状态
 
 **关键特性**：
 - 使用 `ConfigManager<JiraStatusMap>` 管理状态配置
@@ -204,27 +204,27 @@ src/lib/jira/
 **职责**：工作历史记录管理（PR 创建/合并记录）
 
 **主要方法**：
-- `read_work_history()` - 读取工作历史记录（通过 PR ID 查找 Jira ticket）
-- `find_prs_by_jira_ticket()` - 根据 Jira ticket 查找关联的 PR
-- `find_pr_id_by_branch()` - 根据分支名查找 PR ID
-- `write_work_history()` - 写入工作历史记录
-- `update_work_history_merged()` - 更新工作历史记录的合并时间
-- `delete_work_history_entry()` - 删除工作历史记录条目
+- `read-_work-_history()` - 读取工作历史记录（通过 PR ID 查找 Jira ticket）
+- `find-_prs-_by-_jira-_ticket()` - 根据 Jira ticket 查找关联的 PR
+- `find-_pr-_id-_by-_branch()` - 根据分支名查找 PR ID
+- `write-_work-_history()` - 写入工作历史记录
+- `update-_work-_history-_merged()` - 更新工作历史记录的合并时间
+- `delete-_work-_history-_entry()` - 删除工作历史记录条目
 
 **关键特性**：
 - JSON 格式，按仓库分别存储
-- 文件位置：`~/.workflow/work-history/{repo_id}.json`
+- 文件位置：`~/.workflow/work-history/{repo-_id}.json`
 
 ##### `logs/` - JiraLogs
 
 **职责**：日志处理（下载、搜索、查找、清理）
 
 **主要方法**：
-- `download_from_jira()` - 从 Jira 下载日志附件
-- `find_request_id()` - 查找请求 ID
-- `extract_response_content()` - 提取响应内容
-- `search_keyword()` - 搜索关键词
-- `clean_dir()` - 清理日志目录
+- `download-_from-_jira()` - 从 Jira 下载日志附件
+- `find-_request-_id()` - 查找请求 ID
+- `extract-_response-_content()` - 提取响应内容
+- `search-_keyword()` - 搜索关键词
+- `clean-_dir()` - 清理日志目录
 
 **关键特性**：
 - 统一接口，状态缓存
@@ -245,12 +245,12 @@ src/lib/jira/
 ##### `helpers.rs` - 辅助函数
 
 **主要函数**：
-- `get_auth()` - 获取认证信息
-- `get_base_url()` - 获取基础 URL
-- `extract_jira_project()` - 提取项目名
-- `extract_jira_ticket_id()` - 提取 ticket ID
-- `validate_jira_ticket_format()` - 验证 ticket 格式
-- `sanitize_email_for_filename()` - 清理邮箱用于文件名
+- `get-_auth()` - 获取认证信息
+- `get-_base-_url()` - 获取基础 URL
+- `extract-_jira-_project()` - 提取项目名
+- `extract-_jira-_ticket-_id()` - 提取 ticket ID
+- `validate-_jira-_ticket-_format()` - 验证 ticket 格式
+- `sanitize-_email-_for-_filename()` - 清理邮箱用于文件名
 
 ##### `client.rs` - JiraClient
 
@@ -306,7 +306,7 @@ src/lib/jira/
 
 #### 分层错误处理
 
-1. **HTTP 层**：`HttpResponse::ensure_success()` 统一检查 HTTP 状态码
+1. **HTTP 层**：`HttpResponse::ensure-_success()` 统一检查 HTTP 状态码
 2. **API 层**：使用 `anyhow::Context` 添加上下文信息
 3. **业务层**：提供清晰的错误消息和恢复建议
 
@@ -359,19 +359,19 @@ src/commands/jira/
 
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/jira/`**：Jira 集成
-  - `Jira::get_ticket_info()` - 获取 ticket 信息
+  - `Jira::get-_ticket-_info()` - 获取 ticket 信息
 - **`lib/jira/api/`**：Jira API 接口
-  - `JiraIssueApi::get_issue_changelog()` - 获取变更历史
+  - `JiraIssueApi::get-_issue-_changelog()` - 获取变更历史
 - **`lib/jira/history/`**：Jira 工作历史模块（`JiraWorkHistory`）
-  - `JiraWorkHistory::find_prs_by_jira_ticket()` - 查找关联的 PR
+  - `JiraWorkHistory::find-_prs-_by-_jira-_ticket()` - 查找关联的 PR
 - **`lib/git/`**：Git 操作模块
-  - `GitBranch::find_branches_by_jira_ticket()` - 查找关联的分支
+  - `GitBranch::find-_branches-_by-_jira-_ticket()` - 查找关联的分支
 - **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
   - `JiraLogs::new()` - 创建日志管理器
-  - `JiraLogs::download_from_jira()` - 下载附件
-  - `JiraLogs::clean_dir()` - 清理目录
+  - `JiraLogs::download-_from-_jira()` - 下载附件
+  - `JiraLogs::clean-_dir()` - 清理目录
 - **`lib/base/settings/`**：配置管理
-  - `Settings::get()` - 获取配置（`log_output_folder_name`、`log_download_base_dir` 等）
+  - `Settings::get()` - 获取配置（`log-_output-_folder-_name`、`log-_download-_base-_dir` 等）
 
 ---
 
@@ -381,7 +381,7 @@ src/commands/jira/
 
 Jira 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
 
-1. **API 调用**：Commands 层调用 Lib 层的 API 方法（如 `Jira::get_ticket_info()`、`JiraIssueApi::get_issue_changelog()`）
+1. **API 调用**：Commands 层调用 Lib 层的 API 方法（如 `Jira::get-_ticket-_info()`、`JiraIssueApi::get-_issue-_changelog()`）
 2. **日志处理**：Commands 层使用 `JiraLogs` 进行附件下载和清理操作
 3. **工作历史**：Commands 层使用 `JiraWorkHistory` 查找关联的 PR 和分支
 4. **格式化输出**：Commands 层负责格式化输出，支持多种输出格式（table、json、yaml、markdown）
@@ -395,16 +395,16 @@ Jira 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方�
   ↓
 lib/jira/*.rs (业务逻辑层)
   ├── users.rs → JiraUsers::get()
-  ├── ticket.rs → JiraTicket::get_info()
-  ├── status.rs → JiraStatus::configure_interactive()
-  └── history.rs → JiraWorkHistory::read_work_history()
+  ├── ticket.rs → JiraTicket::get-_info()
+  ├── status.rs → JiraStatus::configure-_interactive()
+  └── history.rs → JiraWorkHistory::read-_work-_history()
   ↓
 lib/jira/api/*.rs (API 方法层)
-  ├── issue.rs → JiraIssueApi::get_issue()
-  ├── user.rs → JiraUserApi::get_current_user()
-  └── project.rs → JiraProjectApi::get_project_statuses()
+  ├── issue.rs → JiraIssueApi::get-_issue()
+  ├── user.rs → JiraUserApi::get-_current-_user()
+  └── project.rs → JiraProjectApi::get-_project-_statuses()
   ↓
-lib/jira/api/http_client.rs (HTTP 客户端层)
+lib/jira/api/http-_client.rs (HTTP 客户端层)
   └── JiraHttpClient::global() → get()/post()/put()
   ↓
 lib/base/http/ (基础 HTTP 层)
@@ -437,15 +437,15 @@ match cli.subcommand
 显示 ticket 信息命令提供完整的 ticket 信息查看功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output-_format` - 输出格式选项（table、json、yaml、markdown）
 
 2. **用户交互**：
-   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入
+   - 如果未提供 `jira-_id`，使用 `dialoguer::Input` 交互式输入
    - 格式化显示 ticket 信息
 
 3. **核心功能**：
-   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息
+   - 通过 `Jira::get-_ticket-_info()` API 获取 ticket 信息
    - 显示基本信息（Key, ID, Summary, Status）
    - 显示描述（如果有）
    - 显示附件列表（格式化文件大小）
@@ -457,12 +457,12 @@ match cli.subcommand
 显示关联信息命令提供查找关联的 PR 和分支的功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output-_format` - 输出格式选项（table、json、yaml、markdown）
 
 2. **核心功能**：
-   - 通过 `JiraWorkHistory::find_prs_by_jira_ticket()` 查找关联的 PR
-   - 通过 `GitBranch::find_branches_by_jira_ticket()` 查找关联的分支
+   - 通过 `JiraWorkHistory::find-_prs-_by-_jira-_ticket()` 查找关联的 PR
+   - 通过 `GitBranch::find-_branches-_by-_jira-_ticket()` 查找关联的分支
    - 显示 PR 信息（URL、分支、创建时间、合并时间等）
    - 显示分支信息（分支名、最后提交时间等）
 
@@ -471,11 +471,11 @@ match cli.subcommand
 显示变更历史命令提供查看 ticket 变更历史的功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
-   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output-_format` - 输出格式选项（table、json、yaml、markdown）
 
 2. **核心功能**：
-   - 通过 `JiraIssueApi::get_issue_changelog()` API 获取变更历史
+   - 通过 `JiraIssueApi::get-_issue-_changelog()` API 获取变更历史
    - 显示所有字段的变更记录
    - 显示变更时间、作者、字段变更详情
 
@@ -484,15 +484,15 @@ match cli.subcommand
 显示评论命令提供查看和管理 ticket 评论的功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
    - `--limit <LIMIT>` - 限制显示的评论数量
    - `--offset <OFFSET>` - 分页偏移量
    - `--author <EMAIL>` - 只显示指定作者的评论
    - `--since <DATE>` - 只显示指定日期之后的评论（RFC3339 格式）
-   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+   - `output-_format` - 输出格式选项（table、json、yaml、markdown）
 
 2. **核心功能**：
-   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息（包含评论）
+   - 通过 `Jira::get-_ticket-_info()` API 获取 ticket 信息（包含评论）
    - 支持按作者、时间过滤评论
    - 支持分页显示评论
    - 默认按时间降序排序（最新的在前）
@@ -502,10 +502,10 @@ match cli.subcommand
 下载附件命令提供从 Jira 下载附件的功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入）
 
 2. **核心功能**：
-   - 通过 `JiraLogs::download_from_jira()` API 实现下载功能
+   - 通过 `JiraLogs::download-_from-_jira()` API 实现下载功能
    - 下载所有附件（不仅仅是日志附件）
    - 自动处理附件下载、分片合并、文件解压等操作
 
@@ -514,13 +514,13 @@ match cli.subcommand
 清理本地数据命令提供清理本地下载的数据目录的功能：
 
 1. **参数处理**：
-   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入；如果为空字符串，会报错）
-   - `all` - 如果为 true，清理整个基础目录（忽略 jira_id）
-   - `dry_run` - Dry run 模式选项（预览模式，不实际删除）
-   - `list_only` - 只列出目录内容
+   - `jira-_id` - Jira ticket ID（可选，不提供时会交互式输入；如果为空字符串，会报错）
+   - `all` - 如果为 true，清理整个基础目录（忽略 jira-_id）
+   - `dry-_run` - Dry run 模式选项（预览模式，不实际删除）
+   - `list-_only` - 只列出目录内容
 
 2. **核心功能**：
-   - 通过 `JiraLogs::clean_dir()` API 清理本地数据目录
+   - 通过 `JiraLogs::clean-_dir()` API 清理本地数据目录
    - 支持预览模式和列表模式
 
 ---
@@ -532,9 +532,9 @@ match cli.subcommand
 #### 1. 获取 Ticket 信息
 
 ```
-JiraTicket::get_info("PROJ-123")
+JiraTicket::get-_info("PROJ-123")
   ↓
-JiraIssueApi::get_issue("PROJ-123")
+JiraIssueApi::get-_issue("PROJ-123")
   ↓
 JiraHttpClient::global()?.get("issue/PROJ-123?fields=*all&expand=renderedFields")
   ↓
@@ -546,7 +546,7 @@ HttpClient::global()?.get(url, config)
 ```
 JiraTicket::transition("PROJ-123", "Done")
   ↓
-JiraIssueApi::transition_issue("PROJ-123", transition_id)
+JiraIssueApi::transition-_issue("PROJ-123", transition-_id)
   ↓
 JiraHttpClient::global()?.post("issue/PROJ-123/transitions", body)
 ```
@@ -554,7 +554,7 @@ JiraHttpClient::global()?.post("issue/PROJ-123/transitions", body)
 #### 3. 读取工作历史记录
 
 ```
-JiraWorkHistory::read_work_history(pr_id, repository)
+JiraWorkHistory::read-_work-_history(pr-_id, repository)
   ↓
 读取 ~/.workflow/work-history/{repo}.json
 ```
@@ -565,13 +565,13 @@ JiraWorkHistory::read_work_history(pr_id, repository)
 
 - **用户配置**：`~/.workflow/config/jira-users.toml`
   - 格式：TOML 数组表（`[[users]]`）
-  - 内容：用户邮箱、account_id、display_name
+  - 内容：用户邮箱、account-_id、display-_name
 
 - **状态配置**：`~/.workflow/config/jira-status.toml`
   - 格式：TOML 表（`[PROJ]`）
   - 内容：PR 创建/合并时的目标状态
 
-- **工作历史**：`~/.workflow/work-history/{repo_id}.json`
+- **工作历史**：`~/.workflow/work-history/{repo-_id}.json`
   - 格式：JSON 对象（PR ID → Entry）
   - 内容：Jira ticket、PR URL、时间戳、分支名等
 
@@ -684,13 +684,13 @@ workflow jira clean --list PROJ-123
 
 ### 添加新的业务功能
 
-1. 创建新的模块文件（如 `new_feature.rs`）
+1. 创建新的模块文件（如 `new-_feature.rs`）
 2. 实现业务逻辑，使用 API 层的方法
 3. 在 `mod.rs` 中导出
 
 ### 添加新命令
 
-1. 在 `commands/jira/` 下创建新的命令文件（如 `new_command.rs`）
+1. 在 `commands/jira/` 下创建新的命令文件（如 `new-_command.rs`）
 2. 实现命令结构体和处理方法（如 `NewCommand::execute()`）
 3. 在 `commands/jira/mod.rs` 中导出命令结构体
 4. 在 `src/main.rs` 中添加命令枚举（`JiraSubcommand`）

@@ -33,9 +33,9 @@ src/lib/repo/
 ### 依赖模块
 
 - **`lib/base/settings/`**：路径管理
-  - `Paths::project_config()` - 获取项目配置文件路径
+  - `Paths::project-_config()` - 获取项目配置文件路径
 - **`lib/git/`**：Git 操作
-  - `GitRepo::is_git_repo()` - 检查是否是 Git 仓库
+  - `GitRepo::is-_git-_repo()` - 检查是否是 Git 仓库
 
 ### 模块集成
 
@@ -43,8 +43,8 @@ src/lib/repo/
   - `setup.rs` - 使用 `RepoConfig` 进行配置加载和保存
   - `show.rs` - 使用 `RepoConfig` 进行配置加载和显示
 - **`commands/branch/`**：分支管理命令
-  - 使用 `RepoConfig::get_branch_prefix()` 获取分支前缀
-  - 使用 `RepoConfig::get_ignore_branches()` 获取忽略分支列表
+  - 使用 `RepoConfig::get-_branch-_prefix()` 获取分支前缀
+  - 使用 `RepoConfig::get-_ignore-_branches()` 获取忽略分支列表
 - **`commands/commit/`**、**`commands/pr/`**：其他命令
   - 使用 `RepoSetupCommand::ensure()` 确保配置存在
 
@@ -69,8 +69,8 @@ src/lib/repo/
 - `exists()` - 检查配置是否存在且完整
 - `load()` - 加载项目配置
 - `save()` - 保存项目配置
-- `get_branch_prefix()` - 获取分支前缀
-- `get_ignore_branches()` - 获取忽略分支列表
+- `get-_branch-_prefix()` - 获取分支前缀
+- `get-_ignore-_branches()` - 获取忽略分支列表
 
 **关键特性**：
 - 配置文件路径：`.workflow/config.toml`（项目根目录）
@@ -89,11 +89,11 @@ src/lib/repo/
 **职责**：表示项目级配置结构
 
 **字段**：
-- `template_commit: Map<String, Value>` - 提交模板配置
-- `template_branch: Map<String, Value>` - 分支模板配置
-- `template_pull_requests: Map<String, Value>` - PR 模板配置
+- `template-_commit: Map<String, Value>` - 提交模板配置
+- `template-_branch: Map<String, Value>` - 分支模板配置
+- `template-_pull-_requests: Map<String, Value>` - PR 模板配置
 - `branch: ProjectBranchConfig` - 分支配置
-- `auto_accept_change_type: Option<bool>` - 自动接受变更类型选择
+- `auto-_accept-_change-_type: Option<bool>` - 自动接受变更类型选择
 
 **关键特性**：
 - 使用 `toml::Value` 存储模板配置，支持灵活配置
@@ -111,7 +111,7 @@ src/lib/repo/
 **关键特性**：
 - 使用 `serde` 进行序列化/反序列化
 - 支持 TOML 格式
-- 可选字段使用 `skip_serializing_if` 控制序列化
+- 可选字段使用 `skip-_serializing-_if` 控制序列化
 
 ---
 
@@ -142,9 +142,9 @@ src/lib/repo/
 4. 解析各个配置节：
    - `[template.commit]` - 提交模板配置
    - `[template.branch]` - 分支模板配置
-   - `[template.pull_requests]` - PR 模板配置
+   - `[template.pull-_requests]` - PR 模板配置
    - `[branch]` - 分支配置
-   - `[pr]` 或顶层 `auto_accept_change_type` - PR 配置
+   - `[pr]` 或顶层 `auto-_accept-_change-_type` - PR 配置
 
 **关键特性**：
 - 文件不存在时返回默认配置（不报错）
@@ -165,9 +165,9 @@ src/lib/repo/
 **关键特性**：
 - 自动创建目录结构
 - 配置合并（保留现有配置，只更新提供的字段）
-- 使用 `toml::to_string_pretty()` 格式化输出
+- 使用 `toml::to-_string-_pretty()` 格式化输出
 
-### 4. 分支前缀获取 (`get_branch_prefix()`)
+### 4. 分支前缀获取 (`get-_branch-_prefix()`)
 
 **功能**：获取当前仓库的分支前缀
 
@@ -179,7 +179,7 @@ src/lib/repo/
 - `Some(String)` - 如果配置了分支前缀
 - `None` - 如果未配置或加载失败
 
-### 5. 忽略分支列表获取 (`get_ignore_branches()`)
+### 5. 忽略分支列表获取 (`get-_ignore-_branches()`)
 
 **功能**：获取当前仓库的忽略分支列表
 
@@ -233,13 +233,13 @@ src/commands/repo/
 - **`lib/template/`**：模板配置管理
   - `TemplateConfig::load()` - 加载模板配置
 - **`lib/git/`**：Git 操作
-  - `GitRepo::extract_repo_name()` - 提取仓库名
-  - `GitRepo::is_git_repo()` - 检查是否是 Git 仓库
+  - `GitRepo::extract-_repo-_name()` - 提取仓库名
+  - `GitRepo::is-_git-_repo()` - 检查是否是 Git 仓库
 - **`lib/base/dialog/`**：用户交互对话框
   - `ConfirmDialog` - 确认对话框
   - `InputDialog` - 输入对话框
 - **`lib/base/settings/`**：路径管理
-  - `Paths::project_config()` - 获取项目配置文件路径
+  - `Paths::project-_config()` - 获取项目配置文件路径
 
 ---
 
@@ -281,7 +281,7 @@ match cli.command {
   Commands::Repo { subcommand } => match subcommand {
     RepoSubcommand::Setup => RepoSetupCommand::run()
     RepoSubcommand::Show => RepoShowCommand::show()
-    RepoSubcommand::Clean { dry_run } => RepoCleanCommand::clean(dry_run.dry_run)
+    RepoSubcommand::Clean { dry-_run } => RepoCleanCommand::clean(dry-_run.dry-_run)
   }
 }
 ```
@@ -396,18 +396,18 @@ ignore = [
 ]
 
 [template.commit]
-use_scope = false
-default = "{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}# {{subject}}{{/if}}"
+use-_scope = false
+default = "{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}# {{subject}}{{/if}}"
 
 [template.branch]
-default = "{{jira_key}}-{{summary_slug}}"
-feature = "feature/{{jira_key}}-{{summary_slug}}"
+default = "{{jira-_key}}-{{summary-_slug}}"
+feature = "feature/{{jira-_key}}-{{summary-_slug}}"
 
-[template.pull_requests]
-default = "## Description\n\n{{jira_summary}}\n\n..."
+[template.pull-_requests]
+default = "## Description\n\n{{jira-_summary}}\n\n..."
 
 [pr]
-auto_accept_change_type = true
+auto-_accept-_change-_type = true
 ```
 
 ### 配置节说明
@@ -419,7 +419,7 @@ auto_accept_change_type = true
 
 #### `[template.commit]` 节
 
-- `use_scope` (可选) - 是否使用 scope（Conventional Commits 格式）
+- `use-_scope` (可选) - 是否使用 scope（Conventional Commits 格式）
 - `default` (可选) - 默认提交模板（Handlebars 格式）
 
 #### `[template.branch]` 节
@@ -431,13 +431,13 @@ auto_accept_change_type = true
 - `refactoring` (可选) - Refactoring 分支模板
 - `chore` (可选) - Chore 分支模板
 
-#### `[template.pull_requests]` 节
+#### `[template.pull-_requests]` 节
 
 - `default` (可选) - 默认 PR 模板（Handlebars 格式）
 
 #### `[pr]` 节
 
-- `auto_accept_change_type` (可选) - 是否自动接受变更类型选择
+- `auto-_accept-_change-_type` (可选) - 是否自动接受变更类型选择
 
 ---
 
@@ -514,17 +514,17 @@ println!("Branch prefix: {:?}", config.branch.prefix);
 
 // 保存配置
 let mut config = ProjectConfig::default();
-config.branch.prefix = Some("feature".to_string());
+config.branch.prefix = Some("feature".to-_string());
 RepoConfig::save(&config)?;
 
 // 获取分支前缀
-if let Some(prefix) = RepoConfig::get_branch_prefix() {
+if let Some(prefix) = RepoConfig::get-_branch-_prefix() {
     println!("Branch prefix: {}", prefix);
 }
 
 // 获取忽略分支列表
-let ignore_list = RepoConfig::get_ignore_branches();
-println!("Ignored branches: {:?}", ignore_list);
+let ignore-_list = RepoConfig::get-_ignore-_branches();
+println!("Ignored branches: {:?}", ignore-_list);
 ```
 
 ---
@@ -557,7 +557,7 @@ println!("Ignored branches: {:?}", ignore_list);
 ### 添加新配置项
 
 1. 在 `lib/repo/config.rs` 中的 `ProjectConfig` 结构体中添加新字段
-2. 在 `commands/repo/setup.rs` 的 `collect_config()` 方法中添加交互式收集逻辑
+2. 在 `commands/repo/setup.rs` 的 `collect-_config()` 方法中添加交互式收集逻辑
 3. 在 `commands/repo/show.rs` 的 `show()` 方法中添加显示逻辑
 4. 更新配置文件的保存和加载逻辑
 

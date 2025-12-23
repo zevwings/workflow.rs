@@ -27,7 +27,7 @@ workflow jira assign PROJ-123 --unassign             # 取消分配
 
 **实现建议**：
 - 在 `src/commands/jira/` 下创建 `assign.rs`
-- 支持用户名、邮箱、account_id 等多种输入方式
+- 支持用户名、邮箱、account-_id 等多种输入方式
 - 支持交互式选择用户（从项目成员列表）
 
 #### 2.2 `jira list` - 列出 tickets
@@ -78,7 +78,7 @@ workflow jira transition PROJ-123 --auto            # 自动转换到下一个�
 **实现建议**：
 - 在 `src/commands/jira/` 下创建 `transition.rs`
 - 在 `src/lib/cli/mod.rs` 的 `JiraSubcommand` 中添加 `Transition` 子命令
-- 调用 `JiraTicket::transition()` 或 `JiraTicket::get_transitions()`
+- 调用 `JiraTicket::transition()` 或 `JiraTicket::get-_transitions()`
 
 #### 2.5 `jira watch` - 关注/取消关注
 - ❌ 关注或取消关注 ticket
@@ -110,13 +110,13 @@ workflow jira search --interactive                       # 交互式构建查询
 - 使用 JIRA API `/search` GET 端点
 - 支持保存常用查询到配置文件
 - 支持交互式查询构建器（逐步构建查询条件）
-- 实现 `JiraIssueApi::search_issues()` 方法（在 `src/lib/jira/api/issue.rs` 中）
+- 实现 `JiraIssueApi::search-_issues()` 方法（在 `src/lib/jira/api/issue.rs` 中）
 
 **关联功能**：
-- **动态补全支持**：`jira_ticket_keys()` 方法需要此 API 支持
+- **动态补全支持**：`jira-_ticket-_keys()` 方法需要此 API 支持
   - 位置：`src/lib/completion/dynamic.rs`
   - 用途：为 `jira info` 等命令提供 ticket key 的自动补全
-  - 依赖：`JiraIssueApi::search_issues()` 方法
+  - 依赖：`JiraIssueApi::search-_issues()` 方法
 
 #### 2.7 `jira update` - 更新 ticket
 - ❌ 更新 ticket 的字段（summary、description、priority 等）
@@ -216,7 +216,7 @@ workflow jira batch assign "PROJ-123,PROJ-124" user@example.com      # 批量分
 
 **实现建议**：
 - 在配置文件中定义评论模板
-- 支持模板变量（如 `{{pr_url}}`、`{{branch_name}}` 等）
+- 支持模板变量（如 `{{pr-_url}}`、`{{branch-_name}}` 等）
 
 ---
 

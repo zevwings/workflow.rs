@@ -75,7 +75,7 @@ Repository Variables 用于存储非敏感配置信息，可以在 workflow 中�
 
 **用途**：用于验证 `bump-version-*` PR 的创建者（在 CI workflow 中使用）
 
-**默认值**：`github.repository_owner`（仓库所有者，如果未设置，使用此默认值）
+**默认值**：`github.repository-_owner`（仓库所有者，如果未设置，使用此默认值）
 
 **配置步骤**：
 
@@ -88,7 +88,7 @@ Repository Variables 用于存储非敏感配置信息，可以在 workflow 中�
 **说明**：
 - 此变量必须与 `WORKFLOW_PAT` 的所有者匹配
 - 如果 `WORKFLOW_PAT` 的所有者是 `zevwings`，则 `WORKFLOW_USER_NAME` 应该设置为 `zevwings`
-- 如果未设置此变量，workflow 会使用默认值 `github.repository_owner`（仓库所有者）
+- 如果未设置此变量，workflow 会使用默认值 `github.repository-_owner`（仓库所有者）
 - 此变量仅在 CI workflow 中用于验证 PR 创建者，不用于 Git 提交配置
 - Git 提交使用 `github-actions[bot]` 作为提交者
 
@@ -313,7 +313,7 @@ permissions:
 **解决方案**：
 1. 检查分支保护规则配置
 2. 检查 `check-status` job 的状态
-3. 确认 `check-skip-ci` job 成功并设置了 `should_skip=true`
+3. 确认 `check-skip-ci` job 成功并设置了 `should-_skip=true`
 
 ### 问题 4：Release 需要批准但无法批准
 

@@ -46,12 +46,12 @@ src/commands/github/
 命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
 - **`lib/base/settings/`**：配置管理（`Settings`、`Paths`）
   - `Settings::load()` - 加载配置
-  - `Paths::workflow_config()` - 获取配置文件路径
+  - `Paths::workflow-_config()` - 获取配置文件路径
 - **`lib/git/`**：Git 配置管理（`GitConfig`）
-  - `GitConfig::set_global_user()` - 设置 Git 全局用户配置
+  - `GitConfig::set-_global-_user()` - 设置 Git 全局用户配置
 - **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
   - `ConfigManager::<Settings>::update()` - 更新配置
-- **`lib/base/util/`**：工具函数（`confirm()`、`mask_sensitive_value()`）
+- **`lib/base/util/`**：工具函数（`confirm()`、`mask-_sensitive-_value()`）
 - **`dialoguer`**：交互式输入（`Input`、`Select`）
 
 详细架构文档：参见 [Settings 模块架构文档](../lib/SETTINGS_ARCHITECTURE.md) 和 [Git 模块架构文档](../lib/GIT_ARCHITECTURE.md)
@@ -132,7 +132,7 @@ src/main.rs::GitHubSubcommand::Current
 commands/github/github.rs::GitHubCommand::current()
   ↓
   1. Settings::load() (加载配置)
-  2. Settings::github.get_current_account() (获取当前账号)
+  2. Settings::github.get-_current-_account() (获取当前账号)
   3. 格式化显示当前账号信息
 ```
 
@@ -157,7 +157,7 @@ src/main.rs::GitHubSubcommand::Add
   ↓
 commands/github/github.rs::GitHubCommand::add()
   ↓
-  1. collect_github_account() (交互式收集账号信息)
+  1. collect-_github-_account() (交互式收集账号信息)
   2. 检查账号名称是否已存在
   3. 判断是否为第一个账号
   4. ConfigManager::update() (保存到配置文件)
@@ -185,7 +185,7 @@ commands/github/github.rs::GitHubCommand::add()
 ### 关键步骤说明
 
 1. **账号信息收集**：
-   - 使用 `helpers::collect_github_account()` 交互式收集
+   - 使用 `helpers::collect-_github-_account()` 交互式收集
    - 输入验证（名称非空、邮箱格式、Token 非空）
 
 2. **配置更新**：
@@ -194,7 +194,7 @@ commands/github/github.rs::GitHubCommand::add()
    - 如果是第一个账号，设置 `github.current`
 
 3. **Git 配置更新**：
-   - 使用 `GitConfig::set_global_user()` 更新 Git 全局配置
+   - 使用 `GitConfig::set-_global-_user()` 更新 Git 全局配置
    - 确保 Git 提交使用正确的用户信息
 
 ---
@@ -260,7 +260,7 @@ commands/github/github.rs::GitHubCommand::switch()
   2. 检查账号列表（至少需要 2 个账号）
   3. 交互式选择要切换到的账号
   4. ConfigManager::update() (更新当前账号)
-  5. GitConfig::set_global_user() (更新 Git 配置)
+  5. GitConfig::set-_global-_user() (更新 Git 配置)
 ```
 
 ### 功能说明
@@ -295,7 +295,7 @@ commands/github/github.rs::GitHubCommand::update()
   2. 检查账号列表是否为空
   3. 交互式选择要更新的账号
   4. 显示当前账号信息
-  5. collect_github_account_with_defaults() (使用现有值作为默认值收集新信息)
+  5. collect-_github-_account-_with-_defaults() (使用现有值作为默认值收集新信息)
   6. 检查账号名称是否冲突
   7. 检查是否为当前账号
   8. ConfigManager::update() (更新配置)
@@ -323,7 +323,7 @@ commands/github/github.rs::GitHubCommand::update()
 ### 关键步骤说明
 
 1. **默认值处理**：
-   - 使用 `helpers::collect_github_account_with_defaults()` 收集信息
+   - 使用 `helpers::collect-_github-_account-_with-_defaults()` 收集信息
    - 所有字段都使用现有值作为默认值
 
 2. **名称冲突检查**：
@@ -342,11 +342,11 @@ commands/github/github.rs::GitHubCommand::update()
 
 辅助函数模块提供账号信息收集的共享逻辑：
 
-1. **`collect_github_account()`**：
+1. **`collect-_github-_account()`**：
    - 交互式收集新的 GitHub 账号信息
    - 所有字段都是必填（除了分支前缀）
 
-2. **`collect_github_account_with_defaults()`**：
+2. **`collect-_github-_account-_with-_defaults()`**：
    - 交互式收集 GitHub 账号信息，使用现有值作为默认值
    - 用于更新账号信息
 

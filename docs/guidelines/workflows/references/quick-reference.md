@@ -106,10 +106,10 @@ head -30 CHANGELOG.md
 ### 生成时间戳
 
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/CHECK_REPORT_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/CHECK_REPORT_{}.md", timestamp);
 ```
 
 ### 命令行生成时间戳

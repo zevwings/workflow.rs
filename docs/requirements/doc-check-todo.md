@@ -164,17 +164,17 @@
 ```
 scripts/check-doc-paths.rs
 ├── main() - 入口函数
-├── scan_architecture_docs() - 扫描架构文档
-├── extract_paths_from_doc() - 从文档提取路径
-│   ├── parse_markdown() - 解析 Markdown
-│   ├── extract_code_paths() - 提取代码块中的路径
-│   ├── extract_text_paths() - 提取文本中的路径
-│   └── extract_module_paths() - 提取模块路径
-├── validate_paths() - 验证路径
-│   ├── check_file_exists() - 检查文件是否存在
-│   ├── check_module_exists() - 检查模块是否存在
-│   └── normalize_path() - 规范化路径
-└── generate_report() - 生成报告
+├── scan-_architecture-_docs() - 扫描架构文档
+├── extract-_paths-_from-_doc() - 从文档提取路径
+│   ├── parse-_markdown() - 解析 Markdown
+│   ├── extract-_code-_paths() - 提取代码块中的路径
+│   ├── extract-_text-_paths() - 提取文本中的路径
+│   └── extract-_module-_paths() - 提取模块路径
+├── validate-_paths() - 验证路径
+│   ├── check-_file-_exists() - 检查文件是否存在
+│   ├── check-_module-_exists() - 检查模块是否存在
+│   └── normalize-_path() - 规范化路径
+└── generate-_report() - 生成报告
 ```
 
 #### 核心功能实现
@@ -182,9 +182,9 @@ scripts/check-doc-paths.rs
 **1. Markdown 解析**
 
 ```rust
-use pulldown_cmark::{Parser, Event, Tag};
+use pulldown-_cmark::{Parser, Event, Tag};
 
-fn extract_paths_from_doc(content: &str) -> Vec<PathInfo> {
+fn extract-_paths-_from-_doc(content: &str) -> Vec<PathInfo> {
     let parser = Parser::new(content);
     let mut paths = Vec::new();
 
@@ -192,11 +192,11 @@ fn extract_paths_from_doc(content: &str) -> Vec<PathInfo> {
         match event {
             Event::Code(code) => {
                 // 提取代码块中的路径
-                extract_paths_from_code(&code, &mut paths);
+                extract-_paths-_from-_code(&code, &mut paths);
             }
             Event::Text(text) => {
                 // 提取文本中的路径
-                extract_paths_from_text(&text, &mut paths);
+                extract-_paths-_from-_text(&text, &mut paths);
             }
             _ => {}
         }
@@ -210,27 +210,27 @@ fn extract_paths_from_doc(content: &str) -> Vec<PathInfo> {
 
 ```rust
 // 文件路径模式
-let file_path_re = Regex::new(r"src/(lib|commands)/[a-zA-Z0-9_/]+\.rs")?;
+let file-_path-_re = Regex::new(r"src/(lib|commands)/[a-zA-Z0-9_/]+\.rs")?;
 
 // 模块路径模式
-let module_path_re = Regex::new(r"crate::[a-zA-Z0-9_:]+")?;
+let module-_path-_re = Regex::new(r"crate::[a-zA-Z0-9_:]+")?;
 ```
 
 **3. 模块路径验证**
 
 ```rust
-fn validate_module_path(module_path: &str) -> bool {
+fn validate-_module-_path(module-_path: &str) -> bool {
     // 解析 crate::pr::github::Platform
-    let parts: Vec<&str> = module_path.split("::").collect();
+    let parts: Vec<&str> = module-_path.split("::").collect();
 
     // 跳过 "crate"
-    if parts.is_empty() || parts[0] != "crate" {
+    if parts.is-_empty() || parts[0] != "crate" {
         return false;
     }
 
     // 检查模块文件是否存在
-    let module_file = format!("src/{}.rs", parts[1..].join("/"));
-    Path::new(&module_file).exists()
+    let module-_file = format!("src/{}.rs", parts[1..].join("/"));
+    Path::new(&module-_file).exists()
 }
 ```
 
@@ -248,7 +248,7 @@ fn validate_module_path(module_path: &str) -> bool {
 - `src/lib/pr/github/platform.rs` (docs/architecture/lib/PR_ARCHITECTURE.md)
 
 ### ❌ 不存在的路径
-1. `src/lib/pr/old_module.rs`
+1. `src/lib/pr/old-_module.rs`
    - **文档位置**：docs/architecture/lib/PR_ARCHITECTURE.md
    - **问题类型**：文件不存在
    - **建议**：检查文件是否已删除或重命名
@@ -276,15 +276,15 @@ fn validate_module_path(module_path: &str) -> bool {
 ```
 scripts/check-doc-stats.rs
 ├── main() - 入口函数
-├── scan_code_modules() - 扫描代码模块
-│   ├── count_lines() - 统计代码行数
-│   └── count_files() - 统计文件数量
-├── parse_doc_stats() - 解析文档统计
-│   ├── extract_line_count() - 提取代码行数
-│   ├── extract_file_count() - 提取文件数量
-│   └── extract_component_count() - 提取组件数量
-├── compare_stats() - 对比统计信息
-└── generate_report() - 生成差异报告
+├── scan-_code-_modules() - 扫描代码模块
+│   ├── count-_lines() - 统计代码行数
+│   └── count-_files() - 统计文件数量
+├── parse-_doc-_stats() - 解析文档统计
+│   ├── extract-_line-_count() - 提取代码行数
+│   ├── extract-_file-_count() - 提取文件数量
+│   └── extract-_component-_count() - 提取组件数量
+├── compare-_stats() - 对比统计信息
+└── generate-_report() - 生成差异报告
 ```
 
 #### 核心功能实现
@@ -292,55 +292,55 @@ scripts/check-doc-stats.rs
 **1. 代码行数统计**
 
 ```rust
-fn count_lines(module_path: &Path) -> Result<usize> {
-    let mut total_lines = 0;
+fn count-_lines(module-_path: &Path) -> Result<usize> {
+    let mut total-_lines = 0;
 
-    for entry in WalkDir::new(module_path)
-        .into_iter()
-        .filter_entry(|e| {
+    for entry in WalkDir::new(module-_path)
+        .into-_iter()
+        .filter-_entry(|e| {
             // 只统计 .rs 文件
-            e.path().extension().map_or(false, |ext| ext == "rs")
+            e.path().extension().map-_or(false, |ext| ext == "rs")
         })
     {
         let entry = entry?;
-        if entry.file_type().is_file() {
-            let content = fs::read_to_string(entry.path())?;
-            total_lines += content.lines().count();
+        if entry.file-_type().is-_file() {
+            let content = fs::read-_to-_string(entry.path())?;
+            total-_lines += content.lines().count();
         }
     }
 
-    Ok(total_lines)
+    Ok(total-_lines)
 }
 ```
 
 **2. 统计信息提取**
 
 ```rust
-fn extract_line_count(doc_content: &str) -> Option<usize> {
+fn extract-_line-_count(doc-_content: &str) -> Option<usize> {
     // 匹配 "总代码行数：约 XXX 行" 或 "总代码行数：XXX 行"
     let re = Regex::new(r"总代码行数[：:]\s*(?:约\s*)?(\d+)\s*行")?;
 
-    re.captures(doc_content)
-        .and_then(|caps| caps.get(1))
-        .and_then(|m| m.as_str().parse().ok())
+    re.captures(doc-_content)
+        .and-_then(|caps| caps.get(1))
+        .and-_then(|m| m.as-_str().parse().ok())
 }
 ```
 
 **3. 差异计算**
 
 ```rust
-fn calculate_difference(doc_value: usize, actual_value: usize) -> f64 {
-    if doc_value == 0 {
+fn calculate-_difference(doc-_value: usize, actual-_value: usize) -> f64 {
+    if doc-_value == 0 {
         return 0.0;
     }
 
-    let diff = actual_value as f64 - doc_value as f64;
-    (diff / doc_value as f64) * 100.0
+    let diff = actual-_value as f64 - doc-_value as f64;
+    (diff / doc-_value as f64) * 100.0
 }
 
-fn is_within_tolerance(doc_value: usize, actual_value: usize, tolerance: f64) -> bool {
-    let diff_percent = calculate_difference(doc_value, actual_value).abs();
-    diff_percent <= tolerance
+fn is-_within-_tolerance(doc-_value: usize, actual-_value: usize, tolerance: f64) -> bool {
+    let diff-_percent = calculate-_difference(doc-_value, actual-_value).abs();
+    diff-_percent <= tolerance
 }
 ```
 
@@ -378,10 +378,10 @@ fn is_within_tolerance(doc_value: usize, actual_value: usize, tolerance: f64) ->
 ```
 scripts/check-architecture-docs.rs
 ├── main() - 入口函数，解析命令行参数
-├── run_all_checks() - 运行所有检查
-├── run_path_check() - 运行路径验证
-├── run_stats_check() - 运行统计验证
-└── generate_combined_report() - 生成综合报告
+├── run-_all-_checks() - 运行所有检查
+├── run-_path-_check() - 运行路径验证
+├── run-_stats-_check() - 运行统计验证
+└── generate-_combined-_report() - 生成综合报告
 ```
 
 #### 命令行接口
@@ -392,15 +392,15 @@ use clap::Parser;
 #[derive(Parser)]
 struct Args {
     /// 检查类型：all, paths, stats
-    #[arg(long, default_value = "all")]
-    check_type: String,
+    #[arg(long, default-_value = "all")]
+    check-_type: String,
 
     /// 检查范围：all, module:pr, module:jira
-    #[arg(long, default_value = "all")]
+    #[arg(long, default-_value = "all")]
     scope: String,
 
     /// 输出报告路径
-    #[arg(long, default_value = "report/")]
+    #[arg(long, default-_value = "report/")]
     output: PathBuf,
 }
 ```
@@ -420,11 +420,11 @@ struct Args {
 
 **实现示例**：
 ```rust
-fn extract_paths_from_code(code: &str) -> Vec<String> {
+fn extract-_paths-_from-_code(code: &str) -> Vec<String> {
     // 匹配 src/ 开头的路径
     let re = Regex::new(r"src/(lib|commands)/[a-zA-Z0-9_/]+\.rs")?;
-    re.find_iter(code)
-        .map(|m| m.as_str().to_string())
+    re.find-_iter(code)
+        .map(|m| m.as-_str().to-_string())
         .collect()
 }
 ```
@@ -442,10 +442,10 @@ fn extract_paths_from_code(code: &str) -> Vec<String> {
 
 **实现示例**：
 ```rust
-fn module_path_to_file_path(module_path: &str) -> Option<PathBuf> {
+fn module-_path-_to-_file-_path(module-_path: &str) -> Option<PathBuf> {
     // crate::pr::github::Platform -> src/pr/github.rs 或 src/pr/github/mod.rs
-    let parts: Vec<&str> = module_path.split("::").collect();
-    if parts.is_empty() || parts[0] != "crate" {
+    let parts: Vec<&str> = module-_path.split("::").collect();
+    if parts.is-_empty() || parts[0] != "crate" {
         return None;
     }
 
@@ -475,18 +475,18 @@ fn module_path_to_file_path(module_path: &str) -> Option<PathBuf> {
 
 **实现示例**：
 ```rust
-fn extract_statistics(doc_content: &str) -> DocStats {
-    let line_count_re = Regex::new(
+fn extract-_statistics(doc-_content: &str) -> DocStats {
+    let line-_count-_re = Regex::new(
         r"总代码行数[：:]\s*(?:约\s*|大约\s*)?(\d+)\s*行"
     )?;
 
-    let file_count_re = Regex::new(
+    let file-_count-_re = Regex::new(
         r"文件数量[：:]\s*(\d+)\s*个"
     )?;
 
     DocStats {
-        line_count: extract_number(&line_count_re, doc_content),
-        file_count: extract_number(&file_count_re, doc_content),
+        line-_count: extract-_number(&line-_count-_re, doc-_content),
+        file-_count: extract-_number(&file-_count-_re, doc-_content),
     }
 }
 ```
@@ -504,20 +504,20 @@ fn extract_statistics(doc_content: &str) -> DocStats {
 
 **实现示例**：
 ```rust
-fn doc_to_module_path(doc_path: &Path) -> Option<PathBuf> {
-    let file_name = doc_path.file_stem()?.to_str()?;
+fn doc-_to-_module-_path(doc-_path: &Path) -> Option<PathBuf> {
+    let file-_name = doc-_path.file-_stem()?.to-_str()?;
 
     // PR_ARCHITECTURE.md -> pr
-    let module_name = file_name
-        .strip_suffix("_ARCHITECTURE")?
-        .strip_suffix("_COMMAND_ARCHITECTURE")?
-        .to_lowercase();
+    let module-_name = file-_name
+        .strip-_suffix("_ARCHITECTURE")?
+        .strip-_suffix("_COMMAND_ARCHITECTURE")?
+        .to-_lowercase();
 
     // 判断是 Lib 层还是命令层
-    if doc_path.parent()?.ends_with("lib") {
-        Some(PathBuf::from(format!("src/lib/{}", module_name)))
-    } else if doc_path.parent()?.ends_with("commands") {
-        Some(PathBuf::from(format!("src/commands/{}", module_name)))
+    if doc-_path.parent()?.ends-_with("lib") {
+        Some(PathBuf::from(format!("src/lib/{}", module-_name)))
+    } else if doc-_path.parent()?.ends-_with("commands") {
+        Some(PathBuf::from(format!("src/commands/{}", module-_name)))
     } else {
         None
     }

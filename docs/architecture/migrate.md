@@ -59,20 +59,20 @@ src/commands/migrate/
 //! 迁移描述：例如，迁移某个配置格式
 
 use anyhow::{Context, Result};
-use crate::{log_info, log_success};
+use crate::{log-_info, log-_success};
 
 /// v1.1.0 迁移实现
-pub fn migrate_v1_1_0(dry_run: bool, cleanup: bool) -> Result<()> {
+pub fn migrate-_v1_1_0(dry-_run: bool, cleanup: bool) -> Result<()> {
     // 1. 检测需要迁移的内容
     // 2. 执行迁移逻辑
     // 3. 可选：清理旧文件
 
-    if dry_run {
-        log_info!("Migration preview for v1.1.0...");
+    if dry-_run {
+        log-_info!("Migration preview for v1.1.0...");
     } else {
-        log_info!("Migrating to v1.1.0...");
+        log-_info!("Migrating to v1.1.0...");
         // 执行迁移
-        log_success!("Migration to v1.1.0 completed!");
+        log-_success!("Migration to v1.1.0 completed!");
     }
 
     Ok(())
@@ -90,13 +90,13 @@ pub mod v1_1_0;  // 添加这一行
 
 ```rust
 // src/commands/migrate/mod.rs
-fn migrate_version(version: &str, dry_run: bool, cleanup: bool) -> Result<()> {
+fn migrate-_version(version: &str, dry-_run: bool, cleanup: bool) -> Result<()> {
     match version {
         "v1.0.0" => {
-            v1_0_0::migrate_v1_0_0(dry_run, cleanup)?;
+            v1_0_0::migrate-_v1_0_0(dry-_run, cleanup)?;
         }
         "v1.1.0" => {  // 添加这个分支
-            v1_1_0::migrate_v1_1_0(dry_run, cleanup)?;
+            v1_1_0::migrate-_v1_1_0(dry-_run, cleanup)?;
         }
         _ => {
             anyhow::bail!("Unknown migration version: {}", version);
@@ -115,12 +115,12 @@ fn migrate_version(version: &str, dry_run: bool, cleanup: bool) -> Result<()> {
 const ALL_MIGRATIONS: &[&str] = &["v1.0.0", "v1.1.0"];  // 添加 "v1.1.0"
 
 /// 检查特定版本是否需要迁移
-fn needs_migration(version: &str) -> Result<bool> {
+fn needs-_migration(version: &str) -> Result<bool> {
     match version {
         "v1.0.0" => {
             // 检查是否存在 branch.toml
-            let old_config_path = Paths::config_dir()?.join("branch.toml");
-            Ok(old_config_path.exists())
+            let old-_config-_path = Paths::config-_dir()?.join("branch.toml");
+            Ok(old-_config-_path.exists())
         }
         "v1.1.0" => {  // 添加这个分支
             // 检查是否需要迁移的条件

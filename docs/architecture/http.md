@@ -34,7 +34,7 @@ src/lib/base/http/
 ### 依赖模块
 
 - **reqwest**：底层 HTTP 客户端库
-- **serde/serde_json**：JSON 序列化和反序列化
+- **serde/serde-_json**：JSON 序列化和反序列化
 - **anyhow**：错误处理
 - **dialoguer**：用户交互（重试机制）
 - **tokio**：异步运行时
@@ -47,28 +47,28 @@ src/lib/base/http/
   - `JiraHttpClient` 使用 `HttpClient::global()` 发送请求
   - 使用 `Authorization` 进行 Basic Authentication
   - 使用 `RequestConfig` 配置请求参数
-  - 使用 `HttpResponse::ensure_success()` 统一错误处理
+  - 使用 `HttpResponse::ensure-_success()` 统一错误处理
 
 **关键方法**：
-- `JiraIssueApi::get_issue()` - 使用 `HttpClient::get()`
-- `JiraIssueApi::transition_issue()` - 使用 `HttpClient::post()`
-- `JiraUserApi::get_current_user()` - 使用 `HttpClient::get()`
+- `JiraIssueApi::get-_issue()` - 使用 `HttpClient::get()`
+- `JiraIssueApi::transition-_issue()` - 使用 `HttpClient::post()`
+- `JiraUserApi::get-_current-_user()` - 使用 `HttpClient::get()`
 
 #### PR 模块集成
 
 - **GitHub API 调用**：
   - `GitHub` 平台实现使用 `HttpClient::global()` 发送请求
   - 使用 `RequestConfig` 配置请求（Headers、Body）
-  - 使用 `HttpResponse::as_json()` 解析响应
+  - 使用 `HttpResponse::as-_json()` 解析响应
 
 - **Codeup API 调用**：
   - `Codeup` 平台实现使用 `HttpClient::global()` 发送请求
   - 使用 `RequestConfig` 配置请求（Headers、Body、Query）
-  - 使用 `HttpResponse::as_json()` 解析响应
+  - 使用 `HttpResponse::as-_json()` 解析响应
 
 **关键方法**：
-- `GitHub::create_pull_request()` - 使用 `HttpClient::post()`
-- `Codeup::merge_pull_request()` - 使用 `HttpClient::put()`
+- `GitHub::create-_pull-_request()` - 使用 `HttpClient::post()`
+- `Codeup::merge-_pull-_request()` - 使用 `HttpClient::put()`
 
 #### 其他使用场景
 
@@ -137,14 +137,14 @@ src/lib/base/http/
   - 提供状态码检查和错误处理
 
 **主要方法**：
-- `from_reqwest_response(response)` - 从 reqwest 响应创建
-- `is_success()` - 检查是否为成功响应（200-299）
-- `is_error()` - 检查是否为错误响应
-- `as_json<T>()` - 解析为 JSON
-- `as_text()` - 解析为文本
-- `as_bytes()` - 获取原始字节
-- `ensure_success()` - 确保响应成功，否则返回错误
-- `ensure_success_with(error_handler)` - 使用自定义错误处理器
+- `from-_reqwest-_response(response)` - 从 reqwest 响应创建
+- `is-_success()` - 检查是否为成功响应（200-299）
+- `is-_error()` - 检查是否为错误响应
+- `as-_json<T>()` - 解析为 JSON
+- `as-_text()` - 解析为文本
+- `as-_bytes()` - 获取原始字节
+- `ensure-_success()` - 确保响应成功，否则返回错误
+- `ensure-_success-_with(error-_handler)` - 使用自定义错误处理器
 
 #### 4. 认证层 (`auth.rs`)
 
@@ -199,9 +199,9 @@ src/lib/base/http/
   - 交互式确认（默认：true）
 
 **主要方法**：
-- `retry<F, T>(operation, config, operation_name)` - 执行重试操作
-- `is_retryable_error(error)` - 判断错误是否可重试
-- `countdown_with_cancel(seconds, operation_name)` - 倒计时等待
+- `retry<F, T>(operation, config, operation-_name)` - 执行重试操作
+- `is-_retryable-_error(error)` - 判断错误是否可重试
+- `countdown-_with-_cancel(seconds, operation-_name)` - 倒计时等待
 
 ### 设计模式
 
@@ -213,9 +213,9 @@ src/lib/base/http/
 pub fn global() -> Result<&'static Self> {
     static CLIENT: OnceLock<Result<HttpClient>> = OnceLock::new();
     CLIENT
-        .get_or_init(HttpClient::new)
-        .as_ref()
-        .map_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))
+        .get-_or-_init(HttpClient::new)
+        .as-_ref()
+        .map-_err(|e| anyhow::anyhow!("Failed to create HTTP client: {}", e))
 }
 ```
 
@@ -234,7 +234,7 @@ let config = RequestConfig::new()
     .query(&query)
     .auth(&auth)
     .headers(&headers)
-    .timeout(Duration::from_secs(60));
+    .timeout(Duration::from-_secs(60));
 ```
 
 **优势**：
@@ -269,14 +269,14 @@ impl ResponseParser<String> for TextParser { ... }
 
 ```rust
 pub struct HttpResponse {
-    body_bytes: Vec<u8>,  // 缓存响应体字节
+    body-_bytes: Vec<u8>,  // 缓存响应体字节
     // ...
 }
 
 impl HttpResponse {
-    pub fn as_json<T>(&self) -> Result<T> { ... }
-    pub fn as_text(&self) -> Result<String> { ... }
-    pub fn as_bytes(&self) -> &[u8] { ... }
+    pub fn as-_json<T>(&self) -> Result<T> { ... }
+    pub fn as-_text(&self) -> Result<String> { ... }
+    pub fn as-_bytes(&self) -> &[u8] { ... }
 }
 ```
 
@@ -311,9 +311,9 @@ HttpRetry::retry(
    - 请求构建错误
 
 2. **响应处理层**：
-   - `HttpResponse::ensure_success()` - 统一检查状态码
-   - `HttpResponse::as_json()` - JSON 解析错误
-   - `HttpResponse::as_text()` - 文本解码错误
+   - `HttpResponse::ensure-_success()` - 统一检查状态码
+   - `HttpResponse::as-_json()` - JSON 解析错误
+   - `HttpResponse::as-_text()` - 文本解码错误
 
 3. **重试层**：
    - 智能判断错误是否可重试
@@ -356,13 +356,13 @@ HttpClient::get/post/put/delete/patch() (执行请求)
   ↓
 RequestConfig (配置请求：body, query, auth, headers, timeout)
   ↓
-build_request() (构建请求)
+build-_request() (构建请求)
   ↓
 reqwest::Client (发送请求)
   ↓
-HttpResponse::from_reqwest_response() (封装响应)
+HttpResponse::from-_reqwest-_response() (封装响应)
   ↓
-HttpResponse::as_json/as_text/as_bytes() (延迟解析)
+HttpResponse::as-_json/as-_text/as-_bytes() (延迟解析)
   ↓
 ResponseParser (解析响应体)
   ↓
@@ -382,7 +382,7 @@ let config = RequestConfig::new().query(&[("page", "1")]);
   ↓
 let response = client.get("https://api.example.com", config)?;
   ↓
-let data: MyType = response.ensure_success()?.as_json()?;
+let data: MyType = response.ensure-_success()?.as-_json()?;
 ```
 
 #### 2. 带认证的 POST 请求
@@ -392,15 +392,15 @@ let data: MyType = response.ensure_success()?.as_json()?;
   ↓
 let client = HttpClient::global()?;
   ↓
-let auth = Authorization::new("user@example.com", "api_token");
-let body = serde_json::json!({"key": "value"});
+let auth = Authorization::new("user@example.com", "api-_token");
+let body = serde-_json::json!({"key": "value"});
 let config = RequestConfig::new()
     .body(&body)
     .auth(&auth);
   ↓
 let response = client.post("https://api.example.com", config)?;
   ↓
-let data: MyType = response.ensure_success()?.as_json()?;
+let data: MyType = response.ensure-_success()?.as-_json()?;
 ```
 
 #### 3. 带重试的请求
@@ -414,7 +414,7 @@ HttpRetry::retry(
     || {
         let client = HttpClient::global()?;
         let response = client.get("https://api.example.com", RequestConfig::new())?;
-        Ok(response.ensure_success()?.as_json::<MyType>()?)
+        Ok(response.ensure-_success()?.as-_json::<MyType>()?)
     },
     &config,
     "获取数据"
@@ -429,13 +429,13 @@ HttpRetry::retry(
 flowchart LR
     User[用户代码] --> Client[HttpClient::global<br/>获取单例]
     Client --> Config[RequestConfig<br/>配置请求]
-    Config --> Build[build_request<br/>构建请求]
+    Config --> Build[build-_request<br/>构建请求]
     Build --> Reqwest[reqwest::Client<br/>发送请求]
     Reqwest --> Response[HttpResponse<br/>封装响应]
     Response --> Parse{解析方式}
-    Parse -->|JSON| Json[as_json<br/>JSON 解析]
-    Parse -->|Text| Text[as_text<br/>文本解析]
-    Parse -->|Bytes| Bytes[as_bytes<br/>原始字节]
+    Parse -->|JSON| Json[as-_json<br/>JSON 解析]
+    Parse -->|Text| Text[as-_text<br/>文本解析]
+    Parse -->|Bytes| Bytes[as-_bytes<br/>原始字节]
     Json --> Result[返回结果]
     Text --> Result
     Bytes --> Result
@@ -484,13 +484,13 @@ flowchart TD
 ### 添加新的 HTTP 方法
 
 1. 在 `method.rs` 中添加新的枚举变体
-2. 在 `client.rs` 的 `build_request()` 方法中添加对应的分支
+2. 在 `client.rs` 的 `build-_request()` 方法中添加对应的分支
 3. 在 `client.rs` 中添加对应的公共方法（如 `head()`、`options()`）
 
 ### 添加新的解析格式
 
 1. 在 `parser.rs` 中实现 `ResponseParser<T>` trait
-2. 在 `response.rs` 中添加便捷方法（如 `as_xml()`、`as_yaml()`）
+2. 在 `response.rs` 中添加便捷方法（如 `as-_xml()`、`as-_yaml()`）
 3. 在 `mod.rs` 中导出新的解析器
 
 **示例**：
@@ -506,8 +506,8 @@ impl<T> ResponseParser<T> for XmlParser where T: Deserialize {
 
 // response.rs
 impl HttpResponse {
-    pub fn as_xml<T>(&self) -> Result<T> where T: Deserialize {
-        self.parse_with(XmlParser)
+    pub fn as-_xml<T>(&self) -> Result<T> where T: Deserialize {
+        self.parse-_with(XmlParser)
     }
 }
 ```
@@ -516,7 +516,7 @@ impl HttpResponse {
 
 1. 在 `auth.rs` 中添加新的认证结构体
 2. 在 `config.rs` 的 `RequestConfig` 中添加认证字段
-3. 在 `client.rs` 的 `build_request()` 方法中添加认证逻辑
+3. 在 `client.rs` 的 `build-_request()` 方法中添加认证逻辑
 
 ### 自定义重试策略
 
@@ -547,15 +547,15 @@ let client = HttpClient::global()?;
 
 // GET 请求
 let config = RequestConfig::new()
-    .query(&[("page", "1"), ("per_page", "10")]);
+    .query(&[("page", "1"), ("per-_page", "10")]);
 let response = client.get("https://api.example.com", config)?;
-let data: MyType = response.ensure_success()?.as_json()?;
+let data: MyType = response.ensure-_success()?.as-_json()?;
 
 // POST 请求
-let body = serde_json::json!({"key": "value"});
+let body = serde-_json::json!({"key": "value"});
 let config = RequestConfig::new().body(&body);
 let response = client.post("https://api.example.com", config)?;
-let data: MyType = response.ensure_success()?.as_json()?;
+let data: MyType = response.ensure-_success()?.as-_json()?;
 ```
 
 ### 带认证的请求
@@ -564,7 +564,7 @@ let data: MyType = response.ensure_success()?.as_json()?;
 use workflow::base::http::{HttpClient, RequestConfig, Authorization};
 
 let client = HttpClient::global()?;
-let auth = Authorization::new("user@example.com", "api_token");
+let auth = Authorization::new("user@example.com", "api-_token");
 let config = RequestConfig::new()
     .body(&body)
     .auth(&auth);
@@ -592,7 +592,7 @@ use std::time::Duration;
 
 let client = HttpClient::global()?;
 let config = RequestConfig::new()
-    .timeout(Duration::from_secs(60));
+    .timeout(Duration::from-_secs(60));
 let response = client.get("https://api.example.com", config)?;
 ```
 
@@ -606,7 +606,7 @@ let result = HttpRetry::retry(
     || {
         let client = HttpClient::global()?;
         let response = client.get("https://api.example.com", RequestConfig::new())?;
-        Ok(response.ensure_success()?.as_json::<MyType>()?)
+        Ok(response.ensure-_success()?.as-_json::<MyType>()?)
     },
     &config,
     "获取数据"
@@ -634,23 +634,23 @@ use workflow::base::http::{HttpClient, RequestConfig};
 let client = HttpClient::global()?;
 let response = client.get("https://api.example.com", RequestConfig::new())?;
 
-// 方式 1：使用 ensure_success()
-let data: MyType = response.ensure_success()?.as_json()?;
+// 方式 1：使用 ensure-_success()
+let data: MyType = response.ensure-_success()?.as-_json()?;
 
-// 方式 2：使用 ensure_success_with() 自定义错误处理
+// 方式 2：使用 ensure-_success-_with() 自定义错误处理
 let data: MyType = response
-    .ensure_success_with(|r| {
+    .ensure-_success-_with(|r| {
         anyhow::anyhow!("API 调用失败: HTTP {}", r.status)
     })?
-    .as_json()?;
+    .as-_json()?;
 
 // 方式 3：手动检查
-if response.is_success() {
-    let data: MyType = response.as_json()?;
+if response.is-_success() {
+    let data: MyType = response.as-_json()?;
 } else {
-    log_error!("请求失败: {} {}", response.status, response.status_text);
-    let error_body = response.as_text().unwrap_or_default();
-    log_error!("错误详情: {}", error_body);
+    log-_error!("请求失败: {} {}", response.status, response.status-_text);
+    let error-_body = response.as-_text().unwrap-_or-_default();
+    log-_error!("错误详情: {}", error-_body);
 ```
 
 ---

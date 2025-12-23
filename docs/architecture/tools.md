@@ -58,8 +58,8 @@ src/lib/base/util/
 - **浏览器**：PR 命令使用 `Browser::open()`
 - **文件操作**：Lifecycle 命令使用 `Unzip::extract()` 和 `Checksum::verify()`
 - **用户确认**：多个命令使用 `confirm()` 函数
-- **格式化工具**：Lifecycle 命令使用 `format_size()` 格式化文件大小
-- **平台检测**：Lifecycle 命令使用 `detect_release_platform()` 检测平台
+- **格式化工具**：Lifecycle 命令使用 `format-_size()` 格式化文件大小
+- **平台检测**：Lifecycle 命令使用 `detect-_release-_platform()` 检测平台
 - **表格输出**：PR 命令使用 `TableBuilder` 显示 PR 列表
 
 ---
@@ -83,7 +83,7 @@ src/lib/base/util/
 - 日志级别枚举（None, Error, Warn, Info, Debug）
 - 带颜色的日志输出（成功、错误、警告、信息、调试）
 - 日志级别管理（环境变量、运行时设置）
-- 日志宏（`log_success!`, `log_error!`, `log_warning!`, `log_info!`, `log_debug!`, `log_message!`, `log_break!`）
+- 日志宏（`log-_success!`, `log-_error!`, `log-_warning!`, `log-_info!`, `log-_debug!`, `log-_message!`, `log-_break!`）
 
 ### 核心组件
 
@@ -120,87 +120,87 @@ pub enum LogLevel {
 
 提供打印方法（受日志级别控制）：
 
-- `Logger::print_success(message)` - 总是输出（不受日志级别限制）
-- `Logger::print_error(message)` - 仅在 `>= Error` 时输出
-- `Logger::print_warning(message)` - 仅在 `>= Warn` 时输出
-- `Logger::print_info(message)` - 仅在 `>= Info` 时输出
-- `Logger::print_debug(message)` - 仅在 `>= Debug` 时输出
-- `Logger::print_message(message)` - 总是输出（不受日志级别限制）
-- `Logger::print_separator(char, length)` - 打印分隔线
-- `Logger::print_separator_with_text(char, length, text)` - 打印带文本的分隔线
+- `Logger::print-_success(message)` - 总是输出（不受日志级别限制）
+- `Logger::print-_error(message)` - 仅在 `>= Error` 时输出
+- `Logger::print-_warning(message)` - 仅在 `>= Warn` 时输出
+- `Logger::print-_info(message)` - 仅在 `>= Info` 时输出
+- `Logger::print-_debug(message)` - 仅在 `>= Debug` 时输出
+- `Logger::print-_message(message)` - 总是输出（不受日志级别限制）
+- `Logger::print-_separator(char, length)` - 打印分隔线
+- `Logger::print-_separator-_with-_text(char, length, text)` - 打印带文本的分隔线
 
 ### 日志宏
 
-#### log_success!
+#### log-_success!
 
 ```rust
-log_success!("Operation completed");
-log_success!("Found {} items", count);
+log-_success!("Operation completed");
+log-_success!("Found {} items", count);
 ```
 
 - 总是输出，不受日志级别限制
 - 用于显示命令执行成功的结果
 
-#### log_error!
+#### log-_error!
 
 ```rust
-log_error!("Operation failed");
-log_error!("Error: {} - {}", code, message);
+log-_error!("Operation failed");
+log-_error!("Error: {} - {}", code, message);
 ```
 
 - 仅在日志级别 `>= Error` 时输出
 - 用于显示错误信息
 
-#### log_warning!
+#### log-_warning!
 
 ```rust
-log_warning!("This is a warning");
-log_warning!("Warning: {} items missing", count);
+log-_warning!("This is a warning");
+log-_warning!("Warning: {} items missing", count);
 ```
 
 - 仅在日志级别 `>= Warn` 时输出
 - 用于显示警告信息
 
-#### log_info!
+#### log-_info!
 
 ```rust
-log_info!("Processing data");
-log_info!("Processing {} items", count);
+log-_info!("Processing data");
+log-_info!("Processing {} items", count);
 ```
 
 - 仅在日志级别 `>= Info` 时输出
 - 用于显示一般信息
 
-#### log_debug!
+#### log-_debug!
 
 ```rust
-log_debug!("Debug information");
-log_debug!("Debug: {} = {}", key, value);
+log-_debug!("Debug information");
+log-_debug!("Debug: {} = {}", key, value);
 ```
 
 - 仅在日志级别 `>= Debug` 时输出
 - 在 Debug 模式下自动启用，在 Release 模式下不输出
 - 用于开发调试
 
-#### log_message!
+#### log-_message!
 
 ```rust
-log_message!("Running environment checks...");
-log_message!("[1/2] Checking Git repository status...");
+log-_message!("Running environment checks...");
+log-_message!("[1/2] Checking Git repository status...");
 ```
 
 - 总是输出，不受日志级别限制
 - 用于输出 setup/check 等命令的说明信息
 - 这些信息是指令性的，用户需要看到
 
-#### log_break!
+#### log-_break!
 
 ```rust
-log_break!();                    // 输出换行符
-log_break!('-');                 // 使用默认分隔符（80个 '-'）
-log_break!('=');                 // 指定分隔符字符
-log_break!('=', 100);            // 指定分隔符字符和长度
-log_break!('=', 20, "text");     // 在分隔线中间插入文本
+log-_break!();                    // 输出换行符
+log-_break!('-');                 // 使用默认分隔符（80个 '-'）
+log-_break!('=');                 // 指定分隔符字符
+log-_break!('=', 100);            // 指定分隔符字符和长度
+log-_break!('=', 20, "text");     // 在分隔线中间插入文本
 ```
 
 - 用于输出分隔线或换行
@@ -226,8 +226,8 @@ LogLevel::init(Some(LogLevel::Debug));
 #### 运行时设置日志级别
 
 ```rust
-LogLevel::set_level(LogLevel::Debug);
-let current_level = LogLevel::get_level();
+LogLevel::set-_level(LogLevel::Debug);
+let current-_level = LogLevel::get-_level();
 ```
 
 ### 设计决策
@@ -240,9 +240,9 @@ let current_level = LogLevel::get_level();
 ### 使用场景
 
 - **CLI 命令输出**：所有命令使用日志宏输出执行结果
-- **错误处理**：使用 `log_error!` 显示错误信息
-- **进度提示**：使用 `log_info!` 显示处理进度
-- **调试开发**：使用 `log_debug!` 输出调试信息（仅在 Debug 模式）
+- **错误处理**：使用 `log-_error!` 显示错误信息
+- **进度提示**：使用 `log-_info!` 显示处理进度
+- **调试开发**：使用 `log-_debug!` 输出调试信息（仅在 Debug 模式）
 
 #### 2. 字符串处理工具 (`string.rs`)
 
@@ -252,10 +252,10 @@ let current_level = LogLevel::get_level();
 
 ### 核心函数
 
-#### mask_sensitive_value
+#### mask-_sensitive-_value
 
 ```rust
-pub fn mask_sensitive_value(value: &str) -> String
+pub fn mask-_sensitive-_value(value: &str) -> String
 ```
 
 **功能**：隐藏敏感值（用于显示）
@@ -267,10 +267,10 @@ pub fn mask_sensitive_value(value: &str) -> String
 **示例**：
 
 ```rust
-use workflow::mask_sensitive_value;
+use workflow::mask-_sensitive-_value;
 
-assert_eq!(mask_sensitive_value("short"), "***");
-assert_eq!(mask_sensitive_value("verylongapikey123456"), "very***3456");
+assert-_eq!(mask-_sensitive-_value("short"), "***");
+assert-_eq!(mask-_sensitive-_value("verylongapikey123456"), "very***3456");
 ```
 
 ### 使用场景
@@ -379,17 +379,17 @@ pub fn copy(text: &str) -> Result<()>
 pub struct Unzip;
 ```
 
-#### Unzip::extract_tar_gz
+#### Unzip::extract-_tar-_gz
 
 ```rust
-pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()>
+pub fn extract-_tar-_gz(tar-_gz-_path: &Path, output-_dir: &Path) -> Result<()>
 ```
 
 **功能**：解压 tar.gz 文件到指定目录
 
 **参数**：
-- `tar_gz_path` - tar.gz 文件路径
-- `output_dir` - 解压目标目录
+- `tar-_gz-_path` - tar.gz 文件路径
+- `output-_dir` - 解压目标目录
 
 **错误**：如果解压失败，返回相应的错误信息
 
@@ -403,7 +403,7 @@ pub fn extract_tar_gz(tar_gz_path: &Path, output_dir: &Path) -> Result<()>
 use workflow::Unzip;
 use std::path::Path;
 
-Unzip::extract_tar_gz(
+Unzip::extract-_tar-_gz(
     Path::new("archive.tar.gz"),
     Path::new("./output")
 )?;
@@ -433,16 +433,16 @@ Unzip::extract_tar_gz(
 pub struct Checksum;
 ```
 
-#### Checksum::calculate_file_sha256
+#### Checksum::calculate-_file-_sha256
 
 ```rust
-pub fn calculate_file_sha256(file_path: &Path) -> Result<String>
+pub fn calculate-_file-_sha256(file-_path: &Path) -> Result<String>
 ```
 
 **功能**：计算文件的 SHA256 哈希值
 
 **参数**：
-- `file_path` - 要计算哈希值的文件路径
+- `file-_path` - 要计算哈希值的文件路径
 
 **返回**：返回文件的 SHA256 哈希值（十六进制字符串）
 
@@ -450,10 +450,10 @@ pub fn calculate_file_sha256(file_path: &Path) -> Result<String>
 - 使用 `sha2` crate 进行 SHA256 计算
 - 使用 8KB 缓冲区逐块读取文件，避免内存占用过大
 
-#### Checksum::parse_hash_from_content
+#### Checksum::parse-_hash-_from-_content
 
 ```rust
-pub fn parse_hash_from_content(content: &str) -> Result<String>
+pub fn parse-_hash-_from-_content(content: &str) -> Result<String>
 ```
 
 **功能**：从校验和文件内容中提取哈希值
@@ -473,21 +473,21 @@ pub fn parse_hash_from_content(content: &str) -> Result<String>
 use workflow::Checksum;
 
 let content = "abc123def456  file.tar.gz";
-let hash = Checksum::parse_hash_from_content(content)?;
-assert_eq!(hash, "abc123def456");
+let hash = Checksum::parse-_hash-_from-_content(content)?;
+assert-_eq!(hash, "abc123def456");
 ```
 
 #### Checksum::verify
 
 ```rust
-pub fn verify(file_path: &Path, expected_hash: &str) -> Result<()>
+pub fn verify(file-_path: &Path, expected-_hash: &str) -> Result<()>
 ```
 
 **功能**：验证文件完整性（通过比较哈希值）
 
 **参数**：
-- `file_path` - 要验证的文件路径
-- `expected_hash` - 期望的 SHA256 哈希值
+- `file-_path` - 要验证的文件路径
+- `expected-_hash` - 期望的 SHA256 哈希值
 
 **返回**：如果哈希值匹配，返回 `Ok(())`；否则返回错误
 
@@ -496,16 +496,16 @@ pub fn verify(file_path: &Path, expected_hash: &str) -> Result<()>
 - 与期望哈希值进行比较
 - 输出验证结果日志
 
-#### Checksum::build_url
+#### Checksum::build-_url
 
 ```rust
-pub fn build_url(url: &str) -> String
+pub fn build-_url(url: &str) -> String
 ```
 
 **功能**：从下载 URL 构建校验和 URL
 
 **参数**：
-- `download_url` - 下载文件的 URL
+- `download-_url` - 下载文件的 URL
 
 **返回**：返回校验和文件的 URL
 
@@ -517,7 +517,7 @@ pub fn build_url(url: &str) -> String
 use workflow::Checksum;
 
 let url = "https://example.com/file.tar.gz";
-assert_eq!(Checksum::build_url(url), "https://example.com/file.tar.gz.sha256");
+assert-_eq!(Checksum::build-_url(url), "https://example.com/file.tar.gz.sha256");
 ```
 
 ### 使用场景
@@ -545,14 +545,14 @@ pub fn confirm(prompt: &str, default: bool, message: Option<&str>) -> Result<boo
 **参数**：
 - `prompt` - 提示信息
 - `default` - 默认选择（true 表示默认确认，false 表示默认取消）
-- `cancel_message` - 取消时的错误消息（可选）
+- `cancel-_message` - 取消时的错误消息（可选）
   - 如果为 `Some(msg)`，取消时返回错误
   - 如果为 `None`，取消时返回 `Ok(false)`
 
 **返回**：
 - 用户确认：返回 `Ok(true)`
-- 用户取消且 `cancel_message` 为 `Some`：返回错误
-- 用户取消且 `cancel_message` 为 `None`：返回 `Ok(false)`
+- 用户取消且 `cancel-_message` 为 `Some`：返回错误
+- 用户取消且 `cancel-_message` 为 `None`：返回 `Ok(false)`
 
 **实现**：使用 `dialoguer` crate 提供交互式确认对话框
 
@@ -598,10 +598,10 @@ confirm(
 
 ### 核心函数
 
-#### format_size
+#### format-_size
 
 ```rust
-pub fn format_size(bytes: u64) -> String
+pub fn format-_size(bytes: u64) -> String
 ```
 
 **功能**：格式化文件大小
@@ -618,11 +618,11 @@ pub fn format_size(bytes: u64) -> String
 
 **示例**：
 ```rust
-use workflow::base::util::format_size;
+use workflow::base::util::format-_size;
 
-assert_eq!(format_size(0), "0 B");
-assert_eq!(format_size(1024), "1.00 KB");
-assert_eq!(format_size(1048576), "1.00 MB");
+assert-_eq!(format-_size(0), "0 B");
+assert-_eq!(format-_size(1024), "1.00 KB");
+assert-_eq!(format-_size(1048576), "1.00 MB");
 ```
 
 ### 使用场景
@@ -638,10 +638,10 @@ assert_eq!(format_size(1048576), "1.00 MB");
 
 ### 核心函数
 
-#### detect_release_platform
+#### detect-_release-_platform
 
 ```rust
-pub fn detect_release_platform() -> Result<String>
+pub fn detect-_release-_platform() -> Result<String>
 ```
 
 **功能**：检测当前平台并返回 GitHub Releases 格式的平台标识符
@@ -660,11 +660,11 @@ pub fn detect_release_platform() -> Result<String>
 
 **示例**：
 ```rust
-use workflow::base::util::detect_release_platform;
-use workflow::log_message;
+use workflow::base::util::detect-_release-_platform;
+use workflow::log-_message;
 
-let platform = detect_release_platform()?;
-log_message!("Detected platform: {}", platform);
+let platform = detect-_release-_platform()?;
+log-_message!("Detected platform: {}", platform);
 ```
 
 ### 使用场景
@@ -687,17 +687,17 @@ pub struct TableBuilder<T> {
     data: Vec<T>,
     title: Option<String>,
     style: Option<TableStyle>,
-    max_width: Option<usize>,
+    max-_width: Option<usize>,
     alignments: Vec<Alignment>,
 }
 ```
 
 **主要方法**：
 - `new(data)` - 创建新的表格构建器
-- `with_title(title)` - 设置表格标题
-- `with_style(style)` - 设置表格样式
-- `with_max_width(width)` - 设置最大宽度（自动换行）
-- `with_alignment(alignments)` - 设置列对齐方式
+- `with-_title(title)` - 设置表格标题
+- `with-_style(style)` - 设置表格样式
+- `with-_max-_width(width)` - 设置最大宽度（自动换行）
+- `with-_alignment(alignments)` - 设置列对齐方式
 - `render()` - 构建并渲染表格为字符串
 
 **特性**：
@@ -737,7 +737,7 @@ pub enum TableStyle {
 
 ```rust
 // 日志系统
-Logger::print_info("message");
+Logger::print-_info("message");
 
 // 浏览器操作
 Browser::open("https://example.com");
@@ -746,7 +746,7 @@ Browser::open("https://example.com");
 Clipboard::copy("text");
 
 // 文件操作
-Unzip::extract_tar_gz(path, dir)?;
+Unzip::extract-_tar-_gz(path, dir)?;
 Checksum::verify(file, hash)?;
 ```
 
@@ -760,7 +760,7 @@ Checksum::verify(file, hash)?;
 使用 Rust 宏系统提供便捷的日志输出接口：
 
 ```rust
-log_info!("Processing {} items", count);
+log-_info!("Processing {} items", count);
 ```
 
 **优势**：
@@ -775,7 +775,7 @@ log_info!("Processing {} items", count);
 ```rust
 Browser::open(url)?;
 Clipboard::copy(text)?;
-Unzip::extract_tar_gz(path, dir)?;
+Unzip::extract-_tar-_gz(path, dir)?;
 Checksum::verify(file, hash)?;
 ```
 
@@ -806,9 +806,9 @@ Checksum::verify(file, hash)?;
 #### 日志输出流程
 
 ```
-log_info!("message")
+log-_info!("message")
   ↓
-Logger::print_info()
+Logger::print-_info()
   ↓
 检查日志级别
   ↓
@@ -820,7 +820,7 @@ Logger::print_info()
 #### 文件操作流程
 
 ```
-Unzip::extract_tar_gz(path, dir)
+Unzip::extract-_tar-_gz(path, dir)
   ↓
 读取文件
   ↓
@@ -866,19 +866,19 @@ util (基础设施)
 
 1. 在 `LogLevel` 枚举中添加新级别
 2. 在 `FromStr` 实现中添加字符串解析
-3. 在 `as_str` 方法中添加字符串转换
+3. 在 `as-_str` 方法中添加字符串转换
 4. 添加对应的日志宏（如果需要）
 
 ### 添加新的工具函数
 
-1. 创建新的模块文件（如 `new_tool.rs`）
+1. 创建新的模块文件（如 `new-_tool.rs`）
 2. 在 `mod.rs` 中声明模块并重新导出
 3. 在 `src/lib.rs` 中添加到全局导出（如果需要）
 
 ### 添加新的日志宏
 
 1. 在 `logger.rs` 中添加宏定义
-2. 使用 `#[macro_export]` 导出宏
+2. 使用 `#[macro-_export]` 导出宏
 3. 在 `src/lib.rs` 中重新导出（如果需要）
 
 ---
@@ -898,35 +898,35 @@ util (基础设施)
 ### 日志输出
 
 ```rust
-use workflow::{log_success, log_error, log_warning, log_info, log_debug};
+use workflow::{log-_success, log-_error, log-_warning, log-_info, log-_debug};
 
 // 成功消息
-log_success!("Operation completed successfully");
+log-_success!("Operation completed successfully");
 
 // 错误消息
-log_error!("Failed to process request");
+log-_error!("Failed to process request");
 
 // 警告消息
-log_warning!("This operation is deprecated");
+log-_warning!("This operation is deprecated");
 
 // 信息消息
-log_info!("Processing {} items", count);
+log-_info!("Processing {} items", count);
 
 // 调试消息
-log_debug!("Debug info: {:?}", data);
+log-_debug!("Debug info: {:?}", data);
 
 // 分隔线
-log_break!();
+log-_break!();
 ```
 
 ### 字符串处理
 
 ```rust
-use workflow::mask_sensitive_value;
-use workflow::log_message;
+use workflow::mask-_sensitive-_value;
+use workflow::log-_message;
 
-let api_key = "verylongapikey123456";
-log_message!("API Key: {}", mask_sensitive_value(api_key));
+let api-_key = "verylongapikey123456";
+log-_message!("API Key: {}", mask-_sensitive-_value(api-_key));
 // 输出：API Key: very***3456
 ```
 
@@ -944,7 +944,7 @@ Browser::open("https://github.com")?;
 use workflow::Clipboard;
 
 Clipboard::copy("Hello, World!")?;
-log_success!("Copied to clipboard");
+log-_success!("Copied to clipboard");
 ```
 
 ### 文件操作
@@ -953,10 +953,10 @@ log_success!("Copied to clipboard");
 use workflow::{Unzip, Checksum};
 
 // 解压文件
-Unzip::extract_tar_gz("archive.tar.gz", "output_dir")?;
+Unzip::extract-_tar-_gz("archive.tar.gz", "output-_dir")?;
 
 // 验证校验和
-Checksum::verify("file.bin", "expected_sha256_hash")?;
+Checksum::verify("file.bin", "expected-_sha256_hash")?;
 ```
 
 ### 用户确认
@@ -965,30 +965,30 @@ Checksum::verify("file.bin", "expected_sha256_hash")?;
 use workflow::confirm;
 
 if confirm("Do you want to continue?")? {
-    log_info!("User confirmed");
+    log-_info!("User confirmed");
 } else {
-    log_info!("User cancelled");
+    log-_info!("User cancelled");
 }
 ```
 
 ### 格式化工具
 
 ```rust
-use workflow::base::util::format_size;
-use workflow::log_message;
+use workflow::base::util::format-_size;
+use workflow::log-_message;
 
-let size = format_size(1048576);
-log_message!("File size: {}", size);  // 输出：File size: 1.00 MB
+let size = format-_size(1048576);
+log-_message!("File size: {}", size);  // 输出：File size: 1.00 MB
 ```
 
 ### 平台检测
 
 ```rust
-use workflow::base::util::detect_release_platform;
-use workflow::log_message;
+use workflow::base::util::detect-_release-_platform;
+use workflow::log-_message;
 
-let platform = detect_release_platform()?;
-log_message!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
+let platform = detect-_release-_platform()?;
+log-_message!("Platform: {}", platform);  // 输出：Platform: macOS-AppleSilicon
 ```
 
 ### 表格输出
@@ -1004,15 +1004,15 @@ struct User {
 }
 
 let users = vec![
-    User { name: "Alice".to_string(), age: 30 },
-    User { name: "Bob".to_string(), age: 25 },
+    User { name: "Alice".to-_string(), age: 30 },
+    User { name: "Bob".to-_string(), age: 25 },
 ];
 
 let output = TableBuilder::new(users)
-    .with_title("Users")
-    .with_style(TableStyle::Modern)
+    .with-_title("Users")
+    .with-_style(TableStyle::Modern)
     .render();
-log_message!("{}", output);
+log-_message!("{}", output);
 ```
 
 ---

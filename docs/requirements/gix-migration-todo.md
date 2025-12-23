@@ -17,35 +17,35 @@
 
 #### 1. 仓库操作模块 (`src/lib/git/repo.rs`)
 - [ ] **优先级：高** - 基础仓库检测和操作
-- [ ] 迁移 `GitRepo::is_git_repo()` - 使用 `gix::Repository::discover()`
-- [ ] 迁移 `GitRepo::get_remote_url()` - 使用 `repo.find_remote("origin")?.url()`
+- [ ] 迁移 `GitRepo::is-_git-_repo()` - 使用 `gix::Repository::discover()`
+- [ ] 迁移 `GitRepo::get-_remote-_url()` - 使用 `repo.find-_remote("origin")?.url()`
 - [ ] 迁移 `GitRepo::fetch()` - 使用 `remote.fetch()`
-- [ ] 迁移 `GitRepo::prune_remote()` - 使用 gix 远程操作
-- [ ] 迁移 `GitRepo::extract_repo_name()` - 保持逻辑，改用 gix 获取 URL
+- [ ] 迁移 `GitRepo::prune-_remote()` - 使用 gix 远程操作
+- [ ] 迁移 `GitRepo::extract-_repo-_name()` - 保持逻辑，改用 gix 获取 URL
 - [ ] 更新相关测试用例
 
 #### 2. 提交管理模块 (`src/lib/git/commit.rs`)
 - [ ] **优先级：高** - 核心提交功能
 - [ ] 迁移 `GitCommit::status()` - 使用 `repo.statuses()`
-- [ ] 迁移 `GitCommit::has_changes()` - 使用 gix 状态检查
-- [ ] 迁移 `GitCommit::has_staged()` - 使用 gix index 状态
-- [ ] 迁移 `GitCommit::add_all()` - 使用 `index.add_all()`
+- [ ] 迁移 `GitCommit::has-_changes()` - 使用 gix 状态检查
+- [ ] 迁移 `GitCommit::has-_staged()` - 使用 gix index 状态
+- [ ] 迁移 `GitCommit::add-_all()` - 使用 `index.add-_all()`
 - [ ] 迁移 `GitCommit::commit()` - 使用 `repo.commit()`
-- [ ] 迁移 `GitCommit::get_last_commit_info()` - 使用 `repo.head_commit()`
+- [ ] 迁移 `GitCommit::get-_last-_commit-_info()` - 使用 `repo.head-_commit()`
 - [ ] 迁移 `GitCommit::amend()` - 使用 gix commit 修改
-- [ ] 保留 `GitCommit::reset_hard()` 的复杂 rebase 部分
+- [ ] 保留 `GitCommit::reset-_hard()` 的复杂 rebase 部分
 - [ ] 更新相关测试用例
 
 #### 3. 分支管理模块 (`src/lib/git/branch.rs`)
 - [ ] **优先级：高** - 分支操作核心功能
-- [ ] 迁移 `GitBranch::get_current_branch()` - 使用 `repo.head()?.shorthand()`
-- [ ] 迁移 `GitBranch::branch_exists()` - 使用 gix 分支检查
-- [ ] 迁移 `GitBranch::create_and_switch()` - 使用 `repo.branch()` + checkout
-- [ ] 迁移 `GitBranch::switch_to_branch()` - 使用 gix checkout
-- [ ] 迁移 `GitBranch::get_default_branch()` - 使用 gix 远程信息
-- [ ] 迁移 `GitBranch::pull_latest()` - 使用 `remote.fetch()` + merge
-- [ ] 迁移 `GitBranch::force_push()` - 使用 gix push 操作
-- [ ] 迁移 `GitBranch::delete_remote_branch()` - 使用 gix 远程删除
+- [ ] 迁移 `GitBranch::get-_current-_branch()` - 使用 `repo.head()?.shorthand()`
+- [ ] 迁移 `GitBranch::branch-_exists()` - 使用 gix 分支检查
+- [ ] 迁移 `GitBranch::create-_and-_switch()` - 使用 `repo.branch()` + checkout
+- [ ] 迁移 `GitBranch::switch-_to-_branch()` - 使用 gix checkout
+- [ ] 迁移 `GitBranch::get-_default-_branch()` - 使用 gix 远程信息
+- [ ] 迁移 `GitBranch::pull-_latest()` - 使用 `remote.fetch()` + merge
+- [ ] 迁移 `GitBranch::force-_push()` - 使用 gix push 操作
+- [ ] 迁移 `GitBranch::delete-_remote-_branch()` - 使用 gix 远程删除
 - [ ] 迁移 `GitBranch::merge()` - 使用 gix merge 操作
 - [ ] 更新相关测试用例
 
@@ -53,35 +53,35 @@
 - [ ] **优先级：中** - Stash 操作
 - [ ] 迁移 `GitStash::push()` - 使用 gix stash 功能
 - [ ] 迁移 `GitStash::pop()` - 使用 gix stash apply + drop
-- [ ] 迁移 `GitStash::has_conflicts()` - 使用 gix 冲突检测
+- [ ] 迁移 `GitStash::has-_conflicts()` - 使用 gix 冲突检测
 - [ ] 迁移 `GitStash::list()` - 使用 gix stash 列表
 - [ ] 更新相关测试用例
 
 #### 5. Tag 管理模块 (`src/lib/git/tag.rs`)
 - [ ] **优先级：中** - Tag 操作
-- [ ] 迁移 `GitTag::list_tags()` - 使用 `repo.tag_names()`
-- [ ] 迁移 `GitTag::delete_local_tag()` - 使用 gix tag 删除
-- [ ] 迁移 `GitTag::delete_remote_tag()` - 使用 gix 远程 tag 删除
-- [ ] 迁移 `GitTag::create_tag()` - 使用 gix tag 创建
+- [ ] 迁移 `GitTag::list-_tags()` - 使用 `repo.tag-_names()`
+- [ ] 迁移 `GitTag::delete-_local-_tag()` - 使用 gix tag 删除
+- [ ] 迁移 `GitTag::delete-_remote-_tag()` - 使用 gix 远程 tag 删除
+- [ ] 迁移 `GitTag::create-_tag()` - 使用 gix tag 创建
 - [ ] 更新相关测试用例
 
 #### 6. 配置管理模块 (`src/lib/git/config.rs`)
 - [ ] **优先级：低** - 配置操作
-- [ ] 迁移 `GitConfig::set_global_email()` - 使用 gix config
-- [ ] 迁移 `GitConfig::set_global_name()` - 使用 gix config
-- [ ] 迁移 `GitConfig::get_global_config()` - 使用 gix config 读取
+- [ ] 迁移 `GitConfig::set-_global-_email()` - 使用 gix config
+- [ ] 迁移 `GitConfig::set-_global-_name()` - 使用 gix config
+- [ ] 迁移 `GitConfig::get-_global-_config()` - 使用 gix config 读取
 - [ ] 更新相关测试用例
 
 ### ⚠️ 第二阶段：高级功能迁移（需要额外开发）
 
-#### 7. Cherry-pick 操作模块 (`src/lib/git/cherry_pick.rs`)
+#### 7. Cherry-pick 操作模块 (`src/lib/git/cherry-_pick.rs`)
 - [ ] **优先级：中** - 需要手动实现 cherry-pick 逻辑
 - [ ] 研究 gix 的三向合并 API
 - [ ] 实现 `GitCherryPick::apply()` - 手动实现 cherry-pick 逻辑
-- [ ] 实现 `GitCherryPick::apply_no_commit()` - 应用但不提交
-- [ ] 实现 `GitCherryPick::continue_cherry_pick()` - 继续操作
+- [ ] 实现 `GitCherryPick::apply-_no-_commit()` - 应用但不提交
+- [ ] 实现 `GitCherryPick::continue-_cherry-_pick()` - 继续操作
 - [ ] 实现 `GitCherryPick::abort()` - 中止操作
-- [ ] 实现 `GitCherryPick::is_in_progress()` - 状态检查
+- [ ] 实现 `GitCherryPick::is-_in-_progress()` - 状态检查
 - [ ] 更新相关测试用例
 
 ### ❌ 第三阶段：保留混合模式
@@ -94,7 +94,7 @@
 
 #### 9. Pre-commit 工具集成
 - [ ] **决策：保留外部调用** - pre-commit 是独立 Python 工具
-- [ ] 保留 `src/lib/git/pre_commit.rs` 中的 `pre-commit` 工具调用
+- [ ] 保留 `src/lib/git/pre-_commit.rs` 中的 `pre-commit` 工具调用
 - [ ] 可选：迁移 Git 原生 hooks 执行到 gix
 
 ## 技术实施计划

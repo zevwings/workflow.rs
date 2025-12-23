@@ -29,10 +29,10 @@
 - PR 同步（merge/rebase）
 
 **GitLab API 端点**：
-- `/projects/{id}/merge_requests` - 创建/列出 MR
-- `/projects/{id}/merge_requests/{iid}` - 获取/更新 MR
-- `/projects/{id}/merge_requests/{iid}/merge` - 合并 MR
-- `/projects/{id}/merge_requests/{iid}/approvals` - 批准 MR
+- `/projects/{id}/merge-_requests` - 创建/列出 MR
+- `/projects/{id}/merge-_requests/{iid}` - 获取/更新 MR
+- `/projects/{id}/merge-_requests/{iid}/merge` - 合并 MR
+- `/projects/{id}/merge-_requests/{iid}/approvals` - 批准 MR
 
 #### 1.2 Bitbucket 支持
 - ❌ Bitbucket PR 支持
@@ -52,9 +52,9 @@
 - PR 同步（merge/rebase）
 
 **Bitbucket API 端点**：
-- `/2.0/repositories/{workspace}/{repo_slug}/pullrequests` - 创建/列出 PR
-- `/2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}` - 获取/更新 PR
-- `/2.0/repositories/{workspace}/{repo_slug}/pullrequests/{id}/merge` - 合并 PR
+- `/2.0/repositories/{workspace}/{repo-_slug}/pullrequests` - 创建/列出 PR
+- `/2.0/repositories/{workspace}/{repo-_slug}/pullrequests/{id}` - 获取/更新 PR
+- `/2.0/repositories/{workspace}/{repo-_slug}/pullrequests/{id}/merge` - 合并 PR
 
 #### 1.3 Azure DevOps 支持
 - ❌ Azure DevOps PR 支持
@@ -97,9 +97,9 @@
 - PR 同步（merge/rebase）
 
 **Codeup API 端点**：
-- `/api/v3/projects/{project_id}/code_reviews` - 创建/列出 PR
-- `/api/v3/projects/{project_id}/code_reviews/{review_id}` - 获取/更新 PR
-- `/api/v3/projects/{project_id}/code_reviews/{review_id}/merge` - 合并 PR
+- `/api/v3/projects/{project-_id}/code-_reviews` - 创建/列出 PR
+- `/api/v3/projects/{project-_id}/code-_reviews/{review-_id}` - 获取/更新 PR
+- `/api/v3/projects/{project-_id}/code-_reviews/{review-_id}/merge` - 合并 PR
 
 **配置要求**：
 - `CODEUP_PROJECT_ID` - Codeup 项目 ID
@@ -134,10 +134,10 @@
 enabled = true
 
 [notifications.rules]
-pr_merged = true
-pr_commented = true
-jira_status_changed = true
-jira_assigned = true
+pr-_merged = true
+pr-_commented = true
+jira-_status-_changed = true
+jira-_assigned = true
 ```
 
 **命令示例**：
@@ -166,10 +166,10 @@ workflow notify test                                 # 测试通知
 ```toml
 [notifications.email]
 enabled = true
-smtp_server = "smtp.example.com"
-smtp_port = 587
-smtp_username = "user@example.com"
-smtp_password = "password"
+smtp-_server = "smtp.example.com"
+smtp-_port = 587
+smtp-_username = "user@example.com"
+smtp-_password = "password"
 from = "workflow@example.com"
 to = ["user@example.com"]
 ```
@@ -204,8 +204,8 @@ workflow notify email test                          # 测试邮件通知
 enabled = true
 
 [notifications.webhooks.outgoing]
-pr_merged = "https://example.com/webhook/pr-merged"
-jira_status_changed = "https://example.com/webhook/jira-status"
+pr-_merged = "https://example.com/webhook/pr-merged"
+jira-_status-_changed = "https://example.com/webhook/jira-status"
 
 [notifications.webhooks.incoming]
 enabled = true
@@ -215,7 +215,7 @@ path = "/webhook"
 
 **命令示例**：
 ```bash
-workflow webhook send --event pr_merged --url https://example.com/webhook
+workflow webhook send --event pr-_merged --url https://example.com/webhook
 workflow webhook server start                        # 启动 webhook 服务器
 ```
 
@@ -275,12 +275,12 @@ workflow webhook server start                        # 启动 webhook 服务器
 ```rust
 pub struct GitLabProvider {
     client: reqwest::Client,
-    base_url: String,
+    base-_url: String,
     token: String,
 }
 
 impl PlatformProvider for GitLabProvider {
-    async fn create_pr(&self, params: CreatePrParams) -> Result<PullRequest> {
+    async fn create-_pr(&self, params: CreatePrParams) -> Result<PullRequest> {
         // 实现 GitLab PR 创建
     }
 
@@ -290,17 +290,17 @@ impl PlatformProvider for GitLabProvider {
 
 #### 通知系统实现
 ```rust
-use notify_rust::Notification;
+use notify-_rust::Notification;
 
 pub struct NotificationManager {
-    desktop_enabled: bool,
-    email_enabled: bool,
-    webhook_enabled: bool,
+    desktop-_enabled: bool,
+    email-_enabled: bool,
+    webhook-_enabled: bool,
 }
 
 impl NotificationManager {
-    pub async fn notify_pr_merged(&self, pr: &PullRequest) -> Result<()> {
-        if self.desktop_enabled {
+    pub async fn notify-_pr-_merged(&self, pr: &PullRequest) -> Result<()> {
+        if self.desktop-_enabled {
             Notification::new()
                 .summary("PR Merged")
                 .body(&format!("PR #{} has been merged", pr.number))

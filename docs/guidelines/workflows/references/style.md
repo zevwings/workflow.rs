@@ -80,7 +80,7 @@ make test
 # 代码示例
 ```rust
 // Rust 代码示例
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 ```
 ```
 

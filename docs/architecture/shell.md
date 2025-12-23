@@ -31,8 +31,8 @@ src/lib/base/shell/
 
 ### 依赖模块
 
-- **`lib/base/settings/paths.rs`**：路径管理（`Paths::config_file()`）
-- **`clap_complete::Shell`**：Shell 类型枚举
+- **`lib/base/settings/paths.rs`**：路径管理（`Paths::config-_file()`）
+- **`clap-_complete::Shell`**：Shell 类型枚举
 - **`duct`**：子进程执行（用于配置重载）
 
 ### 模块集成
@@ -47,17 +47,17 @@ src/lib/base/shell/
 **关键调用**：
 ```rust
 // 添加 source 语句（指定 shell 类型）
-ShellConfigManager::add_source_for_shell(
+ShellConfigManager::add-_source-_for-_shell(
     shell,
     "$HOME/.workflow/.completions",
     Some("Workflow CLI completions"),
 )?;
 
 // 移除 source 语句
-ShellConfigManager::remove_source_for_shell(shell, source_pattern)?;
+ShellConfigManager::remove-_source-_for-_shell(shell, source-_pattern)?;
 
 // 检查 source 语句是否存在
-ShellConfigManager::has_source_for_shell(shell, source_pattern)?;
+ShellConfigManager::has-_source-_for-_shell(shell, source-_pattern)?;
 ```
 
 **位置**：`src/lib/completion/completion.rs`
@@ -72,13 +72,13 @@ ShellConfigManager::has_source_for_shell(shell, source_pattern)?;
 **关键调用**：
 ```rust
 // 保存环境变量到配置块
-ShellConfigManager::set_env_vars(&env_vars)?;
+ShellConfigManager::set-_env-_vars(&env-_vars)?;
 
 // 从配置块加载环境变量
-let env_vars = ShellConfigManager::load_env_vars()?;
+let env-_vars = ShellConfigManager::load-_env-_vars()?;
 
 // 移除环境变量
-ShellConfigManager::remove_env_vars(&["http_proxy", "https_proxy", "all_proxy"])?;
+ShellConfigManager::remove-_env-_vars(&["http-_proxy", "https-_proxy", "all-_proxy"])?;
 ```
 
 **位置**：`src/lib/proxy/manager.rs`
@@ -122,7 +122,7 @@ Reload::shell(&shell)?;
 
 **关键方法**：
 - `shell()` - 检测当前 shell 类型
-- `installed_shells()` - 检测已安装的 shell 列表
+- `installed-_shells()` - 检测已安装的 shell 列表
 
 #### 2. Reload（结构体）
 
@@ -150,19 +150,19 @@ Reload::shell(&shell)?;
 
 **关键方法**：
 - **环境变量管理**：
-  - `load_env_vars()` - 从配置块加载环境变量
-  - `save_env_vars(env_vars)` - 保存环境变量到配置块
-  - `set_env_vars(env_vars)` - 批量设置环境变量
-  - `remove_env_vars(keys)` - 从文件中移除指定的 export 语句
+  - `load-_env-_vars()` - 从配置块加载环境变量
+  - `save-_env-_vars(env-_vars)` - 保存环境变量到配置块
+  - `set-_env-_vars(env-_vars)` - 批量设置环境变量
+  - `remove-_env-_vars(keys)` - 从文件中移除指定的 export 语句
 - **Source 语句管理**：
-  - `add_source(source_path, comment)` - 添加 source 语句（自动检测 shell）
-  - `add_source_for_shell(shell, source_path, comment)` - 添加 source 语句（指定 shell）
-  - `remove_source(source_path)` - 移除 source 语句（自动检测 shell）
-  - `remove_source_for_shell(shell, source_path)` - 移除 source 语句（指定 shell）
-  - `has_source(source_path)` - 检查 source 语句是否存在（自动检测 shell）
-  - `has_source_for_shell(shell, source_path)` - 检查 source 语句是否存在（指定 shell）
+  - `add-_source(source-_path, comment)` - 添加 source 语句（自动检测 shell）
+  - `add-_source-_for-_shell(shell, source-_path, comment)` - 添加 source 语句（指定 shell）
+  - `remove-_source(source-_path)` - 移除 source 语句（自动检测 shell）
+  - `remove-_source-_for-_shell(shell, source-_path)` - 移除 source 语句（指定 shell）
+  - `has-_source(source-_path)` - 检查 source 语句是否存在（自动检测 shell）
+  - `has-_source-_for-_shell(shell, source-_path)` - 检查 source 语句是否存在（指定 shell）
 - **工具方法**：
-  - `get_config_path()` - 获取 shell 配置文件路径（自动检测 shell）
+  - `get-_config-_path()` - 获取 shell 配置文件路径（自动检测 shell）
 
 ### 设计模式
 
@@ -175,9 +175,9 @@ Reload::shell(&shell)?;
 
 #### 2. 多 Shell 支持策略
 
-通过 `clap_complete::Shell` 枚举统一处理不同 shell：
-- 使用 `Paths::config_file(shell)` 获取不同 shell 的配置文件路径
-- 使用 `get_source_keyword(shell)` 获取不同 shell 的 source 关键字
+通过 `clap-_complete::Shell` 枚举统一处理不同 shell：
+- 使用 `Paths::config-_file(shell)` 获取不同 shell 的配置文件路径
+- 使用 `get-_source-_keyword(shell)` 获取不同 shell 的 source 关键字
 - 配置文件路径和语法差异由 `Paths` 和 `ShellConfigManager` 统一处理
 
 #### 3. 配置块管理策略
@@ -231,7 +231,7 @@ Detect::shell() -> Result<Shell>
 - 标记行不匹配
 
 **处理**：
-- **解析失败**：返回空 HashMap（`unwrap_or_default()`）
+- **解析失败**：返回空 HashMap（`unwrap-_or-_default()`）
 - **标记不匹配**：忽略配置块，保留原有内容
 
 #### 配置重载失败
@@ -255,9 +255,9 @@ Detect::shell() -> Result<Shell>
   ↓
 shell 模块（Detect / Reload / ShellConfigManager）
   ↓
-Paths::config_file() (获取配置文件路径)
+Paths::config-_file() (获取配置文件路径)
   ↓
-Shell 配置文件（~/.zshrc, ~/.bash_profile, 等）
+Shell 配置文件（~/.zshrc, ~/.bash-_profile, 等）
 ```
 
 ### Shell 检测流程
@@ -265,11 +265,11 @@ Shell 配置文件（~/.zshrc, ~/.bash_profile, 等）
 ```
 Detect::shell()
   ↓
-1. Shell::from_env()                    # 尝试从环境变量检测
+1. Shell::from-_env()                    # 尝试从环境变量检测
   ↓ (失败)
 2. std::env::var("SHELL")               # 读取 SHELL 环境变量
   ↓
-3. Shell::from_shell_path()             # 从路径解析 shell 类型
+3. Shell::from-_shell-_path()             # 从路径解析 shell 类型
   ↓
 返回 Shell 类型或错误
 ```
@@ -279,16 +279,16 @@ Detect::shell()
 #### 加载环境变量
 
 ```
-ShellConfigManager::load_env_vars()
+ShellConfigManager::load-_env-_vars()
   ↓
-1. get_config_path()                    # 获取配置文件路径（自动检测 shell）
+1. get-_config-_path()                    # 获取配置文件路径（自动检测 shell）
   ↓
-2. read_config_file()                   # 读取配置文件内容
+2. read-_config-_file()                   # 读取配置文件内容
   ↓
-3. parse_config_block()                 # 解析配置块
+3. parse-_config-_block()                 # 解析配置块
   ├─ 查找配置块标记（# Workflow CLI Configuration - Start/End）
   ├─ 提取配置块内容
-  └─ parse_shell_config_block()         # 解析 export KEY="VALUE" 格式
+  └─ parse-_shell-_config-_block()         # 解析 export KEY="VALUE" 格式
   ↓
 返回环境变量 HashMap
 ```
@@ -296,43 +296,43 @@ ShellConfigManager::load_env_vars()
 #### 保存环境变量
 
 ```
-ShellConfigManager::save_env_vars(env_vars)
+ShellConfigManager::save-_env-_vars(env-_vars)
   ↓
-1. get_config_path()                    # 获取配置文件路径
+1. get-_config-_path()                    # 获取配置文件路径
   ↓
-2. load_existing_config()               # 加载现有配置
-  ├─ read_config_file()                 # 读取文件内容
-  ├─ parse_config_block()               # 解析配置块
-  └─ 返回 ExistingConfig { env_in_block, content_without_block }
+2. load-_existing-_config()               # 加载现有配置
+  ├─ read-_config-_file()                 # 读取文件内容
+  ├─ parse-_config-_block()               # 解析配置块
+  └─ 返回 ExistingConfig { env-_in-_block, content-_without-_block }
   ↓
-3. merge_env_vars()                     # 合并环境变量（新值覆盖旧值）
+3. merge-_env-_vars()                     # 合并环境变量（新值覆盖旧值）
   ↓
-4. build_config_content()               # 构建新内容
-  ├─ build_config_block()               # 构建配置块
+4. build-_config-_content()               # 构建新内容
+  ├─ build-_config-_block()               # 构建配置块
   │  ├─ 添加标记行
   │  ├─ 按字母顺序排序键
   │  ├─ 转义特殊字符（\, ", $, `）
   │  └─ 生成 export KEY="VALUE" 格式
-  └─ 合并到 content_without_block
+  └─ 合并到 content-_without-_block
   ↓
-5. write_config_file()                  # 写入配置文件
+5. write-_config-_file()                  # 写入配置文件
 ```
 
 #### 移除环境变量
 
 ```
-ShellConfigManager::remove_env_vars(keys)
+ShellConfigManager::remove-_env-_vars(keys)
   ↓
-1. get_config_path()                    # 获取配置文件路径
+1. get-_config-_path()                    # 获取配置文件路径
   ↓
-2. read_config_file()                   # 读取配置文件内容
+2. read-_config-_file()                   # 读取配置文件内容
   ↓
 3. 过滤 export 语句
   ├─ 遍历所有行
   ├─ 检查是否匹配要删除的键（export KEY=）
   └─ 过滤掉匹配的行
   ↓
-4. write_config_file()                  # 写入新内容
+4. write-_config-_file()                  # 写入新内容
 ```
 
 ### Source 语句管理流程
@@ -340,13 +340,13 @@ ShellConfigManager::remove_env_vars(keys)
 #### 添加 Source 语句
 
 ```
-ShellConfigManager::add_source_for_shell(shell, source_path, comment)
+ShellConfigManager::add-_source-_for-_shell(shell, source-_path, comment)
   ↓
-1. Paths::config_file(shell)            # 获取指定 shell 的配置文件路径
+1. Paths::config-_file(shell)            # 获取指定 shell 的配置文件路径
   ↓
-2. read_config_file()                   # 读取配置文件内容
+2. read-_config-_file()                   # 读取配置文件内容
   ↓
-3. has_source_in_content_for_shell()    # 检查是否已存在
+3. has-_source-_in-_content-_for-_shell()    # 检查是否已存在
   ├─ 检查 source 关键字（PowerShell 使用 `.`，其他使用 `source`）
   ├─ 检查相对路径和绝对路径
   └─ 返回 true/false
@@ -356,26 +356,26 @@ ShellConfigManager::add_source_for_shell(shell, source_path, comment)
   ├─ 添加 source 语句（使用正确的关键字）
   └─ 添加空行
   ↓
-5. write_config_file()                  # 写入配置文件
+5. write-_config-_file()                  # 写入配置文件
 ```
 
 #### 移除 Source 语句
 
 ```
-ShellConfigManager::remove_source_for_shell(shell, source_path)
+ShellConfigManager::remove-_source-_for-_shell(shell, source-_path)
   ↓
-1. Paths::config_file(shell)            # 获取指定 shell 的配置文件路径
+1. Paths::config-_file(shell)            # 获取指定 shell 的配置文件路径
   ↓
-2. read_config_file()                   # 读取配置文件内容
+2. read-_config-_file()                   # 读取配置文件内容
   ↓
-3. remove_source_from_content_for_shell()  # 移除 source 语句
+3. remove-_source-_from-_content-_for-_shell()  # 移除 source 语句
   ├─ 遍历所有行
   ├─ 检查配置块标记（# Workflow CLI）
   ├─ 检查 source 语句（支持不同关键字和路径格式）
   ├─ 跳过匹配的行和相关注释
   └─ 清理末尾空行
   ↓
-4. write_config_file()                  # 写入新内容
+4. write-_config-_file()                  # 写入新内容
 ```
 
 ### 配置重载流程
@@ -383,13 +383,13 @@ ShellConfigManager::remove_source_for_shell(shell, source_path)
 ```
 Reload::shell(shell)
   ↓
-1. Paths::config_file(shell)           # 获取配置文件路径
+1. Paths::config-_file(shell)           # 获取配置文件路径
   ↓
 2. 构建 source 命令
-  ├─ PowerShell: `. $config_file`
-  └─ 其他: `source $config_file`
+  ├─ PowerShell: `. $config-_file`
+  └─ 其他: `source $config-_file`
   ↓
-3. cmd(shell, ["-c", source_cmd])      # 在子 shell 中执行
+3. cmd(shell, ["-c", source-_cmd])      # 在子 shell 中执行
   ↓
 4. 验证执行结果
   ├─ 成功：提示用户手动运行 source 命令
@@ -436,9 +436,9 @@ export KEY2="value2"
 不同 shell 的配置文件路径：
 
 - **zsh** → `~/.zshrc`
-- **bash** → `~/.bash_profile`（如果不存在则使用 `~/.bashrc`）
+- **bash** → `~/.bash-_profile`（如果不存在则使用 `~/.bashrc`）
 - **fish** → `~/.config/fish/config.fish`
-- **powershell** → `~/.config/powershell/Microsoft.PowerShell_profile.ps1`
+- **powershell** → `~/.config/powershell/Microsoft.PowerShell-_profile.ps1`
 - **elvish** → `~/.elvish/rc.elv`
 
 ---
@@ -447,15 +447,15 @@ export KEY2="value2"
 
 ### 添加新的 Shell 支持
 
-1. **确认 `clap_complete::Shell` 支持**：
-   - 检查 `clap_complete` 是否已支持该 shell
-   - 如果不支持，需要扩展 `clap_complete::Shell` 枚举
+1. **确认 `clap-_complete::Shell` 支持**：
+   - 检查 `clap-_complete` 是否已支持该 shell
+   - 如果不支持，需要扩展 `clap-_complete::Shell` 枚举
 
 2. **添加配置文件路径**：
-   - 在 `lib/base/settings/paths.rs` 的 `Paths::config_file()` 方法中添加新 shell 的路径映射
+   - 在 `lib/base/settings/paths.rs` 的 `Paths::config-_file()` 方法中添加新 shell 的路径映射
 
 3. **添加 Source 关键字**：
-   - 在 `ShellConfigManager::get_source_keyword()` 方法中添加新 shell 的关键字映射
+   - 在 `ShellConfigManager::get-_source-_keyword()` 方法中添加新 shell 的关键字映射
 
 4. **测试**：
    - 测试 Shell 检测
@@ -467,11 +467,11 @@ export KEY2="value2"
 
 1. **在 `ShellConfigManager` 中添加新方法**：
    - 遵循现有的命名规范
-   - 提供自动检测 shell 和指定 shell 两个版本（如 `xxx()` 和 `xxx_for_shell()`）
+   - 提供自动检测 shell 和指定 shell 两个版本（如 `xxx()` 和 `xxx-_for-_shell()`）
 
 2. **更新配置块格式**（如需要）：
    - 确保新功能与现有配置块格式兼容
-   - 更新 `parse_config_block()` 和 `build_config_block()` 方法
+   - 更新 `parse-_config-_block()` 和 `build-_config-_block()` 方法
 
 3. **测试**：
    - 测试新功能在不同 shell 下的行为
@@ -495,13 +495,13 @@ export KEY2="value2"
 
 1. **查找标记行**：
    ```rust
-   let start_pos = content.find("# Workflow CLI Configuration - Start");
-   let end_pos = content[start_pos..].find("# Workflow CLI Configuration - End");
+   let start-_pos = content.find("# Workflow CLI Configuration - Start");
+   let end-_pos = content[start-_pos..].find("# Workflow CLI Configuration - End");
    ```
 
 2. **提取配置块内容**：
    ```rust
-   let block_content = &content[start_pos + start_marker.len()..start_pos + end_pos];
+   let block-_content = &content[start-_pos + start-_marker.len()..start-_pos + end-_pos];
    ```
 
 3. **解析环境变量**：
@@ -513,16 +513,16 @@ export KEY2="value2"
 
 1. **检查相对路径**：
    ```rust
-   if content.contains(source_path) {
+   if content.contains(source-_path) {
        return Ok(true);
    }
    ```
 
-2. **检查绝对路径**（如果 source_path 包含 `$HOME`）：
+2. **检查绝对路径**（如果 source-_path 包含 `$HOME`）：
    ```rust
    let home = std::env::var("HOME")?;
-   let abs_path = source_path.replace("$HOME", &home);
-   if content.contains(&abs_path) {
+   let abs-_path = source-_path.replace("$HOME", &home);
+   if content.contains(&abs-_path) {
        return Ok(true);
    }
    ```
@@ -546,7 +546,7 @@ export KEY2="value2"
 
 ## 📚 相关文档
 
-- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置文件路径管理（`Paths::config_file()`）
+- [Settings 模块架构文档](./SETTINGS_ARCHITECTURE.md) - 配置文件路径管理（`Paths::config-_file()`）
 - [Completion 架构文档](./COMPLETION_ARCHITECTURE.md) - Completion 模块如何使用 ShellConfigManager
 - [Proxy 架构文档](./PROXY_ARCHITECTURE.md) - Proxy 模块如何使用 ShellConfigManager
 - [主架构文档](../ARCHITECTURE.md)

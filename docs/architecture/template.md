@@ -29,20 +29,20 @@ src/lib/template/
 ### 依赖模块
 
 - **`lib/base/settings/`**：路径管理
-  - `Paths::project_config()` - 获取项目配置文件路径
-  - `Paths::global_config()` - 获取全局配置文件路径
+  - `Paths::project-_config()` - 获取项目配置文件路径
+  - `Paths::global-_config()` - 获取全局配置文件路径
 - **`handlebars`**：Handlebars 模板引擎（第三方库）
 
 ### 模块集成
 
 - **`lib/branch/`**：分支命名
-  - 使用 `TemplateConfig::load_branch_template()` 加载分支模板
+  - 使用 `TemplateConfig::load-_branch-_template()` 加载分支模板
   - 使用 `TemplateEngine` 渲染分支名
 - **`lib/pr/`**：PR 创建
-  - 使用 `TemplateConfig::load_pull_request_template()` 加载 PR 模板
+  - 使用 `TemplateConfig::load-_pull-_request-_template()` 加载 PR 模板
   - 使用 `TemplateEngine` 渲染 PR body
 - **`commands/commit/`**：提交管理
-  - 使用 `TemplateConfig::load_commit_template()` 加载提交模板
+  - 使用 `TemplateConfig::load-_commit-_template()` 加载提交模板
   - 使用 `TemplateEngine` 渲染提交消息
 - **`commands/repo/`**：仓库配置管理
   - 使用 `TemplateConfig::load()` 加载模板配置用于显示
@@ -66,15 +66,15 @@ src/lib/template/
 
 **主要方法**：
 - `new()` - 创建新的模板引擎实例
-- `register_template()` - 注册模板
+- `register-_template()` - 注册模板
 - `render()` - 渲染已注册的模板
-- `render_string()` - 直接渲染模板字符串（无需注册）
+- `render-_string()` - 直接渲染模板字符串（无需注册）
 
 **关键特性**：
 - 使用 Handlebars 作为底层引擎
 - 禁用严格模式（允许未定义的变量）
 - 禁用 HTML 转义（模板输出为纯文本）
-- 支持临时模板渲染（`render_string`）
+- 支持临时模板渲染（`render-_string`）
 
 **使用场景**：
 - 分支名生成：渲染分支命名模板
@@ -87,10 +87,10 @@ src/lib/template/
 
 **主要方法**：
 - `load()` - 加载模板配置（全局+项目级合并）
-- `load_branch_template()` - 加载分支模板（根据分支类型）
-- `load_branch_template_by_type()` - 根据分支类型加载模板
-- `load_commit_template()` - 加载提交模板
-- `load_pull_request_template()` - 加载 PR 模板
+- `load-_branch-_template()` - 加载分支模板（根据分支类型）
+- `load-_branch-_template-_by-_type()` - 根据分支类型加载模板
+- `load-_commit-_template()` - 加载提交模板
+- `load-_pull-_request-_template()` - 加载 PR 模板
 
 **关键特性**：
 - 支持多级配置（全局配置 + 项目级配置）
@@ -102,7 +102,7 @@ src/lib/template/
 - `engine: String` - 模板引擎类型（默认：`"handlebars"`）
 - `branch: BranchTemplates` - 分支模板配置
 - `commit: CommitTemplates` - 提交模板配置
-- `pull_requests: PullRequestsTemplates` - PR 模板配置
+- `pull-_requests: PullRequestsTemplates` - PR 模板配置
 
 #### 3. 模板变量结构体
 
@@ -116,7 +116,7 @@ src/lib/template/
 
 **关键特性**：
 - 使用 `serde::Serialize` 支持序列化
-- 使用 `skip_serializing_if` 控制可选字段的序列化
+- 使用 `skip-_serializing-_if` 控制可选字段的序列化
 - 类型安全，确保模板变量与模板匹配
 
 ---
@@ -138,7 +138,7 @@ src/lib/template/
 2. 全局配置（`~/.workflow/config/workflow.toml`）
 3. 内置默认值
 
-### 2. 分支模板加载 (`load_branch_template()`)
+### 2. 分支模板加载 (`load-_branch-_template()`)
 
 **功能**：根据分支类型加载分支模板
 
@@ -153,7 +153,7 @@ src/lib/template/
    - 其他 → `config.branch.default`
 3. 返回模板字符串
 
-### 3. 模板渲染 (`TemplateEngine::render_string()`)
+### 3. 模板渲染 (`TemplateEngine::render-_string()`)
 
 **功能**：渲染模板字符串
 
@@ -173,27 +173,27 @@ src/lib/template/
 **功能**：准备模板变量结构体
 
 **分支模板变量** (`BranchTemplateVars`)：
-- `jira_key: Option<String>` - JIRA ticket ID
-- `jira_summary: Option<String>` - JIRA ticket 摘要
-- `summary_slug: Option<String>` - 摘要的 slug 格式
-- `jira_type: Option<String>` - JIRA ticket 类型
+- `jira-_key: Option<String>` - JIRA ticket ID
+- `jira-_summary: Option<String>` - JIRA ticket 摘要
+- `summary-_slug: Option<String>` - 摘要的 slug 格式
+- `jira-_type: Option<String>` - JIRA ticket 类型
 
 **提交模板变量** (`CommitTemplateVars`)：
-- `commit_type: String` - 提交类型（feat、fix 等）
+- `commit-_type: String` - 提交类型（feat、fix 等）
 - `scope: Option<String>` - 提交范围
 - `subject: String` - 提交主题
 - `body: Option<String>` - 提交正文
-- `jira_key: Option<String>` - JIRA ticket ID
-- `use_scope: bool` - 是否使用 scope
+- `jira-_key: Option<String>` - JIRA ticket ID
+- `use-_scope: bool` - 是否使用 scope
 
 **PR 模板变量** (`PullRequestTemplateVars`)：
-- `jira_key: Option<String>` - JIRA ticket ID
-- `jira_summary: Option<String>` - JIRA ticket 摘要
-- `jira_description: Option<String>` - JIRA ticket 描述
-- `jira_type: Option<String>` - JIRA ticket 类型
-- `jira_service_address: Option<String>` - JIRA 服务地址
-- `change_types: Vec<ChangeTypeItem>` - 变更类型列表
-- `short_description: Option<String>` - 简短描述
+- `jira-_key: Option<String>` - JIRA ticket ID
+- `jira-_summary: Option<String>` - JIRA ticket 摘要
+- `jira-_description: Option<String>` - JIRA ticket 描述
+- `jira-_type: Option<String>` - JIRA ticket 类型
+- `jira-_service-_address: Option<String>` - JIRA 服务地址
+- `change-_types: Vec<ChangeTypeItem>` - 变更类型列表
+- `short-_description: Option<String>` - 简短描述
 - `dependency: Option<String>` - 依赖信息
 
 ---
@@ -207,14 +207,14 @@ src/lib/template/
 #### 变量插值
 
 ```handlebars
-{{jira_key}}-{{summary_slug}}
+{{jira-_key}}-{{summary-_slug}}
 ```
 
 #### 条件语句
 
 ```handlebars
-{{#if jira_key}}
-  {{jira_key}}: {{subject}}
+{{#if jira-_key}}
+  {{jira-_key}}: {{subject}}
 {{else}}
   # {{subject}}
 {{/if}}
@@ -223,11 +223,11 @@ src/lib/template/
 #### 嵌套条件
 
 ```handlebars
-{{#if jira_key}}
-  {{jira_key}}: {{subject}}
+{{#if jira-_key}}
+  {{jira-_key}}: {{subject}}
 {{else}}
-  {{#if use_scope}}
-    {{commit_type}}({{scope}}): {{subject}}
+  {{#if use-_scope}}
+    {{commit-_type}}({{scope}}): {{subject}}
   {{else}}
     # {{subject}}
   {{/if}}
@@ -237,7 +237,7 @@ src/lib/template/
 #### 循环
 
 ```handlebars
-{{#each change_types}}
+{{#each change-_types}}
   {{#if selected}}
     - {{name}}
   {{/if}}
@@ -249,23 +249,23 @@ src/lib/template/
 #### 分支模板
 
 ```handlebars
-{{jira_key}}-{{summary_slug}}
+{{jira-_key}}-{{summary-_slug}}
 ```
 
 或带前缀：
 
 ```handlebars
-feature/{{jira_key}}-{{summary_slug}}
+feature/{{jira-_key}}-{{summary-_slug}}
 ```
 
 #### 提交模板
 
 ```handlebars
-{{#if jira_key}}{{jira_key}}: {{subject}}{{else}}{{#if use_scope}}{{commit_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
+{{#if jira-_key}}{{jira-_key}}: {{subject}}{{else}}{{#if use-_scope}}{{commit-_type}}{{#if scope}}({{scope}}){{/if}}: {{subject}}{{else}}# {{subject}}{{/if}}{{/if}}
 
 {{#if body}}{{body}}{{/if}}
 
-{{#if jira_key}}Closes {{jira_key}}{{/if}}
+{{#if jira-_key}}Closes {{jira-_key}}{{/if}}
 ```
 
 #### PR 模板
@@ -273,24 +273,24 @@ feature/{{jira_key}}-{{summary_slug}}
 ```handlebars
 ## Description
 
-{{jira_summary}}
+{{jira-_summary}}
 
-{{#if jira_description}}
-{{jira_description}}
+{{#if jira-_description}}
+{{jira-_description}}
 {{/if}}
 
 ## Change Types
 
-{{#each change_types}}
+{{#each change-_types}}
   {{#if selected}}
   - {{name}}
   {{/if}}
 {{/each}}
 
-{{#if short_description}}
+{{#if short-_description}}
 ## Short Description
 
-{{short_description}}
+{{short-_description}}
 {{/if}}
 
 {{#if dependency}}
@@ -299,10 +299,10 @@ feature/{{jira_key}}-{{summary_slug}}
 {{dependency}}
 {{/if}}
 
-{{#if jira_key}}
+{{#if jira-_key}}
 ## Related Ticket
 
-[{{jira_key}}]({{jira_service_address}}/browse/{{jira_key}})
+[{{jira-_key}}]({{jira-_service-_address}}/browse/{{jira-_key}})
 {{/if}}
 ```
 
@@ -338,20 +338,20 @@ feature/{{jira_key}}-{{summary_slug}}
 use workflow::template::{TemplateConfig, TemplateEngine, BranchTemplateVars};
 
 // 加载模板
-let template = TemplateConfig::load_branch_template(Some("feature"))?;
+let template = TemplateConfig::load-_branch-_template(Some("feature"))?;
 
 // 准备变量
 let vars = BranchTemplateVars {
-    jira_key: Some("PROJ-123".to_string()),
-    jira_summary: Some("Add new feature".to_string()),
-    summary_slug: Some("add-new-feature".to_string()),
-    jira_type: Some("Feature".to_string()),
+    jira-_key: Some("PROJ-123".to-_string()),
+    jira-_summary: Some("Add new feature".to-_string()),
+    summary-_slug: Some("add-new-feature".to-_string()),
+    jira-_type: Some("Feature".to-_string()),
 };
 
 // 渲染模板
 let engine = TemplateEngine::new();
-let branch_name = engine.render_string(&template, &vars)?;
-println!("Branch name: {}", branch_name);
+let branch-_name = engine.render-_string(&template, &vars)?;
+println!("Branch name: {}", branch-_name);
 ```
 
 ### 加载并渲染提交模板
@@ -360,22 +360,22 @@ println!("Branch name: {}", branch_name);
 use workflow::template::{TemplateConfig, TemplateEngine, CommitTemplateVars};
 
 // 加载模板
-let template = TemplateConfig::load_commit_template()?;
+let template = TemplateConfig::load-_commit-_template()?;
 
 // 准备变量
 let vars = CommitTemplateVars {
-    commit_type: "feat".to_string(),
-    scope: Some("api".to_string()),
-    subject: "Add user authentication".to_string(),
-    body: Some("Implement JWT-based authentication".to_string()),
-    jira_key: Some("PROJ-123".to_string()),
-    use_scope: true,
+    commit-_type: "feat".to-_string(),
+    scope: Some("api".to-_string()),
+    subject: "Add user authentication".to-_string(),
+    body: Some("Implement JWT-based authentication".to-_string()),
+    jira-_key: Some("PROJ-123".to-_string()),
+    use-_scope: true,
 };
 
 // 渲染模板
 let engine = TemplateEngine::new();
-let commit_message = engine.render_string(&template, &vars)?;
-println!("Commit message:\n{}", commit_message);
+let commit-_message = engine.render-_string(&template, &vars)?;
+println!("Commit message:\n{}", commit-_message);
 ```
 
 ### 加载并渲染 PR 模板
@@ -384,27 +384,27 @@ println!("Commit message:\n{}", commit_message);
 use workflow::template::{TemplateConfig, TemplateEngine, PullRequestTemplateVars, ChangeTypeItem};
 
 // 加载模板
-let template = TemplateConfig::load_pull_request_template()?;
+let template = TemplateConfig::load-_pull-_request-_template()?;
 
 // 准备变量
 let vars = PullRequestTemplateVars {
-    jira_key: Some("PROJ-123".to_string()),
-    jira_summary: Some("Add new feature".to_string()),
-    jira_description: Some("Detailed description...".to_string()),
-    jira_type: Some("Feature".to_string()),
-    jira_service_address: Some("https://jira.example.com".to_string()),
-    change_types: vec![
-        ChangeTypeItem { name: "Feature".to_string(), selected: true },
-        ChangeTypeItem { name: "Bug Fix".to_string(), selected: false },
+    jira-_key: Some("PROJ-123".to-_string()),
+    jira-_summary: Some("Add new feature".to-_string()),
+    jira-_description: Some("Detailed description...".to-_string()),
+    jira-_type: Some("Feature".to-_string()),
+    jira-_service-_address: Some("https://jira.example.com".to-_string()),
+    change-_types: vec![
+        ChangeTypeItem { name: "Feature".to-_string(), selected: true },
+        ChangeTypeItem { name: "Bug Fix".to-_string(), selected: false },
     ],
-    short_description: Some("Brief description".to_string()),
+    short-_description: Some("Brief description".to-_string()),
     dependency: None,
 };
 
 // 渲染模板
 let engine = TemplateEngine::new();
-let pr_body = engine.render_string(&template, &vars)?;
-println!("PR body:\n{}", pr_body);
+let pr-_body = engine.render-_string(&template, &vars)?;
+println!("PR body:\n{}", pr-_body);
 ```
 
 ---

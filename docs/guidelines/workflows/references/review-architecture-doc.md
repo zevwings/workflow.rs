@@ -503,10 +503,10 @@ report/REVIEW_ARCHITECTURE_DOC_{timestamp}.md
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
 ```
 
 在命令行中：

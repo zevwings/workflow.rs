@@ -69,10 +69,10 @@ match cli.command {
 
 **使用方式**：
 ```rust
-use workflow::cli::get_cli_command;
+use workflow::cli::get-_cli-_command;
 
-let command = get_cli_command();
-clap_complete::generate(shell, &mut command, "workflow", &mut output);
+let command = get-_cli-_command();
+clap-_complete::generate(shell, &mut command, "workflow", &mut output);
 ```
 
 ---
@@ -96,7 +96,7 @@ clap_complete::generate(shell, &mut command, "workflow", &mut output);
 ```rust
 #[derive(Parser)]
 #[command(name = "workflow")]
-#[command(about = "Workflow CLI tool", long_about = None)]
+#[command(about = "Workflow CLI tool", long-_about = None)]
 #[command(version)]
 pub struct Cli {
     #[command(subcommand)]
@@ -198,13 +198,13 @@ pub struct OutputFormatArgs {
 pub struct DryRunArgs {
     /// Dry run mode (preview changes without actually executing)
     #[arg(long, short = 'n', action = clap::ArgAction::SetTrue)]
-    pub dry_run: bool,
+    pub dry-_run: bool,
 }
 
 impl DryRunArgs {
-    /// 获取 dry_run 标志
-    pub fn is_dry_run(&self) -> bool {
-        self.dry_run
+    /// 获取 dry-_run 标志
+    pub fn is-_dry-_run(&self) -> bool {
+        self.dry-_run
     }
 }
 
@@ -213,19 +213,19 @@ impl DryRunArgs {
 #[derive(Args, Debug, Clone)]
 pub struct JiraIdArg {
     /// Jira ticket ID (optional, will prompt interactively if not provided)
-    #[arg(value_name = "JIRA_ID")]
-    pub jira_id: Option<String>,
+    #[arg(value-_name = "JIRA_ID")]
+    pub jira-_id: Option<String>,
 }
 
 impl JiraIdArg {
     /// 获取 JIRA ID（如果存在）
     pub fn get(&self) -> Option<&str> {
-        self.jira_id.as_deref()
+        self.jira-_id.as-_deref()
     }
 
     /// 获取 JIRA ID（移动所有权）
-    pub fn into_option(self) -> Option<String> {
-        self.jira_id
+    pub fn into-_option(self) -> Option<String> {
+        self.jira-_id
     }
 }
 ```
@@ -241,17 +241,17 @@ use super::args::{JiraIdArg, OutputFormatArgs, DryRunArgs};
 pub enum JiraSubcommand {
     Info {
         #[command(flatten)]
-        jira_id: JiraIdArg,
+        jira-_id: JiraIdArg,
 
         #[command(flatten)]
-        output_format: OutputFormatArgs,
+        output-_format: OutputFormatArgs,
     },
     Clean {
         #[command(flatten)]
-        jira_id: JiraIdArg,
+        jira-_id: JiraIdArg,
 
         #[command(flatten)]
-        dry_run: DryRunArgs,
+        dry-_run: DryRunArgs,
     },
     // ...
 }
@@ -262,7 +262,7 @@ pub enum JiraSubcommand {
 - ✅ 类型安全：使用结构体而非重复的参数定义
 - ✅ 自动生成 completion：clap 自动为共用参数组生成 completion
 - ✅ 易于维护：修改时只需更新一处
-- ✅ 提供便捷方法：如 `is_dry_run()`、`get()` 等
+- ✅ 提供便捷方法：如 `is-_dry-_run()`、`get()` 等
 
 **当前使用的命令**：
 - `OutputFormatArgs`：Jira 命令（Info, Related, Changelog, Comments）
@@ -313,7 +313,7 @@ pub enum LLMSubcommand {
 - `LogSubcommand` - 日志操作子命令（Download, Find, Search）
 - `JiraSubcommand` - Jira 操作子命令（Info, Attachments, Clean）
 
-#### 4. get_cli_command 函数
+#### 4. get-_cli-_command 函数
 
 **职责**：获取 CLI 命令结构，用于生成补全脚本
 
@@ -323,7 +323,7 @@ pub enum LLMSubcommand {
 ///
 /// 返回 `Cli` 结构体的 `Command` 实例，用于自动生成 shell completion 脚本。
 /// 这样可以确保补全脚本与实际命令结构保持同步。
-pub fn get_cli_command() -> clap::Command {
+pub fn get-_cli-_command() -> clap::Command {
     Cli::command()
 }
 ```
@@ -376,7 +376,7 @@ pub enum Commands {
 ```rust
 Commands::Pr {
     subcommand: PRCommands::Create {
-        jira_id: JiraIdArg,
+        jira-_id: JiraIdArg,
         title: Option<String>,
         // ...
     }
@@ -448,13 +448,13 @@ LLMSetupCommand::setup()
 ```
 补全脚本生成器调用
   ↓
-get_cli_command()
+get-_cli-_command()
   ↓
 Cli::command() (CommandFactory trait)
   ↓
 clap 生成命令结构
   ↓
-clap_complete::generate()
+clap-_complete::generate()
   ↓
 生成补全脚本文件
 ```
@@ -480,9 +480,9 @@ lib/*（业务逻辑）
 ```
 补全脚本生成器
   ↓
-CLI 模块（get_cli_command）
+CLI 模块（get-_cli-_command）
   ↓
-clap_complete::generate()
+clap-_complete::generate()
   ↓
 补全脚本文件
 ```
@@ -505,14 +505,14 @@ fn main() -> Result<()> {
             LLMSubcommand::Setup => LLMSetupCommand::setup()?,
         },
         Some(Commands::Pr { subcommand }) => match subcommand {
-            PRCommands::Create { jira_id, title, .. } => {
+            PRCommands::Create { jira-_id, title, .. } => {
                 // 处理 PR 创建命令
             },
             // ... 其他 PR 子命令
         },
         None => {
             // 显示帮助信息
-            Cli::command().print_help()?;
+            Cli::command().print-_help()?;
         }
     }
 
@@ -523,17 +523,17 @@ fn main() -> Result<()> {
 ### 补全脚本生成（在 completion/generate.rs 中）
 
 ```rust
-use workflow::cli::get_cli_command;
-use clap_complete::{generate, shells::Shell};
+use workflow::cli::get-_cli-_command;
+use clap-_complete::{generate, shells::Shell};
 
-fn generate_completion(shell: Shell) -> Result<()> {
-    let mut command = get_cli_command();
+fn generate-_completion(shell: Shell) -> Result<()> {
+    let mut command = get-_cli-_command();
     let mut output = Vec::new();
 
     generate(shell, &mut command, "workflow", &mut output);
 
     // 保存补全脚本到文件
-    std::fs::write("completion_script", output)?;
+    std::fs::write("completion-_script", output)?;
 
     Ok(())
 }
@@ -651,7 +651,7 @@ Commands::NewCommand {
 
 **解决方案**：
 1. **单一来源**：命令结构定义在 `lib/cli/mod.rs` 中
-2. **自动生成**：补全脚本通过 `get_cli_command()` 自动生成
+2. **自动生成**：补全脚本通过 `get-_cli-_command()` 自动生成
 3. **编译时检查**：Rust 类型系统确保命令结构正确
 
 **优势**：
@@ -669,8 +669,8 @@ Commands::NewCommand {
 **示例测试**：
 ```rust
 #[test]
-fn test_cli_parsing() {
-    let cli = Cli::try_parse_from(["workflow", "llm", "setup"]).unwrap();
+fn test-_cli-_parsing() {
+    let cli = Cli::try-_parse-_from(["workflow", "llm", "setup"]).unwrap();
     assert!(matches!(cli.command, Some(Commands::Llm { .. })));
 }
 ```

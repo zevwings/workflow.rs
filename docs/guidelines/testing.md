@@ -21,7 +21,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_url() {
+    fn test-_parse-_url() {
         // 测试私有函数
     }
 }
@@ -45,11 +45,11 @@ mod tests {
 tests/
 ├── base/              # Base 模块测试
 │   ├── mod.rs
-│   ├── llm_client.rs
+│   ├── llm-_client.rs
 │   ├── logger.rs
 │   ├── settings.rs
-│   ├── util_dialog.rs
-│   └── util_platform.rs
+│   ├── util-_dialog.rs
+│   └── util-_platform.rs
 ├── cli/                # CLI 命令层测试
 │   ├── mod.rs
 │   ├── github.rs
@@ -73,7 +73,7 @@ tests/
 │   └── status.rs
 ├── pr/                 # PR 模块测试
 │   ├── mod.rs
-│   ├── body_parser.rs
+│   ├── body-_parser.rs
 │   ├── github.rs
 │   └── table.rs
 ├── proxy/              # Proxy 模块测试
@@ -85,13 +85,13 @@ tests/
 │   └── helpers.rs
 ├── fixtures/           # 测试数据
 │   ├── .gitkeep
-│   ├── sample_github_pr.json
-│   ├── sample_jira_response.json
-│   └── sample_pr_body.md
+│   ├── sample-_github-_pr.json
+│   ├── sample-_jira-_response.json
+│   └── sample-_pr-_body.md
 ├── integration/        # 集成测试
 │   ├── mod.rs
 │   └── workflow.rs
-└── integration_test.rs # 集成测试入口
+└── integration-_test.rs # 集成测试入口
 ```
 
 ### 结构说明
@@ -118,14 +118,14 @@ tests/
 // 源代码路径 → 测试文件路径
 src/lib/base/http.rs          → tests/base/http.rs
 src/lib/base/logger.rs        → tests/base/logger.rs
-src/lib/pr/body_parser.rs     → tests/pr/body_parser.rs
+src/lib/pr/body-_parser.rs     → tests/pr/body-_parser.rs
 src/lib/completion/config.rs  → tests/completion/config.rs
 ```
 
 ### 不推荐的命名
 
-- ❌ `lib_base_logger.rs` - 包含不必要的前缀
-- ❌ `logger_test.rs` - 不够清晰，无法反映模块路径
+- ❌ `lib-_base-_logger.rs` - 包含不必要的前缀
+- ❌ `logger-_test.rs` - 不够清晰，无法反映模块路径
 - ❌ `logger.rs` - 可能与源代码混淆
 
 ---
@@ -141,11 +141,11 @@ src/lib/completion/config.rs  → tests/completion/config.rs
 pub mod helpers;
 
 // tests/common/helpers.rs
-pub fn setup_test_env() {
+pub fn setup-_test-_env() {
     // 设置测试环境
 }
 
-pub fn create_test_client() -> HttpClient {
+pub fn create-_test-_client() -> HttpClient {
     // 创建测试客户端
 }
 ```
@@ -155,12 +155,12 @@ pub fn create_test_client() -> HttpClient {
 ```rust
 // tests/base/http.rs
 mod common;
-use common::helpers::{setup_test_env, create_test_client};
+use common::helpers::{setup-_test-_env, create-_test-_client};
 
 #[test]
-fn test_http_client() {
-    setup_test_env();
-    let client = create_test_client();
+fn test-_http-_client() {
+    setup-_test-_env();
+    let client = create-_test-_client();
     // ...
 }
 ```
@@ -176,9 +176,9 @@ fn test_http_client() {
 ```
 tests/
 └── fixtures/
-    ├── sample_github_pr.json
-    ├── sample_jira_response.json
-    └── sample_pr_body.md
+    ├── sample-_github-_pr.json
+    ├── sample-_jira-_response.json
+    └── sample-_pr-_body.md
 ```
 
 ### 使用 Fixtures
@@ -188,8 +188,8 @@ tests/
 use std::fs;
 
 #[test]
-fn test_parse_pr_response() {
-    let data = fs::read_to_string("tests/fixtures/sample_github_pr.json")
+fn test-_parse-_pr-_response() {
+    let data = fs::read-_to-_string("tests/fixtures/sample-_github-_pr.json")
         .expect("Failed to read fixture");
     // 使用测试数据
 }
@@ -210,17 +210,17 @@ fn test_parse_pr_response() {
 
 ```rust
 // tests/base/http.rs
-mod get_request {
+mod get-_request {
     #[test]
-    fn test_success() {}
+    fn test-_success() {}
 
     #[test]
-    fn test_timeout() {}
+    fn test-_timeout() {}
 }
 
-mod post_request {
+mod post-_request {
     #[test]
-    fn test_success() {}
+    fn test-_success() {}
 }
 ```
 
@@ -232,12 +232,12 @@ mod post_request {
 
 ```rust
 #[test]
-fn test_parse_url_with_valid_input() {
+fn test-_parse-_url-_with-_valid-_input() {
     // ...
 }
 
 #[test]
-fn test_parse_url_with_invalid_input() {
+fn test-_parse-_url-_with-_invalid-_input() {
     // ...
 }
 ```
@@ -251,8 +251,8 @@ fn test_parse_url_with_invalid_input() {
 pub mod http;
 pub mod logger;
 pub mod settings;
-pub mod util_dialog;
-pub mod util_platform;
+pub mod util-_dialog;
+pub mod util-_platform;
 ```
 
 ---
@@ -290,15 +290,15 @@ cargo tarpaulin --out Html
 
 ```rust
 #[test]
-fn test_parse_ticket_id() {
+fn test-_parse-_ticket-_id() {
     // Arrange
     let input = "PROJ-123";
 
     // Act
-    let result = parse_ticket_id(input);
+    let result = parse-_ticket-_id(input);
 
     // Assert
-    assert_eq!(result, Some("PROJ-123"));
+    assert-_eq!(result, Some("PROJ-123"));
 }
 ```
 
@@ -308,9 +308,9 @@ fn test_parse_ticket_id() {
 
 ```rust
 #[test]
-fn test_parse_ticket_id_invalid() {
-    assert_eq!(parse_ticket_id("invalid"), None);
-    assert_eq!(parse_ticket_id(""), None);
+fn test-_parse-_ticket-_id-_invalid() {
+    assert-_eq!(parse-_ticket-_id("invalid"), None);
+    assert-_eq!(parse-_ticket-_id(""), None);
 }
 ```
 
@@ -320,11 +320,11 @@ fn test_parse_ticket_id_invalid() {
 
 ```rust
 #[test]
-fn test_parse_ticket_id_boundary() {
+fn test-_parse-_ticket-_id-_boundary() {
     // 最小长度
-    assert_eq!(parse_ticket_id("A-1"), Some("A-1"));
+    assert-_eq!(parse-_ticket-_id("A-1"), Some("A-1"));
     // 最大长度
-    assert_eq!(parse_ticket_id("VERY-LONG-PROJECT-NAME-123"), Some("VERY-LONG-PROJECT-NAME-123"));
+    assert-_eq!(parse-_ticket-_id("VERY-LONG-PROJECT-NAME-123"), Some("VERY-LONG-PROJECT-NAME-123"));
 }
 ```
 
@@ -332,20 +332,20 @@ fn test_parse_ticket_id_boundary() {
 
 ## 🛠️ 测试工具
 
-### 1. pretty_assertions
+### 1. pretty-_assertions
 
-`pretty_assertions` 提供更清晰的断言输出，显示彩色 diff。
+`pretty-_assertions` 提供更清晰的断言输出，显示彩色 diff。
 
 **使用方式**：
 
 ```rust
-use pretty_assertions::assert_eq;
+use pretty-_assertions::assert-_eq;
 
 #[test]
-fn test_example() {
+fn test-_example() {
     let actual = "Hello";
     let expected = "World";
-    assert_eq!(actual, expected);  // 会显示清晰的彩色 diff
+    assert-_eq!(actual, expected);  // 会显示清晰的彩色 diff
 }
 ```
 
@@ -364,9 +364,9 @@ use rstest::rstest;
 #[case("input1", "output1")]
 #[case("input2", "output2")]
 #[case("input3", "output3")]
-fn test_multiple_cases(#[case] input: &str, #[case] expected: &str) {
+fn test-_multiple-_cases(#[case] input: &str, #[case] expected: &str) {
     let result = process(input);
-    assert_eq!(result, expected);
+    assert-_eq!(result, expected);
 }
 ```
 
@@ -376,13 +376,13 @@ fn test_multiple_cases(#[case] input: &str, #[case] expected: &str) {
 use rstest::{fixture, rstest};
 
 #[fixture]
-fn sample_data() -> Vec<i32> {
+fn sample-_data() -> Vec<i32> {
     vec![1, 2, 3, 4, 5]
 }
 
 #[rstest]
-fn test_with_fixture(sample_data: Vec<i32>) {
-    assert_eq!(sample_data.len(), 5);
+fn test-_with-_fixture(sample-_data: Vec<i32>) {
+    assert-_eq!(sample-_data.len(), 5);
 }
 ```
 
@@ -398,10 +398,10 @@ fn test_with_fixture(sample_data: Vec<i32>) {
 **使用方式**：
 
 ```rust
-use insta::assert_json_snapshot;
+use insta::assert-_json-_snapshot;
 
 #[test]
-fn test_json_response() {
+fn test-_json-_response() {
     let json = json!({
         "id": 123,
         "name": "Test",
@@ -410,7 +410,7 @@ fn test_json_response() {
 
     // 首次运行会创建快照文件
     // 后续运行会与快照对比
-    assert_json_snapshot!("test_response", json);
+    assert-_json-_snapshot!("test-_response", json);
 }
 ```
 
@@ -442,27 +442,27 @@ cargo insta review
 **使用方式**：
 
 ```rust
-use crate::common::http_helpers::MockServer;
+use crate::common::http-_helpers::MockServer;
 use mockito::Matcher;
 
 #[test]
-fn test_api_call() {
-    let mut mock_server = MockServer::new();
-    mock_server.setup_github_base_url();
+fn test-_api-_call() {
+    let mut mock-_server = MockServer::new();
+    mock-_server.setup-_github-_base-_url();
 
     // 创建 Mock
-    let _mock = mock_server
+    let _mock = mock-_server
         .server
-        .as_mut()
+        .as-_mut()
         .mock("GET", "/api/endpoint")
-        .match_header("authorization", Matcher::Regex(r"token .+".to_string()))
-        .with_status(200)
-        .with_body(r#"{"result": "success"}"#)
+        .match-_header("authorization", Matcher::Regex(r"token .+".to-_string()))
+        .with-_status(200)
+        .with-_body(r#"{"result": "success"}"#)
         .create();
 
     // 执行测试
-    // let result = client.call_api()?;
-    // assert_eq!(result, "success");
+    // let result = client.call-_api()?;
+    // assert-_eq!(result, "success");
 
     // 验证 Mock 被调用
     // _mock.assert();
@@ -471,14 +471,14 @@ fn test_api_call() {
 
 **MockServer 工具**：
 
-`tests/common/http_helpers.rs` 提供了 `MockServer` 包装器，简化 Mock 服务器的使用：
+`tests/common/http-_helpers.rs` 提供了 `MockServer` 包装器，简化 Mock 服务器的使用：
 
 ```rust
-use crate::common::http_helpers::MockServer;
+use crate::common::http-_helpers::MockServer;
 
-let mut mock_server = MockServer::new();
-mock_server.setup_github_base_url();  // 设置 GitHub API Mock
-mock_server.setup_jira_base_url();    // 设置 Jira API Mock
+let mut mock-_server = MockServer::new();
+mock-_server.setup-_github-_base-_url();  // 设置 GitHub API Mock
+mock-_server.setup-_jira-_base-_url();    // 设置 Jira API Mock
 // MockServer 会在 Drop 时自动清理环境变量
 ```
 
@@ -504,7 +504,7 @@ mock_server.setup_jira_base_url();    // 设置 Jira API Mock
 - [The Rust Book - Test Organization](https://doc.rust-lang.org/book/ch11-03-test-organization.html)
 - [Rust API Guidelines - Testing](https://rust-lang.github.io/api-guidelines/documentation.html#c-test)
 - [Cargo Book - Tests](https://doc.rust-lang.org/cargo/guide/tests.html)
-- [pretty_assertions 文档](https://docs.rs/pretty_assertions/)
+- [pretty-_assertions 文档](https://docs.rs/pretty-_assertions/)
 - [rstest 文档](https://docs.rs/rstest/)
 - [insta 文档](https://docs.rs/insta/)
 - [mockito 文档](https://docs.rs/mockito/)

@@ -381,7 +381,7 @@ graph TD
 cargo test --test completeness
 
 # 运行参数检查测试
-cargo test --test args_check
+cargo test --test args-_check
 
 # 手动生成补全脚本验证
 cargo run -- completion generate
@@ -395,10 +395,10 @@ cargo run -- completion generate
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_CLI_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_CLI_{}.md", timestamp);
 ```
 
 在命令行中：
@@ -427,7 +427,7 @@ Write-Host "report/REVIEW_CLI_${timestamp}.md"
 **检查方法**：
 ```bash
 # 使用 grep 搜索重复模式
-grep -r "fs::read_to_string" src/
+grep -r "fs::read-_to-_string" src/
 grep -r "fs::write" src/
 grep -r "cmd(\"git\"" src/
 
@@ -443,10 +443,10 @@ grep -r "cmd(\"git\"" src/
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_CODE_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_CODE_{}.md", timestamp);
 ```
 
 在命令行中：
@@ -491,10 +491,10 @@ grep -r "#[cfg(test)]" src/
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_TEST_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_TEST_{}.md", timestamp);
 ```
 
 在命令行中：
@@ -542,10 +542,10 @@ cat docs/README.md
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_DOCUMENT_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_DOCUMENT_{}.md", timestamp);
 ```
 
 在命令行中：
@@ -594,10 +594,10 @@ grep -r "pub fn\|pub struct\|pub enum\|pub trait" src/lib/$MODULE/ | head -20
 
 在 Rust 代码中：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_ARCHITECTURE_DOC_{}.md", timestamp);
 ```
 
 在命令行中：
@@ -706,15 +706,15 @@ Write-Host "report/REVIEW_ARCHITECTURE_DOC_${timestamp}.md"
 
 在 Rust 代码中（自动获取当前时间）：
 ```rust
-use workflow::base::util::date::format_filename_timestamp;
+use workflow::base::util::date::format-_filename-_timestamp;
 
 // 函数会自动获取当前时间，无需提前获取
-let timestamp = format_filename_timestamp();
-let report_path = format!("report/REVIEW_REPORT_{}.md", timestamp);
+let timestamp = format-_filename-_timestamp();
+let report-_path = format!("report/REVIEW_REPORT_{}.md", timestamp);
 // 输出：report/REVIEW_REPORT_2024-12-19_14-30-00.md
 ```
 
-> **注意**：`format_filename_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
+> **注意**：`format-_filename-_timestamp()` 函数会在调用时自动获取当前系统时间，无需提前获取。每次调用都会返回最新的时间戳。
 
 在命令行中（手动获取当前时间）：
 ```bash
@@ -1060,10 +1060,10 @@ cargo clippy -- -D warnings
 
 # 2. CLI 检查
 cargo test --test completeness
-cargo test --test args_check
+cargo test --test args-_check
 
 # 3. 代码检查
-grep -r "fs::read_to_string" src/
+grep -r "fs::read-_to-_string" src/
 grep -r "fs::write" src/
 grep -r "cmd(\"git\"" src/
 
@@ -1092,7 +1092,7 @@ grep -r "#[cfg(test)]" src/
 
 其中 `{timestamp}` 为当前日期和时间，格式为 `YYYY-MM-DD_HH-MM-SS`（如：`2024-12-19_14-30-00`）。
 
-**生成时间戳**：使用 `workflow::base::util::date::format_filename_timestamp()` 函数或命令行 `date` 命令。
+**生成时间戳**：使用 `workflow::base::util::date::format-_filename-_timestamp()` 函数或命令行 `date` 命令。
 
 ---
 

@@ -126,14 +126,14 @@ grep -r "#\[arg" src/lib/cli/ -B 1 | grep -v "///"
 /// Supports auto-detection of repository type (GitHub), and optionally uses AI to generate PR title.
 Create {
     /// Jira ticket ID (optional, e.g., PROJ-123)
-    #[arg(value_name = "JIRA_ID")]
-    jira_id: Option<String>,
+    #[arg(value-_name = "JIRA_ID")]
+    jira-_id: Option<String>,
 }
 
 // ❌ 不好的做法
 Create {
-    #[arg(value_name = "JIRA_ID")]
-    jira_id: Option<String>,  // 缺少文档注释
+    #[arg(value-_name = "JIRA_ID")]
+    jira-_id: Option<String>,  // 缺少文档注释
 }
 ```
 
@@ -152,9 +152,9 @@ grep -r "json\|yaml\|table\|markdown" src/lib/cli/ --include="*.rs" | grep "#\[a
 ```
 
 **检查清单**：
-- [ ] 相同语义的参数是否使用相同的命名（如 `jira_id` vs `jira_ticket`）
-- [ ] `value_name` 是否使用 `SCREAMING_SNAKE_CASE`（如 `JIRA_ID`）
-- [ ] 参数字段名是否使用 `snake_case`（如 `jira_id`）
+- [ ] 相同语义的参数是否使用相同的命名（如 `jira-_id` vs `jira-_ticket`）
+- [ ] `value-_name` 是否使用 `SCREAMING_SNAKE_CASE`（如 `JIRA_ID`）
+- [ ] 参数字段名是否使用 `snake-_case`（如 `jira-_id`）
 - [ ] 参数长名是否使用 `kebab-case`（clap 自动转换）
 
 **参考**：见 [参数命名规范](#参数命名规范)
@@ -215,7 +215,7 @@ grep -r "json\|yaml\|table\|markdown" src/lib/cli/ --include="*.rs" | grep "#\[a
 
 ```bash
 # 查找定义了 dry-run 参数但没有使用 DryRunArgs 的命令
-grep -r "dry.*run\|dry_run" src/lib/cli/ --include="*.rs" -i | grep "#\[arg" | grep -v "DryRunArgs"
+grep -r "dry.*run\|dry-_run" src/lib/cli/ --include="*.rs" -i | grep "#\[arg" | grep -v "DryRunArgs"
 ```
 
 **检查清单**：
@@ -244,7 +244,7 @@ grep -r "jira" src/lib/cli/ --include="*.rs" -i | grep -E "#\[arg|:" | grep -v "
 - ✅ `jira.rs`：所有子命令使用 `JiraIdArg`
 - ✅ `log.rs`：所有子命令使用 `JiraIdArg`
 - ✅ `branch.rs`：Create 使用 `JiraIdArg`
-- ❌ `pr.rs`：Create 使用 `jira_ticket: Option<String>`（应该使用 `JiraIdArg`）
+- ❌ `pr.rs`：Create 使用 `jira-_ticket: Option<String>`（应该使用 `JiraIdArg`）
 
 **问题示例**：
 
@@ -252,14 +252,14 @@ grep -r "jira" src/lib/cli/ --include="*.rs" -i | grep -E "#\[arg|:" | grep -v "
 // ❌ 不好的做法（pr.rs）
 Create {
     /// Jira ticket ID (optional, e.g., PROJ-123)
-    #[arg(value_name = "JIRA_TICKET")]
-    jira_ticket: Option<String>,  // 应该使用 JiraIdArg
+    #[arg(value-_name = "JIRA_TICKET")]
+    jira-_ticket: Option<String>,  // 应该使用 JiraIdArg
 }
 
 // ✅ 好的做法
 Create {
     #[command(flatten)]
-    jira_id: JiraIdArg,  // 使用已封装的参数
+    jira-_id: JiraIdArg,  // 使用已封装的参数
 }
 ```
 
@@ -324,11 +324,11 @@ grep -r "offset" src/lib/cli/ --include="*.rs" | grep "#\[arg"
 #[derive(Args, Debug, Clone)]
 pub struct PaginationArgs {
     /// Limit number of results to display
-    #[arg(long, value_name = "LIMIT")]
+    #[arg(long, value-_name = "LIMIT")]
     pub limit: Option<usize>,
 
     /// Offset for pagination
-    #[arg(long, value_name = "OFFSET")]
+    #[arg(long, value-_name = "OFFSET")]
     pub offset: Option<usize>,
 }
 ```
@@ -370,11 +370,11 @@ use clap::Args;
 #[derive(Args, Debug, Clone)]
 pub struct PaginationArgs {
     /// Limit number of results to display
-    #[arg(long, value_name = "LIMIT")]
+    #[arg(long, value-_name = "LIMIT")]
     pub limit: Option<usize>,
 
     /// Offset for pagination
-    #[arg(long, value_name = "OFFSET")]
+    #[arg(long, value-_name = "OFFSET")]
     pub offset: Option<usize>,
 }
 ```
@@ -409,9 +409,9 @@ pub enum MySubcommand {
 
 ### 3.3 参数命名规范
 
-**结构体字段名**：`snake_case`（如 `jira_id`、`dry_run`）
+**结构体字段名**：`snake-_case`（如 `jira-_id`、`dry-_run`）
 
-**`value_name`**：`SCREAMING_SNAKE_CASE`（如 `JIRA_ID`、`DRY_RUN`）
+**`value-_name`**：`SCREAMING_SNAKE_CASE`（如 `JIRA_ID`、`DRY_RUN`）
 
 **参数长名**：`kebab-case`（clap 自动转换，如 `--jira-id`、`--dry-run`）
 
@@ -467,7 +467,7 @@ grep -r "parse\|validate\|check" src/lib/cli/ --include="*.rs" -A 5
 - [ ] 子命令是否已在对应枚举中定义
 - [ ] 命令文档注释（`///`）是否完整
 - [ ] 参数文档注释（`///`）是否完整
-- [ ] 参数命名是否一致（如 `jira_id` vs `jira_ticket`）
+- [ ] 参数命名是否一致（如 `jira-_id` vs `jira-_ticket`）
 - [ ] 运行补全完整性测试：`cargo test --test completeness`
 - [ ] 新增命令是否包含在补全脚本中
 - [ ] 所有 shell 类型是否正常生成
@@ -511,11 +511,11 @@ cargo test --test completeness
 
 #### 参数检查测试
 
-**位置**：`tests/args_check.rs`
+**位置**：`tests/args-_check.rs`
 
 **运行命令**：
 ```bash
-cargo test --test args_check
+cargo test --test args-_check
 ```
 
 **检查内容**：
@@ -524,7 +524,7 @@ cargo test --test args_check
 - 是否应该使用 `DryRunArgs` 但使用了自定义参数
 - 参数命名是否一致
 
-**参考**：见 `tests/args_check.rs`
+**参考**：见 `tests/args-_check.rs`
 
 ### 手动检查工具
 
@@ -535,7 +535,7 @@ cargo test --test args_check
 grep -r "jira" src/lib/cli/ --include="*.rs" -i | grep "#\[arg"
 
 # 查找所有 dry-run 相关参数
-grep -r "dry.*run\|dry_run" src/lib/cli/ --include="*.rs" -i
+grep -r "dry.*run\|dry-_run" src/lib/cli/ --include="*.rs" -i
 
 # 查找所有输出格式相关参数
 grep -r "json\|yaml\|table\|markdown" src/lib/cli/ --include="*.rs" | grep "#\[arg"

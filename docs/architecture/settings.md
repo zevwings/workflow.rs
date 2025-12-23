@@ -45,20 +45,20 @@ src/lib/base/settings/
 
 - **配置读取**：所有模块通过 `Settings::get()` 获取配置
 - **配置验证**：使用 `Settings::verify()` 验证配置正确性
-- **路径获取**：使用 `Paths::workflow_config()` 等获取配置文件路径
+- **路径获取**：使用 `Paths::workflow-_config()` 等获取配置文件路径
 
 #### LLM 模块
 
 - **`lib/base/llm/`**：LLM 客户端
   - `Settings::get().llm` - 获取 LLM 配置
-  - `Paths::llm_config()` - 获取 LLM 配置文件路径
+  - `Paths::llm-_config()` - 获取 LLM 配置文件路径
 
 #### Jira 模块
 
 - **`lib/jira/`**：Jira 客户端
   - `Settings::get().jira` - 获取 Jira 配置
-  - `Paths::jira_status_config()` - 获取 Jira 状态配置文件路径
-  - `Paths::jira_users_config()` - 获取 Jira 用户配置文件路径
+  - `Paths::jira-_status-_config()` - 获取 Jira 状态配置文件路径
+  - `Paths::jira-_users-_config()` - 获取 Jira 用户配置文件路径
 
 #### PR 模块
 
@@ -69,18 +69,18 @@ src/lib/base/settings/
 #### Shell 模块
 
 - **`lib/base/shell/`**：Shell 配置管理
-  - `Paths::config_file(shell)` - 获取 Shell 配置文件路径
-  - `Paths::completion_dir()` - 获取 completion 目录路径
+  - `Paths::config-_file(shell)` - 获取 Shell 配置文件路径
+  - `Paths::completion-_dir()` - 获取 completion 目录路径
 
 #### Completion 模块
 
 - **`lib/completion/`**：Completion 管理
-  - `Paths::completion_dir()` - 获取 completion 目录路径
+  - `Paths::completion-_dir()` - 获取 completion 目录路径
 
 #### Rollback 模块
 
 - **`lib/rollback/`**：回滚管理
-  - `Paths::completion_dir()` - 获取 completion 目录路径（用于备份）
+  - `Paths::completion-_dir()` - 获取 completion 目录路径（用于备份）
 
 ---
 
@@ -136,20 +136,20 @@ src/lib/base/settings/
 
 **关键方法**：
 - **配置路径**：
-  - `config_dir()` - 获取配置目录（`~/.workflow/config/`）
-  - `workflow_config()` - 获取主配置文件路径
-  - `llm_config()` - 获取 LLM 配置文件路径
-  - `jira_status_config()` - 获取 Jira 状态配置文件路径
-  - `jira_users_config()` - 获取 Jira 用户配置文件路径
-  - `workflow_dir()` - 获取工作流目录（`~/.workflow/`）
-  - `work_history_dir()` - 获取工作历史记录目录
+  - `config-_dir()` - 获取配置目录（`~/.workflow/config/`）
+  - `workflow-_config()` - 获取主配置文件路径
+  - `llm-_config()` - 获取 LLM 配置文件路径
+  - `jira-_status-_config()` - 获取 Jira 状态配置文件路径
+  - `jira-_users-_config()` - 获取 Jira 用户配置文件路径
+  - `workflow-_dir()` - 获取工作流目录（`~/.workflow/`）
+  - `work-_history-_dir()` - 获取工作历史记录目录
 - **安装路径**：
-  - `command_names()` - 获取所有命令名称
-  - `binary_install_dir()` - 获取二进制文件安装目录
-  - `binary_paths()` - 获取所有二进制文件完整路径
-  - `completion_dir()` - 获取 completion 目录路径
+  - `command-_names()` - 获取所有命令名称
+  - `binary-_install-_dir()` - 获取二进制文件安装目录
+  - `binary-_paths()` - 获取所有二进制文件完整路径
+  - `completion-_dir()` - 获取 completion 目录路径
 - **Shell 路径**：
-  - `config_file(shell)` - 获取 Shell 配置文件路径
+  - `config-_file(shell)` - 获取 Shell 配置文件路径
 
 **关键特性**：
 - ✅ **自动创建目录**：路径不存在时自动创建
@@ -161,7 +161,7 @@ src/lib/base/settings/
 #### iCloud 存储支持（macOS）
 
 **功能概述**：
-在 macOS 上，`Paths` 模块支持自动将配置文件存储到 iCloud Drive，实现跨设备同步。该功能通过 `config_base_dir()` 方法实现，自动在 iCloud 和本地存储之间选择最佳位置。
+在 macOS 上，`Paths` 模块支持自动将配置文件存储到 iCloud Drive，实现跨设备同步。该功能通过 `config-_base-_dir()` 方法实现，自动在 iCloud 和本地存储之间选择最佳位置。
 
 **设计原则**：
 1. **自动选择**：系统自动选择最佳存储位置，用户无需手动配置
@@ -172,13 +172,13 @@ src/lib/base/settings/
 
 **核心方法**：
 
-- **`try_icloud_base_dir()`** (私有方法，仅 macOS)：
+- **`try-_icloud-_base-_dir()`** (私有方法，仅 macOS)：
   - 检查 iCloud Drive 是否可用（`~/Library/Mobile Documents/com~apple~CloudDocs`）
   - 如果可用，创建并返回 `~/.workflow/` 目录在 iCloud 中的路径
   - 设置目录权限为 700（仅用户可访问）
   - 如果不可用或创建失败，返回 `None`
 
-- **`config_base_dir()`** (私有方法)：
+- **`config-_base-_dir()`** (私有方法)：
   - 决策逻辑：
     1. 检查环境变量 `WORKFLOW_DISABLE_ICLOUD`，如果已设置则使用本地存储
     2. 在 macOS 上尝试 iCloud 存储
@@ -188,7 +188,7 @@ src/lib/base/settings/
 **存储位置决策流程**：
 
 ```
-config_base_dir()
+config-_base-_dir()
   ↓
 检查环境变量 WORKFLOW_DISABLE_ICLOUD
   ├─ 已设置 → 使用本地存储 (~/.workflow/)
@@ -203,31 +203,31 @@ config_base_dir()
 
 **使用场景**：
 - **配置同步**：配置文件存储在 iCloud，自动同步到其他 macOS 设备
-- **工作历史保持本地**：`work_history_dir()` 和 `completion_dir()` 强制使用本地存储，避免冲突
+- **工作历史保持本地**：`work-_history-_dir()` 和 `completion-_dir()` 强制使用本地存储，避免冲突
 
 **环境变量控制**：
 - `WORKFLOW_DISABLE_ICLOUD=1`：强制使用本地存储，即使 iCloud 可用
 
 **查询 API**：
-- `Paths::is_config_in_icloud()` - 检查是否使用 iCloud 存储
-- `Paths::storage_location()` - 获取存储位置描述
-- `Paths::storage_info()` - 获取详细存储信息
+- `Paths::is-_config-_in-_icloud()` - 检查是否使用 iCloud 存储
+- `Paths::storage-_location()` - 获取存储位置描述
+- `Paths::storage-_info()` - 获取详细存储信息
 
 **示例**：
 ```rust
 use workflow::base::settings::Paths;
 
 // 自动选择存储位置（iCloud 或本地）
-let config_dir = Paths::config_dir()?;
+let config-_dir = Paths::config-_dir()?;
 
 // 检查是否使用 iCloud
-if Paths::is_config_in_icloud() {
-    log_message!("配置存储在 iCloud，会自动同步");
+if Paths::is-_config-_in-_icloud() {
+    log-_message!("配置存储在 iCloud，会自动同步");
 }
 
 // 强制使用本地存储
-std::env::set_var("WORKFLOW_DISABLE_ICLOUD", "1");
-let local_config_dir = Paths::config_dir()?;  // 总是返回本地路径
+std::env::set-_var("WORKFLOW_DISABLE_ICLOUD", "1");
+let local-_config-_dir = Paths::config-_dir()?;  // 总是返回本地路径
 ```
 
 #### 3. defaults（默认值模块）
@@ -237,13 +237,13 @@ let local_config_dir = Paths::config_dir()?;  // 总是返回本地路径
 **位置**：`src/lib/base/settings/defaults.rs`
 
 **主要函数**：
-- `default_log_folder()` - 默认日志文件夹名称（"logs"）
-- `default_download_base_dir()` - 默认下载基础目录
-- `default_download_base_dir_option()` - 默认下载基础目录（Option 类型）
-- `default_log_settings()` - 默认 LogSettings 实例
-- `default_response_format()` - 默认 LLM 响应格式路径
-- `default_llm_provider()` - 默认 LLM Provider（"openai"）
-- `default_llm_model(provider)` - 根据 Provider 获取默认模型
+- `default-_log-_folder()` - 默认日志文件夹名称（"logs"）
+- `default-_download-_base-_dir()` - 默认下载基础目录
+- `default-_download-_base-_dir-_option()` - 默认下载基础目录（Option 类型）
+- `default-_log-_settings()` - 默认 LogSettings 实例
+- `default-_response-_format()` - 默认 LLM 响应格式路径
+- `default-_llm-_provider()` - 默认 LLM Provider（"openai"）
+- `default-_llm-_model(provider)` - 根据 Provider 获取默认模型
 
 **关键特性**：
 - ✅ **集中管理**：所有默认值集中在一个模块
@@ -258,7 +258,7 @@ let local_config_dir = Paths::config_dir()?;  // 总是返回本地路径
 ```rust
 pub fn get() -> &'static Settings {
     static SETTINGS: OnceLock<Settings> = OnceLock::new();
-    SETTINGS.get_or_init(Self::load)
+    SETTINGS.get-_or-_init(Self::load)
 }
 ```
 
@@ -293,8 +293,8 @@ pub struct Settings {
 pub struct Paths;
 
 impl Paths {
-    pub fn workflow_config() -> Result<PathBuf> { ... }
-    pub fn completion_dir() -> Result<PathBuf> { ... }
+    pub fn workflow-_config() -> Result<PathBuf> { ... }
+    pub fn completion-_dir() -> Result<PathBuf> { ... }
     // ...
 }
 ```
@@ -340,7 +340,7 @@ impl Paths {
 Settings::get() (获取全局单例)
   ↓
 Settings::load() (从 TOML 文件加载)
-  ├─ Paths::workflow_config() (获取配置文件路径)
+  ├─ Paths::workflow-_config() (获取配置文件路径)
   ├─ 检查文件是否存在
   ├─ 读取 TOML 文件内容
   ├─ 解析为 Settings 结构体
@@ -356,7 +356,7 @@ Settings::load() (从 TOML 文件加载)
 ```
 Settings::load()
   ↓
-1. Paths::workflow_config()              # 获取配置文件路径
+1. Paths::workflow-_config()              # 获取配置文件路径
   ↓
 2. 检查文件是否存在
   ├─ 不存在 → 返回默认值
@@ -382,14 +382,14 @@ Settings::load()
 ```
 Settings::verify()
   ↓
-1. print_log()                            # 显示日志配置
-2. print_llm()                            # 显示 LLM 配置
-3. verify_codeup()                        # 显示 Codeup 配置
-4. verify_jira()                          # 验证 Jira 配置
+1. print-_log()                            # 显示日志配置
+2. print-_llm()                            # 显示 LLM 配置
+3. verify-_codeup()                        # 显示 Codeup 配置
+4. verify-_jira()                          # 验证 Jira 配置
   ├─ 检查配置是否完整
   ├─ 发送 HTTP 请求验证
   └─ 显示验证结果
-5. verify_github()                        # 验证 GitHub 配置
+5. verify-_github()                        # 验证 GitHub 配置
   ├─ 遍历所有账号
   ├─ 使用 API Token 验证每个账号
   └─ 显示验证结果
@@ -400,9 +400,9 @@ Settings::verify()
 ```
 workflow.toml (TOML 文件)
   ↓
-fs::read_to_string() (读取文件)
+fs::read-_to-_string() (读取文件)
   ↓
-toml::from_str() (解析 TOML)
+toml::from-_str() (解析 TOML)
   ↓
 Settings 结构体（使用 #[serde(default)] 填充缺失字段）
   ↓
@@ -416,14 +416,14 @@ Settings::get() (返回引用)
 ```
 Settings::verify()
   ↓
-显示配置（print_log, print_llm, verify_codeup）
+显示配置（print-_log, print-_llm, verify-_codeup）
   ↓
-验证 Jira（verify_jira）
+验证 Jira（verify-_jira）
   ├─ HttpClient::global() (发送 HTTP 请求)
   └─ 显示验证结果
   ↓
-验证 GitHub（verify_github）
-  ├─ GitHub::get_user_info() (验证每个账号)
+验证 GitHub（verify-_github）
+  ├─ GitHub::get-_user-_info() (验证每个账号)
   └─ 显示验证结果
 ```
 
@@ -457,14 +457,14 @@ pub struct Settings {
 ### 添加新路径
 
 1. 在 `paths.rs` 的 `Paths` 实现中添加新方法
-2. 使用 `config_dir()` 或 `workflow_dir()` 作为基础路径
+2. 使用 `config-_dir()` 或 `workflow-_dir()` 作为基础路径
 3. 自动创建目录和设置权限（如需要）
 
 **示例**：
 ```rust
 impl Paths {
-    pub fn new_config_file() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("new-config.toml"))
+    pub fn new-_config-_file() -> Result<PathBuf> {
+        Ok(Self::config-_dir()?.join("new-config.toml"))
     }
 }
 ```
@@ -495,16 +495,16 @@ let settings = Settings::get();
 
 // 获取 Jira 配置
 if let Some(email) = &settings.jira.email {
-    log_message!("Jira email: {}", email);
+    log-_message!("Jira email: {}", email);
 }
 
 // 获取 GitHub 当前账号
-if let Some(account) = settings.github.get_current_account() {
-    log_message!("GitHub account: {}", account.name);
+if let Some(account) = settings.github.get-_current-_account() {
+    log-_message!("GitHub account: {}", account.name);
 }
 
 // 获取 LLM 配置
-log_message!("LLM provider: {}", settings.llm.provider);
+log-_message!("LLM provider: {}", settings.llm.provider);
 ```
 
 ### 使用 Paths
@@ -513,14 +513,14 @@ log_message!("LLM provider: {}", settings.llm.provider);
 use workflow::base::settings::Paths;
 
 // 获取配置文件路径
-let config_path = Paths::workflow_config()?;
+let config-_path = Paths::workflow-_config()?;
 
 // 获取 completion 目录
-let completion_dir = Paths::completion_dir()?;
+let completion-_dir = Paths::completion-_dir()?;
 
 // 获取 Shell 配置文件路径
-use clap_complete::shells::Shell;
-let zshrc = Paths::config_file(&Shell::Zsh)?;
+use clap-_complete::shells::Shell;
+let zshrc = Paths::config-_file(&Shell::Zsh)?;
 ```
 
 ### 配置验证

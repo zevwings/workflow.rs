@@ -33,7 +33,7 @@ PR 模块采用 **策略模式（Strategy Pattern）** 设计，通过 `Platform
    - 每个平台有独立的目录和实现
    - 实现 `PlatformProvider` trait 的所有方法
 
-3. **平台工厂** (`src/lib/pr/platform.rs::create_provider()`)
+3. **平台工厂** (`src/lib/pr/platform.rs::create-_provider()`)
    - 根据仓库类型自动创建对应的平台提供者
 
 ### 当前支持
@@ -51,14 +51,14 @@ src/lib/pr/
 ├── mod.rs                    # 模块导出
 ├── platform.rs              # PlatformProvider trait 和工厂函数
 ├── helpers.rs                # 通用辅助函数
-├── body_parser.rs            # PR body 解析
+├── body-_parser.rs            # PR body 解析
 ├── github/                   # GitHub 平台实现
 │   ├── mod.rs
 │   ├── platform.rs          # GitHub 实现 PlatformProvider
 │   ├── requests.rs          # API 请求结构
 │   ├── responses.rs         # API 响应结构
 │   └── errors.rs            # 错误处理
-└── {new_platform}/          # 新平台实现（需要创建）
+└── {new-_platform}/          # 新平台实现（需要创建）
     ├── mod.rs
     ├── platform.rs
     ├── requests.rs
@@ -71,7 +71,7 @@ src/lib/pr/
 ```
 用户命令
   ↓
-create_provider()  # 根据 RepoType 创建平台实例
+create-_provider()  # 根据 RepoType 创建平台实例
   ↓
 PlatformProvider trait 方法
   ↓
@@ -106,21 +106,21 @@ pub enum RepoType {
 
 #### 1.2 在 `src/lib/git/repo.rs` 中添加 URL 检测逻辑
 
-在 `parse_repo_type_from_url()` 函数中添加新平台的 URL 匹配规则：
+在 `parse-_repo-_type-_from-_url()` 函数中添加新平台的 URL 匹配规则：
 
 ```rust
-fn parse_repo_type_from_url(url: &str) -> RepoType {
+fn parse-_repo-_type-_from-_url(url: &str) -> RepoType {
     // 检查 GitHub
     if url.contains("github.com")
-        || url.starts_with("git@github")
-        || url.starts_with("ssh://git@github")
+        || url.starts-_with("git@github")
+        || url.starts-_with("ssh://git@github")
     {
         RepoType::GitHub
     }
     // 检查 GitLab  // 新增
     else if url.contains("gitlab.com")
-        || url.starts_with("git@gitlab")
-        || url.starts_with("ssh://git@gitlab")
+        || url.starts-_with("git@gitlab")
+        || url.starts-_with("ssh://git@gitlab")
     {
         RepoType::GitLab
     }
@@ -167,16 +167,16 @@ use serde::Serialize;
 pub struct CreateMergeRequestRequest {
     pub title: String,
     pub body: String,
-    pub source_branch: String,
-    pub target_branch: String,
+    pub source-_branch: String,
+    pub target-_branch: String,
     // 根据平台 API 添加其他字段
 }
 
 /// 合并 Merge Request 请求
 #[derive(Debug, Serialize)]
 pub struct MergeMergeRequestRequest {
-    pub merge_commit_message: Option<String>,
-    pub should_remove_source_branch: Option<bool>,
+    pub merge-_commit-_message: Option<String>,
+    pub should-_remove-_source-_branch: Option<bool>,
     // 根据平台 API 添加其他字段
 }
 ```
@@ -191,7 +191,7 @@ use serde::Deserialize;
 /// 创建 Merge Request 响应
 #[derive(Debug, Deserialize)]
 pub struct CreateMergeRequestResponse {
-    pub web_url: String,  // GitLab 使用 web_url，GitHub 使用 html_url
+    pub web-_url: String,  // GitLab 使用 web-_url，GitHub 使用 html-_url
     pub iid: u64,         // GitLab 使用 iid，GitHub 使用 number
 }
 
@@ -203,10 +203,10 @@ pub struct MergeRequestInfo {
     pub description: Option<String>,
     pub state: String,
     pub merged: bool,
-    pub merged_at: Option<String>,
-    pub web_url: String,
-    pub source_branch: String,
-    pub target_branch: String,
+    pub merged-_at: Option<String>,
+    pub web-_url: String,
+    pub source-_branch: String,
+    pub target-_branch: String,
     pub author: Option<GitLabUser>,
 }
 ```
@@ -230,7 +230,7 @@ pub struct GitLabErrorResponse {
 }
 
 /// 格式化 GitLab 错误信息
-pub fn format_error(error: &GitLabErrorResponse, response: &HttpResponse) -> Error {
+pub fn format-_error(error: &GitLabErrorResponse, response: &HttpResponse) -> Error {
     let msg = format!(
         "GitLab API error: {} (Status: {})",
         error.message, response.status
@@ -239,13 +239,13 @@ pub fn format_error(error: &GitLabErrorResponse, response: &HttpResponse) -> Err
 }
 
 /// 处理 GitLab API 错误
-pub fn handle_gitlab_error(response: &HttpResponse) -> Result<(), Error> {
-    if response.is_success() {
+pub fn handle-_gitlab-_error(response: &HttpResponse) -> Result<(), Error> {
+    if response.is-_success() {
         return Ok(());
     }
 
-    let error: GitLabErrorResponse = response.as_json()?;
-    Err(format_error(&error, response))
+    let error: GitLabErrorResponse = response.as-_json()?;
+    Err(format-_error(&error, response))
 }
 ```
 
@@ -264,54 +264,54 @@ use anyhow::{Context, Result};
 pub struct GitLab;
 
 impl PlatformProvider for GitLab {
-    fn create_pull_request(
+    fn create-_pull-_request(
         &self,
         title: &str,
         body: &str,
-        source_branch: &str,
-        target_branch: Option<&str>,
+        source-_branch: &str,
+        target-_branch: Option<&str>,
     ) -> Result<String> {
-        // 1. 获取项目信息（owner/repo 或 project_id）
-        let (project_id, _) = Self::get_project_info()?;
+        // 1. 获取项目信息（owner/repo 或 project-_id）
+        let (project-_id, _) = Self::get-_project-_info()?;
 
         // 2. 确定目标分支
-        let base_branch = target_branch
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| GitBranch::get_default_branch()?);
+        let base-_branch = target-_branch
+            .map(|s| s.to-_string())
+            .unwrap-_or-_else(|| GitBranch::get-_default-_branch()?);
 
         // 3. 构建 API URL
-        let url = format!("{}/projects/{}/merge_requests", Self::base_url(), project_id);
+        let url = format!("{}/projects/{}/merge-_requests", Self::base-_url(), project-_id);
 
         // 4. 构建请求体
         let request = CreateMergeRequestRequest {
-            title: title.to_string(),
-            body: body.to_string(),
-            source_branch: source_branch.to_string(),
-            target_branch: base_branch,
+            title: title.to-_string(),
+            body: body.to-_string(),
+            source-_branch: source-_branch.to-_string(),
+            target-_branch: base-_branch,
         };
 
         // 5. 发送 HTTP 请求
         let client = HttpClient::global()?;
-        let headers = Self::get_headers(None)?;
+        let headers = Self::get-_headers(None)?;
         let config = RequestConfig::<_, Value>::new()
             .body(&request)
             .headers(&headers);
 
         let response = client.post(&url, config)?;
-        let response_data: CreateMergeRequestResponse = response
-            .ensure_success_with(handle_gitlab_error)?
-            .as_json()?;
+        let response-_data: CreateMergeRequestResponse = response
+            .ensure-_success-_with(handle-_gitlab-_error)?
+            .as-_json()?;
 
         // 6. 返回 PR URL
-        Ok(response_data.web_url)
+        Ok(response-_data.web-_url)
     }
 
     // 实现其他必需的方法...
-    fn merge_pull_request(&self, pull_request_id: &str, delete_branch: bool) -> Result<()> {
+    fn merge-_pull-_request(&self, pull-_request-_id: &str, delete-_branch: bool) -> Result<()> {
         // 实现合并逻辑
     }
 
-    fn get_pull_request_info(&self, pull_request_id: &str) -> Result<String> {
+    fn get-_pull-_request-_info(&self, pull-_request-_id: &str) -> Result<String> {
         // 实现获取 PR 信息逻辑
     }
 
@@ -322,9 +322,9 @@ impl PlatformProvider for GitLab {
 **关键点**：
 
 1. **必需方法**：必须实现 `PlatformProvider` trait 中的所有方法
-2. **可选方法**：`get_pull_requests()` 和 `get_pull_request_diff()` 有默认实现，如果平台不支持可以保持默认
+2. **可选方法**：`get-_pull-_requests()` 和 `get-_pull-_request-_diff()` 有默认实现，如果平台不支持可以保持默认
 3. **错误处理**：使用 `anyhow::Context` 提供清晰的错误信息
-4. **认证**：从 `Settings` 获取 API token，参考 GitHub 实现的 `get_headers()` 方法
+4. **认证**：从 `Settings` 获取 API token，参考 GitHub 实现的 `get-_headers()` 方法
 
 ---
 
@@ -335,29 +335,29 @@ impl PlatformProvider for GitLab {
 ```rust
 impl GitLab {
     /// 获取 GitLab API 基础 URL
-    fn base_url() -> &'static str {
+    fn base-_url() -> &'static str {
         "https://gitlab.com/api/v4"  // 或从配置读取
     }
 
     /// 创建 API 请求的 headers
-    fn get_headers(token: Option<&str>) -> Result<HeaderMap> {
+    fn get-_headers(token: Option<&str>) -> Result<HeaderMap> {
         let token = token
-            .or_else(|| {
+            .or-_else(|| {
                 let settings = Settings::get();
-                settings.gitlab.get_current_token()  // 需要在 Settings 中添加
+                settings.gitlab.get-_current-_token()  // 需要在 Settings 中添加
             })
             .context("GitLab API token is not configured")?;
 
         // 构建 headers...
     }
 
-    /// 获取项目信息（project_id 和 owner/repo）
-    fn get_project_info() -> Result<(String, String)> {
+    /// 获取项目信息（project-_id 和 owner/repo）
+    fn get-_project-_info() -> Result<(String, String)> {
         // 从 Git remote URL 解析项目信息
     }
 
     /// 获取 Merge Request 信息（内部方法）
-    fn fetch_mr_info_internal(mr_iid: u64) -> Result<MergeRequestInfo> {
+    fn fetch-_mr-_info-_internal(mr-_iid: u64) -> Result<MergeRequestInfo> {
         // 实现获取 MR 信息的逻辑
     }
 }
@@ -375,7 +375,7 @@ pub mod platform;
 pub mod requests;
 pub mod responses;
 
-pub use errors::{format_error, GitLabError, GitLabErrorResponse};
+pub use errors::{format-_error, GitLabError, GitLabErrorResponse};
 pub use platform::GitLab;
 pub use responses::GitLabUser;
 ```
@@ -383,7 +383,7 @@ pub use responses::GitLabUser;
 #### 6.2 更新 `src/lib/pr/mod.rs`
 
 ```rust
-pub mod body_parser;
+pub mod body-_parser;
 pub mod github;
 pub mod gitlab;  // 新增
 pub mod helpers;
@@ -396,17 +396,17 @@ pub use github::errors::{GitHubError, GitHubErrorResponse};
 pub use github::{GitHub, GitHubUser};
 pub use gitlab::errors::{GitLabError, GitLabErrorResponse};  // 新增
 pub use gitlab::{GitLab, GitLabUser};  // 新增
-pub use platform::{create_provider, PlatformProvider, PullRequestStatus, TYPES_OF_CHANGES};
+pub use platform::{create-_provider, PlatformProvider, PullRequestStatus, TYPES_OF_CHANGES};
 // ... 其他导出
 ```
 
 #### 6.3 更新 `src/lib/pr/platform.rs`
 
-在 `create_provider()` 函数中添加新平台的分支：
+在 `create-_provider()` 函数中添加新平台的分支：
 
 ```rust
-pub fn create_provider() -> Result<Box<dyn PlatformProvider>> {
-    match GitRepo::detect_repo_type()? {
+pub fn create-_provider() -> Result<Box<dyn PlatformProvider>> {
+    match GitRepo::detect-_repo-_type()? {
         RepoType::GitHub => Ok(Box::new(GitHub)),
         RepoType::GitLab => Ok(Box::new(GitLab)),  // 新增
         RepoType::Codeup => {
@@ -440,12 +440,12 @@ pub struct GitLabConfig {
 
     /// 自定义 GitLab 实例 URL（用于自托管 GitLab）
     #[serde(default)]
-    pub base_url: Option<String>,
+    pub base-_url: Option<String>,
 }
 
 impl GitLabConfig {
     /// 获取当前激活的 token
-    pub fn get_current_token(&self) -> Option<&str> {
+    pub fn get-_current-_token(&self) -> Option<&str> {
         // 实现逻辑
     }
 }
@@ -468,12 +468,12 @@ pub struct Settings {
 如果 `src/lib/pr/helpers.rs` 中有平台特定的逻辑，需要更新：
 
 ```rust
-pub fn detect_repo_type() -> Result<RepoType> {
-    GitRepo::detect_repo_type()
+pub fn detect-_repo-_type() -> Result<RepoType> {
+    GitRepo::detect-_repo-_type()
 }
 
 // 如果新平台需要特殊的 URL 解析逻辑，添加相应的辅助函数
-pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
+pub fn extract-_gitlab-_repo-_from-_url(url: &str) -> Result<String> {
     // 实现 GitLab URL 解析
 }
 ```
@@ -488,7 +488,7 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
    - 添加新的 `RepoType` 变体
 
 2. **`src/lib/git/repo.rs`**
-   - 在 `parse_repo_type_from_url()` 中添加 URL 检测逻辑
+   - 在 `parse-_repo-_type-_from-_url()` 中添加 URL 检测逻辑
 
 3. **`src/lib/pr/{platform}/`**（新建目录）
    - `mod.rs` - 模块声明
@@ -502,7 +502,7 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
    - 导出新平台的公共类型
 
 5. **`src/lib/pr/platform.rs`**
-   - 在 `create_provider()` 中添加新平台分支
+   - 在 `create-_provider()` 中添加新平台分支
 
 ### 可选修改的文件
 
@@ -523,7 +523,7 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
 10. **`tests/pr/mod.rs`**
     - 添加新平台的测试模块声明
 
-11. **`tests/integration_test.rs`**（可选）
+11. **`tests/integration-_test.rs`**（可选）
     - 添加集成测试
 
 ---
@@ -538,7 +538,7 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
 - **GitLab**: 使用 `PRIVATE-TOKEN {token}` 或 `Bearer {token}`
 - **Bitbucket**: 使用 `Basic {base64(username:password)}` 或 OAuth
 
-参考 GitHub 实现的 `get_headers()` 方法，根据平台文档实现认证。
+参考 GitHub 实现的 `get-_headers()` 方法，根据平台文档实现认证。
 
 ### PR ID 格式
 
@@ -548,7 +548,7 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
 - **GitLab**: IID（Internal ID，如 `42`），不是全局唯一的
 - **Bitbucket**: 数字 ID（如 `123`）
 
-在实现 `get_pull_request_info()` 等方法时，需要根据平台特性处理 ID。
+在实现 `get-_pull-_request-_info()` 等方法时，需要根据平台特性处理 ID。
 
 ### 分支命名
 
@@ -563,17 +563,17 @@ pub fn extract_gitlab_repo_from_url(url: &str) -> Result<String> {
 
 - **GitHub**: `merge`、`squash`、`rebase`
 - **GitLab**: `merge`、`squash`、`rebase`、`fast-forward`
-- **Bitbucket**: `merge_commit`、`squash`、`fast_forward`
+- **Bitbucket**: `merge-_commit`、`squash`、`fast-_forward`
 
-在实现 `merge_pull_request()` 时，需要根据平台支持的方法选择。
+在实现 `merge-_pull-_request()` 时，需要根据平台支持的方法选择。
 
 ### 错误处理
 
 不同平台的错误响应格式不同，需要：
 
 1. 定义平台特定的错误响应结构
-2. 实现 `format_error()` 函数格式化错误信息
-3. 在 HTTP 响应处理中使用 `ensure_success_with()` 方法
+2. 实现 `format-_error()` 函数格式化错误信息
+3. 在 HTTP 响应处理中使用 `ensure-_success-_with()` 方法
 
 ---
 
@@ -588,7 +588,7 @@ tests/pr/
 ├── mod.rs              # 测试模块声明
 ├── github.rs           # GitHub 平台测试
 ├── gitlab.rs           # GitLab 平台测试（新增）
-├── body_parser.rs      # PR body 解析测试
+├── body-_parser.rs      # PR body 解析测试
 └── table.rs            # PR 表格测试
 ```
 
@@ -606,13 +606,13 @@ use workflow::pr::gitlab::GitLab;
 use workflow::pr::platform::PlatformProvider;
 
 #[test]
-fn test_create_merge_request() {
+fn test-_create-_merge-_request() {
     // 测试创建 MR
     // 注意：需要使用 mock 或测试环境，避免实际调用 API
 }
 
 #[test]
-fn test_merge_merge_request() {
+fn test-_merge-_merge-_request() {
     // 测试合并 MR
 }
 ```
@@ -623,7 +623,7 @@ fn test_merge_merge_request() {
 
 ```rust
 // tests/pr/mod.rs
-pub mod body_parser;
+pub mod body-_parser;
 pub mod github;
 pub mod gitlab;  // 新增
 pub mod table;
@@ -631,11 +631,11 @@ pub mod table;
 
 ### 集成测试
 
-在 `tests/integration_test.rs` 中添加集成测试：
+在 `tests/integration-_test.rs` 中添加集成测试：
 
 ```rust
 #[test]
-fn test_gitlab_platform() {
+fn test-_gitlab-_platform() {
     // 测试 GitLab 平台的完整流程
     // 包括：创建、查询、合并等操作
 }
@@ -649,14 +649,14 @@ fn test_gitlab_platform() {
 use mockito::{mock, Server};
 
 #[test]
-fn test_create_merge_request_with_mock() {
+fn test-_create-_merge-_request-_with-_mock() {
     let mut server = Server::new();
 
     // 创建 mock 响应
     let mock = server
-        .mock("POST", "/api/v4/projects/123/merge_requests")
-        .with_status(201)
-        .with_body(r#"{"web_url": "https://gitlab.com/owner/repo/-/merge_requests/1"}"#)
+        .mock("POST", "/api/v4/projects/123/merge-_requests")
+        .with-_status(201)
+        .with-_body(r#"{"web-_url": "https://gitlab.com/owner/repo/-/merge-_requests/1"}"#)
         .create();
 
     // 执行测试
@@ -699,38 +699,38 @@ src/lib/pr/gitlab/
 
 ```rust
 impl PlatformProvider for GitLab {
-    fn create_pull_request(
+    fn create-_pull-_request(
         &self,
         title: &str,
         body: &str,
-        source_branch: &str,
-        target_branch: Option<&str>,
+        source-_branch: &str,
+        target-_branch: Option<&str>,
     ) -> Result<String> {
-        let (project_id, _) = Self::get_project_info()?;
-        let base_branch = target_branch
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| GitBranch::get_default_branch()?);
+        let (project-_id, _) = Self::get-_project-_info()?;
+        let base-_branch = target-_branch
+            .map(|s| s.to-_string())
+            .unwrap-_or-_else(|| GitBranch::get-_default-_branch()?);
 
-        let url = format!("{}/projects/{}/merge_requests", Self::base_url(), project_id);
+        let url = format!("{}/projects/{}/merge-_requests", Self::base-_url(), project-_id);
         let request = CreateMergeRequestRequest {
-            title: title.to_string(),
-            body: body.to_string(),
-            source_branch: source_branch.to_string(),
-            target_branch: base_branch,
+            title: title.to-_string(),
+            body: body.to-_string(),
+            source-_branch: source-_branch.to-_string(),
+            target-_branch: base-_branch,
         };
 
         let client = HttpClient::global()?;
-        let headers = Self::get_headers(None)?;
+        let headers = Self::get-_headers(None)?;
         let config = RequestConfig::<_, Value>::new()
             .body(&request)
             .headers(&headers);
 
         let response = client.post(&url, config)?;
-        let response_data: CreateMergeRequestResponse = response
-            .ensure_success_with(handle_gitlab_error)?
-            .as_json()?;
+        let response-_data: CreateMergeRequestResponse = response
+            .ensure-_success-_with(handle-_gitlab-_error)?
+            .as-_json()?;
 
-        Ok(response_data.web_url)
+        Ok(response-_data.web-_url)
     }
 
     // ... 其他方法实现
@@ -753,13 +753,13 @@ impl PlatformProvider for GitLab {
 - [ ] 实现 `errors.rs`（错误处理和格式化）
 - [ ] 实现 `platform.rs`（所有 `PlatformProvider` trait 方法）
 - [ ] 在 `src/lib/pr/mod.rs` 中导出新平台
-- [ ] 在 `src/lib/pr/platform.rs` 的 `create_provider()` 中添加分支
+- [ ] 在 `src/lib/pr/platform.rs` 的 `create-_provider()` 中添加分支
 
 ### 配置（如需要）
 
 - [ ] 在 `src/lib/base/settings/settings.rs` 中添加配置结构
 - [ ] 实现配置的序列化/反序列化
-- [ ] 实现 `get_current_token()` 等方法
+- [ ] 实现 `get-_current-_token()` 等方法
 
 ### 测试
 

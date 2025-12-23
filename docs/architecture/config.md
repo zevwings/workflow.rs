@@ -44,7 +44,7 @@ src/commands/config/
 - **`lib/base/http/`**：HTTP 客户端（`HttpClient`）
 - **`lib/jira/config.rs`**：配置管理器（`ConfigManager`）
 - **`lib/git/config.rs`**：Git 配置管理（`GitConfig`）
-- **`lib/base/util/`**：工具函数（`LogLevel`、`mask_sensitive_value()`）
+- **`lib/base/util/`**：工具函数（`LogLevel`、`mask-_sensitive-_value()`）
 
 ---
 
@@ -82,8 +82,8 @@ main.rs::Commands::Setup
 commands/setup.rs::SetupCommand::run()
   ↓
   1. Settings::get()                          # 加载现有配置（从 TOML）
-  2. load_existing_config()                   # 转换为 CollectedConfig
-  3. collect_config()                          # 收集配置信息（交互式）
+  2. load-_existing-_config()                   # 转换为 CollectedConfig
+  3. collect-_config()                          # 收集配置信息（交互式）
      ├─ 用户配置（EMAIL）
      ├─ Jira 配置（地址、Token）
      ├─ GitHub 配置（Token、分支前缀）
@@ -91,10 +91,10 @@ commands/setup.rs::SetupCommand::run()
      ├─ 代理配置（是否禁用检查）
      ├─ LLM 配置（提供商、API Key）
      └─ Codeup 配置（项目 ID、CSRF Token、Cookie）
-  4. save_config()                             # 保存配置到 TOML 文件
+  4. save-_config()                             # 保存配置到 TOML 文件
      ├─ workflow.toml (主配置)
      └─ llm.toml (LLM 配置，如果存在)
-  5. verify_config()                            # 验证配置（可选）
+  5. verify-_config()                            # 验证配置（可选）
 ```
 
 ### 功能说明
@@ -135,7 +135,7 @@ commands/setup.rs::SetupCommand::run()
 
 3. **配置保存**：
    - 使用 `ConfigPaths` 获取配置文件路径
-   - 使用 `toml::to_string_pretty()` 序列化为 TOML 格式
+   - 使用 `toml::to-_string-_pretty()` 序列化为 TOML 格式
    - 主配置保存到 `workflow.toml`
    - LLM 配置单独保存到 `llm.toml`（如果存在）
 
@@ -156,7 +156,7 @@ main.rs::Commands::Config
   ↓
 commands/config/show.rs::ConfigCommand::show()
   ↓
-  1. Paths::workflow_config()                # 获取 workflow.toml 路径
+  1. Paths::workflow-_config()                # 获取 workflow.toml 路径
   2. Settings::load()                        # 加载配置（从 TOML，不使用缓存）
   3. Settings::verify()                      # 验证并打印所有配置
      ├─ 敏感信息掩码（Token、Key 等）
@@ -189,7 +189,7 @@ commands/config/show.rs::ConfigCommand::show()
 ### 关键步骤说明
 
 1. **敏感信息掩码**：
-   - 使用 `mask_sensitive_value()` 函数
+   - 使用 `mask-_sensitive-_value()` 函数
    - 只显示前 4 个字符和后 4 个字符，中间用 `***` 替代
 
 2. **配置验证**：
@@ -213,7 +213,7 @@ main.rs::Commands::Log { subcommand }
   ↓
 commands/config/log.rs::LogCommand::{set|check}()
   ↓
-  1. LogLevel::get_level()                   # 获取当前日志级别
+  1. LogLevel::get-_level()                   # 获取当前日志级别
   2. 执行相应操作（设置或检查）
   3. ConfigManager::<Settings>::update()    # 保存到配置文件（如需要）
 ```
@@ -239,7 +239,7 @@ commands/config/log.rs::LogCommand::{set|check}()
 ### 关键步骤说明
 
 1. **日志级别设置**：
-   - 使用 `LogLevel::set_level()` 在内存中设置日志级别
+   - 使用 `LogLevel::set-_level()` 在内存中设置日志级别
    - 使用 `ConfigManager::<Settings>::update()` 保存到配置文件
    - 设置后立即生效，无需重启
 
@@ -273,7 +273,7 @@ commands/config/validate.rs::ConfigValidateCommand::validate()
   ↓
   1. 确定配置文件路径（默认或指定路径）
   2. 读取并解析配置文件（支持 TOML、JSON、YAML）
-  3. 执行配置验证（validate_config）
+  3. 执行配置验证（validate-_config）
      ├─ 验证 JIRA 配置（邮箱格式、URL 格式、API token）
      ├─ 验证 GitHub 配置（账号名称、API token）
      ├─ 验证日志配置（路径格式）
@@ -353,7 +353,7 @@ commands/config/export.rs::ConfigExportCommand::export()
   1. 确定导出格式（toml、json、yaml，默认 toml）
   2. 加载当前配置（Settings::load()）
   3. 如果指定 --section，提取特定配置段
-  4. 验证配置有效性（validate_config）
+  4. 验证配置有效性（validate-_config）
   5. 如果指定 --no-secrets，过滤敏感信息
   6. 保存配置到指定文件
 ```
@@ -589,8 +589,8 @@ Settings 管理（读取/写入 TOML 配置文件）
 
 1. 在 `lib/base/settings/settings.rs` 中添加新的配置结构体（参考相关模块文档）
 2. 在 `setup.rs` 的 `CollectedConfig` 结构体中添加字段
-3. 在 `setup.rs` 的 `collect_config()` 方法中添加配置收集逻辑
-4. 在 `setup.rs` 的 `save_config()` 方法中添加保存逻辑
+3. 在 `setup.rs` 的 `collect-_config()` 方法中添加配置收集逻辑
+4. 在 `setup.rs` 的 `save-_config()` 方法中添加保存逻辑
 5. 在 `show.rs` 中，`Settings::verify()` 会自动显示新配置项
 
 ### 添加新的配置管理子命令
@@ -607,7 +607,7 @@ Settings 管理（读取/写入 TOML 配置文件）
 环境检查功能已独立到 `commands/check/` 模块，详见 [环境检查命令架构文档](./CHECK_COMMAND_ARCHITECTURE.md)。
 
 如需添加新的检查项：
-1. 在 `commands/check/check.rs` 的 `run_all()` 方法中添加新的检查步骤
+1. 在 `commands/check/check.rs` 的 `run-_all()` 方法中添加新的检查步骤
 2. 调用相应的工具函数或库函数
 3. 提供清晰的错误提示和解决建议
 4. 更新检查步骤的编号和日志输出

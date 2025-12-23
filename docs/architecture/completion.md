@@ -27,10 +27,10 @@ src/lib/completion/
 
 ### 依赖模块
 
-- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion_dir()`）
+- **`lib/base/settings/paths.rs`**：路径管理（`Paths::completion-_dir()`）
 - **`lib/base/shell/config.rs`**：Shell 配置文件管理（`ShellConfigManager`）
 - **`lib/base/shell/detect.rs`**：Shell 检测（`Detect::shell()`）
-- **`clap_complete`**：Completion 脚本生成库
+- **`clap-_complete`**：Completion 脚本生成库
 
 ### 模块集成
 
@@ -43,7 +43,7 @@ src/lib/completion/
 #### 路径管理
 
 - **`lib/base/settings/paths.rs`**：`Paths`
-  - `completion_dir()` - 获取 completion 目录路径
+  - `completion-_dir()` - 获取 completion 目录路径
 
 #### Shell 检测
 
@@ -140,17 +140,17 @@ Generate / Files / ShellConfigManager (功能层)
 ### 安装 Completion 流程
 
 ```
-Completion::configure_shell_config(shell)
+Completion::configure-_shell-_config(shell)
   ↓
   1. Detect::shell()                                    # 检测 shell 类型
-  2. Paths::completion_dir()                           # 获取 completion 目录
-  3. fs::create_dir_all()                              # 创建 completion 目录
-  4. Completion::generate_all_completions()             # 生成 completion 脚本
-     ├─ generate::generate_all_completions()
-     │   └─ generate_workflow_completion()            # 生成 workflow completion（包含所有子命令：pr, log, jira, llm, github 等）
-     └─ files::get_completion_filename()              # 获取文件名
-  5. Completion::create_completion_config_file()       # 创建 .completions 配置文件
-  6. ShellConfigManager::add_source()                  # 添加 source 语句到 shell 配置
+  2. Paths::completion-_dir()                           # 获取 completion 目录
+  3. fs::create-_dir-_all()                              # 创建 completion 目录
+  4. Completion::generate-_all-_completions()             # 生成 completion 脚本
+     ├─ generate::generate-_all-_completions()
+     │   └─ generate-_workflow-_completion()            # 生成 workflow completion（包含所有子命令：pr, log, jira, llm, github 等）
+     └─ files::get-_completion-_filename()              # 获取文件名
+  5. Completion::create-_completion-_config-_file()       # 创建 .completions 配置文件
+  6. ShellConfigManager::add-_source()                  # 添加 source 语句到 shell 配置
 ```
 
 **设计说明**：
@@ -161,13 +161,13 @@ Completion::configure_shell_config(shell)
 ### 卸载 Completion 流程
 
 ```
-Completion::remove_completion_config(shell)
+Completion::remove-_completion-_config(shell)
   ↓
   1. Detect::shell()                                    # 检测 shell 类型
-  2. Completion::remove_completion_files()             # 删除 completion 脚本文件
-     └─ files::get_all_completion_files()              # 获取所有 shell 类型的文件列表
-  3. Completion::remove_completion_config_file()       # 删除 .completions 配置文件
-  4. ShellConfigManager::remove_source()               # 从 shell 配置文件移除 source 语句
+  2. Completion::remove-_completion-_files()             # 删除 completion 脚本文件
+     └─ files::get-_all-_completion-_files()              # 获取所有 shell 类型的文件列表
+  3. Completion::remove-_completion-_config-_file()       # 删除 .completions 配置文件
+  4. ShellConfigManager::remove-_source()               # 从 shell 配置文件移除 source 语句
 ```
 
 ### 数据流
@@ -177,7 +177,7 @@ Completion::remove_completion_config(shell)
 ```
 clap::Command (命令定义)
   ↓
-clap_complete::generate() (生成 completion 脚本)
+clap-_complete::generate() (生成 completion 脚本)
   ↓
 Completion 脚本文件（_workflow 或 workflow.bash）
   ↓
@@ -185,7 +185,7 @@ Completion 脚本文件（_workflow 或 workflow.bash）
   ↓
 ~/.workflow/.completions 配置文件（source 语句）
   ↓
-Shell 配置文件 (~/.zshrc, ~/.bash_profile) (source ~/.workflow/.completions)
+Shell 配置文件 (~/.zshrc, ~/.bash-_profile) (source ~/.workflow/.completions)
   ↓
 Shell 环境（启用 completion）
 ```
@@ -207,34 +207,34 @@ Shell 环境（启用 completion）
 
 ### 添加新命令的 Completion
 
-1. 在 `generate.rs` 中添加新的生成函数（如 `generate_new_command_completion()`）
-2. 在 `generate_all_completions()` 中调用新函数
-3. 在 `files.rs` 的 `get_all_completion_files()` 中添加新命令名
-4. 更新 `completion.rs` 中的命令列表（如 `get_completion_files()`）
+1. 在 `generate.rs` 中添加新的生成函数（如 `generate-_new-_command-_completion()`）
+2. 在 `generate-_all-_completions()` 中调用新函数
+3. 在 `files.rs` 的 `get-_all-_completion-_files()` 中添加新命令名
+4. 更新 `completion.rs` 中的命令列表（如 `get-_completion-_files()`）
 
 **示例**：
 ```rust
 // generate.rs
-pub fn generate_new_command_completion(shell: &ClapShell, output_dir: &Path) -> Result<()> {
-    let mut cmd = Command::new("new_command")
+pub fn generate-_new-_command-_completion(shell: &ClapShell, output-_dir: &Path) -> Result<()> {
+    let mut cmd = Command::new("new-_command")
         .about("New command description")
         .subcommand(/* ... */);
 
     let mut buffer = Vec::new();
-    generate(*shell, &mut cmd, "new_command", &mut buffer);
+    generate(*shell, &mut cmd, "new-_command", &mut buffer);
 
-    let filename = get_completion_filename(&shell.to_string(), "new_command")?;
-    let output_file = output_dir.join(&filename);
-    fs::write(&output_file, buffer)?;
+    let filename = get-_completion-_filename(&shell.to-_string(), "new-_command")?;
+    let output-_file = output-_dir.join(&filename);
+    fs::write(&output-_file, buffer)?;
     Ok(())
 }
 ```
 
 ### 添加新 Shell 支持
 
-1. 在 `files.rs` 的 `get_completion_filename()` 中添加新 shell 类型的命名规则
-2. 在 `generate.rs` 的 `generate_all_completions()` 中添加 shell 类型解析
-3. 在 `completion.rs` 的 `create_completion_config_file()` 中添加新 shell 的配置逻辑
+1. 在 `files.rs` 的 `get-_completion-_filename()` 中添加新 shell 类型的命名规则
+2. 在 `generate.rs` 的 `generate-_all-_completions()` 中添加 shell 类型解析
+3. 在 `completion.rs` 的 `create-_completion-_config-_file()` 中添加新 shell 的配置逻辑
 
 ---
 
@@ -254,10 +254,10 @@ pub fn generate_new_command_completion(shell: &ClapShell, output_dir: &Path) -> 
 use workflow::completion::Completion;
 
 // 配置 shell completion
-Completion::configure_shell_config(&shell)?;
+Completion::configure-_shell-_config(&shell)?;
 
 // 移除 completion 配置
-Completion::remove_completion_config(&shell)?;
+Completion::remove-_completion-_config(&shell)?;
 ```
 
 ---
@@ -272,7 +272,7 @@ Shell Completion 模块采用清晰的职责分离设计：
 
 **设计优势**：
 - ✅ **易于扩展**：添加新命令只需扩展生成函数
-- ✅ **类型安全**：使用 clap_complete::Shell 枚举类型
+- ✅ **类型安全**：使用 clap-_complete::Shell 枚举类型
 - ✅ **代码复用**：Files 模块提供通用工具函数
 - ✅ **多 Shell 支持**：支持 zsh、bash、fish、powershell、elvish
 

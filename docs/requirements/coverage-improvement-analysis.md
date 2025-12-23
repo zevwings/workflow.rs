@@ -13,7 +13,7 @@
 
 #### 1. 接近完成的模块（90%+ → 100%）
 
-**`logger/log_level.rs`**: 37/38 (97%) → 38/38 (100%)
+**`logger/log-_level.rs`**: 37/38 (97%) → 38/38 (100%)
 - **剩余工作**: 仅需 1 行
 - **难度**: ⭐ 极低
 - **预计时间**: 5-10 分钟
@@ -99,7 +99,7 @@
   - ✅ 补充了日志级别过滤的各种场景测试
   - ✅ 补充了边界情况测试（零长度、默认参数等）
   - ✅ 补充了不同日志级别下的过滤行为测试
-- **测试文件**: `tests/base/logger_console.rs`（新增 10+ 个测试用例）
+- **测试文件**: `tests/base/logger-_console.rs`（新增 10+ 个测试用例）
 - **状态**: ✅ 已完成测试补充
 
 **`logger/tracing.rs`**: 40% → 85%+ ✅ 已完成测试补充
@@ -109,7 +109,7 @@
   - ✅ 补充了不同输入类型的测试
   - ✅ 补充了复杂格式化和边界情况测试
   - ✅ 补充了长消息和空字符串测试
-- **测试文件**: `tests/base/logger_tracing.rs`（新增 7+ 个测试用例）
+- **测试文件**: `tests/base/logger-_tracing.rs`（新增 7+ 个测试用例）
 - **状态**: ✅ 已完成测试补充
 
 #### 6. HTTP 层进一步提升
@@ -180,9 +180,9 @@
    - 验证已补充测试的模块实际覆盖率
    - 更新文档中的实际覆盖率数据
 
-2. **完成 `logger/log_level.rs`**
+2. **完成 `logger/log-_level.rs`**
    ```bash
-   cargo test --release logger_log_level
+   cargo test --release logger-_log-_level
    ```
    - 达到 100% 覆盖率
    - 预计 5-10 分钟
@@ -277,17 +277,17 @@
 - ✅ 补充了日志级别过滤的各种场景（None、Error、Warn、Info、Debug）
 - ✅ 补充了边界情况测试（零长度、默认参数、不同字符和长度）
 - ✅ 补充了不同日志级别下的过滤行为测试
-- **测试文件**: `tests/base/logger_console.rs`
+- **测试文件**: `tests/base/logger-_console.rs`
 
 **`logger/tracing.rs`**: 40% → 85%+
 - ✅ 新增 7+ 个测试用例
 - ✅ 补充了多次初始化测试
 - ✅ 补充了不同输入类型和复杂格式化测试
 - ✅ 补充了边界情况测试（空字符串、长消息、各种类型）
-- **测试文件**: `tests/base/logger_tracing.rs`
+- **测试文件**: `tests/base/logger-_tracing.rs`
 
-**`logger/log_level.rs`**: 97% → 100%
-- ✅ 测试已存在（`test_log_level_default_level_release`）
+**`logger/log-_level.rs`**: 97% → 100%
+- ✅ 测试已存在（`test-_log-_level-_default-_level-_release`）
 - ✅ 在 release 模式下运行即可覆盖第32行
 - **方法**: `cargo test --release`
 
@@ -305,15 +305,15 @@
 - **所有测试通过**: 1151 个测试通过，0 个失败
 - **新增测试用例**: 20+ 个
 - **测试文件更新**:
-  - `tests/base/logger_console.rs`（新增 10+ 个测试）
-  - `tests/base/logger_tracing.rs`（新增 7+ 个测试）
+  - `tests/base/logger-_console.rs`（新增 10+ 个测试）
+  - `tests/base/logger-_tracing.rs`（新增 7+ 个测试）
   - `tests/http/retry.rs`（新增 3+ 个测试）
 
 ### 4. 预期覆盖率提升
 
 - `logger/console.rs`: 63% → 93%+ ✅
 - `logger/tracing.rs`: 40% → 85%+ ✅
-- `logger/log_level.rs`: 97% → 100% ✅（需 release 模式验证）
+- `logger/log-_level.rs`: 97% → 100% ✅（需 release 模式验证）
 - `http/retry.rs`: 70%+ → 90%+ ✅
 
 ---

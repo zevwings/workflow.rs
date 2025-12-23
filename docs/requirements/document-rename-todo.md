@@ -2,7 +2,7 @@
 
 ## 📋 概述
 
-将 `docs/` 和 `analysis/` 目录下的所有文档文件名从 `SCREAMING_SNAKE_CASE`（全大写+下划线）改为 `snake_case`（小写+下划线），以提升可读性和一致性。
+将 `docs/` 和 `analysis/` 目录下的所有文档文件名从 `SCREAMING_SNAKE_CASE`（全大写+下划线）改为 `snake-_case`（小写+下划线），以提升可读性和一致性。
 
 **目录重命名**：`docs/todo/` → `docs/requirements/`
 
@@ -14,10 +14,10 @@
 
 **示例转换**：
 - `ARCHITECTURE.md` → `architecture.md`（总体架构文档，保留原名）
-- `DEVELOPMENT_GUIDELINES.md` → `development_guidelines.md`
+- `DEVELOPMENT_GUIDELINES.md` → `development-_guidelines.md`
 - `PR_COMMAND_ARCHITECTURE.md` + `lib/PR_ARCHITECTURE.md` → `pr.md`（合并，删除后缀）
 - `lib/GIT_ARCHITECTURE.md` → `git.md`（删除后缀）
-- `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication_analysis.md`
+- `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication-_analysis.md`
 - `docs/todo/` → `docs/requirements/`
 
 ---
@@ -127,53 +127,53 @@
 #### 2.4 处理其他架构文档
 
 - [ ] `ARCHITECTURE.md` → `architecture.md`（总体架构文档）
-- [ ] `CHECK_LOG.md` → `check_log.md`
+- [ ] `CHECK_LOG.md` → `check-_log.md`
 
 ### 阶段 3：文件重命名（其他目录）
 
 #### 3.1 `docs/guidelines/` 目录
 
-- [ ] `CARGO_BLOAT_GUIDELINES.md` → `cargo_bloat_guidelines.md`
-- [ ] `CI_WORKFLOW_GUIDELINES.md` → `ci_workflow_guidelines.md`
-- [ ] `DEVELOPMENT_GUIDELINES.md` → `development_guidelines.md`
-- [ ] `DOCUMENT_GUIDELINES.md` → `document_guidelines.md`
-- [ ] `DOCUMENT_TIMESTAMP_GUIDELINES.md` → `document_timestamp_guidelines.md`
-- [ ] `GITHUB_SETUP_GUIDELINES.md` → `github_setup_guidelines.md`
-- [ ] `PR_PLATFORM_GUIDELINES.md` → `pr_platform_guidelines.md`
-- [ ] `TEMPLATE_GUIDELINES.md` → `template_guidelines.md`
-- [ ] `TESTING_GUIDELINES.md` → `testing_guidelines.md`
-- [ ] `workflows/PRE_COMMIT_GUIDELINES.md` → `workflows/pre_commit_guidelines.md`
-- [ ] `workflows/REVIEW_GUIDELINES.md` → `workflows/review_guidelines.md`
-- [ ] `workflows/references/QUICK_REFERENCE_GUIDELINES.md` → `workflows/references/quick_reference_guidelines.md`
-- [ ] `workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md` → `workflows/references/review_architecture_doc_guidelines.md`
-- [ ] `workflows/references/REVIEW_CLI_GUIDELINES.md` → `workflows/references/review_cli_guidelines.md`
-- [ ] `workflows/references/REVIEW_CODE_GUIDELINES.md` → `workflows/references/review_code_guidelines.md`
-- [ ] `workflows/references/REVIEW_DOCUMENT_GUIDELINES.md` → `workflows/references/review_document_guidelines.md`
-- [ ] `workflows/references/REVIEW_TEST_CASE_GUIDELINES.md` → `workflows/references/review_test_case_guidelines.md`
-- [ ] `workflows/references/STYLE_GUIDELINES.md` → `workflows/references/style_guidelines.md`
-- [ ] `workflows/references/TEST_COVERAGE_CHECK_GUIDELINES.md` → `workflows/references/test_coverage_check_guidelines.md`
+- [ ] `CARGO_BLOAT_GUIDELINES.md` → `cargo-_bloat-_guidelines.md`
+- [ ] `CI_WORKFLOW_GUIDELINES.md` → `ci-_workflow-_guidelines.md`
+- [ ] `DEVELOPMENT_GUIDELINES.md` → `development-_guidelines.md`
+- [ ] `DOCUMENT_GUIDELINES.md` → `document-_guidelines.md`
+- [ ] `DOCUMENT_TIMESTAMP_GUIDELINES.md` → `document-_timestamp-_guidelines.md`
+- [ ] `GITHUB_SETUP_GUIDELINES.md` → `github-_setup-_guidelines.md`
+- [ ] `PR_PLATFORM_GUIDELINES.md` → `pr-_platform-_guidelines.md`
+- [ ] `TEMPLATE_GUIDELINES.md` → `template-_guidelines.md`
+- [ ] `TESTING_GUIDELINES.md` → `testing-_guidelines.md`
+- [ ] `workflows/PRE_COMMIT_GUIDELINES.md` → `workflows/pre-_commit-_guidelines.md`
+- [ ] `workflows/REVIEW_GUIDELINES.md` → `workflows/review-_guidelines.md`
+- [ ] `workflows/references/QUICK_REFERENCE_GUIDELINES.md` → `workflows/references/quick-_reference-_guidelines.md`
+- [ ] `workflows/references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md` → `workflows/references/review-_architecture-_doc-_guidelines.md`
+- [ ] `workflows/references/REVIEW_CLI_GUIDELINES.md` → `workflows/references/review-_cli-_guidelines.md`
+- [ ] `workflows/references/REVIEW_CODE_GUIDELINES.md` → `workflows/references/review-_code-_guidelines.md`
+- [ ] `workflows/references/REVIEW_DOCUMENT_GUIDELINES.md` → `workflows/references/review-_document-_guidelines.md`
+- [ ] `workflows/references/REVIEW_TEST_CASE_GUIDELINES.md` → `workflows/references/review-_test-_case-_guidelines.md`
+- [ ] `workflows/references/STYLE_GUIDELINES.md` → `workflows/references/style-_guidelines.md`
+- [ ] `workflows/references/TEST_COVERAGE_CHECK_GUIDELINES.md` → `workflows/references/test-_coverage-_check-_guidelines.md`
 
 #### 3.2 `docs/requirements/` 目录（目录重命名后）
 
-- [ ] `COVERAGE_IMPROVEMENT_TODO.md` → `coverage_improvement_todo.md`
-- [ ] `DOC_CHECK_TODO.md` → `doc_check_todo.md`
-- [ ] `GIX_MIGRATION_TODO.md` → `gix_migration_todo.md`
-- [ ] `INTEGRATION_TODO.md` → `integration_todo.md`
-- [ ] `JIRA_TODO.md` → `jira_todo.md`
-- [ ] `TEST_ARCHITECTURE_IMPROVEMENT_TODO.md` → `test_architecture_improvement_todo.md`
-- [ ] `DOCUMENT_RENAME_TODO.md` → `document_rename_todo.md`（本文件）
+- [ ] `COVERAGE_IMPROVEMENT_TODO.md` → `coverage-_improvement-_todo.md`
+- [ ] `DOC_CHECK_TODO.md` → `doc-_check-_todo.md`
+- [ ] `GIX_MIGRATION_TODO.md` → `gix-_migration-_todo.md`
+- [ ] `INTEGRATION_TODO.md` → `integration-_todo.md`
+- [ ] `JIRA_TODO.md` → `jira-_todo.md`
+- [ ] `TEST_ARCHITECTURE_IMPROVEMENT_TODO.md` → `test-_architecture-_improvement-_todo.md`
+- [ ] `DOCUMENT_RENAME_TODO.md` → `document-_rename-_todo.md`（本文件）
 
 #### 3.3 `analysis/` 目录
 
-- [ ] `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication_analysis.md`
-- [ ] `GIT2_MIGRATION_STATUS.md` → `git2_migration_status.md`
-- [ ] `TEST_ANALYSIS_REPORT.md` → `test_analysis_report.md`
+- [ ] `GIT2_AUTHENTICATION_ANALYSIS.md` → `git2_authentication-_analysis.md`
+- [ ] `GIT2_MIGRATION_STATUS.md` → `git2_migration-_status.md`
+- [ ] `TEST_ANALYSIS_REPORT.md` → `test-_analysis-_report.md`
 
 #### 3.4 `analysis/impl/` 目录（实现/实施文档）
 
 **注意**：实现文档或实施文档应存放到 `analysis/impl/` 目录下。
 
-- [ ] `GIT2_AUTHENTICATION_IMPLEMENTATION.md` → `analysis/impl/git2_authentication_implementation.md`（移动到 impl 目录）
+- [ ] `GIT2_AUTHENTICATION_IMPLEMENTATION.md` → `analysis/impl/git2_authentication-_implementation.md`（移动到 impl 目录）
 
 ### 阶段 4：更新文档引用
 
@@ -274,10 +274,10 @@ git mv docs/architecture/architecture.md docs/architecture/architecture.md
 # 批量重命名脚本示例（需要根据实际情况调整）
 find docs/architecture -name "*.md" -type f | while read file; do
     dir=$(dirname "$file")
-    old_name=$(basename "$file")
-    new_name=$(echo "$old_name" | tr '[:upper:]' '[:lower:]')
-    if [ "$old_name" != "$new_name" ]; then
-        git mv "$file" "$dir/$new_name"
+    old-_name=$(basename "$file")
+    new-_name=$(echo "$old-_name" | tr '[:upper:]' '[:lower:]')
+    if [ "$old-_name" != "$new-_name" ]; then
+        git mv "$file" "$dir/$new-_name"
     fi
 done
 ```
@@ -291,7 +291,7 @@ done
 # 在 .cursorrules、docs/README.md 等文件中
 
 # 2. 更新文件名引用：ARCHITECTURE.md -> architecture.md
-# PR_ARCHITECTURE.md -> pr_architecture.md
+# PR_ARCHITECTURE.md -> pr-_architecture.md
 # 等等...
 ```
 
@@ -339,7 +339,7 @@ done
 - 架构文档：`{module}.md`（按功能模块组织，包含 Lib 层和 Commands 层，删除 `_architecture` 后缀）
 - 指南文档：`{topic}_guidelines.md`
 - 需求文档：`{topic}_todo.md`（存放到 `docs/requirements/`）
-- 分析文档：`{topic}_analysis.md` 或 `{topic}_analysis_report.md`（存放到 `analysis/`）
+- 分析文档：`{topic}_analysis.md` 或 `{topic}_analysis-_report.md`（存放到 `analysis/`）
 - 实现文档：`{topic}_implementation.md` 或 `{topic}_impl.md`（存放到 `analysis/impl/`）
 
 **目录路径更新**：
@@ -391,13 +391,13 @@ done
 ```
 docs/requirements/
 ├── README.md                      # 索引文档
-├── coverage_improvement_todo.md
-├── doc_check_todo.md
-├── document_rename_todo.md        # 本文件
-├── gix_migration_todo.md
-├── integration_todo.md
-├── jira_todo.md
-└── test_architecture_improvement_todo.md
+├── coverage-_improvement-_todo.md
+├── doc-_check-_todo.md
+├── document-_rename-_todo.md        # 本文件
+├── gix-_migration-_todo.md
+├── integration-_todo.md
+├── jira-_todo.md
+└── test-_architecture-_improvement-_todo.md
 ```
 
 #### `docs/architecture/` 目录（重组后）
@@ -405,7 +405,7 @@ docs/requirements/
 ```
 docs/architecture/
 ├── architecture.md                # 总体架构文档（保留原名）
-├── check_log.md                   # Check Log 文档（非架构文档，保留原名）
+├── check-_log.md                   # Check Log 文档（非架构文档，保留原名）
 ├── pr.md                         # PR 模块（合并 lib + commands）
 ├── jira.md                       # Jira 模块（合并 lib + commands）
 ├── branch.md                     # Branch 模块（合并 lib + commands）
@@ -447,7 +447,7 @@ docs/architecture/
 
 ```
 analysis/impl/
-└── git2_authentication_implementation.md  # 实现文档（从 analysis/ 移动）
+└── git2_authentication-_implementation.md  # 实现文档（从 analysis/ 移动）
 ```
 
 **注意**：

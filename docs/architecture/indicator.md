@@ -50,7 +50,7 @@ Indicator 模块被所有需要显示进度的命令广泛使用：
 
 ### 设计原则
 
-1. **统一接口**：所有指示器使用相似的方法（`new()`, `finish()`, `update_message()`）
+1. **统一接口**：所有指示器使用相似的方法（`new()`, `finish()`, `update-_message()`）
 2. **自动管理**：提供便捷方法自动管理指示器生命周期
 3. **灵活使用**：支持手动管理和自动管理两种方式
 4. **用户体验**：提供清晰的进度反馈
@@ -63,17 +63,17 @@ Indicator 模块被所有需要显示进度的命令广泛使用：
 
 **主要方法**：
 - `new(message)` - 创建新的 spinner 并立即开始显示
-- `update_message(message)` - 更新显示的消息
+- `update-_message(message)` - 更新显示的消息
 - `finish()` - 完成并清除 spinner
-- `finish_with_message(message)` - 完成并显示完成消息
+- `finish-_with-_message(message)` - 完成并显示完成消息
 - `with(message, operation)` - 使用 spinner 执行一个操作（自动管理）
-- `with_output(message, operation)` - 使用 spinner 执行会产生输出的操作
+- `with-_output(message, operation)` - 使用 spinner 执行会产生输出的操作
 
 **特性**：
 - 自动开始显示
 - 支持消息更新
 - 支持自动管理（便捷方法）
-- 支持处理子进程输出（`with_output` 方法）
+- 支持处理子进程输出（`with-_output` 方法）
 
 **使用示例**：
 
@@ -87,20 +87,20 @@ spinner.finish();
 
 // 方式 2：自动管理（推荐）
 let result = Spinner::with("Creating PR...", || {
-    provider.create_pull_request(...)
+    provider.create-_pull-_request(...)
 })?;
 
 // 方式 3：处理会产生输出的操作
-Spinner::with_output("Pushing to remote...", || {
-    GitBranch::push(&current_branch, false)
+Spinner::with-_output("Pushing to remote...", || {
+    GitBranch::push(&current-_branch, false)
 })?;
-log_success!("Pushed to remote successfully");
+log-_success!("Pushed to remote successfully");
 ```
 
 **设计说明**：
 
 - `with()` 方法：自动创建 spinner，执行操作，然后清理 spinner。适用于不产生输出的操作。
-- `with_output()` 方法：先显示 spinner 消息（250ms），然后完成 spinner，再执行操作。这样可以避免子进程的输出与 spinner 动画混合。适用于执行会产生 stdout/stderr 输出的操作（如 `git push`）。
+- `with-_output()` 方法：先显示 spinner 消息（250ms），然后完成 spinner，再执行操作。这样可以避免子进程的输出与 spinner 动画混合。适用于执行会产生 stdout/stderr 输出的操作（如 `git push`）。
 
 #### 2. Progress - 确定进度指示器
 
@@ -108,15 +108,15 @@ log_success!("Pushed to remote successfully");
 
 **主要方法**：
 - `new(total, message)` - 创建一个新的进度条（已知总数）
-- `new_download(total_bytes, message)` - 创建一个新的进度条（用于下载，显示字节数）
-- `new_unknown(message)` - 创建一个新的进度条（未知总数，使用 spinner 模式）
+- `new-_download(total-_bytes, message)` - 创建一个新的进度条（用于下载，显示字节数）
+- `new-_unknown(message)` - 创建一个新的进度条（未知总数，使用 spinner 模式）
 - `inc(delta)` - 增加进度（按单位数）
-- `inc_bytes(delta)` - 增加进度（按字节数）
-- `set_position(pos)` - 设置当前位置
-- `update_message(message)` - 更新显示的消息
+- `inc-_bytes(delta)` - 增加进度（按字节数）
+- `set-_position(pos)` - 设置当前位置
+- `update-_message(message)` - 更新显示的消息
 - `finish()` - 完成并清除进度条
-- `finish_ref()` - 完成并清除进度条（不需要 move，用于 Mutex 中）
-- `finish_with_message(message)` - 完成并显示完成消息
+- `finish-_ref()` - 完成并清除进度条（不需要 move，用于 Mutex 中）
+- `finish-_with-_message(message)` - 完成并显示完成消息
 
 **特性**：
 - 支持已知总数和未知总数两种模式
@@ -138,12 +138,12 @@ for i in 0..100 {
 progress.finish();
 
 // 方式 2：下载模式（显示字节数）
-let progress = Progress::new_download(1024 * 1024, "Downloading...");
-progress.inc_bytes(1024);
+let progress = Progress::new-_download(1024 * 1024, "Downloading...");
+progress.inc-_bytes(1024);
 progress.finish();
 
 // 方式 3：未知总数（使用 spinner 模式）
-let progress = Progress::new_unknown("Downloading...");
+let progress = Progress::new-_unknown("Downloading...");
 // 执行操作
 progress.finish();
 ```
@@ -174,13 +174,13 @@ progress.finish();
 ```rust
 // Spinner 自动管理
 let result = Spinner::with("Creating PR...", || {
-    provider.create_pull_request(...)
+    provider.create-_pull-_request(...)
 })?;
 
 // Progress 需要手动管理（因为需要更新进度）
 let progress = Progress::new(100, "Processing...");
 for item in items {
-    process_item(item);
+    process-_item(item);
     progress.inc(1);
 }
 progress.finish();
@@ -197,7 +197,7 @@ progress.finish();
 
 ```rust
 let result = Spinner::with("Creating PR...", || {
-    provider.create_pull_request(...)
+    provider.create-_pull-_request(...)
 })?;
 // 如果操作失败，spinner 会自动清理
 ```
@@ -234,7 +234,7 @@ Spinner::new("message")
   ↓
 执行操作（手动或通过 with()）
   ↓
-finish() 或 finish_with_message()
+finish() 或 finish-_with-_message()
   ↓
 清除显示
 ```
@@ -246,11 +246,11 @@ Progress::new(total, "message")
   ↓
 开始显示进度条
   ↓
-inc(delta) 或 set_position(pos)  // 更新进度
+inc(delta) 或 set-_position(pos)  // 更新进度
   ↓
-update_message("new message")  // 可选：更新消息
+update-_message("new message")  // 可选：更新消息
   ↓
-finish() 或 finish_with_message()
+finish() 或 finish-_with-_message()
   ↓
 清除显示
 ```
@@ -290,11 +290,11 @@ indicator (基础设施)
 
 ```rust
 let pb = ProgressBar::new(total);
-pb.set_style(
-    ProgressStyle::default_bar()
-        .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
+pb.set-_style(
+    ProgressStyle::default-_bar()
+        .template("{spinner:.green} [{elapsed-_precise}] [{wide-_bar:.cyan/blue}] {pos}/{len} ({percent}%) {msg}")
         .unwrap()
-        .progress_chars("#>-"),
+        .progress-_chars("#>-"),
 );
 ```
 
@@ -322,14 +322,14 @@ spinner.finish();
 
 // 自动管理
 let result = Spinner::with("Creating PR...", || {
-    provider.create_pull_request(...)
+    provider.create-_pull-_request(...)
 })?;
 
 // 处理会产生输出的操作
-Spinner::with_output("Pushing to remote...", || {
-    GitBranch::push(&current_branch, false)
+Spinner::with-_output("Pushing to remote...", || {
+    GitBranch::push(&current-_branch, false)
 })?;
-log_success!("Pushed to remote successfully");
+log-_success!("Pushed to remote successfully");
 ```
 
 ### Progress 使用
@@ -345,12 +345,12 @@ for i in 0..100 {
 progress.finish();
 
 // 下载模式
-let progress = Progress::new_download(1024 * 1024, "Downloading...");
-progress.inc_bytes(1024);
+let progress = Progress::new-_download(1024 * 1024, "Downloading...");
+progress.inc-_bytes(1024);
 progress.finish();
 
 // 未知总数
-let progress = Progress::new_unknown("Downloading...");
+let progress = Progress::new-_unknown("Downloading...");
 progress.finish();
 ```
 
@@ -368,7 +368,7 @@ Indicator 模块为整个项目提供统一的进度指示器功能：
 - ✅ **灵活性**：支持手动管理和自动管理两种方式
 - ✅ **用户体验**：提供清晰的进度反馈
 - ✅ **资源管理**：自动清理资源，减少错误
-- ✅ **适应性**：支持处理子进程输出（`with_output` 方法）
+- ✅ **适应性**：支持处理子进程输出（`with-_output` 方法）
 
 ---
 

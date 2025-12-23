@@ -10,9 +10,9 @@
 该模块为整个应用提供统一的 Prompt 管理基础设施，Prompt 内容作为编译时常量直接嵌入到二进制文件中，便于维护和版本控制。
 
 **模块统计：**
-- 总代码行数：约 143 行（summarize_pr.system.rs）+ 约 200 行（generate_branch.system.rs）
-- 文件数量：2 个 Prompt 文件（generate_branch.system.rs, summarize_pr.system.rs）
-- 主要组件：2 个（GENERATE_BRANCH_SYSTEM_PROMPT 常量，generate_summarize_pr_system_prompt 函数）
+- 总代码行数：约 143 行（summarize-_pr.system.rs）+ 约 200 行（generate-_branch.system.rs）
+- 文件数量：2 个 Prompt 文件（generate-_branch.system.rs, summarize-_pr.system.rs）
+- 主要组件：2 个（GENERATE_BRANCH_SYSTEM_PROMPT 常量，generate-_summarize-_pr-_system-_prompt 函数）
 - 语言支持：通过 `lib/base/llm/languages.rs` 提供多语言支持
 
 ---
@@ -24,13 +24,13 @@
 ```
 src/lib/base/prompt/
 ├── mod.rs                      # 模块声明和导出 (28行)
-├── generate_branch.system.rs   # 生成分支名的 system prompt (约 200 行)
-└── summarize_pr.system.rs      # PR 总结的 system prompt (143行)
+├── generate-_branch.system.rs   # 生成分支名的 system prompt (约 200 行)
+└── summarize-_pr.system.rs      # PR 总结的 system prompt (143行)
 ```
 
 ### 依赖模块
 
-- **`lib/base/llm/languages.rs`**：多语言支持（`get_language_requirement` 函数）
+- **`lib/base/llm/languages.rs`**：多语言支持（`get-_language-_requirement` 函数）
 - **`lib/base/llm/mod.rs`**：语言相关 API 重新导出
 
 ### 模块集成
@@ -39,12 +39,12 @@ src/lib/base/prompt/
 
 - **`lib/pr/llm.rs`**：PR LLM 服务
   - `GENERATE_BRANCH_SYSTEM_PROMPT` - 使用编译时嵌入的 prompt 常量
-  - `generate_summarize_pr_system_prompt(language)` - 根据语言生成 PR 总结 prompt
+  - `generate-_summarize-_pr-_system-_prompt(language)` - 根据语言生成 PR 总结 prompt
 
 #### 使用场景
 
 - **Prompt 使用**：所有需要 LLM prompt 的模块直接使用编译时嵌入的常量或函数
-- **多语言支持**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求
+- **多语言支持**：通过 `get-_language-_requirement` 函数增强 prompt 中的语言要求
 
 ---
 
@@ -53,14 +53,14 @@ src/lib/base/prompt/
 ### 设计原则
 
 1. **编译时嵌入**：Prompt 作为编译时常量直接嵌入到二进制文件中，无需运行时文件读取
-2. **多语言支持**：通过 `get_language_requirement` 函数根据语言动态增强 prompt
+2. **多语言支持**：通过 `get-_language-_requirement` 函数根据语言动态增强 prompt
 3. **类型安全**：使用 Rust 常量（`pub const`）和函数，编译时检查
 4. **易于维护**：Prompt 内容在源代码中，便于版本控制和代码审查
 5. **性能优化**：编译时嵌入，无需运行时文件 I/O 操作
 
 ### 核心组件
 
-#### 1. GENERATE_BRANCH_SYSTEM_PROMPT (`generate_branch.system.rs`)
+#### 1. GENERATE_BRANCH_SYSTEM_PROMPT (`generate-_branch.system.rs`)
 
 **职责**：提供生成分支名和 PR 标题的 system prompt
 
@@ -75,25 +75,25 @@ src/lib/base/prompt/
 - PR 创建时生成分支名和 PR 标题
 - 通过 `PullRequestLLM::generate()` 调用
 
-#### 2. generate_summarize_pr_system_prompt (`summarize_pr.system.rs`)
+#### 2. generate-_summarize-_pr-_system-_prompt (`summarize-_pr.system.rs`)
 
 **职责**：根据语言生成 PR 总结的 system prompt
 
 **主要方法**：
 
-- `generate_summarize_pr_system_prompt(language: &str) -> String` - 根据语言代码生成 system prompt
+- `generate-_summarize-_pr-_system-_prompt(language: &str) -> String` - 根据语言代码生成 system prompt
 
 **关键特性**：
 
 - ✅ **多语言支持**：支持多种语言（en, zh-CN, zh-TW, ja, ko, de, fr, es, pt, ru 等）
-- ✅ **语言增强**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求
+- ✅ **语言增强**：通过 `get-_language-_requirement` 函数增强 prompt 中的语言要求
 - ✅ **动态生成**：根据语言代码动态生成包含语言要求的 prompt
 - ✅ **详细指导**：包含详细的要求分析、功能说明、用户场景等指导
 
 **使用场景**：
 
 - PR 总结时生成多语言的总结文档
-- 通过 `PullRequestLLM::summarize_pr()` 调用
+- 通过 `PullRequestLLM::summarize-_pr()` 调用
 
 ### 设计模式
 
@@ -115,9 +115,9 @@ pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"..."#;
 使用函数根据参数动态生成 prompt：
 
 ```rust
-pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
-    let base_prompt = r#"..."#;
-    get_language_requirement(base_prompt, language)
+pub fn generate-_summarize-_pr-_system-_prompt(language: &str) -> String {
+    let base-_prompt = r#"..."#;
+    get-_language-_requirement(base-_prompt, language)
 }
 ```
 
@@ -131,7 +131,7 @@ pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
 #### 语言代码处理
 
 1. **语言代码验证**：如果提供的语言代码不在支持列表中，使用英文作为默认语言
-2. **语言查找**：通过 `find_language()` 函数查找支持的语言
+2. **语言查找**：通过 `find-_language()` 函数查找支持的语言
 3. **默认回退**：如果找不到匹配的语言，使用英文的默认 instruction
 
 #### 容错机制
@@ -155,16 +155,16 @@ pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
 返回 Prompt 字符串
 ```
 
-#### 2. 使用函数生成（generate_summarize_pr_system_prompt）
+#### 2. 使用函数生成（generate-_summarize-_pr-_system-_prompt）
 
 ```
-调用 generate_summarize_pr_system_prompt(language)
+调用 generate-_summarize-_pr-_system-_prompt(language)
   ↓
-查找语言（find_language(language)）
+查找语言（find-_language(language)）
   ↓
-获取语言 instruction（get_language_instruction(language)）
+获取语言 instruction（get-_language-_instruction(language)）
   ↓
-增强 prompt（get_language_requirement(base_prompt, language)）
+增强 prompt（get-_language-_requirement(base-_prompt, language)）
   ↓
 返回增强后的 Prompt 字符串
 ```
@@ -177,7 +177,7 @@ pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
 use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
 // 直接使用编译时嵌入的 prompt
-let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
+let system-_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to-_string();
 ```
 
 **流程**：
@@ -188,17 +188,17 @@ let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
 #### 2. 使用函数生成（多语言支持）
 
 ```rust
-use workflow::base::prompt::generate_summarize_pr_system_prompt;
+use workflow::base::prompt::generate-_summarize-_pr-_system-_prompt;
 
 // 根据语言生成 prompt
-let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
+let system-_prompt = generate-_summarize-_pr-_system-_prompt("zh-CN");
 ```
 
 **流程**：
 1. 调用函数，传入语言代码
-2. 查找支持的语言（`find_language()`）
-3. 获取语言 instruction（`get_language_instruction()`）
-4. 增强基础 prompt（`get_language_requirement()`）
+2. 查找支持的语言（`find-_language()`）
+3. 获取语言 instruction（`get-_language-_instruction()`）
+4. 增强基础 prompt（`get-_language-_requirement()`）
 5. 返回包含语言要求的完整 prompt
 
 ### 数据流
@@ -218,11 +218,11 @@ let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
 ```
 语言代码（如 "zh-CN"）
   ↓
-find_language() 查找语言
+find-_language() 查找语言
   ↓
-get_language_instruction() 获取 instruction
+get-_language-_instruction() 获取 instruction
   ↓
-get_language_requirement() 增强 prompt
+get-_language-_requirement() 增强 prompt
   ↓
 返回增强后的 Prompt 字符串
 ```
@@ -238,31 +238,31 @@ Prompt 文件作为 Rust 源文件，直接放在 `src/lib/base/prompt/` 目录�
 ```
 src/lib/base/prompt/
 ├── mod.rs                      # 模块声明和导出
-├── generate_branch.system.rs   # 生成分支名的 system prompt（编译时常量）
-└── summarize_pr.system.rs     # PR 总结的 system prompt（函数生成）
+├── generate-_branch.system.rs   # 生成分支名的 system prompt（编译时常量）
+└── summarize-_pr.system.rs     # PR 总结的 system prompt（函数生成）
 ```
 
 ### 文件命名规则
 
 - **Rust 源文件**：所有 Prompt 文件使用 `.rs` 扩展名
-- **命名格式**：使用点号分隔，格式为 `{功能}.{类型}.rs`（如 `generate_branch.system.rs`）
+- **命名格式**：使用点号分隔，格式为 `{功能}.{类型}.rs`（如 `generate-_branch.system.rs`）
 - **编译时嵌入**：使用 `pub const` 定义编译时常量，或使用函数动态生成
 - **模块路径**：使用 `#[path]` 属性指定文件路径
 
 ### 文件内容结构
 
-#### 编译时常量（generate_branch.system.rs）
+#### 编译时常量（generate-_branch.system.rs）
 
 ```rust
 pub const GENERATE_BRANCH_SYSTEM_PROMPT: &str = r#"..."#;
 ```
 
-#### 函数生成（summarize_pr.system.rs）
+#### 函数生成（summarize-_pr.system.rs）
 
 ```rust
-pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
-    let base_prompt = r#"..."#;
-    get_language_requirement(base_prompt, language)
+pub fn generate-_summarize-_pr-_system-_prompt(language: &str) -> String {
+    let base-_prompt = r#"..."#;
+    get-_language-_requirement(base-_prompt, language)
 }
 ```
 
@@ -272,7 +272,7 @@ pub fn generate_summarize_pr_system_prompt(language: &str) -> String {
 
 ### 添加新的 Prompt 常量
 
-1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new_feature.system.rs`）
+1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new-_feature.system.rs`）
 2. 使用 `pub const` 定义编译时常量：
 
 ```rust
@@ -282,33 +282,33 @@ pub const NEW_FEATURE_SYSTEM_PROMPT: &str = r#"..."#;
 3. 在 `mod.rs` 中声明模块并重新导出：
 
 ```rust
-#[path = "new_feature.system.rs"]
-pub mod new_feature_system;
+#[path = "new-_feature.system.rs"]
+pub mod new-_feature-_system;
 
-pub use new_feature_system::NEW_FEATURE_SYSTEM_PROMPT;
+pub use new-_feature-_system::NEW_FEATURE_SYSTEM_PROMPT;
 ```
 
 ### 添加新的 Prompt 生成函数
 
-1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new_feature.system.rs`）
+1. 在 `src/lib/base/prompt/` 目录下创建新的 Rust 源文件（如 `new-_feature.system.rs`）
 2. 实现生成函数：
 
 ```rust
-use crate::base::llm::get_language_requirement;
+use crate::base::llm::get-_language-_requirement;
 
-pub fn generate_new_feature_system_prompt(language: &str) -> String {
-    let base_prompt = r#"..."#;
-    get_language_requirement(base_prompt, language)
+pub fn generate-_new-_feature-_system-_prompt(language: &str) -> String {
+    let base-_prompt = r#"..."#;
+    get-_language-_requirement(base-_prompt, language)
 }
 ```
 
 3. 在 `mod.rs` 中声明模块并重新导出：
 
 ```rust
-#[path = "new_feature.system.rs"]
-pub mod new_feature_system;
+#[path = "new-_feature.system.rs"]
+pub mod new-_feature-_system;
 
-pub use new_feature_system::generate_new_feature_system_prompt;
+pub use new-_feature-_system::generate-_new-_feature-_system-_prompt;
 ```
 
 ### 修改现有 Prompt
@@ -324,8 +324,8 @@ pub use new_feature_system::generate_new_feature_system_prompt;
 SupportedLanguage {
     code: "new-lang",
     name: "New Language",
-    native_name: "新语言",
-    instruction_template: "**所有输出必须使用新语言。**",
+    native-_name: "新语言",
+    instruction-_template: "**所有输出必须使用新语言。**",
 },
 ```
 
@@ -349,16 +349,16 @@ SupportedLanguage {
 use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
 // 直接使用编译时嵌入的 prompt
-let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
+let system-_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to-_string();
 ```
 
 ### 使用函数生成（多语言支持）
 
 ```rust
-use workflow::base::prompt::generate_summarize_pr_system_prompt;
+use workflow::base::prompt::generate-_summarize-_pr-_system-_prompt;
 
 // 根据语言生成 prompt
-let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
+let system-_prompt = generate-_summarize-_pr-_system-_prompt("zh-CN");
 ```
 
 ### 在 PR 模块中使用
@@ -369,17 +369,17 @@ let system_prompt = generate_summarize_pr_system_prompt("zh-CN");
 // src/lib/pr/llm.rs
 use workflow::base::prompt::GENERATE_BRANCH_SYSTEM_PROMPT;
 
-let system_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to_string();
+let system-_prompt = GENERATE_BRANCH_SYSTEM_PROMPT.to-_string();
 ```
 
 #### 生成 PR 总结
 
 ```rust
 // src/lib/pr/llm.rs
-use workflow::base::prompt::generate_summarize_pr_system_prompt;
+use workflow::base::prompt::generate-_summarize-_pr-_system-_prompt;
 
 let language = "zh-CN"; // 或从配置/参数获取
-let system_prompt = generate_summarize_pr_system_prompt(language);
+let system-_prompt = generate-_summarize-_pr-_system-_prompt(language);
 ```
 
 ---
@@ -390,7 +390,7 @@ let system_prompt = generate_summarize_pr_system_prompt(language);
 2. **语言代码**：如果提供的语言代码不在支持列表中，会自动回退到英文
 3. **性能优化**：编译时常量零运行时开销，函数生成也无需文件 I/O 操作
 4. **类型安全**：使用 Rust 常量，编译时检查，确保 prompt 内容正确
-5. **多语言支持**：通过 `get_language_requirement` 函数增强 prompt 中的语言要求，确保 LLM 按照指定语言生成内容
+5. **多语言支持**：通过 `get-_language-_requirement` 函数增强 prompt 中的语言要求，确保 LLM 按照指定语言生成内容
 
 ---
 

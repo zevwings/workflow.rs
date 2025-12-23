@@ -56,7 +56,7 @@ src/
 │   │   └── helpers.rs      # GitHub 辅助函数（账号信息收集等）
 │   ├── check/              # 环境检查命令
 │   │   ├── mod.rs          # Check 命令模块声明
-│   │   └── check.rs        # 综合检查命令（git_status, network）
+│   │   └── check.rs        # 综合检查命令（git-_status, network）
 │   ├── proxy/              # 代理管理命令
 │   │   ├── mod.rs          # Proxy 命令模块声明
 │   │   └── proxy.rs        # 代理管理命令（on, off, check）
@@ -118,14 +118,14 @@ src/
     │   ├── repo.rs         # 仓库检测和类型识别
     │   ├── stash.rs        # 暂存管理
     │   ├── config.rs       # Git 配置管理
-    │   ├── pre_commit.rs   # Pre-commit hooks 支持
+    │   ├── pre-_commit.rs   # Pre-commit hooks 支持
     │   ├── helpers.rs      # Git 操作辅助函数
     │   └── types.rs        # Git 相关类型定义
     ├── jira/               # Jira API 集成
     │   ├── mod.rs          # Jira 模块声明
     │   ├── api/            # API 方法子模块
     │   │   ├── mod.rs      # API 模块声明
-    │   │   ├── http_client.rs  # JiraHttpClient (HTTP 层)
+    │   │   ├── http-_client.rs  # JiraHttpClient (HTTP 层)
     │   │   ├── issue.rs    # Issue/Ticket 相关 API
     │   │   ├── user.rs     # 用户相关 API
     │   │   └── project.rs  # 项目相关 API
@@ -151,7 +151,7 @@ src/
     │   ├── platform.rs     # PlatformProvider trait 和工厂函数
     │   ├── helpers.rs      # PR 辅助函数
     │   ├── llm.rs          # LLM 功能（PR 标题生成）
-    │   ├── body_parser.rs  # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
+    │   ├── body-_parser.rs  # PR Body 解析器（提取 Jira ticket、描述、变更类型等）
     │   ├── github/         # GitHub 平台实现
     │   │   ├── mod.rs      # GitHub 模块导出
     │   │   ├── platform.rs # GitHub 平台实现
@@ -177,8 +177,8 @@ src/
     ├── proxy/              # 代理管理
     │   ├── mod.rs          # Proxy 模块声明
     │   ├── proxy.rs        # 类型定义（ProxyType, ProxyInfo, ProxyConfig）
-    │   ├── system_reader.rs # 系统代理读取器
-    │   ├── config_generator.rs # 代理配置生成器
+    │   ├── system-_reader.rs # 系统代理读取器
+    │   ├── config-_generator.rs # 代理配置生成器
     │   └── manager.rs      # 代理管理器
     ├── repo/               # 仓库配置管理
     │   ├── mod.rs          # Repo 模块声明
@@ -400,16 +400,16 @@ ignore = [
 存储 PR ID 到 Jira ticket 的映射关系，用于在合并 PR 时自动查找对应的 Jira ticket。按仓库分别存储在不同的 JSON 文件中。
 
 **文件位置**：
-- `~/.workflow/work-history/{repo_id}.json` - 每个仓库对应一个 JSON 文件
+- `~/.workflow/work-history/{repo-_id}.json` - 每个仓库对应一个 JSON 文件
 
 **格式**：
 ```json
 {
   "456": {
-    "jira_ticket": "PROJ-123",
-    "pr_url": "https://github.com/xxx/pull/456",
-    "created_at": "2024-01-15T10:30:00Z",
-    "merged_at": null,
+    "jira-_ticket": "PROJ-123",
+    "pr-_url": "https://github.com/xxx/pull/456",
+    "created-_at": "2024-01-15T10:30:00Z",
+    "merged-_at": null,
     "repository": "github.com/xxx/yyy",
     "branch": "feature/PROJ-123-add-feature"
   }

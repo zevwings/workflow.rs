@@ -201,7 +201,7 @@
 - 卸载功能（清理所有相关文件和配置）
 - 更新功能（从 GitHub Releases 更新到新版本）
 - GitHub Actions 发布流程
-- HOMEBREW_TAP_TOKEN 配置说明
+- HOMEBREW-TAP-TOKEN 配置说明
 
 #### [branch.md](./architecture/branch.md)
 **分支管理命令层架构文档**
@@ -252,7 +252,7 @@
 - 别名展开功能（支持嵌套别名和循环检测）
 - 命令行参数展开（在命令解析前自动展开别名）
 
-#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/MIGRATE_COMMAND_ARCHITECTURE.md)
+#### [MIGRATE-COMMAND-ARCHITECTURE.md](./architecture/MIGRATE-COMMAND-ARCHITECTURE.md)
 **配置迁移命令层架构文档**
 
 - 版本化迁移系统（迁移版本独立于软件版本）
@@ -326,7 +326,7 @@
 - 章节检查清单
 - 文档编写规范
 
-### [document_timestamp.md](./guidelines/document_timestamp.md)
+### [document-timestamp.md](./guidelines/document-timestamp.md)
 **文档更新时间维护指南**
 
 - 更新时间格式规范
@@ -344,7 +344,7 @@
 - 快速参考和详细指南导航
 - 工作流文档组织结构
 
-### [pre_commit.md](./guidelines/workflows/pre_commit.md)
+### [pre-commit.md](./guidelines/workflows/pre-commit.md)
 **提交前检查指南（5-15分钟）**
 
 - 快速检查清单和一键执行命令
@@ -365,7 +365,7 @@
 - 综合检查报告生成
 - 定期审查工作流建议
 
-### [quick_reference.md](./guidelines/workflows/references/quick_reference.md)
+### [quick-reference.md](./guidelines/workflows/references/quick-reference.md)
 **快速参考指南**
 
 - 检查类型选择指南（快速检查 vs 深入检查）
@@ -384,7 +384,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [review_document.md](./guidelines/workflows/references/review_document.md)
+### [review-document.md](./guidelines/workflows/references/review-document.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
@@ -396,7 +396,7 @@
 - 文档优化和补全检查（内容完整性、准确性、格式规范性、可读性、链接有效性、文档更新）
 - 检查报告生成和快速检查清单
 
-### [review_test_case.md](./guidelines/workflows/references/review_test_case.md)
+### [review-test-case.md](./guidelines/workflows/references/review-test-case.md)
 **测试用例检查指南**
 
 - 检查目标（测试覆盖、合理性、缺失测试）
@@ -405,7 +405,7 @@
 - 检查方法（自动化工具、手动检查）
 - 检查报告格式
 
-### [cargo_bloat.md](./guidelines/cargo_bloat.md)
+### [cargo-bloat.md](./guidelines/cargo-bloat.md)
 **cargo-bloat 使用指南**
 
 - cargo-bloat 工具安装和基本使用
@@ -415,7 +415,7 @@
 - 常见问题解答
 - 相关工具和资源
 
-### [review_code.md](./guidelines/workflows/references/review_code.md)
+### [review-code.md](./guidelines/workflows/references/review-code.md)
 **代码检查指南**
 
 - 系统化的代码检查方法

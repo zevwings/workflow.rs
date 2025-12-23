@@ -169,7 +169,7 @@ done
 
 **创建检查脚本**：
 ```bash
-cat > check_missing_tests.sh << 'EOF'
+cat > check-_missing-_tests.sh << 'EOF'
 #!/bin/bash
 echo "=== 测试覆盖检查报告 ==="
 echo "生成时间: $(date '+%Y-%m-%d %H:%M:%S')"
@@ -201,8 +201,8 @@ git diff main...HEAD | grep -E "^\+.*Commands::|^\+.*Subcommand" | while read li
 done
 EOF
 
-chmod +x check_missing_tests.sh
-./check_missing_tests.sh
+chmod +x check-_missing-_tests.sh
+./check-_missing-_tests.sh
 ```
 
 ---
@@ -368,10 +368,10 @@ open coverage/index.html
 
 ```bash
 # 检查新增功能的测试覆盖
-./scripts/check_test_coverage.sh
+./scripts/check-_test-_coverage.sh
 
 # 生成测试覆盖报告
-./scripts/generate_test_coverage_report.sh
+./scripts/generate-_test-_coverage-_report.sh
 ```
 
 ---
