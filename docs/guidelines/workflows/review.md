@@ -309,7 +309,7 @@ graph TD
 
 按照以下顺序运行各个专门指南的检查：
 
-1. **CLI 检查**（`reviews/review-cli.md`）
+1. **CLI 检查**（`workflows/references/review-cli.md`）
 2. **代码检查**（`reviews/review-code.md`）
 3. **测试用例检查**（`reviews/review-test-case.md`）
 4. **文档检查**（`reviews/review-document.md`）

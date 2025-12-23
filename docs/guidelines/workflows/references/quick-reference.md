@@ -143,7 +143,7 @@ Write-Host "report/CHECK_REPORT_${timestamp}.md"
 - **代码问题**：参考 [代码检查指南](./reviews/review-code.md)
 - **测试问题**：参考 [测试用例检查指南](./reviews/review-test-case.md)
 - **文档问题**：参考 [文档检查指南](./reviews/review-document.md)
-- **CLI 问题**：参考 [CLI 检查指南](./reviews/review-cli.md)
+- **CLI 问题**：参考 [CLI 检查指南](./review-cli.md)
 
 ---
 
