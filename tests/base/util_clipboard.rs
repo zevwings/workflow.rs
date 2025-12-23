@@ -54,4 +54,3 @@ fn test_clipboard_copy_unicode() {
     // 验证函数可以调用
     assert!(result.is_ok() || result.is_err());
 }
-

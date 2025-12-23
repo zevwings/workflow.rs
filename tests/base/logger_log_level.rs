@@ -114,10 +114,12 @@ fn test_log_level_set_and_get() {
 #[test]
 fn test_log_level_init() {
     // 测试 init 函数（如果之前没有初始化，应该设置级别）
-    LogLevel::init(Some(LogLevel::Error));
+    // 注意：init 只在第一次调用时设置级别，如果之前已经初始化过，就不会更新
+    // 所以我们使用 set_level 来确保设置成功
+    LogLevel::set_level(LogLevel::Error);
     // 验证级别已设置（通过 get_level）
     let level = LogLevel::get_level();
-    assert!(level == LogLevel::Error || level == LogLevel::Debug || level == LogLevel::Info);
+    assert_eq!(level, LogLevel::Error);
 }
 
 #[test]
@@ -136,3 +138,20 @@ fn test_log_level_debug_format() {
     assert_eq!(debug_str, "Info");
 }
 
+#[test]
+fn test_log_level_default_level_release() {
+    // 测试 default_level() 函数的行为
+    // 在 debug 模式下返回 Debug，在 release 模式下返回 Info
+    let level = LogLevel::default_level();
+
+    // 根据编译模式验证返回值
+    if cfg!(debug_assertions) {
+        assert_eq!(level, LogLevel::Debug);
+    } else {
+        // 覆盖 log_level.rs:32 - release 模式下的默认级别
+        assert_eq!(level, LogLevel::Info);
+    }
+
+    // 验证返回值是有效的日志级别
+    assert!(matches!(level, LogLevel::Debug | LogLevel::Info));
+}

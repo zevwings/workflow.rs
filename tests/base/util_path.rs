@@ -2,7 +2,6 @@
 //!
 //! 测试路径操作工具的核心功能，包括 PathAccess 结构体。
 
-use pretty_assertions::assert_eq;
 use std::fs;
 use tempfile::TempDir;
 use workflow::base::util::path::PathAccess;
@@ -163,4 +162,3 @@ fn test_path_access_read_dir_safe_file() -> color_eyre::Result<()> {
 
     Ok(())
 }
-

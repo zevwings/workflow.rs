@@ -170,6 +170,19 @@ mod tests {
     }
 
     #[test]
+    fn test_path_formatting_relative() {
+        // 测试 strip_prefix 成功的情况（覆盖 display.rs:60）
+        // 创建一个在当前工作目录下的路径
+        let current_dir = std::env::current_dir().unwrap_or_default();
+        let relative_path = current_dir.join("test_file.txt");
+        let formatted = DisplayFormatter::path(&relative_path);
+        // 应该返回相对路径（不包含完整路径）
+        assert!(!formatted.is_empty());
+        // 验证返回的是相对路径格式
+        assert!(formatted.contains("test_file.txt"));
+    }
+
+    #[test]
     fn test_list_item_formatting() {
         let item = DisplayFormatter::list_item("  -", "config.toml");
         assert_eq!(item, "  - config.toml");

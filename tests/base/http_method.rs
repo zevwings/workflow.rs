@@ -111,4 +111,3 @@ fn test_http_method_copy() {
     let copied = original;
     assert_eq!(format!("{}", original), format!("{}", copied));
 }
-

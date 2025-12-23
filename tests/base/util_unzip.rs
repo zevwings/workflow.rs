@@ -89,9 +89,18 @@ fn test_unzip_extract_tar_gz() -> color_eyre::Result<()> {
     assert!(output_dir.join("subdir/file3.txt").exists());
 
     // 验证文件内容
-    assert_eq!(fs::read_to_string(output_dir.join("file1.txt"))?, "content1");
-    assert_eq!(fs::read_to_string(output_dir.join("file2.txt"))?, "content2");
-    assert_eq!(fs::read_to_string(output_dir.join("subdir/file3.txt"))?, "content3");
+    assert_eq!(
+        fs::read_to_string(output_dir.join("file1.txt"))?,
+        "content1"
+    );
+    assert_eq!(
+        fs::read_to_string(output_dir.join("file2.txt"))?,
+        "content2"
+    );
+    assert_eq!(
+        fs::read_to_string(output_dir.join("subdir/file3.txt"))?,
+        "content3"
+    );
 
     Ok(())
 }
@@ -151,9 +160,18 @@ fn test_unzip_extract_zip() -> color_eyre::Result<()> {
     assert!(output_dir.join("subdir/file3.txt").exists());
 
     // 验证文件内容
-    assert_eq!(fs::read_to_string(output_dir.join("file1.txt"))?, "content1");
-    assert_eq!(fs::read_to_string(output_dir.join("file2.txt"))?, "content2");
-    assert_eq!(fs::read_to_string(output_dir.join("subdir/file3.txt"))?, "content3");
+    assert_eq!(
+        fs::read_to_string(output_dir.join("file1.txt"))?,
+        "content1"
+    );
+    assert_eq!(
+        fs::read_to_string(output_dir.join("file2.txt"))?,
+        "content2"
+    );
+    assert_eq!(
+        fs::read_to_string(output_dir.join("subdir/file3.txt"))?,
+        "content3"
+    );
 
     Ok(())
 }
@@ -227,7 +245,10 @@ fn test_unzip_extract_zip_with_directories() -> color_eyre::Result<()> {
 
     // 验证嵌套目录结构已创建
     assert!(output_dir.join("level1/level2/file.txt").exists());
-    assert_eq!(fs::read_to_string(output_dir.join("level1/level2/file.txt"))?, "nested content");
+    assert_eq!(
+        fs::read_to_string(output_dir.join("level1/level2/file.txt"))?,
+        "nested content"
+    );
 
     Ok(())
 }
@@ -258,7 +279,10 @@ fn test_unzip_extract_tar_gz_single_file() -> color_eyre::Result<()> {
     // 验证文件已解压
     assert!(output_dir.exists());
     assert!(output_dir.join("single.txt").exists());
-    assert_eq!(fs::read_to_string(output_dir.join("single.txt"))?, "single file content");
+    assert_eq!(
+        fs::read_to_string(output_dir.join("single.txt"))?,
+        "single file content"
+    );
 
     Ok(())
 }

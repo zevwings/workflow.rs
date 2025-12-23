@@ -78,6 +78,26 @@
   - CI 集成（可选）
 - **优先级**: P2（可选，但建议实施以提升效率）
 
+#### 5. [`DOCUMENT_RENAME_TODO.md`](./DOCUMENT_RENAME_TODO.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 文档管理
+- **内容**:
+  - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake_case`
+  - 更新所有文档链接引用
+  - 更新文档命名规范
+- **优先级**: 中优先级（代码质量改进）
+
+#### 6. [`CURSORRULES_ENGLISH_TODO.md`](./CURSORRULES_ENGLISH_TODO.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 0%
+- **分类**: 开发工具配置优化
+- **内容**:
+  - 将 `.cursorrules` 文件从中文翻译为英文
+  - 提升 Cursor AI 的理解准确性和执行效果
+  - 保留中文关键词匹配逻辑（用于文档分类识别）
+- **优先级**: 中优先级（代码质量改进）
+
 ---
 
 ## 📁 目录结构
@@ -88,8 +108,11 @@ docs/todo/
 │
 ├── JIRA_TODO.md                   # JIRA 模块待办事项（🚧 部分完成）
 ├── TEST_ARCHITECTURE_IMPROVEMENT_TODO.md  # 测试架构改进待办事项（🔄 进行中）
-├── INTEGRATION_TODO.md            # 集成与扩展待办事项
-└── DOC_CHECK_TODO.md              # 架构文档检查工具待办事项（⏳ 待实施）
+├── COVERAGE_IMPROVEMENT_TODO.md   # 测试覆盖率提升待办事项（🔄 进行中）
+├── INTEGRATION_TODO.md            # 集成与扩展待办事项（⏳ 待实施）
+├── DOC_CHECK_TODO.md              # 架构文档检查工具待办事项（⏳ 待实施）
+├── DOCUMENT_RENAME_TODO.md        # 文档重命名待办事项（⏳ 待实施）
+└── CURSORRULES_ENGLISH_TODO.md    # Cursor Rules 英文翻译待办事项（⏳ 待实施）
 ```
 
 ---
@@ -100,8 +123,8 @@ docs/todo/
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 2 个 | 测试架构改进、覆盖率提升 |
-| ⏳ 待实施 | 2 个 | 集成扩展、文档检查工具 |
-| **总计** | **5 个** | - |
+| ⏳ 待实施 | 4 个 | 集成扩展、文档检查工具、文档重命名、Cursor Rules 英文翻译 |
+| **总计** | **7 个** | - |
 
 ### 文档列表
 
@@ -111,6 +134,8 @@ docs/todo/
 3. **COVERAGE_IMPROVEMENT_TODO.md** - 测试覆盖率提升待办事项（🔄 进行中，18.09%）
 4. **INTEGRATION_TODO.md** - 集成与扩展待办事项（⏳ 待实施，0%）
 5. **DOC_CHECK_TODO.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
+6. **DOCUMENT_RENAME_TODO.md** - 文档重命名待办事项（⏳ 待实施，0%）
+7. **CURSORRULES_ENGLISH_TODO.md** - Cursor Rules 英文翻译待办事项（⏳ 待实施，0%）
 
 ---
 
@@ -118,7 +143,7 @@ docs/todo/
 
 ### 当前待办事项
 
-本目录包含 4 个文档：
+本目录包含 7 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`JIRA_TODO.md`) - 🚧 部分完成（~40%）
@@ -137,7 +162,7 @@ docs/todo/
    - 🎯 目标覆盖率：75%+
    - 📋 分阶段提升计划（20% → 25% → 30% → 75%）
 
-#### 待实施文档（2 个）
+#### 待实施文档（4 个）
 3. **集成与扩展** (`INTEGRATION_TODO.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
@@ -146,6 +171,16 @@ docs/todo/
    - 模块统计验证脚本
    - 综合检查脚本（可选）
    - CI 集成（可选）
+
+5. **文档重命名** (`DOCUMENT_RENAME_TODO.md`) - ⏳ 待实施（0%）
+   - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake_case`
+   - 更新所有文档链接引用
+   - 更新文档命名规范
+
+6. **Cursor Rules 英文翻译** (`CURSORRULES_ENGLISH_TODO.md`) - ⏳ 待实施（0%）
+   - 将 `.cursorrules` 文件从中文翻译为英文
+   - 提升 Cursor AI 的理解准确性和执行效果
+   - 保留中文关键词匹配逻辑（用于文档分类识别）
 
 > **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`。
 
@@ -169,14 +204,21 @@ docs/todo/
 - **测试覆盖率提升** → [`COVERAGE_IMPROVEMENT_TODO.md`](./COVERAGE_IMPROVEMENT_TODO.md) 🔄 进行中（18.09%）
 - **集成与扩展** → [`INTEGRATION_TODO.md`](./INTEGRATION_TODO.md) ⏳ 待实施
 - **文档检查工具** → [`DOC_CHECK_TODO.md`](./DOC_CHECK_TODO.md) ⏳ 待实施
+- **文档重命名** → [`DOCUMENT_RENAME_TODO.md`](./DOCUMENT_RENAME_TODO.md) ⏳ 待实施
+- **Cursor Rules 英文翻译** → [`CURSORRULES_ENGLISH_TODO.md`](./CURSORRULES_ENGLISH_TODO.md) ⏳ 待实施
 
 ---
 
-**最后更新**: 2025-12-18
+**最后更新**: 2025-01-27
 
 ---
 
 ## 📝 更新说明
+
+### 2025-01-27 更新
+- ✅ 新增 CURSORRULES_ENGLISH_TODO.md - Cursor Rules 英文翻译待办事项（⏳ 待实施）
+- ✅ 新增 DOCUMENT_RENAME_TODO.md - 文档重命名待办事项（⏳ 待实施）
+- ✅ 更新了统计信息和目录结构
 
 ### 2025-12-18 更新
 - ✅ 删除 ARCHITECTURE_DOC_SYNC_TODO.md - 架构文档同步机制任务已完成，自动化检查工具实施计划已迁移至 `docs/todo/DOC_CHECK_TODO.md`

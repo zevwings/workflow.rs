@@ -24,7 +24,7 @@ use crate::base::indicator::{Progress, Spinner};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::Settings;
 use crate::base::shell::Detect;
-use crate::base::util::{detect_release_platform, Checksum, Unzip};
+use crate::base::util::{Checksum, Platform, Unzip};
 use crate::rollback::RollbackManager;
 use crate::{
     get_completion_files_for_shell, log_break, log_debug, log_error, log_info, log_success,
@@ -762,7 +762,7 @@ impl UpdateCommand {
         log_break!();
 
         // 第一步：检测平台
-        let platform = detect_release_platform()?;
+        let platform = Platform::detect().release_identifier()?;
         log_info!("Detected platform: {}", platform);
         log_break!();
 

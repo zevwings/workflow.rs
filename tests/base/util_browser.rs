@@ -28,4 +28,3 @@ fn test_browser_open_empty_url() {
     // 在某些平台上可能会静默失败或成功，这是可以接受的
     assert!(result.is_err() || result.is_ok());
 }
-

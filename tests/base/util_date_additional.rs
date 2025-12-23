@@ -2,16 +2,20 @@
 //!
 //! 测试日期时间工具中未完全覆盖的功能。
 
-use pretty_assertions::assert_eq;
 use regex::Regex;
-use workflow::base::util::date::{format_filename_timestamp, get_unix_timestamp, DateFormat, Timezone};
+use workflow::base::util::date::{
+    format_filename_timestamp, get_unix_timestamp, DateFormat, Timezone,
+};
 
 #[test]
 fn test_format_filename_timestamp() {
     let result = format_filename_timestamp();
     // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
     let re = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
-    assert!(re.is_match(&result), "Filename timestamp format should match YYYY-MM-DD_HH-MM-SS");
+    assert!(
+        re.is_match(&result),
+        "Filename timestamp format should match YYYY-MM-DD_HH-MM-SS"
+    );
 }
 
 #[test]
@@ -29,20 +33,28 @@ fn test_get_unix_timestamp() {
 #[test]
 fn test_format_document_timestamp_all_formats_utc() {
     // 测试所有格式在 UTC 时区下的行为
-    let date_only = workflow::base::util::date::format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
+    let date_only =
+        workflow::base::util::date::format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
     let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
     assert!(re_date.is_match(&date_only));
 
-    let datetime = workflow::base::util::date::format_document_timestamp(DateFormat::DateTime, Timezone::Utc);
+    let datetime =
+        workflow::base::util::date::format_document_timestamp(DateFormat::DateTime, Timezone::Utc);
     let re_datetime = Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").unwrap();
     assert!(re_datetime.is_match(&datetime));
 
-    let iso8601 = workflow::base::util::date::format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
+    let iso8601 =
+        workflow::base::util::date::format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
     assert!(iso8601.contains('T'));
     assert!(iso8601.contains('Z') || iso8601.contains('+') || iso8601.contains('-'));
 
-    let filename = workflow::base::util::date::format_document_timestamp(DateFormat::Filename, Timezone::Utc);
+    let filename =
+        workflow::base::util::date::format_document_timestamp(DateFormat::Filename, Timezone::Utc);
     let re_filename = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
     assert!(re_filename.is_match(&filename));
-}
 
+    // 确保 UTC 时区的 Filename 格式被覆盖（覆盖 date.rs:71）
+    // 验证格式不包含空格和冒号
+    assert!(!filename.contains(' '));
+    assert!(!filename.contains(':'));
+}

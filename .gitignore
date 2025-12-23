@@ -85,6 +85,8 @@ __pycache__/
 *.so
 .Python
 
+# Coverage
+*.profraw
 coverage/
 coverage/**
 
