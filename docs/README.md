@@ -172,7 +172,7 @@
 - 与 lib/pr 模块的集成
 - 命令使用示例
 
-#### [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
+#### [log.md](./architecture/log.md)
 **日志操作命令层架构文档**
 
 #### [jira.md](./architecture/jira.md)
@@ -184,7 +184,7 @@
 - 与 Jira 日志处理模块的集成
 - 命令使用示例
 
-#### [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
+#### [config.md](./architecture/config.md)
 **配置管理命令层架构文档**
 
 - 初始化设置命令（setup）
@@ -194,7 +194,7 @@
 - 环境检查功能（Git 仓库状态、网络连接）
 - Completion 管理命令
 
-#### [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
+#### [lifecycle.md](./architecture/lifecycle.md)
 **生命周期管理命令层架构文档**
 
 - 安装功能（二进制文件和 shell completion 脚本）
@@ -233,7 +233,7 @@
 - 分支保护（检查默认分支，防止误操作）
 - 支持 HEAD 和历史 commit 的 reword
 
-#### [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
+#### [stash.md](./architecture/stash.md)
 **Stash 管理命令层架构文档**
 
 - Stash list 命令（列出所有 stash 条目，支持统计信息）
@@ -243,7 +243,7 @@
 - 交互式选择界面（支持选择特定的 stash）
 - 冲突检测和处理（自动检测冲突并提供解决提示）
 
-#### [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
+#### [alias.md](./architecture/alias.md)
 **别名管理命令层架构文档**
 
 - Alias list 命令（列出所有别名）
@@ -252,7 +252,7 @@
 - 别名展开功能（支持嵌套别名和循环检测）
 - 命令行参数展开（在命令解析前自动展开别名）
 
-#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/commands/MIGRATE_COMMAND_ARCHITECTURE.md)
+#### [MIGRATE_COMMAND_ARCHITECTURE.md](./architecture/MIGRATE_COMMAND_ARCHITECTURE.md)
 **配置迁移命令层架构文档**
 
 - 版本化迁移系统（迁移版本独立于软件版本）
@@ -261,14 +261,14 @@
 - 迁移历史记录管理
 - 每个迁移版本独立实现，互不干扰
 
-#### [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
+#### [check.md](./architecture/check.md)
 **环境检查命令层架构文档**
 
 - Git 仓库状态检查
 - 网络连接检查（到 GitHub）
 - 作为其他命令的前置检查步骤
 
-#### [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
+#### [github.md](./architecture/github.md)
 **GitHub 账号管理命令层架构文档**
 
 - 多账号管理（支持配置多个 GitHub 账号）
@@ -472,19 +472,19 @@
 
 ### 命令层模块（CLI 命令封装）
 - 想了解 PR 命令？ → [pr.md](./architecture/pr.md)
-- 想了解日志操作命令？ → [LOG_COMMAND_ARCHITECTURE.md](./architecture/commands/LOG_COMMAND_ARCHITECTURE.md)
+- 想了解日志操作命令？ → [log.md](./architecture/log.md)
 - 想了解 Jira 操作命令？ → [jira.md](./architecture/jira.md)
-- 想了解配置管理命令？ → [CONFIG_COMMAND_ARCHITECTURE.md](./architecture/commands/CONFIG_COMMAND_ARCHITECTURE.md)
-- 想了解生命周期管理命令（安装/卸载/更新）？ → [LIFECYCLE_COMMAND_ARCHITECTURE.md](./architecture/commands/LIFECYCLE_COMMAND_ARCHITECTURE.md)
+- 想了解配置管理命令？ → [config.md](./architecture/config.md)
+- 想了解生命周期管理命令（安装/卸载/更新）？ → [lifecycle.md](./architecture/lifecycle.md)
 - 想了解分支管理命令？ → [branch.md](./architecture/branch.md)
 - 想了解 Tag 管理命令？ → [tag.md](./architecture/tag.md)
 - 想了解 Repo 管理命令？ → [repo.md](./architecture/repo.md)
 - 想了解 Commit 管理命令？ → [commit.md](./architecture/commit.md)
-- 想了解 Stash 管理命令？ → [STASH_COMMAND_ARCHITECTURE.md](./architecture/commands/STASH_COMMAND_ARCHITECTURE.md)
-- 想了解别名管理命令？ → [ALIAS_COMMAND_ARCHITECTURE.md](./architecture/commands/ALIAS_COMMAND_ARCHITECTURE.md)
+- 想了解 Stash 管理命令？ → [stash.md](./architecture/stash.md)
+- 想了解别名管理命令？ → [alias.md](./architecture/alias.md)
 - 想了解配置迁移命令？ → [migrate.md](./architecture/migrate.md)
-- 想了解环境检查命令？ → [CHECK_COMMAND_ARCHITECTURE.md](./architecture/commands/CHECK_COMMAND_ARCHITECTURE.md)
-- 想了解 GitHub 账号管理命令？ → [GITHUB_COMMAND_ARCHITECTURE.md](./architecture/commands/GITHUB_COMMAND_ARCHITECTURE.md)
+- 想了解环境检查命令？ → [check.md](./architecture/check.md)
+- 想了解 GitHub 账号管理命令？ → [github.md](./architecture/github.md)
 - 想了解代理管理命令？ → [proxy.md](./architecture/proxy.md)
 
 ---
