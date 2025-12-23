@@ -55,7 +55,7 @@ impl JiraLogs {
             settings.log.download_base_dir.clone().unwrap_or_else(default_download_base_dir);
         let base_dir = Paths::expand(&base_dir_str)
             .wrap_err_with(|| format!("Failed to expand path: {}", base_dir_str))?;
-        let output_folder_name = settings.log.output_folder_name.clone();
+        let output_folder_name = settings.log.get_output_folder_name();
 
         Ok(Self {
             settings,

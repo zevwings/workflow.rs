@@ -26,6 +26,6 @@ fn test_workflow_initialization(settings: Settings) {
 #[rstest]
 fn test_workflow_config_completeness(settings: Settings) {
     // 验证基本配置项存在
-    assert_eq!(settings.log.output_folder_name, "logs");
+    assert_eq!(settings.log.get_output_folder_name(), "logs");
     assert!(!settings.llm.provider.is_empty());
 }

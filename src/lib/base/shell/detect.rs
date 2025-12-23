@@ -1,6 +1,7 @@
 use clap_complete::shells::Shell;
 use color_eyre::{eyre::eyre, Result};
-use std::fs;
+
+use crate::base::util::file::FileReader;
 
 /// Shell 检测工具
 ///
@@ -44,7 +45,7 @@ impl Detect {
         let mut installed = Vec::new();
 
         // 读取 /etc/shells 文件
-        if let Ok(content) = fs::read_to_string("/etc/shells") {
+        if let Ok(content) = FileReader::new("/etc/shells").to_string() {
             for line in content.lines() {
                 let line = line.trim();
                 if line.is_empty() || line.starts_with('#') {

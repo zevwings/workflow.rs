@@ -77,7 +77,6 @@ impl GitCommit {
     ///
     /// - `Ok(true)` - 如果有未提交的更改（工作区或暂存区）
     /// - `Ok(false)` - 如果没有未提交的更改
-    #[allow(dead_code)]
     pub fn has_commit() -> Result<bool> {
         // 检查工作区是否有未提交的更改
         // 如果有差异，返回非零退出码（is_err() 返回 true）

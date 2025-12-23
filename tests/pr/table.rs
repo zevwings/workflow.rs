@@ -280,25 +280,6 @@ fn test_pull_request_row_from_github_pr() {
     assert!(row.url.contains("/pull/"));
 }
 
-// Codeup 支持已移除（Codeup support has been removed）
-// #[test]
-// fn test_pull_request_row_from_codeup_pr() {
-//     // 测试模拟从 Codeup PR 创建 PullRequestRow
-//     let row = PullRequestRow {
-//         number: "456".to_string(),
-//         state: "open".to_string(),
-//         branch: "feature/PROJ-456-fix-bug".to_string(),
-//         title: "Fix bug in PROJ-456".to_string(),
-//         author: "codeup-user".to_string(),
-//         url: "https://codeup.aliyun.com/owner/repo/pull/456".to_string(),
-//     };
-//
-//     // 验证字段符合预期格式
-//     assert!(row.number.parse::<u32>().is_ok());
-//     assert!(row.url.contains("codeup"));
-//     assert!(row.url.contains("/pull/"));
-// }
-
 // ==================== PullRequestRow 结构体特性测试 ====================
 
 #[test]

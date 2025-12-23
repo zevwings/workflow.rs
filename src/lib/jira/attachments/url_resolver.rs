@@ -113,12 +113,16 @@ impl UrlResolver {
     }
 
     /// 获取原始 URL 映射（用于调试）
+    ///
+    /// 虽然当前代码中未使用，但保留作为调试工具，方便排查 URL 解析问题。
     #[allow(dead_code)]
     pub fn original_urls(&self) -> &HashMap<String, String> {
         &self.original_urls
     }
 
     /// 获取 API 附件映射（用于调试）
+    ///
+    /// 虽然当前代码中未使用，但保留作为调试工具，方便排查 URL 解析问题。
     #[allow(dead_code)]
     pub fn api_attachments_map(&self) -> &HashMap<String, String> {
         &self.api_attachments_map

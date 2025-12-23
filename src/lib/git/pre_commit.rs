@@ -7,6 +7,7 @@ use duct::cmd;
 use super::commit::GitCommit;
 use super::repo::GitRepo;
 use crate::base::indicator::Spinner;
+use crate::base::util::file::FileReader;
 use crate::{log_break, log_error, log_success, trace_debug};
 
 /// Pre-commit 执行结果
@@ -206,7 +207,7 @@ impl GitPreCommit {
         // 执行 Git pre-commit hook 脚本（如果存在）
         if let Some(hooks_path) = Self::get_pre_commit_hook_path() {
             // 检查 Git hook 是否是由 pre-commit 工具生成的（需要配置文件）
-            let hook_content = std::fs::read_to_string(&hooks_path).ok();
+            let hook_content = FileReader::new(&hooks_path).to_string().ok();
             let is_pre_commit_hook = hook_content
                 .as_ref()
                 .map(|content| {

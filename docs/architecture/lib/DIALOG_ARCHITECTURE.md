@@ -3,22 +3,29 @@
 ## 📋 概述
 
 本文档描述 Workflow CLI 的 Dialog 模块架构，包括：
-- 文本输入对话框（InputDialog）
-- 单选对话框（SelectDialog）
-- 多选对话框（MultiSelectDialog）
-- 确认对话框（ConfirmDialog）
+- 基础对话框组件：
+  - 文本输入对话框（InputDialog）
+  - 单选对话框（SelectDialog）
+  - 多选对话框（MultiSelectDialog）
+  - 确认对话框（ConfirmDialog）
+- 表单构建器（FormBuilder）：
+  - 支持 Group/Step/Field 三层结构
+  - 支持条件逻辑和可选组
+  - 提供统一的表单构建和交互接口
 
 该模块提供统一的交互式对话框接口，使用 `inquire` 和 `dialoguer` 作为后端实现。支持链式调用，提供更好的用户体验和代码可读性。
 
 **注意**：本模块是基础设施模块，被整个项目广泛使用。所有需要用户交互的命令都使用这些对话框组件。
 
 **模块统计：**
-- 总代码行数：约 600+ 行
-- 文件数量：5 个核心文件
-- 主要组件：4 个对话框类型（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
+- 总代码行数：约 2000+ 行
+- 文件数量：11 个核心文件（5 个基础对话框 + 6 个 Form 子模块文件）
+- 主要组件：
+  - 4 个基础对话框类型（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
+  - 1 个表单构建器（FormBuilder）及其支持组件
 - 依赖库：
   - `inquire`（InputDialog, SelectDialog, MultiSelectDialog）
-  - `dialoguer`（ConfirmDialog，支持单键自动完成和 Enter 使用默认值）
+  - `dialoguer`（ConfirmDialog，支持单键自动完成和 Enter 使用默认值；Password 输入）
 
 ---
 
@@ -28,18 +35,26 @@
 
 ```
 src/lib/base/dialog/
-├── mod.rs          # 模块声明和导出 (96行)
-├── input.rs        # 文本输入对话框 (177行)
-├── select.rs       # 单选对话框 (103行)
-├── multi_select.rs # 多选对话框 (103行)
-├── confirm.rs      # 确认对话框 (141行)
-└── types.rs        # 类型定义 (6行)
+├── mod.rs          # 模块声明和导出 (121行)
+├── input.rs        # 文本输入对话框 (180行)
+├── select.rs       # 单选对话框 (159行)
+├── multi_select.rs # 多选对话框 (106行)
+├── confirm.rs      # 确认对话框 (139行)
+├── types.rs        # 类型定义 (6行)
+└── form/           # 表单构建器子模块
+    ├── mod.rs              # Form 模块声明和导出
+    ├── builder.rs          # FormBuilder 主实现 (391行)
+    ├── group_builder.rs     # GroupBuilder 实现 (137行)
+    ├── field_builder.rs     # FieldBuilder 实现 (182行)
+    ├── condition_evaluator.rs # 条件评估器 (58行)
+    └── types.rs             # Form 类型定义 (281行)
 ```
 
 ### 依赖模块
 
 - **`inquire` crate**：提供交互式终端 UI 功能
-- **`anyhow` crate**：错误处理
+- **`dialoguer` crate**：提供确认对话框和密码输入功能
+- **`color_eyre` crate**：错误处理
 
 ### 模块集成
 
@@ -48,7 +63,11 @@ Dialog 模块被所有需要用户交互的命令广泛使用：
 - **PR 命令**：使用 `InputDialog` 输入 PR 标题、描述等
 - **Jira 命令**：使用 `InputDialog` 输入 Jira ID，使用 `SelectDialog` 选择操作
 - **Branch 命令**：使用 `MultiSelectDialog` 选择要清理的分支
-- **Config 命令**：使用 `SelectDialog` 选择配置项，使用 `InputDialog` 输入配置值
+- **Config 命令**：使用 `FormBuilder` 构建完整的配置表单，使用 `SelectDialog` 选择配置项
+- **Repo 命令**：使用 `FormBuilder` 构建仓库配置表单
+- **LLM 命令**：使用 `FormBuilder` 构建 LLM 配置表单
+- **Alias 命令**：使用 `FormBuilder` 构建别名配置表单
+- **MCP 命令**：使用 `FormBuilder` 构建 MCP 配置表单
 - **GitHub 命令**：使用 `SelectDialog` 选择账号
 - **Lifecycle 命令**：使用 `ConfirmDialog` 确认操作
 
@@ -252,6 +271,169 @@ ConfirmDialog::new("This operation cannot be undone. Continue?")
     .prompt()?;
 ```
 
+#### 5. FormBuilder - 表单构建器
+
+提供高级表单构建功能，支持 Group/Step/Field 三层结构，可以将复杂的配置流程封装为一个统一的表单。
+
+**核心概念**：
+- **Group（组）**：表单的最高层级，可以包含多个步骤，支持必填组和可选组
+- **Step（步骤）**：组内的逻辑单元，可以包含多个字段，支持条件执行
+- **Field（字段）**：表单的基本输入单元，支持多种字段类型
+
+**主要方法**：
+- `new()` - 创建新的表单构建器
+- `add_group(id, builder, config)` - 添加表单组
+- `run()` - 执行表单并收集用户输入
+
+**GroupBuilder 方法**：
+- `step(builder)` - 添加无条件步骤
+- `step_if(field_name, value, builder)` - 添加单条件步骤（字段值等于指定值时执行）
+- `step_if_all(conditions, builder)` - 添加多条件步骤（所有条件都满足时执行，AND 逻辑）
+- `step_if_any(conditions, builder)` - 添加多条件步骤（任一条件满足时执行，OR 逻辑）
+- `step_if_dynamic(condition_fn, builder)` - 添加动态条件步骤（基于运行时值）
+
+**FieldBuilder 方法**：
+- `add_text(name, message)` - 添加文本输入字段
+- `add_password(name, message)` - 添加密码输入字段
+- `add_selection(name, message, choices)` - 添加选择字段
+- `add_confirmation(name, message)` - 添加确认字段
+- `required()` - 标记字段为必填
+- `default(value)` - 设置字段默认值
+- `validate(validator)` - 设置字段验证器
+- `allow_empty(allow)` - 允许字段为空
+
+**特性**：
+- 支持 Group/Step/Field 三层结构
+- 支持必填组和可选组
+- 支持步骤级条件逻辑（step_if, step_if_all, step_if_any, step_if_dynamic）
+- 支持字段级条件逻辑
+- 支持多种字段类型（Text, Password, Selection, Confirmation）
+- 支持字段验证和默认值
+- 链式调用，提供流畅的 API
+
+**使用示例**：
+
+```rust
+use workflow::base::dialog::{FormBuilder, GroupConfig};
+
+// 基本用法：必填组
+let form_result = FormBuilder::new()
+    .add_group("jira", |g| {
+        g.step(|f| {
+            f.add_text("jira_email", "Jira email address").required()
+        })
+        .step(|f| {
+            f.add_text("jira_service_address", "Jira service address").required()
+        })
+    }, GroupConfig::required())
+    .run()?;
+
+// 可选组（带标题和描述）
+let form_result = FormBuilder::new()
+    .add_group("llm", |g| {
+        g.step(|f| {
+            f.add_selection("llm_provider", "Select LLM provider",
+                vec!["openai".into(), "deepseek".into()])
+        })
+        .step_if("llm_provider", "openai", |f| {
+            f.add_text("openai_key", "OpenAI API key").required()
+        })
+        .step_if("llm_provider", "deepseek", |f| {
+            f.add_text("deepseek_key", "DeepSeek API key").required()
+        })
+    }, GroupConfig::optional()
+        .with_title("LLM/AI Configuration")
+        .with_description("Configure LLM provider and API keys")
+        .with_default_enabled(true))
+    .run()?;
+
+// 多条件步骤
+let form_result = FormBuilder::new()
+    .add_group("advanced", |g| {
+        g.step(|f| {
+            f.add_text("provider", "Provider").required()
+        })
+        .step_if_all([
+            ("provider", "openai"),
+            ("environment", "production")
+        ], |f| {
+            f.add_text("api_key", "Production API key").required()
+        })
+        .step_if_any([
+            ("provider", "openai"),
+            ("provider", "deepseek")
+        ], |f| {
+            f.add_confirmation("use_proxy", "Use proxy?")
+        })
+    }, GroupConfig::required())
+    .run()?;
+
+// 动态条件步骤
+let form_result = FormBuilder::new()
+    .add_group("dynamic", |g| {
+        g.step(|f| {
+            f.add_text("count", "Item count").required()
+        })
+        .step_if_dynamic(|result| {
+            result.get("count")
+                .and_then(|v| v.parse::<i32>().ok())
+                .map(|n| n > 10)
+                .unwrap_or(false)
+        }, |f| {
+            f.add_text("bulk_discount", "Bulk discount code")
+        })
+    }, GroupConfig::required())
+    .run()?;
+
+// 访问表单结果
+let jira_email = form_result.get_required("jira_email")?;
+let llm_provider = form_result.get("llm_provider").cloned();
+let use_proxy = form_result.get_bool("use_proxy").unwrap_or(false);
+```
+
+**架构设计**：
+
+FormBuilder 采用三层构建器模式：
+
+```
+FormBuilder
+  ↓
+GroupBuilder (组构建器)
+  ↓
+FieldBuilder (字段构建器)
+```
+
+**执行流程**：
+
+1. **验证阶段**：检查组 ID 唯一性、步骤非空、字段非空
+2. **组执行阶段**：
+   - 可选组：先询问用户是否配置
+   - 必填组：直接执行
+   - 显示组标题和描述（如果有）
+3. **步骤执行阶段**：
+   - 评估步骤条件（如果有）
+   - 如果条件满足，执行步骤内的字段
+4. **字段执行阶段**：
+   - 评估字段条件（如果有）
+   - 如果条件满足，显示对话框收集用户输入
+   - 验证字段值（如果有验证器）
+   - 存储字段值到结果映射
+
+**条件评估**：
+
+FormBuilder 支持多种条件类型：
+
+- **单条件**：`step_if(field_name, value)` - 字段值等于指定值时执行
+- **多条件 AND**：`step_if_all([...])` - 所有条件都满足时执行
+- **多条件 OR**：`step_if_any([...])` - 任一条件满足时执行
+- **动态条件**：`step_if_dynamic(fn)` - 基于运行时值判断
+
+条件操作符：
+- `Equals`：等于（不区分大小写）
+- `NotEquals`：不等于（不区分大小写）
+- `In`：在列表中
+- `NotIn`：不在列表中
+
 ### 设计模式
 
 #### 链式调用设计
@@ -301,16 +483,38 @@ match dialog.prompt() {
 
 ### 整体架构流程
 
+#### 基础对话框流程
+
 ```
 应用层（命令、模块）
   ↓
 Dialog API（InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog）
   ↓
-inquire 库（底层终端 UI）
+inquire/dialoguer 库（底层终端 UI）
   ↓
 用户交互
   ↓
 返回结果或错误
+```
+
+#### FormBuilder 流程
+
+```
+应用层（命令、模块）
+  ↓
+FormBuilder API
+  ↓
+GroupBuilder → StepBuilder → FieldBuilder
+  ↓
+基础 Dialog API（InputDialog, SelectDialog, ConfirmDialog）
+  ↓
+inquire/dialoguer 库（底层终端 UI）
+  ↓
+用户交互
+  ↓
+条件评估（ConditionEvaluator）
+  ↓
+返回 FormResult 或错误
 ```
 
 ### 数据流
@@ -353,12 +557,40 @@ prompt()
 返回 Result<T>
 ```
 
+#### FormBuilder 表单流程
+
+```
+FormBuilder::new()
+  ↓
+add_group("id", |g| {...}, GroupConfig::required())
+  ↓
+GroupBuilder::step(|f| {...})
+  ↓
+FieldBuilder::add_text(...).required()
+  ↓
+run()
+  ↓
+验证配置（validate）
+  ↓
+执行组（可选组先询问）
+  ↓
+执行步骤（评估条件）
+  ↓
+执行字段（评估条件，显示对话框）
+  ↓
+收集用户输入
+  ↓
+返回 FormResult
+```
+
 ### 与其他模块的集成
 
 Dialog 模块是基础设施模块，被整个项目广泛使用：
 
 - **CLI 命令层**：所有需要用户交互的命令使用对话框
-- **配置管理**：使用对话框获取配置值
+- **配置管理**：
+  - 使用 `FormBuilder` 构建完整的配置表单（`config setup`, `repo setup`, `llm setup`, `mcp setup`, `alias add`）
+  - 使用基础对话框获取简单配置值
 - **Git 操作**：使用对话框选择分支、确认操作
 - **Jira 操作**：使用对话框输入 Jira ID、选择操作
 - **PR 操作**：使用对话框输入 PR 信息
@@ -367,6 +599,12 @@ Dialog 模块是基础设施模块，被整个项目广泛使用：
 
 ```
 dialog (基础设施)
+  ├── form/ (FormBuilder 子模块)
+  │   ├── builder.rs (使用基础对话框)
+  │   ├── group_builder.rs
+  │   ├── field_builder.rs
+  │   └── condition_evaluator.rs
+  └── 基础对话框 (InputDialog, SelectDialog, MultiSelectDialog, ConfirmDialog)
   ↓
 所有业务模块（commands, lib/*）
 ```
@@ -399,6 +637,17 @@ InputDialog::new("Enter value")
     .with_validator(validator)
     .prompt()?;
 ```
+
+### 添加新的表单字段类型
+
+1. 在 `form/types.rs` 中的 `FormFieldType` 枚举添加新类型
+2. 在 `form/field_builder.rs` 中添加对应的 `add_xxx` 方法
+3. 在 `form/builder.rs` 的 `ask_field` 方法中添加字段类型的处理逻辑
+
+### 添加新的条件操作符
+
+1. 在 `form/types.rs` 中的 `ConditionOperator` 枚举添加新操作符
+2. 在 `form/condition_evaluator.rs` 的 `evaluate` 方法中添加对应的评估逻辑
 
 ---
 
@@ -453,16 +702,60 @@ let confirmed = ConfirmDialog::new("Continue?")
     .prompt()?;
 ```
 
+### 表单构建器
+
+```rust
+use workflow::base::dialog::{FormBuilder, GroupConfig};
+
+let form_result = FormBuilder::new()
+    .add_group("jira", |g| {
+        g.step(|f| {
+            f.add_text("jira_email", "Jira email address").required()
+        })
+        .step(|f| {
+            f.add_text("jira_service_address", "Jira service address").required()
+        })
+    }, GroupConfig::required())
+    .add_group("llm", |g| {
+        g.step(|f| {
+            f.add_selection("llm_provider", "Select LLM provider",
+                vec!["openai".into(), "deepseek".into()])
+        })
+        .step_if("llm_provider", "openai", |f| {
+            f.add_text("openai_key", "OpenAI API key").required()
+        })
+    }, GroupConfig::optional()
+        .with_title("LLM Configuration")
+        .with_default_enabled(true))
+    .run()?;
+
+// 访问结果
+let jira_email = form_result.get_required("jira_email")?;
+let llm_provider = form_result.get("llm_provider");
+```
+
 ---
 
 ## ✅ 总结
 
 Dialog 模块为整个项目提供统一的交互式对话框接口：
 
+### 基础对话框组件
+
 1. **InputDialog**：文本输入，支持默认值、验证器、空值处理
 2. **SelectDialog**：单选，支持默认选项
 3. **MultiSelectDialog**：多选，支持默认选中多个选项
 4. **ConfirmDialog**：确认，支持默认选择和取消消息
+
+### 表单构建器（FormBuilder）
+
+5. **FormBuilder**：高级表单构建器，支持：
+   - Group/Step/Field 三层结构
+   - 必填组和可选组
+   - 步骤级和字段级条件逻辑
+   - 多种字段类型（Text, Password, Selection, Confirmation）
+   - 字段验证和默认值
+   - 链式调用 API
 
 **设计优势**：
 - ✅ **易用性**：简洁的 API，支持链式调用
@@ -470,7 +763,9 @@ Dialog 模块为整个项目提供统一的交互式对话框接口：
 - ✅ **类型安全**：使用泛型支持任意类型
 - ✅ **灵活性**：支持默认值、验证器、空值处理等多种配置
 - ✅ **用户体验**：使用 `inquire` 和 `dialoguer` 提供美观的终端 UI，`ConfirmDialog` 支持单键自动完成
+- ✅ **可扩展性**：FormBuilder 支持复杂的条件逻辑和动态表单构建
+- ✅ **模块化**：三层构建器模式，职责清晰，易于维护
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-23

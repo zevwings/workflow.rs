@@ -3,14 +3,14 @@
 //! Interactively initialize repository-level configuration.
 //! Similar to CheckCommand, provides a static method for other commands to call.
 
-use crate::base::dialog::{ConfirmDialog, InputDialog};
+use crate::base::dialog::{ConfirmDialog, FormBuilder, GroupConfig, InputDialog};
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{GitHubAccount, Settings};
 use crate::base::util::file::FileWriter;
 use crate::git::GitRepo;
 use crate::repo::config::{BranchConfig, PullRequestsConfig, RepoConfig};
-use crate::{log_break, log_info, log_message, log_success, log_warning};
+use crate::{log_break, log_debug, log_info, log_message, log_success, log_warning};
 use color_eyre::{eyre::WrapErr, Result};
 use std::collections::HashMap;
 use std::io::{self, IsTerminal};
@@ -121,13 +121,11 @@ impl RepoSetupCommand {
     /// }
     /// ```
     pub fn run() -> Result<()> {
-        log_success!("Repository Configuration Setup\n");
-
         // 1. 检查是否在 Git 仓库中
         let repo_name = GitRepo::extract_repo_name()
             .wrap_err("Not in a Git repository. Please run this command in a Git repository.")?;
 
-        log_info!("Repository: {}", repo_name);
+        log_message!("Repository: {}", repo_name);
         log_break!();
 
         // 2. 加载现有配置（如果存在）
@@ -141,15 +139,15 @@ impl RepoSetupCommand {
 
         log_break!();
         log_success!("Repository configuration saved successfully!");
-        log_info!(
+        log_debug!(
             "Project template configuration: {}",
             Paths::project_config()?.display()
         );
-        log_info!(
+        log_debug!(
             "Personal preference configuration: {}",
             Paths::repository_config()?.display()
         );
-        log_info!(
+        log_success!(
             "You can commit the project template configuration to Git to share with your team."
         );
 
@@ -164,183 +162,176 @@ impl RepoSetupCommand {
     fn collect_config(existing: &Option<RepoConfig>) -> Result<RepoConfig> {
         let mut config = existing.clone().unwrap_or_default();
 
-        log_message!("Personal Preference Configuration");
-        log_break!('-', 40);
-        log_info!(
-            "These settings are personal preferences and will be saved to your global config."
-        );
-        log_break!();
-
-        // 1. Branch prefix (个人偏好)
+        // 准备现有值
         let current_prefix = config.branch.as_ref().and_then(|b| b.prefix.clone());
-
-        let prefix_prompt = if current_prefix.is_some() {
-            "Enter branch prefix (press Enter to keep)".to_string()
-        } else {
-            "Enter branch prefix (optional, press Enter to skip, e.g., 'feature', 'fix'):"
-                .to_string()
-        };
-
-        let prefix_input = {
-            let mut dialog = InputDialog::new(&prefix_prompt).allow_empty(true);
-
-            // 如果有现有值，设置默认值
-            if let Some(ref current) = current_prefix {
-                dialog = dialog.with_default(current.clone());
-            }
-
-            dialog.prompt().wrap_err("Failed to get branch prefix")?
-        };
-
-        // 处理输入：如果有现有值且用户输入为空，保持原值；否则使用新值或清空
-        let branch_prefix: Option<String> = if !prefix_input.trim().is_empty() {
-            Some(prefix_input.trim().to_string())
-        } else {
-            current_prefix.clone()
-        };
-
-        if branch_prefix.is_some() {
-            config.branch = Some(BranchConfig {
-                prefix: branch_prefix,
-                ignore: config.branch.as_ref().map(|b| b.ignore.clone()).unwrap_or_default(),
-            });
-        }
-
-        log_break!();
-        log_message!("Project Template Configuration");
-        log_break!('-', 40);
-        log_info!("These settings are project standards and will be saved to .workflow/config.toml (can be committed to Git).");
-        log_break!();
-
-        // 2. Use scope (项目规范)
         let current_use_scope = config
             .template_commit
             .get("use_scope")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-
-        let use_scope = ConfirmDialog::new("Use scope for commit messages?")
-            .with_default(current_use_scope)
-            .prompt()
-            .wrap_err("Failed to get use_scope setting")?;
-
-        config
-            .template_commit
-            .insert("use_scope".to_string(), Value::Boolean(use_scope));
-
-        // 3. Commit template configuration
-        let configure_commit_template = ConfirmDialog::new("Configure commit templates?")
-            .with_default(false)
-            .prompt()
-            .wrap_err("Failed to get commit template preference")?;
-
-        if configure_commit_template {
-            // 询问是否使用默认模板
-            let use_default = ConfirmDialog::new("Use default commit template?")
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get template preference")?;
-
-            if !use_default {
-                // 用户选择自定义模板，询问自定义模板内容
-                // 如果使用默认模板，不写入 default 字段，让 serde default 机制处理
-                let custom_template = InputDialog::new("Enter custom commit template:")
-                    .allow_empty(false)
-                    .prompt()
-                    .wrap_err("Failed to get custom template")?;
-
-                config.template_commit.insert(
-                    "default".to_string(),
-                    Value::String(custom_template.trim().to_string()),
-                );
-            }
-            // 如果使用默认模板，不写入 default 字段
-        }
-
-        // 4. Branch template configuration
-        let configure_branch_template = ConfirmDialog::new("Configure branch templates?")
-            .with_default(false)
-            .prompt()
-            .wrap_err("Failed to get branch template preference")?;
-
-        if configure_branch_template {
-            // 询问是否使用默认模板
-            let use_default_branch = ConfirmDialog::new("Use default branch template?")
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get branch template preference")?;
-
-            if !use_default_branch {
-                let custom_branch_template =
-                    InputDialog::new("Enter custom default branch template:")
-                        .allow_empty(false)
-                        .prompt()
-                        .wrap_err("Failed to get custom branch template")?;
-
-                config.template_branch.insert(
-                    "default".to_string(),
-                    Value::String(custom_branch_template.trim().to_string()),
-                );
-            }
-            // 如果使用默认模板，不写入 default 字段
-        }
-
-        // 5. Pull request template configuration
-        let configure_pr_template = ConfirmDialog::new("Configure pull request templates?")
-            .with_default(false)
-            .prompt()
-            .wrap_err("Failed to get PR template preference")?;
-
-        if configure_pr_template {
-            // 询问是否使用默认模板
-            let use_default_pr = ConfirmDialog::new("Use default PR template?")
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get PR template preference")?;
-
-            if !use_default_pr {
-                let custom_pr_template = InputDialog::new("Enter custom PR template:")
-                    .allow_empty(false)
-                    .prompt()
-                    .wrap_err("Failed to get custom PR template")?;
-
-                config.template_pull_requests.insert(
-                    "default".to_string(),
-                    Value::String(custom_pr_template.trim().to_string()),
-                );
-            }
-            // 如果使用默认模板，不写入 default 字段
-        }
-
-        log_break!();
-        log_message!("PR Configuration (Personal Preference)");
-        log_break!('-', 40);
-        log_info!("This setting is a personal preference and will be saved to your global config.");
-        log_break!();
-
-        // 6. Auto-accept change type (个人偏好)
         let current_auto_accept =
             config.pr.as_ref().and_then(|p| p.auto_accept_change_type).unwrap_or(false);
 
-        let auto_accept = ConfirmDialog::new(
-            "Auto-accept auto-selected change type in PR creation? (skip confirmation prompt)",
-        )
-        .with_default(current_auto_accept)
-        .prompt()
-        .wrap_err("Failed to get auto_accept_change_type setting")?;
+        // 使用 FormBuilder 收集所有配置
+        let form_result = FormBuilder::new()
+            // Group 1: Personal Preference Configuration (必填组)
+            .add_group(
+                "personal_preference",
+                |g| {
+                    g.step(|f| {
+                        // Branch prefix
+                        let prefix_prompt = if current_prefix.is_some() {
+                            "Enter branch prefix (press Enter to keep)"
+                        } else {
+                            "Enter branch prefix (optional, press Enter to skip, e.g., 'feature', 'fix'):"
+                        };
+                        let mut field = f.add_text("branch_prefix", prefix_prompt);
+                        if current_prefix.is_some() {
+                            field = field.allow_empty(true);
+                            if let Some(ref prefix) = current_prefix {
+                                field = field.default(prefix.clone());
+                            }
+                        } else {
+                            field = field.allow_empty(true);
+                        }
+                        field
+                    })
+                    .step(|f| {
+                        // Auto-accept change type
+                        f.add_confirmation(
+                            "auto_accept_change_type",
+                            "Auto-accept auto-selected change type in PR creation? (skip confirmation prompt)",
+                        )
+                        .default(current_auto_accept)
+                    })
+                },
+                GroupConfig::required()
+                    .with_title("Personal Preference Configuration")
+                    .with_description("These settings are personal preferences and will be saved to your global config."),
+            )
+            // Group 2: Project Template Configuration (必填组)
+            .add_group(
+                "project_template",
+                |g| {
+                    g.step(|f| {
+                        // Use scope
+                        f.add_confirmation("use_scope", "Use scope for commit messages?")
+                            .default(current_use_scope)
+                    })
+                    .step(|f| {
+                        // Commit template configuration
+                        f.add_confirmation("configure_commit_template", "Configure commit templates?")
+                            .default(false)
+                    })
+                    .step_if("configure_commit_template", "yes", |f| {
+                        f.add_text("custom_commit_template", "Enter custom commit template:")
+                            .allow_empty(true)
+                    })
+                    .step(|f| {
+                        // Branch template configuration
+                        f.add_confirmation("configure_branch_template", "Configure branch templates?")
+                            .default(false)
+                    })
+                    .step_if("configure_branch_template", "yes", |f| {
+                        f.add_text(
+                            "custom_branch_template",
+                            "Enter custom default branch template:",
+                        )
+                        .allow_empty(true)
+                    })
+                    .step(|f| {
+                        // PR template configuration
+                        f.add_confirmation("configure_pr_template", "Configure pull request templates?")
+                            .default(false)
+                    })
+                    .step_if("configure_pr_template", "yes", |f| {
+                        f.add_text("custom_pr_template", "Enter custom pull request template:")
+                            .allow_empty(true)
+                    })
+                },
+                GroupConfig::required()
+                    .with_title("Project Template Configuration")
+                    .with_description("These settings are project standards and will be saved to .workflow/config.toml (can be committed to Git)."),
+            )
+            .run()
+            .wrap_err("Failed to collect repository configuration")?;
 
-        config.pr = Some(PullRequestsConfig {
-            auto_accept_change_type: Some(auto_accept),
-        });
+        // 处理结果：Branch prefix
+        if let Some(prefix_input) = form_result.get("branch_prefix") {
+            let branch_prefix: Option<String> = if !prefix_input.trim().is_empty() {
+                Some(prefix_input.trim().to_string())
+            } else {
+                current_prefix.clone()
+            };
 
-        // 7. MCP 配置 (项目级配置)
+            if branch_prefix.is_some() {
+                config.branch = Some(BranchConfig {
+                    prefix: branch_prefix,
+                    ignore: config.branch.as_ref().map(|b| b.ignore.clone()).unwrap_or_default(),
+                });
+            }
+        }
+
+        // 处理结果：Use scope
+        if let Some(use_scope) = form_result.get_bool("use_scope") {
+            config
+                .template_commit
+                .insert("use_scope".to_string(), Value::Boolean(use_scope));
+        }
+
+        // 处理结果：Commit template
+        // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
+        if form_result.get("configure_commit_template") == Some(&"yes".to_string()) {
+            if let Some(custom_template) = form_result.get("custom_commit_template") {
+                if !custom_template.trim().is_empty() {
+                    config.template_commit.insert(
+                        "default".to_string(),
+                        Value::String(custom_template.trim().to_string()),
+                    );
+                }
+            }
+        }
+
+        // 处理结果：Branch template
+        // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
+        if form_result.get("configure_branch_template") == Some(&"yes".to_string()) {
+            if let Some(custom_branch_template) = form_result.get("custom_branch_template") {
+                if !custom_branch_template.trim().is_empty() {
+                    config.template_branch.insert(
+                        "default".to_string(),
+                        Value::String(custom_branch_template.trim().to_string()),
+                    );
+                }
+            }
+        }
+
+        // 处理结果：PR template
+        // 如果用户选择配置且输入了自定义模板，则保存；如果输入为空，则不写入（使用默认模板）
+        if form_result.get("configure_pr_template") == Some(&"yes".to_string()) {
+            if let Some(custom_pr_template) = form_result.get("custom_pr_template") {
+                if !custom_pr_template.trim().is_empty() {
+                    config.template_pull_requests.insert(
+                        "default".to_string(),
+                        Value::String(custom_pr_template.trim().to_string()),
+                    );
+                }
+            }
+        }
+
+        // 处理结果：Auto-accept change type
+        if let Some(auto_accept) = form_result.get_bool("auto_accept_change_type") {
+            config.pr = Some(PullRequestsConfig {
+                auto_accept_change_type: Some(auto_accept),
+            });
+        }
+
+        // MCP Configuration (顺序交互式流程)
         log_break!();
         log_message!("MCP Configuration (Project-level)");
         log_break!('-', 40);
-        log_info!("Configure MCP servers for Cursor IDE integration.");
+        log_debug!("Configure MCP servers for Cursor IDE integration.");
         log_break!();
 
-        // 直接调用 MCP 配置逻辑（不显示标题和完成信息）
         Self::setup_mcp_integration()?;
 
         // Mark as configured
@@ -359,7 +350,7 @@ impl RepoSetupCommand {
         let mut new_config = MCPConfig::default();
 
         // 2. 询问是否配置 JIRA MCP
-        log_info!("Setting up Jira MCP servers...");
+        log_debug!("Setting up Jira MCP servers...");
         let configure_jira = ConfirmDialog::new("Configure JIRA MCP server?")
             .with_default(true)
             .prompt()
@@ -373,7 +364,7 @@ impl RepoSetupCommand {
 
         // 3. 询问是否配置 GitHub MCP
         log_break!();
-        log_info!("Setting up GitHub MCP servers...");
+        log_debug!("Setting up GitHub MCP servers...");
         let configure_github = ConfirmDialog::new("Configure GitHub MCP server?")
             .with_default(true)
             .prompt()
@@ -423,110 +414,151 @@ impl RepoSetupCommand {
                 (None, None, None)
             };
 
-        // JIRA 服务器地址（必填）
         // 优先级：MCP 配置 > Settings 配置
         let current_jira_address =
             existing_jira_url.or_else(|| settings.jira.service_address.clone());
+        let current_jira_email = existing_jira_username.or_else(|| settings.jira.email.clone());
+        let current_jira_token = existing_jira_token.or_else(|| settings.jira.api_token.clone());
+
         let has_jira_address = current_jira_address.is_some();
-        let jira_address_prompt = if current_jira_address.is_some() {
-            "JIRA server URL (press Enter to keep)".to_string()
+        let has_jira_email = current_jira_email.is_some();
+        let has_jira_token = current_jira_token.is_some();
+
+        let jira_address_prompt = if has_jira_address {
+            "JIRA server URL (press Enter to keep)"
         } else {
-            "JIRA server URL".to_string()
+            "JIRA server URL"
+        };
+        let jira_email_prompt = if has_jira_email {
+            "JIRA email address (press Enter to keep)"
+        } else {
+            "JIRA email address"
+        };
+        let jira_token_prompt = if has_jira_token {
+            "JIRA API token [current: ***] (press Enter to keep)"
+        } else {
+            "JIRA API token"
         };
 
-        let jira_service_address = if let Some(addr) = &current_jira_address {
-            InputDialog::new(&jira_address_prompt).with_default(addr.clone())
-        } else {
-            InputDialog::new(&jira_address_prompt)
-        }
-        .with_validator(move |input: &str| {
-            if input.is_empty() && !has_jira_address {
-                Err("JIRA server URL is required".to_string())
-            } else if !input.is_empty()
-                && !input.starts_with("http://")
-                && !input.starts_with("https://")
-            {
-                Err("Please enter a valid URL (must start with http:// or https://)".to_string())
-            } else {
-                Ok(())
-            }
-        })
-        .prompt()
-        .wrap_err("Failed to get JIRA server URL")?;
+        // 使用 FormBuilder 收集 JIRA 配置
+        let jira_form_result = FormBuilder::new()
+            .add_group(
+                "jira_mcp",
+                |g| {
+                    g.step(|f| {
+                        // JIRA server address
+                        let mut field = f.add_text("jira_service_address", jira_address_prompt);
+                        if has_jira_address {
+                            field = field.allow_empty(true);
+                            if let Some(ref addr) = current_jira_address {
+                                field = field.default(addr.clone());
+                            }
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_address {
+                                Err("JIRA server URL is required".to_string())
+                            } else if !input.is_empty()
+                                && !input.starts_with("http://")
+                                && !input.starts_with("https://")
+                            {
+                                Err(
+                                    "Please enter a valid URL (must start with http:// or https://)"
+                                        .to_string(),
+                                )
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                    .step(|f| {
+                        // JIRA email
+                        let mut field = f.add_text("jira_email", jira_email_prompt);
+                        if has_jira_email {
+                            field = field.allow_empty(true);
+                            if let Some(ref email) = current_jira_email {
+                                field = field.default(email.clone());
+                            }
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_email {
+                                Err("JIRA email address is required".to_string())
+                            } else if !input.is_empty() && !input.contains('@') {
+                                Err("Please enter a valid email address".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                    .step(|f| {
+                        // JIRA API token (不设置默认值，显示 ***)
+                        let mut field = f.add_text("jira_api_token", jira_token_prompt);
+                        if has_jira_token {
+                            field = field.allow_empty(true);
+                            // 不设置默认值，这样显示 *** 而不是明文
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_token {
+                                Err("JIRA API token is required".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                },
+                GroupConfig::required().with_title("JIRA MCP Configuration"),
+            )
+            .run()
+            .wrap_err("Failed to collect JIRA configuration")?;
 
-        let service_address = if !jira_service_address.is_empty() {
-            jira_service_address
-        } else if let Some(addr) = &current_jira_address {
-            addr.clone()
+        // 从 form 结果中提取值
+        let service_address = if let Some(address) = jira_form_result.get("jira_service_address") {
+            if !address.is_empty() {
+                address.clone()
+            } else if let Some(addr) = &current_jira_address {
+                addr.clone()
+            } else {
+                return Err(color_eyre::eyre::eyre!(
+                    "JIRA server URL is required for MCP configuration"
+                ));
+            }
         } else {
             return Err(color_eyre::eyre::eyre!(
                 "JIRA server URL is required for MCP configuration"
             ));
         };
 
-        // JIRA 邮箱（必填）
-        // 优先级：MCP 配置 > Settings 配置
-        let current_jira_email = existing_jira_username.or_else(|| settings.jira.email.clone());
-        let has_jira_email = current_jira_email.is_some();
-        let jira_email_prompt = if current_jira_email.is_some() {
-            "JIRA email address (press Enter to keep)".to_string()
-        } else {
-            "JIRA email address".to_string()
-        };
-
-        let jira_email = if let Some(email) = &current_jira_email {
-            InputDialog::new(&jira_email_prompt).with_default(email.clone())
-        } else {
-            InputDialog::new(&jira_email_prompt)
-        }
-        .with_validator(move |input: &str| {
-            if input.is_empty() && !has_jira_email {
-                Err("JIRA email address is required".to_string())
-            } else if !input.is_empty() && !input.contains('@') {
-                Err("Please enter a valid email address".to_string())
+        let username = if let Some(email) = jira_form_result.get("jira_email") {
+            if !email.is_empty() {
+                email.clone()
+            } else if let Some(e) = &current_jira_email {
+                e.clone()
             } else {
-                Ok(())
+                return Err(color_eyre::eyre::eyre!(
+                    "JIRA email address is required for MCP configuration"
+                ));
             }
-        })
-        .prompt()
-        .wrap_err("Failed to get JIRA email address")?;
-
-        let username = if !jira_email.is_empty() {
-            jira_email
-        } else if let Some(email) = &current_jira_email {
-            email.clone()
         } else {
             return Err(color_eyre::eyre::eyre!(
                 "JIRA email address is required for MCP configuration"
             ));
         };
 
-        // JIRA API Token（必填）
-        // 优先级：MCP 配置 > Settings 配置
-        let current_jira_token = existing_jira_token.or_else(|| settings.jira.api_token.clone());
-        let has_jira_token = current_jira_token.is_some();
-        let jira_token_prompt = if has_jira_token {
-            "JIRA API token [current: ***] (press Enter to keep)".to_string()
-        } else {
-            "JIRA API token".to_string()
-        };
-
-        let jira_api_token = InputDialog::new(&jira_token_prompt)
-            .allow_empty(has_jira_token)
-            .with_validator(move |input: &str| {
-                if input.is_empty() && !has_jira_token {
-                    Err("JIRA API token is required".to_string())
-                } else {
-                    Ok(())
-                }
-            })
-            .prompt()
-            .wrap_err("Failed to get JIRA API token")?;
-
-        let api_token = if !jira_api_token.is_empty() {
-            jira_api_token
-        } else if let Some(token) = &current_jira_token {
-            token.clone()
+        let api_token = if let Some(token) = jira_form_result.get("jira_api_token") {
+            if !token.is_empty() {
+                token.clone()
+            } else if let Some(t) = &current_jira_token {
+                t.clone()
+            } else {
+                return Err(color_eyre::eyre::eyre!(
+                    "JIRA API token is required for MCP configuration"
+                ));
+            }
         } else {
             return Err(color_eyre::eyre::eyre!(
                 "JIRA API token is required for MCP configuration"
@@ -688,49 +720,69 @@ impl RepoSetupCommand {
         }
 
         // 询问用户是否要将 GitHub token 保存到全局配置
-        let should_sync = ConfirmDialog::new(
-            "No GitHub account found in global config. Save this token to global config?",
-        )
-        .with_default(true)
-        .prompt()
-        .wrap_err("Failed to get user confirmation")?;
+        let github_sync_form_result = FormBuilder::new()
+            .add_group(
+                "github_sync",
+                |g| {
+                    g.step(|f| {
+                        f.add_confirmation(
+                            "should_sync",
+                            "No GitHub account found in global config. Save this token to global config?",
+                        )
+                        .default(true)
+                    })
+                    .step_if("should_sync", "yes", |f| {
+                        f.add_text("account_name", "GitHub account name (required)")
+                            .required()
+                            .validate(|input: &str| {
+                                if input.trim().is_empty() {
+                                    Err("Account name is required".to_string())
+                                } else {
+                                    Ok(())
+                                }
+                            })
+                            .add_text("account_email", "GitHub account email (required)")
+                            .required()
+                            .validate(|input: &str| {
+                                if input.trim().is_empty() {
+                                    Err("Email is required".to_string())
+                                } else if !input.contains('@') {
+                                    Err("Please enter a valid email address".to_string())
+                                } else {
+                                    Ok(())
+                                }
+                            })
+                    })
+                },
+                GroupConfig::required(),
+            )
+            .run()
+            .wrap_err("Failed to collect GitHub account information")?;
 
-        if should_sync {
+        if github_sync_form_result.get("should_sync") == Some(&"yes".to_string()) {
             // 获取账号信息
-            let account_name = InputDialog::new("GitHub account name (required)")
-                .with_validator(|input: &str| {
-                    if input.trim().is_empty() {
-                        Err("Account name is required".to_string())
-                    } else {
-                        Ok(())
-                    }
-                })
-                .prompt()
-                .wrap_err("Failed to get GitHub account name")?;
+            let account_name = github_sync_form_result
+                .get("account_name")
+                .ok_or_else(|| color_eyre::eyre::eyre!("Account name is required"))?
+                .trim()
+                .to_string();
 
-            let account_email = InputDialog::new("GitHub account email (required)")
-                .with_validator(|input: &str| {
-                    if input.trim().is_empty() {
-                        Err("Email is required".to_string())
-                    } else if !input.contains('@') {
-                        Err("Please enter a valid email address".to_string())
-                    } else {
-                        Ok(())
-                    }
-                })
-                .prompt()
-                .wrap_err("Failed to get GitHub account email")?;
+            let account_email = github_sync_form_result
+                .get("account_email")
+                .ok_or_else(|| color_eyre::eyre::eyre!("Account email is required"))?
+                .trim()
+                .to_string();
 
             // 创建新的 GitHub 账号配置
             let mut updated_settings = latest_settings.clone();
             let github_account = GitHubAccount {
-                name: account_name.trim().to_string(),
-                email: account_email.trim().to_string(),
+                name: account_name,
+                email: account_email,
                 api_token: api_token.to_string(),
             };
 
-            updated_settings.github.accounts.push(github_account);
-            updated_settings.github.current = Some(account_name.trim().to_string()); // 设置为当前账号
+            updated_settings.github.accounts.push(github_account.clone());
+            updated_settings.github.current = Some(github_account.name.clone()); // 设置为当前账号
 
             // 保存配置
             let config_path = Paths::workflow_config()?;

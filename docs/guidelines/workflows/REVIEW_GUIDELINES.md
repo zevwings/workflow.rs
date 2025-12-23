@@ -17,6 +17,7 @@
 - [🔧 CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md) - 命令结构、补全脚本、参数复用
 - [💻 代码检查指南](./references/REVIEW_CODE_GUIDELINES.md) - 重复代码、工具复用、第三方库
 - [🧪 测试检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md) - 测试覆盖、合理性、缺失测试
+- [📊 测试覆盖检查机制指南](./references/TEST_COVERAGE_CHECK_GUIDELINES.md) - 测试覆盖检查机制、定期检查流程
 - [📚 文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md) - README、架构文档、CHANGELOG
 - [🏗️ 架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md) - 架构文档与代码一致性检查
 
@@ -1077,6 +1078,7 @@ grep -r "#[cfg(test)]" src/
 - [CLI 检查指南](./references/REVIEW_CLI_GUIDELINES.md)
 - [代码检查指南](./references/REVIEW_CODE_GUIDELINES.md)
 - [测试用例检查指南](./references/REVIEW_TEST_CASE_GUIDELINES.md)
+- [测试覆盖检查机制指南](./references/TEST_COVERAGE_CHECK_GUIDELINES.md)
 - [文档检查指南](./references/REVIEW_DOCUMENT_GUIDELINES.md)
 - [架构文档审查指南](./references/REVIEW_ARCHITECTURE_DOC_GUIDELINES.md)
 
@@ -1137,4 +1139,4 @@ grep -r "#[cfg(test)]" src/
 
 ---
 
-**最后更新**: 2025-12-16
+**最后更新**: 2025-12-19

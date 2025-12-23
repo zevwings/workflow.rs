@@ -4,8 +4,9 @@
 
 use color_eyre::Result;
 use std::env;
-use std::fs;
 use std::process::Command;
+
+use crate::base::util::file::FileReader;
 
 /// 平台信息结构体
 ///
@@ -118,7 +119,7 @@ impl Platform {
         }
 
         // 方法1: 检查是否是 Alpine Linux（通常使用 musl）
-        if let Ok(os_release) = fs::read_to_string("/etc/os-release") {
+        if let Ok(os_release) = FileReader::new("/etc/os-release").to_string() {
             if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
                 return true;
             }

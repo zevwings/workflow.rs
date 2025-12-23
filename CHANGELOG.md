@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.9] - 2025-12-23
+
+### Changed
+- **工作流优化**：优化工作流处理逻辑，提升性能和稳定性
+
+---
+
 ## [1.6.7] - 2025-12-18
 
 ### Added
