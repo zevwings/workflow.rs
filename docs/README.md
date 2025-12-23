@@ -384,7 +384,7 @@
 - 信息框和文档结构模板
 - 更新规范和变更记录
 
-### [REVIEW_document.md](./guidelines/workflows/references/REVIEW_document.md)
+### [review_document.md](./guidelines/workflows/references/review_document.md)
 **文档检查指南**
 
 - 检查概述和检查步骤
