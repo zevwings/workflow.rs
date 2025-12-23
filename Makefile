@@ -2,7 +2,7 @@
 # 包含所有功能模块（按依赖顺序）
 
 # 声明所有伪目标（统一管理）
-.PHONY: help dev release clean install update uninstall test test-all lint fix setup bloat check-rustfmt check-clippy coverage coverage-open coverage-ci coverage-trend
+.PHONY: help dev release clean install update uninstall test test-all lint fix setup bloat check-rustfmt check-clippy coverage coverage-open coverage-ci coverage-trend check-docs-links
 
 # 设置默认目标
 .DEFAULT_GOAL := help

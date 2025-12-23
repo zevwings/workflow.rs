@@ -5,6 +5,7 @@
 define HELP_TOOLS
 	@echo "工具安装相关："
 	@echo "  make setup            - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat）"
+	@echo "  make check-docs-links - 验证文档中的链接有效性（使用 lychee）"
 	@echo ""
 endef
 
@@ -58,6 +59,26 @@ setup:
 		echo "❌ rust-analyzer 安装失败"; \
 		echo "请检查错误信息，或手动运行以下命令:"; \
 		echo "  cd /tmp/rust-analyzer && cargo run --package xtask --bin xtask install --server"; \
+		exit 1; \
+	fi
+
+# 验证文档链接有效性
+check-docs-links:
+	@echo "=========================================="
+	@echo "验证文档链接有效性"
+	@echo "=========================================="
+	@echo ""
+	@if command -v lychee >/dev/null 2>&1; then \
+		echo "使用 lychee 验证文档链接..."; \
+		echo ""; \
+		lychee docs/**/*.md --exclude-all-private --exclude-mail --exclude-localhost || exit 1; \
+	else \
+		echo "⚠ lychee 未安装"; \
+		echo "安装方法: cargo install lychee"; \
+		echo ""; \
+		echo "或者使用 markdown-link-check (需要 Node.js):"; \
+		echo "  npm install -g markdown-link-check"; \
+		echo "  find docs -name '*.md' -type f -exec markdown-link-check {} \\;"; \
 		exit 1; \
 	fi
 
