@@ -157,9 +157,12 @@ impl GitRepo {
     /// 从 URL 字符串提取仓库名
     ///
     /// 支持多种 URL 格式：
-    /// - SSH: git@github.com:owner/repo.git
-    /// - SSH (别名): git@github-brainim:owner/repo.git
-    /// - HTTPS: https://github.com/owner/repo.git
+    /// - GitHub SSH: git@github.com:owner/repo.git
+    /// - GitHub SSH (别名): git@github-brainim:owner/repo.git
+    /// - GitHub HTTPS: https://github.com/owner/repo.git
+    /// - Codeup SSH: git@codeup.aliyun.com:owner/repo.git
+    /// - Codeup HTTPS: https://codeup.aliyun.com/owner/repo.git
+    /// - Codeup HTTP: http://codeup.aliyun.com/owner/repo
     ///
     /// # 参数
     ///
@@ -191,6 +194,28 @@ impl GitRepo {
             return Ok(caps
                 .get(1)
                 .ok_or_else(|| eyre!("Failed to extract repo name from GitHub HTTPS URL: {}", url))?
+                .as_str()
+                .to_string());
+        }
+
+        // Codeup SSH 格式: git@codeup.aliyun.com:owner/repo.git
+        let codeup_ssh_re = Regex::new(r"git@codeup\.aliyun\.com:(.+?)(?:\.git)?$")
+            .wrap_err("Invalid regex pattern")?;
+        if let Some(caps) = codeup_ssh_re.captures(url) {
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from Codeup SSH URL: {}", url))?
+                .as_str()
+                .to_string());
+        }
+
+        // Codeup HTTPS/HTTP 格式: https://codeup.aliyun.com/owner/repo.git 或 http://codeup.aliyun.com/owner/repo
+        let codeup_https_re = Regex::new(r"https?://codeup\.aliyun\.com/(.+?)(?:\.git)?/?$")
+            .wrap_err("Invalid regex pattern")?;
+        if let Some(caps) = codeup_https_re.captures(url) {
+            return Ok(caps
+                .get(1)
+                .ok_or_else(|| eyre!("Failed to extract repo name from Codeup HTTPS URL: {}", url))?
                 .as_str()
                 .to_string());
         }
