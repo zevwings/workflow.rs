@@ -2,19 +2,28 @@
 
 ## 📋 概述
 
-Jira 模块是 Workflow CLI 的核心功能之一，提供与 Jira REST API 交互的完整功能，包括用户信息管理、Ticket/Issue 操作、项目状态管理、工作历史记录管理和日志处理等功能。该模块采用分层架构设计，通过统一的 HTTP 客户端和 API 子模块实现代码复用和统一管理。
+Jira 模块是 Workflow CLI 的核心模块，提供与 Jira REST API 交互的完整功能。该模块采用分层架构设计，包括：
+
+- **Lib 层**（`lib/jira/`）：提供与 Jira REST API 交互的完整功能，包括用户信息管理、Ticket/Issue 操作、项目状态管理、工作历史记录管理和日志处理等功能
+- **Commands 层**（`commands/jira/`）：提供 CLI 命令封装，处理用户交互，包括 ticket 信息查看、关联信息显示、变更历史查看、评论管理、附件下载和本地数据清理等功能
+
+Jira 模块通过统一的 HTTP 客户端和 API 子模块实现代码复用和统一管理，支持用户管理、Ticket 操作、状态管理、工作历史、日志处理等功能。
 
 **模块统计：**
-- 总代码行数：约 2800+ 行
-- 文件数量：20+ 个
-- 主要组件：7 个（JiraHttpClient、API 子模块、业务逻辑层、ConfigManager）
+- Lib 层代码行数：约 2800+ 行
+- Commands 层代码行数：约 1000+ 行
+- 命令数量：7 个（info, related, changelog, comment, comments, attachments, clean）
+- 文件数量：Lib 层 20+ 个，Commands 层 7 个
+- 主要组件：`JiraHttpClient`、`JiraIssueApi`、`JiraUserApi`、`JiraProjectApi`、`ConfigManager`、`JiraUsers`、`JiraTicket`、`JiraStatus`、`JiraWorkHistory`、`JiraLogs`
 - 支持功能：用户管理、Ticket 操作、状态管理、工作历史、日志处理
 
 ---
 
-## 📁 模块结构
+## 📁 Lib 层架构（核心业务逻辑）
 
-### 核心模块文件
+Jira 模块（`lib/jira/`）是 Workflow CLI 的核心库模块，提供与 Jira REST API 交互的完整功能，包括用户信息管理、Ticket/Issue 操作、项目状态管理、工作历史记录管理和日志处理等功能。该模块采用分层架构设计，通过统一的 HTTP 客户端和 API 子模块实现代码复用和统一管理。
+
+### 模块结构
 
 ```
 src/lib/jira/
@@ -27,7 +36,7 @@ src/lib/jira/
 │   └── project.rs      # 项目相关 API (~60行)
 ├── config.rs           # ConfigManager (TOML 配置管理器，~148行)
 ├── client.rs           # JiraClient 包装器（向后兼容，~104行）
-├── helpers.rs          # 辅助函数（认证、URL、字符串处理，~178行）
+├── helpers.rs          # 辅助函数（认证、URL、字符串处理，~178行)
 ├── types.rs            # 数据模型定义 (~115行)
 ├── users.rs            # 用户信息管理 (~173行)
 ├── ticket.rs           # Ticket/Issue 操作 (~201行)
@@ -68,7 +77,7 @@ src/lib/jira/
 
 ---
 
-## 🏗️ 架构设计
+## 🏗️ Lib 层架构设计
 
 ### 设计原则
 
@@ -118,6 +127,7 @@ src/lib/jira/
 - `transition_issue()` - 更新 issue 状态
 - `assign_issue()` - 分配 issue 给用户
 - `add_issue_comment()` - 添加评论
+- `get_issue_changelog()` - 获取变更历史
 
 ##### `user.rs` - JiraUserApi
 
@@ -195,6 +205,7 @@ src/lib/jira/
 
 **主要方法**：
 - `read_work_history()` - 读取工作历史记录（通过 PR ID 查找 Jira ticket）
+- `find_prs_by_jira_ticket()` - 根据 Jira ticket 查找关联的 PR
 - `find_pr_id_by_branch()` - 根据分支名查找 PR ID
 - `write_work_history()` - 写入工作历史记录
 - `update_work_history_merged()` - 更新工作历史记录的合并时间
@@ -217,7 +228,7 @@ src/lib/jira/
 
 **关键特性**：
 - 统一接口，状态缓存
-- 详细架构参见 [日志命令模块架构文档](../commands/LOG_COMMAND_ARCHITECTURE.md) 和 [Jira 命令模块架构文档](../commands/JIRA_COMMAND_ARCHITECTURE.md)
+- 支持附件下载、分片合并、文件解压等功能
 
 #### 5. 数据模型层 (`types.rs`)
 
@@ -308,9 +319,76 @@ src/lib/jira/
 
 ---
 
-## 🔄 调用流程与数据流
+## 📁 Commands 层架构（命令封装）
 
-### 整体架构流程
+Jira 命令层是 Workflow CLI 的命令接口，提供 Jira ticket 信息查看和附件下载等功能。该层采用命令模式设计，通过调用 `lib/jira/` 模块提供的 API 实现业务功能。
+
+### 相关文件
+
+#### CLI 入口层
+
+Jira 命令现在作为 `workflow` 主命令的子命令，通过 `src/main.rs` 中的 `Commands::Jira` 枚举定义。
+
+```
+src/main.rs
+```
+- **职责**：`workflow` 主命令入口，负责命令行参数解析和命令分发
+- **功能**：使用 `clap` 解析命令行参数，将 `workflow jira` 子命令分发到对应的命令处理函数
+
+#### 命令封装层
+
+```
+src/commands/jira/
+├── mod.rs          # Jira 命令模块声明
+├── info.rs         # 显示 ticket 信息命令（~354 行）
+├── related.rs      # 显示关联信息命令（PR 和分支）
+├── changelog.rs    # 显示变更历史命令（~200 行）
+├── comment.rs      # 添加评论命令（~191 行）
+├── comments.rs     # 显示评论命令（~313 行）
+├── attachments.rs  # 下载附件命令（~30 行）
+└── clean.rs        # 清理本地数据命令（~58 行）
+```
+
+**职责**：
+- 解析命令参数
+- 处理用户交互（输入、选择等）
+- 格式化输出
+- 调用核心业务逻辑层 (`lib/jira/`) 的 API
+
+### 依赖模块
+
+命令层通过调用 `lib/` 模块提供的 API 实现功能，具体实现细节请参考相关模块文档：
+- **`lib/jira/`**：Jira 集成
+  - `Jira::get_ticket_info()` - 获取 ticket 信息
+- **`lib/jira/api/`**：Jira API 接口
+  - `JiraIssueApi::get_issue_changelog()` - 获取变更历史
+- **`lib/jira/history/`**：Jira 工作历史模块（`JiraWorkHistory`）
+  - `JiraWorkHistory::find_prs_by_jira_ticket()` - 查找关联的 PR
+- **`lib/git/`**：Git 操作模块
+  - `GitBranch::find_branches_by_jira_ticket()` - 查找关联的分支
+- **`lib/jira/logs/`**：Jira 日志处理模块（`JiraLogs`）
+  - `JiraLogs::new()` - 创建日志管理器
+  - `JiraLogs::download_from_jira()` - 下载附件
+  - `JiraLogs::clean_dir()` - 清理目录
+- **`lib/base/settings/`**：配置管理
+  - `Settings::get()` - 获取配置（`log_output_folder_name`、`log_download_base_dir` 等）
+
+---
+
+## 🔄 集成关系
+
+### Lib 层和 Commands 层的协作
+
+Jira 模块采用清晰的分层架构，Lib 层和 Commands 层通过以下方式协作：
+
+1. **API 调用**：Commands 层调用 Lib 层的 API 方法（如 `Jira::get_ticket_info()`、`JiraIssueApi::get_issue_changelog()`）
+2. **日志处理**：Commands 层使用 `JiraLogs` 进行附件下载和清理操作
+3. **工作历史**：Commands 层使用 `JiraWorkHistory` 查找关联的 PR 和分支
+4. **格式化输出**：Commands 层负责格式化输出，支持多种输出格式（table、json、yaml、markdown）
+
+### 调用流程
+
+#### 整体架构流程
 
 ```
 调用者（命令层或其他模块）
@@ -332,6 +410,122 @@ lib/jira/api/http_client.rs (HTTP 客户端层)
 lib/base/http/ (基础 HTTP 层)
   └── HttpClient::global()
 ```
+
+#### 命令分发流程
+
+```
+src/main.rs::main()
+  ↓
+Cli::parse() (解析命令行参数)
+  ↓
+match cli.subcommand
+  ├─ Info → InfoCommand::show()
+  ├─ Related → RelatedCommand::show()
+  ├─ Changelog → ChangelogCommand::show()
+  ├─ Comment → CommentCommand::add()
+  ├─ Comments → CommentsCommand::show()
+  ├─ Attachments → AttachmentsCommand::download()
+  └─ Clean → CleanCommand::clean()
+```
+
+---
+
+## 📋 Commands 层命令详情
+
+### 1. 显示 Ticket 信息命令 (`info.rs`)
+
+显示 ticket 信息命令提供完整的 ticket 信息查看功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+
+2. **用户交互**：
+   - 如果未提供 `jira_id`，使用 `dialoguer::Input` 交互式输入
+   - 格式化显示 ticket 信息
+
+3. **核心功能**：
+   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息
+   - 显示基本信息（Key, ID, Summary, Status）
+   - 显示描述（如果有）
+   - 显示附件列表（格式化文件大小）
+   - 显示评论数量
+   - 显示 Jira URL
+
+### 2. 显示关联信息命令 (`related.rs`)
+
+显示关联信息命令提供查找关联的 PR 和分支的功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+
+2. **核心功能**：
+   - 通过 `JiraWorkHistory::find_prs_by_jira_ticket()` 查找关联的 PR
+   - 通过 `GitBranch::find_branches_by_jira_ticket()` 查找关联的分支
+   - 显示 PR 信息（URL、分支、创建时间、合并时间等）
+   - 显示分支信息（分支名、最后提交时间等）
+
+### 3. 显示变更历史命令 (`changelog.rs`)
+
+显示变更历史命令提供查看 ticket 变更历史的功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+
+2. **核心功能**：
+   - 通过 `JiraIssueApi::get_issue_changelog()` API 获取变更历史
+   - 显示所有字段的变更记录
+   - 显示变更时间、作者、字段变更详情
+
+### 4. 显示评论命令 (`comments.rs`)
+
+显示评论命令提供查看和管理 ticket 评论的功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+   - `--limit <LIMIT>` - 限制显示的评论数量
+   - `--offset <OFFSET>` - 分页偏移量
+   - `--author <EMAIL>` - 只显示指定作者的评论
+   - `--since <DATE>` - 只显示指定日期之后的评论（RFC3339 格式）
+   - `output_format` - 输出格式选项（table、json、yaml、markdown）
+
+2. **核心功能**：
+   - 通过 `Jira::get_ticket_info()` API 获取 ticket 信息（包含评论）
+   - 支持按作者、时间过滤评论
+   - 支持分页显示评论
+   - 默认按时间降序排序（最新的在前）
+
+### 5. 下载附件命令 (`attachments.rs`)
+
+下载附件命令提供从 Jira 下载附件的功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入）
+
+2. **核心功能**：
+   - 通过 `JiraLogs::download_from_jira()` API 实现下载功能
+   - 下载所有附件（不仅仅是日志附件）
+   - 自动处理附件下载、分片合并、文件解压等操作
+
+### 6. 清理本地数据命令 (`clean.rs`)
+
+清理本地数据命令提供清理本地下载的数据目录的功能：
+
+1. **参数处理**：
+   - `jira_id` - Jira ticket ID（可选，不提供时会交互式输入；如果为空字符串，会报错）
+   - `all` - 如果为 true，清理整个基础目录（忽略 jira_id）
+   - `dry_run` - Dry run 模式选项（预览模式，不实际删除）
+   - `list_only` - 只列出目录内容
+
+2. **核心功能**：
+   - 通过 `JiraLogs::clean_dir()` API 清理本地数据目录
+   - 支持预览模式和列表模式
+
+---
+
+## 🔄 调用流程与数据流
 
 ### 典型调用示例
 
@@ -381,113 +575,95 @@ JiraWorkHistory::read_work_history(pr_id, repository)
   - 格式：JSON 对象（PR ID → Entry）
   - 内容：Jira ticket、PR URL、时间戳、分支名等
 
-#### 配置文件示例
-
-**jira-users.toml**：
-```toml
-[[users]]
-email = "user@example.com"
-account_id = "628d9616269a9a0068f27e0c"
-display_name = "User Name"
-```
-
-**jira-status.toml**：
-```toml
-[PROJ]
-created-pr = "In Progress"
-merged-pr = "Done"
-```
-
-**work-history/{repo_id}.json**：
-```json
-{
-  "456": {
-    "jira_ticket": "PROJ-123",
-    "pull_request_url": "https://github.com/xxx/pull/456",
-    "created_at": "2024-01-15T10:30:00Z",
-    "merged_at": null,
-    "repository": "github.com/xxx/yyy",
-    "branch": "feature/PROJ-123-add-feature"
-  }
-}
-```
-
-#### 模块依赖关系
-
-```
-mod.rs
-  ├── api/ (HTTP 客户端层和 API 方法层)
-  │   ├── http_client.rs → helpers.rs, lib/base/http/
-  │   ├── issue.rs → http_client.rs, types.rs
-  │   ├── user.rs → http_client.rs, types.rs
-  │   └── project.rs → http_client.rs
-  ├── config.rs (配置管理层，无依赖)
-  ├── helpers.rs (工具层，无依赖)
-  ├── types.rs (数据模型层，无依赖)
-  ├── users.rs → api/user.rs, config.rs, helpers.rs
-  ├── ticket.rs → api/issue.rs, types.rs
-  ├── status.rs → api/project.rs, config.rs, helpers.rs
-  ├── history.rs → lib/base/settings/paths.rs
-  ├── logs/ (日志处理模块)
-  │   ├── mod.rs → lib/base/settings/
-  │   ├── download.rs → constants.rs, helpers.rs, zip.rs
-  │   ├── search.rs → constants.rs, helpers.rs
-  │   └── ...
-  └── client.rs → users.rs, ticket.rs, types.rs
-```
-
-**依赖关系清晰，无循环依赖**
-
 ---
 
 ## 📋 使用示例
 
-### 基本使用
+### Info 命令
 
-```rust
-use workflow::jira::{JiraTicket, JiraStatus, JiraWorkHistory};
+```bash
+# 提供 JIRA ID
+workflow jira info PROJ-123
 
-// 获取 ticket 信息
-let issue = JiraTicket::get_info("PROJ-123")?;
+# JSON 格式输出
+workflow jira info PROJ-123 --json
 
-// 更新 ticket 状态
-JiraTicket::transition("PROJ-123", "Done")?;
+# Markdown 格式输出
+workflow jira info PROJ-123 --markdown
 
-// 配置状态映射
-JiraStatus::configure_interactive("PROJ")?;
-
-// 读取工作历史记录
-let ticket = JiraWorkHistory::read_work_history("456", Some("github.com/xxx/yyy"))?;
+# 交互式输入 JIRA ID
+workflow jira info
 ```
 
-### 使用 JiraClient（向后兼容）
+### Related 命令
 
-```rust
-use workflow::jira::Jira;
+```bash
+# 提供 JIRA ID
+workflow jira related PROJ-123
 
-// 获取 ticket 信息
-let issue = Jira::get_ticket_info("PROJ-123")?;
+# JSON 格式输出
+workflow jira related PROJ-123 --json
 
-// 更新 ticket 状态
-Jira::move_ticket("PROJ-123", "Done")?;
+# Markdown 格式输出
+workflow jira related PROJ-123 --markdown
 ```
 
-### 使用 ConfigManager
+### Changelog 命令
 
-```rust
-use workflow::jira::ConfigManager;
-use crate::base::settings::paths::Paths;
+```bash
+# 显示所有变更历史
+workflow jira changelog PROJ-123
 
-let config_path = Paths::jira_users_config()?;
-let manager = ConfigManager::<JiraUsersConfig>::new(config_path);
+# JSON 格式输出
+workflow jira changelog PROJ-123 --json
 
-// 读取配置
-let config = manager.read()?;
+# Markdown 格式输出
+workflow jira changelog PROJ-123 --markdown
+```
 
-// 更新配置
-manager.update(|config| {
-    config.users.push(new_user);
-})?;
+### Comments 命令
+
+```bash
+# 显示所有评论
+workflow jira comments PROJ-123
+
+# 只显示最近 10 条评论
+workflow jira comments PROJ-123 --limit 10
+
+# 只显示指定作者的评论
+workflow jira comments PROJ-123 --author user@example.com
+
+# 只显示指定日期之后的评论
+workflow jira comments PROJ-123 --since 2025-01-01T00:00:00Z
+
+# JSON 格式输出
+workflow jira comments PROJ-123 --json
+```
+
+### Attachments 命令
+
+```bash
+# 提供 JIRA ID
+workflow jira attachments PROJ-123
+
+# 交互式输入 JIRA ID
+workflow jira attachments
+```
+
+### Clean 命令
+
+```bash
+# 清理指定 JIRA ID 的本地数据目录
+workflow jira clean PROJ-123
+
+# 清理整个本地数据基础目录（使用 --all 标志）
+workflow jira clean --all
+
+# 预览清理操作（dry-run）
+workflow jira clean --dry-run PROJ-123
+
+# 列出目录内容
+workflow jira clean --list PROJ-123
 ```
 
 ---
@@ -500,34 +676,11 @@ manager.update(|config| {
 2. 在业务逻辑层添加封装方法（如需要）
 3. 更新文档
 
-**示例**：
-```rust
-// api/issue.rs
-impl JiraIssueApi {
-    pub fn delete_issue(issue_key: &str) -> Result<()> {
-        let client = JiraHttpClient::global()?;
-        client.delete(&format!("issue/{}", issue_key))?;
-        Ok(())
-    }
-}
-```
-
 ### 添加新的配置类型
 
 1. 定义配置结构体（实现 `Serialize`、`Deserialize`、`Default`）
 2. 使用 `ConfigManager<T>` 管理配置
 3. 在 `mod.rs` 中导出（如需要）
-
-**示例**：
-```rust
-#[derive(Serialize, Deserialize, Default)]
-pub struct MyConfig {
-    pub field: String,
-}
-
-let manager = ConfigManager::<MyConfig>::new(config_path);
-let config = manager.read()?;
-```
 
 ### 添加新的业务功能
 
@@ -535,15 +688,21 @@ let config = manager.read()?;
 2. 实现业务逻辑，使用 API 层的方法
 3. 在 `mod.rs` 中导出
 
+### 添加新命令
+
+1. 在 `commands/jira/` 下创建新的命令文件（如 `new_command.rs`）
+2. 实现命令结构体和处理方法（如 `NewCommand::execute()`）
+3. 在 `commands/jira/mod.rs` 中导出命令结构体
+4. 在 `src/main.rs` 中添加命令枚举（`JiraSubcommand`）
+5. 在 `src/main.rs` 的 `main()` 函数中添加命令分发逻辑
+
 ---
 
 ## 📚 相关文档
 
-- [主架构文档](../ARCHITECTURE.md)
-- [PR 模块架构文档](./PR_ARCHITECTURE.md) - PR 模块如何使用 Jira 集成
-- [日志命令模块架构文档](../commands/LOG_COMMAND_ARCHITECTURE.md) - 日志命令层如何使用 Jira 日志处理模块
-- [Jira 命令模块架构文档](../commands/JIRA_COMMAND_ARCHITECTURE.md) - Jira 命令层如何使用 Jira 集成
-- [HTTP 模块架构文档](./HTTP_ARCHITECTURE.md) - HTTP 客户端详情
+- [主架构文档](./architecture.md)
+- [PR 模块架构文档](./pr.md) - PR 模块如何使用 Jira 集成
+- [Git 模块架构文档](./git.md) - Git 操作相关
 
 ---
 
@@ -555,7 +714,8 @@ Jira 模块采用清晰的分层架构设计：
 2. **API 方法层**：按功能模块化组织所有 Jira REST API 方法
 3. **业务逻辑层**：提供高级业务功能，封装 API 调用
 4. **配置管理层**：`ConfigManager` 统一管理 TOML 配置文件
-5. **工具层**：辅助函数和向后兼容包装器
+5. **命令封装层**：提供 CLI 命令接口，处理用户交互和格式化输出
+6. **工具层**：辅助函数和向后兼容包装器
 
 **设计优势**：
 - ✅ **职责清晰**：分层架构，每层职责明确
@@ -563,9 +723,11 @@ Jira 模块采用清晰的分层架构设计：
 - ✅ **易于维护**：模块化设计，低耦合
 - ✅ **易于扩展**：添加新功能只需在对应层添加代码
 - ✅ **向后兼容**：保持现有 API 不变，内部实现可优化
+- ✅ **用户友好**：支持交互式输入和多种输出格式
 
-通过模块化设计和统一接口，实现了代码复用、易于维护和扩展的目标。
+通过模块化设计和统一接口，实现了代码复用、易于维护和扩展的目标。命令层专注于用户交互和输出格式化，核心业务逻辑由 Lib 层提供，实现了清晰的职责分离。
 
 ---
 
 **最后更新**: 2025-12-16
+
