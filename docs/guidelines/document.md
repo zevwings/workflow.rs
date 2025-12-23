@@ -217,8 +217,8 @@ pub fn new-_feature() -> Result<()> {
 ## 📚 相关文档
 
 - [主架构文档](../architecture/architecture.md)
-- [{相关 Lib 模块}架构文档](../architecture/{module}.md) - Lib 层模块
-- [{相关命令模块}命令模块架构文档](../architecture/commands/{MODULE}_COMMAND_architecture.md) - 命令层模块（如适用）
+- `{module}.md` - Lib 层模块架构文档（示例：`pr.md`、`jira.md`）
+- `{MODULE}.md` - 命令层模块架构文档（示例：`pr.md`、`config.md`）
 
 ---
 
