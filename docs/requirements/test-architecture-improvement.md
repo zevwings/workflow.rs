@@ -372,7 +372,7 @@
 - [mockito](https://docs.rs/mockito/) - Mock 服务器
 - [rstest](https://docs.rs/rstest/) - 参数化测试
 - [insta](https://docs.rs/insta/) - 快照测试
-- [pretty-_assertions](https://docs.rs/pretty-_assertions/) - 更好的断言
+- [pretty_assertions](https://docs.rs/pretty_assertions/) - 更好的断言
 
 ---
 

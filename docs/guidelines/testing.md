@@ -332,14 +332,14 @@ fn test-_parse-_ticket-_id-_boundary() {
 
 ## 🛠️ 测试工具
 
-### 1. pretty-_assertions
+### 1. pretty_assertions
 
-`pretty-_assertions` 提供更清晰的断言输出，显示彩色 diff。
+`pretty_assertions` 提供更清晰的断言输出，显示彩色 diff。
 
 **使用方式**：
 
 ```rust
-use pretty-_assertions::assert-_eq;
+use pretty_assertions::assert-_eq;
 
 #[test]
 fn test-_example() {
@@ -504,7 +504,7 @@ mock-_server.setup-_jira-_base-_url();    // 设置 Jira API Mock
 - [The Rust Book - Test Organization](https://doc.rust-lang.org/book/ch11-03-test-organization.html)
 - [Rust API Guidelines - Testing](https://rust-lang.github.io/api-guidelines/documentation.html#c-test)
 - [Cargo Book - Tests](https://doc.rust-lang.org/cargo/guide/tests.html)
-- [pretty-_assertions 文档](https://docs.rs/pretty-_assertions/)
+- [pretty_assertions 文档](https://docs.rs/pretty_assertions/)
 - [rstest 文档](https://docs.rs/rstest/)
 - [insta 文档](https://docs.rs/insta/)
 - [mockito 文档](https://docs.rs/mockito/)

@@ -20,7 +20,7 @@
 
 迁移系统采用版本化设计，每个配置格式变化都有对应的迁移版本。
 
-详细的技术实现说明请参考 [`src/commands/migrate/README.md`](../../src/commands/migrate/README.md)。
+详细的技术实现说明请参考 [`docs/architecture/migrate.md`](../../docs/architecture/migrate.md)。
 
 **注意**：分支配置已迁移到项目级配置（`.workflow/config.toml`），请使用 `workflow repo setup` 设置项目级配置。
 
@@ -69,7 +69,7 @@ workflow migrate cleanup
 
 ## 🔗 相关文档
 
-- [迁移系统架构说明](../../src/commands/migrate/README.md) - 迁移系统的技术实现
+- [迁移系统架构说明](../../docs/architecture/migrate.md) - 迁移系统的技术实现
 - [分支命令架构](../architecture/branch.md) - 分支配置相关说明
 
 ---

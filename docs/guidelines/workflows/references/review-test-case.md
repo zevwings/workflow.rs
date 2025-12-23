@@ -302,7 +302,7 @@ fn test-_pr-_create-_preconditions() {
 **实际测试工具配置** (`Cargo.toml`):
 ```toml
 [dev-dependencies]
-pretty-_assertions = "1.4"    # 清晰的断言输出
+pretty_assertions = "1.4"    # 清晰的断言输出
 rstest = "0.18"             # 参数化测试和 fixtures
 mockito = "1.2"             # HTTP API Mock 测试
 insta = "1.38"              # 快照测试（JSON 功能）
@@ -759,9 +759,9 @@ echo "=== 测试工具使用情况 ==="
 rstest-_count=$(grep -r "#\[rstest\]" tests/ 2>/dev/null | wc -l)
 echo "📊 rstest 参数化测试: $rstest-_count 个"
 
-# 检查 pretty-_assertions 使用
-pretty-_assertions=$(grep -r "use pretty-_assertions" tests/ 2>/dev/null | wc -l)
-echo "📊 pretty-_assertions 使用: $pretty-_assertions 个文件"
+# 检查 pretty_assertions 使用
+pretty_assertions=$(grep -r "use pretty_assertions" tests/ 2>/dev/null | wc -l)
+echo "📊 pretty_assertions 使用: $pretty_assertions 个文件"
 
 # 检查 insta 快照测试
 insta-_count=$(grep -r "insta::" tests/ 2>/dev/null | wc -l)
@@ -932,7 +932,7 @@ chmod +x generate-_full-_report.sh
 ### 测试工具配置
 ```toml
 [dev-dependencies]
-pretty-_assertions = "1.4"    # 清晰的断言输出
+pretty_assertions = "1.4"    # 清晰的断言输出
 rstest = "0.18"             # 参数化测试
 mockito = "1.2"             # HTTP Mock 测试
 insta = "1.38"              # 快照测试
@@ -1037,7 +1037,7 @@ find tests -name "*.rs" -exec sh -c 'if [ $(grep -c "#\[test\]" "$1") -eq 0 ]; t
 ### 检查测试工具使用
 ```bash
 # 检查是否使用推荐的测试工具
-grep -r "use pretty-_assertions" tests/ || echo "❌ 未使用 pretty-_assertions"
+grep -r "use pretty_assertions" tests/ || echo "❌ 未使用 pretty_assertions"
 grep -r "#\[rstest\]" tests/ || echo "❌ 未使用 rstest"
 grep -r "insta::" tests/ || echo "❌ 未使用 insta"
 grep -r "mockito::" tests/ || echo "❌ 未使用 mockito"
