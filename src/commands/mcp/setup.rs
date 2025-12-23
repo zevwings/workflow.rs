@@ -2,7 +2,9 @@
 //!
 //! 交互式配置 MCP 服务器，支持从 TOML 配置自动填充。
 
-use crate::base::dialog::{ConfirmDialog, InputDialog, MultiSelectDialog};
+use crate::base::dialog::{
+    ConfirmDialog, InputDialog, MultiSelectDialog, FormBuilder, GroupConfig,
+};
 use crate::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
 use crate::base::settings::settings::Settings;
 use crate::{log_break, log_message, log_success, log_warning};
@@ -186,57 +188,115 @@ impl SetupCommand {
             }
         }
 
-        // 交互式输入
-        let service_address = if let Some(addr) = &settings.jira.service_address {
-            let use_toml = ConfirmDialog::new(format!("Use server address from config file ({})?", addr))
-                .with_default(true)
-                .prompt()?;
+        // 使用 FormBuilder 收集交互式输入
+        let has_service_address = settings.jira.service_address.is_some();
+        let has_email = settings.jira.email.is_some();
+        let has_api_token = settings.jira.api_token.is_some();
 
-            if use_toml {
-                addr.clone()
-            } else {
-                InputDialog::new("Enter JIRA server URL")
-                    .prompt()?
-            }
+        let jira_form_result = FormBuilder::new()
+            .add_group(
+                "jira_mcp",
+                |g| {
+                    g.step_if_dynamic(
+                        |_| has_service_address,
+                        |f| {
+                            // 如果有 TOML 配置，先询问是否使用
+                            f.add_confirmation(
+                                "use_service_address",
+                                format!(
+                                    "Use server address from config file ({})?",
+                                    settings.jira.service_address.as_ref().unwrap()
+                                ),
+                            )
+                            .default(true)
+                        },
+                    )
+                    .step_if_dynamic(
+                        |result| {
+                            // 如果没有 TOML 配置，或者用户选择不使用 TOML 配置
+                            !has_service_address
+                                || result.get("use_service_address") == Some(&"no".to_string())
+                        },
+                        |f| {
+                            f.add_text("service_address", "Enter JIRA server URL").required()
+                        },
+                    )
+                    .step_if_dynamic(
+                        |_| has_email,
+                        |f| {
+                            // 如果有 TOML 配置，先询问是否使用
+                            f.add_confirmation(
+                                "use_username",
+                                format!(
+                                    "Use username from config file ({})?",
+                                    settings.jira.email.as_ref().unwrap()
+                                ),
+                            )
+                            .default(true)
+                        },
+                    )
+                    .step_if_dynamic(
+                        |result| {
+                            // 如果没有 TOML 配置，或者用户选择不使用 TOML 配置
+                            !has_email || result.get("use_username") == Some(&"no".to_string())
+                        },
+                        |f| {
+                            f.add_text("username", "Enter JIRA username/email").required()
+                        },
+                    )
+                    .step_if_dynamic(
+                        |_| has_api_token,
+                        |f| {
+                            // 如果有 TOML 配置，先询问是否使用
+                            f.add_confirmation("use_api_token", "Use API token from config file?")
+                                .default(true)
+                        },
+                    )
+                    .step_if_dynamic(
+                        |result| {
+                            // 如果没有 TOML 配置，或者用户选择不使用 TOML 配置
+                            !has_api_token || result.get("use_api_token") == Some(&"no".to_string())
+                        },
+                        |f| {
+                            f.add_password("api_token", "Enter JIRA API token").required()
+                        },
+                    )
+                },
+                GroupConfig::required()
+                    .with_title("JIRA MCP Configuration"),
+            )
+            .run()
+            .wrap_err("Failed to collect JIRA configuration")?;
+
+        // 从 form 结果中提取值
+        let service_address = if has_service_address
+            && jira_form_result.get("use_service_address") == Some(&"yes".to_string())
+        {
+            settings.jira.service_address.as_ref().unwrap().clone()
         } else {
-            InputDialog::new("Enter JIRA server URL")
-                .prompt()?
+            jira_form_result
+                .get_required("service_address")
+                .wrap_err("JIRA server URL is required")?
         };
 
-        let username = if let Some(email) = &settings.jira.email {
-            let use_toml = ConfirmDialog::new(format!("Use username from config file ({})?", email))
-                .with_default(true)
-                .prompt()?;
-
-            if use_toml {
-                email.clone()
-            } else {
-                InputDialog::new("Enter JIRA username/email")
-                    .prompt()?
-            }
+        let username = if has_email
+            && jira_form_result.get("use_username") == Some(&"yes".to_string())
+        {
+            settings.jira.email.as_ref().unwrap().clone()
         } else {
-            InputDialog::new("Enter JIRA username/email")
-                .prompt()?
+            jira_form_result
+                .get_required("username")
+                .wrap_err("JIRA username is required")?
         };
 
-        let api_token = if let Some(toml_token) = &settings.jira.api_token {
-            let use_toml = ConfirmDialog::new("Use API token from config file?")
-                .with_default(true)
-                .prompt()?;
-
-            if use_toml {
-                toml_token.clone()
-            } else {
-                Password::new()
-                    .with_prompt("Enter JIRA API token")
-                    .interact()
-                    .wrap_err("Failed to get JIRA API token")?
-            }
+        let api_token = if has_api_token
+            && jira_form_result.get("use_api_token") == Some(&"yes".to_string())
+        {
+            settings.jira.api_token.as_ref().unwrap().clone()
         } else {
-            Password::new()
-                .with_prompt("Enter JIRA API token")
-                .interact()
-                .wrap_err("Failed to get JIRA API token")?
+            jira_form_result
+                .get_required("api_token")
+                .wrap_err("JIRA API token is required")?
         };
 
         Ok(MCPServerConfig {
@@ -260,41 +320,81 @@ impl SetupCommand {
         log_message!("Configuring GitHub MCP...");
         log_break!('-', 40);
 
-        // 如果 TOML 配置中有账号，询问是否使用
-        if toml_status.github.has_accounts {
-            if let Some(account) = &toml_status.github.current_account {
-                let use_toml = ConfirmDialog::new(format!(
-                    "Use token from current account {} ({})?",
-                    account.name, account.email
-                ))
-                .with_default(true)
-                .prompt()?;
+        // 使用 FormBuilder 收集交互式输入
+        let has_account = toml_status.github.has_accounts
+            && toml_status.github.current_account.is_some();
 
-                if use_toml {
-                    return Ok(MCPServerConfig {
-                        command: "npx".to_string(),
-                        args: vec![
-                            "-y".to_string(),
-                            "@modelcontextprotocol/server-github".to_string(),
-                        ],
-                        env: {
-                            let mut env = HashMap::new();
-                            env.insert(
-                                "GITHUB_PERSONAL_ACCESS_TOKEN".to_string(),
-                                account.api_token.clone(),
-                            );
-                            env
+        let github_form_result = FormBuilder::new()
+            .add_group(
+                "github_mcp",
+                |g| {
+                    g.step_if_dynamic(
+                        |_| has_account,
+                        |f| {
+                            // 如果有 TOML 配置，先询问是否使用
+                            if let Some(account) = &toml_status.github.current_account {
+                                f.add_confirmation(
+                                    "use_api_token",
+                                    format!(
+                                        "Use token from current account {} ({})?",
+                                        account.name, account.email
+                                    ),
+                                )
+                                .default(true)
+                            } else {
+                                // 这个分支不应该到达，但为了类型安全
+                                f.add_confirmation("use_api_token", "Enter GitHub token")
+                                    .default(false)
+                            }
                         },
-                    });
-                }
-            }
-        }
+                    )
+                    .step_if_dynamic(
+                        |result| {
+                            // 如果没有 TOML 配置，或者用户选择不使用 TOML 配置
+                            !has_account || result.get("use_api_token") == Some(&"no".to_string())
+                        },
+                        |f| {
+                            f.add_password("api_token", "Enter GitHub Personal Access Token")
+                                .required()
+                        },
+                    )
+                },
+                GroupConfig::required()
+                    .with_title("GitHub MCP Configuration"),
+            )
+            .run()
+            .wrap_err("Failed to collect GitHub configuration")?;
 
-        // 交互式输入
-        let api_token = Password::new()
-            .with_prompt("Enter GitHub Personal Access Token")
-            .interact()
-            .wrap_err("Failed to get GitHub token")?;
+        // 从 form 结果中提取值
+        let api_token = if has_account
+            && github_form_result.get("use_api_token") == Some(&"yes".to_string())
+        {
+            // 如果用户选择使用 TOML 配置，直接返回
+            let account = toml_status
+                .github
+                .current_account
+                .as_ref()
+                .unwrap();
+            return Ok(MCPServerConfig {
+                command: "npx".to_string(),
+                args: vec![
+                    "-y".to_string(),
+                    "@modelcontextprotocol/server-github".to_string(),
+                ],
+                env: {
+                    let mut env = HashMap::new();
+                    env.insert(
+                        "GITHUB_PERSONAL_ACCESS_TOKEN".to_string(),
+                        account.api_token.clone(),
+                    );
+                    env
+                },
+            });
+        } else {
+            github_form_result
+                .get_required("api_token")
+                .wrap_err("GitHub API token is required")?
+        };
 
         Ok(MCPServerConfig {
             command: "npx".to_string(),

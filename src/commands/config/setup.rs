@@ -2,8 +2,9 @@
 //! 交互式配置应用，保存到 TOML 配置文件（~/.workflow/config/workflow.toml）
 
 use crate::base::constants::messages::log;
-use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
+use crate::base::dialog::{FormBuilder, GroupConfig, SelectDialog};
 use crate::base::indicator::Spinner;
+use crate::base::llm::{get_supported_language_display_names, SUPPORTED_LANGUAGES};
 use crate::base::settings::paths::Paths;
 use crate::base::settings::settings::{
     default_download_base_dir, // CodeupSettings,  // Codeup support has been removed
@@ -14,7 +15,6 @@ use crate::base::settings::settings::{
     LogSettings,
     Settings,
 };
-use crate::commands::config::helpers::select_language;
 use crate::commands::github::helpers::collect_github_account;
 use crate::git::GitConfig;
 use crate::jira::config::ConfigManager;
@@ -246,518 +246,599 @@ impl SetupCommand {
             let _ = GitConfig::set_global_user(&first_account.email, &first_account.name)?;
         }
 
-        // ==================== 必填项：Jira 配置 ====================
-        log_break!();
-        log_message!("  Jira Configuration (Required)");
-        log_break!('─', 65);
-
+        // 准备现有值
         let has_jira_email = existing.jira_email.is_some();
-        let jira_email_prompt = if existing.jira_email.is_some() {
-            "Jira email address (press Enter to keep)".to_string()
-        } else {
-            "Jira email address (required)".to_string()
-        };
-
-        let jira_email = if let Some(email) = &existing.jira_email {
-            InputDialog::new(&jira_email_prompt).with_default(email.clone())
-        } else {
-            InputDialog::new(&jira_email_prompt)
-        }
-        .with_validator(move |input: &str| {
-            if input.is_empty() && !has_jira_email {
-                Err("Jira email address is required".to_string())
-            } else if !input.is_empty() && !input.contains('@') {
-                Err("Please enter a valid email address".to_string())
-            } else {
-                Ok(())
-            }
-        })
-        .prompt()
-        .wrap_err("Failed to get Jira email address")?;
-
-        let jira_email = if !jira_email.is_empty() {
-            Some(jira_email)
-        } else if existing.jira_email.is_some() {
-            existing.jira_email.clone()
-        } else {
-            color_eyre::eyre::bail!("Jira email address is required");
-        };
-
         let has_jira_address = existing.jira_service_address.is_some();
-        let jira_address_prompt = if existing.jira_service_address.is_some() {
-            "Jira service address (press Enter to keep)".to_string()
-        } else {
-            "Jira service address (required)".to_string()
-        };
-
-        let jira_service_address = if let Some(addr) = &existing.jira_service_address {
-            InputDialog::new(&jira_address_prompt).with_default(addr.clone())
-        } else {
-            InputDialog::new(&jira_address_prompt)
-        }
-        .with_validator(move |input: &str| {
-            if input.is_empty() && !has_jira_address {
-                Err("Jira service address is required".to_string())
-            } else if !input.is_empty()
-                && !input.starts_with("http://")
-                && !input.starts_with("https://")
-            {
-                Err("Please enter a valid URL (must start with http:// or https://)".to_string())
-            } else {
-                Ok(())
-            }
-        })
-        .prompt()
-        .wrap_err("Failed to get Jira service address")?;
-
-        let jira_service_address = if !jira_service_address.is_empty() {
-            Some(jira_service_address)
-        } else if existing.jira_service_address.is_some() {
-            existing.jira_service_address.clone()
-        } else {
-            color_eyre::eyre::bail!("Jira service address is required");
-        };
-
-        let jira_token_prompt = if existing.jira_api_token.is_some() {
-            "Jira API token [current: ***] (press Enter to keep)".to_string()
-        } else {
-            "Jira API token (required)".to_string()
-        };
-
-        let jira_api_token = InputDialog::new(&jira_token_prompt)
-            .allow_empty(existing.jira_api_token.is_some())
-            .prompt()
-            .wrap_err("Failed to get Jira API token")?;
-
-        let jira_api_token = if !jira_api_token.is_empty() {
-            Some(jira_api_token)
-        } else if existing.jira_api_token.is_some() {
-            existing.jira_api_token.clone()
-        } else {
-            color_eyre::eyre::bail!("Jira API token is required");
-        };
-
-        // ==================== 可选：日志输出文件夹名称配置 ====================
-        log_break!();
-        log_message!("  Log Output Folder Name (Optional)");
-        log_break!('─', 65);
-
-        // 先询问用户是否需要配置
+        let has_jira_token = existing.jira_api_token.is_some();
         let default_folder_name = LogSettings::default_log_folder();
         let is_custom_folder_name = existing
             .log_output_folder_name
             .as_ref()
             .map(|name| name != &default_folder_name)
             .unwrap_or(false);
-
-        let should_configure = if is_custom_folder_name {
-            // 如果已有自定义值，询问是否要修改
-            ConfirmDialog::new("Do you want to configure log output folder name?")
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?
-        } else {
-            // 如果没有自定义值，询问是否需要配置
-            ConfirmDialog::new("Do you want to configure log output folder name?")
-                .with_default(false)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?
-        };
-
-        let log_output_folder_name = if should_configure {
-            // 用户选择配置，显示输入框
-            let folder_name_prompt = if is_custom_folder_name {
-                "Log output folder name (press Enter to keep)".to_string()
-            } else {
-                format!(
-                    "Log output folder name (press Enter to use default: {})",
-                    default_folder_name
-                )
-            };
-
-            // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
-            let mut dialog = InputDialog::new(&folder_name_prompt).allow_empty(true);
-            if is_custom_folder_name {
-                // 用户自定义的值，作为默认值显示
-                if let Some(ref existing_name) = existing.log_output_folder_name {
-                    dialog = dialog.with_default(existing_name.clone());
-                }
-            } else {
-                // 显示默认值作为提示
-                dialog = dialog.with_default(default_folder_name.clone());
-            }
-
-            let input_value =
-                dialog.prompt().wrap_err("Failed to get log output folder name")?;
-
-            if input_value.is_empty() {
-                // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
-                None
-            } else if input_value == default_folder_name {
-                // 如果等于默认值，也不保存（使用 None）
-                None
-            } else {
-                // 自定义名称，保存到配置文件
-                Some(input_value)
-            }
-        } else {
-            // 用户选择不配置，保持现有值或使用默认值（None）
-            if is_custom_folder_name {
-                // 保持现有的自定义值
-                existing.log_output_folder_name.clone()
-            } else {
-                // 使用默认值（不保存到配置文件）
-                None
-            }
-        };
-
-        // ==================== 可选：文档基础路径配置 ====================
-        log_break!();
-        log_message!("  Document Base Directory (Optional)");
-        log_break!('─', 65);
-
-        // 先询问用户是否需要配置
         let default_dir = default_download_base_dir();
         let is_custom_dir = existing
             .log_download_base_dir
             .as_ref()
             .map(|dir| dir != &default_dir)
             .unwrap_or(false);
+        let current_trace_console = existing.enable_trace_console.unwrap_or(false);
 
-        let should_configure = if is_custom_dir {
-            // 如果已有自定义值，询问是否要修改
-            ConfirmDialog::new("Do you want to configure document base directory?")
-                .with_default(true)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?
+        // 使用 FormBuilder 收集所有配置
+        let form_result = FormBuilder::new()
+            // Group 1: Jira Configuration (必填组)
+            .add_group(
+                "jira",
+                |g| {
+                    g.step(|f| {
+                        // Jira email
+                        let jira_email_prompt = if has_jira_email {
+                            "Jira email address (press Enter to keep)"
+                        } else {
+                            "Jira email address (required)"
+                        };
+                        let mut field = f.add_text("jira_email", jira_email_prompt);
+                        if has_jira_email {
+                            field = field.allow_empty(true);
+                            if let Some(ref email) = existing.jira_email {
+                                field = field.default(email.clone());
+                            }
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_email {
+                                Err("Jira email address is required".to_string())
+                            } else if !input.is_empty() && !input.contains('@') {
+                                Err("Please enter a valid email address".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                    .step(|f| {
+                        // Jira service address
+                        let jira_address_prompt = if has_jira_address {
+                            "Jira service address (press Enter to keep)"
+                        } else {
+                            "Jira service address (required)"
+                        };
+                        let mut field = f.add_text("jira_service_address", jira_address_prompt);
+                        if has_jira_address {
+                            field = field.allow_empty(true);
+                            if let Some(ref addr) = existing.jira_service_address {
+                                field = field.default(addr.clone());
+                            }
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_address {
+                                Err("Jira service address is required".to_string())
+                            } else if !input.is_empty()
+                                && !input.starts_with("http://")
+                                && !input.starts_with("https://")
+                            {
+                                Err(
+                                    "Please enter a valid URL (must start with http:// or https://)"
+                                        .to_string(),
+                                )
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                    .step(|f| {
+                        // Jira API token
+                        let jira_token_prompt = if has_jira_token {
+                            "Jira API token [current: ***] (press Enter to keep)"
+                        } else {
+                            "Jira API token (required)"
+                        };
+                        let mut field = f.add_text("jira_api_token", jira_token_prompt);
+                        if has_jira_token {
+                            field = field.allow_empty(true);
+                        } else {
+                            field = field.required();
+                        }
+                        field.validate(move |input: &str| {
+                            if input.is_empty() && !has_jira_token {
+                                Err("Jira API token is required".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                },
+                GroupConfig::required().with_title("Jira Configuration (Required)"),
+            )
+            // Group 2: Log Configuration (可选组)
+            .add_group(
+                "log",
+                |g| {
+                    g.step(|f| {
+                        f.add_confirmation(
+                            "should_configure_log_folder",
+                            "Do you want to configure log output folder name?",
+                        )
+                        .default(is_custom_folder_name)
+                    })
+                    .step_if("should_configure_log_folder", "yes", |f| {
+                        let folder_name_prompt = if is_custom_folder_name {
+                            "Log output folder name (press Enter to keep)".to_string()
+                        } else {
+                            format!(
+                                "Log output folder name (press Enter to use default: {})",
+                                default_folder_name
+                            )
+                        };
+                        let mut field = f
+                            .add_text("log_output_folder_name", &folder_name_prompt)
+                            .allow_empty(true);
+                        if is_custom_folder_name {
+                            if let Some(ref existing_name) = existing.log_output_folder_name {
+                                field = field.default(existing_name.clone());
+                            }
+                        } else {
+                            field = field.default(default_folder_name.clone());
+                        }
+                        field
+                    })
+                    .step(|f| {
+                        f.add_confirmation(
+                            "should_configure_doc_dir",
+                            "Do you want to configure document base directory?",
+                        )
+                        .default(is_custom_dir)
+                    })
+                    .step_if("should_configure_doc_dir", "yes", |f| {
+                        let base_dir_prompt = if is_custom_dir {
+                            "Document base directory (press Enter to keep)".to_string()
+                        } else {
+                            format!(
+                                "Document base directory (press Enter to use default: {})",
+                                default_dir
+                            )
+                        };
+                        let mut field =
+                            f.add_text("log_download_base_dir", &base_dir_prompt).allow_empty(true);
+                        if is_custom_dir {
+                            if let Some(ref existing_dir) = existing.log_download_base_dir {
+                                field = field.default(existing_dir.clone());
+                            }
+                        } else {
+                            field = field.default(default_dir.clone());
+                        }
+                        field
+                    })
+                    .step(|f| {
+                        // Tracing Console Output
+                        let trace_console_options = vec![
+                            "Enable (output to both file and console)".to_string(),
+                            "Disable (output to file only)".to_string(),
+                        ];
+                        let default_option = if current_trace_console {
+                            trace_console_options[0].clone()
+                        } else {
+                            trace_console_options[1].clone()
+                        };
+                        f.add_selection(
+                            "trace_console_mode",
+                            "Select trace console output mode",
+                            trace_console_options,
+                        )
+                        .default(default_option)
+                    })
+                },
+                GroupConfig::optional().with_title("Log Configuration (Optional)"),
+            )
+            // Group 3: LLM Configuration (可选组)
+            .add_group(
+                "llm",
+                |g| {
+                    let llm_providers = vec![
+                        "openai".to_string(),
+                        "deepseek".to_string(),
+                        "proxy".to_string(),
+                    ];
+                    let llm_provider_prompt =
+                        format!("Select LLM provider [current: {}]", existing.llm_provider);
+
+                    // OpenAI 配置字段
+                    let openai_key_prompt = if existing.llm_openai_key.is_some() {
+                        "OpenAI API key [current: ***] (press Enter to keep)"
+                    } else {
+                        "OpenAI API key (optional, press Enter to skip)"
+                    };
+                    let openai_model_default = existing
+                        .llm_openai_model
+                        .clone()
+                        .unwrap_or_else(|| LLMSettings::default_model("openai"));
+                    let openai_model_prompt = if existing.llm_openai_model.is_some() {
+                        "OpenAI model (press Enter to keep)"
+                    } else {
+                        "OpenAI model (optional, press Enter to skip)"
+                    };
+
+                    // DeepSeek 配置字段
+                    let deepseek_key_prompt = if existing.llm_deepseek_key.is_some() {
+                        "DeepSeek API key [current: ***] (press Enter to keep)"
+                    } else {
+                        "DeepSeek API key (optional, press Enter to skip)"
+                    };
+                    let deepseek_model_default = existing
+                        .llm_deepseek_model
+                        .clone()
+                        .unwrap_or_else(|| LLMSettings::default_model("deepseek"));
+                    let deepseek_model_prompt = if existing.llm_deepseek_model.is_some() {
+                        "DeepSeek model (press Enter to keep)"
+                    } else {
+                        "DeepSeek model (optional, press Enter to skip)"
+                    };
+
+                    // Proxy 配置字段
+                    let proxy_url_prompt = if existing.llm_proxy_url.is_some() {
+                        "LLM proxy URL (required) (press Enter to keep)"
+                    } else {
+                        "LLM proxy URL (required)"
+                    };
+                    let proxy_key_prompt = if existing.llm_proxy_key.is_some() {
+                        "LLM proxy key [current: ***] (press Enter to keep)"
+                    } else {
+                        "LLM proxy key (required)"
+                    };
+                    let proxy_model_prompt = if existing.llm_proxy_model.is_some() {
+                        "LLM model (press Enter to keep)"
+                    } else {
+                        "LLM model (required)"
+                    };
+
+                    let has_existing_proxy_url = existing.llm_proxy_url.is_some();
+                    let has_existing_proxy_key = existing.llm_proxy_key.is_some();
+                    let has_existing_proxy_model = existing.llm_proxy_model.is_some();
+
+                    g.step(|f| {
+                        f.add_selection("llm_provider", &llm_provider_prompt, llm_providers)
+                            .default(existing.llm_provider.clone())
+                    })
+                    .step_if("llm_provider", "openai", |f| {
+                        let mut form =
+                            f.add_text("llm_openai_key", openai_key_prompt).allow_empty(true);
+                        if let Some(ref key) = existing.llm_openai_key {
+                            form = form.default(key.clone());
+                        }
+                        form.add_text("llm_openai_model", openai_model_prompt)
+                            .allow_empty(true)
+                            .default(openai_model_default)
+                    })
+                    .step_if("llm_provider", "deepseek", |f| {
+                        let mut form =
+                            f.add_text("llm_deepseek_key", deepseek_key_prompt).allow_empty(true);
+                        if let Some(ref key) = existing.llm_deepseek_key {
+                            form = form.default(key.clone());
+                        }
+                        form.add_text("llm_deepseek_model", deepseek_model_prompt)
+                            .allow_empty(true)
+                            .default(deepseek_model_default)
+                    })
+                    .step_if("llm_provider", "proxy", |f| {
+                        let mut form = f.add_text("llm_proxy_url", proxy_url_prompt);
+                        if has_existing_proxy_url {
+                            form = form.allow_empty(true);
+                            if let Some(ref url) = existing.llm_proxy_url {
+                                form = form.default(url.clone());
+                            }
+                        } else {
+                            form = form.required();
+                        }
+                        form = form.validate(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_url {
+                                Err("LLM proxy URL is required".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        });
+
+                        let mut form = form.add_text("llm_proxy_key", proxy_key_prompt);
+                        if has_existing_proxy_key {
+                            form = form.allow_empty(true);
+                        } else {
+                            form = form.required();
+                        }
+                        form = form.validate(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_key {
+                                Err("LLM proxy key is required".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        });
+
+                        let mut form = form.add_text("llm_proxy_model", proxy_model_prompt);
+                        if has_existing_proxy_model {
+                            form = form.allow_empty(true);
+                            if let Some(ref model) = existing.llm_proxy_model {
+                                form = form.default(model.clone());
+                            }
+                        } else {
+                            form = form.required();
+                        }
+                        form.validate(move |input: &str| {
+                            if input.is_empty() && !has_existing_proxy_model {
+                                Err("Model is required for proxy provider".to_string())
+                            } else {
+                                Ok(())
+                            }
+                        })
+                    })
+                    .step(|f| {
+                        // LLM output language (所有 provider 共享)
+                        let language_display_names = get_supported_language_display_names();
+                        let current_language = if !existing.llm_language.is_empty() {
+                            existing.llm_language.as_str()
+                        } else {
+                            "en" // 默认英文
+                        };
+                        let current_idx = SUPPORTED_LANGUAGES
+                            .iter()
+                            .position(|lang| lang.code == current_language)
+                            .unwrap_or(0);
+                        let default_display_name = language_display_names
+                            .get(current_idx)
+                            .cloned()
+                            .unwrap_or_else(|| language_display_names[0].clone());
+                        let llm_language_prompt =
+                            format!("Select LLM output language [current: {}]", current_language);
+                        f.add_selection(
+                            "llm_language_display",
+                            &llm_language_prompt,
+                            language_display_names,
+                        )
+                        .default(default_display_name)
+                    })
+                },
+                GroupConfig::optional().with_title("LLM/AI Configuration (Optional)"),
+            )
+            .run()
+            .wrap_err("Failed to collect configuration")?;
+
+        // 处理结果：Jira 配置
+        let jira_email = if let Some(email) = form_result.get("jira_email") {
+            if !email.is_empty() {
+                Some(email.clone())
+            } else if has_jira_email {
+                existing.jira_email.clone()
+            } else {
+                color_eyre::eyre::bail!("Jira email address is required");
+            }
         } else {
-            // 如果没有自定义值，询问是否需要配置
-            ConfirmDialog::new("Do you want to configure document base directory?")
-                .with_default(false)
-                .prompt()
-                .wrap_err("Failed to get confirmation")?
+            color_eyre::eyre::bail!("Jira email address is required");
         };
 
-        let log_download_base_dir = if should_configure {
-            // 用户选择配置，显示输入框
-            let base_dir_prompt = if is_custom_dir {
-                "Document base directory (press Enter to keep)".to_string()
+        let jira_service_address = if let Some(address) = form_result.get("jira_service_address") {
+            if !address.is_empty() {
+                Some(address.clone())
+            } else if has_jira_address {
+                existing.jira_service_address.clone()
             } else {
-                format!(
-                    "Document base directory (press Enter to use default: {})",
-                    default_dir
-                )
+                color_eyre::eyre::bail!("Jira service address is required");
+            }
+        } else {
+            color_eyre::eyre::bail!("Jira service address is required");
+        };
+
+        let jira_api_token = if let Some(token) = form_result.get("jira_api_token") {
+            if !token.is_empty() {
+                Some(token.clone())
+            } else if has_jira_token {
+                existing.jira_api_token.clone()
+            } else {
+                color_eyre::eyre::bail!("Jira API token is required");
+            }
+        } else {
+            color_eyre::eyre::bail!("Jira API token is required");
+        };
+
+        // 处理结果：Log 配置（包含 Tracing）
+        // 如果用户选择不配置 Log 组，使用现有值
+        let (log_output_folder_name, log_download_base_dir, enable_trace_console) = if form_result
+            .has("should_configure_log_folder")
+            || form_result.has("should_configure_doc_dir")
+            || form_result.has("trace_console_mode")
+        {
+            // 用户配置了 Log 组，处理配置
+            let log_output_folder_name =
+                if form_result.get("should_configure_log_folder") == Some(&"yes".to_string()) {
+                    if let Some(input_value) = form_result.get("log_output_folder_name") {
+                        if input_value.is_empty() || input_value == &default_folder_name {
+                            None
+                        } else {
+                            Some(input_value.clone())
+                        }
+                    } else {
+                        None
+                    }
+                } else if is_custom_folder_name {
+                    existing.log_output_folder_name.clone()
+                } else {
+                    None
+                };
+
+            let log_download_base_dir =
+                if form_result.get("should_configure_doc_dir") == Some(&"yes".to_string()) {
+                    if let Some(input_value) = form_result.get("log_download_base_dir") {
+                        if input_value.is_empty() || input_value == &default_dir {
+                            None
+                        } else {
+                            Some(input_value.clone())
+                        }
+                    } else {
+                        None
+                    }
+                } else if is_custom_dir {
+                    existing.log_download_base_dir.clone()
+                } else {
+                    None
+                };
+
+            // Tracing 配置
+            let enable_trace_console = if let Some(mode) = form_result.get("trace_console_mode") {
+                if mode == "Enable (output to both file and console)" {
+                    Some(true)
+                } else {
+                    None
+                }
+            } else {
+                existing.enable_trace_console
             };
 
-            // 只有当用户之前设置过自定义值时，才显示该值；否则显示默认值作为提示
-            let mut dialog = InputDialog::new(&base_dir_prompt).allow_empty(true);
-            if is_custom_dir {
-                // 用户自定义的值，作为默认值显示
-                if let Some(ref existing_dir) = existing.log_download_base_dir {
-                    dialog = dialog.with_default(existing_dir.clone());
-                }
-            } else {
-                // 显示默认值作为提示
-                dialog = dialog.with_default(default_dir.clone());
-            }
-
-            let input_value =
-                dialog.prompt().wrap_err("Failed to get document base directory")?;
-
-            if input_value.is_empty() {
-                // 如果为空，使用默认值（但不在配置文件中保存，使用 None）
-                None
-            } else if input_value == default_dir {
-                // 如果等于默认值，也不保存（使用 None）
-                None
-            } else {
-                // 自定义路径，保存到配置文件
-                Some(input_value)
-            }
+            (
+                log_output_folder_name,
+                log_download_base_dir,
+                enable_trace_console,
+            )
         } else {
-            // 用户选择不配置，保持现有值或使用默认值（None）
-            if is_custom_dir {
-                // 保持现有的自定义值
-                existing.log_download_base_dir.clone()
-            } else {
-                // 使用默认值（不保存到配置文件）
-                None
-            }
+            // 用户选择不配置 Log 组，使用现有值
+            (
+                existing.log_output_folder_name.clone(),
+                existing.log_download_base_dir.clone(),
+                existing.enable_trace_console,
+            )
         };
 
-        // ==================== 可选：Tracing 控制台输出配置 ====================
-        log_break!();
-        log_message!("  Tracing Console Output (Optional)");
-        log_break!('─', 65);
+        // 处理结果：LLM 配置
+        // 如果用户选择不配置 LLM 组，使用现有值
+        let (
+            llm_provider,
+            llm_openai_key,
+            llm_openai_model,
+            llm_deepseek_key,
+            llm_deepseek_model,
+            llm_proxy_url,
+            llm_proxy_key,
+            llm_proxy_model,
+        ) = if let Some(provider) = form_result.get("llm_provider") {
+            // 用户配置了 LLM 组，处理配置
+            let provider = provider.clone();
 
-        let current_trace_console = existing.enable_trace_console.unwrap_or(false);
-        let current_status = if current_trace_console {
-            "enabled (output to both file and console)"
-        } else {
-            "disabled (output to file only)"
-        };
+            // 初始化各 provider 的配置（从 existing 加载，保持其他 provider 的配置不变）
+            let mut llm_openai_key = existing.llm_openai_key.clone();
+            let mut llm_openai_model = existing.llm_openai_model.clone();
+            let mut llm_deepseek_key = existing.llm_deepseek_key.clone();
+            let mut llm_deepseek_model = existing.llm_deepseek_model.clone();
+            let mut llm_proxy_url = existing.llm_proxy_url.clone();
+            let mut llm_proxy_key = existing.llm_proxy_key.clone();
+            let mut llm_proxy_model = existing.llm_proxy_model.clone();
 
-        log_message!("Current: {}", current_status);
-        log_message!(
-            "Enable tracing console output? (tracing logs will be output to both file and console)"
-        );
+            // 根据选择的 provider 更新对应的配置
+            let has_existing_proxy_url = existing.llm_proxy_url.is_some();
+            let has_existing_proxy_key = existing.llm_proxy_key.is_some();
+            let has_existing_proxy_model = existing.llm_proxy_model.is_some();
 
-        let trace_console_options = vec![
-            "Enable (output to both file and console)",
-            "Disable (output to file only)",
-        ];
-
-        let current_trace_console_idx = if current_trace_console { 0 } else { 1 };
-
-        let selected_trace_console = SelectDialog::new(
-            "Select trace console output mode",
-            trace_console_options.clone(),
-        )
-        .with_default(current_trace_console_idx)
-        .prompt()
-        .wrap_err("Failed to select trace console option")?;
-
-        // true 时写入配置文件，false 时从配置文件中删除（设置为 None）
-        let enable_trace_console = trace_console_options
-            .iter()
-            .position(|&opt| opt == selected_trace_console)
-            .map(|idx| if idx == 0 { Some(true) } else { None })
-            .unwrap_or(None);
-
-        // ==================== 可选：LLM/AI 配置 ====================
-        log_break!();
-        log_message!("  LLM/AI Configuration (Optional)");
-        log_break!('─', 65);
-
-        let llm_providers = ["openai", "deepseek", "proxy"];
-        let current_provider_idx = llm_providers
-            .iter()
-            .position(|&p| p == existing.llm_provider.as_str())
-            .unwrap_or(0);
-
-        let llm_provider_prompt =
-            format!("Select LLM provider [current: {}]", existing.llm_provider);
-
-        let llm_providers_vec: Vec<String> = llm_providers.iter().map(|s| s.to_string()).collect();
-        let llm_provider = SelectDialog::new(&llm_provider_prompt, llm_providers_vec)
-            .with_default(current_provider_idx)
-            .prompt()
-            .wrap_err("Failed to select LLM provider")?;
-
-        // 初始化各 provider 的配置（从 existing 加载，保持其他 provider 的配置不变）
-        let mut llm_openai_key = existing.llm_openai_key.clone();
-        let mut llm_openai_model = existing.llm_openai_model.clone();
-        let mut llm_deepseek_key = existing.llm_deepseek_key.clone();
-        let mut llm_deepseek_model = existing.llm_deepseek_model.clone();
-        let mut llm_proxy_url = existing.llm_proxy_url.clone();
-        let mut llm_proxy_key = existing.llm_proxy_key.clone();
-        let mut llm_proxy_model = existing.llm_proxy_model.clone();
-
-        // 根据选择的 provider 配置对应的设置
-        match llm_provider.as_str() {
-            "openai" => {
-                // 配置 OpenAI API key
-                let key_prompt = if llm_openai_key.is_some() {
-                    "OpenAI API key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "OpenAI API key (optional, press Enter to skip)".to_string()
-                };
-
-                let llm_key_input = InputDialog::new(&key_prompt)
-                    .allow_empty(true)
-                    .prompt()
-                    .wrap_err("Failed to get OpenAI API key")?;
-
-                if !llm_key_input.is_empty() {
-                    llm_openai_key = Some(llm_key_input);
-                }
-
-                // 配置 OpenAI model
-                let default_model = llm_openai_model
-                    .clone()
-                    .unwrap_or_else(|| LLMSettings::default_model("openai"));
-
-                let model_prompt = if llm_openai_model.is_some() {
-                    "OpenAI model (press Enter to keep)".to_string()
-                } else {
-                    "OpenAI model (optional, press Enter to skip)".to_string()
-                };
-
-                let llm_model_input = InputDialog::new(&model_prompt)
-                    .allow_empty(true)
-                    .with_default(default_model.clone())
-                    .prompt()
-                    .wrap_err("Failed to get OpenAI model")?;
-
-                if !llm_model_input.is_empty() {
-                    llm_openai_model = Some(llm_model_input);
-                } else if llm_openai_model.is_none() {
-                    // 如果用户没有输入且之前也没有值，设置为 None（使用默认值）
-                    llm_openai_model = None;
-                }
-            }
-            "deepseek" => {
-                // 配置 DeepSeek API key
-                let key_prompt = if llm_deepseek_key.is_some() {
-                    "DeepSeek API key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "DeepSeek API key (optional, press Enter to skip)".to_string()
-                };
-
-                let llm_key_input = InputDialog::new(&key_prompt)
-                    .allow_empty(true)
-                    .prompt()
-                    .wrap_err("Failed to get DeepSeek API key")?;
-
-                if !llm_key_input.is_empty() {
-                    llm_deepseek_key = Some(llm_key_input);
-                }
-
-                // 配置 DeepSeek model
-                let default_model = llm_deepseek_model
-                    .clone()
-                    .unwrap_or_else(|| LLMSettings::default_model("deepseek"));
-
-                let model_prompt = if llm_deepseek_model.is_some() {
-                    "DeepSeek model (press Enter to keep)".to_string()
-                } else {
-                    "DeepSeek model (optional, press Enter to skip)".to_string()
-                };
-
-                let llm_model_input = InputDialog::new(&model_prompt)
-                    .allow_empty(true)
-                    .with_default(default_model.clone())
-                    .prompt()
-                    .wrap_err("Failed to get DeepSeek model")?;
-
-                if !llm_model_input.is_empty() {
-                    llm_deepseek_model = Some(llm_model_input);
-                } else if llm_deepseek_model.is_none() {
-                    llm_deepseek_model = None;
-                }
-            }
-            "proxy" => {
-                // 配置 Proxy URL（必填）
-                let llm_url_prompt = if llm_proxy_url.is_some() {
-                    "LLM proxy URL (required) (press Enter to keep)".to_string()
-                } else {
-                    "LLM proxy URL (required)".to_string()
-                };
-
-                let has_existing_url = llm_proxy_url.is_some();
-                let existing_url = llm_proxy_url.clone();
-
-                let llm_url_input = {
-                    let mut dialog = InputDialog::new(&llm_url_prompt);
-
-                    // 如果存在现有值，允许空输入（表示保留现有值）
-                    // 如果不存在现有值，不允许空输入（必须输入）
-                    dialog = dialog.allow_empty(has_existing_url);
-
-                    // 如果存在现有值，设置为默认值
-                    if let Some(ref url) = llm_proxy_url {
-                        dialog = dialog.with_default(url.clone());
-                    }
-
-                    // 验证器：只有当不存在现有值且输入为空时才报错
-                    dialog = dialog.with_validator(move |input: &str| {
-                        if input.is_empty() && !has_existing_url {
-                            Err("LLM proxy URL is required".to_string())
-                        } else {
-                            Ok(())
+            match provider.as_str() {
+                "openai" => {
+                    // 更新 OpenAI 配置
+                    if let Some(key) = form_result.get("llm_openai_key") {
+                        if !key.is_empty() {
+                            llm_openai_key = Some(key.clone());
                         }
-                    });
-
-                    dialog.prompt().wrap_err("Failed to get LLM proxy URL")?
-                };
-
-                if !llm_url_input.is_empty() {
-                    llm_proxy_url = Some(llm_url_input);
-                } else if has_existing_url {
-                    // 用户按 Enter 保留现有值
-                    llm_proxy_url = existing_url;
-                } else {
-                    color_eyre::eyre::bail!("LLM proxy URL is required");
-                }
-
-                // 配置 Proxy API key（必填）
-                let key_prompt = if llm_proxy_key.is_some() {
-                    "LLM proxy key [current: ***] (press Enter to keep)".to_string()
-                } else {
-                    "LLM proxy key (required)".to_string()
-                };
-
-                let has_existing_key = llm_proxy_key.is_some();
-                let existing_key = llm_proxy_key.clone();
-
-                let llm_key_input = {
-                    let mut dialog = InputDialog::new(&key_prompt);
-
-                    // 如果存在现有值，允许空输入（表示保留现有值）
-                    // 如果不存在现有值，不允许空输入（必须输入）
-                    dialog = dialog.allow_empty(has_existing_key);
-
-                    // 验证器：只有当不存在现有值且输入为空时才报错
-                    dialog = dialog.with_validator(move |input: &str| {
-                        if input.is_empty() && !has_existing_key {
-                            Err("LLM proxy key is required".to_string())
-                        } else {
-                            Ok(())
-                        }
-                    });
-
-                    dialog.prompt().wrap_err("Failed to get LLM proxy key")?
-                };
-
-                if !llm_key_input.is_empty() {
-                    llm_proxy_key = Some(llm_key_input);
-                } else if has_existing_key {
-                    // 用户按 Enter 保留现有值
-                    llm_proxy_key = existing_key;
-                } else {
-                    color_eyre::eyre::bail!("LLM proxy key is required");
-                }
-
-                // 配置 Proxy model（必填）
-                let model_prompt = if llm_proxy_model.is_some() {
-                    "LLM model (press Enter to keep)".to_string()
-                } else {
-                    "LLM model (required)".to_string()
-                };
-
-                let llm_model_input = if let Some(model) = &llm_proxy_model {
-                    InputDialog::new(&model_prompt).allow_empty(false).with_default(model.clone())
-                } else {
-                    InputDialog::new(&model_prompt).allow_empty(false)
-                }
-                .with_validator(|input: &str| {
-                    if input.is_empty() {
-                        Err("Model is required for proxy provider".to_string())
-                    } else {
-                        Ok(())
                     }
-                })
-                .prompt()
-                .wrap_err("Failed to get LLM model")?;
-
-                if !llm_model_input.is_empty() {
-                    llm_proxy_model = Some(llm_model_input);
-                } else {
-                    color_eyre::eyre::bail!("Model is required for proxy provider");
+                    if let Some(model) = form_result.get("llm_openai_model") {
+                        if !model.is_empty() {
+                            llm_openai_model = Some(model.clone());
+                        } else if llm_openai_model.is_none() {
+                            llm_openai_model = None;
+                        }
+                    }
                 }
+                "deepseek" => {
+                    // 更新 DeepSeek 配置
+                    if let Some(key) = form_result.get("llm_deepseek_key") {
+                        if !key.is_empty() {
+                            llm_deepseek_key = Some(key.clone());
+                        }
+                    }
+                    if let Some(model) = form_result.get("llm_deepseek_model") {
+                        if !model.is_empty() {
+                            llm_deepseek_model = Some(model.clone());
+                        } else if llm_deepseek_model.is_none() {
+                            llm_deepseek_model = None;
+                        }
+                    }
+                }
+                "proxy" => {
+                    // 更新 Proxy 配置
+                    if let Some(url) = form_result.get("llm_proxy_url") {
+                        if !url.is_empty() {
+                            llm_proxy_url = Some(url.clone());
+                        } else if has_existing_proxy_url {
+                            // 用户按 Enter 保留现有值
+                            llm_proxy_url = existing.llm_proxy_url.clone();
+                        } else {
+                            color_eyre::eyre::bail!("LLM proxy URL is required");
+                        }
+                    }
+                    if let Some(key) = form_result.get("llm_proxy_key") {
+                        if !key.is_empty() {
+                            llm_proxy_key = Some(key.clone());
+                        } else if has_existing_proxy_key {
+                            // 用户按 Enter 保留现有值
+                            llm_proxy_key = existing.llm_proxy_key.clone();
+                        } else {
+                            color_eyre::eyre::bail!("LLM proxy key is required");
+                        }
+                    }
+                    if let Some(model) = form_result.get("llm_proxy_model") {
+                        if !model.is_empty() {
+                            llm_proxy_model = Some(model.clone());
+                        } else if has_existing_proxy_model {
+                            // 用户按 Enter 保留现有值
+                            llm_proxy_model = existing.llm_proxy_model.clone();
+                        } else {
+                            color_eyre::eyre::bail!("Model is required for proxy provider");
+                        }
+                    }
+                }
+                _ => {}
             }
-            _ => {}
-        }
 
-        // 配置 LLM 输出语言（所有 provider 共享）
-        let current_language = if !existing.llm_language.is_empty() {
-            Some(existing.llm_language.as_str())
+            (
+                provider,
+                llm_openai_key,
+                llm_openai_model,
+                llm_deepseek_key,
+                llm_deepseek_model,
+                llm_proxy_url,
+                llm_proxy_key,
+                llm_proxy_model,
+            )
         } else {
-            None
+            // 用户选择不配置 LLM 组，使用现有值
+            (
+                existing.llm_provider.clone(),
+                existing.llm_openai_key.clone(),
+                existing.llm_openai_model.clone(),
+                existing.llm_deepseek_key.clone(),
+                existing.llm_deepseek_model.clone(),
+                existing.llm_proxy_url.clone(),
+                existing.llm_proxy_key.clone(),
+                existing.llm_proxy_model.clone(),
+            )
         };
 
-        let llm_language =
-            select_language(current_language).wrap_err("Failed to select LLM output language")?;
+        // 处理结果：LLM 输出语言
+        // 如果用户选择不配置 LLM 组，使用现有值
+        let llm_language = if let Some(display_name) = form_result.get("llm_language_display") {
+            // 从显示名称中提取语言代码
+            // 格式："{native_name} ({name}) - {code}"
+            let language_code = display_name
+                .split(" - ")
+                .nth(1)
+                .ok_or_else(|| color_eyre::eyre::eyre!("Invalid language display name format"))?;
+            language_code.to_string()
+        } else {
+            // 用户选择不配置 LLM 组，使用现有值
+            existing.llm_language.clone()
+        };
 
         // Codeup 配置已移除（Codeup support has been removed）
         // ==================== 可选：Codeup 配置 ====================

@@ -1,238 +1,390 @@
-//! FormBuilder 用于构建交互式表单
+//! 表单构建器
 
-use crate::base::dialog::form::types::{
-    Condition, ConditionOperator, ConditionValue, ConditionalGroup, FieldDefaultValue, FormField,
-    FormFieldType,
-};
+use std::collections::HashMap;
+
+use color_eyre::{eyre::eyre, Result};
+use dialoguer::Password;
+
+use crate::base::dialog::form::condition_evaluator::ConditionEvaluator;
+use crate::base::dialog::form::group_builder::GroupBuilder;
+use crate::base::dialog::form::types::{FormGroup, FormStep, GroupConfig, StepType};
+use crate::base::dialog::form::{FieldDefaultValue, FormField, FormFieldType, FormResult};
+use crate::base::dialog::{ConfirmDialog, InputDialog, SelectDialog};
+use crate::{log_break, log_debug, log_message};
 
 /// 表单构建器
-#[derive(Debug, Clone)]
+///
+/// 提供 Group 支持的表单构建器，可以将整个 setup 的所有内容封装为一个 form。
+///
+/// # 示例
+///
+/// ```rust,no_run
+/// use workflow::base::dialog::form::{FormBuilder, GroupConfig};
+///
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// // 必填组
+/// let form_result = FormBuilder::new()
+///     .add_group("jira", |g| {
+///         g.step(|f| {
+///             f.add_text("jira_email", "Jira email address").required()
+///         })
+///     }, GroupConfig::required())
+///     // 可选组（带标题）
+///     .add_group("llm", |g| {
+///         g.step(|f| {
+///             f.add_selection("llm_provider", "Select LLM provider", vec!["openai", "deepseek"])
+///         })
+///     }, GroupConfig::optional()
+///         .with_title("LLM/AI Configuration")
+///         .with_default_enabled(true))
+///     .run()?;
+/// # Ok(())
+/// # }
+/// ```
 pub struct FormBuilder {
-    /// 表单字段列表
-    pub fields: Vec<FormField>,
-    /// 条件组列表
-    pub conditional_groups: Vec<ConditionalGroup>,
-    /// 当前正在构建的字段
-    pub current_field: Option<usize>,
+    /// 表单组列表
+    pub groups: Vec<FormGroup>,
 }
 
 impl FormBuilder {
-    /// 创建新的表单构建器
+    /// 创建新的统一表单构建器
+    pub fn new() -> Self {
+        Self { groups: Vec::new() }
+    }
+
+    /// 添加表单组
+    ///
+    /// 使用 `GroupConfig` 配置组的行为和显示选项。
+    ///
+    /// # 参数
+    ///
+    /// * `id` - 组的唯一标识符
+    /// * `builder` - 构建组内步骤的闭包
+    /// * `config` - 组配置（使用 `GroupConfig::required()` 或 `GroupConfig::optional()` 创建）
     ///
     /// # 示例
     ///
     /// ```rust,no_run
-    /// use workflow::base::dialog::form::FormBuilder;
+    /// use workflow::base::dialog::form::{FormBuilder, GroupConfig};
     ///
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let result = FormBuilder::new()
-    ///     .add_text("name", "Enter your name")
-    ///         .required()
-    ///         .default("John Doe")
-    ///     .add_password("password", "Enter password")
-    ///         .required()
+    /// // 必填组
+    /// FormBuilder::new()
+    ///     .add_group("jira", |g| {
+    ///         g.step(|f| {
+    ///             f.add_text("jira_email", "Jira email address").required()
+    ///         })
+    ///     }, GroupConfig::required())
+    ///     // 可选组（带标题）
+    ///     .add_group("llm", |g| {
+    ///         g.step(|f| {
+    ///             f.add_selection("llm_provider", "...", vec!["openai", "deepseek"])
+    ///         })
+    ///     }, GroupConfig::optional()
+    ///         .with_title("LLM Configuration"))
+    ///     // 可选组（带标题和描述）
+    ///     .add_group("log", |g| {
+    ///         g.step(|f| {
+    ///             f.add_text("log_level", "Log level").required()
+    ///         })
+    ///     }, GroupConfig::optional()
+    ///         .with_title("Log Configuration")
+    ///         .with_description("Configure logging settings")
+    ///         .with_default_enabled(false))
     ///     .run()?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new() -> Self {
-        Self {
-            fields: Vec::new(),
-            conditional_groups: Vec::new(),
-            current_field: None,
-        }
-    }
+    pub fn add_group<F>(mut self, id: impl Into<String>, builder: F, config: GroupConfig) -> Self
+    where
+        F: FnOnce(GroupBuilder) -> GroupBuilder,
+    {
+        let group_id = id.into();
+        let group_builder = GroupBuilder::new(&group_id);
+        let built = builder(group_builder);
 
-    /// 添加文本输入字段
-    pub fn add_text(mut self, name: impl Into<String>, message: impl Into<String>) -> Self {
-        let field = FormField {
-            name: name.into(),
-            field_type: FormFieldType::Text,
-            message: message.into(),
-            choices: Vec::new(),
-            default_choice: None,
-            default_value: None,
-            required: false,
-            validator: None,
-            condition: None,
+        let group = FormGroup {
+            id: group_id,
+            title: config.title,
+            description: config.description,
+            optional: config.optional,
+            default_enabled: config.default_enabled,
+            steps: built.into_steps(),
         };
-        self.current_field = Some(self.fields.len());
-        self.fields.push(field);
+
+        self.groups.push(group);
         self
     }
 
-    /// 添加密码输入字段
-    pub fn add_password(mut self, name: impl Into<String>, message: impl Into<String>) -> Self {
-        let field = FormField {
-            name: name.into(),
-            field_type: FormFieldType::Password,
-            message: message.into(),
-            choices: Vec::new(),
-            default_choice: None,
-            default_value: None,
-            required: false,
-            validator: None,
-            condition: None,
-        };
-        self.current_field = Some(self.fields.len());
-        self.fields.push(field);
-        self
-    }
+    /// 验证表单构建器的配置
+    ///
+    /// 检查组 ID 唯一性、步骤非空等。
+    ///
+    /// # 错误
+    ///
+    /// 如果验证失败，返回错误
+    fn validate(&self) -> Result<()> {
+        use std::collections::HashSet;
 
-    /// 添加选择字段
-    pub fn add_selection(
-        mut self,
-        name: impl Into<String>,
-        message: impl Into<String>,
-        choices: Vec<String>,
-    ) -> Self {
-        let field = FormField {
-            name: name.into(),
-            field_type: FormFieldType::Selection,
-            message: message.into(),
-            choices,
-            default_choice: None,
-            default_value: None,
-            required: false,
-            validator: None,
-            condition: None,
-        };
-        self.current_field = Some(self.fields.len());
-        self.fields.push(field);
-        self
-    }
-
-    /// 添加确认字段
-    pub fn add_confirmation(mut self, name: impl Into<String>, message: impl Into<String>) -> Self {
-        let field = FormField {
-            name: name.into(),
-            field_type: FormFieldType::Confirmation,
-            message: message.into(),
-            choices: Vec::new(),
-            default_choice: None,
-            default_value: None,
-            required: false,
-            validator: None,
-            condition: None,
-        };
-        self.current_field = Some(self.fields.len());
-        self.fields.push(field);
-        self
-    }
-
-    /// 标记当前字段为必填
-    pub fn required(mut self) -> Self {
-        if let Some(idx) = self.current_field {
-            if let Some(field) = self.fields.get_mut(idx) {
-                field.required = true;
+        // 检查组 ID 唯一性
+        let mut group_ids = HashSet::new();
+        for group in &self.groups {
+            if !group_ids.insert(&group.id) {
+                return Err(color_eyre::eyre::eyre!(
+                    "Duplicate group ID: '{}'. Group IDs must be unique.",
+                    group.id
+                ));
             }
         }
-        self
+
+        // 检查组是否有步骤
+        for group in &self.groups {
+            if group.steps.is_empty() {
+                return Err(color_eyre::eyre::eyre!(
+                    "Group '{}' has no steps. Each group must have at least one step.",
+                    group.id
+                ));
+            }
+
+            // 检查步骤是否有字段
+            for (step_idx, step) in group.steps.iter().enumerate() {
+                if step.fields.is_empty() {
+                    return Err(color_eyre::eyre::eyre!(
+                        "Group '{}', step {} has no fields. Each step must have at least one field.",
+                        group.id,
+                        step_idx + 1
+                    ));
+                }
+            }
+        }
+
+        Ok(())
     }
 
-    /// 设置当前字段的默认值
-    pub fn default(mut self, value: impl Into<FieldDefaultValue>) -> Self {
-        if let Some(idx) = self.current_field {
-            if let Some(field) = self.fields.get_mut(idx) {
-                let default_value = value.into();
-                field.default_value = Some(default_value.clone());
-                // 如果是选择字段，同时设置 default_choice
-                if field.field_type == FormFieldType::Selection {
-                    if let Some(s) = default_value.as_string() {
-                        field.default_choice = Some(s);
+    /// 执行表单并收集用户输入
+    ///
+    /// # 返回
+    ///
+    /// 返回 `FormResult`，包含所有字段的值
+    ///
+    /// # 错误
+    ///
+    /// 如果用户取消或验证失败，返回错误
+    pub fn run(self) -> Result<FormResult> {
+        // 先验证配置
+        self.validate()?;
+
+        let mut field_values: HashMap<String, String> = HashMap::new();
+
+        // 按顺序执行每个组
+        for group in &self.groups {
+            // 如果是可选组，先询问是否配置
+            if group.optional {
+                let should_configure = if let Some(title) = &group.title {
+                    log_break!();
+                    log_message!("{}", title);
+                    log_break!('-', 40);
+                    if let Some(description) = &group.description {
+                        log_debug!("{}", description);
+                        log_break!();
+                    }
+                    ConfirmDialog::new(format!("Configure {}?", title))
+                        .with_default(group.default_enabled)
+                        .prompt()?
+                } else {
+                    group.default_enabled
+                };
+
+                if !should_configure {
+                    continue;
+                }
+            } else {
+                // 必填组：显示标题和描述（如果有）
+                if let Some(title) = &group.title {
+                    log_break!();
+                    log_message!("{}", title);
+                    log_break!('-', 40);
+                }
+                if let Some(description) = &group.description {
+                    log_debug!("{}", description);
+                    log_break!();
+                }
+            }
+
+            // 执行组内的步骤
+            for step in &group.steps {
+                if self.should_execute_step(step, &field_values) {
+                    for field in &step.fields {
+                        if self.should_ask_field(field, &field_values) {
+                            self.ask_field(field, &mut field_values)?;
+                        }
                     }
                 }
             }
         }
-        self
+
+        Ok(FormResult {
+            values: field_values,
+        })
     }
 
-    /// 设置当前字段的验证器
-    pub fn validate<F>(mut self, validator: F) -> Self
-    where
-        F: Fn(&str) -> Result<(), String> + Send + Sync + 'static,
-    {
-        use crate::base::dialog::types::ValidatorFn;
-        use std::sync::Arc;
-
-        if let Some(idx) = self.current_field {
-            if let Some(field) = self.fields.get_mut(idx) {
-                field.validator = Some(Arc::new(validator));
+    /// 判断步骤是否应该执行
+    fn should_execute_step(&self, step: &FormStep, field_values: &HashMap<String, String>) -> bool {
+        match &step.step_type {
+            StepType::Unconditional => true,
+            StepType::Conditional(condition) => {
+                ConditionEvaluator::evaluate(condition, field_values)
+            }
+            StepType::ConditionalAll(conditions) => {
+                conditions.iter().all(|c| ConditionEvaluator::evaluate(c, field_values))
+            }
+            StepType::ConditionalAny(conditions) => {
+                conditions.iter().any(|c| ConditionEvaluator::evaluate(c, field_values))
+            }
+            StepType::DynamicCondition(f) => {
+                let result = FormResult {
+                    values: field_values.clone(),
+                };
+                f(&result)
             }
         }
-        self
     }
 
-    /// 添加条件组：当指定字段满足条件时，显示条件组中的字段
-    ///
-    /// # 示例
-    ///
-    /// ```rust,no_run
-    /// use workflow::base::dialog::form::FormBuilder;
-    ///
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// let result = FormBuilder::new()
-    ///     .add_selection("provider", "Select provider", vec!["openai".to_string(), "custom".to_string()])
-    ///     .when("provider", "custom", |f| {
-    ///         f.add_text("url", "Enter URL").required()
-    ///     })
-    ///     .run()?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn when<F>(mut self, field_name: impl Into<String>, value: impl Into<String>, builder: F) -> Self
-    where
-        F: FnOnce(Self) -> Self,
-    {
-        let condition = Condition {
-            field_name: field_name.into(),
-            operator: ConditionOperator::Equals,
-            value: ConditionValue::single(value.into()),
-        };
+    /// 判断是否应该询问字段（基于字段的条件）
+    fn should_ask_field(&self, field: &FormField, field_values: &HashMap<String, String>) -> bool {
+        if let Some(ref condition) = field.condition {
+            ConditionEvaluator::evaluate(condition, field_values)
+        } else {
+            true
+        }
+    }
 
-        // 创建临时构建器来收集条件字段
-        let temp_builder = Self {
-            fields: Vec::new(),
-            conditional_groups: Vec::new(),
-            current_field: None,
-        };
+    /// 询问单个字段
+    fn ask_field(
+        &self,
+        field: &FormField,
+        field_values: &mut HashMap<String, String>,
+    ) -> Result<()> {
+        match field.field_type {
+            FormFieldType::Text => {
+                let mut dialog = InputDialog::new(&field.message);
 
-        // 使用 builder 构建条件字段
-        let built = builder(temp_builder);
+                // 设置默认值
+                if let Some(ref default_value) = field.default_value {
+                    if let Some(default_str) = <FieldDefaultValue>::as_string(default_value) {
+                        dialog = dialog.with_default(default_str);
+                    }
+                }
 
-        // 创建条件组
-        let group = ConditionalGroup {
-            condition,
-            fields: built.fields,
-            nested_groups: built.conditional_groups,
-        };
+                // 设置验证器和空值处理
+                let field_name = field.name.clone();
+                let field_required = field.required;
+                let field_allow_empty = field.allow_empty;
 
-        self.conditional_groups.push(group);
-        self
+                if let Some(ref validator) = field.validator {
+                    let validator_clone = validator.clone();
+                    dialog = dialog.with_validator(move |input: &str| {
+                        // 如果必填且为空，返回错误
+                        if field_required && input.trim().is_empty() {
+                            return Err(format!("Field '{}' is required", field_name));
+                        }
+                        // 调用自定义验证器
+                        validator_clone(input)
+                    });
+                } else if field.required {
+                    // 如果没有验证器但必填，添加默认验证
+                    let field_name = field.name.clone();
+                    dialog = dialog.with_validator(move |input: &str| {
+                        if input.trim().is_empty() {
+                            Err(format!("Field '{}' is required", field_name))
+                        } else {
+                            Ok(())
+                        }
+                    });
+                } else {
+                    // 根据 allow_empty 设置
+                    dialog = dialog.allow_empty(field_allow_empty);
+                }
+
+                let value = dialog.prompt()?;
+                field_values.insert(field.name.clone(), value);
+            }
+            FormFieldType::Password => {
+                let mut password_prompt = Password::new().with_prompt(&field.message);
+
+                // 如果允许空值，设置允许空密码
+                if field.allow_empty {
+                    password_prompt = password_prompt.allow_empty_password(true);
+                }
+
+                let password = password_prompt
+                    .interact()
+                    .map_err(|e| eyre!("Failed to get password: {}", e))?;
+
+                // 验证必填和空值
+                if field.required && password.is_empty() {
+                    color_eyre::eyre::bail!("Field '{}' is required", field.name);
+                }
+
+                // 如果允许空值且为空，跳过验证器
+                if field.allow_empty && password.is_empty() {
+                    // 允许空值，直接插入空字符串
+                } else {
+                    // 验证器
+                    if let Some(ref validator) = field.validator {
+                        validator(&password)
+                            .map_err(|e| color_eyre::eyre::eyre!("Validation error: {}", e))?;
+                    }
+                }
+
+                field_values.insert(field.name.clone(), password);
+            }
+            FormFieldType::Selection => {
+                let mut dialog = SelectDialog::new(&field.message, field.choices.clone());
+
+                // 设置默认选项
+                if let Some(ref default_choice) = field.default_choice {
+                    if let Some(idx) = field.choices.iter().position(|c| c == default_choice) {
+                        dialog = dialog.with_default(idx);
+                    }
+                } else if let Some(ref default_value) = field.default_value {
+                    if let Some(default_str) = <FieldDefaultValue>::as_string(default_value) {
+                        if let Some(idx) = field.choices.iter().position(|c| c == &default_str) {
+                            dialog = dialog.with_default(idx);
+                        }
+                    }
+                }
+
+                let value = dialog.prompt()?;
+                field_values.insert(field.name.clone(), value);
+            }
+            FormFieldType::Confirmation => {
+                let mut dialog = ConfirmDialog::new(&field.message);
+
+                // 设置默认值
+                if let Some(ref default_value) = field.default_value {
+                    if let Some(default_bool) = <FieldDefaultValue>::as_bool(default_value) {
+                        dialog = dialog.with_default(default_bool);
+                    }
+                }
+
+                let confirmed = dialog.prompt()?;
+                // 将布尔值转换为字符串（"yes" 或 "no"）
+                let value = if confirmed {
+                    "yes".to_string()
+                } else {
+                    "no".to_string()
+                };
+                field_values.insert(field.name.clone(), value);
+            }
+        }
+
+        Ok(())
     }
 }
 
 impl Default for FormBuilder {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-// 实现 From trait 以便于设置默认值
-impl From<String> for FieldDefaultValue {
-    fn from(value: String) -> Self {
-        Self::String(value)
-    }
-}
-
-impl From<&str> for FieldDefaultValue {
-    fn from(value: &str) -> Self {
-        Self::String(value.to_string())
-    }
-}
-
-impl From<bool> for FieldDefaultValue {
-    fn from(value: bool) -> Self {
-        Self::Bool(value)
     }
 }

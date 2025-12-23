@@ -1,76 +1,55 @@
-//! 交互式表单模块
+//! 表单构建器模块
 //!
-//! 提供表单构建和执行功能，支持链式调用、条件字段、验证器等特性。
+//! 提供 FormBuilder，支持 Group 概念，可以将整个 setup 的所有内容封装为一个 form。
 //!
 //! ## 特性
 //!
-//! - **链式构建**：使用 FormBuilder 链式构建表单
-//! - **条件字段**：根据之前输入动态显示字段
-//! - **统一结果收集**：FormResult 统一管理所有字段值
-//! - **多种字段类型**：Text、Password、Selection、Confirmation
-//! - **验证器和默认值**：支持自定义验证和默认值
+//! - **Group 支持**：可以将表单组织成多个组（Group）
+//! - **步骤化构建**：每个组内可以包含多个步骤（Step）
+//! - **字段构建**：每个步骤可以包含多个字段（Field）
+//! - **条件逻辑**：支持多种条件类型（step_if, step_if_all, step_if_any, step_if_dynamic）
+//! - **可选组**：支持可选组，可以询问用户是否配置
 //!
 //! ## 使用示例
 //!
-//! ### 基本用法
-//!
 //! ```rust,no_run
-//! use workflow::base::dialog::form::FormBuilder;
+//! use workflow::base::dialog::form::{FormBuilder, GroupConfig};
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let result = FormBuilder::new()
-//!     .add_text("name", "Enter your name")
-//!         .required()
-//!         .default("John Doe")
-//!     .add_password("password", "Enter password")
-//!         .required()
-//!     .run()?;
-//!
-//! let name = result.get_required("name")?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ### 条件字段
-//!
-//! ```rust,no_run
-//! use workflow::base::dialog::form::FormBuilder;
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let result = FormBuilder::new()
-//!     .add_selection("provider", "Select provider", vec!["openai".to_string(), "custom".to_string()])
-//!     .when("provider", "custom", |f| {
-//!         f.add_text("url", "Enter URL").required()
-//!     })
-//!     .run()?;
-//! # Ok(())
-//! # }
-//! ```
-//!
-//! ### 验证器
-//!
-//! ```rust,no_run
-//! use workflow::base::dialog::form::FormBuilder;
-//!
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! let result = FormBuilder::new()
-//!     .add_text("email", "Enter email")
-//!         .required()
-//!         .validate(|input: &str| {
-//!             if input.contains('@') {
-//!                 Ok(())
-//!             } else {
-//!                 Err("Invalid email format".to_string())
-//!             }
+//! let form_result = FormBuilder::new()
+//!     // Group 1: Jira 配置（必填）
+//!     .add_group("jira", |g| {
+//!         g.step(|f| {
+//!             f.add_text("jira_email", "Jira email address").required()
 //!         })
+//!         .step(|f| {
+//!             f.add_text("jira_service_address", "Jira service address").required()
+//!         })
+//!     }, GroupConfig::required())
+//!     // Group 2: LLM 配置（可选）
+//!     .add_group("llm", |g| {
+//!         g.step(|f| {
+//!             f.add_selection("llm_provider", "Select LLM provider", vec!["openai", "deepseek"])
+//!         })
+//!         .step_if("llm_provider", "openai", |f| {
+//!             f.add_text("openai_key", "OpenAI API key")
+//!         })
+//!     }, GroupConfig::optional()
+//!         .with_title("LLM/AI Configuration")
+//!         .with_default_enabled(true))
 //!     .run()?;
 //! # Ok(())
 //! # }
 //! ```
 
 mod builder;
-mod executor;
+mod condition_evaluator;
+mod field_builder;
+mod group_builder;
 mod types;
 
 pub use builder::FormBuilder;
-pub use types::{Condition, ConditionOperator, ConditionValue, FormField, FormFieldType, FormResult};
+pub use types::{
+    Condition, ConditionOperator, ConditionValue, FieldDefaultValue, FormField, FormFieldType,
+    FormGroup, FormResult, FormStep, GroupConfig, StepType,
+};

@@ -269,9 +269,7 @@ impl LogSettings {
 
     /// 获取日志文件夹名称（如果为 None，返回默认值）
     pub fn get_output_folder_name(&self) -> String {
-        self.output_folder_name
-            .clone()
-            .unwrap_or_else(Self::default_log_folder)
+        self.output_folder_name.clone().unwrap_or_else(Self::default_log_folder)
     }
 
     /// 默认下载基础目录路径（Option 类型，用于序列化）
