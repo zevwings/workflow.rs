@@ -264,10 +264,23 @@ jobs:
           echo ""
 
           # 提取模块名（第一个目录名）
-          MODULES=$(echo "$CHANGED_FILES" | sed 's|src/\(lib\|commands\)/\([^/]*\).*|\2|' | sort -u)
-
+          # 处理多行文件列表，每行单独处理
           MISSING_DOCS=0
-          for module in $MODULES; do
+          echo "$CHANGED_FILES" | while IFS= read -r file; do
+            # 跳过空行
+            [ -z "$file" ] && continue
+
+            # 提取模块名：从 src/lib/module/... 或 src/commands/module/... 中提取 module
+            # 先尝试 lib，再尝试 commands
+            module=$(echo "$file" | sed 's|^src/lib/\([^/]*\).*|\1|')
+            if [ "$module" = "$file" ]; then
+              # 如果不是 lib，尝试 commands
+              module=$(echo "$file" | sed 's|^src/commands/\([^/]*\).*|\1|')
+            fi
+
+            # 跳过空模块名或无效路径（如果提取失败，module 会等于原文件路径）
+            [ -z "$module" ] || [ "$module" = "$file" ] && continue
+
             doc_path="docs/architecture/${module}.md"
             if [ ! -f "$doc_path" ]; then
               echo "⚠️  Warning: Module '$module' changed but architecture doc not found: $doc_path"
