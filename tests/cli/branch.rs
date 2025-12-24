@@ -133,7 +133,10 @@ fn test_branch_create_command_empty_jira_id() {
             // 验证错误消息包含验证信息
             let error_msg = e.to_string();
             assert!(
-                error_msg.contains("JIRA ID") || error_msg.contains("empty") || error_msg.contains("Invalid") || error_msg.contains("validation"),
+                error_msg.contains("JIRA ID")
+                    || error_msg.contains("empty")
+                    || error_msg.contains("Invalid")
+                    || error_msg.contains("validation"),
                 "Error message should indicate JIRA ID validation failure: {}",
                 error_msg
             );
@@ -148,10 +151,7 @@ fn test_branch_create_command_very_long_jira_id() {
     let cli = TestBranchCli::try_parse_from(&["test-branch", "create", &long_jira_id]).unwrap();
 
     match cli.command {
-        BranchSubcommand::Create {
-            jira_id,
-            ..
-        } => {
+        BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(long_jira_id));
         }
         _ => panic!("Expected Create command"),
@@ -166,10 +166,7 @@ fn test_branch_create_command_special_characters_in_jira_id() {
     let cli = TestBranchCli::try_parse_from(&["test-branch", "create", special_jira_id]).unwrap();
 
     match cli.command {
-        BranchSubcommand::Create {
-            jira_id,
-            ..
-        } => {
+        BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(special_jira_id.to_string()));
         }
         _ => panic!("Expected Create command"),

@@ -236,7 +236,10 @@ fn test_form_builder_add_group_with_description() {
     );
 
     assert_eq!(builder.groups.len(), 1);
-    assert_eq!(builder.groups[0].description, Some("Test Description".to_string()));
+    assert_eq!(
+        builder.groups[0].description,
+        Some("Test Description".to_string())
+    );
 }
 
 #[test]

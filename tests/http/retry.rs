@@ -1044,7 +1044,8 @@ fn test_retry_error_description_io_error() {
 
     let result = HttpRetry::retry(
         || {
-            let error = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
+            let error =
+                std::io::Error::new(std::io::ErrorKind::PermissionDenied, "permission denied");
             Err::<String, _>(eyre!(error))
         },
         &config,
@@ -1260,7 +1261,10 @@ fn test_retry_countdown_display_logic_multiple_updates() {
     // 验证成功（重试后成功）
     assert!(result.is_ok());
     // 验证至少等待了初始延迟时间
-    assert!(elapsed.as_secs() >= 5, "Should wait at least initial_delay seconds");
+    assert!(
+        elapsed.as_secs() >= 5,
+        "Should wait at least initial_delay seconds"
+    );
     // 倒计时显示逻辑已通过实际执行验证（每2秒更新一次，剩余时间 <= 3 时也会更新）
 }
 
@@ -1469,7 +1473,10 @@ fn test_retry_countdown_remaining_logic() {
     // 验证成功（重试后成功）
     assert!(result.is_ok());
     // 验证至少等待了初始延迟时间
-    assert!(elapsed.as_secs() >= 5, "Should wait at least initial_delay seconds");
+    assert!(
+        elapsed.as_secs() >= 5,
+        "Should wait at least initial_delay seconds"
+    );
 }
 
 #[test]

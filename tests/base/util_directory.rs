@@ -490,11 +490,15 @@ fn test_directory_walker_find_files_pattern_matching() -> color_eyre::Result<()>
     // 创建多个文件，测试模式匹配
     fs::write(dir_path.join("match1.txt"), "content")?;
     fs::write(dir_path.join("match2.log"), "content")?;
-    fs::write(dir_path.join("other.txt"), "content")?;  // 不包含 "match" 的文件名
+    fs::write(dir_path.join("other.txt"), "content")?; // 不包含 "match" 的文件名
 
     let walker = DirectoryWalker::new(&dir_path);
     let files = walker.find_files("match")?;
-    assert_eq!(files.len(), 2, "应该只找到 match1.txt 和 match2.log，不包含 other.txt");
+    assert_eq!(
+        files.len(),
+        2,
+        "应该只找到 match1.txt 和 match2.log，不包含 other.txt"
+    );
 
     Ok(())
 }
@@ -723,4 +727,3 @@ fn test_directory_walker_list_direct_files_with_nested() -> color_eyre::Result<(
 
     Ok(())
 }
-

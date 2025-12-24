@@ -21,10 +21,16 @@ fn test_json_parser_empty_response() {
     // 空响应应该尝试解析为 null 或 {}
     // 根据实现，空响应会被解析为 null 或 {}，应该总是成功
     let result: color_eyre::Result<serde_json::Value> = JsonParser::parse(b"", 200);
-    assert!(result.is_ok(), "Empty response should be parsed as null or {{}}");
+    assert!(
+        result.is_ok(),
+        "Empty response should be parsed as null or {{}}"
+    );
     // 验证解析结果确实是 null 或 {}
     let value = result.unwrap();
-    assert!(value.is_null() || value.is_object(), "Empty response should parse to null or empty object");
+    assert!(
+        value.is_null() || value.is_object(),
+        "Empty response should parse to null or empty object"
+    );
 }
 
 #[test]
@@ -32,10 +38,16 @@ fn test_json_parser_whitespace_only() {
     // 只有空白字符的响应应该被解析为 null 或 {}
     // 根据实现，空白字符响应会被解析为 null 或 {}，应该总是成功
     let result: color_eyre::Result<serde_json::Value> = JsonParser::parse(b"   \n\t  ", 200);
-    assert!(result.is_ok(), "Whitespace-only response should be parsed as null or {{}}");
+    assert!(
+        result.is_ok(),
+        "Whitespace-only response should be parsed as null or {{}}"
+    );
     // 验证解析结果确实是 null 或 {}
     let value = result.unwrap();
-    assert!(value.is_null() || value.is_object(), "Whitespace-only response should parse to null or empty object");
+    assert!(
+        value.is_null() || value.is_object(),
+        "Whitespace-only response should parse to null or empty object"
+    );
 }
 
 #[test]

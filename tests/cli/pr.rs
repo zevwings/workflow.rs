@@ -540,7 +540,10 @@ fn test_pr_create_command_empty_jira_id() {
             // 验证错误消息包含验证信息
             let error_msg = e.to_string();
             assert!(
-                error_msg.contains("JIRA ID") || error_msg.contains("empty") || error_msg.contains("Invalid") || error_msg.contains("validation"),
+                error_msg.contains("JIRA ID")
+                    || error_msg.contains("empty")
+                    || error_msg.contains("Invalid")
+                    || error_msg.contains("validation"),
                 "Error message should indicate JIRA ID validation failure: {}",
                 error_msg
             );
@@ -552,14 +555,8 @@ fn test_pr_create_command_empty_jira_id() {
 fn test_pr_create_command_very_long_title() {
     // 测试超长标题（边界情况）
     let long_title = "a".repeat(1000);
-    let cli = TestPRCli::try_parse_from(&[
-        "test-pr",
-        "create",
-        "PROJ-123",
-        "--title",
-        &long_title,
-    ])
-    .unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])
+        .unwrap();
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -573,14 +570,9 @@ fn test_pr_create_command_very_long_title() {
 fn test_pr_create_command_special_characters_in_title() {
     // 测试标题中的特殊字符
     let special_title = "Test PR: Fix bug #123 (urgent!)";
-    let cli = TestPRCli::try_parse_from(&[
-        "test-pr",
-        "create",
-        "PROJ-123",
-        "--title",
-        special_title,
-    ])
-    .unwrap();
+    let cli =
+        TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", special_title])
+            .unwrap();
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -597,7 +589,10 @@ fn test_pr_comment_command_empty_message() {
 
     match cli.command {
         PRCommands::Comment { message, .. } => {
-            assert!(message.is_empty(), "Message should be empty when not provided");
+            assert!(
+                message.is_empty(),
+                "Message should be empty when not provided"
+            );
         }
         _ => panic!("Expected Comment command"),
     }

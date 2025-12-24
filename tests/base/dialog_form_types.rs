@@ -374,13 +374,11 @@ fn test_step_type_conditional_all() {
 #[test]
 fn test_step_type_conditional_any() {
     // 测试多条件步骤类型（OR 逻辑）
-    let conditions = vec![
-        Condition {
-            field_name: "field1".to_string(),
-            operator: ConditionOperator::Equals,
-            value: ConditionValue::single("value1"),
-        },
-    ];
+    let conditions = vec![Condition {
+        field_name: "field1".to_string(),
+        operator: ConditionOperator::Equals,
+        value: ConditionValue::single("value1"),
+    }];
     let step_type = StepType::ConditionalAny(conditions.clone());
     match step_type {
         StepType::ConditionalAny(cs) => {
@@ -611,7 +609,10 @@ fn test_form_field_with_condition() {
 
     assert!(field.required);
     assert!(!field.allow_empty);
-    assert_eq!(field.condition.as_ref().unwrap().field_name, condition.field_name);
+    assert_eq!(
+        field.condition.as_ref().unwrap().field_name,
+        condition.field_name
+    );
 }
 
 #[test]

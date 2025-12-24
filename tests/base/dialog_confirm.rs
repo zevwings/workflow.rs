@@ -83,8 +83,7 @@ fn test_confirm_dialog_prompt_cancelled_with_message() {
 #[test]
 fn test_confirm_dialog_cancel_message_set() {
     // 测试设置取消消息后，cancel_message 字段被正确设置（覆盖 confirm.rs:99-101）
-    let _dialog = ConfirmDialog::new("Continue?")
-        .with_cancel_message("Custom cancel message");
+    let _dialog = ConfirmDialog::new("Continue?").with_cancel_message("Custom cancel message");
     // 验证对话框创建成功
     assert!(true);
 }

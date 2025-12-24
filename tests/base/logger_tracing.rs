@@ -430,7 +430,9 @@ fn test_tracer_init_settings_read_logic() {
     let settings = workflow::base::Settings::get();
     // 验证 log 配置存在
     assert!(settings.log.level.is_some() || settings.log.level.is_none());
-    assert!(settings.log.enable_trace_console.is_some() || settings.log.enable_trace_console.is_none());
+    assert!(
+        settings.log.enable_trace_console.is_some() || settings.log.enable_trace_console.is_none()
+    );
 }
 
 #[test]

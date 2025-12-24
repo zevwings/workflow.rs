@@ -122,8 +122,7 @@ fn test_field_builder_default_selection() {
         "test",
         |g| {
             g.step(|f| {
-                f.add_selection("choice", "Choose option", choices.clone())
-                    .default("Option 1")
+                f.add_selection("choice", "Choose option", choices.clone()).default("Option 1")
             })
         },
         workflow::base::dialog::GroupConfig::required(),
@@ -236,4 +235,3 @@ fn test_field_builder_default_impl() {
     // 验证可以创建字段构建器
     assert!(true);
 }
-
