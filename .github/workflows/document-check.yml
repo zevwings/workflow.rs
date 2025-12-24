@@ -223,8 +223,8 @@ jobs:
           3. 确保所有文档链接都有效
 
           参考文档：
-          - [架构文档审查指南](docs/guidelines/development/references/review-architecture-consistency.md)
-          - [文档更新检查清单](docs/guidelines/development/code-review.md)
+          - [架构文档审查指南](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/references/review-architecture-consistency.md)
+          - [文档更新检查清单](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/code-review.md)
 
           ---
 
@@ -282,8 +282,8 @@ jobs:
               **报告位置**：\`report/doc-check-*.md\`
 
               请参考以下文档进行修复：
-              - [架构文档审查指南](docs/guidelines/development/references/review-architecture-consistency.md)
-              - [文档更新检查清单](docs/guidelines/development/code-review.md)
+              - [架构文档审查指南](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/references/review-architecture-consistency.md)
+              - [文档更新检查清单](https://github.com/${{ github.repository }}/blob/main/docs/guidelines/development/code-review.md)
 
               ---
 

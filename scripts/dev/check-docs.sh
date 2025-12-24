@@ -1,6 +1,6 @@
 #!/bin/bash
 # 文档检查脚本
-# 用于本地测试 doc-consistency-check.yml 和 CI check-docs job 的逻辑
+# 用于本地测试 document-check.yml 和 CI check-docs job 的逻辑
 
 set -e
 
@@ -143,7 +143,7 @@ echo "📋 测试 5: 报告生成"
 echo "----------------------------------------"
 mkdir -p report
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
-REPORT_FILE="report/doc-consistency-check-test-${TIMESTAMP}.md"
+REPORT_FILE="report/document-check-test-${TIMESTAMP}.md"
 CHECK_DATE=$(date '+%Y-%m-%d %H:%M:%S')
 UPDATE_DATE=$(date '+%Y-%m-%d')
 
