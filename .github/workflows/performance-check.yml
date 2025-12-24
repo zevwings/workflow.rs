@@ -10,6 +10,8 @@ on:
 # 配置工作流权限
 permissions:
   contents: read
+  pages: write  # 需要写入权限以部署到 GitHub Pages
+  id-token: write  # 需要 OIDC 权限以部署到 GitHub Pages
 
 env:
   CARGO_TERM_COLOR: always
@@ -97,4 +99,29 @@ jobs:
           else \
             echo "⚠️  Performance benchmarks did not generate reports"; \
           fi
+
+      - name: 📤 Upload performance reports to Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/criterion/
+
+  # ============================================
+  # GitHub Pages 部署作业
+  # ============================================
+  deploy-pages:
+    name: 🌐 Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: performance
+    if: always()
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: ⚙️ Configure Pages
+        uses: actions/configure-pages@v4
+
+      - name: 📥 Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 

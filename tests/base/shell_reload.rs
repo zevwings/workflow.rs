@@ -51,6 +51,7 @@ fn test_reload_result_debug() {
 }
 
 // 注意：以下测试需要实际的 shell 环境，在 CI 环境中可能失败
+#[cfg(not(target_os = "windows"))]
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_reload_shell_zsh() {
@@ -60,6 +61,7 @@ fn test_reload_shell_zsh() {
     assert!(result.is_ok() || result.is_err());
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_reload_shell_bash() {
@@ -78,6 +80,7 @@ fn test_reload_shell_powershell() {
     assert!(result.is_ok() || result.is_err());
 }
 
+#[cfg(not(target_os = "windows"))]
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_reload_shell_fish() {
