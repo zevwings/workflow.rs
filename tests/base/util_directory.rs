@@ -305,19 +305,29 @@ fn test_directory_walker_ensure_parent_exists_no_parent() -> color_eyre::Result<
 #[test]
 fn test_directory_walker_find_files_case_sensitive() -> color_eyre::Result<()> {
     // 测试查找文件是大小写敏感的
+    // 注意：此测试不依赖文件系统的大小写敏感性，而是测试 find_files 方法本身的大小写敏感匹配逻辑
     let temp_dir = TempDir::new()?;
     let dir_path = temp_dir.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
+    // 创建一个文件名包含大写 "Test" 的文件
     fs::write(dir_path.join("TestFile.txt"), "content")?;
-    fs::write(dir_path.join("testfile.txt"), "content")?;
+    // 创建一个文件名包含小写 "test" 的文件（使用不同的文件名避免文件系统大小写不敏感的问题）
+    fs::write(dir_path.join("testfile.log"), "content")?;
 
     let walker = DirectoryWalker::new(&dir_path);
     let files_upper = walker.find_files("Test")?;
     let files_lower = walker.find_files("test")?;
 
-    // 大小写敏感，应该有不同的结果
-    assert!(files_upper.len() >= 1);
-    assert!(files_lower.len() >= 1);
+    // 验证大小写敏感匹配：
+    // - "Test" 应该匹配 TestFile.txt（包含 "Test"）
+    // - "test" 应该匹配 testfile.log（包含 "test"）
+    // - 但 "test" 不应该匹配 TestFile.txt（因为大小写敏感）
+    assert_eq!(files_upper.len(), 1, "应该找到包含 'Test' 的文件");
+    assert_eq!(files_lower.len(), 1, "应该找到包含 'test' 的文件");
+
+    // 验证找到的文件是正确的
+    assert!(files_upper[0].file_name().unwrap().to_string_lossy().contains("Test"));
+    assert!(files_lower[0].file_name().unwrap().to_string_lossy().contains("test"));
 
     Ok(())
 }
@@ -480,11 +490,11 @@ fn test_directory_walker_find_files_pattern_matching() -> color_eyre::Result<()>
     // 创建多个文件，测试模式匹配
     fs::write(dir_path.join("match1.txt"), "content")?;
     fs::write(dir_path.join("match2.log"), "content")?;
-    fs::write(dir_path.join("nomatch.txt"), "content")?;
+    fs::write(dir_path.join("other.txt"), "content")?;  // 不包含 "match" 的文件名
 
     let walker = DirectoryWalker::new(&dir_path);
     let files = walker.find_files("match")?;
-    assert_eq!(files.len(), 2);
+    assert_eq!(files.len(), 2, "应该只找到 match1.txt 和 match2.log，不包含 other.txt");
 
     Ok(())
 }

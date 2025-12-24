@@ -69,13 +69,23 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
   #
-  # 运行测试
+  # 运行测试（跨平台并行执行）
   tests:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
+    name: 🧪 Run Tests (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows-x86_64
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -98,6 +108,7 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）

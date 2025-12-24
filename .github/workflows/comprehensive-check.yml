@@ -18,11 +18,21 @@ env:
 
 jobs:
   # ============================================
-  # 基础测试作业
+  # 基础测试作业（跨平台并行执行）
   # ============================================
   test:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
+    name: 🧪 Run Tests (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows-x86_64
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -44,6 +54,7 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y \
