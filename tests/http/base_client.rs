@@ -11,7 +11,7 @@ use crate::common::mock_server::MockServerManager;
 #[test]
 fn test_http_client_global() -> color_eyre::Result<()> {
     // 测试可以获取全局 HttpClient 单例
-    let client = HttpClient::global()?;
+    let _client = HttpClient::global()?;
     // 验证客户端可以获取
     assert!(true);
     Ok(())
