@@ -1,6 +1,0 @@
-{
-  "env": {
-    "ANTHROPIC_API_KEY": "DlJYSkMVj1x4zoe8jZnjvxfHG6z5yGxK",
-    "ANTHROPIC_BASE_URL": "https://anthropic-proxy.brain.loocaa.com:1443"
-  }
-}

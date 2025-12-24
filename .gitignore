@@ -22,6 +22,9 @@ out/
 # IDE - Cursor
 .cursor/
 
+# Claude AI
+.claude/settings.local.json
+
 # macOS
 .DS_Store
 .AppleDouble
