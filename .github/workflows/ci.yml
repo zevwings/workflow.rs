@@ -305,6 +305,218 @@ jobs:
   # 注意：文档检查（check-docs 和 check-links）已移至 doc-consistency-check.yml workflow
   # 该 workflow 支持 PR 触发和定期检查，功能更完整
 
+  # 构建验证：验证代码可以在所有平台上正确构建
+  build:
+    name: 🔨 Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    needs: check-skip-ci
+    # 跳过版本更新分支（bump-version-*）
+    if: needs.check-skip-ci.outputs.should_skip != 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            platform: macOS-Intel
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: macOS-AppleSilicon
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: Linux-x86_64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: Linux-ARM64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            platform: Linux-x86_64-static
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: Windows-x86_64
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            platform: Windows-ARM64
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust for ${{ matrix.target }}
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: 📦 Install musl target
+        if: contains(matrix.target, 'musl')
+        run: |
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: 📦 Install cross-compilation toolchain (Linux ARM64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu python3
+          # 注意：clipboard 功能在 Linux ARM64 上已禁用（Cargo.toml 中配置）
+          # 因此不需要安装 XCB 开发库，简化构建流程
+          # 但需要安装 Python3 用于处理 Cargo.lock 脚本
+
+      - name: 📦 Install system dependencies (Linux x86_64)
+        if: matrix.os == 'ubuntu-latest' && matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          sudo apt-get update
+          # 安装 XCB 开发库（clipboard 依赖）
+          # xcb crate 需要 xcb-proto 来生成代码模块（xproto, big_requests, etc.）
+          # xcb-proto 需要 Python 来运行代码生成脚本
+          sudo apt-get install -y \
+            python3 \
+            python3-pip \
+            python3-xcbgen \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev \
+            pkg-config
+          # 基本验证：检查关键依赖是否可用
+          python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+          pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          echo "✅ xcb dependencies verified"
+
+      - name: 📦 Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # 检查 pkg-config 是否已安装，避免重复安装警告
+          if ! command -v pkg-config >/dev/null 2>&1; then
+            brew install pkg-config
+          else
+            echo "✅ pkg-config is already installed"
+          fi
+
+      - name: 🔍 Get Cargo.lock hash
+        id: cargo_lock
+        shell: bash
+        run: |
+          if [ -f "Cargo.lock" ]; then
+            # macOS 使用 shasum，Linux 使用 sha256sum
+            if command -v shasum >/dev/null 2>&1; then
+              HASH=$(shasum -a 256 Cargo.lock | cut -d' ' -f1 | head -c 16)
+            else
+              HASH=$(sha256sum Cargo.lock | cut -d' ' -f1 | head -c 16)
+            fi
+            echo "hash=$HASH" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 💾 Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ steps.cargo_lock.outputs.hash }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build binaries (验证构建)
+        shell: bash
+        run: |
+          # 设置交叉编译环境变量（仅 Linux ARM64）
+          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            echo "🔧 Cross-compiling for Linux ARM64"
+            echo "   CC: $CC_aarch64_unknown_linux_gnu"
+            echo "   LINKER: $CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER"
+            # 验证交叉编译工具链
+            if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
+              echo "✅ aarch64-linux-gnu-gcc found: $(which aarch64-linux-gnu-gcc)"
+              aarch64-linux-gnu-gcc --version || true
+            else
+              echo "❌ Error: aarch64-linux-gnu-gcc not found"
+              exit 1
+            fi
+          fi
+
+          # 对于 Linux x86_64，设置环境变量以支持 xcb 构建
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            export XCB_PROTO_DIR="${XCB_PROTO_DIR:-/usr/share/xcb}"
+            export PKG_CONFIG_PATH="/usr/lib/x86_64-linux-gnu/pkgconfig:/usr/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+            # 确保 PYTHONPATH 包含 xcbgen 模块路径
+            if ! python3 -c "import xcbgen" 2>/dev/null; then
+              XCBGEN_DIR=$(python3 -c "import xcbgen; import os; print(os.path.dirname(xcbgen.__file__))" 2>/dev/null || find /usr -name "xcbgen" -type d 2>/dev/null | head -1)
+              if [ -n "$XCBGEN_DIR" ]; then
+                export PYTHONPATH="$(dirname $XCBGEN_DIR):${PYTHONPATH:-}"
+              fi
+            fi
+            # 基本验证
+            python3 -c "import xcbgen" || (echo "❌ Error: xcbgen module not available" && exit 1)
+            pkg-config --exists xcb || (echo "❌ Error: xcb pkg-config not found" && exit 1)
+          fi
+
+          # 构建项目（只验证构建，不打包）
+          echo "🔨 Building for ${{ matrix.platform }} (${{ matrix.target }})..."
+          if [[ "${{ matrix.target }}" == "x86_64-unknown-linux-gnu" ]]; then
+            # Linux x86_64 使用详细输出以便调试
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install -vv 2>&1 | tee build.log; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed. Checking build log for xcb-related errors..."
+              grep -i "xcb\|xproto\|xcbgen" build.log | head -20 || true
+            fi
+          elif [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
+            # Linux ARM64 交叉编译
+            echo "🔨 Building for Linux ARM64..."
+            # 确保环境变量已设置
+            export CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc
+            export CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+              echo "❌ Build failed for Linux ARM64"
+            fi
+          else
+            # 其他目标（macOS, Windows, musl）
+            if cargo build --release --target ${{ matrix.target }} --bin workflow --bin install; then
+              BUILD_SUCCESS=true
+            else
+              BUILD_SUCCESS=false
+            fi
+          fi
+
+          # 如果构建失败，退出并返回错误码
+          if [ "$BUILD_SUCCESS" != "true" ]; then
+            echo "❌ Build verification failed for ${{ matrix.platform }}"
+            exit 1
+          fi
+
+          echo "✅ Build verification passed for ${{ matrix.platform }}"
+
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
   # 如果任何检查失败，此 job 会失败，从而阻止 PR 合并
@@ -318,7 +530,7 @@ jobs:
     # 对于所有 PR 都运行此 job，包括版本更新分支的情况
     # 这样 GitHub 会报告状态，满足分支保护规则的要求
     # 使用 always() 确保即使依赖的 job 失败或跳过，此 job 也会运行
-    needs: [check-skip-ci, check-lint, tests, doctests]
+    needs: [check-skip-ci, check-lint, tests, doctests, build]
     if: always()
     steps:
       - name: ✅ Check lint and test status
@@ -332,12 +544,14 @@ jobs:
           LINT_RESULT="${{ needs.check-lint.result }}"
           TEST_RESULT="${{ needs.tests.result }}"
           DOCTEST_RESULT="${{ needs.doctests.result }}"
+          BUILD_RESULT="${{ needs.build.result }}"
 
           echo "📊 Checking job status:"
           echo "  check-skip-ci: $SKIP_CI_RESULT (should_skip: $SKIP_CI_SHOULD_SKIP)"
           echo "  check-lint: $LINT_RESULT"
           echo "  tests: $TEST_RESULT"
           echo "  doctests: $DOCTEST_RESULT"
+          echo "  build: $BUILD_RESULT"
           echo "  Note: Document checks are handled by doc-consistency-check.yml workflow"
 
           # 优先级1: 如果 check-skip-ci 成功且 should_skip 为 true，说明应该跳过 CI
@@ -346,8 +560,8 @@ jobs:
             exit 0
           fi
 
-          # 优先级2: 如果 check-lint、tests 和 doctests 都被跳过，说明应该跳过 CI
-          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ] && [ "$DOCTEST_RESULT" == "skipped" ]; then
+          # 优先级2: 如果 check-lint、tests、doctests 和 build 都被跳过，说明应该跳过 CI
+          if [ "$LINT_RESULT" == "skipped" ] && [ "$TEST_RESULT" == "skipped" ] && [ "$DOCTEST_RESULT" == "skipped" ] && [ "$BUILD_RESULT" == "skipped" ]; then
             echo "✅ CI checks were skipped"
             exit 0
           fi
@@ -391,18 +605,31 @@ jobs:
             fi
           fi
 
-          # 如果 check-lint、tests 和 doctests 都成功或被跳过，则通过
+          # 检查 build 状态
+          if [ -n "$BUILD_RESULT" ]; then
+            if [ "$BUILD_RESULT" == "failure" ] || [ "$BUILD_RESULT" == "cancelled" ]; then
+              echo "❌ Build failed: $BUILD_RESULT"
+              exit 1
+            elif [ "$BUILD_RESULT" != "success" ] && [ "$BUILD_RESULT" != "skipped" ]; then
+              echo "❌ Build has unexpected status: $BUILD_RESULT"
+              exit 1
+            fi
+          fi
+
+          # 如果 check-lint、tests、doctests 和 build 都成功或被跳过，则通过
           # 注意：文档检查已移至 doc-consistency-check.yml workflow
           if [ "$LINT_RESULT" == "success" ] || [ "$LINT_RESULT" == "skipped" ]; then
             if [ "$TEST_RESULT" == "success" ] || [ "$TEST_RESULT" == "skipped" ]; then
               if [ "$DOCTEST_RESULT" == "success" ] || [ "$DOCTEST_RESULT" == "skipped" ]; then
-                echo "✅ All required checks passed or were skipped"
-                exit 0
+                if [ "$BUILD_RESULT" == "success" ] || [ "$BUILD_RESULT" == "skipped" ]; then
+                  echo "✅ All required checks passed or were skipped"
+                  exit 0
+                fi
               fi
             fi
           fi
 
           # 如果到达这里，说明有未处理的状况
-          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT, doctest=$DOCTEST_RESULT"
+          echo "⚠️  Unexpected state: lint=$LINT_RESULT, test=$TEST_RESULT, doctest=$DOCTEST_RESULT, build=$BUILD_RESULT"
           echo "   This should not happen. Please check the workflow configuration."
           exit 1
