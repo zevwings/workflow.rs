@@ -187,7 +187,7 @@
 
 ### ✅ 4.1 GitHub Actions 工作流
 
-- [ ] **创建测试工作流 (.github/workflows/test.yml)**
+- [x] **创建测试工作流 (.github/workflows/comprehensive-check.yml)**
   - [ ] 基础测试作业 (test)
   - [ ] 覆盖率报告作业 (coverage)
   - [ ] 性能基准作业 (performance)
@@ -205,8 +205,6 @@
   - [ ] 代码格式检查
   - [ ] Clippy 检查
   - [ ] 测试运行
-  - [ ] 覆盖率检查
-  - [ ] 性能检查
 
 - [ ] **更新 Makefile**
   - `make install-hooks` - 安装Git钩子

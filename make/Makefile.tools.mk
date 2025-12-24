@@ -5,6 +5,7 @@
 define HELP_TOOLS
 	@echo "工具安装相关："
 	@echo "  make setup            - 安装所需的开发工具（rustfmt, clippy, rust-analyzer, cargo-bloat, cargo-audit, cargo-outdated）"
+	@echo "  make install-hooks    - 安装 Git hooks（pre-commit）"
 	@echo ""
 endef
 
@@ -73,4 +74,45 @@ setup:
 		echo "请检查错误信息，或手动运行以下命令:"; \
 		echo "  cd /tmp/rust-analyzer && cargo run --package xtask --bin xtask install --server"; \
 		exit 1; \
+	fi
+	@echo ""
+	@echo "=========================================="
+	@echo "安装 Git hooks"
+	@echo "=========================================="
+	@$(MAKE) install-hooks
+
+# 安装 Git hooks
+# 自动检测操作系统并使用相应的安装脚本
+# - Windows (MINGW/MSYS/CYGWIN): 优先使用 PowerShell，fallback 到 bash
+# - macOS/Linux: 使用 bash
+install-hooks:
+	@echo "安装 Git hooks..."
+	@if [ -f ".git/hooks/pre-commit" ]; then \
+		UNAME_S=$$(uname -s 2>/dev/null || echo ""); \
+		if echo "$$UNAME_S" | grep -qiE "(MINGW|MSYS|CYGWIN)"; then \
+			echo "检测到 Windows 环境，尝试使用 PowerShell..."; \
+			if command -v powershell >/dev/null 2>&1 && [ -f "scripts/install/install-hooks.ps1" ]; then \
+				powershell -ExecutionPolicy Bypass -File scripts/install/install-hooks.ps1 || \
+				(echo "⚠ PowerShell 失败，使用 bash 脚本..."; bash scripts/install/install-hooks.sh); \
+			elif command -v pwsh >/dev/null 2>&1 && [ -f "scripts/install/install-hooks.ps1" ]; then \
+				pwsh -ExecutionPolicy Bypass -File scripts/install/install-hooks.ps1 || \
+				(echo "⚠ PowerShell Core 失败，使用 bash 脚本..."; bash scripts/install/install-hooks.sh); \
+			elif [ -f "scripts/install/install-hooks.sh" ]; then \
+				bash scripts/install/install-hooks.sh; \
+			else \
+				echo "设置 pre-commit hook 执行权限..."; \
+				chmod +x .git/hooks/pre-commit; \
+				echo "✓ Git pre-commit hook 已安装"; \
+			fi \
+		else \
+			if [ -f "scripts/install/install-hooks.sh" ]; then \
+				bash scripts/install/install-hooks.sh; \
+			else \
+				echo "设置 pre-commit hook 执行权限..."; \
+				chmod +x .git/hooks/pre-commit; \
+				echo "✓ Git pre-commit hook 已安装"; \
+			fi \
+		fi \
+	else \
+		echo "⚠ 警告: .git/hooks/pre-commit 文件不存在，跳过安装"; \
 	fi

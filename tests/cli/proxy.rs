@@ -16,56 +16,6 @@ struct TestProxyCli {
 // ==================== 命令结构测试 ====================
 
 #[test]
-fn test_proxy_subcommand_enum_creation() {
-    // 测试 ProxySubcommand 枚举可以创建
-    // 通过编译验证枚举定义正确
-    assert!(true, "ProxySubcommand enum should be defined");
-}
-
-#[test]
-fn test_proxy_on_command_structure() {
-    // 测试 On 命令结构
-    // 验证命令可以解析
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).unwrap();
-
-    match cli.command {
-        ProxySubcommand::On => {
-            // On 命令没有参数，只需要验证可以匹配
-            assert!(true, "On command parsed successfully");
-        }
-        _ => panic!("Expected On command"),
-    }
-}
-
-#[test]
-fn test_proxy_off_command_structure() {
-    // 测试 Off 命令结构
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).unwrap();
-
-    match cli.command {
-        ProxySubcommand::Off => {
-            // Off 命令没有参数，只需要验证可以匹配
-            assert!(true, "Off command parsed successfully");
-        }
-        _ => panic!("Expected Off command"),
-    }
-}
-
-#[test]
-fn test_proxy_check_command_structure() {
-    // 测试 Check 命令结构
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).unwrap();
-
-    match cli.command {
-        ProxySubcommand::Check => {
-            // Check 命令没有参数，只需要验证可以匹配
-            assert!(true, "Check command parsed successfully");
-        }
-        _ => panic!("Expected Check command"),
-    }
-}
-
-#[test]
 fn test_proxy_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
@@ -134,21 +84,7 @@ fn test_proxy_command_case_sensitivity() {
     );
 }
 
-#[test]
-fn test_proxy_command_enum_variants() {
-    // 测试枚举变体的完整性
-    // 验证所有预期的命令变体都存在
-    let on_cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).unwrap();
-    let off_cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).unwrap();
-    let check_cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).unwrap();
-
-    match (on_cli.command, off_cli.command, check_cli.command) {
-        (ProxySubcommand::On, ProxySubcommand::Off, ProxySubcommand::Check) => {
-            assert!(true, "All expected enum variants exist");
-        }
-        _ => panic!("Unexpected enum variants"),
-    }
-}
+// 枚举变体完整性已通过 test_proxy_command_parsing_all_subcommands 测试验证
 
 #[test]
 fn test_proxy_command_short_names() {

@@ -58,6 +58,17 @@
   - 📝 实施建议和测试编写指南
 - **优先级**: 高优先级（持续提升测试覆盖率）
 
+#### 2.2 [`test-coverage.md`](./test-coverage.md)
+- **状态**: ⏳ 待实施
+- **实现度**: 约 40-50%（基于现有测试覆盖情况估算）
+- **分类**: 测试覆盖缺失分析
+- **内容**:
+  - 📋 全面的测试覆盖缺失分析（Commands、Lib、Bin 模块）
+  - 🎯 优先级建议（高/中/低优先级分类）
+  - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
+  - 📊 任务统计（约 90+ 个待实施任务）
+- **优先级**: 高优先级（测试覆盖率提升指导文档）
+
 #### 3. [`integration.md`](./integration.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
@@ -78,17 +89,7 @@
   - CI 集成（可选）
 - **优先级**: P2（可选，但建议实施以提升效率）
 
-#### 5. [`document-rename.md`](./document-rename.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 0%
-- **分类**: 文档管理
-- **内容**:
-  - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake-_case`
-  - 更新所有文档链接引用
-  - 更新文档命名规范
-- **优先级**: 中优先级（代码质量改进）
-
-#### 6. [`cursorrules-english.md`](./cursorrules-english.md)
+#### 5. [`cursorrules-english.md`](./cursorrules-english.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 开发工具配置优化
@@ -98,7 +99,7 @@
   - 保留中文关键词匹配逻辑（用于文档分类识别）
 - **优先级**: 中优先级（代码质量改进）
 
-#### 7. [`internationalization.md`](./internationalization.md)
+#### 6. [`internationalization.md`](./internationalization.md)
 - **状态**: ⏳ 待实施
 - **实现度**: 0%
 - **分类**: 国际化支持
@@ -120,9 +121,9 @@ docs/requirements/
 ├── jira.md                   # JIRA 模块待办事项（🚧 部分完成）
 ├── test-architecture-improvement.md  # 测试架构改进待办事项（🔄 进行中）
 ├── coverage-improvement.md   # 测试覆盖率提升待办事项（🔄 进行中）
+├── test-coverage.md           # 测试覆盖缺失分析待办事项（⏳ 待实施）
 ├── integration.md            # 集成与扩展待办事项（⏳ 待实施）
 ├── doc-check.md              # 架构文档检查工具待办事项（⏳ 待实施）
-├── document-rename.md        # 文档重命名待办事项（⏳ 待实施）
 ├── cursorrules-english.md    # Cursor Rules 英文翻译待办事项（⏳ 待实施）
 └── internationalization.md   # 国际化支持待办事项（⏳ 待实施）
 ```
@@ -135,8 +136,8 @@ docs/requirements/
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 2 个 | 测试架构改进、覆盖率提升 |
-| ⏳ 待实施 | 5 个 | 集成扩展、文档检查工具、文档重命名、Cursor Rules 英文翻译、国际化支持 |
-| **总计** | **8 个** | - |
+| ⏳ 待实施 | 4 个 | 测试覆盖缺失分析、集成扩展、文档检查工具、Cursor Rules 英文翻译、国际化支持 |
+| **总计** | **7 个** | - |
 
 ### 文档列表
 
@@ -144,9 +145,9 @@ docs/requirements/
 1. **jira.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
 2. **test-architecture-improvement.md** - 测试架构改进待办事项（🔄 进行中，65%）
 3. **coverage-improvement.md** - 测试覆盖率提升待办事项（🔄 进行中，18.09%）
-4. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
-5. **doc-check.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
-6. **document-rename.md** - 文档重命名待办事项（⏳ 待实施，0%）
+4. **test-coverage.md** - 测试覆盖缺失分析待办事项（⏳ 待实施，约 40-50%）
+5. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
+6. **doc-check.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
 7. **cursorrules-english.md** - Cursor Rules 英文翻译待办事项（⏳ 待实施，0%）
 8. **internationalization.md** - 国际化支持待办事项（⏳ 待实施，0%）
 
@@ -156,7 +157,7 @@ docs/requirements/
 
 ### 当前待办事项
 
-本目录包含 8 个文档：
+本目录包含 7 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`jira.md`) - 🚧 部分完成（~40%）
@@ -175,7 +176,13 @@ docs/requirements/
    - 🎯 目标覆盖率：75%+
    - 📋 分阶段提升计划（20% → 25% → 30% → 75%）
 
-#### 待实施文档（5 个）
+2.2. **测试覆盖缺失分析** (`test-coverage.md`) - ⏳ 待实施（约 40-50%）
+   - 📋 全面的测试覆盖缺失分析（Commands、Lib、Bin 模块）
+   - 🎯 优先级建议（高/中/低优先级分类）
+   - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
+   - 📊 任务统计（约 90+ 个待实施任务）
+
+#### 待实施文档（4 个）
 3. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
@@ -185,17 +192,12 @@ docs/requirements/
    - 综合检查脚本（可选）
    - CI 集成（可选）
 
-5. **文档重命名** (`document-rename.md`) - ⏳ 待实施（0%）
-   - 将文档文件名从 `SCREAMING_SNAKE_CASE` 改为 `snake-_case`
-   - 更新所有文档链接引用
-   - 更新文档命名规范
-
-6. **Cursor Rules 英文翻译** (`cursorrules-english.md`) - ⏳ 待实施（0%）
+5. **Cursor Rules 英文翻译** (`cursorrules-english.md`) - ⏳ 待实施（0%）
    - 将 `.cursorrules` 文件从中文翻译为英文
    - 提升 Cursor AI 的理解准确性和执行效果
    - 保留中文关键词匹配逻辑（用于文档分类识别）
 
-7. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
+6. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
    - 多语言支持规则（文本外部化、资源文件组织、语言切换机制）
    - 时区和日期格式处理规则（时区处理、日期格式标准化、本地化显示）
    - 国际化相关的代码规范和最佳实践
@@ -220,19 +222,28 @@ docs/requirements/
 - **JIRA 相关** → [`jira.md`](./jira.md) 🚧 部分完成
 - **测试架构改进** → [`test-architecture-improvement.md`](./test-architecture-improvement.md) 🔄 进行中（65%）
 - **测试覆盖率提升** → [`coverage-improvement.md`](./coverage-improvement.md) 🔄 进行中（18.09%）
+- **测试覆盖缺失分析** → [`test-coverage.md`](./test-coverage.md) ⏳ 待实施（约 40-50%）
 - **集成与扩展** → [`integration.md`](./integration.md) ⏳ 待实施
 - **文档检查工具** → [`doc-check.md`](./doc-check.md) ⏳ 待实施
-- **文档重命名** → [`document-rename.md`](./document-rename.md) ⏳ 待实施
 - **Cursor Rules 英文翻译** → [`cursorrules-english.md`](./cursorrules-english.md) ⏳ 待实施
 - **国际化支持** → [`internationalization.md`](./internationalization.md) ⏳ 待实施
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2025-12-24
 
 ---
 
 ## 📝 更新说明
+
+### 2025-12-24 更新
+- ✅ 删除 document-rename.md - 文档重命名任务已完成
+- ✅ 删除 review-improvements-implementation.md - 综合检查改进项实施计划已完成
+- ✅ 更新了统计信息和目录结构
+
+### 2025-12-24 更新
+- ✅ 新增 test-coverage.md - 测试覆盖缺失分析待办事项（⏳ 待实施）
+- ✅ 更新了统计信息和目录结构
 
 ### 2025-12-23 更新
 - ✅ 新增 internationalization.md - 国际化支持待办事项（⏳ 待实施）

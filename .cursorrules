@@ -206,7 +206,12 @@ Install development tools: `make setup`
 
 ### Document Naming Standards
 
-All documents use the `{TOPIC}.md` format. Refer to the **Document Classification Table** above for document type classification and storage locations.
+All documents use the `{TOPIC}.md` format.
+
+**Important**:
+- Use `snake_case` for topic names (e.g., `test-coverage.md`, `jira.md`)
+
+Refer to the **Document Classification Table** above for document type classification and storage locations.
 
 ### Creating New Documents
 
@@ -253,4 +258,4 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2025-12-24

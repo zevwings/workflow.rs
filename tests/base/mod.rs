@@ -8,6 +8,7 @@ pub mod concurrent;
 pub mod dialog_confirm;
 pub mod dialog_form_builder;
 pub mod dialog_form_condition_evaluator;
+pub mod dialog_form_field_builder;
 pub mod dialog_form_group_builder;
 pub mod dialog_form_types;
 pub mod dialog_multi_select;

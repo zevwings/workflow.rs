@@ -395,3 +395,35 @@ fn test_response_multiple_parses() {
     assert!(text.contains("42"));
     _mock.assert();
 }
+
+#[test]
+fn test_response_ensure_success_with_invalid_utf8_body() {
+    // 测试 ensure_success 在响应体不是有效 UTF-8 时的错误处理
+    // 这应该触发 unwrap_or_else 分支，返回 "Unable to read response body"
+    let mut mock_server = setup_mock_server();
+    let url = format!("{}/invalid-utf8", mock_server.base_url);
+
+    // 创建无效的 UTF-8 字节序列
+    let invalid_utf8_body = vec![0xFF, 0xFE, 0xFD];
+
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/invalid-utf8")
+        .with_status(500)
+        .with_header("content-type", "application/octet-stream")
+        .with_body(invalid_utf8_body)
+        .create();
+
+    let client = HttpClient::global().unwrap();
+    let config = RequestConfig::<Value, Value>::new();
+    let response = client.get(&url, config).unwrap();
+
+    let result = response.ensure_success();
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    // 应该包含状态码和回退消息
+    assert!(error_msg.contains("500"));
+    assert!(error_msg.contains("Unable to read response body"));
+    _mock.assert();
+}

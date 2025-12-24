@@ -2,7 +2,6 @@
 //!
 //! 测试表单构建器的核心功能。
 
-use color_eyre::Result;
 use workflow::base::dialog::{FormBuilder, GroupConfig};
 
 #[test]
@@ -212,4 +211,100 @@ fn test_form_builder_should_ask_field_without_condition() {
     assert_eq!(builder.groups.len(), 1);
     assert!(!builder.groups[0].steps[0].fields.is_empty());
     assert!(builder.groups[0].steps[0].fields[0].condition.is_none());
+}
+
+#[test]
+fn test_form_builder_add_group_with_title() {
+    // 测试添加带标题的组（覆盖 builder.rs:108）
+    let builder = FormBuilder::new().add_group(
+        "group1",
+        |g| g.step(|f| f.add_text("field1", "Field 1")),
+        GroupConfig::required().with_title("Test Group"),
+    );
+
+    assert_eq!(builder.groups.len(), 1);
+    assert_eq!(builder.groups[0].title, Some("Test Group".to_string()));
+}
+
+#[test]
+fn test_form_builder_add_group_with_description() {
+    // 测试添加带描述的组（覆盖 builder.rs:109）
+    let builder = FormBuilder::new().add_group(
+        "group1",
+        |g| g.step(|f| f.add_text("field1", "Field 1")),
+        GroupConfig::required().with_description("Test Description"),
+    );
+
+    assert_eq!(builder.groups.len(), 1);
+    assert_eq!(builder.groups[0].description, Some("Test Description".to_string()));
+}
+
+#[test]
+fn test_form_builder_add_optional_group() {
+    // 测试添加可选组（覆盖 builder.rs:110-111）
+    let builder = FormBuilder::new().add_group(
+        "group1",
+        |g| g.step(|f| f.add_text("field1", "Field 1")),
+        GroupConfig::optional().with_default_enabled(true),
+    );
+
+    assert_eq!(builder.groups.len(), 1);
+    assert!(builder.groups[0].optional);
+    assert!(builder.groups[0].default_enabled);
+}
+
+#[test]
+fn test_form_builder_default() {
+    // 测试 FormBuilder 的 Default trait（覆盖 builder.rs:386-389）
+    let builder = FormBuilder::default();
+    assert!(builder.groups.is_empty());
+}
+
+#[test]
+fn test_form_builder_group_config_all_options() {
+    // 测试组配置的所有选项（覆盖 builder.rs:106-113）
+    let builder = FormBuilder::new().add_group(
+        "group1",
+        |g| g.step(|f| f.add_text("field1", "Field 1")),
+        GroupConfig::optional()
+            .with_title("Test Group")
+            .with_description("Test Description")
+            .with_default_enabled(true),
+    );
+
+    let group = &builder.groups[0];
+    assert_eq!(group.id, "group1");
+    assert_eq!(group.title, Some("Test Group".to_string()));
+    assert_eq!(group.description, Some("Test Description".to_string()));
+    assert!(group.optional);
+    assert!(group.default_enabled);
+}
+
+#[test]
+fn test_form_builder_validate_empty_step_fields() {
+    // 测试验证空步骤字段（覆盖 builder.rs:149-157）
+    // 创建一个没有字段的步骤（通过不添加任何字段）
+    let builder = FormBuilder::new().add_group(
+        "group1",
+        |g| g.step(|f| f), // 不添加任何字段
+        GroupConfig::required(),
+    );
+
+    let result = builder.run();
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("has no fields") || error_msg.contains("step"));
+}
+
+#[test]
+fn test_form_builder_group_id_string_conversion() {
+    // 测试组 ID 的类型转换（覆盖 builder.rs:102）
+    let builder = FormBuilder::new().add_group(
+        "group1".to_string(),
+        |g| g.step(|f| f.add_text("field1", "Field 1")),
+        GroupConfig::required(),
+    );
+
+    assert_eq!(builder.groups.len(), 1);
+    assert_eq!(builder.groups[0].id, "group1");
 }

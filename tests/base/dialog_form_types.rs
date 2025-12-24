@@ -4,7 +4,6 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use std::collections::HashMap;
 use workflow::base::dialog::{
     Condition, ConditionOperator, ConditionValue, FormResult, GroupConfig,
 };
@@ -250,4 +249,30 @@ fn test_group_config_clone() {
     assert_eq!(config.optional, cloned.optional);
     assert_eq!(config.title, cloned.title);
     assert_eq!(config.description, cloned.description);
+}
+
+#[test]
+fn test_condition_operator_all_variants() {
+    // 测试 ConditionOperator 的所有变体（覆盖 types.rs:22-32）
+    assert_eq!(ConditionOperator::Equals, ConditionOperator::Equals);
+    assert_eq!(ConditionOperator::NotEquals, ConditionOperator::NotEquals);
+    assert_eq!(ConditionOperator::In, ConditionOperator::In);
+    assert_eq!(ConditionOperator::NotIn, ConditionOperator::NotIn);
+    assert_ne!(ConditionOperator::Equals, ConditionOperator::NotEquals);
+}
+
+#[test]
+fn test_condition_operator_debug() {
+    // 测试 ConditionOperator 的 Debug trait
+    let op = ConditionOperator::Equals;
+    let debug_str = format!("{:?}", op);
+    assert!(debug_str.contains("Equals") || debug_str.contains("ConditionOperator"));
+}
+
+#[test]
+fn test_condition_value_debug() {
+    // 测试 ConditionValue 的 Debug trait
+    let value = ConditionValue::single("test");
+    let debug_str = format!("{:?}", value);
+    assert!(debug_str.contains("test") || debug_str.contains("Single") || debug_str.contains("ConditionValue"));
 }

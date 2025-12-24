@@ -27,13 +27,6 @@ struct TestLogCli {
 // ==================== 命令结构测试 ====================
 
 #[test]
-fn test_log_subcommand_enum_creation() {
-    // 测试 LogSubcommand 枚举可以创建
-    // 通过编译验证枚举定义正确
-    assert!(true, "LogSubcommand enum should be defined");
-}
-
-#[test]
 fn test_log_download_command_structure() {
     // 测试 Download 命令结构
     // 验证命令可以解析

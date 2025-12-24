@@ -1,0 +1,266 @@
+name: Comprehensive Check
+
+on:
+  pull_request:
+    branches:
+      - master
+      - main
+  # 允许手动触发（用于测试或特殊情况）
+  workflow_dispatch:
+
+# 配置工作流权限
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ============================================
+  # 基础测试作业
+  # ============================================
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: 🧪 Run unit and integration tests
+        run: cargo test --verbose
+
+      - name: ✅ Run completion completeness tests
+        run: cargo test --test completeness
+
+      - name: 📝 Run doctests
+        run: cargo test --doc --verbose
+
+  # ============================================
+  # 覆盖率报告作业
+  # ============================================
+  coverage:
+    name: 📊 Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: 📦 Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: 📊 Generate coverage report
+        run: |
+          cargo tarpaulin --out Html --output-dir coverage \
+            --exclude-files "src/bin/*" \
+            --exclude-files "tests/*" \
+            --exclude-files "benches/*" \
+            --exclude-files "src/*/mod.rs"
+        continue-on-error: true
+
+      - name: 📊 Generate coverage JSON report
+        run: |
+          cargo tarpaulin --out Json --output-dir coverage \
+            --exclude-files "src/bin/*" \
+            --exclude-files "tests/*" \
+            --exclude-files "benches/*" \
+            --exclude-files "src/*/mod.rs" \
+            > coverage/coverage.json 2>/dev/null || true
+        continue-on-error: true
+
+      - name: 📤 Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      - name: 📋 Coverage summary
+        if: always()
+        run: |
+          if [ -f "coverage/coverage.json" ] && command -v python3 >/dev/null 2>&1; then \
+            COVERAGE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0"); \
+            echo "📊 Coverage: ${COVERAGE}%"; \
+            echo "::notice::Test coverage: ${COVERAGE}%"; \
+          else \
+            echo "⚠️  Unable to parse coverage data"; \
+          fi
+
+  # ============================================
+  # 性能基准作业
+  # ============================================
+  performance:
+    name: ⚡ Performance Benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: ⚡ Run performance benchmarks
+        run: |
+          cargo bench --bench cli_performance \
+            --bench core_operations \
+            --bench network_operations
+        continue-on-error: true
+
+      - name: 📤 Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-reports
+          path: target/criterion/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: 📋 Performance summary
+        if: always()
+        run: |
+          if [ -d "target/criterion" ]; then \
+            echo "⚡ Performance benchmarks completed"; \
+            echo "Reports available in target/criterion/"; \
+          else \
+            echo "⚠️  Performance benchmarks did not generate reports"; \
+          fi
+

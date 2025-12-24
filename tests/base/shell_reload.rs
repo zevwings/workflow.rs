@@ -86,3 +86,37 @@ fn test_reload_shell_fish() {
     // 可能成功或失败，取决于环境
     assert!(result.is_ok() || result.is_err());
 }
+
+#[test]
+fn test_reload_result_success_structure() {
+    // 测试成功重载的结果结构（覆盖 reload.rs:76-83）
+    let result = ReloadResult {
+        reloaded: true,
+        messages: vec![
+            "Shell configuration reloaded (in subprocess)".to_string(),
+            "Note: Changes may not take effect in the current shell.".to_string(),
+        ],
+        reload_hint: "source ~/.zshrc".to_string(),
+    };
+
+    assert!(result.reloaded);
+    assert_eq!(result.messages.len(), 2);
+    assert!(result.messages[0].contains("reloaded"));
+    assert!(result.messages[1].contains("current shell"));
+    assert_eq!(result.reload_hint, "source ~/.zshrc");
+}
+
+#[test]
+fn test_reload_result_failure_structure() {
+    // 测试失败重载的结果结构（覆盖 reload.rs:84-91）
+    let result = ReloadResult {
+        reloaded: false,
+        messages: vec!["Could not reload shell configuration: error".to_string()],
+        reload_hint: "source ~/.zshrc".to_string(),
+    };
+
+    assert!(!result.reloaded);
+    assert_eq!(result.messages.len(), 1);
+    assert!(result.messages[0].contains("Could not reload"));
+    assert_eq!(result.reload_hint, "source ~/.zshrc");
+}

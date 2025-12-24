@@ -125,3 +125,18 @@ fn test_json_parser_error_preview() {
     // 应该包含预览信息
     assert!(error_msg.contains("preview") || error_msg.contains("Failed to parse JSON"));
 }
+
+#[test]
+fn test_json_parser_empty_response_fallback_to_object() {
+    // 测试空响应时，如果解析 null 失败，会回退到解析 {}
+    // 使用一个不能从 null 反序列化的类型来触发 or_else 分支
+    let empty_bytes = b"";
+    // 尝试解析为空对象（需要至少一个字段的结构体）
+    // 由于 null 不能反序列化为需要字段的结构体，会触发 or_else 分支
+    let result: Result<TestStruct, _> = JsonParser::parse(empty_bytes, 200);
+    // 这个应该失败，因为 {} 也没有必需的字段
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    // 应该包含错误消息
+    assert!(error_msg.contains("Failed to parse empty response as JSON"));
+}

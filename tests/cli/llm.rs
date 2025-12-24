@@ -16,42 +16,6 @@ struct TestLlmCli {
 // ==================== 命令结构测试 ====================
 
 #[test]
-fn test_llm_subcommand_enum_creation() {
-    // 测试 LLMSubcommand 枚举可以创建
-    // 通过编译验证枚举定义正确
-    assert!(true, "LLMSubcommand enum should be defined");
-}
-
-#[test]
-fn test_llm_show_command_structure() {
-    // 测试 Show 命令结构
-    // 验证命令可以解析
-    let cli = TestLlmCli::try_parse_from(&["test-llm", "show"]).unwrap();
-
-    match cli.command {
-        LLMSubcommand::Show => {
-            // Show 命令没有参数，只需要验证可以匹配
-            assert!(true, "Show command parsed successfully");
-        }
-        _ => panic!("Expected Show command"),
-    }
-}
-
-#[test]
-fn test_llm_setup_command_structure() {
-    // 测试 Setup 命令结构
-    let cli = TestLlmCli::try_parse_from(&["test-llm", "setup"]).unwrap();
-
-    match cli.command {
-        LLMSubcommand::Setup => {
-            // Setup 命令没有参数，只需要验证可以匹配
-            assert!(true, "Setup command parsed successfully");
-        }
-        _ => panic!("Expected Setup command"),
-    }
-}
-
-#[test]
 fn test_llm_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
@@ -115,17 +79,4 @@ fn test_llm_command_case_sensitivity() {
     );
 }
 
-#[test]
-fn test_llm_command_enum_variants() {
-    // 测试枚举变体的完整性
-    // 验证所有预期的命令变体都存在
-    let show_cli = TestLlmCli::try_parse_from(&["test-llm", "show"]).unwrap();
-    let setup_cli = TestLlmCli::try_parse_from(&["test-llm", "setup"]).unwrap();
-
-    match (show_cli.command, setup_cli.command) {
-        (LLMSubcommand::Show, LLMSubcommand::Setup) => {
-            assert!(true, "All expected enum variants exist");
-        }
-        _ => panic!("Unexpected enum variants"),
-    }
-}
+// 枚举变体完整性已通过 test_llm_command_parsing_all_subcommands 测试验证
