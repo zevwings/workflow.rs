@@ -1,10 +1,9 @@
 name: Comprehensive Check
 
 on:
-  pull_request:
-    branches:
-      - master
-      - main
+  schedule:
+    # 每周六 00:00 UTC 运行
+    - cron: '0 0 * * 6'
   # 允许手动触发（用于测试或特殊情况）
   workflow_dispatch:
 
