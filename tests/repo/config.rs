@@ -3,42 +3,18 @@
 //! 测试仓库配置的创建、验证、序列化和管理功能。
 
 use pretty_assertions::assert_eq;
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use serde_json;
-use std::fs;
-use tempfile::TempDir;
-use workflow::repo::{BranchConfig, PullRequestsConfig, RepoConfig};
+use workflow::repo::{BranchConfig, PullRequestsConfig};
 
 // ==================== Fixtures ====================
-
-/// 创建临时目录用于测试
-#[fixture]
-fn temp_dir() -> TempDir {
-    tempfile::tempdir().expect("Failed to create temp dir")
-}
-
-/// 创建测试用的分支配置
-#[fixture]
-fn sample_branch_config() -> BranchConfig {
-    BranchConfig {
-        prefix: Some("feature".to_string()),
-        ignore: vec!["main".to_string(), "develop".to_string()],
-    }
-}
-
-/// 创建测试用的 PR 配置
-#[fixture]
-fn sample_pr_config() -> PullRequestsConfig {
-    PullRequestsConfig {
-        auto_accept_change_type: Some(true),
-    }
-}
+// (Removed unused fixtures)
 
 // ==================== BranchConfig 测试 ====================
 
 #[test]
 fn test_branch_config_default() {
-    /// 测试分支配置的默认值
+    // 测试分支配置的默认值
     let config = BranchConfig::default();
 
     assert_eq!(config.prefix, None);
@@ -47,7 +23,7 @@ fn test_branch_config_default() {
 
 #[test]
 fn test_branch_config_with_values() {
-    /// 测试带值的分支配置创建
+    // 测试带值的分支配置创建
     let config = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string(), "develop".to_string()],
@@ -59,7 +35,7 @@ fn test_branch_config_with_values() {
 
 #[test]
 fn test_branch_config_serialization() {
-    /// 测试分支配置的序列化
+    // 测试分支配置的序列化
     let config = BranchConfig {
         prefix: Some("hotfix".to_string()),
         ignore: vec!["master".to_string()],
@@ -73,7 +49,7 @@ fn test_branch_config_serialization() {
 
 #[test]
 fn test_branch_config_deserialization() {
-    /// 测试分支配置的反序列化
+    // 测试分支配置的反序列化
     let json = r#"{"prefix":"feature","ignore":["main","develop"]}"#;
     let config: BranchConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -83,7 +59,7 @@ fn test_branch_config_deserialization() {
 
 #[test]
 fn test_branch_config_partial_deserialization() {
-    /// 测试部分字段的反序列化
+    // 测试部分字段的反序列化
     let json = r#"{"prefix":"feature"}"#;
     let config: BranchConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -93,7 +69,7 @@ fn test_branch_config_partial_deserialization() {
 
 #[test]
 fn test_branch_config_empty_deserialization() {
-    /// 测试空配置的反序列化
+    // 测试空配置的反序列化
     let json = r#"{}"#;
     let config: BranchConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -107,7 +83,7 @@ fn test_branch_config_empty_deserialization() {
 #[case(Some("hotfix".to_string()), vec!["main".to_string()])]
 #[case(None, vec!["main".to_string(), "develop".to_string()])]
 fn test_branch_config_parametrized(#[case] prefix: Option<String>, #[case] ignore: Vec<String>) {
-    /// 参数化测试分支配置的各种组合
+    // 参数化测试分支配置的各种组合
     let config = BranchConfig {
         prefix,
         ignore: ignore.clone(),
@@ -125,7 +101,7 @@ fn test_branch_config_parametrized(#[case] prefix: Option<String>, #[case] ignor
 
 #[test]
 fn test_pr_config_default() {
-    /// 测试 PR 配置的默认值
+    // 测试 PR 配置的默认值
     let config = PullRequestsConfig::default();
 
     assert_eq!(config.auto_accept_change_type, None);
@@ -133,7 +109,7 @@ fn test_pr_config_default() {
 
 #[test]
 fn test_pr_config_with_values() {
-    /// 测试带值的 PR 配置创建
+    // 测试带值的 PR 配置创建
     let config = PullRequestsConfig {
         auto_accept_change_type: Some(true),
     };
@@ -143,7 +119,7 @@ fn test_pr_config_with_values() {
 
 #[test]
 fn test_pr_config_serialization() {
-    /// 测试 PR 配置的序列化
+    // 测试 PR 配置的序列化
     let config = PullRequestsConfig {
         auto_accept_change_type: Some(false),
     };
@@ -156,7 +132,7 @@ fn test_pr_config_serialization() {
 
 #[test]
 fn test_pr_config_deserialization() {
-    /// 测试 PR 配置的反序列化
+    // 测试 PR 配置的反序列化
     let json = r#"{"auto_accept_change_type":true}"#;
     let config: PullRequestsConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -165,7 +141,7 @@ fn test_pr_config_deserialization() {
 
 #[test]
 fn test_pr_config_empty_deserialization() {
-    /// 测试空 PR 配置的反序列化
+    // 测试空 PR 配置的反序列化
     let json = r#"{}"#;
     let config: PullRequestsConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -177,7 +153,7 @@ fn test_pr_config_empty_deserialization() {
 #[case(Some(true))]
 #[case(Some(false))]
 fn test_pr_config_parametrized(#[case] auto_accept: Option<bool>) {
-    /// 参数化测试 PR 配置的各种值
+    // 参数化测试 PR 配置的各种值
     let config = PullRequestsConfig {
         auto_accept_change_type: auto_accept,
     };
@@ -194,7 +170,7 @@ fn test_pr_config_parametrized(#[case] auto_accept: Option<bool>) {
 
 #[test]
 fn test_branch_config_invalid_json() {
-    /// 测试无效 JSON 的处理
+    // 测试无效 JSON 的处理
     let invalid_json = r#"{"prefix": invalid}"#;
     let result = serde_json::from_str::<BranchConfig>(invalid_json);
 
@@ -203,7 +179,7 @@ fn test_branch_config_invalid_json() {
 
 #[test]
 fn test_pr_config_invalid_json() {
-    /// 测试无效 JSON 的处理
+    // 测试无效 JSON 的处理
     let invalid_json = r#"{"auto_accept_change_type": "not_boolean"}"#;
     let result = serde_json::from_str::<PullRequestsConfig>(invalid_json);
 
@@ -212,7 +188,7 @@ fn test_pr_config_invalid_json() {
 
 #[test]
 fn test_branch_config_with_null_values() {
-    /// 测试包含 null 值的 JSON
+    // 测试包含 null 值的 JSON
     let json = r#"{"prefix":null,"ignore":[]}"#;
     let config: BranchConfig = serde_json::from_str(json).expect("Failed to deserialize");
 
@@ -222,7 +198,7 @@ fn test_branch_config_with_null_values() {
 
 #[test]
 fn test_branch_config_empty_ignore_list() {
-    /// 测试空的忽略列表
+    // 测试空的忽略列表
     let config = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec![],
@@ -236,7 +212,7 @@ fn test_branch_config_empty_ignore_list() {
 
 #[test]
 fn test_branch_config_special_characters() {
-    /// 测试特殊字符的处理
+    // 测试特殊字符的处理
     let config = BranchConfig {
         prefix: Some("feature/test-123".to_string()),
         ignore: vec!["release/v1.0".to_string(), "hotfix-urgent".to_string()],
@@ -251,7 +227,7 @@ fn test_branch_config_special_characters() {
 
 #[test]
 fn test_config_clone() {
-    /// 测试配置的克隆功能
+    // 测试配置的克隆功能
     let original_branch = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string()],
@@ -274,7 +250,7 @@ fn test_config_clone() {
 
 #[test]
 fn test_config_debug() {
-    /// 测试配置的 Debug 输出
+    // 测试配置的 Debug 输出
     let branch_config = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string()],

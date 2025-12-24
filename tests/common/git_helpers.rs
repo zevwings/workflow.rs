@@ -10,6 +10,7 @@ use tempfile::TempDir;
 ///
 /// 返回 `(TempDir, 原始目录路径)`，调用者需要负责恢复原始目录。
 /// 如果 Git 命令不可用，返回 `None`。
+#[allow(dead_code)]
 pub fn setup_git_repo_with_gix() -> Option<(TempDir, PathBuf)> {
     // 保存原始目录在创建临时目录之前
     let original_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
@@ -79,6 +80,7 @@ pub fn setup_git_repo_with_gix() -> Option<(TempDir, PathBuf)> {
 ///
 /// 返回 `(TempDir, 原始目录路径)`，调用者需要负责恢复原始目录。
 /// 如果 Git 命令不可用，会 panic。
+#[allow(dead_code)]
 pub fn setup_git_repo() -> (TempDir, PathBuf) {
     // 保存原始目录在创建临时目录之前
     let original_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
@@ -143,6 +145,7 @@ pub fn setup_git_repo() -> (TempDir, PathBuf) {
 ///
 /// 返回 `TempDir`，不切换当前工作目录。
 /// 适用于不需要切换目录的测试场景。
+#[allow(dead_code)]
 pub fn create_git_repo_with_commit() -> TempDir {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let temp_path = temp_dir.path();
