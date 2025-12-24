@@ -9,20 +9,6 @@ use std::io::Read;
 use tempfile::TempDir;
 use workflow::base::util::file::{FileReader, FileWriter};
 
-#[test]
-fn test_file_reader_new() {
-    let _reader = FileReader::new("test.txt");
-    // 验证可以创建 FileReader
-    assert!(std::path::Path::new("test.txt").exists() || !std::path::Path::new("test.txt").exists());
-}
-
-#[test]
-fn test_file_reader_pathbuf() {
-    let path = std::path::PathBuf::from("test/path.txt");
-    let _reader = FileReader::new(path.clone());
-    // 验证可以创建 FileReader
-    assert!(true);
-}
 
 #[test]
 fn test_file_reader_to_string() -> color_eyre::Result<()> {

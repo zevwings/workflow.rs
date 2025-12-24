@@ -115,8 +115,8 @@ mod types;
 
 pub use confirm::ConfirmDialog;
 pub use form::{
-    Condition, ConditionEvaluator, ConditionOperator, ConditionValue, FormBuilder, FormGroup,
-    FormResult, FormStep, GroupConfig, StepType,
+    Condition, ConditionEvaluator, ConditionOperator, ConditionValue, FieldDefaultValue,
+    FormBuilder, FormField, FormFieldType, FormGroup, FormResult, FormStep, GroupConfig, StepType,
 };
 pub use input::InputDialog;
 pub use multi_select::MultiSelectDialog;

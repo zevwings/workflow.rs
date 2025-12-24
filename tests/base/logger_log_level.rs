@@ -94,8 +94,12 @@ fn test_log_level_ordering() {
 #[test]
 fn test_log_level_default_level() {
     let level = LogLevel::default_level();
-    // 在测试环境中，通常是 debug 模式
-    assert!(level == LogLevel::Debug || level == LogLevel::Info);
+    // 根据编译模式验证返回值
+    if cfg!(debug_assertions) {
+        assert_eq!(level, LogLevel::Debug);
+    } else {
+        assert_eq!(level, LogLevel::Info);
+    }
 }
 
 #[test]
@@ -113,13 +117,23 @@ fn test_log_level_set_and_get() {
 
 #[test]
 fn test_log_level_init() {
-    // 测试 init 函数（如果之前没有初始化，应该设置级别）
-    // 注意：init 只在第一次调用时设置级别，如果之前已经初始化过，就不会更新
-    // 所以我们使用 set_level 来确保设置成功
+    // 测试 init 函数的行为：只在未初始化时设置级别
+    // 先清理状态（通过设置一个已知值，然后重置）
     LogLevel::set_level(LogLevel::Error);
-    // 验证级别已设置（通过 get_level）
-    let level = LogLevel::get_level();
-    assert_eq!(level, LogLevel::Error);
+
+    // 测试 init(None) - 应该使用默认级别
+    // 由于已经初始化过，init 不会改变当前级别
+    let before_init = LogLevel::get_level();
+    LogLevel::init(None);
+    let after_init = LogLevel::get_level();
+    // init 不会改变已初始化的级别
+    assert_eq!(before_init, after_init);
+
+    // 测试 init(Some(level)) - 如果已初始化，不会改变
+    LogLevel::init(Some(LogLevel::Warn));
+    let after_init_with_level = LogLevel::get_level();
+    // 由于已经初始化，init 不会改变级别
+    assert_eq!(after_init, after_init_with_level);
 }
 
 #[test]

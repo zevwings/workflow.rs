@@ -750,7 +750,7 @@
 ## 📚 相关文档
 
 - [测试覆盖率提升 TODO](./coverage-improvement.md) - 测试覆盖率提升计划
-- [测试架构改进 TODO](./test-architecture-improvement.md) - 测试架构改进计划
+- ~~[测试架构改进 TODO](./test-architecture-improvement.md)~~ - 测试架构改进计划（已完成，文档已删除）
 - [测试规范文档](../guidelines/testing.md) - 项目测试规范
 - [开发规范文档](../guidelines/development/README.md) - 开发规范索引
 
