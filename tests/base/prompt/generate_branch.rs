@@ -55,4 +55,3 @@ fn test_generate_branch_system_prompt_length() {
     // 测试 prompt 有合理的长度（至少应该包含基本内容）
     assert!(GENERATE_BRANCH_SYSTEM_PROMPT.len() > 500);
 }
-

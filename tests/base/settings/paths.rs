@@ -461,8 +461,10 @@ fn test_paths_config_file_unix() -> Result<()> {
     assert!(zsh_config.to_string_lossy().ends_with(".zshrc"));
 
     let bash_config = Paths::config_file(&Shell::Bash)?;
-    assert!(bash_config.to_string_lossy().ends_with(".bash_profile")
-            || bash_config.to_string_lossy().ends_with(".bashrc"));
+    assert!(
+        bash_config.to_string_lossy().ends_with(".bash_profile")
+            || bash_config.to_string_lossy().ends_with(".bashrc")
+    );
 
     let fish_config = Paths::config_file(&Shell::Fish)?;
     assert!(fish_config.to_string_lossy().contains("config.fish"));
@@ -532,4 +534,3 @@ fn test_paths_multiple_config_methods() -> Result<()> {
 
     Ok(())
 }
-

@@ -49,7 +49,10 @@ fn test_reword_pr_system_prompt_contains_language_requirement() {
 #[test]
 fn test_reword_pr_system_prompt_contains_markdown_support() {
     // 测试 prompt 包含 markdown 格式支持说明
-    assert!(REWORD_PR_SYSTEM_PROMPT.contains("markdown") || REWORD_PR_SYSTEM_PROMPT.contains("markdown heading"));
+    assert!(
+        REWORD_PR_SYSTEM_PROMPT.contains("markdown")
+            || REWORD_PR_SYSTEM_PROMPT.contains("markdown heading")
+    );
 }
 
 #[test]
@@ -57,4 +60,3 @@ fn test_reword_pr_system_prompt_length() {
     // 测试 prompt 有合理的长度（至少应该包含基本内容）
     assert!(REWORD_PR_SYSTEM_PROMPT.len() > 500);
 }
-

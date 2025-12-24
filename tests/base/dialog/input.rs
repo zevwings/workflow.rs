@@ -117,14 +117,13 @@ fn test_input_dialog_no_validator_not_allow_empty() {
 #[test]
 fn test_input_dialog_validator_error_handling() {
     // 测试验证器错误处理（覆盖 input.rs:144-147）
-    let _dialog = InputDialog::new("Enter value")
-        .with_validator(|input: &str| {
-            if input.parse::<u32>().is_ok() {
-                Ok(())
-            } else {
-                Err("Please enter a valid number".to_string())
-            }
-        });
+    let _dialog = InputDialog::new("Enter value").with_validator(|input: &str| {
+        if input.parse::<u32>().is_ok() {
+            Ok(())
+        } else {
+            Err("Please enter a valid number".to_string())
+        }
+    });
     // 验证对话框创建成功，验证器错误处理逻辑存在
     assert!(true);
 }

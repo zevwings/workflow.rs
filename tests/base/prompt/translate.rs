@@ -13,7 +13,10 @@ fn test_translate_system_prompt_not_empty() {
 #[test]
 fn test_translate_system_prompt_contains_keywords() {
     // 测试 prompt 包含关键内容
-    assert!(TRANSLATE_SYSTEM_PROMPT.contains("translation") || TRANSLATE_SYSTEM_PROMPT.contains("translate"));
+    assert!(
+        TRANSLATE_SYSTEM_PROMPT.contains("translation")
+            || TRANSLATE_SYSTEM_PROMPT.contains("translate")
+    );
     assert!(TRANSLATE_SYSTEM_PROMPT.contains("English"));
 }
 
@@ -26,13 +29,18 @@ fn test_translate_system_prompt_contains_rules() {
 #[test]
 fn test_translate_system_prompt_contains_examples() {
     // 测试 prompt 包含示例
-    assert!(TRANSLATE_SYSTEM_PROMPT.contains("Example") || TRANSLATE_SYSTEM_PROMPT.contains("example"));
+    assert!(
+        TRANSLATE_SYSTEM_PROMPT.contains("Example") || TRANSLATE_SYSTEM_PROMPT.contains("example")
+    );
 }
 
 #[test]
 fn test_translate_system_prompt_contains_accuracy_requirement() {
     // 测试 prompt 包含准确性要求
-    assert!(TRANSLATE_SYSTEM_PROMPT.contains("accurately") || TRANSLATE_SYSTEM_PROMPT.contains("accurate"));
+    assert!(
+        TRANSLATE_SYSTEM_PROMPT.contains("accurately")
+            || TRANSLATE_SYSTEM_PROMPT.contains("accurate")
+    );
 }
 
 #[test]
@@ -55,4 +63,3 @@ fn test_translate_system_prompt_contains_chinese_examples() {
     // 验证包含示例说明
     assert!(prompt_lower.contains("example") || prompt_lower.contains("示例"));
 }
-

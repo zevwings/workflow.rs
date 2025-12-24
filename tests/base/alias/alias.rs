@@ -713,7 +713,10 @@ mod tests {
     fn test_alias_manager_check_circular_direct() {
         // 测试 AliasManager::check_circular() 方法 - 直接循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "a" -> "a" 是否检测为循环
-        let result = workflow::base::alias::AliasManager::check_circular("test_circular_a", "test_circular_a");
+        let result = workflow::base::alias::AliasManager::check_circular(
+            "test_circular_a",
+            "test_circular_a",
+        );
 
         assert!(result.is_ok());
         // 直接循环应该返回 true
@@ -724,7 +727,8 @@ mod tests {
     fn test_alias_manager_check_circular_non_circular() {
         // 测试 AliasManager::check_circular() 方法 - 非循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "new_alias" -> "git status" 是否检测为非循环
-        let result = workflow::base::alias::AliasManager::check_circular("__test_new_alias__", "git status");
+        let result =
+            workflow::base::alias::AliasManager::check_circular("__test_new_alias__", "git status");
 
         assert!(result.is_ok());
         // 非循环应该返回 false
@@ -737,7 +741,8 @@ mod tests {
         // 注意：这个测试需要创建深度嵌套的别名，可能在实际环境中难以实现
         // 主要测试深度检查逻辑
         let mut visited = HashSet::new();
-        let result = workflow::base::alias::AliasManager::expand("__nonexistent__", &mut visited, 11);
+        let result =
+            workflow::base::alias::AliasManager::expand("__nonexistent__", &mut visited, 11);
 
         // 深度超过限制应该返回错误
         assert!(result.is_err());
@@ -748,7 +753,8 @@ mod tests {
     fn test_alias_manager_expand_not_found() {
         // 测试 AliasManager::expand() 方法 - 别名不存在（覆盖 manager.rs:77-79）
         let mut visited = HashSet::new();
-        let result = workflow::base::alias::AliasManager::expand("__nonexistent_alias__", &mut visited, 0);
+        let result =
+            workflow::base::alias::AliasManager::expand("__nonexistent_alias__", &mut visited, 0);
 
         // 别名不存在应该返回错误
         assert!(result.is_err());
@@ -761,7 +767,8 @@ mod tests {
         // 注意：这个测试需要实际的别名配置
         let mut visited = HashSet::new();
         // 尝试展开一个可能存在的别名
-        let result = workflow::base::alias::AliasManager::expand("__test_nested__", &mut visited, 0);
+        let result =
+            workflow::base::alias::AliasManager::expand("__test_nested__", &mut visited, 0);
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
@@ -796,7 +803,10 @@ mod tests {
     fn test_alias_manager_check_circular_with_existing_alias() {
         // 测试 AliasManager::check_circular() 方法 - 与已存在别名形成循环（覆盖 manager.rs:284-297）
         // 注意：这个测试需要实际的别名配置
-        let result = workflow::base::alias::AliasManager::check_circular("__test_new__", "__test_existing__");
+        let result = workflow::base::alias::AliasManager::check_circular(
+            "__test_new__",
+            "__test_existing__",
+        );
 
         // 应该返回 true 或 false，取决于是否形成循环
         assert!(result.is_ok());
@@ -805,7 +815,8 @@ mod tests {
     #[test]
     fn test_alias_manager_check_circular_first_part_not_alias() {
         // 测试 AliasManager::check_circular() 方法 - target 的第一个词不是别名（覆盖 manager.rs:277-299）
-        let result = workflow::base::alias::AliasManager::check_circular("__test_new__", "git status");
+        let result =
+            workflow::base::alias::AliasManager::check_circular("__test_new__", "git status");
 
         // 如果第一个词不是别名，应该返回 false
         assert!(result.is_ok());
@@ -817,7 +828,8 @@ mod tests {
         // 测试 AliasManager::expand() 方法 - 递归嵌套展开（覆盖 manager.rs:89-93）
         let mut visited = HashSet::new();
         // 尝试展开一个可能包含嵌套别名的别名
-        let result = workflow::base::alias::AliasManager::expand("__test_nested__", &mut visited, 0);
+        let result =
+            workflow::base::alias::AliasManager::expand("__test_nested__", &mut visited, 0);
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
@@ -863,14 +875,17 @@ aliases = {}
         assert!(result.is_ok());
 
         // 验证别名已添加到配置文件（直接读取文件，因为 Settings 使用 OnceLock 缓存）
-        use workflow::base::util::file::FileReader;
         use toml::Value;
+        use workflow::base::util::file::FileReader;
         let config_content = FileReader::new(&config_path).to_string()?;
         let config: Value = toml::from_str(&config_content)?;
         let aliases_table = config.get("aliases").and_then(|v| v.as_table());
         assert!(aliases_table.is_some());
         let aliases = aliases_table.unwrap();
-        assert_eq!(aliases.get("test_add_alias").and_then(|v| v.as_str()), Some("echo hello"));
+        assert_eq!(
+            aliases.get("test_add_alias").and_then(|v| v.as_str()),
+            Some("echo hello")
+        );
 
         Ok(())
     }
@@ -917,8 +932,8 @@ aliases = { test_remove_alias = "echo test" }
         assert!(result.unwrap());
 
         // 验证别名已从配置文件中删除（直接读取文件，因为 Settings 使用 OnceLock 缓存）
-        use workflow::base::util::file::FileReader;
         use toml::Value;
+        use workflow::base::util::file::FileReader;
         let config_content = FileReader::new(&config_path).to_string()?;
         let config: Value = toml::from_str(&config_content)?;
         let aliases_table = config.get("aliases").and_then(|v| v.as_table());
@@ -1002,7 +1017,8 @@ aliases = { test_expand_alias = "git status" }
 
         // 展开别名
         let mut visited = HashSet::new();
-        let result = workflow::base::alias::AliasManager::expand("test_expand_alias", &mut visited, 0);
+        let result =
+            workflow::base::alias::AliasManager::expand("test_expand_alias", &mut visited, 0);
 
         // 恢复原始 HOME
         if let Some(home) = original_home {
@@ -1144,7 +1160,11 @@ aliases = { test_args_alias = "git status" }
         let _ = workflow::base::settings::Settings::get();
 
         // 展开参数
-        let args = vec!["workflow".to_string(), "test_args_alias".to_string(), "--verbose".to_string()];
+        let args = vec![
+            "workflow".to_string(),
+            "test_args_alias".to_string(),
+            "--verbose".to_string(),
+        ];
         let result = workflow::base::alias::AliasManager::expand_args(args);
 
         // 恢复原始 HOME
@@ -1192,7 +1212,8 @@ aliases = {
         std::env::set_var("HOME", temp_dir.path());
 
         // 检查是否会形成循环（新别名指向 existing_alias，而 existing_alias 指向 git status，不会循环）
-        let result1 = workflow::base::alias::AliasManager::check_circular("new_alias", "existing_alias");
+        let result1 =
+            workflow::base::alias::AliasManager::check_circular("new_alias", "existing_alias");
 
         // 检查直接循环（新别名指向自己）
         let result2 = workflow::base::alias::AliasManager::check_circular("new_alias", "new_alias");
@@ -1347,7 +1368,10 @@ aliases = {
         let mut aliases = HashMap::new();
 
         // 测试命令中包含多个连续空格
-        aliases.insert("spaces".to_string(), "echo    multiple     spaces".to_string());
+        aliases.insert(
+            "spaces".to_string(),
+            "echo    multiple     spaces".to_string(),
+        );
 
         let mut visited = HashSet::new();
 

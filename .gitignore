@@ -23,7 +23,8 @@ out/
 .cursor/
 
 # Claude AI
-.claude/settings.local.json
+.claude/
+.claude/**
 
 # macOS
 .DS_Store

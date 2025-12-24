@@ -333,8 +333,7 @@ fn test_form_builder_validate_multiple_steps_with_empty_fields() {
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| {
-            g.step(|f| f.add_text("field1", "Field 1"))
-                .step(|f| f) // 空步骤
+            g.step(|f| f.add_text("field1", "Field 1")).step(|f| f) // 空步骤
         },
         GroupConfig::required(),
     );
@@ -447,10 +446,8 @@ fn test_form_builder_field_with_condition() {
     let builder = FormBuilder::new().add_group(
         "group1",
         |g| {
-            g.step(|f| {
-                f.add_text("field1", "Field 1")
-            })
-            .step_if("field1", "value1", |f| f.add_text("field2", "Field 2"))
+            g.step(|f| f.add_text("field1", "Field 1"))
+                .step_if("field1", "value1", |f| f.add_text("field2", "Field 2"))
         },
         GroupConfig::required(),
     );
@@ -525,7 +522,11 @@ fn test_form_builder_ask_field_selection() {
         "group1",
         |g| {
             g.step(|f| {
-                f.add_selection("choice", "Select option", vec!["option1".into(), "option2".into()])
+                f.add_selection(
+                    "choice",
+                    "Select option",
+                    vec!["option1".into(), "option2".into()],
+                )
             })
         },
         GroupConfig::required(),

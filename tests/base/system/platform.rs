@@ -518,8 +518,7 @@ fn test_platform_is_static_required_actual_linux_environment() {
         if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
             // 如果是 Alpine Linux，应该返回 static 版本
             assert_eq!(
-                identifier,
-                "Linux-x86_64-static",
+                identifier, "Linux-x86_64-static",
                 "Alpine Linux should return Linux-x86_64-static"
             );
         }

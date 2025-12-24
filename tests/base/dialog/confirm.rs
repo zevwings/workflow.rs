@@ -132,8 +132,7 @@ fn test_confirm_dialog_cancel_message_none() {
 #[test]
 fn test_confirm_dialog_cancel_message_some() {
     // 测试 cancel_message 为 Some 的情况（覆盖 confirm.rs:132-133）
-    let _dialog = ConfirmDialog::new("Continue?")
-        .with_cancel_message("Operation cancelled.");
+    let _dialog = ConfirmDialog::new("Continue?").with_cancel_message("Operation cancelled.");
     // 验证对话框创建成功，cancel_message 已设置
     assert!(true);
 }

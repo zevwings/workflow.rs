@@ -66,4 +66,3 @@ fn test_generate_summarize_file_change_system_prompt_contains_language_requireme
     // 注意：具体内容取决于 get_language_requirement 的实现
     assert!(!prompt.is_empty());
 }
-

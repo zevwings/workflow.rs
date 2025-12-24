@@ -436,7 +436,8 @@ fn test_mcp_config_manager_write_creates_directory() -> Result<()> {
 
     // 使用 FileWriter 写入配置（模拟 MCPConfigManager::write 的行为）
     let config = MCPConfig::default();
-    let result = workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
+    let result =
+        workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
 
     // 应该能够创建目录和文件
     assert!(result.is_ok());
@@ -459,9 +460,12 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
         args: vec!["server".to_string()],
         env: HashMap::new(),
     };
-    existing_server.env.insert("EXISTING_KEY".to_string(), "existing_value".to_string());
+    existing_server
+        .env
+        .insert("EXISTING_KEY".to_string(), "existing_value".to_string());
     existing_config.mcp_servers.insert("server1".to_string(), existing_server);
-    workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&existing_config)?;
+    workflow::base::util::file::FileWriter::new(&config_path)
+        .write_json_secure(&existing_config)?;
 
     // 创建新配置，包含相同的键但不同的值
     let mut new_config = MCPConfig::default();
@@ -474,7 +478,8 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
     new_config.mcp_servers.insert("server1".to_string(), new_server);
 
     // 模拟合并操作（覆盖 env.entry().or_insert_with() 逻辑）
-    let mut merged_config: MCPConfig = workflow::base::util::file::FileReader::new(&config_path).json()?;
+    let mut merged_config: MCPConfig =
+        workflow::base::util::file::FileReader::new(&config_path).json()?;
     for (name, server_config) in &new_config.mcp_servers {
         if let Some(existing_server) = merged_config.mcp_servers.get_mut(name) {
             for (key, value) in &server_config.env {
@@ -535,11 +540,11 @@ fn test_read_corrupted_json_config() -> Result<()> {
 
     // 测试用例：不完整的 JSON
     let invalid_json_cases = vec![
-        "{ \"mcpServers\": ",                    // 不完整的 JSON
-        "{ \"mcpServers\": { \"server\": } }",   // 无效的对象值
-        "not json at all",                       // 完全不是 JSON
-        "",                                      // 空文件
-        "null",                                  // null 值
+        "{ \"mcpServers\": ",                  // 不完整的 JSON
+        "{ \"mcpServers\": { \"server\": } }", // 无效的对象值
+        "not json at all",                     // 完全不是 JSON
+        "",                                    // 空文件
+        "null",                                // null 值
     ];
 
     for (i, invalid_json) in invalid_json_cases.iter().enumerate() {
@@ -575,7 +580,8 @@ fn test_write_permission_denied() -> Result<()> {
 
     // 尝试写入配置文件
     let config = MCPConfig::default();
-    let result = workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
+    let result =
+        workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&config);
 
     // 应该返回错误
     assert!(result.is_err());
@@ -583,7 +589,9 @@ fn test_write_permission_denied() -> Result<()> {
     let err_msg = format!("{:?}", err);
     // 错误信息应该包含权限相关的内容
     assert!(
-        err_msg.contains("Permission") || err_msg.contains("permission") || err_msg.contains("denied"),
+        err_msg.contains("Permission")
+            || err_msg.contains("permission")
+            || err_msg.contains("denied"),
         "Expected permission error, got: {}",
         err_msg
     );
@@ -625,7 +633,9 @@ fn test_read_permission_denied() -> Result<()> {
     let err_msg = format!("{:?}", err);
     // 错误信息应该包含权限相关的内容
     assert!(
-        err_msg.contains("Permission") || err_msg.contains("permission") || err_msg.contains("denied"),
+        err_msg.contains("Permission")
+            || err_msg.contains("permission")
+            || err_msg.contains("denied"),
         "Expected permission error, got: {}",
         err_msg
     );
@@ -659,7 +669,8 @@ fn test_write_to_readonly_filesystem() -> Result<()> {
 
         // 尝试写入只读文件
         let new_config = MCPConfig::default();
-        let result = workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&new_config);
+        let result = workflow::base::util::file::FileWriter::new(&config_path)
+            .write_json_secure(&new_config);
 
         // 应该返回错误
         assert!(result.is_err());
@@ -679,7 +690,8 @@ fn test_write_to_readonly_filesystem() -> Result<()> {
 
         // 尝试写入只读文件
         let new_config = MCPConfig::default();
-        let result = workflow::base::util::file::FileWriter::new(&config_path).write_json_secure(&new_config);
+        let result = workflow::base::util::file::FileWriter::new(&config_path)
+            .write_json_secure(&new_config);
 
         // 应该返回错误
         assert!(result.is_err());
@@ -770,9 +782,9 @@ fn test_server_config_with_empty_values() -> Result<()> {
     // 创建包含空值的配置
     let mut config = MCPConfig::default();
     let server_config = MCPServerConfig {
-        command: String::new(),        // 空命令
-        args: Vec::new(),             // 空参数列表
-        env: HashMap::new(),          // 空环境变量
+        command: String::new(), // 空命令
+        args: Vec::new(),       // 空参数列表
+        env: HashMap::new(),    // 空环境变量
     };
     config.mcp_servers.insert("empty-server".to_string(), server_config);
 

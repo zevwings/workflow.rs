@@ -351,4 +351,3 @@ fn test_detect_shell_fish() {
         }
     }
 }
-

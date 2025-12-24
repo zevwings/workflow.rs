@@ -351,4 +351,3 @@ export KEY="value"
     assert!(config_content.contains("# Workflow CLI Configuration - End"));
     assert!(config_content.contains("export KEY="));
 }
-

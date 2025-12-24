@@ -159,7 +159,9 @@ fn test_reload_shell_returns_result() {
 
     let reload_result = result.unwrap();
     // 验证结果结构
-    assert!(reload_result.reload_hint.contains("source") || reload_result.reload_hint.contains("."));
+    assert!(
+        reload_result.reload_hint.contains("source") || reload_result.reload_hint.contains(".")
+    );
 }
 
 #[test]
@@ -214,7 +216,11 @@ fn test_reload_shell_all_shell_types() {
     for shell in shells {
         let result = Reload::shell(&shell);
         // 验证总是返回 Ok(ReloadResult)，即使执行失败
-        assert!(result.is_ok(), "Reload::shell({:?}) should return Ok", shell);
+        assert!(
+            result.is_ok(),
+            "Reload::shell({:?}) should return Ok",
+            shell
+        );
 
         let reload_result = result.unwrap();
         // 验证结果包含必要的字段
@@ -260,8 +266,10 @@ fn test_reload_shell_reload_hint_contains_config_path() {
     if let Ok(reload_result) = result {
         // reload_hint 应该包含配置文件路径（可能是相对路径或绝对路径）
         // 对于 zsh，应该是 "source" 加上路径
-        assert!(reload_result.reload_hint.starts_with("source") ||
-                reload_result.reload_hint.starts_with("."));
+        assert!(
+            reload_result.reload_hint.starts_with("source")
+                || reload_result.reload_hint.starts_with(".")
+        );
     }
 }
 

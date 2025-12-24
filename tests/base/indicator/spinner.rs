@@ -66,9 +66,8 @@ fn test_spinner_with_success() {
 #[test]
 fn test_spinner_with_error() {
     // 测试 with 方法错误场景
-    let result: Result<i32, String> = Spinner::with("Creating PR...", || {
-        Err("Operation failed".to_string())
-    });
+    let result: Result<i32, String> =
+        Spinner::with("Creating PR...", || Err("Operation failed".to_string()));
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), "Operation failed");
 }
@@ -89,9 +88,7 @@ fn test_spinner_with_slow_operation() {
 fn test_spinner_with_output_success() {
     // 测试 with_output 方法成功场景（覆盖 spinner.rs:231-242）
     let result: Result<i32, Box<dyn std::error::Error>> =
-        Spinner::with_output("Pushing to remote...", || {
-            Ok(42)
-        });
+        Spinner::with_output("Pushing to remote...", || Ok(42));
     assert!(result.is_ok());
     assert_eq!(result.unwrap(), 42);
 }
@@ -99,9 +96,8 @@ fn test_spinner_with_output_success() {
 #[test]
 fn test_spinner_with_output_error() {
     // 测试 with_output 方法错误场景
-    let result: Result<i32, String> = Spinner::with_output("Pushing to remote...", || {
-        Err("Push failed".to_string())
-    });
+    let result: Result<i32, String> =
+        Spinner::with_output("Pushing to remote...", || Err("Push failed".to_string()));
     assert!(result.is_err());
     assert_eq!(result.unwrap_err(), "Push failed");
 }
@@ -149,4 +145,3 @@ fn test_spinner_finish_with_message_types() {
     // 验证两种方式都可以完成并显示消息
     assert!(true);
 }
-
