@@ -36,27 +36,17 @@
 - **优先级**: 高优先级（命令封装、info 增强）
 
 
-#### 2. [`coverage-improvement.md`](./coverage-improvement.md)
+#### 2. [`test-coverage-improvement.md`](./test-coverage-improvement.md)
 - **状态**: 🔄 进行中
-- **实现度**: 18.09% 覆盖率（目标：75%+）
-- **分类**: 测试覆盖率提升
+- **实现度**: 15.66%-18.09% 覆盖率（目标：75%+）
+- **分类**: 测试覆盖度提升综合方案
 - **内容**:
-  - 📊 当前覆盖率分析（18.09%，2751/15206 行）
-  - 🎯 覆盖率提升计划（分阶段：20% → 25% → 30% → 75%）
-  - 📋 模块优先级分类（100%模块、高覆盖率模块、中等覆盖率模块、低覆盖率模块）
-  - 📝 实施建议和测试编写指南
-- **优先级**: 高优先级（持续提升测试覆盖率）
-
-#### 2.2 [`test-coverage.md`](./test-coverage.md)
-- **状态**: ⏳ 待实施
-- **实现度**: 约 40-50%（基于现有测试覆盖情况估算）
-- **分类**: 测试覆盖缺失分析
-- **内容**:
-  - 📋 全面的测试覆盖缺失分析（Commands、Lib、Bin 模块）
-  - 🎯 优先级建议（高/中/低优先级分类）
-  - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
-  - 📊 任务统计（约 90+ 个待实施任务）
-- **优先级**: 高优先级（测试覆盖率提升指导文档）
+  - 📊 整合测试覆盖缺失分析、覆盖率提升计划和测试质量改进的综合实施方案
+  - 🎯 当前状态分析、目标设定、模块优先级分析
+  - 🔧 测试质量改进计划（删除低价值测试、增强现有测试、补充缺失测试）
+  - 📝 分阶段实施计划（阶段 0-4，从 20% → 75%+）
+  - 📊 进度跟踪和里程碑
+- **优先级**: 高优先级（测试覆盖度提升综合指导文档）
 
 #### 3. [`integration.md`](./integration.md)
 - **状态**: ⏳ 待实施
@@ -97,12 +87,11 @@
 docs/requirements/
 ├── README.md                      # 本文件（索引文档）
 │
-├── jira.md                   # JIRA 模块待办事项（🚧 部分完成）
-├── coverage-improvement.md   # 测试覆盖率提升待办事项（🔄 进行中）
-├── test-coverage.md           # 测试覆盖缺失分析待办事项（⏳ 待实施）
-├── integration.md            # 集成与扩展待办事项（⏳ 待实施）
-├── doc-check.md              # 架构文档检查工具待办事项（⏳ 待实施）
-└── internationalization.md   # 国际化支持待办事项（⏳ 待实施）
+├── jira.md                         # JIRA 模块待办事项（🚧 部分完成）
+├── test-coverage-improvement.md    # 测试覆盖度提升综合方案（🔄 进行中）
+├── integration.md                  # 集成与扩展待办事项（⏳ 待实施）
+├── doc-check.md                    # 架构文档检查工具待办事项（⏳ 待实施）
+└── internationalization.md        # 国际化支持待办事项（⏳ 待实施）
 ```
 
 ---
@@ -112,19 +101,18 @@ docs/requirements/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| 🔄 进行中 | 1 个 | 覆盖率提升 |
-| ⏳ 待实施 | 4 个 | 测试覆盖缺失分析、集成扩展、文档检查工具、国际化支持 |
-| **总计** | **6 个** | - |
+| 🔄 进行中 | 1 个 | 测试覆盖度提升综合方案 |
+| ⏳ 待实施 | 3 个 | 集成扩展、文档检查工具、国际化支持 |
+| **总计** | **5 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **jira.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
-2. **coverage-improvement.md** - 测试覆盖率提升待办事项（🔄 进行中，18.09%）
-3. **test-coverage.md** - 测试覆盖缺失分析待办事项（⏳ 待实施，约 40-50%）
-4. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
-5. **doc-check.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
-6. **internationalization.md** - 国际化支持待办事项（⏳ 待实施，0%）
+2. **test-coverage-improvement.md** - 测试覆盖度提升综合方案（🔄 进行中，15.66%-18.09%）
+3. **integration.md** - 集成与扩展待办事项（⏳ 待实施，0%）
+4. **doc-check.md** - 架构文档检查工具待办事项（⏳ 待实施，0%）
+5. **internationalization.md** - 国际化支持待办事项（⏳ 待实施，0%）
 
 ---
 
@@ -140,28 +128,28 @@ docs/requirements/
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
 #### 进行中文档（1 个）
-2. **测试覆盖率提升** (`coverage-improvement.md`) - 🔄 进行中（18.09%）
-   - 📊 当前覆盖率：18.09% (2751/15206 行)
+2. **测试覆盖度提升综合方案** (`test-coverage-improvement.md`) - 🔄 进行中（15.66%-18.09%）
+   - 📊 当前覆盖率：15.66%-18.09% (2382-2751/15206 行)
    - 🎯 目标覆盖率：75%+
-   - 📋 分阶段提升计划（20% → 25% → 30% → 75%）
-
-3. **测试覆盖缺失分析** (`test-coverage.md`) - ⏳ 待实施（约 40-50%）
+   - 📋 整合测试覆盖缺失分析、覆盖率提升计划和测试质量改进的综合实施方案
+   - 🔧 测试质量改进计划（删除低价值测试、增强现有测试、补充缺失测试）
+   - 📝 分阶段实施计划（阶段 0-4，从 20% → 75%+）
    - 📋 全面的测试覆盖缺失分析（Commands、Lib、Bin 模块）
    - 🎯 优先级建议（高/中/低优先级分类）
    - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
    - 📊 任务统计（约 90+ 个待实施任务）
 
-#### 待实施文档（4 个）
-4. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
+#### 待实施文档（3 个）
+3. **集成与扩展** (`integration.md`) - ⏳ 待实施（0%）
    - 更多平台支持、通知系统
 
-5. **架构文档检查工具** (`doc-check.md`) - ⏳ 待实施（0%）
+4. **架构文档检查工具** (`doc-check.md`) - ⏳ 待实施（0%）
    - 文档路径验证脚本
    - 模块统计验证脚本
    - 综合检查脚本（可选）
    - CI 集成（可选）
 
-6. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
+5. **国际化支持** (`internationalization.md`) - ⏳ 待实施（0%）
    - 多语言支持规则（文本外部化、资源文件组织、语言切换机制）
    - 时区和日期格式处理规则（时区处理、日期格式标准化、本地化显示）
    - 国际化相关的代码规范和最佳实践
@@ -184,8 +172,7 @@ docs/requirements/
 
 ### 按模块查找
 - **JIRA 相关** → [`jira.md`](./jira.md) 🚧 部分完成
-- **测试覆盖率提升** → [`coverage-improvement.md`](./coverage-improvement.md) 🔄 进行中（18.09%）
-- **测试覆盖缺失分析** → [`test-coverage.md`](./test-coverage.md) ⏳ 待实施（约 40-50%）
+- **测试覆盖度提升综合方案** → [`test-coverage-improvement.md`](./test-coverage-improvement.md) 🔄 进行中（15.66%-18.09%）
 - **集成与扩展** → [`integration.md`](./integration.md) ⏳ 待实施
 - **文档检查工具** → [`doc-check.md`](./doc-check.md) ⏳ 待实施
 - **国际化支持** → [`internationalization.md`](./internationalization.md) ⏳ 待实施
@@ -206,7 +193,9 @@ docs/requirements/
 - ✅ 更新了统计信息和目录结构
 
 ### 2025-12-24 更新
-- ✅ 新增 test-coverage.md - 测试覆盖缺失分析待办事项（⏳ 待实施）
+- ✅ 新增 test-coverage-improvement.md - 测试覆盖度提升综合方案（🔄 进行中）
+- ✅ 删除 test-coverage.md、coverage-improvement.md、coverage-improvement-analysis.md - 已整合到 test-coverage-improvement.md
+- ✅ 删除 analysis/CLI_COMMANDS_TEST_ANALYSIS.md - 已整合到 test-coverage-improvement.md
 - ✅ 更新了统计信息和目录结构
 
 ### 2025-12-23 更新
