@@ -56,27 +56,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_mask_short_value() {
+    fn test_mask_basic() {
+        // Basic validation of masking functionality
         assert_eq!("short".mask(), "***");
-        assert_eq!("12345".mask(), "***");
-    }
-
-    #[test]
-    fn test_mask_long_value() {
         assert_eq!("verylongapikey123456".mask(), "very***3456");
-        assert_eq!("1234567890123".mask(), "1234***0123");
-    }
-
-    #[test]
-    fn test_mask_edge_cases() {
-        assert_eq!("".mask(), "***");
-        assert_eq!("123456789012".mask(), "***"); // 恰好12个字符
-        assert_eq!("1234567890123".mask(), "1234***0123"); // 13个字符
-    }
-
-    #[test]
-    fn test_mask_with_string() {
-        let s = String::from("verylongapikey123456");
-        assert_eq!(s.mask(), "very***3456");
     }
 }

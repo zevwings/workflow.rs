@@ -60,3 +60,31 @@ impl PathAccess {
         self.path.is_dir()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_basic_operations() -> Result<()> {
+        // Basic validation of core PathAccess functionality
+        let temp_dir = TempDir::new().unwrap();
+
+        // Test exists/is_file/is_dir
+        let file_path = temp_dir.path().join("test.txt");
+        fs::write(&file_path, "test").unwrap();
+        let path_access = PathAccess::new(&file_path);
+        assert!(path_access.exists());
+        assert!(path_access.is_file());
+
+        // Test ensure_dir_exists
+        let new_dir = temp_dir.path().join("new/dir");
+        let dir_access = PathAccess::new(&new_dir);
+        dir_access.ensure_dir_exists()?;
+        assert!(new_dir.exists() && new_dir.is_dir());
+
+        Ok(())
+    }
+}

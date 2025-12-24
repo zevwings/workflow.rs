@@ -26,3 +26,15 @@ impl Browser {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_browser_basic() {
+        // Basic validation that Browser struct exists
+        let _browser = Browser;
+        // Note: Browser::open() is tested in integration tests
+    }
+}

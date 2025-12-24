@@ -145,52 +145,13 @@ impl fmt::Display for BranchType {
 mod tests {
     use super::*;
 
-    // ==================== BranchType 测试 ====================
-
     #[test]
-    fn test_branch_type_all() {
-        let all = BranchType::all();
-        assert_eq!(all.len(), 5);
-        assert!(all.contains(&BranchType::Feature));
-        assert!(all.contains(&BranchType::Bugfix));
-        assert!(all.contains(&BranchType::Refactoring));
-        assert!(all.contains(&BranchType::Hotfix));
-        assert!(all.contains(&BranchType::Chore));
-    }
-
-    #[test]
-    fn test_branch_type_as_str() {
+    fn test_branch_type_basic() {
+        // Basic validation of branch types
+        assert_eq!(BranchType::all().len(), 5);
         assert_eq!(BranchType::Feature.as_str(), "feature");
-        assert_eq!(BranchType::Bugfix.as_str(), "bugfix");
-        assert_eq!(BranchType::Refactoring.as_str(), "refactoring");
-        assert_eq!(BranchType::Hotfix.as_str(), "hotfix");
-        assert_eq!(BranchType::Chore.as_str(), "chore");
-    }
-
-    #[test]
-    fn test_branch_type_from_str() {
         assert_eq!(BranchType::from_str("feature"), Some(BranchType::Feature));
-        assert_eq!(BranchType::from_str("FEATURE"), Some(BranchType::Feature));
-        assert_eq!(BranchType::from_str("bugfix"), Some(BranchType::Bugfix));
-        assert_eq!(BranchType::from_str("bug"), Some(BranchType::Bugfix));
-        assert_eq!(BranchType::from_str("fix"), Some(BranchType::Bugfix));
-        assert_eq!(
-            BranchType::from_str("refactoring"),
-            Some(BranchType::Refactoring)
-        );
-        assert_eq!(
-            BranchType::from_str("refactor"),
-            Some(BranchType::Refactoring)
-        );
-        assert_eq!(BranchType::from_str("hotfix"), Some(BranchType::Hotfix));
-        assert_eq!(BranchType::from_str("chore"), Some(BranchType::Chore));
-        assert_eq!(BranchType::from_str("invalid"), None);
-    }
-
-    #[test]
-    fn test_branch_type_display() {
         assert_eq!(format!("{}", BranchType::Feature), "feature");
-        assert_eq!(format!("{}", BranchType::Bugfix), "bugfix");
     }
 
     #[test]

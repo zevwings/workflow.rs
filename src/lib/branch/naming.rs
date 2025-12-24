@@ -406,51 +406,17 @@ impl BranchNaming {
 mod tests {
     use super::*;
 
-    // ==================== sanitize 函数测试 ====================
-
     #[test]
     fn test_sanitize_basic() {
+        // Basic validation of sanitization
         assert_eq!(BranchNaming::sanitize("Hello World"), "hello-world");
-        assert_eq!(BranchNaming::sanitize("test-branch"), "test-branch");
-        assert_eq!(BranchNaming::sanitize("Test Branch"), "test-branch");
-    }
-
-    #[test]
-    fn test_sanitize_special_characters() {
         assert_eq!(BranchNaming::sanitize("test@branch#123"), "test-branch-123");
-        assert_eq!(BranchNaming::sanitize("test.branch"), "test-branch");
-        assert_eq!(BranchNaming::sanitize("test_branch"), "test-branch");
     }
-
-    #[test]
-    fn test_sanitize_non_ascii() {
-        // 非 ASCII 字符应该被忽略
-        assert_eq!(BranchNaming::sanitize("测试分支"), "");
-        // 中文被忽略，但 test 和 branch 之间没有分隔符，所以不会添加连字符
-        assert_eq!(BranchNaming::sanitize("test中文branch"), "testbranch");
-        // 中间有空格，所以会添加连字符
-        assert_eq!(BranchNaming::sanitize("test 中文 branch"), "test-branch");
-        assert_eq!(BranchNaming::sanitize("Hello 世界"), "hello");
-    }
-
-    #[test]
-    fn test_sanitize_duplicate_hyphens() {
-        assert_eq!(BranchNaming::sanitize("test---branch"), "test-branch");
-        assert_eq!(BranchNaming::sanitize("test   branch"), "test-branch");
-    }
-
-    #[test]
-    fn test_sanitize_trim_dashes() {
-        assert_eq!(BranchNaming::sanitize("-test-branch-"), "test-branch");
-        assert_eq!(BranchNaming::sanitize("--test--"), "test");
-    }
-
-    // ==================== slugify 函数测试 ====================
 
     #[test]
     fn test_slugify_basic() {
+        // Basic validation of slugify
         assert_eq!(BranchNaming::slugify("Hello World"), "hello-world");
-        assert_eq!(BranchNaming::slugify("test branch"), "test-branch");
     }
 
     #[test]

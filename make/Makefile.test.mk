@@ -25,6 +25,11 @@ test-all:
 	@echo "运行所有测试（包括被忽略的）..."
 	cargo test -- --include-ignored
 
+# 在 release 模式下运行测试（覆盖 release 模式下的代码）
+test-release:
+	@echo "在 release 模式下运行测试..."
+	cargo test --release
+
 # 生成覆盖率报告（HTML格式）
 coverage:
 	@echo "生成覆盖率报告..."
@@ -33,12 +38,17 @@ coverage:
 		echo "请运行: cargo install cargo-tarpaulin"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Html --output-dir coverage \
+	cargo tarpaulin --skip-clean --out Html --out Json --output-dir coverage \
 		--exclude-files "src/bin/*" \
 		--exclude-files "tests/*" \
 		--exclude-files "benches/*" \
 		--exclude-files "src/*/mod.rs"
 	@echo "覆盖率报告已生成到 coverage/ 目录"
+	@echo ""
+	@echo "注意: 要覆盖 release 模式下的代码（如 logger/log_level.rs），请运行:"
+	@echo "  cargo test --release"
+	@echo "  或"
+	@echo "  make test-release"
 
 # 打开覆盖率报告
 coverage-open:
@@ -59,7 +69,7 @@ coverage-ci:
 		echo "请运行: cargo install cargo-tarpaulin"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Lcov --output-dir coverage \
+	cargo tarpaulin --skip-clean --out Lcov --output-dir coverage \
 		--exclude-files "src/bin/*" \
 		--exclude-files "tests/*" \
 		--exclude-files "benches/*" \
@@ -78,7 +88,7 @@ coverage-trend:
 		echo "错误: coverage 目录不存在，请先运行 make coverage"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Html --output-dir coverage \
+	cargo tarpaulin --skip-clean --out Html --out Json --output-dir coverage \
 		--exclude-files "src/bin/*" \
 		--exclude-files "tests/*" \
 		--exclude-files "benches/*" \

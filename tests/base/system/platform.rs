@@ -454,3 +454,74 @@ fn test_platform_is_static_required_ldd_output_scenarios() -> color_eyre::Result
 
     Ok(())
 }
+
+#[test]
+fn test_platform_is_static_required_non_linux_early_return() {
+    // 测试非 Linux 平台的早期返回路径（覆盖 is_static_required 的第 117-118 行）
+    // 通过 release_identifier 间接测试
+    let macos = Platform::new("macos", "x86_64");
+    let windows = Platform::new("windows", "x86_64");
+
+    // 非 Linux 平台不应该检查静态链接
+    assert_eq!(macos.release_identifier().unwrap(), "macOS-Intel");
+    assert_eq!(windows.release_identifier().unwrap(), "Windows-x86_64");
+}
+
+#[test]
+fn test_platform_is_static_required_non_x86_64_early_return() {
+    // 测试非 x86_64 架构的早期返回路径（覆盖 is_static_required 的第 117-118 行）
+    // 通过 release_identifier 间接测试
+    let linux_arm64 = Platform::new("linux", "aarch64");
+
+    // 非 x86_64 架构不应该检查静态链接
+    assert_eq!(linux_arm64.release_identifier().unwrap(), "Linux-ARM64");
+}
+
+#[test]
+fn test_platform_is_static_required_linux_x86_64_scenarios() {
+    // 测试 Linux x86_64 平台的不同场景
+    // 由于无法直接控制文件读取和命令执行，我们通过 release_identifier 间接测试
+    // 这个测试验证代码路径存在，实际行为取决于运行环境
+    let platform = Platform::new("linux", "x86_64");
+    let identifier = platform.release_identifier().unwrap();
+
+    // 应该返回 Linux-x86_64 或 Linux-x86_64-static
+    // 具体值取决于：
+    // 1. 是否是 Alpine Linux（通过 /etc/os-release 检测）
+    // 2. ldd 命令的输出（静态链接检测）
+    assert!(
+        identifier == "Linux-x86_64" || identifier == "Linux-x86_64-static",
+        "Linux x86_64 platform should return Linux-x86_64 or Linux-x86_64-static, got: {}",
+        identifier
+    );
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+#[cfg(target_arch = "x86_64")]
+fn test_platform_is_static_required_actual_linux_environment() {
+    // 在真实的 Linux x86_64 环境中测试静态链接检测
+    // 这个测试只在 Linux x86_64 平台上运行
+    let platform = Platform::new("linux", "x86_64");
+    let identifier = platform.release_identifier().unwrap();
+
+    // 验证返回有效的标识符
+    assert!(
+        identifier == "Linux-x86_64" || identifier == "Linux-x86_64-static",
+        "Should return valid Linux x86_64 identifier, got: {}",
+        identifier
+    );
+
+    // 如果系统上有 /etc/os-release 文件，可以检查是否包含 Alpine 信息
+    // 这有助于验证 Alpine Linux 检测逻辑
+    if let Ok(os_release) = std::fs::read_to_string("/etc/os-release") {
+        if os_release.contains("Alpine") || os_release.contains("ID=alpine") {
+            // 如果是 Alpine Linux，应该返回 static 版本
+            assert_eq!(
+                identifier,
+                "Linux-x86_64-static",
+                "Alpine Linux should return Linux-x86_64-static"
+            );
+        }
+    }
+}

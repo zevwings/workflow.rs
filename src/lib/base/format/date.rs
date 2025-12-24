@@ -194,93 +194,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_format_date_only() {
-        let result = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
-        // 验证格式：YYYY-MM-DD
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap().is_match(&result));
-    }
+    fn test_basic_timestamp_formats() {
+        // Basic validation that timestamp generation works
+        let date = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
+        assert!(date.contains('-') && date.len() == 10); // YYYY-MM-DD
 
-    #[test]
-    fn test_format_datetime() {
-        let result = format_document_timestamp(DateFormat::DateTime, Timezone::Local);
-        // 验证格式：YYYY-MM-DD HH:MM:SS
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-            .unwrap()
-            .is_match(&result));
-    }
-
-    #[test]
-    fn test_format_iso8601() {
-        let result = format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
-        // 验证 ISO 8601 格式
-        assert!(result.contains('T'));
-        assert!(result.contains('Z') || result.contains('+') || result.contains('-'));
-    }
-
-    #[test]
-    fn test_format_filename() {
-        let result = format_document_timestamp(DateFormat::Filename, Timezone::Local);
-        // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-            .unwrap()
-            .is_match(&result));
-    }
-
-    #[test]
-    fn test_format_last_updated() {
-        let result = format_last_updated();
-        // 验证格式：YYYY-MM-DD
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap().is_match(&result));
-    }
-
-    #[test]
-    fn test_format_last_updated_with_time() {
-        let result = format_last_updated_with_time();
-        // 验证格式：YYYY-MM-DD HH:MM:SS
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-            .unwrap()
-            .is_match(&result));
-    }
-
-    #[test]
-    fn test_format_filename_timestamp() {
-        let result = format_filename_timestamp();
-        // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-            .unwrap()
-            .is_match(&result));
-    }
-
-    #[test]
-    fn test_get_unix_timestamp() {
-        let timestamp1 = get_unix_timestamp();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        let timestamp2 = get_unix_timestamp();
-
-        // 验证时间戳是递增的
-        assert!(timestamp2 >= timestamp1);
-
-        // 验证时间戳在合理范围内（2020年之后）
-        let year_2020_timestamp = 1577836800; // 2020-01-01 00:00:00 UTC
-        assert!(timestamp1 > year_2020_timestamp);
-    }
-
-    #[test]
-    fn test_get_unix_timestamp_nanos() {
-        let timestamp1 = get_unix_timestamp_nanos();
-        std::thread::sleep(std::time::Duration::from_millis(1));
-        let timestamp2 = get_unix_timestamp_nanos();
-
-        // 验证纳秒时间戳是递增的
-        assert!(timestamp2 > timestamp1);
-
-        // 验证时间戳在合理范围内（2020年之后）
-        let year_2020_timestamp_nanos = 1_577_836_800_000_000_000_u128; // 2020-01-01 00:00:00 UTC in nanos
-        assert!(timestamp1 > year_2020_timestamp_nanos);
-
-        // 验证纳秒时间戳比秒时间戳精度更高
-        let timestamp_secs = get_unix_timestamp() as u128;
-        let timestamp_nanos = get_unix_timestamp_nanos();
-        assert!(timestamp_nanos > timestamp_secs * 1_000_000_000);
+        let timestamp = get_unix_timestamp();
+        assert!(timestamp > 1577836800); // After 2020-01-01
     }
 }

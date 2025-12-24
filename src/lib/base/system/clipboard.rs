@@ -63,3 +63,15 @@ impl Clipboard {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clipboard_basic() {
+        // Basic validation that Clipboard struct exists
+        let _clipboard = Clipboard;
+        // Note: Clipboard::copy() is tested comprehensively in integration tests
+    }
+}
