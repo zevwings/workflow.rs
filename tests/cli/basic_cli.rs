@@ -39,7 +39,12 @@ fn test_pr_help() {
 }
 
 #[test]
+#[cfg(not(target_os = "windows"))] // Windows 上跳过：可能尝试初始化服务，导致长时间阻塞
+#[ignore] // 忽略：可能尝试初始化 Jira/GitHub 客户端，导致长时间阻塞
 fn test_pr_without_git_repo() {
+    // 注意：此测试执行 pr create 命令，即使没有 Git 仓库也可能尝试初始化服务
+    // Windows 上已通过 #[cfg] 跳过，因为可能尝试初始化 Jira/GitHub 客户端，导致阻塞
+    // 如果需要运行此测试，请使用: cargo test -- --ignored
     let env = CliTestEnv::new();
 
     let binding = CliCommandBuilder::new()

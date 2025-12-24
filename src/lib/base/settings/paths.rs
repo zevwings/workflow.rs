@@ -507,9 +507,12 @@ impl Paths {
     /// use workflow::base::settings::paths::Paths;
     ///
     /// let paths = Paths::binary_paths();
-    /// assert_eq!(paths, vec![
-    ///     "/usr/local/bin/workflow".to_string(),
-    /// ]);
+    /// assert_eq!(paths.len(), 1);
+    /// if cfg!(target_os = "windows") {
+    ///     assert!(paths[0].ends_with("workflow.exe"));
+    /// } else {
+    ///     assert_eq!(paths[0], "/usr/local/bin/workflow");
+    /// }
     /// ```
     pub fn binary_paths() -> Vec<String> {
         let install_dir = Self::binary_install_dir();
