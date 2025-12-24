@@ -6,7 +6,7 @@ use color_eyre::Result;
 use std::env;
 use std::process::Command;
 
-use crate::base::util::file::FileReader;
+use crate::base::util::fs::file::FileReader;
 
 /// 平台信息结构体
 ///

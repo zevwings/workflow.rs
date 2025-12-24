@@ -140,3 +140,66 @@ fn test_json_parser_empty_response_fallback_to_object() {
     // 应该包含错误消息
     assert!(error_msg.contains("Failed to parse empty response as JSON"));
 }
+
+// ==================== 来自 parser_core.rs 的补充测试 ====================
+
+#[test]
+fn test_json_parser_array() -> color_eyre::Result<()> {
+    let json_bytes = b"[1, 2, 3, 4, 5]";
+    let result: Vec<i32> = JsonParser::parse(json_bytes, 200)?;
+    assert_eq!(result, vec![1, 2, 3, 4, 5]);
+    Ok(())
+}
+
+#[test]
+fn test_json_parser_nested_object() -> color_eyre::Result<()> {
+    let json_bytes = b"{\"nested\": {\"key\": \"value\"}}";
+    let result: serde_json::Value = JsonParser::parse(json_bytes, 200)?;
+    assert_eq!(result["nested"]["key"], "value");
+    Ok(())
+}
+
+#[test]
+fn test_text_parser_multiline() -> color_eyre::Result<()> {
+    let text_bytes = b"Line 1\nLine 2\nLine 3";
+    let result = TextParser::parse(text_bytes, 200)?;
+    assert_eq!(result, "Line 1\nLine 2\nLine 3");
+    Ok(())
+}
+
+#[test]
+fn test_text_parser_unicode() -> color_eyre::Result<()> {
+    let text_bytes = "测试文本 🚀".as_bytes();
+    let result = TextParser::parse(text_bytes, 200)?;
+    assert_eq!(result, "测试文本 🚀");
+    Ok(())
+}
+
+#[test]
+fn test_json_parser_custom_struct() -> color_eyre::Result<()> {
+    #[derive(serde::Deserialize, PartialEq, Debug)]
+    struct TestStruct {
+        name: String,
+        age: u32,
+    }
+
+    let json_bytes = b"{\"name\": \"Alice\", \"age\": 30}";
+    let result: TestStruct = JsonParser::parse(json_bytes, 200)?;
+
+    assert_eq!(result.name, "Alice");
+    assert_eq!(result.age, 30);
+
+    Ok(())
+}
+
+#[test]
+fn test_json_parser_long_response_with_status() {
+    // 测试长响应（>200字符）且解析失败时，status 参数在错误消息中的使用
+    let long_invalid_json = format!("{{\"key\": \"value\"{}", "x".repeat(300));
+    let result: color_eyre::Result<serde_json::Value> =
+        JsonParser::parse(long_invalid_json.as_bytes(), 500);
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("500"));
+    assert!(error_msg.contains("Failed to parse JSON"));
+}

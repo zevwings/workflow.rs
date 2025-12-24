@@ -5,8 +5,7 @@
 use pretty_assertions::assert_eq;
 use workflow::base::llm::languages::{
     find_language, get_language_instruction, get_language_requirement,
-    get_supported_language_codes, get_supported_language_display_names,
-    SUPPORTED_LANGUAGES,
+    get_supported_language_codes, get_supported_language_display_names, SUPPORTED_LANGUAGES,
 };
 
 #[test]
@@ -182,8 +181,11 @@ fn test_get_language_instruction_all_supported() {
     // 测试获取所有支持语言的 instruction
     for lang in SUPPORTED_LANGUAGES {
         let instruction = get_language_instruction(lang.code);
-        assert!(!instruction.is_empty(), "Instruction for {} should not be empty", lang.code);
+        assert!(
+            !instruction.is_empty(),
+            "Instruction for {} should not be empty",
+            lang.code
+        );
         assert_eq!(instruction, lang.instruction_template);
     }
 }
-

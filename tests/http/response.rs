@@ -3,6 +3,7 @@
 //! 测试 HTTP 响应的解析和处理功能。
 
 use crate::common::http_helpers::MockServer;
+use crate::common::mock_server::MockServerManager;
 use serde::Deserialize;
 use serde_json::Value;
 use workflow::base::http::{HttpClient, RequestConfig};
@@ -426,4 +427,133 @@ fn test_response_ensure_success_with_invalid_utf8_body() {
     assert!(error_msg.contains("500"));
     assert!(error_msg.contains("Unable to read response body"));
     _mock.assert();
+}
+
+// ==================== 来自 response_core.rs 的补充测试 ====================
+
+#[test]
+fn test_http_response_is_success_201() -> color_eyre::Result<()> {
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("POST", "/test")
+        .with_status(201)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"created": true}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.post(&url, config)?;
+
+    assert_eq!(response.status, 201);
+    assert!(response.is_success());
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
+}
+
+#[test]
+fn test_http_response_is_success_299() -> color_eyre::Result<()> {
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("GET", "/test")
+        .with_status(299)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"status": "success"}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.get(&url, config)?;
+
+    assert_eq!(response.status, 299);
+    assert!(response.is_success());
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
+}
+
+#[test]
+fn test_http_response_debug() -> color_eyre::Result<()> {
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("GET", "/test")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"message": "OK"}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.get(&url, config)?;
+
+    let debug_str = format!("{:?}", response);
+    assert!(debug_str.contains("200") || debug_str.contains("OK"));
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
+}
+
+#[test]
+fn test_http_response_extract_error_message_with_message_field() -> color_eyre::Result<()> {
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("GET", "/test")
+        .with_status(400)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"message": "Simple error message"}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.get(&url, config)?;
+
+    let error_msg = response.extract_error_message();
+    assert!(error_msg.contains("message") || error_msg.contains("Simple error message"));
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
+}
+
+#[test]
+fn test_http_response_extract_error_message_no_error_field() -> color_eyre::Result<()> {
+    // 测试 extract_error_message 当 JSON 响应没有 error/message 字段时
+    let mut manager = MockServerManager::new();
+
+    let mock = manager
+        .server()
+        .mock("GET", "/test")
+        .with_status(400)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"data": {"key": "value"}, "status": "error"}"#)
+        .create();
+
+    let client = HttpClient::global()?;
+    let config = RequestConfig::<Value, Value>::new();
+    let url = format!("{}/test", manager.base_url());
+    let response = client.get(&url, config)?;
+
+    let error_msg = response.extract_error_message();
+    // 应该返回完整的 JSON 字符串（因为没有 error/message 字段）
+    assert!(error_msg.contains("data") || error_msg.contains("status"));
+
+    mock.assert();
+    manager.cleanup();
+    Ok(())
 }

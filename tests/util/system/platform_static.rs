@@ -30,7 +30,8 @@ fn test_platform_release_identifier_non_linux_does_not_check_static() -> color_e
 }
 
 #[test]
-fn test_platform_release_identifier_linux_non_x86_64_does_not_check_static() -> color_eyre::Result<()> {
+fn test_platform_release_identifier_linux_non_x86_64_does_not_check_static(
+) -> color_eyre::Result<()> {
     // 测试 Linux 非 x86_64 架构不会检查静态链接
     let linux_arm64 = Platform::new("linux", "aarch64");
 
@@ -38,4 +39,3 @@ fn test_platform_release_identifier_linux_non_x86_64_does_not_check_static() -> 
 
     Ok(())
 }
-

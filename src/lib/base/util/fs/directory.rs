@@ -2,7 +2,7 @@
 //!
 //! 提供基于路径的目录管理助手 `DirectoryWalker`，包括目录遍历和创建功能。
 
-use crate::base::util::path::PathAccess;
+use crate::base::util::fs::path::PathAccess;
 use color_eyre::{eyre::WrapErr, Result};
 use std::fs;
 use std::path::{Path, PathBuf};

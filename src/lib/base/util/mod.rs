@@ -9,12 +9,10 @@
 //!
 //! ## 模块结构
 //!
-//! - `string` - 字符串处理工具
-//! - `platform` - 平台检测工具（操作系统和架构检测）
-//! - `browser` - 浏览器操作（`Browser`）
-//! - `clipboard` - 剪贴板操作（`Clipboard`）
-//! - `unzip` - 解压工具（tar.gz 文件解压）
-//! - `checksum` - 校验和工具（SHA256 计算和验证）
+//! 本模块按功能领域分为三个子模块：
+//! - `fs` - 文件系统操作（文件、路径、目录、解压）
+//! - `system` - 系统交互（平台检测、浏览器、剪贴板）
+//! - `data` - 数据处理（字符串、日期时间、校验和）
 //!
 //! 注意：以下模块已迁移到独立的目录：
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
@@ -26,47 +24,49 @@
 //! - `lib/uninstall` - 卸载工具
 //! - `lib/proxy/env` - 代理环境变量管理（仅用于代理功能）
 
-pub mod browser;
-pub mod checksum;
-pub mod clipboard;
-pub mod date;
-pub mod directory;
-pub mod file;
-pub mod path;
-pub mod platform;
-pub mod string;
-pub mod unzip;
+pub mod data;
+pub mod fs;
+pub mod system;
 
-// 重新导出 string 模块的函数，保持向后兼容
-pub use string::mask_sensitive_value;
+// 向后兼容：重新导出子模块，使 `util::file::FileReader` 等路径仍然可用
+pub mod file {
+    pub use super::fs::file::*;
+}
+pub mod path {
+    pub use super::fs::path::*;
+}
+pub mod directory {
+    pub use super::fs::directory::*;
+}
+pub mod unzip {
+    pub use super::fs::unzip::*;
+}
+pub mod platform {
+    pub use super::system::platform::*;
+}
+pub mod browser {
+    pub use super::system::browser::*;
+}
+pub mod clipboard {
+    pub use super::system::clipboard::*;
+}
+pub mod string {
+    pub use super::data::string::*;
+}
+pub mod date {
+    pub use super::data::date::*;
+}
+pub mod checksum {
+    pub use super::data::checksum::*;
+}
 
-// 重新导出 platform 模块的结构体
-pub use platform::Platform;
-
-// 重新导出 browser 和 clipboard
-pub use browser::Browser;
-pub use clipboard::Clipboard;
-
-// 重新导出 unzip
-pub use unzip::Unzip;
-
-// 重新导出 checksum
-pub use checksum::Checksum;
-
-// 重新导出 date
-pub use date::{
-    format_document_timestamp, format_last_updated, format_last_updated_with_time, DateFormat,
-    Timezone,
+// 重新导出所有公共 API，保持向后兼容
+pub use data::{
+    format_document_timestamp, format_last_updated, format_last_updated_with_time,
+    mask_sensitive_value, Checksum, DateFormat, Timezone,
 };
-
-// 重新导出 directory
-pub use directory::DirectoryWalker;
-
-// 重新导出 file
-pub use file::{FileReader, FileWriter};
-
-// 重新导出 path
-pub use path::PathAccess;
+pub use fs::{DirectoryWalker, FileReader, FileWriter, PathAccess, Unzip};
+pub use system::{Browser, Clipboard, Platform};
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

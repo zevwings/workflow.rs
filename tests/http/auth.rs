@@ -55,4 +55,3 @@ fn test_authorization_fields_public() {
     assert_eq!(auth.username, "new@example.com");
     assert_eq!(auth.password, "new_token");
 }
-

@@ -62,4 +62,3 @@ fn test_platform_release_identifier_unsupported() {
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("Unsupported platform"));
 }
-

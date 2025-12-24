@@ -5,8 +5,46 @@
 use crate::common::http_helpers::MockServer;
 use color_eyre::eyre::eyre;
 use serde_json::Value;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
 use workflow::base::http::{HttpClient, RequestConfig};
+
+// ==================== 辅助函数（来自 retry_core.rs）====================
+
+/// 创建在指定次数后成功的操作（使用局部计数器避免并发问题）
+fn create_success_after_attempts(success_after: usize) -> impl Fn() -> color_eyre::Result<String> {
+    let counter = Arc::new(Mutex::new(0usize));
+    move || {
+        let mut count = counter.lock().unwrap();
+        *count += 1;
+        let current = *count;
+        drop(count); // 释放锁
+
+        if current >= success_after {
+            Ok("success".to_string())
+        } else {
+            Err(eyre!(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "temporary failure"
+            )))
+        }
+    }
+}
+
+/// 创建总是失败的操作（使用可重试的错误）
+fn create_always_fail_operation() -> impl Fn() -> color_eyre::Result<String> {
+    || {
+        // 创建一个模拟的网络超时错误，这是可重试的
+        let io_error = std::io::Error::new(std::io::ErrorKind::TimedOut, "connection timeout");
+        Err(eyre!(io_error))
+    }
+}
+
+/// 创建总是成功的操作
+fn create_always_success_operation() -> impl Fn() -> color_eyre::Result<String> {
+    || Ok("immediate success".to_string())
+}
 
 #[test]
 fn test_retry_config_new() {
@@ -1515,4 +1553,427 @@ fn test_retry_countdown_time_check_logic() {
     // 验证成功（重试后成功）
     // 时间检查逻辑已通过实际执行验证
     assert!(result.is_ok());
+}
+
+// ==================== 来自 retry_core.rs 的补充测试 ====================
+
+#[test]
+fn test_immediate_success() {
+    let config = HttpRetryConfig {
+        max_retries: 3,
+        initial_delay: 1,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let result =
+        HttpRetry::retry(create_always_success_operation(), &config, "test operation").unwrap();
+
+    assert_eq!(result.retry_count, 0);
+    assert_eq!(result.succeeded_on_first_attempt, true);
+    assert_eq!(result.result, "immediate success");
+}
+
+#[test]
+fn test_success_after_retries() {
+    let config = HttpRetryConfig {
+        max_retries: 3,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let result =
+        HttpRetry::retry(create_success_after_attempts(2), &config, "test operation").unwrap();
+
+    assert_eq!(result.retry_count, 1);
+    assert_eq!(result.succeeded_on_first_attempt, false);
+    assert_eq!(result.result, "success");
+}
+
+#[test]
+fn test_all_retries_exhausted() {
+    let config = HttpRetryConfig {
+        max_retries: 2,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let result = HttpRetry::retry(create_always_fail_operation(), &config, "test operation");
+
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains("test operation failed after 2 retries"));
+}
+
+#[test]
+#[ignore]
+fn test_backoff_timing() {
+    let config = HttpRetryConfig {
+        max_retries: 2,
+        initial_delay: 1,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "timing test");
+    let duration = start_time.elapsed();
+
+    assert!(duration >= Duration::from_millis(2800));
+    assert!(duration <= Duration::from_millis(4000));
+}
+
+#[test]
+#[ignore]
+fn test_backoff_calculation_case_1() {
+    let initial_delay = 1;
+    let multiplier = 2.0;
+    let max_delay = 30;
+    let expected_delays = vec![1, 2, 4, 8, 16, 30, 30];
+
+    let config = HttpRetryConfig {
+        max_retries: expected_delays.len() as u32,
+        initial_delay,
+        max_delay,
+        backoff_multiplier: multiplier,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
+    let duration = start_time.elapsed();
+
+    let expected_total_seconds: u64 = expected_delays.iter().sum();
+    let expected_duration = Duration::from_secs(expected_total_seconds);
+    let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
+    let max_expected = expected_duration + Duration::from_millis(500);
+
+    assert!(
+        duration >= min_expected && duration <= max_expected,
+        "Duration {:?} not in expected range [{:?}, {:?}] for delays {:?}",
+        duration,
+        min_expected,
+        max_expected,
+        expected_delays
+    );
+}
+
+#[test]
+#[ignore]
+fn test_backoff_calculation_case_2() {
+    let initial_delay = 2;
+    let multiplier = 1.5;
+    let max_delay = 10;
+    let expected_delays = vec![2, 3, 4, 6, 9, 10, 10];
+
+    let config = HttpRetryConfig {
+        max_retries: expected_delays.len() as u32,
+        initial_delay,
+        max_delay,
+        backoff_multiplier: multiplier,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
+    let duration = start_time.elapsed();
+
+    let expected_total_seconds: u64 = expected_delays.iter().sum();
+    let expected_duration = Duration::from_secs(expected_total_seconds);
+    let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
+    let max_expected = expected_duration + Duration::from_millis(500);
+
+    assert!(
+        duration >= min_expected && duration <= max_expected,
+        "Duration {:?} not in expected range [{:?}, {:?}] for delays {:?}",
+        duration,
+        min_expected,
+        max_expected,
+        expected_delays
+    );
+}
+
+#[test]
+#[ignore]
+fn test_backoff_calculation_case_3() {
+    let initial_delay = 5;
+    let multiplier = 3.0;
+    let max_delay = 20;
+    let expected_delays = vec![5, 15, 20, 20, 20];
+
+    let config = HttpRetryConfig {
+        max_retries: expected_delays.len() as u32,
+        initial_delay,
+        max_delay,
+        backoff_multiplier: multiplier,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "backoff test");
+    let duration = start_time.elapsed();
+
+    let expected_total_seconds: u64 = expected_delays.iter().sum();
+    let expected_duration = Duration::from_secs(expected_total_seconds);
+    let min_expected = expected_duration.saturating_sub(Duration::from_millis(500));
+    let max_expected = expected_duration + Duration::from_millis(500);
+
+    assert!(
+        duration >= min_expected && duration <= max_expected,
+        "Duration {:?} not in expected range [{:?}, {:?}] for delays {:?}",
+        duration,
+        min_expected,
+        max_expected,
+        expected_delays
+    );
+}
+
+#[test]
+fn test_operation_name_in_error() {
+    let config = HttpRetryConfig {
+        max_retries: 1,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let operation_name = "custom operation name";
+    let result = HttpRetry::retry(create_always_fail_operation(), &config, operation_name);
+
+    assert!(result.is_err());
+    let error_msg = result.unwrap_err().to_string();
+    assert!(error_msg.contains(operation_name));
+    assert!(error_msg.contains("failed after 1 retries"));
+}
+
+#[test]
+fn test_zero_max_retries() {
+    let config = HttpRetryConfig {
+        max_retries: 0,
+        initial_delay: 1,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let success_result = HttpRetry::retry(
+        create_always_success_operation(),
+        &config,
+        "no retry success",
+    )
+    .unwrap();
+    assert_eq!(success_result.retry_count, 0);
+    assert!(success_result.succeeded_on_first_attempt);
+
+    let start_time = Instant::now();
+    let fail_result = HttpRetry::retry(create_always_fail_operation(), &config, "no retry fail");
+    let duration = start_time.elapsed();
+
+    assert!(fail_result.is_err());
+    assert!(duration < Duration::from_millis(100));
+}
+
+#[test]
+fn test_large_max_retries() {
+    let config = HttpRetryConfig {
+        max_retries: 100,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let result = HttpRetry::retry(
+        create_success_after_attempts(5),
+        &config,
+        "large retry test",
+    )
+    .unwrap();
+
+    assert_eq!(result.retry_count, 4);
+    assert!(!result.succeeded_on_first_attempt);
+    assert_eq!(result.result, "success");
+}
+
+#[test]
+fn test_zero_initial_delay() {
+    let config = HttpRetryConfig {
+        max_retries: 2,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "zero delay test");
+    let duration = start_time.elapsed();
+
+    assert!(duration < Duration::from_millis(100));
+}
+
+#[test]
+#[ignore]
+fn test_max_delay_limit() {
+    let config = HttpRetryConfig {
+        max_retries: 10,
+        initial_delay: 1,
+        max_delay: 2,
+        backoff_multiplier: 10.0,
+        interactive: false,
+    };
+
+    let start_time = Instant::now();
+    let _result = HttpRetry::retry(create_always_fail_operation(), &config, "max delay test");
+    let duration = start_time.elapsed();
+
+    assert!(duration <= Duration::from_secs(25));
+}
+
+#[test]
+fn test_different_return_types() {
+    let config = HttpRetryConfig {
+        max_retries: 1,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let int_result = HttpRetry::retry(
+        || -> color_eyre::Result<i32> { Ok(42) },
+        &config,
+        "int test",
+    )
+    .unwrap();
+    assert_eq!(int_result.result, 42);
+
+    let bool_result = HttpRetry::retry(
+        || -> color_eyre::Result<bool> { Ok(true) },
+        &config,
+        "bool test",
+    )
+    .unwrap();
+    assert_eq!(bool_result.result, true);
+
+    #[derive(Debug, PartialEq)]
+    struct CustomData {
+        id: u32,
+        name: String,
+    }
+
+    let custom_result = HttpRetry::retry(
+        || -> color_eyre::Result<CustomData> {
+            Ok(CustomData {
+                id: 123,
+                name: "test".to_string(),
+            })
+        },
+        &config,
+        "custom test",
+    )
+    .unwrap();
+
+    assert_eq!(custom_result.result.id, 123);
+    assert_eq!(custom_result.result.name, "test");
+}
+
+#[test]
+fn test_different_error_types() {
+    let config = HttpRetryConfig {
+        max_retries: 1,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    let string_error_result = HttpRetry::retry(
+        || -> color_eyre::Result<String> { Err(eyre!("string error")) },
+        &config,
+        "string error test",
+    );
+    assert!(string_error_result.is_err());
+
+    #[derive(Debug)]
+    struct CustomError {
+        code: i32,
+        message: String,
+    }
+
+    impl std::fmt::Display for CustomError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "CustomError {}: {}", self.code, self.message)
+        }
+    }
+
+    impl std::error::Error for CustomError {}
+
+    let custom_error_result = HttpRetry::retry(
+        || -> color_eyre::Result<String> {
+            Err(CustomError {
+                code: 404,
+                message: "Not found".to_string(),
+            }
+            .into())
+        },
+        &config,
+        "custom error test",
+    );
+    assert!(custom_error_result.is_err());
+}
+
+#[test]
+fn test_rapid_successive_calls() {
+    let config = HttpRetryConfig {
+        max_retries: 1,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    for i in 0..10 {
+        let result = HttpRetry::retry(
+            || -> color_eyre::Result<usize> { Ok(i) },
+            &config,
+            &format!("rapid call {}", i),
+        )
+        .unwrap();
+
+        assert_eq!(result.result, i);
+        assert_eq!(result.retry_count, 0);
+        assert!(result.succeeded_on_first_attempt);
+    }
+}
+
+#[test]
+fn test_consistent_behavior() {
+    let config = HttpRetryConfig {
+        max_retries: 2,
+        initial_delay: 0,
+        max_delay: 30,
+        backoff_multiplier: 2.0,
+        interactive: false,
+    };
+
+    for _ in 0..5 {
+        let result = HttpRetry::retry(
+            create_success_after_attempts(2),
+            &config,
+            "consistency test",
+        )
+        .unwrap();
+
+        assert_eq!(result.retry_count, 1);
+        assert!(!result.succeeded_on_first_attempt);
+        assert_eq!(result.result, "success");
+    }
 }

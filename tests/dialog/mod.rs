@@ -11,4 +11,3 @@ pub mod form_types;
 pub mod multi_select;
 pub mod select;
 pub mod validators;
-

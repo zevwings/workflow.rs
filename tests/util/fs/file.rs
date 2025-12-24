@@ -9,7 +9,6 @@ use std::io::Read;
 use tempfile::TempDir;
 use workflow::base::util::file::{FileReader, FileWriter};
 
-
 #[test]
 fn test_file_reader_to_string() -> color_eyre::Result<()> {
     let temp_dir = TempDir::new()?;
@@ -125,11 +124,14 @@ fn test_file_writer_ensure_parent_dir() -> color_eyre::Result<()> {
 fn test_file_reader_toml() -> color_eyre::Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("config.toml");
-    fs::write(&file_path, r#"
+    fs::write(
+        &file_path,
+        r#"
 [section]
 key = "value"
 number = 42
-"#)?;
+"#,
+    )?;
 
     let reader = FileReader::new(&file_path);
     #[derive(serde::Deserialize)]
@@ -754,4 +756,3 @@ fn test_file_writer_ensure_parent_dir_no_parent() {
     let result = writer.ensure_parent_dir();
     assert!(result.is_ok());
 }
-

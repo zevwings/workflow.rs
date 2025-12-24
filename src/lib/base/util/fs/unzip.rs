@@ -8,8 +8,8 @@ use std::path::Path;
 use tar::Archive;
 use zip::ZipArchive;
 
-use crate::base::util::directory::DirectoryWalker;
-use crate::base::util::FileReader;
+use crate::base::util::fs::directory::DirectoryWalker;
+use crate::base::util::fs::file::FileReader;
 
 /// 解压工具
 ///
