@@ -9,12 +9,13 @@
 //!
 //! ## 模块结构
 //!
-//! 本模块按功能领域分为三个子模块：
-//! - `fs` - 文件系统操作（文件、路径、目录、解压）
-//! - `system` - 系统交互（平台检测、浏览器、剪贴板）
+//! 本模块按功能领域分为一个子模块：
 //! - `data` - 数据处理（字符串、日期时间、校验和）
 //!
 //! 注意：以下模块已迁移到独立的目录：
+//! - `lib/base/system` - 系统交互（平台检测、浏览器、剪贴板）
+//! - `lib/base/fs` - 文件系统操作（文件、路径、目录）
+//! - `lib/base/zip` - 解压工具（tar.gz 和 zip 文件解压）
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
 //! - `lib/base/indicator` - 进度指示器（`Spinner`、`Progress`）
 //! - `lib/base/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`）
@@ -25,48 +26,48 @@
 //! - `lib/proxy/env` - 代理环境变量管理（仅用于代理功能）
 
 pub mod data;
-pub mod fs;
-pub mod system;
 
 // 向后兼容：重新导出子模块，使 `util::file::FileReader` 等路径仍然可用
 pub mod file {
-    pub use super::fs::file::*;
+    pub use crate::base::fs::file::*;
 }
 pub mod path {
-    pub use super::fs::path::*;
+    pub use crate::base::fs::path::*;
 }
 pub mod directory {
-    pub use super::fs::directory::*;
+    pub use crate::base::fs::directory::*;
 }
 pub mod unzip {
-    pub use super::fs::unzip::*;
+    pub use crate::base::zip::*;
 }
 pub mod platform {
-    pub use super::system::platform::*;
+    pub use crate::base::system::platform::*;
 }
 pub mod browser {
-    pub use super::system::browser::*;
+    pub use crate::base::system::browser::*;
 }
 pub mod clipboard {
-    pub use super::system::clipboard::*;
+    pub use crate::base::system::clipboard::*;
 }
 pub mod string {
-    pub use super::data::string::*;
+    pub use crate::base::format::sensitive::*;
 }
 pub mod date {
-    pub use super::data::date::*;
+    pub use crate::base::format::date::*;
 }
 pub mod checksum {
-    pub use super::data::checksum::*;
+    pub use crate::base::checksum::*;
 }
 
 // 重新导出所有公共 API，保持向后兼容
-pub use data::{
-    format_document_timestamp, format_last_updated, format_last_updated_with_time,
-    mask_sensitive_value, Checksum, DateFormat, Timezone,
+pub use crate::base::checksum::Checksum;
+pub use crate::base::format::{
+    format_document_timestamp, format_last_updated, format_last_updated_with_time, DateFormat,
+    Sensitive, Timezone,
 };
-pub use fs::{DirectoryWalker, FileReader, FileWriter, PathAccess, Unzip};
-pub use system::{Browser, Clipboard, Platform};
+pub use crate::base::fs::{DirectoryWalker, FileReader, FileWriter, PathAccess};
+pub use crate::base::system::{Browser, Clipboard, Platform};
+pub use crate::base::zip::Unzip;
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

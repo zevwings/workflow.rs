@@ -9,9 +9,9 @@ use serde_with::skip_serializing_none;
 use std::os::unix::fs::PermissionsExt;
 
 use super::paths::Paths;
+use crate::base::format::Sensitive;
 use crate::base::http::{Authorization, HttpClient, RequestConfig};
 use crate::jira::types::JiraUser;
-use crate::mask_sensitive_value;
 use crate::pr::GitHub;
 use std::collections::HashMap;
 
@@ -509,11 +509,7 @@ impl Settings {
         };
 
         // 获取 Key（掩码显示）
-        let key = current
-            .key
-            .as_ref()
-            .map(|k| mask_sensitive_value(k))
-            .unwrap_or_else(|| "-".to_string());
+        let key = current.key.as_ref().map(|k| k.mask()).unwrap_or_else(|| "-".to_string());
 
         // 获取 Language（如果有保存的值，否则显示默认值）
         let language = if !self.llm.language.is_empty() {
@@ -540,7 +536,7 @@ impl Settings {
             let config = JiraConfigInfo {
                 email: email.clone(),
                 service_address: service_address.clone(),
-                api_token: mask_sensitive_value(api_token),
+                api_token: api_token.mask(),
             };
 
             let base_url = format!("{}/rest/api/2", service_address);
@@ -647,7 +643,7 @@ impl Settings {
                 name: account.name.clone(),
                 is_current,
                 email: account.email.clone(),
-                token: mask_sensitive_value(&account.api_token),
+                token: account.api_token.mask(),
                 verification_status,
                 verification_error,
             });

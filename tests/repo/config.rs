@@ -106,12 +106,12 @@ fn test_branch_config_empty_deserialization() {
 #[case(Some("feature".to_string()), vec![])]
 #[case(Some("hotfix".to_string()), vec!["main".to_string()])]
 #[case(None, vec!["main".to_string(), "develop".to_string()])]
-fn test_branch_config_parametrized(
-    #[case] prefix: Option<String>,
-    #[case] ignore: Vec<String>
-) {
+fn test_branch_config_parametrized(#[case] prefix: Option<String>, #[case] ignore: Vec<String>) {
     /// 参数化测试分支配置的各种组合
-    let config = BranchConfig { prefix, ignore: ignore.clone() };
+    let config = BranchConfig {
+        prefix,
+        ignore: ignore.clone(),
+    };
 
     // 测试序列化和反序列化的一致性
     let json = serde_json::to_string(&config).expect("Failed to serialize");
@@ -184,7 +184,8 @@ fn test_pr_config_parametrized(#[case] auto_accept: Option<bool>) {
 
     // 测试序列化和反序列化的一致性
     let json = serde_json::to_string(&config).expect("Failed to serialize");
-    let deserialized: PullRequestsConfig = serde_json::from_str(&json).expect("Failed to deserialize");
+    let deserialized: PullRequestsConfig =
+        serde_json::from_str(&json).expect("Failed to deserialize");
 
     assert_eq!(deserialized.auto_accept_change_type, auto_accept);
 }
@@ -229,8 +230,8 @@ fn test_branch_config_empty_ignore_list() {
 
     let json = serde_json::to_string(&config).expect("Failed to serialize");
 
-    // 空数组应该被序列化
-    assert!(json.contains(r#""ignore":[]"#));
+    // 由于 skip_serializing_if = "Vec::is_empty"，空数组不会被序列化
+    assert!(!json.contains(r#""ignore""#));
 }
 
 #[test]
@@ -265,7 +266,10 @@ fn test_config_clone() {
 
     assert_eq!(cloned_branch.prefix, original_branch.prefix);
     assert_eq!(cloned_branch.ignore, original_branch.ignore);
-    assert_eq!(cloned_pr.auto_accept_change_type, original_pr.auto_accept_change_type);
+    assert_eq!(
+        cloned_pr.auto_accept_change_type,
+        original_pr.auto_accept_change_type
+    );
 }
 
 #[test]

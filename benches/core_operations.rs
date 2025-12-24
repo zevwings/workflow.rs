@@ -3,21 +3,19 @@
 //! 测试核心业务逻辑的性能，包括字符串处理、分支操作、配置操作等。
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use workflow::base::util::string::mask_sensitive_value;
+use workflow::base::format::Sensitive;
 use workflow::branch::naming::BranchNaming;
 
 fn bench_string_mask(c: &mut Criterion) {
     c.bench_function("string_mask_short", |b| {
         b.iter(|| {
-            black_box(mask_sensitive_value("test@example.com"));
+            black_box("test@example.com".mask());
         });
     });
 
     c.bench_function("string_mask_long", |b| {
         b.iter(|| {
-            black_box(mask_sensitive_value(
-                "very-long-string-that-needs-masking@example.com",
-            ));
+            black_box("very-long-string-that-needs-masking@example.com".mask());
         });
     });
 }
