@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   coverage-check:
-    name: 📊 Weekly Coverage Check
+    name: 📊 Coverage Check
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout repository
@@ -223,6 +223,17 @@ jobs:
           path: coverage/
           retention-days: 30
 
+      - name: 📤 Upload to Codecov
+        if: always()
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/coverage.json
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        continue-on-error: true
+
       - name: 📤 Upload check report
         if: always()
         uses: actions/upload-artifact@v4
@@ -336,7 +347,7 @@ jobs:
       - name: 📋 Coverage check summary
         if: always()
         run: |
-          echo "📊 Weekly coverage check completed"
+          echo "📊 Coverage check completed"
           echo "Coverage report has been uploaded as an artifact"
           echo "Check report has been generated and uploaded"
 

@@ -14,7 +14,7 @@
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 测试数据工厂
 ///
@@ -80,7 +80,7 @@ pub struct GitHubPRBuilder {
 }
 
 impl GitHubPRBuilder {
-    fn new(templates_dir: &PathBuf) -> Self {
+    fn new(templates_dir: &Path) -> Self {
         let mut vars = HashMap::new();
         // 设置默认值
         vars.insert("number".to_string(), "123".to_string());
@@ -102,7 +102,7 @@ impl GitHubPRBuilder {
         );
 
         Self {
-            templates_dir: templates_dir.clone(),
+            templates_dir: templates_dir.to_path_buf(),
             vars,
         }
     }
@@ -120,6 +120,9 @@ impl GitHubPRBuilder {
     }
 
     /// 设置 PR 正文
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn body<S: Into<String>>(mut self, body: S) -> Self {
         self.vars.insert("body".to_string(), body.into());
         self
@@ -132,12 +135,18 @@ impl GitHubPRBuilder {
     }
 
     /// 设置源分支
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn head_ref<S: Into<String>>(mut self, ref_name: S) -> Self {
         self.vars.insert("head_ref".to_string(), ref_name.into());
         self
     }
 
     /// 设置目标分支
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn base_ref<S: Into<String>>(mut self, ref_name: S) -> Self {
         self.vars.insert("base_ref".to_string(), ref_name.into());
         self
@@ -158,6 +167,9 @@ impl GitHubPRBuilder {
     }
 
     /// 构建为 JSON 字符串
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn build_string(&self) -> String {
         serde_json::to_string_pretty(&self.build()).unwrap()
     }
@@ -170,7 +182,7 @@ pub struct JiraIssueBuilder {
 }
 
 impl JiraIssueBuilder {
-    fn new(templates_dir: &PathBuf) -> Self {
+    fn new(templates_dir: &Path) -> Self {
         let mut vars = HashMap::new();
         // 设置默认值
         vars.insert("id".to_string(), "12345".to_string());
@@ -207,7 +219,7 @@ impl JiraIssueBuilder {
         vars.insert("project_name".to_string(), "Test Project".to_string());
 
         Self {
-            templates_dir: templates_dir.clone(),
+            templates_dir: templates_dir.to_path_buf(),
             vars,
         }
     }
@@ -225,6 +237,9 @@ impl JiraIssueBuilder {
     }
 
     /// 设置 Issue 描述
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn description<S: Into<String>>(mut self, description: S) -> Self {
         self.vars.insert("description".to_string(), description.into());
         self
@@ -251,6 +266,9 @@ impl JiraIssueBuilder {
     }
 
     /// 构建为 JSON 字符串
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn build_string(&self) -> String {
         serde_json::to_string_pretty(&self.build()).unwrap()
     }
@@ -287,18 +305,27 @@ impl ConfigBuilder {
     }
 
     /// 设置 GitHub 配置
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn github(mut self, github_config: Value) -> Self {
         self.config["github"] = github_config;
         self
     }
 
     /// 设置 Jira 配置
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn jira(mut self, jira_config: Value) -> Self {
         self.config["jira"] = jira_config;
         self
     }
 
     /// 设置 LLM 配置
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn llm(mut self, llm_config: Value) -> Self {
         self.config["llm"] = llm_config;
         self
@@ -316,6 +343,9 @@ impl ConfigBuilder {
     }
 
     /// 构建为 JSON 字符串
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn build_string(&self) -> String {
         serde_json::to_string_pretty(&self.build()).unwrap()
     }

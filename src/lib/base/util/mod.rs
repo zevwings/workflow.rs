@@ -9,14 +9,13 @@
 //!
 //! ## 模块结构
 //!
-//! - `string` - 字符串处理工具
-//! - `platform` - 平台检测工具（操作系统和架构检测）
-//! - `browser` - 浏览器操作（`Browser`）
-//! - `clipboard` - 剪贴板操作（`Clipboard`）
-//! - `unzip` - 解压工具（tar.gz 文件解压）
-//! - `checksum` - 校验和工具（SHA256 计算和验证）
+//! 本模块按功能领域分为一个子模块：
+//! - `data` - 数据处理（字符串、日期时间、校验和）
 //!
 //! 注意：以下模块已迁移到独立的目录：
+//! - `lib/base/system` - 系统交互（平台检测、浏览器、剪贴板）
+//! - `lib/base/fs` - 文件系统操作（文件、路径、目录）
+//! - `lib/base/zip` - 解压工具（tar.gz 和 zip 文件解压）
 //! - `lib/base/logger` - 日志相关功能（`LogLevel`、`Logger`、`Tracer`、`colors`）
 //! - `lib/base/indicator` - 进度指示器（`Spinner`、`Progress`）
 //! - `lib/base/dialog` - 交互式对话框（`InputDialog`、`SelectDialog`、`MultiSelectDialog`、`ConfirmDialog`）
@@ -26,47 +25,49 @@
 //! - `lib/uninstall` - 卸载工具
 //! - `lib/proxy/env` - 代理环境变量管理（仅用于代理功能）
 
-pub mod browser;
-pub mod checksum;
-pub mod clipboard;
-pub mod date;
-pub mod directory;
-pub mod file;
-pub mod path;
-pub mod platform;
-pub mod string;
-pub mod unzip;
+pub mod data;
 
-// 重新导出 string 模块的函数，保持向后兼容
-pub use string::mask_sensitive_value;
+// 向后兼容：重新导出子模块，使 `util::file::FileReader` 等路径仍然可用
+pub mod file {
+    pub use crate::base::fs::file::*;
+}
+pub mod path {
+    pub use crate::base::fs::path::*;
+}
+pub mod directory {
+    pub use crate::base::fs::directory::*;
+}
+pub mod unzip {
+    pub use crate::base::zip::*;
+}
+pub mod platform {
+    pub use crate::base::system::platform::*;
+}
+pub mod browser {
+    pub use crate::base::system::browser::*;
+}
+pub mod clipboard {
+    pub use crate::base::system::clipboard::*;
+}
+pub mod string {
+    pub use crate::base::format::sensitive::*;
+}
+pub mod date {
+    pub use crate::base::format::date::*;
+}
+pub mod checksum {
+    pub use crate::base::checksum::*;
+}
 
-// 重新导出 platform 模块的结构体
-pub use platform::Platform;
-
-// 重新导出 browser 和 clipboard
-pub use browser::Browser;
-pub use clipboard::Clipboard;
-
-// 重新导出 unzip
-pub use unzip::Unzip;
-
-// 重新导出 checksum
-pub use checksum::Checksum;
-
-// 重新导出 date
-pub use date::{
+// 重新导出所有公共 API，保持向后兼容
+pub use crate::base::checksum::Checksum;
+pub use crate::base::format::{
     format_document_timestamp, format_last_updated, format_last_updated_with_time, DateFormat,
-    Timezone,
+    Sensitive, Timezone,
 };
-
-// 重新导出 directory
-pub use directory::DirectoryWalker;
-
-// 重新导出 file
-pub use file::{FileReader, FileWriter};
-
-// 重新导出 path
-pub use path::PathAccess;
+pub use crate::base::fs::{DirectoryWalker, FileReader, FileWriter, PathAccess};
+pub use crate::base::system::{Browser, Clipboard, Platform};
+pub use crate::base::zip::Unzip;
 
 // 重新导出 colors 函数（从 logger::console 模块，保持向后兼容）
 pub use crate::base::logger::console::{

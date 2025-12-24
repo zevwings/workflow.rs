@@ -33,7 +33,11 @@ coverage:
 		echo "请运行: cargo install cargo-tarpaulin"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Html --output-dir coverage
+	cargo tarpaulin --out Html --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
 	@echo "覆盖率报告已生成到 coverage/ 目录"
 
 # 打开覆盖率报告
@@ -55,7 +59,11 @@ coverage-ci:
 		echo "请运行: cargo install cargo-tarpaulin"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Lcov --output-dir coverage
+	cargo tarpaulin --out Lcov --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
 	@echo "CI覆盖率报告已生成到 coverage/ 目录"
 
 # 查看覆盖率趋势（需要历史数据支持）
@@ -70,6 +78,10 @@ coverage-trend:
 		echo "错误: coverage 目录不存在，请先运行 make coverage"; \
 		exit 1; \
 	fi
-	cargo tarpaulin --out Html --output-dir coverage
+	cargo tarpaulin --out Html --output-dir coverage \
+		--exclude-files "src/bin/*" \
+		--exclude-files "tests/*" \
+		--exclude-files "benches/*" \
+		--exclude-files "src/*/mod.rs"
 	@echo "覆盖率报告已更新，运行 make coverage-open 查看"
 

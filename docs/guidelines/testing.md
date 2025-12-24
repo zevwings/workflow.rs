@@ -7,6 +7,7 @@
 ## 📋 目录
 
 - [概述](#-概述)
+- [基本测试命令](#-基本测试命令)
 - [测试类型](#-测试类型)
 - [测试组织结构](#-测试组织结构)
 - [测试文件命名约定](#-测试文件命名约定)
@@ -14,14 +15,20 @@
 - [测试数据管理](#-测试数据管理)
 - [测试组织最佳实践](#-测试组织最佳实践)
 - [测试覆盖率](#-测试覆盖率)
+- [覆盖率测试指南](#-覆盖率测试指南)
 - [测试编写规范](#-测试编写规范)
+- [编写测试最佳实践](#-编写测试最佳实践)
 - [测试工具](#-测试工具)
 - [Mock 对象使用规范](#5-mock-对象使用规范)
+- [测试数据管理最佳实践](#-测试数据管理最佳实践)
+- [Mock 服务器使用指南](#-mock-服务器使用指南)
 - [测试数据清理规则](#-测试数据清理规则)
 - [集成测试环境配置](#-集成测试环境配置)
 - [集成测试数据隔离](#-集成测试数据隔离)
 - [集成测试清理机制](#-集成测试清理机制)
 - [测试性能要求](#-测试性能要求)
+- [性能测试指南](#-性能测试指南)
+- [覆盖率提升技巧](#-覆盖率提升技巧)
 - [相关文档](#-相关文档)
 - [参考资源](#-参考资源)
 
@@ -30,6 +37,124 @@
 ## 📋 概述
 
 本文档定义了 Workflow CLI 项目的测试组织规范、命名约定和最佳实践。
+
+---
+
+## 🚀 基本测试命令
+
+### 运行测试
+
+**运行所有测试**：
+```bash
+# 使用 Cargo
+cargo test
+
+# 使用 Makefile
+make test
+```
+
+**运行特定测试**：
+```bash
+# 运行特定模块的测试
+cargo test --lib 模块名
+
+# 运行特定测试文件
+cargo test --test 测试文件名
+
+# 运行匹配模式的测试
+cargo test test_parse_url
+
+# 运行被忽略的测试
+cargo test -- --ignored
+
+# 运行所有测试（包括被忽略的）
+make test-all
+```
+
+**测试输出选项**：
+```bash
+# 显示详细输出
+cargo test -- --nocapture
+
+# 显示测试执行时间
+cargo test -- --nocapture --test-threads=1
+
+# 只运行失败的测试（需要先运行一次）
+cargo test -- --failed
+```
+
+### 测试类型命令
+
+**单元测试**：
+```bash
+# 运行所有单元测试
+cargo test --lib
+
+# 运行特定模块的单元测试
+cargo test --lib 模块名::函数名
+```
+
+**集成测试**：
+```bash
+# 运行所有集成测试
+cargo test --test '*'
+
+# 运行特定集成测试
+cargo test --test integration_test
+```
+
+**文档测试**：
+```bash
+# 运行文档中的代码示例（doctest）
+cargo test --doc
+
+# 运行特定模块的文档测试
+cargo test --doc 模块名
+```
+
+### Makefile 测试命令
+
+项目提供了便捷的 Makefile 命令：
+
+```bash
+# 运行所有测试
+make test
+
+# 运行所有测试（包括被忽略的）
+make test-all
+
+# 生成覆盖率报告
+make coverage
+
+# 打开覆盖率报告
+make coverage-open
+
+# CI 环境覆盖率检查
+make coverage-ci
+
+# 查看覆盖率趋势
+make coverage-trend
+```
+
+### 测试调试
+
+**运行单个测试**：
+```bash
+# 运行单个测试函数
+cargo test test_parse_url -- --nocapture
+
+# 运行单个测试并显示详细输出
+cargo test test_parse_url -- --nocapture --test-threads=1
+```
+
+**测试失败时调试**：
+```bash
+# 显示失败的测试输出
+cargo test -- --nocapture
+
+# 只运行失败的测试
+cargo test -- --failed
+```
 
 ---
 
@@ -306,6 +431,96 @@ cargo tarpaulin --out Html
 
 ---
 
+## 📊 覆盖率测试指南
+
+### 安装覆盖率工具
+
+**cargo-tarpaulin**（推荐）：
+```bash
+# 安装 cargo-tarpaulin
+cargo install cargo-tarpaulin
+
+# 验证安装
+cargo tarpaulin --version
+```
+
+### 生成覆盖率报告
+
+**基本用法**：
+```bash
+# 生成 HTML 格式的覆盖率报告
+make coverage
+# 或
+cargo tarpaulin --out Html --output-dir coverage \
+    --exclude-files "src/bin/*" \
+    --exclude-files "tests/*" \
+    --exclude-files "benches/*" \
+    --exclude-files "src/*/mod.rs"
+```
+
+**查看报告**：
+```bash
+# 打开覆盖率报告
+make coverage-open
+# 或手动打开
+open coverage/tarpaulin-report.html
+```
+
+### CI 环境覆盖率检查
+
+**生成 Lcov 格式报告**（适合 CI/CD）：
+```bash
+# CI 环境覆盖率检查
+make coverage-ci
+# 或
+cargo tarpaulin --out Lcov --output-dir coverage
+```
+
+**覆盖率阈值检查**：
+```bash
+# 设置覆盖率阈值（例如 80%）
+cargo tarpaulin --out Lcov --output-dir coverage --fail-under 80
+```
+
+### 覆盖率分析
+
+**查看覆盖率趋势**：
+```bash
+# 查看覆盖率趋势（需要历史数据）
+make coverage-trend
+```
+
+**排除文件**：
+```bash
+# 排除特定文件或目录
+cargo tarpaulin --out Html \
+    --exclude-files "src/bin/*" \
+    --exclude-files "tests/*" \
+    --exclude-files "src/*/mod.rs"
+```
+
+### 覆盖率报告解读
+
+**HTML 报告**：
+- **绿色**：已覆盖的代码行
+- **红色**：未覆盖的代码行
+- **黄色**：部分覆盖的代码行（条件分支）
+- **覆盖率百分比**：显示每个文件和模块的覆盖率
+
+**覆盖率指标**：
+- **行覆盖率**：执行的代码行数 / 总代码行数
+- **分支覆盖率**：执行的分支数 / 总分支数
+- **函数覆盖率**：执行的函数数 / 总函数数
+
+### 覆盖率提升策略
+
+1. **识别低覆盖率模块**：查看报告，找出覆盖率低于目标的模块
+2. **优先测试关键路径**：确保关键业务逻辑有充分的测试覆盖
+3. **补充边界测试**：为边界条件和错误处理添加测试
+4. **定期检查**：在每次功能开发后检查覆盖率变化
+
+---
+
 ## ✅ 测试编写规范
 
 ### 1. 测试结构
@@ -352,6 +567,191 @@ fn test-_parse-_ticket-_id-_boundary() {
     assert-_eq!(parse-_ticket-_id("A-1"), Some("A-1"));
     // 最大长度
     assert-_eq!(parse-_ticket-_id("VERY-LONG-PROJECT-NAME-123"), Some("VERY-LONG-PROJECT-NAME-123"));
+}
+```
+
+---
+
+## ✍️ 编写测试最佳实践
+
+### 1. 测试命名规范
+
+**描述性命名**：
+- ✅ 使用描述性的测试名称，说明测试的内容和预期结果
+- ✅ 使用 `test_` 前缀或 `#[test]` 属性
+- ✅ 测试名称应包含：被测试的功能、输入条件、预期结果
+
+```rust
+// ✅ 好的命名
+#[test]
+fn test_parse_ticket_id_with_valid_input() {}
+
+#[test]
+fn test_parse_ticket_id_with_invalid_input_returns_none() {}
+
+// ❌ 不好的命名
+#[test]
+fn test1() {}
+
+#[test]
+fn test_parse() {}
+```
+
+### 2. 测试结构（AAA 模式）
+
+**Arrange-Act-Assert 模式**：
+```rust
+#[test]
+fn test_example() {
+    // Arrange: 准备测试数据和环境
+    let input = "PROJ-123";
+    let expected = Some("PROJ-123");
+
+    // Act: 执行被测试的功能
+    let result = parse_ticket_id(input);
+
+    // Assert: 验证结果
+    assert_eq!(result, expected);
+}
+```
+
+### 3. 测试独立性
+
+**每个测试应独立**：
+- ✅ 每个测试应独立运行，不依赖其他测试
+- ✅ 每个测试应使用独立的数据和环境
+- ✅ 测试之间不应共享状态
+
+```rust
+// ✅ 好的做法：每个测试独立
+#[test]
+fn test_parse_ticket_id_1() {
+    let result = parse_ticket_id("PROJ-123");
+    assert_eq!(result, Some("PROJ-123"));
+}
+
+#[test]
+fn test_parse_ticket_id_2() {
+    let result = parse_ticket_id("PROJ-456");
+    assert_eq!(result, Some("PROJ-456"));
+}
+
+// ❌ 不好的做法：测试之间共享状态
+static mut COUNTER: i32 = 0;
+
+#[test]
+fn test_1() {
+    unsafe { COUNTER += 1; }
+    assert_eq!(unsafe { COUNTER }, 1);
+}
+
+#[test]
+fn test_2() {
+    unsafe { COUNTER += 1; }
+    assert_eq!(unsafe { COUNTER }, 2);  // 依赖 test_1
+}
+```
+
+### 4. 测试覆盖原则
+
+**测试覆盖重点**：
+- ✅ **成功路径**：测试正常流程
+- ✅ **错误路径**：测试错误处理和边界条件
+- ✅ **边界条件**：测试边界值和极端情况
+- ✅ **集成场景**：测试模块间交互
+
+### 5. 测试数据管理
+
+**使用 Fixtures**：
+```rust
+// ✅ 使用 fixtures 目录中的测试数据
+use std::fs;
+
+#[test]
+fn test_parse_pr_response() {
+    let data = fs::read_to_string("tests/fixtures/sample_github_pr.json")
+        .expect("Failed to read fixture");
+    // 使用测试数据
+}
+```
+
+**使用测试数据工厂**：
+```rust
+// ✅ 使用测试数据工厂生成测试数据
+use tests::common::test_data_factory::TestDataFactory;
+
+#[test]
+fn test_with_factory() {
+    let pr = TestDataFactory::github_pr()
+        .with_id(123)
+        .with_title("Test PR")
+        .build();
+    // 使用生成的测试数据
+}
+```
+
+### 6. Mock 使用原则
+
+**何时使用 Mock**：
+- ✅ 测试需要调用外部 API（GitHub、Jira 等）
+- ✅ 测试需要模拟网络请求和响应
+- ✅ 测试需要避免依赖外部服务
+- ✅ 测试需要模拟错误情况
+
+**Mock 使用规范**：
+```rust
+// ✅ 使用 MockServer 包装器
+use crate::common::http_helpers::MockServer;
+
+#[test]
+fn test_api_call() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建 Mock
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+
+    // 执行测试
+    // ...
+
+    // MockServer 会在 Drop 时自动清理环境变量
+}
+```
+
+### 7. 断言最佳实践
+
+**使用清晰的断言**：
+```rust
+// ✅ 使用描述性的断言消息
+assert_eq!(result, expected, "Failed to parse ticket ID: {}", input);
+
+// ✅ 使用专门的断言工具
+use pretty_assertions::assert_eq;  // 显示彩色 diff
+
+// ❌ 避免模糊的断言
+assert!(result.is_some());  // 不够清晰
+```
+
+### 8. 测试文档
+
+**为复杂测试添加注释**：
+```rust
+#[test]
+fn test_complex_scenario() {
+    // 测试场景：当用户输入无效的 ticket ID 时，
+    // 系统应该返回 None 并记录错误日志
+
+    let input = "INVALID";
+    let result = parse_ticket_id(input);
+
+    assert_eq!(result, None);
+    // 验证错误日志已记录
 }
 ```
 
@@ -566,6 +966,271 @@ env::remove_var("GITHUB_API_URL");  // 容易忘记
 
 // ❌ 不推荐：在测试之间共享 Mock 服务器
 static mut MOCK_SERVER: Option<MockServer> = None;
+```
+
+---
+
+## 📦 测试数据管理最佳实践
+
+### 1. 测试数据组织
+
+**Fixtures 目录结构**：
+```
+tests/
+└── fixtures/
+    ├── templates/              # 测试数据模板
+    │   ├── github_pr.json
+    │   └── jira_issue.json
+    ├── scenarios/              # 测试场景数据
+    │   ├── auth_failure.json
+    │   └── network_timeout.json
+    └── mock_responses/         # Mock 响应数据
+        ├── github/
+        └── jira/
+```
+
+### 2. 测试数据工厂
+
+**使用测试数据工厂生成测试数据**：
+```rust
+use tests::common::test_data_factory::TestDataFactory;
+
+#[test]
+fn test_with_factory() {
+    // 使用工厂创建测试数据
+    let pr = TestDataFactory::github_pr()
+        .with_id(123)
+        .with_title("Test PR")
+        .with_state("open")
+        .build();
+
+    // 使用生成的测试数据
+    assert_eq!(pr.id, 123);
+    assert_eq!(pr.title, "Test PR");
+}
+```
+
+### 3. 测试数据复用
+
+**创建可复用的测试数据构建器**：
+```rust
+// ✅ 创建可复用的构建器
+struct GitHubPRBuilder {
+    id: u64,
+    title: String,
+    state: String,
+}
+
+impl GitHubPRBuilder {
+    fn new() -> Self {
+        Self {
+            id: 1,
+            title: "Default PR".to_string(),
+            state: "open".to_string(),
+        }
+    }
+
+    fn with_id(mut self, id: u64) -> Self {
+        self.id = id;
+        self
+    }
+
+    fn build(self) -> GitHubPR {
+        GitHubPR {
+            id: self.id,
+            title: self.title,
+            state: self.state,
+        }
+    }
+}
+```
+
+### 4. 测试数据清理
+
+**自动清理测试数据**：
+```rust
+// ✅ 使用实现了 Drop trait 的类型自动清理
+use tempfile::TempDir;
+
+#[test]
+fn test_with_temp_data() {
+    let temp_dir = TempDir::new().unwrap();
+    // 使用临时目录进行测试
+    // TempDir 会在 Drop 时自动删除
+}
+```
+
+---
+
+## 🔧 Mock 服务器使用指南
+
+### 1. MockServer 基本使用
+
+**创建 Mock 服务器**：
+```rust
+use crate::common::http_helpers::MockServer;
+
+#[test]
+fn test_api_call() {
+    // 创建 Mock 服务器
+    let mut mock_server = MockServer::new();
+
+    // 设置 API 基础 URL
+    mock_server.setup_github_base_url();
+    // 或
+    mock_server.setup_jira_base_url();
+}
+```
+
+### 2. 创建 Mock 端点
+
+**基本 Mock 端点**：
+```rust
+#[test]
+fn test_get_request() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建 Mock 端点
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+
+    // 执行测试
+    // ...
+}
+```
+
+**带条件的 Mock 端点**：
+```rust
+use mockito::Matcher;
+
+#[test]
+fn test_with_conditions() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建带条件的 Mock
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .match_header("authorization", Matcher::Regex(r"token .+".to_string()))
+        .match_query(Matcher::AllOf(vec![
+            Matcher::UrlEncoded("key".to_string(), "value".to_string()),
+        ]))
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+
+    // 执行测试
+    // ...
+}
+```
+
+### 3. 模拟错误情况
+
+**模拟网络错误**：
+```rust
+#[test]
+fn test_network_error() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 模拟 500 错误
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .with_status(500)
+        .with_body(r#"{"error": "Internal Server Error"}"#)
+        .create();
+
+    // 测试错误处理
+    // ...
+}
+```
+
+**模拟超时**：
+```rust
+#[test]
+fn test_timeout() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 模拟延迟响应（测试超时处理）
+    let _mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .with_header("content-type", "application/json")
+        .create();
+
+    // 测试超时处理逻辑
+    // ...
+}
+```
+
+### 4. 验证 Mock 调用
+
+**验证 Mock 是否被调用**：
+```rust
+#[test]
+fn test_verify_mock() {
+    let mut mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+
+    // 创建 Mock 并保存引用
+    let mock = mock_server
+        .server
+        .as_mut()
+        .mock("GET", "/api/endpoint")
+        .with_status(200)
+        .with_body(r#"{"result": "success"}"#)
+        .create();
+
+    // 执行测试
+    // ...
+
+    // 验证 Mock 被调用
+    mock.assert();
+}
+```
+
+### 5. Mock 服务器最佳实践
+
+**每个测试独立 Mock**：
+```rust
+// ✅ 好的做法：每个测试创建独立的 Mock 服务器
+#[test]
+fn test_1() {
+    let mut mock_server = MockServer::new();
+    // ...
+}
+
+#[test]
+fn test_2() {
+    let mut mock_server = MockServer::new();
+    // ...
+}
+```
+
+**自动清理**：
+```rust
+// ✅ MockServer 会在 Drop 时自动清理环境变量
+#[test]
+fn test_with_auto_cleanup() {
+    let mock_server = MockServer::new();
+    mock_server.setup_github_base_url();
+    // 测试代码
+    // MockServer 会在测试结束时自动清理环境变量
+}
 ```
 
 ---
@@ -964,6 +1629,174 @@ valgrind --leak-check=full cargo test
 
 ---
 
+## ⚡ 性能测试指南
+
+### 1. 性能基准测试（Benchmark）
+
+**使用 Criterion 进行性能测试**：
+```bash
+# 安装 Criterion（如果未安装）
+# Criterion 已在 Cargo.toml 中配置为 dev-dependency
+
+# 运行所有基准测试
+make bench
+# 或
+cargo bench
+
+# 运行特定基准测试
+make bench-cli        # CLI 性能测试
+make bench-core       # 核心操作测试
+make bench-network    # 网络操作测试
+```
+
+### 2. 创建基准测试
+
+**基准测试文件结构**：
+```rust
+// benches/cli_performance.rs
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use workflow::commands::pr::create::create_pr;
+
+fn bench_cli_command(c: &mut Criterion) {
+    c.bench_function("cli_command", |b| {
+        b.iter(|| {
+            // 执行被测试的操作
+            black_box(create_pr());
+        });
+    });
+}
+
+criterion_group!(benches, bench_cli_command);
+criterion_main!(benches);
+```
+
+### 3. 性能测试报告
+
+**查看性能报告**：
+```bash
+# 生成性能报告
+make bench-report
+
+# 打开性能报告
+make bench-open
+```
+
+**性能报告位置**：
+- CLI 性能：`target/criterion/cli_performance/index.html`
+- 核心操作：`target/criterion/core_operations/index.html`
+- 网络操作：`target/criterion/network_operations/index.html`
+
+### 4. 性能对比和回归检测
+
+**性能对比**：
+```bash
+# 对比当前结果与历史结果
+make bench-compare
+```
+
+**性能回归检测**：
+```bash
+# 检测性能回归
+make bench-regression
+```
+
+**CI 环境性能监控**：
+```bash
+# CI 环境性能监控
+make bench-ci
+```
+
+### 5. 性能测试原则
+
+**性能测试最佳实践**：
+- ✅ **建立基线**：首次运行基准测试建立性能基线
+- ✅ **定期运行**：在每次重要变更后运行性能测试
+- ✅ **关注趋势**：关注性能趋势，及时发现性能回归
+- ✅ **设置阈值**：为关键操作设置性能阈值
+- ✅ **环境一致性**：在相同环境下运行性能测试，确保结果可比较
+
+**性能测试注意事项**：
+- ⚠️ **环境差异**：不同环境的性能测试结果可能不同
+- ⚠️ **统计波动**：性能测试结果可能有统计波动，需要多次运行
+- ⚠️ **资源限制**：注意测试环境的资源限制（CPU、内存等）
+
+---
+
+## 📈 覆盖率提升技巧
+
+### 1. 识别低覆盖率区域
+
+**查看覆盖率报告**：
+```bash
+# 生成覆盖率报告
+make coverage
+
+# 打开报告查看低覆盖率区域
+make coverage-open
+```
+
+**重点关注**：
+- 覆盖率低于目标的模块
+- 关键业务逻辑模块
+- 错误处理路径
+
+### 2. 补充测试策略
+
+**按优先级补充测试**：
+1. **关键业务逻辑**：优先为关键业务逻辑添加测试
+2. **错误处理**：为错误处理路径添加测试
+3. **边界条件**：为边界条件和极端情况添加测试
+4. **集成场景**：为模块间交互添加集成测试
+
+### 3. 测试覆盖技巧
+
+**使用参数化测试**：
+```rust
+use rstest::rstest;
+
+#[rstest]
+#[case("input1", "output1")]
+#[case("input2", "output2")]
+#[case("input3", "output3")]
+fn test_multiple_cases(#[case] input: &str, #[case] expected: &str) {
+    let result = process(input);
+    assert_eq!(result, expected);
+}
+```
+
+**使用测试工具**：
+```rust
+// 使用 pretty_assertions 获得更好的错误信息
+use pretty_assertions::assert_eq;
+
+// 使用 insta 进行快照测试
+use insta::assert_json_snapshot;
+```
+
+### 4. 覆盖率目标
+
+**模块覆盖率目标**：
+- **总体覆盖率**：> 80%
+- **关键业务逻辑**：> 90%
+- **工具函数**：> 70%
+- **CLI 命令层**：> 75%
+
+### 5. 持续改进
+
+**定期检查**：
+- 每次功能开发后检查覆盖率变化
+- 每周检查覆盖率趋势
+- 每月进行覆盖率审查
+
+**覆盖率提升流程**：
+1. 生成覆盖率报告
+2. 识别低覆盖率区域
+3. 制定测试补充计划
+4. 实施测试补充
+5. 验证覆盖率提升
+
+---
+
 ## 🔗 相关文档
 
 - [开发规范索引](./development/README.md) - 开发规范总览
@@ -985,4 +1818,4 @@ valgrind --leak-check=full cargo test
 
 ---
 
-**最后更新**: 2025-01-27
+**最后更新**: 2025-12-24

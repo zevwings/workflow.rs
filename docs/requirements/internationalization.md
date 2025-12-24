@@ -151,9 +151,9 @@
 - [ ] 定义国际化相关的代码审查检查清单
 
 **实现建议**：
-- 参考 `analysis/cursorrules-enhancement-analysis.md` 中的建议
 - 在 `.cursorrules` 中添加国际化相关规则章节
 - 同步更新 `docs/cursorrules.md` 中文版本
+- 参考现有的 Cursor Rules 文档结构进行组织
 
 #### 3.2 代码规范
 
@@ -309,7 +309,6 @@
 
 ## 📚 相关文档
 
-- [`analysis/cursorrules-enhancement-analysis.md`](../../analysis/cursorrules-enhancement-analysis.md) - Cursor Rules 规则增强需求分析（包含国际化规则分析）
 - [`.cursorrules`](../../.cursorrules) - Cursor AI 规则文件（英文版本）
 - [`docs/cursorrules.md`](../cursorrules.md) - Cursor AI 规则文件（中文版本）
 - [`docs/guidelines/development.md`](../guidelines/development.md) - 开发规范文档

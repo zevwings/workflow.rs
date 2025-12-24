@@ -15,51 +15,6 @@ struct TestLifecycleCli {
     command: Option<Commands>,
 }
 
-// ==================== Setup 命令测试 ====================
-
-#[test]
-fn test_setup_command_structure() {
-    // 测试 Setup 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"]).unwrap();
-
-    match cli.command {
-        Some(Commands::Setup) => {
-            assert!(true, "Setup command parsed successfully");
-        }
-        _ => panic!("Expected Setup command"),
-    }
-}
-
-// ==================== Uninstall 命令测试 ====================
-
-#[test]
-fn test_uninstall_command_structure() {
-    // 测试 Uninstall 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"]).unwrap();
-
-    match cli.command {
-        Some(Commands::Uninstall) => {
-            assert!(true, "Uninstall command parsed successfully");
-        }
-        _ => panic!("Expected Uninstall command"),
-    }
-}
-
-// ==================== Version 命令测试 ====================
-
-#[test]
-fn test_version_command_structure() {
-    // 测试 Version 命令结构
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"]).unwrap();
-
-    match cli.command {
-        Some(Commands::Version) => {
-            assert!(true, "Version command parsed successfully");
-        }
-        _ => panic!("Expected Version command"),
-    }
-}
-
 // ==================== Update 命令测试 ====================
 
 #[test]

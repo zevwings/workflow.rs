@@ -69,13 +69,23 @@ jobs:
       - name: ✅ Verify compilation
         run: cargo check
   #
-  # 运行测试
+  # 运行测试（跨平台并行执行）
   tests:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
+    name: 🧪 Run Tests (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
     if: |
       (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
       (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: Linux-x86_64
+          - os: macos-latest
+            platform: macOS
+          - os: windows-latest
+            platform: Windows-x86_64
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -98,6 +108,7 @@ jobs:
           enableCrossOsArchive: false
 
       - name: 📦 Install system dependencies (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           # 安装 XCB 开发库（clipboard 依赖）
@@ -131,6 +142,91 @@ jobs:
 
       - name: 🧪 Run tests
         run: cargo test --verbose
+
+  # 性能基准测试
+  check-performance:
+    name: ⚡ Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: [check-status]
+    if: |
+      (github.ref == 'refs/heads/master' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/master')
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+          enableCrossOsArchive: false
+
+      - name: 📦 Install system dependencies (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            python3 \
+            libxcb1-dev \
+            libxcb-render0-dev \
+            libxcb-shape0-dev \
+            libxcb-xfixes0-dev \
+            xcb-proto \
+            libxcb-keysyms1-dev \
+            libxcb-image0-dev \
+            libxcb-util-dev \
+            libxcb-icccm4-dev \
+            libxcb-sync-dev \
+            libxcb-xinerama0-dev \
+            libxcb-randr0-dev \
+            libxcb-xinput-dev \
+            libxcb-dri3-dev \
+            libxcb-present-dev \
+            libxcb-xv0-dev \
+            libxcb-glx0-dev \
+            libxcb-shm0-dev \
+            libxcb-composite0-dev \
+            libxcb-damage0-dev \
+            libxcb-record0-dev \
+            libxcb-screensaver0-dev \
+            libxcb-res0-dev \
+            libxkbcommon-dev \
+            libxkbcommon-x11-dev
+
+      - name: ⚡ Run performance benchmarks
+        run: |
+          cargo bench --bench cli_performance \
+            --bench core_operations \
+            --bench network_operations
+
+      - name: 📤 Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-benchmarks-${{ github.run_id }}
+          path: target/criterion/
+          retention-days: 30
+          if-no-files-found: ignore
+
+      - name: 📋 Performance summary
+        if: always()
+        run: |
+          if [ -d "target/criterion" ]; then
+            echo "⚡ Performance benchmarks completed"
+            echo "Reports available in target/criterion/"
+          else
+            echo "⚠️  Performance benchmarks did not generate reports"
+          fi
+
   #
   # 确保所有检查都通过（汇总 job）
   # 这个 job 依赖于 check-lint 和 tests，检查所有必需检查的状态
@@ -784,10 +880,11 @@ jobs:
   release-confirm:
     name: ⏸️ Release Confirmation
     runs-on: ubuntu-latest
-    needs: [update-version, build]
+    needs: [update-version, build, check-performance]
     if: |
       needs.update-version.result == 'success' &&
-      needs.build.result == 'success'
+      needs.build.result == 'success' &&
+      needs.check-performance.result == 'success'
     environment: release-confirm
     permissions:
       contents: read

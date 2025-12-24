@@ -15,19 +15,6 @@ struct TestCheckCli {
 
 // ==================== Check 命令测试 ====================
 
-#[test]
-fn test_check_command_structure() {
-    // 测试 Check 命令结构
-    let cli = TestCheckCli::try_parse_from(&["test-workflow", "check"]).unwrap();
-
-    match cli.command {
-        Some(Commands::Check) => {
-            assert!(true, "Check command parsed successfully");
-        }
-        _ => panic!("Expected Check command"),
-    }
-}
-
 // ==================== 命令解析完整性测试 ====================
 
 #[test]

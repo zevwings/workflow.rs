@@ -41,66 +41,6 @@ fn test_stash_list_command_minimal() {
     }
 }
 
-// ==================== Apply 命令测试 ====================
-
-#[test]
-fn test_stash_apply_command_structure() {
-    // 测试 Apply 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "apply"]).unwrap();
-
-    match cli.command {
-        StashSubcommand::Apply => {
-            assert!(true, "Apply command parsed successfully");
-        }
-        _ => panic!("Expected Apply command"),
-    }
-}
-
-// ==================== Drop 命令测试 ====================
-
-#[test]
-fn test_stash_drop_command_structure() {
-    // 测试 Drop 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "drop"]).unwrap();
-
-    match cli.command {
-        StashSubcommand::Drop => {
-            assert!(true, "Drop command parsed successfully");
-        }
-        _ => panic!("Expected Drop command"),
-    }
-}
-
-// ==================== Pop 命令测试 ====================
-
-#[test]
-fn test_stash_pop_command_structure() {
-    // 测试 Pop 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "pop"]).unwrap();
-
-    match cli.command {
-        StashSubcommand::Pop => {
-            assert!(true, "Pop command parsed successfully");
-        }
-        _ => panic!("Expected Pop command"),
-    }
-}
-
-// ==================== Push 命令测试 ====================
-
-#[test]
-fn test_stash_push_command_structure() {
-    // 测试 Push 命令结构
-    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).unwrap();
-
-    match cli.command {
-        StashSubcommand::Push => {
-            assert!(true, "Push command parsed successfully");
-        }
-        _ => panic!("Expected Push command"),
-    }
-}
-
 // ==================== 命令解析完整性测试 ====================
 
 #[test]

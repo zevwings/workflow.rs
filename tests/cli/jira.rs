@@ -29,13 +29,6 @@ fn test_jira_id_alt() -> &'static str {
 
 // ==================== 命令结构测试 ====================
 
-#[test]
-fn test_jira_subcommand_enum_creation() {
-    // 测试 JiraSubcommand 枚举可以创建
-    // 通过编译验证枚举定义正确
-    assert!(true, "JiraSubcommand enum should be defined");
-}
-
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]

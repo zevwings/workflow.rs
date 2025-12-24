@@ -105,6 +105,9 @@ impl MockServerManager {
     }
 
     /// 从文件加载 Mock 响应
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn mock_from_file(
         &mut self,
         method: &str,
@@ -138,6 +141,9 @@ impl MockServerManager {
     }
 
     /// 验证所有 Mock 是否被调用
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn assert_all_called(&self) {
         for mock in &self.mocks {
             mock.assert();
@@ -186,6 +192,9 @@ impl MockServerManager {
     }
 
     /// 设置 GitHub 获取 PR 信息响应
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn setup_github_get_pr(
         &mut self,
         owner: &str,
@@ -204,6 +213,9 @@ impl MockServerManager {
     }
 
     /// 设置 GitHub 错误响应
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn setup_github_error(&mut self, path: &str, status: u16, message: &str) -> &mut Self {
         self.mock_error_response("GET", path, message, status);
         self
@@ -229,6 +241,9 @@ impl MockServerManager {
     }
 
     /// 设置 Jira Issue 不存在响应
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn setup_jira_issue_not_found(&mut self, issue_key: &str) -> &mut Self {
         let error_body = json!({
             "errorMessages": [
@@ -247,6 +262,9 @@ impl MockServerManager {
     }
 
     /// 设置 Jira 搜索 Issues 响应
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
     pub fn setup_jira_search_issues(&mut self, issues: &[Value]) -> &mut Self {
         let response_body = json!({
             "issues": issues,

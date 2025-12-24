@@ -83,9 +83,15 @@ name = "completeness"
 path = "tests/completion/completeness.rs"
 
 # 测试覆盖率配置
+# tarpaulin 会扫描所有代码，但我们应该排除以下内容：
+# - src/bin/*: 二进制入口文件，通常只是调用库代码，不需要单独测试
+# - tests/*: 测试文件本身不应该计入覆盖率
+# - benches/*: 基准测试文件，用于性能测试，不是功能测试
+# - src/*/mod.rs: mod.rs 文件通常只是模块声明，没有业务逻辑
+# 注意：tarpaulin 0.34+ 使用 exclude-files 字段（不是 exclude）
 [package.metadata.tarpaulin]
 target-coverage = 80.0
-exclude = ["src/bin/*", "tests/*", "src/*/mod.rs"]
+exclude-files = ["src/bin/*", "tests/*", "benches/*", "src/*/mod.rs"]
 output = ["Html", "Lcov", "Json"]
 out = "coverage/"
 run-types = ["Tests", "Doctests"]

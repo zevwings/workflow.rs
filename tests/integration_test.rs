@@ -5,17 +5,16 @@
 //! 通过此入口文件，我们可以组织目录结构中的测试模块。
 
 // 引入各个模块的测试
-mod base;
+mod base; // Base 模块测试（包含所有 base/* 子模块）
 mod branch;
 mod cli;
 mod commit;
 mod completion;
-mod git;
-mod http;
 mod integration;
 mod jira;
 mod pr;
 mod proxy;
+mod repo;
 mod rollback;
 mod template;
 

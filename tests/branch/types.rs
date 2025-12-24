@@ -361,6 +361,7 @@ fn test_branch_type_prompt_selection() {
 }
 
 #[test]
+#[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
     // 测试有 repository prefix 的情况
     // 注意：这个测试依赖于实际的仓库配置，可能在不同环境中表现不同

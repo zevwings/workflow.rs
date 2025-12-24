@@ -165,14 +165,7 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
 fn test_pr_update_command_structure() {
     // 测试 Update 命令结构（无参数）
     let cli = TestPRCli::try_parse_from(&["test-pr", "update"]).unwrap();
-
-    match cli.command {
-        PRCommands::Update => {
-            // Update 命令没有参数
-            assert!(true, "Update command should have no parameters");
-        }
-        _ => panic!("Expected Update command"),
-    }
+    assert!(matches!(cli.command, PRCommands::Update));
 }
 
 // ==================== Sync 命令测试 ====================
@@ -530,4 +523,103 @@ fn test_pr_commands_required_parameters() {
 
     let result = TestPRCli::try_parse_from(&["test-pr", "pick", "from"]);
     assert!(result.is_err(), "Pick should require to_branch");
+}
+
+// ==================== 边界情况测试 ====================
+
+#[test]
+fn test_pr_create_command_empty_jira_id() {
+    // 测试空字符串 JIRA ID（应该被验证器拒绝）
+    // 这是正确的行为：JIRA ID 验证器不允许空字符串
+    let result = TestPRCli::try_parse_from(&["test-pr", "create", ""]);
+
+    // 验证解析失败（空字符串被验证器拒绝）
+    match result {
+        Ok(_) => panic!("Empty JIRA ID should be rejected by validator"),
+        Err(e) => {
+            // 验证错误消息包含验证信息
+            let error_msg = e.to_string();
+            assert!(
+                error_msg.contains("JIRA ID")
+                    || error_msg.contains("empty")
+                    || error_msg.contains("Invalid")
+                    || error_msg.contains("validation"),
+                "Error message should indicate JIRA ID validation failure: {}",
+                error_msg
+            );
+        }
+    }
+}
+
+#[test]
+fn test_pr_create_command_very_long_title() {
+    // 测试超长标题（边界情况）
+    let long_title = "a".repeat(1000);
+    let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])
+        .unwrap();
+
+    match cli.command {
+        PRCommands::Create { title, .. } => {
+            assert_eq!(title, Some(long_title));
+        }
+        _ => panic!("Expected Create command"),
+    }
+}
+
+#[test]
+fn test_pr_create_command_special_characters_in_title() {
+    // 测试标题中的特殊字符
+    let special_title = "Test PR: Fix bug #123 (urgent!)";
+    let cli =
+        TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", special_title])
+            .unwrap();
+
+    match cli.command {
+        PRCommands::Create { title, .. } => {
+            assert_eq!(title, Some(special_title.to_string()));
+        }
+        _ => panic!("Expected Create command"),
+    }
+}
+
+#[test]
+fn test_pr_comment_command_empty_message() {
+    // 测试空消息的情况
+    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123"]).unwrap();
+
+    match cli.command {
+        PRCommands::Comment { message, .. } => {
+            assert!(
+                message.is_empty(),
+                "Message should be empty when not provided"
+            );
+        }
+        _ => panic!("Expected Comment command"),
+    }
+}
+
+#[test]
+fn test_pr_list_command_zero_limit() {
+    // 测试 limit 为 0 的情况（边界值）
+    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "0"]).unwrap();
+
+    match cli.command {
+        PRCommands::List { pagination, .. } => {
+            assert_eq!(pagination.limit, Some(0));
+        }
+        _ => panic!("Expected List command"),
+    }
+}
+
+#[test]
+fn test_pr_list_command_very_large_limit() {
+    // 测试非常大的 limit 值（边界情况）
+    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "999999"]).unwrap();
+
+    match cli.command {
+        PRCommands::List { pagination, .. } => {
+            assert_eq!(pagination.limit, Some(999999));
+        }
+        _ => panic!("Expected List command"),
+    }
 }

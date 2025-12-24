@@ -278,8 +278,18 @@ src/
 - **Shell 模块** (`lib::base::shell`) - Shell 检测与管理，支持配置自动加载
   - 详细架构请参考 [shell.md](./shell.md)
 
-- **工具函数模块** (`lib::base::util`) - 通用工具函数（日志、字符串、浏览器、剪贴板等）
+- **工具函数模块** (`lib::base::util`) - 通用工具函数（数据处理等，其他功能已重组到独立模块）
   - 详细架构请参考 [tools.md](./tools.md)
+  - **注意**：模块已重组，大部分功能已迁移到独立模块：
+    - `lib::base::system` - 系统交互（平台检测、浏览器、剪贴板）
+    - `lib::base::fs` - 文件系统操作（文件、路径、目录）
+    - `lib::base::format` - 格式化工具（显示格式化、消息格式化、日期时间、敏感字符串）
+    - `lib::base::logger` - 日志功能
+    - `lib::base::zip` - 解压工具
+    - `lib::base::checksum` - 校验和工具
+    - `lib::base::dialog` - 交互式对话框
+    - `lib::base::indicator` - 进度指示器
+    - `lib::base::table` - 表格输出工具
 
 ### Git 模块 (`lib::git`)
 

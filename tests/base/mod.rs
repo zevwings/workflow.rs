@@ -1,38 +1,23 @@
 //! Base 模块测试
 //!
 //! 包含 base 模块的所有测试文件。
+//! 测试目录结构与源代码目录结构完全对齐：src/lib/base/* ↔ tests/base/*
 
 pub mod alias;
-pub mod alias_config;
+pub mod checksum;
 pub mod concurrent;
-pub mod dialog_confirm;
-pub mod dialog_form_builder;
-pub mod dialog_form_condition_evaluator;
-pub mod dialog_form_group_builder;
-pub mod dialog_form_types;
-pub mod dialog_multi_select;
-pub mod dialog_select;
-pub mod dialog_validators;
-pub mod http_method;
-pub mod http_parser;
-pub mod http_response;
-pub mod http_retry;
-pub mod indicator_progress;
-pub mod llm_client;
-pub mod llm_types;
+pub mod constants;
+pub mod dialog;
+pub mod format;
+pub mod fs;
+pub mod http;
+pub mod indicator;
+pub mod llm;
 pub mod logger;
-pub mod logger_console;
-pub mod logger_log_level;
-pub mod logger_tracing;
-pub mod mcp_config;
-pub mod prompt_summarize_pr;
+pub mod mcp;
+pub mod prompt;
 pub mod settings;
-pub mod shell_reload;
-pub mod util_browser;
-pub mod util_clipboard;
-pub mod util_date_additional;
-pub mod util_dialog;
-pub mod util_format;
-pub mod util_path;
-pub mod util_platform;
-pub mod util_unzip;
+pub mod shell;
+pub mod system;
+pub mod table;
+pub mod zip;

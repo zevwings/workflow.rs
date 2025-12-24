@@ -187,7 +187,6 @@ Install development tools: `make setup`
 | TODO Documents | `docs/requirements/` | `{TOPIC}.md` | TODO、待办、待实现、计划 |
 | Requirement Documents | `docs/requirements/` | `{TOPIC}.md` | 需求、需求分析、功能需求、需求文档 |
 | Analysis Documents | `analysis/` | `{TOPIC}.md` | 分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析、架构分析、设计分析、代码审查分析、问题诊断 |
-| Implementation Documents | `analysis/impl/` | `{TOPIC}.md` | 实现、实施、IMPLEMENTATION、IMPL、实现文档、实施文档、实现方案、实施方案 |
 | Report Documents | `report/` | `{TOPIC}.md` | 分析报告、检查报告、代码分析、质量报告（from pre-commit.md） |
 
 **Note**: Requirement analysis, feature descriptions, implementation plans, and other unclassified documents default to `docs/requirements/` directory.
@@ -206,7 +205,12 @@ Install development tools: `make setup`
 
 ### Document Naming Standards
 
-All documents use the `{TOPIC}.md` format. Refer to the **Document Classification Table** above for document type classification and storage locations.
+All documents use the `{TOPIC}.md` format.
+
+**Important**:
+- Use `snake_case` for topic names (e.g., `test-coverage.md`, `jira.md`)
+
+Refer to the **Document Classification Table** above for document type classification and storage locations.
 
 ### Creating New Documents
 
@@ -224,8 +228,8 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 
 ### Document Index Rules
 
-- **Prohibited Indexing**: Documents in `analysis/`, `analysis/impl/`, and `report/` directories **must not** be indexed in `docs/README.md` or project root `README.md`
-- These directories contain **temporary analysis and implementation documents**, not reference documents, and do not need to be displayed in document index
+- **Prohibited Indexing**: Documents in `analysis/` and `report/` directories **must not** be indexed in `docs/README.md` or project root `README.md`
+- These directories contain **temporary analysis documents**, not reference documents, and do not need to be displayed in document index
 - **Requirement Document Index Restriction**: Requirement documents in `docs/requirements/` directory **only** need to be indexed in `docs/requirements/README.md`, **not** in `docs/README.md` or project root `README.md`
 - **Reference Documents**: Other documents in `docs/` directory (architecture documents, guidelines documents, migration documents) are reference documents and should be indexed in `docs/README.md`
 
@@ -233,9 +237,8 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 
 - **Temporary Documents (can be deleted directly)**:
   - All documents in `analysis/` directory are temporary technical analysis and can be deleted at any time
-  - All documents in `analysis/impl/` directory are temporary implementation documents and can be deleted at any time
   - All documents in `report/` directory are temporary analysis reports and can be deleted at any time
-  - These documents are used for analysis, implementation, and recording during development and do not need long-term retention
+  - These documents are used for analysis and recording during development and do not need long-term retention
 - **Reference Documents (deletion requires caution)**:
   - Documents in `docs/` directory are **reference documents and architecture documents**, deletion requires great care
   - Including: architecture documents (`docs/architecture/`), guidelines documents (`docs/guidelines/`), migration documents (`docs/migration/`), TODO documents (`docs/requirements/`)
@@ -253,4 +256,4 @@ All documents use the `{TOPIC}.md` format. Refer to the **Document Classificatio
 
 ---
 
-**最后更新**: 2025-12-23
+**最后更新**: 2025-12-24

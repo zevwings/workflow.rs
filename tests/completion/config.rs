@@ -10,6 +10,7 @@ use workflow::completion::Completion;
 
 // ==================== Completion 配置检查测试 ====================
 
+#[cfg(not(target_os = "windows"))]
 #[rstest]
 #[case(Shell::Zsh, "zsh", ".zshrc")]
 #[case(Shell::Bash, "bash", ".bashrc")]
@@ -91,6 +92,7 @@ fn test_remove_completion_config_file() {
     // 返回值可能是 true（文件存在并删除）或 false（文件不存在）
 }
 
+#[cfg(not(target_os = "windows"))]
 #[rstest]
 #[case(Shell::Zsh)]
 #[case(Shell::Bash)]

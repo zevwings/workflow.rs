@@ -13,36 +13,6 @@ struct TestRepoCli {
     command: RepoSubcommand,
 }
 
-// ==================== Setup 命令测试 ====================
-
-#[test]
-fn test_repo_setup_command_structure() {
-    // 测试 Setup 命令结构
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"]).unwrap();
-
-    match cli.command {
-        RepoSubcommand::Setup => {
-            assert!(true, "Setup command parsed successfully");
-        }
-        _ => panic!("Expected Setup command"),
-    }
-}
-
-// ==================== Show 命令测试 ====================
-
-#[test]
-fn test_repo_show_command_structure() {
-    // 测试 Show 命令结构
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"]).unwrap();
-
-    match cli.command {
-        RepoSubcommand::Show => {
-            assert!(true, "Show command parsed successfully");
-        }
-        _ => panic!("Expected Show command"),
-    }
-}
-
 // ==================== 命令解析完整性测试 ====================
 
 #[test]
