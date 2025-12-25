@@ -208,10 +208,27 @@ fn test_branch_sync_command_with_squash() {
 ///
 /// 这个测试展示了正确的测试方法：
 /// 1. 使用临时Git仓库（GitTestEnv）
-/// 2. Mock GitHub API（MockServer）
-/// 3. 完全隔离，快速执行
+/// 测试分支同步命令结构（使用Mock）
+///
+/// ## 测试目的
+/// 验证 `BranchSyncCommand::sync()` 方法在使用 Mock 服务器时的基本功能和结构。
+///
+/// ## 测试场景
+/// 1. 创建 Git 测试环境
+/// 2. 设置 Mock GitHub API 服务器
+/// 3. 调用分支同步命令
+/// 4. 验证命令结构正确
+///
+/// ## 技术细节
+/// - 使用 GitTestEnv 创建隔离的 Git 环境
+/// - 使用 MockServer 模拟 GitHub API
+/// - 完全隔离，快速执行
+///
+/// ## 预期结果
+/// - 命令结构正确
+/// - Mock 服务器正常工作
 #[test]
-fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
+fn test_branch_sync_command_structure_with_mock_return_result() -> color_eyre::Result<()> {
     // 1. 设置Mock GitHub API
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -248,8 +265,19 @@ fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
 }
 
 /// 测试使用rebase的分支同步（完整版）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
+fn test_branch_sync_command_with_rebase_mock_return_result() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -281,8 +309,19 @@ fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
 }
 
 /// 测试fast-forward only同步（完整版）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
+fn test_branch_sync_command_with_ff_only_mock_return_result() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -316,8 +355,19 @@ fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
 }
 
 /// 测试squash合并（完整版）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
+fn test_branch_sync_command_with_squash_mock_return_result() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();

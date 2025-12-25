@@ -19,6 +19,16 @@ use crate::common::environments::CliTestEnv;
 // ==================== MCP Config Core Tests ====================
 
 /// 测试创建默认的MCP配置
+///
+/// ## 测试目的
+/// 验证 `MCPConfig::default()` 方法能够创建默认的空配置。
+///
+/// ## 测试场景
+/// 1. 调用 `MCPConfig::default()` 创建默认配置
+///
+/// ## 预期结果
+/// - 配置创建成功
+/// - mcp_servers 为空
 #[test]
 fn test_mcp_config_default_with_no_params_returns_empty_config() {
     // Arrange: 准备测试（无需额外准备）
@@ -31,6 +41,17 @@ fn test_mcp_config_default_with_no_params_returns_empty_config() {
 }
 
 /// 测试创建MCP服务器配置
+///
+/// ## 测试目的
+/// 验证 `MCPServerConfig` 结构体能够正确创建服务器配置。
+///
+/// ## 测试场景
+/// 1. 准备服务器配置参数（command、args、env）
+/// 2. 创建 MCPServerConfig 实例
+///
+/// ## 预期结果
+/// - 配置创建成功
+/// - 所有字段值正确
 #[test]
 fn test_mcp_server_config_creation_with_params_returns_server_config() {
     // Arrange: 准备服务器配置参数
@@ -51,8 +72,19 @@ fn test_mcp_server_config_creation_with_params_returns_server_config() {
 }
 
 /// 测试创建MCP配置管理器
+///
+/// ## 测试目的
+/// 验证 `MCPConfigManager::new()` 方法能够创建配置管理器并正确设置配置路径。
+///
+/// ## 测试场景
+/// 1. 调用 `MCPConfigManager::new()` 创建管理器
+/// 2. 获取配置路径
+///
+/// ## 预期结果
+/// - 管理器创建成功
+/// - 配置路径包含 ".cursor" 和 "mcp.json"
 #[test]
-fn test_mcp_config_manager_new() -> Result<()> {
+fn test_mcp_config_manager_new_return_result() -> Result<()> {
     // Arrange: 准备测试创建配置管理器
     let manager = MCPConfigManager::new()?;
     let config_path = manager.config_path();
@@ -63,8 +95,18 @@ fn test_mcp_config_manager_new() -> Result<()> {
 }
 
 /// 测试读取不存在的配置文件
+///
+/// ## 测试目的
+/// 验证读取不存在的配置文件时能够正确处理，返回默认配置。
+///
+/// ## 测试场景
+/// 1. 准备不存在的配置文件路径
+/// 2. 尝试读取配置
+///
+/// ## 预期结果
+/// - 返回默认配置（mcp_servers 为空）
 #[test]
-fn test_mcp_config_manager_read_nonexistent() -> Result<()> {
+fn test_mcp_config_manager_read_nonexistent_return_result() -> Result<()> {
     // Arrange: 准备测试读取不存在的配置文件（覆盖 config.rs:67-68）
     let mut env = CliTestEnv::new()?;
     let pwd_path = env.path().to_string_lossy().to_string();
@@ -79,8 +121,21 @@ fn test_mcp_config_manager_read_nonexistent() -> Result<()> {
 }
 
 /// 测试写入和读取MCP配置文件
+///
+/// ## 测试目的
+/// 验证 `MCPConfigManager` 能够正确写入和读取配置文件。
+///
+/// ## 测试场景
+/// 1. 创建配置并添加服务器配置
+/// 2. 写入配置文件
+/// 3. 读取配置文件
+///
+/// ## 预期结果
+/// - 写入成功
+/// - 读取成功
+/// - 配置内容正确
 #[test]
-fn test_mcp_config_manager_write_and_read() -> Result<()> {
+fn test_mcp_config_manager_write_and_read_return_result() -> Result<()> {
     // Arrange: 准备测试写入和读取配置文件
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -109,8 +164,20 @@ fn test_mcp_config_manager_write_and_read() -> Result<()> {
 }
 
 /// 测试更新MCP配置文件
+///
+/// ## 测试目的
+/// 验证 `MCPConfigManager` 能够正确更新配置文件。
+///
+/// ## 测试场景
+/// 1. 创建初始配置并写入
+/// 2. 更新配置
+/// 3. 读取并验证更新后的配置
+///
+/// ## 预期结果
+/// - 更新成功
+/// - 配置内容正确更新
 #[test]
-fn test_mcp_config_manager_update() -> Result<()> {
+fn test_mcp_config_manager_update_return_result() -> Result<()> {
     // Arrange: 准备测试更新配置文件（覆盖 config.rs:84-90）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -151,8 +218,22 @@ fn test_mcp_config_manager_update() -> Result<()> {
 }
 
 /// 测试合并MCP配置（合并环境变量）
+///
+/// ## 测试目的
+/// 验证 `MCPConfigManager` 能够正确合并MCP配置，特别是合并环境变量。
+///
+/// ## 测试场景
+/// 1. 创建现有配置并写入
+/// 2. 创建新配置
+/// 3. 合并配置
+/// 4. 验证合并结果
+///
+/// ## 预期结果
+/// - 配置合并成功
+/// - 环境变量正确合并
+/// - 新服务器配置添加成功
 #[test]
-fn test_mcp_config_manager_merge() -> Result<()> {
+fn test_mcp_config_manager_merge_return_result() -> Result<()> {
     // Arrange: 准备测试合并配置（覆盖 config.rs:96-109）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -225,8 +306,20 @@ fn test_mcp_config_manager_merge() -> Result<()> {
 }
 
 /// 测试检测已配置的MCP服务器
+///
+/// ## 测试目的
+/// 验证能够正确检测配置文件中已配置的MCP服务器列表。
+///
+/// ## 测试场景
+/// 1. 创建包含多个服务器的配置
+/// 2. 写入配置文件
+/// 3. 读取配置并检测服务器列表
+///
+/// ## 预期结果
+/// - 正确检测到所有已配置的服务器
+/// - 服务器名称正确
 #[test]
-fn test_mcp_config_manager_detect_configured_servers() -> Result<()> {
+fn test_mcp_config_manager_detect_configured_servers_return_result() -> Result<()> {
     // Arrange: 准备测试检测已配置的服务器（覆盖 config.rs:115-117）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -267,8 +360,20 @@ fn test_mcp_config_manager_detect_configured_servers() -> Result<()> {
 }
 
 /// 测试检查特定服务器是否已配置
+///
+/// ## 测试目的
+/// 验证能够正确检查特定服务器是否已在配置文件中配置。
+///
+/// ## 测试场景
+/// 1. 创建包含特定服务器的配置
+/// 2. 写入配置文件
+/// 3. 检查服务器是否存在
+///
+/// ## 预期结果
+/// - 已配置的服务器返回true
+/// - 未配置的服务器返回false
 #[test]
-fn test_mcp_config_manager_is_configured() -> Result<()> {
+fn test_mcp_config_manager_is_configured_return_result() -> Result<()> {
     // Arrange: 准备测试检查特定服务器是否已配置（覆盖 config.rs:121-123）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -297,8 +402,20 @@ fn test_mcp_config_manager_is_configured() -> Result<()> {
 }
 
 /// 测试读取已存在的配置文件
+///
+/// ## 测试目的
+/// 验证能够正确读取已存在的配置文件。
+///
+/// ## 测试场景
+/// 1. 创建配置文件并写入内容
+/// 2. 读取配置文件
+/// 3. 验证读取的内容
+///
+/// ## 预期结果
+/// - 读取成功
+/// - 配置内容正确
 #[test]
-fn test_mcp_config_manager_read_existing_file() -> Result<()> {
+fn test_mcp_config_manager_read_existing_file_return_result() -> Result<()> {
     // Arrange: 准备测试读取已存在的配置文件（覆盖 config.rs:71）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -325,8 +442,20 @@ fn test_mcp_config_manager_read_existing_file() -> Result<()> {
 }
 
 /// 测试合并已存在的服务器配置
+///
+/// ## 测试目的
+/// 验证能够正确合并已存在的服务器配置，特别是环境变量的合并逻辑。
+///
+/// ## 测试场景
+/// 1. 创建包含现有服务器的配置
+/// 2. 创建包含相同服务器但不同环境变量的新配置
+/// 3. 合并配置
+///
+/// ## 预期结果
+/// - 现有环境变量保留
+/// - 新环境变量添加
 #[test]
-fn test_mcp_config_manager_merge_existing_server() -> Result<()> {
+fn test_mcp_config_manager_merge_existing_server_return_result() -> Result<()> {
     // Arrange: 准备测试合并已存在的服务器配置（覆盖 config.rs:100-103）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -387,8 +516,20 @@ fn test_mcp_config_manager_merge_existing_server() -> Result<()> {
 }
 
 /// 测试合并新服务器配置
+///
+/// ## 测试目的
+/// 验证能够正确合并新服务器配置到现有配置中。
+///
+/// ## 测试场景
+/// 1. 创建现有配置
+/// 2. 创建包含新服务器的配置
+/// 3. 合并配置
+///
+/// ## 预期结果
+/// - 新服务器添加成功
+/// - 现有服务器保留
 #[test]
-fn test_mcp_config_manager_merge_new_server() -> Result<()> {
+fn test_mcp_config_manager_merge_new_server_return_result() -> Result<()> {
     // Arrange: 准备测试合并新服务器配置（覆盖 config.rs:104-107）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -440,6 +581,17 @@ fn test_mcp_config_manager_merge_new_server() -> Result<()> {
 }
 
 /// 测试检测MCP配置文件路径
+///
+/// ## 测试目的
+/// 验证 `MCPConfigManager::new()` 能够正确检测MCP配置文件路径。
+///
+/// ## 测试场景
+/// 1. 调用 `MCPConfigManager::new()` 创建管理器
+/// 2. 获取配置路径
+///
+/// ## 预期结果
+/// - 管理器创建成功
+/// - 配置路径包含 ".cursor" 和 "mcp.json"
 #[test]
 fn test_mcp_config_manager_detect_config_path() {
     // Arrange: 准备测试 detect_config_path() 方法（覆盖 config.rs:50-55）
@@ -455,6 +607,15 @@ fn test_mcp_config_manager_detect_config_path() {
 }
 
 /// 测试读取不存在的配置文件返回默认配置
+///
+/// ## 测试目的
+/// 验证读取不存在的配置文件时能够返回默认配置。
+///
+/// ## 测试场景
+/// 1. 尝试读取不存在的配置文件
+///
+/// ## 预期结果
+/// - 返回默认配置（mcp_servers 为空）
 #[test]
 fn test_mcp_config_manager_read_nonexistent_returns_default() {
     // Arrange: 准备测试读取不存在的配置文件返回默认值（覆盖 config.rs:67-68）
@@ -472,6 +633,17 @@ fn test_mcp_config_manager_read_nonexistent_returns_default() {
 }
 
 /// 测试写入配置时自动创建目录
+///
+/// ## 测试目的
+/// 验证写入配置文件时能够自动创建不存在的父目录。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 写入配置文件
+///
+/// ## 预期结果
+/// - 目录自动创建
+/// - 文件写入成功
 #[test]
 fn test_mcp_config_manager_write_creates_directory() -> Result<()> {
     // Arrange: 准备测试写入配置文件时创建目录（覆盖 config.rs:77-78）
@@ -493,8 +665,20 @@ fn test_mcp_config_manager_write_creates_directory() -> Result<()> {
 }
 
 /// 测试合并环境变量时不覆盖已有值
+///
+/// ## 测试目的
+/// 验证合并环境变量时不会覆盖已有的值，只添加新的键值对。
+///
+/// ## 测试场景
+/// 1. 创建包含现有环境变量的配置
+/// 2. 创建包含相同键但不同值的新配置
+/// 3. 合并配置
+///
+/// ## 预期结果
+/// - 现有环境变量值保留
+/// - 新环境变量键添加
 #[test]
-fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
+fn test_mcp_config_manager_merge_env_vars_not_overwrite_return_result() -> Result<()> {
     // Arrange: 准备测试合并环境变量时不覆盖已有值（覆盖 config.rs:101-103）
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -555,8 +739,19 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
 // ========================================
 
 /// 测试读取无效的JSON配置文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证读取无效的JSON配置文件时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建包含无效JSON的配置文件
+/// 2. 尝试读取配置文件
+///
+/// ## 预期结果
+/// - 返回错误
+/// - 错误信息包含JSON解析相关内容
 #[test]
-fn test_read_invalid_json_config() -> Result<()> {
+fn test_read_invalid_json_config_return_result() -> Result<()> {
     // Arrange: 准备测试读取损坏的 JSON 配置文件
     // 场景：用户手动编辑配置文件导致 JSON 格式错误
     let env = CliTestEnv::new()?;
@@ -585,8 +780,18 @@ fn test_read_invalid_json_config() -> Result<()> {
 }
 
 /// 测试读取各种损坏的JSON格式（应返回错误）
+///
+/// ## 测试目的
+/// 验证读取各种损坏的JSON格式时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建包含各种无效JSON格式的配置文件
+/// 2. 尝试读取每个配置文件
+///
+/// ## 预期结果
+/// - 所有无效格式都返回错误
 #[test]
-fn test_read_corrupted_json_config() -> Result<()> {
+fn test_read_corrupted_json_config_return_result() -> Result<()> {
     // Arrange: 准备测试读取各种损坏的 JSON 格式
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -617,9 +822,19 @@ fn test_read_corrupted_json_config() -> Result<()> {
 }
 
 /// 测试写入权限被拒绝的情况（仅Unix）
+///
+/// ## 测试目的
+/// 验证在Unix系统上，当目录没有写入权限时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 创建只读目录
+/// 2. 尝试写入配置文件
+///
+/// ## 预期结果
+/// - 返回权限错误
 #[test]
 #[cfg(unix)]
-fn test_write_permission_denied() -> Result<()> {
+fn test_write_permission_denied_return_result() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 准备测试写入权限被拒绝的情况
@@ -661,9 +876,20 @@ fn test_write_permission_denied() -> Result<()> {
 }
 
 /// 测试读取权限被拒绝的情况（仅Unix）
+///
+/// ## 测试目的
+/// 验证在Unix系统上，当文件没有读取权限时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 创建配置文件
+/// 2. 移除读取权限
+/// 3. 尝试读取配置文件
+///
+/// ## 预期结果
+/// - 返回权限错误
 #[test]
 #[cfg(unix)]
-fn test_read_permission_denied() -> Result<()> {
+fn test_read_permission_denied_return_result() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 准备测试读取权限被拒绝的情况
@@ -706,8 +932,19 @@ fn test_read_permission_denied() -> Result<()> {
 }
 
 /// 测试写入只读文件系统（应返回错误）
+///
+/// ## 测试目的
+/// 验证写入只读文件时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 创建配置文件
+/// 2. 设置文件为只读
+/// 3. 尝试写入配置文件
+///
+/// ## 预期结果
+/// - 返回权限错误或只读错误
 #[test]
-fn test_write_to_readonly_filesystem() -> Result<()> {
+fn test_write_to_readonly_filesystem_return_collect() -> Result<()> {
     // Arrange: 准备测试写入只读文件的情况
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -765,6 +1002,15 @@ fn test_write_to_readonly_filesystem() -> Result<()> {
 }
 
 /// 测试配置路径检测失败的情况
+///
+/// ## 测试目的
+/// 验证配置路径检测失败时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 模拟配置路径检测失败的情况
+///
+/// ## 预期结果
+/// - 返回适当的错误
 #[test]
 fn test_config_path_detection_failure() {
     // Arrange: 准备测试配置路径检测失败的情况
@@ -790,8 +1036,19 @@ fn test_config_path_detection_failure() {
 }
 
 /// 测试合并空配置的边界情况
+///
+/// ## 测试目的
+/// 验证合并空配置时能够正确处理边界情况。
+///
+/// ## 测试场景
+/// 1. 创建包含服务器的现有配置
+/// 2. 创建空配置
+/// 3. 合并配置
+///
+/// ## 预期结果
+/// - 现有配置保留不变
 #[test]
-fn test_merge_with_empty_new_config() -> Result<()> {
+fn test_merge_with_empty_new_config_return_empty() -> Result<()> {
     // Arrange: 准备测试合并空配置的边界情况
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");
@@ -835,8 +1092,19 @@ fn test_merge_with_empty_new_config() -> Result<()> {
 }
 
 /// 测试服务器配置包含空值的情况（空命令、空参数、空环境变量）
+///
+/// ## 测试目的
+/// 验证服务器配置能够正确处理空值情况（空命令、空参数列表、空环境变量）。
+///
+/// ## 测试场景
+/// 1. 创建包含空值的服务器配置
+/// 2. 写入配置文件
+/// 3. 读取配置文件
+///
+/// ## 预期结果
+/// - 空值被正确保存和读取
 #[test]
-fn test_server_config_with_empty_values() -> Result<()> {
+fn test_server_config_with_empty_values_return_empty() -> Result<()> {
     // Arrange: 准备测试空值情况：空命令、空参数列表、空环境变量
     let env = CliTestEnv::new()?;
     let config_path = env.path().join(".cursor").join("mcp.json");

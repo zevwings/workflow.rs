@@ -69,7 +69,7 @@ fn test_jira_id_alt() -> &'static str {
 #[case("comment", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 #[case("attachments", "PROJ-456")]
-fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_with_id_return_result(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id])?;
 
     match &cli.command {
@@ -105,7 +105,7 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) ->
 #[case("comments")]
 #[case("attachments")]
 #[case("clean")]
-fn test_jira_command_without_id_parses_correctly(#[case] subcommand: &str) -> Result<()> {
+fn test_jira_command_without_id_parses_correctly_return_result(#[case] subcommand: &str) -> Result<()> {
     // Arrange: 准备不带 Jira ID 的命令输入
     let args = &["test-jira", subcommand];
 
@@ -148,7 +148,7 @@ fn test_jira_command_without_id_parses_correctly(#[case] subcommand: &str) -> Re
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_with_table_output_format_parses_correctly(
+fn test_jira_command_with_table_output_format_parses_correctly_return_result(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
@@ -195,7 +195,7 @@ fn test_jira_command_with_table_output_format_parses_correctly(
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_with_json_output_format_parses_correctly(
+fn test_jira_command_with_json_output_format_parses_correctly_return_result(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
@@ -242,7 +242,7 @@ fn test_jira_command_with_json_output_format_parses_correctly(
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_with_yaml_output_format_parses_correctly(
+fn test_jira_command_with_yaml_output_format_parses_correctly_return_result(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
@@ -289,7 +289,7 @@ fn test_jira_command_with_yaml_output_format_parses_correctly(
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_markdown(
+fn test_jira_command_output_format_markdown_return_result(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
@@ -330,7 +330,7 @@ fn test_jira_command_output_format_markdown(
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
-fn test_jira_command_output_format_all_flags(
+fn test_jira_command_output_format_all_flags_return_result(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
@@ -371,8 +371,19 @@ fn test_jira_command_output_format_all_flags(
 // ==================== Clean 命令测试 ====================
 
 /// 测试Jira清理命令的结构（包含所有参数）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_clean_command_structure() -> Result<()> {
+fn test_jira_clean_command_structure_return_result() -> Result<()> {
     // Arrange: 准备测试 Clean 命令结构（带所有参数）
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
@@ -409,7 +420,7 @@ fn test_jira_clean_command_structure() -> Result<()> {
 #[case("PROJ-123", true, true, true, false)]
 #[case("", false, false, false, true)]
 #[case("", true, false, false, true)]
-fn test_jira_clean_command_flags(
+fn test_jira_clean_command_flags_return_result(
     #[case] jira_id: &str,
     #[case] all: bool,
     #[case] dry_run: bool,
@@ -454,8 +465,19 @@ fn test_jira_clean_command_flags(
 }
 
 /// 测试Jira清理命令的短标志（-a, -n, -l）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_clean_command_short_flags() -> Result<()> {
+fn test_jira_clean_command_short_flags_return_result() -> Result<()> {
     // Arrange: 准备测试 Clean 命令的短标志
     let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "-a", "-n", "-l"])?;
 
@@ -479,8 +501,19 @@ fn test_jira_clean_command_short_flags() -> Result<()> {
 // ==================== Comments 命令参数测试 ====================
 
 /// 测试Jira评论命令的limit参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_limit() -> Result<()> {
+fn test_jira_comments_command_with_limit_return_result() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
@@ -490,8 +523,19 @@ fn test_jira_comments_command_with_limit() -> Result<()> {
 }
 
 /// 测试Jira评论命令的offset参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_offset() -> Result<()> {
+fn test_jira_comments_command_with_offset_return_result() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
@@ -501,8 +545,19 @@ fn test_jira_comments_command_with_offset() -> Result<()> {
 }
 
 /// 测试Jira评论命令的author参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_author() -> Result<()> {
+fn test_jira_comments_command_with_author_return_result() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -520,8 +575,19 @@ fn test_jira_comments_command_with_author() -> Result<()> {
 }
 
 /// 测试Jira评论命令的since参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_with_since() -> Result<()> {
+fn test_jira_comments_command_with_since_return_result() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -539,8 +605,19 @@ fn test_jira_comments_command_with_since() -> Result<()> {
 }
 
 /// 测试Jira评论命令的所有过滤参数组合
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_all_filters() -> Result<()> {
+fn test_jira_comments_command_all_filters_return_collect() -> Result<()> {
     // Arrange: 准备测试所有过滤参数组合
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
@@ -576,8 +653,19 @@ fn test_jira_comments_command_all_filters() -> Result<()> {
 }
 
 /// 测试Jira评论命令的分页参数组合（limit + offset）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_comments_command_pagination() -> Result<()> {
+fn test_jira_comments_command_pagination_return_result() -> Result<()> {
     // Arrange: 准备测试分页参数组合（limit + offset）
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
@@ -628,8 +716,19 @@ fn test_jira_command_parsing_all_subcommands(
 }
 
 /// 测试Jira命令的错误处理（无效子命令）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_command_error_handling_invalid_subcommand() -> Result<()> {
+fn test_jira_command_error_handling_invalid_subcommand_return_false() -> Result<()> {
     // Arrange: 准备测试无效子命令的错误处理
     let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
@@ -639,8 +738,19 @@ fn test_jira_command_error_handling_invalid_subcommand() -> Result<()> {
 // ==================== Changelog 命令测试 ====================
 
 /// 测试Jira变更日志命令的字段过滤参数
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_changelog_command_with_field_filter() -> Result<()> {
+fn test_jira_changelog_command_with_field_filter_return_result() -> Result<()> {
     // Arrange: 准备测试 --field 参数
     // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
     // 如果将来添加了 field 字段，这个测试需要更新

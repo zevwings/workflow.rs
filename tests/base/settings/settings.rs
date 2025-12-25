@@ -72,6 +72,17 @@ fn create_test_llm_settings() -> LLMSettings {
 // ==================== JiraSettings 测试 ====================
 
 /// 测试 JiraSettings 创建和字段访问
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_creation() {
     let jira_settings = create_test_jira_settings();
@@ -85,6 +96,17 @@ fn test_jira_settings_creation() {
 }
 
 /// 测试 JiraSettings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_default() {
     let default_jira = JiraSettings::default();
@@ -95,6 +117,17 @@ fn test_jira_settings_default() {
 }
 
 /// 测试 JiraSettings 克隆和调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_settings_clone_and_debug() {
     let original_jira = create_test_jira_settings();
@@ -113,6 +146,17 @@ fn test_jira_settings_clone_and_debug() {
 // ==================== GitHubSettings Tests ====================
 
 /// 测试创建GitHubSettings并验证账号信息
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_settings_creation_with_valid_accounts_creates_settings() {
     // Arrange: 准备测试用的 GitHubSettings
@@ -131,6 +175,17 @@ fn test_github_settings_creation_with_valid_accounts_creates_settings() {
 }
 
 /// 测试获取GitHubSettings的当前账号和token
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_settings_current_account_with_valid_settings_returns_account() {
     // Arrange: 准备测试用的 GitHubSettings
@@ -149,6 +204,17 @@ fn test_github_settings_current_account_with_valid_settings_returns_account() {
 }
 
 /// 测试当current为None时返回第一个账号
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_settings_no_current_account_with_none_current_returns_first_account() {
     // Arrange: 准备 GitHubSettings（current 为 None）
@@ -165,6 +231,17 @@ fn test_github_settings_no_current_account_with_none_current_returns_first_accou
 }
 
 /// 测试当账号列表为空时返回None
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
     // Arrange: 准备空的 GitHubSettings
@@ -183,6 +260,17 @@ fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
 }
 
 /// 测试创建默认的GitHubSettings
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
     // Arrange: 准备创建默认设置
@@ -198,6 +286,17 @@ fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
 // ==================== LLMSettings Tests ====================
 
 /// 测试创建LLMSettings并验证提供商配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_llm_settings_creation_with_valid_providers_creates_settings() {
     // Arrange: 准备测试用的 LLMSettings
@@ -225,6 +324,17 @@ fn test_llm_settings_creation_with_valid_providers_creates_settings() {
 }
 
 /// 测试获取LLMSettings的当前提供商配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
     // Arrange: 准备测试用的 LLMSettings
@@ -239,6 +349,17 @@ fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
 }
 
 /// 测试LLMSettings的默认值方法
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
     // Arrange: 准备检查默认值
@@ -252,6 +373,17 @@ fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
 }
 
 /// 测试创建LLMProviderSettings并验证字段值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
     // Arrange: 准备提供商设置字段值
@@ -281,6 +413,17 @@ fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
 // ==================== LogSettings 测试 ====================
 
 /// 测试 LogSettings 创建和默认值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_creation() {
     let log_settings = LogSettings {
@@ -300,6 +443,17 @@ fn test_log_settings_creation() {
 }
 
 /// 测试 LogSettings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_default() {
     let default_log = LogSettings::default();
@@ -312,6 +466,17 @@ fn test_log_settings_default() {
 }
 
 /// 测试 LogSettings 默认方法
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_log_settings_default_methods() {
     assert_eq!(LogSettings::default_log_folder(), "logs");
@@ -328,6 +493,17 @@ fn test_log_settings_default_methods() {
 // ==================== Settings 主结构测试 ====================
 
 /// 测试 Settings 创建和默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_settings_creation() {
     let settings = Settings {
@@ -350,6 +526,17 @@ fn test_settings_creation() {
 }
 
 /// 测试 Settings 默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_settings_default() {
     let default_settings = Settings::default();
@@ -364,6 +551,17 @@ fn test_settings_default() {
 // ==================== Table Display Structure Tests ====================
 
 /// 测试表格行结构创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_table_row_structures() {
     // Arrange: 准备测试 LLMConfigRow

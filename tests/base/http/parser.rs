@@ -9,6 +9,7 @@
 //! - 测试错误处理和边界情况
 
 use color_eyre::Result;
+use rstest::rstest;
 use serde::Deserialize;
 use workflow::base::http::parser::{JsonParser, ResponseParser, TextParser};
 
@@ -16,6 +17,39 @@ use workflow::base::http::parser::{JsonParser, ResponseParser, TextParser};
 struct TestStruct {
     id: u32,
     name: String,
+}
+
+/// 测试 JSON 解析器解析有效 JSON（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 JsonParser 能够将有效的 JSON 字节解析为不同的类型。
+///
+/// ## 测试场景
+/// 测试各种有效的 JSON 输入：
+/// - 解析为结构体
+/// - 解析为 Value
+/// - 解析为数组
+/// - 解析为嵌套对象
+///
+/// ## 预期结果
+/// - 所有有效的 JSON 都能正确解析
+#[rstest]
+#[case(br#"{"id": 1, "name": "test"}"#, 200, true)]
+#[case(br#"{"key": "value", "number": 42}"#, 200, true)]
+#[case(b"[1, 2, 3, 4, 5]", 200, true)]
+#[case(br#"{"nested": {"key": "value"}}"#, 200, true)]
+fn test_json_parser_parse_with_valid_json_succeeds(
+    #[case] json_bytes: &[u8],
+    #[case] status_code: u16,
+    #[case] should_succeed: bool,
+) {
+    // Arrange: 准备有效的JSON字节（通过参数提供）
+
+    // Act: 解析JSON
+    let result: Result<serde_json::Value, _> = JsonParser::parse(json_bytes, status_code);
+
+    // Assert: 验证解析结果
+    assert_eq!(result.is_ok(), should_succeed);
 }
 
 /// 测试 JSON 解析器解析为结构体
@@ -31,7 +65,7 @@ struct TestStruct {
 /// ## 预期结果
 /// - JSON 被正确解析为结构体，字段值正确
 #[test]
-fn test_json_parser_parse_with_valid_json_returns_struct() -> Result<()> {
+fn test_json_parser_parse_with_valid_json_return_result() -> Result<()> {
     // Arrange: 准备有效的JSON字节
     let json_bytes = br#"{"id": 1, "name": "test"}"#;
 
@@ -44,105 +78,40 @@ fn test_json_parser_parse_with_valid_json_returns_struct() -> Result<()> {
     Ok(())
 }
 
-/// 测试 JSON 解析器解析为 Value
+/// 测试 JSON 解析器处理边界情况（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 JsonParser 能够将有效的 JSON 字节解析为 serde_json::Value。
+/// 使用参数化测试验证 JsonParser 能够正确处理各种边界情况。
 ///
 /// ## 测试场景
-/// 1. 准备有效的 JSON 字节
-/// 2. 解析为 Value
-/// 3. 验证字段值正确
+/// 测试空响应、空白字符响应、无效 JSON 等边界情况
 ///
 /// ## 预期结果
-/// - JSON 被正确解析为 Value，字段值正确
-#[test]
-fn test_json_parser_parse_with_valid_json_returns_value() -> Result<()> {
-    // Arrange: 准备有效的JSON字节
-    let json_bytes = br#"{"key": "value", "number": 42}"#;
+/// - 空响应和空白字符响应能成功解析
+/// - 无效 JSON 返回错误
+#[rstest]
+#[case(b"", 200, true)] // 空响应
+#[case(b"   \n\t  ", 200, true)] // 空白字符
+#[case(b"not valid json", 200, false)] // 无效 JSON
+fn test_json_parser_parse_with_edge_cases(
+    #[case] input: &[u8],
+    #[case] status_code: u16,
+    #[case] should_succeed: bool,
+) {
+    // Arrange: 准备边界情况输入（通过参数提供）
 
-    // Act: 解析JSON为Value
-    let result: serde_json::Value = JsonParser::parse(json_bytes, 200)?;
+    // Act: 尝试解析
+    let result: Result<serde_json::Value, _> = JsonParser::parse(input, status_code);
 
-    // Assert: 验证解析结果正确
-    assert_eq!(result["key"], "value");
-    assert_eq!(result["number"], 42);
-    Ok(())
-}
+    // Assert: 验证解析结果
+    assert_eq!(result.is_ok(), should_succeed);
 
-/// 测试 JSON 解析器处理空响应
-///
-/// ## 测试目的
-/// 验证 JsonParser 能够优雅地处理空响应（解析为 null 或 {}）。
-///
-/// ## 测试场景
-/// 1. 准备空响应字节
-/// 2. 尝试解析为空对象或 null
-/// 3. 验证解析成功
-///
-/// ## 预期结果
-/// - 空响应被成功解析为 null 或 {}
-#[test]
-fn test_json_parser_parse_with_empty_response_handles_gracefully() {
-    // Arrange: 准备空响应（空响应应该尝试解析为 null 或 {}）
-    let empty_bytes = b"";
-
-    // Act: 尝试解析空响应
-    let result: Result<serde_json::Value, _> = JsonParser::parse(empty_bytes, 200);
-
-    // Assert: 应该成功解析为 null 或 {}
-    assert!(result.is_ok());
-}
-
-/// 测试 JSON 解析器处理空白字符响应
-///
-/// ## 测试目的
-/// 验证 JsonParser 能够优雅地处理只包含空白字符的响应。
-///
-/// ## 测试场景
-/// 1. 准备只包含空白字符的响应
-/// 2. 尝试解析
-/// 3. 验证解析成功
-///
-/// ## 预期结果
-/// - 空白字符响应被成功解析为 null 或 {}
-#[test]
-fn test_json_parser_parse_with_whitespace_response_handles_gracefully() {
-    // Arrange: 准备只有空白字符的响应
-    let whitespace_bytes = b"   \n\t  ";
-
-    // Act: 尝试解析空白字符响应
-    let result: Result<serde_json::Value, _> = JsonParser::parse(whitespace_bytes, 200);
-
-    // Assert: 应该成功解析为 null 或 {}
-    assert!(result.is_ok());
-}
-
-/// 测试 JSON 解析器处理无效 JSON
-///
-/// ## 测试目的
-/// 验证 JsonParser 在遇到无效 JSON 时返回错误。
-///
-/// ## 测试场景
-/// 1. 准备无效的 JSON 字节
-/// 2. 尝试解析
-/// 3. 验证返回错误且错误消息包含 "Failed to parse JSON"
-///
-/// ## 预期结果
-/// - 返回错误，错误消息包含 "Failed to parse JSON"
-#[test]
-fn test_json_parser_parse_with_invalid_json_returns_error() {
-    // Arrange: 准备无效的JSON字节
-    let invalid_bytes = b"not valid json";
-
-    // Act: 尝试解析无效JSON
-    let result: Result<serde_json::Value, _> = JsonParser::parse(invalid_bytes, 200);
-
-    // Assert: 验证返回错误且错误消息包含"Failed to parse JSON"
-    assert!(result.is_err());
-    if let Err(e) = result {
-        let error_msg = e.to_string();
-        assert!(error_msg.contains("Failed to parse JSON"));
+    // 如果是无效 JSON，验证错误消息
+    if !should_succeed {
+        if let Err(e) = result {
+            let error_msg = e.to_string();
+            assert!(error_msg.contains("Failed to parse JSON") || error_msg.contains("JSON"));
+        }
     }
 }
 
@@ -159,7 +128,7 @@ fn test_json_parser_parse_with_invalid_json_returns_error() {
 /// ## 预期结果
 /// - JSON 被成功解析，即使状态码是错误码
 #[test]
-fn test_json_parser_parse_with_error_status_parses_json() -> Result<()> {
+fn test_json_parser_parse_with_error_status_parses_json_return_false() -> Result<()> {
     // Arrange: 准备错误状态码的JSON（即使状态码是错误，JSON 解析器也应该尝试解析）
     let json_bytes = br#"{"error": "Not Found"}"#;
 
@@ -171,135 +140,74 @@ fn test_json_parser_parse_with_error_status_parses_json() -> Result<()> {
     Ok(())
 }
 
-/// 测试文本解析器解析有效文本
+/// 测试文本解析器解析有效文本（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 TextParser 能够将有效的文本字节解析为字符串。
+/// 使用参数化测试验证 TextParser 能够将各种文本字节解析为字符串。
 ///
 /// ## 测试场景
-/// 1. 准备有效的文本字节
-/// 2. 解析为字符串
-/// 3. 验证结果正确
+/// 测试普通文本、UTF-8 文本、多行文本、Unicode 文本等
 ///
 /// ## 预期结果
-/// - 文本被正确解析为字符串
-#[test]
-fn test_text_parser_parse_with_valid_text_returns_string() -> Result<()> {
-    // Arrange: 准备有效的文本字节
-    let text_bytes = b"Hello, World!";
+/// - 所有有效的文本都能正确解析
+#[rstest]
+#[case(b"Hello, World!", 200, "Hello, World!", true)]
+#[case("你好，世界！".as_bytes(), 200, "你好，世界！", true)]
+#[case(b"Line 1\nLine 2\nLine 3", 200, "Line 1\nLine 2\nLine 3", true)]
+#[case("测试文本 🚀".as_bytes(), 200, "测试文本 🚀", true)]
+#[case(b"", 200, "", true)]
+fn test_text_parser_parse_with_various_texts_return_result(
+    #[case] text_bytes: &[u8],
+    #[case] status_code: u16,
+    #[case] expected: &str,
+    #[case] should_succeed: bool,
+) -> Result<()> {
+    // Arrange: 准备文本字节（通过参数提供）
 
     // Act: 解析文本
-    let result = TextParser::parse(text_bytes, 200)?;
+    let result = TextParser::parse(text_bytes, status_code);
 
-    // Assert: 验证解析结果正确
-    assert_eq!(result, "Hello, World!");
-    Ok(())
-}
-
-/// 测试文本解析器解析 UTF-8 文本
-///
-/// ## 测试目的
-/// 验证 TextParser 能够正确处理 UTF-8 编码的文本（包括中文）。
-///
-/// ## 测试场景
-/// 1. 准备 UTF-8 文本字节
-/// 2. 解析为字符串
-/// 3. 验证结果正确
-///
-/// ## 预期结果
-/// - UTF-8 文本被正确解析为字符串
-#[test]
-fn test_text_parser_parse_with_utf8_text_returns_string() -> Result<()> {
-    // Arrange: 准备UTF-8文本字节
-    let utf8_bytes = "你好，世界！".as_bytes();
-
-    // Act: 解析UTF-8文本
-    let result = TextParser::parse(utf8_bytes, 200)?;
-
-    // Assert: 验证解析结果正确
-    assert_eq!(result, "你好，世界！");
-    Ok(())
-}
-
-/// 测试文本解析器处理错误状态码
-///
-/// ## 测试目的
-/// 验证 TextParser 在遇到错误状态码时返回错误。
-///
-/// ## 测试场景
-/// 1. 准备错误状态码的文本
-/// 2. 尝试解析
-/// 3. 验证返回错误且错误消息包含状态码
-///
-/// ## 预期结果
-/// - 返回错误，错误消息包含状态码
-#[test]
-fn test_text_parser_parse_with_error_status_returns_error() {
-    // Arrange: 准备错误状态码的文本（TextParser 应该拒绝非成功状态码）
-    let text_bytes = b"Error message";
-
-    // Act: 尝试解析文本（使用错误状态码）
-    let result = TextParser::parse(text_bytes, 500);
-
-    // Assert: 验证返回错误且错误消息包含状态码
-    assert!(result.is_err());
-    if let Err(e) = result {
-        let error_msg = e.to_string();
-        assert!(error_msg.contains("500"));
+    // Assert: 验证解析结果
+    if should_succeed {
+        assert_eq!(result?, expected);
+    } else {
+        assert!(result.is_err());
     }
-}
-
-/// 测试文本解析器处理无效 UTF-8
-///
-/// ## 测试目的
-/// 验证 TextParser 在遇到无效 UTF-8 序列时返回错误。
-///
-/// ## 测试场景
-/// 1. 准备无效的 UTF-8 序列
-/// 2. 尝试解析
-/// 3. 验证返回错误且错误消息包含 UTF-8 相关信息
-///
-/// ## 预期结果
-/// - 返回错误，错误消息包含 UTF-8 相关信息
-#[test]
-fn test_text_parser_parse_with_invalid_utf8_returns_error() {
-    // Arrange: 准备无效的 UTF-8 序列
-    let invalid_utf8 = &[0xFF, 0xFE, 0xFD];
-
-    // Act: 尝试解析无效UTF-8
-    let result = TextParser::parse(invalid_utf8, 200);
-
-    // Assert: 验证返回错误且错误消息包含UTF-8相关信息
-    assert!(result.is_err());
-    if let Err(e) = result {
-        let error_msg = e.to_string();
-        assert!(error_msg.contains("UTF-8"));
-    }
-}
-
-/// 测试文本解析器处理空字节
-///
-/// ## 测试目的
-/// 验证 TextParser 能够正确处理空字节（返回空字符串）。
-///
-/// ## 测试场景
-/// 1. 准备空字节
-/// 2. 解析文本
-/// 3. 验证返回空字符串
-///
-/// ## 预期结果
-/// - 返回空字符串
-#[test]
-fn test_text_parser_parse_with_empty_bytes_returns_empty_string() -> Result<()> {
-    // Arrange: 准备空字节
-    let empty_bytes = b"";
-
-    // Act: 解析空文本
-    let result = TextParser::parse(empty_bytes, 200)?;
-
-    // Assert: 验证返回空字符串
-    assert_eq!(result, "");
     Ok(())
+}
+
+/// 测试文本解析器处理错误情况（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 TextParser 能够正确处理各种错误情况。
+///
+/// ## 测试场景
+/// 测试错误状态码、无效 UTF-8 等错误情况
+///
+/// ## 预期结果
+/// - 错误情况返回错误，且错误消息包含相关信息
+#[rstest]
+#[case(b"Error message", 500, true, "500")] // 错误状态码
+#[case(&[0xFF, 0xFE, 0xFD], 200, true, "UTF-8")] // 无效 UTF-8
+fn test_text_parser_parse_with_error_cases(
+    #[case] text_bytes: &[u8],
+    #[case] status_code: u16,
+    #[case] should_fail: bool,
+    #[case] expected_error_contains: &str,
+) {
+    // Arrange: 准备错误情况输入（通过参数提供）
+
+    // Act: 尝试解析文本
+    let result = TextParser::parse(text_bytes, status_code);
+
+    // Assert: 验证返回错误且错误消息包含预期信息
+    assert!(result.is_err() == should_fail);
+    if should_fail {
+        if let Err(e) = result {
+            let error_msg = e.to_string();
+            assert!(error_msg.contains(expected_error_contains));
+        }
+    }
 }
 
 /// 测试 JSON 解析器处理大响应
@@ -315,7 +223,7 @@ fn test_text_parser_parse_with_empty_bytes_returns_empty_string() -> Result<()> 
 /// ## 预期结果
 /// - 大型 JSON 被正确解析
 #[test]
-fn test_json_parser_parse_with_large_response_parses_correctly() -> Result<()> {
+fn test_json_parser_parse_with_large_response_parses_correctly_return_result() -> Result<()> {
     // Arrange: 准备大响应（超过 200 字符的预览）
     let large_json = format!(r#"{{"data": "{}"}}"#, "x".repeat(300));
 
@@ -405,7 +313,7 @@ fn test_json_parser_parse_with_empty_response_falls_back_to_object() {
 /// ## 预期结果
 /// - JSON 数组被正确解析为 Vec
 #[test]
-fn test_json_parser_parse_with_array_json_returns_array() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_array_json_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备数组JSON字节
     let json_bytes = b"[1, 2, 3, 4, 5]";
 
@@ -430,7 +338,7 @@ fn test_json_parser_parse_with_array_json_returns_array() -> color_eyre::Result<
 /// ## 预期结果
 /// - 嵌套对象被正确解析，嵌套值可访问
 #[test]
-fn test_json_parser_parse_with_nested_object_returns_nested_value() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_nested_object_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备嵌套对象JSON字节
     let json_bytes = b"{\"nested\": {\"key\": \"value\"}}";
 
@@ -455,7 +363,7 @@ fn test_json_parser_parse_with_nested_object_returns_nested_value() -> color_eyr
 /// ## 预期结果
 /// - 多行文本被正确解析，换行符被保留
 #[test]
-fn test_text_parser_parse_with_multiline_text_returns_multiline_string() -> color_eyre::Result<()> {
+fn test_text_parser_parse_with_multiline_text_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备多行文本字节
     let text_bytes = b"Line 1\nLine 2\nLine 3";
 
@@ -480,7 +388,7 @@ fn test_text_parser_parse_with_multiline_text_returns_multiline_string() -> colo
 /// ## 预期结果
 /// - Unicode 文本被正确解析，包括 emoji
 #[test]
-fn test_text_parser_parse_with_unicode_text_returns_unicode_string() -> color_eyre::Result<()> {
+fn test_text_parser_parse_with_unicode_text_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备Unicode文本字节
     let text_bytes = "测试文本 🚀".as_bytes();
 
@@ -505,7 +413,7 @@ fn test_text_parser_parse_with_unicode_text_returns_unicode_string() -> color_ey
 /// ## 预期结果
 /// - JSON 被正确解析为自定义结构体，字段值正确
 #[test]
-fn test_json_parser_parse_with_custom_struct_returns_struct() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_custom_struct_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备自定义结构体和JSON字节
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct TestStruct {

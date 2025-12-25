@@ -40,6 +40,17 @@ fn sample_user_entry() -> JiraUserEntry {
 // ==================== JiraUser 结构体测试 ====================
 
 /// 测试JiraUser结构体的基本功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_structure() {
     // Arrange: 准备测试 JiraUser 结构体的基本功能
@@ -55,6 +66,17 @@ fn test_jira_user_structure() {
 }
 
 /// 测试没有邮箱的JiraUser
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_without_email() {
     // Arrange: 准备测试没有邮箱的 JiraUser
@@ -70,6 +92,17 @@ fn test_jira_user_without_email() {
 }
 
 /// 测试JiraUserEntry结构体
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_entry_structure() {
     // Arrange: 准备测试 JiraUserEntry 结构体
@@ -176,6 +209,17 @@ fn test_config_manager_update_existing_user(test_env: TestIsolation) {
 // ==================== Configuration File Operation Tests ====================
 
 /// 测试JiraConfig的默认值
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_config_default() {
     // Arrange: 准备测试 JiraConfig 的默认值
@@ -184,6 +228,17 @@ fn test_jira_config_default() {
 }
 
 /// 测试配置序列化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_config_serialization() {
     // Arrange: 准备测试配置序列化
@@ -202,6 +257,17 @@ fn test_jira_config_serialization() {
 }
 
 /// 测试配置反序列化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_config_deserialization() {
     // Arrange: 准备测试配置反序列化
@@ -222,6 +288,17 @@ display_name = "Test User"
 // ==================== Boundary Condition Tests ====================
 
 /// 测试空用户列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_config_empty_users() {
     // Arrange: 准备测试空用户列表
@@ -230,6 +307,17 @@ fn test_jira_config_empty_users() {
 }
 
 /// 测试多个用户配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_config_multiple_users() {
     // Arrange: 准备测试多个用户
@@ -265,6 +353,17 @@ fn test_config_manager_read_nonexistent_file(test_env: TestIsolation) {
 }
 
 /// 测试用户条目的相等性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_entry_equality() {
     // Arrange: 准备测试用户条目的相等性
@@ -423,6 +522,18 @@ fn test_jira_users_get_without_local_cache() {
 // ==================== JiraUserApi Mock 测试 ====================
 
 /// 测试使用Mock服务器设置JiraUserApi::get_current_user()的Mock
+///
+/// ## 测试目的
+/// 验证能够使用 Mock 服务器正确设置 JiraUserApi::get_current_user() 的 Mock。
+///
+/// ## 测试场景
+/// 1. 创建 Mock 服务器
+/// 2. 设置 Mock 响应
+/// 3. 调用 get_current_user() 方法
+///
+/// ## 预期结果
+/// - Mock 设置成功
+/// - 能够正确获取用户信息
 #[test]
 fn test_jira_user_api_get_current_user_mock_setup() {
     // Arrange: 准备测试使用 Mock 服务器设置 JiraUserApi::get_current_user() 的 Mock
@@ -446,6 +557,17 @@ fn test_jira_user_api_get_current_user_mock_setup() {
 }
 
 /// 测试Mock JiraUserApi::get_current_user()的错误响应
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_api_get_current_user_mock_error() {
     // Arrange: 准备测试 Mock JiraUserApi::get_current_user() 的错误响应
@@ -461,6 +583,17 @@ fn test_jira_user_api_get_current_user_mock_error() {
 }
 
 /// 测试Mock JiraUserApi::get_current_user()返回空account_id的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_user_api_get_current_user_mock_empty_account_id() {
     // Arrange: 准备测试 Mock 返回空 accountId 的情况（覆盖 users.rs:69-70）

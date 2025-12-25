@@ -13,6 +13,17 @@ use workflow::base::shell::{Reload, ReloadResult};
 // ==================== ReloadResult Structure Tests ====================
 
 /// 测试ReloadResult结构体的创建（包含有效字段）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_structure_with_valid_fields_creates_result() {
     // Arrange: 准备ReloadResult字段值
@@ -34,6 +45,17 @@ fn test_reload_result_structure_with_valid_fields_creates_result() {
 }
 
 /// 测试ReloadResult的克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_clone_with_valid_result_creates_clone() {
     // Arrange: 准备原始ReloadResult
@@ -53,6 +75,17 @@ fn test_reload_result_clone_with_valid_result_creates_clone() {
 }
 
 /// 测试ReloadResult的Debug格式化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_debug_with_valid_result_returns_debug_string() {
     // Arrange: 准备ReloadResult
@@ -73,6 +106,17 @@ fn test_reload_result_debug_with_valid_result_returns_debug_string() {
 // 但这些测试已经包含在下面的 test_reload_shell_* 测试中，所以这里保留作为备用
 
 /// 测试成功重载的结果结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_success_structure_with_success_reload_creates_result() {
     // Arrange: 准备成功重载的结果字段值
@@ -98,6 +142,17 @@ fn test_reload_result_success_structure_with_success_reload_creates_result() {
 }
 
 /// 测试失败重载的结果结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_failure_structure_with_failure_reload_creates_result() {
     // Arrange: 准备失败重载的结果字段值
@@ -119,6 +174,17 @@ fn test_reload_result_failure_structure_with_failure_reload_creates_result() {
 }
 
 /// 测试ReloadResult的空消息列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_empty_messages() {
     // Arrange: 准备测试空消息列表的情况
@@ -133,6 +199,17 @@ fn test_reload_result_empty_messages() {
 }
 
 /// 测试ReloadResult的多条消息
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_multiple_messages() {
     // Arrange: 准备测试多条消息的情况
@@ -154,6 +231,17 @@ fn test_reload_result_multiple_messages() {
 }
 
 /// 测试PowerShell格式的reload_hint
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_reload_hint_powershell_format() {
     // Arrange: 准备测试 PowerShell 格式的 reload_hint（覆盖 reload.rs:46-50）
@@ -168,6 +256,17 @@ fn test_reload_result_reload_hint_powershell_format() {
 }
 
 /// 测试Unix shell格式的reload_hint
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_result_reload_hint_unix_format() {
     // Arrange: 准备测试 Unix shell 格式的 reload_hint（覆盖 reload.rs:52-55）
@@ -184,6 +283,17 @@ fn test_reload_result_reload_hint_unix_format() {
 // 注意：这些测试可能在某些环境中失败，但可以验证方法的基本功能
 
 /// 测试Reload::shell()总是返回Result
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_returns_result() {
     // Arrange: 准备测试 Reload::shell() 总是返回 Result（覆盖 reload.rs:41）
@@ -201,6 +311,17 @@ fn test_reload_shell_returns_result() {
 }
 
 /// 测试PowerShell的reload_hint格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_powershell_hint_format() {
     // Arrange: 准备测试 PowerShell 的 reload_hint 格式（覆盖 reload.rs:46-50）
@@ -225,6 +346,17 @@ fn test_reload_shell_powershell_hint_format() {
 }
 
 /// 测试Unix shell的reload_hint格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_unix_hint_format() {
     // Arrange: 准备测试 Unix shell 的 reload_hint 格式（覆盖 reload.rs:52-55）
@@ -241,6 +373,17 @@ fn test_reload_shell_unix_hint_format() {
 }
 
 /// 测试所有支持的shell类型都能返回结果
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_all_shell_types() {
     // Arrange: 准备测试所有支持的 shell 类型都能返回结果
@@ -268,6 +411,17 @@ fn test_reload_shell_all_shell_types() {
 }
 
 /// 测试成功重载时的消息格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_success_messages() {
     // Arrange: 准备测试成功重载时的消息格式（覆盖 reload.rs:76-83）
@@ -284,6 +438,17 @@ fn test_reload_shell_success_messages() {
 }
 
 /// 测试失败重载时的消息格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_failure_messages() {
     // Arrange: 准备测试失败重载时的消息格式（覆盖 reload.rs:84-91）
@@ -300,6 +465,17 @@ fn test_reload_shell_failure_messages() {
 }
 
 /// 测试reload_hint包含配置文件路径
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_reload_hint_contains_config_path() {
     // Arrange: 准备测试 reload_hint 包含配置文件路径
@@ -316,6 +492,17 @@ fn test_reload_shell_reload_hint_contains_config_path() {
 }
 
 /// 测试多次调用的一致性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_reload_shell_consistency() {
     // Arrange: 准备测试多次调用的一致性

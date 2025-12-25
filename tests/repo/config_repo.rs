@@ -39,6 +39,16 @@ fn create_private_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
 // ==================== Default Value Tests ====================
 
 /// 测试创建默认的RepoConfig
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::default()` 方法能够创建默认的空配置。
+///
+/// ## 测试场景
+/// 1. 调用 `RepoConfig::default()` 创建默认配置
+///
+/// ## 预期结果
+/// - 公共配置字段为空
+/// - 私有配置字段为默认值（configured=false，branch=None，pr=None）
 #[test]
 fn test_repo_config_default_with_no_params_returns_default_config() {
     // Arrange: 准备测试（无需额外准备）
@@ -61,6 +71,17 @@ fn test_repo_config_default_with_no_params_returns_default_config() {
 // ==================== Configuration Field Tests ====================
 
 /// 测试设置commit模板配置
+///
+/// ## 测试目的
+/// 验证能够正确设置和获取 commit 模板配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 template_commit 配置值
+///
+/// ## 预期结果
+/// - template_commit 配置正确设置
+/// - 配置值可以正确获取
 #[test]
 fn test_repo_config_with_template_commit_returns_config_with_commit_template() {
     // Arrange: 准备 template_commit 配置值
@@ -84,6 +105,17 @@ fn test_repo_config_with_template_commit_returns_config_with_commit_template() {
 }
 
 /// 测试设置branch模板配置
+///
+/// ## 测试目的
+/// 验证能够正确设置和获取 branch 模板配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 template_branch 配置值
+///
+/// ## 预期结果
+/// - template_branch 配置正确设置
+/// - 配置值可以正确获取
 #[test]
 fn test_repo_config_with_template_branch_returns_config_with_branch_template() {
     // Arrange: 准备 template_branch 配置值
@@ -106,6 +138,17 @@ fn test_repo_config_with_template_branch_returns_config_with_branch_template() {
 }
 
 /// 测试设置pull requests模板配置
+///
+/// ## 测试目的
+/// 验证能够正确设置和获取 pull requests 模板配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 template_pull_requests 配置值
+///
+/// ## 预期结果
+/// - template_pull_requests 配置正确设置
+/// - 配置值可以正确获取
 #[test]
 fn test_repo_config_with_template_pull_requests_returns_config_with_pr_template() {
     // Arrange: 准备 template_pull_requests 配置值
@@ -128,6 +171,16 @@ fn test_repo_config_with_template_pull_requests_returns_config_with_pr_template(
 }
 
 /// 测试设置configured标志
+///
+/// ## 测试目的
+/// 验证能够正确设置 configured 标志。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 configured 字段为 true
+///
+/// ## 预期结果
+/// - configured 标志正确设置
 #[test]
 fn test_repo_config_with_configured_flag_returns_config_with_configured_true() {
     // Arrange: 准备配置
@@ -141,6 +194,17 @@ fn test_repo_config_with_configured_flag_returns_config_with_configured_true() {
 }
 
 /// 测试设置branch配置
+///
+/// ## 测试目的
+/// 验证能够正确设置和获取 branch 配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 branch 配置（包含 prefix 和 ignore）
+///
+/// ## 预期结果
+/// - branch 配置正确设置
+/// - prefix 和 ignore 值正确
 #[test]
 fn test_repo_config_with_branch_config_returns_config_with_branch() {
     // Arrange: 准备 branch 配置
@@ -159,6 +223,17 @@ fn test_repo_config_with_branch_config_returns_config_with_branch() {
 }
 
 /// 测试设置PR配置
+///
+/// ## 测试目的
+/// 验证能够正确设置和获取 PR 配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置 pr 配置
+///
+/// ## 预期结果
+/// - pr 配置正确设置
+/// - 配置值可以正确获取
 #[test]
 fn test_repo_config_with_pr_config_returns_config_with_pr() {
     // Arrange: 准备 PR 配置
@@ -175,6 +250,17 @@ fn test_repo_config_with_pr_config_returns_config_with_pr() {
 }
 
 /// 测试设置所有配置字段
+///
+/// ## 测试目的
+/// 验证能够同时设置所有配置字段（公共和私有配置）。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置所有公共配置字段
+/// 3. 设置所有私有配置字段
+///
+/// ## 预期结果
+/// - 所有配置字段都正确设置
 #[test]
 fn test_repo_config_with_all_fields_returns_complete_config() {
     // Arrange: 准备所有配置字段
@@ -216,6 +302,15 @@ fn test_repo_config_with_all_fields_returns_complete_config() {
 // ==================== Static Method Tests ====================
 
 /// 测试获取分支前缀（无配置时返回Option）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_branch_prefix()` 方法能够正确返回分支前缀。
+///
+/// ## 测试场景
+/// 1. 调用 `get_branch_prefix()` 方法
+///
+/// ## 预期结果
+/// - 返回 Option<String>（如果配置存在则返回 Some，否则返回 None）
 #[test]
 fn test_get_branch_prefix_with_no_config_returns_option() {
     // Arrange: 准备测试（无需额外准备）
@@ -231,6 +326,15 @@ fn test_get_branch_prefix_with_no_config_returns_option() {
 }
 
 /// 测试获取忽略分支列表（无配置时返回Vec）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_ignore_branches()` 方法能够正确返回忽略分支列表。
+///
+/// ## 测试场景
+/// 1. 调用 `get_ignore_branches()` 方法
+///
+/// ## 预期结果
+/// - 返回 Vec<String>（可能为空或包含分支列表）
 #[test]
 fn test_get_ignore_branches_with_no_config_returns_vec() {
     // Arrange: 准备测试（无需额外准备）
@@ -243,6 +347,15 @@ fn test_get_ignore_branches_with_no_config_returns_vec() {
 }
 
 /// 测试获取auto_accept_change_type（无配置时返回bool）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_auto_accept_change_type()` 方法能够正确返回自动接受变更类型的标志。
+///
+/// ## 测试场景
+/// 1. 调用 `get_auto_accept_change_type()` 方法
+///
+/// ## 预期结果
+/// - 返回布尔值（默认 false 或根据配置返回 true）
 #[test]
 fn test_get_auto_accept_change_type_with_no_config_returns_bool() {
     // Arrange: 准备测试（无需额外准备）
@@ -256,6 +369,15 @@ fn test_get_auto_accept_change_type_with_no_config_returns_bool() {
 }
 
 /// 测试获取commit模板配置（无配置时返回Map）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_template_commit()` 方法能够正确返回 commit 模板配置。
+///
+/// ## 测试场景
+/// 1. 调用 `get_template_commit()` 方法
+///
+/// ## 预期结果
+/// - 返回 Map（可能为空或包含配置项）
 #[test]
 fn test_get_template_commit_with_no_config_returns_map() {
     // Arrange: 准备测试（无需额外准备）
@@ -268,6 +390,15 @@ fn test_get_template_commit_with_no_config_returns_map() {
 }
 
 /// 测试获取branch模板配置（无配置时返回Map）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_template_branch()` 方法能够正确返回 branch 模板配置。
+///
+/// ## 测试场景
+/// 1. 调用 `get_template_branch()` 方法
+///
+/// ## 预期结果
+/// - 返回 Map（可能为空或包含配置项）
 #[test]
 fn test_get_template_branch_with_no_config_returns_map() {
     // Arrange: 准备测试（无需额外准备）
@@ -280,6 +411,15 @@ fn test_get_template_branch_with_no_config_returns_map() {
 }
 
 /// 测试获取pull requests模板配置（无配置时返回Map）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::get_template_pull_requests()` 方法能够正确返回 pull requests 模板配置。
+///
+/// ## 测试场景
+/// 1. 调用 `get_template_pull_requests()` 方法
+///
+/// ## 预期结果
+/// - 返回 Map（可能为空或包含配置项）
 #[test]
 fn test_get_template_pull_requests_with_no_config_returns_map() {
     // Arrange: 准备测试（无需额外准备）
@@ -294,6 +434,16 @@ fn test_get_template_pull_requests_with_no_config_returns_map() {
 // ==================== Clone 和 Debug 测试 ====================
 
 /// 测试克隆RepoConfig实例
+///
+/// ## 测试目的
+/// 验证 `RepoConfig` 的 `Clone` trait 实现能够正确克隆配置实例。
+///
+/// ## 测试场景
+/// 1. 创建包含配置的原始实例
+/// 2. 克隆配置实例
+///
+/// ## 预期结果
+/// - 克隆后的配置与原始配置相同
 #[test]
 fn test_repo_config_clone_with_config_instance_returns_cloned_config() {
     // Arrange: 准备原始配置
@@ -323,6 +473,16 @@ fn test_repo_config_clone_with_config_instance_returns_cloned_config() {
 }
 
 /// 测试RepoConfig实例的Debug格式化输出
+///
+/// ## 测试目的
+/// 验证 `RepoConfig` 的 `Debug` trait 实现能够正确格式化输出。
+///
+/// ## 测试场景
+/// 1. 创建配置实例
+/// 2. 使用 Debug 格式化输出
+///
+/// ## 预期结果
+/// - Debug 输出包含 "RepoConfig"
 #[test]
 fn test_repo_config_debug_with_config_instance_returns_debug_string() {
     // Arrange: 创建配置实例
@@ -338,6 +498,15 @@ fn test_repo_config_debug_with_config_instance_returns_debug_string() {
 // ==================== Boundary Condition Tests ====================
 
 /// 测试默认配置返回空配置
+///
+/// ## 测试目的
+/// 验证默认配置的所有字段都为空或默认值。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+///
+/// ## 预期结果
+/// - 所有字段为空或默认值
 #[test]
 fn test_repo_config_empty_with_default_returns_empty_config() {
     // Arrange: 创建默认配置
@@ -355,6 +524,17 @@ fn test_repo_config_empty_with_default_returns_empty_config() {
 }
 
 /// 测试只有公共配置字段的配置
+///
+/// ## 测试目的
+/// 验证能够只设置公共配置字段，私有配置字段保持默认值。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 只设置公共配置字段
+///
+/// ## 预期结果
+/// - 公共配置字段已设置
+/// - 私有配置字段为默认值
 #[test]
 fn test_repo_config_only_public_with_public_fields_returns_public_config() {
     // Arrange: 准备只有公共配置的配置
@@ -373,6 +553,17 @@ fn test_repo_config_only_public_with_public_fields_returns_public_config() {
 }
 
 /// 测试只有私有配置字段的配置
+///
+/// ## 测试目的
+/// 验证能够只设置私有配置字段，公共配置字段保持默认值。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 只设置私有配置字段
+///
+/// ## 预期结果
+/// - 私有配置字段已设置
+/// - 公共配置字段为默认值
 #[test]
 fn test_repo_config_only_private_with_private_fields_returns_private_config() {
     // Arrange: 准备只有私有配置的配置
@@ -390,6 +581,16 @@ fn test_repo_config_only_private_with_private_fields_returns_private_config() {
 }
 
 /// 测试嵌套模板配置
+///
+/// ## 测试目的
+/// 验证能够设置嵌套的模板配置（Table 类型）。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置嵌套的模板配置
+///
+/// ## 预期结果
+/// - 嵌套配置正确设置
 #[test]
 fn test_repo_config_with_nested_template() {
     // Arrange: 准备测试嵌套的模板配置
@@ -409,6 +610,16 @@ fn test_repo_config_with_nested_template() {
 }
 
 /// 测试包含特殊字符的配置
+///
+/// ## 测试目的
+/// 验证能够正确处理包含特殊字符（如正则表达式模式）的配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置包含特殊字符的配置值
+///
+/// ## 预期结果
+/// - 特殊字符正确保存和读取
 #[test]
 fn test_repo_config_with_special_characters() {
     // Arrange: 准备测试包含特殊字符的配置
@@ -432,6 +643,16 @@ fn test_repo_config_with_special_characters() {
 // ==================== Configuration Update Tests ====================
 
 /// 测试更新commit模板配置
+///
+/// ## 测试目的
+/// 验证能够更新已存在的 commit 模板配置。
+///
+/// ## 测试场景
+/// 1. 创建配置并设置初始值
+/// 2. 更新配置值
+///
+/// ## 预期结果
+/// - 配置值正确更新
 #[test]
 fn test_update_template_commit() {
     // Arrange: 准备测试更新 template_commit 配置
@@ -455,6 +676,16 @@ fn test_update_template_commit() {
 }
 
 /// 测试更新configured标志
+///
+/// ## 测试目的
+/// 验证能够更新 configured 标志。
+///
+/// ## 测试场景
+/// 1. 创建默认配置（configured=false）
+/// 2. 更新 configured 为 true
+///
+/// ## 预期结果
+/// - configured 标志正确更新
 #[test]
 fn test_update_configured_flag() {
     // Arrange: 准备测试更新 configured 标志
@@ -466,6 +697,16 @@ fn test_update_configured_flag() {
 }
 
 /// 测试更新branch配置
+///
+/// ## 测试目的
+/// 验证能够更新已存在的 branch 配置。
+///
+/// ## 测试场景
+/// 1. 创建配置并设置初始 branch 配置
+/// 2. 更新 branch 配置
+///
+/// ## 预期结果
+/// - branch 配置正确更新
 #[test]
 fn test_update_branch_config() {
     // Arrange: 准备测试更新 branch 配置
@@ -487,6 +728,16 @@ fn test_update_branch_config() {
 }
 
 /// 测试清空commit模板配置
+///
+/// ## 测试目的
+/// 验证能够清空 commit 模板配置。
+///
+/// ## 测试场景
+/// 1. 创建配置并设置 commit 模板
+/// 2. 清空 commit 模板配置
+///
+/// ## 预期结果
+/// - commit 模板配置为空
 #[test]
 fn test_clear_template_commit() {
     // Arrange: 准备测试清空 template_commit 配置
@@ -503,6 +754,16 @@ fn test_clear_template_commit() {
 }
 
 /// 测试清空branch配置
+///
+/// ## 测试目的
+/// 验证能够清空 branch 配置。
+///
+/// ## 测试场景
+/// 1. 创建配置并设置 branch 配置
+/// 2. 将 branch 设置为 None
+///
+/// ## 预期结果
+/// - branch 配置为 None
 #[test]
 fn test_clear_branch_config() {
     // Arrange: 准备测试清空 branch 配置
@@ -519,6 +780,16 @@ fn test_clear_branch_config() {
 // ==================== Parameterized Tests ====================
 
 /// 测试仓库配置的参数化组合
+///
+/// ## 测试目的
+/// 验证不同参数组合下仓库配置的正确性。
+///
+/// ## 测试场景
+/// 1. 使用不同的 configured 和 prefix 参数组合
+/// 2. 创建配置并验证
+///
+/// ## 预期结果
+/// - 所有参数组合都能正确设置配置
 #[rstest]
 #[case(true, Some("feature".to_string()))]
 #[case(false, None)]
@@ -541,6 +812,18 @@ fn test_repo_config_parametrized(#[case] configured: bool, #[case] prefix: Optio
 // ==================== Configuration Combination Tests ====================
 
 /// 测试公共和私有配置的组合
+///
+/// ## 测试目的
+/// 验证能够同时设置公共和私有配置，两者独立存在。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置公共配置字段
+/// 3. 设置私有配置字段
+///
+/// ## 预期结果
+/// - 公共和私有配置都正确设置
+/// - 两种配置独立存在
 #[test]
 fn test_public_and_private_config_combination() {
     // Arrange: 准备测试公共和私有配置的组合
@@ -572,6 +855,17 @@ fn test_public_and_private_config_combination() {
 }
 
 /// 测试模板配置的覆盖行为
+///
+/// ## 测试目的
+/// 验证公共模板配置和私有个人配置的覆盖行为。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置公共模板配置
+/// 3. 设置私有个人配置
+///
+/// ## 预期结果
+/// - 两种配置独立存在，不互相覆盖
 #[test]
 fn test_template_override_behavior() {
     // Arrange: 准备测试模板配置的覆盖行为
@@ -603,6 +897,16 @@ fn test_template_override_behavior() {
 // ==================== Configuration Validation Tests ====================
 
 /// 测试有效的分支前缀配置
+///
+/// ## 测试目的
+/// 验证能够设置有效的分支前缀配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置有效的分支前缀
+///
+/// ## 预期结果
+/// - 分支前缀正确设置
 #[test]
 fn test_config_with_valid_branch_prefix() {
     // Arrange: 准备测试有效的分支前缀配置
@@ -618,6 +922,16 @@ fn test_config_with_valid_branch_prefix() {
 }
 
 /// 测试空的分支前缀配置
+///
+/// ## 测试目的
+/// 验证能够设置空的分支前缀配置。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置空的分支前缀
+///
+/// ## 预期结果
+/// - 空的分支前缀正确设置
 #[test]
 fn test_config_with_empty_branch_prefix() {
     // Arrange: 准备测试空的分支前缀配置
@@ -633,6 +947,16 @@ fn test_config_with_empty_branch_prefix() {
 }
 
 /// 测试多个忽略分支配置
+///
+/// ## 测试目的
+/// 验证能够设置多个忽略分支。
+///
+/// ## 测试场景
+/// 1. 创建默认配置
+/// 2. 设置包含多个分支的 ignore 列表
+///
+/// ## 预期结果
+/// - 所有忽略分支正确设置
 #[test]
 fn test_config_with_multiple_ignore_branches() {
     // Arrange: 准备测试多个忽略分支
@@ -655,9 +979,21 @@ fn test_config_with_multiple_ignore_branches() {
 // ==================== File System Integration Tests ====================
 
 /// 测试从现有文件加载配置
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::load()` 方法能够从现有文件正确加载公共和私有配置。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 创建公共和私有配置文件
+/// 3. 调用 `load()` 方法加载配置
+///
+/// ## 预期结果
+/// - 公共配置正确加载
+/// - 私有配置正确加载
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_existing_files() -> Result<()> {
+fn test_load_from_existing_files_return_result() -> Result<()> {
     // 准备：创建包含公共和私有配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -723,9 +1059,19 @@ auto_accept_change_type = false
 }
 
 /// 测试从不存在文件加载配置（应返回默认配置）
+///
+/// ## 测试目的
+/// 验证当配置文件不存在时，`RepoConfig::load()` 方法能够返回默认配置。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库（不创建配置文件）
+/// 2. 调用 `load()` 方法
+///
+/// ## 预期结果
+/// - 返回默认配置（所有字段为空或默认值）
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_non_existing_files() -> Result<()> {
+fn test_load_from_non_existing_files_return_result() -> Result<()> {
     // 准备：创建没有配置文件的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -752,9 +1098,22 @@ fn test_load_from_non_existing_files() -> Result<()> {
 }
 
 /// 测试保存配置到新文件
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::save()` 方法能够将配置保存到新文件。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库（不创建配置文件）
+/// 2. 创建配置并设置值
+/// 3. 调用 `save()` 方法保存配置
+///
+/// ## 预期结果
+/// - 公共配置文件创建成功
+/// - 私有配置文件创建成功
+/// - 配置文件内容正确
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_to_new_files() -> Result<()> {
+fn test_save_to_new_files_return_result() -> Result<()> {
     // 准备：创建临时 Git 仓库（不创建配置文件）
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -804,9 +1163,22 @@ fn test_save_to_new_files() -> Result<()> {
 }
 
 /// 测试加载和保存的往返流程（数据一致性）
+///
+/// ## 测试目的
+/// 验证加载和保存的往返流程能够保持数据一致性。
+///
+/// ## 测试场景
+/// 1. 创建包含配置的临时 Git 仓库
+/// 2. 加载配置
+/// 3. 修改配置
+/// 4. 保存配置
+/// 5. 重新加载配置
+///
+/// ## 预期结果
+/// - 重新加载的配置与保存的配置一致
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip() -> Result<()> {
+fn test_load_and_save_roundtrip_return_result() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -869,9 +1241,22 @@ prefix = "feature"
 }
 
 /// 测试检查配置是否存在
+///
+/// ## 测试目的
+/// 验证 `RepoConfig::exists()` 方法能够正确检查配置是否存在。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 检查配置是否存在（应该返回 false）
+/// 3. 保存配置
+/// 4. 再次检查配置是否存在（应该返回 true）
+///
+/// ## 预期结果
+/// - 未配置时返回 false
+/// - 配置后返回 true
 #[test]
 #[serial(repo_config_fs)]
-fn test_exists_check() -> Result<()> {
+fn test_exists_check_return_result() -> Result<()> {
     // 准备：创建临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -898,9 +1283,20 @@ fn test_exists_check() -> Result<()> {
 // ==================== Error Scenario Tests ====================
 
 /// 测试加载损坏的公共配置文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证当公共配置文件损坏（无效 TOML）时，`RepoConfig::load()` 方法能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 创建包含无效 TOML 的公共配置文件
+/// 3. 尝试加载配置
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_with_corrupted_public_config() -> Result<()> {
+fn test_load_with_corrupted_public_config_return_result() -> Result<()> {
     // 准备：创建包含无效公共配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -928,9 +1324,20 @@ type = "invalid  # 缺少闭合引号和括号
 }
 
 /// 测试加载损坏的私有配置文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证当私有配置文件损坏（无效 TOML）时，`RepoConfig::load()` 方法能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 创建包含无效 TOML 的私有配置文件
+/// 3. 尝试加载配置
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_with_corrupted_private_config() -> Result<()> {
+fn test_load_with_corrupted_private_config_return_result() -> Result<()> {
     // 准备：创建包含无效私有配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -958,9 +1365,19 @@ configured = "not_a_boolean"
 }
 
 /// 测试在非Git仓库中检查配置是否存在
+///
+/// ## 测试目的
+/// 验证在非 Git 仓库中 `RepoConfig::exists()` 方法的行为。
+///
+/// ## 测试场景
+/// 1. 创建非 Git 仓库的临时目录
+/// 2. 调用 `exists()` 方法
+///
+/// ## 预期结果
+/// - 在非 Git 仓库中返回 true（跳过检查）
 #[test]
 #[serial(repo_config_fs)]
-fn test_exists_outside_git_repo() -> Result<()> {
+fn test_exists_outside_git_repo_return_result() -> Result<()> {
     // 准备：创建非 Git 仓库的临时目录
     let env = CliTestEnv::new()?;
     // 注意：不调用 init_git_repo()，因为我们需要测试非 Git 仓库的情况
@@ -977,9 +1394,21 @@ fn test_exists_outside_git_repo() -> Result<()> {
 }
 
 /// 测试只加载公共配置（无私有配置）
+///
+/// ## 测试目的
+/// 验证当只有公共配置文件时，`RepoConfig::load()` 方法能够正确加载公共配置，私有配置使用默认值。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 只创建公共配置文件
+/// 3. 调用 `load()` 方法
+///
+/// ## 预期结果
+/// - 公共配置加载成功
+/// - 私有配置为默认值
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_with_only_public_config() -> Result<()> {
+fn test_load_with_only_public_config_return_result() -> Result<()> {
     // 准备：只创建公共配置
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -1009,9 +1438,21 @@ type = "conventional"
 }
 
 /// 测试只加载私有配置（无公共配置）
+///
+/// ## 测试目的
+/// 验证当只有私有配置文件时，`RepoConfig::load()` 方法能够正确加载私有配置，公共配置使用默认值。
+///
+/// ## 测试场景
+/// 1. 创建临时 Git 仓库
+/// 2. 只创建私有配置文件
+/// 3. 调用 `load()` 方法
+///
+/// ## 预期结果
+/// - 私有配置加载成功
+/// - 公共配置为默认值
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_with_only_private_config() -> Result<()> {
+fn test_load_with_only_private_config_return_result() -> Result<()> {
     // 准备：只创建私有配置
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;

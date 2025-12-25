@@ -3,7 +3,7 @@
 //! 测试分支类型定义、转换和验证功能。
 
 use pretty_assertions::assert_eq;
-// use rstest::{fixture, rstest};
+use rstest::rstest;
 use workflow::branch::BranchType;
 
 // ==================== BranchType 枚举测试 ====================
@@ -137,124 +137,116 @@ fn test_branch_type_as_str_returns_string_slice() {
     assert_eq!(result_chore, expected_chore);
 }
 
-/// 测试从字符串解析分支类型（有效输入）
+/// 测试从字符串解析分支类型（有效输入）（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 BranchType::from_str() 能够从有效字符串解析分支类型。
+/// 使用参数化测试验证 BranchType::from_str() 能够从有效字符串解析分支类型。
 ///
 /// ## 测试场景
-/// 1. 使用各种有效输入（包括别名）解析分支类型
-/// 2. 验证解析结果正确
+/// 测试各种有效输入（包括别名）和无效输入
 ///
 /// ## 预期结果
 /// - 有效输入返回对应的分支类型，无效输入返回 None
-#[test]
-fn test_branch_type_from_string_with_valid_input_returns_some() {
-    // Arrange: 准备测试用例（有效输入）
-    let test_cases = vec![
-        ("feature", Some(BranchType::Feature)),
-        ("bugfix", Some(BranchType::Bugfix)),
-        ("bug", Some(BranchType::Bugfix)),
-        ("fix", Some(BranchType::Bugfix)),
-        ("refactoring", Some(BranchType::Refactoring)),
-        ("refactor", Some(BranchType::Refactoring)),
-        ("hotfix", Some(BranchType::Hotfix)),
-        ("chore", Some(BranchType::Chore)),
-        ("invalid", None),
-    ];
+#[rstest]
+#[case("feature", Some(BranchType::Feature))]
+#[case("bugfix", Some(BranchType::Bugfix))]
+#[case("bug", Some(BranchType::Bugfix))]
+#[case("fix", Some(BranchType::Bugfix))]
+#[case("refactoring", Some(BranchType::Refactoring))]
+#[case("refactor", Some(BranchType::Refactoring))]
+#[case("hotfix", Some(BranchType::Hotfix))]
+#[case("chore", Some(BranchType::Chore))]
+#[case("invalid", None)]
+fn test_branch_type_from_string_with_valid_input(
+    #[case] input: &str,
+    #[case] expected: Option<BranchType>,
+) {
+    // Arrange: 准备测试用例（通过参数提供）
 
     // Act & Assert: 验证从字符串创建分支类型
-    for (input, expected) in test_cases {
-        let result = BranchType::from_str(input);
-        assert_eq!(result, expected);
-    }
+    let result = BranchType::from_str(input);
+    assert_eq!(result, expected);
 }
 
-/// 测试从字符串解析分支类型（大小写不敏感）
+/// 测试从字符串解析分支类型（大小写不敏感）（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 BranchType::from_str() 支持大小写不敏感的解析。
+/// 使用参数化测试验证 BranchType::from_str() 支持大小写不敏感的解析。
 ///
 /// ## 测试场景
-/// 1. 使用不同大小写的字符串解析分支类型
-/// 2. 验证解析结果正确
+/// 测试不同大小写的字符串输入
 ///
 /// ## 预期结果
 /// - 大小写不敏感，所有变体都能正确解析
-#[test]
-fn test_branch_type_from_string_with_case_insensitive_input_returns_some() {
-    // Arrange: 准备测试用例（大小写不敏感）
-    let test_cases = vec![
-        ("FEATURE", Some(BranchType::Feature)),
-        ("BugFix", Some(BranchType::Bugfix)),
-        ("REFACTORING", Some(BranchType::Refactoring)),
-        ("HotFix", Some(BranchType::Hotfix)),
-        ("CHORE", Some(BranchType::Chore)),
-    ];
+#[rstest]
+#[case("FEATURE", Some(BranchType::Feature))]
+#[case("BugFix", Some(BranchType::Bugfix))]
+#[case("REFACTORING", Some(BranchType::Refactoring))]
+#[case("HotFix", Some(BranchType::Hotfix))]
+#[case("CHORE", Some(BranchType::Chore))]
+fn test_branch_type_from_string_with_case_insensitive_input(
+    #[case] input: &str,
+    #[case] expected: Option<BranchType>,
+) {
+    // Arrange: 准备测试用例（通过参数提供）
 
     // Act & Assert: 验证大小写不敏感的转换
-    for (input, expected) in test_cases {
-        let result = BranchType::from_str(input);
-        assert_eq!(result, expected);
-    }
+    let result = BranchType::from_str(input);
+    assert_eq!(result, expected);
 }
 
 // ==================== BranchType 功能测试 ====================
 
-/// 测试分支类型转换为提交类型
+/// 测试分支类型转换为提交类型（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 BranchType::to_commit_type() 能够将分支类型转换为 Conventional Commits 类型。
+/// 使用参数化测试验证 BranchType::to_commit_type() 能够将分支类型转换为 Conventional Commits 类型。
 ///
 /// ## 测试场景
-/// 1. 转换所有分支类型为提交类型
-/// 2. 验证转换结果正确
+/// 测试所有分支类型到提交类型的转换
 ///
 /// ## 预期结果
 /// - 所有分支类型都正确转换为对应的提交类型
-#[test]
-fn test_branch_type_to_commit_type_with_all_types_returns_commit_types() {
-    // Arrange: 准备分支类型和预期提交类型
-    let test_cases = vec![
-        (BranchType::Feature, "feat"),
-        (BranchType::Bugfix, "fix"),
-        (BranchType::Refactoring, "refactor"),
-        (BranchType::Hotfix, "fix"),
-        (BranchType::Chore, "chore"),
-    ];
+#[rstest]
+#[case(BranchType::Feature, "feat")]
+#[case(BranchType::Bugfix, "fix")]
+#[case(BranchType::Refactoring, "refactor")]
+#[case(BranchType::Hotfix, "fix")]
+#[case(BranchType::Chore, "chore")]
+fn test_branch_type_to_commit_type(
+    #[case] branch_type: BranchType,
+    #[case] expected_commit_type: &str,
+) {
+    // Arrange: 准备分支类型和预期提交类型（通过参数提供）
 
     // Act & Assert: 验证转换为 Conventional Commits 类型正确
-    for (branch_type, expected_commit_type) in test_cases {
-        assert_eq!(branch_type.to_commit_type(), expected_commit_type);
-    }
+    assert_eq!(branch_type.to_commit_type(), expected_commit_type);
 }
 
-/// 测试分支类型显示名称
+/// 测试分支类型显示名称（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 BranchType::display_name() 返回包含描述的显示名称。
+/// 使用参数化测试验证 BranchType::display_name() 返回包含描述的显示名称。
 ///
 /// ## 测试场景
-/// 1. 获取所有分支类型的显示名称
-/// 2. 验证显示名称包含类型和描述
+/// 测试所有分支类型的显示名称
 ///
 /// ## 预期结果
 /// - 所有分支类型都返回包含描述的显示名称
-#[test]
-fn test_branch_type_display_name_with_all_types_returns_display_names() {
-    // Arrange: 准备分支类型和预期显示名称
-    let test_cases = vec![
-        (BranchType::Feature, "feature - 新功能开发"),
-        (BranchType::Bugfix, "bugfix - Bug 修复"),
-        (BranchType::Refactoring, "refactoring - 代码重构"),
-        (BranchType::Hotfix, "hotfix - 紧急修复"),
-        (BranchType::Chore, "chore - 杂项任务"),
-    ];
+#[rstest]
+#[case(BranchType::Feature, "feature - 新功能开发")]
+#[case(BranchType::Bugfix, "bugfix - Bug 修复")]
+#[case(BranchType::Refactoring, "refactoring - 代码重构")]
+#[case(BranchType::Hotfix, "hotfix - 紧急修复")]
+#[case(BranchType::Chore, "chore - 杂项任务")]
+fn test_branch_type_display_name(
+    #[case] branch_type: BranchType,
+    #[case] expected_display_name: &str,
+) {
+    // Arrange: 准备分支类型和预期显示名称（通过参数提供）
 
     // Act & Assert: 验证显示名称（包含描述）正确
-    for (branch_type, expected_display_name) in test_cases {
-        assert_eq!(branch_type.display_name(), expected_display_name);
-    }
+    assert_eq!(branch_type.display_name(), expected_display_name);
 }
 
 // ==================== Boundary Condition Tests ====================

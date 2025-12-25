@@ -18,8 +18,19 @@ use crate::common::environments::CliTestEnv;
 // ==================== FileReader Tests ====================
 
 /// 测试读取文件内容为字符串
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_to_string_with_valid_file_returns_content() -> color_eyre::Result<()> {
+fn test_file_reader_to_string_with_valid_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试文件和内容
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -37,8 +48,19 @@ fn test_file_reader_to_string_with_valid_file_returns_content() -> color_eyre::R
 }
 
 /// 测试读取多行文件内容
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_lines_with_multiline_file_returns_lines() -> color_eyre::Result<()> {
+fn test_file_reader_lines_with_multiline_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备多行测试文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -59,8 +81,19 @@ fn test_file_reader_lines_with_multiline_file_returns_lines() -> color_eyre::Res
 }
 
 /// 测试读取二进制文件内容
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_bytes_with_binary_file_returns_bytes() -> color_eyre::Result<()> {
+fn test_file_reader_bytes_with_binary_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备二进制测试文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.bin");
@@ -80,8 +113,19 @@ fn test_file_reader_bytes_with_binary_file_returns_bytes() -> color_eyre::Result
 // ==================== FileWriter Tests ====================
 
 /// 测试写入字符串内容到文件
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_str_with_valid_content_writes_file() -> color_eyre::Result<()> {
+fn test_file_writer_write_str_with_valid_content_writes_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备文件路径和内容
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("output.txt");
@@ -99,6 +143,17 @@ fn test_file_writer_write_str_with_valid_content_writes_file() -> color_eyre::Re
 }
 
 /// 测试写入字符串内容并自动创建目录
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file() -> color_eyre::Result<()> {
     // Arrange: 准备需要创建目录的文件路径
@@ -119,8 +174,19 @@ fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file() -> co
 }
 
 /// 测试写入字节数据到文件
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_bytes_with_valid_bytes_writes_file() -> color_eyre::Result<()> {
+fn test_file_writer_write_bytes_with_valid_bytes_writes_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备文件路径和二进制数据
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("output.bin");
@@ -138,6 +204,17 @@ fn test_file_writer_write_bytes_with_valid_bytes_writes_file() -> color_eyre::Re
 }
 
 /// 测试写入字节数据并自动创建目录
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_bytes_with_dir_creates_directory_and_writes_file() -> color_eyre::Result<()> {
     // Arrange: 准备需要创建目录的文件路径和二进制数据
@@ -158,6 +235,17 @@ fn test_file_writer_write_bytes_with_dir_creates_directory_and_writes_file() -> 
 }
 
 /// 测试确保父目录存在
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_ensure_parent_dir_with_nested_path_creates_parent_dirs() -> color_eyre::Result<()> {
     // Arrange: 准备嵌套路径
@@ -186,7 +274,7 @@ fn test_file_writer_ensure_parent_dir_with_nested_path_creates_parent_dirs() -> 
 /// 2. 使用FileReader读取并解析TOML
 /// 3. 验证解析后的结构体字段值正确
 #[test]
-fn test_file_reader_toml_with_valid_toml_parses_config() -> color_eyre::Result<()> {
+fn test_file_reader_toml_with_valid_toml_parses_config_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备TOML文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.toml");
@@ -229,7 +317,7 @@ number = 42
 /// 2. 使用FileReader读取并解析JSON
 /// 3. 验证解析后的结构体字段值正确
 #[test]
-fn test_file_reader_json_with_valid_json_parses_config() -> color_eyre::Result<()> {
+fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备JSON文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.json");
@@ -261,7 +349,7 @@ fn test_file_reader_json_with_valid_json_parses_config() -> color_eyre::Result<(
 /// 2. 使用FileWriter写入TOML格式
 /// 3. 验证文件内容包含正确的TOML格式数据
 #[test]
-fn test_file_writer_write_toml_with_valid_config_writes_toml() -> color_eyre::Result<()> {
+fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备配置结构
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.toml");
@@ -303,7 +391,7 @@ fn test_file_writer_write_toml_with_valid_config_writes_toml() -> color_eyre::Re
 /// 2. 使用FileWriter写入JSON格式
 /// 3. 验证文件内容包含正确的JSON格式数据
 #[test]
-fn test_file_writer_write_json_with_valid_config_writes_json() -> color_eyre::Result<()> {
+fn test_file_writer_write_json_with_valid_config_writes_json_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备配置结构
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.json");
@@ -360,8 +448,19 @@ fn test_file_writer_write_str_with_dir_with_nonexistent_parent_creates_parent() 
 }
 
 /// 测试打开文件并返回BufReader
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_open_with_valid_file_returns_buf_reader() -> color_eyre::Result<()> {
+fn test_file_reader_open_with_valid_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -380,6 +479,17 @@ fn test_file_reader_open_with_valid_file_returns_buf_reader() -> color_eyre::Res
 }
 
 /// 测试打开不存在文件时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_reader_open_with_nonexistent_file_returns_error() {
     // Arrange: 准备不存在的文件路径
@@ -393,8 +503,19 @@ fn test_file_reader_open_with_nonexistent_file_returns_error() {
 }
 
 /// 测试读取空文件返回空内容
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_empty_file_with_empty_file_returns_empty_content() -> color_eyre::Result<()> {
+fn test_file_reader_empty_file_with_empty_file_return_empty() -> color_eyre::Result<()> {
     // Arrange: 准备空文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("empty.txt");
@@ -412,8 +533,19 @@ fn test_file_reader_empty_file_with_empty_file_returns_empty_content() -> color_
 }
 
 /// 测试读取包含空行的文件
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_lines_with_empty_lines_handles_correctly() -> color_eyre::Result<()> {
+fn test_file_reader_lines_with_empty_lines_handles_correctly_return_empty() -> color_eyre::Result<()> {
     // Arrange: 准备包含空行的文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -443,7 +575,7 @@ fn test_file_reader_lines_with_empty_lines_handles_correctly() -> color_eyre::Re
 /// 3. 验证文件已创建且内容正确
 /// 4. 在Unix系统上验证文件权限为600（仅所有者可读写）
 #[test]
-fn test_file_writer_write_toml_secure() -> color_eyre::Result<()> {
+fn test_file_writer_write_toml_secure_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("secure/config.toml");
     let writer = FileWriter::new(&file_path);
@@ -487,7 +619,7 @@ fn test_file_writer_write_toml_secure() -> color_eyre::Result<()> {
 /// 3. 验证文件已创建且内容正确
 /// 4. 在Unix系统上验证文件权限为600（仅所有者可读写）
 #[test]
-fn test_file_writer_write_json_secure() -> color_eyre::Result<()> {
+fn test_file_writer_write_json_secure_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("secure/config.json");
     let writer = FileWriter::new(&file_path);
@@ -523,7 +655,7 @@ fn test_file_writer_write_json_secure() -> color_eyre::Result<()> {
 /// 测试设置文件权限（Unix系统）
 #[test]
 #[cfg(unix)]
-fn test_file_writer_set_permissions() -> color_eyre::Result<()> {
+fn test_file_writer_set_permissions_return_result() -> color_eyre::Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     let env = CliTestEnv::new()?;
@@ -545,8 +677,19 @@ fn test_file_writer_set_permissions() -> color_eyre::Result<()> {
 }
 
 /// 测试解析无效TOML格式时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_toml_with_invalid_format_returns_error() -> Result<()> {
+fn test_file_reader_toml_with_invalid_format_return_result() -> Result<()> {
     // Arrange: 准备无效格式的TOML文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("invalid.toml");
@@ -562,8 +705,19 @@ fn test_file_reader_toml_with_invalid_format_returns_error() -> Result<()> {
 }
 
 /// 测试解析无效JSON格式时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_json_with_invalid_format_returns_error() -> Result<()> {
+fn test_file_reader_json_with_invalid_format_return_result() -> Result<()> {
     // Arrange: 准备无效格式的JSON文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("invalid.json");
@@ -579,6 +733,17 @@ fn test_file_reader_json_with_invalid_format_returns_error() -> Result<()> {
 }
 
 /// 测试确保根路径的父目录（应该成功，因为根路径没有父目录）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_ensure_parent_dir_with_root_path_succeeds() {
     // Arrange: 准备根路径（没有父目录）
@@ -592,6 +757,17 @@ fn test_file_writer_ensure_parent_dir_with_root_path_succeeds() {
 }
 
 /// 测试读取不存在文件的行时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_reader_lines_with_nonexistent_file_returns_error() {
     // Arrange: 准备不存在的文件路径
@@ -605,6 +781,17 @@ fn test_file_reader_lines_with_nonexistent_file_returns_error() {
 }
 
 /// 测试读取不存在文件的字节时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_reader_bytes_with_nonexistent_file_returns_error() {
     // Arrange: 准备不存在的文件路径
@@ -618,6 +805,17 @@ fn test_file_reader_bytes_with_nonexistent_file_returns_error() {
 }
 
 /// 测试读取不存在的TOML文件时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_reader_toml_with_nonexistent_file_returns_error() {
     // Arrange: 准备不存在的TOML文件路径
@@ -631,6 +829,17 @@ fn test_file_reader_toml_with_nonexistent_file_returns_error() {
 }
 
 /// 测试读取不存在的JSON文件时返回错误
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_reader_json_with_nonexistent_file_returns_error() {
     // Arrange: 准备不存在的JSON文件路径
@@ -644,8 +853,19 @@ fn test_file_reader_json_with_nonexistent_file_returns_error() {
 }
 
 /// 测试写入TOML文件的错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_toml_error_handling() -> Result<()> {
+fn test_file_writer_write_toml_error_handling_return_false() -> Result<()> {
     // Arrange: 准备测试写入到只读目录应该返回错误（如果可能）
     // 注意：这个测试可能在某些系统上无法执行，所以只测试基本功能
     let env = CliTestEnv::new()?;
@@ -668,8 +888,19 @@ fn test_file_writer_write_toml_error_handling() -> Result<()> {
 }
 
 /// 测试写入JSON文件的错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_json_error_handling() -> Result<()> {
+fn test_file_writer_write_json_error_handling_return_false() -> Result<()> {
     // Arrange: 准备测试写入 JSON 文件的基本功能
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.json");
@@ -691,8 +922,19 @@ fn test_file_writer_write_json_error_handling() -> Result<()> {
 }
 
 /// 测试写入嵌套目录的字节文件
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_bytes_with_dir_nested() -> color_eyre::Result<()> {
+fn test_file_writer_write_bytes_with_dir_nested_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试嵌套目录的字节写入
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("level1/level2/level3/file.bin");
@@ -708,8 +950,19 @@ fn test_file_writer_write_bytes_with_dir_nested() -> color_eyre::Result<()> {
 }
 
 /// 测试写入嵌套目录的字符串文件
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_writer_write_str_with_dir_nested() -> color_eyre::Result<()> {
+fn test_file_writer_write_str_with_dir_nested_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试嵌套目录的字符串写入
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("level1/level2/level3/file.txt");
@@ -724,8 +977,19 @@ fn test_file_writer_write_str_with_dir_nested() -> color_eyre::Result<()> {
 }
 
 /// 测试部分读取文件内容
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_open_read_partial() -> color_eyre::Result<()> {
+fn test_file_reader_open_read_partial_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试部分读取文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -741,8 +1005,19 @@ fn test_file_reader_open_read_partial() -> color_eyre::Result<()> {
 }
 
 /// 测试多次读取文件行
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_lines_multiple_iterations() -> color_eyre::Result<()> {
+fn test_file_reader_lines_multiple_iterations_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 方法的循环逻辑（覆盖 file.rs:45-49）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("multiline.txt");
@@ -758,8 +1033,19 @@ fn test_file_reader_lines_multiple_iterations() -> color_eyre::Result<()> {
 }
 
 /// 测试读取大文件的字节内容
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_file_reader_bytes_large_file() -> color_eyre::Result<()> {
+fn test_file_reader_bytes_large_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试 bytes() 方法的循环逻辑（覆盖 file.rs:58-59）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("large.bin");
@@ -784,7 +1070,7 @@ fn test_file_reader_bytes_large_file() -> color_eyre::Result<()> {
 /// 2. 使用FileReader读取文件行
 /// 3. 验证正常读取成功
 #[test]
-fn test_file_reader_lines_with_io_error() -> color_eyre::Result<()> {
+fn test_file_reader_lines_with_io_error_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 方法中的错误处理（覆盖 file.rs:46-47）
     // 创建一个文件，然后删除它，模拟读取时的错误
     let env = CliTestEnv::new()?;
@@ -801,7 +1087,7 @@ fn test_file_reader_lines_with_io_error() -> color_eyre::Result<()> {
 
 /// 测试读取文件行循环中的错误处理
 #[test]
-fn test_file_reader_lines_loop_with_error() -> color_eyre::Result<()> {
+fn test_file_reader_lines_loop_with_error_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 循环中的错误处理（覆盖 file.rs:46-47）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -816,7 +1102,7 @@ fn test_file_reader_lines_loop_with_error() -> color_eyre::Result<()> {
 
 /// 测试读取文件字节到末尾
 #[test]
-fn test_file_reader_bytes_read_to_end() -> color_eyre::Result<()> {
+fn test_file_reader_bytes_read_to_end_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试 bytes() 方法中的 read_to_end 调用（覆盖 file.rs:58-59）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.bin");
@@ -831,6 +1117,17 @@ fn test_file_reader_bytes_read_to_end() -> color_eyre::Result<()> {
 }
 
 /// 测试确保父目录创建嵌套目录
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_dir() 创建嵌套目录（覆盖 file.rs:106-107）
@@ -848,9 +1145,20 @@ fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()>
 }
 
 /// 测试设置文件的不同权限模式（Unix系统）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 #[cfg(unix)]
-fn test_file_writer_set_permissions_various_modes() -> color_eyre::Result<()> {
+fn test_file_writer_set_permissions_various_modes_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试 set_permissions() 的不同权限模式（覆盖 file.rs:124-125）
     use std::os::unix::fs::PermissionsExt;
 
@@ -873,6 +1181,17 @@ fn test_file_writer_set_permissions_various_modes() -> color_eyre::Result<()> {
 }
 
 /// 测试写入字符串文件时创建父目录
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_str_with_dir() 创建父目录（覆盖 file.rs:146-148）
@@ -890,6 +1209,17 @@ fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()
 }
 
 /// 测试写入字节文件时创建父目录
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_bytes_with_dir() 创建父目录（覆盖 file.rs:168-170）
@@ -907,6 +1237,17 @@ fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<
 }
 
 /// 测试安全写入TOML文件时创建目录并设置权限
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_toml_secure() 创建目录和设置权限（覆盖 file.rs:194, 198-202）
@@ -940,6 +1281,17 @@ fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre
 }
 
 /// 测试安全写入JSON文件时创建目录并设置权限
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_write_json_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_json_secure() 创建目录和设置权限（覆盖 file.rs:226, 230-234）
@@ -973,6 +1325,17 @@ fn test_file_writer_write_json_secure_creates_dir_and_sets_perms() -> color_eyre
 }
 
 /// 测试确保父目录（没有父目录的情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_file_writer_ensure_parent_dir_no_parent() {
     // Arrange: 准备测试 ensure_parent_dir() 没有父目录的情况（覆盖 file.rs:109）

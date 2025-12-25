@@ -24,7 +24,7 @@ use workflow::completion::{
 /// ## 预期结果
 /// - 返回 "_workflow"
 #[test]
-fn test_get_completion_filename_with_zsh_shell_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_zsh_shell_return_result() -> Result<()> {
     // Arrange: 准备 zsh shell 和命令名
     let shell = "zsh";
     let command = "workflow";
@@ -49,7 +49,7 @@ fn test_get_completion_filename_with_zsh_shell_returns_filename() -> Result<()> 
 /// ## 预期结果
 /// - 返回 "workflow.bash"
 #[test]
-fn test_get_completion_filename_with_bash_shell_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_bash_shell_return_result() -> Result<()> {
     // Arrange: 准备 bash shell 和命令名
     let shell = "bash";
     let command = "workflow";
@@ -74,7 +74,7 @@ fn test_get_completion_filename_with_bash_shell_returns_filename() -> Result<()>
 /// ## 预期结果
 /// - 返回 "workflow.fish"
 #[test]
-fn test_get_completion_filename_with_fish_shell_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_fish_shell_return_result() -> Result<()> {
     // Arrange: 准备 fish shell 和命令名
     let shell = "fish";
     let command = "workflow";
@@ -99,7 +99,7 @@ fn test_get_completion_filename_with_fish_shell_returns_filename() -> Result<()>
 /// ## 预期结果
 /// - 返回 "_workflow.ps1"
 #[test]
-fn test_get_completion_filename_with_powershell_shell_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_powershell_shell_return_result() -> Result<()> {
     // Arrange: 准备 powershell shell 和命令名
     let shell = "powershell";
     let command = "workflow";
@@ -124,7 +124,7 @@ fn test_get_completion_filename_with_powershell_shell_returns_filename() -> Resu
 /// ## 预期结果
 /// - 返回 "workflow.elv"
 #[test]
-fn test_get_completion_filename_with_elvish_shell_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_elvish_shell_return_result() -> Result<()> {
     // Arrange: 准备 elvish shell 和命令名
     let shell = "elvish";
     let command = "workflow";
@@ -149,7 +149,7 @@ fn test_get_completion_filename_with_elvish_shell_returns_filename() -> Result<(
 /// ## 预期结果
 /// - 返回错误，错误消息包含 "Unsupported shell type" 和 shell 名称
 #[test]
-fn test_get_completion_filename_with_unsupported_shell_returns_error() -> Result<()> {
+fn test_get_completion_filename_with_unsupported_shell_return_result() -> Result<()> {
     // Arrange: 准备不支持的 shell 类型
     let shell = "csh";
     let command = "workflow";
@@ -177,7 +177,7 @@ fn test_get_completion_filename_with_unsupported_shell_returns_error() -> Result
 /// ## 预期结果
 /// - 文件名包含命令名
 #[test]
-fn test_get_completion_filename_with_different_command_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_different_command_return_result() -> Result<()> {
     // Arrange: 准备不同的命令名
     let shell = "zsh";
     let command = "mycmd";
@@ -202,7 +202,7 @@ fn test_get_completion_filename_with_different_command_returns_filename() -> Res
 /// ## 预期结果
 /// - 返回只包含 shell 特定格式的文件名
 #[test]
-fn test_get_completion_filename_with_empty_command_returns_filename() -> Result<()> {
+fn test_get_completion_filename_with_empty_command_return_empty() -> Result<()> {
     // Arrange: 准备空命令名
     let shell = "zsh";
     let command = "";
@@ -227,7 +227,7 @@ fn test_get_completion_filename_with_empty_command_returns_filename() -> Result<
 /// ## 预期结果
 /// - 所有 shell 类型都返回正确的文件名格式
 #[test]
-fn test_get_completion_filename_with_all_shells_returns_correct_filenames() -> Result<()> {
+fn test_get_completion_filename_with_all_shells_return_collect() -> Result<()> {
     // Arrange: 准备所有支持的 shell 类型和预期文件名
     let shells = ["zsh", "bash", "fish", "powershell", "elvish"];
     let expected = [
@@ -264,7 +264,7 @@ fn test_get_completion_filename_with_all_shells_returns_correct_filenames() -> R
 /// ## 预期结果
 /// - 返回包含单个文件的列表
 #[test]
-fn test_get_completion_files_for_shell_with_single_command_returns_files() -> Result<()> {
+fn test_get_completion_files_for_shell_with_single_command_return_collect() -> Result<()> {
     // Arrange: 准备 shell 类型和单个命令
     let shell = "zsh";
     let commands = &["workflow"];
@@ -289,7 +289,7 @@ fn test_get_completion_files_for_shell_with_single_command_returns_files() -> Re
 /// ## 预期结果
 /// - 返回包含所有命令文件的列表
 #[test]
-fn test_get_completion_files_for_shell_with_multiple_commands_returns_files() -> Result<()> {
+fn test_get_completion_files_for_shell_with_multiple_commands_return_collect() -> Result<()> {
     // Arrange: 准备 shell 类型和多个命令
     let shell = "zsh";
     let commands = &["workflow", "mycmd"];
@@ -314,7 +314,7 @@ fn test_get_completion_files_for_shell_with_multiple_commands_returns_files() ->
 /// ## 预期结果
 /// - 返回包含所有命令的 bash 补全文件列表
 #[test]
-fn test_get_completion_files_for_shell_with_bash_multiple_commands_returns_files() -> Result<()> {
+fn test_get_completion_files_for_shell_with_bash_multiple_commands_return_collect() -> Result<()> {
     // Arrange: 准备 bash shell 和多个命令
     let shell = "bash";
     let commands = &["workflow", "tool"];
@@ -339,7 +339,7 @@ fn test_get_completion_files_for_shell_with_bash_multiple_commands_returns_files
 /// ## 预期结果
 /// - 返回空列表
 #[test]
-fn test_get_completion_files_for_shell_with_empty_commands_returns_empty() -> Result<()> {
+fn test_get_completion_files_for_shell_with_empty_commands_return_collect() -> Result<()> {
     // Arrange: 准备 shell 类型和空命令列表
     let shell = "zsh";
     let commands = &[];
@@ -364,7 +364,7 @@ fn test_get_completion_files_for_shell_with_empty_commands_returns_empty() -> Re
 /// ## 预期结果
 /// - 返回错误
 #[test]
-fn test_get_completion_files_for_shell_with_unsupported_shell_returns_error() -> Result<()> {
+fn test_get_completion_files_for_shell_with_unsupported_shell_return_collect() -> Result<()> {
     // Arrange: 准备不支持的 shell 类型
     let shell = "csh";
     let commands = &["workflow"];
@@ -379,7 +379,7 @@ fn test_get_completion_files_for_shell_with_unsupported_shell_returns_error() ->
 
 /// 测试所有支持的 shell 类型的文件列表生成
 #[test]
-fn test_get_completion_files_for_shell_all_shells() -> Result<()> {
+fn test_get_completion_files_for_shell_all_shells_return_collect() -> Result<()> {
     let shells = ["zsh", "bash", "fish", "powershell", "elvish"];
     let commands = &["workflow"];
 
@@ -399,7 +399,7 @@ fn test_get_completion_files_for_shell_all_shells() -> Result<()> {
 
 /// 测试获取所有 shell 类型的补全文件列表
 #[test]
-fn test_get_all_completion_files_single_command() -> Result<()> {
+fn test_get_all_completion_files_single_command_return_collect() -> Result<()> {
     let result = get_all_completion_files(&["workflow"]);
 
     // 应该包含所有 5 种 shell 类型的文件
@@ -415,8 +415,19 @@ fn test_get_all_completion_files_single_command() -> Result<()> {
 }
 
 /// 测试获取多个命令的所有补全文件列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_all_completion_files_multiple_commands() -> Result<()> {
+fn test_get_all_completion_files_multiple_commands_return_collect() -> Result<()> {
     let result = get_all_completion_files(&["workflow", "mycmd"]);
 
     // 应该包含 5 种 shell 类型 × 2 个命令 = 10 个文件
@@ -437,16 +448,38 @@ fn test_get_all_completion_files_multiple_commands() -> Result<()> {
 }
 
 /// 测试空命令列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_all_completion_files_empty_commands() -> Result<()> {
+fn test_get_all_completion_files_empty_commands_return_collect() -> Result<()> {
     let result = get_all_completion_files(&[]);
     assert!(result.is_empty());
     Ok(())
 }
 
 /// 测试所有文件名的唯一性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_all_completion_files_uniqueness() -> Result<()> {
+fn test_get_all_completion_files_uniqueness_return_collect() -> Result<()> {
     let result = get_all_completion_files(&["workflow"]);
     let unique_count = result.iter().collect::<std::collections::HashSet<_>>().len();
     assert_eq!(unique_count, result.len(), "All filenames should be unique");
@@ -454,8 +487,19 @@ fn test_get_all_completion_files_uniqueness() -> Result<()> {
 }
 
 /// 测试文件列表的排序（虽然不是必需的，但验证结果的一致性）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_get_all_completion_files_consistency() -> Result<()> {
+fn test_get_all_completion_files_consistency_return_collect() -> Result<()> {
     let result1 = get_all_completion_files(&["workflow"]);
     let result2 = get_all_completion_files(&["workflow"]);
 
@@ -469,8 +513,19 @@ fn test_get_all_completion_files_consistency() -> Result<()> {
 // ==================== Integration Tests ====================
 
 /// 测试函数之间的集成：从单个文件名到所有文件列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_integration_filename_to_all_files() -> Result<()> {
+fn test_integration_filename_to_all_files_return_collect() -> Result<()> {
     let shells = ["zsh", "bash", "fish", "powershell", "elvish"];
     let command = "workflow";
 
@@ -499,8 +554,19 @@ fn test_integration_filename_to_all_files() -> Result<()> {
 }
 
 /// 测试函数之间的集成：从 shell 文件列表到所有文件列表
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_integration_shell_files_to_all_files() -> Result<()> {
+fn test_integration_shell_files_to_all_files_return_collect() -> Result<()> {
     let shells = ["zsh", "bash", "fish", "powershell", "elvish"];
     let commands = &["workflow"];
 

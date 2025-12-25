@@ -12,6 +12,17 @@ use workflow::repo::RepoConfig;
 // ==================== Configuration Integration Tests ====================
 
 /// 测试公共配置和私有配置的交互
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_public_and_private_config_interaction() {
     // Arrange: 准备测试公共配置和私有配置的交互
@@ -51,6 +62,17 @@ fn test_public_and_private_config_interaction() {
 }
 
 /// 测试公共配置和私有配置的独立性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_independence() {
     // Arrange: 准备测试公共配置和私有配置的独立性
@@ -75,6 +97,17 @@ fn test_config_independence() {
 }
 
 /// 测试模板分支前缀和个人分支前缀的共存
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_template_and_personal_branch_prefix() {
     // Arrange: 准备测试模板分支前缀和个人分支前缀的共存
@@ -102,6 +135,17 @@ fn test_template_and_personal_branch_prefix() {
 }
 
 /// 测试模板PR配置和个人PR配置的共存
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_template_and_personal_pr_config() {
     // Arrange: 准备测试模板 PR 配置和个人 PR 配置的共存
@@ -128,6 +172,17 @@ fn test_template_and_personal_pr_config() {
 // ==================== Configuration Migration Tests ====================
 
 /// 测试从旧格式迁移配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_migration_from_old_format() {
     // Arrange: 准备测试从旧格式迁移配置
@@ -154,6 +209,17 @@ fn test_config_migration_from_old_format() {
 }
 
 /// 测试迁移时添加新字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_migration_add_new_fields() {
     // Arrange: 准备测试迁移时添加新字段
@@ -179,6 +245,17 @@ fn test_config_migration_add_new_fields() {
 }
 
 /// 测试迁移时移除废弃字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_migration_remove_deprecated_fields() {
     // Arrange: 准备测试迁移时移除废弃字段
@@ -203,6 +280,17 @@ fn test_config_migration_remove_deprecated_fields() {
 }
 
 /// 测试迁移时保留用户数据
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_migration_preserve_user_data() {
     // Arrange: 准备测试迁移时保留用户数据
@@ -232,6 +320,17 @@ fn test_config_migration_preserve_user_data() {
 // ==================== Boundary Condition Tests ====================
 
 /// 测试包含特殊字符的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_special_characters() {
     // Arrange: 准备测试包含特殊字符的配置
@@ -259,6 +358,17 @@ fn test_config_with_special_characters() {
 }
 
 /// 测试包含很长值的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_very_long_values() {
     // Arrange: 准备测试包含很长值的配置
@@ -276,6 +386,17 @@ fn test_config_with_very_long_values() {
 }
 
 /// 测试包含Unicode字符的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_unicode() {
     // Arrange: 准备测试包含 Unicode 字符的配置
@@ -294,6 +415,17 @@ fn test_config_with_unicode() {
 }
 
 /// 测试包含空字符串的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_empty_strings() {
     // Arrange: 准备测试包含空字符串的配置
@@ -317,6 +449,17 @@ fn test_config_with_empty_strings() {
 }
 
 /// 测试包含null值的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_null_values() {
     // Arrange: 准备测试包含 null 值的配置
@@ -342,6 +485,17 @@ fn test_config_with_null_values() {
 }
 
 /// 测试包含大量忽略分支的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_many_ignore_branches() {
     // Arrange: 准备测试包含大量忽略分支的配置
@@ -360,6 +514,17 @@ fn test_config_with_many_ignore_branches() {
 }
 
 /// 测试包含嵌套表格的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_nested_tables() {
     // Arrange: 准备测试包含嵌套表格的配置
@@ -381,6 +546,17 @@ fn test_config_with_nested_tables() {
 }
 
 /// 测试包含数组的配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_with_arrays() {
     // Arrange: 准备测试包含数组的配置
@@ -407,6 +583,17 @@ fn test_config_with_arrays() {
 // ==================== Configuration Consistency Tests ====================
 
 /// 测试多次更新后配置的一致性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_consistency_after_multiple_updates() {
     // Arrange: 准备测试多次更新后配置的一致性
@@ -446,6 +633,17 @@ fn test_config_consistency_after_multiple_updates() {
 }
 
 /// 测试部分清空后配置的一致性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_consistency_after_partial_clear() {
     // Arrange: 准备测试部分清空后配置的一致性
@@ -552,6 +750,17 @@ fn test_config_recovery_after_invalid_update() {
 }
 
 /// 测试配置回滚
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_rollback() {
     // Arrange: 准备测试配置回滚

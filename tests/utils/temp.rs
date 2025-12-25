@@ -324,7 +324,7 @@ mod tests {
     /// - 临时目录存在
     /// - 临时目录为目录类型
     #[test]
-    fn test_temp_manager_creation() -> Result<()> {
+    fn test_temp_manager_creation_return_result() -> Result<()> {
         let temp_manager = TempManager::new()?;
         assert!(temp_manager.temp_dir().exists());
         assert!(temp_manager.temp_dir().is_dir());
@@ -399,7 +399,7 @@ mod tests {
     /// - 文件删除成功
     /// - 文件不再存在
     #[test]
-    fn test_cleanup_file() -> Result<()> {
+    fn test_cleanup_file_return_result() -> Result<()> {
         let mut temp_manager = TempManager::new()?;
         let file_path = temp_manager.create_file("temp.txt", "content")?;
 
@@ -427,7 +427,7 @@ mod tests {
     /// - 所有文件不再存在
     /// - 临时文件列表为空
     #[test]
-    fn test_cleanup_all_files() -> Result<()> {
+    fn test_cleanup_all_files_return_collect() -> Result<()> {
         let mut temp_manager = TempManager::new()?;
         let file1 = temp_manager.create_file("file1.txt", "content1")?;
         let file2 = temp_manager.create_file("file2.txt", "content2")?;
@@ -460,7 +460,7 @@ mod tests {
     /// - 返回结果正确
     /// - 临时目录自动清理
     #[test]
-    fn test_with_temp_dir() -> Result<()> {
+    fn test_with_temp_dir_return_result() -> Result<()> {
         let result = with_temp_dir(|temp_path| {
             let file_path = temp_path.join("test.txt");
             fs::write(&file_path, "Hello, World!")?;

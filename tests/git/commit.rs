@@ -53,7 +53,7 @@ fn git_repo_with_commit() -> GitTestEnv {
 /// - `modified_count == 0`：无修改文件
 /// - `staged_count == 0`：无暂存文件
 #[test]
-fn test_worktree_status_clean_with_gix() -> Result<()> {
+fn test_worktree_status_clean_with_gix_return_result() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
 
@@ -88,7 +88,7 @@ fn test_worktree_status_clean_with_gix() -> Result<()> {
 /// - modified_count、staged_count、untracked_count 都为0
 /// - 表示仓库干净，无更改
 #[test]
-fn test_has_changes_clean_repo_with_gix() -> Result<()> {
+fn test_has_changes_clean_repo_with_gix_return_result() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
 
@@ -120,7 +120,7 @@ fn test_has_changes_clean_repo_with_gix() -> Result<()> {
 /// - untracked_count > 0 或 modified_count > 0 或 staged_count > 0
 /// - 表示仓库有未跟踪文件，存在更改
 #[test]
-fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
+fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
 
@@ -157,7 +157,7 @@ fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
 /// - modified_count > 0 或 staged_count > 0 或 untracked_count > 0
 /// - 表示仓库有已修改文件，存在更改
 #[test]
-fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
+fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
 
@@ -197,7 +197,7 @@ fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 所有更改的文件都被暂存
 #[test]
-fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
+fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个文件
     let env = GitTestEnv::new()?;
     std::fs::write(env.path().join("new_file1.txt"), "Content 1")?;
@@ -234,7 +234,7 @@ fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 指定的文件被暂存
 #[test]
-fn test_stage_specific_file() -> Result<()> {
+fn test_stage_specific_file_return_result() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
 
@@ -280,7 +280,7 @@ fn test_stage_specific_file() -> Result<()> {
 /// - SHA不为空，长度为40个字符，为十六进制格式
 /// - message、author、date字段都不为空
 #[test]
-fn test_get_latest_commit_info() -> Result<()> {
+fn test_get_latest_commit_info_return_result() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
 

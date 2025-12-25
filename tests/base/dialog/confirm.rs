@@ -246,6 +246,17 @@ fn test_confirm_dialog_prompt_with_default_true() {
 }
 
 /// 测试设置默认值为false
+///
+/// ## 测试目的
+/// 验证 ConfirmDialog 能够正确设置默认值为 false。
+///
+/// ## 测试场景
+/// 1. 创建 ConfirmDialog 实例
+/// 2. 设置默认值为 false
+/// 3. 验证默认值设置
+///
+/// ## 预期结果
+/// - 默认值被正确设置为 false
 #[test]
 fn test_confirm_dialog_prompt_with_default_false() {
     // Arrange: 准备测试设置默认值为 false（覆盖 confirm.rs:125-127）
@@ -255,6 +266,17 @@ fn test_confirm_dialog_prompt_with_default_false() {
 }
 
 /// 测试不设置默认值的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_prompt_without_default() {
     // Arrange: 准备测试不设置默认值的情况（覆盖 confirm.rs:125-127 的 else 分支）
@@ -264,6 +286,17 @@ fn test_confirm_dialog_prompt_without_default() {
 }
 
 /// 测试错误处理逻辑
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_prompt_error_handling() {
     // Arrange: 准备测试错误处理逻辑（覆盖 confirm.rs:129）
@@ -274,6 +307,17 @@ fn test_confirm_dialog_prompt_error_handling() {
 }
 
 /// 测试cancel_message为None的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_cancel_message_none() {
     // Arrange: 准备测试 cancel_message 为 None 的情况（覆盖 confirm.rs:132-136）
@@ -283,6 +327,17 @@ fn test_confirm_dialog_cancel_message_none() {
 }
 
 /// 测试cancel_message为Some的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_cancel_message_some() {
     // Arrange: 准备测试 cancel_message 为 Some 的情况（覆盖 confirm.rs:132-133）
@@ -292,6 +347,17 @@ fn test_confirm_dialog_cancel_message_some() {
 }
 
 /// 测试wait_for_newline设置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_wait_for_newline() {
     // Arrange: 准备测试 wait_for_newline(false) 的设置（覆盖 confirm.rs:122）
@@ -302,6 +368,17 @@ fn test_confirm_dialog_wait_for_newline() {
 }
 
 /// 测试default为Some(true)的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_default_some_true() {
     // Arrange: 准备测试 default 为 Some(true) 的情况（覆盖 confirm.rs:125-127）
@@ -311,6 +388,17 @@ fn test_confirm_dialog_default_some_true() {
 }
 
 /// 测试default为Some(false)的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_default_some_false() {
     // Arrange: 准备测试 default 为 Some(false) 的情况（覆盖 confirm.rs:125-127）
@@ -320,6 +408,17 @@ fn test_confirm_dialog_default_some_false() {
 }
 
 /// 测试用户确认且未设置cancel_message的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_prompt_confirmed_no_cancel_message() {
     // Arrange: 准备测试用户确认且未设置 cancel_message 的情况（覆盖 confirm.rs:136）
@@ -330,6 +429,17 @@ fn test_confirm_dialog_prompt_confirmed_no_cancel_message() {
 }
 
 /// 测试用户取消且未设置cancel_message的情况
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_confirm_dialog_prompt_cancelled_no_cancel_message() {
     // Arrange: 准备测试用户取消且未设置 cancel_message 的情况（覆盖 confirm.rs:136）

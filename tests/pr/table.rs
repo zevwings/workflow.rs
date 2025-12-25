@@ -8,6 +8,17 @@ use workflow::pr::table::PullRequestRow;
 // ==================== PullRequestRow 结构体创建测试 ====================
 
 /// 测试创建PullRequestRow结构体
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_creation() {
     // Arrange: 准备测试创建 PullRequestRow 结构体
@@ -29,6 +40,17 @@ fn test_pull_request_row_creation() {
 }
 
 /// 测试使用空字符串创建PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_empty_fields() {
     // Arrange: 准备测试使用空字符串创建 PullRequestRow
@@ -50,6 +72,17 @@ fn test_pull_request_row_with_empty_fields() {
 }
 
 /// 测试使用长字符串创建PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_long_strings() {
     // Arrange: 准备测试使用长字符串创建 PullRequestRow
@@ -72,6 +105,17 @@ fn test_pull_request_row_with_long_strings() {
 }
 
 /// 测试使用特殊字符创建PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_special_characters() {
     // Arrange: 准备测试使用特殊字符创建 PullRequestRow
@@ -94,6 +138,17 @@ fn test_pull_request_row_with_special_characters() {
 }
 
 /// 测试使用Unicode字符创建PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_unicode() {
     // Arrange: 准备测试使用 Unicode 字符创建 PullRequestRow
@@ -114,6 +169,17 @@ fn test_pull_request_row_with_unicode() {
 // ==================== PullRequestRow 字段访问测试 ====================
 
 /// 测试PullRequestRow的字段访问（读取和修改）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_field_access() {
     // Arrange: 准备测试字段访问
@@ -141,6 +207,17 @@ fn test_pull_request_row_field_access() {
 // ==================== PullRequestRow 不同状态测试 ====================
 
 /// 测试open状态的PR
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_open_state() {
     // Arrange: 准备测试 open 状态的 PR
@@ -157,6 +234,17 @@ fn test_pull_request_row_open_state() {
 }
 
 /// 测试closed状态的PR
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_closed_state() {
     // Arrange: 准备测试 closed 状态的 PR
@@ -173,6 +261,17 @@ fn test_pull_request_row_closed_state() {
 }
 
 /// 测试merged状态的PR
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_merged_state() {
     // Arrange: 准备测试 merged 状态的 PR
@@ -191,6 +290,17 @@ fn test_pull_request_row_merged_state() {
 // ==================== PullRequestRow 集合操作测试 ====================
 
 /// 测试创建PullRequestRow向量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_vector() {
     // Arrange: 准备测试创建 PullRequestRow 向量
@@ -228,6 +338,17 @@ fn test_pull_request_row_vector() {
 }
 
 /// 测试空的PullRequestRow向量
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_empty_vector() {
     // Arrange: 准备测试空的 PullRequestRow 向量
@@ -239,6 +360,17 @@ fn test_pull_request_row_empty_vector() {
 // ==================== PullRequestRow 边界条件测试 ====================
 
 /// 测试包含空白字符的字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_whitespace() {
     // Arrange: 准备测试包含空白字符的字段
@@ -258,6 +390,17 @@ fn test_pull_request_row_with_whitespace() {
 }
 
 /// 测试包含换行符的字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_with_newlines() {
     // Arrange: 准备测试包含换行符的字段（虽然在实际使用中可能不常见）
@@ -276,6 +419,17 @@ fn test_pull_request_row_with_newlines() {
 // ==================== PullRequestRow 实际使用场景测试 ====================
 
 /// 测试模拟从GitHub PR创建PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_from_github_pr() {
     // Arrange: 准备测试模拟从 GitHub PR 创建 PullRequestRow
@@ -297,6 +451,17 @@ fn test_pull_request_row_from_github_pr() {
 // ==================== PullRequestRow 结构体特性测试 ====================
 
 /// 测试手动克隆PullRequestRow
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_manual_clone() {
     // Arrange: 准备测试手动克隆 PullRequestRow（因为结构体没有实现 Clone trait）
@@ -327,6 +492,17 @@ fn test_pull_request_row_manual_clone() {
 }
 
 /// 测试创建后访问字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pull_request_row_field_access_after_creation() {
     // Arrange: 准备测试创建后访问字段

@@ -81,8 +81,19 @@ fn create_socks_proxy_info() -> ProxyInfo {
 // ==================== Test Cases ====================
 
 /// 测试 ProxyInfo 结构体创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_info_creation() -> Result<()> {
+fn test_proxy_info_creation_return_result() -> Result<()> {
     let proxy_info = create_test_proxy_info();
 
     // Assert: 验证 HTTP 代理配置
@@ -105,8 +116,19 @@ fn test_proxy_info_creation() -> Result<()> {
 }
 
 /// 测试 ProxyInfo 不同代理类型
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_info_different_types() -> Result<()> {
+fn test_proxy_info_different_types_return_result() -> Result<()> {
     let http_proxy = create_test_proxy_info();
     let https_proxy = create_https_proxy_info();
     let socks_proxy = create_socks_proxy_info();
@@ -132,8 +154,19 @@ fn test_proxy_info_different_types() -> Result<()> {
 }
 
 /// 测试 ProxyInfo 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_info_clone() -> Result<()> {
+fn test_proxy_info_clone_return_result() -> Result<()> {
     let original_proxy = create_test_proxy_info();
     let cloned_proxy = original_proxy.clone();
 
@@ -150,6 +183,17 @@ fn test_proxy_info_clone() -> Result<()> {
 }
 
 /// 测试 ProxyInfo 调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_info_debug() {
     let proxy_info = create_test_proxy_info();
@@ -161,6 +205,17 @@ fn test_proxy_info_debug() {
 }
 
 /// 测试 ProxyType 枚举
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_type_enum() {
     // Arrange: 准备测试所有代理类型
@@ -193,8 +248,19 @@ fn test_proxy_type_enum() {
 }
 
 /// 测试 ProxyEnableResult 结构体创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_enable_result_creation() -> Result<()> {
+fn test_proxy_enable_result_creation_return_result() -> Result<()> {
     use std::path::PathBuf;
 
     let enable_result = ProxyEnableResult {
@@ -221,6 +287,17 @@ fn test_proxy_enable_result_creation() -> Result<()> {
 }
 
 /// 测试 ProxyEnableResult 已配置场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_enable_result_already_configured() {
     let enable_result = ProxyEnableResult {
@@ -236,8 +313,19 @@ fn test_proxy_enable_result_already_configured() {
 }
 
 /// 测试 ProxyEnableResult 临时模式场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_enable_result_temporary_mode() -> Result<()> {
+fn test_proxy_enable_result_temporary_mode_return_result() -> Result<()> {
     let enable_result = ProxyEnableResult {
         already_configured: false,
         proxy_command: Some("export http_proxy=http://temp.proxy.com:8080".to_string()),
@@ -256,8 +344,19 @@ fn test_proxy_enable_result_temporary_mode() -> Result<()> {
 }
 
 /// 测试 ProxyDisableResult 结构体创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_proxy_disable_result_creation() -> Result<()> {
+fn test_proxy_disable_result_creation_return_result() -> Result<()> {
     use std::path::PathBuf;
 
     let mut current_env_proxy = HashMap::new();
@@ -294,6 +393,17 @@ fn test_proxy_disable_result_creation() -> Result<()> {
 }
 
 /// 测试 ProxyDisableResult 没有找到代理场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_disable_result_no_proxy_found() {
     let disable_result = ProxyDisableResult {
@@ -311,6 +421,17 @@ fn test_proxy_disable_result_no_proxy_found() {
 }
 
 /// 测试 ProxyDisableResult 只有环境变量场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_disable_result_env_only() {
     let mut current_env_proxy = HashMap::new();
@@ -334,6 +455,17 @@ fn test_proxy_disable_result_env_only() {
 }
 
 /// 测试结构体克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_results_clone() {
     use std::path::PathBuf;
@@ -381,6 +513,17 @@ fn test_results_clone() {
 }
 
 /// 测试结构体调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_results_debug() {
     let enable_result = ProxyEnableResult {
@@ -406,6 +549,17 @@ fn test_results_debug() {
 }
 
 /// 测试 ProxyManager 静态方法
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_manager_static_methods() {
     // 由于 ProxyManager 的实际方法可能需要系统权限或特定环境，
@@ -467,6 +621,17 @@ fn test_proxy_manager_static_methods() {
 }
 
 /// 测试复杂的代理配置场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_complex_proxy_scenarios() {
     // Arrange: 准备测试 HTTP 代理配置
@@ -534,8 +699,19 @@ fn test_complex_proxy_scenarios() {
 }
 
 /// 测试边界情况和错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_edge_cases_and_error_handling() -> Result<()> {
+fn test_edge_cases_and_error_handling_return_false() -> Result<()> {
     // Arrange: 准备测试极端端口号
     let mut extreme_port_proxy = ProxyInfo::new();
     extreme_port_proxy.set_config(

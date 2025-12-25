@@ -37,7 +37,7 @@ struct TestData {
 /// - is_error() 返回 false
 /// - status 为 200
 #[test]
-fn test_response_is_success_with_200_status_returns_true() -> Result<()> {
+fn test_response_is_success_with_200_status_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
@@ -79,7 +79,7 @@ fn test_response_is_success_with_200_status_returns_true() -> Result<()> {
 /// - is_error() 返回 true
 /// - status 为 404
 #[test]
-fn test_response_is_error_with_404_status_returns_true() -> Result<()> {
+fn test_response_is_error_with_404_status_return_false() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
@@ -122,7 +122,7 @@ fn test_response_is_error_with_404_status_returns_true() -> Result<()> {
 /// - JSON 解析成功
 /// - 结构体字段值正确
 #[test]
-fn test_response_as_json_with_valid_json_returns_parsed_data() -> Result<()> {
+fn test_response_as_json_with_valid_json_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/json", mock_server.base_url);
@@ -163,7 +163,7 @@ fn test_response_as_json_with_valid_json_returns_parsed_data() -> Result<()> {
 /// - JSON 解析成功
 /// - Value 内容正确
 #[test]
-fn test_response_as_json_value_with_valid_json_returns_value() -> Result<()> {
+fn test_response_as_json_value_with_valid_json_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/json-value", mock_server.base_url);
@@ -203,7 +203,7 @@ fn test_response_as_json_value_with_valid_json_returns_value() -> Result<()> {
 /// ## 预期结果
 /// - 文本内容正确
 #[test]
-fn test_response_as_text_with_text_response_returns_text() -> Result<()> {
+fn test_response_as_text_with_text_response_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和文本响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/text", mock_server.base_url);
@@ -242,7 +242,7 @@ fn test_response_as_text_with_text_response_returns_text() -> Result<()> {
 /// ## 预期结果
 /// - 字节内容正确
 #[test]
-fn test_response_as_bytes_with_binary_response_returns_bytes() -> Result<()> {
+fn test_response_as_bytes_with_binary_response_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和二进制响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/bytes", mock_server.base_url);
@@ -284,7 +284,7 @@ fn test_response_as_bytes_with_binary_response_returns_bytes() -> Result<()> {
 /// ## 预期结果
 /// - ensure_success() 返回 Ok
 #[test]
-fn test_response_ensure_success_with_success_response_returns_ok() -> Result<()> {
+fn test_response_ensure_success_with_success_response_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
@@ -324,7 +324,7 @@ fn test_response_ensure_success_with_success_response_returns_ok() -> Result<()>
 /// - ensure_success() 返回错误
 /// - 错误消息包含状态码
 #[test]
-fn test_response_ensure_success_with_error_response_returns_error() -> Result<()> {
+fn test_response_ensure_success_with_error_response_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
@@ -372,7 +372,7 @@ fn test_response_ensure_success_with_error_response_returns_error() -> Result<()
 /// ## 预期结果
 /// - ensure_success_with() 返回 Ok
 #[test]
-fn test_response_ensure_success_with_custom_error_handler_returns_ok() -> Result<()> {
+fn test_response_ensure_success_with_custom_error_handler_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/success", mock_server.base_url);
@@ -413,7 +413,7 @@ fn test_response_ensure_success_with_custom_error_handler_returns_ok() -> Result
 /// - ensure_success_with() 返回错误
 /// - 错误消息包含状态码（由自定义处理器生成）
 #[test]
-fn test_response_ensure_success_with_custom_error_handler_on_error_returns_error() -> Result<()> {
+fn test_response_ensure_success_with_custom_error_handler_on_error_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
@@ -460,7 +460,7 @@ fn test_response_ensure_success_with_custom_error_handler_on_error_returns_error
 /// - 错误消息正确提取
 /// - 消息包含预期的错误内容
 #[test]
-fn test_response_extract_error_message_with_json_error_returns_message() -> Result<()> {
+fn test_response_extract_error_message_with_json_error_return_false() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 错误响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error-json", mock_server.base_url);
@@ -500,7 +500,7 @@ fn test_response_extract_error_message_with_json_error_returns_message() -> Resu
 /// - 错误消息正确提取
 /// - 消息包含预期的错误内容
 #[test]
-fn test_response_extract_error_message_with_text_error_returns_message() -> Result<()> {
+fn test_response_extract_error_message_with_text_error_return_false() -> Result<()> {
     // Arrange: 准备 Mock 服务器和文本错误响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error-text", mock_server.base_url);
@@ -542,7 +542,7 @@ fn test_response_extract_error_message_with_text_error_returns_message() -> Resu
 /// - 响应头正确获取
 /// - 自定义响应头值正确
 #[test]
-fn test_response_headers_with_custom_headers_returns_headers() -> Result<()> {
+fn test_response_headers_with_custom_headers_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和自定义响应头
     let mut mock_server = setup_mock_server();
     let url = format!("{}/headers", mock_server.base_url);
@@ -596,7 +596,7 @@ fn test_response_headers_with_custom_headers_returns_headers() -> Result<()> {
 /// - 状态码为 201
 /// - 状态文本不为空
 #[test]
-fn test_response_status_text_with_201_status_returns_status_text() -> Result<()> {
+fn test_response_status_text_with_201_status_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 201 状态码
     let mut mock_server = setup_mock_server();
     let url = format!("{}/status", mock_server.base_url);
@@ -638,7 +638,7 @@ fn test_response_status_text_with_201_status_returns_status_text() -> Result<()>
 /// - 多次解析结果一致
 /// - 不同解析方法都能正常工作
 #[test]
-fn test_response_multiple_parses_with_same_response_allows_multiple_parses() -> Result<()> {
+fn test_response_multiple_parses_with_same_response_allows_multiple_parses_return_collect() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/multi-parse", mock_server.base_url);
@@ -684,7 +684,7 @@ fn test_response_multiple_parses_with_same_response_allows_multiple_parses() -> 
 /// - ensure_success() 返回错误
 /// - 错误处理正确（不会panic）
 #[test]
-fn test_response_ensure_success_with_invalid_utf8_body_returns_error() -> Result<()> {
+fn test_response_ensure_success_with_invalid_utf8_body_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和无效 UTF-8 响应体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/invalid-utf8", mock_server.base_url);
@@ -732,7 +732,7 @@ fn test_response_ensure_success_with_invalid_utf8_body_returns_error() -> Result
 /// - is_success() 返回 true
 /// - status 为 201
 #[test]
-fn test_http_response_is_success_with_201_status_returns_true() -> color_eyre::Result<()> {
+fn test_http_response_is_success_with_201_status_return_true() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和 201 响应
     let mut manager = MockServer::new();
 
@@ -773,7 +773,7 @@ fn test_http_response_is_success_with_201_status_returns_true() -> color_eyre::R
 /// - is_success() 返回 true
 /// - status 为 299
 #[test]
-fn test_http_response_is_success_with_299_status_returns_true() -> color_eyre::Result<()> {
+fn test_http_response_is_success_with_299_status_return_true() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和 299 响应
     let mut manager = MockServer::new();
 
@@ -813,7 +813,7 @@ fn test_http_response_is_success_with_299_status_returns_true() -> color_eyre::R
 /// ## 预期结果
 /// - Debug 字符串包含状态码或消息
 #[test]
-fn test_http_response_debug_with_valid_response_returns_debug_string() -> color_eyre::Result<()> {
+fn test_http_response_debug_with_valid_response_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和响应
     let mut manager = MockServer::new();
 
@@ -854,7 +854,7 @@ fn test_http_response_debug_with_valid_response_returns_debug_string() -> color_
 /// - 错误消息正确提取
 /// - 消息包含预期的错误内容
 #[test]
-fn test_http_response_extract_error_message_with_message_field() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_with_message_field_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应
     let mut manager = MockServer::new();
 
@@ -894,7 +894,7 @@ fn test_http_response_extract_error_message_with_message_field() -> color_eyre::
 /// ## 预期结果
 /// - 错误消息包含完整的 JSON 内容
 #[test]
-fn test_http_response_extract_error_message_without_error_field() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_without_error_field_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应
     let mut manager = MockServer::new();
 

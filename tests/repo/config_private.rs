@@ -662,7 +662,7 @@ fn test_clear_pr_config() {
 /// - 配置能够正确从文件加载
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_existing_file() -> Result<()> {
+fn test_load_from_existing_file_return_result() -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -730,7 +730,7 @@ auto_accept_change_type = true
 /// - 返回默认配置（configured 为 false，branch 和 pr 为 None）
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_non_existing_file() -> Result<()> {
+fn test_load_from_non_existing_file_return_result() -> Result<()> {
     // Arrange: 创建没有配置文件的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -769,7 +769,7 @@ fn test_load_from_non_existing_file() -> Result<()> {
 /// - 配置文件被创建且内容正确
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_to_new_file() -> Result<()> {
+fn test_save_to_new_file_return_result() -> Result<()> {
     // Arrange: 创建临时 Git 仓库（不创建配置文件）
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -828,7 +828,7 @@ fn test_save_to_new_file() -> Result<()> {
 /// - 其他仓库配置被保留，当前仓库配置已添加
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_preserves_other_repos() -> Result<()> {
+fn test_save_preserves_other_repos_return_result() -> Result<()> {
     // Arrange: 创建包含其他仓库配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -891,7 +891,7 @@ prefix = "hotfix"
 /// - 修改后的配置能够正确保存和重新加载
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip() -> Result<()> {
+fn test_load_and_save_roundtrip_return_result() -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -968,7 +968,7 @@ ignore = ["main"]
 /// - 返回 TOML 解析错误
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_corrupted_toml_file() -> Result<()> {
+fn test_load_corrupted_toml_file_return_result() -> Result<()> {
     // Arrange: 创建包含无效 TOML 的配置文件
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -1029,7 +1029,7 @@ configured = "invalid  # 缺少闭合引号和括号
 #[serial(repo_config_fs)]
 #[cfg(unix)]
 #[ignore] // 这个测试在某些系统上可能因权限模型不同而失败
-fn test_save_to_readonly_directory() -> Result<()> {
+fn test_save_to_readonly_directory_return_result() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 创建只读的 .workflow 目录（阻止创建 config 子目录）
@@ -1090,7 +1090,7 @@ fn test_save_to_readonly_directory() -> Result<()> {
 /// - 返回错误（因为不在 Git 仓库中）
 #[test]
 #[serial(repo_config_fs)]
-fn test_generate_repo_id_outside_git_repo() -> Result<()> {
+fn test_generate_repo_id_outside_git_repo_return_result() -> Result<()> {
     use crate::common::helpers::CurrentDirGuard;
 
     // Arrange: 创建非 Git 仓库的临时目录
@@ -1121,7 +1121,7 @@ fn test_generate_repo_id_outside_git_repo() -> Result<()> {
 /// - 文件创建成功但不包含 branch 部分
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_with_empty_branch_config() -> Result<()> {
+fn test_save_with_empty_branch_config_return_result() -> Result<()> {
     // Arrange: 准备测试保存空的 branch 配置（prefix 为 None 且 ignore 为空）
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -1169,7 +1169,7 @@ fn test_save_with_empty_branch_config() -> Result<()> {
 /// - 文件创建成功但不包含 PR 部分
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_with_empty_pr_config() -> Result<()> {
+fn test_save_with_empty_pr_config_return_result() -> Result<()> {
     // Arrange: 准备测试保存空的 PR 配置
     let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;

@@ -167,7 +167,7 @@ fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
 /// - Debug字符串包含`"backup_dir"`、`"binary_backups"`、`"completion_backups"`字段名
 /// - Debug字符串包含备份文件名`"workflow"`
 #[test]
-fn test_backup_info_debug_with_valid_info_returns_debug_string() -> Result<()> {
+fn test_backup_info_debug_with_valid_info_return_result() -> Result<()> {
     // Arrange: 准备 BackupInfo 实例
     let env = setup_test_environment()?;
     let backup_info = create_test_backup_info(&env)?;
@@ -477,8 +477,19 @@ fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Res
 }
 
 /// 测试 RollbackManager 清理备份功能
+///
+/// ## 测试目的
+/// 验证 RollbackManager 能够正确清理备份文件。
+///
+/// ## 测试场景
+/// 1. 创建备份文件
+/// 2. 调用 cleanup_backup() 方法清理备份
+/// 3. 验证备份文件被删除
+///
+/// ## 预期结果
+/// - 备份文件被成功清理
 #[test]
-fn test_rollback_manager_cleanup_backup() -> Result<()> {
+fn test_rollback_manager_cleanup_backup_return_result() -> Result<()> {
     let env = setup_test_environment()?;
     let backup_info = create_test_backup_info(&env)?;
 
@@ -502,8 +513,19 @@ fn test_rollback_manager_cleanup_backup() -> Result<()> {
 }
 
 /// 测试 BackupInfo 内部方法（通过公共接口）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_backup_info_internal_methods() -> Result<()> {
+fn test_backup_info_internal_methods_return_result() -> Result<()> {
     let env = setup_test_environment()?;
     let backup_dir = env.path().join("internal_test");
 
@@ -537,8 +559,19 @@ fn test_backup_info_internal_methods() -> Result<()> {
 }
 
 /// 测试边界情况和错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_edge_cases_and_error_handling() -> Result<()> {
+fn test_edge_cases_and_error_handling_return_false() -> Result<()> {
     // Arrange: 准备测试空的 BackupInfo
     let empty_backup_info = BackupInfo {
         backup_dir: PathBuf::from("/nonexistent/path"),
@@ -576,8 +609,19 @@ fn test_edge_cases_and_error_handling() -> Result<()> {
 }
 
 /// 测试复杂的备份和回滚场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_complex_backup_rollback_scenario() -> Result<()> {
+fn test_complex_backup_rollback_scenario_return_result() -> Result<()> {
     let env = setup_test_environment()?;
     let backup_dir = env.path().join("complex_backup");
     fs::create_dir_all(&backup_dir)?;

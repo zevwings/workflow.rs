@@ -10,6 +10,17 @@ use crate::common::guards::EnvGuard;
 // ==================== Shell Detection Tests ====================
 
 /// 测试从环境变量检测shell
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_from_env_with_env_var_returns_shell() {
     // Arrange: 准备从环境变量检测shell（注意：依赖于实际环境变量）
@@ -35,6 +46,17 @@ fn test_detect_shell_from_env_with_env_var_returns_shell() {
 }
 
 /// 测试不支持的shell的错误消息
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
     // Arrange: 使用 EnvGuard 设置不支持的shell
@@ -53,6 +75,17 @@ fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
 }
 
 /// 测试检测已安装的shell
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_with_system_returns_shells() {
     // Arrange: 准备检测已安装的shell
@@ -76,6 +109,17 @@ fn test_detect_installed_shells_with_system_returns_shells() {
 }
 
 /// 测试检测已安装的shell（当/etc/shells不存在时的回退处理）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefully() {
     // Arrange: 准备检测已安装的shell（当/etc/shells不存在时）
@@ -88,6 +132,17 @@ fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefu
 }
 
 /// 测试不同shell路径的检测
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_with_different_paths() {
     // Arrange: 准备测试不同 shell 路径的检测
@@ -120,6 +175,17 @@ fn test_detect_shell_with_different_paths() {
 }
 
 /// 测试shell检测的一致性（多次调用应返回相同结果）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_consistency() {
     // Arrange: 准备测试 shell 检测的一致性
@@ -159,6 +225,17 @@ fn test_detect_shell_zsh() {
 }
 
 /// 测试检测bash（仅非Windows系统）
+/// 测试检测Bash shell（仅非Windows）
+///
+/// ## 测试目的
+/// 验证在非 Windows 系统上能够正确检测 Bash shell。
+///
+/// ## 测试场景
+/// 1. 在非 Windows 系统上检测 shell
+/// 2. 验证检测结果为 Bash
+///
+/// ## 预期结果
+/// - 能够正确检测到 Bash shell
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn test_detect_shell_bash() {
@@ -176,6 +253,17 @@ fn test_detect_shell_bash() {
 }
 
 /// 测试已安装的shell列表不包含重复项
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_no_duplicates() {
     // Arrange: 准备测试已安装的 shell 列表不包含重复项
@@ -188,6 +276,17 @@ fn test_detect_installed_shells_no_duplicates() {
 }
 
 /// 测试从SHELL环境变量解析的回退逻辑
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_from_shell_path_fallback() {
     // Arrange: 使用 EnvGuard 设置有效的 shell 路径（覆盖 detect.rs:26-29）
@@ -204,6 +303,17 @@ fn test_detect_shell_from_shell_path_fallback() {
 }
 
 /// 测试空环境变量的情况（应返回错误）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_empty_env_var() {
     // Arrange: 使用 EnvGuard 设置空环境变量（覆盖 detect.rs:31-33）
@@ -218,6 +328,17 @@ fn test_detect_shell_empty_env_var() {
 }
 
 /// 测试/etc/shells文件中的注释行被忽略
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_comment_lines() {
     // Arrange: 准备测试 /etc/shells 文件中的注释行被忽略（覆盖 detect.rs:51-52）
@@ -229,6 +350,17 @@ fn test_detect_installed_shells_comment_lines() {
 }
 
 /// 测试/etc/shells文件中的空行被忽略
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_empty_lines() {
     // Arrange: 准备测试 /etc/shells 文件中的空行被忽略（覆盖 detect.rs:51）
@@ -240,6 +372,17 @@ fn test_detect_installed_shells_empty_lines() {
 }
 
 /// 测试当/etc/shells不存在时回退到当前shell
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_installed_shells_fallback_to_current() {
     // Arrange: 准备测试当 /etc/shells 不存在时回退到当前 shell（覆盖 detect.rs:63-66）
@@ -264,6 +407,17 @@ fn test_detect_installed_shells_fallback_to_current() {
 }
 
 /// 测试检测PowerShell
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_powershell() {
     // Arrange: 使用 EnvGuard 设置 PowerShell 路径
@@ -301,6 +455,17 @@ fn test_detect_shell_powershell() {
 }
 
 /// 测试检测fish（仅非Windows系统）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_detect_shell_fish() {
     // Arrange: 使用 EnvGuard 设置 fish 路径

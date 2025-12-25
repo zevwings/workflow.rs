@@ -66,7 +66,7 @@ fn test_check_has_last_commit_without_git_repo_returns_error() {
 /// - 使用`CliTestEnv`自动清理临时目录和环境（支持并行执行）
 /// - 自动恢复原始工作目录和环境变量
 #[test]
-fn test_check_has_last_commit_with_empty_git_repo() -> color_eyre::Result<()> {
+fn test_check_has_last_commit_with_empty_git_repo_return_empty() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
     // 不创建任何 commit
@@ -107,7 +107,7 @@ fn test_check_has_last_commit_with_empty_git_repo() -> color_eyre::Result<()> {
 /// ## 技术细节
 /// - 使用`CliTestEnv`自动创建和清理临时Git仓库（支持并行执行）
 #[test]
-fn test_check_has_last_commit_with_commits() -> color_eyre::Result<()> {
+fn test_check_has_last_commit_with_commits_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?
         .create_file("test.txt", "test content")?
@@ -145,7 +145,7 @@ fn test_check_has_last_commit_with_commits() -> color_eyre::Result<()> {
 /// - 使用`CliTestEnv`创建和管理临时Git仓库（支持并行执行）
 /// - 自动恢复原始工作目录
 #[test]
-fn test_check_not_on_default_branch_on_main_returns_error() -> color_eyre::Result<()> {
+fn test_check_not_on_default_branch_on_main_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并在main分支上
     let env = CliTestEnv::new()?;
     env.init_git_repo()?
@@ -197,7 +197,7 @@ fn test_check_not_on_default_branch_on_main_returns_error() -> color_eyre::Resul
 /// - 当前分支为 "feature/test"
 /// - 默认分支为 "main"
 #[test]
-fn test_check_not_on_default_branch_on_feature_branch_returns_ok() -> color_eyre::Result<()> {
+fn test_check_not_on_default_branch_on_feature_branch_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并切换到feature分支
     let env = CliTestEnv::new()?;
     env.init_git_repo()?

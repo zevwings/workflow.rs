@@ -484,6 +484,17 @@ fn test_proxy_config_generator_different_types() {
 }
 
 /// 测试 ProxyType 枚举功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_type_enum() {
     // Arrange: 准备测试所有代理类型
@@ -512,6 +523,17 @@ fn test_proxy_type_enum() {
 }
 
 /// 测试复杂的 ProxyInfo 配置
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_complex_proxy_info_configuration() {
     let mut proxy_info = ProxyInfo::new();
@@ -565,6 +587,17 @@ fn test_complex_proxy_info_configuration() {
 }
 
 /// 测试边界情况和错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_edge_cases_and_error_handling() {
     // Arrange: 准备测试无效的代理配置（空地址）
@@ -610,6 +643,17 @@ fn test_edge_cases_and_error_handling() {
 }
 
 /// 测试 ProxyInfo 的可变操作
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_proxy_info_mutable_operations() {
     let mut proxy_info = ProxyInfo::new();

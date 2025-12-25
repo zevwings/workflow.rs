@@ -8,6 +8,7 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
+use rstest::rstest;
 use serde_json::json;
 use std::collections::HashMap;
 use workflow::template::{TemplateEngine, TemplateEngineType};
@@ -45,8 +46,19 @@ fn create_nested_variables() -> serde_json::Value {
 // ==================== Test Cases ====================
 
 /// 测试引擎创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_new_engine_creation() -> Result<()> {
+fn test_new_engine_creation_return_result() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Assert: 验证引擎创建成功（通过尝试渲染一个简单模板）
@@ -57,8 +69,19 @@ fn test_new_engine_creation() -> Result<()> {
 }
 
 /// 测试默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_default_engine_creation() -> Result<()> {
+fn test_default_engine_creation_return_result() -> Result<()> {
     let engine = TemplateEngine::default();
 
     // Assert: 验证默认引擎与 new() 创建的引擎行为一致
@@ -69,8 +92,19 @@ fn test_default_engine_creation() -> Result<()> {
 }
 
 /// 测试简单模板渲染
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_render_simple_template() -> Result<()> {
+fn test_render_simple_template_return_result() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // 注册简单模板
@@ -86,90 +120,147 @@ fn test_render_simple_template() -> Result<()> {
     Ok(())
 }
 
-/// 测试变量替换渲染
-#[test]
-fn test_render_with_variables() -> Result<()> {
+/// 测试变量替换渲染（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 TemplateEngine 能够正确处理各种变量替换场景。
+///
+/// ## 测试场景
+/// 测试基本变量替换和嵌套变量访问
+///
+/// ## 预期结果
+/// - 所有变量都能正确替换
+#[rstest]
+#[case(
+    "Name: {{name}}, Age: {{age}}, Active: {{active}}",
+    "basic",
+    "Name: John Doe, Age: 30, Active: true"
+)]
+#[case(
+    "User: {{user.name}}, Email: {{user.profile.email}}, Role: {{user.profile.role}}",
+    "nested",
+    "User: Alice, Email: alice@example.com, Role: admin"
+)]
+fn test_render_with_variables_return_result(
+    #[case] template: &str,
+    #[case] vars_type: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     let engine = TemplateEngine::new();
-    let vars = create_test_variables();
 
-    // Arrange: 准备测试基本变量替换
-    let template = "Name: {{name}}, Age: {{age}}, Active: {{active}}";
+    // Arrange: 准备测试变量替换
+    let vars: serde_json::Value = match vars_type {
+        "basic" => {
+            let mut map = serde_json::Map::new();
+            for (k, v) in create_test_variables() {
+                map.insert(k, v);
+            }
+            serde_json::Value::Object(map)
+        }
+        "nested" => create_nested_variables(),
+        _ => json!({}),
+    };
+
+    // Act: 渲染模板
     let result = engine.render_string(template, &vars);
-    assert!(result.is_ok());
-    assert_eq!(result?, "Name: John Doe, Age: 30, Active: true");
 
-    // Arrange: 准备测试嵌套变量访问
-    let nested_vars = create_nested_variables();
-    let nested_template =
-        "User: {{user.name}}, Email: {{user.profile.email}}, Role: {{user.profile.role}}";
-    let nested_result = engine.render_string(nested_template, &nested_vars);
-    assert!(nested_result.is_ok());
-    assert_eq!(
-        nested_result?,
-        "User: Alice, Email: alice@example.com, Role: admin"
-    );
+    // Assert: 验证渲染结果
+    assert!(result.is_ok());
+    assert_eq!(result?, expected);
     Ok(())
 }
 
-/// 测试条件渲染
-#[test]
-fn test_render_with_conditions() -> Result<()> {
+/// 测试条件渲染（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 TemplateEngine 能够正确处理条件渲染（if/unless）。
+///
+/// ## 测试场景
+/// 测试 if 条件为 true/false 和 unless 条件
+///
+/// ## 预期结果
+/// - 所有条件都能正确渲染
+#[rstest]
+#[case(
+    "{{#if active}}User is active{{else}}User is inactive{{/if}}",
+    json!({"active": true}),
+    "User is active"
+)]
+#[case(
+    "{{#if active}}User is active{{else}}User is inactive{{/if}}",
+    json!({"active": false}),
+    "User is inactive"
+)]
+#[case(
+    "{{#unless disabled}}Feature enabled{{else}}Feature disabled{{/unless}}",
+    json!({"disabled": false}),
+    "Feature enabled"
+)]
+fn test_render_with_conditions_return_result(
+    #[case] template: &str,
+    #[case] vars: serde_json::Value,
+    #[case] expected: &str,
+) -> Result<()> {
     let engine = TemplateEngine::new();
 
-    // Arrange: 准备测试 if 条件
-    let template = "{{#if active}}User is active{{else}}User is inactive{{/if}}";
+    // Arrange: 准备测试条件渲染（通过参数提供）
 
-    // Arrange: 准备测试条件为 true
-    let vars_true = json!({"active": true});
-    let result_true = engine.render_string(template, &vars_true);
-    assert!(result_true.is_ok());
-    assert_eq!(result_true?, "User is active");
+    // Act: 渲染模板
+    let result = engine.render_string(template, &vars);
 
-    // Arrange: 准备测试条件为 false
-    let vars_false = json!({"active": false});
-    let result_false = engine.render_string(template, &vars_false);
-    assert!(result_false.is_ok());
-    assert_eq!(result_false?, "User is inactive");
-
-    // Arrange: 准备测试 unless 条件
-    let unless_template = "{{#unless disabled}}Feature enabled{{else}}Feature disabled{{/unless}}";
-    let vars_enabled = json!({"disabled": false});
-    let result_enabled = engine.render_string(unless_template, &vars_enabled);
-    assert!(result_enabled.is_ok());
-    assert_eq!(result_enabled?, "Feature enabled");
+    // Assert: 验证渲染结果
+    assert!(result.is_ok());
+    assert_eq!(result?, expected);
     Ok(())
 }
 
-/// 测试循环渲染
-#[test]
-fn test_render_with_loops() -> Result<()> {
-    let engine = TemplateEngine::new();
-
-    // Arrange: 准备测试简单数组循环
-    let template = "Items: {{#each items}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}";
-    let vars = json!({"items": ["apple", "banana", "cherry"]});
-    let result = engine.render_string(template, &vars);
-    assert!(result.is_ok());
-    assert_eq!(result?, "Items: apple, banana, cherry");
-
-    // Arrange: 准备测试对象数组循环
-    let object_template =
-        "{{#each users}}{{@index}}: {{name}} ({{role}}){{#unless @last}}\n{{/unless}}{{/each}}";
-    let object_vars = json!({
+/// 测试循环渲染（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 TemplateEngine 能够正确处理循环渲染（each）。
+///
+/// ## 测试场景
+/// 测试简单数组循环和对象数组循环
+///
+/// ## 预期结果
+/// - 所有循环都能正确渲染
+#[rstest]
+#[case(
+    "Items: {{#each items}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}",
+    json!({"items": ["apple", "banana", "cherry"]}),
+    "Items: apple, banana, cherry"
+)]
+#[case(
+    "{{#each users}}{{@index}}: {{name}} ({{role}}){{#unless @last}}\n{{/unless}}{{/each}}",
+    json!({
         "users": [
             {"name": "Alice", "role": "admin"},
             {"name": "Bob", "role": "user"}
         ]
-    });
-    let object_result = engine.render_string(object_template, &object_vars);
-    assert!(object_result.is_ok());
-    assert_eq!(object_result?, "0: Alice (admin)\n1: Bob (user)");
+    }),
+    "0: Alice (admin)\n1: Bob (user)"
+)]
+fn test_render_with_loops_return_result(
+    #[case] template: &str,
+    #[case] vars: serde_json::Value,
+    #[case] expected: &str,
+) -> Result<()> {
+    let engine = TemplateEngine::new();
+
+    // Arrange: 准备测试循环渲染（通过参数提供）
+
+    // Act: 渲染模板
+    let result = engine.render_string(template, &vars);
+
+    // Assert: 验证渲染结果
+    assert!(result.is_ok());
+    assert_eq!(result?, expected);
     Ok(())
 }
 
 /// 测试模板注册
 #[test]
-fn test_register_template() -> Result<()> {
+fn test_register_template_return_result() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // Arrange: 准备测试成功注册
@@ -201,8 +292,19 @@ fn test_register_template() -> Result<()> {
 }
 
 /// 测试无效模板错误处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_render_invalid_template() -> Result<()> {
+fn test_render_invalid_template_return_result() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // Arrange: 准备测试语法错误的模板
@@ -223,8 +325,19 @@ fn test_render_invalid_template() -> Result<()> {
 }
 
 /// 测试缺失变量处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_render_missing_variables() -> Result<()> {
+fn test_render_missing_variables_return_result() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Arrange: 准备测试缺失变量（非严格模式下应该渲染为空字符串）
@@ -244,8 +357,19 @@ fn test_render_missing_variables() -> Result<()> {
 }
 
 /// 测试 TemplateEngineType 枚举
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_template_engine_type() -> Result<()> {
+fn test_template_engine_type_return_result() -> Result<()> {
     // Arrange: 准备测试枚举值
     let engine_type = TemplateEngineType::Handlebars;
 
@@ -264,8 +388,19 @@ fn test_template_engine_type() -> Result<()> {
 }
 
 /// 测试复杂模板场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_complex_template_scenario() -> Result<()> {
+fn test_complex_template_scenario_return_result() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // 创建复杂的模板，包含条件、循环和嵌套变量
@@ -300,8 +435,19 @@ No features available
 }
 
 /// 测试特殊字符处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_special_characters_handling() -> Result<()> {
+fn test_special_characters_handling_return_result() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Arrange: 准备测试包含特殊字符的变量

@@ -41,7 +41,7 @@ https://jira.example.com/browse/ABC-456"#,
 )]
 #[case("No Jira link", None)]
 #[case("", None)]
-fn test_extract_jira_ticket_from_body_various_cases(#[case] body: &str, #[case] expected: Option<&str>) {
+fn test_extract_jira_ticket_from_body_with_various_bodies_returns_ticket(#[case] body: &str, #[case] expected: Option<&str>) {
     // Arrange: 准备 PR body 文本和预期结果
 
     // Act: 从 body 中提取 Jira ticket
@@ -83,7 +83,7 @@ This is a test description"#,
 )]
 #[case("No description", None)]
 #[case("", None)]
-fn test_extract_description_from_body_various_cases(#[case] body: &str, #[case] expected: Option<&str>) {
+fn test_extract_description_from_body_various_bodies_returns_description(#[case] body: &str, #[case] expected: Option<&str>) {
     // Arrange: 准备 PR body 文本和预期结果
 
     // Act: 从 body 中提取描述

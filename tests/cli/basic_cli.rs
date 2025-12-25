@@ -10,6 +10,17 @@ use crate::common::environments::CliTestEnv;
 // ==================== Basic Command Tests ====================
 
 /// 测试帮助命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_help_command() {
     let binding = CliCommandBuilder::new().arg("--help").assert_success();
@@ -21,6 +32,17 @@ fn test_help_command() {
 }
 
 /// 测试版本命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_version_command() {
     let binding = CliCommandBuilder::new().arg("--version").assert_success();
@@ -33,6 +55,17 @@ fn test_version_command() {
 // ==================== PR 命令测试 ====================
 
 /// 测试PR帮助命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_help() {
     let binding = CliCommandBuilder::new().args(["pr", "--help"]).assert_success();
@@ -73,7 +106,7 @@ fn test_pr_help() {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：可能尝试初始化服务，导致长时间阻塞
 #[ignore] // 忽略：可能尝试初始化 Jira/GitHub 客户端，导致长时间阻塞
-fn test_pr_without_git_repo() -> color_eyre::Result<()> {
+fn test_pr_without_git_repo_return_result() -> color_eyre::Result<()> {
     // 注意：此测试执行 pr create 命令，即使没有 Git 仓库也可能尝试初始化服务
     // Windows 上已通过 #[cfg] 跳过，因为可能尝试初始化 Jira/GitHub 客户端，导致阻塞
     // 如果需要运行此测试，请使用: cargo test -- --ignored
@@ -124,7 +157,7 @@ fn test_pr_without_git_repo() -> color_eyre::Result<()> {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 命令和路径处理可能有问题
 #[ignore] // 忽略：可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_pr_with_git_repo() -> color_eyre::Result<()> {
+fn test_pr_with_git_repo_return_result() -> color_eyre::Result<()> {
     // 注意：此测试可能尝试初始化 Jira/GitHub 客户端或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - Git 命令路径或行为差异
@@ -152,6 +185,16 @@ fn test_pr_with_git_repo() -> color_eyre::Result<()> {
 // ==================== Branch 命令测试 ====================
 
 /// 测试Branch帮助命令
+///
+/// ## 测试目的
+/// 验证 Branch 命令的帮助信息能够正确显示。
+///
+/// ## 测试场景
+/// 1. 执行 `workflow branch --help` 命令
+/// 2. 验证帮助信息输出
+///
+/// ## 预期结果
+/// - 帮助信息正确显示
 #[test]
 fn test_branch_help() {
     let binding = CliCommandBuilder::new().args(["branch", "--help"]).assert_success();
@@ -162,8 +205,19 @@ fn test_branch_help() {
 }
 
 /// 测试在没有Git仓库时执行Branch命令（应返回错误）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_branch_without_git() -> color_eyre::Result<()> {
+fn test_branch_without_git_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
@@ -180,6 +234,17 @@ fn test_branch_without_git() -> color_eyre::Result<()> {
 // ==================== Config 命令测试 ====================
 
 /// 测试Config帮助命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_help() {
     let binding = CliCommandBuilder::new().args(["config", "--help"]).assert_success();
@@ -190,8 +255,19 @@ fn test_config_help() {
 }
 
 /// 测试Config显示命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_config_show() -> color_eyre::Result<()> {
+fn test_config_show_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     env.create_config(&TestDataGenerator::config_content())?;
 
@@ -211,6 +287,17 @@ fn test_config_show() -> color_eyre::Result<()> {
 // ==================== Jira 命令测试 ====================
 
 /// 测试Jira帮助命令
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_jira_help() {
     let binding = CliCommandBuilder::new().args(["jira", "--help"]).assert_success();
@@ -221,8 +308,19 @@ fn test_jira_help() {
 }
 
 /// 测试在没有配置时执行Jira info命令（应返回错误）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_jira_info_without_config() -> color_eyre::Result<()> {
+fn test_jira_info_without_config_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
@@ -240,6 +338,17 @@ fn test_jira_info_without_config() -> color_eyre::Result<()> {
 // ==================== Output Format Tests ====================
 
 /// 测试JSON输出格式
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_json_output_format() {
     let binding = CliCommandBuilder::new().args(["--help", "--format", "json"]).assert();
@@ -262,6 +371,17 @@ fn test_json_output_format() {
 // ==================== Parameter Validation Tests ====================
 
 /// 测试无效命令（应返回错误）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_invalid_command() {
     let binding = CliCommandBuilder::new().arg("invalid-command").assert_failure();
@@ -319,7 +439,7 @@ fn test_missing_required_argument() {
 
 /// 测试环境变量设置
 #[test]
-fn test_environment_variables() -> color_eyre::Result<()> {
+fn test_environment_variables_return_result() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
@@ -339,6 +459,17 @@ fn test_environment_variables() -> color_eyre::Result<()> {
 // ==================== Performance Tests ====================
 
 /// 测试帮助命令的性能（应快速执行）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_help_command_performance() {
     use std::time::Instant;
@@ -397,7 +528,7 @@ fn test_help_command_performance() {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：多个命令执行和路径处理可能有问题
 #[ignore] // 忽略：执行多个命令，可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_complete_workflow_dry_run() -> color_eyre::Result<()> {
+fn test_complete_workflow_dry_run_return_result() -> color_eyre::Result<()> {
     // 注意：此测试执行多个命令，其中一些可能尝试初始化服务或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - 多个 Git 命令执行可能更慢

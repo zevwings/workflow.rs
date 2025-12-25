@@ -186,6 +186,17 @@ fn test_pr_list_command_with_various_options_parses_correctly(
 // ==================== Update Command Tests ====================
 
 /// 测试PR更新命令的参数解析（无参数）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_update_command_with_valid_input_parses_successfully() {
     // Arrange: 准备有效的 Update 命令输入（无参数）
@@ -376,6 +387,17 @@ fn test_pr_approve_command_with_various_inputs_parses_correctly(
 // ==================== Comment Command Tests ====================
 
 /// 测试PR评论命令的参数解析（包含PR ID和消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() {
     // Arrange: 准备带 PR ID 和消息的 Comment 命令输入
@@ -399,6 +421,17 @@ fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() {
 }
 
 /// 测试PR评论命令的参数解析（多词消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_comment_command_with_multiple_words_parses_correctly() {
     let cli = TestPRCli::try_parse_from(&[
@@ -426,6 +459,17 @@ fn test_pr_comment_command_with_multiple_words_parses_correctly() {
 }
 
 /// 测试PR评论命令的参数解析（只有单个参数，无消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_comment_command_without_id() {
     // Arrange: 准备测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
@@ -565,6 +609,17 @@ fn test_pr_commands_enum_all_variants(
 }
 
 /// 测试PR命令的错误处理（无效子命令）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_commands_error_handling_invalid_subcommand() {
     // Arrange: 准备测试无效子命令的错误处理
@@ -573,6 +628,17 @@ fn test_pr_commands_error_handling_invalid_subcommand() {
 }
 
 /// 测试PR命令的必需参数验证
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_commands_required_parameters() {
     // Arrange: 准备测试必需参数的错误处理
@@ -599,6 +665,17 @@ fn test_pr_commands_required_parameters() {
 // ==================== Boundary Condition Tests ====================
 
 /// 测试PR创建命令的空JIRA ID（应被验证器拒绝）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_create_command_empty_jira_id() {
     // Arrange: 准备测试空字符串 JIRA ID（应该被验证器拒绝）
@@ -624,6 +701,17 @@ fn test_pr_create_command_empty_jira_id() {
 }
 
 /// 测试PR创建命令的超长标题（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_create_command_very_long_title() {
     // Arrange: 准备测试超长标题（边界情况）
@@ -640,6 +728,17 @@ fn test_pr_create_command_very_long_title() {
 }
 
 /// 测试PR创建命令标题中的特殊字符
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_create_command_special_characters_in_title() {
     // Arrange: 准备测试标题中的特殊字符
@@ -657,6 +756,17 @@ fn test_pr_create_command_special_characters_in_title() {
 }
 
 /// 测试PR评论命令的空消息（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_comment_command_empty_message() {
     // Arrange: 准备测试空消息的情况
@@ -675,6 +785,17 @@ fn test_pr_comment_command_empty_message() {
 }
 
 /// 测试PR列表命令的limit为0（边界值）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_list_command_zero_limit() {
     // Arrange: 准备测试 limit 为 0 的情况（边界值）
@@ -690,6 +811,17 @@ fn test_pr_list_command_zero_limit() {
 }
 
 /// 测试PR列表命令的超大limit值（边界情况）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_list_command_very_large_limit() {
     // Arrange: 准备测试非常大的 limit 值（边界情况）

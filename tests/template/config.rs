@@ -15,6 +15,17 @@ use workflow::template::{CommitTemplates, PullRequestsTemplates, TemplateConfig}
 // ==================== Test Cases ====================
 
 /// 测试默认配置加载
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_load_default_config() {
     let config = TemplateConfig::default();
@@ -44,6 +55,17 @@ fn test_load_default_config() {
 }
 
 /// 测试配置结构体创建
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_struct_creation() {
     let branch_templates = BranchTemplates {
@@ -81,6 +103,17 @@ fn test_config_struct_creation() {
 }
 
 /// 测试分支模板默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_branch_templates_default() {
     let branch_templates = BranchTemplates::default();
@@ -109,6 +142,17 @@ fn test_branch_templates_default() {
 }
 
 /// 测试提交模板默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_commit_templates_default() {
     let commit_templates = CommitTemplates::default();
@@ -125,6 +169,17 @@ fn test_commit_templates_default() {
 }
 
 /// 测试 PR 模板默认实现
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_pr_templates_default() {
     let pr_templates = PullRequestsTemplates::default();
@@ -140,6 +195,17 @@ fn test_pr_templates_default() {
 }
 
 /// 测试配置序列化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_serialization() {
     let config = TemplateConfig::default();
@@ -162,6 +228,17 @@ fn test_config_serialization() {
 }
 
 /// 测试配置反序列化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_deserialization() {
     // Arrange: 准备测试从 JSON 反序列化
@@ -214,6 +291,17 @@ default = "TOML PR template"
 }
 
 /// 测试分支模板按 JIRA 类型加载
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_load_branch_template_by_jira_type() {
     // 由于这个方法需要实际的配置文件，我们主要测试它不会 panic
@@ -237,6 +325,17 @@ fn test_load_branch_template_by_jira_type() {
 }
 
 /// 测试分支模板按分支类型加载
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_load_branch_template_by_branch_type() {
     // Arrange: 准备测试各种分支类型
@@ -262,6 +361,17 @@ fn test_load_branch_template_by_branch_type() {
 }
 
 /// 测试提交模板加载
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_load_commit_template() {
     let result = TemplateConfig::load_commit_template();
@@ -280,6 +390,17 @@ fn test_load_commit_template() {
 }
 
 /// 测试 PR 模板加载
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_load_pull_request_template() {
     let result = TemplateConfig::load_pull_request_template();
@@ -298,6 +419,17 @@ fn test_load_pull_request_template() {
 }
 
 /// 测试配置克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_clone() {
     let original_config = TemplateConfig::default();
@@ -314,6 +446,17 @@ fn test_config_clone() {
 }
 
 /// 测试配置调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_config_debug() {
     let config = TemplateConfig::default();

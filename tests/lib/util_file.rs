@@ -120,7 +120,7 @@ fn test_file_writer_pathbuf_with_pathbuf_creates_writer() {
 /// ## 预期结果
 /// - 文件内容被正确读取为字符串
 #[test]
-fn test_file_reader_to_string_with_text_file_reads_content() -> color_eyre::Result<()> {
+fn test_file_reader_to_string_with_text_file_reads_content_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备临时文件和内容
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -150,7 +150,7 @@ fn test_file_reader_to_string_with_text_file_reads_content() -> color_eyre::Resu
 /// ## 预期结果
 /// - 所有行被正确读取，行数和内容正确
 #[test]
-fn test_file_reader_lines_with_multiline_file_reads_lines() -> color_eyre::Result<()> {
+fn test_file_reader_lines_with_multiline_file_reads_lines_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备多行临时文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.txt");
@@ -183,7 +183,7 @@ fn test_file_reader_lines_with_multiline_file_reads_lines() -> color_eyre::Resul
 /// ## 预期结果
 /// - 二进制文件的字节内容被正确读取
 #[test]
-fn test_file_reader_bytes_with_binary_file_reads_bytes() -> color_eyre::Result<()> {
+fn test_file_reader_bytes_with_binary_file_reads_bytes_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备二进制临时文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("test.bin");
@@ -215,7 +215,7 @@ fn test_file_reader_bytes_with_binary_file_reads_bytes() -> color_eyre::Result<(
 /// ## 预期结果
 /// - 文件内容与写入的内容一致
 #[test]
-fn test_file_writer_write_str_with_text_content_writes_file() -> color_eyre::Result<()> {
+fn test_file_writer_write_str_with_text_content_writes_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和文件路径
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("output.txt");
@@ -276,7 +276,7 @@ fn test_file_writer_write_str_with_dir_creates_dir_and_writes_file() -> color_ey
 /// ## 预期结果
 /// - 文件内容与写入的字节内容一致
 #[test]
-fn test_file_writer_write_bytes_with_binary_content_writes_file() -> color_eyre::Result<()> {
+fn test_file_writer_write_bytes_with_binary_content_writes_file_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和文件路径
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("output.bin");
@@ -370,7 +370,7 @@ fn test_file_writer_ensure_parent_dir_with_nested_path_creates_dirs() -> color_e
 /// ## 预期结果
 /// - TOML 文件被正确解析为配置结构
 #[test]
-fn test_file_reader_toml_with_valid_toml_parses_config() -> color_eyre::Result<()> {
+fn test_file_reader_toml_with_valid_toml_parses_config_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 TOML 文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.toml");
@@ -414,7 +414,7 @@ number = 42
 /// ## 预期结果
 /// - JSON 文件被正确解析为配置结构
 #[test]
-fn test_file_reader_json_with_valid_json_parses_config() -> color_eyre::Result<()> {
+fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 JSON 文件
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.json");
@@ -452,7 +452,7 @@ fn test_file_reader_json_with_valid_json_parses_config() -> color_eyre::Result<(
 /// ## 预期结果
 /// - 配置被正确序列化为 TOML 格式并写入文件
 #[test]
-fn test_file_writer_write_toml_with_valid_config_writes_toml() -> color_eyre::Result<()> {
+fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备配置结构和文件路径
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.toml");
@@ -499,7 +499,7 @@ fn test_file_writer_write_toml_with_valid_config_writes_toml() -> color_eyre::Re
 /// ## 预期结果
 /// - 配置被正确序列化为 JSON 格式并写入文件
 #[test]
-fn test_file_writer_write_json_with_valid_config_writes_json() -> color_eyre::Result<()> {
+fn test_file_writer_write_json_with_valid_config_writes_json_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备配置结构和文件路径
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("config.json");

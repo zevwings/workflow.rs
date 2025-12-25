@@ -49,7 +49,7 @@ fn test_commands_config_default_with_no_parameters_creates_empty_config() {
 /// - 返回非空命令列表
 /// - 包含预期的默认命令（"pr create", "jira info", "branch create"等）
 #[test]
-fn test_commands_config_get_common_commands_default_with_no_config_returns_defaults() -> Result<()> {
+fn test_commands_config_get_common_commands_default_with_no_config_return_result() -> Result<()> {
     // Arrange: 准备无配置文件的环境
 
     // Act: 获取默认常用命令列表
@@ -81,7 +81,7 @@ fn test_commands_config_get_common_commands_default_with_no_config_returns_defau
 /// ## 预期结果
 /// - 配置文件读取成功（取决于路径解析逻辑）
 #[test]
-fn test_commands_config_get_common_commands_from_file_with_valid_config_reads_commands() -> Result<()> {
+fn test_commands_config_get_common_commands_from_file_with_valid_config_reads_commands_return_result() -> Result<()> {
     // Arrange: 准备配置文件
     let mut env = CliTestEnv::new()?;
     let config_path = env.path().join("commands.toml");
@@ -117,7 +117,7 @@ common_commands = [
 /// - 返回非空命令列表
 /// - 返回默认命令列表
 #[test]
-fn test_commands_config_get_common_commands_empty_file_with_empty_config_returns_defaults() -> Result<()> {
+fn test_commands_config_get_common_commands_empty_file_with_empty_config_return_empty() -> Result<()> {
     // Arrange: 准备空配置文件环境
 
     // Act: 获取常用命令列表
@@ -172,7 +172,7 @@ fn test_commands_config_load_nonexistent_file_with_missing_file_handles_graceful
 /// - 返回Result类型（Ok或Err都可以接受）
 /// - 不会panic
 #[test]
-fn test_commands_config_load_existing_file_with_valid_config_loads_config() -> Result<()> {
+fn test_commands_config_load_existing_file_with_valid_config_loads_config_return_result() -> Result<()> {
     // Arrange: 准备存在的配置文件
     let mut env = CliTestEnv::new()?;
     let config_path = env.path().join("commands.toml");
@@ -214,7 +214,7 @@ common_commands = [
 /// - 返回非空命令列表
 /// - 可能包含自定义命令或默认命令
 #[test]
-fn test_commands_config_get_common_commands_with_custom_file_reads_custom_commands() -> Result<()> {
+fn test_commands_config_get_common_commands_with_custom_file_reads_custom_commands_return_result() -> Result<()> {
     // Arrange: 准备包含自定义命令的配置文件
     let mut env = CliTestEnv::new()?;
     let config_path = env.path().join("commands.toml");

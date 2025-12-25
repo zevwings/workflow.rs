@@ -727,7 +727,7 @@ fn test_config_default_with_multiple_calls_returns_consistent_defaults() {
 /// - 配置能够正确从文件加载
 #[test]
 #[serial(repo_config_fs)] // 串行执行，避免工作目录冲突
-fn test_load_from_existing_file_with_valid_config_returns_loaded_config() -> Result<()> {
+fn test_load_from_existing_file_with_valid_config_return_result() -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -780,7 +780,7 @@ separator = "/"
 /// - 返回默认配置（所有字段为空）
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_non_existing_file_returns_default_config() -> Result<()> {
+fn test_load_from_non_existing_file_return_result() -> Result<()> {
     // Arrange: 创建没有配置文件的临时 Git 仓库
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -857,7 +857,7 @@ fn test_save_to_new_file_with_config_creates_file() -> Result<()> {
 /// - 其他配置部分被保留，模板配置已更新
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_preserves_other_sections_with_existing_config_preserves_other_sections() -> Result<()> {
+fn test_save_preserves_other_sections_with_existing_config_preserves_other_sections_return_result() -> Result<()> {
     // Arrange: 创建包含其他配置部分的临时 Git 仓库
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -914,7 +914,7 @@ type = "old_type"
 /// - 修改后的配置能够正确保存和重新加载
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip_with_modified_config_returns_consistent_config() -> Result<()> {
+fn test_load_and_save_roundtrip_with_modified_config_return_result() -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -984,7 +984,7 @@ require_review = true
 /// - 返回 TOML 解析错误
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_corrupted_toml_file_with_invalid_toml_returns_error() -> Result<()> {
+fn test_load_corrupted_toml_file_with_invalid_toml_return_result() -> Result<()> {
     // Arrange: 创建包含无效 TOML 的配置文件
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -1020,7 +1020,7 @@ type = "invalid  # 缺少闭合引号和括号
 #[test]
 #[cfg(unix)]
 #[serial(repo_config_fs)]
-fn test_save_to_readonly_directory_with_config_returns_error() -> Result<()> {
+fn test_save_to_readonly_directory_with_config_return_result() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 创建只读的 .workflow 目录

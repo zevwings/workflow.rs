@@ -317,7 +317,7 @@ fn test_change_type_item_parsing_with_valid_fields_creates_item() {
 
 /// 测试变量序列化
 #[test]
-fn test_vars_serialization() -> Result<()> {
+fn test_vars_serialization_return_result() -> Result<()> {
     // Arrange: 准备测试分支模板变量序列化
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SER-123".to_string()),
@@ -362,8 +362,19 @@ fn test_vars_serialization() -> Result<()> {
 }
 
 /// 测试特殊字符处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_vars_with_special_characters() -> Result<()> {
+fn test_vars_with_special_characters_return_result() -> Result<()> {
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SPECIAL-123".to_string()),
         jira_summary: Some("Fix \"authentication\" & <security> issues".to_string()),
@@ -385,8 +396,19 @@ fn test_vars_with_special_characters() -> Result<()> {
 }
 
 /// 测试变量完整性
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_vars_completeness() -> Result<()> {
+fn test_vars_completeness_return_result() -> Result<()> {
     // Arrange: 准备测试所有字段都存在的完整变量
     let complete_branch_vars = BranchTemplateVars {
         jira_key: Some("COMPLETE-001".to_string()),
@@ -453,6 +475,17 @@ fn test_vars_completeness() -> Result<()> {
 }
 
 /// 测试变量克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_vars_clone() {
     let original_branch_vars = BranchTemplateVars {
@@ -495,6 +528,17 @@ fn test_vars_clone() {
 }
 
 /// 测试变量调试输出
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_vars_debug() {
     let branch_vars = BranchTemplateVars {

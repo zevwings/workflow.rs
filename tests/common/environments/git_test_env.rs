@@ -8,7 +8,7 @@
 //! use tests::common::environments::GitTestEnv;
 //!
 //! #[test]
-//! fn test_git_operations() -> color_eyre::Result<()> {
+//! fn test_git_operations_return_result() -> color_eyre::Result<()> {
 //!     let env = GitTestEnv::new()?;
 //!
 //!     env.create_branch("feature/test")?;
@@ -394,7 +394,7 @@ mod tests {
     /// - .git目录存在
     #[test]
     #[serial]
-    fn test_git_test_env_creation() -> Result<()> {
+    fn test_git_test_env_creation_return_result() -> Result<()> {
         let env = GitTestEnv::new()?;
         let path = env.path();
         assert!(path.exists());
@@ -448,7 +448,7 @@ mod tests {
     /// - 提交后的SHA与提交前不同
     #[test]
     #[serial]
-    fn test_make_test_commit() -> Result<()> {
+    fn test_make_test_commit_return_result() -> Result<()> {
         let env = GitTestEnv::new()?;
 
         let sha_before = env.last_commit_sha()?;
@@ -482,7 +482,7 @@ mod tests {
     /// - 全局工作目录保持不变（使用绝对路径，不切换全局目录）
     #[test]
     #[serial]
-    fn test_isolation_from_current_repo() -> Result<()> {
+    fn test_isolation_from_current_repo_return_result() -> Result<()> {
         // 验证 GitTestEnv 不会操作当前仓库
         let original_dir = std::env::current_dir()?;
         let original_dir_str = original_dir.to_string_lossy().to_string();

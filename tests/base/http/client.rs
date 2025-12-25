@@ -25,7 +25,7 @@ use workflow::base::http::{Authorization, HttpClient, RequestConfig};
 /// - 能够成功获取全局客户端实例
 /// - 多次调用返回同一个实例（单例模式）
 #[test]
-fn test_http_client_global_returns_singleton_instance() -> Result<()> {
+fn test_http_client_global_return_result() -> Result<()> {
     // Arrange: 准备获取全局客户端
 
     // Act: 获取全局客户端实例
@@ -53,7 +53,7 @@ fn test_http_client_global_returns_singleton_instance() -> Result<()> {
 /// - 响应标记为成功
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_get_request_with_success_response_returns_response() -> Result<()> {
+fn test_get_request_with_success_response_return_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
@@ -94,7 +94,7 @@ fn test_get_request_with_success_response_returns_response() -> Result<()> {
 /// - 请求成功
 /// - 查询参数正确匹配
 #[test]
-fn test_get_request_with_query_parameters_sends_query_string() -> Result<()> {
+fn test_get_request_with_query_parameters_sends_query_string_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和查询参数匹配
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
@@ -139,7 +139,7 @@ fn test_get_request_with_query_parameters_sends_query_string() -> Result<()> {
 /// - 请求成功
 /// - 认证头正确匹配（Basic 认证）
 #[test]
-fn test_get_request_with_auth_header_sends_authorization() -> Result<()> {
+fn test_get_request_with_auth_header_sends_authorization_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和认证匹配
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
@@ -181,7 +181,7 @@ fn test_get_request_with_auth_header_sends_authorization() -> Result<()> {
 /// - 请求成功
 /// - 自定义请求头正确匹配
 #[test]
-fn test_get_request_with_custom_headers_sends_headers() -> Result<()> {
+fn test_get_request_with_custom_headers_sends_headers_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和自定义请求头
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
@@ -239,7 +239,7 @@ fn test_get_request_with_custom_headers_sends_headers() -> Result<()> {
 // ==================== POST Request Tests ====================
 
 #[test]
-fn test_post_request_with_json_body_returns_response() -> Result<()> {
+fn test_post_request_with_json_body_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
@@ -284,7 +284,7 @@ fn test_post_request_with_json_body_returns_response() -> Result<()> {
 /// - 响应状态码为 200
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_put_request_with_json_body_returns_response() -> Result<()> {
+fn test_put_request_with_json_body_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
@@ -329,7 +329,7 @@ fn test_put_request_with_json_body_returns_response() -> Result<()> {
 /// - 响应状态码为 204
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_delete_request_with_valid_url_returns_response() -> Result<()> {
+fn test_delete_request_with_valid_url_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
@@ -364,7 +364,7 @@ fn test_delete_request_with_valid_url_returns_response() -> Result<()> {
 /// - 响应状态码为 200
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_patch_request_with_json_body_returns_response() -> Result<()> {
+fn test_patch_request_with_json_body_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
@@ -410,7 +410,7 @@ fn test_patch_request_with_json_body_returns_response() -> Result<()> {
 /// - 请求头正确匹配（multipart/form-data）
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_post_multipart_request_with_form_data_returns_response() -> Result<()> {
+fn test_post_multipart_request_with_form_data_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 multipart 表单数据
     let mut mock_server = setup_mock_server();
     let url = format!("{}/upload", mock_server.base_url);
@@ -460,7 +460,7 @@ fn test_post_multipart_request_with_form_data_returns_response() -> Result<()> {
 /// - 流数据内容正确
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
+fn test_stream_request_with_get_method_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器和流式响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/stream", mock_server.base_url);
@@ -503,7 +503,7 @@ fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
 /// - 请求成功
 /// - 超时配置正确传递
 #[test]
-fn test_request_with_timeout_config_applies_timeout() -> Result<()> {
+fn test_request_with_timeout_config_applies_timeout_return_result() -> Result<()> {
     // Arrange: 准备 Mock 服务器（注意：mockito 不支持真正的延迟，这里只测试配置是否正确传递）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/slow", mock_server.base_url);
@@ -542,7 +542,7 @@ fn test_request_with_timeout_config_applies_timeout() -> Result<()> {
 /// - 响应标记为错误
 /// - Mock 服务器收到预期的请求
 #[test]
-fn test_request_with_error_status_handles_error_response() -> Result<()> {
+fn test_request_with_error_status_handles_error_response_return_false() -> Result<()> {
     // Arrange: 准备返回错误状态码的 Mock 服务器
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
@@ -581,7 +581,7 @@ fn test_request_with_error_status_handles_error_response() -> Result<()> {
 /// - 请求成功
 /// - 所有选项正确匹配（查询参数、认证头、请求头、请求体）
 #[test]
-fn test_request_with_all_options_configures_all_options() -> Result<()> {
+fn test_request_with_all_options_configures_all_options_return_collect() -> Result<()> {
     // Arrange: 准备包含所有选项的请求配置
     let mut mock_server = setup_mock_server();
     let url = format!("{}/complex", mock_server.base_url);
@@ -638,7 +638,7 @@ fn test_request_with_all_options_configures_all_options() -> Result<()> {
 /// - 响应状态码为 200
 /// - JSON 内容正确解析
 #[test]
-fn test_http_client_get_with_valid_url_returns_response() -> color_eyre::Result<()> {
+fn test_http_client_get_with_valid_url_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器
     let mut manager = MockServer::new();
     let mock = manager
@@ -679,7 +679,7 @@ fn test_http_client_get_with_valid_url_returns_response() -> color_eyre::Result<
 /// - 响应状态码为 201
 /// - JSON 内容正确解析
 #[test]
-fn test_http_client_post_with_json_body_returns_response() -> color_eyre::Result<()> {
+fn test_http_client_post_with_json_body_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
     let body = serde_json::json!({"key": "value"});
@@ -722,7 +722,7 @@ fn test_http_client_post_with_json_body_returns_response() -> color_eyre::Result
 /// - 认证头正确匹配
 /// - JSON 内容正确解析
 #[test]
-fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
+fn test_http_client_get_with_auth_return_result() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
 
     let mock = manager
@@ -766,7 +766,7 @@ fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
 /// - 响应状态码为 200
 /// - 查询参数正确匹配
 #[test]
-fn test_http_client_get_with_query() -> color_eyre::Result<()> {
+fn test_http_client_get_with_query_return_result() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
 
     let mock = manager
@@ -808,7 +808,7 @@ fn test_http_client_get_with_query() -> color_eyre::Result<()> {
 /// - 响应状态码为 200
 /// - 自定义请求头正确匹配
 #[test]
-fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
+fn test_http_client_get_with_headers_return_result() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
 
     use reqwest::header::HeaderMap;
@@ -853,7 +853,7 @@ fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
 /// - 响应状态码为 200
 /// - 超时配置正确传递
 #[test]
-fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
+fn test_http_client_get_with_timeout_return_result() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
 
     let mock = manager
@@ -889,7 +889,7 @@ fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
 /// ## 预期结果
 /// - 响应状态码为 200
 #[test]
-fn test_http_client_put_with_json_body_returns_response() -> color_eyre::Result<()> {
+fn test_http_client_put_with_json_body_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
     let body = serde_json::json!({"key": "updated_value"});
@@ -928,7 +928,7 @@ fn test_http_client_put_with_json_body_returns_response() -> color_eyre::Result<
 /// ## 预期结果
 /// - 响应状态码为 204
 #[test]
-fn test_http_client_delete_with_valid_url_returns_response() -> color_eyre::Result<()> {
+fn test_http_client_delete_with_valid_url_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器
     let mut manager = MockServer::new();
     let mock = manager
@@ -966,7 +966,7 @@ fn test_http_client_delete_with_valid_url_returns_response() -> color_eyre::Resu
 /// ## 预期结果
 /// - 响应状态码为 200
 #[test]
-fn test_http_client_patch_with_json_body_returns_response() -> color_eyre::Result<()> {
+fn test_http_client_patch_with_json_body_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
     let body = serde_json::json!({"key": "patched_value"});
@@ -1006,7 +1006,7 @@ fn test_http_client_patch_with_json_body_returns_response() -> color_eyre::Resul
 /// - 响应状态码为 404
 /// - 响应标记为错误
 #[test]
-fn test_http_client_get_with_error_status_handles_error_response() -> color_eyre::Result<()> {
+fn test_http_client_get_with_error_status_handles_error_response_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备返回错误状态码的 Mock 服务器
     let mut manager = MockServer::new();
     let mock = manager

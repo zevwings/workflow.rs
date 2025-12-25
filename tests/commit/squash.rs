@@ -53,6 +53,17 @@ fn create_single_commit() -> CommitInfo {
 // ==================== Test Cases ====================
 
 /// 测试获取分支提交（多个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_get_branch_commits_with_multiple_commits_returns_all_commits() {
     // Arrange: 准备多个提交
@@ -66,6 +77,17 @@ fn test_get_branch_commits_with_multiple_commits_returns_all_commits() {
 }
 
 /// 测试创建预览（多个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_create_preview_with_multiple_commits_creates_preview() {
     // Arrange: 准备多个提交和新消息
@@ -89,6 +111,17 @@ fn test_create_preview_with_multiple_commits_creates_preview() {
 }
 
 /// 测试创建预览（单个提交）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_create_preview_with_single_commit_creates_preview() {
     // Arrange: 准备单个提交和新消息
@@ -110,6 +143,17 @@ fn test_create_preview_with_single_commit_creates_preview() {
 }
 
 /// 测试格式化预览显示
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_format_preview_with_valid_preview_returns_formatted_string() {
     // Arrange: 准备预览数据
@@ -133,6 +177,17 @@ fn test_format_preview_with_valid_preview_returns_formatted_string() {
 }
 
 /// 测试 SquashOptions 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_options_with_valid_fields_creates_options() {
     // Arrange: 准备选项字段值
@@ -155,6 +210,17 @@ fn test_squash_options_with_valid_fields_creates_options() {
 }
 
 /// 测试 SquashResult 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_result_with_success_fields_creates_result() {
     // Arrange: 准备成功结果字段值
@@ -176,6 +242,17 @@ fn test_squash_result_with_success_fields_creates_result() {
 }
 
 /// 测试 SquashResult 失败场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_result_with_failure_fields_creates_result() {
     // Arrange: 准备失败结果字段值
@@ -197,6 +274,17 @@ fn test_squash_result_with_failure_fields_creates_result() {
 }
 
 /// 测试 SquashPreview 结构
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_preview_with_valid_fields_creates_preview() {
     // Arrange: 准备预览字段值
@@ -221,6 +309,17 @@ fn test_squash_preview_with_valid_fields_creates_preview() {
 }
 
 /// 测试空提交列表处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_create_preview_with_empty_commits_handles_gracefully() {
     // Arrange: 准备空提交列表
@@ -242,6 +341,17 @@ fn test_create_preview_with_empty_commits_handles_gracefully() {
 }
 
 /// 测试 SquashPreview 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_preview_clone_with_valid_preview_creates_clone() {
     // Arrange: 准备原始预览
@@ -264,6 +374,17 @@ fn test_squash_preview_clone_with_valid_preview_creates_clone() {
 }
 
 /// 测试 SquashOptions 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_squash_options_clone_with_valid_options_creates_clone() {
     // Arrange: 准备原始选项
@@ -283,6 +404,17 @@ fn test_squash_options_clone_with_valid_options_creates_clone() {
 }
 
 /// 测试错误处理场景
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_get_branch_commits_error_handling_with_invalid_environment_handles_gracefully() {
     // Arrange: 测试在非 Git 仓库环境中的行为
@@ -310,8 +442,19 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
 }
 
 /// 测试 Git 仓库集成
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_git_integration() -> color_eyre::Result<()> {
+fn test_git_integration_return_result() -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let env = GitTestEnv::new()?;
 

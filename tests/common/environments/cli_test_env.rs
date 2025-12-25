@@ -8,7 +8,7 @@
 //! use tests::common::environments::CliTestEnv;
 //!
 //! #[test]
-//! fn test_cli_command() -> color_eyre::Result<()> {
+//! fn test_cli_command_return_result() -> color_eyre::Result<()> {
 //!     let env = CliTestEnv::new()?;
 //!     env.init_git_repo()?;
 //!     env.create_file("test.txt", "content")?;
@@ -309,7 +309,7 @@ mod tests {
     /// - 路径存在
     /// - 路径为目录
     #[test]
-    fn test_cli_test_env_creation() -> Result<()> {
+    fn test_cli_test_env_creation_return_result() -> Result<()> {
         let env = CliTestEnv::new()?;
         assert!(env.path().exists());
         assert!(env.path().is_dir());
@@ -331,7 +331,7 @@ mod tests {
     /// - .git目录存在
     #[test]
     #[serial]
-    fn test_init_git_repo() -> Result<()> {
+    fn test_init_git_repo_return_result() -> Result<()> {
         let env = CliTestEnv::new()?;
         env.init_git_repo()?;
 

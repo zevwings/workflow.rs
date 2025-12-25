@@ -35,6 +35,17 @@ fn create_sample_commit_info() -> CommitInfo {
 // ==================== Test Cases ====================
 
 /// 测试创建预览
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_create_preview() -> Result<()> {
     let commit_info = create_sample_commit_info();
@@ -66,6 +77,17 @@ fn test_create_preview() -> Result<()> {
 }
 
 /// 测试创建预览（无新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_create_preview_without_new_message() -> Result<()> {
     let commit_info = create_sample_commit_info();
@@ -94,6 +116,17 @@ fn test_create_preview_without_new_message() -> Result<()> {
 }
 
 /// 测试格式化预览显示（有新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_format_preview_display_with_new_message_returns_formatted_string() {
     // Arrange: 准备有新消息的预览
@@ -120,6 +153,17 @@ fn test_format_preview_display_with_new_message_returns_formatted_string() {
 }
 
 /// 测试格式化预览显示（无新消息）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_format_preview_display_without_new_message_returns_formatted_string() {
     // Arrange: 准备无新消息的预览
@@ -144,6 +188,17 @@ fn test_format_preview_display_without_new_message_returns_formatted_string() {
 }
 
 /// 测试完成消息格式化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_format_completion_message_with_valid_input_returns_message() {
     // Arrange: 准备分支名和 SHA
@@ -170,6 +225,17 @@ fn test_format_completion_message_with_valid_input_returns_message() {
 }
 
 /// 测试强制推送警告检查（已推送）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
     // Arrange: 准备分支名和 SHA（已推送的提交）
@@ -193,6 +259,17 @@ fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
 }
 
 /// 测试强制推送警告检查（未推送）
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
     // Arrange: 准备分支名和 SHA（未推送的提交）
@@ -213,6 +290,17 @@ fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
 }
 
 /// 测试详细提交信息格式化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_format_commit_info_detailed_with_valid_info_returns_formatted_string() {
     // Arrange: 准备提交信息、分支名和状态
@@ -233,6 +321,17 @@ fn test_format_commit_info_detailed_with_valid_info_returns_formatted_string() {
 }
 
 /// 测试 AmendPreview 结构体字段
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_amend_preview_struct_with_valid_fields_creates_preview() {
     // Arrange: 准备预览字段值
@@ -264,6 +363,17 @@ fn test_amend_preview_struct_with_valid_fields_creates_preview() {
 }
 
 /// 测试 AmendPreview 克隆功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_amend_preview_clone_with_valid_preview_creates_clone() {
     // Arrange: 准备原始预览
@@ -289,8 +399,19 @@ fn test_amend_preview_clone_with_valid_preview_creates_clone() {
 }
 
 /// 测试 Git 仓库集成
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_git_integration() -> Result<()> {
+fn test_git_integration_return_result() -> Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let _env = GitTestEnv::new()?;
 

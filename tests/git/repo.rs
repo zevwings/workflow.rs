@@ -35,7 +35,7 @@ use workflow::git::{GitRepo, RepoType};
 #[case("https://codeup.aliyun.com/owner/repo.git", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo")]
 #[case("http://codeup.aliyun.com/owner/repo", "owner/repo")]
-fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_valid_cases_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试各种有效 URL 格式的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -54,7 +54,7 @@ fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expect
     "https://codeup.aliyun.com/group/subgroup/project.git",
     "group/subgroup/project"
 )]
-fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_nested_paths_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试嵌套路径的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -71,7 +71,7 @@ fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expec
 #[case("git@github.com:owner/repo.with.dots.git", "owner/repo.with.dots")]
 #[case("https://github.com/owner/repo123", "owner/repo123")]
 #[case("git@codeup.aliyun.com:中文用户/中文仓库.git", "中文用户/中文仓库")]
-fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_special_characters_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试包含特殊字符的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -117,7 +117,7 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
 #[case("https://github.com/owner/repo/", "owner/repo")]
 #[case("https://github.com/owner/repo.git/", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo/", "owner/repo")]
-fn test_extract_repo_name_from_url_trailing_slashes(
+fn test_extract_repo_name_from_url_trailing_slashes_return_result(
     #[case] url: &str,
     #[case] expected: &str,
 ) -> Result<()> {
@@ -145,7 +145,7 @@ fn test_extract_repo_name_from_url_trailing_slashes(
 #[case("https://github.com/Owner/Repo.git", "Owner/Repo")]
 #[case("git@github.com:Owner/Repo.git", "Owner/Repo")]
 #[case("https://codeup.aliyun.com/Owner/Repo", "Owner/Repo")]
-fn test_extract_repo_name_from_url_case_sensitivity_valid_cases(
+fn test_extract_repo_name_from_url_case_sensitivity_valid_cases_return_result(
     #[case] url: &str,
     #[case] expected: &str,
 ) -> Result<()> {
@@ -227,6 +227,17 @@ fn test_parse_repo_type_consistency_with_mock(#[case] url: &str, #[case] expecte
 }
 
 /// 测试GitHub SSH别名检测
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_github_ssh_alias_detection() {
     // Arrange: 准备测试 GitHub SSH 别名的检测
@@ -249,6 +260,17 @@ fn test_github_ssh_alias_detection() {
 }
 
 /// 测试大小写敏感的检测
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_case_sensitive_detection() {
     // Arrange: 准备测试大小写敏感的检测 - mock 实现是大小写敏感的
@@ -289,6 +311,17 @@ fn test_case_sensitive_detection() {
 // ==================== Boundary Conditions and Error Handling Tests ====================
 
 /// 测试空字符串和空白字符的处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_empty_and_whitespace_urls() {
     // Arrange: 准备测试空字符串和空白字符的处理
@@ -313,6 +346,17 @@ fn test_empty_and_whitespace_urls() {
 }
 
 /// 测试格式错误的URL
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_malformed_urls() {
     // Arrange: 准备测试格式错误的 URL
@@ -332,8 +376,19 @@ fn test_malformed_urls() {
 }
 
 /// 测试Unicode字符和特殊字符的处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_unicode_and_special_characters() -> Result<()> {
+fn test_unicode_and_special_characters_return_result() -> Result<()> {
     // Arrange: 准备测试 Unicode 字符和特殊字符的处理
     let unicode_cases = vec![
         ("git@github.com:用户/仓库.git", "用户/仓库"),
@@ -353,8 +408,19 @@ fn test_unicode_and_special_characters() -> Result<()> {
 }
 
 /// 测试极长URL的处理
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_very_long_urls() -> Result<()> {
+fn test_very_long_urls_return_result() -> Result<()> {
     // Arrange: 准备测试极长的 URL
     let long_owner = "a".repeat(100);
     let long_repo = "b".repeat(100);
@@ -367,6 +433,17 @@ fn test_very_long_urls() -> Result<()> {
 }
 
 /// 测试包含查询参数的URL
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_url_with_query_parameters() {
     // Arrange: 准备测试包含查询参数的 URL（虽然不常见，但应该优雅处理）
@@ -386,6 +463,17 @@ fn test_url_with_query_parameters() {
 // ==================== Performance and Stress Tests ====================
 
 /// 测试大量URL处理的性能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_performance_with_many_urls() {
     // Arrange: 准备测试大量 URL 处理的性能
@@ -436,7 +524,7 @@ fn test_performance_with_many_urls() {
 #[case("git@github.com:owner/repo.git", "owner/repo", RepoType::GitHub, true)]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo", RepoType::Codeup, true)]
 #[case("git@gitlab.com:owner/repo.git", "owner/repo", RepoType::Unknown, false)]
-fn test_extract_and_detect_integration(
+fn test_extract_and_detect_integration_return_result(
     #[case] url: &str,
     #[case] expected_name: &str,
     #[case] expected_type: RepoType,
@@ -462,7 +550,7 @@ fn test_extract_and_detect_integration(
 
 /// 测试已知问题的回归
 #[test]
-fn test_regression_known_issues() -> Result<()> {
+fn test_regression_known_issues_return_result() -> Result<()> {
     // Arrange: 准备测试已知问题的回归
 
     // Arrange: 准备测试：确保 SSH 别名正确处理

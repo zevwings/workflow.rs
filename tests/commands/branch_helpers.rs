@@ -27,7 +27,7 @@ use workflow::commands::branch::helpers::sort_branches_with_priority;
 /// ## 预期结果
 /// - main 分支排在第一位
 #[test]
-fn test_sort_branches_with_priority_main_first() -> Result<()> {
+fn test_sort_branches_with_priority_main_first_return_result() -> Result<()> {
     let branches = vec![
         "feature/test".to_string(),
         "main".to_string(),
@@ -55,7 +55,7 @@ fn test_sort_branches_with_priority_main_first() -> Result<()> {
 /// ## 预期结果
 /// - main 在 master 之前
 #[test]
-fn test_sort_branches_with_priority_master_after_main() -> Result<()> {
+fn test_sort_branches_with_priority_master_after_main_return_result() -> Result<()> {
     let branches = vec![
         "master".to_string(),
         "main".to_string(),
@@ -84,7 +84,7 @@ fn test_sort_branches_with_priority_master_after_main() -> Result<()> {
 /// ## 预期结果
 /// - develop 在 feature 和 hotfix 之前
 #[test]
-fn test_sort_branches_with_priority_develop_second() -> Result<()> {
+fn test_sort_branches_with_priority_develop_second_return_result() -> Result<()> {
     let branches = vec![
         "feature/test".to_string(),
         "develop".to_string(),
@@ -113,7 +113,7 @@ fn test_sort_branches_with_priority_develop_second() -> Result<()> {
 /// ## 预期结果
 /// - 其他分支按字母顺序排序
 #[test]
-fn test_sort_branches_with_priority_alphabetical_others() -> Result<()> {
+fn test_sort_branches_with_priority_alphabetical_others_return_result() -> Result<()> {
     let branches = vec!["zebra".to_string(), "alpha".to_string(), "beta".to_string()];
 
     let sorted = sort_branches_with_priority(branches)?;
@@ -138,7 +138,7 @@ fn test_sort_branches_with_priority_alphabetical_others() -> Result<()> {
 /// ## 预期结果
 /// - 返回空列表
 #[test]
-fn test_sort_branches_empty() -> Result<()> {
+fn test_sort_branches_empty_return_empty() -> Result<()> {
     let branches = vec![];
     let sorted = sort_branches_with_priority(branches)?;
     assert!(sorted.is_empty());
@@ -158,7 +158,7 @@ fn test_sort_branches_empty() -> Result<()> {
 /// ## 预期结果
 /// - 返回包含单个分支的列表
 #[test]
-fn test_sort_branches_single() -> Result<()> {
+fn test_sort_branches_single_return_result() -> Result<()> {
     let branches = vec!["feature/test".to_string()];
     let sorted = sort_branches_with_priority(branches)?;
     assert_eq!(sorted.len(), 1);
@@ -181,7 +181,7 @@ fn test_sort_branches_single() -> Result<()> {
 /// ## 预期结果
 /// - main 在第一位，develop 在 main 之后，其他分支按前缀或字母顺序排序
 #[test]
-fn test_sort_branches_with_prefix_priority() -> Result<()> {
+fn test_sort_branches_with_prefix_priority_return_result() -> Result<()> {
     // Arrange: 准备测试带前缀的分支优先级
     // 注意：这个测试依赖于当前分支或配置的前缀
     // 如果当前分支有前缀（如 "zw/feature-branch"），则 "zw/" 开头的分支应该有更高优先级
@@ -225,7 +225,7 @@ fn test_sort_branches_with_prefix_priority() -> Result<()> {
 /// - 此测试需要在非 Git 仓库环境中运行，以确保所有优先级4的分支都按字母顺序排序
 /// - 如果当前分支有前缀（如 feature/xxx），feature/test 会被提升到优先级3
 #[test]
-fn test_sort_branches_all_priority_levels() -> Result<()> {
+fn test_sort_branches_all_priority_levels_return_collect() -> Result<()> {
     use crate::common::environments::CliTestEnv;
     use crate::common::helpers::CurrentDirGuard;
 
@@ -282,7 +282,7 @@ fn test_sort_branches_all_priority_levels() -> Result<()> {
 /// ## 预期结果
 /// - 保留重复项，main 在第一位
 #[test]
-fn test_sort_branches_duplicate_names() -> Result<()> {
+fn test_sort_branches_duplicate_names_return_result() -> Result<()> {
     // Arrange: 准备测试重复分支名（边界情况）
     let branches = vec![
         "main".to_string(),
@@ -311,7 +311,7 @@ fn test_sort_branches_duplicate_names() -> Result<()> {
 /// ## 预期结果
 /// - main 在第一位，其他分支按字母顺序排序
 #[test]
-fn test_sort_branches_special_characters() -> Result<()> {
+fn test_sort_branches_special_characters_return_result() -> Result<()> {
     // Arrange: 准备测试特殊字符分支名（边界情况）
     let branches = vec![
         "feature/test-branch".to_string(),

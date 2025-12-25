@@ -52,7 +52,7 @@ fn test_config_command_show_with_empty_config_returns_ok() {
 /// - 返回Result类型（Ok或Err都可以接受）
 /// - 不会panic
 #[test]
-fn test_config_command_show_with_valid_config_returns_result() -> color_eyre::Result<()> {
+fn test_config_command_show_with_valid_config_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备有效配置环境
     let env = CliTestEnv::new()?;
     env.create_config(&TestDataGenerator::config_content())?;

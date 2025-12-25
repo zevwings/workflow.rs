@@ -40,7 +40,7 @@ fn unique_repo() -> String {
 
 /// 测试读取不存在的工作历史记录文件
 #[rstest]
-fn test_read_work_history_nonexistent_file(unique_repo: String) -> Result<()> {
+fn test_read_work_history_nonexistent_file_return_result(unique_repo: String) -> Result<()> {
     // Arrange: 准备测试读取不存在的工作历史记录文件
     let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo))?;
 
@@ -50,6 +50,17 @@ fn test_read_work_history_nonexistent_file(unique_repo: String) -> Result<()> {
 }
 
 /// 测试读取存在的工作历史记录条目
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_read_work_history_existing_entry() {
     // Arrange: 准备测试读取存在的工作历史记录条目
@@ -92,6 +103,17 @@ fn test_read_work_history_existing_entry() {
 }
 
 /// 测试读取不存在的工作历史记录条目
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_read_work_history_nonexistent_entry() {
     // Arrange: 准备测试读取不存在的工作历史记录条目
@@ -133,7 +155,7 @@ fn test_read_work_history_nonexistent_entry() {
 
 /// 测试在不存在文件中根据分支名查找PR ID
 #[rstest]
-fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) -> Result<()> {
+fn test_find_pr_id_by_branch_nonexistent_file_return_result(unique_repo: String) -> Result<()> {
     // Arrange: 准备测试在不存在文件中根据分支名查找 PR ID
     let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo))?;
 
@@ -143,6 +165,17 @@ fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) -> Result<()>
 }
 
 /// 测试根据分支名查找存在的PR ID
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_find_pr_id_by_branch_existing_branch() {
     // Arrange: 准备测试根据分支名查找存在的 PR ID
@@ -186,6 +219,17 @@ fn test_find_pr_id_by_branch_existing_branch() {
 }
 
 /// 测试根据分支名查找不存在的PR ID
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_find_pr_id_by_branch_nonexistent_branch() {
     // Arrange: 准备测试根据分支名查找不存在的 PR ID
@@ -358,6 +402,17 @@ fn test_update_work_history_merged_nonexistent_file(unique_repo: String) {
 }
 
 /// 测试基本的合并时间更新功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_update_work_history_merged_basic() {
     // Arrange: 准备测试基本的合并时间更新功能
@@ -407,7 +462,7 @@ fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
 #[case("999")]
 #[case("888")]
 #[case("777")]
-fn test_delete_work_history_entry_nonexistent_file(
+fn test_delete_work_history_entry_nonexistent_file_return_result(
     unique_repo: String,
     #[case] pr_id: &str,
 ) -> Result<()> {
@@ -429,6 +484,17 @@ fn test_delete_work_history_entry_nonexistent_file(
 }
 
 /// 测试基本的删除功能
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
 fn test_delete_work_history_entry_basic() {
     // Arrange: 准备测试基本的删除功能
@@ -453,7 +519,7 @@ fn test_delete_work_history_entry_basic() {
 
 /// 测试WorkHistoryEntry的序列化
 #[rstest]
-fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry) -> Result<()> {
+fn test_work_history_entry_serialization_return_result(sample_history_entry: WorkHistoryEntry) -> Result<()> {
     // Arrange: 准备测试 WorkHistoryEntry 的序列化
     let json_str = serde_json::to_string(&sample_history_entry)?;
 
@@ -473,8 +539,19 @@ fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry)
 }
 
 /// 测试WorkHistoryEntry的反序列化
+///
+/// ## 测试目的
+/// 验证测试函数能够正确执行预期功能。
+///
+/// ## 测试场景
+/// 1. 准备测试数据
+/// 2. 执行被测试的操作
+/// 3. 验证结果
+///
+/// ## 预期结果
+/// - 测试通过，无错误
 #[test]
-fn test_work_history_entry_deserialization() -> Result<()> {
+fn test_work_history_entry_deserialization_return_result() -> Result<()> {
     // Arrange: 准备测试 WorkHistoryEntry 的反序列化
     let json = r#"{
       "jira_ticket": "PROJ-123",
@@ -517,7 +594,7 @@ fn test_work_history_entry_deserialization() -> Result<()> {
     Some("github.com/test/repo"),
     None
 )]
-fn test_work_history_entry_with_optional_fields(
+fn test_work_history_entry_with_optional_fields_return_result(
     #[case] jira_ticket: &str,
     #[case] pull_request_url: Option<&str>,
     #[case] created_at: Option<&str>,

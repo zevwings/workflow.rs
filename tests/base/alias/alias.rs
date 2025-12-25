@@ -167,7 +167,7 @@ mod tests {
     /// - "ll" 展开为 "ls -la"
     /// - "la" 展开为 "ls -A"
     #[test]
-    fn test_simple_alias_expansion_with_valid_alias_expands_alias() -> Result<()> {
+    fn test_simple_alias_expansion_with_valid_alias_expands_alias_return_result() -> Result<()> {
         // Arrange: 准备别名映射
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
@@ -202,7 +202,7 @@ mod tests {
     /// - "lll" 递归展开为 "ls -la -h"
     /// - 嵌套别名被正确解析
     #[test]
-    fn test_nested_alias_expansion_with_nested_alias_expands_recursively() -> Result<()> {
+    fn test_nested_alias_expansion_with_nested_alias_expands_recursively_return_result() -> Result<()> {
         // Arrange: 准备嵌套别名映射
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
@@ -233,7 +233,7 @@ mod tests {
     /// - 所有嵌套层级都被正确解析
     /// - 参数顺序正确
     #[test]
-    fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels() -> Result<()> {
+    fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels_return_collect() -> Result<()> {
         // Arrange: 准备深层嵌套别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b arg1".to_string());
@@ -265,7 +265,7 @@ mod tests {
     /// - 返回错误
     /// - 错误消息包含 "Alias not found"
     #[test]
-    fn test_alias_not_found_with_nonexistent_alias_returns_error() -> Result<()> {
+    fn test_alias_not_found_with_nonexistent_alias_return_result() -> Result<()> {
         // Arrange: 准备空别名映射和不存在的别名
         let aliases = HashMap::new();
         let mut visited = HashSet::new();
@@ -296,7 +296,7 @@ mod tests {
     /// - 返回错误
     /// - 错误消息包含 "Circular alias detected"
     #[test]
-    fn test_direct_circular_alias_with_direct_cycle_detects_circular() -> Result<()> {
+    fn test_direct_circular_alias_with_direct_cycle_detects_circular_return_result() -> Result<()> {
         // Arrange: 准备直接循环别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "a".to_string()); // 直接循环
@@ -326,7 +326,7 @@ mod tests {
     /// - 错误消息包含 "Circular alias detected"
     /// - 能够检测多级间接循环
     #[test]
-    fn test_indirect_circular_alias_with_indirect_cycle_detects_circular() -> Result<()> {
+    fn test_indirect_circular_alias_with_indirect_cycle_detects_circular_return_result() -> Result<()> {
         // Arrange: 准备间接循环别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
@@ -359,7 +359,7 @@ mod tests {
     /// - 直接循环情况返回 true
     /// - 间接循环情况返回 true
     #[test]
-    fn test_circular_detection_function_with_various_cases_detects_circular() -> Result<()> {
+    fn test_circular_detection_function_with_various_cases_detects_circular_return_result() -> Result<()> {
         // Arrange: 准备别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
@@ -397,7 +397,7 @@ mod tests {
     /// - 错误消息包含 "depth exceeded maximum"
     /// - 防止无限递归
     #[test]
-    fn test_max_depth_limit_with_deep_chain_returns_error() -> Result<()> {
+    fn test_max_depth_limit_with_deep_chain_return_result() -> Result<()> {
         // Arrange: 创建一个很深的别名链（超过最大深度限制）
         let mut aliases = HashMap::new();
         for i in 0..15 {
@@ -431,7 +431,7 @@ mod tests {
     /// - 展开成功
     /// - 返回最终命令 "echo final"
     #[test]
-    fn test_depth_within_limit_with_valid_depth_expands_successfully() -> Result<()> {
+    fn test_depth_within_limit_with_valid_depth_expands_successfully_return_true() -> Result<()> {
         // Arrange: 创建一个在限制内的别名链（9层）
         let mut aliases = HashMap::new();
         for i in 0..9 {
@@ -469,7 +469,7 @@ mod tests {
     /// - 其他参数保持不变
     /// - 参数顺序正确
     #[test]
-    fn test_expand_args_with_alias_with_alias_in_args_expands_alias() -> Result<()> {
+    fn test_expand_args_with_alias_with_alias_in_args_expands_alias_return_result() -> Result<()> {
         // Arrange: 准备别名映射和包含别名的参数列表
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
@@ -513,7 +513,7 @@ mod tests {
     /// - 参数列表保持不变
     /// - 不进行任何展开操作
     #[test]
-    fn test_expand_args_without_alias_with_no_alias_returns_unchanged() -> Result<()> {
+    fn test_expand_args_without_alias_with_no_alias_return_result() -> Result<()> {
         // Arrange: 准备空别名映射和不包含别名的参数列表
         let aliases = HashMap::new();
         let args = vec![
@@ -546,7 +546,7 @@ mod tests {
     /// - 空参数列表返回空列表
     /// - 只包含程序名的参数列表保持不变
     #[test]
-    fn test_expand_args_empty_with_empty_args_returns_empty() -> Result<()> {
+    fn test_expand_args_empty_with_empty_args_return_empty() -> Result<()> {
         // Arrange: 准备空别名映射和空参数列表
         let aliases = HashMap::new();
         let empty_args: Vec<String> = vec![];
@@ -585,7 +585,7 @@ mod tests {
     /// - 其他参数保持不变
     /// - 参数顺序正确
     #[test]
-    fn test_expand_args_nested_alias_with_nested_alias_expands_recursively() -> Result<()> {
+    fn test_expand_args_nested_alias_with_nested_alias_expands_recursively_return_result() -> Result<()> {
         // Arrange: 准备嵌套别名映射和包含嵌套别名的参数列表
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
@@ -635,7 +635,7 @@ mod tests {
     #[case("la", "ls -A", "ls -A")]
     #[case("grep", "grep --color=auto", "grep --color=auto")]
     #[case("status", "git status --short", "git status --short")]
-    fn test_simple_alias_expansion_parametrized(
+    fn test_simple_alias_expansion_parametrized_return_result(
         #[case] alias: &str,
         #[case] command: &str,
         #[case] expected: &str,
@@ -667,7 +667,7 @@ mod tests {
     #[case(vec!["a", "b"], vec!["b", "a"], true)] // 会循环：a->b, b->a 形成循环
     #[case(vec!["a", "a"], vec![], true)] // 直接循环
     #[case(vec!["a", "b", "c"], vec!["c", "a"], true)] // 间接循环
-    fn test_circular_detection_parametrized(
+    fn test_circular_detection_parametrized_return_result(
         #[case] alias_chain: Vec<&str>,
         #[case] test_pairs: Vec<&str>,
         #[case] should_be_circular: bool,
@@ -704,7 +704,7 @@ mod tests {
     /// - 所有包含特殊字符的别名都能正确展开
     /// - 特殊字符被正确处理
     #[test]
-    fn test_alias_with_special_characters() -> Result<()> {
+    fn test_alias_with_special_characters_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("docker-ps".to_string(), "docker ps -a".to_string());
         aliases.insert("k8s_pods".to_string(), "kubectl get pods".to_string());
@@ -744,7 +744,7 @@ mod tests {
     /// - 包含复杂参数的别名都能正确展开
     /// - 参数格式正确
     #[test]
-    fn test_alias_with_quotes_and_spaces() -> Result<()> {
+    fn test_alias_with_quotes_and_spaces_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert(
             "find-large".to_string(),
@@ -781,7 +781,7 @@ mod tests {
     /// ## 预期结果
     /// - 空命令别名展开为空字符串
     #[test]
-    fn test_empty_alias_command() -> Result<()> {
+    fn test_empty_alias_command_return_empty() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("empty".to_string(), "".to_string());
 
@@ -807,7 +807,7 @@ mod tests {
     /// ## 预期结果
     /// - 单个命令的别名都能正确展开
     #[test]
-    fn test_alias_with_single_command() -> Result<()> {
+    fn test_alias_with_single_command_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("vi".to_string(), "vim".to_string());
         aliases.insert("py".to_string(), "python3".to_string());
@@ -843,7 +843,7 @@ mod tests {
     /// - 普通命令保持不变
     /// - 管道符号等特殊字符被正确处理
     #[test]
-    fn test_mixed_alias_and_regular_commands() -> Result<()> {
+    fn test_mixed_alias_and_regular_commands_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
         aliases.insert("search".to_string(), "ll | grep".to_string());
@@ -888,7 +888,7 @@ mod tests {
     /// - 别名展开后的参数顺序正确
     /// - 原始参数顺序保持不变
     #[test]
-    fn test_alias_expansion_preserves_argument_order() -> Result<()> {
+    fn test_alias_expansion_preserves_argument_order_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("docker-run".to_string(), "docker run -it --rm".to_string());
 
@@ -936,7 +936,7 @@ mod tests {
     /// - 100次查找操作应在100毫秒内完成
     /// - 性能表现良好
     #[test]
-    fn test_performance_with_large_alias_map() -> Result<()> {
+    fn test_performance_with_large_alias_map_return_result() -> Result<()> {
         use std::time::Instant;
 
         let mut aliases = HashMap::new();
@@ -981,7 +981,7 @@ mod tests {
     /// - 返回 HashMap<String, String>
     /// - 即使别名列表为空也能正常工作
     #[test]
-    fn test_alias_manager_load() -> Result<()> {
+    fn test_alias_manager_load_return_result() -> Result<()> {
         // 测试 AliasManager::load() 方法（覆盖 manager.rs:29-32）
         let result = workflow::base::alias::AliasManager::load();
 
@@ -1008,7 +1008,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 返回 HashMap<String, String>
     #[test]
-    fn test_alias_manager_list() -> Result<()> {
+    fn test_alias_manager_list_return_collect() -> Result<()> {
         // 测试 AliasManager::list() 方法（覆盖 manager.rs:235-237）
         let result = workflow::base::alias::AliasManager::list();
 
@@ -1034,7 +1034,7 @@ mod tests {
     /// - 方法返回 Ok(false)
     /// - 不存在的别名返回 false
     #[test]
-    fn test_alias_manager_exists() -> Result<()> {
+    fn test_alias_manager_exists_return_result() -> Result<()> {
         // 测试 AliasManager::exists() 方法（覆盖 manager.rs:252-255）
         // 测试不存在的别名
         let result = workflow::base::alias::AliasManager::exists("__nonexistent_alias_test__");
@@ -1058,7 +1058,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 参数列表保持不变
     #[test]
-    fn test_alias_manager_expand_args_empty() -> Result<()> {
+    fn test_alias_manager_expand_args_empty_return_empty() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 空参数（覆盖 manager.rs:116-120）
         let args = vec!["workflow".to_string()];
         let result = workflow::base::alias::AliasManager::expand_args(args.clone());
@@ -1082,7 +1082,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 参数列表保持不变
     #[test]
-    fn test_alias_manager_expand_args_single() -> Result<()> {
+    fn test_alias_manager_expand_args_single_return_result() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 单个参数（覆盖 manager.rs:116-120）
         let args = vec!["workflow".to_string()];
         let result = workflow::base::alias::AliasManager::expand_args(args.clone());
@@ -1106,7 +1106,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 参数列表保持不变（第一个参数不是别名）
     #[test]
-    fn test_alias_manager_expand_args_non_alias() -> Result<()> {
+    fn test_alias_manager_expand_args_non_alias_return_result() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 非别名命令（覆盖 manager.rs:144-147）
         let args = vec![
             "workflow".to_string(),
@@ -1137,7 +1137,7 @@ mod tests {
     /// - 方法返回 Ok(true)
     /// - 直接循环被正确检测
     #[test]
-    fn test_alias_manager_check_circular_direct() -> Result<()> {
+    fn test_alias_manager_check_circular_direct_return_result() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 直接循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "a" -> "a" 是否检测为循环
         let result = workflow::base::alias::AliasManager::check_circular(
@@ -1164,7 +1164,7 @@ mod tests {
     /// - 方法返回 Ok(false)
     /// - 非循环别名被正确识别
     #[test]
-    fn test_alias_manager_check_circular_non_circular() -> Result<()> {
+    fn test_alias_manager_check_circular_non_circular_return_result() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 非循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "new_alias" -> "git status" 是否检测为非循环
         let result =
@@ -1189,7 +1189,7 @@ mod tests {
     /// - 返回错误
     /// - 错误消息包含 "depth exceeded maximum"
     #[test]
-    fn test_alias_manager_expand_depth_limit() -> Result<()> {
+    fn test_alias_manager_expand_depth_limit_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 深度限制（覆盖 manager.rs:54-98）
         // 注意：这个测试需要创建深度嵌套的别名，可能在实际环境中难以实现
         // 主要测试深度检查逻辑
@@ -1216,7 +1216,7 @@ mod tests {
     /// - 返回错误
     /// - 错误消息包含 "Alias not found"
     #[test]
-    fn test_alias_manager_expand_not_found() -> Result<()> {
+    fn test_alias_manager_expand_not_found_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 别名不存在（覆盖 manager.rs:77-79）
         let mut visited = HashSet::new();
         let result =
@@ -1241,7 +1241,7 @@ mod tests {
     /// - 可能成功或失败，取决于实际配置
     /// - 如果别名存在，应正确展开
     #[test]
-    fn test_alias_manager_expand_with_nested_alias() -> Result<()> {
+    fn test_alias_manager_expand_with_nested_alias_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名（覆盖 manager.rs:84-95）
         // 注意：这个测试需要实际的别名配置
         let mut visited = HashSet::new();
@@ -1267,7 +1267,7 @@ mod tests {
     /// ## 预期结果
     /// - 返回错误（循环检测或别名不存在）
     #[test]
-    fn test_alias_manager_expand_with_visited_set() -> Result<()> {
+    fn test_alias_manager_expand_with_visited_set_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - visited 集合的使用（覆盖 manager.rs:82）
         let mut visited = HashSet::new();
         visited.insert("test_alias".to_string());
@@ -1295,7 +1295,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 如果别名存在，应正确展开；如果不存在，参数保持不变
     #[test]
-    fn test_alias_manager_expand_args_with_alias() -> Result<()> {
+    fn test_alias_manager_expand_args_with_alias_return_result() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 包含别名（覆盖 manager.rs:128-143）
         // 注意：这个测试需要实际的别名配置
         let args = vec!["workflow".to_string(), "__test_alias__".to_string()];
@@ -1319,7 +1319,7 @@ mod tests {
     /// - 方法返回 Ok
     /// - 如果形成循环，返回 true；否则返回 false
     #[test]
-    fn test_alias_manager_check_circular_with_existing_alias() -> Result<()> {
+    fn test_alias_manager_check_circular_with_existing_alias_return_result() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 与已存在别名形成循环（覆盖 manager.rs:284-297）
         // 注意：这个测试需要实际的别名配置
         let result = workflow::base::alias::AliasManager::check_circular(
@@ -1345,7 +1345,7 @@ mod tests {
     /// - 方法返回 Ok(false)
     /// - 第一个词不是别名时，不会形成循环
     #[test]
-    fn test_alias_manager_check_circular_first_part_not_alias() -> Result<()> {
+    fn test_alias_manager_check_circular_first_part_not_alias_return_result() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - target 的第一个词不是别名（覆盖 manager.rs:277-299）
         let result =
             workflow::base::alias::AliasManager::check_circular("__test_new__", "git status");
@@ -1369,7 +1369,7 @@ mod tests {
     /// - 可能成功或失败，取决于实际配置
     /// - 如果别名存在且包含嵌套，应正确递归展开
     #[test]
-    fn test_alias_manager_expand_recursive_nested() -> Result<()> {
+    fn test_alias_manager_expand_recursive_nested_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 递归嵌套展开（覆盖 manager.rs:89-93）
         let mut visited = HashSet::new();
         // 尝试展开一个可能包含嵌套别名的别名
@@ -1401,7 +1401,7 @@ mod tests {
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_add_with_temp_config() -> Result<()> {
+    fn test_alias_manager_add_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::add() 方法 - 使用临时配置文件（覆盖 manager.rs:162-181）
         use workflow::base::util::file::FileWriter;
 
@@ -1462,7 +1462,7 @@ aliases = {}
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_remove_with_temp_config() -> Result<()> {
+    fn test_alias_manager_remove_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 使用临时配置文件（覆盖 manager.rs:198-222）
         use workflow::base::util::file::FileWriter;
 
@@ -1520,7 +1520,7 @@ aliases = { test_remove_alias = "echo test" }
     /// - 方法返回 Ok(false)
     /// - 别名不存在时，返回 false 而不是错误
     #[test]
-    fn test_alias_manager_remove_nonexistent_with_temp_config() -> Result<()> {
+    fn test_alias_manager_remove_nonexistent_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 删除不存在的别名（覆盖 manager.rs:202-205）
         use workflow::base::util::file::FileWriter;
 
@@ -1568,7 +1568,7 @@ aliases = {}
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_with_temp_config() -> Result<()> {
+    fn test_alias_manager_expand_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 使用临时配置文件（覆盖 manager.rs:54-98）
         use workflow::base::util::file::FileWriter;
 
@@ -1624,7 +1624,7 @@ aliases = { test_expand_alias = "git status" }
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_nested_with_temp_config() -> Result<()> {
+    fn test_alias_manager_expand_nested_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名展开（覆盖 manager.rs:84-95）
         use workflow::base::util::file::FileWriter;
 
@@ -1682,7 +1682,7 @@ aliases = {
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_circular_with_temp_config() -> Result<()> {
+    fn test_alias_manager_expand_circular_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 循环别名检测（覆盖 manager.rs:65-71）
         use workflow::base::util::file::FileWriter;
 
@@ -1736,7 +1736,7 @@ aliases = {
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_args_with_temp_config() -> Result<()> {
+    fn test_alias_manager_expand_args_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 使用临时配置文件（覆盖 manager.rs:116-148）
         use workflow::base::util::file::FileWriter;
 
@@ -1792,7 +1792,7 @@ aliases = { test_args_alias = "git status" }
     /// - 新别名指向现有别名时，返回 `Ok(false)`（不会形成循环）
     /// - 新别名指向自己时，返回 `Ok(true)`（检测到循环）
     #[test]
-    fn test_alias_manager_check_circular_with_temp_config() -> Result<()> {
+    fn test_alias_manager_check_circular_with_temp_config_return_result() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 使用临时配置文件（覆盖 manager.rs:273-302）
         use workflow::base::util::file::FileWriter;
 
@@ -1847,7 +1847,7 @@ aliases = {
     /// - 展开成功，返回最终命令 "echo final"
     /// - 不会因为达到深度限制而失败
     #[test]
-    fn test_alias_depth_boundary_exact_limit() -> Result<()> {
+    fn test_alias_depth_boundary_exact_limit_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建恰好 10 层深度的别名链（MAX_DEPTH = 10）
@@ -1881,7 +1881,7 @@ aliases = {
     /// - 展开失败，返回错误
     /// - 错误消息包含 "depth exceeded maximum"
     #[test]
-    fn test_alias_depth_boundary_exceed_by_one() -> Result<()> {
+    fn test_alias_depth_boundary_exceed_by_one_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建 11 层深度的别名链（超出 MAX_DEPTH = 10）
@@ -1914,7 +1914,7 @@ aliases = {
     /// - 所有Unicode字符都能正确保留和处理
     /// - 展开结果与预期一致
     #[test]
-    fn test_alias_with_unicode_characters() -> Result<()> {
+    fn test_alias_with_unicode_characters_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("中文别名".to_string(), "echo 你好世界".to_string());
         aliases.insert("emoji".to_string(), "echo 🚀 测试".to_string());
@@ -1954,7 +1954,7 @@ aliases = {
     /// - 超长命令能够正确展开
     /// - 所有参数都被保留
     #[test]
-    fn test_alias_with_very_long_command() -> Result<()> {
+    fn test_alias_with_very_long_command_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建超长命令（100+ 个参数）
@@ -1985,7 +1985,7 @@ aliases = {
     /// - 超长别名名称能够正确识别和展开
     /// - 展开结果正确
     #[test]
-    fn test_alias_with_very_long_name() -> Result<()> {
+    fn test_alias_with_very_long_name_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建超长别名名称（100+ 字符）
@@ -2014,7 +2014,7 @@ aliases = {
     /// - 所有层的参数都被正确累积
     /// - 最终命令包含所有参数，顺序正确
     #[test]
-    fn test_alias_with_complex_nested_args() -> Result<()> {
+    fn test_alias_with_complex_nested_args_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建复杂的嵌套别名，每层添加不同参数
@@ -2046,7 +2046,7 @@ aliases = {
     /// - 多个连续空格被保留（原样输出）
     /// - 命令能够正确展开
     #[test]
-    fn test_alias_with_multiple_spaces() -> Result<()> {
+    fn test_alias_with_multiple_spaces_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 测试命令中包含多个连续空格
@@ -2078,7 +2078,7 @@ aliases = {
     /// - 制表符和换行符被保留（原样输出）
     /// - 命令能够正确展开
     #[test]
-    fn test_alias_with_tabs_and_newlines() -> Result<()> {
+    fn test_alias_with_tabs_and_newlines_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 测试命令中包含制表符和换行符
@@ -2107,7 +2107,7 @@ aliases = {
     /// - 前导空格被保留（原样输出）
     /// - 命令能够正确展开
     #[test]
-    fn test_alias_expansion_with_empty_first_part() -> Result<()> {
+    fn test_alias_expansion_with_empty_first_part_return_empty() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 测试命令以空格开头的情况
@@ -2138,7 +2138,7 @@ aliases = {
     /// - 所有额外参数（--short, --branch, -v）都被保留
     /// - 参数顺序正确
     #[test]
-    fn test_expand_args_with_multiple_extra_args() -> Result<()> {
+    fn test_expand_args_with_multiple_extra_args_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("gs".to_string(), "git status".to_string());
 
@@ -2178,7 +2178,7 @@ aliases = {
     /// - 所有特殊字符的别名名称都能正确识别和展开
     /// - 展开结果正确
     #[test]
-    fn test_alias_name_with_special_chars() -> Result<()> {
+    fn test_alias_name_with_special_chars_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 测试别名名称包含特殊字符（虽然不推荐，但应该能处理）
@@ -2222,7 +2222,7 @@ aliases = {
     /// - 所有参数都被正确累积
     /// - 最终命令为 "echo hello arg1 arg2 arg3"
     #[test]
-    fn test_complex_four_level_nesting() -> Result<()> {
+    fn test_complex_four_level_nesting_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建 4 层嵌套别名，测试复杂场景
@@ -2255,7 +2255,7 @@ aliases = {
     /// - 使用错误大小写的别名名称展开失败（返回错误）
     /// - 别名名称是大小写敏感的
     #[test]
-    fn test_alias_expansion_preserves_case() -> Result<()> {
+    fn test_alias_expansion_preserves_case_return_result() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 测试大小写敏感性

@@ -9,7 +9,7 @@
 //! use crate::common::fixtures::{git_repo_with_commit, cli_env_with_git, mock_server};
 //!
 //! #[rstest]
-//! fn test_with_git_repo(git_repo_with_commit: GitTestEnv) -> Result<()> {
+//! fn test_with_git_repo_return_result(git_repo_with_commit: GitTestEnv) -> Result<()> {
 //!     // 使用 fixture
 //!     Ok(())
 //! }
@@ -43,7 +43,7 @@ use crate::common::http_helpers::MockServer;
 /// use crate::common::fixtures::git_repo_with_commit;
 ///
 /// #[rstest]
-/// fn test_git_operations(git_repo_with_commit: GitTestEnv) -> Result<()> {
+/// fn test_git_operations_return_result(git_repo_with_commit: GitTestEnv) -> Result<()> {
 ///     // git_repo_with_commit 已经初始化了 Git 仓库
 ///     // 可以直接进行 Git 操作
 ///     Ok(())
@@ -76,7 +76,7 @@ pub fn git_repo_with_commit() -> GitTestEnv {
 /// use crate::common::fixtures::cli_env_with_git;
 ///
 /// #[rstest]
-/// fn test_cli_command(cli_env_with_git: CliTestEnv) -> Result<()> {
+/// fn test_cli_command_return_result(cli_env_with_git: CliTestEnv) -> Result<()> {
 ///     // cli_env_with_git 已经初始化了 Git 仓库
 ///     // 可以直接进行 CLI 命令测试
 ///     Ok(())
@@ -107,7 +107,7 @@ pub fn cli_env_with_git() -> CliTestEnv {
 /// use crate::common::fixtures::cli_env;
 ///
 /// #[rstest]
-/// fn test_cli_command(cli_env: CliTestEnv) -> Result<()> {
+/// fn test_cli_command_return_result(cli_env: CliTestEnv) -> Result<()> {
 ///     // cli_env 提供临时目录和环境隔离
 ///     Ok(())
 /// }
@@ -135,7 +135,7 @@ pub fn cli_env() -> CliTestEnv {
 /// use crate::common::fixtures::mock_server;
 ///
 /// #[rstest]
-/// fn test_http_request(mut mock_server: MockServer) -> Result<()> {
+/// fn test_http_request_return_result(mut mock_server: MockServer) -> Result<()> {
 ///     let url = format!("{}/test", mock_server.base_url);
 ///     // 配置 Mock 端点
 ///     // ...
@@ -162,7 +162,7 @@ pub fn mock_server() -> MockServer {
 /// use crate::common::fixtures::mock_server_github;
 ///
 /// #[rstest]
-/// fn test_github_api(mut mock_server_github: MockServer) -> Result<()> {
+/// fn test_github_api_return_result(mut mock_server_github: MockServer) -> Result<()> {
 ///     // GITHUB_API_URL 已自动设置
 ///     // 可以直接配置 GitHub API Mock 端点
 ///     Ok(())
@@ -190,7 +190,7 @@ pub fn mock_server_github() -> MockServer {
 /// use crate::common::fixtures::mock_server_jira;
 ///
 /// #[rstest]
-/// fn test_jira_api(mut mock_server_jira: MockServer) -> Result<()> {
+/// fn test_jira_api_return_result(mut mock_server_jira: MockServer) -> Result<()> {
 ///     // JIRA_API_URL 已自动设置
 ///     // 可以直接配置 Jira API Mock 端点
 ///     Ok(())
@@ -216,7 +216,7 @@ mod tests {
     /// - Git 测试环境创建成功
     /// - Git 仓库已初始化
     #[test]
-    fn test_git_repo_with_commit_fixture() -> Result<()> {
+    fn test_git_repo_with_commit_fixture_return_result() -> Result<()> {
         let env = git_repo_with_commit();
         assert!(env.path().join(".git").exists());
         Ok(())
@@ -231,7 +231,7 @@ mod tests {
     /// - CLI 测试环境创建成功
     /// - Git 仓库已初始化
     #[test]
-    fn test_cli_env_with_git_fixture() -> Result<()> {
+    fn test_cli_env_with_git_fixture_return_result() -> Result<()> {
         let env = cli_env_with_git();
         assert!(env.path().join(".git").exists());
         Ok(())

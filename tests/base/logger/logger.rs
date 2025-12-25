@@ -36,7 +36,7 @@ use workflow::trace_warn;
 /// - debug消息包含 "⚙" 图标
 /// - 所有消息都包含原始文本
 #[test]
-fn test_logger_output_with_all_levels_returns_formatted_messages() -> Result<()> {
+fn test_logger_output_with_all_levels_return_collect() -> Result<()> {
     // Arrange: 准备测试消息
     let test_message = "Test";
 
@@ -235,7 +235,7 @@ fn test_log_level_from_str_with_valid_strings_parses_correctly() {
 /// - LogLevel::Info -> "info"
 /// - LogLevel::Debug -> "debug"
 #[test]
-fn test_log_level_as_str() -> Result<()> {
+fn test_log_level_as_str_return_result() -> Result<()> {
     assert_eq!(LogLevel::None.as_str(), "off");
     assert_eq!(LogLevel::Error.as_str(), "error");
     assert_eq!(LogLevel::Warn.as_str(), "warn");
@@ -262,7 +262,7 @@ fn test_log_level_as_str() -> Result<()> {
 /// - 日志级别顺序正确
 /// - `should_log()` 方法按照预期过滤日志
 #[test]
-fn test_log_level_ordering() -> Result<()> {
+fn test_log_level_ordering_return_result() -> Result<()> {
     // Arrange: 准备测试日志级别的顺序
     assert!(LogLevel::None < LogLevel::Error);
     assert!(LogLevel::Error < LogLevel::Warn);
@@ -322,7 +322,7 @@ fn test_log_level_ordering() -> Result<()> {
 /// - 每次设置后，`get_level()` 返回正确的级别
 /// - 测试结束后恢复原始级别，不影响其他测试
 #[test]
-fn test_log_level_set_and_get() -> Result<()> {
+fn test_log_level_set_and_get_return_result() -> Result<()> {
     // 保存原始级别
     let original_level = LogLevel::get_level();
 
@@ -360,7 +360,7 @@ fn test_log_level_set_and_get() -> Result<()> {
 /// - Debug模式（debug_assertions）：返回 LogLevel::Debug
 /// - Release模式：返回 LogLevel::Info
 #[test]
-fn test_log_level_default() -> Result<()> {
+fn test_log_level_default_return_result() -> Result<()> {
     // Arrange: 准备测试默认级别（根据编译模式）
     let default = LogLevel::default_level();
 
@@ -419,7 +419,7 @@ fn test_log_level_round_trip() {
 /// - 所有宏都能正常编译和运行
 /// - 不会panic或产生错误
 #[test]
-fn test_tracing_macros() -> Result<()> {
+fn test_tracing_macros_return_result() -> Result<()> {
     // 这些宏应该可以编译和运行（即使不输出）
     trace_debug!("Test debug message");
     trace_info!("Test info message");

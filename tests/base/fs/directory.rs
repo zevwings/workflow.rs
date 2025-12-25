@@ -17,6 +17,16 @@ use crate::common::environments::CliTestEnv;
 // ==================== DirectoryWalker Creation Tests ====================
 
 /// 测试使用字符串路径创建DirectoryWalker实例
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::new()` 方法能够使用字符串路径创建 DirectoryWalker 实例。
+///
+/// ## 测试场景
+/// 1. 准备字符串路径 "test/path"
+/// 2. 调用 `DirectoryWalker::new()` 创建实例
+///
+/// ## 预期结果
+/// - DirectoryWalker 实例创建成功，不会panic
 #[test]
 fn test_directory_walker_new_with_string_path_creates_instance() {
     // Arrange: 准备字符串路径
@@ -29,6 +39,16 @@ fn test_directory_walker_new_with_string_path_creates_instance() {
 }
 
 /// 测试使用PathBuf路径创建DirectoryWalker实例
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::new()` 方法能够使用 PathBuf 路径创建 DirectoryWalker 实例。
+///
+/// ## 测试场景
+/// 1. 准备 PathBuf 路径
+/// 2. 调用 `DirectoryWalker::new()` 创建实例
+///
+/// ## 预期结果
+/// - DirectoryWalker 实例创建成功，不会panic
 #[test]
 fn test_directory_walker_new_with_pathbuf_creates_instance() {
     // Arrange: 准备 PathBuf 路径
@@ -44,6 +64,18 @@ fn test_directory_walker_new_with_pathbuf_creates_instance() {
 // ==================== Directory Creation Tests ====================
 
 /// 测试确保新目录存在（创建嵌套目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_exists()` 方法能够创建新的嵌套目录结构。
+///
+/// ## 测试场景
+/// 1. 准备新的嵌套目录路径 "new/deep/nested/directory"
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_exists()` 方法
+///
+/// ## 预期结果
+/// - 目录创建成功
+/// - 目录存在且为目录类型
 #[test]
 fn test_directory_walker_ensure_exists_with_new_path_creates_directory() -> color_eyre::Result<()> {
     // Arrange: 准备新目录路径
@@ -62,6 +94,18 @@ fn test_directory_walker_ensure_exists_with_new_path_creates_directory() -> colo
 }
 
 /// 测试确保已存在的目录存在（不重复创建）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_exists()` 方法对已存在的目录能够成功处理，不会重复创建。
+///
+/// ## 测试场景
+/// 1. 准备已存在的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_exists()` 方法
+///
+/// ## 预期结果
+/// - 方法调用成功，不会出错
+/// - 目录仍然存在
 #[test]
 fn test_directory_walker_ensure_exists_with_existing_dir_succeeds() -> color_eyre::Result<()> {
     // Arrange: 准备已存在的目录
@@ -80,6 +124,18 @@ fn test_directory_walker_ensure_exists_with_existing_dir_succeeds() -> color_eyr
 }
 
 /// 测试多次调用ensure_exists（幂等性）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_exists()` 方法具有幂等性，多次调用不会出错。
+///
+/// ## 测试场景
+/// 1. 准备目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 多次调用 `ensure_exists()` 方法（3次）
+///
+/// ## 预期结果
+/// - 所有调用都成功
+/// - 目录存在且为目录类型
 #[test]
 fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds() -> color_eyre::Result<()> {
     // Arrange: 准备目录路径
@@ -102,8 +158,19 @@ fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds() -> color_e
 // ==================== Directory Listing Tests ====================
 
 /// 测试列出嵌套结构中的所有目录
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法能够递归列出嵌套目录结构中的所有目录。
+///
+/// ## 测试场景
+/// 1. 准备包含子目录的目录结构
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回至少3个目录（根目录和子目录）
 #[test]
-fn test_directory_walker_list_dirs_with_nested_structure_returns_all_dirs() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_with_nested_structure_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含子目录的目录结构
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -123,8 +190,20 @@ fn test_directory_walker_list_dirs_with_nested_structure_returns_all_dirs() -> c
 }
 
 /// 测试列出混合内容中的文件（不包括目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法能够列出目录中的所有文件，不包括目录。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录结构
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 只返回文件，不包含目录
+/// - 返回的文件数量正确
 #[test]
-fn test_directory_walker_list_files_with_mixed_content_returns_only_files() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_with_mixed_content_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含文件和子目录的目录结构
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -144,8 +223,20 @@ fn test_directory_walker_list_files_with_mixed_content_returns_only_files() -> c
 }
 
 /// 测试根据模式查找匹配的文件
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法能够根据模式查找匹配的文件。
+///
+/// ## 测试场景
+/// 1. 准备包含匹配和不匹配文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法查找匹配模式的文件
+///
+/// ## 预期结果
+/// - 返回匹配模式的文件
+/// - 不返回不匹配的文件
 #[test]
-fn test_directory_walker_find_files_with_pattern_returns_matching_files() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_with_pattern_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含匹配和不匹配文件的目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -165,8 +256,20 @@ fn test_directory_walker_find_files_with_pattern_returns_matching_files() -> col
 }
 
 /// 测试列出直接子目录（不包括嵌套目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_dirs()` 方法能够列出直接子目录，不包括嵌套目录。
+///
+/// ## 测试场景
+/// 1. 准备包含直接子目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回直接子目录，不包括文件
+/// - 不返回嵌套目录
 #[test]
-fn test_directory_walker_list_direct_dirs_with_subdirs_returns_direct_dirs() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_dirs_with_subdirs_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含直接子目录的目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -186,8 +289,20 @@ fn test_directory_walker_list_direct_dirs_with_subdirs_returns_direct_dirs() -> 
 }
 
 /// 测试列出直接文件（不包括子目录中的文件）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_files()` 方法能够列出直接文件，不包括子目录中的文件。
+///
+/// ## 测试场景
+/// 1. 准备包含直接文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_files()` 方法
+///
+/// ## 预期结果
+/// - 返回直接文件，不包括目录
+/// - 不返回子目录中的文件
 #[test]
-fn test_directory_walker_list_direct_files_with_files_returns_direct_files() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_files_with_files_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含直接文件的目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -207,6 +322,17 @@ fn test_directory_walker_list_direct_files_with_files_returns_direct_files() -> 
 }
 
 /// 测试确保文件路径的父目录存在
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_parent_exists()` 方法能够为文件路径创建父目录。
+///
+/// ## 测试场景
+/// 1. 准备文件路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_parent_exists()` 方法
+///
+/// ## 预期结果
+/// - 父目录创建成功
 #[test]
 fn test_directory_walker_ensure_parent_exists_with_file_path_creates_parent() -> color_eyre::Result<()> {
     // Arrange: 准备文件路径
@@ -225,6 +351,17 @@ fn test_directory_walker_ensure_parent_exists_with_file_path_creates_parent() ->
 }
 
 /// 测试列出不存在路径的目录（应返回错误）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法对不存在的路径能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 fn test_directory_walker_list_dirs_with_nonexistent_path_returns_error() {
     // Arrange: 准备不存在的目录路径
@@ -238,6 +375,17 @@ fn test_directory_walker_list_dirs_with_nonexistent_path_returns_error() {
 }
 
 /// 测试列出不存在路径的文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法对不存在的路径能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 fn test_directory_walker_list_files_with_nonexistent_path_returns_error() {
     // Arrange: 准备不存在的目录路径
@@ -251,6 +399,17 @@ fn test_directory_walker_list_files_with_nonexistent_path_returns_error() {
 }
 
 /// 测试在不存在的路径中查找文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法对不存在的路径能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 fn test_directory_walker_find_files_with_nonexistent_path_returns_error() {
     // Arrange: 准备不存在的目录路径
@@ -264,6 +423,17 @@ fn test_directory_walker_find_files_with_nonexistent_path_returns_error() {
 }
 
 /// 测试列出不存在路径的直接子目录（应返回错误）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_dirs()` 方法对不存在的路径能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 fn test_directory_walker_list_direct_dirs_with_nonexistent_path_returns_error() {
     // Arrange: 准备不存在的目录路径
@@ -277,6 +447,17 @@ fn test_directory_walker_list_direct_dirs_with_nonexistent_path_returns_error() 
 }
 
 /// 测试列出不存在路径的直接文件（应返回错误）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_files()` 方法对不存在的路径能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_files()` 方法
+///
+/// ## 预期结果
+/// - 返回错误，不panic
 #[test]
 fn test_directory_walker_list_direct_files_with_nonexistent_path_returns_error() {
     // Arrange: 准备不存在的目录路径
@@ -290,8 +471,19 @@ fn test_directory_walker_list_direct_files_with_nonexistent_path_returns_error()
 }
 
 /// 测试使用空模式查找文件（应返回所有文件）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法使用空模式时能够返回所有文件。
+///
+/// ## 测试场景
+/// 1. 准备包含多个文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 使用空模式调用 `find_files()` 方法
+///
+/// ## 预期结果
+/// - 返回所有文件
 #[test]
-fn test_directory_walker_find_files_with_empty_pattern_returns_all_files() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_with_empty_pattern_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备包含多个文件的目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -310,8 +502,19 @@ fn test_directory_walker_find_files_with_empty_pattern_returns_all_files() -> co
 }
 
 /// 测试查找不匹配模式的文件（应返回空列表）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法查找不匹配模式时能够返回空列表。
+///
+/// ## 测试场景
+/// 1. 准备不匹配模式的文件
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法查找不匹配的模式
+///
+/// ## 预期结果
+/// - 返回空列表
 #[test]
-fn test_directory_walker_find_files_with_no_matching_pattern_returns_empty() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_with_no_matching_pattern_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备不匹配模式的文件
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -330,8 +533,19 @@ fn test_directory_walker_find_files_with_no_matching_pattern_returns_empty() -> 
 }
 
 /// 测试列出空目录（应只返回根目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法对空目录能够正确返回根目录本身。
+///
+/// ## 测试场景
+/// 1. 准备空目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 只包含根目录本身
 #[test]
-fn test_directory_walker_list_dirs_with_empty_directory_returns_root_only() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_with_empty_directory_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备空目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("empty_dir");
@@ -349,8 +563,19 @@ fn test_directory_walker_list_dirs_with_empty_directory_returns_root_only() -> c
 }
 
 /// 测试列出空目录的文件（应返回空列表）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法对空目录能够返回空列表。
+///
+/// ## 测试场景
+/// 1. 准备空目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 返回空列表
 #[test]
-fn test_directory_walker_list_files_with_empty_directory_returns_empty() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_with_empty_directory_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备空目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("empty_dir");
@@ -367,8 +592,19 @@ fn test_directory_walker_list_files_with_empty_directory_returns_empty() -> colo
 }
 
 /// 测试列出空目录的直接子目录（应返回空列表）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_dirs()` 方法对空目录能够返回空列表。
+///
+/// ## 测试场景
+/// 1. 准备空目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回空列表
 #[test]
-fn test_directory_walker_list_direct_dirs_with_empty_directory_returns_empty() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_dirs_with_empty_directory_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备空目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("empty_dir");
@@ -385,8 +621,19 @@ fn test_directory_walker_list_direct_dirs_with_empty_directory_returns_empty() -
 }
 
 /// 测试列出空目录的直接文件（应返回空列表）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_files()` 方法对空目录能够返回空列表。
+///
+/// ## 测试场景
+/// 1. 准备空目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_files()` 方法
+///
+/// ## 预期结果
+/// - 返回空列表
 #[test]
-fn test_directory_walker_list_direct_files_with_empty_directory_returns_empty() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_files_with_empty_directory_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备空目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("empty_dir");
@@ -403,6 +650,17 @@ fn test_directory_walker_list_direct_files_with_empty_directory_returns_empty() 
 }
 
 /// 测试确保没有父目录的路径的父目录存在（根路径）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_parent_exists()` 方法对没有父目录的路径（根路径）能够正确处理。
+///
+/// ## 测试场景
+/// 1. 准备没有父目录的文件路径（根路径）
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_parent_exists()` 方法
+///
+/// ## 预期结果
+/// - 不会出错（根路径没有父目录，应该成功）
 #[test]
 fn test_directory_walker_ensure_parent_exists_with_no_parent_succeeds() -> color_eyre::Result<()> {
     // Arrange: 准备没有父目录的文件路径（根路径）
@@ -420,8 +678,20 @@ fn test_directory_walker_ensure_parent_exists_with_no_parent_succeeds() -> color
 }
 
 /// 测试查找文件的大小写敏感性
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法的大小写敏感匹配逻辑。
+///
+/// ## 测试场景
+/// 1. 准备包含大小写不同文件名的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 使用不同大小写的模式查找文件
+///
+/// ## 预期结果
+/// - 大小写敏感匹配正确
+/// - 找到的文件符合预期
 #[test]
-fn test_directory_walker_find_files_case_sensitive() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_case_sensitive_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试查找文件是大小写敏感的
     // 注意：此测试不依赖文件系统的大小写敏感性，而是测试 find_files 方法本身的大小写敏感匹配逻辑
     let env = CliTestEnv::new()?;
@@ -453,8 +723,19 @@ fn test_directory_walker_find_files_case_sensitive() -> color_eyre::Result<()> {
 }
 
 /// 测试列出深层嵌套目录结构中的所有目录
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法能够递归列出深层嵌套目录结构中的所有目录。
+///
+/// ## 测试场景
+/// 1. 准备深层嵌套目录结构
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回所有目录（包括根目录和所有子目录）
 #[test]
-fn test_directory_walker_list_dirs_deep_nesting() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_deep_nesting_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 的循环逻辑（覆盖 directory.rs:25-31）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -474,8 +755,19 @@ fn test_directory_walker_list_dirs_deep_nesting() -> color_eyre::Result<()> {
 }
 
 /// 测试列出深层嵌套文件结构中的所有文件
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法能够递归列出深层嵌套文件结构中的所有文件。
+///
+/// ## 测试场景
+/// 1. 准备深层嵌套文件结构
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 返回所有文件
 #[test]
-fn test_directory_walker_list_files_deep_nesting() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_deep_nesting_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 的循环逻辑（覆盖 directory.rs:38-44）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -495,8 +787,19 @@ fn test_directory_walker_list_files_deep_nesting() -> color_eyre::Result<()> {
 }
 
 /// 测试查找多个匹配的文件
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法能够查找多个匹配模式的文件。
+///
+/// ## 测试场景
+/// 1. 准备包含多个匹配文件的目录结构
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法查找匹配模式的文件
+///
+/// ## 预期结果
+/// - 返回所有匹配的文件
 #[test]
-fn test_directory_walker_find_files_multiple_matches() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_multiple_matches_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 的循环逻辑（覆盖 directory.rs:51-61）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -518,8 +821,19 @@ fn test_directory_walker_find_files_multiple_matches() -> color_eyre::Result<()>
 }
 
 /// 测试列出目录时只返回目录（不包括文件）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法只返回目录，不包括文件。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 只返回目录，不包括文件
 #[test]
-fn test_directory_walker_list_dirs_with_files() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_with_files_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 只返回目录，不包括文件（覆盖 directory.rs:28-30）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -540,8 +854,19 @@ fn test_directory_walker_list_dirs_with_files() -> color_eyre::Result<()> {
 }
 
 /// 测试列出文件时只返回文件（不包括目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法只返回文件，不包括目录。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 只返回文件，不包括目录
 #[test]
-fn test_directory_walker_list_files_with_dirs() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_with_dirs_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 只返回文件，不包括目录（覆盖 directory.rs:41-43）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -561,8 +886,19 @@ fn test_directory_walker_list_files_with_dirs() -> color_eyre::Result<()> {
 }
 
 /// 测试list_dirs()循环中的错误处理
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法在循环遍历目录时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 准备正常目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 正常情况应该成功
 #[test]
-fn test_directory_walker_list_dirs_error_in_loop() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_error_in_loop_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 循环中的错误处理（覆盖 directory.rs:26-27）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -577,8 +913,19 @@ fn test_directory_walker_list_dirs_error_in_loop() -> color_eyre::Result<()> {
 }
 
 /// 测试list_files()循环中的错误处理
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法在循环遍历文件时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 准备包含文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 正常情况应该成功
 #[test]
-fn test_directory_walker_list_files_error_in_loop() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_error_in_loop_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 循环中的错误处理（覆盖 directory.rs:39-40）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -593,8 +940,19 @@ fn test_directory_walker_list_files_error_in_loop() -> color_eyre::Result<()> {
 }
 
 /// 测试find_files()循环中的错误处理
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法在循环查找文件时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 准备包含匹配文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法
+///
+/// ## 预期结果
+/// - 正常情况应该成功
 #[test]
-fn test_directory_walker_find_files_error_in_loop() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_error_in_loop_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 循环中的错误处理（覆盖 directory.rs:52-53）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -609,8 +967,19 @@ fn test_directory_walker_find_files_error_in_loop() -> color_eyre::Result<()> {
 }
 
 /// 测试find_files()中的模式匹配逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法中的模式匹配逻辑能够正确匹配文件名。
+///
+/// ## 测试场景
+/// 1. 准备包含匹配和不匹配文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法查找匹配模式的文件
+///
+/// ## 预期结果
+/// - 只返回匹配模式的文件
 #[test]
-fn test_directory_walker_find_files_pattern_matching() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_pattern_matching_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 中的模式匹配逻辑（覆盖 directory.rs:55-58）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -633,8 +1002,19 @@ fn test_directory_walker_find_files_pattern_matching() -> color_eyre::Result<()>
 }
 
 /// 测试list_direct_dirs()的过滤逻辑（只返回目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_dirs()` 方法的过滤逻辑能够只返回目录，不包括文件。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_dirs()` 方法
+///
+/// ## 预期结果
+/// - 只返回目录，不包括文件
 #[test]
-fn test_directory_walker_list_direct_dirs_filter() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_dirs_filter_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_dirs() 的过滤逻辑（覆盖 directory.rs:67）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -655,8 +1035,19 @@ fn test_directory_walker_list_direct_dirs_filter() -> color_eyre::Result<()> {
 }
 
 /// 测试list_direct_files()的过滤逻辑（只返回文件）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_files()` 方法的过滤逻辑能够只返回文件，不包括目录。
+///
+/// ## 测试场景
+/// 1. 准备包含文件和子目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_files()` 方法
+///
+/// ## 预期结果
+/// - 只返回文件，不包括目录
 #[test]
-fn test_directory_walker_list_direct_files_filter() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_files_filter_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_files() 的过滤逻辑（覆盖 directory.rs:73）
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -677,8 +1068,19 @@ fn test_directory_walker_list_direct_files_filter() -> color_eyre::Result<()> {
 }
 
 /// 测试ensure_parent_exists()有父目录的情况
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_parent_exists()` 方法对有父目录的文件路径能够正确处理。
+///
+/// ## 测试场景
+/// 1. 准备有父目录的文件路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_parent_exists()` 方法
+///
+/// ## 预期结果
+/// - 父目录创建成功
 #[test]
-fn test_directory_walker_ensure_parent_exists_with_parent() -> color_eyre::Result<()> {
+fn test_directory_walker_ensure_parent_exists_with_parent_return_result() -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_exists() 有父目录的情况（覆盖 directory.rs:123-125）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("parent/dir/file.txt");
@@ -693,7 +1095,7 @@ fn test_directory_walker_ensure_parent_exists_with_parent() -> color_eyre::Resul
 
 /// 测试list_dirs()处理符号链接的情况
 #[test]
-fn test_directory_walker_list_dirs_with_symlinks() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_with_symlinks_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 处理符号链接的情况
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -709,8 +1111,19 @@ fn test_directory_walker_list_dirs_with_symlinks() -> color_eyre::Result<()> {
 }
 
 /// 测试list_files()处理符号链接的情况
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法能够正确处理符号链接。
+///
+/// ## 测试场景
+/// 1. 准备包含文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 返回文件列表
 #[test]
-fn test_directory_walker_list_files_with_symlinks() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_with_symlinks_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 处理符号链接的情况
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -725,8 +1138,19 @@ fn test_directory_walker_list_files_with_symlinks() -> color_eyre::Result<()> {
 }
 
 /// 测试find_files()部分匹配的情况
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法能够正确处理部分匹配的情况。
+///
+/// ## 测试场景
+/// 1. 准备包含部分匹配文件名的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法查找部分匹配的模式
+///
+/// ## 预期结果
+/// - 返回匹配的文件
 #[test]
-fn test_directory_walker_find_files_with_partial_match() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_with_partial_match_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 部分匹配的情况
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -742,6 +1166,16 @@ fn test_directory_walker_find_files_with_partial_match() -> color_eyre::Result<(
 }
 
 /// 测试ensure_exists()的错误消息格式
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_exists()` 方法的错误消息格式。
+///
+/// ## 测试场景
+/// 1. 使用根目录路径
+/// 2. 调用 `ensure_exists()` 方法
+///
+/// ## 预期结果
+/// - 根目录应该总是存在，应该成功
 #[test]
 fn test_directory_walker_ensure_exists_error_message() {
     // Arrange: 准备测试 ensure_exists() 的错误消息格式
@@ -754,6 +1188,18 @@ fn test_directory_walker_ensure_exists_error_message() {
 }
 
 /// 测试list_dirs()的错误包装逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_dirs()` 方法的错误包装逻辑能够提供有用的错误信息。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_dirs()` 方法
+///
+/// ## 预期结果
+/// - 返回错误
+/// - 错误消息包含路径信息
 #[test]
 fn test_directory_walker_list_dirs_error_wrap() {
     // Arrange: 准备测试 list_dirs() 的错误包装逻辑（覆盖 directory.rs:26-27 的 wrap_err_with）
@@ -768,6 +1214,18 @@ fn test_directory_walker_list_dirs_error_wrap() {
 }
 
 /// 测试list_files()的错误包装逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_files()` 方法的错误包装逻辑能够提供有用的错误信息。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_files()` 方法
+///
+/// ## 预期结果
+/// - 返回错误
+/// - 错误消息包含路径信息
 #[test]
 fn test_directory_walker_list_files_error_wrap() {
     // Arrange: 准备测试 list_files() 的错误包装逻辑（覆盖 directory.rs:39-40 的 wrap_err_with）
@@ -782,6 +1240,18 @@ fn test_directory_walker_list_files_error_wrap() {
 }
 
 /// 测试find_files()的错误包装逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法的错误包装逻辑能够提供有用的错误信息。
+///
+/// ## 测试场景
+/// 1. 准备不存在的目录路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `find_files()` 方法
+///
+/// ## 预期结果
+/// - 返回错误
+/// - 错误消息包含路径信息
 #[test]
 fn test_directory_walker_find_files_error_wrap() {
     // Arrange: 准备测试 find_files() 的错误包装逻辑（覆盖 directory.rs:52-53 的 wrap_err_with）
@@ -796,6 +1266,16 @@ fn test_directory_walker_find_files_error_wrap() {
 }
 
 /// 测试ensure_exists()的错误包装逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_exists()` 方法的错误包装逻辑。
+///
+/// ## 测试场景
+/// 1. 使用根目录路径
+/// 2. 调用 `ensure_exists()` 方法
+///
+/// ## 预期结果
+/// - 根目录应该总是存在，应该成功
 #[test]
 fn test_directory_walker_ensure_exists_error_wrap() {
     // Arrange: 准备测试 ensure_exists() 的错误包装逻辑（覆盖 directory.rs:95-96 的 wrap_err_with）
@@ -808,8 +1288,19 @@ fn test_directory_walker_ensure_exists_error_wrap() {
 }
 
 /// 测试ensure_parent_exists()的错误包装逻辑
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::ensure_parent_exists()` 方法的错误包装逻辑。
+///
+/// ## 测试场景
+/// 1. 准备有父目录的文件路径
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `ensure_parent_exists()` 方法
+///
+/// ## 预期结果
+/// - 父目录创建成功
 #[test]
-fn test_directory_walker_ensure_parent_exists_error_wrap() -> color_eyre::Result<()> {
+fn test_directory_walker_ensure_parent_exists_error_wrap_return_false() -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_exists() 的错误包装逻辑（覆盖 directory.rs:124-125 的 wrap_err_with）
     let env = CliTestEnv::new()?;
     let file_path = env.path().join("parent/dir/file.txt");
@@ -824,8 +1315,19 @@ fn test_directory_walker_ensure_parent_exists_error_wrap() -> color_eyre::Result
 }
 
 /// 测试find_files()处理Unicode模式的情况
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::find_files()` 方法能够正确处理Unicode模式。
+///
+/// ## 测试场景
+/// 1. 准备包含Unicode文件名的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 使用Unicode模式调用 `find_files()` 方法
+///
+/// ## 预期结果
+/// - 正确匹配Unicode文件名
 #[test]
-fn test_directory_walker_find_files_unicode_pattern() -> color_eyre::Result<()> {
+fn test_directory_walker_find_files_unicode_pattern_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 处理 Unicode 模式的情况
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -841,8 +1343,19 @@ fn test_directory_walker_find_files_unicode_pattern() -> color_eyre::Result<()> 
 }
 
 /// 测试list_direct_dirs()只返回直接子目录（不包括嵌套目录）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_dirs()` 方法只返回直接子目录，不包括嵌套目录。
+///
+/// ## 测试场景
+/// 1. 准备包含直接子目录和嵌套目录的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_dirs()` 方法
+///
+/// ## 预期结果
+/// - 只返回直接子目录，不包括嵌套目录
 #[test]
-fn test_directory_walker_list_direct_dirs_with_nested() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_dirs_with_nested_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_dirs() 只返回直接子目录，不包括嵌套目录
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");
@@ -861,8 +1374,19 @@ fn test_directory_walker_list_direct_dirs_with_nested() -> color_eyre::Result<()
 }
 
 /// 测试list_direct_files()只返回直接文件（不包括嵌套目录中的文件）
+///
+/// ## 测试目的
+/// 验证 `DirectoryWalker::list_direct_files()` 方法只返回直接文件，不包括嵌套目录中的文件。
+///
+/// ## 测试场景
+/// 1. 准备包含直接文件和嵌套目录中文件的目录
+/// 2. 创建 DirectoryWalker 实例
+/// 3. 调用 `list_direct_files()` 方法
+///
+/// ## 预期结果
+/// - 只返回直接文件，不包括嵌套目录中的文件
 #[test]
-fn test_directory_walker_list_direct_files_with_nested() -> color_eyre::Result<()> {
+fn test_directory_walker_list_direct_files_with_nested_return_collect() -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_files() 只返回直接文件，不包括嵌套目录中的文件
     let env = CliTestEnv::new()?;
     let dir_path = env.path().join("test_dir");

@@ -631,7 +631,7 @@ mod checksum_tests {
     /// - 哈希值长度为64个十六进制字符
     /// - 哈希值与预期值匹配
     #[test]
-    fn test_calculate_file_sha256() -> Result<()> {
+    fn test_calculate_file_sha256_return_result() -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("test_file.txt");
 
@@ -664,7 +664,7 @@ mod checksum_tests {
     /// - 空文件的SHA256哈希值为标准空文件哈希值
     /// - 哈希值格式正确
     #[test]
-    fn test_calculate_empty_file_sha256() -> Result<()> {
+    fn test_calculate_empty_file_sha256_return_empty() -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("empty_file.txt");
 
@@ -694,7 +694,7 @@ mod checksum_tests {
     /// - 大文件的哈希值计算成功
     /// - 哈希值格式正确（64个十六进制字符）
     #[test]
-    fn test_calculate_large_file_sha256() -> Result<()> {
+    fn test_calculate_large_file_sha256_return_result() -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("large_file.txt");
 
@@ -727,7 +727,7 @@ mod checksum_tests {
     /// - 所有格式都能正确解析哈希值
     /// - 多行内容只取第一行
     #[test]
-    fn test_parse_hash_from_content() -> Result<()> {
+    fn test_parse_hash_from_content_return_result() -> Result<()> {
         // 测试标准格式：hash  filename
         let content1 = "abc123def456789  file.tar.gz";
         let hash1 = Checksum::parse_hash_from_content(content1)?;
@@ -790,7 +790,7 @@ mod checksum_tests {
     /// - 验证成功（verified = true）
     /// - 消息包含验证通过的信息
     #[test]
-    fn test_verify_success() -> Result<()> {
+    fn test_verify_success_return_true() -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("verify_test.txt");
 
@@ -932,7 +932,7 @@ mod checksum_tests {
         "abc",
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     )]
-    fn test_known_hash_values(#[case] content: &str, #[case] expected_hash: &str) -> Result<()> {
+    fn test_known_hash_values_return_result(#[case] content: &str, #[case] expected_hash: &str) -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("hash_test.txt");
 
@@ -1011,7 +1011,7 @@ mod integration_tests {
     /// - 格式化工具正常工作
     /// - 集成使用无错误
     #[test]
-    fn test_checksum_and_format_integration() -> Result<()> {
+    fn test_checksum_and_format_integration_return_result() -> Result<()> {
         let env = CliTestEnv::new()?;
         let file_path = env.path().join("integration_test.txt");
 
@@ -1086,7 +1086,7 @@ mod integration_tests {
     /// - 1000次格式化操作应在100毫秒内完成
     /// - 性能表现良好
     #[test]
-    fn test_performance_characteristics() -> Result<()> {
+    fn test_performance_characteristics_return_result() -> Result<()> {
         use std::time::Instant;
 
         // 测试格式化函数的性能特征（应该很快）

@@ -450,8 +450,19 @@ fn test_create_preview_with_empty_message_creates_preview() {
 }
 
 /// 测试 Git 仓库集成
+///
+/// ## 测试目的
+/// 验证 CommitReword 功能在真实 Git 仓库环境中的集成行为。
+///
+/// ## 测试场景
+/// 1. 创建 Git 测试环境
+/// 2. 执行 CommitReword 相关操作
+/// 3. 验证与 Git 仓库的集成
+///
+/// ## 预期结果
+/// - Git 集成操作成功
 #[test]
-fn test_git_integration() -> color_eyre::Result<()> {
+fn test_git_integration_return_result() -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
     let env = GitTestEnv::new()?;
 

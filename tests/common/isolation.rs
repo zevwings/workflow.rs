@@ -8,7 +8,7 @@
 //! use tests::common::TestIsolation;
 //!
 //! #[test]
-//! fn test_with_full_isolation() -> color_eyre::Result<()> {
+//! fn test_with_full_isolation_return_result() -> color_eyre::Result<()> {
 //!     let isolation = TestIsolation::new()?
 //!         .with_git_config()?
 //!         .with_mock_server()?;
@@ -268,7 +268,7 @@ mod tests {
     /// - 工作目录路径为绝对路径
     /// - 路径包含"tmp"或"temp"（临时目录特征）
     #[test]
-    fn test_test_isolation_basic() -> Result<()> {
+    fn test_test_isolation_basic_return_result() -> Result<()> {
         let isolation = TestIsolation::new()?;
         let work_dir = isolation.work_dir();
 
@@ -301,7 +301,7 @@ mod tests {
     /// - Git配置守卫可用
     /// - Git配置项设置成功
     #[test]
-    fn test_test_isolation_with_git_config() -> Result<()> {
+    fn test_test_isolation_with_git_config_return_result() -> Result<()> {
         let mut isolation = TestIsolation::new()?.with_git_config()?;
 
         // 验证Git配置守卫可用
@@ -326,7 +326,7 @@ mod tests {
     /// - Mock服务器可用
     /// - base_url不为空
     #[test]
-    fn test_test_isolation_with_mock_server() -> Result<()> {
+    fn test_test_isolation_with_mock_server_return_result() -> Result<()> {
         let isolation = TestIsolation::new()?.with_mock_server()?;
 
         // 验证Mock服务器可用
@@ -352,7 +352,7 @@ mod tests {
     /// - 环境变量设置成功
     /// - Drop时自动恢复
     #[test]
-    fn test_test_isolation_env_guard() -> Result<()> {
+    fn test_test_isolation_env_guard_return_result() -> Result<()> {
         let mut isolation = TestIsolation::new()?;
 
         // 设置环境变量

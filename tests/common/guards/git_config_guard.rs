@@ -8,7 +8,7 @@
 //! use tests::common::guards::GitConfigGuard;
 //!
 //! #[test]
-//! fn test_with_git_config_isolation() -> color_eyre::Result<()> {
+//! fn test_with_git_config_isolation_return_result() -> color_eyre::Result<()> {
 //!     let guard = GitConfigGuard::new()?;
 //!
 //!     // 设置Git配置项
@@ -262,7 +262,7 @@ mod tests {
     /// - 配置项设置成功
     /// - git config命令能够读取设置的配置值
     #[test]
-    fn test_git_config_guard_set() -> Result<()> {
+    fn test_git_config_guard_set_return_result() -> Result<()> {
         let guard = GitConfigGuard::new()?;
 
         guard.set("user.name", "Test User")?;
@@ -314,7 +314,7 @@ mod tests {
     /// - Guard创建时，GIT_CONFIG被设置
     /// - Guard drop后，GIT_CONFIG恢复为原始值（或移除，如果原本不存在）
     #[test]
-    fn test_git_config_guard_restore() -> Result<()> {
+    fn test_git_config_guard_restore_return_result() -> Result<()> {
         let original_git_config = std::env::var("GIT_CONFIG").ok();
 
         {
