@@ -9,6 +9,7 @@ use crate::common::environments::CliTestEnv;
 
 // ==================== 基本命令测试 ====================
 
+/// 测试帮助命令
 #[test]
 fn test_help_command() {
     let binding = CliCommandBuilder::new().arg("--help").assert_success();
@@ -19,6 +20,7 @@ fn test_help_command() {
     assert!(stdout.contains("USAGE") || stdout.contains("Usage"));
 }
 
+/// 测试版本命令
 #[test]
 fn test_version_command() {
     let binding = CliCommandBuilder::new().arg("--version").assert_success();
@@ -30,6 +32,7 @@ fn test_version_command() {
 
 // ==================== PR 命令测试 ====================
 
+/// 测试PR帮助命令
 #[test]
 fn test_pr_help() {
     let binding = CliCommandBuilder::new().args(["pr", "--help"]).assert_success();
@@ -148,6 +151,7 @@ fn test_pr_with_git_repo() -> color_eyre::Result<()> {
 
 // ==================== Branch 命令测试 ====================
 
+/// 测试Branch帮助命令
 #[test]
 fn test_branch_help() {
     let binding = CliCommandBuilder::new().args(["branch", "--help"]).assert_success();
@@ -157,6 +161,7 @@ fn test_branch_help() {
     assert!(stdout.contains("branch"));
 }
 
+/// 测试在没有Git仓库时执行Branch命令（应返回错误）
 #[test]
 fn test_branch_without_git() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
@@ -174,6 +179,7 @@ fn test_branch_without_git() -> color_eyre::Result<()> {
 
 // ==================== Config 命令测试 ====================
 
+/// 测试Config帮助命令
 #[test]
 fn test_config_help() {
     let binding = CliCommandBuilder::new().args(["config", "--help"]).assert_success();
@@ -183,6 +189,7 @@ fn test_config_help() {
     assert!(stdout.contains("config"));
 }
 
+/// 测试Config显示命令
 #[test]
 fn test_config_show() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
@@ -203,6 +210,7 @@ fn test_config_show() -> color_eyre::Result<()> {
 
 // ==================== Jira 命令测试 ====================
 
+/// 测试Jira帮助命令
 #[test]
 fn test_jira_help() {
     let binding = CliCommandBuilder::new().args(["jira", "--help"]).assert_success();
@@ -212,6 +220,7 @@ fn test_jira_help() {
     assert!(stdout.contains("jira"));
 }
 
+/// 测试在没有配置时执行Jira info命令（应返回错误）
 #[test]
 fn test_jira_info_without_config() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
@@ -230,6 +239,7 @@ fn test_jira_info_without_config() -> color_eyre::Result<()> {
 
 // ==================== 输出格式测试 ====================
 
+/// 测试JSON输出格式
 #[test]
 fn test_json_output_format() {
     let binding = CliCommandBuilder::new().args(["--help", "--format", "json"]).assert();
@@ -251,6 +261,7 @@ fn test_json_output_format() {
 
 // ==================== 参数验证测试 ====================
 
+/// 测试无效命令（应返回错误）
 #[test]
 fn test_invalid_command() {
     let binding = CliCommandBuilder::new().arg("invalid-command").assert_failure();
@@ -306,6 +317,7 @@ fn test_missing_required_argument() {
 
 // ==================== 环境变量测试 ====================
 
+/// 测试环境变量设置
 #[test]
 fn test_environment_variables() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
@@ -326,6 +338,7 @@ fn test_environment_variables() -> color_eyre::Result<()> {
 
 // ==================== 性能测试 ====================
 
+/// 测试帮助命令的性能（应快速执行）
 #[test]
 fn test_help_command_performance() {
     use std::time::Instant;

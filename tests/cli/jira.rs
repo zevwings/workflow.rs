@@ -96,6 +96,7 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) ->
     Ok(())
 }
 
+/// 测试Jira命令不带ID时的参数解析
 #[rstest]
 #[case("info")]
 #[case("related")]
@@ -141,6 +142,7 @@ fn test_jira_command_without_id_parses_correctly(#[case] subcommand: &str) -> Re
 
 // ==================== Output Format Tests ====================
 
+/// 测试Jira命令的table输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -187,6 +189,7 @@ fn test_jira_command_with_table_output_format_parses_correctly(
     Ok(())
 }
 
+/// 测试Jira命令的json输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -233,6 +236,7 @@ fn test_jira_command_with_json_output_format_parses_correctly(
     Ok(())
 }
 
+/// 测试Jira命令的yaml输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -279,6 +283,7 @@ fn test_jira_command_with_yaml_output_format_parses_correctly(
     Ok(())
 }
 
+/// 测试Jira命令的markdown输出格式解析
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -320,6 +325,7 @@ fn test_jira_command_output_format_markdown(
     Ok(())
 }
 
+/// 测试Jira命令的所有输出格式标志
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
@@ -364,9 +370,10 @@ fn test_jira_command_output_format_all_flags(
 
 // ==================== Clean 命令测试 ====================
 
+/// 测试Jira清理命令的结构（包含所有参数）
 #[test]
 fn test_jira_clean_command_structure() -> Result<()> {
-    // 测试 Clean 命令结构（带所有参数）
+    // Arrange: 准备测试 Clean 命令结构（带所有参数）
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "clean",
@@ -393,6 +400,7 @@ fn test_jira_clean_command_structure() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira清理命令的标志组合
 #[rstest]
 #[case("PROJ-123", false, false, false, false)]
 #[case("PROJ-123", true, false, false, false)]
@@ -445,9 +453,10 @@ fn test_jira_clean_command_flags(
     Ok(())
 }
 
+/// 测试Jira清理命令的短标志（-a, -n, -l）
 #[test]
 fn test_jira_clean_command_short_flags() -> Result<()> {
-    // 测试 Clean 命令的短标志
+    // Arrange: 准备测试 Clean 命令的短标志
     let cli = TestJiraCli::try_parse_from(&["test-jira", "clean", "-a", "-n", "-l"])?;
 
     match cli.command {
@@ -469,6 +478,7 @@ fn test_jira_clean_command_short_flags() -> Result<()> {
 
 // ==================== Comments 命令参数测试 ====================
 
+/// 测试Jira评论命令的limit参数
 #[test]
 fn test_jira_comments_command_with_limit() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
@@ -479,6 +489,7 @@ fn test_jira_comments_command_with_limit() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira评论命令的offset参数
 #[test]
 fn test_jira_comments_command_with_offset() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
@@ -489,6 +500,7 @@ fn test_jira_comments_command_with_offset() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira评论命令的author参数
 #[test]
 fn test_jira_comments_command_with_author() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&[
@@ -507,6 +519,7 @@ fn test_jira_comments_command_with_author() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira评论命令的since参数
 #[test]
 fn test_jira_comments_command_with_since() -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&[
@@ -525,9 +538,10 @@ fn test_jira_comments_command_with_since() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira评论命令的所有过滤参数组合
 #[test]
 fn test_jira_comments_command_all_filters() -> Result<()> {
-    // 测试所有过滤参数组合
+    // Arrange: 准备测试所有过滤参数组合
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -561,9 +575,10 @@ fn test_jira_comments_command_all_filters() -> Result<()> {
     Ok(())
 }
 
+/// 测试Jira评论命令的分页参数组合（limit + offset）
 #[test]
 fn test_jira_comments_command_pagination() -> Result<()> {
-    // 测试分页参数组合（limit + offset）
+    // Arrange: 准备测试分页参数组合（limit + offset）
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         "comments",
@@ -591,6 +606,7 @@ fn test_jira_comments_command_pagination() -> Result<()> {
 
 // ==================== 命令枚举测试 ====================
 
+/// 测试Jira命令解析所有子命令
 #[rstest]
 #[case("info", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Info { .. }))]
 #[case("related", |cmd: &JiraSubcommand| matches!(cmd, JiraSubcommand::Related { .. }))]
@@ -611,9 +627,10 @@ fn test_jira_command_parsing_all_subcommands(
     Ok(())
 }
 
+/// 测试Jira命令的错误处理（无效子命令）
 #[test]
 fn test_jira_command_error_handling_invalid_subcommand() -> Result<()> {
-    // 测试无效子命令的错误处理
+    // Arrange: 准备测试无效子命令的错误处理
     let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
     Ok(())
@@ -621,9 +638,10 @@ fn test_jira_command_error_handling_invalid_subcommand() -> Result<()> {
 
 // ==================== Changelog 命令测试 ====================
 
+/// 测试Jira变更日志命令的字段过滤参数
 #[test]
 fn test_jira_changelog_command_with_field_filter() -> Result<()> {
-    // 测试 --field 参数
+    // Arrange: 准备测试 --field 参数
     // 注意：当前 Changelog 命令的枚举定义中没有 field 字段
     // 如果将来添加了 field 字段，这个测试需要更新
     let cli = TestJiraCli::try_parse_from(&["test-jira", "changelog", "PROJ-123"])?;

@@ -38,9 +38,10 @@ fn unique_repo() -> String {
 
 // ==================== 工作历史记录读写测试 ====================
 
+/// 测试读取不存在的工作历史记录文件
 #[rstest]
 fn test_read_work_history_nonexistent_file(unique_repo: String) -> Result<()> {
-    // 测试读取不存在的工作历史记录文件
+    // Arrange: 准备测试读取不存在的工作历史记录文件
     let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo))?;
 
     // 文件不存在时应该返回 None
@@ -48,9 +49,10 @@ fn test_read_work_history_nonexistent_file(unique_repo: String) -> Result<()> {
     Ok(())
 }
 
+/// 测试读取存在的工作历史记录条目
 #[test]
 fn test_read_work_history_existing_entry() {
-    // 测试读取存在的工作历史记录条目
+    // Arrange: 准备测试读取存在的工作历史记录条目
     let test_dir = create_temp_test_dir("work_history");
     let repo_url = "github.com-test-repo";
 
@@ -89,9 +91,10 @@ fn test_read_work_history_existing_entry() {
     cleanup_temp_test_dir(&test_dir);
 }
 
+/// 测试读取不存在的工作历史记录条目
 #[test]
 fn test_read_work_history_nonexistent_entry() {
-    // 测试读取不存在的工作历史记录条目
+    // Arrange: 准备测试读取不存在的工作历史记录条目
     let test_dir = create_temp_test_dir("work_history");
     let repo_url = "github.com-test-repo";
 
@@ -128,9 +131,10 @@ fn test_read_work_history_nonexistent_entry() {
     cleanup_temp_test_dir(&test_dir);
 }
 
+/// 测试在不存在文件中根据分支名查找PR ID
 #[rstest]
 fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) -> Result<()> {
-    // 测试在不存在文件中根据分支名查找 PR ID
+    // Arrange: 准备测试在不存在文件中根据分支名查找 PR ID
     let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo))?;
 
     // 文件不存在时应该返回 None
@@ -138,9 +142,10 @@ fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) -> Result<()>
     Ok(())
 }
 
+/// 测试根据分支名查找存在的PR ID
 #[test]
 fn test_find_pr_id_by_branch_existing_branch() {
-    // 测试根据分支名查找存在的 PR ID
+    // Arrange: 准备测试根据分支名查找存在的 PR ID
     let test_dir = create_temp_test_dir("work_history");
     let repo_url = "github.com-test-repo";
 
@@ -180,9 +185,10 @@ fn test_find_pr_id_by_branch_existing_branch() {
     cleanup_temp_test_dir(&test_dir);
 }
 
+/// 测试根据分支名查找不存在的PR ID
 #[test]
 fn test_find_pr_id_by_branch_nonexistent_branch() {
-    // 测试根据分支名查找不存在的 PR ID
+    // Arrange: 准备测试根据分支名查找不存在的 PR ID
     let test_dir = create_temp_test_dir("work_history");
     let repo_url = "github.com-test-repo";
 
@@ -222,12 +228,13 @@ fn test_find_pr_id_by_branch_nonexistent_branch() {
     cleanup_temp_test_dir(&test_dir);
 }
 
+/// 测试在没有提供仓库地址时查找PR ID（应返回错误）
 #[rstest]
 #[case("feature/test")]
 #[case("feature/PROJ-123")]
 #[case("main")]
 fn test_find_pr_id_by_branch_without_repository(#[case] branch: &str) {
-    // 测试在没有提供仓库地址时查找 PR ID（应该失败）
+    // Arrange: 准备测试在没有提供仓库地址时查找 PR ID（应该失败）
     let result = JiraWorkHistory::find_pr_id_by_branch(branch, None);
 
     // 应该返回错误，因为仓库地址是必需的
@@ -244,6 +251,7 @@ fn test_find_pr_id_by_branch_without_repository(#[case] branch: &str) {
 
 // ==================== 工作历史记录写入测试 ====================
 
+/// 测试在没有提供仓库地址时写入工作历史记录（应返回错误）
 #[rstest]
 #[case(
     "PROJ-123",
@@ -258,7 +266,7 @@ fn test_write_work_history_without_repository(
     #[case] pr_url: Option<&str>,
     #[case] branch: Option<&str>,
 ) {
-    // 测试在没有提供仓库地址时写入工作历史记录（应该失败）
+    // Arrange: 准备测试在没有提供仓库地址时写入工作历史记录（应该失败）
     let result = JiraWorkHistory::write_work_history(jira_ticket, pr_id, pr_url, None, branch);
 
     // 应该返回错误，因为仓库地址是必需的
@@ -273,6 +281,7 @@ fn test_write_work_history_without_repository(
     );
 }
 
+/// 测试工作历史记录写入功能
 #[rstest]
 #[case(
     "PROJ-123",
@@ -293,7 +302,7 @@ fn test_write_work_history(
     #[case] pr_url: Option<&str>,
     #[case] branch: Option<&str>,
 ) {
-    // 测试工作历史记录写入功能
+    // Arrange: 准备测试工作历史记录写入功能
     // 注意：由于实际路径由 Paths::work_history_dir() 决定，我们主要验证函数不会 panic
     let result = JiraWorkHistory::write_work_history(
         jira_ticket,
@@ -317,12 +326,13 @@ fn test_write_work_history(
 
 // ==================== 工作历史记录更新测试 ====================
 
+/// 测试在没有提供仓库地址时更新合并时间（应返回错误）
 #[rstest]
 #[case("123")]
 #[case("456")]
 #[case("999")]
 fn test_update_work_history_merged_without_repository(#[case] pr_id: &str) {
-    // 测试在没有提供仓库地址时更新合并时间（应该失败）
+    // Arrange: 准备测试在没有提供仓库地址时更新合并时间（应该失败）
     let result = JiraWorkHistory::update_work_history_merged(pr_id, None);
 
     // 应该返回错误，因为仓库地址是必需的
@@ -337,18 +347,20 @@ fn test_update_work_history_merged_without_repository(#[case] pr_id: &str) {
     );
 }
 
+/// 测试更新不存在文件的合并时间
 #[rstest]
 fn test_update_work_history_merged_nonexistent_file(unique_repo: String) {
-    // 测试更新不存在文件的合并时间
+    // Arrange: 准备测试更新不存在文件的合并时间
     let result = JiraWorkHistory::update_work_history_merged("123", Some(&unique_repo));
 
     // 文件不存在时应该返回 Ok(())（不报错）
     assert!(result.is_ok(), "Should return Ok when file doesn't exist");
 }
 
+/// 测试基本的合并时间更新功能
 #[test]
 fn test_update_work_history_merged_basic() {
-    // 测试基本的合并时间更新功能
+    // Arrange: 准备测试基本的合并时间更新功能
     // 注意：由于实际路径由 Paths::work_history_dir() 决定，我们主要验证函数不会 panic
     let result = JiraWorkHistory::update_work_history_merged("123", Some("github.com/test/repo"));
 
@@ -369,12 +381,13 @@ fn test_update_work_history_merged_basic() {
 
 // ==================== 工作历史记录删除测试 ====================
 
+/// 测试在没有提供仓库地址时删除工作历史记录条目（应返回错误）
 #[rstest]
 #[case("123")]
 #[case("456")]
 #[case("999")]
 fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
-    // 测试在没有提供仓库地址时删除工作历史记录条目（应该失败）
+    // Arrange: 准备测试在没有提供仓库地址时删除工作历史记录条目（应该失败）
     let result = JiraWorkHistory::delete_work_history_entry(pr_id, None);
 
     // 应该返回错误，因为仓库地址是必需的
@@ -389,6 +402,7 @@ fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
     );
 }
 
+/// 测试删除不存在文件中的条目
 #[rstest]
 #[case("999")]
 #[case("888")]
@@ -397,7 +411,7 @@ fn test_delete_work_history_entry_nonexistent_file(
     unique_repo: String,
     #[case] pr_id: &str,
 ) -> Result<()> {
-    // 测试删除不存在文件中的条目
+    // Arrange: 准备测试删除不存在文件中的条目
     let delete_result = JiraWorkHistory::delete_work_history_entry(pr_id, Some(&unique_repo))?;
 
     // 文件不存在时，messages 和 warnings 应该为空
@@ -414,16 +428,17 @@ fn test_delete_work_history_entry_nonexistent_file(
     Ok(())
 }
 
+/// 测试基本的删除功能
 #[test]
 fn test_delete_work_history_entry_basic() {
-    // 测试基本的删除功能
+    // Arrange: 准备测试基本的删除功能
     // 注意：由于实际路径由 Paths::work_history_dir() 决定，我们主要验证函数不会 panic
     let result = JiraWorkHistory::delete_work_history_entry("123", Some("github.com/test/repo"));
 
     // 如果路径解析成功，应该能删除；否则返回错误或 Ok（文件不存在）
     match result {
         Ok(_delete_result) => {
-            // 验证返回的结构体格式正确
+            // Assert: 验证返回的结构体格式正确
             assert!(true, "Messages should be a valid vector");
             assert!(true, "Warnings should be a valid vector");
         }
@@ -436,12 +451,13 @@ fn test_delete_work_history_entry_basic() {
 
 // ==================== WorkHistoryEntry 结构体测试 ====================
 
+/// 测试WorkHistoryEntry的序列化
 #[rstest]
 fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry) -> Result<()> {
-    // 测试 WorkHistoryEntry 的序列化
+    // Arrange: 准备测试 WorkHistoryEntry 的序列化
     let json_str = serde_json::to_string(&sample_history_entry)?;
 
-    // 验证 JSON 是有效的，并包含必要的字段
+    // Assert: 验证 JSON 是有效的，并包含必要的字段
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 
@@ -456,9 +472,10 @@ fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry)
     Ok(())
 }
 
+/// 测试WorkHistoryEntry的反序列化
 #[test]
 fn test_work_history_entry_deserialization() -> Result<()> {
-    // 测试 WorkHistoryEntry 的反序列化
+    // Arrange: 准备测试 WorkHistoryEntry 的反序列化
     let json = r#"{
       "jira_ticket": "PROJ-123",
       "pull_request_url": "https://github.com/test/repo/pull/123",
@@ -481,6 +498,7 @@ fn test_work_history_entry_deserialization() -> Result<()> {
     Ok(())
 }
 
+/// 测试WorkHistoryEntry的可选字段
 #[rstest]
 #[case("PROJ-123", None, None, None, None, None)]
 #[case(
@@ -507,7 +525,7 @@ fn test_work_history_entry_with_optional_fields(
     #[case] repository: Option<&str>,
     #[case] branch: Option<&str>,
 ) -> Result<()> {
-    // 测试 WorkHistoryEntry 的可选字段
+    // Arrange: 准备测试 WorkHistoryEntry 的可选字段
     let entry = WorkHistoryEntry {
         jira_ticket: jira_ticket.to_string(),
         pull_request_url: pull_request_url.map(|s| s.to_string()),
@@ -517,10 +535,10 @@ fn test_work_history_entry_with_optional_fields(
         branch: branch.map(|s| s.to_string()),
     };
 
-    // 测试序列化（可选字段应该被跳过）
+    // Arrange: 准备测试序列化（可选字段应该被跳过）
     let json_str = serde_json::to_string(&entry)?;
 
-    // 验证 JSON 是有效的
+    // Assert: 验证 JSON 是有效的
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 

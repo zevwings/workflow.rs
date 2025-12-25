@@ -368,11 +368,10 @@ fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
 }
 
 #[test]
-fn test_request_timeout() -> Result<()> {
+fn test_request_with_timeout_config_applies_timeout() -> Result<()> {
+    // Arrange: 准备 Mock 服务器（注意：mockito 不支持真正的延迟，这里只测试配置是否正确传递）
     let mut mock_server = setup_mock_server();
     let url = format!("{}/slow", mock_server.base_url);
-
-    // 注意：mockito 不支持真正的延迟，这里只测试配置是否正确传递
     let _mock = mock_server
         .server
         .as_mut()
@@ -382,20 +381,22 @@ fn test_request_timeout() -> Result<()> {
         .with_body(r#"{}"#)
         .create();
 
+    // Act: 发送带超时配置的请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().timeout(std::time::Duration::from_secs(5));
     let response = client.get(&url, config)?;
 
+    // Assert: 验证请求成功
     assert!(response.is_success());
     _mock.assert();
     Ok(())
 }
 
 #[test]
-fn test_request_error_handling() -> Result<()> {
+fn test_request_with_error_status_handles_error_response() -> Result<()> {
+    // Arrange: 准备返回错误状态码的 Mock 服务器
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
-
     let _mock = mock_server
         .server
         .as_mut()
@@ -405,11 +406,12 @@ fn test_request_error_handling() -> Result<()> {
         .with_body(r#"{"error": "Internal Server Error"}"#)
         .create();
 
+    // Act: 发送请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let response = client.get(&url, config)?;
 
-    // 请求应该成功（HTTP 客户端层面），但响应状态码是 500
+    // Assert: 验证请求应该成功（HTTP 客户端层面），但响应状态码是 500
     assert_eq!(response.status, 500);
     assert!(response.is_error());
     _mock.assert();
@@ -417,16 +419,15 @@ fn test_request_error_handling() -> Result<()> {
 }
 
 #[test]
-fn test_request_with_all_options() -> Result<()> {
+fn test_request_with_all_options_configures_all_options() -> Result<()> {
+    // Arrange: 准备包含所有选项的请求配置
     let mut mock_server = setup_mock_server();
     let url = format!("{}/complex", mock_server.base_url);
-
     let body_data = serde_json::json!({"data": "test"});
     let query = [("filter", "active")];
     let auth = workflow::base::http::Authorization::new("user", "pass");
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("X-Request-ID", "12345".parse()?);
-
     let _mock = mock_server
         .server
         .as_mut()
@@ -443,6 +444,7 @@ fn test_request_with_all_options() -> Result<()> {
         .with_body(r#"{"success": true}"#)
         .create();
 
+    // Act: 发送包含所有选项的请求
     let client = HttpClient::global()?;
     let config = RequestConfig::new()
         .body(&body_data)
@@ -452,6 +454,7 @@ fn test_request_with_all_options() -> Result<()> {
         .timeout(std::time::Duration::from_secs(10));
     let response = client.post(&url, config)?;
 
+    // Assert: 验证请求成功
     assert!(response.is_success());
     _mock.assert();
     Ok(())
@@ -460,9 +463,9 @@ fn test_request_with_all_options() -> Result<()> {
 // ==================== 来自 client_core.rs 的补充测试 ====================
 
 #[test]
-fn test_http_client_get() -> color_eyre::Result<()> {
+fn test_http_client_get_with_valid_url_returns_response() -> color_eyre::Result<()> {
+    // Arrange: 准备 Mock 服务器
     let mut manager = MockServer::new();
-
     let mock = manager
         .server()
         .mock("GET", "/test")
@@ -471,11 +474,13 @@ fn test_http_client_get() -> color_eyre::Result<()> {
         .with_body(r#"{"message": "success"}"#)
         .create();
 
+    // Act: 发送 GET 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let url = format!("{}/test", manager.base_url());
     let response = client.get(&url, config)?;
 
+    // Assert: 验证响应状态和内容正确
     assert_eq!(response.status, 200);
     let json: Value = response.as_json()?;
     assert_eq!(json["message"], "success");
@@ -486,9 +491,9 @@ fn test_http_client_get() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_http_client_post() -> color_eyre::Result<()> {
+fn test_http_client_post_with_json_body_returns_response() -> color_eyre::Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
-
     let body = serde_json::json!({"key": "value"});
     let mock = manager
         .server()
@@ -498,11 +503,13 @@ fn test_http_client_post() -> color_eyre::Result<()> {
         .with_body(r#"{"id": 123, "key": "value"}"#)
         .create();
 
+    // Act: 发送 POST 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body);
     let url = format!("{}/test", manager.base_url());
     let response = client.post(&url, config)?;
 
+    // Assert: 验证响应状态和内容正确
     assert_eq!(response.status, 201);
     let json: Value = response.as_json()?;
     assert_eq!(json["id"], 123);
@@ -629,9 +636,9 @@ fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_http_client_put() -> color_eyre::Result<()> {
+fn test_http_client_put_with_json_body_returns_response() -> color_eyre::Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
-
     let body = serde_json::json!({"key": "updated_value"});
     let mock = manager
         .server()
@@ -641,11 +648,13 @@ fn test_http_client_put() -> color_eyre::Result<()> {
         .with_body(r#"{"updated": true}"#)
         .create();
 
+    // Act: 发送 PUT 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body);
     let url = format!("{}/test", manager.base_url());
     let response = client.put(&url, config)?;
 
+    // Assert: 验证响应状态正确
     assert_eq!(response.status, 200);
 
     mock.assert();
@@ -654,9 +663,9 @@ fn test_http_client_put() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_http_client_delete() -> color_eyre::Result<()> {
+fn test_http_client_delete_with_valid_url_returns_response() -> color_eyre::Result<()> {
+    // Arrange: 准备 Mock 服务器
     let mut manager = MockServer::new();
-
     let mock = manager
         .server()
         .mock("DELETE", "/test")
@@ -665,11 +674,13 @@ fn test_http_client_delete() -> color_eyre::Result<()> {
         .with_body("")
         .create();
 
+    // Act: 发送 DELETE 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let url = format!("{}/test", manager.base_url());
     let response = client.delete(&url, config)?;
 
+    // Assert: 验证响应状态正确
     assert_eq!(response.status, 204);
 
     mock.assert();
@@ -678,9 +689,9 @@ fn test_http_client_delete() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_http_client_patch() -> color_eyre::Result<()> {
+fn test_http_client_patch_with_json_body_returns_response() -> color_eyre::Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut manager = MockServer::new();
-
     let body = serde_json::json!({"key": "patched_value"});
     let mock = manager
         .server()
@@ -690,11 +701,13 @@ fn test_http_client_patch() -> color_eyre::Result<()> {
         .with_body(r#"{"patched": true}"#)
         .create();
 
+    // Act: 发送 PATCH 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body);
     let url = format!("{}/test", manager.base_url());
     let response = client.patch(&url, config)?;
 
+    // Assert: 验证响应状态正确
     assert_eq!(response.status, 200);
 
     mock.assert();
@@ -703,9 +716,9 @@ fn test_http_client_patch() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_http_client_error_response() -> color_eyre::Result<()> {
+fn test_http_client_get_with_error_status_handles_error_response() -> color_eyre::Result<()> {
+    // Arrange: 准备返回错误状态码的 Mock 服务器
     let mut manager = MockServer::new();
-
     let mock = manager
         .server()
         .mock("GET", "/test")
@@ -714,11 +727,13 @@ fn test_http_client_error_response() -> color_eyre::Result<()> {
         .with_body(r#"{"error": "Not Found"}"#)
         .create();
 
+    // Act: 发送 GET 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let url = format!("{}/test", manager.base_url());
     let response = client.get(&url, config)?;
 
+    // Assert: 验证响应状态为错误且错误标志正确
     assert_eq!(response.status, 404);
     assert!(!response.is_success());
     assert!(response.is_error());

@@ -7,9 +7,10 @@ use workflow::pr::table::PullRequestRow;
 
 // ==================== PullRequestRow 结构体创建测试 ====================
 
+/// 测试创建PullRequestRow结构体
 #[test]
 fn test_pull_request_row_creation() {
-    // 测试创建 PullRequestRow 结构体
+    // Arrange: 准备测试创建 PullRequestRow 结构体
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -27,9 +28,10 @@ fn test_pull_request_row_creation() {
     assert_eq!(row.url, "https://github.com/owner/repo/pull/123");
 }
 
+/// 测试使用空字符串创建PullRequestRow
 #[test]
 fn test_pull_request_row_with_empty_fields() {
-    // 测试使用空字符串创建 PullRequestRow
+    // Arrange: 准备测试使用空字符串创建 PullRequestRow
     let row = PullRequestRow {
         number: String::new(),
         state: String::new(),
@@ -47,9 +49,10 @@ fn test_pull_request_row_with_empty_fields() {
     assert_eq!(row.url, "");
 }
 
+/// 测试使用长字符串创建PullRequestRow
 #[test]
 fn test_pull_request_row_with_long_strings() {
-    // 测试使用长字符串创建 PullRequestRow
+    // Arrange: 准备测试使用长字符串创建 PullRequestRow
     let long_title = "A".repeat(200);
     let long_branch = "feature/".to_string() + &"x".repeat(100);
     let long_url = "https://github.com/".to_string() + &"owner/".repeat(20) + "repo/pull/123";
@@ -68,9 +71,10 @@ fn test_pull_request_row_with_long_strings() {
     assert_eq!(row.url, long_url);
 }
 
+/// 测试使用特殊字符创建PullRequestRow
 #[test]
 fn test_pull_request_row_with_special_characters() {
-    // 测试使用特殊字符创建 PullRequestRow
+    // Arrange: 准备测试使用特殊字符创建 PullRequestRow
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -89,9 +93,10 @@ fn test_pull_request_row_with_special_characters() {
     );
 }
 
+/// 测试使用Unicode字符创建PullRequestRow
 #[test]
 fn test_pull_request_row_with_unicode() {
-    // 测试使用 Unicode 字符创建 PullRequestRow
+    // Arrange: 准备测试使用 Unicode 字符创建 PullRequestRow
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -108,9 +113,10 @@ fn test_pull_request_row_with_unicode() {
 
 // ==================== PullRequestRow 字段访问测试 ====================
 
+/// 测试PullRequestRow的字段访问（读取和修改）
 #[test]
 fn test_pull_request_row_field_access() {
-    // 测试字段访问
+    // Arrange: 准备测试字段访问
     let mut row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -120,11 +126,11 @@ fn test_pull_request_row_field_access() {
         url: "https://github.com/owner/repo/pull/123".to_string(),
     };
 
-    // 测试读取字段
+    // Arrange: 准备测试读取字段
     assert_eq!(row.number, "123");
     assert_eq!(row.state, "open");
 
-    // 测试修改字段
+    // Arrange: 准备测试修改字段
     row.state = "closed".to_string();
     row.title = "Updated PR".to_string();
 
@@ -134,9 +140,10 @@ fn test_pull_request_row_field_access() {
 
 // ==================== PullRequestRow 不同状态测试 ====================
 
+/// 测试open状态的PR
 #[test]
 fn test_pull_request_row_open_state() {
-    // 测试 open 状态的 PR
+    // Arrange: 准备测试 open 状态的 PR
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -149,9 +156,10 @@ fn test_pull_request_row_open_state() {
     assert_eq!(row.state, "open");
 }
 
+/// 测试closed状态的PR
 #[test]
 fn test_pull_request_row_closed_state() {
-    // 测试 closed 状态的 PR
+    // Arrange: 准备测试 closed 状态的 PR
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "closed".to_string(),
@@ -164,9 +172,10 @@ fn test_pull_request_row_closed_state() {
     assert_eq!(row.state, "closed");
 }
 
+/// 测试merged状态的PR
 #[test]
 fn test_pull_request_row_merged_state() {
-    // 测试 merged 状态的 PR
+    // Arrange: 准备测试 merged 状态的 PR
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "merged".to_string(),
@@ -181,9 +190,10 @@ fn test_pull_request_row_merged_state() {
 
 // ==================== PullRequestRow 集合操作测试 ====================
 
+/// 测试创建PullRequestRow向量
 #[test]
 fn test_pull_request_row_vector() {
-    // 测试创建 PullRequestRow 向量
+    // Arrange: 准备测试创建 PullRequestRow 向量
     let rows = vec![
         PullRequestRow {
             number: "123".to_string(),
@@ -217,9 +227,10 @@ fn test_pull_request_row_vector() {
     assert_eq!(rows[2].number, "789");
 }
 
+/// 测试空的PullRequestRow向量
 #[test]
 fn test_pull_request_row_empty_vector() {
-    // 测试空的 PullRequestRow 向量
+    // Arrange: 准备测试空的 PullRequestRow 向量
     let rows: Vec<PullRequestRow> = vec![];
 
     assert_eq!(rows.len(), 0);
@@ -227,9 +238,10 @@ fn test_pull_request_row_empty_vector() {
 
 // ==================== PullRequestRow 边界条件测试 ====================
 
+/// 测试包含空白字符的字段
 #[test]
 fn test_pull_request_row_with_whitespace() {
-    // 测试包含空白字符的字段
+    // Arrange: 准备测试包含空白字符的字段
     let row = PullRequestRow {
         number: "  123  ".to_string(),
         state: "  open  ".to_string(),
@@ -239,15 +251,16 @@ fn test_pull_request_row_with_whitespace() {
         url: "  https://github.com/owner/repo/pull/123  ".to_string(),
     };
 
-    // 验证字段包含空白字符
+    // Assert: 验证字段包含空白字符
     assert!(row.number.starts_with(' '));
     assert!(row.number.ends_with(' '));
     assert!(row.title.contains("Test PR"));
 }
 
+/// 测试包含换行符的字段
 #[test]
 fn test_pull_request_row_with_newlines() {
-    // 测试包含换行符的字段（虽然在实际使用中可能不常见）
+    // Arrange: 准备测试包含换行符的字段（虽然在实际使用中可能不常见）
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -262,9 +275,10 @@ fn test_pull_request_row_with_newlines() {
 
 // ==================== PullRequestRow 实际使用场景测试 ====================
 
+/// 测试模拟从GitHub PR创建PullRequestRow
 #[test]
 fn test_pull_request_row_from_github_pr() {
-    // 测试模拟从 GitHub PR 创建 PullRequestRow
+    // Arrange: 准备测试模拟从 GitHub PR 创建 PullRequestRow
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -274,7 +288,7 @@ fn test_pull_request_row_from_github_pr() {
         url: "https://github.com/owner/repo/pull/123".to_string(),
     };
 
-    // 验证字段符合预期格式
+    // Assert: 验证字段符合预期格式
     assert!(row.number.parse::<u32>().is_ok());
     assert!(row.url.starts_with(workflow::git::github::BASE));
     assert!(row.url.contains("/pull/"));
@@ -282,9 +296,10 @@ fn test_pull_request_row_from_github_pr() {
 
 // ==================== PullRequestRow 结构体特性测试 ====================
 
+/// 测试手动克隆PullRequestRow
 #[test]
 fn test_pull_request_row_manual_clone() {
-    // 测试手动克隆 PullRequestRow（因为结构体没有实现 Clone trait）
+    // Arrange: 准备测试手动克隆 PullRequestRow（因为结构体没有实现 Clone trait）
     let row1 = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -311,9 +326,10 @@ fn test_pull_request_row_manual_clone() {
     assert_eq!(row1.url, row2.url);
 }
 
+/// 测试创建后访问字段
 #[test]
 fn test_pull_request_row_field_access_after_creation() {
-    // 测试创建后访问字段
+    // Arrange: 准备测试创建后访问字段
     let row = PullRequestRow {
         number: "123".to_string(),
         state: "open".to_string(),
@@ -323,7 +339,7 @@ fn test_pull_request_row_field_access_after_creation() {
         url: "https://github.com/owner/repo/pull/123".to_string(),
     };
 
-    // 验证所有字段都可以访问
+    // Assert: 验证所有字段都可以访问
     assert_eq!(row.number, "123");
     assert_eq!(row.state, "open");
     assert_eq!(row.branch, "feature/test");

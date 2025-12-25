@@ -23,22 +23,25 @@ fn nonexistent_jira_id() -> &'static str {
 
 // ==================== JiraLogs 初始化测试 ====================
 
+/// 测试创建JiraLogs实例
 #[test]
 fn test_jira_logs_new() {
-    // 测试创建 JiraLogs 实例
+    // Arrange: 准备测试创建 JiraLogs 实例
     let jira_logs = JiraLogs::new();
     assert!(jira_logs.is_ok(), "JiraLogs::new() should succeed");
 }
 
+/// 测试获取基础目录路径
 #[rstest]
 fn test_jira_logs_get_base_dir_path(jira_logs: JiraLogs) {
-    // 测试获取基础目录路径
+    // Arrange: 准备测试获取基础目录路径
     let base_dir = jira_logs.get_base_dir_path();
 
-    // 验证返回的是有效的路径
+    // Assert: 验证返回的是有效的路径
     assert!(base_dir.is_absolute() || base_dir.to_string_lossy().starts_with("~"));
 }
 
+/// 测试获取日志文件路径
 #[rstest]
 #[case("TEST-123", "TEST")]
 #[case("PROJ-456", "PROJ")]
@@ -47,11 +50,11 @@ fn test_jira_logs_get_log_file_path(
     #[case] jira_id: &str,
     #[case] project_prefix: &str,
 ) {
-    // 测试获取日志文件路径
+    // Arrange: 准备测试获取日志文件路径
     let log_file_path = jira_logs.get_log_file_path(jira_id);
     // 即使目录不存在，也应该返回一个路径
     if let Ok(path) = log_file_path {
-        // 验证路径包含 jira_id（如果路径构建成功）
+        // Assert: 验证路径包含 jira_id（如果路径构建成功）
         let path_str = path.to_string_lossy();
         assert!(
             path_str.contains(jira_id) || path_str.contains(project_prefix),
@@ -65,16 +68,17 @@ fn test_jira_logs_get_log_file_path(
     }
 }
 
+/// 测试日志文件路径格式
 #[rstest]
 fn test_jira_logs_get_log_file_path_format(jira_logs: JiraLogs) {
-    // 测试日志文件路径格式
+    // Arrange: 准备测试日志文件路径格式
     let jira_id = "PROJ-456";
 
     let log_file_path_result = jira_logs.get_log_file_path(jira_id);
     if let Ok(log_file_path) = log_file_path_result {
         let path_str = log_file_path.to_string_lossy();
 
-        // 验证路径格式：应该包含 jira 目录和 jira_id
+        // Assert: 验证路径格式：应该包含 jira 目录和 jira_id
         assert!(
             path_str.contains("jira"),
             "Path should contain 'jira' directory"
@@ -88,9 +92,10 @@ fn test_jira_logs_get_log_file_path_format(jira_logs: JiraLogs) {
 
 // ==================== 路径处理测试 ====================
 
+/// 测试路径一致性（多次调用应返回相同结果）
 #[rstest]
 fn test_jira_logs_path_consistency(jira_logs: JiraLogs) {
-    // 测试路径一致性
+    // Arrange: 准备测试路径一致性
     let jira_id = "TEST-789";
 
     let path1_result = jira_logs.get_log_file_path(jira_id);
@@ -113,9 +118,10 @@ fn test_jira_logs_path_consistency(jira_logs: JiraLogs) {
     }
 }
 
+/// 测试不同JIRA ID的路径（应返回不同路径）
 #[rstest]
 fn test_jira_logs_different_jira_ids(jira_logs: JiraLogs) {
-    // 测试不同 JIRA ID 的路径
+    // Arrange: 准备测试不同 JIRA ID 的路径
     let path1_result = jira_logs.get_log_file_path("PROJ-1");
     let path2_result = jira_logs.get_log_file_path("PROJ-2");
 
@@ -139,12 +145,13 @@ fn test_jira_logs_different_jira_ids(jira_logs: JiraLogs) {
 
 // ==================== 日志文件存在性测试 ====================
 
+/// 测试确保日志文件存在（文件不存在的情况，应返回错误）
 #[rstest]
 fn test_jira_logs_ensure_log_file_exists_nonexistent(
     jira_logs: JiraLogs,
     nonexistent_jira_id: &str,
 ) {
-    // 测试确保日志文件存在（文件不存在的情况）
+    // Arrange: 准备测试确保日志文件存在（文件不存在的情况）
     let result = jira_logs.ensure_log_file_exists(nonexistent_jira_id);
 
     // 文件不存在时应该返回错误
@@ -165,9 +172,10 @@ fn test_jira_logs_ensure_log_file_exists_nonexistent(
     );
 }
 
+/// 测试确保日志文件存在（使用临时文件）
 #[rstest]
 fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) {
-    // 测试确保日志文件存在（使用临时文件）
+    // Arrange: 准备测试确保日志文件存在（使用临时文件）
     let _ = jira_logs; // 使用 fixture，即使不直接使用也保持一致性
     let test_dir = create_temp_test_dir("jira_logs_test");
 
@@ -190,13 +198,14 @@ fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) {
 
 // ==================== LogEntry 测试 ====================
 
+/// 测试创建LogEntry（包含可选字段）
 #[rstest]
 #[case(Some("123"), Some("https://example.com/api"))]
 #[case(Some("456"), None)]
 #[case(None, Some("https://example.com/api"))]
 #[case(None, None)]
 fn test_log_entry(#[case] id: Option<&str>, #[case] url: Option<&str>) {
-    // 测试创建 LogEntry
+    // Arrange: 准备测试创建 LogEntry
     let entry = LogEntry {
         id: id.map(|s| s.to_string()),
         url: url.map(|s| s.to_string()),
@@ -208,12 +217,13 @@ fn test_log_entry(#[case] id: Option<&str>, #[case] url: Option<&str>) {
 
 // ==================== 清理功能测试 ====================
 
+/// 测试清理目录（包含dry_run和list_only选项）
 #[rstest]
 #[case("NONEXISTENT-999", true, false)]
 #[case("TEST-DRYRUN", true, false)]
 #[case("TEST-LIST", false, true)]
 fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case] list_only: bool) {
-    // 测试清理目录
+    // Arrange: 准备测试清理目录
     let cleaner = AttachmentCleaner::new();
 
     let result = cleaner.clean_dir(jira_id, dry_run, list_only);
@@ -270,7 +280,7 @@ fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case
 #[test]
 #[ignore] // 需要交互式确认，在 CI 环境中会卡住
 fn test_jira_logs_clean_dir_empty_jira_id() {
-    // 测试清理整个基础目录（空 JIRA ID）
+    // Arrange: 准备测试清理整个基础目录（空 JIRA ID）
     // 注意：这个测试会触发交互式确认对话框，在 CI 环境中会卡住
     // 使用 `cargo test -- --ignored` 来运行这些测试
     let cleaner = AttachmentCleaner::new();
@@ -295,9 +305,10 @@ fn test_jira_logs_clean_dir_empty_jira_id() {
 
 // ==================== 搜索功能测试 ====================
 
+/// 测试在不存在的文件中查找请求ID（应返回错误）
 #[rstest]
 fn test_jira_logs_find_request_id_nonexistent_file(jira_logs: JiraLogs, nonexistent_jira_id: &str) {
-    // 测试在不存在的文件中查找请求 ID
+    // Arrange: 准备测试在不存在的文件中查找请求 ID
     let result = jira_logs.find_request_id(nonexistent_jira_id, "123");
 
     // 文件不存在时应该返回错误
@@ -307,12 +318,13 @@ fn test_jira_logs_find_request_id_nonexistent_file(jira_logs: JiraLogs, nonexist
     );
 }
 
+/// 测试从不存在的文件中提取响应内容（应返回错误）
 #[rstest]
 fn test_jira_logs_extract_response_content_nonexistent_file(
     jira_logs: JiraLogs,
     nonexistent_jira_id: &str,
 ) {
-    // 测试从不存在的文件中提取响应内容
+    // Arrange: 准备测试从不存在的文件中提取响应内容
     let result = jira_logs.extract_response_content(nonexistent_jira_id, "123");
 
     // 文件不存在时应该返回错误
@@ -324,10 +336,11 @@ fn test_jira_logs_extract_response_content_nonexistent_file(
 
 // ==================== 配置和设置测试 ====================
 
+/// 测试与Settings的集成
 #[rstest]
 fn test_jira_logs_settings_integration(jira_logs: JiraLogs) {
-    // 测试与 Settings 的集成
-    // 验证可以从 Settings 读取配置
+    // Arrange: 准备测试与 Settings 的集成
+    // Assert: 验证可以从 Settings 读取配置
     let base_dir = jira_logs.get_base_dir_path();
     assert!(
         !base_dir.to_string_lossy().is_empty(),
@@ -335,9 +348,10 @@ fn test_jira_logs_settings_integration(jira_logs: JiraLogs) {
     );
 }
 
+/// 测试输出文件夹名称配置
 #[rstest]
 fn test_jira_logs_output_folder_name(jira_logs: JiraLogs) {
-    // 测试输出文件夹名称配置
+    // Arrange: 准备测试输出文件夹名称配置
     let jira_id = "TEST-OUTPUT";
 
     let log_file_path_result = jira_logs.get_log_file_path(jira_id);
@@ -355,16 +369,17 @@ fn test_jira_logs_output_folder_name(jira_logs: JiraLogs) {
 
 // ==================== 错误处理测试 ====================
 
+/// 测试错误消息的格式
 #[rstest]
 fn test_jira_logs_error_messages(jira_logs: JiraLogs) {
-    // 测试错误消息的格式
+    // Arrange: 准备测试错误消息的格式
     let jira_id = "ERROR-TEST";
 
     let result = jira_logs.ensure_log_file_exists(jira_id);
     assert!(result.is_err(), "Should return error for non-existent file");
 
     let error_msg = result.unwrap_err().to_string();
-    // 验证错误消息包含有用的信息
+    // Assert: 验证错误消息包含有用的信息
     // 错误可能是 "Log file not found" 或路径相关的错误
     assert!(
         error_msg.contains("Log file not found")
@@ -376,12 +391,13 @@ fn test_jira_logs_error_messages(jira_logs: JiraLogs) {
     );
 }
 
+/// 测试无效的JIRA ID格式
 #[rstest]
 #[case("INVALID")]
 #[case("123")]
 #[case("PROJ")]
 fn test_jira_logs_invalid_jira_id_format(jira_logs: JiraLogs, #[case] jira_id: &str) {
-    // 测试无效的 JIRA ID 格式
+    // Arrange: 准备测试无效的 JIRA ID 格式
     // 即使格式可能无效，路径构建应该仍然工作（或优雅地失败）
     let result = jira_logs.get_log_file_path(jira_id);
     // 路径构建可能成功或失败，主要验证不会 panic

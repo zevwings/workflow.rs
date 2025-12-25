@@ -319,7 +319,7 @@ fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Res
         cloned_result.shell_config_file
     );
 
-    // 测试调试输出
+    // Arrange: 准备测试调试输出
     let debug_str = format!("{:?}", original_result);
     assert!(debug_str.contains("RollbackResult"));
     assert!(debug_str.contains("restored_binaries"));
@@ -334,7 +334,7 @@ fn test_rollback_manager_cleanup_backup() -> Result<()> {
     let temp_dir = setup_test_environment()?;
     let backup_info = create_test_backup_info(&temp_dir)?;
 
-    // 验证备份目录存在
+    // Assert: 验证备份目录存在
     assert!(backup_info.backup_dir.exists());
 
     // 执行清理
@@ -366,7 +366,7 @@ fn test_backup_info_internal_methods() -> Result<()> {
         completion_backups: vec![],
     };
 
-    // 验证初始状态
+    // Assert: 验证初始状态
     assert_eq!(backup_info.backup_dir, backup_dir);
     assert!(backup_info.binary_backups.is_empty());
     assert!(backup_info.completion_backups.is_empty());
@@ -380,7 +380,7 @@ fn test_backup_info_internal_methods() -> Result<()> {
         backup_dir.join("test_completion"),
     ));
 
-    // 验证添加后的状态
+    // Assert: 验证添加后的状态
     assert_eq!(backup_info.binary_backups.len(), 1);
     assert_eq!(backup_info.completion_backups.len(), 1);
     assert_eq!(backup_info.binary_backups[0].0, "test_binary");
@@ -391,23 +391,23 @@ fn test_backup_info_internal_methods() -> Result<()> {
 /// 测试边界情况和错误处理
 #[test]
 fn test_edge_cases_and_error_handling() -> Result<()> {
-    // 测试空的 BackupInfo
+    // Arrange: 准备测试空的 BackupInfo
     let empty_backup_info = BackupInfo {
         backup_dir: PathBuf::from("/nonexistent/path"),
         binary_backups: vec![],
         completion_backups: vec![],
     };
 
-    // 验证空的备份信息不会导致 panic
+    // Assert: 验证空的备份信息不会导致 panic
     assert!(empty_backup_info.binary_backups.is_empty());
     assert!(empty_backup_info.completion_backups.is_empty());
 
-    // 测试清理不存在的备份目录
+    // Arrange: 准备测试清理不存在的备份目录
     let cleanup_result = RollbackManager::cleanup_backup(&empty_backup_info);
     // 应该成功，因为目录不存在时不需要清理
     assert!(cleanup_result.is_ok());
 
-    // 测试空的 RollbackResult
+    // Arrange: 准备测试空的 RollbackResult
     let empty_rollback_result = RollbackResult {
         restored_binaries: vec![],
         restored_completions: vec![],
@@ -417,7 +417,7 @@ fn test_edge_cases_and_error_handling() -> Result<()> {
         shell_config_file: None,
     };
 
-    // 验证空结果的状态
+    // Assert: 验证空结果的状态
     assert!(empty_rollback_result.restored_binaries.is_empty());
     assert!(empty_rollback_result.restored_completions.is_empty());
     assert!(empty_rollback_result.failed_binaries.is_empty());
@@ -467,11 +467,11 @@ fn test_complex_backup_rollback_scenario() -> Result<()> {
     fs::write(backup_dir.join("workflow.bash"), "bash completion backup")?;
     fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup")?;
 
-    // 验证备份信息的完整性
+    // Assert: 验证备份信息的完整性
     assert_eq!(complex_backup_info.binary_backups.len(), 3);
     assert_eq!(complex_backup_info.completion_backups.len(), 4);
 
-    // 验证部分文件存在，部分不存在
+    // Assert: 验证部分文件存在，部分不存在
     assert!(backup_dir.join("workflow").exists());
     assert!(backup_dir.join("workflow.bash").exists());
     assert!(!backup_dir.join("missing_binary").exists());
@@ -502,13 +502,13 @@ fn test_complex_backup_rollback_scenario() -> Result<()> {
         shell_config_file: Some(PathBuf::from("/home/user/.bashrc")),
     };
 
-    // 验证复杂回滚结果的统计
+    // Assert: 验证复杂回滚结果的统计
     assert_eq!(complex_rollback_result.restored_binaries.len(), 1);
     assert_eq!(complex_rollback_result.restored_completions.len(), 2);
     assert_eq!(complex_rollback_result.failed_binaries.len(), 2);
     assert_eq!(complex_rollback_result.failed_completions.len(), 2);
 
-    // 验证成功率计算
+    // Assert: 验证成功率计算
     let total_binaries = complex_rollback_result.restored_binaries.len()
         + complex_rollback_result.failed_binaries.len();
     let total_completions = complex_rollback_result.restored_completions.len()

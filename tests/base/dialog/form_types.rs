@@ -11,75 +11,91 @@ use workflow::base::dialog::{
 // ==================== FormFieldType 枚举测试 ====================
 
 #[test]
-fn test_form_field_type_variants() {
-    // 测试所有 FormFieldType 变体的创建和比较
+fn test_form_field_type_variants_with_all_types_creates_and_compares() {
+    // Arrange: 准备所有 FormFieldType 变体
+
+    // Act: 创建各种变体
     let text = FormFieldType::Text;
     let password = FormFieldType::Password;
     let selection = FormFieldType::Selection;
     let confirmation = FormFieldType::Confirmation;
 
-    // 验证变体可以创建
+    // Assert: 验证变体可以创建且相等性正确
     assert_eq!(text, FormFieldType::Text);
     assert_eq!(password, FormFieldType::Password);
     assert_eq!(selection, FormFieldType::Selection);
     assert_eq!(confirmation, FormFieldType::Confirmation);
-
-    // 验证变体不相等
     assert_ne!(text, password);
     assert_ne!(selection, confirmation);
 }
 
 #[test]
-fn test_form_field_type_clone() {
-    // 测试 FormFieldType 的 Clone trait
+fn test_form_field_type_clone_with_valid_type_creates_clone() {
+    // Arrange: 准备 FormFieldType 实例
+
+    // Act: 克隆类型
     let field_type = FormFieldType::Text;
     let cloned = field_type;
+
+    // Assert: 验证克隆成功
     assert_eq!(field_type, cloned);
 }
 
 #[test]
-fn test_form_field_type_debug() {
-    // 测试 FormFieldType 的 Debug trait
+fn test_form_field_type_debug_with_valid_type_returns_debug_string() {
+    // Arrange: 准备 FormFieldType 实例
+
+    // Act: 格式化调试字符串
     let field_type = FormFieldType::Text;
     let debug_str = format!("{:?}", field_type);
+
+    // Assert: 验证调试字符串包含类型信息
     assert!(debug_str.contains("Text"));
 }
 
 // ==================== ConditionOperator 枚举测试 ====================
 
 #[test]
-fn test_condition_operator_variants() {
-    // 测试所有 ConditionOperator 变体的创建和比较
+fn test_condition_operator_variants_with_all_operators_creates_and_compares() {
+    // Arrange: 准备所有 ConditionOperator 变体
+
+    // Act: 创建各种操作符
     let equals = ConditionOperator::Equals;
     let not_equals = ConditionOperator::NotEquals;
     let in_op = ConditionOperator::In;
     let not_in = ConditionOperator::NotIn;
 
-    // 验证变体可以创建
+    // Assert: 验证操作符可以创建且相等性正确
     assert_eq!(equals, ConditionOperator::Equals);
     assert_eq!(not_equals, ConditionOperator::NotEquals);
     assert_eq!(in_op, ConditionOperator::In);
     assert_eq!(not_in, ConditionOperator::NotIn);
-
-    // 验证变体不相等
     assert_ne!(equals, not_equals);
     assert_ne!(in_op, not_in);
 }
 
 #[test]
-fn test_condition_operator_clone() {
-    // 测试 ConditionOperator 的 Clone trait
+fn test_condition_operator_clone_with_valid_operator_creates_clone() {
+    // Arrange: 准备 ConditionOperator 实例
+
+    // Act: 克隆操作符
     let op = ConditionOperator::Equals;
     let cloned = op;
+
+    // Assert: 验证克隆成功
     assert_eq!(op, cloned);
 }
 
 // ==================== ConditionValue 枚举测试 ====================
 
 #[test]
-fn test_condition_value_single() {
-    // 测试创建单个值（覆盖 types.rs:58-60）
+fn test_condition_value_single_with_str_creates_single_value() {
+    // Arrange: 准备字符串值（覆盖 types.rs:58-60）
+
+    // Act: 创建单个值
     let value = ConditionValue::single("test");
+
+    // Assert: 验证创建了 Single 变体
     match value {
         ConditionValue::Single(s) => assert_eq!(s, "test"),
         ConditionValue::Multiple(_) => panic!("Expected Single variant"),
@@ -87,9 +103,13 @@ fn test_condition_value_single() {
 }
 
 #[test]
-fn test_condition_value_single_string() {
-    // 测试 single() 方法接受 String
+fn test_condition_value_single_with_string_creates_single_value() {
+    // Arrange: 准备 String 值
+
+    // Act: 创建单个值（接受 String）
     let value = ConditionValue::single("test".to_string());
+
+    // Assert: 验证创建了 Single 变体
     match value {
         ConditionValue::Single(s) => assert_eq!(s, "test"),
         ConditionValue::Multiple(_) => panic!("Expected Single variant"),
@@ -97,10 +117,14 @@ fn test_condition_value_single_string() {
 }
 
 #[test]
-fn test_condition_value_multiple() {
-    // 测试创建多个值（覆盖 types.rs:63-65）
+fn test_condition_value_multiple_with_vec_creates_multiple_values() {
+    // Arrange: 准备多个值（覆盖 types.rs:63-65）
     let values = vec!["value1".to_string(), "value2".to_string()];
+
+    // Act: 创建多个值
     let value = ConditionValue::multiple(values.clone());
+
+    // Assert: 验证创建了 Multiple 变体
     match value {
         ConditionValue::Single(_) => panic!("Expected Multiple variant"),
         ConditionValue::Multiple(v) => assert_eq!(v, values),
@@ -108,10 +132,14 @@ fn test_condition_value_multiple() {
 }
 
 #[test]
-fn test_condition_value_clone() {
-    // 测试 ConditionValue 的 Clone trait
+fn test_condition_value_clone_with_valid_value_creates_clone() {
+    // Arrange: 准备 ConditionValue 实例
+
+    // Act: 克隆值
     let value1 = ConditionValue::single("test");
     let value2 = value1.clone();
+
+    // Assert: 验证克隆成功
     match (value1, value2) {
         (ConditionValue::Single(s1), ConditionValue::Single(s2)) => assert_eq!(s1, s2),
         _ => panic!("Expected Single variants"),
@@ -121,14 +149,17 @@ fn test_condition_value_clone() {
 // ==================== Condition 结构体测试 ====================
 
 #[test]
-fn test_condition_creation() {
-    // 测试创建 Condition（覆盖 types.rs:36-45）
+fn test_condition_creation_with_valid_fields_creates_condition() {
+    // Arrange: 准备条件字段（覆盖 types.rs:36-45）
+
+    // Act: 创建条件
     let condition = Condition {
         field_name: "test_field".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("test_value"),
     };
 
+    // Assert: 验证条件字段正确
     assert_eq!(condition.field_name, "test_field");
     assert_eq!(condition.operator, ConditionOperator::Equals);
     match condition.value {
@@ -138,36 +169,48 @@ fn test_condition_creation() {
 }
 
 #[test]
-fn test_condition_clone() {
-    // 测试 Condition 的 Clone trait
+fn test_condition_clone_with_valid_condition_creates_clone() {
+    // Arrange: 准备 Condition 实例
+
+    // Act: 克隆条件
     let condition1 = Condition {
         field_name: "field".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("value"),
     };
     let condition2 = condition1.clone();
+
+    // Assert: 验证克隆成功
     assert_eq!(condition1.field_name, condition2.field_name);
     assert_eq!(condition1.operator, condition2.operator);
 }
 
 #[test]
-fn test_condition_debug() {
-    // 测试 Condition 的 Debug trait
+fn test_condition_debug_with_valid_condition_returns_debug_string() {
+    // Arrange: 准备 Condition 实例
+
+    // Act: 格式化调试字符串
     let condition = Condition {
         field_name: "field".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("value"),
     };
     let debug_str = format!("{:?}", condition);
+
+    // Assert: 验证调试字符串包含字段信息
     assert!(debug_str.contains("field"));
 }
 
 // ==================== FieldDefaultValue 枚举测试 ====================
 
 #[test]
-fn test_field_default_value_string() {
-    // 测试创建字符串默认值
+fn test_field_default_value_string_with_str_creates_string_value() {
+    // Arrange: 准备字符串值
+
+    // Act: 创建字符串默认值
     let value = FieldDefaultValue::String("test".to_string());
+
+    // Assert: 验证创建了 String 变体
     match value {
         FieldDefaultValue::String(s) => assert_eq!(s, "test"),
         FieldDefaultValue::Bool(_) => panic!("Expected String variant"),
@@ -175,9 +218,13 @@ fn test_field_default_value_string() {
 }
 
 #[test]
-fn test_field_default_value_bool() {
-    // 测试创建布尔默认值
+fn test_field_default_value_bool_with_bool_creates_bool_value() {
+    // Arrange: 准备布尔值
+
+    // Act: 创建布尔默认值
     let value = FieldDefaultValue::Bool(true);
+
+    // Assert: 验证创建了 Bool 变体
     match value {
         FieldDefaultValue::String(_) => panic!("Expected Bool variant"),
         FieldDefaultValue::Bool(b) => assert!(b),
@@ -185,8 +232,10 @@ fn test_field_default_value_bool() {
 }
 
 #[test]
-fn test_field_default_value_as_string() {
-    // 测试 as_string() 方法（覆盖 types.rs:79-83）
+fn test_field_default_value_as_string_with_string_value_returns_string() {
+    // Arrange: 准备字符串和布尔值（覆盖 types.rs:79-83）
+
+    // Act & Assert: 测试 as_string() 方法
     let string_value = FieldDefaultValue::String("test".to_string());
     assert_eq!(string_value.as_string(), Some("test".to_string()));
 
@@ -195,8 +244,10 @@ fn test_field_default_value_as_string() {
 }
 
 #[test]
-fn test_field_default_value_as_bool() {
-    // 测试 as_bool() 方法（覆盖 types.rs:87-91）
+fn test_field_default_value_as_bool_with_bool_value_returns_bool() {
+    // Arrange: 准备布尔和字符串值（覆盖 types.rs:87-91）
+
+    // Act & Assert: 测试 as_bool() 方法
     let bool_value = FieldDefaultValue::Bool(true);
     assert_eq!(bool_value.as_bool(), Some(true));
 
@@ -205,10 +256,14 @@ fn test_field_default_value_as_bool() {
 }
 
 #[test]
-fn test_field_default_value_clone() {
-    // 测试 FieldDefaultValue 的 Clone trait
+fn test_field_default_value_clone_with_valid_value_creates_clone() {
+    // Arrange: 准备 FieldDefaultValue 实例
+
+    // Act: 克隆值
     let value1 = FieldDefaultValue::String("test".to_string());
     let value2 = value1.clone();
+
+    // Assert: 验证克隆成功
     match (value1, value2) {
         (FieldDefaultValue::String(s1), FieldDefaultValue::String(s2)) => assert_eq!(s1, s2),
         _ => panic!("Expected String variants"),
@@ -218,35 +273,45 @@ fn test_field_default_value_clone() {
 // ==================== FormResult 结构体测试 ====================
 
 #[test]
-fn test_form_result_new() {
-    // 测试创建新的 FormResult（覆盖 types.rs:132-136）
+fn test_form_result_new_creates_empty_result() {
+    // Arrange: 准备创建 FormResult（覆盖 types.rs:132-136）
+
+    // Act: 创建新的 FormResult
     let result = FormResult::new();
+
+    // Assert: 验证结果为空
     assert!(result.values.is_empty());
 }
 
 #[test]
-fn test_form_result_default() {
-    // 测试 FormResult 的 Default trait（覆盖 types.rs:173-176）
+fn test_form_result_default_creates_empty_result() {
+    // Arrange: 准备使用 Default trait（覆盖 types.rs:173-176）
+
+    // Act: 创建默认 FormResult
     let result = FormResult::default();
+
+    // Assert: 验证结果为空
     assert!(result.values.is_empty());
 }
 
 #[test]
-fn test_form_result_get() {
-    // 测试 get() 方法（覆盖 types.rs:139-141）
+fn test_form_result_get_with_existing_field_returns_value() {
+    // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:139-141）
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
 
+    // Act & Assert: 测试 get() 方法
     assert_eq!(result.get("field1"), Some(&"value1".to_string()));
     assert_eq!(result.get("field2"), None);
 }
 
 #[test]
-fn test_form_result_get_required() -> Result<()> {
-    // 测试 get_required() 方法（覆盖 types.rs:144-149）
+fn test_form_result_get_required_with_existing_field_returns_value() -> Result<()> {
+    // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:144-149）
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
 
+    // Act & Assert: 测试 get_required() 方法
     assert_eq!(result.get_required("field1")?, "value1");
     assert!(result.get_required("field2").is_err());
 
@@ -254,33 +319,36 @@ fn test_form_result_get_required() -> Result<()> {
 }
 
 #[test]
-fn test_form_result_get_or_default() {
-    // 测试 get_or_default() 方法（覆盖 types.rs:152-154）
+fn test_form_result_get_or_default_with_existing_field_returns_value() {
+    // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:152-154）
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
 
+    // Act & Assert: 测试 get_or_default() 方法
     assert_eq!(result.get_or_default("field1", "default"), "value1");
     assert_eq!(result.get_or_default("field2", "default"), "default");
 }
 
 #[test]
-fn test_form_result_has() {
-    // 测试 has() 方法（覆盖 types.rs:157-159）
+fn test_form_result_has_with_existing_field_returns_true() {
+    // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:157-159）
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
 
+    // Act & Assert: 测试 has() 方法
     assert!(result.has("field1"));
     assert!(!result.has("field2"));
 }
 
 #[test]
-fn test_form_result_get_bool() {
-    // 测试 get_bool() 方法（覆盖 types.rs:162-164）
+fn test_form_result_get_bool_with_various_values_returns_bool() {
+    // Arrange: 准备包含各种值的 FormResult（覆盖 types.rs:162-164）
     let mut result = FormResult::new();
     result.values.insert("yes_field".to_string(), "yes".to_string());
     result.values.insert("no_field".to_string(), "no".to_string());
     result.values.insert("other_field".to_string(), "other".to_string());
 
+    // Act & Assert: 测试 get_bool() 方法
     assert_eq!(result.get_bool("yes_field"), Some(true));
     assert_eq!(result.get_bool("no_field"), Some(false));
     assert_eq!(result.get_bool("other_field"), Some(false)); // "other" != "yes"
@@ -288,11 +356,12 @@ fn test_form_result_get_bool() {
 }
 
 #[test]
-fn test_form_result_get_required_bool() -> Result<()> {
-    // 测试 get_required_bool() 方法（覆盖 types.rs:167-170）
+fn test_form_result_get_required_bool_with_existing_field_returns_bool() -> Result<()> {
+    // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:167-170）
     let mut result = FormResult::new();
     result.values.insert("yes_field".to_string(), "yes".to_string());
 
+    // Act & Assert: 测试 get_required_bool() 方法
     assert_eq!(result.get_required_bool("yes_field")?, true);
     assert!(result.get_required_bool("nonexistent").is_err());
 
@@ -300,30 +369,41 @@ fn test_form_result_get_required_bool() -> Result<()> {
 }
 
 #[test]
-fn test_form_result_clone() {
-    // 测试 FormResult 的 Clone trait
+fn test_form_result_clone_with_valid_result_creates_clone() {
+    // Arrange: 准备 FormResult 实例
+
+    // Act: 克隆结果
     let mut result1 = FormResult::new();
     result1.values.insert("field1".to_string(), "value1".to_string());
     let result2 = result1.clone();
 
+    // Assert: 验证克隆成功
     assert_eq!(result1.get("field1"), result2.get("field1"));
 }
 
 #[test]
-fn test_form_result_debug() {
-    // 测试 FormResult 的 Debug trait
+fn test_form_result_debug_with_valid_result_returns_debug_string() {
+    // Arrange: 准备 FormResult 实例
+
+    // Act: 格式化调试字符串
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
     let debug_str = format!("{:?}", result);
+
+    // Assert: 验证调试字符串包含字段信息
     assert!(debug_str.contains("field1") || debug_str.contains("value1"));
 }
 
 // ==================== StepType 枚举测试 ====================
 
 #[test]
-fn test_step_type_unconditional() {
-    // 测试无条件步骤类型
+fn test_step_type_unconditional_creates_unconditional_step() {
+    // Arrange: 准备无条件步骤类型
+
+    // Act: 创建无条件步骤
     let step_type = StepType::Unconditional;
+
+    // Assert: 验证创建了 Unconditional 变体
     match step_type {
         StepType::Unconditional => {}
         _ => panic!("Expected Unconditional variant"),
@@ -331,14 +411,18 @@ fn test_step_type_unconditional() {
 }
 
 #[test]
-fn test_step_type_conditional() {
-    // 测试单条件步骤类型
+fn test_step_type_conditional_with_condition_creates_conditional_step() {
+    // Arrange: 准备条件
     let condition = Condition {
         field_name: "field".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("value"),
     };
+
+    // Act: 创建单条件步骤
     let step_type = StepType::Conditional(condition.clone());
+
+    // Assert: 验证创建了 Conditional 变体
     match step_type {
         StepType::Conditional(c) => {
             assert_eq!(c.field_name, condition.field_name);
@@ -348,8 +432,8 @@ fn test_step_type_conditional() {
 }
 
 #[test]
-fn test_step_type_conditional_all() {
-    // 测试多条件步骤类型（AND 逻辑）
+fn test_step_type_conditional_all_with_conditions_creates_conditional_all_step() {
+    // Arrange: 准备多个条件（AND 逻辑）
     let conditions = vec![
         Condition {
             field_name: "field1".to_string(),
@@ -362,7 +446,11 @@ fn test_step_type_conditional_all() {
             value: ConditionValue::single("value2"),
         },
     ];
+
+    // Act: 创建多条件步骤（AND）
     let step_type = StepType::ConditionalAll(conditions.clone());
+
+    // Assert: 验证创建了 ConditionalAll 变体
     match step_type {
         StepType::ConditionalAll(cs) => {
             assert_eq!(cs.len(), 2);
@@ -372,14 +460,18 @@ fn test_step_type_conditional_all() {
 }
 
 #[test]
-fn test_step_type_conditional_any() {
-    // 测试多条件步骤类型（OR 逻辑）
+fn test_step_type_conditional_any_with_conditions_creates_conditional_any_step() {
+    // Arrange: 准备多个条件（OR 逻辑）
     let conditions = vec![Condition {
         field_name: "field1".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("value1"),
     }];
+
+    // Act: 创建多条件步骤（OR）
     let step_type = StepType::ConditionalAny(conditions.clone());
+
+    // Assert: 验证创建了 ConditionalAny 变体
     match step_type {
         StepType::ConditionalAny(cs) => {
             assert_eq!(cs.len(), 1);
@@ -389,9 +481,13 @@ fn test_step_type_conditional_any() {
 }
 
 #[test]
-fn test_step_type_dynamic_condition() {
-    // 测试动态条件步骤类型
+fn test_step_type_dynamic_condition_with_function_creates_dynamic_step() {
+    // Arrange: 准备动态条件函数
+
+    // Act: 创建动态条件步骤
     let step_type = StepType::DynamicCondition(Box::new(|_result: &FormResult| true));
+
+    // Assert: 验证创建了 DynamicCondition 变体
     match step_type {
         StepType::DynamicCondition(_) => {}
         _ => panic!("Expected DynamicCondition variant"),
@@ -401,8 +497,10 @@ fn test_step_type_dynamic_condition() {
 // ==================== FormStep 结构体测试 ====================
 
 #[test]
-fn test_form_step_creation() {
-    // 测试创建 FormStep（覆盖 types.rs:194-203）
+fn test_form_step_creation_with_valid_fields_creates_step() {
+    // Arrange: 准备步骤字段（覆盖 types.rs:194-203）
+
+    // Act: 创建 FormStep
     let step = FormStep {
         id: Some("step1".to_string()),
         step_type: StepType::Unconditional,
@@ -410,14 +508,17 @@ fn test_form_step_creation() {
         skip_if_false: false,
     };
 
+    // Assert: 验证步骤字段正确
     assert_eq!(step.id, Some("step1".to_string()));
     assert_eq!(step.fields.len(), 0);
     assert!(!step.skip_if_false);
 }
 
 #[test]
-fn test_form_step_without_id() {
-    // 测试没有 ID 的 FormStep
+fn test_form_step_creation_without_id_creates_step_without_id() {
+    // Arrange: 准备没有 ID 的步骤字段
+
+    // Act: 创建没有 ID 的 FormStep
     let step = FormStep {
         id: None,
         step_type: StepType::Unconditional,
@@ -425,6 +526,7 @@ fn test_form_step_without_id() {
         skip_if_false: true,
     };
 
+    // Assert: 验证步骤字段正确
     assert_eq!(step.id, None);
     assert!(step.skip_if_false);
 }
@@ -432,9 +534,13 @@ fn test_form_step_without_id() {
 // ==================== GroupConfig 结构体测试 ====================
 
 #[test]
-fn test_group_config_required() {
-    // 测试创建必填组配置（覆盖 types.rs:222-229）
+fn test_group_config_required_creates_required_config() {
+    // Arrange: 准备创建必填组配置（覆盖 types.rs:222-229）
+
+    // Act: 创建必填组配置
     let config = GroupConfig::required();
+
+    // Assert: 验证配置正确
     assert!(!config.optional);
     assert_eq!(config.title, None);
     assert_eq!(config.description, None);
@@ -442,9 +548,13 @@ fn test_group_config_required() {
 }
 
 #[test]
-fn test_group_config_optional() {
-    // 测试创建可选组配置（覆盖 types.rs:232-239）
+fn test_group_config_optional_creates_optional_config() {
+    // Arrange: 准备创建可选组配置（覆盖 types.rs:232-239）
+
+    // Act: 创建可选组配置
     let config = GroupConfig::optional();
+
+    // Assert: 验证配置正确
     assert!(config.optional);
     assert_eq!(config.title, None);
     assert_eq!(config.description, None);
@@ -452,44 +562,62 @@ fn test_group_config_optional() {
 }
 
 #[test]
-fn test_group_config_with_title() {
-    // 测试设置组标题（覆盖 types.rs:242-245）
+fn test_group_config_with_title_with_str_sets_title() {
+    // Arrange: 准备标题字符串（覆盖 types.rs:242-245）
+
+    // Act: 设置组标题
     let config = GroupConfig::required().with_title("Test Title");
+
+    // Assert: 验证标题设置成功
     assert_eq!(config.title, Some("Test Title".to_string()));
 }
 
 #[test]
-fn test_group_config_with_title_string() {
-    // 测试 with_title() 接受 String
+fn test_group_config_with_title_with_string_sets_title() {
+    // Arrange: 准备 String 类型的标题
+
+    // Act: 设置组标题（接受 String）
     let config = GroupConfig::required().with_title("Test Title".to_string());
+
+    // Assert: 验证标题设置成功
     assert_eq!(config.title, Some("Test Title".to_string()));
 }
 
 #[test]
-fn test_group_config_with_description() {
-    // 测试设置组描述（覆盖 types.rs:248-251）
+fn test_group_config_with_description_with_str_sets_description() {
+    // Arrange: 准备描述字符串（覆盖 types.rs:248-251）
+
+    // Act: 设置组描述
     let config = GroupConfig::required().with_description("Test Description");
+
+    // Assert: 验证描述设置成功
     assert_eq!(config.description, Some("Test Description".to_string()));
 }
 
 #[test]
-fn test_group_config_with_default_enabled() {
-    // 测试设置默认启用（覆盖 types.rs:254-257）
-    let config = GroupConfig::optional().with_default_enabled(true);
-    assert!(config.default_enabled);
+fn test_group_config_with_default_enabled_with_bool_sets_default_enabled() {
+    // Arrange: 准备布尔值（覆盖 types.rs:254-257）
 
+    // Act: 设置默认启用
+    let config = GroupConfig::optional().with_default_enabled(true);
     let config2 = GroupConfig::optional().with_default_enabled(false);
+
+    // Assert: 验证默认启用设置成功
+    assert!(config.default_enabled);
     assert!(!config2.default_enabled);
 }
 
 #[test]
-fn test_group_config_chain_calls() {
-    // 测试链式调用所有方法
+fn test_group_config_chain_calls_with_all_methods_configures_all_options() {
+    // Arrange: 准备所有配置选项
+
+    // Act: 链式调用所有方法
     let config = GroupConfig::optional()
         .with_title("Title")
         .with_description("Description")
         .with_default_enabled(true);
 
+    // Assert: 验证所有选项配置成功
     assert!(config.optional);
     assert_eq!(config.title, Some("Title".to_string()));
     assert_eq!(config.description, Some("Description".to_string()));
@@ -497,9 +625,13 @@ fn test_group_config_chain_calls() {
 }
 
 #[test]
-fn test_group_config_default() {
-    // 测试 GroupConfig 的 Default trait（覆盖 types.rs:260-263）
+fn test_group_config_default_creates_default_config() {
+    // Arrange: 准备使用 Default trait（覆盖 types.rs:260-263）
+
+    // Act: 创建默认配置
     let config = GroupConfig::default();
+
+    // Assert: 验证默认配置正确
     assert!(!config.optional);
     assert_eq!(config.title, None);
     assert_eq!(config.description, None);
@@ -507,27 +639,37 @@ fn test_group_config_default() {
 }
 
 #[test]
-fn test_group_config_clone() {
-    // 测试 GroupConfig 的 Clone trait
+fn test_group_config_clone_with_valid_config_creates_clone() {
+    // Arrange: 准备 GroupConfig 实例
+
+    // Act: 克隆配置
     let config1 = GroupConfig::optional().with_title("Title");
     let config2 = config1.clone();
+
+    // Assert: 验证克隆成功
     assert_eq!(config1.title, config2.title);
     assert_eq!(config1.optional, config2.optional);
 }
 
 #[test]
-fn test_group_config_debug() {
-    // 测试 GroupConfig 的 Debug trait
+fn test_group_config_debug_with_valid_config_returns_debug_string() {
+    // Arrange: 准备 GroupConfig 实例
+
+    // Act: 格式化调试字符串
     let config = GroupConfig::required().with_title("Title");
     let debug_str = format!("{:?}", config);
+
+    // Assert: 验证调试字符串包含配置信息
     assert!(debug_str.contains("Title") || debug_str.contains("optional"));
 }
 
 // ==================== FormGroup 结构体测试 ====================
 
 #[test]
-fn test_form_group_creation() {
-    // 测试创建 FormGroup（覆盖 types.rs:267-280）
+fn test_form_group_creation_with_valid_fields_creates_group() {
+    // Arrange: 准备组字段（覆盖 types.rs:267-280）
+
+    // Act: 创建 FormGroup
     let group = FormGroup {
         id: "group1".to_string(),
         title: Some("Group Title".to_string()),
@@ -537,6 +679,7 @@ fn test_form_group_creation() {
         steps: vec![],
     };
 
+    // Assert: 验证组字段正确
     assert_eq!(group.id, "group1");
     assert_eq!(group.title, Some("Group Title".to_string()));
     assert_eq!(group.description, Some("Group Description".to_string()));
@@ -546,8 +689,10 @@ fn test_form_group_creation() {
 }
 
 #[test]
-fn test_form_group_optional() {
-    // 测试可选组
+fn test_form_group_creation_with_optional_config_creates_optional_group() {
+    // Arrange: 准备可选组字段
+
+    // Act: 创建可选组
     let group = FormGroup {
         id: "group2".to_string(),
         title: None,
@@ -557,6 +702,7 @@ fn test_form_group_optional() {
         steps: vec![],
     };
 
+    // Assert: 验证可选组配置正确
     assert!(group.optional);
     assert!(group.default_enabled);
 }
@@ -564,8 +710,10 @@ fn test_form_group_optional() {
 // ==================== FormField 结构体测试 ====================
 
 #[test]
-fn test_form_field_creation() {
-    // 测试创建 FormField（覆盖 types.rs:97-121）
+fn test_form_field_creation_with_valid_fields_creates_field() {
+    // Arrange: 准备字段属性（覆盖 types.rs:97-121）
+
+    // Act: 创建 FormField
     let field = FormField {
         name: "field1".to_string(),
         field_type: FormFieldType::Text,
@@ -579,6 +727,7 @@ fn test_form_field_creation() {
         condition: None,
     };
 
+    // Assert: 验证字段属性正确
     assert_eq!(field.name, "field1");
     assert_eq!(field.field_type, FormFieldType::Text);
     assert_eq!(field.message, "Enter value");
@@ -587,13 +736,15 @@ fn test_form_field_creation() {
 }
 
 #[test]
-fn test_form_field_with_condition() {
-    // 测试带条件的字段
+fn test_form_field_creation_with_condition_creates_field_with_condition() {
+    // Arrange: 准备条件和字段属性
     let condition = Condition {
         field_name: "other_field".to_string(),
         operator: ConditionOperator::Equals,
         value: ConditionValue::single("value"),
     };
+
+    // Act: 创建带条件的字段
     let field = FormField {
         name: "field1".to_string(),
         field_type: FormFieldType::Text,
@@ -607,6 +758,7 @@ fn test_form_field_with_condition() {
         condition: Some(condition.clone()),
     };
 
+    // Assert: 验证字段和条件正确
     assert!(field.required);
     assert!(!field.allow_empty);
     assert_eq!(
@@ -616,8 +768,10 @@ fn test_form_field_with_condition() {
 }
 
 #[test]
-fn test_form_field_clone() {
-    // 测试 FormField 的 Clone trait
+fn test_form_field_clone_with_valid_field_creates_clone() {
+    // Arrange: 准备 FormField 实例
+
+    // Act: 克隆字段
     let field1 = FormField {
         name: "field1".to_string(),
         field_type: FormFieldType::Text,
@@ -631,6 +785,8 @@ fn test_form_field_clone() {
         condition: None,
     };
     let field2 = field1.clone();
+
+    // Assert: 验证克隆成功
     assert_eq!(field1.name, field2.name);
     assert_eq!(field1.field_type, field2.field_type);
 }

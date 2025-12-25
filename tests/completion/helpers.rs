@@ -251,7 +251,7 @@ fn test_get_all_completion_files_single_command() -> Result<()> {
     // 应该包含所有 5 种 shell 类型的文件
     assert_eq!(result.len(), 5);
 
-    // 验证包含所有预期的文件名
+    // Assert: 验证包含所有预期的文件名
     assert!(result.contains(&"_workflow".to_string()));
     assert!(result.contains(&"workflow.bash".to_string()));
     assert!(result.contains(&"workflow.fish".to_string()));
@@ -268,7 +268,7 @@ fn test_get_all_completion_files_multiple_commands() -> Result<()> {
     // 应该包含 5 种 shell 类型 × 2 个命令 = 10 个文件
     assert_eq!(result.len(), 10);
 
-    // 验证包含所有预期的文件名
+    // Assert: 验证包含所有预期的文件名
     assert!(result.contains(&"_workflow".to_string()));
     assert!(result.contains(&"_mycmd".to_string()));
     assert!(result.contains(&"workflow.bash".to_string()));
@@ -330,7 +330,7 @@ fn test_integration_filename_to_all_files() -> Result<()> {
     // 使用 get_all_completion_files 获取所有文件
     let all_files = get_all_completion_files(&[command]);
 
-    // 验证所有预期的文件都在结果中
+    // Assert: 验证所有预期的文件都在结果中
     for expected_file in &expected_files {
         assert!(
             all_files.contains(expected_file),
@@ -339,7 +339,7 @@ fn test_integration_filename_to_all_files() -> Result<()> {
         );
     }
 
-    // 验证数量一致
+    // Assert: 验证数量一致
     assert_eq!(expected_files.len(), all_files.len());
     Ok(())
 }
@@ -360,7 +360,7 @@ fn test_integration_shell_files_to_all_files() -> Result<()> {
     // 使用 get_all_completion_files 获取所有文件
     let all_files = get_all_completion_files(commands);
 
-    // 验证所有预期的文件都在结果中
+    // Assert: 验证所有预期的文件都在结果中
     for expected_file in &expected_files {
         assert!(
             all_files.contains(expected_file),
@@ -369,7 +369,7 @@ fn test_integration_shell_files_to_all_files() -> Result<()> {
         );
     }
 
-    // 验证数量一致
+    // Assert: 验证数量一致
     assert_eq!(expected_files.len(), all_files.len());
     Ok(())
 }

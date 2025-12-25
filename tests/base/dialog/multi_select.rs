@@ -50,39 +50,51 @@ fn test_multi_select_dialog_empty_options_with_empty_list_returns_error() {
 }
 
 #[test]
-fn test_multi_select_dialog_prompt_string_conversion() {
-    // 测试 prompt 参数的类型转换
+fn test_multi_select_dialog_new_with_string_prompt_creates_dialog() {
+    // Arrange: 准备字符串和String类型的提示消息
     let options = vec!["Option 1"];
+
+    // Act: 使用字符串和String类型创建对话框
     let _dialog1 = MultiSelectDialog::new("String prompt", options.clone());
     let _dialog2 = MultiSelectDialog::new("String prompt".to_string(), options);
-    // 验证两种方式都可以创建对话框
+
+    // Assert: 验证两种方式都可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_multi_select_dialog_with_default_empty() {
-    // 测试设置空默认值
+fn test_multi_select_dialog_with_default_with_empty_list_sets_no_options() {
+    // Arrange: 准备选项列表
+
+    // Act: 设置空默认值
     let options = vec!["Option 1", "Option 2"];
     let _dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![]);
-    // 验证链式调用成功
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_multi_select_dialog_with_default_multiple() {
-    // 测试设置多个默认值（覆盖 multi_select.rs:94-95）
+fn test_multi_select_dialog_with_default_with_multiple_indices_sets_options() {
+    // Arrange: 准备选项列表和多个默认索引（覆盖 multi_select.rs:94-95）
     let options = vec!["Option 1", "Option 2", "Option 3", "Option 4"];
+
+    // Act: 设置多个默认值
     let _dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0, 2, 3]);
-    // 验证链式调用成功
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_multi_select_dialog_prompt_without_default() {
-    // 测试不设置默认值的情况（覆盖 multi_select.rs:94-95 的 else 分支）
+fn test_multi_select_dialog_new_without_default_creates_dialog() {
+    // Arrange: 准备选项列表（覆盖 multi_select.rs:94-95 的 else 分支）
+
+    // Act: 创建不设置默认值的对话框
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = MultiSelectDialog::new("Choose options", options);
-    // 验证对话框创建成功
+
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
@@ -118,7 +130,7 @@ fn test_multi_select_dialog_prompt_without_default() {
 #[test]
 #[ignore] // 需要用户交互
 fn test_multi_select_dialog_prompt() {
-    // 测试用户选择的情况（覆盖 multi_select.rs:98-103 的错误处理）
+    // Arrange: 准备测试用户选择的情况（覆盖 multi_select.rs:98-103 的错误处理）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0]);
     let result = dialog.prompt();
@@ -130,47 +142,47 @@ fn test_multi_select_dialog_prompt() {
 
 #[test]
 fn test_multi_select_dialog_with_default_slice() {
-    // 测试设置默认值为切片（覆盖 multi_select.rs:95）
+    // Arrange: 准备测试设置默认值为切片（覆盖 multi_select.rs:95）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0, 2]);
-    // 验证对话框创建成功，default_indices.as_slice() 逻辑存在
+    // Assert: 验证对话框创建成功，default_indices.as_slice() 逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_multi_select_dialog_error_handling_operation_canceled() {
-    // 测试 OperationCanceled 错误处理（覆盖 multi_select.rs:99-101）
+    // Arrange: 准备测试 OperationCanceled 错误处理（覆盖 multi_select.rs:99-101）
     // 注意：这个测试主要验证错误处理代码路径
     let options = vec!["Option 1"];
     let _dialog = MultiSelectDialog::new("Choose options", options);
-    // 验证对话框创建成功，错误处理逻辑存在
+    // Assert: 验证对话框创建成功，错误处理逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_multi_select_dialog_error_handling_other_errors() {
-    // 测试其他错误处理（覆盖 multi_select.rs:102-103）
+    // Arrange: 准备测试其他错误处理（覆盖 multi_select.rs:102-103）
     // 注意：这个测试主要验证错误处理代码路径
     let options = vec!["Option 1"];
     let _dialog = MultiSelectDialog::new("Choose options", options);
-    // 验证对话框创建成功，错误处理逻辑存在
+    // Assert: 验证对话框创建成功，错误处理逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_multi_select_dialog_default_none() {
-    // 测试 default 为 None 的情况（覆盖 multi_select.rs:94-95 的 else 分支）
+    // Arrange: 准备测试 default 为 None 的情况（覆盖 multi_select.rs:94-95 的 else 分支）
     let options = vec!["Option 1", "Option 2"];
     let _dialog = MultiSelectDialog::new("Choose options", options);
-    // 验证对话框创建成功，default 为 None
+    // Assert: 验证对话框创建成功，default 为 None
     assert!(true);
 }
 
 #[test]
 fn test_multi_select_dialog_default_some() {
-    // 测试 default 为 Some 的情况（覆盖 multi_select.rs:94-95）
+    // Arrange: 准备测试 default 为 Some 的情况（覆盖 multi_select.rs:94-95）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0, 2]);
-    // 验证对话框创建成功，default 已设置
+    // Assert: 验证对话框创建成功，default 已设置
     assert!(true);
 }

@@ -102,7 +102,7 @@ fn test_unzip_extract_tar_gz_with_valid_file_extracts_files() -> color_eyre::Res
     assert!(output_dir.join("file2.txt").exists());
     assert!(output_dir.join("subdir/file3.txt").exists());
 
-    // 验证文件内容
+    // Assert: 验证文件内容
     assert_eq!(
         fs::read_to_string(output_dir.join("file1.txt"))?,
         "content1"
@@ -242,7 +242,7 @@ fn test_unzip_extract_zip_output_dir_created_with_missing_dir_creates_dir() -> c
 
     Unzip::extract_zip(&zip_path, &output_dir)?;
 
-    // 验证目录已创建
+    // Assert: 验证目录已创建
     assert!(output_dir.exists());
     assert!(output_dir.is_dir());
 
@@ -275,7 +275,7 @@ fn test_unzip_extract_zip_with_directories() -> color_eyre::Result<()> {
     let output_dir = temp_dir.path().join("output");
     Unzip::extract_zip(&zip_path, &output_dir)?;
 
-    // 验证嵌套目录结构已创建
+    // Assert: 验证嵌套目录结构已创建
     assert!(output_dir.join("level1/level2/file.txt").exists());
     assert_eq!(
         fs::read_to_string(output_dir.join("level1/level2/file.txt"))?,
@@ -308,7 +308,7 @@ fn test_unzip_extract_tar_gz_single_file() -> color_eyre::Result<()> {
     let output_dir = temp_dir.path().join("output");
     Unzip::extract_tar_gz(&tar_gz_path, &output_dir)?;
 
-    // 验证文件已解压
+    // Assert: 验证文件已解压
     assert!(output_dir.exists());
     assert!(output_dir.join("single.txt").exists());
     assert_eq!(

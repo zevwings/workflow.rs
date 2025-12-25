@@ -138,11 +138,15 @@ impl Drop for TestEnv {
 
 // ==================== 默认值测试 ====================
 
+/// 测试创建默认的RepoConfig
 #[test]
-fn test_repo_config_default() {
-    // 测试仓库配置的默认值
+fn test_repo_config_default_with_no_params_returns_default_config() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 创建默认配置
     let config = RepoConfig::default();
 
+    // Assert: 验证默认值
     // Public configuration
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
@@ -156,9 +160,10 @@ fn test_repo_config_default() {
 
 // ==================== 配置字段测试 ====================
 
+/// 测试设置commit模板配置
 #[test]
-fn test_repo_config_with_template_commit() {
-    // 测试设置 template_commit 配置
+fn test_repo_config_with_template_commit_returns_config_with_commit_template() {
+    // Arrange: 准备 template_commit 配置值
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -170,6 +175,7 @@ fn test_repo_config_with_template_commit() {
         .template_commit
         .insert("scope_required".to_string(), Value::Boolean(true));
 
+    // Act & Assert: 验证 template_commit 配置
     assert_eq!(config.template_commit.len(), 2);
     assert_eq!(
         config.template_commit.get("type"),
@@ -177,9 +183,10 @@ fn test_repo_config_with_template_commit() {
     );
 }
 
+/// 测试设置branch模板配置
 #[test]
-fn test_repo_config_with_template_branch() {
-    // 测试设置 template_branch 配置
+fn test_repo_config_with_template_branch_returns_config_with_branch_template() {
+    // Arrange: 准备 template_branch 配置值
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -190,6 +197,7 @@ fn test_repo_config_with_template_branch() {
         .template_branch
         .insert("separator".to_string(), Value::String("/".to_string()));
 
+    // Act & Assert: 验证 template_branch 配置
     assert_eq!(config.template_branch.len(), 2);
     assert_eq!(
         config.template_branch.get("prefix"),
@@ -197,9 +205,10 @@ fn test_repo_config_with_template_branch() {
     );
 }
 
+/// 测试设置pull requests模板配置
 #[test]
-fn test_repo_config_with_template_pull_requests() {
-    // 测试设置 template_pull_requests 配置
+fn test_repo_config_with_template_pull_requests_returns_config_with_pr_template() {
+    // Arrange: 准备 template_pull_requests 配置值
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -210,6 +219,7 @@ fn test_repo_config_with_template_pull_requests() {
         .template_pull_requests
         .insert("require_review".to_string(), Value::Boolean(true));
 
+    // Act & Assert: 验证 template_pull_requests 配置
     assert_eq!(config.template_pull_requests.len(), 2);
     assert_eq!(
         config.template_pull_requests.get("auto_merge"),
@@ -217,24 +227,30 @@ fn test_repo_config_with_template_pull_requests() {
     );
 }
 
+/// 测试设置configured标志
 #[test]
-fn test_repo_config_with_configured() {
-    // 测试设置 configured 字段
+fn test_repo_config_with_configured_flag_returns_config_with_configured_true() {
+    // Arrange: 准备配置
     let mut config = RepoConfig::default();
+
+    // Act: 设置 configured 字段
     config.configured = true;
 
+    // Assert: 验证 configured 为 true
     assert!(config.configured);
 }
 
+/// 测试设置branch配置
 #[test]
-fn test_repo_config_with_branch() {
-    // 测试设置 branch 配置
+fn test_repo_config_with_branch_config_returns_config_with_branch() {
+    // Arrange: 准备 branch 配置
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string(), "develop".to_string()],
     });
 
+    // Act & Assert: 验证 branch 配置
     assert!(config.branch.is_some());
     if let Some(ref branch) = config.branch {
         assert_eq!(branch.prefix, Some("feature".to_string()));
@@ -242,23 +258,26 @@ fn test_repo_config_with_branch() {
     }
 }
 
+/// 测试设置PR配置
 #[test]
-fn test_repo_config_with_pr() {
-    // 测试设置 PR 配置
+fn test_repo_config_with_pr_config_returns_config_with_pr() {
+    // Arrange: 准备 PR 配置
     let mut config = RepoConfig::default();
     config.pr = Some(PullRequestsConfig {
         auto_accept_change_type: Some(true),
     });
 
+    // Act & Assert: 验证 PR 配置
     assert!(config.pr.is_some());
     if let Some(ref pr) = config.pr {
         assert_eq!(pr.auto_accept_change_type, Some(true));
     }
 }
 
+/// 测试设置所有配置字段
 #[test]
-fn test_repo_config_with_all_fields() {
-    // 测试设置所有字段
+fn test_repo_config_with_all_fields_returns_complete_config() {
+    // Arrange: 准备所有配置字段
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -285,6 +304,7 @@ fn test_repo_config_with_all_fields() {
         auto_accept_change_type: Some(true),
     });
 
+    // Act & Assert: 验证所有字段都已设置
     assert!(!config.template_commit.is_empty());
     assert!(!config.template_branch.is_empty());
     assert!(!config.template_pull_requests.is_empty());
@@ -295,62 +315,88 @@ fn test_repo_config_with_all_fields() {
 
 // ==================== 静态方法测试 ====================
 
+/// 测试获取分支前缀（无配置时返回Option）
 #[test]
-fn test_get_branch_prefix_none() {
-    // 测试获取不存在的分支前缀
+fn test_get_branch_prefix_with_no_config_returns_option() {
+    // Arrange: 准备测试（无需额外准备）
     // 注意：这个测试依赖于当前仓库的配置状态
+
+    // Act: 获取分支前缀
     let prefix = RepoConfig::get_branch_prefix();
+
+    // Assert: 验证返回类型是 Option<String>
     // 如果配置不存在，应该返回 None
     // 如果配置存在，应该返回配置的值
-    // 这里我们只验证返回类型是 Option<String>
     assert!(prefix.is_none() || prefix.is_some());
 }
 
+/// 测试获取忽略分支列表（无配置时返回Vec）
 #[test]
-fn test_get_ignore_branches_empty() {
-    // 测试获取空的忽略分支列表
+fn test_get_ignore_branches_with_no_config_returns_vec() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取忽略分支列表
     let branches = RepoConfig::get_ignore_branches();
-    // 返回值应该是一个 Vec<String>
+
+    // Assert: 验证返回值是一个 Vec<String>
     assert!(branches.is_empty() || !branches.is_empty());
 }
 
+/// 测试获取auto_accept_change_type（无配置时返回bool）
 #[test]
-fn test_get_auto_accept_change_type_default() {
-    // 测试获取 auto_accept_change_type 的默认值
+fn test_get_auto_accept_change_type_with_no_config_returns_bool() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 auto_accept_change_type
     let auto_accept = RepoConfig::get_auto_accept_change_type();
+
+    // Assert: 验证返回布尔值
     // 默认应该是 false，或者根据配置返回 true
     assert!(!auto_accept || auto_accept);
 }
 
+/// 测试获取commit模板配置（无配置时返回Map）
 #[test]
-fn test_get_template_commit_empty() {
-    // 测试获取空的 template_commit 配置
+fn test_get_template_commit_with_no_config_returns_map() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 template_commit 配置
     let template = RepoConfig::get_template_commit();
-    // 返回值应该是一个 Map
+
+    // Assert: 验证返回值是一个 Map
     assert!(template.is_empty() || !template.is_empty());
 }
 
+/// 测试获取branch模板配置（无配置时返回Map）
 #[test]
-fn test_get_template_branch_empty() {
-    // 测试获取空的 template_branch 配置
+fn test_get_template_branch_with_no_config_returns_map() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 template_branch 配置
     let template = RepoConfig::get_template_branch();
-    // 返回值应该是一个 Map
+
+    // Assert: 验证返回值是一个 Map
     assert!(template.is_empty() || !template.is_empty());
 }
 
+/// 测试获取pull requests模板配置（无配置时返回Map）
 #[test]
-fn test_get_template_pull_requests_empty() {
-    // 测试获取空的 template_pull_requests 配置
+fn test_get_template_pull_requests_with_no_config_returns_map() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 template_pull_requests 配置
     let template = RepoConfig::get_template_pull_requests();
-    // 返回值应该是一个 Map
+
+    // Assert: 验证返回值是一个 Map
     assert!(template.is_empty() || !template.is_empty());
 }
 
 // ==================== Clone 和 Debug 测试 ====================
 
+/// 测试克隆RepoConfig实例
 #[test]
-fn test_repo_config_clone() {
-    // 测试配置的克隆功能
+fn test_repo_config_clone_with_config_instance_returns_cloned_config() {
+    // Arrange: 准备原始配置
     use toml::Value;
 
     let mut original = RepoConfig::default();
@@ -364,8 +410,10 @@ fn test_repo_config_clone() {
         ignore: vec!["main".to_string()],
     });
 
+    // Act: 克隆配置
     let cloned = original.clone();
 
+    // Assert: 验证克隆后的配置与原始配置相同
     assert_eq!(cloned.template_commit.len(), original.template_commit.len());
     assert_eq!(cloned.configured, original.configured);
     assert_eq!(
@@ -374,21 +422,30 @@ fn test_repo_config_clone() {
     );
 }
 
+/// 测试RepoConfig实例的Debug格式化输出
 #[test]
-fn test_repo_config_debug() {
-    // 测试配置的 Debug 输出
+fn test_repo_config_debug_with_config_instance_returns_debug_string() {
+    // Arrange: 创建配置实例
     let config = RepoConfig::default();
+
+    // Act: 格式化 Debug 输出
     let debug_output = format!("{:?}", config);
+
+    // Assert: 验证 Debug 输出包含 RepoConfig
     assert!(debug_output.contains("RepoConfig"));
 }
 
 // ==================== 边界情况测试 ====================
 
+/// 测试默认配置返回空配置
 #[test]
-fn test_repo_config_empty() {
-    // 测试空配置
+fn test_repo_config_empty_with_default_returns_empty_config() {
+    // Arrange: 创建默认配置
+
+    // Act: 获取配置
     let config = RepoConfig::default();
 
+    // Assert: 验证所有字段为空或默认值
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
@@ -397,9 +454,10 @@ fn test_repo_config_empty() {
     assert!(config.pr.is_none());
 }
 
+/// 测试只有公共配置字段的配置
 #[test]
-fn test_repo_config_only_public() {
-    // 测试只有公共配置
+fn test_repo_config_only_public_with_public_fields_returns_public_config() {
+    // Arrange: 准备只有公共配置的配置
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -408,14 +466,16 @@ fn test_repo_config_only_public() {
         Value::String("conventional".to_string()),
     );
 
+    // Act & Assert: 验证只有公共配置
     assert!(!config.template_commit.is_empty());
     assert!(!config.configured);
     assert!(config.branch.is_none());
 }
 
+/// 测试只有私有配置字段的配置
 #[test]
-fn test_repo_config_only_private() {
-    // 测试只有私有配置
+fn test_repo_config_only_private_with_private_fields_returns_private_config() {
+    // Arrange: 准备只有私有配置的配置
     let mut config = RepoConfig::default();
     config.configured = true;
     config.branch = Some(BranchConfig {
@@ -423,14 +483,16 @@ fn test_repo_config_only_private() {
         ignore: vec![],
     });
 
+    // Act & Assert: 验证只有私有配置
     assert!(config.template_commit.is_empty());
     assert!(config.configured);
     assert!(config.branch.is_some());
 }
 
+/// 测试嵌套模板配置
 #[test]
 fn test_repo_config_with_nested_template() {
-    // 测试嵌套的模板配置
+    // Arrange: 准备测试嵌套的模板配置
     use toml::map::Map;
     use toml::Value;
 
@@ -446,9 +508,10 @@ fn test_repo_config_with_nested_template() {
     assert_eq!(config.template_commit.len(), 1);
 }
 
+/// 测试包含特殊字符的配置
 #[test]
 fn test_repo_config_with_special_characters() {
-    // 测试包含特殊字符的配置
+    // Arrange: 准备测试包含特殊字符的配置
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -468,9 +531,10 @@ fn test_repo_config_with_special_characters() {
 
 // ==================== 配置更新测试 ====================
 
+/// 测试更新commit模板配置
 #[test]
 fn test_update_template_commit() {
-    // 测试更新 template_commit 配置
+    // Arrange: 准备测试更新 template_commit 配置
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -490,9 +554,10 @@ fn test_update_template_commit() {
     );
 }
 
+/// 测试更新configured标志
 #[test]
 fn test_update_configured_flag() {
-    // 测试更新 configured 标志
+    // Arrange: 准备测试更新 configured 标志
     let mut config = RepoConfig::default();
     assert!(!config.configured);
 
@@ -500,9 +565,10 @@ fn test_update_configured_flag() {
     assert!(config.configured);
 }
 
+/// 测试更新branch配置
 #[test]
 fn test_update_branch_config() {
-    // 测试更新 branch 配置
+    // Arrange: 准备测试更新 branch 配置
     let mut config = RepoConfig::default();
 
     config.branch = Some(BranchConfig {
@@ -520,9 +586,10 @@ fn test_update_branch_config() {
     }
 }
 
+/// 测试清空commit模板配置
 #[test]
 fn test_clear_template_commit() {
-    // 测试清空 template_commit 配置
+    // Arrange: 准备测试清空 template_commit 配置
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -535,9 +602,10 @@ fn test_clear_template_commit() {
     assert!(config.template_commit.is_empty());
 }
 
+/// 测试清空branch配置
 #[test]
 fn test_clear_branch_config() {
-    // 测试清空 branch 配置
+    // Arrange: 准备测试清空 branch 配置
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("feature".to_string()),
@@ -550,6 +618,7 @@ fn test_clear_branch_config() {
 
 // ==================== 参数化测试 ====================
 
+/// 测试仓库配置的参数化组合
 #[rstest]
 #[case(true, Some("feature".to_string()))]
 #[case(false, None)]
@@ -571,9 +640,10 @@ fn test_repo_config_parametrized(#[case] configured: bool, #[case] prefix: Optio
 
 // ==================== 配置组合测试 ====================
 
+/// 测试公共和私有配置的组合
 #[test]
 fn test_public_and_private_config_combination() {
-    // 测试公共和私有配置的组合
+    // Arrange: 准备测试公共和私有配置的组合
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -594,16 +664,17 @@ fn test_public_and_private_config_combination() {
         ignore: vec!["main".to_string()],
     });
 
-    // 验证两种配置都存在
+    // Assert: 验证两种配置都存在
     assert!(!config.template_commit.is_empty());
     assert!(!config.template_branch.is_empty());
     assert!(config.configured);
     assert!(config.branch.is_some());
 }
 
+/// 测试模板配置的覆盖行为
 #[test]
 fn test_template_override_behavior() {
-    // 测试模板配置的覆盖行为
+    // Arrange: 准备测试模板配置的覆盖行为
     use toml::Value;
 
     let mut config = RepoConfig::default();
@@ -631,9 +702,10 @@ fn test_template_override_behavior() {
 
 // ==================== 配置验证测试 ====================
 
+/// 测试有效的分支前缀配置
 #[test]
 fn test_config_with_valid_branch_prefix() {
-    // 测试有效的分支前缀配置
+    // Arrange: 准备测试有效的分支前缀配置
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("feature".to_string()),
@@ -645,9 +717,10 @@ fn test_config_with_valid_branch_prefix() {
     }
 }
 
+/// 测试空的分支前缀配置
 #[test]
 fn test_config_with_empty_branch_prefix() {
-    // 测试空的分支前缀配置
+    // Arrange: 准备测试空的分支前缀配置
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("".to_string()),
@@ -659,9 +732,10 @@ fn test_config_with_empty_branch_prefix() {
     }
 }
 
+/// 测试多个忽略分支配置
 #[test]
 fn test_config_with_multiple_ignore_branches() {
-    // 测试多个忽略分支
+    // Arrange: 准备测试多个忽略分支
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("feature".to_string()),
@@ -680,6 +754,7 @@ fn test_config_with_multiple_ignore_branches() {
 
 // ==================== 文件系统集成测试 ====================
 
+/// 测试从现有文件加载配置
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_from_existing_files() -> Result<()> {
@@ -719,11 +794,11 @@ auto_accept_change_type = false
     // 执行：调用 RepoConfig::load()
     let config = RepoConfig::load()?;
 
-    // 验证：公共配置正确加载
+    // Assert: 验证：公共配置正确加载
     assert_eq!(config.template_commit.len(), 2);
     assert_eq!(config.template_branch.len(), 1);
 
-    // 验证：私有配置正确加载
+    // Assert: 验证：私有配置正确加载
     assert!(config.configured);
     assert!(config.branch.is_some());
     assert!(config.pr.is_some());
@@ -739,6 +814,7 @@ auto_accept_change_type = false
     Ok(())
 }
 
+/// 测试从不存在文件加载配置（应返回默认配置）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_from_non_existing_files() -> Result<()> {
@@ -750,7 +826,7 @@ fn test_load_from_non_existing_files() -> Result<()> {
     // 执行：调用 RepoConfig::load()
     let config = RepoConfig::load()?;
 
-    // 验证：返回默认配置
+    // Assert: 验证：返回默认配置
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
@@ -761,6 +837,7 @@ fn test_load_from_non_existing_files() -> Result<()> {
     Ok(())
 }
 
+/// 测试保存配置到新文件
 #[test]
 #[serial(repo_config_fs)]
 fn test_save_to_new_files() -> Result<()> {
@@ -783,20 +860,20 @@ fn test_save_to_new_files() -> Result<()> {
     });
     config.save()?;
 
-    // 验证：公共配置文件创建成功
+    // Assert: 验证：公共配置文件创建成功
     let public_config_path = env.path().join(".workflow").join("config.toml");
     assert!(public_config_path.exists());
 
-    // 验证：私有配置文件创建成功
+    // Assert: 验证：私有配置文件创建成功
     let private_config_path = env.path().join(".workflow").join("config").join("repository.toml");
     assert!(private_config_path.exists());
 
-    // 验证：公共配置内容正确
+    // Assert: 验证：公共配置内容正确
     let public_content = fs::read_to_string(&public_config_path)?;
     assert!(public_content.contains("[template.commit]"));
     assert!(public_content.contains(r#"type = "conventional""#));
 
-    // 验证：私有配置内容正确
+    // Assert: 验证：私有配置内容正确
     let private_content = fs::read_to_string(&private_config_path)?;
     assert!(private_content.contains("configured = true"));
     assert!(private_content.contains(r#"prefix = "feature""#));
@@ -804,6 +881,7 @@ fn test_save_to_new_files() -> Result<()> {
     Ok(())
 }
 
+/// 测试加载和保存的往返流程（数据一致性）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_and_save_roundtrip() -> Result<()> {
@@ -850,7 +928,7 @@ prefix = "feature"
     // 重新加载
     let reloaded_config = RepoConfig::load()?;
 
-    // 验证：数据一致性
+    // Assert: 验证：数据一致性
     assert_eq!(
         reloaded_config.template_commit.len(),
         config.template_commit.len()
@@ -863,6 +941,7 @@ prefix = "feature"
     Ok(())
 }
 
+/// 测试检查配置是否存在
 #[test]
 #[serial(repo_config_fs)]
 fn test_exists_check() -> Result<()> {
@@ -886,6 +965,7 @@ fn test_exists_check() -> Result<()> {
 
 // ==================== 错误场景测试 ====================
 
+/// 测试加载损坏的公共配置文件（应返回错误）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_with_corrupted_public_config() -> Result<()> {
@@ -903,12 +983,13 @@ type = "invalid  # 缺少闭合引号和括号
     // 执行：尝试加载配置
     let result = RepoConfig::load();
 
-    // 验证：返回错误
+    // Assert: 验证：返回错误
     assert!(result.is_err());
 
     Ok(())
 }
 
+/// 测试加载损坏的私有配置文件（应返回错误）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_with_corrupted_private_config() -> Result<()> {
@@ -926,12 +1007,13 @@ configured = "not_a_boolean"
     // 执行：尝试加载配置
     let result = RepoConfig::load();
 
-    // 验证：返回错误（私有配置损坏会导致加载失败）
+    // Assert: 验证：返回错误（私有配置损坏会导致加载失败）
     assert!(result.is_err());
 
     Ok(())
 }
 
+/// 测试在非Git仓库中检查配置是否存在
 #[test]
 #[serial(repo_config_fs)]
 fn test_exists_outside_git_repo() -> Result<()> {
@@ -945,12 +1027,13 @@ fn test_exists_outside_git_repo() -> Result<()> {
     // 执行：调用 RepoConfig::exists()
     let result = RepoConfig::exists()?;
 
-    // 验证：在非 Git 仓库中返回 true（跳过检查）
+    // Assert: 验证：在非 Git 仓库中返回 true（跳过检查）
     assert!(result);
 
     Ok(())
 }
 
+/// 测试只加载公共配置（无私有配置）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_with_only_public_config() -> Result<()> {
@@ -968,7 +1051,7 @@ type = "conventional"
     // 执行：加载配置
     let config = RepoConfig::load()?;
 
-    // 验证：公共配置加载成功，私有配置为默认值
+    // Assert: 验证：公共配置加载成功，私有配置为默认值
     assert_eq!(config.template_commit.len(), 1);
     assert!(!config.configured);
     assert!(config.branch.is_none());
@@ -976,6 +1059,7 @@ type = "conventional"
     Ok(())
 }
 
+/// 测试只加载私有配置（无公共配置）
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_with_only_private_config() -> Result<()> {
@@ -997,7 +1081,7 @@ configured = true
     // 执行：加载配置
     let config = RepoConfig::load()?;
 
-    // 验证：私有配置加载成功，公共配置为默认值
+    // Assert: 验证：私有配置加载成功，公共配置为默认值
     assert!(config.configured);
     assert!(config.template_commit.is_empty());
 

@@ -93,27 +93,24 @@ impl Drop for TestEnv {
 // ==================== PublicRepoConfig Load 测试 ====================
 
 #[test]
-fn test_load_public_config_default() {
-    // 测试加载不存在的配置文件时返回默认值
+fn test_load_public_config_default_with_no_config_returns_default_config() {
+    // Arrange: 准备测试（无需额外准备）
     // 注意：这个测试依赖于当前目录没有 .workflow/config.toml
-    // 在实际项目中运行时可能会加载真实配置
-    // 这里我们只测试 PublicRepoConfig 的结构
-
     // 由于 PublicRepoConfig::load() 依赖于 Paths::project_config()，
-    // 而 Paths::project_config() 会查找当前目录的 .workflow/config.toml，
-    // 我们无法轻易模拟不存在的情况。
-    // 这里我们测试默认值的创建
+    // 我们无法轻易模拟不存在的情况，这里我们测试默认值的创建
+
+    // Act: 创建默认配置
     let config = PublicRepoConfig::default();
 
+    // Assert: 验证所有模板字段为空
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
 }
 
 #[test]
-fn test_load_public_config_with_commit_template() {
-    // 测试加载包含 commit 模板的配置
-
+fn test_load_public_config_with_commit_template_returns_config_with_commit_template() {
+    // Arrange: 准备 commit 模板配置
     // 由于 PublicRepoConfig::load() 使用 Paths::project_config()，
     // 我们直接测试配置结构的创建和字段设置
     let mut config = PublicRepoConfig::default();
@@ -125,6 +122,7 @@ fn test_load_public_config_with_commit_template() {
         .template_commit
         .insert("scope_required".to_string(), Value::Boolean(true));
 
+    // Act & Assert: 验证 commit 模板配置
     assert_eq!(config.template_commit.len(), 2);
     assert_eq!(
         config.template_commit.get("type"),
@@ -137,9 +135,8 @@ fn test_load_public_config_with_commit_template() {
 }
 
 #[test]
-fn test_load_public_config_with_branch_template() {
-    // 测试加载包含 branch 模板的配置
-
+fn test_load_public_config_with_branch_template_returns_config_with_branch_template() {
+    // Arrange: 准备 branch 模板配置
     let mut config = PublicRepoConfig::default();
     config
         .template_branch
@@ -148,6 +145,7 @@ fn test_load_public_config_with_branch_template() {
         .template_branch
         .insert("separator".to_string(), Value::String("/".to_string()));
 
+    // Act & Assert: 验证 branch 模板配置
     assert_eq!(config.template_branch.len(), 2);
     assert_eq!(
         config.template_branch.get("prefix"),
@@ -160,9 +158,8 @@ fn test_load_public_config_with_branch_template() {
 }
 
 #[test]
-fn test_load_public_config_with_pr_template() {
-    // 测试加载包含 PR 模板的配置
-
+fn test_load_public_config_with_pr_template_returns_config_with_pr_template() {
+    // Arrange: 准备 PR 模板配置
     let mut config = PublicRepoConfig::default();
     config
         .template_pull_requests
@@ -171,6 +168,7 @@ fn test_load_public_config_with_pr_template() {
         .template_pull_requests
         .insert("require_review".to_string(), Value::Boolean(true));
 
+    // Act & Assert: 验证 PR 模板配置
     assert_eq!(config.template_pull_requests.len(), 2);
     assert_eq!(
         config.template_pull_requests.get("auto_merge"),
@@ -183,9 +181,8 @@ fn test_load_public_config_with_pr_template() {
 }
 
 #[test]
-fn test_load_public_config_with_all_templates() {
-    // 测试加载包含所有模板的配置
-
+fn test_load_public_config_with_all_templates_returns_complete_config() {
+    // Arrange: 准备所有模板配置
     let mut config = PublicRepoConfig::default();
 
     // 添加 commit 模板
@@ -204,6 +201,7 @@ fn test_load_public_config_with_all_templates() {
         .template_pull_requests
         .insert("auto_merge".to_string(), Value::Boolean(false));
 
+    // Act & Assert: 验证所有模板都已设置
     assert_eq!(config.template_commit.len(), 1);
     assert_eq!(config.template_branch.len(), 1);
     assert_eq!(config.template_pull_requests.len(), 1);
@@ -212,9 +210,8 @@ fn test_load_public_config_with_all_templates() {
 // ==================== PublicRepoConfig Save 测试 ====================
 
 #[test]
-fn test_save_public_config_structure() {
-    // 测试保存配置的数据结构
-
+fn test_save_public_config_structure_with_all_fields_returns_complete_structure() {
+    // Arrange: 准备包含所有字段的配置
     let mut config = PublicRepoConfig::default();
 
     // 添加测试数据
@@ -229,7 +226,7 @@ fn test_save_public_config_structure() {
         .template_pull_requests
         .insert("auto_merge".to_string(), Value::Boolean(false));
 
-    // 验证数据结构
+    // Act & Assert: 验证数据结构完整
     assert!(!config.template_commit.is_empty());
     assert!(!config.template_branch.is_empty());
     assert!(!config.template_pull_requests.is_empty());
@@ -238,9 +235,8 @@ fn test_save_public_config_structure() {
 // ==================== 配置字段测试 ====================
 
 #[test]
-fn test_template_commit_fields() {
-    // 测试 template.commit 字段的各种类型
-
+fn test_template_commit_fields_with_various_types_returns_config_with_fields() {
+    // Arrange: 准备不同类型的字段值
     let mut config = PublicRepoConfig::default();
 
     // 字符串类型
@@ -265,13 +261,13 @@ fn test_template_commit_fields() {
     ];
     config.template_commit.insert("allowed_types".to_string(), Value::Array(types));
 
+    // Act & Assert: 验证所有字段都已添加
     assert_eq!(config.template_commit.len(), 4);
 }
 
 #[test]
-fn test_template_branch_fields() {
-    // 测试 template.branch 字段的各种类型
-
+fn test_template_branch_fields_with_various_types_returns_config_with_fields() {
+    // Arrange: 准备不同类型的字段值
     let mut config = PublicRepoConfig::default();
 
     config
@@ -282,13 +278,13 @@ fn test_template_branch_fields() {
         .insert("separator".to_string(), Value::String("/".to_string()));
     config.template_branch.insert("use_jira_key".to_string(), Value::Boolean(true));
 
+    // Act & Assert: 验证所有字段都已添加
     assert_eq!(config.template_branch.len(), 3);
 }
 
 #[test]
-fn test_template_pull_requests_fields() {
-    // 测试 template.pull_requests 字段的各种类型
-
+fn test_template_pull_requests_fields_with_various_types_returns_config_with_fields() {
+    // Arrange: 准备不同类型的字段值
     let mut config = PublicRepoConfig::default();
 
     config
@@ -301,26 +297,28 @@ fn test_template_pull_requests_fields() {
         .template_pull_requests
         .insert("min_reviewers".to_string(), Value::Integer(2));
 
+    // Act & Assert: 验证所有字段都已添加
     assert_eq!(config.template_pull_requests.len(), 3);
 }
 
 // ==================== 边界情况测试 ====================
 
 #[test]
-fn test_empty_config() {
-    // 测试空配置
+fn test_empty_config_with_default_returns_empty_config() {
+    // Arrange: 创建默认配置
 
+    // Act: 获取配置
     let config = PublicRepoConfig::default();
 
+    // Assert: 验证所有字段为空
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
 }
 
 #[test]
-fn test_config_with_nested_tables() {
-    // 测试嵌套表格配置
-
+fn test_config_with_nested_tables_returns_config_with_nested_structure() {
+    // Arrange: 准备嵌套表格配置
     let mut config = PublicRepoConfig::default();
 
     // 创建嵌套表格
@@ -332,6 +330,7 @@ fn test_config_with_nested_tables() {
         .template_commit
         .insert("validation".to_string(), Value::Table(nested_table));
 
+    // Act & Assert: 验证嵌套表格结构
     assert_eq!(config.template_commit.len(), 1);
     if let Some(Value::Table(table)) = config.template_commit.get("validation") {
         assert_eq!(table.len(), 2);
@@ -342,9 +341,8 @@ fn test_config_with_nested_tables() {
 }
 
 #[test]
-fn test_config_with_special_characters() {
-    // 测试包含特殊字符的配置值
-
+fn test_config_with_special_characters_returns_config_with_special_chars() {
+    // Arrange: 准备包含特殊字符的配置值
     let mut config = PublicRepoConfig::default();
 
     config.template_branch.insert(
@@ -356,13 +354,13 @@ fn test_config_with_special_characters() {
         Value::String(r"^[a-z]+/[A-Z]+-\d+".to_string()),
     );
 
+    // Act & Assert: 验证特殊字符被正确保存
     assert_eq!(config.template_branch.len(), 2);
 }
 
 #[test]
-fn test_config_with_unicode() {
-    // 测试包含 Unicode 字符的配置值
-
+fn test_config_with_unicode_returns_config_with_unicode_chars() {
+    // Arrange: 准备包含 Unicode 字符的配置值
     let mut config = PublicRepoConfig::default();
 
     config.template_commit.insert(
@@ -370,6 +368,7 @@ fn test_config_with_unicode() {
         Value::String("功能: 添加新特性 🚀".to_string()),
     );
 
+    // Act & Assert: 验证 Unicode 字符被正确保存
     assert_eq!(config.template_commit.len(), 1);
     assert_eq!(
         config.template_commit.get("description"),
@@ -380,9 +379,8 @@ fn test_config_with_unicode() {
 // ==================== 配置更新测试 ====================
 
 #[test]
-fn test_update_existing_field() {
-    // 测试更新已存在的字段
-
+fn test_update_existing_field_with_new_value_updates_field() {
+    // Arrange: 准备配置和初始值
     let mut config = PublicRepoConfig::default();
 
     // 初始值
@@ -395,10 +393,12 @@ fn test_update_existing_field() {
         Some(&Value::String("conventional".to_string()))
     );
 
-    // 更新值
+    // Act: 更新值
     config
         .template_commit
         .insert("type".to_string(), Value::String("semantic".to_string()));
+
+    // Assert: 验证值已更新
     assert_eq!(
         config.template_commit.get("type"),
         Some(&Value::String("semantic".to_string()))
@@ -406,9 +406,8 @@ fn test_update_existing_field() {
 }
 
 #[test]
-fn test_remove_field() {
-    // 测试删除字段
-
+fn test_remove_field_with_existing_field_removes_field() {
+    // Arrange: 准备配置和字段
     let mut config = PublicRepoConfig::default();
 
     config.template_commit.insert(
@@ -417,14 +416,16 @@ fn test_remove_field() {
     );
     assert_eq!(config.template_commit.len(), 1);
 
+    // Act: 删除字段
     config.template_commit.remove("type");
+
+    // Assert: 验证字段已删除
     assert_eq!(config.template_commit.len(), 0);
 }
 
 #[test]
-fn test_clear_all_fields() {
-    // 测试清空所有字段
-
+fn test_clear_all_fields_with_populated_config_clears_all_fields() {
+    // Arrange: 准备包含所有字段的配置
     let mut config = PublicRepoConfig::default();
 
     config.template_commit.insert(
@@ -438,10 +439,12 @@ fn test_clear_all_fields() {
         .template_pull_requests
         .insert("auto_merge".to_string(), Value::Boolean(false));
 
+    // Act: 清空所有字段
     config.template_commit.clear();
     config.template_branch.clear();
     config.template_pull_requests.clear();
 
+    // Assert: 验证所有字段已清空
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
@@ -453,12 +456,18 @@ fn test_clear_all_fields() {
 #[case("type", Value::String("conventional".to_string()))]
 #[case("scope_required", Value::Boolean(true))]
 #[case("max_length", Value::Integer(72))]
-fn test_template_commit_parametrized(#[case] key: &str, #[case] value: Value) {
+fn test_template_commit_parametrized_with_various_fields_returns_config_with_field(
+    #[case] key: &str,
+    #[case] value: Value,
+) {
+    // Arrange: 准备参数化测试数据
     // 参数化测试 template.commit 的各种字段
 
+    // Act: 插入字段
     let mut config = PublicRepoConfig::default();
     config.template_commit.insert(key.to_string(), value.clone());
 
+    // Assert: 验证字段已正确插入
     assert_eq!(config.template_commit.get(key), Some(&value));
 }
 
@@ -466,12 +475,18 @@ fn test_template_commit_parametrized(#[case] key: &str, #[case] value: Value) {
 #[case("prefix", Value::String("feature".to_string()))]
 #[case("separator", Value::String("/".to_string()))]
 #[case("use_jira_key", Value::Boolean(true))]
-fn test_template_branch_parametrized(#[case] key: &str, #[case] value: Value) {
+fn test_template_branch_parametrized_with_various_fields_returns_config_with_field(
+    #[case] key: &str,
+    #[case] value: Value,
+) {
+    // Arrange: 准备参数化测试数据
     // 参数化测试 template.branch 的各种字段
 
+    // Act: 插入字段
     let mut config = PublicRepoConfig::default();
     config.template_branch.insert(key.to_string(), value.clone());
 
+    // Assert: 验证字段已正确插入
     assert_eq!(config.template_branch.get(key), Some(&value));
 }
 
@@ -479,38 +494,48 @@ fn test_template_branch_parametrized(#[case] key: &str, #[case] value: Value) {
 #[case("auto_merge", Value::Boolean(false))]
 #[case("require_review", Value::Boolean(true))]
 #[case("min_reviewers", Value::Integer(2))]
-fn test_template_pull_requests_parametrized(#[case] key: &str, #[case] value: Value) {
+fn test_template_pull_requests_parametrized_with_various_fields_returns_config_with_field(
+    #[case] key: &str,
+    #[case] value: Value,
+) {
+    // Arrange: 准备参数化测试数据
     // 参数化测试 template.pull_requests 的各种字段
 
+    // Act: 插入字段
     let mut config = PublicRepoConfig::default();
     config.template_pull_requests.insert(key.to_string(), value.clone());
 
+    // Assert: 验证字段已正确插入
     assert_eq!(config.template_pull_requests.get(key), Some(&value));
 }
 
 // ==================== Debug 和 Clone 测试 ====================
 
 #[test]
-fn test_config_debug() {
-    // 测试配置的 Debug 输出
-
+fn test_config_debug_with_config_instance_returns_debug_string() {
+    // Arrange: 准备配置实例
     let mut config = PublicRepoConfig::default();
     config.template_commit.insert(
         "type".to_string(),
         Value::String("conventional".to_string()),
     );
 
+    // Act: 格式化 Debug 输出
     let debug_output = format!("{:?}", config);
+
+    // Assert: 验证 Debug 输出包含 PublicRepoConfig
     assert!(debug_output.contains("PublicRepoConfig"));
 }
 
 #[test]
-fn test_config_default() {
-    // 测试配置的默认值
+fn test_config_default_with_multiple_calls_returns_consistent_defaults() {
+    // Arrange: 准备测试（无需额外准备）
 
+    // Act: 创建多个默认配置
     let config1 = PublicRepoConfig::default();
     let config2 = PublicRepoConfig::default();
 
+    // Assert: 验证默认值一致
     assert!(config1.template_commit.is_empty());
     assert!(config2.template_commit.is_empty());
 }
@@ -519,8 +544,8 @@ fn test_config_default() {
 
 #[test]
 #[serial(repo_config_fs)] // 串行执行，避免工作目录冲突
-fn test_load_from_existing_file() -> Result<()> {
-    // 准备：创建包含配置的临时 Git 仓库
+fn test_load_from_existing_file_with_valid_config_returns_loaded_config() -> Result<()> {
+    // Arrange: 创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -536,10 +561,10 @@ separator = "/"
 "#;
     env.create_config(config_content)?;
 
-    // 执行：调用 PublicRepoConfig::load()
+    // Act: 调用 PublicRepoConfig::load()
     let config = PublicRepoConfig::load()?;
 
-    // 验证：配置正确加载
+    // Assert: 验证配置正确加载
     assert_eq!(config.template_commit.len(), 2);
     assert_eq!(config.template_branch.len(), 2);
     assert_eq!(
@@ -560,16 +585,16 @@ separator = "/"
 
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_from_non_existing_file() -> Result<()> {
-    // 准备：创建没有配置文件的临时 Git 仓库
+fn test_load_from_non_existing_file_returns_default_config() -> Result<()> {
+    // Arrange: 创建没有配置文件的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
 
-    // 执行：调用 PublicRepoConfig::load()
+    // Act: 调用 PublicRepoConfig::load()
     let config = PublicRepoConfig::load()?;
 
-    // 验证：返回默认配置
+    // Assert: 验证返回默认配置
     assert!(config.template_commit.is_empty());
     assert!(config.template_branch.is_empty());
     assert!(config.template_pull_requests.is_empty());
@@ -579,13 +604,13 @@ fn test_load_from_non_existing_file() -> Result<()> {
 
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_to_new_file() -> Result<()> {
-    // 准备：创建临时 Git 仓库（不创建配置文件）
+fn test_save_to_new_file_with_config_creates_file() -> Result<()> {
+    // Arrange: 创建临时 Git 仓库（不创建配置文件）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
 
-    // 执行：创建配置并保存
+    // 创建配置
     let mut config = PublicRepoConfig::default();
     config.template_commit.insert(
         "type".to_string(),
@@ -594,13 +619,14 @@ fn test_save_to_new_file() -> Result<()> {
     config
         .template_branch
         .insert("prefix".to_string(), Value::String("feature".to_string()));
+
+    // Act: 保存配置
     config.save()?;
 
-    // 验证：文件创建成功
+    // Assert: 验证文件创建成功，内容正确
     let config_path = env.path().join(".workflow/config.toml");
     assert!(config_path.exists());
 
-    // 验证：内容正确
     let content = fs::read_to_string(&config_path)?;
     assert!(content.contains("[template.commit]"));
     assert!(content.contains(r#"type = "conventional""#));
@@ -612,8 +638,8 @@ fn test_save_to_new_file() -> Result<()> {
 
 #[test]
 #[serial(repo_config_fs)]
-fn test_save_preserves_other_sections() -> Result<()> {
-    // 准备：创建包含其他配置部分的临时 Git 仓库
+fn test_save_preserves_other_sections_with_existing_config_preserves_other_sections() -> Result<()> {
+    // Arrange: 创建包含其他配置部分的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -628,7 +654,7 @@ type = "old_type"
 "#;
     env.create_config(config_content)?;
 
-    // 执行：保存新的模板配置
+    // 创建新配置
     let mut config = PublicRepoConfig::default();
     config.template_commit.insert(
         "type".to_string(),
@@ -637,15 +663,15 @@ type = "old_type"
     config
         .template_commit
         .insert("scope_required".to_string(), Value::Boolean(true));
+
+    // Act: 保存配置
     config.save()?;
 
-    // 验证：其他配置部分未被覆盖
+    // Assert: 验证其他配置部分未被覆盖，模板配置已更新
     let content = fs::read_to_string(env.path().join(".workflow/config.toml"))?;
     assert!(content.contains("[other_section]"));
     assert!(content.contains(r#"key1 = "value1""#));
     assert!(content.contains(r#"key2 = "value2""#));
-
-    // 验证：模板配置已更新
     assert!(content.contains("[template.commit]"));
     assert!(content.contains(r#"type = "conventional""#));
     assert!(content.contains("scope_required = true"));
@@ -655,8 +681,8 @@ type = "old_type"
 
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip() -> Result<()> {
-    // 准备：创建包含配置的临时 Git 仓库
+fn test_load_and_save_roundtrip_with_modified_config_returns_consistent_config() -> Result<()> {
+    // Arrange: 创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -676,16 +702,15 @@ require_review = true
 "#;
     env.create_config(config_content)?;
 
-    // 执行：加载 → 修改 → 保存 → 重新加载
+    // Act: 加载 → 修改 → 保存 → 重新加载
     let mut config = PublicRepoConfig::load()?;
     config.template_commit.insert("max_length".to_string(), Value::Integer(72));
     config.template_branch.insert("use_jira_key".to_string(), Value::Boolean(true));
     config.save()?;
 
-    // 重新加载
     let reloaded_config = PublicRepoConfig::load()?;
 
-    // 验证：数据一致性
+    // Assert: 验证数据一致性
     assert_eq!(
         config.template_commit.len(),
         reloaded_config.template_commit.len()
@@ -714,8 +739,8 @@ require_review = true
 
 #[test]
 #[serial(repo_config_fs)]
-fn test_load_corrupted_toml_file() -> Result<()> {
-    // 准备：创建包含无效 TOML 的配置文件
+fn test_load_corrupted_toml_file_with_invalid_toml_returns_error() -> Result<()> {
+    // Arrange: 创建包含无效 TOML 的配置文件
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -726,10 +751,10 @@ type = "invalid  # 缺少闭合引号和括号
 "#;
     env.create_config(invalid_toml)?;
 
-    // 执行：尝试加载配置
+    // Act: 尝试加载配置
     let result = PublicRepoConfig::load();
 
-    // 验证：返回错误
+    // Assert: 验证返回错误
     assert!(result.is_err());
 
     Ok(())
@@ -738,10 +763,10 @@ type = "invalid  # 缺少闭合引号和括号
 #[test]
 #[cfg(unix)]
 #[serial(repo_config_fs)]
-fn test_save_to_readonly_directory() -> Result<()> {
+fn test_save_to_readonly_directory_with_config_returns_error() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
-    // 准备：创建只读的 .workflow 目录
+    // Arrange: 创建只读的 .workflow 目录
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -754,15 +779,17 @@ fn test_save_to_readonly_directory() -> Result<()> {
     perms.set_mode(0o444);
     fs::set_permissions(&workflow_dir, perms)?;
 
-    // 执行：尝试保存配置
+    // 准备配置
     let mut config = PublicRepoConfig::default();
     config.template_commit.insert(
         "type".to_string(),
         Value::String("conventional".to_string()),
     );
+
+    // Act: 尝试保存配置
     let result = config.save();
 
-    // 验证：返回权限错误
+    // Assert: 验证返回权限错误
     assert!(result.is_err());
 
     // 恢复权限以便清理

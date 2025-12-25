@@ -48,18 +48,6 @@
   - 📊 进度跟踪和里程碑
 - **优先级**: 高优先级（测试覆盖度提升综合指导文档）
 
-#### 2.1 [`test-improvement-tracking.md`](./test-improvement-tracking.md)
-- **状态**: 🚧 进行中
-- **实现度**: 1% (已完成 1/5 任务)
-- **分类**: 测试最佳实践改进追踪
-- **内容**:
-  - 📋 5个改进任务：减少 unwrap() 使用、检查覆盖率、添加文档、扩展数据工厂、管理忽略测试
-  - 📊 详细的进度追踪（626处 unwrap()、153处 expect()、54个被忽略测试）
-  - 🎯 任务优先级和时间表
-  - ✅ 完成标准和验收条件
-  - 📝 改进模式和最佳实践示例
-- **优先级**: ⭐⭐⭐⭐ 高优先级（影响代码质量和可维护性）
-
 #### 3. 核心业务模块测试覆盖率改进计划
 
 ##### 3.1 [`testing/test-coverage-branch.md`](./testing/test-coverage-branch.md)
@@ -212,7 +200,6 @@ docs/requirements/
 │
 ├── jira.md                          # JIRA 模块待办事项（🚧 部分完成）
 ├── test-coverage-improvement.md     # 测试覆盖度提升综合方案（🔄 进行中）
-├── test-improvement-tracking.md     # 测试最佳实践改进追踪（🚧 进行中）
 │
 ├── testing/                          # 测试覆盖率需求文档目录
 │   ├── README.md                     # 测试覆盖率文档索引
@@ -243,17 +230,16 @@ docs/requirements/
 | 状态 | 文档数量 | 说明 |
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
-| 🔄 进行中 | 2 个 | 测试覆盖度提升综合方案、测试最佳实践改进追踪 |
+| 🔄 进行中 | 1 个 | 测试覆盖度提升综合方案 |
 | 📋 待实施 | 13 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构、测试架构改进、测试命名结构改进 |
 | ⏳ 待实施 | 3 个 | 集成扩展、文档检查工具、国际化支持 |
-| **总计** | **19 个** | - |
+| **总计** | **18 个** | - |
 
 ### 文档列表
 
 #### 分类待办事项文档
 1. **jira.md** - JIRA 模块待办事项（🚧 部分完成，~40%）
 2. **test-coverage-improvement.md** - 测试覆盖度提升综合方案（🔄 进行中，15.66%-18.09%）
-3. **test-improvement-tracking.md** - 测试最佳实践改进追踪（🚧 进行中，1%）
 
 #### 核心业务模块测试覆盖率改进计划（10 个）
 详见 [`testing/README.md`](./testing/README.md) 获取完整列表。
@@ -273,14 +259,14 @@ docs/requirements/
 
 ### 当前待办事项
 
-本目录包含 13 个文档：
+本目录包含 12 个文档：
 
 #### 部分完成文档（1 个）
 1. **JIRA 模块** (`jira.md`) - 🚧 部分完成（~40%）
    - ✅ 已完成：`jira info`、`jira changelog`、`jira comments`、`jira attachments`、`jira clean`、JIRA API 基础功能
    - ⏳ 待实现：`jira info` 增强、新增命令（assign、comment、create、list、watch）
 
-#### 进行中文档（2 个）
+#### 进行中文档（1 个）
 2. **测试覆盖度提升综合方案** (`test-coverage-improvement.md`) - 🔄 进行中（15.66%-18.09%）
    - 📊 当前覆盖率：15.66%-18.09% (2382-2751/15206 行)
    - 🎯 目标覆盖率：75%+
@@ -292,12 +278,6 @@ docs/requirements/
    - 📝 分阶段实施计划（核心功能 → 重要功能 → 辅助功能）
    - 📊 任务统计（约 90+ 个待实施任务）
 
-3. **测试最佳实践改进追踪** (`test-improvement-tracking.md`) - 🚧 进行中（1%）
-   - 📋 5个改进任务：减少 unwrap() 使用、检查覆盖率、添加文档、扩展数据工厂、管理忽略测试
-   - 📊 详细的进度追踪（626处 unwrap()、153处 expect()、54个被忽略测试）
-   - 🎯 任务优先级、时间表和完成标准
-   - ✅ 已完成 `tests/base/http/client.rs` 改进
-   - ⏳ 待完成：4个高优先级任务
 
 #### 核心业务模块测试覆盖率改进计划（10 个）
 
@@ -392,7 +372,6 @@ docs/requirements/
 ### 按模块查找
 - **JIRA 相关** → [`jira.md`](./jira.md) 🚧 部分完成
 - **测试覆盖度提升综合方案** → [`testing/test-coverage-improvement.md`](./testing/test-coverage-improvement.md) 🔄 进行中（15.66%-18.09%）
-- **测试最佳实践改进追踪** → [`test-improvement-tracking.md`](./test-improvement-tracking.md) 🚧 进行中（1%）
 
 **核心业务模块测试覆盖率改进**（详见 [`testing/README.md`](./testing/README.md)）：
 - **Branch 模块** → [`testing/test-coverage-branch.md`](./testing/test-coverage-branch.md) 📋 待实施（27.9%）
@@ -430,7 +409,7 @@ docs/requirements/
   - ✅ 统一AAA模式规范（~573个测试需要改进，81%符合率）
   - ⚡ 优化测试并行化（减少不必要的串行测试）
   - 📋 分阶段实施计划（6个主要任务，约2000+个子任务）
-- ✅ 更新了统计信息和目录结构（19 个文档）
+- ✅ 更新了统计信息和目录结构（18 个文档）
 - ✅ 更新了快速导航和文档列表
 
 ### 2025-12-25 更新（早期）
@@ -466,11 +445,6 @@ docs/requirements/
 - ✅ 更新了快速导航和文档列表
 
 ### 2025-12-24 更新（早期）
-- ✅ 新增 `test-improvement-tracking.md` - 测试最佳实践改进追踪文档（🚧 进行中）
-  - 📋 5个改进任务详细追踪（unwrap()、覆盖率、文档、数据工厂、忽略测试）
-  - 📊 详细的统计数据和进度追踪
-  - 🎯 任务优先级、时间表和完成标准
-  - ✅ 已完成 `tests/base/http/client.rs` 改进示例
 - ✅ 更新了统计信息和目录结构（11 个文档）
 - ✅ 更新了快速导航和文档列表
 

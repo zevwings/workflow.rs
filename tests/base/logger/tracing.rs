@@ -4,117 +4,203 @@
 
 use workflow::base::logger::tracing::Tracer;
 
+// ==================== Tracer Method Tests ====================
+
+/// 测试Tracer的debug方法
 #[test]
-fn test_tracer_debug() {
-    // 测试 debug 方法（不会 panic 即可）
+fn test_tracer_debug_with_message_returns_void() {
+    // Arrange: 准备测试消息
+
+    // Act: 调用 debug 方法
     Tracer::debug("Test debug message");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的info方法
 #[test]
-fn test_tracer_info() {
-    // 测试 info 方法
+fn test_tracer_info_with_message_returns_void() {
+    // Arrange: 准备测试消息
+
+    // Act: 调用 info 方法
     Tracer::info("Test info message");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的warn方法
 #[test]
-fn test_tracer_warn() {
-    // 测试 warn 方法
+fn test_tracer_warn_with_message_returns_void() {
+    // Arrange: 准备测试消息
+
+    // Act: 调用 warn 方法
     Tracer::warn("Test warn message");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的error方法
 #[test]
-fn test_tracer_error() {
-    // 测试 error 方法
+fn test_tracer_error_with_message_returns_void() {
+    // Arrange: 准备测试消息
+
+    // Act: 调用 error 方法
     Tracer::error("Test error message");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的debug_fmt方法（格式化参数）
 #[test]
-fn test_tracer_debug_fmt() {
-    // 测试 debug_fmt 方法
+fn test_tracer_debug_fmt_with_format_args_returns_void() {
+    // Arrange: 准备格式化参数
+
+    // Act: 调用 debug_fmt 方法
     Tracer::debug_fmt(format_args!("Debug: {}", "test"));
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的info_fmt方法（格式化参数）
 #[test]
-fn test_tracer_info_fmt() {
-    // 测试 info_fmt 方法
+fn test_tracer_info_fmt_with_format_args_returns_void() {
+    // Arrange: 准备格式化参数
+
+    // Act: 调用 info_fmt 方法
     Tracer::info_fmt(format_args!("Info: {}", "test"));
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的warn_fmt方法（格式化参数）
 #[test]
-fn test_tracer_warn_fmt() {
-    // 测试 warn_fmt 方法
+fn test_tracer_warn_fmt_with_format_args_returns_void() {
+    // Arrange: 准备格式化参数
+
+    // Act: 调用 warn_fmt 方法
     Tracer::warn_fmt(format_args!("Warn: {}", "test"));
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的error_fmt方法（格式化参数）
 #[test]
-fn test_tracer_error_fmt() {
-    // 测试 error_fmt 方法
+fn test_tracer_error_fmt_with_format_args_returns_void() {
+    // Arrange: 准备格式化参数
+
+    // Act: 调用 error_fmt 方法
     Tracer::error_fmt(format_args!("Error: {}", "test"));
+
+    // Assert: 验证不会 panic（无返回值）
 }
+
+// ==================== Trace Macro Tests ====================
 
 // 注意：get_log_file_path 是私有方法，无法直接测试
 // 可以通过 Tracer::init() 间接测试路径创建功能
 
+/// 测试各种trace宏的基本功能
 #[test]
-fn test_trace_macros() {
-    // 测试 trace_* 宏
+fn test_trace_macros_with_basic_messages_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 调用各种 trace 宏
     workflow::trace_debug!("Debug macro test");
     workflow::trace_info!("Info macro test");
     workflow::trace_warn!("Warn macro test");
     workflow::trace_error!("Error macro test");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试trace宏的格式化功能
 #[test]
-fn test_trace_macros_with_formatting() {
-    // 测试带格式化的 trace_* 宏
+fn test_trace_macros_with_formatting_returns_void() {
+    // Arrange: 准备格式化参数
     let count = 5;
+
+    // Act: 调用带格式化的 trace 宏
     workflow::trace_debug!("Debug: {} items", count);
     workflow::trace_info!("Info: {} items", count);
     workflow::trace_warn!("Warn: {} items", count);
     workflow::trace_error!("Error: {} items", count);
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试trace宏的多次调用
 #[test]
-fn test_tracer_init() {
-    // 测试初始化（可能会失败，但不应该 panic）
-    // 注意：多次初始化可能会失败，这是正常的
-    Tracer::init();
-}
+fn test_trace_macro_with_multiple_calls_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
 
-#[test]
-fn test_trace_macro_multiple_calls() {
-    // 测试多次调用宏
+    // Act: 多次调用宏
     for i in 0..5 {
         workflow::trace_debug!("Iteration {}", i);
         workflow::trace_info!("Iteration {}", i);
     }
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+// ==================== Tracer Init Tests ====================
+
+/// 测试Tracer的初始化方法（默认配置）
 #[test]
-fn test_tracer_init_multiple_times() {
-    // 测试多次初始化（应该不会 panic）
+fn test_tracer_init_with_default_config_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
+    // 注意：多次初始化可能会失败，这是正常的
+
+    // Act: 调用初始化方法
     Tracer::init();
-    Tracer::init();
-    Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer的多次初始化调用
 #[test]
-fn test_tracer_methods_with_different_inputs() {
-    // 测试不同输入的方法
+fn test_tracer_init_with_multiple_calls_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 多次调用初始化方法
+    Tracer::init();
+    Tracer::init();
+    Tracer::init();
+
+    // Assert: 验证不会 panic（无返回值）
+}
+
+/// 测试Tracer方法处理不同输入（空字符串、特殊字符等）
+#[test]
+fn test_tracer_methods_with_different_inputs_returns_void() {
+    // Arrange: 准备不同的输入
+
+    // Act: 调用各种方法
     Tracer::debug("");
     Tracer::info("Simple message");
     Tracer::warn("Warning with special chars: !@#$%");
     Tracer::error("Error with newline\nand tab\t");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer格式化方法处理复杂格式化参数
+///
+/// ## 测试目的
+/// 验证Tracer的fmt方法能够正确处理包含多种类型参数的复杂格式化字符串。
+///
+/// ## 测试场景
+/// 1. 准备多种类型的参数（数字、文本、布尔值）
+/// 2. 使用format_args!创建格式化参数
+/// 3. 调用各个级别的fmt方法
+/// 4. 验证格式化输出正常
 #[test]
-fn test_tracer_fmt_methods_with_complex_formatting() {
-    // 测试复杂格式化
+fn test_tracer_fmt_methods_with_complex_formatting_returns_void() {
+    // Arrange: 准备复杂格式化参数
     let number = 42;
     let text = "test";
     let boolean = true;
 
+    // Act: 调用格式化方法
     Tracer::debug_fmt(format_args!(
         "Debug: number={}, text={}, bool={}",
         number, text, boolean
@@ -131,248 +217,325 @@ fn test_tracer_fmt_methods_with_complex_formatting() {
         "Error: number={}, text={}, bool={}",
         number, text, boolean
     ));
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试trace宏处理不同类型的参数
 #[test]
-fn test_trace_macros_with_various_types() {
-    // 测试不同类型的参数
+fn test_trace_macros_with_various_types_returns_void() {
+    // Arrange: 准备不同类型的参数
+
+    // Act: 调用各种 trace 宏
     workflow::trace_debug!("Number: {}", 42);
     workflow::trace_info!("Float: {}", 3.14);
     workflow::trace_warn!("Boolean: {}", true);
     workflow::trace_error!("String: {}", "test");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试trace宏处理空字符串
 #[test]
-fn test_trace_macros_with_empty_strings() {
-    // 测试空字符串
+fn test_trace_macros_with_empty_strings_returns_void() {
+    // Arrange: 准备空字符串
+
+    // Act: 调用 trace 宏
     workflow::trace_debug!("");
     workflow::trace_info!("");
     workflow::trace_warn!("");
     workflow::trace_error!("");
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试trace宏处理长消息
 #[test]
-fn test_trace_macros_with_long_messages() {
-    // 测试长消息
+fn test_trace_macros_with_long_messages_returns_void() {
+    // Arrange: 准备长消息
     let long_message = "x".repeat(1000);
+
+    // Act: 调用 trace 宏
     workflow::trace_debug!("Long: {}", long_message);
     workflow::trace_info!("Long: {}", long_message);
     workflow::trace_warn!("Long: {}", long_message);
     workflow::trace_error!("Long: {}", long_message);
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+// ==================== Tracer Init Branch Tests ====================
+
+/// 测试Tracer初始化时启用控制台输出的分支
 #[test]
-fn test_tracer_init_with_enable_console() {
-    // 测试 enable_trace_console 配置分支
+fn test_tracer_init_with_enable_console_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试可能不会完全覆盖所有分支
     // 但至少可以验证代码路径存在
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时文件创建失败的回退逻辑
 #[test]
-fn test_tracer_init_file_creation_fallback() {
-    // 测试文件创建失败时的回退逻辑
+fn test_tracer_init_file_creation_fallback_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 注意：这个测试很难直接触发文件创建失败，但至少可以验证代码路径存在
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时日志级别为None的分支
 #[test]
-fn test_tracer_init_log_level_none() {
-    // 测试 LogLevel::None 的分支（输出到 sink）
+fn test_tracer_init_log_level_none_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 注意：由于 Tracer::init() 从配置文件读取，这个测试可能不会完全覆盖
     // 但至少可以验证代码路径存在
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer间接获取日志文件路径的功能
 #[test]
-fn test_tracer_get_log_file_path_indirect() {
+fn test_tracer_get_log_file_path_indirect_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 间接测试 get_log_file_path() 方法
     // 通过 Tracer::init() 调用，验证日志文件路径创建功能
+
+    // Act: 调用初始化方法
     Tracer::init();
 
-    // 验证 tracing 目录被创建（通过 init 调用）
+    // Assert: 验证 tracing 目录被创建（通过 init 调用）
     // 如果运行到这里没有 panic，说明路径创建成功
 }
 
+/// 测试Tracer初始化时enable_console为true的分支路径
 #[test]
-fn test_tracer_init_enable_console_true_path() {
+fn test_tracer_init_enable_console_true_path_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试 enable_console = true 的分支（第110-113行）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试通过多次调用来验证代码路径
     // 实际的分支覆盖取决于配置文件中的 enable_trace_console 设置
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时enable_console为false的分支路径
 #[test]
-fn test_tracer_init_enable_console_false_path() {
+fn test_tracer_init_enable_console_false_path_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试 enable_console = false 的分支（第114-116行）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试通过多次调用来验证代码路径
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时文件打开成功的路径
 #[test]
-fn test_tracer_init_file_open_success_path() {
+fn test_tracer_init_file_open_success_path_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试文件打开成功的路径（第99-118行）
     // 通过 Tracer::init() 间接测试
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明文件打开成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时文件打开失败的回退逻辑
 #[test]
-fn test_tracer_init_file_open_failure_fallback() {
+fn test_tracer_init_file_open_failure_fallback_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试文件打开失败时的回退逻辑（第121-125行）
     // 注意：这个测试很难直接触发文件打开失败，但至少可以验证代码路径存在
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时日志级别为None的sink路径
 #[test]
-fn test_tracer_init_log_level_none_sink_path() {
+fn test_tracer_init_log_level_none_sink_path_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试 LogLevel::None 的分支（输出到 sink，第126-132行）
     // 注意：由于 Tracer::init() 从配置文件读取，这个测试可能不会完全覆盖
     // 但至少可以验证代码路径存在
+
+    // Act: 调用初始化方法
     Tracer::init();
-    // 如果运行到这里没有 panic，说明成功
+
+    // Assert: 验证不会 panic（无返回值）
 }
 
+/// 测试Tracer初始化时获取日志文件路径的错误处理
 #[test]
 fn test_tracer_init_get_log_file_path_error_handling() {
     // 测试 get_log_file_path() 的错误处理（第99行和第140-152行）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明路径获取成功或错误处理正确
+    // Assert: 验证不会 panic（无返回值）路径获取成功或错误处理正确
 }
 
+/// 测试Tracer初始化时从Settings解析配置的逻辑
 #[test]
 fn test_tracer_init_settings_parsing() {
     // 测试从 Settings 读取日志级别的逻辑（覆盖 directory.rs:82-87）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明配置读取成功
+    // Assert: 验证不会 panic（无返回值）配置读取成功
 }
 
+/// 测试Tracer初始化时日志级别转换为tracing格式字符串
 #[test]
 fn test_tracer_init_log_level_conversion() {
     // 测试 LogLevel 转换为 tracing 格式字符串（覆盖 directory.rs:90）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明转换成功
+    // Assert: 验证不会 panic（无返回值）转换成功
 }
 
+/// 测试Tracer初始化时enable_console配置的unwrap_or逻辑
 #[test]
 fn test_tracer_init_enable_console_unwrap_or() {
     // 测试 enable_trace_console 的 unwrap_or(false) 逻辑（覆盖 directory.rs:96）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明配置读取成功
+    // Assert: 验证不会 panic（无返回值）配置读取成功
 }
 
+/// 测试Tracer初始化时文件路径获取成功的分支
 #[test]
 fn test_tracer_init_file_path_ok_branch() {
     // 测试 get_log_file_path() 返回 Ok 的分支（覆盖 directory.rs:99）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明文件路径获取成功
+    // Assert: 验证不会 panic（无返回值）文件路径获取成功
 }
 
+/// 测试Tracer初始化时文件打开成功的分支
 #[test]
 fn test_tracer_init_file_open_ok_branch() {
     // 测试文件打开返回 Ok 的分支（覆盖 directory.rs:100）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明文件打开成功
+    // Assert: 验证不会 panic（无返回值）文件打开成功
 }
 
+/// 测试Tracer初始化时registry创建逻辑
 #[test]
 fn test_tracer_init_registry_creation() {
     // 测试 registry 创建逻辑（覆盖 directory.rs:102-103）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明 registry 创建成功
+    // Assert: 验证不会 panic（无返回值） registry 创建成功
 }
 
+/// 测试Tracer初始化时文件layer创建逻辑
 #[test]
 fn test_tracer_init_file_layer_creation() {
     // 测试文件 layer 创建逻辑（覆盖 directory.rs:106-107）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明文件 layer 创建成功
+    // Assert: 验证不会 panic（无返回值）文件 layer 创建成功
 }
 
+/// 测试Tracer初始化时控制台layer的条件添加逻辑
 #[test]
 fn test_tracer_init_console_layer_conditional() {
     // 测试控制台 layer 的条件添加逻辑（覆盖 directory.rs:110-116）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明条件逻辑执行成功
+    // Assert: 验证不会 panic（无返回值）条件逻辑执行成功
 }
 
+/// 测试Tracer初始化时文件路径获取失败的错误分支
 #[test]
 fn test_tracer_init_file_path_error_branch() {
     // 测试 get_log_file_path() 返回 Err 的分支（覆盖 directory.rs:119-125）
     // 这个分支很难直接触发，但至少可以验证代码路径存在
     Tracer::init();
-    // 如果运行到这里没有 panic，说明错误处理正确
+    // Assert: 验证不会 panic（无返回值）错误处理正确
 }
 
+/// 测试Tracer初始化时文件打开失败的错误分支
 #[test]
 fn test_tracer_init_file_open_error_branch() {
     // 测试文件打开返回 Err 的分支（覆盖 directory.rs:119-125）
     // 这个分支很难直接触发，但至少可以验证代码路径存在
     Tracer::init();
-    // 如果运行到这里没有 panic，说明错误处理正确
+    // Assert: 验证不会 panic（无返回值）错误处理正确
 }
 
+/// 测试Tracer初始化时回退到stderr的逻辑
 #[test]
 fn test_tracer_init_fallback_to_stderr() {
     // 测试回退到 stderr 的逻辑（覆盖 directory.rs:122-125）
     // 这个分支很难直接触发，但至少可以验证代码路径存在
     Tracer::init();
-    // 如果运行到这里没有 panic，说明回退逻辑正确
+    // Assert: 验证不会 panic（无返回值）回退逻辑正确
 }
 
+/// 测试Tracer初始化时sink writer的逻辑
 #[test]
 fn test_tracer_init_sink_writer() {
     // 测试 sink writer 的逻辑（覆盖 directory.rs:128-131）
     // 通过 Tracer::init() 间接测试（当 log_level == None 时）
     Tracer::init();
-    // 如果运行到这里没有 panic，说明 sink writer 创建成功
+    // Assert: 验证不会 panic（无返回值） sink writer 创建成功
 }
 
+/// 测试Tracer获取日志文件路径时获取logs_dir的逻辑
 #[test]
 fn test_tracer_get_log_file_path_logs_dir() {
     // 测试 get_log_file_path() 中获取 logs_dir 的逻辑（覆盖 directory.rs:142）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明 logs_dir 获取成功
+    // Assert: 验证不会 panic（无返回值） logs_dir 获取成功
 }
 
+/// 测试Tracer获取日志文件路径时创建tracing目录的逻辑
 #[test]
 fn test_tracer_get_log_file_path_tracing_dir() {
     // 测试 get_log_file_path() 中创建 tracing 目录的逻辑（覆盖 directory.rs:145-146）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明 tracing 目录创建成功
+    // Assert: 验证不会 panic（无返回值） tracing 目录创建成功
 }
 
+/// 测试Tracer获取日志文件路径时日期格式化的逻辑
 #[test]
 fn test_tracer_get_log_file_path_date_format() {
     // 测试 get_log_file_path() 中日期格式化的逻辑（覆盖 directory.rs:149-150）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明日期格式化成功
+    // Assert: 验证不会 panic（无返回值）日期格式化成功
 }
 
+/// 测试Tracer获取日志文件路径时的错误处理（wrap_err）
 #[test]
 fn test_tracer_get_log_file_path_wrap_err() {
     // 测试 get_log_file_path() 中 wrap_err 的逻辑（覆盖 directory.rs:142）
     // 通过 Tracer::init() 间接测试
     Tracer::init();
-    // 如果运行到这里没有 panic，说明错误处理正确
+    // Assert: 验证不会 panic（无返回值）错误处理正确
 }
 
 // ==================== 配置分支测试（受限测试）====================
@@ -389,8 +552,17 @@ fn test_tracer_get_log_file_path_wrap_err() {
 //
 // 要完全覆盖所有分支，需要在不同的进程中运行测试，或使用不同的配置文件。
 
+/// 测试Tracer初始化的配置分支覆盖说明
+///
+/// ## 测试目的
+/// 验证Tracer::init()的基本功能，并说明配置分支的覆盖情况。
+///
+/// ## 分支覆盖说明
+/// 由于tracing_subscriber的限制，部分分支难以在同一进程中测试。
+/// 详见测试代码中的注释说明。
 #[test]
-fn test_tracer_init_config_branch_coverage_note() {
+fn test_tracer_init_config_branch_coverage_note_returns_void() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试说明：验证 Tracer::init() 的基本功能
     //
     // 由于 tracing_subscriber 的限制，以下分支的覆盖情况：
@@ -413,9 +585,10 @@ fn test_tracer_init_config_branch_coverage_note() {
     // 3. 使用集成测试验证不同配置组合
 
     Tracer::init();
-    // 如果运行到这里没有 panic，说明基本功能正常
+    // Assert: 验证不会 panic（无返回值）基本功能正常
 }
 
+/// 测试Tracer初始化时从Settings读取配置的逻辑
 #[test]
 fn test_tracer_init_settings_read_logic() {
     // 测试 Settings 读取逻辑（覆盖 tracing.rs:79-87）
@@ -435,18 +608,20 @@ fn test_tracer_init_settings_read_logic() {
     );
 }
 
+/// 测试Tracer初始化时日志级别解析逻辑
 #[test]
-fn test_tracer_init_log_level_parsing() {
+fn test_tracer_init_log_level_parsing_returns_result() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试日志级别解析逻辑（覆盖 tracing.rs:82-87）
     // 验证代码能够正确解析日志级别字符串
 
+    // Act: 调用初始化方法并读取设置
     Tracer::init();
+    let settings = workflow::base::Settings::get();
 
-    // 验证日志级别解析逻辑存在
+    // Assert: 验证日志级别解析逻辑存在
     // 由于 Settings 已缓存，无法测试不同的配置值
     // 但可以验证代码路径存在
-
-    let settings = workflow::base::Settings::get();
     if let Some(level_str) = &settings.log.level {
         // 验证能够解析日志级别字符串
         let parsed = level_str.parse::<workflow::base::LogLevel>();
@@ -455,21 +630,24 @@ fn test_tracer_init_log_level_parsing() {
     }
 }
 
+/// 测试Tracer初始化时enable_console配置读取逻辑
 #[test]
-fn test_tracer_init_enable_console_config_read() {
+fn test_tracer_init_enable_console_config_read_returns_bool() {
+    // Arrange: 准备测试（无需额外准备）
     // 测试 enable_trace_console 配置读取逻辑（覆盖 tracing.rs:96）
     // 验证代码能够正确读取 enable_trace_console 配置
 
+    // Act: 调用初始化方法并读取设置
     Tracer::init();
-
     let settings = workflow::base::Settings::get();
-    // 验证配置读取逻辑存在
-    // unwrap_or(false) 的逻辑：如果为 None，则使用 false
     let enable_console = settings.log.enable_trace_console.unwrap_or(false);
-    // 应该是一个布尔值（不会 panic）
+
+    // Assert: 验证配置读取逻辑存在，返回布尔值
+    // unwrap_or(false) 的逻辑：如果为 None，则使用 false
     assert!(enable_console == true || enable_console == false);
 }
 
+/// 测试Tracer初始化时日志文件路径创建逻辑
 #[test]
 fn test_tracer_init_file_path_creation_logic() {
     // 测试日志文件路径创建逻辑（覆盖 tracing.rs:99, 140-152）
@@ -488,6 +666,7 @@ fn test_tracer_init_file_path_creation_logic() {
     }
 }
 
+/// 测试Tracer初始化时registry构建逻辑
 #[test]
 fn test_tracer_init_registry_building_logic() {
     // 测试 registry 构建逻辑（覆盖 tracing.rs:102-116）
@@ -503,6 +682,7 @@ fn test_tracer_init_registry_building_logic() {
     assert!(true);
 }
 
+/// 测试Tracer初始化时条件添加console layer的逻辑
 #[test]
 fn test_tracer_init_conditional_console_layer() {
     // 测试条件添加 console layer 的逻辑（覆盖 tracing.rs:110-116）
@@ -524,6 +704,7 @@ fn test_tracer_init_conditional_console_layer() {
     assert!(enable_console == true || enable_console == false);
 }
 
+/// 测试Tracer初始化时回退逻辑的存在性
 #[test]
 fn test_tracer_init_fallback_logic_existence() {
     // 测试回退逻辑的存在性（覆盖 tracing.rs:119-125）
@@ -539,6 +720,7 @@ fn test_tracer_init_fallback_logic_existence() {
     assert!(true);
 }
 
+/// 测试Tracer初始化时sink writer逻辑的存在性
 #[test]
 fn test_tracer_init_sink_writer_logic() {
     // 测试 sink writer 逻辑的存在性（覆盖 tracing.rs:126-132）

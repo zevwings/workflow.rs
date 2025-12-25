@@ -128,13 +128,13 @@ fn test_table_builder_display_trait() {
     let builder = TableBuilder::new(users);
     let output = format!("{}", builder);
 
-    // 验证 Display trait 正常工作
+    // Assert: 验证 Display trait 正常工作
     assert!(!output.is_empty());
 }
 
 #[test]
 fn test_table_style_variants() {
-    // 验证所有 TableStyle 变体都可以使用
+    // Assert: 验证所有 TableStyle 变体都可以使用
     let _styles = vec![
         TableStyle::Default,
         TableStyle::Modern,
@@ -154,7 +154,7 @@ fn test_table_builder_chain_calls() {
         email: "alice@example.com".to_string(),
     }];
 
-    // 测试链式调用
+    // Arrange: 准备测试链式调用
     let output = TableBuilder::new(users)
         .with_title("Users")
         .with_style(TableStyle::Modern)

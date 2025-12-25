@@ -79,10 +79,7 @@ fn test_colors_have_space_between_icon_and_text() {
         "Debug message should contain a space"
     );
 
-    // Assert: 验证空格位置和格式（图标 + 空格 + 文本）
-    let info_space_pos = info_msg.find(' ').expect("No space in info message");
-    let success_space_pos = success_msg.find(' ').expect("No space in success message");
-
+    // Assert: 验证格式（图标 + 空格 + 文本）
     // 去除 ANSI 转义码后再验证格式（在 CI 环境中可能有颜色代码）
     let strip_ansi = |s: &str| -> String {
         s.replace("\u{1b}[0m", "")
@@ -171,7 +168,7 @@ fn test_log_level_from_str_with_valid_strings_parses_correctly() {
         LogLevel::Debug
     );
 
-    // 测试无效的日志级别字符串
+    // Arrange: 准备测试无效的日志级别字符串
     assert!("invalid".parse::<LogLevel>().is_err());
     assert!("".parse::<LogLevel>().is_err());
     assert!("trace".parse::<LogLevel>().is_err());
@@ -189,13 +186,13 @@ fn test_log_level_as_str() -> Result<()> {
 
 #[test]
 fn test_log_level_ordering() -> Result<()> {
-    // 测试日志级别的顺序
+    // Arrange: 准备测试日志级别的顺序
     assert!(LogLevel::None < LogLevel::Error);
     assert!(LogLevel::Error < LogLevel::Warn);
     assert!(LogLevel::Warn < LogLevel::Info);
     assert!(LogLevel::Info < LogLevel::Debug);
 
-    // 测试 should_log 方法
+    // Arrange: 准备测试 should_log 方法
     let debug_level = LogLevel::Debug;
     assert!(debug_level.should_log(LogLevel::None));
     assert!(debug_level.should_log(LogLevel::Error));
@@ -238,7 +235,7 @@ fn test_log_level_set_and_get() -> Result<()> {
     // 保存原始级别
     let original_level = LogLevel::get_level();
 
-    // 测试设置和获取不同的日志级别
+    // Arrange: 准备测试设置和获取不同的日志级别
     LogLevel::set_level(LogLevel::Debug);
     assert_eq!(LogLevel::get_level(), LogLevel::Debug);
 
@@ -261,7 +258,7 @@ fn test_log_level_set_and_get() -> Result<()> {
 
 #[test]
 fn test_log_level_default() -> Result<()> {
-    // 测试默认级别（根据编译模式）
+    // Arrange: 准备测试默认级别（根据编译模式）
     let default = LogLevel::default_level();
 
     // 在 debug 模式下应该是 Debug，在 release 模式下应该是 Info
@@ -275,7 +272,7 @@ fn test_log_level_default() -> Result<()> {
 
 #[test]
 fn test_log_level_round_trip() {
-    // 测试字符串转换的往返一致性
+    // Arrange: 准备测试字符串转换的往返一致性
     let levels = vec![
         LogLevel::None,
         LogLevel::Error,

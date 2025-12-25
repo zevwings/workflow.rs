@@ -384,7 +384,7 @@ fn test_github_user_minimal_with_only_login_creates_user() {
 
 #[test]
 fn test_github_user_deserialization() -> Result<()> {
-    // 测试 GitHub 用户的反序列化
+    // Arrange: 准备测试 GitHub 用户的反序列化
     let json = r#"{
         "login": "testuser",
         "name": "Test User",
@@ -421,7 +421,7 @@ fn test_request_edge_cases(
 
 #[test]
 fn test_request_long_strings() {
-    // 测试长字符串的处理
+    // Arrange: 准备测试长字符串的处理
     let long_string = "a".repeat(1000);
     let request = CreatePullRequestRequest {
         title: long_string.clone(),
@@ -436,7 +436,7 @@ fn test_request_long_strings() {
 
 #[test]
 fn test_response_missing_optional_fields() -> Result<()> {
-    // 测试响应中缺失可选字段
+    // Arrange: 准备测试响应中缺失可选字段
     let json = r#"{
         "number": 123,
         "title": "Test PR",
@@ -458,7 +458,7 @@ fn test_response_missing_optional_fields() -> Result<()> {
 
 #[test]
 fn test_request_type_safety() {
-    // 测试请求类型的安全性
+    // Arrange: 准备测试请求类型的安全性
     let create_request: CreatePullRequestRequest = CreatePullRequestRequest {
         title: "Test".to_string(),
         body: "Test".to_string(),
@@ -472,17 +472,17 @@ fn test_request_type_safety() {
         merge_method: "squash".to_string(),
     };
 
-    // 验证类型正确（通过编译验证）
+    // Assert: 验证类型正确（通过编译验证）
     assert!(true, "Types should be type-safe");
 
-    // 验证可以分别序列化
+    // Assert: 验证可以分别序列化
     assert!(serde_json::to_string(&create_request).is_ok());
     assert!(serde_json::to_string(&merge_request).is_ok());
 }
 
 #[test]
 fn test_response_type_safety() {
-    // 测试响应类型的安全性
+    // Arrange: 准备测试响应类型的安全性
     let _create_response: CreatePullRequestResponse = CreatePullRequestResponse {
         html_url: "https://example.com".to_string(),
     };
@@ -504,6 +504,6 @@ fn test_response_type_safety() {
         user: None,
     };
 
-    // 验证类型正确（通过编译验证）
+    // Assert: 验证类型正确（通过编译验证）
     assert!(true, "Types should be type-safe");
 }

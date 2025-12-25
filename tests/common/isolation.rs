@@ -46,7 +46,7 @@ pub struct TestIsolation {
     /// 临时目录（保持引用以确保目录不被删除）
     _temp_dir: TempDir,
     /// 工作目录守卫
-    work_dir_guard: CurrentDirGuard,
+    _work_dir_guard: CurrentDirGuard,
     /// 环境变量守卫
     env_guard: EnvGuard,
     /// Git配置守卫（可选）
@@ -85,7 +85,7 @@ impl TestIsolation {
 
         Ok(Self {
             _temp_dir: temp_dir,
-            work_dir_guard,
+            _work_dir_guard: work_dir_guard,
             env_guard,
             git_config_guard: None,
             mock_server: None,
@@ -237,6 +237,7 @@ impl TestIsolation {
     /// let mock_server = isolation.mock_server_mut().unwrap();
     /// mock_server.setup_github_base_url();
     /// ```
+    #[allow(unused)]
     pub fn mock_server_mut(&mut self) -> Option<&mut MockServer> {
         self.mock_server.as_mut()
     }

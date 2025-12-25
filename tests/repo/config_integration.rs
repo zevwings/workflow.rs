@@ -11,9 +11,10 @@ use workflow::repo::RepoConfig;
 
 // ==================== 配置集成测试 ====================
 
+/// 测试公共配置和私有配置的交互
 #[test]
 fn test_public_and_private_config_interaction() {
-    // 测试公共配置和私有配置的交互
+    // Arrange: 准备测试公共配置和私有配置的交互
     let mut config = RepoConfig::default();
 
     // 设置公共配置（项目模板）
@@ -38,20 +39,21 @@ fn test_public_and_private_config_interaction() {
         auto_accept_change_type: Some(true),
     });
 
-    // 验证公共配置
+    // Assert: 验证公共配置
     assert_eq!(config.template_commit.len(), 1);
     assert_eq!(config.template_branch.len(), 1);
     assert_eq!(config.template_pull_requests.len(), 1);
 
-    // 验证私有配置
+    // Assert: 验证私有配置
     assert!(config.configured);
     assert!(config.branch.is_some());
     assert!(config.pr.is_some());
 }
 
+/// 测试公共配置和私有配置的独立性
 #[test]
 fn test_config_independence() {
-    // 测试公共配置和私有配置的独立性
+    // Arrange: 准备测试公共配置和私有配置的独立性
     let mut config = RepoConfig::default();
 
     // 只设置公共配置
@@ -60,7 +62,7 @@ fn test_config_independence() {
         Value::String("conventional".to_string()),
     );
 
-    // 验证私有配置保持默认值
+    // Assert: 验证私有配置保持默认值
     assert!(!config.configured);
     assert!(config.branch.is_none());
     assert!(config.pr.is_none());
@@ -68,13 +70,14 @@ fn test_config_independence() {
     // 只设置私有配置
     config.configured = true;
 
-    // 验证公共配置不受影响
+    // Assert: 验证公共配置不受影响
     assert_eq!(config.template_commit.len(), 1);
 }
 
+/// 测试模板分支前缀和个人分支前缀的共存
 #[test]
 fn test_template_and_personal_branch_prefix() {
-    // 测试模板分支前缀和个人分支前缀的共存
+    // Arrange: 准备测试模板分支前缀和个人分支前缀的共存
     let mut config = RepoConfig::default();
 
     // 公共模板：项目标准分支前缀
@@ -98,9 +101,10 @@ fn test_template_and_personal_branch_prefix() {
     }
 }
 
+/// 测试模板PR配置和个人PR配置的共存
 #[test]
 fn test_template_and_personal_pr_config() {
-    // 测试模板 PR 配置和个人 PR 配置的共存
+    // Arrange: 准备测试模板 PR 配置和个人 PR 配置的共存
     let mut config = RepoConfig::default();
 
     // 公共模板：项目 PR 标准
@@ -123,9 +127,10 @@ fn test_template_and_personal_pr_config() {
 
 // ==================== 配置迁移测试 ====================
 
+/// 测试从旧格式迁移配置
 #[test]
 fn test_config_migration_from_old_format() {
-    // 测试从旧格式迁移配置
+    // Arrange: 准备测试从旧格式迁移配置
     let mut old_config = RepoConfig::default();
 
     // 模拟旧格式配置
@@ -141,16 +146,17 @@ fn test_config_migration_from_old_format() {
         Value::String("conventional".to_string()),
     );
 
-    // 验证迁移结果
+    // Assert: 验证迁移结果
     assert_eq!(
         new_config.template_commit.get("type"),
         Some(&Value::String("conventional".to_string()))
     );
 }
 
+/// 测试迁移时添加新字段
 #[test]
 fn test_config_migration_add_new_fields() {
-    // 测试迁移时添加新字段
+    // Arrange: 准备测试迁移时添加新字段
     let mut config = RepoConfig::default();
 
     // 原有配置
@@ -165,16 +171,17 @@ fn test_config_migration_add_new_fields() {
         .insert("scope_required".to_string(), Value::Boolean(true));
     config.template_commit.insert("max_length".to_string(), Value::Integer(72));
 
-    // 验证所有字段都存在
+    // Assert: 验证所有字段都存在
     assert_eq!(config.template_commit.len(), 3);
     assert!(config.template_commit.contains_key("type"));
     assert!(config.template_commit.contains_key("scope_required"));
     assert!(config.template_commit.contains_key("max_length"));
 }
 
+/// 测试迁移时移除废弃字段
 #[test]
 fn test_config_migration_remove_deprecated_fields() {
-    // 测试迁移时移除废弃字段
+    // Arrange: 准备测试迁移时移除废弃字段
     let mut config = RepoConfig::default();
 
     // 原有配置（包含废弃字段）
@@ -190,14 +197,15 @@ fn test_config_migration_remove_deprecated_fields() {
     // 移除废弃字段
     config.template_commit.remove("deprecated_field");
 
-    // 验证废弃字段已移除
+    // Assert: 验证废弃字段已移除
     assert_eq!(config.template_commit.len(), 1);
     assert!(!config.template_commit.contains_key("deprecated_field"));
 }
 
+/// 测试迁移时保留用户数据
 #[test]
 fn test_config_migration_preserve_user_data() {
-    // 测试迁移时保留用户数据
+    // Arrange: 准备测试迁移时保留用户数据
     let mut config = RepoConfig::default();
 
     // 用户配置
@@ -213,7 +221,7 @@ fn test_config_migration_preserve_user_data() {
         Value::String("conventional".to_string()),
     );
 
-    // 验证用户数据未受影响
+    // Assert: 验证用户数据未受影响
     assert!(config.configured);
     assert!(config.branch.is_some());
     if let Some(ref branch) = config.branch {
@@ -223,9 +231,10 @@ fn test_config_migration_preserve_user_data() {
 
 // ==================== 边界情况测试 ====================
 
+/// 测试包含特殊字符的配置
 #[test]
 fn test_config_with_special_characters() {
-    // 测试包含特殊字符的配置
+    // Arrange: 准备测试包含特殊字符的配置
     let mut config = RepoConfig::default();
 
     // 特殊字符在模板配置中
@@ -243,15 +252,16 @@ fn test_config_with_special_characters() {
         ignore: vec!["release/v1.0".to_string(), "hotfix-urgent".to_string()],
     });
 
-    // 验证特殊字符正确处理
+    // Assert: 验证特殊字符正确处理
     assert!(config.template_branch.contains_key("pattern"));
     assert!(config.template_commit.contains_key("emoji"));
     assert!(config.branch.is_some());
 }
 
+/// 测试包含很长值的配置
 #[test]
 fn test_config_with_very_long_values() {
-    // 测试包含很长值的配置
+    // Arrange: 准备测试包含很长值的配置
     let mut config = RepoConfig::default();
 
     let long_string = "a".repeat(1000);
@@ -265,9 +275,10 @@ fn test_config_with_very_long_values() {
     );
 }
 
+/// 测试包含Unicode字符的配置
 #[test]
 fn test_config_with_unicode() {
-    // 测试包含 Unicode 字符的配置
+    // Arrange: 准备测试包含 Unicode 字符的配置
     let mut config = RepoConfig::default();
 
     config.template_commit.insert(
@@ -282,9 +293,10 @@ fn test_config_with_unicode() {
     assert!(config.template_branch.contains_key("中文键"));
 }
 
+/// 测试包含空字符串的配置
 #[test]
 fn test_config_with_empty_strings() {
-    // 测试包含空字符串的配置
+    // Arrange: 准备测试包含空字符串的配置
     let mut config = RepoConfig::default();
 
     config
@@ -304,9 +316,10 @@ fn test_config_with_empty_strings() {
     }
 }
 
+/// 测试包含null值的配置
 #[test]
 fn test_config_with_null_values() {
-    // 测试包含 null 值的配置
+    // Arrange: 准备测试包含 null 值的配置
     let mut config = RepoConfig::default();
 
     // TOML 中的 null 值通常不存在，但我们可以测试 None
@@ -328,9 +341,10 @@ fn test_config_with_null_values() {
     }
 }
 
+/// 测试包含大量忽略分支的配置
 #[test]
 fn test_config_with_many_ignore_branches() {
-    // 测试包含大量忽略分支的配置
+    // Arrange: 准备测试包含大量忽略分支的配置
     let mut config = RepoConfig::default();
 
     let ignore_branches: Vec<String> = (0..100).map(|i| format!("branch-{}", i)).collect();
@@ -345,9 +359,10 @@ fn test_config_with_many_ignore_branches() {
     }
 }
 
+/// 测试包含嵌套表格的配置
 #[test]
 fn test_config_with_nested_tables() {
-    // 测试包含嵌套表格的配置
+    // Arrange: 准备测试包含嵌套表格的配置
     let mut config = RepoConfig::default();
 
     let mut nested_table = Map::new();
@@ -365,9 +380,10 @@ fn test_config_with_nested_tables() {
     assert!(config.template_commit.contains_key("validation"));
 }
 
+/// 测试包含数组的配置
 #[test]
 fn test_config_with_arrays() {
-    // 测试包含数组的配置
+    // Arrange: 准备测试包含数组的配置
     let mut config = RepoConfig::default();
 
     let types = vec![
@@ -390,9 +406,10 @@ fn test_config_with_arrays() {
 
 // ==================== 配置一致性测试 ====================
 
+/// 测试多次更新后配置的一致性
 #[test]
 fn test_config_consistency_after_multiple_updates() {
-    // 测试多次更新后配置的一致性
+    // Arrange: 准备测试多次更新后配置的一致性
     let mut config = RepoConfig::default();
 
     // 第一次更新
@@ -419,7 +436,7 @@ fn test_config_consistency_after_multiple_updates() {
         auto_accept_change_type: Some(true),
     });
 
-    // 验证所有配置都存在且正确
+    // Assert: 验证所有配置都存在且正确
     assert_eq!(config.template_commit.len(), 1);
     assert_eq!(config.template_branch.len(), 1);
     assert_eq!(config.template_pull_requests.len(), 1);
@@ -428,9 +445,10 @@ fn test_config_consistency_after_multiple_updates() {
     assert!(config.pr.is_some());
 }
 
+/// 测试部分清空后配置的一致性
 #[test]
 fn test_config_consistency_after_partial_clear() {
-    // 测试部分清空后配置的一致性
+    // Arrange: 准备测试部分清空后配置的一致性
     let mut config = RepoConfig::default();
 
     // 设置所有配置
@@ -451,7 +469,7 @@ fn test_config_consistency_after_partial_clear() {
     config.template_commit.clear();
     config.branch = None;
 
-    // 验证剩余配置正确
+    // Assert: 验证剩余配置正确
     assert!(config.template_commit.is_empty());
     assert_eq!(config.template_branch.len(), 1);
     assert!(config.configured);
@@ -494,9 +512,10 @@ fn test_config_combinations(
 
 // ==================== 错误恢复测试 ====================
 
+/// 测试无效更新后的配置恢复
 #[test]
 fn test_config_recovery_after_invalid_update() {
-    // 测试无效更新后的配置恢复
+    // Arrange: 准备测试无效更新后的配置恢复
     let mut config = RepoConfig::default();
 
     // 设置有效配置
@@ -513,13 +532,14 @@ fn test_config_recovery_after_invalid_update() {
         Value::String("conventional".to_string()),
     );
 
-    // 验证配置已恢复
+    // Assert: 验证配置已恢复
     assert_eq!(config.template_commit.len(), 1);
 }
 
+/// 测试配置回滚
 #[test]
 fn test_config_rollback() {
-    // 测试配置回滚
+    // Arrange: 准备测试配置回滚
     let mut config = RepoConfig::default();
 
     // 原始配置
@@ -537,7 +557,7 @@ fn test_config_rollback() {
     // 回滚配置
     config.template_commit = original_commit;
 
-    // 验证已回滚
+    // Assert: 验证已回滚
     assert_eq!(
         config.template_commit.get("type"),
         Some(&Value::String("conventional".to_string()))

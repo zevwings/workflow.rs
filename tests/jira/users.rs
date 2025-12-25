@@ -38,9 +38,10 @@ fn sample_user_entry() -> JiraUserEntry {
 
 // ==================== JiraUser 结构体测试 ====================
 
+/// 测试JiraUser结构体的基本功能
 #[test]
 fn test_jira_user_structure() {
-    // 测试 JiraUser 结构体的基本功能
+    // Arrange: 准备测试 JiraUser 结构体的基本功能
     let user = JiraUser {
         account_id: "account-123".to_string(),
         display_name: "John Doe".to_string(),
@@ -52,9 +53,10 @@ fn test_jira_user_structure() {
     assert_eq!(user.email_address, Some("john@example.com".to_string()));
 }
 
+/// 测试没有邮箱的JiraUser
 #[test]
 fn test_jira_user_without_email() {
-    // 测试没有邮箱的 JiraUser
+    // Arrange: 准备测试没有邮箱的 JiraUser
     let user = JiraUser {
         account_id: "account-123".to_string(),
         display_name: "John Doe".to_string(),
@@ -66,9 +68,10 @@ fn test_jira_user_without_email() {
     assert_eq!(user.email_address, None);
 }
 
+/// 测试JiraUserEntry结构体
 #[test]
 fn test_jira_user_entry_structure() {
-    // 测试 JiraUserEntry 结构体
+    // Arrange: 准备测试 JiraUserEntry 结构体
     let entry = JiraUserEntry {
         email: "test@example.com".to_string(),
         account_id: "account-123".to_string(),
@@ -82,9 +85,10 @@ fn test_jira_user_entry_structure() {
 
 // ==================== ConfigManager 测试 ====================
 
+/// 测试创建和读取配置文件
 #[rstest]
 fn test_config_manager_create_and_read(temp_dir: TempDir) {
-    // 测试创建和读取配置文件
+    // Arrange: 准备测试创建和读取配置文件
     let config_path = temp_dir.path().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
@@ -96,18 +100,19 @@ fn test_config_manager_create_and_read(temp_dir: TempDir) {
         display_name: "Test User".to_string(),
     });
 
-    // 写入配置
+    // Act: 写入配置
     manager.write(&config).expect("Should write config");
 
-    // 读取配置
+    // Act: 读取配置
     let read_config = manager.read().expect("Should read config");
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].email, "test@example.com");
 }
 
+/// 测试更新配置文件
 #[rstest]
 fn test_config_manager_update(temp_dir: TempDir) {
-    // 测试更新配置文件
+    // Arrange: 准备测试更新配置文件
     let config_path = temp_dir.path().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
@@ -131,14 +136,15 @@ fn test_config_manager_update(temp_dir: TempDir) {
         })
         .expect("Should update config");
 
-    // 验证更新
+    // Assert: 验证更新
     let read_config = manager.read().expect("Should read config");
     assert_eq!(read_config.users.len(), 2);
 }
 
+/// 测试更新已存在的用户
 #[rstest]
 fn test_config_manager_update_existing_user(temp_dir: TempDir) {
-    // 测试更新已存在的用户
+    // Arrange: 准备测试更新已存在的用户
     let config_path = temp_dir.path().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
@@ -160,7 +166,7 @@ fn test_config_manager_update_existing_user(temp_dir: TempDir) {
         })
         .expect("Should update config");
 
-    // 验证更新
+    // Assert: 验证更新
     let read_config = manager.read().expect("Should read config");
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].display_name, "Updated User");
@@ -168,16 +174,18 @@ fn test_config_manager_update_existing_user(temp_dir: TempDir) {
 
 // ==================== 配置文件操作测试 ====================
 
+/// 测试JiraConfig的默认值
 #[test]
 fn test_jira_config_default() {
-    // 测试 JiraConfig 的默认值
+    // Arrange: 准备测试 JiraConfig 的默认值
     let config = JiraConfig::default();
     assert!(config.users.is_empty());
 }
 
+/// 测试配置序列化
 #[test]
 fn test_jira_config_serialization() {
-    // 测试配置序列化
+    // Arrange: 准备测试配置序列化
     let mut config = JiraConfig::default();
     config.users.push(JiraUserEntry {
         email: "test@example.com".to_string(),
@@ -192,9 +200,10 @@ fn test_jira_config_serialization() {
     assert!(toml_str.contains("account-123"));
 }
 
+/// 测试配置反序列化
 #[test]
 fn test_jira_config_deserialization() {
-    // 测试配置反序列化
+    // Arrange: 准备测试配置反序列化
     let toml_str = r#"
 [[users]]
 email = "test@example.com"
@@ -211,16 +220,18 @@ display_name = "Test User"
 
 // ==================== 边界情况测试 ====================
 
+/// 测试空用户列表
 #[test]
 fn test_jira_config_empty_users() {
-    // 测试空用户列表
+    // Arrange: 准备测试空用户列表
     let config = JiraConfig::default();
     assert_eq!(config.users.len(), 0);
 }
 
+/// 测试多个用户配置
 #[test]
 fn test_jira_config_multiple_users() {
-    // 测试多个用户
+    // Arrange: 准备测试多个用户
     let mut config = JiraConfig::default();
     config.users.push(JiraUserEntry {
         email: "user1@example.com".to_string(),
@@ -238,22 +249,24 @@ fn test_jira_config_multiple_users() {
 
 // ==================== 错误处理测试 ====================
 
+/// 测试读取不存在的配置文件
 #[rstest]
 fn test_config_manager_read_nonexistent_file(temp_dir: TempDir) {
-    // 测试读取不存在的配置文件
+    // Arrange: 准备测试读取不存在的配置文件
     let config_path = temp_dir.path().join("nonexistent.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path);
 
-    // 读取不存在的文件应该返回错误或默认配置
+    // Act: 读取不存在的文件应该返回错误或默认配置
     let result = manager.read();
     // 根据实现，可能返回错误或默认配置
     // 这里只验证不会 panic
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试用户条目的相等性
 #[test]
 fn test_jira_user_entry_equality() {
-    // 测试用户条目的相等性
+    // Arrange: 准备测试用户条目的相等性
     let entry1 = JiraUserEntry {
         email: "test@example.com".to_string(),
         account_id: "account-123".to_string(),
@@ -274,9 +287,10 @@ fn test_jira_user_entry_equality() {
 
 // ==================== 集成测试 ====================
 
+/// 测试配置的完整往返（写入和读取）
 #[rstest]
 fn test_jira_config_round_trip(temp_dir: TempDir) {
-    // 测试配置的完整往返（写入和读取）
+    // Arrange: 准备测试配置的完整往返（写入和读取）
     let config_path = temp_dir.path().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
@@ -288,13 +302,13 @@ fn test_jira_config_round_trip(temp_dir: TempDir) {
         display_name: "Test User".to_string(),
     });
 
-    // 写入
+    // Act: 写入
     manager.write(&config).expect("Should write config");
 
-    // 读取
+    // Act: 读取
     let read_config = manager.read().expect("Should read config");
 
-    // 验证
+    // Assert: 验证
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].email, "test@example.com");
     assert_eq!(read_config.users[0].account_id, "account-123");
@@ -335,7 +349,7 @@ fn test_jira_config_round_trip(temp_dir: TempDir) {
 #[test]
 #[ignore] // 需要设置 Jira 认证信息，在 CI 环境中可能失败
 fn test_jira_users_get_with_local_cache() {
-    // 测试从本地缓存获取用户信息
+    // Arrange: 准备测试从本地缓存获取用户信息
     // 注意：这个测试需要实际的 Jira 配置和本地缓存
     let result = workflow::jira::users::JiraUsers::get();
 
@@ -343,7 +357,7 @@ fn test_jira_users_get_with_local_cache() {
     // 如果不存在，可能会调用 API（需要认证）
     match result {
         Ok(user) => {
-            // 验证返回的用户信息有效
+            // Assert: 验证返回的用户信息有效
             assert!(!user.account_id.is_empty());
             assert!(!user.display_name.is_empty());
         }
@@ -389,7 +403,7 @@ fn test_jira_users_get_with_local_cache() {
 #[test]
 #[ignore] // 需要设置 Jira 认证信息
 fn test_jira_users_get_without_local_cache() {
-    // 测试没有本地缓存时从 API 获取用户信息
+    // Arrange: 准备测试没有本地缓存时从 API 获取用户信息
     // 注意：这个测试需要实际的 Jira API 调用
     let result = workflow::jira::users::JiraUsers::get();
 
@@ -407,9 +421,10 @@ fn test_jira_users_get_without_local_cache() {
 
 // ==================== JiraUserApi Mock 测试 ====================
 
+/// 测试使用Mock服务器设置JiraUserApi::get_current_user()的Mock
 #[test]
 fn test_jira_user_api_get_current_user_mock_setup() {
-    // 测试使用 Mock 服务器设置 JiraUserApi::get_current_user() 的 Mock
+    // Arrange: 准备测试使用 Mock 服务器设置 JiraUserApi::get_current_user() 的 Mock
     use crate::common::http_helpers::MockServer;
     use serde_json::json;
 
@@ -425,13 +440,14 @@ fn test_jira_user_api_get_current_user_mock_setup() {
 
     manager.setup_jira_get_current_user_success(&mock_user_response);
 
-    // 验证 Mock 已创建
+    // Assert: 验证 Mock 已创建
     assert!(manager.base_url().starts_with("http://"));
 }
 
+/// 测试Mock JiraUserApi::get_current_user()的错误响应
 #[test]
 fn test_jira_user_api_get_current_user_mock_error() {
-    // 测试 Mock JiraUserApi::get_current_user() 的错误响应
+    // Arrange: 准备测试 Mock JiraUserApi::get_current_user() 的错误响应
     use crate::common::http_helpers::MockServer;
 
     let mut manager = MockServer::new();
@@ -439,13 +455,14 @@ fn test_jira_user_api_get_current_user_mock_error() {
 
     manager.setup_jira_get_current_user_error(401, "Unauthorized");
 
-    // 验证 Mock 已创建
+    // Assert: 验证 Mock 已创建
     assert!(manager.base_url().starts_with("http://"));
 }
 
+/// 测试Mock JiraUserApi::get_current_user()返回空account_id的情况
 #[test]
 fn test_jira_user_api_get_current_user_mock_empty_account_id() {
-    // 测试 Mock 返回空 accountId 的情况（覆盖 users.rs:69-70）
+    // Arrange: 准备测试 Mock 返回空 accountId 的情况（覆盖 users.rs:69-70）
     use crate::common::http_helpers::MockServer;
     use serde_json::json;
 
@@ -461,6 +478,6 @@ fn test_jira_user_api_get_current_user_mock_empty_account_id() {
 
     manager.setup_jira_get_current_user_success(&mock_user_response);
 
-    // 验证 Mock 已创建
+    // Assert: 验证 Mock 已创建
     assert!(manager.base_url().starts_with("http://"));
 }

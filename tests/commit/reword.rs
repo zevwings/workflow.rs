@@ -172,7 +172,7 @@ fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
     // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
+            // Assert: 验证返回值是布尔类型
             assert!(is_pushed == true || is_pushed == false);
         }
         Err(_) => {
@@ -315,15 +315,18 @@ fn test_reword_preview_clone_with_valid_preview_creates_clone() {
 
 /// 测试空消息处理
 #[test]
-fn test_create_preview_empty_message() {
+fn test_create_preview_with_empty_message_creates_preview() {
+    // Arrange: 准备提交信息和空消息
     let commit_info = create_sample_commit_info();
     let empty_message = "";
     let is_head = false;
     let current_branch = "feature";
 
+    // Act: 创建预览
     let result = CommitReword::create_preview(&commit_info, empty_message, is_head, current_branch);
     assert!(result.is_ok());
 
+    // Assert: 验证预览创建成功且空消息被正确处理
     let preview = result.expect("operation should succeed");
     assert_eq!(preview.new_message, "");
     assert_eq!(preview.is_head, false);

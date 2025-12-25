@@ -142,17 +142,17 @@ fn test_progress_finish_with_message_with_message_finishes_with_message() {
 
 #[test]
 fn test_progress_message_string_conversion() {
-    // 测试消息参数的类型转换
+    // Arrange: 准备测试消息参数的类型转换
     let _progress1 = Progress::new(100, "String message");
     let _progress2 = Progress::new(100, "String message".to_string());
-    // 验证两种方式都可以创建进度条
+    // Assert: 验证两种方式都可以创建进度条
     assert!(true);
 }
 
 #[test]
 fn test_progress_multiple_operations() {
-    // 测试进度条的多个操作组合
+    // Arrange: 准备测试进度条的多个操作组合
     let _progress = Progress::new(100, "Processing...");
-    // 验证可以创建进度条（多个操作需要实际运行才能测试）
+    // Assert: 验证可以创建进度条（多个操作需要实际运行才能测试）
     assert!(true);
 }

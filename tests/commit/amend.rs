@@ -140,7 +140,8 @@ fn test_create_preview_without_new_message() -> Result<()> {
 
 /// 测试格式化预览显示（有新消息）
 #[test]
-fn test_format_preview_display_with_new_message() {
+fn test_format_preview_display_with_new_message_returns_formatted_string() {
+    // Arrange: 准备有新消息的预览
     let preview = AmendPreview {
         original_sha: "abc123def456789012345678901234567890abcd".to_string(),
         original_message: "Original commit message".to_string(),
@@ -150,7 +151,10 @@ fn test_format_preview_display_with_new_message() {
         is_pushed: false,
     };
 
+    // Act: 格式化预览
     let formatted = CommitAmend::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("Original Commit SHA"));
     assert!(formatted.contains("abc123de"));
     assert!(formatted.contains("Original commit message"));
@@ -162,7 +166,8 @@ fn test_format_preview_display_with_new_message() {
 
 /// 测试格式化预览显示（无新消息）
 #[test]
-fn test_format_preview_display_without_new_message() {
+fn test_format_preview_display_without_new_message_returns_formatted_string() {
+    // Arrange: 准备无新消息的预览
     let preview = AmendPreview {
         original_sha: "def456abc789012345678901234567890abcdef12".to_string(),
         original_message: "Test commit".to_string(),
@@ -172,7 +177,10 @@ fn test_format_preview_display_without_new_message() {
         is_pushed: true,
     };
 
+    // Act: 格式化预览
     let formatted = CommitAmend::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("Original Commit SHA"));
     assert!(formatted.contains("def456ab"));
     assert!(formatted.contains("Test commit"));
@@ -182,11 +190,15 @@ fn test_format_preview_display_without_new_message() {
 
 /// 测试完成消息格式化
 #[test]
-fn test_format_completion_message() {
+fn test_format_completion_message_with_valid_input_returns_message() {
+    // Arrange: 准备分支名和 SHA
     let current_branch = "main";
     let old_sha = "abc123def456789012345678901234567890abcd";
 
+    // Act: 格式化完成消息
     let result = CommitAmend::format_completion_message(current_branch, old_sha);
+
+    // Assert: 验证返回结果（成功、None 或错误都是可以接受的）
     match result {
         Ok(Some(message)) => {
             assert!(message.contains("successfully") || message.contains("completed"));
@@ -204,14 +216,18 @@ fn test_format_completion_message() {
 
 /// 测试强制推送警告检查（已推送）
 #[test]
-fn test_should_show_force_push_warning_pushed() {
+fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA（已推送的提交）
     let current_branch = "main";
     let old_sha = "test123456789012345678901234567890abcdef";
 
+    // Act: 检查是否应该显示强制推送警告
     let result = CommitAmend::should_show_force_push_warning(current_branch, old_sha);
+
+    // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
+            // Assert: 验证返回值是布尔类型
             assert!(is_pushed == true || is_pushed == false);
         }
         Err(_) => {
@@ -223,14 +239,15 @@ fn test_should_show_force_push_warning_pushed() {
 
 /// 测试强制推送警告检查（未推送）
 #[test]
-fn test_should_show_force_push_warning_not_pushed() {
+fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA（未推送的提交）
     let current_branch = "feature";
     let old_sha = "test987654321098765432109876543210987654";
 
     let result = CommitAmend::should_show_force_push_warning(current_branch, old_sha);
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
+            // Assert: 验证返回值是布尔类型
             assert!(is_pushed == true || is_pushed == false);
         }
         Err(_) => {
@@ -242,12 +259,16 @@ fn test_should_show_force_push_warning_not_pushed() {
 
 /// 测试详细提交信息格式化
 #[test]
-fn test_format_commit_info_detailed() {
+fn test_format_commit_info_detailed_with_valid_info_returns_formatted_string() {
+    // Arrange: 准备提交信息、分支名和状态
     let commit_info = create_sample_commit_info();
     let branch = "main";
     let status = None; // 不提供 WorktreeStatus
 
+    // Act: 格式化详细提交信息
     let formatted = CommitAmend::format_commit_info_detailed(&commit_info, branch, status);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("abc123de")); // 短 SHA
     assert!(formatted.contains("feat: add user authentication system"));
     assert!(formatted.contains("John Doe"));
@@ -258,29 +279,39 @@ fn test_format_commit_info_detailed() {
 
 /// 测试 AmendPreview 结构体字段
 #[test]
-fn test_amend_preview_struct() {
+fn test_amend_preview_struct_with_valid_fields_creates_preview() {
+    // Arrange: 准备预览字段值
+    let original_sha = "sha123";
+    let original_message = "original message";
+    let new_message = Some("new message".to_string());
+    let files_to_add = vec!["file.rs".to_string()];
+    let operation_type = "amend";
+    let is_pushed = false;
+
+    // Act: 创建 AmendPreview
     let preview = AmendPreview {
-        original_sha: "sha123".to_string(),
-        original_message: "original message".to_string(),
-        new_message: Some("new message".to_string()),
-        files_to_add: vec!["file.rs".to_string()],
-        operation_type: "amend".to_string(),
-        is_pushed: false,
+        original_sha: original_sha.to_string(),
+        original_message: original_message.to_string(),
+        new_message: new_message.clone(),
+        files_to_add: files_to_add.clone(),
+        operation_type: operation_type.to_string(),
+        is_pushed,
     };
 
-    // 验证所有字段
-    assert_eq!(preview.original_sha, "sha123");
-    assert_eq!(preview.original_message, "original message");
-    assert_eq!(preview.new_message, Some("new message".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(preview.original_sha, original_sha);
+    assert_eq!(preview.original_message, original_message);
+    assert_eq!(preview.new_message, new_message);
     assert_eq!(preview.files_to_add.len(), 1);
     assert_eq!(preview.files_to_add[0], "file.rs");
-    assert_eq!(preview.operation_type, "amend");
+    assert_eq!(preview.operation_type, operation_type);
     assert_eq!(preview.is_pushed, false);
 }
 
 /// 测试 AmendPreview 克隆功能
 #[test]
-fn test_amend_preview_clone() {
+fn test_amend_preview_clone_with_valid_preview_creates_clone() {
+    // Arrange: 准备原始预览
     let original = AmendPreview {
         original_sha: "clone_test".to_string(),
         original_message: "clone message".to_string(),
@@ -290,7 +321,10 @@ fn test_amend_preview_clone() {
         is_pushed: true,
     };
 
+    // Act: 克隆预览
     let cloned = original.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original.original_sha, cloned.original_sha);
     assert_eq!(original.original_message, cloned.original_message);
     assert_eq!(original.new_message, cloned.new_message);

@@ -191,11 +191,11 @@ fn test_log_level_set_and_get_with_valid_level_sets_and_gets_level() {
 
 #[test]
 fn test_log_level_init() {
-    // 测试 init 函数的行为：只在未初始化时设置级别
+    // Arrange: 准备测试 init 函数的行为：只在未初始化时设置级别
     // 先清理状态（通过设置一个已知值，然后重置）
     LogLevel::set_level(LogLevel::Error);
 
-    // 测试 init(None) - 应该使用默认级别
+    // Arrange: 准备测试 init(None) - 应该使用默认级别
     // 由于已经初始化过，init 不会改变当前级别
     let before_init = LogLevel::get_level();
     LogLevel::init(None);
@@ -203,7 +203,7 @@ fn test_log_level_init() {
     // init 不会改变已初始化的级别
     assert_eq!(before_init, after_init);
 
-    // 测试 init(Some(level)) - 如果已初始化，不会改变
+    // Arrange: 准备测试 init(Some(level)) - 如果已初始化，不会改变
     LogLevel::init(Some(LogLevel::Warn));
     let after_init_with_level = LogLevel::get_level();
     // 由于已经初始化，init 不会改变级别
@@ -228,7 +228,7 @@ fn test_log_level_debug_format() {
 
 #[test]
 fn test_log_level_default_level_release() {
-    // 测试 default_level() 函数的行为
+    // Arrange: 准备测试 default_level() 函数的行为
     // 在 debug 模式下返回 Debug，在 release 模式下返回 Info
     let level = LogLevel::default_level();
 
@@ -240,6 +240,6 @@ fn test_log_level_default_level_release() {
         assert_eq!(level, LogLevel::Info);
     }
 
-    // 验证返回值是有效的日志级别
+    // Assert: 验证返回值是有效的日志级别
     assert!(matches!(level, LogLevel::Debug | LogLevel::Info));
 }

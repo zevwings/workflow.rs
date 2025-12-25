@@ -159,7 +159,7 @@ impl Drop for TestEnv {
 
 #[test]
 fn test_private_config_default() {
-    // 测试私有配置的默认值
+    // Arrange: 准备测试私有配置的默认值
     let config = PrivateRepoConfig::default();
 
     assert!(!config.configured);
@@ -171,7 +171,7 @@ fn test_private_config_default() {
 
 #[test]
 fn test_private_config_with_configured() {
-    // 测试设置 configured 字段
+    // Arrange: 准备测试设置 configured 字段
     let mut config = PrivateRepoConfig::default();
     config.configured = true;
 
@@ -180,7 +180,7 @@ fn test_private_config_with_configured() {
 
 #[test]
 fn test_private_config_with_branch() {
-    // 测试设置 branch 配置
+    // Arrange: 准备测试设置 branch 配置
     let mut config = PrivateRepoConfig::default();
     config.branch = Some(BranchConfig {
         prefix: Some("feature".to_string()),
@@ -196,7 +196,7 @@ fn test_private_config_with_branch() {
 
 #[test]
 fn test_private_config_with_pr() {
-    // 测试设置 PR 配置
+    // Arrange: 准备测试设置 PR 配置
     let mut config = PrivateRepoConfig::default();
     config.pr = Some(PullRequestsConfig {
         auto_accept_change_type: Some(true),
@@ -210,7 +210,7 @@ fn test_private_config_with_pr() {
 
 #[test]
 fn test_private_config_with_all_fields() {
-    // 测试设置所有字段
+    // Arrange: 准备测试设置所有字段
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -231,7 +231,7 @@ fn test_private_config_with_all_fields() {
 
 #[test]
 fn test_generate_repo_id_format() {
-    // 测试仓库 ID 的格式
+    // Arrange: 准备测试仓库 ID 的格式
     // 注意：这个测试需要在 Git 仓库中运行
     if let Ok(repo_id) = PrivateRepoConfig::generate_repo_id() {
         // 验证格式：{repo_name}_{hash}
@@ -250,7 +250,7 @@ fn test_generate_repo_id_format() {
 
 #[test]
 fn test_generate_repo_id_consistency() {
-    // 测试同一仓库生成的 ID 应该一致
+    // Arrange: 准备测试同一仓库生成的 ID 应该一致
     if let (Ok(id1), Ok(id2)) = (
         PrivateRepoConfig::generate_repo_id(),
         PrivateRepoConfig::generate_repo_id(),
@@ -263,7 +263,7 @@ fn test_generate_repo_id_consistency() {
 
 #[test]
 fn test_private_config_clone() {
-    // 测试配置的克隆功能
+    // Arrange: 准备测试配置的克隆功能
     let original = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -290,7 +290,7 @@ fn test_private_config_clone() {
 
 #[test]
 fn test_private_config_debug() {
-    // 测试配置的 Debug 输出
+    // Arrange: 准备测试配置的 Debug 输出
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -311,7 +311,7 @@ fn test_private_config_debug() {
 
 #[test]
 fn test_private_config_with_empty_branch() {
-    // 测试空的 branch 配置
+    // Arrange: 准备测试空的 branch 配置
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -331,7 +331,7 @@ fn test_private_config_with_empty_branch() {
 
 #[test]
 fn test_private_config_with_empty_pr() {
-    // 测试空的 PR 配置
+    // Arrange: 准备测试空的 PR 配置
     let config = PrivateRepoConfig {
         configured: true,
         branch: None,
@@ -349,7 +349,7 @@ fn test_private_config_with_empty_pr() {
 
 #[test]
 fn test_private_config_with_multiple_ignore_branches() {
-    // 测试多个忽略分支
+    // Arrange: 准备测试多个忽略分支
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -375,7 +375,7 @@ fn test_private_config_with_multiple_ignore_branches() {
 
 #[test]
 fn test_private_config_with_special_branch_prefix() {
-    // 测试特殊字符的分支前缀
+    // Arrange: 准备测试特殊字符的分支前缀
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -442,7 +442,7 @@ fn test_private_config_pr_parametrized(#[case] auto_accept: Option<bool>) {
 
 #[test]
 fn test_update_configured_flag() {
-    // 测试更新 configured 标志
+    // Arrange: 准备测试更新 configured 标志
     let mut config = PrivateRepoConfig::default();
     assert!(!config.configured);
 
@@ -455,7 +455,7 @@ fn test_update_configured_flag() {
 
 #[test]
 fn test_update_branch_config() {
-    // 测试更新 branch 配置
+    // Arrange: 准备测试更新 branch 配置
     let mut config = PrivateRepoConfig::default();
 
     // 初始为 None
@@ -482,7 +482,7 @@ fn test_update_branch_config() {
 
 #[test]
 fn test_update_pr_config() {
-    // 测试更新 PR 配置
+    // Arrange: 准备测试更新 PR 配置
     let mut config = PrivateRepoConfig::default();
 
     // 初始为 None
@@ -506,7 +506,7 @@ fn test_update_pr_config() {
 
 #[test]
 fn test_clear_branch_config() {
-    // 测试清空 branch 配置
+    // Arrange: 准备测试清空 branch 配置
     let mut config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -524,7 +524,7 @@ fn test_clear_branch_config() {
 
 #[test]
 fn test_clear_pr_config() {
-    // 测试清空 PR 配置
+    // Arrange: 准备测试清空 PR 配置
     let mut config = PrivateRepoConfig {
         configured: true,
         branch: None,
@@ -544,7 +544,7 @@ fn test_clear_pr_config() {
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_from_existing_file() -> Result<()> {
-    // 准备：创建包含配置的临时 Git 仓库
+    // Arrange: 创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -567,10 +567,10 @@ auto_accept_change_type = true
     );
     env.create_config(&config_content)?;
 
-    // 执行：调用 PrivateRepoConfig::load()
+    // Act: 调用 PrivateRepoConfig::load()
     let config = PrivateRepoConfig::load()?;
 
-    // 验证：配置正确加载
+    // Assert: 配置正确加载
     assert!(config.configured);
     assert!(config.branch.is_some());
     assert!(config.pr.is_some());
@@ -592,15 +592,15 @@ auto_accept_change_type = true
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_from_non_existing_file() -> Result<()> {
-    // 准备：创建没有配置文件的临时 Git 仓库
+    // Arrange: 创建没有配置文件的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
 
-    // 执行：调用 PrivateRepoConfig::load()
+    // Act: 调用 PrivateRepoConfig::load()
     let config = PrivateRepoConfig::load()?;
 
-    // 验证：返回默认配置
+    // Assert: 返回默认配置
     assert!(!config.configured);
     assert!(config.branch.is_none());
     assert!(config.pr.is_none());
@@ -611,12 +611,12 @@ fn test_load_from_non_existing_file() -> Result<()> {
 #[test]
 #[serial(repo_config_fs)]
 fn test_save_to_new_file() -> Result<()> {
-    // 准备：创建临时 Git 仓库（不创建配置文件）
+    // Arrange: 创建临时 Git 仓库（不创建配置文件）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
 
-    // 执行：创建配置并保存
+    // Act: 创建配置并保存
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -629,11 +629,11 @@ fn test_save_to_new_file() -> Result<()> {
     };
     config.save()?;
 
-    // 验证：文件创建成功
+    // Assert: 文件创建成功
     let config_path = env.config_path();
     assert!(config_path.exists());
 
-    // 验证：内容正确
+    // Assert: 内容正确
     let content = fs::read_to_string(&config_path)?;
     let _repo_id = PrivateRepoConfig::generate_repo_id()?;
     // Note: TOML section names with special chars might be quoted
@@ -647,7 +647,7 @@ fn test_save_to_new_file() -> Result<()> {
 #[test]
 #[serial(repo_config_fs)]
 fn test_save_preserves_other_repos() -> Result<()> {
-    // 准备：创建包含其他仓库配置的临时 Git 仓库
+    // Arrange: 创建包含其他仓库配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -661,7 +661,7 @@ prefix = "hotfix"
 "#;
     env.create_config(config_content)?;
 
-    // 执行：保存当前仓库的配置
+    // Act: 保存当前仓库的配置
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -672,13 +672,13 @@ prefix = "hotfix"
     };
     config.save()?;
 
-    // 验证：其他仓库配置未被覆盖
+    // Assert: 其他仓库配置未被覆盖
     let content = fs::read_to_string(env.config_path())?;
     assert!(content.contains("[other_repo_12345678]"));
     assert!(content.contains("[other_repo_12345678.branch]"));
     assert!(content.contains(r#"prefix = "hotfix""#));
 
-    // 验证：当前仓库配置已添加
+    // Assert: 当前仓库配置已添加
     assert!(content.contains(r#"prefix = "feature""#));
 
     Ok(())
@@ -687,7 +687,7 @@ prefix = "hotfix"
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_and_save_roundtrip() -> Result<()> {
-    // 准备：创建包含配置的临时 Git 仓库
+    // Arrange: 创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -705,7 +705,7 @@ ignore = ["main"]
     );
     env.create_config(&config_content)?;
 
-    // 执行：加载 → 修改 → 保存 → 重新加载
+    // Act: 加载 → 修改 → 保存 → 重新加载
     let mut config = PrivateRepoConfig::load()?;
     assert!(config.configured);
 
@@ -721,7 +721,7 @@ ignore = ["main"]
     // 重新加载
     let reloaded_config = PrivateRepoConfig::load()?;
 
-    // 验证：数据一致性
+    // Assert: 数据一致性
     assert_eq!(reloaded_config.configured, config.configured);
     assert_eq!(
         reloaded_config.branch.as_ref().and_then(|b| b.prefix.clone()),
@@ -744,7 +744,7 @@ ignore = ["main"]
 #[test]
 #[serial(repo_config_fs)]
 fn test_load_corrupted_toml_file() -> Result<()> {
-    // 准备：创建包含无效 TOML 的配置文件
+    // Arrange: 创建包含无效 TOML 的配置文件
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -755,10 +755,10 @@ configured = "invalid  # 缺少闭合引号和括号
 "#;
     env.create_config(invalid_toml)?;
 
-    // 执行：尝试加载配置
+    // Act: 尝试加载配置
     let result = PrivateRepoConfig::load();
 
-    // 验证：返回错误
+    // Assert: 返回错误
     assert!(result.is_err());
 
     Ok(())
@@ -802,7 +802,7 @@ configured = "invalid  # 缺少闭合引号和括号
 fn test_save_to_readonly_directory() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
-    // 准备：创建只读的 .workflow 目录（阻止创建 config 子目录）
+    // Arrange: 创建只读的 .workflow 目录（阻止创建 config 子目录）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
     let _dir_guard = CurrentDirGuard::new(env.path())?;
@@ -815,7 +815,7 @@ fn test_save_to_readonly_directory() -> Result<()> {
     perms.set_mode(0o555); // r-xr-xr-x (只读+执行)
     fs::set_permissions(&workflow_dir, perms)?;
 
-    // 执行：尝试保存配置
+    // Act: 尝试保存配置
     let config = PrivateRepoConfig {
         configured: true,
         branch: Some(BranchConfig {
@@ -826,7 +826,7 @@ fn test_save_to_readonly_directory() -> Result<()> {
     };
     let result = config.save();
 
-    // 验证：返回权限错误
+    // Assert: 返回权限错误
     // 注意：在某些系统上，root 用户或特定权限配置下这个测试可能会失败
     assert!(
         result.is_err(),
@@ -846,15 +846,15 @@ fn test_save_to_readonly_directory() -> Result<()> {
 fn test_generate_repo_id_outside_git_repo() -> Result<()> {
     use crate::common::helpers::CurrentDirGuard;
 
-    // 准备：创建非 Git 仓库的临时目录
+    // Arrange: 创建非 Git 仓库的临时目录
     let env = TestEnv::new()?;
     let temp_path = env.path();
     let _dir_guard = CurrentDirGuard::new(temp_path)?;
 
-    // 执行：尝试生成 repo_id
+    // Act: 尝试生成 repo_id
     let result = PrivateRepoConfig::generate_repo_id();
 
-    // 验证：返回错误（因为不在 Git 仓库中）
+    // Assert: 返回错误（因为不在 Git 仓库中）
     assert!(result.is_err());
 
     Ok(())
@@ -863,7 +863,7 @@ fn test_generate_repo_id_outside_git_repo() -> Result<()> {
 #[test]
 #[serial(repo_config_fs)]
 fn test_save_with_empty_branch_config() -> Result<()> {
-    // 测试保存空的 branch 配置（prefix 为 None 且 ignore 为空）
+    // Arrange: 准备测试保存空的 branch 配置（prefix 为 None 且 ignore 为空）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
 
@@ -877,7 +877,7 @@ fn test_save_with_empty_branch_config() -> Result<()> {
     };
     config.save()?;
 
-    // 验证：文件创建成功但不包含 branch 部分（因为是空的）
+    // Assert: 文件创建成功但不包含 branch 部分（因为是空的）
     let content = fs::read_to_string(env.config_path())?;
     assert!(content.contains("configured = true"));
     // 空的 branch 配置不应该被保存
@@ -889,7 +889,7 @@ fn test_save_with_empty_branch_config() -> Result<()> {
 #[test]
 #[serial(repo_config_fs)]
 fn test_save_with_empty_pr_config() -> Result<()> {
-    // 测试保存空的 PR 配置
+    // Arrange: 准备测试保存空的 PR 配置
     let env = TestEnv::new()?;
     env.init_git_repo()?;
 
@@ -902,7 +902,7 @@ fn test_save_with_empty_pr_config() -> Result<()> {
     };
     config.save()?;
 
-    // 验证：文件创建成功但不包含 pr 部分（因为是空的）
+    // Assert: 文件创建成功但不包含 pr 部分（因为是空的）
     let content = fs::read_to_string(env.config_path())?;
     assert!(content.contains("configured = true"));
     // 空的 pr 配置不应该被保存

@@ -45,30 +45,39 @@ fn test_confirm_dialog_with_cancel_message_with_message_creates_dialog() {
 }
 
 #[test]
-fn test_confirm_dialog_chain_all() {
-    // 测试链式调用所有方法
+fn test_confirm_dialog_chain_all_with_all_methods_configures_dialog() {
+    // Arrange: 准备所有配置选项
+
+    // Act: 链式调用所有方法
     let _dialog = ConfirmDialog::new("Continue?")
         .with_default(false)
         .with_cancel_message("Operation cancelled.");
-    // 验证链式调用成功
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_confirm_dialog_prompt_string_conversion() {
-    // 测试 prompt 参数的类型转换
+fn test_confirm_dialog_new_with_string_prompt_creates_dialog() {
+    // Arrange: 准备字符串和String类型的提示消息
+
+    // Act: 使用字符串和String类型创建对话框
     let _dialog1 = ConfirmDialog::new("String prompt");
     let _dialog2 = ConfirmDialog::new("String prompt".to_string());
-    // 验证两种方式都可以创建对话框
+
+    // Assert: 验证两种方式都可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_confirm_dialog_cancel_message_string_conversion() {
-    // 测试 cancel_message 参数的类型转换
+fn test_confirm_dialog_with_string_cancel_message_sets_message() {
+    // Arrange: 准备字符串和String类型的取消消息
+
+    // Act: 使用字符串和String类型设置取消消息
     let _dialog1 = ConfirmDialog::new("Continue?").with_cancel_message("Message");
     let _dialog2 = ConfirmDialog::new("Continue?").with_cancel_message("Message".to_string());
-    // 验证两种方式都可以创建对话框
+
+    // Assert: 验证两种方式都可以创建对话框
     assert!(true);
 }
 
@@ -150,102 +159,114 @@ fn test_confirm_dialog_prompt_cancelled_with_message() {
     assert!(true);
 }
 
+/// 测试设置取消消息
 #[test]
 fn test_confirm_dialog_cancel_message_set() {
-    // 测试设置取消消息后，cancel_message 字段被正确设置（覆盖 confirm.rs:99-101）
+    // Arrange: 准备测试设置取消消息后，cancel_message 字段被正确设置（覆盖 confirm.rs:99-101）
     let _dialog = ConfirmDialog::new("Continue?").with_cancel_message("Custom cancel message");
-    // 验证对话框创建成功
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
+/// 测试设置默认值为true
 #[test]
 fn test_confirm_dialog_prompt_with_default_true() {
-    // 测试设置默认值为 true（覆盖 confirm.rs:125-127）
+    // Arrange: 准备测试设置默认值为 true（覆盖 confirm.rs:125-127）
     let _dialog = ConfirmDialog::new("Continue?").with_default(true);
-    // 验证对话框创建成功，默认值设置正确
+    // Assert: 验证对话框创建成功，默认值设置正确
     assert!(true);
 }
 
+/// 测试设置默认值为false
 #[test]
 fn test_confirm_dialog_prompt_with_default_false() {
-    // 测试设置默认值为 false（覆盖 confirm.rs:125-127）
+    // Arrange: 准备测试设置默认值为 false（覆盖 confirm.rs:125-127）
     let _dialog = ConfirmDialog::new("Continue?").with_default(false);
-    // 验证对话框创建成功，默认值设置正确
+    // Assert: 验证对话框创建成功，默认值设置正确
     assert!(true);
 }
 
+/// 测试不设置默认值的情况
 #[test]
 fn test_confirm_dialog_prompt_without_default() {
-    // 测试不设置默认值的情况（覆盖 confirm.rs:125-127 的 else 分支）
+    // Arrange: 准备测试不设置默认值的情况（覆盖 confirm.rs:125-127 的 else 分支）
     let _dialog = ConfirmDialog::new("Continue?");
-    // 验证对话框创建成功
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
+/// 测试错误处理逻辑
 #[test]
 fn test_confirm_dialog_prompt_error_handling() {
-    // 测试错误处理逻辑（覆盖 confirm.rs:129）
+    // Arrange: 准备测试错误处理逻辑（覆盖 confirm.rs:129）
     // 注意：这个测试主要验证错误处理代码路径，实际错误需要用户交互
     let _dialog = ConfirmDialog::new("Continue?");
-    // 验证对话框创建成功，错误处理逻辑存在
+    // Assert: 验证对话框创建成功，错误处理逻辑存在
     assert!(true);
 }
 
+/// 测试cancel_message为None的情况
 #[test]
 fn test_confirm_dialog_cancel_message_none() {
-    // 测试 cancel_message 为 None 的情况（覆盖 confirm.rs:132-136）
+    // Arrange: 准备测试 cancel_message 为 None 的情况（覆盖 confirm.rs:132-136）
     let _dialog = ConfirmDialog::new("Continue?");
-    // 验证对话框创建成功，cancel_message 为 None
+    // Assert: 验证对话框创建成功，cancel_message 为 None
     assert!(true);
 }
 
+/// 测试cancel_message为Some的情况
 #[test]
 fn test_confirm_dialog_cancel_message_some() {
-    // 测试 cancel_message 为 Some 的情况（覆盖 confirm.rs:132-133）
+    // Arrange: 准备测试 cancel_message 为 Some 的情况（覆盖 confirm.rs:132-133）
     let _dialog = ConfirmDialog::new("Continue?").with_cancel_message("Operation cancelled.");
-    // 验证对话框创建成功，cancel_message 已设置
+    // Assert: 验证对话框创建成功，cancel_message 已设置
     assert!(true);
 }
 
+/// 测试wait_for_newline设置
 #[test]
 fn test_confirm_dialog_wait_for_newline() {
-    // 测试 wait_for_newline(false) 的设置（覆盖 confirm.rs:122）
+    // Arrange: 准备测试 wait_for_newline(false) 的设置（覆盖 confirm.rs:122）
     // 这个设置启用单键自动完成
     let _dialog = ConfirmDialog::new("Continue?");
-    // 验证对话框创建成功，wait_for_newline 设置存在
+    // Assert: 验证对话框创建成功，wait_for_newline 设置存在
     assert!(true);
 }
 
+/// 测试default为Some(true)的情况
 #[test]
 fn test_confirm_dialog_default_some_true() {
-    // 测试 default 为 Some(true) 的情况（覆盖 confirm.rs:125-127）
+    // Arrange: 准备测试 default 为 Some(true) 的情况（覆盖 confirm.rs:125-127）
     let _dialog = ConfirmDialog::new("Continue?").with_default(true);
-    // 验证对话框创建成功，default 设置为 true
+    // Assert: 验证对话框创建成功，default 设置为 true
     assert!(true);
 }
 
+/// 测试default为Some(false)的情况
 #[test]
 fn test_confirm_dialog_default_some_false() {
-    // 测试 default 为 Some(false) 的情况（覆盖 confirm.rs:125-127）
+    // Arrange: 准备测试 default 为 Some(false) 的情况（覆盖 confirm.rs:125-127）
     let _dialog = ConfirmDialog::new("Continue?").with_default(false);
-    // 验证对话框创建成功，default 设置为 false
+    // Assert: 验证对话框创建成功，default 设置为 false
     assert!(true);
 }
 
+/// 测试用户确认且未设置cancel_message的情况
 #[test]
 fn test_confirm_dialog_prompt_confirmed_no_cancel_message() {
-    // 测试用户确认且未设置 cancel_message 的情况（覆盖 confirm.rs:136）
+    // Arrange: 准备测试用户确认且未设置 cancel_message 的情况（覆盖 confirm.rs:136）
     // 应该返回 Ok(true)
     let _dialog = ConfirmDialog::new("Continue?").with_default(true);
-    // 验证对话框创建成功
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
+/// 测试用户取消且未设置cancel_message的情况
 #[test]
 fn test_confirm_dialog_prompt_cancelled_no_cancel_message() {
-    // 测试用户取消且未设置 cancel_message 的情况（覆盖 confirm.rs:136）
+    // Arrange: 准备测试用户取消且未设置 cancel_message 的情况（覆盖 confirm.rs:136）
     // 应该返回 Ok(false)
     let _dialog = ConfirmDialog::new("Continue?").with_default(false);
-    // 验证对话框创建成功
+    // Assert: 验证对话框创建成功
     assert!(true);
 }

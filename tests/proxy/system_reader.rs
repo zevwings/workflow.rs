@@ -300,7 +300,7 @@ fn test_proxy_config_generator_empty_command() {
 /// 测试不同代理类型的配置生成
 #[test]
 fn test_proxy_config_generator_different_types() {
-    // 测试 HTTP 代理
+    // Arrange: 准备测试 HTTP 代理
     let mut http_proxy_info = ProxyInfo::new();
     http_proxy_info.set_config(
         ProxyType::Http,
@@ -311,7 +311,7 @@ fn test_proxy_config_generator_different_types() {
         },
     );
 
-    // 测试 HTTPS 代理
+    // Arrange: 准备测试 HTTPS 代理
     let mut https_proxy_info = ProxyInfo::new();
     https_proxy_info.set_config(
         ProxyType::Https,
@@ -322,7 +322,7 @@ fn test_proxy_config_generator_different_types() {
         },
     );
 
-    // 测试 SOCKS 代理
+    // Arrange: 准备测试 SOCKS 代理
     let mut socks_proxy_info = ProxyInfo::new();
     socks_proxy_info.set_config(
         ProxyType::Socks,
@@ -333,7 +333,7 @@ fn test_proxy_config_generator_different_types() {
         },
     );
 
-    // 测试每种类型的环境变量生成
+    // Arrange: 准备测试每种类型的环境变量生成
     let http_env_vars = ProxyConfigGenerator::generate_env_vars(&http_proxy_info);
     assert!(http_env_vars.contains_key("http_proxy"));
 
@@ -347,24 +347,24 @@ fn test_proxy_config_generator_different_types() {
 /// 测试 ProxyType 枚举功能
 #[test]
 fn test_proxy_type_enum() {
-    // 测试所有代理类型
+    // Arrange: 准备测试所有代理类型
     let all_types: Vec<ProxyType> = ProxyType::all().collect();
     assert_eq!(all_types.len(), 3);
     assert!(all_types.contains(&ProxyType::Http));
     assert!(all_types.contains(&ProxyType::Https));
     assert!(all_types.contains(&ProxyType::Socks));
 
-    // 测试环境变量键名
+    // Arrange: 准备测试环境变量键名
     assert_eq!(ProxyType::Http.env_key(), "http_proxy");
     assert_eq!(ProxyType::Https.env_key(), "https_proxy");
     assert_eq!(ProxyType::Socks.env_key(), "all_proxy");
 
-    // 测试 URL 协议方案
+    // Arrange: 准备测试 URL 协议方案
     assert_eq!(ProxyType::Http.url_scheme(), "http");
     assert_eq!(ProxyType::Https.url_scheme(), "http");
     assert_eq!(ProxyType::Socks.url_scheme(), "socks5");
 
-    // 测试所有环境变量键名
+    // Arrange: 准备测试所有环境变量键名
     let all_env_keys = ProxyType::all_env_keys();
     assert_eq!(all_env_keys.len(), 3);
     assert!(all_env_keys.contains(&"http_proxy"));
@@ -405,7 +405,7 @@ fn test_complex_proxy_info_configuration() {
         },
     );
 
-    // 验证环境变量生成
+    // Assert: 验证环境变量生成
     let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
 
     // 应该包含启用的代理
@@ -415,7 +415,7 @@ fn test_complex_proxy_info_configuration() {
     // 不应该包含禁用的代理
     assert!(!env_vars.contains_key("https_proxy"));
 
-    // 验证 URL 格式
+    // Assert: 验证 URL 格式
     let http_url = env_vars.get("http_proxy").expect("operation should succeed");
     assert!(http_url.starts_with("http://"));
     assert!(http_url.contains("http-proxy.example.com:8080"));
@@ -428,7 +428,7 @@ fn test_complex_proxy_info_configuration() {
 /// 测试边界情况和错误处理
 #[test]
 fn test_edge_cases_and_error_handling() {
-    // 测试无效的代理配置（空地址）
+    // Arrange: 准备测试无效的代理配置（空地址）
     let mut invalid_proxy_info = ProxyInfo::new();
     invalid_proxy_info.set_config(
         ProxyType::Http,
@@ -443,7 +443,7 @@ fn test_edge_cases_and_error_handling() {
     // 无效配置不应该生成环境变量
     assert!(env_vars.is_empty());
 
-    // 测试无效端口
+    // Arrange: 准备测试无效端口
     let mut invalid_port_proxy = ProxyInfo::new();
     invalid_port_proxy.set_config(
         ProxyType::Http,
@@ -458,13 +458,13 @@ fn test_edge_cases_and_error_handling() {
     // 无端口配置不应该生成环境变量
     assert!(env_vars_no_port.is_empty());
 
-    // 测试空配置的环境变量生成
+    // Arrange: 准备测试空配置的环境变量生成
     let empty_proxy_info = create_empty_proxy_info();
     let empty_env_vars = ProxyConfigGenerator::generate_env_vars(&empty_proxy_info);
     // 空配置应该生成空的环境变量映射
     assert!(empty_env_vars.is_empty());
 
-    // 测试空配置的命令生成
+    // Arrange: 准备测试空配置的命令生成
     let empty_command = ProxyConfigGenerator::generate_command(&empty_proxy_info);
     // 空配置应该返回 None
     assert!(empty_command.is_none());
@@ -488,7 +488,7 @@ fn test_proxy_info_mutable_operations() {
         },
     );
 
-    // 验证配置已添加
+    // Assert: 验证配置已添加
     let config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
     assert_eq!(config.enable, true);
     assert_eq!(config.address, Some("new-proxy.example.com".to_string()));
@@ -499,7 +499,7 @@ fn test_proxy_info_mutable_operations() {
     config_mut.enable = false;
     config_mut.port = Some(8888);
 
-    // 验证修改生效
+    // Assert: 验证修改生效
     let updated_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
     assert_eq!(updated_config.enable, false);
     assert_eq!(updated_config.port, Some(8888));

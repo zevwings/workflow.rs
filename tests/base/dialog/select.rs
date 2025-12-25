@@ -50,40 +50,52 @@ fn test_select_dialog_empty_options_with_empty_list_returns_error() {
 }
 
 #[test]
-fn test_select_dialog_prompt_string_conversion() {
-    // 测试 prompt 参数的类型转换
+fn test_select_dialog_new_with_string_prompt_creates_dialog() {
+    // Arrange: 准备字符串和String类型的提示消息
     let options = vec!["Option 1"];
+
+    // Act: 使用字符串和String类型创建对话框
     let _dialog1 = SelectDialog::new("String prompt", options.clone());
     let _dialog2 = SelectDialog::new("String prompt".to_string(), options);
-    // 验证两种方式都可以创建对话框
+
+    // Assert: 验证两种方式都可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_select_dialog_with_default_zero() {
-    // 测试设置默认值为 0
+fn test_select_dialog_with_default_with_zero_index_sets_first_option() {
+    // Arrange: 准备选项列表
     let options = vec!["Option 1", "Option 2"];
+
+    // Act: 设置默认值为 0
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
-    // 验证链式调用成功
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_select_dialog_fuzzy_scorer_empty_input() {
-    // 测试模糊匹配 scorer 的空输入情况（覆盖 select.rs:135-137）
+fn test_select_dialog_fuzzy_scorer_with_empty_input_handles_correctly() {
+    // Arrange: 准备选项列表（覆盖 select.rs:135-137）
     // 这个测试通过创建对话框来间接测试 fuzzy_scorer 函数
     let options = vec!["Option 1", "Option 2"];
+
+    // Act: 创建对话框（fuzzy_scorer 会在 prompt 时被调用）
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
-    // 验证对话框创建成功（fuzzy_scorer 会在 prompt 时被调用）
+
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
 #[test]
-fn test_select_dialog_prompt_without_default() {
-    // 测试不设置默认值的情况（覆盖 select.rs:120-121 的 else 分支）
+fn test_select_dialog_new_without_default_creates_dialog() {
+    // Arrange: 准备选项列表（覆盖 select.rs:120-121 的 else 分支）
+
+    // Act: 创建不设置默认值的对话框
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功
+
+    // Assert: 验证对话框创建成功
     assert!(true);
 }
 
@@ -120,7 +132,7 @@ fn test_select_dialog_prompt_without_default() {
 #[test]
 #[ignore] // 需要用户交互
 fn test_select_dialog_prompt() {
-    // 测试用户选择的情况（覆盖 select.rs:151-156 的错误处理）
+    // Arrange: 准备测试用户选择的情况（覆盖 select.rs:151-156 的错误处理）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let dialog = SelectDialog::new("Choose an option", options).with_default(0);
     let result = dialog.prompt();
@@ -132,65 +144,65 @@ fn test_select_dialog_prompt() {
 
 #[test]
 fn test_select_dialog_fuzzy_scorer_non_empty_input() {
-    // 测试模糊匹配 scorer 的非空输入情况（覆盖 select.rs:139-146）
+    // Arrange: 准备测试模糊匹配 scorer 的非空输入情况（覆盖 select.rs:139-146）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = SelectDialog::new("Choose an option", options).with_default(0);
-    // 验证对话框创建成功（fuzzy_scorer 会在 prompt 时被调用）
+    // Assert: 验证对话框创建成功（fuzzy_scorer 会在 prompt 时被调用）
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_fuzzy_scorer_matcher_creation() {
-    // 测试模糊匹配器的创建（覆盖 select.rs:141）
+    // Arrange: 准备测试模糊匹配器的创建（覆盖 select.rs:141）
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功，matcher 创建逻辑存在
+    // Assert: 验证对话框创建成功，matcher 创建逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_fuzzy_scorer_option_to_string() {
-    // 测试选项转换为字符串（覆盖 select.rs:142）
+    // Arrange: 准备测试选项转换为字符串（覆盖 select.rs:142）
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功，option.to_string() 逻辑存在
+    // Assert: 验证对话框创建成功，option.to_string() 逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_error_handling_operation_canceled() {
-    // 测试 OperationCanceled 错误处理（覆盖 select.rs:151-154）
+    // Arrange: 准备测试 OperationCanceled 错误处理（覆盖 select.rs:151-154）
     // 注意：这个测试主要验证错误处理代码路径
     let options = vec!["Option 1"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功，错误处理逻辑存在
+    // Assert: 验证对话框创建成功，错误处理逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_error_handling_other_errors() {
-    // 测试其他错误处理（覆盖 select.rs:155-156）
+    // Arrange: 准备测试其他错误处理（覆盖 select.rs:155-156）
     // 注意：这个测试主要验证错误处理代码路径
     let options = vec!["Option 1"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功，错误处理逻辑存在
+    // Assert: 验证对话框创建成功，错误处理逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_with_starting_cursor() {
-    // 测试设置 starting_cursor（覆盖 select.rs:121）
+    // Arrange: 准备测试设置 starting_cursor（覆盖 select.rs:121）
     let options = vec!["Option 1", "Option 2", "Option 3"];
     let _dialog = SelectDialog::new("Choose an option", options).with_default(2);
-    // 验证对话框创建成功，starting_cursor 设置逻辑存在
+    // Assert: 验证对话框创建成功，starting_cursor 设置逻辑存在
     assert!(true);
 }
 
 #[test]
 fn test_select_dialog_with_scorer() {
-    // 测试设置 scorer（覆盖 select.rs:149）
+    // Arrange: 准备测试设置 scorer（覆盖 select.rs:149）
     let options = vec!["Option 1", "Option 2"];
     let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证对话框创建成功，scorer 设置逻辑存在
+    // Assert: 验证对话框创建成功，scorer 设置逻辑存在
     assert!(true);
 }

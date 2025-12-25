@@ -39,7 +39,7 @@ use crate::common::http_helpers::MockServer;
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
 fn test_branch_sync_command_structure() {
-    // 测试分支同步命令的结构
+    // Arrange: 准备测试分支同步命令的结构
     // 注意：这个测试需要：
     // 1. 有效的 Git 仓库
     // 2. 网络连接到 GitHub（用于 CheckCommand::run_all()）
@@ -51,7 +51,7 @@ fn test_branch_sync_command_structure() {
         false, // squash
     );
 
-    // 验证函数返回 Result 类型
+    // Assert: 验证函数返回 Result 类型
     match result {
         Ok(_) => {
             // 在有效的 Git 仓库中同步成功
@@ -143,7 +143,7 @@ fn test_branch_sync_command_with_ff_only_option_executes() {
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
 fn test_branch_sync_command_with_squash() {
-    // 测试使用 squash 的合并
+    // Arrange: 准备测试使用 squash 的合并
     // 注意：这个测试需要：
     // 1. 有效的 Git 仓库
     // 2. 网络连接到 GitHub（用于 CheckCommand::run_all()）
@@ -239,7 +239,7 @@ fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
         false,
     );
 
-    // 验证（目录自动恢复）
+    // Assert: 验证（目录自动恢复）
     assert!(result.is_ok(), "Rebase sync should succeed");
 
     Ok(())
@@ -271,7 +271,7 @@ fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
         false,
     );
 
-    // 验证（目录自动恢复）
+    // Assert: 验证（目录自动恢复）
     assert!(
         result.is_ok(),
         "FF-only sync should succeed for fast-forwardable branches"
@@ -308,7 +308,7 @@ fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
         true, // squash
     );
 
-    // 验证（目录自动恢复）
+    // Assert: 验证（目录自动恢复）
     assert!(result.is_ok(), "Squash sync should succeed");
 
     Ok(())

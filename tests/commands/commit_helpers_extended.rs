@@ -76,8 +76,6 @@ fn test_check_not_on_default_branch_on_feature_branch_returns_ok() -> color_eyre
         .output()
         .ok();
 
-    let default_branch = "main".to_string();
-
     // 创建并切换到 feature 分支
     // Act: 创建并切换到feature分支，然后检查是否允许操作
     std::process::Command::new("git")

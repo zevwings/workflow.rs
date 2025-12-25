@@ -89,7 +89,7 @@ fn test_worktree_status_clean_with_gix() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
 
-    // 测试干净的工作树状态
+    // Arrange: 准备测试干净的工作树状态
     let status = GitCommit::get_worktree_status()?;
 
     // 干净的工作树应该没有未跟踪或修改的文件
@@ -186,7 +186,7 @@ fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
     let result = GitCommit::add_all();
     assert!(result.is_ok(), "Failed to stage all changes: {:?}", result);
 
-    // 验证文件已暂存
+    // Assert: 验证文件已暂存
     let status = GitCommit::get_worktree_status()?;
     assert!(status.staged_count > 0, "Should have staged files");
 
@@ -212,7 +212,7 @@ fn test_stage_specific_file() -> Result<()> {
         result
     );
 
-    // 验证文件已暂存
+    // Assert: 验证文件已暂存
     let status = GitCommit::get_worktree_status()?;
     assert!(
         status.staged_count > 0,
@@ -243,7 +243,7 @@ fn test_get_latest_commit_info() -> Result<()> {
 
     let info = commit_info?;
 
-    // 验证提交信息的基本字段
+    // Assert: 验证提交信息的基本字段
     assert!(!info.sha.is_empty(), "Commit SHA should not be empty");
     assert!(
         !info.message.is_empty(),
@@ -252,7 +252,7 @@ fn test_get_latest_commit_info() -> Result<()> {
     assert!(!info.author.is_empty(), "Commit author should not be empty");
     assert!(!info.date.is_empty(), "Commit date should not be empty");
 
-    // 验证 SHA 格式（应该是 40 个字符的十六进制）
+    // Assert: 验证 SHA 格式（应该是 40 个字符的十六进制）
     assert_eq!(
         info.sha.len(),
         40,
@@ -305,7 +305,7 @@ fn test_operations_outside_git_repo_with_container() {
         "Temp directory should not be a git repository"
     );
 
-    // 验证当前工作目录确实是临时目录（处理 macOS 路径规范化）
+    // Assert: 验证当前工作目录确实是临时目录（处理 macOS 路径规范化）
     let current_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
     let current_canonical = current_dir.canonicalize().unwrap_or(current_dir);
     let temp_canonical =
@@ -321,7 +321,7 @@ fn test_operations_outside_git_repo_with_container() {
         "get_worktree_status should fail in non-git directory"
     );
 
-    // 测试 add_all 是否正确返回错误
+    // Arrange: 准备测试 add_all 是否正确返回错误
     let add_result = GitCommit::add_all();
     assert!(
         add_result.is_err(),
@@ -334,7 +334,7 @@ fn test_operations_outside_git_repo_with_container() {
         "commit should fail in non-git directory"
     );
 
-    // 测试 get_last_commit_info 是否正确返回错误
+    // Arrange: 准备测试 get_last_commit_info 是否正确返回错误
     let commit_info_result = GitCommit::get_last_commit_info();
     assert!(
         commit_info_result.is_err(),

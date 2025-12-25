@@ -5,72 +5,92 @@
 use color_eyre::Result;
 use workflow::base::settings::paths::Paths;
 
+// ==================== Paths Expand Tests ====================
+
+/// 测试展开主目录路径（~）
 #[test]
-fn test_paths_home_dir_indirect() -> Result<()> {
+fn test_paths_home_dir_with_expand_tilde_returns_home_path() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
     // 测试 home_dir() 方法（通过其他方法间接测试，覆盖 paths.rs:49-51）
     // home_dir() 是私有方法，通过 expand("~") 间接测试
+
+    // Act: 展开 ~ 路径
     let home = Paths::expand("~")?;
 
-    // 应该能够获取主目录
+    // Assert: 验证能够获取主目录
     assert!(home.exists() || !home.exists()); // 主目录可能不存在但路径有效
     Ok(())
 }
 
+/// 测试展开包含~的路径
 #[test]
-fn test_paths_expand_tilde() -> Result<()> {
-    // 测试展开 ~ 路径（覆盖 paths.rs:198-201）
+fn test_paths_expand_with_tilde_path_returns_expanded_path() -> Result<()> {
+    // Arrange: 准备包含 ~ 的路径
+
+    // Act: 展开 ~ 路径（覆盖 paths.rs:198-201）
     let result = Paths::expand("~/test/path")?;
 
-    // 应该展开为主目录下的路径
+    // Assert: 验证展开为主目录下的路径
     assert!(result.to_string_lossy().contains("test"));
     assert!(result.to_string_lossy().contains("path"));
 
     Ok(())
 }
 
+/// 测试展开单独的~
 #[test]
-fn test_paths_expand_tilde_only() -> Result<()> {
-    // 测试展开单独的 ~（覆盖 paths.rs:202-204）
+fn test_paths_expand_with_tilde_only_returns_home_path() -> Result<()> {
+    // Arrange: 准备单独的 ~
+
+    // Act: 展开单独的 ~（覆盖 paths.rs:202-204）
     let result = Paths::expand("~")?;
 
-    // 应该返回主目录路径
+    // Assert: 验证返回主目录路径
     assert!(result.to_string_lossy().len() > 0);
 
     Ok(())
 }
 
+/// 测试展开绝对路径
 #[test]
-fn test_paths_expand_absolute_path() -> Result<()> {
-    // 测试绝对路径（覆盖 paths.rs:238-239）
+fn test_paths_expand_with_absolute_path_returns_absolute_path() -> Result<()> {
+    // Arrange: 准备绝对路径
+
+    // Act: 展开绝对路径（覆盖 paths.rs:238-239）
     let result = Paths::expand("/absolute/path")?;
 
-    // 应该直接返回绝对路径
+    // Assert: 验证直接返回绝对路径
     assert_eq!(result, std::path::PathBuf::from("/absolute/path"));
 
     Ok(())
 }
 
+/// 测试展开相对路径
 #[test]
-fn test_paths_expand_relative_path() -> Result<()> {
-    // 测试相对路径（覆盖 paths.rs:238-239）
+fn test_paths_expand_with_relative_path_returns_relative_path() -> Result<()> {
+    // Arrange: 准备相对路径
+
+    // Act: 展开相对路径（覆盖 paths.rs:238-239）
     let result = Paths::expand("relative/path")?;
 
-    // 应该直接返回相对路径
+    // Assert: 验证直接返回相对路径
     assert_eq!(result, std::path::PathBuf::from("relative/path"));
 
     Ok(())
 }
 
+/// 测试展开Windows环境变量路径（仅Windows）
 #[cfg(target_os = "windows")]
 #[test]
-fn test_paths_expand_windows_env_var() -> Result<()> {
+fn test_paths_expand_with_windows_env_var_returns_expanded_path() -> Result<()> {
+    // Arrange: 设置测试环境变量
     // 测试 Windows 环境变量展开（覆盖 paths.rs:207-235）
-    // 设置测试环境变量
     env::set_var("TEST_VAR", "test_value");
 
+    // Act: 展开包含环境变量的路径
     let result = Paths::expand("%TEST_VAR%/path")?;
 
-    // 应该展开环境变量
+    // Assert: 验证展开环境变量
     assert!(result.to_string_lossy().contains("test_value"));
 
     // 清理
@@ -79,108 +99,132 @@ fn test_paths_expand_windows_env_var() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开未设置的环境变量时返回错误
 #[test]
-fn test_paths_expand_env_var_not_set() {
-    // 测试未设置的环境变量（覆盖 paths.rs:225-227）
+fn test_paths_expand_with_env_var_not_set_returns_error() {
+    // Arrange: 准备未设置的环境变量
+
+    // Act: 展开包含未设置环境变量的路径（覆盖 paths.rs:225-227）
     let result = Paths::expand("%NONEXISTENT_VAR%/path");
 
-    // 应该返回错误
+    // Assert: 验证返回错误
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("Environment variable not set"));
 }
 
+// ==================== Paths Config Directory Tests ====================
+
+/// 测试获取配置目录路径
 #[test]
-fn test_paths_config_dir() -> Result<()> {
-    // 测试 config_dir() 方法（覆盖 paths.rs:261-275）
+fn test_paths_config_dir_with_no_params_returns_config_dir() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取配置目录（覆盖 paths.rs:261-275）
     let result = Paths::config_dir()?;
 
-    // 应该返回配置目录路径
+    // Assert: 验证返回配置目录路径
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("config"));
 
     Ok(())
 }
 
+/// 测试获取workflow配置文件路径
 #[test]
-fn test_paths_workflow_config() -> Result<()> {
-    // 测试 workflow_config() 方法（覆盖 paths.rs:281-283）
+fn test_paths_workflow_config_with_no_params_returns_workflow_config_path() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 workflow 配置路径（覆盖 paths.rs:281-283）
     let result = Paths::workflow_config()?;
 
-    // 应该返回 workflow.toml 路径
+    // Assert: 验证返回 workflow.toml 路径
     assert!(result.to_string_lossy().contains("workflow.toml"));
 
     Ok(())
 }
 
+/// 测试获取llm配置文件路径
 #[test]
-fn test_paths_llm_config() -> Result<()> {
-    // 测试 llm_config() 方法（覆盖 paths.rs:288-290）
+fn test_paths_llm_config_with_no_params_returns_llm_config_path() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 llm 配置路径（覆盖 paths.rs:288-290）
     let result = Paths::llm_config()?;
 
-    // 应该返回 llm.toml 路径
+    // Assert: 验证返回 llm.toml 路径
     assert!(result.to_string_lossy().contains("llm.toml"));
 
     Ok(())
 }
 
+/// 测试获取jira配置文件路径
 #[test]
-fn test_paths_jira_config() -> Result<()> {
-    // 测试 jira_config() 方法（覆盖 paths.rs:296-298）
+fn test_paths_jira_config_with_no_params_returns_jira_config_path() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 jira 配置路径（覆盖 paths.rs:296-298）
     let result = Paths::jira_config()?;
 
-    // 应该返回 jira.toml 路径
+    // Assert: 验证返回 jira.toml 路径
     assert!(result.to_string_lossy().contains("jira.toml"));
 
     Ok(())
 }
 
+/// 测试获取commands配置文件路径
 #[test]
-fn test_paths_commands_config() -> Result<()> {
-    // 测试 commands_config() 方法（覆盖 paths.rs:303-305）
+fn test_paths_commands_config_with_no_params_returns_commands_config_path() -> Result<()> {
+    // Arrange: 准备测试（无需额外准备）
+
+    // Act: 获取 commands 配置路径（覆盖 paths.rs:303-305）
     let result = Paths::commands_config()?;
 
-    // 应该返回 commands.toml 路径
+    // Assert: 验证返回 commands.toml 路径
     assert!(result.to_string_lossy().contains("commands.toml"));
 
     Ok(())
 }
 
+/// 测试获取项目配置文件路径
 #[test]
 fn test_paths_project_config() -> Result<()> {
     // 测试 project_config() 方法（覆盖 paths.rs:323-328）
     let result = Paths::project_config()?;
 
-    // 应该返回项目配置路径
+    // Assert: 验证返回项目配置路径
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("config.toml"));
 
     Ok(())
 }
 
+/// 测试获取本地基础目录路径
 #[test]
 fn test_paths_local_base_dir() -> Result<()> {
     // 测试 local_base_dir() 方法（覆盖 paths.rs:116-131）
     let result = Paths::local_base_dir()?;
 
-    // 应该返回本地基础目录
+    // Assert: 验证返回本地基础目录
     assert!(result.to_string_lossy().contains(".workflow"));
 
     Ok(())
 }
 
+/// 测试获取配置基础目录路径（间接测试）
 #[test]
 fn test_paths_config_base_dir_indirect() -> Result<()> {
     // 测试 config_base_dir() 方法（通过 config_dir() 间接测试，覆盖 paths.rs:154-170）
     // config_base_dir() 是私有方法，通过 config_dir() 间接测试
     let result = Paths::config_dir()?;
 
-    // 应该返回配置目录（包含 config_base_dir）
+    // Assert: 验证返回配置目录（包含 config_base_dir）
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("config"));
 
     Ok(())
 }
 
+/// 测试展开空环境变量名
 #[test]
 fn test_paths_expand_empty_env_var() {
     // 测试空环境变量名（覆盖 paths.rs:224）
@@ -191,6 +235,7 @@ fn test_paths_expand_empty_env_var() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试展开多个环境变量
 #[test]
 fn test_paths_expand_multiple_env_vars() -> Result<()> {
     // 测试多个环境变量（覆盖 paths.rs:207-235）
@@ -218,6 +263,7 @@ fn test_paths_expand_multiple_env_vars() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开路径中间的环境变量
 #[test]
 fn test_paths_expand_env_var_in_middle() -> Result<()> {
     // 测试路径中间的环境变量（覆盖 paths.rs:207-235）
@@ -244,6 +290,7 @@ fn test_paths_expand_env_var_in_middle() -> Result<()> {
 
 // ==================== 边界和跨平台测试 ====================
 
+/// 测试展开带尾随斜杠的~路径
 #[test]
 fn test_paths_expand_tilde_with_trailing_slash() -> Result<()> {
     // 测试 ~/path/ 格式
@@ -254,23 +301,25 @@ fn test_paths_expand_tilde_with_trailing_slash() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开复杂路径（包含相对路径符号）
 #[test]
 fn test_paths_expand_complex_path() -> Result<()> {
     // 测试复杂路径展开
     let result = Paths::expand("~/path/../another/./test")?;
 
-    // 应该展开波浪号，但保留相对路径符号
+    // Assert: 验证展开波浪号，但保留相对路径符号
     assert!(result.to_string_lossy().len() > 0);
 
     Ok(())
 }
 
+/// 测试获取二进制文件路径列表
 #[test]
 fn test_paths_binary_paths() {
     // 测试 binary_paths() 方法（覆盖 paths.rs:517-527）
     let result = Paths::binary_paths();
 
-    // 应该返回至少一个二进制文件路径
+    // Assert: 验证返回至少一个二进制文件路径
     assert!(!result.is_empty());
     assert!(result[0].contains("workflow"));
 
@@ -286,6 +335,7 @@ fn test_paths_binary_paths() {
     }
 }
 
+/// 测试获取二进制文件名（跨平台）
 #[test]
 fn test_paths_binary_name() {
     // 测试 binary_name() 方法（覆盖 paths.rs:550-556）
@@ -304,6 +354,7 @@ fn test_paths_binary_name() {
     }
 }
 
+/// 测试获取自定义二进制文件名
 #[test]
 fn test_paths_binary_name_custom() {
     // 测试自定义名称
@@ -325,17 +376,18 @@ fn test_paths_command_names() {
     // 测试 command_names() 方法（覆盖 paths.rs:461-463）
     let result = Paths::command_names();
 
-    // 应该返回命令名称列表
+    // Assert: 验证返回命令名称列表
     assert!(!result.is_empty());
     assert!(result.contains(&"workflow"));
 }
 
+/// 测试获取二进制安装目录路径（跨平台）
 #[test]
 fn test_paths_binary_install_dir() {
     // 测试 binary_install_dir() 方法（覆盖 paths.rs:482-494）
     let result = Paths::binary_install_dir();
 
-    // 应该返回安装目录路径
+    // Assert: 验证返回安装目录路径
     assert!(!result.is_empty());
 
     #[cfg(target_os = "windows")]
@@ -351,70 +403,76 @@ fn test_paths_binary_install_dir() {
     }
 }
 
+/// 测试获取补全脚本目录路径
 #[test]
 fn test_paths_completion_dir() -> Result<()> {
     // 测试 completion_dir() 方法（覆盖 paths.rs:570-578）
     let result = Paths::completion_dir()?;
 
-    // 应该返回 completions 目录路径
+    // Assert: 验证返回 completions 目录路径
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("completions"));
 
     Ok(())
 }
 
+/// 测试获取工作历史目录路径
 #[test]
 fn test_paths_work_history_dir() -> Result<()> {
     // 测试 work_history_dir() 方法（覆盖 paths.rs:388-403）
     let result = Paths::work_history_dir()?;
 
-    // 应该返回 work-history 目录路径
+    // Assert: 验证返回 work-history 目录路径
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("work-history"));
 
     Ok(())
 }
 
+/// 测试获取日志目录路径
 #[test]
 fn test_paths_logs_dir() -> Result<()> {
     // 测试 logs_dir() 方法（覆盖 paths.rs:425-440）
     let result = Paths::logs_dir()?;
 
-    // 应该返回 logs 目录路径
+    // Assert: 验证返回 logs 目录路径
     assert!(result.to_string_lossy().contains(".workflow"));
     assert!(result.to_string_lossy().contains("logs"));
 
     Ok(())
 }
 
+/// 测试获取仓库配置文件路径
 #[test]
 fn test_paths_repository_config() -> Result<()> {
     // 测试 repository_config() 方法（覆盖 paths.rs:347-349）
     let result = Paths::repository_config()?;
 
-    // 应该返回 repository.toml 路径
+    // Assert: 验证返回 repository.toml 路径
     assert!(result.to_string_lossy().contains("repository.toml"));
 
     Ok(())
 }
 
+/// 测试获取workflow目录路径
 #[test]
 fn test_paths_workflow_dir() -> Result<()> {
     // 测试 workflow_dir() 方法（覆盖 paths.rs:362-365）
     let result = Paths::workflow_dir()?;
 
-    // 应该返回 .workflow 目录路径
+    // Assert: 验证返回 .workflow 目录路径
     assert!(result.to_string_lossy().contains(".workflow"));
 
     Ok(())
 }
 
+/// 测试检查配置是否在iCloud中（仅macOS）
 #[test]
 fn test_paths_is_config_in_icloud() {
     // 测试 is_config_in_icloud() 方法（覆盖 paths.rs:588-598）
     let result = Paths::is_config_in_icloud();
 
-    // 应该返回布尔值（具体值取决于平台和环境）
+    // Assert: 验证返回布尔值（具体值取决于平台和环境）
     #[cfg(target_os = "macos")]
     {
         // macOS 可能返回 true 或 false
@@ -428,28 +486,31 @@ fn test_paths_is_config_in_icloud() {
     }
 }
 
+/// 测试获取存储位置描述
 #[test]
 fn test_paths_storage_location() {
     // 测试 storage_location() 方法（覆盖 paths.rs:606-612）
     let result = Paths::storage_location();
 
-    // 应该返回存储位置描述
+    // Assert: 验证返回存储位置描述
     assert!(!result.is_empty());
     assert!(result.contains("iCloud") || result.contains("Local"));
 }
 
+/// 测试获取存储信息详情
 #[test]
 fn test_paths_storage_info() -> Result<()> {
     // 测试 storage_info() 方法（覆盖 paths.rs:625-655）
     let result = Paths::storage_info()?;
 
-    // 应该返回包含存储信息的字符串
+    // Assert: 验证返回包含存储信息的字符串
     assert!(!result.is_empty());
     assert!(result.contains("Storage Type") || result.contains("Configuration"));
 
     Ok(())
 }
 
+/// 测试获取Unix shell配置文件路径（仅Unix）
 #[test]
 #[cfg(unix)]
 fn test_paths_config_file_unix() -> Result<()> {
@@ -471,6 +532,7 @@ fn test_paths_config_file_unix() -> Result<()> {
     Ok(())
 }
 
+/// 测试获取Windows PowerShell配置文件路径（仅Windows）
 #[test]
 #[cfg(target_os = "windows")]
 fn test_paths_config_file_windows() -> Result<()> {
@@ -483,6 +545,7 @@ fn test_paths_config_file_windows() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开包含特殊字符的路径
 #[test]
 fn test_paths_expand_with_special_characters() -> Result<()> {
     // 测试路径中包含特殊字符
@@ -493,6 +556,7 @@ fn test_paths_expand_with_special_characters() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开包含Unicode字符的路径
 #[test]
 fn test_paths_expand_with_unicode() -> Result<()> {
     // 测试路径中包含 Unicode 字符
@@ -504,6 +568,7 @@ fn test_paths_expand_with_unicode() -> Result<()> {
     Ok(())
 }
 
+/// 测试展开深层嵌套路径
 #[test]
 fn test_paths_expand_deep_nested_path() -> Result<()> {
     // 测试深层嵌套路径
@@ -515,6 +580,7 @@ fn test_paths_expand_deep_nested_path() -> Result<()> {
     Ok(())
 }
 
+/// 测试多个配置方法返回的路径一致性
 #[test]
 fn test_paths_multiple_config_methods() -> Result<()> {
     // 测试多个配置方法返回的路径都是有效的

@@ -12,6 +12,7 @@ use workflow::base::shell::{Reload, ReloadResult};
 
 // ==================== ReloadResult Structure Tests ====================
 
+/// 测试ReloadResult结构体的创建（包含有效字段）
 #[test]
 fn test_reload_result_structure_with_valid_fields_creates_result() {
     // Arrange: 准备ReloadResult字段值
@@ -32,6 +33,7 @@ fn test_reload_result_structure_with_valid_fields_creates_result() {
     assert_eq!(result.reload_hint, reload_hint);
 }
 
+/// 测试ReloadResult的克隆功能
 #[test]
 fn test_reload_result_clone_with_valid_result_creates_clone() {
     // Arrange: 准备原始ReloadResult
@@ -50,6 +52,7 @@ fn test_reload_result_clone_with_valid_result_creates_clone() {
     assert_eq!(result1.reload_hint, result2.reload_hint);
 }
 
+/// 测试ReloadResult的Debug格式化
 #[test]
 fn test_reload_result_debug_with_valid_result_returns_debug_string() {
     // Arrange: 准备ReloadResult
@@ -69,6 +72,7 @@ fn test_reload_result_debug_with_valid_result_returns_debug_string() {
 // 注意：以下测试需要实际的 shell 环境，在 CI 环境中可能失败
 // 但这些测试已经包含在下面的 test_reload_shell_* 测试中，所以这里保留作为备用
 
+/// 测试成功重载的结果结构
 #[test]
 fn test_reload_result_success_structure_with_success_reload_creates_result() {
     // Arrange: 准备成功重载的结果字段值
@@ -93,6 +97,7 @@ fn test_reload_result_success_structure_with_success_reload_creates_result() {
     assert_eq!(result.reload_hint, reload_hint);
 }
 
+/// 测试失败重载的结果结构
 #[test]
 fn test_reload_result_failure_structure_with_failure_reload_creates_result() {
     // Arrange: 准备失败重载的结果字段值
@@ -113,9 +118,10 @@ fn test_reload_result_failure_structure_with_failure_reload_creates_result() {
     assert_eq!(result.reload_hint, reload_hint);
 }
 
+/// 测试ReloadResult的空消息列表
 #[test]
 fn test_reload_result_empty_messages() {
-    // 测试空消息列表的情况
+    // Arrange: 准备测试空消息列表的情况
     let result = ReloadResult {
         reloaded: true,
         messages: vec![],
@@ -126,9 +132,10 @@ fn test_reload_result_empty_messages() {
     assert_eq!(result.messages.len(), 0);
 }
 
+/// 测试ReloadResult的多条消息
 #[test]
 fn test_reload_result_multiple_messages() {
-    // 测试多条消息的情况
+    // Arrange: 准备测试多条消息的情况
     let result = ReloadResult {
         reloaded: true,
         messages: vec![
@@ -146,9 +153,10 @@ fn test_reload_result_multiple_messages() {
     assert_eq!(result.messages[2], "Message 3");
 }
 
+/// 测试PowerShell格式的reload_hint
 #[test]
 fn test_reload_result_reload_hint_powershell_format() {
-    // 测试 PowerShell 格式的 reload_hint（覆盖 reload.rs:46-50）
+    // Arrange: 准备测试 PowerShell 格式的 reload_hint（覆盖 reload.rs:46-50）
     let result = ReloadResult {
         reloaded: true,
         messages: vec!["Message".to_string()],
@@ -159,9 +167,10 @@ fn test_reload_result_reload_hint_powershell_format() {
     assert!(result.reload_hint.contains(".ps1"));
 }
 
+/// 测试Unix shell格式的reload_hint
 #[test]
 fn test_reload_result_reload_hint_unix_format() {
-    // 测试 Unix shell 格式的 reload_hint（覆盖 reload.rs:52-55）
+    // Arrange: 准备测试 Unix shell 格式的 reload_hint（覆盖 reload.rs:52-55）
     let result = ReloadResult {
         reloaded: true,
         messages: vec!["Message".to_string()],
@@ -174,25 +183,27 @@ fn test_reload_result_reload_hint_unix_format() {
 // 测试实际调用 Reload::shell() 的功能
 // 注意：这些测试可能在某些环境中失败，但可以验证方法的基本功能
 
+/// 测试Reload::shell()总是返回Result
 #[test]
 fn test_reload_shell_returns_result() {
-    // 测试 Reload::shell() 总是返回 Result（覆盖 reload.rs:41）
+    // Arrange: 准备测试 Reload::shell() 总是返回 Result（覆盖 reload.rs:41）
     // 即使失败，也应该返回 Ok(ReloadResult)，而不是 Err
     let result = Reload::shell(&Shell::Zsh);
 
-    // 验证返回的是 Ok(ReloadResult)
+    // Assert: 验证返回的是 Ok(ReloadResult)
     assert!(result.is_ok());
 
     let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
-    // 验证结果结构
+    // Assert: 验证结果结构
     assert!(
         reload_result.reload_hint.contains("source") || reload_result.reload_hint.contains(".")
     );
 }
 
+/// 测试PowerShell的reload_hint格式
 #[test]
 fn test_reload_shell_powershell_hint_format() {
-    // 测试 PowerShell 的 reload_hint 格式（覆盖 reload.rs:46-50）
+    // Arrange: 准备测试 PowerShell 的 reload_hint 格式（覆盖 reload.rs:46-50）
     #[cfg(target_os = "windows")]
     {
         let result = Reload::shell(&Shell::PowerShell);
@@ -208,14 +219,15 @@ fn test_reload_shell_powershell_hint_format() {
     {
         // 在非 Windows 系统上，PowerShell 测试可能失败，这是正常的
         let result = Reload::shell(&Shell::PowerShell);
-        // 验证至少返回了结果（成功或失败）
+        // Assert: 验证至少返回了结果（成功或失败）
         assert!(result.is_ok());
     }
 }
 
+/// 测试Unix shell的reload_hint格式
 #[test]
 fn test_reload_shell_unix_hint_format() {
-    // 测试 Unix shell 的 reload_hint 格式（覆盖 reload.rs:52-55）
+    // Arrange: 准备测试 Unix shell 的 reload_hint 格式（覆盖 reload.rs:52-55）
     #[cfg(not(target_os = "windows"))]
     {
         let result = Reload::shell(&Shell::Zsh);
@@ -228,9 +240,10 @@ fn test_reload_shell_unix_hint_format() {
     }
 }
 
+/// 测试所有支持的shell类型都能返回结果
 #[test]
 fn test_reload_shell_all_shell_types() {
-    // 测试所有支持的 shell 类型都能返回结果
+    // Arrange: 准备测试所有支持的 shell 类型都能返回结果
     let shells = vec![
         Shell::Bash,
         Shell::Zsh,
@@ -241,7 +254,7 @@ fn test_reload_shell_all_shell_types() {
 
     for shell in shells {
         let result = Reload::shell(&shell);
-        // 验证总是返回 Ok(ReloadResult)，即使执行失败
+        // Assert: 验证总是返回 Ok(ReloadResult)，即使执行失败
         assert!(
             result.is_ok(),
             "Reload::shell({:?}) should return Ok",
@@ -249,19 +262,20 @@ fn test_reload_shell_all_shell_types() {
         );
 
         let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
-        // 验证结果包含必要的字段
+        // Assert: 验证结果包含必要的字段
         assert!(!reload_result.reload_hint.is_empty());
     }
 }
 
+/// 测试成功重载时的消息格式
 #[test]
 fn test_reload_shell_success_messages() {
-    // 测试成功重载时的消息格式（覆盖 reload.rs:76-83）
+    // Arrange: 准备测试成功重载时的消息格式（覆盖 reload.rs:76-83）
     let result = Reload::shell(&Shell::Zsh);
 
     if let Ok(reload_result) = result {
         if reload_result.reloaded {
-            // 验证成功消息格式
+            // Assert: 验证成功消息格式
             assert_eq!(reload_result.messages.len(), 2);
             assert!(reload_result.messages[0].contains("reloaded"));
             assert!(reload_result.messages[1].contains("current shell"));
@@ -269,24 +283,26 @@ fn test_reload_shell_success_messages() {
     }
 }
 
+/// 测试失败重载时的消息格式
 #[test]
 fn test_reload_shell_failure_messages() {
-    // 测试失败重载时的消息格式（覆盖 reload.rs:84-91）
+    // Arrange: 准备测试失败重载时的消息格式（覆盖 reload.rs:84-91）
     // 注意：这个测试可能在某些环境中总是成功，这是正常的
     let result = Reload::shell(&Shell::Zsh);
 
     if let Ok(reload_result) = result {
         if !reload_result.reloaded {
-            // 验证失败消息格式
+            // Assert: 验证失败消息格式
             assert_eq!(reload_result.messages.len(), 1);
             assert!(reload_result.messages[0].contains("Could not reload"));
         }
     }
 }
 
+/// 测试reload_hint包含配置文件路径
 #[test]
 fn test_reload_shell_reload_hint_contains_config_path() {
-    // 测试 reload_hint 包含配置文件路径
+    // Arrange: 准备测试 reload_hint 包含配置文件路径
     let result = Reload::shell(&Shell::Zsh);
 
     if let Ok(reload_result) = result {
@@ -299,9 +315,10 @@ fn test_reload_shell_reload_hint_contains_config_path() {
     }
 }
 
+/// 测试多次调用的一致性
 #[test]
 fn test_reload_shell_consistency() {
-    // 测试多次调用的一致性
+    // Arrange: 准备测试多次调用的一致性
     let result1 = Reload::shell(&Shell::Zsh);
     let result2 = Reload::shell(&Shell::Zsh);
 

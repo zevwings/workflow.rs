@@ -98,7 +98,7 @@ fn test_sort_branches_single() -> Result<()> {
 
 #[test]
 fn test_sort_branches_with_prefix_priority() -> Result<()> {
-    // 测试带前缀的分支优先级
+    // Arrange: 准备测试带前缀的分支优先级
     // 注意：这个测试依赖于当前分支或配置的前缀
     // 如果当前分支有前缀（如 "zw/feature-branch"），则 "zw/" 开头的分支应该有更高优先级
     let branches = vec![
@@ -126,7 +126,7 @@ fn test_sort_branches_with_prefix_priority() -> Result<()> {
 
 #[test]
 fn test_sort_branches_all_priority_levels() -> Result<()> {
-    // 测试所有优先级级别的分支
+    // Arrange: 准备测试所有优先级级别的分支
     let branches = vec![
         "zebra".to_string(),        // Priority 4
         "main".to_string(),         // Priority 1
@@ -138,7 +138,7 @@ fn test_sort_branches_all_priority_levels() -> Result<()> {
 
     let sorted = sort_branches_with_priority(branches)?;
 
-    // 验证排序顺序
+    // Assert: 验证排序顺序
     assert_eq!(sorted[0], "main", "main should be first");
     assert_eq!(sorted[1], "master", "master should be second");
 
@@ -163,7 +163,7 @@ fn test_sort_branches_all_priority_levels() -> Result<()> {
 
 #[test]
 fn test_sort_branches_duplicate_names() -> Result<()> {
-    // 测试重复分支名（边界情况）
+    // Arrange: 准备测试重复分支名（边界情况）
     let branches = vec![
         "main".to_string(),
         "main".to_string(), // 重复
@@ -180,7 +180,7 @@ fn test_sort_branches_duplicate_names() -> Result<()> {
 
 #[test]
 fn test_sort_branches_special_characters() -> Result<()> {
-    // 测试特殊字符分支名（边界情况）
+    // Arrange: 准备测试特殊字符分支名（边界情况）
     let branches = vec![
         "feature/test-branch".to_string(),
         "feature/test_branch".to_string(),

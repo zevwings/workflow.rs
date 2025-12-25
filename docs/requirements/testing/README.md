@@ -145,10 +145,6 @@
 - [代码审查规范](../../guidelines/development/code-review.md) - 代码审查标准
 - [错误处理规范](../../guidelines/development/error-handling.md) - 错误处理最佳实践
 
-### 测试改进追踪
-
-- [测试改进追踪文档](../test-improvement-tracking.md) - 测试代码质量改进工作追踪
-
 ---
 
 **最后更新**: 2025-12-25

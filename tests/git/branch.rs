@@ -6,10 +6,10 @@ use pretty_assertions::assert_eq;
 use color_eyre::Result;
 use rstest::fixture;
 use serial_test::serial;
-use tempfile::TempDir;
 use workflow::git::{GitBranch, MergeStrategy};
 
 use crate::common::environments::GitTestEnv;
+use crate::common::guards::EnvGuard;
 
 // ==================== Fixtures ====================
 
@@ -240,18 +240,16 @@ fn test_empty_branch_name_with_empty_string_returns_error() -> Result<()> {
 
 #[test]
 fn test_git_not_available_without_git_returns_error() -> Result<()> {
-    // Arrange: 保存原始 PATH 并临时移除 Git
-    let original_path = std::env::var("PATH").unwrap_or_default();
-    std::env::set_var("PATH", "");
+    // Arrange: 使用 EnvGuard 临时移除 Git（通过清空 PATH）
+    let mut env_guard = EnvGuard::new();
+    env_guard.set("PATH", "");
 
     // Act: 尝试检查分支（Git 不可用）
     let _result = GitBranch::has_local_branch("any-branch");
 
-    // 恢复 PATH
-    std::env::set_var("PATH", original_path);
-
     // Assert: 验证在没有 Git 的情况下应该返回错误
     // 注意：这个测试可能不会按预期工作，因为 Git 可能在其他位置
+    // EnvGuard 会在 drop 时自动恢复 PATH
     Ok(())
 }
 

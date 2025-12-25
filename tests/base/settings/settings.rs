@@ -104,7 +104,7 @@ fn test_jira_settings_clone_and_debug() {
     assert_eq!(original_jira.api_token, cloned_jira.api_token);
     assert_eq!(original_jira.service_address, cloned_jira.service_address);
 
-    // 测试调试输出
+    // Arrange: 准备测试调试输出
     let debug_str = format!("{:?}", original_jira);
     assert!(debug_str.contains("JiraSettings"));
     assert!(debug_str.contains("test@example.com"));
@@ -112,6 +112,7 @@ fn test_jira_settings_clone_and_debug() {
 
 // ==================== GitHubSettings Tests ====================
 
+/// 测试创建GitHubSettings并验证账号信息
 #[test]
 fn test_github_settings_creation_with_valid_accounts_creates_settings() {
     // Arrange: 准备测试用的 GitHubSettings
@@ -129,6 +130,7 @@ fn test_github_settings_creation_with_valid_accounts_creates_settings() {
     assert_eq!(personal_account.api_token, "ghp_personal_token");
 }
 
+/// 测试获取GitHubSettings的当前账号和token
 #[test]
 fn test_github_settings_current_account_with_valid_settings_returns_account() {
     // Arrange: 准备测试用的 GitHubSettings
@@ -146,6 +148,7 @@ fn test_github_settings_current_account_with_valid_settings_returns_account() {
     assert_eq!(current_token, Some("ghp_personal_token"));
 }
 
+/// 测试当current为None时返回第一个账号
 #[test]
 fn test_github_settings_no_current_account_with_none_current_returns_first_account() {
     // Arrange: 准备 GitHubSettings（current 为 None）
@@ -161,6 +164,7 @@ fn test_github_settings_no_current_account_with_none_current_returns_first_accou
     assert_eq!(account.name, "personal");
 }
 
+/// 测试当账号列表为空时返回None
 #[test]
 fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
     // Arrange: 准备空的 GitHubSettings
@@ -178,6 +182,7 @@ fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
     assert!(current_token.is_none());
 }
 
+/// 测试创建默认的GitHubSettings
 #[test]
 fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
     // Arrange: 准备创建默认设置
@@ -192,6 +197,7 @@ fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
 
 // ==================== LLMSettings Tests ====================
 
+/// 测试创建LLMSettings并验证提供商配置
 #[test]
 fn test_llm_settings_creation_with_valid_providers_creates_settings() {
     // Arrange: 准备测试用的 LLMSettings
@@ -218,6 +224,7 @@ fn test_llm_settings_creation_with_valid_providers_creates_settings() {
     );
 }
 
+/// 测试获取LLMSettings的当前提供商配置
 #[test]
 fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
     // Arrange: 准备测试用的 LLMSettings
@@ -231,6 +238,7 @@ fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
     assert_eq!(current_provider.model, Some("gpt-4".to_string()));
 }
 
+/// 测试LLMSettings的默认值方法
 #[test]
 fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
     // Arrange: 准备检查默认值
@@ -243,6 +251,7 @@ fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
     assert_eq!(LLMSettings::default_model("unknown"), ""); // proxy 必须输入，没有默认值
 }
 
+/// 测试创建LLMProviderSettings并验证字段值
 #[test]
 fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
     // Arrange: 准备提供商设置字段值
@@ -262,7 +271,7 @@ fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
     assert_eq!(provider_settings.key, key);
     assert_eq!(provider_settings.model, model);
 
-    // 测试默认值
+    // Arrange: 准备测试默认值
     let default_provider = LLMProviderSettings::default();
     assert_eq!(default_provider.url, None);
     assert_eq!(default_provider.key, None);
@@ -357,7 +366,7 @@ fn test_settings_default() {
 /// 测试表格行结构创建
 #[test]
 fn test_table_row_structures() {
-    // 测试 LLMConfigRow
+    // Arrange: 准备测试 LLMConfigRow
     let llm_row = LLMConfigRow {
         provider: "openai".to_string(),
         model: "gpt-4".to_string(),
@@ -368,7 +377,7 @@ fn test_table_row_structures() {
     assert_eq!(llm_row.provider, "openai");
     assert_eq!(llm_row.model, "gpt-4");
 
-    // 测试 JiraConfigRow
+    // Arrange: 准备测试 JiraConfigRow
     let jira_row = JiraConfigRow {
         email: "jira@example.com".to_string(),
         service_address: "https://jira.company.com".to_string(),
@@ -378,7 +387,7 @@ fn test_table_row_structures() {
     assert_eq!(jira_row.email, "jira@example.com");
     assert!(jira_row.service_address.contains("jira.company.com"));
 
-    // 测试 GitHubAccountRow
+    // Arrange: 准备测试 GitHubAccountRow
     let github_row = GitHubAccountRow {
         name: "personal".to_string(),
         email: "github@example.com".to_string(),
@@ -390,7 +399,7 @@ fn test_table_row_structures() {
     assert_eq!(github_row.name, "personal");
     assert_eq!(github_row.status, "Active");
 
-    // 测试 GitHubAccountListRow
+    // Arrange: 准备测试 GitHubAccountListRow
     let github_list_row = GitHubAccountListRow {
         index: "1".to_string(),
         name: "work".to_string(),
@@ -404,6 +413,22 @@ fn test_table_row_structures() {
 }
 
 /// 测试复杂配置场景
+///
+/// ## 测试目的
+/// 验证Settings结构体能够正确处理包含所有配置类型的复杂场景
+///
+/// ## 测试场景
+/// 1. 创建包含Jira、GitHub、Log、LLM和别名配置的完整Settings
+/// 2. 验证各个配置模块的字段值正确
+/// 3. 验证GitHub当前账号功能
+/// 4. 验证LLM当前提供商功能
+/// 5. 验证别名功能
+///
+/// ## 预期结果
+/// - 所有配置字段正确设置
+/// - GitHub当前账号功能正常
+/// - LLM当前提供商功能正常
+/// - 别名功能正常
 #[test]
 fn test_complex_configuration_scenario() {
     // 创建包含所有配置的复杂设置
@@ -466,14 +491,14 @@ fn test_complex_configuration_scenario() {
         aliases,
     };
 
-    // 验证复杂配置的各个方面
+    // Assert: 验证复杂配置的各个方面
     assert!(complex_settings.jira.email.is_some());
     assert_eq!(complex_settings.github.accounts.len(), 3);
     assert_eq!(complex_settings.log.level, Some("info".to_string()));
     assert_eq!(complex_settings.llm.provider, "proxy");
     assert_eq!(complex_settings.aliases.len(), 3);
 
-    // 验证 GitHub 当前账号功能
+    // Assert: 验证 GitHub 当前账号功能
     let current_account = complex_settings.github.get_current_account();
     assert!(current_account.is_some());
     assert_eq!(
@@ -481,14 +506,14 @@ fn test_complex_configuration_scenario() {
         "main"
     );
 
-    // 验证 LLM 当前提供商功能
+    // Assert: 验证 LLM 当前提供商功能
     let current_llm = complex_settings.llm.current_provider();
     assert_eq!(
         current_llm.url,
         Some("https://complex.proxy.api.com".to_string())
     );
 
-    // 验证别名功能
+    // Assert: 验证别名功能
     assert_eq!(
         complex_settings.aliases.get("s"),
         Some(&"status".to_string())

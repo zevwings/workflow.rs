@@ -211,7 +211,7 @@ fn test_extract_content_with_null_content_returns_error() {
 
 #[test]
 fn test_extract_content_whitespace_trimming() -> Result<()> {
-    // 测试 extract_content() 方法 - 内容首尾空白被修剪（覆盖 client.rs:243）
+    // Arrange: 准备测试 extract_content() 方法 - 内容首尾空白被修剪（覆盖 client.rs:243）
     let json = json!({
         "id": "test",
         "object": "chat.completion",
@@ -235,7 +235,7 @@ fn test_extract_content_whitespace_trimming() -> Result<()> {
     let client = LLMClient::global();
     let result = client.extract_content(&json)?;
 
-    // 验证首尾空白被修剪
+    // Assert: 验证首尾空白被修剪
     assert_eq!(result, "Test content with whitespace");
     assert!(!result.starts_with(' '));
     assert!(!result.ends_with(' '));
@@ -244,7 +244,7 @@ fn test_extract_content_whitespace_trimming() -> Result<()> {
 
 #[test]
 fn test_extract_content_multiple_choices() -> Result<()> {
-    // 测试 extract_content() 方法 - 多个 choices，取第一个（覆盖 client.rs:237-240）
+    // Arrange: 准备测试 extract_content() 方法 - 多个 choices，取第一个（覆盖 client.rs:237-240）
     let json = json!({
         "id": "test",
         "object": "chat.completion",
@@ -285,7 +285,7 @@ fn test_extract_content_multiple_choices() -> Result<()> {
 
 #[test]
 fn test_extract_content_invalid_json_structure() {
-    // 测试 extract_content() 方法 - 无效的 JSON 结构（覆盖 client.rs:228-244）
+    // Arrange: 准备测试 extract_content() 方法 - 无效的 JSON 结构（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
         "invalid_structure": true
@@ -300,7 +300,7 @@ fn test_extract_content_invalid_json_structure() {
 
 #[test]
 fn test_extract_content_missing_required_fields() {
-    // 测试 extract_content() 方法 - 缺少必需字段（覆盖 client.rs:228-244）
+    // Arrange: 准备测试 extract_content() 方法 - 缺少必需字段（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test"
     });
@@ -314,7 +314,7 @@ fn test_extract_content_missing_required_fields() {
 
 #[test]
 fn test_extract_content_with_finish_reason_length() -> Result<()> {
-    // 测试 extract_content() 方法 - finish_reason 为 length（覆盖 client.rs:228-244）
+    // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 length（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
         "object": "chat.completion",
@@ -345,7 +345,7 @@ fn test_extract_content_with_finish_reason_length() -> Result<()> {
 
 #[test]
 fn test_extract_content_with_finish_reason_stop() -> Result<()> {
-    // 测试 extract_content() 方法 - finish_reason 为 stop（覆盖 client.rs:228-244）
+    // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 stop（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
         "object": "chat.completion",
@@ -422,7 +422,7 @@ fn test_extract_content_with_finish_reason_stop() -> Result<()> {
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_openai_provider() {
-    // 测试 call() 方法 - OpenAI provider（覆盖 client.rs:77-134, build_url:148, build_model:189-190）
+    // Arrange: 准备测试 call() 方法 - OpenAI provider（覆盖 client.rs:77-134, build_url:148, build_model:189-190）
     // 注意：这个测试需要有效的 OpenAI API key 和网络连接
     use workflow::base::llm::types::LLMRequestParams;
 
@@ -485,7 +485,7 @@ fn test_llm_client_call_with_openai_provider() {
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_deepseek_provider() {
-    // 测试 call() 方法 - DeepSeek provider（覆盖 client.rs:149, build_model:189-190）
+    // Arrange: 准备测试 call() 方法 - DeepSeek provider（覆盖 client.rs:149, build_model:189-190）
     use workflow::base::llm::types::LLMRequestParams;
 
     let client = LLMClient::global();
@@ -550,7 +550,7 @@ fn test_llm_client_call_with_deepseek_provider() {
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_proxy_provider() {
-    // 测试 call() 方法 - Proxy provider（覆盖 client.rs:150-156, build_model:192）
+    // Arrange: 准备测试 call() 方法 - Proxy provider（覆盖 client.rs:150-156, build_model:192）
     use workflow::base::llm::types::LLMRequestParams;
 
     let client = LLMClient::global();
@@ -569,7 +569,7 @@ fn test_llm_client_call_with_proxy_provider() {
 
 #[test]
 fn test_llm_client_build_payload_structure() {
-    // 测试 build_payload() 方法的结构（通过 call 方法的错误来间接测试）
+    // Arrange: 准备测试 build_payload() 方法的结构（通过 call 方法的错误来间接测试）
     // 注意：这个测试会失败，因为需要有效的配置，但可以验证 payload 构建逻辑
     use workflow::base::llm::types::LLMRequestParams;
 
@@ -590,7 +590,7 @@ fn test_llm_client_build_payload_structure() {
 
 #[test]
 fn test_llm_client_build_headers_structure() {
-    // 测试 build_headers() 方法的结构（通过 call 方法的错误来间接测试）
+    // Arrange: 准备测试 build_headers() 方法的结构（通过 call 方法的错误来间接测试）
     // 注意：这个测试会失败，因为需要有效的配置，但可以验证 headers 构建逻辑
     use workflow::base::llm::types::LLMRequestParams;
 

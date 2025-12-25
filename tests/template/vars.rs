@@ -205,7 +205,7 @@ fn test_change_type_item_parsing_with_valid_fields_creates_item() {
     assert_eq!(change_type.name, name);
     assert_eq!(change_type.selected, selected);
 
-    // 测试克隆和调试输出
+    // Arrange: 准备测试克隆和调试输出
     let cloned = change_type.clone();
     assert_eq!(cloned.name, change_type.name);
     assert_eq!(cloned.selected, change_type.selected);
@@ -218,7 +218,7 @@ fn test_change_type_item_parsing_with_valid_fields_creates_item() {
 /// 测试变量序列化
 #[test]
 fn test_vars_serialization() -> Result<()> {
-    // 测试分支模板变量序列化
+    // Arrange: 准备测试分支模板变量序列化
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SER-123".to_string()),
         jira_summary: Some("Test serialization".to_string()),
@@ -230,7 +230,7 @@ fn test_vars_serialization() -> Result<()> {
     assert!(branch_json_str.contains("SER-123"));
     assert!(branch_json_str.contains("test-serialization"));
 
-    // 测试提交模板变量序列化
+    // Arrange: 准备测试提交模板变量序列化
     let commit_vars = CommitTemplateVars {
         commit_type: "test".to_string(),
         scope: Some("serialization".to_string()),
@@ -245,7 +245,7 @@ fn test_vars_serialization() -> Result<()> {
     assert!(commit_json_str.contains("serialization"));
     assert!(commit_json_str.contains("SER-456"));
 
-    // 测试 PR 模板变量序列化
+    // Arrange: 准备测试 PR 模板变量序列化
     let pr_vars = PullRequestTemplateVars {
         jira_key: Some("PR-789".to_string()),
         change_types: vec![ChangeTypeItem {
@@ -271,14 +271,14 @@ fn test_vars_with_special_characters() -> Result<()> {
         jira_type: Some("Bug/Fix".to_string()),
     };
 
-    // 测试序列化能正确处理特殊字符
+    // Arrange: 准备测试序列化能正确处理特殊字符
     let json_str = serde_json::to_string(&branch_vars)?;
     assert!(json_str.contains("SPECIAL-123"));
     assert!(json_str.contains("authentication"));
     assert!(json_str.contains("security"));
     assert!(json_str.contains("Bug/Fix"));
 
-    // 验证特殊字符被正确转义
+    // Assert: 验证特殊字符被正确转义
     assert!(json_str.contains("\\\"")); // 引号被转义
     assert!(json_str.contains("&")); // & 符号保持原样
     Ok(())
@@ -287,7 +287,7 @@ fn test_vars_with_special_characters() -> Result<()> {
 /// 测试变量完整性
 #[test]
 fn test_vars_completeness() -> Result<()> {
-    // 测试所有字段都存在的完整变量
+    // Arrange: 准备测试所有字段都存在的完整变量
     let complete_branch_vars = BranchTemplateVars {
         jira_key: Some("COMPLETE-001".to_string()),
         jira_summary: Some("Complete test case".to_string()),
@@ -328,7 +328,7 @@ fn test_vars_completeness() -> Result<()> {
         dependency: Some("No dependencies".to_string()),
     };
 
-    // 验证所有字段都能正确序列化
+    // Assert: 验证所有字段都能正确序列化
     let branch_json = serde_json::to_value(&complete_branch_vars)?;
     assert!(branch_json["jira_key"].is_string());
     assert!(branch_json["jira_summary"].is_string());

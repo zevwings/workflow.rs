@@ -127,7 +127,7 @@ fn test_get_language_instruction_not_found_with_invalid_code_returns_default() {
 
 #[test]
 fn test_get_language_instruction_zh_variants() {
-    // 测试中文变体的 instruction
+    // Arrange: 准备测试中文变体的 instruction
     let instruction_zh = get_language_instruction("zh");
     let instruction_zh_cn = get_language_instruction("zh-CN");
 
@@ -137,7 +137,7 @@ fn test_get_language_instruction_zh_variants() {
 
 #[test]
 fn test_get_language_requirement_default() {
-    // 测试获取语言要求（增强 system prompt）- 默认语言
+    // Arrange: 准备测试获取语言要求（增强 system prompt）- 默认语言
     let original = "You are a helpful assistant.";
     let enhanced = get_language_requirement(original);
 
@@ -150,12 +150,12 @@ fn test_get_language_requirement_default() {
 
 #[test]
 fn test_get_language_requirement_with_language() {
-    // 测试获取语言要求（增强 system prompt）- 指定语言
+    // Arrange: 准备测试获取语言要求（增强 system prompt）- 指定语言
     // 注意：这个测试依赖于 Settings，可能需要设置环境变量或配置文件
     let original = "You are a helpful assistant.";
     let enhanced = get_language_requirement(original);
 
-    // 验证基本结构
+    // Assert: 验证基本结构
     assert!(enhanced.contains(original));
     assert!(enhanced.contains("CRITICAL LANGUAGE REQUIREMENT"));
     assert!(enhanced.contains("REMINDER: Language Requirement"));
@@ -163,11 +163,11 @@ fn test_get_language_requirement_with_language() {
 
 #[test]
 fn test_get_language_requirement_format() {
-    // 测试 get_language_requirement 的格式
+    // Arrange: 准备测试 get_language_requirement 的格式
     let original = "Test prompt";
     let enhanced = get_language_requirement(original);
 
-    // 验证格式包含所有必要的部分
+    // Assert: 验证格式包含所有必要的部分
     assert!(enhanced.starts_with("## CRITICAL LANGUAGE REQUIREMENT"));
     assert!(enhanced.contains("**IMPORTANT REMINDER**"));
     assert!(enhanced.contains(original));
@@ -177,7 +177,7 @@ fn test_get_language_requirement_format() {
 
 #[test]
 fn test_get_supported_language_codes() {
-    // 测试获取所有支持的语言代码列表
+    // Arrange: 准备测试获取所有支持的语言代码列表
     let codes = get_supported_language_codes();
 
     assert!(!codes.is_empty());
@@ -190,13 +190,13 @@ fn test_get_supported_language_codes() {
 
 #[test]
 fn test_get_supported_language_display_names() {
-    // 测试获取所有支持的语言显示名称列表
+    // Arrange: 准备测试获取所有支持的语言显示名称列表
     let display_names = get_supported_language_display_names();
 
     assert!(!display_names.is_empty());
     assert_eq!(display_names.len(), SUPPORTED_LANGUAGES.len());
 
-    // 验证格式："{native_name} ({name}) - {code}"
+    // Assert: 验证格式："{native_name} ({name}) - {code}"
     let en_display = display_names.iter().find(|n| n.contains("English"));
     assert!(en_display.is_some());
     let en_display = en_display.expect("English display name should be found");
@@ -205,7 +205,7 @@ fn test_get_supported_language_display_names() {
 
 #[test]
 fn test_supported_languages_structure() {
-    // 测试 SUPPORTED_LANGUAGES 的结构
+    // Arrange: 准备测试 SUPPORTED_LANGUAGES 的结构
     assert!(!SUPPORTED_LANGUAGES.is_empty());
 
     for lang in SUPPORTED_LANGUAGES {
@@ -218,7 +218,7 @@ fn test_supported_languages_structure() {
 
 #[test]
 fn test_find_language_all_supported() {
-    // 测试查找所有支持的语言
+    // Arrange: 准备测试查找所有支持的语言
     for lang in SUPPORTED_LANGUAGES {
         let found = find_language(lang.code);
         assert!(found.is_some(), "Language {} should be found", lang.code);
@@ -229,7 +229,7 @@ fn test_find_language_all_supported() {
 
 #[test]
 fn test_get_language_instruction_all_supported() {
-    // 测试获取所有支持语言的 instruction
+    // Arrange: 准备测试获取所有支持语言的 instruction
     for lang in SUPPORTED_LANGUAGES {
         let instruction = get_language_instruction(lang.code);
         assert!(

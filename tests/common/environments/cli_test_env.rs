@@ -284,6 +284,7 @@ impl CliTestEnv {
     /// let mut env = CliTestEnv::new()?;
     /// env.env_guard().set("HOME", "/tmp/test");
     /// ```
+    #[allow(dead_code)]
     pub fn env_guard(&mut self) -> &mut crate::common::guards::EnvGuard {
         self.isolation.env_guard()
     }

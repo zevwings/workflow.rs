@@ -8,6 +8,7 @@ use workflow::base::shell::Detect;
 
 // ==================== Shell Detection Tests ====================
 
+/// 测试从环境变量检测shell
 #[test]
 fn test_detect_shell_from_env_with_env_var_returns_shell() {
     // Arrange: 准备从环境变量检测shell（注意：依赖于实际环境变量）
@@ -32,6 +33,7 @@ fn test_detect_shell_from_env_with_env_var_returns_shell() {
     }
 }
 
+/// 测试不支持的shell的错误消息
 #[test]
 fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
     // Arrange: 保存原始SHELL环境变量并设置不支持的shell
@@ -54,6 +56,7 @@ fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
     }
 }
 
+/// 测试检测已安装的shell
 #[test]
 fn test_detect_installed_shells_with_system_returns_shells() {
     // Arrange: 准备检测已安装的shell
@@ -76,6 +79,7 @@ fn test_detect_installed_shells_with_system_returns_shells() {
     }
 }
 
+/// 测试检测已安装的shell（当/etc/shells不存在时的回退处理）
 #[test]
 fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefully() {
     // Arrange: 准备检测已安装的shell（当/etc/shells不存在时）
@@ -87,12 +91,13 @@ fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefu
     let _shell_count = shells.len();
 }
 
+/// 测试不同shell路径的检测
 #[test]
 fn test_detect_shell_with_different_paths() {
-    // 测试不同 shell 路径的检测
+    // Arrange: 准备测试不同 shell 路径的检测
     // 这个测试验证 Shell::from_shell_path 的功能
 
-    // 测试常见的 shell 路径
+    // Arrange: 准备测试常见的 shell 路径
     let test_paths = vec![
         "/bin/bash",
         "/usr/bin/bash",
@@ -104,7 +109,7 @@ fn test_detect_shell_with_different_paths() {
 
     for path in test_paths {
         if let Some(shell) = Shell::from_shell_path(path) {
-            // 验证可以解析 shell 类型
+            // Assert: 验证可以解析 shell 类型
             match shell {
                 Shell::Bash | Shell::Zsh | Shell::Fish => {
                     assert!(true);
@@ -118,9 +123,10 @@ fn test_detect_shell_with_different_paths() {
     }
 }
 
+/// 测试shell检测的一致性（多次调用应返回相同结果）
 #[test]
 fn test_detect_shell_consistency() {
-    // 测试 shell 检测的一致性
+    // Arrange: 准备测试 shell 检测的一致性
     // 多次调用应该返回相同的结果（如果环境变量不变）
     let result1 = Detect::shell();
     let result2 = Detect::shell();
@@ -138,10 +144,11 @@ fn test_detect_shell_consistency() {
     }
 }
 
+/// 测试检测zsh（仅非Windows系统）
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn test_detect_shell_zsh() {
-    // 测试检测 zsh（覆盖 detect.rs:24-34）
+    // Arrange: 准备测试检测 zsh（覆盖 detect.rs:24-34）
     // 只在非 Windows 系统上测试
     let original_shell = env::var("SHELL").ok();
 
@@ -162,10 +169,11 @@ fn test_detect_shell_zsh() {
     }
 }
 
+/// 测试检测bash（仅非Windows系统）
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn test_detect_shell_bash() {
-    // 测试检测 bash
+    // Arrange: 准备测试检测 bash
     let original_shell = env::var("SHELL").ok();
 
     // 设置 bash 路径
@@ -185,20 +193,22 @@ fn test_detect_shell_bash() {
     }
 }
 
+/// 测试已安装的shell列表不包含重复项
 #[test]
 fn test_detect_installed_shells_no_duplicates() {
-    // 测试已安装的 shell 列表不包含重复项
+    // Arrange: 准备测试已安装的 shell 列表不包含重复项
     let shells = Detect::installed_shells();
 
-    // 验证函数可以正常执行
+    // Assert: 验证函数可以正常执行
     // 注意：检查重复需要复杂的逻辑，这里只验证函数可以正常执行
     let _shells_count = shells.len();
     assert!(true);
 }
 
+/// 测试从SHELL环境变量解析的回退逻辑
 #[test]
 fn test_detect_shell_from_shell_path_fallback() {
-    // 测试从 SHELL 环境变量解析的回退逻辑（覆盖 detect.rs:26-29）
+    // Arrange: 准备测试从 SHELL 环境变量解析的回退逻辑（覆盖 detect.rs:26-29）
     let original_shell = env::var("SHELL").ok();
 
     // 设置一个有效的 shell 路径
@@ -218,9 +228,10 @@ fn test_detect_shell_from_shell_path_fallback() {
     }
 }
 
+/// 测试空环境变量的情况（应返回错误）
 #[test]
 fn test_detect_shell_empty_env_var() {
-    // 测试空环境变量的情况（覆盖 detect.rs:31-33）
+    // Arrange: 准备测试空环境变量的情况（覆盖 detect.rs:31-33）
     let original_shell = env::var("SHELL").ok();
 
     // 设置空环境变量
@@ -238,29 +249,32 @@ fn test_detect_shell_empty_env_var() {
     }
 }
 
+/// 测试/etc/shells文件中的注释行被忽略
 #[test]
 fn test_detect_installed_shells_comment_lines() {
-    // 测试 /etc/shells 文件中的注释行被忽略（覆盖 detect.rs:51-52）
+    // Arrange: 准备测试 /etc/shells 文件中的注释行被忽略（覆盖 detect.rs:51-52）
     // 注意：这个测试主要验证代码逻辑，实际文件可能不存在
     let shells = Detect::installed_shells();
 
-    // 验证函数可以正常执行
+    // Assert: 验证函数可以正常执行
     let _shell_count = shells.len();
 }
 
+/// 测试/etc/shells文件中的空行被忽略
 #[test]
 fn test_detect_installed_shells_empty_lines() {
-    // 测试 /etc/shells 文件中的空行被忽略（覆盖 detect.rs:51）
+    // Arrange: 准备测试 /etc/shells 文件中的空行被忽略（覆盖 detect.rs:51）
     // 注意：这个测试主要验证代码逻辑，实际文件可能不存在
     let shells = Detect::installed_shells();
 
-    // 验证函数可以正常执行
+    // Assert: 验证函数可以正常执行
     let _shell_count = shells.len();
 }
 
+/// 测试当/etc/shells不存在时回退到当前shell
 #[test]
 fn test_detect_installed_shells_fallback_to_current() {
-    // 测试当 /etc/shells 不存在时回退到当前 shell（覆盖 detect.rs:63-66）
+    // Arrange: 准备测试当 /etc/shells 不存在时回退到当前 shell（覆盖 detect.rs:63-66）
     let shells = Detect::installed_shells();
 
     // 即使 /etc/shells 不存在，也应该尝试返回当前 shell
@@ -281,9 +295,10 @@ fn test_detect_installed_shells_fallback_to_current() {
     }
 }
 
+/// 测试检测PowerShell
 #[test]
 fn test_detect_shell_powershell() {
-    // 测试检测 PowerShell
+    // Arrange: 准备测试检测 PowerShell
     let original_shell = env::var("SHELL").ok();
 
     // 设置 PowerShell 路径（Windows 格式）
@@ -323,9 +338,10 @@ fn test_detect_shell_powershell() {
     }
 }
 
+/// 测试检测fish（仅非Windows系统）
 #[test]
 fn test_detect_shell_fish() {
-    // 测试检测 fish
+    // Arrange: 准备测试检测 fish
     #[cfg(not(target_os = "windows"))]
     {
         let original_shell = env::var("SHELL").ok();

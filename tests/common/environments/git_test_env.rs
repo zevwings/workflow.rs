@@ -119,8 +119,7 @@ impl GitTestEnv {
     /// let repo_path = env.path();
     /// ```
     pub fn path(&self) -> PathBuf {
-        // 由于我们在 new() 中已经切换了工作目录，当前目录就是仓库路径
-        std::env::current_dir().unwrap()
+        self.isolation.work_dir()
     }
 
     /// 创建新分支
@@ -342,6 +341,7 @@ impl GitTestEnv {
     /// let mut env = GitTestEnv::new()?;
     /// env.env_guard().set("HOME", "/tmp/test");
     /// ```
+    #[allow(dead_code)]
     pub fn env_guard(&mut self) -> &mut crate::common::guards::EnvGuard {
         self.isolation.env_guard()
     }

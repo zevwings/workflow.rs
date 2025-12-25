@@ -40,7 +40,7 @@ use tempfile::NamedTempFile;
 /// - ✅ 支持从全局配置复制
 pub struct GitConfigGuard {
     /// 临时Git配置文件
-    temp_config_file: NamedTempFile,
+    _temp_config_file: NamedTempFile,
     /// 原始的GIT_CONFIG环境变量值
     original_git_config_env: Option<String>,
     /// 临时配置文件路径
@@ -82,7 +82,7 @@ impl GitConfigGuard {
         std::env::set_var("GIT_CONFIG", config_path.to_string_lossy().as_ref());
 
         Ok(Self {
-            temp_config_file: temp_file,
+            _temp_config_file: temp_file,
             original_git_config_env,
             config_path,
         })
@@ -161,6 +161,7 @@ impl GitConfigGuard {
     /// guard.copy_from_global()?;
     /// guard.set("user.name", "Test User")?; // 覆盖特定配置
     /// ```
+    #[allow(unused)]
     pub fn copy_from_global(&self) -> Result<()> {
         // 获取全局配置路径
         let global_config = dirs::home_dir()

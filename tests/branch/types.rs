@@ -134,46 +134,69 @@ fn test_branch_type_from_string_with_case_insensitive_input_returns_some() {
 // ==================== BranchType 功能测试 ====================
 
 #[test]
-fn test_branch_type_to_commit_type() {
-    // 测试转换为 Conventional Commits 类型
-    assert_eq!(BranchType::Feature.to_commit_type(), "feat");
-    assert_eq!(BranchType::Bugfix.to_commit_type(), "fix");
-    assert_eq!(BranchType::Refactoring.to_commit_type(), "refactor");
-    assert_eq!(BranchType::Hotfix.to_commit_type(), "fix");
-    assert_eq!(BranchType::Chore.to_commit_type(), "chore");
+fn test_branch_type_to_commit_type_with_all_types_returns_commit_types() {
+    // Arrange: 准备分支类型和预期提交类型
+    let test_cases = vec![
+        (BranchType::Feature, "feat"),
+        (BranchType::Bugfix, "fix"),
+        (BranchType::Refactoring, "refactor"),
+        (BranchType::Hotfix, "fix"),
+        (BranchType::Chore, "chore"),
+    ];
+
+    // Act & Assert: 验证转换为 Conventional Commits 类型正确
+    for (branch_type, expected_commit_type) in test_cases {
+        assert_eq!(branch_type.to_commit_type(), expected_commit_type);
+    }
 }
 
 #[test]
-fn test_branch_type_display_name() {
-    // 测试显示名称（包含描述）
-    assert_eq!(BranchType::Feature.display_name(), "feature - 新功能开发");
-    assert_eq!(BranchType::Bugfix.display_name(), "bugfix - Bug 修复");
-    assert_eq!(
-        BranchType::Refactoring.display_name(),
-        "refactoring - 代码重构"
-    );
-    assert_eq!(BranchType::Hotfix.display_name(), "hotfix - 紧急修复");
-    assert_eq!(BranchType::Chore.display_name(), "chore - 杂项任务");
+fn test_branch_type_display_name_with_all_types_returns_display_names() {
+    // Arrange: 准备分支类型和预期显示名称
+    let test_cases = vec![
+        (BranchType::Feature, "feature - 新功能开发"),
+        (BranchType::Bugfix, "bugfix - Bug 修复"),
+        (BranchType::Refactoring, "refactoring - 代码重构"),
+        (BranchType::Hotfix, "hotfix - 紧急修复"),
+        (BranchType::Chore, "chore - 杂项任务"),
+    ];
+
+    // Act & Assert: 验证显示名称（包含描述）正确
+    for (branch_type, expected_display_name) in test_cases {
+        assert_eq!(branch_type.display_name(), expected_display_name);
+    }
 }
 
 // ==================== 边界条件测试 ====================
 
 #[test]
-fn test_branch_type_from_empty_string() {
+fn test_branch_type_from_str_with_empty_string_returns_none() {
+    // Arrange: 准备空字符串
+
+    // Act: 从空字符串解析分支类型
     let result = BranchType::from_str("");
+
+    // Assert: 验证返回 None
     assert_eq!(result, None);
 }
 
 #[test]
-fn test_branch_type_from_whitespace() {
+fn test_branch_type_from_str_with_whitespace_returns_none() {
+    // Arrange: 准备空白字符串
+
+    // Act: 从空白字符串解析分支类型
     let result = BranchType::from_str("   ");
+
+    // Assert: 验证返回 None
     assert_eq!(result, None);
 }
 
 #[test]
-fn test_branch_type_from_special_characters() {
+fn test_branch_type_from_str_with_special_characters_handles_correctly() {
+    // Arrange: 准备包含特殊字符的字符串
     let special_strings = vec!["feat!", "bug#", "fix@", "hot-fix", "feature_branch"];
 
+    // Act & Assert: 验证特殊字符处理正确
     for special_str in special_strings {
         let result = BranchType::from_str(special_str);
         // 大部分特殊字符应该返回 None，除非有特殊处理
@@ -188,51 +211,58 @@ fn test_branch_type_from_special_characters() {
 // ==================== 分支类型比较测试 ====================
 
 #[test]
-fn test_branch_type_equality() {
-    // 测试分支类型相等性
+fn test_branch_type_equality_with_same_types_returns_equal() {
+    // Arrange: 准备相同和不同的分支类型
+
+    // Act & Assert: 验证分支类型相等性
     assert_eq!(BranchType::Feature, BranchType::Feature);
     assert_eq!(BranchType::Bugfix, BranchType::Bugfix);
-
     assert_ne!(BranchType::Feature, BranchType::Bugfix);
     assert_ne!(BranchType::Hotfix, BranchType::Chore);
 }
 
 #[test]
-fn test_branch_type_clone() {
-    // 测试克隆功能
+fn test_branch_type_clone_with_valid_type_creates_clone() {
+    // Arrange: 准备原始分支类型
     let original = BranchType::Feature;
+
+    // Act: 克隆分支类型
     let cloned = original.clone();
+
+    // Assert: 验证克隆后的值相等
     assert_eq!(original, cloned);
 }
 
 #[test]
-fn test_branch_type_copy() {
-    // 测试复制功能
+fn test_branch_type_copy_with_valid_type_copies_value() {
+    // Arrange: 准备原始分支类型
     let original = BranchType::Refactoring;
+
+    // Act: 复制分支类型（Copy trait）
     let copied = original;
+
+    // Assert: 验证复制后的值相等
     assert_eq!(original, copied);
 }
 
 // ==================== 性能测试 ====================
 
 #[test]
-fn test_branch_type_conversion_performance() {
+fn test_branch_type_conversion_performance_with_multiple_conversions_completes_quickly() {
+    // Arrange: 准备测试字符串
     use std::time::Instant;
-
     let test_strings = vec!["feature", "bugfix", "refactoring", "hotfix", "chore"];
 
+    // Act: 多次转换并测量时间
     let start = Instant::now();
-
-    // 多次转换
     for _ in 0..1000 {
         for s in &test_strings {
             let _ = BranchType::from_str(s);
         }
     }
-
     let duration = start.elapsed();
 
-    // 转换应该很快
+    // Assert: 验证转换速度（应该很快）
     assert!(
         duration.as_millis() < 100,
         "Branch type conversion too slow: {:?}",
@@ -241,14 +271,13 @@ fn test_branch_type_conversion_performance() {
 }
 
 #[test]
-fn test_branch_type_display_performance() {
+fn test_branch_type_display_performance_with_multiple_displays_completes_quickly() {
+    // Arrange: 准备所有分支类型
     use std::time::Instant;
-
     let types = BranchType::all();
 
+    // Act: 多次显示转换并测量时间
     let start = Instant::now();
-
-    // 多次显示转换
     for _ in 0..1000 {
         for branch_type in &types {
             let _ = branch_type.to_string();
@@ -257,10 +286,9 @@ fn test_branch_type_display_performance() {
             let _ = branch_type.to_commit_type();
         }
     }
-
     let duration = start.elapsed();
 
-    // 显示转换应该很快
+    // Assert: 验证显示转换速度（应该很快）
     assert!(
         duration.as_millis() < 50,
         "Branch type display too slow: {:?}",
@@ -271,31 +299,31 @@ fn test_branch_type_display_performance() {
 // ==================== 集成测试 ====================
 
 #[test]
-fn test_complete_branch_type_workflow() {
-    // 1. 获取所有类型
+fn test_complete_branch_type_workflow_with_all_types_completes_successfully() {
+    // Arrange: 获取所有类型
     let all_types = BranchType::all();
     assert!(!all_types.is_empty());
 
-    // 2. 测试每种类型的完整功能
+    // Act & Assert: 测试每种类型的完整功能
     for branch_type in all_types {
-        // 3. 转换为字符串
+        // 转换为字符串
         let str_repr = branch_type.as_str();
         assert!(!str_repr.is_empty());
 
-        // 4. 从字符串转换回来
+        // 从字符串转换回来
         let parsed = BranchType::from_str(str_repr);
         assert_eq!(parsed, Some(branch_type));
 
-        // 5. 获取提交类型
+        // 获取提交类型
         let commit_type = branch_type.to_commit_type();
         assert!(!commit_type.is_empty());
 
-        // 6. 获取显示名称
+        // 获取显示名称
         let display_name = branch_type.display_name();
         assert!(!display_name.is_empty());
         assert!(display_name.contains(str_repr));
 
-        // 7. 测试显示格式
+        // Arrange: 准备测试显示格式
         let display = format!("{}", branch_type);
         assert_eq!(display, str_repr);
     }
@@ -304,7 +332,8 @@ fn test_complete_branch_type_workflow() {
 // ==================== 错误处理测试 ====================
 
 #[test]
-fn test_branch_type_invalid_inputs() {
+fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
+    // Arrange: 准备无效输入列表
     let invalid_inputs = vec![
         "",
         "   ",
@@ -317,6 +346,7 @@ fn test_branch_type_invalid_inputs() {
         "bug_fix",
     ];
 
+    // Act & Assert: 验证无效输入处理正确
     for input in invalid_inputs {
         let result = BranchType::from_str(input);
         if result.is_none() {
@@ -333,8 +363,8 @@ fn test_branch_type_invalid_inputs() {
 // ==================== 实际使用场景测试 ====================
 
 #[test]
-fn test_branch_type_commit_mapping_scenario() {
-    // 模拟实际使用场景：根据分支类型生成提交消息前缀
+fn test_branch_type_to_commit_type_with_all_types_maps_correctly() {
+    // Arrange: 准备分支类型和预期提交类型映射
     let scenarios = vec![
         (BranchType::Feature, "feat"),
         (BranchType::Bugfix, "fix"),
@@ -343,6 +373,7 @@ fn test_branch_type_commit_mapping_scenario() {
         (BranchType::Chore, "chore"),
     ];
 
+    // Act & Assert: 模拟实际使用场景：根据分支类型生成提交消息前缀
     for (branch_type, expected_commit_type) in scenarios {
         let commit_type = branch_type.to_commit_type();
         assert_eq!(commit_type, expected_commit_type);
@@ -354,17 +385,17 @@ fn test_branch_type_commit_mapping_scenario() {
 }
 
 #[test]
-fn test_branch_type_template_selection_scenario() {
-    // 模拟模板选择场景
+fn test_branch_type_template_selection_with_feature_type_returns_template_path() {
+    // Arrange: 准备分支类型
     let branch_type = BranchType::Feature;
     let template_key = branch_type.as_str();
 
-    // 验证模板键可用于文件路径
+    // Act: 模拟模板选择场景
     let template_path = format!("templates/{}.hbs", template_key);
-    assert!(template_path.contains("feature.hbs"));
-
-    // 验证可用于配置键
     let config_key = format!("branch.{}.prefix", template_key);
+
+    // Assert: 验证模板键可用于文件路径和配置键
+    assert!(template_path.contains("feature.hbs"));
     assert!(config_key.contains("branch.feature.prefix"));
 }
 
@@ -402,7 +433,7 @@ fn test_branch_type_template_selection_scenario() {
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_branch_type_prompt_selection() {
-    // 测试交互式选择分支类型
+    // Arrange: 准备测试交互式选择分支类型
     // 注意：这个测试需要用户交互，在 CI 环境中会卡住
     // 使用 `cargo test -- --ignored` 来运行这些测试
     let result = workflow::branch::BranchType::prompt_selection();
@@ -411,7 +442,7 @@ fn test_branch_type_prompt_selection() {
     // 如果成功，应该返回有效的 BranchType
     match result {
         Ok(branch_type) => {
-            // 验证返回的是有效的分支类型
+            // Assert: 验证返回的是有效的分支类型
             assert!(workflow::branch::BranchType::all().contains(&branch_type));
         }
         Err(_) => {
@@ -456,7 +487,7 @@ fn test_branch_type_prompt_selection() {
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
-    // 测试有 repository prefix 的情况
+    // Arrange: 准备测试有 repository prefix 的情况
     // 注意：这个测试依赖于实际的仓库配置，可能在不同环境中表现不同
     let result = workflow::branch::BranchType::resolve_with_repo_prefix();
 
@@ -464,7 +495,7 @@ fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
     // 如果没有配置，可能会调用 prompt_selection（需要交互）
     match result {
         Ok(branch_type) => {
-            // 验证返回的是有效的分支类型
+            // Assert: 验证返回的是有效的分支类型
             assert!(workflow::branch::BranchType::all().contains(&branch_type));
         }
         Err(_) => {
@@ -510,7 +541,7 @@ fn test_branch_type_resolve_with_repo_prefix_with_prefix() {
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_branch_type_resolve_with_repo_prefix_without_prefix() {
-    // 测试没有 repository prefix 的情况（会调用 prompt_selection）
+    // Arrange: 准备测试没有 repository prefix 的情况（会调用 prompt_selection）
     // 注意：这个测试需要用户交互，在 CI 环境中会卡住
     let result = workflow::branch::BranchType::resolve_with_repo_prefix();
 
@@ -538,14 +569,14 @@ fn test_branch_type_display_name_all_variants() {
     for branch_type in all_types {
         let display_name = branch_type.display_name();
 
-        // 验证 display_name 不为空
+        // Assert: 验证 display_name 不为空
         assert!(
             !display_name.is_empty(),
             "Display name should not be empty for {:?}",
             branch_type
         );
 
-        // 验证 display_name 包含分支类型字符串
+        // Assert: 验证 display_name 包含分支类型字符串
         let type_str = branch_type.as_str();
         assert!(
             display_name.contains(type_str),
@@ -554,7 +585,7 @@ fn test_branch_type_display_name_all_variants() {
             type_str
         );
 
-        // 验证 display_name 包含中文描述（所有 display_name 都包含中文）
+        // Assert: 验证 display_name 包含中文描述（所有 display_name 都包含中文）
         assert!(
             display_name.contains(" - "),
             "Display name '{}' should contain separator ' - '",

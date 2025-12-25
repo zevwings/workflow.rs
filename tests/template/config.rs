@@ -19,10 +19,10 @@ use workflow::template::{CommitTemplates, PullRequestsTemplates, TemplateConfig}
 fn test_load_default_config() {
     let config = TemplateConfig::default();
 
-    // 验证默认引擎
+    // Assert: 验证默认引擎
     assert_eq!(config.engine, "handlebars");
 
-    // 验证默认分支模板
+    // Assert: 验证默认分支模板
     assert_eq!(config.branch.default, "{{jira_key}}-{{summary_slug}}");
     assert_eq!(
         config.branch.feature,
@@ -33,12 +33,12 @@ fn test_load_default_config() {
         Some("bugfix/{{jira_key}}-{{summary_slug}}".to_string())
     );
 
-    // 验证默认提交模板
+    // Assert: 验证默认提交模板
     assert!(config.commit.default.contains("{{jira_key}}"));
     assert!(config.commit.default.contains("{{subject}}"));
     assert_eq!(config.commit.use_scope, false);
 
-    // 验证默认 PR 模板
+    // Assert: 验证默认 PR 模板
     assert!(config.pull_requests.default.contains("PR Ready"));
     assert!(config.pull_requests.default.contains("change_types"));
 }
@@ -71,7 +71,7 @@ fn test_config_struct_creation() {
         pull_requests: pr_templates.clone(),
     };
 
-    // 验证字段访问
+    // Assert: 验证字段访问
     assert_eq!(config.engine, "custom_engine");
     assert_eq!(config.branch.default, "custom-{{jira_key}}");
     assert_eq!(config.branch.feature, Some("feat/{{jira_key}}".to_string()));
@@ -118,7 +118,7 @@ fn test_commit_templates_default() {
     assert!(commit_templates.default.contains("{{commit_type}}"));
     assert_eq!(commit_templates.use_scope, false);
 
-    // 测试默认模板方法
+    // Arrange: 准备测试默认模板方法
     let default_template = CommitTemplates::default_commit_template();
     assert!(default_template.contains("{{jira_key}}"));
     assert!(default_template.contains("{{subject}}"));
@@ -133,7 +133,7 @@ fn test_pr_templates_default() {
     assert!(pr_templates.default.contains("Types of changes"));
     assert!(pr_templates.default.contains("{{#each change_types}}"));
 
-    // 测试默认模板方法
+    // Arrange: 准备测试默认模板方法
     let default_template = PullRequestsTemplates::default_pull_request_template();
     assert!(default_template.contains("PR Ready"));
     assert!(default_template.contains("{{jira_key}}"));
@@ -144,7 +144,7 @@ fn test_pr_templates_default() {
 fn test_config_serialization() {
     let config = TemplateConfig::default();
 
-    // 测试序列化为 JSON
+    // Arrange: 准备测试序列化为 JSON
     let json_result = serde_json::to_string(&config);
     assert!(json_result.is_ok());
 
@@ -152,7 +152,7 @@ fn test_config_serialization() {
     assert!(json_str.contains("handlebars"));
     assert!(json_str.contains("jira_key"));
 
-    // 测试序列化为 TOML
+    // Arrange: 准备测试序列化为 TOML
     let toml_result = toml::to_string(&config);
     assert!(toml_result.is_ok());
 
@@ -164,7 +164,7 @@ fn test_config_serialization() {
 /// 测试配置反序列化
 #[test]
 fn test_config_deserialization() {
-    // 测试从 JSON 反序列化
+    // Arrange: 准备测试从 JSON 反序列化
     let json_config = json!({
         "engine": "test_engine",
         "branch": {
@@ -189,7 +189,7 @@ fn test_config_deserialization() {
     assert_eq!(config.branch.feature, Some("feat/{{jira_key}}".to_string()));
     assert_eq!(config.commit.use_scope, true);
 
-    // 测试从 TOML 反序列化
+    // Arrange: 准备测试从 TOML 反序列化
     let toml_str = r#"
 engine = "toml_engine"
 
@@ -239,7 +239,7 @@ fn test_load_branch_template_by_jira_type() {
 /// 测试分支模板按分支类型加载
 #[test]
 fn test_load_branch_template_by_branch_type() {
-    // 测试各种分支类型
+    // Arrange: 准备测试各种分支类型
     let results = [
         TemplateConfig::load_branch_template_by_type(Some("feature")),
         TemplateConfig::load_branch_template_by_type(Some("bugfix")),
@@ -250,7 +250,7 @@ fn test_load_branch_template_by_branch_type() {
         TemplateConfig::load_branch_template_by_type(None),
     ];
 
-    // 验证方法能处理各种输入而不 panic
+    // Assert: 验证方法能处理各种输入而不 panic
     for result in results {
         match result {
             Ok(template) => assert!(!template.is_empty()),
@@ -266,7 +266,7 @@ fn test_load_branch_template_by_branch_type() {
 fn test_load_commit_template() {
     let result = TemplateConfig::load_commit_template();
 
-    // 验证方法能正常调用
+    // Assert: 验证方法能正常调用
     match result {
         Ok(template) => {
             assert!(!template.is_empty());
@@ -284,7 +284,7 @@ fn test_load_commit_template() {
 fn test_load_pull_request_template() {
     let result = TemplateConfig::load_pull_request_template();
 
-    // 验证方法能正常调用
+    // Assert: 验证方法能正常调用
     match result {
         Ok(template) => {
             assert!(!template.is_empty());
@@ -303,7 +303,7 @@ fn test_config_clone() {
     let original_config = TemplateConfig::default();
     let cloned_config = original_config.clone();
 
-    // 验证克隆的配置与原始配置相等
+    // Assert: 验证克隆的配置与原始配置相等
     assert_eq!(original_config.engine, cloned_config.engine);
     assert_eq!(original_config.branch.default, cloned_config.branch.default);
     assert_eq!(original_config.commit.default, cloned_config.commit.default);
@@ -318,13 +318,13 @@ fn test_config_clone() {
 fn test_config_debug() {
     let config = TemplateConfig::default();
 
-    // 测试 Debug 实现
+    // Arrange: 准备测试 Debug 实现
     let debug_str = format!("{:?}", config);
     assert!(debug_str.contains("TemplateConfig"));
     assert!(debug_str.contains("handlebars"));
     assert!(debug_str.contains("jira_key"));
 
-    // 测试各个子结构的 Debug 实现
+    // Arrange: 准备测试各个子结构的 Debug 实现
     let branch_debug = format!("{:?}", config.branch);
     assert!(branch_debug.contains("BranchTemplates"));
 

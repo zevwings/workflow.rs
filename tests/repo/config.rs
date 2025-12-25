@@ -213,7 +213,7 @@ fn test_pr_config_parametrized_with_various_values_creates_config(
         auto_accept_change_type: auto_accept,
     };
 
-    // 测试序列化和反序列化的一致性
+    // Arrange: 准备测试序列化和反序列化的一致性
     let json = serde_json::to_string(&config)?;
     let deserialized: PullRequestsConfig = serde_json::from_str(&json)?;
 
@@ -246,7 +246,7 @@ fn test_pr_config_invalid_json_with_invalid_json_returns_error() {
 
 #[test]
 fn test_branch_config_with_null_values() -> Result<()> {
-    // 测试包含 null 值的 JSON
+    // Arrange: 准备测试包含 null 值的 JSON
     let json = r#"{"prefix":null,"ignore":[]}"#;
     let config: BranchConfig = serde_json::from_str(json)?;
 
@@ -257,7 +257,7 @@ fn test_branch_config_with_null_values() -> Result<()> {
 
 #[test]
 fn test_branch_config_empty_ignore_list() -> Result<()> {
-    // 测试空的忽略列表
+    // Arrange: 准备测试空的忽略列表
     let config = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec![],
@@ -272,7 +272,7 @@ fn test_branch_config_empty_ignore_list() -> Result<()> {
 
 #[test]
 fn test_branch_config_special_characters() -> Result<()> {
-    // 测试特殊字符的处理
+    // Arrange: 准备测试特殊字符的处理
     let config = BranchConfig {
         prefix: Some("feature/test-123".to_string()),
         ignore: vec!["release/v1.0".to_string(), "hotfix-urgent".to_string()],
@@ -288,7 +288,7 @@ fn test_branch_config_special_characters() -> Result<()> {
 
 #[test]
 fn test_config_clone() {
-    // 测试配置的克隆功能
+    // Arrange: 准备测试配置的克隆功能
     let original_branch = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string()],
@@ -311,7 +311,7 @@ fn test_config_clone() {
 
 #[test]
 fn test_config_debug() {
-    // 测试配置的 Debug 输出
+    // Arrange: 准备测试配置的 Debug 输出
     let branch_config = BranchConfig {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string()],

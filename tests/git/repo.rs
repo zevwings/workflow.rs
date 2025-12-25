@@ -20,6 +20,7 @@ use workflow::git::{GitRepo, RepoType};
 
 // ==================== URL 解析和仓库名提取测试 ====================
 
+/// 测试从有效URL中提取仓库名（各种URL格式）
 #[rstest]
 #[case("git@github.com:owner/repo.git", "owner/repo")]
 #[case("git@github.com:owner/repo", "owner/repo")]
@@ -35,12 +36,13 @@ use workflow::git::{GitRepo, RepoType};
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo")]
 #[case("http://codeup.aliyun.com/owner/repo", "owner/repo")]
 fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expected: &str) -> Result<()> {
-    // 测试各种有效 URL 格式的仓库名提取
+    // Arrange: 准备测试各种有效 URL 格式的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
     Ok(())
 }
 
+/// 测试从嵌套路径URL中提取仓库名
 #[rstest]
 #[case("git@github.com:org/sub-org/repo.git", "org/sub-org/repo")]
 #[case("https://github.com/org/sub-org/repo", "org/sub-org/repo")]
@@ -53,12 +55,13 @@ fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expect
     "group/subgroup/project"
 )]
 fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expected: &str) -> Result<()> {
-    // 测试嵌套路径的仓库名提取
+    // Arrange: 准备测试嵌套路径的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
     Ok(())
 }
 
+/// 测试从包含特殊字符的URL中提取仓库名
 #[rstest]
 #[case("git@github.com:owner/repo-with-dashes.git", "owner/repo-with-dashes")]
 #[case(
@@ -69,12 +72,13 @@ fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expec
 #[case("https://github.com/owner/repo123", "owner/repo123")]
 #[case("git@codeup.aliyun.com:中文用户/中文仓库.git", "中文用户/中文仓库")]
 fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case] expected: &str) -> Result<()> {
-    // 测试包含特殊字符的仓库名提取
+    // Arrange: 准备测试包含特殊字符的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
     Ok(())
 }
 
+/// 测试从无效URL中提取仓库名（应返回错误）
 #[rstest]
 #[case("")]
 #[case("not-a-url")]
@@ -87,7 +91,7 @@ fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case]
 #[case(workflow::git::github::BASE)]
 #[case("git@github.com")]
 fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
-    // 测试无效 URL 的错误处理
+    // Arrange: 准备测试无效 URL 的错误处理
     let result = GitRepo::extract_repo_name_from_url(url);
     assert!(
         result.is_err(),
@@ -96,9 +100,10 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
     );
 }
 
+/// 测试从包含尾部斜杠的URL中提取仓库名
 #[test]
 fn test_extract_repo_name_from_url_trailing_slashes() -> Result<()> {
-    // 测试末尾斜杠的处理
+    // Arrange: 准备测试末尾斜杠的处理
     let test_cases = vec![
         ("https://github.com/owner/repo/", "owner/repo"),
         ("https://github.com/owner/repo.git/", "owner/repo"),
@@ -112,9 +117,10 @@ fn test_extract_repo_name_from_url_trailing_slashes() -> Result<()> {
     Ok(())
 }
 
+/// 测试URL大小写敏感性
 #[test]
 fn test_extract_repo_name_from_url_case_sensitivity() -> Result<()> {
-    // 测试大小写敏感性 - 实际实现是大小写敏感的，只有小写域名被支持
+    // Arrange: 准备测试大小写敏感性 - 实际实现是大小写敏感的，只有小写域名被支持
     let valid_cases = vec![
         ("https://github.com/Owner/Repo.git", "Owner/Repo"),
         ("git@github.com:Owner/Repo.git", "Owner/Repo"),
@@ -161,6 +167,7 @@ fn mock_parse_repo_type_from_url(url: &str) -> RepoType {
     }
 }
 
+/// 测试仓库类型解析与mock实现的一致性
 #[rstest]
 #[case("git@github.com:owner/repo.git", RepoType::GitHub)]
 #[case("https://github.com/owner/repo", RepoType::GitHub)]
@@ -172,7 +179,7 @@ fn mock_parse_repo_type_from_url(url: &str) -> RepoType {
 #[case("https://gitlab.com/owner/repo", RepoType::Unknown)]
 #[case("", RepoType::Unknown)]
 fn test_parse_repo_type_consistency_with_mock(#[case] url: &str, #[case] expected: RepoType) {
-    // 验证实际实现与 mock 实现的一致性
+    // Assert: 验证实际实现与 mock 实现的一致性
 
     // 使用反射或其他方式访问私有方法进行测试
     // 由于 parse_repo_type_from_url 是私有方法，我们通过 URL 解析来间接测试
@@ -187,9 +194,10 @@ fn test_parse_repo_type_consistency_with_mock(#[case] url: &str, #[case] expecte
     // 在实际项目中可能需要将其改为 pub(crate) 或添加测试辅助方法
 }
 
+/// 测试GitHub SSH别名检测
 #[test]
 fn test_github_ssh_alias_detection() {
-    // 测试 GitHub SSH 别名的检测
+    // Arrange: 准备测试 GitHub SSH 别名的检测
     let github_aliases = vec![
         "git@github-personal:owner/repo.git",
         "git@github-work:owner/repo.git",
@@ -208,9 +216,10 @@ fn test_github_ssh_alias_detection() {
     }
 }
 
+/// 测试大小写敏感的检测
 #[test]
 fn test_case_sensitive_detection() {
-    // 测试大小写敏感的检测 - mock 实现是大小写敏感的
+    // Arrange: 准备测试大小写敏感的检测 - mock 实现是大小写敏感的
     let valid_cases = vec![
         ("https://github.com/owner/repo", RepoType::GitHub),
         ("git@github.com:owner/repo.git", RepoType::GitHub),
@@ -247,9 +256,10 @@ fn test_case_sensitive_detection() {
 
 // ==================== 边界情况和错误处理测试 ====================
 
+/// 测试空字符串和空白字符的处理
 #[test]
 fn test_empty_and_whitespace_urls() {
-    // 测试空字符串和空白字符的处理
+    // Arrange: 准备测试空字符串和空白字符的处理
     let invalid_urls = vec!["", " ", "\t", "\n", "   \t\n   "];
 
     for url in invalid_urls {
@@ -270,9 +280,10 @@ fn test_empty_and_whitespace_urls() {
     }
 }
 
+/// 测试格式错误的URL
 #[test]
 fn test_malformed_urls() {
-    // 测试格式错误的 URL
+    // Arrange: 准备测试格式错误的 URL
     let malformed_urls = vec![
         "git@",
         "https://",
@@ -288,9 +299,10 @@ fn test_malformed_urls() {
     }
 }
 
+/// 测试Unicode字符和特殊字符的处理
 #[test]
 fn test_unicode_and_special_characters() -> Result<()> {
-    // 测试 Unicode 字符和特殊字符的处理
+    // Arrange: 准备测试 Unicode 字符和特殊字符的处理
     let unicode_cases = vec![
         ("git@github.com:用户/仓库.git", "用户/仓库"),
         ("https://github.com/用户名/项目名", "用户名/项目名"),
@@ -308,9 +320,10 @@ fn test_unicode_and_special_characters() -> Result<()> {
     Ok(())
 }
 
+/// 测试极长URL的处理
 #[test]
 fn test_very_long_urls() -> Result<()> {
-    // 测试极长的 URL
+    // Arrange: 准备测试极长的 URL
     let long_owner = "a".repeat(100);
     let long_repo = "b".repeat(100);
     let long_url = format!("https://github.com/{}/{}", long_owner, long_repo);
@@ -321,9 +334,10 @@ fn test_very_long_urls() -> Result<()> {
     Ok(())
 }
 
+/// 测试包含查询参数的URL
 #[test]
 fn test_url_with_query_parameters() {
-    // 测试包含查询参数的 URL（虽然不常见，但应该优雅处理）
+    // Arrange: 准备测试包含查询参数的 URL（虽然不常见，但应该优雅处理）
     let urls_with_params = vec![
         "https://github.com/owner/repo?tab=readme",
         "https://github.com/owner/repo.git?ref=main",
@@ -339,9 +353,10 @@ fn test_url_with_query_parameters() {
 
 // ==================== 性能和压力测试 ====================
 
+/// 测试大量URL处理的性能
 #[test]
 fn test_performance_with_many_urls() {
-    // 测试大量 URL 处理的性能
+    // Arrange: 准备测试大量 URL 处理的性能
     let base_urls = vec![
         "git@github.com:owner{}/repo{}.git",
         "https://github.com/owner{}/repo{}",
@@ -371,9 +386,10 @@ fn test_performance_with_many_urls() {
 
 // ==================== 集成测试辅助 ====================
 
+/// 测试URL解析和类型检测的集成
 #[test]
 fn test_extract_and_detect_integration() -> Result<()> {
-    // 测试 URL 解析和类型检测的集成
+    // Arrange: 准备测试 URL 解析和类型检测的集成
     let test_cases = vec![
         (
             "git@github.com:owner/repo.git",
@@ -393,13 +409,13 @@ fn test_extract_and_detect_integration() -> Result<()> {
     ];
 
     for (url, expected_name, expected_type) in test_cases {
-        // 测试仓库名提取
+        // Arrange: 准备测试仓库名提取
         if expected_type != RepoType::Unknown {
             let repo_name = GitRepo::extract_repo_name_from_url(url)?;
             assert_eq!(repo_name, expected_name);
         }
 
-        // 测试类型检测
+        // Arrange: 准备测试类型检测
         let type_result = mock_parse_repo_type_from_url(url);
         assert_eq!(
             type_result, expected_type,
@@ -412,11 +428,12 @@ fn test_extract_and_detect_integration() -> Result<()> {
 
 // ==================== 回归测试 ====================
 
+/// 测试已知问题的回归
 #[test]
 fn test_regression_known_issues() -> Result<()> {
-    // 测试已知问题的回归
+    // Arrange: 准备测试已知问题的回归
 
-    // 测试：确保 SSH 别名正确处理
+    // Arrange: 准备测试：确保 SSH 别名正确处理
     let ssh_alias_cases = vec![
         "git@github-personal:owner/repo.git",
         "git@github-work:owner/repo.git",
@@ -430,7 +447,7 @@ fn test_regression_known_issues() -> Result<()> {
         assert_eq!(type_result, RepoType::GitHub);
     }
 
-    // 测试：确保 .git 后缀正确处理
+    // Arrange: 准备测试：确保 .git 后缀正确处理
     let git_suffix_cases = vec![
         ("git@github.com:owner/repo.git", "owner/repo"),
         ("git@github.com:owner/repo", "owner/repo"),

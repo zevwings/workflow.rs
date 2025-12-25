@@ -29,6 +29,7 @@ fn test_branch() -> &'static str {
 
 // ==================== Create Command Tests ====================
 
+/// 测试PR创建命令的参数解析（各种选项组合）
 #[rstest]
 #[case(None, None, None, false)]
 #[case(Some("PROJ-123"), None, None, false)]
@@ -78,6 +79,7 @@ fn test_pr_create_command_with_various_options_parses_correctly(
 
 // ==================== Merge Command Tests ====================
 
+/// 测试PR合并命令的参数解析（包含force选项）
 #[rstest]
 #[case(None, false)]
 #[case(Some("123"), false)]
@@ -113,6 +115,7 @@ fn test_pr_merge_command_with_various_options_parses_correctly(
 
 // ==================== Status Command Tests ====================
 
+/// 测试PR状态命令的参数解析（支持PR ID或分支名）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
@@ -142,6 +145,7 @@ fn test_pr_status_command_with_various_inputs_parses_correctly(
 
 // ==================== List Command Tests ====================
 
+/// 测试PR列表命令的参数解析（包含state和limit选项）
 #[rstest]
 #[case(None, None)]
 #[case(Some("open"), None)]
@@ -181,6 +185,7 @@ fn test_pr_list_command_with_various_options_parses_correctly(
 
 // ==================== Update Command Tests ====================
 
+/// 测试PR更新命令的参数解析（无参数）
 #[test]
 fn test_pr_update_command_with_valid_input_parses_successfully() {
     // Arrange: 准备有效的 Update 命令输入（无参数）
@@ -196,6 +201,7 @@ fn test_pr_update_command_with_valid_input_parses_successfully() {
 
 // ==================== Sync Command Tests ====================
 
+/// 测试PR同步命令的参数解析（包含rebase、ff_only、squash选项）
 #[rstest]
 #[case("feature/source", false, false, false)]
 #[case("feature/source", true, false, false)]
@@ -242,6 +248,7 @@ fn test_pr_sync_command_with_various_options_parses_correctly(
 
 // ==================== Rebase Command Tests ====================
 
+/// 测试PR变基命令的参数解析（包含no_push和dry_run选项）
 #[rstest]
 #[case("main", false, false)]
 #[case("main", true, false)]
@@ -281,6 +288,7 @@ fn test_pr_rebase_command_with_various_options_parses_correctly(
 
 // ==================== Close Command Tests ====================
 
+/// 测试PR关闭命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
@@ -309,6 +317,7 @@ fn test_pr_close_command_with_various_inputs_parses_correctly(
 
 // ==================== Summarize Command Tests ====================
 
+/// 测试PR摘要命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
@@ -337,6 +346,7 @@ fn test_pr_summarize_command_with_various_inputs_parses_correctly(
 
 // ==================== Approve Command Tests ====================
 
+/// 测试PR批准命令的参数解析（可选PR ID）
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
@@ -365,6 +375,7 @@ fn test_pr_approve_command_with_various_inputs_parses_correctly(
 
 // ==================== Comment Command Tests ====================
 
+/// 测试PR评论命令的参数解析（包含PR ID和消息）
 #[test]
 fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() {
     // Arrange: 准备带 PR ID 和消息的 Comment 命令输入
@@ -387,6 +398,7 @@ fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() {
     }
 }
 
+/// 测试PR评论命令的参数解析（多词消息）
 #[test]
 fn test_pr_comment_command_with_multiple_words_parses_correctly() {
     let cli = TestPRCli::try_parse_from(&[
@@ -413,9 +425,10 @@ fn test_pr_comment_command_with_multiple_words_parses_correctly() {
     }
 }
 
+/// 测试PR评论命令的参数解析（只有单个参数，无消息）
 #[test]
 fn test_pr_comment_command_without_id() {
-    // 测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
+    // Arrange: 准备测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
     let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"])
         .expect("CLI args should parse successfully");
 
@@ -437,6 +450,7 @@ fn test_pr_comment_command_without_id() {
 
 // ==================== Pick 命令测试 ====================
 
+/// 测试PR选择命令的参数解析（包含dry_run选项）
 #[rstest]
 #[case("feature/source", "main", false)]
 #[case("feature/source", "main", true)]
@@ -464,6 +478,7 @@ fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[ca
 
 // ==================== Reword 命令测试 ====================
 
+/// 测试PR重写命令的参数解析（包含title、description、dry_run选项）
 #[rstest]
 #[case(None, false, false, false)]
 #[case(Some("456"), false, false, false)]
@@ -511,6 +526,7 @@ fn test_pr_reword_command(
 
 // ==================== 命令枚举测试 ====================
 
+/// 测试PR命令枚举的所有变体
 #[rstest]
 #[case("create", |cmd: &PRCommands| matches!(cmd, PRCommands::Create { .. }))]
 #[case("merge", |cmd: &PRCommands| matches!(cmd, PRCommands::Merge { .. }))]
@@ -548,16 +564,18 @@ fn test_pr_commands_enum_all_variants(
     );
 }
 
+/// 测试PR命令的错误处理（无效子命令）
 #[test]
 fn test_pr_commands_error_handling_invalid_subcommand() {
-    // 测试无效子命令的错误处理
+    // Arrange: 准备测试无效子命令的错误处理
     let result = TestPRCli::try_parse_from(&["test-pr", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
+/// 测试PR命令的必需参数验证
 #[test]
 fn test_pr_commands_required_parameters() {
-    // 测试必需参数的错误处理
+    // Arrange: 准备测试必需参数的错误处理
 
     // Sync 需要 source_branch
     let result = TestPRCli::try_parse_from(&["test-pr", "sync"]);
@@ -580,17 +598,18 @@ fn test_pr_commands_required_parameters() {
 
 // ==================== 边界情况测试 ====================
 
+/// 测试PR创建命令的空JIRA ID（应被验证器拒绝）
 #[test]
 fn test_pr_create_command_empty_jira_id() {
-    // 测试空字符串 JIRA ID（应该被验证器拒绝）
+    // Arrange: 准备测试空字符串 JIRA ID（应该被验证器拒绝）
     // 这是正确的行为：JIRA ID 验证器不允许空字符串
     let result = TestPRCli::try_parse_from(&["test-pr", "create", ""]);
 
-    // 验证解析失败（空字符串被验证器拒绝）
+    // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
         Ok(_) => panic!("Empty JIRA ID should be rejected by validator"),
         Err(e) => {
-            // 验证错误消息包含验证信息
+            // Assert: 验证错误消息包含验证信息
             let error_msg = e.to_string();
             assert!(
                 error_msg.contains("JIRA ID")
@@ -604,9 +623,10 @@ fn test_pr_create_command_empty_jira_id() {
     }
 }
 
+/// 测试PR创建命令的超长标题（边界情况）
 #[test]
 fn test_pr_create_command_very_long_title() {
-    // 测试超长标题（边界情况）
+    // Arrange: 准备测试超长标题（边界情况）
     let long_title = "a".repeat(1000);
     let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])
         .expect("CLI args should parse successfully");
@@ -619,9 +639,10 @@ fn test_pr_create_command_very_long_title() {
     }
 }
 
+/// 测试PR创建命令标题中的特殊字符
 #[test]
 fn test_pr_create_command_special_characters_in_title() {
-    // 测试标题中的特殊字符
+    // Arrange: 准备测试标题中的特殊字符
     let special_title = "Test PR: Fix bug #123 (urgent!)";
     let cli =
         TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", special_title])
@@ -635,9 +656,10 @@ fn test_pr_create_command_special_characters_in_title() {
     }
 }
 
+/// 测试PR评论命令的空消息（边界情况）
 #[test]
 fn test_pr_comment_command_empty_message() {
-    // 测试空消息的情况
+    // Arrange: 准备测试空消息的情况
     let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123"])
         .expect("CLI args should parse successfully");
 
@@ -652,9 +674,10 @@ fn test_pr_comment_command_empty_message() {
     }
 }
 
+/// 测试PR列表命令的limit为0（边界值）
 #[test]
 fn test_pr_list_command_zero_limit() {
-    // 测试 limit 为 0 的情况（边界值）
+    // Arrange: 准备测试 limit 为 0 的情况（边界值）
     let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "0"])
         .expect("CLI args should parse successfully");
 
@@ -666,9 +689,10 @@ fn test_pr_list_command_zero_limit() {
     }
 }
 
+/// 测试PR列表命令的超大limit值（边界情况）
 #[test]
 fn test_pr_list_command_very_large_limit() {
-    // 测试非常大的 limit 值（边界情况）
+    // Arrange: 准备测试非常大的 limit 值（边界情况）
     let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "999999"])
         .expect("CLI args should parse successfully");
 

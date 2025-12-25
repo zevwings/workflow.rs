@@ -21,7 +21,7 @@ fn test_is_shell_configured(
     #[case] shell_name: &str,
     #[case] config_identifier: &str,
 ) {
-    // 测试检查 shell 是否已配置 completion
+    // Arrange: 准备测试检查 shell 是否已配置 completion
     let result = Completion::is_shell_configured(&shell);
 
     // 应该返回 Ok，包含配置状态和配置文件路径
@@ -43,7 +43,7 @@ fn test_is_shell_configured(
 
 #[test]
 fn test_is_shell_configured_powershell() {
-    // 测试检查 PowerShell 是否已配置 completion
+    // Arrange: 准备测试检查 PowerShell 是否已配置 completion
     let result = Completion::is_shell_configured(&Shell::PowerShell);
 
     // 应该返回 Ok，包含配置状态和配置文件路径
@@ -64,7 +64,7 @@ fn test_get_completion_files(
     #[case] identifier1: &str,
     #[case] identifier2: &str,
 ) {
-    // 测试获取 shell 的 completion 文件列表
+    // Arrange: 准备测试获取 shell 的 completion 文件列表
     let files = Completion::get_completion_files(&shell);
 
     // 应该返回文件路径列表（可能为空）
@@ -84,7 +84,7 @@ fn test_get_completion_files(
 
 #[test]
 fn test_remove_completion_config_file() {
-    // 测试删除 completion 配置文件
+    // Arrange: 准备测试删除 completion 配置文件
     let result = Completion::remove_completion_config_file();
 
     // 应该返回 Ok，表示是否删除了文件
@@ -98,7 +98,7 @@ fn test_remove_completion_config_file() {
 #[case(Shell::Bash)]
 #[case(Shell::Fish)]
 fn test_remove_completion_config(#[case] shell: Shell) {
-    // 测试删除 shell 的 completion 配置
+    // Arrange: 准备测试删除 shell 的 completion 配置
     let result = Completion::remove_completion_config(&shell);
 
     // 应该返回 Ok（即使配置不存在）
@@ -111,7 +111,7 @@ fn test_remove_completion_config(#[case] shell: Shell) {
 
 #[test]
 fn test_remove_all_completion_configs() {
-    // 测试删除所有 shell 的 completion 配置
+    // Arrange: 准备测试删除所有 shell 的 completion 配置
     let result = Completion::remove_all_completion_configs();
 
     // 应该返回 Ok
@@ -125,7 +125,7 @@ fn test_remove_all_completion_configs() {
 #[case(Shell::Bash)]
 #[case(Shell::Fish)]
 fn test_remove_completion_files(#[case] shell: Shell) {
-    // 测试删除 shell 的 completion 文件
+    // Arrange: 准备测试删除 shell 的 completion 文件
     let result = Completion::remove_completion_files(&shell);
 
     // 应该返回 Ok，包含删除结果
@@ -146,7 +146,7 @@ fn test_remove_completion_files(#[case] shell: Shell) {
 
 #[test]
 fn test_completion_config_result_structure() {
-    // 测试 CompletionConfigResult 结构体
+    // Arrange: 准备测试 CompletionConfigResult 结构体
     use workflow::completion::CompletionConfigResult;
 
     let result = CompletionConfigResult {
@@ -164,7 +164,7 @@ fn test_completion_config_result_structure() {
 
 #[test]
 fn test_completion_removal_result_structure() {
-    // 测试 CompletionRemovalResult 结构体
+    // Arrange: 准备测试 CompletionRemovalResult 结构体
     use std::path::PathBuf;
     use workflow::completion::CompletionRemovalResult;
 
@@ -186,7 +186,7 @@ fn test_completion_removal_result_structure() {
 
 #[test]
 fn test_generate_all_completions_with_shell_type() {
-    // 测试使用指定 shell 类型生成所有 completion
+    // Arrange: 准备测试使用指定 shell 类型生成所有 completion
     let result = Completion::generate_all_completions(Some("zsh".to_string()), None);
 
     // 如果路径解析成功，应该能生成；否则返回错误
@@ -203,7 +203,7 @@ fn test_generate_all_completions_with_shell_type() {
 
 #[test]
 fn test_generate_all_completions_auto_detect() {
-    // 测试自动检测 shell 类型生成所有 completion
+    // Arrange: 准备测试自动检测 shell 类型生成所有 completion
     let result = Completion::generate_all_completions(None, None);
 
     // 如果路径解析成功，应该能生成；否则返回错误
@@ -220,7 +220,7 @@ fn test_generate_all_completions_auto_detect() {
 
 #[test]
 fn test_generate_all_completions_with_output_dir() {
-    // 测试使用指定输出目录生成所有 completion
+    // Arrange: 准备测试使用指定输出目录生成所有 completion
     let test_dir = create_temp_test_dir("completion_test");
     let result = Completion::generate_all_completions(
         Some("zsh".to_string()),
