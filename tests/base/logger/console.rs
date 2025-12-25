@@ -126,7 +126,7 @@ fn test_separator_with_text_long_with_long_text_returns_text_only() {
 
 /// 测试打印成功消息
 #[test]
-fn test_logger_print_success_with_message_returns_void() {
+fn test_logger_print_success_with_message() {
     // Arrange: 准备成功消息
     // print_success 总是输出，不受日志级别限制
 
@@ -138,7 +138,7 @@ fn test_logger_print_success_with_message_returns_void() {
 
 /// 测试打印普通消息
 #[test]
-fn test_logger_print_message_with_message_returns_void() {
+fn test_logger_print_message_with_message() {
     // Arrange: 准备消息
     // print_message 总是输出，不受日志级别限制
 
@@ -150,7 +150,7 @@ fn test_logger_print_message_with_message_returns_void() {
 
 /// 测试打印分隔符（使用不同参数）
 #[test]
-fn test_logger_print_separator_with_various_params_returns_void() {
+fn test_logger_print_separator_with_various_params() {
     // Arrange: 准备不同的分隔符参数
 
     // Act: 打印分隔符（使用不同参数）
@@ -163,7 +163,7 @@ fn test_logger_print_separator_with_various_params_returns_void() {
 
 /// 测试打印带文本的分隔符
 #[test]
-fn test_logger_print_separator_with_text_with_params_returns_void() {
+fn test_logger_print_separator_with_text_with_params() {
     // Arrange: 准备分隔符参数和文本
 
     // Act: 打印带文本的分隔符
@@ -174,7 +174,7 @@ fn test_logger_print_separator_with_text_with_params_returns_void() {
 
 /// 测试打印换行
 #[test]
-fn test_logger_print_newline_with_no_params_returns_void() {
+fn test_logger_print_newline_with_no_params() {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 打印换行
@@ -185,7 +185,7 @@ fn test_logger_print_newline_with_no_params_returns_void() {
 
 /// 测试打印错误消息（Error级别）
 #[test]
-fn test_logger_print_error_with_error_level_returns_void() {
+fn test_logger_print_error_with_error_level() {
     // Arrange: 设置日志级别为 Error
     LogLevel::set_level(LogLevel::Error);
 
@@ -197,7 +197,7 @@ fn test_logger_print_error_with_error_level_returns_void() {
 
 /// 测试打印警告消息（Warn级别）
 #[test]
-fn test_logger_print_warning_with_warn_level_returns_void() {
+fn test_logger_print_warning_with_warn_level() {
     // Arrange: 设置日志级别为 Warn
     LogLevel::set_level(LogLevel::Warn);
 
@@ -209,7 +209,7 @@ fn test_logger_print_warning_with_warn_level_returns_void() {
 
 /// 测试打印信息消息（Info级别）
 #[test]
-fn test_logger_print_info_with_info_level_returns_void() {
+fn test_logger_print_info_with_info_level() {
     // Arrange: 设置日志级别为 Info
     LogLevel::set_level(LogLevel::Info);
 
@@ -221,7 +221,7 @@ fn test_logger_print_info_with_info_level_returns_void() {
 
 /// 测试打印调试消息（Debug级别）
 #[test]
-fn test_logger_print_debug_with_debug_level_returns_void() {
+fn test_logger_print_debug_with_debug_level() {
     // Arrange: 设置日志级别为 Debug
     LogLevel::set_level(LogLevel::Debug);
 
@@ -287,7 +287,7 @@ fn test_separator_with_text_centering_returns_centered_text() {
 
 /// 测试打印分隔符（使用默认参数）
 #[test]
-fn test_logger_print_separator_with_defaults_returns_void() {
+fn test_logger_print_separator_with_defaults() {
     // Arrange: 准备测试（无需额外准备）
     // 测试 print_separator 的默认参数
 

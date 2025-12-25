@@ -173,7 +173,7 @@ fn test_config_manager_update_existing_user(test_env: TestIsolation) {
     assert_eq!(read_config.users[0].display_name, "Updated User");
 }
 
-// ==================== 配置文件操作测试 ====================
+// ==================== Configuration File Operation Tests ====================
 
 /// 测试JiraConfig的默认值
 #[test]
@@ -219,7 +219,7 @@ display_name = "Test User"
     assert_eq!(config.users[0].email, "test@example.com");
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试空用户列表
 #[test]
@@ -248,7 +248,7 @@ fn test_jira_config_multiple_users() {
     assert_eq!(config.users.len(), 2);
 }
 
-// ==================== 错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
 /// 测试读取不存在的配置文件
 #[rstest]
@@ -286,7 +286,7 @@ fn test_jira_user_entry_equality() {
     assert_eq!(entry1.display_name, entry2.display_name);
 }
 
-// ==================== 集成测试 ====================
+// ==================== Integration Tests ====================
 
 /// 测试配置的完整往返（写入和读取）
 #[rstest]

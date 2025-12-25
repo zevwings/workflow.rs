@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 use workflow::base::http::retry::{HttpRetry, HttpRetryConfig};
 use workflow::base::http::{HttpClient, RequestConfig};
 
-// ==================== 辅助函数（来自 retry_core.rs）====================
+// ==================== Helper Functions (from retry_core.rs) ====================
 
 /// 创建在指定次数后成功的操作（使用局部计数器避免并发问题）
 fn create_success_after_attempts(success_after: usize) -> impl Fn() -> color_eyre::Result<String> {
@@ -1057,6 +1057,23 @@ fn test_retry_delay_max_limit_returns_success() {
     assert!(result.is_ok());
 }
 
+/// 测试HTTP重试机制处理reqwest超时错误
+///
+/// ## 测试目的
+/// 验证 `HttpRetry::retry()` 能够正确处理 `reqwest::Error` 的超时错误（`is_timeout()` 分支）。
+///
+/// ## 测试场景
+/// 1. 配置HTTP重试参数（max_retries: 0，不重试）
+/// 2. 使用极短超时时间（1ms）请求无效URL
+/// 3. 验证超时错误被正确处理
+///
+/// ## 注意事项
+/// - 此测试被标记为 `#[ignore]`，因为超时行为在单元测试中难以可靠重现
+/// - 连接失败可能比超时更快发生，导致测试不稳定
+/// - 更好的方法是使用 mock 服务器模拟延迟响应
+///
+/// ## 预期结果
+/// - 超时错误被正确识别和处理
 #[test]
 #[ignore = "Flaky test - timeout behavior is difficult to reliably reproduce in unit tests"]
 fn test_retry_with_reqwest_error_timeout() -> Result<()> {
@@ -1243,7 +1260,7 @@ fn test_retry_with_reqwest_error_429() -> Result<()> {
     Ok(())
 }
 
-// ==================== 补充测试：覆盖更多代码路径 ====================
+// ==================== Additional Tests: Cover More Code Paths ====================
 
 /// 测试交互模式下第一次失败时的倒计时逻辑
 #[test]
@@ -1664,7 +1681,7 @@ fn test_retry_non_retryable_error_logging() {
     // 应该立即失败，不进行重试（第一次尝试就失败且不可重试）
 }
 
-// ==================== 补充测试：覆盖未覆盖的代码路径 ====================
+// ==================== Additional Tests: Cover Uncovered Code Paths ====================
 //
 // 注意：以下测试补充了未覆盖的代码路径，但由于技术限制，某些路径无法完全覆盖：
 // 1. 交互式确认的用户选择"继续"路径（Ok(true)）- 需要 mock ConfirmDialog

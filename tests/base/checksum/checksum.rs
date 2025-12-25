@@ -12,7 +12,7 @@ use rstest::rstest;
 use workflow::base::checksum::Checksum;
 use crate::common::environments::CliTestEnv;
 
-// ==================== 校验和计算测试 ====================
+// ==================== Checksum Calculation Tests ====================
 
 /// 测试计算文件 SHA256 哈希值（有效文件）
 ///

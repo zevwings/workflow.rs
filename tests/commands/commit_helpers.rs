@@ -4,12 +4,27 @@
 
 use crate::common::environments::CliTestEnv;
 use crate::common::helpers::CurrentDirGuard;
-use serial_test::serial;
 // Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
 use workflow::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch};
 
 // ==================== Commit Existence Check Tests ====================
 
+/// 测试在非Git仓库中检查是否有最后提交
+///
+/// ## 测试目的
+/// 验证 `check_has_last_commit()` 在非Git仓库目录中能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 在非Git仓库目录中调用 `check_has_last_commit()`
+/// 2. 验证返回错误或成功（取决于当前目录）
+///
+/// ## 注意事项
+/// - 如果当前目录恰好是Git仓库且有commit，返回成功是可以接受的
+/// - 如果当前目录不是Git仓库，应返回错误
+///
+/// ## 预期结果
+/// - 在非Git仓库中返回Err
+/// - 错误消息包含 "No commits"、"git" 或 "repository" 等关键词
 #[test]
 fn test_check_has_last_commit_without_git_repo_returns_error() {
     // Arrange: 准备非 Git 仓库环境
@@ -51,7 +66,6 @@ fn test_check_has_last_commit_without_git_repo_returns_error() {
 /// - 使用`CliTestEnv`自动清理临时目录和环境（支持并行执行）
 /// - 自动恢复原始工作目录和环境变量
 #[test]
-#[serial]
 fn test_check_has_last_commit_with_empty_git_repo() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?;
@@ -93,7 +107,6 @@ fn test_check_has_last_commit_with_empty_git_repo() -> color_eyre::Result<()> {
 /// ## 技术细节
 /// - 使用`CliTestEnv`自动创建和清理临时Git仓库（支持并行执行）
 #[test]
-#[serial]
 fn test_check_has_last_commit_with_commits() -> color_eyre::Result<()> {
     let env = CliTestEnv::new()?;
     env.init_git_repo()?
@@ -132,7 +145,6 @@ fn test_check_has_last_commit_with_commits() -> color_eyre::Result<()> {
 /// - 使用`CliTestEnv`创建和管理临时Git仓库（支持并行执行）
 /// - 自动恢复原始工作目录
 #[test]
-#[serial]
 fn test_check_not_on_default_branch_on_main_returns_error() -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并在main分支上
     let env = CliTestEnv::new()?;
@@ -168,8 +180,23 @@ fn test_check_not_on_default_branch_on_main_returns_error() -> color_eyre::Resul
     Ok(())
 }
 
+/// 测试在feature分支上的默认分支检查
+///
+/// ## 测试目的
+/// 验证 `check_not_on_default_branch()` 在feature分支上正确返回成功，允许执行操作。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库并初始化
+/// 2. 创建文件并提交
+/// 3. 创建并切换到feature分支（feature/test）
+/// 4. 调用 `check_not_on_default_branch()`
+/// 5. 验证返回成功并包含正确的分支信息
+///
+/// ## 预期结果
+/// - 返回Ok，包含当前分支和默认分支的元组
+/// - 当前分支为 "feature/test"
+/// - 默认分支为 "main"
 #[test]
-#[serial]
 fn test_check_not_on_default_branch_on_feature_branch_returns_ok() -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并切换到feature分支
     let env = CliTestEnv::new()?;
@@ -209,6 +236,23 @@ fn test_check_not_on_default_branch_on_feature_branch_returns_ok() -> color_eyre
     Ok(())
 }
 
+/// 测试在非Git仓库中检查默认分支的错误消息格式
+///
+/// ## 测试目的
+/// 验证 `check_not_on_default_branch()` 在非Git仓库目录中能够返回格式良好的错误消息。
+///
+/// ## 测试场景
+/// 1. 在非Git仓库目录中调用 `check_not_on_default_branch()`
+/// 2. 验证返回错误或成功（取决于当前目录）
+///
+/// ## 注意事项
+/// - 如果当前目录恰好是Git仓库，返回成功是可以接受的
+/// - 如果当前目录不是Git仓库，应返回错误
+///
+/// ## 预期结果
+/// - 在非Git仓库中返回Err
+/// - 错误消息包含 "branch"、"git" 或 "Failed" 等关键词
+/// - 错误消息格式清晰，便于调试
 #[test]
 fn test_check_not_on_default_branch_error_message_format_with_non_git_repo_returns_error() {
     // Arrange: 准备非Git仓库环境

@@ -6,6 +6,21 @@ use workflow::base::prompt::generate_summarize_pr_system_prompt;
 
 // ==================== Summarize PR System Prompt Generation Tests ====================
 
+/// 测试生成PR总结system prompt（无参数）
+///
+/// ## 测试目的
+/// 验证 `generate_summarize_pr_system_prompt()` 函数能够生成非空的system prompt，并包含所有关键内容。
+///
+/// ## 测试场景
+/// 1. 调用函数生成prompt
+/// 2. 验证prompt不为空
+/// 3. 验证prompt包含关键内容
+///
+/// ## 预期结果
+/// - prompt不为空
+/// - 包含 "CRITICAL LANGUAGE REQUIREMENT"
+/// - 包含 "Summary Document Rules"、"Filename Rules"、"Response Format"
+/// - 包含示例关键词（summary, filename, add-user-authentication）
 #[test]
 fn test_generate_summarize_pr_system_prompt_with_no_parameters_returns_prompt() {
     // Arrange: 准备生成prompt
@@ -24,6 +39,18 @@ fn test_generate_summarize_pr_system_prompt_with_no_parameters_returns_prompt() 
     assert!(prompt.contains("add-user-authentication"));
 }
 
+/// 测试生成的PR总结prompt包含语言要求
+///
+/// ## 测试目的
+/// 验证生成的system prompt包含语言要求说明（通过 `get_language_requirement` 添加）。
+///
+/// ## 测试场景
+/// 1. 生成system prompt
+/// 2. 验证包含语言要求关键词
+///
+/// ## 预期结果
+/// - prompt包含 "CRITICAL LANGUAGE REQUIREMENT"
+/// - prompt包含 "REMINDER: Language Requirement"
 #[test]
 fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_prompt_contains_language() {
     // Arrange: 准备生成prompt
@@ -34,6 +61,20 @@ fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_p
     assert!(prompt.contains("REMINDER: Language Requirement"));
 }
 
+/// 测试生成的PR总结prompt包含文档结构说明
+///
+/// ## 测试目的
+/// 验证生成的system prompt包含文档结构说明，包括所有必需的章节。
+///
+/// ## 测试场景
+/// 1. 生成system prompt
+/// 2. 准备文档结构关键词列表
+/// 3. 验证prompt包含所有关键词
+///
+/// ## 预期结果
+/// - prompt包含所有文档结构关键词：
+///   - PR Title, Overview, Requirements Analysis, Key Changes
+///   - Files Changed, Technical Details, Testing, Usage Instructions
 #[test]
 fn test_generate_summarize_pr_system_prompt_contains_document_structure_with_prompt_contains_structure() {
     // Arrange: 准备生成prompt和文档结构关键词列表
@@ -49,6 +90,18 @@ fn test_generate_summarize_pr_system_prompt_contains_document_structure_with_pro
     }
 }
 
+/// 测试多次调用生成函数返回一致的结果
+///
+/// ## 测试目的
+/// 验证 `generate_summarize_pr_system_prompt()` 函数在多次调用时返回一致的结果（幂等性）。
+///
+/// ## 测试场景
+/// 1. 多次调用生成函数
+/// 2. 比较多次调用的结果
+///
+/// ## 预期结果
+/// - 多次调用的结果完全一致
+/// - 函数具有幂等性
 #[test]
 fn test_generate_summarize_pr_system_prompt_consistent_with_multiple_calls_returns_same_result() {
     // Arrange: 准备多次调用

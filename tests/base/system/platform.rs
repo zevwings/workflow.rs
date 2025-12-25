@@ -7,7 +7,7 @@ use pretty_assertions::assert_eq;
 use std::env;
 use workflow::base::system::Platform;
 
-// ==================== 平台检测测试 ====================
+// ==================== Platform Detection Tests ====================
 
 /// 测试检测平台并获取有效的发布标识符格式
 #[test]

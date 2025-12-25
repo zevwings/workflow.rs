@@ -7,6 +7,18 @@ use workflow::branch::naming::BranchNaming;
 
 // ==================== Slugify Boundary Tests ====================
 
+/// 测试slugify方法对长字符串的长度限制
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::slugify()` 方法能够正确处理超过长度限制的长字符串，结果不超过50个字符。
+///
+/// ## 测试场景
+/// 1. 准备超过长度限制的长字符串（100个字符）
+/// 2. 调用slugify方法
+/// 3. 验证结果长度不超过50个字符
+///
+/// ## 预期结果
+/// - 结果长度不超过50个字符
 #[test]
 fn test_slugify_with_long_string_enforces_length_limit() {
     // Arrange: 准备超过长度限制的长字符串（100个字符）
@@ -19,6 +31,22 @@ fn test_slugify_with_long_string_enforces_length_limit() {
     assert!(result.len() <= 50);
 }
 
+/// 测试slugify方法处理边界情况
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::slugify()` 方法能够正确处理各种边界情况（空字符串、空格、连字符、单个字符等）。
+///
+/// ## 测试场景
+/// 1. 测试空字符串
+/// 2. 测试只有空格的字符串
+/// 3. 测试只有连字符的字符串
+/// 4. 测试单个小写字母
+/// 5. 测试单个大写字母
+///
+/// ## 预期结果
+/// - 空字符串和空格返回空字符串
+/// - 连字符返回空字符串
+/// - 单个字母返回小写字母
 #[test]
 fn test_slugify_with_edge_cases_handles_correctly() {
     // Arrange: 准备边界情况输入
@@ -43,6 +71,19 @@ fn test_slugify_with_edge_cases_handles_correctly() {
     assert_eq!(result_uppercase, "a");
 }
 
+/// 测试slugify方法处理Unicode字符
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::slugify()` 方法能够正确处理包含Unicode字符的输入（保留ASCII部分）。
+///
+/// ## 测试场景
+/// 1. 测试包含Unicode字符的输入（café, naïve）
+/// 2. 调用slugify方法
+/// 3. 验证Unicode字符处理正确
+///
+/// ## 预期结果
+/// - Unicode字符被移除或转换
+/// - ASCII部分被保留
 #[test]
 fn test_slugify_with_unicode_characters_handles_correctly() {
     // Arrange: 准备包含 Unicode 字符的输入
@@ -58,6 +99,19 @@ fn test_slugify_with_unicode_characters_handles_correctly() {
     assert!(result2.contains("na"));
 }
 
+/// 测试slugify方法保留数字
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::slugify()` 方法能够保留输入中的数字。
+///
+/// ## 测试场景
+/// 1. 测试包含数字的输入（test123, 123test, test-123-branch）
+/// 2. 调用slugify方法
+/// 3. 验证数字被保留
+///
+/// ## 预期结果
+/// - 数字被保留在结果中
+/// - 格式正确（小写、连字符分隔）
 #[test]
 fn test_slugify_with_numbers_preserves_numbers() {
     // Arrange: 准备包含数字的输入
@@ -78,6 +132,22 @@ fn test_slugify_with_numbers_preserves_numbers() {
 
 // ==================== Sanitize Boundary Tests ====================
 
+/// 测试sanitize方法处理边界情况
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::sanitize()` 方法能够正确处理各种边界情况（空字符串、空格、连字符、单个字符等）。
+///
+/// ## 测试场景
+/// 1. 测试空字符串
+/// 2. 测试只有空格的字符串
+/// 3. 测试只有连字符的字符串
+/// 4. 测试单个小写字母
+/// 5. 测试单个大写字母
+///
+/// ## 预期结果
+/// - 空字符串和空格返回空字符串
+/// - 连字符返回空字符串
+/// - 单个字母返回小写字母
 #[test]
 fn test_sanitize_with_edge_cases_handles_correctly() {
     // Arrange: 准备边界情况输入
@@ -102,6 +172,19 @@ fn test_sanitize_with_edge_cases_handles_correctly() {
     assert_eq!(result_uppercase, "a");
 }
 
+/// 测试sanitize方法移除非ASCII字符
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::sanitize()` 方法能够移除非ASCII字符，保留ASCII字符。
+///
+/// ## 测试场景
+/// 1. 测试包含Unicode字符的输入（café, naïve, résumé）
+/// 2. 调用sanitize方法
+/// 3. 验证非ASCII字符被移除，ASCII字符被保留
+///
+/// ## 预期结果
+/// - 非ASCII字符（é, ï等）被移除
+/// - ASCII字符（caf, na, r等）被保留
 #[test]
 fn test_sanitize_with_unicode_characters_removes_non_ascii() {
     // Arrange: 准备包含 Unicode 字符的输入
@@ -123,6 +206,19 @@ fn test_sanitize_with_unicode_characters_removes_non_ascii() {
     assert!(!result3.contains("é"));
 }
 
+/// 测试sanitize方法保留数字
+///
+/// ## 测试目的
+/// 验证 `BranchNaming::sanitize()` 方法能够保留输入中的数字。
+///
+/// ## 测试场景
+/// 1. 测试包含数字的输入（test123, 123test, test-123-branch）
+/// 2. 调用sanitize方法
+/// 3. 验证数字被保留
+///
+/// ## 预期结果
+/// - 数字被保留在结果中
+/// - 格式正确（小写、连字符分隔）
 #[test]
 fn test_sanitize_with_numbers_preserves_numbers() {
     // Arrange: 准备包含数字的输入

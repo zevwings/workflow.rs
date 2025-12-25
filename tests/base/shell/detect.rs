@@ -3,8 +3,9 @@
 //! 测试 Shell 检测功能。
 
 use clap_complete::Shell;
-use std::env;
 use workflow::base::shell::Detect;
+
+use crate::common::guards::EnvGuard;
 
 // ==================== Shell Detection Tests ====================
 
@@ -36,9 +37,9 @@ fn test_detect_shell_from_env_with_env_var_returns_shell() {
 /// 测试不支持的shell的错误消息
 #[test]
 fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
-    // Arrange: 保存原始SHELL环境变量并设置不支持的shell
-    let original_shell = env::var("SHELL").ok();
-    env::set_var("SHELL", "/usr/bin/unsupported-shell");
+    // Arrange: 使用 EnvGuard 设置不支持的shell
+    let mut guard = EnvGuard::new();
+    guard.set("SHELL", "/usr/bin/unsupported-shell");
 
     // Act: 尝试检测shell
     let result = Detect::shell();
@@ -48,12 +49,7 @@ fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Unsupported shell") || error_msg.contains("unsupported-shell"));
     }
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试检测已安装的shell
@@ -148,12 +144,10 @@ fn test_detect_shell_consistency() {
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn test_detect_shell_zsh() {
-    // Arrange: 准备测试检测 zsh（覆盖 detect.rs:24-34）
+    // Arrange: 使用 EnvGuard 设置 zsh 路径（覆盖 detect.rs:24-34）
     // 只在非 Windows 系统上测试
-    let original_shell = env::var("SHELL").ok();
-
-    // 设置 zsh 路径
-    env::set_var("SHELL", "/bin/zsh");
+    let mut guard = EnvGuard::new();
+    guard.set("SHELL", "/bin/zsh");
 
     let result = Detect::shell();
 
@@ -161,23 +155,16 @@ fn test_detect_shell_zsh() {
     if let Ok(shell) = result {
         assert_eq!(shell, Shell::Zsh);
     }
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试检测bash（仅非Windows系统）
 #[cfg(not(target_os = "windows"))]
 #[test]
 fn test_detect_shell_bash() {
-    // Arrange: 准备测试检测 bash
-    let original_shell = env::var("SHELL").ok();
-
-    // 设置 bash 路径
-    env::set_var("SHELL", "/bin/bash");
+    // Arrange: 使用 EnvGuard 设置 bash 路径
+    let mut guard = EnvGuard::new();
+    guard.set("SHELL", "/bin/bash");
 
     let result = Detect::shell();
 
@@ -185,12 +172,7 @@ fn test_detect_shell_bash() {
     if let Ok(shell) = result {
         assert_eq!(shell, Shell::Bash);
     }
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试已安装的shell列表不包含重复项
@@ -208,11 +190,9 @@ fn test_detect_installed_shells_no_duplicates() {
 /// 测试从SHELL环境变量解析的回退逻辑
 #[test]
 fn test_detect_shell_from_shell_path_fallback() {
-    // Arrange: 准备测试从 SHELL 环境变量解析的回退逻辑（覆盖 detect.rs:26-29）
-    let original_shell = env::var("SHELL").ok();
-
-    // 设置一个有效的 shell 路径
-    env::set_var("SHELL", "/bin/zsh");
+    // Arrange: 使用 EnvGuard 设置有效的 shell 路径（覆盖 detect.rs:26-29）
+    let mut guard = EnvGuard::new();
+    guard.set("SHELL", "/bin/zsh");
 
     let result = Detect::shell();
 
@@ -220,33 +200,21 @@ fn test_detect_shell_from_shell_path_fallback() {
     if result.is_ok() {
         assert_eq!(result.expect("should detect zsh shell"), Shell::Zsh);
     }
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试空环境变量的情况（应返回错误）
 #[test]
 fn test_detect_shell_empty_env_var() {
-    // Arrange: 准备测试空环境变量的情况（覆盖 detect.rs:31-33）
-    let original_shell = env::var("SHELL").ok();
-
-    // 设置空环境变量
-    env::set_var("SHELL", "");
+    // Arrange: 使用 EnvGuard 设置空环境变量（覆盖 detect.rs:31-33）
+    let mut guard = EnvGuard::new();
+    guard.set("SHELL", "");
 
     let result = Detect::shell();
 
     // 空环境变量应该返回错误
     assert!(result.is_err());
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试/etc/shells文件中的注释行被忽略
@@ -298,18 +266,17 @@ fn test_detect_installed_shells_fallback_to_current() {
 /// 测试检测PowerShell
 #[test]
 fn test_detect_shell_powershell() {
-    // Arrange: 准备测试检测 PowerShell
-    let original_shell = env::var("SHELL").ok();
+    // Arrange: 使用 EnvGuard 设置 PowerShell 路径
+    let mut guard = EnvGuard::new();
 
-    // 设置 PowerShell 路径（Windows 格式）
     #[cfg(target_os = "windows")]
     {
-        env::set_var("SHELL", "powershell.exe");
+        guard.set("SHELL", "powershell.exe");
     }
 
     #[cfg(not(target_os = "windows"))]
     {
-        env::set_var("SHELL", "/usr/bin/pwsh");
+        guard.set("SHELL", "/usr/bin/pwsh");
     }
 
     let result = Detect::shell();
@@ -330,24 +297,17 @@ fn test_detect_shell_powershell() {
             let _ = result.expect("shell detection should succeed");
         }
     }
-
-    // 恢复原始环境变量
-    match original_shell {
-        Some(val) => env::set_var("SHELL", val),
-        None => env::remove_var("SHELL"),
-    }
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 }
 
 /// 测试检测fish（仅非Windows系统）
 #[test]
 fn test_detect_shell_fish() {
-    // Arrange: 准备测试检测 fish
+    // Arrange: 使用 EnvGuard 设置 fish 路径
     #[cfg(not(target_os = "windows"))]
     {
-        let original_shell = env::var("SHELL").ok();
-
-        // 设置 fish 路径
-        env::set_var("SHELL", "/usr/bin/fish");
+        let mut guard = EnvGuard::new();
+        guard.set("SHELL", "/usr/bin/fish");
 
         let result = Detect::shell();
 
@@ -355,11 +315,6 @@ fn test_detect_shell_fish() {
         if let Ok(shell) = result {
             assert_eq!(shell, Shell::Fish);
         }
-
-        // 恢复原始环境变量
-        match original_shell {
-            Some(val) => env::set_var("SHELL", val),
-            None => env::remove_var("SHELL"),
-        }
+        // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
     }
 }

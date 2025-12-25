@@ -8,7 +8,7 @@ use workflow::base::logger::tracing::Tracer;
 
 /// 测试Tracer的debug方法
 #[test]
-fn test_tracer_debug_with_message_returns_void() {
+fn test_tracer_debug_with_message() {
     // Arrange: 准备测试消息
 
     // Act: 调用 debug 方法
@@ -19,7 +19,7 @@ fn test_tracer_debug_with_message_returns_void() {
 
 /// 测试Tracer的info方法
 #[test]
-fn test_tracer_info_with_message_returns_void() {
+fn test_tracer_info_with_message() {
     // Arrange: 准备测试消息
 
     // Act: 调用 info 方法
@@ -30,7 +30,7 @@ fn test_tracer_info_with_message_returns_void() {
 
 /// 测试Tracer的warn方法
 #[test]
-fn test_tracer_warn_with_message_returns_void() {
+fn test_tracer_warn_with_message() {
     // Arrange: 准备测试消息
 
     // Act: 调用 warn 方法
@@ -41,7 +41,7 @@ fn test_tracer_warn_with_message_returns_void() {
 
 /// 测试Tracer的error方法
 #[test]
-fn test_tracer_error_with_message_returns_void() {
+fn test_tracer_error_with_message() {
     // Arrange: 准备测试消息
 
     // Act: 调用 error 方法
@@ -52,7 +52,7 @@ fn test_tracer_error_with_message_returns_void() {
 
 /// 测试Tracer的debug_fmt方法（格式化参数）
 #[test]
-fn test_tracer_debug_fmt_with_format_args_returns_void() {
+fn test_tracer_debug_fmt_with_format_args() {
     // Arrange: 准备格式化参数
 
     // Act: 调用 debug_fmt 方法
@@ -63,7 +63,7 @@ fn test_tracer_debug_fmt_with_format_args_returns_void() {
 
 /// 测试Tracer的info_fmt方法（格式化参数）
 #[test]
-fn test_tracer_info_fmt_with_format_args_returns_void() {
+fn test_tracer_info_fmt_with_format_args() {
     // Arrange: 准备格式化参数
 
     // Act: 调用 info_fmt 方法
@@ -74,7 +74,7 @@ fn test_tracer_info_fmt_with_format_args_returns_void() {
 
 /// 测试Tracer的warn_fmt方法（格式化参数）
 #[test]
-fn test_tracer_warn_fmt_with_format_args_returns_void() {
+fn test_tracer_warn_fmt_with_format_args() {
     // Arrange: 准备格式化参数
 
     // Act: 调用 warn_fmt 方法
@@ -85,7 +85,7 @@ fn test_tracer_warn_fmt_with_format_args_returns_void() {
 
 /// 测试Tracer的error_fmt方法（格式化参数）
 #[test]
-fn test_tracer_error_fmt_with_format_args_returns_void() {
+fn test_tracer_error_fmt_with_format_args() {
     // Arrange: 准备格式化参数
 
     // Act: 调用 error_fmt 方法
@@ -101,7 +101,7 @@ fn test_tracer_error_fmt_with_format_args_returns_void() {
 
 /// 测试各种trace宏的基本功能
 #[test]
-fn test_trace_macros_with_basic_messages_returns_void() {
+fn test_trace_macros_with_basic_messages() {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 调用各种 trace 宏
@@ -115,7 +115,7 @@ fn test_trace_macros_with_basic_messages_returns_void() {
 
 /// 测试trace宏的格式化功能
 #[test]
-fn test_trace_macros_with_formatting_returns_void() {
+fn test_trace_macros_with_formatting() {
     // Arrange: 准备格式化参数
     let count = 5;
 
@@ -130,7 +130,7 @@ fn test_trace_macros_with_formatting_returns_void() {
 
 /// 测试trace宏的多次调用
 #[test]
-fn test_trace_macro_with_multiple_calls_returns_void() {
+fn test_trace_macro_with_multiple_calls() {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 多次调用宏
@@ -146,7 +146,7 @@ fn test_trace_macro_with_multiple_calls_returns_void() {
 
 /// 测试Tracer的初始化方法（默认配置）
 #[test]
-fn test_tracer_init_with_default_config_returns_void() {
+fn test_tracer_init_with_default_config() {
     // Arrange: 准备测试（无需额外准备）
     // 注意：多次初始化可能会失败，这是正常的
 
@@ -158,7 +158,7 @@ fn test_tracer_init_with_default_config_returns_void() {
 
 /// 测试Tracer的多次初始化调用
 #[test]
-fn test_tracer_init_with_multiple_calls_returns_void() {
+fn test_tracer_init_with_multiple_calls() {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 多次调用初始化方法
@@ -171,7 +171,7 @@ fn test_tracer_init_with_multiple_calls_returns_void() {
 
 /// 测试Tracer方法处理不同输入（空字符串、特殊字符等）
 #[test]
-fn test_tracer_methods_with_different_inputs_returns_void() {
+fn test_tracer_methods_with_different_inputs() {
     // Arrange: 准备不同的输入
 
     // Act: 调用各种方法
@@ -194,7 +194,7 @@ fn test_tracer_methods_with_different_inputs_returns_void() {
 /// 3. 调用各个级别的fmt方法
 /// 4. 验证格式化输出正常
 #[test]
-fn test_tracer_fmt_methods_with_complex_formatting_returns_void() {
+fn test_tracer_fmt_methods_with_complex_formatting() {
     // Arrange: 准备复杂格式化参数
     let number = 42;
     let text = "test";
@@ -223,7 +223,7 @@ fn test_tracer_fmt_methods_with_complex_formatting_returns_void() {
 
 /// 测试trace宏处理不同类型的参数
 #[test]
-fn test_trace_macros_with_various_types_returns_void() {
+fn test_trace_macros_with_various_types() {
     // Arrange: 准备不同类型的参数
 
     // Act: 调用各种 trace 宏
@@ -237,7 +237,7 @@ fn test_trace_macros_with_various_types_returns_void() {
 
 /// 测试trace宏处理空字符串
 #[test]
-fn test_trace_macros_with_empty_strings_returns_void() {
+fn test_trace_macros_with_empty_strings() {
     // Arrange: 准备空字符串
 
     // Act: 调用 trace 宏
@@ -251,7 +251,7 @@ fn test_trace_macros_with_empty_strings_returns_void() {
 
 /// 测试trace宏处理长消息
 #[test]
-fn test_trace_macros_with_long_messages_returns_void() {
+fn test_trace_macros_with_long_messages() {
     // Arrange: 准备长消息
     let long_message = "x".repeat(1000);
 
@@ -268,7 +268,7 @@ fn test_trace_macros_with_long_messages_returns_void() {
 
 /// 测试Tracer初始化时启用控制台输出的分支
 #[test]
-fn test_tracer_init_with_enable_console_returns_void() {
+fn test_tracer_init_with_enable_console() {
     // Arrange: 准备测试（无需额外准备）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试可能不会完全覆盖所有分支
     // 但至少可以验证代码路径存在
@@ -281,7 +281,7 @@ fn test_tracer_init_with_enable_console_returns_void() {
 
 /// 测试Tracer初始化时文件创建失败的回退逻辑
 #[test]
-fn test_tracer_init_file_creation_fallback_returns_void() {
+fn test_tracer_init_file_creation_fallback() {
     // Arrange: 准备测试（无需额外准备）
     // 注意：这个测试很难直接触发文件创建失败，但至少可以验证代码路径存在
 
@@ -293,7 +293,7 @@ fn test_tracer_init_file_creation_fallback_returns_void() {
 
 /// 测试Tracer初始化时日志级别为None的分支
 #[test]
-fn test_tracer_init_log_level_none_returns_void() {
+fn test_tracer_init_log_level_none() {
     // Arrange: 准备测试（无需额外准备）
     // 注意：由于 Tracer::init() 从配置文件读取，这个测试可能不会完全覆盖
     // 但至少可以验证代码路径存在
@@ -306,7 +306,7 @@ fn test_tracer_init_log_level_none_returns_void() {
 
 /// 测试Tracer间接获取日志文件路径的功能
 #[test]
-fn test_tracer_get_log_file_path_indirect_returns_void() {
+fn test_tracer_get_log_file_path_indirect() {
     // Arrange: 准备测试（无需额外准备）
     // 间接测试 get_log_file_path() 方法
     // 通过 Tracer::init() 调用，验证日志文件路径创建功能
@@ -320,7 +320,7 @@ fn test_tracer_get_log_file_path_indirect_returns_void() {
 
 /// 测试Tracer初始化时enable_console为true的分支路径
 #[test]
-fn test_tracer_init_enable_console_true_path_returns_void() {
+fn test_tracer_init_enable_console_true_path() {
     // Arrange: 准备测试（无需额外准备）
     // 测试 enable_console = true 的分支（第110-113行）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试通过多次调用来验证代码路径
@@ -334,7 +334,7 @@ fn test_tracer_init_enable_console_true_path_returns_void() {
 
 /// 测试Tracer初始化时enable_console为false的分支路径
 #[test]
-fn test_tracer_init_enable_console_false_path_returns_void() {
+fn test_tracer_init_enable_console_false_path() {
     // Arrange: 准备测试（无需额外准备）
     // 测试 enable_console = false 的分支（第114-116行）
     // 注意：由于 Tracer::init() 只能调用一次，这个测试通过多次调用来验证代码路径
@@ -347,7 +347,7 @@ fn test_tracer_init_enable_console_false_path_returns_void() {
 
 /// 测试Tracer初始化时文件打开成功的路径
 #[test]
-fn test_tracer_init_file_open_success_path_returns_void() {
+fn test_tracer_init_file_open_success_path() {
     // Arrange: 准备测试（无需额外准备）
     // 测试文件打开成功的路径（第99-118行）
     // 通过 Tracer::init() 间接测试
@@ -360,7 +360,7 @@ fn test_tracer_init_file_open_success_path_returns_void() {
 
 /// 测试Tracer初始化时文件打开失败的回退逻辑
 #[test]
-fn test_tracer_init_file_open_failure_fallback_returns_void() {
+fn test_tracer_init_file_open_failure_fallback() {
     // Arrange: 准备测试（无需额外准备）
     // 测试文件打开失败时的回退逻辑（第121-125行）
     // 注意：这个测试很难直接触发文件打开失败，但至少可以验证代码路径存在
@@ -373,7 +373,7 @@ fn test_tracer_init_file_open_failure_fallback_returns_void() {
 
 /// 测试Tracer初始化时日志级别为None的sink路径
 #[test]
-fn test_tracer_init_log_level_none_sink_path_returns_void() {
+fn test_tracer_init_log_level_none_sink_path() {
     // Arrange: 准备测试（无需额外准备）
     // 测试 LogLevel::None 的分支（输出到 sink，第126-132行）
     // 注意：由于 Tracer::init() 从配置文件读取，这个测试可能不会完全覆盖
@@ -538,7 +538,7 @@ fn test_tracer_get_log_file_path_wrap_err() {
     // Assert: 验证不会 panic（无返回值）错误处理正确
 }
 
-// ==================== 配置分支测试（受限测试）====================
+// ==================== Configuration Branch Tests (Restricted Tests) ====================
 //
 // 注意：以下测试受到以下限制：
 // 1. `tracing_subscriber` 只能初始化一次，后续调用会被忽略
@@ -561,7 +561,7 @@ fn test_tracer_get_log_file_path_wrap_err() {
 /// 由于tracing_subscriber的限制，部分分支难以在同一进程中测试。
 /// 详见测试代码中的注释说明。
 #[test]
-fn test_tracer_init_config_branch_coverage_note_returns_void() {
+fn test_tracer_init_config_branch_coverage_note() {
     // Arrange: 准备测试（无需额外准备）
     // 测试说明：验证 Tracer::init() 的基本功能
     //

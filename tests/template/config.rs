@@ -12,7 +12,7 @@ use serde_json::json;
 use workflow::template::config::BranchTemplates;
 use workflow::template::{CommitTemplates, PullRequestsTemplates, TemplateConfig};
 
-// ==================== 测试用例 ====================
+// ==================== Test Cases ====================
 
 /// 测试默认配置加载
 #[test]

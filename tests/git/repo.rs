@@ -100,57 +100,89 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
     );
 }
 
-/// 测试从包含尾部斜杠的URL中提取仓库名
-#[test]
-fn test_extract_repo_name_from_url_trailing_slashes() -> Result<()> {
+/// 测试从包含尾部斜杠的URL中提取仓库名（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 GitRepo 能够正确处理包含尾部斜杠的 URL。
+///
+/// ## 测试场景
+/// 测试各种包含尾部斜杠的 URL 格式：
+/// - HTTPS URL 带尾部斜杠
+/// - HTTPS URL 带 .git 和尾部斜杠
+/// - Codeup URL 带尾部斜杠
+///
+/// ## 预期结果
+/// - 所有 URL 都能正确提取仓库名，忽略尾部斜杠
+#[rstest]
+#[case("https://github.com/owner/repo/", "owner/repo")]
+#[case("https://github.com/owner/repo.git/", "owner/repo")]
+#[case("https://codeup.aliyun.com/owner/repo/", "owner/repo")]
+fn test_extract_repo_name_from_url_trailing_slashes(
+    #[case] url: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     // Arrange: 准备测试末尾斜杠的处理
-    let test_cases = vec![
-        ("https://github.com/owner/repo/", "owner/repo"),
-        ("https://github.com/owner/repo.git/", "owner/repo"),
-        ("https://codeup.aliyun.com/owner/repo/", "owner/repo"),
-    ];
-
-    for (url, expected) in test_cases {
-        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
-        assert_eq!(repo_name, expected);
-    }
+    let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+    assert_eq!(repo_name, expected);
     Ok(())
 }
 
-/// 测试URL大小写敏感性
-#[test]
-fn test_extract_repo_name_from_url_case_sensitivity() -> Result<()> {
+/// 测试URL大小写敏感性 - 有效URL（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 GitRepo 能够正确处理大小写敏感的仓库名。
+///
+/// ## 测试场景
+/// 测试包含大写字母的仓库名（域名必须小写）：
+/// - HTTPS URL 带大写仓库名
+/// - SSH URL 带大写仓库名
+/// - Codeup URL 带大写仓库名
+///
+/// ## 预期结果
+/// - 仓库名保持原始大小写
+/// - 域名必须小写
+#[rstest]
+#[case("https://github.com/Owner/Repo.git", "Owner/Repo")]
+#[case("git@github.com:Owner/Repo.git", "Owner/Repo")]
+#[case("https://codeup.aliyun.com/Owner/Repo", "Owner/Repo")]
+fn test_extract_repo_name_from_url_case_sensitivity_valid_cases(
+    #[case] url: &str,
+    #[case] expected: &str,
+) -> Result<()> {
     // Arrange: 准备测试大小写敏感性 - 实际实现是大小写敏感的，只有小写域名被支持
-    let valid_cases = vec![
-        ("https://github.com/Owner/Repo.git", "Owner/Repo"),
-        ("git@github.com:Owner/Repo.git", "Owner/Repo"),
-        ("https://codeup.aliyun.com/Owner/Repo", "Owner/Repo"),
-    ];
-
-    for (url, expected) in valid_cases {
-        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
-        assert_eq!(repo_name, expected);
-    }
-
-    // 大写域名不被支持
-    let invalid_cases = vec![
-        "https://GITHUB.com/Owner/Repo.git",
-        "git@GITHUB.com:Owner/Repo.git",
-        "https://CODEUP.aliyun.com/Owner/Repo",
-    ];
-
-    for url in invalid_cases {
-        let result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            result.is_err(),
-            "Should fail for uppercase domain in URL: {}",
-            url
-        );
-    }
+    let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+    assert_eq!(repo_name, expected);
     Ok(())
 }
 
-// ==================== 仓库类型检测测试 ====================
+/// 测试URL大小写敏感性 - 无效URL（大写域名）（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 GitRepo 拒绝包含大写域名的 URL。
+///
+/// ## 测试场景
+/// 测试包含大写域名的 URL（应被拒绝）：
+/// - HTTPS URL 带大写域名
+/// - SSH URL 带大写域名
+/// - Codeup URL 带大写域名
+///
+/// ## 预期结果
+/// - 所有包含大写域名的 URL 都应返回错误
+#[rstest]
+#[case("https://GITHUB.com/Owner/Repo.git")]
+#[case("git@GITHUB.com:Owner/Repo.git")]
+#[case("https://CODEUP.aliyun.com/Owner/Repo")]
+fn test_extract_repo_name_from_url_case_sensitivity_invalid_domains(#[case] url: &str) {
+    // Arrange: 准备测试大写域名不被支持
+    let result = GitRepo::extract_repo_name_from_url(url);
+    assert!(
+        result.is_err(),
+        "Should fail for uppercase domain in URL: {}",
+        url
+    );
+}
+
+// ==================== Repository Type Detection Tests ====================
 
 // 从 tests/git/types.rs 复制的模拟函数，用于一致性验证
 fn mock_parse_repo_type_from_url(url: &str) -> RepoType {
@@ -254,7 +286,7 @@ fn test_case_sensitive_detection() {
     }
 }
 
-// ==================== 边界情况和错误处理测试 ====================
+// ==================== Boundary Conditions and Error Handling Tests ====================
 
 /// 测试空字符串和空白字符的处理
 #[test]
@@ -351,7 +383,7 @@ fn test_url_with_query_parameters() {
     }
 }
 
-// ==================== 性能和压力测试 ====================
+// ==================== Performance and Stress Tests ====================
 
 /// 测试大量URL处理的性能
 #[test]
@@ -384,49 +416,49 @@ fn test_performance_with_many_urls() {
     );
 }
 
-// ==================== 集成测试辅助 ====================
+// ==================== Integration Test Helpers ====================
 
-/// 测试URL解析和类型检测的集成
-#[test]
-fn test_extract_and_detect_integration() -> Result<()> {
-    // Arrange: 准备测试 URL 解析和类型检测的集成
-    let test_cases = vec![
-        (
-            "git@github.com:owner/repo.git",
-            "owner/repo",
-            RepoType::GitHub,
-        ),
-        (
-            "https://codeup.aliyun.com/owner/repo",
-            "owner/repo",
-            RepoType::Codeup,
-        ),
-        (
-            "git@gitlab.com:owner/repo.git",
-            "owner/repo",
-            RepoType::Unknown,
-        ),
-    ];
-
-    for (url, expected_name, expected_type) in test_cases {
-        // Arrange: 准备测试仓库名提取
-        if expected_type != RepoType::Unknown {
-            let repo_name = GitRepo::extract_repo_name_from_url(url)?;
-            assert_eq!(repo_name, expected_name);
-        }
-
-        // Arrange: 准备测试类型检测
-        let type_result = mock_parse_repo_type_from_url(url);
-        assert_eq!(
-            type_result, expected_type,
-            "Should detect correct type for URL: {}",
-            url
-        );
+/// 测试URL解析和类型检测的集成（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 URL 解析和类型检测的集成功能。
+///
+/// ## 测试场景
+/// 测试不同仓库类型的 URL：
+/// - GitHub URL（应能解析并识别为 GitHub）
+/// - Codeup URL（应能解析并识别为 Codeup）
+/// - 未知类型 URL（应识别为 Unknown，可能无法解析）
+///
+/// ## 预期结果
+/// - 支持的仓库类型能正确解析仓库名
+/// - 类型检测结果与预期一致
+#[rstest]
+#[case("git@github.com:owner/repo.git", "owner/repo", RepoType::GitHub, true)]
+#[case("https://codeup.aliyun.com/owner/repo", "owner/repo", RepoType::Codeup, true)]
+#[case("git@gitlab.com:owner/repo.git", "owner/repo", RepoType::Unknown, false)]
+fn test_extract_and_detect_integration(
+    #[case] url: &str,
+    #[case] expected_name: &str,
+    #[case] expected_type: RepoType,
+    #[case] should_extract_name: bool,
+) -> Result<()> {
+    // Arrange: 准备测试仓库名提取
+    if should_extract_name {
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, expected_name);
     }
+
+    // Arrange: 准备测试类型检测
+    let type_result = mock_parse_repo_type_from_url(url);
+    assert_eq!(
+        type_result, expected_type,
+        "Should detect correct type for URL: {}",
+        url
+    );
     Ok(())
 }
 
-// ==================== 回归测试 ====================
+// ==================== Regression Tests ====================
 
 /// 测试已知问题的回归
 #[test]

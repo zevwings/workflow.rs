@@ -115,19 +115,62 @@ impl GitConfigGuard {
     /// guard.set("user.email", "test@example.com")?;
     /// ```
     pub fn set(&self, key: &str, value: &str) -> Result<()> {
-        let output = Command::new("git")
-            .args([
-                "config",
-                "--file",
-                self.config_path.to_str().unwrap(),
-                key,
-                value,
-            ])
-            .output()
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to execute git config: {}", e))?;
+        const MAX_RETRIES: usize = 3;
+        const RETRY_DELAY_MS: u64 = 100;
 
-        if !output.status.success() {
+        // 使用稳定的工作目录（项目根目录或系统临时目录）
+        // Git 命令使用 --file 参数，不需要特定的工作目录
+        // 但在并行测试时，当前工作目录可能被删除，导致 Git 命令失败
+        // 优先使用项目根目录（CARGO_MANIFEST_DIR），如果不可用则使用系统临时目录
+        let stable_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .and_then(|p| std::path::PathBuf::from(p).canonicalize().ok())
+            .or_else(|| {
+                std::env::current_dir()
+                    .ok()
+                    .and_then(|d| d.canonicalize().ok())
+                    .filter(|d| d.exists())
+            })
+            .unwrap_or_else(|| std::env::temp_dir());
+
+        // 重试机制：处理锁文件冲突和短暂的并发锁定
+        for attempt in 0..MAX_RETRIES {
+            // 清理可能存在的锁文件（解决锁文件残留问题）
+            // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
+            // 如果之前的测试异常退出，锁文件可能残留
+            let lock_file = format!("{}.lock", self.config_path.to_string_lossy());
+            if std::path::Path::new(&lock_file).exists() {
+                // 忽略清理失败（锁文件可能正在被使用）
+                let _ = std::fs::remove_file(&lock_file);
+            }
+
+            let output = Command::new("git")
+                .args([
+                    "config",
+                    "--file",
+                    self.config_path.to_str().unwrap(),
+                    key,
+                    value,
+                ])
+                .current_dir(&stable_dir)  // 设置稳定的工作目录，避免并行测试时目录被删除的问题
+                .output()
+                .map_err(|e| color_eyre::eyre::eyre!("Failed to execute git config: {}", e))?;
+
+            if output.status.success() {
+                return Ok(());
+            }
+
+            // 检查是否是锁文件错误
             let error = String::from_utf8_lossy(&output.stderr);
+            let is_lock_error = error.contains("could not lock config file");
+
+            // 如果是锁文件错误且还有重试机会，等待后重试
+            if is_lock_error && attempt < MAX_RETRIES - 1 {
+                std::thread::sleep(std::time::Duration::from_millis(RETRY_DELAY_MS));
+                continue;
+            }
+
+            // 其他错误或重试次数用尽，返回错误
             return Err(color_eyre::eyre::eyre!(
                 "Failed to set Git config {}={}: {}",
                 key,
@@ -136,7 +179,7 @@ impl GitConfigGuard {
             ));
         }
 
-        Ok(())
+        unreachable!()
     }
 
     /// 从全局配置复制
@@ -205,6 +248,19 @@ impl Drop for GitConfigGuard {
 mod tests {
     use super::*;
 
+    /// 测试GitConfigGuard设置配置项
+    ///
+    /// ## 测试目的
+    /// 验证 `GitConfigGuard::set()` 方法能够正确设置Git配置项到临时配置文件。
+    ///
+    /// ## 测试场景
+    /// 1. 创建GitConfigGuard
+    /// 2. 设置多个配置项（user.name, user.email）
+    /// 3. 使用git config命令验证配置已设置
+    ///
+    /// ## 预期结果
+    /// - 配置项设置成功
+    /// - git config命令能够读取设置的配置值
     #[test]
     fn test_git_config_guard_set() -> Result<()> {
         let guard = GitConfigGuard::new()?;
@@ -213,6 +269,18 @@ mod tests {
         guard.set("user.email", "test@example.com")?;
 
         // 验证配置已设置
+        // 使用稳定的工作目录，避免并行测试时目录被删除的问题
+        let stable_dir = std::env::var("CARGO_MANIFEST_DIR")
+            .ok()
+            .and_then(|p| std::path::PathBuf::from(p).canonicalize().ok())
+            .or_else(|| {
+                std::env::current_dir()
+                    .ok()
+                    .and_then(|d| d.canonicalize().ok())
+                    .filter(|d| d.exists())
+            })
+            .unwrap_or_else(|| std::env::temp_dir());
+
         let output = Command::new("git")
             .args([
                 "config",
@@ -220,6 +288,7 @@ mod tests {
                 guard.config_path().to_str().unwrap(),
                 "user.name",
             ])
+            .current_dir(&stable_dir)
             .output()?;
 
         assert!(output.status.success());
@@ -229,6 +298,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试GitConfigGuard自动恢复GIT_CONFIG环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `GitConfigGuard` 在drop时能够自动恢复原始的GIT_CONFIG环境变量。
+    ///
+    /// ## 测试场景
+    /// 1. 保存原始GIT_CONFIG环境变量值
+    /// 2. 创建GitConfigGuard（会设置GIT_CONFIG）
+    /// 3. 验证GIT_CONFIG已设置
+    /// 4. Drop guard
+    /// 5. 验证GIT_CONFIG已恢复为原始值
+    ///
+    /// ## 预期结果
+    /// - Guard创建时，GIT_CONFIG被设置
+    /// - Guard drop后，GIT_CONFIG恢复为原始值（或移除，如果原本不存在）
     #[test]
     fn test_git_config_guard_restore() -> Result<()> {
         let original_git_config = std::env::var("GIT_CONFIG").ok();

@@ -34,7 +34,7 @@ fn test_jira_id_alt() -> &'static str {
     "PROJ-456"
 }
 
-// ==================== 命令结构测试 ====================
+// ==================== Command Structure Tests ====================
 
 /// 测试Jira子命令的参数解析（带Jira ID）
 ///
@@ -604,7 +604,7 @@ fn test_jira_comments_command_pagination() -> Result<()> {
     Ok(())
 }
 
-// ==================== 命令枚举测试 ====================
+// ==================== Command Enum Tests ====================
 
 /// 测试Jira命令解析所有子命令
 #[rstest]

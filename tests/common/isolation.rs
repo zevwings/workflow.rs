@@ -251,6 +251,22 @@ impl TestIsolation {
 mod tests {
     use super::*;
 
+    /// 测试TestIsolation基础功能
+    ///
+    /// ## 测试目的
+    /// 验证 `TestIsolation::new()` 能够创建基础隔离环境，包括临时目录和环境变量隔离。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestIsolation实例
+    /// 2. 获取工作目录路径
+    /// 3. 验证工作目录存在且为目录
+    /// 4. 验证返回的是绝对路径
+    /// 5. 验证路径来自tempfile临时目录
+    ///
+    /// ## 预期结果
+    /// - 工作目录存在且为目录
+    /// - 工作目录路径为绝对路径
+    /// - 路径包含"tmp"或"temp"（临时目录特征）
     #[test]
     fn test_test_isolation_basic() -> Result<()> {
         let isolation = TestIsolation::new()?;
@@ -270,6 +286,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试TestIsolation启用Git配置隔离
+    ///
+    /// ## 测试目的
+    /// 验证 `TestIsolation::with_git_config()` 方法能够启用Git配置隔离，并能够设置Git配置项。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestIsolation并启用Git配置隔离
+    /// 2. 获取Git配置守卫
+    /// 3. 设置Git配置项（user.name, user.email）
+    /// 4. 验证配置设置成功
+    ///
+    /// ## 预期结果
+    /// - Git配置守卫可用
+    /// - Git配置项设置成功
     #[test]
     fn test_test_isolation_with_git_config() -> Result<()> {
         let mut isolation = TestIsolation::new()?.with_git_config()?;
@@ -282,6 +312,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试TestIsolation启用Mock服务器
+    ///
+    /// ## 测试目的
+    /// 验证 `TestIsolation::with_mock_server()` 方法能够启用Mock服务器，并能够获取Mock服务器实例。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestIsolation并启用Mock服务器
+    /// 2. 获取Mock服务器实例
+    /// 3. 验证Mock服务器可用（base_url不为空）
+    ///
+    /// ## 预期结果
+    /// - Mock服务器可用
+    /// - base_url不为空
     #[test]
     fn test_test_isolation_with_mock_server() -> Result<()> {
         let isolation = TestIsolation::new()?.with_mock_server()?;
@@ -293,6 +336,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试TestIsolation的环境变量守卫功能
+    ///
+    /// ## 测试目的
+    /// 验证 `TestIsolation::env_guard()` 方法能够返回环境变量守卫，用于设置和恢复环境变量。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestIsolation实例
+    /// 2. 获取环境变量守卫并设置环境变量
+    /// 3. 验证环境变量已设置
+    /// 4. Drop时自动恢复
+    ///
+    /// ## 预期结果
+    /// - 环境变量守卫可用
+    /// - 环境变量设置成功
+    /// - Drop时自动恢复
     #[test]
     fn test_test_isolation_env_guard() -> Result<()> {
         let mut isolation = TestIsolation::new()?;

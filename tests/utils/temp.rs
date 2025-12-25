@@ -310,6 +310,19 @@ where
 mod tests {
     use super::*;
 
+    /// 测试TempManager创建
+    ///
+    /// ## 测试目的
+    /// 验证 `TempManager::new()` 能够成功创建临时文件管理器，包括临时目录的创建。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TempManager实例
+    /// 2. 获取临时目录路径
+    /// 3. 验证临时目录存在且为目录
+    ///
+    /// ## 预期结果
+    /// - 临时目录存在
+    /// - 临时目录为目录类型
     #[test]
     fn test_temp_manager_creation() -> Result<()> {
         let temp_manager = TempManager::new()?;
@@ -318,6 +331,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试创建文件
+    ///
+    /// ## 测试目的
+    /// 验证 `TempManager::create_file()` 方法能够成功创建文件，并写入指定内容。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TempManager
+    /// 2. 创建文件（test.txt）
+    /// 3. 验证文件存在且为文件类型
+    /// 4. 验证文件内容正确
+    ///
+    /// ## 预期结果
+    /// - 文件创建成功
+    /// - 文件存在且为文件类型
+    /// - 文件内容与预期一致
     #[test]
     fn test_create_file() -> Result<()> {
         let mut temp_manager = TempManager::new()?;
@@ -332,6 +360,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试创建目录
+    ///
+    /// ## 测试目的
+    /// 验证 `TempManager::create_dir()` 方法能够成功创建子目录。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TempManager
+    /// 2. 创建子目录（subdir）
+    /// 3. 验证目录存在且为目录类型
+    ///
+    /// ## 预期结果
+    /// - 目录创建成功
+    /// - 目录存在且为目录类型
     #[test]
     fn test_create_dir() -> Result<()> {
         let temp_manager = TempManager::new()?;
@@ -343,6 +384,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试清理单个文件
+    ///
+    /// ## 测试目的
+    /// 验证 `TempManager::cleanup_file()` 方法能够成功删除指定的临时文件。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TempManager并创建文件
+    /// 2. 验证文件存在
+    /// 3. 调用cleanup_file删除文件
+    /// 4. 验证文件已删除
+    ///
+    /// ## 预期结果
+    /// - 文件删除成功
+    /// - 文件不再存在
     #[test]
     fn test_cleanup_file() -> Result<()> {
         let mut temp_manager = TempManager::new()?;
@@ -355,6 +410,22 @@ mod tests {
         Ok(())
     }
 
+    /// 测试清理所有文件
+    ///
+    /// ## 测试目的
+    /// 验证 `TempManager::cleanup_all_files()` 方法能够成功删除所有创建的临时文件。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TempManager并创建多个文件
+    /// 2. 验证所有文件存在
+    /// 3. 调用cleanup_all_files删除所有文件
+    /// 4. 验证所有文件已删除
+    /// 5. 验证临时文件列表为空
+    ///
+    /// ## 预期结果
+    /// - 所有文件删除成功
+    /// - 所有文件不再存在
+    /// - 临时文件列表为空
     #[test]
     fn test_cleanup_all_files() -> Result<()> {
         let mut temp_manager = TempManager::new()?;
@@ -373,6 +444,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试with_temp_dir便捷函数
+    ///
+    /// ## 测试目的
+    /// 验证 `with_temp_dir()` 便捷函数能够在临时目录中执行操作，并在操作完成后自动清理。
+    ///
+    /// ## 测试场景
+    /// 1. 使用with_temp_dir创建临时目录
+    /// 2. 在临时目录中创建文件并读取内容
+    /// 3. 验证操作成功
+    /// 4. 函数返回后临时目录自动清理
+    ///
+    /// ## 预期结果
+    /// - 操作成功执行
+    /// - 返回结果正确
+    /// - 临时目录自动清理
     #[test]
     fn test_with_temp_dir() -> Result<()> {
         let result = with_temp_dir(|temp_path| {

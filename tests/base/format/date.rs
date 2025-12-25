@@ -14,6 +14,18 @@ use workflow::base::format::date::{
 
 // ==================== Filename Timestamp Tests ====================
 
+/// 测试格式化文件名时间戳（无参数）
+///
+/// ## 测试目的
+/// 验证 `format_filename_timestamp()` 函数能够返回正确格式的文件名时间戳（YYYY-MM-DD_HH-MM-SS格式，适合文件名）。
+///
+/// ## 测试场景
+/// 1. 调用 `format_filename_timestamp()` 格式化时间戳
+/// 2. 使用正则表达式验证格式
+///
+/// ## 预期结果
+/// - 返回的时间戳格式为 YYYY-MM-DD_HH-MM-SS
+/// - 格式适合用作文件名（不包含空格和冒号）
 #[test]
 fn test_format_filename_timestamp_with_no_parameters_returns_formatted_string() {
     // Arrange: 准备文件名时间戳格式的正则表达式
@@ -32,6 +44,20 @@ fn test_format_filename_timestamp_with_no_parameters_returns_formatted_string() 
 
 // ==================== Unix Timestamp Tests ====================
 
+/// 测试获取Unix时间戳（无参数）
+///
+/// ## 测试目的
+/// 验证 `get_unix_timestamp()` 函数能够返回合理的Unix时间戳，并且时间戳会递增。
+///
+/// ## 测试场景
+/// 1. 获取Unix时间戳
+/// 2. 验证时间戳合理（在2020年之后）
+/// 3. 等待一小段时间后再次获取
+/// 4. 验证时间戳递增
+///
+/// ## 预期结果
+/// - 时间戳大于2020年的时间戳（1577836800）
+/// - 第二次获取的时间戳大于等于第一次
 #[test]
 fn test_get_unix_timestamp_with_no_parameters_returns_timestamp() {
     // Arrange: 准备时间戳阈值（2020年）
@@ -53,6 +79,20 @@ fn test_get_unix_timestamp_with_no_parameters_returns_timestamp() {
 
 // ==================== Document Timestamp Format Tests ====================
 
+/// 测试格式化文档时间戳所有格式（UTC时区）
+///
+/// ## 测试目的
+/// 验证 `format_document_timestamp()` 函数能够使用所有日期格式（DateOnly, DateTime, Iso8601, Filename）和UTC时区正确格式化时间戳。
+///
+/// ## 测试场景
+/// 1. 使用各种格式和UTC时区格式化时间戳
+/// 2. 验证每种格式的输出符合预期
+///
+/// ## 预期结果
+/// - DateOnly格式：YYYY-MM-DD
+/// - DateTime格式：YYYY-MM-DD HH:MM:SS
+/// - Iso8601格式：包含'T'和时区标识符（Z或+/-）
+/// - Filename格式：YYYY-MM-DD_HH-MM-SS（不包含空格和冒号）
 #[test]
 fn test_format_document_timestamp_all_formats_utc_with_all_formats_returns_formatted_strings() {
     // Arrange: 准备各种格式的正则表达式

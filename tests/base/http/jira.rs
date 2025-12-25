@@ -16,6 +16,23 @@ fn setup_mock_server() -> MockServer {
 
 // ==================== Jira API Issue Tests ====================
 
+/// 测试获取Jira Issue成功（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证Jira API获取Issue的HTTP请求格式正确（使用mockito Mock服务器）。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建Mock响应（200状态码，包含Issue信息）
+/// 3. 验证请求格式（headers, URL）
+///
+/// ## 注意事项
+/// - 实际测试需要设置认证信息
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - 请求格式正确
 #[test]
 fn test_get_issue_success_with_valid_issue_key_returns_issue() {
     // Arrange: 准备Mock服务器
@@ -49,6 +66,24 @@ fn test_get_issue_success_with_valid_issue_key_returns_issue() {
     // 验证Mock被调用: _mock.assert();
 }
 
+/// 测试获取Jira Issue未找到错误（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证Jira API获取Issue在收到404错误响应时能够正确处理。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建错误响应的Mock（404状态码，Issue不存在）
+/// 3. 验证错误处理
+///
+/// ## 注意事项
+/// - 实际测试需要设置认证信息
+/// - 需要验证 `result.is_err()`
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - 404错误被正确处理
 #[test]
 fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
     // Arrange: 准备Mock服务器
@@ -70,6 +105,23 @@ fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
     // 验证Mock被调用: _mock.assert();
 }
 
+/// 测试搜索Jira Issues（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证Jira API搜索Issues的HTTP请求格式正确（使用mockito Mock服务器）。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建Mock响应（200状态码，包含Issues列表）
+/// 3. 验证请求格式和响应解析
+///
+/// ## 注意事项
+/// - 实际测试需要设置Jira客户端和认证
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - Issues列表能够正确解析
 #[test]
 fn test_search_issues_with_valid_query_returns_issues() {
     // Arrange: 准备Mock服务器

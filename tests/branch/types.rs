@@ -257,7 +257,7 @@ fn test_branch_type_display_name_with_all_types_returns_display_names() {
     }
 }
 
-// ==================== 边界条件测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试从空字符串解析分支类型
 ///
@@ -331,7 +331,7 @@ fn test_branch_type_from_str_with_special_characters_handles_correctly() {
     }
 }
 
-// ==================== 分支类型比较测试 ====================
+// ==================== Branch Type Comparison Tests ====================
 
 /// 测试分支类型相等性
 ///
@@ -402,7 +402,7 @@ fn test_branch_type_copy_with_valid_type_copies_value() {
     assert_eq!(original, copied);
 }
 
-// ==================== 性能测试 ====================
+// ==================== Performance Tests ====================
 
 /// 测试分支类型转换性能
 ///
@@ -475,7 +475,7 @@ fn test_branch_type_display_performance_with_multiple_displays_completes_quickly
     );
 }
 
-// ==================== 集成测试 ====================
+// ==================== Integration Tests ====================
 
 /// 测试完整分支类型工作流
 ///
@@ -520,7 +520,7 @@ fn test_complete_branch_type_workflow_with_all_types_completes_successfully() {
     }
 }
 
-// ==================== 错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
 /// 测试从无效输入解析分支类型
 ///
@@ -562,7 +562,7 @@ fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
     }
 }
 
-// ==================== 实际使用场景测试 ====================
+// ==================== Real-World Usage Scenario Tests ====================
 
 /// 测试分支类型到提交类型映射
 ///

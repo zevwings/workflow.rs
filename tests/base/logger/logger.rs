@@ -19,6 +19,22 @@ use workflow::trace_warn;
 
 // ==================== Console Logger Tests ====================
 
+/// 测试所有日志级别的输出格式
+///
+/// ## 测试目的
+/// 验证各个日志级别函数（success, error, warning, info, debug）能够返回正确格式化的消息，包含文本和对应的图标。
+///
+/// ## 测试场景
+/// 1. 调用各个日志级别的函数（success, error, warning, info, debug）
+/// 2. 验证每个消息都包含测试文本和对应的图标
+///
+/// ## 预期结果
+/// - success消息包含 "✓" 图标
+/// - error消息包含 "✗" 图标
+/// - warning消息包含 "⚠" 图标
+/// - info消息包含 "ℹ" 图标
+/// - debug消息包含 "⚙" 图标
+/// - 所有消息都包含原始文本
 #[test]
 fn test_logger_output_with_all_levels_returns_formatted_messages() -> Result<()> {
     // Arrange: 准备测试消息
@@ -45,6 +61,20 @@ fn test_logger_output_with_all_levels_returns_formatted_messages() -> Result<()>
     Ok(())
 }
 
+/// 测试日志消息格式：图标和文本之间有空格
+///
+/// ## 测试目的
+/// 验证所有日志级别的消息格式正确，图标和文本之间包含空格，格式为"图标 + 空格 + 文本"。
+///
+/// ## 测试场景
+/// 1. 调用各个日志级别的函数
+/// 2. 验证所有消息都包含空格
+/// 3. 去除ANSI转义码后验证info消息的格式
+///
+/// ## 预期结果
+/// - 所有消息都在图标和文本之间包含空格
+/// - info消息去除ANSI码后可以分割为两部分：图标部分和文本部分
+/// - 图标部分包含 "ℹ"，文本部分为原始消息
 #[test]
 fn test_colors_have_space_between_icon_and_text() {
     // Arrange: 准备测试消息
@@ -113,6 +143,22 @@ fn test_colors_have_space_between_icon_and_text() {
 
 // ==================== LogLevel Tests ====================
 
+/// 测试从字符串解析日志级别（不区分大小写）
+///
+/// ## 测试目的
+/// 验证 `LogLevel` 的 `FromStr` 实现能够正确解析各种格式的日志级别字符串，支持不区分大小写，并支持 "off"（新格式）和 "none"（向后兼容）。
+///
+/// ## 测试场景
+/// 1. 测试 "off"/"OFF" 和 "none"/"NONE" 解析为 LogLevel::None
+/// 2. 测试 "error"/"ERROR" 解析为 LogLevel::Error
+/// 3. 测试 "warn"/"WARN" 解析为 LogLevel::Warn
+/// 4. 测试 "info"/"INFO" 解析为 LogLevel::Info
+/// 5. 测试 "debug"/"DEBUG" 解析为 LogLevel::Debug
+/// 6. 测试无效字符串返回错误
+///
+/// ## 预期结果
+/// - 所有有效字符串（不区分大小写）都能正确解析
+/// - 无效字符串（"invalid", "", "trace"）返回错误
 #[test]
 fn test_log_level_from_str_with_valid_strings_parses_correctly() {
     // Arrange: 准备有效的日志级别字符串（不区分大小写）
@@ -174,6 +220,20 @@ fn test_log_level_from_str_with_valid_strings_parses_correctly() {
     assert!("trace".parse::<LogLevel>().is_err());
 }
 
+/// 测试日志级别转换为字符串
+///
+/// ## 测试目的
+/// 验证 `LogLevel::as_str()` 方法能够将各个日志级别正确转换为对应的字符串表示。
+///
+/// ## 测试场景
+/// 1. 测试各个日志级别转换为字符串
+///
+/// ## 预期结果
+/// - LogLevel::None -> "off"
+/// - LogLevel::Error -> "error"
+/// - LogLevel::Warn -> "warn"
+/// - LogLevel::Info -> "info"
+/// - LogLevel::Debug -> "debug"
 #[test]
 fn test_log_level_as_str() -> Result<()> {
     assert_eq!(LogLevel::None.as_str(), "off");
@@ -184,6 +244,23 @@ fn test_log_level_as_str() -> Result<()> {
     Ok(())
 }
 
+/// 测试日志级别的顺序和should_log方法
+///
+/// ## 测试目的
+/// 验证日志级别的顺序关系（None < Error < Warn < Info < Debug）以及 `should_log()` 方法的过滤逻辑。
+///
+/// ## 测试场景
+/// 1. 验证日志级别的顺序关系
+/// 2. 测试各个日志级别的 `should_log()` 方法：
+///    - Debug级别：应该记录所有级别
+///    - Info级别：应该记录None、Error、Warn、Info，不记录Debug
+///    - Warn级别：应该记录None、Error、Warn，不记录Info、Debug
+///    - Error级别：应该记录None、Error，不记录其他级别
+///    - None级别：只记录None，不记录其他级别
+///
+/// ## 预期结果
+/// - 日志级别顺序正确
+/// - `should_log()` 方法按照预期过滤日志
 #[test]
 fn test_log_level_ordering() -> Result<()> {
     // Arrange: 准备测试日志级别的顺序
@@ -230,6 +307,20 @@ fn test_log_level_ordering() -> Result<()> {
     Ok(())
 }
 
+/// 测试设置和获取全局日志级别
+///
+/// ## 测试目的
+/// 验证 `LogLevel::set_level()` 和 `LogLevel::get_level()` 方法能够正确设置和获取全局日志级别。
+///
+/// ## 测试场景
+/// 1. 保存原始日志级别
+/// 2. 依次设置各个日志级别（Debug, Info, Warn, Error, None）
+/// 3. 验证每次设置后都能正确获取
+/// 4. 恢复原始日志级别
+///
+/// ## 预期结果
+/// - 每次设置后，`get_level()` 返回正确的级别
+/// - 测试结束后恢复原始级别，不影响其他测试
 #[test]
 fn test_log_level_set_and_get() -> Result<()> {
     // 保存原始级别
@@ -256,6 +347,18 @@ fn test_log_level_set_and_get() -> Result<()> {
     Ok(())
 }
 
+/// 测试默认日志级别（根据编译模式）
+///
+/// ## 测试目的
+/// 验证 `LogLevel::default_level()` 方法根据编译模式返回正确的默认日志级别。
+///
+/// ## 测试场景
+/// 1. 调用 `default_level()` 获取默认级别
+/// 2. 根据编译模式验证级别
+///
+/// ## 预期结果
+/// - Debug模式（debug_assertions）：返回 LogLevel::Debug
+/// - Release模式：返回 LogLevel::Info
 #[test]
 fn test_log_level_default() -> Result<()> {
     // Arrange: 准备测试默认级别（根据编译模式）
@@ -270,6 +373,19 @@ fn test_log_level_default() -> Result<()> {
     Ok(())
 }
 
+/// 测试日志级别的往返转换一致性
+///
+/// ## 测试目的
+/// 验证日志级别通过字符串转换的往返一致性，即 `as_str()` 和 `parse()` 的组合应该保持原始值不变。
+///
+/// ## 测试场景
+/// 1. 遍历所有日志级别
+/// 2. 将级别转换为字符串，再解析回级别
+/// 3. 验证解析后的级别与原始级别相同
+///
+/// ## 预期结果
+/// - 所有级别的往返转换都成功
+/// - 解析后的级别与原始级别完全一致
 #[test]
 fn test_log_level_round_trip() {
     // Arrange: 准备测试字符串转换的往返一致性
@@ -290,6 +406,18 @@ fn test_log_level_round_trip() {
 
 // ==================== Tracing 宏测试 ====================
 
+/// 测试tracing宏可以编译和运行
+///
+/// ## 测试目的
+/// 验证所有tracing宏（trace_debug!, trace_info!, trace_warn!, trace_error!）能够正常编译和运行，即使不输出日志。
+///
+/// ## 测试场景
+/// 1. 调用各个tracing宏
+/// 2. 验证不会产生编译错误或运行时错误
+///
+/// ## 预期结果
+/// - 所有宏都能正常编译和运行
+/// - 不会panic或产生错误
 #[test]
 fn test_tracing_macros() -> Result<()> {
     // 这些宏应该可以编译和运行（即使不输出）

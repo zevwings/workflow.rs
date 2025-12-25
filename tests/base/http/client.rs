@@ -8,16 +8,11 @@
 //! - 所有测试返回 Result<()>，使用 ? 运算符处理错误
 //! - 测试覆盖成功场景、错误场景、边界条件
 
-use crate::common::http_helpers::MockServer;
+use crate::common::http_helpers::{setup_mock_server, MockServer};
 use color_eyre::Result;
 use mockito::Matcher;
 use serde_json::Value;
 use workflow::base::http::{Authorization, HttpClient, RequestConfig};
-
-/// 设置 Mock 服务器
-fn setup_mock_server() -> MockServer {
-    MockServer::new()
-}
 
 // ==================== HttpClient Singleton Tests ====================
 
@@ -627,7 +622,7 @@ fn test_request_with_all_options_configures_all_options() -> Result<()> {
     Ok(())
 }
 
-// ==================== 来自 client_core.rs 的补充测试 ====================
+// ==================== Additional Tests from client_core.rs ====================
 
 /// 测试 HTTP 客户端 GET 请求（补充测试）
 ///

@@ -16,6 +16,24 @@ fn setup_mock_server() -> MockServer {
 
 // ==================== GitHub API Pull Request Tests ====================
 
+/// 测试创建Pull Request成功（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证GitHub API创建Pull Request的HTTP请求格式正确（使用mockito Mock服务器）。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建Mock响应（201状态码）
+/// 3. 验证请求格式（headers, body）
+///
+/// ## 注意事项
+/// - 实际测试需要设置Git仓库和认证
+/// - 这里仅展示Mock设置方式
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - 请求格式正确
 #[test]
 fn test_create_pull_request_success_with_valid_request_creates_pr() {
     // Arrange: 准备Mock服务器
@@ -42,6 +60,24 @@ fn test_create_pull_request_success_with_valid_request_creates_pr() {
     // 验证Mock被调用: _mock.assert();
 }
 
+/// 测试创建Pull Request错误处理（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证GitHub API创建Pull Request在收到错误响应（422状态码）时能够正确处理。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建错误响应的Mock（422状态码，Validation Failed）
+/// 3. 验证错误处理
+///
+/// ## 注意事项
+/// - 实际测试需要设置Git仓库和认证
+/// - 需要验证 `result.is_err()`
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - 错误响应被正确处理
 #[test]
 fn test_create_pull_request_error_with_invalid_request_returns_error() {
     // Arrange: 准备Mock服务器
@@ -65,6 +101,23 @@ fn test_create_pull_request_error_with_invalid_request_returns_error() {
     // 验证Mock被调用: _mock.assert();
 }
 
+/// 测试获取Pull Request信息（使用Mock服务器）
+///
+/// ## 测试目的
+/// 验证GitHub API获取Pull Request信息的HTTP请求格式正确（使用mockito Mock服务器）。
+///
+/// ## 测试场景
+/// 1. 设置Mock服务器
+/// 2. 创建Mock响应（200状态码，包含PR信息）
+/// 3. 验证请求格式和响应解析
+///
+/// ## 注意事项
+/// - 实际测试需要设置GitHub客户端和认证
+/// - Mock验证需要调用 `_mock.assert()`
+///
+/// ## 预期结果
+/// - Mock设置成功
+/// - PR信息能够正确解析
 #[test]
 fn test_get_pull_request_info_with_valid_pr_number_returns_info() {
     // Arrange: 准备Mock服务器

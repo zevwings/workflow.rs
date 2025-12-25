@@ -8,7 +8,6 @@ use workflow::commands::branch::sync::BranchSyncCommand;
 use crate::common::environments::GitTestEnv;
 use crate::common::helpers::CurrentDirGuard;
 use crate::common::http_helpers::MockServer;
-use serial_test::serial;
 
 /// 测试分支同步命令的基础结构
 ///
@@ -64,6 +63,23 @@ fn test_branch_sync_command_structure() {
     }
 }
 
+/// 测试分支同步命令使用rebase选项执行
+///
+/// ## 测试目的
+/// 验证 `BranchSyncCommand::sync()` 方法在使用 `rebase` 选项时能够正确执行。
+///
+/// ## 测试场景
+/// 1. 准备分支名称和rebase选项（启用rebase，禁用ff_only和squash）
+/// 2. 调用分支同步命令
+/// 3. 验证函数返回Result类型
+///
+/// ## 注意事项
+/// - 此测试被标记为 `#[ignore]`，需要实际的Git仓库和网络连接（GitHub API）
+/// - 成功或失败都是可以接受的，取决于测试环境
+///
+/// ## 预期结果
+/// - 函数返回Result类型
+/// - 在有效环境中可能成功，在无效环境中可能失败
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
 fn test_branch_sync_command_with_rebase_option_executes() {
@@ -89,6 +105,23 @@ fn test_branch_sync_command_with_rebase_option_executes() {
     }
 }
 
+/// 测试分支同步命令使用ff_only选项执行
+///
+/// ## 测试目的
+/// 验证 `BranchSyncCommand::sync()` 方法在使用 `ff_only`（fast-forward only）选项时能够正确执行。
+///
+/// ## 测试场景
+/// 1. 准备分支名称和ff_only选项（禁用rebase，启用ff_only，禁用squash）
+/// 2. 调用分支同步命令
+/// 3. 验证函数返回Result类型
+///
+/// ## 注意事项
+/// - 此测试被标记为 `#[ignore]`，需要实际的Git仓库和网络连接（GitHub API）
+/// - 成功或失败都是可以接受的，取决于测试环境
+///
+/// ## 预期结果
+/// - 函数返回Result类型
+/// - 在有效环境中可能成功，在无效环境中可能失败
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
 fn test_branch_sync_command_with_ff_only_option_executes() {
@@ -178,7 +211,6 @@ fn test_branch_sync_command_with_squash() {
 /// 2. Mock GitHub API（MockServer）
 /// 3. 完全隔离，快速执行
 #[test]
-#[serial]
 fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
     // 1. 设置Mock GitHub API
     let mut mock_server = MockServer::new();
@@ -217,7 +249,6 @@ fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
 
 /// 测试使用rebase的分支同步（完整版）
 #[test]
-#[serial]
 fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
@@ -251,7 +282,6 @@ fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
 
 /// 测试fast-forward only同步（完整版）
 #[test]
-#[serial]
 fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
@@ -287,7 +317,6 @@ fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
 
 /// 测试squash合并（完整版）
 #[test]
-#[serial]
 fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();

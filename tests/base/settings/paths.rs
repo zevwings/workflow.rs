@@ -83,18 +83,17 @@ fn test_paths_expand_with_relative_path_returns_relative_path() -> Result<()> {
 #[cfg(target_os = "windows")]
 #[test]
 fn test_paths_expand_with_windows_env_var_returns_expanded_path() -> Result<()> {
-    // Arrange: 设置测试环境变量
+    // Arrange: 使用 EnvGuard 设置测试环境变量
     // 测试 Windows 环境变量展开（覆盖 paths.rs:207-235）
-    env::set_var("TEST_VAR", "test_value");
+    let mut guard = EnvGuard::new();
+    guard.set("TEST_VAR", "test_value");
 
     // Act: 展开包含环境变量的路径
     let result = Paths::expand("%TEST_VAR%/path")?;
 
     // Assert: 验证展开环境变量
     assert!(result.to_string_lossy().contains("test_value"));
-
-    // 清理
-    env::remove_var("TEST_VAR");
+    // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
 
     Ok(())
 }
@@ -241,16 +240,15 @@ fn test_paths_expand_multiple_env_vars() -> Result<()> {
     // 测试多个环境变量（覆盖 paths.rs:207-235）
     #[cfg(target_os = "windows")]
     {
-        env::set_var("VAR1", "value1");
-        env::set_var("VAR2", "value2");
+        let mut guard = EnvGuard::new();
+        guard.set("VAR1", "value1");
+        guard.set("VAR2", "value2");
 
         let result = Paths::expand("%VAR1%/%VAR2%/path")?;
 
         assert!(result.to_string_lossy().contains("value1"));
         assert!(result.to_string_lossy().contains("value2"));
-
-        env::remove_var("VAR1");
-        env::remove_var("VAR2");
+        // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -269,13 +267,13 @@ fn test_paths_expand_env_var_in_middle() -> Result<()> {
     // 测试路径中间的环境变量（覆盖 paths.rs:207-235）
     #[cfg(target_os = "windows")]
     {
-        env::set_var("MID_VAR", "middle");
+        let mut guard = EnvGuard::new();
+        guard.set("MID_VAR", "middle");
 
         let result = Paths::expand("prefix/%MID_VAR%/suffix")?;
 
         assert!(result.to_string_lossy().contains("middle"));
-
-        env::remove_var("MID_VAR");
+        // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -288,7 +286,7 @@ fn test_paths_expand_env_var_in_middle() -> Result<()> {
     Ok(())
 }
 
-// ==================== 边界和跨平台测试 ====================
+// ==================== Boundary and Cross-Platform Tests ====================
 
 /// 测试展开带尾随斜杠的~路径
 #[test]
@@ -371,6 +369,18 @@ fn test_paths_binary_name_custom() {
     }
 }
 
+/// 测试获取命令名称列表
+///
+/// ## 测试目的
+/// 验证 `Paths::command_names()` 方法能够返回可用的命令名称列表。
+///
+/// ## 测试场景
+/// 1. 调用 `Paths::command_names()` 获取命令名称列表
+/// 2. 验证返回结果
+///
+/// ## 预期结果
+/// - 返回的命令名称列表不为空
+/// - 列表中包含 "workflow" 命令
 #[test]
 fn test_paths_command_names() {
     // 测试 command_names() 方法（覆盖 paths.rs:461-463）

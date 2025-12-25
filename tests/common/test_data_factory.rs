@@ -574,6 +574,19 @@ impl ConfigBuilder {
 mod tests {
     use super::*;
 
+    /// 测试GitHubPRBuilder使用默认值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `GitHubPRBuilder` 使用默认值能够成功构建GitHub PR JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值构建GitHub PR
+    /// 3. 验证构建的数据包含预期的默认值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - number为123，title为"Test PR"，state为"open"，merged为false
     #[test]
     fn test_github_pr_builder_default() -> Result<()> {
         let factory = TestDataFactory::new();
@@ -586,6 +599,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试GitHubPRBuilder使用自定义值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `GitHubPRBuilder` 使用自定义值能够成功构建GitHub PR JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用自定义值构建GitHub PR（number, title, state, merged）
+    /// 3. 验证构建的数据包含自定义值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 所有自定义值都正确设置
     #[test]
     fn test_github_pr_builder_custom() -> Result<()> {
         let factory = TestDataFactory::new();
@@ -604,6 +630,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试JiraIssueBuilder使用默认值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `JiraIssueBuilder` 使用默认值能够成功构建Jira Issue JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值构建Jira Issue
+    /// 3. 验证构建的数据包含预期的默认值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - key为"PROJ-123"，summary为"Test Issue Summary"，status为"In Progress"
     #[test]
     fn test_jira_issue_builder_default() -> Result<()> {
         let factory = TestDataFactory::new();
@@ -615,6 +654,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试JiraIssueBuilder使用自定义值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `JiraIssueBuilder` 使用自定义值能够成功构建Jira Issue JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用自定义值构建Jira Issue（key, summary, status, issue_type）
+    /// 3. 验证构建的数据包含自定义值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 所有自定义值都正确设置
     #[test]
     fn test_jira_issue_builder_custom() -> Result<()> {
         let factory = TestDataFactory::new();
@@ -633,6 +685,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试ConfigBuilder使用默认值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `ConfigBuilder` 使用默认值能够成功构建配置JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值构建配置
+    /// 3. 验证构建的配置包含所有必需的节（github, jira, llm, log）
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 配置包含所有必需的节
     #[test]
     fn test_config_builder_default() {
         let factory = TestDataFactory::new();
@@ -644,6 +709,19 @@ mod tests {
         assert!(config["log"].is_object());
     }
 
+    /// 测试ConfigBuilder使用自定义值构建
+///
+/// ## 测试目的
+/// 验证 `ConfigBuilder` 使用自定义值能够成功构建配置JSON数据。
+///
+/// ## 测试场景
+/// 1. 创建TestDataFactory
+/// 2. 使用自定义值构建配置（log配置）
+/// 3. 验证构建的配置包含自定义值
+///
+/// ## 预期结果
+/// - 构建成功
+/// - 自定义值正确设置
     #[test]
     fn test_config_builder_custom() {
         let factory = TestDataFactory::new();
@@ -659,6 +737,19 @@ mod tests {
         assert_eq!(config["log"]["method"], "file");
     }
 
+    /// 测试GitCommitBuilder使用默认值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `GitCommitBuilder` 使用默认值能够成功构建Git Commit JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值构建Git Commit
+    /// 3. 验证构建的数据包含预期的默认值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - sha、message、author等字段包含预期的默认值
     #[test]
     fn test_git_commit_builder_default() -> Result<()> {
         let factory = TestDataFactory::new();
@@ -671,6 +762,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试GitCommitBuilder使用自定义值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `GitCommitBuilder` 使用自定义值能够成功构建Git Commit JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用自定义值构建Git Commit（sha, message, author_name, author_email, author_date）
+    /// 3. 验证构建的数据包含自定义值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 所有自定义值都正确设置
     #[test]
     fn test_git_commit_builder_custom() -> Result<()> {
         let factory = TestDataFactory::new();

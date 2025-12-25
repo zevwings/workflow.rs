@@ -623,7 +623,7 @@ fn test_form_builder_group_id_with_string_id_converts_correctly() {
     assert_eq!(builder.groups[0].id, "group1");
 }
 
-// ==================== 更多 validate() 方法测试 ====================
+// ==================== Additional validate() Method Tests ====================
 
 /// 测试多个空组验证
 ///

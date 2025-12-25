@@ -14,7 +14,7 @@ use workflow::repo::RepoConfig;
 use crate::common::environments::CliTestEnv;
 use crate::common::helpers::CurrentDirGuard;
 
-// ==================== 测试辅助函数 ====================
+// ==================== Test Helper Functions ====================
 
 /// 创建公共配置文件（.workflow/config.toml）
 fn create_public_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
@@ -36,7 +36,7 @@ fn create_private_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
     Ok(config_file)
 }
 
-// ==================== 默认值测试 ====================
+// ==================== Default Value Tests ====================
 
 /// 测试创建默认的RepoConfig
 #[test]
@@ -58,7 +58,7 @@ fn test_repo_config_default_with_no_params_returns_default_config() {
     assert!(config.pr.is_none());
 }
 
-// ==================== 配置字段测试 ====================
+// ==================== Configuration Field Tests ====================
 
 /// 测试设置commit模板配置
 #[test]
@@ -213,7 +213,7 @@ fn test_repo_config_with_all_fields_returns_complete_config() {
     assert!(config.pr.is_some());
 }
 
-// ==================== 静态方法测试 ====================
+// ==================== Static Method Tests ====================
 
 /// 测试获取分支前缀（无配置时返回Option）
 #[test]
@@ -335,7 +335,7 @@ fn test_repo_config_debug_with_config_instance_returns_debug_string() {
     assert!(debug_output.contains("RepoConfig"));
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试默认配置返回空配置
 #[test]
@@ -429,7 +429,7 @@ fn test_repo_config_with_special_characters() {
     assert!(config.branch.is_some());
 }
 
-// ==================== 配置更新测试 ====================
+// ==================== Configuration Update Tests ====================
 
 /// 测试更新commit模板配置
 #[test]
@@ -516,7 +516,7 @@ fn test_clear_branch_config() {
     assert!(config.branch.is_none());
 }
 
-// ==================== 参数化测试 ====================
+// ==================== Parameterized Tests ====================
 
 /// 测试仓库配置的参数化组合
 #[rstest]
@@ -538,7 +538,7 @@ fn test_repo_config_parametrized(#[case] configured: bool, #[case] prefix: Optio
     }
 }
 
-// ==================== 配置组合测试 ====================
+// ==================== Configuration Combination Tests ====================
 
 /// 测试公共和私有配置的组合
 #[test]
@@ -600,7 +600,7 @@ fn test_template_override_behavior() {
     }
 }
 
-// ==================== 配置验证测试 ====================
+// ==================== Configuration Validation Tests ====================
 
 /// 测试有效的分支前缀配置
 #[test]
@@ -652,7 +652,7 @@ fn test_config_with_multiple_ignore_branches() {
     }
 }
 
-// ==================== 文件系统集成测试 ====================
+// ==================== File System Integration Tests ====================
 
 /// 测试从现有文件加载配置
 #[test]
@@ -681,6 +681,8 @@ prefix = "feature"
 
     // 创建私有配置（个人偏好）
     use workflow::repo::config::private::PrivateRepoConfig;
+    // 切换到测试目录，让 generate_repo_id() 能找到 Git remote
+    let _guard_for_repo_id = CurrentDirGuard::new(env.path())?;
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
     let private_config_content = format!(
         r#"
@@ -893,7 +895,7 @@ fn test_exists_check() -> Result<()> {
     Ok(())
 }
 
-// ==================== 错误场景测试 ====================
+// ==================== Error Scenario Tests ====================
 
 /// 测试加载损坏的公共配置文件（应返回错误）
 #[test]
@@ -960,10 +962,12 @@ configured = "not_a_boolean"
 #[serial(repo_config_fs)]
 fn test_exists_outside_git_repo() -> Result<()> {
     // 准备：创建非 Git 仓库的临时目录
-    let _env = CliTestEnv::new()?;
+    let env = CliTestEnv::new()?;
     // 注意：不调用 init_git_repo()，因为我们需要测试非 Git 仓库的情况
 
-    // 执行：调用 RepoConfig::exists()
+    // 执行：切换到非 Git 仓库目录，然后调用 RepoConfig::exists()
+    // 这样可以确保 GitRepo::is_git_repo() 检测不到项目根目录的 Git 仓库
+    let _guard = CurrentDirGuard::new(env.path())?;
     let result = RepoConfig::exists()?;
 
     // Assert: 验证：在非 Git 仓库中返回 true（跳过检查）
@@ -1019,6 +1023,8 @@ fn test_load_with_only_private_config() -> Result<()> {
     env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     use workflow::repo::config::private::PrivateRepoConfig;
+    // 切换到测试目录，让 generate_repo_id() 能找到 Git remote
+    let _guard_for_repo_id = CurrentDirGuard::new(env.path())?;
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
     let private_config_content = format!(
         r#"

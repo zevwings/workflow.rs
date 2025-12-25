@@ -39,7 +39,8 @@
 | | [覆盖率测试指南](./references/coverage.md) | 覆盖率工具、报告生成、提升技巧 |
 | | [性能测试指南](./references/performance.md) | 基准测试、性能要求、优化建议 |
 | | [集成测试指南](./references/integration.md) | 环境配置、数据隔离、清理机制 |
-| **测试模板** | [标准测试模板](./templates/test-case.template) | 标准测试用例模板 |
+| **测试模板** | [测试文档模板](./documentation-template.md) | 标准化测试文档模板（推荐） |
+| | [标准测试模板](./templates/test-case.template) | 标准测试用例模板 |
 | | [被忽略测试模板](./templates/ignored-test.template) | 被忽略测试的完整模板 |
 | | [Mock测试模板](./templates/mock-test.template) | Mock 测试模板 |
 
@@ -205,6 +206,18 @@ make coverage
 
 项目提供了常用的测试模板，帮助快速创建标准化的测试代码：
 
+### [测试文档模板](./documentation-template.md) ⭐ 推荐
+
+**标准化测试文档模板**，包含：
+- 标准测试模板（基础版和完整版）
+- 被忽略测试模板
+- 参数化测试模板
+- 集成测试模板
+- 错误处理测试模板
+- 实际使用示例
+
+**使用场景**：所有新编写的测试都应该参考此模板编写文档注释。
+
 ### [标准测试模板](./templates/test-case.template)
 
 标准测试用例的模板，包含完整的 AAA 结构。
@@ -229,7 +242,8 @@ make coverage
    - [测试命令参考](./commands.md) - 掌握常用命令
 
 2. **实践编写测试**（~2小时）
-   - 使用[标准测试模板](./templates/test-case.template)
+   - 参考[测试文档模板](./documentation-template.md)编写测试文档
+   - 使用[标准测试模板](./templates/test-case.template)编写测试代码
    - 参考[测试工具指南](./references/tools.md)
    - 运行测试并查看结果
 
@@ -324,6 +338,7 @@ make coverage-open
 ## 📝 变更历史
 
 ### 2025-12-25
+- **新增测试文档模板**：添加 `documentation-template.md`，提供标准化的测试文档模板
 - **新增测试环境工具文档**：添加 `environments.md` 和 `helpers.md` 文档
 - **更新Mock服务器文档**：更新 `mock-server.md`，添加高级方法和预设Mock端点说明
 - **更新测试工具指南**：更新 `tools.md`，添加测试环境工具和测试辅助工具的链接

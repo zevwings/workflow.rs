@@ -6,6 +6,22 @@ use workflow::commands::alias::list::AliasListCommand;
 
 // ==================== Alias List Command Tests ====================
 
+/// 测试别名列表命令执行成功
+///
+/// ## 测试目的
+/// 验证 `AliasListCommand::list()` 方法能够正常执行，不会panic或产生未定义行为。
+///
+/// ## 测试场景
+/// 1. 调用别名列表命令
+/// 2. 验证函数返回Result类型
+///
+/// ## 注意事项
+/// - 在无别名配置的情况下会正常返回，不会失败
+/// - 成功或失败都是可以接受的（取决于配置状态）
+///
+/// ## 预期结果
+/// - 函数返回Result类型
+/// - 不会panic
 #[test]
 fn test_alias_list_command_with_valid_call_executes_successfully() {
     // Arrange: 准备调用别名列表命令

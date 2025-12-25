@@ -6,6 +6,17 @@ use workflow::base::dialog::ConfirmDialog;
 
 // ==================== ConfirmDialog Creation Tests ====================
 
+/// 测试使用消息创建确认对话框
+///
+/// ## 测试目的
+/// 验证 `ConfirmDialog::new()` 方法能够使用提示消息创建确认对话框。
+///
+/// ## 测试场景
+/// 1. 准备提示消息 "Continue?"
+/// 2. 调用 `ConfirmDialog::new()` 创建对话框
+///
+/// ## 预期结果
+/// - 对话框创建成功，无错误
 #[test]
 fn test_confirm_dialog_new_with_message_creates_dialog() {
     // Arrange: 准备提示消息
@@ -18,6 +29,17 @@ fn test_confirm_dialog_new_with_message_creates_dialog() {
     assert!(true);
 }
 
+/// 测试使用默认值创建确认对话框
+///
+/// ## 测试目的
+/// 验证 `ConfirmDialog::with_default()` 方法能够设置确认对话框的默认值。
+///
+/// ## 测试场景
+/// 1. 准备提示消息和默认值（true）
+/// 2. 使用链式调用创建带默认值的对话框
+///
+/// ## 预期结果
+/// - 对话框创建成功，默认值被正确设置
 #[test]
 fn test_confirm_dialog_with_default_with_default_value_creates_dialog() {
     // Arrange: 准备提示消息和默认值
@@ -31,6 +53,17 @@ fn test_confirm_dialog_with_default_with_default_value_creates_dialog() {
     assert!(true);
 }
 
+/// 测试使用取消消息创建确认对话框
+///
+/// ## 测试目的
+/// 验证 `ConfirmDialog::with_cancel_message()` 方法能够设置确认对话框的取消消息。
+///
+/// ## 测试场景
+/// 1. 准备提示消息和取消消息
+/// 2. 使用链式调用创建带取消消息的对话框
+///
+/// ## 预期结果
+/// - 对话框创建成功，取消消息被正确设置
 #[test]
 fn test_confirm_dialog_with_cancel_message_with_message_creates_dialog() {
     // Arrange: 准备提示消息和取消消息
@@ -44,6 +77,17 @@ fn test_confirm_dialog_with_cancel_message_with_message_creates_dialog() {
     assert!(true);
 }
 
+/// 测试链式调用所有方法配置确认对话框
+///
+/// ## 测试目的
+/// 验证确认对话框支持链式调用所有配置方法，能够一次性配置所有选项。
+///
+/// ## 测试场景
+/// 1. 使用链式调用所有方法（new, with_default, with_cancel_message）
+/// 2. 配置所有选项
+///
+/// ## 预期结果
+/// - 链式调用成功，所有配置都被正确应用
 #[test]
 fn test_confirm_dialog_chain_all_with_all_methods_configures_dialog() {
     // Arrange: 准备所有配置选项
@@ -57,6 +101,18 @@ fn test_confirm_dialog_chain_all_with_all_methods_configures_dialog() {
     assert!(true);
 }
 
+/// 测试使用字符串和String类型创建确认对话框
+///
+/// ## 测试目的
+/// 验证 `ConfirmDialog::new()` 方法能够接受 `&str` 和 `String` 两种类型的提示消息。
+///
+/// ## 测试场景
+/// 1. 使用字符串字面量创建对话框
+/// 2. 使用String类型创建对话框
+///
+/// ## 预期结果
+/// - 两种方式都能成功创建对话框
+/// - 功能一致
 #[test]
 fn test_confirm_dialog_new_with_string_prompt_creates_dialog() {
     // Arrange: 准备字符串和String类型的提示消息
@@ -69,6 +125,18 @@ fn test_confirm_dialog_new_with_string_prompt_creates_dialog() {
     assert!(true);
 }
 
+/// 测试使用字符串和String类型设置取消消息
+///
+/// ## 测试目的
+/// 验证 `ConfirmDialog::with_cancel_message()` 方法能够接受 `&str` 和 `String` 两种类型的取消消息。
+///
+/// ## 测试场景
+/// 1. 使用字符串字面量设置取消消息
+/// 2. 使用String类型设置取消消息
+///
+/// ## 预期结果
+/// - 两种方式都能成功设置取消消息
+/// - 功能一致
 #[test]
 fn test_confirm_dialog_with_string_cancel_message_sets_message() {
     // Arrange: 准备字符串和String类型的取消消息

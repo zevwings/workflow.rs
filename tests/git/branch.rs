@@ -57,10 +57,9 @@ fn test_remove_branch_prefix_with_slash_handles_prefix() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 当前分支存在
-#[test]
-fn test_exists_main_branch_with_default_branch_returns_true() -> Result<()> {
-    // Arrange: 准备 Git 测试环境
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_exists_main_branch_with_default_branch_returns_true(git_repo_with_commit: GitTestEnv) -> Result<()> {
+    // Arrange: 准备 Git 测试环境（使用 fixture）
 
     // Act: 获取当前分支并检查是否存在
     let current_branch = GitBranch::current_branch()?;
@@ -88,10 +87,9 @@ fn test_exists_main_branch_with_default_branch_returns_true() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 不存在的分支返回 false
-#[test]
-fn test_exists_nonexistent_branch_with_invalid_name_returns_false() -> Result<()> {
-    // Arrange: 准备 Git 测试环境和不存在的分支名
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_exists_nonexistent_branch_with_invalid_name_returns_false(git_repo_with_commit: GitTestEnv) -> Result<()> {
+    // Arrange: 准备 Git 测试环境和不存在的分支名（使用 fixture）
     let nonexistent_branch = "nonexistent-branch-12345";
 
     // Act: 检查不存在的分支
@@ -367,6 +365,6 @@ fn test_git_not_available_without_git_returns_error() -> Result<()> {
     Ok(())
 }
 
-// ==================== 集成测试 ====================
+// ==================== Integration Tests ====================
 
-// ==================== 性能测试 ====================
+// ==================== Performance Tests ====================

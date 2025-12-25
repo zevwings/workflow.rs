@@ -13,6 +13,7 @@
 | 文档 | 描述 | 状态 |
 |------|------|------|
 | [test-coverage-improvement.md](./test-coverage-improvement.md) | 测试覆盖度提升综合方案 | 📋 待实施 |
+| [test-stability-analysis.md](./test-stability-analysis.md) | 测试不稳定性分析与修复方案 | 📋 分析完成，待实施 |
 
 ### 模块测试覆盖率文档
 

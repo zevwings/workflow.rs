@@ -6,6 +6,17 @@ use workflow::base::prompt::TRANSLATE_SYSTEM_PROMPT;
 
 // ==================== Translate System Prompt Tests ====================
 
+/// 测试翻译system prompt常量不为空
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 常量已正确定义且不为空。
+///
+/// ## 测试场景
+/// 1. 检查prompt常量
+/// 2. 验证常量不为空
+///
+/// ## 预期结果
+/// - prompt常量不为空
 #[test]
 fn test_translate_system_prompt_with_valid_constant_returns_non_empty() {
     // Arrange: 准备检查 prompt 常量
@@ -17,6 +28,18 @@ fn test_translate_system_prompt_with_valid_constant_returns_non_empty() {
     assert!(!TRANSLATE_SYSTEM_PROMPT.is_empty());
 }
 
+/// 测试翻译system prompt包含必需的关键词
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含翻译和语言相关的关键词。
+///
+/// ## 测试场景
+/// 1. 准备关键词列表（translation/translate, English）
+/// 2. 验证prompt包含这些关键词
+///
+/// ## 预期结果
+/// - prompt包含翻译关键词（translation或translate）
+/// - prompt包含语言关键词（English）
 #[test]
 fn test_translate_system_prompt_contains_required_keywords() {
     // Arrange: 准备关键词列表
@@ -35,6 +58,17 @@ fn test_translate_system_prompt_contains_required_keywords() {
     );
 }
 
+/// 测试翻译system prompt包含规则说明
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含翻译规则说明。
+///
+/// ## 测试场景
+/// 1. 准备规则关键词
+/// 2. 验证prompt包含规则说明
+///
+/// ## 预期结果
+/// - prompt包含 "Rules" 或 "rules"
 #[test]
 fn test_translate_system_prompt_contains_required_rules() {
     // Arrange: 准备规则关键词
@@ -48,6 +82,17 @@ fn test_translate_system_prompt_contains_required_rules() {
     );
 }
 
+/// 测试翻译system prompt包含示例
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含使用示例。
+///
+/// ## 测试场景
+/// 1. 准备示例关键词
+/// 2. 验证prompt包含示例
+///
+/// ## 预期结果
+/// - prompt包含 "Example" 或 "example"
 #[test]
 fn test_translate_system_prompt_contains_examples() {
     // Arrange: 准备示例关键词
@@ -61,6 +106,17 @@ fn test_translate_system_prompt_contains_examples() {
     );
 }
 
+/// 测试翻译system prompt包含准确性要求
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含翻译准确性要求说明。
+///
+/// ## 测试场景
+/// 1. 准备准确性要求关键词
+/// 2. 验证prompt包含准确性要求
+///
+/// ## 预期结果
+/// - prompt包含 "accurately" 或 "accurate"
 #[test]
 fn test_translate_system_prompt_contains_accuracy_requirement() {
     // Arrange: 准备准确性要求关键词
@@ -74,6 +130,17 @@ fn test_translate_system_prompt_contains_accuracy_requirement() {
     );
 }
 
+/// 测试翻译system prompt包含输出格式说明
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含输出格式的说明（只输出翻译结果）。
+///
+/// ## 测试场景
+/// 1. 准备输出格式关键词
+/// 2. 验证prompt包含输出格式说明
+///
+/// ## 预期结果
+/// - prompt包含 "ONLY" 或 "only"
 #[test]
 fn test_translate_system_prompt_contains_output_format() {
     // Arrange: 准备输出格式关键词
@@ -87,6 +154,17 @@ fn test_translate_system_prompt_contains_output_format() {
     );
 }
 
+/// 测试翻译system prompt长度合理
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 有合理的长度，至少包含基本内容（最小长度阈值100字符）。
+///
+/// ## 测试场景
+/// 1. 获取prompt长度
+/// 2. 验证长度超过最小阈值
+///
+/// ## 预期结果
+/// - prompt长度大于100字符
 #[test]
 fn test_translate_system_prompt_has_reasonable_length() {
     // Arrange: 准备最小长度要求
@@ -104,6 +182,17 @@ fn test_translate_system_prompt_has_reasonable_length() {
     );
 }
 
+/// 测试翻译system prompt包含示例说明
+///
+/// ## 测试目的
+/// 验证 `TRANSLATE_SYSTEM_PROMPT` 包含示例说明（支持中英文关键词）。
+///
+/// ## 测试场景
+/// 1. 将prompt转换为小写
+/// 2. 验证包含示例关键词（example或示例）
+///
+/// ## 预期结果
+/// - prompt包含 "example" 或 "示例"
 #[test]
 fn test_translate_system_prompt_contains_example_specification() {
     // Arrange: 准备示例说明关键词（转换为小写）

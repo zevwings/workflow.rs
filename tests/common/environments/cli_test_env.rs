@@ -295,6 +295,19 @@ mod tests {
     use super::*;
     use serial_test::serial;
 
+    /// 测试CliTestEnv创建
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::new()` 能够成功创建CLI测试环境，包括临时目录和环境变量隔离。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv实例
+    /// 2. 获取路径
+    /// 3. 验证路径存在且为目录
+    ///
+    /// ## 预期结果
+    /// - 路径存在
+    /// - 路径为目录
     #[test]
     fn test_cli_test_env_creation() -> Result<()> {
         let env = CliTestEnv::new()?;
@@ -303,6 +316,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试初始化Git仓库
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::init_git_repo()` 方法能够成功初始化Git仓库，包括配置测试用户和添加远程origin。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv
+    /// 2. 初始化Git仓库
+    /// 3. 验证.git目录存在
+    ///
+    /// ## 预期结果
+    /// - Git仓库初始化成功
+    /// - .git目录存在
     #[test]
     #[serial]
     fn test_init_git_repo() -> Result<()> {
@@ -313,6 +339,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试创建文件
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::create_file()` 方法能够成功创建文件，并写入指定内容。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv
+    /// 2. 创建文件（test.txt）
+    /// 3. 验证文件存在
+    /// 4. 验证文件内容正确
+    ///
+    /// ## 预期结果
+    /// - 文件创建成功
+    /// - 文件内容与预期一致
     #[test]
     fn test_create_file() -> Result<()> {
         let env = CliTestEnv::new()?;
@@ -328,6 +368,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试创建配置文件
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::create_config()` 方法能够成功创建配置文件（.workflow/workflow.toml），并写入指定内容。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv
+    /// 2. 创建配置文件
+    /// 3. 验证配置文件存在
+    /// 4. 验证配置文件内容包含预期内容
+    ///
+    /// ## 预期结果
+    /// - 配置文件创建成功
+    /// - 配置文件路径为.workflow/workflow.toml
+    /// - 配置文件内容包含预期内容
     #[test]
     fn test_create_config() -> Result<()> {
         let env = CliTestEnv::new()?;

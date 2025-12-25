@@ -524,7 +524,7 @@ fn test_pr_reword_command(
     }
 }
 
-// ==================== 命令枚举测试 ====================
+// ==================== Command Enum Tests ====================
 
 /// 测试PR命令枚举的所有变体
 #[rstest]
@@ -596,7 +596,7 @@ fn test_pr_commands_required_parameters() {
     assert!(result.is_err(), "Pick should require to_branch");
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试PR创建命令的空JIRA ID（应被验证器拒绝）
 #[test]

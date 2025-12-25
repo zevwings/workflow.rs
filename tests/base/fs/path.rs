@@ -12,6 +12,8 @@ use std::fs;
 use workflow::base::fs::path::PathAccess;
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== PathAccess Creation Tests ====================
 
@@ -74,13 +76,12 @@ fn test_path_access_new_with_pathbuf_creates_instance() {
 ///
 /// ## 预期结果
 /// - 存在的路径返回 true，不存在的路径返回 false
-#[test]
-fn test_path_access_exists_with_existing_and_nonexisting_paths_returns_correct() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_exists_various_paths(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备存在的和不存在的路径
-    let env = CliTestEnv::new()?;
-    let existing_path = env.path().join("existing.txt");
+    let existing_path = cli_env.path().join("existing.txt");
     fs::write(&existing_path, "test")?;
-    let non_existing_path = env.path().join("non_existing.txt");
+    let non_existing_path = cli_env.path().join("non_existing.txt");
 
     // Act: 检查路径是否存在
     let existing_access = PathAccess::new(&existing_path);
@@ -105,13 +106,12 @@ fn test_path_access_exists_with_existing_and_nonexisting_paths_returns_correct()
 ///
 /// ## 预期结果
 /// - 文件路径返回 true，目录路径返回 false
-#[test]
-fn test_path_access_is_file_with_file_and_dir_returns_correct() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_is_file_with_file_and_dir(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备文件和目录路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
-    let dir_path = env.path().join("subdir");
+    let dir_path = cli_env.path().join("subdir");
     fs::create_dir(&dir_path)?;
 
     // Act: 检查是否为文件
@@ -137,13 +137,12 @@ fn test_path_access_is_file_with_file_and_dir_returns_correct() -> color_eyre::R
 ///
 /// ## 预期结果
 /// - 目录路径返回 true，文件路径返回 false
-#[test]
-fn test_path_access_is_dir_with_dir_and_file_returns_correct() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_is_dir_with_dir_and_file(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备目录和文件路径
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("subdir");
+    let dir_path = cli_env.path().join("subdir");
     fs::create_dir(&dir_path)?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
 
     // Act: 检查是否为目录

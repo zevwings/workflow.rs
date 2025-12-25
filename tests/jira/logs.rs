@@ -90,7 +90,7 @@ fn test_jira_logs_get_log_file_path_format(jira_logs: JiraLogs) {
     }
 }
 
-// ==================== 路径处理测试 ====================
+// ==================== Path Processing Tests ====================
 
 /// 测试路径一致性（多次调用应返回相同结果）
 #[rstest]
@@ -143,7 +143,7 @@ fn test_jira_logs_different_jira_ids(jira_logs: JiraLogs) {
     }
 }
 
-// ==================== 日志文件存在性测试 ====================
+// ==================== Log File Existence Tests ====================
 
 /// 测试确保日志文件存在（文件不存在的情况，应返回错误）
 #[rstest]
@@ -215,7 +215,7 @@ fn test_log_entry(#[case] id: Option<&str>, #[case] url: Option<&str>) {
     assert_eq!(entry.url, url.map(|s| s.to_string()));
 }
 
-// ==================== 清理功能测试 ====================
+// ==================== Cleanup Function Tests ====================
 
 /// 测试清理目录（包含dry_run和list_only选项）
 #[rstest]
@@ -303,7 +303,7 @@ fn test_jira_logs_clean_dir_empty_jira_id() {
     }
 }
 
-// ==================== 搜索功能测试 ====================
+// ==================== Search Function Tests ====================
 
 /// 测试在不存在的文件中查找请求ID（应返回错误）
 #[rstest]
@@ -334,7 +334,7 @@ fn test_jira_logs_extract_response_content_nonexistent_file(
     );
 }
 
-// ==================== 配置和设置测试 ====================
+// ==================== Configuration and Settings Tests ====================
 
 /// 测试与Settings的集成
 #[rstest]
@@ -367,7 +367,7 @@ fn test_jira_logs_output_folder_name(jira_logs: JiraLogs) {
     }
 }
 
-// ==================== 错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
 /// 测试错误消息的格式
 #[rstest]

@@ -297,17 +297,68 @@ impl Drop for MockServer {
     }
 }
 
+/// 创建 Mock 服务器（公共函数）
+///
+/// 用于所有需要 Mock HTTP 服务器的测试。
+/// 这个函数统一了 Mock 服务器的创建方式，避免在多个测试文件中重复定义。
+///
+/// # 返回
+///
+/// 返回新创建的 `MockServer` 实例
+///
+/// # 示例
+///
+/// ```rust
+/// use crate::common::http_helpers::setup_mock_server;
+///
+/// #[test]
+/// fn test_http_request() -> Result<()> {
+///     let mut mock_server = setup_mock_server();
+///     let url = format!("{}/test", mock_server.base_url);
+///     // ...
+///     Ok(())
+/// }
+/// ```
+pub fn setup_mock_server() -> MockServer {
+    MockServer::new()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::common::test_data_factory::TestDataFactory;
 
+    /// 测试MockServer创建
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::new()` 能够成功创建Mock服务器，并生成有效的base URL。
+    ///
+    /// ## 测试场景
+    /// 1. 创建MockServer实例
+    /// 2. 获取base URL
+    /// 3. 验证base URL不为空
+    ///
+    /// ## 预期结果
+    /// - Mock服务器创建成功
+    /// - base URL不为空
     #[test]
     fn test_mock_server_creation() {
         let server = MockServer::new();
         assert!(!server.base_url().is_empty());
     }
 
+    /// 测试设置GitHub API环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::setup_github_api()` 方法能够设置GITHUB_API_URL环境变量。
+    ///
+    /// ## 测试场景
+    /// 1. 创建MockServer
+    /// 2. 调用setup_github_api设置环境变量
+    /// 3. 验证环境变量已设置
+    ///
+    /// ## 预期结果
+    /// - GITHUB_API_URL环境变量已设置
     #[test]
     fn test_setup_github_api() {
         let server = MockServer::new();
@@ -316,6 +367,18 @@ mod tests {
         assert!(env::var("GITHUB_API_URL").is_ok());
     }
 
+    /// 测试设置Jira API环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::setup_jira_api()` 方法能够设置JIRA_API_URL环境变量。
+    ///
+    /// ## 测试场景
+    /// 1. 创建MockServer
+    /// 2. 调用setup_jira_api设置环境变量
+    /// 3. 验证环境变量已设置
+    ///
+    /// ## 预期结果
+    /// - JIRA_API_URL环境变量已设置
     #[test]
     fn test_setup_jira_api() {
         let server = MockServer::new();
@@ -324,6 +387,19 @@ mod tests {
         assert!(env::var("JIRA_API_URL").is_ok());
     }
 
+    /// 测试Mock GitHub创建PR端点
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::setup_github_create_pr_success()` 方法能够创建GitHub创建PR的Mock端点。
+    ///
+    /// ## 测试场景
+    /// 1. 创建MockServer并设置GitHub API环境变量
+    /// 2. 调用setup_github_create_pr_success创建Mock端点
+    /// 3. 验证Mock端点已创建
+    ///
+    /// ## 预期结果
+    /// - Mock端点创建成功
+    /// - mocks列表长度为1
     #[test]
     fn test_mock_github_create_pr() {
         let mut server = MockServer::new();
@@ -334,6 +410,20 @@ mod tests {
         assert_eq!(server.mocks.len(), 1);
     }
 
+    /// 测试Mock Jira获取Issue端点
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::setup_jira_get_issue_success()` 方法能够创建Jira获取Issue的Mock端点。
+    ///
+    /// ## 测试场景
+    /// 1. 使用TestDataFactory创建Issue数据
+    /// 2. 创建MockServer并设置Jira API环境变量
+    /// 3. 调用setup_jira_get_issue_success创建Mock端点
+    /// 4. 验证Mock端点已创建
+    ///
+    /// ## 预期结果
+    /// - Mock端点创建成功
+    /// - mocks列表长度为1
     #[test]
     fn test_mock_jira_get_issue() -> color_eyre::Result<()> {
         let factory = TestDataFactory::new();
@@ -347,6 +437,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试Mock错误响应
+    ///
+    /// ## 测试目的
+    /// 验证 `MockServer::mock_error_response()` 方法能够创建错误响应的Mock端点。
+    ///
+    /// ## 测试场景
+    /// 1. 创建MockServer并设置GitHub API环境变量
+    /// 2. 调用mock_error_response创建错误响应Mock（404状态码）
+    /// 3. 验证Mock端点已创建
+    ///
+    /// ## 预期结果
+    /// - Mock端点创建成功
+    /// - mocks列表长度为1
     #[test]
     fn test_mock_error_response() {
         let mut server = MockServer::new();

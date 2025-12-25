@@ -390,7 +390,7 @@ fn test_json_parser_parse_with_empty_response_falls_back_to_object() {
     }
 }
 
-// ==================== 来自 parser_core.rs 的补充测试 ====================
+// ==================== Additional Tests from parser_core.rs ====================
 
 /// 测试 JSON 解析器解析数组 JSON
 ///

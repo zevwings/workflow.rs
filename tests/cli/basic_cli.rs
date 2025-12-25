@@ -7,7 +7,7 @@ use crate::common::cli_helpers::{
 };
 use crate::common::environments::CliTestEnv;
 
-// ==================== 基本命令测试 ====================
+// ==================== Basic Command Tests ====================
 
 /// 测试帮助命令
 #[test]
@@ -237,7 +237,7 @@ fn test_jira_info_without_config() -> color_eyre::Result<()> {
     Ok(())
 }
 
-// ==================== 输出格式测试 ====================
+// ==================== Output Format Tests ====================
 
 /// 测试JSON输出格式
 #[test]
@@ -259,7 +259,7 @@ fn test_json_output_format() {
     }
 }
 
-// ==================== 参数验证测试 ====================
+// ==================== Parameter Validation Tests ====================
 
 /// 测试无效命令（应返回错误）
 #[test]
@@ -315,7 +315,7 @@ fn test_missing_required_argument() {
     assert!(contains_error(&stderr) || stderr.contains("required") || stderr.contains("missing"));
 }
 
-// ==================== 环境变量测试 ====================
+// ==================== Environment Variable Tests ====================
 
 /// 测试环境变量设置
 #[test]
@@ -336,7 +336,7 @@ fn test_environment_variables() -> color_eyre::Result<()> {
     Ok(())
 }
 
-// ==================== 性能测试 ====================
+// ==================== Performance Tests ====================
 
 /// 测试帮助命令的性能（应快速执行）
 #[test]
@@ -357,7 +357,7 @@ fn test_help_command_performance() {
     );
 }
 
-// ==================== 集成测试 ====================
+// ==================== Integration Tests ====================
 
 /// 测试完整工作流程的dry-run模式
 ///

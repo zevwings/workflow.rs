@@ -13,9 +13,9 @@ use std::path::Path;
 
 use color_eyre::Result;
 use rstest::rstest;
-use tempfile::tempdir;
 
 use workflow::base::checksum::Checksum;
+use crate::common::environments::CliTestEnv;
 use workflow::base::format::DisplayFormatter;
 use workflow::base::format::{
     date::{
@@ -31,127 +31,127 @@ mod format_size_tests {
 
     // ==================== 文件大小格式化测试 ====================
 
-    /// 测试文件大小格式化（字节单位）
+    /// 测试文件大小格式化（字节单位）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确格式化字节值（< 1024 字节）。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确格式化字节值（< 1024 字节）。
     ///
     /// ## 测试场景
     /// 测试多种字节值：0、1、512、1023
     ///
     /// ## 预期结果
     /// - 所有值都格式化为 "X B" 格式
-    #[test]
-    fn test_format_size_bytes_with_byte_values_returns_byte_string() {
-        // Arrange: 准备字节值
-        let test_cases = vec![(0, "0 B"), (1, "1 B"), (512, "512 B"), (1023, "1023 B")];
+    #[rstest]
+    #[case(0, "0 B")]
+    #[case(1, "1 B")]
+    #[case(512, "512 B")]
+    #[case(1023, "1023 B")]
+    fn test_format_size_bytes_with_byte_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备字节值（通过参数提供）
 
         // Act & Assert: 验证字节值格式化正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
-    /// 测试文件大小格式化（KB单位）
+    /// 测试文件大小格式化（KB单位）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确格式化KB值（1024 字节到 1023 KB）。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确格式化KB值（1024 字节到 1023 KB）。
     ///
     /// ## 测试场景
     /// 测试多种KB值：1 KB、1.5 KB、2 KB、1023 KB
     ///
     /// ## 预期结果
     /// - 所有值都格式化为 "X.XX KB" 格式
-    #[test]
-    fn test_format_size_kilobytes_with_kb_values_returns_kb_string() {
-        // Arrange: 准备KB值
-        let test_cases = vec![
-            (1024, "1.00 KB"),
-            (1536, "1.50 KB"), // 1024 + 512
-            (2048, "2.00 KB"),
-            (1024 * 1023, "1023.00 KB"),
-        ];
+    #[rstest]
+    #[case(1024, "1.00 KB")]
+    #[case(1536, "1.50 KB")] // 1024 + 512
+    #[case(2048, "2.00 KB")]
+    #[case(1024 * 1023, "1023.00 KB")]
+    fn test_format_size_kilobytes_with_kb_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备KB值（通过参数提供）
 
         // Act & Assert: 验证KB值格式化正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
-    /// 测试文件大小格式化（MB单位）
+    /// 测试文件大小格式化（MB单位）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确格式化MB值（1 MB到 1023 MB）。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确格式化MB值（1 MB到 1023 MB）。
     ///
     /// ## 测试场景
     /// 测试多种MB值：1 MB、1.5 MB、5 MB、1023 MB
     ///
     /// ## 预期结果
     /// - 所有值都格式化为 "X.XX MB" 格式
-    #[test]
-    fn test_format_size_megabytes_with_mb_values_returns_mb_string() {
-        // Arrange: 准备MB值
-        let test_cases = vec![
-            (1024 * 1024, "1.00 MB"),
-            (1024 * 1024 + 512 * 1024, "1.50 MB"),
-            (1024 * 1024 * 5, "5.00 MB"),
-            (1024 * 1024 * 1023, "1023.00 MB"),
-        ];
+    #[rstest]
+    #[case(1024 * 1024, "1.00 MB")]
+    #[case(1024 * 1024 + 512 * 1024, "1.50 MB")]
+    #[case(1024 * 1024 * 5, "5.00 MB")]
+    #[case(1024 * 1024 * 1023, "1023.00 MB")]
+    fn test_format_size_megabytes_with_mb_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备MB值（通过参数提供）
 
         // Act & Assert: 验证MB值格式化正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
-    /// 测试文件大小格式化（GB单位）
+    /// 测试文件大小格式化（GB单位）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确格式化GB值（1 GB及以上）。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确格式化GB值（1 GB及以上）。
     ///
     /// ## 测试场景
     /// 测试多种GB值：1 GB、1.5 GB、10 GB
     ///
     /// ## 预期结果
     /// - 所有值都格式化为 "X.XX GB" 格式
-    #[test]
-    fn test_format_size_gigabytes_with_gb_values_returns_gb_string() {
-        // Arrange: 准备GB值
-        let test_cases = vec![
-            (1024_u64.pow(3), "1.00 GB"),
-            (1024_u64.pow(3) + 512 * 1024_u64.pow(2), "1.50 GB"),
-            (1024_u64.pow(3) * 10, "10.00 GB"),
-        ];
+    #[rstest]
+    #[case(1024_u64.pow(3), "1.00 GB")]
+    #[case(1024_u64.pow(3) + 512 * 1024_u64.pow(2), "1.50 GB")]
+    #[case(1024_u64.pow(3) * 10, "10.00 GB")]
+    fn test_format_size_gigabytes_with_gb_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备GB值（通过参数提供）
 
         // Act & Assert: 验证GB值格式化正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
-    /// 测试文件大小格式化（TB单位）
+    /// 测试文件大小格式化（TB单位）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确格式化TB值（1 TB及以上）。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确格式化TB值（1 TB及以上）。
     ///
     /// ## 测试场景
     /// 测试多种TB值：1 TB、2 TB、1.5 TB
     ///
     /// ## 预期结果
     /// - 所有值都格式化为 "X.XX TB" 格式
-    #[test]
-    fn test_format_size_terabytes_with_tb_values_returns_tb_string() {
-        // Arrange: 准备TB值
-        let test_cases = vec![
-            (1024_u64.pow(4), "1.00 TB"),
-            (1024_u64.pow(4) * 2, "2.00 TB"),
-            (1024_u64.pow(4) + 512 * 1024_u64.pow(3), "1.50 TB"),
-        ];
+    #[rstest]
+    #[case(1024_u64.pow(4), "1.00 TB")]
+    #[case(1024_u64.pow(4) * 2, "2.00 TB")]
+    #[case(1024_u64.pow(4) + 512 * 1024_u64.pow(3), "1.50 TB")]
+    fn test_format_size_terabytes_with_tb_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备TB值（通过参数提供）
 
         // Act & Assert: 验证TB值格式化正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
     /// 测试文件大小格式化（参数化测试）
@@ -188,29 +188,28 @@ mod format_size_tests {
         assert_eq!(result, expected);
     }
 
-    /// 测试文件大小格式化的精度
+    /// 测试文件大小格式化的精度（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 DisplayFormatter::size() 能够正确处理带小数的文件大小。
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确处理带小数的文件大小。
     ///
     /// ## 测试场景
     /// 测试1.25 KB、1.10 KB、1.05 KB等带小数的值
     ///
     /// ## 预期结果
     /// - 小数精度正确（保留两位小数）
-    #[test]
-    fn test_format_size_precision_with_decimal_values_returns_precise_string() {
-        // Arrange: 准备带小数的字节值
-        let test_cases = vec![
-            (1024 + 256, "1.25 KB"), // 1.25 KB
-            (1024 + 102, "1.10 KB"), // 约1.10 KB
-            (1024 + 51, "1.05 KB"),  // 约1.05 KB
-        ];
+    #[rstest]
+    #[case(1024 + 256, "1.25 KB")] // 1.25 KB
+    #[case(1024 + 102, "1.10 KB")] // 约1.10 KB
+    #[case(1024 + 51, "1.05 KB")]  // 约1.05 KB
+    fn test_format_size_precision_with_decimal_values(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备带小数的字节值（通过参数提供）
 
         // Act & Assert: 验证小数精度正确
-        for (bytes, expected) in test_cases {
-            assert_eq!(DisplayFormatter::size(bytes), expected);
-        }
+        assert_eq!(DisplayFormatter::size(bytes), expected);
     }
 
     /// 测试文件大小格式化的边界情况
@@ -252,53 +251,55 @@ mod sensitive_string_tests {
 
     // ==================== 敏感信息掩码测试 ====================
 
-    /// 测试敏感信息掩码功能（短字符串）
+    /// 测试敏感信息掩码功能（短字符串）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 Sensitive trait 的 mask() 方法能够正确掩码短字符串（≤12个字符）。
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法能够正确掩码短字符串（≤12个字符）。
     ///
     /// ## 测试场景
     /// 测试空字符串、单字符、短字符串（≤12个字符）
     ///
     /// ## 预期结果
     /// - 所有短字符串都被掩码为 "***"
-    #[test]
-    fn test_mask_short_strings_with_short_inputs_returns_masked_string() {
-        // Arrange: 准备短字符串
-        let test_cases = vec![("", "***"), ("a", "***"), ("short", "***")];
+    #[rstest]
+    #[case("", "***")]
+    #[case("a", "***")]
+    #[case("short", "***")]
+    #[case("12345", "***")]
+    #[case("123456789012", "***")] // 恰好12个字符
+    fn test_mask_short_strings(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备短字符串（通过参数提供）
 
         // Act & Assert: 验证短字符串被掩码
-        for (input, expected) in test_cases {
-            assert_eq!(input.mask(), expected);
-        }
-        assert_eq!("12345".mask(), "***");
-        assert_eq!("123456789012".mask(), "***"); // 恰好12个字符
+        assert_eq!(input.mask(), expected);
     }
 
-    /// 测试敏感信息掩码功能（长字符串）
+    /// 测试敏感信息掩码功能（长字符串）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 Sensitive trait 的 mask() 方法能够正确掩码长字符串（>12个字符）。
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法能够正确掩码长字符串（>12个字符）。
     ///
     /// ## 测试场景
     /// 测试各种长度的长字符串，包括API密钥格式
     ///
     /// ## 预期结果
     /// - 长字符串显示前4个和后4个字符，中间用 "***" 掩码
-    #[test]
-    fn test_mask_long_strings_with_long_inputs_returns_masked_string() {
-        // Arrange: 准备长字符串
-        let test_cases = vec![
-            ("1234567890123", "1234***0123"), // 13个字符
-            ("verylongapikey123456", "very***3456"),
-            ("ghp_1234567890abcdefghijklmnop", "ghp_***mnop"),
-            ("sk-1234567890abcdefghijklmnopqrstuvwxyz", "sk-1***wxyz"),
-        ];
+    #[rstest]
+    #[case("1234567890123", "1234***0123")] // 13个字符
+    #[case("verylongapikey123456", "very***3456")]
+    #[case("ghp_1234567890abcdefghijklmnop", "ghp_***mnop")]
+    #[case("sk-1234567890abcdefghijklmnopqrstuvwxyz", "sk-1***wxyz")]
+    fn test_mask_long_strings(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备长字符串（通过参数提供）
 
         // Act & Assert: 验证长字符串掩码正确
-        for (input, expected) in test_cases {
-            assert_eq!(input.mask(), expected);
-        }
+        assert_eq!(input.mask(), expected);
     }
 
     /// 测试敏感信息掩码功能（String类型）
@@ -321,29 +322,28 @@ mod sensitive_string_tests {
         assert_eq!(short_string.mask(), "***");
     }
 
-    /// 测试敏感信息掩码功能（基本场景）
+    /// 测试敏感信息掩码功能（基本场景）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 Sensitive trait 的 mask() 方法的基本功能。
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法的基本功能。
     ///
     /// ## 测试场景
     /// 测试空字符串、短字符串、长字符串
     ///
     /// ## 预期结果
     /// - 所有输入都能正确掩码
-    #[test]
-    fn test_mask_basic_with_basic_inputs_returns_masked_string() {
-        // Arrange: 准备基本输入
-        let test_cases = vec![
-            ("short", "***"),
-            ("verylongapikey123456", "very***3456"),
-            ("", "***"),
-        ];
+    #[rstest]
+    #[case("short", "***")]
+    #[case("verylongapikey123456", "very***3456")]
+    #[case("", "***")]
+    fn test_mask_basic(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备基本输入（通过参数提供）
 
         // Act & Assert: 验证基本掩码正确
-        for (input, expected) in test_cases {
-            assert_eq!(input.mask(), expected);
-        }
+        assert_eq!(input.mask(), expected);
     }
 
     /// 测试敏感信息掩码功能（参数化测试）
@@ -378,10 +378,10 @@ mod sensitive_string_tests {
         assert_eq!(result, expected);
     }
 
-    /// 测试敏感信息掩码功能（特殊字符）
+    /// 测试敏感信息掩码功能（特殊字符）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 Sensitive trait 的 mask() 方法能够正确处理包含特殊字符的字符串。
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法能够正确处理包含特殊字符的字符串。
     ///
     /// ## 测试场景
     /// 测试包含连字符、下划线、点号、@符号等的字符串
@@ -389,26 +389,25 @@ mod sensitive_string_tests {
     /// ## 预期结果
     /// - 特殊字符被正确保留
     /// - 掩码格式正确
-    #[test]
-    fn test_mask_special_characters_with_special_chars_handles_correctly() {
-        // Arrange: 准备包含特殊字符的字符串
-        let test_cases = vec![
-            ("key-with-dashes-123456789", "key-***6789"),
-            ("key_with_underscores_123456", "key_***3456"),
-            ("key.with.dots.123456789", "key.***6789"),
-            ("key@with@symbols#123456", "key@***3456"),
-        ];
+    #[rstest]
+    #[case("key-with-dashes-123456789", "key-***6789")]
+    #[case("key_with_underscores_123456", "key_***3456")]
+    #[case("key.with.dots.123456789", "key.***6789")]
+    #[case("key@with@symbols#123456", "key@***3456")]
+    fn test_mask_special_characters(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备包含特殊字符的字符串（通过参数提供）
 
         // Act & Assert: 验证特殊字符处理正确
-        for (input, expected) in test_cases {
-            assert_eq!(input.mask(), expected);
-        }
+        assert_eq!(input.mask(), expected);
     }
 
-    /// 测试敏感信息掩码功能（Unicode字符串）
+    /// 测试敏感信息掩码功能（Unicode字符串）（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证 Sensitive trait 的 mask() 方法能够正确处理Unicode字符串。
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法能够正确处理Unicode字符串。
     ///
     /// ## 测试场景
     /// 测试中文、emoji等Unicode字符
@@ -416,19 +415,18 @@ mod sensitive_string_tests {
     /// ## 预期结果
     /// - Unicode字符被正确处理
     /// - 掩码格式正确
-    #[test]
-    fn test_mask_unicode_strings_with_unicode_inputs_handles_correctly() {
-        // Arrange: 准备Unicode字符串
-        let test_cases = vec![
-            ("短字符串", "***"),
-            ("这是一个很长的中文字符串包含数字123456", "这是一个***3456"),
-            ("émoji🚀test123456789", "émoj***6789"),
-        ];
+    #[rstest]
+    #[case("短字符串", "***")]
+    #[case("这是一个很长的中文字符串包含数字123456", "这是一个***3456")]
+    #[case("émoji🚀test123456789", "émoj***6789")]
+    fn test_mask_unicode_strings(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备Unicode字符串（通过参数提供）
 
         // Act & Assert: 验证Unicode字符串处理正确
-        for (input, expected) in test_cases {
-            assert_eq!(input.mask(), expected);
-        }
+        assert_eq!(input.mask(), expected);
     }
 }
 
@@ -634,8 +632,8 @@ mod checksum_tests {
     /// - 哈希值与预期值匹配
     #[test]
     fn test_calculate_file_sha256() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("test_file.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("test_file.txt");
 
         // 创建测试文件
         let mut file = fs::File::create(&file_path)?;
@@ -667,8 +665,8 @@ mod checksum_tests {
     /// - 哈希值格式正确
     #[test]
     fn test_calculate_empty_file_sha256() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("empty_file.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("empty_file.txt");
 
         // 创建空文件
         fs::File::create(&file_path)?;
@@ -697,8 +695,8 @@ mod checksum_tests {
     /// - 哈希值格式正确（64个十六进制字符）
     #[test]
     fn test_calculate_large_file_sha256() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("large_file.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("large_file.txt");
 
         // 创建较大的测试文件（超过缓冲区大小）
         let mut file = fs::File::create(&file_path)?;
@@ -793,8 +791,8 @@ mod checksum_tests {
     /// - 消息包含验证通过的信息
     #[test]
     fn test_verify_success() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("verify_test.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("verify_test.txt");
 
         // 创建测试文件
         let mut file = fs::File::create(&file_path)?;
@@ -831,8 +829,8 @@ mod checksum_tests {
     /// - 错误消息包含预期和实际的哈希值
     #[test]
     fn test_verify_failure() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("verify_fail_test.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("verify_fail_test.txt");
 
         // 创建测试文件
         let mut file = fs::File::create(&file_path)?;
@@ -935,8 +933,8 @@ mod checksum_tests {
         "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
     )]
     fn test_known_hash_values(#[case] content: &str, #[case] expected_hash: &str) -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("hash_test.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("hash_test.txt");
 
         // 创建测试文件
         let mut file = fs::File::create(&file_path)?;
@@ -1014,8 +1012,8 @@ mod integration_tests {
     /// - 集成使用无错误
     #[test]
     fn test_checksum_and_format_integration() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let file_path = temp_dir.path().join("integration_test.txt");
+        let env = CliTestEnv::new()?;
+        let file_path = env.path().join("integration_test.txt");
 
         // 创建测试文件
         let content = "Integration test content";

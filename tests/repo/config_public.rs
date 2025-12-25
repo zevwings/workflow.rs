@@ -15,7 +15,7 @@ use workflow::repo::config::public::PublicRepoConfig;
 use crate::common::environments::CliTestEnv;
 use crate::common::helpers::CurrentDirGuard;
 
-// ==================== 测试辅助函数 ====================
+// ==================== Test Helper Functions ====================
 
 /// 创建公共配置文件（.workflow/config.toml）
 fn create_public_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
@@ -234,7 +234,7 @@ fn test_save_public_config_structure_with_all_fields_returns_complete_structure(
     assert!(!config.template_pull_requests.is_empty());
 }
 
-// ==================== 配置字段测试 ====================
+// ==================== Configuration Field Tests ====================
 
 /// 测试提交模板字段类型支持
 ///
@@ -336,7 +336,7 @@ fn test_template_pull_requests_fields_with_various_types_returns_config_with_fie
     assert_eq!(config.template_pull_requests.len(), 3);
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试空配置默认值
 ///
@@ -455,7 +455,7 @@ fn test_config_with_unicode_returns_config_with_unicode_chars() {
     );
 }
 
-// ==================== 配置更新测试 ====================
+// ==================== Configuration Update Tests ====================
 
 /// 测试字段更新功能
 ///
@@ -565,7 +565,7 @@ fn test_clear_all_fields_with_populated_config_clears_all_fields() {
     assert!(config.template_pull_requests.is_empty());
 }
 
-// ==================== 参数化测试 ====================
+// ==================== Parameterized Tests ====================
 
 /// 测试提交模板字段参数化
 ///
@@ -711,7 +711,7 @@ fn test_config_default_with_multiple_calls_returns_consistent_defaults() {
     assert!(config2.template_commit.is_empty());
 }
 
-// ==================== 文件系统集成测试 ====================
+// ==================== File System Integration Tests ====================
 
 /// 测试从文件加载配置
 ///
@@ -968,7 +968,7 @@ require_review = true
     Ok(())
 }
 
-// ==================== 错误场景测试 ====================
+// ==================== Error Scenario Tests ====================
 
 /// 测试加载损坏的 TOML 文件
 ///

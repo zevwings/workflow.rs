@@ -153,6 +153,21 @@ impl Drop for EnvGuard {
 mod tests {
     use super::*;
 
+    /// 测试EnvGuard设置和恢复环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `EnvGuard::set()` 方法能够设置环境变量，并在drop时自动恢复原始值。
+    ///
+    /// ## 测试场景
+    /// 1. 保存原始HOME环境变量值
+    /// 2. 创建EnvGuard并设置HOME为测试值
+    /// 3. 验证HOME已设置为测试值
+    /// 4. Drop guard
+    /// 5. 验证HOME已恢复为原始值
+    ///
+    /// ## 预期结果
+    /// - 设置时，环境变量被正确设置
+    /// - Drop后，环境变量恢复为原始值（或移除，如果原本不存在）
     #[test]
     fn test_env_guard_set_and_restore() {
         let original_home = std::env::var("HOME").ok();
@@ -172,6 +187,21 @@ mod tests {
         }
     }
 
+    /// 测试EnvGuard移除和恢复环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `EnvGuard::remove()` 方法能够移除环境变量，并在drop时自动恢复原始值。
+    ///
+    /// ## 测试场景
+    /// 1. 设置一个测试环境变量
+    /// 2. 创建EnvGuard并移除该环境变量
+    /// 3. 验证环境变量已移除
+    /// 4. Drop guard
+    /// 5. 验证环境变量已恢复为原始值
+    ///
+    /// ## 预期结果
+    /// - 移除时，环境变量被正确移除
+    /// - Drop后，环境变量恢复为原始值
     #[test]
     fn test_env_guard_remove_and_restore() {
         // 设置一个测试环境变量
@@ -192,6 +222,21 @@ mod tests {
         std::env::remove_var("TEST_ENV_VAR");
     }
 
+    /// 测试EnvGuard批量设置环境变量
+    ///
+    /// ## 测试目的
+    /// 验证 `EnvGuard::set_many()` 方法能够批量设置多个环境变量，并在drop时自动恢复所有原始值。
+    ///
+    /// ## 测试场景
+    /// 1. 保存原始HOME和PATH环境变量值
+    /// 2. 创建EnvGuard并批量设置多个环境变量
+    /// 3. 验证所有环境变量已设置
+    /// 4. Drop guard
+    /// 5. 验证所有环境变量已恢复为原始值
+    ///
+    /// ## 预期结果
+    /// - 批量设置时，所有环境变量被正确设置
+    /// - Drop后，所有环境变量恢复为原始值
     #[test]
     fn test_env_guard_set_many() {
         let original_home = std::env::var("HOME").ok();

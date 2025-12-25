@@ -15,6 +15,19 @@ struct TestLlmCli {
 
 // ==================== Command Parsing Tests ====================
 
+/// 测试LLM命令解析所有子命令
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand` 枚举的所有子命令（show, setup）都能够正确解析。
+///
+/// ## 测试场景
+/// 1. 准备所有子命令的输入
+/// 2. 解析所有子命令
+/// 3. 验证每个子命令都能正确解析
+///
+/// ## 预期结果
+/// - 所有子命令都能正确解析
+/// - 命令类型匹配预期
 #[test]
 fn test_llm_command_with_all_subcommands_parses_successfully() {
     // Arrange: 准备所有子命令的输入
@@ -34,6 +47,19 @@ fn test_llm_command_with_all_subcommands_parses_successfully() {
 
 // ==================== Error Handling Tests ====================
 
+/// 测试LLM命令使用无效子命令返回错误
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand` 在使用无效子命令时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效子命令的输入（"invalid"）
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示无效子命令
 #[test]
 fn test_llm_command_with_invalid_subcommand_returns_error() {
     // Arrange: 准备无效子命令的输入
@@ -46,6 +72,19 @@ fn test_llm_command_with_invalid_subcommand_returns_error() {
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
+/// 测试LLM命令缺少子命令返回错误
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand` 在缺少子命令时能够正确返回错误（LLM命令需要子命令）。
+///
+/// ## 测试场景
+/// 1. 准备缺少子命令的输入（只有命令名）
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示缺少子命令
 #[test]
 fn test_llm_command_with_missing_subcommand_returns_error() {
     // Arrange: 准备缺少子命令的输入
@@ -58,6 +97,19 @@ fn test_llm_command_with_missing_subcommand_returns_error() {
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }
 
+/// 测试LLM show命令使用额外参数返回错误
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand::Show` 命令不接受额外参数。
+///
+/// ## 测试场景
+/// 1. 准备包含额外参数的Show命令输入
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示不接受额外参数
 #[test]
 fn test_llm_show_command_with_extra_arguments_returns_error() {
     // Arrange: 准备包含额外参数的 Show 命令输入
@@ -73,6 +125,19 @@ fn test_llm_show_command_with_extra_arguments_returns_error() {
     );
 }
 
+/// 测试LLM setup命令使用额外参数返回错误
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand::Setup` 命令不接受额外参数。
+///
+/// ## 测试场景
+/// 1. 准备包含额外参数的Setup命令输入
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示不接受额外参数
 #[test]
 fn test_llm_setup_command_with_extra_arguments_returns_error() {
     // Arrange: 准备包含额外参数的 Setup 命令输入
@@ -88,6 +153,23 @@ fn test_llm_setup_command_with_extra_arguments_returns_error() {
     );
 }
 
+/// 测试LLM命令使用大写子命令返回错误
+///
+/// ## 测试目的
+/// 验证 `LLMSubcommand` 在使用大写子命令时能够正确返回错误（clap默认区分大小写）。
+///
+/// ## 测试场景
+/// 1. 准备大写子命令的输入（SHOW, SETUP）
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 注意事项
+/// - clap默认区分大小写
+/// - 大写命令应该返回错误
+///
+/// ## 预期结果
+/// - 所有大写命令都返回错误
+/// - 错误消息明确指示命令无效
 #[test]
 fn test_llm_command_with_uppercase_subcommand_returns_error() {
     // Arrange: 准备大写子命令的输入（clap 默认区分大小写）

@@ -15,6 +15,19 @@ struct TestRepoCli {
 
 // ==================== Command Parsing Tests ====================
 
+/// 测试Repo命令解析所有子命令
+///
+/// ## 测试目的
+/// 验证 `RepoSubcommand` 枚举的所有子命令（setup, show）都能够正确解析。
+///
+/// ## 测试场景
+/// 1. 准备所有子命令的输入
+/// 2. 解析所有子命令
+/// 3. 验证每个子命令都能正确解析
+///
+/// ## 预期结果
+/// - 所有子命令都能正确解析
+/// - 命令类型匹配预期
 #[test]
 fn test_repo_command_with_all_subcommands_parses_successfully() {
     // Arrange: 准备所有子命令的输入
@@ -34,6 +47,19 @@ fn test_repo_command_with_all_subcommands_parses_successfully() {
 
 // ==================== Error Handling Tests ====================
 
+/// 测试Repo命令使用无效子命令返回错误
+///
+/// ## 测试目的
+/// 验证 `RepoSubcommand` 在使用无效子命令时能够正确返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效子命令的输入（"invalid"）
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示无效子命令
 #[test]
 fn test_repo_command_with_invalid_subcommand_returns_error() {
     // Arrange: 准备无效子命令的输入
@@ -46,6 +72,19 @@ fn test_repo_command_with_invalid_subcommand_returns_error() {
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
+/// 测试Repo命令缺少子命令返回错误
+///
+/// ## 测试目的
+/// 验证 `RepoSubcommand` 在缺少子命令时能够正确返回错误（Repo命令需要子命令）。
+///
+/// ## 测试场景
+/// 1. 准备缺少子命令的输入（只有命令名）
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示缺少子命令
 #[test]
 fn test_repo_command_with_missing_subcommand_returns_error() {
     // Arrange: 准备缺少子命令的输入
@@ -58,6 +97,19 @@ fn test_repo_command_with_missing_subcommand_returns_error() {
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }
 
+/// 测试Repo所有命令使用额外参数返回错误
+///
+/// ## 测试目的
+/// 验证 `RepoSubcommand` 的所有子命令（setup, show）都不接受额外参数。
+///
+/// ## 测试场景
+/// 1. 遍历所有子命令
+/// 2. 为每个命令添加额外参数
+/// 3. 验证所有命令都拒绝额外参数
+///
+/// ## 预期结果
+/// - 所有命令在使用额外参数时都返回错误
+/// - 错误消息明确指示不接受额外参数
 #[test]
 fn test_repo_all_commands_with_extra_arguments_return_error() {
     // Arrange: 准备所有命令和额外参数

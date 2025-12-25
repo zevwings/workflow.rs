@@ -542,7 +542,7 @@ fn test_github_user_deserialization() -> Result<()> {
     Ok(())
 }
 
-// ==================== 序列化/反序列化边界测试 ====================
+// ==================== Serialization/Deserialization Boundary Tests ====================
 
 /// 测试请求边界情况（参数化测试）
 ///
@@ -632,7 +632,7 @@ fn test_response_missing_optional_fields() -> Result<()> {
     Ok(())
 }
 
-// ==================== 类型安全测试 ====================
+// ==================== Type Safety Tests ====================
 
 /// 测试请求类型安全
 ///

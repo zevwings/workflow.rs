@@ -78,7 +78,7 @@ fn create_socks_proxy_info() -> ProxyInfo {
     proxy_info
 }
 
-// ==================== 测试用例 ====================
+// ==================== Test Cases ====================
 
 /// 测试 ProxyInfo 结构体创建
 #[test]

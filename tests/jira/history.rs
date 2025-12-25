@@ -36,7 +36,7 @@ fn unique_repo() -> String {
     format!("github.com/test/repo-{}", timestamp)
 }
 
-// ==================== 工作历史记录读写测试 ====================
+// ==================== Work History Record Read/Write Tests ====================
 
 /// 测试读取不存在的工作历史记录文件
 #[rstest]
@@ -249,7 +249,7 @@ fn test_find_pr_id_by_branch_without_repository(#[case] branch: &str) {
     );
 }
 
-// ==================== 工作历史记录写入测试 ====================
+// ==================== Work History Record Write Tests ====================
 
 /// 测试在没有提供仓库地址时写入工作历史记录（应返回错误）
 #[rstest]
@@ -324,7 +324,7 @@ fn test_write_work_history(
     }
 }
 
-// ==================== 工作历史记录更新测试 ====================
+// ==================== Work History Record Update Tests ====================
 
 /// 测试在没有提供仓库地址时更新合并时间（应返回错误）
 #[rstest]
@@ -379,7 +379,7 @@ fn test_update_work_history_merged_basic() {
     }
 }
 
-// ==================== 工作历史记录删除测试 ====================
+// ==================== Work History Record Delete Tests ====================
 
 /// 测试在没有提供仓库地址时删除工作历史记录条目（应返回错误）
 #[rstest]

@@ -6,6 +6,21 @@ use workflow::base::dialog::{FormBuilder, GroupConfig};
 
 // ==================== FormGroupBuilder Step Tests ====================
 
+/// 测试FormGroupBuilder添加无条件步骤
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder::step()` 方法能够添加无条件步骤（通过FormBuilder间接测试）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中添加无条件步骤
+/// 3. 验证步骤添加成功
+///
+/// ## 注意事项
+/// - GroupBuilder::new是pub(crate)，通过FormBuilder间接测试
+///
+/// ## 预期结果
+/// - 步骤添加成功，不会panic
 #[test]
 fn test_group_builder_step_with_unconditional_step_adds_step() {
     // Arrange: 准备FormBuilder
@@ -22,6 +37,18 @@ fn test_group_builder_step_with_unconditional_step_adds_step() {
     assert!(true);
 }
 
+/// 测试FormGroupBuilder添加条件步骤
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder::step_if()` 方法能够添加条件步骤（当指定字段等于指定值时显示）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中添加条件步骤（field1 == "value1"）
+/// 3. 验证步骤添加成功
+///
+/// ## 预期结果
+/// - 条件步骤添加成功，不会panic
 #[test]
 fn test_group_builder_step_if_with_condition_adds_conditional_step() {
     // Arrange: 准备FormBuilder和条件
@@ -39,6 +66,18 @@ fn test_group_builder_step_if_with_condition_adds_conditional_step() {
     assert!(true);
 }
 
+/// 测试FormGroupBuilder添加多条件步骤（AND逻辑）
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder::step_if_all()` 方法能够添加多条件步骤（所有条件都满足时显示，AND逻辑）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中添加多条件步骤（field1 == "value1" AND field2 == "value2"）
+/// 3. 验证步骤添加成功
+///
+/// ## 预期结果
+/// - 多条件步骤添加成功，不会panic
 #[test]
 fn test_group_builder_step_if_all_with_all_conditions_adds_step() {
     // Arrange: 准备FormBuilder和多个条件（AND逻辑）
@@ -55,6 +94,18 @@ fn test_group_builder_step_if_all_with_all_conditions_adds_step() {
     assert!(true);
 }
 
+/// 测试FormGroupBuilder添加多条件步骤（OR逻辑）
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder::step_if_any()` 方法能够添加多条件步骤（任一条件满足时显示，OR逻辑）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中添加多条件步骤（field1 == "value1" OR field2 == "value2"）
+/// 3. 验证步骤添加成功
+///
+/// ## 预期结果
+/// - 多条件步骤添加成功，不会panic
 #[test]
 fn test_group_builder_step_if_any_with_any_condition_adds_step() {
     // Arrange: 准备FormBuilder和多个条件（OR逻辑）
@@ -71,6 +122,18 @@ fn test_group_builder_step_if_any_with_any_condition_adds_step() {
     assert!(true);
 }
 
+/// 测试FormGroupBuilder添加动态条件步骤
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder::step_if_dynamic()` 方法能够添加动态条件步骤（使用函数动态判断条件）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中添加动态条件步骤（使用函数判断条件）
+/// 3. 验证步骤添加成功
+///
+/// ## 预期结果
+/// - 动态条件步骤添加成功，不会panic
 #[test]
 fn test_group_builder_step_if_dynamic_with_dynamic_condition_adds_step() {
     // Arrange: 准备FormBuilder和动态条件函数
@@ -86,6 +149,19 @@ fn test_group_builder_step_if_dynamic_with_dynamic_condition_adds_step() {
     assert!(true);
 }
 
+/// 测试FormGroupBuilder添加多个步骤
+///
+/// ## 测试目的
+/// 验证 `FormGroupBuilder` 能够链式调用添加多个步骤（包括无条件步骤和条件步骤）。
+///
+/// ## 测试场景
+/// 1. 创建FormBuilder并添加组
+/// 2. 在组中链式添加多个步骤（无条件步骤和条件步骤）
+/// 3. 验证所有步骤添加成功
+///
+/// ## 预期结果
+/// - 所有步骤添加成功，不会panic
+/// - 链式调用正常工作
 #[test]
 fn test_group_builder_multiple_steps_with_multiple_steps_adds_all_steps() {
     // Arrange: 准备FormBuilder

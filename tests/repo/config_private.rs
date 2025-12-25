@@ -14,7 +14,7 @@ use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 use crate::common::environments::CliTestEnv;
 use crate::common::helpers::CurrentDirGuard;
 
-// ==================== 测试辅助函数 ====================
+// ==================== Test Helper Functions ====================
 
 /// 创建私有配置文件（~/.workflow/config/repository.toml）
 ///
@@ -27,7 +27,7 @@ fn create_private_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
     Ok(config_file)
 }
 
-// ==================== 默认值测试 ====================
+// ==================== Default Value Tests ====================
 
 /// 测试私有配置默认值
 ///
@@ -50,7 +50,7 @@ fn test_private_config_default() {
     assert!(config.pr.is_none());
 }
 
-// ==================== 配置字段测试 ====================
+// ==================== Configuration Field Tests ====================
 
 /// 测试设置 configured 字段
 ///
@@ -157,7 +157,7 @@ fn test_private_config_with_all_fields() {
     assert!(config.pr.is_some());
 }
 
-// ==================== 仓库 ID 生成测试 ====================
+// ==================== Repository ID Generation Tests ====================
 
 /// 测试仓库 ID 格式生成
 ///
@@ -284,7 +284,7 @@ fn test_private_config_debug() {
     assert!(debug_output.contains("configured"));
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试空 branch 配置
 ///
@@ -411,7 +411,7 @@ fn test_private_config_with_special_branch_prefix() {
     }
 }
 
-// ==================== 参数化测试 ====================
+// ==================== Parameterized Tests ====================
 
 /// 测试私有配置参数化
 ///
@@ -481,7 +481,7 @@ fn test_private_config_pr_parametrized(#[case] auto_accept: Option<bool>) {
     }
 }
 
-// ==================== 配置更新测试 ====================
+// ==================== Configuration Update Tests ====================
 
 /// 测试更新 configured 标志
 ///
@@ -645,7 +645,7 @@ fn test_clear_pr_config() {
     assert!(config.pr.is_none());
 }
 
-// ==================== 文件系统集成测试 ====================
+// ==================== File System Integration Tests ====================
 
 /// 测试从文件加载配置
 ///
@@ -673,6 +673,8 @@ fn test_load_from_existing_file() -> Result<()> {
     env.env_guard().set("HOME", &home_path);
     env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
+    // 切换到测试目录，让 generate_repo_id() 和 load() 能找到 Git remote
+    let _guard = CurrentDirGuard::new(env.path())?;
     // 生成 repo_id
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
 
@@ -691,7 +693,7 @@ auto_accept_change_type = true
     );
     create_private_config(&env, &config_content)?;
 
-    // Act: 调用 PrivateRepoConfig::load()
+    // Act: 调用 PrivateRepoConfig::load()（guard 仍然有效）
     let config = PrivateRepoConfig::load()?;
 
     // Assert: 配置正确加载
@@ -739,7 +741,9 @@ fn test_load_from_non_existing_file() -> Result<()> {
     env.env_guard().set("HOME", &home_path);
     env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
-    // Act: 调用 PrivateRepoConfig::load()
+    // Act: 切换到测试目录，然后调用 PrivateRepoConfig::load()
+    // load() 内部会调用 generate_repo_id()，需要 Git remote
+    let _guard = CurrentDirGuard::new(env.path())?;
     let config = PrivateRepoConfig::load()?;
 
     // Assert: 返回默认配置
@@ -798,6 +802,9 @@ fn test_save_to_new_file() -> Result<()> {
 
     // Assert: 内容正确
     let content = fs::read_to_string(&config_path)?;
+    // 切换到测试目录，让 generate_repo_id() 能找到 Git remote
+    // 注意：_guard 仍然有效，但为了明确，我们使用新的 guard
+    let _guard_for_repo_id = CurrentDirGuard::new(env.path())?;
     let _repo_id = PrivateRepoConfig::generate_repo_id()?;
     // Note: TOML section names with special chars might be quoted
     assert!(content.contains("configured = true"));
@@ -895,6 +902,8 @@ fn test_load_and_save_roundtrip() -> Result<()> {
     env.env_guard().set("HOME", &home_path);
     env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
+    // 切换到测试目录，让 generate_repo_id() 和后续操作能找到 Git remote
+    let _guard = CurrentDirGuard::new(env.path())?;
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
     let config_content = format!(
         r#"
@@ -908,7 +917,7 @@ ignore = ["main"]
     );
     create_private_config(&env, &config_content)?;
 
-    // Act: 加载 → 修改 → 保存 → 重新加载
+    // Act: 加载 → 修改 → 保存 → 重新加载（guard 仍然有效）
     let mut config = PrivateRepoConfig::load()?;
     assert!(config.configured);
 
@@ -942,7 +951,7 @@ ignore = ["main"]
     Ok(())
 }
 
-// ==================== 错误场景测试 ====================
+// ==================== Error Scenario Tests ====================
 
 /// 测试加载损坏的 TOML 文件
 ///

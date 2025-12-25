@@ -15,6 +15,20 @@ struct TestMigrateCli {
 
 // ==================== Migrate Command Tests ====================
 
+/// 测试Migrate命令解析--dry-run标志
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令能够正确解析 `--dry-run` 标志。
+///
+/// ## 测试场景
+/// 1. 准备包含 `--dry-run` 标志的命令行输入
+/// 2. 解析命令行参数
+/// 3. 验证 `dry_run` 标志正确设置，`keep_old` 为默认值
+///
+/// ## 预期结果
+/// - 解析成功
+/// - dry_run为true
+/// - keep_old为false（默认值）
 #[test]
 fn test_migrate_command_with_dry_run_flag_parses_correctly() {
     // Arrange: 准备带 --dry-run 参数的 Migrate 命令输入
@@ -34,6 +48,20 @@ fn test_migrate_command_with_dry_run_flag_parses_correctly() {
     }
 }
 
+/// 测试Migrate命令解析--keep-old标志
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令能够正确解析 `--keep-old` 标志。
+///
+/// ## 测试场景
+/// 1. 准备包含 `--keep-old` 标志的命令行输入
+/// 2. 解析命令行参数
+/// 3. 验证 `keep_old` 标志正确设置，`dry_run` 为默认值
+///
+/// ## 预期结果
+/// - 解析成功
+/// - keep_old为true
+/// - dry_run为false（默认值）
 #[test]
 fn test_migrate_command_with_keep_old_flag_parses_correctly() {
     // Arrange: 准备带 --keep-old 参数的 Migrate 命令输入
@@ -53,6 +81,20 @@ fn test_migrate_command_with_keep_old_flag_parses_correctly() {
     }
 }
 
+/// 测试Migrate命令解析两个标志组合
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令能够同时解析 `--dry-run` 和 `--keep-old` 两个标志。
+///
+/// ## 测试场景
+/// 1. 准备包含两个标志的命令行输入
+/// 2. 解析命令行参数
+/// 3. 验证两个标志都正确设置
+///
+/// ## 预期结果
+/// - 解析成功
+/// - dry_run为true
+/// - keep_old为true
 #[test]
 fn test_migrate_command_with_both_flags_parses_correctly() {
     // Arrange: 准备带 --dry-run 和 --keep-old 参数的 Migrate 命令输入
@@ -72,6 +114,20 @@ fn test_migrate_command_with_both_flags_parses_correctly() {
     }
 }
 
+/// 测试Migrate命令解析最小参数
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令在使用最小参数（只有命令名）时能够正确解析，所有标志使用默认值。
+///
+/// ## 测试场景
+/// 1. 准备只包含命令名的命令行输入
+/// 2. 解析命令行参数
+/// 3. 验证所有标志为默认值
+///
+/// ## 预期结果
+/// - 解析成功
+/// - dry_run为false（默认值）
+/// - keep_old为false（默认值）
 #[test]
 fn test_migrate_command_with_minimal_args_parses_correctly() {
     // Arrange: 准备最小参数的 Migrate 命令输入
@@ -93,6 +149,19 @@ fn test_migrate_command_with_minimal_args_parses_correctly() {
 
 // ==================== Command Parsing Tests ====================
 
+/// 测试Migrate命令解析有效输入
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令能够正确解析有效的命令行输入。
+///
+/// ## 测试场景
+/// 1. 准备有效的Migrate命令输入
+/// 2. 解析命令行参数
+/// 3. 验证命令解析成功
+///
+/// ## 预期结果
+/// - 解析成功
+/// - 命令类型为 `Commands::Migrate`
 #[test]
 fn test_migrate_command_with_valid_input_parses_successfully() {
     // Arrange: 准备有效的 Migrate 命令输入
@@ -108,6 +177,19 @@ fn test_migrate_command_with_valid_input_parses_successfully() {
 
 // ==================== Error Handling Tests ====================
 
+/// 测试Migrate命令使用额外参数返回错误
+///
+/// ## 测试目的
+/// 验证 `Commands::Migrate` 命令在使用额外参数时能够正确返回错误（Migrate命令不接受额外参数）。
+///
+/// ## 测试场景
+/// 1. 准备包含额外参数的命令行输入
+/// 2. 尝试解析命令行参数
+/// 3. 验证解析失败
+///
+/// ## 预期结果
+/// - 解析失败，返回错误
+/// - 错误消息明确指示不接受额外参数
 #[test]
 fn test_migrate_command_with_extra_arguments_returns_error() {
     // Arrange: 准备包含额外参数的输入

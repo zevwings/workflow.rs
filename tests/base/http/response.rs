@@ -8,16 +8,11 @@
 //! - 使用 `MockServer` 模拟 HTTP 服务器
 //! - 测试各种响应场景：成功、错误、不同内容类型
 
-use crate::common::http_helpers::MockServer;
+use crate::common::http_helpers::{setup_mock_server, MockServer};
 use color_eyre::Result;
 use serde::Deserialize;
 use serde_json::Value;
 use workflow::base::http::{HttpClient, RequestConfig};
-
-/// 设置 Mock 服务器
-fn setup_mock_server() -> MockServer {
-    MockServer::new()
-}
 
 #[derive(Debug, Deserialize, PartialEq)]
 struct TestData {
@@ -859,7 +854,7 @@ fn test_http_response_debug_with_valid_response_returns_debug_string() -> color_
 /// - 错误消息正确提取
 /// - 消息包含预期的错误内容
 #[test]
-fn test_http_response_extract_error_message_with_message_field_returns_message() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_with_message_field() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应
     let mut manager = MockServer::new();
 
@@ -899,7 +894,7 @@ fn test_http_response_extract_error_message_with_message_field_returns_message()
 /// ## 预期结果
 /// - 错误消息包含完整的 JSON 内容
 #[test]
-fn test_http_response_extract_error_message_without_error_field_returns_full_json() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_without_error_field() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应
     let mut manager = MockServer::new();
 

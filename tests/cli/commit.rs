@@ -17,6 +17,22 @@ struct TestCommitCli {
 
 // ==================== Amend Command Tests ====================
 
+/// 测试Commit amend命令解析各种选项（参数化测试）
+///
+/// ## 测试目的
+/// 验证 `CommitSubcommand::Amend` 命令能够正确解析各种选项组合（message, --no-edit, --no-verify）。
+///
+/// ## 测试场景
+/// 使用参数化测试覆盖以下组合：
+/// - 无选项
+/// - 只有message
+/// - 只有--no-edit
+/// - 只有--no-verify
+/// - 所有选项组合
+///
+/// ## 预期结果
+/// - 所有组合都能正确解析
+/// - 参数值与预期一致
 #[rstest]
 #[case(None, false, false)]
 #[case(Some("New commit message"), false, false)]
@@ -61,6 +77,22 @@ fn test_commit_amend_command_with_various_options_parses_correctly(
 
 // ==================== Reword Command Tests ====================
 
+/// 测试Commit reword命令解析各种commit ID（参数化测试）
+///
+/// ## 测试目的
+/// 验证 `CommitSubcommand::Reword` 命令能够正确解析各种格式的commit ID（可选参数）。
+///
+/// ## 测试场景
+/// 使用参数化测试覆盖以下情况：
+/// - 无commit ID（None）
+/// - 短commit ID（"abc1234"）
+/// - HEAD引用（"HEAD"）
+/// - 相对引用（"HEAD~2"）
+/// - 完整SHA（40字符）
+///
+/// ## 预期结果
+/// - 所有格式都能正确解析
+/// - commit_id值与预期一致
 #[rstest]
 #[case(None)]
 #[case(Some("abc1234"))]
@@ -90,6 +122,18 @@ fn test_commit_reword_command_with_various_commit_ids_parses_correctly(
 
 // ==================== Subcommand Enum Tests ====================
 
+/// 测试CommitSubcommand枚举包含所有子命令
+///
+/// ## 测试目的
+/// 验证 `CommitSubcommand` 枚举包含所有预期的子命令（Amend, Reword等）。
+///
+/// ## 测试场景
+/// 1. 解析所有子命令的输入
+/// 2. 验证每个子命令都能正确解析
+///
+/// ## 预期结果
+/// - 所有子命令都能正确解析
+/// - 枚举类型匹配预期
 #[test]
 fn test_commit_subcommand_enum_contains_all_subcommands() {
     // Arrange: 准备所有子命令的输入

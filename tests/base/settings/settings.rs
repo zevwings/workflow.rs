@@ -361,7 +361,7 @@ fn test_settings_default() {
     assert!(default_settings.aliases.is_empty());
 }
 
-// ==================== 表格显示结构测试 ====================
+// ==================== Table Display Structure Tests ====================
 
 /// 测试表格行结构创建
 #[test]

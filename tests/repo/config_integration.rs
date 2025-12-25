@@ -9,7 +9,7 @@ use toml::Value;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 use workflow::repo::RepoConfig;
 
-// ==================== 配置集成测试 ====================
+// ==================== Configuration Integration Tests ====================
 
 /// 测试公共配置和私有配置的交互
 #[test]
@@ -125,7 +125,7 @@ fn test_template_and_personal_pr_config() {
     assert!(config.pr.is_some());
 }
 
-// ==================== 配置迁移测试 ====================
+// ==================== Configuration Migration Tests ====================
 
 /// 测试从旧格式迁移配置
 #[test]
@@ -229,7 +229,7 @@ fn test_config_migration_preserve_user_data() {
     }
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 /// 测试包含特殊字符的配置
 #[test]
@@ -404,7 +404,7 @@ fn test_config_with_arrays() {
     );
 }
 
-// ==================== 配置一致性测试 ====================
+// ==================== Configuration Consistency Tests ====================
 
 /// 测试多次更新后配置的一致性
 #[test]
@@ -476,8 +476,23 @@ fn test_config_consistency_after_partial_clear() {
     assert!(config.branch.is_none());
 }
 
-// ==================== 参数化测试 ====================
+// ==================== Parameterized Tests ====================
 
+/// 测试配置的各种组合情况（参数化测试）
+///
+/// ## 测试目的
+/// 验证 `RepoConfig` 在不同配置组合下的行为是否正确。
+///
+/// ## 测试场景
+/// 使用参数化测试覆盖以下组合：
+/// - `has_public=true, has_private=true, configured=true`
+/// - `has_public=true, has_private=false, configured=false`
+/// - `has_public=false, has_private=true, configured=false`
+/// - `has_public=false, has_private=false, configured=false`
+///
+/// ## 预期结果
+/// - 所有配置组合都能正确处理
+/// - 配置状态与预期一致
 #[rstest]
 #[case(true, true, true)]
 #[case(true, false, false)]
@@ -510,7 +525,7 @@ fn test_config_combinations(
     assert_eq!(config.configured, has_private && configured);
 }
 
-// ==================== 错误恢复测试 ====================
+// ==================== Error Recovery Tests ====================
 
 /// 测试无效更新后的配置恢复
 #[test]

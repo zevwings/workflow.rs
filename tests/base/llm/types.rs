@@ -7,6 +7,21 @@ use workflow::base::llm::types::LLMRequestParams;
 
 // ==================== LLMRequestParams Default Tests ====================
 
+/// 测试LLMRequestParams默认值创建
+///
+/// ## 测试目的
+/// 验证 `LLMRequestParams::default()` 方法能够创建包含所有默认值的参数结构。
+///
+/// ## 测试场景
+/// 1. 调用 `default()` 创建默认参数
+/// 2. 验证所有字段为预期默认值
+///
+/// ## 预期结果
+/// - system_prompt为空字符串
+/// - user_prompt为空字符串
+/// - max_tokens为None
+/// - temperature为0.5
+/// - model为"gpt-3.5-turbo"
 #[test]
 fn test_llm_request_params_default_with_no_parameters_creates_default_params() {
     // Arrange: 准备创建默认参数
@@ -24,6 +39,19 @@ fn test_llm_request_params_default_with_no_parameters_creates_default_params() {
 
 // ==================== LLMRequestParams Serialization Tests ====================
 
+/// 测试LLMRequestParams序列化为JSON
+///
+/// ## 测试目的
+/// 验证 `LLMRequestParams` 结构体能够正确序列化为JSON格式（使用serde）。
+///
+/// ## 测试场景
+/// 1. 创建包含有效数据的LLMRequestParams
+/// 2. 使用serde_json序列化为JSON
+/// 3. 验证序列化成功
+///
+/// ## 预期结果
+/// - 序列化成功，返回Ok
+/// - JSON字符串包含所有字段
 #[test]
 fn test_llm_request_params_serialize_with_valid_params_serializes_to_json() {
     // Arrange: 准备有效的 LLMRequestParams
