@@ -1,0 +1,64 @@
+# 概述
+
+> **⚠️ 同步提示**：此文件必须与其英文版本 `.cursor/rules/overview.md` 保持同步。修改此文件时，必须立即更新对应的英文版本。
+
+---
+
+## 项目概述
+
+这是一个用 Rust 编写的 CLI 工具，用于自动化开发工作流，提供 PR 管理、Jira 集成、日志处理等功能。
+
+### 架构设计
+
+项目采用三层架构：
+- **CLI 入口层** (`bin/`, `main.rs`): 命令行参数解析和命令分发
+- **命令封装层** (`commands/`): CLI 命令封装，处理用户交互
+- **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
+
+详细的模块架构信息请参考 `docs/architecture/architecture.md`。
+
+## 代码和文档修改规则
+
+### 代码修改规则
+
+**禁止在没有用户明确同意或说明的情况下修改现有代码文件。** 如需修改代码，必须先获得用户同意或用户明确说明需要修改。
+
+### 文档修改规则
+
+**禁止在没有用户明确同意或说明的情况下修改现有文档文件。** 如需修改文档，必须先获得用户同意或用户明确说明需要修改。
+
+## 注意事项
+
+1. **跨平台支持**：项目支持 macOS、Linux、Windows，注意平台特定代码。平台特定代码的组织方式和测试要求，请参考 `docs/guidelines/development/module-organization.md`（平台特定代码组织章节）
+2. **剪贴板功能**：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能
+3. **配置文件**：配置文件存储在 `~/.workflow/config/workflow.toml`（macOS/Linux）或 `%APPDATA%\workflow\config\workflow.toml`（Windows）
+4. **错误处理**：所有错误都应该提供清晰的错误消息和上下文
+5. **日志**：使用 `tracing` 进行日志记录，支持不同日志级别
+6. **GitHub 配置**：首次设置项目时，需要配置 GitHub Secrets、Variables 和分支保护规则，参考 `docs/guidelines/github-setup.md`
+
+## 文档索引规则
+
+- **禁止索引**：`analysis/` 和 `report/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 或项目根目录 `README.md` 中
+- 这些目录包含**临时分析文档**，不是参考文档，不需要在文档索引中展示
+- **需求文档索引限制**：`docs/requirements/` 目录下的需求文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 或项目根目录 `README.md` 中索引
+- **参考文档**：`docs/` 目录下的其他文档（架构文档、指南文档、迁移文档）是参考文档，应该被索引到 `docs/README.md` 中
+- **文档索引更新**：创建新文档时，更新相应的文档索引（如适用）：
+  - TODO 文档：只在 `docs/requirements/README.md` 中索引
+  - 其他参考文档：在 `docs/README.md` 中索引
+
+## 文档删除规则
+
+- **临时文档（可直接删除）**：
+  - `analysis/` 目录下的所有文档都是临时技术分析，可以随时删除
+  - `report/` 目录下的所有文档都是临时分析报告，可以随时删除
+  - 这些文档用于开发过程中的分析和记录，不需要长期保留
+- **参考文档（删除需谨慎）**：
+  - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
+  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/requirements/`）
+  - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
+  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/requirements/README.md` 中维护索引，不在主文档索引中展示
+
+---
+
+**最后更新**: 2025-12-25
+

@@ -20,7 +20,10 @@ out/
 .rustrover/
 
 # IDE - Cursor
-.cursor/
+!.cursor/
+.cursor/mcp.json
+!.cursor/rules/
+!.cursor/rules/**
 
 # Claude AI
 .claude/
@@ -112,6 +115,8 @@ docs/**
 !docs/README.md
 !docs/architecture/
 !docs/architecture/**
+!docs/cursorrules/
+!docs/cursorrules/**
 !docs/guidelines/
 !docs/guidelines/**
 !docs/migration/
