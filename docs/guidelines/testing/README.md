@@ -30,7 +30,9 @@
 | **核心规范** | [测试组织规范](./organization.md) | 测试类型、目录结构、命名约定、共享工具 |
 | | [测试编写规范](./writing.md) | AAA模式、命名规范、独立性、断言最佳实践 |
 | | [测试命令参考](./commands.md) | 常用测试命令、调试命令、Makefile命令 |
-| **参考文档** | [测试工具指南](./references/tools.md) | pretty_assertions、rstest、insta、mockito |
+| **参考文档** | [测试工具指南](./references/tools.md) | pretty_assertions、rstest、mockito |
+| | [测试环境工具指南](./references/environments.md) | TestIsolation、CliTestEnv、GitTestEnv |
+| | [测试辅助工具指南](./references/helpers.md) | CliCommandBuilder、TestDataGenerator |
 | | [Mock服务器使用指南](./references/mock-server.md) | MockServer 使用、端点配置、错误模拟 |
 | | [测试数据工厂指南](./references/data-factory.md) | Builder模式、数据生成、模板扩展 |
 | | [被忽略测试规范](./references/ignored-tests.md) | 文档格式、测试类型模板、最佳实践 |
@@ -131,8 +133,9 @@ make coverage
 **包含工具**：
 - `pretty_assertions` - 彩色 diff 断言
 - `rstest` - 参数化测试
-- `insta` - 快照测试
 - `mockito` - HTTP Mock 测试
+- 测试环境工具（TestIsolation、CliTestEnv、GitTestEnv）
+- 测试辅助工具（CliCommandBuilder、TestDataGenerator）
 
 ### [Mock服务器使用指南](./references/mock-server.md)
 
@@ -231,6 +234,8 @@ make coverage
    - 运行测试并查看结果
 
 3. **深入学习**（按需）
+   - 需要隔离的测试环境 → 阅读 [测试环境工具指南](./references/environments.md)
+   - 需要 CLI 命令测试辅助 → 阅读 [测试辅助工具指南](./references/helpers.md)
    - 需要 Mock 外部 API → 阅读 [Mock服务器使用指南](./references/mock-server.md)
    - 需要生成测试数据 → 阅读 [测试数据工厂指南](./references/data-factory.md)
    - 需要提升覆盖率 → 阅读 [覆盖率测试指南](./references/coverage.md)
@@ -313,4 +318,13 @@ make coverage-open
 ---
 
 **最后更新**: 2025-12-25
+
+---
+
+## 📝 变更历史
+
+### 2025-12-25
+- **新增测试环境工具文档**：添加 `environments.md` 和 `helpers.md` 文档
+- **更新Mock服务器文档**：更新 `mock-server.md`，添加高级方法和预设Mock端点说明
+- **更新测试工具指南**：更新 `tools.md`，添加测试环境工具和测试辅助工具的链接
 

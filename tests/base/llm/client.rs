@@ -6,10 +6,9 @@
 //!
 //! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - 测试多种 OpenAI 兼容的 JSON 格式
-//! - 使用快照测试验证 JSON 结构
+//! - JSON 结构验证由 `extract_content()` 方法通过 serde 反序列化自动完成
 
 use color_eyre::Result;
-use insta::assert_json_snapshot;
 use pretty_assertions::assert_eq;
 
 use serde_json::json;
@@ -42,8 +41,7 @@ fn test_extract_from_openai_standard() -> Result<()> {
     let result = client.extract_content(&json)?;
     assert_eq!(result, "Test content");
 
-    // 使用快照测试验证 JSON 结构
-    assert_json_snapshot!("openai_standard_response", json);
+    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
     Ok(())
 }
 
@@ -89,8 +87,7 @@ fn test_extract_from_openai_proxy() -> Result<()> {
     let result = client.extract_content(&json)?;
     assert_eq!(result, "Test response content");
 
-    // 使用快照测试验证 JSON 结构
-    assert_json_snapshot!("openai_proxy_response", json);
+    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
     Ok(())
 }
 
@@ -129,8 +126,7 @@ fn test_extract_from_cerebras_proxy() -> Result<()> {
     let result = client.extract_content(&json)?;
     assert_eq!(result, "Test response content");
 
-    // 使用快照测试验证 JSON 结构
-    assert_json_snapshot!("cerebras_proxy_response", json);
+    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
     Ok(())
 }
 

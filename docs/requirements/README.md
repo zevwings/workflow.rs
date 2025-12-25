@@ -175,6 +175,20 @@
   - 📊 成功指标：100%通过率，连续运行100次0失败
 - **优先级**: 🔵 低（长期优化，当前通过率已达99.8%）
 
+#### 8. [`test-architecture-improvement.md`](./test-architecture-improvement.md)
+- **状态**: 📋 待实施
+- **实现度**: 0%
+- **分类**: 测试架构优化
+- **内容**:
+  - 🔄 统一测试环境使用模式（迁移TempDir到GitTestEnv/CliTestEnv）
+  - 🛡️ 扩展守卫层功能（FileSystemGuard、NetworkGuard等）
+  - 🌐 加强Mock服务器集成和使用
+  - 📦 改进测试数据管理（规范化Fixtures、扩展TestDataFactory）
+  - 🏗️ 新增RepoTestEnv测试环境
+  - ⚡ 性能优化（并行化、资源缓存）
+  - 📚 完善测试文档（使用指南、最佳实践、示例）
+- **优先级**: ⭐⭐⭐ 中（长期优化，提升测试架构一致性）
+
 ---
 
 ## 📁 目录结构
@@ -215,9 +229,9 @@ docs/requirements/
 |-----|---------|------|
 | 🚧 部分完成 | 1 个 | JIRA 模块已有基础实现 |
 | 🔄 进行中 | 2 个 | 测试覆盖度提升综合方案、测试最佳实践改进追踪 |
-| 📋 待实施 | 11 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构 |
+| 📋 待实施 | 12 个 | 核心业务模块测试覆盖率改进计划（10个）、测试全局状态重构、测试架构改进 |
 | ⏳ 待实施 | 3 个 | 集成扩展、文档检查工具、国际化支持 |
-| **总计** | **17 个** | - |
+| **总计** | **18 个** | - |
 
 ### 文档列表
 
@@ -329,6 +343,14 @@ docs/requirements/
    - 修复 2-3 个间歇性失败测试
    - 目标：100% 测试通过率
 
+12. **测试架构改进** (`test-architecture-improvement.md`) - 📋 待实施（0%）
+   - 统一测试环境使用模式
+   - 扩展守卫层功能
+   - 加强Mock服务器集成
+   - 改进测试数据管理
+   - 新增RepoTestEnv
+   - 性能优化和文档完善
+
 > **注意**：架构文档同步机制相关任务已完成，自动化检查工具实施计划已迁移至 `docs/requirements/doc-check.md`。
 
 > **注意**：配置管理相关功能（配置验证、导入/导出、多环境支持）已迁移至需求文档。
@@ -367,6 +389,7 @@ docs/requirements/
 - **文档检查工具** → [`doc-check.md`](./doc-check.md) ⏳ 待实施
 - **国际化支持** → [`internationalization.md`](./internationalization.md) ⏳ 待实施
 - **测试全局状态重构** → [`test-global-state-refactoring.md`](./test-global-state-refactoring.md) 📋 待实施（99.8-99.9%）
+- **测试架构改进** → [`test-architecture-improvement.md`](./test-architecture-improvement.md) 📋 待实施（0%）
 
 ---
 
@@ -377,13 +400,25 @@ docs/requirements/
 ## 📝 更新说明（最新）
 
 ### 2025-12-25 更新（最新）
+- ✅ 新增 `test-architecture-improvement.md` - 测试架构改进TODO（📋 待实施）
+  - 🔄 统一测试环境使用模式（迁移TempDir到GitTestEnv/CliTestEnv）
+  - 🛡️ 扩展守卫层功能（FileSystemGuard、NetworkGuard等）
+  - 🌐 加强Mock服务器集成和使用
+  - 📦 改进测试数据管理（规范化Fixtures、扩展TestDataFactory）
+  - 🏗️ 新增RepoTestEnv测试环境
+  - ⚡ 性能优化（并行化、资源缓存）
+  - 📚 完善测试文档（使用指南、最佳实践、示例）
+- ✅ 更新了统计信息和目录结构（18 个文档）
+- ✅ 更新了快速导航和文档列表
+
+### 2025-12-25 更新（早期）
 - ✅ 新增 `test-global-state-refactoring.md` - 测试全局状态依赖重构（📋 待实施）
   - 🎯 重构测试以减少对全局状态的依赖，实现100%测试通过率
   - 🔍 分析2-3个间歇性失败测试的根本原因（环境变量、Git配置、Mock服务器、文件系统状态）
   - 🛠️ 提出3个重构方案（增强测试隔离、独立进程运行、容器化测试）
   - 📝 详细的实施计划（工具开发、修复失败测试、重构现有测试、验证优化）
   - 📊 明确的成功指标（100%通过率、连续运行100次0失败、性能不超过120%）
-- ✅ 更新了统计信息和目录结构（13 个文档）
+- ✅ 更新了统计信息和目录结构（17 个文档）
 - ✅ 更新了快速导航和文档列表
 
 ### 2025-12-24 更新（最新）

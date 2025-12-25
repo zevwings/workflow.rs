@@ -9,7 +9,6 @@
 //! - 测试覆盖成功场景、错误场景、边界条件
 
 use crate::common::http_helpers::MockServer;
-use crate::common::mock_server::MockServerManager;
 use color_eyre::Result;
 use mockito::Matcher;
 use serde_json::Value;
@@ -409,7 +408,7 @@ fn test_request_with_all_options() -> Result<()> {
 
 #[test]
 fn test_http_client_get() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -435,7 +434,7 @@ fn test_http_client_get() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_post() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let body = serde_json::json!({"key": "value"});
     let mock = manager
@@ -462,7 +461,7 @@ fn test_http_client_post() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -493,7 +492,7 @@ fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_get_with_query() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -522,7 +521,7 @@ fn test_http_client_get_with_query() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     use reqwest::header::HeaderMap;
     let mut headers = HeaderMap::new();
@@ -554,7 +553,7 @@ fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -578,7 +577,7 @@ fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_put() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let body = serde_json::json!({"key": "updated_value"});
     let mock = manager
@@ -603,7 +602,7 @@ fn test_http_client_put() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_delete() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -627,7 +626,7 @@ fn test_http_client_delete() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_patch() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let body = serde_json::json!({"key": "patched_value"});
     let mock = manager
@@ -652,7 +651,7 @@ fn test_http_client_patch() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_client_error_response() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()

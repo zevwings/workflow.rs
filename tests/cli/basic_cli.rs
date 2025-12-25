@@ -3,8 +3,9 @@
 //! 使用新的测试工具进行基础 CLI 功能测试。
 
 use crate::common::cli_helpers::{
-    contains_error, is_json_format, CliCommandBuilder, CliTestEnv, TestDataGenerator,
+    contains_error, is_json_format, CliCommandBuilder, TestDataGenerator,
 };
+use crate::common::environments::CliTestEnv;
 
 // ==================== 基本命令测试 ====================
 
@@ -69,11 +70,11 @@ fn test_pr_help() {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：可能尝试初始化服务，导致长时间阻塞
 #[ignore] // 忽略：可能尝试初始化 Jira/GitHub 客户端，导致长时间阻塞
-fn test_pr_without_git_repo() {
+fn test_pr_without_git_repo() -> color_eyre::Result<()> {
     // 注意：此测试执行 pr create 命令，即使没有 Git 仓库也可能尝试初始化服务
     // Windows 上已通过 #[cfg] 跳过，因为可能尝试初始化 Jira/GitHub 客户端，导致阻塞
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new();
+    let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
@@ -84,6 +85,7 @@ fn test_pr_without_git_repo() {
     // 应该提示没有 Git 仓库
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(contains_error(&stderr));
+    Ok(())
 }
 
 /// 测试在Git仓库中执行PR命令
@@ -119,17 +121,17 @@ fn test_pr_without_git_repo() {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 命令和路径处理可能有问题
 #[ignore] // 忽略：可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_pr_with_git_repo() {
+fn test_pr_with_git_repo() -> color_eyre::Result<()> {
     // 注意：此测试可能尝试初始化 Jira/GitHub 客户端或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - Git 命令路径或行为差异
     // - 路径分隔符处理（虽然 Rust Path 应该处理，但某些情况下可能仍有问题）
     // - 临时目录路径格式差异
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("README.md", "# Test")
-        .create_commit("Initial commit");
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("README.md", "# Test")?
+        .create_commit("Initial commit")?;
 
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
@@ -141,6 +143,7 @@ fn test_pr_with_git_repo() {
     // 但不应该是因为没有 Git 仓库而失败
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!stderr.contains("not a git repository"));
+    Ok(())
 }
 
 // ==================== Branch 命令测试 ====================
@@ -155,8 +158,8 @@ fn test_branch_help() {
 }
 
 #[test]
-fn test_branch_without_git() {
-    let env = CliTestEnv::new();
+fn test_branch_without_git() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
         .args(["branch", "create", "test-branch"])
@@ -166,6 +169,7 @@ fn test_branch_without_git() {
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(contains_error(&stderr));
+    Ok(())
 }
 
 // ==================== Config 命令测试 ====================
@@ -180,9 +184,9 @@ fn test_config_help() {
 }
 
 #[test]
-fn test_config_show() {
-    let env = CliTestEnv::new();
-    env.create_config(&TestDataGenerator::config_content());
+fn test_config_show() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
+    env.create_config(&TestDataGenerator::config_content())?;
 
     let binding = CliCommandBuilder::new()
         .args(["config", "show"])
@@ -194,6 +198,7 @@ fn test_config_show() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!stdout.is_empty() || !stderr.is_empty());
+    Ok(())
 }
 
 // ==================== Jira 命令测试 ====================
@@ -208,8 +213,8 @@ fn test_jira_help() {
 }
 
 #[test]
-fn test_jira_info_without_config() {
-    let env = CliTestEnv::new();
+fn test_jira_info_without_config() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
         .args(["jira", "info", "TEST-123"])
@@ -220,6 +225,7 @@ fn test_jira_info_without_config() {
     // 没有配置时应该失败
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(contains_error(&stderr));
+    Ok(())
 }
 
 // ==================== 输出格式测试 ====================
@@ -301,8 +307,8 @@ fn test_missing_required_argument() {
 // ==================== 环境变量测试 ====================
 
 #[test]
-fn test_environment_variables() {
-    let env = CliTestEnv::new();
+fn test_environment_variables() -> color_eyre::Result<()> {
+    let env = CliTestEnv::new()?;
 
     let binding = CliCommandBuilder::new()
         .args(["config", "show"])
@@ -315,6 +321,7 @@ fn test_environment_variables() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(!stdout.is_empty() || !stderr.is_empty());
+    Ok(())
 }
 
 // ==================== 性能测试 ====================
@@ -377,18 +384,18 @@ fn test_help_command_performance() {
 #[test]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：多个命令执行和路径处理可能有问题
 #[ignore] // 忽略：执行多个命令，可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_complete_workflow_dry_run() {
+fn test_complete_workflow_dry_run() -> color_eyre::Result<()> {
     // 注意：此测试执行多个命令，其中一些可能尝试初始化服务或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - 多个 Git 命令执行可能更慢
     // - 路径处理在多个命令间可能不一致
     // - 配置文件路径格式差异
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("src/main.rs", "fn main() {}")
-        .create_commit("Initial commit")
-        .create_config(&TestDataGenerator::config_content());
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("src/main.rs", "fn main() {}")?
+        .create_commit("Initial commit")?
+        .create_config(&TestDataGenerator::config_content())?;
 
     // 尝试完整的工作流（dry-run 模式）
     let commands = vec![
@@ -410,4 +417,5 @@ fn test_complete_workflow_dry_run() {
             cmd_args
         );
     }
+    Ok(())
 }

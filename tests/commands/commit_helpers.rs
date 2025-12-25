@@ -2,7 +2,7 @@
 //!
 //! 测试 Commit 命令的辅助函数，包括分支检查、force push 处理等。
 
-use crate::common::cli_helpers::CliTestEnv;
+use crate::common::environments::CliTestEnv;
 use serial_test::serial;
 use workflow::commands::commit::helpers::check_has_last_commit;
 
@@ -50,15 +50,11 @@ fn test_check_has_last_commit_without_git_repo() {
 /// - 自动恢复原始工作目录
 #[test]
 #[serial]
-fn test_check_has_last_commit_with_empty_git_repo() {
-    use crate::common::helpers::CurrentDirGuard;
-
-    let env = CliTestEnv::new();
-    env.init_git_repo();
+fn test_check_has_last_commit_with_empty_git_repo() -> color_eyre::Result<()> {
+    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?;
     // 不创建任何 commit
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
 
     let result = check_has_last_commit();
 
@@ -76,7 +72,8 @@ fn test_check_has_last_commit_with_empty_git_repo() {
         error_msg
     );
 
-    // 目录会在函数结束时自动恢复
+    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    Ok(())
 }
 
 /// 测试有commit的Git仓库的情况
@@ -95,16 +92,12 @@ fn test_check_has_last_commit_with_empty_git_repo() {
 /// - 自动创建和清理临时Git仓库
 #[test]
 #[serial]
-fn test_check_has_last_commit_with_commits() {
-    use crate::common::helpers::CurrentDirGuard;
-
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("test.txt", "test content")
-        .create_commit("Initial commit");
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
+fn test_check_has_last_commit_with_commits() -> color_eyre::Result<()> {
+    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("test.txt", "test content")?
+        .create_commit("Initial commit")?;
 
     let result = check_has_last_commit();
 
@@ -114,5 +107,6 @@ fn test_check_has_last_commit_with_commits() {
         "check_has_last_commit should succeed when there are commits"
     );
 
-    // 目录会在函数结束时自动恢复
+    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    Ok(())
 }

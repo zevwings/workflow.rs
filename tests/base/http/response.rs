@@ -9,7 +9,6 @@
 //! - 测试各种响应场景：成功、错误、不同内容类型
 
 use crate::common::http_helpers::MockServer;
-use crate::common::mock_server::MockServerManager;
 use color_eyre::Result;
 use serde::Deserialize;
 use serde_json::Value;
@@ -471,7 +470,7 @@ fn test_response_ensure_success_with_invalid_utf8_body() -> Result<()> {
 
 #[test]
 fn test_http_response_is_success_201() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -496,7 +495,7 @@ fn test_http_response_is_success_201() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_response_is_success_299() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -521,7 +520,7 @@ fn test_http_response_is_success_299() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_response_debug() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -546,7 +545,7 @@ fn test_http_response_debug() -> color_eyre::Result<()> {
 
 #[test]
 fn test_http_response_extract_error_message_with_message_field() -> color_eyre::Result<()> {
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()
@@ -572,7 +571,7 @@ fn test_http_response_extract_error_message_with_message_field() -> color_eyre::
 #[test]
 fn test_http_response_extract_error_message_no_error_field() -> color_eyre::Result<()> {
     // 测试 extract_error_message 当 JSON 响应没有 error/message 字段时
-    let mut manager = MockServerManager::new();
+    let mut manager = MockServer::new();
 
     let mock = manager
         .server()

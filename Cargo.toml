@@ -44,9 +44,7 @@ handlebars = "5.1"
 pretty_assertions = "1.4"
 rstest = "0.18"
 mockito = "1.2"
-insta = { version = "1.38", features = ["json"] }
 assert_cmd = "2.0"      # CLI 命令测试
-predicates = "3.0"      # 断言谓词
 tempfile = "3.8"        # 临时文件和目录
 serial_test = "3.2.0"
 gix = "0.66"            # 现代 Git 操作库 (仅用于测试)

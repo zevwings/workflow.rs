@@ -2,8 +2,8 @@
 //!
 //! 测试配置显示命令的功能。
 
-use crate::common::cli_helpers::{CliTestEnv, TestDataGenerator};
-use std::env;
+use crate::common::cli_helpers::TestDataGenerator;
+use crate::common::environments::CliTestEnv;
 use workflow::commands::config::show::ConfigCommand;
 
 #[test]
@@ -20,19 +20,17 @@ fn test_config_command_show_with_empty_config() {
 }
 
 #[test]
-fn test_config_command_show_with_valid_config() {
+fn test_config_command_show_with_valid_config() -> color_eyre::Result<()> {
     // 测试有有效配置的情况
-    let env = CliTestEnv::new();
-    env.create_config(&TestDataGenerator::config_content());
-
-    // 设置环境变量指向测试配置目录
-    let original_home = env::var("HOME").ok();
-    let config_path = env.path().join(".workflow");
+    let env = CliTestEnv::new()?;
+    env.create_config(&TestDataGenerator::config_content())?;
 
     // 注意：ConfigCommand::show() 使用 Paths::workflow_config() 获取配置路径
     // 这个路径基于 HOME 目录，所以我们需要设置 HOME 环境变量
     // 但由于 Paths 的实现可能使用 dirs 库，我们需要确保配置在正确的位置
     // 这里我们主要测试函数不会崩溃，实际的路径测试在集成测试中完成
+    // 新版 CliTestEnv 使用 TestIsolation，环境变量会自动管理
+    // 配置路径: env.path().join(".workflow")
 
     let result = ConfigCommand::show();
 
@@ -48,10 +46,8 @@ fn test_config_command_show_with_valid_config() {
         }
     }
 
-    // 恢复原始 HOME（如果设置了）
-    if let Some(home) = original_home {
-        env::set_var("HOME", home);
-    }
+    // 环境变量会在 env 离开作用域时自动恢复（通过 TestIsolation）
+    Ok(())
 }
 
 #[test]

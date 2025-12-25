@@ -9,15 +9,14 @@ use serial_test::serial;
 use tempfile::TempDir;
 use workflow::git::{GitBranch, MergeStrategy};
 
-use crate::common::git_helpers::{create_git_repo_with_commit, setup_git_repo_with_gix};
-use crate::common::helpers::CurrentDirGuard;
+use crate::common::environments::GitTestEnv;
 
 // ==================== Fixtures ====================
 
 /// 创建带有初始提交的 Git 仓库
 #[fixture]
-fn git_repo_with_commit() -> TempDir {
-    create_git_repo_with_commit()
+fn git_repo_with_commit() -> GitTestEnv {
+    GitTestEnv::new().expect("Failed to create git test env")
 }
 
 // ==================== 分支前缀处理测试 ====================
@@ -37,13 +36,9 @@ Ok(())
 #[test]
 #[serial]
 fn test_exists_main_branch() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    // 如果 Git 不可用，GitTestEnv::new() 会返回错误
+    let _env = GitTestEnv::new()?;
 
     // 检查默认分支（通常是 main 或 master）是否存在
     let current_branch = GitBranch::current_branch()?;
@@ -53,20 +48,15 @@ fn test_exists_main_branch() -> Result<()> {
         current_branch
     );
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
 #[test]
 #[serial]
 fn test_exists_nonexistent_branch() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     // 检查不存在的分支
     let nonexistent_branch = "nonexistent-branch-12345";
@@ -76,7 +66,7 @@ fn test_exists_nonexistent_branch() -> Result<()> {
         nonexistent_branch
     );
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -85,13 +75,8 @@ fn test_exists_nonexistent_branch() -> Result<()> {
 #[test]
 #[serial]
 fn test_create_simple_branch_with_gix() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     let branch_name = "feature/test-branch";
 
@@ -113,13 +98,8 @@ fn test_create_simple_branch_with_gix() -> Result<()> {
 #[test]
 #[serial]
 fn test_create_branch_with_prefix_with_gix() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     let branch_name = "feature/user-authentication";
 
@@ -132,7 +112,7 @@ fn test_create_branch_with_prefix_with_gix() -> Result<()> {
     let current_branch = GitBranch::current_branch()?;
     assert_eq!(current_branch, branch_name);
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -143,13 +123,8 @@ fn test_create_branch_with_prefix_with_gix() -> Result<()> {
 #[test]
 #[serial]
 fn test_delete_existing_branch() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     let branch_name = "feature/to-delete";
 
@@ -185,7 +160,7 @@ fn test_delete_existing_branch() -> Result<()> {
         "Branch should not exist after deletion"
     );
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -194,13 +169,8 @@ fn test_delete_existing_branch() -> Result<()> {
 #[test]
 #[serial]
 fn test_list_branches() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     // 获取初始分支列表
     let initial_branches = GitBranch::get_local_branches()?;
@@ -233,7 +203,7 @@ fn test_list_branches() -> Result<()> {
         );
     }
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -262,13 +232,8 @@ Ok(())
 #[test]
 #[serial]
 fn test_empty_branch_name() -> Result<()> {
-    let Some((temp_dir, _original_dir)) = setup_git_repo_with_gix() else {
-        // Git 不可用，跳过测试
-        return;
-    };
-
-    // 切换到临时目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
+    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+    let _env = GitTestEnv::new()?;
 
     // 尝试创建空名称的分支应该失败
     let result = GitBranch::checkout_branch("");
@@ -281,7 +246,7 @@ fn test_empty_branch_name() -> Result<()> {
     let exists = GitBranch::has_local_branch("").unwrap_or(true);
     assert!(!exists, "Empty branch name should not exist");
 
-    // 目录会在函数结束时自动恢复
+    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 

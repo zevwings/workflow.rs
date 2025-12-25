@@ -2,7 +2,7 @@
 //!
 //! 测试 Commit 命令辅助函数的业务逻辑，包括默认分支检查等。
 
-use crate::common::cli_helpers::CliTestEnv;
+use crate::common::environments::CliTestEnv;
 use serial_test::serial;
 use workflow::commands::commit::helpers::check_not_on_default_branch;
 
@@ -24,16 +24,12 @@ use workflow::commands::commit::helpers::check_not_on_default_branch;
 /// - 自动恢复原始工作目录
 #[test]
 #[serial]
-fn test_check_not_on_default_branch_on_main() {
-    use crate::common::helpers::CurrentDirGuard;
-
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("test.txt", "test")
-        .create_commit("Initial commit");
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
+fn test_check_not_on_default_branch_on_main() -> color_eyre::Result<()> {
+    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
     std::process::Command::new("git")
@@ -63,7 +59,8 @@ fn test_check_not_on_default_branch_on_main() {
         error_msg
     );
 
-    // 目录会在函数结束时自动恢复
+    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    Ok(())
 }
 
 /// 测试在feature分支上的默认分支检查
@@ -84,16 +81,12 @@ fn test_check_not_on_default_branch_on_main() {
 /// - 自动恢复原始工作目录
 #[test]
 #[serial]
-fn test_check_not_on_default_branch_on_feature_branch() {
-    use crate::common::helpers::CurrentDirGuard;
-
-    let env = CliTestEnv::new();
-    env.init_git_repo()
-        .create_file("test.txt", "test")
-        .create_commit("Initial commit");
-
-    // 切换到测试目录（使用RAII确保恢复）
-    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
+fn test_check_not_on_default_branch_on_feature_branch() -> color_eyre::Result<()> {
+    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+    let env = CliTestEnv::new()?;
+    env.init_git_repo()?
+        .create_file("test.txt", "test")?
+        .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
     std::process::Command::new("git")
@@ -127,7 +120,8 @@ fn test_check_not_on_default_branch_on_feature_branch() {
         assert_eq!(default, default_branch); // 使用实际的默认分支名
     }
 
-    // 目录会在函数结束时自动恢复
+    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    Ok(())
 }
 
 #[test]
