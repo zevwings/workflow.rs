@@ -5,7 +5,7 @@
 use pretty_assertions::assert_eq;
 use color_eyre::Result;
 use rstest::fixture;
-use serial_test::serial;
+// Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
 use workflow::git::{GitBranch, MergeStrategy};
 
 use crate::common::environments::GitTestEnv;
@@ -21,6 +21,17 @@ fn git_repo_with_commit() -> GitTestEnv {
 
 // ==================== Branch Prefix Processing Tests ====================
 
+/// 测试移除分支前缀（带斜杠）
+///
+/// ## 测试目的
+/// 验证分支前缀移除逻辑（通过分支操作间接测试，remove_branch_prefix 是私有函数）。
+///
+/// ## 测试场景
+/// 1. 通过分支操作间接测试前缀移除逻辑
+/// 2. 验证前缀移除逻辑（通过公共API间接验证）
+///
+/// ## 预期结果
+/// - 前缀移除逻辑正常工作
 #[test]
 fn test_remove_branch_prefix_with_slash_handles_prefix() -> Result<()> {
     // Arrange: 准备测试分支前缀移除逻辑
@@ -34,8 +45,19 @@ fn test_remove_branch_prefix_with_slash_handles_prefix() -> Result<()> {
 
 // ==================== Branch Existence Tests ====================
 
+/// 测试检查主分支是否存在
+///
+/// ## 测试目的
+/// 验证 GitBranch::has_local_branch() 能够检查默认分支（main）是否存在。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 获取当前分支并检查是否存在
+/// 3. 验证当前分支存在
+///
+/// ## 预期结果
+/// - 当前分支存在
 #[test]
-#[serial]
 fn test_exists_main_branch_with_default_branch_returns_true() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let _env = GitTestEnv::new()?;
@@ -54,8 +76,19 @@ fn test_exists_main_branch_with_default_branch_returns_true() -> Result<()> {
     Ok(())
 }
 
+/// 测试检查不存在分支
+///
+/// ## 测试目的
+/// 验证 GitBranch::has_local_branch() 对不存在的分支返回 false。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境和不存在的分支名
+/// 2. 检查不存在的分支
+/// 3. 验证分支不存在
+///
+/// ## 预期结果
+/// - 不存在的分支返回 false
 #[test]
-#[serial]
 fn test_exists_nonexistent_branch_with_invalid_name_returns_false() -> Result<()> {
     // Arrange: 准备 Git 测试环境和不存在的分支名
     let _env = GitTestEnv::new()?;
@@ -76,8 +109,19 @@ fn test_exists_nonexistent_branch_with_invalid_name_returns_false() -> Result<()
 
 // ==================== Branch Creation Tests ====================
 
+/// 测试创建简单分支
+///
+/// ## 测试目的
+/// 验证 GitBranch::checkout_branch() 能够创建并切换到新分支。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境和分支名
+/// 2. 创建并切换到新分支
+/// 3. 验证分支创建成功、存在且已切换
+///
+/// ## 预期结果
+/// - 分支创建成功，存在且已切换
 #[test]
-#[serial]
 fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境和分支名
     let _env = GitTestEnv::new()?;
@@ -95,8 +139,19 @@ fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
     Ok(())
 }
 
+/// 测试创建带前缀的分支
+///
+/// ## 测试目的
+/// 验证 GitBranch::checkout_branch() 能够创建并切换到带前缀的新分支。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境和带前缀的分支名
+/// 2. 创建并切换到新分支
+/// 3. 验证分支创建成功、存在且已切换
+///
+/// ## 预期结果
+/// - 带前缀的分支创建成功，存在且已切换
 #[test]
-#[serial]
 fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境和带前缀的分支名
     let _env = GitTestEnv::new()?;
@@ -116,8 +171,20 @@ fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
 
 // ==================== Branch Deletion Tests ====================
 
+/// 测试删除存在的分支
+///
+/// ## 测试目的
+/// 验证 GitBranch::delete() 能够删除存在的分支。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境并创建分支
+/// 2. 切换回主分支
+/// 3. 删除分支
+/// 4. 验证分支已被删除
+///
+/// ## 预期结果
+/// - 分支被成功删除
 #[test]
-#[serial]
 fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建分支
     let _env = GitTestEnv::new()?;
@@ -159,8 +226,20 @@ fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
 
 // ==================== Branch Listing Tests ====================
 
+/// 测试列出多个分支
+///
+/// ## 测试目的
+/// 验证 GitBranch::get_local_branches() 能够返回所有本地分支。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境并获取初始分支列表
+/// 2. 创建多个测试分支
+/// 3. 获取更新后的分支列表
+/// 4. 验证分支数量增加且所有测试分支都在列表中
+///
+/// ## 预期结果
+/// - 分支数量增加，所有测试分支都在列表中
 #[test]
-#[serial]
 fn test_list_branches_with_multiple_branches_returns_all_branches() -> Result<()> {
     // Arrange: 准备 Git 测试环境并获取初始分支列表
     let _env = GitTestEnv::new()?;
@@ -196,6 +275,18 @@ fn test_list_branches_with_multiple_branches_returns_all_branches() -> Result<()
 
 // ==================== Merge Strategy Tests ====================
 
+/// 测试合并策略枚举（所有变体）
+///
+/// ## 测试目的
+/// 验证 MergeStrategy 枚举的所有变体都可以格式化为 Debug 字符串。
+///
+/// ## 测试场景
+/// 1. 准备所有合并策略枚举变体
+/// 2. 格式化每个策略为 Debug 字符串
+/// 3. 验证 Debug 字符串不为空
+///
+/// ## 预期结果
+/// - 所有策略的 Debug 字符串都不为空
 #[test]
 fn test_merge_strategy_enum_with_all_variants_returns_debug_string() -> Result<()> {
     // Arrange: 准备所有合并策略枚举变体
@@ -216,8 +307,19 @@ fn test_merge_strategy_enum_with_all_variants_returns_debug_string() -> Result<(
 
 // ==================== Boundary Condition Tests ====================
 
+/// 测试空分支名错误处理
+///
+/// ## 测试目的
+/// 验证 GitBranch::checkout_branch() 对空分支名返回错误。
+///
+/// ## 测试场景
+/// 1. 准备 Git 测试环境
+/// 2. 尝试创建空名称的分支
+/// 3. 验证创建失败且分支不存在
+///
+/// ## 预期结果
+/// - 创建失败，空分支名不存在
 #[test]
-#[serial]
 fn test_empty_branch_name_with_empty_string_returns_error() -> Result<()> {
     // Arrange: 准备 Git 测试环境
     let _env = GitTestEnv::new()?;
@@ -238,6 +340,18 @@ fn test_empty_branch_name_with_empty_string_returns_error() -> Result<()> {
 
 // ==================== Error Handling Tests ====================
 
+/// 测试 Git 不可用时的错误处理
+///
+/// ## 测试目的
+/// 验证 GitBranch 在没有 Git 的情况下返回错误。
+///
+/// ## 测试场景
+/// 1. 使用 EnvGuard 临时移除 Git（通过清空 PATH）
+/// 2. 尝试检查分支（Git 不可用）
+/// 3. 验证在没有 Git 的情况下应该返回错误
+///
+/// ## 预期结果
+/// - 在没有 Git 的情况下返回错误（注意：这个测试可能不会按预期工作，因为 Git 可能在其他位置）
 #[test]
 fn test_git_not_available_without_git_returns_error() -> Result<()> {
     // Arrange: 使用 EnvGuard 临时移除 Git（通过清空 PATH）

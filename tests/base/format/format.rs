@@ -31,6 +31,16 @@ mod format_size_tests {
 
     // ==================== 文件大小格式化测试 ====================
 
+    /// 测试文件大小格式化（字节单位）
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确格式化字节值（< 1024 字节）。
+    ///
+    /// ## 测试场景
+    /// 测试多种字节值：0、1、512、1023
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为 "X B" 格式
     #[test]
     fn test_format_size_bytes_with_byte_values_returns_byte_string() {
         // Arrange: 准备字节值
@@ -42,6 +52,16 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化（KB单位）
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确格式化KB值（1024 字节到 1023 KB）。
+    ///
+    /// ## 测试场景
+    /// 测试多种KB值：1 KB、1.5 KB、2 KB、1023 KB
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为 "X.XX KB" 格式
     #[test]
     fn test_format_size_kilobytes_with_kb_values_returns_kb_string() {
         // Arrange: 准备KB值
@@ -58,6 +78,16 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化（MB单位）
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确格式化MB值（1 MB到 1023 MB）。
+    ///
+    /// ## 测试场景
+    /// 测试多种MB值：1 MB、1.5 MB、5 MB、1023 MB
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为 "X.XX MB" 格式
     #[test]
     fn test_format_size_megabytes_with_mb_values_returns_mb_string() {
         // Arrange: 准备MB值
@@ -74,6 +104,16 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化（GB单位）
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确格式化GB值（1 GB及以上）。
+    ///
+    /// ## 测试场景
+    /// 测试多种GB值：1 GB、1.5 GB、10 GB
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为 "X.XX GB" 格式
     #[test]
     fn test_format_size_gigabytes_with_gb_values_returns_gb_string() {
         // Arrange: 准备GB值
@@ -89,6 +129,16 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化（TB单位）
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确格式化TB值（1 TB及以上）。
+    ///
+    /// ## 测试场景
+    /// 测试多种TB值：1 TB、2 TB、1.5 TB
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为 "X.XX TB" 格式
     #[test]
     fn test_format_size_terabytes_with_tb_values_returns_tb_string() {
         // Arrange: 准备TB值
@@ -104,6 +154,16 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证 DisplayFormatter::size() 能够正确处理各种大小的文件。
+    ///
+    /// ## 测试场景
+    /// 测试从字节到TB的各种大小值
+    ///
+    /// ## 预期结果
+    /// - 所有值都格式化为正确的单位格式
     #[rstest]
     #[case(0, "0 B")]
     #[case(1, "1 B")]
@@ -128,6 +188,16 @@ mod format_size_tests {
         assert_eq!(result, expected);
     }
 
+    /// 测试文件大小格式化的精度
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确处理带小数的文件大小。
+    ///
+    /// ## 测试场景
+    /// 测试1.25 KB、1.10 KB、1.05 KB等带小数的值
+    ///
+    /// ## 预期结果
+    /// - 小数精度正确（保留两位小数）
     #[test]
     fn test_format_size_precision_with_decimal_values_returns_precise_string() {
         // Arrange: 准备带小数的字节值
@@ -143,6 +213,17 @@ mod format_size_tests {
         }
     }
 
+    /// 测试文件大小格式化的边界情况
+    ///
+    /// ## 测试目的
+    /// 验证 DisplayFormatter::size() 能够正确处理边界值（如单位转换点、最大值等）。
+    ///
+    /// ## 测试场景
+    /// 测试1023 B、1024 B、1024 KB、1 MB等边界值以及最大值
+    ///
+    /// ## 预期结果
+    /// - 边界值格式化正确
+    /// - 最大值能够正确处理
     #[test]
     fn test_format_size_edge_cases_with_boundary_values_handles_correctly() {
         // Arrange: 准备边界值
@@ -171,6 +252,16 @@ mod sensitive_string_tests {
 
     // ==================== 敏感信息掩码测试 ====================
 
+    /// 测试敏感信息掩码功能（短字符串）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法能够正确掩码短字符串（≤12个字符）。
+    ///
+    /// ## 测试场景
+    /// 测试空字符串、单字符、短字符串（≤12个字符）
+    ///
+    /// ## 预期结果
+    /// - 所有短字符串都被掩码为 "***"
     #[test]
     fn test_mask_short_strings_with_short_inputs_returns_masked_string() {
         // Arrange: 准备短字符串
@@ -184,6 +275,16 @@ mod sensitive_string_tests {
         assert_eq!("123456789012".mask(), "***"); // 恰好12个字符
     }
 
+    /// 测试敏感信息掩码功能（长字符串）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法能够正确掩码长字符串（>12个字符）。
+    ///
+    /// ## 测试场景
+    /// 测试各种长度的长字符串，包括API密钥格式
+    ///
+    /// ## 预期结果
+    /// - 长字符串显示前4个和后4个字符，中间用 "***" 掩码
     #[test]
     fn test_mask_long_strings_with_long_inputs_returns_masked_string() {
         // Arrange: 准备长字符串
@@ -200,6 +301,15 @@ mod sensitive_string_tests {
         }
     }
 
+    /// 测试敏感信息掩码功能（String类型）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法能够正确处理 String 类型。
+    ///
+    /// ## 预期结果
+    /// - String 类型能够正确掩码
+    /// - 短字符串掩码为 "***"
+    /// - 长字符串显示前后字符
     #[test]
     fn test_mask_with_string_type_with_string_inputs_returns_masked_string() {
         // Arrange: 准备String类型的输入
@@ -211,6 +321,16 @@ mod sensitive_string_tests {
         assert_eq!(short_string.mask(), "***");
     }
 
+    /// 测试敏感信息掩码功能（基本场景）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法的基本功能。
+    ///
+    /// ## 测试场景
+    /// 测试空字符串、短字符串、长字符串
+    ///
+    /// ## 预期结果
+    /// - 所有输入都能正确掩码
     #[test]
     fn test_mask_basic_with_basic_inputs_returns_masked_string() {
         // Arrange: 准备基本输入
@@ -226,6 +346,16 @@ mod sensitive_string_tests {
         }
     }
 
+    /// 测试敏感信息掩码功能（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证 Sensitive trait 的 mask() 方法能够处理各种输入。
+    ///
+    /// ## 测试场景
+    /// 测试从空字符串到长API密钥的各种输入
+    ///
+    /// ## 预期结果
+    /// - 所有输入都能正确掩码
     #[rstest]
     #[case("", "***")]
     #[case("a", "***")]
@@ -248,6 +378,17 @@ mod sensitive_string_tests {
         assert_eq!(result, expected);
     }
 
+    /// 测试敏感信息掩码功能（特殊字符）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法能够正确处理包含特殊字符的字符串。
+    ///
+    /// ## 测试场景
+    /// 测试包含连字符、下划线、点号、@符号等的字符串
+    ///
+    /// ## 预期结果
+    /// - 特殊字符被正确保留
+    /// - 掩码格式正确
     #[test]
     fn test_mask_special_characters_with_special_chars_handles_correctly() {
         // Arrange: 准备包含特殊字符的字符串
@@ -264,6 +405,17 @@ mod sensitive_string_tests {
         }
     }
 
+    /// 测试敏感信息掩码功能（Unicode字符串）
+    ///
+    /// ## 测试目的
+    /// 验证 Sensitive trait 的 mask() 方法能够正确处理Unicode字符串。
+    ///
+    /// ## 测试场景
+    /// 测试中文、emoji等Unicode字符
+    ///
+    /// ## 预期结果
+    /// - Unicode字符被正确处理
+    /// - 掩码格式正确
     #[test]
     fn test_mask_unicode_strings_with_unicode_inputs_handles_correctly() {
         // Arrange: 准备Unicode字符串
@@ -286,6 +438,17 @@ mod date_format_tests {
 
     // ==================== 日期时间格式化测试 ====================
 
+    /// 测试日期格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 format_document_timestamp() 能够使用 DateFormat::DateOnly 正确格式化日期。
+    ///
+    /// ## 测试场景
+    /// 测试 Local 和 UTC 时区的日期格式化
+    ///
+    /// ## 预期结果
+    /// - 格式为 YYYY-MM-DD
+    /// - Local 和 UTC 时区都能正确格式化
     #[test]
     fn test_date_format_patterns_with_date_format_returns_formatted_date() {
         // Arrange: 准备日期格式正则表达式
@@ -301,6 +464,17 @@ mod date_format_tests {
         assert!(date_regex.is_match(&date_utc));
     }
 
+    /// 测试日期时间格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 format_document_timestamp() 能够使用 DateFormat::DateTime 正确格式化日期时间。
+    ///
+    /// ## 测试场景
+    /// 测试 Local 和 UTC 时区的日期时间格式化
+    ///
+    /// ## 预期结果
+    /// - 格式为 YYYY-MM-DD HH:MM:SS
+    /// - Local 和 UTC 时区都能正确格式化
     #[test]
     fn test_datetime_format_patterns_with_datetime_format_returns_formatted_datetime() {
         // Arrange: 准备日期时间格式正则表达式
@@ -316,6 +490,17 @@ mod date_format_tests {
         assert!(datetime_regex.is_match(&datetime_utc));
     }
 
+    /// 测试ISO 8601格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 format_document_timestamp() 能够使用 DateFormat::Iso8601 正确格式化ISO 8601时间戳。
+    ///
+    /// ## 测试场景
+    /// 测试 Local 和 UTC 时区的ISO 8601格式化
+    ///
+    /// ## 预期结果
+    /// - 格式符合ISO 8601标准
+    /// - UTC时区以Z结尾或包含时区偏移
     #[test]
     fn test_iso8601_format_patterns_with_iso8601_format_returns_formatted_string() {
         // Arrange: 准备ISO 8601格式
@@ -330,6 +515,14 @@ mod date_format_tests {
         assert!(iso_utc.ends_with('Z') || iso_utc.contains('+') || iso_utc.contains('-'));
     }
 
+    /// 测试日期格式化的便利函数
+    ///
+    /// ## 测试目的
+    /// 验证 format_last_updated() 和 format_last_updated_with_time() 等便利函数能够返回有效格式。
+    ///
+    /// ## 预期结果
+    /// - format_last_updated() 返回日期格式（YYYY-MM-DD）
+    /// - format_last_updated_with_time() 返回日期时间格式（YYYY-MM-DD HH:MM:SS）
     #[test]
     fn test_convenience_functions_return_valid_format() {
         // Arrange: 准备正则表达式模式
@@ -347,6 +540,14 @@ mod date_format_tests {
         assert!(datetime_regex.is_match(&last_updated_with_time));
     }
 
+    /// 测试文件名时间戳格式化功能
+    ///
+    /// ## 测试目的
+    /// 验证 format_filename_timestamp() 能够返回文件名友好的时间戳格式。
+    ///
+    /// ## 预期结果
+    /// - 格式为 YYYY-MM-DD_HH-MM-SS
+    /// - 不包含空格和冒号（文件名友好）
     #[test]
     fn test_filename_timestamp_format_returns_filename_friendly_string() {
         // Arrange: 准备正则表达式模式
@@ -362,6 +563,16 @@ mod date_format_tests {
         assert!(!filename_timestamp.contains(':'));
     }
 
+    /// 测试不同日期格式的一致性
+    ///
+    /// ## 测试目的
+    /// 验证同一时刻的不同日期格式应该包含相同的日期部分。
+    ///
+    /// ## 测试场景
+    /// 比较 DateOnly、DateTime 和 filename_timestamp 格式的日期部分
+    ///
+    /// ## 预期结果
+    /// - 所有格式的日期部分（YYYY-MM-DD）一致
     #[test]
     fn test_date_consistency_across_formats_has_same_date_part() {
         // Arrange: 准备不同格式的时间戳函数
@@ -379,6 +590,16 @@ mod date_format_tests {
         assert_eq!(date_only, date_part_from_filename);
     }
 
+    /// 测试日期格式模式（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证不同日期格式的模式匹配。
+    ///
+    /// ## 测试场景
+    /// 测试 DateOnly 和 DateTime 格式的正则表达式匹配
+    ///
+    /// ## 预期结果
+    /// - 所有格式都能正确匹配对应的正则表达式
     #[rstest]
     #[case(DateFormat::DateOnly, r"^\d{4}-\d{2}-\d{2}$")]
     #[case(DateFormat::DateTime, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")]
@@ -398,6 +619,19 @@ mod checksum_tests {
 
     // ==================== 校验和计算测试 ====================
 
+    /// 测试计算文件的SHA256哈希值
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::calculate_file_sha256() 能够正确计算文件的SHA256哈希值。
+    ///
+    /// ## 测试场景
+    /// 1. 创建测试文件并写入内容
+    /// 2. 计算文件的SHA256哈希值
+    /// 3. 验证哈希值格式和内容
+    ///
+    /// ## 预期结果
+    /// - 哈希值长度为64个十六进制字符
+    /// - 哈希值与预期值匹配
     #[test]
     fn test_calculate_file_sha256() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -423,6 +657,14 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试计算空文件的SHA256哈希值
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::calculate_file_sha256() 能够正确处理空文件。
+    ///
+    /// ## 预期结果
+    /// - 空文件的SHA256哈希值为标准空文件哈希值
+    /// - 哈希值格式正确
     #[test]
     fn test_calculate_empty_file_sha256() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -442,6 +684,17 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试计算大文件的SHA256哈希值
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::calculate_file_sha256() 能够正确处理大文件（超过缓冲区大小）。
+    ///
+    /// ## 测试场景
+    /// 创建10KB的测试文件并计算哈希值
+    ///
+    /// ## 预期结果
+    /// - 大文件的哈希值计算成功
+    /// - 哈希值格式正确（64个十六进制字符）
     #[test]
     fn test_calculate_large_file_sha256() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -464,6 +717,17 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试从内容中解析哈希值
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::parse_hash_from_content() 能够从各种格式的内容中解析哈希值。
+    ///
+    /// ## 测试场景
+    /// 测试标准格式（hash filename）、只有哈希值、多行内容、带额外空格等格式
+    ///
+    /// ## 预期结果
+    /// - 所有格式都能正确解析哈希值
+    /// - 多行内容只取第一行
     #[test]
     fn test_parse_hash_from_content() -> Result<()> {
         // 测试标准格式：hash  filename
@@ -489,6 +753,16 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试从无效内容中解析哈希值
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::parse_hash_from_content() 能够正确处理无效内容。
+    ///
+    /// ## 测试场景
+    /// 测试空内容、只包含空格、只包含文件名等无效格式
+    ///
+    /// ## 预期结果
+    /// - 无效内容返回错误
     #[test]
     fn test_parse_hash_from_invalid_content() {
         // 测试空内容
@@ -504,6 +778,19 @@ mod checksum_tests {
         assert!(result3.is_err());
     }
 
+    /// 测试文件完整性验证（成功场景）
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::verify() 能够正确验证文件完整性，当哈希值匹配时返回成功。
+    ///
+    /// ## 测试场景
+    /// 1. 创建测试文件
+    /// 2. 计算文件的SHA256哈希值
+    /// 3. 使用正确的哈希值验证文件
+    ///
+    /// ## 预期结果
+    /// - 验证成功（verified = true）
+    /// - 消息包含验证通过的信息
     #[test]
     fn test_verify_success() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -529,6 +816,19 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试文件完整性验证（失败场景）
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::verify() 能够正确检测文件完整性验证失败。
+    ///
+    /// ## 测试场景
+    /// 1. 创建测试文件
+    /// 2. 使用错误的哈希值验证文件
+    /// 3. 验证错误处理
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含预期和实际的哈希值
     #[test]
     fn test_verify_failure() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -553,6 +853,13 @@ mod checksum_tests {
         Ok(())
     }
 
+    /// 测试构建下载URL
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::build_url() 能够正确构建文件下载URL。
+    ///
+    /// ## 预期结果
+    /// - URL格式正确
     #[test]
     fn test_build_url() {
         // 测试基本 URL 构建
@@ -585,6 +892,14 @@ mod checksum_tests {
         assert_eq!(Checksum::build_url(url5), ".sha256");
     }
 
+    /// 测试文件不存在时的错误处理
+    ///
+    /// ## 测试目的
+    /// 验证 Checksum::calculate_file_sha256() 能够正确处理文件不存在的情况。
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Failed to open file"
     #[test]
     fn test_file_not_found() {
         let non_existent_path = Path::new("/this/path/does/not/exist/file.txt");
@@ -595,6 +910,16 @@ mod checksum_tests {
         assert!(error_msg.contains("Failed to open file"));
     }
 
+    /// 测试已知内容的哈希值计算
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证 Checksum::calculate_file_sha256() 能够计算已知内容的正确哈希值。
+    ///
+    /// ## 测试场景
+    /// 测试多种已知内容的SHA256哈希值（标准测试向量）
+    ///
+    /// ## 预期结果
+    /// - 所有已知内容的哈希值与预期值完全匹配
     #[rstest]
     #[case(
         "Hello, World!",
@@ -633,6 +958,20 @@ mod integration_tests {
 
     // ==================== 集成测试 ====================
 
+    /// 测试格式化工具的集成使用
+    ///
+    /// ## 测试目的
+    /// 验证各种格式化工具（文件大小、时间戳、敏感信息掩码）能够协同工作。
+    ///
+    /// ## 测试场景
+    /// 1. 格式化文件大小
+    /// 2. 生成文件名时间戳
+    /// 3. 掩码API密钥
+    /// 4. 组合使用生成报告文件名
+    ///
+    /// ## 预期结果
+    /// - 所有格式化工具正常工作
+    /// - 组合使用生成正确的报告文件名
     #[test]
     fn test_format_utilities_integration() {
         // 测试各种格式化工具的集成使用
@@ -658,6 +997,21 @@ mod integration_tests {
         assert!(report_filename.ends_with(".md"));
     }
 
+    /// 测试校验和和格式化工具的集成使用
+    ///
+    /// ## 测试目的
+    /// 验证校验和计算和格式化工具能够协同工作。
+    ///
+    /// ## 测试场景
+    /// 1. 创建测试文件
+    /// 2. 计算文件哈希值
+    /// 3. 格式化文件大小
+    /// 4. 组合使用生成报告
+    ///
+    /// ## 预期结果
+    /// - 校验和计算成功
+    /// - 格式化工具正常工作
+    /// - 集成使用无错误
     #[test]
     fn test_checksum_and_format_integration() -> Result<()> {
         let temp_dir = tempdir()?;
@@ -691,6 +1045,19 @@ mod integration_tests {
         Ok(())
     }
 
+    /// 测试错误处理的一致性
+    ///
+    /// ## 测试目的
+    /// 验证各个模块的错误处理保持一致，错误消息包含有用信息。
+    ///
+    /// ## 测试场景
+    /// 1. 测试文件不存在时的错误处理
+    /// 2. 测试无效内容解析时的错误处理
+    /// 3. 验证错误消息格式
+    ///
+    /// ## 预期结果
+    /// - 所有错误情况都能正确返回错误
+    /// - 错误消息包含有用的信息（如文件路径、错误类型等）
     #[test]
     fn test_error_handling_consistency() {
         // 测试各个模块的错误处理一致性
@@ -709,6 +1076,17 @@ mod integration_tests {
         assert!(error_msg.contains("Failed to open file") || error_msg.contains("No such file"));
     }
 
+    /// 测试格式化函数的性能特征
+    ///
+    /// ## 测试目的
+    /// 验证格式化函数（文件大小格式化、敏感信息掩码）的性能表现。
+    ///
+    /// ## 测试场景
+    /// 执行1000次格式化操作，测量总耗时
+    ///
+    /// ## 预期结果
+    /// - 1000次格式化操作应在100毫秒内完成
+    /// - 性能表现良好
     #[test]
     fn test_performance_characteristics() -> Result<()> {
         use std::time::Instant;

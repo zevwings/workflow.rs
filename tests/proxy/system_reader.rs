@@ -85,6 +85,21 @@ fn create_empty_proxy_info() -> ProxyInfo {
 
 // ==================== ProxyConfig Tests ====================
 
+/// 测试使用有效字段创建代理配置
+///
+/// ## 测试目的
+/// 验证`ProxyConfig`结构体可以使用有效的字段值（启用状态、地址、端口）正确创建。
+///
+/// ## 测试场景
+/// 1. 准备代理配置字段值：启用状态为`true`，地址为`proxy.example.com`，端口为`8080`
+/// 2. 使用这些字段值创建`ProxyConfig`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `ProxyConfig`实例创建成功
+/// - `enable`字段为`true`
+/// - `address`字段为`Some("proxy.example.com")`
+/// - `port`字段为`Some(8080)`
 #[test]
 fn test_proxy_config_creation_with_valid_fields_creates_config() {
     // Arrange: 准备代理配置字段值
@@ -105,6 +120,21 @@ fn test_proxy_config_creation_with_valid_fields_creates_config() {
     assert_eq!(config.port, port);
 }
 
+/// 测试创建禁用状态的代理配置
+///
+/// ## 测试目的
+/// 验证`ProxyConfig`结构体可以正确创建禁用状态的配置（`enable`为`false`，地址和端口为`None`）。
+///
+/// ## 测试场景
+/// 1. 准备禁用状态的代理配置：`enable`为`false`，`address`和`port`为`None`
+/// 2. 使用这些字段值创建`ProxyConfig`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `ProxyConfig`实例创建成功
+/// - `enable`字段为`false`
+/// - `address`字段为`None`
+/// - `port`字段为`None`
 #[test]
 fn test_proxy_config_disabled_with_disabled_state_creates_config() {
     // Arrange: 准备禁用状态的代理配置
@@ -123,6 +153,19 @@ fn test_proxy_config_disabled_with_disabled_state_creates_config() {
     assert_eq!(config.port, None);
 }
 
+/// 测试克隆代理配置
+///
+/// ## 测试目的
+/// 验证`ProxyConfig`结构体的`Clone`实现能够正确创建配置的副本，所有字段值保持一致。
+///
+/// ## 测试场景
+/// 1. 准备原始`ProxyConfig`实例，包含启用状态、地址和端口
+/// 2. 调用`clone()`方法创建副本
+/// 3. 验证克隆后的配置与原始配置的所有字段值相同
+///
+/// ## 预期结果
+/// - 克隆操作成功
+/// - 克隆后的`enable`、`address`、`port`字段值与原始配置完全相同
 #[test]
 fn test_proxy_config_clone_with_valid_config_creates_clone() {
     // Arrange: 准备原始 ProxyConfig
@@ -141,6 +184,21 @@ fn test_proxy_config_clone_with_valid_config_creates_clone() {
     assert_eq!(original_config.port, cloned_config.port);
 }
 
+/// 测试代理配置的Debug格式化输出
+///
+/// ## 测试目的
+/// 验证`ProxyConfig`结构体的`Debug`实现能够正确格式化输出，包含结构体名称和关键字段信息。
+///
+/// ## 测试场景
+/// 1. 准备包含启用状态、地址和端口的`ProxyConfig`实例
+/// 2. 使用`format!("{:?}", config)`格式化Debug输出
+/// 3. 验证Debug字符串包含结构体名称和关键字段信息
+///
+/// ## 预期结果
+/// - Debug字符串包含`"ProxyConfig"`结构体名称
+/// - Debug字符串包含`"enable"`字段名
+/// - Debug字符串包含`"address"`字段名
+/// - Debug字符串包含地址值`"debug.proxy.com"`
 #[test]
 fn test_proxy_config_debug_with_valid_config_returns_debug_string() {
     // Arrange: 准备 ProxyConfig 实例
@@ -162,6 +220,19 @@ fn test_proxy_config_debug_with_valid_config_returns_debug_string() {
 
 // ==================== SystemProxyReader Tests ====================
 
+/// 测试从系统读取代理配置
+///
+/// ## 测试目的
+/// 验证`SystemProxyReader::read()`能够从系统配置中读取代理信息，返回`ProxyInfo`结构。
+///
+/// ## 测试场景
+/// 1. 调用`SystemProxyReader::read()`读取系统代理配置
+/// 2. 如果成功，验证返回的`ProxyInfo`包含有效的代理配置（HTTP、HTTPS、SOCKS）
+/// 3. 如果失败，验证错误处理（在测试环境中失败是可以接受的，可能没有`scutil`命令或权限问题）
+///
+/// ## 预期结果
+/// - 成功时：返回`Ok(ProxyInfo)`，包含HTTP、HTTPS、SOCKS代理配置（启用或禁用状态）
+/// - 失败时：返回`Err`（在测试环境中可能发生，因为需要访问系统配置或`scutil`命令）
 #[test]
 fn test_system_proxy_reader_read_with_system_config_returns_proxy_info() {
     // Arrange: 准备读取系统代理配置
@@ -192,6 +263,22 @@ fn test_system_proxy_reader_read_with_system_config_returns_proxy_info() {
 
 // ==================== ProxyInfo Tests ====================
 
+/// 测试使用有效配置创建代理信息
+///
+/// ## 测试目的
+/// 验证`ProxyInfo`结构体可以使用多个代理类型的配置（HTTP、HTTPS、SOCKS）正确创建，并能通过`get_config()`方法获取配置。
+///
+/// ## 测试场景
+/// 1. 使用`create_test_proxy_info()`创建包含HTTP、HTTPS、SOCKS配置的`ProxyInfo`
+/// 2. 通过`get_config()`获取各个代理类型的配置
+/// 3. 验证HTTP代理配置：启用状态、地址、端口
+/// 4. 验证HTTPS代理配置：启用状态、地址、端口
+/// 5. 验证SOCKS代理配置：禁用状态、地址、端口
+///
+/// ## 预期结果
+/// - HTTP代理：启用，地址为`proxy.example.com`，端口为`8080`
+/// - HTTPS代理：启用，地址为`secure-proxy.example.com`，端口为`8443`
+/// - SOCKS代理：禁用，地址为`socks-proxy.example.com`，端口为`1080`
 #[test]
 fn test_proxy_info_creation_with_valid_configs_creates_info() {
     // Arrange: 准备测试用的 ProxyInfo
@@ -220,6 +307,22 @@ fn test_proxy_info_creation_with_valid_configs_creates_info() {
     assert_eq!(socks_config.port, Some(1080));
 }
 
+/// 测试获取启用的代理URL
+///
+/// ## 测试目的
+/// 验证`ProxyInfo::get_proxy_url()`能够为启用的代理类型返回正确的URL字符串，为禁用的代理返回`None`。
+///
+/// ## 测试场景
+/// 1. 使用`create_test_proxy_info()`创建包含HTTP（启用）、HTTPS（启用）、SOCKS（禁用）配置的`ProxyInfo`
+/// 2. 调用`get_proxy_url()`获取各个代理类型的URL
+/// 3. 验证HTTP代理返回包含协议、地址、端口的URL
+/// 4. 验证HTTPS代理返回包含协议、地址、端口的URL
+/// 5. 验证SOCKS代理返回`None`（因为禁用）
+///
+/// ## 预期结果
+/// - HTTP代理URL：包含`http://`协议、`proxy.example.com`地址、`8080`端口
+/// - HTTPS代理URL：包含`http://`协议、`secure-proxy.example.com`地址、`8443`端口
+/// - SOCKS代理URL：返回`None`（因为代理被禁用）
 #[test]
 fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() {
     // Arrange: 准备测试用的 ProxyInfo
@@ -246,6 +349,24 @@ fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() {
 
 // ==================== ProxyConfigGenerator Tests ====================
 
+/// 测试使用有效代理信息生成环境变量
+///
+/// ## 测试目的
+/// 验证`ProxyConfigGenerator::generate_env_vars()`能够根据`ProxyInfo`中的启用代理配置生成对应的环境变量映射。
+///
+/// ## 测试场景
+/// 1. 使用`create_test_proxy_info()`创建包含HTTP（启用）、HTTPS（启用）、SOCKS（禁用）配置的`ProxyInfo`
+/// 2. 调用`generate_env_vars()`生成环境变量映射
+/// 3. 验证生成的环境变量不为空
+/// 4. 验证`http_proxy`环境变量包含协议、地址、端口
+/// 5. 验证`https_proxy`环境变量包含协议、地址、端口
+/// 6. 验证`all_proxy`环境变量不存在（因为SOCKS代理被禁用）
+///
+/// ## 预期结果
+/// - 环境变量映射不为空
+/// - `http_proxy`包含`http://`协议、`proxy.example.com`地址、`8080`端口
+/// - `https_proxy`包含`http://`协议、`secure-proxy.example.com`地址、`8443`端口
+/// - `all_proxy`不存在（因为SOCKS代理被禁用）
 #[test]
 fn test_proxy_config_generator_generate_env_vars_with_valid_info_generates_vars() {
     // Arrange: 准备测试用的 ProxyInfo
@@ -269,6 +390,24 @@ fn test_proxy_config_generator_generate_env_vars_with_valid_info_generates_vars(
     assert!(!env_vars.contains_key("all_proxy"));
 }
 
+/// 测试使用有效代理信息生成命令字符串
+///
+/// ## 测试目的
+/// 验证`ProxyConfigGenerator::generate_command()`能够根据`ProxyInfo`中的启用代理配置生成用于设置环境变量的shell命令字符串。
+///
+/// ## 测试场景
+/// 1. 使用`create_minimal_proxy_info()`创建包含HTTP代理（启用）配置的`ProxyInfo`
+/// 2. 调用`generate_command()`生成命令字符串
+/// 3. 验证生成的命令字符串以`export `开头
+/// 4. 验证命令包含`http_proxy=`环境变量设置
+/// 5. 验证命令包含代理地址和端口信息
+///
+/// ## 预期结果
+/// - 命令字符串不为`None`
+/// - 命令以`export `开头
+/// - 命令包含`http_proxy=`设置
+/// - 命令包含`simple.proxy.com`地址
+/// - 命令包含`3128`端口
 #[test]
 fn test_proxy_config_generator_generate_command_with_valid_info_generates_command() {
     // Arrange: 准备最小配置的 ProxyInfo

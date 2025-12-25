@@ -77,7 +77,14 @@ impl GitTestEnv {
         // 创建隔离环境，启用Git配置隔离
         let mut isolation = TestIsolation::new()?.with_git_config()?;
 
-        let work_dir = isolation.work_dir();
+        // 先配置Git用户（避免借用冲突）
+        if let Some(git_guard) = isolation.git_config_guard() {
+            git_guard.set("user.name", "Test User")?;
+            git_guard.set("user.email", "test@example.com")?;
+        }
+
+        // 获取工作目录绝对路径
+        let work_dir = isolation.work_dir().to_path_buf();
 
         // 确保.git目录不存在（如果存在则删除）
         let git_dir = work_dir.join(".git");
@@ -89,12 +96,6 @@ impl GitTestEnv {
 
         // 初始化Git仓库，设置默认分支为main
         Self::run_git_command(&work_dir, &["init", "-b", "main"])?;
-
-        // 配置测试用户（使用Git配置守卫）
-        if let Some(git_guard) = isolation.git_config_guard() {
-            git_guard.set("user.name", "Test User")?;
-            git_guard.set("user.email", "test@example.com")?;
-        }
 
         // 创建初始提交
         std::fs::write(work_dir.join("README.md"), "# Test Repository\n")?;
@@ -119,7 +120,7 @@ impl GitTestEnv {
     /// let repo_path = env.path();
     /// ```
     pub fn path(&self) -> PathBuf {
-        self.isolation.work_dir()
+        self.isolation.work_dir().to_path_buf()
     }
 
     /// 创建新分支
@@ -439,24 +440,32 @@ mod tests {
                 "Test repo path should not be the current repo path"
             );
 
-            // 验证当前工作目录已切换到临时目录
-            let current_dir = std::env::current_dir()?;
-            let current_dir_str = current_dir.to_string_lossy().to_string();
-            assert_eq!(
-                current_dir_str, test_repo_path_str,
-                "Current directory should be the test repo directory"
+            // 验证返回的是绝对路径
+            assert!(
+                test_repo_path.is_absolute(),
+                "Test repo path should be absolute: {}",
+                test_repo_path_str
             );
 
             // 验证测试仓库有独立的 .git 目录
             assert!(test_repo_path.join(".git").exists());
+
+            // 验证全局工作目录没有被切换（方案5：不切换全局目录）
+            let current_dir = std::env::current_dir()?;
+            let current_dir_str = current_dir.to_string_lossy().to_string();
+            // 全局工作目录应该保持不变（因为我们不切换它了）
+            assert_eq!(
+                current_dir_str, original_dir_str,
+                "Global current directory should not be changed (we use absolute paths instead)"
+            );
         }
 
-        // 验证工作目录已恢复
+        // 验证工作目录保持不变（因为我们从不切换它）
         let restored_dir = std::env::current_dir()?;
         let restored_dir_str = restored_dir.to_string_lossy().to_string();
         assert_eq!(
             restored_dir_str, original_dir_str,
-            "Current directory should be restored after GitTestEnv drop"
+            "Current directory should remain unchanged (we don't switch global directory)"
         );
 
         Ok(())

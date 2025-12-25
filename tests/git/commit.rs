@@ -6,15 +6,13 @@
 //!
 //! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - Fixture 函数中的 `expect()` 保留（fixture 失败应该panic）
-//! - 使用 `serial_test` 确保 Git 操作串行执行
-//! - 使用 `TempDir` 确保测试隔离和自动清理
+//! - 使用 `GitTestEnv` 确保测试隔离和自动清理（支持并行执行）
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::fixture;
-use serial_test::serial;
+// Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
 use std::fs;
-use tempfile::TempDir;
 use workflow::git::GitCommit;
 
 use crate::common::environments::GitTestEnv;
@@ -25,35 +23,6 @@ use crate::common::environments::GitTestEnv;
 #[fixture]
 fn git_repo_with_commit() -> GitTestEnv {
     GitTestEnv::new().expect("Failed to create git test env")
-}
-
-/// 创建干净的 Git 仓库（无提交）
-#[fixture]
-fn clean_git_repo() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 在临时目录中执行 Git 操作，而不是切换当前工作目录
-    std::process::Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 配置 Git 用户
-    std::process::Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    std::process::Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    temp_dir
 }
 
 // ==================== 工作树状态检查测试 ====================
@@ -74,7 +43,7 @@ fn clean_git_repo() -> TempDir {
 /// 5. 恢复原始工作目录
 ///
 /// ## 技术细节
-/// - 使用 `#[serial]` 确保测试串行执行（避免工作目录冲突）
+/// - 使用 `GitTestEnv` 确保测试隔离（支持并行执行）
 /// - 使用临时目录进行隔离测试
 /// - 使用 `gix` 库（纯Rust的Git实现）而非git2
 /// - 自动恢复原始工作目录（即使测试失败）
@@ -84,7 +53,6 @@ fn clean_git_repo() -> TempDir {
 /// - `modified_count == 0`：无修改文件
 /// - `staged_count == 0`：无暂存文件
 #[test]
-#[serial]
 fn test_worktree_status_clean_with_gix() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
@@ -106,7 +74,6 @@ fn test_worktree_status_clean_with_gix() -> Result<()> {
 // ==================== 使用 gix 重新实现的更改检查测试 ====================
 
 #[test]
-#[serial]
 fn test_has_changes_clean_repo_with_gix() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
@@ -124,7 +91,6 @@ fn test_has_changes_clean_repo_with_gix() -> Result<()> {
 }
 
 #[test]
-#[serial]
 fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
@@ -147,7 +113,6 @@ fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
 }
 
 #[test]
-#[serial]
 fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
@@ -172,7 +137,6 @@ fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
 // ==================== Staging Operations Tests ====================
 
 #[test]
-#[serial]
 fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个文件
     let env = GitTestEnv::new()?;
@@ -195,7 +159,6 @@ fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
 }
 
 #[test]
-#[serial]
 fn test_stage_specific_file() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let env = GitTestEnv::new()?;
@@ -228,7 +191,6 @@ fn test_stage_specific_file() -> Result<()> {
 // ==================== 提交信息获取测试 ====================
 
 #[test]
-#[serial]
 fn test_get_latest_commit_info() -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
     let _env = GitTestEnv::new()?;
@@ -288,8 +250,8 @@ fn test_get_latest_commit_info() -> Result<()> {
 // ==================== 使用 gix 重新实现的错误处理测试 ====================
 
 #[test]
-#[serial] // 确保这个测试串行运行，避免并发问题
 fn test_operations_outside_git_repo_with_container() {
+    // 注意：这里使用 tempfile::tempdir 而不是 GitTestEnv，因为我们需要测试非 Git 仓库的情况
     use tempfile::tempdir;
 
     // 在非 Git 目录中测试操作

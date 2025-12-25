@@ -4,6 +4,17 @@
 
 use workflow::base::dialog::{FormBuilder, GroupConfig};
 
+/// 测试表单构建器创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder::new() 能够创建一个空的表单构建器。
+///
+/// ## 测试场景
+/// 1. 调用 FormBuilder::new() 创建构建器
+/// 2. 验证构建器的 groups 字段为空
+///
+/// ## 预期结果
+/// - 构建器的 groups 为空
 #[test]
 fn test_form_builder_new_creates_empty_builder() {
     // Arrange: 准备创建表单构建器
@@ -15,6 +26,18 @@ fn test_form_builder_new_creates_empty_builder() {
     assert!(builder.groups.is_empty());
 }
 
+/// 测试添加表单组功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够使用有效配置添加表单组。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个带有效配置的组
+/// 3. 验证组添加成功
+///
+/// ## 预期结果
+/// - 组被成功添加，groups 长度为 1
 #[test]
 fn test_form_builder_add_group_with_valid_config_adds_group() {
     // Arrange: 准备组ID和配置
@@ -32,6 +55,18 @@ fn test_form_builder_add_group_with_valid_config_adds_group() {
     assert_eq!(builder.groups[0].id, group_id);
 }
 
+/// 测试添加多个表单组功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够添加多个具有不同配置的表单组。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加多个组（必填组和可选组）
+/// 3. 验证所有组添加成功
+///
+/// ## 预期结果
+/// - 所有组被成功添加，groups 长度正确
 #[test]
 fn test_form_builder_add_multiple_groups_with_different_configs_adds_all_groups() {
     // Arrange: 准备多个组配置
@@ -55,6 +90,19 @@ fn test_form_builder_add_multiple_groups_with_different_configs_adds_all_groups(
     assert_eq!(builder.groups[1].id, "group2");
 }
 
+/// 测试重复组ID验证
+///
+/// ## 测试目的
+/// 验证 FormBuilder 在遇到重复组ID时返回错误。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加两个具有相同ID的组
+/// 3. 运行验证
+/// 4. 验证返回错误且错误消息包含 "Duplicate group ID"
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "Duplicate group ID"
 #[test]
 fn test_form_builder_validate_with_duplicate_group_id_returns_error() {
     // Arrange: 准备带有重复组ID的构建器（覆盖 builder.rs:130-137）
@@ -79,6 +127,19 @@ fn test_form_builder_validate_with_duplicate_group_id_returns_error() {
     assert!(error_msg.contains("Duplicate group ID"));
 }
 
+/// 测试空组验证
+///
+/// ## 测试目的
+/// 验证 FormBuilder 在遇到没有步骤的组时返回错误。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个没有步骤的组
+/// 3. 运行验证
+/// 4. 验证返回错误且错误消息包含 "has no steps"
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "has no steps"
 #[test]
 fn test_form_builder_validate_with_empty_group_returns_error() {
     // Arrange: 准备带有空组的构建器（覆盖 builder.rs:141-147）
@@ -99,6 +160,19 @@ fn test_form_builder_validate_with_empty_group_returns_error() {
     assert!(error_msg.contains("has no steps"));
 }
 
+/// 测试空步骤处理
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够优雅地处理没有字段的步骤。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含空步骤的组
+/// 3. 运行验证
+/// 4. 验证结果（可能成功或失败，取决于 FieldBuilder 默认行为）
+///
+/// ## 预期结果
+/// - 验证可能成功或失败，取决于实现
 #[test]
 fn test_form_builder_validate_with_empty_step_handles_gracefully() {
     // Arrange: 准备带有空步骤的构建器（覆盖 builder.rs:149-157）
@@ -164,6 +238,18 @@ fn test_form_builder_run() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试无条件步骤创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建无条件步骤。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含无条件步骤的组
+/// 3. 验证步骤创建成功
+///
+/// ## 预期结果
+/// - 步骤被成功创建，组包含步骤
 #[test]
 fn test_form_builder_should_execute_step_with_unconditional_step_creates_step() {
     // Arrange: 准备无条件步骤（覆盖 builder.rs:234）
@@ -181,6 +267,18 @@ fn test_form_builder_should_execute_step_with_unconditional_step_creates_step() 
     assert!(!builder.groups[0].steps.is_empty());
 }
 
+/// 测试条件步骤创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建条件步骤（step_if）。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含条件步骤的组
+/// 3. 验证步骤创建成功
+///
+/// ## 预期结果
+/// - 条件步骤被成功创建，组包含两个步骤
 #[test]
 fn test_form_builder_should_execute_step_with_conditional_step_creates_step() {
     // Arrange: 准备条件步骤（覆盖 builder.rs:235-237）
@@ -200,6 +298,18 @@ fn test_form_builder_should_execute_step_with_conditional_step_creates_step() {
     assert_eq!(builder.groups[0].steps.len(), 2);
 }
 
+/// 测试多条件步骤创建（AND）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建多条件步骤（所有条件必须满足）。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含多条件步骤（AND）的组
+/// 3. 验证步骤创建成功
+///
+/// ## 预期结果
+/// - 多条件步骤被成功创建
 #[test]
 fn test_form_builder_should_execute_step_with_conditional_all_creates_step() {
     // Arrange: 准备多条件步骤（AND）（覆盖 builder.rs:238-240）
@@ -217,6 +327,18 @@ fn test_form_builder_should_execute_step_with_conditional_all_creates_step() {
     assert!(!builder.groups[0].steps.is_empty());
 }
 
+/// 测试多条件步骤创建（OR）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建多条件步骤（任一条件满足即可）。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含多条件步骤（OR）的组
+/// 3. 验证步骤创建成功
+///
+/// ## 预期结果
+/// - 多条件步骤被成功创建
 #[test]
 fn test_form_builder_should_execute_step_with_conditional_any_creates_step() {
     // Arrange: 准备多条件步骤（OR）（覆盖 builder.rs:241-243）
@@ -234,6 +356,18 @@ fn test_form_builder_should_execute_step_with_conditional_any_creates_step() {
     assert!(!builder.groups[0].steps.is_empty());
 }
 
+/// 测试动态条件步骤创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建动态条件步骤（使用函数判断）。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含动态条件步骤的组
+/// 3. 验证步骤创建成功
+///
+/// ## 预期结果
+/// - 动态条件步骤被成功创建
 #[test]
 fn test_form_builder_should_execute_step_with_dynamic_condition_creates_step() {
     // Arrange: 准备动态条件步骤（覆盖 builder.rs:244-249）
@@ -250,6 +384,18 @@ fn test_form_builder_should_execute_step_with_dynamic_condition_creates_step() {
     assert!(!builder.groups[0].steps.is_empty());
 }
 
+/// 测试无条件字段创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建没有条件的字段。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含无条件字段的组
+/// 3. 验证字段创建成功且没有条件
+///
+/// ## 预期结果
+/// - 字段被成功创建，condition 为 None
 #[test]
 fn test_form_builder_should_ask_field_without_condition_creates_field() {
     // Arrange: 准备没有条件的字段（覆盖 builder.rs:257-259）
@@ -267,6 +413,18 @@ fn test_form_builder_should_ask_field_without_condition_creates_field() {
     assert!(builder.groups[0].steps[0].fields[0].condition.is_none());
 }
 
+/// 测试添加带标题的组
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够为组设置标题。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个带标题的组
+/// 3. 验证标题设置成功
+///
+/// ## 预期结果
+/// - 组的 title 字段被正确设置
 #[test]
 fn test_form_builder_add_group_with_title_sets_title() {
     // Arrange: 准备组标题
@@ -284,6 +442,18 @@ fn test_form_builder_add_group_with_title_sets_title() {
     assert_eq!(builder.groups[0].title, Some(title.to_string()));
 }
 
+/// 测试添加带描述的组
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够为组设置描述。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个带描述的组
+/// 3. 验证描述设置成功
+///
+/// ## 预期结果
+/// - 组的 description 字段被正确设置
 #[test]
 fn test_form_builder_add_group_with_description_sets_description() {
     // Arrange: 准备组描述
@@ -304,6 +474,18 @@ fn test_form_builder_add_group_with_description_sets_description() {
     );
 }
 
+/// 测试添加可选组
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够添加可选组并设置默认启用状态。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个可选组并设置默认启用
+/// 3. 验证组标记为可选且默认启用
+///
+/// ## 预期结果
+/// - 组的 optional 和 default_enabled 字段被正确设置
 #[test]
 fn test_form_builder_add_optional_group_marks_group_as_optional() {
     // Arrange: 准备可选组配置（覆盖 builder.rs:110-111）
@@ -321,6 +503,17 @@ fn test_form_builder_add_optional_group_marks_group_as_optional() {
     assert!(builder.groups[0].default_enabled);
 }
 
+/// 测试默认构建器创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder::default() 能够创建一个空的表单构建器。
+///
+/// ## 测试场景
+/// 1. 调用 FormBuilder::default() 创建构建器
+/// 2. 验证构建器的 groups 字段为空
+///
+/// ## 预期结果
+/// - 构建器的 groups 为空
 #[test]
 fn test_form_builder_default_creates_empty_builder() {
     // Arrange: 准备使用 Default trait
@@ -332,6 +525,18 @@ fn test_form_builder_default_creates_empty_builder() {
     assert!(builder.groups.is_empty());
 }
 
+/// 测试组配置所有选项
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够为组设置所有配置选项（标题、描述、可选性、默认启用）。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含所有配置选项的组
+/// 3. 验证所有选项设置成功
+///
+/// ## 预期结果
+/// - 所有配置选项被正确设置
 #[test]
 fn test_form_builder_group_config_with_all_options_sets_all_options() {
     // Arrange: 准备包含所有选项的组配置（覆盖 builder.rs:106-113）
@@ -357,6 +562,19 @@ fn test_form_builder_group_config_with_all_options_sets_all_options() {
     assert!(group.default_enabled);
 }
 
+/// 测试空步骤字段验证
+///
+/// ## 测试目的
+/// 验证 FormBuilder 在遇到没有字段的步骤时返回错误。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含空步骤字段的组
+/// 3. 运行验证
+/// 4. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含相关信息
 #[test]
 fn test_form_builder_validate_with_empty_step_fields_returns_error() {
     // Arrange: 准备带有空步骤字段的构建器（覆盖 builder.rs:149-157）
@@ -376,6 +594,18 @@ fn test_form_builder_validate_with_empty_step_fields_returns_error() {
     assert!(error_msg.contains("has no fields") || error_msg.contains("step"));
 }
 
+/// 测试组ID字符串转换
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够正确处理字符串类型的组ID。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 使用字符串类型的组ID添加组
+/// 3. 验证组ID转换正确
+///
+/// ## 预期结果
+/// - 组ID被正确转换和存储
 #[test]
 fn test_form_builder_group_id_with_string_id_converts_correctly() {
     // Arrange: 准备字符串类型的组ID（覆盖 builder.rs:102）
@@ -395,6 +625,19 @@ fn test_form_builder_group_id_with_string_id_converts_correctly() {
 
 // ==================== 更多 validate() 方法测试 ====================
 
+/// 测试多个空组验证
+///
+/// ## 测试目的
+/// 验证 FormBuilder 在遇到多个空组时返回错误。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加多个空组
+/// 3. 运行验证
+/// 4. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "has no steps"
 #[test]
 fn test_form_builder_validate_with_multiple_empty_groups_returns_error() {
     // Arrange: 准备多个空组的构建器（覆盖 builder.rs:141-147）
@@ -411,6 +654,19 @@ fn test_form_builder_validate_with_multiple_empty_groups_returns_error() {
     assert!(error_msg.contains("has no steps"));
 }
 
+/// 测试多个步骤包含空字段验证
+///
+/// ## 测试目的
+/// 验证 FormBuilder 在遇到包含空字段的多个步骤时返回错误。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含空字段的多个步骤的组
+/// 3. 运行验证
+/// 4. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含相关信息
 #[test]
 fn test_form_builder_validate_with_multiple_steps_containing_empty_fields_returns_error() {
     // Arrange: 准备包含空字段的多个步骤的构建器（覆盖 builder.rs:149-157）
@@ -434,6 +690,18 @@ fn test_form_builder_validate_with_multiple_steps_containing_empty_fields_return
 // ==================== should_execute_step() 间接测试 ====================
 // 注意：should_execute_step() 是私有方法，通过创建表单结构来间接测试
 
+/// 测试条件步骤评估
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建条件步骤并正确设置步骤类型。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含条件步骤的组
+/// 3. 验证步骤类型为 Conditional
+///
+/// ## 预期结果
+/// - 条件步骤被创建，步骤类型为 Conditional
 #[test]
 fn test_form_builder_step_conditional_evaluation_with_conditional_step_creates_conditional_step() {
     // Arrange: 准备条件步骤（覆盖 builder.rs:235-237）
@@ -459,6 +727,18 @@ fn test_form_builder_step_conditional_evaluation_with_conditional_step_creates_c
     }
 }
 
+/// 测试多条件步骤评估（AND）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建多条件步骤（AND）并正确设置步骤类型。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含多条件步骤（AND）的组
+/// 3. 验证步骤类型为 ConditionalAll
+///
+/// ## 预期结果
+/// - 多条件步骤被创建，步骤类型为 ConditionalAll
 #[test]
 fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_creates_conditional_all_step() {
     // Arrange: 准备多条件步骤（AND）（覆盖 builder.rs:238-240）
@@ -481,6 +761,18 @@ fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_cr
     }
 }
 
+/// 测试多条件步骤评估（OR）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建多条件步骤（OR）并正确设置步骤类型。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含多条件步骤（OR）的组
+/// 3. 验证步骤类型为 ConditionalAny
+///
+/// ## 预期结果
+/// - 多条件步骤被创建，步骤类型为 ConditionalAny
 #[test]
 fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_creates_conditional_any_step() {
     // Arrange: 准备多条件步骤（OR）（覆盖 builder.rs:241-243）
@@ -503,6 +795,18 @@ fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_cr
     }
 }
 
+/// 测试动态条件步骤评估
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建动态条件步骤并正确设置步骤类型。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含动态条件步骤的组
+/// 3. 验证步骤类型为 DynamicCondition
+///
+/// ## 预期结果
+/// - 动态条件步骤被创建，步骤类型为 DynamicCondition
 #[test]
 fn test_form_builder_step_dynamic_condition_evaluation_with_dynamic_condition_creates_dynamic_step() {
     // Arrange: 准备动态条件步骤（覆盖 builder.rs:244-249）
@@ -527,6 +831,18 @@ fn test_form_builder_step_dynamic_condition_evaluation_with_dynamic_condition_cr
 // ==================== should_ask_field() 间接测试 ====================
 // 注意：should_ask_field() 是私有方法，通过创建带条件的字段来间接测试
 
+/// 测试带条件的字段创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建带条件的字段并正确设置步骤类型。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含条件步骤的组
+/// 3. 验证步骤类型和字段数量正确
+///
+/// ## 预期结果
+/// - 条件步骤被创建，步骤类型为 Conditional
 #[test]
 fn test_form_builder_field_with_condition_creates_conditional_step() {
     // Arrange: 准备带条件的字段（覆盖 builder.rs:255-257）
@@ -554,6 +870,18 @@ fn test_form_builder_field_with_condition_creates_conditional_step() {
     }
 }
 
+/// 测试无条件字段创建
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够创建没有条件的字段。
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含无条件字段的组
+/// 3. 验证字段创建成功且没有条件
+///
+/// ## 预期结果
+/// - 字段被成功创建，condition 为 None
 #[test]
 fn test_form_builder_field_without_condition_creates_unconditional_field() {
     // Arrange: 准备没有条件的字段（覆盖 builder.rs:257-259）
@@ -574,6 +902,27 @@ fn test_form_builder_field_without_condition_creates_unconditional_field() {
 // ==================== ask_field() 间接测试 ====================
 // 注意：ask_field() 需要用户交互，这些测试会被忽略，但可以验证字段类型
 
+/// 测试询问文本字段功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够询问文本类型的字段（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户输入文本
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_ask_field_text -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含文本字段的组
+/// 3. 运行表单并等待用户输入
+///
+/// ## 预期结果
+/// - 能够询问文本字段并接收用户输入
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_ask_field_text() {
@@ -589,6 +938,27 @@ fn test_form_builder_ask_field_text() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试询问密码字段功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够询问密码类型的字段（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户输入密码
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_ask_field_password -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含密码字段的组
+/// 3. 运行表单并等待用户输入
+///
+/// ## 预期结果
+/// - 能够询问密码字段并接收用户输入
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_ask_field_password() {
@@ -604,6 +974,27 @@ fn test_form_builder_ask_field_password() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试询问选择字段功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够询问选择类型的字段（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户选择选项
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_ask_field_selection -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含选择字段的组
+/// 3. 运行表单并等待用户选择
+///
+/// ## 预期结果
+/// - 能够询问选择字段并接收用户选择
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_ask_field_selection() {
@@ -627,6 +1018,27 @@ fn test_form_builder_ask_field_selection() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试询问确认字段功能
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够询问确认类型的字段（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户确认
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_ask_field_confirmation -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个包含确认字段的组
+/// 3. 运行表单并等待用户确认
+///
+/// ## 预期结果
+/// - 能够询问确认字段并接收用户确认
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_ask_field_confirmation() {
@@ -644,6 +1056,27 @@ fn test_form_builder_ask_field_confirmation() {
 
 // ==================== run() 方法的更多测试 ====================
 
+/// 测试运行表单（可选组）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够运行包含可选组的表单（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户输入
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_run_with_optional_group -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个可选组
+/// 3. 运行表单并等待用户输入
+///
+/// ## 预期结果
+/// - 能够运行表单并处理可选组
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_run_with_optional_group() {
@@ -659,6 +1092,27 @@ fn test_form_builder_run_with_optional_group() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试运行表单（必填组）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够运行包含必填组的表单（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户输入
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_run_with_required_group -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加一个必填组
+/// 3. 运行表单并等待用户输入
+///
+/// ## 预期结果
+/// - 能够运行表单并处理必填组
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_run_with_required_group() {
@@ -674,6 +1128,27 @@ fn test_form_builder_run_with_required_group() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试运行表单（多个组）
+///
+/// ## 测试目的
+/// 验证 FormBuilder 能够运行包含多个组的表单（需要用户交互）。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户输入多个字段
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_form_builder_run_with_multiple_groups -- --ignored
+/// ```
+///
+/// ## 测试场景
+/// 1. 创建表单构建器
+/// 2. 添加多个组（必填组和可选组）
+/// 3. 运行表单并等待用户输入
+///
+/// ## 预期结果
+/// - 能够运行表单并处理多个组
 #[test]
 #[ignore] // 需要用户交互
 fn test_form_builder_run_with_multiple_groups() {

@@ -138,6 +138,19 @@ mod tests {
 
     // ==================== 基础验证器测试 ====================
 
+    /// 测试非空验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证非空验证器能够正确识别空输入和有效输入。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效输入（非空字符串）
+    /// 2. 测试无效输入（空字符串、只有空格、只有空白字符）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 有效输入通过验证
+    /// - 无效输入返回错误消息
     #[test]
     fn test_non_empty_validator_with_various_inputs_validates_correctly() {
         // Arrange: 准备非空验证器
@@ -158,6 +171,19 @@ mod tests {
         assert_eq!(result.unwrap_err(), "Input cannot be empty");
     }
 
+    /// 测试数字验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证数字验证器能够正确识别有效数字和无效输入。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效数字（整数、负数、零、带空格）
+    /// 2. 测试无效输入（非数字、浮点数、空字符串、混合字符）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 有效数字通过验证
+    /// - 无效输入返回错误消息
     #[test]
     fn test_number_validator_with_various_inputs_validates_correctly() {
         // Arrange: 准备数字验证器
@@ -182,6 +208,19 @@ mod tests {
         assert_eq!(empty_result.unwrap_err(), "Number cannot be empty");
     }
 
+    /// 测试邮箱验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证邮箱验证器能够正确识别有效邮箱地址和无效输入。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效邮箱（标准格式、带点、带空格）
+    /// 2. 测试无效邮箱（缺少@、缺少域名、缺少用户名、空字符串）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 有效邮箱通过验证
+    /// - 无效邮箱返回错误消息
     #[test]
     fn test_email_validator_with_various_inputs_validates_correctly() {
         // Arrange: 准备邮箱验证器
@@ -206,6 +245,19 @@ mod tests {
         assert_eq!(empty_result.unwrap_err(), "Email cannot be empty");
     }
 
+    /// 测试长度验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证长度验证器能够正确检查输入长度是否在指定范围内。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效长度（最小长度、最大长度、中间长度）
+    /// 2. 测试无效长度（太短、太长、空字符串）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 有效长度通过验证
+    /// - 无效长度返回错误消息
     #[test]
     fn test_length_validator_with_various_lengths_validates_correctly() {
         // Arrange: 准备长度验证器（最小3，最大10）
@@ -234,6 +286,19 @@ mod tests {
         );
     }
 
+    /// 测试范围验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证范围验证器能够正确检查数字是否在指定范围内。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效范围（最小值、最大值、中间值）
+    /// 2. 测试无效范围（小于最小值、大于最大值、负数、非数字）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 有效范围通过验证
+    /// - 无效范围返回错误消息
     #[test]
     fn test_range_validator_with_various_values_validates_correctly() {
         // Arrange: 准备范围验证器（1-100）
@@ -260,6 +325,19 @@ mod tests {
         assert_eq!(invalid_result.unwrap_err(), "Please enter a valid number");
     }
 
+    /// 测试正则表达式验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证正则表达式验证器能够根据模式正确验证输入。
+    ///
+    /// ## 测试场景
+    /// 1. 测试有效输入（符合正则模式）
+    /// 2. 测试无效输入（不符合正则模式）
+    /// 3. 验证错误消息正确
+    ///
+    /// ## 预期结果
+    /// - 符合模式的输入通过验证
+    /// - 不符合模式的输入返回错误消息
     #[test]
     fn test_regex_validator_with_various_inputs_validates_correctly() {
         // Arrange: 准备正则验证器（用户名：只允许字母、数字、下划线）
@@ -288,6 +366,17 @@ mod tests {
 
     // ==================== 参数化验证器测试 ====================
 
+    /// 测试数字验证器参数化
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证数字验证器对各种输入的响应。
+    ///
+    /// ## 测试场景
+    /// 1. 使用多种输入（有效数字、无效输入）进行测试
+    /// 2. 验证结果与预期一致
+    ///
+    /// ## 预期结果
+    /// - 有效数字通过验证，无效输入返回错误
     #[rstest]
     #[case("123", true)]
     #[case("-456", true)]
@@ -311,6 +400,17 @@ mod tests {
         assert_eq!(result.is_ok(), should_be_valid);
     }
 
+    /// 测试邮箱验证器参数化
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证邮箱验证器对各种输入的响应。
+    ///
+    /// ## 测试场景
+    /// 1. 使用多种输入（有效邮箱、无效邮箱）进行测试
+    /// 2. 验证结果与预期一致
+    ///
+    /// ## 预期结果
+    /// - 有效邮箱通过验证，无效邮箱返回错误
     #[rstest]
     #[case("user@example.com", true)]
     #[case("test.email@domain.org", true)]
@@ -334,6 +434,17 @@ mod tests {
         assert_eq!(result.is_ok(), should_be_valid);
     }
 
+    /// 测试长度验证器参数化
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证长度验证器对不同长度范围的响应。
+    ///
+    /// ## 测试场景
+    /// 1. 使用不同的最小/最大长度和输入进行测试
+    /// 2. 验证结果与预期一致
+    ///
+    /// ## 预期结果
+    /// - 在范围内的输入通过验证，超出范围返回错误
     #[rstest]
     #[case(1, 5, "abc", true)] // 3 chars, within range
     #[case(1, 5, "a", true)] // 1 char, minimum
@@ -356,6 +467,18 @@ mod tests {
 
     // ==================== 输入验证逻辑测试 ====================
 
+    /// 测试输入验证逻辑（有验证器）
+    ///
+    /// ## 测试目的
+    /// 验证当提供验证器时，输入验证逻辑能够正确调用验证器。
+    ///
+    /// ## 测试场景
+    /// 1. 使用验证器验证有效输入
+    /// 2. 使用验证器验证无效输入
+    /// 3. 验证 allow_empty 优先级
+    ///
+    /// ## 预期结果
+    /// - 验证器被正确调用，allow_empty 优先于验证器
     #[test]
     fn test_validate_input_with_validator_with_validator_validates_correctly() {
         // Arrange: 准备验证器
@@ -367,6 +490,17 @@ mod tests {
         assert!(mock_validate_input("", Some(&validator), true).is_ok()); // allow_empty优先
     }
 
+    /// 测试输入验证逻辑（无验证器）
+    ///
+    /// ## 测试目的
+    /// 验证当没有提供验证器时，输入验证逻辑能够正确处理空值检查。
+    ///
+    /// ## 测试场景
+    /// 1. 无验证器且不允许空值的情况
+    /// 2. 无验证器但允许空值的情况
+    ///
+    /// ## 预期结果
+    /// - 根据 allow_empty 标志正确处理空值
     #[test]
     fn test_validate_input_without_validator_without_validator_validates_correctly() {
         // Arrange: 准备无验证器的情况
@@ -378,6 +512,17 @@ mod tests {
         assert!(mock_validate_input("hello", None, true).is_ok());
     }
 
+    /// 测试 allow_empty 优先级
+    ///
+    /// ## 测试目的
+    /// 验证 allow_empty 标志的优先级高于验证器。
+    ///
+    /// ## 测试场景
+    /// 1. 设置 allow_empty=true，即使验证器拒绝空值
+    /// 2. 验证空值能够通过验证
+    ///
+    /// ## 预期结果
+    /// - allow_empty=true 时，空值能够通过验证
     #[test]
     fn test_validate_input_allow_empty_priority_with_allow_empty_prioritizes_empty() {
         // Arrange: 准备验证器
@@ -389,6 +534,18 @@ mod tests {
         assert!(mock_validate_input("hello", Some(&validator), true).is_ok());
     }
 
+    /// 测试空白字符处理
+    ///
+    /// ## 测试目的
+    /// 验证输入验证逻辑能够正确处理空白字符（空格、制表符、换行符）。
+    ///
+    /// ## 测试场景
+    /// 1. 测试带空格的输入
+    /// 2. 测试只有空白字符的输入
+    /// 3. 验证空白字符被正确识别为空值
+    ///
+    /// ## 预期结果
+    /// - 空白字符被正确识别和处理
     #[test]
     fn test_validate_input_whitespace_handling_with_whitespace_handles_correctly() {
         // Arrange: 准备验证器
@@ -403,6 +560,17 @@ mod tests {
 
     // ==================== 复合验证器测试 ====================
 
+    /// 测试组合验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证多个验证器能够组合使用，依次验证输入。
+    ///
+    /// ## 测试场景
+    /// 1. 创建组合验证器（数字验证 + 范围验证）
+    /// 2. 测试有效和无效输入
+    ///
+    /// ## 预期结果
+    /// - 所有验证器都被调用，只有全部通过才返回成功
     #[test]
     fn test_combined_validators_with_multiple_validators_validates_all() {
         // Arrange: 创建组合验证器：数字 + 范围
@@ -427,6 +595,17 @@ mod tests {
         assert!(combined_validator("abc").is_err()); // 不是数字
     }
 
+    /// 测试条件验证器功能
+    ///
+    /// ## 测试目的
+    /// 验证验证器能够根据输入内容进行条件验证。
+    ///
+    /// ## 测试场景
+    /// 1. 创建条件验证器（根据前缀应用不同规则）
+    /// 2. 测试不同条件下的验证结果
+    ///
+    /// ## 预期结果
+    /// - 根据条件应用不同的验证规则
     #[test]
     fn test_conditional_validator_with_conditions_validates_conditionally() {
         // Arrange: 创建条件验证器：如果输入以"admin_"开头，则需要至少10个字符
@@ -453,6 +632,17 @@ mod tests {
 
     // ==================== 错误处理和边界条件测试 ====================
 
+    /// 测试验证器错误消息
+    ///
+    /// ## 测试目的
+    /// 验证各种验证器能够返回正确的错误消息。
+    ///
+    /// ## 测试场景
+    /// 1. 测试多个验证器的错误消息
+    /// 2. 验证错误消息内容正确
+    ///
+    /// ## 预期结果
+    /// - 所有验证器返回预期的错误消息
     #[test]
     fn test_validator_error_messages() {
         let validators = vec![
@@ -485,6 +675,18 @@ mod tests {
         }
     }
 
+    /// 测试 Unicode 输入验证
+    ///
+    /// ## 测试目的
+    /// 验证验证器能够正确处理 Unicode 字符（包括中文、emoji）。
+    ///
+    /// ## 测试场景
+    /// 1. 测试中文字符验证
+    /// 2. 测试包含重音符号的字符
+    /// 3. 测试 emoji 字符
+    ///
+    /// ## 预期结果
+    /// - Unicode 字符被正确验证
     #[test]
     fn test_unicode_input_validation() {
         let length_validator = create_length_validator(3, 10);
@@ -498,6 +700,18 @@ mod tests {
         assert!(email_validator("用户@example.com").is_ok()); // 中文用户名
     }
 
+    /// 测试极端输入长度
+    ///
+    /// ## 测试目的
+    /// 验证长度验证器能够处理极长和极短的输入。
+    ///
+    /// ## 测试场景
+    /// 1. 测试极长输入（500字符）
+    /// 2. 测试超长输入（1001字符）
+    /// 3. 测试空输入（min=0）
+    ///
+    /// ## 预期结果
+    /// - 长度验证器正确处理极端情况
     #[test]
     fn test_extreme_input_lengths() {
         let length_validator = create_length_validator(0, 1000);
@@ -513,6 +727,17 @@ mod tests {
         assert!(length_validator("").is_ok()); // min = 0
     }
 
+    /// 测试特殊字符验证
+    ///
+    /// ## 测试目的
+    /// 验证正则表达式验证器能够正确处理特殊字符。
+    ///
+    /// ## 测试场景
+    /// 1. 测试允许的特殊字符（连字符、下划线）
+    /// 2. 测试不允许的特殊字符（@、空格）
+    ///
+    /// ## 预期结果
+    /// - 特殊字符被正确验证
     #[test]
     fn test_special_characters_in_validation() {
         let regex_validator = create_regex_validator(
@@ -532,6 +757,17 @@ mod tests {
 
     // ==================== 性能和一致性测试 ====================
 
+    /// 测试验证器性能
+    ///
+    /// ## 测试目的
+    /// 验证验证器在大量调用时能够保持良好性能。
+    ///
+    /// ## 测试场景
+    /// 1. 执行1000次验证操作
+    /// 2. 测量执行时间
+    ///
+    /// ## 预期结果
+    /// - 1000次验证在100毫秒内完成
     #[test]
     fn test_validator_performance() {
         use std::time::Instant;
@@ -549,6 +785,17 @@ mod tests {
         assert!(duration.as_millis() < 100);
     }
 
+    /// 测试验证器一致性
+    ///
+    /// ## 测试目的
+    /// 验证验证器在多次调用时返回一致的结果。
+    ///
+    /// ## 测试场景
+    /// 1. 多次运行相同的验证操作
+    /// 2. 验证结果一致
+    ///
+    /// ## 预期结果
+    /// - 多次调用返回相同结果
     #[test]
     fn test_validator_consistency() {
         let validator = create_number_validator();
@@ -562,6 +809,17 @@ mod tests {
         }
     }
 
+    /// 测试验证器线程安全性
+    ///
+    /// ## 测试目的
+    /// 验证验证器能够在多线程环境中安全使用。
+    ///
+    /// ## 测试场景
+    /// 1. 在不同线程中使用验证器
+    /// 2. 验证线程安全
+    ///
+    /// ## 预期结果
+    /// - 验证器在多线程环境中正常工作
     #[test]
     fn test_validator_thread_safety() {
         use std::thread;
@@ -582,6 +840,17 @@ mod tests {
         handle.join().expect("thread should join successfully");
     }
 
+    /// 测试验证器内存效率
+    ///
+    /// ## 测试目的
+    /// 验证创建大量验证器实例时的内存使用情况。
+    ///
+    /// ## 测试场景
+    /// 1. 创建100个验证器实例
+    /// 2. 验证所有验证器都能正常工作
+    ///
+    /// ## 预期结果
+    /// - 所有验证器实例都能正常工作
     #[test]
     fn test_validator_memory_efficiency() {
         // 创建多个验证器实例，测试内存使用

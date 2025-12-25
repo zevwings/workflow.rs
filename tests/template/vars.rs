@@ -21,6 +21,19 @@ use workflow::template::{
 
 // ==================== BranchTemplateVars Tests ====================
 
+/// 测试使用所有字段创建分支模板变量
+///
+/// ## 测试目的
+/// 验证`BranchTemplateVars`结构体可以使用所有字段值（Jira键、Jira摘要、摘要slug、Jira类型）正确创建。
+///
+/// ## 测试场景
+/// 1. 准备分支模板变量字段值：Jira键、Jira摘要、摘要slug、Jira类型
+/// 2. 使用这些字段值创建`BranchTemplateVars`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `BranchTemplateVars`实例创建成功
+/// - `jira_key`、`jira_summary`、`summary_slug`、`jira_type`字段值与提供的值一致
 #[test]
 fn test_branch_template_vars_creation_with_all_fields_creates_vars() {
     // Arrange: 准备分支模板变量字段值
@@ -44,6 +57,20 @@ fn test_branch_template_vars_creation_with_all_fields_creates_vars() {
     assert_eq!(vars.jira_type, jira_type);
 }
 
+/// 测试使用部分字段（部分为None）创建分支模板变量
+///
+/// ## 测试目的
+/// 验证`BranchTemplateVars`结构体可以创建仅包含部分字段的配置，可选字段（Jira摘要、Jira类型）可以为`None`。
+///
+/// ## 测试场景
+/// 1. 准备分支模板变量字段值：Jira键和摘要slug为`Some`，Jira摘要和Jira类型为`None`
+/// 2. 使用这些字段值创建`BranchTemplateVars`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `BranchTemplateVars`实例创建成功
+/// - `jira_key`和`summary_slug`字段为`Some`值
+/// - `jira_summary`和`jira_type`字段为`None`
 #[test]
 fn test_branch_template_vars_partial_with_some_none_fields_creates_vars() {
     // Arrange: 准备分支模板变量字段值（部分为 None）
@@ -67,6 +94,19 @@ fn test_branch_template_vars_partial_with_some_none_fields_creates_vars() {
 
 // ==================== CommitTemplateVars Tests ====================
 
+/// 测试使用所有字段创建提交模板变量
+///
+/// ## 测试目的
+/// 验证`CommitTemplateVars`结构体可以使用所有字段值（提交类型、作用域、主题、正文、Jira键、使用作用域标志）正确创建。
+///
+/// ## 测试场景
+/// 1. 准备提交模板变量字段值：提交类型、作用域、主题、正文、Jira键、使用作用域标志
+/// 2. 使用这些字段值创建`CommitTemplateVars`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `CommitTemplateVars`实例创建成功
+/// - `commit_type`、`scope`、`subject`、`body`、`jira_key`、`use_scope`字段值与提供的值一致
 #[test]
 fn test_commit_template_vars_creation_with_all_fields_creates_vars() {
     // Arrange: 准备提交模板变量字段值
@@ -96,6 +136,21 @@ fn test_commit_template_vars_creation_with_all_fields_creates_vars() {
     assert_eq!(vars.use_scope, use_scope);
 }
 
+/// 测试使用最小字段创建提交模板变量
+///
+/// ## 测试目的
+/// 验证`CommitTemplateVars`结构体可以创建仅包含必需字段（提交类型、主题）的配置，可选字段（作用域、正文、Jira键）可以为`None`，`use_scope`为`false`。
+///
+/// ## 测试场景
+/// 1. 准备最小配置的提交模板变量字段值：提交类型和主题，其他字段为`None`或`false`
+/// 2. 使用这些字段值创建`CommitTemplateVars`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `CommitTemplateVars`实例创建成功
+/// - `commit_type`和`subject`字段为提供的值
+/// - `scope`、`body`、`jira_key`字段为`None`
+/// - `use_scope`字段为`false`
 #[test]
 fn test_commit_template_vars_minimal_with_minimal_fields_creates_vars() {
     // Arrange: 准备最小配置的提交模板变量字段值
@@ -123,6 +178,20 @@ fn test_commit_template_vars_minimal_with_minimal_fields_creates_vars() {
 
 // ==================== PullRequestTemplateVars Tests ====================
 
+/// 测试使用所有字段创建PR模板变量
+///
+/// ## 测试目的
+/// 验证`PullRequestTemplateVars`结构体可以使用所有字段值（Jira键、Jira摘要、Jira描述、Jira类型、Jira服务地址、变更类型列表、简短描述、依赖）正确创建。
+///
+/// ## 测试场景
+/// 1. 准备PR模板变量字段值：包含3个变更类型项的列表、Jira相关信息、简短描述、依赖
+/// 2. 使用这些字段值创建`PullRequestTemplateVars`实例
+/// 3. 验证所有字段值正确设置，包括变更类型列表的长度和内容
+///
+/// ## 预期结果
+/// - `PullRequestTemplateVars`实例创建成功
+/// - `jira_key`、`jira_summary`、`jira_type`字段值与提供的值一致
+/// - `change_types`包含3个变更类型项，第一个和第三个被选中，第二个未选中
 #[test]
 fn test_pr_template_vars_creation_with_all_fields_creates_vars() {
     // Arrange: 准备 PR 模板变量字段值
@@ -169,6 +238,20 @@ fn test_pr_template_vars_creation_with_all_fields_creates_vars() {
     assert_eq!(vars.change_types[1].selected, false);
 }
 
+/// 测试创建默认PR模板变量
+///
+/// ## 测试目的
+/// 验证`PullRequestTemplateVars::default()`能够创建所有字段为`None`或空的默认PR模板变量实例。
+///
+/// ## 测试场景
+/// 1. 调用`PullRequestTemplateVars::default()`创建默认实例
+/// 2. 验证所有可选字段为`None`
+/// 3. 验证`change_types`列表为空
+///
+/// ## 预期结果
+/// - `PullRequestTemplateVars`实例创建成功
+/// - 所有可选字段（`jira_key`、`jira_summary`、`jira_description`、`jira_type`、`jira_service_address`、`short_description`、`dependency`）为`None`
+/// - `change_types`列表为空
 #[test]
 fn test_pr_template_vars_default_with_no_parameters_creates_empty_vars() {
     // Arrange: 准备创建默认变量
@@ -189,6 +272,23 @@ fn test_pr_template_vars_default_with_no_parameters_creates_empty_vars() {
 
 // ==================== ChangeTypeItem Tests ====================
 
+/// 测试使用有效字段创建变更类型项
+///
+/// ## 测试目的
+/// 验证`ChangeTypeItem`结构体可以使用有效的字段值（名称、选中状态）正确创建，并验证`Clone`和`Debug`实现。
+///
+/// ## 测试场景
+/// 1. 准备变更类型项字段值：名称为`"Breaking change"`，选中状态为`true`
+/// 2. 使用这些字段值创建`ChangeTypeItem`实例
+/// 3. 验证字段值正确设置
+/// 4. 测试`Clone`实现，验证克隆后的字段值与原始值相同
+/// 5. 测试`Debug`实现，验证Debug字符串包含结构体名称和字段值
+///
+/// ## 预期结果
+/// - `ChangeTypeItem`实例创建成功
+/// - `name`和`selected`字段值与提供的值一致
+/// - 克隆后的字段值与原始值相同
+/// - Debug字符串包含`"ChangeTypeItem"`、名称和选中状态
 #[test]
 fn test_change_type_item_parsing_with_valid_fields_creates_item() {
     // Arrange: 准备变更类型项字段值

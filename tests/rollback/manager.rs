@@ -11,15 +11,16 @@ use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::fs;
 use std::path::PathBuf;
-use tempfile::TempDir;
 use workflow::rollback::{BackupInfo, BackupResult, RollbackManager, RollbackResult};
+
+use crate::common::environments::CliTestEnv;
 
 // ==================== Helper Functions ====================
 
 /// 创建测试用的临时目录结构
-fn setup_test_environment() -> Result<TempDir> {
-    let temp_dir = tempfile::tempdir()?;
-    let temp_path = temp_dir.path();
+fn setup_test_environment() -> Result<CliTestEnv> {
+    let env = CliTestEnv::new()?;
+    let temp_path = env.path();
 
     // 创建模拟的二进制文件目录
     let bin_dir = temp_path.join("bin");
@@ -36,12 +37,12 @@ fn setup_test_environment() -> Result<TempDir> {
     fs::write(completion_dir.join("workflow.bash"), "# bash completion")?;
     fs::write(completion_dir.join("workflow.zsh"), "# zsh completion")?;
 
-    Ok(temp_dir)
+    Ok(env)
 }
 
 /// 创建测试用的 BackupInfo
-fn create_test_backup_info(temp_dir: &TempDir) -> Result<BackupInfo> {
-    let backup_dir = temp_dir.path().join("backup");
+fn create_test_backup_info(env: &CliTestEnv) -> Result<BackupInfo> {
+    let backup_dir = env.path().join("backup");
     fs::create_dir_all(&backup_dir)?;
 
     // 创建一些备份文件
@@ -69,11 +70,26 @@ fn create_test_backup_info(temp_dir: &TempDir) -> Result<BackupInfo> {
 
 // ==================== BackupInfo Tests ====================
 
+/// 测试使用有效路径创建备份信息
+///
+/// ## 测试目的
+/// 验证`BackupInfo`结构体可以使用有效的备份目录路径、二进制文件备份列表和补全脚本备份列表正确创建。
+///
+/// ## 测试场景
+/// 1. 准备测试环境和备份目录
+/// 2. 创建包含备份目录、2个二进制文件备份和1个补全脚本备份的`BackupInfo`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `BackupInfo`实例创建成功
+/// - `backup_dir`字段与备份目录路径一致
+/// - `binary_backups`包含2个备份项（`workflow`和`install`）
+/// - `completion_backups`包含1个备份项（`workflow.bash`）
 #[test]
 fn test_backup_info_creation_with_valid_paths_creates_info() -> Result<()> {
     // Arrange: 准备测试环境和备份目录
-    let temp_dir = setup_test_environment()?;
-    let backup_dir = temp_dir.path().join("test_backup");
+    let env = setup_test_environment()?;
+    let backup_dir = env.path().join("test_backup");
 
     // Act: 创建 BackupInfo 实例
     let backup_info = BackupInfo {
@@ -97,11 +113,24 @@ fn test_backup_info_creation_with_valid_paths_creates_info() -> Result<()> {
     Ok(())
 }
 
+/// 测试克隆备份信息
+///
+/// ## 测试目的
+/// 验证`BackupInfo`结构体的`Clone`实现能够正确创建备份信息的副本，所有字段值（备份目录、二进制备份列表、补全脚本备份列表）保持一致。
+///
+/// ## 测试场景
+/// 1. 准备原始`BackupInfo`实例
+/// 2. 调用`clone()`方法创建副本
+/// 3. 验证克隆后的备份信息与原始备份信息的所有字段值相同
+///
+/// ## 预期结果
+/// - 克隆操作成功
+/// - 克隆后的`backup_dir`、`binary_backups`、`completion_backups`字段值与原始备份信息完全相同
 #[test]
 fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
     // Arrange: 准备原始 BackupInfo
-    let temp_dir = setup_test_environment()?;
-    let original_info = create_test_backup_info(&temp_dir)?;
+    let env = setup_test_environment()?;
+    let original_info = create_test_backup_info(&env)?;
 
     // Act: 克隆 BackupInfo
     let cloned_info = original_info.clone();
@@ -123,11 +152,25 @@ fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
     Ok(())
 }
 
+/// 测试备份信息的Debug格式化输出
+///
+/// ## 测试目的
+/// 验证`BackupInfo`结构体的`Debug`实现能够正确格式化输出，包含结构体名称和关键字段信息（备份目录、二进制备份、补全脚本备份）。
+///
+/// ## 测试场景
+/// 1. 准备包含备份目录、二进制备份和补全脚本备份的`BackupInfo`实例
+/// 2. 使用`format!("{:?}", backup_info)`格式化Debug输出
+/// 3. 验证Debug字符串包含结构体名称和关键字段信息
+///
+/// ## 预期结果
+/// - Debug字符串包含`"BackupInfo"`结构体名称
+/// - Debug字符串包含`"backup_dir"`、`"binary_backups"`、`"completion_backups"`字段名
+/// - Debug字符串包含备份文件名`"workflow"`
 #[test]
 fn test_backup_info_debug_with_valid_info_returns_debug_string() -> Result<()> {
     // Arrange: 准备 BackupInfo 实例
-    let temp_dir = setup_test_environment()?;
-    let backup_info = create_test_backup_info(&temp_dir)?;
+    let env = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&env)?;
 
     // Act: 格式化 Debug 输出
     let debug_str = format!("{:?}", backup_info);
@@ -143,11 +186,26 @@ fn test_backup_info_debug_with_valid_info_returns_debug_string() -> Result<()> {
 
 // ==================== BackupResult Tests ====================
 
+/// 测试使用有效信息创建备份结果
+///
+/// ## 测试目的
+/// 验证`BackupResult`结构体可以使用有效的备份信息、二进制文件计数和补全脚本计数正确创建。
+///
+/// ## 测试场景
+/// 1. 准备`BackupInfo`实例和备份计数（二进制文件2个，补全脚本1个）
+/// 2. 使用这些字段值创建`BackupResult`实例
+/// 3. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `BackupResult`实例创建成功
+/// - `binary_count`字段为2
+/// - `completion_count`字段为1
+/// - `backup_info`字段与提供的备份信息一致
 #[test]
 fn test_backup_result_creation_with_valid_info_creates_result() -> Result<()> {
     // Arrange: 准备 BackupInfo 和计数
-    let temp_dir = setup_test_environment()?;
-    let backup_info = create_test_backup_info(&temp_dir)?;
+    let env = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&env)?;
     let binary_count = 2;
     let completion_count = 1;
 
@@ -165,11 +223,27 @@ fn test_backup_result_creation_with_valid_info_creates_result() -> Result<()> {
     Ok(())
 }
 
+/// 测试克隆备份结果并格式化Debug输出
+///
+/// ## 测试目的
+/// 验证`BackupResult`结构体的`Clone`实现能够正确创建备份结果的副本，所有字段值保持一致，同时验证`Debug`实现能够正确格式化输出。
+///
+/// ## 测试场景
+/// 1. 准备原始`BackupResult`实例，包含备份信息、二进制文件计数和补全脚本计数
+/// 2. 调用`clone()`方法创建副本
+/// 3. 使用`format!("{:?}", original_result)`格式化Debug输出
+/// 4. 验证克隆后的结果与原始结果的所有字段值相同
+/// 5. 验证Debug字符串包含结构体名称和关键字段信息
+///
+/// ## 预期结果
+/// - 克隆操作成功
+/// - 克隆后的`binary_count`、`completion_count`字段值与原始结果完全相同
+/// - Debug字符串包含`"BackupResult"`结构体名称和关键字段名
 #[test]
 fn test_backup_result_clone_and_debug_with_valid_result_creates_clone() -> Result<()> {
     // Arrange: 准备原始 BackupResult
-    let temp_dir = setup_test_environment()?;
-    let backup_info = create_test_backup_info(&temp_dir)?;
+    let env = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&env)?;
     let original_result = BackupResult {
         backup_info,
         binary_count: 3,
@@ -195,6 +269,26 @@ fn test_backup_result_clone_and_debug_with_valid_result_creates_clone() -> Resul
 
 // ==================== RollbackResult Tests ====================
 
+/// 测试创建混合结果（部分成功、部分失败）的回滚结果
+///
+/// ## 测试目的
+/// 验证`RollbackResult`结构体可以正确创建包含部分成功恢复和部分失败的回滚结果，包括恢复的文件列表、失败的文件列表（含错误信息）、shell重载状态和shell配置文件路径。
+///
+/// ## 测试场景
+/// 1. 准备恢复成功的二进制文件列表（2个）和补全脚本列表（1个）
+/// 2. 准备失败的二进制文件列表（1个，含错误信息）和补全脚本列表（1个，含错误信息）
+/// 3. 设置shell重载成功标志和shell配置文件路径
+/// 4. 使用这些字段值创建`RollbackResult`实例
+/// 5. 验证所有字段值正确设置
+///
+/// ## 预期结果
+/// - `RollbackResult`实例创建成功
+/// - `restored_binaries`包含2个文件
+/// - `restored_completions`包含1个文件
+/// - `failed_binaries`包含1个失败项（文件名和错误信息）
+/// - `failed_completions`包含1个失败项（文件名和错误信息）
+/// - `shell_reload_success`为`Some(true)`
+/// - `shell_config_file`为`Some(PathBuf)`
 #[test]
 fn test_rollback_result_creation_with_mixed_results_creates_result() -> Result<()> {
     // Arrange: 准备恢复和失败的文件列表
@@ -226,6 +320,25 @@ fn test_rollback_result_creation_with_mixed_results_creates_result() -> Result<(
     Ok(())
 }
 
+/// 测试创建部分成功的回滚结果
+///
+/// ## 测试目的
+/// 验证`RollbackResult`结构体可以正确创建部分成功的回滚结果，其中部分文件恢复成功，部分文件恢复失败，shell重载也失败。
+///
+/// ## 测试场景
+/// 1. 准备部分恢复成功的二进制文件列表（1个）
+/// 2. 准备失败的二进制文件列表（1个，含错误信息）和补全脚本列表（1个，含错误信息）
+/// 3. 设置shell重载失败标志和shell配置文件路径
+/// 4. 使用这些字段值创建`RollbackResult`实例
+/// 5. 验证部分成功的情况
+///
+/// ## 预期结果
+/// - `RollbackResult`实例创建成功
+/// - `restored_binaries`包含1个文件
+/// - `restored_completions`为空
+/// - `failed_binaries`包含1个失败项（错误信息为`"Backup file missing"`）
+/// - `failed_completions`包含1个失败项（错误信息为`"Permission denied"`）
+/// - `shell_reload_success`为`Some(false)`
 #[test]
 fn test_rollback_result_partial_success_with_partial_restore_creates_result() -> Result<()> {
     // Arrange: 准备部分成功的结果字段值
@@ -254,6 +367,25 @@ fn test_rollback_result_partial_success_with_partial_restore_creates_result() ->
     Ok(())
 }
 
+/// 测试创建完全失败的回滚结果
+///
+/// ## 测试目的
+/// 验证`RollbackResult`结构体可以正确创建完全失败的回滚结果，其中所有文件恢复都失败，shell重载状态和shell配置文件路径都为`None`。
+///
+/// ## 测试场景
+/// 1. 准备失败的二进制文件列表（2个，含不同错误信息）和补全脚本列表（1个，含错误信息）
+/// 2. 设置恢复成功的列表为空
+/// 3. 设置shell重载状态和shell配置文件路径为`None`
+/// 4. 使用这些字段值创建`RollbackResult`实例
+/// 5. 验证完全失败的情况
+///
+/// ## 预期结果
+/// - `RollbackResult`实例创建成功
+/// - `restored_binaries`和`restored_completions`为空
+/// - `failed_binaries`包含2个失败项（含不同错误信息）
+/// - `failed_completions`包含1个失败项（含错误信息）
+/// - `shell_reload_success`为`None`
+/// - `shell_config_file`为`None`
 #[test]
 fn test_rollback_result_complete_failure_with_all_failed_creates_result() -> Result<()> {
     // Arrange: 准备完全失败的结果字段值
@@ -286,6 +418,22 @@ fn test_rollback_result_complete_failure_with_all_failed_creates_result() -> Res
     Ok(())
 }
 
+/// 测试克隆回滚结果并格式化Debug输出
+///
+/// ## 测试目的
+/// 验证`RollbackResult`结构体的`Clone`实现能够正确创建回滚结果的副本，所有字段值保持一致，同时验证`Debug`实现能够正确格式化输出。
+///
+/// ## 测试场景
+/// 1. 准备原始`RollbackResult`实例，包含恢复的文件列表、失败的文件列表、shell重载状态和shell配置文件路径
+/// 2. 调用`clone()`方法创建副本
+/// 3. 使用`format!("{:?}", original_result)`格式化Debug输出
+/// 4. 验证克隆后的结果与原始结果的所有字段值相同
+/// 5. 验证Debug字符串包含结构体名称和关键字段信息
+///
+/// ## 预期结果
+/// - 克隆操作成功
+/// - 克隆后的所有字段值与原始结果完全相同
+/// - Debug字符串包含`"RollbackResult"`结构体名称和关键字段名
 #[test]
 fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Result<()> {
     // Arrange: 准备原始 RollbackResult
@@ -331,8 +479,8 @@ fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Res
 /// 测试 RollbackManager 清理备份功能
 #[test]
 fn test_rollback_manager_cleanup_backup() -> Result<()> {
-    let temp_dir = setup_test_environment()?;
-    let backup_info = create_test_backup_info(&temp_dir)?;
+    let env = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&env)?;
 
     // Assert: 验证备份目录存在
     assert!(backup_info.backup_dir.exists());
@@ -356,8 +504,8 @@ fn test_rollback_manager_cleanup_backup() -> Result<()> {
 /// 测试 BackupInfo 内部方法（通过公共接口）
 #[test]
 fn test_backup_info_internal_methods() -> Result<()> {
-    let temp_dir = setup_test_environment()?;
-    let backup_dir = temp_dir.path().join("internal_test");
+    let env = setup_test_environment()?;
+    let backup_dir = env.path().join("internal_test");
 
     // 创建一个空的 BackupInfo 来测试内部状态
     let mut backup_info = BackupInfo {
@@ -430,8 +578,8 @@ fn test_edge_cases_and_error_handling() -> Result<()> {
 /// 测试复杂的备份和回滚场景
 #[test]
 fn test_complex_backup_rollback_scenario() -> Result<()> {
-    let temp_dir = setup_test_environment()?;
-    let backup_dir = temp_dir.path().join("complex_backup");
+    let env = setup_test_environment()?;
+    let backup_dir = env.path().join("complex_backup");
     fs::create_dir_all(&backup_dir)?;
 
     // 创建复杂的备份信息，包含多个文件和不同状态

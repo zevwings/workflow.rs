@@ -21,6 +21,14 @@ fn setup_mock_server() -> MockServer {
 
 // ==================== HttpClient Singleton Tests ====================
 
+/// 测试 HttpClient 全局单例实例
+///
+/// ## 测试目的
+/// 验证 HttpClient::global() 返回单例实例，多次调用返回同一个实例。
+///
+/// ## 预期结果
+/// - 能够成功获取全局客户端实例
+/// - 多次调用返回同一个实例（单例模式）
 #[test]
 fn test_http_client_global_returns_singleton_instance() -> Result<()> {
     // Arrange: 准备获取全局客户端
@@ -35,6 +43,20 @@ fn test_http_client_global_returns_singleton_instance() -> Result<()> {
 
 // ==================== GET Request Tests ====================
 
+/// 测试 GET 请求成功响应
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 GET 请求并处理成功响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码和 JSON 响应
+/// 2. 发送 GET 请求
+/// 3. 验证响应状态码和内容
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 响应标记为成功
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_get_request_with_success_response_returns_response() -> Result<()> {
     // Arrange: 准备 Mock 服务器和响应
@@ -63,6 +85,19 @@ fn test_get_request_with_success_response_returns_response() -> Result<()> {
     Ok(())
 }
 
+/// 测试带查询参数的 GET 请求
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带查询参数的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配查询参数（page=1, limit=10）
+/// 2. 发送带查询参数的 GET 请求
+/// 3. 验证查询参数正确传递
+///
+/// ## 预期结果
+/// - 请求成功
+/// - 查询参数正确匹配
 #[test]
 fn test_get_request_with_query_parameters_sends_query_string() -> Result<()> {
     // Arrange: 准备 Mock 服务器和查询参数匹配
@@ -95,6 +130,19 @@ fn test_get_request_with_query_parameters_sends_query_string() -> Result<()> {
     Ok(())
 }
 
+/// 测试带认证头的 GET 请求
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带认证头的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配 Basic 认证头
+/// 2. 发送带认证的 GET 请求
+/// 3. 验证认证头正确传递
+///
+/// ## 预期结果
+/// - 请求成功
+/// - 认证头正确匹配（Basic 认证）
 #[test]
 fn test_get_request_with_auth_header_sends_authorization() -> Result<()> {
     // Arrange: 准备 Mock 服务器和认证匹配
@@ -124,6 +172,19 @@ fn test_get_request_with_auth_header_sends_authorization() -> Result<()> {
     Ok(())
 }
 
+/// 测试带自定义请求头的 GET 请求
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带自定义请求头的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配自定义请求头（X-Custom-Header）
+/// 2. 发送带自定义请求头的 GET 请求
+/// 3. 验证请求头正确传递
+///
+/// ## 预期结果
+/// - 请求成功
+/// - 自定义请求头正确匹配
 #[test]
 fn test_get_request_with_custom_headers_sends_headers() -> Result<()> {
     // Arrange: 准备 Mock 服务器和自定义请求头
@@ -214,6 +275,19 @@ fn test_post_request_with_json_body_returns_response() -> Result<()> {
 
 // ==================== PUT Request Tests ====================
 
+/// 测试 PUT 请求成功响应
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 PUT 请求并处理成功响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送带 JSON 请求体的 PUT 请求
+/// 3. 验证响应状态码和请求匹配
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_put_request_with_json_body_returns_response() -> Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
@@ -246,6 +320,19 @@ fn test_put_request_with_json_body_returns_response() -> Result<()> {
 
 // ==================== DELETE Request Tests ====================
 
+/// 测试 DELETE 请求成功响应
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 DELETE 请求并处理成功响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 204 No Content 状态码
+/// 2. 发送 DELETE 请求
+/// 3. 验证响应状态码和请求匹配
+///
+/// ## 预期结果
+/// - 响应状态码为 204
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_delete_request_with_valid_url_returns_response() -> Result<()> {
     // Arrange: 准备 Mock 服务器
@@ -268,6 +355,19 @@ fn test_delete_request_with_valid_url_returns_response() -> Result<()> {
 
 // ==================== PATCH Request Tests ====================
 
+/// 测试 PATCH 请求成功响应
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 PATCH 请求并处理成功响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送带 JSON 请求体的 PATCH 请求
+/// 3. 验证响应状态码和请求匹配
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_patch_request_with_json_body_returns_response() -> Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
@@ -300,6 +400,20 @@ fn test_patch_request_with_json_body_returns_response() -> Result<()> {
 
 // ==================== Multipart Request Tests ====================
 
+/// 测试 POST multipart 表单数据请求
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 multipart/form-data 格式的 POST 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配 multipart/form-data 请求头
+/// 2. 发送带表单数据的 POST 请求
+/// 3. 验证响应状态码和请求匹配
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 请求头正确匹配（multipart/form-data）
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_post_multipart_request_with_form_data_returns_response() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 multipart 表单数据
@@ -337,6 +451,19 @@ fn test_post_multipart_request_with_form_data_returns_response() -> Result<()> {
 
 // ==================== Stream Request Tests ====================
 
+/// 测试流式请求
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送流式请求并读取响应流。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回二进制流数据
+/// 2. 发送流式 GET 请求
+/// 3. 读取流数据并验证内容
+///
+/// ## 预期结果
+/// - 流数据内容正确
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
     // Arrange: 准备 Mock 服务器和流式响应
@@ -367,6 +494,19 @@ fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
     Ok(())
 }
 
+/// 测试请求超时配置
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确应用超时配置。
+///
+/// ## 测试场景
+/// 1. 配置请求超时为 5 秒
+/// 2. 发送请求
+/// 3. 验证超时配置正确传递（注意：mockito 不支持真正的延迟）
+///
+/// ## 预期结果
+/// - 请求成功
+/// - 超时配置正确传递
 #[test]
 fn test_request_with_timeout_config_applies_timeout() -> Result<()> {
     // Arrange: 准备 Mock 服务器（注意：mockito 不支持真正的延迟，这里只测试配置是否正确传递）
@@ -392,6 +532,20 @@ fn test_request_with_timeout_config_applies_timeout() -> Result<()> {
     Ok(())
 }
 
+/// 测试错误状态码响应处理
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确处理错误状态码响应（如 500）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 500 错误状态码
+/// 2. 发送请求
+/// 3. 验证响应状态码和错误标记
+///
+/// ## 预期结果
+/// - 响应状态码为 500
+/// - 响应标记为错误
+/// - Mock 服务器收到预期的请求
 #[test]
 fn test_request_with_error_status_handles_error_response() -> Result<()> {
     // Arrange: 准备返回错误状态码的 Mock 服务器
@@ -418,6 +572,19 @@ fn test_request_with_error_status_handles_error_response() -> Result<()> {
     Ok(())
 }
 
+/// 测试包含所有选项的请求配置
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够同时配置和使用所有请求选项（查询参数、认证、请求头、请求体、超时）。
+///
+/// ## 测试场景
+/// 1. 配置包含所有选项的请求（查询参数、认证、请求头、请求体、超时）
+/// 2. 发送 POST 请求
+/// 3. 验证所有选项正确传递
+///
+/// ## 预期结果
+/// - 请求成功
+/// - 所有选项正确匹配（查询参数、认证头、请求头、请求体）
 #[test]
 fn test_request_with_all_options_configures_all_options() -> Result<()> {
     // Arrange: 准备包含所有选项的请求配置
@@ -462,6 +629,19 @@ fn test_request_with_all_options_configures_all_options() -> Result<()> {
 
 // ==================== 来自 client_core.rs 的补充测试 ====================
 
+/// 测试 HTTP 客户端 GET 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 GET 请求并解析 JSON 响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 响应
+/// 2. 发送 GET 请求
+/// 3. 验证响应状态码和 JSON 内容
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - JSON 内容正确解析
 #[test]
 fn test_http_client_get_with_valid_url_returns_response() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器
@@ -490,6 +670,19 @@ fn test_http_client_get_with_valid_url_returns_response() -> color_eyre::Result<
     Ok(())
 }
 
+/// 测试 HTTP 客户端 POST 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 POST 请求并解析 JSON 响应。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 响应
+/// 2. 发送带 JSON 请求体的 POST 请求
+/// 3. 验证响应状态码和 JSON 内容
+///
+/// ## 预期结果
+/// - 响应状态码为 201
+/// - JSON 内容正确解析
 #[test]
 fn test_http_client_post_with_json_body_returns_response() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
@@ -519,6 +712,20 @@ fn test_http_client_post_with_json_body_returns_response() -> color_eyre::Result
     Ok(())
 }
 
+/// 测试带认证的 HTTP 客户端 GET 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带认证的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配 Basic 认证头
+/// 2. 发送带认证的 GET 请求
+/// 3. 验证响应状态码和 JSON 内容
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 认证头正确匹配
+/// - JSON 内容正确解析
 #[test]
 fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
@@ -550,6 +757,19 @@ fn test_http_client_get_with_auth() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// 测试带查询参数的 HTTP 客户端 GET 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带查询参数的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配查询参数（page=1, per_page=10）
+/// 2. 发送带查询参数的 GET 请求
+/// 3. 验证查询参数正确传递
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 查询参数正确匹配
 #[test]
 fn test_http_client_get_with_query() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
@@ -579,6 +799,19 @@ fn test_http_client_get_with_query() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// 测试带自定义请求头的 HTTP 客户端 GET 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送带自定义请求头的 GET 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器匹配自定义请求头（X-Custom-Header）
+/// 2. 发送带自定义请求头的 GET 请求
+/// 3. 验证请求头正确传递
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 自定义请求头正确匹配
 #[test]
 fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
@@ -611,6 +844,19 @@ fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// 测试带超时的 HTTP 客户端 GET 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确应用超时配置。
+///
+/// ## 测试场景
+/// 1. 配置请求超时为 30 秒
+/// 2. 发送 GET 请求
+/// 3. 验证超时配置正确传递
+///
+/// ## 预期结果
+/// - 响应状态码为 200
+/// - 超时配置正确传递
 #[test]
 fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
     let mut manager = MockServer::new();
@@ -635,6 +881,18 @@ fn test_http_client_get_with_timeout() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// 测试 HTTP 客户端 PUT 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 PUT 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送带 JSON 请求体的 PUT 请求
+/// 3. 验证响应状态码
+///
+/// ## 预期结果
+/// - 响应状态码为 200
 #[test]
 fn test_http_client_put_with_json_body_returns_response() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
@@ -662,6 +920,18 @@ fn test_http_client_put_with_json_body_returns_response() -> color_eyre::Result<
     Ok(())
 }
 
+/// 测试 HTTP 客户端 DELETE 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 DELETE 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 204 No Content 状态码
+/// 2. 发送 DELETE 请求
+/// 3. 验证响应状态码
+///
+/// ## 预期结果
+/// - 响应状态码为 204
 #[test]
 fn test_http_client_delete_with_valid_url_returns_response() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器
@@ -688,6 +958,18 @@ fn test_http_client_delete_with_valid_url_returns_response() -> color_eyre::Resu
     Ok(())
 }
 
+/// 测试 HTTP 客户端 PATCH 请求（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确发送 PATCH 请求。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送带 JSON 请求体的 PATCH 请求
+/// 3. 验证响应状态码
+///
+/// ## 预期结果
+/// - 响应状态码为 200
 #[test]
 fn test_http_client_patch_with_json_body_returns_response() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和请求体
@@ -715,6 +997,19 @@ fn test_http_client_patch_with_json_body_returns_response() -> color_eyre::Resul
     Ok(())
 }
 
+/// 测试 HTTP 客户端错误状态码响应处理（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 客户端能够正确处理错误状态码响应（如 404）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 404 错误状态码
+/// 2. 发送 GET 请求
+/// 3. 验证响应状态码和错误标记
+///
+/// ## 预期结果
+/// - 响应状态码为 404
+/// - 响应标记为错误
 #[test]
 fn test_http_client_get_with_error_status_handles_error_response() -> color_eyre::Result<()> {
     // Arrange: 准备返回错误状态码的 Mock 服务器

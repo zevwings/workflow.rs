@@ -40,6 +40,16 @@ fn sample_merge_request() -> MergePullRequestRequest {
 
 // ==================== Request Structure Tests ====================
 
+/// 测试创建 PR 请求结构体（参数化测试）
+///
+/// ## 测试目的
+/// 验证 CreatePullRequestRequest 结构体能够使用有效字段正确创建。
+///
+/// ## 测试场景
+/// 使用 fixture 提供的示例请求数据
+///
+/// ## 预期结果
+/// - 所有字段值正确（title、body、head、base）
 #[rstest]
 fn test_create_request_structure_with_valid_fields_creates_request(
     sample_create_request: CreatePullRequestRequest,
@@ -56,6 +66,17 @@ fn test_create_request_structure_with_valid_fields_creates_request(
     assert_eq!(sample_create_request.base, "main");
 }
 
+/// 测试创建 PR 请求序列化（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 CreatePullRequestRequest 能够正确序列化为 JSON。
+///
+/// ## 测试场景
+/// 测试正常输入、空字符串、特殊字符、多行文本等各种输入
+///
+/// ## 预期结果
+/// - JSON 字段存在且值正确
+/// - 序列化/反序列化一致
 #[rstest]
 #[case("Test PR", "Test body", "feature/test", "main")]
 #[case("", "", "", "")]
@@ -92,6 +113,16 @@ fn test_create_pr_request_serialization_with_various_inputs_serializes_correctly
     Ok(())
 }
 
+/// 测试合并 PR 请求结构体（参数化测试）
+///
+/// ## 测试目的
+/// 验证 MergePullRequestRequest 结构体能够使用有效字段正确创建。
+///
+/// ## 测试场景
+/// 使用 fixture 提供的示例请求数据
+///
+/// ## 预期结果
+/// - 所有字段值正确（commit_title、commit_message、merge_method）
 #[rstest]
 fn test_merge_request_structure_with_valid_fields_creates_request(
     sample_merge_request: MergePullRequestRequest,
@@ -107,6 +138,17 @@ fn test_merge_request_structure_with_valid_fields_creates_request(
     assert_eq!(sample_merge_request.merge_method, "squash");
 }
 
+/// 测试合并 PR 请求序列化（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 MergePullRequestRequest 能够正确序列化为 JSON，包括可选字段的处理。
+///
+/// ## 测试场景
+/// 测试不同的合并方法（squash、merge、rebase）和可选字段（commit_title、commit_message）
+///
+/// ## 预期结果
+/// - JSON 包含 merge_method
+/// - None 字段被跳过（不包含在 JSON 中）
 #[rstest]
 #[case(None, None, "squash")]
 #[case(Some("Merge PR #123"), Some("Merged via workflow"), "merge")]
@@ -146,6 +188,17 @@ fn test_merge_pr_request_serialization_with_various_options_serializes_correctly
     Ok(())
 }
 
+/// 测试更新 PR 请求序列化（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 UpdatePullRequestRequest 能够正确序列化为 JSON，包括可选字段的处理。
+///
+/// ## 测试场景
+/// 测试不同的更新选项组合（title、body、state、base）
+///
+/// ## 预期结果
+/// - 存在的字段包含在 JSON 中
+/// - None 字段被跳过（不包含在 JSON 中）
 #[rstest]
 #[case(None, None, Some("closed"), None)]
 #[case(Some("New Title"), None, None, None)]
@@ -201,6 +254,13 @@ fn test_update_pr_request_serialization_with_various_options_serializes_correctl
 
 // ==================== Response Structure Tests ====================
 
+/// 测试创建 PR 响应结构体
+///
+/// ## 测试目的
+/// 验证 CreatePullRequestResponse 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - html_url 字段值正确
 #[test]
 fn test_create_pull_request_response_structure_with_valid_fields_creates_response() {
     // Arrange: 准备响应字段值
@@ -215,6 +275,17 @@ fn test_create_pull_request_response_structure_with_valid_fields_creates_respons
     assert_eq!(response.html_url, html_url);
 }
 
+/// 测试创建 PR 响应反序列化
+///
+/// ## 测试目的
+/// 验证 CreatePullRequestResponse 能够从有效的 JSON 正确反序列化。
+///
+/// ## 测试场景
+/// 从 JSON 字符串反序列化为结构体
+///
+/// ## 预期结果
+/// - 反序列化成功
+/// - html_url 字段值正确
 #[test]
 fn test_create_pull_request_response_deserialization_with_valid_json_deserializes_response() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
@@ -228,6 +299,13 @@ fn test_create_pull_request_response_deserialization_with_valid_json_deserialize
     Ok(())
 }
 
+/// 测试 PR 信息结构体
+///
+/// ## 测试目的
+/// 验证 PullRequestInfo 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段值正确（number、title、body、state、merged、head、base等）
 #[test]
 fn test_pull_request_info_structure_with_valid_fields_creates_info() {
     // Arrange: 准备 PR 信息字段值
@@ -264,6 +342,17 @@ fn test_pull_request_info_structure_with_valid_fields_creates_info() {
     assert_eq!(pr_info.base.ref_name, "main");
 }
 
+/// 测试 PR 信息反序列化
+///
+/// ## 测试目的
+/// 验证 PullRequestInfo 能够从有效的 JSON 正确反序列化。
+///
+/// ## 测试场景
+/// 从 JSON 字符串反序列化为结构体
+///
+/// ## 预期结果
+/// - 反序列化成功
+/// - 所有字段值正确
 #[test]
 fn test_pull_request_info_deserialization_with_valid_json_deserializes_info() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
@@ -288,6 +377,18 @@ fn test_pull_request_info_deserialization_with_valid_json_deserializes_info() ->
     Ok(())
 }
 
+/// 测试已合并 PR 的状态
+///
+/// ## 测试目的
+/// 验证 PullRequestInfo 能够正确表示已合并的 PR 状态。
+///
+/// ## 测试场景
+/// 从包含 merged=true 和 merged_at 的 JSON 反序列化
+///
+/// ## 预期结果
+/// - merged 字段为 true
+/// - state 为 "closed"
+/// - merged_at 不为 None
 #[test]
 fn test_pull_request_info_merged_state_with_merged_pr_returns_merged() -> Result<()> {
     // Arrange: 准备已合并 PR 的 JSON
@@ -315,6 +416,13 @@ fn test_pull_request_info_merged_state_with_merged_pr_returns_merged() -> Result
 
 // ==================== PullRequestBranch Tests ====================
 
+/// 测试 PR 分支结构体
+///
+/// ## 测试目的
+/// 验证 PullRequestBranch 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - ref_name 字段值正确
 #[test]
 fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
     // Arrange: 准备分支引用名
@@ -329,6 +437,17 @@ fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
     assert_eq!(branch.ref_name, ref_name);
 }
 
+/// 测试 PR 分支反序列化
+///
+/// ## 测试目的
+/// 验证 PullRequestBranch 能够从有效的 JSON 正确反序列化（注意 JSON 中使用 "ref" 字段）。
+///
+/// ## 测试场景
+/// 从 JSON 字符串反序列化为结构体（JSON 字段名为 "ref"，结构体字段名为 ref_name）
+///
+/// ## 预期结果
+/// - 反序列化成功
+/// - ref_name 字段值正确
 #[test]
 fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串（注意 JSON 中使用 "ref" 字段）
@@ -344,6 +463,13 @@ fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch(
 
 // ==================== GitHubUser Tests ====================
 
+/// 测试 GitHub 用户结构体（包含所有字段）
+///
+/// ## 测试目的
+/// 验证 GitHubUser 结构体能够使用所有字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段值正确（login、name、email）
 #[test]
 fn test_github_user_structure_with_all_fields_creates_user() {
     // Arrange: 准备用户字段值
@@ -364,6 +490,14 @@ fn test_github_user_structure_with_all_fields_creates_user() {
     assert_eq!(user.email, email);
 }
 
+/// 测试 GitHub 用户结构体（最小字段）
+///
+/// ## 测试目的
+/// 验证 GitHubUser 结构体能够使用最小字段（只有 login）正确创建。
+///
+/// ## 预期结果
+/// - login 字段值正确
+/// - 可选字段（name、email）为 None
 #[test]
 fn test_github_user_minimal_with_only_login_creates_user() {
     // Arrange: 准备最小字段值（只有 login）
@@ -382,6 +516,17 @@ fn test_github_user_minimal_with_only_login_creates_user() {
     assert_eq!(user.email, None);
 }
 
+/// 测试 GitHub 用户反序列化
+///
+/// ## 测试目的
+/// 验证 GitHubUser 能够从有效的 JSON 正确反序列化。
+///
+/// ## 测试场景
+/// 从 JSON 字符串反序列化为结构体
+///
+/// ## 预期结果
+/// - 反序列化成功
+/// - 所有字段值正确
 #[test]
 fn test_github_user_deserialization() -> Result<()> {
     // Arrange: 准备测试 GitHub 用户的反序列化
@@ -399,6 +544,17 @@ fn test_github_user_deserialization() -> Result<()> {
 
 // ==================== 序列化/反序列化边界测试 ====================
 
+/// 测试请求边界情况（参数化测试）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 CreatePullRequestRequest 能够处理边界情况（空字符串、单字符等）。
+///
+/// ## 测试场景
+/// 测试空字符串和单字符输入
+///
+/// ## 预期结果
+/// - 序列化成功
+/// - 不会panic或返回错误
 #[rstest]
 #[case("", "", "", "")]
 #[case("a", "b", "c", "d")]
@@ -419,6 +575,17 @@ fn test_request_edge_cases(
     assert!(json.is_ok(), "Should handle edge cases");
 }
 
+/// 测试请求长字符串处理
+///
+/// ## 测试目的
+/// 验证 CreatePullRequestRequest 能够处理长字符串输入。
+///
+/// ## 测试场景
+/// 测试包含1000个字符的长字符串
+///
+/// ## 预期结果
+/// - 序列化成功
+/// - 不会panic或返回错误
 #[test]
 fn test_request_long_strings() {
     // Arrange: 准备测试长字符串的处理
@@ -434,6 +601,17 @@ fn test_request_long_strings() {
     assert!(json.is_ok(), "Should handle long strings");
 }
 
+/// 测试响应缺失可选字段的处理
+///
+/// ## 测试目的
+/// 验证 PullRequestInfo 能够正确处理缺失可选字段的 JSON。
+///
+/// ## 测试场景
+/// 从缺失可选字段（body、merged_at、user）的 JSON 反序列化
+///
+/// ## 预期结果
+/// - 反序列化成功
+/// - 可选字段为 None
 #[test]
 fn test_response_missing_optional_fields() -> Result<()> {
     // Arrange: 准备测试响应中缺失可选字段
@@ -456,6 +634,17 @@ fn test_response_missing_optional_fields() -> Result<()> {
 
 // ==================== 类型安全测试 ====================
 
+/// 测试请求类型安全
+///
+/// ## 测试目的
+/// 验证不同类型的请求结构体能够正确区分，确保类型安全。
+///
+/// ## 测试场景
+/// 创建不同类型的请求并验证可以分别序列化
+///
+/// ## 预期结果
+/// - 类型正确（通过编译验证）
+/// - 可以分别序列化
 #[test]
 fn test_request_type_safety() {
     // Arrange: 准备测试请求类型的安全性
@@ -480,6 +669,17 @@ fn test_request_type_safety() {
     assert!(serde_json::to_string(&merge_request).is_ok());
 }
 
+/// 测试响应类型安全
+///
+/// ## 测试目的
+/// 验证不同类型的响应结构体能够正确区分，确保类型安全。
+///
+/// ## 测试场景
+/// 创建不同类型的响应并验证可以分别序列化
+///
+/// ## 预期结果
+/// - 类型正确（通过编译验证）
+/// - 可以分别序列化
 #[test]
 fn test_response_type_safety() {
     // Arrange: 准备测试响应类型的安全性

@@ -12,6 +12,17 @@ use workflow::completion::{
 
 // ==================== Completion Filename Generation Tests ====================
 
+/// 测试生成 zsh shell 补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为 zsh shell 生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用 zsh shell 和命令名生成文件名
+/// 2. 验证文件名格式正确（zsh 使用下划线前缀）
+///
+/// ## 预期结果
+/// - 返回 "_workflow"
 #[test]
 fn test_get_completion_filename_with_zsh_shell_returns_filename() -> Result<()> {
     // Arrange: 准备 zsh shell 和命令名
@@ -26,6 +37,17 @@ fn test_get_completion_filename_with_zsh_shell_returns_filename() -> Result<()> 
     Ok(())
 }
 
+/// 测试生成 bash shell 补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为 bash shell 生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用 bash shell 和命令名生成文件名
+/// 2. 验证文件名格式正确（bash 使用 .bash 扩展名）
+///
+/// ## 预期结果
+/// - 返回 "workflow.bash"
 #[test]
 fn test_get_completion_filename_with_bash_shell_returns_filename() -> Result<()> {
     // Arrange: 准备 bash shell 和命令名
@@ -40,6 +62,17 @@ fn test_get_completion_filename_with_bash_shell_returns_filename() -> Result<()>
     Ok(())
 }
 
+/// 测试生成 fish shell 补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为 fish shell 生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用 fish shell 和命令名生成文件名
+/// 2. 验证文件名格式正确（fish 使用 .fish 扩展名）
+///
+/// ## 预期结果
+/// - 返回 "workflow.fish"
 #[test]
 fn test_get_completion_filename_with_fish_shell_returns_filename() -> Result<()> {
     // Arrange: 准备 fish shell 和命令名
@@ -54,6 +87,17 @@ fn test_get_completion_filename_with_fish_shell_returns_filename() -> Result<()>
     Ok(())
 }
 
+/// 测试生成 PowerShell shell 补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为 PowerShell shell 生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用 PowerShell shell 和命令名生成文件名
+/// 2. 验证文件名格式正确（PowerShell 使用下划线前缀和 .ps1 扩展名）
+///
+/// ## 预期结果
+/// - 返回 "_workflow.ps1"
 #[test]
 fn test_get_completion_filename_with_powershell_shell_returns_filename() -> Result<()> {
     // Arrange: 准备 powershell shell 和命令名
@@ -68,6 +112,17 @@ fn test_get_completion_filename_with_powershell_shell_returns_filename() -> Resu
     Ok(())
 }
 
+/// 测试生成 elvish shell 补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为 elvish shell 生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用 elvish shell 和命令名生成文件名
+/// 2. 验证文件名格式正确（elvish 使用 .elv 扩展名）
+///
+/// ## 预期结果
+/// - 返回 "workflow.elv"
 #[test]
 fn test_get_completion_filename_with_elvish_shell_returns_filename() -> Result<()> {
     // Arrange: 准备 elvish shell 和命令名
@@ -82,6 +137,17 @@ fn test_get_completion_filename_with_elvish_shell_returns_filename() -> Result<(
     Ok(())
 }
 
+/// 测试不支持的 shell 类型处理
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 对不支持的 shell 类型返回错误。
+///
+/// ## 测试场景
+/// 1. 使用不支持的 shell 类型（如 csh）生成文件名
+/// 2. 验证返回错误且错误消息包含提示信息
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "Unsupported shell type" 和 shell 名称
 #[test]
 fn test_get_completion_filename_with_unsupported_shell_returns_error() -> Result<()> {
     // Arrange: 准备不支持的 shell 类型
@@ -99,6 +165,17 @@ fn test_get_completion_filename_with_unsupported_shell_returns_error() -> Result
     Ok(())
 }
 
+/// 测试使用不同命令名生成补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 能够为不同的命令名生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用不同的命令名生成文件名
+/// 2. 验证文件名包含命令名
+///
+/// ## 预期结果
+/// - 文件名包含命令名
 #[test]
 fn test_get_completion_filename_with_different_command_returns_filename() -> Result<()> {
     // Arrange: 准备不同的命令名
@@ -113,6 +190,17 @@ fn test_get_completion_filename_with_different_command_returns_filename() -> Res
     Ok(())
 }
 
+/// 测试使用空命令名生成补全文件名
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 对空命令名的处理。
+///
+/// ## 测试场景
+/// 1. 使用空命令名生成文件名
+/// 2. 验证文件名格式正确（只包含 shell 特定的前缀/后缀）
+///
+/// ## 预期结果
+/// - 返回只包含 shell 特定格式的文件名
 #[test]
 fn test_get_completion_filename_with_empty_command_returns_filename() -> Result<()> {
     // Arrange: 准备空命令名
@@ -127,6 +215,17 @@ fn test_get_completion_filename_with_empty_command_returns_filename() -> Result<
     Ok(())
 }
 
+/// 测试所有支持的 shell 类型的文件名生成
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 为所有支持的 shell 类型生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 使用所有支持的 shell 类型生成文件名
+/// 2. 验证每个 shell 的文件名格式正确
+///
+/// ## 预期结果
+/// - 所有 shell 类型都返回正确的文件名格式
 #[test]
 fn test_get_completion_filename_with_all_shells_returns_correct_filenames() -> Result<()> {
     // Arrange: 准备所有支持的 shell 类型和预期文件名
@@ -153,6 +252,17 @@ fn test_get_completion_filename_with_all_shells_returns_correct_filenames() -> R
 
 // ==================== Completion Files for Shell Tests ====================
 
+/// 测试获取单个命令的补全文件列表
+///
+/// ## 测试目的
+/// 验证 get_completion_files_for_shell() 能够为单个命令返回补全文件列表。
+///
+/// ## 测试场景
+/// 1. 使用单个命令获取补全文件列表
+/// 2. 验证返回的文件列表正确
+///
+/// ## 预期结果
+/// - 返回包含单个文件的列表
 #[test]
 fn test_get_completion_files_for_shell_with_single_command_returns_files() -> Result<()> {
     // Arrange: 准备 shell 类型和单个命令
@@ -167,6 +277,17 @@ fn test_get_completion_files_for_shell_with_single_command_returns_files() -> Re
     Ok(())
 }
 
+/// 测试获取多个命令的补全文件列表
+///
+/// ## 测试目的
+/// 验证 get_completion_files_for_shell() 能够为多个命令返回补全文件列表。
+///
+/// ## 测试场景
+/// 1. 使用多个命令获取补全文件列表
+/// 2. 验证返回的文件列表包含所有命令的文件
+///
+/// ## 预期结果
+/// - 返回包含所有命令文件的列表
 #[test]
 fn test_get_completion_files_for_shell_with_multiple_commands_returns_files() -> Result<()> {
     // Arrange: 准备 shell 类型和多个命令
@@ -181,6 +302,17 @@ fn test_get_completion_files_for_shell_with_multiple_commands_returns_files() ->
     Ok(())
 }
 
+/// 测试获取 bash shell 多个命令的补全文件列表
+///
+/// ## 测试目的
+/// 验证 get_completion_files_for_shell() 能够为 bash shell 的多个命令返回补全文件列表。
+///
+/// ## 测试场景
+/// 1. 使用 bash shell 和多个命令获取补全文件列表
+/// 2. 验证返回的文件列表正确
+///
+/// ## 预期结果
+/// - 返回包含所有命令的 bash 补全文件列表
 #[test]
 fn test_get_completion_files_for_shell_with_bash_multiple_commands_returns_files() -> Result<()> {
     // Arrange: 准备 bash shell 和多个命令
@@ -195,6 +327,17 @@ fn test_get_completion_files_for_shell_with_bash_multiple_commands_returns_files
     Ok(())
 }
 
+/// 测试获取空命令列表的补全文件列表
+///
+/// ## 测试目的
+/// 验证 get_completion_files_for_shell() 对空命令列表返回空列表。
+///
+/// ## 测试场景
+/// 1. 使用空命令列表获取补全文件列表
+/// 2. 验证返回空列表
+///
+/// ## 预期结果
+/// - 返回空列表
 #[test]
 fn test_get_completion_files_for_shell_with_empty_commands_returns_empty() -> Result<()> {
     // Arrange: 准备 shell 类型和空命令列表
@@ -209,6 +352,17 @@ fn test_get_completion_files_for_shell_with_empty_commands_returns_empty() -> Re
     Ok(())
 }
 
+/// 测试获取不支持的 shell 类型的补全文件列表
+///
+/// ## 测试目的
+/// 验证 get_completion_files_for_shell() 对不支持的 shell 类型返回错误。
+///
+/// ## 测试场景
+/// 1. 使用不支持的 shell 类型获取补全文件列表
+/// 2. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误
 #[test]
 fn test_get_completion_files_for_shell_with_unsupported_shell_returns_error() -> Result<()> {
     // Arrange: 准备不支持的 shell 类型

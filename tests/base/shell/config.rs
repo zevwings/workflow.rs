@@ -4,8 +4,9 @@
 
 use std::collections::HashMap;
 use std::fs;
-use tempfile::TempDir;
 use workflow::base::shell::ShellConfigManager;
+
+use crate::common::environments::CliTestEnv;
 
 // ==================== ShellConfigManager Environment Variables Tests ====================
 
@@ -449,8 +450,8 @@ export ANOTHER_KEY="another_value"
 "#;
 
     // 创建一个临时文件来测试解析
-    let temp_dir = TempDir::new().expect("should create temp dir for test");
-    let config_file = temp_dir.path().join("test_config");
+    let env = CliTestEnv::new().expect("should create test env");
+    let config_file = env.path().join("test_config");
     fs::write(&config_file, config_content).expect("should write config file");
 
     // 读取并验证内容

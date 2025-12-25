@@ -14,12 +14,10 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use serial_test::serial;
-use std::fs;
-use std::process::Command;
-use tempfile::TempDir;
 use workflow::commit::{AmendPreview, CommitAmend};
 use workflow::git::CommitInfo;
+
+use crate::common::environments::GitTestEnv;
 
 // ==================== Helper Functions ====================
 
@@ -33,49 +31,6 @@ fn create_sample_commit_info() -> CommitInfo {
     }
 }
 
-/// 创建带有初始提交的临时 Git 仓库
-fn create_git_repo_with_commit() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 初始化 Git 仓库
-    Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 设置 Git 配置
-    Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建初始文件并提交
-    let readme_path = temp_path.join("README.md");
-    fs::write(&readme_path, "# Test Repository\n").expect("Failed to write README");
-
-    Command::new("git")
-        .args(["add", "README.md"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to add file");
-
-    Command::new("git")
-        .args(["commit", "-m", "Initial commit"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to commit");
-
-    temp_dir
-}
 
 // ==================== 测试用例 ====================
 
@@ -335,11 +290,12 @@ fn test_amend_preview_clone_with_valid_preview_creates_clone() {
 
 /// 测试 Git 仓库集成
 #[test]
-#[serial]
-fn test_git_integration() {
-    let _temp_dir = create_git_repo_with_commit();
+fn test_git_integration() -> Result<()> {
+    // 使用 GitTestEnv 创建隔离的 Git 仓库
+    let _env = GitTestEnv::new()?;
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行
-    assert!(true);
+    // GitTestEnv 会在函数结束时自动清理
+    Ok(())
 }

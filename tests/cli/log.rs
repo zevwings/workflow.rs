@@ -27,6 +27,18 @@ struct TestLogCli {
 
 // ==================== Download Command Tests ====================
 
+/// 测试 Log Download 命令解析（带 JIRA ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Download 能够正确解析带 JIRA ID 的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备带 JIRA ID 的 Download 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 Download 命令结构解析正确
+///
+/// ## 预期结果
+/// - Download 命令正确解析，JIRA ID 被正确设置
 #[test]
 fn test_log_download_command_with_jira_id_parses_correctly() -> Result<()> {
     // Arrange: 准备带 JIRA ID 的 Download 命令输入
@@ -45,6 +57,18 @@ fn test_log_download_command_with_jira_id_parses_correctly() -> Result<()> {
     Ok(())
 }
 
+/// 测试 Log Download 命令解析（不带 ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Download 能够正确解析不带 JIRA ID 的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备不带 ID 的 Download 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 JIRA ID 为 None
+///
+/// ## 预期结果
+/// - Download 命令正确解析，JIRA ID 为 None
 #[test]
 fn test_log_download_command_without_id_parses_correctly() -> Result<()> {
     // Arrange: 准备不带 ID 的 Download 命令输入
@@ -65,6 +89,18 @@ fn test_log_download_command_without_id_parses_correctly() -> Result<()> {
 
 // ==================== Find Command Tests ====================
 
+/// 测试 Log Find 命令解析（带 JIRA ID 和 Request ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Find 能够正确解析带 JIRA ID 和 Request ID 的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备带 JIRA ID 和 Request ID 的 Find 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 Find 命令结构解析正确
+///
+/// ## 预期结果
+/// - Find 命令正确解析，JIRA ID 和 Request ID 都被正确设置
 #[test]
 fn test_log_find_command_with_jira_id_and_request_id_parses_correctly() -> Result<()> {
     // Arrange: 准备带 JIRA ID 和 Request ID 的 Find 命令输入
@@ -87,6 +123,18 @@ fn test_log_find_command_with_jira_id_and_request_id_parses_correctly() -> Resul
     Ok(())
 }
 
+/// 测试 Log Find 命令解析（只带 JIRA ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Find 能够正确解析只带 JIRA ID 的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备只带 JIRA ID 的 Find 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 JIRA ID 解析正确，Request ID 为 None
+///
+/// ## 预期结果
+/// - Find 命令正确解析，JIRA ID 被设置，Request ID 为 None
 #[test]
 fn test_log_find_command_with_jira_id_only_parses_correctly() -> Result<()> {
     // Arrange: 准备只带 JIRA ID 的 Find 命令输入
@@ -109,6 +157,18 @@ fn test_log_find_command_with_jira_id_only_parses_correctly() -> Result<()> {
     Ok(())
 }
 
+/// 测试 Log Find 命令解析（不带参数）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Find 能够正确解析不带任何参数的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备不带任何参数的 Find 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证所有参数为 None
+///
+/// ## 预期结果
+/// - Find 命令正确解析，所有参数都为 None
 #[test]
 fn test_log_find_command_without_parameters_parses_correctly() -> Result<()> {
     // Arrange: 准备不带任何参数的 Find 命令输入
@@ -133,6 +193,18 @@ fn test_log_find_command_without_parameters_parses_correctly() -> Result<()> {
 
 // ==================== Search Command Tests ====================
 
+/// 测试 Log Search 命令解析（带 JIRA ID 和搜索关键词）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Search 能够正确解析带 JIRA ID 和搜索关键词的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备带 JIRA ID 和搜索关键词的 Search 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 Search 命令结构解析正确
+///
+/// ## 预期结果
+/// - Search 命令正确解析，JIRA ID 和搜索关键词都被正确设置
 #[test]
 fn test_log_search_command_with_jira_id_and_search_term_parses_correctly() -> Result<()> {
     // Arrange: 准备带 JIRA ID 和搜索关键词的 Search 命令输入
@@ -155,6 +227,18 @@ fn test_log_search_command_with_jira_id_and_search_term_parses_correctly() -> Re
     Ok(())
 }
 
+/// 测试 Log Search 命令解析（只带 JIRA ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Search 能够正确解析只带 JIRA ID 的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备只带 JIRA ID 的 Search 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 JIRA ID 解析正确，搜索关键词为 None
+///
+/// ## 预期结果
+/// - Search 命令正确解析，JIRA ID 被设置，搜索关键词为 None
 #[test]
 fn test_log_search_command_with_jira_id_only_parses_correctly() -> Result<()> {
     // Arrange: 准备只带 JIRA ID 的 Search 命令输入
@@ -177,6 +261,18 @@ fn test_log_search_command_with_jira_id_only_parses_correctly() -> Result<()> {
     Ok(())
 }
 
+/// 测试 Log Search 命令解析（不带参数）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Search 能够正确解析不带任何参数的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备不带任何参数的 Search 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证所有参数为 None
+///
+/// ## 预期结果
+/// - Search 命令正确解析，所有参数都为 None
 #[test]
 fn test_log_search_command_without_parameters_parses_correctly() -> Result<()> {
     // Arrange: 准备不带任何参数的 Search 命令输入
@@ -201,6 +297,18 @@ fn test_log_search_command_without_parameters_parses_correctly() -> Result<()> {
 
 // ==================== Common Command Tests ====================
 
+/// 测试 Log 命令的所有子命令解析
+///
+/// ## 测试目的
+/// 验证 LogSubcommand 的所有子命令（download、find、search）都能够正确解析。
+///
+/// ## 测试场景
+/// 1. 准备所有子命令的输入
+/// 2. 解析所有子命令
+/// 3. 验证所有子命令都可以正确解析
+///
+/// ## 预期结果
+/// - 所有子命令都可以正确解析
 #[test]
 fn test_log_command_with_all_subcommands_parses_successfully() -> Result<()> {
     // Arrange: 准备所有子命令的输入
@@ -222,6 +330,18 @@ fn test_log_command_with_all_subcommands_parses_successfully() -> Result<()> {
 
 // ==================== Error Handling Tests ====================
 
+/// 测试 Log 命令无效子命令错误处理
+///
+/// ## 测试目的
+/// 验证 LogSubcommand 对无效子命令返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效子命令的输入
+/// 2. 尝试解析无效子命令
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 无效子命令返回解析错误
 #[test]
 fn test_log_command_with_invalid_subcommand_returns_error() -> Result<()> {
     // Arrange: 准备无效子命令的输入
@@ -237,6 +357,18 @@ fn test_log_command_with_invalid_subcommand_returns_error() -> Result<()> {
 
 // ==================== Parameter Optionality Tests ====================
 
+/// 测试 Log 命令 JIRA ID 参数可选性
+///
+/// ## 测试目的
+/// 验证 LogSubcommand 的所有命令中 JIRA ID 参数都是可选的。
+///
+/// ## 测试场景
+/// 1. 准备不带 JIRA ID 的所有命令输入
+/// 2. 解析所有命令
+/// 3. 验证 JIRA ID 参数在所有命令中都是可选的
+///
+/// ## 预期结果
+/// - 所有命令中 JIRA ID 参数都是可选的（为 None）
 #[test]
 fn test_log_jira_id_parameter_is_optional_in_all_commands() -> Result<()> {
     // Arrange: 准备不带 JIRA ID 的所有命令输入
@@ -267,6 +399,18 @@ fn test_log_jira_id_parameter_is_optional_in_all_commands() -> Result<()> {
     Ok(())
 }
 
+/// 测试 Log Find 命令解析（只带 Request ID）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Find 在只提供 Request ID 时的解析行为（clap 按位置解析）。
+///
+/// ## 测试场景
+/// 1. 准备只带 Request ID 的 Find 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证第一个参数被解析为 jira_id（clap 按位置解析）
+///
+/// ## 预期结果
+/// - 第一个参数被解析为 jira_id，request_id 为 None
 #[test]
 fn test_log_find_command_with_request_id_only_parses_correctly() -> Result<()> {
     // Arrange: 准备只带 Request ID 的 Find 命令输入
@@ -290,6 +434,18 @@ fn test_log_find_command_with_request_id_only_parses_correctly() -> Result<()> {
     Ok(())
 }
 
+/// 测试 Log Search 命令解析（只带搜索关键词）
+///
+/// ## 测试目的
+/// 验证 LogSubcommand::Search 在只提供搜索关键词时的解析行为（clap 按位置解析）。
+///
+/// ## 测试场景
+/// 1. 准备只带搜索关键词的 Search 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证第一个参数被解析为 jira_id（clap 按位置解析）
+///
+/// ## 预期结果
+/// - 第一个参数被解析为 jira_id，search_term 为 None
 #[test]
 fn test_log_search_command_with_search_term_only_parses_correctly() -> Result<()> {
     // Arrange: 准备只带搜索关键词的 Search 命令输入

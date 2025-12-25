@@ -120,6 +120,18 @@ const SHELL_TYPES: &[&str] = &["zsh", "bash", "fish", "powershell", "elvish"];
 
 // ==================== CLI Command Structure Tests ====================
 
+/// 测试 CLI 包含所有顶级命令
+///
+/// ## 测试目的
+/// 验证 CLI 命令结构包含所有预期的顶级命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 检查所有预期的命令是否存在
+/// 3. 验证所有预期的命令都存在
+///
+/// ## 预期结果
+/// - 所有预期的顶级命令都存在
 #[test]
 fn test_cli_contains_all_top_level_commands_returns_true() {
     // Arrange: 准备 CLI 命令结构
@@ -149,6 +161,18 @@ fn test_cli_contains_all_top_level_commands_returns_true() {
 
 // ==================== Subcommand Completeness Tests ====================
 
+/// 测试 PR 子命令完整性
+///
+/// ## 测试目的
+/// 验证 PR 命令包含所有预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 PR 命令结构
+/// 2. 获取 PR 子命令列表
+/// 3. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有预期的 PR 子命令都存在且数量匹配
 #[test]
 fn test_pr_subcommands_completeness_with_all_subcommands_returns_true() {
     // Arrange: 准备 PR 命令结构
@@ -183,6 +207,18 @@ fn test_pr_subcommands_completeness_with_all_subcommands_returns_true() {
     );
 }
 
+/// 测试 Commit 子命令完整性
+///
+/// ## 测试目的
+/// 验证 Commit 命令包含所有预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 Commit 命令结构
+/// 2. 获取 Commit 子命令列表
+/// 3. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有预期的 Commit 子命令都存在且数量匹配
 #[test]
 fn test_commit_subcommands_completeness_with_all_subcommands_returns_true() {
     // Arrange: 准备 Commit 命令结构
@@ -219,6 +255,18 @@ fn test_commit_subcommands_completeness_with_all_subcommands_returns_true() {
 
 // ==================== Completion Generation Tests ====================
 
+/// 测试为所有 shell 类型生成补全文件
+///
+/// ## 测试目的
+/// 验证 CompletionGenerator 能够为所有支持的 shell 类型生成补全脚本文件。
+///
+/// ## 测试场景
+/// 1. 准备临时输出目录和 shell 类型列表
+/// 2. 为每个 shell 类型生成补全脚本
+/// 3. 验证文件已生成且不为空
+///
+/// ## 预期结果
+/// - 所有 shell 类型的补全文件都已生成且不为空
 #[test]
 fn test_completion_generation_with_all_shells_generates_files() {
     // Arrange: 准备临时输出目录和 shell 类型列表
@@ -273,6 +321,18 @@ fn test_completion_generation_with_all_shells_generates_files() {
     fs::remove_dir_all(&output_dir).ok();
 }
 
+/// 测试 zsh 补全脚本包含所有命令
+///
+/// ## 测试目的
+/// 验证生成的 zsh 补全脚本包含 workflow 命令。
+///
+/// ## 测试场景
+/// 1. 生成 zsh 补全脚本
+/// 2. 读取补全脚本内容
+/// 3. 验证包含 workflow 命令
+///
+/// ## 预期结果
+/// - zsh 补全脚本包含 "workflow" 命令
 #[test]
 fn test_zsh_completion_contains_all_commands_with_valid_content_returns_true() {
     // Arrange: 准备临时输出目录
@@ -306,6 +366,18 @@ fn test_zsh_completion_contains_all_commands_with_valid_content_returns_true() {
     fs::remove_dir_all(&output_dir).ok();
 }
 
+/// 测试 bash 补全脚本包含所有命令
+///
+/// ## 测试目的
+/// 验证生成的 bash 补全脚本包含 workflow 命令。
+///
+/// ## 测试场景
+/// 1. 生成 bash 补全脚本
+/// 2. 读取补全脚本内容
+/// 3. 验证包含 workflow 命令
+///
+/// ## 预期结果
+/// - bash 补全脚本包含 "workflow" 命令
 #[test]
 fn test_bash_completion_contains_all_commands_with_valid_content_returns_true() {
     // Arrange: 准备临时输出目录
@@ -339,6 +411,18 @@ fn test_bash_completion_contains_all_commands_with_valid_content_returns_true() 
     fs::remove_dir_all(&output_dir).ok();
 }
 
+/// 测试所有子命令的完整性
+///
+/// ## 测试目的
+/// 验证所有带子命令的命令都包含预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 验证所有带子命令的命令（PR、Jira、GitHub、LLM、Branch、Commit、Proxy、Log、Completion、Stash、Repo、Alias、Tag）
+/// 3. 验证所有子命令数量匹配
+///
+/// ## 预期结果
+/// - 所有带子命令的命令都包含预期的子命令
 #[test]
 fn test_all_subcommands_completeness_with_all_commands_returns_true() {
     // Arrange: 准备 CLI 命令结构
@@ -478,6 +562,18 @@ fn test_all_subcommands_completeness_with_all_commands_returns_true() {
     println!("All subcommands verified successfully!");
 }
 
+/// 测试补全文件名生成（所有 shell 类型）
+///
+/// ## 测试目的
+/// 验证 get_completion_filename() 为所有 shell 类型生成正确的文件名。
+///
+/// ## 测试场景
+/// 1. 准备 shell 类型和预期文件名
+/// 2. 为每个 shell 类型生成文件名
+/// 3. 验证文件名正确
+///
+/// ## 预期结果
+/// - 所有 shell 类型的文件名都正确
 #[test]
 fn test_completion_filename_generation_with_all_shells_returns_correct_filenames() {
     // Arrange: 准备 shell 类型和预期文件名
@@ -502,6 +598,18 @@ fn test_completion_filename_generation_with_all_shells_returns_correct_filenames
     }
 }
 
+/// 测试 CLI 结构摘要
+///
+/// ## 测试目的
+/// 验证 CLI 命令结构的完整性并输出摘要信息。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 统计所有命令和子命令
+/// 3. 验证基本完整性并输出摘要
+///
+/// ## 预期结果
+/// - CLI 结构完整，至少包含10个顶级命令和20个子命令
 #[test]
 fn test_cli_structure_summary_with_all_commands_returns_summary() {
     // Arrange: 准备 CLI 命令结构
@@ -543,6 +651,18 @@ fn test_cli_structure_summary_with_all_commands_returns_summary() {
 
 // ==================== Parameterized Shell Completion Tests ====================
 
+/// 测试所有 shell 类型的补全生成（参数化）
+///
+/// ## 测试目的
+/// 验证 CompletionGenerator 能够为所有支持的 shell 类型生成补全脚本并验证文件名和内容。
+///
+/// ## 测试场景
+/// 1. 准备临时输出目录和预期文件名
+/// 2. 为每个 shell 类型生成补全脚本
+/// 3. 验证文件名正确、文件存在、内容不为空且包含 workflow 命令
+///
+/// ## 预期结果
+/// - 所有 shell 类型的补全文件都正确生成，文件名和内容都正确
 #[test]
 fn test_all_shell_types_completion_generation_with_all_shells_generates_files() {
     // Arrange: 准备临时输出目录和 shell 类型列表
@@ -616,6 +736,18 @@ fn test_all_shell_types_completion_generation_with_all_shells_generates_files() 
     fs::remove_dir_all(&output_dir).ok();
 }
 
+/// 测试所有带子命令的命令完整性
+///
+/// ## 测试目的
+/// 验证所有带子命令的命令都包含预期的子命令且数量匹配。
+///
+/// ## 测试场景
+/// 1. 准备 CLI 命令结构和命令列表
+/// 2. 验证所有带子命令的命令
+/// 3. 验证每个命令的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有带子命令的命令都包含预期的子命令且数量匹配
 #[test]
 fn test_all_commands_with_subcommands_with_all_commands_returns_true() {
     // Arrange: 准备 CLI 命令结构和命令列表
@@ -673,6 +805,19 @@ fn test_all_commands_with_subcommands_with_all_commands_returns_true() {
     }
 }
 
+/// 测试嵌套子命令完整性
+///
+/// ## 测试目的
+/// 验证嵌套子命令（Jira Log 和 Branch Ignore）都包含预期的子命令。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 验证 Jira Log 嵌套子命令
+/// 3. 验证 Branch Ignore 嵌套子命令
+/// 4. 验证所有预期的子命令都存在且数量匹配
+///
+/// ## 预期结果
+/// - 所有嵌套子命令都包含预期的子命令且数量匹配
 #[test]
 fn test_nested_subcommands_with_jira_log_and_branch_ignore_returns_true() {
     // Arrange: 准备 CLI 命令结构
@@ -744,6 +889,18 @@ fn test_nested_subcommands_with_jira_log_and_branch_ignore_returns_true() {
     );
 }
 
+/// 测试顶级命令与常量同步
+///
+/// ## 测试目的
+/// 验证 CLI 中的顶级命令与 TOP_LEVEL_COMMANDS 常量保持同步。
+///
+/// ## 测试场景
+/// 1. 获取 CLI 命令结构
+/// 2. 获取实际命令列表
+/// 3. 验证所有命令都在常量列表中且数量匹配
+///
+/// ## 预期结果
+/// - CLI 中的顶级命令与常量列表完全同步
 #[test]
 fn test_top_level_commands_sync_with_constants_returns_true() {
     // Arrange: 准备 CLI 命令结构和常量列表

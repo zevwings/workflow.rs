@@ -10,6 +10,15 @@ use workflow::base::dialog::{
 
 // ==================== FormFieldType 枚举测试 ====================
 
+/// 测试 FormFieldType 枚举的所有变体
+///
+/// ## 测试目的
+/// 验证 FormFieldType 枚举的所有变体（Text、Password、Selection、Confirmation）能够正确创建和比较。
+///
+/// ## 预期结果
+/// - 所有变体都能正确创建
+/// - 相等性比较正确
+/// - 不同变体之间不相等
 #[test]
 fn test_form_field_type_variants_with_all_types_creates_and_compares() {
     // Arrange: 准备所有 FormFieldType 变体
@@ -29,6 +38,13 @@ fn test_form_field_type_variants_with_all_types_creates_and_compares() {
     assert_ne!(selection, confirmation);
 }
 
+/// 测试 FormFieldType 枚举的克隆功能
+///
+/// ## 测试目的
+/// 验证 FormFieldType 枚举能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_form_field_type_clone_with_valid_type_creates_clone() {
     // Arrange: 准备 FormFieldType 实例
@@ -41,6 +57,13 @@ fn test_form_field_type_clone_with_valid_type_creates_clone() {
     assert_eq!(field_type, cloned);
 }
 
+/// 测试 FormFieldType 枚举的调试格式化
+///
+/// ## 测试目的
+/// 验证 FormFieldType 枚举能够正确格式化调试字符串。
+///
+/// ## 预期结果
+/// - 调试字符串包含类型信息
 #[test]
 fn test_form_field_type_debug_with_valid_type_returns_debug_string() {
     // Arrange: 准备 FormFieldType 实例
@@ -55,6 +78,15 @@ fn test_form_field_type_debug_with_valid_type_returns_debug_string() {
 
 // ==================== ConditionOperator 枚举测试 ====================
 
+/// 测试 ConditionOperator 枚举的所有变体
+///
+/// ## 测试目的
+/// 验证 ConditionOperator 枚举的所有变体（Equals、NotEquals、In、NotIn）能够正确创建和比较。
+///
+/// ## 预期结果
+/// - 所有变体都能正确创建
+/// - 相等性比较正确
+/// - 不同变体之间不相等
 #[test]
 fn test_condition_operator_variants_with_all_operators_creates_and_compares() {
     // Arrange: 准备所有 ConditionOperator 变体
@@ -74,6 +106,13 @@ fn test_condition_operator_variants_with_all_operators_creates_and_compares() {
     assert_ne!(in_op, not_in);
 }
 
+/// 测试 ConditionOperator 枚举的克隆功能
+///
+/// ## 测试目的
+/// 验证 ConditionOperator 枚举能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_condition_operator_clone_with_valid_operator_creates_clone() {
     // Arrange: 准备 ConditionOperator 实例
@@ -88,6 +127,14 @@ fn test_condition_operator_clone_with_valid_operator_creates_clone() {
 
 // ==================== ConditionValue 枚举测试 ====================
 
+/// 测试 ConditionValue::single() 方法使用字符串切片创建单个值
+///
+/// ## 测试目的
+/// 验证 ConditionValue::single() 方法能够使用字符串切片创建 Single 变体。
+///
+/// ## 预期结果
+/// - 创建 ConditionValue::Single 变体
+/// - 值正确
 #[test]
 fn test_condition_value_single_with_str_creates_single_value() {
     // Arrange: 准备字符串值（覆盖 types.rs:58-60）
@@ -102,6 +149,14 @@ fn test_condition_value_single_with_str_creates_single_value() {
     }
 }
 
+/// 测试 ConditionValue::single() 方法使用 String 创建单个值
+///
+/// ## 测试目的
+/// 验证 ConditionValue::single() 方法能够使用 String 创建 Single 变体。
+///
+/// ## 预期结果
+/// - 创建 ConditionValue::Single 变体
+/// - 值正确
 #[test]
 fn test_condition_value_single_with_string_creates_single_value() {
     // Arrange: 准备 String 值
@@ -116,6 +171,14 @@ fn test_condition_value_single_with_string_creates_single_value() {
     }
 }
 
+/// 测试 ConditionValue::multiple() 方法创建多个值
+///
+/// ## 测试目的
+/// 验证 ConditionValue::multiple() 方法能够使用 Vec<String> 创建 Multiple 变体。
+///
+/// ## 预期结果
+/// - 创建 ConditionValue::Multiple 变体
+/// - 值列表正确
 #[test]
 fn test_condition_value_multiple_with_vec_creates_multiple_values() {
     // Arrange: 准备多个值（覆盖 types.rs:63-65）
@@ -131,6 +194,13 @@ fn test_condition_value_multiple_with_vec_creates_multiple_values() {
     }
 }
 
+/// 测试 ConditionValue 枚举的克隆功能
+///
+/// ## 测试目的
+/// 验证 ConditionValue 枚举能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_condition_value_clone_with_valid_value_creates_clone() {
     // Arrange: 准备 ConditionValue 实例
@@ -148,6 +218,14 @@ fn test_condition_value_clone_with_valid_value_creates_clone() {
 
 // ==================== Condition 结构体测试 ====================
 
+/// 测试 Condition 结构体的创建
+///
+/// ## 测试目的
+/// 验证 Condition 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段正确设置
+/// - 字段值正确
 #[test]
 fn test_condition_creation_with_valid_fields_creates_condition() {
     // Arrange: 准备条件字段（覆盖 types.rs:36-45）
@@ -168,6 +246,13 @@ fn test_condition_creation_with_valid_fields_creates_condition() {
     }
 }
 
+/// 测试 Condition 结构体的克隆功能
+///
+/// ## 测试目的
+/// 验证 Condition 结构体能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_condition_clone_with_valid_condition_creates_clone() {
     // Arrange: 准备 Condition 实例
@@ -185,6 +270,13 @@ fn test_condition_clone_with_valid_condition_creates_clone() {
     assert_eq!(condition1.operator, condition2.operator);
 }
 
+/// 测试 Condition 结构体的调试格式化
+///
+/// ## 测试目的
+/// 验证 Condition 结构体能够正确格式化调试字符串。
+///
+/// ## 预期结果
+/// - 调试字符串包含字段信息
 #[test]
 fn test_condition_debug_with_valid_condition_returns_debug_string() {
     // Arrange: 准备 Condition 实例
@@ -203,6 +295,14 @@ fn test_condition_debug_with_valid_condition_returns_debug_string() {
 
 // ==================== FieldDefaultValue 枚举测试 ====================
 
+/// 测试 FieldDefaultValue 枚举的 String 变体
+///
+/// ## 测试目的
+/// 验证 FieldDefaultValue 枚举能够使用字符串创建 String 变体。
+///
+/// ## 预期结果
+/// - 创建 FieldDefaultValue::String 变体
+/// - 值正确
 #[test]
 fn test_field_default_value_string_with_str_creates_string_value() {
     // Arrange: 准备字符串值
@@ -217,6 +317,14 @@ fn test_field_default_value_string_with_str_creates_string_value() {
     }
 }
 
+/// 测试 FieldDefaultValue 枚举的 Bool 变体
+///
+/// ## 测试目的
+/// 验证 FieldDefaultValue 枚举能够使用布尔值创建 Bool 变体。
+///
+/// ## 预期结果
+/// - 创建 FieldDefaultValue::Bool 变体
+/// - 值正确
 #[test]
 fn test_field_default_value_bool_with_bool_creates_bool_value() {
     // Arrange: 准备布尔值
@@ -231,6 +339,14 @@ fn test_field_default_value_bool_with_bool_creates_bool_value() {
     }
 }
 
+/// 测试 FieldDefaultValue::as_string() 方法
+///
+/// ## 测试目的
+/// 验证 FieldDefaultValue::as_string() 方法能够正确返回字符串值。
+///
+/// ## 预期结果
+/// - String 变体返回 Some(String)
+/// - Bool 变体返回 None
 #[test]
 fn test_field_default_value_as_string_with_string_value_returns_string() {
     // Arrange: 准备字符串和布尔值（覆盖 types.rs:79-83）
@@ -243,6 +359,14 @@ fn test_field_default_value_as_string_with_string_value_returns_string() {
     assert_eq!(bool_value.as_string(), None);
 }
 
+/// 测试 FieldDefaultValue::as_bool() 方法
+///
+/// ## 测试目的
+/// 验证 FieldDefaultValue::as_bool() 方法能够正确返回布尔值。
+///
+/// ## 预期结果
+/// - Bool 变体返回 Some(bool)
+/// - String 变体返回 None
 #[test]
 fn test_field_default_value_as_bool_with_bool_value_returns_bool() {
     // Arrange: 准备布尔和字符串值（覆盖 types.rs:87-91）
@@ -255,6 +379,13 @@ fn test_field_default_value_as_bool_with_bool_value_returns_bool() {
     assert_eq!(string_value.as_bool(), None);
 }
 
+/// 测试 FieldDefaultValue 枚举的克隆功能
+///
+/// ## 测试目的
+/// 验证 FieldDefaultValue 枚举能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_field_default_value_clone_with_valid_value_creates_clone() {
     // Arrange: 准备 FieldDefaultValue 实例
@@ -272,6 +403,14 @@ fn test_field_default_value_clone_with_valid_value_creates_clone() {
 
 // ==================== FormResult 结构体测试 ====================
 
+/// 测试 FormResult::new() 方法创建空结果
+///
+/// ## 测试目的
+/// 验证 FormResult::new() 方法能够创建空的表单结果。
+///
+/// ## 预期结果
+/// - 创建空的 FormResult
+/// - values 字段为空
 #[test]
 fn test_form_result_new_creates_empty_result() {
     // Arrange: 准备创建 FormResult（覆盖 types.rs:132-136）
@@ -283,6 +422,14 @@ fn test_form_result_new_creates_empty_result() {
     assert!(result.values.is_empty());
 }
 
+/// 测试 FormResult::default() 方法创建空结果
+///
+/// ## 测试目的
+/// 验证 FormResult 的 Default trait 实现能够创建空的表单结果。
+///
+/// ## 预期结果
+/// - 创建空的 FormResult
+/// - values 字段为空
 #[test]
 fn test_form_result_default_creates_empty_result() {
     // Arrange: 准备使用 Default trait（覆盖 types.rs:173-176）
@@ -294,6 +441,14 @@ fn test_form_result_default_creates_empty_result() {
     assert!(result.values.is_empty());
 }
 
+/// 测试 FormResult::get() 方法获取字段值
+///
+/// ## 测试目的
+/// 验证 FormResult::get() 方法能够正确获取字段值。
+///
+/// ## 预期结果
+/// - 存在的字段返回 Some(value)
+/// - 不存在的字段返回 None
 #[test]
 fn test_form_result_get_with_existing_field_returns_value() {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:139-141）
@@ -305,6 +460,14 @@ fn test_form_result_get_with_existing_field_returns_value() {
     assert_eq!(result.get("field2"), None);
 }
 
+/// 测试 FormResult::get_required() 方法获取必需字段值
+///
+/// ## 测试目的
+/// 验证 FormResult::get_required() 方法能够正确获取必需字段值，不存在时返回错误。
+///
+/// ## 预期结果
+/// - 存在的字段返回 Ok(value)
+/// - 不存在的字段返回错误
 #[test]
 fn test_form_result_get_required_with_existing_field_returns_value() -> Result<()> {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:144-149）
@@ -318,6 +481,14 @@ fn test_form_result_get_required_with_existing_field_returns_value() -> Result<(
     Ok(())
 }
 
+/// 测试 FormResult::get_or_default() 方法获取字段值或默认值
+///
+/// ## 测试目的
+/// 验证 FormResult::get_or_default() 方法能够返回字段值或默认值。
+///
+/// ## 预期结果
+/// - 存在的字段返回字段值
+/// - 不存在的字段返回默认值
 #[test]
 fn test_form_result_get_or_default_with_existing_field_returns_value() {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:152-154）
@@ -329,6 +500,14 @@ fn test_form_result_get_or_default_with_existing_field_returns_value() {
     assert_eq!(result.get_or_default("field2", "default"), "default");
 }
 
+/// 测试 FormResult::has() 方法检查字段是否存在
+///
+/// ## 测试目的
+/// 验证 FormResult::has() 方法能够正确检查字段是否存在。
+///
+/// ## 预期结果
+/// - 存在的字段返回 true
+/// - 不存在的字段返回 false
 #[test]
 fn test_form_result_has_with_existing_field_returns_true() {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:157-159）
@@ -340,6 +519,15 @@ fn test_form_result_has_with_existing_field_returns_true() {
     assert!(!result.has("field2"));
 }
 
+/// 测试 FormResult::get_bool() 方法获取布尔值
+///
+/// ## 测试目的
+/// 验证 FormResult::get_bool() 方法能够正确解析字符串值为布尔值。
+///
+/// ## 预期结果
+/// - "yes" 返回 Some(true)
+/// - "no" 或其他值返回 Some(false)
+/// - 不存在的字段返回 None
 #[test]
 fn test_form_result_get_bool_with_various_values_returns_bool() {
     // Arrange: 准备包含各种值的 FormResult（覆盖 types.rs:162-164）
@@ -355,6 +543,14 @@ fn test_form_result_get_bool_with_various_values_returns_bool() {
     assert_eq!(result.get_bool("nonexistent"), None);
 }
 
+/// 测试 FormResult::get_required_bool() 方法获取必需布尔值
+///
+/// ## 测试目的
+/// 验证 FormResult::get_required_bool() 方法能够正确获取必需布尔值，不存在时返回错误。
+///
+/// ## 预期结果
+/// - 存在的字段返回 Ok(bool)
+/// - 不存在的字段返回错误
 #[test]
 fn test_form_result_get_required_bool_with_existing_field_returns_bool() -> Result<()> {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:167-170）
@@ -368,6 +564,13 @@ fn test_form_result_get_required_bool_with_existing_field_returns_bool() -> Resu
     Ok(())
 }
 
+/// 测试 FormResult 结构体的克隆功能
+///
+/// ## 测试目的
+/// 验证 FormResult 结构体能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_form_result_clone_with_valid_result_creates_clone() {
     // Arrange: 准备 FormResult 实例
@@ -381,6 +584,13 @@ fn test_form_result_clone_with_valid_result_creates_clone() {
     assert_eq!(result1.get("field1"), result2.get("field1"));
 }
 
+/// 测试 FormResult 结构体的调试格式化
+///
+/// ## 测试目的
+/// 验证 FormResult 结构体能够正确格式化调试字符串。
+///
+/// ## 预期结果
+/// - 调试字符串包含字段信息
 #[test]
 fn test_form_result_debug_with_valid_result_returns_debug_string() {
     // Arrange: 准备 FormResult 实例
@@ -396,6 +606,13 @@ fn test_form_result_debug_with_valid_result_returns_debug_string() {
 
 // ==================== StepType 枚举测试 ====================
 
+/// 测试 StepType::Unconditional 变体
+///
+/// ## 测试目的
+/// 验证 StepType 枚举能够创建 Unconditional 变体。
+///
+/// ## 预期结果
+/// - 创建 StepType::Unconditional 变体
 #[test]
 fn test_step_type_unconditional_creates_unconditional_step() {
     // Arrange: 准备无条件步骤类型
@@ -410,6 +627,14 @@ fn test_step_type_unconditional_creates_unconditional_step() {
     }
 }
 
+/// 测试 StepType::Conditional 变体
+///
+/// ## 测试目的
+/// 验证 StepType 枚举能够使用单个条件创建 Conditional 变体。
+///
+/// ## 预期结果
+/// - 创建 StepType::Conditional 变体
+/// - 条件正确设置
 #[test]
 fn test_step_type_conditional_with_condition_creates_conditional_step() {
     // Arrange: 准备条件
@@ -431,6 +656,14 @@ fn test_step_type_conditional_with_condition_creates_conditional_step() {
     }
 }
 
+/// 测试 StepType::ConditionalAll 变体
+///
+/// ## 测试目的
+/// 验证 StepType 枚举能够使用多个条件（AND 逻辑）创建 ConditionalAll 变体。
+///
+/// ## 预期结果
+/// - 创建 StepType::ConditionalAll 变体
+/// - 所有条件正确设置
 #[test]
 fn test_step_type_conditional_all_with_conditions_creates_conditional_all_step() {
     // Arrange: 准备多个条件（AND 逻辑）
@@ -459,6 +692,14 @@ fn test_step_type_conditional_all_with_conditions_creates_conditional_all_step()
     }
 }
 
+/// 测试 StepType::ConditionalAny 变体
+///
+/// ## 测试目的
+/// 验证 StepType 枚举能够使用多个条件（OR 逻辑）创建 ConditionalAny 变体。
+///
+/// ## 预期结果
+/// - 创建 StepType::ConditionalAny 变体
+/// - 所有条件正确设置
 #[test]
 fn test_step_type_conditional_any_with_conditions_creates_conditional_any_step() {
     // Arrange: 准备多个条件（OR 逻辑）
@@ -480,6 +721,14 @@ fn test_step_type_conditional_any_with_conditions_creates_conditional_any_step()
     }
 }
 
+/// 测试 StepType::DynamicCondition 变体
+///
+/// ## 测试目的
+/// 验证 StepType 枚举能够使用动态条件函数创建 DynamicCondition 变体。
+///
+/// ## 预期结果
+/// - 创建 StepType::DynamicCondition 变体
+/// - 函数正确设置
 #[test]
 fn test_step_type_dynamic_condition_with_function_creates_dynamic_step() {
     // Arrange: 准备动态条件函数
@@ -496,6 +745,14 @@ fn test_step_type_dynamic_condition_with_function_creates_dynamic_step() {
 
 // ==================== FormStep 结构体测试 ====================
 
+/// 测试 FormStep 结构体的创建
+///
+/// ## 测试目的
+/// 验证 FormStep 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段正确设置
+/// - ID、step_type、fields 等字段正确
 #[test]
 fn test_form_step_creation_with_valid_fields_creates_step() {
     // Arrange: 准备步骤字段（覆盖 types.rs:194-203）
@@ -514,6 +771,14 @@ fn test_form_step_creation_with_valid_fields_creates_step() {
     assert!(!step.skip_if_false);
 }
 
+/// 测试 FormStep 结构体创建不带ID的步骤
+///
+/// ## 测试目的
+/// 验证 FormStep 结构体能够创建不带ID的步骤。
+///
+/// ## 预期结果
+/// - ID 为 None
+/// - 其他字段正确设置
 #[test]
 fn test_form_step_creation_without_id_creates_step_without_id() {
     // Arrange: 准备没有 ID 的步骤字段
@@ -533,6 +798,14 @@ fn test_form_step_creation_without_id_creates_step_without_id() {
 
 // ==================== GroupConfig 结构体测试 ====================
 
+/// 测试 GroupConfig::required() 方法创建必填配置
+///
+/// ## 测试目的
+/// 验证 GroupConfig::required() 方法能够创建必填组配置。
+///
+/// ## 预期结果
+/// - optional 字段为 false
+/// - 其他字段为默认值
 #[test]
 fn test_group_config_required_creates_required_config() {
     // Arrange: 准备创建必填组配置（覆盖 types.rs:222-229）
@@ -547,6 +820,14 @@ fn test_group_config_required_creates_required_config() {
     assert!(!config.default_enabled);
 }
 
+/// 测试 GroupConfig::optional() 方法创建可选配置
+///
+/// ## 测试目的
+/// 验证 GroupConfig::optional() 方法能够创建可选组配置。
+///
+/// ## 预期结果
+/// - optional 字段为 true
+/// - 其他字段为默认值
 #[test]
 fn test_group_config_optional_creates_optional_config() {
     // Arrange: 准备创建可选组配置（覆盖 types.rs:232-239）
@@ -561,6 +842,13 @@ fn test_group_config_optional_creates_optional_config() {
     assert!(!config.default_enabled);
 }
 
+/// 测试 GroupConfig::with_title() 方法设置标题（字符串切片）
+///
+/// ## 测试目的
+/// 验证 GroupConfig::with_title() 方法能够使用字符串切片设置标题。
+///
+/// ## 预期结果
+/// - title 字段正确设置
 #[test]
 fn test_group_config_with_title_with_str_sets_title() {
     // Arrange: 准备标题字符串（覆盖 types.rs:242-245）
@@ -572,6 +860,13 @@ fn test_group_config_with_title_with_str_sets_title() {
     assert_eq!(config.title, Some("Test Title".to_string()));
 }
 
+/// 测试 GroupConfig::with_title() 方法设置标题（String类型）
+///
+/// ## 测试目的
+/// 验证 GroupConfig::with_title() 方法能够使用 String 类型设置标题。
+///
+/// ## 预期结果
+/// - title 字段正确设置
 #[test]
 fn test_group_config_with_title_with_string_sets_title() {
     // Arrange: 准备 String 类型的标题
@@ -583,6 +878,13 @@ fn test_group_config_with_title_with_string_sets_title() {
     assert_eq!(config.title, Some("Test Title".to_string()));
 }
 
+/// 测试 GroupConfig::with_description() 方法设置描述
+///
+/// ## 测试目的
+/// 验证 GroupConfig::with_description() 方法能够使用字符串切片设置描述。
+///
+/// ## 预期结果
+/// - description 字段正确设置
 #[test]
 fn test_group_config_with_description_with_str_sets_description() {
     // Arrange: 准备描述字符串（覆盖 types.rs:248-251）
@@ -594,6 +896,13 @@ fn test_group_config_with_description_with_str_sets_description() {
     assert_eq!(config.description, Some("Test Description".to_string()));
 }
 
+/// 测试 GroupConfig::with_default_enabled() 方法设置默认启用状态
+///
+/// ## 测试目的
+/// 验证 GroupConfig::with_default_enabled() 方法能够设置组的默认启用状态。
+///
+/// ## 预期结果
+/// - default_enabled 字段正确设置
 #[test]
 fn test_group_config_with_default_enabled_with_bool_sets_default_enabled() {
     // Arrange: 准备布尔值（覆盖 types.rs:254-257）
@@ -607,6 +916,14 @@ fn test_group_config_with_default_enabled_with_bool_sets_default_enabled() {
     assert!(!config2.default_enabled);
 }
 
+/// 测试 GroupConfig 的链式调用
+///
+/// ## 测试目的
+/// 验证 GroupConfig 的所有方法能够链式调用，配置所有选项。
+///
+/// ## 预期结果
+/// - 所有选项都能通过链式调用正确配置
+/// - optional、title、description、default_enabled 都正确设置
 #[test]
 fn test_group_config_chain_calls_with_all_methods_configures_all_options() {
     // Arrange: 准备所有配置选项
@@ -624,6 +941,13 @@ fn test_group_config_chain_calls_with_all_methods_configures_all_options() {
     assert!(config.default_enabled);
 }
 
+/// 测试 GroupConfig::default() 方法创建默认配置
+///
+/// ## 测试目的
+/// 验证 GroupConfig 的 Default trait 实现能够创建默认配置。
+///
+/// ## 预期结果
+/// - 创建默认配置（optional=false，其他字段为None或false）
 #[test]
 fn test_group_config_default_creates_default_config() {
     // Arrange: 准备使用 Default trait（覆盖 types.rs:260-263）
@@ -638,6 +962,13 @@ fn test_group_config_default_creates_default_config() {
     assert!(!config.default_enabled);
 }
 
+/// 测试 GroupConfig 结构体的克隆功能
+///
+/// ## 测试目的
+/// 验证 GroupConfig 结构体能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_group_config_clone_with_valid_config_creates_clone() {
     // Arrange: 准备 GroupConfig 实例
@@ -651,6 +982,13 @@ fn test_group_config_clone_with_valid_config_creates_clone() {
     assert_eq!(config1.optional, config2.optional);
 }
 
+/// 测试 GroupConfig 结构体的调试格式化
+///
+/// ## 测试目的
+/// 验证 GroupConfig 结构体能够正确格式化调试字符串。
+///
+/// ## 预期结果
+/// - 调试字符串包含配置信息
 #[test]
 fn test_group_config_debug_with_valid_config_returns_debug_string() {
     // Arrange: 准备 GroupConfig 实例
@@ -665,6 +1003,14 @@ fn test_group_config_debug_with_valid_config_returns_debug_string() {
 
 // ==================== FormGroup 结构体测试 ====================
 
+/// 测试 FormGroup 结构体的创建
+///
+/// ## 测试目的
+/// 验证 FormGroup 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段正确设置
+/// - id、title、description、optional、default_enabled、steps 等字段正确
 #[test]
 fn test_form_group_creation_with_valid_fields_creates_group() {
     // Arrange: 准备组字段（覆盖 types.rs:267-280）
@@ -688,6 +1034,15 @@ fn test_form_group_creation_with_valid_fields_creates_group() {
     assert_eq!(group.steps.len(), 0);
 }
 
+/// 测试 FormGroup 结构体创建可选组
+///
+/// ## 测试目的
+/// 验证 FormGroup 结构体能够创建可选组配置。
+///
+/// ## 预期结果
+/// - optional 字段为 true
+/// - default_enabled 字段为 true
+/// - 其他字段正确设置
 #[test]
 fn test_form_group_creation_with_optional_config_creates_optional_group() {
     // Arrange: 准备可选组字段
@@ -709,6 +1064,14 @@ fn test_form_group_creation_with_optional_config_creates_optional_group() {
 
 // ==================== FormField 结构体测试 ====================
 
+/// 测试 FormField 结构体的创建
+///
+/// ## 测试目的
+/// 验证 FormField 结构体能够使用有效字段正确创建。
+///
+/// ## 预期结果
+/// - 所有字段正确设置
+/// - name、field_type、message、choices、default_choice、default_value、required、allow_empty、validator、condition 等字段正确
 #[test]
 fn test_form_field_creation_with_valid_fields_creates_field() {
     // Arrange: 准备字段属性（覆盖 types.rs:97-121）
@@ -735,6 +1098,14 @@ fn test_form_field_creation_with_valid_fields_creates_field() {
     assert!(field.allow_empty);
 }
 
+/// 测试 FormField 结构体创建带条件的字段
+///
+/// ## 测试目的
+/// 验证 FormField 结构体能够创建带条件的字段。
+///
+/// ## 预期结果
+/// - condition 字段正确设置
+/// - 其他字段正确设置
 #[test]
 fn test_form_field_creation_with_condition_creates_field_with_condition() {
     // Arrange: 准备条件和字段属性
@@ -767,6 +1138,14 @@ fn test_form_field_creation_with_condition_creates_field_with_condition() {
     );
 }
 
+/// 测试 FormField 结构体的克隆功能
+///
+/// ## 测试目的
+/// 验证 FormField 结构体能够正确克隆。
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
+/// - 所有字段都正确克隆
 #[test]
 fn test_form_field_clone_with_valid_field_creates_clone() {
     // Arrange: 准备 FormField 实例

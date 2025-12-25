@@ -7,133 +7,33 @@ use pretty_assertions::assert_eq;
 use rstest::rstest;
 use serial_test::serial;
 use std::fs;
-use std::path::{Path, PathBuf};
-use tempfile::TempDir;
+use std::path::PathBuf;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 use workflow::repo::RepoConfig;
 
+use crate::common::environments::CliTestEnv;
 use crate::common::helpers::CurrentDirGuard;
 
-// ==================== 测试辅助函数和结构 ====================
+// ==================== 测试辅助函数 ====================
 
-/// 测试环境管理器（RAII 模式）
+/// 创建公共配置文件（.workflow/config.toml）
+fn create_public_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
+    let config_dir = env.path().join(".workflow");
+    fs::create_dir_all(&config_dir)?;
+    let config_file = config_dir.join("config.toml");
+    fs::write(&config_file, content)?;
+    Ok(config_file)
+}
+
+/// 创建私有配置文件（~/.workflow/config/repository.toml）
 ///
-/// 自动处理临时目录的创建和清理，以及工作目录和环境变量的切换和恢复
-struct TestEnv {
-    temp_dir: TempDir,
-    original_dir: PathBuf,
-    original_home: Option<PathBuf>,
-    original_xdg_config_home: Option<PathBuf>,
-}
-
-impl TestEnv {
-    /// 创建新的测试环境
-    fn new() -> Result<Self> {
-        let original_dir = std::env::current_dir()?;
-        let temp_dir = tempfile::tempdir()?;
-
-        // 保存原始环境变量
-        let original_home = std::env::var_os("HOME").map(PathBuf::from);
-        let original_xdg_config_home = std::env::var_os("XDG_CONFIG_HOME").map(PathBuf::from);
-
-        // 设置临时 HOME 和 XDG_CONFIG_HOME
-        std::env::set_var("HOME", temp_dir.path());
-        std::env::set_var("XDG_CONFIG_HOME", temp_dir.path().join(".config"));
-
-        Ok(Self {
-            temp_dir,
-            original_dir,
-            original_home,
-            original_xdg_config_home,
-        })
-    }
-
-    /// 初始化 Git 仓库
-    fn init_git_repo(&self) -> Result<()> {
-        let temp_path = self.temp_dir.path();
-        // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
-
-        std::process::Command::new("git")
-            .args(["init"])
-            .current_dir(temp_path)
-            .output()?;
-        std::process::Command::new("git")
-            .args(["config", "user.name", "Test User"])
-            .current_dir(temp_path)
-            .output()?;
-        std::process::Command::new("git")
-            .args(["config", "user.email", "test@example.com"])
-            .current_dir(temp_path)
-            .output()?;
-
-        // 添加远程仓库（用于生成 repo_id）
-        std::process::Command::new("git")
-            .args([
-                "remote",
-                "add",
-                "origin",
-                "https://github.com/test/test-repo.git",
-            ])
-            .current_dir(temp_path)
-            .output()?;
-
-        // 创建初始提交
-        let readme_path = temp_path.join("README.md");
-        fs::write(&readme_path, "# Test Repository")?;
-        std::process::Command::new("git")
-            .args(["add", "README.md"])
-            .current_dir(temp_path)
-            .output()?;
-        std::process::Command::new("git")
-            .args(["commit", "-m", "Initial commit"])
-            .current_dir(temp_path)
-            .output()?;
-
-        Ok(())
-    }
-
-    /// 创建公共配置文件（项目根目录 .workflow/config.toml）
-    fn create_public_config(&self, content: &str) -> Result<PathBuf> {
-        let config_dir = self.temp_dir.path().join(".workflow");
-        fs::create_dir_all(&config_dir)?;
-        let config_file = config_dir.join("config.toml");
-        fs::write(&config_file, content)?;
-        Ok(config_file)
-    }
-
-    /// 创建私有配置文件（~/.workflow/config/repository.toml）
-    fn create_private_config(&self, content: &str) -> Result<PathBuf> {
-        let config_dir = self.temp_dir.path().join(".workflow").join("config");
-        fs::create_dir_all(&config_dir)?;
-        let config_file = config_dir.join("repository.toml");
-        fs::write(&config_file, content)?;
-        Ok(config_file)
-    }
-
-    /// 获取临时目录路径
-    fn path(&self) -> &Path {
-        self.temp_dir.path()
-    }
-}
-
-impl Drop for TestEnv {
-    fn drop(&mut self) {
-        // 恢复原始工作目录
-        let _ = std::env::set_current_dir(&self.original_dir);
-
-        // 恢复原始环境变量
-        if let Some(ref home) = self.original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
-
-        if let Some(ref xdg) = self.original_xdg_config_home {
-            std::env::set_var("XDG_CONFIG_HOME", xdg);
-        } else {
-            std::env::remove_var("XDG_CONFIG_HOME");
-        }
-    }
+/// 注意：需要先设置 HOME 环境变量指向 CliTestEnv 的路径
+fn create_private_config(env: &CliTestEnv, content: &str) -> Result<PathBuf> {
+    let config_dir = env.path().join(".workflow").join("config");
+    fs::create_dir_all(&config_dir)?;
+    let config_file = config_dir.join("repository.toml");
+    fs::write(&config_file, content)?;
+    Ok(config_file)
 }
 
 // ==================== 默认值测试 ====================
@@ -759,9 +659,14 @@ fn test_config_with_multiple_ignore_branches() {
 #[serial(repo_config_fs)]
 fn test_load_from_existing_files() -> Result<()> {
     // 准备：创建包含公共和私有配置的临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量（PrivateRepoConfig 需要）
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 创建公共配置（项目模板）
     let public_config_content = r#"
@@ -772,7 +677,7 @@ scope_required = true
 [template.branch]
 prefix = "feature"
 "#;
-    env.create_public_config(public_config_content)?;
+    create_public_config(&env, public_config_content)?;
 
     // 创建私有配置（个人偏好）
     use workflow::repo::config::private::PrivateRepoConfig;
@@ -789,9 +694,10 @@ ignore = ["main", "develop"]
 auto_accept_change_type = false
 "#
     );
-    env.create_private_config(&private_config_content)?;
+    create_private_config(&env, &private_config_content)?;
 
-    // 执行：调用 RepoConfig::load()
+    // 执行：切换到测试目录，然后调用 RepoConfig::load()
+    let _guard = CurrentDirGuard::new(env.path())?;
     let config = RepoConfig::load()?;
 
     // Assert: 验证：公共配置正确加载
@@ -819,11 +725,17 @@ auto_accept_change_type = false
 #[serial(repo_config_fs)]
 fn test_load_from_non_existing_files() -> Result<()> {
     // 准备：创建没有配置文件的临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
-    // 执行：调用 RepoConfig::load()
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+
+    // 执行：切换到测试目录，然后调用 RepoConfig::load()
+    let _guard = CurrentDirGuard::new(env.path())?;
     let config = RepoConfig::load()?;
 
     // Assert: 验证：返回默认配置
@@ -842,9 +754,14 @@ fn test_load_from_non_existing_files() -> Result<()> {
 #[serial(repo_config_fs)]
 fn test_save_to_new_files() -> Result<()> {
     // 准备：创建临时 Git 仓库（不创建配置文件）
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 执行：创建配置并保存
     use toml::Value;
@@ -858,6 +775,9 @@ fn test_save_to_new_files() -> Result<()> {
         prefix: Some("feature".to_string()),
         ignore: vec!["main".to_string()],
     });
+
+    // 切换到测试目录，然后保存配置
+    let _guard = CurrentDirGuard::new(env.path())?;
     config.save()?;
 
     // Assert: 验证：公共配置文件创建成功
@@ -886,16 +806,21 @@ fn test_save_to_new_files() -> Result<()> {
 #[serial(repo_config_fs)]
 fn test_load_and_save_roundtrip() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 创建初始公共配置
     let public_config_content = r#"
 [template.commit]
 type = "conventional"
 "#;
-    env.create_public_config(public_config_content)?;
+    create_public_config(&env, public_config_content)?;
 
     // 创建初始私有配置
     use workflow::repo::config::private::PrivateRepoConfig;
@@ -909,7 +834,7 @@ configured = true
 prefix = "feature"
 "#
     );
-    env.create_private_config(&private_config_content)?;
+    create_private_config(&env, &private_config_content)?;
 
     // 执行：加载 → 修改 → 保存 → 重新加载
     let mut config = RepoConfig::load()?;
@@ -946,9 +871,14 @@ prefix = "feature"
 #[serial(repo_config_fs)]
 fn test_exists_check() -> Result<()> {
     // 准备：创建临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 1. 未配置时，exists() 应返回 false
     assert!(!RepoConfig::exists()?);
@@ -970,17 +900,23 @@ fn test_exists_check() -> Result<()> {
 #[serial(repo_config_fs)]
 fn test_load_with_corrupted_public_config() -> Result<()> {
     // 准备：创建包含无效公共配置的临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let invalid_public_config = r#"
 [template.commit
 type = "invalid  # 缺少闭合引号和括号
 "#;
-    env.create_public_config(invalid_public_config)?;
+    create_public_config(&env, invalid_public_config)?;
 
-    // 执行：尝试加载配置
+    // 执行：切换到测试目录，然后尝试加载配置
+    let _guard = CurrentDirGuard::new(env.path())?;
     let result = RepoConfig::load();
 
     // Assert: 验证：返回错误
@@ -994,17 +930,23 @@ type = "invalid  # 缺少闭合引号和括号
 #[serial(repo_config_fs)]
 fn test_load_with_corrupted_private_config() -> Result<()> {
     // 准备：创建包含无效私有配置的临时 Git 仓库
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let invalid_private_config = r#"
 [invalid
 configured = "not_a_boolean"
 "#;
-    env.create_private_config(invalid_private_config)?;
+    create_private_config(&env, invalid_private_config)?;
 
-    // 执行：尝试加载配置
+    // 执行：切换到测试目录，然后尝试加载配置
+    let _guard = CurrentDirGuard::new(env.path())?;
     let result = RepoConfig::load();
 
     // Assert: 验证：返回错误（私有配置损坏会导致加载失败）
@@ -1017,12 +959,9 @@ configured = "not_a_boolean"
 #[test]
 #[serial(repo_config_fs)]
 fn test_exists_outside_git_repo() -> Result<()> {
-    use crate::common::helpers::CurrentDirGuard;
-
     // 准备：创建非 Git 仓库的临时目录
-    let env = TestEnv::new()?;
-    let temp_path = env.path();
-    let _dir_guard = CurrentDirGuard::new(temp_path)?;
+    let _env = CliTestEnv::new()?;
+    // 注意：不调用 init_git_repo()，因为我们需要测试非 Git 仓库的情况
 
     // 执行：调用 RepoConfig::exists()
     let result = RepoConfig::exists()?;
@@ -1038,17 +977,23 @@ fn test_exists_outside_git_repo() -> Result<()> {
 #[serial(repo_config_fs)]
 fn test_load_with_only_public_config() -> Result<()> {
     // 准备：只创建公共配置
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let public_config_content = r#"
 [template.commit]
 type = "conventional"
 "#;
-    env.create_public_config(public_config_content)?;
+    create_public_config(&env, public_config_content)?;
 
-    // 执行：加载配置
+    // 执行：切换到测试目录，然后加载配置
+    let _guard = CurrentDirGuard::new(env.path())?;
     let config = RepoConfig::load()?;
 
     // Assert: 验证：公共配置加载成功，私有配置为默认值
@@ -1064,9 +1009,14 @@ type = "conventional"
 #[serial(repo_config_fs)]
 fn test_load_with_only_private_config() -> Result<()> {
     // 准备：只创建私有配置
-    let env = TestEnv::new()?;
+    let mut env = CliTestEnv::new()?;
     env.init_git_repo()?;
-    let _dir_guard = CurrentDirGuard::new(env.path())?;
+
+    // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
+    let home_path = env.path().to_string_lossy().to_string();
+    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
+    env.env_guard().set("HOME", &home_path);
+    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     use workflow::repo::config::private::PrivateRepoConfig;
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
@@ -1076,9 +1026,10 @@ fn test_load_with_only_private_config() -> Result<()> {
 configured = true
 "#
     );
-    env.create_private_config(&private_config_content)?;
+    create_private_config(&env, &private_config_content)?;
 
-    // 执行：加载配置
+    // 执行：切换到测试目录，然后加载配置
+    let _guard = CurrentDirGuard::new(env.path())?;
     let config = RepoConfig::load()?;
 
     // Assert: 验证：私有配置加载成功，公共配置为默认值

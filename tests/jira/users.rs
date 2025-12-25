@@ -4,16 +4,17 @@
 
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
-use tempfile::TempDir;
 use workflow::jira::config::{ConfigManager, JiraConfig, JiraUserEntry};
 use workflow::jira::types::JiraUser;
 
+use crate::common::isolation::TestIsolation;
+
 // ==================== Fixtures ====================
 
-/// 创建临时目录用于测试
+/// 创建测试隔离环境用于测试
 #[fixture]
-fn temp_dir() -> TempDir {
-    tempfile::tempdir().expect("Failed to create temp dir")
+fn test_env() -> TestIsolation {
+    TestIsolation::new().expect("Failed to create test isolation")
 }
 
 /// 创建测试用的 JiraUser
@@ -87,9 +88,9 @@ fn test_jira_user_entry_structure() {
 
 /// 测试创建和读取配置文件
 #[rstest]
-fn test_config_manager_create_and_read(temp_dir: TempDir) {
+fn test_config_manager_create_and_read(test_env: TestIsolation) {
     // Arrange: 准备测试创建和读取配置文件
-    let config_path = temp_dir.path().join("jira.toml");
+    let config_path = test_env.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
     // 创建初始配置
@@ -111,9 +112,9 @@ fn test_config_manager_create_and_read(temp_dir: TempDir) {
 
 /// 测试更新配置文件
 #[rstest]
-fn test_config_manager_update(temp_dir: TempDir) {
+fn test_config_manager_update(test_env: TestIsolation) {
     // Arrange: 准备测试更新配置文件
-    let config_path = temp_dir.path().join("jira.toml");
+    let config_path = test_env.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
     // 创建初始配置
@@ -143,9 +144,9 @@ fn test_config_manager_update(temp_dir: TempDir) {
 
 /// 测试更新已存在的用户
 #[rstest]
-fn test_config_manager_update_existing_user(temp_dir: TempDir) {
+fn test_config_manager_update_existing_user(test_env: TestIsolation) {
     // Arrange: 准备测试更新已存在的用户
-    let config_path = temp_dir.path().join("jira.toml");
+    let config_path = test_env.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
     // 创建初始配置
@@ -251,9 +252,9 @@ fn test_jira_config_multiple_users() {
 
 /// 测试读取不存在的配置文件
 #[rstest]
-fn test_config_manager_read_nonexistent_file(temp_dir: TempDir) {
+fn test_config_manager_read_nonexistent_file(test_env: TestIsolation) {
     // Arrange: 准备测试读取不存在的配置文件
-    let config_path = temp_dir.path().join("nonexistent.toml");
+    let config_path = test_env.work_dir().join("nonexistent.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path);
 
     // Act: 读取不存在的文件应该返回错误或默认配置
@@ -289,9 +290,9 @@ fn test_jira_user_entry_equality() {
 
 /// 测试配置的完整往返（写入和读取）
 #[rstest]
-fn test_jira_config_round_trip(temp_dir: TempDir) {
+fn test_jira_config_round_trip(test_env: TestIsolation) {
     // Arrange: 准备测试配置的完整往返（写入和读取）
-    let config_path = temp_dir.path().join("jira.toml");
+    let config_path = test_env.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
 
     // 创建配置

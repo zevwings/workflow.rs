@@ -17,6 +17,18 @@ struct TestConfigCli {
 
 // ==================== Show Command Tests ====================
 
+/// 测试 Config Show 命令解析
+///
+/// ## 测试目的
+/// 验证 ConfigSubcommand::Show 能够正确解析命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备有效的 Show 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证 Show 命令可以正确解析
+///
+/// ## 预期结果
+/// - Show 命令正确解析（没有参数）
 #[test]
 fn test_config_show_command_with_valid_input_parses_successfully() {
     // Arrange: 准备有效的 Show 命令输入
@@ -35,6 +47,18 @@ fn test_config_show_command_with_valid_input_parses_successfully() {
     }
 }
 
+/// 测试 Config Show 命令解析（不带额外参数）
+///
+/// ## 测试目的
+/// 验证 ConfigSubcommand::Show 能够正确解析不带额外参数的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备不带额外参数的 Show 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证命令可以正确解析
+///
+/// ## 预期结果
+/// - Show 命令正确解析
 #[test]
 fn test_config_show_command_with_no_arguments_parses_successfully() {
     // Arrange: 准备不带额外参数的 Show 命令输入
@@ -51,6 +75,18 @@ fn test_config_show_command_with_no_arguments_parses_successfully() {
 
 // ==================== Validate Command Tests ====================
 
+/// 测试 Config Validate 命令解析（各种选项）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 ConfigSubcommand::Validate 能够正确解析各种选项组合。
+///
+/// ## 测试场景
+/// 1. 准备各种选项组合的命令行参数（config_path、fix、strict）
+/// 2. 解析命令行参数
+/// 3. 验证参数解析正确
+///
+/// ## 预期结果
+/// - 所有选项组合都能正确解析
 #[rstest]
 #[case(None, false, false)]
 #[case(Some("/path/to/config.toml"), false, false)]
@@ -94,6 +130,18 @@ fn test_config_validate_command_with_various_options_parses_correctly(
 
 // ==================== Export Command Tests ====================
 
+/// 测试 Config Export 命令解析（基本结构）
+///
+/// ## 测试目的
+/// 验证 ConfigSubcommand::Export 能够正确解析基本的命令行参数。
+///
+/// ## 测试场景
+/// 1. 准备基本的 Export 命令输入
+/// 2. 解析命令行参数
+/// 3. 验证基本结构解析正确
+///
+/// ## 预期结果
+/// - Export 命令基本结构解析正确，默认值正确
 #[test]
 fn test_config_export_command_with_basic_structure_parses_correctly() {
     // Arrange: 准备基本的 Export 命令输入
@@ -124,6 +172,18 @@ fn test_config_export_command_with_basic_structure_parses_correctly() {
     }
 }
 
+/// 测试 Config Export 命令解析（各种选项）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 ConfigSubcommand::Export 能够正确解析各种选项组合。
+///
+/// ## 测试场景
+/// 1. 准备各种选项组合的命令行参数（output_path、section、no_secrets、toml、json、yaml）
+/// 2. 解析命令行参数
+/// 3. 验证参数解析正确
+///
+/// ## 预期结果
+/// - 所有选项组合都能正确解析
 #[rstest]
 #[case("output.toml", None, false, false, false, false)]
 #[case("/path/to/output.json", None, false, false, false, false)]
@@ -184,6 +244,18 @@ fn test_config_export_command_with_various_options_parses_correctly(
     }
 }
 
+/// 测试 Config Export 命令输出格式标志解析
+///
+/// ## 测试目的
+/// 使用参数化测试验证 ConfigSubcommand::Export 能够正确解析输出格式标志。
+///
+/// ## 测试场景
+/// 1. 准备带输出格式标志的命令输入
+/// 2. 解析命令行参数
+/// 3. 验证输出格式标志解析正确
+///
+/// ## 预期结果
+/// - 输出格式标志（--toml、--json、--yaml）都能正确解析
 #[rstest]
 #[case("--toml", true, false, false)]
 #[case("--json", false, true, false)]
@@ -219,6 +291,18 @@ fn test_config_export_command_with_output_format_flags_parses_correctly(
 
 // ==================== Import Command Tests ====================
 
+/// 测试 Config Import 命令解析（各种选项）
+///
+/// ## 测试目的
+/// 使用参数化测试验证 ConfigSubcommand::Import 能够正确解析各种选项组合。
+///
+/// ## 测试场景
+/// 1. 准备各种选项组合的命令行参数（input_path、overwrite、section、dry_run）
+/// 2. 解析命令行参数
+/// 3. 验证参数解析正确
+///
+/// ## 预期结果
+/// - 所有选项组合都能正确解析
 #[rstest]
 #[case("input.toml", false, None, false)]
 #[case("/path/to/input.json", false, None, false)]
@@ -267,6 +351,18 @@ fn test_config_import_command_with_various_options_parses_correctly(
 
 // ==================== Common Command Tests ====================
 
+/// 测试 Config 命令的所有子命令解析
+///
+/// ## 测试目的
+/// 使用参数化测试验证 ConfigSubcommand 的所有子命令都能够正确解析。
+///
+/// ## 测试场景
+/// 1. 准备所有子命令的输入（为需要参数的命令添加最小参数）
+/// 2. 解析命令行参数
+/// 3. 验证所有子命令都可以正确解析
+///
+/// ## 预期结果
+/// - 所有子命令都可以正确解析
 #[rstest]
 #[case("show", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Show))]
 #[case("validate", |cmd: &ConfigSubcommand| matches!(cmd, ConfigSubcommand::Validate { .. }))]
@@ -297,6 +393,18 @@ fn test_config_command_with_all_subcommands_parses_successfully(
 
 // ==================== Error Handling Tests ====================
 
+/// 测试 Config 命令无效子命令错误处理
+///
+/// ## 测试目的
+/// 验证 ConfigSubcommand 对无效子命令返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效子命令的输入
+/// 2. 尝试解析无效子命令
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 无效子命令返回解析错误
 #[test]
 fn test_config_command_with_invalid_subcommand_returns_error() {
     // Arrange: 准备无效子命令的输入
@@ -309,6 +417,18 @@ fn test_config_command_with_invalid_subcommand_returns_error() {
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
+/// 测试 Config 命令缺少子命令错误处理
+///
+/// ## 测试目的
+/// 验证 ConfigSubcommand 在缺少子命令时返回错误。
+///
+/// ## 测试场景
+/// 1. 准备缺少子命令的输入
+/// 2. 尝试解析缺少子命令的参数
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 缺少子命令时返回解析错误
 #[test]
 fn test_config_command_with_missing_subcommand_returns_error() {
     // Arrange: 准备缺少子命令的输入

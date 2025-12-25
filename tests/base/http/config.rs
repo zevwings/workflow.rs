@@ -15,6 +15,17 @@ use workflow::base::http::{Authorization, MultipartRequestConfig, RequestConfig}
 
 // ==================== RequestConfig Creation Tests ====================
 
+/// 测试创建新的 RequestConfig
+///
+/// ## 测试目的
+/// 验证 RequestConfig::new() 能够创建一个空的配置。
+///
+/// ## 测试场景
+/// 1. 调用 new() 创建配置
+/// 2. 验证所有字段为 None
+///
+/// ## 预期结果
+/// - 所有字段（body、query、auth、headers、timeout）都为 None
 #[test]
 fn test_request_config_new_with_no_parameters_creates_empty_config() {
     // Arrange: 准备创建新配置
@@ -30,6 +41,17 @@ fn test_request_config_new_with_no_parameters_creates_empty_config() {
     assert!(config.timeout.is_none());
 }
 
+/// 测试创建默认的 RequestConfig
+///
+/// ## 测试目的
+/// 验证 RequestConfig::default() 能够创建一个空的配置。
+///
+/// ## 测试场景
+/// 1. 调用 default() 创建配置
+/// 2. 验证所有字段为 None
+///
+/// ## 预期结果
+/// - 所有字段都为 None
 #[test]
 fn test_request_config_default_with_no_parameters_creates_empty_config() {
     // Arrange: 准备创建默认配置
@@ -47,6 +69,18 @@ fn test_request_config_default_with_no_parameters_creates_empty_config() {
 
 // ==================== RequestConfig Builder Tests ====================
 
+/// 测试设置 RequestConfig 的请求体
+///
+/// ## 测试目的
+/// 验证 RequestConfig::body() 能够设置 JSON 请求体。
+///
+/// ## 测试场景
+/// 1. 创建 JSON 请求体
+/// 2. 使用 body() 方法设置请求体
+/// 3. 验证请求体已设置
+///
+/// ## 预期结果
+/// - 请求体被正确设置
 #[test]
 fn test_request_config_body_with_json_value_sets_body() -> Result<()> {
     // Arrange: 准备 JSON 请求体
@@ -63,6 +97,18 @@ fn test_request_config_body_with_json_value_sets_body() -> Result<()> {
     Ok(())
 }
 
+/// 测试设置 RequestConfig 的查询参数（数组）
+///
+/// ## 测试目的
+/// 验证 RequestConfig::query() 能够使用数组设置查询参数。
+///
+/// ## 测试场景
+/// 1. 准备查询参数数组
+/// 2. 使用 query() 方法设置查询参数
+/// 3. 验证查询参数已设置
+///
+/// ## 预期结果
+/// - 查询参数被正确设置
 #[test]
 fn test_request_config_query_with_array_sets_query() {
     // Arrange: 准备查询参数数组
@@ -75,6 +121,18 @@ fn test_request_config_query_with_array_sets_query() {
     assert!(config.query.is_some());
 }
 
+/// 测试设置 RequestConfig 的查询参数（HashMap）
+///
+/// ## 测试目的
+/// 验证 RequestConfig::query() 能够使用 HashMap 设置查询参数。
+///
+/// ## 测试场景
+/// 1. 准备查询参数 HashMap
+/// 2. 使用 query() 方法设置查询参数
+/// 3. 验证查询参数已设置
+///
+/// ## 预期结果
+/// - 查询参数被正确设置
 #[test]
 fn test_request_config_query_with_hashmap_sets_query() {
     // Arrange: 准备查询参数 HashMap
@@ -89,6 +147,18 @@ fn test_request_config_query_with_hashmap_sets_query() {
     assert!(config.query.is_some());
 }
 
+/// 测试设置 RequestConfig 的认证信息
+///
+/// ## 测试目的
+/// 验证 RequestConfig::auth() 能够设置认证信息。
+///
+/// ## 测试场景
+/// 1. 创建认证信息
+/// 2. 使用 auth() 方法设置认证信息
+/// 3. 验证认证信息已设置
+///
+/// ## 预期结果
+/// - 认证信息被正确设置
 #[test]
 fn test_request_config_auth_with_credentials_sets_auth() -> Result<()> {
     // Arrange: 准备认证信息
@@ -106,6 +176,18 @@ fn test_request_config_auth_with_credentials_sets_auth() -> Result<()> {
     Ok(())
 }
 
+/// 测试设置 RequestConfig 的请求头
+///
+/// ## 测试目的
+/// 验证 RequestConfig::headers() 能够设置请求头。
+///
+/// ## 测试场景
+/// 1. 准备请求头映射
+/// 2. 使用 headers() 方法设置请求头
+/// 3. 验证请求头已设置
+///
+/// ## 预期结果
+/// - 请求头被正确设置
 #[test]
 fn test_request_config_headers_with_header_map_sets_headers() -> Result<()> {
     // Arrange: 准备请求头
@@ -128,6 +210,18 @@ fn test_request_config_headers_with_header_map_sets_headers() -> Result<()> {
     Ok(())
 }
 
+/// 测试设置 RequestConfig 的超时时间
+///
+/// ## 测试目的
+/// 验证 RequestConfig::timeout() 能够设置超时时间。
+///
+/// ## 测试场景
+/// 1. 准备超时时间 Duration
+/// 2. 使用 timeout() 方法设置超时时间
+/// 3. 验证超时时间已设置
+///
+/// ## 预期结果
+/// - 超时时间被正确设置
 #[test]
 fn test_request_config_timeout_with_duration_sets_timeout() -> Result<()> {
     // Arrange: 准备超时时间
@@ -144,6 +238,18 @@ fn test_request_config_timeout_with_duration_sets_timeout() -> Result<()> {
     Ok(())
 }
 
+/// 测试 RequestConfig 的方法链
+///
+/// ## 测试目的
+/// 验证 RequestConfig 能够使用方法链设置所有配置选项。
+///
+/// ## 测试场景
+/// 1. 准备所有配置选项
+/// 2. 使用方法链设置所有选项
+/// 3. 验证所有选项都已设置
+///
+/// ## 预期结果
+/// - 所有配置选项都被正确设置
 #[test]
 fn test_request_config_chain_with_multiple_options_sets_all_options() -> Result<()> {
     // Arrange: 准备所有配置选项
@@ -173,6 +279,17 @@ fn test_request_config_chain_with_multiple_options_sets_all_options() -> Result<
 
 // ==================== MultipartRequestConfig Creation Tests ====================
 
+/// 测试创建新的 MultipartRequestConfig
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::new() 能够创建一个空的配置。
+///
+/// ## 测试场景
+/// 1. 调用 new() 创建配置
+/// 2. 验证所有字段为 None
+///
+/// ## 预期结果
+/// - 所有字段（multipart、query、auth、headers、timeout）都为 None
 #[test]
 fn test_multipart_request_config_new_with_no_parameters_creates_empty_config() {
     // Arrange: 准备创建新配置
@@ -188,6 +305,17 @@ fn test_multipart_request_config_new_with_no_parameters_creates_empty_config() {
     assert!(config.timeout.is_none());
 }
 
+/// 测试创建默认的 MultipartRequestConfig
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::default() 能够创建一个空的配置。
+///
+/// ## 测试场景
+/// 1. 调用 default() 创建配置
+/// 2. 验证所有字段为 None
+///
+/// ## 预期结果
+/// - 所有字段都为 None
 #[test]
 fn test_multipart_request_config_default_with_no_parameters_creates_empty_config() {
     // Arrange: 准备创建默认配置
@@ -205,6 +333,18 @@ fn test_multipart_request_config_default_with_no_parameters_creates_empty_config
 
 // ==================== MultipartRequestConfig Builder Tests ====================
 
+/// 测试设置 MultipartRequestConfig 的 multipart 表单
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::multipart() 能够设置 multipart 表单。
+///
+/// ## 测试场景
+/// 1. 准备 multipart 表单
+/// 2. 使用 multipart() 方法设置表单
+/// 3. 验证表单已设置
+///
+/// ## 预期结果
+/// - multipart 表单被正确设置
 #[test]
 fn test_multipart_request_config_multipart_with_form_sets_multipart() {
     // Arrange: 准备 multipart 表单
@@ -219,6 +359,18 @@ fn test_multipart_request_config_multipart_with_form_sets_multipart() {
     assert!(config.multipart.is_some());
 }
 
+/// 测试设置 MultipartRequestConfig 的查询参数
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::query() 能够设置查询参数。
+///
+/// ## 测试场景
+/// 1. 准备查询参数 JSON
+/// 2. 使用 query() 方法设置查询参数
+/// 3. 验证查询参数已设置
+///
+/// ## 预期结果
+/// - 查询参数被正确设置
 #[test]
 fn test_multipart_request_config_query_with_json_sets_query() {
     // Arrange: 准备查询参数 JSON
@@ -231,6 +383,18 @@ fn test_multipart_request_config_query_with_json_sets_query() {
     assert!(config.query.is_some());
 }
 
+/// 测试设置 MultipartRequestConfig 的认证信息
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::auth() 能够设置认证信息。
+///
+/// ## 测试场景
+/// 1. 创建认证信息
+/// 2. 使用 auth() 方法设置认证信息
+/// 3. 验证认证信息已设置
+///
+/// ## 预期结果
+/// - 认证信息被正确设置
 #[test]
 fn test_multipart_request_config_auth_with_credentials_sets_auth() -> Result<()> {
     // Arrange: 准备认证信息
@@ -249,6 +413,18 @@ fn test_multipart_request_config_auth_with_credentials_sets_auth() -> Result<()>
     Ok(())
 }
 
+/// 测试设置 MultipartRequestConfig 的请求头
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::headers() 能够设置请求头。
+///
+/// ## 测试场景
+/// 1. 准备请求头映射
+/// 2. 使用 headers() 方法设置请求头
+/// 3. 验证请求头已设置
+///
+/// ## 预期结果
+/// - 请求头被正确设置
 #[test]
 fn test_multipart_request_config_headers_with_header_map_sets_headers() -> Result<()> {
     // Arrange: 准备请求头
@@ -271,6 +447,18 @@ fn test_multipart_request_config_headers_with_header_map_sets_headers() -> Resul
     Ok(())
 }
 
+/// 测试设置 MultipartRequestConfig 的超时时间
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig::timeout() 能够设置超时时间。
+///
+/// ## 测试场景
+/// 1. 准备超时时间 Duration
+/// 2. 使用 timeout() 方法设置超时时间
+/// 3. 验证超时时间已设置
+///
+/// ## 预期结果
+/// - 超时时间被正确设置
 #[test]
 fn test_multipart_request_config_timeout_with_duration_sets_timeout() -> Result<()> {
     // Arrange: 准备超时时间
@@ -287,6 +475,18 @@ fn test_multipart_request_config_timeout_with_duration_sets_timeout() -> Result<
     Ok(())
 }
 
+/// 测试 MultipartRequestConfig 的方法链
+///
+/// ## 测试目的
+/// 验证 MultipartRequestConfig 能够使用方法链设置所有配置选项。
+///
+/// ## 测试场景
+/// 1. 准备所有配置选项
+/// 2. 使用方法链设置所有选项
+/// 3. 验证所有选项都已设置
+///
+/// ## 预期结果
+/// - 所有配置选项都被正确设置
 #[test]
 fn test_multipart_request_config_chain_with_multiple_options_sets_all_options() -> Result<()> {
     // Arrange: 准备所有配置选项

@@ -8,6 +8,18 @@ use workflow::branch::BranchType;
 
 // ==================== BranchType 枚举测试 ====================
 
+/// 测试分支类型枚举值创建
+///
+/// ## 测试目的
+/// 验证所有分支类型枚举值都可以创建并格式化。
+///
+/// ## 测试场景
+/// 1. 创建所有分支类型枚举值
+/// 2. 格式化每个类型为 Debug 字符串
+/// 3. 验证字符串不为空
+///
+/// ## 预期结果
+/// - 所有分支类型都可以创建并格式化
 #[test]
 fn test_branch_type_enum_values_can_be_created() {
     // Arrange: 准备所有分支类型枚举值
@@ -26,6 +38,18 @@ fn test_branch_type_enum_values_can_be_created() {
     }
 }
 
+/// 测试获取所有分支类型
+///
+/// ## 测试目的
+/// 验证 BranchType::all() 返回所有分支类型。
+///
+/// ## 测试场景
+/// 1. 调用 all() 方法
+/// 2. 验证返回的类型数量正确
+/// 3. 验证包含所有预期的分支类型
+///
+/// ## 预期结果
+/// - 返回所有5种分支类型
 #[test]
 fn test_branch_type_all_returns_all_types() {
     // Arrange: 准备预期结果
@@ -43,6 +67,17 @@ fn test_branch_type_all_returns_all_types() {
     assert!(all_types.contains(&BranchType::Chore));
 }
 
+/// 测试分支类型显示格式
+///
+/// ## 测试目的
+/// 验证 BranchType 的 Display trait 实现返回小写字符串。
+///
+/// ## 测试场景
+/// 1. 调用 to_string() 方法转换每个分支类型
+/// 2. 验证返回的字符串为小写格式
+///
+/// ## 预期结果
+/// - 所有分支类型都返回小写字符串
 #[test]
 fn test_branch_type_display_returns_lowercase_string() {
     // Arrange: 准备预期结果
@@ -67,6 +102,17 @@ fn test_branch_type_display_returns_lowercase_string() {
     assert_eq!(result_chore, expected_chore);
 }
 
+/// 测试分支类型字符串切片
+///
+/// ## 测试目的
+/// 验证 BranchType::as_str() 返回正确的字符串切片。
+///
+/// ## 测试场景
+/// 1. 调用 as_str() 方法获取每个分支类型的字符串切片
+/// 2. 验证返回的字符串切片正确
+///
+/// ## 预期结果
+/// - 所有分支类型都返回正确的字符串切片
 #[test]
 fn test_branch_type_as_str_returns_string_slice() {
     // Arrange: 准备预期结果
@@ -91,6 +137,17 @@ fn test_branch_type_as_str_returns_string_slice() {
     assert_eq!(result_chore, expected_chore);
 }
 
+/// 测试从字符串解析分支类型（有效输入）
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 能够从有效字符串解析分支类型。
+///
+/// ## 测试场景
+/// 1. 使用各种有效输入（包括别名）解析分支类型
+/// 2. 验证解析结果正确
+///
+/// ## 预期结果
+/// - 有效输入返回对应的分支类型，无效输入返回 None
 #[test]
 fn test_branch_type_from_string_with_valid_input_returns_some() {
     // Arrange: 准备测试用例（有效输入）
@@ -113,6 +170,17 @@ fn test_branch_type_from_string_with_valid_input_returns_some() {
     }
 }
 
+/// 测试从字符串解析分支类型（大小写不敏感）
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 支持大小写不敏感的解析。
+///
+/// ## 测试场景
+/// 1. 使用不同大小写的字符串解析分支类型
+/// 2. 验证解析结果正确
+///
+/// ## 预期结果
+/// - 大小写不敏感，所有变体都能正确解析
 #[test]
 fn test_branch_type_from_string_with_case_insensitive_input_returns_some() {
     // Arrange: 准备测试用例（大小写不敏感）
@@ -133,6 +201,17 @@ fn test_branch_type_from_string_with_case_insensitive_input_returns_some() {
 
 // ==================== BranchType 功能测试 ====================
 
+/// 测试分支类型转换为提交类型
+///
+/// ## 测试目的
+/// 验证 BranchType::to_commit_type() 能够将分支类型转换为 Conventional Commits 类型。
+///
+/// ## 测试场景
+/// 1. 转换所有分支类型为提交类型
+/// 2. 验证转换结果正确
+///
+/// ## 预期结果
+/// - 所有分支类型都正确转换为对应的提交类型
 #[test]
 fn test_branch_type_to_commit_type_with_all_types_returns_commit_types() {
     // Arrange: 准备分支类型和预期提交类型
@@ -150,6 +229,17 @@ fn test_branch_type_to_commit_type_with_all_types_returns_commit_types() {
     }
 }
 
+/// 测试分支类型显示名称
+///
+/// ## 测试目的
+/// 验证 BranchType::display_name() 返回包含描述的显示名称。
+///
+/// ## 测试场景
+/// 1. 获取所有分支类型的显示名称
+/// 2. 验证显示名称包含类型和描述
+///
+/// ## 预期结果
+/// - 所有分支类型都返回包含描述的显示名称
 #[test]
 fn test_branch_type_display_name_with_all_types_returns_display_names() {
     // Arrange: 准备分支类型和预期显示名称
@@ -169,6 +259,17 @@ fn test_branch_type_display_name_with_all_types_returns_display_names() {
 
 // ==================== 边界条件测试 ====================
 
+/// 测试从空字符串解析分支类型
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 对空字符串返回 None。
+///
+/// ## 测试场景
+/// 1. 使用空字符串解析分支类型
+/// 2. 验证返回 None
+///
+/// ## 预期结果
+/// - 空字符串返回 None
 #[test]
 fn test_branch_type_from_str_with_empty_string_returns_none() {
     // Arrange: 准备空字符串
@@ -180,6 +281,17 @@ fn test_branch_type_from_str_with_empty_string_returns_none() {
     assert_eq!(result, None);
 }
 
+/// 测试从空白字符串解析分支类型
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 对只包含空白字符的字符串返回 None。
+///
+/// ## 测试场景
+/// 1. 使用只包含空白字符的字符串解析分支类型
+/// 2. 验证返回 None
+///
+/// ## 预期结果
+/// - 空白字符串返回 None
 #[test]
 fn test_branch_type_from_str_with_whitespace_returns_none() {
     // Arrange: 准备空白字符串
@@ -191,6 +303,17 @@ fn test_branch_type_from_str_with_whitespace_returns_none() {
     assert_eq!(result, None);
 }
 
+/// 测试从包含特殊字符的字符串解析分支类型
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 对包含特殊字符的字符串的处理。
+///
+/// ## 测试场景
+/// 1. 使用包含特殊字符的字符串解析分支类型
+/// 2. 验证处理结果（大部分应返回 None，除非有特殊处理）
+///
+/// ## 预期结果
+/// - 包含特殊字符的字符串通常返回 None，除非有特殊处理
 #[test]
 fn test_branch_type_from_str_with_special_characters_handles_correctly() {
     // Arrange: 准备包含特殊字符的字符串
@@ -210,6 +333,18 @@ fn test_branch_type_from_str_with_special_characters_handles_correctly() {
 
 // ==================== 分支类型比较测试 ====================
 
+/// 测试分支类型相等性
+///
+/// ## 测试目的
+/// 验证分支类型的相等性比较正确。
+///
+/// ## 测试场景
+/// 1. 比较相同类型的分支类型
+/// 2. 比较不同类型的分支类型
+/// 3. 验证相等性结果正确
+///
+/// ## 预期结果
+/// - 相同类型相等，不同类型不相等
 #[test]
 fn test_branch_type_equality_with_same_types_returns_equal() {
     // Arrange: 准备相同和不同的分支类型
@@ -221,6 +356,17 @@ fn test_branch_type_equality_with_same_types_returns_equal() {
     assert_ne!(BranchType::Hotfix, BranchType::Chore);
 }
 
+/// 测试分支类型克隆功能
+///
+/// ## 测试目的
+/// 验证 BranchType 的 Clone trait 实现正确。
+///
+/// ## 测试场景
+/// 1. 克隆分支类型
+/// 2. 验证克隆后的值与原值相等
+///
+/// ## 预期结果
+/// - 克隆后的值与原值相等
 #[test]
 fn test_branch_type_clone_with_valid_type_creates_clone() {
     // Arrange: 准备原始分支类型
@@ -233,6 +379,17 @@ fn test_branch_type_clone_with_valid_type_creates_clone() {
     assert_eq!(original, cloned);
 }
 
+/// 测试分支类型复制功能
+///
+/// ## 测试目的
+/// 验证 BranchType 的 Copy trait 实现正确。
+///
+/// ## 测试场景
+/// 1. 复制分支类型（通过赋值）
+/// 2. 验证复制后的值与原值相等
+///
+/// ## 预期结果
+/// - 复制后的值与原值相等
 #[test]
 fn test_branch_type_copy_with_valid_type_copies_value() {
     // Arrange: 准备原始分支类型
@@ -247,6 +404,17 @@ fn test_branch_type_copy_with_valid_type_copies_value() {
 
 // ==================== 性能测试 ====================
 
+/// 测试分支类型转换性能
+///
+/// ## 测试目的
+/// 验证分支类型转换操作在大量调用时保持良好性能。
+///
+/// ## 测试场景
+/// 1. 执行1000次转换操作
+/// 2. 测量执行时间
+///
+/// ## 预期结果
+/// - 1000次转换在100毫秒内完成
 #[test]
 fn test_branch_type_conversion_performance_with_multiple_conversions_completes_quickly() {
     // Arrange: 准备测试字符串
@@ -270,6 +438,17 @@ fn test_branch_type_conversion_performance_with_multiple_conversions_completes_q
     );
 }
 
+/// 测试分支类型显示性能
+///
+/// ## 测试目的
+/// 验证分支类型显示操作在大量调用时保持良好性能。
+///
+/// ## 测试场景
+/// 1. 执行1000次显示转换操作
+/// 2. 测量执行时间
+///
+/// ## 预期结果
+/// - 1000次显示转换在50毫秒内完成
 #[test]
 fn test_branch_type_display_performance_with_multiple_displays_completes_quickly() {
     // Arrange: 准备所有分支类型
@@ -298,6 +477,18 @@ fn test_branch_type_display_performance_with_multiple_displays_completes_quickly
 
 // ==================== 集成测试 ====================
 
+/// 测试完整分支类型工作流
+///
+/// ## 测试目的
+/// 验证分支类型的所有功能在完整工作流中正常工作。
+///
+/// ## 测试场景
+/// 1. 获取所有分支类型
+/// 2. 对每种类型测试：转换为字符串、从字符串解析、获取提交类型、获取显示名称
+/// 3. 验证所有操作都成功
+///
+/// ## 预期结果
+/// - 所有分支类型的所有功能都正常工作
 #[test]
 fn test_complete_branch_type_workflow_with_all_types_completes_successfully() {
     // Arrange: 获取所有类型
@@ -331,6 +522,17 @@ fn test_complete_branch_type_workflow_with_all_types_completes_successfully() {
 
 // ==================== 错误处理测试 ====================
 
+/// 测试从无效输入解析分支类型
+///
+/// ## 测试目的
+/// 验证 BranchType::from_str() 对无效输入返回 None。
+///
+/// ## 测试场景
+/// 1. 使用各种无效输入解析分支类型
+/// 2. 验证返回 None 或有效的分支类型
+///
+/// ## 预期结果
+/// - 无效输入返回 None，有效输入返回对应的分支类型
 #[test]
 fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
     // Arrange: 准备无效输入列表
@@ -362,6 +564,18 @@ fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
 
 // ==================== 实际使用场景测试 ====================
 
+/// 测试分支类型到提交类型映射
+///
+/// ## 测试目的
+/// 验证分支类型到提交类型的映射在实际使用场景中正确。
+///
+/// ## 测试场景
+/// 1. 转换所有分支类型为提交类型
+/// 2. 模拟生成完整的提交消息
+/// 3. 验证提交消息前缀正确
+///
+/// ## 预期结果
+/// - 所有分支类型都正确映射到对应的提交类型
 #[test]
 fn test_branch_type_to_commit_type_with_all_types_maps_correctly() {
     // Arrange: 准备分支类型和预期提交类型映射
@@ -384,6 +598,18 @@ fn test_branch_type_to_commit_type_with_all_types_maps_correctly() {
     }
 }
 
+/// 测试分支类型模板选择
+///
+/// ## 测试目的
+/// 验证分支类型可用于模板路径和配置键的生成。
+///
+/// ## 测试场景
+/// 1. 使用分支类型生成模板路径
+/// 2. 使用分支类型生成配置键
+/// 3. 验证路径和键正确
+///
+/// ## 预期结果
+/// - 分支类型可以用于生成模板路径和配置键
 #[test]
 fn test_branch_type_template_selection_with_feature_type_returns_template_path() {
     // Arrange: 准备分支类型
@@ -560,6 +786,18 @@ fn test_branch_type_resolve_with_repo_prefix_without_prefix() {
     }
 }
 
+/// 测试所有分支类型的显示名称
+///
+/// ## 测试目的
+/// 验证所有分支类型的 display_name() 方法都返回正确的显示名称。
+///
+/// ## 测试场景
+/// 1. 获取所有分支类型的显示名称
+/// 2. 验证显示名称不为空且包含类型字符串和分隔符
+/// 3. 明确测试每个分支类型的显示名称
+///
+/// ## 预期结果
+/// - 所有分支类型都返回正确的显示名称
 #[test]
 fn test_branch_type_display_name_all_variants() {
     // 确保所有分支类型的 display_name 都被测试覆盖

@@ -53,6 +53,18 @@ mod tests {
 
     // ==================== 基础功能测试 ====================
 
+    /// 测试创建并发执行器
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor::new() 能够创建执行器并处理并发限制。
+    ///
+    /// ## 测试场景
+    /// 1. 使用指定的并发限制创建执行器
+    /// 2. 测试最小并发数限制（0会被调整为至少1）
+    /// 3. 验证执行器能够执行任务
+    ///
+    /// ## 预期结果
+    /// - 执行器创建成功，能够执行任务
     #[test]
     fn test_executor_creation_with_concurrency_limit_creates_executor() -> Result<()> {
         // Arrange: 准备并发限制
@@ -73,6 +85,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试执行空任务列表
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 对空任务列表的处理。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器
+    /// 2. 执行空任务列表
+    /// 3. 验证返回空结果
+    ///
+    /// ## 预期结果
+    /// - 返回空结果列表
     #[test]
     fn test_execute_empty_tasks_with_empty_list_returns_empty_results() -> Result<()> {
         // Arrange: 准备执行器和空任务列表
@@ -87,6 +111,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试执行单个成功任务
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够执行单个成功任务并返回成功结果。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和成功任务
+    /// 2. 执行任务
+    /// 3. 验证返回成功结果
+    ///
+    /// ## 预期结果
+    /// - 返回成功结果，包含任务名和结果值
     #[test]
     fn test_execute_single_task_success_with_success_task_returns_success() -> Result<()> {
         // Arrange: 准备执行器和成功任务
@@ -109,6 +145,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试执行单个失败任务
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够执行单个失败任务并返回失败结果。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和失败任务
+    /// 2. 执行任务
+    /// 3. 验证返回失败结果
+    ///
+    /// ## 预期结果
+    /// - 返回失败结果，包含任务名和错误信息
     #[test]
     fn test_execute_single_task_failure_with_failure_task_returns_failure() -> Result<()> {
         // Arrange: 准备执行器和失败任务
@@ -133,6 +181,18 @@ mod tests {
 
     // ==================== 并发控制测试 ====================
 
+    /// 测试并发执行多个任务
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够并发执行多个任务。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器（并发数2）和多个任务
+    /// 2. 执行任务并测量时间
+    /// 3. 验证结果数量正确且执行时间符合并发预期
+    ///
+    /// ## 预期结果
+    /// - 所有任务都成功，执行时间符合并发预期
     #[test]
     fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently() -> Result<()> {
         // Arrange: 准备执行器和多个任务
@@ -180,6 +240,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试不同并发级别的执行时间
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证不同并发级别下的执行时间。
+    ///
+    /// ## 测试场景
+    /// 1. 使用不同的并发级别和任务数量
+    /// 2. 执行任务并测量时间
+    /// 3. 验证时间在合理范围内
+    ///
+    /// ## 预期结果
+    /// - 执行时间在合理范围内，所有任务都成功
     #[rstest]
     #[case(1, 4)] // 串行执行
     #[case(2, 4)] // 并发数2
@@ -246,6 +318,18 @@ mod tests {
 
     // ==================== 错误处理和混合结果测试 ====================
 
+    /// 测试混合成功和失败任务
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够正确处理混合的成功和失败任务。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和混合任务（成功和失败）
+    /// 2. 执行任务
+    /// 3. 验证成功和失败的数量正确
+    ///
+    /// ## 预期结果
+    /// - 成功和失败任务都被正确处理
     #[test]
     fn test_mixed_success_and_failure_tasks_with_mixed_tasks_handles_both() -> Result<()> {
         // Arrange: 准备执行器和混合任务（成功和失败）
@@ -303,6 +387,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试所有任务都失败的情况
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 在所有任务都失败时能够返回所有失败结果。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和所有失败任务
+    /// 2. 执行任务
+    /// 3. 验证所有任务都返回失败结果
+    ///
+    /// ## 预期结果
+    /// - 所有任务都返回失败结果
     #[test]
     fn test_all_tasks_fail_with_all_failure_tasks_returns_all_failures() -> Result<()> {
         // Arrange: 准备执行器和所有失败任务
@@ -338,6 +434,18 @@ mod tests {
 
     // ==================== 进度回调测试 ====================
 
+    /// 测试带进度回调的执行
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor::execute_with_progress() 能够调用进度回调函数。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和进度回调
+    /// 2. 执行任务（包含成功和失败）
+    /// 3. 验证进度回调被正确调用
+    ///
+    /// ## 预期结果
+    /// - 进度回调被调用，包含正确的任务名、成功状态和错误信息
     #[test]
     fn test_execute_with_progress_callback() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
@@ -395,6 +503,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试带进度回调的单任务执行
+    ///
+    /// ## 测试目的
+    /// 验证 execute_with_progress() 对单个任务也能正确调用进度回调。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和进度回调
+    /// 2. 执行单个任务
+    /// 3. 验证进度回调被调用
+    ///
+    /// ## 预期结果
+    /// - 进度回调被调用一次，包含正确的任务信息
     #[test]
     fn test_execute_with_progress_single_task() -> Result<()> {
         let executor = ConcurrentExecutor::new(1);
@@ -427,6 +547,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试不带进度回调的执行
+    ///
+    /// ## 测试目的
+    /// 验证 execute_with_progress() 在没有提供回调函数时也能正常执行。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器
+    /// 2. 执行任务但不提供回调函数
+    /// 3. 验证执行正常完成
+    ///
+    /// ## 预期结果
+    /// - 即使没有回调函数，执行也能正常完成
     #[test]
     fn test_execute_with_progress_no_callback() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
@@ -453,6 +585,18 @@ mod tests {
 
     // ==================== 边界条件和压力测试 ====================
 
+    /// 测试大量任务执行
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够处理大量任务。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和100个任务
+    /// 2. 执行任务并测量时间
+    /// 3. 验证所有任务都成功且执行时间合理
+    ///
+    /// ## 预期结果
+    /// - 所有任务都成功，执行时间在合理范围内
     #[test]
     fn test_large_number_of_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(10);
@@ -485,6 +629,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试零延迟任务执行
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够快速执行零延迟任务。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和零延迟任务
+    /// 2. 执行任务并测量时间
+    /// 3. 验证执行时间很短
+    ///
+    /// ## 预期结果
+    /// - 任务在很短时间内完成
     #[test]
     fn test_zero_delay_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
@@ -514,6 +670,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试任务名称保留
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够保留所有任务名称（即使执行顺序可能不同）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和多个任务
+    /// 2. 执行任务
+    /// 3. 验证所有任务名称都被保留
+    ///
+    /// ## 预期结果
+    /// - 所有任务名称都被保留（顺序可能不同）
     #[test]
     fn test_task_names_preservation() -> Result<()> {
         let executor = ConcurrentExecutor::new(3);
@@ -543,6 +711,18 @@ mod tests {
 
     // ==================== 类型系统测试 ====================
 
+    /// 测试不同结果类型
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够处理不同结果类型的任务。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和整数类型任务
+    /// 2. 执行任务
+    /// 3. 验证结果类型正确
+    ///
+    /// ## 预期结果
+    /// - 不同结果类型都能正确处理
     #[test]
     fn test_different_result_types() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
@@ -560,6 +740,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试自定义错误类型
+    ///
+    /// ## 测试目的
+    /// 验证 ConcurrentExecutor 能够处理自定义错误类型。
+    ///
+    /// ## 测试场景
+    /// 1. 创建执行器和自定义错误类型任务
+    /// 2. 执行任务（包含成功和失败）
+    /// 3. 验证自定义错误类型被正确处理
+    ///
+    /// ## 预期结果
+    /// - 自定义错误类型被正确处理
     #[test]
     fn test_custom_error_types() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);

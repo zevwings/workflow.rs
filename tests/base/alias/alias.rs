@@ -153,6 +153,19 @@ mod tests {
 
     // ==================== 基础别名展开测试 ====================
 
+    /// 测试简单别名展开功能
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确展开简单的别名（不包含嵌套）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（"ll" -> "ls -la", "la" -> "ls -A"）
+    /// 2. 展开别名 "ll"
+    /// 3. 展开别名 "la"
+    ///
+    /// ## 预期结果
+    /// - "ll" 展开为 "ls -la"
+    /// - "la" 展开为 "ls -A"
     #[test]
     fn test_simple_alias_expansion_with_valid_alias_expands_alias() -> Result<()> {
         // Arrange: 准备别名映射
@@ -175,6 +188,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试嵌套别名展开功能
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确递归展开嵌套的别名（别名指向另一个别名）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（"ll" -> "ls -la", "lll" -> "ll -h"）
+    /// 2. 展开嵌套别名 "lll"
+    /// 3. 验证递归展开结果
+    ///
+    /// ## 预期结果
+    /// - "lll" 递归展开为 "ls -la -h"
+    /// - 嵌套别名被正确解析
     #[test]
     fn test_nested_alias_expansion_with_nested_alias_expands_recursively() -> Result<()> {
         // Arrange: 准备嵌套别名映射
@@ -192,6 +218,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试深层嵌套别名展开功能
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理多层嵌套的别名（a -> b -> c -> d）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建多层嵌套别名映射（a -> b arg1, b -> c arg2, c -> d arg3, d -> echo final）
+    /// 2. 展开顶层别名 "a"
+    /// 3. 验证所有层级都被正确展开
+    ///
+    /// ## 预期结果
+    /// - "a" 递归展开为 "echo final arg3 arg2 arg1"
+    /// - 所有嵌套层级都被正确解析
+    /// - 参数顺序正确
     #[test]
     fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels() -> Result<()> {
         // Arrange: 准备深层嵌套别名映射
@@ -211,6 +251,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试不存在的别名处理
+    ///
+    /// ## 测试目的
+    /// 验证当尝试展开不存在的别名时，别名管理器能够正确返回错误。
+    ///
+    /// ## 测试场景
+    /// 1. 创建空的别名映射
+    /// 2. 尝试展开不存在的别名 "nonexistent"
+    /// 3. 验证错误处理
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Alias not found"
     #[test]
     fn test_alias_not_found_with_nonexistent_alias_returns_error() -> Result<()> {
         // Arrange: 准备空别名映射和不存在的别名
@@ -229,6 +282,19 @@ mod tests {
 
     // ==================== 循环检测测试 ====================
 
+    /// 测试直接循环别名检测
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确检测直接循环别名（别名指向自身）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建直接循环别名映射（"a" -> "a"）
+    /// 2. 尝试展开别名 "a"
+    /// 3. 验证循环检测
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Circular alias detected"
     #[test]
     fn test_direct_circular_alias_with_direct_cycle_detects_circular() -> Result<()> {
         // Arrange: 准备直接循环别名映射
@@ -245,6 +311,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试间接循环别名检测
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确检测间接循环别名（a -> b -> c -> a）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建间接循环别名映射（a -> b, b -> c, c -> a）
+    /// 2. 尝试展开别名 "a"
+    /// 3. 验证循环检测
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Circular alias detected"
+    /// - 能够检测多级间接循环
     #[test]
     fn test_indirect_circular_alias_with_indirect_cycle_detects_circular() -> Result<()> {
         // Arrange: 准备间接循环别名映射
@@ -263,6 +343,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试循环检测函数处理多种情况
+    ///
+    /// ## 测试目的
+    /// 验证循环检测函数能够正确处理多种循环情况（直接循环、间接循环、非循环）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（a -> b, b -> c）
+    /// 2. 测试不会形成循环的情况（d -> a）
+    /// 3. 测试会形成直接循环的情况（a -> a）
+    /// 4. 测试会形成间接循环的情况（c -> a）
+    ///
+    /// ## 预期结果
+    /// - 非循环情况返回 false
+    /// - 直接循环情况返回 true
+    /// - 间接循环情况返回 true
     #[test]
     fn test_circular_detection_function_with_various_cases_detects_circular() -> Result<()> {
         // Arrange: 准备别名映射
@@ -287,6 +382,20 @@ mod tests {
 
     // ==================== 深度限制测试 ====================
 
+    /// 测试最大深度限制
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确检测并拒绝超过最大深度限制的别名链。
+    ///
+    /// ## 测试场景
+    /// 1. 创建一个超过最大深度限制（10层）的别名链（15层）
+    /// 2. 尝试展开顶层别名
+    /// 3. 验证深度限制检测
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "depth exceeded maximum"
+    /// - 防止无限递归
     #[test]
     fn test_max_depth_limit_with_deep_chain_returns_error() -> Result<()> {
         // Arrange: 创建一个很深的别名链（超过最大深度限制）
@@ -308,6 +417,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试在深度限制内的别名展开
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够成功展开在深度限制内的别名链。
+    ///
+    /// ## 测试场景
+    /// 1. 创建一个在深度限制内（9层）的别名链
+    /// 2. 展开顶层别名
+    /// 3. 验证展开成功
+    ///
+    /// ## 预期结果
+    /// - 展开成功
+    /// - 返回最终命令 "echo final"
     #[test]
     fn test_depth_within_limit_with_valid_depth_expands_successfully() -> Result<()> {
         // Arrange: 创建一个在限制内的别名链（9层）
@@ -331,6 +453,21 @@ mod tests {
 
     // ==================== 命令行参数展开测试 ====================
 
+    /// 测试命令行参数中包含别名的展开
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确展开命令行参数中的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（"ll" -> "ls -la"）
+    /// 2. 准备包含别名的参数列表（["workflow", "ll", "--color", "/tmp"]）
+    /// 3. 展开参数中的别名
+    /// 4. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 别名 "ll" 被展开为 "ls -la"
+    /// - 其他参数保持不变
+    /// - 参数顺序正确
     #[test]
     fn test_expand_args_with_alias_with_alias_in_args_expands_alias() -> Result<()> {
         // Arrange: 准备别名映射和包含别名的参数列表
@@ -361,6 +498,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试命令行参数中不包含别名的处理
+    ///
+    /// ## 测试目的
+    /// 验证当命令行参数中不包含别名时，参数保持不变。
+    ///
+    /// ## 测试场景
+    /// 1. 创建空的别名映射
+    /// 2. 准备不包含别名的参数列表（["workflow", "status", "--verbose"]）
+    /// 3. 尝试展开参数
+    /// 4. 验证参数保持不变
+    ///
+    /// ## 预期结果
+    /// - 参数列表保持不变
+    /// - 不进行任何展开操作
     #[test]
     fn test_expand_args_without_alias_with_no_alias_returns_unchanged() -> Result<()> {
         // Arrange: 准备空别名映射和不包含别名的参数列表
@@ -380,6 +531,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试空参数列表的处理
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理空参数列表或只包含程序名的参数列表。
+    ///
+    /// ## 测试场景
+    /// 1. 创建空的别名映射
+    /// 2. 测试空参数列表 []
+    /// 3. 测试只包含程序名的参数列表 ["workflow"]
+    /// 4. 验证处理结果
+    ///
+    /// ## 预期结果
+    /// - 空参数列表返回空列表
+    /// - 只包含程序名的参数列表保持不变
     #[test]
     fn test_expand_args_empty_with_empty_args_returns_empty() -> Result<()> {
         // Arrange: 准备空别名映射和空参数列表
@@ -404,6 +569,21 @@ mod tests {
         Ok(())
     }
 
+    /// 测试命令行参数中嵌套别名的展开
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确递归展开命令行参数中的嵌套别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建嵌套别名映射（"ll" -> "ls -la", "lll" -> "ll -h"）
+    /// 2. 准备包含嵌套别名的参数列表（["workflow", "lll", "/home"]）
+    /// 3. 展开嵌套别名
+    /// 4. 验证递归展开结果
+    ///
+    /// ## 预期结果
+    /// - 嵌套别名 "lll" 递归展开为 "ls -la -h"
+    /// - 其他参数保持不变
+    /// - 参数顺序正确
     #[test]
     fn test_expand_args_nested_alias_with_nested_alias_expands_recursively() -> Result<()> {
         // Arrange: 准备嵌套别名映射和包含嵌套别名的参数列表
@@ -436,6 +616,20 @@ mod tests {
 
     // ==================== 参数化测试 ====================
 
+    /// 测试简单别名展开（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证多种简单别名的展开功能。
+    ///
+    /// ## 测试场景
+    /// 测试多种别名和命令的组合：
+    /// - "ll" -> "ls -la"
+    /// - "la" -> "ls -A"
+    /// - "grep" -> "grep --color=auto"
+    /// - "status" -> "git status --short"
+    ///
+    /// ## 预期结果
+    /// - 所有测试用例都能正确展开别名
     #[rstest]
     #[case("ll", "ls -la", "ls -la")]
     #[case("la", "ls -A", "ls -A")]
@@ -456,6 +650,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试循环检测（参数化测试）
+    ///
+    /// ## 测试目的
+    /// 使用参数化测试验证多种循环情况的检测功能。
+    ///
+    /// ## 测试场景
+    /// 测试多种循环情况：
+    /// - 间接循环：a->b, b->a
+    /// - 直接循环：a->a
+    /// - 多级间接循环：a->b->c, c->a
+    ///
+    /// ## 预期结果
+    /// - 所有循环情况都能被正确检测
     #[rstest]
     #[case(vec!["a", "b"], vec!["b", "a"], true)] // 会循环：a->b, b->a 形成循环
     #[case(vec!["a", "a"], vec![], true)] // 直接循环
@@ -483,6 +690,19 @@ mod tests {
 
     // ==================== 边界条件和特殊情况测试 ====================
 
+    /// 测试包含特殊字符的别名
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理包含特殊字符（如连字符、下划线、@符号）的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含特殊字符的别名映射（"docker-ps", "k8s_pods", "log@error"）
+    /// 2. 展开这些别名
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 所有包含特殊字符的别名都能正确展开
+    /// - 特殊字符被正确处理
     #[test]
     fn test_alias_with_special_characters() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -510,6 +730,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试包含引号和空格的别名
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理包含复杂参数（空格、引号等）的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含复杂参数的别名映射（"find-large", "git-log"）
+    /// 2. 展开这些别名
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 包含复杂参数的别名都能正确展开
+    /// - 参数格式正确
     #[test]
     fn test_alias_with_quotes_and_spaces() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -535,6 +768,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试空命令的别名
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理空命令的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建空命令的别名映射（"empty" -> ""）
+    /// 2. 展开别名
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 空命令别名展开为空字符串
     #[test]
     fn test_empty_alias_command() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -549,6 +794,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试单个命令的别名
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理单个命令的别名（无参数）。
+    ///
+    /// ## 测试场景
+    /// 1. 创建单个命令的别名映射（"vi" -> "vim", "py" -> "python3"）
+    /// 2. 展开这些别名
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 单个命令的别名都能正确展开
     #[test]
     fn test_alias_with_single_command() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -570,6 +827,21 @@ mod tests {
 
     // ==================== 复杂场景测试 ====================
 
+    /// 测试混合别名和普通命令的场景
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器能够正确处理包含别名和普通命令混合的命令行。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（"ll" -> "ls -la", "search" -> "ll | grep"）
+    /// 2. 准备包含别名和普通命令的参数列表
+    /// 3. 展开参数
+    /// 4. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 别名被正确展开
+    /// - 普通命令保持不变
+    /// - 管道符号等特殊字符被正确处理
     #[test]
     fn test_mixed_alias_and_regular_commands() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -601,6 +873,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试别名展开保持参数顺序
+    ///
+    /// ## 测试目的
+    /// 验证别名展开后，原始参数顺序被正确保持。
+    ///
+    /// ## 测试场景
+    /// 1. 创建别名映射（"docker-run" -> "docker run -it --rm"）
+    /// 2. 准备包含别名和额外参数的命令行参数
+    /// 3. 展开别名
+    /// 4. 验证参数顺序正确
+    ///
+    /// ## 预期结果
+    /// - 别名展开后的参数顺序正确
+    /// - 原始参数顺序保持不变
     #[test]
     fn test_alias_expansion_preserves_argument_order() -> Result<()> {
         let mut aliases = HashMap::new();
@@ -635,6 +921,20 @@ mod tests {
         Ok(())
     }
 
+    /// 测试大量别名映射的性能
+    ///
+    /// ## 测试目的
+    /// 验证别名管理器在处理大量别名时的性能表现。
+    ///
+    /// ## 测试场景
+    /// 1. 创建1000个别名映射
+    /// 2. 执行100次别名查找和展开操作
+    /// 3. 测量执行时间
+    /// 4. 验证性能在可接受范围内
+    ///
+    /// ## 预期结果
+    /// - 100次查找操作应在100毫秒内完成
+    /// - 性能表现良好
     #[test]
     fn test_performance_with_large_alias_map() -> Result<()> {
         use std::time::Instant;
@@ -666,6 +966,20 @@ mod tests {
     // ==================== 实际 AliasManager 方法测试 ====================
     // 注意：这些测试依赖实际的配置文件，但会测试 AliasManager 的实际方法
 
+    /// 测试 AliasManager::load() 方法
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager 能够正确加载别名配置。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 AliasManager::load() 方法
+    /// 2. 验证返回结果
+    /// 3. 检查返回的别名映射
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 返回 HashMap<String, String>
+    /// - 即使别名列表为空也能正常工作
     #[test]
     fn test_alias_manager_load() -> Result<()> {
         // 测试 AliasManager::load() 方法（覆盖 manager.rs:29-32）
@@ -680,6 +994,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::list() 方法
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager 能够正确列出所有别名。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 AliasManager::list() 方法
+    /// 2. 验证返回结果
+    /// 3. 检查返回的别名映射
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 返回 HashMap<String, String>
     #[test]
     fn test_alias_manager_list() -> Result<()> {
         // 测试 AliasManager::list() 方法（覆盖 manager.rs:235-237）
@@ -694,6 +1021,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::exists() 方法
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager 能够正确检查别名是否存在。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 AliasManager::exists() 检查不存在的别名
+    /// 2. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok(false)
+    /// - 不存在的别名返回 false
     #[test]
     fn test_alias_manager_exists() -> Result<()> {
         // 测试 AliasManager::exists() 方法（覆盖 manager.rs:252-255）
@@ -705,6 +1044,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand_args() 方法处理空参数
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand_args() 能够正确处理只包含程序名的参数列表。
+    ///
+    /// ## 测试场景
+    /// 1. 准备只包含程序名的参数列表（["workflow"]）
+    /// 2. 调用 expand_args() 方法
+    /// 3. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 参数列表保持不变
     #[test]
     fn test_alias_manager_expand_args_empty() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 空参数（覆盖 manager.rs:116-120）
@@ -716,6 +1068,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand_args() 方法处理单个参数
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand_args() 能够正确处理只包含程序名的参数列表。
+    ///
+    /// ## 测试场景
+    /// 1. 准备只包含程序名的参数列表（["workflow"]）
+    /// 2. 调用 expand_args() 方法
+    /// 3. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 参数列表保持不变
     #[test]
     fn test_alias_manager_expand_args_single() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 单个参数（覆盖 manager.rs:116-120）
@@ -727,6 +1092,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand_args() 方法处理非别名命令
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand_args() 能够正确处理不包含别名的命令参数。
+    ///
+    /// ## 测试场景
+    /// 1. 准备不包含别名的参数列表（["workflow", "status", "--verbose"]）
+    /// 2. 调用 expand_args() 方法
+    /// 3. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 参数列表保持不变（第一个参数不是别名）
     #[test]
     fn test_alias_manager_expand_args_non_alias() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 非别名命令（覆盖 manager.rs:144-147）
@@ -746,6 +1124,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::check_circular() 方法检测直接循环
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::check_circular() 能够正确检测直接循环别名（别名指向自身）。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 check_circular() 检查直接循环（"test_circular_a" -> "test_circular_a"）
+    /// 2. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok(true)
+    /// - 直接循环被正确检测
     #[test]
     fn test_alias_manager_check_circular_direct() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 直接循环（覆盖 manager.rs:273-302）
@@ -761,6 +1151,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::check_circular() 方法检测非循环别名
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::check_circular() 能够正确识别非循环的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 check_circular() 检查非循环别名（"__test_new_alias__" -> "git status"）
+    /// 2. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok(false)
+    /// - 非循环别名被正确识别
     #[test]
     fn test_alias_manager_check_circular_non_circular() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 非循环（覆盖 manager.rs:273-302）
@@ -774,6 +1176,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法的深度限制
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够正确检测并拒绝超过深度限制的别名展开。
+    ///
+    /// ## 测试场景
+    /// 1. 使用超过最大深度限制（11层）调用 expand() 方法
+    /// 2. 验证错误处理
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "depth exceeded maximum"
     #[test]
     fn test_alias_manager_expand_depth_limit() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 深度限制（覆盖 manager.rs:54-98）
@@ -789,6 +1203,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法处理不存在的别名
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够正确处理不存在的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 尝试展开不存在的别名 "__nonexistent_alias__"
+    /// 2. 验证错误处理
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Alias not found"
     #[test]
     fn test_alias_manager_expand_not_found() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 别名不存在（覆盖 manager.rs:77-79）
@@ -802,6 +1228,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法处理嵌套别名
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够正确处理嵌套别名（如果存在）。
+    ///
+    /// ## 测试场景
+    /// 1. 尝试展开可能存在的嵌套别名 "__test_nested__"
+    /// 2. 验证处理结果
+    ///
+    /// ## 预期结果
+    /// - 可能成功或失败，取决于实际配置
+    /// - 如果别名存在，应正确展开
     #[test]
     fn test_alias_manager_expand_with_nested_alias() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名（覆盖 manager.rs:84-95）
@@ -816,6 +1254,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法使用 visited 集合检测循环
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够使用 visited 集合正确检测循环引用。
+    ///
+    /// ## 测试场景
+    /// 1. 将别名添加到 visited 集合
+    /// 2. 尝试展开已访问的别名
+    /// 3. 验证循环检测
+    ///
+    /// ## 预期结果
+    /// - 返回错误（循环检测或别名不存在）
     #[test]
     fn test_alias_manager_expand_with_visited_set() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - visited 集合的使用（覆盖 manager.rs:82）
@@ -831,6 +1281,19 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand_args() 方法处理包含别名的参数
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand_args() 能够正确处理包含别名的命令行参数。
+    ///
+    /// ## 测试场景
+    /// 1. 准备包含可能别名的参数列表（["workflow", "__test_alias__"]）
+    /// 2. 调用 expand_args() 方法
+    /// 3. 验证处理结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 如果别名存在，应正确展开；如果不存在，参数保持不变
     #[test]
     fn test_alias_manager_expand_args_with_alias() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 包含别名（覆盖 manager.rs:128-143）
@@ -843,6 +1306,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::check_circular() 方法与已存在别名形成循环
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::check_circular() 能够检测与已存在别名形成循环的情况。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 check_circular() 检查新别名与已存在别名是否形成循环
+    /// 2. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok
+    /// - 如果形成循环，返回 true；否则返回 false
     #[test]
     fn test_alias_manager_check_circular_with_existing_alias() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 与已存在别名形成循环（覆盖 manager.rs:284-297）
@@ -857,6 +1332,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::check_circular() 方法处理 target 的第一个词不是别名的情况
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::check_circular() 能够正确处理 target 的第一个词不是别名的情况。
+    ///
+    /// ## 测试场景
+    /// 1. 调用 check_circular() 检查新别名，target 的第一个词不是别名（如 "git status"）
+    /// 2. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok(false)
+    /// - 第一个词不是别名时，不会形成循环
     #[test]
     fn test_alias_manager_check_circular_first_part_not_alias() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - target 的第一个词不是别名（覆盖 manager.rs:277-299）
@@ -869,6 +1356,18 @@ mod tests {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法处理递归嵌套展开
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够正确处理递归嵌套的别名展开。
+    ///
+    /// ## 测试场景
+    /// 1. 尝试展开可能包含嵌套别名的别名
+    /// 2. 验证处理结果
+    ///
+    /// ## 预期结果
+    /// - 可能成功或失败，取决于实际配置
+    /// - 如果别名存在且包含嵌套，应正确递归展开
     #[test]
     fn test_alias_manager_expand_recursive_nested() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 递归嵌套展开（覆盖 manager.rs:89-93）
@@ -884,15 +1383,30 @@ mod tests {
 
     // ==================== 使用临时配置文件的实际方法测试 ====================
 
+    /// 测试 AliasManager::add() 方法使用临时配置文件
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::add() 能够使用临时配置文件正确添加别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建临时配置文件和测试环境
+    /// 2. 调用 add() 方法添加别名
+    /// 3. 验证别名已添加到配置文件
+    ///
+    /// ## 预期结果
+    /// - 添加成功
+    /// - 别名已写入配置文件
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_add_with_temp_config() -> Result<()> {
         // 测试 AliasManager::add() 方法 - 使用临时配置文件（覆盖 manager.rs:162-181）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
@@ -902,21 +1416,13 @@ aliases = {}
 "#;
         FileWriter::new(&config_path).write_str(initial_config)?;
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 设置临时 HOME 目录
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 添加别名
         let result = workflow::base::alias::AliasManager::add("test_add_alias", "echo hello");
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证添加成功
         assert!(result.is_ok());
@@ -938,23 +1444,36 @@ aliases = {}
         Ok(())
     }
 
+    /// 测试 AliasManager::remove() 方法使用临时配置文件
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::remove() 能够使用临时配置文件正确删除别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含别名的临时配置文件
+    /// 2. 调用 remove() 方法删除别名
+    /// 3. 验证别名已从配置文件删除
+    ///
+    /// ## 预期结果
+    /// - 删除成功
+    /// - 别名已从配置文件移除
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_remove_with_temp_config() -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 使用临时配置文件（覆盖 manager.rs:198-222）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 先设置临时 HOME 目录（在创建配置文件之前）
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 创建包含别名的配置文件（在设置 HOME 之后）
         let initial_config = r#"
@@ -967,13 +1486,7 @@ aliases = { test_remove_alias = "echo test" }
 
         // 删除别名
         let result = workflow::base::alias::AliasManager::remove("test_remove_alias");
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证删除成功
         assert!(result.is_ok());
@@ -993,14 +1506,26 @@ aliases = { test_remove_alias = "echo test" }
         Ok(())
     }
 
+    /// 测试 AliasManager::remove() 方法删除不存在的别名
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::remove() 能够正确处理删除不存在别名的情况。
+    ///
+    /// ## 测试场景
+    /// 1. 创建空的临时配置文件
+    /// 2. 尝试删除不存在的别名
+    /// 3. 验证返回结果
+    ///
+    /// ## 预期结果
+    /// - 方法返回 Ok(false)
+    /// - 别名不存在时，返回 false 而不是错误
     #[test]
     fn test_alias_manager_remove_nonexistent_with_temp_config() -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 删除不存在的别名（覆盖 manager.rs:202-205）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
@@ -1010,21 +1535,13 @@ aliases = {}
 "#;
         FileWriter::new(&config_path).write_str(initial_config)?;
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 设置临时 HOME 目录
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 尝试删除不存在的别名
         let result = workflow::base::alias::AliasManager::remove("__nonexistent_alias__");
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证返回 false（别名不存在）
         assert!(result.is_ok());
@@ -1033,23 +1550,36 @@ aliases = {}
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法使用临时配置文件
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够使用临时配置文件正确展开别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含别名的临时配置文件
+    /// 2. 调用 expand() 方法展开别名
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 展开成功
+    /// - 展开结果正确
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_with_temp_config() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 使用临时配置文件（覆盖 manager.rs:54-98）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 先设置临时 HOME 目录（在创建配置文件之前）
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 创建包含别名的配置文件（在设置 HOME 之后）
         let initial_config = r#"
@@ -1067,13 +1597,7 @@ aliases = { test_expand_alias = "git status" }
         let mut visited = HashSet::new();
         let result =
             workflow::base::alias::AliasManager::expand("test_expand_alias", &mut visited, 0);
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证展开成功
         assert!(result.is_ok());
@@ -1082,23 +1606,36 @@ aliases = { test_expand_alias = "git status" }
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法展开嵌套别名（使用临时配置文件）
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够使用临时配置文件正确展开嵌套别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含嵌套别名的临时配置文件
+    /// 2. 调用 expand() 方法展开嵌套别名
+    /// 3. 验证递归展开结果
+    ///
+    /// ## 预期结果
+    /// - 展开成功
+    /// - 嵌套别名被正确递归展开
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_nested_with_temp_config() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名展开（覆盖 manager.rs:84-95）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 先设置临时 HOME 目录（在创建配置文件之前）
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 创建包含嵌套别名的配置文件（在设置 HOME 之后）
         let initial_config = r#"
@@ -1115,13 +1652,7 @@ aliases = {
         // 展开嵌套别名
         let mut visited = HashSet::new();
         let result = workflow::base::alias::AliasManager::expand("alias_b", &mut visited, 0);
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证展开成功（应该展开为 "git status --verbose"）
         assert!(result.is_ok());
@@ -1133,23 +1664,36 @@ aliases = {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand() 方法检测循环别名（使用临时配置文件）
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand() 能够使用临时配置文件正确检测循环别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含循环别名的临时配置文件
+    /// 2. 调用 expand() 方法展开循环别名
+    /// 3. 验证循环检测
+    ///
+    /// ## 预期结果
+    /// - 返回错误
+    /// - 错误消息包含 "Circular alias"
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_circular_with_temp_config() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 循环别名检测（覆盖 manager.rs:65-71）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 先设置临时 HOME 目录（在创建配置文件之前）
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 创建包含循环别名的配置文件（在设置 HOME 之后）
         let initial_config = r#"
@@ -1165,13 +1709,7 @@ aliases = {
         // 尝试展开循环别名
         let mut visited = HashSet::new();
         let result = workflow::base::alias::AliasManager::expand("alias_circular", &mut visited, 0);
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证检测到循环引用
         assert!(result.is_err());
@@ -1180,23 +1718,36 @@ aliases = {
         Ok(())
     }
 
+    /// 测试 AliasManager::expand_args() 方法使用临时配置文件
+    ///
+    /// ## 测试目的
+    /// 验证 AliasManager::expand_args() 能够使用临时配置文件正确展开命令行参数中的别名。
+    ///
+    /// ## 测试场景
+    /// 1. 创建包含别名的临时配置文件
+    /// 2. 调用 expand_args() 方法展开包含别名的参数列表
+    /// 3. 验证展开结果
+    ///
+    /// ## 预期结果
+    /// - 展开成功
+    /// - 别名被正确展开，其他参数保持不变
+    ///
+    /// ## 为什么被忽略
+    /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[test]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
     fn test_alias_manager_expand_args_with_temp_config() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 使用临时配置文件（覆盖 manager.rs:116-148）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 先设置临时 HOME 目录（在创建配置文件之前）
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 创建包含别名的配置文件（在设置 HOME 之后）
         let initial_config = r#"
@@ -1214,13 +1765,7 @@ aliases = { test_args_alias = "git status" }
             "--verbose".to_string(),
         ];
         let result = workflow::base::alias::AliasManager::expand_args(args);
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证展开成功
         assert!(result.is_ok());
@@ -1236,11 +1781,10 @@ aliases = { test_args_alias = "git status" }
     #[test]
     fn test_alias_manager_check_circular_with_temp_config() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 使用临时配置文件（覆盖 manager.rs:273-302）
-        use tempfile::TempDir;
         use workflow::base::util::file::FileWriter;
 
-        let temp_dir = TempDir::new()?;
-        let config_dir = temp_dir.path().join(".workflow").join("config");
+        let mut env = crate::common::environments::CliTestEnv::new()?;
+        let config_dir = env.path().join(".workflow").join("config");
         std::fs::create_dir_all(&config_dir)?;
         let config_path = config_dir.join("workflow.toml");
 
@@ -1253,11 +1797,9 @@ aliases = {
 "#;
         FileWriter::new(&config_path).write_str(initial_config)?;
 
-        // 保存原始 HOME 环境变量
-        let original_home = std::env::var("HOME").ok();
-
         // 设置临时 HOME 目录
-        std::env::set_var("HOME", temp_dir.path());
+        let home_path = env.path().to_string_lossy().to_string();
+        env.env_guard().set("HOME", &home_path);
 
         // 检查是否会形成循环（新别名指向 existing_alias，而 existing_alias 指向 git status，不会循环）
         let result1 =
@@ -1265,13 +1807,7 @@ aliases = {
 
         // 检查直接循环（新别名指向自己）
         let result2 = workflow::base::alias::AliasManager::check_circular("new_alias", "new_alias");
-
-        // 恢复原始 HOME
-        if let Some(home) = original_home {
-            std::env::set_var("HOME", home);
-        } else {
-            std::env::remove_var("HOME");
-        }
+        // EnvGuard 会在 env 离开作用域时自动恢复 HOME
 
         // 验证结果
         assert!(result1.is_ok());

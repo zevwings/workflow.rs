@@ -7,12 +7,10 @@
 //! - 错误处理和边界情况
 
 use pretty_assertions::assert_eq;
-use serial_test::serial;
-use std::fs;
-use std::process::Command;
-use tempfile::TempDir;
 use workflow::commit::{CommitSquash, SquashOptions, SquashPreview, SquashResult};
 use workflow::git::CommitInfo;
+
+use crate::common::environments::GitTestEnv;
 
 // ==================== Helper Functions ====================
 
@@ -51,52 +49,6 @@ fn create_single_commit() -> CommitInfo {
     }
 }
 
-/// 创建带有多个提交的临时 Git 仓库
-fn create_git_repo_with_multiple_commits() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
-
-    // 初始化 Git 仓库
-    Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    // 设置 Git 配置
-    Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建多个提交
-    for i in 1..=5 {
-        let file_path = temp_path.join(format!("feature{}.txt", i));
-        fs::write(&file_path, format!("Feature {} implementation\n", i))
-            .expect("Failed to write file");
-
-        Command::new("git")
-            .args(["add", &format!("feature{}.txt", i)])
-            .current_dir(temp_path)
-            .output()
-            .expect("Failed to add file");
-
-        Command::new("git")
-            .args(["commit", "-m", &format!("feat: add feature {}", i)])
-            .current_dir(temp_path)
-            .output()
-            .expect("Failed to commit");
-    }
-
-    temp_dir
-}
 
 // ==================== 测试用例 ====================
 
@@ -359,11 +311,21 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
 
 /// 测试 Git 仓库集成
 #[test]
-#[serial]
-fn test_git_integration() {
-    let _temp_dir = create_git_repo_with_multiple_commits();
+fn test_git_integration() -> color_eyre::Result<()> {
+    // 使用 GitTestEnv 创建隔离的 Git 仓库
+    let env = GitTestEnv::new()?;
+
+    // 创建多个提交以模拟真实场景
+    for i in 1..=5 {
+        env.make_test_commit(
+            &format!("feature{}.txt", i),
+            &format!("Feature {} implementation\n", i),
+            &format!("feat: add feature {}", i),
+        )?;
+    }
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行
-    assert!(true);
+    // GitTestEnv 会在函数结束时自动清理
+    Ok(())
 }

@@ -27,6 +27,20 @@ struct TestData {
 
 // ==================== Response Status Tests ====================
 
+/// 测试响应成功状态判断（200状态码）
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确判断成功状态（200状态码）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送请求并获取响应
+/// 3. 验证响应状态判断方法
+///
+/// ## 预期结果
+/// - is_success() 返回 true
+/// - is_error() 返回 false
+/// - status 为 200
 #[test]
 fn test_response_is_success_with_200_status_returns_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
@@ -55,6 +69,20 @@ fn test_response_is_success_with_200_status_returns_true() -> Result<()> {
     Ok(())
 }
 
+/// 测试响应错误状态判断（404状态码）
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确判断错误状态（404状态码）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 404 状态码
+/// 2. 发送请求并获取响应
+/// 3. 验证响应状态判断方法
+///
+/// ## 预期结果
+/// - is_success() 返回 false
+/// - is_error() 返回 true
+/// - status 为 404
 #[test]
 fn test_response_is_error_with_404_status_returns_true() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
@@ -85,6 +113,19 @@ fn test_response_is_error_with_404_status_returns_true() -> Result<()> {
 
 // ==================== Response Content Parsing Tests ====================
 
+/// 测试解析有效的 JSON 响应为结构体
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确解析 JSON 内容为指定的结构体类型。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 响应
+/// 2. 发送请求并获取响应
+/// 3. 使用 as_json() 解析为 TestData 结构体
+///
+/// ## 预期结果
+/// - JSON 解析成功
+/// - 结构体字段值正确
 #[test]
 fn test_response_as_json_with_valid_json_returns_parsed_data() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
@@ -113,6 +154,19 @@ fn test_response_as_json_with_valid_json_returns_parsed_data() -> Result<()> {
     Ok(())
 }
 
+/// 测试解析有效的 JSON 响应为 Value
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确解析 JSON 内容为 serde_json::Value。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 响应
+/// 2. 发送请求并获取响应
+/// 3. 使用 as_json() 解析为 Value
+///
+/// ## 预期结果
+/// - JSON 解析成功
+/// - Value 内容正确
 #[test]
 fn test_response_as_json_value_with_valid_json_returns_value() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
@@ -141,6 +195,18 @@ fn test_response_as_json_value_with_valid_json_returns_value() -> Result<()> {
     Ok(())
 }
 
+/// 测试解析文本响应
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确解析文本内容。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回文本响应
+/// 2. 发送请求并获取响应
+/// 3. 使用 as_text() 获取文本内容
+///
+/// ## 预期结果
+/// - 文本内容正确
 #[test]
 fn test_response_as_text_with_text_response_returns_text() -> Result<()> {
     // Arrange: 准备 Mock 服务器和文本响应
@@ -168,6 +234,18 @@ fn test_response_as_text_with_text_response_returns_text() -> Result<()> {
     Ok(())
 }
 
+/// 测试解析二进制响应
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确解析二进制内容。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回二进制响应
+/// 2. 发送请求并获取响应
+/// 3. 使用 as_bytes() 获取字节内容
+///
+/// ## 预期结果
+/// - 字节内容正确
 #[test]
 fn test_response_as_bytes_with_binary_response_returns_bytes() -> Result<()> {
     // Arrange: 准备 Mock 服务器和二进制响应
@@ -198,6 +276,18 @@ fn test_response_as_bytes_with_binary_response_returns_bytes() -> Result<()> {
 
 // ==================== Response Success Validation Tests ====================
 
+/// 测试确保响应成功的验证（成功响应）
+///
+/// ## 测试目的
+/// 验证 ensure_success() 方法在成功响应时返回 Ok。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送请求并获取响应
+/// 3. 调用 ensure_success() 验证
+///
+/// ## 预期结果
+/// - ensure_success() 返回 Ok
 #[test]
 fn test_response_ensure_success_with_success_response_returns_ok() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
@@ -225,6 +315,19 @@ fn test_response_ensure_success_with_success_response_returns_ok() -> Result<()>
     Ok(())
 }
 
+/// 测试确保响应成功的验证（错误响应）
+///
+/// ## 测试目的
+/// 验证 ensure_success() 方法在错误响应时返回错误。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 500 状态码
+/// 2. 发送请求并获取响应
+/// 3. 调用 ensure_success() 验证
+///
+/// ## 预期结果
+/// - ensure_success() 返回错误
+/// - 错误消息包含状态码
 #[test]
 fn test_response_ensure_success_with_error_response_returns_error() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
@@ -261,6 +364,18 @@ fn test_response_ensure_success_with_error_response_returns_error() -> Result<()
     Ok(())
 }
 
+/// 测试使用自定义错误处理器的成功验证（成功响应）
+///
+/// ## 测试目的
+/// 验证 ensure_success_with() 方法在成功响应时返回 Ok。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 200 状态码
+/// 2. 发送请求并获取响应
+/// 3. 使用自定义错误处理器调用 ensure_success_with() 验证
+///
+/// ## 预期结果
+/// - ensure_success_with() 返回 Ok
 #[test]
 fn test_response_ensure_success_with_custom_error_handler_returns_ok() -> Result<()> {
     // Arrange: 准备 Mock 服务器和成功响应
@@ -289,6 +404,19 @@ fn test_response_ensure_success_with_custom_error_handler_returns_ok() -> Result
     Ok(())
 }
 
+/// 测试使用自定义错误处理器的成功验证（错误响应）
+///
+/// ## 测试目的
+/// 验证 ensure_success_with() 方法在错误响应时调用自定义错误处理器并返回错误。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 403 状态码
+/// 2. 发送请求并获取响应
+/// 3. 使用自定义错误处理器调用 ensure_success_with() 验证
+///
+/// ## 预期结果
+/// - ensure_success_with() 返回错误
+/// - 错误消息包含状态码（由自定义处理器生成）
 #[test]
 fn test_response_ensure_success_with_custom_error_handler_on_error_returns_error() -> Result<()> {
     // Arrange: 准备 Mock 服务器和错误响应
@@ -323,6 +451,19 @@ fn test_response_ensure_success_with_custom_error_handler_on_error_returns_error
 
 // ==================== Response Error Message Extraction Tests ====================
 
+/// 测试从 JSON 错误响应中提取错误消息
+///
+/// ## 测试目的
+/// 验证 extract_error_message() 方法能够从 JSON 错误响应中提取错误消息。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 错误响应
+/// 2. 发送请求并获取响应
+/// 3. 调用 extract_error_message() 提取错误消息
+///
+/// ## 预期结果
+/// - 错误消息正确提取
+/// - 消息包含预期的错误内容
 #[test]
 fn test_response_extract_error_message_with_json_error_returns_message() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 错误响应
@@ -350,6 +491,19 @@ fn test_response_extract_error_message_with_json_error_returns_message() -> Resu
     Ok(())
 }
 
+/// 测试从文本错误响应中提取错误消息
+///
+/// ## 测试目的
+/// 验证 extract_error_message() 方法能够从文本错误响应中提取错误消息。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回文本错误响应
+/// 2. 发送请求并获取响应
+/// 3. 调用 extract_error_message() 提取错误消息
+///
+/// ## 预期结果
+/// - 错误消息正确提取
+/// - 消息包含预期的错误内容
 #[test]
 fn test_response_extract_error_message_with_text_error_returns_message() -> Result<()> {
     // Arrange: 准备 Mock 服务器和文本错误响应
@@ -379,6 +533,19 @@ fn test_response_extract_error_message_with_text_error_returns_message() -> Resu
 
 // ==================== Response Metadata Tests ====================
 
+/// 测试获取响应头
+///
+/// ## 测试目的
+/// 验证能够正确获取 HTTP 响应的自定义响应头。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回自定义响应头
+/// 2. 发送请求并获取响应
+/// 3. 获取响应头并验证
+///
+/// ## 预期结果
+/// - 响应头正确获取
+/// - 自定义响应头值正确
 #[test]
 fn test_response_headers_with_custom_headers_returns_headers() -> Result<()> {
     // Arrange: 准备 Mock 服务器和自定义响应头
@@ -420,6 +587,19 @@ fn test_response_headers_with_custom_headers_returns_headers() -> Result<()> {
     Ok(())
 }
 
+/// 测试获取状态码文本
+///
+/// ## 测试目的
+/// 验证能够正确获取 HTTP 响应的状态码文本。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 201 状态码
+/// 2. 发送请求并获取响应
+/// 3. 验证状态码和状态文本
+///
+/// ## 预期结果
+/// - 状态码为 201
+/// - 状态文本不为空
 #[test]
 fn test_response_status_text_with_201_status_returns_status_text() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 201 状态码
@@ -449,6 +629,19 @@ fn test_response_status_text_with_201_status_returns_status_text() -> Result<()>
 
 // ==================== Response Multiple Parsing Tests ====================
 
+/// 测试同一响应的多次解析
+///
+/// ## 测试目的
+/// 验证能够对同一个响应进行多次解析（JSON、文本等）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 JSON 响应
+/// 2. 发送请求并获取响应
+/// 3. 多次调用不同的解析方法
+///
+/// ## 预期结果
+/// - 多次解析结果一致
+/// - 不同解析方法都能正常工作
 #[test]
 fn test_response_multiple_parses_with_same_response_allows_multiple_parses() -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
@@ -482,6 +675,19 @@ fn test_response_multiple_parses_with_same_response_allows_multiple_parses() -> 
 
 // ==================== Response Error Handling Tests ====================
 
+/// 测试无效 UTF-8 响应体的错误处理
+///
+/// ## 测试目的
+/// 验证 ensure_success() 方法在响应体包含无效 UTF-8 时能够正确处理错误。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回包含无效 UTF-8 的响应体
+/// 2. 发送请求并获取响应
+/// 3. 调用 ensure_success() 验证
+///
+/// ## 预期结果
+/// - ensure_success() 返回错误
+/// - 错误处理正确（不会panic）
 #[test]
 fn test_response_ensure_success_with_invalid_utf8_body_returns_error() -> Result<()> {
     // Arrange: 准备 Mock 服务器和无效 UTF-8 响应体
@@ -517,6 +723,19 @@ fn test_response_ensure_success_with_invalid_utf8_body_returns_error() -> Result
 
 // ==================== Additional Response Tests ====================
 
+/// 测试响应成功状态判断（201状态码，补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确判断成功状态（201 Created状态码）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 201 状态码
+/// 2. 发送 POST 请求并获取响应
+/// 3. 验证响应状态判断方法
+///
+/// ## 预期结果
+/// - is_success() 返回 true
+/// - status 为 201
 #[test]
 fn test_http_response_is_success_with_201_status_returns_true() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和 201 响应
@@ -545,6 +764,19 @@ fn test_http_response_is_success_with_201_status_returns_true() -> color_eyre::R
     Ok(())
 }
 
+/// 测试响应成功状态判断（299状态码，补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确判断成功状态（299状态码，2xx范围的上限）。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回 299 状态码
+/// 2. 发送 GET 请求并获取响应
+/// 3. 验证响应状态判断方法
+///
+/// ## 预期结果
+/// - is_success() 返回 true
+/// - status 为 299
 #[test]
 fn test_http_response_is_success_with_299_status_returns_true() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和 299 响应
@@ -573,6 +805,18 @@ fn test_http_response_is_success_with_299_status_returns_true() -> color_eyre::R
     Ok(())
 }
 
+/// 测试响应调试格式化（补充测试）
+///
+/// ## 测试目的
+/// 验证 HTTP 响应能够正确格式化调试字符串。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回响应
+/// 2. 发送请求并获取响应
+/// 3. 格式化 Debug 输出
+///
+/// ## 预期结果
+/// - Debug 字符串包含状态码或消息
 #[test]
 fn test_http_response_debug_with_valid_response_returns_debug_string() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和响应
@@ -601,6 +845,19 @@ fn test_http_response_debug_with_valid_response_returns_debug_string() -> color_
     Ok(())
 }
 
+/// 测试从包含 message 字段的 JSON 错误响应中提取错误消息（补充测试）
+///
+/// ## 测试目的
+/// 验证 extract_error_message() 方法能够从包含 message 字段的 JSON 错误响应中提取错误消息。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回包含 message 字段的 JSON 错误响应
+/// 2. 发送请求并获取响应
+/// 3. 调用 extract_error_message() 提取错误消息
+///
+/// ## 预期结果
+/// - 错误消息正确提取
+/// - 消息包含预期的错误内容
 #[test]
 fn test_http_response_extract_error_message_with_message_field_returns_message() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应
@@ -629,6 +886,18 @@ fn test_http_response_extract_error_message_with_message_field_returns_message()
     Ok(())
 }
 
+/// 测试从没有 error 字段的 JSON 错误响应中提取错误消息（补充测试）
+///
+/// ## 测试目的
+/// 验证 extract_error_message() 方法在没有 error 字段时能够返回完整的 JSON 字符串。
+///
+/// ## 测试场景
+/// 1. 配置 Mock 服务器返回没有 error 字段的 JSON 错误响应
+/// 2. 发送请求并获取响应
+/// 3. 调用 extract_error_message() 提取错误消息
+///
+/// ## 预期结果
+/// - 错误消息包含完整的 JSON 内容
 #[test]
 fn test_http_response_extract_error_message_without_error_field_returns_full_json() -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应

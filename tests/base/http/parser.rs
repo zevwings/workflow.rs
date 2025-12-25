@@ -18,6 +18,18 @@ struct TestStruct {
     name: String,
 }
 
+/// 测试 JSON 解析器解析为结构体
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够将有效的 JSON 字节解析为 Rust 结构体。
+///
+/// ## 测试场景
+/// 1. 准备有效的 JSON 字节
+/// 2. 解析为 TestStruct
+/// 3. 验证字段值正确
+///
+/// ## 预期结果
+/// - JSON 被正确解析为结构体，字段值正确
 #[test]
 fn test_json_parser_parse_with_valid_json_returns_struct() -> Result<()> {
     // Arrange: 准备有效的JSON字节
@@ -32,6 +44,18 @@ fn test_json_parser_parse_with_valid_json_returns_struct() -> Result<()> {
     Ok(())
 }
 
+/// 测试 JSON 解析器解析为 Value
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够将有效的 JSON 字节解析为 serde_json::Value。
+///
+/// ## 测试场景
+/// 1. 准备有效的 JSON 字节
+/// 2. 解析为 Value
+/// 3. 验证字段值正确
+///
+/// ## 预期结果
+/// - JSON 被正确解析为 Value，字段值正确
 #[test]
 fn test_json_parser_parse_with_valid_json_returns_value() -> Result<()> {
     // Arrange: 准备有效的JSON字节
@@ -46,6 +70,18 @@ fn test_json_parser_parse_with_valid_json_returns_value() -> Result<()> {
     Ok(())
 }
 
+/// 测试 JSON 解析器处理空响应
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够优雅地处理空响应（解析为 null 或 {}）。
+///
+/// ## 测试场景
+/// 1. 准备空响应字节
+/// 2. 尝试解析为空对象或 null
+/// 3. 验证解析成功
+///
+/// ## 预期结果
+/// - 空响应被成功解析为 null 或 {}
 #[test]
 fn test_json_parser_parse_with_empty_response_handles_gracefully() {
     // Arrange: 准备空响应（空响应应该尝试解析为 null 或 {}）
@@ -58,6 +94,18 @@ fn test_json_parser_parse_with_empty_response_handles_gracefully() {
     assert!(result.is_ok());
 }
 
+/// 测试 JSON 解析器处理空白字符响应
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够优雅地处理只包含空白字符的响应。
+///
+/// ## 测试场景
+/// 1. 准备只包含空白字符的响应
+/// 2. 尝试解析
+/// 3. 验证解析成功
+///
+/// ## 预期结果
+/// - 空白字符响应被成功解析为 null 或 {}
 #[test]
 fn test_json_parser_parse_with_whitespace_response_handles_gracefully() {
     // Arrange: 准备只有空白字符的响应
@@ -70,6 +118,18 @@ fn test_json_parser_parse_with_whitespace_response_handles_gracefully() {
     assert!(result.is_ok());
 }
 
+/// 测试 JSON 解析器处理无效 JSON
+///
+/// ## 测试目的
+/// 验证 JsonParser 在遇到无效 JSON 时返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效的 JSON 字节
+/// 2. 尝试解析
+/// 3. 验证返回错误且错误消息包含 "Failed to parse JSON"
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "Failed to parse JSON"
 #[test]
 fn test_json_parser_parse_with_invalid_json_returns_error() {
     // Arrange: 准备无效的JSON字节
@@ -86,6 +146,18 @@ fn test_json_parser_parse_with_invalid_json_returns_error() {
     }
 }
 
+/// 测试 JSON 解析器处理错误状态码
+///
+/// ## 测试目的
+/// 验证 JsonParser 即使状态码是错误码，也能尝试解析 JSON。
+///
+/// ## 测试场景
+/// 1. 准备错误状态码的 JSON
+/// 2. 解析 JSON
+/// 3. 验证解析成功
+///
+/// ## 预期结果
+/// - JSON 被成功解析，即使状态码是错误码
 #[test]
 fn test_json_parser_parse_with_error_status_parses_json() -> Result<()> {
     // Arrange: 准备错误状态码的JSON（即使状态码是错误，JSON 解析器也应该尝试解析）
@@ -99,6 +171,18 @@ fn test_json_parser_parse_with_error_status_parses_json() -> Result<()> {
     Ok(())
 }
 
+/// 测试文本解析器解析有效文本
+///
+/// ## 测试目的
+/// 验证 TextParser 能够将有效的文本字节解析为字符串。
+///
+/// ## 测试场景
+/// 1. 准备有效的文本字节
+/// 2. 解析为字符串
+/// 3. 验证结果正确
+///
+/// ## 预期结果
+/// - 文本被正确解析为字符串
 #[test]
 fn test_text_parser_parse_with_valid_text_returns_string() -> Result<()> {
     // Arrange: 准备有效的文本字节
@@ -112,6 +196,18 @@ fn test_text_parser_parse_with_valid_text_returns_string() -> Result<()> {
     Ok(())
 }
 
+/// 测试文本解析器解析 UTF-8 文本
+///
+/// ## 测试目的
+/// 验证 TextParser 能够正确处理 UTF-8 编码的文本（包括中文）。
+///
+/// ## 测试场景
+/// 1. 准备 UTF-8 文本字节
+/// 2. 解析为字符串
+/// 3. 验证结果正确
+///
+/// ## 预期结果
+/// - UTF-8 文本被正确解析为字符串
 #[test]
 fn test_text_parser_parse_with_utf8_text_returns_string() -> Result<()> {
     // Arrange: 准备UTF-8文本字节
@@ -125,6 +221,18 @@ fn test_text_parser_parse_with_utf8_text_returns_string() -> Result<()> {
     Ok(())
 }
 
+/// 测试文本解析器处理错误状态码
+///
+/// ## 测试目的
+/// 验证 TextParser 在遇到错误状态码时返回错误。
+///
+/// ## 测试场景
+/// 1. 准备错误状态码的文本
+/// 2. 尝试解析
+/// 3. 验证返回错误且错误消息包含状态码
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含状态码
 #[test]
 fn test_text_parser_parse_with_error_status_returns_error() {
     // Arrange: 准备错误状态码的文本（TextParser 应该拒绝非成功状态码）
@@ -141,6 +249,18 @@ fn test_text_parser_parse_with_error_status_returns_error() {
     }
 }
 
+/// 测试文本解析器处理无效 UTF-8
+///
+/// ## 测试目的
+/// 验证 TextParser 在遇到无效 UTF-8 序列时返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效的 UTF-8 序列
+/// 2. 尝试解析
+/// 3. 验证返回错误且错误消息包含 UTF-8 相关信息
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 UTF-8 相关信息
 #[test]
 fn test_text_parser_parse_with_invalid_utf8_returns_error() {
     // Arrange: 准备无效的 UTF-8 序列
@@ -157,6 +277,18 @@ fn test_text_parser_parse_with_invalid_utf8_returns_error() {
     }
 }
 
+/// 测试文本解析器处理空字节
+///
+/// ## 测试目的
+/// 验证 TextParser 能够正确处理空字节（返回空字符串）。
+///
+/// ## 测试场景
+/// 1. 准备空字节
+/// 2. 解析文本
+/// 3. 验证返回空字符串
+///
+/// ## 预期结果
+/// - 返回空字符串
 #[test]
 fn test_text_parser_parse_with_empty_bytes_returns_empty_string() -> Result<()> {
     // Arrange: 准备空字节
@@ -170,6 +302,18 @@ fn test_text_parser_parse_with_empty_bytes_returns_empty_string() -> Result<()> 
     Ok(())
 }
 
+/// 测试 JSON 解析器处理大响应
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够正确处理大型 JSON 响应（超过 200 字符）。
+///
+/// ## 测试场景
+/// 1. 准备大型 JSON 响应
+/// 2. 解析 JSON
+/// 3. 验证解析结果正确
+///
+/// ## 预期结果
+/// - 大型 JSON 被正确解析
 #[test]
 fn test_json_parser_parse_with_large_response_parses_correctly() -> Result<()> {
     // Arrange: 准备大响应（超过 200 字符的预览）
@@ -184,6 +328,18 @@ fn test_json_parser_parse_with_large_response_parses_correctly() -> Result<()> {
     Ok(())
 }
 
+/// 测试 JSON 解析器错误消息预览功能
+///
+/// ## 测试目的
+/// 验证当 JSON 解析失败时，错误消息中包含预览信息。
+///
+/// ## 测试场景
+/// 1. 准备无效的长 JSON（>200字符）
+/// 2. 尝试解析
+/// 3. 验证错误消息包含预览信息
+///
+/// ## 预期结果
+/// - 错误消息包含预览信息或 "Failed to parse JSON"
 #[test]
 fn test_json_parser_parse_with_invalid_json_returns_error_with_preview() {
     // Arrange: 准备无效的JSON（测试错误消息中的预览功能）
@@ -203,6 +359,18 @@ fn test_json_parser_parse_with_invalid_json_returns_error_with_preview() {
     }
 }
 
+/// 测试 JSON 解析器空响应回退机制
+///
+/// ## 测试目的
+/// 验证当空响应无法解析为 null 时，JsonParser 会回退到解析 {}。
+///
+/// ## 测试场景
+/// 1. 准备空响应
+/// 2. 尝试解析为需要字段的结构体
+/// 3. 验证返回错误且错误消息包含相关信息
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "Failed to parse empty response as JSON"
 #[test]
 fn test_json_parser_parse_with_empty_response_falls_back_to_object() {
     // Arrange: 准备空响应（测试空响应时，如果解析 null 失败，会回退到解析 {}）
@@ -224,6 +392,18 @@ fn test_json_parser_parse_with_empty_response_falls_back_to_object() {
 
 // ==================== 来自 parser_core.rs 的补充测试 ====================
 
+/// 测试 JSON 解析器解析数组 JSON
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够将数组格式的 JSON 解析为 Vec。
+///
+/// ## 测试场景
+/// 1. 准备数组 JSON 字节
+/// 2. 解析为 Vec<i32>
+/// 3. 验证解析结果为数组
+///
+/// ## 预期结果
+/// - JSON 数组被正确解析为 Vec
 #[test]
 fn test_json_parser_parse_with_array_json_returns_array() -> color_eyre::Result<()> {
     // Arrange: 准备数组JSON字节
@@ -237,6 +417,18 @@ fn test_json_parser_parse_with_array_json_returns_array() -> color_eyre::Result<
     Ok(())
 }
 
+/// 测试 JSON 解析器解析嵌套对象
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够正确解析嵌套的 JSON 对象。
+///
+/// ## 测试场景
+/// 1. 准备嵌套对象 JSON 字节
+/// 2. 解析为 Value
+/// 3. 验证嵌套值正确
+///
+/// ## 预期结果
+/// - 嵌套对象被正确解析，嵌套值可访问
 #[test]
 fn test_json_parser_parse_with_nested_object_returns_nested_value() -> color_eyre::Result<()> {
     // Arrange: 准备嵌套对象JSON字节
@@ -250,6 +442,18 @@ fn test_json_parser_parse_with_nested_object_returns_nested_value() -> color_eyr
     Ok(())
 }
 
+/// 测试文本解析器解析多行文本
+///
+/// ## 测试目的
+/// 验证 TextParser 能够正确处理包含换行符的多行文本。
+///
+/// ## 测试场景
+/// 1. 准备多行文本字节
+/// 2. 解析为字符串
+/// 3. 验证解析结果正确
+///
+/// ## 预期结果
+/// - 多行文本被正确解析，换行符被保留
 #[test]
 fn test_text_parser_parse_with_multiline_text_returns_multiline_string() -> color_eyre::Result<()> {
     // Arrange: 准备多行文本字节
@@ -263,6 +467,18 @@ fn test_text_parser_parse_with_multiline_text_returns_multiline_string() -> colo
     Ok(())
 }
 
+/// 测试文本解析器解析 Unicode 文本
+///
+/// ## 测试目的
+/// 验证 TextParser 能够正确处理 Unicode 字符（包括 emoji）。
+///
+/// ## 测试场景
+/// 1. 准备 Unicode 文本字节
+/// 2. 解析为字符串
+/// 3. 验证解析结果正确
+///
+/// ## 预期结果
+/// - Unicode 文本被正确解析，包括 emoji
 #[test]
 fn test_text_parser_parse_with_unicode_text_returns_unicode_string() -> color_eyre::Result<()> {
     // Arrange: 准备Unicode文本字节
@@ -276,6 +492,18 @@ fn test_text_parser_parse_with_unicode_text_returns_unicode_string() -> color_ey
     Ok(())
 }
 
+/// 测试 JSON 解析器解析自定义结构体
+///
+/// ## 测试目的
+/// 验证 JsonParser 能够将 JSON 解析为自定义的 Rust 结构体。
+///
+/// ## 测试场景
+/// 1. 准备自定义结构体和 JSON 字节
+/// 2. 解析为自定义结构体
+/// 3. 验证字段值正确
+///
+/// ## 预期结果
+/// - JSON 被正确解析为自定义结构体，字段值正确
 #[test]
 fn test_json_parser_parse_with_custom_struct_returns_struct() -> color_eyre::Result<()> {
     // Arrange: 准备自定义结构体和JSON字节
@@ -296,6 +524,18 @@ fn test_json_parser_parse_with_custom_struct_returns_struct() -> color_eyre::Res
     Ok(())
 }
 
+/// 测试 JSON 解析器错误消息包含状态码
+///
+/// ## 测试目的
+/// 验证当解析失败时，错误消息中包含 HTTP 状态码信息。
+///
+/// ## 测试场景
+/// 1. 准备长响应（>200字符）且解析失败
+/// 2. 使用错误状态码（500）尝试解析
+/// 3. 验证错误消息包含状态码
+///
+/// ## 预期结果
+/// - 错误消息包含状态码和 "Failed to parse JSON"
 #[test]
 fn test_json_parser_parse_with_long_response_and_status_returns_error_with_status() {
     // Arrange: 准备长响应（>200字符）且解析失败时，status 参数在错误消息中的使用

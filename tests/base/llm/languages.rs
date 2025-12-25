@@ -16,6 +16,17 @@ use workflow::base::llm::languages::{
 
 // ==================== Language Finding Tests ====================
 
+/// 测试精确匹配查找语言
+///
+/// ## 测试目的
+/// 验证 find_language() 能够通过有效的语言代码查找语言。
+///
+/// ## 测试场景
+/// 1. 使用有效的语言代码查找语言
+/// 2. 验证找到正确的语言
+///
+/// ## 预期结果
+/// - 返回对应的语言信息
 #[test]
 fn test_find_language_exact_match_with_valid_code_returns_language() {
     // Arrange: 准备有效的语言代码
@@ -31,6 +42,17 @@ fn test_find_language_exact_match_with_valid_code_returns_language() {
     assert_eq!(lang.name, "English");
 }
 
+/// 测试大小写不敏感查找语言
+///
+/// ## 测试目的
+/// 验证 find_language() 支持大小写不敏感的查找。
+///
+/// ## 测试场景
+/// 1. 使用不同大小写的语言代码查找语言
+/// 2. 验证所有变体都找到相同的语言
+///
+/// ## 预期结果
+/// - 所有大小写变体都返回相同的语言
 #[test]
 fn test_find_language_case_insensitive_with_different_cases_returns_same_language() {
     // Arrange: 准备不同大小写的语言代码
@@ -52,6 +74,17 @@ fn test_find_language_case_insensitive_with_different_cases_returns_same_languag
     assert_eq!(lang2.code, lang3.code);
 }
 
+/// 测试中文变体代码查找
+///
+/// ## 测试目的
+/// 验证 find_language() 能够正确处理中文变体代码（zh、zh-CN）。
+///
+/// ## 测试场景
+/// 1. 使用中文变体代码查找语言
+/// 2. 验证都返回 zh-CN
+///
+/// ## 预期结果
+/// - zh 和 zh-CN 都返回 zh-CN
 #[test]
 fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() {
     // Arrange: 准备中文变体代码
@@ -70,6 +103,17 @@ fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() {
     assert_eq!(lang_zh_cn.code, "zh-CN");
 }
 
+/// 测试繁体中文代码查找
+///
+/// ## 测试目的
+/// 验证 find_language() 能够通过 zh-TW 代码查找繁体中文。
+///
+/// ## 测试场景
+/// 1. 使用 zh-TW 代码查找语言
+/// 2. 验证返回繁体中文
+///
+/// ## 预期结果
+/// - 返回繁体中文语言信息
 #[test]
 fn test_find_language_zh_tw_with_valid_code_returns_traditional_chinese() {
     // Arrange: 准备繁体中文代码
@@ -85,6 +129,17 @@ fn test_find_language_zh_tw_with_valid_code_returns_traditional_chinese() {
     assert_eq!(lang.name, "Traditional Chinese");
 }
 
+/// 测试无效语言代码查找
+///
+/// ## 测试目的
+/// 验证 find_language() 对无效的语言代码返回 None。
+///
+/// ## 测试场景
+/// 1. 使用无效的语言代码查找语言
+/// 2. 验证返回 None
+///
+/// ## 预期结果
+/// - 无效代码返回 None
 #[test]
 fn test_find_language_not_found_with_invalid_code_returns_none() {
     // Arrange: 准备无效的语言代码
@@ -99,6 +154,17 @@ fn test_find_language_not_found_with_invalid_code_returns_none() {
 
 // ==================== Language Instruction Tests ====================
 
+/// 测试获取语言指令（有效代码）
+///
+/// ## 测试目的
+/// 验证 get_language_instruction() 能够为有效的语言代码返回指令。
+///
+/// ## 测试场景
+/// 1. 使用有效的语言代码获取指令
+/// 2. 验证返回非空指令且包含语言名称
+///
+/// ## 预期结果
+/// - 返回包含语言名称的指令
 #[test]
 fn test_get_language_instruction_found_with_valid_code_returns_instruction() {
     // Arrange: 准备有效的语言代码
@@ -112,6 +178,17 @@ fn test_get_language_instruction_found_with_valid_code_returns_instruction() {
     assert!(instruction.contains("English"));
 }
 
+/// 测试获取语言指令（无效代码）
+///
+/// ## 测试目的
+/// 验证 get_language_instruction() 对无效的语言代码返回默认英文指令。
+///
+/// ## 测试场景
+/// 1. 使用无效的语言代码获取指令
+/// 2. 验证返回默认英文指令
+///
+/// ## 预期结果
+/// - 返回默认英文指令
 #[test]
 fn test_get_language_instruction_not_found_with_invalid_code_returns_default() {
     // Arrange: 准备无效的语言代码
@@ -125,6 +202,17 @@ fn test_get_language_instruction_not_found_with_invalid_code_returns_default() {
     assert!(instruction.contains("English"));
 }
 
+/// 测试获取中文变体的语言指令
+///
+/// ## 测试目的
+/// 验证 get_language_instruction() 对中文变体返回相同的指令。
+///
+/// ## 测试场景
+/// 1. 获取 zh 和 zh-CN 的指令
+/// 2. 验证指令相同且包含简体中文
+///
+/// ## 预期结果
+/// - zh 和 zh-CN 返回相同的指令，包含"简体中文"
 #[test]
 fn test_get_language_instruction_zh_variants() {
     // Arrange: 准备测试中文变体的 instruction
@@ -135,6 +223,18 @@ fn test_get_language_instruction_zh_variants() {
     assert!(instruction_zh.contains("简体中文"));
 }
 
+/// 测试获取语言要求（默认语言）
+///
+/// ## 测试目的
+/// 验证 get_language_requirement() 能够增强 system prompt 并添加语言要求。
+///
+/// ## 测试场景
+/// 1. 提供原始 prompt
+/// 2. 获取增强后的 prompt
+/// 3. 验证包含语言要求部分
+///
+/// ## 预期结果
+/// - 增强后的 prompt 包含原始内容和语言要求，默认使用英文
 #[test]
 fn test_get_language_requirement_default() {
     // Arrange: 准备测试获取语言要求（增强 system prompt）- 默认语言
@@ -148,6 +248,18 @@ fn test_get_language_requirement_default() {
     assert!(enhanced.contains("English"));
 }
 
+/// 测试获取语言要求（指定语言）
+///
+/// ## 测试目的
+/// 验证 get_language_requirement() 能够为指定语言增强 system prompt。
+///
+/// ## 测试场景
+/// 1. 提供原始 prompt
+/// 2. 获取增强后的 prompt（可能使用配置的语言）
+/// 3. 验证包含语言要求部分
+///
+/// ## 预期结果
+/// - 增强后的 prompt 包含语言要求部分
 #[test]
 fn test_get_language_requirement_with_language() {
     // Arrange: 准备测试获取语言要求（增强 system prompt）- 指定语言
@@ -161,6 +273,18 @@ fn test_get_language_requirement_with_language() {
     assert!(enhanced.contains("REMINDER: Language Requirement"));
 }
 
+/// 测试语言要求的格式
+///
+/// ## 测试目的
+/// 验证 get_language_requirement() 返回的格式包含所有必要的部分。
+///
+/// ## 测试场景
+/// 1. 提供原始 prompt
+/// 2. 获取增强后的 prompt
+/// 3. 验证格式包含所有必要的部分
+///
+/// ## 预期结果
+/// - 格式包含 CRITICAL LANGUAGE REQUIREMENT、REMINDER 等部分
 #[test]
 fn test_get_language_requirement_format() {
     // Arrange: 准备测试 get_language_requirement 的格式
@@ -175,6 +299,17 @@ fn test_get_language_requirement_format() {
     assert!(enhanced.ends_with("No exceptions."));
 }
 
+/// 测试获取所有支持的语言代码列表
+///
+/// ## 测试目的
+/// 验证 get_supported_language_codes() 返回所有支持的语言代码。
+///
+/// ## 测试场景
+/// 1. 获取支持的语言代码列表
+/// 2. 验证列表不为空且包含常见语言代码
+///
+/// ## 预期结果
+/// - 列表包含 en、zh-CN、zh-TW、ja、ko 等语言代码
 #[test]
 fn test_get_supported_language_codes() {
     // Arrange: 准备测试获取所有支持的语言代码列表
@@ -188,6 +323,17 @@ fn test_get_supported_language_codes() {
     assert!(codes.contains(&"ko"));
 }
 
+/// 测试获取所有支持的语言显示名称列表
+///
+/// ## 测试目的
+/// 验证 get_supported_language_display_names() 返回所有支持的语言显示名称。
+///
+/// ## 测试场景
+/// 1. 获取支持的语言显示名称列表
+/// 2. 验证列表不为空且格式正确
+///
+/// ## 预期结果
+/// - 列表包含格式为 "{native_name} ({name}) - {code}" 的显示名称
 #[test]
 fn test_get_supported_language_display_names() {
     // Arrange: 准备测试获取所有支持的语言显示名称列表
@@ -203,6 +349,17 @@ fn test_get_supported_language_display_names() {
     assert!(en_display.contains("en"));
 }
 
+/// 测试 SUPPORTED_LANGUAGES 的结构
+///
+/// ## 测试目的
+/// 验证 SUPPORTED_LANGUAGES 常量中所有语言的结构正确。
+///
+/// ## 测试场景
+/// 1. 遍历所有支持的语言
+/// 2. 验证每个语言的字段都不为空
+///
+/// ## 预期结果
+/// - 所有语言的 code、name、native_name、instruction_template 都不为空
 #[test]
 fn test_supported_languages_structure() {
     // Arrange: 准备测试 SUPPORTED_LANGUAGES 的结构
@@ -216,6 +373,18 @@ fn test_supported_languages_structure() {
     }
 }
 
+/// 测试查找所有支持的语言
+///
+/// ## 测试目的
+/// 验证 find_language() 能够查找所有支持的语言。
+///
+/// ## 测试场景
+/// 1. 遍历所有支持的语言
+/// 2. 使用每个语言的代码查找
+/// 3. 验证都能找到对应的语言
+///
+/// ## 预期结果
+/// - 所有支持的语言都能被找到
 #[test]
 fn test_find_language_all_supported() {
     // Arrange: 准备测试查找所有支持的语言
@@ -227,6 +396,18 @@ fn test_find_language_all_supported() {
     }
 }
 
+/// 测试获取所有支持语言的指令
+///
+/// ## 测试目的
+/// 验证 get_language_instruction() 能够为所有支持的语言返回指令。
+///
+/// ## 测试场景
+/// 1. 遍历所有支持的语言
+/// 2. 获取每个语言的指令
+/// 3. 验证指令不为空且与模板一致
+///
+/// ## 预期结果
+/// - 所有语言的指令都不为空且与模板一致
 #[test]
 fn test_get_language_instruction_all_supported() {
     // Arrange: 准备测试获取所有支持语言的 instruction

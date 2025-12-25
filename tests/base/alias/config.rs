@@ -4,9 +4,10 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
-use tempfile::TempDir;
 use workflow::base::alias::CommandsConfig;
 use workflow::base::util::file::FileWriter;
+
+use crate::common::environments::CliTestEnv;
 
 // ==================== CommandsConfig Initialization Tests ====================
 
@@ -42,8 +43,8 @@ fn test_commands_config_get_common_commands_default_with_no_config_returns_defau
 #[test]
 fn test_commands_config_get_common_commands_from_file_with_valid_config_reads_commands() -> Result<()> {
     // Arrange: 准备配置文件
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join("commands.toml");
+    let mut env = CliTestEnv::new()?;
+    let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [
     "custom command 1",
@@ -52,14 +53,13 @@ common_commands = [
 ]
 "#;
     FileWriter::new(&config_path).write_str(config_content)?;
-    std::env::set_var("WORKFLOW_CONFIG_DIR", temp_dir.path());
+    let config_dir = env.path().to_string_lossy().to_string();
+    env.env_guard().set("WORKFLOW_CONFIG_DIR", &config_dir);
 
     // Act: 从配置文件读取常用命令列表
     // 注意：由于 Paths::commands_config() 可能使用其他路径逻辑，
     // 这个测试可能需要调整以匹配实际的路径解析逻辑
-
-    // 清理环境变量
-    std::env::remove_var("WORKFLOW_CONFIG_DIR");
+    // EnvGuard 会在 env 离开作用域时自动恢复环境变量
 
     Ok(())
 }
@@ -93,8 +93,8 @@ fn test_commands_config_load_nonexistent_file_with_missing_file_handles_graceful
 #[test]
 fn test_commands_config_load_existing_file_with_valid_config_loads_config() -> Result<()> {
     // Arrange: 准备存在的配置文件
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join("commands.toml");
+    let mut env = CliTestEnv::new()?;
+    let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [
     "test command 1",
@@ -102,13 +102,12 @@ common_commands = [
 ]
 "#;
     FileWriter::new(&config_path).write_str(config_content)?;
-    std::env::set_var("WORKFLOW_CONFIG_DIR", temp_dir.path());
+    let config_dir = env.path().to_string_lossy().to_string();
+    env.env_guard().set("WORKFLOW_CONFIG_DIR", &config_dir);
 
     // Act: 尝试加载配置
     let result = CommandsConfig::load();
-
-    // 清理环境变量
-    std::env::remove_var("WORKFLOW_CONFIG_DIR");
+    // EnvGuard 会在 env 离开作用域时自动恢复环境变量
 
     // Assert: 验证可以加载（可能成功或失败，取决于路径解析逻辑）
     assert!(result.is_ok() || result.is_err());
@@ -119,8 +118,8 @@ common_commands = [
 #[test]
 fn test_commands_config_get_common_commands_with_custom_file_reads_custom_commands() -> Result<()> {
     // Arrange: 准备包含自定义命令的配置文件
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join("commands.toml");
+    let mut env = CliTestEnv::new()?;
+    let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [
     "custom command 1",
@@ -129,13 +128,12 @@ common_commands = [
 ]
 "#;
     FileWriter::new(&config_path).write_str(config_content)?;
-    std::env::set_var("WORKFLOW_CONFIG_DIR", temp_dir.path());
+    let config_dir = env.path().to_string_lossy().to_string();
+    env.env_guard().set("WORKFLOW_CONFIG_DIR", &config_dir);
 
     // Act: 获取常用命令
     let commands = CommandsConfig::get_common_commands()?;
-
-    // 清理环境变量
-    std::env::remove_var("WORKFLOW_CONFIG_DIR");
+    // EnvGuard 会在 env 离开作用域时自动恢复环境变量
 
     // 验证返回了命令列表（可能是自定义的或默认的，取决于路径解析）
     assert!(!commands.is_empty());

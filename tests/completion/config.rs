@@ -10,6 +10,18 @@ use workflow::completion::Completion;
 
 // ==================== Completion 配置检查测试 ====================
 
+/// 测试检查 shell 是否已配置补全（参数化）
+///
+/// ## 测试目的
+/// 验证 Completion::is_shell_configured() 能够检查各种 shell 是否已配置补全。
+///
+/// ## 测试场景
+/// 1. 使用不同的 shell 类型检查配置状态
+/// 2. 验证返回 Ok，包含配置状态和配置文件路径
+/// 3. 验证配置文件路径与 shell 相关
+///
+/// ## 预期结果
+/// - 返回 Ok，配置文件路径与 shell 相关
 #[cfg(not(target_os = "windows"))]
 #[rstest]
 #[case(Shell::Zsh, "zsh", ".zshrc")]
@@ -41,6 +53,17 @@ fn test_is_shell_configured(
     );
 }
 
+/// 测试检查 PowerShell 是否已配置补全
+///
+/// ## 测试目的
+/// 验证 Completion::is_shell_configured() 能够检查 PowerShell 是否已配置补全。
+///
+/// ## 测试场景
+/// 1. 使用 PowerShell shell 检查配置状态
+/// 2. 验证返回 Ok，包含配置状态和配置文件路径
+///
+/// ## 预期结果
+/// - 返回 Ok，配置文件路径可能包含 "powershell" 或 "Microsoft"
 #[test]
 fn test_is_shell_configured_powershell() {
     // Arrange: 准备测试检查 PowerShell 是否已配置 completion
@@ -55,6 +78,18 @@ fn test_is_shell_configured_powershell() {
 
 // ==================== Completion 文件列表测试 ====================
 
+/// 测试获取补全文件列表（参数化）
+///
+/// ## 测试目的
+/// 验证 Completion::get_completion_files() 能够获取 shell 的补全文件列表。
+///
+/// ## 测试场景
+/// 1. 使用不同的 shell 类型获取补全文件列表
+/// 2. 验证返回文件路径列表
+/// 3. 验证文件路径与补全相关
+///
+/// ## 预期结果
+/// - 返回文件路径列表，文件路径与补全相关
 #[rstest]
 #[case(Shell::Zsh, "completion", "_workflow")]
 #[case(Shell::Bash, "completion", "workflow.bash")]
@@ -82,6 +117,17 @@ fn test_get_completion_files(
 
 // ==================== Completion 配置删除测试 ====================
 
+/// 测试删除补全配置文件
+///
+/// ## 测试目的
+/// 验证 Completion::remove_completion_config_file() 能够删除补全配置文件。
+///
+/// ## 测试场景
+/// 1. 调用 remove_completion_config_file()
+/// 2. 验证返回 Ok，表示是否删除了文件
+///
+/// ## 预期结果
+/// - 返回 Ok，返回值可能是 true（文件存在并删除）或 false（文件不存在）
 #[test]
 fn test_remove_completion_config_file() {
     // Arrange: 准备测试删除 completion 配置文件
@@ -92,6 +138,17 @@ fn test_remove_completion_config_file() {
     // 返回值可能是 true（文件存在并删除）或 false（文件不存在）
 }
 
+/// 测试删除 shell 的补全配置（参数化）
+///
+/// ## 测试目的
+/// 验证 Completion::remove_completion_config() 能够删除指定 shell 的补全配置。
+///
+/// ## 测试场景
+/// 1. 使用不同的 shell 类型删除补全配置
+/// 2. 验证返回 Ok（即使配置不存在）
+///
+/// ## 预期结果
+/// - 返回 Ok，即使配置不存在也能成功
 #[cfg(not(target_os = "windows"))]
 #[rstest]
 #[case(Shell::Zsh)]
@@ -109,6 +166,17 @@ fn test_remove_completion_config(#[case] shell: Shell) {
     );
 }
 
+/// 测试删除所有 shell 的补全配置
+///
+/// ## 测试目的
+/// 验证 Completion::remove_all_completion_configs() 能够删除所有 shell 的补全配置。
+///
+/// ## 测试场景
+/// 1. 调用 remove_all_completion_configs()
+/// 2. 验证返回 Ok
+///
+/// ## 预期结果
+/// - 返回 Ok
 #[test]
 fn test_remove_all_completion_configs() {
     // Arrange: 准备测试删除所有 shell 的 completion 配置
@@ -120,6 +188,18 @@ fn test_remove_all_completion_configs() {
 
 // ==================== Completion 文件删除测试 ====================
 
+/// 测试删除 shell 的补全文件（参数化）
+///
+/// ## 测试目的
+/// 验证 Completion::remove_completion_files() 能够删除指定 shell 的补全文件。
+///
+/// ## 测试场景
+/// 1. 使用不同的 shell 类型删除补全文件
+/// 2. 验证返回 Ok，包含删除结果
+/// 3. 验证删除的文件数量匹配
+///
+/// ## 预期结果
+/// - 返回 Ok，删除的文件数量匹配
 #[rstest]
 #[case(Shell::Zsh)]
 #[case(Shell::Bash)]
@@ -144,6 +224,17 @@ fn test_remove_completion_files(#[case] shell: Shell) {
 
 // ==================== Completion 配置结果结构体测试 ====================
 
+/// 测试 CompletionConfigResult 结构体
+///
+/// ## 测试目的
+/// 验证 CompletionConfigResult 结构体的字段和值设置。
+///
+/// ## 测试场景
+/// 1. 创建 CompletionConfigResult 实例
+/// 2. 验证所有字段的值正确
+///
+/// ## 预期结果
+/// - 所有字段的值都正确
 #[test]
 fn test_completion_config_result_structure() {
     // Arrange: 准备测试 CompletionConfigResult 结构体
@@ -162,6 +253,17 @@ fn test_completion_config_result_structure() {
     assert_eq!(result.config_file, None);
 }
 
+/// 测试 CompletionRemovalResult 结构体
+///
+/// ## 测试目的
+/// 验证 CompletionRemovalResult 结构体的字段和值设置。
+///
+/// ## 测试场景
+/// 1. 创建 CompletionRemovalResult 实例
+/// 2. 验证所有字段的值正确
+///
+/// ## 预期结果
+/// - 所有字段的值都正确
 #[test]
 fn test_completion_removal_result_structure() {
     // Arrange: 准备测试 CompletionRemovalResult 结构体
@@ -184,6 +286,17 @@ fn test_completion_removal_result_structure() {
 
 // ==================== Completion 生成测试 ====================
 
+/// 测试使用指定 shell 类型生成所有补全
+///
+/// ## 测试目的
+/// 验证 Completion::generate_all_completions() 能够使用指定的 shell 类型生成所有补全。
+///
+/// ## 测试场景
+/// 1. 使用指定的 shell 类型生成补全
+/// 2. 验证生成结果（成功或路径解析失败）
+///
+/// ## 预期结果
+/// - 如果路径解析成功，应该能生成；否则返回错误
 #[test]
 fn test_generate_all_completions_with_shell_type() {
     // Arrange: 准备测试使用指定 shell 类型生成所有 completion
@@ -201,6 +314,17 @@ fn test_generate_all_completions_with_shell_type() {
     }
 }
 
+/// 测试自动检测 shell 类型生成所有补全
+///
+/// ## 测试目的
+/// 验证 Completion::generate_all_completions() 能够自动检测 shell 类型并生成所有补全。
+///
+/// ## 测试场景
+/// 1. 不指定 shell 类型，自动检测
+/// 2. 验证生成结果（成功或路径解析/检测失败）
+///
+/// ## 预期结果
+/// - 如果路径解析和 shell 检测成功，应该能生成；否则返回错误
 #[test]
 fn test_generate_all_completions_auto_detect() {
     // Arrange: 准备测试自动检测 shell 类型生成所有 completion
@@ -218,6 +342,17 @@ fn test_generate_all_completions_auto_detect() {
     }
 }
 
+/// 测试使用指定输出目录生成所有补全
+///
+/// ## 测试目的
+/// 验证 Completion::generate_all_completions() 能够使用指定的输出目录生成所有补全。
+///
+/// ## 测试场景
+/// 1. 使用指定的输出目录生成补全
+/// 2. 验证生成结果（成功或目录创建失败）
+///
+/// ## 预期结果
+/// - 如果目录创建成功，应该能生成；否则返回错误
 #[test]
 fn test_generate_all_completions_with_output_dir() {
     // Arrange: 准备测试使用指定输出目录生成所有 completion

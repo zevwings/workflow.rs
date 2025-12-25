@@ -12,8 +12,9 @@ use color_eyre::eyre::eyre;
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
-use tempfile::TempDir;
 use workflow::base::mcp::config::{MCPConfig, MCPConfigManager, MCPServerConfig};
+
+use crate::common::environments::CliTestEnv;
 
 // ==================== MCP Config Core Tests ====================
 
@@ -65,15 +66,15 @@ fn test_mcp_config_manager_new() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_read_nonexistent() -> Result<()> {
     // Arrange: 准备测试读取不存在的配置文件（覆盖 config.rs:67-68）
-    let temp_dir = TempDir::new()?;
-    std::env::set_var("PWD", temp_dir.path());
+    let mut env = CliTestEnv::new()?;
+    let pwd_path = env.path().to_string_lossy().to_string();
+    env.env_guard().set("PWD", &pwd_path);
 
     // 由于 detect_config_path 使用 current_dir，我们需要在临时目录中创建管理器
     // 这里我们直接测试读取逻辑
     let config = MCPConfig::default();
     assert!(config.mcp_servers.is_empty());
-
-    std::env::remove_var("PWD");
+    // EnvGuard 会在 env 离开作用域时自动恢复环境变量
     Ok(())
 }
 
@@ -81,8 +82,8 @@ fn test_mcp_config_manager_read_nonexistent() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_write_and_read() -> Result<()> {
     // Arrange: 准备测试写入和读取配置文件
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -111,8 +112,8 @@ fn test_mcp_config_manager_write_and_read() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_update() -> Result<()> {
     // Arrange: 准备测试更新配置文件（覆盖 config.rs:84-90）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -153,8 +154,8 @@ fn test_mcp_config_manager_update() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_merge() -> Result<()> {
     // Arrange: 准备测试合并配置（覆盖 config.rs:96-109）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -227,8 +228,8 @@ fn test_mcp_config_manager_merge() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_detect_configured_servers() -> Result<()> {
     // Arrange: 准备测试检测已配置的服务器（覆盖 config.rs:115-117）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -269,8 +270,8 @@ fn test_mcp_config_manager_detect_configured_servers() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_is_configured() -> Result<()> {
     // Arrange: 准备测试检查特定服务器是否已配置（覆盖 config.rs:121-123）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -299,8 +300,8 @@ fn test_mcp_config_manager_is_configured() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_read_existing_file() -> Result<()> {
     // Arrange: 准备测试读取已存在的配置文件（覆盖 config.rs:71）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -327,8 +328,8 @@ fn test_mcp_config_manager_read_existing_file() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_merge_existing_server() -> Result<()> {
     // Arrange: 准备测试合并已存在的服务器配置（覆盖 config.rs:100-103）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -389,8 +390,8 @@ fn test_mcp_config_manager_merge_existing_server() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_merge_new_server() -> Result<()> {
     // Arrange: 准备测试合并新服务器配置（覆盖 config.rs:104-107）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -474,8 +475,8 @@ fn test_mcp_config_manager_read_nonexistent_returns_default() {
 #[test]
 fn test_mcp_config_manager_write_creates_directory() -> Result<()> {
     // Arrange: 准备测试写入配置文件时创建目录（覆盖 config.rs:77-78）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
 
     // 使用 FileWriter 写入配置（模拟 MCPConfigManager::write 的行为）
     let config = MCPConfig::default();
@@ -495,8 +496,8 @@ fn test_mcp_config_manager_write_creates_directory() -> Result<()> {
 #[test]
 fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
     // Arrange: 准备测试合并环境变量时不覆盖已有值（覆盖 config.rs:101-103）
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -558,8 +559,8 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
 fn test_read_invalid_json_config() -> Result<()> {
     // Arrange: 准备测试读取损坏的 JSON 配置文件
     // 场景：用户手动编辑配置文件导致 JSON 格式错误
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -587,8 +588,8 @@ fn test_read_invalid_json_config() -> Result<()> {
 #[test]
 fn test_read_corrupted_json_config() -> Result<()> {
     // Arrange: 准备测试读取各种损坏的 JSON 格式
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -623,8 +624,8 @@ fn test_write_permission_denied() -> Result<()> {
 
     // Arrange: 准备测试写入权限被拒绝的情况
     // 场景：目录或文件没有写入权限
-    let temp_dir = TempDir::new()?;
-    let cursor_dir = temp_dir.path().join(".cursor");
+    let env = CliTestEnv::new()?;
+    let cursor_dir = env.path().join(".cursor");
     std::fs::create_dir_all(&cursor_dir)?;
     let config_path = cursor_dir.join("mcp.json");
 
@@ -666,8 +667,8 @@ fn test_read_permission_denied() -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 准备测试读取权限被拒绝的情况
-    let temp_dir = TempDir::new()?;
-    let cursor_dir = temp_dir.path().join(".cursor");
+    let env = CliTestEnv::new()?;
+    let cursor_dir = env.path().join(".cursor");
     std::fs::create_dir_all(&cursor_dir)?;
     let config_path = cursor_dir.join("mcp.json");
 
@@ -708,8 +709,8 @@ fn test_read_permission_denied() -> Result<()> {
 #[test]
 fn test_write_to_readonly_filesystem() -> Result<()> {
     // Arrange: 准备测试写入只读文件的情况
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -792,8 +793,8 @@ fn test_config_path_detection_failure() {
 #[test]
 fn test_merge_with_empty_new_config() -> Result<()> {
     // Arrange: 准备测试合并空配置的边界情况
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 
@@ -837,8 +838,8 @@ fn test_merge_with_empty_new_config() -> Result<()> {
 #[test]
 fn test_server_config_with_empty_values() -> Result<()> {
     // Arrange: 准备测试空值情况：空命令、空参数列表、空环境变量
-    let temp_dir = TempDir::new()?;
-    let config_path = temp_dir.path().join(".cursor").join("mcp.json");
+    let env = CliTestEnv::new()?;
+    let config_path = env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
     std::fs::create_dir_all(parent_dir)?;
 

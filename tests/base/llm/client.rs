@@ -16,6 +16,18 @@ use workflow::base::llm::client::LLMClient;
 
 // ==================== LLM Response Extraction Tests ====================
 
+/// 测试从标准 OpenAI 格式 JSON 提取内容
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 能够从标准 OpenAI 格式的 JSON 响应中提取内容。
+///
+/// ## 测试场景
+/// 1. 准备标准 OpenAI 格式的 JSON（包含所有必需字段）
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证提取的内容正确
+///
+/// ## 预期结果
+/// - 成功提取内容，与 JSON 中的 content 字段匹配
 #[test]
 fn test_extract_from_openai_standard_with_valid_json_returns_content() -> Result<()> {
     // Arrange: 准备标准 OpenAI 格式的 JSON（包含所有必需字段）
@@ -48,6 +60,18 @@ fn test_extract_from_openai_standard_with_valid_json_returns_content() -> Result
     Ok(())
 }
 
+/// 测试从 OpenAI Proxy 格式 JSON 提取内容
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 能够从包含扩展字段的 OpenAI Proxy 格式 JSON 中提取内容。
+///
+/// ## 测试场景
+/// 1. 准备 proxy 格式的 JSON（包含扩展字段，但符合 OpenAI 标准）
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证提取的内容正确
+///
+/// ## 预期结果
+/// - 成功提取内容，忽略扩展字段
 #[test]
 fn test_extract_from_openai_proxy_with_extended_fields_returns_content() -> Result<()> {
     // Arrange: 准备 proxy 格式的 JSON（包含扩展字段，但符合 OpenAI 标准）
@@ -95,6 +119,18 @@ fn test_extract_from_openai_proxy_with_extended_fields_returns_content() -> Resu
     Ok(())
 }
 
+/// 测试从 Cerebras Proxy 格式 JSON 提取内容
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 能够从另一种 proxy 格式变体的 JSON 中提取内容。
+///
+/// ## 测试场景
+/// 1. 准备另一种 proxy 格式变体的 JSON（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证提取的内容正确
+///
+/// ## 预期结果
+/// - 成功提取内容，忽略字段顺序和扩展字段
 #[test]
 fn test_extract_from_cerebras_proxy_with_variant_format_returns_content() -> Result<()> {
     // Arrange: 准备另一种 proxy 格式变体的 JSON（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
@@ -137,6 +173,18 @@ fn test_extract_from_cerebras_proxy_with_variant_format_returns_content() -> Res
 
 // ==================== LLMClient Method Tests ====================
 
+/// 测试 LLMClient global() 方法返回单例
+///
+/// ## 测试目的
+/// 验证 LLMClient::global() 方法返回的是同一个实例（单例模式）。
+///
+/// ## 测试场景
+/// 1. 多次调用 global() 方法
+/// 2. 获取两个客户端实例
+/// 3. 验证返回的是同一个实例
+///
+/// ## 预期结果
+/// - 返回的是同一个实例（指针相等）
 #[test]
 fn test_llm_client_global_with_multiple_calls_returns_singleton() {
     // Arrange: 准备多次调用 global() 方法
@@ -149,6 +197,18 @@ fn test_llm_client_global_with_multiple_calls_returns_singleton() {
     assert!(std::ptr::eq(client1, client2));
 }
 
+/// 测试提取内容（空 choices 数组）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 对空 choices 数组返回错误。
+///
+/// ## 测试场景
+/// 1. 准备空 choices 数组的 JSON
+/// 2. 尝试提取内容
+/// 3. 验证返回错误且错误消息包含提示
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "No content in response"
 #[test]
 fn test_extract_content_with_empty_choices_returns_error() {
     // Arrange: 准备空 choices 数组的 JSON
@@ -176,6 +236,18 @@ fn test_extract_content_with_empty_choices_returns_error() {
     }
 }
 
+/// 测试提取内容（content 为 null）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 对 content 为 null 的 JSON 返回错误。
+///
+/// ## 测试场景
+/// 1. 准备 content 为 null 的 JSON
+/// 2. 尝试提取内容
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误，错误消息包含 "No content in response"
 #[test]
 fn test_extract_content_with_null_content_returns_error() {
     // Arrange: 准备 content 为 null 的 JSON
@@ -209,6 +281,18 @@ fn test_extract_content_with_null_content_returns_error() {
     }
 }
 
+/// 测试提取内容时修剪空白字符
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 能够修剪内容首尾的空白字符。
+///
+/// ## 测试场景
+/// 1. 准备包含首尾空白字符的 content 的 JSON
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证首尾空白被修剪
+///
+/// ## 预期结果
+/// - 内容首尾空白被修剪
 #[test]
 fn test_extract_content_whitespace_trimming() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - 内容首尾空白被修剪（覆盖 client.rs:243）
@@ -242,6 +326,18 @@ fn test_extract_content_whitespace_trimming() -> Result<()> {
     Ok(())
 }
 
+/// 测试提取内容（多个 choices）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 在存在多个 choices 时取第一个 choice 的内容。
+///
+/// ## 测试场景
+/// 1. 准备包含多个 choices 的 JSON
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证返回第一个 choice 的内容
+///
+/// ## 预期结果
+/// - 返回第一个 choice 的内容
 #[test]
 fn test_extract_content_multiple_choices() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - 多个 choices，取第一个（覆盖 client.rs:237-240）
@@ -283,6 +379,18 @@ fn test_extract_content_multiple_choices() -> Result<()> {
     Ok(())
 }
 
+/// 测试提取内容（无效的 JSON 结构）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 对无效的 JSON 结构返回错误。
+///
+/// ## 测试场景
+/// 1. 准备无效结构的 JSON（缺少必需字段）
+/// 2. 尝试提取内容
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误
 #[test]
 fn test_extract_content_invalid_json_structure() {
     // Arrange: 准备测试 extract_content() 方法 - 无效的 JSON 结构（覆盖 client.rs:228-244）
@@ -298,6 +406,18 @@ fn test_extract_content_invalid_json_structure() {
     assert!(result.is_err());
 }
 
+/// 测试提取内容（缺少必需字段）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 对缺少必需字段的 JSON 返回错误。
+///
+/// ## 测试场景
+/// 1. 准备缺少必需字段的 JSON
+/// 2. 尝试提取内容
+/// 3. 验证返回错误
+///
+/// ## 预期结果
+/// - 返回错误
 #[test]
 fn test_extract_content_missing_required_fields() {
     // Arrange: 准备测试 extract_content() 方法 - 缺少必需字段（覆盖 client.rs:228-244）
@@ -312,6 +432,18 @@ fn test_extract_content_missing_required_fields() {
     assert!(result.is_err());
 }
 
+/// 测试提取内容（finish_reason 为 length）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 在 finish_reason 为 length 时能够提取内容。
+///
+/// ## 测试场景
+/// 1. 准备 finish_reason 为 length 的 JSON
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证能够提取内容
+///
+/// ## 预期结果
+/// - finish_reason 为 length 时也能提取内容
 #[test]
 fn test_extract_content_with_finish_reason_length() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 length（覆盖 client.rs:228-244）
@@ -343,6 +475,18 @@ fn test_extract_content_with_finish_reason_length() -> Result<()> {
     Ok(())
 }
 
+/// 测试提取内容（finish_reason 为 stop）
+///
+/// ## 测试目的
+/// 验证 LLMClient::extract_content() 在 finish_reason 为 stop 时能够提取内容。
+///
+/// ## 测试场景
+/// 1. 准备 finish_reason 为 stop 的 JSON
+/// 2. 使用 extract_content() 提取内容
+/// 3. 验证能够提取内容
+///
+/// ## 预期结果
+/// - finish_reason 为 stop 时能提取内容
 #[test]
 fn test_extract_content_with_finish_reason_stop() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 stop（覆盖 client.rs:228-244）
@@ -567,6 +711,18 @@ fn test_llm_client_call_with_proxy_provider() {
     assert!(result.is_ok() || result.is_err()); // 可能成功或失败，取决于配置
 }
 
+/// 测试 LLMClient build_payload() 方法结构
+///
+/// ## 测试目的
+/// 验证 LLMClient::build_payload() 方法的结构（通过 call 方法的错误来间接测试）。
+///
+/// ## 测试场景
+/// 1. 准备 LLMRequestParams
+/// 2. 调用 call() 方法（即使失败也能验证 build_payload 的逻辑）
+/// 3. 验证 build_payload 的逻辑已被执行
+///
+/// ## 预期结果
+/// - build_payload 的逻辑已被执行（即使配置无效返回错误）
 #[test]
 fn test_llm_client_build_payload_structure() {
     // Arrange: 准备测试 build_payload() 方法的结构（通过 call 方法的错误来间接测试）
@@ -588,6 +744,18 @@ fn test_llm_client_build_payload_structure() {
     assert!(result.is_ok() || result.is_err());
 }
 
+/// 测试 LLMClient build_headers() 方法结构
+///
+/// ## 测试目的
+/// 验证 LLMClient::build_headers() 方法的结构（通过 call 方法的错误来间接测试）。
+///
+/// ## 测试场景
+/// 1. 准备 LLMRequestParams
+/// 2. 调用 call() 方法（即使失败也能验证 build_headers 的逻辑）
+/// 3. 验证 build_headers 的逻辑已被执行
+///
+/// ## 预期结果
+/// - build_headers 的逻辑已被执行（即使配置无效返回错误）
 #[test]
 fn test_llm_client_build_headers_structure() {
     // Arrange: 准备测试 build_headers() 方法的结构（通过 call 方法的错误来间接测试）

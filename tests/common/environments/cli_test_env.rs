@@ -267,7 +267,7 @@ impl CliTestEnv {
     /// let path = env.path();
     /// ```
     pub fn path(&self) -> PathBuf {
-        self.isolation.work_dir()
+        self.isolation.work_dir().to_path_buf()
     }
 
     /// 获取环境变量守卫的可变引用（用于设置环境变量）
