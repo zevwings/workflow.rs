@@ -98,50 +98,60 @@ mod tests {
     // ==================== RepoType 枚举测试 ====================
 
     #[test]
-    fn test_repo_type_equality() {
+    fn test_repo_type_equality_with_same_types_returns_equal() {
+        // Arrange: 准备相同类型的RepoType
+
+        // Act & Assert: 验证相同类型相等，不同类型不相等
         assert_eq!(RepoType::GitHub, RepoType::GitHub);
         assert_eq!(RepoType::Codeup, RepoType::Codeup);
         assert_eq!(RepoType::Unknown, RepoType::Unknown);
-
         assert_ne!(RepoType::GitHub, RepoType::Codeup);
         assert_ne!(RepoType::GitHub, RepoType::Unknown);
         assert_ne!(RepoType::Codeup, RepoType::Unknown);
     }
 
     #[test]
-    fn test_repo_type_debug() {
-        // 测试Debug trait的实现
+    fn test_repo_type_debug_with_variants_returns_debug_string() {
+        // Arrange: 准备各种RepoType变体
         let github = RepoType::GitHub;
-        let debug_str = format!("{:?}", github);
-        assert_eq!(debug_str, "GitHub");
-
         let codeup = RepoType::Codeup;
-        let debug_str = format!("{:?}", codeup);
-        assert_eq!(debug_str, "Codeup");
-
         let unknown = RepoType::Unknown;
-        let debug_str = format!("{:?}", unknown);
-        assert_eq!(debug_str, "Unknown");
+
+        // Act: 格式化Debug输出
+        let github_debug = format!("{:?}", github);
+        let codeup_debug = format!("{:?}", codeup);
+        let unknown_debug = format!("{:?}", unknown);
+
+        // Assert: 验证Debug字符串正确
+        assert_eq!(github_debug, "GitHub");
+        assert_eq!(codeup_debug, "Codeup");
+        assert_eq!(unknown_debug, "Unknown");
     }
 
     #[test]
-    fn test_repo_type_clone() {
+    fn test_repo_type_clone_with_valid_type_creates_clone() {
+        // Arrange: 准备原始RepoType
         let original = RepoType::GitHub;
-        let cloned = original.clone();
-        assert_eq!(original, cloned);
 
-        // 验证克隆后的值是独立的
+        // Act: 克隆RepoType
+        let cloned = original.clone();
+
+        // Assert: 验证克隆后的值相等且独立
+        assert_eq!(original, cloned);
         let another = RepoType::Codeup;
         assert_ne!(cloned, another);
     }
 
     #[test]
-    fn test_repo_type_copy() {
+    fn test_repo_type_copy_with_valid_type_copies_value() {
+        // Arrange: 准备原始RepoType
         let original = RepoType::GitHub;
-        let copied = original; // Copy trait 允许这样赋值
-        assert_eq!(original, copied);
 
-        // 验证原始值仍然可用（Copy语义）
+        // Act: 复制RepoType（Copy trait允许这样赋值）
+        let copied = original;
+
+        // Assert: 验证复制后的值相等且原始值仍然可用（Copy语义）
+        assert_eq!(original, copied);
         assert_eq!(original, RepoType::GitHub);
     }
 
@@ -164,7 +174,8 @@ mod tests {
     }
 
     #[test]
-    fn test_github_url_variations() {
+    fn test_github_url_variations_with_various_urls_returns_github() {
+        // Arrange: 准备各种GitHub URL变体
         let github_urls = vec![
             "https://github.com/user/repo",
             "https://github.com/user/repo.git",
@@ -174,6 +185,7 @@ mod tests {
             "git@github123:user/repo.git",
         ];
 
+        // Act & Assert: 验证所有GitHub URL变体都解析为GitHub类型
         for url in github_urls {
             assert_eq!(
                 mock_parse_repo_type_from_url(url),
@@ -185,7 +197,8 @@ mod tests {
     }
 
     #[test]
-    fn test_codeup_url_variations() {
+    fn test_codeup_url_variations_with_various_urls_returns_codeup() {
+        // Arrange: 准备各种Codeup URL变体
         let codeup_urls = vec![
             "https://codeup.aliyun.com/user/repo",
             "https://codeup.aliyun.com/user/repo.git",
@@ -193,6 +206,7 @@ mod tests {
             "ssh://git@codeup.aliyun.com/user/repo.git",
         ];
 
+        // Act & Assert: 验证所有Codeup URL变体都解析为Codeup类型
         for url in codeup_urls {
             assert_eq!(
                 mock_parse_repo_type_from_url(url),
@@ -204,7 +218,8 @@ mod tests {
     }
 
     #[test]
-    fn test_unknown_repo_types() {
+    fn test_unknown_repo_types_with_unknown_urls_returns_unknown() {
+        // Arrange: 准备未知类型的URL列表
         let unknown_urls = vec![
             "https://gitlab.com/user/repo.git",
             "git@bitbucket.org:user/repo.git",
@@ -214,6 +229,7 @@ mod tests {
             "ftp://example.com/repo",
         ];
 
+        // Act & Assert: 验证所有未知URL都解析为Unknown类型
         for url in unknown_urls {
             assert_eq!(
                 mock_parse_repo_type_from_url(url),
@@ -240,8 +256,10 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_branch_names() {
-        // 测试复杂的分支名称处理
+    fn test_complex_branch_names_with_complex_names_removes_prefixes() {
+        // Arrange: 准备复杂的分支名称
+
+        // Act & Assert: 验证复杂分支名称的前缀移除正确
         assert_eq!(
             mock_remove_branch_prefix("feature/user/PROJ-123--login-system"),
             "login-system"
@@ -257,8 +275,10 @@ mod tests {
     }
 
     #[test]
-    fn test_edge_case_branch_names() {
-        // 测试边界情况
+    fn test_edge_case_branch_names_with_edge_cases_handles_correctly() {
+        // Arrange: 准备边界情况的分支名称
+
+        // Act & Assert: 验证边界情况处理正确
         assert_eq!(mock_remove_branch_prefix("/"), "");
         assert_eq!(mock_remove_branch_prefix("--"), "");
         assert_eq!(mock_remove_branch_prefix("feature/"), "");
@@ -276,30 +296,41 @@ mod tests {
     // ==================== MergeStrategy 枚举测试 ====================
 
     #[test]
-    fn test_merge_strategy_debug() {
-        assert_eq!(format!("{:?}", MergeStrategy::Merge), "Merge");
-        assert_eq!(format!("{:?}", MergeStrategy::Squash), "Squash");
-        assert_eq!(
-            format!("{:?}", MergeStrategy::FastForwardOnly),
-            "FastForwardOnly"
-        );
+    fn test_merge_strategy_debug_with_variants_returns_debug_string() {
+        // Arrange: 准备各种MergeStrategy变体
+
+        // Act: 格式化Debug输出
+        let merge_debug = format!("{:?}", MergeStrategy::Merge);
+        let squash_debug = format!("{:?}", MergeStrategy::Squash);
+        let ff_debug = format!("{:?}", MergeStrategy::FastForwardOnly);
+
+        // Assert: 验证Debug字符串正确
+        assert_eq!(merge_debug, "Merge");
+        assert_eq!(squash_debug, "Squash");
+        assert_eq!(ff_debug, "FastForwardOnly");
     }
 
     #[test]
-    fn test_merge_strategy_clone() {
+    fn test_merge_strategy_clone_with_valid_strategy_creates_clone() {
+        // Arrange: 准备原始MergeStrategy
         let original = MergeStrategy::Merge;
+
+        // Act: 克隆MergeStrategy
         let cloned = original.clone();
 
-        // 由于是枚举，我们通过Debug输出来验证
+        // Assert: 验证克隆后的值相等（通过Debug输出验证）
         assert_eq!(format!("{:?}", original), format!("{:?}", cloned));
     }
 
     #[test]
-    fn test_merge_strategy_copy() {
+    fn test_merge_strategy_copy_with_valid_strategy_copies_value() {
+        // Arrange: 准备原始MergeStrategy
         let original = MergeStrategy::Squash;
-        let copied = original; // Copy trait
 
-        // 验证Copy语义
+        // Act: 复制MergeStrategy（Copy trait）
+        let copied = original;
+
+        // Assert: 验证Copy语义（原始值和复制值相等）
         assert_eq!(format!("{:?}", original), format!("{:?}", copied));
         assert_eq!(format!("{:?}", original), "Squash");
     }
@@ -307,22 +338,31 @@ mod tests {
     // ==================== CommitInfo 结构体测试 ====================
 
     #[test]
-    fn test_commit_info_creation() {
+    fn test_commit_info_creation_with_valid_fields_creates_commit_info() {
+        // Arrange: 准备CommitInfo字段值
+        let sha = "abc123def456";
+        let message = "Initial commit";
+        let author = "John Doe";
+        let date = "2024-01-01";
+
+        // Act: 创建CommitInfo
         let commit = CommitInfo {
-            sha: "abc123def456".to_string(),
-            message: "Initial commit".to_string(),
-            author: "John Doe".to_string(),
-            date: "2024-01-01".to_string(),
+            sha: sha.to_string(),
+            message: message.to_string(),
+            author: author.to_string(),
+            date: date.to_string(),
         };
 
-        assert_eq!(commit.sha, "abc123def456");
-        assert_eq!(commit.message, "Initial commit");
-        assert_eq!(commit.author, "John Doe");
-        assert_eq!(commit.date, "2024-01-01");
+        // Assert: 验证所有字段值正确
+        assert_eq!(commit.sha, sha);
+        assert_eq!(commit.message, message);
+        assert_eq!(commit.author, author);
+        assert_eq!(commit.date, date);
     }
 
     #[test]
-    fn test_commit_info_clone() {
+    fn test_commit_info_clone_with_valid_info_creates_deep_clone() {
+        // Arrange: 准备原始CommitInfo
         let original = CommitInfo {
             sha: "abc123".to_string(),
             message: "Test commit".to_string(),
@@ -330,19 +370,21 @@ mod tests {
             date: "2024-12-17".to_string(),
         };
 
+        // Act: 克隆CommitInfo
         let cloned = original.clone();
+
+        // Assert: 验证克隆后的值相等且是深拷贝
         assert_eq!(original.sha, cloned.sha);
         assert_eq!(original.message, cloned.message);
         assert_eq!(original.author, cloned.author);
         assert_eq!(original.date, cloned.date);
-
-        // 验证是深拷贝（修改克隆不影响原始）
-        // 由于String是堆分配的，这里验证地址不同
+        // 验证是深拷贝（修改克隆不影响原始）- 由于String是堆分配的，这里验证地址不同
         assert_ne!(original.sha.as_ptr(), cloned.sha.as_ptr());
     }
 
     #[test]
-    fn test_commit_info_debug() {
+    fn test_commit_info_debug_with_valid_info_returns_debug_string() {
+        // Arrange: 准备CommitInfo
         let commit = CommitInfo {
             sha: "abc123".to_string(),
             message: "Test".to_string(),
@@ -350,7 +392,10 @@ mod tests {
             date: "2024-01-01".to_string(),
         };
 
+        // Act: 格式化Debug输出
         let debug_str = format!("{:?}", commit);
+
+        // Assert: 验证Debug字符串包含所有字段
         assert!(debug_str.contains("abc123"));
         assert!(debug_str.contains("Test"));
         assert!(debug_str.contains("Dev"));
@@ -358,10 +403,14 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_commit_info_valid() {
+    fn test_parse_commit_info_valid_with_valid_output_parses_correctly() {
+        // Arrange: 准备有效的提交信息输出
         let output = "abc123def456\nJohn Doe\n2024-01-01 10:30:00\nInitial commit";
+
+        // Act: 解析提交信息
         let commit = mock_parse_commit_info(output).expect("operation should succeed");
 
+        // Assert: 验证解析结果正确
         assert_eq!(commit.sha, "abc123def456");
         assert_eq!(commit.author, "John Doe");
         assert_eq!(commit.date, "2024-01-01 10:30:00");
@@ -369,13 +418,21 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_commit_info_invalid() {
-        // 测试不完整的输出
+    fn test_parse_commit_info_invalid_with_invalid_output_returns_none() {
+        // Arrange: 准备不完整的输出
         let invalid_outputs = vec![
             "",
             "abc123",
             "abc123\nJohn Doe",
             "abc123\nJohn Doe\n2024-01-01",
+        ];
+
+        // Act & Assert: 验证所有无效输出都返回None
+        for output in invalid_outputs {
+            let result = mock_parse_commit_info(output);
+            assert!(result.is_none(), "Should return None for invalid output: {:?}", output);
+        }
+    }
         ];
 
         for output in invalid_outputs {

@@ -13,44 +13,60 @@ struct TestRepoCli {
     command: RepoSubcommand,
 }
 
-// ==================== 命令解析完整性测试 ====================
+// ==================== Command Parsing Tests ====================
 
 #[test]
-fn test_repo_command_parsing_all_subcommands() {
-    // 测试所有子命令都可以正确解析
+fn test_repo_command_with_all_subcommands_parses_successfully() {
+    // Arrange: 准备所有子命令的输入
+    let setup_args = &["test-repo", "setup"];
+    let show_args = &["test-repo", "show"];
 
-    // Setup
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"])
+    // Act: 解析所有子命令
+    let setup_cli = TestRepoCli::try_parse_from(setup_args)
         .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, RepoSubcommand::Setup));
+    let show_cli = TestRepoCli::try_parse_from(show_args)
+        .expect("CLI args should parse successfully");
 
-    // Show
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"])
-        .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, RepoSubcommand::Show));
+    // Assert: 验证所有子命令都可以正确解析
+    assert!(matches!(setup_cli.command, RepoSubcommand::Setup));
+    assert!(matches!(show_cli.command, RepoSubcommand::Show));
 }
 
+// ==================== Error Handling Tests ====================
+
 #[test]
-fn test_repo_command_error_handling_invalid_subcommand() {
-    // 测试无效子命令的错误处理
-    let result = TestRepoCli::try_parse_from(&["test-repo", "invalid"]);
+fn test_repo_command_with_invalid_subcommand_returns_error() {
+    // Arrange: 准备无效子命令的输入
+    let args = &["test-repo", "invalid"];
+
+    // Act: 尝试解析无效子命令
+    let result = TestRepoCli::try_parse_from(args);
+
+    // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail on invalid subcommand");
 }
 
 #[test]
-fn test_repo_command_error_handling_missing_subcommand() {
-    // 测试缺少子命令的错误处理
-    let result = TestRepoCli::try_parse_from(&["test-repo"]);
+fn test_repo_command_with_missing_subcommand_returns_error() {
+    // Arrange: 准备缺少子命令的输入
+    let args = &["test-repo"];
+
+    // Act: 尝试解析缺少子命令的参数
+    let result = TestRepoCli::try_parse_from(args);
+
+    // Assert: 验证返回错误
     assert!(result.is_err(), "Should fail when subcommand is missing");
 }
 
 #[test]
-fn test_repo_all_commands_no_extra_arguments() {
-    // 测试所有命令都不接受额外参数
+fn test_repo_all_commands_with_extra_arguments_return_error() {
+    // Arrange: 准备所有命令和额外参数
     let commands = ["setup", "show"];
 
+    // Act & Assert: 验证所有命令都不接受额外参数
     for cmd in commands.iter() {
-        let result = TestRepoCli::try_parse_from(&["test-repo", cmd, "extra-arg"]);
+        let args = &["test-repo", cmd, "extra-arg"];
+        let result = TestRepoCli::try_parse_from(args);
         assert!(
             result.is_err(),
             "{} command should not accept extra arguments",

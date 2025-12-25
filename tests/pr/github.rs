@@ -38,10 +38,18 @@ fn sample_merge_request() -> MergePullRequestRequest {
     }
 }
 
-// ==================== 请求结构体测试 ====================
+// ==================== Request Structure Tests ====================
 
 #[rstest]
-fn test_create_request_structure(sample_create_request: CreatePullRequestRequest) {
+fn test_create_request_structure_with_valid_fields_creates_request(
+    sample_create_request: CreatePullRequestRequest,
+) {
+    // Arrange: 使用 fixture 提供的请求
+
+    // Act: 验证请求结构
+    // (结构验证在 Assert 中完成)
+
+    // Assert: 验证所有字段值正确
     assert_eq!(sample_create_request.title, "Test PR");
     assert_eq!(sample_create_request.body, "Test body");
     assert_eq!(sample_create_request.head, "feature/test");
@@ -57,12 +65,13 @@ fn test_create_request_structure(sample_create_request: CreatePullRequestRequest
     "feature/long-branch-name",
     "develop"
 )]
-fn test_create_pr_request_serialization(
+fn test_create_pr_request_serialization_with_various_inputs_serializes_correctly(
     #[case] title: &str,
     #[case] body: &str,
     #[case] head: &str,
     #[case] base: &str,
 ) -> Result<()> {
+    // Arrange: 准备 CreatePullRequestRequest 实例
     let request = CreatePullRequestRequest {
         title: title.to_string(),
         body: body.to_string(),
@@ -70,13 +79,12 @@ fn test_create_pr_request_serialization(
         base: base.to_string(),
     };
 
+    // Act: 序列化为 JSON
     let json_str = serde_json::to_string(&request)?;
-
-    // 验证 JSON 是有效的，并包含必要的字段
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 
-    // 验证字段存在且值正确
+    // Assert: 验证 JSON 字段存在且值正确
     assert_eq!(obj.get("title").and_then(|v| v.as_str()), Some(title));
     assert_eq!(obj.get("body").and_then(|v| v.as_str()), Some(body));
     assert_eq!(obj.get("head").and_then(|v| v.as_str()), Some(head));
@@ -85,7 +93,15 @@ fn test_create_pr_request_serialization(
 }
 
 #[rstest]
-fn test_merge_request_structure(sample_merge_request: MergePullRequestRequest) {
+fn test_merge_request_structure_with_valid_fields_creates_request(
+    sample_merge_request: MergePullRequestRequest,
+) {
+    // Arrange: 使用 fixture 提供的请求
+
+    // Act: 验证请求结构
+    // (结构验证在 Assert 中完成)
+
+    // Assert: 验证所有字段值正确
     assert_eq!(sample_merge_request.commit_title, None);
     assert_eq!(sample_merge_request.commit_message, None);
     assert_eq!(sample_merge_request.merge_method, "squash");
@@ -95,24 +111,26 @@ fn test_merge_request_structure(sample_merge_request: MergePullRequestRequest) {
 #[case(None, None, "squash")]
 #[case(Some("Merge PR #123"), Some("Merged via workflow"), "merge")]
 #[case(Some("Custom Title"), None, "rebase")]
-fn test_merge_pr_request_serialization(
+fn test_merge_pr_request_serialization_with_various_options_serializes_correctly(
     #[case] commit_title: Option<&str>,
     #[case] commit_message: Option<&str>,
     #[case] merge_method: &str,
 ) -> Result<()> {
+    // Arrange: 准备 MergePullRequestRequest 实例
     let request = MergePullRequestRequest {
         commit_title: commit_title.map(|s| s.to_string()),
         commit_message: commit_message.map(|s| s.to_string()),
         merge_method: merge_method.to_string(),
     };
 
+    // Act: 序列化为 JSON
     let json_str = serde_json::to_string(&request)?;
+
+    // Assert: 验证 JSON 包含 merge_method 且 None 字段被跳过
     assert!(
         json_str.contains(merge_method),
         "JSON should contain merge_method"
     );
-
-    // 验证 None 字段被跳过
     if commit_title.is_none() {
         assert!(
             !json_str.contains("commit_title"),
@@ -133,12 +151,13 @@ fn test_merge_pr_request_serialization(
 #[case(Some("New Title"), None, None, None)]
 #[case(None, Some("New Body"), None, None)]
 #[case(Some("New Title"), Some("New Body"), None, None)]
-fn test_update_pr_request_serialization(
+fn test_update_pr_request_serialization_with_various_options_serializes_correctly(
     #[case] title: Option<&str>,
     #[case] body: Option<&str>,
     #[case] state: Option<&str>,
     #[case] base: Option<&str>,
 ) -> Result<()> {
+    // Arrange: 准备 UpdatePullRequestRequest 实例
     let request = UpdatePullRequestRequest {
         title: title.map(|s| s.to_string()),
         body: body.map(|s| s.to_string()),
@@ -146,9 +165,10 @@ fn test_update_pr_request_serialization(
         base: base.map(|s| s.to_string()),
     };
 
+    // Act: 序列化为 JSON
     let json_str = serde_json::to_string(&request)?;
 
-    // 验证存在的字段
+    // Assert: 验证存在的字段包含在 JSON 中，None 字段被跳过
     if let Some(t) = title {
         assert!(json_str.contains(t), "JSON should contain title");
     }
@@ -158,8 +178,6 @@ fn test_update_pr_request_serialization(
     if let Some(s) = state {
         assert!(json_str.contains(s), "JSON should contain state");
     }
-
-    // 验证 None 字段被跳过
     if title.is_none() {
         assert!(
             !json_str.contains("\"title\""),
@@ -181,36 +199,49 @@ fn test_update_pr_request_serialization(
     Ok(())
 }
 
-// ==================== 响应结构体测试 ====================
+// ==================== Response Structure Tests ====================
 
 #[test]
-fn test_create_pull_request_response_structure() {
-    // 测试创建 PR 响应结构
+fn test_create_pull_request_response_structure_with_valid_fields_creates_response() {
+    // Arrange: 准备响应字段值
+    let html_url = "https://github.com/owner/repo/pull/123";
+
+    // Act: 创建 CreatePullRequestResponse 实例
     let response = CreatePullRequestResponse {
-        html_url: "https://github.com/owner/repo/pull/123".to_string(),
+        html_url: html_url.to_string(),
     };
 
-    assert_eq!(response.html_url, "https://github.com/owner/repo/pull/123");
+    // Assert: 验证字段值正确
+    assert_eq!(response.html_url, html_url);
 }
 
 #[test]
-fn test_create_pull_request_response_deserialization() -> Result<()> {
-    // 测试创建 PR 响应的反序列化
+fn test_create_pull_request_response_deserialization_with_valid_json_deserializes_response() -> Result<()> {
+    // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"html_url": "https://github.com/owner/repo/pull/123"}"#;
 
+    // Act: 反序列化为 CreatePullRequestResponse
     let response: CreatePullRequestResponse = serde_json::from_str(json)?;
+
+    // Assert: 验证字段值正确
     assert_eq!(response.html_url, "https://github.com/owner/repo/pull/123");
     Ok(())
 }
 
 #[test]
-fn test_pull_request_info_structure() {
-    // 测试 PR 信息结构
+fn test_pull_request_info_structure_with_valid_fields_creates_info() {
+    // Arrange: 准备 PR 信息字段值
+    let number = 123;
+    let title = "Test PR";
+    let body = Some("Test body".to_string());
+    let state = "open";
+
+    // Act: 创建 PullRequestInfo 实例
     let pr_info = PullRequestInfo {
-        number: 123,
-        title: "Test PR".to_string(),
-        body: Some("Test body".to_string()),
-        state: "open".to_string(),
+        number,
+        title: title.to_string(),
+        body: body.clone(),
+        state: state.to_string(),
         merged: false,
         merged_at: None,
         html_url: "https://github.com/owner/repo/pull/123".to_string(),
@@ -223,18 +254,19 @@ fn test_pull_request_info_structure() {
         user: None,
     };
 
-    assert_eq!(pr_info.number, 123);
-    assert_eq!(pr_info.title, "Test PR");
-    assert_eq!(pr_info.body, Some("Test body".to_string()));
-    assert_eq!(pr_info.state, "open");
+    // Assert: 验证所有字段值正确
+    assert_eq!(pr_info.number, number);
+    assert_eq!(pr_info.title, title);
+    assert_eq!(pr_info.body, body);
+    assert_eq!(pr_info.state, state);
     assert!(!pr_info.merged);
     assert_eq!(pr_info.head.ref_name, "feature/test");
     assert_eq!(pr_info.base.ref_name, "main");
 }
 
 #[test]
-fn test_pull_request_info_deserialization() -> Result<()> {
-    // 测试 PR 信息的反序列化
+fn test_pull_request_info_deserialization_with_valid_json_deserializes_info() -> Result<()> {
+    // Arrange: 准备有效的 JSON 字符串
     let json = r#"{
         "number": 123,
         "title": "Test PR",
@@ -246,7 +278,10 @@ fn test_pull_request_info_deserialization() -> Result<()> {
         "base": {"ref": "main"}
     }"#;
 
+    // Act: 反序列化为 PullRequestInfo
     let pr_info: PullRequestInfo = serde_json::from_str(json)?;
+
+    // Assert: 验证字段值正确
     assert_eq!(pr_info.number, 123);
     assert_eq!(pr_info.title, "Test PR");
     assert_eq!(pr_info.state, "open");
@@ -254,8 +289,8 @@ fn test_pull_request_info_deserialization() -> Result<()> {
 }
 
 #[test]
-fn test_pull_request_info_merged_state() -> Result<()> {
-    // 测试 PR 信息的合并状态
+fn test_pull_request_info_merged_state_with_merged_pr_returns_merged() -> Result<()> {
+    // Arrange: 准备已合并 PR 的 JSON
     let json = r#"{
         "number": 123,
         "title": "Merged PR",
@@ -268,57 +303,81 @@ fn test_pull_request_info_merged_state() -> Result<()> {
         "base": {"ref": "main"}
     }"#;
 
+    // Act: 反序列化为 PullRequestInfo
     let pr_info: PullRequestInfo = serde_json::from_str(json)?;
+
+    // Assert: 验证合并状态正确
     assert!(pr_info.merged, "Should be marked as merged");
     assert_eq!(pr_info.state, "closed");
     assert!(pr_info.merged_at.is_some());
     Ok(())
 }
 
+// ==================== PullRequestBranch Tests ====================
+
 #[test]
-fn test_pull_request_branch_structure() {
-    // 测试 PR 分支结构
+fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
+    // Arrange: 准备分支引用名
+    let ref_name = "feature/test";
+
+    // Act: 创建 PullRequestBranch 实例
     let branch = PullRequestBranch {
-        ref_name: "feature/test".to_string(),
+        ref_name: ref_name.to_string(),
     };
 
-    assert_eq!(branch.ref_name, "feature/test");
+    // Assert: 验证字段值正确
+    assert_eq!(branch.ref_name, ref_name);
 }
 
 #[test]
-fn test_pull_request_branch_deserialization() -> Result<()> {
-    // 测试 PR 分支的反序列化（注意 JSON 中使用 "ref" 字段）
+fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch() -> Result<()> {
+    // Arrange: 准备有效的 JSON 字符串（注意 JSON 中使用 "ref" 字段）
     let json = r#"{"ref": "feature/test"}"#;
 
+    // Act: 反序列化为 PullRequestBranch
     let branch: PullRequestBranch = serde_json::from_str(json)?;
+
+    // Assert: 验证字段值正确
     assert_eq!(branch.ref_name, "feature/test");
     Ok(())
 }
 
+// ==================== GitHubUser Tests ====================
+
 #[test]
-fn test_github_user_structure() {
-    // 测试 GitHub 用户结构
+fn test_github_user_structure_with_all_fields_creates_user() {
+    // Arrange: 准备用户字段值
+    let login = "testuser";
+    let name = Some("Test User".to_string());
+    let email = Some("test@example.com".to_string());
+
+    // Act: 创建 GitHubUser 实例
     let user = GitHubUser {
-        login: "testuser".to_string(),
-        name: Some("Test User".to_string()),
-        email: Some("test@example.com".to_string()),
+        login: login.to_string(),
+        name: name.clone(),
+        email: email.clone(),
     };
 
-    assert_eq!(user.login, "testuser");
-    assert_eq!(user.name, Some("Test User".to_string()));
-    assert_eq!(user.email, Some("test@example.com".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(user.login, login);
+    assert_eq!(user.name, name);
+    assert_eq!(user.email, email);
 }
 
 #[test]
-fn test_github_user_minimal() {
-    // 测试 GitHub 用户结构（最小字段）
+fn test_github_user_minimal_with_only_login_creates_user() {
+    // Arrange: 准备最小字段值（只有 login）
+    let login = "testuser";
+
+    // Act: 创建 GitHubUser 实例（可选字段为 None）
     let user = GitHubUser {
-        login: "testuser".to_string(),
+        login: login.to_string(),
         name: None,
         email: None,
     };
 
-    assert_eq!(user.login, "testuser");
+    // Assert: 验证字段值正确
+    assert_eq!(user.login, login);
     assert_eq!(user.name, None);
     assert_eq!(user.email, None);
 }

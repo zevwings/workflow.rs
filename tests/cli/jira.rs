@@ -104,9 +104,14 @@ fn test_jira_command_with_id(#[case] subcommand: &str, #[case] jira_id: &str) ->
 #[case("comments")]
 #[case("attachments")]
 #[case("clean")]
-fn test_jira_command_without_id(#[case] subcommand: &str) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand])?;
+fn test_jira_command_without_id_parses_correctly(#[case] subcommand: &str) -> Result<()> {
+    // Arrange: 准备不带 Jira ID 的命令输入
+    let args = &["test-jira", subcommand];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证 Jira ID 为 None
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert_eq!(args.jira_id.jira_id, None);
@@ -134,19 +139,24 @@ fn test_jira_command_without_id(#[case] subcommand: &str) -> Result<()> {
     Ok(())
 }
 
-// ==================== 输出格式测试 ====================
+// ==================== Output Format Tests ====================
 
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_table(
+fn test_jira_command_with_table_output_format_parses_correctly(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"])?;
+    // Arrange: 准备带 --table 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--table"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 table
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(args.query_display.output_format.table);
@@ -182,12 +192,17 @@ fn test_jira_command_output_format_table(
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_json(
+fn test_jira_command_with_json_output_format_parses_correctly(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"])?;
+    // Arrange: 准备带 --json 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--json"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 json
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(!args.query_display.output_format.table);
@@ -223,12 +238,17 @@ fn test_jira_command_output_format_json(
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_yaml(
+fn test_jira_command_with_yaml_output_format_parses_correctly(
     #[case] subcommand: &str,
     #[case] jira_id: &str,
 ) -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"])?;
+    // Arrange: 准备带 --yaml 标志的命令输入
+    let args = &["test-jira", subcommand, jira_id, "--yaml"];
 
+    // Act: 解析命令行参数
+    let cli = TestJiraCli::try_parse_from(args)?;
+
+    // Assert: 验证输出格式为 yaml
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
             assert!(!args.query_display.output_format.table);

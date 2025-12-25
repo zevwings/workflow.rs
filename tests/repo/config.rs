@@ -17,72 +17,91 @@ use workflow::repo::{BranchConfig, PullRequestsConfig};
 // ==================== Fixtures ====================
 // (Removed unused fixtures)
 
-// ==================== BranchConfig 测试 ====================
+// ==================== BranchConfig Tests ====================
 
 #[test]
-fn test_branch_config_default() {
-    // 测试分支配置的默认值
+fn test_branch_config_default_with_no_parameters_creates_empty_config() {
+    // Arrange: 准备创建默认配置
+
+    // Act: 创建默认的 BranchConfig
     let config = BranchConfig::default();
 
+    // Assert: 验证默认值正确
     assert_eq!(config.prefix, None);
     assert!(config.ignore.is_empty());
 }
 
 #[test]
-fn test_branch_config_with_values() {
-    // 测试带值的分支配置创建
+fn test_branch_config_with_values_creates_config() {
+    // Arrange: 准备配置值
+    let prefix = Some("feature".to_string());
+    let ignore = vec!["main".to_string(), "develop".to_string()];
+
+    // Act: 创建 BranchConfig 实例
     let config = BranchConfig {
-        prefix: Some("feature".to_string()),
-        ignore: vec!["main".to_string(), "develop".to_string()],
+        prefix: prefix.clone(),
+        ignore: ignore.clone(),
     };
 
-    assert_eq!(config.prefix, Some("feature".to_string()));
+    // Assert: 验证字段值正确
+    assert_eq!(config.prefix, prefix);
     assert_eq!(config.ignore, vec!["main", "develop"]);
 }
 
 #[test]
-fn test_branch_config_serialization() -> Result<()> {
-    // 测试分支配置的序列化
+fn test_branch_config_serialization_with_valid_config_serializes_to_json() -> Result<()> {
+    // Arrange: 准备 BranchConfig 实例
     let config = BranchConfig {
         prefix: Some("hotfix".to_string()),
         ignore: vec!["master".to_string()],
     };
-
-    let json = serde_json::to_string(&config)?;
     let expected = r#"{"prefix":"hotfix","ignore":["master"]}"#;
 
+    // Act: 序列化为 JSON
+    let json = serde_json::to_string(&config)?;
+
+    // Assert: 验证 JSON 字符串正确
     assert_eq!(json, expected);
     Ok(())
 }
 
 #[test]
-fn test_branch_config_deserialization() -> Result<()> {
-    // 测试分支配置的反序列化
+fn test_branch_config_deserialization_with_valid_json_deserializes_config() -> Result<()> {
+    // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"prefix":"feature","ignore":["main","develop"]}"#;
+
+    // Act: 反序列化为 BranchConfig
     let config: BranchConfig = serde_json::from_str(json)?;
 
+    // Assert: 验证字段值正确
     assert_eq!(config.prefix, Some("feature".to_string()));
     assert_eq!(config.ignore, vec!["main", "develop"]);
     Ok(())
 }
 
 #[test]
-fn test_branch_config_partial_deserialization() -> Result<()> {
-    // 测试部分字段的反序列化
+fn test_branch_config_partial_deserialization_with_partial_json_deserializes_config() -> Result<()> {
+    // Arrange: 准备部分字段的 JSON 字符串
     let json = r#"{"prefix":"feature"}"#;
+
+    // Act: 反序列化为 BranchConfig
     let config: BranchConfig = serde_json::from_str(json)?;
 
+    // Assert: 验证字段值正确（ignore 应为空）
     assert_eq!(config.prefix, Some("feature".to_string()));
     assert!(config.ignore.is_empty());
     Ok(())
 }
 
 #[test]
-fn test_branch_config_empty_deserialization() -> Result<()> {
-    // 测试空配置的反序列化
+fn test_branch_config_empty_deserialization_with_empty_json_deserializes_config() -> Result<()> {
+    // Arrange: 准备空 JSON 对象
     let json = r#"{}"#;
+
+    // Act: 反序列化为 BranchConfig
     let config: BranchConfig = serde_json::from_str(json)?;
 
+    // Assert: 验证默认值正确
     assert_eq!(config.prefix, None);
     assert!(config.ignore.is_empty());
     Ok(())
@@ -93,75 +112,91 @@ fn test_branch_config_empty_deserialization() -> Result<()> {
 #[case(Some("feature".to_string()), vec![])]
 #[case(Some("hotfix".to_string()), vec!["main".to_string()])]
 #[case(None, vec!["main".to_string(), "develop".to_string()])]
-fn test_branch_config_parametrized(
+fn test_branch_config_parametrized_with_various_combinations_creates_config(
     #[case] prefix: Option<String>,
     #[case] ignore: Vec<String>,
 ) -> Result<()> {
-    // 参数化测试分支配置的各种组合
+    // Arrange: 准备参数化测试的配置值
     let config = BranchConfig {
         prefix,
         ignore: ignore.clone(),
     };
 
-    // 测试序列化和反序列化的一致性
+    // Act: 测试序列化和反序列化的一致性
     let json = serde_json::to_string(&config)?;
     let deserialized: BranchConfig = serde_json::from_str(&json)?;
 
+    // Assert: 验证序列化和反序列化结果一致
     assert_eq!(deserialized.prefix, config.prefix);
     assert_eq!(deserialized.ignore, ignore);
     Ok(())
 }
 
-// ==================== PullRequestsConfig 测试 ====================
+// ==================== PullRequestsConfig Tests ====================
 
 #[test]
-fn test_pr_config_default() {
-    // 测试 PR 配置的默认值
+fn test_pr_config_default_with_no_parameters_creates_empty_config() {
+    // Arrange: 准备创建默认配置
+
+    // Act: 创建默认的 PullRequestsConfig
     let config = PullRequestsConfig::default();
 
+    // Assert: 验证默认值正确
     assert_eq!(config.auto_accept_change_type, None);
 }
 
 #[test]
-fn test_pr_config_with_values() {
-    // 测试带值的 PR 配置创建
+fn test_pr_config_with_values_creates_config() {
+    // Arrange: 准备配置值
+    let auto_accept = Some(true);
+
+    // Act: 创建 PullRequestsConfig 实例
     let config = PullRequestsConfig {
-        auto_accept_change_type: Some(true),
+        auto_accept_change_type: auto_accept,
     };
 
-    assert_eq!(config.auto_accept_change_type, Some(true));
+    // Assert: 验证字段值正确
+    assert_eq!(config.auto_accept_change_type, auto_accept);
 }
 
 #[test]
-fn test_pr_config_serialization() -> Result<()> {
-    // 测试 PR 配置的序列化
+fn test_pr_config_serialization_with_valid_config_serializes_to_json() -> Result<()> {
+    // Arrange: 准备 PullRequestsConfig 实例
     let config = PullRequestsConfig {
         auto_accept_change_type: Some(false),
     };
-
-    let json = serde_json::to_string(&config)?;
     let expected = r#"{"auto_accept_change_type":false}"#;
 
+    // Act: 序列化为 JSON
+    let json = serde_json::to_string(&config)?;
+
+    // Assert: 验证 JSON 字符串正确
     assert_eq!(json, expected);
     Ok(())
 }
 
 #[test]
-fn test_pr_config_deserialization() -> Result<()> {
-    // 测试 PR 配置的反序列化
+fn test_pr_config_deserialization_with_valid_json_deserializes_config() -> Result<()> {
+    // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"auto_accept_change_type":true}"#;
+
+    // Act: 反序列化为 PullRequestsConfig
     let config: PullRequestsConfig = serde_json::from_str(json)?;
 
+    // Assert: 验证字段值正确
     assert_eq!(config.auto_accept_change_type, Some(true));
     Ok(())
 }
 
 #[test]
-fn test_pr_config_empty_deserialization() -> Result<()> {
-    // 测试空 PR 配置的反序列化
+fn test_pr_config_empty_deserialization_with_empty_json_deserializes_config() -> Result<()> {
+    // Arrange: 准备空 JSON 对象
     let json = r#"{}"#;
+
+    // Act: 反序列化为 PullRequestsConfig
     let config: PullRequestsConfig = serde_json::from_str(json)?;
 
+    // Assert: 验证默认值正确
     assert_eq!(config.auto_accept_change_type, None);
     Ok(())
 }
@@ -170,8 +205,10 @@ fn test_pr_config_empty_deserialization() -> Result<()> {
 #[case(None)]
 #[case(Some(true))]
 #[case(Some(false))]
-fn test_pr_config_parametrized(#[case] auto_accept: Option<bool>) -> Result<()> {
-    // 参数化测试 PR 配置的各种值
+fn test_pr_config_parametrized_with_various_values_creates_config(
+    #[case] auto_accept: Option<bool>,
+) -> Result<()> {
+    // Arrange: 准备参数化测试的配置值
     let config = PullRequestsConfig {
         auto_accept_change_type: auto_accept,
     };
@@ -184,20 +221,23 @@ fn test_pr_config_parametrized(#[case] auto_accept: Option<bool>) -> Result<()> 
     Ok(())
 }
 
-// ==================== 边界条件和错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
 #[test]
-fn test_branch_config_invalid_json() {
-    // 测试无效 JSON 的处理
+fn test_branch_config_invalid_json_with_invalid_json_returns_error() {
+    // Arrange: 准备无效的 JSON 字符串
     let invalid_json = r#"{"prefix": invalid}"#;
+
+    // Act: 尝试反序列化
     let result = serde_json::from_str::<BranchConfig>(invalid_json);
 
+    // Assert: 验证返回错误
     assert!(result.is_err());
 }
 
 #[test]
-fn test_pr_config_invalid_json() {
-    // 测试无效 JSON 的处理
+fn test_pr_config_invalid_json_with_invalid_json_returns_error() {
+    // Arrange: 准备无效的 JSON 字符串
     let invalid_json = r#"{"auto_accept_change_type": "not_boolean"}"#;
     let result = serde_json::from_str::<PullRequestsConfig>(invalid_json);
 

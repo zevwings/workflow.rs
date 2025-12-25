@@ -7,46 +7,41 @@ use std::fs;
 use tempfile::TempDir;
 use workflow::base::shell::ShellConfigManager;
 
-// 注意：由于 ShellConfigManager 依赖于真实的 shell 检测和配置文件路径，
-// 这些测试主要验证配置块的解析和格式化功能，而不是完整的端到端测试。
-// 完整的集成测试需要在真实的 shell 环境中进行。
+// ==================== ShellConfigManager Environment Variables Tests ====================
 
 #[test]
-fn test_load_env_vars_empty_file() {
-    // 测试从空文件加载环境变量
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
+fn test_load_env_vars_empty_file_with_empty_file_returns_empty_map() {
+    // Arrange: 准备空配置文件环境（注意：依赖于真实配置文件路径）
+
+    // Act: 从空文件加载环境变量
     let result = ShellConfigManager::load_env_vars();
 
-    // 应该返回空 HashMap（如果文件不存在或为空）
+    // Assert: 验证返回空HashMap或包含变量的HashMap（如果文件不存在或为空）
     if let Ok(env_vars) = result {
         assert!(env_vars.is_empty() || !env_vars.is_empty());
     }
 }
 
 #[test]
-fn test_set_and_load_env_vars() {
-    // 测试设置和加载环境变量
-    // 注意：这个测试依赖于真实的配置文件路径，可能在某些环境中失败
-
+fn test_set_and_load_env_vars_with_valid_vars_sets_and_loads_vars() {
+    // Arrange: 准备测试环境变量
     let mut test_vars = HashMap::new();
     test_vars.insert("TEST_KEY1".to_string(), "test_value1".to_string());
     test_vars.insert("TEST_KEY2".to_string(), "test_value2".to_string());
 
-    // 设置环境变量
+    // Act: 设置环境变量
     let set_result = ShellConfigManager::set_env_vars(&test_vars);
 
-    // 如果设置成功，尝试加载
+    // Assert: 如果设置成功，验证可以加载且包含设置的变量
     if set_result.is_ok() {
         let load_result = ShellConfigManager::load_env_vars();
         if let Ok(loaded_vars) = load_result {
-            // 验证加载的变量包含设置的变量
             for (key, value) in &test_vars {
                 if let Some(loaded_value) = loaded_vars.get(key) {
                     assert_eq!(loaded_value, value);
                 }
             }
         }
-
         // 清理：移除测试变量
         let _ = ShellConfigManager::remove_env_vars(&["TEST_KEY1", "TEST_KEY2"]);
     }

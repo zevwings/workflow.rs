@@ -154,18 +154,20 @@ mod tests {
     // ==================== 基础别名展开测试 ====================
 
     #[test]
-    fn test_simple_alias_expansion() -> Result<()> {
+    fn test_simple_alias_expansion_with_valid_alias_expands_alias() -> Result<()> {
+        // Arrange: 准备别名映射
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
         aliases.insert("la".to_string(), "ls -A".to_string());
-
         let mut visited = HashSet::new();
 
-        // 测试简单别名展开
+        // Act: 展开简单别名
         let result = mock_expand_alias("ll", &aliases, &mut visited, 0)?;
+
+        // Assert: 验证别名展开正确
         assert_eq!(result, "ls -la");
 
-        // 重置访问集合
+        // 重置访问集合并测试另一个别名
         visited.clear();
         let result2 = mock_expand_alias("la", &aliases, &mut visited, 0)?;
         assert_eq!(result2, "ls -A");
@@ -174,44 +176,52 @@ mod tests {
     }
 
     #[test]
-    fn test_nested_alias_expansion() -> Result<()> {
+    fn test_nested_alias_expansion_with_nested_alias_expands_recursively() -> Result<()> {
+        // Arrange: 准备嵌套别名映射
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
         aliases.insert("lll".to_string(), "ll -h".to_string()); // 嵌套别名
-
         let mut visited = HashSet::new();
 
-        // 测试嵌套别名展开
+        // Act: 展开嵌套别名
         let result = mock_expand_alias("lll", &aliases, &mut visited, 0)?;
+
+        // Assert: 验证嵌套别名递归展开正确
         assert_eq!(result, "ls -la -h");
 
         Ok(())
     }
 
     #[test]
-    fn test_deep_nested_alias_expansion() -> Result<()> {
+    fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels() -> Result<()> {
+        // Arrange: 准备深层嵌套别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b arg1".to_string());
         aliases.insert("b".to_string(), "c arg2".to_string());
         aliases.insert("c".to_string(), "d arg3".to_string());
         aliases.insert("d".to_string(), "echo final".to_string());
-
         let mut visited = HashSet::new();
 
-        // 测试深层嵌套别名展开
+        // Act: 展开深层嵌套别名
         let result = mock_expand_alias("a", &aliases, &mut visited, 0)?;
+
+        // Assert: 验证深层嵌套别名递归展开正确
         assert_eq!(result, "echo final arg3 arg2 arg1");
 
         Ok(())
     }
 
     #[test]
-    fn test_alias_not_found() -> Result<()> {
+    fn test_alias_not_found_with_nonexistent_alias_returns_error() -> Result<()> {
+        // Arrange: 准备空别名映射和不存在的别名
         let aliases = HashMap::new();
         let mut visited = HashSet::new();
+        let alias = "nonexistent";
 
-        // 测试别名不存在的情况
-        let result = mock_expand_alias("nonexistent", &aliases, &mut visited, 0);
+        // Act: 尝试展开不存在的别名
+        let result = mock_expand_alias(alias, &aliases, &mut visited, 0);
+
+        // Assert: 验证返回错误且错误消息包含"Alias not found"
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Alias not found"));
         Ok(())
@@ -220,50 +230,55 @@ mod tests {
     // ==================== 循环检测测试 ====================
 
     #[test]
-    fn test_direct_circular_alias() -> Result<()> {
+    fn test_direct_circular_alias_with_direct_cycle_detects_circular() -> Result<()> {
+        // Arrange: 准备直接循环别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "a".to_string()); // 直接循环
-
         let mut visited = HashSet::new();
 
-        // 测试直接循环检测
+        // Act: 尝试展开直接循环别名
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
+
+        // Assert: 验证检测到循环且错误消息包含"Circular alias detected"
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
         Ok(())
     }
 
     #[test]
-    fn test_indirect_circular_alias() -> Result<()> {
+    fn test_indirect_circular_alias_with_indirect_cycle_detects_circular() -> Result<()> {
+        // Arrange: 准备间接循环别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
         aliases.insert("b".to_string(), "c".to_string());
         aliases.insert("c".to_string(), "a".to_string()); // 间接循环
-
         let mut visited = HashSet::new();
 
-        // 测试间接循环检测
+        // Act: 尝试展开间接循环别名
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
+
+        // Assert: 验证检测到循环且错误消息包含"Circular alias detected"
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
         Ok(())
     }
 
     #[test]
-    fn test_circular_detection_function() -> Result<()> {
+    fn test_circular_detection_function_with_various_cases_detects_circular() -> Result<()> {
+        // Arrange: 准备别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
         aliases.insert("b".to_string(), "c".to_string());
 
-        // 测试不会形成循环的情况
+        // Act & Assert: 测试不会形成循环的情况
         let result1 = mock_check_circular("d", "a", &aliases)?;
         assert!(!result1);
 
-        // 测试会形成直接循环的情况
+        // Act & Assert: 测试会形成直接循环的情况
         let result2 = mock_check_circular("a", "a", &aliases)?;
         assert!(result2);
 
-        // 测试会形成间接循环的情况
+        // Act & Assert: 测试会形成间接循环的情况
         let result3 = mock_check_circular("c", "a", &aliases)?;
         assert!(result3);
 
@@ -273,42 +288,42 @@ mod tests {
     // ==================== 深度限制测试 ====================
 
     #[test]
-    fn test_max_depth_limit() -> Result<()> {
+    fn test_max_depth_limit_with_deep_chain_returns_error() -> Result<()> {
+        // Arrange: 创建一个很深的别名链（超过最大深度限制）
         let mut aliases = HashMap::new();
-
-        // 创建一个很深的别名链
         for i in 0..15 {
             let current = format!("alias{}", i);
             let next = format!("alias{}", i + 1);
             aliases.insert(current, next);
         }
         aliases.insert("alias15".to_string(), "echo final".to_string());
-
         let mut visited = HashSet::new();
 
-        // 测试深度限制
+        // Act: 尝试展开超过深度限制的别名
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
+
+        // Assert: 验证返回错误且错误消息包含"depth exceeded maximum"
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
         Ok(())
     }
 
     #[test]
-    fn test_depth_within_limit() -> Result<()> {
+    fn test_depth_within_limit_with_valid_depth_expands_successfully() -> Result<()> {
+        // Arrange: 创建一个在限制内的别名链（9层）
         let mut aliases = HashMap::new();
-
-        // 创建一个在限制内的别名链（9层）
         for i in 0..9 {
             let current = format!("alias{}", i);
             let next = format!("alias{}", i + 1);
             aliases.insert(current, next);
         }
         aliases.insert("alias9".to_string(), "echo final".to_string());
-
         let mut visited = HashSet::new();
 
-        // 测试在深度限制内的展开
+        // Act: 展开在深度限制内的别名
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0)?;
+
+        // Assert: 验证展开成功
         assert_eq!(result, "echo final");
 
         Ok(())
@@ -317,10 +332,10 @@ mod tests {
     // ==================== 命令行参数展开测试 ====================
 
     #[test]
-    fn test_expand_args_with_alias() -> Result<()> {
+    fn test_expand_args_with_alias_with_alias_in_args_expands_alias() -> Result<()> {
+        // Arrange: 准备别名映射和包含别名的参数列表
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
-
         let args = vec![
             "workflow".to_string(),
             "ll".to_string(),
@@ -328,8 +343,10 @@ mod tests {
             "/tmp".to_string(),
         ];
 
+        // Act: 展开参数中的别名
         let result = mock_expand_args(args, &aliases)?;
 
+        // Assert: 验证别名被展开且其他参数保持不变
         assert_eq!(
             result,
             vec![
@@ -345,54 +362,64 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_args_without_alias() -> Result<()> {
+    fn test_expand_args_without_alias_with_no_alias_returns_unchanged() -> Result<()> {
+        // Arrange: 准备空别名映射和不包含别名的参数列表
         let aliases = HashMap::new();
-
         let args = vec![
             "workflow".to_string(),
             "status".to_string(),
             "--verbose".to_string(),
         ];
 
+        // Act: 展开参数（无别名）
         let result = mock_expand_args(args.clone(), &aliases)?;
 
-        // 不是别名，应该返回原参数
+        // Assert: 验证参数保持不变（不是别名，应该返回原参数）
         assert_eq!(result, args);
 
         Ok(())
     }
 
     #[test]
-    fn test_expand_args_empty() -> Result<()> {
+    fn test_expand_args_empty_with_empty_args_returns_empty() -> Result<()> {
+        // Arrange: 准备空别名映射和空参数列表
         let aliases = HashMap::new();
+        let empty_args: Vec<String> = vec![];
 
-        // 测试空参数
-        let empty_args = vec![];
+        // Act: 展开空参数
         let result1 = mock_expand_args(empty_args.clone(), &aliases)?;
+
+        // Assert: 验证返回空参数
         assert_eq!(result1, empty_args);
 
-        // 测试只有程序名的参数
+        // Arrange: 准备只有程序名的参数
         let single_arg = vec!["workflow".to_string()];
+
+        // Act: 展开只有程序名的参数
         let result2 = mock_expand_args(single_arg.clone(), &aliases)?;
+
+        // Assert: 验证返回原参数
         assert_eq!(result2, single_arg);
 
         Ok(())
     }
 
     #[test]
-    fn test_expand_args_nested_alias() -> Result<()> {
+    fn test_expand_args_nested_alias_with_nested_alias_expands_recursively() -> Result<()> {
+        // Arrange: 准备嵌套别名映射和包含嵌套别名的参数列表
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
         aliases.insert("lll".to_string(), "ll -h".to_string());
-
         let args = vec![
             "workflow".to_string(),
             "lll".to_string(),
             "/home".to_string(),
         ];
 
+        // Act: 展开嵌套别名
         let result = mock_expand_args(args, &aliases)?;
 
+        // Assert: 验证嵌套别名递归展开正确
         assert_eq!(
             result,
             vec![

@@ -19,122 +19,116 @@ fn git_repo_with_commit() -> GitTestEnv {
     GitTestEnv::new().expect("Failed to create git test env")
 }
 
-// ==================== 分支前缀处理测试 ====================
+// ==================== Branch Prefix Processing Tests ====================
 
 #[test]
-fn test_remove_branch_prefix_with_slash() -> Result<()> {
-    // 这是测试内部函数，需要通过公共API测试
-    // 我们通过分支名称处理的相关功能来测试
+fn test_remove_branch_prefix_with_slash_handles_prefix() -> Result<()> {
+    // Arrange: 准备测试分支前缀移除逻辑
+    // 注意：remove_branch_prefix 是私有函数，我们通过分支操作间接测试
 
-    // 测试分支前缀移除逻辑（通过分支操作间接测试）
-    // 注意：remove_branch_prefix 是私有函数，我们测试其效果
-Ok(())
+    // Act: 测试分支前缀移除逻辑（通过分支操作间接测试）
+
+    // Assert: 验证前缀移除逻辑（通过公共API间接验证）
+    Ok(())
 }
 
-// ==================== 分支存在性检查测试 ====================
+// ==================== Branch Existence Tests ====================
 
 #[test]
 #[serial]
-fn test_exists_main_branch() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    // 如果 Git 不可用，GitTestEnv::new() 会返回错误
+fn test_exists_main_branch_with_default_branch_returns_true() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
     let _env = GitTestEnv::new()?;
 
-    // 检查默认分支（通常是 main 或 master）是否存在
+    // Act: 获取当前分支并检查是否存在
     let current_branch = GitBranch::current_branch()?;
+    let exists = GitBranch::has_local_branch(&current_branch).unwrap_or(false);
+
+    // Assert: 验证当前分支存在
     assert!(
-        GitBranch::has_local_branch(&current_branch).unwrap_or(false),
+        exists,
         "Current branch '{}' should exist locally",
         current_branch
     );
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
 #[test]
 #[serial]
-fn test_exists_nonexistent_branch() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_exists_nonexistent_branch_with_invalid_name_returns_false() -> Result<()> {
+    // Arrange: 准备 Git 测试环境和不存在的分支名
     let _env = GitTestEnv::new()?;
-
-    // 检查不存在的分支
     let nonexistent_branch = "nonexistent-branch-12345";
+
+    // Act: 检查不存在的分支
+    let exists = GitBranch::has_local_branch(nonexistent_branch).unwrap_or(true);
+
+    // Assert: 验证分支不存在
     assert!(
-        !GitBranch::has_local_branch(nonexistent_branch).unwrap_or(true),
+        !exists,
         "Branch '{}' should not exist",
         nonexistent_branch
     );
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 使用 fstest 重新实现的测试 ====================
+// ==================== Branch Creation Tests ====================
 
 #[test]
 #[serial]
-fn test_create_simple_branch_with_gix() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境和分支名
     let _env = GitTestEnv::new()?;
-
     let branch_name = "feature/test-branch";
 
-    // 创建分支
+    // Act: 创建并切换到新分支
     let result = GitBranch::checkout_branch(branch_name);
+
+    // Assert: 验证分支创建成功、存在且已切换
     assert!(result.is_ok(), "Failed to create branch: {:?}", result);
-
-    // 验证分支存在
     assert!(GitBranch::has_local_branch(branch_name).unwrap_or(false));
-
-    // 验证当前分支
     let current_branch = GitBranch::current_branch()?;
     assert_eq!(current_branch, branch_name);
 
-    // 目录会在函数结束时自动恢复
     Ok(())
 }
 
 #[test]
 #[serial]
-fn test_create_branch_with_prefix_with_gix() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境和带前缀的分支名
     let _env = GitTestEnv::new()?;
-
     let branch_name = "feature/user-authentication";
 
+    // Act: 创建并切换到新分支
     let result = GitBranch::checkout_branch(branch_name);
+
+    // Assert: 验证分支创建成功、存在且已切换
     assert!(result.is_ok(), "Failed to create branch: {:?}", result);
-
     assert!(GitBranch::has_local_branch(branch_name).unwrap_or(false));
-
-    // 验证当前分支
     let current_branch = GitBranch::current_branch()?;
     assert_eq!(current_branch, branch_name);
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 分支切换测试 ====================
-
-// ==================== 分支删除测试 ====================
+// ==================== Branch Deletion Tests ====================
 
 #[test]
 #[serial]
-fn test_delete_existing_branch() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并创建分支
     let _env = GitTestEnv::new()?;
-
     let branch_name = "feature/to-delete";
 
     // 创建分支
     let result = GitBranch::checkout_branch(branch_name);
     assert!(result.is_ok(), "Failed to create branch: {:?}", result);
 
-    // 切换回主分支
+    // 切换回主分支（如果当前就是主分支，先创建一个临时分支）
     let main_branch = GitBranch::current_branch()?;
-    // 如果当前就是主分支，先创建一个临时分支
     if main_branch == branch_name {
         GitBranch::checkout_branch("main")
             .unwrap_or_else(|_| GitBranch::checkout_branch("master")?);
@@ -146,7 +140,7 @@ fn test_delete_existing_branch() -> Result<()> {
         "Branch should exist before deletion"
     );
 
-    // 删除分支
+    // Act: 删除分支
     let delete_result = GitBranch::delete(branch_name, false);
     assert!(
         delete_result.is_ok(),
@@ -154,31 +148,27 @@ fn test_delete_existing_branch() -> Result<()> {
         delete_result
     );
 
-    // 确认分支已被删除
+    // Assert: 验证分支已被删除
     assert!(
         !GitBranch::has_local_branch(branch_name).unwrap_or(true),
         "Branch should not exist after deletion"
     );
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 分支列表测试 ====================
+// ==================== Branch Listing Tests ====================
 
 #[test]
 #[serial]
-fn test_list_branches() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_list_branches_with_multiple_branches_returns_all_branches() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并获取初始分支列表
     let _env = GitTestEnv::new()?;
-
-    // 获取初始分支列表
     let initial_branches = GitBranch::get_local_branches()?;
     let initial_count = initial_branches.len();
-
-    // 创建几个测试分支
     let test_branches = vec!["feature/branch1", "feature/branch2", "hotfix/fix1"];
 
+    // Act: 创建多个测试分支
     for branch in &test_branches {
         GitBranch::checkout_branch(branch)?;
     }
@@ -186,15 +176,13 @@ fn test_list_branches() -> Result<()> {
     // 获取更新后的分支列表
     let updated_branches = GitBranch::get_local_branches()?;
 
-    // 验证分支数量增加了
+    // Assert: 验证分支数量增加且所有测试分支都在列表中
     assert!(
         updated_branches.len() >= initial_count + test_branches.len(),
         "Branch count should increase. Initial: {}, Updated: {}",
         initial_count,
         updated_branches.len()
     );
-
-    // 验证所有测试分支都在列表中
     for branch in &test_branches {
         assert!(
             updated_branches.contains(&branch.to_string()),
@@ -203,73 +191,68 @@ fn test_list_branches() -> Result<()> {
         );
     }
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 合并策略测试 ====================
+// ==================== Merge Strategy Tests ====================
 
 #[test]
-fn test_merge_strategy_enum() -> Result<()> {
-    // 测试合并策略枚举的基本功能
+fn test_merge_strategy_enum_with_all_variants_returns_debug_string() -> Result<()> {
+    // Arrange: 准备所有合并策略枚举变体
     let strategies = [
         MergeStrategy::Merge,
         MergeStrategy::Squash,
         MergeStrategy::FastForwardOnly,
     ];
 
-    // 验证枚举可以正常使用
+    // Act & Assert: 验证每个策略都可以格式化为 Debug 字符串
     for strategy in &strategies {
-        // 这里主要测试枚举的基本功能
         let debug_str = format!("{:?}", strategy);
         assert!(!debug_str.is_empty());
     }
-Ok(())
+
+    Ok(())
 }
 
-// ==================== 边界条件测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 #[test]
 #[serial]
-fn test_empty_branch_name() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_empty_branch_name_with_empty_string_returns_error() -> Result<()> {
+    // Arrange: 准备 Git 测试环境
     let _env = GitTestEnv::new()?;
 
-    // 尝试创建空名称的分支应该失败
+    // Act: 尝试创建空名称的分支
     let result = GitBranch::checkout_branch("");
+    let exists = GitBranch::has_local_branch("").unwrap_or(true);
+
+    // Assert: 验证创建失败且分支不存在
     assert!(
         result.is_err(),
         "Creating branch with empty name should fail"
     );
-
-    // 检查空分支名是否存在应该返回 false
-    let exists = GitBranch::has_local_branch("").unwrap_or(true);
     assert!(!exists, "Empty branch name should not exist");
 
-    // GitTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-// ==================== 错误处理测试 ====================
+// ==================== Error Handling Tests ====================
 
 #[test]
-fn test_git_not_available() -> Result<()> {
-    // 测试 Git 不可用的情况
-    // 注意：这个测试在有 Git 的环境中会跳过
-
+fn test_git_not_available_without_git_returns_error() -> Result<()> {
+    // Arrange: 保存原始 PATH 并临时移除 Git
     let original_path = std::env::var("PATH").unwrap_or_default();
-
-    // 临时移除 PATH 中的 Git
     std::env::set_var("PATH", "");
 
+    // Act: 尝试检查分支（Git 不可用）
     let _result = GitBranch::has_local_branch("any-branch");
 
     // 恢复 PATH
     std::env::set_var("PATH", original_path);
 
-    // 在没有 Git 的情况下应该返回错误
+    // Assert: 验证在没有 Git 的情况下应该返回错误
     // 注意：这个测试可能不会按预期工作，因为 Git 可能在其他位置
-Ok(())
+    Ok(())
 }
 
 // ==================== 集成测试 ====================

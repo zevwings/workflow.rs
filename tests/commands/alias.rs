@@ -4,13 +4,17 @@
 
 use workflow::commands::alias::list::AliasListCommand;
 
+// ==================== Alias List Command Tests ====================
+
 #[test]
-fn test_alias_list_command_structure() {
-    // 测试别名列表命令可以正常调用（不抛出编译错误）
+fn test_alias_list_command_with_valid_call_executes_successfully() {
+    // Arrange: 准备调用别名列表命令
     // 注意：这个测试在无别名配置的情况下会正常返回，不会失败
+
+    // Act: 调用别名列表命令
     let result = AliasListCommand::list();
 
-    // 验证函数返回 Result 类型
+    // Assert: 验证函数返回 Result 类型（成功或失败都是可以接受的）
     match result {
         Ok(_) => {
             // 命令执行成功（可能没有别名，这是正常的）

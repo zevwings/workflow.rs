@@ -14,11 +14,14 @@ fn setup_mock_server() -> MockServer {
     mock_server
 }
 
+// ==================== GitHub API Pull Request Tests ====================
+
 #[test]
-fn test_create_pull_request_success() {
+fn test_create_pull_request_success_with_valid_request_creates_pr() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
-    // 创建 Mock
+    // Act: 创建Mock响应
     let _mock = mock_server
         .server
         .as_mut()
@@ -34,26 +37,17 @@ fn test_create_pull_request_success() {
         .with_body(r#"{"html_url":"https://github.com/owner/repo/pull/123"}"#)
         .create();
 
-    // 注意：实际测试需要设置 Git 仓库和认证
-    // 这里仅展示 Mock 设置方式
-    // let github = GitHub;
-    // let result = github.create_pull_request(
-    //     "Test PR",
-    //     "Test body",
-    //     "feature",
-    //     Some("main")
-    // )?;
-
-    // 验证 Mock 被调用
-    // _mock.assert();
-    // assert_eq!(result, "https://github.com/owner/repo/pull/123");
+    // Assert: 注意：实际测试需要设置Git仓库和认证
+    // 这里仅展示Mock设置方式
+    // 验证Mock被调用: _mock.assert();
 }
 
 #[test]
-fn test_create_pull_request_error() {
+fn test_create_pull_request_error_with_invalid_request_returns_error() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
-    // 创建错误响应的 Mock
+    // Act: 创建错误响应的Mock
     let _mock = mock_server
         .server
         .as_mut()
@@ -66,19 +60,17 @@ fn test_create_pull_request_error() {
         )
         .create();
 
-    // 测试错误处理
-    // let github = GitHub;
-    // let result = github.create_pull_request(...);
-    // assert!(result.is_err());
-
-    // 验证 Mock 被调用
-    // _mock.assert();
+    // Assert: 注意：实际测试需要设置Git仓库和认证
+    // 测试错误处理: assert!(result.is_err());
+    // 验证Mock被调用: _mock.assert();
 }
 
 #[test]
-fn test_get_pull_request_info() {
+fn test_get_pull_request_info_with_valid_pr_number_returns_info() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
+    // Act: 创建Mock响应
     let _mock = mock_server
         .server
         .as_mut()

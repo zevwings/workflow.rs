@@ -85,15 +85,19 @@ fn create_test_zip(temp_dir: &TempDir) -> PathBuf {
     zip_path
 }
 
+// ==================== Unzip Extraction Tests ====================
+
 #[test]
-fn test_unzip_extract_tar_gz() -> color_eyre::Result<()> {
+fn test_unzip_extract_tar_gz_with_valid_file_extracts_files() -> color_eyre::Result<()> {
+    // Arrange: 准备临时目录和tar.gz文件
     let temp_dir = TempDir::new()?;
     let tar_gz_path = create_test_tar_gz(&temp_dir);
     let output_dir = temp_dir.path().join("output");
 
+    // Act: 解压tar.gz文件
     Unzip::extract_tar_gz(&tar_gz_path, &output_dir)?;
 
-    // 验证文件已解压
+    // Assert: 验证文件已解压
     assert!(output_dir.join("file1.txt").exists());
     assert!(output_dir.join("file2.txt").exists());
     assert!(output_dir.join("subdir/file3.txt").exists());
@@ -116,41 +120,49 @@ fn test_unzip_extract_tar_gz() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_unzip_extract_tar_gz_nonexistent_file() -> Result<()> {
+fn test_unzip_extract_tar_gz_nonexistent_file_with_missing_file_returns_error() -> Result<()> {
+    // Arrange: 准备不存在的文件路径
     let temp_dir = TempDir::new()?;
     let nonexistent_path = temp_dir.path().join("nonexistent.tar.gz");
     let output_dir = temp_dir.path().join("output");
 
+    // Act: 尝试解压不存在的文件
     let result = Unzip::extract_tar_gz(&nonexistent_path, &output_dir);
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
     Ok(())
 }
 
 #[test]
-fn test_unzip_extract_tar_gz_invalid_format() -> color_eyre::Result<()> {
+fn test_unzip_extract_tar_gz_invalid_format_with_invalid_file_returns_error() -> color_eyre::Result<()> {
+    // Arrange: 准备无效格式的文件
     let temp_dir = TempDir::new()?;
     let invalid_file = temp_dir.path().join("invalid.tar.gz");
     fs::write(&invalid_file, "not a valid tar.gz file")?;
-
     let output_dir = temp_dir.path().join("output");
+
+    // Act: 尝试解压无效格式的文件
     let result = Unzip::extract_tar_gz(&invalid_file, &output_dir);
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
 
     Ok(())
 }
 
 #[test]
-fn test_unzip_extract_tar_gz_output_dir_created() -> color_eyre::Result<()> {
+fn test_unzip_extract_tar_gz_output_dir_created_with_missing_dir_creates_dir() -> color_eyre::Result<()> {
+    // Arrange: 准备tar.gz文件和不存在的输出目录
     let temp_dir = TempDir::new()?;
     let tar_gz_path = create_test_tar_gz(&temp_dir);
     let output_dir = temp_dir.path().join("new/output/dir");
-
-    // 输出目录不存在，应该自动创建
     assert!(!output_dir.exists());
 
+    // Act: 解压文件（输出目录不存在，应该自动创建）
     Unzip::extract_tar_gz(&tar_gz_path, &output_dir)?;
 
-    // 验证目录已创建
+    // Assert: 验证目录已创建
     assert!(output_dir.exists());
     assert!(output_dir.is_dir());
 
@@ -158,19 +170,19 @@ fn test_unzip_extract_tar_gz_output_dir_created() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_unzip_extract_zip() -> color_eyre::Result<()> {
+fn test_unzip_extract_zip_with_valid_file_extracts_files() -> color_eyre::Result<()> {
+    // Arrange: 准备临时目录和zip文件
     let temp_dir = TempDir::new()?;
     let zip_path = create_test_zip(&temp_dir);
     let output_dir = temp_dir.path().join("output");
 
+    // Act: 解压zip文件
     Unzip::extract_zip(&zip_path, &output_dir)?;
 
-    // 验证文件已解压
+    // Assert: 验证文件已解压且内容正确
     assert!(output_dir.join("file1.txt").exists());
     assert!(output_dir.join("file2.txt").exists());
     assert!(output_dir.join("subdir/file3.txt").exists());
-
-    // 验证文件内容
     assert_eq!(
         fs::read_to_string(output_dir.join("file1.txt"))?,
         "content1"
@@ -188,31 +200,39 @@ fn test_unzip_extract_zip() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_unzip_extract_zip_nonexistent_file() -> Result<()> {
+fn test_unzip_extract_zip_nonexistent_file_with_missing_file_returns_error() -> Result<()> {
+    // Arrange: 准备不存在的文件路径
     let temp_dir = TempDir::new()?;
     let nonexistent_path = temp_dir.path().join("nonexistent.zip");
     let output_dir = temp_dir.path().join("output");
 
+    // Act: 尝试解压不存在的文件
     let result = Unzip::extract_zip(&nonexistent_path, &output_dir);
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
     Ok(())
 }
 
 #[test]
-fn test_unzip_extract_zip_invalid_format() -> color_eyre::Result<()> {
+fn test_unzip_extract_zip_invalid_format_with_invalid_file_returns_error() -> color_eyre::Result<()> {
+    // Arrange: 准备无效格式的文件
     let temp_dir = TempDir::new()?;
     let invalid_file = temp_dir.path().join("invalid.zip");
     fs::write(&invalid_file, "not a valid zip file")?;
-
     let output_dir = temp_dir.path().join("output");
+
+    // Act: 尝试解压无效格式的文件
     let result = Unzip::extract_zip(&invalid_file, &output_dir);
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
 
     Ok(())
 }
 
 #[test]
-fn test_unzip_extract_zip_output_dir_created() -> color_eyre::Result<()> {
+fn test_unzip_extract_zip_output_dir_created_with_missing_dir_creates_dir() -> color_eyre::Result<()> {
     let temp_dir = TempDir::new()?;
     let zip_path = create_test_zip(&temp_dir);
     let output_dir = temp_dir.path().join("new/output/dir");

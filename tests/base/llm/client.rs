@@ -14,9 +14,11 @@ use pretty_assertions::assert_eq;
 use serde_json::json;
 use workflow::base::llm::client::LLMClient;
 
+// ==================== LLM Response Extraction Tests ====================
+
 #[test]
-fn test_extract_from_openai_standard() -> Result<()> {
-    // 测试标准 OpenAI 格式（包含所有必需字段）
+fn test_extract_from_openai_standard_with_valid_json_returns_content() -> Result<()> {
+    // Arrange: 准备标准 OpenAI 格式的 JSON（包含所有必需字段）
     let json = json!({
         "id": "chatcmpl-test",
         "object": "chat.completion",
@@ -37,17 +39,18 @@ fn test_extract_from_openai_standard() -> Result<()> {
         }
     });
 
+    // Act: 提取内容
     let client = LLMClient::global();
     let result = client.extract_content(&json)?;
-    assert_eq!(result, "Test content");
 
-    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
+    // Assert: 验证提取的内容正确
+    assert_eq!(result, "Test content");
     Ok(())
 }
 
 #[test]
-fn test_extract_from_openai_proxy() -> Result<()> {
-    // 测试 proxy 格式（包含扩展字段，但符合 OpenAI 标准）
+fn test_extract_from_openai_proxy_with_extended_fields_returns_content() -> Result<()> {
+    // Arrange: 准备 proxy 格式的 JSON（包含扩展字段，但符合 OpenAI 标准）
     let json = json!({
         "id": "chatcmpl-CfonRS9pFvyJW33Opwz83wHhVIGnz",
         "object": "chat.completion",
@@ -83,17 +86,18 @@ fn test_extract_from_openai_proxy() -> Result<()> {
         "system_fingerprint": null
     });
 
+    // Act: 提取内容
     let client = LLMClient::global();
     let result = client.extract_content(&json)?;
-    assert_eq!(result, "Test response content");
 
-    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
+    // Assert: 验证提取的内容正确
+    assert_eq!(result, "Test response content");
     Ok(())
 }
 
 #[test]
-fn test_extract_from_cerebras_proxy() -> Result<()> {
-    // 测试另一种 proxy 格式变体（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
+fn test_extract_from_cerebras_proxy_with_variant_format_returns_content() -> Result<()> {
+    // Arrange: 准备另一种 proxy 格式变体的 JSON（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
     let json = json!({
         "id": "chatcmpl-97c1fe15-05df-490d-a1b9-8540771db334",
         "choices": [{
@@ -122,29 +126,32 @@ fn test_extract_from_cerebras_proxy() -> Result<()> {
         }
     });
 
+    // Act: 提取内容
     let client = LLMClient::global();
     let result = client.extract_content(&json)?;
-    assert_eq!(result, "Test response content");
 
-    // JSON 结构验证由 extract_content() 通过 serde 反序列化自动完成
+    // Assert: 验证提取的内容正确
+    assert_eq!(result, "Test response content");
     Ok(())
 }
 
-// ==================== LLMClient 方法测试 ====================
+// ==================== LLMClient Method Tests ====================
 
 #[test]
-fn test_llm_client_global() {
-    // 测试 LLMClient::global() 方法（覆盖 client.rs:59-62）
+fn test_llm_client_global_with_multiple_calls_returns_singleton() {
+    // Arrange: 准备多次调用 global() 方法
+
+    // Act: 获取两个客户端实例
     let client1 = LLMClient::global();
     let client2 = LLMClient::global();
 
-    // 验证返回的是同一个实例（单例模式）
+    // Assert: 验证返回的是同一个实例（单例模式）
     assert!(std::ptr::eq(client1, client2));
 }
 
 #[test]
-fn test_extract_content_empty_choices() {
-    // 测试 extract_content() 方法 - 空 choices 数组（覆盖 client.rs:228-244）
+fn test_extract_content_with_empty_choices_returns_error() {
+    // Arrange: 准备空 choices 数组的 JSON
     let json = json!({
         "id": "test",
         "object": "chat.completion",
@@ -158,10 +165,11 @@ fn test_extract_content_empty_choices() {
         }
     });
 
+    // Act: 尝试提取内容
     let client = LLMClient::global();
     let result = client.extract_content(&json);
 
-    // 空 choices 应该返回错误
+    // Assert: 验证返回错误且错误消息包含提示
     assert!(result.is_err());
     if let Err(e) = result {
         assert!(e.to_string().contains("No content in response"));
@@ -169,8 +177,8 @@ fn test_extract_content_empty_choices() {
 }
 
 #[test]
-fn test_extract_content_null_content() {
-    // 测试 extract_content() 方法 - content 为 null（覆盖 client.rs:228-244）
+fn test_extract_content_with_null_content_returns_error() {
+    // Arrange: 准备 content 为 null 的 JSON
     let json = json!({
         "id": "test",
         "object": "chat.completion",

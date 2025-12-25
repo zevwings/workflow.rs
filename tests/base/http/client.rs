@@ -19,20 +19,25 @@ fn setup_mock_server() -> MockServer {
     MockServer::new()
 }
 
-#[test]
-fn test_http_client_global() -> Result<()> {
-    // 测试全局单例创建
-    let _client1 = HttpClient::global()?;
+// ==================== HttpClient Singleton Tests ====================
 
-    // 测试单例复用
+#[test]
+fn test_http_client_global_returns_singleton_instance() -> Result<()> {
+    // Arrange: 准备获取全局客户端
+
+    // Act: 获取全局客户端实例
+    let _client1 = HttpClient::global()?;
     let _client2 = HttpClient::global()?;
 
-    // 验证都能成功获取客户端实例
+    // Assert: 验证都能成功获取客户端实例（单例复用）
     Ok(())
 }
 
+// ==================== GET Request Tests ====================
+
 #[test]
-fn test_get_request_success() -> Result<()> {
+fn test_get_request_with_success_response_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -45,19 +50,22 @@ fn test_get_request_success() -> Result<()> {
         .with_body(r#"{"message": "success"}"#)
         .create();
 
+    // Act: 发送 GET 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let response = client.get(&url, config)?;
 
+    // Assert: 验证响应状态和内容
     assert_eq!(response.status, 200);
     assert!(response.is_success());
-
     _mock.assert();
+
     Ok(())
 }
 
 #[test]
-fn test_get_request_with_query() -> Result<()> {
+fn test_get_request_with_query_parameters_sends_query_string() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和查询参数匹配
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -74,18 +82,22 @@ fn test_get_request_with_query() -> Result<()> {
         .with_body(r#"{"data": []}"#)
         .create();
 
+    // Act: 发送带查询参数的 GET 请求
     let client = HttpClient::global()?;
     let query = [("page", "1"), ("limit", "10")];
     let config = RequestConfig::<Value, _>::new().query(&query);
     let response = client.get(&url, config)?;
 
+    // Assert: 验证请求成功且查询参数匹配
     assert!(response.is_success());
     _mock.assert();
+
     Ok(())
 }
 
 #[test]
-fn test_get_request_with_auth() -> Result<()> {
+fn test_get_request_with_auth_header_sends_authorization() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和认证匹配
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -99,18 +111,22 @@ fn test_get_request_with_auth() -> Result<()> {
         .with_body(r#"{"authenticated": true}"#)
         .create();
 
+    // Act: 发送带认证的 GET 请求
     let client = HttpClient::global()?;
     let auth = workflow::base::http::Authorization::new("user", "pass");
     let config = RequestConfig::<Value, Value>::new().auth(&auth);
     let response = client.get(&url, config)?;
 
+    // Assert: 验证请求成功且认证头匹配
     assert!(response.is_success());
     _mock.assert();
+
     Ok(())
 }
 
 #[test]
-fn test_get_request_with_headers() -> Result<()> {
+fn test_get_request_with_custom_headers_sends_headers() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和自定义请求头
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -127,12 +143,15 @@ fn test_get_request_with_headers() -> Result<()> {
         .with_body(r#"{}"#)
         .create();
 
+    // Act: 发送带自定义请求头的 GET 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().headers(&headers);
     let response = client.get(&url, config)?;
 
+    // Assert: 验证请求成功且请求头匹配
     assert!(response.is_success());
     _mock.assert();
+
     Ok(())
 }
 
@@ -161,11 +180,13 @@ fn test_get_request_with_headers() -> Result<()> {
 /// ## 预期结果
 /// - 响应状态码为201
 /// - mock服务器确认收到了正确的请求
+// ==================== POST Request Tests ====================
+
 #[test]
-fn test_post_request_success() -> Result<()> {
+fn test_post_request_with_json_body_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
-
     let body_data = serde_json::json!({"name": "test", "value": 123});
 
     let _mock = mock_server
@@ -179,20 +200,25 @@ fn test_post_request_success() -> Result<()> {
         .with_body(r#"{"id": 1, "name": "test"}"#)
         .create();
 
+    // Act: 发送 POST 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
     let response = client.post(&url, config)?;
 
+    // Assert: 验证响应状态和请求匹配
     assert_eq!(response.status, 201);
     _mock.assert();
+
     Ok(())
 }
 
+// ==================== PUT Request Tests ====================
+
 #[test]
-fn test_put_request_success() -> Result<()> {
+fn test_put_request_with_json_body_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
-
     let body_data = serde_json::json!({"name": "updated"});
 
     let _mock = mock_server
@@ -206,36 +232,47 @@ fn test_put_request_success() -> Result<()> {
         .with_body(r#"{"id": 1, "name": "updated"}"#)
         .create();
 
+    // Act: 发送 PUT 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
     let response = client.put(&url, config)?;
 
+    // Assert: 验证响应状态和请求匹配
     assert_eq!(response.status, 200);
     _mock.assert();
+
     Ok(())
 }
 
+// ==================== DELETE Request Tests ====================
+
 #[test]
-fn test_delete_request_success() -> Result<()> {
+fn test_delete_request_with_valid_url_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
 
     let _mock = mock_server.server.as_mut().mock("DELETE", "/test/1").with_status(204).create();
 
+    // Act: 发送 DELETE 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let response = client.delete(&url, config)?;
 
+    // Assert: 验证响应状态和请求匹配
     assert_eq!(response.status, 204);
     _mock.assert();
+
     Ok(())
 }
 
+// ==================== PATCH Request Tests ====================
+
 #[test]
-fn test_patch_request_success() -> Result<()> {
+fn test_patch_request_with_json_body_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和请求体
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
-
     let body_data = serde_json::json!({"status": "active"});
 
     let _mock = mock_server
@@ -249,17 +286,23 @@ fn test_patch_request_success() -> Result<()> {
         .with_body(r#"{"id": 1, "status": "active"}"#)
         .create();
 
+    // Act: 发送 PATCH 请求
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
     let response = client.patch(&url, config)?;
 
+    // Assert: 验证响应状态和请求匹配
     assert_eq!(response.status, 200);
     _mock.assert();
+
     Ok(())
 }
 
+// ==================== Multipart Request Tests ====================
+
 #[test]
-fn test_post_multipart_request() -> Result<()> {
+fn test_post_multipart_request_with_form_data_returns_response() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和 multipart 表单数据
     let mut mock_server = setup_mock_server();
     let url = format!("{}/upload", mock_server.base_url);
 
@@ -280,17 +323,23 @@ fn test_post_multipart_request() -> Result<()> {
         .with_body(r#"{"uploaded": true}"#)
         .create();
 
+    // Act: 发送 multipart POST 请求
     let client = HttpClient::global()?;
     let config = workflow::base::http::MultipartRequestConfig::<Value>::new().multipart(form);
     let response = client.post_multipart(&url, config)?;
 
+    // Assert: 验证响应成功且请求匹配
     assert!(response.is_success());
     _mock.assert();
+
     Ok(())
 }
 
+// ==================== Stream Request Tests ====================
+
 #[test]
-fn test_stream_request() -> Result<()> {
+fn test_stream_request_with_get_method_returns_stream() -> Result<()> {
+    // Arrange: 准备 Mock 服务器和流式响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/stream", mock_server.base_url);
 
@@ -303,14 +352,18 @@ fn test_stream_request() -> Result<()> {
         .with_body(b"streaming data")
         .create();
 
+    // Act: 发送流式请求并读取数据
     let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
     let mut stream = client.stream(workflow::base::http::HttpMethod::Get, &url, config)?;
 
     let mut buffer = Vec::new();
     stream.copy_to(&mut buffer)?;
+
+    // Assert: 验证流数据内容正确
     assert_eq!(buffer, b"streaming data");
     _mock.assert();
+
     Ok(())
 }
 

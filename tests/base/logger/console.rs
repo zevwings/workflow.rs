@@ -41,29 +41,49 @@ fn test_debug_formatting() {
     assert!(formatted.contains("Debug information"));
 }
 
+// ==================== Console Separator Tests ====================
+
 #[test]
-fn test_separator() {
-    let sep = console::separator('-', 10);
-    // separator 函数返回的字符串包含 ANSI 转义码（用于颜色），所以实际长度会大于10
-    // 我们检查内容而不是长度，或者检查去除 ANSI 码后的内容
-    assert!(sep.contains('-'));
-    // 检查是否包含10个 '-' 字符（去除 ANSI 码后）
-    let dash_count = sep.matches('-').count();
-    assert_eq!(dash_count, 10);
+fn test_separator_with_char_and_length_returns_separator_string() {
+    // Arrange: 准备分隔符字符和长度
+    let char = '-';
+    let length = 10;
+
+    // Act: 生成分隔符
+    let sep = console::separator(char, length);
+
+    // Assert: 验证包含指定字符和数量（去除 ANSI 码后）
+    assert!(sep.contains(char));
+    let dash_count = sep.matches(char).count();
+    assert_eq!(dash_count, length);
 }
 
 #[test]
-fn test_separator_with_text() {
-    let sep = console::separator_with_text('=', 20, "Title");
-    assert!(sep.contains("Title"));
-    assert!(sep.contains('='));
+fn test_separator_with_text_with_valid_params_returns_separator_with_text() {
+    // Arrange: 准备分隔符参数和文本
+    let char = '=';
+    let length = 20;
+    let text = "Title";
+
+    // Act: 生成带文本的分隔符
+    let sep = console::separator_with_text(char, length, text);
+
+    // Assert: 验证包含文本和分隔符字符
+    assert!(sep.contains(text));
+    assert!(sep.contains(char));
 }
 
 #[test]
-fn test_separator_with_text_long() {
-    // 如果文本长度大于等于总长度，直接输出文本
+fn test_separator_with_text_long_with_long_text_returns_text_only() {
+    // Arrange: 准备长文本（长度大于分隔符长度）
     let long_text = "x".repeat(30);
-    let sep = console::separator_with_text('-', 20, &long_text);
+    let char = '-';
+    let length = 20;
+
+    // Act: 生成带长文本的分隔符
+    let sep = console::separator_with_text(char, length, &long_text);
+
+    // Assert: 验证直接输出文本（如果文本长度大于等于总长度）
     assert!(sep.contains(&long_text));
 }
 

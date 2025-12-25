@@ -10,52 +10,88 @@ use workflow::completion::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
 };
 
-// ==================== get_completion_filename 测试 ====================
+// ==================== Completion Filename Generation Tests ====================
 
-/// 测试 zsh shell 的文件名生成
 #[test]
-fn test_get_completion_filename_zsh() -> Result<()> {
-    let result = get_completion_filename("zsh", "workflow")?;
+fn test_get_completion_filename_with_zsh_shell_returns_filename() -> Result<()> {
+    // Arrange: 准备 zsh shell 和命令名
+    let shell = "zsh";
+    let command = "workflow";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "_workflow");
     Ok(())
 }
 
-/// 测试 bash shell 的文件名生成
 #[test]
-fn test_get_completion_filename_bash() -> Result<()> {
-    let result = get_completion_filename("bash", "workflow")?;
+fn test_get_completion_filename_with_bash_shell_returns_filename() -> Result<()> {
+    // Arrange: 准备 bash shell 和命令名
+    let shell = "bash";
+    let command = "workflow";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "workflow.bash");
     Ok(())
 }
 
-/// 测试 fish shell 的文件名生成
 #[test]
-fn test_get_completion_filename_fish() -> Result<()> {
-    let result = get_completion_filename("fish", "workflow")?;
+fn test_get_completion_filename_with_fish_shell_returns_filename() -> Result<()> {
+    // Arrange: 准备 fish shell 和命令名
+    let shell = "fish";
+    let command = "workflow";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "workflow.fish");
     Ok(())
 }
 
-/// 测试 powershell shell 的文件名生成
 #[test]
-fn test_get_completion_filename_powershell() -> Result<()> {
-    let result = get_completion_filename("powershell", "workflow")?;
+fn test_get_completion_filename_with_powershell_shell_returns_filename() -> Result<()> {
+    // Arrange: 准备 powershell shell 和命令名
+    let shell = "powershell";
+    let command = "workflow";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "_workflow.ps1");
     Ok(())
 }
 
-/// 测试 elvish shell 的文件名生成
 #[test]
-fn test_get_completion_filename_elvish() -> Result<()> {
-    let result = get_completion_filename("elvish", "workflow")?;
+fn test_get_completion_filename_with_elvish_shell_returns_filename() -> Result<()> {
+    // Arrange: 准备 elvish shell 和命令名
+    let shell = "elvish";
+    let command = "workflow";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "workflow.elv");
     Ok(())
 }
 
-/// 测试不支持的 shell 类型
 #[test]
-fn test_get_completion_filename_unsupported_shell() -> Result<()> {
-    let result = get_completion_filename("csh", "workflow");
+fn test_get_completion_filename_with_unsupported_shell_returns_error() -> Result<()> {
+    // Arrange: 准备不支持的 shell 类型
+    let shell = "csh";
+    let command = "workflow";
+
+    // Act: 尝试生成文件名
+    let result = get_completion_filename(shell, command);
+
+    // Assert: 验证返回错误且错误消息包含提示
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("Unsupported shell type"));
@@ -63,25 +99,37 @@ fn test_get_completion_filename_unsupported_shell() -> Result<()> {
     Ok(())
 }
 
-/// 测试不同命令名的文件名生成
 #[test]
-fn test_get_completion_filename_different_command() -> Result<()> {
-    let result = get_completion_filename("zsh", "mycmd")?;
+fn test_get_completion_filename_with_different_command_returns_filename() -> Result<()> {
+    // Arrange: 准备不同的命令名
+    let shell = "zsh";
+    let command = "mycmd";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "_mycmd");
     Ok(())
 }
 
-/// 测试空命令名
 #[test]
-fn test_get_completion_filename_empty_command() -> Result<()> {
-    let result = get_completion_filename("zsh", "")?;
+fn test_get_completion_filename_with_empty_command_returns_filename() -> Result<()> {
+    // Arrange: 准备空命令名
+    let shell = "zsh";
+    let command = "";
+
+    // Act: 生成文件名
+    let result = get_completion_filename(shell, command)?;
+
+    // Assert: 验证文件名格式正确
     assert_eq!(result, "_");
     Ok(())
 }
 
-/// 测试所有支持的 shell 类型文件名格式
 #[test]
-fn test_get_completion_filename_all_shells() -> Result<()> {
+fn test_get_completion_filename_with_all_shells_returns_correct_filenames() -> Result<()> {
+    // Arrange: 准备所有支持的 shell 类型和预期文件名
     let shells = ["zsh", "bash", "fish", "powershell", "elvish"];
     let expected = [
         "_workflow",
@@ -91,6 +139,7 @@ fn test_get_completion_filename_all_shells() -> Result<()> {
         "workflow.elv",
     ];
 
+    // Act & Assert: 验证每个 shell 的文件名格式正确
     for (shell, expected_filename) in shells.iter().zip(expected.iter()) {
         let result = get_completion_filename(shell, "workflow")?;
         assert_eq!(
@@ -102,44 +151,74 @@ fn test_get_completion_filename_all_shells() -> Result<()> {
     Ok(())
 }
 
-// ==================== get_completion_files_for_shell 测试 ====================
+// ==================== Completion Files for Shell Tests ====================
 
-/// 测试获取单个命令的补全文件列表
 #[test]
-fn test_get_completion_files_for_shell_single_command() -> Result<()> {
-    let result = get_completion_files_for_shell("zsh", &["workflow"])?;
+fn test_get_completion_files_for_shell_with_single_command_returns_files() -> Result<()> {
+    // Arrange: 准备 shell 类型和单个命令
+    let shell = "zsh";
+    let commands = &["workflow"];
+
+    // Act: 获取补全文件列表
+    let result = get_completion_files_for_shell(shell, commands)?;
+
+    // Assert: 验证返回的文件列表正确
     assert_eq!(result, vec!["_workflow"]);
     Ok(())
 }
 
-/// 测试获取多个命令的补全文件列表
 #[test]
-fn test_get_completion_files_for_shell_multiple_commands() -> Result<()> {
-    let result = get_completion_files_for_shell("zsh", &["workflow", "mycmd"])?;
+fn test_get_completion_files_for_shell_with_multiple_commands_returns_files() -> Result<()> {
+    // Arrange: 准备 shell 类型和多个命令
+    let shell = "zsh";
+    let commands = &["workflow", "mycmd"];
+
+    // Act: 获取补全文件列表
+    let result = get_completion_files_for_shell(shell, commands)?;
+
+    // Assert: 验证返回的文件列表正确
     assert_eq!(result, vec!["_workflow", "_mycmd"]);
     Ok(())
 }
 
-/// 测试 bash shell 的多个命令文件列表
 #[test]
-fn test_get_completion_files_for_shell_bash_multiple() -> Result<()> {
-    let result = get_completion_files_for_shell("bash", &["workflow", "tool"])?;
+fn test_get_completion_files_for_shell_with_bash_multiple_commands_returns_files() -> Result<()> {
+    // Arrange: 准备 bash shell 和多个命令
+    let shell = "bash";
+    let commands = &["workflow", "tool"];
+
+    // Act: 获取补全文件列表
+    let result = get_completion_files_for_shell(shell, commands)?;
+
+    // Assert: 验证返回的文件列表正确
     assert_eq!(result, vec!["workflow.bash", "tool.bash"]);
     Ok(())
 }
 
-/// 测试空命令列表
 #[test]
-fn test_get_completion_files_for_shell_empty_commands() -> Result<()> {
-    let result = get_completion_files_for_shell("zsh", &[])?;
+fn test_get_completion_files_for_shell_with_empty_commands_returns_empty() -> Result<()> {
+    // Arrange: 准备 shell 类型和空命令列表
+    let shell = "zsh";
+    let commands = &[];
+
+    // Act: 获取补全文件列表
+    let result = get_completion_files_for_shell(shell, commands)?;
+
+    // Assert: 验证返回空列表
     assert!(result.is_empty());
     Ok(())
 }
 
-/// 测试不支持的 shell 类型
 #[test]
-fn test_get_completion_files_for_shell_unsupported() -> Result<()> {
-    let result = get_completion_files_for_shell("csh", &["workflow"]);
+fn test_get_completion_files_for_shell_with_unsupported_shell_returns_error() -> Result<()> {
+    // Arrange: 准备不支持的 shell 类型
+    let shell = "csh";
+    let commands = &["workflow"];
+
+    // Act: 尝试获取补全文件列表
+    let result = get_completion_files_for_shell(shell, commands);
+
+    // Assert: 验证返回错误
     assert!(result.is_err());
     Ok(())
 }

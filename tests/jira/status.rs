@@ -6,17 +6,21 @@ use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::jira::status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
 
-// ==================== 状态配置读取测试 ====================
+// ==================== Status Configuration Reading Tests ====================
 
 #[rstest]
 #[case("invalid-ticket")]
 #[case("")]
 #[case("   ")]
-fn test_read_pull_request_created_status_invalid_ticket(#[case] ticket: &str) {
-    // 测试读取无效 ticket 格式的状态配置
+fn test_read_pull_request_created_status_with_invalid_ticket_returns_error(
+    #[case] ticket: &str,
+) {
+    // Arrange: 准备无效的 ticket 格式
+
+    // Act: 尝试读取状态配置
     let result = JiraStatus::read_pull_request_created_status(ticket);
 
-    // 应该返回错误，因为 ticket 格式无效
+    // Assert: 验证返回错误且错误消息包含格式相关提示
     assert!(
         result.is_err(),
         "Should return error for invalid ticket format: {}",
@@ -33,29 +37,35 @@ fn test_read_pull_request_created_status_invalid_ticket(#[case] ticket: &str) {
 #[case("PROJ-123")]
 #[case("PROJ-456")]
 #[case("ABC-789")]
-fn test_read_pull_request_created_status_valid_ticket(#[case] ticket: &str) {
-    // 测试读取有效 ticket 的状态配置
-    // 注意：如果配置文件不存在，应该返回 Ok(None)
+fn test_read_pull_request_created_status_with_valid_ticket_returns_ok(
+    #[case] ticket: &str,
+) {
+    // Arrange: 准备有效的 ticket 格式
+
+    // Act: 尝试读取状态配置
     let result = JiraStatus::read_pull_request_created_status(ticket);
 
-    // 应该返回 Ok，但可能为 None（如果配置不存在）
+    // Assert: 验证返回 Ok（值可能为 None，如果配置不存在）
     assert!(
         result.is_ok(),
         "Should return Ok for valid ticket format: {}",
         ticket
     );
-    // 值可能是 None（如果配置不存在），这是可以接受的
 }
 
 #[rstest]
 #[case("invalid-ticket")]
 #[case("")]
 #[case("   ")]
-fn test_read_pull_request_merged_status_invalid_ticket(#[case] ticket: &str) {
-    // 测试读取无效 ticket 格式的合并状态配置
+fn test_read_pull_request_merged_status_with_invalid_ticket_returns_error(
+    #[case] ticket: &str,
+) {
+    // Arrange: 准备无效的 ticket 格式
+
+    // Act: 尝试读取合并状态配置
     let result = JiraStatus::read_pull_request_merged_status(ticket);
 
-    // 应该返回错误，因为 ticket 格式无效
+    // Assert: 验证返回错误且错误消息包含格式相关提示
     assert!(
         result.is_err(),
         "Should return error for invalid ticket format: {}",
@@ -72,67 +82,76 @@ fn test_read_pull_request_merged_status_invalid_ticket(#[case] ticket: &str) {
 #[case("PROJ-123")]
 #[case("PROJ-456")]
 #[case("ABC-789")]
-fn test_read_pull_request_merged_status_valid_ticket(#[case] ticket: &str) {
-    // 测试读取有效 ticket 的合并状态配置
-    // 注意：如果配置文件不存在，应该返回 Ok(None)
+fn test_read_pull_request_merged_status_with_valid_ticket_returns_ok(#[case] ticket: &str) {
+    // Arrange: 准备有效的 ticket 格式
+
+    // Act: 尝试读取合并状态配置
     let result = JiraStatus::read_pull_request_merged_status(ticket);
 
-    // 应该返回 Ok，但可能为 None（如果配置不存在）
+    // Assert: 验证返回 Ok（值可能为 None，如果配置不存在）
     assert!(
         result.is_ok(),
         "Should return Ok for valid ticket format: {}",
         ticket
     );
-    // 值可能是 None（如果配置不存在），这是可以接受的
 }
 
-// ==================== 状态配置结构体测试 ====================
+// ==================== Status Configuration Structure Tests ====================
 
 #[test]
-fn test_jira_status_config_structure() {
-    // 测试 JiraStatusConfig 结构体
+fn test_jira_status_config_structure_with_all_fields_creates_config() {
+    // Arrange: 准备配置字段值
+    let project = "PROJ";
+    let created_status = Some("In Progress".to_string());
+    let merged_status = Some("Done".to_string());
+
+    // Act: 创建 JiraStatusConfig 实例
     let config = JiraStatusConfig {
-        project: "PROJ".to_string(),
-        created_pull_request_status: Some("In Progress".to_string()),
-        merged_pull_request_status: Some("Done".to_string()),
+        project: project.to_string(),
+        created_pull_request_status: created_status.clone(),
+        merged_pull_request_status: merged_status.clone(),
     };
 
-    assert_eq!(config.project, "PROJ");
-    assert_eq!(
-        config.created_pull_request_status,
-        Some("In Progress".to_string())
-    );
-    assert_eq!(config.merged_pull_request_status, Some("Done".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(config.project, project);
+    assert_eq!(config.created_pull_request_status, created_status);
+    assert_eq!(config.merged_pull_request_status, merged_status);
 }
 
 #[test]
-fn test_jira_status_config_with_none_fields() {
-    // 测试 JiraStatusConfig 的可选字段
+fn test_jira_status_config_with_none_fields_creates_config() {
+    // Arrange: 准备配置字段值（可选字段为 None）
+    let project = "PROJ";
+
+    // Act: 创建 JiraStatusConfig 实例（可选字段为 None）
     let config = JiraStatusConfig {
-        project: "PROJ".to_string(),
+        project: project.to_string(),
         created_pull_request_status: None,
         merged_pull_request_status: None,
     };
 
-    assert_eq!(config.project, "PROJ");
+    // Assert: 验证字段值正确
+    assert_eq!(config.project, project);
     assert_eq!(config.created_pull_request_status, None);
     assert_eq!(config.merged_pull_request_status, None);
 }
 
+// ==================== Status Configuration Serialization Tests ====================
+
 #[test]
-fn test_project_status_config_serialization() {
-    // 测试 ProjectStatusConfig 的序列化
+fn test_project_status_config_serialization_with_valid_config_serializes_to_toml() {
+    // Arrange: 准备 ProjectStatusConfig 实例
     let config = ProjectStatusConfig {
         created_pull_request_status: Some("In Progress".to_string()),
         merged_pull_request_status: Some("Done".to_string()),
     };
 
-    // 测试序列化（使用 TOML）
+    // Act: 序列化为 TOML
     let toml = toml::to_string(&config);
-    assert!(toml.is_ok(), "Should serialize ProjectStatusConfig to TOML");
 
+    // Assert: 验证序列化成功且包含预期字段
+    assert!(toml.is_ok(), "Should serialize ProjectStatusConfig to TOML");
     let toml_str = toml.expect("serialization should succeed");
-    // TOML 字段名应该是 "created-pr" 和 "merged-pr"（根据 serde rename）
     assert!(
         toml_str.contains("created-pr") || toml_str.contains("created_pull_request_status"),
         "TOML should contain created-pr field"
@@ -144,19 +163,21 @@ fn test_project_status_config_serialization() {
 }
 
 #[test]
-fn test_project_status_config_deserialization() {
-    // 测试 ProjectStatusConfig 的反序列化
+fn test_project_status_config_deserialization_with_valid_toml_deserializes_config() {
+    // Arrange: 准备有效的 TOML 字符串
     let toml = r#"
 created-pr = "In Progress"
 merged-pr = "Done"
 "#;
 
+    // Act: 反序列化为 ProjectStatusConfig
     let config: Result<ProjectStatusConfig, _> = toml::from_str(toml);
+
+    // Assert: 验证反序列化成功且字段值正确
     assert!(
         config.is_ok(),
         "Should deserialize TOML to ProjectStatusConfig"
     );
-
     let config = config.expect("deserialization should succeed");
     assert_eq!(
         config.created_pull_request_status,
@@ -166,31 +187,35 @@ merged-pr = "Done"
 }
 
 #[test]
-fn test_project_status_config_with_optional_fields() {
-    // 测试 ProjectStatusConfig 的可选字段
+fn test_project_status_config_with_optional_fields_serializes_successfully() {
+    // Arrange: 准备 ProjectStatusConfig 实例（可选字段为 None）
     let config = ProjectStatusConfig {
         created_pull_request_status: None,
         merged_pull_request_status: None,
     };
 
-    // 测试序列化
+    // Act: 序列化为 TOML
     let toml = toml::to_string(&config);
+
+    // Assert: 验证序列化成功
     assert!(
         toml.is_ok(),
         "Should serialize ProjectStatusConfig with optional fields"
     );
 }
 
-// ==================== 交互式配置测试 ====================
+// ==================== Interactive Configuration Tests ====================
 
 #[rstest]
 #[case("invalid/project")]
 #[case("PROJ/测试")]
-fn test_configure_interactive_invalid_project(#[case] project: &str) {
-    // 测试使用无效项目名进行交互式配置
+fn test_configure_interactive_with_invalid_project_returns_error(#[case] project: &str) {
+    // Arrange: 准备无效的项目名
+
+    // Act: 尝试进行交互式配置
     let result = JiraStatus::configure_interactive(project);
 
-    // 应该返回错误，因为项目名格式无效
+    // Assert: 验证返回错误且错误消息包含格式或字符相关提示
     assert!(
         result.is_err(),
         "Should return error for invalid project name: {}",
@@ -207,16 +232,17 @@ fn test_configure_interactive_invalid_project(#[case] project: &str) {
 }
 
 #[test]
-fn test_configure_interactive_empty_string() {
-    // 测试使用空字符串进行交互式配置
+fn test_configure_interactive_with_empty_string_returns_error() {
+    // Arrange: 准备空字符串
+
+    // Act: 尝试进行交互式配置
     let result = JiraStatus::configure_interactive("");
 
-    // 应该返回错误，因为项目名格式无效
+    // Assert: 验证返回错误
     assert!(
         result.is_err(),
         "Should return error for empty project name"
     );
-    // 空字符串的错误消息可能不同，所以不检查具体内容
 }
 
 /// 测试使用ticket ID进行交互式Jira配置

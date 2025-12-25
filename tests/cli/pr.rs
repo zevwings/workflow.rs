@@ -27,18 +27,19 @@ fn test_branch() -> &'static str {
     "feature/my-branch"
 }
 
-// ==================== Create 命令测试 ====================
+// ==================== Create Command Tests ====================
 
 #[rstest]
 #[case(None, None, None, false)]
 #[case(Some("PROJ-123"), None, None, false)]
 #[case(Some("PROJ-123"), Some("Test PR"), Some("Test description"), true)]
-fn test_pr_create_command(
+fn test_pr_create_command_with_various_options_parses_correctly(
     #[case] jira_ticket: Option<&str>,
     #[case] title: Option<&str>,
     #[case] description: Option<&str>,
     #[case] dry_run: bool,
 ) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "create"];
     if let Some(ticket) = jira_ticket {
         args.push(ticket);
@@ -55,8 +56,10 @@ fn test_pr_create_command(
         args.push("--dry-run");
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Create {
             jira_id: JiraIdArg { jira_id: ticket },
@@ -73,13 +76,17 @@ fn test_pr_create_command(
     }
 }
 
-// ==================== Merge 命令测试 ====================
+// ==================== Merge Command Tests ====================
 
 #[rstest]
 #[case(None, false)]
 #[case(Some("123"), false)]
 #[case(Some("123"), true)]
-fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: bool) {
+fn test_pr_merge_command_with_various_options_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+    #[case] force: bool,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "merge"];
     if let Some(id) = pull_request_id {
         args.push(id);
@@ -88,8 +95,10 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
         args.push("--force");
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Merge {
             pull_request_id: id,
@@ -102,20 +111,25 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
     }
 }
 
-// ==================== Status 命令测试 ====================
+// ==================== Status Command Tests ====================
 
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
 #[case(Some("feature/my-branch"))]
-fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
+fn test_pr_status_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id_or_branch: Option<&str>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "status"];
     if let Some(id) = pull_request_id_or_branch {
         args.push(id);
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Status {
             pull_request_id_or_branch: id,
@@ -126,14 +140,18 @@ fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
     }
 }
 
-// ==================== List 命令测试 ====================
+// ==================== List Command Tests ====================
 
 #[rstest]
 #[case(None, None)]
 #[case(Some("open"), None)]
 #[case(None, Some(10))]
 #[case(Some("closed"), Some(5))]
-fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize>) {
+fn test_pr_list_command_with_various_options_parses_correctly(
+    #[case] state: Option<&str>,
+    #[case] limit: Option<usize>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "list"];
     if let Some(s) = state {
         args.push("--state");
@@ -145,8 +163,10 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
         args.push(l);
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::List {
             state: s,
@@ -159,17 +179,22 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
     }
 }
 
-// ==================== Update 命令测试 ====================
+// ==================== Update Command Tests ====================
 
 #[test]
-fn test_pr_update_command_structure() {
-    // 测试 Update 命令结构（无参数）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "update"])
+fn test_pr_update_command_with_valid_input_parses_successfully() {
+    // Arrange: 准备有效的 Update 命令输入（无参数）
+    let args = &["test-pr", "update"];
+
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
+
+    // Assert: 验证 Update 命令可以正确解析
     assert!(matches!(cli.command, PRCommands::Update));
 }
 
-// ==================== Sync 命令测试 ====================
+// ==================== Sync Command Tests ====================
 
 #[rstest]
 #[case("feature/source", false, false, false)]
@@ -177,12 +202,13 @@ fn test_pr_update_command_structure() {
 #[case("feature/source", false, true, false)]
 #[case("feature/source", false, false, true)]
 #[case("feature/source", true, true, true)]
-fn test_pr_sync_command(
+fn test_pr_sync_command_with_various_options_parses_correctly(
     #[case] source_branch: &str,
     #[case] rebase: bool,
     #[case] ff_only: bool,
     #[case] squash: bool,
 ) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "sync", source_branch];
     if rebase {
         args.push("--rebase");
@@ -194,8 +220,10 @@ fn test_pr_sync_command(
         args.push("--squash");
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Sync {
             source_branch: sb,
@@ -212,18 +240,19 @@ fn test_pr_sync_command(
     }
 }
 
-// ==================== Rebase 命令测试 ====================
+// ==================== Rebase Command Tests ====================
 
 #[rstest]
 #[case("main", false, false)]
 #[case("main", true, false)]
 #[case("main", false, true)]
 #[case("main", true, true)]
-fn test_pr_rebase_command(
+fn test_pr_rebase_command_with_various_options_parses_correctly(
     #[case] target_branch: &str,
     #[case] no_push: bool,
     #[case] dry_run: bool,
 ) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "rebase", target_branch];
     if no_push {
         args.push("--no-push");
@@ -232,8 +261,10 @@ fn test_pr_rebase_command(
         args.push("--dry-run");
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Rebase {
             target_branch: tb,
@@ -248,19 +279,24 @@ fn test_pr_rebase_command(
     }
 }
 
-// ==================== Close 命令测试 ====================
+// ==================== Close Command Tests ====================
 
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_close_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_close_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "close"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Close {
             pull_request_id: id,
@@ -271,19 +307,24 @@ fn test_pr_close_command(#[case] pull_request_id: Option<&str>) {
     }
 }
 
-// ==================== Summarize 命令测试 ====================
+// ==================== Summarize Command Tests ====================
 
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_summarize_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_summarize_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "summarize"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Summarize {
             pull_request_id: id,
@@ -294,19 +335,24 @@ fn test_pr_summarize_command(#[case] pull_request_id: Option<&str>) {
     }
 }
 
-// ==================== Approve 命令测试 ====================
+// ==================== Approve Command Tests ====================
 
 #[rstest]
 #[case(None)]
 #[case(Some("123"))]
-fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
+fn test_pr_approve_command_with_various_inputs_parses_correctly(
+    #[case] pull_request_id: Option<&str>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-pr", "approve"];
     if let Some(id) = pull_request_id {
         args.push(id);
     }
 
+    // Act: 解析命令行参数
     let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Approve {
             pull_request_id: id,
@@ -317,13 +363,18 @@ fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
     }
 }
 
-// ==================== Comment 命令测试 ====================
+// ==================== Comment Command Tests ====================
 
 #[test]
-fn test_pr_comment_command_structure() {
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"])
+fn test_pr_comment_command_with_pr_id_and_message_parses_correctly() {
+    // Arrange: 准备带 PR ID 和消息的 Comment 命令输入
+    let args = &["test-pr", "comment", "123", "This is a comment"];
+
+    // Act: 解析命令行参数
+    let cli = TestPRCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         PRCommands::Comment {
             pull_request_id,
@@ -337,7 +388,7 @@ fn test_pr_comment_command_structure() {
 }
 
 #[test]
-fn test_pr_comment_command_with_multiple_words() {
+fn test_pr_comment_command_with_multiple_words_parses_correctly() {
     let cli = TestPRCli::try_parse_from(&[
         "test-pr",
         "comment",

@@ -4,31 +4,46 @@
 
 use workflow::base::dialog::SelectDialog;
 
+// ==================== SelectDialog Creation Tests ====================
+
 #[test]
-fn test_select_dialog_new() {
-    // 测试创建单选对话框
+fn test_select_dialog_new_with_options_creates_dialog() {
+    // Arrange: 准备提示消息和选项列表
+    let message = "Choose an option";
     let options = vec!["Option 1", "Option 2", "Option 3"];
-    let _dialog = SelectDialog::new("Choose an option", options);
-    // 验证可以创建对话框
+
+    // Act: 创建单选对话框
+    let _dialog = SelectDialog::new(message, options);
+
+    // Assert: 验证可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_select_dialog_with_default() {
-    // 测试设置默认选项（覆盖 select.rs:98-100, 120-121）
+fn test_select_dialog_with_default_with_default_index_creates_dialog() {
+    // Arrange: 准备提示消息、选项列表和默认索引
+    let message = "Choose an option";
     let options = vec!["Option 1", "Option 2", "Option 3"];
-    let _dialog = SelectDialog::new("Choose an option", options).with_default(1);
-    // 验证链式调用成功
+    let default_index = 1;
+
+    // Act: 创建带默认选项的单选对话框
+    let _dialog = SelectDialog::new(message, options).with_default(default_index);
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_select_dialog_empty_options() {
-    // 测试空选项列表（覆盖 select.rs:113-114）
+fn test_select_dialog_empty_options_with_empty_list_returns_error() {
+    // Arrange: 准备空选项列表
+    let message = "Choose an option";
     let options: Vec<&str> = vec![];
-    let dialog = SelectDialog::new("Choose an option", options);
+
+    // Act: 创建对话框并尝试提示
+    let dialog = SelectDialog::new(message, options);
     let result = dialog.prompt();
 
+    // Assert: 验证返回错误且错误消息包含"No options available"
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("No options available"));

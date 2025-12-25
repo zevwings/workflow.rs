@@ -14,27 +14,39 @@ use std::io::Read;
 use tempfile::TempDir;
 use workflow::base::fs::file::{FileReader, FileWriter};
 
+// ==================== FileReader Tests ====================
+
 #[test]
-fn test_file_reader_to_string() -> color_eyre::Result<()> {
+fn test_file_reader_to_string_with_valid_file_returns_content() -> color_eyre::Result<()> {
+    // Arrange: 准备测试文件和内容
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.txt");
-    fs::write(&file_path, "Hello, World!")?;
+    let expected_content = "Hello, World!";
+    fs::write(&file_path, expected_content)?;
 
+    // Act: 读取文件内容
     let reader = FileReader::new(&file_path);
     let content = reader.to_string()?;
-    assert_eq!(content, "Hello, World!");
+
+    // Assert: 验证内容正确
+    assert_eq!(content, expected_content);
 
     Ok(())
 }
 
 #[test]
-fn test_file_reader_lines() -> color_eyre::Result<()> {
+fn test_file_reader_lines_with_multiline_file_returns_lines() -> color_eyre::Result<()> {
+    // Arrange: 准备多行测试文件
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.txt");
-    fs::write(&file_path, "line1\nline2\nline3")?;
+    let file_content = "line1\nline2\nline3";
+    fs::write(&file_path, file_content)?;
 
+    // Act: 读取文件行
     let reader = FileReader::new(&file_path);
     let lines = reader.lines()?;
+
+    // Assert: 验证行数和内容正确
     assert_eq!(lines.len(), 3);
     assert_eq!(lines[0], "line1");
     assert_eq!(lines[1], "line2");
@@ -44,42 +56,58 @@ fn test_file_reader_lines() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_file_reader_bytes() -> color_eyre::Result<()> {
+fn test_file_reader_bytes_with_binary_file_returns_bytes() -> color_eyre::Result<()> {
+    // Arrange: 准备二进制测试文件
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("test.bin");
     let test_bytes = b"binary data\x00\x01\x02";
     fs::write(&file_path, test_bytes)?;
 
+    // Act: 读取文件字节
     let reader = FileReader::new(&file_path);
     let bytes = reader.bytes()?;
+
+    // Assert: 验证字节内容正确
     assert_eq!(bytes, test_bytes);
 
     Ok(())
 }
 
+// ==================== FileWriter Tests ====================
+
 #[test]
-fn test_file_writer_write_str() -> color_eyre::Result<()> {
+fn test_file_writer_write_str_with_valid_content_writes_file() -> color_eyre::Result<()> {
+    // Arrange: 准备文件路径和内容
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("output.txt");
     let writer = FileWriter::new(&file_path);
+    let expected_content = "Test content";
 
-    writer.write_str("Test content")?;
+    // Act: 写入字符串内容
+    writer.write_str(expected_content)?;
+
+    // Assert: 验证文件内容正确
     let content = fs::read_to_string(&file_path)?;
-    assert_eq!(content, "Test content");
+    assert_eq!(content, expected_content);
 
     Ok(())
 }
 
 #[test]
-fn test_file_writer_write_str_with_dir() -> color_eyre::Result<()> {
+fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file() -> color_eyre::Result<()> {
+    // Arrange: 准备需要创建目录的文件路径
     let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("subdir/output.txt");
     let writer = FileWriter::new(&file_path);
+    let expected_content = "Test content";
 
-    writer.write_str_with_dir("Test content")?;
+    // Act: 写入字符串内容（自动创建目录）
+    writer.write_str_with_dir(expected_content)?;
+
+    // Assert: 验证目录和文件已创建，内容正确
     assert!(file_path.exists());
     let content = fs::read_to_string(&file_path)?;
-    assert_eq!(content, "Test content");
+    assert_eq!(content, expected_content);
 
     Ok(())
 }

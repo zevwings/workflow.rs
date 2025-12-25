@@ -83,91 +83,103 @@ fn create_empty_proxy_info() -> ProxyInfo {
     proxy_info
 }
 
-// ==================== 测试用例 ====================
+// ==================== ProxyConfig Tests ====================
 
-/// 测试 ProxyConfig 结构体创建
 #[test]
-fn test_proxy_config_creation() {
+fn test_proxy_config_creation_with_valid_fields_creates_config() {
+    // Arrange: 准备代理配置字段值
+    let enable = true;
+    let address = Some("proxy.example.com".to_string());
+    let port = Some(8080);
+
+    // Act: 创建 ProxyConfig 实例
     let config = ProxyConfig {
-        enable: true,
-        address: Some("proxy.example.com".to_string()),
-        port: Some(8080),
+        enable,
+        address: address.clone(),
+        port,
     };
 
-    assert_eq!(config.enable, true);
-    assert_eq!(config.address, Some("proxy.example.com".to_string()));
-    assert_eq!(config.port, Some(8080));
+    // Assert: 验证所有字段值正确
+    assert_eq!(config.enable, enable);
+    assert_eq!(config.address, address);
+    assert_eq!(config.port, port);
 }
 
-/// 测试 ProxyConfig 禁用状态
 #[test]
-fn test_proxy_config_disabled() {
+fn test_proxy_config_disabled_with_disabled_state_creates_config() {
+    // Arrange: 准备禁用状态的代理配置
+    let enable = false;
+
+    // Act: 创建 ProxyConfig 实例（禁用状态）
     let config = ProxyConfig {
-        enable: false,
+        enable,
         address: None,
         port: None,
     };
 
-    assert_eq!(config.enable, false);
+    // Assert: 验证字段值正确
+    assert_eq!(config.enable, enable);
     assert_eq!(config.address, None);
     assert_eq!(config.port, None);
 }
 
-/// 测试 ProxyConfig 克隆功能
 #[test]
-fn test_proxy_config_clone() {
+fn test_proxy_config_clone_with_valid_config_creates_clone() {
+    // Arrange: 准备原始 ProxyConfig
     let original_config = ProxyConfig {
         enable: true,
         address: Some("test.proxy.com".to_string()),
         port: Some(3128),
     };
+
+    // Act: 克隆配置
     let cloned_config = original_config.clone();
 
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original_config.enable, cloned_config.enable);
     assert_eq!(original_config.address, cloned_config.address);
     assert_eq!(original_config.port, cloned_config.port);
 }
 
-/// 测试 ProxyConfig 调试输出
 #[test]
-fn test_proxy_config_debug() {
+fn test_proxy_config_debug_with_valid_config_returns_debug_string() {
+    // Arrange: 准备 ProxyConfig 实例
     let config = ProxyConfig {
         enable: true,
         address: Some("debug.proxy.com".to_string()),
         port: Some(8080),
     };
 
+    // Act: 格式化 Debug 输出
     let debug_str = format!("{:?}", config);
+
+    // Assert: 验证 Debug 字符串包含预期内容
     assert!(debug_str.contains("ProxyConfig"));
     assert!(debug_str.contains("enable"));
     assert!(debug_str.contains("address"));
     assert!(debug_str.contains("debug.proxy.com"));
 }
 
-/// 测试 SystemProxyReader 读取系统代理配置
-#[test]
-fn test_system_proxy_reader_read() {
-    // 由于 SystemProxyReader 需要访问系统配置，在测试环境中可能会失败
-    // 我们主要测试方法调用不会 panic
+// ==================== SystemProxyReader Tests ====================
 
+#[test]
+fn test_system_proxy_reader_read_with_system_config_returns_proxy_info() {
+    // Arrange: 准备读取系统代理配置
+    // 注意：由于 SystemProxyReader 需要访问系统配置，在测试环境中可能会失败
+
+    // Act: 读取系统代理配置
     let read_result = SystemProxyReader::read();
+
+    // Assert: 验证返回结果（成功或失败都是可以接受的）
     match read_result {
         Ok(proxy_info) => {
             // 如果成功读取，验证 ProxyInfo 结构
-            // 系统可能没有设置代理，所以配置可能为禁用状态
-
-            // 检查 HTTP 代理配置
             if let Some(http_config) = proxy_info.get_config(ProxyType::Http) {
-                // 验证配置字段存在
                 assert!(http_config.enable == true || http_config.enable == false);
             }
-
-            // 检查 HTTPS 代理配置
             if let Some(https_config) = proxy_info.get_config(ProxyType::Https) {
                 assert!(https_config.enable == true || https_config.enable == false);
             }
-
-            // 检查 SOCKS 代理配置
             if let Some(socks_config) = proxy_info.get_config(ProxyType::Socks) {
                 assert!(socks_config.enable == true || socks_config.enable == false);
             }
@@ -178,28 +190,28 @@ fn test_system_proxy_reader_read() {
     }
 }
 
-/// 测试 ProxyInfo 结构体创建和操作
+// ==================== ProxyInfo Tests ====================
+
 #[test]
-fn test_proxy_info_creation() {
+fn test_proxy_info_creation_with_valid_configs_creates_info() {
+    // Arrange: 准备测试用的 ProxyInfo
     let proxy_info = create_test_proxy_info();
 
-    // 验证 HTTP 代理配置
+    // Act: 获取各个代理类型的配置
     let http_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
+    let https_config = proxy_info.get_config(ProxyType::Https).expect("operation should succeed");
+    let socks_config = proxy_info.get_config(ProxyType::Socks).expect("operation should succeed");
+
+    // Assert: 验证所有代理配置正确
     assert_eq!(http_config.enable, true);
     assert_eq!(http_config.address, Some("proxy.example.com".to_string()));
     assert_eq!(http_config.port, Some(8080));
-
-    // 验证 HTTPS 代理配置
-    let https_config = proxy_info.get_config(ProxyType::Https).expect("operation should succeed");
     assert_eq!(https_config.enable, true);
     assert_eq!(
         https_config.address,
         Some("secure-proxy.example.com".to_string())
     );
     assert_eq!(https_config.port, Some(8443));
-
-    // 验证 SOCKS 代理配置
-    let socks_config = proxy_info.get_config(ProxyType::Socks).expect("operation should succeed");
     assert_eq!(socks_config.enable, false);
     assert_eq!(
         socks_config.address,
@@ -208,69 +220,65 @@ fn test_proxy_info_creation() {
     assert_eq!(socks_config.port, Some(1080));
 }
 
-/// 测试 ProxyInfo 获取代理 URL
 #[test]
-fn test_proxy_info_get_proxy_url() {
+fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() {
+    // Arrange: 准备测试用的 ProxyInfo
     let proxy_info = create_test_proxy_info();
 
-    // HTTP 代理应该返回 URL（已启用）
+    // Act: 获取各个代理类型的 URL
     let http_url = proxy_info.get_proxy_url(ProxyType::Http);
+    let https_url = proxy_info.get_proxy_url(ProxyType::Https);
+    let socks_url = proxy_info.get_proxy_url(ProxyType::Socks);
+
+    // Assert: 验证 HTTP 和 HTTPS 代理返回 URL，SOCKS 代理返回 None
     assert!(http_url.is_some());
     let http_url = http_url.expect("operation should succeed");
     assert!(http_url.contains("http://"));
     assert!(http_url.contains("proxy.example.com"));
     assert!(http_url.contains("8080"));
-
-    // HTTPS 代理应该返回 URL（已启用）
-    let https_url = proxy_info.get_proxy_url(ProxyType::Https);
     assert!(https_url.is_some());
     let https_url = https_url.expect("operation should succeed");
     assert!(https_url.contains("http://"));
     assert!(https_url.contains("secure-proxy.example.com"));
     assert!(https_url.contains("8443"));
-
-    // SOCKS 代理应该返回 None（已禁用）
-    let socks_url = proxy_info.get_proxy_url(ProxyType::Socks);
     assert!(socks_url.is_none());
 }
 
-/// 测试 ProxyConfigGenerator 生成环境变量
+// ==================== ProxyConfigGenerator Tests ====================
+
 #[test]
-fn test_proxy_config_generator_generate_env_vars() {
+fn test_proxy_config_generator_generate_env_vars_with_valid_info_generates_vars() {
+    // Arrange: 准备测试用的 ProxyInfo
     let proxy_info = create_test_proxy_info();
 
+    // Act: 生成环境变量
     let env_vars = ProxyConfigGenerator::generate_env_vars(&proxy_info);
 
-    // 验证生成的环境变量
+    // Assert: 验证生成的环境变量包含预期内容
     assert!(!env_vars.is_empty());
-
-    // 检查 HTTP 代理环境变量
     if let Some(http_proxy) = env_vars.get("http_proxy") {
         assert!(http_proxy.contains("http://"));
         assert!(http_proxy.contains("proxy.example.com"));
         assert!(http_proxy.contains("8080"));
     }
-
-    // 检查 HTTPS 代理环境变量
     if let Some(https_proxy) = env_vars.get("https_proxy") {
         assert!(https_proxy.contains("http://"));
         assert!(https_proxy.contains("secure-proxy.example.com"));
         assert!(https_proxy.contains("8443"));
     }
-
-    // SOCKS 代理已禁用，不应该有 all_proxy 环境变量
     assert!(!env_vars.contains_key("all_proxy"));
 }
 
-/// 测试 ProxyConfigGenerator 生成命令字符串
 #[test]
-fn test_proxy_config_generator_generate_command() {
+fn test_proxy_config_generator_generate_command_with_valid_info_generates_command() {
+    // Arrange: 准备最小配置的 ProxyInfo
     let proxy_info = create_minimal_proxy_info();
 
+    // Act: 生成命令字符串
     let command = ProxyConfigGenerator::generate_command(&proxy_info);
 
+    // Assert: 验证生成的命令字符串包含预期内容
     if let Some(cmd) = command {
-        // 验证生成的命令字符串
         assert!(cmd.starts_with("export "));
         assert!(cmd.contains("http_proxy="));
         assert!(cmd.contains("simple.proxy.com"));

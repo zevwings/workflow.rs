@@ -15,14 +15,18 @@ struct TestLifecycleCli {
     command: Option<Commands>,
 }
 
-// ==================== Update 命令测试 ====================
+// ==================== Update Command Tests ====================
 
 #[test]
-fn test_update_command_structure_with_version() {
-    // 测试 Update 命令结构（带 --version 参数）
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update", "--version", "1.2.3"])
+fn test_update_command_with_version_flag_parses_correctly() {
+    // Arrange: 准备带 --version 参数的 Update 命令输入
+    let args = &["test-workflow", "update", "--version", "1.2.3"];
+
+    // Act: 解析命令行参数
+    let cli = TestLifecycleCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证版本参数解析正确
     match cli.command {
         Some(Commands::Update { version }) => {
             assert_eq!(version, Some("1.2.3".to_string()), "version should be set");
@@ -32,11 +36,15 @@ fn test_update_command_structure_with_version() {
 }
 
 #[test]
-fn test_update_command_structure_with_short_version() {
-    // 测试 Update 命令结构（带 -v 参数）
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update", "-v", "1.2.3"])
+fn test_update_command_with_short_version_flag_parses_correctly() {
+    // Arrange: 准备带 -v 参数的 Update 命令输入
+    let args = &["test-workflow", "update", "-v", "1.2.3"];
+
+    // Act: 解析命令行参数
+    let cli = TestLifecycleCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证短版本参数解析正确
     match cli.command {
         Some(Commands::Update { version }) => {
             assert_eq!(version, Some("1.2.3".to_string()), "version should be set");
@@ -46,11 +54,15 @@ fn test_update_command_structure_with_short_version() {
 }
 
 #[test]
-fn test_update_command_structure_minimal() {
-    // 测试 Update 命令最小参数
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"])
+fn test_update_command_with_minimal_args_parses_correctly() {
+    // Arrange: 准备最小参数的 Update 命令输入
+    let args = &["test-workflow", "update"];
+
+    // Act: 解析命令行参数
+    let cli = TestLifecycleCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证版本参数默认为 None
     match cli.command {
         Some(Commands::Update { version }) => {
             assert_eq!(version, None, "version should be None by default");
@@ -59,40 +71,44 @@ fn test_update_command_structure_minimal() {
     }
 }
 
-// ==================== 命令解析完整性测试 ====================
+// ==================== Command Parsing Tests ====================
 
 #[test]
-fn test_lifecycle_commands_parsing() {
-    // 测试所有 lifecycle 命令都可以正确解析
+fn test_lifecycle_commands_with_all_subcommands_parses_successfully() {
+    // Arrange: 准备所有 lifecycle 命令的输入
+    let setup_args = &["test-workflow", "setup"];
+    let uninstall_args = &["test-workflow", "uninstall"];
+    let version_args = &["test-workflow", "version"];
+    let update_args = &["test-workflow", "update"];
 
-    // Setup
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"])
+    // Act: 解析所有命令
+    let setup_cli = TestLifecycleCli::try_parse_from(setup_args)
         .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, Some(Commands::Setup)));
+    let uninstall_cli = TestLifecycleCli::try_parse_from(uninstall_args)
+        .expect("CLI args should parse successfully");
+    let version_cli = TestLifecycleCli::try_parse_from(version_args)
+        .expect("CLI args should parse successfully");
+    let update_cli = TestLifecycleCli::try_parse_from(update_args)
+        .expect("CLI args should parse successfully");
 
-    // Uninstall
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"])
-        .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, Some(Commands::Uninstall)));
-
-    // Version
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"])
-        .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, Some(Commands::Version)));
-
-    // Update
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"])
-        .expect("CLI args should parse successfully");
-    assert!(matches!(cli.command, Some(Commands::Update { .. })));
+    // Assert: 验证所有 lifecycle 命令都可以正确解析
+    assert!(matches!(setup_cli.command, Some(Commands::Setup)));
+    assert!(matches!(uninstall_cli.command, Some(Commands::Uninstall)));
+    assert!(matches!(version_cli.command, Some(Commands::Version)));
+    assert!(matches!(update_cli.command, Some(Commands::Update { .. })));
 }
 
+// ==================== Error Handling Tests ====================
+
 #[test]
-fn test_lifecycle_commands_error_handling_extra_arguments() {
-    // 测试 lifecycle 命令不接受额外参数
+fn test_lifecycle_commands_with_extra_arguments_return_error() {
+    // Arrange: 准备所有命令和额外参数
     let commands = ["setup", "uninstall", "version"];
 
+    // Act & Assert: 验证所有命令都不接受额外参数
     for cmd in commands.iter() {
-        let result = TestLifecycleCli::try_parse_from(&["test-workflow", cmd, "extra-arg"]);
+        let args = &["test-workflow", cmd, "extra-arg"];
+        let result = TestLifecycleCli::try_parse_from(args);
         assert!(
             result.is_err(),
             "{} command should not accept extra arguments",

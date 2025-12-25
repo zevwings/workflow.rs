@@ -67,14 +67,15 @@ fn create_test_backup_info(temp_dir: &TempDir) -> Result<BackupInfo> {
     })
 }
 
-// ==================== 测试用例 ====================
+// ==================== BackupInfo Tests ====================
 
-/// 测试 BackupInfo 结构体创建
 #[test]
-fn test_backup_info_creation() -> Result<()> {
+fn test_backup_info_creation_with_valid_paths_creates_info() -> Result<()> {
+    // Arrange: 准备测试环境和备份目录
     let temp_dir = setup_test_environment()?;
     let backup_dir = temp_dir.path().join("test_backup");
 
+    // Act: 创建 BackupInfo 实例
     let backup_info = BackupInfo {
         backup_dir: backup_dir.clone(),
         binary_backups: vec![
@@ -87,7 +88,7 @@ fn test_backup_info_creation() -> Result<()> {
         )],
     };
 
-    // 验证字段访问
+    // Assert: 验证所有字段值正确
     assert_eq!(backup_info.backup_dir, backup_dir);
     assert_eq!(backup_info.binary_backups.len(), 2);
     assert_eq!(backup_info.completion_backups.len(), 1);
@@ -96,13 +97,16 @@ fn test_backup_info_creation() -> Result<()> {
     Ok(())
 }
 
-/// 测试 BackupInfo 克隆功能
 #[test]
-fn test_backup_info_clone() -> Result<()> {
+fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
+    // Arrange: 准备原始 BackupInfo
     let temp_dir = setup_test_environment()?;
     let original_info = create_test_backup_info(&temp_dir)?;
+
+    // Act: 克隆 BackupInfo
     let cloned_info = original_info.clone();
 
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original_info.backup_dir, cloned_info.backup_dir);
     assert_eq!(
         original_info.binary_backups.len(),
@@ -112,8 +116,6 @@ fn test_backup_info_clone() -> Result<()> {
         original_info.completion_backups.len(),
         cloned_info.completion_backups.len()
     );
-
-    // 验证深度克隆
     for (i, (name, path)) in original_info.binary_backups.iter().enumerate() {
         assert_eq!(name, &cloned_info.binary_backups[i].0);
         assert_eq!(path, &cloned_info.binary_backups[i].1);
@@ -121,13 +123,16 @@ fn test_backup_info_clone() -> Result<()> {
     Ok(())
 }
 
-/// 测试 BackupInfo 调试输出
 #[test]
-fn test_backup_info_debug() -> Result<()> {
+fn test_backup_info_debug_with_valid_info_returns_debug_string() -> Result<()> {
+    // Arrange: 准备 BackupInfo 实例
     let temp_dir = setup_test_environment()?;
     let backup_info = create_test_backup_info(&temp_dir)?;
 
+    // Act: 格式化 Debug 输出
     let debug_str = format!("{:?}", backup_info);
+
+    // Assert: 验证 Debug 字符串包含预期内容
     assert!(debug_str.contains("BackupInfo"));
     assert!(debug_str.contains("backup_dir"));
     assert!(debug_str.contains("binary_backups"));
@@ -136,46 +141,51 @@ fn test_backup_info_debug() -> Result<()> {
     Ok(())
 }
 
-/// 测试 BackupResult 结构体创建
+// ==================== BackupResult Tests ====================
+
 #[test]
-fn test_backup_result_creation() -> Result<()> {
+fn test_backup_result_creation_with_valid_info_creates_result() -> Result<()> {
+    // Arrange: 准备 BackupInfo 和计数
     let temp_dir = setup_test_environment()?;
     let backup_info = create_test_backup_info(&temp_dir)?;
+    let binary_count = 2;
+    let completion_count = 1;
 
+    // Act: 创建 BackupResult 实例
     let backup_result = BackupResult {
         backup_info: backup_info.clone(),
-        binary_count: 2,
-        completion_count: 1,
+        binary_count,
+        completion_count,
     };
 
-    assert_eq!(backup_result.binary_count, 2);
-    assert_eq!(backup_result.completion_count, 1);
+    // Assert: 验证所有字段值正确
+    assert_eq!(backup_result.binary_count, binary_count);
+    assert_eq!(backup_result.completion_count, completion_count);
     assert_eq!(backup_result.backup_info.backup_dir, backup_info.backup_dir);
     Ok(())
 }
 
-/// 测试 BackupResult 克隆和调试输出
 #[test]
-fn test_backup_result_clone_and_debug() -> Result<()> {
+fn test_backup_result_clone_and_debug_with_valid_result_creates_clone() -> Result<()> {
+    // Arrange: 准备原始 BackupResult
     let temp_dir = setup_test_environment()?;
     let backup_info = create_test_backup_info(&temp_dir)?;
-
     let original_result = BackupResult {
         backup_info,
         binary_count: 3,
         completion_count: 2,
     };
 
-    // 测试克隆
+    // Act: 克隆结果并格式化 Debug 输出
     let cloned_result = original_result.clone();
+    let debug_str = format!("{:?}", original_result);
+
+    // Assert: 验证克隆的字段值与原始值相同，且 Debug 字符串包含预期内容
     assert_eq!(original_result.binary_count, cloned_result.binary_count);
     assert_eq!(
         original_result.completion_count,
         cloned_result.completion_count
     );
-
-    // 测试调试输出
-    let debug_str = format!("{:?}", original_result);
     assert!(debug_str.contains("BackupResult"));
     assert!(debug_str.contains("binary_count"));
     assert!(debug_str.contains("completion_count"));
@@ -183,79 +193,90 @@ fn test_backup_result_clone_and_debug() -> Result<()> {
     Ok(())
 }
 
-/// 测试 RollbackResult 结构体创建
+// ==================== RollbackResult Tests ====================
+
 #[test]
-fn test_rollback_result_creation() -> Result<()> {
+fn test_rollback_result_creation_with_mixed_results_creates_result() -> Result<()> {
+    // Arrange: 准备恢复和失败的文件列表
+    let restored_binaries = vec!["workflow".to_string(), "install".to_string()];
+    let restored_completions = vec!["workflow.bash".to_string()];
+    let failed_binaries = vec![("failed_binary".to_string(), "Permission denied".to_string())];
+    let failed_completions = vec![("failed_completion".to_string(), "File not found".to_string())];
+
+    // Act: 创建 RollbackResult 实例
     let rollback_result = RollbackResult {
-        restored_binaries: vec!["workflow".to_string(), "install".to_string()],
-        restored_completions: vec!["workflow.bash".to_string()],
-        failed_binaries: vec![("failed_binary".to_string(), "Permission denied".to_string())],
-        failed_completions: vec![(
-            "failed_completion".to_string(),
-            "File not found".to_string(),
-        )],
+        restored_binaries: restored_binaries.clone(),
+        restored_completions: restored_completions.clone(),
+        failed_binaries: failed_binaries.clone(),
+        failed_completions: failed_completions.clone(),
         shell_reload_success: Some(true),
         shell_config_file: Some(PathBuf::from("/home/user/.bashrc")),
     };
 
+    // Assert: 验证所有字段值正确
     assert_eq!(rollback_result.restored_binaries.len(), 2);
     assert_eq!(rollback_result.restored_completions.len(), 1);
     assert_eq!(rollback_result.failed_binaries.len(), 1);
     assert_eq!(rollback_result.failed_completions.len(), 1);
     assert_eq!(rollback_result.shell_reload_success, Some(true));
     assert!(rollback_result.shell_config_file.is_some());
-
-    // 验证具体内容
     assert_eq!(rollback_result.restored_binaries[0], "workflow");
     assert_eq!(rollback_result.failed_binaries[0].0, "failed_binary");
     assert_eq!(rollback_result.failed_binaries[0].1, "Permission denied");
     Ok(())
 }
 
-/// 测试 RollbackResult 部分成功场景
 #[test]
-fn test_rollback_result_partial_success() -> Result<()> {
+fn test_rollback_result_partial_success_with_partial_restore_creates_result() -> Result<()> {
+    // Arrange: 准备部分成功的结果字段值
+    let restored_binaries = vec!["workflow".to_string()];
+    let failed_binaries = vec![("install".to_string(), "Backup file missing".to_string())];
+    let failed_completions = vec![("workflow.zsh".to_string(), "Permission denied".to_string())];
+
+    // Act: 创建 RollbackResult 实例
     let rollback_result = RollbackResult {
-        restored_binaries: vec!["workflow".to_string()],
+        restored_binaries: restored_binaries.clone(),
         restored_completions: vec![],
-        failed_binaries: vec![("install".to_string(), "Backup file missing".to_string())],
-        failed_completions: vec![("workflow.zsh".to_string(), "Permission denied".to_string())],
+        failed_binaries: failed_binaries.clone(),
+        failed_completions: failed_completions.clone(),
         shell_reload_success: Some(false),
         shell_config_file: Some(PathBuf::from("/home/user/.zshrc")),
     };
 
-    // 验证部分成功的情况
+    // Assert: 验证部分成功的情况
     assert_eq!(rollback_result.restored_binaries.len(), 1);
     assert_eq!(rollback_result.restored_completions.len(), 0);
     assert_eq!(rollback_result.failed_binaries.len(), 1);
     assert_eq!(rollback_result.failed_completions.len(), 1);
     assert_eq!(rollback_result.shell_reload_success, Some(false));
-
-    // 验证失败信息
     assert_eq!(rollback_result.failed_binaries[0].1, "Backup file missing");
     assert_eq!(rollback_result.failed_completions[0].1, "Permission denied");
     Ok(())
 }
 
-/// 测试 RollbackResult 完全失败场景
 #[test]
-fn test_rollback_result_complete_failure() -> Result<()> {
+fn test_rollback_result_complete_failure_with_all_failed_creates_result() -> Result<()> {
+    // Arrange: 准备完全失败的结果字段值
+    let failed_binaries = vec![
+        ("workflow".to_string(), "System error".to_string()),
+        ("install".to_string(), "Access denied".to_string()),
+    ];
+    let failed_completions = vec![(
+        "workflow.bash".to_string(),
+        "Directory not found".to_string(),
+    )];
+
+    // Act: 创建 RollbackResult 实例
     let rollback_result = RollbackResult {
         restored_binaries: vec![],
         restored_completions: vec![],
-        failed_binaries: vec![
-            ("workflow".to_string(), "System error".to_string()),
-            ("install".to_string(), "Access denied".to_string()),
-        ],
-        failed_completions: vec![(
-            "workflow.bash".to_string(),
-            "Directory not found".to_string(),
-        )],
+        failed_binaries: failed_binaries.clone(),
+        failed_completions: failed_completions.clone(),
         shell_reload_success: None,
         shell_config_file: None,
     };
 
-    // 验证完全失败的情况
+    // Assert: 验证完全失败的情况
     assert!(rollback_result.restored_binaries.is_empty());
     assert!(rollback_result.restored_completions.is_empty());
     assert_eq!(rollback_result.failed_binaries.len(), 2);
@@ -265,9 +286,9 @@ fn test_rollback_result_complete_failure() -> Result<()> {
     Ok(())
 }
 
-/// 测试 RollbackResult 克隆和调试输出
 #[test]
-fn test_rollback_result_clone_and_debug() -> Result<()> {
+fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Result<()> {
+    // Arrange: 准备原始 RollbackResult
     let original_result = RollbackResult {
         restored_binaries: vec!["test".to_string()],
         restored_completions: vec!["test.bash".to_string()],
@@ -277,8 +298,10 @@ fn test_rollback_result_clone_and_debug() -> Result<()> {
         shell_config_file: Some(PathBuf::from("/test/.bashrc")),
     };
 
-    // 测试克隆
+    // Act: 克隆结果
     let cloned_result = original_result.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(
         original_result.restored_binaries,
         cloned_result.restored_binaries

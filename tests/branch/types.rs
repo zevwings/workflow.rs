@@ -9,8 +9,8 @@ use workflow::branch::BranchType;
 // ==================== BranchType 枚举测试 ====================
 
 #[test]
-fn test_branch_type_enum_values() {
-    // 测试所有分支类型枚举值
+fn test_branch_type_enum_values_can_be_created() {
+    // Arrange: 准备所有分支类型枚举值
     let types = vec![
         BranchType::Feature,
         BranchType::Bugfix,
@@ -19,7 +19,7 @@ fn test_branch_type_enum_values() {
         BranchType::Chore,
     ];
 
-    // 验证所有类型都可以创建
+    // Act & Assert: 验证所有类型都可以创建并格式化
     for branch_type in types {
         let debug_str = format!("{:?}", branch_type);
         assert!(!debug_str.is_empty());
@@ -27,10 +27,15 @@ fn test_branch_type_enum_values() {
 }
 
 #[test]
-fn test_branch_type_all() {
-    // 测试获取所有分支类型
+fn test_branch_type_all_returns_all_types() {
+    // Arrange: 准备预期结果
+    let expected_count = 5;
+
+    // Act: 调用 all() 方法
     let all_types = BranchType::all();
-    assert_eq!(all_types.len(), 5);
+
+    // Assert: 验证返回所有类型且数量正确
+    assert_eq!(all_types.len(), expected_count);
     assert!(all_types.contains(&BranchType::Feature));
     assert!(all_types.contains(&BranchType::Bugfix));
     assert!(all_types.contains(&BranchType::Refactoring));
@@ -39,28 +44,56 @@ fn test_branch_type_all() {
 }
 
 #[test]
-fn test_branch_type_display() {
-    // 测试分支类型的显示格式
-    assert_eq!(BranchType::Feature.to_string(), "feature");
-    assert_eq!(BranchType::Bugfix.to_string(), "bugfix");
-    assert_eq!(BranchType::Refactoring.to_string(), "refactoring");
-    assert_eq!(BranchType::Hotfix.to_string(), "hotfix");
-    assert_eq!(BranchType::Chore.to_string(), "chore");
+fn test_branch_type_display_returns_lowercase_string() {
+    // Arrange: 准备预期结果
+    let expected_feature = "feature";
+    let expected_bugfix = "bugfix";
+    let expected_refactoring = "refactoring";
+    let expected_hotfix = "hotfix";
+    let expected_chore = "chore";
+
+    // Act: 调用 to_string() 方法
+    let result_feature = BranchType::Feature.to_string();
+    let result_bugfix = BranchType::Bugfix.to_string();
+    let result_refactoring = BranchType::Refactoring.to_string();
+    let result_hotfix = BranchType::Hotfix.to_string();
+    let result_chore = BranchType::Chore.to_string();
+
+    // Assert: 验证显示格式正确
+    assert_eq!(result_feature, expected_feature);
+    assert_eq!(result_bugfix, expected_bugfix);
+    assert_eq!(result_refactoring, expected_refactoring);
+    assert_eq!(result_hotfix, expected_hotfix);
+    assert_eq!(result_chore, expected_chore);
 }
 
 #[test]
-fn test_branch_type_as_str() {
-    // 测试 as_str 方法
-    assert_eq!(BranchType::Feature.as_str(), "feature");
-    assert_eq!(BranchType::Bugfix.as_str(), "bugfix");
-    assert_eq!(BranchType::Refactoring.as_str(), "refactoring");
-    assert_eq!(BranchType::Hotfix.as_str(), "hotfix");
-    assert_eq!(BranchType::Chore.as_str(), "chore");
+fn test_branch_type_as_str_returns_string_slice() {
+    // Arrange: 准备预期结果
+    let expected_feature = "feature";
+    let expected_bugfix = "bugfix";
+    let expected_refactoring = "refactoring";
+    let expected_hotfix = "hotfix";
+    let expected_chore = "chore";
+
+    // Act: 调用 as_str() 方法
+    let result_feature = BranchType::Feature.as_str();
+    let result_bugfix = BranchType::Bugfix.as_str();
+    let result_refactoring = BranchType::Refactoring.as_str();
+    let result_hotfix = BranchType::Hotfix.as_str();
+    let result_chore = BranchType::Chore.as_str();
+
+    // Assert: 验证返回正确的字符串切片
+    assert_eq!(result_feature, expected_feature);
+    assert_eq!(result_bugfix, expected_bugfix);
+    assert_eq!(result_refactoring, expected_refactoring);
+    assert_eq!(result_hotfix, expected_hotfix);
+    assert_eq!(result_chore, expected_chore);
 }
 
 #[test]
-fn test_branch_type_from_string() {
-    // 测试从字符串创建分支类型
+fn test_branch_type_from_string_with_valid_input_returns_some() {
+    // Arrange: 准备测试用例（有效输入）
     let test_cases = vec![
         ("feature", Some(BranchType::Feature)),
         ("bugfix", Some(BranchType::Bugfix)),
@@ -73,6 +106,7 @@ fn test_branch_type_from_string() {
         ("invalid", None),
     ];
 
+    // Act & Assert: 验证从字符串创建分支类型
     for (input, expected) in test_cases {
         let result = BranchType::from_str(input);
         assert_eq!(result, expected);
@@ -80,8 +114,8 @@ fn test_branch_type_from_string() {
 }
 
 #[test]
-fn test_branch_type_from_string_case_insensitive() {
-    // 测试大小写不敏感的转换
+fn test_branch_type_from_string_with_case_insensitive_input_returns_some() {
+    // Arrange: 准备测试用例（大小写不敏感）
     let test_cases = vec![
         ("FEATURE", Some(BranchType::Feature)),
         ("BugFix", Some(BranchType::Bugfix)),
@@ -90,6 +124,7 @@ fn test_branch_type_from_string_case_insensitive() {
         ("CHORE", Some(BranchType::Chore)),
     ];
 
+    // Act & Assert: 验证大小写不敏感的转换
     for (input, expected) in test_cases {
         let result = BranchType::from_str(input);
         assert_eq!(result, expected);

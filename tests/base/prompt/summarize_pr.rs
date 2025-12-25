@@ -4,57 +4,59 @@
 
 use workflow::base::prompt::generate_summarize_pr_system_prompt;
 
+// ==================== Summarize PR System Prompt Generation Tests ====================
+
 #[test]
-fn test_generate_summarize_pr_system_prompt() {
-    // 测试生成 PR 总结的 system prompt
+fn test_generate_summarize_pr_system_prompt_with_no_parameters_returns_prompt() {
+    // Arrange: 准备生成prompt
+
+    // Act: 生成PR总结的system prompt
     let prompt = generate_summarize_pr_system_prompt();
 
-    // 验证返回的 prompt 不为空
+    // Assert: 验证返回的prompt不为空且包含关键内容
     assert!(!prompt.is_empty());
-
-    // 验证包含关键内容
     assert!(prompt.contains("CRITICAL LANGUAGE REQUIREMENT"));
     assert!(prompt.contains("Summary Document Rules"));
     assert!(prompt.contains("Filename Rules"));
     assert!(prompt.contains("Response Format"));
     assert!(prompt.contains("summary"));
     assert!(prompt.contains("filename"));
-
-    // 验证包含 JSON 示例
     assert!(prompt.contains("add-user-authentication"));
 }
 
 #[test]
-fn test_generate_summarize_pr_system_prompt_contains_language_requirement() {
-    // 测试 prompt 包含语言要求
+fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_prompt_contains_language() {
+    // Arrange: 准备生成prompt
     let prompt = generate_summarize_pr_system_prompt();
 
-    // 验证包含语言增强内容（通过 get_language_requirement 添加）
+    // Act & Assert: 验证包含语言增强内容（通过get_language_requirement添加）
     assert!(prompt.contains("CRITICAL LANGUAGE REQUIREMENT"));
     assert!(prompt.contains("REMINDER: Language Requirement"));
 }
 
 #[test]
-fn test_generate_summarize_pr_system_prompt_contains_document_structure() {
-    // 测试 prompt 包含文档结构要求
+fn test_generate_summarize_pr_system_prompt_contains_document_structure_with_prompt_contains_structure() {
+    // Arrange: 准备生成prompt和文档结构关键词列表
     let prompt = generate_summarize_pr_system_prompt();
+    let structure_keywords = [
+        "PR Title", "Overview", "Requirements Analysis", "Key Changes",
+        "Files Changed", "Technical Details", "Testing", "Usage Instructions",
+    ];
 
-    // 验证包含文档结构说明
-    assert!(prompt.contains("PR Title"));
-    assert!(prompt.contains("Overview"));
-    assert!(prompt.contains("Requirements Analysis"));
-    assert!(prompt.contains("Key Changes"));
-    assert!(prompt.contains("Files Changed"));
-    assert!(prompt.contains("Technical Details"));
-    assert!(prompt.contains("Testing"));
-    assert!(prompt.contains("Usage Instructions"));
+    // Act & Assert: 验证包含文档结构说明
+    for keyword in structure_keywords.iter() {
+        assert!(prompt.contains(keyword));
+    }
 }
 
 #[test]
-fn test_generate_summarize_pr_system_prompt_consistent() {
-    // 测试多次调用返回一致的结果
+fn test_generate_summarize_pr_system_prompt_consistent_with_multiple_calls_returns_same_result() {
+    // Arrange: 准备多次调用
+
+    // Act: 多次生成prompt
     let prompt1 = generate_summarize_pr_system_prompt();
     let prompt2 = generate_summarize_pr_system_prompt();
 
+    // Assert: 验证多次调用返回一致的结果
     assert_eq!(prompt1, prompt2);
 }

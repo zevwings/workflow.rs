@@ -309,7 +309,7 @@ jobs:
   build:
     name: 🔨 Build (${{ matrix.platform }})
     runs-on: ${{ matrix.os }}
-    needs: check-skip-ci
+    needs: [check-skip-ci, tests, doctests]
     # 跳过版本更新分支（bump-version-*）
     if: needs.check-skip-ci.outputs.should_skip != 'true'
     strategy:

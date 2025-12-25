@@ -95,9 +95,9 @@ fn test_create_preview() {
     assert_eq!(preview.is_head, true);
 }
 
-/// 测试格式化预览显示
 #[test]
-fn test_format_preview() {
+fn test_format_preview_with_valid_preview_returns_formatted_string() {
+    // Arrange: 准备 RewordPreview 实例
     let preview = RewordPreview {
         original_sha: "def456abc789012345678901234567890abcdef12".to_string(),
         original_message: "fix: resolve login authentication bug".to_string(),
@@ -106,7 +106,10 @@ fn test_format_preview() {
         is_pushed: true,
     };
 
+    // Act: 格式化预览
     let formatted = CommitReword::format_preview(&preview);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("Original Commit SHA"));
     assert!(formatted.contains("def456ab"));
     assert!(formatted.contains("fix: resolve login authentication bug"));
@@ -114,13 +117,16 @@ fn test_format_preview() {
     assert!(formatted.contains("With new detailed description."));
 }
 
-/// 测试提交信息格式化
 #[test]
-fn test_format_commit_info() {
+fn test_format_commit_info_with_valid_info_returns_formatted_string() {
+    // Arrange: 准备提交信息和分支名
     let commit_info = create_sample_commit_info();
     let branch = "feature-auth";
 
+    // Act: 格式化提交信息
     let formatted = CommitReword::format_commit_info(&commit_info, branch);
+
+    // Assert: 验证格式化字符串包含预期内容
     assert!(formatted.contains("def456ab")); // 短 SHA
     assert!(formatted.contains("fix: resolve login authentication bug"));
     assert!(formatted.contains("Jane Smith"));
@@ -129,35 +135,41 @@ fn test_format_commit_info() {
     assert!(formatted.contains("feature-auth")); // 分支名
 }
 
-/// 测试完成消息格式化
 #[test]
-fn test_format_completion_message() {
+fn test_format_completion_message_with_valid_input_returns_message() {
+    // Arrange: 准备分支名和 SHA
     let current_branch = "main";
     let old_sha = "def456abc789012345678901234567890abcdef12";
 
+    // Act: 格式化完成消息
     let result = CommitReword::format_completion_message(current_branch, old_sha);
+
+    // Assert: 验证返回结果（成功、None 或错误都是可以接受的）
     match result {
         Ok(Some(message)) => {
             assert!(message.contains("successfully") || message.contains("completed"));
         }
         Ok(None) => {
             // 某些情况下可能返回 None，这也是有效的
-            assert!(true);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
-/// 测试强制推送警告检查（已推送）
+// ==================== Force Push Warning Tests ====================
+
 #[test]
-fn test_should_show_force_push_warning_pushed() {
+fn test_should_show_force_push_warning_with_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA
     let current_branch = "main";
     let old_sha = "test123456789012345678901234567890abcdef";
 
+    // Act: 检查是否应该显示强制推送警告
     let result = CommitReword::should_show_force_push_warning(current_branch, old_sha);
+
+    // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
             // 验证返回值是布尔类型
@@ -165,93 +177,123 @@ fn test_should_show_force_push_warning_pushed() {
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
-/// 测试强制推送警告检查（未推送）
 #[test]
-fn test_should_show_force_push_warning_not_pushed() {
+fn test_should_show_force_push_warning_with_not_pushed_commit_returns_bool() {
+    // Arrange: 准备分支名和 SHA（未推送的提交）
     let current_branch = "feature";
     let old_sha = "test987654321098765432109876543210987654";
 
+    // Act: 检查是否应该显示强制推送警告
     let result = CommitReword::should_show_force_push_warning(current_branch, old_sha);
+
+    // Assert: 验证返回布尔值（成功或失败都是可以接受的）
     match result {
         Ok(is_pushed) => {
-            // 验证返回值是布尔类型
             assert!(is_pushed == true || is_pushed == false);
         }
         Err(_) => {
             // 在测试环境中可能失败，这是可以接受的
-            assert!(true);
         }
     }
 }
 
-/// 测试 RewordHistoryOptions 结构
+// ==================== RewordHistoryOptions Tests ====================
+
 #[test]
-fn test_reword_history_options() {
+fn test_reword_history_options_with_valid_fields_creates_options() {
+    // Arrange: 准备历史重写选项字段值
+    let commit_sha = "abc123def456";
+    let new_message = "Updated historical commit message";
+    let auto_stash = true;
+
+    // Act: 创建 RewordHistoryOptions 实例
     let options = RewordHistoryOptions {
-        commit_sha: "abc123def456".to_string(),
-        new_message: "Updated historical commit message".to_string(),
-        auto_stash: true,
+        commit_sha: commit_sha.to_string(),
+        new_message: new_message.to_string(),
+        auto_stash,
     };
 
-    assert_eq!(options.commit_sha, "abc123def456");
-    assert_eq!(options.new_message, "Updated historical commit message");
-    assert_eq!(options.auto_stash, true);
+    // Assert: 验证所有字段值正确
+    assert_eq!(options.commit_sha, commit_sha);
+    assert_eq!(options.new_message, new_message);
+    assert_eq!(options.auto_stash, auto_stash);
 }
 
-/// 测试 RewordHistoryResult 结构
+// ==================== RewordHistoryResult Tests ====================
+
 #[test]
-fn test_reword_history_result() {
+fn test_reword_history_result_with_success_creates_result() {
+    // Arrange: 准备成功的结果字段值
+    let success = true;
+    let has_conflicts = false;
+    let was_stashed = true;
+
+    // Act: 创建 RewordHistoryResult 实例
     let result = RewordHistoryResult {
-        success: true,
-        has_conflicts: false,
-        was_stashed: true,
+        success,
+        has_conflicts,
+        was_stashed,
     };
 
-    assert_eq!(result.success, true);
-    assert_eq!(result.has_conflicts, false);
-    assert_eq!(result.was_stashed, true);
+    // Assert: 验证所有字段值正确
+    assert_eq!(result.success, success);
+    assert_eq!(result.has_conflicts, has_conflicts);
+    assert_eq!(result.was_stashed, was_stashed);
 }
 
-/// 测试 RewordHistoryResult 失败场景
 #[test]
-fn test_reword_history_result_failure() {
+fn test_reword_history_result_failure_with_conflicts_creates_result() {
+    // Arrange: 准备失败的结果字段值
+    let success = false;
+    let has_conflicts = true;
+    let was_stashed = false;
+
+    // Act: 创建 RewordHistoryResult 实例
     let result = RewordHistoryResult {
-        success: false,
-        has_conflicts: true,
-        was_stashed: false,
+        success,
+        has_conflicts,
+        was_stashed,
     };
 
-    assert_eq!(result.success, false);
-    assert_eq!(result.has_conflicts, true);
-    assert_eq!(result.was_stashed, false);
+    // Assert: 验证所有字段值正确
+    assert_eq!(result.success, success);
+    assert_eq!(result.has_conflicts, has_conflicts);
+    assert_eq!(result.was_stashed, was_stashed);
 }
 
-/// 测试 RewordPreview 结构体字段
+// ==================== RewordPreview Tests ====================
+
 #[test]
-fn test_reword_preview_struct() {
+fn test_reword_preview_struct_with_valid_fields_creates_preview() {
+    // Arrange: 准备预览字段值
+    let original_sha = "preview_sha";
+    let original_message = "original preview message";
+    let new_message = "new preview message";
+
+    // Act: 创建 RewordPreview 实例
     let preview = RewordPreview {
-        original_sha: "preview_sha".to_string(),
-        original_message: "original preview message".to_string(),
-        new_message: "new preview message".to_string(),
+        original_sha: original_sha.to_string(),
+        original_message: original_message.to_string(),
+        new_message: new_message.to_string(),
         is_head: false,
         is_pushed: true,
     };
 
-    assert_eq!(preview.original_sha, "preview_sha");
-    assert_eq!(preview.original_message, "original preview message");
-    assert_eq!(preview.new_message, "new preview message");
+    // Assert: 验证所有字段值正确
+    assert_eq!(preview.original_sha, original_sha);
+    assert_eq!(preview.original_message, original_message);
+    assert_eq!(preview.new_message, new_message);
     assert_eq!(preview.is_head, false);
     assert_eq!(preview.is_pushed, true);
 }
 
-/// 测试 RewordPreview 克隆功能
 #[test]
-fn test_reword_preview_clone() {
+fn test_reword_preview_clone_with_valid_preview_creates_clone() {
+    // Arrange: 准备原始 RewordPreview
     let original = RewordPreview {
         original_sha: "clone_sha".to_string(),
         original_message: "clone original".to_string(),
@@ -260,7 +302,10 @@ fn test_reword_preview_clone() {
         is_pushed: false,
     };
 
+    // Act: 克隆预览
     let cloned = original.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(original.original_sha, cloned.original_sha);
     assert_eq!(original.original_message, cloned.original_message);
     assert_eq!(original.new_message, cloned.new_message);

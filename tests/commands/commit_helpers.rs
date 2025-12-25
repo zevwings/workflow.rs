@@ -6,21 +6,22 @@ use crate::common::environments::CliTestEnv;
 use serial_test::serial;
 use workflow::commands::commit::helpers::check_has_last_commit;
 
+// ==================== Commit Existence Check Tests ====================
+
 #[test]
-fn test_check_has_last_commit_without_git_repo() {
-    // 测试非 Git 仓库的情况
+fn test_check_has_last_commit_without_git_repo_returns_error() {
+    // Arrange: 准备非 Git 仓库环境
     // 注意：check_has_last_commit() 使用当前工作目录的 Git 仓库
-    // 在测试环境中，如果没有 Git 仓库，应该返回错误
+
+    // Act: 检查是否有最后的提交
     let result = check_has_last_commit();
 
-    // 验证函数返回错误（非 Git 仓库或无 commit）
-    // 这个测试可能在不同环境下表现不同，主要验证函数不会 panic
+    // Assert: 验证返回错误且错误消息包含相关信息（成功或失败都是可以接受的）
     match result {
         Ok(_) => {
             // 如果当前目录恰好是 Git 仓库且有 commit，这是可以接受的
         }
         Err(e) => {
-            // 验证错误消息包含相关信息
             let error_msg = e.to_string();
             assert!(
                 error_msg.contains("No commits")

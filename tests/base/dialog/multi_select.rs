@@ -4,31 +4,46 @@
 
 use workflow::base::dialog::MultiSelectDialog;
 
+// ==================== MultiSelectDialog Creation Tests ====================
+
 #[test]
-fn test_multi_select_dialog_new() {
-    // 测试创建多选对话框
+fn test_multi_select_dialog_new_with_options_creates_dialog() {
+    // Arrange: 准备提示消息和选项列表
+    let message = "Choose options";
     let options = vec!["Option 1", "Option 2", "Option 3"];
-    let _dialog = MultiSelectDialog::new("Choose options", options);
-    // 验证可以创建对话框
+
+    // Act: 创建多选对话框
+    let _dialog = MultiSelectDialog::new(message, options);
+
+    // Assert: 验证可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_multi_select_dialog_with_default() {
-    // 测试设置默认选中的选项（覆盖 multi_select.rs:72-74）
+fn test_multi_select_dialog_with_default_with_default_indices_creates_dialog() {
+    // Arrange: 准备提示消息、选项列表和默认索引列表
+    let message = "Choose options";
     let options = vec!["Option 1", "Option 2", "Option 3"];
-    let _dialog = MultiSelectDialog::new("Choose options", options).with_default(vec![0, 2]);
-    // 验证链式调用成功
+    let default_indices = vec![0, 2];
+
+    // Act: 创建带默认选中选项的多选对话框
+    let _dialog = MultiSelectDialog::new(message, options).with_default(default_indices);
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_multi_select_dialog_empty_options() {
-    // 测试空选项列表（覆盖 multi_select.rs:87-88）
+fn test_multi_select_dialog_empty_options_with_empty_list_returns_error() {
+    // Arrange: 准备空选项列表
+    let message = "Choose options";
     let options: Vec<&str> = vec![];
-    let dialog = MultiSelectDialog::new("Choose options", options);
+
+    // Act: 创建对话框并尝试提示
+    let dialog = MultiSelectDialog::new(message, options);
     let result = dialog.prompt();
 
+    // Assert: 验证返回错误且错误消息包含"No options available"
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("No options available"));

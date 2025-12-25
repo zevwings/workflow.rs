@@ -54,11 +54,15 @@ mod tests {
     // ==================== 基础功能测试 ====================
 
     #[test]
-    fn test_executor_creation() -> Result<()> {
-        let _executor = ConcurrentExecutor::new(5);
-        // 验证执行器创建成功（内部字段无法直接访问，通过行为验证）
+    fn test_executor_creation_with_concurrency_limit_creates_executor() -> Result<()> {
+        // Arrange: 准备并发限制
+        let concurrency = 5;
 
-        // 测试最小并发数限制（应该至少为 1）
+        // Act: 创建执行器
+        let _executor = ConcurrentExecutor::new(concurrency);
+
+        // Assert: 验证执行器创建成功（内部字段无法直接访问，通过行为验证）
+        // 测试最小并发数限制（应该至少为1）
         let executor_zero = ConcurrentExecutor::new(0);
         let tasks = vec![(
             "task1".to_string(),
@@ -70,23 +74,32 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_empty_tasks() -> Result<()> {
+    fn test_execute_empty_tasks_with_empty_list_returns_empty_results() -> Result<()> {
+        // Arrange: 准备执行器和空任务列表
         let executor = ConcurrentExecutor::new(5);
-        let results = executor.execute::<String, String>(Vec::new())?;
+        let tasks: Vec<(String, Box<dyn Fn() -> Result<String, String> + Send + Sync>)> = Vec::new();
+
+        // Act: 执行空任务列表
+        let results = executor.execute(tasks)?;
+
+        // Assert: 验证返回空结果
         assert_eq!(results.len(), 0);
         Ok(())
     }
 
     #[test]
-    fn test_execute_single_task_success() -> Result<()> {
+    fn test_execute_single_task_success_with_success_task_returns_success() -> Result<()> {
+        // Arrange: 准备执行器和成功任务
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![(
             "task1".to_string(),
             create_success_task("result1".to_string(), 0),
         )];
 
+        // Act: 执行任务
         let results = executor.execute(tasks)?;
 
+        // Assert: 验证返回成功结果
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "task1");
         match &results[0].1 {
@@ -97,15 +110,18 @@ mod tests {
     }
 
     #[test]
-    fn test_execute_single_task_failure() -> Result<()> {
+    fn test_execute_single_task_failure_with_failure_task_returns_failure() -> Result<()> {
+        // Arrange: 准备执行器和失败任务
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![(
             "task1".to_string(),
             create_failure_task("test error".to_string(), 0),
         )];
 
+        // Act: 执行任务
         let results = executor.execute(tasks)?;
 
+        // Assert: 验证返回失败结果
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "task1");
         match &results[0].1 {
@@ -118,7 +134,8 @@ mod tests {
     // ==================== 并发控制测试 ====================
 
     #[test]
-    fn test_concurrent_execution_multiple_tasks() -> Result<()> {
+    fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently() -> Result<()> {
+        // Arrange: 准备执行器和多个任务
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![
             (
@@ -139,14 +156,15 @@ mod tests {
             ),
         ];
 
+        // Act: 执行多个任务并测量时间
         let start_time = Instant::now();
         let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
-        // 验证结果数量
+        // Assert: 验证结果数量正确
         assert_eq!(results.len(), 4);
 
-        // 验证所有任务都成功
+        // Assert: 验证所有任务都成功
         for (_, result) in &results {
             match result {
                 TaskResult::Success(_) => {}
@@ -154,12 +172,10 @@ mod tests {
             }
         }
 
-        // 验证并发执行（4个任务，并发数2，每个任务50ms，应该大约需要100ms而不是200ms）
+        // Assert: 验证并发执行（4个任务，并发数2，每个任务50ms，应该大约需要100ms而不是200ms）
         // 允许一些时间误差，特别是在CI环境中线程调度可能不稳定
         assert!(duration >= Duration::from_millis(90));
         // 增加上限以应对CI环境的线程调度延迟，但仍需远小于串行执行的200ms
-        // 注意：在CI环境中，由于线程调度延迟和系统负载，实际执行时间可能超过理论值
-        // 1000ms的上限仍然远小于串行执行的200ms（4个任务 × 50ms），足以验证并发执行
         assert!(duration <= Duration::from_millis(1000));
         Ok(())
     }
@@ -169,13 +185,13 @@ mod tests {
     #[case(2, 4)] // 并发数2
     #[case(4, 4)] // 并发数4
     #[case(8, 4)] // 并发数超过任务数
-    fn test_concurrent_limits_timing(
+    fn test_concurrent_limits_timing_with_various_concurrency_levels_executes_within_time_limit(
         #[case] max_concurrent: usize,
         #[case] task_count: usize,
     ) -> Result<()> {
+        // Arrange: 准备执行器和任务列表
         let executor = ConcurrentExecutor::new(max_concurrent);
         let mut tasks = Vec::new();
-
         for i in 0..task_count {
             tasks.push((
                 format!("task{}", i),
@@ -183,17 +199,17 @@ mod tests {
             ));
         }
 
+        // Act: 执行任务并测量时间
         let start_time = Instant::now();
         let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
+        // Assert: 验证结果数量正确
         assert_eq!(results.len(), task_count);
 
-        // 只验证基本的时间约束：
-        // 1. 总时间应该合理（不会过快或过慢）
+        // Assert: 验证时间在合理范围内
         let min_duration = Duration::from_millis(5); // 至少5ms（考虑系统开销）
         let max_duration = Duration::from_secs(2); // 最多2秒（防止死锁）
-
         assert!(
             duration >= min_duration && duration <= max_duration,
             "Duration {:?} not in reasonable range [{:?}, {:?}] for concurrent={}, tasks={}",
@@ -204,17 +220,15 @@ mod tests {
             task_count
         );
 
-        // 验证所有任务都成功（顺序可能不同）
+        // Assert: 验证所有任务都成功（顺序可能不同）
         let mut task_names: Vec<String> = results.iter().map(|(name, _)| name.clone()).collect();
         task_names.sort();
-
         let mut expected_names: Vec<String> =
             (0..task_count).map(|i| format!("task{}", i)).collect();
         expected_names.sort();
-
         assert_eq!(task_names, expected_names);
 
-        // 验证每个任务的结果
+        // Assert: 验证每个任务的结果
         for (name, result) in &results {
             match result {
                 TaskResult::Success(value) => {
@@ -233,7 +247,8 @@ mod tests {
     // ==================== 错误处理和混合结果测试 ====================
 
     #[test]
-    fn test_mixed_success_and_failure_tasks() -> Result<()> {
+    fn test_mixed_success_and_failure_tasks_with_mixed_tasks_handles_both() -> Result<()> {
+        // Arrange: 准备执行器和混合任务（成功和失败）
         let executor = ConcurrentExecutor::new(3);
         let tasks = vec![
             (
@@ -254,14 +269,15 @@ mod tests {
             ),
         ];
 
+        // Act: 执行混合任务
         let results = executor.execute(tasks)?;
 
+        // Assert: 验证结果数量正确
         assert_eq!(results.len(), 4);
 
-        // 统计成功和失败的数量
+        // Assert: 统计成功和失败的数量并验证结果正确
         let mut success_count = 0;
         let mut failure_count = 0;
-
         for (name, result) in &results {
             match result {
                 TaskResult::Success(value) => {
@@ -282,14 +298,14 @@ mod tests {
                 }
             }
         }
-
         assert_eq!(success_count, 2);
         assert_eq!(failure_count, 2);
         Ok(())
     }
 
     #[test]
-    fn test_all_tasks_fail() -> Result<()> {
+    fn test_all_tasks_fail_with_all_failure_tasks_returns_all_failures() -> Result<()> {
+        // Arrange: 准备执行器和所有失败任务
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![
             (
@@ -306,11 +322,11 @@ mod tests {
             ),
         ];
 
+        // Act: 执行所有失败任务
         let results = executor.execute(tasks)?;
 
+        // Assert: 验证结果数量正确且所有任务都失败
         assert_eq!(results.len(), 3);
-
-        // 验证所有任务都失败
         for (_, result) in &results {
             match result {
                 TaskResult::Success(_) => panic!("Expected all tasks to fail"),

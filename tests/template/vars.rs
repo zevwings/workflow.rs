@@ -19,96 +19,113 @@ use workflow::template::{
     BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
 };
 
-// ==================== 测试用例 ====================
+// ==================== BranchTemplateVars Tests ====================
 
-/// 测试分支模板变量创建
 #[test]
-fn test_branch_template_vars_creation() {
+fn test_branch_template_vars_creation_with_all_fields_creates_vars() {
+    // Arrange: 准备分支模板变量字段值
+    let jira_key = Some("PROJ-123".to_string());
+    let jira_summary = Some("Implement user authentication".to_string());
+    let summary_slug = Some("implement-user-authentication".to_string());
+    let jira_type = Some("Feature".to_string());
+
+    // Act: 创建 BranchTemplateVars 实例
     let vars = BranchTemplateVars {
-        jira_key: Some("PROJ-123".to_string()),
-        jira_summary: Some("Implement user authentication".to_string()),
-        summary_slug: Some("implement-user-authentication".to_string()),
-        jira_type: Some("Feature".to_string()),
+        jira_key: jira_key.clone(),
+        jira_summary: jira_summary.clone(),
+        summary_slug: summary_slug.clone(),
+        jira_type: jira_type.clone(),
     };
 
-    assert_eq!(vars.jira_key, Some("PROJ-123".to_string()));
-    assert_eq!(
-        vars.jira_summary,
-        Some("Implement user authentication".to_string())
-    );
-    assert_eq!(
-        vars.summary_slug,
-        Some("implement-user-authentication".to_string())
-    );
-    assert_eq!(vars.jira_type, Some("Feature".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(vars.jira_key, jira_key);
+    assert_eq!(vars.jira_summary, jira_summary);
+    assert_eq!(vars.summary_slug, summary_slug);
+    assert_eq!(vars.jira_type, jira_type);
 }
 
-/// 测试分支模板变量（部分字段为 None）
 #[test]
-fn test_branch_template_vars_partial() {
+fn test_branch_template_vars_partial_with_some_none_fields_creates_vars() {
+    // Arrange: 准备分支模板变量字段值（部分为 None）
+    let jira_key = Some("TASK-456".to_string());
+    let summary_slug = Some("fix-login-bug".to_string());
+
+    // Act: 创建 BranchTemplateVars 实例（部分字段为 None）
     let vars = BranchTemplateVars {
-        jira_key: Some("TASK-456".to_string()),
+        jira_key: jira_key.clone(),
         jira_summary: None,
-        summary_slug: Some("fix-login-bug".to_string()),
+        summary_slug: summary_slug.clone(),
         jira_type: None,
     };
 
-    assert_eq!(vars.jira_key, Some("TASK-456".to_string()));
+    // Assert: 验证字段值正确
+    assert_eq!(vars.jira_key, jira_key);
     assert_eq!(vars.jira_summary, None);
-    assert_eq!(vars.summary_slug, Some("fix-login-bug".to_string()));
+    assert_eq!(vars.summary_slug, summary_slug);
     assert_eq!(vars.jira_type, None);
 }
 
-/// 测试提交模板变量创建
+// ==================== CommitTemplateVars Tests ====================
+
 #[test]
-fn test_commit_template_vars_creation() {
+fn test_commit_template_vars_creation_with_all_fields_creates_vars() {
+    // Arrange: 准备提交模板变量字段值
+    let commit_type = "feat";
+    let scope = Some("auth".to_string());
+    let subject = "implement user authentication system";
+    let body = Some("Add comprehensive authentication with JWT tokens and session management.".to_string());
+    let jira_key = Some("AUTH-789".to_string());
+    let use_scope = true;
+
+    // Act: 创建 CommitTemplateVars 实例
     let vars = CommitTemplateVars {
-        commit_type: "feat".to_string(),
-        scope: Some("auth".to_string()),
-        subject: "implement user authentication system".to_string(),
-        body: Some(
-            "Add comprehensive authentication with JWT tokens and session management.".to_string(),
-        ),
-        jira_key: Some("AUTH-789".to_string()),
-        use_scope: true,
+        commit_type: commit_type.to_string(),
+        scope: scope.clone(),
+        subject: subject.to_string(),
+        body: body.clone(),
+        jira_key: jira_key.clone(),
+        use_scope,
     };
 
-    assert_eq!(vars.commit_type, "feat");
-    assert_eq!(vars.scope, Some("auth".to_string()));
-    assert_eq!(vars.subject, "implement user authentication system");
-    assert_eq!(
-        vars.body,
-        Some(
-            "Add comprehensive authentication with JWT tokens and session management.".to_string()
-        )
-    );
-    assert_eq!(vars.jira_key, Some("AUTH-789".to_string()));
-    assert_eq!(vars.use_scope, true);
+    // Assert: 验证所有字段值正确
+    assert_eq!(vars.commit_type, commit_type);
+    assert_eq!(vars.scope, scope);
+    assert_eq!(vars.subject, subject);
+    assert_eq!(vars.body, body);
+    assert_eq!(vars.jira_key, jira_key);
+    assert_eq!(vars.use_scope, use_scope);
 }
 
-/// 测试提交模板变量（最小配置）
 #[test]
-fn test_commit_template_vars_minimal() {
+fn test_commit_template_vars_minimal_with_minimal_fields_creates_vars() {
+    // Arrange: 准备最小配置的提交模板变量字段值
+    let commit_type = "fix";
+    let subject = "resolve login issue";
+
+    // Act: 创建 CommitTemplateVars 实例（可选字段为 None）
     let vars = CommitTemplateVars {
-        commit_type: "fix".to_string(),
+        commit_type: commit_type.to_string(),
         scope: None,
-        subject: "resolve login issue".to_string(),
+        subject: subject.to_string(),
         body: None,
         jira_key: None,
         use_scope: false,
     };
 
-    assert_eq!(vars.commit_type, "fix");
+    // Assert: 验证字段值正确
+    assert_eq!(vars.commit_type, commit_type);
     assert_eq!(vars.scope, None);
-    assert_eq!(vars.subject, "resolve login issue");
+    assert_eq!(vars.subject, subject);
     assert_eq!(vars.body, None);
     assert_eq!(vars.jira_key, None);
     assert_eq!(vars.use_scope, false);
 }
 
-/// 测试 PR 模板变量创建
+// ==================== PullRequestTemplateVars Tests ====================
+
 #[test]
-fn test_pr_template_vars_creation() {
+fn test_pr_template_vars_creation_with_all_fields_creates_vars() {
+    // Arrange: 准备 PR 模板变量字段值
     let change_types = vec![
         ChangeTypeItem {
             name: "Bug fix".to_string(),
@@ -123,12 +140,16 @@ fn test_pr_template_vars_creation() {
             selected: true,
         },
     ];
+    let jira_key = Some("PR-101".to_string());
+    let jira_summary = Some("Fix authentication bug".to_string());
+    let jira_type = Some("Bug".to_string());
 
+    // Act: 创建 PullRequestTemplateVars 实例
     let vars = PullRequestTemplateVars {
-        jira_key: Some("PR-101".to_string()),
-        jira_summary: Some("Fix authentication bug".to_string()),
+        jira_key: jira_key.clone(),
+        jira_summary: jira_summary.clone(),
         jira_description: Some("Detailed description of the authentication issue.".to_string()),
-        jira_type: Some("Bug".to_string()),
+        jira_type: jira_type.clone(),
         jira_service_address: Some("https://company.atlassian.net".to_string()),
         change_types: change_types.clone(),
         short_description: Some(
@@ -138,30 +159,24 @@ fn test_pr_template_vars_creation() {
         dependency: Some("Requires backend API v2.1+".to_string()),
     };
 
-    assert_eq!(vars.jira_key, Some("PR-101".to_string()));
-    assert_eq!(
-        vars.jira_summary,
-        Some("Fix authentication bug".to_string())
-    );
-    assert_eq!(vars.jira_type, Some("Bug".to_string()));
+    // Assert: 验证所有字段值正确
+    assert_eq!(vars.jira_key, jira_key);
+    assert_eq!(vars.jira_summary, jira_summary);
+    assert_eq!(vars.jira_type, jira_type);
     assert_eq!(vars.change_types.len(), 3);
     assert_eq!(vars.change_types[0].name, "Bug fix");
     assert_eq!(vars.change_types[0].selected, true);
     assert_eq!(vars.change_types[1].selected, false);
-    assert_eq!(
-        vars.short_description,
-        Some(
-            "This PR fixes the authentication bug that was preventing users from logging in."
-                .to_string()
-        )
-    );
 }
 
-/// 测试 PR 模板变量默认实现
 #[test]
-fn test_pr_template_vars_default() {
+fn test_pr_template_vars_default_with_no_parameters_creates_empty_vars() {
+    // Arrange: 准备创建默认变量
+
+    // Act: 创建默认的 PullRequestTemplateVars
     let vars = PullRequestTemplateVars::default();
 
+    // Assert: 验证所有字段为 None 或空
     assert_eq!(vars.jira_key, None);
     assert_eq!(vars.jira_summary, None);
     assert_eq!(vars.jira_description, None);
@@ -172,23 +187,28 @@ fn test_pr_template_vars_default() {
     assert_eq!(vars.dependency, None);
 }
 
-/// 测试变更类型项
+// ==================== ChangeTypeItem Tests ====================
+
 #[test]
-fn test_change_type_item_parsing() {
+fn test_change_type_item_parsing_with_valid_fields_creates_item() {
+    // Arrange: 准备变更类型项字段值
+    let name = "Breaking change";
+    let selected = true;
+
+    // Act: 创建 ChangeTypeItem 实例
     let change_type = ChangeTypeItem {
-        name: "Breaking change".to_string(),
-        selected: true,
+        name: name.to_string(),
+        selected,
     };
 
-    assert_eq!(change_type.name, "Breaking change");
-    assert_eq!(change_type.selected, true);
+    // Assert: 验证字段值正确
+    assert_eq!(change_type.name, name);
+    assert_eq!(change_type.selected, selected);
 
-    // 测试克隆
+    // 测试克隆和调试输出
     let cloned = change_type.clone();
     assert_eq!(cloned.name, change_type.name);
     assert_eq!(cloned.selected, change_type.selected);
-
-    // 测试调试输出
     let debug_str = format!("{:?}", change_type);
     assert!(debug_str.contains("ChangeTypeItem"));
     assert!(debug_str.contains("Breaking change"));

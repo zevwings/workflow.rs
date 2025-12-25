@@ -14,20 +14,24 @@ struct TestBranchCli {
     command: BranchSubcommand,
 }
 
-// ==================== Create 命令测试 ====================
+// ==================== Create Command Tests ====================
 
 #[test]
-fn test_branch_create_command_structure() {
-    // 测试 Create 命令结构（带所有参数）
-    let cli = TestBranchCli::try_parse_from(&[
+fn test_branch_create_command_with_all_options_parses_correctly() {
+    // Arrange: 准备包含所有参数的 Create 命令输入
+    let args = &[
         "test-branch",
         "create",
         "PROJ-123",
         "--from-default",
         "--dry-run",
-    ])
-    .expect("CLI args should parse successfully");
+    ];
 
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
+        .expect("CLI args should parse successfully");
+
+    // Assert: 验证所有参数解析正确
     match cli.command {
         BranchSubcommand::Create {
             jira_id,
@@ -43,11 +47,15 @@ fn test_branch_create_command_structure() {
 }
 
 #[test]
-fn test_branch_create_command_minimal() {
-    // 测试 Create 命令最小参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create"])
+fn test_branch_create_command_with_minimal_args_parses_correctly() {
+    // Arrange: 准备最小参数的 Create 命令输入
+    let args = &["test-branch", "create"];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证最小参数解析正确
     match cli.command {
         BranchSubcommand::Create {
             jira_id,
@@ -63,11 +71,15 @@ fn test_branch_create_command_minimal() {
 }
 
 #[test]
-fn test_branch_create_command_with_jira_ticket_only() {
-    // 测试 Create 命令只带 JIRA ticket
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "PROJ-456"])
+fn test_branch_create_command_with_jira_ticket_only_parses_correctly() {
+    // Arrange: 准备只带 JIRA ticket 的 Create 命令输入
+    let args = &["test-branch", "create", "PROJ-456"];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证 JIRA ticket 解析正确
     match cli.command {
         BranchSubcommand::Create {
             jira_id,
@@ -83,11 +95,15 @@ fn test_branch_create_command_with_jira_ticket_only() {
 }
 
 #[test]
-fn test_branch_create_command_with_from_default() {
-    // 测试 Create 命令带 --from-default 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--from-default"])
+fn test_branch_create_command_with_from_default_flag_parses_correctly() {
+    // Arrange: 准备带 --from-default 参数的 Create 命令输入
+    let args = &["test-branch", "create", "--from-default"];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证 --from-default 参数解析正确
     match cli.command {
         BranchSubcommand::Create {
             jira_id,
@@ -103,11 +119,15 @@ fn test_branch_create_command_with_from_default() {
 }
 
 #[test]
-fn test_branch_create_command_with_dry_run() {
-    // 测试 Create 命令带 --dry-run 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--dry-run"])
+fn test_branch_create_command_with_dry_run_flag_parses_correctly() {
+    // Arrange: 准备带 --dry-run 参数的 Create 命令输入
+    let args = &["test-branch", "create", "--dry-run"];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证 --dry-run 参数解析正确
     match cli.command {
         BranchSubcommand::Create {
             jira_id,
@@ -122,15 +142,18 @@ fn test_branch_create_command_with_dry_run() {
     }
 }
 
-// ==================== 边界情况测试 ====================
+// ==================== Boundary Condition Tests ====================
 
 #[test]
-fn test_branch_create_command_empty_jira_id() {
-    // 测试空字符串 JIRA ID（应该被验证器拒绝）
-    // 这是正确的行为：JIRA ID 验证器不允许空字符串
-    let result = TestBranchCli::try_parse_from(&["test-branch", "create", ""]);
+fn test_branch_create_command_with_empty_jira_id_returns_error() {
+    // Arrange: 准备空字符串 JIRA ID 的输入
+    // 注意：这是正确的行为，JIRA ID 验证器不允许空字符串
+    let args = &["test-branch", "create", ""];
 
-    // 验证解析失败（空字符串被验证器拒绝）
+    // Act: 尝试解析空字符串 JIRA ID
+    let result = TestBranchCli::try_parse_from(args);
+
+    // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
         Ok(_) => panic!("Empty JIRA ID should be rejected by validator"),
         Err(e) => {
@@ -149,12 +172,16 @@ fn test_branch_create_command_empty_jira_id() {
 }
 
 #[test]
-fn test_branch_create_command_very_long_jira_id() {
-    // 测试超长 JIRA ID（边界情况）
+fn test_branch_create_command_with_very_long_jira_id_parses_correctly() {
+    // Arrange: 准备超长 JIRA ID（边界情况）
     let long_jira_id = "PROJ-".to_string() + &"1".repeat(100);
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", &long_jira_id])
+    let args = &["test-branch", "create", &long_jira_id];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证超长 JIRA ID 解析正确
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(long_jira_id));
@@ -164,13 +191,17 @@ fn test_branch_create_command_very_long_jira_id() {
 }
 
 #[test]
-fn test_branch_create_command_special_characters_in_jira_id() {
-    // 测试 JIRA ID 中的特殊字符（边界情况）
+fn test_branch_create_command_with_special_characters_in_jira_id_parses_correctly() {
+    // Arrange: 准备包含特殊字符的 JIRA ID（边界情况）
     // 注意：实际业务逻辑可能会验证 JIRA ID 格式，但 CLI 解析应该接受任何字符串
     let special_jira_id = "PROJ-123_test@example.com";
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", special_jira_id])
+    let args = &["test-branch", "create", special_jira_id];
+
+    // Act: 解析命令行参数
+    let cli = TestBranchCli::try_parse_from(args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证特殊字符 JIRA ID 解析正确
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {
             assert_eq!(jira_id.into_option(), Some(special_jira_id.to_string()));

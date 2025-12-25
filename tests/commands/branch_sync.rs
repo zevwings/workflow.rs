@@ -62,49 +62,21 @@ fn test_branch_sync_command_structure() {
     }
 }
 
-/// 测试使用rebase的分支同步
-///
-/// ## 测试目的
-/// 验证`BranchSyncCommand::sync()`使用rebase选项时的行为。
-///
-/// ## 为什么被忽略
-/// - **需要Git仓库**: 测试需要在有效的Git仓库中运行
-/// - **需要网络连接**: 需要访问GitHub API
-/// - **Git操作复杂**: rebase操作可能产生冲突
-/// - **集成测试**: 涉及完整的Git工作流
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_branch_sync_command_with_rebase -- --ignored --nocapture
-/// ```
-/// **警告**: rebase操作会修改Git历史，确保在测试环境中运行
-///
-/// ## 测试场景
-/// 1. 在Git仓库中运行测试
-/// 2. 调用BranchSyncCommand::sync()并启用rebase选项
-/// 3. 执行git rebase操作同步分支
-/// 4. 验证rebase执行结果
-///
-/// ## 预期行为
-/// - 无冲突时：成功rebase并返回Ok
-/// - 有冲突时：返回Err并提示冲突
-/// - 正确使用git rebase命令
-/// - 保持线性的提交历史
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
-fn test_branch_sync_command_with_rebase() {
-    // 测试使用 rebase 的分支同步
-    // 注意：这个测试需要：
-    // 1. 有效的 Git 仓库
-    // 2. 网络连接到 GitHub（用于 CheckCommand::run_all()）
-    // 运行方式：cargo test -- --ignored
+fn test_branch_sync_command_with_rebase_option_executes() {
+    // Arrange: 准备分支同步命令参数（启用 rebase）
+    let branch_name = "main".to_string();
+
+    // Act: 调用分支同步命令（启用 rebase 选项）
     let result = BranchSyncCommand::sync(
-        "main".to_string(),
+        branch_name,
         true,  // rebase
         false, // ff_only
         false, // squash
     );
 
+    // Assert: 验证函数返回 Result 类型（成功或失败都是可以接受的）
     match result {
         Ok(_) => {
             // 同步成功
@@ -115,49 +87,21 @@ fn test_branch_sync_command_with_rebase() {
     }
 }
 
-/// 测试只允许fast-forward的分支同步
-///
-/// ## 测试目的
-/// 验证`BranchSyncCommand::sync()`使用ff_only选项时的行为。
-///
-/// ## 为什么被忽略
-/// - **需要Git仓库**: 测试需要在有效的Git仓库中运行
-/// - **需要网络连接**: 需要访问GitHub API
-/// - **Git状态依赖**: 只在可以fast-forward时成功
-/// - **集成测试**: 涉及完整的Git工作流
-///
-/// ## 如何手动运行
-/// ```bash
-/// cargo test test_branch_sync_command_with_ff_only -- --ignored --nocapture
-/// ```
-/// **注意**: 只有在分支可以fast-forward合并时才会成功
-///
-/// ## 测试场景
-/// 1. 在Git仓库中运行测试
-/// 2. 调用BranchSyncCommand::sync()并启用ff_only选项
-/// 3. 尝试fast-forward合并
-/// 4. 验证合并结果
-///
-/// ## 预期行为
-/// - 可以fast-forward时：成功合并并返回Ok
-/// - 不能fast-forward时：返回Err并说明原因
-/// - 正确使用git merge --ff-only命令
-/// - 不创建额外的合并提交
 #[test]
 #[ignore] // 需要实际的 Git 仓库和网络连接（GitHub API）
-fn test_branch_sync_command_with_ff_only() {
-    // 测试只允许 fast-forward 的合并
-    // 注意：这个测试需要：
-    // 1. 有效的 Git 仓库
-    // 2. 网络连接到 GitHub（用于 CheckCommand::run_all()）
-    // 运行方式：cargo test -- --ignored
+fn test_branch_sync_command_with_ff_only_option_executes() {
+    // Arrange: 准备分支同步命令参数（启用 ff_only）
+    let branch_name = "main".to_string();
+
+    // Act: 调用分支同步命令（启用 ff_only 选项）
     let result = BranchSyncCommand::sync(
-        "main".to_string(),
+        branch_name,
         false, // rebase
         true,  // ff_only
         false, // squash
     );
 
+    // Assert: 验证函数返回 Result 类型（成功或失败都是可以接受的）
     match result {
         Ok(_) => {
             // 同步成功

@@ -4,27 +4,43 @@
 
 use workflow::base::dialog::ConfirmDialog;
 
+// ==================== ConfirmDialog Creation Tests ====================
+
 #[test]
-fn test_confirm_dialog_new() {
-    // 测试创建确认对话框
-    let _dialog = ConfirmDialog::new("Continue?");
-    // 验证可以创建对话框
+fn test_confirm_dialog_new_with_message_creates_dialog() {
+    // Arrange: 准备提示消息
+    let message = "Continue?";
+
+    // Act: 创建确认对话框
+    let _dialog = ConfirmDialog::new(message);
+
+    // Assert: 验证可以创建对话框
     assert!(true);
 }
 
 #[test]
-fn test_confirm_dialog_with_default() {
-    // 测试设置默认值（覆盖 confirm.rs:83-85）
-    let _dialog = ConfirmDialog::new("Continue?").with_default(true);
-    // 验证链式调用成功
+fn test_confirm_dialog_with_default_with_default_value_creates_dialog() {
+    // Arrange: 准备提示消息和默认值
+    let message = "Continue?";
+    let default_value = true;
+
+    // Act: 创建带默认值的确认对话框
+    let _dialog = ConfirmDialog::new(message).with_default(default_value);
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 
 #[test]
-fn test_confirm_dialog_with_cancel_message() {
-    // 测试设置取消消息（覆盖 confirm.rs:99-101）
-    let _dialog = ConfirmDialog::new("Continue?").with_cancel_message("Operation cancelled.");
-    // 验证链式调用成功
+fn test_confirm_dialog_with_cancel_message_with_message_creates_dialog() {
+    // Arrange: 准备提示消息和取消消息
+    let message = "Continue?";
+    let cancel_message = "Operation cancelled.";
+
+    // Act: 创建带取消消息的确认对话框
+    let _dialog = ConfirmDialog::new(message).with_cancel_message(cancel_message);
+
+    // Assert: 验证链式调用成功
     assert!(true);
 }
 

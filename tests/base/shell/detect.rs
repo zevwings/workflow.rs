@@ -6,46 +6,42 @@ use clap_complete::Shell;
 use std::env;
 use workflow::base::shell::Detect;
 
+// ==================== Shell Detection Tests ====================
+
 #[test]
-fn test_detect_shell_from_env() {
-    // 测试从环境变量检测 shell（覆盖 detect.rs:24-34）
-    // 注意：这个测试依赖于实际的环境变量，可能在不同环境中表现不同
+fn test_detect_shell_from_env_with_env_var_returns_shell() {
+    // Arrange: 准备从环境变量检测shell（注意：依赖于实际环境变量）
+
+    // Act: 从环境变量检测shell
     let result = Detect::shell();
 
-    // 如果检测成功，验证返回的 shell 类型是支持的
+    // Assert: 验证返回支持的shell类型或错误
     if let Ok(shell) = result {
-        // 验证 shell 类型是支持的
         match shell {
             Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {
                 assert!(true);
             }
             _ => {
-                // 如果检测到其他 shell 类型，也接受（clap_complete 可能支持更多类型）
+                // 如果检测到其他shell类型，也接受
                 assert!(true);
             }
         }
     } else {
-        // 如果检测失败，可能是因为环境变量未设置或不支持的 shell
-        // 这在某些测试环境中是正常的
+        // 如果检测失败，可能是因为环境变量未设置或不支持的shell
         assert!(result.is_err());
     }
 }
 
 #[test]
-fn test_detect_shell_error_message() {
-    // 测试不支持的 shell 错误消息
-    // 注意：这个测试可能在实际环境中失败，因为环境变量可能已设置
-    // 我们主要验证错误处理逻辑
-
-    // 保存原始 SHELL 环境变量
+fn test_detect_shell_error_message_with_unsupported_shell_returns_error() {
+    // Arrange: 保存原始SHELL环境变量并设置不支持的shell
     let original_shell = env::var("SHELL").ok();
-
-    // 设置一个不支持的 shell 路径
     env::set_var("SHELL", "/usr/bin/unsupported-shell");
 
+    // Act: 尝试检测shell
     let result = Detect::shell();
 
-    // 验证返回错误
+    // Assert: 验证返回错误且错误消息包含相关信息
     if result.is_err() {
         let error_msg = result.unwrap_err().to_string();
         assert!(error_msg.contains("Unsupported shell") || error_msg.contains("unsupported-shell"));
@@ -59,26 +55,21 @@ fn test_detect_shell_error_message() {
 }
 
 #[test]
-fn test_detect_installed_shells() {
-    // 测试检测已安装的 shell（覆盖 detect.rs:44-70）
+fn test_detect_installed_shells_with_system_returns_shells() {
+    // Arrange: 准备检测已安装的shell
+
+    // Act: 检测已安装的shell
     let shells = Detect::installed_shells();
 
-    // 验证返回的 shell 列表不为空（至少应该包含当前 shell）
-    // 注意：在某些环境中 /etc/shells 可能不存在或为空
-    // 但至少应该尝试返回当前 shell
-
-    // 验证返回的是 Vec<Shell>
-    // 验证函数可以正常执行
+    // Assert: 验证返回有效的Shell类型列表
     let _shell_count = shells.len();
-
-    // 如果检测到 shell，验证它们都是有效的 Shell 类型
     for shell in &shells {
         match shell {
             Shell::Bash | Shell::Zsh | Shell::Fish | Shell::PowerShell | Shell::Elvish => {
                 assert!(true);
             }
             _ => {
-                // 如果检测到其他 shell 类型，也接受
+                // 如果检测到其他shell类型，也接受
                 assert!(true);
             }
         }
@@ -86,14 +77,13 @@ fn test_detect_installed_shells() {
 }
 
 #[test]
-fn test_detect_installed_shells_fallback() {
-    // 测试当 /etc/shells 不存在时的回退逻辑
-    // 应该至少返回当前 shell（如果可用）
+fn test_detect_installed_shells_fallback_with_missing_etc_shells_handles_gracefully() {
+    // Arrange: 准备检测已安装的shell（当/etc/shells不存在时）
+
+    // Act: 检测已安装的shell
     let shells = Detect::installed_shells();
 
-    // 即使 /etc/shells 不存在，也应该尝试返回当前 shell
-    // 所以 shells 可能为空（如果当前 shell 也无法检测）或包含当前 shell
-    // 验证函数可以正常执行
+    // Assert: 验证函数可以正常执行（可能为空或包含当前shell）
     let _shell_count = shells.len();
 }
 

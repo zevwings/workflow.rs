@@ -169,19 +169,17 @@ fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
     Ok(())
 }
 
-// ==================== 暂存操作测试 ====================
+// ==================== Staging Operations Tests ====================
 
 #[test]
 #[serial]
-fn test_stage_all_changes() -> Result<()> {
-    // 新版 GitTestEnv 自动切换工作目录，无需手动管理
+fn test_stage_all_changes_with_multiple_files_stages_all() -> Result<()> {
+    // Arrange: 准备 Git 测试环境并创建多个文件
     let env = GitTestEnv::new()?;
-
-    // 创建一些新文件
     std::fs::write(env.path().join("new_file1.txt"), "Content 1")?;
     std::fs::write(env.path().join("new_file2.txt"), "Content 2")?;
 
-    // 修改现有文件
+    // Act: 暂存所有变更
     std::fs::write(env.path().join("README.md"), "# Updated README")?;
 
     // 暂存所有更改

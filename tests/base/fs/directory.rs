@@ -13,26 +13,44 @@ use std::fs;
 use tempfile::TempDir;
 use workflow::base::fs::directory::DirectoryWalker;
 
+// ==================== DirectoryWalker Creation Tests ====================
+
 #[test]
-fn test_directory_walker_new() {
+fn test_directory_walker_new_with_string_path_creates_instance() {
+    // Arrange: 准备字符串路径
+
+    // Act: 创建 DirectoryWalker 实例
     let _walker = DirectoryWalker::new("test/path");
-    // 验证可以创建 DirectoryWalker
+
+    // Assert: 验证可以创建 DirectoryWalker（不会panic）
+    assert!(true);
 }
 
 #[test]
-fn test_directory_walker_new_pathbuf() {
+fn test_directory_walker_new_with_pathbuf_creates_instance() {
+    // Arrange: 准备 PathBuf 路径
     let path = std::path::PathBuf::from("test/path");
+
+    // Act: 创建 DirectoryWalker 实例
     let _walker = DirectoryWalker::new(path);
-    // 验证可以创建 DirectoryWalker
+
+    // Assert: 验证可以创建 DirectoryWalker（不会panic）
+    assert!(true);
 }
 
+// ==================== Directory Creation Tests ====================
+
 #[test]
-fn test_directory_walker_ensure_exists() -> color_eyre::Result<()> {
+fn test_directory_walker_ensure_exists_with_new_path_creates_directory() -> color_eyre::Result<()> {
+    // Arrange: 准备新目录路径
     let temp_dir = TempDir::new()?;
     let new_dir = temp_dir.path().join("new/deep/nested/directory");
 
+    // Act: 确保目录存在
     let walker = DirectoryWalker::new(&new_dir);
     walker.ensure_exists()?;
+
+    // Assert: 验证目录已创建
     assert!(new_dir.exists());
     assert!(new_dir.is_dir());
 
@@ -40,38 +58,46 @@ fn test_directory_walker_ensure_exists() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_directory_walker_ensure_exists_existing() -> color_eyre::Result<()> {
+fn test_directory_walker_ensure_exists_with_existing_dir_succeeds() -> color_eyre::Result<()> {
+    // Arrange: 准备已存在的目录
     let temp_dir = TempDir::new()?;
     let existing_dir = temp_dir.path().join("existing");
     fs::create_dir_all(&existing_dir)?;
 
+    // Act: 确保目录存在（目录已存在）
     let walker = DirectoryWalker::new(&existing_dir);
-    // 应该不会失败，即使目录已存在
     walker.ensure_exists()?;
+
+    // Assert: 验证目录仍然存在
     assert!(existing_dir.exists());
 
     Ok(())
 }
 
 #[test]
-fn test_directory_walker_ensure_exists_multiple_times() -> color_eyre::Result<()> {
+fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds() -> color_eyre::Result<()> {
+    // Arrange: 准备目录路径
     let temp_dir = TempDir::new()?;
     let dir_path = temp_dir.path().join("test/dir");
 
+    // Act: 多次调用 ensure_exists
     let walker = DirectoryWalker::new(&dir_path);
-    // 多次调用应该都成功
     walker.ensure_exists()?;
     walker.ensure_exists()?;
     walker.ensure_exists()?;
 
+    // Assert: 验证目录存在且多次调用都成功
     assert!(dir_path.exists());
     assert!(dir_path.is_dir());
 
     Ok(())
 }
 
+// ==================== Directory Listing Tests ====================
+
 #[test]
-fn test_directory_walker_list_dirs() -> color_eyre::Result<()> {
+fn test_directory_walker_list_dirs_with_nested_structure_returns_all_dirs() -> color_eyre::Result<()> {
+    // Arrange: 准备包含子目录的目录结构
     let temp_dir = TempDir::new()?;
     let dir_path = temp_dir.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
@@ -79,16 +105,19 @@ fn test_directory_walker_list_dirs() -> color_eyre::Result<()> {
     fs::create_dir(dir_path.join("subdir2"))?;
     fs::write(dir_path.join("file.txt"), "content")?;
 
+    // Act: 列出所有目录
     let walker = DirectoryWalker::new(&dir_path);
     let dirs = walker.list_dirs()?;
-    // 应该包含根目录和子目录
+
+    // Assert: 验证返回至少3个目录（根目录和子目录）
     assert!(dirs.len() >= 3);
 
     Ok(())
 }
 
 #[test]
-fn test_directory_walker_list_files() -> color_eyre::Result<()> {
+fn test_directory_walker_list_files_with_mixed_content_returns_only_files() -> color_eyre::Result<()> {
+    // Arrange: 准备包含文件和子目录的目录结构
     let temp_dir = TempDir::new()?;
     let dir_path = temp_dir.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
@@ -96,8 +125,11 @@ fn test_directory_walker_list_files() -> color_eyre::Result<()> {
     fs::write(dir_path.join("file2.txt"), "content2")?;
     fs::create_dir(dir_path.join("subdir"))?;
 
+    // Act: 列出所有文件
     let walker = DirectoryWalker::new(&dir_path);
     let files = walker.list_files()?;
+
+    // Assert: 验证只返回文件（不包含目录）
     assert_eq!(files.len(), 2);
 
     Ok(())

@@ -18,83 +18,106 @@ fn test_field_builder_new() {
     assert!(true);
 }
 
+// ==================== FormFieldBuilder Field Addition Tests ====================
+
 #[test]
-fn test_field_builder_add_text() {
-    // 测试添加文本字段（覆盖 field_builder.rs:28-44）
+fn test_field_builder_add_text_with_text_field_adds_field() {
+    // Arrange: 准备FormBuilder
+
+    // Act: 添加文本字段
     let builder = FormBuilder::new().add_group(
         "test",
         |g| g.step(|f| f.add_text("field1", "Field 1")),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证字段创建成功
+
+    // Assert: 验证字段创建成功
     assert_eq!(builder.groups.len(), 1);
     assert!(!builder.groups[0].steps.is_empty());
     assert!(!builder.groups[0].steps[0].fields.is_empty());
 }
 
 #[test]
-fn test_field_builder_add_password() {
-    // 测试添加密码字段（覆盖 field_builder.rs:47-63）
+fn test_field_builder_add_password_with_password_field_adds_field() {
+    // Arrange: 准备FormBuilder
+
+    // Act: 添加密码字段
     let builder = FormBuilder::new().add_group(
         "test",
         |g| g.step(|f| f.add_password("password", "Enter password")),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证密码字段创建成功
+
+    // Assert: 验证密码字段创建成功
     assert_eq!(builder.groups.len(), 1);
     assert!(!builder.groups[0].steps[0].fields.is_empty());
 }
 
 #[test]
-fn test_field_builder_add_selection() {
-    // 测试添加选择字段（覆盖 field_builder.rs:66-87）
+fn test_field_builder_add_selection_with_selection_field_adds_field() {
+    // Arrange: 准备FormBuilder和选项列表
     let choices = vec!["Option 1".to_string(), "Option 2".to_string()];
+
+    // Act: 添加选择字段
     let builder = FormBuilder::new().add_group(
         "test",
         |g| g.step(|f| f.add_selection("choice", "Choose option", choices.clone())),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证选择字段创建成功
+
+    // Assert: 验证选择字段创建成功
     assert_eq!(builder.groups.len(), 1);
     assert!(!builder.groups[0].steps[0].fields.is_empty());
 }
 
 #[test]
-fn test_field_builder_add_confirmation() {
-    // 测试添加确认字段（覆盖 field_builder.rs:90-106）
+fn test_field_builder_add_confirmation_with_confirmation_field_adds_field() {
+    // Arrange: 准备FormBuilder
+
+    // Act: 添加确认字段
     let builder = FormBuilder::new().add_group(
         "test",
         |g| g.step(|f| f.add_confirmation("confirm", "Confirm?")),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证确认字段创建成功
+
+    // Assert: 验证确认字段创建成功
     assert_eq!(builder.groups.len(), 1);
     assert!(!builder.groups[0].steps[0].fields.is_empty());
 }
 
+// ==================== FormFieldBuilder Field Configuration Tests ====================
+
 #[test]
-fn test_field_builder_required() {
-    // 测试标记字段为必填（覆盖 field_builder.rs:109-116）
+fn test_field_builder_required_with_required_flag_marks_field_required() {
+    // Arrange: 准备FormBuilder
+
+    // Act: 添加必填字段
     let builder = FormBuilder::new().add_group(
         "test",
         |g| g.step(|f| f.add_text("field1", "Field 1").required()),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证字段标记为必填
+
+    // Assert: 验证字段标记为必填
     assert_eq!(builder.groups.len(), 1);
     let field = &builder.groups[0].steps[0].fields[0];
     assert!(field.required);
 }
 
 #[test]
-fn test_field_builder_default_string() {
-    // 测试设置字符串默认值（覆盖 field_builder.rs:119-133）
+fn test_field_builder_default_string_with_default_value_sets_default() {
+    // Arrange: 准备FormBuilder和默认值
+    let default_value = "default_value";
+
+    // Act: 添加带默认值的字段
     let builder = FormBuilder::new().add_group(
         "test",
-        |g| g.step(|f| f.add_text("field1", "Field 1").default("default_value")),
+        |g| g.step(|f| f.add_text("field1", "Field 1").default(default_value)),
         workflow::base::dialog::GroupConfig::required(),
     );
-    // 验证默认值设置成功
+
+    // Assert: 验证默认值设置成功
     assert_eq!(builder.groups.len(), 1);
     let field = &builder.groups[0].steps[0].fields[0];
     assert!(field.default_value.is_some());

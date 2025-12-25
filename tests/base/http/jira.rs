@@ -14,11 +14,14 @@ fn setup_mock_server() -> MockServer {
     mock_server
 }
 
+// ==================== Jira API Issue Tests ====================
+
 #[test]
-fn test_get_issue_success() {
+fn test_get_issue_success_with_valid_issue_key_returns_issue() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
-    // 创建 Mock
+    // Act: 创建Mock响应
     let _mock = mock_server
         .server
         .as_mut()
@@ -42,21 +45,16 @@ fn test_get_issue_success() {
         )
         .create();
 
-    // 注意：实际测试需要设置认证信息
-    // 这里仅展示 Mock 设置方式
-    // let jira = JiraClient::new(...);
-    // let issue = jira.get_issue("PROJ-123")?;
-    // assert_eq!(issue.key, "PROJ-123");
-
-    // 验证 Mock 被调用
-    // _mock.assert();
+    // Assert: 注意：实际测试需要设置认证信息
+    // 验证Mock被调用: _mock.assert();
 }
 
 #[test]
-fn test_get_issue_not_found() {
+fn test_get_issue_not_found_with_invalid_issue_key_returns_error() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
-    // 创建错误响应的 Mock
+    // Act: 创建错误响应的Mock
     let _mock = mock_server
         .server
         .as_mut()
@@ -67,19 +65,17 @@ fn test_get_issue_not_found() {
         .with_body(r#"{"errorMessages":["Issue does not exist or you do not have permission to see it."]}"#)
         .create();
 
-    // 测试错误处理
-    // let jira = JiraClient::new(...);
-    // let result = jira.get_issue("PROJ-999");
-    // assert!(result.is_err());
-
-    // 验证 Mock 被调用
-    // _mock.assert();
+    // Assert: 注意：实际测试需要设置认证信息
+    // 测试错误处理: assert!(result.is_err());
+    // 验证Mock被调用: _mock.assert();
 }
 
 #[test]
-fn test_search_issues() {
+fn test_search_issues_with_valid_query_returns_issues() {
+    // Arrange: 准备Mock服务器
     let mut mock_server = setup_mock_server();
 
+    // Act: 创建Mock响应
     let _mock = mock_server
         .server
         .as_mut()

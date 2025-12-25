@@ -110,87 +110,99 @@ fn test_jira_settings_clone_and_debug() {
     assert!(debug_str.contains("test@example.com"));
 }
 
-// ==================== GitHubSettings 测试 ====================
+// ==================== GitHubSettings Tests ====================
 
-/// 测试 GitHubSettings 创建和账号管理
 #[test]
-fn test_github_settings_creation() {
+fn test_github_settings_creation_with_valid_accounts_creates_settings() {
+    // Arrange: 准备测试用的 GitHubSettings
     let github_settings = create_test_github_settings();
 
+    // Act: 验证设置创建
+    // (验证在 Assert 中完成)
+
+    // Assert: 验证账号数量和当前账号设置正确
     assert_eq!(github_settings.accounts.len(), 2);
     assert_eq!(github_settings.current, Some("personal".to_string()));
-
-    // 验证账号信息
     let personal_account = &github_settings.accounts[0];
     assert_eq!(personal_account.name, "personal");
     assert_eq!(personal_account.email, "personal@example.com");
     assert_eq!(personal_account.api_token, "ghp_personal_token");
 }
 
-/// 测试 GitHubSettings 当前账号获取
 #[test]
-fn test_github_settings_current_account() {
+fn test_github_settings_current_account_with_valid_settings_returns_account() {
+    // Arrange: 准备测试用的 GitHubSettings
     let github_settings = create_test_github_settings();
 
-    // 测试获取当前账号
+    // Act: 获取当前账号和 token
     let current_account = github_settings.get_current_account();
-    assert!(current_account.is_some());
+    let current_token = github_settings.get_current_token();
 
+    // Assert: 验证当前账号和 token 正确
+    assert!(current_account.is_some());
     let account = current_account.expect("current account should exist");
     assert_eq!(account.name, "personal");
     assert_eq!(account.email, "personal@example.com");
-
-    // 测试获取当前 token
-    let current_token = github_settings.get_current_token();
     assert_eq!(current_token, Some("ghp_personal_token"));
 }
 
-/// 测试 GitHubSettings 无当前账号设置
 #[test]
-fn test_github_settings_no_current_account() {
+fn test_github_settings_no_current_account_with_none_current_returns_first_account() {
+    // Arrange: 准备 GitHubSettings（current 为 None）
     let mut github_settings = create_test_github_settings();
     github_settings.current = None;
 
-    // 应该返回第一个账号
+    // Act: 获取当前账号
     let current_account = github_settings.get_current_account();
-    assert!(current_account.is_some());
 
+    // Assert: 验证返回第一个账号
+    assert!(current_account.is_some());
     let account = current_account.expect("should return first account");
     assert_eq!(account.name, "personal");
 }
 
-/// 测试 GitHubSettings 空账号列表
 #[test]
-fn test_github_settings_empty_accounts() {
+fn test_github_settings_empty_accounts_with_no_accounts_returns_none() {
+    // Arrange: 准备空的 GitHubSettings
     let empty_github = GitHubSettings {
         accounts: vec![],
         current: None,
     };
 
-    assert!(empty_github.get_current_account().is_none());
-    assert!(empty_github.get_current_token().is_none());
+    // Act: 获取当前账号和 token
+    let current_account = empty_github.get_current_account();
+    let current_token = empty_github.get_current_token();
+
+    // Assert: 验证返回 None
+    assert!(current_account.is_none());
+    assert!(current_token.is_none());
 }
 
-/// 测试 GitHubSettings 默认实现
 #[test]
-fn test_github_settings_default() {
+fn test_github_settings_default_with_no_parameters_creates_empty_settings() {
+    // Arrange: 准备创建默认设置
+
+    // Act: 创建默认的 GitHubSettings
     let default_github = GitHubSettings::default();
 
+    // Assert: 验证账号列表为空且当前账号为 None
     assert!(default_github.accounts.is_empty());
     assert_eq!(default_github.current, None);
 }
 
-// ==================== LLMSettings 测试 ====================
+// ==================== LLMSettings Tests ====================
 
-/// 测试 LLMSettings 创建和提供商管理
 #[test]
-fn test_llm_settings_creation() {
+fn test_llm_settings_creation_with_valid_providers_creates_settings() {
+    // Arrange: 准备测试用的 LLMSettings
     let llm_settings = create_test_llm_settings();
 
+    // Act: 验证设置创建
+    // (验证在 Assert 中完成)
+
+    // Assert: 验证提供商和语言设置正确，以及各个提供商配置正确
     assert_eq!(llm_settings.provider, "openai");
     assert_eq!(llm_settings.language, "English");
-
-    // 验证各个提供商配置
     assert_eq!(
         llm_settings.openai.key,
         Some("sk-test_openai_key".to_string())
@@ -206,19 +218,24 @@ fn test_llm_settings_creation() {
     );
 }
 
-/// 测试 LLMSettings 当前提供商获取
 #[test]
-fn test_llm_settings_current_provider() {
+fn test_llm_settings_current_provider_with_valid_settings_returns_provider() {
+    // Arrange: 准备测试用的 LLMSettings
     let llm_settings = create_test_llm_settings();
 
+    // Act: 获取当前提供商
     let current_provider = llm_settings.current_provider();
+
+    // Assert: 验证当前提供商配置正确
     assert_eq!(current_provider.key, Some("sk-test_openai_key".to_string()));
     assert_eq!(current_provider.model, Some("gpt-4".to_string()));
 }
 
-/// 测试 LLMSettings 默认值
 #[test]
-fn test_llm_settings_defaults() {
+fn test_llm_settings_defaults_with_no_parameters_returns_default_values() {
+    // Arrange: 准备检查默认值
+
+    // Act & Assert: 验证各个默认值方法返回正确的值
     assert_eq!(LLMSettings::default_provider(), "openai");
     assert_eq!(LLMSettings::default_language(), "en");
     assert_eq!(LLMSettings::default_model("openai"), "gpt-4.0");
@@ -226,21 +243,24 @@ fn test_llm_settings_defaults() {
     assert_eq!(LLMSettings::default_model("unknown"), ""); // proxy 必须输入，没有默认值
 }
 
-/// 测试 LLMProviderSettings 创建
 #[test]
-fn test_llm_provider_settings_creation() {
+fn test_llm_provider_settings_creation_with_valid_fields_creates_settings() {
+    // Arrange: 准备提供商设置字段值
+    let url = Some("https://api.example.com".to_string());
+    let key = Some("test_key".to_string());
+    let model = Some("test_model".to_string());
+
+    // Act: 创建 LLMProviderSettings 实例
     let provider_settings = LLMProviderSettings {
-        url: Some("https://api.example.com".to_string()),
-        key: Some("test_key".to_string()),
-        model: Some("test_model".to_string()),
+        url: url.clone(),
+        key: key.clone(),
+        model: model.clone(),
     };
 
-    assert_eq!(
-        provider_settings.url,
-        Some("https://api.example.com".to_string())
-    );
-    assert_eq!(provider_settings.key, Some("test_key".to_string()));
-    assert_eq!(provider_settings.model, Some("test_model".to_string()));
+    // Assert: 验证字段值正确
+    assert_eq!(provider_settings.url, url);
+    assert_eq!(provider_settings.key, key);
+    assert_eq!(provider_settings.model, model);
 
     // 测试默认值
     let default_provider = LLMProviderSettings::default();

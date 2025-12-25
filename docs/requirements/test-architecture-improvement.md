@@ -114,9 +114,9 @@ fn test_example() -> Result<()> {
     let temp_dir = tempfile::tempdir()?;
     let original_dir = std::env::current_dir()?;
     std::env::set_current_dir(temp_dir.path())?;
-    
+
     // 测试代码...
-    
+
     std::env::set_current_dir(original_dir)?;
     Ok(())
 }
@@ -130,9 +130,9 @@ use tests::common::environments::GitTestEnv;
 #[serial]
 fn test_example() -> Result<()> {
     let _env = GitTestEnv::new()?;  // 自动隔离和清理
-    
+
     // 测试代码...
-    
+
     Ok(())
 }
 ```

@@ -6,134 +6,167 @@ use pretty_assertions::assert_eq;
 use std::str::FromStr;
 use workflow::base::LogLevel;
 
+// ==================== LogLevel Parsing Tests ====================
+
 #[test]
-fn test_log_level_from_str_off() {
-    assert_eq!(
-        LogLevel::from_str("off").expect("'off' should parse"),
-        LogLevel::None
-    );
-    assert_eq!(
-        LogLevel::from_str("OFF").expect("'OFF' should parse"),
-        LogLevel::None
-    );
-    assert_eq!(
-        LogLevel::from_str("none").expect("'none' should parse"),
-        LogLevel::None
-    );
-    assert_eq!(
-        LogLevel::from_str("NONE").expect("'NONE' should parse"),
-        LogLevel::None
-    );
+fn test_log_level_from_str_off_with_various_cases_returns_none() {
+    // Arrange: 准备各种大小写的 "off" 和 "none" 字符串
+    let inputs = ["off", "OFF", "none", "NONE"];
+
+    // Act & Assert: 验证所有变体都解析为 None
+    for input in inputs.iter() {
+        assert_eq!(
+            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
+            LogLevel::None
+        );
+    }
 }
 
 #[test]
-fn test_log_level_from_str_error() {
-    assert_eq!(
-        LogLevel::from_str("error").expect("'error' should parse"),
-        LogLevel::Error
-    );
-    assert_eq!(
-        LogLevel::from_str("ERROR").expect("'ERROR' should parse"),
-        LogLevel::Error
-    );
-    assert_eq!(
-        LogLevel::from_str("Error").expect("'Error' should parse"),
-        LogLevel::Error
-    );
+fn test_log_level_from_str_error_with_various_cases_returns_error() {
+    // Arrange: 准备各种大小写的 "error" 字符串
+    let inputs = ["error", "ERROR", "Error"];
+
+    // Act & Assert: 验证所有变体都解析为 Error
+    for input in inputs.iter() {
+        assert_eq!(
+            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
+            LogLevel::Error
+        );
+    }
 }
 
 #[test]
-fn test_log_level_from_str_warn() {
-    assert_eq!(
-        LogLevel::from_str("warn").expect("'warn' should parse"),
-        LogLevel::Warn
-    );
-    assert_eq!(
-        LogLevel::from_str("WARN").expect("'WARN' should parse"),
-        LogLevel::Warn
-    );
+fn test_log_level_from_str_warn_with_various_cases_returns_warn() {
+    // Arrange: 准备各种大小写的 "warn" 字符串
+    let inputs = ["warn", "WARN"];
+
+    // Act & Assert: 验证所有变体都解析为 Warn
+    for input in inputs.iter() {
+        assert_eq!(
+            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
+            LogLevel::Warn
+        );
+    }
 }
 
 #[test]
-fn test_log_level_from_str_info() {
-    assert_eq!(
-        LogLevel::from_str("info").expect("'info' should parse"),
-        LogLevel::Info
-    );
-    assert_eq!(
-        LogLevel::from_str("INFO").expect("'INFO' should parse"),
-        LogLevel::Info
-    );
+fn test_log_level_from_str_info_with_various_cases_returns_info() {
+    // Arrange: 准备各种大小写的 "info" 字符串
+    let inputs = ["info", "INFO"];
+
+    // Act & Assert: 验证所有变体都解析为 Info
+    for input in inputs.iter() {
+        assert_eq!(
+            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
+            LogLevel::Info
+        );
+    }
 }
 
 #[test]
-fn test_log_level_from_str_debug() {
-    assert_eq!(
-        LogLevel::from_str("debug").expect("'debug' should parse"),
-        LogLevel::Debug
-    );
-    assert_eq!(
-        LogLevel::from_str("DEBUG").expect("'DEBUG' should parse"),
-        LogLevel::Debug
-    );
+fn test_log_level_from_str_debug_with_various_cases_returns_debug() {
+    // Arrange: 准备各种大小写的 "debug" 字符串
+    let inputs = ["debug", "DEBUG"];
+
+    // Act & Assert: 验证所有变体都解析为 Debug
+    for input in inputs.iter() {
+        assert_eq!(
+            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
+            LogLevel::Debug
+        );
+    }
 }
 
 #[test]
-fn test_log_level_from_str_invalid() {
-    assert!(LogLevel::from_str("invalid").is_err());
-    assert!(LogLevel::from_str("").is_err());
-    assert!(LogLevel::from_str("trace").is_err());
+fn test_log_level_from_str_invalid_with_invalid_strings_returns_error() {
+    // Arrange: 准备无效的字符串
+    let invalid_inputs = ["invalid", "", "trace"];
+
+    // Act & Assert: 验证所有无效输入都返回错误
+    for input in invalid_inputs.iter() {
+        assert!(LogLevel::from_str(input).is_err(), "Input '{}' should fail to parse", input);
+    }
 }
 
-#[test]
-fn test_log_level_as_str() {
-    assert_eq!(LogLevel::None.as_str(), "off");
-    assert_eq!(LogLevel::Error.as_str(), "error");
-    assert_eq!(LogLevel::Warn.as_str(), "warn");
-    assert_eq!(LogLevel::Info.as_str(), "info");
-    assert_eq!(LogLevel::Debug.as_str(), "debug");
-}
+// ==================== LogLevel String Conversion Tests ====================
 
 #[test]
-fn test_log_level_should_log() {
+fn test_log_level_as_str_with_all_levels_returns_string_representation() {
+    // Arrange: 准备所有日志级别和对应的字符串表示
+    let levels = [
+        (LogLevel::None, "off"),
+        (LogLevel::Error, "error"),
+        (LogLevel::Warn, "warn"),
+        (LogLevel::Info, "info"),
+        (LogLevel::Debug, "debug"),
+    ];
+
+    // Act & Assert: 验证每个级别的字符串表示正确
+    for (level, expected_str) in levels.iter() {
+        assert_eq!(level.as_str(), *expected_str);
+    }
+}
+
+// ==================== LogLevel Should Log Tests ====================
+
+#[test]
+fn test_log_level_should_log_with_various_levels_returns_correct_result() {
+    // Arrange: 准备各种日志级别组合
+
+    // Act & Assert: 验证 Debug 级别应该记录所有级别
     assert!(LogLevel::Debug.should_log(LogLevel::Debug));
     assert!(LogLevel::Debug.should_log(LogLevel::Info));
     assert!(LogLevel::Debug.should_log(LogLevel::Warn));
     assert!(LogLevel::Debug.should_log(LogLevel::Error));
 
+    // Act & Assert: 验证 Info 级别应该记录 Info 及以上级别
     assert!(LogLevel::Info.should_log(LogLevel::Info));
     assert!(LogLevel::Info.should_log(LogLevel::Warn));
     assert!(LogLevel::Info.should_log(LogLevel::Error));
     assert!(!LogLevel::Info.should_log(LogLevel::Debug));
 
+    // Act & Assert: 验证 Warn 级别应该记录 Warn 及以上级别
     assert!(LogLevel::Warn.should_log(LogLevel::Warn));
     assert!(LogLevel::Warn.should_log(LogLevel::Error));
     assert!(!LogLevel::Warn.should_log(LogLevel::Info));
     assert!(!LogLevel::Warn.should_log(LogLevel::Debug));
 
+    // Act & Assert: 验证 Error 级别只应该记录 Error
     assert!(LogLevel::Error.should_log(LogLevel::Error));
     assert!(!LogLevel::Error.should_log(LogLevel::Warn));
     assert!(!LogLevel::Error.should_log(LogLevel::Info));
     assert!(!LogLevel::Error.should_log(LogLevel::Debug));
 
+    // Act & Assert: 验证 None 级别不应该记录任何级别
     assert!(!LogLevel::None.should_log(LogLevel::Error));
 }
 
+// ==================== LogLevel Ordering Tests ====================
+
 #[test]
-fn test_log_level_ordering() {
+fn test_log_level_ordering_with_various_levels_returns_correct_order() {
+    // Arrange: 准备各种日志级别
+
+    // Act & Assert: 验证级别顺序（Debug > Info > Warn > Error > None）
     assert!(LogLevel::Debug > LogLevel::Info);
     assert!(LogLevel::Info > LogLevel::Warn);
     assert!(LogLevel::Warn > LogLevel::Error);
     assert!(LogLevel::Error > LogLevel::None);
-
     assert!(LogLevel::Debug >= LogLevel::Info);
     assert!(LogLevel::Info >= LogLevel::Info);
 }
 
+// ==================== LogLevel Default and Management Tests ====================
+
 #[test]
-fn test_log_level_default_level() {
+fn test_log_level_default_level_with_no_parameters_returns_default() {
+    // Arrange: 准备获取默认级别
+
+    // Act: 获取默认级别
     let level = LogLevel::default_level();
-    // 根据编译模式验证返回值
+
+    // Assert: 根据编译模式验证返回值
     if cfg!(debug_assertions) {
         assert_eq!(level, LogLevel::Debug);
     } else {
@@ -142,12 +175,14 @@ fn test_log_level_default_level() {
 }
 
 #[test]
-fn test_log_level_set_and_get() {
-    // 保存原始级别
+fn test_log_level_set_and_get_with_valid_level_sets_and_gets_level() {
+    // Arrange: 保存原始级别
     let original = LogLevel::get_level();
 
-    // 设置新级别
+    // Act: 设置新级别
     LogLevel::set_level(LogLevel::Warn);
+
+    // Assert: 验证级别已设置
     assert_eq!(LogLevel::get_level(), LogLevel::Warn);
 
     // 恢复原始级别

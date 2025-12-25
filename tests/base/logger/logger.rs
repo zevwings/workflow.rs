@@ -17,47 +17,47 @@ use workflow::trace_error;
 use workflow::trace_info;
 use workflow::trace_warn;
 
-// ==================== Console Logger 测试 ====================
+// ==================== Console Logger Tests ====================
 
 #[test]
-fn test_logger_output() -> Result<()> {
-    // 测试成功消息（使用 ASCII 字符 ✓）
-    let success_msg = success("Test");
-    assert!(success_msg.contains("Test"));
+fn test_logger_output_with_all_levels_returns_formatted_messages() -> Result<()> {
+    // Arrange: 准备测试消息
+    let test_message = "Test";
+
+    // Act: 调用各个日志级别的函数
+    let success_msg = success(test_message);
+    let error_msg = error(test_message);
+    let warning_msg = warning(test_message);
+    let info_msg = info(test_message);
+    let debug_msg = debug(test_message);
+
+    // Assert: 验证每个消息都包含文本和对应的图标
+    assert!(success_msg.contains(test_message));
     assert!(success_msg.contains("✓"));
-
-    // 测试错误消息（使用 ASCII 字符 ✗）
-    let error_msg = error("Test");
-    assert!(error_msg.contains("Test"));
+    assert!(error_msg.contains(test_message));
     assert!(error_msg.contains("✗"));
-
-    // 测试警告消息（使用 ASCII 字符 ⚠）
-    let warning_msg = warning("Test");
-    assert!(warning_msg.contains("Test"));
+    assert!(warning_msg.contains(test_message));
     assert!(warning_msg.contains("⚠"));
-
-    // 测试信息消息（使用 ASCII 字符 ℹ）
-    let info_msg = info("Test");
-    assert!(info_msg.contains("Test"));
+    assert!(info_msg.contains(test_message));
     assert!(info_msg.contains("ℹ"));
-
-    // 测试调试消息（使用 ASCII 字符 ⚙）
-    let debug_msg = debug("Test");
-    assert!(debug_msg.contains("Test"));
+    assert!(debug_msg.contains(test_message));
     assert!(debug_msg.contains("⚙"));
     Ok(())
 }
 
 #[test]
-fn test_colors_have_space() {
-    // 测试所有颜色函数都在 Emoji 和文本之间有空格
-    let success_msg = success("Test");
-    let error_msg = error("Test");
-    let warning_msg = warning("Test");
-    let info_msg = info("Test");
-    let debug_msg = debug("Test");
+fn test_colors_have_space_between_icon_and_text() {
+    // Arrange: 准备测试消息
+    let test_message = "Test";
 
-    // 检查是否包含空格
+    // Act: 调用各个日志级别的函数
+    let success_msg = success(test_message);
+    let error_msg = error(test_message);
+    let warning_msg = warning(test_message);
+    let info_msg = info(test_message);
+    let debug_msg = debug(test_message);
+
+    // Assert: 验证所有消息都在图标和文本之间包含空格
     assert!(
         success_msg.contains(' '),
         "Success message should contain a space"
@@ -79,22 +79,12 @@ fn test_colors_have_space() {
         "Debug message should contain a space"
     );
 
-    // 检查空格的位置（应该在 Emoji 之后）
+    // Assert: 验证空格位置和格式（图标 + 空格 + 文本）
     let info_space_pos = info_msg.find(' ').expect("No space in info message");
     let success_space_pos = success_msg.find(' ').expect("No space in success message");
 
-    // 打印调试信息
-    println!("Info message: '{}'", info_msg);
-    println!("Info message length: {}", info_msg.len());
-    println!("Info space position: {}", info_space_pos);
-    println!("Success message: '{}'", success_msg);
-    println!("Success message length: {}", success_msg.len());
-    println!("Success space position: {}", success_space_pos);
-
-    // 验证格式：图标 + 空格 + 文本
-    // 去除 ANSI 转义码后再比较（在 CI 环境中可能有颜色代码）
+    // 去除 ANSI 转义码后再验证格式（在 CI 环境中可能有颜色代码）
     let strip_ansi = |s: &str| -> String {
-        // 简单的 ANSI 转义码去除（匹配 \u{1b}[...m 格式）
         s.replace("\u{1b}[0m", "")
             .replace("\u{1b}[31m", "")
             .replace("\u{1b}[32m", "")
@@ -124,12 +114,14 @@ fn test_colors_have_space() {
     );
 }
 
-// ==================== LogLevel 测试 ====================
+// ==================== LogLevel Tests ====================
 
 #[test]
-fn test_log_level_from_str() {
-    // 测试有效的日志级别字符串（不区分大小写）
+fn test_log_level_from_str_with_valid_strings_parses_correctly() {
+    // Arrange: 准备有效的日志级别字符串（不区分大小写）
     // 支持 "off"（新格式）和 "none"（向后兼容）
+
+    // Act & Assert: 验证各种格式的字符串都能正确解析
     assert_eq!(
         "off".parse::<LogLevel>().expect("'off' should parse to LogLevel"),
         LogLevel::None

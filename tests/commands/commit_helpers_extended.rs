@@ -6,6 +6,8 @@ use crate::common::environments::CliTestEnv;
 use serial_test::serial;
 use workflow::commands::commit::helpers::check_not_on_default_branch;
 
+// ==================== Default Branch Check Tests ====================
+
 /// 测试在main分支上的默认分支检查
 ///
 /// ## 测试目的
@@ -24,8 +26,8 @@ use workflow::commands::commit::helpers::check_not_on_default_branch;
 /// - 自动恢复原始工作目录
 #[test]
 #[serial]
-fn test_check_not_on_default_branch_on_main() -> color_eyre::Result<()> {
-    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+fn test_check_not_on_default_branch_on_main_returns_error() -> color_eyre::Result<()> {
+    // Arrange: 准备临时Git仓库并在main分支上
     let env = CliTestEnv::new()?;
     env.init_git_repo()?
         .create_file("test.txt", "test")?
@@ -38,18 +40,14 @@ fn test_check_not_on_default_branch_on_main() -> color_eyre::Result<()> {
         .output()
         .ok();
 
-    // 确保在 main 分支上（init_git_repo已经创建了main分支）
-    // 无需额外操作，因为init -b main已经确保了这一点
-
+    // Act: 在main分支上检查是否允许操作
     let result = check_not_on_default_branch("amend");
 
-    // 验证返回错误（在默认分支上不允许操作）
+    // Assert: 验证返回错误且错误消息包含保护分支信息
     assert!(
         result.is_err(),
         "check_not_on_default_branch should fail on default branch"
     );
-
-    // 验证错误消息
     let error_msg = result.unwrap_err().to_string();
     assert!(
         error_msg.contains("protected")
@@ -59,30 +57,13 @@ fn test_check_not_on_default_branch_on_main() -> color_eyre::Result<()> {
         error_msg
     );
 
-    // CliTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
-/// 测试在feature分支上的默认分支检查
-///
-/// ## 测试目的
-/// 验证`check_not_on_default_branch()`在feature分支上正确返回成功，允许在非保护分支上执行操作。
-///
-/// ## 测试场景
-/// 1. 创建临时Git仓库并初始化
-/// 2. 创建文件并提交
-/// 3. 创建并切换到feature/test分支
-/// 4. 调用`check_not_on_default_branch()`
-/// 5. 验证返回成功且返回的分支信息正确
-///
-/// ## 技术细节
-/// - 使用`#[serial]`确保测试串行执行
-/// - 验证返回的当前分支和默认分支信息
-/// - 自动恢复原始工作目录
 #[test]
 #[serial]
-fn test_check_not_on_default_branch_on_feature_branch() -> color_eyre::Result<()> {
-    // 新版 CliTestEnv 自动切换工作目录，无需手动管理
+fn test_check_not_on_default_branch_on_feature_branch_returns_ok() -> color_eyre::Result<()> {
+    // Arrange: 准备临时Git仓库并切换到feature分支
     let env = CliTestEnv::new()?;
     env.init_git_repo()?
         .create_file("test.txt", "test")?
@@ -95,10 +76,10 @@ fn test_check_not_on_default_branch_on_feature_branch() -> color_eyre::Result<()
         .output()
         .ok();
 
-    // 获取默认分支名
-    let default_branch = "main".to_string(); // 我们明确知道是main
+    let default_branch = "main".to_string();
 
     // 创建并切换到 feature 分支
+    // Act: 创建并切换到feature分支，然后检查是否允许操作
     std::process::Command::new("git")
         .args(["checkout", "-b", "feature/test"])
         .current_dir(env.path())
@@ -107,40 +88,34 @@ fn test_check_not_on_default_branch_on_feature_branch() -> color_eyre::Result<()
 
     let result = check_not_on_default_branch("amend");
 
-    // 验证返回成功（在非默认分支上允许操作）
+    // Assert: 验证返回成功且分支信息正确
     assert!(
         result.is_ok(),
         "check_not_on_default_branch should succeed on feature branch, error: {:?}",
         result.as_ref().err()
     );
-
-    // 验证返回值包含分支信息
     if let Ok((current, default)) = result {
         assert_eq!(current, "feature/test");
-        assert_eq!(default, default_branch); // 使用实际的默认分支名
+        assert_eq!(default, "main");
     }
 
-    // CliTestEnv 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
 #[test]
-fn test_check_not_on_default_branch_error_message_format() {
-    // 测试错误消息格式（通过模拟错误情况）
-    // 注意：这个测试主要验证函数不会 panic，实际的错误消息测试需要实际环境
+fn test_check_not_on_default_branch_error_message_format_with_non_git_repo_returns_error() {
+    // Arrange: 准备非Git仓库环境
 
-    // 在非 Git 仓库中，函数应该返回错误
+    // Act: 在非Git仓库中检查是否允许操作
     let result = check_not_on_default_branch("amend");
 
-    // 验证函数返回错误（非 Git 仓库）
+    // Assert: 验证返回错误且错误消息包含相关信息
     match result {
         Ok(_) => {
-            // 如果当前目录恰好是 Git 仓库，这是可以接受的
+            // 如果当前目录恰好是Git仓库，这是可以接受的
         }
         Err(e) => {
-            // 验证错误消息格式
             let error_msg = e.to_string();
-            // 错误消息应该包含操作名称或分支相关信息
             assert!(
                 error_msg.contains("branch")
                     || error_msg.contains("git")

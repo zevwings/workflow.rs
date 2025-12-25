@@ -15,7 +15,7 @@ struct TestCommitCli {
     command: CommitSubcommand,
 }
 
-// ==================== Amend 命令测试 ====================
+// ==================== Amend Command Tests ====================
 
 #[rstest]
 #[case(None, false, false)]
@@ -23,11 +23,12 @@ struct TestCommitCli {
 #[case(None, true, false)]
 #[case(None, false, true)]
 #[case(Some("New message"), true, true)]
-fn test_commit_amend_command(
+fn test_commit_amend_command_with_various_options_parses_correctly(
     #[case] message: Option<&str>,
     #[case] no_edit: bool,
     #[case] no_verify: bool,
 ) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-commit", "amend"];
     if let Some(m) = message {
         args.push("--message");
@@ -40,8 +41,10 @@ fn test_commit_amend_command(
         args.push("--no-verify");
     }
 
+    // Act: 解析命令行参数
     let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         CommitSubcommand::Amend {
             message: m,
@@ -56,7 +59,7 @@ fn test_commit_amend_command(
     }
 }
 
-// ==================== Reword 命令测试 ====================
+// ==================== Reword Command Tests ====================
 
 #[rstest]
 #[case(None)]
@@ -64,14 +67,19 @@ fn test_commit_amend_command(
 #[case(Some("HEAD"))]
 #[case(Some("HEAD~2"))]
 #[case(Some("abcdef1234567890abcdef1234567890abcdef12"))]
-fn test_commit_reword_command(#[case] commit_id: Option<&str>) {
+fn test_commit_reword_command_with_various_commit_ids_parses_correctly(
+    #[case] commit_id: Option<&str>,
+) {
+    // Arrange: 准备命令行参数
     let mut args = vec!["test-commit", "reword"];
     if let Some(id) = commit_id {
         args.push(id);
     }
 
+    // Act: 解析命令行参数
     let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
+    // Assert: 验证参数解析正确
     match cli.command {
         CommitSubcommand::Reword { commit_id: id } => {
             assert_eq!(id, commit_id.map(|s| s.to_string()));
@@ -80,16 +88,21 @@ fn test_commit_reword_command(#[case] commit_id: Option<&str>) {
     }
 }
 
-// ==================== 命令枚举测试 ====================
+// ==================== Subcommand Enum Tests ====================
 
 #[test]
-fn test_commit_subcommand_enum() {
-    // 测试 CommitSubcommand 枚举包含所有子命令
-    let amend_cli = TestCommitCli::try_parse_from(&["test-commit", "amend"])
+fn test_commit_subcommand_enum_contains_all_subcommands() {
+    // Arrange: 准备所有子命令的输入
+    let amend_args = &["test-commit", "amend"];
+    let reword_args = &["test-commit", "reword"];
+
+    // Act: 解析所有子命令
+    let amend_cli = TestCommitCli::try_parse_from(amend_args)
         .expect("CLI args should parse successfully");
-    let reword_cli = TestCommitCli::try_parse_from(&["test-commit", "reword"])
+    let reword_cli = TestCommitCli::try_parse_from(reword_args)
         .expect("CLI args should parse successfully");
 
+    // Assert: 验证 CommitSubcommand 枚举包含所有子命令
     match amend_cli.command {
         CommitSubcommand::Amend { .. } => {}
         _ => panic!("Expected Amend command"),

@@ -10,48 +10,59 @@
 use clap_complete::Shell;
 use workflow::base::shell::{Reload, ReloadResult};
 
-#[test]
-fn test_reload_result_structure() {
-    // 测试 ReloadResult 结构
+// ==================== ReloadResult Structure Tests ====================
 
+#[test]
+fn test_reload_result_structure_with_valid_fields_creates_result() {
+    // Arrange: 准备ReloadResult字段值
+    let reloaded = true;
+    let messages = vec!["Message 1".to_string(), "Message 2".to_string()];
+    let reload_hint = "source ~/.zshrc".to_string();
+
+    // Act: 创建ReloadResult实例
     let result = ReloadResult {
-        reloaded: true,
-        messages: vec!["Message 1".to_string(), "Message 2".to_string()],
-        reload_hint: "source ~/.zshrc".to_string(),
+        reloaded,
+        messages: messages.clone(),
+        reload_hint: reload_hint.clone(),
     };
 
+    // Assert: 验证所有字段值正确
     assert!(result.reloaded);
     assert_eq!(result.messages.len(), 2);
-    assert_eq!(result.reload_hint, "source ~/.zshrc");
+    assert_eq!(result.reload_hint, reload_hint);
 }
 
 #[test]
-fn test_reload_result_clone() {
-    // 测试 ReloadResult 的 Clone trait
-
+fn test_reload_result_clone_with_valid_result_creates_clone() {
+    // Arrange: 准备原始ReloadResult
     let result1 = ReloadResult {
         reloaded: true,
         messages: vec!["Message".to_string()],
         reload_hint: "hint".to_string(),
     };
 
+    // Act: 克隆ReloadResult
     let result2 = result1.clone();
+
+    // Assert: 验证克隆的字段值与原始值相同
     assert_eq!(result1.reloaded, result2.reloaded);
     assert_eq!(result1.messages, result2.messages);
     assert_eq!(result1.reload_hint, result2.reload_hint);
 }
 
 #[test]
-fn test_reload_result_debug() {
-    // 测试 ReloadResult 的 Debug trait
-
+fn test_reload_result_debug_with_valid_result_returns_debug_string() {
+    // Arrange: 准备ReloadResult
     let result = ReloadResult {
         reloaded: false,
         messages: vec!["Error".to_string()],
         reload_hint: "hint".to_string(),
     };
 
+    // Act: 格式化Debug输出
     let debug_str = format!("{:?}", result);
+
+    // Assert: 验证Debug字符串包含预期内容
     assert!(debug_str.contains("reloaded") || debug_str.contains("Error"));
 }
 
@@ -59,37 +70,47 @@ fn test_reload_result_debug() {
 // 但这些测试已经包含在下面的 test_reload_shell_* 测试中，所以这里保留作为备用
 
 #[test]
-fn test_reload_result_success_structure() {
-    // 测试成功重载的结果结构（覆盖 reload.rs:76-83）
+fn test_reload_result_success_structure_with_success_reload_creates_result() {
+    // Arrange: 准备成功重载的结果字段值
+    let messages = vec![
+        "Shell configuration reloaded (in subprocess)".to_string(),
+        "Note: Changes may not take effect in the current shell.".to_string(),
+    ];
+    let reload_hint = "source ~/.zshrc".to_string();
+
+    // Act: 创建成功重载的ReloadResult
     let result = ReloadResult {
         reloaded: true,
-        messages: vec![
-            "Shell configuration reloaded (in subprocess)".to_string(),
-            "Note: Changes may not take effect in the current shell.".to_string(),
-        ],
-        reload_hint: "source ~/.zshrc".to_string(),
+        messages: messages.clone(),
+        reload_hint: reload_hint.clone(),
     };
 
+    // Assert: 验证成功重载的结果结构正确
     assert!(result.reloaded);
     assert_eq!(result.messages.len(), 2);
     assert!(result.messages[0].contains("reloaded"));
     assert!(result.messages[1].contains("current shell"));
-    assert_eq!(result.reload_hint, "source ~/.zshrc");
+    assert_eq!(result.reload_hint, reload_hint);
 }
 
 #[test]
-fn test_reload_result_failure_structure() {
-    // 测试失败重载的结果结构（覆盖 reload.rs:84-91）
+fn test_reload_result_failure_structure_with_failure_reload_creates_result() {
+    // Arrange: 准备失败重载的结果字段值
+    let messages = vec!["Could not reload shell configuration: error".to_string()];
+    let reload_hint = "source ~/.zshrc".to_string();
+
+    // Act: 创建失败重载的ReloadResult
     let result = ReloadResult {
         reloaded: false,
-        messages: vec!["Could not reload shell configuration: error".to_string()],
-        reload_hint: "source ~/.zshrc".to_string(),
+        messages: messages.clone(),
+        reload_hint: reload_hint.clone(),
     };
 
+    // Assert: 验证失败重载的结果结构正确
     assert!(!result.reloaded);
     assert_eq!(result.messages.len(), 1);
     assert!(result.messages[0].contains("Could not reload"));
-    assert_eq!(result.reload_hint, "source ~/.zshrc");
+    assert_eq!(result.reload_hint, reload_hint);
 }
 
 #[test]

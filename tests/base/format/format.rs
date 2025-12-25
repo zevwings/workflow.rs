@@ -32,47 +32,76 @@ mod format_size_tests {
     // ==================== 文件大小格式化测试 ====================
 
     #[test]
-    fn test_format_size_bytes() {
-        assert_eq!(DisplayFormatter::size(0), "0 B");
-        assert_eq!(DisplayFormatter::size(1), "1 B");
-        assert_eq!(DisplayFormatter::size(512), "512 B");
-        assert_eq!(DisplayFormatter::size(1023), "1023 B");
+    fn test_format_size_bytes_with_byte_values_returns_byte_string() {
+        // Arrange: 准备字节值
+        let test_cases = vec![(0, "0 B"), (1, "1 B"), (512, "512 B"), (1023, "1023 B")];
+
+        // Act & Assert: 验证字节值格式化正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[test]
-    fn test_format_size_kilobytes() {
-        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
-        assert_eq!(DisplayFormatter::size(1536), "1.50 KB"); // 1024 + 512
-        assert_eq!(DisplayFormatter::size(2048), "2.00 KB");
-        assert_eq!(DisplayFormatter::size(1024 * 1023), "1023.00 KB");
+    fn test_format_size_kilobytes_with_kb_values_returns_kb_string() {
+        // Arrange: 准备KB值
+        let test_cases = vec![
+            (1024, "1.00 KB"),
+            (1536, "1.50 KB"), // 1024 + 512
+            (2048, "2.00 KB"),
+            (1024 * 1023, "1023.00 KB"),
+        ];
+
+        // Act & Assert: 验证KB值格式化正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[test]
-    fn test_format_size_megabytes() {
-        assert_eq!(DisplayFormatter::size(1024 * 1024), "1.00 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 + 512 * 1024), "1.50 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 * 5), "5.00 MB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 * 1023), "1023.00 MB");
+    fn test_format_size_megabytes_with_mb_values_returns_mb_string() {
+        // Arrange: 准备MB值
+        let test_cases = vec![
+            (1024 * 1024, "1.00 MB"),
+            (1024 * 1024 + 512 * 1024, "1.50 MB"),
+            (1024 * 1024 * 5, "5.00 MB"),
+            (1024 * 1024 * 1023, "1023.00 MB"),
+        ];
+
+        // Act & Assert: 验证MB值格式化正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[test]
-    fn test_format_size_gigabytes() {
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(3)), "1.00 GB");
-        assert_eq!(
-            DisplayFormatter::size(1024_u64.pow(3) + 512 * 1024_u64.pow(2)),
-            "1.50 GB"
-        );
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(3) * 10), "10.00 GB");
+    fn test_format_size_gigabytes_with_gb_values_returns_gb_string() {
+        // Arrange: 准备GB值
+        let test_cases = vec![
+            (1024_u64.pow(3), "1.00 GB"),
+            (1024_u64.pow(3) + 512 * 1024_u64.pow(2), "1.50 GB"),
+            (1024_u64.pow(3) * 10, "10.00 GB"),
+        ];
+
+        // Act & Assert: 验证GB值格式化正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[test]
-    fn test_format_size_terabytes() {
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(4)), "1.00 TB");
-        assert_eq!(DisplayFormatter::size(1024_u64.pow(4) * 2), "2.00 TB");
-        assert_eq!(
-            DisplayFormatter::size(1024_u64.pow(4) + 512 * 1024_u64.pow(3)),
-            "1.50 TB"
-        );
+    fn test_format_size_terabytes_with_tb_values_returns_tb_string() {
+        // Arrange: 准备TB值
+        let test_cases = vec![
+            (1024_u64.pow(4), "1.00 TB"),
+            (1024_u64.pow(4) * 2, "2.00 TB"),
+            (1024_u64.pow(4) + 512 * 1024_u64.pow(3), "1.50 TB"),
+        ];
+
+        // Act & Assert: 验证TB值格式化正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[rstest]
@@ -86,31 +115,53 @@ mod format_size_tests {
     #[case(1099511627776, "1.00 TB")] // 1024^4
     #[case(2147483648, "2.00 GB")] // 2 * 1024^3
     #[case(5368709120, "5.00 GB")] // 5 * 1024^3
-    fn test_format_size_parametrized(#[case] bytes: u64, #[case] expected: &str) {
-        assert_eq!(DisplayFormatter::size(bytes), expected);
+    fn test_format_size_parametrized_with_various_bytes_returns_formatted_string(
+        #[case] bytes: u64,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备字节值和预期结果（通过参数提供）
+
+        // Act: 格式化文件大小
+        let result = DisplayFormatter::size(bytes);
+
+        // Assert: 验证格式化结果与预期一致
+        assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_format_size_precision() {
-        // 测试小数精度
-        assert_eq!(DisplayFormatter::size(1024 + 256), "1.25 KB"); // 1.25 KB
-        assert_eq!(DisplayFormatter::size(1024 + 102), "1.10 KB"); // 约1.10 KB
-        assert_eq!(DisplayFormatter::size(1024 + 51), "1.05 KB"); // 约1.05 KB
+    fn test_format_size_precision_with_decimal_values_returns_precise_string() {
+        // Arrange: 准备带小数的字节值
+        let test_cases = vec![
+            (1024 + 256, "1.25 KB"), // 1.25 KB
+            (1024 + 102, "1.10 KB"), // 约1.10 KB
+            (1024 + 51, "1.05 KB"),  // 约1.05 KB
+        ];
+
+        // Act & Assert: 验证小数精度正确
+        for (bytes, expected) in test_cases {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 
     #[test]
-    fn test_format_size_edge_cases() {
-        // 测试边界值
+    fn test_format_size_edge_cases_with_boundary_values_handles_correctly() {
+        // Arrange: 准备边界值
+        let max_value = u64::MAX;
+        let boundary_values = vec![
+            (1024 - 1, "1023 B"),
+            (1024, "1.00 KB"),
+            (1024 * 1024 - 1, "1024.00 KB"),
+            (1024 * 1024, "1.00 MB"),
+        ];
+
+        // Act & Assert: 验证边界值处理正确
         assert_eq!(
-            DisplayFormatter::size(u64::MAX),
-            format!("{:.2} TB", u64::MAX as f64 / 1024_f64.powi(4))
+            DisplayFormatter::size(max_value),
+            format!("{:.2} TB", max_value as f64 / 1024_f64.powi(4))
         );
-
-        // 测试刚好达到下一个单位的值
-        assert_eq!(DisplayFormatter::size(1024 - 1), "1023 B");
-        assert_eq!(DisplayFormatter::size(1024), "1.00 KB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024 - 1), "1024.00 KB");
-        assert_eq!(DisplayFormatter::size(1024 * 1024), "1.00 MB");
+        for (bytes, expected) in boundary_values {
+            assert_eq!(DisplayFormatter::size(bytes), expected);
+        }
     }
 }
 
@@ -121,39 +172,58 @@ mod sensitive_string_tests {
     // ==================== 敏感信息掩码测试 ====================
 
     #[test]
-    fn test_mask_short_strings() {
-        assert_eq!("".mask(), "***");
-        assert_eq!("a".mask(), "***");
-        assert_eq!("short".mask(), "***");
+    fn test_mask_short_strings_with_short_inputs_returns_masked_string() {
+        // Arrange: 准备短字符串
+        let test_cases = vec![("", "***"), ("a", "***"), ("short", "***")];
+
+        // Act & Assert: 验证短字符串被掩码
+        for (input, expected) in test_cases {
+            assert_eq!(input.mask(), expected);
+        }
         assert_eq!("12345".mask(), "***");
         assert_eq!("123456789012".mask(), "***"); // 恰好12个字符
     }
 
     #[test]
-    fn test_mask_long_strings() {
-        assert_eq!("1234567890123".mask(), "1234***0123"); // 13个字符
-        assert_eq!("verylongapikey123456".mask(), "very***3456");
-        assert_eq!("ghp_1234567890abcdefghijklmnop".mask(), "ghp_***mnop");
-        assert_eq!(
-            "sk-1234567890abcdefghijklmnopqrstuvwxyz".mask(),
-            "sk-1***wxyz"
-        );
+    fn test_mask_long_strings_with_long_inputs_returns_masked_string() {
+        // Arrange: 准备长字符串
+        let test_cases = vec![
+            ("1234567890123", "1234***0123"), // 13个字符
+            ("verylongapikey123456", "very***3456"),
+            ("ghp_1234567890abcdefghijklmnop", "ghp_***mnop"),
+            ("sk-1234567890abcdefghijklmnopqrstuvwxyz", "sk-1***wxyz"),
+        ];
+
+        // Act & Assert: 验证长字符串掩码正确
+        for (input, expected) in test_cases {
+            assert_eq!(input.mask(), expected);
+        }
     }
 
     #[test]
-    fn test_mask_with_string_type() {
+    fn test_mask_with_string_type_with_string_inputs_returns_masked_string() {
+        // Arrange: 准备String类型的输入
         let s = String::from("verylongapikey123456");
-        assert_eq!(s.mask(), "very***3456");
-
         let short_string = String::from("short");
+
+        // Act & Assert: 验证String类型掩码正确
+        assert_eq!(s.mask(), "very***3456");
         assert_eq!(short_string.mask(), "***");
     }
 
     #[test]
-    fn test_mask_basic() {
-        assert_eq!("short".mask(), "***");
-        assert_eq!("verylongapikey123456".mask(), "very***3456");
-        assert_eq!("".mask(), "***");
+    fn test_mask_basic_with_basic_inputs_returns_masked_string() {
+        // Arrange: 准备基本输入
+        let test_cases = vec![
+            ("short", "***"),
+            ("verylongapikey123456", "very***3456"),
+            ("", "***"),
+        ];
+
+        // Act & Assert: 验证基本掩码正确
+        for (input, expected) in test_cases {
+            assert_eq!(input.mask(), expected);
+        }
     }
 
     #[rstest]
@@ -165,26 +235,48 @@ mod sensitive_string_tests {
     #[case("abcdefghijklmnop", "abcd***mnop")] // 16 chars
     #[case("github_pat_1234567890abcdefghijklmnop", "gith***mnop")]
     #[case("very_long_api_key_with_underscores_123456", "very***3456")]
-    fn test_mask_parametrized(#[case] input: &str, #[case] expected: &str) {
-        assert_eq!(input.mask(), expected);
+    fn test_mask_parametrized_with_various_inputs_returns_masked_string(
+        #[case] input: &str,
+        #[case] expected: &str,
+    ) {
+        // Arrange: 准备输入和预期结果（通过参数提供）
+
+        // Act: 掩码输入
+        let result = input.mask();
+
+        // Assert: 验证掩码结果与预期一致
+        assert_eq!(result, expected);
     }
 
     #[test]
-    fn test_mask_special_characters() {
-        assert_eq!("key-with-dashes-123456789".mask(), "key-***6789");
-        assert_eq!("key_with_underscores_123456".mask(), "key_***3456");
-        assert_eq!("key.with.dots.123456789".mask(), "key.***6789");
-        assert_eq!("key@with@symbols#123456".mask(), "key@***3456");
+    fn test_mask_special_characters_with_special_chars_handles_correctly() {
+        // Arrange: 准备包含特殊字符的字符串
+        let test_cases = vec![
+            ("key-with-dashes-123456789", "key-***6789"),
+            ("key_with_underscores_123456", "key_***3456"),
+            ("key.with.dots.123456789", "key.***6789"),
+            ("key@with@symbols#123456", "key@***3456"),
+        ];
+
+        // Act & Assert: 验证特殊字符处理正确
+        for (input, expected) in test_cases {
+            assert_eq!(input.mask(), expected);
+        }
     }
 
     #[test]
-    fn test_mask_unicode_strings() {
-        assert_eq!("短字符串".mask(), "***");
-        assert_eq!(
-            "这是一个很长的中文字符串包含数字123456".mask(),
-            "这是一个***3456"
-        );
-        assert_eq!("émoji🚀test123456789".mask(), "émoj***6789");
+    fn test_mask_unicode_strings_with_unicode_inputs_handles_correctly() {
+        // Arrange: 准备Unicode字符串
+        let test_cases = vec![
+            ("短字符串", "***"),
+            ("这是一个很长的中文字符串包含数字123456", "这是一个***3456"),
+            ("émoji🚀test123456789", "émoj***6789"),
+        ];
+
+        // Act & Assert: 验证Unicode字符串处理正确
+        for (input, expected) in test_cases {
+            assert_eq!(input.mask(), expected);
+        }
     }
 }
 
@@ -195,84 +287,94 @@ mod date_format_tests {
     // ==================== 日期时间格式化测试 ====================
 
     #[test]
-    fn test_date_format_patterns() {
-        // 测试日期格式
+    fn test_date_format_patterns_with_date_format_returns_formatted_date() {
+        // Arrange: 准备日期格式正则表达式
+        let date_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
+
+        // Act: 格式化日期（Local和UTC时区）
         let date_local = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
         let date_utc = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
 
-        // 验证格式：YYYY-MM-DD
-        let date_regex =
-            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
+        // Assert: 验证格式为YYYY-MM-DD
         assert!(date_regex.is_match(&date_local));
         assert!(date_regex.is_match(&date_utc));
     }
 
     #[test]
-    fn test_datetime_format_patterns() {
-        // 测试日期时间格式
+    fn test_datetime_format_patterns_with_datetime_format_returns_formatted_datetime() {
+        // Arrange: 准备日期时间格式正则表达式
+        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+            .expect("DateTime regex pattern should be valid");
+
+        // Act: 格式化日期时间（Local和UTC时区）
         let datetime_local = format_document_timestamp(DateFormat::DateTime, Timezone::Local);
         let datetime_utc = format_document_timestamp(DateFormat::DateTime, Timezone::Utc);
 
-        // 验证格式：YYYY-MM-DD HH:MM:SS
-        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-            .expect("DateTime regex pattern should be valid");
+        // Assert: 验证格式为YYYY-MM-DD HH:MM:SS
         assert!(datetime_regex.is_match(&datetime_local));
         assert!(datetime_regex.is_match(&datetime_utc));
     }
 
     #[test]
-    fn test_iso8601_format_patterns() {
-        // 测试 ISO 8601 格式
+    fn test_iso8601_format_patterns_with_iso8601_format_returns_formatted_string() {
+        // Arrange: 准备ISO 8601格式
+
+        // Act: 格式化ISO 8601时间戳（Local和UTC时区）
         let iso_local = format_document_timestamp(DateFormat::Iso8601, Timezone::Local);
         let iso_utc = format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
 
-        // 验证 ISO 8601 格式特征
+        // Assert: 验证ISO 8601格式特征
         assert!(iso_local.contains('T'));
         assert!(iso_utc.contains('T'));
         assert!(iso_utc.ends_with('Z') || iso_utc.contains('+') || iso_utc.contains('-'));
     }
 
     #[test]
-    fn test_convenience_functions() {
-        // 测试便利函数
-        let last_updated = format_last_updated();
-        let last_updated_with_time = format_last_updated_with_time();
-
-        // 验证格式
+    fn test_convenience_functions_return_valid_format() {
+        // Arrange: 准备正则表达式模式
         let date_regex =
             regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
         let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
             .expect("DateTime regex pattern should be valid");
 
+        // Act: 调用便利函数
+        let last_updated = format_last_updated();
+        let last_updated_with_time = format_last_updated_with_time();
+
+        // Assert: 验证格式正确
         assert!(date_regex.is_match(&last_updated));
         assert!(datetime_regex.is_match(&last_updated_with_time));
     }
 
     #[test]
-    fn test_filename_timestamp_format() {
-        let filename_timestamp = format_filename_timestamp();
-
-        // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
+    fn test_filename_timestamp_format_returns_filename_friendly_string() {
+        // Arrange: 准备正则表达式模式
         let filename_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
             .expect("Filename regex pattern should be valid");
-        assert!(filename_regex.is_match(&filename_timestamp));
 
-        // 验证不包含空格和冒号（文件名友好）
+        // Act: 调用文件名时间戳格式化函数
+        let filename_timestamp = format_filename_timestamp();
+
+        // Assert: 验证格式正确且文件名友好
+        assert!(filename_regex.is_match(&filename_timestamp));
         assert!(!filename_timestamp.contains(' '));
         assert!(!filename_timestamp.contains(':'));
     }
 
     #[test]
-    fn test_date_consistency() {
-        // 测试同一时刻的不同格式应该包含相同的日期部分
+    fn test_date_consistency_across_formats_has_same_date_part() {
+        // Arrange: 准备不同格式的时间戳函数
+        // 注意：测试同一时刻的不同格式应该包含相同的日期部分
+
+        // Act: 调用不同格式的时间戳函数
         let date_only = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
         let datetime = format_document_timestamp(DateFormat::DateTime, Timezone::Local);
         let filename_ts = format_filename_timestamp();
 
-        // 提取日期部分进行比较
+        // Assert: 验证日期部分一致
         let date_part_from_datetime = &datetime[..10];
         let date_part_from_filename = &filename_ts[..10];
-
         assert_eq!(date_only, date_part_from_datetime);
         assert_eq!(date_only, date_part_from_filename);
     }

@@ -5,50 +5,74 @@
 use std::time::Duration;
 use workflow::base::indicator::Spinner;
 
-#[test]
-fn test_spinner_new() {
-    // 测试创建新的 spinner（覆盖 spinner.rs:68-79）
-    let spinner = Spinner::new("Creating PR...");
-    // 验证可以创建 spinner
-    spinner.finish();
-    assert!(true);
-}
+// ==================== Spinner Creation Tests ====================
 
 #[test]
-fn test_spinner_new_with_string() {
-    // 测试使用 String 创建 spinner
-    let message = "Processing...".to_string();
+fn test_spinner_new_with_message_creates_spinner() {
+    // Arrange: 准备消息
+    let message = "Creating PR...";
+
+    // Act: 创建 spinner
     let spinner = Spinner::new(message);
     spinner.finish();
+
+    // Assert: 验证可以创建 spinner
     assert!(true);
 }
 
 #[test]
-fn test_spinner_update_message() {
-    // 测试更新消息（覆盖 spinner.rs:96-98）
+fn test_spinner_new_with_string_with_string_message_creates_spinner() {
+    // Arrange: 准备 String 消息
+    let message = "Processing...".to_string();
+
+    // Act: 使用 String 创建 spinner
+    let spinner = Spinner::new(message);
+    spinner.finish();
+
+    // Assert: 验证可以创建 spinner
+    assert!(true);
+}
+
+// ==================== Spinner Update Tests ====================
+
+#[test]
+fn test_spinner_update_message_with_messages_updates_message() {
+    // Arrange: 准备 spinner
     let spinner = Spinner::new("Starting...");
+
+    // Act: 更新消息
     spinner.update_message("Processing...");
     spinner.update_message("Almost done...");
     spinner.finish();
-    // 验证可以更新消息
+
+    // Assert: 验证可以更新消息
     assert!(true);
 }
 
+// ==================== Spinner Finish Tests ====================
+
 #[test]
-fn test_spinner_finish() {
-    // 测试完成 spinner（覆盖 spinner.rs:113-119）
+fn test_spinner_finish_with_spinner_finishes_spinner() {
+    // Arrange: 准备 spinner
     let spinner = Spinner::new("Creating PR...");
+
+    // Act: 完成 spinner
     spinner.finish();
-    // 验证可以完成 spinner
+
+    // Assert: 验证可以完成 spinner
     assert!(true);
 }
 
 #[test]
-fn test_spinner_finish_with_message() {
-    // 测试完成并显示消息（覆盖 spinner.rs:138-144）
+fn test_spinner_finish_with_message_with_message_finishes_with_message() {
+    // Arrange: 准备 spinner 和完成消息
     let spinner = Spinner::new("Creating PR...");
-    spinner.finish_with_message("PR created successfully!");
-    // 验证可以完成并显示消息
+    let message = "PR created successfully!";
+
+    // Act: 完成并显示消息
+    spinner.finish_with_message(message);
+
+    // Assert: 验证可以完成并显示消息
     assert!(true);
 }
 
