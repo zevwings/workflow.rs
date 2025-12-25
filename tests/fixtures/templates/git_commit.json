@@ -1,0 +1,31 @@
+{
+  "sha": "{{sha}}",
+  "commit": {
+    "message": "{{message}}",
+    "author": {
+      "name": "{{author_name}}",
+      "email": "{{author_email}}",
+      "date": "{{author_date}}"
+    },
+    "committer": {
+      "name": "{{committer_name}}",
+      "email": "{{committer_email}}",
+      "date": "{{committer_date}}"
+    }
+  },
+  "author": {
+    "login": "{{author_login}}",
+    "id": {{author_id}}
+  },
+  "committer": {
+    "login": "{{committer_login}}",
+    "id": {{committer_id}}
+  },
+  "parents": [
+    {
+      "sha": "{{parent_sha}}"
+    }
+  ],
+  "html_url": "{{html_url}}"
+}
+

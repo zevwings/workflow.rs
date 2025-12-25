@@ -148,7 +148,7 @@ fn test_config_serialization() {
     let json_result = serde_json::to_string(&config);
     assert!(json_result.is_ok());
 
-    let json_str = json_result.unwrap();
+    let json_str = json_result.expect("operation should succeed");
     assert!(json_str.contains("handlebars"));
     assert!(json_str.contains("jira_key"));
 
@@ -156,7 +156,7 @@ fn test_config_serialization() {
     let toml_result = toml::to_string(&config);
     assert!(toml_result.is_ok());
 
-    let toml_str = toml_result.unwrap();
+    let toml_str = toml_result.expect("operation should succeed");
     assert!(toml_str.contains("engine"));
     assert!(toml_str.contains("handlebars"));
 }
@@ -183,7 +183,7 @@ fn test_config_deserialization() {
     let config_result: Result<TemplateConfig, _> = serde_json::from_value(json_config);
     assert!(config_result.is_ok());
 
-    let config = config_result.unwrap();
+    let config = config_result.expect("operation should succeed");
     assert_eq!(config.engine, "test_engine");
     assert_eq!(config.branch.default, "test-{{jira_key}}");
     assert_eq!(config.branch.feature, Some("feat/{{jira_key}}".to_string()));
@@ -207,7 +207,7 @@ default = "TOML PR template"
     let toml_config_result: Result<TemplateConfig, _> = toml::from_str(toml_str);
     assert!(toml_config_result.is_ok());
 
-    let toml_config = toml_config_result.unwrap();
+    let toml_config = toml_config_result.expect("operation should succeed");
     assert_eq!(toml_config.engine, "toml_engine");
     assert_eq!(toml_config.branch.default, "toml-{{jira_key}}");
     assert_eq!(toml_config.commit.use_scope, false);

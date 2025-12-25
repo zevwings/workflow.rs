@@ -202,7 +202,7 @@ impl MockServerManager {
         pr_number: u64,
         pr_data: &Value,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(pr_data).unwrap();
+        let response_body = serde_json::to_string(pr_data).expect("operation should succeed");
         self.mock_github_pr(
             "GET",
             &format!("/repos/{}/{}/pulls/{}", owner, repo, pr_number),
@@ -230,7 +230,7 @@ impl MockServerManager {
         issue_key: &str,
         issue_data: &Value,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(issue_data).unwrap();
+        let response_body = serde_json::to_string(issue_data).expect("operation should succeed");
         self.mock_jira_issue(
             "GET",
             &format!("/rest/api/3/issue/{}", issue_key),
@@ -278,7 +278,7 @@ impl MockServerManager {
 
     /// 设置 Jira 获取当前用户（/myself）成功响应
     pub fn setup_jira_get_current_user_success(&mut self, user_data: &Value) -> &mut Self {
-        let response_body = serde_json::to_string(user_data).unwrap();
+        let response_body = serde_json::to_string(user_data).expect("operation should succeed");
         self.mock_jira_issue("GET", "/rest/api/2/myself", &response_body, 200);
         self
     }
@@ -337,15 +337,16 @@ mod tests {
     }
 
     #[test]
-    fn test_mock_jira_get_issue() {
+    fn test_mock_jira_get_issue() -> color_eyre::Result<()> {
         let factory = TestDataFactory::new();
-        let issue_data = factory.jira_issue().key("PROJ-123").build();
+        let issue_data = factory.jira_issue().key("PROJ-123").build()?;
 
         let mut manager = MockServerManager::new();
         manager.setup_jira_api();
         manager.setup_jira_get_issue_success("PROJ-123", &issue_data);
 
         assert_eq!(manager.mocks.len(), 1);
+        Ok(())
     }
 
     #[test]

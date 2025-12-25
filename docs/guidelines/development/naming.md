@@ -38,9 +38,9 @@
 
 - **模块文件**：`snake_case.rs`（如 `jira_client.rs`、`pr_helpers.rs`）
 - **测试文件**：与源文件同名，放在 `tests/` 目录或使用 `#[cfg(test)]` 模块
-- **文档文件**：`kebab-case.md`（如 `development.md`、`pr.md`）
+- **文档文件**：`kebab-case.md`（如 `testing/README.md`、`pr.md`）
   - **架构文档**：`{module}.md`（如 `pr.md`、`git.md`，包含 Lib 层和 Commands 层两部分）
-  - **指南文档**：`{topic}.md`（如 `development.md`、`document.md`）
+  - **指南文档**：`{topic}.md`（如 `testing/README.md`、`document.md`）
   - **需求文档**：`{topic}.md`（如 `jira.md`、`integration.md`，存放到 `docs/requirements/`）
   - **迁移文档**：`{version}-to-{version}.md`（如 `1.5.6-to-1.5.7.md`）
 

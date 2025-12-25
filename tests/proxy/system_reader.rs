@@ -184,13 +184,13 @@ fn test_proxy_info_creation() {
     let proxy_info = create_test_proxy_info();
 
     // 验证 HTTP 代理配置
-    let http_config = proxy_info.get_config(ProxyType::Http).unwrap();
+    let http_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
     assert_eq!(http_config.enable, true);
     assert_eq!(http_config.address, Some("proxy.example.com".to_string()));
     assert_eq!(http_config.port, Some(8080));
 
     // 验证 HTTPS 代理配置
-    let https_config = proxy_info.get_config(ProxyType::Https).unwrap();
+    let https_config = proxy_info.get_config(ProxyType::Https).expect("operation should succeed");
     assert_eq!(https_config.enable, true);
     assert_eq!(
         https_config.address,
@@ -199,7 +199,7 @@ fn test_proxy_info_creation() {
     assert_eq!(https_config.port, Some(8443));
 
     // 验证 SOCKS 代理配置
-    let socks_config = proxy_info.get_config(ProxyType::Socks).unwrap();
+    let socks_config = proxy_info.get_config(ProxyType::Socks).expect("operation should succeed");
     assert_eq!(socks_config.enable, false);
     assert_eq!(
         socks_config.address,
@@ -216,7 +216,7 @@ fn test_proxy_info_get_proxy_url() {
     // HTTP 代理应该返回 URL（已启用）
     let http_url = proxy_info.get_proxy_url(ProxyType::Http);
     assert!(http_url.is_some());
-    let http_url = http_url.unwrap();
+    let http_url = http_url.expect("operation should succeed");
     assert!(http_url.contains("http://"));
     assert!(http_url.contains("proxy.example.com"));
     assert!(http_url.contains("8080"));
@@ -224,7 +224,7 @@ fn test_proxy_info_get_proxy_url() {
     // HTTPS 代理应该返回 URL（已启用）
     let https_url = proxy_info.get_proxy_url(ProxyType::Https);
     assert!(https_url.is_some());
-    let https_url = https_url.unwrap();
+    let https_url = https_url.expect("operation should succeed");
     assert!(https_url.contains("http://"));
     assert!(https_url.contains("secure-proxy.example.com"));
     assert!(https_url.contains("8443"));
@@ -408,11 +408,11 @@ fn test_complex_proxy_info_configuration() {
     assert!(!env_vars.contains_key("https_proxy"));
 
     // 验证 URL 格式
-    let http_url = env_vars.get("http_proxy").unwrap();
+    let http_url = env_vars.get("http_proxy").expect("operation should succeed");
     assert!(http_url.starts_with("http://"));
     assert!(http_url.contains("http-proxy.example.com:8080"));
 
-    let socks_url = env_vars.get("all_proxy").unwrap();
+    let socks_url = env_vars.get("all_proxy").expect("operation should succeed");
     assert!(socks_url.starts_with("socks5://"));
     assert!(socks_url.contains("socks-proxy.example.com:1080"));
 }
@@ -481,7 +481,7 @@ fn test_proxy_info_mutable_operations() {
     );
 
     // 验证配置已添加
-    let config = proxy_info.get_config(ProxyType::Http).unwrap();
+    let config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
     assert_eq!(config.enable, true);
     assert_eq!(config.address, Some("new-proxy.example.com".to_string()));
     assert_eq!(config.port, Some(9090));
@@ -492,7 +492,7 @@ fn test_proxy_info_mutable_operations() {
     config_mut.port = Some(8888);
 
     // 验证修改生效
-    let updated_config = proxy_info.get_config(ProxyType::Http).unwrap();
+    let updated_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
     assert_eq!(updated_config.enable, false);
     assert_eq!(updated_config.port, Some(8888));
 }

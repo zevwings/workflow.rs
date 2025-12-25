@@ -227,7 +227,7 @@
   - 在 `.cursorrules` 中添加国际化规则
   - 同步更新 `docs/cursorrules.md`
 - [ ] **任务4.2**：更新开发规范文档
-  - 在 `docs/guidelines/development.md` 中添加国际化规范
+  - 在 `docs/guidelines/development/` 中添加国际化规范
   - 添加国际化相关的代码审查检查清单
 - [ ] **任务4.3**：编写国际化使用指南
   - 创建 `docs/guidelines/internationalization.md`
@@ -311,7 +311,7 @@
 
 - [`.cursorrules`](../../.cursorrules) - Cursor AI 规则文件（英文版本）
 - [`docs/cursorrules.md`](../cursorrules.md) - Cursor AI 规则文件（中文版本）
-- [`docs/guidelines/development.md`](../guidelines/development.md) - 开发规范文档
+- [`docs/guidelines/development/`](../guidelines/development/README.md) - 开发规范文档
 
 ---
 

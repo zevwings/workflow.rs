@@ -13,6 +13,8 @@ use toml::map::Map;
 use toml::Value;
 use workflow::repo::config::public::PublicRepoConfig;
 
+use crate::common::helpers::CurrentDirGuard;
+
 // ==================== 测试辅助函数和结构 ====================
 
 /// 测试环境管理器（RAII 模式）
@@ -34,7 +36,7 @@ impl TestEnv {
     /// 初始化 Git 仓库
     fn init_git_repo(&self) -> Result<()> {
         let temp_path = self.temp_dir.path();
-        std::env::set_current_dir(temp_path)?;
+        // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
 
         std::process::Command::new("git").args(["init"]).current_dir(temp_path).output()?;
         std::process::Command::new("git")
@@ -536,6 +538,7 @@ fn test_load_from_existing_file() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let config_content = r#"
 [template.commit]
@@ -573,6 +576,7 @@ fn test_load_from_non_existing_file() -> Result<()> {
     // 准备：创建没有配置文件的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：调用 PublicRepoConfig::load()
     let config = PublicRepoConfig::load()?;
@@ -591,6 +595,7 @@ fn test_save_to_new_file() -> Result<()> {
     // 准备：创建临时 Git 仓库（不创建配置文件）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：创建配置并保存
     let mut config = PublicRepoConfig::default();
@@ -618,6 +623,7 @@ fn test_save_preserves_other_sections() -> Result<()> {
     // 准备：创建包含其他配置部分的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let config_content = r#"
 [other_section]
@@ -657,6 +663,7 @@ fn test_load_and_save_roundtrip() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let config_content = r#"
 [template.commit]
@@ -711,6 +718,7 @@ fn test_load_corrupted_toml_file() -> Result<()> {
     // 准备：创建包含无效 TOML 的配置文件
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let invalid_toml = r#"
 [template.commit
@@ -736,6 +744,7 @@ fn test_save_to_readonly_directory() -> Result<()> {
     // 准备：创建只读的 .workflow 目录
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let workflow_dir = env.path().join(".workflow");
     fs::create_dir_all(&workflow_dir)?;

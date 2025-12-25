@@ -269,7 +269,7 @@ Git 模块是 Workflow CLI 的基础设施模块，封装所有 Git 操作：
 ## 📚 相关文档
 
 - [测试覆盖度提升综合方案](./test-coverage-improvement.md)
-- [Git 模块架构](../architecture/git.md)
+- [Git 模块架构](../../architecture/git.md)
 
 ---
 

@@ -58,7 +58,7 @@ fn test_parse_change_types_from_body() {
 - [x] Breaking change"#;
     let types = parse_change_types_from_body(body);
     assert!(types.is_some());
-    let types = types.unwrap();
+    let types = types.expect("change types should be parsed");
     // 根据 TYPES_OF_CHANGES 的顺序检查
     assert!(types.len() > 0);
 }

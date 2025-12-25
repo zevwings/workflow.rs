@@ -221,7 +221,7 @@ fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case
     // 应该成功返回
     assert!(result.is_ok(), "Should handle directory gracefully");
 
-    let clean_result = result.unwrap();
+    let clean_result = result.expect("clean should succeed");
     if dry_run {
         assert!(clean_result.dry_run, "Should be in dry run mode");
     }
@@ -237,6 +237,36 @@ fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case
     }
 }
 
+/// 测试清理整个Jira日志基础目录（空JIRA ID）
+///
+/// ## 测试目的
+/// 验证当JIRA ID为空时，`clean_dir()`方法能够清理整个基础目录并请求用户确认。
+///
+/// ## 为什么被忽略
+/// - **需要交互式确认**: 清理整个目录需要用户确认（危险操作）
+/// - **CI环境不支持**: 自动化环境无法提供交互式输入
+/// - **文件系统操作**: 会实际删除文件
+/// - **安全保护**: 避免在CI中误删除文件
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_jira_logs_clean_dir_empty_jira_id -- --ignored
+/// ```
+/// **警告**: 此测试会清理Jira日志目录！请在测试环境中运行
+///
+/// ## 测试场景
+/// 1. 调用clean_dir()方法并传入空的JIRA ID
+/// 2. 检测到要清理整个基础目录
+/// 3. 显示确认对话框警告用户
+/// 4. 等待用户确认（y）或取消（n）
+/// 5. 用户确认后删除目录
+///
+/// ## 预期行为
+/// - 显示明确的警告消息
+/// - 列出将要删除的目录路径
+/// - 用户确认后成功删除
+/// - 用户取消则不删除
+/// - 返回适当的Result
 #[test]
 #[ignore] // 需要交互式确认，在 CI 环境中会卡住
 fn test_jira_logs_clean_dir_empty_jira_id() {

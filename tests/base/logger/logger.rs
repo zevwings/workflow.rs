@@ -1,7 +1,14 @@
 //! Logger 模块测试
 //!
 //! 测试日志相关的功能，包括日志级别、日志输出格式和 tracing 宏等。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用 `ok_or_else()` 替代 `unwrap()` 处理 Option 类型
+//! - 测试日志级别解析、日志输出格式和 tracing 宏
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::base::logger::console::{debug, error, info, success, warning};
 use workflow::base::logger::LogLevel;
@@ -13,7 +20,7 @@ use workflow::trace_warn;
 // ==================== Console Logger 测试 ====================
 
 #[test]
-fn test_logger_output() {
+fn test_logger_output() -> Result<()> {
     // 测试成功消息（使用 ASCII 字符 ✓）
     let success_msg = success("Test");
     assert!(success_msg.contains("Test"));
@@ -38,6 +45,7 @@ fn test_logger_output() {
     let debug_msg = debug("Test");
     assert!(debug_msg.contains("Test"));
     assert!(debug_msg.contains("⚙"));
+Ok(())
 }
 
 #[test]
@@ -72,8 +80,8 @@ fn test_colors_have_space() {
     );
 
     // 检查空格的位置（应该在 Emoji 之后）
-    let info_space_pos = info_msg.find(' ').expect("Info message should have a space");
-    let success_space_pos = success_msg.find(' ').expect("Success message should have a space");
+    let info_space_pos = info_msg.find(' ').expect("No space in info message");
+    let success_space_pos = success_msg.find(' ').expect("No space in success message");
 
     // 打印调试信息
     println!("Info message: '{}'", info_msg);
@@ -122,18 +130,66 @@ fn test_colors_have_space() {
 fn test_log_level_from_str() {
     // 测试有效的日志级别字符串（不区分大小写）
     // 支持 "off"（新格式）和 "none"（向后兼容）
-    assert_eq!("off".parse::<LogLevel>().unwrap(), LogLevel::None);
-    assert_eq!("OFF".parse::<LogLevel>().unwrap(), LogLevel::None);
-    assert_eq!("none".parse::<LogLevel>().unwrap(), LogLevel::None);
-    assert_eq!("NONE".parse::<LogLevel>().unwrap(), LogLevel::None);
-    assert_eq!("error".parse::<LogLevel>().unwrap(), LogLevel::Error);
-    assert_eq!("ERROR".parse::<LogLevel>().unwrap(), LogLevel::Error);
-    assert_eq!("warn".parse::<LogLevel>().unwrap(), LogLevel::Warn);
-    assert_eq!("WARN".parse::<LogLevel>().unwrap(), LogLevel::Warn);
-    assert_eq!("info".parse::<LogLevel>().unwrap(), LogLevel::Info);
-    assert_eq!("INFO".parse::<LogLevel>().unwrap(), LogLevel::Info);
-    assert_eq!("debug".parse::<LogLevel>().unwrap(), LogLevel::Debug);
-    assert_eq!("DEBUG".parse::<LogLevel>().unwrap(), LogLevel::Debug);
+    assert_eq!(
+        "off".parse::<LogLevel>()
+            .expect("'off' should parse to LogLevel"),
+        LogLevel::None
+    );
+    assert_eq!(
+        "OFF".parse::<LogLevel>()
+            .expect("'OFF' should parse to LogLevel"),
+        LogLevel::None
+    );
+    assert_eq!(
+        "none".parse::<LogLevel>()
+            .expect("'none' should parse to LogLevel"),
+        LogLevel::None
+    );
+    assert_eq!(
+        "NONE".parse::<LogLevel>()
+            .expect("'NONE' should parse to LogLevel"),
+        LogLevel::None
+    );
+    assert_eq!(
+        "error".parse::<LogLevel>()
+            .expect("'error' should parse to LogLevel"),
+        LogLevel::Error
+    );
+    assert_eq!(
+        "ERROR".parse::<LogLevel>()
+            .expect("'ERROR' should parse to LogLevel"),
+        LogLevel::Error
+    );
+    assert_eq!(
+        "warn".parse::<LogLevel>()
+            .expect("'warn' should parse to LogLevel"),
+        LogLevel::Warn
+    );
+    assert_eq!(
+        "WARN".parse::<LogLevel>()
+            .expect("'WARN' should parse to LogLevel"),
+        LogLevel::Warn
+    );
+    assert_eq!(
+        "info".parse::<LogLevel>()
+            .expect("'info' should parse to LogLevel"),
+        LogLevel::Info
+    );
+    assert_eq!(
+        "INFO".parse::<LogLevel>()
+            .expect("'INFO' should parse to LogLevel"),
+        LogLevel::Info
+    );
+    assert_eq!(
+        "debug".parse::<LogLevel>()
+            .expect("'debug' should parse to LogLevel"),
+        LogLevel::Debug
+    );
+    assert_eq!(
+        "DEBUG".parse::<LogLevel>()
+            .expect("'DEBUG' should parse to LogLevel"),
+        LogLevel::Debug
+    );
 
     // 测试无效的日志级别字符串
     assert!("invalid".parse::<LogLevel>().is_err());
@@ -142,16 +198,17 @@ fn test_log_level_from_str() {
 }
 
 #[test]
-fn test_log_level_as_str() {
+fn test_log_level_as_str() -> Result<()> {
     assert_eq!(LogLevel::None.as_str(), "off");
     assert_eq!(LogLevel::Error.as_str(), "error");
     assert_eq!(LogLevel::Warn.as_str(), "warn");
     assert_eq!(LogLevel::Info.as_str(), "info");
     assert_eq!(LogLevel::Debug.as_str(), "debug");
+Ok(())
 }
 
 #[test]
-fn test_log_level_ordering() {
+fn test_log_level_ordering() -> Result<()> {
     // 测试日志级别的顺序
     assert!(LogLevel::None < LogLevel::Error);
     assert!(LogLevel::Error < LogLevel::Warn);
@@ -193,10 +250,11 @@ fn test_log_level_ordering() {
     assert!(!none_level.should_log(LogLevel::Warn));
     assert!(!none_level.should_log(LogLevel::Info));
     assert!(!none_level.should_log(LogLevel::Debug));
+Ok(())
 }
 
 #[test]
-fn test_log_level_set_and_get() {
+fn test_log_level_set_and_get() -> Result<()> {
     // 保存原始级别
     let original_level = LogLevel::get_level();
 
@@ -218,10 +276,11 @@ fn test_log_level_set_and_get() {
 
     // 恢复原始级别
     LogLevel::set_level(original_level);
+Ok(())
 }
 
 #[test]
-fn test_log_level_default() {
+fn test_log_level_default() -> Result<()> {
     // 测试默认级别（根据编译模式）
     let default = LogLevel::default_level();
 
@@ -231,6 +290,7 @@ fn test_log_level_default() {
     } else {
         assert_eq!(default, LogLevel::Info);
     }
+Ok(())
 }
 
 #[test]
@@ -246,7 +306,9 @@ fn test_log_level_round_trip() {
 
     for level in levels {
         let level_str = level.as_str();
-        let parsed = level_str.parse::<LogLevel>().unwrap();
+        let parsed = level_str
+            .parse::<LogLevel>()
+            .expect("LogLevel round trip should succeed");
         assert_eq!(level, parsed, "Round trip failed for level: {}", level_str);
     }
 }
@@ -254,10 +316,11 @@ fn test_log_level_round_trip() {
 // ==================== Tracing 宏测试 ====================
 
 #[test]
-fn test_tracing_macros() {
+fn test_tracing_macros() -> Result<()> {
     // 这些宏应该可以编译和运行（即使不输出）
     trace_debug!("Test debug message");
     trace_info!("Test info message");
     trace_warn!("Test warn message");
     trace_error!("Test error message");
+Ok(())
 }

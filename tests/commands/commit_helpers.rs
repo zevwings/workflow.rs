@@ -3,7 +3,7 @@
 //! 测试 Commit 命令的辅助函数，包括分支检查、force push 处理等。
 
 use crate::common::cli_helpers::CliTestEnv;
-use std::env;
+use serial_test::serial;
 use workflow::commands::commit::helpers::check_has_last_commit;
 
 #[test]
@@ -33,18 +33,32 @@ fn test_check_has_last_commit_without_git_repo() {
     }
 }
 
+/// 测试空Git仓库（无commit）的情况
+///
+/// ## 测试目的
+/// 验证`check_has_last_commit()`在空Git仓库中正确返回错误。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库（使用`CliTestEnv`）
+/// 2. 初始化Git但不创建任何commit
+/// 3. 调用`check_has_last_commit()`
+/// 4. 验证返回错误且错误消息包含"No commits"
+///
+/// ## 技术细节
+/// - 使用`#[serial]`确保测试串行执行（避免目录切换冲突）
+/// - 使用`TempDir`自动清理临时目录
+/// - 自动恢复原始工作目录
 #[test]
-#[ignore] // 需要实际的 Git 仓库环境
+#[serial]
 fn test_check_has_last_commit_with_empty_git_repo() {
-    // 测试空 Git 仓库（无 commit）的情况
-    // 注意：这个测试需要实际的 Git 仓库环境
+    use crate::common::helpers::CurrentDirGuard;
+
     let env = CliTestEnv::new();
     env.init_git_repo();
     // 不创建任何 commit
 
-    // 切换到测试目录
-    let original_dir = env::current_dir().ok();
-    env::set_current_dir(env.path()).ok();
+    // 切换到测试目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
 
     let result = check_has_last_commit();
 
@@ -62,24 +76,35 @@ fn test_check_has_last_commit_with_empty_git_repo() {
         error_msg
     );
 
-    // 恢复原始目录
-    if let Some(dir) = original_dir {
-        env::set_current_dir(dir).ok();
-    }
+    // 目录会在函数结束时自动恢复
 }
 
+/// 测试有commit的Git仓库的情况
+///
+/// ## 测试目的
+/// 验证`check_has_last_commit()`在有commit的Git仓库中正确返回成功。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库
+/// 2. 创建文件并提交
+/// 3. 调用`check_has_last_commit()`
+/// 4. 验证返回成功
+///
+/// ## 技术细节
+/// - 使用`#[serial]`确保测试串行执行
+/// - 自动创建和清理临时Git仓库
 #[test]
-#[ignore] // 需要实际的 Git 仓库环境
+#[serial]
 fn test_check_has_last_commit_with_commits() {
-    // 测试有 commit 的 Git 仓库的情况
+    use crate::common::helpers::CurrentDirGuard;
+
     let env = CliTestEnv::new();
     env.init_git_repo()
         .create_file("test.txt", "test content")
         .create_commit("Initial commit");
 
-    // 切换到测试目录
-    let original_dir = env::current_dir().ok();
-    env::set_current_dir(env.path()).ok();
+    // 切换到测试目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(env.path()).ok();
 
     let result = check_has_last_commit();
 
@@ -89,9 +114,6 @@ fn test_check_has_last_commit_with_commits() {
         "check_has_last_commit should succeed when there are commits"
     );
 
-    // 恢复原始目录
-    if let Some(dir) = original_dir {
-        env::set_current_dir(dir).ok();
-    }
+    // 目录会在函数结束时自动恢复
 }
 

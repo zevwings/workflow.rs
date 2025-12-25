@@ -1,7 +1,14 @@
 //! GitHub PR 模块测试
 //!
 //! 测试 GitHub PR 平台的 API 集成、请求构建和响应解析。
+//!
+//! ## 测试策略
+//!
+//! - 涉及序列化/反序列化的测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试请求和响应结构体的正确性
+//! - 测试各种边界情况和可选字段处理
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
 
@@ -55,7 +62,7 @@ fn test_create_pr_request_serialization(
     #[case] body: &str,
     #[case] head: &str,
     #[case] base: &str,
-) {
+) -> Result<()> {
     let request = CreatePullRequestRequest {
         title: title.to_string(),
         body: body.to_string(),
@@ -63,16 +70,10 @@ fn test_create_pr_request_serialization(
         base: base.to_string(),
     };
 
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
+    let json_str = serde_json::to_string(&request)?;
 
     // 验证 JSON 是有效的，并包含必要的字段
-    let json_value: Result<serde_json::Value, _> = serde_json::from_str(&json_str);
-    assert!(json_value.is_ok(), "Serialized JSON should be valid");
-
-    let json_value = json_value.unwrap();
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 
     // 验证字段存在且值正确
@@ -80,6 +81,7 @@ fn test_create_pr_request_serialization(
     assert_eq!(obj.get("body").and_then(|v| v.as_str()), Some(body));
     assert_eq!(obj.get("head").and_then(|v| v.as_str()), Some(head));
     assert_eq!(obj.get("base").and_then(|v| v.as_str()), Some(base));
+    Ok(())
 }
 
 #[rstest]
@@ -97,17 +99,14 @@ fn test_merge_pr_request_serialization(
     #[case] commit_title: Option<&str>,
     #[case] commit_message: Option<&str>,
     #[case] merge_method: &str,
-) {
+) -> Result<()> {
     let request = MergePullRequestRequest {
         commit_title: commit_title.map(|s| s.to_string()),
         commit_message: commit_message.map(|s| s.to_string()),
         merge_method: merge_method.to_string(),
     };
 
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
+    let json_str = serde_json::to_string(&request)?;
     assert!(
         json_str.contains(merge_method),
         "JSON should contain merge_method"
@@ -126,6 +125,7 @@ fn test_merge_pr_request_serialization(
             "None fields should be skipped"
         );
     }
+    Ok(())
 }
 
 #[rstest]
@@ -138,7 +138,7 @@ fn test_update_pr_request_serialization(
     #[case] body: Option<&str>,
     #[case] state: Option<&str>,
     #[case] base: Option<&str>,
-) {
+) -> Result<()> {
     let request = UpdatePullRequestRequest {
         title: title.map(|s| s.to_string()),
         body: body.map(|s| s.to_string()),
@@ -146,10 +146,7 @@ fn test_update_pr_request_serialization(
         base: base.map(|s| s.to_string()),
     };
 
-    let json = serde_json::to_string(&request);
-    assert!(json.is_ok(), "Should serialize to JSON");
-
-    let json_str = json.unwrap();
+    let json_str = serde_json::to_string(&request)?;
 
     // 验证存在的字段
     if let Some(t) = title {
@@ -181,6 +178,7 @@ fn test_update_pr_request_serialization(
             "None state should be skipped"
         );
     }
+    Ok(())
 }
 
 // ==================== 响应结构体测试 ====================
@@ -196,15 +194,13 @@ fn test_create_pull_request_response_structure() {
 }
 
 #[test]
-fn test_create_pull_request_response_deserialization() {
+fn test_create_pull_request_response_deserialization() -> Result<()> {
     // 测试创建 PR 响应的反序列化
     let json = r#"{"html_url": "https://github.com/owner/repo/pull/123"}"#;
 
-    let response: Result<CreatePullRequestResponse, _> = serde_json::from_str(json);
-    assert!(response.is_ok(), "Should deserialize from JSON");
-
-    let response = response.unwrap();
+    let response: CreatePullRequestResponse = serde_json::from_str(json)?;
     assert_eq!(response.html_url, "https://github.com/owner/repo/pull/123");
+    Ok(())
 }
 
 #[test]
@@ -237,7 +233,7 @@ fn test_pull_request_info_structure() {
 }
 
 #[test]
-fn test_pull_request_info_deserialization() {
+fn test_pull_request_info_deserialization() -> Result<()> {
     // 测试 PR 信息的反序列化
     let json = r#"{
         "number": 123,
@@ -250,17 +246,15 @@ fn test_pull_request_info_deserialization() {
         "base": {"ref": "main"}
     }"#;
 
-    let pr_info: Result<PullRequestInfo, _> = serde_json::from_str(json);
-    assert!(pr_info.is_ok(), "Should deserialize from JSON");
-
-    let pr_info = pr_info.unwrap();
+    let pr_info: PullRequestInfo = serde_json::from_str(json)?;
     assert_eq!(pr_info.number, 123);
     assert_eq!(pr_info.title, "Test PR");
     assert_eq!(pr_info.state, "open");
+    Ok(())
 }
 
 #[test]
-fn test_pull_request_info_merged_state() {
+fn test_pull_request_info_merged_state() -> Result<()> {
     // 测试 PR 信息的合并状态
     let json = r#"{
         "number": 123,
@@ -274,13 +268,11 @@ fn test_pull_request_info_merged_state() {
         "base": {"ref": "main"}
     }"#;
 
-    let pr_info: Result<PullRequestInfo, _> = serde_json::from_str(json);
-    assert!(pr_info.is_ok(), "Should deserialize merged PR");
-
-    let pr_info = pr_info.unwrap();
+    let pr_info: PullRequestInfo = serde_json::from_str(json)?;
     assert!(pr_info.merged, "Should be marked as merged");
     assert_eq!(pr_info.state, "closed");
     assert!(pr_info.merged_at.is_some());
+    Ok(())
 }
 
 #[test]
@@ -294,15 +286,13 @@ fn test_pull_request_branch_structure() {
 }
 
 #[test]
-fn test_pull_request_branch_deserialization() {
+fn test_pull_request_branch_deserialization() -> Result<()> {
     // 测试 PR 分支的反序列化（注意 JSON 中使用 "ref" 字段）
     let json = r#"{"ref": "feature/test"}"#;
 
-    let branch: Result<PullRequestBranch, _> = serde_json::from_str(json);
-    assert!(branch.is_ok(), "Should deserialize from JSON");
-
-    let branch = branch.unwrap();
+    let branch: PullRequestBranch = serde_json::from_str(json)?;
     assert_eq!(branch.ref_name, "feature/test");
+    Ok(())
 }
 
 #[test]
@@ -334,7 +324,7 @@ fn test_github_user_minimal() {
 }
 
 #[test]
-fn test_github_user_deserialization() {
+fn test_github_user_deserialization() -> Result<()> {
     // 测试 GitHub 用户的反序列化
     let json = r#"{
         "login": "testuser",
@@ -342,12 +332,10 @@ fn test_github_user_deserialization() {
         "email": "test@example.com"
     }"#;
 
-    let user: Result<GitHubUser, _> = serde_json::from_str(json);
-    assert!(user.is_ok(), "Should deserialize from JSON");
-
-    let user = user.unwrap();
+    let user: GitHubUser = serde_json::from_str(json)?;
     assert_eq!(user.login, "testuser");
     assert_eq!(user.name, Some("Test User".to_string()));
+    Ok(())
 }
 
 // ==================== 序列化/反序列化边界测试 ====================
@@ -388,7 +376,7 @@ fn test_request_long_strings() {
 }
 
 #[test]
-fn test_response_missing_optional_fields() {
+fn test_response_missing_optional_fields() -> Result<()> {
     // 测试响应中缺失可选字段
     let json = r#"{
         "number": 123,
@@ -400,13 +388,11 @@ fn test_response_missing_optional_fields() {
         "base": {"ref": "main"}
     }"#;
 
-    let pr_info: Result<PullRequestInfo, _> = serde_json::from_str(json);
-    assert!(pr_info.is_ok(), "Should handle missing optional fields");
-
-    let pr_info = pr_info.unwrap();
+    let pr_info: PullRequestInfo = serde_json::from_str(json)?;
     assert_eq!(pr_info.body, None);
     assert_eq!(pr_info.merged_at, None);
     assert!(pr_info.user.is_none(), "User should be None");
+    Ok(())
 }
 
 // ==================== 类型安全测试 ====================

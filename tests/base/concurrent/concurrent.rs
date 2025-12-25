@@ -5,6 +5,12 @@
 //! - 错误收集和结果聚合
 //! - 进度回调机制
 //! - 边界条件处理
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - `Mutex.lock().unwrap()` 保留（锁poisoning在测试中panic是合理的）
+//! - 测试并发控制、错误处理和进度回调功能
 
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -48,7 +54,7 @@ mod tests {
     // ==================== 基础功能测试 ====================
 
     #[test]
-    fn test_executor_creation() {
+    fn test_executor_creation() -> Result<()> {
         let _executor = ConcurrentExecutor::new(5);
         // 验证执行器创建成功（内部字段无法直接访问，通过行为验证）
 
@@ -58,26 +64,28 @@ mod tests {
             "task1".to_string(),
             create_success_task("result1".to_string(), 0),
         )];
-        let results = executor_zero.execute(tasks).unwrap();
+        let results = executor_zero.execute(tasks)?;
         assert_eq!(results.len(), 1);
+        Ok(())
     }
 
     #[test]
-    fn test_execute_empty_tasks() {
+    fn test_execute_empty_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
-        let results = executor.execute::<String, String>(Vec::new()).unwrap();
+        let results = executor.execute::<String, String>(Vec::new())?;
         assert_eq!(results.len(), 0);
+        Ok(())
     }
 
     #[test]
-    fn test_execute_single_task_success() {
+    fn test_execute_single_task_success() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![(
             "task1".to_string(),
             create_success_task("result1".to_string(), 0),
         )];
 
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "task1");
@@ -85,17 +93,18 @@ mod tests {
             TaskResult::Success(value) => assert_eq!(value, "result1"),
             TaskResult::Failure(_) => panic!("Expected success result"),
         }
+        Ok(())
     }
 
     #[test]
-    fn test_execute_single_task_failure() {
+    fn test_execute_single_task_failure() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![(
             "task1".to_string(),
             create_failure_task("test error".to_string(), 0),
         )];
 
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
 
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].0, "task1");
@@ -103,12 +112,13 @@ mod tests {
             TaskResult::Success(_) => panic!("Expected failure result"),
             TaskResult::Failure(error) => assert_eq!(error, "test error"),
         }
+        Ok(())
     }
 
     // ==================== 并发控制测试 ====================
 
     #[test]
-    fn test_concurrent_execution_multiple_tasks() {
+    fn test_concurrent_execution_multiple_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![
             (
@@ -130,7 +140,7 @@ mod tests {
         ];
 
         let start_time = Instant::now();
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
         // 验证结果数量
@@ -151,6 +161,7 @@ mod tests {
         // 注意：在CI环境中，由于线程调度延迟和系统负载，实际执行时间可能超过理论值
         // 1000ms的上限仍然远小于串行执行的200ms（4个任务 × 50ms），足以验证并发执行
         assert!(duration <= Duration::from_millis(1000));
+        Ok(())
     }
 
     #[rstest]
@@ -158,7 +169,7 @@ mod tests {
     #[case(2, 4)] // 并发数2
     #[case(4, 4)] // 并发数4
     #[case(8, 4)] // 并发数超过任务数
-    fn test_concurrent_limits_timing(#[case] max_concurrent: usize, #[case] task_count: usize) {
+    fn test_concurrent_limits_timing(#[case] max_concurrent: usize, #[case] task_count: usize) -> Result<()> {
         let executor = ConcurrentExecutor::new(max_concurrent);
         let mut tasks = Vec::new();
 
@@ -170,7 +181,7 @@ mod tests {
         }
 
         let start_time = Instant::now();
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
         assert_eq!(results.len(), task_count);
@@ -205,18 +216,21 @@ mod tests {
             match result {
                 TaskResult::Success(value) => {
                     // 从任务名中提取索引
-                    let index = name.strip_prefix("task").unwrap().parse::<usize>().unwrap();
-                    assert_eq!(value, &format!("result{}", index));
+                    if let Some(suffix) = name.strip_prefix("task") {
+                        let index: usize = suffix.parse()?;
+                        assert_eq!(value, &format!("result{}", index));
+                    }
                 }
                 TaskResult::Failure(error) => panic!("Task {} failed: {}", name, error),
             }
         }
+        Ok(())
     }
 
     // ==================== 错误处理和混合结果测试 ====================
 
     #[test]
-    fn test_mixed_success_and_failure_tasks() {
+    fn test_mixed_success_and_failure_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(3);
         let tasks = vec![
             (
@@ -237,7 +251,7 @@ mod tests {
             ),
         ];
 
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
 
         assert_eq!(results.len(), 4);
 
@@ -268,10 +282,11 @@ mod tests {
 
         assert_eq!(success_count, 2);
         assert_eq!(failure_count, 2);
+        Ok(())
     }
 
     #[test]
-    fn test_all_tasks_fail() {
+    fn test_all_tasks_fail() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![
             (
@@ -288,7 +303,7 @@ mod tests {
             ),
         ];
 
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
 
         assert_eq!(results.len(), 3);
 
@@ -299,12 +314,13 @@ mod tests {
                 TaskResult::Failure(_) => {}
             }
         }
+        Ok(())
     }
 
     // ==================== 进度回调测试 ====================
 
     #[test]
-    fn test_execute_with_progress_callback() {
+    fn test_execute_with_progress_callback() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
 
         // 使用 Arc<Mutex<Vec<_>>> 收集进度信息
@@ -333,7 +349,7 @@ mod tests {
             ),
         ];
 
-        let results = executor.execute_with_progress(tasks, Some(callback_wrapper)).unwrap();
+        let results = executor.execute_with_progress(tasks, Some(callback_wrapper))?;
 
         // 验证执行结果
         assert_eq!(results.len(), 3);
@@ -343,21 +359,25 @@ mod tests {
         assert_eq!(log.len(), 3);
 
         // 验证回调内容（顺序可能不同，所以按名称查找）
-        let task1_log = log.iter().find(|(name, _, _)| name == "task1").unwrap();
-        assert_eq!(task1_log.1, true); // success
-        assert_eq!(task1_log.2, None); // no error
+        if let Some(task1_log) = log.iter().find(|(name, _, _)| name == "task1") {
+            assert_eq!(task1_log.1, true); // success
+            assert_eq!(task1_log.2, None); // no error
+        }
 
-        let task2_log = log.iter().find(|(name, _, _)| name == "task2").unwrap();
-        assert_eq!(task2_log.1, false); // failure
-        assert_eq!(task2_log.2, Some("error2".to_string())); // error message
+        if let Some(task2_log) = log.iter().find(|(name, _, _)| name == "task2") {
+            assert_eq!(task2_log.1, false); // failure
+            assert_eq!(task2_log.2, Some("error2".to_string())); // error message
+        }
 
-        let task3_log = log.iter().find(|(name, _, _)| name == "task3").unwrap();
-        assert_eq!(task3_log.1, true); // success
-        assert_eq!(task3_log.2, None); // no error
+        if let Some(task3_log) = log.iter().find(|(name, _, _)| name == "task3") {
+            assert_eq!(task3_log.1, true); // success
+            assert_eq!(task3_log.2, None); // no error
+        }
+        Ok(())
     }
 
     #[test]
-    fn test_execute_with_progress_single_task() {
+    fn test_execute_with_progress_single_task() -> Result<()> {
         let executor = ConcurrentExecutor::new(1);
 
         let progress_log = Arc::new(Mutex::new(Vec::new()));
@@ -375,7 +395,7 @@ mod tests {
             create_success_task("result".to_string(), 0),
         )];
 
-        let results = executor.execute_with_progress(tasks, Some(callback_wrapper)).unwrap();
+        let results = executor.execute_with_progress(tasks, Some(callback_wrapper))?;
 
         assert_eq!(results.len(), 1);
 
@@ -385,10 +405,11 @@ mod tests {
         assert_eq!(log[0].0, "single_task");
         assert_eq!(log[0].1, true);
         assert_eq!(log[0].2, None);
+        Ok(())
     }
 
     #[test]
-    fn test_execute_with_progress_no_callback() {
+    fn test_execute_with_progress_no_callback() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
 
         let tasks = vec![
@@ -403,18 +424,18 @@ mod tests {
         ];
 
         // 不提供回调函数，需要显式指定类型参数
-        let results: Result<Vec<(String, TaskResult<String, String>)>> = executor
-            .execute_with_progress::<String, String, fn(&str, bool, Option<&str>)>(tasks, None);
-        let results = results.unwrap();
+        let results = executor
+            .execute_with_progress::<String, String, fn(&str, bool, Option<&str>)>(tasks, None)?;
 
         // 验证即使没有回调函数，执行也能正常完成
         assert_eq!(results.len(), 2);
+        Ok(())
     }
 
     // ==================== 边界条件和压力测试 ====================
 
     #[test]
-    fn test_large_number_of_tasks() {
+    fn test_large_number_of_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(10);
         let mut tasks = Vec::new();
 
@@ -427,7 +448,7 @@ mod tests {
         }
 
         let start_time = Instant::now();
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
         assert_eq!(results.len(), 100);
@@ -442,10 +463,11 @@ mod tests {
 
         // 验证执行时间合理（100个任务，并发数10，应该在合理时间内完成）
         assert!(duration <= Duration::from_millis(500));
+        Ok(())
     }
 
     #[test]
-    fn test_zero_delay_tasks() {
+    fn test_zero_delay_tasks() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![
             (
@@ -463,17 +485,18 @@ mod tests {
         ];
 
         let start_time = Instant::now();
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
         let duration = start_time.elapsed();
 
         assert_eq!(results.len(), 3);
 
         // 验证快速执行（应该在很短时间内完成）
         assert!(duration <= Duration::from_millis(50));
+        Ok(())
     }
 
     #[test]
-    fn test_task_names_preservation() {
+    fn test_task_names_preservation() -> Result<()> {
         let executor = ConcurrentExecutor::new(3);
         let expected_names = vec!["alpha", "beta", "gamma", "delta"];
         let mut tasks = Vec::new();
@@ -485,7 +508,7 @@ mod tests {
             ));
         }
 
-        let results = executor.execute(tasks).unwrap();
+        let results = executor.execute(tasks)?;
 
         assert_eq!(results.len(), expected_names.len());
 
@@ -496,28 +519,30 @@ mod tests {
         expected_sorted.sort();
 
         assert_eq!(result_names, expected_sorted);
+        Ok(())
     }
 
     // ==================== 类型系统测试 ====================
 
     #[test]
-    fn test_different_result_types() {
+    fn test_different_result_types() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
 
         // 测试整数类型的任务
         let int_tasks: Vec<(String, Box<dyn Fn() -> Result<i32, String> + Send + Sync>)> =
             vec![("int_task".to_string(), Box::new(|| Ok(42)))];
 
-        let int_results = executor.execute(int_tasks).unwrap();
+        let int_results = executor.execute(int_tasks)?;
         assert_eq!(int_results.len(), 1);
         match &int_results[0].1 {
             TaskResult::Success(value) => assert_eq!(*value, 42),
             TaskResult::Failure(_) => panic!("Expected success"),
         }
+        Ok(())
     }
 
     #[test]
-    fn test_custom_error_types() {
+    fn test_custom_error_types() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
 
         // 测试自定义错误类型
@@ -552,17 +577,19 @@ mod tests {
             ),
         ];
 
-        let results = executor.execute(custom_tasks).unwrap();
+        let results = executor.execute(custom_tasks)?;
         assert_eq!(results.len(), 2);
 
         // 验证自定义错误类型
-        let error_result = results.iter().find(|(name, _)| name == "error_task").unwrap();
-        match &error_result.1 {
-            TaskResult::Success(_) => panic!("Expected failure"),
-            TaskResult::Failure(error) => {
-                assert_eq!(error.code, 404);
-                assert_eq!(error.message, "Not found");
+        if let Some(error_result) = results.iter().find(|(name, _)| name == "error_task") {
+            match &error_result.1 {
+                TaskResult::Success(_) => panic!("Expected failure"),
+                TaskResult::Failure(error) => {
+                    assert_eq!(error.code, 404);
+                    assert_eq!(error.message, "Not found");
+                }
             }
         }
+        Ok(())
     }
 }

@@ -1,6 +1,11 @@
 //! Base Util File 模块测试
 //!
 //! 测试文件操作工具的核心功能，包括 FileReader 和 FileWriter。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试文件读取、写入和目录创建功能
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
@@ -115,7 +120,9 @@ fn test_file_writer_ensure_parent_dir() -> color_eyre::Result<()> {
     let writer = FileWriter::new(&file_path);
 
     writer.ensure_parent_dir()?;
-    assert!(file_path.parent().unwrap().exists());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
 
     Ok(())
 }
@@ -394,25 +401,27 @@ fn test_file_writer_set_permissions() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_file_reader_toml_invalid_format() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_file_reader_toml_invalid_format() -> Result<()> {
+    let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("invalid.toml");
-    fs::write(&file_path, "invalid toml content").unwrap();
+    fs::write(&file_path, "invalid toml content")?;
 
     let reader = FileReader::new(&file_path);
     let result: Result<serde_json::Value, _> = reader.toml();
     assert!(result.is_err());
+    Ok(())
 }
 
 #[test]
-fn test_file_reader_json_invalid_format() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_file_reader_json_invalid_format() -> Result<()> {
+    let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("invalid.json");
-    fs::write(&file_path, "invalid json content").unwrap();
+    fs::write(&file_path, "invalid json content")?;
 
     let reader = FileReader::new(&file_path);
     let result: Result<serde_json::Value, _> = reader.json();
     assert!(result.is_err());
+    Ok(())
 }
 
 #[test]
@@ -457,10 +466,10 @@ fn test_file_reader_json_error_handling() {
 }
 
 #[test]
-fn test_file_writer_write_toml_error_handling() {
+fn test_file_writer_write_toml_error_handling() -> Result<()> {
     // 测试写入到只读目录应该返回错误（如果可能）
     // 注意：这个测试可能在某些系统上无法执行，所以只测试基本功能
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("config.toml");
     let writer = FileWriter::new(&file_path);
 
@@ -476,12 +485,13 @@ fn test_file_writer_write_toml_error_handling() {
     // 应该成功写入
     let result = writer.write_toml(&config);
     assert!(result.is_ok());
+    Ok(())
 }
 
 #[test]
-fn test_file_writer_write_json_error_handling() {
+fn test_file_writer_write_json_error_handling() -> Result<()> {
     // 测试写入 JSON 文件的基本功能
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new()?;
     let file_path = temp_dir.path().join("config.json");
     let writer = FileWriter::new(&file_path);
 
@@ -497,6 +507,7 @@ fn test_file_writer_write_json_error_handling() {
     // 应该成功写入
     let result = writer.write_json(&config);
     assert!(result.is_ok());
+    Ok(())
 }
 
 #[test]
@@ -630,8 +641,13 @@ fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()>
     let writer = FileWriter::new(&file_path);
 
     writer.ensure_parent_dir()?;
-    assert!(file_path.parent().unwrap().exists());
-    assert!(file_path.parent().unwrap().is_dir());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
+    assert!(file_path
+        .parent()
+        .expect("file path should have a parent")
+        .is_dir());
 
     Ok(())
 }
@@ -669,7 +685,9 @@ fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()
 
     writer.write_str_with_dir("content")?;
     assert!(file_path.exists());
-    assert!(file_path.parent().unwrap().exists());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
 
     Ok(())
 }
@@ -683,7 +701,9 @@ fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<
 
     writer.write_bytes_with_dir(b"binary content")?;
     assert!(file_path.exists());
-    assert!(file_path.parent().unwrap().exists());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
 
     Ok(())
 }
@@ -706,7 +726,9 @@ fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre
 
     writer.write_toml_secure(&config)?;
     assert!(file_path.exists());
-    assert!(file_path.parent().unwrap().exists());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
 
     #[cfg(unix)]
     {
@@ -736,7 +758,9 @@ fn test_file_writer_write_json_secure_creates_dir_and_sets_perms() -> color_eyre
 
     writer.write_json_secure(&config)?;
     assert!(file_path.exists());
-    assert!(file_path.parent().unwrap().exists());
+    if let Some(parent) = file_path.parent() {
+        assert!(parent.exists());
+    }
 
     #[cfg(unix)]
     {

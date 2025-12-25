@@ -1,6 +1,11 @@
 //! Base HTTP Method 模块测试
 //!
 //! 测试 HTTP 方法枚举的核心功能，包括 FromStr 和 Display trait。
+//!
+//! ## 测试策略
+//!
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试所有HTTP方法的解析和显示功能
 
 use pretty_assertions::assert_eq;
 use std::str::FromStr;
@@ -8,7 +13,7 @@ use workflow::base::http::HttpMethod;
 
 #[test]
 fn test_http_method_from_str_get() {
-    let method = HttpMethod::from_str("GET").unwrap();
+    let method = HttpMethod::from_str("GET").expect("GET should be a valid HTTP method");
     match method {
         HttpMethod::Get => assert!(true),
         _ => panic!("Expected Get"),
@@ -17,7 +22,7 @@ fn test_http_method_from_str_get() {
 
 #[test]
 fn test_http_method_from_str_post() {
-    let method = HttpMethod::from_str("POST").unwrap();
+    let method = HttpMethod::from_str("POST").expect("POST should be a valid HTTP method");
     match method {
         HttpMethod::Post => assert!(true),
         _ => panic!("Expected Post"),
@@ -26,7 +31,7 @@ fn test_http_method_from_str_post() {
 
 #[test]
 fn test_http_method_from_str_put() {
-    let method = HttpMethod::from_str("PUT").unwrap();
+    let method = HttpMethod::from_str("PUT").expect("PUT should be a valid HTTP method");
     match method {
         HttpMethod::Put => assert!(true),
         _ => panic!("Expected Put"),
@@ -35,7 +40,7 @@ fn test_http_method_from_str_put() {
 
 #[test]
 fn test_http_method_from_str_delete() {
-    let method = HttpMethod::from_str("DELETE").unwrap();
+    let method = HttpMethod::from_str("DELETE").expect("DELETE should be a valid HTTP method");
     match method {
         HttpMethod::Delete => assert!(true),
         _ => panic!("Expected Delete"),
@@ -44,7 +49,7 @@ fn test_http_method_from_str_delete() {
 
 #[test]
 fn test_http_method_from_str_patch() {
-    let method = HttpMethod::from_str("PATCH").unwrap();
+    let method = HttpMethod::from_str("PATCH").expect("PATCH should be a valid HTTP method");
     match method {
         HttpMethod::Patch => assert!(true),
         _ => panic!("Expected Patch"),

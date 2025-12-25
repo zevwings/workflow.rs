@@ -1,6 +1,11 @@
 //! Base/Shell Reload 模块测试
 //!
 //! 测试 Shell 配置重载功能。
+//!
+//! ## 测试策略
+//!
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试所有shell类型的重载功能
 
 use clap_complete::Shell;
 use workflow::base::shell::{Reload, ReloadResult};
@@ -157,7 +162,7 @@ fn test_reload_shell_returns_result() {
     // 验证返回的是 Ok(ReloadResult)
     assert!(result.is_ok());
 
-    let reload_result = result.unwrap();
+    let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
     // 验证结果结构
     assert!(
         reload_result.reload_hint.contains("source") || reload_result.reload_hint.contains(".")
@@ -222,7 +227,7 @@ fn test_reload_shell_all_shell_types() {
             shell
         );
 
-        let reload_result = result.unwrap();
+        let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
         // 验证结果包含必要的字段
         assert!(!reload_result.reload_hint.is_empty());
     }
@@ -283,8 +288,8 @@ fn test_reload_shell_consistency() {
     assert!(result1.is_ok());
     assert!(result2.is_ok());
 
-    let reload_result1 = result1.unwrap();
-    let reload_result2 = result2.unwrap();
+    let reload_result1 = result1.expect("First call should return Ok(ReloadResult)");
+    let reload_result2 = result2.expect("Second call should return Ok(ReloadResult)");
 
     // reload_hint 应该相同（配置文件路径应该相同）
     assert_eq!(reload_result1.reload_hint, reload_result2.reload_hint);

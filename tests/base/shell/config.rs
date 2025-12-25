@@ -253,6 +253,46 @@ fn test_remove_multiple_env_vars() {
 }
 
 // 注意：以下测试需要实际的 shell 环境，在 CI 环境中可能失败
+
+/// 测试向Zsh配置文件添加source语句
+///
+/// ## 测试目的
+/// 验证`ShellConfigManager`能够正确向用户的~/.zshrc文件添加source语句，
+/// 用于加载shell补全脚本。
+///
+/// ## 为什么被忽略
+/// - **修改系统文件**: 会实际修改用户的~/.zshrc配置文件
+/// - **安全风险**: 错误的修改可能破坏用户的shell环境
+/// - **需要shell环境**: 需要实际的zsh shell环境
+/// - **难以恢复**: 配置修改可能难以完全撤销
+/// - **环境依赖**: 不同系统的shell配置文件位置可能不同
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 先备份配置文件！
+/// cp ~/.zshrc ~/.zshrc.backup
+///
+/// # 2. 运行测试
+/// cargo test test_add_source_for_shell_zsh -- --ignored
+///
+/// # 3. 如需恢复
+/// cp ~/.zshrc.backup ~/.zshrc
+/// ```
+/// **⚠️ 警告**: 此测试会修改你的~/.zshrc文件！请务必先备份！
+///
+/// ## 测试场景
+/// 1. 准备source路径（$HOME/.workflow/zsh_completions）
+/// 2. 调用add_source_for_shell添加source语句到~/.zshrc
+/// 3. 验证source语句已添加
+/// 4. 清理：调用remove_source_for_shell删除添加的语句
+///
+/// ## 预期行为
+/// - source语句正确添加到~/.zshrc末尾
+/// - 添加的语句格式：`source $HOME/.workflow/zsh_completions`
+/// - 文件格式保持完整（换行符、编码等）
+/// - 不破坏现有配置
+/// - 清理操作能正确删除添加的语句
+/// - 可以被zsh正确解析和执行
 #[cfg(not(target_os = "windows"))]
 #[test]
 #[ignore] // 需要实际的 shell 环境
@@ -271,6 +311,45 @@ fn test_add_source_for_shell_zsh() {
     let _ = ShellConfigManager::remove_source_for_shell(&Shell::Zsh, source_path);
 }
 
+/// 测试向Bash配置文件添加source语句
+///
+/// ## 测试目的
+/// 验证`ShellConfigManager`能够正确向用户的~/.bashrc文件添加source语句，
+/// 用于加载shell补全脚本。
+///
+/// ## 为什么被忽略
+/// - **修改系统文件**: 会实际修改用户的~/.bashrc配置文件
+/// - **安全风险**: 错误的修改可能破坏用户的shell环境
+/// - **需要shell环境**: 需要实际的bash shell环境
+/// - **难以恢复**: 配置修改可能难以完全撤销
+/// - **环境依赖**: 不同系统的shell配置文件位置可能不同
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 先备份配置文件！
+/// cp ~/.bashrc ~/.bashrc.backup
+///
+/// # 2. 运行测试
+/// cargo test test_add_source_for_shell_bash -- --ignored
+///
+/// # 3. 如需恢复
+/// cp ~/.bashrc.backup ~/.bashrc
+/// ```
+/// **⚠️ 警告**: 此测试会修改你的~/.bashrc文件！请务必先备份！
+///
+/// ## 测试场景
+/// 1. 准备source路径（$HOME/.workflow/bash_completions）
+/// 2. 调用add_source_for_shell添加source语句到~/.bashrc
+/// 3. 验证source语句已添加
+/// 4. 清理：调用remove_source_for_shell删除添加的语句
+///
+/// ## 预期行为
+/// - source语句正确添加到~/.bashrc末尾
+/// - 添加的语句格式：`source $HOME/.workflow/bash_completions`
+/// - 文件格式保持完整（换行符、编码等）
+/// - 不破坏现有配置
+/// - 清理操作能正确删除添加的语句
+/// - 可以被bash正确解析和执行
 #[cfg(not(target_os = "windows"))]
 #[test]
 #[ignore] // 需要实际的 shell 环境
@@ -289,6 +368,46 @@ fn test_add_source_for_shell_bash() {
     let _ = ShellConfigManager::remove_source_for_shell(&Shell::Bash, source_path);
 }
 
+/// 测试向PowerShell配置文件添加source语句
+///
+/// ## 测试目的
+/// 验证`ShellConfigManager`能够正确向用户的PowerShell配置文件添加source语句（使用`.`关键字），
+/// 用于加载shell补全脚本。
+///
+/// ## 为什么被忽略
+/// - **修改系统文件**: 会实际修改用户的PowerShell配置文件（$PROFILE）
+/// - **安全风险**: 错误的修改可能破坏用户的PowerShell环境
+/// - **需要PowerShell环境**: 需要实际的PowerShell shell环境
+/// - **难以恢复**: 配置修改可能难以完全撤销
+/// - **Windows特定**: 主要在Windows系统上运行，跨平台测试困难
+/// - **配置文件位置**: PowerShell配置文件位置因版本和安装方式不同而异
+///
+/// ## 如何手动运行
+/// ```powershell
+/// # 1. 先备份配置文件！（PowerShell）
+/// Copy-Item $PROFILE "$PROFILE.backup"
+///
+/// # 2. 运行测试
+/// cargo test test_add_source_for_shell_powershell -- --ignored
+///
+/// # 3. 如需恢复
+/// Copy-Item "$PROFILE.backup" $PROFILE
+/// ```
+/// **⚠️ 警告**: 此测试会修改你的PowerShell配置文件！请务必先备份！
+///
+/// ## 测试场景
+/// 1. 准备source路径（$HOME/.workflow/powershell_completions）
+/// 2. 调用add_source_for_shell添加source语句到PowerShell配置文件
+/// 3. 验证source语句已添加
+/// 4. 清理：调用remove_source_for_shell删除添加的语句
+///
+/// ## 预期行为
+/// - source语句正确添加到PowerShell配置文件末尾
+/// - 添加的语句格式：`. $HOME/.workflow/powershell_completions`（使用`.`而非`source`）
+/// - 文件格式保持完整（UTF-16编码、换行符等）
+/// - 不破坏现有配置
+/// - 清理操作能正确删除添加的语句
+/// - 可以被PowerShell正确解析和执行
 #[test]
 #[ignore] // 需要实际的 shell 环境
 fn test_add_source_for_shell_powershell() {
@@ -321,12 +440,12 @@ export ANOTHER_KEY="another_value"
 "#;
 
     // 创建一个临时文件来测试解析
-    let temp_dir = TempDir::new().unwrap();
+    let temp_dir = TempDir::new().expect("should create temp dir for test");
     let config_file = temp_dir.path().join("test_config");
-    fs::write(&config_file, config_content).unwrap();
+    fs::write(&config_file, config_content).expect("should write config file");
 
     // 读取并验证内容
-    let content = fs::read_to_string(&config_file).unwrap();
+    let content = fs::read_to_string(&config_file).expect("should read config file");
     assert!(content.contains("TEST_KEY"));
     assert!(content.contains("test_value"));
     assert!(content.contains("ANOTHER_KEY"));

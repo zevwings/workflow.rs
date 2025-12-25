@@ -164,7 +164,7 @@ ValidationError {
    ```
 
 4. **创建迁移文档**：
-   - 使用迁移文档模板：`docs/migration/templates/migration.template`
+   - 使用迁移文档模板：`docs/templates/migration/migration.template`
    - 创建迁移文档：`docs/migration/{旧版本}-to-{新版本}.md`
    - 更新迁移文档索引：`docs/migration/README.md`
 

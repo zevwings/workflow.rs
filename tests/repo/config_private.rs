@@ -12,11 +12,36 @@ use tempfile::TempDir;
 use workflow::repo::config::private::PrivateRepoConfig;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 
+use crate::common::helpers::CurrentDirGuard;
+
 // ==================== 测试辅助函数和结构 ====================
 
 /// 测试环境管理器（RAII 模式）
 ///
-/// 自动处理临时目录的创建和清理，以及工作目录和环境变量的切换和恢复
+/// ## 功能说明
+/// 自动处理临时目录的创建和清理，以及工作目录和环境变量的切换和恢复。
+/// 使用 RAII（Resource Acquisition Is Initialization）模式确保资源的正确清理。
+///
+/// ## 设计原理
+/// 1. **自动清理**：利用 Rust 的 Drop trait，在对象销毁时自动恢复环境
+/// 2. **环境隔离**：每个测试在独立的临时目录和环境变量中运行
+/// 3. **Git 集成**：支持在临时目录中初始化 Git 仓库
+/// 4. **配置管理**：提供创建和管理配置文件的辅助方法
+///
+/// ## 使用示例
+/// ```rust
+/// let env = TestEnv::new()?;
+/// env.init_git_repo()?;
+/// env.create_config("key = value")?;
+/// // 测试代码...
+/// // 自动清理：当 env 离开作用域时，Drop trait 会恢复所有环境
+/// ```
+///
+/// ## 管理的资源
+/// - `temp_dir`: 临时目录（自动清理）
+/// - `original_dir`: 原始工作目录（自动恢复）
+/// - `original_home`: 原始 HOME 环境变量（自动恢复）
+/// - `original_xdg_config_home`: 原始 XDG_CONFIG_HOME 环境变量（自动恢复）
 struct TestEnv {
     temp_dir: TempDir,
     original_dir: PathBuf,
@@ -49,7 +74,7 @@ impl TestEnv {
     /// 初始化 Git 仓库
     fn init_git_repo(&self) -> Result<()> {
         let temp_path = self.temp_dir.path();
-        std::env::set_current_dir(temp_path)?;
+        // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
 
         std::process::Command::new("git").args(["init"]).current_dir(temp_path).output()?;
         std::process::Command::new("git")
@@ -213,9 +238,10 @@ fn test_generate_repo_id_format() {
         assert!(parts.len() >= 2);
 
         // 验证 hash 部分是 8 个字符的十六进制
-        let hash_part = parts.last().unwrap();
-        assert_eq!(hash_part.len(), 8);
-        assert!(hash_part.chars().all(|c| c.is_ascii_hexdigit()));
+        if let Some(hash_part) = parts.last() {
+            assert_eq!(hash_part.len(), 8);
+            assert!(hash_part.chars().all(|c| c.is_ascii_hexdigit()));
+        }
     }
 }
 
@@ -518,6 +544,7 @@ fn test_load_from_existing_file() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 生成 repo_id
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
@@ -565,6 +592,7 @@ fn test_load_from_non_existing_file() -> Result<()> {
     // 准备：创建没有配置文件的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：调用 PrivateRepoConfig::load()
     let config = PrivateRepoConfig::load()?;
@@ -583,6 +611,7 @@ fn test_save_to_new_file() -> Result<()> {
     // 准备：创建临时 Git 仓库（不创建配置文件）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：创建配置并保存
     let config = PrivateRepoConfig {
@@ -603,7 +632,7 @@ fn test_save_to_new_file() -> Result<()> {
 
     // 验证：内容正确
     let content = fs::read_to_string(&config_path)?;
-    let repo_id = PrivateRepoConfig::generate_repo_id()?;
+    let _repo_id = PrivateRepoConfig::generate_repo_id()?;
     // Note: TOML section names with special chars might be quoted
     assert!(content.contains("configured = true"));
     assert!(content.contains(r#"prefix = "feature""#));
@@ -618,6 +647,7 @@ fn test_save_preserves_other_repos() -> Result<()> {
     // 准备：创建包含其他仓库配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let config_content = r#"
 [other_repo_12345678]
@@ -657,6 +687,7 @@ fn test_load_and_save_roundtrip() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let repo_id = PrivateRepoConfig::generate_repo_id()?;
     let config_content = format!(
@@ -713,6 +744,7 @@ fn test_load_corrupted_toml_file() -> Result<()> {
     // 准备：创建包含无效 TOML 的配置文件
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let invalid_toml = r#"
 [test_repo
@@ -729,6 +761,37 @@ configured = "invalid  # 缺少闭合引号和括号
     Ok(())
 }
 
+/// 测试向只读目录保存配置的错误处理
+///
+/// ## 测试目的
+/// 验证`PrivateRepoConfig::save()`在目标目录只读时能够正确返回错误，而不是panic。
+///
+/// ## 为什么被忽略
+/// - **权限模型差异**: 不同系统（Linux/macOS）的权限模型可能不同
+/// - **Unix特定**: 使用Unix特定的权限API，仅在Unix系统上运行
+/// - **文件系统依赖**: 依赖文件系统正确处理只读权限
+/// - **可能失败**: 在某些系统配置下可能因权限处理不同而失败
+/// - **需要#[serial]**: 避免并发文件系统操作干扰
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_save_to_readonly_directory -- --ignored
+/// ```
+/// 注意：此测试仅在Unix系统（Linux/macOS）上运行
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库和.workflow目录
+/// 2. 将.workflow目录设置为只读（权限0o555）
+/// 3. 尝试保存PrivateRepoConfig到只读目录
+/// 4. 验证操作失败并返回适当的错误
+/// 5. 恢复目录权限进行清理
+///
+/// ## 预期行为
+/// - 保存操作失败（不能创建config子目录）
+/// - 返回Err而不是panic
+/// - 错误消息清晰说明权限问题
+/// - 清理过程正确恢复权限
+/// - 不会留下部分创建的文件
 #[test]
 #[serial(repo_config_fs)]
 #[cfg(unix)]
@@ -739,6 +802,7 @@ fn test_save_to_readonly_directory() -> Result<()> {
     // 准备：创建只读的 .workflow 目录（阻止创建 config 子目录）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let workflow_dir = env.path().join(".workflow");
     fs::create_dir_all(&workflow_dir)?;
@@ -774,10 +838,12 @@ fn test_save_to_readonly_directory() -> Result<()> {
 #[test]
 #[serial(repo_config_fs)]
 fn test_generate_repo_id_outside_git_repo() -> Result<()> {
+    use crate::common::helpers::CurrentDirGuard;
+
     // 准备：创建非 Git 仓库的临时目录
     let env = TestEnv::new()?;
     let temp_path = env.path();
-    std::env::set_current_dir(temp_path)?;
+    let _dir_guard = CurrentDirGuard::new(temp_path)?;
 
     // 执行：尝试生成 repo_id
     let result = PrivateRepoConfig::generate_repo_id();

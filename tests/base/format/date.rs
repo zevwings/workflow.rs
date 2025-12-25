@@ -1,6 +1,11 @@
 //! Base Util Date 模块补充测试
 //!
 //! 测试日期时间工具中未完全覆盖的功能。
+//!
+//! ## 测试策略
+//!
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试各种日期时间格式化功能
 
 use regex::Regex;
 use workflow::base::format::date::{
@@ -11,7 +16,8 @@ use workflow::base::format::date::{
 fn test_format_filename_timestamp() {
     let result = format_filename_timestamp();
     // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
-    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
+    let re = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
+        .expect("Filename timestamp regex should be valid");
     assert!(
         re.is_match(&result),
         "Filename timestamp format should match YYYY-MM-DD_HH-MM-SS"
@@ -34,11 +40,13 @@ fn test_get_unix_timestamp() {
 fn test_format_document_timestamp_all_formats_utc() {
     // 测试所有格式在 UTC 时区下的行为
     let date_only = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
-    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+        .expect("Date only regex should be valid");
     assert!(re_date.is_match(&date_only));
 
     let datetime = format_document_timestamp(DateFormat::DateTime, Timezone::Utc);
-    let re_datetime = Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").unwrap();
+    let re_datetime = Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+        .expect("DateTime regex should be valid");
     assert!(re_datetime.is_match(&datetime));
 
     let iso8601 = format_document_timestamp(DateFormat::Iso8601, Timezone::Utc);
@@ -46,7 +54,8 @@ fn test_format_document_timestamp_all_formats_utc() {
     assert!(iso8601.contains('Z') || iso8601.contains('+') || iso8601.contains('-'));
 
     let filename = format_document_timestamp(DateFormat::Filename, Timezone::Utc);
-    let re_filename = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
+    let re_filename = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
+        .expect("Filename regex should be valid");
     assert!(re_filename.is_match(&filename));
 
     // 确保 UTC 时区的 Filename 格式被覆盖（覆盖 date.rs:71）

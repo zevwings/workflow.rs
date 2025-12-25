@@ -137,7 +137,10 @@ fn test_detect_shell_consistency() {
 
     // 如果两次都成功，应该返回相同的结果
     if result1.is_ok() && result2.is_ok() {
-        assert_eq!(result1.unwrap(), result2.unwrap());
+        assert_eq!(
+            result1.expect("first shell detection should succeed"),
+            result2.expect("second shell detection should succeed")
+        );
     }
     // 如果两次都失败，也应该一致
     else if result1.is_err() && result2.is_err() {
@@ -215,7 +218,10 @@ fn test_detect_shell_from_shell_path_fallback() {
 
     // 应该能够检测到 shell
     if result.is_ok() {
-        assert_eq!(result.unwrap(), Shell::Zsh);
+        assert_eq!(
+            result.expect("should detect zsh shell"),
+            Shell::Zsh
+        );
     }
 
     // 恢复原始环境变量
@@ -311,12 +317,15 @@ fn test_detect_shell_powershell() {
         #[cfg(target_os = "windows")]
         {
             // Windows 上可能检测为 PowerShell
-            assert!(matches!(result.unwrap(), Shell::PowerShell));
+            assert!(matches!(
+                result.expect("should detect powershell on Windows"),
+                Shell::PowerShell
+            ));
         }
         #[cfg(not(target_os = "windows"))]
         {
             // 非 Windows 上可能检测为 PowerShell 或其他
-            let _ = result.unwrap();
+            let _ = result.expect("shell detection should succeed");
         }
     }
 

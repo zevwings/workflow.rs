@@ -11,7 +11,7 @@
 //!
 //! #[test]
 //! fn my_test() {
-//!     let temp_manager = TempManager::new().unwrap();
+//!     let temp_manager = TempManager::new().expect("operation should succeed");
 //!     // 使用临时目录...
 //! }
 //! ```

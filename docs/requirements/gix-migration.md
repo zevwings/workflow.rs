@@ -184,7 +184,7 @@
 ## 文档更新
 
 ### 开发文档
-- [ ] 更新 `docs/guidelines/development.md`
+- [ ] 更新 `docs/guidelines/development/`
 - [ ] 创建 gix 使用指南
 - [ ] 更新 API 文档
 

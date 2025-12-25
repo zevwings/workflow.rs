@@ -251,3 +251,71 @@ pub fn assert_error_contains(error_msg: &str, keywords: &[&str]) {
         keywords, error_msg
     );
 }
+
+/// 当前目录守卫
+///
+/// 使用 RAII 模式确保当前目录在作用域结束时恢复到原始值。
+/// 即使在测试失败（panic）时也能保证恢复，避免测试间的状态污染。
+///
+/// # 使用场景
+///
+/// - 需要临时切换到其他目录执行操作
+/// - 确保测试间的目录隔离
+/// - 避免全局状态污染
+///
+/// # 示例
+///
+/// ```no_run
+/// use tests::common::helpers::CurrentDirGuard;
+/// use std::path::Path;
+///
+/// #[test]
+/// fn my_test() -> color_eyre::Result<()> {
+///     // 自动恢复目录，即使测试失败
+///     let _guard = CurrentDirGuard::new("/tmp/test")?;
+///
+///     // 在新目录中执行操作
+///     assert_eq!(std::env::current_dir()?, Path::new("/tmp/test"));
+///
+///     // Drop 时自动恢复到原始目录
+///     Ok(())
+/// }
+/// ```
+///
+/// # 注意事项
+///
+/// - 必须保持`_guard`变量在作用域内，通常命名为`_guard`以表明其用途
+/// - 如果需要手动提前恢复，可以显式调用`drop(_guard)`
+/// - Drop 时的恢复失败会被忽略（避免 panic during panic）
+pub struct CurrentDirGuard {
+    original_dir: PathBuf,
+}
+
+impl CurrentDirGuard {
+    /// 创建目录守卫并切换到新目录
+    ///
+    /// # 参数
+    ///
+    /// * `new_dir` - 要切换到的目标目录
+    ///
+    /// # 返回
+    ///
+    /// 成功时返回守卫实例，失败时返回错误
+    ///
+    /// # 错误
+    ///
+    /// - 无法获取当前目录
+    /// - 无法切换到目标目录
+    pub fn new(new_dir: impl AsRef<Path>) -> color_eyre::Result<Self> {
+        let original_dir = std::env::current_dir()?;
+        std::env::set_current_dir(new_dir)?;
+        Ok(Self { original_dir })
+    }
+}
+
+impl Drop for CurrentDirGuard {
+    fn drop(&mut self) {
+        // 忽略恢复失败，避免 panic during panic
+        let _ = std::env::set_current_dir(&self.original_dir);
+    }
+}

@@ -80,7 +80,7 @@ fn create_non_empty_validator() -> ValidatorFn {
 
 /// 常用验证器函数 - 正则表达式验证
 fn create_regex_validator(pattern: &str, error_msg: &str) -> ValidatorFn {
-    let regex = regex::Regex::new(pattern).unwrap();
+    let regex = regex::Regex::new(pattern).expect("regex pattern should be valid");
     let error_message = error_msg.to_string();
 
     Arc::new(move |input: &str| -> Result<(), String> {
@@ -560,7 +560,7 @@ mod tests {
         assert!(validator("456").is_ok());
         assert!(validator("def").is_err());
 
-        handle.join().unwrap();
+        handle.join().expect("thread should join successfully");
     }
 
     #[test]

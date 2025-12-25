@@ -40,7 +40,7 @@ fn test_commit_amend_command(
         args.push("--no-verify");
     }
 
-    let cli = TestCommitCli::try_parse_from(&args).unwrap();
+    let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         CommitSubcommand::Amend {
@@ -70,7 +70,7 @@ fn test_commit_reword_command(#[case] commit_id: Option<&str>) {
         args.push(id);
     }
 
-    let cli = TestCommitCli::try_parse_from(&args).unwrap();
+    let cli = TestCommitCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         CommitSubcommand::Reword { commit_id: id } => {
@@ -85,8 +85,8 @@ fn test_commit_reword_command(#[case] commit_id: Option<&str>) {
 #[test]
 fn test_commit_subcommand_enum() {
     // 测试 CommitSubcommand 枚举包含所有子命令
-    let amend_cli = TestCommitCli::try_parse_from(&["test-commit", "amend"]).unwrap();
-    let reword_cli = TestCommitCli::try_parse_from(&["test-commit", "reword"]).unwrap();
+    let amend_cli = TestCommitCli::try_parse_from(&["test-commit", "amend"]).expect("CLI args should parse successfully");
+    let reword_cli = TestCommitCli::try_parse_from(&["test-commit", "reword"]).expect("CLI args should parse successfully");
 
     match amend_cli.command {
         CommitSubcommand::Amend { .. } => {}

@@ -206,7 +206,7 @@ mod tests {
     }
 
     #[test]
-    fn test_alias_not_found() {
+    fn test_alias_not_found() -> Result<()> {
         let aliases = HashMap::new();
         let mut visited = HashSet::new();
 
@@ -214,12 +214,13 @@ mod tests {
         let result = mock_expand_alias("nonexistent", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Alias not found"));
+    Ok(())
     }
 
     // ==================== 循环检测测试 ====================
 
     #[test]
-    fn test_direct_circular_alias() {
+    fn test_direct_circular_alias() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "a".to_string()); // 直接循环
 
@@ -229,10 +230,11 @@ mod tests {
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
+    Ok(())
     }
 
     #[test]
-    fn test_indirect_circular_alias() {
+    fn test_indirect_circular_alias() -> Result<()> {
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
         aliases.insert("b".to_string(), "c".to_string());
@@ -244,6 +246,7 @@ mod tests {
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
+    Ok(())
     }
 
     #[test]
@@ -270,7 +273,7 @@ mod tests {
     // ==================== 深度限制测试 ====================
 
     #[test]
-    fn test_max_depth_limit() {
+    fn test_max_depth_limit() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建一个很深的别名链
@@ -287,6 +290,7 @@ mod tests {
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
+    Ok(())
     }
 
     #[test]
@@ -636,63 +640,68 @@ mod tests {
     // 注意：这些测试依赖实际的配置文件，但会测试 AliasManager 的实际方法
 
     #[test]
-    fn test_alias_manager_load() {
+    fn test_alias_manager_load() -> Result<()> {
         // 测试 AliasManager::load() 方法（覆盖 manager.rs:29-32）
         let result = workflow::base::alias::AliasManager::load();
 
         // 应该总是返回 Ok，即使别名列表为空
         assert!(result.is_ok());
 
-        let aliases = result.unwrap();
+        let aliases = result?;
         // 验证返回的是 HashMap
         let _alias_count = aliases.len();
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_list() {
+    fn test_alias_manager_list() -> Result<()> {
         // 测试 AliasManager::list() 方法（覆盖 manager.rs:235-237）
         let result = workflow::base::alias::AliasManager::list();
 
         // 应该总是返回 Ok
         assert!(result.is_ok());
 
-        let aliases = result.unwrap();
+        let aliases = result?;
         // 验证返回的是 HashMap
         let _alias_count = aliases.len();
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_exists() {
+    fn test_alias_manager_exists() -> Result<()> {
         // 测试 AliasManager::exists() 方法（覆盖 manager.rs:252-255）
         // 测试不存在的别名
         let result = workflow::base::alias::AliasManager::exists("__nonexistent_alias_test__");
 
         assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!result?);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_args_empty() {
+    fn test_alias_manager_expand_args_empty() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 空参数（覆盖 manager.rs:116-120）
         let args = vec!["workflow".to_string()];
         let result = workflow::base::alias::AliasManager::expand_args(args.clone());
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), args);
+        assert_eq!(result?, args);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_args_single() {
+    fn test_alias_manager_expand_args_single() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 单个参数（覆盖 manager.rs:116-120）
         let args = vec!["workflow".to_string()];
         let result = workflow::base::alias::AliasManager::expand_args(args.clone());
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), args);
+        assert_eq!(result?, args);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_args_non_alias() {
+    fn test_alias_manager_expand_args_non_alias() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 非别名命令（覆盖 manager.rs:144-147）
         let args = vec![
             "workflow".to_string(),
@@ -703,14 +712,15 @@ mod tests {
 
         // 如果不是别名，应该返回原参数
         assert!(result.is_ok());
-        let expanded = result.unwrap();
+        let expanded = result?;
         // 如果第一个参数不是别名，应该保持不变
         assert_eq!(expanded[0], "workflow");
         assert_eq!(expanded[1], "status");
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_check_circular_direct() {
+    fn test_alias_manager_check_circular_direct() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 直接循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "a" -> "a" 是否检测为循环
         let result = workflow::base::alias::AliasManager::check_circular(
@@ -720,11 +730,12 @@ mod tests {
 
         assert!(result.is_ok());
         // 直接循环应该返回 true
-        assert!(result.unwrap());
+        assert!(result?);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_check_circular_non_circular() {
+    fn test_alias_manager_check_circular_non_circular() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 非循环（覆盖 manager.rs:273-302）
         // 测试添加别名 "new_alias" -> "git status" 是否检测为非循环
         let result =
@@ -732,11 +743,12 @@ mod tests {
 
         assert!(result.is_ok());
         // 非循环应该返回 false
-        assert!(!result.unwrap());
+        assert!(!result?);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_depth_limit() {
+    fn test_alias_manager_expand_depth_limit() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 深度限制（覆盖 manager.rs:54-98）
         // 注意：这个测试需要创建深度嵌套的别名，可能在实际环境中难以实现
         // 主要测试深度检查逻辑
@@ -747,10 +759,11 @@ mod tests {
         // 深度超过限制应该返回错误
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_not_found() {
+    fn test_alias_manager_expand_not_found() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 别名不存在（覆盖 manager.rs:77-79）
         let mut visited = HashSet::new();
         let result =
@@ -759,10 +772,11 @@ mod tests {
         // 别名不存在应该返回错误
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Alias not found"));
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_with_nested_alias() {
+    fn test_alias_manager_expand_with_nested_alias() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名（覆盖 manager.rs:84-95）
         // 注意：这个测试需要实际的别名配置
         let mut visited = HashSet::new();
@@ -772,10 +786,11 @@ mod tests {
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_with_visited_set() {
+    fn test_alias_manager_expand_with_visited_set() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - visited 集合的使用（覆盖 manager.rs:82）
         let mut visited = HashSet::new();
         visited.insert("test_alias".to_string());
@@ -786,10 +801,11 @@ mod tests {
         // 如果别名存在且已访问，应该检测到循环
         // 如果别名不存在，应该返回"not found"错误
         assert!(result.is_err());
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_args_with_alias() {
+    fn test_alias_manager_expand_args_with_alias() -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 包含别名（覆盖 manager.rs:128-143）
         // 注意：这个测试需要实际的别名配置
         let args = vec!["workflow".to_string(), "__test_alias__".to_string()];
@@ -797,10 +813,11 @@ mod tests {
 
         // 如果别名存在，应该展开；如果不存在，应该返回原参数
         assert!(result.is_ok());
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_check_circular_with_existing_alias() {
+    fn test_alias_manager_check_circular_with_existing_alias() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 与已存在别名形成循环（覆盖 manager.rs:284-297）
         // 注意：这个测试需要实际的别名配置
         let result = workflow::base::alias::AliasManager::check_circular(
@@ -810,21 +827,23 @@ mod tests {
 
         // 应该返回 true 或 false，取决于是否形成循环
         assert!(result.is_ok());
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_check_circular_first_part_not_alias() {
+    fn test_alias_manager_check_circular_first_part_not_alias() -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - target 的第一个词不是别名（覆盖 manager.rs:277-299）
         let result =
             workflow::base::alias::AliasManager::check_circular("__test_new__", "git status");
 
         // 如果第一个词不是别名，应该返回 false
         assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!result?);
+    Ok(())
     }
 
     #[test]
-    fn test_alias_manager_expand_recursive_nested() {
+    fn test_alias_manager_expand_recursive_nested() -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 递归嵌套展开（覆盖 manager.rs:89-93）
         let mut visited = HashSet::new();
         // 尝试展开一个可能包含嵌套别名的别名
@@ -833,6 +852,7 @@ mod tests {
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
+    Ok(())
     }
 
     // ==================== 使用临时配置文件的实际方法测试 ====================
@@ -879,11 +899,12 @@ aliases = {}
         use workflow::base::util::file::FileReader;
         let config_content = FileReader::new(&config_path).to_string()?;
         let config: Value = toml::from_str(&config_content)?;
-        let aliases_table = config.get("aliases").and_then(|v| v.as_table());
-        assert!(aliases_table.is_some());
-        let aliases = aliases_table.unwrap();
+        let aliases_table = config
+            .get("aliases")
+            .and_then(|v| v.as_table())
+            .expect("aliases table should exist in config");
         assert_eq!(
-            aliases.get("test_add_alias").and_then(|v| v.as_str()),
+            aliases_table.get("test_add_alias").and_then(|v| v.as_str()),
             Some("echo hello")
         );
 
@@ -929,7 +950,7 @@ aliases = { test_remove_alias = "echo test" }
 
         // 验证删除成功
         assert!(result.is_ok());
-        assert!(result.unwrap());
+        assert!(result?);
 
         // 验证别名已从配置文件中删除（直接读取文件，因为 Settings 使用 OnceLock 缓存）
         use toml::Value;
@@ -980,7 +1001,7 @@ aliases = {}
 
         // 验证返回 false（别名不存在）
         assert!(result.is_ok());
-        assert!(!result.unwrap());
+        assert!(!result?);
 
         Ok(())
     }
@@ -1029,7 +1050,7 @@ aliases = { test_expand_alias = "git status" }
 
         // 验证展开成功
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "git status");
+        assert_eq!(result?, "git status");
 
         Ok(())
     }
@@ -1077,7 +1098,7 @@ aliases = {
 
         // 验证展开成功（应该展开为 "git status --verbose"）
         assert!(result.is_ok());
-        let expanded = result.unwrap();
+        let expanded = result?;
         assert!(expanded.contains("git"));
         assert!(expanded.contains("status"));
         assert!(expanded.contains("verbose"));
@@ -1176,7 +1197,7 @@ aliases = { test_args_alias = "git status" }
 
         // 验证展开成功
         assert!(result.is_ok());
-        let expanded = result.unwrap();
+        let expanded = result?;
         assert_eq!(expanded[0], "workflow");
         assert_eq!(expanded[1], "git");
         assert_eq!(expanded[2], "status");
@@ -1227,10 +1248,10 @@ aliases = {
 
         // 验证结果
         assert!(result1.is_ok());
-        assert!(!result1.unwrap()); // 不会形成循环
+        assert!(!result1?); // 不会形成循环
 
         assert!(result2.is_ok());
-        assert!(result2.unwrap()); // 直接循环应该返回 true
+        assert!(result2?); // 直接循环应该返回 true
 
         Ok(())
     }
@@ -1254,13 +1275,13 @@ aliases = {
         // 测试恰好在限制内的情况（应该成功）
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "echo final");
+        assert_eq!(result?, "echo final");
 
         Ok(())
     }
 
     #[test]
-    fn test_alias_depth_boundary_exceed_by_one() {
+    fn test_alias_depth_boundary_exceed_by_one() -> Result<()> {
         let mut aliases = HashMap::new();
 
         // 创建 11 层深度的别名链（超出 MAX_DEPTH = 10）
@@ -1277,6 +1298,7 @@ aliases = {
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
+    Ok(())
     }
 
     #[test]

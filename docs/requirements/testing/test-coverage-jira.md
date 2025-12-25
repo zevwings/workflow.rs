@@ -218,8 +218,8 @@ Jira 模块负责与 Jira API 交互，提供：
 ## 📚 相关文档
 
 - [测试覆盖度提升综合方案](./test-coverage-improvement.md)
-- [Jira 模块架构](../architecture/jira.md)
-- [Jira 需求文档](./jira.md)
+- [Jira 模块架构](../../architecture/jira.md)
+- [Jira 需求文档](../jira.md)
 
 ---
 

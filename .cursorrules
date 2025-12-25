@@ -4,21 +4,228 @@
 
 ## ⚠️ Important Notes
 
-**Code and Document Generation Rules**:
-- **Do not generate code or documents unless explicitly requested**
-- Only execute code or document generation when explicitly requested by the user
-- For analysis, explanation, or discussion questions, provide text-only answers without automatically generating code or document files
-- If the user is only asking questions or needs explanations, do not proactively create files or modify code
-- **Prohibition Rule**: **Without explicit user instruction to generate code or documents, AI is prohibited from automatically generating any code files or document files. Only provide analysis, explanations, suggestions, and other text responses.**
-- **Analysis Question Rule**: **For analysis, discussion, or inquiry questions, only provide text answers and analysis without automatically generating analysis document files. Only create document files when the user explicitly requests document generation.**
-- **Code Modification Rule**: **Prohibited from modifying existing code files without explicit user consent or instruction. If code modification is needed, user consent or explicit instruction must be obtained first.**
-- **Document Modification Rule**: **Prohibited from modifying existing document files without explicit user consent or instruction. If document modification is needed, user consent or explicit instruction must be obtained first.**
-- **Review Workflow Report Generation Rule**: **When executing the review workflows described in `docs/guidelines/development/workflows/review.md` or `docs/guidelines/development/workflows/pre-commit.md`, reports must be automatically generated:**
-  - **Comprehensive Deep Review** (`review.md`): After executing the review, must automatically generate `report/review-report-{timestamp}.md` report document
-  - **Pre-commit Check** (`pre-commit.md`): After executing the check, must automatically generate `report/pre-commit-report-{timestamp}.md` report document
-  - **Timestamp Format**: `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-12-23_22-55-15`)
-  - **Report Content**: Must generate complete check reports according to the report templates in the corresponding workflow documents
-  - **Report Location**: All report documents must be saved in the `report/` directory
+### 🚫 Document Generation Rules (Mandatory)
+
+#### Core Principle
+
+**Default: No Document Generation**: Unless the user uses explicit keywords, do NOT generate any `.md` document files.
+
+#### ✅ Allowed Document Generation (Whitelist)
+
+**ONLY** generate documents when users use these explicit keywords:
+
+**Direct Commands**:
+- "generate document", "create document", "write a document"
+- "generate report", "create report", "write a report"
+- "save as document", "save as file", "output to file"
+- "record to document", "write to document"
+
+**Explicit Requests**:
+- "help me create a... document"
+- "can you generate a... report"
+- "please write a... documentation"
+
+**Exceptions**:
+- When executing `review.md` or `pre-commit.md` workflows (explicitly defined below)
+
+**⚠️ Important**: If the user doesn't use the above keywords, **DO NOT generate documents**!
+
+#### ❌ Prohibited Auto-Generation Scenarios (Blacklist)
+
+The following scenarios **STRICTLY PROHIBIT** automatic document generation. Provide text responses in chat only:
+
+**Analysis Requests**:
+- "analyze...", "check...", "inspect...", "diagnose...", "investigate..."
+- ❌ Wrong: Auto-generate `analysis/xxx-analysis.md`
+- ✅ Correct: Provide analysis in chat, ask "Need me to generate a document?"
+
+**Summary Requests**:
+- "summarize...", "sum up...", "consolidate...", "outline..."
+- ❌ Wrong: Auto-generate `analysis/xxx-summary.md`
+- ✅ Correct: Provide summary text in chat
+
+**Completion Requests**:
+- "complete...", "implement...", "do...", "handle..."
+- ❌ Wrong: Think "complete" means "code + report"
+- ✅ Correct: "complete" means code only, summarize in chat
+
+**Progress Requests**:
+- "how's the progress", "what's done", "status update", "what's completed"
+- ❌ Wrong: Auto-generate `analysis/xxx-progress.md`
+- ✅ Correct: Report progress in chat
+
+**Review Requests**:
+- "review...", "examine...", "look at...", "check out..."
+- ❌ Wrong: Auto-generate `analysis/xxx-review.md`
+- ✅ Correct: Provide review feedback in chat
+- ⚠️ Exception: When executing `review.md` workflow (explicitly defined below)
+
+#### 📋 Mandatory Pre-Generation Checklist
+
+AI must pass ALL FOUR checks before generating ANY `.md` document:
+
+**Check 1: Explicit Request**
+- [ ] Did the user use a whitelist keyword?
+  - ✅ Yes → Continue to Check 2
+  - ❌ No → **PROHIBIT generation**, provide text response in chat
+
+**Check 2: Blacklist Scenario**
+- [ ] Is this request a blacklist scenario?
+  - ❌ Yes → **PROHIBIT generation**, provide text response in chat
+  - ✅ No → Continue to Check 3
+
+**Check 3: Exception Rule**
+- [ ] Is this a Review Workflow auto-report?
+  - ✅ Yes → Can generate
+  - ❌ No → Continue to Check 4
+
+**Check 4: Double Confirmation**
+- [ ] If passed all checks above, ask before generating:
+  ```
+  Ready to generate document:
+  - [document path]
+
+  Confirm generation?
+  ```
+
+**Only after passing ALL FOUR checks can documents be generated!**
+
+#### 📚 Correct vs Incorrect Examples
+
+**Scenario 1: User says "analyze test failure reasons"**
+
+❌ **Wrong Approach**:
+```
+1. Run analysis
+2. Auto-generate analysis/test-failure-analysis.md
+3. Tell user: "Report generated"
+```
+
+✅ **Correct Approach**:
+```
+1. Run analysis
+2. **In chat** provide analysis:
+
+   🔍 Test Failure Analysis
+
+   Failed tests: 27
+   Main cause: Global state pollution (set_current_dir)
+
+   Specific issues:
+   - 54 tests use set_current_dir
+   - Some tests don't restore directory
+   - Causes subsequent tests to run in wrong directory
+
+   Suggested fixes:
+   1. Create CurrentDirGuard tool
+   2. Use RAII pattern for auto-restore
+   3. Remove redundant set_current_dir calls
+
+   Need me to generate a detailed report?
+
+3. Wait for explicit confirmation
+```
+
+**Scenario 2: User says "complete Branch Sync tests"**
+
+❌ **Wrong Approach** (This violation):
+```
+1. Implement code ✅
+2. Auto-generate branch-sync-complete-report.md ❌
+3. Auto-generate test-failure-diagnosis.md ❌
+4. Auto-generate branch-sync-final-summary.md ❌
+```
+
+✅ **Correct Approach**:
+```
+1. Implement code ✅
+2. **In chat** summarize:
+
+   🎉 Branch Sync Tests Complete!
+
+   ✅ Completed:
+   - GitTestEnv tool (166 lines)
+   - 4 test cases
+   - GitHub API Mock
+   - CurrentDirGuard tool
+
+   📊 Test Results:
+   - Standalone: ✅ All pass
+   - Full suite: Failures reduced from 27 to 15
+
+   💡 Issues identified with solutions provided
+
+   Need me to generate a complete implementation report?
+
+3. Wait for explicit confirmation
+```
+
+**Scenario 3: User says "generate test coverage report"**
+
+✅ **Correct Approach** (Explicit keyword):
+```
+1. Confirm: User used "generate report" keyword ✅
+2. Not a blacklist scenario ✅
+3. Directly generate analysis/test-coverage-report.md
+4. Tell user: "Report generated"
+```
+
+#### 🔐 Review Workflow Report Generation Rules
+
+**Special Exception**: When executing these workflows, **MUST** auto-generate reports:
+
+- **Comprehensive Deep Review** (`docs/guidelines/development/workflows/review.md`):
+  - Must auto-generate `report/review-report-{timestamp}.md` after execution
+- **Pre-commit Check** (`docs/guidelines/development/workflows/pre-commit.md`):
+  - Must auto-generate `report/pre-commit-report-{timestamp}.md` after execution
+
+**Timestamp Format**: `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-12-23_22-55-15`)
+**Report Content**: Generate complete reports per workflow document templates
+**Report Location**: All reports must be saved in `report/` directory
+
+#### ⚠️ Violation Handling
+
+If AI violates document generation rules:
+
+1. **Immediately stop** current behavior
+2. **Acknowledge error**: "I violated the document generation rules"
+3. **Explain reason**: Why the violation occurred
+4. **Propose remedy**:
+   - Delete violating documents?
+   - Consolidate content into chat?
+5. **Ensure understanding**: Restate rules, confirm no repeat
+
+**Example**:
+```
+🚨 I made a serious mistake!
+
+Violation: Auto-generated 24 analysis documents
+Rules broken: Generated documents without explicit request
+
+Root cause analysis:
+- Mistakenly thought "complete task" includes "generate report"
+- Didn't check for explicit keywords
+- Violated blacklist scenario rules
+
+Suggested remedy:
+1. Delete these 24 violating documents
+2. Keep code implementation
+3. Strictly follow four-check checklist going forward
+
+Should I delete these documents immediately?
+```
+
+#### 🔒 Enforcement Guarantee
+
+These rules are **mandatory**, not suggestions. AI must strictly comply and may NOT bypass them for "user convenience", "task completion", "providing complete solution", or any other reason.
+
+### Code Modification Rules
+
+**Prohibited from modifying existing code files without explicit user consent or instruction.** If code modification is needed, user consent or explicit instruction must be obtained first.
+
+### Document Modification Rules
+
+**Prohibited from modifying existing document files without explicit user consent or instruction.** If document modification is needed, user consent or explicit instruction must be obtained first.
 
 ## 📋 Project Overview
 
@@ -256,4 +463,4 @@ Refer to the **Document Classification Table** above for document type classific
 
 ---
 
-**最后更新**: 2025-12-24
+**Last Updated**: 2025-12-25

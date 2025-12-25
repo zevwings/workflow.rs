@@ -8,35 +8,74 @@ use workflow::base::LogLevel;
 
 #[test]
 fn test_log_level_from_str_off() {
-    assert_eq!(LogLevel::from_str("off").unwrap(), LogLevel::None);
-    assert_eq!(LogLevel::from_str("OFF").unwrap(), LogLevel::None);
-    assert_eq!(LogLevel::from_str("none").unwrap(), LogLevel::None);
-    assert_eq!(LogLevel::from_str("NONE").unwrap(), LogLevel::None);
+    assert_eq!(
+        LogLevel::from_str("off").expect("'off' should parse"),
+        LogLevel::None
+    );
+    assert_eq!(
+        LogLevel::from_str("OFF").expect("'OFF' should parse"),
+        LogLevel::None
+    );
+    assert_eq!(
+        LogLevel::from_str("none").expect("'none' should parse"),
+        LogLevel::None
+    );
+    assert_eq!(
+        LogLevel::from_str("NONE").expect("'NONE' should parse"),
+        LogLevel::None
+    );
 }
 
 #[test]
 fn test_log_level_from_str_error() {
-    assert_eq!(LogLevel::from_str("error").unwrap(), LogLevel::Error);
-    assert_eq!(LogLevel::from_str("ERROR").unwrap(), LogLevel::Error);
-    assert_eq!(LogLevel::from_str("Error").unwrap(), LogLevel::Error);
+    assert_eq!(
+        LogLevel::from_str("error").expect("'error' should parse"),
+        LogLevel::Error
+    );
+    assert_eq!(
+        LogLevel::from_str("ERROR").expect("'ERROR' should parse"),
+        LogLevel::Error
+    );
+    assert_eq!(
+        LogLevel::from_str("Error").expect("'Error' should parse"),
+        LogLevel::Error
+    );
 }
 
 #[test]
 fn test_log_level_from_str_warn() {
-    assert_eq!(LogLevel::from_str("warn").unwrap(), LogLevel::Warn);
-    assert_eq!(LogLevel::from_str("WARN").unwrap(), LogLevel::Warn);
+    assert_eq!(
+        LogLevel::from_str("warn").expect("'warn' should parse"),
+        LogLevel::Warn
+    );
+    assert_eq!(
+        LogLevel::from_str("WARN").expect("'WARN' should parse"),
+        LogLevel::Warn
+    );
 }
 
 #[test]
 fn test_log_level_from_str_info() {
-    assert_eq!(LogLevel::from_str("info").unwrap(), LogLevel::Info);
-    assert_eq!(LogLevel::from_str("INFO").unwrap(), LogLevel::Info);
+    assert_eq!(
+        LogLevel::from_str("info").expect("'info' should parse"),
+        LogLevel::Info
+    );
+    assert_eq!(
+        LogLevel::from_str("INFO").expect("'INFO' should parse"),
+        LogLevel::Info
+    );
 }
 
 #[test]
 fn test_log_level_from_str_debug() {
-    assert_eq!(LogLevel::from_str("debug").unwrap(), LogLevel::Debug);
-    assert_eq!(LogLevel::from_str("DEBUG").unwrap(), LogLevel::Debug);
+    assert_eq!(
+        LogLevel::from_str("debug").expect("'debug' should parse"),
+        LogLevel::Debug
+    );
+    assert_eq!(
+        LogLevel::from_str("DEBUG").expect("'DEBUG' should parse"),
+        LogLevel::Debug
+    );
 }
 
 #[test]

@@ -60,7 +60,10 @@ fn test_spinner_with_success() {
         Ok(42)
     });
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), 42);
+    assert_eq!(
+        result.expect("spinner operation should succeed"),
+        42
+    );
 }
 
 #[test]
@@ -81,7 +84,10 @@ fn test_spinner_with_slow_operation() {
         Ok(42)
     });
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), 42);
+    assert_eq!(
+        result.expect("slow spinner operation should succeed"),
+        42
+    );
 }
 
 #[test]
@@ -90,7 +96,10 @@ fn test_spinner_with_output_success() {
     let result: Result<i32, Box<dyn std::error::Error>> =
         Spinner::with_output("Pushing to remote...", || Ok(42));
     assert!(result.is_ok());
-    assert_eq!(result.unwrap(), 42);
+    assert_eq!(
+        result.expect("spinner with output should succeed"),
+        42
+    );
 }
 
 #[test]

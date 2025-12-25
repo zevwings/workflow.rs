@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn test_parse_commit_info_valid() {
         let output = "abc123def456\nJohn Doe\n2024-01-01 10:30:00\nInitial commit";
-        let commit = mock_parse_commit_info(output).unwrap();
+        let commit = mock_parse_commit_info(output).expect("operation should succeed");
 
         assert_eq!(commit.sha, "abc123def456");
         assert_eq!(commit.author, "John Doe");
@@ -386,7 +386,7 @@ mod tests {
     #[test]
     fn test_parse_commit_info_with_multiline_message() {
         let output = "abc123\nJohn Doe\n2024-01-01\nFirst line of commit message";
-        let commit = mock_parse_commit_info(output).unwrap();
+        let commit = mock_parse_commit_info(output).expect("operation should succeed");
 
         assert_eq!(commit.message, "First line of commit message");
     }

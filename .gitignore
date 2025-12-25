@@ -114,8 +114,10 @@ docs/**
 !docs/architecture/**
 !docs/guidelines/
 !docs/guidelines/**
-!docs/requirements/
-!docs/requirements/**
 !docs/migration/
 !docs/migration/**
+!docs/requirements/
+!docs/requirements/**
+!docs/templates/
+!docs/templates/**
 handlebars

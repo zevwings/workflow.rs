@@ -57,26 +57,80 @@ fn test_confirm_dialog_cancel_message_string_conversion() {
 }
 
 // 注意：以下测试需要用户交互，在 CI 环境中会被忽略
+
+/// 测试确认对话框的用户确认场景
+///
+/// ## 测试目的
+/// 验证`ConfirmDialog`在用户确认时正确显示提示并接收用户输入。
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户在终端中输入y/n进行确认
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+/// - **UI/UX验证**: 用于手动验证对话框的显示效果和用户体验
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_confirm_dialog_prompt_confirmed -- --ignored
+/// ```
+/// 然后在提示符处输入`y`或按Enter键（默认为true）
+///
+/// ## 测试场景
+/// 1. 创建确认对话框，提示消息为"Continue?"
+/// 2. 设置默认值为true
+/// 3. 显示对话框并等待用户输入
+/// 4. 用户输入确认（y或Enter）
+/// 5. 验证函数返回成功
+///
+/// ## 预期行为
+/// - 在终端显示: `Continue? [Y/n]`
+/// - 接受用户输入并正确解析
+/// - 返回`Ok(true)`表示用户确认
 #[test]
 #[ignore] // 需要用户交互
 fn test_confirm_dialog_prompt_confirmed() {
-    // 测试用户确认的情况
     let dialog = ConfirmDialog::new("Continue?").with_default(true);
     let _result = dialog.prompt();
-    // 这个测试需要手动运行
+    // 这个测试需要手动运行并验证UI显示
     assert!(true);
 }
 
+/// 测试确认对话框的用户取消场景（带自定义取消消息）
+///
+/// ## 测试目的
+/// 验证`ConfirmDialog`在用户取消时正确返回错误，并显示自定义的取消消息。
+/// 覆盖源代码: `confirm.rs:132-133`
+///
+/// ## 为什么被忽略
+/// - **需要用户交互**: 测试需要用户在终端中输入n进行取消
+/// - **CI环境不支持**: 自动化CI环境无法提供交互式输入
+/// - **错误处理验证**: 用于手动验证取消消息的显示
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_confirm_dialog_prompt_cancelled_with_message -- --ignored
+/// ```
+/// 然后在提示符处输入`n`进行取消
+///
+/// ## 测试场景
+/// 1. 创建确认对话框，提示消息为"Continue?"
+/// 2. 设置默认值为false
+/// 3. 设置自定义取消消息"Operation cancelled."
+/// 4. 显示对话框并等待用户输入
+/// 5. 用户输入取消（n）
+/// 6. 验证返回错误且包含取消消息
+///
+/// ## 预期行为
+/// - 在终端显示: `Continue? [y/N]`
+/// - 用户输入n后返回`Err(...)`
+/// - 错误消息包含"Operation cancelled."
 #[test]
 #[ignore] // 需要用户交互
 fn test_confirm_dialog_prompt_cancelled_with_message() {
-    // 测试用户取消且设置了取消消息的情况（覆盖 confirm.rs:132-133）
     let dialog = ConfirmDialog::new("Continue?")
         .with_default(false)
         .with_cancel_message("Operation cancelled.");
     let _result = dialog.prompt();
-    // 如果用户取消，应该返回错误
-    // 这个测试需要手动运行
+    // 这个测试需要手动运行并验证取消消息显示
     assert!(true);
 }
 

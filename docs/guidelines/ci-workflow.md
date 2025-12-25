@@ -311,8 +311,8 @@ PR 可以合并
 
 - [GitHub Setup Guidelines](./github-setup.md)：GitHub 配置指南
 - [CI 工作流配置指南](./ci-workflow.md)：CI 工作流详细配置说明
-- [Development Guidelines](./development.md)：开发规范
-- [Testing Guidelines](./testing.md)：测试指南
+- [Development Guidelines](./development/README.md)：开发规范
+- [Testing Guidelines](./testing/README.md)：测试指南
 
 ---
 

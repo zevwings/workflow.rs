@@ -6,7 +6,14 @@
 //! - PR 模板变量创建和序列化
 //! - 变更类型项处理
 //! - 特殊字符处理
+//!
+//! ## 测试策略
+//!
+//! - 涉及序列化/反序列化的测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试变量的创建、克隆和调试输出功能
+//! - 测试特殊字符处理和完整性验证
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::template::{
     BranchTemplateVars, ChangeTypeItem, CommitTemplateVars, PullRequestTemplateVars,
@@ -190,7 +197,7 @@ fn test_change_type_item_parsing() {
 
 /// 测试变量序列化
 #[test]
-fn test_vars_serialization() {
+fn test_vars_serialization() -> Result<()> {
     // 测试分支模板变量序列化
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SER-123".to_string()),
@@ -199,9 +206,7 @@ fn test_vars_serialization() {
         jira_type: Some("Task".to_string()),
     };
 
-    let branch_json = serde_json::to_string(&branch_vars);
-    assert!(branch_json.is_ok());
-    let branch_json_str = branch_json.unwrap();
+    let branch_json_str = serde_json::to_string(&branch_vars)?;
     assert!(branch_json_str.contains("SER-123"));
     assert!(branch_json_str.contains("test-serialization"));
 
@@ -215,9 +220,7 @@ fn test_vars_serialization() {
         use_scope: true,
     };
 
-    let commit_json = serde_json::to_string(&commit_vars);
-    assert!(commit_json.is_ok());
-    let commit_json_str = commit_json.unwrap();
+    let commit_json_str = serde_json::to_string(&commit_vars)?;
     assert!(commit_json_str.contains("test"));
     assert!(commit_json_str.contains("serialization"));
     assert!(commit_json_str.contains("SER-456"));
@@ -232,16 +235,15 @@ fn test_vars_serialization() {
         ..Default::default()
     };
 
-    let pr_json = serde_json::to_string(&pr_vars);
-    assert!(pr_json.is_ok());
-    let pr_json_str = pr_json.unwrap();
+    let pr_json_str = serde_json::to_string(&pr_vars)?;
     assert!(pr_json_str.contains("PR-789"));
     assert!(pr_json_str.contains("Test change"));
+    Ok(())
 }
 
 /// 测试特殊字符处理
 #[test]
-fn test_vars_with_special_characters() {
+fn test_vars_with_special_characters() -> Result<()> {
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SPECIAL-123".to_string()),
         jira_summary: Some("Fix \"authentication\" & <security> issues".to_string()),
@@ -250,10 +252,7 @@ fn test_vars_with_special_characters() {
     };
 
     // 测试序列化能正确处理特殊字符
-    let json_result = serde_json::to_string(&branch_vars);
-    assert!(json_result.is_ok());
-
-    let json_str = json_result.unwrap();
+    let json_str = serde_json::to_string(&branch_vars)?;
     assert!(json_str.contains("SPECIAL-123"));
     assert!(json_str.contains("authentication"));
     assert!(json_str.contains("security"));
@@ -262,11 +261,12 @@ fn test_vars_with_special_characters() {
     // 验证特殊字符被正确转义
     assert!(json_str.contains("\\\"")); // 引号被转义
     assert!(json_str.contains("&")); // & 符号保持原样
+    Ok(())
 }
 
 /// 测试变量完整性
 #[test]
-fn test_vars_completeness() {
+fn test_vars_completeness() -> Result<()> {
     // 测试所有字段都存在的完整变量
     let complete_branch_vars = BranchTemplateVars {
         jira_key: Some("COMPLETE-001".to_string()),
@@ -309,13 +309,13 @@ fn test_vars_completeness() {
     };
 
     // 验证所有字段都能正确序列化
-    let branch_json = serde_json::to_value(&complete_branch_vars).unwrap();
+    let branch_json = serde_json::to_value(&complete_branch_vars)?;
     assert!(branch_json["jira_key"].is_string());
     assert!(branch_json["jira_summary"].is_string());
     assert!(branch_json["summary_slug"].is_string());
     assert!(branch_json["jira_type"].is_string());
 
-    let commit_json = serde_json::to_value(&complete_commit_vars).unwrap();
+    let commit_json = serde_json::to_value(&complete_commit_vars)?;
     assert!(commit_json["commit_type"].is_string());
     assert!(commit_json["scope"].is_string());
     assert!(commit_json["subject"].is_string());
@@ -323,10 +323,13 @@ fn test_vars_completeness() {
     assert!(commit_json["jira_key"].is_string());
     assert!(commit_json["use_scope"].is_boolean());
 
-    let pr_json = serde_json::to_value(&complete_pr_vars).unwrap();
+    let pr_json = serde_json::to_value(&complete_pr_vars)?;
     assert!(pr_json["jira_key"].is_string());
     assert!(pr_json["change_types"].is_array());
-    assert_eq!(pr_json["change_types"].as_array().unwrap().len(), 3);
+    if let Some(arr) = pr_json["change_types"].as_array() {
+        assert_eq!(arr.len(), 3);
+    }
+    Ok(())
 }
 
 /// 测试变量克隆功能

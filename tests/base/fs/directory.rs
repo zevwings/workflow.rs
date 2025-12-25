@@ -1,6 +1,12 @@
 //! Base Util Directory 模块测试
 //!
 //! 测试目录操作工具的核心功能，包括 DirectoryWalker 结构体。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试目录遍历、文件查找和目录创建功能
 
 use pretty_assertions::assert_eq;
 use std::fs;
@@ -152,7 +158,8 @@ fn test_directory_walker_ensure_parent_exists() -> color_eyre::Result<()> {
 
     let walker = DirectoryWalker::new(temp_dir.path());
     walker.ensure_parent_exists(&file_path)?;
-    assert!(file_path.parent().unwrap().exists());
+    let parent = file_path.parent().expect("File path should have a parent directory");
+    assert!(parent.exists());
 
     Ok(())
 }
@@ -326,8 +333,10 @@ fn test_directory_walker_find_files_case_sensitive() -> color_eyre::Result<()> {
     assert_eq!(files_lower.len(), 1, "应该找到包含 'test' 的文件");
 
     // 验证找到的文件是正确的
-    assert!(files_upper[0].file_name().unwrap().to_string_lossy().contains("Test"));
-    assert!(files_lower[0].file_name().unwrap().to_string_lossy().contains("test"));
+    let upper_name = files_upper[0].file_name().expect("File should have a name");
+    let lower_name = files_lower[0].file_name().expect("File should have a name");
+    assert!(upper_name.to_string_lossy().contains("Test"));
+    assert!(lower_name.to_string_lossy().contains("test"));
 
     Ok(())
 }
@@ -553,7 +562,8 @@ fn test_directory_walker_ensure_parent_exists_with_parent() -> color_eyre::Resul
 
     let walker = DirectoryWalker::new(temp_dir.path());
     walker.ensure_parent_exists(&file_path)?;
-    assert!(file_path.parent().unwrap().exists());
+    let parent = file_path.parent().expect("File path should have a parent directory");
+    assert!(parent.exists());
 
     Ok(())
 }
@@ -623,8 +633,10 @@ fn test_directory_walker_list_dirs_error_wrap() {
     let result = walker.list_dirs();
     assert!(result.is_err());
     // 验证错误消息包含路径信息
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(error_msg.contains("Failed to read directory entry"));
+    if let Err(e) = result {
+        let error_msg = format!("{:?}", e);
+        assert!(error_msg.contains("Failed to read directory entry"));
+    }
 }
 
 #[test]
@@ -634,8 +646,10 @@ fn test_directory_walker_list_files_error_wrap() {
     let result = walker.list_files();
     assert!(result.is_err());
     // 验证错误消息包含路径信息
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(error_msg.contains("Failed to read directory entry"));
+    if let Err(e) = result {
+        let error_msg = format!("{:?}", e);
+        assert!(error_msg.contains("Failed to read directory entry"));
+    }
 }
 
 #[test]
@@ -645,8 +659,10 @@ fn test_directory_walker_find_files_error_wrap() {
     let result = walker.find_files("pattern");
     assert!(result.is_err());
     // 验证错误消息包含路径信息
-    let error_msg = format!("{:?}", result.unwrap_err());
-    assert!(error_msg.contains("Failed to read directory entry"));
+    if let Err(e) = result {
+        let error_msg = format!("{:?}", e);
+        assert!(error_msg.contains("Failed to read directory entry"));
+    }
 }
 
 #[test]
@@ -669,7 +685,8 @@ fn test_directory_walker_ensure_parent_exists_error_wrap() -> color_eyre::Result
     let walker = DirectoryWalker::new(temp_dir.path());
     let result = walker.ensure_parent_exists(&file_path);
     assert!(result.is_ok());
-    assert!(file_path.parent().unwrap().exists());
+    let parent = file_path.parent().expect("File path should have a parent directory");
+    assert!(parent.exists());
 
     Ok(())
 }

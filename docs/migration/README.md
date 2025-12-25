@@ -62,12 +62,12 @@ workflow migrate cleanup
 
 ```bash
 # 复制迁移文档模板
-cp docs/migration/templates/migration.template docs/migration/{旧版本}-to-{新版本}.md
+cp docs/templates/migration/migration.template docs/migration/{旧版本}-to-{新版本}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
 
-**模板位置**：`docs/migration/templates/migration.template`
+**模板位置**：`docs/templates/migration/migration.template`
 
 **对于 AI 助手（Cursor 等）**：
 - 参考模板结构和格式生成迁移文档

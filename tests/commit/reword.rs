@@ -85,7 +85,7 @@ fn test_create_preview() {
     let result = CommitReword::create_preview(&commit_info, new_message, is_head, current_branch);
     assert!(result.is_ok());
 
-    let preview = result.unwrap();
+    let preview = result.expect("operation should succeed");
     assert_eq!(
         preview.original_sha,
         "def456abc789012345678901234567890abcdef12"
@@ -279,7 +279,7 @@ fn test_create_preview_empty_message() {
     let result = CommitReword::create_preview(&commit_info, empty_message, is_head, current_branch);
     assert!(result.is_ok());
 
-    let preview = result.unwrap();
+    let preview = result.expect("operation should succeed");
     assert_eq!(preview.new_message, "");
     assert_eq!(preview.is_head, false);
 }

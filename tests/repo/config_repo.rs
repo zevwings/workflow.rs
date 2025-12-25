@@ -12,6 +12,8 @@ use tempfile::TempDir;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 use workflow::repo::RepoConfig;
 
+use crate::common::helpers::CurrentDirGuard;
+
 // ==================== 测试辅助函数和结构 ====================
 
 /// 测试环境管理器（RAII 模式）
@@ -49,7 +51,7 @@ impl TestEnv {
     /// 初始化 Git 仓库
     fn init_git_repo(&self) -> Result<()> {
         let temp_path = self.temp_dir.path();
-        std::env::set_current_dir(temp_path)?;
+        // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
 
         std::process::Command::new("git").args(["init"]).current_dir(temp_path).output()?;
         std::process::Command::new("git")
@@ -636,7 +638,11 @@ fn test_config_with_valid_branch_prefix() {
     });
 
     if let Some(ref branch) = config.branch {
-        assert!(!branch.prefix.as_ref().unwrap().is_empty());
+        assert!(!branch
+            .prefix
+            .as_ref()
+            .expect("branch prefix should exist")
+            .is_empty());
     }
 }
 
@@ -681,6 +687,7 @@ fn test_load_from_existing_files() -> Result<()> {
     // 准备：创建包含公共和私有配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 创建公共配置（项目模板）
     let public_config_content = r#"
@@ -739,6 +746,7 @@ fn test_load_from_non_existing_files() -> Result<()> {
     // 准备：创建没有配置文件的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：调用 RepoConfig::load()
     let config = RepoConfig::load()?;
@@ -760,6 +768,7 @@ fn test_save_to_new_files() -> Result<()> {
     // 准备：创建临时 Git 仓库（不创建配置文件）
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 执行：创建配置并保存
     use toml::Value;
@@ -803,6 +812,7 @@ fn test_load_and_save_roundtrip() -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 创建初始公共配置
     let public_config_content = r#"
@@ -864,6 +874,7 @@ fn test_exists_check() -> Result<()> {
     // 准备：创建临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     // 1. 未配置时，exists() 应返回 false
     assert!(!RepoConfig::exists()?);
@@ -886,6 +897,7 @@ fn test_load_with_corrupted_public_config() -> Result<()> {
     // 准备：创建包含无效公共配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let invalid_public_config = r#"
 [template.commit
@@ -908,6 +920,7 @@ fn test_load_with_corrupted_private_config() -> Result<()> {
     // 准备：创建包含无效私有配置的临时 Git 仓库
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let invalid_private_config = r#"
 [invalid
@@ -927,10 +940,12 @@ configured = "not_a_boolean"
 #[test]
 #[serial(repo_config_fs)]
 fn test_exists_outside_git_repo() -> Result<()> {
+    use crate::common::helpers::CurrentDirGuard;
+
     // 准备：创建非 Git 仓库的临时目录
     let env = TestEnv::new()?;
     let temp_path = env.path();
-    std::env::set_current_dir(temp_path)?;
+    let _dir_guard = CurrentDirGuard::new(temp_path)?;
 
     // 执行：调用 RepoConfig::exists()
     let result = RepoConfig::exists()?;
@@ -947,6 +962,7 @@ fn test_load_with_only_public_config() -> Result<()> {
     // 准备：只创建公共配置
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     let public_config_content = r#"
 [template.commit]
@@ -971,6 +987,7 @@ fn test_load_with_only_private_config() -> Result<()> {
     // 准备：只创建私有配置
     let env = TestEnv::new()?;
     env.init_git_repo()?;
+    let _dir_guard = CurrentDirGuard::new(env.path())?;
 
     use workflow::repo::config::private::PrivateRepoConfig;
     let repo_id = PrivateRepoConfig::generate_repo_id()?;

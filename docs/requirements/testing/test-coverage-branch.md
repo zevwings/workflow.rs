@@ -575,14 +575,14 @@ fn test_sync_push_failure() { }
 ### 项目文档
 
 - [测试覆盖度提升综合方案](./test-coverage-improvement.md) - 整体测试覆盖率改进计划
-- [测试标准](../guidelines/testing.md) - 项目测试标准和最佳实践
-- [开发指南](../guidelines/development/README.md) - 开发规范和流程
+- [测试标准](../../guidelines/testing/README.md) - 项目测试标准和最佳实践
+- [开发指南](../../guidelines/development/README.md) - 开发规范和流程
 
 ### 架构文档
 
-- [Branch 模块架构](../architecture/branch.md) - Branch 模块设计文档
-- [Git 模块架构](../architecture/git.md) - Git 操作封装
-- [Template 模块架构](../architecture/template.md) - 模板系统设计
+- [Branch 模块架构](../../architecture/branch.md) - Branch 模块设计文档
+- [Git 模块架构](../../architecture/git.md) - Git 操作封装
+- [Template 模块架构](../../architecture/template.md) - 模板系统设计
 
 ### 源代码
 

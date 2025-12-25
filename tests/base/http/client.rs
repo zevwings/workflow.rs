@@ -1,9 +1,16 @@
 //! HTTP Client 测试
 //!
 //! 测试 HTTP 客户端的各种功能，包括 GET、POST、PUT、DELETE、PATCH 等方法。
+//!
+//! ## 测试策略
+//!
+//! - 使用 MockServer 模拟 HTTP 服务器，避免实际网络请求
+//! - 所有测试返回 Result<()>，使用 ? 运算符处理错误
+//! - 测试覆盖成功场景、错误场景、边界条件
 
 use crate::common::http_helpers::MockServer;
 use crate::common::mock_server::MockServerManager;
+use color_eyre::Result;
 use mockito::Matcher;
 use serde_json::Value;
 use workflow::base::http::{Authorization, HttpClient, RequestConfig};
@@ -14,19 +21,19 @@ fn setup_mock_server() -> MockServer {
 }
 
 #[test]
-fn test_http_client_global() {
+fn test_http_client_global() -> Result<()> {
     // 测试全局单例创建
-    let client1 = HttpClient::global();
-    assert!(client1.is_ok());
+    let _client1 = HttpClient::global()?;
 
     // 测试单例复用
-    let client2 = HttpClient::global();
-    assert!(client2.is_ok());
-    // 两个引用应该指向同一个实例（通过行为验证）
+    let _client2 = HttpClient::global()?;
+
+    // 验证都能成功获取客户端实例
+    Ok(())
 }
 
 #[test]
-fn test_get_request_success() {
+fn test_get_request_success() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -39,20 +46,19 @@ fn test_get_request_success() {
         .with_body(r#"{"message": "success"}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 200);
     assert!(response.is_success());
 
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_get_request_with_query() {
+fn test_get_request_with_query() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -69,17 +75,18 @@ fn test_get_request_with_query() {
         .with_body(r#"{"data": []}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let query = [("page", "1"), ("limit", "10")];
     let config = RequestConfig::<Value, _>::new().query(&query);
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_get_request_with_auth() {
+fn test_get_request_with_auth() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -93,22 +100,23 @@ fn test_get_request_with_auth() {
         .with_body(r#"{"authenticated": true}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let auth = workflow::base::http::Authorization::new("user", "pass");
     let config = RequestConfig::<Value, Value>::new().auth(&auth);
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_get_request_with_headers() {
+fn test_get_request_with_headers() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Custom-Header", "test-value".parse().unwrap());
+    headers.insert("X-Custom-Header", "test-value".parse()?);
 
     let _mock = mock_server
         .server
@@ -120,16 +128,42 @@ fn test_get_request_with_headers() {
         .with_body(r#"{}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().headers(&headers);
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
+/// 测试POST请求的成功场景
+///
+/// ## 测试目的
+/// 验证HTTP客户端能够正确发送POST请求，包括请求体序列化、响应解析和状态码检查。
+///
+/// ## 测试场景
+/// 1. 启动mock HTTP服务器（使用`mockito`）
+/// 2. 配置mock响应规则：
+///    - 匹配POST方法和路径
+///    - 验证请求头（Content-Type: application/json）
+///    - 验证请求体（使用JsonString matcher精确匹配）
+///    - 返回201 Created状态码和JSON响应
+/// 3. 发送POST请求
+/// 4. 验证响应状态码
+/// 5. 验证mock服务器收到了预期的请求
+///
+/// ## 技术细节
+/// - 使用`mockito::Matcher::JsonString`进行JSON body匹配
+/// - 使用`serde_json::json!`宏创建JSON数据
+/// - 测试完成后mock自动验证（`_mock.assert()`）
+/// - MockServer在`Drop`时自动清理环境变量
+///
+/// ## 预期结果
+/// - 响应状态码为201
+/// - mock服务器确认收到了正确的请求
 #[test]
-fn test_post_request_success() {
+fn test_post_request_success() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test", mock_server.base_url);
 
@@ -141,25 +175,24 @@ fn test_post_request_success() {
         .mock("POST", "/test")
         .match_header("content-type", "application/json")
         .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data).unwrap(),
+            serde_json::to_string(&body_data)?,
         ))
         .with_status(201)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "name": "test"}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
-    let response = client.post(&url, config);
+    let response = client.post(&url, config)?;
 
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 201);
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_put_request_success() {
+fn test_put_request_success() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
 
@@ -171,42 +204,40 @@ fn test_put_request_success() {
         .mock("PUT", "/test/1")
         .match_header("content-type", "application/json")
         .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data).unwrap(),
+            serde_json::to_string(&body_data)?,
         ))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "name": "updated"}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
-    let response = client.put(&url, config);
+    let response = client.put(&url, config)?;
 
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 200);
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_delete_request_success() {
+fn test_delete_request_success() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
 
     let _mock = mock_server.server.as_mut().mock("DELETE", "/test/1").with_status(204).create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
-    let response = client.delete(&url, config);
+    let response = client.delete(&url, config)?;
 
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 204);
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_patch_request_success() {
+fn test_patch_request_success() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/test/1", mock_server.base_url);
 
@@ -218,25 +249,24 @@ fn test_patch_request_success() {
         .mock("PATCH", "/test/1")
         .match_header("content-type", "application/json")
         .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data).unwrap(),
+            serde_json::to_string(&body_data)?,
         ))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "status": "active"}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().body(&body_data);
-    let response = client.patch(&url, config);
+    let response = client.patch(&url, config)?;
 
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 200);
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_post_multipart_request() {
+fn test_post_multipart_request() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/upload", mock_server.base_url);
 
@@ -257,16 +287,17 @@ fn test_post_multipart_request() {
         .with_body(r#"{"uploaded": true}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = workflow::base::http::MultipartRequestConfig::<Value>::new().multipart(form);
-    let response = client.post_multipart(&url, config);
+    let response = client.post_multipart(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_stream_request() {
+fn test_stream_request() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/stream", mock_server.base_url);
 
@@ -279,20 +310,19 @@ fn test_stream_request() {
         .with_body(b"streaming data")
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
-    let response = client.stream(workflow::base::http::HttpMethod::Get, &url, config);
+    let mut stream = client.stream(workflow::base::http::HttpMethod::Get, &url, config)?;
 
-    assert!(response.is_ok());
-    let mut stream = response.unwrap();
     let mut buffer = Vec::new();
-    stream.copy_to(&mut buffer).unwrap();
+    stream.copy_to(&mut buffer)?;
     assert_eq!(buffer, b"streaming data");
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_request_timeout() {
+fn test_request_timeout() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/slow", mock_server.base_url);
 
@@ -306,16 +336,17 @@ fn test_request_timeout() {
         .with_body(r#"{}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new().timeout(std::time::Duration::from_secs(5));
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_request_error_handling() {
+fn test_request_error_handling() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/error", mock_server.base_url);
 
@@ -328,20 +359,19 @@ fn test_request_error_handling() {
         .with_body(r#"{"error": "Internal Server Error"}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::<Value, Value>::new();
-    let response = client.get(&url, config);
+    let response = client.get(&url, config)?;
 
     // 请求应该成功（HTTP 客户端层面），但响应状态码是 500
-    assert!(response.is_ok());
-    let response = response.unwrap();
     assert_eq!(response.status, 500);
     assert!(response.is_error());
     _mock.assert();
+    Ok(())
 }
 
 #[test]
-fn test_request_with_all_options() {
+fn test_request_with_all_options() -> Result<()> {
     let mut mock_server = setup_mock_server();
     let url = format!("{}/complex", mock_server.base_url);
 
@@ -349,7 +379,7 @@ fn test_request_with_all_options() {
     let query = [("filter", "active")];
     let auth = workflow::base::http::Authorization::new("user", "pass");
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Request-ID", "12345".parse().unwrap());
+    headers.insert("X-Request-ID", "12345".parse()?);
 
     let _mock = mock_server
         .server
@@ -362,24 +392,25 @@ fn test_request_with_all_options() {
             "active".to_string(),
         ))
         .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data).unwrap(),
+            serde_json::to_string(&body_data)?,
         ))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"success": true}"#)
         .create();
 
-    let client = HttpClient::global().unwrap();
+    let client = HttpClient::global()?;
     let config = RequestConfig::new()
         .body(&body_data)
         .query(&query)
         .auth(&auth)
         .headers(&headers)
         .timeout(std::time::Duration::from_secs(10));
-    let response = client.post(&url, config);
+    let response = client.post(&url, config)?;
 
-    assert!(response.is_ok());
+    assert!(response.is_success());
     _mock.assert();
+    Ok(())
 }
 
 // ==================== 来自 client_core.rs 的补充测试 ====================
@@ -503,7 +534,12 @@ fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
 
     use reqwest::header::HeaderMap;
     let mut headers = HeaderMap::new();
-    headers.insert("X-Custom-Header", "custom-value".parse().unwrap());
+    headers.insert(
+        "X-Custom-Header",
+        "custom-value"
+            .parse()
+            .expect("header value should parse successfully"),
+    );
 
     let mock = manager
         .server()

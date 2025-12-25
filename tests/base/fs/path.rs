@@ -1,6 +1,12 @@
 //! Base Util Path 模块测试
 //!
 //! 测试路径操作工具的核心功能，包括 PathAccess 结构体。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试路径访问、目录创建和安全读取功能
 
 use std::fs;
 use tempfile::TempDir;
@@ -103,8 +109,9 @@ fn test_path_access_ensure_parent_exists() -> color_eyre::Result<()> {
 
     let path_access = PathAccess::new(&file_path);
     path_access.ensure_parent_exists()?;
-    assert!(file_path.parent().unwrap().exists());
-    assert!(file_path.parent().unwrap().is_dir());
+    let parent = file_path.parent().expect("File path should have a parent directory");
+    assert!(parent.exists());
+    assert!(parent.is_dir());
 
     Ok(())
 }

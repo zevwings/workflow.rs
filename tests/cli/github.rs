@@ -20,27 +20,27 @@ fn test_github_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // List
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "list"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "list"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::List));
 
     // Current
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "current"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "current"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::Current));
 
     // Add
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "add"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "add"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::Add));
 
     // Remove
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "remove"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "remove"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::Remove));
 
     // Switch
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "switch"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "switch"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::Switch));
 
     // Update
-    let cli = TestGitHubCli::try_parse_from(&["test-github", "update"]).unwrap();
+    let cli = TestGitHubCli::try_parse_from(&["test-github", "update"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, GitHubSubcommand::Update));
 }
 

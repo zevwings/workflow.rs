@@ -6,15 +6,14 @@ use color_eyre::Result;
 use workflow::base::settings::paths::Paths;
 
 #[test]
-fn test_paths_home_dir_indirect() {
+fn test_paths_home_dir_indirect() -> Result<()> {
     // 测试 home_dir() 方法（通过其他方法间接测试，覆盖 paths.rs:49-51）
     // home_dir() 是私有方法，通过 expand("~") 间接测试
-    let result = Paths::expand("~");
+    let home = Paths::expand("~")?;
 
     // 应该能够获取主目录
-    assert!(result.is_ok());
-    let home = result.unwrap();
     assert!(home.exists() || !home.exists()); // 主目录可能不存在但路径有效
+    Ok(())
 }
 
 #[test]

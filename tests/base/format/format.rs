@@ -201,7 +201,8 @@ mod date_format_tests {
         let date_utc = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
 
         // 验证格式：YYYY-MM-DD
-        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
+        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+            .expect("Date regex pattern should be valid");
         assert!(date_regex.is_match(&date_local));
         assert!(date_regex.is_match(&date_utc));
     }
@@ -213,7 +214,8 @@ mod date_format_tests {
         let datetime_utc = format_document_timestamp(DateFormat::DateTime, Timezone::Utc);
 
         // 验证格式：YYYY-MM-DD HH:MM:SS
-        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").unwrap();
+        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+            .expect("DateTime regex pattern should be valid");
         assert!(datetime_regex.is_match(&datetime_local));
         assert!(datetime_regex.is_match(&datetime_utc));
     }
@@ -237,8 +239,10 @@ mod date_format_tests {
         let last_updated_with_time = format_last_updated_with_time();
 
         // 验证格式
-        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").unwrap();
-        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").unwrap();
+        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+            .expect("Date regex pattern should be valid");
+        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
+            .expect("DateTime regex pattern should be valid");
 
         assert!(date_regex.is_match(&last_updated));
         assert!(datetime_regex.is_match(&last_updated_with_time));
@@ -249,7 +253,8 @@ mod date_format_tests {
         let filename_timestamp = format_filename_timestamp();
 
         // 验证格式：YYYY-MM-DD_HH-MM-SS（适合文件名）
-        let filename_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").unwrap();
+        let filename_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
+            .expect("Filename regex pattern should be valid");
         assert!(filename_regex.is_match(&filename_timestamp));
 
         // 验证不包含空格和冒号（文件名友好）
@@ -279,7 +284,8 @@ mod date_format_tests {
         let result_local = format_document_timestamp(format, Timezone::Local);
         let result_utc = format_document_timestamp(format, Timezone::Utc);
 
-        let regex = regex::Regex::new(pattern).unwrap();
+        let regex = regex::Regex::new(pattern)
+            .expect("Regex pattern should be valid");
         assert!(regex.is_match(&result_local));
         assert!(regex.is_match(&result_utc));
     }
@@ -536,7 +542,7 @@ mod integration_tests {
         // 验证格式化结果
         assert_eq!(file_size, "5.00 MB");
         assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-            .unwrap()
+            .expect("Filename timestamp regex should be valid")
             .is_match(&timestamp));
         assert_eq!(masked_key, "very***6789");
 

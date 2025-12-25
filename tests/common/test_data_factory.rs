@@ -11,6 +11,7 @@
 //! let pr = factory.github_pr().number(123).title("Test PR").build();
 //! ```
 
+use color_eyre::Result;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs;
@@ -44,18 +45,36 @@ impl TestDataFactory {
         JiraIssueBuilder::new(&self.templates_dir)
     }
 
+    /// 创建 Git Commit 数据构建器
+    pub fn git_commit(&self) -> GitCommitBuilder {
+        GitCommitBuilder::new(&self.templates_dir)
+    }
+
     /// 创建配置数据构建器
     pub fn config(&self) -> ConfigBuilder {
         ConfigBuilder::new()
     }
 
     /// 从模板文件加载并替换变量
-    fn load_template(&self, filename: &str, vars: &HashMap<String, String>) -> Value {
+    ///
+    /// ## 错误处理
+    /// 如果模板文件不存在或JSON解析失败，返回包含详细错误上下文的`Result`。
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let mut vars = HashMap::new();
+    /// vars.insert("number".to_string(), "123".to_string());
+    /// let data = factory.load_template("github_pr.json", &vars)?;
+    /// ```
+    fn load_template(&self, filename: &str, vars: &HashMap<String, String>) -> Result<Value> {
+        use color_eyre::eyre::Context;
+
         let template_path = self.templates_dir.join(filename);
         let template_content = fs::read_to_string(&template_path)
-            .unwrap_or_else(|_| panic!("Failed to read template: {}", template_path.display()));
+            .wrap_err_with(|| format!("Failed to read template: {}", template_path.display()))?;
 
-        let mut result = template_content.clone();
+        let mut result = template_content;
         for (key, value) in vars {
             let placeholder = format!("{{{{{}}}}}", key);
             result = result.replace(&placeholder, value);
@@ -63,7 +82,7 @@ impl TestDataFactory {
 
         // 解析为 JSON
         serde_json::from_str(&result)
-            .unwrap_or_else(|_| panic!("Failed to parse template result as JSON"))
+            .wrap_err_with(|| format!("Failed to parse template result as JSON for file: {}", filename))
     }
 }
 
@@ -159,7 +178,20 @@ impl GitHubPRBuilder {
     }
 
     /// 构建 GitHub PR JSON 数据
-    pub fn build(&self) -> Value {
+    ///
+    /// ## 错误处理
+    /// 如果模板加载或JSON解析失败，返回包含详细上下文的错误。
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let pr = factory
+    ///     .github_pr()
+    ///     .number(123)
+    ///     .title("Test PR")
+    ///     .build()?;
+    /// ```
+    pub fn build(&self) -> Result<Value> {
         let factory = TestDataFactory {
             templates_dir: self.templates_dir.clone(),
         };
@@ -168,10 +200,15 @@ impl GitHubPRBuilder {
 
     /// 构建为 JSON 字符串
     ///
+    /// ## 示例
+    /// ```rust
+    /// let pr_json = factory.github_pr().build_string()?;
+    /// ```
+    ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
     #[allow(dead_code)]
-    pub fn build_string(&self) -> String {
-        serde_json::to_string_pretty(&self.build()).unwrap()
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build()?)?)
     }
 }
 
@@ -258,7 +295,20 @@ impl JiraIssueBuilder {
     }
 
     /// 构建 Jira Issue JSON 数据
-    pub fn build(&self) -> Value {
+    ///
+    /// ## 错误处理
+    /// 如果模板加载或JSON解析失败，返回包含详细上下文的错误。
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let issue = factory
+    ///     .jira_issue()
+    ///     .key("PROJ-123")
+    ///     .summary("Test Issue")
+    ///     .build()?;
+    /// ```
+    pub fn build(&self) -> Result<Value> {
         let factory = TestDataFactory {
             templates_dir: self.templates_dir.clone(),
         };
@@ -267,10 +317,175 @@ impl JiraIssueBuilder {
 
     /// 构建为 JSON 字符串
     ///
+    /// ## 示例
+    /// ```rust
+    /// let issue_json = factory.jira_issue().build_string()?;
+    /// ```
+    ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
     #[allow(dead_code)]
-    pub fn build_string(&self) -> String {
-        serde_json::to_string_pretty(&self.build()).unwrap()
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build()?)?)
+    }
+}
+
+/// Git Commit 数据构建器
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+/// let commit = factory
+///     .git_commit()
+///     .sha("abc123def456")
+///     .message("feat: add new feature")
+///     .author_name("John Doe")
+///     .author_email("john@example.com")
+///     .build();
+/// ```
+pub struct GitCommitBuilder {
+    templates_dir: PathBuf,
+    vars: HashMap<String, String>,
+}
+
+impl GitCommitBuilder {
+    fn new(templates_dir: &Path) -> Self {
+        let mut vars = HashMap::new();
+        // 设置默认值
+        vars.insert("sha".to_string(), "abc123def456789".to_string());
+        vars.insert(
+            "message".to_string(),
+            "feat: test commit message".to_string(),
+        );
+        vars.insert("author_name".to_string(), "Test Author".to_string());
+        vars.insert("author_email".to_string(), "author@example.com".to_string());
+        vars.insert(
+            "author_date".to_string(),
+            "2024-01-01T10:00:00Z".to_string(),
+        );
+        vars.insert("committer_name".to_string(), "Test Committer".to_string());
+        vars.insert(
+            "committer_email".to_string(),
+            "committer@example.com".to_string(),
+        );
+        vars.insert(
+            "committer_date".to_string(),
+            "2024-01-01T10:00:00Z".to_string(),
+        );
+        vars.insert("author_login".to_string(), "testauthor".to_string());
+        vars.insert("author_id".to_string(), "12345".to_string());
+        vars.insert("committer_login".to_string(), "testcommitter".to_string());
+        vars.insert("committer_id".to_string(), "12345".to_string());
+        vars.insert("parent_sha".to_string(), "parent123def456".to_string());
+        vars.insert(
+            "html_url".to_string(),
+            "https://github.com/owner/repo/commit/abc123def456789".to_string(),
+        );
+
+        Self {
+            templates_dir: templates_dir.to_path_buf(),
+            vars,
+        }
+    }
+
+    /// 设置 commit SHA
+    pub fn sha<S: Into<String>>(mut self, sha: S) -> Self {
+        self.vars.insert("sha".to_string(), sha.into());
+        self
+    }
+
+    /// 设置 commit 消息
+    pub fn message<S: Into<String>>(mut self, message: S) -> Self {
+        self.vars.insert("message".to_string(), message.into());
+        self
+    }
+
+    /// 设置作者名称
+    pub fn author_name<S: Into<String>>(mut self, name: S) -> Self {
+        self.vars.insert("author_name".to_string(), name.into());
+        self
+    }
+
+    /// 设置作者邮箱
+    pub fn author_email<S: Into<String>>(mut self, email: S) -> Self {
+        self.vars.insert("author_email".to_string(), email.into());
+        self
+    }
+
+    /// 设置作者日期
+    pub fn author_date<S: Into<String>>(mut self, date: S) -> Self {
+        self.vars.insert("author_date".to_string(), date.into());
+        self
+    }
+
+    /// 设置提交者名称
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
+    pub fn committer_name<S: Into<String>>(mut self, name: S) -> Self {
+        self.vars.insert("committer_name".to_string(), name.into());
+        self
+    }
+
+    /// 设置提交者邮箱
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
+    pub fn committer_email<S: Into<String>>(mut self, email: S) -> Self {
+        self.vars.insert("committer_email".to_string(), email.into());
+        self
+    }
+
+    /// 设置提交者日期
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
+    pub fn committer_date<S: Into<String>>(mut self, date: S) -> Self {
+        self.vars.insert("committer_date".to_string(), date.into());
+        self
+    }
+
+    /// 设置父提交 SHA
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
+    pub fn parent_sha<S: Into<String>>(mut self, sha: S) -> Self {
+        self.vars.insert("parent_sha".to_string(), sha.into());
+        self
+    }
+
+    /// 构建 Git Commit JSON 数据
+    ///
+    /// ## 错误处理
+    /// 如果模板加载或JSON解析失败，返回包含详细上下文的错误。
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let factory = TestDataFactory::new();
+    /// let commit = factory
+    ///     .git_commit()
+    ///     .sha("abc123")
+    ///     .message("feat: add feature")
+    ///     .build()?;
+    /// ```
+    pub fn build(&self) -> Result<Value> {
+        let factory = TestDataFactory {
+            templates_dir: self.templates_dir.clone(),
+        };
+        factory.load_template("git_commit.json", &self.vars)
+    }
+
+    /// 构建为 JSON 字符串
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let commit_json = factory.git_commit().build_string()?;
+    /// ```
+    ///
+    /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
+    #[allow(dead_code)]
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build()?)?)
     }
 }
 
@@ -347,7 +562,7 @@ impl ConfigBuilder {
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
     #[allow(dead_code)]
     pub fn build_string(&self) -> String {
-        serde_json::to_string_pretty(&self.build()).unwrap()
+        serde_json::to_string_pretty(&self.build()).expect("JSON serialization should succeed")
     }
 }
 
@@ -356,18 +571,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_github_pr_builder_default() {
+    fn test_github_pr_builder_default() -> Result<()> {
         let factory = TestDataFactory::new();
-        let pr = factory.github_pr().build();
+        let pr = factory.github_pr().build()?;
 
         assert_eq!(pr["number"], 123);
         assert_eq!(pr["title"], "Test PR");
         assert_eq!(pr["state"], "open");
         assert_eq!(pr["merged"], false);
+        Ok(())
     }
 
     #[test]
-    fn test_github_pr_builder_custom() {
+    fn test_github_pr_builder_custom() -> Result<()> {
         let factory = TestDataFactory::new();
         let pr = factory
             .github_pr()
@@ -375,26 +591,28 @@ mod tests {
             .title("Custom PR")
             .state("closed")
             .merged(true)
-            .build();
+            .build()?;
 
         assert_eq!(pr["number"], 456);
         assert_eq!(pr["title"], "Custom PR");
         assert_eq!(pr["state"], "closed");
         assert_eq!(pr["merged"], true);
+        Ok(())
     }
 
     #[test]
-    fn test_jira_issue_builder_default() {
+    fn test_jira_issue_builder_default() -> Result<()> {
         let factory = TestDataFactory::new();
-        let issue = factory.jira_issue().build();
+        let issue = factory.jira_issue().build()?;
 
         assert_eq!(issue["key"], "PROJ-123");
         assert_eq!(issue["fields"]["summary"], "Test Issue Summary");
         assert_eq!(issue["fields"]["status"]["name"], "In Progress");
+        Ok(())
     }
 
     #[test]
-    fn test_jira_issue_builder_custom() {
+    fn test_jira_issue_builder_custom() -> Result<()> {
         let factory = TestDataFactory::new();
         let issue = factory
             .jira_issue()
@@ -402,12 +620,13 @@ mod tests {
             .summary("Custom Issue")
             .status("Done")
             .issue_type("Feature")
-            .build();
+            .build()?;
 
         assert_eq!(issue["key"], "PROJ-456");
         assert_eq!(issue["fields"]["summary"], "Custom Issue");
         assert_eq!(issue["fields"]["status"]["name"], "Done");
         assert_eq!(issue["fields"]["issuetype"]["name"], "Feature");
+        Ok(())
     }
 
     #[test]
@@ -434,5 +653,37 @@ mod tests {
 
         assert_eq!(config["log"]["level"], "debug");
         assert_eq!(config["log"]["method"], "file");
+    }
+
+    #[test]
+    fn test_git_commit_builder_default() -> Result<()> {
+        let factory = TestDataFactory::new();
+        let commit = factory.git_commit().build()?;
+
+        assert_eq!(commit["sha"], "abc123def456789");
+        assert_eq!(commit["commit"]["message"], "feat: test commit message");
+        assert_eq!(commit["commit"]["author"]["name"], "Test Author");
+        assert_eq!(commit["commit"]["author"]["email"], "author@example.com");
+        Ok(())
+    }
+
+    #[test]
+    fn test_git_commit_builder_custom() -> Result<()> {
+        let factory = TestDataFactory::new();
+        let commit = factory
+            .git_commit()
+            .sha("custom123sha")
+            .message("fix: custom commit message")
+            .author_name("Custom Author")
+            .author_email("custom@example.com")
+            .author_date("2024-06-01T12:00:00Z")
+            .build()?;
+
+        assert_eq!(commit["sha"], "custom123sha");
+        assert_eq!(commit["commit"]["message"], "fix: custom commit message");
+        assert_eq!(commit["commit"]["author"]["name"], "Custom Author");
+        assert_eq!(commit["commit"]["author"]["email"], "custom@example.com");
+        assert_eq!(commit["commit"]["author"]["date"], "2024-06-01T12:00:00Z");
+        Ok(())
     }
 }

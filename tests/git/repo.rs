@@ -5,7 +5,14 @@
 //! - 仓库类型检测
 //! - 错误处理和边界情况
 //! - 与现有 mock 实现的一致性验证
+//!
+//! ## 测试策略
+//!
+//! - 使用 `rstest` 进行参数化测试
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试各种 URL 格式、边界情况和性能场景
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 
@@ -27,15 +34,11 @@ use workflow::git::{GitRepo, RepoType};
 #[case("https://codeup.aliyun.com/owner/repo.git", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo")]
 #[case("http://codeup.aliyun.com/owner/repo", "owner/repo")]
-fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expected: &str) {
+fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // 测试各种有效 URL 格式的仓库名提取
-    let result = GitRepo::extract_repo_name_from_url(url);
-    assert!(
-        result.is_ok(),
-        "Failed to extract repo name from URL: {}",
-        url
-    );
-    assert_eq!(result.unwrap(), expected);
+    let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+    assert_eq!(repo_name, expected);
+    Ok(())
 }
 
 #[rstest]
@@ -49,15 +52,11 @@ fn test_extract_repo_name_from_url_valid_cases(#[case] url: &str, #[case] expect
     "https://codeup.aliyun.com/group/subgroup/project.git",
     "group/subgroup/project"
 )]
-fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expected: &str) {
+fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // 测试嵌套路径的仓库名提取
-    let result = GitRepo::extract_repo_name_from_url(url);
-    assert!(
-        result.is_ok(),
-        "Failed to extract nested repo name from URL: {}",
-        url
-    );
-    assert_eq!(result.unwrap(), expected);
+    let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+    assert_eq!(repo_name, expected);
+    Ok(())
 }
 
 #[rstest]
@@ -69,15 +68,11 @@ fn test_extract_repo_name_from_url_nested_paths(#[case] url: &str, #[case] expec
 #[case("git@github.com:owner/repo.with.dots.git", "owner/repo.with.dots")]
 #[case("https://github.com/owner/repo123", "owner/repo123")]
 #[case("git@codeup.aliyun.com:中文用户/中文仓库.git", "中文用户/中文仓库")]
-fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case] expected: &str) {
+fn test_extract_repo_name_from_url_special_characters(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // 测试包含特殊字符的仓库名提取
-    let result = GitRepo::extract_repo_name_from_url(url);
-    assert!(
-        result.is_ok(),
-        "Failed to extract repo name with special chars from URL: {}",
-        url
-    );
-    assert_eq!(result.unwrap(), expected);
+    let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+    assert_eq!(repo_name, expected);
+    Ok(())
 }
 
 #[rstest]
@@ -102,7 +97,7 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
 }
 
 #[test]
-fn test_extract_repo_name_from_url_trailing_slashes() {
+fn test_extract_repo_name_from_url_trailing_slashes() -> Result<()> {
     // 测试末尾斜杠的处理
     let test_cases = vec![
         ("https://github.com/owner/repo/", "owner/repo"),
@@ -111,18 +106,14 @@ fn test_extract_repo_name_from_url_trailing_slashes() {
     ];
 
     for (url, expected) in test_cases {
-        let result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            result.is_ok(),
-            "Failed to handle trailing slash in URL: {}",
-            url
-        );
-        assert_eq!(result.unwrap(), expected);
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, expected);
     }
+    Ok(())
 }
 
 #[test]
-fn test_extract_repo_name_from_url_case_sensitivity() {
+fn test_extract_repo_name_from_url_case_sensitivity() -> Result<()> {
     // 测试大小写敏感性 - 实际实现是大小写敏感的，只有小写域名被支持
     let valid_cases = vec![
         ("https://github.com/Owner/Repo.git", "Owner/Repo"),
@@ -131,13 +122,8 @@ fn test_extract_repo_name_from_url_case_sensitivity() {
     ];
 
     for (url, expected) in valid_cases {
-        let result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            result.is_ok(),
-            "Should handle lowercase domain in URL: {}",
-            url
-        );
-        assert_eq!(result.unwrap(), expected);
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, expected);
     }
 
     // 大写域名不被支持
@@ -155,6 +141,7 @@ fn test_extract_repo_name_from_url_case_sensitivity() {
             url
         );
     }
+    Ok(())
 }
 
 // ==================== 仓库类型检测测试 ====================
@@ -302,7 +289,7 @@ fn test_malformed_urls() {
 }
 
 #[test]
-fn test_unicode_and_special_characters() {
+fn test_unicode_and_special_characters() -> Result<()> {
     // 测试 Unicode 字符和特殊字符的处理
     let unicode_cases = vec![
         ("git@github.com:用户/仓库.git", "用户/仓库"),
@@ -315,27 +302,23 @@ fn test_unicode_and_special_characters() {
     ];
 
     for (url, expected) in unicode_cases {
-        let result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            result.is_ok(),
-            "Should handle Unicode characters in URL: {}",
-            url
-        );
-        assert_eq!(result.unwrap(), expected);
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, expected);
     }
+    Ok(())
 }
 
 #[test]
-fn test_very_long_urls() {
+fn test_very_long_urls() -> Result<()> {
     // 测试极长的 URL
     let long_owner = "a".repeat(100);
     let long_repo = "b".repeat(100);
     let long_url = format!("https://github.com/{}/{}", long_owner, long_repo);
     let expected = format!("{}/{}", long_owner, long_repo);
 
-    let result = GitRepo::extract_repo_name_from_url(&long_url);
-    assert!(result.is_ok(), "Should handle very long URLs");
-    assert_eq!(result.unwrap(), expected);
+    let repo_name = GitRepo::extract_repo_name_from_url(&long_url)?;
+    assert_eq!(repo_name, expected);
+    Ok(())
 }
 
 #[test]
@@ -389,7 +372,7 @@ fn test_performance_with_many_urls() {
 // ==================== 集成测试辅助 ====================
 
 #[test]
-fn test_extract_and_detect_integration() {
+fn test_extract_and_detect_integration() -> Result<()> {
     // 测试 URL 解析和类型检测的集成
     let test_cases = vec![
         (
@@ -412,13 +395,8 @@ fn test_extract_and_detect_integration() {
     for (url, expected_name, expected_type) in test_cases {
         // 测试仓库名提取
         if expected_type != RepoType::Unknown {
-            let name_result = GitRepo::extract_repo_name_from_url(url);
-            assert!(
-                name_result.is_ok(),
-                "Should extract name from supported URL: {}",
-                url
-            );
-            assert_eq!(name_result.unwrap(), expected_name);
+            let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+            assert_eq!(repo_name, expected_name);
         }
 
         // 测试类型检测
@@ -429,12 +407,13 @@ fn test_extract_and_detect_integration() {
             url
         );
     }
+    Ok(())
 }
 
 // ==================== 回归测试 ====================
 
 #[test]
-fn test_regression_known_issues() {
+fn test_regression_known_issues() -> Result<()> {
     // 测试已知问题的回归
 
     // 测试：确保 SSH 别名正确处理
@@ -444,13 +423,8 @@ fn test_regression_known_issues() {
     ];
 
     for url in ssh_alias_cases {
-        let name_result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            name_result.is_ok(),
-            "SSH alias should be supported: {}",
-            url
-        );
-        assert_eq!(name_result.unwrap(), "owner/repo");
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, "owner/repo");
 
         let type_result = mock_parse_repo_type_from_url(url);
         assert_eq!(type_result, RepoType::GitHub);
@@ -465,12 +439,8 @@ fn test_regression_known_issues() {
     ];
 
     for (url, expected) in git_suffix_cases {
-        let result = GitRepo::extract_repo_name_from_url(url);
-        assert!(
-            result.is_ok(),
-            "Should handle .git suffix correctly: {}",
-            url
-        );
-        assert_eq!(result.unwrap(), expected);
+        let repo_name = GitRepo::extract_repo_name_from_url(url)?;
+        assert_eq!(repo_name, expected);
     }
+    Ok(())
 }

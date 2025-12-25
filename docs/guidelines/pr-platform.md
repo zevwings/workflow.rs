@@ -787,7 +787,7 @@ impl PlatformProvider for GitLab {
 
 ## 🔗 相关文档
 
-- [开发规范](./development.md) - 代码风格和最佳实践
+- [开发规范](./development/README.md) - 代码风格和最佳实践
 - [PR 模块架构文档](../architecture/pr.md) - PR 模块的详细架构
 - [Git 模块架构文档](../architecture/git.md) - Git 模块的详细架构
 

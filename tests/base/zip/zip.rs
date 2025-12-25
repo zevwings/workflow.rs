@@ -1,7 +1,14 @@
 //! Zip 模块测试
 //!
 //! 测试解压工具的核心功能，包括 tar.gz 和 zip 文件解压。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 辅助函数中的 `unwrap()` 保留（测试辅助函数失败时 panic 是合理的）
+//! - 测试 tar.gz 和 zip 文件的解压功能
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::fs;
 use std::path::PathBuf;
@@ -18,26 +25,29 @@ fn create_test_tar_gz(temp_dir: &TempDir) -> PathBuf {
 
     // 创建临时文件用于打包
     let file1_path = temp_dir.path().join("file1.txt");
-    fs::write(&file1_path, "content1").unwrap();
+    fs::write(&file1_path, "content1").expect("should write file1");
 
     let file2_path = temp_dir.path().join("file2.txt");
-    fs::write(&file2_path, "content2").unwrap();
+    fs::write(&file2_path, "content2").expect("should write file2");
 
     let subdir = temp_dir.path().join("subdir");
-    fs::create_dir_all(&subdir).unwrap();
+    fs::create_dir_all(&subdir).expect("should create subdir");
     let file3_path = subdir.join("file3.txt");
-    fs::write(&file3_path, "content3").unwrap();
+    fs::write(&file3_path, "content3").expect("should write file3");
 
     // 创建 tar.gz 文件
-    let tar_gz_file = fs::File::create(&tar_gz_path).unwrap();
+    let tar_gz_file = fs::File::create(&tar_gz_path).expect("should create tar.gz file");
     let enc = GzEncoder::new(tar_gz_file, Compression::default());
     let mut tar = Builder::new(enc);
 
-    tar.append_path_with_name(&file1_path, "file1.txt").unwrap();
-    tar.append_path_with_name(&file2_path, "file2.txt").unwrap();
-    tar.append_path_with_name(&file3_path, "subdir/file3.txt").unwrap();
+    tar.append_path_with_name(&file1_path, "file1.txt")
+        .expect("should append file1 to tar");
+    tar.append_path_with_name(&file2_path, "file2.txt")
+        .expect("should append file2 to tar");
+    tar.append_path_with_name(&file3_path, "subdir/file3.txt")
+        .expect("should append file3 to tar");
 
-    tar.finish().unwrap();
+    tar.finish().expect("should finish tar archive");
 
     tar_gz_path
 }
@@ -49,7 +59,7 @@ fn create_test_zip(temp_dir: &TempDir) -> PathBuf {
     use zip::CompressionMethod;
 
     let zip_path = temp_dir.path().join("test.zip");
-    let zip_file = fs::File::create(&zip_path).unwrap();
+    let zip_file = fs::File::create(&zip_path).expect("should create zip file");
     let mut zip = ZipWriter::new(zip_file);
 
     let options = FileOptions::default()
@@ -57,20 +67,27 @@ fn create_test_zip(temp_dir: &TempDir) -> PathBuf {
         .unix_permissions(0o755);
 
     // 添加文件
-    zip.start_file("file1.txt", options).unwrap();
-    zip.write_all(b"content1").unwrap();
+    zip.start_file("file1.txt", options)
+        .expect("should start file1 in zip");
+    zip.write_all(b"content1")
+        .expect("should write content1 to zip");
 
-    zip.start_file("file2.txt", options).unwrap();
-    zip.write_all(b"content2").unwrap();
+    zip.start_file("file2.txt", options)
+        .expect("should start file2 in zip");
+    zip.write_all(b"content2")
+        .expect("should write content2 to zip");
 
     // 添加目录
-    zip.add_directory("subdir/", options).unwrap();
+    zip.add_directory("subdir/", options)
+        .expect("should add subdir to zip");
 
     // 添加子目录中的文件
-    zip.start_file("subdir/file3.txt", options).unwrap();
-    zip.write_all(b"content3").unwrap();
+    zip.start_file("subdir/file3.txt", options)
+        .expect("should start file3 in zip");
+    zip.write_all(b"content3")
+        .expect("should write content3 to zip");
 
-    zip.finish().unwrap();
+    zip.finish().expect("should finish zip archive");
 
     zip_path
 }
@@ -106,13 +123,14 @@ fn test_unzip_extract_tar_gz() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_unzip_extract_tar_gz_nonexistent_file() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_unzip_extract_tar_gz_nonexistent_file() -> Result<()> {
+    let temp_dir = TempDir::new()?;
     let nonexistent_path = temp_dir.path().join("nonexistent.tar.gz");
     let output_dir = temp_dir.path().join("output");
 
     let result = Unzip::extract_tar_gz(&nonexistent_path, &output_dir);
     assert!(result.is_err());
+    Ok(())
 }
 
 #[test]
@@ -177,13 +195,14 @@ fn test_unzip_extract_zip() -> color_eyre::Result<()> {
 }
 
 #[test]
-fn test_unzip_extract_zip_nonexistent_file() {
-    let temp_dir = TempDir::new().unwrap();
+fn test_unzip_extract_zip_nonexistent_file() -> Result<()> {
+    let temp_dir = TempDir::new()?;
     let nonexistent_path = temp_dir.path().join("nonexistent.zip");
     let output_dir = temp_dir.path().join("output");
 
     let result = Unzip::extract_zip(&nonexistent_path, &output_dir);
     assert!(result.is_err());
+    Ok(())
 }
 
 #[test]

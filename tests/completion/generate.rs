@@ -28,7 +28,7 @@ fn test_completion_generator_new_with_shell(#[case] shell: &str) {
         "Should create CompletionGenerator for {}",
         shell
     );
-    let _generator = result.unwrap();
+    let _generator = result.expect("operation should succeed");
     // shell 字段是私有的，我们只能验证创建成功
 
     cleanup_temp_test_dir(&test_dir);
@@ -107,8 +107,12 @@ fn test_completion_generator_generate_all(#[case] shell: &str) {
             // 对于 zsh，验证文件是否生成
             if shell == "zsh" {
                 let files: Vec<_> = std::fs::read_dir(&test_dir)
-                    .unwrap()
-                    .map(|entry| entry.unwrap().file_name())
+                    .expect("should read test directory")
+                    .map(|entry| {
+                        entry
+                            .expect("directory entry should be valid")
+                            .file_name()
+                    })
                     .collect();
                 // 应该至少有一个 completion 文件
                 assert!(

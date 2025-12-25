@@ -918,7 +918,7 @@ cargo test --release
 
 实施本需求时，请确保：
 
-- [ ] 遵循项目测试规范（参考 `docs/guidelines/testing.md`）
+- [ ] 遵循项目测试规范（参考 `docs/guidelines/testing/README.md`）
 - [ ] 使用 Mock 服务器进行网络相关测试（参考 `tests/common/mock_server.rs`）
 - [ ] 使用测试数据工厂生成测试数据（参考 `tests/common/test_data_factory.rs`）
 - [ ] 为每个公共函数至少编写 1 个测试用例
@@ -934,7 +934,7 @@ cargo test --release
 ## 📚 相关文档
 
 ### 指南文档
-- [测试规范文档](../guidelines/testing.md) - 项目测试规范
+- [测试规范文档](../guidelines/testing/README.md) - 项目测试规范
 - [测试用例审查指南](../guidelines/development/references/review-test-case.md) - 测试用例审查标准
 - [测试覆盖检查机制指南](../guidelines/development/references/test-coverage-check.md) - 覆盖率检查机制
 - [开发规范文档](../guidelines/development/README.md) - 开发规范索引

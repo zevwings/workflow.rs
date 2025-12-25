@@ -24,7 +24,7 @@ impl CliTestEnv {
     /// 初始化 Git 仓库
     pub fn init_git_repo(&self) -> &Self {
         std::process::Command::new("git")
-            .args(["init"])
+            .args(["init", "-b", "main"])
             .current_dir(self.path())
             .output()
             .expect("Failed to init git repo");
@@ -40,6 +40,21 @@ impl CliTestEnv {
             .current_dir(self.path())
             .output()
             .expect("Failed to set git user email");
+
+        // 添加remote origin（用于测试需要remote的功能）
+        std::process::Command::new("git")
+            .args(["remote", "add", "origin", "https://github.com/test/test-repo.git"])
+            .current_dir(self.path())
+            .output()
+            .expect("Failed to add remote origin");
+
+        // 设置远程HEAD引用（模拟远程默认分支为main）
+        // 这样get_default_branch()就能正确工作
+        std::process::Command::new("git")
+            .args(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"])
+            .current_dir(self.path())
+            .output()
+            .ok(); // 允许失败，因为可能remote branch还不存在
 
         self
     }

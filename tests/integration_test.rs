@@ -8,6 +8,7 @@
 mod base; // Base 模块测试（包含所有 base/* 子模块）
 mod branch;
 mod cli;
+mod commands; // Commands 模块测试
 mod commit;
 mod completion;
 mod integration;

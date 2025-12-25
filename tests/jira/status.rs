@@ -131,7 +131,7 @@ fn test_project_status_config_serialization() {
     let toml = toml::to_string(&config);
     assert!(toml.is_ok(), "Should serialize ProjectStatusConfig to TOML");
 
-    let toml_str = toml.unwrap();
+    let toml_str = toml.expect("serialization should succeed");
     // TOML 字段名应该是 "created-pr" 和 "merged-pr"（根据 serde rename）
     assert!(
         toml_str.contains("created-pr") || toml_str.contains("created_pull_request_status"),
@@ -157,7 +157,7 @@ merged-pr = "Done"
         "Should deserialize TOML to ProjectStatusConfig"
     );
 
-    let config = config.unwrap();
+    let config = config.expect("deserialization should succeed");
     assert_eq!(
         config.created_pull_request_status,
         Some("In Progress".to_string())
@@ -219,6 +219,37 @@ fn test_configure_interactive_empty_string() {
     // 空字符串的错误消息可能不同，所以不检查具体内容
 }
 
+/// 测试使用ticket ID进行交互式Jira配置
+///
+/// ## 测试目的
+/// 验证`configure_interactive()`方法能够使用ticket ID引导用户完成Jira配置。
+///
+/// ## 为什么被忽略
+/// - **需要交互式输入**: 需要用户输入Jira URL、用户名、API token等
+/// - **CI环境不支持**: 自动化环境无法提供交互式输入
+/// - **多步骤交互**: 涉及多个连续的用户输入步骤
+/// - **配置敏感信息**: 涉及API token等敏感信息
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_configure_interactive_with_ticket -- --ignored
+/// ```
+/// 准备好Jira URL、用户名和API token以完成配置
+///
+/// ## 测试场景
+/// 1. 调用configure_interactive()并提供ticket ID
+/// 2. 提示用户输入Jira URL
+/// 3. 提示用户输入Jira用户名
+/// 4. 提示用户输入API token
+/// 5. 使用ticket ID验证配置
+/// 6. 保存配置到文件
+///
+/// ## 预期行为
+/// - 依次显示各个配置项的输入提示
+/// - 接受用户输入并验证格式
+/// - 使用ticket ID测试连接
+/// - 配置成功后保存到~/.workflow/config/
+/// - 返回Ok表示配置完成
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_configure_interactive_with_ticket() {
@@ -242,6 +273,37 @@ fn test_configure_interactive_with_ticket() {
     }
 }
 
+/// 测试使用项目名进行交互式Jira配置
+///
+/// ## 测试目的
+/// 验证`configure_interactive()`方法能够使用项目名引导用户完成Jira配置。
+///
+/// ## 为什么被忽略
+/// - **需要交互式输入**: 需要用户输入Jira URL、用户名、API token等
+/// - **CI环境不支持**: 自动化环境无法提供交互式输入
+/// - **多步骤交互**: 涉及多个连续的用户输入步骤
+/// - **配置敏感信息**: 涉及API token等敏感信息
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_configure_interactive_with_project_name -- --ignored
+/// ```
+/// 准备好Jira URL、用户名、API token和项目名
+///
+/// ## 测试场景
+/// 1. 调用configure_interactive()并提供项目名
+/// 2. 提示用户输入Jira URL
+/// 3. 提示用户输入Jira用户名
+/// 4. 提示用户输入API token
+/// 5. 使用项目名验证配置
+/// 6. 保存配置到文件
+///
+/// ## 预期行为
+/// - 依次显示各个配置项的输入提示
+/// - 接受用户输入并验证格式
+/// - 使用项目名测试连接
+/// - 配置成功后保存到~/.workflow/config/
+/// - 返回Ok表示配置完成
 #[test]
 #[ignore] // 需要交互式输入，在 CI 环境中会卡住
 fn test_configure_interactive_with_project_name() {

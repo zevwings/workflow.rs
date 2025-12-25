@@ -215,8 +215,8 @@ PR 模块是 Workflow CLI 的核心业务模块之一，负责：
 ## 📚 相关文档
 
 - [测试覆盖度提升综合方案](./test-coverage-improvement.md)
-- [PR 模块架构](../architecture/pr.md)
-- [PR 平台扩展指南](../guidelines/pr-platform.md)
+- [PR 模块架构](../../architecture/pr.md)
+- [PR 平台扩展指南](../../guidelines/pr-platform.md)
 
 ---
 

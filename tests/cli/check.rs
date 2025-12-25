@@ -20,7 +20,7 @@ struct TestCheckCli {
 #[test]
 fn test_check_command_parsing() {
     // 测试 Check 命令可以正确解析
-    let cli = TestCheckCli::try_parse_from(&["test-workflow", "check"]).unwrap();
+    let cli = TestCheckCli::try_parse_from(&["test-workflow", "check"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Check)));
 }
 

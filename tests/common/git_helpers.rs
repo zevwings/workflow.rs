@@ -1,211 +1,165 @@
-//! Git 测试辅助函数
+//! Git测试辅助函数
 //!
-//! 提供创建测试用 Git 仓库的共享函数和 fixtures。
+//! 提供用于测试的Git仓库设置和管理功能。
 
-use std::fs;
-use std::path::PathBuf;
+use color_eyre::Result;
+use std::path::Path;
+use std::process::Command;
 use tempfile::TempDir;
 
-/// 创建带有初始提交的 Git 仓库
-///
-/// 返回 `(TempDir, 原始目录路径)`，调用者需要负责恢复原始目录。
-/// 如果 Git 命令不可用，返回 `None`。
-#[allow(dead_code)]
-pub fn setup_git_repo_with_gix() -> Option<(TempDir, PathBuf)> {
-    // 保存原始目录在创建临时目录之前
-    let original_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
-
-    let temp_dir = TempDir::new().unwrap();
-    let temp_path = temp_dir.path();
-
-    // 切换到临时目录，确保 gix::init 有正确的工作目录上下文
-    std::env::set_current_dir(temp_path).unwrap();
-
-    // 使用 gix 初始化仓库（在临时目录中）
-    let _repo = gix::init(".").unwrap();
-
-    // 设置基本的 Git 配置
-    let git_config_result = std::process::Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output();
-
-    if git_config_result.is_err() {
-        // 如果 git 命令不可用，跳过这个测试
-        eprintln!("Git command not available, skipping test");
-        return None;
-    }
-
-    std::process::Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建初始文件
-    let readme_path = temp_path.join("README.md");
-    std::fs::write(&readme_path, "# Test Repository\n").unwrap();
-
-    // 使用命令行 git 来创建初始提交（在临时目录中执行）
-    let add_output = std::process::Command::new("git")
-        .args(&["add", "README.md"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to add file");
-
-    if !add_output.status.success() {
-        panic!(
-            "Git add failed: {}",
-            String::from_utf8_lossy(&add_output.stderr)
-        );
-    }
-
-    let commit_output = std::process::Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to create commit");
-
-    if !commit_output.status.success() {
-        panic!(
-            "Git commit failed: {}",
-            String::from_utf8_lossy(&commit_output.stderr)
-        );
-    }
-
-    Some((temp_dir, original_dir))
+/// Git测试环境
+pub struct GitTestEnv {
+    temp_dir: TempDir,
 }
 
-/// 创建带有初始提交的 Git 仓库（使用命令行 git）
-///
-/// 返回 `(TempDir, 原始目录路径)`，调用者需要负责恢复原始目录。
-/// 如果 Git 命令不可用，会 panic。
-#[allow(dead_code)]
-pub fn setup_git_repo() -> (TempDir, PathBuf) {
-    // 保存原始目录在创建临时目录之前
-    let original_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("/tmp"));
+impl GitTestEnv {
+    /// 创建新的Git测试环境
+    ///
+    /// 自动初始化Git仓库并配置测试用户
+    pub fn new() -> Result<Self> {
+        let temp_dir = TempDir::new()?;
+        let repo_path = temp_dir.path();
 
-    let temp_dir = TempDir::new().unwrap();
-    let temp_path = temp_dir.path();
+        // 初始化Git仓库，设置默认分支为main
+        Self::run_git_command(repo_path, &["init", "-b", "main"])?;
 
-    // 切换到临时目录，确保 gix::init 有正确的工作目录上下文
-    std::env::set_current_dir(temp_path).unwrap();
+        // 配置测试用户
+        Self::run_git_command(repo_path, &["config", "user.name", "Test User"])?;
+        Self::run_git_command(repo_path, &["config", "user.email", "test@example.com"])?;
 
-    // 使用 gix 初始化仓库（在临时目录中）
-    let _repo = gix::init(".").unwrap();
+        // 创建初始提交
+        std::fs::write(repo_path.join("README.md"), "# Test Repository\n")?;
+        Self::run_git_command(repo_path, &["add", "."])?;
+        Self::run_git_command(repo_path, &["commit", "-m", "Initial commit"])?;
 
-    // 设置基本的 Git 配置
-    std::process::Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
-
-    std::process::Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
-
-    // 创建初始文件
-    let readme_path = temp_path.join("README.md");
-    std::fs::write(&readme_path, "# Test Repository\n").unwrap();
-
-    // 使用命令行 git 来创建初始提交（在临时目录中执行）
-    let add_output = std::process::Command::new("git")
-        .args(&["add", "README.md"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to add file");
-
-    if !add_output.status.success() {
-        panic!(
-            "Git add failed: {}",
-            String::from_utf8_lossy(&add_output.stderr)
-        );
+        Ok(Self { temp_dir })
     }
 
-    let commit_output = std::process::Command::new("git")
-        .args(&["commit", "-m", "Initial commit"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to create commit");
-
-    if !commit_output.status.success() {
-        panic!(
-            "Git commit failed: {}",
-            String::from_utf8_lossy(&commit_output.stderr)
-        );
+    /// 获取仓库路径
+    pub fn path(&self) -> &Path {
+        self.temp_dir.path()
     }
 
-    (temp_dir, original_dir)
+    /// 创建新分支
+    pub fn create_branch(&self, branch_name: &str) -> Result<()> {
+        Self::run_git_command(self.path(), &["branch", branch_name])
+    }
+
+    /// 切换分支
+    pub fn checkout(&self, branch_name: &str) -> Result<()> {
+        Self::run_git_command(self.path(), &["checkout", branch_name])
+    }
+
+    /// 创建并切换到新分支
+    pub fn checkout_new_branch(&self, branch_name: &str) -> Result<()> {
+        Self::run_git_command(self.path(), &["checkout", "-b", branch_name])
+    }
+
+    /// 创建测试文件
+    pub fn create_file(&self, filename: &str, content: &str) -> Result<()> {
+        let file_path = self.path().join(filename);
+        std::fs::write(file_path, content)?;
+        Ok(())
+    }
+
+    /// 添加并提交更改
+    pub fn add_and_commit(&self, message: &str) -> Result<()> {
+        Self::run_git_command(self.path(), &["add", "."])?;
+        Self::run_git_command(self.path(), &["commit", "-m", message])
+    }
+
+    /// 创建测试提交
+    pub fn make_test_commit(&self, filename: &str, content: &str, message: &str) -> Result<()> {
+        self.create_file(filename, content)?;
+        self.add_and_commit(message)
+    }
+
+    /// 获取当前分支名
+    pub fn current_branch(&self) -> Result<String> {
+        let output = Command::new("git")
+            .args(&["branch", "--show-current"])
+            .current_dir(self.path())
+            .output()?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!("Failed to get current branch: {}", error));
+        }
+
+        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    }
+
+    /// 获取最后一次提交的SHA
+    pub fn last_commit_sha(&self) -> Result<String> {
+        let output = Command::new("git")
+            .args(&["rev-parse", "HEAD"])
+            .current_dir(self.path())
+            .output()?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!("Failed to get commit SHA: {}", error));
+        }
+
+        Ok(String::from_utf8(output.stdout)?.trim().to_string())
+    }
+
+    /// 运行Git命令
+    fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<()> {
+        let output = Command::new("git")
+            .args(args)
+            .current_dir(repo_path)
+            .output()?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr);
+            return Err(color_eyre::eyre::eyre!(
+                "Git command failed: git {}\nError: {}",
+                args.join(" "),
+                error
+            ));
+        }
+
+        Ok(())
+    }
 }
 
-/// 创建带有初始提交的 Git 仓库（使用命令行 git，不切换目录）
-///
-/// 返回 `TempDir`，不切换当前工作目录。
-/// 适用于不需要切换目录的测试场景。
-#[allow(dead_code)]
-pub fn create_git_repo_with_commit() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
-    let temp_path = temp_dir.path();
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    // 在临时目录中执行 Git 操作，而不是切换当前工作目录
-    let init_output = std::process::Command::new("git")
-        .args(["init"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to init git repo");
-
-    if !init_output.status.success() {
-        panic!(
-            "Git init failed: {}",
-            String::from_utf8_lossy(&init_output.stderr)
-        );
+    #[test]
+    fn test_git_test_env_creation() -> Result<()> {
+        let env = GitTestEnv::new()?;
+        assert!(env.path().exists());
+        assert!(env.path().join(".git").exists());
+        Ok(())
     }
 
-    // 配置 Git 用户
-    let name_output = std::process::Command::new("git")
-        .args(["config", "user.name", "Test User"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user name");
+    #[test]
+    fn test_create_and_checkout_branch() -> Result<()> {
+        let env = GitTestEnv::new()?;
 
-    if !name_output.status.success() {
-        panic!(
-            "Git config user.name failed: {}",
-            String::from_utf8_lossy(&name_output.stderr)
-        );
+        env.create_branch("test-branch")?;
+        env.checkout("test-branch")?;
+
+        let current = env.current_branch()?;
+        assert_eq!(current, "test-branch");
+
+        Ok(())
     }
 
-    let email_output = std::process::Command::new("git")
-        .args(["config", "user.email", "test@example.com"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to set git user email");
+    #[test]
+    fn test_make_test_commit() -> Result<()> {
+        let env = GitTestEnv::new()?;
 
-    if !email_output.status.success() {
-        panic!(
-            "Git config user.email failed: {}",
-            String::from_utf8_lossy(&email_output.stderr)
-        );
+        let sha_before = env.last_commit_sha()?;
+
+        env.make_test_commit("test.txt", "test content", "test commit")?;
+
+        let sha_after = env.last_commit_sha()?;
+        assert_ne!(sha_before, sha_after);
+
+        Ok(())
     }
-
-    // 创建初始提交
-    let readme_path = temp_path.join("README.md");
-    fs::write(&readme_path, "# Test Repository").expect("Failed to write file");
-
-    std::process::Command::new("git")
-        .args(["add", "README.md"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to add file");
-
-    std::process::Command::new("git")
-        .args(["commit", "-m", "Initial commit"])
-        .current_dir(temp_path)
-        .output()
-        .expect("Failed to commit");
-
-    temp_dir
 }

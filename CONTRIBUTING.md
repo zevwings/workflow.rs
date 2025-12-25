@@ -537,7 +537,7 @@ Related to #456
 
 ### 开发规范
 
-- [开发规范文档](./docs/guidelines/development.md) - 详细的开发规范和最佳实践
+- [开发规范文档](./docs/guidelines/development/README.md) - 详细的开发规范和最佳实践
 - [测试规范文档](./docs/guidelines/testing.md) - 测试规范和测试方法
 - [文档编写指南](./docs/guidelines/document.md) - 文档编写规范和模板
 

@@ -1,7 +1,13 @@
 //! HTTP Config 测试
 //!
 //! 测试 HTTP 请求配置和 Multipart 请求配置的功能。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试配置构建器模式和方法链
 
+use color_eyre::Result;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -28,11 +34,14 @@ fn test_request_config_default() {
 }
 
 #[test]
-fn test_request_config_body() {
+fn test_request_config_body() -> Result<()> {
     let body = serde_json::json!({"key": "value"});
     let config = RequestConfig::<Value, Value>::new().body(&body);
     assert!(config.body.is_some());
-    assert_eq!(config.body.unwrap()["key"], "value");
+    if let Some(ref body) = config.body {
+        assert_eq!(body["key"], "value");
+    }
+    Ok(())
 }
 
 #[test]
@@ -52,42 +61,50 @@ fn test_request_config_query_hashmap() {
 }
 
 #[test]
-fn test_request_config_auth() {
+fn test_request_config_auth() -> Result<()> {
     let auth = Authorization::new("username", "password");
     let config = RequestConfig::<Value, Value>::new().auth(&auth);
     assert!(config.auth.is_some());
-    let config_auth = config.auth.unwrap();
-    assert_eq!(config_auth.username, "username");
-    assert_eq!(config_auth.password, "password");
+    if let Some(config_auth) = config.auth {
+        assert_eq!(config_auth.username, "username");
+        assert_eq!(config_auth.password, "password");
+    }
+    Ok(())
 }
 
 #[test]
-fn test_request_config_headers() {
+fn test_request_config_headers() -> Result<()> {
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Custom-Header", "value".parse().unwrap());
+    headers.insert("X-Custom-Header", "value".parse()?);
     let config = RequestConfig::<Value, Value>::new().headers(&headers);
     assert!(config.headers.is_some());
-    assert_eq!(
-        config.headers.unwrap().get("X-Custom-Header").unwrap(),
-        "value"
-    );
+    if let Some(headers) = config.headers {
+        assert_eq!(
+            headers.get("X-Custom-Header").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+            "value"
+        );
+    }
+    Ok(())
 }
 
 #[test]
-fn test_request_config_timeout() {
+fn test_request_config_timeout() -> Result<()> {
     let timeout = Duration::from_secs(60);
     let config = RequestConfig::<Value, Value>::new().timeout(timeout);
     assert!(config.timeout.is_some());
-    assert_eq!(config.timeout.unwrap(), timeout);
+    if let Some(t) = config.timeout {
+        assert_eq!(t, timeout);
+    }
+    Ok(())
 }
 
 #[test]
-fn test_request_config_chain() {
+fn test_request_config_chain() -> Result<()> {
     let body = serde_json::json!({"data": "test"});
     let query = [("filter", "active")];
     let auth = Authorization::new("user", "pass");
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Request-ID", "12345".parse().unwrap());
+    headers.insert("X-Request-ID", "12345".parse()?);
     let timeout = Duration::from_secs(30);
 
     let config = RequestConfig::new()
@@ -102,6 +119,7 @@ fn test_request_config_chain() {
     assert!(config.auth.is_some());
     assert!(config.headers.is_some());
     assert!(config.timeout.is_some());
+    Ok(())
 }
 
 #[test]
@@ -141,43 +159,51 @@ fn test_multipart_request_config_query() {
 }
 
 #[test]
-fn test_multipart_request_config_auth() {
+fn test_multipart_request_config_auth() -> Result<()> {
     let auth = Authorization::new("username", "password");
     let auth_clone = auth.clone();
     let config = MultipartRequestConfig::<Value>::new().auth(auth);
     assert!(config.auth.is_some());
-    let config_auth = config.auth.unwrap();
-    assert_eq!(config_auth.username, auth_clone.username);
-    assert_eq!(config_auth.password, auth_clone.password);
+    if let Some(config_auth) = config.auth {
+        assert_eq!(config_auth.username, auth_clone.username);
+        assert_eq!(config_auth.password, auth_clone.password);
+    }
+    Ok(())
 }
 
 #[test]
-fn test_multipart_request_config_headers() {
+fn test_multipart_request_config_headers() -> Result<()> {
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Custom-Header", "value".parse().unwrap());
+    headers.insert("X-Custom-Header", "value".parse()?);
     let config = MultipartRequestConfig::<Value>::new().headers(headers.clone());
     assert!(config.headers.is_some());
-    assert_eq!(
-        config.headers.unwrap().get("X-Custom-Header").unwrap(),
-        "value"
-    );
+    if let Some(headers) = config.headers {
+        assert_eq!(
+            headers.get("X-Custom-Header").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+            "value"
+        );
+    }
+    Ok(())
 }
 
 #[test]
-fn test_multipart_request_config_timeout() {
+fn test_multipart_request_config_timeout() -> Result<()> {
     let timeout = Duration::from_secs(120);
     let config = MultipartRequestConfig::<Value>::new().timeout(timeout);
     assert!(config.timeout.is_some());
-    assert_eq!(config.timeout.unwrap(), timeout);
+    if let Some(t) = config.timeout {
+        assert_eq!(t, timeout);
+    }
+    Ok(())
 }
 
 #[test]
-fn test_multipart_request_config_chain() {
+fn test_multipart_request_config_chain() -> Result<()> {
     let form = reqwest::blocking::multipart::Form::new().text("file", "content");
     let query = serde_json::json!({"param": "value"});
     let auth = Authorization::new("user", "pass");
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("X-Upload-ID", "67890".parse().unwrap());
+    headers.insert("X-Upload-ID", "67890".parse()?);
     let timeout = Duration::from_secs(60);
 
     let config = MultipartRequestConfig::new()
@@ -192,4 +218,5 @@ fn test_multipart_request_config_chain() {
     assert!(config.auth.is_some());
     assert!(config.headers.is_some());
     assert!(config.timeout.is_some());
+    Ok(())
 }

@@ -5,7 +5,14 @@
 //! - 完成消息生成
 //! - 强制推送警告检查
 //! - 提交信息详细格式化
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - Fixture 函数中的 `expect()` 保留（fixture 失败应该panic）
+//! - 使用真实的Git仓库进行集成测试
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use serial_test::serial;
 use std::fs;
@@ -74,53 +81,52 @@ fn create_git_repo_with_commit() -> TempDir {
 
 /// 测试创建预览
 #[test]
-fn test_create_preview() {
+fn test_create_preview() -> Result<()> {
     let commit_info = create_sample_commit_info();
     let new_message = Some("feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.".to_string());
     let files_to_add = vec!["src/auth.rs".to_string(), "tests/auth_test.rs".to_string()];
     let operation_type = "amend";
     let current_branch = "main";
 
-    let result = CommitAmend::create_preview(
+    let preview = CommitAmend::create_preview(
         &commit_info,
         &new_message,
         &files_to_add,
         operation_type,
         current_branch,
-    );
-    assert!(result.is_ok());
+    )?;
 
-    let preview = result.unwrap();
     assert_eq!(
         preview.original_sha,
         "abc123def456789012345678901234567890abcd"
     );
     assert_eq!(preview.original_message, "feat: add user authentication system\n\nImplement comprehensive user authentication with JWT tokens and session management.");
     assert!(preview.new_message.is_some());
-    assert_eq!(preview.new_message.as_ref().unwrap(), "feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.");
+    if let Some(ref msg) = preview.new_message {
+        assert_eq!(msg, "feat: implement advanced user authentication\n\nAdd comprehensive authentication with OAuth2 support.");
+    }
     assert_eq!(preview.files_to_add.len(), 2);
     assert_eq!(preview.operation_type, "amend");
+    Ok(())
 }
 
 /// 测试创建预览（无新消息）
 #[test]
-fn test_create_preview_without_new_message() {
+fn test_create_preview_without_new_message() -> Result<()> {
     let commit_info = create_sample_commit_info();
     let new_message = None;
     let files_to_add = vec![];
     let operation_type = "amend_files_only";
     let current_branch = "feature-branch";
 
-    let result = CommitAmend::create_preview(
+    let preview = CommitAmend::create_preview(
         &commit_info,
         &new_message,
         &files_to_add,
         operation_type,
         current_branch,
-    );
-    assert!(result.is_ok());
+    )?;
 
-    let preview = result.unwrap();
     assert_eq!(
         preview.original_sha,
         "abc123def456789012345678901234567890abcd"
@@ -129,6 +135,7 @@ fn test_create_preview_without_new_message() {
     assert!(preview.new_message.is_none());
     assert!(preview.files_to_add.is_empty());
     assert_eq!(preview.operation_type, "amend_files_only");
+    Ok(())
 }
 
 /// 测试格式化预览显示（有新消息）

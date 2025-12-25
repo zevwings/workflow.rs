@@ -1,7 +1,14 @@
 //! LLM 客户端测试
 //!
 //! 测试 LLM 客户端的 JSON 解析功能，支持多种 OpenAI 兼容格式。
+//!
+//! ## 测试策略
+//!
+//! - 所有测试返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 测试多种 OpenAI 兼容的 JSON 格式
+//! - 使用快照测试验证 JSON 结构
 
+use color_eyre::Result;
 use insta::assert_json_snapshot;
 use pretty_assertions::assert_eq;
 
@@ -9,7 +16,7 @@ use serde_json::json;
 use workflow::base::llm::client::LLMClient;
 
 #[test]
-fn test_extract_from_openai_standard() {
+fn test_extract_from_openai_standard() -> Result<()> {
     // 测试标准 OpenAI 格式（包含所有必需字段）
     let json = json!({
         "id": "chatcmpl-test",
@@ -32,15 +39,16 @@ fn test_extract_from_openai_standard() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
     assert_eq!(result, "Test content");
 
     // 使用快照测试验证 JSON 结构
     assert_json_snapshot!("openai_standard_response", json);
+    Ok(())
 }
 
 #[test]
-fn test_extract_from_openai_proxy() {
+fn test_extract_from_openai_proxy() -> Result<()> {
     // 测试 proxy 格式（包含扩展字段，但符合 OpenAI 标准）
     let json = json!({
         "id": "chatcmpl-CfonRS9pFvyJW33Opwz83wHhVIGnz",
@@ -78,15 +86,16 @@ fn test_extract_from_openai_proxy() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
     assert_eq!(result, "Test response content");
 
     // 使用快照测试验证 JSON 结构
     assert_json_snapshot!("openai_proxy_response", json);
+    Ok(())
 }
 
 #[test]
-fn test_extract_from_cerebras_proxy() {
+fn test_extract_from_cerebras_proxy() -> Result<()> {
     // 测试另一种 proxy 格式变体（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
     let json = json!({
         "id": "chatcmpl-97c1fe15-05df-490d-a1b9-8540771db334",
@@ -117,11 +126,12 @@ fn test_extract_from_cerebras_proxy() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
     assert_eq!(result, "Test response content");
 
     // 使用快照测试验证 JSON 结构
     assert_json_snapshot!("cerebras_proxy_response", json);
+    Ok(())
 }
 
 // ==================== LLMClient 方法测试 ====================
@@ -157,7 +167,9 @@ fn test_extract_content_empty_choices() {
 
     // 空 choices 应该返回错误
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("No content in response"));
+    if let Err(e) = result {
+        assert!(e.to_string().contains("No content in response"));
+    }
 }
 
 #[test]
@@ -188,11 +200,13 @@ fn test_extract_content_null_content() {
 
     // content 为 null 应该返回错误
     assert!(result.is_err());
-    assert!(result.unwrap_err().to_string().contains("No content in response"));
+    if let Err(e) = result {
+        assert!(e.to_string().contains("No content in response"));
+    }
 }
 
 #[test]
-fn test_extract_content_whitespace_trimming() {
+fn test_extract_content_whitespace_trimming() -> Result<()> {
     // 测试 extract_content() 方法 - 内容首尾空白被修剪（覆盖 client.rs:243）
     let json = json!({
         "id": "test",
@@ -215,16 +229,17 @@ fn test_extract_content_whitespace_trimming() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
 
     // 验证首尾空白被修剪
     assert_eq!(result, "Test content with whitespace");
     assert!(!result.starts_with(' '));
     assert!(!result.ends_with(' '));
+    Ok(())
 }
 
 #[test]
-fn test_extract_content_multiple_choices() {
+fn test_extract_content_multiple_choices() -> Result<()> {
     // 测试 extract_content() 方法 - 多个 choices，取第一个（覆盖 client.rs:237-240）
     let json = json!({
         "id": "test",
@@ -257,10 +272,11 @@ fn test_extract_content_multiple_choices() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
 
     // 应该返回第一个 choice 的内容
     assert_eq!(result, "First choice");
+    Ok(())
 }
 
 #[test]
@@ -293,7 +309,7 @@ fn test_extract_content_missing_required_fields() {
 }
 
 #[test]
-fn test_extract_content_with_finish_reason_length() {
+fn test_extract_content_with_finish_reason_length() -> Result<()> {
     // 测试 extract_content() 方法 - finish_reason 为 length（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
@@ -316,14 +332,15 @@ fn test_extract_content_with_finish_reason_length() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
 
     // finish_reason 为 length 时也应该能提取内容
     assert_eq!(result, "Partial content");
+    Ok(())
 }
 
 #[test]
-fn test_extract_content_with_finish_reason_stop() {
+fn test_extract_content_with_finish_reason_stop() -> Result<()> {
     // 测试 extract_content() 方法 - finish_reason 为 stop（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
@@ -346,15 +363,58 @@ fn test_extract_content_with_finish_reason_stop() {
     });
 
     let client = LLMClient::global();
-    let result = client.extract_content(&json).unwrap();
+    let result = client.extract_content(&json)?;
 
     // finish_reason 为 stop 时应该能提取内容
     assert_eq!(result, "Complete content");
+    Ok(())
 }
 
 // ==================== LLMClient 构建方法测试（通过 call 间接测试）====================
 // 注意：这些测试需要实际的配置文件，但会测试 build_url, build_headers, build_model, build_payload 等方法
 
+/// 测试LLM客户端与OpenAI provider的实际API调用
+///
+/// ## 测试目的
+/// 验证`LLMClient`能够成功调用真实的OpenAI API并正确处理响应。
+/// 覆盖源代码: `client.rs:77-134`, `build_url:148`, `build_model:189-190`
+///
+/// ## 为什么被忽略
+/// - **需要网络连接**: 需要实际连接到OpenAI API服务器
+/// - **需要API密钥**: 需要有效的OpenAI API key配置在config文件中
+/// - **产生费用**: 每次API调用会产生实际费用（约$0.001-0.01，取决于模型和tokens）
+/// - **不稳定性**: 网络问题、API限流、服务中断可能导致测试失败
+/// - **CI不适用**: CI环境通常没有API密钥且不应产生费用
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 确保已配置OpenAI API key
+/// # 在 ~/.workflow/config/workflow.toml 中:
+/// # [llm]
+/// # provider = "OpenAI"
+/// # api_key = "sk-..."
+///
+/// # 2. 运行测试
+/// cargo test test_llm_client_call_with_openai_provider -- --ignored --nocapture
+/// ```
+/// **💰 注意**: 此测试会产生实际的API调用费用！使用gpt-3.5-turbo模型，约$0.001-0.01/次
+///
+/// ## 测试场景
+/// 1. 获取LLM客户端单例
+/// 2. 构造请求参数（system prompt, user prompt, tokens等）
+/// 3. 调用OpenAI API（gpt-3.5-turbo模型）
+/// 4. 等待API响应
+/// 5. 验证响应格式和内容
+///
+/// ## 预期行为
+/// - 成功情况：返回`Ok(LLMResponse)`包含AI生成的回复
+/// - 失败情况：返回`Err(...)`并包含清晰的错误信息：
+///   - API key无效或缺失
+///   - 网络连接错误
+///   - API限流（rate limit）
+///   - 模型不存在或无权限
+/// - 响应内容符合请求的max_tokens限制
+/// - 正确处理API的各种错误码
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_openai_provider() {
@@ -376,6 +436,48 @@ fn test_llm_client_call_with_openai_provider() {
     assert!(result.is_ok() || result.is_err()); // 可能成功或失败，取决于配置
 }
 
+/// 测试LLM客户端与DeepSeek provider的实际API调用
+///
+/// ## 测试目的
+/// 验证`LLMClient`能够成功调用真实的DeepSeek API并正确处理响应。
+/// 覆盖源代码: `client.rs:149`, `build_model:189-190`
+///
+/// ## 为什么被忽略
+/// - **需要网络连接**: 需要实际连接到DeepSeek API服务器
+/// - **需要API密钥**: 需要有效的DeepSeek API key配置在config文件中
+/// - **产生费用**: 每次API调用会产生实际费用（约$0.0005-0.005，取决于模型和tokens）
+/// - **不稳定性**: 网络问题、API限流、服务中断可能导致测试失败
+/// - **CI不适用**: CI环境通常没有API密钥且不应产生费用
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 确保已配置DeepSeek API key
+/// # 在 ~/.workflow/config/workflow.toml 中:
+/// # [llm]
+/// # provider = "DeepSeek"
+/// # api_key = "sk-..."
+///
+/// # 2. 运行测试
+/// cargo test test_llm_client_call_with_deepseek_provider -- --ignored --nocapture
+/// ```
+/// **💰 注意**: 此测试会产生实际的API调用费用！使用deepseek-chat模型，约$0.0005-0.005/次
+///
+/// ## 测试场景
+/// 1. 获取LLM客户端单例
+/// 2. 构造请求参数（system prompt, user prompt, tokens等）
+/// 3. 调用DeepSeek API（deepseek-chat模型）
+/// 4. 等待API响应
+/// 5. 验证响应格式和内容
+///
+/// ## 预期行为
+/// - 成功情况：返回`Ok(LLMResponse)`包含AI生成的回复
+/// - 失败情况：返回`Err(...)`并包含清晰的错误信息：
+///   - API key无效或缺失
+///   - 网络连接错误
+///   - API限流（rate limit）
+///   - 模型不存在或无权限
+/// - 响应内容符合请求的max_tokens限制
+/// - 正确处理DeepSeek特定的API格式和错误码
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_deepseek_provider() {
@@ -396,6 +498,51 @@ fn test_llm_client_call_with_deepseek_provider() {
     assert!(result.is_ok() || result.is_err()); // 可能成功或失败，取决于配置
 }
 
+/// 测试LLM客户端与Proxy provider的实际API调用
+///
+/// ## 测试目的
+/// 验证`LLMClient`能够通过自定义代理URL调用LLM API并正确处理响应。
+/// 覆盖源代码: `client.rs:150-156`, `build_model:192`
+///
+/// ## 为什么被忽略
+/// - **需要网络连接**: 需要实际连接到代理服务器
+/// - **需要代理配置**: 需要有效的proxy URL和API key配置在config文件中
+/// - **产生费用**: 每次API调用可能产生费用（取决于代理服务的计费方式）
+/// - **环境依赖**: 需要可用的代理服务器
+/// - **不稳定性**: 网络问题、代理服务中断可能导致测试失败
+/// - **CI不适用**: CI环境通常没有代理配置且不应产生费用
+///
+/// ## 如何手动运行
+/// ```bash
+/// # 1. 确保已配置Proxy
+/// # 在 ~/.workflow/config/workflow.toml 中:
+/// # [llm]
+/// # provider = "Proxy"
+/// # proxy_url = "https://your-proxy.com/v1"
+/// # api_key = "your-key"
+///
+/// # 2. 运行测试
+/// cargo test test_llm_client_call_with_proxy_provider -- --ignored --nocapture
+/// ```
+/// **💰 注意**: 此测试可能产生API调用费用！费用取决于你的代理服务提供商
+///
+/// ## 测试场景
+/// 1. 获取LLM客户端单例
+/// 2. 构造请求参数（system prompt, user prompt, tokens等）
+/// 3. 通过配置的代理URL调用LLM API（自定义模型）
+/// 4. 等待代理服务器响应
+/// 5. 验证响应格式和内容
+///
+/// ## 预期行为
+/// - 成功情况：返回`Ok(LLMResponse)`包含AI生成的回复
+/// - 失败情况：返回`Err(...)`并包含清晰的错误信息：
+///   - API key或proxy URL无效或缺失
+///   - 网络连接错误
+///   - 代理服务器错误（5xx）
+///   - 模型不存在或无权限
+/// - 响应内容符合请求的max_tokens限制
+/// - 正确处理代理服务器特定的API格式
+/// - 支持自定义模型名称
 #[test]
 #[ignore] // 需要网络请求，默认忽略
 fn test_llm_client_call_with_proxy_provider() {

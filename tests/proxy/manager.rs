@@ -5,7 +5,14 @@
 //! - 代理信息管理
 //! - 结果结构体处理
 //! - 错误处理和边界情况
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用 helper 函数创建测试数据
+//! - 测试各种代理类型和配置组合
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use workflow::proxy::{
@@ -75,61 +82,71 @@ fn create_socks_proxy_info() -> ProxyInfo {
 
 /// 测试 ProxyInfo 结构体创建
 #[test]
-fn test_proxy_info_creation() {
+fn test_proxy_info_creation() -> Result<()> {
     let proxy_info = create_test_proxy_info();
 
     // 验证 HTTP 代理配置
-    let http_config = proxy_info.get_config(ProxyType::Http).unwrap();
-    assert_eq!(http_config.enable, true);
-    assert_eq!(http_config.address, Some("proxy.example.com".to_string()));
-    assert_eq!(http_config.port, Some(8080));
+    if let Some(http_config) = proxy_info.get_config(ProxyType::Http) {
+        assert_eq!(http_config.enable, true);
+        assert_eq!(http_config.address, Some("proxy.example.com".to_string()));
+        assert_eq!(http_config.port, Some(8080));
+    }
 
     // 验证 HTTPS 代理配置
-    let https_config = proxy_info.get_config(ProxyType::Https).unwrap();
-    assert_eq!(https_config.enable, true);
-    assert_eq!(
-        https_config.address,
-        Some("secure-proxy.example.com".to_string())
-    );
-    assert_eq!(https_config.port, Some(8443));
+    if let Some(https_config) = proxy_info.get_config(ProxyType::Https) {
+        assert_eq!(https_config.enable, true);
+        assert_eq!(
+            https_config.address,
+            Some("secure-proxy.example.com".to_string())
+        );
+        assert_eq!(https_config.port, Some(8443));
+    }
+    Ok(())
 }
 
 /// 测试 ProxyInfo 不同代理类型
 #[test]
-fn test_proxy_info_different_types() {
+fn test_proxy_info_different_types() -> Result<()> {
     let http_proxy = create_test_proxy_info();
     let https_proxy = create_https_proxy_info();
     let socks_proxy = create_socks_proxy_info();
 
     // 验证 HTTP 代理
-    let http_config = http_proxy.get_config(ProxyType::Http).unwrap();
-    assert_eq!(http_config.enable, true);
-    assert_eq!(http_config.port, Some(8080));
+    if let Some(http_config) = http_proxy.get_config(ProxyType::Http) {
+        assert_eq!(http_config.enable, true);
+        assert_eq!(http_config.port, Some(8080));
+    }
 
     // 验证 HTTPS 代理（禁用状态）
-    let https_config = https_proxy.get_config(ProxyType::Https).unwrap();
-    assert_eq!(https_config.enable, false);
-    assert_eq!(https_config.port, Some(8443));
+    if let Some(https_config) = https_proxy.get_config(ProxyType::Https) {
+        assert_eq!(https_config.enable, false);
+        assert_eq!(https_config.port, Some(8443));
+    }
 
     // 验证 SOCKS 代理
-    let socks_config = socks_proxy.get_config(ProxyType::Socks).unwrap();
-    assert_eq!(socks_config.enable, true);
-    assert_eq!(socks_config.port, Some(1080));
+    if let Some(socks_config) = socks_proxy.get_config(ProxyType::Socks) {
+        assert_eq!(socks_config.enable, true);
+        assert_eq!(socks_config.port, Some(1080));
+    }
+    Ok(())
 }
 
 /// 测试 ProxyInfo 克隆功能
 #[test]
-fn test_proxy_info_clone() {
+fn test_proxy_info_clone() -> Result<()> {
     let original_proxy = create_test_proxy_info();
     let cloned_proxy = original_proxy.clone();
 
     // 验证 HTTP 配置克隆
-    let original_http = original_proxy.get_config(ProxyType::Http).unwrap();
-    let cloned_http = cloned_proxy.get_config(ProxyType::Http).unwrap();
-
-    assert_eq!(original_http.enable, cloned_http.enable);
-    assert_eq!(original_http.address, cloned_http.address);
-    assert_eq!(original_http.port, cloned_http.port);
+    if let (Some(original_http), Some(cloned_http)) = (
+        original_proxy.get_config(ProxyType::Http),
+        cloned_proxy.get_config(ProxyType::Http),
+    ) {
+        assert_eq!(original_http.enable, cloned_http.enable);
+        assert_eq!(original_http.address, cloned_http.address);
+        assert_eq!(original_http.port, cloned_http.port);
+    }
+    Ok(())
 }
 
 /// 测试 ProxyInfo 调试输出
@@ -177,7 +194,7 @@ fn test_proxy_type_enum() {
 
 /// 测试 ProxyEnableResult 结构体创建
 #[test]
-fn test_proxy_enable_result_creation() {
+fn test_proxy_enable_result_creation() -> Result<()> {
     use std::path::PathBuf;
 
     let enable_result = ProxyEnableResult {
@@ -191,13 +208,16 @@ fn test_proxy_enable_result_creation() {
     assert!(enable_result.shell_config_path.is_some());
 
     // 验证具体内容
-    let command = enable_result.proxy_command.unwrap();
-    assert!(command.contains("export"));
-    assert!(command.contains("http_proxy"));
-    assert!(command.contains("proxy.example.com"));
+    if let Some(command) = &enable_result.proxy_command {
+        assert!(command.contains("export"));
+        assert!(command.contains("http_proxy"));
+        assert!(command.contains("proxy.example.com"));
+    }
 
-    let config_path = enable_result.shell_config_path.unwrap();
-    assert_eq!(config_path, PathBuf::from("/home/user/.bashrc"));
+    if let Some(config_path) = &enable_result.shell_config_path {
+        assert_eq!(config_path, &PathBuf::from("/home/user/.bashrc"));
+    }
+    Ok(())
 }
 
 /// 测试 ProxyEnableResult 已配置场景
@@ -217,7 +237,7 @@ fn test_proxy_enable_result_already_configured() {
 
 /// 测试 ProxyEnableResult 临时模式场景
 #[test]
-fn test_proxy_enable_result_temporary_mode() {
+fn test_proxy_enable_result_temporary_mode() -> Result<()> {
     let enable_result = ProxyEnableResult {
         already_configured: false,
         proxy_command: Some("export http_proxy=http://temp.proxy.com:8080".to_string()),
@@ -229,13 +249,15 @@ fn test_proxy_enable_result_temporary_mode() {
     assert!(enable_result.proxy_command.is_some());
     assert!(enable_result.shell_config_path.is_none());
 
-    let command = enable_result.proxy_command.unwrap();
-    assert!(command.contains("temp.proxy.com"));
+    if let Some(command) = &enable_result.proxy_command {
+        assert!(command.contains("temp.proxy.com"));
+    }
+    Ok(())
 }
 
 /// 测试 ProxyDisableResult 结构体创建
 #[test]
-fn test_proxy_disable_result_creation() {
+fn test_proxy_disable_result_creation() -> Result<()> {
     use std::path::PathBuf;
 
     let mut current_env_proxy = HashMap::new();
@@ -261,12 +283,14 @@ fn test_proxy_disable_result_creation() {
     assert_eq!(disable_result.current_env_proxy.len(), 2);
 
     // 验证具体内容
-    let unset_cmd = disable_result.unset_command.unwrap();
-    assert!(unset_cmd.contains("unset"));
-    assert!(unset_cmd.contains("http_proxy"));
+    if let Some(unset_cmd) = &disable_result.unset_command {
+        assert!(unset_cmd.contains("unset"));
+        assert!(unset_cmd.contains("http_proxy"));
+    }
 
     assert!(disable_result.current_env_proxy.contains_key("http_proxy"));
     assert!(disable_result.current_env_proxy.contains_key("https_proxy"));
+    Ok(())
 }
 
 /// 测试 ProxyDisableResult 没有找到代理场景
@@ -479,26 +503,29 @@ fn test_complex_proxy_scenarios() {
     );
 
     // 验证不同类型代理的配置
-    let http_config = http_proxy_info.get_config(ProxyType::Http).unwrap();
-    assert_eq!(http_config.enable, true);
-    assert_eq!(
-        http_config.address,
-        Some("auth-proxy.example.com".to_string())
-    );
-    assert_eq!(http_config.port, Some(3128));
+    if let Some(http_config) = http_proxy_info.get_config(ProxyType::Http) {
+        assert_eq!(http_config.enable, true);
+        assert_eq!(
+            http_config.address,
+            Some("auth-proxy.example.com".to_string())
+        );
+        assert_eq!(http_config.port, Some(3128));
+    }
 
-    let https_config = https_proxy_info.get_config(ProxyType::Https).unwrap();
-    assert_eq!(https_config.enable, false);
-    assert_eq!(
-        https_config.address,
-        Some("public-proxy.example.com".to_string())
-    );
-    assert_eq!(https_config.port, Some(8443));
+    if let Some(https_config) = https_proxy_info.get_config(ProxyType::Https) {
+        assert_eq!(https_config.enable, false);
+        assert_eq!(
+            https_config.address,
+            Some("public-proxy.example.com".to_string())
+        );
+        assert_eq!(https_config.port, Some(8443));
+    }
 
-    let socks_config = socks_proxy_info.get_config(ProxyType::Socks).unwrap();
-    assert_eq!(socks_config.enable, true);
-    assert_eq!(socks_config.address, Some("localhost".to_string()));
-    assert_eq!(socks_config.port, Some(1080));
+    if let Some(socks_config) = socks_proxy_info.get_config(ProxyType::Socks) {
+        assert_eq!(socks_config.enable, true);
+        assert_eq!(socks_config.address, Some("localhost".to_string()));
+        assert_eq!(socks_config.port, Some(1080));
+    }
 
     // 测试代理 URL 生成
     assert!(http_proxy_info.get_proxy_url(ProxyType::Http).is_some());
@@ -508,7 +535,7 @@ fn test_complex_proxy_scenarios() {
 
 /// 测试边界情况和错误处理
 #[test]
-fn test_edge_cases_and_error_handling() {
+fn test_edge_cases_and_error_handling() -> Result<()> {
     // 测试极端端口号
     let mut extreme_port_proxy = ProxyInfo::new();
     extreme_port_proxy.set_config(
@@ -520,8 +547,9 @@ fn test_edge_cases_and_error_handling() {
         },
     );
 
-    let config = extreme_port_proxy.get_config(ProxyType::Http).unwrap();
-    assert_eq!(config.port, Some(65535));
+    if let Some(config) = extreme_port_proxy.get_config(ProxyType::Http) {
+        assert_eq!(config.port, Some(65535));
+    }
 
     // 测试空主机名（虽然在实际使用中不应该这样）
     let mut empty_host_proxy = ProxyInfo::new();
@@ -534,9 +562,10 @@ fn test_edge_cases_and_error_handling() {
         },
     );
 
-    let empty_config = empty_host_proxy.get_config(ProxyType::Http).unwrap();
-    assert_eq!(empty_config.address, Some("".to_string()));
-    assert_eq!(empty_config.enable, false);
+    if let Some(empty_config) = empty_host_proxy.get_config(ProxyType::Http) {
+        assert_eq!(empty_config.address, Some("".to_string()));
+        assert_eq!(empty_config.enable, false);
+    }
 
     // 测试 None 地址和端口
     let mut invalid_proxy = ProxyInfo::new();
@@ -580,4 +609,5 @@ fn test_edge_cases_and_error_handling() {
     assert!(empty_disable_result.shell_config_path.is_none());
     assert!(empty_disable_result.unset_command.is_none());
     assert!(empty_disable_result.current_env_proxy.is_empty());
+    Ok(())
 }

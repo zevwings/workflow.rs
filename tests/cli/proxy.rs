@@ -20,15 +20,15 @@ fn test_proxy_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // On
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::On));
 
     // Off
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::Off));
 
     // Check
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::Check));
 }
 
@@ -93,14 +93,14 @@ fn test_proxy_command_short_names() {
     // 注意：ProxySubcommand 没有定义短名称，所以只测试完整名称
 
     // On
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "on"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::On));
 
     // Off
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "off"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::Off));
 
     // Check
-    let cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).unwrap();
+    let cli = TestProxyCli::try_parse_from(&["test-proxy", "check"]).expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ProxySubcommand::Check));
 }

@@ -30,7 +30,7 @@ fn test_is_shell_configured(
         "Should return Ok for {} shell check",
         shell_name
     );
-    let (_configured, config_path) = result.unwrap();
+    let (_configured, config_path) = result.expect("operation should succeed");
     // configured 可能是 true 或 false，取决于实际配置
     let path_str = config_path.to_string_lossy();
     assert!(
@@ -48,7 +48,7 @@ fn test_is_shell_configured_powershell() {
 
     // 应该返回 Ok，包含配置状态和配置文件路径
     assert!(result.is_ok(), "Should return Ok for PowerShell check");
-    let (_configured, _config_path) = result.unwrap();
+    let (_configured, _config_path) = result.expect("operation should succeed");
     // configured 可能是 true 或 false，取决于实际配置
     // PowerShell 配置文件路径可能包含 "powershell" 或 "Microsoft"
 }
@@ -134,7 +134,7 @@ fn test_remove_completion_files(#[case] shell: Shell) {
         "Should return Ok when removing {:?} completion files",
         shell
     );
-    let removal_result = result.unwrap();
+    let removal_result = result.expect("operation should succeed");
     assert!(true, "Removed count should be non-negative");
     assert!(
         removal_result.removed_files.len() == removal_result.removed_count as usize,

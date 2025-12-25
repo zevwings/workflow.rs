@@ -8,6 +8,7 @@
 //! - 结构体创建和字段访问
 
 use pretty_assertions::assert_eq;
+use color_eyre::Result;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -16,47 +17,41 @@ use workflow::rollback::{BackupInfo, BackupResult, RollbackManager, RollbackResu
 // ==================== Helper Functions ====================
 
 /// 创建测试用的临时目录结构
-fn setup_test_environment() -> TempDir {
-    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+fn setup_test_environment() -> Result<TempDir> {
+    let temp_dir = tempfile::tempdir()?;
     let temp_path = temp_dir.path();
 
     // 创建模拟的二进制文件目录
     let bin_dir = temp_path.join("bin");
-    fs::create_dir_all(&bin_dir).expect("Failed to create bin dir");
+    fs::create_dir_all(&bin_dir)?;
 
     // 创建模拟的补全脚本目录
     let completion_dir = temp_path.join("completion");
-    fs::create_dir_all(&completion_dir).expect("Failed to create completion dir");
+    fs::create_dir_all(&completion_dir)?;
 
     // 创建一些测试文件
-    fs::write(bin_dir.join("workflow"), "#!/bin/bash\necho 'workflow'")
-        .expect("Failed to create test binary");
-    fs::write(bin_dir.join("install"), "#!/bin/bash\necho 'install'")
-        .expect("Failed to create test binary");
+    fs::write(bin_dir.join("workflow"), "#!/bin/bash\necho 'workflow'")?;
+    fs::write(bin_dir.join("install"), "#!/bin/bash\necho 'install'")?;
 
-    fs::write(completion_dir.join("workflow.bash"), "# bash completion")
-        .expect("Failed to create test completion");
-    fs::write(completion_dir.join("workflow.zsh"), "# zsh completion")
-        .expect("Failed to create test completion");
+    fs::write(completion_dir.join("workflow.bash"), "# bash completion")?;
+    fs::write(completion_dir.join("workflow.zsh"), "# zsh completion")?;
 
-    temp_dir
+    Ok(temp_dir)
 }
 
 /// 创建测试用的 BackupInfo
-fn create_test_backup_info(temp_dir: &TempDir) -> BackupInfo {
+fn create_test_backup_info(temp_dir: &TempDir) -> Result<BackupInfo> {
     let backup_dir = temp_dir.path().join("backup");
-    fs::create_dir_all(&backup_dir).expect("Failed to create backup dir");
+    fs::create_dir_all(&backup_dir)?;
 
     // 创建一些备份文件
     fs::write(
         backup_dir.join("workflow"),
         "#!/bin/bash\necho 'workflow backup'",
-    )
-    .expect("Failed to create backup binary");
-    fs::write(backup_dir.join("workflow.bash"), "# bash completion backup")
-        .expect("Failed to create backup completion");
+    )?;
+    fs::write(backup_dir.join("workflow.bash"), "# bash completion backup")?;
 
-    BackupInfo {
+    Ok(BackupInfo {
         backup_dir: backup_dir.clone(),
         binary_backups: vec![
             ("workflow".to_string(), backup_dir.join("workflow")),
@@ -69,15 +64,15 @@ fn create_test_backup_info(temp_dir: &TempDir) -> BackupInfo {
             ),
             ("workflow.zsh".to_string(), backup_dir.join("workflow.zsh")),
         ],
-    }
+    })
 }
 
 // ==================== 测试用例 ====================
 
 /// 测试 BackupInfo 结构体创建
 #[test]
-fn test_backup_info_creation() {
-    let temp_dir = setup_test_environment();
+fn test_backup_info_creation() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
     let backup_dir = temp_dir.path().join("test_backup");
 
     let backup_info = BackupInfo {
@@ -98,13 +93,14 @@ fn test_backup_info_creation() {
     assert_eq!(backup_info.completion_backups.len(), 1);
     assert_eq!(backup_info.binary_backups[0].0, "workflow");
     assert_eq!(backup_info.completion_backups[0].0, "workflow.bash");
+Ok(())
 }
 
 /// 测试 BackupInfo 克隆功能
 #[test]
-fn test_backup_info_clone() {
-    let temp_dir = setup_test_environment();
-    let original_info = create_test_backup_info(&temp_dir);
+fn test_backup_info_clone() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
+    let original_info = create_test_backup_info(&temp_dir)?;
     let cloned_info = original_info.clone();
 
     assert_eq!(original_info.backup_dir, cloned_info.backup_dir);
@@ -122,13 +118,14 @@ fn test_backup_info_clone() {
         assert_eq!(name, &cloned_info.binary_backups[i].0);
         assert_eq!(path, &cloned_info.binary_backups[i].1);
     }
+Ok(())
 }
 
 /// 测试 BackupInfo 调试输出
 #[test]
-fn test_backup_info_debug() {
-    let temp_dir = setup_test_environment();
-    let backup_info = create_test_backup_info(&temp_dir);
+fn test_backup_info_debug() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&temp_dir)?;
 
     let debug_str = format!("{:?}", backup_info);
     assert!(debug_str.contains("BackupInfo"));
@@ -136,13 +133,14 @@ fn test_backup_info_debug() {
     assert!(debug_str.contains("binary_backups"));
     assert!(debug_str.contains("completion_backups"));
     assert!(debug_str.contains("workflow"));
+Ok(())
 }
 
 /// 测试 BackupResult 结构体创建
 #[test]
-fn test_backup_result_creation() {
-    let temp_dir = setup_test_environment();
-    let backup_info = create_test_backup_info(&temp_dir);
+fn test_backup_result_creation() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&temp_dir)?;
 
     let backup_result = BackupResult {
         backup_info: backup_info.clone(),
@@ -153,13 +151,14 @@ fn test_backup_result_creation() {
     assert_eq!(backup_result.binary_count, 2);
     assert_eq!(backup_result.completion_count, 1);
     assert_eq!(backup_result.backup_info.backup_dir, backup_info.backup_dir);
+Ok(())
 }
 
 /// 测试 BackupResult 克隆和调试输出
 #[test]
-fn test_backup_result_clone_and_debug() {
-    let temp_dir = setup_test_environment();
-    let backup_info = create_test_backup_info(&temp_dir);
+fn test_backup_result_clone_and_debug() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&temp_dir)?;
 
     let original_result = BackupResult {
         backup_info,
@@ -181,11 +180,12 @@ fn test_backup_result_clone_and_debug() {
     assert!(debug_str.contains("binary_count"));
     assert!(debug_str.contains("completion_count"));
     assert!(debug_str.contains("backup_info"));
+Ok(())
 }
 
 /// 测试 RollbackResult 结构体创建
 #[test]
-fn test_rollback_result_creation() {
+fn test_rollback_result_creation() -> Result<()> {
     let rollback_result = RollbackResult {
         restored_binaries: vec!["workflow".to_string(), "install".to_string()],
         restored_completions: vec!["workflow.bash".to_string()],
@@ -209,11 +209,12 @@ fn test_rollback_result_creation() {
     assert_eq!(rollback_result.restored_binaries[0], "workflow");
     assert_eq!(rollback_result.failed_binaries[0].0, "failed_binary");
     assert_eq!(rollback_result.failed_binaries[0].1, "Permission denied");
+Ok(())
 }
 
 /// 测试 RollbackResult 部分成功场景
 #[test]
-fn test_rollback_result_partial_success() {
+fn test_rollback_result_partial_success() -> Result<()> {
     let rollback_result = RollbackResult {
         restored_binaries: vec!["workflow".to_string()],
         restored_completions: vec![],
@@ -233,11 +234,12 @@ fn test_rollback_result_partial_success() {
     // 验证失败信息
     assert_eq!(rollback_result.failed_binaries[0].1, "Backup file missing");
     assert_eq!(rollback_result.failed_completions[0].1, "Permission denied");
+Ok(())
 }
 
 /// 测试 RollbackResult 完全失败场景
 #[test]
-fn test_rollback_result_complete_failure() {
+fn test_rollback_result_complete_failure() -> Result<()> {
     let rollback_result = RollbackResult {
         restored_binaries: vec![],
         restored_completions: vec![],
@@ -260,11 +262,12 @@ fn test_rollback_result_complete_failure() {
     assert_eq!(rollback_result.failed_completions.len(), 1);
     assert_eq!(rollback_result.shell_reload_success, None);
     assert_eq!(rollback_result.shell_config_file, None);
+Ok(())
 }
 
 /// 测试 RollbackResult 克隆和调试输出
 #[test]
-fn test_rollback_result_clone_and_debug() {
+fn test_rollback_result_clone_and_debug() -> Result<()> {
     let original_result = RollbackResult {
         restored_binaries: vec!["test".to_string()],
         restored_completions: vec!["test.bash".to_string()],
@@ -299,13 +302,14 @@ fn test_rollback_result_clone_and_debug() {
     assert!(debug_str.contains("restored_binaries"));
     assert!(debug_str.contains("restored_completions"));
     assert!(debug_str.contains("shell_reload_success"));
+Ok(())
 }
 
 /// 测试 RollbackManager 清理备份功能
 #[test]
-fn test_rollback_manager_cleanup_backup() {
-    let temp_dir = setup_test_environment();
-    let backup_info = create_test_backup_info(&temp_dir);
+fn test_rollback_manager_cleanup_backup() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
+    let backup_info = create_test_backup_info(&temp_dir)?;
 
     // 验证备份目录存在
     assert!(backup_info.backup_dir.exists());
@@ -323,12 +327,13 @@ fn test_rollback_manager_cleanup_backup() {
             // 在测试环境中失败是可以接受的，主要是验证方法不会 panic
         }
     }
+Ok(())
 }
 
 /// 测试 BackupInfo 内部方法（通过公共接口）
 #[test]
-fn test_backup_info_internal_methods() {
-    let temp_dir = setup_test_environment();
+fn test_backup_info_internal_methods() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
     let backup_dir = temp_dir.path().join("internal_test");
 
     // 创建一个空的 BackupInfo 来测试内部状态
@@ -357,11 +362,12 @@ fn test_backup_info_internal_methods() {
     assert_eq!(backup_info.completion_backups.len(), 1);
     assert_eq!(backup_info.binary_backups[0].0, "test_binary");
     assert_eq!(backup_info.completion_backups[0].0, "test_completion");
+Ok(())
 }
 
 /// 测试边界情况和错误处理
 #[test]
-fn test_edge_cases_and_error_handling() {
+fn test_edge_cases_and_error_handling() -> Result<()> {
     // 测试空的 BackupInfo
     let empty_backup_info = BackupInfo {
         backup_dir: PathBuf::from("/nonexistent/path"),
@@ -395,14 +401,15 @@ fn test_edge_cases_and_error_handling() {
     assert!(empty_rollback_result.failed_completions.is_empty());
     assert_eq!(empty_rollback_result.shell_reload_success, None);
     assert_eq!(empty_rollback_result.shell_config_file, None);
+Ok(())
 }
 
 /// 测试复杂的备份和回滚场景
 #[test]
-fn test_complex_backup_rollback_scenario() {
-    let temp_dir = setup_test_environment();
+fn test_complex_backup_rollback_scenario() -> Result<()> {
+    let temp_dir = setup_test_environment()?;
     let backup_dir = temp_dir.path().join("complex_backup");
-    fs::create_dir_all(&backup_dir).expect("Failed to create backup dir");
+    fs::create_dir_all(&backup_dir)?;
 
     // 创建复杂的备份信息，包含多个文件和不同状态
     let complex_backup_info = BackupInfo {
@@ -433,11 +440,11 @@ fn test_complex_backup_rollback_scenario() {
     };
 
     // 只创建部分备份文件，模拟部分备份成功的情况
-    fs::write(backup_dir.join("workflow"), "workflow backup").expect("Failed to write file");
+    fs::write(backup_dir.join("workflow"), "workflow backup")?;
     fs::write(backup_dir.join("workflow.bash"), "bash completion backup")
-        .expect("Failed to write file");
+        ?;
     fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup")
-        .expect("Failed to write file");
+        ?;
 
     // 验证备份信息的完整性
     assert_eq!(complex_backup_info.binary_backups.len(), 3);
@@ -496,4 +503,5 @@ fn test_complex_backup_rollback_scenario() {
 
     assert!((binary_success_rate - 0.33).abs() < 0.01); // 约 33%
     assert!((completion_success_rate - 0.5).abs() < 0.01); // 50%
+Ok(())
 }

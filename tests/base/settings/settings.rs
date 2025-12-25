@@ -136,7 +136,7 @@ fn test_github_settings_current_account() {
     let current_account = github_settings.get_current_account();
     assert!(current_account.is_some());
 
-    let account = current_account.unwrap();
+    let account = current_account.expect("current account should exist");
     assert_eq!(account.name, "personal");
     assert_eq!(account.email, "personal@example.com");
 
@@ -155,7 +155,7 @@ fn test_github_settings_no_current_account() {
     let current_account = github_settings.get_current_account();
     assert!(current_account.is_some());
 
-    let account = current_account.unwrap();
+    let account = current_account.expect("should return first account");
     assert_eq!(account.name, "personal");
 }
 
@@ -456,7 +456,12 @@ fn test_complex_configuration_scenario() {
     // 验证 GitHub 当前账号功能
     let current_account = complex_settings.github.get_current_account();
     assert!(current_account.is_some());
-    assert_eq!(current_account.unwrap().name, "main");
+    assert_eq!(
+        current_account
+            .expect("current account should exist")
+            .name,
+        "main"
+    );
 
     // 验证 LLM 当前提供商功能
     let current_llm = complex_settings.llm.current_provider();

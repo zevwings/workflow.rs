@@ -1,7 +1,14 @@
 //! Jira 工作历史记录模块测试
 //!
 //! 测试 Jira 工作历史记录的读写、更新和删除功能。
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - 使用临时测试目录进行隔离测试
+//! - 测试各种边界情况和错误处理
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
 
@@ -32,17 +39,13 @@ fn unique_repo() -> String {
 // ==================== 工作历史记录读写测试 ====================
 
 #[rstest]
-fn test_read_work_history_nonexistent_file(unique_repo: String) {
+fn test_read_work_history_nonexistent_file(unique_repo: String) -> Result<()> {
     // 测试读取不存在的工作历史记录文件
-    let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo));
+    let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo))?;
 
-    // 文件不存在时应该返回 Ok(None)
-    assert!(result.is_ok(), "Should return Ok when file doesn't exist");
-    assert_eq!(
-        result.unwrap(),
-        None,
-        "Should return None when file doesn't exist"
-    );
+    // 文件不存在时应该返回 None
+    assert_eq!(result, None, "Should return None when file doesn't exist");
+    Ok(())
 }
 
 #[test]
@@ -126,17 +129,13 @@ fn test_read_work_history_nonexistent_entry() {
 }
 
 #[rstest]
-fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) {
+fn test_find_pr_id_by_branch_nonexistent_file(unique_repo: String) -> Result<()> {
     // 测试在不存在文件中根据分支名查找 PR ID
-    let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo));
+    let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo))?;
 
-    // 文件不存在时应该返回 Ok(None)
-    assert!(result.is_ok(), "Should return Ok when file doesn't exist");
-    assert_eq!(
-        result.unwrap(),
-        None,
-        "Should return None when file doesn't exist"
-    );
+    // 文件不存在时应该返回 None
+    assert_eq!(result, None, "Should return None when file doesn't exist");
+    Ok(())
 }
 
 #[test]
@@ -394,13 +393,11 @@ fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
 #[case("999")]
 #[case("888")]
 #[case("777")]
-fn test_delete_work_history_entry_nonexistent_file(unique_repo: String, #[case] pr_id: &str) {
+fn test_delete_work_history_entry_nonexistent_file(unique_repo: String, #[case] pr_id: &str) -> Result<()> {
     // 测试删除不存在文件中的条目
-    let result = JiraWorkHistory::delete_work_history_entry(pr_id, Some(&unique_repo));
+    let delete_result = JiraWorkHistory::delete_work_history_entry(pr_id, Some(&unique_repo))?;
 
-    // 文件不存在时应该返回 Ok，但 messages 和 warnings 应该为空
-    assert!(result.is_ok(), "Should return Ok when file doesn't exist");
-    let delete_result = result.unwrap();
+    // 文件不存在时，messages 和 warnings 应该为空
     assert_eq!(
         delete_result.messages.len(),
         0,
@@ -411,6 +408,7 @@ fn test_delete_work_history_entry_nonexistent_file(unique_repo: String, #[case] 
         0,
         "Warnings should be empty when file doesn't exist"
     );
+    Ok(())
 }
 
 #[test]
@@ -436,18 +434,12 @@ fn test_delete_work_history_entry_basic() {
 // ==================== WorkHistoryEntry 结构体测试 ====================
 
 #[rstest]
-fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry) {
+fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry) -> Result<()> {
     // 测试 WorkHistoryEntry 的序列化
-    let json = serde_json::to_string(&sample_history_entry);
-    assert!(json.is_ok(), "Should serialize WorkHistoryEntry to JSON");
-
-    let json_str = json.unwrap();
+    let json_str = serde_json::to_string(&sample_history_entry)?;
 
     // 验证 JSON 是有效的，并包含必要的字段
-    let json_value: Result<serde_json::Value, _> = serde_json::from_str(&json_str);
-    assert!(json_value.is_ok(), "Serialized JSON should be valid");
-
-    let json_value = json_value.unwrap();
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 
     assert_eq!(
@@ -458,10 +450,11 @@ fn test_work_history_entry_serialization(sample_history_entry: WorkHistoryEntry)
         obj.contains_key("pull_request_url"),
         "JSON should contain pull_request_url"
     );
+    Ok(())
 }
 
 #[test]
-fn test_work_history_entry_deserialization() {
+fn test_work_history_entry_deserialization() -> Result<()> {
     // 测试 WorkHistoryEntry 的反序列化
     let json = r#"{
       "jira_ticket": "PROJ-123",
@@ -472,10 +465,7 @@ fn test_work_history_entry_deserialization() {
       "branch": "feature/PROJ-123"
     }"#;
 
-    let entry: Result<WorkHistoryEntry, _> = serde_json::from_str(json);
-    assert!(entry.is_ok(), "Should deserialize JSON to WorkHistoryEntry");
-
-    let entry = entry.unwrap();
+    let entry: WorkHistoryEntry = serde_json::from_str(json)?;
     assert_eq!(entry.jira_ticket, "PROJ-123");
     assert_eq!(
         entry.pull_request_url,
@@ -485,6 +475,7 @@ fn test_work_history_entry_deserialization() {
     assert_eq!(entry.merged_at, None);
     assert_eq!(entry.repository, Some("github.com/test/repo".to_string()));
     assert_eq!(entry.branch, Some("feature/PROJ-123".to_string()));
+    Ok(())
 }
 
 #[rstest]
@@ -512,7 +503,7 @@ fn test_work_history_entry_with_optional_fields(
     #[case] merged_at: Option<&str>,
     #[case] repository: Option<&str>,
     #[case] branch: Option<&str>,
-) {
+) -> Result<()> {
     // 测试 WorkHistoryEntry 的可选字段
     let entry = WorkHistoryEntry {
         jira_ticket: jira_ticket.to_string(),
@@ -524,23 +515,15 @@ fn test_work_history_entry_with_optional_fields(
     };
 
     // 测试序列化（可选字段应该被跳过）
-    let json = serde_json::to_string(&entry);
-    assert!(
-        json.is_ok(),
-        "Should serialize WorkHistoryEntry with optional fields"
-    );
-
-    let json_str = json.unwrap();
+    let json_str = serde_json::to_string(&entry)?;
 
     // 验证 JSON 是有效的
-    let json_value: Result<serde_json::Value, _> = serde_json::from_str(&json_str);
-    assert!(json_value.is_ok(), "Serialized JSON should be valid");
-
-    let json_value = json_value.unwrap();
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
     let obj = json_value.as_object().expect("Should be a JSON object");
 
     assert_eq!(
         obj.get("jira_ticket").and_then(|v| v.as_str()),
         Some(jira_ticket)
     );
+    Ok(())
 }

@@ -28,71 +28,71 @@
 
 #### 1. 架构文档模板 (`architecture.template`)
 
-**统一架构模板** (`docs/architecture/templates/architecture.template`)
+**统一架构模板** (`docs/templates/architecture/architecture.template`)
    - 适用于：同时包含 `lib/` 和 `commands/` 的模块架构文档
    - 特点：统一描述 Lib 层和 Commands 层的架构、设计、集成关系
    - 示例：`pr.md`、`jira.md`、`branch.md`、`alias.md`
-   - 位置：`docs/architecture/templates/architecture.template`
+   - 位置：`docs/templates/architecture/architecture.template`
 
 **注意**：现在所有架构文档都统一使用此模板，因为实际文档已经合并了 Lib 层和 Commands 层的内容。
 
 #### 2. 指南文档模板 (`guideline.template`)
 
-**指南文档模板** (`docs/guidelines/templates/guideline.template`)
+**指南文档模板** (`docs/templates/development/guideline.template`)
    - 适用于：开发规范、配置指南、使用指南等指南类文档
    - 特点：提供统一的文档结构，包含目录、概述、章节、故障排除等
-   - 示例：`development.md`、`testing.md`、`github-setup.md`、`pr-platform.md`
-   - 位置：`docs/guidelines/templates/guideline.template`
+   - 示例：`testing/README.md`、`github-setup.md`、`pr-platform.md`
+   - 位置：`docs/templates/development/guideline.template`
 
 #### 3. 需求文档模板 (`requirement.template`)
 
-**需求文档模板** (`docs/requirements/templates/requirement.template`)
+**需求文档模板** (`docs/templates/requirements/requirement.template`)
    - 适用于：待办事项、需求分析、实施计划等需求类文档
    - 特点：提供统一的文档结构，包含状态标记、任务清单、实施计划等
    - 示例：`jira.md`、`coverage-improvement.md`、`gix-migration.md`、`integration.md`
-   - 位置：`docs/requirements/templates/requirement.template`
+   - 位置：`docs/templates/requirements/requirement.template`
 
 #### 4. 检查工作流文档模板 (`review-workflow.template`)
 
-**检查工作流文档模板** (`docs/guidelines/templates/review-workflow.template`)
+**检查工作流文档模板** (`docs/templates/review/review-workflow.template`)
    - 适用于：检查工作流文档，如提交前检查、综合深入检查等
    - 特点：包含 Mermaid 流程图、快速导航、检查步骤、进度指示器、报告生成等
    - 示例：`pre-commit.md`、`review.md`、`README.md`（工作流索引）
-   - 位置：`docs/guidelines/templates/review-workflow.template`
+   - 位置：`docs/templates/review/review-workflow.template`
    - **注意**：这是 AI 工作流文档模板，专为 AI 助手设计
 
 #### 5. 检查指南模板 (`review-guide.template`)
 
-**检查指南模板** (`docs/guidelines/templates/review-guide.template`)
+**检查指南模板** (`docs/templates/review/review-guide.template`)
    - 适用于：专门检查指南和快速参考文档
    - 特点：提供统一的检查指南结构，包含核心原则、检查目标、检查流程、检查方法、检查清单等，灵活支持详细指南和快速参考两种模式
    - 示例：`review-cli.md`、`review-code.md`、`review-test-case.md`、`review-document-completeness.md`、`review-architecture-consistency.md`、`test-coverage-check.md`、`quick-reference.md`
-   - 位置：`docs/guidelines/templates/review-guide.template`
+   - 位置：`docs/templates/review/review-guide.template`
 
 #### 6. 核心规范文档模板 (`development-core.template`)
 
-**核心规范文档模板** (`docs/guidelines/templates/development-core.template`)
+**核心规范文档模板** (`docs/templates/development/development-core.template`)
    - 适用于：核心开发规范文档（日常必读）
    - 特点：提供核心规范文档结构，包含快速参考、规则、最佳实践等
    - 示例：`code-style.md`、`error-handling.md`、`naming.md`、`module-organization.md`
-   - 位置：`docs/guidelines/templates/development-core.template`
+   - 位置：`docs/templates/development/development-core.template`
 
 #### 7. 开发工作流文档模板 (`development-workflow.template`)
 
-**开发工作流文档模板** (`docs/guidelines/templates/development-workflow.template`)
+**开发工作流文档模板** (`docs/templates/development/development-workflow.template`)
    - 适用于：开发工作流文档（开发流程）
    - 特点：提供开发工作流结构，包含工作流步骤、检查清单、验证步骤等
    - 示例：`new-feature.md`、`refactoring.md`、`add-dependency.md`
-   - 位置：`docs/guidelines/templates/development-workflow.template`
+   - 位置：`docs/templates/development/development-workflow.template`
    - **注意**：这是 AI 工作流文档模板，专为 AI 助手设计
 
 #### 8. 参考文档模板 (`development-reference.template`)
 
-**参考文档模板** (`docs/guidelines/templates/development-reference.template`)
+**参考文档模板** (`docs/templates/development/development-reference.template`)
    - 适用于：开发规范参考文档（详细指南）
    - 特点：提供参考文档结构，包含详细说明、最佳实践、故障排除等
    - 示例：`references/logging.md`、`references/documentation.md`、`references/refactoring.md`
-   - 位置：`docs/guidelines/templates/development-reference.template`
+   - 位置：`docs/templates/development/development-reference.template`
 
 ### 快速使用
 
@@ -100,7 +100,7 @@
 
 ```bash
 # 复制统一架构模板
-cp docs/architecture/templates/architecture.template docs/architecture/{module}.md
+cp docs/templates/architecture/architecture.template docs/architecture/{module}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -109,10 +109,10 @@ cp docs/architecture/templates/architecture.template docs/architecture/{module}.
 
 ```bash
 # 复制指南文档模板（通用，适用于开发规范、配置指南、使用指南等）
-cp docs/guidelines/templates/guideline.template docs/guidelines/{topic}.md
+cp docs/templates/development/guideline.template docs/guidelines/{topic}.md
 
 # 复制核心规范文档模板（适用于日常必读的核心规范文档）
-cp docs/guidelines/templates/development-core.template docs/guidelines/development/{topic}.md
+cp docs/templates/development/development-core.template docs/guidelines/development/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -121,7 +121,7 @@ cp docs/guidelines/templates/development-core.template docs/guidelines/developme
 
 ```bash
 # 复制需求文档模板
-cp docs/requirements/templates/requirement.template docs/requirements/{topic}.md
+cp docs/templates/requirements/requirement.template docs/requirements/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -130,7 +130,7 @@ cp docs/requirements/templates/requirement.template docs/requirements/{topic}.md
 
 ```bash
 # 复制检查工作流文档模板
-cp docs/guidelines/templates/review-workflow.template docs/guidelines/workflows/{topic}.md
+cp docs/templates/review/review-workflow.template docs/guidelines/workflows/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -139,7 +139,7 @@ cp docs/guidelines/templates/review-workflow.template docs/guidelines/workflows/
 
 ```bash
 # 复制检查指南模板
-cp docs/guidelines/templates/review-guide.template docs/guidelines/development/references/{topic}.md
+cp docs/templates/review/review-guide.template docs/guidelines/development/references/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 # 对于快速参考文档，可以省略详细检查方法章节，保持简洁
@@ -149,10 +149,10 @@ cp docs/guidelines/templates/review-guide.template docs/guidelines/development/r
 
 ```bash
 # 复制指南文档模板（通用，适用于开发规范文档）
-cp docs/guidelines/templates/guideline.template docs/guidelines/development/{topic}.md
+cp docs/templates/development/guideline.template docs/guidelines/development/{topic}.md
 
 # 复制核心规范文档模板（适用于日常必读的核心规范文档）
-cp docs/guidelines/templates/development-core.template docs/guidelines/development/{topic}.md
+cp docs/templates/development/development-core.template docs/guidelines/development/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -161,7 +161,7 @@ cp docs/guidelines/templates/development-core.template docs/guidelines/developme
 
 ```bash
 # 复制开发工作流文档模板
-cp docs/guidelines/templates/development-workflow.template docs/guidelines/development/workflows/{workflow-name}.md
+cp docs/templates/development/development-workflow.template docs/guidelines/development/workflows/{workflow-name}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -170,7 +170,7 @@ cp docs/guidelines/templates/development-workflow.template docs/guidelines/devel
 
 ```bash
 # 复制参考文档模板
-cp docs/guidelines/templates/development-reference.template docs/guidelines/development/references/{topic}.md
+cp docs/templates/development/development-reference.template docs/guidelines/development/references/{topic}.md
 
 # 然后编辑文件，替换所有 {占位符}
 ```
@@ -863,14 +863,14 @@ let iso = format-_document-_timestamp(DateFormat::Iso8601, Timezone::Local);
 
 ## 🔗 相关文档
 
-- [统一架构模板文件](../architecture/templates/architecture.template) - 统一架构文档模板（Lib 层 + Commands 层）
-- [指南文档模板文件](./templates/guideline.template) - 指南文档模板（开发规范、配置指南等，已合并 development.template）
-- [核心规范文档模板文件](./templates/development-core.template) - 核心规范文档模板（日常必读的核心规范）
-- [开发工作流文档模板文件](./templates/development-workflow.template) - 开发工作流文档模板（AI 工作流文档）
-- [检查工作流文档模板文件](./templates/review-workflow.template) - 检查工作流文档模板（AI 工作流文档）
-- [参考文档模板文件](./templates/development-reference.template) - 参考文档模板（详细参考文档）
-- [检查指南模板文件](./templates/review-guide.template) - 检查指南模板（专门检查指南、快速参考等）
-- [需求文档模板文件](../requirements/templates/requirement.template) - 需求文档模板（待办事项、需求分析等）
+- [统一架构模板文件](../templates/architecture/architecture.template) - 统一架构文档模板（Lib 层 + Commands 层）
+- [指南文档模板文件](../templates/development/guideline.template) - 指南文档模板（开发规范、配置指南等，已合并 development.template）
+- [核心规范文档模板文件](../templates/development/development-core.template) - 核心规范文档模板（日常必读的核心规范）
+- [开发工作流文档模板文件](../templates/development/development-workflow.template) - 开发工作流文档模板（AI 工作流文档）
+- [检查工作流文档模板文件](../templates/review/review-workflow.template) - 检查工作流文档模板（AI 工作流文档）
+- [参考文档模板文件](../templates/development/development-reference.template) - 参考文档模板（详细参考文档）
+- [检查指南模板文件](../templates/review/review-guide.template) - 检查指南模板（专门检查指南、快速参考等）
+- [需求文档模板文件](../templates/requirements/requirement.template) - 需求文档模板（待办事项、需求分析等）
 - [主架构文档](../architecture/architecture.md) - 总体架构设计文档
 - [文档时间戳维护指南](./document-timestamp.md) - 文档更新时间维护指南
 

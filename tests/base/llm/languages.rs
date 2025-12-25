@@ -1,6 +1,12 @@
 //! Base/LLM Languages 模块测试
 //!
 //! 测试语言查找和 instruction 生成功能。
+//!
+//! ## 测试策略
+//!
+//! - 测试语言查找、指令生成和语言要求功能
+//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试所有支持的语言和边界情况
 
 use pretty_assertions::assert_eq;
 use workflow::base::llm::languages::{
@@ -13,8 +19,9 @@ fn test_find_language_exact_match() {
     // 测试精确匹配
     let lang = find_language("en");
     assert!(lang.is_some());
-    assert_eq!(lang.unwrap().code, "en");
-    assert_eq!(lang.unwrap().name, "English");
+    let lang = lang.expect("Language 'en' should be found");
+    assert_eq!(lang.code, "en");
+    assert_eq!(lang.name, "English");
 }
 
 #[test]
@@ -27,8 +34,13 @@ fn test_find_language_case_insensitive() {
     assert!(lang1.is_some());
     assert!(lang2.is_some());
     assert!(lang3.is_some());
-    assert_eq!(lang1.unwrap().code, lang2.unwrap().code);
-    assert_eq!(lang2.unwrap().code, lang3.unwrap().code);
+
+    let lang1 = lang1.expect("Language 'EN' should be found");
+    let lang2 = lang2.expect("Language 'en' should be found");
+    let lang3 = lang3.expect("Language 'En' should be found");
+
+    assert_eq!(lang1.code, lang2.code);
+    assert_eq!(lang2.code, lang3.code);
 }
 
 #[test]
@@ -39,8 +51,12 @@ fn test_find_language_zh_variants() {
 
     assert!(lang_zh.is_some());
     assert!(lang_zh_cn.is_some());
-    assert_eq!(lang_zh.unwrap().code, "zh-CN");
-    assert_eq!(lang_zh_cn.unwrap().code, "zh-CN");
+
+    let lang_zh = lang_zh.expect("Language 'zh' should be found");
+    let lang_zh_cn = lang_zh_cn.expect("Language 'zh-CN' should be found");
+
+    assert_eq!(lang_zh.code, "zh-CN");
+    assert_eq!(lang_zh_cn.code, "zh-CN");
 }
 
 #[test]
@@ -48,8 +64,9 @@ fn test_find_language_zh_tw() {
     // 测试繁体中文
     let lang = find_language("zh-TW");
     assert!(lang.is_some());
-    assert_eq!(lang.unwrap().code, "zh-TW");
-    assert_eq!(lang.unwrap().name, "Traditional Chinese");
+    let lang = lang.expect("Language 'zh-TW' should be found");
+    assert_eq!(lang.code, "zh-TW");
+    assert_eq!(lang.name, "Traditional Chinese");
 }
 
 #[test]
@@ -150,7 +167,8 @@ fn test_get_supported_language_display_names() {
     // 验证格式："{native_name} ({name}) - {code}"
     let en_display = display_names.iter().find(|n| n.contains("English"));
     assert!(en_display.is_some());
-    assert!(en_display.unwrap().contains("en"));
+    let en_display = en_display.expect("English display name should be found");
+    assert!(en_display.contains("en"));
 }
 
 #[test]
@@ -172,7 +190,8 @@ fn test_find_language_all_supported() {
     for lang in SUPPORTED_LANGUAGES {
         let found = find_language(lang.code);
         assert!(found.is_some(), "Language {} should be found", lang.code);
-        assert_eq!(found.unwrap().code, lang.code);
+        let found = found.expect(&format!("Language {} should be found", lang.code));
+        assert_eq!(found.code, lang.code);
     }
 }
 

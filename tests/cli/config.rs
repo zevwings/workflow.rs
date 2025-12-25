@@ -20,7 +20,8 @@ struct TestConfigCli {
 #[test]
 fn test_config_show_command_structure() {
     // 测试 Show 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "show"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(&["test-config", "show"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         ConfigSubcommand::Show => {
@@ -38,7 +39,8 @@ fn test_config_show_command_no_arguments() {
     let _result = TestConfigCli::try_parse_from(&["test-config", "show", "invalid-arg"]);
     // 注意：clap 可能会接受额外的参数，这取决于配置
     // 这里主要验证命令可以正确解析
-    let cli = TestConfigCli::try_parse_from(&["test-config", "show"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(&["test-config", "show"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, ConfigSubcommand::Show));
 }
 
@@ -66,7 +68,7 @@ fn test_config_validate_command(
         args.push("--strict");
     }
 
-    let cli = TestConfigCli::try_parse_from(&args).unwrap();
+    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         ConfigSubcommand::Validate {
@@ -87,7 +89,8 @@ fn test_config_validate_command(
 #[test]
 fn test_config_export_command_structure() {
     // 测试 Export 命令基本结构
-    let cli = TestConfigCli::try_parse_from(&["test-config", "export", "output.toml"]).unwrap();
+    let cli = TestConfigCli::try_parse_from(&["test-config", "export", "output.toml"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         ConfigSubcommand::Export {
@@ -144,7 +147,7 @@ fn test_config_export_command(
         args.push("--yaml");
     }
 
-    let cli = TestConfigCli::try_parse_from(&args).unwrap();
+    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         ConfigSubcommand::Export {
@@ -177,7 +180,8 @@ fn test_config_export_command_output_formats(
     #[case] yaml: bool,
 ) {
     let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag]).unwrap();
+        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag])
+            .expect("CLI args should parse successfully");
     match cli.command {
         ConfigSubcommand::Export {
             toml: t,
@@ -220,7 +224,7 @@ fn test_config_import_command(
         args.push("--dry-run");
     }
 
-    let cli = TestConfigCli::try_parse_from(&args).unwrap();
+    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         ConfigSubcommand::Import {
@@ -257,7 +261,7 @@ fn test_config_command_parsing_all_subcommands(
         _ => {}
     }
 
-    let cli = TestConfigCli::try_parse_from(&args).unwrap();
+    let cli = TestConfigCli::try_parse_from(&args).expect("CLI args should parse successfully");
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"

@@ -1,7 +1,15 @@
 //! Git 提交管理测试
 //!
 //! 测试 Git 提交状态检查、暂存操作和提交创建功能。
+//!
+//! ## 测试策略
+//!
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
+//! - Fixture 函数中的 `expect()` 保留（fixture 失败应该panic）
+//! - 使用 `serial_test` 确保 Git 操作串行执行
+//! - 使用 `TempDir` 确保测试隔离和自动清理
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::fixture;
 use serial_test::serial;
@@ -10,6 +18,7 @@ use tempfile::TempDir;
 use workflow::git::GitCommit;
 
 use crate::common::git_helpers::{create_git_repo_with_commit, setup_git_repo};
+use crate::common::helpers::CurrentDirGuard;
 
 // ==================== Fixtures ====================
 
@@ -52,34 +61,47 @@ fn clean_git_repo() -> TempDir {
 
 // ==================== 使用 gix 重新实现的工作树状态测试 ====================
 
+/// 测试干净的Git工作树状态检测
+///
+/// ## 测试目的
+/// 验证 `GitCommit::get_worktree_status()` 能够正确检测干净的工作树状态
+/// （没有未跟踪、修改或暂存的文件）。
+///
+/// ## 测试场景
+/// 1. 创建临时Git仓库（包含初始提交）
+/// 2. 切换到临时仓库目录
+/// 3. 获取工作树状态
+/// 4. 验证所有计数器为0
+/// 5. 恢复原始工作目录
+///
+/// ## 技术细节
+/// - 使用 `#[serial]` 确保测试串行执行（避免工作目录冲突）
+/// - 使用临时目录进行隔离测试
+/// - 使用 `gix` 库（纯Rust的Git实现）而非git2
+/// - 自动恢复原始工作目录（即使测试失败）
+///
+/// ## 预期结果
+/// - `untracked_count == 0`：无未跟踪文件
+/// - `modified_count == 0`：无修改文件
+/// - `staged_count == 0`：无暂存文件
 #[test]
 #[serial]
-fn test_worktree_status_clean_with_gix() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_worktree_status_clean_with_gix() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 测试干净的工作树状态
-    let result = GitCommit::get_worktree_status();
-    assert!(
-        result.is_ok(),
-        "Failed to get worktree status: {:?}",
-        result
-    );
-
-    let status = result.unwrap();
+    let status = GitCommit::get_worktree_status()?;
 
     // 干净的工作树应该没有未跟踪或修改的文件
     assert_eq!(status.untracked_count, 0, "Expected no untracked files");
     assert_eq!(status.modified_count, 0, "Expected no modified files");
     assert_eq!(status.staged_count, 0, "Expected no staged files");
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 // ==================== 更改检查测试 ====================
@@ -88,11 +110,11 @@ fn test_worktree_status_clean_with_gix() {
 
 #[test]
 #[serial]
-fn test_has_changes_clean_repo_with_gix() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_has_changes_clean_repo_with_gix() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 干净的仓库应该没有更改
     // 使用 get_worktree_status 检查是否有变更
@@ -100,25 +122,22 @@ fn test_has_changes_clean_repo_with_gix() {
     let result =
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
-    assert!(!result.unwrap(), "Clean repo should have no changes");
+    assert!(!result?, "Clean repo should have no changes");
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 #[test]
 #[serial]
-fn test_has_changes_with_untracked_files_with_gix() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_has_changes_with_untracked_files_with_gix() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 创建未跟踪文件
-    std::fs::write(temp_dir.path().join("new_file.txt"), "New content").unwrap();
+    std::fs::write(temp_dir.path().join("new_file.txt"), "New content")?;
 
     // 使用 get_worktree_status 检查是否有变更
     let status = GitCommit::get_worktree_status();
@@ -126,27 +145,24 @@ fn test_has_changes_with_untracked_files_with_gix() {
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
     assert!(
-        result.unwrap(),
+        result?,
         "Repo with untracked files should have changes"
     );
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 #[test]
 #[serial]
-fn test_has_changes_with_modified_files_with_gix() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_has_changes_with_modified_files_with_gix() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 修改现有文件（README.md 在 setup 中已经创建）
-    std::fs::write(temp_dir.path().join("README.md"), "# Updated README").unwrap();
+    std::fs::write(temp_dir.path().join("README.md"), "# Updated README")?;
 
     // 使用 get_worktree_status 检查是否有变更
     let status = GitCommit::get_worktree_status();
@@ -154,60 +170,54 @@ fn test_has_changes_with_modified_files_with_gix() {
         status.map(|s| s.modified_count > 0 || s.staged_count > 0 || s.untracked_count > 0);
     assert!(result.is_ok());
     assert!(
-        result.unwrap(),
+        result?,
         "Repo with modified files should have changes"
     );
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 // ==================== 暂存操作测试 ====================
 
 #[test]
 #[serial]
-fn test_stage_all_changes() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_stage_all_changes() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 创建一些新文件
-    std::fs::write(temp_dir.path().join("new_file1.txt"), "Content 1").unwrap();
-    std::fs::write(temp_dir.path().join("new_file2.txt"), "Content 2").unwrap();
+    std::fs::write(temp_dir.path().join("new_file1.txt"), "Content 1")?;
+    std::fs::write(temp_dir.path().join("new_file2.txt"), "Content 2")?;
 
     // 修改现有文件
-    std::fs::write(temp_dir.path().join("README.md"), "# Updated README").unwrap();
+    std::fs::write(temp_dir.path().join("README.md"), "# Updated README")?;
 
     // 暂存所有更改
     let result = GitCommit::add_all();
     assert!(result.is_ok(), "Failed to stage all changes: {:?}", result);
 
     // 验证文件已暂存
-    let status = GitCommit::get_worktree_status().unwrap();
+    let status = GitCommit::get_worktree_status()?;
     assert!(status.staged_count > 0, "Should have staged files");
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 #[test]
 #[serial]
-fn test_stage_specific_file() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_stage_specific_file() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 创建测试文件
     let test_file = "specific_file.txt";
-    std::fs::write(temp_dir.path().join(test_file), "Specific content").unwrap();
+    std::fs::write(temp_dir.path().join(test_file), "Specific content")?;
 
     // 暂存特定文件
     let result = GitCommit::add_files(&[test_file.to_string()]);
@@ -218,17 +228,14 @@ fn test_stage_specific_file() {
     );
 
     // 验证文件已暂存
-    let status = GitCommit::get_worktree_status().unwrap();
+    let status = GitCommit::get_worktree_status()?;
     assert!(
         status.staged_count > 0,
         "Should have staged the specific file"
     );
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 // ==================== 提交创建测试 ====================
@@ -237,11 +244,11 @@ fn test_stage_specific_file() {
 
 #[test]
 #[serial]
-fn test_get_latest_commit_info() {
-    let (temp_dir, original_dir) = setup_git_repo();
+fn test_get_latest_commit_info() -> Result<()> {
+    let (temp_dir, _original_dir) = setup_git_repo();
 
-    // 切换到临时目录
-    std::env::set_current_dir(temp_dir.path()).unwrap();
+    // 切换到临时目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(temp_dir.path())?;
 
     // 获取最新提交信息
     let commit_info = GitCommit::get_last_commit_info();
@@ -251,7 +258,7 @@ fn test_get_latest_commit_info() {
         commit_info
     );
 
-    let info = commit_info.unwrap();
+    let info = commit_info?;
 
     // 验证提交信息的基本字段
     assert!(!info.sha.is_empty(), "Commit SHA should not be empty");
@@ -273,11 +280,8 @@ fn test_get_latest_commit_info() {
         "Commit SHA should be hexadecimal"
     );
 
-    // 恢复原始目录
-    // 恢复原始目录（如果目录仍然存在）
-    if original_dir.exists() {
-        let _ = std::env::set_current_dir(original_dir);
-    }
+    // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 // ==================== WorktreeStatus 结构体测试 ====================
@@ -307,10 +311,9 @@ fn test_operations_outside_git_repo_with_container() {
 
     // 在非 Git 目录中测试操作
     let temp_dir = tempdir().expect("Failed to create temp dir");
-    let original_dir = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/tmp"));
 
-    // 切换到非Git目录
-    std::env::set_current_dir(&temp_dir).expect("Failed to change dir");
+    // 切换到非Git目录（使用RAII确保恢复）
+    let _dir_guard = CurrentDirGuard::new(&temp_dir).expect("Failed to change dir");
 
     // 确保这不是一个 Git 仓库，并且父目录也不是
     assert!(
@@ -355,8 +358,7 @@ fn test_operations_outside_git_repo_with_container() {
         commit_info_result
     );
 
-    // 恢复原始目录
-    std::env::set_current_dir(original_dir).expect("Failed to restore dir");
+    // 目录会在函数结束时自动恢复
 }
 
 // ==================== 集成测试 ====================

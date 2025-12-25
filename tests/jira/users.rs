@@ -187,7 +187,7 @@ fn test_jira_config_serialization() {
 
     let toml = toml::to_string(&config);
     assert!(toml.is_ok(), "Should serialize JiraConfig");
-    let toml_str = toml.unwrap();
+    let toml_str = toml.expect("serialization should succeed");
     assert!(toml_str.contains("test@example.com"));
     assert!(toml_str.contains("account-123"));
 }
@@ -204,7 +204,7 @@ display_name = "Test User"
 
     let config: Result<JiraConfig, _> = toml::from_str(toml_str);
     assert!(config.is_ok(), "Should deserialize JiraConfig");
-    let config = config.unwrap();
+    let config = config.expect("deserialization should succeed");
     assert_eq!(config.users.len(), 1);
     assert_eq!(config.users[0].email, "test@example.com");
 }
@@ -303,6 +303,35 @@ fn test_jira_config_round_trip(temp_dir: TempDir) {
 
 // ==================== JiraUsers 集成测试（使用 Mock 服务器）====================
 
+/// 测试从本地缓存获取Jira用户信息
+///
+/// ## 测试目的
+/// 验证`JiraUsers::get()`方法能够从本地缓存文件读取用户信息，避免API调用。
+///
+/// ## 为什么被忽略
+/// - **需要Jira认证**: 需要配置有效的Jira认证信息
+/// - **需要缓存文件**: 依赖本地缓存文件存在
+/// - **环境依赖**: 不同环境中缓存状态不同
+/// - **CI环境不适用**: CI环境通常没有Jira配置
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_jira_users_get_with_local_cache -- --ignored
+/// ```
+/// 注意：需要先运行一次实际API调用以生成缓存
+///
+/// ## 测试场景
+/// 1. 确保本地缓存文件存在
+/// 2. 调用JiraUsers::get()获取用户信息
+/// 3. 从缓存文件读取数据（不调用API）
+/// 4. 解析缓存的用户信息
+/// 5. 返回用户列表
+///
+/// ## 预期行为
+/// - 成功从缓存读取用户信息
+/// - 不进行API调用（快速返回）
+/// - 返回Ok(Vec<User>)包含用户列表
+/// - 缓存数据格式正确
 #[test]
 #[ignore] // 需要设置 Jira 认证信息，在 CI 环境中可能失败
 fn test_jira_users_get_with_local_cache() {
@@ -325,6 +354,38 @@ fn test_jira_users_get_with_local_cache() {
     }
 }
 
+/// 测试没有本地缓存时从API获取Jira用户信息
+///
+/// ## 测试目的
+/// 验证`JiraUsers::get()`方法在没有缓存时能够调用Jira API获取用户信息并缓存。
+///
+/// ## 为什么被忽略
+/// - **需要Jira认证**: 需要配置有效的Jira认证信息
+/// - **需要网络连接**: 需要实际连接到Jira API
+/// - **产生API调用**: 会消耗API配额
+/// - **CI环境不适用**: CI环境通常没有Jira配置
+/// - **不稳定性**: 网络问题可能导致测试失败
+///
+/// ## 如何手动运行
+/// ```bash
+/// cargo test test_jira_users_get_without_local_cache -- --ignored
+/// ```
+/// 注意：此测试会调用实际的Jira API
+///
+/// ## 测试场景
+/// 1. 确保没有本地缓存文件（或删除缓存）
+/// 2. 调用JiraUsers::get()获取用户信息
+/// 3. 检测缓存不存在
+/// 4. 调用Jira API获取用户列表
+/// 5. 将结果写入缓存文件
+/// 6. 返回用户列表
+///
+/// ## 预期行为
+/// - 成功调用Jira API
+/// - 获取完整的用户列表
+/// - 创建缓存文件并写入数据
+/// - 返回Ok(Vec<User>)包含用户列表
+/// - 后续调用可以使用缓存
 #[test]
 #[ignore] // 需要设置 Jira 认证信息
 fn test_jira_users_get_without_local_cache() {

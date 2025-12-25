@@ -55,7 +55,7 @@ fn test_pr_create_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Create {
@@ -88,7 +88,7 @@ fn test_pr_merge_command(#[case] pull_request_id: Option<&str>, #[case] force: b
         args.push("--force");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Merge {
@@ -114,7 +114,7 @@ fn test_pr_status_command(#[case] pull_request_id_or_branch: Option<&str>) {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Status {
@@ -145,7 +145,7 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
         args.push(l);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::List {
@@ -164,7 +164,8 @@ fn test_pr_list_command(#[case] state: Option<&str>, #[case] limit: Option<usize
 #[test]
 fn test_pr_update_command_structure() {
     // 测试 Update 命令结构（无参数）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "update"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "update"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, PRCommands::Update));
 }
 
@@ -193,7 +194,7 @@ fn test_pr_sync_command(
         args.push("--squash");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Sync {
@@ -231,7 +232,7 @@ fn test_pr_rebase_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Rebase {
@@ -258,7 +259,7 @@ fn test_pr_close_command(#[case] pull_request_id: Option<&str>) {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Close {
@@ -281,7 +282,7 @@ fn test_pr_summarize_command(#[case] pull_request_id: Option<&str>) {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Summarize {
@@ -304,7 +305,7 @@ fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
         args.push(id);
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Approve {
@@ -321,7 +322,8 @@ fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
 #[test]
 fn test_pr_comment_command_structure() {
     let cli =
-        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"]).unwrap();
+        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"])
+            .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Comment {
@@ -347,7 +349,7 @@ fn test_pr_comment_command_with_multiple_words() {
         "multi-word",
         "comment",
     ])
-    .unwrap();
+    .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Comment {
@@ -364,7 +366,8 @@ fn test_pr_comment_command_with_multiple_words() {
 #[test]
 fn test_pr_comment_command_without_id() {
     // 测试场景：只有一个参数时，它会被解析为 PR ID，message 为空
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "single-arg"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Comment {
@@ -393,7 +396,7 @@ fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[ca
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Pick {
@@ -438,7 +441,7 @@ fn test_pr_reword_command(
         args.push("--dry-run");
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Reword {
@@ -488,7 +491,7 @@ fn test_pr_commands_enum_all_variants(
         _ => {}
     }
 
-    let cli = TestPRCli::try_parse_from(&args).unwrap();
+    let cli = TestPRCli::try_parse_from(&args).expect("CLI args should parse successfully");
     assert!(
         assert_fn(&cli.command),
         "Command should match expected variant"
@@ -556,7 +559,7 @@ fn test_pr_create_command_very_long_title() {
     // 测试超长标题（边界情况）
     let long_title = "a".repeat(1000);
     let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])
-        .unwrap();
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -572,7 +575,7 @@ fn test_pr_create_command_special_characters_in_title() {
     let special_title = "Test PR: Fix bug #123 (urgent!)";
     let cli =
         TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", special_title])
-            .unwrap();
+            .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Create { title, .. } => {
@@ -585,7 +588,8 @@ fn test_pr_create_command_special_characters_in_title() {
 #[test]
 fn test_pr_comment_command_empty_message() {
     // 测试空消息的情况
-    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Comment { message, .. } => {
@@ -601,7 +605,8 @@ fn test_pr_comment_command_empty_message() {
 #[test]
 fn test_pr_list_command_zero_limit() {
     // 测试 limit 为 0 的情况（边界值）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "0"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "0"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::List { pagination, .. } => {
@@ -614,7 +619,8 @@ fn test_pr_list_command_zero_limit() {
 #[test]
 fn test_pr_list_command_very_large_limit() {
     // 测试非常大的 limit 值（边界情况）
-    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "999999"]).unwrap();
+    let cli = TestPRCli::try_parse_from(&["test-pr", "list", "--limit", "999999"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::List { pagination, .. } => {

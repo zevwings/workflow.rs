@@ -318,7 +318,7 @@ find src/commands -name "*.rs" -type f | grep -v mod.rs | sort
 - development/ - 开发规范目录（包含所有开发规范文档）
 - document.md - 文档编写指南
 - pre-commit.md - 提交前检查指南
-- testing.md - 测试指南
+- testing/README.md - 测试指南
 - review-document-completeness.md - 文档完整性检查指南（本文档）
 - ...（其他指南文档）
 

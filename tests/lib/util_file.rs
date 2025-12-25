@@ -140,7 +140,10 @@ fn test_file_writer_ensure_parent_dir() -> color_eyre::Result<()> {
     let writer = FileWriter::new(&file_path);
 
     writer.ensure_parent_dir()?;
-    assert!(file_path.parent().unwrap().exists());
+    assert!(file_path
+        .parent()
+        .expect("file path should have a parent")
+        .exists());
 
     Ok(())
 }
