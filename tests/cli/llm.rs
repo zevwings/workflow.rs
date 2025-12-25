@@ -20,11 +20,13 @@ fn test_llm_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // Show
-    let cli = TestLlmCli::try_parse_from(&["test-llm", "show"]).expect("CLI args should parse successfully");
+    let cli = TestLlmCli::try_parse_from(&["test-llm", "show"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, LLMSubcommand::Show));
 
     // Setup
-    let cli = TestLlmCli::try_parse_from(&["test-llm", "setup"]).expect("CLI args should parse successfully");
+    let cli = TestLlmCli::try_parse_from(&["test-llm", "setup"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, LLMSubcommand::Setup));
 }
 

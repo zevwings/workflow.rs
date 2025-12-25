@@ -2,8 +2,8 @@
 //!
 //! 测试分支同步命令的功能。
 
-use workflow::commands::branch::sync::BranchSyncCommand;
 use serial_test::serial;
+use workflow::commands::branch::sync::BranchSyncCommand;
 
 use crate::common::git_helpers::GitTestEnv;
 use crate::common::helpers::CurrentDirGuard;
@@ -240,10 +240,7 @@ fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
     mock_server.setup_github_base_url();
 
     // Mock GitHub BASE URL的GET请求（用于网络检查）
-    let _mock = mock_server.server.mock("GET", "/")
-        .with_status(200)
-        .with_body("OK")
-        .create();
+    let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 2. 创建临时Git仓库
     let git_env = GitTestEnv::new()?;
@@ -267,7 +264,10 @@ fn test_branch_sync_command_structure_with_mock() -> color_eyre::Result<()> {
     );
 
     // 7. 验证结果（目录会在函数结束时自动恢复）
-    assert!(result.is_ok(), "Branch sync should succeed with mock GitHub API");
+    assert!(
+        result.is_ok(),
+        "Branch sync should succeed with mock GitHub API"
+    );
 
     Ok(())
 }
@@ -279,10 +279,7 @@ fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
-    let _mock = mock_server.server.mock("GET", "/")
-        .with_status(200)
-        .with_body("OK")
-        .create();
+    let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
     let git_env = GitTestEnv::new()?;
@@ -298,7 +295,7 @@ fn test_branch_sync_command_with_rebase_mock() -> color_eyre::Result<()> {
     // 执行rebase同步
     let result = BranchSyncCommand::sync(
         "feature".to_string(),
-        true,  // rebase
+        true, // rebase
         false,
         false,
     );
@@ -316,10 +313,7 @@ fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
-    let _mock = mock_server.server.mock("GET", "/")
-        .with_status(200)
-        .with_body("OK")
-        .create();
+    let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
     let git_env = GitTestEnv::new()?;
@@ -335,12 +329,15 @@ fn test_branch_sync_command_with_ff_only_mock() -> color_eyre::Result<()> {
     let result = BranchSyncCommand::sync(
         "feature".to_string(),
         false,
-        true,  // ff_only
+        true, // ff_only
         false,
     );
 
     // 验证（目录自动恢复）
-    assert!(result.is_ok(), "FF-only sync should succeed for fast-forwardable branches");
+    assert!(
+        result.is_ok(),
+        "FF-only sync should succeed for fast-forwardable branches"
+    );
 
     Ok(())
 }
@@ -352,10 +349,7 @@ fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
-    let _mock = mock_server.server.mock("GET", "/")
-        .with_status(200)
-        .with_body("OK")
-        .create();
+    let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
     let git_env = GitTestEnv::new()?;
@@ -374,7 +368,7 @@ fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
         "feature".to_string(),
         false,
         false,
-        true,  // squash
+        true, // squash
     );
 
     // 验证（目录自动恢复）
@@ -382,4 +376,3 @@ fn test_branch_sync_command_with_squash_mock() -> color_eyre::Result<()> {
 
     Ok(())
 }
-

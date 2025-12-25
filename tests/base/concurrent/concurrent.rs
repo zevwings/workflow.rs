@@ -169,7 +169,10 @@ mod tests {
     #[case(2, 4)] // 并发数2
     #[case(4, 4)] // 并发数4
     #[case(8, 4)] // 并发数超过任务数
-    fn test_concurrent_limits_timing(#[case] max_concurrent: usize, #[case] task_count: usize) -> Result<()> {
+    fn test_concurrent_limits_timing(
+        #[case] max_concurrent: usize,
+        #[case] task_count: usize,
+    ) -> Result<()> {
         let executor = ConcurrentExecutor::new(max_concurrent);
         let mut tasks = Vec::new();
 

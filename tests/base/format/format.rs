@@ -201,8 +201,8 @@ mod date_format_tests {
         let date_utc = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
 
         // 验证格式：YYYY-MM-DD
-        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-            .expect("Date regex pattern should be valid");
+        let date_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
         assert!(date_regex.is_match(&date_local));
         assert!(date_regex.is_match(&date_utc));
     }
@@ -239,8 +239,8 @@ mod date_format_tests {
         let last_updated_with_time = format_last_updated_with_time();
 
         // 验证格式
-        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-            .expect("Date regex pattern should be valid");
+        let date_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
         let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
             .expect("DateTime regex pattern should be valid");
 
@@ -284,8 +284,7 @@ mod date_format_tests {
         let result_local = format_document_timestamp(format, Timezone::Local);
         let result_utc = format_document_timestamp(format, Timezone::Utc);
 
-        let regex = regex::Regex::new(pattern)
-            .expect("Regex pattern should be valid");
+        let regex = regex::Regex::new(pattern).expect("Regex pattern should be valid");
         assert!(regex.is_match(&result_local));
         assert!(regex.is_match(&result_utc));
     }

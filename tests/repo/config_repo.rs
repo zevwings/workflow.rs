@@ -53,7 +53,10 @@ impl TestEnv {
         let temp_path = self.temp_dir.path();
         // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
 
-        std::process::Command::new("git").args(["init"]).current_dir(temp_path).output()?;
+        std::process::Command::new("git")
+            .args(["init"])
+            .current_dir(temp_path)
+            .output()?;
         std::process::Command::new("git")
             .args(["config", "user.name", "Test User"])
             .current_dir(temp_path)
@@ -638,11 +641,7 @@ fn test_config_with_valid_branch_prefix() {
     });
 
     if let Some(ref branch) = config.branch {
-        assert!(!branch
-            .prefix
-            .as_ref()
-            .expect("branch prefix should exist")
-            .is_empty());
+        assert!(!branch.prefix.as_ref().expect("branch prefix should exist").is_empty());
     }
 }
 
@@ -789,8 +788,7 @@ fn test_save_to_new_files() -> Result<()> {
     assert!(public_config_path.exists());
 
     // 验证：私有配置文件创建成功
-    let private_config_path =
-        env.path().join(".workflow").join("config").join("repository.toml");
+    let private_config_path = env.path().join(".workflow").join("config").join("repository.toml");
     assert!(private_config_path.exists());
 
     // 验证：公共配置内容正确
@@ -858,10 +856,7 @@ prefix = "feature"
         config.template_commit.len()
     );
     assert_eq!(
-        reloaded_config
-            .pr
-            .as_ref()
-            .and_then(|p| p.auto_accept_change_type),
+        reloaded_config.pr.as_ref().and_then(|p| p.auto_accept_change_type),
         Some(true)
     );
 

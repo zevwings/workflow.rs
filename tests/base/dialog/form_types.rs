@@ -610,11 +610,7 @@ fn test_form_field_with_condition() {
     assert!(field.required);
     assert!(!field.allow_empty);
     assert_eq!(
-        field
-            .condition
-            .as_ref()
-            .expect("condition should exist")
-            .field_name,
+        field.condition.as_ref().expect("condition should exist").field_name,
         condition.field_name
     );
 }

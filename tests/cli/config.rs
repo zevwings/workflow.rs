@@ -179,9 +179,8 @@ fn test_config_export_command_output_formats(
     #[case] json: bool,
     #[case] yaml: bool,
 ) {
-    let cli =
-        TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag])
-            .expect("CLI args should parse successfully");
+    let cli = TestConfigCli::try_parse_from(&["test-config", "export", "output.toml", flag])
+        .expect("CLI args should parse successfully");
     match cli.command {
         ConfigSubcommand::Export {
             toml: t,

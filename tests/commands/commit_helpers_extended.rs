@@ -56,7 +56,9 @@ fn test_check_not_on_default_branch_on_main() {
     // 验证错误消息
     let error_msg = result.unwrap_err().to_string();
     assert!(
-        error_msg.contains("protected") || error_msg.contains("default branch") || error_msg.contains("Cannot"),
+        error_msg.contains("protected")
+            || error_msg.contains("default branch")
+            || error_msg.contains("Cannot"),
         "Error message should indicate protected branch: {}",
         error_msg
     );
@@ -146,11 +148,12 @@ fn test_check_not_on_default_branch_error_message_format() {
             let error_msg = e.to_string();
             // 错误消息应该包含操作名称或分支相关信息
             assert!(
-                error_msg.contains("branch") || error_msg.contains("git") || error_msg.contains("Failed"),
+                error_msg.contains("branch")
+                    || error_msg.contains("git")
+                    || error_msg.contains("Failed"),
                 "Error message should be informative: {}",
                 error_msg
             );
         }
     }
 }
-

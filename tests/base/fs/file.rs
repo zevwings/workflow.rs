@@ -644,10 +644,7 @@ fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()>
     if let Some(parent) = file_path.parent() {
         assert!(parent.exists());
     }
-    assert!(file_path
-        .parent()
-        .expect("file path should have a parent")
-        .is_dir());
+    assert!(file_path.parent().expect("file path should have a parent").is_dir());
 
     Ok(())
 }

@@ -481,9 +481,7 @@ fn test_tracer_init_file_path_creation_logic() {
     // 通过检查日志目录是否存在来验证路径创建逻辑
     let logs_dir = workflow::base::Paths::logs_dir();
     if logs_dir.is_ok() {
-        let tracing_dir = logs_dir
-            .expect("logs directory should exist")
-            .join("tracing");
+        let tracing_dir = logs_dir.expect("logs directory should exist").join("tracing");
         // 如果目录存在，说明路径创建逻辑正常工作
         // 注意：即使目录不存在，也不意味着代码有问题（可能是权限问题）
         assert!(tracing_dir.exists() || !tracing_dir.exists());

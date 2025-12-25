@@ -9,4 +9,3 @@ pub mod commit_helpers;
 pub mod commit_helpers_extended;
 pub mod config_show;
 pub mod lifecycle;
-

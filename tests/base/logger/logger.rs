@@ -45,7 +45,7 @@ fn test_logger_output() -> Result<()> {
     let debug_msg = debug("Test");
     assert!(debug_msg.contains("Test"));
     assert!(debug_msg.contains("⚙"));
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -131,63 +131,51 @@ fn test_log_level_from_str() {
     // 测试有效的日志级别字符串（不区分大小写）
     // 支持 "off"（新格式）和 "none"（向后兼容）
     assert_eq!(
-        "off".parse::<LogLevel>()
-            .expect("'off' should parse to LogLevel"),
+        "off".parse::<LogLevel>().expect("'off' should parse to LogLevel"),
         LogLevel::None
     );
     assert_eq!(
-        "OFF".parse::<LogLevel>()
-            .expect("'OFF' should parse to LogLevel"),
+        "OFF".parse::<LogLevel>().expect("'OFF' should parse to LogLevel"),
         LogLevel::None
     );
     assert_eq!(
-        "none".parse::<LogLevel>()
-            .expect("'none' should parse to LogLevel"),
+        "none".parse::<LogLevel>().expect("'none' should parse to LogLevel"),
         LogLevel::None
     );
     assert_eq!(
-        "NONE".parse::<LogLevel>()
-            .expect("'NONE' should parse to LogLevel"),
+        "NONE".parse::<LogLevel>().expect("'NONE' should parse to LogLevel"),
         LogLevel::None
     );
     assert_eq!(
-        "error".parse::<LogLevel>()
-            .expect("'error' should parse to LogLevel"),
+        "error".parse::<LogLevel>().expect("'error' should parse to LogLevel"),
         LogLevel::Error
     );
     assert_eq!(
-        "ERROR".parse::<LogLevel>()
-            .expect("'ERROR' should parse to LogLevel"),
+        "ERROR".parse::<LogLevel>().expect("'ERROR' should parse to LogLevel"),
         LogLevel::Error
     );
     assert_eq!(
-        "warn".parse::<LogLevel>()
-            .expect("'warn' should parse to LogLevel"),
+        "warn".parse::<LogLevel>().expect("'warn' should parse to LogLevel"),
         LogLevel::Warn
     );
     assert_eq!(
-        "WARN".parse::<LogLevel>()
-            .expect("'WARN' should parse to LogLevel"),
+        "WARN".parse::<LogLevel>().expect("'WARN' should parse to LogLevel"),
         LogLevel::Warn
     );
     assert_eq!(
-        "info".parse::<LogLevel>()
-            .expect("'info' should parse to LogLevel"),
+        "info".parse::<LogLevel>().expect("'info' should parse to LogLevel"),
         LogLevel::Info
     );
     assert_eq!(
-        "INFO".parse::<LogLevel>()
-            .expect("'INFO' should parse to LogLevel"),
+        "INFO".parse::<LogLevel>().expect("'INFO' should parse to LogLevel"),
         LogLevel::Info
     );
     assert_eq!(
-        "debug".parse::<LogLevel>()
-            .expect("'debug' should parse to LogLevel"),
+        "debug".parse::<LogLevel>().expect("'debug' should parse to LogLevel"),
         LogLevel::Debug
     );
     assert_eq!(
-        "DEBUG".parse::<LogLevel>()
-            .expect("'DEBUG' should parse to LogLevel"),
+        "DEBUG".parse::<LogLevel>().expect("'DEBUG' should parse to LogLevel"),
         LogLevel::Debug
     );
 
@@ -204,7 +192,7 @@ fn test_log_level_as_str() -> Result<()> {
     assert_eq!(LogLevel::Warn.as_str(), "warn");
     assert_eq!(LogLevel::Info.as_str(), "info");
     assert_eq!(LogLevel::Debug.as_str(), "debug");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -250,7 +238,7 @@ fn test_log_level_ordering() -> Result<()> {
     assert!(!none_level.should_log(LogLevel::Warn));
     assert!(!none_level.should_log(LogLevel::Info));
     assert!(!none_level.should_log(LogLevel::Debug));
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -276,7 +264,7 @@ fn test_log_level_set_and_get() -> Result<()> {
 
     // 恢复原始级别
     LogLevel::set_level(original_level);
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -290,7 +278,7 @@ fn test_log_level_default() -> Result<()> {
     } else {
         assert_eq!(default, LogLevel::Info);
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -306,9 +294,7 @@ fn test_log_level_round_trip() {
 
     for level in levels {
         let level_str = level.as_str();
-        let parsed = level_str
-            .parse::<LogLevel>()
-            .expect("LogLevel round trip should succeed");
+        let parsed = level_str.parse::<LogLevel>().expect("LogLevel round trip should succeed");
         assert_eq!(level, parsed, "Round trip failed for level: {}", level_str);
     }
 }
@@ -322,5 +308,5 @@ fn test_tracing_macros() -> Result<()> {
     trace_info!("Test info message");
     trace_warn!("Test warn message");
     trace_error!("Test error message");
-Ok(())
+    Ok(())
 }

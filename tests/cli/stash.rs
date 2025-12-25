@@ -18,7 +18,8 @@ struct TestStashCli {
 #[test]
 fn test_stash_list_command_structure() {
     // 测试 List 命令结构（带 --stat 参数）
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list", "--stat"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "list", "--stat"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         StashSubcommand::List { stat } => {
@@ -31,7 +32,8 @@ fn test_stash_list_command_structure() {
 #[test]
 fn test_stash_list_command_minimal() {
     // 测试 List 命令最小参数
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "list"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         StashSubcommand::List { stat } => {
@@ -48,23 +50,28 @@ fn test_stash_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // List
-    let cli = TestStashCli::try_parse_from(&["test-stash", "list"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "list"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, StashSubcommand::List { .. }));
 
     // Apply
-    let cli = TestStashCli::try_parse_from(&["test-stash", "apply"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "apply"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, StashSubcommand::Apply));
 
     // Drop
-    let cli = TestStashCli::try_parse_from(&["test-stash", "drop"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "drop"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, StashSubcommand::Drop));
 
     // Pop
-    let cli = TestStashCli::try_parse_from(&["test-stash", "pop"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "pop"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, StashSubcommand::Pop));
 
     // Push
-    let cli = TestStashCli::try_parse_from(&["test-stash", "push"]).expect("CLI args should parse successfully");
+    let cli = TestStashCli::try_parse_from(&["test-stash", "push"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, StashSubcommand::Push));
 }
 

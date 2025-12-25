@@ -218,10 +218,7 @@ fn test_detect_shell_from_shell_path_fallback() {
 
     // 应该能够检测到 shell
     if result.is_ok() {
-        assert_eq!(
-            result.expect("should detect zsh shell"),
-            Shell::Zsh
-        );
+        assert_eq!(result.expect("should detect zsh shell"), Shell::Zsh);
     }
 
     // 恢复原始环境变量

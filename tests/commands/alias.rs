@@ -20,4 +20,3 @@ fn test_alias_list_command_structure() {
         }
     }
 }
-

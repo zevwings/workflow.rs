@@ -34,8 +34,8 @@ fn test_update_command_structure_with_version() {
 #[test]
 fn test_update_command_structure_with_short_version() {
     // 测试 Update 命令结构（带 -v 参数）
-    let cli =
-        TestLifecycleCli::try_parse_from(&["test-workflow", "update", "-v", "1.2.3"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update", "-v", "1.2.3"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         Some(Commands::Update { version }) => {
@@ -48,7 +48,8 @@ fn test_update_command_structure_with_short_version() {
 #[test]
 fn test_update_command_structure_minimal() {
     // 测试 Update 命令最小参数
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         Some(Commands::Update { version }) => {
@@ -65,19 +66,23 @@ fn test_lifecycle_commands_parsing() {
     // 测试所有 lifecycle 命令都可以正确解析
 
     // Setup
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "setup"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Setup)));
 
     // Uninstall
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "uninstall"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Uninstall)));
 
     // Version
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "version"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Version)));
 
     // Update
-    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"]).expect("CLI args should parse successfully");
+    let cli = TestLifecycleCli::try_parse_from(&["test-workflow", "update"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Update { .. })));
 }
 

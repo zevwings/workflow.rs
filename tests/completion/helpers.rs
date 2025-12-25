@@ -5,10 +5,10 @@
 //! - Shell 类型文件列表获取
 //! - 所有 shell 类型文件列表获取
 
+use color_eyre::Result;
 use workflow::completion::{
     get_all_completion_files, get_completion_filename, get_completion_files_for_shell,
 };
-use color_eyre::Result;
 
 // ==================== get_completion_filename 测试 ====================
 
@@ -17,7 +17,7 @@ use color_eyre::Result;
 fn test_get_completion_filename_zsh() -> Result<()> {
     let result = get_completion_filename("zsh", "workflow")?;
     assert_eq!(result, "_workflow");
-Ok(())
+    Ok(())
 }
 
 /// 测试 bash shell 的文件名生成
@@ -25,7 +25,7 @@ Ok(())
 fn test_get_completion_filename_bash() -> Result<()> {
     let result = get_completion_filename("bash", "workflow")?;
     assert_eq!(result, "workflow.bash");
-Ok(())
+    Ok(())
 }
 
 /// 测试 fish shell 的文件名生成
@@ -33,7 +33,7 @@ Ok(())
 fn test_get_completion_filename_fish() -> Result<()> {
     let result = get_completion_filename("fish", "workflow")?;
     assert_eq!(result, "workflow.fish");
-Ok(())
+    Ok(())
 }
 
 /// 测试 powershell shell 的文件名生成
@@ -41,7 +41,7 @@ Ok(())
 fn test_get_completion_filename_powershell() -> Result<()> {
     let result = get_completion_filename("powershell", "workflow")?;
     assert_eq!(result, "_workflow.ps1");
-Ok(())
+    Ok(())
 }
 
 /// 测试 elvish shell 的文件名生成
@@ -49,7 +49,7 @@ Ok(())
 fn test_get_completion_filename_elvish() -> Result<()> {
     let result = get_completion_filename("elvish", "workflow")?;
     assert_eq!(result, "workflow.elv");
-Ok(())
+    Ok(())
 }
 
 /// 测试不支持的 shell 类型
@@ -60,7 +60,7 @@ fn test_get_completion_filename_unsupported_shell() -> Result<()> {
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("Unsupported shell type"));
     assert!(error_msg.contains("csh"));
-Ok(())
+    Ok(())
 }
 
 /// 测试不同命令名的文件名生成
@@ -68,7 +68,7 @@ Ok(())
 fn test_get_completion_filename_different_command() -> Result<()> {
     let result = get_completion_filename("zsh", "mycmd")?;
     assert_eq!(result, "_mycmd");
-Ok(())
+    Ok(())
 }
 
 /// 测试空命令名
@@ -76,7 +76,7 @@ Ok(())
 fn test_get_completion_filename_empty_command() -> Result<()> {
     let result = get_completion_filename("zsh", "")?;
     assert_eq!(result, "_");
-Ok(())
+    Ok(())
 }
 
 /// 测试所有支持的 shell 类型文件名格式
@@ -99,7 +99,7 @@ fn test_get_completion_filename_all_shells() -> Result<()> {
             shell, expected_filename, result
         );
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== get_completion_files_for_shell 测试 ====================
@@ -109,7 +109,7 @@ Ok(())
 fn test_get_completion_files_for_shell_single_command() -> Result<()> {
     let result = get_completion_files_for_shell("zsh", &["workflow"])?;
     assert_eq!(result, vec!["_workflow"]);
-Ok(())
+    Ok(())
 }
 
 /// 测试获取多个命令的补全文件列表
@@ -117,7 +117,7 @@ Ok(())
 fn test_get_completion_files_for_shell_multiple_commands() -> Result<()> {
     let result = get_completion_files_for_shell("zsh", &["workflow", "mycmd"])?;
     assert_eq!(result, vec!["_workflow", "_mycmd"]);
-Ok(())
+    Ok(())
 }
 
 /// 测试 bash shell 的多个命令文件列表
@@ -125,7 +125,7 @@ Ok(())
 fn test_get_completion_files_for_shell_bash_multiple() -> Result<()> {
     let result = get_completion_files_for_shell("bash", &["workflow", "tool"])?;
     assert_eq!(result, vec!["workflow.bash", "tool.bash"]);
-Ok(())
+    Ok(())
 }
 
 /// 测试空命令列表
@@ -133,7 +133,7 @@ Ok(())
 fn test_get_completion_files_for_shell_empty_commands() -> Result<()> {
     let result = get_completion_files_for_shell("zsh", &[])?;
     assert!(result.is_empty());
-Ok(())
+    Ok(())
 }
 
 /// 测试不支持的 shell 类型
@@ -141,7 +141,7 @@ Ok(())
 fn test_get_completion_files_for_shell_unsupported() -> Result<()> {
     let result = get_completion_files_for_shell("csh", &["workflow"]);
     assert!(result.is_err());
-Ok(())
+    Ok(())
 }
 
 /// 测试所有支持的 shell 类型的文件列表生成
@@ -159,7 +159,7 @@ fn test_get_completion_files_for_shell_all_shells() -> Result<()> {
             shell
         );
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== get_all_completion_files 测试 ====================
@@ -178,7 +178,7 @@ fn test_get_all_completion_files_single_command() -> Result<()> {
     assert!(result.contains(&"workflow.fish".to_string()));
     assert!(result.contains(&"_workflow.ps1".to_string()));
     assert!(result.contains(&"workflow.elv".to_string()));
-Ok(())
+    Ok(())
 }
 
 /// 测试获取多个命令的所有补全文件列表
@@ -200,7 +200,7 @@ fn test_get_all_completion_files_multiple_commands() -> Result<()> {
     assert!(result.contains(&"_mycmd.ps1".to_string()));
     assert!(result.contains(&"workflow.elv".to_string()));
     assert!(result.contains(&"mycmd.elv".to_string()));
-Ok(())
+    Ok(())
 }
 
 /// 测试空命令列表
@@ -208,7 +208,7 @@ Ok(())
 fn test_get_all_completion_files_empty_commands() -> Result<()> {
     let result = get_all_completion_files(&[]);
     assert!(result.is_empty());
-Ok(())
+    Ok(())
 }
 
 /// 测试所有文件名的唯一性
@@ -217,7 +217,7 @@ fn test_get_all_completion_files_uniqueness() -> Result<()> {
     let result = get_all_completion_files(&["workflow"]);
     let unique_count = result.iter().collect::<std::collections::HashSet<_>>().len();
     assert_eq!(unique_count, result.len(), "All filenames should be unique");
-Ok(())
+    Ok(())
 }
 
 /// 测试文件列表的排序（虽然不是必需的，但验证结果的一致性）
@@ -230,7 +230,7 @@ fn test_get_all_completion_files_consistency() -> Result<()> {
     let set1: std::collections::HashSet<_> = result1.iter().collect();
     let set2: std::collections::HashSet<_> = result2.iter().collect();
     assert_eq!(set1, set2, "Results should be consistent across calls");
-Ok(())
+    Ok(())
 }
 
 // ==================== 集成测试 ====================
@@ -262,7 +262,7 @@ fn test_integration_filename_to_all_files() -> Result<()> {
 
     // 验证数量一致
     assert_eq!(expected_files.len(), all_files.len());
-Ok(())
+    Ok(())
 }
 
 /// 测试函数之间的集成：从 shell 文件列表到所有文件列表
@@ -292,5 +292,5 @@ fn test_integration_shell_files_to_all_files() -> Result<()> {
 
     // 验证数量一致
     assert_eq!(expected_files.len(), all_files.len());
-Ok(())
+    Ok(())
 }

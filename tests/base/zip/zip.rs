@@ -67,25 +67,18 @@ fn create_test_zip(temp_dir: &TempDir) -> PathBuf {
         .unix_permissions(0o755);
 
     // 添加文件
-    zip.start_file("file1.txt", options)
-        .expect("should start file1 in zip");
-    zip.write_all(b"content1")
-        .expect("should write content1 to zip");
+    zip.start_file("file1.txt", options).expect("should start file1 in zip");
+    zip.write_all(b"content1").expect("should write content1 to zip");
 
-    zip.start_file("file2.txt", options)
-        .expect("should start file2 in zip");
-    zip.write_all(b"content2")
-        .expect("should write content2 to zip");
+    zip.start_file("file2.txt", options).expect("should start file2 in zip");
+    zip.write_all(b"content2").expect("should write content2 to zip");
 
     // 添加目录
-    zip.add_directory("subdir/", options)
-        .expect("should add subdir to zip");
+    zip.add_directory("subdir/", options).expect("should add subdir to zip");
 
     // 添加子目录中的文件
-    zip.start_file("subdir/file3.txt", options)
-        .expect("should start file3 in zip");
-    zip.write_all(b"content3")
-        .expect("should write content3 to zip");
+    zip.start_file("subdir/file3.txt", options).expect("should start file3 in zip");
+    zip.write_all(b"content3").expect("should write content3 to zip");
 
     zip.finish().expect("should finish zip archive");
 

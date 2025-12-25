@@ -13,7 +13,10 @@ fn test_config_command_show_with_empty_config() {
     let result = ConfigCommand::show();
 
     // 验证函数返回 Ok（空配置是有效的，会显示警告但不会失败）
-    assert!(result.is_ok(), "show() should succeed even with empty config");
+    assert!(
+        result.is_ok(),
+        "show() should succeed even with empty config"
+    );
 }
 
 #[test]
@@ -76,4 +79,3 @@ fn test_config_command_show_error_handling() {
         }
     }
 }
-

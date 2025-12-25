@@ -7,8 +7,8 @@
 //! - 备份清理功能
 //! - 结构体创建和字段访问
 
-use pretty_assertions::assert_eq;
 use color_eyre::Result;
+use pretty_assertions::assert_eq;
 use std::fs;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -93,7 +93,7 @@ fn test_backup_info_creation() -> Result<()> {
     assert_eq!(backup_info.completion_backups.len(), 1);
     assert_eq!(backup_info.binary_backups[0].0, "workflow");
     assert_eq!(backup_info.completion_backups[0].0, "workflow.bash");
-Ok(())
+    Ok(())
 }
 
 /// 测试 BackupInfo 克隆功能
@@ -118,7 +118,7 @@ fn test_backup_info_clone() -> Result<()> {
         assert_eq!(name, &cloned_info.binary_backups[i].0);
         assert_eq!(path, &cloned_info.binary_backups[i].1);
     }
-Ok(())
+    Ok(())
 }
 
 /// 测试 BackupInfo 调试输出
@@ -133,7 +133,7 @@ fn test_backup_info_debug() -> Result<()> {
     assert!(debug_str.contains("binary_backups"));
     assert!(debug_str.contains("completion_backups"));
     assert!(debug_str.contains("workflow"));
-Ok(())
+    Ok(())
 }
 
 /// 测试 BackupResult 结构体创建
@@ -151,7 +151,7 @@ fn test_backup_result_creation() -> Result<()> {
     assert_eq!(backup_result.binary_count, 2);
     assert_eq!(backup_result.completion_count, 1);
     assert_eq!(backup_result.backup_info.backup_dir, backup_info.backup_dir);
-Ok(())
+    Ok(())
 }
 
 /// 测试 BackupResult 克隆和调试输出
@@ -180,7 +180,7 @@ fn test_backup_result_clone_and_debug() -> Result<()> {
     assert!(debug_str.contains("binary_count"));
     assert!(debug_str.contains("completion_count"));
     assert!(debug_str.contains("backup_info"));
-Ok(())
+    Ok(())
 }
 
 /// 测试 RollbackResult 结构体创建
@@ -209,7 +209,7 @@ fn test_rollback_result_creation() -> Result<()> {
     assert_eq!(rollback_result.restored_binaries[0], "workflow");
     assert_eq!(rollback_result.failed_binaries[0].0, "failed_binary");
     assert_eq!(rollback_result.failed_binaries[0].1, "Permission denied");
-Ok(())
+    Ok(())
 }
 
 /// 测试 RollbackResult 部分成功场景
@@ -234,7 +234,7 @@ fn test_rollback_result_partial_success() -> Result<()> {
     // 验证失败信息
     assert_eq!(rollback_result.failed_binaries[0].1, "Backup file missing");
     assert_eq!(rollback_result.failed_completions[0].1, "Permission denied");
-Ok(())
+    Ok(())
 }
 
 /// 测试 RollbackResult 完全失败场景
@@ -262,7 +262,7 @@ fn test_rollback_result_complete_failure() -> Result<()> {
     assert_eq!(rollback_result.failed_completions.len(), 1);
     assert_eq!(rollback_result.shell_reload_success, None);
     assert_eq!(rollback_result.shell_config_file, None);
-Ok(())
+    Ok(())
 }
 
 /// 测试 RollbackResult 克隆和调试输出
@@ -302,7 +302,7 @@ fn test_rollback_result_clone_and_debug() -> Result<()> {
     assert!(debug_str.contains("restored_binaries"));
     assert!(debug_str.contains("restored_completions"));
     assert!(debug_str.contains("shell_reload_success"));
-Ok(())
+    Ok(())
 }
 
 /// 测试 RollbackManager 清理备份功能
@@ -327,7 +327,7 @@ fn test_rollback_manager_cleanup_backup() -> Result<()> {
             // 在测试环境中失败是可以接受的，主要是验证方法不会 panic
         }
     }
-Ok(())
+    Ok(())
 }
 
 /// 测试 BackupInfo 内部方法（通过公共接口）
@@ -362,7 +362,7 @@ fn test_backup_info_internal_methods() -> Result<()> {
     assert_eq!(backup_info.completion_backups.len(), 1);
     assert_eq!(backup_info.binary_backups[0].0, "test_binary");
     assert_eq!(backup_info.completion_backups[0].0, "test_completion");
-Ok(())
+    Ok(())
 }
 
 /// 测试边界情况和错误处理
@@ -401,7 +401,7 @@ fn test_edge_cases_and_error_handling() -> Result<()> {
     assert!(empty_rollback_result.failed_completions.is_empty());
     assert_eq!(empty_rollback_result.shell_reload_success, None);
     assert_eq!(empty_rollback_result.shell_config_file, None);
-Ok(())
+    Ok(())
 }
 
 /// 测试复杂的备份和回滚场景
@@ -441,10 +441,8 @@ fn test_complex_backup_rollback_scenario() -> Result<()> {
 
     // 只创建部分备份文件，模拟部分备份成功的情况
     fs::write(backup_dir.join("workflow"), "workflow backup")?;
-    fs::write(backup_dir.join("workflow.bash"), "bash completion backup")
-        ?;
-    fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup")
-        ?;
+    fs::write(backup_dir.join("workflow.bash"), "bash completion backup")?;
+    fs::write(backup_dir.join("workflow.zsh"), "zsh completion backup")?;
 
     // 验证备份信息的完整性
     assert_eq!(complex_backup_info.binary_backups.len(), 3);
@@ -503,5 +501,5 @@ fn test_complex_backup_rollback_scenario() -> Result<()> {
 
     assert!((binary_success_rate - 0.33).abs() < 0.01); // 约 33%
     assert!((completion_success_rate - 0.5).abs() < 0.01); // 50%
-Ok(())
+    Ok(())
 }

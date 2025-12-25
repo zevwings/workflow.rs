@@ -66,11 +66,7 @@ fn test_sort_branches_with_priority_develop_second() -> Result<()> {
 
 #[test]
 fn test_sort_branches_with_priority_alphabetical_others() -> Result<()> {
-    let branches = vec![
-        "zebra".to_string(),
-        "alpha".to_string(),
-        "beta".to_string(),
-    ];
+    let branches = vec!["zebra".to_string(), "alpha".to_string(), "beta".to_string()];
 
     let sorted = sort_branches_with_priority(branches)?;
 
@@ -132,11 +128,11 @@ fn test_sort_branches_with_prefix_priority() -> Result<()> {
 fn test_sort_branches_all_priority_levels() -> Result<()> {
     // 测试所有优先级级别的分支
     let branches = vec![
-        "zebra".to_string(),      // Priority 4
-        "main".to_string(),        // Priority 1
-        "master".to_string(),      // Priority 1 (after main)
-        "develop".to_string(),     // Priority 2
-        "alpha".to_string(),       // Priority 4
+        "zebra".to_string(),        // Priority 4
+        "main".to_string(),         // Priority 1
+        "master".to_string(),       // Priority 1 (after main)
+        "develop".to_string(),      // Priority 2
+        "alpha".to_string(),        // Priority 4
         "feature/test".to_string(), // Priority 4
     ];
 
@@ -154,8 +150,14 @@ fn test_sort_branches_all_priority_levels() -> Result<()> {
     let feature_pos = sorted.iter().position(|b| b == "feature/test").expect("feature not found");
     let zebra_pos = sorted.iter().position(|b| b == "zebra").expect("zebra not found");
 
-    assert!(alpha_pos < feature_pos, "alpha should come before feature/test");
-    assert!(feature_pos < zebra_pos, "feature/test should come before zebra");
+    assert!(
+        alpha_pos < feature_pos,
+        "alpha should come before feature/test"
+    );
+    assert!(
+        feature_pos < zebra_pos,
+        "feature/test should come before zebra"
+    );
     Ok(())
 }
 
@@ -195,4 +197,3 @@ fn test_sort_branches_special_characters() -> Result<()> {
     assert_eq!(sorted.len(), 4);
     Ok(())
 }
-

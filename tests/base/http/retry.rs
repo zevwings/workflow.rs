@@ -1861,8 +1861,7 @@ fn test_immediate_success() -> Result<()> {
         interactive: false,
     };
 
-    let result =
-        HttpRetry::retry(create_always_success_operation(), &config, "test operation")?;
+    let result = HttpRetry::retry(create_always_success_operation(), &config, "test operation")?;
 
     assert_eq!(result.retry_count, 0);
     assert_eq!(result.succeeded_on_first_attempt, true);
@@ -1880,8 +1879,7 @@ fn test_success_after_retries() -> Result<()> {
         interactive: false,
     };
 
-    let result =
-        HttpRetry::retry(create_success_after_attempts(2), &config, "test operation")?;
+    let result = HttpRetry::retry(create_success_after_attempts(2), &config, "test operation")?;
 
     assert_eq!(result.retry_count, 1);
     assert_eq!(result.succeeded_on_first_attempt, false);

@@ -108,11 +108,7 @@ fn test_completion_generator_generate_all(#[case] shell: &str) {
             if shell == "zsh" {
                 let files: Vec<_> = std::fs::read_dir(&test_dir)
                     .expect("should read test directory")
-                    .map(|entry| {
-                        entry
-                            .expect("directory entry should be valid")
-                            .file_name()
-                    })
+                    .map(|entry| entry.expect("directory entry should be valid").file_name())
                     .collect();
                 // 应该至少有一个 completion 文件
                 assert!(

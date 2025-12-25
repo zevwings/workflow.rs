@@ -43,7 +43,12 @@ impl CliTestEnv {
 
         // 添加remote origin（用于测试需要remote的功能）
         std::process::Command::new("git")
-            .args(["remote", "add", "origin", "https://github.com/test/test-repo.git"])
+            .args([
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/test/test-repo.git",
+            ])
             .current_dir(self.path())
             .output()
             .expect("Failed to add remote origin");
@@ -51,7 +56,11 @@ impl CliTestEnv {
         // 设置远程HEAD引用（模拟远程默认分支为main）
         // 这样get_default_branch()就能正确工作
         std::process::Command::new("git")
-            .args(["symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main"])
+            .args([
+                "symbolic-ref",
+                "refs/remotes/origin/HEAD",
+                "refs/remotes/origin/main",
+            ])
             .current_dir(self.path())
             .output()
             .ok(); // 允许失败，因为可能remote branch还不存在

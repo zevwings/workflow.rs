@@ -321,9 +321,8 @@ fn test_pr_approve_command(#[case] pull_request_id: Option<&str>) {
 
 #[test]
 fn test_pr_comment_command_structure() {
-    let cli =
-        TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"])
-            .expect("CLI args should parse successfully");
+    let cli = TestPRCli::try_parse_from(&["test-pr", "comment", "123", "This is a comment"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         PRCommands::Comment {

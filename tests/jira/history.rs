@@ -393,7 +393,10 @@ fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
 #[case("999")]
 #[case("888")]
 #[case("777")]
-fn test_delete_work_history_entry_nonexistent_file(unique_repo: String, #[case] pr_id: &str) -> Result<()> {
+fn test_delete_work_history_entry_nonexistent_file(
+    unique_repo: String,
+    #[case] pr_id: &str,
+) -> Result<()> {
     // 测试删除不存在文件中的条目
     let delete_result = JiraWorkHistory::delete_work_history_entry(pr_id, Some(&unique_repo))?;
 

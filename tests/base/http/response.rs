@@ -360,10 +360,19 @@ fn test_response_headers() -> Result<()> {
     let response = client.get(&url, config)?;
 
     assert_eq!(
-        response.headers.get("x-custom-header").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+        response
+            .headers
+            .get("x-custom-header")
+            .ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
         "custom-value"
     );
-    assert_eq!(response.headers.get("x-request-id").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?, "12345");
+    assert_eq!(
+        response
+            .headers
+            .get("x-request-id")
+            .ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+        "12345"
+    );
     _mock.assert();
     Ok(())
 }

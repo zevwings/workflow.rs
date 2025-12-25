@@ -131,7 +131,7 @@ fn test_jira_command_without_id(#[case] subcommand: &str) -> Result<()> {
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== 输出格式测试 ====================
@@ -141,7 +141,10 @@ Ok(())
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_output_format_table(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--table"])?;
 
     match &cli.command {
@@ -171,7 +174,7 @@ fn test_jira_command_output_format_table(#[case] subcommand: &str, #[case] jira_
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 #[rstest]
@@ -179,7 +182,10 @@ Ok(())
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_output_format_json(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--json"])?;
 
     match &cli.command {
@@ -209,7 +215,7 @@ fn test_jira_command_output_format_json(#[case] subcommand: &str, #[case] jira_i
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 #[rstest]
@@ -217,7 +223,10 @@ Ok(())
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_output_format_yaml(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--yaml"])?;
 
     match &cli.command {
@@ -247,7 +256,7 @@ fn test_jira_command_output_format_yaml(#[case] subcommand: &str, #[case] jira_i
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 #[rstest]
@@ -255,9 +264,11 @@ Ok(())
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
 #[case("comments", "PROJ-123")]
-fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
-    let cli =
-        TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"])?;
+fn test_jira_command_output_format_markdown(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
+    let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id, "--markdown"])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -286,14 +297,17 @@ fn test_jira_command_output_format_markdown(#[case] subcommand: &str, #[case] ji
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 #[rstest]
 #[case("info", "PROJ-123")]
 #[case("related", "PROJ-123")]
 #[case("changelog", "PROJ-123")]
-fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_output_format_all_flags(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&[
         "test-jira",
         subcommand,
@@ -302,8 +316,7 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
         "--json",
         "--yaml",
         "--markdown",
-    ])
-    ?;
+    ])?;
 
     match &cli.command {
         JiraSubcommand::Info { args, .. } => {
@@ -326,7 +339,7 @@ fn test_jira_command_output_format_all_flags(#[case] subcommand: &str, #[case] j
         }
         _ => panic!("Unexpected command variant"),
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== Clean 命令测试 ====================
@@ -341,8 +354,7 @@ fn test_jira_clean_command_structure() -> Result<()> {
         "--all",
         "--dry-run",
         "--list",
-    ])
-    ?;
+    ])?;
 
     match cli.command {
         JiraSubcommand::Clean {
@@ -358,7 +370,7 @@ fn test_jira_clean_command_structure() -> Result<()> {
         }
         _ => panic!("Expected Clean command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[rstest]
@@ -432,31 +444,29 @@ fn test_jira_clean_command_short_flags() -> Result<()> {
         }
         _ => panic!("Expected Clean command"),
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== Comments 命令参数测试 ====================
 
 #[test]
 fn test_jira_comments_command_with_limit() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])
-        ?;
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--limit", "10"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.limit, Some(10)),
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
 fn test_jira_comments_command_with_offset() -> Result<()> {
-    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])
-        ?;
+    let cli = TestJiraCli::try_parse_from(&["test-jira", "comments", "PROJ-123", "--offset", "5"])?;
     match cli.command {
         JiraSubcommand::Comments { pagination, .. } => assert_eq!(pagination.offset, Some(5)),
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -467,15 +477,14 @@ fn test_jira_comments_command_with_author() -> Result<()> {
         "PROJ-123",
         "--author",
         "user@example.com",
-    ])
-    ?;
+    ])?;
     match cli.command {
         JiraSubcommand::Comments { author, .. } => {
             assert_eq!(author, Some("user@example.com".to_string()));
         }
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -486,15 +495,14 @@ fn test_jira_comments_command_with_since() -> Result<()> {
         "PROJ-123",
         "--since",
         "2024-01-01T00:00:00Z",
-    ])
-    ?;
+    ])?;
     match cli.command {
         JiraSubcommand::Comments { since, .. } => {
             assert_eq!(since, Some("2024-01-01T00:00:00Z".to_string()));
         }
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -512,8 +520,7 @@ fn test_jira_comments_command_all_filters() -> Result<()> {
         "user@example.com",
         "--since",
         "2024-01-01T00:00:00Z",
-    ])
-    ?;
+    ])?;
 
     match cli.command {
         JiraSubcommand::Comments {
@@ -531,7 +538,7 @@ fn test_jira_comments_command_all_filters() -> Result<()> {
         }
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -545,8 +552,7 @@ fn test_jira_comments_command_pagination() -> Result<()> {
         "15",
         "--offset",
         "30",
-    ])
-    ?;
+    ])?;
 
     match cli.command {
         JiraSubcommand::Comments {
@@ -560,7 +566,7 @@ fn test_jira_comments_command_pagination() -> Result<()> {
         }
         _ => panic!("Expected Comments command"),
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== 命令枚举测试 ====================
@@ -590,7 +596,7 @@ fn test_jira_command_error_handling_invalid_subcommand() -> Result<()> {
     // 测试无效子命令的错误处理
     let result = TestJiraCli::try_parse_from(&["test-jira", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
-Ok(())
+    Ok(())
 }
 
 // ==================== Changelog 命令测试 ====================
@@ -609,5 +615,5 @@ fn test_jira_changelog_command_with_field_filter() -> Result<()> {
         }
         _ => panic!("Expected Changelog command"),
     }
-Ok(())
+    Ok(())
 }

@@ -40,8 +40,7 @@ fn test_get_unix_timestamp() {
 fn test_format_document_timestamp_all_formats_utc() {
     // 测试所有格式在 UTC 时区下的行为
     let date_only = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
-    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$")
-        .expect("Date only regex should be valid");
+    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date only regex should be valid");
     assert!(re_date.is_match(&date_only));
 
     let datetime = format_document_timestamp(DateFormat::DateTime, Timezone::Utc);

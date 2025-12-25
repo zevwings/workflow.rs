@@ -18,7 +18,8 @@ struct TestMigrateCli {
 #[test]
 fn test_migrate_command_structure_with_dry_run() {
     // 测试 Migrate 命令结构（带 --dry-run 参数）
-    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate", "--dry-run"]).expect("CLI args should parse successfully");
+    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate", "--dry-run"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         Some(Commands::Migrate { dry_run, keep_old }) => {
@@ -32,7 +33,8 @@ fn test_migrate_command_structure_with_dry_run() {
 #[test]
 fn test_migrate_command_structure_with_keep_old() {
     // 测试 Migrate 命令结构（带 --keep-old 参数）
-    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate", "--keep-old"]).expect("CLI args should parse successfully");
+    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate", "--keep-old"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         Some(Commands::Migrate { dry_run, keep_old }) => {
@@ -62,7 +64,8 @@ fn test_migrate_command_structure_with_both_flags() {
 #[test]
 fn test_migrate_command_structure_minimal() {
     // 测试 Migrate 命令最小参数
-    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate"]).expect("CLI args should parse successfully");
+    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         Some(Commands::Migrate { dry_run, keep_old }) => {
@@ -78,7 +81,8 @@ fn test_migrate_command_structure_minimal() {
 #[test]
 fn test_migrate_command_parsing() {
     // 测试 Migrate 命令可以正确解析
-    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate"]).expect("CLI args should parse successfully");
+    let cli = TestMigrateCli::try_parse_from(&["test-workflow", "migrate"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, Some(Commands::Migrate { .. })));
 }
 

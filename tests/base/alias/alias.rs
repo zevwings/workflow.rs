@@ -214,7 +214,7 @@ mod tests {
         let result = mock_expand_alias("nonexistent", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Alias not found"));
-    Ok(())
+        Ok(())
     }
 
     // ==================== 循环检测测试 ====================
@@ -230,7 +230,7 @@ mod tests {
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
         let result = mock_expand_alias("a", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Circular alias detected"));
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -290,7 +290,7 @@ mod tests {
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -650,7 +650,7 @@ mod tests {
         let aliases = result?;
         // 验证返回的是 HashMap
         let _alias_count = aliases.len();
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
         let aliases = result?;
         // 验证返回的是 HashMap
         let _alias_count = aliases.len();
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -675,7 +675,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(!result?);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -686,7 +686,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result?, args);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -697,7 +697,7 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result?, args);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -716,7 +716,7 @@ mod tests {
         // 如果第一个参数不是别名，应该保持不变
         assert_eq!(expanded[0], "workflow");
         assert_eq!(expanded[1], "status");
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -731,7 +731,7 @@ mod tests {
         assert!(result.is_ok());
         // 直接循环应该返回 true
         assert!(result?);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -744,7 +744,7 @@ mod tests {
         assert!(result.is_ok());
         // 非循环应该返回 false
         assert!(!result?);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -759,7 +759,7 @@ mod tests {
         // 深度超过限制应该返回错误
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -772,7 +772,7 @@ mod tests {
         // 别名不存在应该返回错误
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Alias not found"));
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -786,7 +786,7 @@ mod tests {
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -801,7 +801,7 @@ mod tests {
         // 如果别名存在且已访问，应该检测到循环
         // 如果别名不存在，应该返回"not found"错误
         assert!(result.is_err());
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -813,7 +813,7 @@ mod tests {
 
         // 如果别名存在，应该展开；如果不存在，应该返回原参数
         assert!(result.is_ok());
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -827,7 +827,7 @@ mod tests {
 
         // 应该返回 true 或 false，取决于是否形成循环
         assert!(result.is_ok());
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -839,7 +839,7 @@ mod tests {
         // 如果第一个词不是别名，应该返回 false
         assert!(result.is_ok());
         assert!(!result?);
-    Ok(())
+        Ok(())
     }
 
     #[test]
@@ -852,7 +852,7 @@ mod tests {
 
         // 可能成功或失败，取决于配置
         assert!(result.is_ok() || result.is_err());
-    Ok(())
+        Ok(())
     }
 
     // ==================== 使用临时配置文件的实际方法测试 ====================
@@ -1298,7 +1298,7 @@ aliases = {
         let result = mock_expand_alias("alias0", &aliases, &mut visited, 0);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("depth exceeded maximum"));
-    Ok(())
+        Ok(())
     }
 
     #[test]

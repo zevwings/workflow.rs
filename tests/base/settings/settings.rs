@@ -457,9 +457,7 @@ fn test_complex_configuration_scenario() {
     let current_account = complex_settings.github.get_current_account();
     assert!(current_account.is_some());
     assert_eq!(
-        current_account
-            .expect("current account should exist")
-            .name,
+        current_account.expect("current account should exist").name,
         "main"
     );
 

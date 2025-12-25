@@ -83,7 +83,10 @@ impl GitTestEnv {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!("Failed to get current branch: {}", error));
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to get current branch: {}",
+                error
+            ));
         }
 
         Ok(String::from_utf8(output.stdout)?.trim().to_string())
@@ -98,7 +101,10 @@ impl GitTestEnv {
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);
-            return Err(color_eyre::eyre::eyre!("Failed to get commit SHA: {}", error));
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to get commit SHA: {}",
+                error
+            ));
         }
 
         Ok(String::from_utf8(output.stdout)?.trim().to_string())
@@ -106,10 +112,7 @@ impl GitTestEnv {
 
     /// 运行Git命令
     fn run_git_command(repo_path: &Path, args: &[&str]) -> Result<()> {
-        let output = Command::new("git")
-            .args(args)
-            .current_dir(repo_path)
-            .output()?;
+        let output = Command::new("git").args(args).current_dir(repo_path).output()?;
 
         if !output.status.success() {
             let error = String::from_utf8_lossy(&output.stderr);

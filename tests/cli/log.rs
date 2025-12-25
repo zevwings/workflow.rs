@@ -39,7 +39,7 @@ fn test_log_download_command_structure() -> Result<()> {
         }
         _ => panic!("Expected Download command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -53,7 +53,7 @@ fn test_log_download_command_without_id() -> Result<()> {
         }
         _ => panic!("Expected Download command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -71,7 +71,7 @@ fn test_log_find_command_structure() -> Result<()> {
         }
         _ => panic!("Expected Find command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn test_log_find_command_with_jira_id_only() -> Result<()> {
         }
         _ => panic!("Expected Find command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -107,7 +107,7 @@ fn test_log_find_command_without_parameters() -> Result<()> {
         }
         _ => panic!("Expected Find command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn test_log_search_command_structure() -> Result<()> {
         }
         _ => panic!("Expected Search command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -143,7 +143,7 @@ fn test_log_search_command_with_jira_id_only() -> Result<()> {
         }
         _ => panic!("Expected Search command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -161,7 +161,7 @@ fn test_log_search_command_without_parameters() -> Result<()> {
         }
         _ => panic!("Expected Search command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -179,7 +179,7 @@ fn test_log_command_parsing_all_subcommands() -> Result<()> {
     // Search
     let cli = TestLogCli::try_parse_from(&["test-log", "search"])?;
     assert!(matches!(cli.command, LogSubcommand::Search { .. }));
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -187,7 +187,7 @@ fn test_log_command_error_handling_invalid_subcommand() -> Result<()> {
     // 测试无效子命令的错误处理
     let result = TestLogCli::try_parse_from(&["test-log", "invalid"]);
     assert!(result.is_err(), "Should fail on invalid subcommand");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -213,7 +213,7 @@ fn test_log_jira_id_parameter_optional() -> Result<()> {
         LogSubcommand::Search { jira_id, .. } => assert_eq!(jira_id.jira_id, None),
         _ => panic!(),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -233,7 +233,7 @@ fn test_log_find_with_request_id_only() -> Result<()> {
         }
         _ => panic!("Expected Find command"),
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -253,5 +253,5 @@ fn test_log_search_with_search_term_only() -> Result<()> {
         }
         _ => panic!("Expected Search command"),
     }
-Ok(())
+    Ok(())
 }

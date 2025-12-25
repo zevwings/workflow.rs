@@ -45,7 +45,8 @@ fn test_branch_create_command_structure() {
 #[test]
 fn test_branch_create_command_minimal() {
     // 测试 Create 命令最小参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create"]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create {
@@ -64,7 +65,8 @@ fn test_branch_create_command_minimal() {
 #[test]
 fn test_branch_create_command_with_jira_ticket_only() {
     // 测试 Create 命令只带 JIRA ticket
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "PROJ-456"]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "PROJ-456"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create {
@@ -83,7 +85,8 @@ fn test_branch_create_command_with_jira_ticket_only() {
 #[test]
 fn test_branch_create_command_with_from_default() {
     // 测试 Create 命令带 --from-default 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--from-default"]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--from-default"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create {
@@ -102,7 +105,8 @@ fn test_branch_create_command_with_from_default() {
 #[test]
 fn test_branch_create_command_with_dry_run() {
     // 测试 Create 命令带 --dry-run 参数
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--dry-run"]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", "--dry-run"])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create {
@@ -148,7 +152,8 @@ fn test_branch_create_command_empty_jira_id() {
 fn test_branch_create_command_very_long_jira_id() {
     // 测试超长 JIRA ID（边界情况）
     let long_jira_id = "PROJ-".to_string() + &"1".repeat(100);
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", &long_jira_id]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", &long_jira_id])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {
@@ -163,7 +168,8 @@ fn test_branch_create_command_special_characters_in_jira_id() {
     // 测试 JIRA ID 中的特殊字符（边界情况）
     // 注意：实际业务逻辑可能会验证 JIRA ID 格式，但 CLI 解析应该接受任何字符串
     let special_jira_id = "PROJ-123_test@example.com";
-    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", special_jira_id]).expect("CLI args should parse successfully");
+    let cli = TestBranchCli::try_parse_from(&["test-branch", "create", special_jira_id])
+        .expect("CLI args should parse successfully");
 
     match cli.command {
         BranchSubcommand::Create { jira_id, .. } => {

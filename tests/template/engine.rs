@@ -6,8 +6,8 @@
 //! - 变量替换和条件渲染
 //! - 错误处理和边界情况
 
-use pretty_assertions::assert_eq;
 use color_eyre::Result;
+use pretty_assertions::assert_eq;
 use serde_json::json;
 use std::collections::HashMap;
 use workflow::template::{TemplateEngine, TemplateEngineType};
@@ -53,7 +53,7 @@ fn test_new_engine_creation() -> Result<()> {
     let result = engine.render_string("Hello {{name}}", &json!({"name": "World"}));
     assert!(result.is_ok());
     assert_eq!(result?, "Hello World");
-Ok(())
+    Ok(())
 }
 
 /// 测试默认实现
@@ -65,7 +65,7 @@ fn test_default_engine_creation() -> Result<()> {
     let result = engine.render_string("Test {{value}}", &json!({"value": "default"}));
     assert!(result.is_ok());
     assert_eq!(result?, "Test default");
-Ok(())
+    Ok(())
 }
 
 /// 测试简单模板渲染
@@ -83,7 +83,7 @@ fn test_render_simple_template() -> Result<()> {
     let rendered = engine.render("greeting", &vars);
     assert!(rendered.is_ok());
     assert_eq!(rendered?, "Hello Alice!");
-Ok(())
+    Ok(())
 }
 
 /// 测试变量替换渲染
@@ -108,7 +108,7 @@ fn test_render_with_variables() -> Result<()> {
         nested_result?,
         "User: Alice, Email: alice@example.com, Role: admin"
     );
-Ok(())
+    Ok(())
 }
 
 /// 测试条件渲染
@@ -137,7 +137,7 @@ fn test_render_with_conditions() -> Result<()> {
     let result_enabled = engine.render_string(unless_template, &vars_enabled);
     assert!(result_enabled.is_ok());
     assert_eq!(result_enabled?, "Feature enabled");
-Ok(())
+    Ok(())
 }
 
 /// 测试循环渲染
@@ -164,7 +164,7 @@ fn test_render_with_loops() -> Result<()> {
     let object_result = engine.render_string(object_template, &object_vars);
     assert!(object_result.is_ok());
     assert_eq!(object_result?, "0: Alice (admin)\n1: Bob (user)");
-Ok(())
+    Ok(())
 }
 
 /// 测试模板注册
@@ -197,7 +197,7 @@ fn test_register_template() -> Result<()> {
     let render3 = engine.render("template1", &vars);
     assert!(render3.is_ok());
     assert_eq!(render3?, "Hi World!");
-Ok(())
+    Ok(())
 }
 
 /// 测试无效模板错误处理
@@ -240,7 +240,7 @@ fn test_render_missing_variables() -> Result<()> {
     let empty_result = engine.render_string(template, &empty_vars);
     assert!(empty_result.is_ok());
     assert_eq!(empty_result?, "Hello , your age is ");
-Ok(())
+    Ok(())
 }
 
 /// 测试 TemplateEngineType 枚举
@@ -260,7 +260,7 @@ fn test_template_engine_type() -> Result<()> {
     // 测试 Copy 实现
     let copied_type = engine_type;
     assert!(matches!(copied_type, TemplateEngineType::Handlebars));
-Ok(())
+    Ok(())
 }
 
 /// 测试复杂模板场景
@@ -296,7 +296,7 @@ No features available
     assert!(rendered.contains("- git"));
     assert!(rendered.contains("- jira"));
     assert!(rendered.contains("- pr"));
-Ok(())
+    Ok(())
 }
 
 /// 测试特殊字符处理
@@ -320,5 +320,5 @@ fn test_special_characters_handling() -> Result<()> {
     assert!(rendered.contains("Hello \"World\" & <Universe>!"));
     assert!(rendered.contains("/path/to/file.txt"));
     assert!(rendered.contains("if (x > 0) { return true; }"));
-Ok(())
+    Ok(())
 }

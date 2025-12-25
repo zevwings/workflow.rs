@@ -80,7 +80,9 @@ fn test_request_config_headers() -> Result<()> {
     assert!(config.headers.is_some());
     if let Some(headers) = config.headers {
         assert_eq!(
-            headers.get("X-Custom-Header").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+            headers
+                .get("X-Custom-Header")
+                .ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
             "value"
         );
     }
@@ -179,7 +181,9 @@ fn test_multipart_request_config_headers() -> Result<()> {
     assert!(config.headers.is_some());
     if let Some(headers) = config.headers {
         assert_eq!(
-            headers.get("X-Custom-Header").ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
+            headers
+                .get("X-Custom-Header")
+                .ok_or_else(|| color_eyre::eyre::eyre!("Missing header"))?,
             "value"
         );
     }

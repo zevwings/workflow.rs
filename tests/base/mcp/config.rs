@@ -8,8 +8,8 @@
 //! - 使用 `ok_or_else()` 替代 `unwrap()` 处理 Option 类型
 //! - 测试MCP配置的读取、写入和合并功能
 
-use color_eyre::Result;
 use color_eyre::eyre::eyre;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use tempfile::TempDir;
@@ -192,7 +192,10 @@ fn test_mcp_config_manager_merge() -> Result<()> {
 
     // 验证合并结果
     assert_eq!(merged_config.mcp_servers.len(), 2);
-    let merged_server = merged_config.mcp_servers.get("server1").ok_or_else(|| eyre!("server1 not found"))?;
+    let merged_server = merged_config
+        .mcp_servers
+        .get("server1")
+        .ok_or_else(|| eyre!("server1 not found"))?;
     assert_eq!(
         merged_server.env.get("EXISTING_KEY"),
         Some(&"existing_value".to_string())
@@ -347,7 +350,10 @@ fn test_mcp_config_manager_merge_existing_server() -> Result<()> {
     }
 
     // 验证合并结果：现有键保留，新键添加
-    let merged_server = merged_config.mcp_servers.get("server1").ok_or_else(|| eyre!("server1 not found"))?;
+    let merged_server = merged_config
+        .mcp_servers
+        .get("server1")
+        .ok_or_else(|| eyre!("server1 not found"))?;
     assert_eq!(
         merged_server.env.get("EXISTING_KEY"),
         Some(&"existing_value".to_string())
@@ -507,7 +513,10 @@ fn test_mcp_config_manager_merge_env_vars_not_overwrite() -> Result<()> {
     }
 
     // 验证现有值没有被覆盖
-    let merged_server = merged_config.mcp_servers.get("server1").ok_or_else(|| eyre!("server1 not found"))?;
+    let merged_server = merged_config
+        .mcp_servers
+        .get("server1")
+        .ok_or_else(|| eyre!("server1 not found"))?;
     assert_eq!(
         merged_server.env.get("EXISTING_KEY"),
         Some(&"existing_value".to_string())
@@ -816,7 +825,10 @@ fn test_server_config_with_empty_values() -> Result<()> {
         workflow::base::util::file::FileReader::new(&config_path).json()?;
 
     // 验证空值被正确保存和读取
-    let server = read_config.mcp_servers.get("empty-server").ok_or_else(|| eyre!("empty-server not found"))?;
+    let server = read_config
+        .mcp_servers
+        .get("empty-server")
+        .ok_or_else(|| eyre!("empty-server not found"))?;
     assert_eq!(server.command, "");
     assert!(server.args.is_empty());
     assert!(server.env.is_empty());

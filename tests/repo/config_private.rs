@@ -76,7 +76,10 @@ impl TestEnv {
         let temp_path = self.temp_dir.path();
         // 注意：不需要set_current_dir，因为所有Git命令都使用.current_dir(temp_path)
 
-        std::process::Command::new("git").args(["init"]).current_dir(temp_path).output()?;
+        std::process::Command::new("git")
+            .args(["init"])
+            .current_dir(temp_path)
+            .output()?;
         std::process::Command::new("git")
             .args(["config", "user.name", "Test User"])
             .current_dir(temp_path)
@@ -825,7 +828,10 @@ fn test_save_to_readonly_directory() -> Result<()> {
 
     // 验证：返回权限错误
     // 注意：在某些系统上，root 用户或特定权限配置下这个测试可能会失败
-    assert!(result.is_err(), "Expected error when saving to readonly directory");
+    assert!(
+        result.is_err(),
+        "Expected error when saving to readonly directory"
+    );
 
     // 恢复权限以便清理
     let mut perms = fs::metadata(&workflow_dir)?.permissions();

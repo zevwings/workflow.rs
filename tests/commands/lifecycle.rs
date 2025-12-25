@@ -18,4 +18,3 @@ fn test_version_command_output_contains_version() {
     let result = VersionCommand::show();
     assert!(result.is_ok());
 }
-

@@ -23,9 +23,9 @@ fn test_check_has_last_commit_without_git_repo() {
             // 验证错误消息包含相关信息
             let error_msg = e.to_string();
             assert!(
-                error_msg.contains("No commits") ||
-                error_msg.contains("git") ||
-                error_msg.contains("repository"),
+                error_msg.contains("No commits")
+                    || error_msg.contains("git")
+                    || error_msg.contains("repository"),
                 "Error message should indicate the issue: {}",
                 error_msg
             );
@@ -116,4 +116,3 @@ fn test_check_has_last_commit_with_commits() {
 
     // 目录会在函数结束时自动恢复
 }
-

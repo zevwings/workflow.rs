@@ -174,9 +174,7 @@ fn test_post_request_success() -> Result<()> {
         .as_mut()
         .mock("POST", "/test")
         .match_header("content-type", "application/json")
-        .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data)?,
-        ))
+        .match_body(Matcher::JsonString(serde_json::to_string(&body_data)?))
         .with_status(201)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "name": "test"}"#)
@@ -203,9 +201,7 @@ fn test_put_request_success() -> Result<()> {
         .as_mut()
         .mock("PUT", "/test/1")
         .match_header("content-type", "application/json")
-        .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data)?,
-        ))
+        .match_body(Matcher::JsonString(serde_json::to_string(&body_data)?))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "name": "updated"}"#)
@@ -248,9 +244,7 @@ fn test_patch_request_success() -> Result<()> {
         .as_mut()
         .mock("PATCH", "/test/1")
         .match_header("content-type", "application/json")
-        .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data)?,
-        ))
+        .match_body(Matcher::JsonString(serde_json::to_string(&body_data)?))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"id": 1, "status": "active"}"#)
@@ -391,9 +385,7 @@ fn test_request_with_all_options() -> Result<()> {
             "filter".to_string(),
             "active".to_string(),
         ))
-        .match_body(Matcher::JsonString(
-            serde_json::to_string(&body_data)?,
-        ))
+        .match_body(Matcher::JsonString(serde_json::to_string(&body_data)?))
         .with_status(200)
         .with_header("content-type", "application/json")
         .with_body(r#"{"success": true}"#)
@@ -536,9 +528,7 @@ fn test_http_client_get_with_headers() -> color_eyre::Result<()> {
     let mut headers = HeaderMap::new();
     headers.insert(
         "X-Custom-Header",
-        "custom-value"
-            .parse()
-            .expect("header value should parse successfully"),
+        "custom-value".parse().expect("header value should parse successfully"),
     );
 
     let mock = manager

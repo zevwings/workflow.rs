@@ -20,11 +20,13 @@ fn test_repo_command_parsing_all_subcommands() {
     // 测试所有子命令都可以正确解析
 
     // Setup
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"]).expect("CLI args should parse successfully");
+    let cli = TestRepoCli::try_parse_from(&["test-repo", "setup"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, RepoSubcommand::Setup));
 
     // Show
-    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"]).expect("CLI args should parse successfully");
+    let cli = TestRepoCli::try_parse_from(&["test-repo", "show"])
+        .expect("CLI args should parse successfully");
     assert!(matches!(cli.command, RepoSubcommand::Show));
 }
 

@@ -81,8 +81,12 @@ impl TestDataFactory {
         }
 
         // 解析为 JSON
-        serde_json::from_str(&result)
-            .wrap_err_with(|| format!("Failed to parse template result as JSON for file: {}", filename))
+        serde_json::from_str(&result).wrap_err_with(|| {
+            format!(
+                "Failed to parse template result as JSON for file: {}",
+                filename
+            )
+        })
     }
 }
 

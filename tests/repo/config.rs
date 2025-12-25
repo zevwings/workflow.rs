@@ -93,7 +93,10 @@ fn test_branch_config_empty_deserialization() -> Result<()> {
 #[case(Some("feature".to_string()), vec![])]
 #[case(Some("hotfix".to_string()), vec!["main".to_string()])]
 #[case(None, vec!["main".to_string(), "develop".to_string()])]
-fn test_branch_config_parametrized(#[case] prefix: Option<String>, #[case] ignore: Vec<String>) -> Result<()> {
+fn test_branch_config_parametrized(
+    #[case] prefix: Option<String>,
+    #[case] ignore: Vec<String>,
+) -> Result<()> {
     // 参数化测试分支配置的各种组合
     let config = BranchConfig {
         prefix,

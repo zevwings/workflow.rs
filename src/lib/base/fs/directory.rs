@@ -86,8 +86,11 @@ impl DirectoryWalker {
     /// # use color_eyre::Result;
     ///
     /// # fn main() -> Result<()> {
-    /// let walker = DirectoryWalker::new("./test_dir");
+    /// # let temp_dir = tempfile::tempdir()?;
+    /// # let test_path = temp_dir.path().join("test_dir");
+    /// let walker = DirectoryWalker::new(&test_path);
     /// walker.ensure_exists()?;
+    /// # assert!(test_path.exists());
     /// # Ok(())
     /// # }
     /// ```
@@ -114,8 +117,11 @@ impl DirectoryWalker {
     /// # use color_eyre::Result;
     ///
     /// # fn main() -> Result<()> {
+    /// # let temp_dir = tempfile::tempdir()?;
+    /// # let file_path = temp_dir.path().join("some/nested/file.txt");
     /// let walker = DirectoryWalker::new(".");
-    /// walker.ensure_parent_exists(Path::new("./some/nested/file.txt"))?;
+    /// walker.ensure_parent_exists(&file_path)?;
+    /// # assert!(file_path.parent().unwrap().exists());
     /// # Ok(())
     /// # }
     /// ```

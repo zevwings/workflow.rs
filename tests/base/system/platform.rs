@@ -2,8 +2,8 @@
 //!
 //! 测试平台检测、路径处理和系统信息获取功能。
 
-use pretty_assertions::assert_eq;
 use color_eyre::Result;
+use pretty_assertions::assert_eq;
 use std::env;
 use workflow::base::system::Platform;
 
@@ -19,7 +19,7 @@ fn test_detect_release_platform_returns_valid_format() -> Result<()> {
 
     // 验证格式：应该包含平台名称和架构，用连字符分隔
     assert!(platform.contains('-'), "Platform should contain a hyphen");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -27,8 +27,7 @@ fn test_detect_release_platform_macos() -> Result<()> {
     // 测试 macOS 平台检测
     // 注意：这个测试只在 macOS 上会通过
     if env::consts::OS == "macos" {
-        let platform =
-            Platform::detect().release_identifier()?;
+        let platform = Platform::detect().release_identifier()?;
 
         // macOS 应该是 macOS-Intel 或 macOS-AppleSilicon
         assert!(
@@ -44,7 +43,7 @@ fn test_detect_release_platform_macos() -> Result<()> {
             assert_eq!(platform, "macOS-AppleSilicon");
         }
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -52,8 +51,7 @@ fn test_detect_release_platform_linux() -> Result<()> {
     // 测试 Linux 平台检测
     // 注意：这个测试只在 Linux 上会通过
     if env::consts::OS == "linux" {
-        let platform =
-            Platform::detect().release_identifier()?;
+        let platform = Platform::detect().release_identifier()?;
 
         // Linux 应该是 Linux-x86_64, Linux-x86_64-static, 或 Linux-ARM64
         assert!(
@@ -74,7 +72,7 @@ fn test_detect_release_platform_linux() -> Result<()> {
             assert_eq!(platform, "Linux-ARM64");
         }
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -82,8 +80,7 @@ fn test_detect_release_platform_windows() -> Result<()> {
     // 测试 Windows 平台检测
     // 注意：这个测试只在 Windows 上会通过
     if env::consts::OS == "windows" {
-        let platform =
-            Platform::detect().release_identifier()?;
+        let platform = Platform::detect().release_identifier()?;
 
         // Windows 应该是 Windows-x86_64 或 Windows-ARM64
         assert!(
@@ -99,7 +96,7 @@ fn test_detect_release_platform_windows() -> Result<()> {
             assert_eq!(platform, "Windows-ARM64");
         }
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -112,7 +109,7 @@ fn test_detect_release_platform_consistency() -> Result<()> {
 
     assert_eq!(platform1, platform2);
     assert_eq!(platform2, platform3);
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -135,7 +132,7 @@ fn test_detect_release_platform_format_structure() -> Result<()> {
         "OS part should be macOS, Linux, or Windows, got: {}",
         os_part
     );
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -156,7 +153,7 @@ fn test_detect_release_platform_architecture_consistency() -> Result<()> {
             "Platform should contain ARM64 or AppleSilicon for aarch64 architecture"
         );
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -167,7 +164,7 @@ fn test_detect_release_platform_no_panic() -> Result<()> {
 
     // 不应该 panic
     assert!(result.is_ok(), "detect_release_platform should not panic");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -182,7 +179,7 @@ fn test_detect_release_platform_error_handling() -> Result<()> {
     if env::consts::OS == "macos" || env::consts::OS == "linux" || env::consts::OS == "windows" {
         assert!(result.is_ok(), "Should succeed on supported platforms");
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -204,7 +201,7 @@ fn test_platform_identifier_case() -> Result<()> {
     if platform.starts_with("Windows") {
         assert_eq!(&platform[0..7], "Windows");
     }
-Ok(())
+    Ok(())
 }
 
 // ==================== Platform 结构体基础方法测试 ====================
@@ -214,7 +211,7 @@ fn test_platform_new() -> Result<()> {
     let platform = Platform::new("macos", "aarch64");
     assert_eq!(platform.os(), "macos");
     assert_eq!(platform.arch(), "aarch64");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -224,7 +221,7 @@ fn test_platform_new_with_string() -> Result<()> {
     let platform = Platform::new(os, arch);
     assert_eq!(platform.os(), "linux");
     assert_eq!(platform.arch(), "x86_64");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -232,21 +229,21 @@ fn test_platform_detect() -> Result<()> {
     let platform = Platform::detect();
     assert_eq!(platform.os(), env::consts::OS);
     assert_eq!(platform.arch(), env::consts::ARCH);
-Ok(())
+    Ok(())
 }
 
 #[test]
 fn test_platform_os() -> Result<()> {
     let platform = Platform::new("windows", "x86_64");
     assert_eq!(platform.os(), "windows");
-Ok(())
+    Ok(())
 }
 
 #[test]
 fn test_platform_arch() -> Result<()> {
     let platform = Platform::new("linux", "aarch64");
     assert_eq!(platform.arch(), "aarch64");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -256,7 +253,7 @@ fn test_platform_is_macos() -> Result<()> {
 
     let linux_platform = Platform::new("linux", "x86_64");
     assert!(!linux_platform.is_macos());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -266,7 +263,7 @@ fn test_platform_is_linux() -> Result<()> {
 
     let macos_platform = Platform::new("macos", "aarch64");
     assert!(!macos_platform.is_linux());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -276,7 +273,7 @@ fn test_platform_is_windows() -> Result<()> {
 
     let linux_platform = Platform::new("linux", "x86_64");
     assert!(!linux_platform.is_windows());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -286,7 +283,7 @@ fn test_platform_is_x86_64() -> Result<()> {
 
     let aarch64_platform = Platform::new("linux", "aarch64");
     assert!(!aarch64_platform.is_x86_64());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -296,7 +293,7 @@ fn test_platform_is_aarch64() -> Result<()> {
 
     let x86_64_platform = Platform::new("macos", "x86_64");
     assert!(!x86_64_platform.is_aarch64());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -355,7 +352,7 @@ fn test_platform_release_identifier_unsupported() -> Result<()> {
     assert!(result.is_err());
     let error_msg = result.unwrap_err().to_string();
     assert!(error_msg.contains("Unsupported platform"));
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -363,7 +360,7 @@ fn test_platform_debug() -> Result<()> {
     let platform = Platform::new("macos", "aarch64");
     let debug_str = format!("{:?}", platform);
     assert!(debug_str.contains("macos") || debug_str.contains("aarch64"));
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -372,7 +369,7 @@ fn test_platform_clone() -> Result<()> {
     let platform2 = platform1.clone();
     assert_eq!(platform1.os(), platform2.os());
     assert_eq!(platform1.arch(), platform2.arch());
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -383,7 +380,7 @@ fn test_platform_eq() -> Result<()> {
 
     let platform3 = Platform::new("linux", "x86_64");
     assert_ne!(platform1, platform3);
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -411,8 +408,7 @@ fn test_platform_release_identifier_non_linux_does_not_check_static() -> Result<
 }
 
 #[test]
-fn test_platform_release_identifier_linux_non_x86_64_does_not_check_static(
-) -> Result<()> {
+fn test_platform_release_identifier_linux_non_x86_64_does_not_check_static() -> Result<()> {
     // 测试 Linux 非 x86_64 架构不会检查静态链接
     let linux_arm64 = Platform::new("linux", "aarch64");
 
@@ -443,7 +439,7 @@ fn test_platform_release_identifier_all_combinations() -> Result<()> {
             expected_prefix
         );
     }
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -456,7 +452,7 @@ fn test_platform_is_static_required_alpine_detection() -> Result<()> {
 
     // 应该是 Linux-x86_64 或 Linux-x86_64-static
     assert!(identifier == "Linux-x86_64" || identifier == "Linux-x86_64-static");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -492,7 +488,7 @@ fn test_platform_is_static_required_non_linux_early_return() -> Result<()> {
     // 非 Linux 平台不应该检查静态链接
     assert_eq!(macos.release_identifier()?, "macOS-Intel");
     assert_eq!(windows.release_identifier()?, "Windows-x86_64");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -503,7 +499,7 @@ fn test_platform_is_static_required_non_x86_64_early_return() -> Result<()> {
 
     // 非 x86_64 架构不应该检查静态链接
     assert_eq!(linux_arm64.release_identifier()?, "Linux-ARM64");
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -523,7 +519,7 @@ fn test_platform_is_static_required_linux_x86_64_scenarios() -> Result<()> {
         "Linux x86_64 platform should return Linux-x86_64 or Linux-x86_64-static, got: {}",
         identifier
     );
-Ok(())
+    Ok(())
 }
 
 #[test]
@@ -553,5 +549,5 @@ fn test_platform_is_static_required_actual_linux_environment() -> Result<()> {
             );
         }
     }
-Ok(())
+    Ok(())
 }
