@@ -10,7 +10,7 @@ use workflow::cli::{
     TestsSubcommand, TestsCheckSubcommand, TestsDocsSubcommand, TestsMetricsSubcommand,
     TestsReportSubcommand, TestsTrendsSubcommand, PerformanceSubcommand,
     VersionSubcommand, CiSubcommand, ChecksumSubcommand, HomebrewSubcommand,
-    TagSubcommand, PrSubcommand,
+    DevTagSubcommand, PrSubcommand,
 };
 use workflow::commands::dev::checksum;
 use workflow::commands::dev::ci;
@@ -152,11 +152,11 @@ fn main() -> Result<()> {
         }
         DevSubcommand::Tag { command } => {
             match command {
-                TagSubcommand::Create { tag, commit, ci } => {
+                DevTagSubcommand::Create { tag, commit, ci } => {
                     let cmd = tag::TagCreateCommand::new(tag, commit, ci);
                     cmd.create()?;
                 }
-                TagSubcommand::Cleanup { merge_commit, version, ci } => {
+                DevTagSubcommand::Cleanup { merge_commit, version, ci } => {
                     let cmd = tag::TagCleanupCommand::new(merge_commit, version, ci);
                     cmd.cleanup()?;
                 }

@@ -330,16 +330,45 @@ jobs:
           echo "   Event: ${{ github.event_name }}"
           echo "   Is Manual: $IS_MANUAL_TRIGGER"
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 📦 Generate version number
         id: generate_version
         run: |
-          cargo run --bin dev version generate \
+          cargo run --bin dev --release version generate \
             --master ${{ steps.detect_mode.outputs.is_master_branch == 'true' }} \
             --ci
-
-      - name: 🔧 Setup Rust toolchain
-        if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
-        uses: dtolnay/rust-toolchain@stable
 
       - name: 📝 Update Cargo.toml and Cargo.lock version
         if: steps.generate_version.outputs.needs_increment == 'true' && steps.detect_mode.outputs.is_master_branch == 'true'
@@ -697,6 +726,39 @@ jobs:
           echo "📦 Archive contents:"
           tar tzf "$ARCHIVE_NAME"
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 🔐 Calculate SHA256 checksum for archive
         id: sha256
         run: |
@@ -705,7 +767,7 @@ jobs:
           else
             ARCHIVE_NAME="workflow-${{ steps.version.outputs.version }}-${{ matrix.platform }}.tar.gz"
           fi
-          SHA256=$(cargo run --bin dev checksum calculate "$ARCHIVE_NAME")
+          SHA256=$(cargo run --bin dev --release checksum calculate "$ARCHIVE_NAME")
           echo "sha256=$SHA256" >> $GITHUB_OUTPUT
           echo "$SHA256" > "sha256-${{ matrix.platform }}.txt"
 
@@ -774,6 +836,39 @@ jobs:
           # 当 tag 指向的 commit 修改了 workflow 文件时，GITHUB_TOKEN 无法推送，必须使用 PAT
           token: ${{ secrets.WORKFLOW_PAT }}
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 🔧 Install jq
         shell: bash
         run: |
@@ -806,7 +901,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          cargo run --bin dev pr create \
+          cargo run --bin dev --release pr create \
             --version "${{ needs.update-version.outputs.version }}" \
             --base master \
             --ci
@@ -919,7 +1014,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cargo run --bin dev pr merge \
+          cargo run --bin dev --release pr merge \
             --pr-number "${{ steps.create_pr.outputs.pr_number }}" \
             --commit-title "chore: bump version to ${{ needs.update-version.outputs.version }}" \
             --commit-message "Automated version bump to ${{ needs.update-version.outputs.version }}\n\nMerged via GitHub Actions workflow" \
@@ -1030,6 +1125,39 @@ jobs:
           fi
 
       # Step 3: Create and push tag
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: ⚙️ Configure Git for tag creation
         shell: bash
         run: |
@@ -1054,19 +1182,19 @@ jobs:
                 git fetch origin "$MERGE_COMMIT_SHA" 2>/dev/null || \
                 git fetch origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null || true
               fi
-              cargo run --bin dev tag create \
+              cargo run --bin dev --release tag create \
                 --tag "$TAG" \
                 --commit "$MERGE_COMMIT_SHA" \
                 --ci
             else
               # 如果没有 merge_commit_sha，使用当前 HEAD
-              cargo run --bin dev tag create \
+              cargo run --bin dev --release tag create \
                 --tag "$TAG" \
                 --ci
             fi
           else
             # 非 Master 分支：使用当前 HEAD
-            cargo run --bin dev tag create \
+            cargo run --bin dev --release tag create \
               --tag "$TAG" \
               --ci
           fi
@@ -1212,6 +1340,39 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 🔍 Get version and tag from previous jobs
         id: version
         shell: bash
@@ -1242,7 +1403,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          cargo run --bin dev homebrew update \
+          cargo run --bin dev --release homebrew update \
             --version "${{ steps.version.outputs.version }}" \
             --tag "${{ steps.version.outputs.tag }}" \
             --formula-path Formula/workflow.rb \
@@ -1273,6 +1434,39 @@ jobs:
           # 使用 PAT 以支持删除 tag
           token: ${{ secrets.WORKFLOW_PAT }}
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 🧹 Cleanup Alpha Tags
         id: cleanup
         run: |
@@ -1284,7 +1478,7 @@ jobs:
           fi
 
           CURRENT_VERSION="${{ needs.create-tag.outputs.version }}"
-          cargo run --bin dev tag cleanup \
+          cargo run --bin dev --release tag cleanup \
             --merge-commit "$MERGE_COMMIT_SHA" \
             --version "$CURRENT_VERSION" \
             --ci

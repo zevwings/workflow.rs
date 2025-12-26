@@ -42,7 +42,7 @@ pub use pr::PRCommands;
 pub use proxy::ProxySubcommand;
 pub use repo::RepoSubcommand;
 pub use stash::StashSubcommand;
-// TagSubcommand is exported from dev module, not tag module
+pub use tag::TagSubcommand;
 
 // Dev 工具 CLI
 pub use dev::{
@@ -50,7 +50,7 @@ pub use dev::{
     TestsSubcommand, TestsCheckSubcommand, TestsDocsSubcommand, TestsMetricsSubcommand,
     TestsReportSubcommand, TestsTrendsSubcommand, PerformanceSubcommand,
     VersionSubcommand, CiSubcommand, ChecksumSubcommand, HomebrewSubcommand,
-    TagSubcommand, PrSubcommand,
+    DevTagSubcommand, PrSubcommand,
 };
 
 /// CLI 主结构体

@@ -70,7 +70,7 @@ pub enum DevSubcommand {
     /// 提供 Git tag 创建、清理等功能。
     Tag {
         #[command(subcommand)]
-        command: TagSubcommand,
+        command: DevTagSubcommand,
     },
     /// PR 相关工具
     ///
@@ -373,7 +373,7 @@ pub enum HomebrewSubcommand {
 
 /// Git Tag 相关子命令
 #[derive(clap::Subcommand)]
-pub enum TagSubcommand {
+pub enum DevTagSubcommand {
     /// 创建 Git tag
     ///
     /// 创建并推送 Git tag 到远程仓库。

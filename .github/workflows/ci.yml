@@ -33,6 +33,39 @@ jobs:
         with:
           fetch-depth: 0  # 需要完整历史来检查提交者
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 🔍 Check if version bump branch
         id: check
         env:
@@ -42,7 +75,7 @@ jobs:
           GITHUB_PR_CREATOR: ${{ github.event.pull_request.user.login }}
           WORKFLOW_USER_NAME: ${{ env.WORKFLOW_USER_NAME }}
         run: |
-          cargo run --bin dev ci check-skip \
+          cargo run --bin dev --release ci check-skip \
             --branch "${{ github.head_ref || github.ref_name }}" \
             --pr-creator "${{ github.event.pull_request.user.login }}" \
             --expected-user "${{ env.WORKFLOW_USER_NAME }}" \
@@ -181,11 +214,28 @@ jobs:
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-deps-
           # 优化 Windows 上的缓存性能
           enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
 
       - name: 📦 Install system dependencies (Linux)
         if: runner.os == 'Linux'
@@ -277,7 +327,7 @@ jobs:
           REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.html"
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
           grep '^{' test-output.log 2>/dev/null | \
-            cargo run --bin dev tests report generate \
+            cargo run --bin dev --release tests report generate \
               --format html \
               --output "$REPORT_FILE" || {
             echo "⚠️  Failed to generate test report, continuing..."
@@ -285,7 +335,7 @@ jobs:
           }
           # 同时生成 JSON 报告用于 PR 评论
           grep '^{' test-output.log 2>/dev/null | \
-            cargo run --bin dev tests report generate \
+            cargo run --bin dev --release tests report generate \
               --format json \
               --output "$JSON_REPORT_FILE" || {
             echo "⚠️  Failed to generate JSON report, continuing..."
@@ -329,7 +379,7 @@ jobs:
 
           JSON_REPORT_FILE="test-report-${{ matrix.test_type }}-${{ matrix.platform }}.json"
           if [ -f "$JSON_REPORT_FILE" ]; then
-            cargo run --bin dev tests metrics collect \
+            cargo run --bin dev --release tests metrics collect \
               --report "$JSON_REPORT_FILE" \
               --output "$METRICS_DIR/metrics-${{ matrix.test_type }}-${{ matrix.platform }}-${{ github.run_id }}.json"
           fi
@@ -367,7 +417,7 @@ jobs:
           BASELINE_FILE="performance-baseline-${{ matrix.test_type }}-${{ matrix.platform }}.json"
 
           # 分析性能回归
-          cargo run --bin dev performance analyze \
+          cargo run --bin dev --release performance analyze \
             --current "$JSON_REPORT_FILE" \
             --baseline "$BASELINE_FILE" \
             --output "performance-regression-report.md" \
@@ -707,6 +757,39 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 📥 Download all test reports
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -746,7 +829,7 @@ jobs:
           for json_file in $JSON_FILES; do
             CMD_ARGS="$CMD_ARGS --report $json_file"
           done
-          cargo run --bin dev tests report generate $CMD_ARGS || {
+          cargo run --bin dev --release tests report generate $CMD_ARGS || {
             echo "⚠️  Failed to generate PR comment, continuing..."
             exit 0
           }
@@ -819,6 +902,39 @@ jobs:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
 
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: 📥 Download test metrics
         uses: actions/download-artifact@v4
         continue-on-error: true
@@ -848,7 +964,7 @@ jobs:
           fi
 
           # 分析趋势
-          cargo run --bin dev tests trends analyze \
+          cargo run --bin dev --release tests trends analyze \
             --metrics-dir "$METRICS_DIR" \
             --output "test-trends-report.md" || {
             echo "⚠️  Failed to generate trend report, continuing..."
@@ -882,6 +998,39 @@ jobs:
     needs: [check-skip-ci, check-lint, tests, doctests, build]
     if: always()
     steps:
+      - name: 🔧 Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: 💾 Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-deps-
+          enableCrossOsArchive: false
+
+      - name: 💾 Cache dev binary build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            target/release/dev
+            target/release/deps/dev*
+            target/release/.fingerprint/dev*
+            target/release/incremental/dev-*
+          key: ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-dev-bin-${{ hashFiles('src/lib/cli/dev.rs', 'src/bin/dev.rs', 'src/commands/dev/**/*.rs') }}-
+            ${{ runner.os }}-dev-bin-
+          enableCrossOsArchive: false
+
+      - name: 🔨 Build dev binary
+        run: cargo build --bin dev --release
+
       - name: ✅ Check lint and test status
         id: status_check
         env:
@@ -891,6 +1040,6 @@ jobs:
           DOCTESTS_RESULT: ${{ needs.doctests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          cargo run --bin dev ci verify \
+          cargo run --bin dev --release ci verify \
             --should-skip ${{ needs.check-skip-ci.outputs.should_skip == 'true' }} \
             --jobs "check-lint,tests,doctests,build"
