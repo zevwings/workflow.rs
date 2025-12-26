@@ -73,22 +73,6 @@ impl Paths {
         dirs::home_dir().wrap_err("Cannot determine home directory")
     }
 
-    /// 尝试获取 iCloud 基础目录（仅 macOS）
-    ///
-    /// 检查 iCloud Drive 是否可用，如果可用则返回 .workflow 目录路径。
-    ///
-    /// # 返回
-    ///
-    /// - `Some(PathBuf)` - iCloud Drive 可用且成功创建目录
-    /// - `None` - iCloud Drive 不可用或创建目录失败
-    ///
-    /// # iCloud 路径
-    ///
-    /// macOS: `~/Library/Mobile Documents/com~apple~CloudDocs/.workflow/`
-    #[cfg(target_os = "macos")]
-    fn try_icloud_base_dir() -> Option<PathBuf> {
-        Self::try_icloud_base_dir_in(Self::home_dir().ok()?)
-    }
 
     /// 尝试获取 iCloud 基础目录（指定主目录，仅 macOS）
     ///
@@ -130,16 +114,6 @@ impl Paths {
         }
 
         Some(workflow_dir)
-    }
-
-    /// 非 macOS 平台：总是返回 None
-    ///
-    /// 注意：此函数在非 macOS 平台上不会被调用（调用处被 `#[cfg(target_os = "macos")]` 包裹），
-    /// 但为了保持 trait 实现的一致性，需要提供此实现。
-    #[cfg(not(target_os = "macos"))]
-    #[allow(dead_code)] // 在非 macOS 平台上不会被调用，但需要提供实现以保持一致性
-    fn try_icloud_base_dir() -> Option<PathBuf> {
-        None
     }
 
     /// 非 macOS 平台：总是返回 None（指定主目录版本）
@@ -218,14 +192,11 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建目录，返回相应的错误信息。
-    fn config_base_dir() -> Result<PathBuf> {
-        Self::config_base_dir_in(Self::home_dir()?)
-    }
 
     /// 获取配置基础目录（指定主目录，支持 iCloud）
     ///
     /// 决策逻辑：
-    /// 1. 检查环境变量 `WORKFLOW_DISABLE_ICLOUD`，如果设置则强制使用本地
+    /// 1. 如果 `disable_icloud` 为 `true`，强制使用本地目录
     /// 2. 在 macOS 上，如果 iCloud Drive 可用，优先使用 iCloud
     /// 3. 如果 iCloud 不可用，回退到本地目录
     /// 4. 在其他平台上，直接使用本地目录
@@ -233,6 +204,7 @@ impl Paths {
     /// # 参数
     ///
     /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
     ///
     /// # 返回
     ///
@@ -241,9 +213,9 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建目录，返回相应的错误信息。
-    pub(crate) fn config_base_dir_in(home: impl AsRef<Path>) -> Result<PathBuf> {
-        // 检查用户是否明确禁用 iCloud
-        if std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok() {
+    pub(crate) fn config_base_dir_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        // 如果明确禁用 iCloud，直接使用本地目录
+        if disable_icloud {
             return Self::local_base_dir_in(home);
         }
 
@@ -284,13 +256,44 @@ impl Paths {
     /// expand("C:\\absolute\\path") -> "C:\\absolute\\path"
     /// ```
     pub fn expand(path_str: &str) -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        Self::expand_in(path_str, home)
+    }
+
+    /// 展开路径字符串（指定主目录）
+    ///
+    /// 支持的路径格式：
+    /// - Unix: `~` 和 `~/path` - 展开为指定的主目录
+    /// - Windows: `%VAR%` 和 `%VAR%\path` - 展开环境变量
+    /// - 绝对路径: 直接使用
+    ///
+    /// # 参数
+    ///
+    /// * `path_str` - 要展开的路径字符串
+    /// * `home` - 用户主目录路径（用于展开 `~`）
+    ///
+    /// # 示例
+    ///
+    /// ```text
+    /// // Unix
+    /// expand_in("~/Documents/Workflow", "/tmp/test") -> "/tmp/test/Documents/Workflow"
+    /// expand_in("~", "/tmp/test") -> "/tmp/test"
+    ///
+    /// // Windows
+    /// expand_in("%USERPROFILE%\\Documents\\Workflow", "C:\\Users\\User") -> "C:\\Users\\User\\Documents\\Workflow"
+    ///
+    /// // 绝对路径
+    /// expand_in("/absolute/path", "/tmp/test") -> "/absolute/path"
+    /// ```
+    pub fn expand_in(path_str: &str, home: impl AsRef<Path>) -> Result<PathBuf> {
+        let home = home.as_ref();
+
         // 处理 Unix 风格的 ~ 展开
         if let Some(rest) = path_str.strip_prefix("~/") {
-            let home = Self::home_dir()?;
             return Ok(home.join(rest));
         }
         if path_str == "~" {
-            return Self::home_dir();
+            return Ok(home.to_path_buf());
         }
 
         // 处理 Windows 风格的环境变量展开 %VAR%
@@ -349,17 +352,20 @@ impl Paths {
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn config_dir() -> Result<PathBuf> {
-        Self::config_dir_in(Self::home_dir()?)
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::config_dir_in(home, disable_icloud)
     }
 
     /// 获取配置目录（指定主目录）
     ///
     /// 返回指定主目录下的 `.workflow/config/` 目录路径。
-    /// 支持 iCloud 同步（在 macOS 上，如果 iCloud 可用）。
+    /// 支持 iCloud 同步（在 macOS 上，如果 iCloud 可用且未禁用）。
     ///
     /// # 参数
     ///
     /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
     ///
     /// # 路径示例
     ///
@@ -373,9 +379,9 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建目录，返回相应的错误信息。
-    pub fn config_dir_in(home: impl AsRef<Path>) -> Result<PathBuf> {
+    pub fn config_dir_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
         // 使用支持 iCloud 的配置基础目录
-        let config_dir = Self::config_base_dir_in(home)?.join(CONFIG_DIR);
+        let config_dir = Self::config_base_dir_in(home, disable_icloud)?.join(CONFIG_DIR);
 
         // 确保配置目录存在
         DirectoryWalker::new(&config_dir).ensure_exists()?;
@@ -394,14 +400,50 @@ impl Paths {
     ///
     /// 返回 `~/.workflow/config/workflow.toml` 的路径。
     pub fn workflow_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join(WORKFLOW_CONFIG_FILE))
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::workflow_config_in(home, disable_icloud)
+    }
+
+    /// 获取主配置文件路径（指定主目录）
+    ///
+    /// 返回指定主目录下的 `.workflow/config/workflow.toml` 路径。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
+    ///
+    /// # 返回
+    ///
+    /// 返回主配置文件的 `PathBuf`。
+    pub fn workflow_config_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        Ok(Self::config_dir_in(home, disable_icloud)?.join(WORKFLOW_CONFIG_FILE))
     }
 
     /// 获取 LLM 配置文件路径
     ///
     /// 返回 `~/.workflow/config/llm.toml` 的路径。
     pub fn llm_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join(LLM_CONFIG_FILE))
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::llm_config_in(home, disable_icloud)
+    }
+
+    /// 获取 LLM 配置文件路径（指定主目录）
+    ///
+    /// 返回指定主目录下的 `.workflow/config/llm.toml` 路径。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
+    ///
+    /// # 返回
+    ///
+    /// 返回 LLM 配置文件的 `PathBuf`。
+    pub fn llm_config_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        Ok(Self::config_dir_in(home, disable_icloud)?.join(LLM_CONFIG_FILE))
     }
 
     /// 获取 Jira 配置文件路径
@@ -409,14 +451,50 @@ impl Paths {
     /// 返回 `~/.workflow/config/jira.toml` 的路径。
     /// 这是合并后的 Jira 配置文件，包含用户和状态配置。
     pub fn jira_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join(JIRA_CONFIG_FILE))
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::jira_config_in(home, disable_icloud)
+    }
+
+    /// 获取 Jira 配置文件路径（指定主目录）
+    ///
+    /// 返回指定主目录下的 `.workflow/config/jira.toml` 路径。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
+    ///
+    /// # 返回
+    ///
+    /// 返回 Jira 配置文件的 `PathBuf`。
+    pub fn jira_config_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        Ok(Self::config_dir_in(home, disable_icloud)?.join(JIRA_CONFIG_FILE))
     }
 
     /// 获取常用命令配置文件路径
     ///
     /// 返回 `~/.workflow/config/commands.toml` 的路径。
     pub fn commands_config() -> Result<PathBuf> {
-        Ok(Self::config_dir()?.join("commands.toml"))
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::commands_config_in(home, disable_icloud)
+    }
+
+    /// 获取常用命令配置文件路径（指定主目录）
+    ///
+    /// 返回指定主目录下的 `.workflow/config/commands.toml` 路径。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
+    ///
+    /// # 返回
+    ///
+    /// 返回常用命令配置文件的 `PathBuf`。
+    pub fn commands_config_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        Ok(Self::config_dir_in(home, disable_icloud)?.join("commands.toml"))
     }
 
     /// 获取项目级配置文件路径
@@ -486,17 +564,20 @@ impl Paths {
     ///
     /// 如果无法创建配置目录，返回相应的错误信息。
     pub fn repository_config() -> Result<PathBuf> {
-        Self::repository_config_in(Self::home_dir()?)
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::repository_config_in(home, disable_icloud)
     }
 
     /// 获取个人偏好配置文件路径（指定主目录）
     ///
     /// 返回指定主目录下的 `.workflow/config/repository.toml` 路径。
-    /// 支持 iCloud 同步（在 macOS 上，如果 iCloud 可用）。
+    /// 支持 iCloud 同步（在 macOS 上，如果 iCloud 可用且未禁用）。
     ///
     /// # 参数
     ///
     /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
     ///
     /// # 路径示例
     ///
@@ -510,8 +591,8 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建配置目录，返回相应的错误信息。
-    pub fn repository_config_in(home: impl AsRef<Path>) -> Result<PathBuf> {
-        Ok(Self::config_dir_in(home)?.join("repository.toml"))
+    pub fn repository_config_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+        Ok(Self::config_dir_in(home, disable_icloud)?.join("repository.toml"))
     }
 
     /// 获取工作流目录路径（支持 iCloud）
@@ -526,8 +607,30 @@ impl Paths {
     ///
     /// 如果无法创建目录，返回相应的错误信息。
     pub fn workflow_dir() -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
+        Self::workflow_dir_in(home, disable_icloud)
+    }
+
+    /// 获取工作流目录路径（指定主目录，支持 iCloud）
+    ///
+    /// 返回指定主目录下的工作流基础目录。如果 iCloud 可用且未禁用，返回 iCloud 路径。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    /// * `disable_icloud` - 是否禁用 iCloud（如果为 `true`，强制使用本地目录）
+    ///
+    /// # 返回
+    ///
+    /// 返回工作流目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn workflow_dir_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
         // 直接返回配置基础目录
-        Self::config_base_dir()
+        Self::config_base_dir_in(home, disable_icloud)
     }
 
     /// 获取工作历史目录路径（强制本地，不同步）
@@ -552,8 +655,28 @@ impl Paths {
     ///
     /// 如果环境变量未设置或无法创建目录，返回相应的错误信息。
     pub fn work_history_dir() -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        Self::work_history_dir_in(home)
+    }
+
+    /// 获取工作历史目录路径（指定主目录，强制本地）
+    ///
+    /// 返回指定主目录下的 `.workflow/work-history/` 路径（总是本地路径）。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回工作历史目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn work_history_dir_in(home: impl AsRef<Path>) -> Result<PathBuf> {
         // 强制使用本地路径，不使用 iCloud
-        let history_dir = Self::local_base_dir()?.join("work-history");
+        let history_dir = Self::local_base_dir_in(home.as_ref())?.join("work-history");
 
         // 确保目录存在
         DirectoryWalker::new(&history_dir).ensure_exists()?;
@@ -589,8 +712,28 @@ impl Paths {
     ///
     /// 如果无法创建目录，返回相应的错误信息。
     pub fn logs_dir() -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        Self::logs_dir_in(home)
+    }
+
+    /// 获取日志目录路径（指定主目录，强制本地）
+    ///
+    /// 返回指定主目录下的 `.workflow/logs/` 路径（总是本地路径）。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回日志目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn logs_dir_in(home: impl AsRef<Path>) -> Result<PathBuf> {
         // 强制使用本地路径，不使用 iCloud
-        let logs_dir = Self::local_base_dir()?.join("logs");
+        let logs_dir = Self::local_base_dir_in(home.as_ref())?.join("logs");
 
         // 确保目录存在
         DirectoryWalker::new(&logs_dir).ensure_exists()?;
@@ -734,8 +877,28 @@ impl Paths {
     ///
     /// 如果无法获取本地目录，返回相应的错误信息。
     pub fn completion_dir() -> Result<PathBuf> {
+        let home = Self::home_dir()?;
+        Self::completion_dir_in(home)
+    }
+
+    /// 获取补全脚本目录路径（指定主目录，强制本地）
+    ///
+    /// 返回指定主目录下的 `.workflow/completions/` 路径（总是本地路径）。
+    ///
+    /// # 参数
+    ///
+    /// * `home` - 用户主目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回补全脚本目录的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法创建目录，返回相应的错误信息。
+    pub fn completion_dir_in(home: impl AsRef<Path>) -> Result<PathBuf> {
         // 确保使用本地路径
-        let completion_dir = Self::local_base_dir()?.join("completions");
+        let completion_dir = Self::local_base_dir_in(home.as_ref())?.join("completions");
 
         // 确保目录存在
         DirectoryWalker::new(&completion_dir).ensure_exists()?;
@@ -754,7 +917,12 @@ impl Paths {
     pub fn is_config_in_icloud() -> bool {
         #[cfg(target_os = "macos")]
         {
-            Self::try_icloud_base_dir().is_some()
+            // 直接调用 _in 版本，避免依赖未使用的私有函数
+            if let Ok(home) = Self::home_dir() {
+                Self::try_icloud_base_dir_in(home).is_some()
+            } else {
+                false
+            }
         }
 
         #[cfg(not(target_os = "macos"))]

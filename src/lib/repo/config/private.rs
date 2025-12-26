@@ -136,8 +136,10 @@ impl PrivateRepoConfig {
     /// * `home` - 用户主目录路径
     pub fn load_from(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<Self> {
         let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
+        // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
         let config_path =
-            Paths::repository_config_in(home).wrap_err("Failed to get repository config path")?;
+            Paths::repository_config_in(home, disable_icloud).wrap_err("Failed to get repository config path")?;
 
         // If file doesn't exist, return default configuration
         if !config_path.exists() {
@@ -228,8 +230,10 @@ impl PrivateRepoConfig {
     /// * `home` - 用户主目录路径
     pub fn save_in(&self, repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<()> {
         let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
+        // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
+        let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
         let config_path =
-            Paths::repository_config_in(home).wrap_err("Failed to get repository config path")?;
+            Paths::repository_config_in(home, disable_icloud).wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
         PathAccess::new(&config_path).ensure_parent_exists()?;

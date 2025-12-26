@@ -5,7 +5,6 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use serial_test::serial;
 use std::fs;
 use workflow::base::settings::paths::Paths;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
@@ -970,7 +969,7 @@ fn test_config_with_multiple_ignore_branches() {
 /// - 公共配置正确加载
 /// - 私有配置正确加载
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_from_existing_files_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // 准备：创建包含公共和私有配置的临时 Git 仓库
 
@@ -1109,7 +1108,8 @@ fn test_save_to_new_files_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<
     assert!(public_config_path.exists());
 
     // Assert: 验证：私有配置文件创建成功
-    let private_config_path = Paths::repository_config_in(cli_env_with_git.home_path())?;
+    // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
+    let private_config_path = Paths::repository_config_in(cli_env_with_git.home_path(), true)?;
     assert!(private_config_path.exists());
 
     // Assert: 验证：公共配置内容正确
@@ -1140,7 +1140,7 @@ fn test_save_to_new_files_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<
 /// ## 预期结果
 /// - 重新加载的配置与保存的配置一致
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_and_save_roundtrip_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // 准备：创建包含配置的临时 Git 仓库
 
@@ -1215,7 +1215,7 @@ prefix = "feature"
 /// - 未配置时返回 false
 /// - 配置后返回 true
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_exists_check_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // 准备：创建临时 Git 仓库
 
@@ -1288,7 +1288,7 @@ type = "invalid  # 缺少闭合引号和括号
 /// ## 预期结果
 /// - 返回错误，不panic
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_with_corrupted_private_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // 准备：创建包含无效私有配置的临时 Git 仓库
 
@@ -1390,7 +1390,7 @@ type = "conventional"
 /// - 私有配置加载成功
 /// - 公共配置为默认值
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_with_only_private_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // 准备：只创建私有配置
 

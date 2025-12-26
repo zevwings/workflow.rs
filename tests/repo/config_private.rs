@@ -5,7 +5,6 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use serial_test::serial;
 use std::fs;
 use workflow::base::settings::paths::Paths;
 use workflow::repo::config::private::PrivateRepoConfig;
@@ -648,7 +647,7 @@ fn test_clear_pr_config() {
 /// ## 预期结果
 /// - 配置能够正确从文件加载
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_from_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
 
@@ -711,7 +710,7 @@ auto_accept_change_type = true
 /// ## 预期结果
 /// - 返回默认配置（configured 为 false，branch 和 pr 为 None）
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_from_non_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建没有配置文件的临时 Git 仓库
 
@@ -745,7 +744,7 @@ fn test_load_from_non_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) 
 /// ## 预期结果
 /// - 配置文件被创建且内容正确
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_save_to_new_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建临时 Git 仓库（不创建配置文件）
 
@@ -769,7 +768,8 @@ fn test_save_to_new_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<(
     config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
 
     // Assert: 文件创建成功
-    let config_path = Paths::repository_config_in(cli_env_with_git.home_path())?;
+    // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
+    let config_path = Paths::repository_config_in(cli_env_with_git.home_path(), true)?;
     assert!(config_path.exists());
 
     // Assert: 内容正确
@@ -797,7 +797,7 @@ fn test_save_to_new_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<(
 /// ## 预期结果
 /// - 其他仓库配置被保留，当前仓库配置已添加
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_save_preserves_other_repos_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含其他仓库配置的临时 Git 仓库
 
@@ -828,7 +828,8 @@ prefix = "hotfix"
     config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
 
     // Assert: 其他仓库配置未被覆盖
-    let config_path = Paths::repository_config_in(cli_env_with_git.home_path())?;
+    // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
+    let config_path = Paths::repository_config_in(cli_env_with_git.home_path(), true)?;
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("[other_repo_12345678]"));
     assert!(content.contains("[other_repo_12345678.branch]"));
@@ -855,7 +856,7 @@ prefix = "hotfix"
 /// ## 预期结果
 /// - 修改后的配置能够正确保存和重新加载
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_and_save_roundtrip_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
 
@@ -928,7 +929,7 @@ ignore = ["main"]
 /// ## 预期结果
 /// - 返回 TOML 解析错误
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_load_corrupted_toml_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含无效 TOML 的配置文件
 
@@ -1070,7 +1071,7 @@ fn test_generate_repo_id_outside_git_repo_return_ok(cli_env: CliTestEnv) -> Resu
 /// ## 预期结果
 /// - 文件创建成功但不包含 branch 部分
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_save_with_empty_branch_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试保存空的 branch 配置（prefix 为 None 且 ignore 为空）
 
@@ -1091,7 +1092,8 @@ fn test_save_with_empty_branch_config_return_ok(mut cli_env_with_git: CliTestEnv
     config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
 
     // Assert: 文件创建成功但不包含 branch 部分（因为是空的）
-    let config_path = Paths::repository_config_in(cli_env_with_git.home_path())?;
+    // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
+    let config_path = Paths::repository_config_in(cli_env_with_git.home_path(), true)?;
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("configured = true"));
     // 空的 branch 配置不应该被保存
@@ -1113,7 +1115,7 @@ fn test_save_with_empty_branch_config_return_ok(mut cli_env_with_git: CliTestEnv
 /// ## 预期结果
 /// - 文件创建成功但不包含 PR 部分
 #[rstest]
-#[serial]  // 需要串行执行，避免 HOME 环境变量被其他测试覆盖
+// 已修复：使用路径参数版本，不再需要串行执行
 fn test_save_with_empty_pr_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试保存空的 PR 配置
 
@@ -1133,7 +1135,8 @@ fn test_save_with_empty_pr_config_return_ok(mut cli_env_with_git: CliTestEnv) ->
     config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
 
     // Assert: 文件创建成功但不包含 pr 部分（因为是空的）
-    let config_path = Paths::repository_config_in(cli_env_with_git.home_path())?;
+    // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
+    let config_path = Paths::repository_config_in(cli_env_with_git.home_path(), true)?;
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("configured = true"));
     // 空的 pr 配置不应该被保存

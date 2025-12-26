@@ -8,6 +8,21 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+/// Mock 期望信息
+///
+/// 记录每个 Mock 端点的期望信息，用于在验证失败时提供详细的错误信息。
+#[derive(Debug, Clone)]
+pub struct MockExpectation {
+    /// HTTP 方法
+    pub method: String,
+    /// 请求路径
+    pub path: String,
+    /// 期望的状态码
+    pub status: u16,
+    /// Mock 索引（用于关联实际的 Mock 对象）
+    mock_index: usize,
+}
+
 /// Mock 服务器包装器
 ///
 /// 提供统一的 Mock 服务器管理接口，支持 GitHub 和 Jira API Mock。
@@ -22,6 +37,8 @@ pub struct MockServer {
     pub base_url: String,
     /// 跟踪创建的 Mock 端点
     mocks: Vec<Mock>,
+    /// 跟踪 Mock 期望信息（用于错误信息增强）
+    expectations: Vec<MockExpectation>,
 }
 
 impl MockServer {
@@ -34,6 +51,7 @@ impl MockServer {
             server: Box::new(server),
             base_url,
             mocks: Vec::new(),
+            expectations: Vec::new(),
         }
     }
 
@@ -78,6 +96,7 @@ impl MockServer {
         response_body: &str,
         status: u16,
     ) -> &mut Self {
+        let mock_index = self.mocks.len();
         let mock = self
             .server
             .as_mut()
@@ -90,6 +109,12 @@ impl MockServer {
             .create();
 
         self.mocks.push(mock);
+        self.expectations.push(MockExpectation {
+            method: method.to_string(),
+            path: path.to_string(),
+            status,
+            mock_index,
+        });
         self
     }
 
@@ -101,6 +126,7 @@ impl MockServer {
         response_body: &str,
         status: u16,
     ) -> &mut Self {
+        let mock_index = self.mocks.len();
         let mock = self
             .server
             .as_mut()
@@ -113,10 +139,39 @@ impl MockServer {
             .create();
 
         self.mocks.push(mock);
+        self.expectations.push(MockExpectation {
+            method: method.to_string(),
+            path: path.to_string(),
+            status,
+            mock_index,
+        });
         self
     }
 
-    /// 从文件加载 Mock 响应
+    /// 从文件加载 Mock 响应（通用方法）
+    ///
+    /// 从文件加载响应体，创建通用的 Mock 端点。
+    /// 适用于需要从文件加载复杂响应数据的场景。
+    ///
+    /// # 参数
+    ///
+    /// * `method` - HTTP 方法（GET, POST, PUT, DELETE 等）
+    /// * `path` - 请求路径
+    /// * `file_path` - 响应文件路径（相对于项目根目录或绝对路径）
+    /// * `status` - HTTP 状态码
+    ///
+    /// # 返回
+    ///
+    /// 返回 `&mut Self` 以支持链式调用
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use std::path::PathBuf;
+    ///
+    /// let response_file = PathBuf::from("tests/fixtures/mock_responses/jira/issue.json");
+    /// mock_server.mock_from_file("GET", "/rest/api/3/issue/PROJ-123", &response_file, 200);
+    /// ```
     #[allow(dead_code)]
     pub fn mock_from_file(
         &mut self,
@@ -128,7 +183,88 @@ impl MockServer {
         let response_body = fs::read_to_string(file_path)
             .unwrap_or_else(|_| panic!("Failed to read mock response file: {:?}", file_path));
 
+        // 创建通用的 Mock 端点（不限制为 GitHub 或 Jira）
+        let mock_index = self.mocks.len();
+        let mock = self
+            .server
+            .as_mut()
+            .mock(method, path)
+            .with_status(status as usize)
+            .with_header("content-type", "application/json")
+            .with_body(&response_body)
+            .create();
+
+        self.mocks.push(mock);
+        self.expectations.push(MockExpectation {
+            method: method.to_string(),
+            path: path.to_string(),
+            status,
+            mock_index,
+        });
+        self
+    }
+
+    /// 从文件加载 GitHub PR Mock 响应（便捷方法）
+    ///
+    /// 从文件加载响应体，创建 GitHub PR Mock 端点（自动匹配 GitHub API 请求头）。
+    ///
+    /// # 参数
+    ///
+    /// * `method` - HTTP 方法
+    /// * `path` - 请求路径
+    /// * `file_path` - 响应文件路径
+    /// * `status` - HTTP 状态码
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let response_file = PathBuf::from("tests/fixtures/mock_responses/github/pr.json");
+    /// mock_server.mock_github_pr_from_file("GET", "/repos/owner/repo/pulls/123", &response_file, 200);
+    /// ```
+    #[allow(dead_code)]
+    pub fn mock_github_pr_from_file(
+        &mut self,
+        method: &str,
+        path: &str,
+        file_path: &PathBuf,
+        status: u16,
+    ) -> &mut Self {
+        let response_body = fs::read_to_string(file_path)
+            .unwrap_or_else(|_| panic!("Failed to read mock response file: {:?}", file_path));
+
         self.mock_github_pr(method, path, &response_body, status);
+        self
+    }
+
+    /// 从文件加载 Jira Issue Mock 响应（便捷方法）
+    ///
+    /// 从文件加载响应体，创建 Jira Issue Mock 端点（自动匹配 Jira API 请求头）。
+    ///
+    /// # 参数
+    ///
+    /// * `method` - HTTP 方法
+    /// * `path` - 请求路径
+    /// * `file_path` - 响应文件路径
+    /// * `status` - HTTP 状态码
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let response_file = PathBuf::from("tests/fixtures/mock_responses/jira/issue.json");
+    /// mock_server.mock_jira_issue_from_file("GET", "/rest/api/3/issue/PROJ-123", &response_file, 200);
+    /// ```
+    #[allow(dead_code)]
+    pub fn mock_jira_issue_from_file(
+        &mut self,
+        method: &str,
+        path: &str,
+        file_path: &PathBuf,
+        status: u16,
+    ) -> &mut Self {
+        let response_body = fs::read_to_string(file_path)
+            .unwrap_or_else(|_| panic!("Failed to read mock response file: {:?}", file_path));
+
+        self.mock_jira_issue(method, path, &response_body, status);
         self
     }
 
@@ -151,9 +287,51 @@ impl MockServer {
     }
 
     /// 验证所有 Mock 是否被调用
+    ///
+    /// 如果验证失败，会输出详细的错误信息，包括每个未调用的 Mock 的期望信息。
+    ///
+    /// # 错误信息增强
+    ///
+    /// 当 Mock 验证失败时，会输出以下信息：
+    /// - Mock 索引
+    /// - 期望的 HTTP 方法
+    /// - 期望的请求路径
+    /// - 期望的响应状态码
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let mut mock_server = MockServer::new();
+    /// mock_server.setup_github_api();
+    /// mock_server.setup_github_create_pr_success("owner", "repo", 123);
+    ///
+    /// // 执行测试...
+    ///
+    /// // 验证所有 Mock 被调用（如果失败会输出详细错误信息）
+    /// mock_server.assert_all_called();
+    /// ```
     #[allow(dead_code)]
     pub fn assert_all_called(&self) {
-        for mock in &self.mocks {
+        // 先输出所有 Mock 的期望信息，这样在 assert() 失败时也能看到
+        if !self.expectations.is_empty() {
+            eprintln!("\n📋 Mock 期望信息 (共 {} 个):", self.expectations.len());
+            for (idx, exp) in self.expectations.iter().enumerate() {
+                eprintln!("   Mock #{}: {} {} -> 状态码 {}",
+                    idx + 1,
+                    exp.method,
+                    exp.path,
+                    exp.status
+                );
+            }
+            eprintln!("");
+        }
+
+        // 验证所有 Mock
+        for (index, mock) in self.mocks.iter().enumerate() {
+            if let Some(expectation) = self.expectations.iter().find(|e| e.mock_index == index) {
+                // 在验证前输出当前 Mock 信息，这样如果失败可以看到是哪个 Mock
+                eprintln!("验证 Mock #{}: {} {}", index + 1, expectation.method, expectation.path);
+            }
             mock.assert();
         }
     }
@@ -161,8 +339,55 @@ impl MockServer {
     /// 清理所有 Mock 和环境变量
     pub fn cleanup(&mut self) {
         self.mocks.clear();
+        self.expectations.clear();
         env::remove_var("GITHUB_API_URL");
         env::remove_var("JIRA_API_URL");
+    }
+
+    /// 获取 Mock 期望信息（用于调试）
+    ///
+    /// 返回所有 Mock 端点的期望信息，包括方法、路径和状态码。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// let expectations = mock_server.get_expectations();
+    /// for exp in expectations {
+    ///     println!("期望: {} {} -> {}", exp.method, exp.path, exp.status);
+    /// }
+    /// ```
+    #[allow(dead_code)]
+    pub fn get_expectations(&self) -> &[MockExpectation] {
+        &self.expectations
+    }
+
+    /// 打印所有 Mock 期望信息（用于调试）
+    ///
+    /// 在测试失败时调用此方法，可以查看所有 Mock 的期望信息，帮助调试。
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// // 在测试失败时调用
+    /// mock_server.print_expectations();
+    /// ```
+    #[allow(dead_code)]
+    pub fn print_expectations(&self) {
+        if self.expectations.is_empty() {
+            eprintln!("📋 没有配置 Mock 期望");
+            return;
+        }
+
+        eprintln!("\n📋 Mock 期望信息 (共 {} 个):", self.expectations.len());
+        for (idx, exp) in self.expectations.iter().enumerate() {
+            eprintln!("   Mock #{}: {} {} -> 状态码 {}",
+                idx + 1,
+                exp.method,
+                exp.path,
+                exp.status
+            );
+        }
+        eprintln!("");
     }
 }
 
