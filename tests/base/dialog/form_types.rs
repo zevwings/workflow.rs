@@ -1107,7 +1107,7 @@ fn test_form_field_creation_with_valid_fields_creates_field() {
 /// - condition 字段正确设置
 /// - 其他字段正确设置
 #[test]
-fn test_form_field_creation_with_condition_creates_field_with_condition() {
+fn test_form_field_creation_with_condition_creates_field_with_condition() -> Result<()> {
     // Arrange: 准备条件和字段属性
     let condition = Condition {
         field_name: "other_field".to_string(),
@@ -1132,10 +1132,12 @@ fn test_form_field_creation_with_condition_creates_field_with_condition() {
     // Assert: 验证字段和条件正确
     assert!(field.required);
     assert!(!field.allow_empty);
-    assert_eq!(
-        field.condition.as_ref().expect("condition should exist").field_name,
-        condition.field_name
-    );
+    let cond = field
+        .condition
+        .as_ref()
+        .ok_or_else(|| color_eyre::eyre::eyre!("condition should exist"))?;
+    assert_eq!(cond.field_name, condition.field_name);
+    Ok(())
 }
 
 /// 测试 FormField 结构体的克隆功能

@@ -3,6 +3,7 @@
 //! 测试 Completion 脚本生成器的功能。
 
 use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir};
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::completion::generate::CompletionGenerator;
@@ -31,7 +32,9 @@ use workflow::completion::generate::CompletionGenerator;
 #[case("fish")]
 #[case("powershell")]
 #[case("elvish")]
-fn test_completion_generator_new_with_shell_creates_generator(#[case] shell: &str) {
+fn test_completion_generator_new_with_shell_creates_generator(
+    #[case] shell: &str,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录
     let test_dir = create_temp_test_dir("completion_gen");
 
@@ -47,9 +50,11 @@ fn test_completion_generator_new_with_shell_creates_generator(#[case] shell: &st
         "Should create CompletionGenerator for {}",
         shell
     );
-    let _generator = result.expect("operation should succeed");
+    let _generator =
+        result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 /// 测试使用不支持的shell类型创建CompletionGenerator
@@ -166,14 +171,16 @@ fn test_completion_generator_new_with_default_output_dir_creates_generator() {
 #[case("zsh")]
 #[case("bash")]
 #[case("fish")]
-fn test_completion_generator_generate_all_with_shell_generates_files(#[case] shell: &str) {
+fn test_completion_generator_generate_all_with_shell_generates_files(
+    #[case] shell: &str,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时测试目录和生成器
     let test_dir = create_temp_test_dir("completion_gen");
     let generator = CompletionGenerator::new(
         Some(shell.to_string()),
         Some(test_dir.to_string_lossy().to_string()),
     )
-    .expect("Should create generator");
+    .map_err(|e| color_eyre::eyre::eyre!("Should create generator: {}", e))?;
 
     // Act: 生成补全脚本
     let result = generator.generate_all();
@@ -187,9 +194,15 @@ fn test_completion_generator_generate_all_with_shell_generates_files(#[case] she
             );
             if shell == "zsh" {
                 let files: Vec<_> = std::fs::read_dir(&test_dir)
-                    .expect("should read test directory")
-                    .map(|entry| entry.expect("directory entry should be valid").file_name())
-                    .collect();
+                    .map_err(|e| color_eyre::eyre::eyre!("should read test directory: {}", e))?
+                    .map(|entry| {
+                        entry
+                            .map_err(|e| {
+                                color_eyre::eyre::eyre!("directory entry should be valid: {}", e)
+                            })
+                            .map(|e| e.file_name())
+                    })
+                    .collect::<Result<Vec<_>, _>>()?;
                 assert!(
                     files.len() > 0,
                     "Should generate at least one completion file"
@@ -202,6 +215,7 @@ fn test_completion_generator_generate_all_with_shell_generates_files(#[case] she
     }
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 // ==================== GenerateResult 结构体测试 ====================

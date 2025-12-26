@@ -101,7 +101,10 @@ mod tests {
     fn test_execute_empty_tasks_with_empty_list_return_collect() -> Result<()> {
         // Arrange: 准备执行器和空任务列表
         let executor = ConcurrentExecutor::new(5);
-        let tasks: Vec<(String, Box<dyn Fn() -> Result<String, String> + Send + Sync>)> = Vec::new();
+        let tasks: Vec<(
+            String,
+            Box<dyn Fn() -> Result<String, String> + Send + Sync>,
+        )> = Vec::new();
 
         // Act: 执行空任务列表
         let results = executor.execute(tasks)?;
@@ -194,7 +197,8 @@ mod tests {
     /// ## 预期结果
     /// - 所有任务都成功，执行时间符合并发预期
     #[test]
-    fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently_return_ok() -> Result<()> {
+    fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently_return_ok(
+    ) -> Result<()> {
         // Arrange: 准备执行器和多个任务
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![

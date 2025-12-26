@@ -70,7 +70,9 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
-        Self::current_branch_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::current_branch_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// 获取当前分支名（指定仓库路径）
@@ -239,7 +241,9 @@ impl GitBranch {
     /// 2. 如果失败，使用 `git remote show origin` 获取（需要网络连接）
     /// 3. 如果都失败，使用 `git ls-remote --symref origin HEAD` 直接从远程获取符号引用（需要网络连接）
     pub fn get_default_branch() -> Result<String> {
-        Self::get_default_branch_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::get_default_branch_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// 获取默认分支名（指定仓库路径）
@@ -298,7 +302,9 @@ impl GitBranch {
     }
 
     /// 从 `git remote show origin` 获取默认分支（指定仓库路径）
-    fn get_default_branch_from_remote_show_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
+    fn get_default_branch_from_remote_show_in(
+        repo_path: impl AsRef<std::path::Path>,
+    ) -> Result<String> {
         let remote_info = GitCommand::new(["remote", "show", "origin"])
             .with_cwd(repo_path.as_ref())
             .with_env("GIT_TERMINAL_PROMPT", "0")
@@ -355,7 +361,9 @@ impl GitBranch {
     /// # 错误
     ///
     /// 如果没有找到任何常见的默认分支，返回相应的错误信息。
-    fn find_default_branch_from_remote_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
+    fn find_default_branch_from_remote_in(
+        repo_path: impl AsRef<std::path::Path>,
+    ) -> Result<String> {
         let remote_branches = GitCommand::new(["branch", "-r"])
             .with_cwd(repo_path.as_ref())
             .read()

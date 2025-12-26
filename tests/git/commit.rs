@@ -361,16 +361,18 @@ fn test_get_latest_commit_info_return_ok(
 /// - 此测试使用 `CurrentDirGuard` 切换全局工作目录，需要串行执行以避免并行测试时的竞态条件
 #[test]
 #[serial_test::serial]
-fn test_operations_outside_git_repo_with_container() {
+fn test_operations_outside_git_repo_with_container() -> Result<()> {
     // 注意：这里使用 tempfile::tempdir 而不是 GitTestEnv，因为我们需要测试非 Git 仓库的情况
     use tempfile::tempdir;
 
     // 在非 Git 目录中测试操作
     // 注意：这里不使用 GitTestEnv，因为我们需要测试非 Git 仓库的情况
-    let temp_dir = tempdir().expect("Failed to create temp dir");
+    let temp_dir = tempdir()
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to create temp dir: {}", e))?;
 
     // 切换到非Git目录（使用RAII确保恢复）
-    let _dir_guard = crate::common::helpers::CurrentDirGuard::new(&temp_dir).expect("Failed to change dir");
+    let _dir_guard = crate::common::helpers::CurrentDirGuard::new(&temp_dir)
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to change dir: {}", e))?;
 
     // 确保这不是一个 Git 仓库，并且父目录也不是
     assert!(
@@ -416,6 +418,7 @@ fn test_operations_outside_git_repo_with_container() {
     );
 
     // 目录会在函数结束时自动恢复
+    Ok(())
 }
 
 // ==================== Integration Tests ====================

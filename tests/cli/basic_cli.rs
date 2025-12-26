@@ -521,7 +521,9 @@ fn test_help_command_performance() {
 #[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：多个命令执行和路径处理可能有问题
 #[ignore] // 忽略：执行多个命令，可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_complete_workflow_dry_run_return_ok(cli_env_with_git: CliTestEnv) -> color_eyre::Result<()> {
+fn test_complete_workflow_dry_run_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
     // 注意：此测试执行多个命令，其中一些可能尝试初始化服务或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - 多个 Git 命令执行可能更慢
@@ -542,7 +544,10 @@ fn test_complete_workflow_dry_run_return_ok(cli_env_with_git: CliTestEnv) -> col
     ];
 
     for cmd_args in commands {
-        let binding = CliCommandBuilder::new().args(&cmd_args).current_dir(cli_env_with_git.path()).assert();
+        let binding = CliCommandBuilder::new()
+            .args(&cmd_args)
+            .current_dir(cli_env_with_git.path())
+            .assert();
         let output = binding.get_output();
 
         // 每个命令都应该有输出（成功或失败都可以）

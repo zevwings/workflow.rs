@@ -4,9 +4,10 @@
 //!
 //! ## 测试策略
 //!
-//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - 测试各种日期时间格式化功能
 
+use color_eyre::Result;
 use regex::Regex;
 use workflow::base::format::date::{
     format_document_timestamp, format_filename_timestamp, get_unix_timestamp, DateFormat, Timezone,
@@ -27,10 +28,10 @@ use workflow::base::format::date::{
 /// - 返回的时间戳格式为 YYYY-MM-DD_HH-MM-SS
 /// - 格式适合用作文件名（不包含空格和冒号）
 #[test]
-fn test_format_filename_timestamp_with_no_parameters_returns_formatted_string() {
+fn test_format_filename_timestamp_with_no_parameters_returns_formatted_string() -> Result<()> {
     // Arrange: 准备文件名时间戳格式的正则表达式
     let re = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-        .expect("Filename timestamp regex should be valid");
+        .map_err(|e| color_eyre::eyre::eyre!("Filename timestamp regex should be valid: {}", e))?;
 
     // Act: 格式化文件名时间戳
     let result = format_filename_timestamp();
@@ -40,6 +41,7 @@ fn test_format_filename_timestamp_with_no_parameters_returns_formatted_string() 
         re.is_match(&result),
         "Filename timestamp format should match YYYY-MM-DD_HH-MM-SS"
     );
+    Ok(())
 }
 
 // ==================== Unix Timestamp Tests ====================
@@ -94,13 +96,15 @@ fn test_get_unix_timestamp_with_no_parameters_returns_timestamp() {
 /// - Iso8601格式：包含'T'和时区标识符（Z或+/-）
 /// - Filename格式：YYYY-MM-DD_HH-MM-SS（不包含空格和冒号）
 #[test]
-fn test_format_document_timestamp_all_formats_utc_with_all_formats_returns_formatted_strings() {
+fn test_format_document_timestamp_all_formats_utc_with_all_formats_returns_formatted_strings(
+) -> Result<()> {
     // Arrange: 准备各种格式的正则表达式
-    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date only regex should be valid");
+    let re_date = Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+        .map_err(|e| color_eyre::eyre::eyre!("Date only regex should be valid: {}", e))?;
     let re_datetime = Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-        .expect("DateTime regex should be valid");
+        .map_err(|e| color_eyre::eyre::eyre!("DateTime regex should be valid: {}", e))?;
     let re_filename = Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-        .expect("Filename regex should be valid");
+        .map_err(|e| color_eyre::eyre::eyre!("Filename regex should be valid: {}", e))?;
 
     // Act: 格式化各种格式的时间戳（UTC时区）
     let date_only = format_document_timestamp(DateFormat::DateOnly, Timezone::Utc);
@@ -116,4 +120,5 @@ fn test_format_document_timestamp_all_formats_utc_with_all_formats_returns_forma
     assert!(re_filename.is_match(&filename));
     assert!(!filename.contains(' '));
     assert!(!filename.contains(':'));
+    Ok(())
 }

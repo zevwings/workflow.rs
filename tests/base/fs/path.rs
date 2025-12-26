@@ -8,7 +8,6 @@
 //! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
 //! - 测试路径访问、目录创建和安全读取功能
 
-use color_eyre::Result;
 use std::fs;
 use workflow::base::fs::path::PathAccess;
 
@@ -78,7 +77,9 @@ fn test_path_access_new_with_pathbuf_creates_instance() {
 /// ## 预期结果
 /// - 存在的路径返回 true，不存在的路径返回 false
 #[rstest]
-fn test_path_access_exists_with_existing_and_nonexisting_paths_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_exists_with_existing_and_nonexisting_paths_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备存在的和不存在的路径
     let existing_path = cli_env.path().join("existing.txt");
     fs::write(&existing_path, "test")?;
@@ -108,7 +109,9 @@ fn test_path_access_exists_with_existing_and_nonexisting_paths_return_ok(cli_env
 /// ## 预期结果
 /// - 文件路径返回 true，目录路径返回 false
 #[rstest]
-fn test_path_access_is_file_with_file_and_dir_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_is_file_with_file_and_dir_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件和目录路径
     let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
@@ -139,7 +142,9 @@ fn test_path_access_is_file_with_file_and_dir_return_ok(cli_env: CliTestEnv) -> 
 /// ## 预期结果
 /// - 目录路径返回 true，文件路径返回 false
 #[rstest]
-fn test_path_access_is_dir_with_dir_and_file_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_is_dir_with_dir_and_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备目录和文件路径
     let dir_path = cli_env.path().join("subdir");
     fs::create_dir(&dir_path)?;
@@ -243,7 +248,8 @@ fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory
     path_access.ensure_parent_exists()?;
 
     // Assert: 验证父目录已创建
-    let parent = file_path.parent()
+    let parent = file_path
+        .parent()
         .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
     assert!(parent.is_dir());

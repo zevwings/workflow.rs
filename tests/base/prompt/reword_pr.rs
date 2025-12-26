@@ -152,7 +152,8 @@ fn test_reword_pr_system_prompt_contains_markdown_support_with_prompt_contains_m
     let markdown_keywords = ["markdown", "markdown heading"];
 
     // Act & Assert: 验证prompt包含markdown格式支持说明
-    let contains_markdown = markdown_keywords.iter()
+    let contains_markdown = markdown_keywords
+        .iter()
         .any(|keyword| REWORD_PR_SYSTEM_PROMPT.contains(keyword));
     assert!(contains_markdown);
 }

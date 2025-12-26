@@ -815,7 +815,9 @@ fn test_http_client_get_with_headers_return_ok() -> color_eyre::Result<()> {
     let mut headers = HeaderMap::new();
     headers.insert(
         "X-Custom-Header",
-        "custom-value".parse().expect("header value should parse successfully"),
+        "custom-value".parse().map_err(|e| {
+            color_eyre::eyre::eyre!("header value should parse successfully: {}", e)
+        })?,
     );
 
     let mock = manager
@@ -1006,7 +1008,8 @@ fn test_http_client_patch_with_json_body_return_ok() -> color_eyre::Result<()> {
 /// - 响应状态码为 404
 /// - 响应标记为错误
 #[test]
-fn test_http_client_get_with_error_status_handles_error_response_return_false() -> color_eyre::Result<()> {
+fn test_http_client_get_with_error_status_handles_error_response_return_false(
+) -> color_eyre::Result<()> {
     // Arrange: 准备返回错误状态码的 Mock 服务器
     let mut manager = MockServer::new();
     let mock = manager

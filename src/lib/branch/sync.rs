@@ -87,7 +87,11 @@ impl BranchSync {
         options: BranchSyncOptions,
         callbacks: Option<Box<dyn BranchSyncCallbacks>>,
     ) -> Result<BranchSyncResult> {
-        Self::sync_in(std::env::current_dir().wrap_err("Failed to get current directory")?, options, callbacks)
+        Self::sync_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+            options,
+            callbacks,
+        )
     }
 
     /// 执行分支同步（指定仓库路径）
@@ -144,8 +148,9 @@ impl BranchSync {
 
         // 如果回调已经推送了（skip_stash_pop == true），可能已经推送过了
         // 但为了确保所有情况都覆盖，我们仍然检查并询问用户
-        let current_branch_exists_remote = Self::has_remote_branch_in(repo_path, &result.current_branch)
-            .wrap_err("Failed to check if current branch exists on remote")?;
+        let current_branch_exists_remote =
+            Self::has_remote_branch_in(repo_path, &result.current_branch)
+                .wrap_err("Failed to check if current branch exists on remote")?;
 
         if current_branch_exists_remote {
             // 如果回调已经推送了（通常发生在 PR Sync 且当前分支有 PR 的情况），
@@ -177,8 +182,8 @@ impl BranchSync {
     /// 返回是否执行了 stash 操作。
     fn check_working_directory_in(repo_path: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
-        let has_uncommitted = Self::has_commit_in(repo_path)
-            .wrap_err("Failed to check working directory status")?;
+        let has_uncommitted =
+            Self::has_commit_in(repo_path).wrap_err("Failed to check working directory status")?;
 
         if has_uncommitted {
             log_warning!("Working directory has uncommitted changes");
@@ -217,7 +222,10 @@ impl BranchSync {
     ///
     /// 检查要合并到当前分支的源分支是否存在（本地或远程），如果只在远程则先 fetch。
     /// 返回源分支信息（类型、合并引用）。
-    fn prepare_source_branch_in(repo_path: impl AsRef<Path>, source_branch: &str) -> Result<SourceBranchInfo> {
+    fn prepare_source_branch_in(
+        repo_path: impl AsRef<Path>,
+        source_branch: &str,
+    ) -> Result<SourceBranchInfo> {
         let repo_path = repo_path.as_ref();
         let (exists_local, exists_remote) = Self::is_branch_exists_in(repo_path, source_branch)
             .wrap_err("Failed to check if source branch exists")?;
@@ -279,7 +287,13 @@ impl BranchSync {
             SyncStrategy::Merge(merge_strategy) => {
                 let merge_result = Spinner::with(
                     format!("Merging '{}' into '{}'...", source_branch, current_branch),
-                    || Self::merge_branch_in(repo_path, &source_branch_info.merge_ref, merge_strategy),
+                    || {
+                        Self::merge_branch_in(
+                            repo_path,
+                            &source_branch_info.merge_ref,
+                            merge_strategy,
+                        )
+                    },
                 );
 
                 // 如果合并失败，恢复 stash（如果有）
@@ -353,7 +367,10 @@ impl BranchSync {
     }
 
     /// 询问用户并推送同步后的更改（指定仓库路径）
-    fn prompt_and_push_after_sync_in(repo_path: impl AsRef<Path>, result: &BranchSyncResult) -> Result<()> {
+    fn prompt_and_push_after_sync_in(
+        repo_path: impl AsRef<Path>,
+        result: &BranchSyncResult,
+    ) -> Result<()> {
         let repo_path = repo_path.as_ref();
         let use_force = matches!(result.strategy, SyncStrategy::Rebase);
         let push_message = if use_force {
@@ -412,9 +429,8 @@ impl BranchSync {
     fn has_commit_in(repo_path: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
         // 检查工作区是否有未提交的更改
-        let has_worktree_changes = !GitCommand::new(["diff", "--quiet"])
-            .with_cwd(repo_path)
-            .quiet_success();
+        let has_worktree_changes =
+            !GitCommand::new(["diff", "--quiet"]).with_cwd(repo_path).quiet_success();
 
         // 检查暂存区是否有未提交的更改
         let has_staged_changes = !GitCommand::new(["diff", "--cached", "--quiet"])
@@ -439,12 +455,13 @@ impl BranchSync {
     }
 
     /// 应用并删除指定的 stash（指定仓库路径）
-    fn stash_pop_in(repo_path: impl AsRef<Path>, stash_ref: Option<&str>) -> Result<StashPopResult> {
+    fn stash_pop_in(
+        repo_path: impl AsRef<Path>,
+        stash_ref: Option<&str>,
+    ) -> Result<StashPopResult> {
         let repo_path = repo_path.as_ref();
         let stash_ref = stash_ref.unwrap_or("stash@{0}");
-        let result = GitCommand::new(["stash", "pop", stash_ref])
-            .with_cwd(repo_path)
-            .run();
+        let result = GitCommand::new(["stash", "pop", stash_ref]).with_cwd(repo_path).run();
 
         match result {
             Ok(_) => Ok(StashPopResult {
@@ -526,13 +543,14 @@ impl BranchSync {
     }
 
     /// 合并分支（指定仓库路径）
-    fn merge_branch_in(repo_path: impl AsRef<Path>, source_branch: &str, strategy: MergeStrategy) -> Result<()> {
+    fn merge_branch_in(
+        repo_path: impl AsRef<Path>,
+        source_branch: &str,
+        strategy: MergeStrategy,
+    ) -> Result<()> {
         let repo_path = repo_path.as_ref();
         // 保存合并前的 HEAD，用于验证合并是否完成
-        let head_before = GitCommand::new(["rev-parse", "HEAD"])
-            .with_cwd(repo_path)
-            .read()
-            .ok();
+        let head_before = GitCommand::new(["rev-parse", "HEAD"]).with_cwd(repo_path).read().ok();
 
         let mut args = vec!["merge"];
 
@@ -550,9 +568,7 @@ impl BranchSync {
 
         args.push(source_branch);
 
-        let merge_result = GitCommand::new(args)
-            .with_cwd(repo_path)
-            .run();
+        let merge_result = GitCommand::new(args).with_cwd(repo_path).run();
 
         // 检查合并是否实际上已经完成
         if merge_result.is_err() {
@@ -562,10 +578,7 @@ impl BranchSync {
                 .quiet_success();
 
             // 检查 HEAD 是否已经改变
-            let head_after = GitCommand::new(["rev-parse", "HEAD"])
-                .with_cwd(repo_path)
-                .read()
-                .ok();
+            let head_after = GitCommand::new(["rev-parse", "HEAD"]).with_cwd(repo_path).read().ok();
             let head_changed = if let (Some(before), Some(after)) = (head_before, head_after) {
                 before.trim() != after.trim()
             } else {
@@ -593,10 +606,7 @@ impl BranchSync {
     fn has_merge_conflicts_in(repo_path: impl AsRef<Path>) -> Result<bool> {
         let repo_path = repo_path.as_ref();
         // 检查是否有未合并的文件
-        if !GitCommand::new(["diff", "--check"])
-            .with_cwd(repo_path)
-            .quiet_success()
-        {
+        if !GitCommand::new(["diff", "--check"]).with_cwd(repo_path).quiet_success() {
             return Ok(true);
         }
 

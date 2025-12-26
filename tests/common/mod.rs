@@ -11,3 +11,4 @@ pub mod http_helpers;
 pub mod isolation;
 pub mod macros;
 pub mod test_data_factory;
+pub mod validators;

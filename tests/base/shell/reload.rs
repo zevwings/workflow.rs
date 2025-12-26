@@ -4,10 +4,11 @@
 //!
 //! ## 测试策略
 //!
-//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 测试函数返回 `Result<()>`，使用 `?` 运算符处理错误
 //! - 测试所有shell类型的重载功能
 
 use clap_complete::Shell;
+use color_eyre::Result;
 use workflow::base::shell::{Reload, ReloadResult};
 
 // ==================== ReloadResult Structure Tests ====================
@@ -295,7 +296,7 @@ fn test_reload_result_reload_hint_unix_format() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_reload_shell_returns_result() {
+fn test_reload_shell_returns_result() -> Result<()> {
     // Arrange: 准备测试 Reload::shell() 总是返回 Result（覆盖 reload.rs:41）
     // 即使失败，也应该返回 Ok(ReloadResult)，而不是 Err
     let result = Reload::shell(&Shell::Zsh);
@@ -303,11 +304,14 @@ fn test_reload_shell_returns_result() {
     // Assert: 验证返回的是 Ok(ReloadResult)
     assert!(result.is_ok());
 
-    let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
+    let reload_result = result.map_err(|e| {
+        color_eyre::eyre::eyre!("Reload::shell should return Ok(ReloadResult): {}", e)
+    })?;
     // Assert: 验证结果结构
     assert!(
         reload_result.reload_hint.contains("source") || reload_result.reload_hint.contains(".")
     );
+    Ok(())
 }
 
 /// 测试PowerShell的reload_hint格式
@@ -385,7 +389,7 @@ fn test_reload_shell_unix_hint_format() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_reload_shell_all_shell_types() {
+fn test_reload_shell_all_shell_types() -> Result<()> {
     // Arrange: 准备测试所有支持的 shell 类型都能返回结果
     let shells = vec![
         Shell::Bash,
@@ -404,10 +408,13 @@ fn test_reload_shell_all_shell_types() {
             shell
         );
 
-        let reload_result = result.expect("Reload::shell should return Ok(ReloadResult)");
+        let reload_result = result.map_err(|e| {
+            color_eyre::eyre::eyre!("Reload::shell should return Ok(ReloadResult): {}", e)
+        })?;
         // Assert: 验证结果包含必要的字段
         assert!(!reload_result.reload_hint.is_empty());
     }
+    Ok(())
 }
 
 /// 测试成功重载时的消息格式
@@ -504,7 +511,7 @@ fn test_reload_shell_reload_hint_contains_config_path() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_reload_shell_consistency() {
+fn test_reload_shell_consistency() -> Result<()> {
     // Arrange: 准备测试多次调用的一致性
     let result1 = Reload::shell(&Shell::Zsh);
     let result2 = Reload::shell(&Shell::Zsh);
@@ -513,9 +520,13 @@ fn test_reload_shell_consistency() {
     assert!(result1.is_ok());
     assert!(result2.is_ok());
 
-    let reload_result1 = result1.expect("First call should return Ok(ReloadResult)");
-    let reload_result2 = result2.expect("Second call should return Ok(ReloadResult)");
+    let reload_result1 = result1
+        .map_err(|e| color_eyre::eyre::eyre!("First call should return Ok(ReloadResult): {}", e))?;
+    let reload_result2 = result2.map_err(|e| {
+        color_eyre::eyre::eyre!("Second call should return Ok(ReloadResult): {}", e)
+    })?;
 
     // reload_hint 应该相同（配置文件路径应该相同）
     assert_eq!(reload_result1.reload_hint, reload_result2.reload_hint);
+    Ok(())
 }

@@ -169,7 +169,7 @@ mod tests {
     /// - 设置时，环境变量被正确设置
     /// - Drop后，环境变量恢复为原始值（或移除，如果原本不存在）
     #[test]
-    fn test_env_guard_set_and_restore() {
+    fn test_env_guard_set_and_restore() -> color_eyre::Result<()> {
         let original_home = std::env::var("HOME").ok();
 
         {
@@ -177,14 +177,21 @@ mod tests {
             guard.set("HOME", "/tmp/test");
 
             // 验证环境变量已设置
-            assert_eq!(std::env::var("HOME").unwrap(), "/tmp/test");
+            let home = std::env::var("HOME")
+                .map_err(|e| color_eyre::eyre::eyre!("HOME should exist: {}", e))?;
+            assert_eq!(home, "/tmp/test");
         }
 
         // 验证环境变量已恢复
         match original_home {
-            Some(ref value) => assert_eq!(std::env::var("HOME").unwrap(), *value),
+            Some(ref value) => {
+                let home = std::env::var("HOME")
+                    .map_err(|e| color_eyre::eyre::eyre!("HOME should exist: {}", e))?;
+                assert_eq!(home, *value);
+            }
             None => assert!(std::env::var("HOME").is_err()),
         }
+        Ok(())
     }
 
     /// 测试EnvGuard移除和恢复环境变量
@@ -203,7 +210,7 @@ mod tests {
     /// - 移除时，环境变量被正确移除
     /// - Drop后，环境变量恢复为原始值
     #[test]
-    fn test_env_guard_remove_and_restore() {
+    fn test_env_guard_remove_and_restore() -> color_eyre::Result<()> {
         // 设置一个测试环境变量
         std::env::set_var("TEST_ENV_VAR", "original_value");
 
@@ -216,10 +223,13 @@ mod tests {
         }
 
         // 验证环境变量已恢复
-        assert_eq!(std::env::var("TEST_ENV_VAR").unwrap(), "original_value");
+        let test_var = std::env::var("TEST_ENV_VAR")
+            .map_err(|e| color_eyre::eyre::eyre!("TEST_ENV_VAR should exist: {}", e))?;
+        assert_eq!(test_var, "original_value");
 
         // 清理
         std::env::remove_var("TEST_ENV_VAR");
+        Ok(())
     }
 
     /// 测试EnvGuard批量设置环境变量
@@ -238,7 +248,7 @@ mod tests {
     /// - 批量设置时，所有环境变量被正确设置
     /// - Drop后，所有环境变量恢复为原始值
     #[test]
-    fn test_env_guard_set_many() {
+    fn test_env_guard_set_many() -> color_eyre::Result<()> {
         let original_home = std::env::var("HOME").ok();
         let original_path = std::env::var("PATH").ok();
 
@@ -247,19 +257,31 @@ mod tests {
             guard.set_many(&[("HOME", "/tmp/test"), ("PATH", "/usr/bin")]);
 
             // 验证环境变量已设置
-            assert_eq!(std::env::var("HOME").unwrap(), "/tmp/test");
-            assert_eq!(std::env::var("PATH").unwrap(), "/usr/bin");
+            let home = std::env::var("HOME")
+                .map_err(|e| color_eyre::eyre::eyre!("HOME should exist: {}", e))?;
+            let path = std::env::var("PATH")
+                .map_err(|e| color_eyre::eyre::eyre!("PATH should exist: {}", e))?;
+            assert_eq!(home, "/tmp/test");
+            assert_eq!(path, "/usr/bin");
         }
 
         // 验证环境变量已恢复
         match original_home {
-            Some(ref value) => assert_eq!(std::env::var("HOME").unwrap(), *value),
+            Some(ref value) => {
+                let home = std::env::var("HOME")
+                    .map_err(|e| color_eyre::eyre::eyre!("HOME should exist: {}", e))?;
+                assert_eq!(home, *value);
+            }
             None => assert!(std::env::var("HOME").is_err()),
         }
         match original_path {
-            Some(ref value) => assert_eq!(std::env::var("PATH").unwrap(), *value),
+            Some(ref value) => {
+                let path = std::env::var("PATH")
+                    .map_err(|e| color_eyre::eyre::eyre!("PATH should exist: {}", e))?;
+                assert_eq!(path, *value);
+            }
             None => assert!(std::env::var("PATH").is_err()),
         }
+        Ok(())
     }
 }
-

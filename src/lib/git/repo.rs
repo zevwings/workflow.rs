@@ -90,7 +90,9 @@ impl GitRepo {
     ///
     /// 如果无法获取远程 URL，返回相应的错误信息。
     pub fn get_remote_url() -> Result<String> {
-        Self::get_remote_url_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::get_remote_url_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// 获取远程仓库 URL（指定仓库路径）
@@ -171,7 +173,9 @@ impl GitRepo {
     ///
     /// 如果无法从 URL 中提取仓库名，返回相应的错误信息。
     pub fn extract_repo_name() -> Result<String> {
-        Self::extract_repo_name_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::extract_repo_name_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// 从 Git remote URL 提取仓库名（指定仓库路径）

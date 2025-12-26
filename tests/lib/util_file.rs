@@ -2,6 +2,7 @@
 //!
 //! 测试文件操作工具的核心功能，包括 FileReader 和 FileWriter。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::fs;
 use std::io::Write;
@@ -357,10 +358,9 @@ fn test_file_writer_ensure_parent_dir_with_nested_path_creates_dirs(
     writer.ensure_parent_dir()?;
 
     // Assert: 验证父目录已创建
-    assert!(file_path
-        .parent()
-        .expect("file path should have a parent")
-        .exists());
+    let parent = file_path.parent()
+        .ok_or_else(|| color_eyre::eyre::eyre!("file path should have a parent"))?;
+    assert!(parent.exists());
 
     Ok(())
 }

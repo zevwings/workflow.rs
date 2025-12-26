@@ -675,7 +675,10 @@ auto_accept_change_type = true
     cli_env_with_git.create_home_config(&config_content)?;
 
     // Act: 调用 PrivateRepoConfig::load_from()，传入 home 路径
-    let config = PrivateRepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = PrivateRepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 配置正确加载
     assert!(config.configured);
@@ -720,7 +723,10 @@ fn test_load_from_non_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) 
     cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // Act: 调用 PrivateRepoConfig::load_from()，传入 home 路径
-    let config = PrivateRepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = PrivateRepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 返回默认配置
     assert!(!config.configured);
@@ -765,7 +771,10 @@ fn test_save_to_new_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<(
         }),
     };
 
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 文件创建成功
     // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
@@ -825,7 +834,10 @@ prefix = "hotfix"
         pr: None,
     };
 
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 其他仓库配置未被覆盖
     // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
@@ -880,7 +892,10 @@ ignore = ["main"]
     cli_env_with_git.create_home_config(&config_content)?;
 
     // Act: 加载 → 修改 → 保存 → 重新加载
-    let mut config = PrivateRepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let mut config = PrivateRepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
     assert!(config.configured);
 
     // 修改配置
@@ -890,10 +905,16 @@ ignore = ["main"]
     if let Some(ref mut branch) = config.branch {
         branch.ignore.push("develop".to_string());
     }
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // 重新加载
-    let reloaded_config = PrivateRepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let reloaded_config = PrivateRepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 数据一致性
     assert_eq!(reloaded_config.configured, config.configured);
@@ -945,7 +966,10 @@ configured = "invalid  # 缺少闭合引号和括号
     cli_env_with_git.create_home_config(invalid_toml)?;
 
     // Act: 尝试加载配置
-    let result = PrivateRepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path());
+    let result = PrivateRepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    );
 
     // Assert: 返回错误
     assert!(result.is_err());
@@ -1015,7 +1039,10 @@ fn test_save_to_readonly_directory_return_ok(mut cli_env_with_git: CliTestEnv) -
         }),
         pr: None,
     };
-    let result = config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path());
+    let result = config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    );
 
     // Assert: 返回权限错误
     // 注意：在某些系统上，root 用户或特定权限配置下这个测试可能会失败
@@ -1089,7 +1116,10 @@ fn test_save_with_empty_branch_config_return_ok(mut cli_env_with_git: CliTestEnv
         pr: None,
     };
 
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 文件创建成功但不包含 branch 部分（因为是空的）
     // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud
@@ -1132,7 +1162,10 @@ fn test_save_with_empty_pr_config_return_ok(mut cli_env_with_git: CliTestEnv) ->
         }),
     };
 
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 文件创建成功但不包含 pr 部分（因为是空的）
     // CliTestEnv 已设置 WORKFLOW_DISABLE_ICLOUD=1，传递 true 禁用 iCloud

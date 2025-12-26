@@ -322,7 +322,10 @@ fn test_log_command_with_all_subcommands_parses_successfully_return_true() -> Re
     let search_cli = TestLogCli::try_parse_from(search_args)?;
 
     // Assert: 验证所有子命令都可以正确解析
-    assert!(matches!(download_cli.command, LogSubcommand::Download { .. }));
+    assert!(matches!(
+        download_cli.command,
+        LogSubcommand::Download { .. }
+    ));
     assert!(matches!(find_cli.command, LogSubcommand::Find { .. }));
     assert!(matches!(search_cli.command, LogSubcommand::Search { .. }));
     Ok(())

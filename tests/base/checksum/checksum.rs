@@ -9,9 +9,9 @@ use std::path::Path;
 use color_eyre::Result;
 use rstest::rstest;
 
-use workflow::base::checksum::Checksum;
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;
+use workflow::base::checksum::Checksum;
 
 // ==================== Checksum Calculation Tests ====================
 

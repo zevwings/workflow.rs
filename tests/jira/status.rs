@@ -2,6 +2,7 @@
 //!
 //! 测试 Jira 状态配置的读取、写入和交互式配置功能。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::jira::status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
@@ -26,9 +27,7 @@ use workflow::jira::status::{JiraStatus, JiraStatusConfig, ProjectStatusConfig};
 #[case("invalid-ticket")]
 #[case("")]
 #[case("   ")]
-fn test_read_pull_request_created_status_with_invalid_ticket_returns_error(
-    #[case] ticket: &str,
-) {
+fn test_read_pull_request_created_status_with_invalid_ticket_returns_error(#[case] ticket: &str) {
     // Arrange: 准备无效的 ticket 格式
 
     // Act: 尝试读取状态配置
@@ -65,9 +64,7 @@ fn test_read_pull_request_created_status_with_invalid_ticket_returns_error(
 #[case("PROJ-123")]
 #[case("PROJ-456")]
 #[case("ABC-789")]
-fn test_read_pull_request_created_status_with_valid_ticket_returns_ok(
-    #[case] ticket: &str,
-) {
+fn test_read_pull_request_created_status_with_valid_ticket_returns_ok(#[case] ticket: &str) {
     // Arrange: 准备有效的 ticket 格式
 
     // Act: 尝试读取状态配置
@@ -99,9 +96,7 @@ fn test_read_pull_request_created_status_with_valid_ticket_returns_ok(
 #[case("invalid-ticket")]
 #[case("")]
 #[case("   ")]
-fn test_read_pull_request_merged_status_with_invalid_ticket_returns_error(
-    #[case] ticket: &str,
-) {
+fn test_read_pull_request_merged_status_with_invalid_ticket_returns_error(#[case] ticket: &str) {
     // Arrange: 准备无效的 ticket 格式
 
     // Act: 尝试读取合并状态配置
@@ -241,7 +236,7 @@ fn test_jira_status_config_with_none_fields_creates_config() {
 /// - TOML字符串包含PR创建状态字段（`created-pr`或`created_pull_request_status`）
 /// - TOML字符串包含PR合并状态字段（`merged-pr`或`merged_pull_request_status`）
 #[test]
-fn test_project_status_config_serialization_with_valid_config_serializes_to_toml() {
+fn test_project_status_config_serialization_with_valid_config_serializes_to_toml() -> Result<()> {
     // Arrange: 准备 ProjectStatusConfig 实例
     let config = ProjectStatusConfig {
         created_pull_request_status: Some("In Progress".to_string()),
@@ -253,7 +248,8 @@ fn test_project_status_config_serialization_with_valid_config_serializes_to_toml
 
     // Assert: 验证序列化成功且包含预期字段
     assert!(toml.is_ok(), "Should serialize ProjectStatusConfig to TOML");
-    let toml_str = toml.expect("serialization should succeed");
+    let toml_str =
+        toml.map_err(|e| color_eyre::eyre::eyre!("serialization should succeed: {}", e))?;
     assert!(
         toml_str.contains("created-pr") || toml_str.contains("created_pull_request_status"),
         "TOML should contain created-pr field"
@@ -262,6 +258,7 @@ fn test_project_status_config_serialization_with_valid_config_serializes_to_toml
         toml_str.contains("merged-pr") || toml_str.contains("merged_pull_request_status"),
         "TOML should contain merged-pr field"
     );
+    Ok(())
 }
 
 /// 测试从TOML反序列化项目状态配置
@@ -281,7 +278,7 @@ fn test_project_status_config_serialization_with_valid_config_serializes_to_toml
 /// - `created_pull_request_status`字段为`Some("In Progress")`
 /// - `merged_pull_request_status`字段为`Some("Done")`
 #[test]
-fn test_project_status_config_deserialization_with_valid_toml_deserializes_config() {
+fn test_project_status_config_deserialization_with_valid_toml_deserializes_config() -> Result<()> {
     // Arrange: 准备有效的 TOML 字符串
     let toml = r#"
 created-pr = "In Progress"
@@ -296,12 +293,14 @@ merged-pr = "Done"
         config.is_ok(),
         "Should deserialize TOML to ProjectStatusConfig"
     );
-    let config = config.expect("deserialization should succeed");
+    let config =
+        config.map_err(|e| color_eyre::eyre::eyre!("deserialization should succeed: {}", e))?;
     assert_eq!(
         config.created_pull_request_status,
         Some("In Progress".to_string())
     );
     assert_eq!(config.merged_pull_request_status, Some("Done".to_string()));
+    Ok(())
 }
 
 /// 测试可选字段为None的项目状态配置序列化

@@ -4,6 +4,7 @@
 
 use crate::common::helpers::create_temp_test_dir;
 use clap_complete::Shell;
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::completion::Completion;
@@ -32,7 +33,7 @@ fn test_is_shell_configured(
     #[case] shell: Shell,
     #[case] shell_name: &str,
     #[case] config_identifier: &str,
-) {
+) -> Result<()> {
     // Arrange: 准备测试检查 shell 是否已配置 completion
     let result = Completion::is_shell_configured(&shell);
 
@@ -42,7 +43,8 @@ fn test_is_shell_configured(
         "Should return Ok for {} shell check",
         shell_name
     );
-    let (_configured, config_path) = result.expect("operation should succeed");
+    let (_configured, config_path) =
+        result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     // configured 可能是 true 或 false，取决于实际配置
     let path_str = config_path.to_string_lossy();
     assert!(
@@ -51,6 +53,7 @@ fn test_is_shell_configured(
         shell_name,
         path_str
     );
+    Ok(())
 }
 
 /// 测试检查 PowerShell 是否已配置补全
@@ -65,15 +68,17 @@ fn test_is_shell_configured(
 /// ## 预期结果
 /// - 返回 Ok，配置文件路径可能包含 "powershell" 或 "Microsoft"
 #[test]
-fn test_is_shell_configured_powershell() {
+fn test_is_shell_configured_powershell() -> Result<()> {
     // Arrange: 准备测试检查 PowerShell 是否已配置 completion
     let result = Completion::is_shell_configured(&Shell::PowerShell);
 
     // 应该返回 Ok，包含配置状态和配置文件路径
     assert!(result.is_ok(), "Should return Ok for PowerShell check");
-    let (_configured, _config_path) = result.expect("operation should succeed");
+    let (_configured, _config_path) =
+        result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     // configured 可能是 true 或 false，取决于实际配置
     // PowerShell 配置文件路径可能包含 "powershell" 或 "Microsoft"
+    Ok(())
 }
 
 // ==================== Completion 文件列表测试 ====================
@@ -204,7 +209,7 @@ fn test_remove_all_completion_configs() {
 #[case(Shell::Zsh)]
 #[case(Shell::Bash)]
 #[case(Shell::Fish)]
-fn test_remove_completion_files(#[case] shell: Shell) {
+fn test_remove_completion_files(#[case] shell: Shell) -> Result<()> {
     // Arrange: 准备测试删除 shell 的 completion 文件
     let result = Completion::remove_completion_files(&shell);
 
@@ -214,12 +219,14 @@ fn test_remove_completion_files(#[case] shell: Shell) {
         "Should return Ok when removing {:?} completion files",
         shell
     );
-    let removal_result = result.expect("operation should succeed");
+    let removal_result =
+        result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     assert!(true, "Removed count should be non-negative");
     assert!(
         removal_result.removed_files.len() == removal_result.removed_count as usize,
         "Removed files count should match removed count"
     );
+    Ok(())
 }
 
 // ==================== Completion 配置结果结构体测试 ====================

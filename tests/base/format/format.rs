@@ -14,9 +14,9 @@ use std::path::Path;
 use color_eyre::Result;
 use rstest::rstest;
 
-use workflow::base::checksum::Checksum;
 use crate::common::environments::CliTestEnv;
 use crate::common::fixtures::cli_env;
+use workflow::base::checksum::Checksum;
 use workflow::base::format::DisplayFormatter;
 use workflow::base::format::{
     date::{
@@ -47,10 +47,7 @@ mod format_size_tests {
     #[case(1, "1 B")]
     #[case(512, "512 B")]
     #[case(1023, "1023 B")]
-    fn test_format_size_bytes_with_byte_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    fn test_format_size_bytes_with_byte_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备字节值（通过参数提供）
 
         // Act & Assert: 验证字节值格式化正确
@@ -72,10 +69,7 @@ mod format_size_tests {
     #[case(1536, "1.50 KB")] // 1024 + 512
     #[case(2048, "2.00 KB")]
     #[case(1024 * 1023, "1023.00 KB")]
-    fn test_format_size_kilobytes_with_kb_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    fn test_format_size_kilobytes_with_kb_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备KB值（通过参数提供）
 
         // Act & Assert: 验证KB值格式化正确
@@ -97,10 +91,7 @@ mod format_size_tests {
     #[case(1024 * 1024 + 512 * 1024, "1.50 MB")]
     #[case(1024 * 1024 * 5, "5.00 MB")]
     #[case(1024 * 1024 * 1023, "1023.00 MB")]
-    fn test_format_size_megabytes_with_mb_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    fn test_format_size_megabytes_with_mb_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备MB值（通过参数提供）
 
         // Act & Assert: 验证MB值格式化正确
@@ -121,10 +112,7 @@ mod format_size_tests {
     #[case(1024_u64.pow(3), "1.00 GB")]
     #[case(1024_u64.pow(3) + 512 * 1024_u64.pow(2), "1.50 GB")]
     #[case(1024_u64.pow(3) * 10, "10.00 GB")]
-    fn test_format_size_gigabytes_with_gb_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    fn test_format_size_gigabytes_with_gb_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备GB值（通过参数提供）
 
         // Act & Assert: 验证GB值格式化正确
@@ -145,10 +133,7 @@ mod format_size_tests {
     #[case(1024_u64.pow(4), "1.00 TB")]
     #[case(1024_u64.pow(4) * 2, "2.00 TB")]
     #[case(1024_u64.pow(4) + 512 * 1024_u64.pow(3), "1.50 TB")]
-    fn test_format_size_terabytes_with_tb_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    fn test_format_size_terabytes_with_tb_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备TB值（通过参数提供）
 
         // Act & Assert: 验证TB值格式化正确
@@ -202,11 +187,8 @@ mod format_size_tests {
     #[rstest]
     #[case(1024 + 256, "1.25 KB")] // 1.25 KB
     #[case(1024 + 102, "1.10 KB")] // 约1.10 KB
-    #[case(1024 + 51, "1.05 KB")]  // 约1.05 KB
-    fn test_format_size_precision_with_decimal_values(
-        #[case] bytes: u64,
-        #[case] expected: &str,
-    ) {
+    #[case(1024 + 51, "1.05 KB")] // 约1.05 KB
+    fn test_format_size_precision_with_decimal_values(#[case] bytes: u64, #[case] expected: &str) {
         // Arrange: 准备带小数的字节值（通过参数提供）
 
         // Act & Assert: 验证小数精度正确
@@ -268,10 +250,7 @@ mod sensitive_string_tests {
     #[case("short", "***")]
     #[case("12345", "***")]
     #[case("123456789012", "***")] // 恰好12个字符
-    fn test_mask_short_strings(
-        #[case] input: &str,
-        #[case] expected: &str,
-    ) {
+    fn test_mask_short_strings(#[case] input: &str, #[case] expected: &str) {
         // Arrange: 准备短字符串（通过参数提供）
 
         // Act & Assert: 验证短字符串被掩码
@@ -293,10 +272,7 @@ mod sensitive_string_tests {
     #[case("verylongapikey123456", "very***3456")]
     #[case("ghp_1234567890abcdefghijklmnop", "ghp_***mnop")]
     #[case("sk-1234567890abcdefghijklmnopqrstuvwxyz", "sk-1***wxyz")]
-    fn test_mask_long_strings(
-        #[case] input: &str,
-        #[case] expected: &str,
-    ) {
+    fn test_mask_long_strings(#[case] input: &str, #[case] expected: &str) {
         // Arrange: 准备长字符串（通过参数提供）
 
         // Act & Assert: 验证长字符串掩码正确
@@ -337,10 +313,7 @@ mod sensitive_string_tests {
     #[case("short", "***")]
     #[case("verylongapikey123456", "very***3456")]
     #[case("", "***")]
-    fn test_mask_basic(
-        #[case] input: &str,
-        #[case] expected: &str,
-    ) {
+    fn test_mask_basic(#[case] input: &str, #[case] expected: &str) {
         // Arrange: 准备基本输入（通过参数提供）
 
         // Act & Assert: 验证基本掩码正确
@@ -395,10 +368,7 @@ mod sensitive_string_tests {
     #[case("key_with_underscores_123456", "key_***3456")]
     #[case("key.with.dots.123456789", "key.***6789")]
     #[case("key@with@symbols#123456", "key@***3456")]
-    fn test_mask_special_characters(
-        #[case] input: &str,
-        #[case] expected: &str,
-    ) {
+    fn test_mask_special_characters(#[case] input: &str, #[case] expected: &str) {
         // Arrange: 准备包含特殊字符的字符串（通过参数提供）
 
         // Act & Assert: 验证特殊字符处理正确
@@ -420,10 +390,7 @@ mod sensitive_string_tests {
     #[case("短字符串", "***")]
     #[case("这是一个很长的中文字符串包含数字123456", "这是一个***3456")]
     #[case("émoji🚀test123456789", "émoj***6789")]
-    fn test_mask_unicode_strings(
-        #[case] input: &str,
-        #[case] expected: &str,
-    ) {
+    fn test_mask_unicode_strings(#[case] input: &str, #[case] expected: &str) {
         // Arrange: 准备Unicode字符串（通过参数提供）
 
         // Act & Assert: 验证Unicode字符串处理正确
@@ -449,10 +416,10 @@ mod date_format_tests {
     /// - 格式为 YYYY-MM-DD
     /// - Local 和 UTC 时区都能正确格式化
     #[test]
-    fn test_date_format_patterns_with_date_format_returns_formatted_date() {
+    fn test_date_format_patterns_with_date_format_returns_formatted_date() -> Result<()> {
         // Arrange: 准备日期格式正则表达式
-        let date_regex =
-            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
+        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+            .map_err(|e| color_eyre::eyre::eyre!("Date regex pattern should be valid: {}", e))?;
 
         // Act: 格式化日期（Local和UTC时区）
         let date_local = format_document_timestamp(DateFormat::DateOnly, Timezone::Local);
@@ -461,6 +428,7 @@ mod date_format_tests {
         // Assert: 验证格式为YYYY-MM-DD
         assert!(date_regex.is_match(&date_local));
         assert!(date_regex.is_match(&date_utc));
+        Ok(())
     }
 
     /// 测试日期时间格式化功能
@@ -475,10 +443,13 @@ mod date_format_tests {
     /// - 格式为 YYYY-MM-DD HH:MM:SS
     /// - Local 和 UTC 时区都能正确格式化
     #[test]
-    fn test_datetime_format_patterns_with_datetime_format_returns_formatted_datetime() {
+    fn test_datetime_format_patterns_with_datetime_format_returns_formatted_datetime() -> Result<()>
+    {
         // Arrange: 准备日期时间格式正则表达式
-        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-            .expect("DateTime regex pattern should be valid");
+        let datetime_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").map_err(|e| {
+                color_eyre::eyre::eyre!("DateTime regex pattern should be valid: {}", e)
+            })?;
 
         // Act: 格式化日期时间（Local和UTC时区）
         let datetime_local = format_document_timestamp(DateFormat::DateTime, Timezone::Local);
@@ -487,6 +458,7 @@ mod date_format_tests {
         // Assert: 验证格式为YYYY-MM-DD HH:MM:SS
         assert!(datetime_regex.is_match(&datetime_local));
         assert!(datetime_regex.is_match(&datetime_utc));
+        Ok(())
     }
 
     /// 测试ISO 8601格式化功能
@@ -523,12 +495,14 @@ mod date_format_tests {
     /// - format_last_updated() 返回日期格式（YYYY-MM-DD）
     /// - format_last_updated_with_time() 返回日期时间格式（YYYY-MM-DD HH:MM:SS）
     #[test]
-    fn test_convenience_functions_return_valid_format() {
+    fn test_convenience_functions_return_valid_format() -> Result<()> {
         // Arrange: 准备正则表达式模式
-        let date_regex =
-            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$").expect("Date regex pattern should be valid");
-        let datetime_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")
-            .expect("DateTime regex pattern should be valid");
+        let date_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}$")
+            .map_err(|e| color_eyre::eyre::eyre!("Date regex pattern should be valid: {}", e))?;
+        let datetime_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$").map_err(|e| {
+                color_eyre::eyre::eyre!("DateTime regex pattern should be valid: {}", e)
+            })?;
 
         // Act: 调用便利函数
         let last_updated = format_last_updated();
@@ -537,6 +511,7 @@ mod date_format_tests {
         // Assert: 验证格式正确
         assert!(date_regex.is_match(&last_updated));
         assert!(datetime_regex.is_match(&last_updated_with_time));
+        Ok(())
     }
 
     /// 测试文件名时间戳格式化功能
@@ -548,10 +523,12 @@ mod date_format_tests {
     /// - 格式为 YYYY-MM-DD_HH-MM-SS
     /// - 不包含空格和冒号（文件名友好）
     #[test]
-    fn test_filename_timestamp_format_returns_filename_friendly_string() {
+    fn test_filename_timestamp_format_returns_filename_friendly_string() -> Result<()> {
         // Arrange: 准备正则表达式模式
-        let filename_regex = regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-            .expect("Filename regex pattern should be valid");
+        let filename_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").map_err(|e| {
+                color_eyre::eyre::eyre!("Filename regex pattern should be valid: {}", e)
+            })?;
 
         // Act: 调用文件名时间戳格式化函数
         let filename_timestamp = format_filename_timestamp();
@@ -560,6 +537,7 @@ mod date_format_tests {
         assert!(filename_regex.is_match(&filename_timestamp));
         assert!(!filename_timestamp.contains(' '));
         assert!(!filename_timestamp.contains(':'));
+        Ok(())
     }
 
     /// 测试不同日期格式的一致性
@@ -602,13 +580,18 @@ mod date_format_tests {
     #[rstest]
     #[case(DateFormat::DateOnly, r"^\d{4}-\d{2}-\d{2}$")]
     #[case(DateFormat::DateTime, r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$")]
-    fn test_format_patterns_parametrized(#[case] format: DateFormat, #[case] pattern: &str) {
+    fn test_format_patterns_parametrized(
+        #[case] format: DateFormat,
+        #[case] pattern: &str,
+    ) -> Result<()> {
         let result_local = format_document_timestamp(format, Timezone::Local);
         let result_utc = format_document_timestamp(format, Timezone::Utc);
 
-        let regex = regex::Regex::new(pattern).expect("Regex pattern should be valid");
+        let regex = regex::Regex::new(pattern)
+            .map_err(|e| color_eyre::eyre::eyre!("Regex pattern should be valid: {}", e))?;
         assert!(regex.is_match(&result_local));
         assert!(regex.is_match(&result_utc));
+        Ok(())
     }
 }
 
@@ -976,7 +959,7 @@ mod integration_tests {
     /// - 所有格式化工具正常工作
     /// - 组合使用生成正确的报告文件名
     #[test]
-    fn test_format_utilities_integration() {
+    fn test_format_utilities_integration() -> Result<()> {
         // 测试各种格式化工具的集成使用
         let file_size = DisplayFormatter::size(1024 * 1024 * 5); // 5MB
         let timestamp = format_filename_timestamp();
@@ -984,9 +967,11 @@ mod integration_tests {
 
         // 验证格式化结果
         assert_eq!(file_size, "5.00 MB");
-        assert!(regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
-            .expect("Filename timestamp regex should be valid")
-            .is_match(&timestamp));
+        let timestamp_regex =
+            regex::Regex::new(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$").map_err(|e| {
+                color_eyre::eyre::eyre!("Filename timestamp regex should be valid: {}", e)
+            })?;
+        assert!(timestamp_regex.is_match(&timestamp));
         assert_eq!(masked_key, "very***6789");
 
         // 模拟生成报告文件名
@@ -998,6 +983,7 @@ mod integration_tests {
         assert!(report_filename.contains("DOWNLOAD_REPORT_"));
         assert!(report_filename.contains("5.00_MB"));
         assert!(report_filename.ends_with(".md"));
+        Ok(())
     }
 
     /// 测试校验和和格式化工具的集成使用

@@ -2,6 +2,7 @@
 //!
 //! 测试 Spinner 的核心功能。
 
+use color_eyre::Result;
 use std::time::Duration;
 use workflow::base::indicator::Spinner;
 
@@ -149,14 +150,17 @@ fn test_spinner_finish_with_message_with_message_finishes_with_message() {
 /// ## 预期结果
 /// - 操作成功，返回正确的结果值
 #[test]
-fn test_spinner_with_success() {
+fn test_spinner_with_success() -> Result<()> {
     // Arrange: 准备测试 with 方法成功场景（覆盖 spinner.rs:175-194）
     let result: Result<i32, Box<dyn std::error::Error>> = Spinner::with("Creating PR...", || {
         // 模拟快速操作（< 100ms）
         Ok(42)
     });
     assert!(result.is_ok());
-    assert_eq!(result.expect("spinner operation should succeed"), 42);
+    let value =
+        result.map_err(|e| color_eyre::eyre::eyre!("spinner operation should succeed: {}", e))?;
+    assert_eq!(value, 42);
+    Ok(())
 }
 
 /// 测试 Spinner::with() 方法错误场景
@@ -191,7 +195,7 @@ fn test_spinner_with_error() {
 /// ## 预期结果
 /// - 操作成功，加载指示器在慢速操作时显示
 #[test]
-fn test_spinner_with_slow_operation() {
+fn test_spinner_with_slow_operation() -> Result<()> {
     // Arrange: 准备测试 with 方法慢速操作（> 100ms）
     let result: Result<i32, Box<dyn std::error::Error>> = Spinner::with("Creating PR...", || {
         // 模拟慢速操作（> 100ms）
@@ -199,7 +203,10 @@ fn test_spinner_with_slow_operation() {
         Ok(42)
     });
     assert!(result.is_ok());
-    assert_eq!(result.expect("slow spinner operation should succeed"), 42);
+    let value = result
+        .map_err(|e| color_eyre::eyre::eyre!("slow spinner operation should succeed: {}", e))?;
+    assert_eq!(value, 42);
+    Ok(())
 }
 
 /// 测试 Spinner::with_output() 方法成功场景
@@ -214,12 +221,15 @@ fn test_spinner_with_slow_operation() {
 /// ## 预期结果
 /// - 操作成功，返回正确的结果值
 #[test]
-fn test_spinner_with_output_success() {
+fn test_spinner_with_output_success() -> Result<()> {
     // Arrange: 准备测试 with_output 方法成功场景（覆盖 spinner.rs:231-242）
     let result: Result<i32, Box<dyn std::error::Error>> =
         Spinner::with_output("Pushing to remote...", || Ok(42));
     assert!(result.is_ok());
-    assert_eq!(result.expect("spinner with output should succeed"), 42);
+    let value =
+        result.map_err(|e| color_eyre::eyre::eyre!("spinner with output should succeed: {}", e))?;
+    assert_eq!(value, 42);
+    Ok(())
 }
 
 /// 测试 Spinner::with_output() 方法错误场景

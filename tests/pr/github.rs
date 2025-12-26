@@ -103,7 +103,9 @@ fn test_create_pr_request_serialization_with_various_inputs_serializes_correctly
     // Act: 序列化为 JSON
     let json_str = serde_json::to_string(&request)?;
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
-    let obj = json_value.as_object().expect("Should be a JSON object");
+    let obj = json_value
+        .as_object()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Should be a JSON object"))?;
 
     // Assert: 验证 JSON 字段存在且值正确
     assert_eq!(obj.get("title").and_then(|v| v.as_str()), Some(title));
@@ -287,7 +289,8 @@ fn test_create_pull_request_response_structure_with_valid_fields_creates_respons
 /// - 反序列化成功
 /// - html_url 字段值正确
 #[test]
-fn test_create_pull_request_response_deserialization_with_valid_json_deserializes_response() -> Result<()> {
+fn test_create_pull_request_response_deserialization_with_valid_json_deserializes_response(
+) -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"html_url": "https://github.com/owner/repo/pull/123"}"#;
 
@@ -354,7 +357,8 @@ fn test_pull_request_info_structure_with_valid_fields_creates_info() {
 /// - 反序列化成功
 /// - 所有字段值正确
 #[test]
-fn test_pull_request_info_deserialization_with_valid_json_deserializes_info_return_ok() -> Result<()> {
+fn test_pull_request_info_deserialization_with_valid_json_deserializes_info_return_ok() -> Result<()>
+{
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{
         "number": 123,
@@ -449,7 +453,8 @@ fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
 /// - 反序列化成功
 /// - ref_name 字段值正确
 #[test]
-fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch_return_ok() -> Result<()> {
+fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch_return_ok(
+) -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串（注意 JSON 中使用 "ref" 字段）
     let json = r#"{"ref": "feature/test"}"#;
 

@@ -6,6 +6,7 @@
 //! - 完成消息生成
 //! - 历史选项和结果处理
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::commit::{CommitReword, RewordHistoryOptions, RewordHistoryResult, RewordPreview};
 use workflow::git::CommitInfo;
@@ -25,7 +26,6 @@ fn create_sample_commit_info() -> CommitInfo {
         date: "2023-12-02 14:45:00 +0000".to_string(),
     }
 }
-
 
 // ==================== Test Cases ====================
 
@@ -47,16 +47,14 @@ fn create_sample_commit_info() -> CommitInfo {
 /// - `new_message`与新提供的消息一致
 /// - `is_head`为`true`（表示这是HEAD提交）
 #[test]
-fn test_create_preview() {
+fn test_create_preview() -> Result<()> {
     let commit_info = create_sample_commit_info();
     let new_message = "fix: resolve critical login authentication issue\n\nFix authentication bug that was blocking user access with proper credentials.";
     let is_head = true;
     let current_branch = "main";
 
     let result = CommitReword::create_preview(&commit_info, new_message, is_head, current_branch);
-    assert!(result.is_ok());
-
-    let preview = result.expect("operation should succeed");
+    let preview = result?;
     assert_eq!(
         preview.original_sha,
         "def456abc789012345678901234567890abcdef12"
@@ -64,6 +62,7 @@ fn test_create_preview() {
     assert_eq!(preview.original_message, "fix: resolve login authentication bug\n\nFix critical authentication issue that prevented users from logging in with valid credentials.");
     assert_eq!(preview.new_message, "fix: resolve critical login authentication issue\n\nFix authentication bug that was blocking user access with proper credentials.");
     assert_eq!(preview.is_head, true);
+    Ok(())
 }
 
 /// 测试格式化预览信息
@@ -434,7 +433,7 @@ fn test_reword_preview_clone_with_valid_preview_creates_clone() {
 
 /// 测试空消息处理
 #[test]
-fn test_create_preview_with_empty_message_creates_preview() {
+fn test_create_preview_with_empty_message_creates_preview() -> Result<()> {
     // Arrange: 准备提交信息和空消息
     let commit_info = create_sample_commit_info();
     let empty_message = "";
@@ -442,13 +441,11 @@ fn test_create_preview_with_empty_message_creates_preview() {
     let current_branch = "feature";
 
     // Act: 创建预览
-    let result = CommitReword::create_preview(&commit_info, empty_message, is_head, current_branch);
-    assert!(result.is_ok());
-
-    // Assert: 验证预览创建成功且空消息被正确处理
-    let preview = result.expect("operation should succeed");
+    let preview =
+        CommitReword::create_preview(&commit_info, empty_message, is_head, current_branch)?;
     assert_eq!(preview.new_message, "");
     assert_eq!(preview.is_head, false);
+    Ok(())
 }
 
 /// 测试 Git 仓库集成

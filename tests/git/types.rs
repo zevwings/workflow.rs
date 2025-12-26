@@ -7,6 +7,7 @@
 //! - 合并策略枚举
 //! - 分支名称处理逻辑
 
+use color_eyre::Result;
 use rstest::rstest;
 
 use workflow::git::{CommitInfo, MergeStrategy, RepoType, WorktreeStatus};
@@ -566,18 +567,20 @@ mod tests {
     /// - 所有字段正确解析
     /// - 返回 Some(CommitInfo)
     #[test]
-    fn test_parse_commit_info_valid_with_valid_output_parses_correctly() {
+    fn test_parse_commit_info_valid_with_valid_output_parses_correctly() -> Result<()> {
         // Arrange: 准备有效的提交信息输出
         let output = "abc123def456\nJohn Doe\n2024-01-01 10:30:00\nInitial commit";
 
         // Act: 解析提交信息
-        let commit = mock_parse_commit_info(output).expect("operation should succeed");
+        let commit = mock_parse_commit_info(output)
+            .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
 
         // Assert: 验证解析结果正确
         assert_eq!(commit.sha, "abc123def456");
         assert_eq!(commit.author, "John Doe");
         assert_eq!(commit.date, "2024-01-01 10:30:00");
         assert_eq!(commit.message, "Initial commit");
+        Ok(())
     }
 
     /// 测试解析无效的提交信息输出
@@ -615,11 +618,13 @@ mod tests {
     /// ## 预期结果
     /// - 提交消息正确解析（只取第一行）
     #[test]
-    fn test_parse_commit_info_with_multiline_message() {
+    fn test_parse_commit_info_with_multiline_message() -> Result<()> {
         let output = "abc123\nJohn Doe\n2024-01-01\nFirst line of commit message";
-        let commit = mock_parse_commit_info(output).expect("operation should succeed");
+        let commit = mock_parse_commit_info(output)
+            .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
 
         assert_eq!(commit.message, "First line of commit message");
+        Ok(())
     }
 
     // ==================== WorktreeStatus 结构体测试 ====================

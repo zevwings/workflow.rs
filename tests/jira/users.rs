@@ -2,6 +2,7 @@
 //!
 //! 测试 Jira 用户信息的获取、缓存和管理功能。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
 use workflow::jira::config::{ConfigManager, JiraConfig, JiraUserEntry};
@@ -114,7 +115,7 @@ fn test_jira_user_entry_structure() {
 
 /// 测试创建和读取配置文件
 #[rstest]
-fn test_config_manager_create_and_read(test_isolation: TestIsolation) {
+fn test_config_manager_create_and_read(test_isolation: TestIsolation) -> Result<()> {
     // Arrange: 准备测试创建和读取配置文件
     let config_path = test_isolation.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
@@ -128,17 +129,18 @@ fn test_config_manager_create_and_read(test_isolation: TestIsolation) {
     });
 
     // Act: 写入配置
-    manager.write(&config).expect("Should write config");
+    manager.write(&config)?;
 
     // Act: 读取配置
-    let read_config = manager.read().expect("Should read config");
+    let read_config = manager.read()?;
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].email, "test@example.com");
+    Ok(())
 }
 
 /// 测试更新配置文件
 #[rstest]
-fn test_config_manager_update(test_isolation: TestIsolation) {
+fn test_config_manager_update(test_isolation: TestIsolation) -> Result<()> {
     // Arrange: 准备测试更新配置文件
     let config_path = test_isolation.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
@@ -150,27 +152,26 @@ fn test_config_manager_update(test_isolation: TestIsolation) {
         account_id: "account-123".to_string(),
         display_name: "Test User".to_string(),
     });
-    manager.write(&config).expect("Should write config");
+    manager.write(&config)?;
 
     // 更新配置
-    manager
-        .update(|config| {
-            config.users.push(JiraUserEntry {
-                email: "test2@example.com".to_string(),
-                account_id: "account-456".to_string(),
-                display_name: "Test User 2".to_string(),
-            });
-        })
-        .expect("Should update config");
+    manager.update(|config| {
+        config.users.push(JiraUserEntry {
+            email: "test2@example.com".to_string(),
+            account_id: "account-456".to_string(),
+            display_name: "Test User 2".to_string(),
+        });
+    })?;
 
     // Assert: 验证更新
-    let read_config = manager.read().expect("Should read config");
+    let read_config = manager.read()?;
     assert_eq!(read_config.users.len(), 2);
+    Ok(())
 }
 
 /// 测试更新已存在的用户
 #[rstest]
-fn test_config_manager_update_existing_user(test_isolation: TestIsolation) {
+fn test_config_manager_update_existing_user(test_isolation: TestIsolation) -> Result<()> {
     // Arrange: 准备测试更新已存在的用户
     let config_path = test_isolation.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
@@ -182,21 +183,20 @@ fn test_config_manager_update_existing_user(test_isolation: TestIsolation) {
         account_id: "account-123".to_string(),
         display_name: "Test User".to_string(),
     });
-    manager.write(&config).expect("Should write config");
+    manager.write(&config)?;
 
     // 更新已存在的用户
-    manager
-        .update(|config| {
-            if let Some(user) = config.users.iter_mut().find(|u| u.email == "test@example.com") {
-                user.display_name = "Updated User".to_string();
-            }
-        })
-        .expect("Should update config");
+    manager.update(|config| {
+        if let Some(user) = config.users.iter_mut().find(|u| u.email == "test@example.com") {
+            user.display_name = "Updated User".to_string();
+        }
+    })?;
 
     // Assert: 验证更新
-    let read_config = manager.read().expect("Should read config");
+    let read_config = manager.read()?;
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].display_name, "Updated User");
+    Ok(())
 }
 
 // ==================== Configuration File Operation Tests ====================
@@ -233,7 +233,7 @@ fn test_jira_config_default() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_jira_config_serialization() {
+fn test_jira_config_serialization() -> Result<()> {
     // Arrange: 准备测试配置序列化
     let mut config = JiraConfig::default();
     config.users.push(JiraUserEntry {
@@ -242,11 +242,11 @@ fn test_jira_config_serialization() {
         display_name: "Test User".to_string(),
     });
 
-    let toml = toml::to_string(&config);
-    assert!(toml.is_ok(), "Should serialize JiraConfig");
-    let toml_str = toml.expect("serialization should succeed");
+    let toml_str = toml::to_string(&config)
+        .map_err(|e| color_eyre::eyre::eyre!("serialization should succeed: {}", e))?;
     assert!(toml_str.contains("test@example.com"));
     assert!(toml_str.contains("account-123"));
+    Ok(())
 }
 
 /// 测试配置反序列化
@@ -262,7 +262,7 @@ fn test_jira_config_serialization() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_jira_config_deserialization() {
+fn test_jira_config_deserialization() -> Result<()> {
     // Arrange: 准备测试配置反序列化
     let toml_str = r#"
 [[users]]
@@ -271,11 +271,11 @@ account_id = "account-123"
 display_name = "Test User"
 "#;
 
-    let config: Result<JiraConfig, _> = toml::from_str(toml_str);
-    assert!(config.is_ok(), "Should deserialize JiraConfig");
-    let config = config.expect("deserialization should succeed");
+    let config = toml::from_str::<JiraConfig>(toml_str)
+        .map_err(|e| color_eyre::eyre::eyre!("deserialization should succeed: {}", e))?;
     assert_eq!(config.users.len(), 1);
     assert_eq!(config.users[0].email, "test@example.com");
+    Ok(())
 }
 
 // ==================== Boundary Condition Tests ====================
@@ -382,7 +382,7 @@ fn test_jira_user_entry_equality() {
 
 /// 测试配置的完整往返（写入和读取）
 #[rstest]
-fn test_jira_config_round_trip(test_isolation: TestIsolation) {
+fn test_jira_config_round_trip(test_isolation: TestIsolation) -> Result<()> {
     // Arrange: 准备测试配置的完整往返（写入和读取）
     let config_path = test_isolation.work_dir().join("jira.toml");
     let manager = ConfigManager::<JiraConfig>::new(config_path.clone());
@@ -396,16 +396,17 @@ fn test_jira_config_round_trip(test_isolation: TestIsolation) {
     });
 
     // Act: 写入
-    manager.write(&config).expect("Should write config");
+    manager.write(&config)?;
 
     // Act: 读取
-    let read_config = manager.read().expect("Should read config");
+    let read_config = manager.read()?;
 
     // Assert: 验证
     assert_eq!(read_config.users.len(), 1);
     assert_eq!(read_config.users[0].email, "test@example.com");
     assert_eq!(read_config.users[0].account_id, "account-123");
     assert_eq!(read_config.users[0].display_name, "Test User");
+    Ok(())
 }
 
 // ==================== JiraUsers 集成测试（使用 Mock 服务器）====================

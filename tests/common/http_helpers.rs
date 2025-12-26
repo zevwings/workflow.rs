@@ -316,7 +316,8 @@ impl MockServer {
         if !self.expectations.is_empty() {
             eprintln!("\n📋 Mock 期望信息 (共 {} 个):", self.expectations.len());
             for (idx, exp) in self.expectations.iter().enumerate() {
-                eprintln!("   Mock #{}: {} {} -> 状态码 {}",
+                eprintln!(
+                    "   Mock #{}: {} {} -> 状态码 {}",
                     idx + 1,
                     exp.method,
                     exp.path,
@@ -330,7 +331,12 @@ impl MockServer {
         for (index, mock) in self.mocks.iter().enumerate() {
             if let Some(expectation) = self.expectations.iter().find(|e| e.mock_index == index) {
                 // 在验证前输出当前 Mock 信息，这样如果失败可以看到是哪个 Mock
-                eprintln!("验证 Mock #{}: {} {}", index + 1, expectation.method, expectation.path);
+                eprintln!(
+                    "验证 Mock #{}: {} {}",
+                    index + 1,
+                    expectation.method,
+                    expectation.path
+                );
             }
             mock.assert();
         }
@@ -380,7 +386,8 @@ impl MockServer {
 
         eprintln!("\n📋 Mock 期望信息 (共 {} 个):", self.expectations.len());
         for (idx, exp) in self.expectations.iter().enumerate() {
-            eprintln!("   Mock #{}: {} {} -> 状态码 {}",
+            eprintln!(
+                "   Mock #{}: {} {} -> 状态码 {}",
                 idx + 1,
                 exp.method,
                 exp.path,
@@ -428,7 +435,8 @@ impl MockServer {
         pr_number: u64,
         pr_data: &Value,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(pr_data).expect("operation should succeed");
+        let response_body = serde_json::to_string(pr_data)
+            .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
         self.mock_github_pr(
             "GET",
             &format!("/repos/{}/{}/pulls/{}", owner, repo, pr_number),
@@ -454,7 +462,8 @@ impl MockServer {
         issue_key: &str,
         issue_data: &Value,
     ) -> &mut Self {
-        let response_body = serde_json::to_string(issue_data).expect("operation should succeed");
+        let response_body = serde_json::to_string(issue_data)
+            .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
         self.mock_jira_issue(
             "GET",
             &format!("/rest/api/3/issue/{}", issue_key),
@@ -498,7 +507,8 @@ impl MockServer {
 
     /// 设置 Jira 获取当前用户（/myself）成功响应
     pub fn setup_jira_get_current_user_success(&mut self, user_data: &Value) -> &mut Self {
-        let response_body = serde_json::to_string(user_data).expect("operation should succeed");
+        let response_body = serde_json::to_string(user_data)
+            .unwrap_or_else(|e| panic!("operation should succeed: {}", e));
         self.mock_jira_issue("GET", "/rest/api/2/myself", &response_body, 200);
         self
     }

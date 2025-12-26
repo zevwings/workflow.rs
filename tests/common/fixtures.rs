@@ -52,8 +52,7 @@ use crate::common::isolation::TestIsolation;
 /// ```
 #[fixture]
 pub fn git_repo_with_commit() -> GitTestEnv {
-    GitTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create git test env: {:?}", e))
+    GitTestEnv::new().unwrap_or_else(|e| panic!("Failed to create git test env: {:?}", e))
 }
 
 /// CLI 测试环境 Fixture（带 Git 仓库）
@@ -86,8 +85,8 @@ pub fn git_repo_with_commit() -> GitTestEnv {
 /// ```
 #[fixture]
 pub fn cli_env_with_git() -> CliTestEnv {
-    let env = CliTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
+    let env =
+        CliTestEnv::new().unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
     env.init_git_repo()
         .unwrap_or_else(|e| panic!("Failed to init git repo: {:?}", e));
     env
@@ -118,8 +117,7 @@ pub fn cli_env_with_git() -> CliTestEnv {
 /// ```
 #[fixture]
 pub fn cli_env() -> CliTestEnv {
-    CliTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e))
+    CliTestEnv::new().unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e))
 }
 
 /// CLI 测试环境 Fixture（带 Git 仓库和初始提交）
@@ -153,8 +151,8 @@ pub fn cli_env() -> CliTestEnv {
 /// ```
 #[fixture]
 pub fn cli_env_with_git_and_commit() -> CliTestEnv {
-    let env = CliTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
+    let env =
+        CliTestEnv::new().unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
     env.init_git_repo()
         .unwrap_or_else(|e| panic!("Failed to init git repo: {:?}", e))
         .create_file("test.txt", "test content")
@@ -377,8 +375,8 @@ pub fn test_jira_id_alt() -> &'static str {
 /// ```
 #[fixture]
 pub fn git_repo_with_branch(#[default("feature/test")] branch_name: &str) -> GitTestEnv {
-    let env = GitTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create git test env: {:?}", e));
+    let env =
+        GitTestEnv::new().unwrap_or_else(|e| panic!("Failed to create git test env: {:?}", e));
     env.checkout_new_branch(branch_name)
         .unwrap_or_else(|e| panic!("Failed to create branch '{}': {:?}", branch_name, e));
     env
@@ -423,9 +421,11 @@ pub fn git_repo_with_branch(#[default("feature/test")] branch_name: &str) -> Git
 /// }
 /// ```
 #[fixture]
-pub fn cli_env_with_config(#[default("[jira]\nurl = \"test\"")] config_content: &str) -> CliTestEnv {
-    let env = CliTestEnv::new()
-        .unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
+pub fn cli_env_with_config(
+    #[default("[jira]\nurl = \"test\"")] config_content: &str,
+) -> CliTestEnv {
+    let env =
+        CliTestEnv::new().unwrap_or_else(|e| panic!("Failed to create CLI test env: {:?}", e));
     env.create_config(config_content)
         .unwrap_or_else(|e| panic!("Failed to create config: {:?}", e));
     env
@@ -459,8 +459,7 @@ pub fn cli_env_with_config(#[default("[jira]\nurl = \"test\"")] config_content: 
 /// ```
 #[fixture]
 pub fn test_isolation() -> TestIsolation {
-    TestIsolation::new()
-        .unwrap_or_else(|e| panic!("Failed to create test isolation: {:?}", e))
+    TestIsolation::new().unwrap_or_else(|e| panic!("Failed to create test isolation: {:?}", e))
 }
 
 #[cfg(test)]
@@ -606,4 +605,3 @@ mod tests {
         Ok(())
     }
 }
-

@@ -242,7 +242,9 @@ fn test_backup_result_creation_with_valid_info_creates_result(cli_env: CliTestEn
 /// - 克隆后的`binary_count`、`completion_count`字段值与原始结果完全相同
 /// - Debug字符串包含`"BackupResult"`结构体名称和关键字段名
 #[rstest]
-fn test_backup_result_clone_and_debug_with_valid_result_creates_clone(cli_env: CliTestEnv) -> Result<()> {
+fn test_backup_result_clone_and_debug_with_valid_result_creates_clone(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备原始 BackupResult
     let env = setup_test_environment(cli_env)?;
     let backup_info = create_test_backup_info(&env)?;
@@ -297,7 +299,10 @@ fn test_rollback_result_creation_with_mixed_results_creates_result() -> Result<(
     let restored_binaries = vec!["workflow".to_string(), "install".to_string()];
     let restored_completions = vec!["workflow.bash".to_string()];
     let failed_binaries = vec![("failed_binary".to_string(), "Permission denied".to_string())];
-    let failed_completions = vec![("failed_completion".to_string(), "File not found".to_string())];
+    let failed_completions = vec![(
+        "failed_completion".to_string(),
+        "File not found".to_string(),
+    )];
 
     // Act: 创建 RollbackResult 实例
     let rollback_result = RollbackResult {

@@ -2,6 +2,7 @@
 //!
 //! 测试日志级别枚举的核心功能。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::str::FromStr;
 use workflow::base::LogLevel;
@@ -20,17 +21,17 @@ use workflow::base::LogLevel;
 /// ## 预期结果
 /// - 所有变体都解析为 LogLevel::None
 #[test]
-fn test_log_level_from_str_off_with_various_cases_returns_none() {
+fn test_log_level_from_str_off_with_various_cases_returns_none() -> Result<()> {
     // Arrange: 准备各种大小写的 "off" 和 "none" 字符串
     let inputs = ["off", "OFF", "none", "NONE"];
 
     // Act & Assert: 验证所有变体都解析为 None
     for input in inputs.iter() {
-        assert_eq!(
-            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
-            LogLevel::None
-        );
+        let level = LogLevel::from_str(input)
+            .map_err(|e| color_eyre::eyre::eyre!("'{}' should parse: {}", input, e))?;
+        assert_eq!(level, LogLevel::None);
     }
+    Ok(())
 }
 
 /// 测试从字符串解析日志级别（error）
@@ -45,17 +46,17 @@ fn test_log_level_from_str_off_with_various_cases_returns_none() {
 /// ## 预期结果
 /// - 所有变体都解析为 LogLevel::Error
 #[test]
-fn test_log_level_from_str_error_with_various_cases_returns_error() {
+fn test_log_level_from_str_error_with_various_cases_returns_error() -> Result<()> {
     // Arrange: 准备各种大小写的 "error" 字符串
     let inputs = ["error", "ERROR", "Error"];
 
     // Act & Assert: 验证所有变体都解析为 Error
     for input in inputs.iter() {
-        assert_eq!(
-            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
-            LogLevel::Error
-        );
+        let level = LogLevel::from_str(input)
+            .map_err(|e| color_eyre::eyre::eyre!("'{}' should parse: {}", input, e))?;
+        assert_eq!(level, LogLevel::Error);
     }
+    Ok(())
 }
 
 /// 测试从字符串解析日志级别（warn）
@@ -70,17 +71,17 @@ fn test_log_level_from_str_error_with_various_cases_returns_error() {
 /// ## 预期结果
 /// - 所有变体都解析为 LogLevel::Warn
 #[test]
-fn test_log_level_from_str_warn_with_various_cases_returns_warn() {
+fn test_log_level_from_str_warn_with_various_cases_returns_warn() -> Result<()> {
     // Arrange: 准备各种大小写的 "warn" 字符串
     let inputs = ["warn", "WARN"];
 
     // Act & Assert: 验证所有变体都解析为 Warn
     for input in inputs.iter() {
-        assert_eq!(
-            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
-            LogLevel::Warn
-        );
+        let level = LogLevel::from_str(input)
+            .map_err(|e| color_eyre::eyre::eyre!("'{}' should parse: {}", input, e))?;
+        assert_eq!(level, LogLevel::Warn);
     }
+    Ok(())
 }
 
 /// 测试从字符串解析日志级别（info）
@@ -95,17 +96,17 @@ fn test_log_level_from_str_warn_with_various_cases_returns_warn() {
 /// ## 预期结果
 /// - 所有变体都解析为 LogLevel::Info
 #[test]
-fn test_log_level_from_str_info_with_various_cases_returns_info() {
+fn test_log_level_from_str_info_with_various_cases_returns_info() -> Result<()> {
     // Arrange: 准备各种大小写的 "info" 字符串
     let inputs = ["info", "INFO"];
 
     // Act & Assert: 验证所有变体都解析为 Info
     for input in inputs.iter() {
-        assert_eq!(
-            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
-            LogLevel::Info
-        );
+        let level = LogLevel::from_str(input)
+            .map_err(|e| color_eyre::eyre::eyre!("'{}' should parse: {}", input, e))?;
+        assert_eq!(level, LogLevel::Info);
     }
+    Ok(())
 }
 
 /// 测试从字符串解析日志级别（debug）
@@ -120,17 +121,17 @@ fn test_log_level_from_str_info_with_various_cases_returns_info() {
 /// ## 预期结果
 /// - 所有变体都解析为 LogLevel::Debug
 #[test]
-fn test_log_level_from_str_debug_with_various_cases_returns_debug() {
+fn test_log_level_from_str_debug_with_various_cases_returns_debug() -> Result<()> {
     // Arrange: 准备各种大小写的 "debug" 字符串
     let inputs = ["debug", "DEBUG"];
 
     // Act & Assert: 验证所有变体都解析为 Debug
     for input in inputs.iter() {
-        assert_eq!(
-            LogLevel::from_str(input).expect(&format!("'{}' should parse", input)),
-            LogLevel::Debug
-        );
+        let level = LogLevel::from_str(input)
+            .map_err(|e| color_eyre::eyre::eyre!("'{}' should parse: {}", input, e))?;
+        assert_eq!(level, LogLevel::Debug);
     }
+    Ok(())
 }
 
 /// 测试从无效字符串解析日志级别
@@ -151,7 +152,11 @@ fn test_log_level_from_str_invalid_with_invalid_strings_returns_error() {
 
     // Act & Assert: 验证所有无效输入都返回错误
     for input in invalid_inputs.iter() {
-        assert!(LogLevel::from_str(input).is_err(), "Input '{}' should fail to parse", input);
+        assert!(
+            LogLevel::from_str(input).is_err(),
+            "Input '{}' should fail to parse",
+            input
+        );
     }
 }
 

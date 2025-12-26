@@ -112,7 +112,8 @@ fn test_branch_config_serialization_with_valid_config_serializes_to_json_return_
 /// ## 预期结果
 /// - 字段值与 JSON 中的值一致
 #[test]
-fn test_branch_config_deserialization_with_valid_json_deserializes_config_return_ok() -> Result<()> {
+fn test_branch_config_deserialization_with_valid_json_deserializes_config_return_ok() -> Result<()>
+{
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"prefix":"feature","ignore":["main","develop"]}"#;
 
@@ -138,7 +139,8 @@ fn test_branch_config_deserialization_with_valid_json_deserializes_config_return
 /// ## 预期结果
 /// - 存在的字段正确设置，缺失字段使用默认值
 #[test]
-fn test_branch_config_partial_deserialization_with_partial_json_deserializes_config_return_ok() -> Result<()> {
+fn test_branch_config_partial_deserialization_with_partial_json_deserializes_config_return_ok(
+) -> Result<()> {
     // Arrange: 准备部分字段的 JSON 字符串
     let json = r#"{"prefix":"feature"}"#;
 
@@ -164,7 +166,8 @@ fn test_branch_config_partial_deserialization_with_partial_json_deserializes_con
 /// ## 预期结果
 /// - 所有字段使用默认值
 #[test]
-fn test_branch_config_empty_deserialization_with_empty_json_deserializes_config_return_empty() -> Result<()> {
+fn test_branch_config_empty_deserialization_with_empty_json_deserializes_config_return_empty(
+) -> Result<()> {
     // Arrange: 准备空 JSON 对象
     let json = r#"{}"#;
 
@@ -328,7 +331,8 @@ fn test_pr_config_deserialization_with_valid_json_deserializes_config_return_ok(
 /// ## 预期结果
 /// - 字段使用默认值（None）
 #[test]
-fn test_pr_config_empty_deserialization_with_empty_json_deserializes_config_return_empty() -> Result<()> {
+fn test_pr_config_empty_deserialization_with_empty_json_deserializes_config_return_empty(
+) -> Result<()> {
     // Arrange: 准备空 JSON 对象
     let json = r#"{}"#;
 

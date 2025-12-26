@@ -27,10 +27,7 @@ use workflow::base::logger::tracing::Tracer;
 #[case("info", "Test info message")]
 #[case("warn", "Test warn message")]
 #[case("error", "Test error message")]
-fn test_tracer_basic_methods_with_messages(
-    #[case] level: &str,
-    #[case] message: &str,
-) {
+fn test_tracer_basic_methods_with_messages(#[case] level: &str, #[case] message: &str) {
     // Arrange: 准备测试消息（通过参数传入）
 
     // Act: 根据级别调用相应方法
@@ -1030,8 +1027,8 @@ fn test_tracer_init_file_path_creation_logic() {
     // 验证日志目录被创建
     // 通过检查日志目录是否存在来验证路径创建逻辑
     let logs_dir = workflow::base::Paths::logs_dir();
-    if logs_dir.is_ok() {
-        let tracing_dir = logs_dir.expect("logs directory should exist").join("tracing");
+    if let Ok(logs_path) = logs_dir {
+        let tracing_dir = logs_path.join("tracing");
         // 如果目录存在，说明路径创建逻辑正常工作
         // 注意：即使目录不存在，也不意味着代码有问题（可能是权限问题）
         assert!(tracing_dir.exists() || !tracing_dir.exists());

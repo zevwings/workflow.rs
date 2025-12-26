@@ -519,13 +519,17 @@ fn test_delete_work_history_entry_basic() {
 
 /// 测试WorkHistoryEntry的序列化
 #[rstest]
-fn test_work_history_entry_serialization_return_ok(sample_history_entry: WorkHistoryEntry) -> Result<()> {
+fn test_work_history_entry_serialization_return_ok(
+    sample_history_entry: WorkHistoryEntry,
+) -> Result<()> {
     // Arrange: 准备测试 WorkHistoryEntry 的序列化
     let json_str = serde_json::to_string(&sample_history_entry)?;
 
     // Assert: 验证 JSON 是有效的，并包含必要的字段
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
-    let obj = json_value.as_object().expect("Should be a JSON object");
+    let obj = json_value
+        .as_object()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Should be a JSON object"))?;
 
     assert_eq!(
         obj.get("jira_ticket").and_then(|v| v.as_str()),
@@ -617,7 +621,9 @@ fn test_work_history_entry_with_optional_fields_return_ok(
 
     // Assert: 验证 JSON 是有效的
     let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
-    let obj = json_value.as_object().expect("Should be a JSON object");
+    let obj = json_value
+        .as_object()
+        .ok_or_else(|| color_eyre::eyre::eyre!("Should be a JSON object"))?;
 
     assert_eq!(
         obj.get("jira_ticket").and_then(|v| v.as_str()),

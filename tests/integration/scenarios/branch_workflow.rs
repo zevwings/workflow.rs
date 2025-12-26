@@ -2,8 +2,8 @@
 //!
 //! 提供分支创建、切换、管理等场景的测试辅助函数。
 
-use color_eyre::Result;
 use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 /// 分支创建场景构建器
 pub struct BranchCreationScenario {
@@ -44,9 +44,7 @@ impl BranchCreationScenario {
             .create_commit("Initial commit")?;
 
         // 2. 创建并切换分支
-        self.env
-            .create_branch(&self.branch_name)?
-            .checkout(&self.branch_name)?;
+        self.env.create_branch(&self.branch_name)?.checkout(&self.branch_name)?;
 
         Ok(self.env)
     }
@@ -103,4 +101,3 @@ impl MultiBranchScenario {
         Ok(self.env)
     }
 }
-

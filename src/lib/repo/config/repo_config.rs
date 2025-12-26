@@ -66,7 +66,8 @@ impl RepoConfig {
     /// - Do not check file existence or other methods to determine configuration status
     pub fn exists() -> Result<bool> {
         let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
-        let home = crate::base::settings::paths::Paths::home_dir().wrap_err("Failed to get home directory")?;
+        let home = crate::base::settings::paths::Paths::home_dir()
+            .wrap_err("Failed to get home directory")?;
         Self::exists_in(repo_path, home)
     }
 
@@ -181,7 +182,8 @@ impl RepoConfig {
     /// Returns a `RepoConfig` containing all configuration properties.
     pub fn load() -> Result<Self> {
         let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
-        let home = crate::base::settings::paths::Paths::home_dir().wrap_err("Failed to get home directory")?;
+        let home = crate::base::settings::paths::Paths::home_dir()
+            .wrap_err("Failed to get home directory")?;
         Self::load_from(repo_path, home)
     }
 
@@ -195,12 +197,12 @@ impl RepoConfig {
     /// * `home` - 用户主目录路径
     pub fn load_from(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<Self> {
         // Load public configuration (project template)
-        let public_config =
-            PublicRepoConfig::load_from(repo_path.as_ref()).wrap_err("Failed to load public repository config")?;
+        let public_config = PublicRepoConfig::load_from(repo_path.as_ref())
+            .wrap_err("Failed to load public repository config")?;
 
         // Load private configuration (personal preference)
-        let private_config =
-            PrivateRepoConfig::load_from(repo_path.as_ref(), home).wrap_err("Failed to load private repository config")?;
+        let private_config = PrivateRepoConfig::load_from(repo_path.as_ref(), home)
+            .wrap_err("Failed to load private repository config")?;
 
         Ok(Self {
             // Public configuration
@@ -220,7 +222,8 @@ impl RepoConfig {
     /// to their respective files.
     pub fn save(&self) -> Result<()> {
         let repo_path = std::env::current_dir().wrap_err("Failed to get current directory")?;
-        let home = crate::base::settings::paths::Paths::home_dir().wrap_err("Failed to get home directory")?;
+        let home = crate::base::settings::paths::Paths::home_dir()
+            .wrap_err("Failed to get home directory")?;
         self.save_in(repo_path, home)
     }
 
@@ -239,7 +242,9 @@ impl RepoConfig {
             template_branch: self.template_branch.clone(),
             template_pull_requests: self.template_pull_requests.clone(),
         };
-        public_config.save_in(repo_path.as_ref()).wrap_err("Failed to save public repository config")?;
+        public_config
+            .save_in(repo_path.as_ref())
+            .wrap_err("Failed to save public repository config")?;
 
         // Save private configuration (personal preference)
         let private_config = PrivateRepoConfig {
@@ -247,7 +252,9 @@ impl RepoConfig {
             branch: self.branch.clone(),
             pr: self.pr.clone(),
         };
-        private_config.save_in(repo_path.as_ref(), home).wrap_err("Failed to save private repository config")?;
+        private_config
+            .save_in(repo_path.as_ref(), home)
+            .wrap_err("Failed to save private repository config")?;
 
         Ok(())
     }

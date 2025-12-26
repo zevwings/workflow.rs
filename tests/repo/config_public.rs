@@ -860,7 +860,8 @@ type = "old_type"
     config.save_in(cli_env_with_git.project_path())?;
 
     // Assert: 验证其他配置部分未被覆盖，模板配置已更新
-    let content = fs::read_to_string(cli_env_with_git.project_path().join(".workflow/config.toml"))?;
+    let content =
+        fs::read_to_string(cli_env_with_git.project_path().join(".workflow/config.toml"))?;
     assert!(content.contains("[other_section]"));
     assert!(content.contains(r#"key1 = "value1""#));
     assert!(content.contains(r#"key2 = "value2""#));

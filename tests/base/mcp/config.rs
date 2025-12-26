@@ -317,9 +317,7 @@ fn test_mcp_config_manager_merge_return_ok(cli_env: CliTestEnv) -> Result<()> {
 /// - 正确检测到所有已配置的服务器
 /// - 服务器名称正确
 #[rstest]
-fn test_mcp_config_manager_detect_configured_servers_return_ok(
-    cli_env: CliTestEnv,
-) -> Result<()> {
+fn test_mcp_config_manager_detect_configured_servers_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试检测已配置的服务器（覆盖 config.rs:115-117）
     let config_path = cli_env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;
@@ -452,9 +450,7 @@ fn test_mcp_config_manager_read_existing_file_return_ok(cli_env: CliTestEnv) -> 
 /// - 现有环境变量保留
 /// - 新环境变量添加
 #[rstest]
-fn test_mcp_config_manager_merge_existing_server_return_ok(
-    cli_env: CliTestEnv,
-) -> Result<()> {
+fn test_mcp_config_manager_merge_existing_server_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试合并已存在的服务器配置（覆盖 config.rs:100-103）
     let config_path = cli_env.path().join(".cursor").join("mcp.json");
     let parent_dir = config_path.parent().ok_or_else(|| eyre!("No parent directory"))?;

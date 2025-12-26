@@ -51,7 +51,6 @@ fn create_single_commit() -> CommitInfo {
     }
 }
 
-
 // ==================== Test Cases ====================
 
 /// 测试获取分支提交（多个提交）

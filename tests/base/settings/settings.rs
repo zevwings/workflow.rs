@@ -6,6 +6,7 @@
 //! - 配置验证和序列化
 //! - 表格显示结构测试
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use workflow::base::settings::settings::{
@@ -187,7 +188,7 @@ fn test_github_settings_creation_with_valid_accounts_creates_settings() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_github_settings_current_account_with_valid_settings_returns_account() {
+fn test_github_settings_current_account_with_valid_settings_returns_account() -> Result<()> {
     // Arrange: 准备测试用的 GitHubSettings
     let github_settings = create_test_github_settings();
 
@@ -197,10 +198,12 @@ fn test_github_settings_current_account_with_valid_settings_returns_account() {
 
     // Assert: 验证当前账号和 token 正确
     assert!(current_account.is_some());
-    let account = current_account.expect("current account should exist");
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("current account should exist"))?;
     assert_eq!(account.name, "personal");
     assert_eq!(account.email, "personal@example.com");
     assert_eq!(current_token, Some("ghp_personal_token"));
+    Ok(())
 }
 
 /// 测试当current为None时返回第一个账号
@@ -216,7 +219,7 @@ fn test_github_settings_current_account_with_valid_settings_returns_account() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_github_settings_no_current_account_with_none_current_returns_first_account() {
+fn test_github_settings_no_current_account_with_none_current_returns_first_account() -> Result<()> {
     // Arrange: 准备 GitHubSettings（current 为 None）
     let mut github_settings = create_test_github_settings();
     github_settings.current = None;
@@ -226,8 +229,10 @@ fn test_github_settings_no_current_account_with_none_current_returns_first_accou
 
     // Assert: 验证返回第一个账号
     assert!(current_account.is_some());
-    let account = current_account.expect("should return first account");
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("should return first account"))?;
     assert_eq!(account.name, "personal");
+    Ok(())
 }
 
 /// 测试当账号列表为空时返回None
@@ -628,7 +633,7 @@ fn test_table_row_structures() {
 /// - LLM当前提供商功能正常
 /// - 别名功能正常
 #[test]
-fn test_complex_configuration_scenario() {
+fn test_complex_configuration_scenario() -> Result<()> {
     // 创建包含所有配置的复杂设置
     let mut aliases = HashMap::new();
     aliases.insert("s".to_string(), "status".to_string());
@@ -699,10 +704,9 @@ fn test_complex_configuration_scenario() {
     // Assert: 验证 GitHub 当前账号功能
     let current_account = complex_settings.github.get_current_account();
     assert!(current_account.is_some());
-    assert_eq!(
-        current_account.expect("current account should exist").name,
-        "main"
-    );
+    let account =
+        current_account.ok_or_else(|| color_eyre::eyre::eyre!("current account should exist"))?;
+    assert_eq!(account.name, "main");
 
     // Assert: 验证 LLM 当前提供商功能
     let current_llm = complex_settings.llm.current_provider();
@@ -721,4 +725,5 @@ fn test_complex_configuration_scenario() {
         Some(&"commit".to_string())
     );
     assert_eq!(complex_settings.aliases.get("p"), Some(&"push".to_string()));
+    Ok(())
 }

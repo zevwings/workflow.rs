@@ -33,7 +33,6 @@ fn create_sample_commit_info() -> CommitInfo {
     }
 }
 
-
 // ==================== Test Cases ====================
 
 /// 测试创建预览

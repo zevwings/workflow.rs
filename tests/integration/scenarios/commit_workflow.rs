@@ -2,8 +2,8 @@
 //!
 //! 提供提交创建、历史管理等场景的测试辅助函数。
 
-use color_eyre::Result;
 use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 /// 提交创建场景构建器
 pub struct CommitCreationScenario {
@@ -54,9 +54,7 @@ impl CommitCreationScenario {
 
         // 2. 创建所有指定的提交
         for (file_name, file_content, commit_message) in &self.commits {
-            self.env
-                .create_file(file_name, file_content)?
-                .create_commit(commit_message)?;
+            self.env.create_file(file_name, file_content)?.create_commit(commit_message)?;
         }
 
         Ok(self.env)
@@ -112,4 +110,3 @@ impl CommitHistoryScenario {
         Ok(self.env)
     }
 }
-

@@ -188,7 +188,11 @@ impl CliTestEnv {
         // 禁用网络连接，避免测试超时
         // 设置 GIT_TERMINAL_PROMPT=0 和 url.insteadOf 来避免网络请求
         std::process::Command::new("git")
-            .args(["config", "url.insteadOf", "https://github.com/test/test-repo.git"])
+            .args([
+                "config",
+                "url.insteadOf",
+                "https://github.com/test/test-repo.git",
+            ])
             .current_dir(&work_dir)
             .output()
             .ok(); // 允许失败
@@ -415,8 +419,9 @@ impl CliTestEnv {
     /// ```
     pub fn create_project_config(&self, content: &str) -> Result<PathBuf> {
         let config_dir = self.project_path.join(".workflow");
-        fs::create_dir_all(&config_dir)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to create project config directory: {}", e))?;
+        fs::create_dir_all(&config_dir).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create project config directory: {}", e)
+        })?;
 
         let config_file = config_dir.join("config.toml");
         fs::write(&config_file, content)
@@ -449,8 +454,9 @@ impl CliTestEnv {
     /// ```
     pub fn create_home_config(&self, content: &str) -> Result<PathBuf> {
         let config_dir = self.home_path.join(".workflow").join("config");
-        fs::create_dir_all(&config_dir)
-            .map_err(|e| color_eyre::eyre::eyre!("Failed to create home config directory: {}", e))?;
+        fs::create_dir_all(&config_dir).map_err(|e| {
+            color_eyre::eyre::eyre!("Failed to create home config directory: {}", e)
+        })?;
 
         let config_file = config_dir.join("repository.toml");
         fs::write(&config_file, content)
@@ -627,11 +633,11 @@ mod tests {
     fn test_create_branch_return_ok() -> Result<()> {
         let env = CliTestEnv::new()?;
         env.init_git_repo()?;
-        
+
         // 创建初始提交（Git需要至少一个提交才能创建分支）
         env.create_file("README.md", "# Test")?;
         env.create_commit("Initial commit")?;
-        
+
         env.create_branch("feature/test")?;
 
         // 验证分支存在
@@ -686,4 +692,3 @@ mod tests {
         Ok(())
     }
 }
-

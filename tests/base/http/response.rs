@@ -638,7 +638,8 @@ fn test_response_status_text_with_201_status_return_ok() -> Result<()> {
 /// - 多次解析结果一致
 /// - 不同解析方法都能正常工作
 #[test]
-fn test_response_multiple_parses_with_same_response_allows_multiple_parses_return_collect() -> Result<()> {
+fn test_response_multiple_parses_with_same_response_allows_multiple_parses_return_collect(
+) -> Result<()> {
     // Arrange: 准备 Mock 服务器和 JSON 响应
     let mut mock_server = setup_mock_server();
     let url = format!("{}/multi-parse", mock_server.base_url);
@@ -854,7 +855,8 @@ fn test_http_response_debug_with_valid_response_return_ok() -> color_eyre::Resul
 /// - 错误消息正确提取
 /// - 消息包含预期的错误内容
 #[test]
-fn test_http_response_extract_error_message_with_message_field_return_false() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_with_message_field_return_false(
+) -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和包含 message 字段的错误响应
     let mut manager = MockServer::new();
 
@@ -894,7 +896,8 @@ fn test_http_response_extract_error_message_with_message_field_return_false() ->
 /// ## 预期结果
 /// - 错误消息包含完整的 JSON 内容
 #[test]
-fn test_http_response_extract_error_message_without_error_field_return_false() -> color_eyre::Result<()> {
+fn test_http_response_extract_error_message_without_error_field_return_false(
+) -> color_eyre::Result<()> {
     // Arrange: 准备 Mock 服务器和没有 error/message 字段的错误响应
     let mut manager = MockServer::new();
 

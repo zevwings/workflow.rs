@@ -5,10 +5,10 @@
 //! 注意：这些测试默认被忽略，只在性能测试时运行。
 //! 使用 `cargo test -- --ignored` 来运行这些测试。
 
+use crate::common::cli_helpers::CliCommandBuilder;
+use crate::common::environments::CliTestEnv;
 use color_eyre::Result;
 use std::time::Duration;
-use crate::common::environments::CliTestEnv;
-use crate::common::cli_helpers::CliCommandBuilder;
 
 /// 性能测试配置
 ///
@@ -347,4 +347,3 @@ fn test_complete_workflow_performance() -> Result<()> {
 
     Ok(())
 }
-

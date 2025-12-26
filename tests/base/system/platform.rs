@@ -692,7 +692,8 @@ fn test_platform_eq_with_same_platforms_return_ok() -> Result<()> {
 /// ## 预期结果
 /// - 返回包含或不包含 "-static" 后缀的标识符（取决于系统环境）
 #[test]
-fn test_platform_release_identifier_with_linux_x86_64_detects_static_link_return_ok() -> Result<()> {
+fn test_platform_release_identifier_with_linux_x86_64_detects_static_link_return_ok() -> Result<()>
+{
     // Arrange: 创建 Linux x86_64 平台实例
     // 这个测试验证 release_identifier 能够正确检测静态链接需求
 
@@ -744,7 +745,8 @@ fn test_platform_release_identifier_with_non_linux_does_not_check_static_return_
 /// ## 预期结果
 /// - 返回的标识符不包含 "-static" 后缀
 #[test]
-fn test_platform_release_identifier_with_linux_non_x86_64_does_not_check_static_return_ok() -> Result<()> {
+fn test_platform_release_identifier_with_linux_non_x86_64_does_not_check_static_return_ok(
+) -> Result<()> {
     // Arrange: 创建 Linux 非 x86_64 架构平台实例
     let linux_arm64 = Platform::new("linux", "aarch64");
 
@@ -829,7 +831,8 @@ fn test_platform_release_identifier_with_alpine_linux_detects_static_return_ok()
 /// ## 预期结果
 /// - 能够正确解析 ldd 输出并检测静态链接需求
 #[test]
-fn test_platform_release_identifier_with_ldd_scenarios_handles_different_outputs_return_ok() -> Result<()> {
+fn test_platform_release_identifier_with_ldd_scenarios_handles_different_outputs_return_ok(
+) -> Result<()> {
     // Arrange: 创建不同平台实例
     // 由于无法直接控制 ldd 命令的输出，我们通过 release_identifier 间接测试
     let platform = Platform::new("linux", "x86_64");
@@ -901,7 +904,8 @@ fn test_platform_release_identifier_with_non_x86_64_return_ok() -> Result<()> {
 
 /// 测试Linux x86_64平台处理不同场景（Alpine检测、静态链接检测）
 #[test]
-fn test_platform_release_identifier_with_linux_x86_64_handles_different_scenarios_return_ok() -> Result<()> {
+fn test_platform_release_identifier_with_linux_x86_64_handles_different_scenarios_return_ok(
+) -> Result<()> {
     // Arrange: 创建 Linux x86_64 平台实例
     // 由于无法直接控制文件读取和命令执行，我们通过 release_identifier 间接测试
     // 这个测试验证代码路径存在，实际行为取决于运行环境

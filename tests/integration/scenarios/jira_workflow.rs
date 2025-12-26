@@ -2,8 +2,8 @@
 //!
 //! 提供Jira ticket创建、更新、状态同步等场景的测试辅助函数。
 
-use color_eyre::Result;
 use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 /// Jira集成场景构建器
 pub struct JiraIntegrationScenario {
@@ -66,9 +66,7 @@ username = "{}"
             .create_commit("Initial commit")?;
 
         // 2. 创建关联Jira ticket的分支
-        self.env
-            .create_branch(&self.branch_name)?
-            .checkout(&self.branch_name)?;
+        self.env.create_branch(&self.branch_name)?.checkout(&self.branch_name)?;
 
         // 3. 创建文件并提交（包含ticket ID）
         let commit_message = format!("feat({}): add feature", self.ticket_id);
@@ -125,9 +123,7 @@ username = "{}"
 
         // 创建关联ticket的分支
         let branch_name = format!("feature/{}", self.ticket_id);
-        self.env
-            .create_branch(&branch_name)?
-            .checkout(&branch_name)?;
+        self.env.create_branch(&branch_name)?.checkout(&branch_name)?;
 
         // 创建提交
         let commit_message = format!("feat({}): implement feature", self.ticket_id);
@@ -138,4 +134,3 @@ username = "{}"
         Ok(self.env)
     }
 }
-

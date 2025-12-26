@@ -122,10 +122,6 @@ mod tests {
         let result: Result<i32, String> = Err("test error".to_string());
         let converted = test_result!(result);
         assert!(converted.is_err());
-        assert!(converted
-            .unwrap_err()
-            .to_string()
-            .contains("Test failed: test error"));
+        assert!(converted.unwrap_err().to_string().contains("Test failed: test error"));
     }
 }
-

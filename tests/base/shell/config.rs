@@ -2,6 +2,7 @@
 //!
 //! 测试 Shell 配置管理器的核心功能。
 
+use color_eyre::Result;
 use std::collections::HashMap;
 use std::fs;
 use workflow::base::shell::ShellConfigManager;
@@ -592,7 +593,7 @@ fn test_add_source_for_shell_powershell() {
 /// ## 预期结果
 /// - 配置块被正确解析
 #[rstest]
-fn test_config_block_parsing(cli_env: CliTestEnv) {
+fn test_config_block_parsing(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试配置块解析功能
     // 这个测试验证配置块的解析逻辑（通过实际文件操作）
 
@@ -608,14 +609,17 @@ export ANOTHER_KEY="another_value"
     // 创建一个临时文件来测试解析
     let env = &cli_env;
     let config_file = env.path().join("test_config");
-    fs::write(&config_file, config_content).expect("should write config file");
+    fs::write(&config_file, config_content)
+        .map_err(|e| color_eyre::eyre::eyre!("should write config file: {}", e))?;
 
     // 读取并验证内容
-    let content = fs::read_to_string(&config_file).expect("should read config file");
+    let content = fs::read_to_string(&config_file)
+        .map_err(|e| color_eyre::eyre::eyre!("should read config file: {}", e))?;
     assert!(content.contains("TEST_KEY"));
     assert!(content.contains("test_value"));
     assert!(content.contains("ANOTHER_KEY"));
     assert!(content.contains("another_value"));
+    Ok(())
 }
 
 /// 测试配置块格式

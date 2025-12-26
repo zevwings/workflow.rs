@@ -8,7 +8,6 @@
 //! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
 //! - 测试目录遍历、文件查找和目录创建功能
 
-use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use std::fs;
 use workflow::base::fs::directory::DirectoryWalker;
@@ -356,7 +355,8 @@ fn test_directory_walker_ensure_parent_exists_with_file_path_creates_parent(
     walker.ensure_parent_exists(&file_path)?;
 
     // Assert: 验证父目录已创建
-    let parent = file_path.parent()
+    let parent = file_path
+        .parent()
         .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
 
@@ -735,9 +735,11 @@ fn test_directory_walker_find_files_case_sensitive_return_collect(
     assert_eq!(files_lower.len(), 1, "应该找到包含 'test' 的文件");
 
     // Assert: 验证找到的文件是正确的
-    let upper_name = files_upper[0].file_name()
+    let upper_name = files_upper[0]
+        .file_name()
         .ok_or_else(|| color_eyre::eyre::eyre!("File should have a name"))?;
-    let lower_name = files_lower[0].file_name()
+    let lower_name = files_lower[0]
+        .file_name()
         .ok_or_else(|| color_eyre::eyre::eyre!("File should have a name"))?;
     assert!(upper_name.to_string_lossy().contains("Test"));
     assert!(lower_name.to_string_lossy().contains("test"));
@@ -1122,7 +1124,8 @@ fn test_directory_walker_ensure_parent_exists_with_parent_return_ok(
 
     let walker = DirectoryWalker::new(cli_env.path());
     walker.ensure_parent_exists(&file_path)?;
-    let parent = file_path.parent()
+    let parent = file_path
+        .parent()
         .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
 
@@ -1348,7 +1351,8 @@ fn test_directory_walker_ensure_parent_exists_error_wrap_return_false(
     let walker = DirectoryWalker::new(cli_env.path());
     let result = walker.ensure_parent_exists(&file_path);
     assert!(result.is_ok());
-    let parent = file_path.parent()
+    let parent = file_path
+        .parent()
         .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
 

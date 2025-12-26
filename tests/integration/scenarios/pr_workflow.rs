@@ -2,8 +2,8 @@
 //!
 //! 提供PR创建、更新、合并等场景的测试辅助函数。
 
-use color_eyre::Result;
 use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 /// PR创建场景构建器
 ///
@@ -76,9 +76,7 @@ impl PRCreationScenario {
             .create_commit("Initial commit")?;
 
         // 2. 创建并切换到新分支
-        self.env
-            .create_branch(&self.branch_name)?
-            .checkout(&self.branch_name)?;
+        self.env.create_branch(&self.branch_name)?.checkout(&self.branch_name)?;
 
         // 3. 创建文件并提交
         self.env
@@ -138,9 +136,7 @@ impl PRMergeScenario {
             .create_commit("Initial commit")?;
 
         // 2. 创建并切换到源分支
-        self.env
-            .create_branch(&self.source_branch)?
-            .checkout(&self.source_branch)?;
+        self.env.create_branch(&self.source_branch)?.checkout(&self.source_branch)?;
 
         // 3. 在源分支创建提交
         self.env
@@ -153,4 +149,3 @@ impl PRMergeScenario {
         Ok(self.env)
     }
 }
-

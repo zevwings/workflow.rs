@@ -121,7 +121,8 @@ common_commands = [
 /// - 返回非空命令列表
 /// - 返回默认命令列表
 #[test]
-fn test_commands_config_get_common_commands_empty_file_with_empty_config_return_empty() -> Result<()> {
+fn test_commands_config_get_common_commands_empty_file_with_empty_config_return_empty() -> Result<()>
+{
     // Arrange: 准备空配置文件环境
 
     // Act: 获取常用命令列表

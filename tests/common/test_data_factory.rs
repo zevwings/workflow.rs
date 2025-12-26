@@ -55,6 +55,16 @@ impl TestDataFactory {
         ConfigBuilder::new()
     }
 
+    /// 创建分支数据构建器
+    pub fn branch(&self) -> BranchBuilder {
+        BranchBuilder::new()
+    }
+
+    /// 创建用户数据构建器
+    pub fn user(&self) -> UserBuilder {
+        UserBuilder::new()
+    }
+
     /// 从模板文件加载并替换变量
     ///
     /// ## 错误处理
@@ -565,8 +575,233 @@ impl ConfigBuilder {
     ///
     /// 注意：此方法目前未被使用，但保留作为测试工具函数，供未来测试使用。
     #[allow(dead_code)]
-    pub fn build_string(&self) -> String {
-        serde_json::to_string_pretty(&self.build()).expect("JSON serialization should succeed")
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+    }
+}
+
+/// 分支数据构建器
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+/// let branch_name = factory.branch().name("feature/test").build_name();
+/// let branch_data = factory.branch().name("feature/test").build();
+/// ```
+pub struct BranchBuilder {
+    name: String,
+    prefix: Option<String>,
+    jira_key: Option<String>,
+}
+
+impl BranchBuilder {
+    fn new() -> Self {
+        Self {
+            name: "feature/test".to_string(),
+            prefix: Some("feature".to_string()),
+            jira_key: None,
+        }
+    }
+
+    /// 设置分支名称
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = name.into();
+        self
+    }
+
+    /// 设置分支前缀（feature, bugfix, hotfix等）
+    pub fn prefix<S: Into<String>>(mut self, prefix: S) -> Self {
+        self.prefix = Some(prefix.into());
+        self
+    }
+
+    /// 设置关联的 Jira Key
+    pub fn jira_key<S: Into<String>>(mut self, jira_key: S) -> Self {
+        self.jira_key = Some(jira_key.into());
+        self
+    }
+
+    /// 构建分支名称字符串
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let branch_name = factory.branch().name("test").build_name();
+    /// ```
+    pub fn build_name(&self) -> String {
+        self.name.clone()
+    }
+
+    /// 构建分支 JSON 数据
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let branch_data = factory.branch().name("feature/test").build();
+    /// ```
+    pub fn build(&self) -> Value {
+        let mut branch = json!({
+            "name": self.name,
+            "ref": format!("refs/heads/{}", self.name),
+            "sha": "abc123def456789",
+        });
+
+        if let Some(ref prefix) = self.prefix {
+            branch["prefix"] = json!(prefix);
+        }
+
+        if let Some(ref jira_key) = self.jira_key {
+            branch["jira_key"] = json!(jira_key);
+        }
+
+        branch
+    }
+
+    /// 构建为 JSON 字符串
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+    }
+}
+
+impl Default for BranchBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// 用户数据构建器
+///
+/// ## 使用示例
+///
+/// ```rust
+/// let factory = TestDataFactory::new();
+/// // GitHub 用户
+/// let github_user = factory.user().github().login("testuser").build();
+/// // Jira 用户
+/// let jira_user = factory.user().jira().account_id("test-123").build();
+/// ```
+pub struct UserBuilder {
+    user_type: UserType,
+    login: Option<String>,
+    id: Option<String>,
+    name: Option<String>,
+    email: Option<String>,
+    account_id: Option<String>,
+}
+
+enum UserType {
+    GitHub,
+    Jira,
+}
+
+impl UserBuilder {
+    fn new() -> Self {
+        Self {
+            user_type: UserType::GitHub,
+            login: Some("testuser".to_string()),
+            id: Some("12345".to_string()),
+            name: Some("Test User".to_string()),
+            email: Some("test@example.com".to_string()),
+            account_id: None,
+        }
+    }
+
+    /// 设置为 GitHub 用户
+    pub fn github(mut self) -> Self {
+        self.user_type = UserType::GitHub;
+        self
+    }
+
+    /// 设置为 Jira 用户
+    pub fn jira(mut self) -> Self {
+        self.user_type = UserType::Jira;
+        self
+    }
+
+    /// 设置登录名（GitHub）
+    pub fn login<S: Into<String>>(mut self, login: S) -> Self {
+        self.login = Some(login.into());
+        self
+    }
+
+    /// 设置用户 ID
+    pub fn id<S: Into<String>>(mut self, id: S) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// 设置显示名称
+    pub fn name<S: Into<String>>(mut self, name: S) -> Self {
+        self.name = Some(name.into());
+        self
+    }
+
+    /// 设置邮箱
+    pub fn email<S: Into<String>>(mut self, email: S) -> Self {
+        self.email = Some(email.into());
+        self
+    }
+
+    /// 设置账户 ID（Jira）
+    pub fn account_id<S: Into<String>>(mut self, account_id: S) -> Self {
+        self.account_id = Some(account_id.into());
+        self
+    }
+
+    /// 构建用户 JSON 数据
+    ///
+    /// ## 示例
+    /// ```rust
+    /// let user = factory.user().github().login("testuser").build();
+    /// ```
+    pub fn build(&self) -> Value {
+        match self.user_type {
+            UserType::GitHub => {
+                let mut user = json!({
+                    "login": self.login.as_ref().unwrap_or(&"testuser".to_string()),
+                    "id": self.id.as_ref().unwrap_or(&"12345".to_string()),
+                });
+
+                if let Some(ref name) = self.name {
+                    user["name"] = json!(name);
+                }
+
+                if let Some(ref email) = self.email {
+                    user["email"] = json!(email);
+                }
+
+                user
+            }
+            UserType::Jira => {
+                let mut user = json!({
+                    "accountId": self.account_id.as_ref().unwrap_or(&"test-account-id-123".to_string()),
+                    "displayName": self.name.as_ref().unwrap_or(&"Test User".to_string()),
+                });
+
+                if let Some(ref email) = self.email {
+                    user["emailAddress"] = json!(email);
+                }
+
+                if let Some(ref login) = self.login {
+                    user["name"] = json!(login);
+                }
+
+                user
+            }
+        }
+    }
+
+    /// 构建为 JSON 字符串
+    pub fn build_string(&self) -> Result<String> {
+        Ok(serde_json::to_string_pretty(&self.build())
+            .map_err(|e| color_eyre::eyre::eyre!("JSON serialization should succeed: {}", e))?)
+    }
+}
+
+impl Default for UserBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -710,18 +945,18 @@ mod tests {
     }
 
     /// 测试ConfigBuilder使用自定义值构建
-///
-/// ## 测试目的
-/// 验证 `ConfigBuilder` 使用自定义值能够成功构建配置JSON数据。
-///
-/// ## 测试场景
-/// 1. 创建TestDataFactory
-/// 2. 使用自定义值构建配置（log配置）
-/// 3. 验证构建的配置包含自定义值
-///
-/// ## 预期结果
-/// - 构建成功
-/// - 自定义值正确设置
+    ///
+    /// ## 测试目的
+    /// 验证 `ConfigBuilder` 使用自定义值能够成功构建配置JSON数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用自定义值构建配置（log配置）
+    /// 3. 验证构建的配置包含自定义值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 自定义值正确设置
     #[test]
     fn test_config_builder_custom() {
         let factory = TestDataFactory::new();
@@ -793,5 +1028,137 @@ mod tests {
         assert_eq!(commit["commit"]["author"]["email"], "custom@example.com");
         assert_eq!(commit["commit"]["author"]["date"], "2024-06-01T12:00:00Z");
         Ok(())
+    }
+
+    /// 测试BranchBuilder使用默认值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchBuilder` 使用默认值能够成功构建分支数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用默认值构建分支
+    /// 3. 验证构建的数据包含预期的默认值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - name为"feature/test"，ref为"refs/heads/feature/test"
+    #[test]
+    fn test_branch_builder_default() {
+        let factory = TestDataFactory::new();
+        let branch = factory.branch().build();
+
+        assert_eq!(branch["name"], "feature/test");
+        assert_eq!(branch["ref"], "refs/heads/feature/test");
+    }
+
+    /// 测试BranchBuilder使用自定义值构建
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchBuilder` 使用自定义值能够成功构建分支数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用自定义值构建分支（name, prefix, jira_key）
+    /// 3. 验证构建的数据包含自定义值
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 所有自定义值都正确设置
+    #[test]
+    fn test_branch_builder_custom() {
+        let factory = TestDataFactory::new();
+        let branch = factory
+            .branch()
+            .name("bugfix/PROJ-456")
+            .prefix("bugfix")
+            .jira_key("PROJ-456")
+            .build();
+
+        assert_eq!(branch["name"], "bugfix/PROJ-456");
+        assert_eq!(branch["prefix"], "bugfix");
+        assert_eq!(branch["jira_key"], "PROJ-456");
+    }
+
+    /// 测试BranchBuilder构建分支名称字符串
+    ///
+    /// ## 测试目的
+    /// 验证 `BranchBuilder::build_name()` 能够返回分支名称字符串。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 设置分支名称
+    /// 3. 调用build_name()获取名称字符串
+    ///
+    /// ## 预期结果
+    /// - 返回正确的分支名称字符串
+    #[test]
+    fn test_branch_builder_build_name() {
+        let factory = TestDataFactory::new();
+        let branch_name = factory.branch().name("feature/custom").build_name();
+
+        assert_eq!(branch_name, "feature/custom");
+    }
+
+    /// 测试UserBuilder构建GitHub用户
+    ///
+    /// ## 测试目的
+    /// 验证 `UserBuilder` 能够成功构建GitHub用户数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用github()方法设置为GitHub用户
+    /// 3. 设置用户信息（login, id, name, email）
+    /// 4. 验证构建的数据包含GitHub用户字段
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 包含login、id等GitHub用户字段
+    #[test]
+    fn test_user_builder_github() {
+        let factory = TestDataFactory::new();
+        let user = factory
+            .user()
+            .github()
+            .login("testuser")
+            .id("12345")
+            .name("Test User")
+            .email("test@example.com")
+            .build();
+
+        assert_eq!(user["login"], "testuser");
+        assert_eq!(user["id"], "12345");
+        assert_eq!(user["name"], "Test User");
+        assert_eq!(user["email"], "test@example.com");
+    }
+
+    /// 测试UserBuilder构建Jira用户
+    ///
+    /// ## 测试目的
+    /// 验证 `UserBuilder` 能够成功构建Jira用户数据。
+    ///
+    /// ## 测试场景
+    /// 1. 创建TestDataFactory
+    /// 2. 使用jira()方法设置为Jira用户
+    /// 3. 设置用户信息（account_id, name, email）
+    /// 4. 验证构建的数据包含Jira用户字段
+    ///
+    /// ## 预期结果
+    /// - 构建成功
+    /// - 包含accountId、displayName等Jira用户字段
+    #[test]
+    fn test_user_builder_jira() {
+        let factory = TestDataFactory::new();
+        let user = factory
+            .user()
+            .jira()
+            .account_id("test-account-id-123")
+            .name("Test User")
+            .email("test@example.com")
+            .build();
+
+        assert_eq!(user["accountId"], "test-account-id-123");
+        assert_eq!(user["displayName"], "Test User");
+        assert_eq!(user["emailAddress"], "test@example.com");
     }
 }

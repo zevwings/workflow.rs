@@ -46,7 +46,8 @@ impl PublicRepoConfig {
     ///
     /// * `repo_path` - 仓库根目录路径
     pub fn load_from(repo_path: impl AsRef<Path>) -> Result<Self> {
-        let path = Paths::project_config_in(repo_path).wrap_err("Failed to get project config path")?;
+        let path =
+            Paths::project_config_in(repo_path).wrap_err("Failed to get project config path")?;
 
         if !path.exists() {
             return Ok(Self::default());
@@ -101,7 +102,8 @@ impl PublicRepoConfig {
     ///
     /// * `repo_path` - 仓库根目录路径
     pub fn save_in(&self, repo_path: impl AsRef<Path>) -> Result<()> {
-        let path = Paths::project_config_in(repo_path.as_ref()).wrap_err("Failed to get project config path")?;
+        let path = Paths::project_config_in(repo_path.as_ref())
+            .wrap_err("Failed to get project config path")?;
 
         PathAccess::new(&path).ensure_parent_exists()?;
 

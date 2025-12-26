@@ -418,9 +418,7 @@ fn test_unzip_extract_zip_with_directories_return_ok(
 /// ## 预期结果
 /// - 文件被正确解压，文件内容正确
 #[rstest]
-fn test_unzip_extract_tar_gz_single_file_return_ok(
-    cli_env: CliTestEnv,
-) -> color_eyre::Result<()> {
+fn test_unzip_extract_tar_gz_single_file_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use tar::Builder;

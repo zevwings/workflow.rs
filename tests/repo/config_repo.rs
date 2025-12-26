@@ -885,7 +885,7 @@ fn test_template_override_behavior() {
 /// ## 预期结果
 /// - 分支前缀正确设置
 #[test]
-fn test_config_with_valid_branch_prefix() {
+fn test_config_with_valid_branch_prefix() -> Result<()> {
     // Arrange: 准备测试有效的分支前缀配置
     let mut config = RepoConfig::default();
     config.branch = Some(BranchConfig {
@@ -894,8 +894,13 @@ fn test_config_with_valid_branch_prefix() {
     });
 
     if let Some(ref branch) = config.branch {
-        assert!(!branch.prefix.as_ref().expect("branch prefix should exist").is_empty());
+        let prefix = branch
+            .prefix
+            .as_ref()
+            .ok_or_else(|| color_eyre::eyre::eyre!("branch prefix should exist"))?;
+        assert!(!prefix.is_empty());
     }
+    Ok(())
 }
 
 /// 测试空的分支前缀配置
@@ -1008,7 +1013,10 @@ auto_accept_change_type = false
     cli_env_with_git.create_home_config(&private_config_content)?;
 
     // 执行：调用 RepoConfig::load_from()，传入 home 路径
-    let config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：公共配置正确加载
     assert_eq!(config.template_commit.len(), 2);
@@ -1051,7 +1059,10 @@ fn test_load_from_non_existing_files_return_ok(mut cli_env_with_git: CliTestEnv)
     cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 执行：调用 RepoConfig::load_from()，传入 home 路径
-    let config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：返回默认配置
     assert!(config.template_commit.is_empty());
@@ -1101,7 +1112,10 @@ fn test_save_to_new_files_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<
     });
 
     // 保存配置
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：公共配置文件创建成功
     let public_config_path = cli_env_with_git.project_path().join(".workflow").join("config.toml");
@@ -1171,7 +1185,10 @@ prefix = "feature"
     cli_env_with_git.create_home_config(&private_config_content)?;
 
     // 执行：加载 → 修改 → 保存 → 重新加载
-    let mut config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let mut config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
     assert!(config.configured);
 
     // 修改配置
@@ -1182,10 +1199,16 @@ prefix = "feature"
     config.pr = Some(PullRequestsConfig {
         auto_accept_change_type: Some(true),
     });
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // 重新加载
-    let reloaded_config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let reloaded_config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：数据一致性
     assert_eq!(
@@ -1225,14 +1248,23 @@ fn test_exists_check_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 1. 未配置时，exists() 应返回 false
-    assert!(!RepoConfig::exists_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?);
+    assert!(!RepoConfig::exists_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path()
+    )?);
 
     // 2. 保存配置后，exists() 应返回 true
     let mut config = RepoConfig::default();
     config.configured = true;
-    config.save_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    config.save_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
-    assert!(RepoConfig::exists_in(cli_env_with_git.project_path(), cli_env_with_git.home_path())?);
+    assert!(RepoConfig::exists_in(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path()
+    )?);
 
     Ok(())
 }
@@ -1252,7 +1284,9 @@ fn test_exists_check_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
 /// ## 预期结果
 /// - 返回错误，不panic
 #[rstest]
-fn test_load_with_corrupted_public_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
+fn test_load_with_corrupted_public_config_return_ok(
+    mut cli_env_with_git: CliTestEnv,
+) -> Result<()> {
     // 准备：创建包含无效公共配置的临时 Git 仓库
 
     // HOME 和 WORKFLOW_DISABLE_ICLOUD 已在 CliTestEnv::new() 中自动设置
@@ -1267,7 +1301,10 @@ type = "invalid  # 缺少闭合引号和括号
     cli_env_with_git.create_project_config(invalid_public_config)?;
 
     // 执行：尝试加载配置
-    let result = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path());
+    let result = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    );
 
     // Assert: 验证：返回错误
     assert!(result.is_err());
@@ -1289,7 +1326,9 @@ type = "invalid  # 缺少闭合引号和括号
 /// - 返回错误，不panic
 #[rstest]
 // 已修复：使用路径参数版本，不再需要串行执行
-fn test_load_with_corrupted_private_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
+fn test_load_with_corrupted_private_config_return_ok(
+    mut cli_env_with_git: CliTestEnv,
+) -> Result<()> {
     // 准备：创建包含无效私有配置的临时 Git 仓库
 
     // HOME 和 WORKFLOW_DISABLE_ICLOUD 已在 CliTestEnv::new() 中自动设置
@@ -1304,7 +1343,10 @@ configured = "not_a_boolean"
     cli_env_with_git.create_home_config(invalid_private_config)?;
 
     // 执行：尝试加载配置
-    let result = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path());
+    let result = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    );
 
     // Assert: 验证：返回错误（私有配置损坏会导致加载失败）
     assert!(result.is_err());
@@ -1366,7 +1408,10 @@ type = "conventional"
     cli_env_with_git.create_project_config(public_config_content)?;
 
     // 执行：加载配置
-    let config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：公共配置加载成功，私有配置为默认值
     assert_eq!(config.template_commit.len(), 1);
@@ -1411,7 +1456,10 @@ configured = true
     cli_env_with_git.create_home_config(&private_config_content)?;
 
     // 执行：加载配置
-    let config = RepoConfig::load_from(cli_env_with_git.project_path(), cli_env_with_git.home_path())?;
+    let config = RepoConfig::load_from(
+        cli_env_with_git.project_path(),
+        cli_env_with_git.home_path(),
+    )?;
 
     // Assert: 验证：私有配置加载成功，公共配置为默认值
     assert!(config.configured);

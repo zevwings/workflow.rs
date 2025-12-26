@@ -75,7 +75,9 @@ impl PrivateRepoConfig {
     ///
     /// Returns an error if unable to get remote URL or extract repository name.
     pub fn generate_repo_id() -> Result<String> {
-        Self::generate_repo_id_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::generate_repo_id_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// Generate repository identifier (specified repository path)
@@ -95,10 +97,11 @@ impl PrivateRepoConfig {
     ///
     /// Returns an error if unable to get remote URL or extract repository name.
     pub fn generate_repo_id_in(repo_path: impl AsRef<Path>) -> Result<String> {
-        let url = GitRepo::get_remote_url_in(repo_path.as_ref()).wrap_err("Failed to get remote URL")?;
+        let url =
+            GitRepo::get_remote_url_in(repo_path.as_ref()).wrap_err("Failed to get remote URL")?;
 
-        let repo_name_full =
-            GitRepo::extract_repo_name_in(repo_path.as_ref()).wrap_err("Failed to extract repository name")?;
+        let repo_name_full = GitRepo::extract_repo_name_in(repo_path.as_ref())
+            .wrap_err("Failed to extract repository name")?;
 
         let repo_name = repo_name_full
             .split('/')
@@ -135,11 +138,12 @@ impl PrivateRepoConfig {
     /// * `repo_path` - 仓库根目录路径
     /// * `home` - 用户主目录路径
     pub fn load_from(repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<Self> {
-        let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref())
+            .wrap_err("Failed to generate repository ID")?;
         // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
         let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
-        let config_path =
-            Paths::repository_config_in(home, disable_icloud).wrap_err("Failed to get repository config path")?;
+        let config_path = Paths::repository_config_in(home, disable_icloud)
+            .wrap_err("Failed to get repository config path")?;
 
         // If file doesn't exist, return default configuration
         if !config_path.exists() {
@@ -229,11 +233,12 @@ impl PrivateRepoConfig {
     /// * `repo_path` - 仓库根目录路径
     /// * `home` - 用户主目录路径
     pub fn save_in(&self, repo_path: impl AsRef<Path>, home: impl AsRef<Path>) -> Result<()> {
-        let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref())
+            .wrap_err("Failed to generate repository ID")?;
         // 从环境变量读取 disable_icloud 设置（测试环境会设置 WORKFLOW_DISABLE_ICLOUD=1）
         let disable_icloud = std::env::var("WORKFLOW_DISABLE_ICLOUD").is_ok();
-        let config_path =
-            Paths::repository_config_in(home, disable_icloud).wrap_err("Failed to get repository config path")?;
+        let config_path = Paths::repository_config_in(home, disable_icloud)
+            .wrap_err("Failed to get repository config path")?;
 
         // Ensure config directory exists
         PathAccess::new(&config_path).ensure_parent_exists()?;

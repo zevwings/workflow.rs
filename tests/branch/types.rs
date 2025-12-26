@@ -2,6 +2,7 @@
 //!
 //! 测试分支类型定义、转换和验证功能。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::branch::BranchType;
@@ -307,7 +308,7 @@ fn test_branch_type_from_str_with_whitespace_returns_none() {
 /// ## 预期结果
 /// - 包含特殊字符的字符串通常返回 None，除非有特殊处理
 #[test]
-fn test_branch_type_from_str_with_special_characters_handles_correctly() {
+fn test_branch_type_from_str_with_special_characters_handles_correctly() -> Result<()> {
     // Arrange: 准备包含特殊字符的字符串
     let special_strings = vec!["feat!", "bug#", "fix@", "hot-fix", "feature_branch"];
 
@@ -315,12 +316,11 @@ fn test_branch_type_from_str_with_special_characters_handles_correctly() {
     for special_str in special_strings {
         let result = BranchType::from_str(special_str);
         // 大部分特殊字符应该返回 None，除非有特殊处理
-        if result.is_some() {
-            // 如果有结果，验证它是有效的类型
-            let branch_type = result.expect("operation should succeed");
+        if let Some(branch_type) = result {
             assert!(BranchType::all().contains(&branch_type));
         }
     }
+    Ok(())
 }
 
 // ==================== Branch Type Comparison Tests ====================
@@ -526,7 +526,7 @@ fn test_complete_branch_type_workflow_with_all_types_completes_successfully() {
 /// ## 预期结果
 /// - 无效输入返回 None，有效输入返回对应的分支类型
 #[test]
-fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
+fn test_branch_type_from_str_with_invalid_inputs_returns_none() -> Result<()> {
     // Arrange: 准备无效输入列表
     let invalid_inputs = vec![
         "",
@@ -549,9 +549,10 @@ fn test_branch_type_from_str_with_invalid_inputs_returns_none() {
         }
 
         // 如果有结果，验证它确实是有效的
-        let branch_type = result.expect("operation should succeed");
+        let branch_type = result.ok_or_else(|| color_eyre::eyre::eyre!("result should be Some"))?;
         assert!(BranchType::all().contains(&branch_type));
     }
+    Ok(())
 }
 
 // ==================== Real-World Usage Scenario Tests ====================

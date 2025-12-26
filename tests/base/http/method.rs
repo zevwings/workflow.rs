@@ -49,7 +49,13 @@ fn test_http_method_from_str_with_valid_methods_parses_correctly(
         | (HttpMethod::Put, HttpMethod::Put)
         | (HttpMethod::Delete, HttpMethod::Delete)
         | (HttpMethod::Patch, HttpMethod::Patch) => assert!(true),
-        _ => return Err(color_eyre::eyre::eyre!("Failed to parse {} as {:?}", input, expected)),
+        _ => {
+            return Err(color_eyre::eyre::eyre!(
+                "Failed to parse {} as {:?}",
+                input,
+                expected
+            ))
+        }
     }
     Ok(())
 }
@@ -97,7 +103,11 @@ fn test_http_method_from_str_case_sensitive_with_lowercase_strings_returns_error
 
     // Act & Assert: 验证大小写敏感，小写输入返回错误
     for input in lowercase_inputs.iter() {
-        assert!(HttpMethod::from_str(input).is_err(), "Input '{}' should fail", input);
+        assert!(
+            HttpMethod::from_str(input).is_err(),
+            "Input '{}' should fail",
+            input
+        );
     }
 }
 
@@ -129,7 +139,11 @@ fn test_http_method_display_with_all_methods_formats_correctly(
     let display = format!("{}", method);
 
     // Assert: 验证显示为预期字符串
-    assert_eq!(display, expected, "Failed to format {:?} as {}", method, expected);
+    assert_eq!(
+        display, expected,
+        "Failed to format {:?} as {}",
+        method, expected
+    );
 }
 
 /// 测试 HTTP 方法 Debug 格式化

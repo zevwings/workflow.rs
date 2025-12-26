@@ -134,6 +134,10 @@ impl GitConfigGuard {
             .unwrap_or_else(|| std::env::temp_dir());
 
         // 重试机制：处理锁文件冲突和短暂的并发锁定
+        let config_path_str = self
+            .config_path
+            .to_str()
+            .ok_or_else(|| color_eyre::eyre::eyre!("config path should be valid UTF-8"))?;
         for attempt in 0..MAX_RETRIES {
             // 清理可能存在的锁文件（解决锁文件残留问题）
             // Git 在写入配置文件时会创建锁文件（.tmpXXXXX.lock）
@@ -145,14 +149,8 @@ impl GitConfigGuard {
             }
 
             let output = Command::new("git")
-                .args([
-                    "config",
-                    "--file",
-                    self.config_path.to_str().unwrap(),
-                    key,
-                    value,
-                ])
-                .current_dir(&stable_dir)  // 设置稳定的工作目录，避免并行测试时目录被删除的问题
+                .args(["config", "--file", config_path_str, key, value])
+                .current_dir(&stable_dir) // 设置稳定的工作目录，避免并行测试时目录被删除的问题
                 .output()
                 .map_err(|e| color_eyre::eyre::eyre!("Failed to execute git config: {}", e))?;
 
@@ -281,13 +279,12 @@ mod tests {
             })
             .unwrap_or_else(|| std::env::temp_dir());
 
+        let config_path_str = guard
+            .config_path()
+            .to_str()
+            .ok_or_else(|| color_eyre::eyre::eyre!("config path should be valid UTF-8"))?;
         let output = Command::new("git")
-            .args([
-                "config",
-                "--file",
-                guard.config_path().to_str().unwrap(),
-                "user.name",
-            ])
+            .args(["config", "--file", config_path_str, "user.name"])
             .current_dir(&stable_dir)
             .output()?;
 
@@ -325,7 +322,11 @@ mod tests {
 
         // 验证GIT_CONFIG已恢复
         match original_git_config {
-            Some(ref val) => assert_eq!(std::env::var("GIT_CONFIG").unwrap(), *val),
+            Some(ref val) => {
+                let current = std::env::var("GIT_CONFIG")
+                    .map_err(|e| color_eyre::eyre::eyre!("GIT_CONFIG should exist: {}", e))?;
+                assert_eq!(current, *val);
+            }
             None => assert!(std::env::var("GIT_CONFIG").is_err()),
         }
 

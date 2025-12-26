@@ -4,9 +4,9 @@
 //!
 //! 注意：这些测试可能需要Mock Jira API或实际配置，部分测试标记为 `#[ignore]`。
 
-use color_eyre::Result;
-use crate::common::environments::CliTestEnv;
 use crate::common::cli_helpers::CliCommandBuilder;
+use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 // ==================== Jira Ticket 创建测试 ====================
 
@@ -23,14 +23,13 @@ use crate::common::cli_helpers::CliCommandBuilder;
 #[test]
 fn test_jira_ticket_creation_workflow() -> Result<()> {
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_config(
-            r#"
+    env.init_git_repo()?.create_config(
+        r#"
 [jira]
 url = "https://test.atlassian.net"
 username = "test@example.com"
 "#,
-        )?;
+    )?;
 
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -39,8 +38,7 @@ username = "test@example.com"
     // 创建关联Jira ticket的分支
     let ticket_id = "PROJ-123";
     let branch_name = format!("feature/{}", ticket_id);
-    env.create_branch(&branch_name)?
-        .checkout(&branch_name)?;
+    env.create_branch(&branch_name)?.checkout(&branch_name)?;
 
     // 创建包含ticket ID的提交
     env.create_file("feature.txt", "new feature")?
@@ -80,14 +78,13 @@ username = "test@example.com"
 #[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_status_sync_on_pr_creation() -> Result<()> {
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_config(
-            r#"
+    env.init_git_repo()?.create_config(
+        r#"
 [jira]
 url = "https://test.atlassian.net"
 username = "test@example.com"
 "#,
-        )?;
+    )?;
 
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -96,8 +93,7 @@ username = "test@example.com"
     // 创建关联Jira ticket的分支
     let ticket_id = "PROJ-123";
     let branch_name = format!("feature/{}", ticket_id);
-    env.create_branch(&branch_name)?
-        .checkout(&branch_name)?;
+    env.create_branch(&branch_name)?.checkout(&branch_name)?;
 
     // 创建提交
     env.create_file("feature.txt", "new feature")?
@@ -135,14 +131,13 @@ username = "test@example.com"
 #[ignore] // 需要Mock Jira API或实际配置
 fn test_jira_status_sync_on_pr_merge() -> Result<()> {
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_config(
-            r#"
+    env.init_git_repo()?.create_config(
+        r#"
 [jira]
 url = "https://test.atlassian.net"
 username = "test@example.com"
 "#,
-        )?;
+    )?;
 
     // 创建初始提交
     env.create_file("README.md", "# Test Project")?
@@ -151,8 +146,7 @@ username = "test@example.com"
     // 创建关联Jira ticket的分支
     let ticket_id = "PROJ-123";
     let branch_name = format!("feature/{}", ticket_id);
-    env.create_branch(&branch_name)?
-        .checkout(&branch_name)?;
+    env.create_branch(&branch_name)?.checkout(&branch_name)?;
 
     // 创建提交
     env.create_file("feature.txt", "new feature")?
@@ -315,4 +309,3 @@ url = ""
 
     Ok(())
 }
-

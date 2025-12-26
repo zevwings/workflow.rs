@@ -69,8 +69,14 @@ fn test_sort_branches_with_priority_master_after_main_return_ok() -> Result<()> 
     let sorted = sort_branches_with_priority(branches)?;
 
     // main 应该在 master 之前
-    let main_pos = sorted.iter().position(|b| b == "main").expect("main not found");
-    let master_pos = sorted.iter().position(|b| b == "master").expect("master not found");
+    let main_pos = sorted
+        .iter()
+        .position(|b| b == "main")
+        .ok_or_else(|| color_eyre::eyre::eyre!("main not found"))?;
+    let master_pos = sorted
+        .iter()
+        .position(|b| b == "master")
+        .ok_or_else(|| color_eyre::eyre::eyre!("master not found"))?;
     assert!(main_pos < master_pos);
     Ok(())
 }
@@ -98,8 +104,14 @@ fn test_sort_branches_with_priority_develop_second_return_ok() -> Result<()> {
     let sorted = sort_branches_with_priority(branches)?;
 
     // develop 应该在 feature 和 hotfix 之前
-    let develop_pos = sorted.iter().position(|b| b == "develop").expect("develop not found");
-    let feature_pos = sorted.iter().position(|b| b == "feature/test").expect("feature not found");
+    let develop_pos = sorted
+        .iter()
+        .position(|b| b == "develop")
+        .ok_or_else(|| color_eyre::eyre::eyre!("develop not found"))?;
+    let feature_pos = sorted
+        .iter()
+        .position(|b| b == "feature/test")
+        .ok_or_else(|| color_eyre::eyre::eyre!("feature not found"))?;
     assert!(develop_pos < feature_pos);
     Ok(())
 }
@@ -203,7 +215,10 @@ fn test_sort_branches_with_prefix_priority_return_ok() -> Result<()> {
     assert_eq!(sorted[0], "main");
 
     // develop 应该在 main 之后
-    let develop_pos = sorted.iter().position(|b| b == "develop").expect("develop not found");
+    let develop_pos = sorted
+        .iter()
+        .position(|b| b == "develop")
+        .ok_or_else(|| color_eyre::eyre::eyre!("develop not found"))?;
     assert!(develop_pos > 0, "develop should come after main");
 
     // 其他分支应该按字母顺序或前缀优先级排序
@@ -230,7 +245,9 @@ fn test_sort_branches_with_prefix_priority_return_ok() -> Result<()> {
 /// - 如果当前分支有前缀（如 feature/xxx），feature/test 会被提升到优先级3
 #[rstest]
 #[serial] // 需要串行执行，因为使用 CurrentDirGuard 切换全局工作目录
-fn test_sort_branches_all_priority_levels_return_collect(cli_env: crate::common::environments::CliTestEnv) -> Result<()> {
+fn test_sort_branches_all_priority_levels_return_collect(
+    cli_env: crate::common::environments::CliTestEnv,
+) -> Result<()> {
     use crate::common::helpers::CurrentDirGuard;
 
     // Arrange: 创建非 Git 仓库环境，确保排序不受当前分支影响
@@ -256,13 +273,25 @@ fn test_sort_branches_all_priority_levels_return_collect(cli_env: crate::common:
     assert_eq!(sorted[0], "main", "main should be first");
     assert_eq!(sorted[1], "master", "master should be second");
 
-    let develop_pos = sorted.iter().position(|b| b == "develop").expect("develop not found");
+    let develop_pos = sorted
+        .iter()
+        .position(|b| b == "develop")
+        .ok_or_else(|| color_eyre::eyre::eyre!("develop not found"))?;
     assert!(develop_pos == 2, "develop should be third");
 
     // 其他分支应该按字母顺序（在非 Git 仓库中，所有优先级4的分支都按字母顺序）
-    let alpha_pos = sorted.iter().position(|b| b == "alpha").expect("alpha not found");
-    let feature_pos = sorted.iter().position(|b| b == "feature/test").expect("feature not found");
-    let zebra_pos = sorted.iter().position(|b| b == "zebra").expect("zebra not found");
+    let alpha_pos = sorted
+        .iter()
+        .position(|b| b == "alpha")
+        .ok_or_else(|| color_eyre::eyre::eyre!("alpha not found"))?;
+    let feature_pos = sorted
+        .iter()
+        .position(|b| b == "feature/test")
+        .ok_or_else(|| color_eyre::eyre::eyre!("feature not found"))?;
+    let zebra_pos = sorted
+        .iter()
+        .position(|b| b == "zebra")
+        .ok_or_else(|| color_eyre::eyre::eyre!("zebra not found"))?;
 
     assert!(
         alpha_pos < feature_pos,

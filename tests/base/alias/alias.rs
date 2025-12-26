@@ -236,7 +236,8 @@ mod tests {
     /// - 所有嵌套层级都被正确解析
     /// - 参数顺序正确
     #[test]
-    fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels_return_collect() -> Result<()> {
+    fn test_deep_nested_alias_expansion_with_deep_nesting_expands_all_levels_return_collect(
+    ) -> Result<()> {
         // Arrange: 准备深层嵌套别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b arg1".to_string());
@@ -362,7 +363,8 @@ mod tests {
     /// - 直接循环情况返回 true
     /// - 间接循环情况返回 true
     #[test]
-    fn test_circular_detection_function_with_various_cases_detects_circular_return_ok() -> Result<()> {
+    fn test_circular_detection_function_with_various_cases_detects_circular_return_ok() -> Result<()>
+    {
         // Arrange: 准备别名映射
         let mut aliases = HashMap::new();
         aliases.insert("a".to_string(), "b".to_string());
@@ -588,7 +590,8 @@ mod tests {
     /// - 其他参数保持不变
     /// - 参数顺序正确
     #[test]
-    fn test_expand_args_nested_alias_with_nested_alias_expands_recursively_return_ok() -> Result<()> {
+    fn test_expand_args_nested_alias_with_nested_alias_expands_recursively_return_ok() -> Result<()>
+    {
         // Arrange: 准备嵌套别名映射和包含嵌套别名的参数列表
         let mut aliases = HashMap::new();
         aliases.insert("ll".to_string(), "ls -la".to_string());
@@ -1523,7 +1526,9 @@ aliases = { test_remove_alias = "echo test" }
     /// - 方法返回 Ok(false)
     /// - 别名不存在时，返回 false 而不是错误
     #[rstest]
-    fn test_alias_manager_remove_nonexistent_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
+    fn test_alias_manager_remove_nonexistent_with_temp_config_return_ok(
+        mut cli_env: CliTestEnv,
+    ) -> Result<()> {
         // 测试 AliasManager::remove() 方法 - 删除不存在的别名（覆盖 manager.rs:202-205）
         use workflow::base::util::file::FileWriter;
 
@@ -1627,7 +1632,9 @@ aliases = { test_expand_alias = "git status" }
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_nested_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
+    fn test_alias_manager_expand_nested_with_temp_config_return_ok(
+        mut cli_env: CliTestEnv,
+    ) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 嵌套别名展开（覆盖 manager.rs:84-95）
         use workflow::base::util::file::FileWriter;
 
@@ -1685,7 +1692,9 @@ aliases = {
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_circular_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
+    fn test_alias_manager_expand_circular_with_temp_config_return_ok(
+        mut cli_env: CliTestEnv,
+    ) -> Result<()> {
         // 测试 AliasManager::expand() 方法 - 循环别名检测（覆盖 manager.rs:65-71）
         use workflow::base::util::file::FileWriter;
 
@@ -1739,7 +1748,9 @@ aliases = {
     /// - **需要干净的测试环境**: Settings 使用 OnceLock 单例，无法重置
     #[rstest]
     #[ignore = "Requires clean test environment - Settings uses OnceLock singleton that cannot be reset"]
-    fn test_alias_manager_expand_args_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
+    fn test_alias_manager_expand_args_with_temp_config_return_ok(
+        mut cli_env: CliTestEnv,
+    ) -> Result<()> {
         // 测试 AliasManager::expand_args() 方法 - 使用临时配置文件（覆盖 manager.rs:116-148）
         use workflow::base::util::file::FileWriter;
 
@@ -1795,7 +1806,9 @@ aliases = { test_args_alias = "git status" }
     /// - 新别名指向现有别名时，返回 `Ok(false)`（不会形成循环）
     /// - 新别名指向自己时，返回 `Ok(true)`（检测到循环）
     #[rstest]
-    fn test_alias_manager_check_circular_with_temp_config_return_ok(mut cli_env: CliTestEnv) -> Result<()> {
+    fn test_alias_manager_check_circular_with_temp_config_return_ok(
+        mut cli_env: CliTestEnv,
+    ) -> Result<()> {
         // 测试 AliasManager::check_circular() 方法 - 使用临时配置文件（覆盖 manager.rs:273-302）
         use workflow::base::util::file::FileWriter;
 

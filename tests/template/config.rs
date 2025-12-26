@@ -7,6 +7,7 @@
 //! - 模板选择逻辑
 //! - 序列化和反序列化
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use workflow::template::config::BranchTemplates;
@@ -207,14 +208,15 @@ fn test_pr_templates_default() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_config_serialization() {
+fn test_config_serialization() -> Result<()> {
     let config = TemplateConfig::default();
 
     // Arrange: 准备测试序列化为 JSON
     let json_result = serde_json::to_string(&config);
     assert!(json_result.is_ok());
 
-    let json_str = json_result.expect("operation should succeed");
+    let json_str =
+        json_result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     assert!(json_str.contains("handlebars"));
     assert!(json_str.contains("jira_key"));
 
@@ -222,9 +224,11 @@ fn test_config_serialization() {
     let toml_result = toml::to_string(&config);
     assert!(toml_result.is_ok());
 
-    let toml_str = toml_result.expect("operation should succeed");
+    let toml_str =
+        toml_result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     assert!(toml_str.contains("engine"));
     assert!(toml_str.contains("handlebars"));
+    Ok(())
 }
 
 /// 测试配置反序列化
@@ -240,7 +244,7 @@ fn test_config_serialization() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_config_deserialization() {
+fn test_config_deserialization() -> Result<()> {
     // Arrange: 准备测试从 JSON 反序列化
     let json_config = json!({
         "engine": "test_engine",
@@ -260,7 +264,8 @@ fn test_config_deserialization() {
     let config_result: Result<TemplateConfig, _> = serde_json::from_value(json_config);
     assert!(config_result.is_ok());
 
-    let config = config_result.expect("operation should succeed");
+    let config =
+        config_result.map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     assert_eq!(config.engine, "test_engine");
     assert_eq!(config.branch.default, "test-{{jira_key}}");
     assert_eq!(config.branch.feature, Some("feat/{{jira_key}}".to_string()));
@@ -284,10 +289,12 @@ default = "TOML PR template"
     let toml_config_result: Result<TemplateConfig, _> = toml::from_str(toml_str);
     assert!(toml_config_result.is_ok());
 
-    let toml_config = toml_config_result.expect("operation should succeed");
+    let toml_config = toml_config_result
+        .map_err(|e| color_eyre::eyre::eyre!("operation should succeed: {}", e))?;
     assert_eq!(toml_config.engine, "toml_engine");
     assert_eq!(toml_config.branch.default, "toml-{{jira_key}}");
     assert_eq!(toml_config.commit.use_scope, false);
+    Ok(())
 }
 
 /// 测试分支模板按 JIRA 类型加载

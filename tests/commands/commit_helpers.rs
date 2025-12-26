@@ -257,11 +257,17 @@ fn test_check_not_on_default_branch_on_feature_branch_return_ok(
         .ok(); // 允许失败
 
     // 创建并切换到 feature 分支
-    std::process::Command::new("git")
+    let output = std::process::Command::new("git")
         .args(["checkout", "-b", "feature/test"])
         .current_dir(cli_env_with_git.path())
         .output()
-        .expect("Failed to create feature branch");
+        .map_err(|e| color_eyre::eyre::eyre!("Failed to create feature branch: {}", e))?;
+    if !output.status.success() {
+        return Err(color_eyre::eyre::eyre!(
+            "Failed to create feature branch: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
 
     // Act: 使用路径参数版本，避免切换全局工作目录
     let result = check_not_on_default_branch_in(cli_env_with_git.path(), "amend");

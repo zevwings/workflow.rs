@@ -5,9 +5,10 @@
 //! ## 测试策略
 //!
 //! - 测试语言查找、指令生成和语言要求功能
-//! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 使用 `Result<()>` 返回类型和 `?` 操作符处理错误
 //! - 测试所有支持的语言和边界情况
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::base::llm::languages::{
     find_language, get_language_instruction, get_language_requirement,
@@ -28,7 +29,7 @@ use workflow::base::llm::languages::{
 /// ## 预期结果
 /// - 返回对应的语言信息
 #[test]
-fn test_find_language_exact_match_with_valid_code_returns_language() {
+fn test_find_language_exact_match_with_valid_code_returns_language() -> Result<()> {
     // Arrange: 准备有效的语言代码
     let code = "en";
 
@@ -36,10 +37,10 @@ fn test_find_language_exact_match_with_valid_code_returns_language() {
     let lang = find_language(code);
 
     // Assert: 验证找到正确的语言
-    assert!(lang.is_some());
-    let lang = lang.expect("Language 'en' should be found");
+    let lang = lang.ok_or_else(|| color_eyre::eyre::eyre!("Language 'en' should be found"))?;
     assert_eq!(lang.code, "en");
     assert_eq!(lang.name, "English");
+    Ok(())
 }
 
 /// 测试大小写不敏感查找语言
@@ -54,7 +55,7 @@ fn test_find_language_exact_match_with_valid_code_returns_language() {
 /// ## 预期结果
 /// - 所有大小写变体都返回相同的语言
 #[test]
-fn test_find_language_case_insensitive_with_different_cases_returns_same_language() {
+fn test_find_language_case_insensitive_with_different_cases_returns_same_language() -> Result<()> {
     // Arrange: 准备不同大小写的语言代码
     let codes = ["EN", "en", "En"];
 
@@ -64,14 +65,12 @@ fn test_find_language_case_insensitive_with_different_cases_returns_same_languag
     let lang3 = find_language(codes[2]);
 
     // Assert: 验证所有变体都找到相同的语言
-    assert!(lang1.is_some());
-    assert!(lang2.is_some());
-    assert!(lang3.is_some());
-    let lang1 = lang1.expect("Language 'EN' should be found");
-    let lang2 = lang2.expect("Language 'en' should be found");
-    let lang3 = lang3.expect("Language 'En' should be found");
+    let lang1 = lang1.ok_or_else(|| color_eyre::eyre::eyre!("Language 'EN' should be found"))?;
+    let lang2 = lang2.ok_or_else(|| color_eyre::eyre::eyre!("Language 'en' should be found"))?;
+    let lang3 = lang3.ok_or_else(|| color_eyre::eyre::eyre!("Language 'En' should be found"))?;
     assert_eq!(lang1.code, lang2.code);
     assert_eq!(lang2.code, lang3.code);
+    Ok(())
 }
 
 /// 测试中文变体代码查找
@@ -86,7 +85,7 @@ fn test_find_language_case_insensitive_with_different_cases_returns_same_languag
 /// ## 预期结果
 /// - zh 和 zh-CN 都返回 zh-CN
 #[test]
-fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() {
+fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() -> Result<()> {
     // Arrange: 准备中文变体代码
     let codes = ["zh", "zh-CN"];
 
@@ -95,12 +94,13 @@ fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() {
     let lang_zh_cn = find_language(codes[1]);
 
     // Assert: 验证都返回 zh-CN
-    assert!(lang_zh.is_some());
-    assert!(lang_zh_cn.is_some());
-    let lang_zh = lang_zh.expect("Language 'zh' should be found");
-    let lang_zh_cn = lang_zh_cn.expect("Language 'zh-CN' should be found");
+    let lang_zh =
+        lang_zh.ok_or_else(|| color_eyre::eyre::eyre!("Language 'zh' should be found"))?;
+    let lang_zh_cn =
+        lang_zh_cn.ok_or_else(|| color_eyre::eyre::eyre!("Language 'zh-CN' should be found"))?;
     assert_eq!(lang_zh.code, "zh-CN");
     assert_eq!(lang_zh_cn.code, "zh-CN");
+    Ok(())
 }
 
 /// 测试繁体中文代码查找
@@ -115,7 +115,7 @@ fn test_find_language_zh_variants_with_zh_codes_returns_zh_cn() {
 /// ## 预期结果
 /// - 返回繁体中文语言信息
 #[test]
-fn test_find_language_zh_tw_with_valid_code_returns_traditional_chinese() {
+fn test_find_language_zh_tw_with_valid_code_returns_traditional_chinese() -> Result<()> {
     // Arrange: 准备繁体中文代码
     let code = "zh-TW";
 
@@ -123,10 +123,10 @@ fn test_find_language_zh_tw_with_valid_code_returns_traditional_chinese() {
     let lang = find_language(code);
 
     // Assert: 验证返回繁体中文
-    assert!(lang.is_some());
-    let lang = lang.expect("Language 'zh-TW' should be found");
+    let lang = lang.ok_or_else(|| color_eyre::eyre::eyre!("Language 'zh-TW' should be found"))?;
     assert_eq!(lang.code, "zh-TW");
     assert_eq!(lang.name, "Traditional Chinese");
+    Ok(())
 }
 
 /// 测试无效语言代码查找
@@ -335,7 +335,7 @@ fn test_get_supported_language_codes() {
 /// ## 预期结果
 /// - 列表包含格式为 "{native_name} ({name}) - {code}" 的显示名称
 #[test]
-fn test_get_supported_language_display_names() {
+fn test_get_supported_language_display_names() -> Result<()> {
     // Arrange: 准备测试获取所有支持的语言显示名称列表
     let display_names = get_supported_language_display_names();
 
@@ -343,10 +343,12 @@ fn test_get_supported_language_display_names() {
     assert_eq!(display_names.len(), SUPPORTED_LANGUAGES.len());
 
     // Assert: 验证格式："{native_name} ({name}) - {code}"
-    let en_display = display_names.iter().find(|n| n.contains("English"));
-    assert!(en_display.is_some());
-    let en_display = en_display.expect("English display name should be found");
+    let en_display = display_names
+        .iter()
+        .find(|n| n.contains("English"))
+        .ok_or_else(|| color_eyre::eyre::eyre!("English display name should be found"))?;
     assert!(en_display.contains("en"));
+    Ok(())
 }
 
 /// 测试 SUPPORTED_LANGUAGES 的结构
@@ -386,14 +388,14 @@ fn test_supported_languages_structure() {
 /// ## 预期结果
 /// - 所有支持的语言都能被找到
 #[test]
-fn test_find_language_all_supported() {
+fn test_find_language_all_supported() -> Result<()> {
     // Arrange: 准备测试查找所有支持的语言
     for lang in SUPPORTED_LANGUAGES {
-        let found = find_language(lang.code);
-        assert!(found.is_some(), "Language {} should be found", lang.code);
-        let found = found.expect(&format!("Language {} should be found", lang.code));
+        let found = find_language(lang.code)
+            .ok_or_else(|| color_eyre::eyre::eyre!("Language {} should be found", lang.code))?;
         assert_eq!(found.code, lang.code);
     }
+    Ok(())
 }
 
 /// 测试获取所有支持语言的指令

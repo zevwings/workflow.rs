@@ -3,6 +3,7 @@
 //! 测试 Shell 检测功能。
 
 use clap_complete::Shell;
+use color_eyre::Result;
 use workflow::base::shell::Detect;
 
 use crate::common::guards::EnvGuard;
@@ -187,7 +188,7 @@ fn test_detect_shell_with_different_paths() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_detect_shell_consistency() {
+fn test_detect_shell_consistency() -> Result<()> {
     // Arrange: 准备测试 shell 检测的一致性
     // 多次调用应该返回相同的结果（如果环境变量不变）
     let result1 = Detect::shell();
@@ -195,15 +196,17 @@ fn test_detect_shell_consistency() {
 
     // 如果两次都成功，应该返回相同的结果
     if result1.is_ok() && result2.is_ok() {
-        assert_eq!(
-            result1.expect("first shell detection should succeed"),
-            result2.expect("second shell detection should succeed")
-        );
+        let shell1 = result1
+            .map_err(|e| color_eyre::eyre::eyre!("first shell detection should succeed: {}", e))?;
+        let shell2 = result2
+            .map_err(|e| color_eyre::eyre::eyre!("second shell detection should succeed: {}", e))?;
+        assert_eq!(shell1, shell2);
     }
     // 如果两次都失败，也应该一致
     else if result1.is_err() && result2.is_err() {
         assert!(true);
     }
+    Ok(())
 }
 
 /// 测试检测zsh（仅非Windows系统）
@@ -288,7 +291,7 @@ fn test_detect_installed_shells_no_duplicates() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_detect_shell_from_shell_path_fallback() {
+fn test_detect_shell_from_shell_path_fallback() -> Result<()> {
     // Arrange: 使用 EnvGuard 设置有效的 shell 路径（覆盖 detect.rs:26-29）
     let mut guard = EnvGuard::new();
     guard.set("SHELL", "/bin/zsh");
@@ -297,9 +300,12 @@ fn test_detect_shell_from_shell_path_fallback() {
 
     // 应该能够检测到 shell
     if result.is_ok() {
-        assert_eq!(result.expect("should detect zsh shell"), Shell::Zsh);
+        let shell =
+            result.map_err(|e| color_eyre::eyre::eyre!("should detect zsh shell: {}", e))?;
+        assert_eq!(shell, Shell::Zsh);
     }
     // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
+    Ok(())
 }
 
 /// 测试空环境变量的情况（应返回错误）
@@ -419,7 +425,7 @@ fn test_detect_installed_shells_fallback_to_current() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_detect_shell_powershell() {
+fn test_detect_shell_powershell() -> Result<()> {
     // Arrange: 使用 EnvGuard 设置 PowerShell 路径
     let mut guard = EnvGuard::new();
 
@@ -440,18 +446,20 @@ fn test_detect_shell_powershell() {
         #[cfg(target_os = "windows")]
         {
             // Windows 上可能检测为 PowerShell
-            assert!(matches!(
-                result.expect("should detect powershell on Windows"),
-                Shell::PowerShell
-            ));
+            let shell = result.map_err(|e| {
+                color_eyre::eyre::eyre!("should detect powershell on Windows: {}", e)
+            })?;
+            assert!(matches!(shell, Shell::PowerShell));
         }
         #[cfg(not(target_os = "windows"))]
         {
             // 非 Windows 上可能检测为 PowerShell 或其他
-            let _ = result.expect("shell detection should succeed");
+            let _ = result
+                .map_err(|e| color_eyre::eyre::eyre!("shell detection should succeed: {}", e))?;
         }
     }
     // EnvGuard 会在 guard 离开作用域时自动恢复环境变量
+    Ok(())
 }
 
 /// 测试检测fish（仅非Windows系统）

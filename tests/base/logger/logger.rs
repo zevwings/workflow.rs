@@ -160,57 +160,81 @@ fn test_colors_have_space_between_icon_and_text() {
 /// - 所有有效字符串（不区分大小写）都能正确解析
 /// - 无效字符串（"invalid", "", "trace"）返回错误
 #[test]
-fn test_log_level_from_str_with_valid_strings_parses_correctly() {
+fn test_log_level_from_str_with_valid_strings_parses_correctly() -> Result<()> {
     // Arrange: 准备有效的日志级别字符串（不区分大小写）
     // 支持 "off"（新格式）和 "none"（向后兼容）
 
     // Act & Assert: 验证各种格式的字符串都能正确解析
     assert_eq!(
-        "off".parse::<LogLevel>().expect("'off' should parse to LogLevel"),
+        "off"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'off' should parse to LogLevel: {}", e))?,
         LogLevel::None
     );
     assert_eq!(
-        "OFF".parse::<LogLevel>().expect("'OFF' should parse to LogLevel"),
+        "OFF"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'OFF' should parse to LogLevel: {}", e))?,
         LogLevel::None
     );
     assert_eq!(
-        "none".parse::<LogLevel>().expect("'none' should parse to LogLevel"),
+        "none"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'none' should parse to LogLevel: {}", e))?,
         LogLevel::None
     );
     assert_eq!(
-        "NONE".parse::<LogLevel>().expect("'NONE' should parse to LogLevel"),
+        "NONE"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'NONE' should parse to LogLevel: {}", e))?,
         LogLevel::None
     );
     assert_eq!(
-        "error".parse::<LogLevel>().expect("'error' should parse to LogLevel"),
+        "error"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'error' should parse to LogLevel: {}", e))?,
         LogLevel::Error
     );
     assert_eq!(
-        "ERROR".parse::<LogLevel>().expect("'ERROR' should parse to LogLevel"),
+        "ERROR"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'ERROR' should parse to LogLevel: {}", e))?,
         LogLevel::Error
     );
     assert_eq!(
-        "warn".parse::<LogLevel>().expect("'warn' should parse to LogLevel"),
+        "warn"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'warn' should parse to LogLevel: {}", e))?,
         LogLevel::Warn
     );
     assert_eq!(
-        "WARN".parse::<LogLevel>().expect("'WARN' should parse to LogLevel"),
+        "WARN"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'WARN' should parse to LogLevel: {}", e))?,
         LogLevel::Warn
     );
     assert_eq!(
-        "info".parse::<LogLevel>().expect("'info' should parse to LogLevel"),
+        "info"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'info' should parse to LogLevel: {}", e))?,
         LogLevel::Info
     );
     assert_eq!(
-        "INFO".parse::<LogLevel>().expect("'INFO' should parse to LogLevel"),
+        "INFO"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'INFO' should parse to LogLevel: {}", e))?,
         LogLevel::Info
     );
     assert_eq!(
-        "debug".parse::<LogLevel>().expect("'debug' should parse to LogLevel"),
+        "debug"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'debug' should parse to LogLevel: {}", e))?,
         LogLevel::Debug
     );
     assert_eq!(
-        "DEBUG".parse::<LogLevel>().expect("'DEBUG' should parse to LogLevel"),
+        "DEBUG"
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("'DEBUG' should parse to LogLevel: {}", e))?,
         LogLevel::Debug
     );
 
@@ -218,6 +242,7 @@ fn test_log_level_from_str_with_valid_strings_parses_correctly() {
     assert!("invalid".parse::<LogLevel>().is_err());
     assert!("".parse::<LogLevel>().is_err());
     assert!("trace".parse::<LogLevel>().is_err());
+    Ok(())
 }
 
 /// 测试日志级别转换为字符串
@@ -387,7 +412,7 @@ fn test_log_level_default_return_ok() -> Result<()> {
 /// - 所有级别的往返转换都成功
 /// - 解析后的级别与原始级别完全一致
 #[test]
-fn test_log_level_round_trip() {
+fn test_log_level_round_trip() -> Result<()> {
     // Arrange: 准备测试字符串转换的往返一致性
     let levels = vec![
         LogLevel::None,
@@ -399,9 +424,12 @@ fn test_log_level_round_trip() {
 
     for level in levels {
         let level_str = level.as_str();
-        let parsed = level_str.parse::<LogLevel>().expect("LogLevel round trip should succeed");
+        let parsed = level_str
+            .parse::<LogLevel>()
+            .map_err(|e| color_eyre::eyre::eyre!("LogLevel round trip should succeed: {}", e))?;
         assert_eq!(level, parsed, "Round trip failed for level: {}", level_str);
     }
+    Ok(())
 }
 
 // ==================== Tracing 宏测试 ====================

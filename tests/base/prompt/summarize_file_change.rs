@@ -42,14 +42,15 @@ fn test_generate_summarize_file_change_system_prompt_returns_non_empty_string() 
 #[test]
 fn test_generate_summarize_file_change_system_prompt_contains_keywords() {
     // Arrange: 准备关键词列表
-    let keywords = ["summary", "Summary", "file", "File", "diff", "Diff", "changes", "Changes"];
+    let keywords = [
+        "summary", "Summary", "file", "File", "diff", "Diff", "changes", "Changes",
+    ];
 
     // Act: 生成 system prompt
     let prompt = generate_summarize_file_change_system_prompt();
 
     // Assert: 验证 prompt 包含关键内容
-    let contains_keywords = keywords.iter()
-        .any(|keyword| prompt.contains(keyword));
+    let contains_keywords = keywords.iter().any(|keyword| prompt.contains(keyword));
     assert!(contains_keywords);
 }
 
@@ -73,8 +74,7 @@ fn test_generate_summarize_file_change_system_prompt_contains_rules() {
     let prompt = generate_summarize_file_change_system_prompt();
 
     // Assert: 验证 prompt 包含规则说明
-    let contains_rules = rule_keywords.iter()
-        .any(|keyword| prompt.contains(keyword));
+    let contains_rules = rule_keywords.iter().any(|keyword| prompt.contains(keyword));
     assert!(contains_rules);
 }
 
@@ -98,8 +98,7 @@ fn test_generate_summarize_file_change_system_prompt_contains_examples() {
     let prompt = generate_summarize_file_change_system_prompt();
 
     // Assert: 验证 prompt 包含示例
-    let contains_examples = example_keywords.iter()
-        .any(|keyword| prompt.contains(keyword));
+    let contains_examples = example_keywords.iter().any(|keyword| prompt.contains(keyword));
     assert!(contains_examples);
 }
 
@@ -117,7 +116,8 @@ fn test_generate_summarize_file_change_system_prompt_contains_examples() {
 /// ## 预期结果
 /// - 多次调用的结果完全一致
 #[test]
-fn test_generate_summarize_file_change_system_prompt_with_multiple_calls_returns_consistent_result() {
+fn test_generate_summarize_file_change_system_prompt_with_multiple_calls_returns_consistent_result()
+{
     // Arrange: 准备多次调用
 
     // Act: 多次调用生成函数

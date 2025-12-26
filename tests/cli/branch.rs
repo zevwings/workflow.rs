@@ -239,7 +239,11 @@ fn test_branch_create_command_with_empty_jira_id_returns_error() -> Result<()> {
 
     // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
-        Ok(_) => return Err(color_eyre::eyre::eyre!("Empty JIRA ID should be rejected by validator")),
+        Ok(_) => {
+            return Err(color_eyre::eyre::eyre!(
+                "Empty JIRA ID should be rejected by validator"
+            ))
+        }
         Err(e) => {
             // 验证错误消息包含验证信息
             let error_msg = e.to_string();

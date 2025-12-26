@@ -280,8 +280,10 @@ mod tests {
         assert!(work_dir.is_absolute());
 
         // 验证路径来自tempfile临时目录
-        assert!(work_dir.to_string_lossy().contains("tmp") ||
-                work_dir.to_string_lossy().contains("temp"));
+        assert!(
+            work_dir.to_string_lossy().contains("tmp")
+                || work_dir.to_string_lossy().contains("temp")
+        );
 
         Ok(())
     }
@@ -305,7 +307,9 @@ mod tests {
         let mut isolation = TestIsolation::new()?.with_git_config()?;
 
         // 验证Git配置守卫可用
-        let git_guard = isolation.git_config_guard().unwrap();
+        let git_guard = isolation
+            .git_config_guard()
+            .ok_or_else(|| color_eyre::eyre::eyre!("git_config_guard should exist"))?;
         git_guard.set("user.name", "Test User")?;
         git_guard.set("user.email", "test@example.com")?;
 
@@ -330,7 +334,9 @@ mod tests {
         let isolation = TestIsolation::new()?.with_mock_server()?;
 
         // 验证Mock服务器可用
-        let mock_server = isolation.mock_server().unwrap();
+        let mock_server = isolation
+            .mock_server()
+            .ok_or_else(|| color_eyre::eyre::eyre!("mock_server should exist"))?;
         assert!(!mock_server.base_url.is_empty());
 
         Ok(())
@@ -359,7 +365,9 @@ mod tests {
         isolation.env_guard().set("TEST_VAR", "test_value");
 
         // 验证环境变量已设置
-        assert_eq!(std::env::var("TEST_VAR").unwrap(), "test_value");
+        let test_var = std::env::var("TEST_VAR")
+            .map_err(|e| color_eyre::eyre::eyre!("TEST_VAR should exist: {}", e))?;
+        assert_eq!(test_var, "test_value");
 
         // Drop时自动恢复
         Ok(())

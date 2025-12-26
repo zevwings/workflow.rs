@@ -4,9 +4,9 @@
 //!
 //! 这些测试验证整个系统的集成，确保各个组件能够正确协作。
 
-use color_eyre::Result;
-use crate::common::environments::CliTestEnv;
 use crate::common::cli_helpers::CliCommandBuilder;
+use crate::common::environments::CliTestEnv;
+use color_eyre::Result;
 
 // ==================== PR 工作流测试 ====================
 
@@ -35,12 +35,10 @@ fn test_pr_creation_workflow() -> Result<()> {
         .create_commit("Initial commit")?;
 
     // 2. 创建分支并切换
-    env.create_branch("feature/test")?
-        .checkout("feature/test")?;
+    env.create_branch("feature/test")?.checkout("feature/test")?;
 
     // 3. 创建文件并提交
-    env.create_file("test.txt", "test content")?
-        .create_commit("feat: add test")?;
+    env.create_file("test.txt", "test content")?.create_commit("feat: add test")?;
 
     // 4. 创建PR（dry-run模式，避免实际创建）
     let binding = CliCommandBuilder::new()
@@ -80,21 +78,19 @@ fn test_pr_creation_workflow() -> Result<()> {
 #[ignore] // 需要Mock Jira API或实际配置
 fn test_pr_creation_with_jira_workflow() -> Result<()> {
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_config(
-            r#"
+    env.init_git_repo()?.create_config(
+        r#"
 [jira]
 url = "https://test.atlassian.net"
 "#,
-        )?;
+    )?;
 
     // 1. 创建初始提交
     env.create_file("README.md", "# Test Project")?
         .create_commit("Initial commit")?;
 
     // 2. 创建关联Jira ticket的分支
-    env.create_branch("feature/PROJ-123")?
-        .checkout("feature/PROJ-123")?;
+    env.create_branch("feature/PROJ-123")?.checkout("feature/PROJ-123")?;
 
     // 3. 创建文件并提交（包含Jira ticket ID）
     env.create_file("feature.txt", "new feature")?
@@ -143,8 +139,7 @@ fn test_branch_management_workflow() -> Result<()> {
     env.init_git_repo()?;
 
     // 1. 创建初始提交
-    env.create_file("README.md", "# Test")?
-        .create_commit("Initial commit")?;
+    env.create_file("README.md", "# Test")?.create_commit("Initial commit")?;
 
     // 2. 创建多个分支
     env.create_branch("feature/one")?
@@ -249,9 +244,8 @@ fn test_commit_workflow() -> Result<()> {
 #[test]
 fn test_config_workflow() -> Result<()> {
     let env = CliTestEnv::new()?;
-    env.init_git_repo()?
-        .create_config(
-            r#"
+    env.init_git_repo()?.create_config(
+        r#"
 [jira]
 url = "https://test.atlassian.net"
 username = "test@example.com"
@@ -259,7 +253,7 @@ username = "test@example.com"
 [github]
 token = "test_token"
 "#,
-        )?;
+    )?;
 
     // 验证配置文件存在
     let config_path = env.path().join(".workflow").join("workflow.toml");
@@ -283,4 +277,3 @@ token = "test_token"
 
     Ok(())
 }
-

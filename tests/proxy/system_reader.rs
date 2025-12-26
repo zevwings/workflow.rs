@@ -6,6 +6,7 @@
 //! - 环境变量生成
 //! - 命令字符串生成
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use workflow::proxy::{ProxyConfig, ProxyConfigGenerator, ProxyInfo, ProxyType, SystemProxyReader};
 
@@ -280,14 +281,20 @@ fn test_system_proxy_reader_read_with_system_config_returns_proxy_info() {
 /// - HTTPS代理：启用，地址为`secure-proxy.example.com`，端口为`8443`
 /// - SOCKS代理：禁用，地址为`socks-proxy.example.com`，端口为`1080`
 #[test]
-fn test_proxy_info_creation_with_valid_configs_creates_info() {
+fn test_proxy_info_creation_with_valid_configs_creates_info() -> Result<()> {
     // Arrange: 准备测试用的 ProxyInfo
     let proxy_info = create_test_proxy_info();
 
     // Act: 获取各个代理类型的配置
-    let http_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
-    let https_config = proxy_info.get_config(ProxyType::Https).expect("operation should succeed");
-    let socks_config = proxy_info.get_config(ProxyType::Socks).expect("operation should succeed");
+    let http_config = proxy_info
+        .get_config(ProxyType::Http)
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
+    let https_config = proxy_info
+        .get_config(ProxyType::Https)
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
+    let socks_config = proxy_info
+        .get_config(ProxyType::Socks)
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
 
     // Assert: 验证所有代理配置正确
     assert_eq!(http_config.enable, true);
@@ -305,6 +312,7 @@ fn test_proxy_info_creation_with_valid_configs_creates_info() {
         Some("socks-proxy.example.com".to_string())
     );
     assert_eq!(socks_config.port, Some(1080));
+    Ok(())
 }
 
 /// 测试获取启用的代理URL
@@ -324,7 +332,7 @@ fn test_proxy_info_creation_with_valid_configs_creates_info() {
 /// - HTTPS代理URL：包含`http://`协议、`secure-proxy.example.com`地址、`8443`端口
 /// - SOCKS代理URL：返回`None`（因为代理被禁用）
 #[test]
-fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() {
+fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() -> Result<()> {
     // Arrange: 准备测试用的 ProxyInfo
     let proxy_info = create_test_proxy_info();
 
@@ -334,17 +342,16 @@ fn test_proxy_info_get_proxy_url_with_enabled_proxies_returns_urls() {
     let socks_url = proxy_info.get_proxy_url(ProxyType::Socks);
 
     // Assert: 验证 HTTP 和 HTTPS 代理返回 URL，SOCKS 代理返回 None
-    assert!(http_url.is_some());
-    let http_url = http_url.expect("operation should succeed");
+    let http_url = http_url.ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert!(http_url.contains("http://"));
     assert!(http_url.contains("proxy.example.com"));
     assert!(http_url.contains("8080"));
-    assert!(https_url.is_some());
-    let https_url = https_url.expect("operation should succeed");
+    let https_url = https_url.ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert!(https_url.contains("http://"));
     assert!(https_url.contains("secure-proxy.example.com"));
     assert!(https_url.contains("8443"));
     assert!(socks_url.is_none());
+    Ok(())
 }
 
 // ==================== ProxyConfigGenerator Tests ====================
@@ -535,7 +542,7 @@ fn test_proxy_type_enum() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_complex_proxy_info_configuration() {
+fn test_complex_proxy_info_configuration() -> Result<()> {
     let mut proxy_info = ProxyInfo::new();
 
     // 设置混合配置：HTTP 启用，HTTPS 禁用，SOCKS 启用
@@ -577,13 +584,18 @@ fn test_complex_proxy_info_configuration() {
     assert!(!env_vars.contains_key("https_proxy"));
 
     // Assert: 验证 URL 格式
-    let http_url = env_vars.get("http_proxy").expect("operation should succeed");
+    let http_url = env_vars
+        .get("http_proxy")
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert!(http_url.starts_with("http://"));
     assert!(http_url.contains("http-proxy.example.com:8080"));
 
-    let socks_url = env_vars.get("all_proxy").expect("operation should succeed");
+    let socks_url = env_vars
+        .get("all_proxy")
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert!(socks_url.starts_with("socks5://"));
     assert!(socks_url.contains("socks-proxy.example.com:1080"));
+    Ok(())
 }
 
 /// 测试边界情况和错误处理
@@ -655,7 +667,7 @@ fn test_edge_cases_and_error_handling() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_info_mutable_operations() {
+fn test_proxy_info_mutable_operations() -> Result<()> {
     let mut proxy_info = ProxyInfo::new();
 
     // 初始状态应该没有配置
@@ -672,7 +684,9 @@ fn test_proxy_info_mutable_operations() {
     );
 
     // Assert: 验证配置已添加
-    let config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
+    let config = proxy_info
+        .get_config(ProxyType::Http)
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert_eq!(config.enable, true);
     assert_eq!(config.address, Some("new-proxy.example.com".to_string()));
     assert_eq!(config.port, Some(9090));
@@ -683,7 +697,10 @@ fn test_proxy_info_mutable_operations() {
     config_mut.port = Some(8888);
 
     // Assert: 验证修改生效
-    let updated_config = proxy_info.get_config(ProxyType::Http).expect("operation should succeed");
+    let updated_config = proxy_info
+        .get_config(ProxyType::Http)
+        .ok_or_else(|| color_eyre::eyre::eyre!("operation should succeed"))?;
     assert_eq!(updated_config.enable, false);
     assert_eq!(updated_config.port, Some(8888));
+    Ok(())
 }

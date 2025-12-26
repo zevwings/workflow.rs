@@ -52,7 +52,8 @@ fn test_generate_summarize_pr_system_prompt_with_no_parameters_returns_prompt() 
 /// - prompt包含 "CRITICAL LANGUAGE REQUIREMENT"
 /// - prompt包含 "REMINDER: Language Requirement"
 #[test]
-fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_prompt_contains_language() {
+fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_prompt_contains_language(
+) {
     // Arrange: 准备生成prompt
     let prompt = generate_summarize_pr_system_prompt();
 
@@ -76,12 +77,19 @@ fn test_generate_summarize_pr_system_prompt_contains_language_requirement_with_p
 ///   - PR Title, Overview, Requirements Analysis, Key Changes
 ///   - Files Changed, Technical Details, Testing, Usage Instructions
 #[test]
-fn test_generate_summarize_pr_system_prompt_contains_document_structure_with_prompt_contains_structure() {
+fn test_generate_summarize_pr_system_prompt_contains_document_structure_with_prompt_contains_structure(
+) {
     // Arrange: 准备生成prompt和文档结构关键词列表
     let prompt = generate_summarize_pr_system_prompt();
     let structure_keywords = [
-        "PR Title", "Overview", "Requirements Analysis", "Key Changes",
-        "Files Changed", "Technical Details", "Testing", "Usage Instructions",
+        "PR Title",
+        "Overview",
+        "Requirements Analysis",
+        "Key Changes",
+        "Files Changed",
+        "Technical Details",
+        "Testing",
+        "Usage Instructions",
     ];
 
     // Act & Assert: 验证包含文档结构说明

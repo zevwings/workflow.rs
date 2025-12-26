@@ -19,6 +19,8 @@
 2. **GitHubPRBuilder** - GitHub Pull Request数据
 3. **JiraIssueBuilder** - Jira Issue数据
 4. **ConfigBuilder** - 配置数据
+5. **BranchBuilder** - 分支数据（名称和JSON）
+6. **UserBuilder** - 用户数据（GitHub和Jira）
 
 ## 使用示例
 
@@ -42,11 +44,40 @@ fn test_git_commit_example() {
 
 ### 模板文件
 
-所有Builder都基于JSON模板文件生成数据：
+部分Builder基于JSON模板文件生成数据：
 - `tests/fixtures/templates/git_commit.json`
 - `tests/fixtures/templates/github_pr.json`
 - `tests/fixtures/templates/jira_issue.json`
 
+其他Builder（BranchBuilder、UserBuilder、ConfigBuilder）直接生成JSON数据。
+
+## 数据验证
+
+使用 `TestDataValidator` trait 和专用验证器确保测试数据的正确性：
+
+```rust
+use tests::common::validators::{GitHubPRValidator, TestDataValidator};
+
+let factory = TestDataFactory::new();
+let pr = factory.github_pr().build()?;
+
+// 基础验证
+pr.validate()?;
+
+// 专用验证
+GitHubPRValidator::validate(&pr)?;
+```
+
+可用的验证器：
+- `GitHubPRValidator` - 验证 GitHub PR 数据
+- `JiraIssueValidator` - 验证 Jira Issue 数据
+- `GitCommitValidator` - 验证 Git Commit 数据
+
+## 相关文档
+
+- [TestDataFactory 使用指南](./test-data-factory-usage.md) - 详细的使用方法和最佳实践
+- [TestDataFactory 迁移指南](./test-data-factory-migration.md) - 从硬编码数据迁移到 Factory
+
 ---
 
-**最后更新**: 2025-12-25
+**最后更新**: 2025-01-XX

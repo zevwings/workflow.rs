@@ -57,7 +57,10 @@ struct TestJiraCli {
 #[case("comment", "PROJ-123")]
 #[case("comments", "PROJ-123")]
 #[case("attachments", "PROJ-456")]
-fn test_jira_command_with_id_return_ok(#[case] subcommand: &str, #[case] jira_id: &str) -> Result<()> {
+fn test_jira_command_with_id_return_ok(
+    #[case] subcommand: &str,
+    #[case] jira_id: &str,
+) -> Result<()> {
     let cli = TestJiraCli::try_parse_from(&["test-jira", subcommand, jira_id])?;
 
     match &cli.command {

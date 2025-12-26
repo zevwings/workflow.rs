@@ -113,7 +113,9 @@ fn test_commit_template_vars_creation_with_all_fields_creates_vars() {
     let commit_type = "feat";
     let scope = Some("auth".to_string());
     let subject = "implement user authentication system";
-    let body = Some("Add comprehensive authentication with JWT tokens and session management.".to_string());
+    let body = Some(
+        "Add comprehensive authentication with JWT tokens and session management.".to_string(),
+    );
     let jira_key = Some("AUTH-789".to_string());
     let use_scope = true;
 

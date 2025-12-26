@@ -468,10 +468,7 @@ fn test_form_builder_add_group_with_description_sets_description() {
 
     // Assert: 验证描述设置成功
     assert_eq!(builder.groups.len(), 1);
-    assert_eq!(
-        builder.groups[0].description,
-        Some(description.to_string())
-    );
+    assert_eq!(builder.groups[0].description, Some(description.to_string()));
 }
 
 /// 测试添加可选组
@@ -740,7 +737,8 @@ fn test_form_builder_step_conditional_evaluation_with_conditional_step_creates_c
 /// ## 预期结果
 /// - 多条件步骤被创建，步骤类型为 ConditionalAll
 #[test]
-fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_creates_conditional_all_step() {
+fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_creates_conditional_all_step(
+) {
     // Arrange: 准备多条件步骤（AND）（覆盖 builder.rs:238-240）
     let conditions = vec![("field1", "value1"), ("field2", "value2")];
 
@@ -774,7 +772,8 @@ fn test_form_builder_step_conditional_all_evaluation_with_multiple_conditions_cr
 /// ## 预期结果
 /// - 多条件步骤被创建，步骤类型为 ConditionalAny
 #[test]
-fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_creates_conditional_any_step() {
+fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_creates_conditional_any_step(
+) {
     // Arrange: 准备多条件步骤（OR）（覆盖 builder.rs:241-243）
     let conditions = vec![("field1", "value1"), ("field2", "value2")];
 
@@ -808,7 +807,8 @@ fn test_form_builder_step_conditional_any_evaluation_with_multiple_conditions_cr
 /// ## 预期结果
 /// - 动态条件步骤被创建，步骤类型为 DynamicCondition
 #[test]
-fn test_form_builder_step_dynamic_condition_evaluation_with_dynamic_condition_creates_dynamic_step() {
+fn test_form_builder_step_dynamic_condition_evaluation_with_dynamic_condition_creates_dynamic_step()
+{
     // Arrange: 准备动态条件步骤（覆盖 builder.rs:244-249）
 
     // Act: 创建带有动态条件步骤的构建器
@@ -862,7 +862,7 @@ fn test_form_builder_field_with_condition_creates_conditional_step() {
     assert_eq!(builder.groups[0].steps.len(), 2); // 两个步骤：一个无条件，一个有条件
     assert_eq!(builder.groups[0].steps[0].fields.len(), 1); // 第一个步骤有一个字段
     assert_eq!(builder.groups[0].steps[1].fields.len(), 1); // 第二个步骤有一个字段
-    // Assert: 验证第二个步骤有条件（步骤类型是 Conditional，不是字段的条件）
+                                                            // Assert: 验证第二个步骤有条件（步骤类型是 Conditional，不是字段的条件）
     use workflow::base::dialog::StepType;
     match &builder.groups[0].steps[1].step_type {
         StepType::Conditional(_) => assert!(true),

@@ -488,7 +488,8 @@ fn test_multipart_request_config_timeout_with_duration_sets_timeout_return_ok() 
 /// ## 预期结果
 /// - 所有配置选项都被正确设置
 #[test]
-fn test_multipart_request_config_chain_with_multiple_options_sets_all_options_return_collect() -> Result<()> {
+fn test_multipart_request_config_chain_with_multiple_options_sets_all_options_return_collect(
+) -> Result<()> {
     // Arrange: 准备所有配置选项
     let form = reqwest::blocking::multipart::Form::new().text("file", "content");
     let query = serde_json::json!({"param": "value"});

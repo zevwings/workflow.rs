@@ -236,4 +236,3 @@ fn test_sanitize_with_numbers_preserves_numbers() {
     assert_eq!(result2, "123test");
     assert_eq!(result3, "test-123-branch");
 }
-

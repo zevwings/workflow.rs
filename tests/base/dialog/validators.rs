@@ -80,7 +80,9 @@ fn create_non_empty_validator() -> ValidatorFn {
 
 /// 常用验证器函数 - 正则表达式验证
 fn create_regex_validator(pattern: &str, error_msg: &str) -> ValidatorFn {
-    let regex = regex::Regex::new(pattern).expect("regex pattern should be valid");
+    let regex = regex::Regex::new(pattern)
+        .map_err(|e| format!("regex pattern should be valid: {}", e))
+        .expect("regex pattern should be valid");
     let error_message = error_msg.to_string();
 
     Arc::new(move |input: &str| -> Result<(), String> {
@@ -150,12 +152,12 @@ mod tests {
     /// - 有效输入通过验证
     /// - 无效输入返回错误消息
     #[rstest]
-    #[case("hello", true)]  // 有效输入
-    #[case("  world  ", true)]  // 带空格的有效输入
-    #[case("123", true)]  // 数字字符串
-    #[case("", false)]  // 空字符串
-    #[case("   ", false)]  // 只有空格
-    #[case("\t\n", false)]  // 只有空白字符
+    #[case("hello", true)] // 有效输入
+    #[case("  world  ", true)] // 带空格的有效输入
+    #[case("123", true)] // 数字字符串
+    #[case("", false)] // 空字符串
+    #[case("   ", false)] // 只有空格
+    #[case("\t\n", false)] // 只有空白字符
     fn test_non_empty_validator_with_various_inputs_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -172,7 +174,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -193,14 +199,14 @@ mod tests {
     /// - 有效数字通过验证
     /// - 无效输入返回错误消息
     #[rstest]
-    #[case("123", true, None)]  // 有效整数
-    #[case("-456", true, None)]  // 有效负数
-    #[case("0", true, None)]  // 零
-    #[case("  789  ", true, None)]  // 带空格的数字
-    #[case("abc", false, Some("Please enter a valid number"))]  // 非数字
-    #[case("12.34", false, Some("Please enter a valid number"))]  // 浮点数
-    #[case("", false, Some("Number cannot be empty"))]  // 空字符串
-    #[case("123abc", false, Some("Please enter a valid number"))]  // 混合字符
+    #[case("123", true, None)] // 有效整数
+    #[case("-456", true, None)] // 有效负数
+    #[case("0", true, None)] // 零
+    #[case("  789  ", true, None)] // 带空格的数字
+    #[case("abc", false, Some("Please enter a valid number"))] // 非数字
+    #[case("12.34", false, Some("Please enter a valid number"))] // 浮点数
+    #[case("", false, Some("Number cannot be empty"))] // 空字符串
+    #[case("123abc", false, Some("Please enter a valid number"))] // 混合字符
     fn test_number_validator_with_various_inputs_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -218,7 +224,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -241,14 +251,14 @@ mod tests {
     /// - 有效邮箱通过验证
     /// - 无效邮箱返回错误消息
     #[rstest]
-    #[case("user@example.com", true, None)]  // 标准格式
-    #[case("test.email@domain.org", true, None)]  // 带点
-    #[case("  user@example.com  ", true, None)]  // 带空格
-    #[case("invalid-email", false, Some("Please enter a valid email address"))]  // 无效格式（不包含@）
-    #[case("@example.com", false, Some("Invalid email format"))]  // 缺少用户名（包含@但格式不对）
-    #[case("user@", false, Some("Please enter a valid email address"))]  // 缺少域名（包含@但不包含.，实际返回"Please enter a valid email address"）
-    #[case("user.example.com", false, Some("Please enter a valid email address"))]  // 缺少@（不包含@）
-    #[case("", false, Some("Email cannot be empty"))]  // 空字符串
+    #[case("user@example.com", true, None)] // 标准格式
+    #[case("test.email@domain.org", true, None)] // 带点
+    #[case("  user@example.com  ", true, None)] // 带空格
+    #[case("invalid-email", false, Some("Please enter a valid email address"))] // 无效格式（不包含@）
+    #[case("@example.com", false, Some("Invalid email format"))] // 缺少用户名（包含@但格式不对）
+    #[case("user@", false, Some("Please enter a valid email address"))] // 缺少域名（包含@但不包含.，实际返回"Please enter a valid email address"）
+    #[case("user.example.com", false, Some("Please enter a valid email address"))] // 缺少@（不包含@）
+    #[case("", false, Some("Email cannot be empty"))] // 空字符串
     fn test_email_validator_with_various_inputs_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -266,7 +276,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -289,12 +303,12 @@ mod tests {
     /// - 有效长度通过验证
     /// - 无效长度返回错误消息
     #[rstest]
-    #[case("abc", true, None)]  // 最小长度
-    #[case("1234567890", true, None)]  // 最大长度
-    #[case("hello", true, None)]  // 中间长度
-    #[case("ab", false, Some("Input must be at least 3 characters"))]  // 太短
-    #[case("12345678901", false, Some("Input must be no more than 10 characters"))]  // 太长
-    #[case("", false, Some("Input must be at least 3 characters"))]  // 空字符串
+    #[case("abc", true, None)] // 最小长度
+    #[case("1234567890", true, None)] // 最大长度
+    #[case("hello", true, None)] // 中间长度
+    #[case("ab", false, Some("Input must be at least 3 characters"))] // 太短
+    #[case("12345678901", false, Some("Input must be no more than 10 characters"))] // 太长
+    #[case("", false, Some("Input must be at least 3 characters"))] // 空字符串
     fn test_length_validator_with_various_lengths_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -312,7 +326,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -335,13 +353,13 @@ mod tests {
     /// - 有效范围通过验证
     /// - 无效范围返回错误消息
     #[rstest]
-    #[case("1", true, None)]  // 最小值
-    #[case("100", true, None)]  // 最大值
-    #[case("50", true, None)]  // 中间值
-    #[case("0", false, Some("Number must be between 1 and 100"))]  // 小于最小值
-    #[case("101", false, Some("Number must be between 1 and 100"))]  // 大于最大值
-    #[case("-5", false, Some("Number must be between 1 and 100"))]  // 负数
-    #[case("abc", false, Some("Please enter a valid number"))]  // 非数字输入
+    #[case("1", true, None)] // 最小值
+    #[case("100", true, None)] // 最大值
+    #[case("50", true, None)] // 中间值
+    #[case("0", false, Some("Number must be between 1 and 100"))] // 小于最小值
+    #[case("101", false, Some("Number must be between 1 and 100"))] // 大于最大值
+    #[case("-5", false, Some("Number must be between 1 and 100"))] // 负数
+    #[case("abc", false, Some("Please enter a valid number"))] // 非数字输入
     fn test_range_validator_with_various_values_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -359,7 +377,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -382,12 +404,24 @@ mod tests {
     /// - 符合模式的输入通过验证
     /// - 不符合模式的输入返回错误消息
     #[rstest]
-    #[case("user123", true, None)]  // 有效用户名
-    #[case("test_user", true, None)]  // 有效用户名（带下划线）
-    #[case("UserName", true, None)]  // 有效用户名（大小写混合）
-    #[case("user-123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含连字符
-    #[case("user@123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含特殊字符
-    #[case("user 123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含空格
+    #[case("user123", true, None)] // 有效用户名
+    #[case("test_user", true, None)] // 有效用户名（带下划线）
+    #[case("UserName", true, None)] // 有效用户名（大小写混合）
+    #[case(
+        "user-123",
+        false,
+        Some("Username can only contain letters, numbers, and underscores")
+    )] // 包含连字符
+    #[case(
+        "user@123",
+        false,
+        Some("Username can only contain letters, numbers, and underscores")
+    )] // 包含特殊字符
+    #[case(
+        "user 123",
+        false,
+        Some("Username can only contain letters, numbers, and underscores")
+    )] // 包含空格
     fn test_regex_validator_with_various_inputs_validates_correctly(
         #[case] input: &str,
         #[case] should_be_valid: bool,
@@ -408,7 +442,11 @@ mod tests {
             should_be_valid,
             "Input '{}' should {}",
             input,
-            if should_be_valid { "be valid" } else { "be invalid" }
+            if should_be_valid {
+                "be valid"
+            } else {
+                "be invalid"
+            }
         );
 
         // 验证错误消息（仅对无效输入）
@@ -876,7 +914,7 @@ mod tests {
     /// ## 预期结果
     /// - 验证器在多线程环境中正常工作
     #[test]
-    fn test_validator_thread_safety() {
+    fn test_validator_thread_safety() -> Result<()> {
         use std::thread;
 
         let validator = create_number_validator();
@@ -892,7 +930,10 @@ mod tests {
         assert!(validator("456").is_ok());
         assert!(validator("def").is_err());
 
-        handle.join().expect("thread should join successfully");
+        handle
+            .join()
+            .map_err(|e| color_eyre::eyre::eyre!("thread should join successfully: {:?}", e))?;
+        Ok(())
     }
 
     /// 测试验证器内存效率

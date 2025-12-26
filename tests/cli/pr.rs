@@ -509,7 +509,11 @@ fn test_pr_comment_command_without_id() -> Result<()> {
 #[rstest]
 #[case("feature/source", "main", false)]
 #[case("feature/source", "main", true)]
-fn test_pr_pick_command(#[case] from_branch: &str, #[case] to_branch: &str, #[case] dry_run: bool) -> Result<()> {
+fn test_pr_pick_command(
+    #[case] from_branch: &str,
+    #[case] to_branch: &str,
+    #[case] dry_run: bool,
+) -> Result<()> {
     let mut args = vec!["test-pr", "pick", from_branch, to_branch];
     if dry_run {
         args.push("--dry-run");
@@ -705,7 +709,11 @@ fn test_pr_create_command_empty_jira_id() -> Result<()> {
 
     // Assert: 验证解析失败（空字符串被验证器拒绝）
     match result {
-        Ok(_) => return Err(color_eyre::eyre::eyre!("Empty JIRA ID should be rejected by validator")),
+        Ok(_) => {
+            return Err(color_eyre::eyre::eyre!(
+                "Empty JIRA ID should be rejected by validator"
+            ))
+        }
         Err(e) => {
             // Assert: 验证错误消息包含验证信息
             let error_msg = e.to_string();
@@ -739,7 +747,8 @@ fn test_pr_create_command_empty_jira_id() -> Result<()> {
 fn test_pr_create_command_very_long_title() -> Result<()> {
     // Arrange: 准备测试超长标题（边界情况）
     let long_title = "a".repeat(1000);
-    let cli = TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])?;
+    let cli =
+        TestPRCli::try_parse_from(&["test-pr", "create", "PROJ-123", "--title", &long_title])?;
 
     match cli.command {
         PRCommands::Create { title, .. } => {

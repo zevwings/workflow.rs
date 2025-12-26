@@ -73,7 +73,6 @@ impl Paths {
         dirs::home_dir().wrap_err("Cannot determine home directory")
     }
 
-
     /// 尝试获取 iCloud 基础目录（指定主目录，仅 macOS）
     ///
     /// 检查 iCloud Drive 是否可用，如果可用则返回 .workflow 目录路径。
@@ -94,7 +93,11 @@ impl Paths {
     fn try_icloud_base_dir_in(home: impl AsRef<Path>) -> Option<PathBuf> {
         // 构建 iCloud Drive 基础路径
         // ~/Library/Mobile Documents/com~apple~CloudDocs
-        let icloud_base = home.as_ref().join("Library").join("Mobile Documents").join("com~apple~CloudDocs");
+        let icloud_base = home
+            .as_ref()
+            .join("Library")
+            .join("Mobile Documents")
+            .join("com~apple~CloudDocs");
 
         // 检查 iCloud Drive 是否可用
         if !icloud_base.exists() || !icloud_base.is_dir() {
@@ -213,7 +216,10 @@ impl Paths {
     /// # 错误
     ///
     /// 如果无法创建目录，返回相应的错误信息。
-    pub(crate) fn config_base_dir_in(home: impl AsRef<Path>, disable_icloud: bool) -> Result<PathBuf> {
+    pub(crate) fn config_base_dir_in(
+        home: impl AsRef<Path>,
+        disable_icloud: bool,
+    ) -> Result<PathBuf> {
         // 如果明确禁用 iCloud，直接使用本地目录
         if disable_icloud {
             return Self::local_base_dir_in(home);
@@ -514,7 +520,9 @@ impl Paths {
     ///
     /// 如果无法获取当前工作目录，返回相应的错误信息。
     pub fn project_config() -> Result<PathBuf> {
-        Self::project_config_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+        Self::project_config_in(
+            std::env::current_dir().wrap_err("Failed to get current directory")?,
+        )
     }
 
     /// 获取项目级配置文件路径（指定仓库路径）

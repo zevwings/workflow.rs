@@ -3,6 +3,7 @@
 //! 测试 Jira 日志下载、搜索、清理和路径处理功能。
 
 use crate::common::helpers::{cleanup_temp_test_dir, create_temp_test_dir, create_test_file};
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::{fixture, rstest};
 use std::fs;
@@ -13,7 +14,9 @@ use workflow::jira::logs::{JiraLogs, LogEntry};
 
 #[fixture]
 fn jira_logs() -> JiraLogs {
-    JiraLogs::new().expect("Should create JiraLogs")
+    // 注意：fixture 函数中，如果创建失败应该 panic，这是合理的
+    // 因为 fixture 失败意味着测试环境有问题
+    JiraLogs::new().unwrap_or_else(|e| panic!("Should create JiraLogs: {}", e))
 }
 
 #[fixture]
@@ -185,7 +188,7 @@ fn test_jira_logs_ensure_log_file_exists_nonexistent(
 
 /// 测试确保日志文件存在（使用临时文件）
 #[rstest]
-fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) {
+fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) -> Result<()> {
     // Arrange: 准备测试确保日志文件存在（使用临时文件）
     let _ = jira_logs; // 使用 fixture，即使不直接使用也保持一致性
     let test_dir = create_temp_test_dir("jira_logs_test");
@@ -194,7 +197,8 @@ fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) {
     let jira_id = "TEST-123";
     let jira_dir = test_dir.join("jira").join(jira_id);
     let logs_dir = jira_dir.join("logs");
-    fs::create_dir_all(&logs_dir).expect("Should create directories");
+    fs::create_dir_all(&logs_dir)
+        .map_err(|e| color_eyre::eyre::eyre!("Should create directories: {}", e))?;
 
     // 创建日志文件
     let log_file = logs_dir.join("flutter-api.log");
@@ -205,6 +209,7 @@ fn test_jira_logs_ensure_log_file_exists_with_temp_file(jira_logs: JiraLogs) {
     assert!(log_file.exists(), "Test log file should exist");
 
     cleanup_temp_test_dir(&test_dir);
+    Ok(())
 }
 
 // ==================== LogEntry 测试 ====================
@@ -233,7 +238,11 @@ fn test_log_entry(#[case] id: Option<&str>, #[case] url: Option<&str>) {
 #[case("NONEXISTENT-999", true, false)]
 #[case("TEST-DRYRUN", true, false)]
 #[case("TEST-LIST", false, true)]
-fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case] list_only: bool) {
+fn test_jira_logs_clean_dir(
+    #[case] jira_id: &str,
+    #[case] dry_run: bool,
+    #[case] list_only: bool,
+) -> Result<()> {
     // Arrange: 准备测试清理目录
     let cleaner = AttachmentCleaner::new();
 
@@ -242,7 +251,8 @@ fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case
     // 应该成功返回
     assert!(result.is_ok(), "Should handle directory gracefully");
 
-    let clean_result = result.expect("clean should succeed");
+    let clean_result =
+        result.map_err(|e| color_eyre::eyre::eyre!("clean should succeed: {}", e))?;
     if dry_run {
         assert!(clean_result.dry_run, "Should be in dry run mode");
     }
@@ -256,6 +266,7 @@ fn test_jira_logs_clean_dir(#[case] jira_id: &str, #[case] dry_run: bool, #[case
         );
         assert!(!clean_result.dir_exists, "Directory should not exist");
     }
+    Ok(())
 }
 
 /// 测试清理整个Jira日志基础目录（空JIRA ID）

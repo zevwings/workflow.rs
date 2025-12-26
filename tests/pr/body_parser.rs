@@ -2,6 +2,7 @@
 //!
 //! 测试从 PR body 中提取信息的功能。
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
 use workflow::pr::body_parser::{
@@ -41,7 +42,10 @@ https://jira.example.com/browse/ABC-456"#,
 )]
 #[case("No Jira link", None)]
 #[case("", None)]
-fn test_extract_jira_ticket_from_body_with_various_bodies_returns_ticket(#[case] body: &str, #[case] expected: Option<&str>) {
+fn test_extract_jira_ticket_from_body_with_various_bodies_returns_ticket(
+    #[case] body: &str,
+    #[case] expected: Option<&str>,
+) {
     // Arrange: 准备 PR body 文本和预期结果
 
     // Act: 从 body 中提取 Jira ticket
@@ -83,7 +87,10 @@ This is a test description"#,
 )]
 #[case("No description", None)]
 #[case("", None)]
-fn test_extract_description_from_body_various_bodies_returns_description(#[case] body: &str, #[case] expected: Option<&str>) {
+fn test_extract_description_from_body_various_bodies_returns_description(
+    #[case] body: &str,
+    #[case] expected: Option<&str>,
+) {
     // Arrange: 准备 PR body 文本和预期结果
 
     // Act: 从 body 中提取描述
@@ -109,7 +116,7 @@ fn test_extract_description_from_body_various_bodies_returns_description(#[case]
 /// - 解析成功，返回Some
 /// - 变更类型列表不为空
 #[test]
-fn test_parse_change_types_from_body_with_markdown_list_returns_types() {
+fn test_parse_change_types_from_body_with_markdown_list_returns_types() -> Result<()> {
     // Arrange: 准备包含变更类型的 PR body
     let body = r#"## Types of changes
 
@@ -122,8 +129,9 @@ fn test_parse_change_types_from_body_with_markdown_list_returns_types() {
 
     // Assert: 验证解析成功且包含类型
     assert!(types.is_some());
-    let types = types.expect("change types should be parsed");
+    let types = types.ok_or_else(|| color_eyre::eyre::eyre!("change types should be parsed"))?;
     assert!(types.len() > 0);
+    Ok(())
 }
 
 // ==================== Source PR Info Extraction Tests ====================
