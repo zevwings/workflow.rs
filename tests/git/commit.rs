@@ -16,14 +16,8 @@ use std::fs;
 use workflow::git::GitCommit;
 
 use crate::common::environments::GitTestEnv;
-
-// ==================== Fixtures ====================
-
-/// 创建带有初始提交的 Git 仓库
-#[fixture]
-fn git_repo_with_commit() -> GitTestEnv {
-    GitTestEnv::new().expect("Failed to create git test env")
-}
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Worktree Status Check Tests ====================
 
@@ -52,10 +46,11 @@ fn git_repo_with_commit() -> GitTestEnv {
 /// - `untracked_count == 0`：无未跟踪文件
 /// - `modified_count == 0`：无修改文件
 /// - `staged_count == 0`：无暂存文件
-#[test]
-fn test_worktree_status_clean_with_gix_return_result() -> Result<()> {
+#[rstest]
+fn test_worktree_status_clean_with_gix_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let _env = GitTestEnv::new()?;
 
     // Arrange: 准备测试干净的工作树状态
     let status = GitCommit::get_worktree_status()?;
@@ -87,10 +82,11 @@ fn test_worktree_status_clean_with_gix_return_result() -> Result<()> {
 /// - 返回Ok状态
 /// - modified_count、staged_count、untracked_count 都为0
 /// - 表示仓库干净，无更改
-#[test]
-fn test_has_changes_clean_repo_with_gix_return_result() -> Result<()> {
+#[rstest]
+fn test_has_changes_clean_repo_with_gix_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let _env = GitTestEnv::new()?;
 
     // 干净的仓库应该没有更改
     // 使用 get_worktree_status 检查是否有变更
@@ -119,10 +115,12 @@ fn test_has_changes_clean_repo_with_gix_return_result() -> Result<()> {
 /// - 返回Ok状态
 /// - untracked_count > 0 或 modified_count > 0 或 staged_count > 0
 /// - 表示仓库有未跟踪文件，存在更改
-#[test]
-fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()> {
+#[rstest]
+fn test_has_changes_with_untracked_files_with_gix_return_collect(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
 
     // 创建未跟踪文件
     std::fs::write(env.path().join("new_file.txt"), "New content")?;
@@ -156,10 +154,12 @@ fn test_has_changes_with_untracked_files_with_gix_return_collect() -> Result<()>
 /// - 返回Ok状态
 /// - modified_count > 0 或 staged_count > 0 或 untracked_count > 0
 /// - 表示仓库有已修改文件，存在更改
-#[test]
-fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> {
+#[rstest]
+fn test_has_changes_with_modified_files_with_gix_return_collect(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
 
     // 修改现有文件（README.md 在 GitTestEnv::new() 中已经创建）
     std::fs::write(env.path().join("README.md"), "# Updated README")?;
@@ -196,10 +196,12 @@ fn test_has_changes_with_modified_files_with_gix_return_collect() -> Result<()> 
 /// - `add_all()` 返回Ok
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 所有更改的文件都被暂存
-#[test]
-fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Result<()> {
+#[rstest]
+fn test_stage_all_changes_with_multiple_files_stages_all_return_collect(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // Arrange: 准备 Git 测试环境并创建多个文件
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
     std::fs::write(env.path().join("new_file1.txt"), "Content 1")?;
     std::fs::write(env.path().join("new_file2.txt"), "Content 2")?;
 
@@ -233,10 +235,12 @@ fn test_stage_all_changes_with_multiple_files_stages_all_return_collect() -> Res
 /// - `add_files()` 返回Ok
 /// - `get_worktree_status()` 显示 staged_count > 0
 /// - 指定的文件被暂存
-#[test]
-fn test_stage_specific_file_return_result() -> Result<()> {
+#[rstest]
+fn test_stage_specific_file_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
 
     // 创建测试文件
     let test_file = "specific_file.txt";
@@ -279,10 +283,11 @@ fn test_stage_specific_file_return_result() -> Result<()> {
 /// - 返回Ok，包含CommitInfo结构
 /// - SHA不为空，长度为40个字符，为十六进制格式
 /// - message、author、date字段都不为空
-#[test]
-fn test_get_latest_commit_info_return_result() -> Result<()> {
+#[rstest]
+fn test_get_latest_commit_info_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
     // 新版 GitTestEnv 自动切换工作目录，无需手动管理
-    let _env = GitTestEnv::new()?;
 
     // 获取最新提交信息
     let commit_info = GitCommit::get_last_commit_info();

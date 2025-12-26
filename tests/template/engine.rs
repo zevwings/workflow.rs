@@ -58,7 +58,7 @@ fn create_nested_variables() -> serde_json::Value {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_new_engine_creation_return_result() -> Result<()> {
+fn test_new_engine_creation_return_ok() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Assert: 验证引擎创建成功（通过尝试渲染一个简单模板）
@@ -81,7 +81,7 @@ fn test_new_engine_creation_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_default_engine_creation_return_result() -> Result<()> {
+fn test_default_engine_creation_return_ok() -> Result<()> {
     let engine = TemplateEngine::default();
 
     // Assert: 验证默认引擎与 new() 创建的引擎行为一致
@@ -104,7 +104,7 @@ fn test_default_engine_creation_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_render_simple_template_return_result() -> Result<()> {
+fn test_render_simple_template_return_ok() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // 注册简单模板
@@ -141,7 +141,7 @@ fn test_render_simple_template_return_result() -> Result<()> {
     "nested",
     "User: Alice, Email: alice@example.com, Role: admin"
 )]
-fn test_render_with_variables_return_result(
+fn test_render_with_variables_return_ok(
     #[case] template: &str,
     #[case] vars_type: &str,
     #[case] expected: &str,
@@ -196,7 +196,7 @@ fn test_render_with_variables_return_result(
     json!({"disabled": false}),
     "Feature enabled"
 )]
-fn test_render_with_conditions_return_result(
+fn test_render_with_conditions_return_ok(
     #[case] template: &str,
     #[case] vars: serde_json::Value,
     #[case] expected: &str,
@@ -240,7 +240,7 @@ fn test_render_with_conditions_return_result(
     }),
     "0: Alice (admin)\n1: Bob (user)"
 )]
-fn test_render_with_loops_return_result(
+fn test_render_with_loops_return_ok(
     #[case] template: &str,
     #[case] vars: serde_json::Value,
     #[case] expected: &str,
@@ -260,7 +260,7 @@ fn test_render_with_loops_return_result(
 
 /// 测试模板注册
 #[test]
-fn test_register_template_return_result() -> Result<()> {
+fn test_register_template_return_ok() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // Arrange: 准备测试成功注册
@@ -304,7 +304,7 @@ fn test_register_template_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_render_invalid_template_return_result() -> Result<()> {
+fn test_render_invalid_template_return_ok() -> Result<()> {
     let mut engine = TemplateEngine::new();
 
     // Arrange: 准备测试语法错误的模板
@@ -337,7 +337,7 @@ fn test_render_invalid_template_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_render_missing_variables_return_result() -> Result<()> {
+fn test_render_missing_variables_return_ok() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Arrange: 准备测试缺失变量（非严格模式下应该渲染为空字符串）
@@ -369,7 +369,7 @@ fn test_render_missing_variables_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_template_engine_type_return_result() -> Result<()> {
+fn test_template_engine_type_return_ok() -> Result<()> {
     // Arrange: 准备测试枚举值
     let engine_type = TemplateEngineType::Handlebars;
 
@@ -400,7 +400,7 @@ fn test_template_engine_type_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_complex_template_scenario_return_result() -> Result<()> {
+fn test_complex_template_scenario_return_ok() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // 创建复杂的模板，包含条件、循环和嵌套变量
@@ -447,7 +447,7 @@ No features available
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_special_characters_handling_return_result() -> Result<()> {
+fn test_special_characters_handling_return_ok() -> Result<()> {
     let engine = TemplateEngine::new();
 
     // Arrange: 准备测试包含特殊字符的变量

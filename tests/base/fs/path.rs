@@ -77,7 +77,7 @@ fn test_path_access_new_with_pathbuf_creates_instance() {
 /// ## 预期结果
 /// - 存在的路径返回 true，不存在的路径返回 false
 #[rstest]
-fn test_path_access_exists_with_existing_and_nonexisting_paths_return_result(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_exists_with_existing_and_nonexisting_paths_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备存在的和不存在的路径
     let existing_path = cli_env.path().join("existing.txt");
     fs::write(&existing_path, "test")?;
@@ -107,7 +107,7 @@ fn test_path_access_exists_with_existing_and_nonexisting_paths_return_result(cli
 /// ## 预期结果
 /// - 文件路径返回 true，目录路径返回 false
 #[rstest]
-fn test_path_access_is_file_with_file_and_dir_return_result(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_is_file_with_file_and_dir_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备文件和目录路径
     let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
@@ -138,7 +138,7 @@ fn test_path_access_is_file_with_file_and_dir_return_result(cli_env: CliTestEnv)
 /// ## 预期结果
 /// - 目录路径返回 true，文件路径返回 false
 #[rstest]
-fn test_path_access_is_dir_with_dir_and_file_return_result(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+fn test_path_access_is_dir_with_dir_and_file_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备目录和文件路径
     let dir_path = cli_env.path().join("subdir");
     fs::create_dir(&dir_path)?;
@@ -170,11 +170,12 @@ fn test_path_access_is_dir_with_dir_and_file_return_result(cli_env: CliTestEnv) 
 ///
 /// ## 预期结果
 /// - 目录被创建且存在
-#[test]
-fn test_path_access_ensure_dir_exists_with_new_path_creates_directory() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_ensure_dir_exists_with_new_path_creates_directory(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备新目录路径
-    let env = CliTestEnv::new()?;
-    let new_dir = env.path().join("new/dir/path");
+    let new_dir = cli_env.path().join("new/dir/path");
 
     // Act: 确保目录存在
     let path_access = PathAccess::new(&new_dir);
@@ -199,11 +200,12 @@ fn test_path_access_ensure_dir_exists_with_new_path_creates_directory() -> color
 ///
 /// ## 预期结果
 /// - 目录仍然存在，操作成功
-#[test]
-fn test_path_access_ensure_dir_exists_with_existing_dir_succeeds() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_ensure_dir_exists_with_existing_dir_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备已存在的目录
-    let env = CliTestEnv::new()?;
-    let existing_dir = env.path().join("existing");
+    let existing_dir = cli_env.path().join("existing");
     fs::create_dir_all(&existing_dir)?;
 
     // Act: 确保目录存在（目录已存在）
@@ -228,11 +230,12 @@ fn test_path_access_ensure_dir_exists_with_existing_dir_succeeds() -> color_eyre
 ///
 /// ## 预期结果
 /// - 父目录被创建且存在
-#[test]
-fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件路径（父目录不存在）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("parent/dir/file.txt");
+    let file_path = cli_env.path().join("parent/dir/file.txt");
 
     // Act: 确保父目录存在
     let path_access = PathAccess::new(&file_path);
@@ -258,11 +261,12 @@ fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory
 ///
 /// ## 预期结果
 /// - 操作成功，即使没有父目录也不会失败
-#[test]
-fn test_path_access_ensure_parent_exists_with_root_path_succeeds() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_ensure_parent_exists_with_root_path_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备根路径（没有父目录）
-    let env = CliTestEnv::new()?;
-    let root_path = env.path();
+    let root_path = cli_env.path();
 
     // Act: 确保父目录存在（根路径没有父目录）
     let path_access = PathAccess::new(root_path);
@@ -286,11 +290,12 @@ fn test_path_access_ensure_parent_exists_with_root_path_succeeds() -> color_eyre
 ///
 /// ## 预期结果
 /// - 返回目录条目列表，至少包含3个条目
-#[test]
-fn test_path_access_read_dir_safe_with_valid_directory_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_read_dir_safe_with_valid_directory_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含文件和子目录的目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -342,11 +347,12 @@ fn test_path_access_read_dir_safe_with_nonexistent_path_returns_error() {
 ///
 /// ## 预期结果
 /// - 返回错误
-#[test]
-fn test_path_access_read_dir_safe_with_file_path_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_path_access_read_dir_safe_with_file_path_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件路径（不是目录）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "test")?;
 
     // Act: 尝试读取文件作为目录

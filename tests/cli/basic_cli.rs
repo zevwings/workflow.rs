@@ -6,6 +6,8 @@ use crate::common::cli_helpers::{
     contains_error, is_json_format, CliCommandBuilder, TestDataGenerator,
 };
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::{cli_env, cli_env_with_git};
+use rstest::rstest;
 
 // ==================== Basic Command Tests ====================
 
@@ -103,18 +105,16 @@ fn test_pr_help() {
 /// - stderr包含错误消息
 /// - 错误消息清晰说明原因（不在Git仓库中）
 /// - 不会尝试创建PR或调用远程API
-#[test]
+#[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：可能尝试初始化服务，导致长时间阻塞
 #[ignore] // 忽略：可能尝试初始化 Jira/GitHub 客户端，导致长时间阻塞
-fn test_pr_without_git_repo_return_result() -> color_eyre::Result<()> {
+fn test_pr_without_git_repo_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // 注意：此测试执行 pr create 命令，即使没有 Git 仓库也可能尝试初始化服务
     // Windows 上已通过 #[cfg] 跳过，因为可能尝试初始化 Jira/GitHub 客户端，导致阻塞
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new()?;
-
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
-        .current_dir(env.path())
+        .current_dir(cli_env.path())
         .assert_failure();
     let output = binding.get_output();
 
@@ -154,24 +154,24 @@ fn test_pr_without_git_repo_return_result() -> color_eyre::Result<()> {
 /// - dry-run模式不会实际创建PR
 /// - 可能显示将要创建的PR信息
 /// - 如果需要API/LLM，应该有合适的错误消息
-#[test]
+#[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：Git 命令和路径处理可能有问题
 #[ignore] // 忽略：可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_pr_with_git_repo_return_result() -> color_eyre::Result<()> {
+fn test_pr_with_git_repo_return_ok(cli_env_with_git: CliTestEnv) -> color_eyre::Result<()> {
     // 注意：此测试可能尝试初始化 Jira/GitHub 客户端或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - Git 命令路径或行为差异
     // - 路径分隔符处理（虽然 Rust Path 应该处理，但某些情况下可能仍有问题）
     // - 临时目录路径格式差异
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
         .create_file("README.md", "# Test")?
         .create_commit("Initial commit")?;
 
     let binding = CliCommandBuilder::new()
         .args(["pr", "create", "--dry-run"])
-        .current_dir(env.path())
+        .current_dir(cli_env_with_git.path())
         .assert();
     let output = binding.get_output();
 
@@ -216,13 +216,11 @@ fn test_branch_help() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_branch_without_git_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-
+#[rstest]
+fn test_branch_without_git_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     let binding = CliCommandBuilder::new()
         .args(["branch", "create", "test-branch"])
-        .current_dir(env.path())
+        .current_dir(cli_env.path())
         .assert_failure();
     let output = binding.get_output();
 
@@ -266,14 +264,13 @@ fn test_config_help() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_config_show_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    env.create_config(&TestDataGenerator::config_content())?;
+#[rstest]
+fn test_config_show_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
+    cli_env.create_config(&TestDataGenerator::config_content())?;
 
     let binding = CliCommandBuilder::new()
         .args(["config", "show"])
-        .current_dir(env.path())
+        .current_dir(cli_env.path())
         .assert();
     let output = binding.get_output();
 
@@ -319,13 +316,11 @@ fn test_jira_help() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_jira_info_without_config_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-
+#[rstest]
+fn test_jira_info_without_config_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     let binding = CliCommandBuilder::new()
         .args(["jira", "info", "TEST-123"])
-        .current_dir(env.path())
+        .current_dir(cli_env.path())
         .assert_failure();
     let output = binding.get_output();
 
@@ -438,14 +433,12 @@ fn test_missing_required_argument() {
 // ==================== Environment Variable Tests ====================
 
 /// 测试环境变量设置
-#[test]
-fn test_environment_variables_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-
+#[rstest]
+fn test_environment_variables_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     let binding = CliCommandBuilder::new()
         .args(["config", "show"])
-        .env("WORKFLOW_CONFIG_DIR", env.path())
-        .current_dir(env.path())
+        .env("WORKFLOW_CONFIG_DIR", cli_env.path())
+        .current_dir(cli_env.path())
         .assert();
     let output = binding.get_output();
 
@@ -525,18 +518,18 @@ fn test_help_command_performance() {
 /// - 显示将要执行的操作计划
 /// - 命令之间的依赖关系正确处理
 /// - 配置正确加载和使用
-#[test]
+#[rstest]
 #[cfg(not(target_os = "windows"))] // Windows 上跳过：多个命令执行和路径处理可能有问题
 #[ignore] // 忽略：执行多个命令，可能涉及网络请求或 LLM 调用，导致长时间阻塞
-fn test_complete_workflow_dry_run_return_result() -> color_eyre::Result<()> {
+fn test_complete_workflow_dry_run_return_ok(cli_env_with_git: CliTestEnv) -> color_eyre::Result<()> {
     // 注意：此测试执行多个命令，其中一些可能尝试初始化服务或调用 LLM，导致阻塞
     // Windows 上已通过 #[cfg] 跳过，因为：
     // - 多个 Git 命令执行可能更慢
     // - 路径处理在多个命令间可能不一致
     // - 配置文件路径格式差异
     // 如果需要运行此测试，请使用: cargo test -- --ignored
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
         .create_file("src/main.rs", "fn main() {}")?
         .create_commit("Initial commit")?
         .create_config(&TestDataGenerator::config_content())?;
@@ -549,7 +542,7 @@ fn test_complete_workflow_dry_run_return_result() -> color_eyre::Result<()> {
     ];
 
     for cmd_args in commands {
-        let binding = CliCommandBuilder::new().args(&cmd_args).current_dir(env.path()).assert();
+        let binding = CliCommandBuilder::new().args(&cmd_args).current_dir(cli_env_with_git.path()).assert();
         let output = binding.get_output();
 
         // 每个命令都应该有输出（成功或失败都可以）

@@ -321,8 +321,34 @@ impl Paths {
     ///
     /// 如果无法获取当前工作目录，返回相应的错误信息。
     pub fn project_config() -> Result<PathBuf> {
-        Ok(std::env::current_dir()
-            .wrap_err("Failed to get current directory")?
+        Self::project_config_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// 获取项目级配置文件路径（指定仓库路径）
+    ///
+    /// 返回指定仓库路径下的 `.workflow/config.toml` 路径。
+    /// 这是项目级别的配置文件，用于存储仓库特定的配置（如分支前缀、提交模板等）。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 路径示例
+    ///
+    /// - 相对于指定路径：`{repo_path}/.workflow/config.toml`
+    ///
+    /// # 返回
+    ///
+    /// 返回项目级配置文件的 `PathBuf`。
+    ///
+    /// # 错误
+    ///
+    /// 如果无法规范化路径，返回相应的错误信息。
+    pub fn project_config_in(repo_path: impl AsRef<std::path::Path>) -> Result<PathBuf> {
+        Ok(repo_path
+            .as_ref()
+            .canonicalize()
+            .wrap_err("Failed to canonicalize repository path")?
             .join(WORKFLOW_DIR)
             .join("config.toml"))
     }

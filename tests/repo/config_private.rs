@@ -5,14 +5,13 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use serial_test::serial;
 use std::fs;
 use std::path::PathBuf;
 use workflow::repo::config::private::PrivateRepoConfig;
 use workflow::repo::config::types::{BranchConfig, PullRequestsConfig};
 
 use crate::common::environments::CliTestEnv;
-use crate::common::helpers::CurrentDirGuard;
+use crate::common::fixtures::{cli_env, cli_env_with_git};
 
 // ==================== Test Helper Functions ====================
 
@@ -660,23 +659,18 @@ fn test_clear_pr_config() {
 ///
 /// ## 预期结果
 /// - 配置能够正确从文件加载
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_from_existing_file_return_result() -> Result<()> {
+#[rstest]
+fn test_load_from_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量（PrivateRepoConfig 需要）
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
-    // 切换到测试目录，让 generate_repo_id() 和 load() 能找到 Git remote
-    let _guard = CurrentDirGuard::new(env.path())?;
     // 生成 repo_id
-    let repo_id = PrivateRepoConfig::generate_repo_id()?;
+    let repo_id = PrivateRepoConfig::generate_repo_id_in(cli_env_with_git.path())?;
 
     let config_content = format!(
         r#"
@@ -691,10 +685,10 @@ ignore = ["main", "develop"]
 auto_accept_change_type = true
 "#
     );
-    create_private_config(&env, &config_content)?;
+    create_private_config(&cli_env_with_git, &config_content)?;
 
-    // Act: 调用 PrivateRepoConfig::load()（guard 仍然有效）
-    let config = PrivateRepoConfig::load()?;
+    // Act: 调用 PrivateRepoConfig::load_from()
+    let config = PrivateRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 配置正确加载
     assert!(config.configured);
@@ -728,23 +722,18 @@ auto_accept_change_type = true
 ///
 /// ## 预期结果
 /// - 返回默认配置（configured 为 false，branch 和 pr 为 None）
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_from_non_existing_file_return_result() -> Result<()> {
+#[rstest]
+fn test_load_from_non_existing_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建没有配置文件的临时 Git 仓库
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
-    // Act: 切换到测试目录，然后调用 PrivateRepoConfig::load()
-    // load() 内部会调用 generate_repo_id()，需要 Git remote
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let config = PrivateRepoConfig::load()?;
+    // Act: 调用 PrivateRepoConfig::load_from()
+    let config = PrivateRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 返回默认配置
     assert!(!config.configured);
@@ -767,18 +756,15 @@ fn test_load_from_non_existing_file_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 配置文件被创建且内容正确
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_to_new_file_return_result() -> Result<()> {
+#[rstest]
+fn test_save_to_new_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建临时 Git 仓库（不创建配置文件）
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // Act: 创建配置并保存
     let config = PrivateRepoConfig {
@@ -792,20 +778,16 @@ fn test_save_to_new_file_return_result() -> Result<()> {
         }),
     };
 
-    // 切换到测试目录，让 generate_repo_id() 能找到 Git 仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 文件创建成功
-    let config_path = env.path().join(".workflow").join("config").join("repository.toml");
+    let config_path = cli_env_with_git.path().join(".workflow").join("config").join("repository.toml");
     assert!(config_path.exists());
 
     // Assert: 内容正确
     let content = fs::read_to_string(&config_path)?;
-    // 切换到测试目录，让 generate_repo_id() 能找到 Git remote
-    // 注意：_guard 仍然有效，但为了明确，我们使用新的 guard
-    let _guard_for_repo_id = CurrentDirGuard::new(env.path())?;
-    let _repo_id = PrivateRepoConfig::generate_repo_id()?;
+    // 验证 repo_id（用于检查配置内容）
+    let _repo_id = PrivateRepoConfig::generate_repo_id_in(cli_env_with_git.path())?;
     // Note: TOML section names with special chars might be quoted
     assert!(content.contains("configured = true"));
     assert!(content.contains(r#"prefix = "feature""#));
@@ -826,18 +808,15 @@ fn test_save_to_new_file_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 其他仓库配置被保留，当前仓库配置已添加
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_preserves_other_repos_return_result() -> Result<()> {
+#[rstest]
+fn test_save_preserves_other_repos_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含其他仓库配置的临时 Git 仓库
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let config_content = r#"
 [other_repo_12345678]
@@ -846,7 +825,7 @@ configured = true
 [other_repo_12345678.branch]
 prefix = "hotfix"
 "#;
-    create_private_config(&env, config_content)?;
+    create_private_config(&cli_env_with_git, config_content)?;
 
     // Act: 保存当前仓库的配置
     let config = PrivateRepoConfig {
@@ -858,12 +837,10 @@ prefix = "hotfix"
         pr: None,
     };
 
-    // 切换到测试目录，让 generate_repo_id() 能找到 Git 仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 其他仓库配置未被覆盖
-    let config_path = env.path().join(".workflow").join("config").join("repository.toml");
+    let config_path = cli_env_with_git.path().join(".workflow").join("config").join("repository.toml");
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("[other_repo_12345678]"));
     assert!(content.contains("[other_repo_12345678.branch]"));
@@ -889,22 +866,18 @@ prefix = "hotfix"
 ///
 /// ## 预期结果
 /// - 修改后的配置能够正确保存和重新加载
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip_return_result() -> Result<()> {
+#[rstest]
+fn test_load_and_save_roundtrip_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含配置的临时 Git 仓库
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     // 切换到测试目录，让 generate_repo_id() 和后续操作能找到 Git remote
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let repo_id = PrivateRepoConfig::generate_repo_id()?;
+    let repo_id = PrivateRepoConfig::generate_repo_id_in(cli_env_with_git.path())?;
     let config_content = format!(
         r#"
 ["{repo_id}"]
@@ -915,10 +888,10 @@ prefix = "feature"
 ignore = ["main"]
 "#
     );
-    create_private_config(&env, &config_content)?;
+    create_private_config(&cli_env_with_git, &config_content)?;
 
-    // Act: 加载 → 修改 → 保存 → 重新加载（guard 仍然有效）
-    let mut config = PrivateRepoConfig::load()?;
+    // Act: 加载 → 修改 → 保存 → 重新加载
+    let mut config = PrivateRepoConfig::load_from(cli_env_with_git.path())?;
     assert!(config.configured);
 
     // 修改配置
@@ -928,10 +901,10 @@ ignore = ["main"]
     if let Some(ref mut branch) = config.branch {
         branch.ignore.push("develop".to_string());
     }
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
     // 重新加载
-    let reloaded_config = PrivateRepoConfig::load()?;
+    let reloaded_config = PrivateRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 数据一致性
     assert_eq!(reloaded_config.configured, config.configured);
@@ -966,27 +939,24 @@ ignore = ["main"]
 ///
 /// ## 预期结果
 /// - 返回 TOML 解析错误
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_corrupted_toml_file_return_result() -> Result<()> {
+#[rstest]
+fn test_load_corrupted_toml_file_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 创建包含无效 TOML 的配置文件
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let invalid_toml = r#"
 [test_repo
 configured = "invalid  # 缺少闭合引号和括号
 "#;
-    create_private_config(&env, invalid_toml)?;
+    create_private_config(&cli_env_with_git, invalid_toml)?;
 
     // Act: 尝试加载配置
-    let result = PrivateRepoConfig::load();
+    let result = PrivateRepoConfig::load_from(cli_env_with_git.path());
 
     // Assert: 返回错误
     assert!(result.is_err());
@@ -1025,24 +995,21 @@ configured = "invalid  # 缺少闭合引号和括号
 /// - 错误消息清晰说明权限问题
 /// - 清理过程正确恢复权限
 /// - 不会留下部分创建的文件
-#[test]
-#[serial(repo_config_fs)]
+#[rstest]
 #[cfg(unix)]
 #[ignore] // 这个测试在某些系统上可能因权限模型不同而失败
-fn test_save_to_readonly_directory_return_result() -> Result<()> {
+fn test_save_to_readonly_directory_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
     // Arrange: 创建只读的 .workflow 目录（阻止创建 config 子目录）
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
-    let workflow_dir = env.path().join(".workflow");
+    let workflow_dir = cli_env_with_git.path().join(".workflow");
     fs::create_dir_all(&workflow_dir)?;
 
     // 设置 .workflow 目录为只读（无法创建 config 子目录）
@@ -1059,7 +1026,7 @@ fn test_save_to_readonly_directory_return_result() -> Result<()> {
         }),
         pr: None,
     };
-    let result = config.save();
+    let result = config.save_in(cli_env_with_git.path());
 
     // Assert: 返回权限错误
     // 注意：在某些系统上，root 用户或特定权限配置下这个测试可能会失败
@@ -1088,18 +1055,13 @@ fn test_save_to_readonly_directory_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 返回错误（因为不在 Git 仓库中）
-#[test]
-#[serial(repo_config_fs)]
-fn test_generate_repo_id_outside_git_repo_return_result() -> Result<()> {
-    use crate::common::helpers::CurrentDirGuard;
-
+#[rstest]
+fn test_generate_repo_id_outside_git_repo_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 创建非 Git 仓库的临时目录
-    let env = CliTestEnv::new()?;
-    // 注意：不调用 init_git_repo()，因为我们需要测试非 Git 仓库的情况
+    // 注意：使用 cli_env 而不是 cli_env_with_git，因为我们需要测试非 Git 仓库的情况
 
-    // Act: 切换到非 Git 仓库目录，然后尝试生成 repo_id
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let result = PrivateRepoConfig::generate_repo_id();
+    // Act: 尝试生成 repo_id
+    let result = PrivateRepoConfig::generate_repo_id_in(cli_env.path());
 
     // Assert: 返回错误（因为不在 Git 仓库中）
     assert!(result.is_err());
@@ -1119,18 +1081,15 @@ fn test_generate_repo_id_outside_git_repo_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 文件创建成功但不包含 branch 部分
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_with_empty_branch_config_return_result() -> Result<()> {
+#[rstest]
+fn test_save_with_empty_branch_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试保存空的 branch 配置（prefix 为 None 且 ignore 为空）
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let config = PrivateRepoConfig {
         configured: true,
@@ -1141,12 +1100,10 @@ fn test_save_with_empty_branch_config_return_result() -> Result<()> {
         pr: None,
     };
 
-    // 切换到测试目录，让 generate_repo_id() 能找到 Git 仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 文件创建成功但不包含 branch 部分（因为是空的）
-    let config_path = env.path().join(".workflow").join("config").join("repository.toml");
+    let config_path = cli_env_with_git.path().join(".workflow").join("config").join("repository.toml");
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("configured = true"));
     // 空的 branch 配置不应该被保存
@@ -1167,18 +1124,15 @@ fn test_save_with_empty_branch_config_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 文件创建成功但不包含 PR 部分
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_with_empty_pr_config_return_result() -> Result<()> {
+#[rstest]
+fn test_save_with_empty_pr_config_return_ok(mut cli_env_with_git: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试保存空的 PR 配置
-    let mut env = CliTestEnv::new()?;
-    env.init_git_repo()?;
 
     // 设置 HOME 和 XDG_CONFIG_HOME 环境变量
-    let home_path = env.path().to_string_lossy().to_string();
-    let xdg_path = env.path().join(".config").to_string_lossy().to_string();
-    env.env_guard().set("HOME", &home_path);
-    env.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
+    let home_path = cli_env_with_git.path().to_string_lossy().to_string();
+    let xdg_path = cli_env_with_git.path().join(".config").to_string_lossy().to_string();
+    cli_env_with_git.env_guard().set("HOME", &home_path);
+    cli_env_with_git.env_guard().set("XDG_CONFIG_HOME", &xdg_path);
 
     let config = PrivateRepoConfig {
         configured: true,
@@ -1188,12 +1142,10 @@ fn test_save_with_empty_pr_config_return_result() -> Result<()> {
         }),
     };
 
-    // 切换到测试目录，让 generate_repo_id() 能找到 Git 仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 文件创建成功但不包含 pr 部分（因为是空的）
-    let config_path = env.path().join(".workflow").join("config").join("repository.toml");
+    let config_path = cli_env_with_git.path().join(".workflow").join("config").join("repository.toml");
     let content = fs::read_to_string(config_path)?;
     assert!(content.contains("configured = true"));
     // 空的 pr 配置不应该被保存

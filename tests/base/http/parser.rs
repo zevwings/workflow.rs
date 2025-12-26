@@ -65,7 +65,7 @@ fn test_json_parser_parse_with_valid_json_succeeds(
 /// ## 预期结果
 /// - JSON 被正确解析为结构体，字段值正确
 #[test]
-fn test_json_parser_parse_with_valid_json_return_result() -> Result<()> {
+fn test_json_parser_parse_with_valid_json_return_ok() -> Result<()> {
     // Arrange: 准备有效的JSON字节
     let json_bytes = br#"{"id": 1, "name": "test"}"#;
 
@@ -156,7 +156,7 @@ fn test_json_parser_parse_with_error_status_parses_json_return_false() -> Result
 #[case(b"Line 1\nLine 2\nLine 3", 200, "Line 1\nLine 2\nLine 3", true)]
 #[case("测试文本 🚀".as_bytes(), 200, "测试文本 🚀", true)]
 #[case(b"", 200, "", true)]
-fn test_text_parser_parse_with_various_texts_return_result(
+fn test_text_parser_parse_with_various_texts_return_ok(
     #[case] text_bytes: &[u8],
     #[case] status_code: u16,
     #[case] expected: &str,
@@ -223,7 +223,7 @@ fn test_text_parser_parse_with_error_cases(
 /// ## 预期结果
 /// - 大型 JSON 被正确解析
 #[test]
-fn test_json_parser_parse_with_large_response_parses_correctly_return_result() -> Result<()> {
+fn test_json_parser_parse_with_large_response_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备大响应（超过 200 字符的预览）
     let large_json = format!(r#"{{"data": "{}"}}"#, "x".repeat(300));
 
@@ -313,7 +313,7 @@ fn test_json_parser_parse_with_empty_response_falls_back_to_object() {
 /// ## 预期结果
 /// - JSON 数组被正确解析为 Vec
 #[test]
-fn test_json_parser_parse_with_array_json_return_result() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_array_json_return_ok() -> color_eyre::Result<()> {
     // Arrange: 准备数组JSON字节
     let json_bytes = b"[1, 2, 3, 4, 5]";
 
@@ -338,7 +338,7 @@ fn test_json_parser_parse_with_array_json_return_result() -> color_eyre::Result<
 /// ## 预期结果
 /// - 嵌套对象被正确解析，嵌套值可访问
 #[test]
-fn test_json_parser_parse_with_nested_object_return_result() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_nested_object_return_ok() -> color_eyre::Result<()> {
     // Arrange: 准备嵌套对象JSON字节
     let json_bytes = b"{\"nested\": {\"key\": \"value\"}}";
 
@@ -363,7 +363,7 @@ fn test_json_parser_parse_with_nested_object_return_result() -> color_eyre::Resu
 /// ## 预期结果
 /// - 多行文本被正确解析，换行符被保留
 #[test]
-fn test_text_parser_parse_with_multiline_text_return_result() -> color_eyre::Result<()> {
+fn test_text_parser_parse_with_multiline_text_return_ok() -> color_eyre::Result<()> {
     // Arrange: 准备多行文本字节
     let text_bytes = b"Line 1\nLine 2\nLine 3";
 
@@ -388,7 +388,7 @@ fn test_text_parser_parse_with_multiline_text_return_result() -> color_eyre::Res
 /// ## 预期结果
 /// - Unicode 文本被正确解析，包括 emoji
 #[test]
-fn test_text_parser_parse_with_unicode_text_return_result() -> color_eyre::Result<()> {
+fn test_text_parser_parse_with_unicode_text_return_ok() -> color_eyre::Result<()> {
     // Arrange: 准备Unicode文本字节
     let text_bytes = "测试文本 🚀".as_bytes();
 
@@ -413,7 +413,7 @@ fn test_text_parser_parse_with_unicode_text_return_result() -> color_eyre::Resul
 /// ## 预期结果
 /// - JSON 被正确解析为自定义结构体，字段值正确
 #[test]
-fn test_json_parser_parse_with_custom_struct_return_result() -> color_eyre::Result<()> {
+fn test_json_parser_parse_with_custom_struct_return_ok() -> color_eyre::Result<()> {
     // Arrange: 准备自定义结构体和JSON字节
     #[derive(serde::Deserialize, PartialEq, Debug)]
     struct TestStruct {

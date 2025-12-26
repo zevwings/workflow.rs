@@ -8,6 +8,7 @@ use crate::base::util::file::{FileReader, FileWriter};
 use crate::base::util::path::PathAccess;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
+use std::path::Path;
 use toml::map::Map;
 use toml::Value;
 
@@ -34,7 +35,18 @@ impl PublicRepoConfig {
     ///
     /// Loads template configuration from `.workflow/config.toml`.
     pub fn load() -> Result<Self> {
-        let path = Paths::project_config().wrap_err("Failed to get project config path")?;
+        Self::load_from(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Load project configuration from specified repository path
+    ///
+    /// Loads template configuration from `.workflow/config.toml` in the specified repository.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn load_from(repo_path: impl AsRef<Path>) -> Result<Self> {
+        let path = Paths::project_config_in(repo_path).wrap_err("Failed to get project config path")?;
 
         if !path.exists() {
             return Ok(Self::default());
@@ -78,7 +90,18 @@ impl PublicRepoConfig {
     ///
     /// Saves to `.workflow/config.toml` (only saves template configuration and project standards).
     pub fn save(&self) -> Result<()> {
-        let path = Paths::project_config().wrap_err("Failed to get project config path")?;
+        self.save_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Save project configuration (specified repository path)
+    ///
+    /// Saves to `.workflow/config.toml` in the specified repository.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn save_in(&self, repo_path: impl AsRef<Path>) -> Result<()> {
+        let path = Paths::project_config_in(repo_path.as_ref()).wrap_err("Failed to get project config path")?;
 
         PathAccess::new(&path).ensure_parent_exists()?;
 

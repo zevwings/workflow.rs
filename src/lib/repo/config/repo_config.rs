@@ -3,9 +3,10 @@
 //! Provides a unified configuration access interface, internally calling
 //! `PublicRepoConfig` and `PrivateRepoConfig`.
 
-use crate::git::GitRepo;
+use crate::git::GitCommandPublic as GitCommand;
 use color_eyre::eyre::WrapErr;
 use color_eyre::Result;
+use std::path::Path;
 use toml::map::Map;
 use toml::Value;
 
@@ -64,14 +65,29 @@ impl RepoConfig {
     /// - All code should use this method to check if `repo setup` has been completed
     /// - Do not check file existence or other methods to determine configuration status
     pub fn exists() -> Result<bool> {
+        Self::exists_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Check if repository configuration exists (specified repository path)
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn exists_in(repo_path: impl AsRef<Path>) -> Result<bool> {
+        let repo_path = repo_path.as_ref();
         // 1. Check if in Git repository
-        if !GitRepo::is_git_repo() {
+        // Note: GitRepo::is_git_repo() still uses current directory, so we check by trying to get git dir
+        let is_git_repo = GitCommand::new(["rev-parse", "--git-dir", "--quiet"])
+            .with_cwd(repo_path)
+            .quiet_success();
+
+        if !is_git_repo {
             return Ok(true); // Not in Git repository, consider as "configured" (skip check)
         }
 
         // 2. Load personal preference configuration
-        let config =
-            PrivateRepoConfig::load().wrap_err("Failed to load repository personal config")?;
+        let config = PrivateRepoConfig::load_from(repo_path)
+            .wrap_err("Failed to load repository personal config")?;
 
         // 3. Check if configured (unified check: always use PrivateRepoConfig.configured)
         Ok(config.configured)
@@ -164,13 +180,24 @@ impl RepoConfig {
     ///
     /// Returns a `RepoConfig` containing all configuration properties.
     pub fn load() -> Result<Self> {
+        Self::load_from(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Load repository configuration (specified repository path)
+    ///
+    /// Loads both public and private configuration for the specified repository.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn load_from(repo_path: impl AsRef<Path>) -> Result<Self> {
         // Load public configuration (project template)
         let public_config =
-            PublicRepoConfig::load().wrap_err("Failed to load public repository config")?;
+            PublicRepoConfig::load_from(repo_path.as_ref()).wrap_err("Failed to load public repository config")?;
 
         // Load private configuration (personal preference)
         let private_config =
-            PrivateRepoConfig::load().wrap_err("Failed to load private repository config")?;
+            PrivateRepoConfig::load_from(repo_path.as_ref()).wrap_err("Failed to load private repository config")?;
 
         Ok(Self {
             // Public configuration
@@ -189,13 +216,24 @@ impl RepoConfig {
     /// Saves both public (project template) and private (personal preference) configurations
     /// to their respective files.
     pub fn save(&self) -> Result<()> {
+        self.save_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Save repository configuration (specified repository path)
+    ///
+    /// Saves both public and private configuration for the specified repository.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn save_in(&self, repo_path: impl AsRef<Path>) -> Result<()> {
         // Save public configuration (project template)
         let public_config = PublicRepoConfig {
             template_commit: self.template_commit.clone(),
             template_branch: self.template_branch.clone(),
             template_pull_requests: self.template_pull_requests.clone(),
         };
-        public_config.save().wrap_err("Failed to save public repository config")?;
+        public_config.save_in(repo_path.as_ref()).wrap_err("Failed to save public repository config")?;
 
         // Save private configuration (personal preference)
         let private_config = PrivateRepoConfig {
@@ -203,7 +241,7 @@ impl RepoConfig {
             branch: self.branch.clone(),
             pr: self.pr.clone(),
         };
-        private_config.save().wrap_err("Failed to save private repository config")?;
+        private_config.save_in(repo_path.as_ref()).wrap_err("Failed to save private repository config")?;
 
         Ok(())
     }

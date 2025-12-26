@@ -82,7 +82,7 @@ fn test_request_config_default_with_no_parameters_creates_empty_config() {
 /// ## 预期结果
 /// - 请求体被正确设置
 #[test]
-fn test_request_config_body_with_json_value_sets_body_return_result() -> Result<()> {
+fn test_request_config_body_with_json_value_sets_body_return_ok() -> Result<()> {
     // Arrange: 准备 JSON 请求体
     let body = serde_json::json!({"key": "value"});
 
@@ -160,7 +160,7 @@ fn test_request_config_query_with_hashmap_sets_query() {
 /// ## 预期结果
 /// - 认证信息被正确设置
 #[test]
-fn test_request_config_auth_with_credentials_sets_auth_return_result() -> Result<()> {
+fn test_request_config_auth_with_credentials_sets_auth_return_ok() -> Result<()> {
     // Arrange: 准备认证信息
     let auth = Authorization::new("username", "password");
 
@@ -189,7 +189,7 @@ fn test_request_config_auth_with_credentials_sets_auth_return_result() -> Result
 /// ## 预期结果
 /// - 请求头被正确设置
 #[test]
-fn test_request_config_headers_with_header_map_sets_headers_return_result() -> Result<()> {
+fn test_request_config_headers_with_header_map_sets_headers_return_ok() -> Result<()> {
     // Arrange: 准备请求头
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("X-Custom-Header", "value".parse()?);
@@ -223,7 +223,7 @@ fn test_request_config_headers_with_header_map_sets_headers_return_result() -> R
 /// ## 预期结果
 /// - 超时时间被正确设置
 #[test]
-fn test_request_config_timeout_with_duration_sets_timeout_return_result() -> Result<()> {
+fn test_request_config_timeout_with_duration_sets_timeout_return_ok() -> Result<()> {
     // Arrange: 准备超时时间
     let timeout = Duration::from_secs(60);
 
@@ -396,7 +396,7 @@ fn test_multipart_request_config_query_with_json_sets_query() {
 /// ## 预期结果
 /// - 认证信息被正确设置
 #[test]
-fn test_multipart_request_config_auth_with_credentials_sets_auth_return_result() -> Result<()> {
+fn test_multipart_request_config_auth_with_credentials_sets_auth_return_ok() -> Result<()> {
     // Arrange: 准备认证信息
     let auth = Authorization::new("username", "password");
     let auth_clone = auth.clone();
@@ -426,7 +426,7 @@ fn test_multipart_request_config_auth_with_credentials_sets_auth_return_result()
 /// ## 预期结果
 /// - 请求头被正确设置
 #[test]
-fn test_multipart_request_config_headers_with_header_map_sets_headers_return_result() -> Result<()> {
+fn test_multipart_request_config_headers_with_header_map_sets_headers_return_ok() -> Result<()> {
     // Arrange: 准备请求头
     let mut headers = reqwest::header::HeaderMap::new();
     headers.insert("X-Custom-Header", "value".parse()?);
@@ -460,7 +460,7 @@ fn test_multipart_request_config_headers_with_header_map_sets_headers_return_res
 /// ## 预期结果
 /// - 超时时间被正确设置
 #[test]
-fn test_multipart_request_config_timeout_with_duration_sets_timeout_return_result() -> Result<()> {
+fn test_multipart_request_config_timeout_with_duration_sets_timeout_return_ok() -> Result<()> {
     // Arrange: 准备超时时间
     let timeout = Duration::from_secs(120);
 

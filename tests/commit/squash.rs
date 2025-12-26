@@ -11,6 +11,8 @@ use workflow::commit::{CommitSquash, SquashOptions, SquashPreview, SquashResult}
 use workflow::git::CommitInfo;
 
 use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
@@ -453,10 +455,10 @@ fn test_get_branch_commits_error_handling_with_invalid_environment_handles_grace
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_git_integration_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
 
     // 创建多个提交以模拟真实场景
     for i in 1..=5 {

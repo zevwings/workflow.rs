@@ -10,7 +10,10 @@
 
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
+use rstest::rstest;
 use workflow::commands::branch::helpers::sort_branches_with_priority;
+
+use crate::common::fixtures::cli_env;
 
 // 注意: get_branch_priority 是私有函数，我们需要通过公共 API 测试其效果
 
@@ -27,7 +30,7 @@ use workflow::commands::branch::helpers::sort_branches_with_priority;
 /// ## 预期结果
 /// - main 分支排在第一位
 #[test]
-fn test_sort_branches_with_priority_main_first_return_result() -> Result<()> {
+fn test_sort_branches_with_priority_main_first_return_ok() -> Result<()> {
     let branches = vec![
         "feature/test".to_string(),
         "main".to_string(),
@@ -55,7 +58,7 @@ fn test_sort_branches_with_priority_main_first_return_result() -> Result<()> {
 /// ## 预期结果
 /// - main 在 master 之前
 #[test]
-fn test_sort_branches_with_priority_master_after_main_return_result() -> Result<()> {
+fn test_sort_branches_with_priority_master_after_main_return_ok() -> Result<()> {
     let branches = vec![
         "master".to_string(),
         "main".to_string(),
@@ -84,7 +87,7 @@ fn test_sort_branches_with_priority_master_after_main_return_result() -> Result<
 /// ## 预期结果
 /// - develop 在 feature 和 hotfix 之前
 #[test]
-fn test_sort_branches_with_priority_develop_second_return_result() -> Result<()> {
+fn test_sort_branches_with_priority_develop_second_return_ok() -> Result<()> {
     let branches = vec![
         "feature/test".to_string(),
         "develop".to_string(),
@@ -113,7 +116,7 @@ fn test_sort_branches_with_priority_develop_second_return_result() -> Result<()>
 /// ## 预期结果
 /// - 其他分支按字母顺序排序
 #[test]
-fn test_sort_branches_with_priority_alphabetical_others_return_result() -> Result<()> {
+fn test_sort_branches_with_priority_alphabetical_others_return_ok() -> Result<()> {
     let branches = vec!["zebra".to_string(), "alpha".to_string(), "beta".to_string()];
 
     let sorted = sort_branches_with_priority(branches)?;
@@ -158,7 +161,7 @@ fn test_sort_branches_empty_return_empty() -> Result<()> {
 /// ## 预期结果
 /// - 返回包含单个分支的列表
 #[test]
-fn test_sort_branches_single_return_result() -> Result<()> {
+fn test_sort_branches_single_return_ok() -> Result<()> {
     let branches = vec!["feature/test".to_string()];
     let sorted = sort_branches_with_priority(branches)?;
     assert_eq!(sorted.len(), 1);
@@ -181,7 +184,7 @@ fn test_sort_branches_single_return_result() -> Result<()> {
 /// ## 预期结果
 /// - main 在第一位，develop 在 main 之后，其他分支按前缀或字母顺序排序
 #[test]
-fn test_sort_branches_with_prefix_priority_return_result() -> Result<()> {
+fn test_sort_branches_with_prefix_priority_return_ok() -> Result<()> {
     // Arrange: 准备测试带前缀的分支优先级
     // 注意：这个测试依赖于当前分支或配置的前缀
     // 如果当前分支有前缀（如 "zw/feature-branch"），则 "zw/" 开头的分支应该有更高优先级
@@ -224,13 +227,12 @@ fn test_sort_branches_with_prefix_priority_return_result() -> Result<()> {
 /// ## 注意
 /// - 此测试需要在非 Git 仓库环境中运行，以确保所有优先级4的分支都按字母顺序排序
 /// - 如果当前分支有前缀（如 feature/xxx），feature/test 会被提升到优先级3
-#[test]
-fn test_sort_branches_all_priority_levels_return_collect() -> Result<()> {
-    use crate::common::environments::CliTestEnv;
+#[rstest]
+fn test_sort_branches_all_priority_levels_return_collect(cli_env: crate::common::environments::CliTestEnv) -> Result<()> {
     use crate::common::helpers::CurrentDirGuard;
 
     // Arrange: 创建非 Git 仓库环境，确保排序不受当前分支影响
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     // 注意：不调用 init_git_repo()，确保不在 Git 仓库中
 
     let branches = vec![
@@ -282,7 +284,7 @@ fn test_sort_branches_all_priority_levels_return_collect() -> Result<()> {
 /// ## 预期结果
 /// - 保留重复项，main 在第一位
 #[test]
-fn test_sort_branches_duplicate_names_return_result() -> Result<()> {
+fn test_sort_branches_duplicate_names_return_ok() -> Result<()> {
     // Arrange: 准备测试重复分支名（边界情况）
     let branches = vec![
         "main".to_string(),
@@ -311,7 +313,7 @@ fn test_sort_branches_duplicate_names_return_result() -> Result<()> {
 /// ## 预期结果
 /// - main 在第一位，其他分支按字母顺序排序
 #[test]
-fn test_sort_branches_special_characters_return_result() -> Result<()> {
+fn test_sort_branches_special_characters_return_ok() -> Result<()> {
     // Arrange: 准备测试特殊字符分支名（边界情况）
     let branches = vec![
         "feature/test-branch".to_string(),

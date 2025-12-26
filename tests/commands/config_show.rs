@@ -4,6 +4,8 @@
 
 use crate::common::cli_helpers::TestDataGenerator;
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 use workflow::commands::config::show::ConfigCommand;
 
 // ==================== Config Show Command Tests ====================
@@ -51,10 +53,10 @@ fn test_config_command_show_with_empty_config_returns_ok() {
 /// ## 预期结果
 /// - 返回Result类型（Ok或Err都可以接受）
 /// - 不会panic
-#[test]
-fn test_config_command_show_with_valid_config_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_config_command_show_with_valid_config_return_ok(cli_env: CliTestEnv) -> color_eyre::Result<()> {
     // Arrange: 准备有效配置环境
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     env.create_config(&TestDataGenerator::config_content())?;
 
     // Act: 执行配置显示命令

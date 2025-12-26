@@ -312,7 +312,7 @@ impl Drop for MockServer {
 /// use crate::common::http_helpers::setup_mock_server;
 ///
 /// #[test]
-/// fn test_http_request_return_result() -> Result<()> {
+/// fn test_http_request_return_ok() -> Result<()> {
 ///     let mut mock_server = setup_mock_server();
 ///     let url = format!("{}/test", mock_server.base_url);
 ///     // ...
@@ -425,7 +425,7 @@ mod tests {
     /// - Mock端点创建成功
     /// - mocks列表长度为1
     #[test]
-    fn test_mock_jira_get_issue_return_result() -> color_eyre::Result<()> {
+    fn test_mock_jira_get_issue_return_ok() -> color_eyre::Result<()> {
         let factory = TestDataFactory::new();
         let issue_data = factory.jira_issue().key("PROJ-123").build()?;
 

@@ -15,6 +15,8 @@ use std::path::PathBuf;
 use workflow::base::zip::Unzip;
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // 辅助函数：创建测试用的 tar.gz 文件
 fn create_test_tar_gz(env: &CliTestEnv) -> PathBuf {
@@ -100,12 +102,13 @@ fn create_test_zip(env: &CliTestEnv) -> PathBuf {
 ///
 /// ## 预期结果
 /// - 所有文件都被正确解压，文件内容正确
-#[test]
-fn test_unzip_extract_tar_gz_with_valid_file_extracts_files_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_tar_gz_with_valid_file_extracts_files_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和tar.gz文件
-    let env = CliTestEnv::new()?;
-    let tar_gz_path = create_test_tar_gz(&env);
-    let output_dir = env.path().join("output");
+    let tar_gz_path = create_test_tar_gz(&cli_env);
+    let output_dir = cli_env.path().join("output");
 
     // Act: 解压tar.gz文件
     Unzip::extract_tar_gz(&tar_gz_path, &output_dir)?;
@@ -144,12 +147,13 @@ fn test_unzip_extract_tar_gz_with_valid_file_extracts_files_return_collect() -> 
 ///
 /// ## 预期结果
 /// - 返回文件不存在错误
-#[test]
-fn test_unzip_extract_tar_gz_nonexistent_file_with_missing_file_return_result() -> Result<()> {
+#[rstest]
+fn test_unzip_extract_tar_gz_nonexistent_file_with_missing_file_return_ok(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备不存在的文件路径
-    let env = CliTestEnv::new()?;
-    let nonexistent_path = env.path().join("nonexistent.tar.gz");
-    let output_dir = env.path().join("output");
+    let nonexistent_path = cli_env.path().join("nonexistent.tar.gz");
+    let output_dir = cli_env.path().join("output");
 
     // Act: 尝试解压不存在的文件
     let result = Unzip::extract_tar_gz(&nonexistent_path, &output_dir);
@@ -171,13 +175,14 @@ fn test_unzip_extract_tar_gz_nonexistent_file_with_missing_file_return_result() 
 ///
 /// ## 预期结果
 /// - 返回格式错误
-#[test]
-fn test_unzip_extract_tar_gz_invalid_format_with_invalid_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_tar_gz_invalid_format_with_invalid_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备无效格式的文件
-    let env = CliTestEnv::new()?;
-    let invalid_file = env.path().join("invalid.tar.gz");
+    let invalid_file = cli_env.path().join("invalid.tar.gz");
     fs::write(&invalid_file, "not a valid tar.gz file")?;
-    let output_dir = env.path().join("output");
+    let output_dir = cli_env.path().join("output");
 
     // Act: 尝试解压无效格式的文件
     let result = Unzip::extract_tar_gz(&invalid_file, &output_dir);
@@ -200,12 +205,13 @@ fn test_unzip_extract_tar_gz_invalid_format_with_invalid_file_return_result() ->
 ///
 /// ## 预期结果
 /// - 输出目录被自动创建
-#[test]
-fn test_unzip_extract_tar_gz_output_dir_created_with_missing_dir_creates_dir() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_tar_gz_output_dir_created_with_missing_dir_creates_dir(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备tar.gz文件和不存在的输出目录
-    let env = CliTestEnv::new()?;
-    let tar_gz_path = create_test_tar_gz(&env);
-    let output_dir = env.path().join("new/output/dir");
+    let tar_gz_path = create_test_tar_gz(&cli_env);
+    let output_dir = cli_env.path().join("new/output/dir");
     assert!(!output_dir.exists());
 
     // Act: 解压文件（输出目录不存在，应该自动创建）
@@ -230,12 +236,13 @@ fn test_unzip_extract_tar_gz_output_dir_created_with_missing_dir_creates_dir() -
 ///
 /// ## 预期结果
 /// - 所有文件都被正确解压，文件内容正确
-#[test]
-fn test_unzip_extract_zip_with_valid_file_extracts_files_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_zip_with_valid_file_extracts_files_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和zip文件
-    let env = CliTestEnv::new()?;
-    let zip_path = create_test_zip(&env);
-    let output_dir = env.path().join("output");
+    let zip_path = create_test_zip(&cli_env);
+    let output_dir = cli_env.path().join("output");
 
     // Act: 解压zip文件
     Unzip::extract_zip(&zip_path, &output_dir)?;
@@ -272,12 +279,13 @@ fn test_unzip_extract_zip_with_valid_file_extracts_files_return_collect() -> col
 ///
 /// ## 预期结果
 /// - 返回文件不存在错误
-#[test]
-fn test_unzip_extract_zip_nonexistent_file_with_missing_file_return_result() -> Result<()> {
+#[rstest]
+fn test_unzip_extract_zip_nonexistent_file_with_missing_file_return_ok(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备不存在的文件路径
-    let env = CliTestEnv::new()?;
-    let nonexistent_path = env.path().join("nonexistent.zip");
-    let output_dir = env.path().join("output");
+    let nonexistent_path = cli_env.path().join("nonexistent.zip");
+    let output_dir = cli_env.path().join("output");
 
     // Act: 尝试解压不存在的文件
     let result = Unzip::extract_zip(&nonexistent_path, &output_dir);
@@ -299,13 +307,14 @@ fn test_unzip_extract_zip_nonexistent_file_with_missing_file_return_result() -> 
 ///
 /// ## 预期结果
 /// - 返回格式错误
-#[test]
-fn test_unzip_extract_zip_invalid_format_with_invalid_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_zip_invalid_format_with_invalid_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备无效格式的文件
-    let env = CliTestEnv::new()?;
-    let invalid_file = env.path().join("invalid.zip");
+    let invalid_file = cli_env.path().join("invalid.zip");
     fs::write(&invalid_file, "not a valid zip file")?;
-    let output_dir = env.path().join("output");
+    let output_dir = cli_env.path().join("output");
 
     // Act: 尝试解压无效格式的文件
     let result = Unzip::extract_zip(&invalid_file, &output_dir);
@@ -328,11 +337,12 @@ fn test_unzip_extract_zip_invalid_format_with_invalid_file_return_result() -> co
 ///
 /// ## 预期结果
 /// - 输出目录被自动创建
-#[test]
-fn test_unzip_extract_zip_output_dir_created_with_missing_dir_creates_dir() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    let zip_path = create_test_zip(&env);
-    let output_dir = env.path().join("new/output/dir");
+#[rstest]
+fn test_unzip_extract_zip_output_dir_created_with_missing_dir_creates_dir(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    let zip_path = create_test_zip(&cli_env);
+    let output_dir = cli_env.path().join("new/output/dir");
 
     // 输出目录不存在，应该自动创建
     assert!(!output_dir.exists());
@@ -358,14 +368,15 @@ fn test_unzip_extract_zip_output_dir_created_with_missing_dir_creates_dir() -> c
 ///
 /// ## 预期结果
 /// - 嵌套目录结构被正确创建，文件内容正确
-#[test]
-fn test_unzip_extract_zip_with_directories_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_zip_with_directories_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     use std::io::Write;
     use zip::write::{FileOptions, ZipWriter};
     use zip::CompressionMethod;
 
-    let env = CliTestEnv::new()?;
-    let zip_path = env.path().join("test.zip");
+    let zip_path = cli_env.path().join("test.zip");
     let zip_file = fs::File::create(&zip_path)?;
     let mut zip = ZipWriter::new(zip_file);
 
@@ -381,7 +392,7 @@ fn test_unzip_extract_zip_with_directories_return_result() -> color_eyre::Result
 
     zip.finish()?;
 
-    let output_dir = env.path().join("output");
+    let output_dir = cli_env.path().join("output");
     Unzip::extract_zip(&zip_path, &output_dir)?;
 
     // Assert: 验证嵌套目录结构已创建
@@ -406,14 +417,15 @@ fn test_unzip_extract_zip_with_directories_return_result() -> color_eyre::Result
 ///
 /// ## 预期结果
 /// - 文件被正确解压，文件内容正确
-#[test]
-fn test_unzip_extract_tar_gz_single_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_tar_gz_single_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     use flate2::write::GzEncoder;
     use flate2::Compression;
     use tar::Builder;
 
-    let env = CliTestEnv::new()?;
-    let tar_gz_path = env.path().join("single.tar.gz");
+    let tar_gz_path = cli_env.path().join("single.tar.gz");
 
     // 创建一个只包含一个文件的 tar.gz 归档
     let tar_gz_file = fs::File::create(&tar_gz_path)?;
@@ -421,12 +433,12 @@ fn test_unzip_extract_tar_gz_single_file_return_result() -> color_eyre::Result<(
     let mut tar = Builder::new(enc);
 
     // 添加一个文件条目
-    let file_path = env.path().join("single.txt");
+    let file_path = cli_env.path().join("single.txt");
     fs::write(&file_path, "single file content")?;
     tar.append_path_with_name(&file_path, "single.txt")?;
     drop(tar); // 确保 tar builder 被 drop，刷新所有数据
 
-    let output_dir = env.path().join("output");
+    let output_dir = cli_env.path().join("output");
     Unzip::extract_tar_gz(&tar_gz_path, &output_dir)?;
 
     // Assert: 验证文件已解压
@@ -452,19 +464,20 @@ fn test_unzip_extract_tar_gz_single_file_return_result() -> color_eyre::Result<(
 ///
 /// ## 预期结果
 /// - 解压成功，输出目录存在
-#[test]
-fn test_unzip_extract_zip_empty_archive_return_empty() -> color_eyre::Result<()> {
+#[rstest]
+fn test_unzip_extract_zip_empty_archive_return_empty(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     use zip::write::ZipWriter;
 
-    let env = CliTestEnv::new()?;
-    let zip_path = env.path().join("empty.zip");
+    let zip_path = cli_env.path().join("empty.zip");
 
     // 创建空的 zip 文件
     let zip_file = fs::File::create(&zip_path)?;
     let mut zip = ZipWriter::new(zip_file);
     zip.finish()?;
 
-    let output_dir = env.path().join("output");
+    let output_dir = cli_env.path().join("output");
     let result = Unzip::extract_zip(&zip_path, &output_dir);
     // 空归档应该成功解压（只是没有文件）
     assert!(result.is_ok());

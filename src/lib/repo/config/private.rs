@@ -10,6 +10,7 @@ use crate::git::GitRepo;
 use color_eyre::{eyre::eyre, eyre::WrapErr, Result};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::path::Path;
 use toml::map::Map;
 use toml::Value;
 
@@ -72,10 +73,30 @@ impl PrivateRepoConfig {
     ///
     /// Returns an error if unable to get remote URL or extract repository name.
     pub fn generate_repo_id() -> Result<String> {
-        let url = GitRepo::get_remote_url().wrap_err("Failed to get remote URL")?;
+        Self::generate_repo_id_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Generate repository identifier (specified repository path)
+    ///
+    /// Generates a unique repository identifier based on Git remote URL for the specified repository.
+    /// Format: `{repo_name}_{hash}`, where hash is the first 8 characters of the URL's SHA256.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # Returns
+    ///
+    /// Returns a repository identifier string, e.g., `workflow.rs_12345678`
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if unable to get remote URL or extract repository name.
+    pub fn generate_repo_id_in(repo_path: impl AsRef<Path>) -> Result<String> {
+        let url = GitRepo::get_remote_url_in(repo_path.as_ref()).wrap_err("Failed to get remote URL")?;
 
         let repo_name_full =
-            GitRepo::extract_repo_name().wrap_err("Failed to extract repository name")?;
+            GitRepo::extract_repo_name_in(repo_path.as_ref()).wrap_err("Failed to extract repository name")?;
 
         let repo_name = repo_name_full
             .split('/')
@@ -97,7 +118,19 @@ impl PrivateRepoConfig {
     /// Loads personal preference configuration for the current repository
     /// from `~/.workflow/config/repository.toml`.
     pub fn load() -> Result<Self> {
-        let repo_id = Self::generate_repo_id().wrap_err("Failed to generate repository ID")?;
+        Self::load_from(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Load personal preference configuration (specified repository path)
+    ///
+    /// Loads personal preference configuration for the specified repository
+    /// from `~/.workflow/config/repository.toml`.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn load_from(repo_path: impl AsRef<Path>) -> Result<Self> {
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
         let config_path =
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 
@@ -184,7 +217,20 @@ impl PrivateRepoConfig {
     /// to `~/.workflow/config/repository.toml`.
     /// Supports configuration merging, won't overwrite other repositories' configurations.
     pub fn save(&self) -> Result<()> {
-        let repo_id = Self::generate_repo_id().wrap_err("Failed to generate repository ID")?;
+        self.save_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// Save personal preference configuration (specified repository path)
+    ///
+    /// Saves personal preference configuration for the specified repository
+    /// to `~/.workflow/config/repository.toml`.
+    /// Supports configuration merging, won't overwrite other repositories' configurations.
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    pub fn save_in(&self, repo_path: impl AsRef<Path>) -> Result<()> {
+        let repo_id = Self::generate_repo_id_in(repo_path.as_ref()).wrap_err("Failed to generate repository ID")?;
         let config_path =
             Paths::repository_config().wrap_err("Failed to get repository config path")?;
 

@@ -317,7 +317,7 @@ fn test_change_type_item_parsing_with_valid_fields_creates_item() {
 
 /// 测试变量序列化
 #[test]
-fn test_vars_serialization_return_result() -> Result<()> {
+fn test_vars_serialization_return_ok() -> Result<()> {
     // Arrange: 准备测试分支模板变量序列化
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SER-123".to_string()),
@@ -374,7 +374,7 @@ fn test_vars_serialization_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_vars_with_special_characters_return_result() -> Result<()> {
+fn test_vars_with_special_characters_return_ok() -> Result<()> {
     let branch_vars = BranchTemplateVars {
         jira_key: Some("SPECIAL-123".to_string()),
         jira_summary: Some("Fix \"authentication\" & <security> issues".to_string()),
@@ -408,7 +408,7 @@ fn test_vars_with_special_characters_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_vars_completeness_return_result() -> Result<()> {
+fn test_vars_completeness_return_ok() -> Result<()> {
     // Arrange: 准备测试所有字段都存在的完整变量
     let complete_branch_vars = BranchTemplateVars {
         jira_key: Some("COMPLETE-001".to_string()),

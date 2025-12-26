@@ -469,7 +469,7 @@ fn test_form_result_get_with_existing_field_returns_value() {
 /// - 存在的字段返回 Ok(value)
 /// - 不存在的字段返回错误
 #[test]
-fn test_form_result_get_required_with_existing_field_return_result() -> Result<()> {
+fn test_form_result_get_required_with_existing_field_return_ok() -> Result<()> {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:144-149）
     let mut result = FormResult::new();
     result.values.insert("field1".to_string(), "value1".to_string());
@@ -552,7 +552,7 @@ fn test_form_result_get_bool_with_various_values_returns_bool() {
 /// - 存在的字段返回 Ok(bool)
 /// - 不存在的字段返回错误
 #[test]
-fn test_form_result_get_required_bool_with_existing_field_return_result() -> Result<()> {
+fn test_form_result_get_required_bool_with_existing_field_return_ok() -> Result<()> {
     // Arrange: 准备包含字段的 FormResult（覆盖 types.rs:167-170）
     let mut result = FormResult::new();
     result.values.insert("yes_field".to_string(), "yes".to_string());

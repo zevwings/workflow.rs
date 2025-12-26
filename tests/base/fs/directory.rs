@@ -13,6 +13,8 @@ use std::fs;
 use workflow::base::fs::directory::DirectoryWalker;
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== DirectoryWalker Creation Tests ====================
 
@@ -76,11 +78,12 @@ fn test_directory_walker_new_with_pathbuf_creates_instance() {
 /// ## 预期结果
 /// - 目录创建成功
 /// - 目录存在且为目录类型
-#[test]
-fn test_directory_walker_ensure_exists_with_new_path_creates_directory() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_exists_with_new_path_creates_directory(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备新目录路径
-    let env = CliTestEnv::new()?;
-    let new_dir = env.path().join("new/deep/nested/directory");
+    let new_dir = cli_env.path().join("new/deep/nested/directory");
 
     // Act: 确保目录存在
     let walker = DirectoryWalker::new(&new_dir);
@@ -106,11 +109,12 @@ fn test_directory_walker_ensure_exists_with_new_path_creates_directory() -> colo
 /// ## 预期结果
 /// - 方法调用成功，不会出错
 /// - 目录仍然存在
-#[test]
-fn test_directory_walker_ensure_exists_with_existing_dir_succeeds() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_exists_with_existing_dir_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备已存在的目录
-    let env = CliTestEnv::new()?;
-    let existing_dir = env.path().join("existing");
+    let existing_dir = cli_env.path().join("existing");
     fs::create_dir_all(&existing_dir)?;
 
     // Act: 确保目录存在（目录已存在）
@@ -136,11 +140,12 @@ fn test_directory_walker_ensure_exists_with_existing_dir_succeeds() -> color_eyr
 /// ## 预期结果
 /// - 所有调用都成功
 /// - 目录存在且为目录类型
-#[test]
-fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备目录路径
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test/dir");
+    let dir_path = cli_env.path().join("test/dir");
 
     // Act: 多次调用 ensure_exists
     let walker = DirectoryWalker::new(&dir_path);
@@ -169,11 +174,12 @@ fn test_directory_walker_ensure_exists_with_multiple_calls_succeeds() -> color_e
 ///
 /// ## 预期结果
 /// - 返回至少3个目录（根目录和子目录）
-#[test]
-fn test_directory_walker_list_dirs_with_nested_structure_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_with_nested_structure_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含子目录的目录结构
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir(dir_path.join("subdir1"))?;
     fs::create_dir(dir_path.join("subdir2"))?;
@@ -202,11 +208,12 @@ fn test_directory_walker_list_dirs_with_nested_structure_return_collect() -> col
 /// ## 预期结果
 /// - 只返回文件，不包含目录
 /// - 返回的文件数量正确
-#[test]
-fn test_directory_walker_list_files_with_mixed_content_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_with_mixed_content_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含文件和子目录的目录结构
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -235,11 +242,12 @@ fn test_directory_walker_list_files_with_mixed_content_return_collect() -> color
 /// ## 预期结果
 /// - 返回匹配模式的文件
 /// - 不返回不匹配的文件
-#[test]
-fn test_directory_walker_find_files_with_pattern_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_with_pattern_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含匹配和不匹配文件的目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("test_file.txt"), "content")?;
     fs::write(dir_path.join("other_file.txt"), "content")?;
@@ -268,11 +276,12 @@ fn test_directory_walker_find_files_with_pattern_return_collect() -> color_eyre:
 /// ## 预期结果
 /// - 返回直接子目录，不包括文件
 /// - 不返回嵌套目录
-#[test]
-fn test_directory_walker_list_direct_dirs_with_subdirs_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_dirs_with_subdirs_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含直接子目录的目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir(dir_path.join("subdir1"))?;
     fs::create_dir(dir_path.join("subdir2"))?;
@@ -301,11 +310,12 @@ fn test_directory_walker_list_direct_dirs_with_subdirs_return_collect() -> color
 /// ## 预期结果
 /// - 返回直接文件，不包括目录
 /// - 不返回子目录中的文件
-#[test]
-fn test_directory_walker_list_direct_files_with_files_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_files_with_files_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含直接文件的目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -333,14 +343,15 @@ fn test_directory_walker_list_direct_files_with_files_return_collect() -> color_
 ///
 /// ## 预期结果
 /// - 父目录创建成功
-#[test]
-fn test_directory_walker_ensure_parent_exists_with_file_path_creates_parent() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_parent_exists_with_file_path_creates_parent(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("parent/dir/file.txt");
+    let file_path = cli_env.path().join("parent/dir/file.txt");
 
     // Act: 确保父目录存在
-    let walker = DirectoryWalker::new(env.path());
+    let walker = DirectoryWalker::new(cli_env.path());
     walker.ensure_parent_exists(&file_path)?;
 
     // Assert: 验证父目录已创建
@@ -482,11 +493,12 @@ fn test_directory_walker_list_direct_files_with_nonexistent_path_returns_error()
 ///
 /// ## 预期结果
 /// - 返回所有文件
-#[test]
-fn test_directory_walker_find_files_with_empty_pattern_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_with_empty_pattern_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含多个文件的目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -513,11 +525,12 @@ fn test_directory_walker_find_files_with_empty_pattern_return_collect() -> color
 ///
 /// ## 预期结果
 /// - 返回空列表
-#[test]
-fn test_directory_walker_find_files_with_no_matching_pattern_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_with_no_matching_pattern_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备不匹配模式的文件
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -544,11 +557,12 @@ fn test_directory_walker_find_files_with_no_matching_pattern_return_collect() ->
 ///
 /// ## 预期结果
 /// - 只包含根目录本身
-#[test]
-fn test_directory_walker_list_dirs_with_empty_directory_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_with_empty_directory_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备空目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("empty_dir");
+    let dir_path = cli_env.path().join("empty_dir");
     fs::create_dir_all(&dir_path)?;
 
     // Act: 列出目录
@@ -574,11 +588,12 @@ fn test_directory_walker_list_dirs_with_empty_directory_return_collect() -> colo
 ///
 /// ## 预期结果
 /// - 返回空列表
-#[test]
-fn test_directory_walker_list_files_with_empty_directory_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_with_empty_directory_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备空目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("empty_dir");
+    let dir_path = cli_env.path().join("empty_dir");
     fs::create_dir_all(&dir_path)?;
 
     // Act: 列出文件
@@ -603,11 +618,12 @@ fn test_directory_walker_list_files_with_empty_directory_return_collect() -> col
 ///
 /// ## 预期结果
 /// - 返回空列表
-#[test]
-fn test_directory_walker_list_direct_dirs_with_empty_directory_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_dirs_with_empty_directory_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备空目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("empty_dir");
+    let dir_path = cli_env.path().join("empty_dir");
     fs::create_dir_all(&dir_path)?;
 
     // Act: 列出直接子目录
@@ -632,11 +648,12 @@ fn test_directory_walker_list_direct_dirs_with_empty_directory_return_collect() 
 ///
 /// ## 预期结果
 /// - 返回空列表
-#[test]
-fn test_directory_walker_list_direct_files_with_empty_directory_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_files_with_empty_directory_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备空目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("empty_dir");
+    let dir_path = cli_env.path().join("empty_dir");
     fs::create_dir_all(&dir_path)?;
 
     // Act: 列出直接文件
@@ -661,14 +678,15 @@ fn test_directory_walker_list_direct_files_with_empty_directory_return_collect()
 ///
 /// ## 预期结果
 /// - 不会出错（根路径没有父目录，应该成功）
-#[test]
-fn test_directory_walker_ensure_parent_exists_with_no_parent_succeeds() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_parent_exists_with_no_parent_succeeds(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备没有父目录的文件路径（根路径）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path(); // 根路径本身
+    let file_path = cli_env.path(); // 根路径本身
 
     // Act: 确保父目录存在（根路径没有父目录）
-    let walker = DirectoryWalker::new(env.path());
+    let walker = DirectoryWalker::new(cli_env.path());
     let result = walker.ensure_parent_exists(&file_path);
 
     // Assert: 验证不会出错（根路径没有父目录，应该成功）
@@ -690,12 +708,13 @@ fn test_directory_walker_ensure_parent_exists_with_no_parent_succeeds() -> color
 /// ## 预期结果
 /// - 大小写敏感匹配正确
 /// - 找到的文件符合预期
-#[test]
-fn test_directory_walker_find_files_case_sensitive_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_case_sensitive_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试查找文件是大小写敏感的
     // 注意：此测试不依赖文件系统的大小写敏感性，而是测试 find_files 方法本身的大小写敏感匹配逻辑
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     // 创建一个文件名包含大写 "Test" 的文件
     fs::write(dir_path.join("TestFile.txt"), "content")?;
@@ -734,11 +753,12 @@ fn test_directory_walker_find_files_case_sensitive_return_collect() -> color_eyr
 ///
 /// ## 预期结果
 /// - 返回所有目录（包括根目录和所有子目录）
-#[test]
-fn test_directory_walker_list_dirs_deep_nesting_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_deep_nesting_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 的循环逻辑（覆盖 directory.rs:25-31）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
 
     // 创建深层嵌套目录结构
@@ -766,11 +786,12 @@ fn test_directory_walker_list_dirs_deep_nesting_return_collect() -> color_eyre::
 ///
 /// ## 预期结果
 /// - 返回所有文件
-#[test]
-fn test_directory_walker_list_files_deep_nesting_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_deep_nesting_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 的循环逻辑（覆盖 directory.rs:38-44）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
 
     // 创建深层嵌套文件结构
@@ -798,11 +819,12 @@ fn test_directory_walker_list_files_deep_nesting_return_collect() -> color_eyre:
 ///
 /// ## 预期结果
 /// - 返回所有匹配的文件
-#[test]
-fn test_directory_walker_find_files_multiple_matches_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_multiple_matches_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 的循环逻辑（覆盖 directory.rs:51-61）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
 
     // 创建多个匹配的文件
@@ -832,11 +854,12 @@ fn test_directory_walker_find_files_multiple_matches_return_collect() -> color_e
 ///
 /// ## 预期结果
 /// - 只返回目录，不包括文件
-#[test]
-fn test_directory_walker_list_dirs_with_files_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_with_files_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 只返回目录，不包括文件（覆盖 directory.rs:28-30）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir(dir_path.join("subdir1"))?;
     fs::create_dir(dir_path.join("subdir2"))?;
@@ -865,11 +888,12 @@ fn test_directory_walker_list_dirs_with_files_return_collect() -> color_eyre::Re
 ///
 /// ## 预期结果
 /// - 只返回文件，不包括目录
-#[test]
-fn test_directory_walker_list_files_with_dirs_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_with_dirs_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 只返回文件，不包括目录（覆盖 directory.rs:41-43）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -897,11 +921,12 @@ fn test_directory_walker_list_files_with_dirs_return_collect() -> color_eyre::Re
 ///
 /// ## 预期结果
 /// - 正常情况应该成功
-#[test]
-fn test_directory_walker_list_dirs_error_in_loop_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_error_in_loop_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 循环中的错误处理（覆盖 directory.rs:26-27）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
 
     let walker = DirectoryWalker::new(&dir_path);
@@ -924,11 +949,12 @@ fn test_directory_walker_list_dirs_error_in_loop_return_false() -> color_eyre::R
 ///
 /// ## 预期结果
 /// - 正常情况应该成功
-#[test]
-fn test_directory_walker_list_files_error_in_loop_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_error_in_loop_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 循环中的错误处理（覆盖 directory.rs:39-40）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file.txt"), "content")?;
 
@@ -951,11 +977,12 @@ fn test_directory_walker_list_files_error_in_loop_return_false() -> color_eyre::
 ///
 /// ## 预期结果
 /// - 正常情况应该成功
-#[test]
-fn test_directory_walker_find_files_error_in_loop_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_error_in_loop_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 循环中的错误处理（覆盖 directory.rs:52-53）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("test_file.txt"), "content")?;
 
@@ -978,11 +1005,12 @@ fn test_directory_walker_find_files_error_in_loop_return_false() -> color_eyre::
 ///
 /// ## 预期结果
 /// - 只返回匹配模式的文件
-#[test]
-fn test_directory_walker_find_files_pattern_matching_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_pattern_matching_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 中的模式匹配逻辑（覆盖 directory.rs:55-58）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
 
     // 创建多个文件，测试模式匹配
@@ -1013,11 +1041,12 @@ fn test_directory_walker_find_files_pattern_matching_return_collect() -> color_e
 ///
 /// ## 预期结果
 /// - 只返回目录，不包括文件
-#[test]
-fn test_directory_walker_list_direct_dirs_filter_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_dirs_filter_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_dirs() 的过滤逻辑（覆盖 directory.rs:67）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir(dir_path.join("subdir1"))?;
     fs::create_dir(dir_path.join("subdir2"))?;
@@ -1046,11 +1075,12 @@ fn test_directory_walker_list_direct_dirs_filter_return_collect() -> color_eyre:
 ///
 /// ## 预期结果
 /// - 只返回文件，不包括目录
-#[test]
-fn test_directory_walker_list_direct_files_filter_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_files_filter_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_files() 的过滤逻辑（覆盖 directory.rs:73）
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::write(dir_path.join("file2.txt"), "content2")?;
@@ -1079,13 +1109,14 @@ fn test_directory_walker_list_direct_files_filter_return_collect() -> color_eyre
 ///
 /// ## 预期结果
 /// - 父目录创建成功
-#[test]
-fn test_directory_walker_ensure_parent_exists_with_parent_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_parent_exists_with_parent_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_exists() 有父目录的情况（覆盖 directory.rs:123-125）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("parent/dir/file.txt");
+    let file_path = cli_env.path().join("parent/dir/file.txt");
 
-    let walker = DirectoryWalker::new(env.path());
+    let walker = DirectoryWalker::new(cli_env.path());
     walker.ensure_parent_exists(&file_path)?;
     let parent = file_path.parent().expect("File path should have a parent directory");
     assert!(parent.exists());
@@ -1094,11 +1125,12 @@ fn test_directory_walker_ensure_parent_exists_with_parent_return_result() -> col
 }
 
 /// 测试list_dirs()处理符号链接的情况
-#[test]
-fn test_directory_walker_list_dirs_with_symlinks_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_dirs_with_symlinks_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_dirs() 处理符号链接的情况
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir(dir_path.join("subdir"))?;
 
@@ -1122,11 +1154,12 @@ fn test_directory_walker_list_dirs_with_symlinks_return_collect() -> color_eyre:
 ///
 /// ## 预期结果
 /// - 返回文件列表
-#[test]
-fn test_directory_walker_list_files_with_symlinks_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_files_with_symlinks_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_files() 处理符号链接的情况
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file.txt"), "content")?;
 
@@ -1149,11 +1182,12 @@ fn test_directory_walker_list_files_with_symlinks_return_collect() -> color_eyre
 ///
 /// ## 预期结果
 /// - 返回匹配的文件
-#[test]
-fn test_directory_walker_find_files_with_partial_match_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_with_partial_match_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 部分匹配的情况
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("prefix_suffix.txt"), "content")?;
     fs::write(dir_path.join("prefix_middle_suffix.txt"), "content")?;
@@ -1299,13 +1333,14 @@ fn test_directory_walker_ensure_exists_error_wrap() {
 ///
 /// ## 预期结果
 /// - 父目录创建成功
-#[test]
-fn test_directory_walker_ensure_parent_exists_error_wrap_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_ensure_parent_exists_error_wrap_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_exists() 的错误包装逻辑（覆盖 directory.rs:124-125 的 wrap_err_with）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("parent/dir/file.txt");
+    let file_path = cli_env.path().join("parent/dir/file.txt");
 
-    let walker = DirectoryWalker::new(env.path());
+    let walker = DirectoryWalker::new(cli_env.path());
     let result = walker.ensure_parent_exists(&file_path);
     assert!(result.is_ok());
     let parent = file_path.parent().expect("File path should have a parent directory");
@@ -1326,11 +1361,12 @@ fn test_directory_walker_ensure_parent_exists_error_wrap_return_false() -> color
 ///
 /// ## 预期结果
 /// - 正确匹配Unicode文件名
-#[test]
-fn test_directory_walker_find_files_unicode_pattern_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_find_files_unicode_pattern_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 find_files() 处理 Unicode 模式的情况
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("测试文件.txt"), "content")?;
     fs::write(dir_path.join("test.txt"), "content")?;
@@ -1354,11 +1390,12 @@ fn test_directory_walker_find_files_unicode_pattern_return_collect() -> color_ey
 ///
 /// ## 预期结果
 /// - 只返回直接子目录，不包括嵌套目录
-#[test]
-fn test_directory_walker_list_direct_dirs_with_nested_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_dirs_with_nested_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_dirs() 只返回直接子目录，不包括嵌套目录
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::create_dir_all(dir_path.join("subdir1/nested"))?;
     fs::create_dir(dir_path.join("subdir2"))?;
@@ -1385,11 +1422,12 @@ fn test_directory_walker_list_direct_dirs_with_nested_return_collect() -> color_
 ///
 /// ## 预期结果
 /// - 只返回直接文件，不包括嵌套目录中的文件
-#[test]
-fn test_directory_walker_list_direct_files_with_nested_return_collect() -> color_eyre::Result<()> {
+#[rstest]
+fn test_directory_walker_list_direct_files_with_nested_return_collect(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 list_direct_files() 只返回直接文件，不包括嵌套目录中的文件
-    let env = CliTestEnv::new()?;
-    let dir_path = env.path().join("test_dir");
+    let dir_path = cli_env.path().join("test_dir");
     fs::create_dir_all(&dir_path)?;
     fs::write(dir_path.join("file1.txt"), "content1")?;
     fs::create_dir_all(dir_path.join("subdir"))?;

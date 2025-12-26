@@ -29,7 +29,7 @@ use workflow::base::llm::client::LLMClient;
 /// ## 预期结果
 /// - 成功提取内容，与 JSON 中的 content 字段匹配
 #[test]
-fn test_extract_from_openai_standard_with_valid_json_return_result() -> Result<()> {
+fn test_extract_from_openai_standard_with_valid_json_return_ok() -> Result<()> {
     // Arrange: 准备标准 OpenAI 格式的 JSON（包含所有必需字段）
     let json = json!({
         "id": "chatcmpl-test",
@@ -73,7 +73,7 @@ fn test_extract_from_openai_standard_with_valid_json_return_result() -> Result<(
 /// ## 预期结果
 /// - 成功提取内容，忽略扩展字段
 #[test]
-fn test_extract_from_openai_proxy_with_extended_fields_return_result() -> Result<()> {
+fn test_extract_from_openai_proxy_with_extended_fields_return_ok() -> Result<()> {
     // Arrange: 准备 proxy 格式的 JSON（包含扩展字段，但符合 OpenAI 标准）
     let json = json!({
         "id": "chatcmpl-CfonRS9pFvyJW33Opwz83wHhVIGnz",
@@ -132,7 +132,7 @@ fn test_extract_from_openai_proxy_with_extended_fields_return_result() -> Result
 /// ## 预期结果
 /// - 成功提取内容，忽略字段顺序和扩展字段
 #[test]
-fn test_extract_from_cerebras_proxy_with_variant_format_return_result() -> Result<()> {
+fn test_extract_from_cerebras_proxy_with_variant_format_return_ok() -> Result<()> {
     // Arrange: 准备另一种 proxy 格式变体的 JSON（字段顺序不同，缺少部分扩展字段，但有新的 time_info）
     let json = json!({
         "id": "chatcmpl-97c1fe15-05df-490d-a1b9-8540771db334",
@@ -294,7 +294,7 @@ fn test_extract_content_with_null_content_returns_error() {
 /// ## 预期结果
 /// - 内容首尾空白被修剪
 #[test]
-fn test_extract_content_whitespace_trimming_return_result() -> Result<()> {
+fn test_extract_content_whitespace_trimming_return_ok() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - 内容首尾空白被修剪（覆盖 client.rs:243）
     let json = json!({
         "id": "test",
@@ -339,7 +339,7 @@ fn test_extract_content_whitespace_trimming_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回第一个 choice 的内容
 #[test]
-fn test_extract_content_multiple_choices_return_result() -> Result<()> {
+fn test_extract_content_multiple_choices_return_ok() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - 多个 choices，取第一个（覆盖 client.rs:237-240）
     let json = json!({
         "id": "test",
@@ -445,7 +445,7 @@ fn test_extract_content_missing_required_fields() {
 /// ## 预期结果
 /// - finish_reason 为 length 时也能提取内容
 #[test]
-fn test_extract_content_with_finish_reason_length_return_result() -> Result<()> {
+fn test_extract_content_with_finish_reason_length_return_ok() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 length（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",
@@ -488,7 +488,7 @@ fn test_extract_content_with_finish_reason_length_return_result() -> Result<()> 
 /// ## 预期结果
 /// - finish_reason 为 stop 时能提取内容
 #[test]
-fn test_extract_content_with_finish_reason_stop_return_result() -> Result<()> {
+fn test_extract_content_with_finish_reason_stop_return_ok() -> Result<()> {
     // Arrange: 准备测试 extract_content() 方法 - finish_reason 为 stop（覆盖 client.rs:228-244）
     let json = json!({
         "id": "test",

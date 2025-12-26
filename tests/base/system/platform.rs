@@ -22,7 +22,7 @@ use workflow::base::system::Platform;
 /// - 返回的字符串不为空
 /// - 格式正确，包含连字符（OS-ARCH 格式）
 #[test]
-fn test_detect_release_platform_return_result() -> Result<()> {
+fn test_detect_release_platform_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 检测平台并获取发布标识符
@@ -46,7 +46,7 @@ fn test_detect_release_platform_return_result() -> Result<()> {
 /// - 返回 "macOS-Intel" 或 "macOS-AppleSilicon"
 /// - 架构匹配正确（x86_64 对应 Intel，aarch64 对应 AppleSilicon）
 #[test]
-fn test_detect_release_platform_on_macos_return_result() -> Result<()> {
+fn test_detect_release_platform_on_macos_return_ok() -> Result<()> {
     // Arrange: 准备测试（仅在 macOS 上运行）
     // 注意：这个测试只在 macOS 上会通过
 
@@ -83,7 +83,7 @@ fn test_detect_release_platform_on_macos_return_result() -> Result<()> {
 /// - 返回 "Linux-x86_64"、"Linux-x86_64-static" 或 "Linux-ARM64"
 /// - 架构匹配正确（x86_64 对应 Linux-x86_64 或 Linux-x86_64-static，aarch64 对应 Linux-ARM64）
 #[test]
-fn test_detect_release_platform_on_linux_return_result() -> Result<()> {
+fn test_detect_release_platform_on_linux_return_ok() -> Result<()> {
     // Arrange: 准备测试（仅在 Linux 上运行）
     // 注意：这个测试只在 Linux 上会通过
 
@@ -125,7 +125,7 @@ fn test_detect_release_platform_on_linux_return_result() -> Result<()> {
 /// - 返回 "Windows-x86_64" 或 "Windows-ARM64"
 /// - 架构匹配正确（x86_64 对应 Windows-x86_64，aarch64 对应 Windows-ARM64）
 #[test]
-fn test_detect_release_platform_on_windows_return_result() -> Result<()> {
+fn test_detect_release_platform_on_windows_return_ok() -> Result<()> {
     // Arrange: 准备测试（仅在 Windows 上运行）
     // 注意：这个测试只在 Windows 上会通过
 
@@ -188,7 +188,7 @@ fn test_detect_release_platform_with_multiple_calls_return_collect() -> Result<(
 /// - 标识符至少包含两部分，用连字符分隔
 /// - 第一部分是操作系统名称（macOS、Linux 或 Windows）
 #[test]
-fn test_detect_release_platform_with_valid_format_return_result() -> Result<()> {
+fn test_detect_release_platform_with_valid_format_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 检测平台并获取发布标识符
@@ -226,7 +226,7 @@ fn test_detect_release_platform_with_valid_format_return_result() -> Result<()> 
 /// - x86_64 架构对应标识符包含 "x86_64" 或 "Intel"
 /// - aarch64 架构对应标识符包含 "ARM64" 或 "AppleSilicon"
 #[test]
-fn test_detect_release_platform_with_system_arch_return_result() -> Result<()> {
+fn test_detect_release_platform_with_system_arch_return_ok() -> Result<()> {
     // Arrange: 准备测试，获取系统架构
     let arch = env::consts::ARCH;
 
@@ -260,7 +260,7 @@ fn test_detect_release_platform_with_system_arch_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 不会 panic（即使在不支持的平台上也应该返回错误而不是 panic）
 #[test]
-fn test_detect_release_platform_with_any_platform_does_not_panic_return_result() -> Result<()> {
+fn test_detect_release_platform_with_any_platform_does_not_panic_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
     // 注意：即使在不支持的平台上，也应该返回错误而不是 panic
 
@@ -283,7 +283,7 @@ fn test_detect_release_platform_with_any_platform_does_not_panic_return_result()
 /// ## 预期结果
 /// - 在支持的平台上应该成功返回结果
 #[test]
-fn test_detect_release_platform_with_supported_os_return_result() -> Result<()> {
+fn test_detect_release_platform_with_supported_os_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
     // 注意：这个测试主要验证函数不会因为意外的系统状态而 panic
 
@@ -311,7 +311,7 @@ fn test_detect_release_platform_with_supported_os_return_result() -> Result<()> 
 /// - Linux 应该是 "Linux"（首字母大写）
 /// - Windows 应该是 "Windows"（首字母大写）
 #[test]
-fn test_platform_identifier_with_detected_platform_return_result() -> Result<()> {
+fn test_platform_identifier_with_detected_platform_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 检测平台并获取发布标识符
@@ -349,7 +349,7 @@ fn test_platform_identifier_with_detected_platform_return_result() -> Result<()>
 /// ## 预期结果
 /// - Platform 实例创建成功
 #[test]
-fn test_platform_new_with_os_and_arch_return_result() -> Result<()> {
+fn test_platform_new_with_os_and_arch_return_ok() -> Result<()> {
     // Arrange: 准备操作系统和架构参数
 
     // Act: 创建 Platform 实例
@@ -373,7 +373,7 @@ fn test_platform_new_with_os_and_arch_return_result() -> Result<()> {
 /// ## 预期结果
 /// - Platform 实例创建成功，参数正确保存
 #[test]
-fn test_platform_new_with_string_params_return_result() -> Result<()> {
+fn test_platform_new_with_string_params_return_ok() -> Result<()> {
     // Arrange: 准备字符串参数
     let os = String::from("linux");
     let arch = String::from("x86_64");
@@ -398,7 +398,7 @@ fn test_platform_new_with_string_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的操作系统和架构与系统实际值一致
 #[test]
-fn test_platform_detect_with_system_info_return_result() -> Result<()> {
+fn test_platform_detect_with_system_info_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 检测当前平台
@@ -422,7 +422,7 @@ fn test_platform_detect_with_system_info_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回正确的操作系统
 #[test]
-fn test_platform_os_with_platform_instance_return_result() -> Result<()> {
+fn test_platform_os_with_platform_instance_return_ok() -> Result<()> {
     // Arrange: 创建 Platform 实例
     let platform = Platform::new("windows", "x86_64");
 
@@ -446,7 +446,7 @@ fn test_platform_os_with_platform_instance_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回正确的架构
 #[test]
-fn test_platform_arch_with_platform_instance_return_result() -> Result<()> {
+fn test_platform_arch_with_platform_instance_return_ok() -> Result<()> {
     // Arrange: 创建 Platform 实例
     let platform = Platform::new("linux", "aarch64");
 
@@ -472,7 +472,7 @@ fn test_platform_arch_with_platform_instance_return_result() -> Result<()> {
 #[case("macos", "aarch64", "linux", "x86_64", true, false)] // is_macos
 #[case("linux", "x86_64", "macos", "aarch64", true, false)] // is_linux
 #[case("windows", "x86_64", "linux", "x86_64", true, false)] // is_windows
-fn test_platform_is_os_return_result(
+fn test_platform_is_os_return_ok(
     #[case] target_os: &str,
     #[case] target_arch: &str,
     #[case] other_os: &str,
@@ -516,7 +516,7 @@ fn test_platform_is_os_return_result(
 #[rstest]
 #[case("linux", "x86_64", "linux", "aarch64", true, false)] // is_x86_64
 #[case("macos", "aarch64", "macos", "x86_64", true, false)] // is_aarch64
-fn test_platform_is_arch_return_result(
+fn test_platform_is_arch_return_ok(
     #[case] target_os: &str,
     #[case] target_arch: &str,
     #[case] other_os: &str,
@@ -556,7 +556,7 @@ fn test_platform_is_arch_return_result(
 #[case("linux", "aarch64", "Linux-ARM64")]
 #[case("windows", "x86_64", "Windows-x86_64")]
 #[case("windows", "aarch64", "Windows-ARM64")]
-fn test_platform_release_identifier_return_result(
+fn test_platform_release_identifier_return_ok(
     #[case] os: &str,
     #[case] arch: &str,
     #[case] expected_identifier: &str,
@@ -592,7 +592,7 @@ fn test_platform_release_identifier_return_result(
 /// ## 预期结果
 /// - 返回错误，错误消息包含 "Unsupported platform"
 #[test]
-fn test_platform_release_identifier_with_unsupported_platform_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_unsupported_platform_return_ok() -> Result<()> {
     // Arrange: 创建不支持的平台实例
     let platform = Platform::new("unsupported_os", "unsupported_arch");
 
@@ -618,7 +618,7 @@ fn test_platform_release_identifier_with_unsupported_platform_return_result() ->
 /// ## 预期结果
 /// - 输出包含操作系统和架构信息
 #[test]
-fn test_platform_debug_with_platform_instance_return_result() -> Result<()> {
+fn test_platform_debug_with_platform_instance_return_ok() -> Result<()> {
     // Arrange: 创建 Platform 实例
     let platform = Platform::new("macos", "aarch64");
 
@@ -642,7 +642,7 @@ fn test_platform_debug_with_platform_instance_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 克隆的实例与原实例属性相同
 #[test]
-fn test_platform_clone_with_platform_instance_return_result() -> Result<()> {
+fn test_platform_clone_with_platform_instance_return_ok() -> Result<()> {
     // Arrange: 创建 Platform 实例
     let platform1 = Platform::new("linux", "x86_64");
 
@@ -668,7 +668,7 @@ fn test_platform_clone_with_platform_instance_return_result() -> Result<()> {
 /// - 相同参数的实例相等
 /// - 不同参数的实例不相等
 #[test]
-fn test_platform_eq_with_same_platforms_return_result() -> Result<()> {
+fn test_platform_eq_with_same_platforms_return_ok() -> Result<()> {
     // Arrange: 创建相同的平台实例
     let platform1 = Platform::new("macos", "aarch64");
     let platform2 = Platform::new("macos", "aarch64");
@@ -692,7 +692,7 @@ fn test_platform_eq_with_same_platforms_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回包含或不包含 "-static" 后缀的标识符（取决于系统环境）
 #[test]
-fn test_platform_release_identifier_with_linux_x86_64_detects_static_link_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_linux_x86_64_detects_static_link_return_ok() -> Result<()> {
     // Arrange: 创建 Linux x86_64 平台实例
     // 这个测试验证 release_identifier 能够正确检测静态链接需求
 
@@ -717,7 +717,7 @@ fn test_platform_release_identifier_with_linux_x86_64_detects_static_link_return
 /// ## 预期结果
 /// - 返回的标识符不包含 "-static" 后缀
 #[test]
-fn test_platform_release_identifier_with_non_linux_does_not_check_static_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_non_linux_does_not_check_static_return_ok() -> Result<()> {
     // Arrange: 创建非 Linux 平台实例
     let macos = Platform::new("macos", "x86_64");
     let windows = Platform::new("windows", "x86_64");
@@ -744,7 +744,7 @@ fn test_platform_release_identifier_with_non_linux_does_not_check_static_return_
 /// ## 预期结果
 /// - 返回的标识符不包含 "-static" 后缀
 #[test]
-fn test_platform_release_identifier_with_linux_non_x86_64_does_not_check_static_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_linux_non_x86_64_does_not_check_static_return_ok() -> Result<()> {
     // Arrange: 创建 Linux 非 x86_64 架构平台实例
     let linux_arm64 = Platform::new("linux", "aarch64");
 
@@ -804,7 +804,7 @@ fn test_platform_release_identifier_with_all_combinations_return_collect() -> Re
 /// ## 预期结果
 /// - 返回的标识符包含 "-static" 后缀（如果在 Alpine Linux 环境中）
 #[test]
-fn test_platform_release_identifier_with_alpine_linux_detects_static_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_alpine_linux_detects_static_return_ok() -> Result<()> {
     // Arrange: 创建 Linux x86_64 平台实例
     // 注意：这个测试在非 Alpine Linux 系统上可能无法完全测试
     // 但至少可以验证代码路径存在
@@ -829,7 +829,7 @@ fn test_platform_release_identifier_with_alpine_linux_detects_static_return_resu
 /// ## 预期结果
 /// - 能够正确解析 ldd 输出并检测静态链接需求
 #[test]
-fn test_platform_release_identifier_with_ldd_scenarios_handles_different_outputs_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_ldd_scenarios_handles_different_outputs_return_ok() -> Result<()> {
     // Arrange: 创建不同平台实例
     // 由于无法直接控制 ldd 命令的输出，我们通过 release_identifier 间接测试
     let platform = Platform::new("linux", "x86_64");
@@ -859,7 +859,7 @@ fn test_platform_release_identifier_with_ldd_scenarios_handles_different_outputs
 /// ## 预期结果
 /// - 不执行静态链接检查，返回标准标识符
 #[test]
-fn test_platform_release_identifier_with_non_linux_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_non_linux_return_ok() -> Result<()> {
     // Arrange: 创建非 Linux 平台实例
     // 测试非 Linux 平台的早期返回路径（覆盖 is_static_required 的第 117-118 行）
     let macos = Platform::new("macos", "x86_64");
@@ -886,7 +886,7 @@ fn test_platform_release_identifier_with_non_linux_return_result() -> Result<()>
 /// ## 预期结果
 /// - 不执行静态链接检查，返回标准标识符
 #[test]
-fn test_platform_release_identifier_with_non_x86_64_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_non_x86_64_return_ok() -> Result<()> {
     // Arrange: 创建非 x86_64 架构平台实例
     // 测试非 x86_64 架构的早期返回路径（覆盖 is_static_required 的第 117-118 行）
     let linux_arm64 = Platform::new("linux", "aarch64");
@@ -901,7 +901,7 @@ fn test_platform_release_identifier_with_non_x86_64_return_result() -> Result<()
 
 /// 测试Linux x86_64平台处理不同场景（Alpine检测、静态链接检测）
 #[test]
-fn test_platform_release_identifier_with_linux_x86_64_handles_different_scenarios_return_result() -> Result<()> {
+fn test_platform_release_identifier_with_linux_x86_64_handles_different_scenarios_return_ok() -> Result<()> {
     // Arrange: 创建 Linux x86_64 平台实例
     // 由于无法直接控制文件读取和命令执行，我们通过 release_identifier 间接测试
     // 这个测试验证代码路径存在，实际行为取决于运行环境
@@ -926,7 +926,7 @@ fn test_platform_release_identifier_with_linux_x86_64_handles_different_scenario
 #[test]
 #[cfg(target_os = "linux")]
 #[cfg(target_arch = "x86_64")]
-fn test_platform_release_identifier_in_actual_linux_environment_return_result() -> Result<()> {
+fn test_platform_release_identifier_in_actual_linux_environment_return_ok() -> Result<()> {
     // Arrange: 创建 Linux x86_64 平台实例
     // 在真实的 Linux x86_64 环境中测试静态链接检测
     // 这个测试只在 Linux x86_64 平台上运行

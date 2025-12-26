@@ -10,6 +10,40 @@
 
 **Default: No Document Generation**: Unless the user uses explicit keywords, do NOT generate any `.md` document files.
 
+### 🔄 Per-Message Independent Evaluation Rule
+
+**Critical Principle**: Each user message must be evaluated **independently** for document generation eligibility. Previous document generation in the same chat session does NOT grant permission for subsequent automatic generation.
+
+**Rules**:
+- ✅ **Every message**: Must pass ALL FOUR checks independently
+- ❌ **Never assume**: "User wanted documents before, so they want them now"
+- ❌ **Never continue**: "I generated a document earlier, so I'll generate more"
+- ✅ **Always check**: Does THIS specific message contain explicit keywords?
+
+**Example**:
+```
+Message 1: "generate test report" → ✅ Generate document
+Message 2: "analyze failure reasons" → ❌ NO document, provide analysis in chat
+Message 3: "summarize" → ❌ NO document, provide summary in chat
+Message 4: "generate summary report" → ✅ Generate document (new explicit request)
+```
+
+### 🚫 Context Independence Rule
+
+**Critical Principle**: Chat context, conversation history, or previous document generation does NOT override the mandatory four-check process.
+
+**Prohibited Assumptions**:
+- ❌ "User asked for analysis before, so they want analysis documents now"
+- ❌ "I generated documents earlier, so I should continue generating"
+- ❌ "This is a follow-up, so I should generate a document"
+- ❌ "User seems to want documentation based on context"
+
+**Required Behavior**:
+- ✅ Check THIS message for explicit keywords
+- ✅ Apply blacklist rules to THIS message
+- ✅ Ignore previous document generation history
+- ✅ Treat each message as a fresh request
+
 ### ✅ Allowed Document Generation (Whitelist)
 
 **ONLY** generate documents when users use these explicit keywords:
@@ -60,19 +94,26 @@ The following scenarios **STRICTLY PROHIBIT** automatic document generation. Pro
 - ✅ Correct: Provide review feedback in chat
 - ⚠️ Exception: When executing `review.md` workflow (explicitly defined below)
 
-### 📋 Mandatory Pre-Generation Checklist
+### 📋 Mandatory Pre-Generation Checklist (Enhanced)
 
-AI must pass ALL FOUR checks before generating ANY `.md` document:
+AI must pass ALL FOUR checks **independently** before generating ANY `.md` document:
+
+**Important Reminders**:
+- ⚠️ **Re-check every message**, do not skip checks because documents were generated before
+- ⚠️ **Context does not affect judgment**, do not assume user intent based on conversation history
+- ⚠️ **Independent evaluation**, treat each message as an independent request
 
 **Check 1: Explicit Request**
-- [ ] Did the user use a whitelist keyword?
+- [ ] Does **THIS message** use a whitelist keyword?
   - ✅ Yes → Continue to Check 2
   - ❌ No → **PROHIBIT generation**, provide text response in chat
+  - ⚠️ **Note**: Cannot assume this message contains keywords just because previous messages did
 
 **Check 2: Blacklist Scenario**
-- [ ] Is this request a blacklist scenario?
+- [ ] Is **THIS message** a blacklist scenario?
   - ❌ Yes → **PROHIBIT generation**, provide text response in chat
   - ✅ No → Continue to Check 3
+  - ⚠️ **Note**: Even if previous messages generated documents, if this message is a blacklist scenario, generation is still prohibited
 
 **Check 3: Exception Rule**
 - [ ] Is this a Review Workflow auto-report?
@@ -87,8 +128,31 @@ AI must pass ALL FOUR checks before generating ANY `.md` document:
 
   Confirm generation?
   ```
+  - ⚠️ **Note**: Even if documents were generated before, confirmation is still required
 
 **Only after passing ALL FOUR checks can documents be generated!**
+
+### 🔍 Pre-Generation Self-Check Mechanism
+
+**Before generating any document, AI must ask itself**:
+
+1. **Keyword Check**:
+   - "Did the user use explicit keywords in THIS message?"
+   - "If this were the first message, would I generate a document?"
+
+2. **Scenario Check**:
+   - "Is this message a blacklist scenario?"
+   - "Am I assuming the user wants a document?"
+
+3. **Context Check**:
+   - "Am I assuming the user wants a document because of previous messages?"
+   - "Am I continuing to generate because I generated documents before?"
+
+4. **Independence Check**:
+   - "If I ignore the previous conversation history, does THIS message alone satisfy the generation conditions?"
+   - "Am I making assumptions based on context?"
+
+**If ANY answer is unclear or "no"** → **PROHIBIT document generation**
 
 ### 📚 Correct vs Incorrect Examples
 
@@ -206,11 +270,13 @@ Root cause analysis:
 - Mistakenly thought "complete task" includes "generate report"
 - Didn't check for explicit keywords
 - Violated blacklist scenario rules
+- Made assumptions based on context (common violation cause)
 
 Suggested remedy:
 1. Delete these 24 violating documents
 2. Keep code implementation
 3. Strictly follow four-check checklist going forward
+4. Evaluate each message independently, do not make assumptions based on context
 
 Should I delete these documents immediately?
 ```

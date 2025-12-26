@@ -194,7 +194,7 @@ mod tests {
     /// ## 预期结果
     /// - 所有任务都成功，执行时间符合并发预期
     #[test]
-    fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently_return_result() -> Result<()> {
+    fn test_concurrent_execution_multiple_tasks_with_multiple_tasks_executes_concurrently_return_ok() -> Result<()> {
         // Arrange: 准备执行器和多个任务
         let executor = ConcurrentExecutor::new(2);
         let tasks = vec![
@@ -257,7 +257,7 @@ mod tests {
     #[case(2, 4)] // 并发数2
     #[case(4, 4)] // 并发数4
     #[case(8, 4)] // 并发数超过任务数
-    fn test_concurrent_limits_timing_with_various_concurrency_levels_executes_within_time_limit_return_result(
+    fn test_concurrent_limits_timing_with_various_concurrency_levels_executes_within_time_limit_return_ok(
         #[case] max_concurrent: usize,
         #[case] task_count: usize,
     ) -> Result<()> {
@@ -516,7 +516,7 @@ mod tests {
     /// ## 预期结果
     /// - 进度回调被调用一次，包含正确的任务信息
     #[test]
-    fn test_execute_with_progress_single_task_return_result() -> Result<()> {
+    fn test_execute_with_progress_single_task_return_ok() -> Result<()> {
         let executor = ConcurrentExecutor::new(1);
 
         let progress_log = Arc::new(Mutex::new(Vec::new()));
@@ -598,7 +598,7 @@ mod tests {
     /// ## 预期结果
     /// - 所有任务都成功，执行时间在合理范围内
     #[test]
-    fn test_large_number_of_tasks_return_result() -> Result<()> {
+    fn test_large_number_of_tasks_return_ok() -> Result<()> {
         let executor = ConcurrentExecutor::new(10);
         let mut tasks = Vec::new();
 
@@ -642,7 +642,7 @@ mod tests {
     /// ## 预期结果
     /// - 任务在很短时间内完成
     #[test]
-    fn test_zero_delay_tasks_return_result() -> Result<()> {
+    fn test_zero_delay_tasks_return_ok() -> Result<()> {
         let executor = ConcurrentExecutor::new(5);
         let tasks = vec![
             (
@@ -683,7 +683,7 @@ mod tests {
     /// ## 预期结果
     /// - 所有任务名称都被保留（顺序可能不同）
     #[test]
-    fn test_task_names_preservation_return_result() -> Result<()> {
+    fn test_task_names_preservation_return_ok() -> Result<()> {
         let executor = ConcurrentExecutor::new(3);
         let expected_names = vec!["alpha", "beta", "gamma", "delta"];
         let mut tasks = Vec::new();
@@ -724,7 +724,7 @@ mod tests {
     /// ## 预期结果
     /// - 不同结果类型都能正确处理
     #[test]
-    fn test_different_result_types_return_result() -> Result<()> {
+    fn test_different_result_types_return_ok() -> Result<()> {
         let executor = ConcurrentExecutor::new(2);
 
         // 测试整数类型的任务

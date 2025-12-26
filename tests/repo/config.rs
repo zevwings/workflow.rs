@@ -83,7 +83,7 @@ fn test_branch_config_with_values_creates_config() {
 /// ## 预期结果
 /// - JSON 字符串与预期一致
 #[test]
-fn test_branch_config_serialization_with_valid_config_serializes_to_json_return_result() -> Result<()> {
+fn test_branch_config_serialization_with_valid_config_serializes_to_json_return_ok() -> Result<()> {
     // Arrange: 准备 BranchConfig 实例
     let config = BranchConfig {
         prefix: Some("hotfix".to_string()),
@@ -112,7 +112,7 @@ fn test_branch_config_serialization_with_valid_config_serializes_to_json_return_
 /// ## 预期结果
 /// - 字段值与 JSON 中的值一致
 #[test]
-fn test_branch_config_deserialization_with_valid_json_deserializes_config_return_result() -> Result<()> {
+fn test_branch_config_deserialization_with_valid_json_deserializes_config_return_ok() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"prefix":"feature","ignore":["main","develop"]}"#;
 
@@ -138,7 +138,7 @@ fn test_branch_config_deserialization_with_valid_json_deserializes_config_return
 /// ## 预期结果
 /// - 存在的字段正确设置，缺失字段使用默认值
 #[test]
-fn test_branch_config_partial_deserialization_with_partial_json_deserializes_config_return_result() -> Result<()> {
+fn test_branch_config_partial_deserialization_with_partial_json_deserializes_config_return_ok() -> Result<()> {
     // Arrange: 准备部分字段的 JSON 字符串
     let json = r#"{"prefix":"feature"}"#;
 
@@ -275,7 +275,7 @@ fn test_pr_config_with_values_creates_config() {
 /// ## 预期结果
 /// - JSON 字符串与预期一致
 #[test]
-fn test_pr_config_serialization_with_valid_config_serializes_to_json_return_result() -> Result<()> {
+fn test_pr_config_serialization_with_valid_config_serializes_to_json_return_ok() -> Result<()> {
     // Arrange: 准备 PullRequestsConfig 实例
     let config = PullRequestsConfig {
         auto_accept_change_type: Some(false),
@@ -303,7 +303,7 @@ fn test_pr_config_serialization_with_valid_config_serializes_to_json_return_resu
 /// ## 预期结果
 /// - 字段值与 JSON 中的值一致
 #[test]
-fn test_pr_config_deserialization_with_valid_json_deserializes_config_return_result() -> Result<()> {
+fn test_pr_config_deserialization_with_valid_json_deserializes_config_return_ok() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{"auto_accept_change_type":true}"#;
 
@@ -431,7 +431,7 @@ fn test_pr_config_invalid_json_with_invalid_json_returns_error() {
 /// ## 预期结果
 /// - null 值被正确转换为 None
 #[test]
-fn test_branch_config_with_null_values_return_result() -> Result<()> {
+fn test_branch_config_with_null_values_return_ok() -> Result<()> {
     // Arrange: 准备测试包含 null 值的 JSON
     let json = r#"{"prefix":null,"ignore":[]}"#;
     let config: BranchConfig = serde_json::from_str(json)?;
@@ -481,7 +481,7 @@ fn test_branch_config_empty_ignore_list_return_collect() -> Result<()> {
 /// ## 预期结果
 /// - 特殊字符被正确保存和读取
 #[test]
-fn test_branch_config_special_characters_return_result() -> Result<()> {
+fn test_branch_config_special_characters_return_ok() -> Result<()> {
     // Arrange: 准备测试特殊字符的处理
     let config = BranchConfig {
         prefix: Some("feature/test-123".to_string()),

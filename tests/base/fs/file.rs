@@ -14,6 +14,8 @@ use std::io::Read;
 use workflow::base::fs::file::{FileReader, FileWriter};
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== FileReader Tests ====================
 
@@ -29,11 +31,12 @@ use crate::common::environments::CliTestEnv;
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_to_string_with_valid_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_to_string_with_valid_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试文件和内容
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let expected_content = "Hello, World!";
     fs::write(&file_path, expected_content)?;
 
@@ -59,11 +62,12 @@ fn test_file_reader_to_string_with_valid_file_return_result() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_lines_with_multiline_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_with_multiline_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备多行测试文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let file_content = "line1\nline2\nline3";
     fs::write(&file_path, file_content)?;
 
@@ -92,11 +96,12 @@ fn test_file_reader_lines_with_multiline_file_return_result() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_bytes_with_binary_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_bytes_with_binary_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备二进制测试文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.bin");
+    let file_path = cli_env.path().join("test.bin");
     let test_bytes = b"binary data\x00\x01\x02";
     fs::write(&file_path, test_bytes)?;
 
@@ -124,11 +129,12 @@ fn test_file_reader_bytes_with_binary_file_return_result() -> color_eyre::Result
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_str_with_valid_content_writes_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_valid_content_writes_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件路径和内容
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("output.txt");
+    let file_path = cli_env.path().join("output.txt");
     let writer = FileWriter::new(&file_path);
     let expected_content = "Test content";
 
@@ -154,11 +160,12 @@ fn test_file_writer_write_str_with_valid_content_writes_file_return_result() -> 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备需要创建目录的文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("subdir/output.txt");
+    let file_path = cli_env.path().join("subdir/output.txt");
     let writer = FileWriter::new(&file_path);
     let expected_content = "Test content";
 
@@ -185,11 +192,12 @@ fn test_file_writer_write_str_with_dir_creates_directory_and_writes_file() -> co
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_bytes_with_valid_bytes_writes_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_valid_bytes_writes_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备文件路径和二进制数据
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("output.bin");
+    let file_path = cli_env.path().join("output.bin");
     let writer = FileWriter::new(&file_path);
     let test_bytes = b"binary data";
 
@@ -215,11 +223,12 @@ fn test_file_writer_write_bytes_with_valid_bytes_writes_file_return_result() -> 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_bytes_with_dir_creates_directory_and_writes_file() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_dir_creates_directory_and_writes_file(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备需要创建目录的文件路径和二进制数据
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("subdir/output.bin");
+    let file_path = cli_env.path().join("subdir/output.bin");
     let writer = FileWriter::new(&file_path);
     let test_bytes = b"binary data";
 
@@ -246,11 +255,12 @@ fn test_file_writer_write_bytes_with_dir_creates_directory_and_writes_file() -> 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_ensure_parent_dir_with_nested_path_creates_parent_dirs() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_ensure_parent_dir_with_nested_path_creates_parent_dirs(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备嵌套路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("deep/nested/path/file.txt");
+    let file_path = cli_env.path().join("deep/nested/path/file.txt");
     let writer = FileWriter::new(&file_path);
 
     // Act: 确保父目录存在
@@ -273,11 +283,12 @@ fn test_file_writer_ensure_parent_dir_with_nested_path_creates_parent_dirs() -> 
 /// 1. 创建包含section和字段的TOML文件
 /// 2. 使用FileReader读取并解析TOML
 /// 3. 验证解析后的结构体字段值正确
-#[test]
-fn test_file_reader_toml_with_valid_toml_parses_config_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_toml_with_valid_toml_parses_config_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备TOML文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.toml");
+    let file_path = cli_env.path().join("config.toml");
     fs::write(
         &file_path,
         r#"
@@ -316,11 +327,12 @@ number = 42
 /// 1. 创建包含key和number字段的JSON文件
 /// 2. 使用FileReader读取并解析JSON
 /// 3. 验证解析后的结构体字段值正确
-#[test]
-fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_json_with_valid_json_parses_config_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备JSON文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.json");
+    let file_path = cli_env.path().join("config.json");
     fs::write(&file_path, r#"{"key": "value", "number": 42}"#)?;
 
     // Act: 读取并解析JSON
@@ -348,11 +360,12 @@ fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_
 /// 1. 创建包含section和字段的配置结构体
 /// 2. 使用FileWriter写入TOML格式
 /// 3. 验证文件内容包含正确的TOML格式数据
-#[test]
-fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_toml_with_valid_config_writes_toml_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备配置结构
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.toml");
+    let file_path = cli_env.path().join("config.toml");
     let writer = FileWriter::new(&file_path);
     #[derive(serde::Serialize)]
     struct Config {
@@ -390,11 +403,12 @@ fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> 
 /// 1. 创建包含key和number字段的配置结构体
 /// 2. 使用FileWriter写入JSON格式
 /// 3. 验证文件内容包含正确的JSON格式数据
-#[test]
-fn test_file_writer_write_json_with_valid_config_writes_json_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_json_with_valid_config_writes_json_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备配置结构
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.json");
+    let file_path = cli_env.path().join("config.json");
     let writer = FileWriter::new(&file_path);
     #[derive(serde::Serialize)]
     struct Config {
@@ -431,11 +445,12 @@ fn test_file_reader_to_string_with_nonexistent_file_returns_error() {
 }
 
 /// 测试写入文件时自动创建不存在的父目录
-#[test]
-fn test_file_writer_write_str_with_dir_with_nonexistent_parent_creates_parent() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_dir_with_nonexistent_parent_creates_parent(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备需要创建父目录的文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("nonexistent/parent/file.txt");
+    let file_path = cli_env.path().join("nonexistent/parent/file.txt");
     let writer = FileWriter::new(&file_path);
 
     // Act: 使用 write_str_with_dir 应该自动创建父目录
@@ -459,11 +474,12 @@ fn test_file_writer_write_str_with_dir_with_nonexistent_parent_creates_parent() 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_open_with_valid_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_open_with_valid_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "Hello, World!")?;
 
     // Act: 打开文件
@@ -514,11 +530,12 @@ fn test_file_reader_open_with_nonexistent_file_returns_error() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_empty_file_with_empty_file_return_empty() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_empty_file_with_empty_file_return_empty(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备空文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("empty.txt");
+    let file_path = cli_env.path().join("empty.txt");
     fs::write(&file_path, "")?;
 
     // Act: 读取空文件
@@ -544,11 +561,12 @@ fn test_file_reader_empty_file_with_empty_file_return_empty() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_lines_with_empty_lines_handles_correctly_return_empty() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_with_empty_lines_handles_correctly_return_empty(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备包含空行的文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "line1\n\nline3\n")?;
 
     // Act: 读取文件行
@@ -574,10 +592,11 @@ fn test_file_reader_lines_with_empty_lines_handles_correctly_return_empty() -> c
 /// 2. 使用write_toml_secure写入文件
 /// 3. 验证文件已创建且内容正确
 /// 4. 在Unix系统上验证文件权限为600（仅所有者可读写）
-#[test]
-fn test_file_writer_write_toml_secure_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("secure/config.toml");
+#[rstest]
+fn test_file_writer_write_toml_secure_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    let file_path = cli_env.path().join("secure/config.toml");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -618,10 +637,11 @@ fn test_file_writer_write_toml_secure_return_result() -> color_eyre::Result<()> 
 /// 2. 使用write_json_secure写入文件
 /// 3. 验证文件已创建且内容正确
 /// 4. 在Unix系统上验证文件权限为600（仅所有者可读写）
-#[test]
-fn test_file_writer_write_json_secure_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("secure/config.json");
+#[rstest]
+fn test_file_writer_write_json_secure_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
+    let file_path = cli_env.path().join("secure/config.json");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -653,13 +673,14 @@ fn test_file_writer_write_json_secure_return_result() -> color_eyre::Result<()> 
 }
 
 /// 测试设置文件权限（Unix系统）
-#[test]
+#[rstest]
 #[cfg(unix)]
-fn test_file_writer_set_permissions_return_result() -> color_eyre::Result<()> {
+fn test_file_writer_set_permissions_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let writer = FileWriter::new(&file_path);
 
     // 先创建文件
@@ -688,11 +709,12 @@ fn test_file_writer_set_permissions_return_result() -> color_eyre::Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_toml_with_invalid_format_return_result() -> Result<()> {
+#[rstest]
+fn test_file_reader_toml_with_invalid_format_return_ok(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备无效格式的TOML文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("invalid.toml");
+    let file_path = cli_env.path().join("invalid.toml");
     fs::write(&file_path, "invalid toml content")?;
 
     // Act: 尝试解析无效TOML
@@ -716,11 +738,12 @@ fn test_file_reader_toml_with_invalid_format_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_json_with_invalid_format_return_result() -> Result<()> {
+#[rstest]
+fn test_file_reader_json_with_invalid_format_return_ok(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备无效格式的JSON文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("invalid.json");
+    let file_path = cli_env.path().join("invalid.json");
     fs::write(&file_path, "invalid json content")?;
 
     // Act: 尝试解析无效JSON
@@ -864,12 +887,13 @@ fn test_file_reader_json_with_nonexistent_file_returns_error() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_toml_error_handling_return_false() -> Result<()> {
+#[rstest]
+fn test_file_writer_write_toml_error_handling_return_false(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备测试写入到只读目录应该返回错误（如果可能）
     // 注意：这个测试可能在某些系统上无法执行，所以只测试基本功能
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.toml");
+    let file_path = cli_env.path().join("config.toml");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -899,11 +923,12 @@ fn test_file_writer_write_toml_error_handling_return_false() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_json_error_handling_return_false() -> Result<()> {
+#[rstest]
+fn test_file_writer_write_json_error_handling_return_false(
+    cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备测试写入 JSON 文件的基本功能
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.json");
+    let file_path = cli_env.path().join("config.json");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -933,11 +958,12 @@ fn test_file_writer_write_json_error_handling_return_false() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_bytes_with_dir_nested_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_dir_nested_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试嵌套目录的字节写入
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("level1/level2/level3/file.bin");
+    let file_path = cli_env.path().join("level1/level2/level3/file.bin");
     let writer = FileWriter::new(&file_path);
     let test_bytes = b"nested binary data";
 
@@ -961,11 +987,12 @@ fn test_file_writer_write_bytes_with_dir_nested_return_result() -> color_eyre::R
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_str_with_dir_nested_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_dir_nested_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试嵌套目录的字符串写入
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("level1/level2/level3/file.txt");
+    let file_path = cli_env.path().join("level1/level2/level3/file.txt");
     let writer = FileWriter::new(&file_path);
 
     writer.write_str_with_dir("nested content")?;
@@ -988,11 +1015,12 @@ fn test_file_writer_write_str_with_dir_nested_return_result() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_open_read_partial_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_open_read_partial_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试部分读取文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "Hello, World!")?;
 
     let reader = FileReader::new(&file_path);
@@ -1016,11 +1044,12 @@ fn test_file_reader_open_read_partial_return_result() -> color_eyre::Result<()> 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_lines_multiple_iterations_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_multiple_iterations_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 方法的循环逻辑（覆盖 file.rs:45-49）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("multiline.txt");
+    let file_path = cli_env.path().join("multiline.txt");
     fs::write(&file_path, "line1\nline2\nline3\nline4\nline5")?;
 
     let reader = FileReader::new(&file_path);
@@ -1044,11 +1073,12 @@ fn test_file_reader_lines_multiple_iterations_return_result() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_reader_bytes_large_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_bytes_large_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 bytes() 方法的循环逻辑（覆盖 file.rs:58-59）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("large.bin");
+    let file_path = cli_env.path().join("large.bin");
     let large_data = vec![0u8; 10000]; // 10KB 数据
     fs::write(&file_path, &large_data)?;
 
@@ -1069,12 +1099,13 @@ fn test_file_reader_bytes_large_file_return_result() -> color_eyre::Result<()> {
 /// 1. 创建包含多行的测试文件
 /// 2. 使用FileReader读取文件行
 /// 3. 验证正常读取成功
-#[test]
-fn test_file_reader_lines_with_io_error_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_with_io_error_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 方法中的错误处理（覆盖 file.rs:46-47）
     // 创建一个文件，然后删除它，模拟读取时的错误
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "line1\nline2")?;
 
     let reader = FileReader::new(&file_path);
@@ -1086,11 +1117,12 @@ fn test_file_reader_lines_with_io_error_return_false() -> color_eyre::Result<()>
 }
 
 /// 测试读取文件行循环中的错误处理
-#[test]
-fn test_file_reader_lines_loop_with_error_return_false() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_loop_with_error_return_false(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 lines() 循环中的错误处理（覆盖 file.rs:46-47）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     fs::write(&file_path, "line1\nline2\nline3")?;
 
     let reader = FileReader::new(&file_path);
@@ -1101,11 +1133,12 @@ fn test_file_reader_lines_loop_with_error_return_false() -> color_eyre::Result<(
 }
 
 /// 测试读取文件字节到末尾
-#[test]
-fn test_file_reader_bytes_read_to_end_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_bytes_read_to_end_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 bytes() 方法中的 read_to_end 调用（覆盖 file.rs:58-59）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.bin");
+    let file_path = cli_env.path().join("test.bin");
     let test_data = vec![0u8, 1u8, 2u8, 3u8, 4u8, 5u8];
     fs::write(&file_path, &test_data)?;
 
@@ -1128,11 +1161,12 @@ fn test_file_reader_bytes_read_to_end_return_result() -> color_eyre::Result<()> 
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_ensure_parent_dir_creates_nested(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 ensure_parent_dir() 创建嵌套目录（覆盖 file.rs:106-107）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("level1/level2/level3/file.txt");
+    let file_path = cli_env.path().join("level1/level2/level3/file.txt");
     let writer = FileWriter::new(&file_path);
 
     writer.ensure_parent_dir()?;
@@ -1156,14 +1190,15 @@ fn test_file_writer_ensure_parent_dir_creates_nested() -> color_eyre::Result<()>
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
+#[rstest]
 #[cfg(unix)]
-fn test_file_writer_set_permissions_various_modes_return_result() -> color_eyre::Result<()> {
+fn test_file_writer_set_permissions_various_modes_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 set_permissions() 的不同权限模式（覆盖 file.rs:124-125）
     use std::os::unix::fs::PermissionsExt;
 
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let writer = FileWriter::new(&file_path);
 
     writer.write_str("test content")?;
@@ -1192,11 +1227,12 @@ fn test_file_writer_set_permissions_various_modes_return_result() -> color_eyre:
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_dir_creates_parent(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_str_with_dir() 创建父目录（覆盖 file.rs:146-148）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("nested/path/file.txt");
+    let file_path = cli_env.path().join("nested/path/file.txt");
     let writer = FileWriter::new(&file_path);
 
     writer.write_str_with_dir("content")?;
@@ -1220,11 +1256,12 @@ fn test_file_writer_write_str_with_dir_creates_parent() -> color_eyre::Result<()
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_dir_creates_parent(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_bytes_with_dir() 创建父目录（覆盖 file.rs:168-170）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("nested/path/file.bin");
+    let file_path = cli_env.path().join("nested/path/file.bin");
     let writer = FileWriter::new(&file_path);
 
     writer.write_bytes_with_dir(b"binary content")?;
@@ -1248,11 +1285,12 @@ fn test_file_writer_write_bytes_with_dir_creates_parent() -> color_eyre::Result<
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_toml_secure() 创建目录和设置权限（覆盖 file.rs:194, 198-202）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("secure/config.toml");
+    let file_path = cli_env.path().join("secure/config.toml");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -1292,11 +1330,12 @@ fn test_file_writer_write_toml_secure_creates_dir_and_sets_perms() -> color_eyre
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_file_writer_write_json_secure_creates_dir_and_sets_perms() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_json_secure_creates_dir_and_sets_perms(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备测试 write_json_secure() 创建目录和设置权限（覆盖 file.rs:226, 230-234）
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("secure/config.json");
+    let file_path = cli_env.path().join("secure/config.json");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]

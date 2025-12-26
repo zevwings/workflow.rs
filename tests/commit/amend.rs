@@ -18,6 +18,8 @@ use workflow::commit::{AmendPreview, CommitAmend};
 use workflow::git::CommitInfo;
 
 use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
@@ -410,10 +412,9 @@ fn test_amend_preview_clone_with_valid_preview_creates_clone() {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_git_integration_return_result() -> Result<()> {
+#[rstest]
+fn test_git_integration_return_ok(_git_repo_with_commit: GitTestEnv) -> Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
-    let _env = GitTestEnv::new()?;
 
     // 这个测试主要验证 Git 仓库创建辅助函数工作正常
     // 实际的 Git 集成测试应该在更高级别的集成测试中进行

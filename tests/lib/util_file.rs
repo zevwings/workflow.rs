@@ -8,6 +8,8 @@ use std::io::Write;
 use workflow::base::util::file::{FileReader, FileWriter};
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== FileReader Initialization Tests ====================
 
@@ -119,11 +121,12 @@ fn test_file_writer_pathbuf_with_pathbuf_creates_writer() {
 ///
 /// ## 预期结果
 /// - 文件内容被正确读取为字符串
-#[test]
-fn test_file_reader_to_string_with_text_file_reads_content_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_to_string_with_text_file_reads_content_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时文件和内容
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let expected_content = "Hello, World!";
     fs::write(&file_path, expected_content)?;
 
@@ -149,11 +152,12 @@ fn test_file_reader_to_string_with_text_file_reads_content_return_result() -> co
 ///
 /// ## 预期结果
 /// - 所有行被正确读取，行数和内容正确
-#[test]
-fn test_file_reader_lines_with_multiline_file_reads_lines_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_lines_with_multiline_file_reads_lines_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备多行临时文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.txt");
+    let file_path = cli_env.path().join("test.txt");
     let file_content = "line1\nline2\nline3";
     fs::write(&file_path, file_content)?;
 
@@ -182,11 +186,12 @@ fn test_file_reader_lines_with_multiline_file_reads_lines_return_result() -> col
 ///
 /// ## 预期结果
 /// - 二进制文件的字节内容被正确读取
-#[test]
-fn test_file_reader_bytes_with_binary_file_reads_bytes_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_bytes_with_binary_file_reads_bytes_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备二进制临时文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("test.bin");
+    let file_path = cli_env.path().join("test.bin");
     let test_bytes = b"binary data\x00\x01\x02";
     fs::write(&file_path, test_bytes)?;
 
@@ -214,11 +219,12 @@ fn test_file_reader_bytes_with_binary_file_reads_bytes_return_result() -> color_
 ///
 /// ## 预期结果
 /// - 文件内容与写入的内容一致
-#[test]
-fn test_file_writer_write_str_with_text_content_writes_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_text_content_writes_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("output.txt");
+    let file_path = cli_env.path().join("output.txt");
     let writer = FileWriter::new(&file_path);
     let content = "Test content";
 
@@ -244,11 +250,12 @@ fn test_file_writer_write_str_with_text_content_writes_file_return_result() -> c
 ///
 /// ## 预期结果
 /// - 目录被自动创建，文件内容正确
-#[test]
-fn test_file_writer_write_str_with_dir_creates_dir_and_writes_file() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_str_with_dir_creates_dir_and_writes_file(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和子目录文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("subdir/output.txt");
+    let file_path = cli_env.path().join("subdir/output.txt");
     let writer = FileWriter::new(&file_path);
     let content = "Test content";
 
@@ -275,11 +282,12 @@ fn test_file_writer_write_str_with_dir_creates_dir_and_writes_file() -> color_ey
 ///
 /// ## 预期结果
 /// - 文件内容与写入的字节内容一致
-#[test]
-fn test_file_writer_write_bytes_with_binary_content_writes_file_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_binary_content_writes_file_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("output.bin");
+    let file_path = cli_env.path().join("output.bin");
     let writer = FileWriter::new(&file_path);
     let test_bytes = b"binary data";
 
@@ -305,11 +313,12 @@ fn test_file_writer_write_bytes_with_binary_content_writes_file_return_result() 
 ///
 /// ## 预期结果
 /// - 目录被自动创建，文件内容正确
-#[test]
-fn test_file_writer_write_bytes_with_dir_creates_dir_and_writes_file() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_bytes_with_dir_creates_dir_and_writes_file(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时目录和子目录文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("subdir/output.bin");
+    let file_path = cli_env.path().join("subdir/output.bin");
     let writer = FileWriter::new(&file_path);
     let test_bytes = b"binary data";
 
@@ -336,11 +345,12 @@ fn test_file_writer_write_bytes_with_dir_creates_dir_and_writes_file() -> color_
 ///
 /// ## 预期结果
 /// - 所有父目录都被创建
-#[test]
-fn test_file_writer_ensure_parent_dir_with_nested_path_creates_dirs() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_ensure_parent_dir_with_nested_path_creates_dirs(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备嵌套路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("deep/nested/path/file.txt");
+    let file_path = cli_env.path().join("deep/nested/path/file.txt");
     let writer = FileWriter::new(&file_path);
 
     // Act: 确保父目录存在
@@ -369,11 +379,12 @@ fn test_file_writer_ensure_parent_dir_with_nested_path_creates_dirs() -> color_e
 ///
 /// ## 预期结果
 /// - TOML 文件被正确解析为配置结构
-#[test]
-fn test_file_reader_toml_with_valid_toml_parses_config_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_toml_with_valid_toml_parses_config_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备 TOML 文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.toml");
+    let file_path = cli_env.path().join("config.toml");
     fs::write(&file_path, r#"
 [section]
 key = "value"
@@ -413,11 +424,12 @@ number = 42
 ///
 /// ## 预期结果
 /// - JSON 文件被正确解析为配置结构
-#[test]
-fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_reader_json_with_valid_json_parses_config_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备 JSON 文件
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.json");
+    let file_path = cli_env.path().join("config.json");
     fs::write(&file_path, r#"{"key": "value", "number": 42}"#)?;
 
     #[derive(serde::Deserialize)]
@@ -451,11 +463,12 @@ fn test_file_reader_json_with_valid_json_parses_config_return_result() -> color_
 ///
 /// ## 预期结果
 /// - 配置被正确序列化为 TOML 格式并写入文件
-#[test]
-fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_toml_with_valid_config_writes_toml_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备配置结构和文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.toml");
+    let file_path = cli_env.path().join("config.toml");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -498,11 +511,12 @@ fn test_file_writer_write_toml_with_valid_config_writes_toml_return_result() -> 
 ///
 /// ## 预期结果
 /// - 配置被正确序列化为 JSON 格式并写入文件
-#[test]
-fn test_file_writer_write_json_with_valid_config_writes_json_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_write_json_with_valid_config_writes_json_return_ok(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备配置结构和文件路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("config.json");
+    let file_path = cli_env.path().join("config.json");
     let writer = FileWriter::new(&file_path);
 
     #[derive(serde::Serialize)]
@@ -565,11 +579,12 @@ fn test_file_reader_nonexistent_file_with_invalid_path_returns_error() {
 ///
 /// ## 预期结果
 /// - 父目录被自动创建，文件写入成功
-#[test]
-fn test_file_writer_nonexistent_parent_with_missing_dir_creates_dir() -> color_eyre::Result<()> {
+#[rstest]
+fn test_file_writer_nonexistent_parent_with_missing_dir_creates_dir(
+    cli_env: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备不存在的父目录路径
-    let env = CliTestEnv::new()?;
-    let file_path = env.path().join("nonexistent/parent/file.txt");
+    let file_path = cli_env.path().join("nonexistent/parent/file.txt");
     let writer = FileWriter::new(&file_path);
 
     // Act: 使用 write_str_with_dir 自动创建父目录

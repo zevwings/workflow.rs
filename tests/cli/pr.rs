@@ -4,7 +4,7 @@
 
 use clap::Parser;
 use pretty_assertions::assert_eq;
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use workflow::cli::{JiraIdArg, PRCommands};
 
 // 创建一个测试用的 CLI 结构来测试参数解析
@@ -13,18 +13,6 @@ use workflow::cli::{JiraIdArg, PRCommands};
 struct TestPRCli {
     #[command(subcommand)]
     command: PRCommands,
-}
-
-// ==================== Fixtures ====================
-
-#[fixture]
-fn test_pr_id() -> &'static str {
-    "123"
-}
-
-#[fixture]
-fn test_branch() -> &'static str {
-    "feature/my-branch"
 }
 
 // ==================== Create Command Tests ====================

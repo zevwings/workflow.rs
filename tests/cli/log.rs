@@ -40,7 +40,7 @@ struct TestLogCli {
 /// ## 预期结果
 /// - Download 命令正确解析，JIRA ID 被正确设置
 #[test]
-fn test_log_download_command_with_jira_id_parses_correctly_return_result() -> Result<()> {
+fn test_log_download_command_with_jira_id_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备带 JIRA ID 的 Download 命令输入
     let args = &["test-log", "download", "PROJ-123"];
 
@@ -70,7 +70,7 @@ fn test_log_download_command_with_jira_id_parses_correctly_return_result() -> Re
 /// ## 预期结果
 /// - Download 命令正确解析，JIRA ID 为 None
 #[test]
-fn test_log_download_command_without_id_parses_correctly_return_result() -> Result<()> {
+fn test_log_download_command_without_id_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备不带 ID 的 Download 命令输入
     let args = &["test-log", "download"];
 
@@ -102,7 +102,7 @@ fn test_log_download_command_without_id_parses_correctly_return_result() -> Resu
 /// ## 预期结果
 /// - Find 命令正确解析，JIRA ID 和 Request ID 都被正确设置
 #[test]
-fn test_log_find_command_with_jira_id_and_request_id_parses_correctly_return_result() -> Result<()> {
+fn test_log_find_command_with_jira_id_and_request_id_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备带 JIRA ID 和 Request ID 的 Find 命令输入
     let args = &["test-log", "find", "PROJ-456", "req-12345"];
 
@@ -136,7 +136,7 @@ fn test_log_find_command_with_jira_id_and_request_id_parses_correctly_return_res
 /// ## 预期结果
 /// - Find 命令正确解析，JIRA ID 被设置，Request ID 为 None
 #[test]
-fn test_log_find_command_with_jira_id_only_parses_correctly_return_result() -> Result<()> {
+fn test_log_find_command_with_jira_id_only_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备只带 JIRA ID 的 Find 命令输入
     let args = &["test-log", "find", "PROJ-456"];
 
@@ -170,7 +170,7 @@ fn test_log_find_command_with_jira_id_only_parses_correctly_return_result() -> R
 /// ## 预期结果
 /// - Find 命令正确解析，所有参数都为 None
 #[test]
-fn test_log_find_command_without_parameters_parses_correctly_return_result() -> Result<()> {
+fn test_log_find_command_without_parameters_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备不带任何参数的 Find 命令输入
     let args = &["test-log", "find"];
 
@@ -206,7 +206,7 @@ fn test_log_find_command_without_parameters_parses_correctly_return_result() -> 
 /// ## 预期结果
 /// - Search 命令正确解析，JIRA ID 和搜索关键词都被正确设置
 #[test]
-fn test_log_search_command_with_jira_id_and_search_term_parses_correctly_return_result() -> Result<()> {
+fn test_log_search_command_with_jira_id_and_search_term_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备带 JIRA ID 和搜索关键词的 Search 命令输入
     let args = &["test-log", "search", "PROJ-789", "error"];
 
@@ -240,7 +240,7 @@ fn test_log_search_command_with_jira_id_and_search_term_parses_correctly_return_
 /// ## 预期结果
 /// - Search 命令正确解析，JIRA ID 被设置，搜索关键词为 None
 #[test]
-fn test_log_search_command_with_jira_id_only_parses_correctly_return_result() -> Result<()> {
+fn test_log_search_command_with_jira_id_only_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备只带 JIRA ID 的 Search 命令输入
     let args = &["test-log", "search", "PROJ-789"];
 
@@ -274,7 +274,7 @@ fn test_log_search_command_with_jira_id_only_parses_correctly_return_result() ->
 /// ## 预期结果
 /// - Search 命令正确解析，所有参数都为 None
 #[test]
-fn test_log_search_command_without_parameters_parses_correctly_return_result() -> Result<()> {
+fn test_log_search_command_without_parameters_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备不带任何参数的 Search 命令输入
     let args = &["test-log", "search"];
 
@@ -343,7 +343,7 @@ fn test_log_command_with_all_subcommands_parses_successfully_return_true() -> Re
 /// ## 预期结果
 /// - 无效子命令返回解析错误
 #[test]
-fn test_log_command_with_invalid_subcommand_return_result() -> Result<()> {
+fn test_log_command_with_invalid_subcommand_return_ok() -> Result<()> {
     // Arrange: 准备无效子命令的输入
     let args = &["test-log", "invalid"];
 
@@ -412,7 +412,7 @@ fn test_log_jira_id_parameter_is_optional_in_all_commands_return_collect() -> Re
 /// ## 预期结果
 /// - 第一个参数被解析为 jira_id，request_id 为 None
 #[test]
-fn test_log_find_command_with_request_id_only_parses_correctly_return_result() -> Result<()> {
+fn test_log_find_command_with_request_id_only_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备只带 Request ID 的 Find 命令输入
     // 注意：clap 按位置解析，所以第一个参数会被解析为 jira_id
     let args = &["test-log", "find", "req-12345"];
@@ -447,7 +447,7 @@ fn test_log_find_command_with_request_id_only_parses_correctly_return_result() -
 /// ## 预期结果
 /// - 第一个参数被解析为 jira_id，search_term 为 None
 #[test]
-fn test_log_search_command_with_search_term_only_parses_correctly_return_result() -> Result<()> {
+fn test_log_search_command_with_search_term_only_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备只带搜索关键词的 Search 命令输入
     // 注意：clap 按位置解析，所以第一个参数会被解析为 jira_id
     let args = &["test-log", "search", "error"];

@@ -11,6 +11,7 @@ use rstest::rstest;
 
 use workflow::base::checksum::Checksum;
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
 
 // ==================== Checksum Calculation Tests ====================
 
@@ -26,10 +27,10 @@ use crate::common::environments::CliTestEnv;
 ///
 /// ## 预期结果
 /// - 返回64字符的十六进制哈希值，与预期值匹配
-#[test]
-fn test_calculate_file_sha256_with_valid_file_return_result() -> Result<()> {
+#[rstest]
+fn test_calculate_file_sha256_with_valid_file_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试文件
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     let file_path = env.path().join("test_file.txt");
     let mut file = fs::File::create(&file_path)?;
     file.write_all(b"Hello, World!")?;
@@ -60,10 +61,10 @@ fn test_calculate_file_sha256_with_valid_file_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 返回空文件的 SHA256 哈希值（e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855）
-#[test]
-fn test_calculate_file_sha256_with_empty_file_return_empty() -> Result<()> {
+#[rstest]
+fn test_calculate_file_sha256_with_empty_file_return_empty(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备空文件
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     let file_path = env.path().join("empty_file.txt");
     fs::File::create(&file_path)?;
 
@@ -89,10 +90,10 @@ fn test_calculate_file_sha256_with_empty_file_return_empty() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 返回64字符的十六进制哈希值
-#[test]
-fn test_calculate_file_sha256_with_large_file_return_result() -> Result<()> {
+#[rstest]
+fn test_calculate_file_sha256_with_large_file_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备较大的测试文件（超过缓冲区大小）
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     let file_path = env.path().join("large_file.txt");
     let mut file = fs::File::create(&file_path)?;
     let data = "A".repeat(10000); // 10KB 数据
@@ -124,7 +125,7 @@ fn test_calculate_file_sha256_with_large_file_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 所有格式都能正确解析哈希值
 #[test]
-fn test_parse_hash_from_content_with_various_formats_parses_correctly_return_result() -> Result<()> {
+fn test_parse_hash_from_content_with_various_formats_parses_correctly_return_ok() -> Result<()> {
     // Arrange: 准备各种格式的内容
 
     // Act & Assert: 测试标准格式：hash  filename
@@ -192,10 +193,10 @@ fn test_parse_hash_from_content_with_invalid_content_returns_error() {
 ///
 /// ## 预期结果
 /// - 验证成功，消息包含 "verification passed"
-#[test]
-fn test_verify_with_correct_hash_return_result() -> Result<()> {
+#[rstest]
+fn test_verify_with_correct_hash_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试文件和正确的哈希值
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     let file_path = env.path().join("verify_test.txt");
     let mut file = fs::File::create(&file_path)?;
     file.write_all(b"Test content for verification")?;
@@ -227,10 +228,10 @@ fn test_verify_with_correct_hash_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 返回错误，错误消息包含 "File integrity verification failed"、"Expected:"、"Actual:"
-#[test]
-fn test_verify_with_incorrect_hash_return_result() -> Result<()> {
+#[rstest]
+fn test_verify_with_incorrect_hash_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试文件和错误的哈希值
-    let env = CliTestEnv::new()?;
+    let env = &cli_env;
     let file_path = env.path().join("verify_fail_test.txt");
     let mut file = fs::File::create(&file_path)?;
     file.write_all(b"Test content")?;
@@ -351,8 +352,12 @@ fn test_calculate_file_sha256_with_nonexistent_file_returns_error() {
     "abc",
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 )]
-fn test_known_hash_values_return_result(#[case] content: &str, #[case] expected_hash: &str) -> Result<()> {
-    let env = CliTestEnv::new()?;
+fn test_known_hash_values_return_ok(
+    cli_env: CliTestEnv,
+    #[case] content: &str,
+    #[case] expected_hash: &str,
+) -> Result<()> {
+    let env = &cli_env;
     let file_path = env.path().join("hash_test.txt");
 
     // 创建测试文件

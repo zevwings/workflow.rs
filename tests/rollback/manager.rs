@@ -14,12 +14,14 @@ use std::path::PathBuf;
 use workflow::rollback::{BackupInfo, BackupResult, RollbackManager, RollbackResult};
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
 /// 创建测试用的临时目录结构
-fn setup_test_environment() -> Result<CliTestEnv> {
-    let env = CliTestEnv::new()?;
+fn setup_test_environment(cli_env: CliTestEnv) -> Result<CliTestEnv> {
+    let env = cli_env;
     let temp_path = env.path();
 
     // 创建模拟的二进制文件目录
@@ -85,10 +87,10 @@ fn create_test_backup_info(env: &CliTestEnv) -> Result<BackupInfo> {
 /// - `backup_dir`字段与备份目录路径一致
 /// - `binary_backups`包含2个备份项（`workflow`和`install`）
 /// - `completion_backups`包含1个备份项（`workflow.bash`）
-#[test]
-fn test_backup_info_creation_with_valid_paths_creates_info() -> Result<()> {
+#[rstest]
+fn test_backup_info_creation_with_valid_paths_creates_info(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备测试环境和备份目录
-    let env = setup_test_environment()?;
+    let env = setup_test_environment(cli_env)?;
     let backup_dir = env.path().join("test_backup");
 
     // Act: 创建 BackupInfo 实例
@@ -126,10 +128,10 @@ fn test_backup_info_creation_with_valid_paths_creates_info() -> Result<()> {
 /// ## 预期结果
 /// - 克隆操作成功
 /// - 克隆后的`backup_dir`、`binary_backups`、`completion_backups`字段值与原始备份信息完全相同
-#[test]
-fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
+#[rstest]
+fn test_backup_info_clone_with_valid_info_creates_clone(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备原始 BackupInfo
-    let env = setup_test_environment()?;
+    let env = setup_test_environment(cli_env)?;
     let original_info = create_test_backup_info(&env)?;
 
     // Act: 克隆 BackupInfo
@@ -166,10 +168,10 @@ fn test_backup_info_clone_with_valid_info_creates_clone() -> Result<()> {
 /// - Debug字符串包含`"BackupInfo"`结构体名称
 /// - Debug字符串包含`"backup_dir"`、`"binary_backups"`、`"completion_backups"`字段名
 /// - Debug字符串包含备份文件名`"workflow"`
-#[test]
-fn test_backup_info_debug_with_valid_info_return_result() -> Result<()> {
+#[rstest]
+fn test_backup_info_debug_with_valid_info_return_ok(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备 BackupInfo 实例
-    let env = setup_test_environment()?;
+    let env = setup_test_environment(cli_env)?;
     let backup_info = create_test_backup_info(&env)?;
 
     // Act: 格式化 Debug 输出
@@ -201,10 +203,10 @@ fn test_backup_info_debug_with_valid_info_return_result() -> Result<()> {
 /// - `binary_count`字段为2
 /// - `completion_count`字段为1
 /// - `backup_info`字段与提供的备份信息一致
-#[test]
-fn test_backup_result_creation_with_valid_info_creates_result() -> Result<()> {
+#[rstest]
+fn test_backup_result_creation_with_valid_info_creates_result(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备 BackupInfo 和计数
-    let env = setup_test_environment()?;
+    let env = setup_test_environment(cli_env)?;
     let backup_info = create_test_backup_info(&env)?;
     let binary_count = 2;
     let completion_count = 1;
@@ -239,10 +241,10 @@ fn test_backup_result_creation_with_valid_info_creates_result() -> Result<()> {
 /// - 克隆操作成功
 /// - 克隆后的`binary_count`、`completion_count`字段值与原始结果完全相同
 /// - Debug字符串包含`"BackupResult"`结构体名称和关键字段名
-#[test]
-fn test_backup_result_clone_and_debug_with_valid_result_creates_clone() -> Result<()> {
+#[rstest]
+fn test_backup_result_clone_and_debug_with_valid_result_creates_clone(cli_env: CliTestEnv) -> Result<()> {
     // Arrange: 准备原始 BackupResult
-    let env = setup_test_environment()?;
+    let env = setup_test_environment(cli_env)?;
     let backup_info = create_test_backup_info(&env)?;
     let original_result = BackupResult {
         backup_info,
@@ -488,9 +490,9 @@ fn test_rollback_result_clone_and_debug_with_valid_result_creates_clone() -> Res
 ///
 /// ## 预期结果
 /// - 备份文件被成功清理
-#[test]
-fn test_rollback_manager_cleanup_backup_return_result() -> Result<()> {
-    let env = setup_test_environment()?;
+#[rstest]
+fn test_rollback_manager_cleanup_backup_return_ok(cli_env: CliTestEnv) -> Result<()> {
+    let env = setup_test_environment(cli_env)?;
     let backup_info = create_test_backup_info(&env)?;
 
     // Assert: 验证备份目录存在
@@ -524,9 +526,9 @@ fn test_rollback_manager_cleanup_backup_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_backup_info_internal_methods_return_result() -> Result<()> {
-    let env = setup_test_environment()?;
+#[rstest]
+fn test_backup_info_internal_methods_return_ok(cli_env: CliTestEnv) -> Result<()> {
+    let env = setup_test_environment(cli_env)?;
     let backup_dir = env.path().join("internal_test");
 
     // 创建一个空的 BackupInfo 来测试内部状态
@@ -620,9 +622,9 @@ fn test_edge_cases_and_error_handling_return_false() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_complex_backup_rollback_scenario_return_result() -> Result<()> {
-    let env = setup_test_environment()?;
+#[rstest]
+fn test_complex_backup_rollback_scenario_return_ok(cli_env: CliTestEnv) -> Result<()> {
+    let env = setup_test_environment(cli_env)?;
     let backup_dir = env.path().join("complex_backup");
     fs::create_dir_all(&backup_dir)?;
 

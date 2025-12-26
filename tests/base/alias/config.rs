@@ -8,6 +8,8 @@ use workflow::base::alias::CommandsConfig;
 use workflow::base::util::file::FileWriter;
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== CommandsConfig Initialization Tests ====================
 
@@ -49,7 +51,7 @@ fn test_commands_config_default_with_no_parameters_creates_empty_config() {
 /// - 返回非空命令列表
 /// - 包含预期的默认命令（"pr create", "jira info", "branch create"等）
 #[test]
-fn test_commands_config_get_common_commands_default_with_no_config_return_result() -> Result<()> {
+fn test_commands_config_get_common_commands_default_with_no_config_return_ok() -> Result<()> {
     // Arrange: 准备无配置文件的环境
 
     // Act: 获取默认常用命令列表
@@ -80,10 +82,12 @@ fn test_commands_config_get_common_commands_default_with_no_config_return_result
 ///
 /// ## 预期结果
 /// - 配置文件读取成功（取决于路径解析逻辑）
-#[test]
-fn test_commands_config_get_common_commands_from_file_with_valid_config_reads_commands_return_result() -> Result<()> {
+#[rstest]
+fn test_commands_config_get_common_commands_from_file_with_valid_config_reads_commands_return_ok(
+    mut cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备配置文件
-    let mut env = CliTestEnv::new()?;
+    let env = &mut cli_env;
     let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [
@@ -171,10 +175,12 @@ fn test_commands_config_load_nonexistent_file_with_missing_file_handles_graceful
 /// ## 预期结果
 /// - 返回Result类型（Ok或Err都可以接受）
 /// - 不会panic
-#[test]
-fn test_commands_config_load_existing_file_with_valid_config_loads_config_return_result() -> Result<()> {
+#[rstest]
+fn test_commands_config_load_existing_file_with_valid_config_loads_config_return_ok(
+    mut cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备存在的配置文件
-    let mut env = CliTestEnv::new()?;
+    let env = &mut cli_env;
     let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [
@@ -213,10 +219,12 @@ common_commands = [
 /// ## 预期结果
 /// - 返回非空命令列表
 /// - 可能包含自定义命令或默认命令
-#[test]
-fn test_commands_config_get_common_commands_with_custom_file_reads_custom_commands_return_result() -> Result<()> {
+#[rstest]
+fn test_commands_config_get_common_commands_with_custom_file_reads_custom_commands_return_ok(
+    mut cli_env: CliTestEnv,
+) -> Result<()> {
     // Arrange: 准备包含自定义命令的配置文件
-    let mut env = CliTestEnv::new()?;
+    let env = &mut cli_env;
     let config_path = env.path().join("commands.toml");
     let config_content = r#"
 common_commands = [

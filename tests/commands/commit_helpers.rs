@@ -3,7 +3,9 @@
 //! 测试 Commit 命令的辅助函数，包括提交存在性检查、默认分支检查等。
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env_with_git;
 use crate::common::helpers::CurrentDirGuard;
+use rstest::rstest;
 // Removed serial_test::serial - tests can run in parallel with CliTestEnv isolation
 use workflow::commands::commit::helpers::{check_has_last_commit, check_not_on_default_branch};
 
@@ -63,16 +65,16 @@ fn test_check_has_last_commit_without_git_repo_returns_error() {
 /// 4. 验证返回错误且错误消息包含"No commits"
 ///
 /// ## 技术细节
-/// - 使用`CliTestEnv`自动清理临时目录和环境（支持并行执行）
+/// - 使用`cli_env_with_git` fixture自动清理临时目录和环境（支持并行执行）
 /// - 自动恢复原始工作目录和环境变量
-#[test]
-fn test_check_has_last_commit_with_empty_git_repo_return_empty() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-    // 不创建任何 commit
+#[rstest]
+fn test_check_has_last_commit_with_empty_git_repo_return_empty(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // cli_env_with_git 已经初始化了 Git 仓库，但不创建任何 commit
 
     // 切换到测试目录，让 Git 操作能找到仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
+    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
     let result = check_has_last_commit();
 
     // 验证函数返回错误（无 commit）
@@ -89,7 +91,7 @@ fn test_check_has_last_commit_with_empty_git_repo_return_empty() -> color_eyre::
         error_msg
     );
 
-    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    // cli_env_with_git fixture 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -105,16 +107,18 @@ fn test_check_has_last_commit_with_empty_git_repo_return_empty() -> color_eyre::
 /// 4. 验证返回成功
 ///
 /// ## 技术细节
-/// - 使用`CliTestEnv`自动创建和清理临时Git仓库（支持并行执行）
-#[test]
-fn test_check_has_last_commit_with_commits_return_result() -> color_eyre::Result<()> {
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
+/// - 使用`cli_env_with_git` fixture自动创建和清理临时Git仓库（支持并行执行）
+#[rstest]
+fn test_check_has_last_commit_with_commits_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
         .create_file("test.txt", "test content")?
         .create_commit("Initial commit")?;
 
     // 切换到测试目录，让 Git 操作能找到仓库
-    let _guard = CurrentDirGuard::new(env.path())?;
+    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
     let result = check_has_last_commit();
 
     // 验证函数返回成功（有 commit）
@@ -123,7 +127,7 @@ fn test_check_has_last_commit_with_commits_return_result() -> color_eyre::Result
         "check_has_last_commit should succeed when there are commits"
     );
 
-    // CliTestEnv 会在函数结束时自动恢复目录和环境
+    // cli_env_with_git fixture 会在函数结束时自动恢复目录和环境
     Ok(())
 }
 
@@ -142,25 +146,27 @@ fn test_check_has_last_commit_with_commits_return_result() -> color_eyre::Result
 /// 5. 验证返回错误且错误消息包含"protected"或"default branch"
 ///
 /// ## 技术细节
-/// - 使用`CliTestEnv`创建和管理临时Git仓库（支持并行执行）
+/// - 使用`cli_env_with_git` fixture创建和管理临时Git仓库（支持并行执行）
 /// - 自动恢复原始工作目录
-#[test]
-fn test_check_not_on_default_branch_on_main_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_check_not_on_default_branch_on_main_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并在main分支上
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
         .create_file("test.txt", "test")?
         .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
     std::process::Command::new("git")
         .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-        .current_dir(env.path())
+        .current_dir(cli_env_with_git.path())
         .output()
         .ok();
 
     // Act: 切换到测试目录，然后在main分支上检查是否允许操作
-    let _guard = CurrentDirGuard::new(env.path())?;
+    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
     let result = check_not_on_default_branch("amend");
 
     // Assert: 验证返回错误且错误消息包含保护分支信息
@@ -196,30 +202,32 @@ fn test_check_not_on_default_branch_on_main_return_result() -> color_eyre::Resul
 /// - 返回Ok，包含当前分支和默认分支的元组
 /// - 当前分支为 "feature/test"
 /// - 默认分支为 "main"
-#[test]
-fn test_check_not_on_default_branch_on_feature_branch_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_check_not_on_default_branch_on_feature_branch_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> color_eyre::Result<()> {
     // Arrange: 准备临时Git仓库并切换到feature分支
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?
+    // cli_env_with_git 已经初始化了 Git 仓库，创建文件并提交
+    cli_env_with_git
         .create_file("test.txt", "test")?
         .create_commit("Initial commit")?;
 
     // 创建一个假的远程分支引用，让get_default_branch()能正常工作
     std::process::Command::new("git")
         .args(["update-ref", "refs/remotes/origin/main", "HEAD"])
-        .current_dir(env.path())
+        .current_dir(cli_env_with_git.path())
         .output()
         .ok();
 
     // 创建并切换到 feature 分支
     std::process::Command::new("git")
         .args(["checkout", "-b", "feature/test"])
-        .current_dir(env.path())
+        .current_dir(cli_env_with_git.path())
         .output()
         .expect("Failed to create feature branch");
 
     // Act: 切换到测试目录，然后检查是否允许操作
-    let _guard = CurrentDirGuard::new(env.path())?;
+    let _guard = CurrentDirGuard::new(cli_env_with_git.path())?;
     let result = check_not_on_default_branch("amend");
 
     // Assert: 验证返回成功且分支信息正确

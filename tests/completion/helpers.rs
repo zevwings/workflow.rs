@@ -24,7 +24,7 @@ use workflow::completion::{
 /// ## 预期结果
 /// - 返回 "_workflow"
 #[test]
-fn test_get_completion_filename_with_zsh_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_zsh_shell_return_ok() -> Result<()> {
     // Arrange: 准备 zsh shell 和命令名
     let shell = "zsh";
     let command = "workflow";
@@ -49,7 +49,7 @@ fn test_get_completion_filename_with_zsh_shell_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回 "workflow.bash"
 #[test]
-fn test_get_completion_filename_with_bash_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_bash_shell_return_ok() -> Result<()> {
     // Arrange: 准备 bash shell 和命令名
     let shell = "bash";
     let command = "workflow";
@@ -74,7 +74,7 @@ fn test_get_completion_filename_with_bash_shell_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回 "workflow.fish"
 #[test]
-fn test_get_completion_filename_with_fish_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_fish_shell_return_ok() -> Result<()> {
     // Arrange: 准备 fish shell 和命令名
     let shell = "fish";
     let command = "workflow";
@@ -99,7 +99,7 @@ fn test_get_completion_filename_with_fish_shell_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回 "_workflow.ps1"
 #[test]
-fn test_get_completion_filename_with_powershell_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_powershell_shell_return_ok() -> Result<()> {
     // Arrange: 准备 powershell shell 和命令名
     let shell = "powershell";
     let command = "workflow";
@@ -124,7 +124,7 @@ fn test_get_completion_filename_with_powershell_shell_return_result() -> Result<
 /// ## 预期结果
 /// - 返回 "workflow.elv"
 #[test]
-fn test_get_completion_filename_with_elvish_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_elvish_shell_return_ok() -> Result<()> {
     // Arrange: 准备 elvish shell 和命令名
     let shell = "elvish";
     let command = "workflow";
@@ -149,7 +149,7 @@ fn test_get_completion_filename_with_elvish_shell_return_result() -> Result<()> 
 /// ## 预期结果
 /// - 返回错误，错误消息包含 "Unsupported shell type" 和 shell 名称
 #[test]
-fn test_get_completion_filename_with_unsupported_shell_return_result() -> Result<()> {
+fn test_get_completion_filename_with_unsupported_shell_return_ok() -> Result<()> {
     // Arrange: 准备不支持的 shell 类型
     let shell = "csh";
     let command = "workflow";
@@ -177,7 +177,7 @@ fn test_get_completion_filename_with_unsupported_shell_return_result() -> Result
 /// ## 预期结果
 /// - 文件名包含命令名
 #[test]
-fn test_get_completion_filename_with_different_command_return_result() -> Result<()> {
+fn test_get_completion_filename_with_different_command_return_ok() -> Result<()> {
     // Arrange: 准备不同的命令名
     let shell = "zsh";
     let command = "mycmd";

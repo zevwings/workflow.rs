@@ -153,7 +153,7 @@ fn test_merge_request_structure_with_valid_fields_creates_request(
 #[case(None, None, "squash")]
 #[case(Some("Merge PR #123"), Some("Merged via workflow"), "merge")]
 #[case(Some("Custom Title"), None, "rebase")]
-fn test_merge_pr_request_serialization_with_various_options_serializes_correctly_return_result(
+fn test_merge_pr_request_serialization_with_various_options_serializes_correctly_return_ok(
     #[case] commit_title: Option<&str>,
     #[case] commit_message: Option<&str>,
     #[case] merge_method: &str,
@@ -204,7 +204,7 @@ fn test_merge_pr_request_serialization_with_various_options_serializes_correctly
 #[case(Some("New Title"), None, None, None)]
 #[case(None, Some("New Body"), None, None)]
 #[case(Some("New Title"), Some("New Body"), None, None)]
-fn test_update_pr_request_serialization_with_various_options_serializes_correctly_return_result(
+fn test_update_pr_request_serialization_with_various_options_serializes_correctly_return_ok(
     #[case] title: Option<&str>,
     #[case] body: Option<&str>,
     #[case] state: Option<&str>,
@@ -354,7 +354,7 @@ fn test_pull_request_info_structure_with_valid_fields_creates_info() {
 /// - 反序列化成功
 /// - 所有字段值正确
 #[test]
-fn test_pull_request_info_deserialization_with_valid_json_deserializes_info_return_result() -> Result<()> {
+fn test_pull_request_info_deserialization_with_valid_json_deserializes_info_return_ok() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串
     let json = r#"{
         "number": 123,
@@ -390,7 +390,7 @@ fn test_pull_request_info_deserialization_with_valid_json_deserializes_info_retu
 /// - state 为 "closed"
 /// - merged_at 不为 None
 #[test]
-fn test_pull_request_info_merged_state_with_merged_pr_return_result() -> Result<()> {
+fn test_pull_request_info_merged_state_with_merged_pr_return_ok() -> Result<()> {
     // Arrange: 准备已合并 PR 的 JSON
     let json = r#"{
         "number": 123,
@@ -449,7 +449,7 @@ fn test_pull_request_branch_structure_with_valid_ref_creates_branch() {
 /// - 反序列化成功
 /// - ref_name 字段值正确
 #[test]
-fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch_return_result() -> Result<()> {
+fn test_pull_request_branch_deserialization_with_valid_json_deserializes_branch_return_ok() -> Result<()> {
     // Arrange: 准备有效的 JSON 字符串（注意 JSON 中使用 "ref" 字段）
     let json = r#"{"ref": "feature/test"}"#;
 
@@ -528,7 +528,7 @@ fn test_github_user_minimal_with_only_login_creates_user() {
 /// - 反序列化成功
 /// - 所有字段值正确
 #[test]
-fn test_github_user_deserialization_return_result() -> Result<()> {
+fn test_github_user_deserialization_return_ok() -> Result<()> {
     // Arrange: 准备测试 GitHub 用户的反序列化
     let json = r#"{
         "login": "testuser",
@@ -613,7 +613,7 @@ fn test_request_long_strings() {
 /// - 反序列化成功
 /// - 可选字段为 None
 #[test]
-fn test_response_missing_optional_fields_return_result() -> Result<()> {
+fn test_response_missing_optional_fields_return_ok() -> Result<()> {
     // Arrange: 准备测试响应中缺失可选字段
     let json = r#"{
         "number": 123,

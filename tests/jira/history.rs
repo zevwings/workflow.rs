@@ -40,7 +40,7 @@ fn unique_repo() -> String {
 
 /// 测试读取不存在的工作历史记录文件
 #[rstest]
-fn test_read_work_history_nonexistent_file_return_result(unique_repo: String) -> Result<()> {
+fn test_read_work_history_nonexistent_file_return_ok(unique_repo: String) -> Result<()> {
     // Arrange: 准备测试读取不存在的工作历史记录文件
     let result = JiraWorkHistory::read_work_history("123", Some(&unique_repo))?;
 
@@ -155,7 +155,7 @@ fn test_read_work_history_nonexistent_entry() {
 
 /// 测试在不存在文件中根据分支名查找PR ID
 #[rstest]
-fn test_find_pr_id_by_branch_nonexistent_file_return_result(unique_repo: String) -> Result<()> {
+fn test_find_pr_id_by_branch_nonexistent_file_return_ok(unique_repo: String) -> Result<()> {
     // Arrange: 准备测试在不存在文件中根据分支名查找 PR ID
     let result = JiraWorkHistory::find_pr_id_by_branch("feature/test", Some(&unique_repo))?;
 
@@ -462,7 +462,7 @@ fn test_delete_work_history_entry_without_repository(#[case] pr_id: &str) {
 #[case("999")]
 #[case("888")]
 #[case("777")]
-fn test_delete_work_history_entry_nonexistent_file_return_result(
+fn test_delete_work_history_entry_nonexistent_file_return_ok(
     unique_repo: String,
     #[case] pr_id: &str,
 ) -> Result<()> {
@@ -519,7 +519,7 @@ fn test_delete_work_history_entry_basic() {
 
 /// 测试WorkHistoryEntry的序列化
 #[rstest]
-fn test_work_history_entry_serialization_return_result(sample_history_entry: WorkHistoryEntry) -> Result<()> {
+fn test_work_history_entry_serialization_return_ok(sample_history_entry: WorkHistoryEntry) -> Result<()> {
     // Arrange: 准备测试 WorkHistoryEntry 的序列化
     let json_str = serde_json::to_string(&sample_history_entry)?;
 
@@ -551,7 +551,7 @@ fn test_work_history_entry_serialization_return_result(sample_history_entry: Wor
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_work_history_entry_deserialization_return_result() -> Result<()> {
+fn test_work_history_entry_deserialization_return_ok() -> Result<()> {
     // Arrange: 准备测试 WorkHistoryEntry 的反序列化
     let json = r#"{
       "jira_ticket": "PROJ-123",
@@ -594,7 +594,7 @@ fn test_work_history_entry_deserialization_return_result() -> Result<()> {
     Some("github.com/test/repo"),
     None
 )]
-fn test_work_history_entry_with_optional_fields_return_result(
+fn test_work_history_entry_with_optional_fields_return_ok(
     #[case] jira_ticket: &str,
     #[case] pull_request_url: Option<&str>,
     #[case] created_at: Option<&str>,

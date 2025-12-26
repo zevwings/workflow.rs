@@ -7,6 +7,8 @@ use std::fs;
 use workflow::base::shell::ShellConfigManager;
 
 use crate::common::environments::CliTestEnv;
+use crate::common::fixtures::cli_env;
+use rstest::rstest;
 
 // ==================== ShellConfigManager Environment Variables Tests ====================
 
@@ -589,8 +591,8 @@ fn test_add_source_for_shell_powershell() {
 ///
 /// ## 预期结果
 /// - 配置块被正确解析
-#[test]
-fn test_config_block_parsing() {
+#[rstest]
+fn test_config_block_parsing(cli_env: CliTestEnv) {
     // Arrange: 准备测试配置块解析功能
     // 这个测试验证配置块的解析逻辑（通过实际文件操作）
 
@@ -604,7 +606,7 @@ export ANOTHER_KEY="another_value"
 "#;
 
     // 创建一个临时文件来测试解析
-    let env = CliTestEnv::new().expect("should create test env");
+    let env = &cli_env;
     let config_file = env.path().join("test_config");
     fs::write(&config_file, config_content).expect("should write config file");
 

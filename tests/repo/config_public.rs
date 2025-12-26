@@ -5,7 +5,6 @@
 use color_eyre::Result;
 use pretty_assertions::assert_eq;
 use rstest::rstest;
-use serial_test::serial;
 use std::fs;
 use std::path::PathBuf;
 use toml::map::Map;
@@ -13,7 +12,7 @@ use toml::Value;
 use workflow::repo::config::public::PublicRepoConfig;
 
 use crate::common::environments::CliTestEnv;
-use crate::common::helpers::CurrentDirGuard;
+use crate::common::fixtures::cli_env_with_git;
 
 // ==================== Test Helper Functions ====================
 
@@ -725,13 +724,11 @@ fn test_config_default_with_multiple_calls_returns_consistent_defaults() {
 ///
 /// ## 预期结果
 /// - 配置能够正确从文件加载
-#[test]
-#[serial(repo_config_fs)] // 串行执行，避免工作目录冲突
-fn test_load_from_existing_file_with_valid_config_return_result() -> Result<()> {
-    // Arrange: 创建包含配置的临时 Git 仓库
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
+#[rstest]
+fn test_load_from_existing_file_with_valid_config_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> Result<()> {
+    // Arrange: 创建包含配置的临时 Git 仓库（使用 fixture）
     let config_content = r#"
 [template.commit]
 type = "conventional"
@@ -741,11 +738,10 @@ scope_required = true
 prefix = "feature"
 separator = "/"
 "#;
-    create_public_config(&env, config_content)?;
+    create_public_config(&cli_env_with_git, config_content)?;
 
-    // Act: 切换到测试目录，然后调用 PublicRepoConfig::load()
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let config = PublicRepoConfig::load()?;
+    // Act: 使用新的 load_from() 方法，不再需要切换目录
+    let config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 验证配置正确加载
     assert_eq!(config.template_commit.len(), 2);
@@ -778,16 +774,12 @@ separator = "/"
 ///
 /// ## 预期结果
 /// - 返回默认配置（所有字段为空）
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_from_non_existing_file_return_result() -> Result<()> {
-    // Arrange: 创建没有配置文件的临时 Git 仓库
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
+#[rstest]
+fn test_load_from_non_existing_file_return_ok(cli_env_with_git: CliTestEnv) -> Result<()> {
+    // Arrange: 创建没有配置文件的临时 Git 仓库（使用 fixture）
 
-    // Act: 切换到测试目录，然后调用 PublicRepoConfig::load()
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let config = PublicRepoConfig::load()?;
+    // Act: 使用新的 load_from() 方法，不再需要切换目录
+    let config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 验证返回默认配置
     assert!(config.template_commit.is_empty());
@@ -809,12 +801,9 @@ fn test_load_from_non_existing_file_return_result() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 配置文件被创建且内容正确
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_to_new_file_with_config_creates_file() -> Result<()> {
-    // Arrange: 创建临时 Git 仓库（不创建配置文件）
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
+#[rstest]
+fn test_save_to_new_file_with_config_creates_file(cli_env_with_git: CliTestEnv) -> Result<()> {
+    // Arrange: 创建临时 Git 仓库（不创建配置文件，使用 fixture）
 
     // 创建配置
     let mut config = PublicRepoConfig::default();
@@ -826,12 +815,11 @@ fn test_save_to_new_file_with_config_creates_file() -> Result<()> {
         .template_branch
         .insert("prefix".to_string(), Value::String("feature".to_string()));
 
-    // Act: 切换到测试目录，然后保存配置
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    // Act: 保存配置
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 验证文件创建成功，内容正确
-    let config_path = env.path().join(".workflow/config.toml");
+    let config_path = cli_env_with_git.path().join(".workflow/config.toml");
     assert!(config_path.exists());
 
     let content = fs::read_to_string(&config_path)?;
@@ -855,13 +843,11 @@ fn test_save_to_new_file_with_config_creates_file() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 其他配置部分被保留，模板配置已更新
-#[test]
-#[serial(repo_config_fs)]
-fn test_save_preserves_other_sections_with_existing_config_preserves_other_sections_return_result() -> Result<()> {
-    // Arrange: 创建包含其他配置部分的临时 Git 仓库
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
+#[rstest]
+fn test_save_preserves_other_sections_with_existing_config_preserves_other_sections_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> Result<()> {
+    // Arrange: 创建包含其他配置部分的临时 Git 仓库（使用 fixture）
     let config_content = r#"
 [other_section]
 key1 = "value1"
@@ -870,7 +856,7 @@ key2 = "value2"
 [template.commit]
 type = "old_type"
 "#;
-    create_public_config(&env, config_content)?;
+    create_public_config(&cli_env_with_git, config_content)?;
 
     // 创建新配置
     let mut config = PublicRepoConfig::default();
@@ -882,12 +868,11 @@ type = "old_type"
         .template_commit
         .insert("scope_required".to_string(), Value::Boolean(true));
 
-    // Act: 切换到测试目录，然后保存配置
-    let _guard = CurrentDirGuard::new(env.path())?;
-    config.save()?;
+    // Act: 保存配置
+    config.save_in(cli_env_with_git.path())?;
 
     // Assert: 验证其他配置部分未被覆盖，模板配置已更新
-    let content = fs::read_to_string(env.path().join(".workflow/config.toml"))?;
+    let content = fs::read_to_string(cli_env_with_git.path().join(".workflow/config.toml"))?;
     assert!(content.contains("[other_section]"));
     assert!(content.contains(r#"key1 = "value1""#));
     assert!(content.contains(r#"key2 = "value2""#));
@@ -912,13 +897,11 @@ type = "old_type"
 ///
 /// ## 预期结果
 /// - 修改后的配置能够正确保存和重新加载
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_and_save_roundtrip_with_modified_config_return_result() -> Result<()> {
-    // Arrange: 创建包含配置的临时 Git 仓库
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
+#[rstest]
+fn test_load_and_save_roundtrip_with_modified_config_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> Result<()> {
+    // Arrange: 创建包含配置的临时 Git 仓库（使用 fixture）
     let config_content = r#"
 [template.commit]
 type = "conventional"
@@ -932,16 +915,15 @@ separator = "/"
 auto_merge = false
 require_review = true
 "#;
-    create_public_config(&env, config_content)?;
+    create_public_config(&cli_env_with_git, config_content)?;
 
-    // Act: 切换到测试目录，然后加载 → 修改 → 保存 → 重新加载
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let mut config = PublicRepoConfig::load()?;
+    // Act: 加载 → 修改 → 保存 → 重新加载
+    let mut config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
     config.template_commit.insert("max_length".to_string(), Value::Integer(72));
     config.template_branch.insert("use_jira_key".to_string(), Value::Boolean(true));
-    config.save()?;
+    config.save_in(cli_env_with_git.path())?;
 
-    let reloaded_config = PublicRepoConfig::load()?;
+    let reloaded_config = PublicRepoConfig::load_from(cli_env_with_git.path())?;
 
     // Assert: 验证数据一致性
     assert_eq!(
@@ -982,22 +964,19 @@ require_review = true
 ///
 /// ## 预期结果
 /// - 返回 TOML 解析错误
-#[test]
-#[serial(repo_config_fs)]
-fn test_load_corrupted_toml_file_with_invalid_toml_return_result() -> Result<()> {
-    // Arrange: 创建包含无效 TOML 的配置文件
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
+#[rstest]
+fn test_load_corrupted_toml_file_with_invalid_toml_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> Result<()> {
+    // Arrange: 创建包含无效 TOML 的配置文件（使用 fixture）
     let invalid_toml = r#"
 [template.commit
 type = "invalid  # 缺少闭合引号和括号
 "#;
-    create_public_config(&env, invalid_toml)?;
+    create_public_config(&cli_env_with_git, invalid_toml)?;
 
-    // Act: 切换到测试目录，然后尝试加载配置
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let result = PublicRepoConfig::load();
+    // Act: 尝试加载配置
+    let result = PublicRepoConfig::load_from(cli_env_with_git.path());
 
     // Assert: 验证返回错误
     assert!(result.is_err());
@@ -1017,17 +996,15 @@ type = "invalid  # 缺少闭合引号和括号
 ///
 /// ## 预期结果
 /// - 返回文件系统权限错误
-#[test]
+#[rstest]
 #[cfg(unix)]
-#[serial(repo_config_fs)]
-fn test_save_to_readonly_directory_with_config_return_result() -> Result<()> {
+fn test_save_to_readonly_directory_with_config_return_ok(
+    cli_env_with_git: CliTestEnv,
+) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
 
-    // Arrange: 创建只读的 .workflow 目录
-    let env = CliTestEnv::new()?;
-    env.init_git_repo()?;
-
-    let workflow_dir = env.path().join(".workflow");
+    // Arrange: 创建只读的 .workflow 目录（使用 fixture）
+    let workflow_dir = cli_env_with_git.path().join(".workflow");
     fs::create_dir_all(&workflow_dir)?;
 
     // 设置目录为只读
@@ -1042,9 +1019,8 @@ fn test_save_to_readonly_directory_with_config_return_result() -> Result<()> {
         Value::String("conventional".to_string()),
     );
 
-    // Act: 切换到测试目录，然后尝试保存配置
-    let _guard = CurrentDirGuard::new(env.path())?;
-    let result = config.save();
+    // Act: 尝试保存配置
+    let result = config.save_in(cli_env_with_git.path());
 
     // Assert: 验证返回权限错误
     assert!(result.is_err());

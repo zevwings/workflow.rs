@@ -588,7 +588,7 @@ mod tests {
     /// - 构建成功
     /// - number为123，title为"Test PR"，state为"open"，merged为false
     #[test]
-    fn test_github_pr_builder_default_return_result() -> Result<()> {
+    fn test_github_pr_builder_default_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let pr = factory.github_pr().build()?;
 
@@ -613,7 +613,7 @@ mod tests {
     /// - 构建成功
     /// - 所有自定义值都正确设置
     #[test]
-    fn test_github_pr_builder_custom_return_result() -> Result<()> {
+    fn test_github_pr_builder_custom_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let pr = factory
             .github_pr()
@@ -644,7 +644,7 @@ mod tests {
     /// - 构建成功
     /// - key为"PROJ-123"，summary为"Test Issue Summary"，status为"In Progress"
     #[test]
-    fn test_jira_issue_builder_default_return_result() -> Result<()> {
+    fn test_jira_issue_builder_default_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let issue = factory.jira_issue().build()?;
 
@@ -668,7 +668,7 @@ mod tests {
     /// - 构建成功
     /// - 所有自定义值都正确设置
     #[test]
-    fn test_jira_issue_builder_custom_return_result() -> Result<()> {
+    fn test_jira_issue_builder_custom_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let issue = factory
             .jira_issue()
@@ -751,7 +751,7 @@ mod tests {
     /// - 构建成功
     /// - sha、message、author等字段包含预期的默认值
     #[test]
-    fn test_git_commit_builder_default_return_result() -> Result<()> {
+    fn test_git_commit_builder_default_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let commit = factory.git_commit().build()?;
 
@@ -776,7 +776,7 @@ mod tests {
     /// - 构建成功
     /// - 所有自定义值都正确设置
     #[test]
-    fn test_git_commit_builder_custom_return_result() -> Result<()> {
+    fn test_git_commit_builder_custom_return_ok() -> Result<()> {
         let factory = TestDataFactory::new();
         let commit = factory
             .git_commit()

@@ -4,20 +4,13 @@
 
 use pretty_assertions::assert_eq;
 use color_eyre::Result;
-use rstest::fixture;
+use rstest::rstest;
 // Removed serial_test::serial - tests can run in parallel with GitTestEnv isolation
 use workflow::git::{GitBranch, MergeStrategy};
 
 use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
 use crate::common::guards::EnvGuard;
-
-// ==================== Fixtures ====================
-
-/// 创建带有初始提交的 Git 仓库
-#[fixture]
-fn git_repo_with_commit() -> GitTestEnv {
-    GitTestEnv::new().expect("Failed to create git test env")
-}
 
 // ==================== Branch Prefix Processing Tests ====================
 
@@ -33,7 +26,7 @@ fn git_repo_with_commit() -> GitTestEnv {
 /// ## 预期结果
 /// - 前缀移除逻辑正常工作
 #[test]
-fn test_remove_branch_prefix_with_slash_handles_prefix_return_result() -> Result<()> {
+fn test_remove_branch_prefix_with_slash_handles_prefix_return_ok() -> Result<()> {
     // Arrange: 准备测试分支前缀移除逻辑
     // 注意：remove_branch_prefix 是私有函数，我们通过分支操作间接测试
 
@@ -58,7 +51,7 @@ fn test_remove_branch_prefix_with_slash_handles_prefix_return_result() -> Result
 /// ## 预期结果
 /// - 当前分支存在
 #[rstest]
-fn test_exists_main_branch_with_default_branch_return_result(git_repo_with_commit: GitTestEnv) -> Result<()> {
+fn test_exists_main_branch_with_default_branch_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
     // Arrange: 准备 Git 测试环境（使用 fixture）
 
     // Act: 获取当前分支并检查是否存在
@@ -88,7 +81,7 @@ fn test_exists_main_branch_with_default_branch_return_result(git_repo_with_commi
 /// ## 预期结果
 /// - 不存在的分支返回 false
 #[rstest]
-fn test_exists_nonexistent_branch_with_invalid_name_return_result(git_repo_with_commit: GitTestEnv) -> Result<()> {
+fn test_exists_nonexistent_branch_with_invalid_name_return_ok(git_repo_with_commit: GitTestEnv) -> Result<()> {
     // Arrange: 准备 Git 测试环境和不存在的分支名（使用 fixture）
     let nonexistent_branch = "nonexistent-branch-12345";
 
@@ -119,10 +112,11 @@ fn test_exists_nonexistent_branch_with_invalid_name_return_result(git_repo_with_
 ///
 /// ## 预期结果
 /// - 分支创建成功，存在且已切换
-#[test]
-fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
-    // Arrange: 准备 Git 测试环境和分支名
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_create_simple_branch_with_valid_name_succeeds(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // Arrange: 准备 Git 测试环境和分支名（使用 fixture）
     let branch_name = "feature/test-branch";
 
     // Act: 创建并切换到新分支
@@ -149,10 +143,11 @@ fn test_create_simple_branch_with_valid_name_succeeds() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 带前缀的分支创建成功，存在且已切换
-#[test]
-fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
-    // Arrange: 准备 Git 测试环境和带前缀的分支名
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_create_branch_with_prefix_and_valid_name_succeeds(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // Arrange: 准备 Git 测试环境和带前缀的分支名（使用 fixture）
     let branch_name = "feature/user-authentication";
 
     // Act: 创建并切换到新分支
@@ -182,10 +177,11 @@ fn test_create_branch_with_prefix_and_valid_name_succeeds() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 分支被成功删除
-#[test]
-fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
-    // Arrange: 准备 Git 测试环境并创建分支
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_delete_existing_branch_with_valid_name_succeeds(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // Arrange: 准备 Git 测试环境并创建分支（使用 fixture）
     let branch_name = "feature/to-delete";
 
     // 创建分支
@@ -237,10 +233,11 @@ fn test_delete_existing_branch_with_valid_name_succeeds() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 分支数量增加，所有测试分支都在列表中
-#[test]
-fn test_list_branches_with_multiple_branches_return_collect() -> Result<()> {
-    // Arrange: 准备 Git 测试环境并获取初始分支列表
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_list_branches_with_multiple_branches_return_collect(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // Arrange: 准备 Git 测试环境并获取初始分支列表（使用 fixture）
     let initial_branches = GitBranch::get_local_branches()?;
     let initial_count = initial_branches.len();
     let test_branches = vec!["feature/branch1", "feature/branch2", "hotfix/fix1"];
@@ -317,10 +314,11 @@ fn test_merge_strategy_enum_with_all_variants_return_collect() -> Result<()> {
 ///
 /// ## 预期结果
 /// - 创建失败，空分支名不存在
-#[test]
-fn test_empty_branch_name_with_empty_string_return_empty() -> Result<()> {
-    // Arrange: 准备 Git 测试环境
-    let _env = GitTestEnv::new()?;
+#[rstest]
+fn test_empty_branch_name_with_empty_string_return_empty(
+    git_repo_with_commit: GitTestEnv,
+) -> Result<()> {
+    // Arrange: 准备 Git 测试环境（使用 fixture）
 
     // Act: 尝试创建空名称的分支
     let result = GitBranch::checkout_branch("");
@@ -351,7 +349,7 @@ fn test_empty_branch_name_with_empty_string_return_empty() -> Result<()> {
 /// ## 预期结果
 /// - 在没有 Git 的情况下返回错误（注意：这个测试可能不会按预期工作，因为 Git 可能在其他位置）
 #[test]
-fn test_git_not_available_without_git_return_result() -> Result<()> {
+fn test_git_not_available_without_git_return_ok() -> Result<()> {
     // Arrange: 使用 EnvGuard 临时移除 Git（通过清空 PATH）
     let mut env_guard = EnvGuard::new();
     env_guard.set("PATH", "");

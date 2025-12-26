@@ -70,7 +70,27 @@ impl GitBranch {
     ///
     /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
     pub fn current_branch() -> Result<String> {
+        Self::current_branch_in(std::env::current_dir().wrap_err("Failed to get current directory")?)
+    }
+
+    /// 获取当前分支名（指定仓库路径）
+    ///
+    /// 使用 `git branch --show-current` 获取指定仓库的当前分支名称。
+    ///
+    /// # 参数
+    ///
+    /// * `repo_path` - 仓库根目录路径
+    ///
+    /// # 返回
+    ///
+    /// 返回当前分支的名称（去除首尾空白）。
+    ///
+    /// # 错误
+    ///
+    /// 如果不在 Git 仓库中或命令执行失败，返回相应的错误信息。
+    pub fn current_branch_in(repo_path: impl AsRef<std::path::Path>) -> Result<String> {
         GitCommand::new(["branch", "--show-current"])
+            .with_cwd(repo_path.as_ref())
             .read()
             .wrap_err("Failed to get current branch")
     }

@@ -93,7 +93,7 @@ fn create_socks_proxy_info() -> ProxyInfo {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_info_creation_return_result() -> Result<()> {
+fn test_proxy_info_creation_return_ok() -> Result<()> {
     let proxy_info = create_test_proxy_info();
 
     // Assert: 验证 HTTP 代理配置
@@ -128,7 +128,7 @@ fn test_proxy_info_creation_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_info_different_types_return_result() -> Result<()> {
+fn test_proxy_info_different_types_return_ok() -> Result<()> {
     let http_proxy = create_test_proxy_info();
     let https_proxy = create_https_proxy_info();
     let socks_proxy = create_socks_proxy_info();
@@ -166,7 +166,7 @@ fn test_proxy_info_different_types_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_info_clone_return_result() -> Result<()> {
+fn test_proxy_info_clone_return_ok() -> Result<()> {
     let original_proxy = create_test_proxy_info();
     let cloned_proxy = original_proxy.clone();
 
@@ -260,7 +260,7 @@ fn test_proxy_type_enum() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_enable_result_creation_return_result() -> Result<()> {
+fn test_proxy_enable_result_creation_return_ok() -> Result<()> {
     use std::path::PathBuf;
 
     let enable_result = ProxyEnableResult {
@@ -325,7 +325,7 @@ fn test_proxy_enable_result_already_configured() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_enable_result_temporary_mode_return_result() -> Result<()> {
+fn test_proxy_enable_result_temporary_mode_return_ok() -> Result<()> {
     let enable_result = ProxyEnableResult {
         already_configured: false,
         proxy_command: Some("export http_proxy=http://temp.proxy.com:8080".to_string()),
@@ -356,7 +356,7 @@ fn test_proxy_enable_result_temporary_mode_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_proxy_disable_result_creation_return_result() -> Result<()> {
+fn test_proxy_disable_result_creation_return_ok() -> Result<()> {
     use std::path::PathBuf;
 
     let mut current_env_proxy = HashMap::new();

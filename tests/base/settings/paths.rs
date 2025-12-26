@@ -18,7 +18,7 @@ use workflow::base::settings::paths::Paths;
 /// ## 预期结果
 /// - 返回主目录路径（home_dir() 是私有方法，通过 expand("~") 间接测试）
 #[test]
-fn test_paths_home_dir_with_expand_tilde_return_result() -> Result<()> {
+fn test_paths_home_dir_with_expand_tilde_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
     // 测试 home_dir() 方法（通过其他方法间接测试，覆盖 paths.rs:49-51）
     // home_dir() 是私有方法，通过 expand("~") 间接测试
@@ -43,7 +43,7 @@ fn test_paths_home_dir_with_expand_tilde_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回展开后的路径，包含路径的各个部分
 #[test]
-fn test_paths_expand_with_tilde_path_return_result() -> Result<()> {
+fn test_paths_expand_with_tilde_path_return_ok() -> Result<()> {
     // Arrange: 准备包含 ~ 的路径
 
     // Act: 展开 ~ 路径（覆盖 paths.rs:198-201）
@@ -68,7 +68,7 @@ fn test_paths_expand_with_tilde_path_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回主目录路径
 #[test]
-fn test_paths_expand_with_tilde_only_return_result() -> Result<()> {
+fn test_paths_expand_with_tilde_only_return_ok() -> Result<()> {
     // Arrange: 准备单独的 ~
 
     // Act: 展开单独的 ~（覆盖 paths.rs:202-204）
@@ -92,7 +92,7 @@ fn test_paths_expand_with_tilde_only_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 直接返回绝对路径，不进行任何修改
 #[test]
-fn test_paths_expand_with_absolute_path_return_result() -> Result<()> {
+fn test_paths_expand_with_absolute_path_return_ok() -> Result<()> {
     // Arrange: 准备绝对路径
 
     // Act: 展开绝对路径（覆盖 paths.rs:238-239）
@@ -116,7 +116,7 @@ fn test_paths_expand_with_absolute_path_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 直接返回相对路径，不进行任何修改
 #[test]
-fn test_paths_expand_with_relative_path_return_result() -> Result<()> {
+fn test_paths_expand_with_relative_path_return_ok() -> Result<()> {
     // Arrange: 准备相对路径
 
     // Act: 展开相对路径（覆盖 paths.rs:238-239）
@@ -141,7 +141,7 @@ fn test_paths_expand_with_relative_path_return_result() -> Result<()> {
 /// - 环境变量被正确展开（EnvGuard 会在离开作用域时自动恢复环境变量）
 #[cfg(target_os = "windows")]
 #[test]
-fn test_paths_expand_with_windows_env_var_return_result() -> Result<()> {
+fn test_paths_expand_with_windows_env_var_return_ok() -> Result<()> {
     // Arrange: 使用 EnvGuard 设置测试环境变量
     // 测试 Windows 环境变量展开（覆盖 paths.rs:207-235）
     let mut guard = EnvGuard::new();
@@ -193,7 +193,7 @@ fn test_paths_expand_with_env_var_not_set_returns_error() {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "config"
 #[test]
-fn test_paths_config_dir_with_no_params_return_result() -> Result<()> {
+fn test_paths_config_dir_with_no_params_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 获取配置目录（覆盖 paths.rs:261-275）
@@ -217,7 +217,7 @@ fn test_paths_config_dir_with_no_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 "workflow.toml"
 #[test]
-fn test_paths_workflow_config_with_no_params_return_result() -> Result<()> {
+fn test_paths_workflow_config_with_no_params_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 获取 workflow 配置路径（覆盖 paths.rs:281-283）
@@ -240,7 +240,7 @@ fn test_paths_workflow_config_with_no_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 "llm.toml"
 #[test]
-fn test_paths_llm_config_with_no_params_return_result() -> Result<()> {
+fn test_paths_llm_config_with_no_params_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 获取 llm 配置路径（覆盖 paths.rs:288-290）
@@ -263,7 +263,7 @@ fn test_paths_llm_config_with_no_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 "jira.toml"
 #[test]
-fn test_paths_jira_config_with_no_params_return_result() -> Result<()> {
+fn test_paths_jira_config_with_no_params_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 获取 jira 配置路径（覆盖 paths.rs:296-298）
@@ -286,7 +286,7 @@ fn test_paths_jira_config_with_no_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 "commands.toml"
 #[test]
-fn test_paths_commands_config_with_no_params_return_result() -> Result<()> {
+fn test_paths_commands_config_with_no_params_return_ok() -> Result<()> {
     // Arrange: 准备测试（无需额外准备）
 
     // Act: 获取 commands 配置路径（覆盖 paths.rs:303-305）
@@ -309,7 +309,7 @@ fn test_paths_commands_config_with_no_params_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "config.toml"
 #[test]
-fn test_paths_project_config_return_result() -> Result<()> {
+fn test_paths_project_config_return_ok() -> Result<()> {
     // 测试 project_config() 方法（覆盖 paths.rs:323-328）
     let result = Paths::project_config()?;
 
@@ -331,7 +331,7 @@ fn test_paths_project_config_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow"
 #[test]
-fn test_paths_local_base_dir_return_result() -> Result<()> {
+fn test_paths_local_base_dir_return_ok() -> Result<()> {
     // 测试 local_base_dir() 方法（覆盖 paths.rs:116-131）
     let result = Paths::local_base_dir()?;
 
@@ -352,7 +352,7 @@ fn test_paths_local_base_dir_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "config"（config_base_dir 是私有方法，通过 config_dir 间接测试）
 #[test]
-fn test_paths_config_base_dir_indirect_return_result() -> Result<()> {
+fn test_paths_config_base_dir_indirect_return_ok() -> Result<()> {
     // 测试 config_base_dir() 方法（通过 config_dir() 间接测试，覆盖 paths.rs:154-170）
     // config_base_dir() 是私有方法，通过 config_dir() 间接测试
     let result = Paths::config_dir()?;
@@ -397,7 +397,7 @@ fn test_paths_expand_empty_env_var() {
 /// ## 预期结果
 /// - 所有环境变量都被正确展开（EnvGuard 会在离开作用域时自动恢复环境变量）
 #[test]
-fn test_paths_expand_multiple_env_vars_return_result() -> Result<()> {
+fn test_paths_expand_multiple_env_vars_return_ok() -> Result<()> {
     // 测试多个环境变量（覆盖 paths.rs:207-235）
     #[cfg(target_os = "windows")]
     {
@@ -434,7 +434,7 @@ fn test_paths_expand_multiple_env_vars_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 环境变量被正确展开（EnvGuard 会在离开作用域时自动恢复环境变量）
 #[test]
-fn test_paths_expand_env_var_in_middle_return_result() -> Result<()> {
+fn test_paths_expand_env_var_in_middle_return_ok() -> Result<()> {
     // 测试路径中间的环境变量（覆盖 paths.rs:207-235）
     #[cfg(target_os = "windows")]
     {
@@ -471,7 +471,7 @@ fn test_paths_expand_env_var_in_middle_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 路径被正确展开，包含路径部分
 #[test]
-fn test_paths_expand_tilde_with_trailing_slash_return_result() -> Result<()> {
+fn test_paths_expand_tilde_with_trailing_slash_return_ok() -> Result<()> {
     // 测试 ~/path/ 格式
     let result = Paths::expand("~/test/")?;
 
@@ -492,7 +492,7 @@ fn test_paths_expand_tilde_with_trailing_slash_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 波浪号被展开，但保留相对路径符号
 #[test]
-fn test_paths_expand_complex_path_return_result() -> Result<()> {
+fn test_paths_expand_complex_path_return_ok() -> Result<()> {
     // 测试复杂路径展开
     let result = Paths::expand("~/path/../another/./test")?;
 
@@ -656,7 +656,7 @@ fn test_paths_binary_install_dir() {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "completions"
 #[test]
-fn test_paths_completion_dir_return_result() -> Result<()> {
+fn test_paths_completion_dir_return_ok() -> Result<()> {
     // 测试 completion_dir() 方法（覆盖 paths.rs:570-578）
     let result = Paths::completion_dir()?;
 
@@ -678,7 +678,7 @@ fn test_paths_completion_dir_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "work-history"
 #[test]
-fn test_paths_work_history_dir_return_result() -> Result<()> {
+fn test_paths_work_history_dir_return_ok() -> Result<()> {
     // 测试 work_history_dir() 方法（覆盖 paths.rs:388-403）
     let result = Paths::work_history_dir()?;
 
@@ -700,7 +700,7 @@ fn test_paths_work_history_dir_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow" 和 "logs"
 #[test]
-fn test_paths_logs_dir_return_result() -> Result<()> {
+fn test_paths_logs_dir_return_ok() -> Result<()> {
     // 测试 logs_dir() 方法（覆盖 paths.rs:425-440）
     let result = Paths::logs_dir()?;
 
@@ -722,7 +722,7 @@ fn test_paths_logs_dir_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 "repository.toml"
 #[test]
-fn test_paths_repository_config_return_result() -> Result<()> {
+fn test_paths_repository_config_return_ok() -> Result<()> {
     // 测试 repository_config() 方法（覆盖 paths.rs:347-349）
     let result = Paths::repository_config()?;
 
@@ -743,7 +743,7 @@ fn test_paths_repository_config_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 返回的路径包含 ".workflow"
 #[test]
-fn test_paths_workflow_dir_return_result() -> Result<()> {
+fn test_paths_workflow_dir_return_ok() -> Result<()> {
     // 测试 workflow_dir() 方法（覆盖 paths.rs:362-365）
     let result = Paths::workflow_dir()?;
 
@@ -816,7 +816,7 @@ fn test_paths_storage_location() {
 /// - 返回的字符串不为空
 /// - 包含 "Storage Type" 或 "Configuration"
 #[test]
-fn test_paths_storage_info_return_result() -> Result<()> {
+fn test_paths_storage_info_return_ok() -> Result<()> {
     // 测试 storage_info() 方法（覆盖 paths.rs:625-655）
     let result = Paths::storage_info()?;
 
@@ -841,7 +841,7 @@ fn test_paths_storage_info_return_result() -> Result<()> {
 /// - Fish 配置文件路径包含 "config.fish"
 #[test]
 #[cfg(unix)]
-fn test_paths_config_file_unix_return_result() -> Result<()> {
+fn test_paths_config_file_unix_return_ok() -> Result<()> {
     use clap_complete::shells::Shell;
 
     // 测试 Unix shell 配置文件路径
@@ -872,7 +872,7 @@ fn test_paths_config_file_unix_return_result() -> Result<()> {
 /// - 返回的路径包含 "Microsoft.PowerShell_profile.ps1"
 #[test]
 #[cfg(target_os = "windows")]
-fn test_paths_config_file_windows_return_result() -> Result<()> {
+fn test_paths_config_file_windows_return_ok() -> Result<()> {
     use clap_complete::shells::Shell;
 
     // 测试 Windows PowerShell 配置文件路径
@@ -894,7 +894,7 @@ fn test_paths_config_file_windows_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 路径被正确展开，特殊字符被保留
 #[test]
-fn test_paths_expand_with_special_characters_return_result() -> Result<()> {
+fn test_paths_expand_with_special_characters_return_ok() -> Result<()> {
     // 测试路径中包含特殊字符
     let result = Paths::expand("~/test-path_with.dots")?;
 
@@ -905,7 +905,7 @@ fn test_paths_expand_with_special_characters_return_result() -> Result<()> {
 
 /// 测试展开包含Unicode字符的路径
 #[test]
-fn test_paths_expand_with_unicode_return_result() -> Result<()> {
+fn test_paths_expand_with_unicode_return_ok() -> Result<()> {
     // 测试路径中包含 Unicode 字符
     let result = Paths::expand("~/测试/path")?;
 
@@ -917,7 +917,7 @@ fn test_paths_expand_with_unicode_return_result() -> Result<()> {
 
 /// 测试展开深层嵌套路径
 #[test]
-fn test_paths_expand_deep_nested_path_return_result() -> Result<()> {
+fn test_paths_expand_deep_nested_path_return_ok() -> Result<()> {
     // 测试深层嵌套路径
     let deep_path = "~/a/b/c/d/e/f/g/h/i/j";
     let result = Paths::expand(deep_path)?;
@@ -929,7 +929,7 @@ fn test_paths_expand_deep_nested_path_return_result() -> Result<()> {
 
 /// 测试多个配置方法返回的路径一致性
 #[test]
-fn test_paths_multiple_config_methods_return_result() -> Result<()> {
+fn test_paths_multiple_config_methods_return_ok() -> Result<()> {
     // 测试多个配置方法返回的路径都是有效的
     let workflow = Paths::workflow_config()?;
     let jira = Paths::jira_config()?;

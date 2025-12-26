@@ -1250,7 +1250,7 @@ fn test_retry_delay_max_limit_returns_success() {
 /// - 超时错误被正确识别和处理
 #[test]
 #[ignore = "Flaky test - timeout behavior is difficult to reliably reproduce in unit tests"]
-fn test_retry_with_reqwest_error_timeout_return_result() -> Result<()> {
+fn test_retry_with_reqwest_error_timeout_return_ok() -> Result<()> {
     // 测试 reqwest::Error 的 is_timeout() 分支
     // 注意：此测试尝试通过设置极短超时来触发超时错误，但在实际环境中
     // 连接失败（connection refused）可能比超时更快发生，导致测试不稳定
@@ -2834,7 +2834,7 @@ fn test_zero_max_retries_with_success_return_true() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_large_max_retries_with_multiple_attempts_return_result() -> Result<()> {
+fn test_large_max_retries_with_multiple_attempts_return_ok() -> Result<()> {
     // Arrange: 准备配置（大 max_retries）和会在第五次成功的操作
     let config = HttpRetryConfig {
         max_retries: 100,
@@ -2941,7 +2941,7 @@ fn test_max_delay_limit_with_large_multiplier_returns_limited_duration() {
 
 /// 测试HTTP重试机制支持不同的返回类型
 #[test]
-fn test_different_return_result() -> Result<()> {
+fn test_different_return_ok() -> Result<()> {
     // Arrange: 准备配置
     let config = HttpRetryConfig {
         max_retries: 1,

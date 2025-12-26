@@ -11,6 +11,8 @@ use workflow::commit::{CommitReword, RewordHistoryOptions, RewordHistoryResult, 
 use workflow::git::CommitInfo;
 
 use crate::common::environments::GitTestEnv;
+use crate::common::fixtures::git_repo_with_commit;
+use rstest::rstest;
 
 // ==================== Helper Functions ====================
 
@@ -461,10 +463,10 @@ fn test_create_preview_with_empty_message_creates_preview() {
 ///
 /// ## 预期结果
 /// - Git 集成操作成功
-#[test]
-fn test_git_integration_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_git_integration_return_ok(git_repo_with_commit: GitTestEnv) -> color_eyre::Result<()> {
     // 使用 GitTestEnv 创建隔离的 Git 仓库
-    let env = GitTestEnv::new()?;
+    let env = &git_repo_with_commit;
 
     // 创建多个提交以模拟真实场景
     for i in 1..=3 {

@@ -6,8 +6,9 @@
 use workflow::commands::branch::sync::BranchSyncCommand;
 
 use crate::common::environments::GitTestEnv;
-use crate::common::helpers::CurrentDirGuard;
+use crate::common::fixtures::git_repo_with_commit;
 use crate::common::http_helpers::MockServer;
+use rstest::rstest;
 
 /// 测试分支同步命令的基础结构
 ///
@@ -227,8 +228,10 @@ fn test_branch_sync_command_with_squash() {
 /// ## 预期结果
 /// - 命令结构正确
 /// - Mock 服务器正常工作
-#[test]
-fn test_branch_sync_command_structure_with_mock_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_branch_sync_command_structure_with_mock_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> color_eyre::Result<()> {
     // 1. 设置Mock GitHub API
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
@@ -237,7 +240,7 @@ fn test_branch_sync_command_structure_with_mock_return_result() -> color_eyre::R
     let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 2. 创建临时Git仓库
-    let git_env = GitTestEnv::new()?;
+    let git_env = &git_repo_with_commit;
 
     // 4. 创建测试分支
     git_env.checkout_new_branch("feature")?;
@@ -246,9 +249,9 @@ fn test_branch_sync_command_structure_with_mock_return_result() -> color_eyre::R
     // 5. 切换回main分支
     git_env.checkout("main")?;
 
-    // 6. 切换到测试目录，然后执行分支同步
-    let _guard = CurrentDirGuard::new(git_env.path())?;
-    let result = BranchSyncCommand::sync(
+    // 6. 执行分支同步
+    let result = BranchSyncCommand::sync_in(
+        git_env.path(),
         "feature".to_string(),
         false, // rebase
         false, // ff_only
@@ -276,15 +279,17 @@ fn test_branch_sync_command_structure_with_mock_return_result() -> color_eyre::R
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_branch_sync_command_with_rebase_mock_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_branch_sync_command_with_rebase_mock_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
     let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
-    let git_env = GitTestEnv::new()?;
+    let git_env = &git_repo_with_commit;
 
     // 创建分支结构：main <- feature
     git_env.checkout_new_branch("feature")?;
@@ -293,9 +298,9 @@ fn test_branch_sync_command_with_rebase_mock_return_result() -> color_eyre::Resu
 
     git_env.checkout("main")?;
 
-    // 切换到测试目录，然后执行rebase同步
-    let _guard = CurrentDirGuard::new(git_env.path())?;
-    let result = BranchSyncCommand::sync(
+    // 执行rebase同步
+    let result = BranchSyncCommand::sync_in(
+        git_env.path(),
         "feature".to_string(),
         true, // rebase
         false,
@@ -320,15 +325,17 @@ fn test_branch_sync_command_with_rebase_mock_return_result() -> color_eyre::Resu
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_branch_sync_command_with_ff_only_mock_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_branch_sync_command_with_ff_only_mock_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
     let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
-    let git_env = GitTestEnv::new()?;
+    let git_env = &git_repo_with_commit;
 
     // 创建可以fast-forward的分支结构
     git_env.checkout_new_branch("feature")?;
@@ -336,9 +343,9 @@ fn test_branch_sync_command_with_ff_only_mock_return_result() -> color_eyre::Res
 
     git_env.checkout("main")?;
 
-    // 切换到测试目录，然后执行ff-only同步
-    let _guard = CurrentDirGuard::new(git_env.path())?;
-    let result = BranchSyncCommand::sync(
+    // 执行ff-only同步
+    let result = BranchSyncCommand::sync_in(
+        git_env.path(),
         "feature".to_string(),
         false,
         true, // ff_only
@@ -366,15 +373,17 @@ fn test_branch_sync_command_with_ff_only_mock_return_result() -> color_eyre::Res
 ///
 /// ## 预期结果
 /// - 测试通过，无错误
-#[test]
-fn test_branch_sync_command_with_squash_mock_return_result() -> color_eyre::Result<()> {
+#[rstest]
+fn test_branch_sync_command_with_squash_mock_return_ok(
+    git_repo_with_commit: GitTestEnv,
+) -> color_eyre::Result<()> {
     // 设置Mock
     let mut mock_server = MockServer::new();
     mock_server.setup_github_base_url();
     let _mock = mock_server.server.mock("GET", "/").with_status(200).with_body("OK").create();
 
     // 创建Git环境
-    let git_env = GitTestEnv::new()?;
+    let git_env = &git_repo_with_commit;
 
     // 创建多个提交的分支
     git_env.checkout_new_branch("feature")?;
@@ -384,9 +393,9 @@ fn test_branch_sync_command_with_squash_mock_return_result() -> color_eyre::Resu
 
     git_env.checkout("main")?;
 
-    // 切换到测试目录，然后执行squash同步
-    let _guard = CurrentDirGuard::new(git_env.path())?;
-    let result = BranchSyncCommand::sync(
+    // 执行squash同步
+    let result = BranchSyncCommand::sync_in(
+        git_env.path(),
         "feature".to_string(),
         false,
         false,

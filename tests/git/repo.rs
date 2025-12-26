@@ -35,7 +35,7 @@ use workflow::git::{GitRepo, RepoType};
 #[case("https://codeup.aliyun.com/owner/repo.git", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo")]
 #[case("http://codeup.aliyun.com/owner/repo", "owner/repo")]
-fn test_extract_repo_name_from_url_valid_cases_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_valid_cases_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试各种有效 URL 格式的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -54,7 +54,7 @@ fn test_extract_repo_name_from_url_valid_cases_return_result(#[case] url: &str, 
     "https://codeup.aliyun.com/group/subgroup/project.git",
     "group/subgroup/project"
 )]
-fn test_extract_repo_name_from_url_nested_paths_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_nested_paths_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试嵌套路径的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -71,7 +71,7 @@ fn test_extract_repo_name_from_url_nested_paths_return_result(#[case] url: &str,
 #[case("git@github.com:owner/repo.with.dots.git", "owner/repo.with.dots")]
 #[case("https://github.com/owner/repo123", "owner/repo123")]
 #[case("git@codeup.aliyun.com:中文用户/中文仓库.git", "中文用户/中文仓库")]
-fn test_extract_repo_name_from_url_special_characters_return_result(#[case] url: &str, #[case] expected: &str) -> Result<()> {
+fn test_extract_repo_name_from_url_special_characters_return_ok(#[case] url: &str, #[case] expected: &str) -> Result<()> {
     // Arrange: 准备测试包含特殊字符的仓库名提取
     let repo_name = GitRepo::extract_repo_name_from_url(url)?;
     assert_eq!(repo_name, expected);
@@ -117,7 +117,7 @@ fn test_extract_repo_name_from_url_invalid_cases(#[case] url: &str) {
 #[case("https://github.com/owner/repo/", "owner/repo")]
 #[case("https://github.com/owner/repo.git/", "owner/repo")]
 #[case("https://codeup.aliyun.com/owner/repo/", "owner/repo")]
-fn test_extract_repo_name_from_url_trailing_slashes_return_result(
+fn test_extract_repo_name_from_url_trailing_slashes_return_ok(
     #[case] url: &str,
     #[case] expected: &str,
 ) -> Result<()> {
@@ -145,7 +145,7 @@ fn test_extract_repo_name_from_url_trailing_slashes_return_result(
 #[case("https://github.com/Owner/Repo.git", "Owner/Repo")]
 #[case("git@github.com:Owner/Repo.git", "Owner/Repo")]
 #[case("https://codeup.aliyun.com/Owner/Repo", "Owner/Repo")]
-fn test_extract_repo_name_from_url_case_sensitivity_valid_cases_return_result(
+fn test_extract_repo_name_from_url_case_sensitivity_valid_cases_return_ok(
     #[case] url: &str,
     #[case] expected: &str,
 ) -> Result<()> {
@@ -388,7 +388,7 @@ fn test_malformed_urls() {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_unicode_and_special_characters_return_result() -> Result<()> {
+fn test_unicode_and_special_characters_return_ok() -> Result<()> {
     // Arrange: 准备测试 Unicode 字符和特殊字符的处理
     let unicode_cases = vec![
         ("git@github.com:用户/仓库.git", "用户/仓库"),
@@ -420,7 +420,7 @@ fn test_unicode_and_special_characters_return_result() -> Result<()> {
 /// ## 预期结果
 /// - 测试通过，无错误
 #[test]
-fn test_very_long_urls_return_result() -> Result<()> {
+fn test_very_long_urls_return_ok() -> Result<()> {
     // Arrange: 准备测试极长的 URL
     let long_owner = "a".repeat(100);
     let long_repo = "b".repeat(100);
@@ -524,7 +524,7 @@ fn test_performance_with_many_urls() {
 #[case("git@github.com:owner/repo.git", "owner/repo", RepoType::GitHub, true)]
 #[case("https://codeup.aliyun.com/owner/repo", "owner/repo", RepoType::Codeup, true)]
 #[case("git@gitlab.com:owner/repo.git", "owner/repo", RepoType::Unknown, false)]
-fn test_extract_and_detect_integration_return_result(
+fn test_extract_and_detect_integration_return_ok(
     #[case] url: &str,
     #[case] expected_name: &str,
     #[case] expected_type: RepoType,
@@ -550,7 +550,7 @@ fn test_extract_and_detect_integration_return_result(
 
 /// 测试已知问题的回归
 #[test]
-fn test_regression_known_issues_return_result() -> Result<()> {
+fn test_regression_known_issues_return_ok() -> Result<()> {
     // Arrange: 准备测试已知问题的回归
 
     // Arrange: 准备测试：确保 SSH 别名正确处理
