@@ -231,7 +231,8 @@ fn test_json_parser_parse_with_large_response_parses_correctly_return_ok() -> Re
     let result: serde_json::Value = JsonParser::parse(large_json.as_bytes(), 200)?;
 
     // Assert: 验证解析结果正确
-    let data_str = result["data"].as_str().expect("data should be a string");
+    let data_str = result["data"].as_str()
+        .ok_or_else(|| color_eyre::eyre::eyre!("data should be a string"))?;
     assert_eq!(data_str.len(), 300);
     Ok(())
 }

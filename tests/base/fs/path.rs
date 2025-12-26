@@ -8,6 +8,7 @@
 //! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
 //! - 测试路径访问、目录创建和安全读取功能
 
+use color_eyre::Result;
 use std::fs;
 use workflow::base::fs::path::PathAccess;
 
@@ -242,7 +243,8 @@ fn test_path_access_ensure_parent_exists_with_file_path_creates_parent_directory
     path_access.ensure_parent_exists()?;
 
     // Assert: 验证父目录已创建
-    let parent = file_path.parent().expect("File path should have a parent directory");
+    let parent = file_path.parent()
+        .ok_or_else(|| color_eyre::eyre::eyre!("File path should have a parent directory"))?;
     assert!(parent.exists());
     assert!(parent.is_dir());
 

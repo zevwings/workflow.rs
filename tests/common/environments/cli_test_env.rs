@@ -289,6 +289,73 @@ impl CliTestEnv {
         Ok(self)
     }
 
+    /// 创建Git分支
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回`&Self`以支持链式调用
+    ///
+    /// # 错误
+    ///
+    /// - 无法创建分支
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// env.init_git_repo()?;
+    /// env.create_branch("feature/test")?;
+    /// ```
+    pub fn create_branch(&self, branch_name: &str) -> Result<&Self> {
+        std::process::Command::new("git")
+            .args(["branch", branch_name])
+            .current_dir(&self.project_path)
+            .output()
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to create branch: {}", e))?;
+
+        Ok(self)
+    }
+
+    /// 切换Git分支
+    ///
+    /// # 参数
+    ///
+    /// * `branch_name` - 分支名称
+    ///
+    /// # 返回
+    ///
+    /// 返回`&Self`以支持链式调用
+    ///
+    /// # 错误
+    ///
+    /// - 无法切换分支
+    ///
+    /// # 示例
+    ///
+    /// ```rust
+    /// use tests::common::environments::CliTestEnv;
+    ///
+    /// let env = CliTestEnv::new()?;
+    /// env.init_git_repo()?;
+    /// env.create_branch("feature/test")?;
+    /// env.checkout("feature/test")?;
+    /// ```
+    pub fn checkout(&self, branch_name: &str) -> Result<&Self> {
+        std::process::Command::new("git")
+            .args(["checkout", branch_name])
+            .current_dir(&self.project_path)
+            .output()
+            .map_err(|e| color_eyre::eyre::eyre!("Failed to checkout branch: {}", e))?;
+
+        Ok(self)
+    }
+
     /// 创建配置文件
     ///
     /// 在工作目录的`.workflow`目录下创建`workflow.toml`配置文件。
@@ -536,6 +603,85 @@ mod tests {
 
         let content = fs::read_to_string(&config_path)?;
         assert!(content.contains("jira"));
+
+        Ok(())
+    }
+
+    /// 测试创建分支
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::create_branch()` 方法能够成功创建Git分支。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv
+    /// 2. 初始化Git仓库
+    /// 3. 创建初始提交（Git需要至少一个提交才能创建分支）
+    /// 4. 创建分支
+    /// 5. 验证分支存在
+    ///
+    /// ## 预期结果
+    /// - 分支创建成功
+    /// - 分支存在于Git仓库中
+    #[test]
+    #[serial]
+    fn test_create_branch_return_ok() -> Result<()> {
+        let env = CliTestEnv::new()?;
+        env.init_git_repo()?;
+        
+        // 创建初始提交（Git需要至少一个提交才能创建分支）
+        env.create_file("README.md", "# Test")?;
+        env.create_commit("Initial commit")?;
+        
+        env.create_branch("feature/test")?;
+
+        // 验证分支存在
+        let output = std::process::Command::new("git")
+            .args(["branch", "--list", "feature/test"])
+            .current_dir(env.path())
+            .output()?;
+
+        let branch_list = String::from_utf8_lossy(&output.stdout);
+        assert!(branch_list.contains("feature/test"));
+
+        Ok(())
+    }
+
+    /// 测试切换分支
+    ///
+    /// ## 测试目的
+    /// 验证 `CliTestEnv::checkout()` 方法能够成功切换Git分支。
+    ///
+    /// ## 测试场景
+    /// 1. 创建CliTestEnv
+    /// 2. 初始化Git仓库
+    /// 3. 创建分支
+    /// 4. 切换分支
+    /// 5. 验证当前分支
+    ///
+    /// ## 预期结果
+    /// - 分支切换成功
+    /// - 当前分支为切换后的分支
+    #[test]
+    #[serial]
+    fn test_checkout_branch_return_ok() -> Result<()> {
+        let env = CliTestEnv::new()?;
+        env.init_git_repo()?;
+
+        // 创建初始提交（checkout需要至少一个提交）
+        env.create_file("README.md", "# Test")?;
+        env.create_commit("Initial commit")?;
+
+        env.create_branch("feature/test")?;
+        env.checkout("feature/test")?;
+
+        // 验证当前分支
+        let output = std::process::Command::new("git")
+            .args(["branch", "--show-current"])
+            .current_dir(env.path())
+            .output()?;
+
+        let current_branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        assert_eq!(current_branch, "feature/test");
 
         Ok(())
     }

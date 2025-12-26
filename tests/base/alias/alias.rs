@@ -1438,7 +1438,7 @@ aliases = {}
         let aliases_table = config
             .get("aliases")
             .and_then(|v| v.as_table())
-            .expect("aliases table should exist in config");
+            .ok_or_else(|| color_eyre::eyre::eyre!("aliases table should exist in config"))?;
         assert_eq!(
             aliases_table.get("test_add_alias").and_then(|v| v.as_str()),
             Some("echo hello")

@@ -1,175 +1,76 @@
 //! Logger Tracing 测试
 //!
 //! 测试 tracing 封装的功能。
+//!
+//! ## 测试策略
+//!
+//! - 使用参数化测试减少重复代码
+//! - 测试所有日志级别的方法
 
+use rstest::rstest;
 use workflow::base::logger::tracing::Tracer;
 
 // ==================== Tracer Method Tests ====================
 
-/// 测试Tracer的debug方法
+/// 测试Tracer的基本方法（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 `Tracer::debug()` 方法能够正确记录调试消息。
+/// 使用参数化测试验证 Tracer 的各个基本方法（debug、info、warn、error）能够正确记录消息。
 ///
 /// ## 测试场景
-/// 1. 准备测试消息
-/// 2. 调用 `Tracer::debug()` 方法
+/// 测试所有日志级别的方法：debug、info、warn、error
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_debug_with_message() {
-    // Arrange: 准备测试消息
+/// - 所有方法都能正确记录消息，不会panic
+#[rstest]
+#[case("debug", "Test debug message")]
+#[case("info", "Test info message")]
+#[case("warn", "Test warn message")]
+#[case("error", "Test error message")]
+fn test_tracer_basic_methods_with_messages(
+    #[case] level: &str,
+    #[case] message: &str,
+) {
+    // Arrange: 准备测试消息（通过参数传入）
 
-    // Act: 调用 debug 方法
-    Tracer::debug("Test debug message");
+    // Act: 根据级别调用相应方法
+    match level {
+        "debug" => Tracer::debug(message),
+        "info" => Tracer::info(message),
+        "warn" => Tracer::warn(message),
+        "error" => Tracer::error(message),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
 
-/// 测试Tracer的info方法
+/// 测试Tracer的格式化方法（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 `Tracer::info()` 方法能够正确记录信息消息。
+/// 使用参数化测试验证 Tracer 的各个格式化方法（debug_fmt、info_fmt、warn_fmt、error_fmt）能够使用格式化参数正确记录消息。
 ///
 /// ## 测试场景
-/// 1. 准备测试消息
-/// 2. 调用 `Tracer::info()` 方法
+/// 测试所有日志级别的格式化方法：debug_fmt、info_fmt、warn_fmt、error_fmt
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_info_with_message() {
-    // Arrange: 准备测试消息
-
-    // Act: 调用 info 方法
-    Tracer::info("Test info message");
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的warn方法
-///
-/// ## 测试目的
-/// 验证 `Tracer::warn()` 方法能够正确记录警告消息。
-///
-/// ## 测试场景
-/// 1. 准备测试消息
-/// 2. 调用 `Tracer::warn()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_warn_with_message() {
-    // Arrange: 准备测试消息
-
-    // Act: 调用 warn 方法
-    Tracer::warn("Test warn message");
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的error方法
-///
-/// ## 测试目的
-/// 验证 `Tracer::error()` 方法能够正确记录错误消息。
-///
-/// ## 测试场景
-/// 1. 准备测试消息
-/// 2. 调用 `Tracer::error()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_error_with_message() {
-    // Arrange: 准备测试消息
-
-    // Act: 调用 error 方法
-    Tracer::error("Test error message");
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的debug_fmt方法（格式化参数）
-///
-/// ## 测试目的
-/// 验证 `Tracer::debug_fmt()` 方法能够使用格式化参数正确记录调试消息。
-///
-/// ## 测试场景
-/// 1. 准备格式化参数
-/// 2. 调用 `Tracer::debug_fmt()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_debug_fmt_with_format_args() {
+/// - 所有格式化方法都能正确记录消息，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_tracer_fmt_methods_with_format_args(#[case] level: &str) {
     // Arrange: 准备格式化参数
 
-    // Act: 调用 debug_fmt 方法
-    Tracer::debug_fmt(format_args!("Debug: {}", "test"));
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的info_fmt方法（格式化参数）
-///
-/// ## 测试目的
-/// 验证 `Tracer::info_fmt()` 方法能够使用格式化参数正确记录信息消息。
-///
-/// ## 测试场景
-/// 1. 准备格式化参数
-/// 2. 调用 `Tracer::info_fmt()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_info_fmt_with_format_args() {
-    // Arrange: 准备格式化参数
-
-    // Act: 调用 info_fmt 方法
-    Tracer::info_fmt(format_args!("Info: {}", "test"));
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的warn_fmt方法（格式化参数）
-///
-/// ## 测试目的
-/// 验证 `Tracer::warn_fmt()` 方法能够使用格式化参数正确记录警告消息。
-///
-/// ## 测试场景
-/// 1. 准备格式化参数
-/// 2. 调用 `Tracer::warn_fmt()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_warn_fmt_with_format_args() {
-    // Arrange: 准备格式化参数
-
-    // Act: 调用 warn_fmt 方法
-    Tracer::warn_fmt(format_args!("Warn: {}", "test"));
-
-    // Assert: 验证不会 panic（无返回值）
-}
-
-/// 测试Tracer的error_fmt方法（格式化参数）
-///
-/// ## 测试目的
-/// 验证 `Tracer::error_fmt()` 方法能够使用格式化参数正确记录错误消息。
-///
-/// ## 测试场景
-/// 1. 准备格式化参数
-/// 2. 调用 `Tracer::error_fmt()` 方法
-///
-/// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_tracer_error_fmt_with_format_args() {
-    // Arrange: 准备格式化参数
-
-    // Act: 调用 error_fmt 方法
-    Tracer::error_fmt(format_args!("Error: {}", "test"));
+    // Act: 根据级别调用相应格式化方法
+    match level {
+        "debug" => Tracer::debug_fmt(format_args!("Debug: {}", "test")),
+        "info" => Tracer::info_fmt(format_args!("Info: {}", "test")),
+        "warn" => Tracer::warn_fmt(format_args!("Warn: {}", "test")),
+        "error" => Tracer::error_fmt(format_args!("Error: {}", "test")),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
@@ -179,50 +80,63 @@ fn test_tracer_error_fmt_with_format_args() {
 // 注意：get_log_file_path 是私有方法，无法直接测试
 // 可以通过 Tracer::init() 间接测试路径创建功能
 
-/// 测试各种trace宏的基本功能
+/// 测试各种trace宏的基本功能（参数化测试）
 ///
 /// ## 测试目的
-/// 验证各种 trace 宏（trace_debug!、trace_info!、trace_warn!、trace_error!）能够正确记录消息。
+/// 使用参数化测试验证各种 trace 宏（trace_debug!、trace_info!、trace_warn!、trace_error!）能够正确记录消息。
 ///
 /// ## 测试场景
-/// 1. 调用各种 trace 宏记录消息
+/// 测试所有日志级别的宏：debug、info、warn、error
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_trace_macros_with_basic_messages() {
-    // Arrange: 准备测试（无需额外准备）
+/// - 所有宏都能正确记录消息，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_trace_macros_with_basic_messages(#[case] level: &str) {
+    // Arrange: 准备测试（通过参数传入级别）
 
-    // Act: 调用各种 trace 宏
-    workflow::trace_debug!("Debug macro test");
-    workflow::trace_info!("Info macro test");
-    workflow::trace_warn!("Warn macro test");
-    workflow::trace_error!("Error macro test");
+    // Act: 根据级别调用相应宏
+    match level {
+        "debug" => workflow::trace_debug!("Debug macro test"),
+        "info" => workflow::trace_info!("Info macro test"),
+        "warn" => workflow::trace_warn!("Warn macro test"),
+        "error" => workflow::trace_error!("Error macro test"),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
 
-/// 测试trace宏的格式化功能
+/// 测试trace宏的格式化功能（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 trace 宏能够使用格式化参数正确记录消息。
+/// 使用参数化测试验证 trace 宏能够使用格式化参数正确记录消息。
 ///
 /// ## 测试场景
-/// 1. 准备格式化参数
-/// 2. 调用带格式化的 trace 宏
+/// 测试所有日志级别的格式化宏：debug、info、warn、error
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_trace_macros_with_formatting() {
+/// - 所有格式化宏都能正确记录消息，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_trace_macros_with_formatting(#[case] level: &str) {
     // Arrange: 准备格式化参数
     let count = 5;
 
-    // Act: 调用带格式化的 trace 宏
-    workflow::trace_debug!("Debug: {} items", count);
-    workflow::trace_info!("Info: {} items", count);
-    workflow::trace_warn!("Warn: {} items", count);
-    workflow::trace_error!("Error: {} items", count);
+    // Act: 根据级别调用相应格式化宏
+    match level {
+        "debug" => workflow::trace_debug!("Debug: {} items", count),
+        "info" => workflow::trace_info!("Info: {} items", count),
+        "warn" => workflow::trace_warn!("Warn: {} items", count),
+        "error" => workflow::trace_error!("Error: {} items", count),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
@@ -357,75 +271,93 @@ fn test_tracer_fmt_methods_with_complex_formatting() {
     // Assert: 验证不会 panic（无返回值）
 }
 
-/// 测试trace宏处理不同类型的参数
+/// 测试trace宏处理不同类型的参数（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 trace 宏能够处理不同类型的参数（数字、字符串、布尔值等）。
+/// 使用参数化测试验证 trace 宏能够处理不同类型的参数（数字、字符串、布尔值等）。
 ///
 /// ## 测试场景
-/// 1. 准备不同类型的参数
-/// 2. 调用各种 trace 宏
+/// 测试所有日志级别的宏处理不同类型参数
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_trace_macros_with_various_types() {
+/// - 所有宏都能正确处理不同类型参数，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_trace_macros_with_various_types(#[case] level: &str) {
     // Arrange: 准备不同类型的参数
 
-    // Act: 调用各种 trace 宏
-    workflow::trace_debug!("Number: {}", 42);
-    workflow::trace_info!("Float: {}", 3.14);
-    workflow::trace_warn!("Boolean: {}", true);
-    workflow::trace_error!("String: {}", "test");
+    // Act: 根据级别调用相应宏（注意：宏需要字面量，所以直接调用）
+    match level {
+        "debug" => workflow::trace_debug!("Number: {}", 42),
+        "info" => workflow::trace_info!("Float: {}", 3.14),
+        "warn" => workflow::trace_warn!("Boolean: {}", true),
+        "error" => workflow::trace_error!("String: {}", "test"),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
 
-/// 测试trace宏处理空字符串
+/// 测试trace宏处理空字符串（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 trace 宏能够正确处理空字符串输入。
+/// 使用参数化测试验证 trace 宏能够正确处理空字符串输入。
 ///
 /// ## 测试场景
-/// 1. 准备空字符串
-/// 2. 调用各种 trace 宏
+/// 测试所有日志级别的宏处理空字符串
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_trace_macros_with_empty_strings() {
+/// - 所有宏都能正确处理空字符串，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_trace_macros_with_empty_strings(#[case] level: &str) {
     // Arrange: 准备空字符串
 
-    // Act: 调用 trace 宏
-    workflow::trace_debug!("");
-    workflow::trace_info!("");
-    workflow::trace_warn!("");
-    workflow::trace_error!("");
+    // Act: 根据级别调用相应宏
+    match level {
+        "debug" => workflow::trace_debug!(""),
+        "info" => workflow::trace_info!(""),
+        "warn" => workflow::trace_warn!(""),
+        "error" => workflow::trace_error!(""),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }
 
-/// 测试trace宏处理长消息
+/// 测试trace宏处理长消息（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 trace 宏能够正确处理长消息（1000个字符）。
+/// 使用参数化测试验证 trace 宏能够正确处理长消息（1000个字符）。
 ///
 /// ## 测试场景
-/// 1. 准备长消息
-/// 2. 调用各种 trace 宏
+/// 测试所有日志级别的宏处理长消息
 ///
 /// ## 预期结果
-/// - 不会panic（无返回值）
-#[test]
-fn test_trace_macros_with_long_messages() {
+/// - 所有宏都能正确处理长消息，不会panic
+#[rstest]
+#[case("debug")]
+#[case("info")]
+#[case("warn")]
+#[case("error")]
+fn test_trace_macros_with_long_messages(#[case] level: &str) {
     // Arrange: 准备长消息
     let long_message = "x".repeat(1000);
 
-    // Act: 调用 trace 宏
-    workflow::trace_debug!("Long: {}", long_message);
-    workflow::trace_info!("Long: {}", long_message);
-    workflow::trace_warn!("Long: {}", long_message);
-    workflow::trace_error!("Long: {}", long_message);
+    // Act: 根据级别调用相应宏
+    match level {
+        "debug" => workflow::trace_debug!("Long: {}", long_message),
+        "info" => workflow::trace_info!("Long: {}", long_message),
+        "warn" => workflow::trace_warn!("Long: {}", long_message),
+        "error" => workflow::trace_error!("Long: {}", long_message),
+        _ => panic!("Unknown log level: {}", level),
+    }
 
     // Assert: 验证不会 panic（无返回值）
 }

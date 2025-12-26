@@ -5,137 +5,53 @@
 //! ## 测试策略
 //!
 //! - 使用 `expect()` 替代 `unwrap()` 提供清晰的错误消息
+//! - 使用参数化测试减少重复代码
 //! - 测试所有HTTP方法的解析和显示功能
 
+use color_eyre::Result;
 use pretty_assertions::assert_eq;
+use rstest::rstest;
 use std::str::FromStr;
 use workflow::base::http::HttpMethod;
 
 // ==================== HttpMethod Parsing Tests ====================
 
-/// 测试从字符串解析 HTTP 方法（GET）
+/// 测试从字符串解析 HTTP 方法（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 HttpMethod::from_str() 能够解析 "GET" 字符串。
+/// 使用参数化测试验证 HttpMethod::from_str() 能够正确解析所有有效的 HTTP 方法字符串。
 ///
 /// ## 测试场景
-/// 1. 使用 "GET" 字符串解析 HTTP 方法
-/// 2. 验证解析为 Get 方法
+/// 测试所有标准 HTTP 方法：GET, POST, PUT, DELETE, PATCH
 ///
 /// ## 预期结果
-/// - "GET" 解析为 HttpMethod::Get
-#[test]
-fn test_http_method_from_str_get_with_get_string_returns_get() {
-    // Arrange: 准备GET字符串
+/// - 所有有效的 HTTP 方法字符串都能正确解析为对应的枚举值
+#[rstest]
+#[case("GET", HttpMethod::Get)]
+#[case("POST", HttpMethod::Post)]
+#[case("PUT", HttpMethod::Put)]
+#[case("DELETE", HttpMethod::Delete)]
+#[case("PATCH", HttpMethod::Patch)]
+fn test_http_method_from_str_with_valid_methods_parses_correctly(
+    #[case] input: &str,
+    #[case] expected: HttpMethod,
+) -> Result<()> {
+    // Arrange: 准备HTTP方法字符串（通过参数传入）
 
     // Act: 从字符串解析HTTP方法
-    let method = HttpMethod::from_str("GET").expect("GET should be a valid HTTP method");
+    let method = HttpMethod::from_str(input)
+        .map_err(|e| color_eyre::eyre::eyre!("{} should be a valid HTTP method: {}", input, e))?;
 
-    // Assert: 验证解析为Get方法
-    match method {
-        HttpMethod::Get => assert!(true),
-        _ => panic!("Expected Get"),
+    // Assert: 验证解析为预期方法
+    match (method, expected) {
+        (HttpMethod::Get, HttpMethod::Get)
+        | (HttpMethod::Post, HttpMethod::Post)
+        | (HttpMethod::Put, HttpMethod::Put)
+        | (HttpMethod::Delete, HttpMethod::Delete)
+        | (HttpMethod::Patch, HttpMethod::Patch) => assert!(true),
+        _ => return Err(color_eyre::eyre::eyre!("Failed to parse {} as {:?}", input, expected)),
     }
-}
-
-/// 测试从字符串解析 HTTP 方法（POST）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::from_str() 能够解析 "POST" 字符串。
-///
-/// ## 测试场景
-/// 1. 使用 "POST" 字符串解析 HTTP 方法
-/// 2. 验证解析为 Post 方法
-///
-/// ## 预期结果
-/// - "POST" 解析为 HttpMethod::Post
-#[test]
-fn test_http_method_from_str_post_with_post_string_returns_post() {
-    // Arrange: 准备POST字符串
-
-    // Act: 从字符串解析HTTP方法
-    let method = HttpMethod::from_str("POST").expect("POST should be a valid HTTP method");
-
-    // Assert: 验证解析为Post方法
-    match method {
-        HttpMethod::Post => assert!(true),
-        _ => panic!("Expected Post"),
-    }
-}
-
-/// 测试从字符串解析 HTTP 方法（PUT）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::from_str() 能够解析 "PUT" 字符串。
-///
-/// ## 测试场景
-/// 1. 使用 "PUT" 字符串解析 HTTP 方法
-/// 2. 验证解析为 Put 方法
-///
-/// ## 预期结果
-/// - "PUT" 解析为 HttpMethod::Put
-#[test]
-fn test_http_method_from_str_put_with_put_string_returns_put() {
-    // Arrange: 准备PUT字符串
-
-    // Act: 从字符串解析HTTP方法
-    let method = HttpMethod::from_str("PUT").expect("PUT should be a valid HTTP method");
-
-    // Assert: 验证解析为Put方法
-    match method {
-        HttpMethod::Put => assert!(true),
-        _ => panic!("Expected Put"),
-    }
-}
-
-/// 测试从字符串解析 HTTP 方法（DELETE）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::from_str() 能够解析 "DELETE" 字符串。
-///
-/// ## 测试场景
-/// 1. 使用 "DELETE" 字符串解析 HTTP 方法
-/// 2. 验证解析为 Delete 方法
-///
-/// ## 预期结果
-/// - "DELETE" 解析为 HttpMethod::Delete
-#[test]
-fn test_http_method_from_str_delete_with_delete_string_returns_delete() {
-    // Arrange: 准备DELETE字符串
-
-    // Act: 从字符串解析HTTP方法
-    let method = HttpMethod::from_str("DELETE").expect("DELETE should be a valid HTTP method");
-
-    // Assert: 验证解析为Delete方法
-    match method {
-        HttpMethod::Delete => assert!(true),
-        _ => panic!("Expected Delete"),
-    }
-}
-
-/// 测试从字符串解析 HTTP 方法（PATCH）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::from_str() 能够解析 "PATCH" 字符串。
-///
-/// ## 测试场景
-/// 1. 使用 "PATCH" 字符串解析 HTTP 方法
-/// 2. 验证解析为 Patch 方法
-///
-/// ## 预期结果
-/// - "PATCH" 解析为 HttpMethod::Patch
-#[test]
-fn test_http_method_from_str_patch_with_patch_string_returns_patch() {
-    // Arrange: 准备PATCH字符串
-
-    // Act: 从字符串解析HTTP方法
-    let method = HttpMethod::from_str("PATCH").expect("PATCH should be a valid HTTP method");
-
-    // Assert: 验证解析为Patch方法
-    match method {
-        HttpMethod::Patch => assert!(true),
-        _ => panic!("Expected Patch"),
-    }
+    Ok(())
 }
 
 /// 测试从无效字符串解析 HTTP 方法
@@ -187,114 +103,33 @@ fn test_http_method_from_str_case_sensitive_with_lowercase_strings_returns_error
 
 // ==================== HttpMethod Display Tests ====================
 
-/// 测试 HTTP 方法显示格式（GET）
+/// 测试 HTTP 方法显示格式（参数化测试）
 ///
 /// ## 测试目的
-/// 验证 HttpMethod::Get 的 Display trait 实现返回 "GET"。
+/// 使用参数化测试验证所有 HttpMethod 枚举值的 Display trait 实现是否正确。
 ///
 /// ## 测试场景
-/// 1. 格式化 Get 方法为字符串
-/// 2. 验证显示为 "GET"
+/// 测试所有标准 HTTP 方法的显示格式：GET, POST, PUT, DELETE, PATCH
 ///
 /// ## 预期结果
-/// - Get 方法显示为 "GET"
-#[test]
-fn test_http_method_display_get_with_get_method_returns_get_string() {
-    // Arrange: 准备Get方法
+/// - 所有 HTTP 方法都能正确格式化为对应的字符串表示
+#[rstest]
+#[case(HttpMethod::Get, "GET")]
+#[case(HttpMethod::Post, "POST")]
+#[case(HttpMethod::Put, "PUT")]
+#[case(HttpMethod::Delete, "DELETE")]
+#[case(HttpMethod::Patch, "PATCH")]
+fn test_http_method_display_with_all_methods_formats_correctly(
+    #[case] method: HttpMethod,
+    #[case] expected: &str,
+) {
+    // Arrange: 准备HTTP方法（通过参数传入）
 
     // Act: 格式化显示
-    let display = format!("{}", HttpMethod::Get);
+    let display = format!("{}", method);
 
-    // Assert: 验证显示为"GET"
-    assert_eq!(display, "GET");
-}
-
-/// 测试 HTTP 方法显示格式（POST）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::Post 的 Display trait 实现返回 "POST"。
-///
-/// ## 测试场景
-/// 1. 格式化 Post 方法为字符串
-/// 2. 验证显示为 "POST"
-///
-/// ## 预期结果
-/// - Post 方法显示为 "POST"
-#[test]
-fn test_http_method_display_post_with_post_method_returns_post_string() {
-    // Arrange: 准备Post方法
-
-    // Act: 格式化显示
-    let display = format!("{}", HttpMethod::Post);
-
-    // Assert: 验证显示为"POST"
-    assert_eq!(display, "POST");
-}
-
-/// 测试 HTTP 方法显示格式（PUT）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::Put 的 Display trait 实现返回 "PUT"。
-///
-/// ## 测试场景
-/// 1. 格式化 Put 方法为字符串
-/// 2. 验证显示为 "PUT"
-///
-/// ## 预期结果
-/// - Put 方法显示为 "PUT"
-#[test]
-fn test_http_method_display_put_with_put_method_returns_put_string() {
-    // Arrange: 准备Put方法
-
-    // Act: 格式化显示
-    let display = format!("{}", HttpMethod::Put);
-
-    // Assert: 验证显示为"PUT"
-    assert_eq!(display, "PUT");
-}
-
-/// 测试 HTTP 方法显示格式（DELETE）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::Delete 的 Display trait 实现返回 "DELETE"。
-///
-/// ## 测试场景
-/// 1. 格式化 Delete 方法为字符串
-/// 2. 验证显示为 "DELETE"
-///
-/// ## 预期结果
-/// - Delete 方法显示为 "DELETE"
-#[test]
-fn test_http_method_display_delete_with_delete_method_returns_delete_string() {
-    // Arrange: 准备Delete方法
-
-    // Act: 格式化显示
-    let display = format!("{}", HttpMethod::Delete);
-
-    // Assert: 验证显示为"DELETE"
-    assert_eq!(display, "DELETE");
-}
-
-/// 测试 HTTP 方法显示格式（PATCH）
-///
-/// ## 测试目的
-/// 验证 HttpMethod::Patch 的 Display trait 实现返回 "PATCH"。
-///
-/// ## 测试场景
-/// 1. 格式化 Patch 方法为字符串
-/// 2. 验证显示为 "PATCH"
-///
-/// ## 预期结果
-/// - Patch 方法显示为 "PATCH"
-#[test]
-fn test_http_method_display_patch_with_patch_method_returns_patch_string() {
-    // Arrange: 准备Patch方法
-
-    // Act: 格式化显示
-    let display = format!("{}", HttpMethod::Patch);
-
-    // Assert: 验证显示为"PATCH"
-    assert_eq!(display, "PATCH");
+    // Assert: 验证显示为预期字符串
+    assert_eq!(display, expected, "Failed to format {:?} as {}", method, expected);
 }
 
 /// 测试 HTTP 方法 Debug 格式化

@@ -138,230 +138,285 @@ mod tests {
 
     // ==================== 基础验证器测试 ====================
 
-    /// 测试非空验证器功能
+    /// 测试非空验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证非空验证器能够正确识别空输入和有效输入。
+    /// 使用参数化测试验证非空验证器能够正确识别空输入和有效输入。
     ///
     /// ## 测试场景
-    /// 1. 测试有效输入（非空字符串）
-    /// 2. 测试无效输入（空字符串、只有空格、只有空白字符）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效输入（非空字符串）、无效输入（空字符串、只有空格、只有空白字符）
     ///
     /// ## 预期结果
     /// - 有效输入通过验证
     /// - 无效输入返回错误消息
-    #[test]
-    fn test_non_empty_validator_with_various_inputs_validates_correctly() {
+    #[rstest]
+    #[case("hello", true)]  // 有效输入
+    #[case("  world  ", true)]  // 带空格的有效输入
+    #[case("123", true)]  // 数字字符串
+    #[case("", false)]  // 空字符串
+    #[case("   ", false)]  // 只有空格
+    #[case("\t\n", false)]  // 只有空白字符
+    fn test_non_empty_validator_with_various_inputs_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+    ) {
         // Arrange: 准备非空验证器
         let validator = create_non_empty_validator();
 
-        // Act & Assert: 验证有效输入通过验证
-        assert!(validator("hello").is_ok());
-        assert!(validator("  world  ").is_ok()); // 带空格的有效输入
-        assert!(validator("123").is_ok());
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效输入失败
-        assert!(validator("").is_err());
-        assert!(validator("   ").is_err()); // 只有空格
-        assert!(validator("\t\n").is_err()); // 只有空白字符
+        // Assert: 验证结果与预期一致
+        assert_eq!(
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
+        );
 
-        // Act & Assert: 验证错误消息正确
-        let result = validator("");
-        assert_eq!(result.unwrap_err(), "Input cannot be empty");
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            assert_eq!(result.unwrap_err(), "Input cannot be empty");
+        }
     }
 
-    /// 测试数字验证器功能
+    /// 测试数字验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证数字验证器能够正确识别有效数字和无效输入。
+    /// 使用参数化测试验证数字验证器能够正确识别有效数字和无效输入。
     ///
     /// ## 测试场景
-    /// 1. 测试有效数字（整数、负数、零、带空格）
-    /// 2. 测试无效输入（非数字、浮点数、空字符串、混合字符）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效数字（整数、负数、零、带空格）、无效输入（非数字、浮点数、空字符串、混合字符）
     ///
     /// ## 预期结果
     /// - 有效数字通过验证
     /// - 无效输入返回错误消息
-    #[test]
-    fn test_number_validator_with_various_inputs_validates_correctly() {
+    #[rstest]
+    #[case("123", true, None)]  // 有效整数
+    #[case("-456", true, None)]  // 有效负数
+    #[case("0", true, None)]  // 零
+    #[case("  789  ", true, None)]  // 带空格的数字
+    #[case("abc", false, Some("Please enter a valid number"))]  // 非数字
+    #[case("12.34", false, Some("Please enter a valid number"))]  // 浮点数
+    #[case("", false, Some("Number cannot be empty"))]  // 空字符串
+    #[case("123abc", false, Some("Please enter a valid number"))]  // 混合字符
+    fn test_number_validator_with_various_inputs_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+        #[case] expected_error: Option<&str>,
+    ) {
         // Arrange: 准备数字验证器
         let validator = create_number_validator();
 
-        // Act & Assert: 验证有效数字通过验证
-        assert!(validator("123").is_ok());
-        assert!(validator("-456").is_ok());
-        assert!(validator("0").is_ok());
-        assert!(validator("  789  ").is_ok()); // 带空格的数字
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效输入失败
-        assert!(validator("abc").is_err());
-        assert!(validator("12.34").is_err()); // 浮点数
-        assert!(validator("").is_err());
-        assert!(validator("123abc").is_err());
+        // Assert: 验证结果与预期一致
+        assert_eq!(
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
+        );
 
-        // Act & Assert: 验证错误消息正确
-        let result = validator("abc");
-        assert_eq!(result.unwrap_err(), "Please enter a valid number");
-        let empty_result = validator("");
-        assert_eq!(empty_result.unwrap_err(), "Number cannot be empty");
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            if let Some(expected_msg) = expected_error {
+                assert_eq!(result.unwrap_err(), expected_msg);
+            }
+        }
     }
 
-    /// 测试邮箱验证器功能
+    /// 测试邮箱验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证邮箱验证器能够正确识别有效邮箱地址和无效输入。
+    /// 使用参数化测试验证邮箱验证器能够正确识别有效邮箱地址和无效输入。
     ///
     /// ## 测试场景
-    /// 1. 测试有效邮箱（标准格式、带点、带空格）
-    /// 2. 测试无效邮箱（缺少@、缺少域名、缺少用户名、空字符串）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效邮箱（标准格式、带点、带空格）、无效邮箱（缺少@、缺少域名、缺少用户名、空字符串）
     ///
     /// ## 预期结果
     /// - 有效邮箱通过验证
     /// - 无效邮箱返回错误消息
-    #[test]
-    fn test_email_validator_with_various_inputs_validates_correctly() {
+    #[rstest]
+    #[case("user@example.com", true, None)]  // 标准格式
+    #[case("test.email@domain.org", true, None)]  // 带点
+    #[case("  user@example.com  ", true, None)]  // 带空格
+    #[case("invalid-email", false, Some("Please enter a valid email address"))]  // 无效格式（不包含@）
+    #[case("@example.com", false, Some("Invalid email format"))]  // 缺少用户名（包含@但格式不对）
+    #[case("user@", false, Some("Please enter a valid email address"))]  // 缺少域名（包含@但不包含.，实际返回"Please enter a valid email address"）
+    #[case("user.example.com", false, Some("Please enter a valid email address"))]  // 缺少@（不包含@）
+    #[case("", false, Some("Email cannot be empty"))]  // 空字符串
+    fn test_email_validator_with_various_inputs_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+        #[case] expected_error: Option<&str>,
+    ) {
         // Arrange: 准备邮箱验证器
         let validator = create_email_validator();
 
-        // Act & Assert: 验证有效邮箱通过验证
-        assert!(validator("user@example.com").is_ok());
-        assert!(validator("test.email@domain.org").is_ok());
-        assert!(validator("  user@example.com  ").is_ok()); // 带空格
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效邮箱失败
-        assert!(validator("invalid-email").is_err());
-        assert!(validator("@example.com").is_err()); // 缺少用户名
-        assert!(validator("user@").is_err()); // 缺少域名
-        assert!(validator("user.example.com").is_err()); // 缺少@
-        assert!(validator("").is_err());
+        // Assert: 验证结果与预期一致
+        assert_eq!(
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
+        );
 
-        // Act & Assert: 验证错误消息正确
-        let result = validator("invalid");
-        assert_eq!(result.unwrap_err(), "Please enter a valid email address");
-        let empty_result = validator("");
-        assert_eq!(empty_result.unwrap_err(), "Email cannot be empty");
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            if let Some(expected_msg) = expected_error {
+                assert_eq!(result.unwrap_err(), expected_msg);
+            }
+        }
     }
 
-    /// 测试长度验证器功能
+    /// 测试长度验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证长度验证器能够正确检查输入长度是否在指定范围内。
+    /// 使用参数化测试验证长度验证器能够正确检查输入长度是否在指定范围内。
     ///
     /// ## 测试场景
-    /// 1. 测试有效长度（最小长度、最大长度、中间长度）
-    /// 2. 测试无效长度（太短、太长、空字符串）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效长度（最小长度、最大长度、中间长度）、无效长度（太短、太长、空字符串）
     ///
     /// ## 预期结果
     /// - 有效长度通过验证
     /// - 无效长度返回错误消息
-    #[test]
-    fn test_length_validator_with_various_lengths_validates_correctly() {
+    #[rstest]
+    #[case("abc", true, None)]  // 最小长度
+    #[case("1234567890", true, None)]  // 最大长度
+    #[case("hello", true, None)]  // 中间长度
+    #[case("ab", false, Some("Input must be at least 3 characters"))]  // 太短
+    #[case("12345678901", false, Some("Input must be no more than 10 characters"))]  // 太长
+    #[case("", false, Some("Input must be at least 3 characters"))]  // 空字符串
+    fn test_length_validator_with_various_lengths_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+        #[case] expected_error: Option<&str>,
+    ) {
         // Arrange: 准备长度验证器（最小3，最大10）
         let validator = create_length_validator(3, 10);
 
-        // Act & Assert: 验证有效长度通过验证
-        assert!(validator("abc").is_ok()); // 最小长度
-        assert!(validator("1234567890").is_ok()); // 最大长度
-        assert!(validator("hello").is_ok()); // 中间长度
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效长度失败
-        assert!(validator("ab").is_err()); // 太短
-        assert!(validator("12345678901").is_err()); // 太长
-        assert!(validator("").is_err()); // 空字符串
+        // Assert: 验证结果与预期一致
+        assert_eq!(
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
+        );
 
-        // Act & Assert: 验证错误消息正确
-        let short_result = validator("ab");
-        assert_eq!(
-            short_result.unwrap_err(),
-            "Input must be at least 3 characters"
-        );
-        let long_result = validator("12345678901");
-        assert_eq!(
-            long_result.unwrap_err(),
-            "Input must be no more than 10 characters"
-        );
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            if let Some(expected_msg) = expected_error {
+                assert_eq!(result.unwrap_err(), expected_msg);
+            }
+        }
     }
 
-    /// 测试范围验证器功能
+    /// 测试范围验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证范围验证器能够正确检查数字是否在指定范围内。
+    /// 使用参数化测试验证范围验证器能够正确检查数字是否在指定范围内。
     ///
     /// ## 测试场景
-    /// 1. 测试有效范围（最小值、最大值、中间值）
-    /// 2. 测试无效范围（小于最小值、大于最大值、负数、非数字）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效范围（最小值、最大值、中间值）、无效范围（小于最小值、大于最大值、负数、非数字）
     ///
     /// ## 预期结果
     /// - 有效范围通过验证
     /// - 无效范围返回错误消息
-    #[test]
-    fn test_range_validator_with_various_values_validates_correctly() {
+    #[rstest]
+    #[case("1", true, None)]  // 最小值
+    #[case("100", true, None)]  // 最大值
+    #[case("50", true, None)]  // 中间值
+    #[case("0", false, Some("Number must be between 1 and 100"))]  // 小于最小值
+    #[case("101", false, Some("Number must be between 1 and 100"))]  // 大于最大值
+    #[case("-5", false, Some("Number must be between 1 and 100"))]  // 负数
+    #[case("abc", false, Some("Please enter a valid number"))]  // 非数字输入
+    fn test_range_validator_with_various_values_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+        #[case] expected_error: Option<&str>,
+    ) {
         // Arrange: 准备范围验证器（1-100）
         let validator = create_range_validator(1, 100);
 
-        // Act & Assert: 验证有效范围通过验证
-        assert!(validator("1").is_ok()); // 最小值
-        assert!(validator("100").is_ok()); // 最大值
-        assert!(validator("50").is_ok()); // 中间值
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效范围失败
-        assert!(validator("0").is_err()); // 小于最小值
-        assert!(validator("101").is_err()); // 大于最大值
-        assert!(validator("-5").is_err()); // 负数
-        assert!(validator("abc").is_err()); // 非数字输入
-
-        // Act & Assert: 验证错误消息正确
-        let range_result = validator("0");
+        // Assert: 验证结果与预期一致
         assert_eq!(
-            range_result.unwrap_err(),
-            "Number must be between 1 and 100"
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
         );
-        let invalid_result = validator("abc");
-        assert_eq!(invalid_result.unwrap_err(), "Please enter a valid number");
+
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            if let Some(expected_msg) = expected_error {
+                assert_eq!(result.unwrap_err(), expected_msg);
+            }
+        }
     }
 
-    /// 测试正则表达式验证器功能
+    /// 测试正则表达式验证器功能（参数化测试）
     ///
     /// ## 测试目的
-    /// 验证正则表达式验证器能够根据模式正确验证输入。
+    /// 使用参数化测试验证正则表达式验证器能够根据模式正确验证输入。
     ///
     /// ## 测试场景
-    /// 1. 测试有效输入（符合正则模式）
-    /// 2. 测试无效输入（不符合正则模式）
-    /// 3. 验证错误消息正确
+    /// 测试各种输入：有效输入（符合正则模式）、无效输入（不符合正则模式）
     ///
     /// ## 预期结果
     /// - 符合模式的输入通过验证
     /// - 不符合模式的输入返回错误消息
-    #[test]
-    fn test_regex_validator_with_various_inputs_validates_correctly() {
+    #[rstest]
+    #[case("user123", true, None)]  // 有效用户名
+    #[case("test_user", true, None)]  // 有效用户名（带下划线）
+    #[case("UserName", true, None)]  // 有效用户名（大小写混合）
+    #[case("user-123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含连字符
+    #[case("user@123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含特殊字符
+    #[case("user 123", false, Some("Username can only contain letters, numbers, and underscores"))]  // 包含空格
+    fn test_regex_validator_with_various_inputs_validates_correctly(
+        #[case] input: &str,
+        #[case] should_be_valid: bool,
+        #[case] expected_error: Option<&str>,
+    ) {
         // Arrange: 准备正则验证器（用户名：只允许字母、数字、下划线）
         let validator = create_regex_validator(
             r"^[a-zA-Z0-9_]+$",
             "Username can only contain letters, numbers, and underscores",
         );
 
-        // Act & Assert: 验证有效用户名通过验证
-        assert!(validator("user123").is_ok());
-        assert!(validator("test_user").is_ok());
-        assert!(validator("UserName").is_ok());
+        // Act: 验证输入
+        let result = validator(input);
 
-        // Act & Assert: 验证无效用户名失败
-        assert!(validator("user-123").is_err()); // 包含连字符
-        assert!(validator("user@123").is_err()); // 包含特殊字符
-        assert!(validator("user 123").is_err()); // 包含空格
-
-        // Act & Assert: 验证错误消息正确
-        let result = validator("user-123");
+        // Assert: 验证结果与预期一致
         assert_eq!(
-            result.unwrap_err(),
-            "Username can only contain letters, numbers, and underscores"
+            result.is_ok(),
+            should_be_valid,
+            "Input '{}' should {}",
+            input,
+            if should_be_valid { "be valid" } else { "be invalid" }
         );
+
+        // 验证错误消息（仅对无效输入）
+        if !should_be_valid {
+            if let Some(expected_msg) = expected_error {
+                assert_eq!(result.unwrap_err(), expected_msg);
+            }
+        }
     }
 
     // ==================== 参数化验证器测试 ====================
