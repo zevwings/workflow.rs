@@ -12,12 +12,12 @@
 
 ## 📂 规则文件
 
-| 文件 | 说明 |
-|------|------|
-| `document.md` | 文档生成、分类和存储规则 |
-| `overview.md` | 项目概述、架构、修改规则、文档索引/删除规则和一般注意事项 |
-| `development.md` | 开发规范和指南 |
-| `sync.md` | 保持中英文版本同步的规则 |
+| 文件 | 说明 | 类型 |
+|------|------|------|
+| `document.mdc` | 文档生成、分类和存储规则 | `always` |
+| `overview.mdc` | 项目概述、架构、修改规则、文档索引/删除规则和一般注意事项 | `always` |
+| `development.mdc` | 开发规范和指南 | `always` |
+| `sync.mdc` | 保持中英文版本同步的规则 | `always` |
 
 ## 🔄 同步规则
 
@@ -29,11 +29,19 @@
 - 修改 `docs/cursorrules/` 中的任何文件时，立即更新 `.cursor/rules/` 中对应的文件
 - 保持章节结构、内容和时间戳在两个版本之间一致
 
-详细的同步规则，请参考 `sync.md`。
+详细的同步规则，请参考 `sync.mdc`。
 
 ## 📖 使用说明
 
-Cursor IDE 会自动加载本目录下的所有 `.md` 文件。无需额外配置。
+Cursor IDE 会自动加载本目录下的所有 `.mdc` 文件。这些文件使用 MDC（Markdown Component）格式，包含 YAML front matter 元数据来定义规则类型和行为。
+
+**规则类型**：
+- `always`: 始终包含在模型上下文中（核心规则的默认类型）
+- `auto-attach`: 当引用匹配 glob 模式的文件时自动附加
+- `agent-request`: 可供 AI 根据需要包含（需要提供描述）
+- `manual`: 只有在使用 `@ruleName` 明确引用时才会包含
+
+**注意**：本项目使用 `.mdc` 格式（Cursor 推荐），而不是传统的 `.cursorrules` 文件格式。
 
 ## 📚 相关文档
 

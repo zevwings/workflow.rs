@@ -1,6 +1,11 @@
+---
+description: 保持中英文版本规则文件同步的规则
+type: always
+---
+
 # 文件同步规则
 
-> **⚠️ 同步提示**：此文件必须与其英文版本 `.cursor/rules/sync.md` 保持同步。修改此文件时，必须立即更新对应的英文版本。
+> **⚠️ 同步提示**：此文件必须与其英文版本 `.cursor/rules/sync.mdc` 保持同步。修改此文件时，必须立即更新对应的英文版本。
 
 ---
 
@@ -14,8 +19,8 @@
 
 ### 同步更新的方向
 
-- **修改 `.cursor/rules/{filename}.md`（英文版）** → 必须立即同步更新 `docs/cursorrules/{filename}.md`（中文版）
-- **修改 `docs/cursorrules/{filename}.md`（中文版）** → 必须立即同步更新 `.cursor/rules/{filename}.md`（英文版）
+- **修改 `.cursor/rules/{filename}.mdc`（英文版）** → 必须立即同步更新 `docs/cursorrules/{filename}.mdc`（中文版）
+- **修改 `docs/cursorrules/{filename}.mdc`（中文版）** → 必须立即同步更新 `.cursor/rules/{filename}.mdc`（英文版）
 
 ### 同步更新的验证方法
 
@@ -39,4 +44,3 @@
 ---
 
 **最后更新**: 2025-12-25
-
