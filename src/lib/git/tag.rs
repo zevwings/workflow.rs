@@ -297,4 +297,132 @@ impl GitTag {
 
         Ok(())
     }
+
+    /// 创建 tag（基于指定的 commit SHA）
+    ///
+    /// # 参数
+    ///
+    /// * `tag_name` - tag 名称
+    /// * `commit_sha` - 可选的 commit SHA，如果不提供则使用当前 HEAD
+    ///
+    /// # 错误
+    ///
+    /// 如果 tag 创建失败，返回相应的错误信息。
+    pub fn create(tag_name: &str, commit_sha: Option<&str>) -> Result<()> {
+        let mut cmd = GitCommand::new(["tag", tag_name]);
+        if let Some(sha) = commit_sha {
+            cmd = GitCommand::new(["tag", tag_name, sha]);
+        }
+        cmd.run()
+            .wrap_err_with(|| format!("Failed to create tag: {}", tag_name))
+    }
+
+    /// 推送 tag 到远程
+    ///
+    /// # 参数
+    ///
+    /// * `tag_name` - tag 名称
+    ///
+    /// # 错误
+    ///
+    /// 如果推送失败，返回相应的错误信息。
+    pub fn push(tag_name: &str) -> Result<()> {
+        GitCommand::new(["push", "origin", tag_name])
+            .run()
+            .wrap_err_with(|| format!("Failed to push tag: {}", tag_name))
+    }
+
+    /// 创建并推送 tag
+    ///
+    /// # 参数
+    ///
+    /// * `tag_name` - tag 名称
+    /// * `commit_sha` - 可选的 commit SHA，如果不提供则使用当前 HEAD
+    ///
+    /// # 错误
+    ///
+    /// 如果创建或推送失败，返回相应的错误信息。
+    pub fn create_and_push(tag_name: &str, commit_sha: Option<&str>) -> Result<()> {
+        // 检查 tag 是否已存在
+        let (exists_local, exists_remote) = Self::is_tag_exists(tag_name)?;
+
+        if exists_local || exists_remote {
+            // 获取现有 tag 的 commit SHA
+            let existing_tag_info = Self::get_tag_info(tag_name)?;
+            let target_sha = commit_sha
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| GitCommand::new(["rev-parse", "HEAD"]).read().unwrap_or_default());
+
+            if existing_tag_info.commit_hash == target_sha {
+                // Tag 已存在且指向正确的 commit
+                return Ok(());
+            } else {
+                // Tag 已存在但指向不同的 commit，需要删除后重新创建
+                if exists_local {
+                    Self::delete_local(tag_name)?;
+                }
+                if exists_remote {
+                    Self::delete_remote(tag_name)?;
+                }
+            }
+        }
+
+        // 创建 tag
+        Self::create(tag_name, commit_sha)?;
+
+        // 推送 tag
+        Self::push(tag_name)?;
+
+        Ok(())
+    }
+
+    /// 列出所有 alpha tag
+    ///
+    /// 查找所有匹配 `*.alpha-*` 格式的 tag。
+    ///
+    /// # 返回
+    ///
+    /// 返回所有 alpha tag 名称的列表（已排序）。
+    pub fn list_alpha_tags() -> Result<Vec<String>> {
+        let all_tags = Self::list_local_tags()?;
+        let alpha_tags: Vec<String> = all_tags
+            .into_iter()
+            .filter(|tag| tag.contains(".alpha-"))
+            .collect();
+        Ok(alpha_tags)
+    }
+
+    /// 检查 commit 是否在指定 commit 的祖先中
+    ///
+    /// # 参数
+    ///
+    /// * `commit_sha` - 要检查的 commit SHA
+    /// * `ancestor_sha` - 祖先 commit SHA
+    ///
+    /// # 返回
+    ///
+    /// 如果 `commit_sha` 是 `ancestor_sha` 的祖先，返回 `true`。
+    pub fn is_ancestor(commit_sha: &str, ancestor_sha: &str) -> bool {
+        GitCommand::new(["merge-base", "--is-ancestor", commit_sha, ancestor_sha])
+            .quiet_success()
+    }
+
+    /// 提取 tag 的版本号
+    ///
+    /// 从 tag 名称中提取版本号（例如：`v1.6.0.alpha-001` -> `1.6.0`）。
+    ///
+    /// # 参数
+    ///
+    /// * `tag_name` - tag 名称
+    ///
+    /// # 返回
+    ///
+    /// 返回版本号字符串，如果无法提取则返回 `None`。
+    pub fn extract_version(tag_name: &str) -> Option<String> {
+        use regex::Regex;
+        let re = Regex::new(r"^v?([0-9]+\.[0-9]+\.[0-9]+)").ok()?;
+        re.captures(tag_name)
+            .and_then(|caps| caps.get(1))
+            .map(|m| m.as_str().to_string())
+    }
 }

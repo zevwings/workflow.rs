@@ -1,68 +1,66 @@
 ---
-description: Project overview, architecture, modification rules, document index/deletion rules, and general notes
+description: 项目概述、架构、修改规则、文档索引/删除规则和一般注意事项
 type: always
 ---
 
-# Overview
-
-> **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/overview.md`. When modifying this file, you must immediately update the corresponding Chinese version.
+# 概述
 
 ---
 
-## Project Overview
+## 项目概述
 
-This is a CLI tool written in Rust for automating development workflows, providing PR management, Jira integration, log processing, and other features.
+这是一个用 Rust 编写的 CLI 工具，用于自动化开发工作流，提供 PR 管理、Jira 集成、日志处理等功能。
 
-### Architecture
+### 架构设计
 
-The project adopts a three-layer architecture:
-- **CLI Entry Layer** (`bin/`, `main.rs`): Command-line argument parsing and command dispatching
-- **Command Wrapper Layer** (`commands/`): CLI command wrappers, handling user interactions
-- **Core Business Logic Layer** (`lib/`): All business logic implementation
+项目采用三层架构：
+- **CLI 入口层** (`bin/`, `main.rs`): 命令行参数解析和命令分发
+- **命令封装层** (`commands/`): CLI 命令封装，处理用户交互
+- **核心业务逻辑层** (`lib/`): 所有业务逻辑实现
 
-For detailed module architecture information, refer to `docs/architecture/architecture.md`.
+详细的模块架构信息请参考 `docs/architecture/architecture.md`。
 
-## Code and Document Modification Rules
+## 代码和文档修改规则
 
-### Code Modification Rules
+### 代码修改规则
 
-**Prohibited from modifying existing code files without explicit user consent or instruction.** If code modification is needed, user consent or explicit instruction must be obtained first.
+**禁止在没有用户明确同意或说明的情况下修改现有代码文件。** 如需修改代码，必须先获得用户同意或用户明确说明需要修改。
 
-### Document Modification Rules
+### 文档修改规则
 
-**Prohibited from modifying existing document files without explicit user consent or instruction.** If document modification is needed, user consent or explicit instruction must be obtained first.
+**禁止在没有用户明确同意或说明的情况下修改现有文档文件。** 如需修改文档，必须先获得用户同意或用户明确说明需要修改。
 
-## Notes
+## 注意事项
 
-1. **Cross-platform Support**: Project supports macOS, Linux, Windows, pay attention to platform-specific code. For platform-specific code organization and testing requirements, reference `docs/guidelines/development/module-organization.md` (Platform-specific Code Organization section)
-2. **Clipboard Functionality**: Linux ARM64 and musl static linking versions do not support clipboard functionality
-3. **Configuration Files**: Configuration files stored in `~/.workflow/config/workflow.toml` (macOS/Linux) or `%APPDATA%\workflow\config\workflow.toml` (Windows)
-4. **Error Handling**: All errors should provide clear error messages and context
-5. **Logging**: Use `tracing` for logging, supports different log levels
-6. **GitHub Configuration**: When setting up the project for the first time, need to configure GitHub Secrets, Variables, and branch protection rules, reference `docs/guidelines/github-setup.md`
+1. **跨平台支持**：项目支持 macOS、Linux、Windows，注意平台特定代码。平台特定代码的组织方式和测试要求，请参考 `docs/guidelines/development/module-organization.md`（平台特定代码组织章节）
+2. **剪贴板功能**：Linux ARM64 和 musl 静态链接版本不支持剪贴板功能
+3. **配置文件**：配置文件存储在 `~/.workflow/config/workflow.toml`（macOS/Linux）或 `%APPDATA%\workflow\config\workflow.toml`（Windows）
+4. **错误处理**：所有错误都应该提供清晰的错误消息和上下文
+5. **日志**：使用 `tracing` 进行日志记录，支持不同日志级别
+6. **GitHub 配置**：首次设置项目时，需要配置 GitHub Secrets、Variables 和分支保护规则，参考 `docs/guidelines/github-setup.md`
 
-## Document Index Rules
+## 文档索引规则
 
-- **Prohibited Indexing**: Documents in `analysis/` and `report/` directories **must not** be indexed in `docs/README.md` or project root `README.md`
-- These directories contain **temporary analysis documents**, not reference documents, and do not need to be displayed in document index
-- **Requirement Document Index Restriction**: Requirement documents in `docs/requirements/` directory **only** need to be indexed in `docs/requirements/README.md`, **not** in `docs/README.md` or project root `README.md`
-- **Reference Documents**: Other documents in `docs/` directory (architecture documents, guidelines documents, migration documents) are reference documents and should be indexed in `docs/README.md`
-- **Document Index Update**: When creating new documents, update corresponding document index (as applicable):
-  - TODO Documents: Only index in `docs/requirements/README.md`
-  - Other Reference Documents: Index in `docs/README.md`
+- **禁止索引**：`analysis/` 和 `report/` 目录下的文档**绝对不应该**被索引到 `docs/README.md` 或项目根目录 `README.md` 中
+- 这些目录包含**临时分析文档**，不是参考文档，不需要在文档索引中展示
+- **需求文档索引限制**：`docs/requirements/` 目录下的需求文档**只需要**在 `docs/requirements/README.md` 中索引，**不需要**在 `docs/README.md` 或项目根目录 `README.md` 中索引
+- **参考文档**：`docs/` 目录下的其他文档（架构文档、指南文档、迁移文档）是参考文档，应该被索引到 `docs/README.md` 中
+- **文档索引更新**：创建新文档时，更新相应的文档索引（如适用）：
+  - TODO 文档：只在 `docs/requirements/README.md` 中索引
+  - 其他参考文档：在 `docs/README.md` 中索引
 
-## Document Deletion Rules
+## 文档删除规则
 
-- **Temporary Documents (can be deleted directly)**:
-  - All documents in `analysis/` directory are temporary technical analysis and can be deleted at any time
-  - All documents in `report/` directory are temporary analysis reports and can be deleted at any time
-  - These documents are used for analysis and recording during development and do not need long-term retention
-- **Reference Documents (deletion requires caution)**:
-  - Documents in `docs/` directory are **reference documents and architecture documents**, deletion requires great care
-  - Including: architecture documents (`docs/architecture/`), guidelines documents (`docs/guidelines/`), migration documents (`docs/migration/`), TODO documents (`docs/requirements/`)
-  - These documents are the project's knowledge base and reference materials, must confirm no longer needed before deletion
-  - **Special Note**: TODO documents, although reference documents, are only indexed in `docs/requirements/README.md`, not in the main document index
+- **临时文档（可直接删除）**：
+  - `analysis/` 目录下的所有文档都是临时技术分析，可以随时删除
+  - `report/` 目录下的所有文档都是临时分析报告，可以随时删除
+  - 这些文档用于开发过程中的分析和记录，不需要长期保留
+- **参考文档（删除需谨慎）**：
+  - `docs/` 目录下的文档是**参考文档和架构文档**，删除需要非常注意
+  - 包括：架构文档（`docs/architecture/`）、指南文档（`docs/guidelines/`）、迁移文档（`docs/migration/`）、待办文档（`docs/requirements/`）
+  - 这些文档是项目的知识库和参考材料，删除前必须确认不再需要
+  - **特别说明**：TODO 文档虽然是参考文档，但只在 `docs/requirements/README.md` 中维护索引，不在主文档索引中展示
 
 ---
 
-**Last Updated**: 2025-12-25
+**最后更新**: 2025-12-25

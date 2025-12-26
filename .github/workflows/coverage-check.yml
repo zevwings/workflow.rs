@@ -77,145 +77,26 @@ jobs:
         timeout-minutes: 50
         run: cargo tarpaulin --out Html --output-dir coverage --tests
 
-      - name: 📋 Check coverage threshold
+      - name: 📋 Check coverage threshold and generate report
         id: check
         continue-on-error: true
-        run: |
-          echo "📊 Checking coverage threshold..."
-          # 生成 JSON 格式的覆盖率报告用于解析
-          cargo tarpaulin --out Json --output-dir coverage --tests > coverage/coverage.json 2>/dev/null || true
-
-          # 检查覆盖率是否达到阈值（80%）
-          COVERAGE_STATUS="pass"
-          COVERAGE_VALUE="0"
-          TARGET_COVERAGE=80.0
-
-          if [ -f "coverage/coverage.json" ]; then
-            # 使用 Python 解析 JSON（如果可用）
-            if command -v python3 >/dev/null 2>&1; then
-              COVERAGE_VALUE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
-
-              echo "当前覆盖率: ${COVERAGE_VALUE}%"
-              echo "目标覆盖率: ${TARGET_COVERAGE}%"
-
-              # 使用 awk 进行浮点数比较
-              if awk "BEGIN {exit !($COVERAGE_VALUE >= $TARGET_COVERAGE)}"; then
-                echo "✅ 覆盖率已达到目标阈值"
-                echo "coverage_status=pass" >> $GITHUB_OUTPUT
-              else
-                echo "⚠️  覆盖率未达到目标阈值"
-                echo "   当前覆盖率: ${COVERAGE_VALUE}%"
-                echo "   目标覆盖率: ${TARGET_COVERAGE}%"
-                echo "   请考虑添加更多测试用例以提高覆盖率"
-                echo "::warning::Coverage ${COVERAGE_VALUE}% is below target ${TARGET_COVERAGE}%"
-                COVERAGE_STATUS="fail"
-                echo "coverage_status=fail" >> $GITHUB_OUTPUT
-              fi
-              echo "coverage_value=${COVERAGE_VALUE}" >> $GITHUB_OUTPUT
-            else
-              echo "⚠️  Python3 不可用，无法解析覆盖率数据"
-              echo "coverage_status=unknown" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "⚠️  无法生成覆盖率 JSON 报告"
-            echo "coverage_status=unknown" >> $GITHUB_OUTPUT
-          fi
-
-          echo "target_coverage=${TARGET_COVERAGE}" >> $GITHUB_OUTPUT
-
-      - name: 📊 Generate report
-        id: generate_report
-        if: always()
         run: |
           mkdir -p report
           TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
           REPORT_FILE="report/coverage-check-${TIMESTAMP}.md"
-          CHECK_DATE=$(date '+%Y-%m-%d %H:%M:%S')
-          UPDATE_DATE=$(date '+%Y-%m-%d')
 
-          # 从 JSON 文件读取覆盖率数据（如果存在）
-          COVERAGE_VALUE="0"
-          TARGET_COVERAGE="80.0"
-          COVERAGE_STATUS="unknown"
+          cargo run --bin dev tests check coverage \
+            --threshold 80.0 \
+            --ci \
+            --output "$REPORT_FILE" \
+            --check-type "定期审查" || true
 
-          if [ -f "coverage/coverage.json" ] && command -v python3 >/dev/null 2>&1; then
-            COVERAGE_VALUE=$(python3 -c "import json; data = json.load(open('coverage/coverage.json')); print(data.get('coverage_percent', 0))" 2>/dev/null || echo "0")
-            if awk "BEGIN {exit !($COVERAGE_VALUE >= $TARGET_COVERAGE)}"; then
-              COVERAGE_STATUS="pass"
-            else
-              COVERAGE_STATUS="fail"
-            fi
-          fi
-
-          # 确定状态
-          if [ "$COVERAGE_STATUS" = "pass" ]; then
-            STATUS_EMOJI="✅"
-            STATUS_TEXT="通过"
-          elif [ "$COVERAGE_STATUS" = "fail" ]; then
-            STATUS_EMOJI="⚠️"
-            STATUS_TEXT="未达标"
-            GAP=$(awk "BEGIN {printf \"%.2f\", $TARGET_COVERAGE - $COVERAGE_VALUE}")
+          if [ -f "$REPORT_FILE" ]; then
+            echo "📄 Report generated: $REPORT_FILE"
+            echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
           else
-            STATUS_EMOJI="❓"
-            STATUS_TEXT="未知"
+            echo "⚠️  Report file not generated"
           fi
-
-          cat > "$REPORT_FILE" << EOF
-          # 测试覆盖率检查报告
-
-          **检查日期**：${CHECK_DATE}
-          **检查类型**：定期审查
-
-          ## 检查结果
-
-          ### 覆盖率统计
-
-          - **当前覆盖率**：${COVERAGE_VALUE}%
-          - **目标覆盖率**：${TARGET_COVERAGE}%
-          - **检查状态**：${STATUS_EMOJI} ${STATUS_TEXT}
-
-          ### 详细说明
-
-          $(if [ "$COVERAGE_STATUS" = "pass" ]; then
-            echo "✅ 测试覆盖率已达到目标阈值（${TARGET_COVERAGE}%）。"
-          elif [ "$COVERAGE_STATUS" = "fail" ]; then
-            echo "⚠️  测试覆盖率未达到目标阈值。"
-            echo ""
-            echo "**当前覆盖率**：${COVERAGE_VALUE}%"
-            echo "**目标覆盖率**：${TARGET_COVERAGE}%"
-            echo "**差距**：${GAP}%"
-            echo ""
-            echo "建议："
-            echo "1. 检查未覆盖的代码模块"
-            echo "2. 为关键业务逻辑添加更多测试用例"
-            echo "3. 参考 \`docs/requirements/QUICK_COVERAGE_MODULES.md\` 了解快速提升覆盖率的模块"
-          else
-            echo "❓ 无法获取覆盖率数据，请检查检查日志。"
-          fi)
-
-          ## 报告文件
-
-          - HTML 报告已上传为 Artifact：\`coverage-report\`
-          - 查看详细覆盖率数据：下载 Artifact 中的 \`coverage/tarpaulin-report.html\`
-
-          ## 改进建议
-
-          1. 确保关键业务逻辑的测试覆盖率 > 90%
-          2. 定期审查未覆盖的代码模块
-          3. 为新功能添加相应的测试用例
-
-          参考文档：
-          - [测试覆盖率改进分析](docs/requirements/coverage-improvement.md)
-          - [快速覆盖率提升模块](docs/requirements/QUICK_COVERAGE_MODULES.md)
-          - [测试规范](docs/guidelines/testing.md)
-
-          ---
-
-          **最后更新**: ${UPDATE_DATE}
-          EOF
-
-          echo "📄 Report generated: $REPORT_FILE"
-          echo "report_file=$REPORT_FILE" >> $GITHUB_OUTPUT
 
       - name: 📤 Upload coverage report
         if: always()
@@ -225,55 +106,13 @@ jobs:
           path: coverage/
           retention-days: 30
 
-      - name: 📊 Analyze coverage trends
-        if: always()
-        continue-on-error: true
-        run: |
-          echo "📊 Analyzing coverage trends..."
-
-          if ! command -v python3 >/dev/null 2>&1; then
-            echo "⚠️  Python3 not found, skipping trend analysis"
-            exit 0
-          fi
-
-          # 生成当前覆盖率 JSON（如果还没有）
-          if [ ! -f "coverage/coverage.json" ]; then
-            cargo tarpaulin --out Json --output-dir coverage --tests > coverage/coverage.json 2>/dev/null || true
-          fi
-
-          # 复制为当前覆盖率文件
-          cp coverage/coverage.json coverage/current-coverage.json 2>/dev/null || true
-
-          # 尝试加载基准覆盖率（从 Artifacts 或上次运行）
-          BASELINE_FILE="coverage/baseline-coverage.json"
-
-          # 尝试从 Artifacts 下载基准（如果存在）
-          if [ ! -f "$BASELINE_FILE" ]; then
-            # 首次运行，使用当前作为基准
-            cp coverage/current-coverage.json "$BASELINE_FILE" 2>/dev/null || true
-          fi
-
-          # 分析趋势
-          if [ -f "coverage/current-coverage.json" ] && [ -f "$BASELINE_FILE" ]; then
-            python3 scripts/dev/analyze-coverage-trends.py \
-              --current coverage/current-coverage.json \
-              --baseline "$BASELINE_FILE" \
-              --output coverage/coverage-change-report.md \
-              --threshold 1.0 || {
-              echo "⚠️  Coverage regression detected, but continuing..."
-            }
-          fi
-
-          # 更新基准（如果当前覆盖率更高）
-          if [ -f "coverage/current-coverage.json" ] && [ -f "$BASELINE_FILE" ]; then
-            CURRENT_COV=$(python3 -c "import json; print(json.load(open('coverage/current-coverage.json')).get('coverage_percent', 0))" 2>/dev/null || echo "0")
-            BASELINE_COV=$(python3 -c "import json; print(json.load(open('$BASELINE_FILE')).get('coverage_percent', 0))" 2>/dev/null || echo "0")
-
-            if awk "BEGIN {exit !($CURRENT_COV >= $BASELINE_COV)}"; then
-              cp coverage/current-coverage.json "$BASELINE_FILE"
-              echo "✅ Baseline updated"
-            fi
-          fi
+      # 注意：覆盖率趋势分析已由 Codecov 提供
+      # Codecov 提供以下功能：
+      # - 覆盖率历史趋势图（云端）
+      # - PR 评论中的覆盖率变化（自动）
+      # - 覆盖率回归检测（自动）
+      # - 模块级别的覆盖率对比（可视化）
+      # 因此不再需要本地趋势分析脚本
 
       - name: 📤 Upload to Codecov
         if: always()
@@ -286,14 +125,6 @@ jobs:
           fail_ci_if_error: false
         continue-on-error: true
 
-      - name: 📤 Upload coverage change report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-change-report
-          path: coverage/coverage-change-report.md
-          retention-days: 30
-          if-no-files-found: ignore
 
       - name: 📤 Upload check report
         if: always()
@@ -310,9 +141,9 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: 📤 Commit and push report to repository
-        if: always() && steps.generate_report.outputs.report_file != ''
+        if: always() && steps.check.outputs.report_file != ''
         run: |
-          REPORT_FILE="${{ steps.generate_report.outputs.report_file }}"
+          REPORT_FILE="${{ steps.check.outputs.report_file }}"
 
           if [ -z "$REPORT_FILE" ] || [ ! -f "$REPORT_FILE" ]; then
             echo "⚠️  Report file not found, skipping commit"

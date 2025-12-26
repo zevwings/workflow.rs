@@ -10,7 +10,6 @@
 
 | 脚本 | 语言 | 说明 | 状态 |
 |------|------|------|------|
-| `add-test-docs.py` | Python | 为测试函数添加标准文档注释 | ✅ 已完成 |
 | `check-test-docs.sh` | Bash | 检查测试文档注释完成情况 | 📋 待迁移 |
 
 #### 测试执行与报告
@@ -20,7 +19,6 @@
 | `generate-test-report.py` | Python | 生成测试执行报告（HTML/JSON） | ✅ 已完成 |
 | `generate-pr-comment.py` | Python | 从测试报告生成 PR 评论内容 | ✅ 已完成 |
 | `verify-test-stability.sh` | Bash | 连续运行测试验证稳定性 | 🔧 保持 |
-| `check-doctests.sh` | Bash | 文档测试（doctest）检查 | 🔧 保持 |
 
 #### 测试指标与分析
 
@@ -39,11 +37,7 @@
 
 #### 测试迁移工具
 
-| 脚本 | 语言 | 说明 | 状态 |
-|------|------|------|------|
-| `check-migration-status.sh` | Bash | 检查测试迁移状态 | 📋 待迁移 |
-| `identify-migration-targets.sh` | Bash | 识别需要迁移的测试文件 | 📋 待迁移 |
-| `rename-test-return-result.sh` | Bash | 批量替换测试函数名中的 `_return_result` 为 `_return_ok` | 🔧 保持 |
+> **注意**: 测试迁移工具已完成使用，相关脚本已删除。
 
 ### 📚 文档相关
 
@@ -65,7 +59,7 @@
 ### 迁移进度
 
 - [ ] 阶段 1: 高优先级脚本（`check-test-docs.sh`, `check-docs.sh`）
-- [ ] 阶段 2: 中优先级脚本（`check-links.sh`, `check-migration-status.sh`, `identify-migration-targets.sh`, `check-coverage.sh`）
+- [ ] 阶段 2: 中优先级脚本（`check-links.sh`, `check-coverage.sh`）
 - [ ] 阶段 3: 优化和整合
 
 **状态说明**:
@@ -80,19 +74,6 @@
 ### 🧪 测试相关脚本
 
 #### 测试文档管理
-
-##### add-test-docs.py
-
-为测试函数添加标准文档注释。
-
-```bash
-python3 scripts/dev/add-test-docs.py <test_file>
-```
-
-**示例**:
-```bash
-python3 scripts/dev/add-test-docs.py tests/base/fs/directory.rs
-```
 
 ##### check-test-docs.sh
 
@@ -167,27 +148,6 @@ python3 scripts/dev/generate-pr-comment.py \
     --report unit-test-report.json integration-test-report.json \
     --artifact-url https://github.com/.../artifacts \
     --output pr-comment.md
-```
-
-##### verify-test-stability.sh
-
-连续运行测试验证稳定性。
-
-```bash
-./scripts/dev/verify-test-stability.sh [运行次数]
-```
-
-**示例**:
-```bash
-./scripts/dev/verify-test-stability.sh 100  # 运行 100 次
-```
-
-##### check-doctests.sh
-
-文档测试（doctest）检查。
-
-```bash
-./scripts/dev/check-doctests.sh
 ```
 
 #### 测试指标与分析
@@ -298,53 +258,6 @@ python3 scripts/dev/analyze-coverage-trends.py \
 ```bash
 cargo install cargo-tarpaulin
 ```
-
-#### 测试迁移工具
-
-##### check-migration-status.sh
-
-检查测试迁移状态。
-
-```bash
-./scripts/dev/check-migration-status.sh
-```
-
-##### identify-migration-targets.sh
-
-识别需要迁移的测试文件。
-
-```bash
-./scripts/dev/identify-migration-targets.sh
-```
-
-##### rename-test-return-result.sh
-
-安全地批量替换测试函数名中的 `_return_result` 为 `_return_ok`。
-
-```bash
-./scripts/dev/rename-test-return-result.sh [OPTIONS]
-```
-
-**选项**:
-- `--dry-run`: 预览模式，只显示将要替换的内容，不实际修改
-- `--no-backup`: 不创建备份文件
-
-**示例**:
-```bash
-# 预览替换
-./scripts/dev/rename-test-return-result.sh --dry-run
-
-# 执行替换（默认会创建备份）
-./scripts/dev/rename-test-return-result.sh
-
-# 执行替换但不创建备份
-./scripts/dev/rename-test-return-result.sh --no-backup
-```
-
-**注意事项**:
-- 只替换以 `fn test` 开头的函数定义
-- 不会修改注释、字符串或其他内容
-- 默认会为每个文件创建 `.bak` 备份文件
 
 ### 📚 文档相关脚本
 

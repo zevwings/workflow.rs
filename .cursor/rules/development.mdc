@@ -1,120 +1,118 @@
 ---
-description: Development standards and guidelines, including code style, error handling, testing standards, Git workflow, and code review
+description: 开发规范与指南，包含代码风格、错误处理、测试规范、Git 工作流和代码审查
 type: always
 ---
 
-# Development Standards and Guidelines
-
-> **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/development.md`. When modifying this file, you must immediately update the corresponding Chinese version.
+# 开发规范与指南
 
 ---
 
-## Development Standards and Guidelines
+## 开发规范与指南
 
-**Important**: All development standards and guidelines must strictly follow the detailed descriptions in `docs/guidelines/development/README.md`.
+**重要**：所有开发规范和指南请严格遵循 `docs/guidelines/development/` 目录中的详细说明。
 
-### Development Guidelines Reference
+### 开发规范引用
 
-**Mandatory Development Guidelines Document**: `docs/guidelines/development/README.md` (Development Guidelines Index)
+**必须遵守的开发规范文档**：`docs/guidelines/development/README.md`（开发规范索引）
 
-This directory contains complete development guidelines, including:
-- **Core Guidelines**: Code style, error handling, naming conventions, module organization
-- **Process Guidelines**: Git workflow, commit standards, code review
-- **Reference Documents**: Logging, documentation, configuration management, security, dependency management, performance optimization, development tools, etc.
+该目录包含完整的开发规范，包括：
+- **核心规范**：代码风格、错误处理、命名规范、模块组织
+- **流程规范**：Git 工作流、提交规范、代码审查
+- **参考文档**：日志、文档、配置管理、安全性、依赖管理、性能优化、开发工具等
 
-### Quick Reference
+### 快速参考
 
-The following are the most commonly used standards quick reference (**for detailed descriptions and complete standards, see `docs/guidelines/development/README.md`**):
+以下是最常用的规范快速参考（**详细说明和完整规范请查看 `docs/guidelines/development/README.md`**）：
 
-- **Code Formatting**: `cargo fmt` (must run before commit)
-- **Code Checking**: `cargo clippy -- -D warnings` (all warnings must be fixed)
-- **Naming Conventions**: Modules/functions/variables `snake_case`, Types/Traits `PascalCase`, Constants `SCREAMING_SNAKE_CASE`
-- **Import Order**: Standard library → Third-party libraries → Project internal
-- **Error Handling**: Use `color_eyre::Result<T>` and add context to error messages
-- **Documentation Comments**: All public APIs must have `///` documentation comments, including parameters, return values, errors, examples
+- **代码格式化**：`cargo fmt`（提交前必须运行）
+- **代码检查**：`cargo clippy -- -D warnings`（所有警告必须修复）
+- **命名约定**：模块/函数/变量 `snake_case`，类型/Trait `PascalCase`，常量 `SCREAMING_SNAKE_CASE`
+- **导入顺序**：标准库 → 第三方库 → 项目内部
+- **错误处理**：使用 `color_eyre::Result<T>` 并为错误消息添加上下文
+- **文档注释**：所有公共 API 必须有 `///` 文档注释，包含参数、返回值、错误、示例
 
-### Code Generation Rules
+### 代码生成规则
 
-**Important**: Only execute code generation operations when the user explicitly requests code generation.
+**重要**：只有在用户明确要求生成代码时，才执行代码生成操作。
 
-When generating code, must strictly follow all development standards in `docs/guidelines/development/` directory, including:
+生成代码时必须严格遵循 `docs/guidelines/development/` 目录中的所有开发规范，包括：
 
-- **Code Style**: Follow project naming conventions and code style, use `rustfmt` for formatting, pass `clippy` checks
-- **Error Handling**: Use `color_eyre::Result<T>`, add context to error messages, consider all error cases
-- **Documentation Comments**: Add complete documentation comments for new features (including parameters, return values, errors, examples)
-- **Document Writing**: If generating documents, must reference `docs/guidelines/document.md` to select appropriate templates, and add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
-- **API Design**: Follow public API design principles, maintain backward compatibility, use `#[deprecated]` for deprecated APIs, reference `docs/guidelines/development/references/documentation.md` for detailed documentation standards
-- **Module Organization**: Follow three-layer architecture, correctly organize modules and dependencies
-- **Testing**: Add unit tests and integration tests for new features (as applicable)
-- **Commit Standards**: If involving Git commits, follow Conventional Commits format
-- **Code Quality**: Keep code concise and readable, follow Rust best practices (e.g., use `Result` types, avoid `unwrap()`, etc.)
-- **Code Review**: Ensure code meets review checklist requirements
+- **代码风格**：遵循项目的命名约定和代码风格，使用 `rustfmt` 格式化，通过 `clippy` 检查
+- **错误处理**：使用 `color_eyre::Result<T>`，为错误消息添加上下文，考虑所有错误情况
+- **文档注释**：为新功能添加完整的文档注释（包含参数、返回值、错误、示例）
+- **文档编写**：如果生成文档，必须参考 `docs/guidelines/document.md` 选择合适的模板，并在文档末尾添加"最后更新"时间戳（参考 `docs/guidelines/document-timestamp.md`）
+- **API 设计**：遵循公共 API 设计原则，保持向后兼容性，使用 `#[deprecated]` 标记废弃的 API，详细规范请参考 `docs/guidelines/development/references/documentation.md` 中的文档规范章节
+- **模块组织**：遵循三层架构，正确组织模块和依赖关系
+- **测试**：为新功能添加单元测试和集成测试（如适用）
+- **提交规范**：如果涉及 Git 提交，遵循 Conventional Commits 格式
+- **代码质量**：保持代码简洁和可读性，遵循 Rust 最佳实践（如使用 `Result` 类型、避免 `unwrap()` 等）
+- **代码审查**：确保代码符合审查清单要求
 
-### Adding New Features
+### 添加新功能
 
-1. Implement core business logic in `lib/`
-2. Add CLI command wrappers in `commands/`
-3. Register commands in `main.rs`
-4. Add test cases (reference testing standards)
-5. Update documentation
-6. **Extending PR Platform Support**: To add new PR platforms (e.g., GitLab, Bitbucket), reference `docs/guidelines/pr-platform.md`
+1. 在 `lib/` 中实现核心业务逻辑
+2. 在 `commands/` 中添加 CLI 命令封装
+3. 在 `main.rs` 中注册命令
+4. 添加测试用例（参考测试规范）
+5. 更新文档
+6. **扩展 PR 平台支持**：如需添加新的 PR 平台（如 GitLab、Bitbucket），参考 `docs/guidelines/pr-platform.md`
 
-### Git Workflow and Commit Standards
+### Git 工作流和提交规范
 
-**Must Follow**: Git workflow and commit standards in `docs/guidelines/development/git-workflow.md` and `docs/guidelines/development/commit.md`.
+**必须遵循**：`docs/guidelines/development/git-workflow.md` 和 `docs/guidelines/development/commit.md` 中的 Git 工作流和提交规范。
 
-- **Branch Strategy**: Use `feature/*`, `fix/*`, `hotfix/*` branches
-- **Commit Format**: Use Conventional Commits format (`<type>(<scope>): <subject>`)
-- **Commit Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `perf`, `ci`
-- **Commit Message Requirements**: Subject line no more than 50 characters, use imperative mood
+- **分支策略**：使用 `feature/*`、`fix/*`、`hotfix/*` 分支
+- **提交格式**：使用 Conventional Commits 格式（`<type>(<scope>): <subject>`）
+- **提交类型**：`feat`、`fix`、`docs`、`style`、`refactor`、`test`、`chore`、`perf`、`ci`
+- **提交信息要求**：主题行不超过 50 个字符，使用祈使语气
 
-### Testing Standards
+### 测试规范
 
-**Detailed Standards**: Reference `docs/guidelines/development/README.md` and `docs/guidelines/testing/README.md`.
+**详细规范**：请参考 `docs/guidelines/development/README.md` 和 `docs/guidelines/testing/README.md`。
 
-- Unit tests placed in `#[cfg(test)]` modules of corresponding modules
-- Integration tests placed in `tests/` directory
-- Use `cargo test` to run tests
-- Target coverage: > 80%, critical business logic: > 90%
+- 单元测试放在对应模块的 `#[cfg(test)]` 模块中
+- 集成测试放在 `tests/` 目录
+- 使用 `cargo test` 运行测试
+- 目标覆盖率：> 80%，关键业务逻辑：> 90%
 
-### Code Review
+### 代码审查
 
-**Review Checklist**: Reference `docs/guidelines/development/code-review.md` for code review standards.
+**审查清单**：请参考 `docs/guidelines/development/code-review.md` 中的代码审查规范。
 
-**Code Review Workflow**:
-- **Pre-commit Check** (5-15 minutes): Reference `docs/guidelines/workflows/pre-commit.md`
-- **Comprehensive Deep Review** (2-4 hours): Reference `docs/guidelines/workflows/review.md` (after feature completion, periodic review, before major refactoring)
+**代码审查工作流**：
+- **提交前检查**（5-15分钟）：参考 `docs/guidelines/development/workflows/pre-commit.md`
+- **综合深入检查**（2-4小时）：参考 `docs/guidelines/development/workflows/review.md`（功能完成后、定期审查、重大重构前）
 
-Before submitting PR, ensure:
-- [ ] Code is formatted (`cargo fmt`)
-- [ ] Passes Clippy checks (`cargo clippy`)
-- [ ] All tests pass (`cargo test`)
-- [ ] Added necessary documentation comments
-- [ ] Followed error handling standards
-- [ ] Commit messages meet standards
+提交 PR 前，确保：
+- [ ] 代码已格式化（`cargo fmt`）
+- [ ] 通过 Clippy 检查（`cargo clippy`）
+- [ ] 所有测试通过（`cargo test`）
+- [ ] 添加了必要的文档注释
+- [ ] 遵循了错误处理规范
+- [ ] 提交信息符合规范
 
-### Dependency Management
+### 依赖管理
 
-**Detailed Principles**: Reference `docs/guidelines/development/references/dependency-management.md` for dependency management standards.
+**详细原则**：请参考 `docs/guidelines/development/references/dependency-management.md` 中的依赖管理规范。
 
-- Use `cargo add <package-name>` to add dependencies
-- Prefer stable versions of crates
-- Avoid unnecessary dependencies
-- Before adding new dependencies, consider if really needed, if there are lighter alternatives
+- 使用 `cargo add <package-name>` 添加依赖
+- 优先使用稳定版本的 crate
+- 避免不必要的依赖
+- 添加新依赖前，考虑是否真的需要、是否有更轻量的替代方案
 
-### Development Tools
+### 开发工具
 
-**Required Tools and Common Commands**: Reference `docs/guidelines/development/references/development-tools.md` for development tools standards (if created).
+**必需工具和常用命令**：请参考 `docs/guidelines/development/references/development-tools.md` 中的开发工具规范（如已创建）。
 
-**CI/CD Configuration**:
-- **CI Workflow Configuration**: Reference `docs/guidelines/ci-workflow.md`
-- **GitHub Configuration**: Reference `docs/guidelines/github-setup.md` (Secrets, Variables, branch protection rules, etc.)
+**CI/CD 配置**：
+- **CI 工作流配置**：参考 `docs/guidelines/ci-workflow.md`
+- **GitHub 配置**：参考 `docs/guidelines/github-setup.md`（Secrets、Variables、分支保护规则等）
 
-**Performance Analysis Tools**:
-- **Binary Size Analysis**: Reference `docs/guidelines/cargo-bloat.md` (use `cargo-bloat` to analyze binary file size)
+**性能分析工具**：
+- **二进制大小分析**：参考 `docs/guidelines/cargo-bloat.md`（使用 `cargo-bloat` 分析二进制文件大小）
 
-Install development tools: `make setup`
+安装开发工具：`make setup`
 
 ---
 
-**Last Updated**: 2025-12-25
+**最后更新**: 2025-12-25

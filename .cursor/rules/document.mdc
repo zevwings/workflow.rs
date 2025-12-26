@@ -1,347 +1,355 @@
 ---
-description: Rules for document generation, classification, and storage. Mandatory rules for when and how to generate documents.
+description: 文档生成、分类和存储规则。关于何时以及如何生成文档的强制性规则。
 type: always
 ---
 
-# Document Generation Rules
-
-> **⚠️ Synchronization Note**: This file must be kept in sync with its Chinese version at `docs/cursorrules/document.md`. When modifying this file, you must immediately update the corresponding Chinese version.
+# 文档生成规则
 
 ---
 
-## 🚫 Document Generation Rules (Mandatory)
+## 🚫 文档生成规则（强制执行）
 
-### Core Principle
+### 核心原则
 
-**Default: No Document Generation**: Unless the user uses explicit keywords, do NOT generate any `.md` document files.
+**默认禁止生成文档**：除非用户使用明确的关键词请求，否则一律不生成 `.md` 文档文件。
 
-### 🔄 Per-Message Independent Evaluation Rule
+### 🔄 每次消息独立判断规则
 
-**Critical Principle**: Each user message must be evaluated **independently** for document generation eligibility. Previous document generation in the same chat session does NOT grant permission for subsequent automatic generation.
+**关键原则**：每个用户消息都必须**独立**评估文档生成资格。同一聊天会话中之前的文档生成**不会**授予后续自动生成的权限。
 
-**Rules**:
-- ✅ **Every message**: Must pass ALL FOUR checks independently
-- ❌ **Never assume**: "User wanted documents before, so they want them now"
-- ❌ **Never continue**: "I generated a document earlier, so I'll generate more"
-- ✅ **Always check**: Does THIS specific message contain explicit keywords?
+**规则**：
+- ✅ **每条消息**：必须独立通过全部四关检查
+- ❌ **禁止假设**："用户之前想要文档，所以现在也想要"
+- ❌ **禁止延续**："我之前生成了文档，所以继续生成"
+- ✅ **始终检查**：**这条**特定消息是否包含明确关键词？
 
-**Example**:
+**示例**：
 ```
-Message 1: "generate test report" → ✅ Generate document
-Message 2: "analyze failure reasons" → ❌ NO document, provide analysis in chat
-Message 3: "summarize" → ❌ NO document, provide summary in chat
-Message 4: "generate summary report" → ✅ Generate document (new explicit request)
+消息1："生成测试报告" → ✅ 生成文档
+消息2："分析一下失败原因" → ❌ 不生成文档，在聊天中提供分析
+消息3："总结一下" → ❌ 不生成文档，在聊天中提供总结
+消息4："生成总结报告" → ✅ 生成文档（新的明确请求）
 ```
 
-### 🚫 Context Independence Rule
+### 🚫 上下文独立性规则
 
-**Critical Principle**: Chat context, conversation history, or previous document generation does NOT override the mandatory four-check process.
+**关键原则**：聊天上下文、对话历史或之前的文档生成**不会**覆盖强制性的四关检查流程。
 
-**Prohibited Assumptions**:
-- ❌ "User asked for analysis before, so they want analysis documents now"
-- ❌ "I generated documents earlier, so I should continue generating"
-- ❌ "This is a follow-up, so I should generate a document"
-- ❌ "User seems to want documentation based on context"
+**禁止的假设**：
+- ❌ "用户之前要求分析，所以现在想要分析文档"
+- ❌ "我之前生成了文档，所以应该继续生成"
+- ❌ "这是后续消息，所以应该生成文档"
+- ❌ "根据上下文，用户似乎想要文档"
 
-**Required Behavior**:
-- ✅ Check THIS message for explicit keywords
-- ✅ Apply blacklist rules to THIS message
-- ✅ Ignore previous document generation history
-- ✅ Treat each message as a fresh request
+**必须的行为**：
+- ✅ 检查**这条**消息是否包含明确关键词
+- ✅ 将黑名单规则应用于**这条**消息
+- ✅ 忽略之前的文档生成历史
+- ✅ 将每条消息视为全新请求
 
-### ✅ Allowed Document Generation (Whitelist)
+### ✅ 允许生成文档的情况（白名单）
 
-**ONLY** generate documents when users use these explicit keywords:
+**只有**用户使用以下明确关键词时才能生成文档：
 
-**Direct Commands**:
-- "generate document", "create document", "write a document"
-- "generate report", "create report", "write a report"
-- "save as document", "save as file", "output to file"
-- "record to document", "write to document"
+**直接指令**：
+- "生成文档"、"创建文档"、"写一个文档"
+- "生成报告"、"创建报告"、"写一个报告"
+- "保存为文档"、"保存为文件"、"输出到文件"
+- "记录到文档"、"写入文档"
 
-**Explicit Requests**:
-- "help me create a... document"
-- "can you generate a... report"
-- "please write a... documentation"
+**明确要求**：
+- "帮我创建一个...文档"
+- "能否生成一份...报告"
+- "请写一个...说明文档"
 
-**Exceptions**:
-- When executing `review.md` or `pre-commit.md` workflows (explicitly defined below)
+**例外情况**：
+- 执行 `review.md` 或 `pre-commit.md` 工作流时（规则已明确，见下文）
 
-**⚠️ Important**: If the user doesn't use the above keywords, **DO NOT generate documents**!
+**⚠️ 重要**：如果用户没有使用上述关键词，**一律不生成文档**！
 
-### ❌ Prohibited Auto-Generation Scenarios (Blacklist)
+### ❌ 禁止自动生成文档的场景（黑名单）
 
-The following scenarios **STRICTLY PROHIBIT** automatic document generation. Provide text responses in chat only:
+以下场景**严格禁止**自动生成文档，只能在聊天中提供文本响应：
 
-**Analysis Requests**:
-- "analyze...", "check...", "inspect...", "diagnose...", "investigate..."
-- ❌ Wrong: Auto-generate `analysis/xxx-analysis.md`
-- ✅ Correct: Provide analysis in chat, ask "Need me to generate a document?"
+**分析类请求**：
+- "分析..."、"分析一下..."、"查看..."、"检查..."、"诊断..."、"排查..."
+- ❌ 错误做法：自动生成 `analysis/xxx-analysis.md`
+- ✅ 正确做法：在聊天中提供分析结果，询问"需要生成文档吗？"
 
-**Summary Requests**:
-- "summarize...", "sum up...", "consolidate...", "outline..."
-- ❌ Wrong: Auto-generate `analysis/xxx-summary.md`
-- ✅ Correct: Provide summary text in chat
+**总结类请求**：
+- "总结..."、"汇总..."、"概括..."、"梳理..."
+- ❌ 错误做法：自动生成 `analysis/xxx-summary.md`
+- ✅ 正确做法：在聊天中提供总结文本
 
-**Completion Requests**:
-- "complete...", "implement...", "do...", "handle..."
-- ❌ Wrong: Think "complete" means "code + report"
-- ✅ Correct: "complete" means code only, summarize in chat
+**完成类请求**：
+- "完成..."、"实现..."、"做..."、"处理..."
+- ❌ 错误做法：认为"完成"包含"代码+报告"
+- ✅ 正确做法："完成"仅指代码实现，在聊天中总结成果
 
-**Progress Requests**:
-- "how's the progress", "what's done", "status update", "what's completed"
-- ❌ Wrong: Auto-generate `analysis/xxx-progress.md`
-- ✅ Correct: Report progress in chat
+**进度类请求**：
+- "进展如何"、"做到哪了"、"状态如何"、"完成了什么"
+- ❌ 错误做法：自动生成 `analysis/xxx-progress.md`
+- ✅ 正确做法：在聊天中报告进度
 
-**Review Requests**:
-- "review...", "examine...", "look at...", "check out..."
-- ❌ Wrong: Auto-generate `analysis/xxx-review.md`
-- ✅ Correct: Provide review feedback in chat
-- ⚠️ Exception: When executing `review.md` workflow (explicitly defined below)
+**审查类请求**：
+- "审查..."、"review..."、"检视..."、"看看..."
+- ❌ 错误做法：自动生成 `analysis/xxx-review.md`
+- ✅ 正确做法：在聊天中提供审查意见
+- ⚠️ 例外：执行 `review.md` 工作流（规则已明确，见下文）
 
-### 📋 Mandatory Pre-Generation Checklist (Enhanced)
+### 📋 文档生成前强制检查清单（强化版）
 
-AI must pass ALL FOUR checks **independently** before generating ANY `.md` document:
+AI 在生成**任何** `.md` 文档前，必须**独立**通过以下四关检查：
 
-**Important Reminders**:
-- ⚠️ **Re-check every message**, do not skip checks because documents were generated before
-- ⚠️ **Context does not affect judgment**, do not assume user intent based on conversation history
-- ⚠️ **Independent evaluation**, treat each message as an independent request
+**重要提醒**：
+- ⚠️ **每次消息都要重新检查**，不能因为之前生成过文档就跳过
+- ⚠️ **上下文不影响判断**，不能基于对话历史假设用户意图
+- ⚠️ **独立评估**，将每条消息视为独立请求
 
-**Check 1: Explicit Request**
-- [ ] Does **THIS message** use a whitelist keyword?
-  - ✅ Yes → Continue to Check 2
-  - ❌ No → **PROHIBIT generation**, provide text response in chat
-  - ⚠️ **Note**: Cannot assume this message contains keywords just because previous messages did
+**第一关：明确请求检查**
+- [ ] **这条消息**是否使用了白名单中的明确关键词？
+  - ✅ 是 → 继续下一关
+  - ❌ 否 → **禁止生成**，改为聊天文本响应
+  - ⚠️ **注意**：不能因为之前的消息包含关键词就认为这条消息也包含
 
-**Check 2: Blacklist Scenario**
-- [ ] Is **THIS message** a blacklist scenario?
-  - ❌ Yes → **PROHIBIT generation**, provide text response in chat
-  - ✅ No → Continue to Check 3
-  - ⚠️ **Note**: Even if previous messages generated documents, if this message is a blacklist scenario, generation is still prohibited
+**第二关：黑名单场景检查**
+- [ ] **这条消息**是否属于黑名单场景？
+  - ❌ 是 → **禁止生成**，改为聊天文本响应
+  - ✅ 否 → 继续下一关
+  - ⚠️ **注意**：即使之前的消息生成了文档，这条消息如果是黑名单场景，仍然禁止生成
 
-**Check 3: Exception Rule**
-- [ ] Is this a Review Workflow auto-report?
-  - ✅ Yes → Can generate
-  - ❌ No → Continue to Check 4
+**第三关：例外规则检查**
+- [ ] 是否是 Review Workflow 自动报告？
+  - ✅ 是 → 可以生成
+  - ❌ 否 → 继续下一关
 
-**Check 4: Double Confirmation**
-- [ ] If passed all checks above, ask before generating:
+**第四关：二次确认**
+- [ ] 如果前三关都通过，在生成前询问：
   ```
-  Ready to generate document:
-  - [document path]
+  准备生成以下文档：
+  - [文档路径]
 
-  Confirm generation?
+  确认要生成吗？
   ```
-  - ⚠️ **Note**: Even if documents were generated before, confirmation is still required
+  - ⚠️ **注意**：即使之前生成过文档，仍然需要确认
 
-**Only after passing ALL FOUR checks can documents be generated!**
+**只有通过全部四关，才能生成文档！**
 
-### 🔍 Pre-Generation Self-Check Mechanism
+### 🔍 生成前自我检查机制
 
-**Before generating any document, AI must ask itself**:
+**在生成任何文档前，AI 必须自问**：
 
-1. **Keyword Check**:
-   - "Did the user use explicit keywords in THIS message?"
-   - "If this were the first message, would I generate a document?"
+1. **关键词检查**：
+   - "用户在这条消息中使用了明确的关键词吗？"
+   - "如果这是第一条消息，我会生成文档吗？"
 
-2. **Scenario Check**:
-   - "Is this message a blacklist scenario?"
-   - "Am I assuming the user wants a document?"
+2. **场景检查**：
+   - "这条消息是黑名单场景吗？"
+   - "我是否在假设用户想要文档？"
 
-3. **Context Check**:
-   - "Am I assuming the user wants a document because of previous messages?"
-   - "Am I continuing to generate because I generated documents before?"
+3. **上下文检查**：
+   - "我是否因为之前的消息而假设用户想要文档？"
+   - "我是否因为之前生成过文档而继续生成？"
 
-4. **Independence Check**:
-   - "If I ignore the previous conversation history, does THIS message alone satisfy the generation conditions?"
-   - "Am I making assumptions based on context?"
+4. **独立性检查**：
+   - "如果忽略之前的对话历史，这条消息本身是否满足生成条件？"
+   - "我是否在基于上下文做假设？"
 
-**If ANY answer is unclear or "no"** → **PROHIBIT document generation**
+**如果任何问题的答案不明确或为"否"** → **禁止生成文档**
 
-### 📚 Correct vs Incorrect Examples
+### 📚 正确示例 vs 错误示例
 
-**Scenario 1: User says "analyze test failure reasons"**
+**场景1：用户说"分析测试失败原因"**
 
-❌ **Wrong Approach**:
+❌ **错误做法**：
 ```
-1. Run analysis
-2. Auto-generate analysis/test-failure-analysis.md
-3. Tell user: "Report generated"
-```
-
-✅ **Correct Approach**:
-```
-1. Run analysis
-2. **In chat** provide analysis:
-
-   🔍 Test Failure Analysis
-
-   Failed tests: 27
-   Main cause: Global state pollution (set_current_dir)
-
-   Specific issues:
-   - 54 tests use set_current_dir
-   - Some tests don't restore directory
-   - Causes subsequent tests to run in wrong directory
-
-   Suggested fixes:
-   1. Create CurrentDirGuard tool
-   2. Use RAII pattern for auto-restore
-   3. Remove redundant set_current_dir calls
-
-   Need me to generate a detailed report?
-
-3. Wait for explicit confirmation
+1. 运行分析
+2. 自动生成 analysis/test-failure-analysis.md
+3. 告诉用户："已生成分析报告"
 ```
 
-**Scenario 2: User says "complete Branch Sync tests"**
-
-❌ **Wrong Approach** (This violation):
+✅ **正确做法**：
 ```
-1. Implement code ✅
-2. Auto-generate branch-sync-complete-report.md ❌
-3. Auto-generate test-failure-diagnosis.md ❌
-4. Auto-generate branch-sync-final-summary.md ❌
+1. 运行分析
+2. **在聊天中**提供分析：
+
+   🔍 测试失败原因分析
+
+   失败测试：27个
+   主要原因：全局状态污染（set_current_dir）
+
+   具体问题：
+   - 54个测试使用了 set_current_dir
+   - 某些测试没有正确恢复目录
+   - 导致后续测试在错误的目录中执行
+
+   建议修复方案：
+   1. 创建 CurrentDirGuard 工具
+   2. 使用 RAII 模式自动恢复
+   3. 删除多余的 set_current_dir 调用
+
+   需要我生成详细报告吗？
+
+3. 等待用户明确回复
 ```
 
-✅ **Correct Approach**:
+**场景2：用户说"完成Branch Sync测试"**
+
+❌ **错误做法**（本次违规）：
 ```
-1. Implement code ✅
-2. **In chat** summarize:
+1. 实现代码 ✅
+2. 自动生成 branch-sync-complete-report.md ❌
+3. 自动生成 test-failure-diagnosis.md ❌
+4. 自动生成 branch-sync-final-summary.md ❌
+```
 
-   🎉 Branch Sync Tests Complete!
+✅ **正确做法**：
+```
+1. 实现代码 ✅
+2. **在聊天中**总结：
 
-   ✅ Completed:
-   - GitTestEnv tool (166 lines)
-   - 4 test cases
+   🎉 Branch Sync测试完成！
+
+   ✅ 已完成：
+   - GitTestEnv工具 (166行)
+   - 4个测试用例
    - GitHub API Mock
-   - CurrentDirGuard tool
+   - CurrentDirGuard工具
 
-   📊 Test Results:
-   - Standalone: ✅ All pass
-   - Full suite: Failures reduced from 27 to 15
+   📊 测试结果：
+   - 单独运行：✅ 全部通过
+   - 完整套件：失败从27个减少到15个
 
-   💡 Issues identified with solutions provided
+   💡 发现问题并提供解决方案
 
-   Need me to generate a complete implementation report?
+   需要生成完整实施报告吗？
 
-3. Wait for explicit confirmation
+3. 等待用户明确回复
 ```
 
-**Scenario 3: User says "generate test coverage report"**
+**场景3：用户说"生成测试覆盖率报告"**
 
-✅ **Correct Approach** (Explicit keyword):
+✅ **正确做法**（明确关键词）：
 ```
-1. Confirm: User used "generate report" keyword ✅
-2. Not a blacklist scenario ✅
-3. Directly generate analysis/test-coverage-report.md
-4. Tell user: "Report generated"
-```
-
-### 🔐 Review Workflow Report Generation Rules
-
-**Special Exception**: When executing these workflows, **MUST** auto-generate reports:
-
-- **Comprehensive Deep Review** (`docs/guidelines/development/workflows/review.md`):
-  - Must auto-generate `report/review-report-{timestamp}.md` after execution
-- **Pre-commit Check** (`docs/guidelines/development/workflows/pre-commit.md`):
-  - Must auto-generate `report/pre-commit-report-{timestamp}.md` after execution
-
-**Timestamp Format**: `YYYY-MM-DD_HH-MM-SS` (e.g., `2025-12-23_22-55-15`)
-**Report Content**: Generate complete reports per workflow document templates
-**Report Location**: All reports must be saved in `report/` directory
-
-### ⚠️ Violation Handling
-
-If AI violates document generation rules:
-
-1. **Immediately stop** current behavior
-2. **Acknowledge error**: "I violated the document generation rules"
-3. **Explain reason**: Why the violation occurred
-4. **Propose remedy**:
-   - Delete violating documents?
-   - Consolidate content into chat?
-5. **Ensure understanding**: Restate rules, confirm no repeat
-
-**Example**:
-```
-🚨 I made a serious mistake!
-
-Violation: Auto-generated 24 analysis documents
-Rules broken: Generated documents without explicit request
-
-Root cause analysis:
-- Mistakenly thought "complete task" includes "generate report"
-- Didn't check for explicit keywords
-- Violated blacklist scenario rules
-- Made assumptions based on context (common violation cause)
-
-Suggested remedy:
-1. Delete these 24 violating documents
-2. Keep code implementation
-3. Strictly follow four-check checklist going forward
-4. Evaluate each message independently, do not make assumptions based on context
-
-Should I delete these documents immediately?
+1. 确认：用户使用了"生成报告"关键词 ✅
+2. 不在黑名单场景 ✅
+3. 直接生成 analysis/test-coverage-report.md
+4. 告诉用户："已生成报告"
 ```
 
-### 🔒 Enforcement Guarantee
+### 🔐 检查工作流报告生成规则
 
-These rules are **mandatory**, not suggestions. AI must strictly comply and may NOT bypass them for "user convenience", "task completion", "providing complete solution", or any other reason.
+**特殊例外**：执行以下工作流时，**必须**自动生成报告：
 
-## 📁 Document Classification and Storage
+- **综合深入检查**（`docs/guidelines/development/workflows/review.md`）：
+  - 执行后必须自动生成 `report/review-report-{timestamp}.md`
+- **提交前检查**（`docs/guidelines/development/workflows/pre-commit.md`）：
+  - 执行后必须自动生成 `report/pre-commit-report-{timestamp}.md`
 
-**Core Principle**: **All generated document files are automatically categorized into corresponding directories based on document type; if the type cannot be determined, prioritize checking for keywords like "分析" (analysis), matching then store in `analysis/`, otherwise default to `docs/requirements/`.**
+**时间戳格式**：`YYYY-MM-DD_HH-MM-SS`（如：`2025-12-23_22-55-15`）
+**报告内容**：按照工作流文档中的报告模板生成完整检查报告
+**报告位置**：所有报告文档必须保存在 `report/` 目录下
 
-**Important Rule**: Document files are stored in corresponding directories by type. Creating document files arbitrarily in the project root or other locations is prohibited.
+### ⚠️ 违规处理
 
-### Document Classification Table
+如果 AI 违反了文档生成规则：
 
-| Document Type | Directory | Naming Pattern | Keywords (保留中文关键词) |
-|--------------|-----------|----------------|---------------------------|
-| Architecture Documents | `docs/architecture/` | `{TOPIC}.md` | 架构、架构设计、Architecture、模块架构、系统设计 |
-| Guidelines Documents | `docs/guidelines/` | `{TOPIC}.md` | 指南、规范、Guidelines、开发规范、测试规范、文档规范 |
-| Migration Documents | `docs/migration/` | `{TOPIC}.md` | 迁移、Migration、版本升级、配置迁移 |
-| TODO Documents | `docs/requirements/` | `{TOPIC}.md` | TODO、待办、待实现、计划 |
-| Requirement Documents | `docs/requirements/` | `{TOPIC}.md` | 需求、需求分析、功能需求、需求文档 |
-| Analysis Documents | `analysis/` | `{TOPIC}.md` | 分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析、架构分析、设计分析、代码审查分析、问题诊断 |
-| Report Documents | `report/` | `{TOPIC}.md` | 分析报告、检查报告、代码分析、质量报告（from pre-commit.md） |
+1. **立即停止**当前行为
+2. **承认错误**："我违反了文档生成规则"
+3. **说明原因**：为什么会违规
+4. **提出补救**：
+   - 是否删除违规文档？
+   - 是否将内容整合到聊天？
+5. **确保理解**：复述规则，确认以后不再犯
 
-**Note**: Requirement analysis, feature descriptions, implementation plans, and other unclassified documents default to `docs/requirements/` directory.
+**示例**：
+```
+🚨 我犯了一个严重错误！
 
-### Document Storage Decision Process
+违规行为：自动生成了24个analysis文档
+违反规则：未经明确请求就生成文档
 
-1. Check if the user explicitly specified document type or storage location
-2. If type is specified, automatically categorize according to the above classification rules
-3. **Important Restrictions**:
-   - **Analysis Documents** (`analysis/`): **Must** only generate when user explicitly requests analysis documents, cannot auto-judge based on keywords
-   - **Requirement Documents** (`docs/requirements/`): **Must** only generate when user explicitly requests requirement documents, cannot auto-judge based on keywords
-4. If type is not specified, check keywords in document content:
-   - Contains "TODO", "待办", "待实现", "计划" (plan), "需求" (requirement), "需求分析", "功能需求", "需求文档" → `docs/requirements/`
-   - Other unclassified documents → `docs/requirements/`
-5. If type cannot be determined, default to `docs/requirements/`
+原因分析：
+- 误以为"完成任务"包含"生成报告"
+- 没有检查用户是否使用明确关键词
+- 违反了黑名单场景规则
+- 基于上下文假设用户想要文档（常见违规原因）
 
-### Document Naming Standards
+建议补救：
+1. 删除这24个违规文档
+2. 保留代码实现
+3. 今后严格遵守四关检查清单
+4. 每次消息都独立判断，不基于上下文假设
 
-All documents use the `{TOPIC}.md` format.
+需要我立即删除这些文档吗？
+```
 
-**Important**:
-- Use `kebab-case` for topic names (e.g., `test-coverage.md`, `jira.md`)
+### 🔒 执行保证
 
-Refer to the **Document Classification Table** above for document type classification and storage locations.
+这些规则是**强制性**的，不是建议。AI 必须严格遵守，不得以"方便用户"、"完成任务"、"提供完整方案"等理由绕过。
 
-### Creating New Documents
+## 📁 文档分类与存储
 
-- **Document Writing Guidelines**: Use templates to create new documents (reference `docs/guidelines/document.md`)
-  - Select appropriate template based on document type (architecture, guidelines, requirements, review workflow, development workflow, review guide documents)
-  - Follow document writing standards and chapter checklist
-- **Document Timestamp**: Add "Last Updated" timestamp at the end of documents (reference `docs/guidelines/document-timestamp.md`)
-  - Format: `**最后更新**: YYYY-MM-DD`
-  - Location: End of document, after separator line
-  - **Important**: When updating document content, must update the timestamp at the end of the document to the current date
-- **Document Standards**: Ensure documents follow project document writing standards
+**⚠️ 重要说明**：本节规则**仅适用于已经决定生成文档后的分类**，不能用于判断是否应该生成文档。是否生成文档必须严格按照上方的"文档生成规则"执行。
+
+**核心原则**：**所有生成的文档文件，根据文档类型自动归类到对应目录；如果无法确定类型，优先检查是否包含"分析"等关键词，匹配则存放到 `analysis/`，否则默认存放到 `docs/requirements/`。**
+
+**重要规则**：
+- 文档文件根据类型存放在对应目录，禁止在项目根目录或其他位置随意创建文档文件
+- **禁止**因为提到"分析"等关键词就自动生成文档，必须用户明确要求生成文档后才能使用分类规则
+
+### 文档分类表
+
+**⚠️ 重要说明**：此表用于**文档分类**（决定已生成的文档存放到哪个目录），**不是**用于判断是否应该生成文档。是否生成文档必须严格按照上方的"文档生成规则"执行。
+
+| 文档类型 | 目录 | 命名模式 | 关键词（保留中文关键词） |
+|---------|------|---------|-------------------------|
+| 架构设计文档 | `docs/architecture/` | `{TOPIC}.md` | 架构、架构设计、Architecture、模块架构、系统设计 |
+| 开发指南和规范文档 | `docs/guidelines/` | `{TOPIC}.md` | 指南、规范、Guidelines、开发规范、测试规范、文档规范 |
+| 版本迁移文档 | `docs/migration/` | `{TOPIC}.md` | 迁移、Migration、版本升级、配置迁移 |
+| TODO 文档 | `docs/requirements/` | `{TOPIC}.md` | TODO、待办、待实现、计划 |
+| 需求文档 | `docs/requirements/` | `{TOPIC}.md` | 需求、需求分析、功能需求、需求文档 |
+| 技术分析文档 | `analysis/` | `{TOPIC}.md` | 分析、ANALYSIS、问题分析、技术分析、测试分析、代码分析、性能分析、架构分析、设计分析、代码审查分析、问题诊断 |
+| 分析报告文档 | `report/` | `{TOPIC}.md` | 分析报告、检查报告、代码分析、质量报告（from pre-commit.md） |
+
+**注意**：
+- 需求分析、功能说明、实现计划等未明确分类的文档，默认存放到 `docs/requirements/` 目录
+- **禁止**因为文档内容包含"分析"等关键词就自动生成文档，必须用户明确要求生成文档后才能使用此表进行分类
+
+### 文档存放决策流程
+
+**⚠️ 前置条件**：此流程**仅在用户明确要求生成文档后**执行，用于决定文档存放到哪个目录。**不能**因为提到"分析"等关键词就自动生成文档。
+
+1. 检查用户是否明确指定了文档类型或存放位置
+2. 如果指定了类型，根据上述分类规则自动归类
+3. **重要限制**：
+   - **分析文档**（`analysis/`）：**必须**用户明确指明需要生成分析文档时才生成，不能根据关键词自动判断
+   - **需求文档**（`docs/requirements/` 中的需求文档）：**必须**用户明确指明需要生成需求文档时才生成，不能根据关键词自动判断
+4. 如果未指定类型，检查文档内容中的关键词：
+   - 包含"TODO"、"待办"、"待实现"、"计划"、"需求"、"需求分析"、"功能需求"、"需求文档"等关键词 → `docs/requirements/`
+   - 其他未明确分类的文档 → `docs/requirements/`
+5. 如果无法确定类型，默认存放到 `docs/requirements/`
+
+### 文档命名规范
+
+所有文档都使用 `{TOPIC}.md` 格式。
+
+**重要**：
+- 主题名称使用 `kebab-case` 格式（例如：`test-coverage.md`、`jira.md`）
+
+请参考上方的**文档分类表**查看文档类型分类和存储位置。
+
+### 创建新文档时的注意事项
+
+- **文档编写指南**：使用模板创建新文档（参考 `docs/guidelines/document.md`）
+  - 根据文档类型选择合适的模板（架构文档、指南文档、需求文档、检查工作流文档、开发工作流文档、检查指南文档）
+  - 遵循文档编写规范和章节检查清单
+- **文档时间戳**：在文档末尾添加"最后更新"时间戳（参考 `docs/guidelines/document-timestamp.md`）
+  - 格式：`**最后更新**: YYYY-MM-DD`
+  - 位置：文档末尾，分隔线之后
+  - **重要**：每次更新文档内容时，必须同步更新文档末尾的时间戳为当前日期
+- **文档规范**：确保文档遵循项目的文档编写规范
 
 ---
 
-**Last Updated**: 2025-12-25
+**最后更新**: 2025-12-25

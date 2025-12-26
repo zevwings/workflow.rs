@@ -12,6 +12,7 @@ mod branch;
 mod commands;
 mod commit;
 mod config;
+mod dev;
 mod github;
 mod jira;
 mod llm;
@@ -41,7 +42,16 @@ pub use pr::PRCommands;
 pub use proxy::ProxySubcommand;
 pub use repo::RepoSubcommand;
 pub use stash::StashSubcommand;
-pub use tag::TagSubcommand;
+// TagSubcommand is exported from dev module, not tag module
+
+// Dev 工具 CLI
+pub use dev::{
+    DevCommands, DevSubcommand, DocsSubcommand, DocsCheckSubcommand, DocsReportSubcommand,
+    TestsSubcommand, TestsCheckSubcommand, TestsDocsSubcommand, TestsMetricsSubcommand,
+    TestsReportSubcommand, TestsTrendsSubcommand, PerformanceSubcommand,
+    VersionSubcommand, CiSubcommand, ChecksumSubcommand, HomebrewSubcommand,
+    TagSubcommand, PrSubcommand,
+};
 
 /// CLI 主结构体
 ///

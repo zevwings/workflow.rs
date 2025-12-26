@@ -191,7 +191,7 @@ impl PlatformProvider for GitHub {
         let pr = Self::fetch_pr_info_internal(pr_number)?;
         Ok(PullRequestStatus {
             state: pr.state,
-            merged: pr.merged,
+            merged: pr.merged.unwrap_or(false),
             merged_at: pr.merged_at,
         })
     }
